@@ -80,10 +80,6 @@
   {
    "link_doctype": "Designation",
    "link_fieldname": "appraisal_template"
-  },
-  {
-   "link_doctype": "Department",
-   "link_fieldname": "department"
   }
  ],
  "modified": "2023-03-17 18:58:23.471479",
