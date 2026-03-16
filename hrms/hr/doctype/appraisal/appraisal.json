@@ -18,6 +18,14 @@
   "appraisal_cycle",
   "start_date",
   "end_date",
+  "personal_particulars_section",
+  "date_joined",
+  "confirmation_due",
+  "performance_period",
+  "column_break_pp",
+  "staff_no",
+  "unit",
+  "job_grade",
   "section_break_aeb0",
   "final_score",
   "kra_tab",
@@ -31,6 +39,22 @@
   "remarks",
   "total_section",
   "total_score",
+  "competency_tab",
+  "section_b_heading",
+  "functional_competencies",
+  "competency_score",
+  "initiatives_tab",
+  "section_c_heading",
+  "extra_initiatives",
+  "initiatives_score",
+  "scoring_summary_tab",
+  "section_a_score",
+  "section_b_score",
+  "section_c_score",
+  "column_break_scoring",
+  "pms_total_score",
+  "overall_grade",
+  "grade_scale_html",
   "feedback_tab",
   "feedback_html",
   "section_break_20",
@@ -41,6 +65,18 @@
   "self_score",
   "reflections_section",
   "reflections",
+  "signoff_tab",
+  "appraisee_section",
+  "appraisee_comments",
+  "appraisee_agreement",
+  "appraisee_sign_date",
+  "appraiser_section",
+  "appraiser_comments",
+  "appraiser_decision",
+  "appraiser_sign_date",
+  "reviewer_section",
+  "reviewer_comments",
+  "reviewer_sign_date",
   "amended_from"
  ],
  "fields": [
@@ -291,6 +327,207 @@
    "in_list_view": 1,
    "label": "Final Score",
    "read_only": 1
+  },
+  {
+   "fieldname": "personal_particulars_section",
+   "fieldtype": "Section Break",
+   "label": "Personal Particulars"
+  },
+  {
+   "fetch_from": "employee.date_of_joining",
+   "fieldname": "date_joined",
+   "fieldtype": "Date",
+   "label": "Date Joined",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confirmation_due",
+   "fieldtype": "Date",
+   "label": "Confirmation Due",
+   "read_only": 1
+  },
+  {
+   "fieldname": "performance_period",
+   "fieldtype": "Data",
+   "label": "Performance Period"
+  },
+  {
+   "fieldname": "column_break_pp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "employee.employee",
+   "fieldname": "staff_no",
+   "fieldtype": "Data",
+   "label": "Staff No",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.branch",
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.grade",
+   "fieldname": "job_grade",
+   "fieldtype": "Link",
+   "label": "Job Grade",
+   "options": "Employee Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "competency_tab",
+   "fieldtype": "Tab Break",
+   "label": "Functional Competency"
+  },
+  {
+   "fieldname": "section_b_heading",
+   "fieldtype": "Section Break",
+   "label": "Section B: Functional Competency (20% Weight)"
+  },
+  {
+   "fieldname": "functional_competencies",
+   "fieldtype": "Table",
+   "label": "Functional Competencies",
+   "options": "Appraisal Functional Competency"
+  },
+  {
+   "fieldname": "competency_score",
+   "fieldtype": "Float",
+   "label": "Section B Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "initiatives_tab",
+   "fieldtype": "Tab Break",
+   "label": "Extra Functions & Initiatives"
+  },
+  {
+   "fieldname": "section_c_heading",
+   "fieldtype": "Section Break",
+   "label": "Section C: Extra Functions & Initiatives (10% Weight)"
+  },
+  {
+   "fieldname": "extra_initiatives",
+   "fieldtype": "Table",
+   "label": "Extra Initiatives",
+   "options": "Appraisal Extra Initiative"
+  },
+  {
+   "fieldname": "initiatives_score",
+   "fieldtype": "Float",
+   "label": "Section C Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scoring_summary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Scoring Summary"
+  },
+  {
+   "fieldname": "section_a_score",
+   "fieldtype": "Float",
+   "label": "Section A \u2014 KRA/KPI (70% max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b_score",
+   "fieldtype": "Float",
+   "label": "Section B \u2014 Functional Competency (20% max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_c_score",
+   "fieldtype": "Float",
+   "label": "Section C \u2014 Extra Functions (10% max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_scoring",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "pms_total_score",
+   "fieldtype": "Float",
+   "label": "Total PMS Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "overall_grade",
+   "fieldtype": "Data",
+   "label": "Overall Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grade_scale_html",
+   "fieldtype": "HTML",
+   "label": "Grade Scale",
+   "options": "<div style='margin-top:10px; padding:10px; background:#f5f5f5; border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>91\u2013100: Outstanding | 81\u201390: Exceeds Expectations | 71\u201380: Meets Expectations | 60\u201370: Needs Improvement | &lt;60: Unsatisfactory</div>"
+  },
+  {
+   "fieldname": "signoff_tab",
+   "fieldtype": "Tab Break",
+   "label": "Comments & Sign-Off"
+  },
+  {
+   "fieldname": "appraisee_section",
+   "fieldtype": "Section Break",
+   "label": "Appraisee"
+  },
+  {
+   "fieldname": "appraisee_comments",
+   "fieldtype": "Text Editor",
+   "label": "Appraisee Comments"
+  },
+  {
+   "fieldname": "appraisee_agreement",
+   "fieldtype": "Select",
+   "label": "Appraisee Agreement",
+   "options": "\nI agree and accept the reviews and feedback\nI request extension for improvement"
+  },
+  {
+   "fieldname": "appraisee_sign_date",
+   "fieldtype": "Date",
+   "label": "Appraisee Sign Date"
+  },
+  {
+   "fieldname": "appraiser_section",
+   "fieldtype": "Section Break",
+   "label": "Appraiser"
+  },
+  {
+   "fieldname": "appraiser_comments",
+   "fieldtype": "Text Editor",
+   "label": "Appraiser Comments"
+  },
+  {
+   "fieldname": "appraiser_decision",
+   "fieldtype": "Select",
+   "label": "Appraiser Decision",
+   "options": "\nFor employee records and improvement\nConfirm employee\nExtend probation\nSet for PIP/PDP"
+  },
+  {
+   "fieldname": "appraiser_sign_date",
+   "fieldtype": "Date",
+   "label": "Appraiser Sign Date"
+  },
+  {
+   "fieldname": "reviewer_section",
+   "fieldtype": "Section Break",
+   "label": "Reviewer"
+  },
+  {
+   "fieldname": "reviewer_comments",
+   "fieldtype": "Text Editor",
+   "label": "Reviewer Comments"
+  },
+  {
+   "fieldname": "reviewer_sign_date",
+   "fieldtype": "Date",
+   "label": "Reviewer Sign Date"
   }
  ],
  "icon": "fa fa-thumbs-up",
@@ -298,7 +535,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-24 15:40:29.669135",
+ "modified": "2026-03-16 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal",

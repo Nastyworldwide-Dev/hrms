@@ -8,8 +8,16 @@
  "engine": "InnoDB",
  "field_order": [
   "kra",
+  "kra_category",
+  "kpi_description",
   "per_weightage",
   "column_break_3",
+  "target",
+  "actual",
+  "achievement",
+  "manager_rating",
+  "weighted_score",
+  "column_break_old",
   "goal_completion",
   "goal_score"
  ],
@@ -29,6 +37,19 @@
    "width": "200px"
   },
   {
+   "fieldname": "kra_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Category",
+   "options": "\nStakeholder Goal\nFinancial Goal\nContinuous Growth Goal\nOperational Goal\nPeople Goal"
+  },
+  {
+   "fieldname": "kpi_description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "KPI"
+  },
+  {
    "fieldname": "per_weightage",
    "fieldtype": "Percent",
    "in_list_view": 1,
@@ -44,9 +65,45 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "target",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Target"
+  },
+  {
+   "fieldname": "actual",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual"
+  },
+  {
+   "fieldname": "achievement",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Achievement (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "manager_rating",
+   "fieldtype": "Rating",
+   "in_list_view": 1,
+   "label": "Rating (1-5)"
+  },
+  {
+   "fieldname": "weighted_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_old",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "goal_completion",
    "fieldtype": "Percent",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Goal Completion (%)",
    "precision": "2",
    "read_only": 1
@@ -54,7 +111,7 @@
   {
    "fieldname": "goal_score",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Goal Score (weighted)",
    "precision": "2",
    "read_only": 1
@@ -62,7 +119,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2023-03-27 12:21:24.929426",
+ "modified": "2026-03-16 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal KRA",

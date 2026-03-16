@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-03-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "competency",
+  "proficiency_level",
+  "per_weightage",
+  "column_break_1",
+  "self_rating",
+  "manager_rating",
+  "justification",
+  "column_break_2",
+  "score",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "competency",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Competency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "proficiency_level",
+   "fieldtype": "Select",
+   "label": "Proficiency Level",
+   "options": "\n1 - Awareness\n2 - Developing\n3 - Proficient\n4 - Advanced\n5 - Expert / Mastery"
+  },
+  {
+   "fieldname": "per_weightage",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "self_rating",
+   "fieldtype": "Rating",
+   "in_list_view": 1,
+   "label": "Self Rating"
+  },
+  {
+   "fieldname": "manager_rating",
+   "fieldtype": "Rating",
+   "in_list_view": 1,
+   "label": "Manager Rating"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Small Text",
+   "label": "Justification"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Appraisal Functional Competency",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -20,8 +20,19 @@ class Appraisal(Document, AppraisalMixin):
 		validate_active_employee(self.employee)
 		validate_active_appraisal_cycle(self.appraisal_cycle)
 		self.validate_duplicate()
-		self.validate_total_weightage("appraisal_kra", "KRAs")
+		self.set_personal_particulars()
+
+		# New 70/20/10 weightage validation
+		self.validate_total_weightage("appraisal_kra", "KRAs (Section A)", 70)
+		self.validate_total_weightage("functional_competencies", "Functional Competencies (Section B)", 20)
+		self.validate_total_weightage("extra_initiatives", "Extra Initiatives (Section C)", 10)
 		self.validate_total_weightage("self_ratings", "Self Ratings")
+
+		# Calculate all section scores
+		self.calculate_section_a_score()
+		self.calculate_section_b_score()
+		self.calculate_section_c_score()
+		self.calculate_pms_total()
 
 		self.set_goal_score()
 		self.calculate_self_appraisal_score()
@@ -72,6 +83,76 @@ class Appraisal(Document, AppraisalMixin):
 			)
 		):
 			self.rate_goals_manually = 1
+
+	def set_personal_particulars(self):
+		"""Fetch personal particulars from Employee record and appraisal cycle"""
+		if not self.employee:
+			return
+
+		employee = frappe.get_cached_doc("Employee", self.employee)
+
+		self.date_joined = employee.date_of_joining
+		self.staff_no = employee.name
+		self.unit = employee.branch
+		self.job_grade = employee.grade
+
+		# Set confirmation due from Employee
+		self.confirmation_due = (
+			employee.get("final_confirmation_date")
+			or employee.get("scheduled_confirmation_date")
+			or None
+		)
+
+		# Auto-fill performance period from cycle dates
+		if self.appraisal_cycle and not self.performance_period:
+			cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
+			if cycle.start_date and cycle.end_date:
+				self.performance_period = f"{cycle.start_date} to {cycle.end_date}"
+
+	def calculate_section_a_score(self):
+		"""Calculate Section A: KRA/KPI score (max 70)"""
+		section_a = 0
+		for row in self.appraisal_kra:
+			if flt(row.target):
+				row.achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
+			else:
+				row.achievement = 0
+
+			# Rating field stores 0-1 (fraction), multiply by 5 to get 1-5 scale
+			rating_value = flt(row.manager_rating) * 5
+			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			section_a += flt(row.weighted_score)
+
+		self.section_a_score = flt(section_a, 2)
+
+	def calculate_section_b_score(self):
+		"""Calculate Section B: Functional Competency score (max 20)"""
+		section_b = 0
+		for row in self.functional_competencies:
+			rating_value = flt(row.manager_rating) * 5
+			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			section_b += flt(row.score)
+
+		self.competency_score = flt(section_b, 2)
+		self.section_b_score = flt(section_b, 2)
+
+	def calculate_section_c_score(self):
+		"""Calculate Section C: Extra Functions & Initiatives score (max 10)"""
+		section_c = 0
+		for row in self.extra_initiatives:
+			rating_value = flt(row.manager_rating) * 5
+			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			section_c += flt(row.score)
+
+		self.initiatives_score = flt(section_c, 2)
+		self.section_c_score = flt(section_c, 2)
+
+	def calculate_pms_total(self):
+		"""Calculate total PMS score and determine grade"""
+		self.pms_total_score = flt(
+			flt(self.section_a_score) + flt(self.section_b_score) + flt(self.section_c_score), 2
+		)
+		self.overall_grade = get_grade(self.pms_total_score)
 
 	@frappe.whitelist()
 	def set_appraisal_template(self):
@@ -185,6 +266,12 @@ class Appraisal(Document, AppraisalMixin):
 			self.db_update()
 
 	def calculate_final_score(self):
+		# Use PMS total score as the final score
+		if flt(self.pms_total_score):
+			self.final_score = flt(self.pms_total_score, self.precision("final_score"))
+			return
+
+		# Fallback to legacy formula-based calculation
 		final_score = 0
 		appraisal_cycle_doc = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
 
@@ -266,6 +353,21 @@ class Appraisal(Document, AppraisalMixin):
 			self.db_update()
 
 		return self
+
+
+def get_grade(score):
+	"""Map PMS total score to grade"""
+	score = flt(score)
+	if score >= 91:
+		return "Outstanding"
+	elif score >= 81:
+		return "Exceeds Expectations"
+	elif score >= 71:
+		return "Meets Expectations"
+	elif score >= 60:
+		return "Needs Improvement"
+	else:
+		return "Unsatisfactory"
 
 
 @frappe.whitelist()
