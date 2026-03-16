@@ -11,6 +11,15 @@ frappe.ui.form.on("Appraisal", {
 
 		// don't allow removing image (fetched from employee)
 		frm.sidebar.image_wrapper.find(".sidebar-image-actions").addClass("hide");
+
+		// Filter appraisal_template by department (or templates with no department)
+		if (frm.doc.department) {
+			frm.set_query("appraisal_template", () => ({
+				filters: {
+					department: ["in", [frm.doc.department, ""]],
+				},
+			}));
+		}
 	},
 
 	appraisal_template(frm) {

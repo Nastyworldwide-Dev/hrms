@@ -192,6 +192,8 @@ class Appraisal(Document, AppraisalMixin):
 				{
 					"kra": entry.key_result_area,
 					"per_weightage": entry.per_weightage,
+					"kra_category": entry.get("kra_category"),
+					"kpi_description": entry.get("kpi_description"),
 				},
 			)
 

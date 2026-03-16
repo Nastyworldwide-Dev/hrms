@@ -8,6 +8,40 @@ from frappe.query_builder.functions import Count
 from frappe.query_builder.terms import SubQuery
 
 
+def get_department_template(department):
+	"""Find appraisal template by walking up the department tree"""
+	if not department:
+		return None
+
+	dept = frappe.db.get_value("Department", department, ["lft", "rgt"], as_dict=True)
+	if not dept:
+		return None
+
+	# Get all ancestor departments (including self), ordered nearest-first
+	ancestors = frappe.get_all(
+		"Department",
+		filters={
+			"lft": ("<=", dept.lft),
+			"rgt": (">=", dept.rgt),
+			"disabled": 0,
+		},
+		order_by="lft desc",
+		pluck="name",
+	)
+
+	# Find first ancestor that has an appraisal template
+	for ancestor in ancestors:
+		template = frappe.db.get_value(
+			"Appraisal Template",
+			{"department": ancestor},
+			"name",
+		)
+		if template:
+			return template
+
+	return None
+
+
 class AppraisalCycle(Document):
 	def onload(self):
 		self.set_onload("appraisals_created", self.check_if_appraisals_exist())
@@ -38,14 +72,20 @@ class AppraisalCycle(Document):
 	def set_employees(self):
 		"""Pull employees in appraisee list based on selected filters"""
 		employees = self.get_employees_for_appraisal()
-		appraisal_templates = self.get_appraisal_template_map()
+		designation_templates = self.get_appraisal_template_map()
 
 		if employees:
 			self.set("appraisees", [])
 			template_missing = False
 
 			for data in employees:
-				if not appraisal_templates.get(data.designation):
+				# Priority: department tree → designation → None
+				template = (
+					get_department_template(data.department)
+					or designation_templates.get(data.designation)
+				)
+
+				if not template:
 					template_missing = True
 
 				self.append(
@@ -56,7 +96,7 @@ class AppraisalCycle(Document):
 						"branch": data.branch,
 						"designation": data.designation,
 						"department": data.department,
-						"appraisal_template": appraisal_templates.get(data.designation),
+						"appraisal_template": template,
 					},
 				)
 
@@ -132,11 +172,14 @@ class AppraisalCycle(Document):
 			self.reload()
 
 	def show_missing_template_message(self, raise_exception=False):
-		msg = _("Appraisal Template not found for some designations.")
+		msg = _("Appraisal Template not found for some employees.")
 		msg += "<br><br>"
 		msg += _(
-			"Please set the Appraisal Template for all the {0} or select the template in the Employees table below."
-		).format(f"""<a href='{frappe.utils.get_url_to_list("Designation")}'>Designations</a>""")
+			"Please set the Appraisal Template for the relevant {0} or {1}, or select the template in the Employees table below."
+		).format(
+			f"""<a href='{frappe.utils.get_url_to_list("Department")}'>Departments</a>""",
+			f"""<a href='{frappe.utils.get_url_to_list("Designation")}'>Designations</a>""",
+		)
 
 		frappe.msgprint(
 			msg, title=_("Appraisal Template Missing"), indicator="yellow", raise_exception=raise_exception

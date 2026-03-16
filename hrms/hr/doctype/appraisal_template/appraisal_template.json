@@ -9,6 +9,7 @@
  "engine": "InnoDB",
  "field_order": [
   "template_title",
+  "department",
   "section_break_5",
   "description",
   "section_break_7",
@@ -60,6 +61,13 @@
    "oldfieldtype": "Data",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Department",
+   "options": "Department"
   }
  ],
  "icon": "icon-file-text",
@@ -72,6 +80,10 @@
   {
    "link_doctype": "Designation",
    "link_fieldname": "appraisal_template"
+  },
+  {
+   "link_doctype": "Department",
+   "link_fieldname": "department"
   }
  ],
  "modified": "2023-03-17 18:58:23.471479",
