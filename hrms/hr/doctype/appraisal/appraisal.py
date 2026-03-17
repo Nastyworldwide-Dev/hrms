@@ -487,6 +487,28 @@ def get_feedback_history(employee, appraisal):
 
 
 @frappe.whitelist()
+def get_department_ancestors(department):
+	"""Return list of department and its ancestors (for template filtering)"""
+	if not department:
+		return []
+
+	dept = frappe.db.get_value("Department", department, ["lft", "rgt"], as_dict=True)
+	if not dept:
+		return []
+
+	return frappe.get_all(
+		"Department",
+		filters={
+			"lft": ("<=", dept.lft),
+			"rgt": (">=", dept.rgt),
+			"disabled": 0,
+		},
+		order_by="lft desc",
+		pluck="name",
+	)
+
+
+@frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_kras_for_employee(doctype, txt, searchfield, start, page_len, filters):
 	appraisal = frappe.db.get_value(

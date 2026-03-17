@@ -41,13 +41,20 @@ frappe.ui.form.on("Appraisal", {
 			);
 		}
 
-		// Filter appraisal_template by department (or templates with no department)
+		// Filter appraisal_template by employee's department tree (self + ancestors)
 		if (frm.doc.department) {
-			frm.set_query("appraisal_template", () => ({
-				filters: {
-					department: ["in", [frm.doc.department, ""]],
+			frappe.call({
+				method: "hrms.hr.doctype.appraisal.appraisal.get_department_ancestors",
+				args: { department: frm.doc.department },
+				callback: (r) => {
+					let departments = r.message || [];
+					frm.set_query("appraisal_template", () => ({
+						filters: {
+							department: ["in", departments],
+						},
+					}));
 				},
-			}));
+			});
 		}
 	},
 
