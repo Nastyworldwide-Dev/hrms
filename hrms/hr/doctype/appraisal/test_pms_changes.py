@@ -1,0 +1,660 @@
+# Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
+# Tests for PMS 70/20/10 model changes, department-based template binding,
+# and related improvements on the as-hr_kpi branch.
+
+import frappe
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt
+
+from erpnext.setup.doctype.designation.test_designation import create_designation
+from erpnext.setup.doctype.employee.test_employee import make_employee
+
+from hrms.hr.doctype.appraisal.appraisal import GRADE_SCALE, get_grade
+from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import get_department_template
+from hrms.hr.doctype.appraisal_cycle.test_appraisal_cycle import create_appraisal_cycle
+from hrms.hr.doctype.appraisal_template.test_appraisal_template import (
+	create_appraisal_template,
+	create_kras,
+)
+from hrms.tests.test_utils import create_company
+
+
+class TestWeightageScaling(FrappeTestCase):
+	"""Tests for template 100% → 70% scaling when copying KRAs to appraisal"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.employee = make_employee(
+			"pms_test@example.com", company=self.company, designation="Engineer"
+		)
+
+	def test_kras_scaled_to_70(self):
+		"""Template KRAs (30+70=100) should become (21+49=70) on appraisal"""
+		cycle = create_appraisal_cycle(designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
+		self.assertEqual(total, 70.0)
+
+		# 30% of 100 → 21% of 70
+		self.assertEqual(appraisal.appraisal_kra[0].per_weightage, 21.0)
+		# 70% of 100 → 49% of 70
+		self.assertEqual(appraisal.appraisal_kra[1].per_weightage, 49.0)
+
+	def test_scaling_with_odd_weights(self):
+		"""Rounding fix should ensure weights sum to exactly 70"""
+		# 33.33 + 33.33 + 33.34 = 100
+		template = create_appraisal_template(
+			title="Odd Weights",
+			kras=[
+				{"key_result_area": "Quality", "per_weightage": 33.33},
+				{"key_result_area": "Development", "per_weightage": 33.33},
+				{"key_result_area": "Innovation", "per_weightage": 33.34},
+			],
+		)
+
+		appraisal = frappe.get_doc(
+			{
+				"doctype": "Appraisal",
+				"employee": self.employee,
+				"company": self.company,
+				"appraisal_template": template.name,
+				"appraisal_cycle": create_appraisal_cycle(
+					name="Q-Odd", designation="Engineer"
+				).name,
+			}
+		)
+		appraisal.set_kras_and_rating_criteria()
+
+		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
+		self.assertEqual(flt(total, 2), 70.0)
+
+	def test_scaling_preserves_ratios(self):
+		"""Relative proportions should be maintained after scaling"""
+		cycle = create_appraisal_cycle(name="Q-Ratio", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		w0 = appraisal.appraisal_kra[0].per_weightage
+		w1 = appraisal.appraisal_kra[1].per_weightage
+
+		# Original ratio: 30:70 = 3:7, scaled should maintain ~3:7
+		ratio = w0 / w1
+		expected_ratio = 30.0 / 70.0
+		self.assertAlmostEqual(ratio, expected_ratio, places=1)
+
+	def test_manual_rating_goals_not_scaled(self):
+		"""Manual rating mode uses 'goals' table — weightage should still scale to 70"""
+		cycle = create_appraisal_cycle(
+			name="Q-Manual", designation="Engineer", kra_evaluation_method="Manual Rating"
+		)
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		total = sum(flt(row.per_weightage) for row in appraisal.goals)
+		self.assertEqual(flt(total, 2), 70.0)
+
+
+class TestKRAMetadataCopy(FrappeTestCase):
+	"""Tests for kra_category and kpi_description copying from template to appraisal"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+
+		create_kras(["Revenue", "Compliance"])
+
+		self.template = create_appraisal_template(
+			title="Metadata Test",
+			kras=[
+				{
+					"key_result_area": "Revenue",
+					"per_weightage": 60,
+					"kra_category": "Financial Goal",
+					"kpi_description": "Achieve 15% YoY growth",
+				},
+				{
+					"key_result_area": "Compliance",
+					"per_weightage": 40,
+					"kra_category": "Stakeholder Goal",
+					"kpi_description": "Zero audit findings",
+				},
+			],
+		)
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.employee = make_employee(
+			"metadata_test@example.com", company=self.company, designation="Engineer"
+		)
+
+	def test_category_and_kpi_copied(self):
+		"""kra_category and kpi_description should copy from template to appraisal KRA rows"""
+		cycle = create_appraisal_cycle(name="Q-Meta", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		self.assertEqual(appraisal.appraisal_kra[0].kra_category, "Financial Goal")
+		self.assertEqual(appraisal.appraisal_kra[0].kpi_description, "Achieve 15% YoY growth")
+		self.assertEqual(appraisal.appraisal_kra[1].kra_category, "Stakeholder Goal")
+		self.assertEqual(appraisal.appraisal_kra[1].kpi_description, "Zero audit findings")
+
+	def test_empty_metadata_handled(self):
+		"""Template goals without metadata should copy as None/empty"""
+		template = create_appraisal_template()  # default — no metadata
+
+		appraisal = frappe.get_doc(
+			{
+				"doctype": "Appraisal",
+				"employee": self.employee,
+				"company": self.company,
+				"appraisal_template": template.name,
+				"appraisal_cycle": create_appraisal_cycle(
+					name="Q-NoMeta", designation="Engineer"
+				).name,
+			}
+		)
+		appraisal.set_kras_and_rating_criteria()
+
+		for row in appraisal.appraisal_kra:
+			self.assertFalse(row.kra_category)
+			self.assertFalse(row.kpi_description)
+
+
+class TestDepartmentTemplateResolution(FrappeTestCase):
+	"""Tests for department tree-based template lookup"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+
+		# Create department tree: Operations → Logistics, Procurement
+		self._create_department_tree()
+
+		create_kras(["Ops KRA", "Procurement KRA"])
+
+		# Template for Operations (parent)
+		self.ops_template = create_appraisal_template(
+			title="Operations KRAs",
+			kras=[
+				{"key_result_area": "Ops KRA", "per_weightage": 100},
+			],
+		)
+		self.ops_template.department = self.operations
+		self.ops_template.save()
+
+		# Template for Procurement (override)
+		self.proc_template = create_appraisal_template(
+			title="Procurement KRAs",
+			kras=[
+				{"key_result_area": "Procurement KRA", "per_weightage": 100},
+			],
+		)
+		self.proc_template.department = self.procurement
+		self.proc_template.save()
+
+	def _create_department_tree(self):
+		"""Create Operations → Logistics, Procurement department tree"""
+		from erpnext.setup.doctype.department.department import get_abbreviated_name
+
+		company_abbr = frappe.get_cached_value("Company", self.company, "abbr")
+
+		# Parent department
+		ops_name = get_abbreviated_name("Operations", self.company)
+		if not frappe.db.exists("Department", ops_name):
+			ops = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "Operations",
+					"company": self.company,
+				}
+			).insert()
+			self.operations = ops.name
+		else:
+			self.operations = ops_name
+
+		# Child: Logistics (no template — should inherit from Operations)
+		log_name = get_abbreviated_name("Logistics", self.company)
+		if not frappe.db.exists("Department", log_name):
+			log = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "Logistics",
+					"company": self.company,
+					"parent_department": self.operations,
+				}
+			).insert()
+			self.logistics = log.name
+		else:
+			self.logistics = log_name
+
+		# Child: Procurement (has own template — overrides parent)
+		proc_name = get_abbreviated_name("Procurement", self.company)
+		if not frappe.db.exists("Department", proc_name):
+			proc = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "Procurement",
+					"company": self.company,
+					"parent_department": self.operations,
+				}
+			).insert()
+			self.procurement = proc.name
+		else:
+			self.procurement = proc_name
+
+		# Rebuild tree to set lft/rgt
+		frappe.get_doc("Department", self.operations).rebuild_tree()
+
+	def test_exact_department_match(self):
+		"""Procurement has its own template — should use it directly"""
+		result = get_department_template(self.procurement)
+		self.assertEqual(result, self.proc_template.name)
+
+	def test_parent_department_inheritance(self):
+		"""Logistics has no template — should inherit from parent Operations"""
+		result = get_department_template(self.logistics)
+		self.assertEqual(result, self.ops_template.name)
+
+	def test_parent_department_direct(self):
+		"""Operations has a template — should return it"""
+		result = get_department_template(self.operations)
+		self.assertEqual(result, self.ops_template.name)
+
+	def test_no_template_returns_none(self):
+		"""Department with no template in tree should return None"""
+		from erpnext.setup.doctype.department.department import get_abbreviated_name
+
+		dept_name = get_abbreviated_name("Orphan Dept", self.company)
+		if not frappe.db.exists("Department", dept_name):
+			dept = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "Orphan Dept",
+					"company": self.company,
+				}
+			).insert()
+			dept_name = dept.name
+
+		result = get_department_template(dept_name)
+		self.assertIsNone(result)
+
+	def test_none_department_returns_none(self):
+		result = get_department_template(None)
+		self.assertIsNone(result)
+
+	def test_cycle_uses_department_over_designation(self):
+		"""When both department template and designation template exist, department wins"""
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.ops_template.name
+		engineer.save()
+
+		emp = make_employee(
+			"logistics_emp@example.com",
+			company=self.company,
+			designation="Engineer",
+			department=self.procurement,
+		)
+
+		cycle = create_appraisal_cycle(name="Q-Dept", company=self.company)
+		# Find the appraisee for this employee
+		appraisee = [a for a in cycle.appraisees if a.employee == emp]
+		self.assertTrue(len(appraisee) > 0)
+		# Should use Procurement template, not designation template
+		self.assertEqual(appraisee[0].appraisal_template, self.proc_template.name)
+
+	def test_designation_fallback_when_no_dept_template(self):
+		"""Employee with no department template should fall back to designation"""
+		from erpnext.setup.doctype.department.department import get_abbreviated_name
+
+		# Create a department with no template anywhere in its tree
+		dept_name = get_abbreviated_name("NoTemplate Dept", self.company)
+		if not frappe.db.exists("Department", dept_name):
+			dept = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "NoTemplate Dept",
+					"company": self.company,
+				}
+			).insert()
+			dept_name = dept.name
+
+		fallback_template = create_appraisal_template()
+
+		designer = create_designation(designation_name="Designer")
+		designer.appraisal_template = fallback_template.name
+		designer.save()
+
+		emp = make_employee(
+			"no_dept_template@example.com",
+			company=self.company,
+			designation="Designer",
+			department=dept_name,
+		)
+
+		cycle = create_appraisal_cycle(name="Q-Fallback", company=self.company)
+		appraisee = [a for a in cycle.appraisees if a.employee == emp]
+		self.assertTrue(len(appraisee) > 0)
+		self.assertEqual(appraisee[0].appraisal_template, fallback_template.name)
+
+
+class TestAppraisalTemplateResolution(FrappeTestCase):
+	"""Tests for set_appraisal_template() fallback chain on Appraisal form"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+
+		create_kras(["Dept KRA", "Desig KRA"])
+
+		self.dept_template = create_appraisal_template(
+			title="Dept Template",
+			kras=[{"key_result_area": "Dept KRA", "per_weightage": 100}],
+		)
+
+		self.desig_template = create_appraisal_template(
+			title="Desig Template",
+			kras=[{"key_result_area": "Desig KRA", "per_weightage": 100}],
+		)
+
+		from erpnext.setup.doctype.department.department import get_abbreviated_name
+
+		dept_name = get_abbreviated_name("Template Test Dept", self.company)
+		if not frappe.db.exists("Department", dept_name):
+			dept = frappe.get_doc(
+				{
+					"doctype": "Department",
+					"department_name": "Template Test Dept",
+					"company": self.company,
+				}
+			).insert()
+			dept_name = dept.name
+		self.department = dept_name
+
+		self.dept_template.department = self.department
+		self.dept_template.save()
+
+		analyst = create_designation(designation_name="Analyst")
+		analyst.appraisal_template = self.desig_template.name
+		analyst.save()
+
+		self.employee = make_employee(
+			"template_resolve@example.com",
+			company=self.company,
+			designation="Analyst",
+			department=self.department,
+		)
+
+	def test_department_wins_over_designation(self):
+		"""When no cycle appraisee entry, department template should be preferred over designation"""
+		appraisal = frappe.get_doc(
+			{
+				"doctype": "Appraisal",
+				"employee": self.employee,
+				"company": self.company,
+				"appraisal_cycle": create_appraisal_cycle(
+					name="Q-Resolve", designation="Analyst"
+				).name,
+			}
+		)
+		appraisal.set_appraisal_template()
+
+		# Department template should win since it's checked before designation
+		self.assertEqual(appraisal.appraisal_template, self.dept_template.name)
+
+
+class TestGradeScale(FrappeTestCase):
+	"""Tests for centralized grade scale"""
+
+	def test_grade_boundaries(self):
+		self.assertEqual(get_grade(100), "Outstanding")
+		self.assertEqual(get_grade(91), "Outstanding")
+		self.assertEqual(get_grade(90), "Exceeds Expectations")
+		self.assertEqual(get_grade(81), "Exceeds Expectations")
+		self.assertEqual(get_grade(80), "Meets Expectations")
+		self.assertEqual(get_grade(71), "Meets Expectations")
+		self.assertEqual(get_grade(70), "Needs Improvement")
+		self.assertEqual(get_grade(60), "Needs Improvement")
+		self.assertEqual(get_grade(59), "Unsatisfactory")
+		self.assertEqual(get_grade(0), "Unsatisfactory")
+
+	def test_grade_scale_constant_sorted_descending(self):
+		"""GRADE_SCALE must be sorted descending by threshold for get_grade() to work"""
+		thresholds = [t for t, _ in GRADE_SCALE]
+		self.assertEqual(thresholds, sorted(thresholds, reverse=True))
+
+	def test_grade_scale_covers_zero(self):
+		"""Last threshold must be 0 to catch all scores"""
+		self.assertEqual(GRADE_SCALE[-1][0], 0)
+
+
+class TestSectionScoreCalculation(FrappeTestCase):
+	"""Tests for PMS section score calculations"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.employee = make_employee(
+			"score_test@example.com", company=self.company, designation="Engineer"
+		)
+
+	def test_section_a_score_calculation(self):
+		"""weighted_score = per_weightage * (rating * 5) / 5 = per_weightage * rating"""
+		cycle = create_appraisal_cycle(name="Q-ScoreA", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		# Set ratings (0-1 fraction, where 1.0 = 5 stars)
+		appraisal.appraisal_kra[0].manager_rating = 1.0  # 5/5 on 21% weight
+		appraisal.appraisal_kra[1].manager_rating = 0.8  # 4/5 on 49% weight
+		appraisal.save()
+
+		# Row 0: 21 * (1.0*5) / 5 = 21.0
+		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 21.0)
+		# Row 1: 49 * (0.8*5) / 5 = 49 * 0.8 = 39.2
+		self.assertEqual(appraisal.appraisal_kra[1].weighted_score, 39.2)
+		# Total Section A: 21.0 + 39.2 = 60.2
+		self.assertEqual(appraisal.section_a_score, 60.2)
+
+	def test_achievement_calculation(self):
+		"""achievement = actual / target * 100"""
+		cycle = create_appraisal_cycle(name="Q-Achieve", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		appraisal.appraisal_kra[0].target = 100
+		appraisal.appraisal_kra[0].actual = 85
+		appraisal.appraisal_kra[0].manager_rating = 0.8
+		appraisal.save()
+
+		self.assertEqual(appraisal.appraisal_kra[0].achievement, 85.0)
+
+	def test_zero_target_achievement(self):
+		"""Target of 0 should not cause division by zero"""
+		cycle = create_appraisal_cycle(name="Q-ZeroTarget", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		appraisal.appraisal_kra[0].target = 0
+		appraisal.appraisal_kra[0].actual = 50
+		appraisal.appraisal_kra[0].manager_rating = 0.6
+		appraisal.save()
+
+		self.assertEqual(appraisal.appraisal_kra[0].achievement, 0)
+
+	def test_pms_total_and_grade(self):
+		"""PMS total = section_a + section_b + section_c; grade derived from total"""
+		cycle = create_appraisal_cycle(name="Q-PMS", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		# Max out all ratings
+		for row in appraisal.appraisal_kra:
+			row.manager_rating = 1.0  # 5/5
+
+		appraisal.save()
+
+		# Section A should be 70 (all 5/5 on total 70% weight)
+		self.assertEqual(appraisal.section_a_score, 70.0)
+		# No Section B/C rows, so PMS total = 70
+		self.assertEqual(appraisal.pms_total_score, 70.0)
+		self.assertEqual(appraisal.overall_grade, "Needs Improvement")
+
+	def test_final_score_uses_pms_total(self):
+		"""final_score should equal pms_total_score when PMS model is active"""
+		cycle = create_appraisal_cycle(name="Q-Final", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		for row in appraisal.appraisal_kra:
+			row.manager_rating = 1.0
+		appraisal.save()
+
+		self.assertEqual(appraisal.final_score, appraisal.pms_total_score)
+
+
+class TestCalculateTotalScoreExpects70(FrappeTestCase):
+	"""Tests that calculate_total_score validates weightage sums correctly"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.employee = make_employee(
+			"total_score_test@example.com", company=self.company, designation="Engineer"
+		)
+
+	def test_kra_weightage_70_passes_validation(self):
+		"""KRA weights summing to 70 should pass validate_total_weightage"""
+		cycle = create_appraisal_cycle(name="Q-Val70", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		# Should not throw — weights sum to 70
+		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
+		self.assertEqual(total, 70.0)
+		appraisal.save()  # Should succeed without error
+
+
+class TestGoalScoreGroupedQuery(FrappeTestCase):
+	"""Tests that the grouped query in set_goal_score produces same results as N+1"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.employee = make_employee(
+			"goal_query_test@example.com", company=self.company, designation="Engineer"
+		)
+
+	def test_goal_score_with_no_goals(self):
+		"""No goals should result in 0 completion for all KRAs"""
+		cycle = create_appraisal_cycle(name="Q-NoGoal", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		for kra in appraisal.appraisal_kra:
+			self.assertEqual(kra.goal_completion, 0)
+			self.assertEqual(kra.goal_score, 0)
+
+	def test_goal_score_single_kra(self):
+		"""Goal score for a single KRA with one goal"""
+		from hrms.hr.doctype.goal.test_goal import create_goal
+
+		cycle = create_appraisal_cycle(name="Q-SingleGoal", designation="Engineer")
+		cycle.create_appraisals()
+
+		create_goal(self.employee, "Quality", appraisal_cycle=cycle.name, progress=75)
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		# Quality KRA, 21% weight, 75% completion → goal_score = 75 * 21 / 100 = 15.75
+		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 75)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15.75)

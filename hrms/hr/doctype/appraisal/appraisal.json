@@ -271,7 +271,8 @@
   },
   {
    "fieldname": "section_break_kras",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Section A: KRA/KPI (70%)"
   },
   {
    "fieldname": "section_break_goals",
@@ -321,7 +322,7 @@
   },
   {
    "depends_on": "appraisal_cycle",
-   "description": "Average of Goal Score, Feedback Score, and Self Appraisal Score",
+   "description": "PMS Total Score (Section A + B + C), or legacy formula-based calculation",
    "fieldname": "final_score",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -396,6 +397,7 @@
   {
    "fieldname": "competency_score",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section B Score",
    "read_only": 1
   },
@@ -418,6 +420,7 @@
   {
    "fieldname": "initiatives_score",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section C Score",
    "read_only": 1
   },
@@ -464,8 +467,7 @@
   {
    "fieldname": "grade_scale_html",
    "fieldtype": "HTML",
-   "label": "Grade Scale",
-   "options": "<div style='margin-top:10px; padding:10px; background:#f5f5f5; border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>91\u2013100: Outstanding | 81\u201390: Exceeds Expectations | 71\u201380: Meets Expectations | 60\u201370: Needs Improvement | &lt;60: Unsatisfactory</div>"
+   "label": "Grade Scale"
   },
   {
    "fieldname": "signoff_tab",
@@ -480,18 +482,21 @@
   {
    "fieldname": "appraisee_comments",
    "fieldtype": "Text Editor",
-   "label": "Appraisee Comments"
+   "label": "Appraisee Comments",
+   "permlevel": 1
   },
   {
    "fieldname": "appraisee_agreement",
    "fieldtype": "Select",
    "label": "Appraisee Agreement",
-   "options": "\nI agree and accept the reviews and feedback\nI request extension for improvement"
+   "options": "\nI agree and accept the reviews and feedback\nI request extension for improvement",
+   "permlevel": 1
   },
   {
    "fieldname": "appraisee_sign_date",
    "fieldtype": "Date",
-   "label": "Appraisee Sign Date"
+   "label": "Appraisee Sign Date",
+   "permlevel": 1
   },
   {
    "fieldname": "appraiser_section",
@@ -501,18 +506,21 @@
   {
    "fieldname": "appraiser_comments",
    "fieldtype": "Text Editor",
-   "label": "Appraiser Comments"
+   "label": "Appraiser Comments",
+   "permlevel": 2
   },
   {
    "fieldname": "appraiser_decision",
    "fieldtype": "Select",
    "label": "Appraiser Decision",
-   "options": "\nFor employee records and improvement\nConfirm employee\nExtend probation\nSet for PIP/PDP"
+   "options": "\nFor employee records and improvement\nConfirm employee\nExtend probation\nSet for PIP/PDP",
+   "permlevel": 2
   },
   {
    "fieldname": "appraiser_sign_date",
    "fieldtype": "Date",
-   "label": "Appraiser Sign Date"
+   "label": "Appraiser Sign Date",
+   "permlevel": 2
   },
   {
    "fieldname": "reviewer_section",
@@ -522,12 +530,14 @@
   {
    "fieldname": "reviewer_comments",
    "fieldtype": "Text Editor",
-   "label": "Reviewer Comments"
+   "label": "Reviewer Comments",
+   "permlevel": 3
   },
   {
    "fieldname": "reviewer_sign_date",
    "fieldtype": "Date",
-   "label": "Reviewer Sign Date"
+   "label": "Reviewer Sign Date",
+   "permlevel": 3
   }
  ],
  "icon": "fa fa-thumbs-up",
@@ -592,6 +602,55 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Employee",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",

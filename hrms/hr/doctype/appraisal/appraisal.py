@@ -7,7 +7,10 @@ from frappe.model.document import Document
 from frappe.query_builder.functions import Avg
 from frappe.utils import flt, get_link_to_form, now
 
-from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import validate_active_appraisal_cycle
+from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
+	get_department_template,
+	validate_active_appraisal_cycle,
+)
 from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
 from hrms.payroll.utils import sanitize_expression
@@ -110,7 +113,11 @@ class Appraisal(Document, AppraisalMixin):
 				self.performance_period = f"{cycle.start_date} to {cycle.end_date}"
 
 	def calculate_section_a_score(self):
-		"""Calculate Section A: KRA/KPI score (max 70)"""
+		"""Calculate Section A: KRA/KPI score (max 70)
+
+		Note: Frappe Rating field stores values as 0-1 fractions (0, 0.2, 0.4, 0.6, 0.8, 1.0)
+		representing a 1-5 star scale. We multiply by 5 to get the 1-5 value.
+		"""
 		section_a = 0
 		for row in self.appraisal_kra:
 			if flt(row.target):
@@ -133,7 +140,6 @@ class Appraisal(Document, AppraisalMixin):
 			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			section_b += flt(row.score)
 
-		self.competency_score = flt(section_b, 2)
 		self.section_b_score = flt(section_b, 2)
 
 	def calculate_section_c_score(self):
@@ -144,7 +150,6 @@ class Appraisal(Document, AppraisalMixin):
 			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			section_c += flt(row.score)
 
-		self.initiatives_score = flt(section_c, 2)
 		self.section_c_score = flt(section_c, 2)
 
 	def calculate_pms_total(self):
@@ -156,18 +161,32 @@ class Appraisal(Document, AppraisalMixin):
 
 	@frappe.whitelist()
 	def set_appraisal_template(self):
-		"""Sets appraisal template from Appraisee table in Cycle"""
-		if not self.appraisal_cycle:
+		"""Sets appraisal template from Appraisee table, then department tree, then designation"""
+		if not self.employee:
 			return
 
-		appraisal_template = frappe.db.get_value(
-			"Appraisee",
-			{
-				"employee": self.employee,
-				"parent": self.appraisal_cycle,
-			},
-			"appraisal_template",
-		)
+		appraisal_template = None
+
+		# 1. Check Appraisee table in Cycle
+		if self.appraisal_cycle:
+			appraisal_template = frappe.db.get_value(
+				"Appraisee",
+				{
+					"employee": self.employee,
+					"parent": self.appraisal_cycle,
+				},
+				"appraisal_template",
+			)
+
+		# 2. Fall back to department tree
+		if not appraisal_template and self.department:
+			appraisal_template = get_department_template(self.department)
+
+		# 3. Fall back to designation
+		if not appraisal_template and self.designation:
+			appraisal_template = frappe.db.get_value(
+				"Designation", self.designation, "appraisal_template"
+			)
 
 		if appraisal_template:
 			self.appraisal_template = appraisal_template
@@ -184,18 +203,31 @@ class Appraisal(Document, AppraisalMixin):
 
 		template = frappe.get_doc("Appraisal Template", self.appraisal_template)
 
-		for entry in template.goals:
-			table_name = "goals" if self.rate_goals_manually else "appraisal_kra"
+		# Template goals sum to 100%; scale to 70% for Section A
+		template_total = sum(flt(e.per_weightage) for e in template.goals) or 100
+		section_a_max = 70
+		scale = section_a_max / template_total
 
+		table_name = "goals" if self.rate_goals_manually else "appraisal_kra"
+
+		for entry in template.goals:
 			self.append(
 				table_name,
 				{
 					"kra": entry.key_result_area,
-					"per_weightage": entry.per_weightage,
+					"per_weightage": flt(entry.per_weightage * scale, 2),
 					"kra_category": entry.get("kra_category"),
 					"kpi_description": entry.get("kpi_description"),
 				},
 			)
+
+		# Fix rounding so rows sum to exactly section_a_max
+		rows = self.get(table_name)
+		if rows:
+			rounded_total = sum(flt(r.per_weightage) for r in rows)
+			diff = flt(section_a_max - rounded_total, 2)
+			if diff:
+				rows[-1].per_weightage = flt(rows[-1].per_weightage + diff, 2)
 
 		for entry in template.rating_criteria:
 			self.append(
@@ -214,6 +246,7 @@ class Appraisal(Document, AppraisalMixin):
 		number_of_stars = meta.get_options("score") or 5
 		if self.rate_goals_manually:
 			table = _("Goals")
+			expected_total = 70.0
 			for entry in self.goals:
 				if flt(entry.score) > flt(number_of_stars):
 					frappe.throw(
@@ -226,6 +259,7 @@ class Appraisal(Document, AppraisalMixin):
 
 		else:
 			table = _("KRAs")
+			expected_total = 70.0
 			for entry in self.appraisal_kra:
 				goal_score_percentage += flt(entry.goal_score)
 				total_weightage += flt(entry.per_weightage)
@@ -234,10 +268,10 @@ class Appraisal(Document, AppraisalMixin):
 			# convert goal score percentage to total score out of 5
 			total = flt(goal_score_percentage) / 20
 
-		if total_weightage and flt(total_weightage, 2) != 100.0:
+		if total_weightage and flt(total_weightage, 2) != flt(expected_total, 2):
 			frappe.throw(
-				_("Total weightage for all {0} must add up to 100. Currently, it is {1}%").format(
-					table, total_weightage
+				_("Total weightage for all {0} must add up to {1}. Currently, it is {2}%").format(
+					table, expected_total, total_weightage
 				),
 				title=_("Incorrect Weightage Allocation"),
 			)
@@ -281,15 +315,18 @@ class Appraisal(Document, AppraisalMixin):
 		based_on_formula = appraisal_cycle_doc.calculate_final_score_based_on_formula
 
 		if based_on_formula:
-			employee_doc = frappe.get_cached_doc("Employee", self.employee)
 			data = {
 				"goal_score": flt(self.total_score),
 				"average_feedback_score": flt(self.avg_feedback_score),
 				"self_appraisal_score": flt(self.self_score),
+				"section_a_score": flt(self.section_a_score),
+				"section_b_score": flt(self.section_b_score),
+				"section_c_score": flt(self.section_c_score),
+				"pms_total_score": flt(self.pms_total_score),
+				"total_score": flt(self.total_score),
+				"self_score": flt(self.self_score),
+				"avg_feedback_score": flt(self.avg_feedback_score),
 			}
-			data.update(appraisal_cycle_doc.as_dict())
-			data.update(employee_doc.as_dict())
-			data.update(self.as_dict())
 
 			sanitized_formula = sanitize_expression(formula)
 			final_score = frappe.safe_eval(sanitized_formula, data)
@@ -326,22 +363,25 @@ class Appraisal(Document, AppraisalMixin):
 		return feedback
 
 	def set_goal_score(self, update=False):
-		for kra in self.appraisal_kra:
-			# update progress for all goals as KRA linked could be removed or changed
-			Goal = frappe.qb.DocType("Goal")
-			avg_goal_completion = (
+		# Single grouped query instead of N+1 per KRA
+		Goal = frappe.qb.DocType("Goal")
+		avg_by_kra = {
+			row.kra: flt(row.avg_progress)
+			for row in (
 				frappe.qb.from_(Goal)
-				.select(Avg(Goal.progress).as_("avg_goal_completion"))
+				.select(Goal.kra, Avg(Goal.progress).as_("avg_progress"))
 				.where(
-					(Goal.kra == kra.kra)
-					& (Goal.employee == self.employee)
-					# archived goals should not contribute to progress
+					(Goal.employee == self.employee)
+					& (Goal.appraisal_cycle == self.appraisal_cycle)
 					& (Goal.status != "Archived")
 					& ((Goal.parent_goal == "") | (Goal.parent_goal.isnull()))
-					& (Goal.appraisal_cycle == self.appraisal_cycle)
 				)
-			).run()[0][0]
+				.groupby(Goal.kra)
+			).run(as_dict=True)
+		}
 
+		for kra in self.appraisal_kra:
+			avg_goal_completion = avg_by_kra.get(kra.kra, 0)
 			kra.goal_completion = flt(avg_goal_completion, kra.precision("goal_completion"))
 			kra.goal_score = flt(kra.goal_completion * kra.per_weightage / 100, kra.precision("goal_score"))
 
@@ -357,19 +397,40 @@ class Appraisal(Document, AppraisalMixin):
 		return self
 
 
+GRADE_SCALE = [
+	(91, "Outstanding"),
+	(81, "Exceeds Expectations"),
+	(71, "Meets Expectations"),
+	(60, "Needs Improvement"),
+	(0, "Unsatisfactory"),
+]
+
+
 def get_grade(score):
-	"""Map PMS total score to grade"""
+	"""Map PMS total score to grade using GRADE_SCALE thresholds"""
 	score = flt(score)
-	if score >= 91:
-		return "Outstanding"
-	elif score >= 81:
-		return "Exceeds Expectations"
-	elif score >= 71:
-		return "Meets Expectations"
-	elif score >= 60:
-		return "Needs Improvement"
-	else:
-		return "Unsatisfactory"
+	for threshold, grade in GRADE_SCALE:
+		if score >= threshold:
+			return grade
+	return GRADE_SCALE[-1][1]
+
+
+def get_grade_scale_html():
+	"""Generate grade scale HTML from GRADE_SCALE for display on form"""
+	parts = []
+	for i, (threshold, grade) in enumerate(GRADE_SCALE):
+		if i < len(GRADE_SCALE) - 1:
+			next_threshold = GRADE_SCALE[i - 1][0] if i > 0 else 100
+			parts.append(f"{threshold}\u2013{next_threshold}: {grade}")
+		else:
+			prev_threshold = GRADE_SCALE[i - 1][0]
+			parts.append(f"&lt;{prev_threshold}: {grade}")
+	return (
+		"<div style='margin-top:10px; padding:10px; background:#f5f5f5; "
+		"border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>"
+		+ " | ".join(parts)
+		+ "</div>"
+	)
 
 
 @frappe.whitelist()

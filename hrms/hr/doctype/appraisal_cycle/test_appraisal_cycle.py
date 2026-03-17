@@ -40,10 +40,13 @@ class TestAppraisalCycle(FrappeTestCase):
 
 		appraisal = frappe.get_doc("Appraisal", appraisals[0].name)
 
+		# Template weights (30+70=100) are scaled to 70% for Section A
+		expected_weights = [21.0, 49.0]
+
 		for i in range(2):
 			# check if KRAs are set
 			self.assertEqual(appraisal.appraisal_kra[i].kra, self.template.goals[i].key_result_area)
-			self.assertEqual(appraisal.appraisal_kra[i].per_weightage, self.template.goals[i].per_weightage)
+			self.assertEqual(appraisal.appraisal_kra[i].per_weightage, expected_weights[i])
 
 			# check if rating criteria is set
 			self.assertEqual(appraisal.self_ratings[i].criteria, self.template.rating_criteria[i].criteria)

@@ -1,6 +1,21 @@
 // Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
+const GRADE_SCALE = [
+	[91, "Outstanding"],
+	[81, "Exceeds Expectations"],
+	[71, "Meets Expectations"],
+	[60, "Needs Improvement"],
+	[0, "Unsatisfactory"],
+];
+
+function get_grade(score) {
+	for (let [threshold, grade] of GRADE_SCALE) {
+		if (score >= threshold) return grade;
+	}
+	return GRADE_SCALE[GRADE_SCALE.length - 1][1];
+}
+
 frappe.ui.form.on("Appraisal", {
 	refresh(frm) {
 		if (!frm.doc.__islocal) {
@@ -11,6 +26,20 @@ frappe.ui.form.on("Appraisal", {
 
 		// don't allow removing image (fetched from employee)
 		frm.sidebar.image_wrapper.find(".sidebar-image-actions").addClass("hide");
+
+		// Render grade scale from shared constant
+		if (frm.fields_dict.grade_scale_html) {
+			let parts = GRADE_SCALE.map(([threshold, grade], i) => {
+				if (i < GRADE_SCALE.length - 1) {
+					let upper = i > 0 ? GRADE_SCALE[i - 1][0] : 100;
+					return `${threshold}\u2013${upper}: ${grade}`;
+				}
+				return `&lt;${GRADE_SCALE[i - 1][0]}: ${grade}`;
+			});
+			frm.fields_dict.grade_scale_html.$wrapper.html(
+				`<div style="margin-top:10px; padding:10px; background:#f5f5f5; border-radius:4px; font-size:12px;"><strong>Grade Scale:</strong><br>${parts.join(" | ")}</div>`
+			);
+		}
 
 		// Filter appraisal_template by department (or templates with no department)
 		if (frm.doc.department) {
@@ -144,7 +173,6 @@ frappe.ui.form.on("Appraisal", {
 			total += flt(d.score);
 		});
 		frm.set_value("section_b_score", flt(total, 2));
-		frm.set_value("competency_score", flt(total, 2));
 		frm.trigger("calculate_pms_total");
 	},
 
@@ -154,7 +182,6 @@ frappe.ui.form.on("Appraisal", {
 			total += flt(d.score);
 		});
 		frm.set_value("section_c_score", flt(total, 2));
-		frm.set_value("initiatives_score", flt(total, 2));
 		frm.trigger("calculate_pms_total");
 	},
 
@@ -164,15 +191,7 @@ frappe.ui.form.on("Appraisal", {
 			flt(frm.doc.section_b_score) +
 			flt(frm.doc.section_c_score);
 		frm.set_value("pms_total_score", flt(total, 2));
-
-		let grade = "";
-		if (total >= 91) grade = "Outstanding";
-		else if (total >= 81) grade = "Exceeds Expectations";
-		else if (total >= 71) grade = "Meets Expectations";
-		else if (total >= 60) grade = "Needs Improvement";
-		else grade = "Unsatisfactory";
-
-		frm.set_value("overall_grade", grade);
+		frm.set_value("overall_grade", get_grade(total));
 	},
 });
 
