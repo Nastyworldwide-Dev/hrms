@@ -47,14 +47,12 @@
   {
    "fieldname": "kra_category",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Category",
    "options": "\nStakeholder Goal\nFinancial Goal\nContinuous Growth Goal\nOperational Goal\nPeople Goal"
   },
   {
    "fieldname": "kpi_description",
    "fieldtype": "Small Text",
-   "in_list_view": 1,
    "label": "KPI"
   },
   {
