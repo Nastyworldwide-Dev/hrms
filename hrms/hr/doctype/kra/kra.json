@@ -26,7 +26,12 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
+ "links": [
+  {
+   "link_doctype": "KPI",
+   "link_fieldname": "kra"
+  }
+ ],
  "modified": "2023-03-17 20:53:40.000452",
  "modified_by": "Administrator",
  "module": "HR",

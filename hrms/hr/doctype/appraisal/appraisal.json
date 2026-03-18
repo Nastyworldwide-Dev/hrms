@@ -31,6 +31,17 @@
   "kra_tab",
   "appraisal_template",
   "rate_goals_manually",
+  "scoring_method_section",
+  "scoring_method",
+  "allow_over_achievement",
+  "column_break_asm",
+  "achievement_weight_pct",
+  "manager_rating_weight_pct",
+  "section_pct_section",
+  "section_a_pct",
+  "section_b_pct",
+  "column_break_apct",
+  "section_c_pct",
   "section_break_kras",
   "appraisal_kra",
   "goal_score_percentage",
@@ -270,9 +281,73 @@
    "label": "Remarks"
   },
   {
+   "fieldname": "scoring_method_section",
+   "fieldtype": "Section Break",
+   "label": "Scoring Method"
+  },
+  {
+   "default": "Manager Rating Only",
+   "fieldname": "scoring_method",
+   "fieldtype": "Select",
+   "label": "Scoring Method",
+   "options": "Manager Rating Only\nAchievement Based\nBlended"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.scoring_method === 'Achievement Based' || doc.scoring_method === 'Blended'",
+   "fieldname": "allow_over_achievement",
+   "fieldtype": "Check",
+   "label": "Allow Over-Achievement"
+  },
+  {
+   "fieldname": "column_break_asm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "50",
+   "depends_on": "eval:doc.scoring_method === 'Blended'",
+   "fieldname": "achievement_weight_pct",
+   "fieldtype": "Float",
+   "label": "Achievement Weight %"
+  },
+  {
+   "default": "50",
+   "depends_on": "eval:doc.scoring_method === 'Blended'",
+   "fieldname": "manager_rating_weight_pct",
+   "fieldtype": "Float",
+   "label": "Manager Rating Weight %"
+  },
+  {
+   "fieldname": "section_pct_section",
+   "fieldtype": "Section Break",
+   "label": "Section Percentages"
+  },
+  {
+   "default": "70",
+   "fieldname": "section_a_pct",
+   "fieldtype": "Float",
+   "label": "Section A %"
+  },
+  {
+   "default": "20",
+   "fieldname": "section_b_pct",
+   "fieldtype": "Float",
+   "label": "Section B %"
+  },
+  {
+   "fieldname": "column_break_apct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "fieldname": "section_c_pct",
+   "fieldtype": "Float",
+   "label": "Section C %"
+  },
+  {
    "fieldname": "section_break_kras",
    "fieldtype": "Section Break",
-   "label": "Section A: KRA/KPI (70%)"
+   "label": "Section A: KRA/KPI"
   },
   {
    "fieldname": "section_break_goals",
@@ -386,7 +461,7 @@
   {
    "fieldname": "section_b_heading",
    "fieldtype": "Section Break",
-   "label": "Section B: Functional Competency (20% Weight)"
+   "label": "Section B: Functional Competency"
   },
   {
    "fieldname": "functional_competencies",
@@ -409,7 +484,7 @@
   {
    "fieldname": "section_c_heading",
    "fieldtype": "Section Break",
-   "label": "Section C: Extra Functions & Initiatives (10% Weight)"
+   "label": "Section C: Extra Functions & Initiatives"
   },
   {
    "fieldname": "extra_initiatives",
@@ -432,19 +507,19 @@
   {
    "fieldname": "section_a_score",
    "fieldtype": "Float",
-   "label": "Section A \u2014 KRA/KPI (70% max)",
+   "label": "Section A \u2014 KRA/KPI",
    "read_only": 1
   },
   {
    "fieldname": "section_b_score",
    "fieldtype": "Float",
-   "label": "Section B \u2014 Functional Competency (20% max)",
+   "label": "Section B \u2014 Functional Competency",
    "read_only": 1
   },
   {
    "fieldname": "section_c_score",
    "fieldtype": "Float",
-   "label": "Section C \u2014 Extra Functions (10% max)",
+   "label": "Section C \u2014 Extra Functions",
    "read_only": 1
   },
   {

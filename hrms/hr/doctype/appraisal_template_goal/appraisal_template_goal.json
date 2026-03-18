@@ -7,9 +7,13 @@
  "engine": "InnoDB",
  "field_order": [
   "key_result_area",
+  "kpi",
   "kra_category",
   "kpi_description",
-  "per_weightage"
+  "per_weightage",
+  "column_break_tg",
+  "default_target",
+  "unit_of_measure"
  ],
  "fields": [
   {
@@ -33,6 +37,13 @@
    "reqd": 1
   },
   {
+   "fieldname": "kpi",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "KPI",
+   "options": "KPI"
+  },
+  {
    "fieldname": "kra_category",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -42,8 +53,21 @@
   {
    "fieldname": "kpi_description",
    "fieldtype": "Small Text",
-   "in_list_view": 1,
-   "label": "KPI"
+   "label": "KPI Description"
+  },
+  {
+   "fieldname": "column_break_tg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_target",
+   "fieldtype": "Float",
+   "label": "Default Target"
+  },
+  {
+   "fieldname": "unit_of_measure",
+   "fieldtype": "Data",
+   "label": "Unit of Measure"
   }
  ],
  "idx": 1,

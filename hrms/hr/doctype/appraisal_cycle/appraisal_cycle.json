@@ -19,6 +19,17 @@
   "settings_section",
   "column_break_vhzx",
   "kra_evaluation_method",
+  "scoring_method_section",
+  "scoring_method",
+  "allow_over_achievement",
+  "column_break_sm",
+  "achievement_weight_pct",
+  "manager_rating_weight_pct",
+  "section_percentages_section",
+  "section_a_pct",
+  "section_b_pct",
+  "column_break_pct",
+  "section_c_pct",
   "section_break_zykh",
   "calculate_final_score_based_on_formula",
   "final_score_formula",
@@ -183,6 +194,76 @@
    "fieldname": "section_break_zykh",
    "fieldtype": "Section Break",
    "hide_border": 1
+  },
+  {
+   "fieldname": "scoring_method_section",
+   "fieldtype": "Section Break",
+   "label": "Scoring Method"
+  },
+  {
+   "default": "Manager Rating Only",
+   "fieldname": "scoring_method",
+   "fieldtype": "Select",
+   "label": "Scoring Method",
+   "options": "Manager Rating Only\nAchievement Based\nBlended"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.scoring_method === 'Achievement Based' || doc.scoring_method === 'Blended'",
+   "description": "When checked, achievement percentage can exceed 100%",
+   "fieldname": "allow_over_achievement",
+   "fieldtype": "Check",
+   "label": "Allow Over-Achievement"
+  },
+  {
+   "fieldname": "column_break_sm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "50",
+   "depends_on": "eval:doc.scoring_method === 'Blended'",
+   "fieldname": "achievement_weight_pct",
+   "fieldtype": "Float",
+   "label": "Achievement Weight %",
+   "mandatory_depends_on": "eval:doc.scoring_method === 'Blended'"
+  },
+  {
+   "default": "50",
+   "depends_on": "eval:doc.scoring_method === 'Blended'",
+   "fieldname": "manager_rating_weight_pct",
+   "fieldtype": "Float",
+   "label": "Manager Rating Weight %",
+   "mandatory_depends_on": "eval:doc.scoring_method === 'Blended'"
+  },
+  {
+   "fieldname": "section_percentages_section",
+   "fieldtype": "Section Break",
+   "label": "Section Percentages"
+  },
+  {
+   "default": "70",
+   "description": "Maximum score for Section A: KRA/KPI",
+   "fieldname": "section_a_pct",
+   "fieldtype": "Float",
+   "label": "Section A %"
+  },
+  {
+   "default": "20",
+   "description": "Maximum score for Section B: Functional Competency",
+   "fieldname": "section_b_pct",
+   "fieldtype": "Float",
+   "label": "Section B %"
+  },
+  {
+   "fieldname": "column_break_pct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "description": "Maximum score for Section C: Extra Functions & Initiatives",
+   "fieldname": "section_c_pct",
+   "fieldtype": "Float",
+   "label": "Section C %"
   }
  ],
  "index_web_pages_for_search": 1,

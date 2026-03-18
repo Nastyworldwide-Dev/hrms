@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import Count
 from frappe.query_builder.terms import SubQuery
+from frappe.utils import flt
 
 
 def get_department_template(department):
@@ -49,6 +50,25 @@ class AppraisalCycle(Document):
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
 		self.validate_evaluation_method_change()
+		self.validate_section_percentages()
+		self.validate_blend_weights()
+
+	def validate_section_percentages(self):
+		total = flt(self.section_a_pct or 70) + flt(self.section_b_pct or 20) + flt(self.section_c_pct or 10)
+		if flt(total, 2) != 100.0:
+			frappe.throw(
+				_("Section percentages (A + B + C) must total 100. Currently, it is {0}").format(total),
+				title=_("Invalid Section Percentages"),
+			)
+
+	def validate_blend_weights(self):
+		if self.scoring_method == "Blended":
+			total = flt(self.achievement_weight_pct or 50) + flt(self.manager_rating_weight_pct or 50)
+			if flt(total, 2) != 100.0:
+				frappe.throw(
+					_("Achievement Weight % and Manager Rating Weight % must total 100. Currently, it is {0}").format(total),
+					title=_("Invalid Blend Weights"),
+				)
 
 	def validate_evaluation_method_change(self):
 		if self.is_new():

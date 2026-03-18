@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "kra",
+  "kpi",
   "kra_category",
   "kpi_description",
   "per_weightage",
@@ -15,6 +16,7 @@
   "target",
   "actual",
   "achievement",
+  "unit_of_measure",
   "manager_rating",
   "weighted_score",
   "column_break_old",
@@ -35,6 +37,12 @@
    "print_width": "200px",
    "reqd": 1,
    "width": "200px"
+  },
+  {
+   "fieldname": "kpi",
+   "fieldtype": "Link",
+   "label": "KPI",
+   "options": "KPI"
   },
   {
    "fieldname": "kra_category",
@@ -82,6 +90,11 @@
    "in_list_view": 1,
    "label": "Achievement (%)",
    "read_only": 1
+  },
+  {
+   "fieldname": "unit_of_measure",
+   "fieldtype": "Data",
+   "label": "Unit of Measure"
   },
   {
    "fieldname": "manager_rating",
