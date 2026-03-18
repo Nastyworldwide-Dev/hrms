@@ -18,7 +18,6 @@ from hrms.payroll.utils import sanitize_expression
 
 class Appraisal(Document, AppraisalMixin):
 	def validate(self):
-		self.set_kra_evaluation_method()
 		self.set_section_percentages()
 		self.set_scoring_method()
 
@@ -127,17 +126,6 @@ class Appraisal(Document, AppraisalMixin):
 					_("Achievement Weight % and Manager Rating Weight % must total 100. Currently, it is {0}").format(total),
 					title=_("Invalid Blend Weights"),
 				)
-
-	def set_kra_evaluation_method(self):
-		if (
-			self.is_new()
-			and self.appraisal_cycle
-			and (
-				frappe.db.get_value("Appraisal Cycle", self.appraisal_cycle, "kra_evaluation_method")
-				== "Manual Rating"
-			)
-		):
-			self.rate_goals_manually = 1
 
 	def set_personal_particulars(self):
 		"""Fetch personal particulars from Employee record and appraisal cycle"""
@@ -276,7 +264,6 @@ class Appraisal(Document, AppraisalMixin):
 
 		self.set("appraisal_kra", [])
 		self.set("self_ratings", [])
-		self.set("goals", [])
 
 		template = frappe.get_doc("Appraisal Template", self.appraisal_template)
 
@@ -285,11 +272,9 @@ class Appraisal(Document, AppraisalMixin):
 		section_a_max = flt(self.section_a_pct or 70)
 		scale = section_a_max / template_total
 
-		table_name = "goals" if self.rate_goals_manually else "appraisal_kra"
-
 		for entry in template.goals:
 			self.append(
-				table_name,
+				"appraisal_kra",
 				{
 					"kra": entry.key_result_area,
 					"per_weightage": flt(entry.per_weightage * scale, 2),
@@ -302,7 +287,7 @@ class Appraisal(Document, AppraisalMixin):
 			)
 
 		# Fix rounding so rows sum to exactly section_a_max
-		rows = self.get(table_name)
+		rows = self.get("appraisal_kra")
 		if rows:
 			rounded_total = sum(flt(r.per_weightage) for r in rows)
 			diff = flt(section_a_max - rounded_total, 2)
@@ -321,37 +306,21 @@ class Appraisal(Document, AppraisalMixin):
 		return self
 
 	def calculate_total_score(self):
-		total_weightage, total, goal_score_percentage = 0, 0, 0
-		meta = frappe.get_meta("Appraisal Goal")
-		number_of_stars = meta.get_options("score") or 5
-		if self.rate_goals_manually:
-			table = _("Goals")
-			expected_total = flt(self.section_a_pct or 70)
-			for entry in self.goals:
-				if flt(entry.score) > flt(number_of_stars):
-					frappe.throw(
-						_("Row {0}: Goal Score cannot be greater than {1}").format(entry.idx, number_of_stars)
-					)
+		total_weightage, goal_score_percentage = 0, 0
+		expected_total = flt(self.section_a_pct or 70)
 
-				entry.score_earned = flt(entry.score) * flt(entry.per_weightage) / 100
-				total += flt(entry.score_earned)
-				total_weightage += flt(entry.per_weightage)
+		for entry in self.appraisal_kra:
+			goal_score_percentage += flt(entry.goal_score)
+			total_weightage += flt(entry.per_weightage)
 
-		else:
-			table = _("KRAs")
-			expected_total = flt(self.section_a_pct or 70)
-			for entry in self.appraisal_kra:
-				goal_score_percentage += flt(entry.goal_score)
-				total_weightage += flt(entry.per_weightage)
-
-			self.goal_score_percentage = flt(goal_score_percentage, self.precision("goal_score_percentage"))
-			# convert goal score percentage to total score out of 5
-			total = flt(goal_score_percentage) / 20
+		self.goal_score_percentage = flt(goal_score_percentage, self.precision("goal_score_percentage"))
+		# convert goal score percentage to total score out of 5
+		total = flt(goal_score_percentage) / 20
 
 		if total_weightage and flt(total_weightage, 2) != flt(expected_total, 2):
 			frappe.throw(
 				_("Total weightage for all {0} must add up to {1}. Currently, it is {2}%").format(
-					table, expected_total, total_weightage
+					_("KRAs"), expected_total, total_weightage
 				),
 				title=_("Incorrect Weightage Allocation"),
 			)

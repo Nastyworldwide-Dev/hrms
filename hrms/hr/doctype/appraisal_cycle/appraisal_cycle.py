@@ -243,9 +243,6 @@ def create_appraisals_for_cycle(appraisal_cycle: AppraisalCycle, publish_progres
 				}
 			)
 
-			appraisal.rate_goals_manually = (
-				1 if appraisal_cycle.kra_evaluation_method == "Manual Rating" else 0
-			)
 			appraisal.set_kras_and_rating_criteria()
 			appraisal.insert()
 

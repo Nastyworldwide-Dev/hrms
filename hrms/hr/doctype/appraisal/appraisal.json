@@ -165,7 +165,6 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval: !doc.rate_goals_manually",
    "fieldname": "appraisal_kra",
    "fieldtype": "Table",
    "label": "KRA vs Goals",
@@ -267,17 +266,17 @@
    "fieldtype": "Text Editor"
   },
   {
-   "depends_on": "rate_goals_manually",
    "fieldname": "goals",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Goals",
    "options": "Appraisal Goal"
   },
   {
-   "depends_on": "rate_goals_manually",
    "description": "Any other remarks, noteworthy effort that should go in the records",
    "fieldname": "remarks",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Remarks"
   },
   {
@@ -357,6 +356,7 @@
    "default": "0",
    "fieldname": "rate_goals_manually",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Rate Goals Manually",
    "read_only": 1
   },
@@ -380,9 +380,9 @@
    "show_dashboard": 1
   },
   {
-   "depends_on": "eval: !doc.rate_goals_manually",
    "fieldname": "goal_score_percentage",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Goal Score (%)",
    "read_only": 1
   },

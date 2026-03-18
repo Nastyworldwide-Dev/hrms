@@ -84,7 +84,6 @@ frappe.ui.form.on("Appraisal", {
 							"Appraisal Cycle",
 							frm.doc.appraisal_cycle,
 							[
-								"kra_evaluation_method",
 								"section_a_pct",
 								"section_b_pct",
 								"section_c_pct",
@@ -94,12 +93,6 @@ frappe.ui.form.on("Appraisal", {
 								"manager_rating_weight_pct",
 							],
 							(r) => {
-								if (r.kra_evaluation_method) {
-									frm.set_value(
-										"rate_goals_manually",
-										cint(r.kra_evaluation_method === "Manual Rating"),
-									);
-								}
 								frm.set_value("section_a_pct", flt(r.section_a_pct) || 70);
 								frm.set_value("section_b_pct", flt(r.section_b_pct) || 20);
 								frm.set_value("section_c_pct", flt(r.section_c_pct) || 10);
@@ -228,16 +221,6 @@ frappe.ui.form.on("Appraisal", {
 		}
 	},
 
-	calculate_total(frm) {
-		let total = 0;
-
-		frm.doc.goals.forEach((d) => {
-			total += flt(d.score_earned);
-		});
-
-		frm.set_value("total_score", total);
-	},
-
 	calculate_section_a(frm) {
 		let total = 0;
 		(frm.doc.appraisal_kra || []).forEach((d) => {
@@ -272,37 +255,6 @@ frappe.ui.form.on("Appraisal", {
 			flt(frm.doc.section_c_score);
 		frm.set_value("pms_total_score", flt(total, 2));
 		frm.set_value("overall_grade", get_grade(total));
-	},
-});
-
-frappe.ui.form.on("Appraisal Goal", {
-	score(frm, cdt, cdn) {
-		let d = frappe.get_doc(cdt, cdn);
-
-		if (flt(d.score) > 5) {
-			frappe.msgprint(__("Score must be less than or equal to 5"));
-			d.score = 0;
-			refresh_field("score", d.name, "goals");
-		} else {
-			frm.trigger("set_score_earned", cdt, cdn);
-		}
-	},
-
-	per_weightage(frm, cdt, cdn) {
-		frm.trigger("set_score_earned", cdt, cdn);
-	},
-
-	goals_remove(frm, cdt, cdn) {
-		frm.trigger("set_score_earned", cdt, cdn);
-	},
-
-	set_score_earned(frm, cdt, cdn) {
-		let d = frappe.get_doc(cdt, cdn);
-
-		let score_earned = (flt(d.score) * flt(d.per_weightage)) / 100;
-		frappe.model.set_value(cdt, cdn, "score_earned", score_earned);
-
-		frm.trigger("calculate_total");
 	},
 });
 
