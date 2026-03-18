@@ -71,7 +71,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -91,6 +91,16 @@
    "label": "KRA",
    "link_count": 0,
    "link_to": "KRA",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "KPI",
+   "link_count": 0,
+   "link_to": "KPI",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -172,7 +182,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-02-18 15:55:42.734793",
+ "modified": "2026-03-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Performance",
