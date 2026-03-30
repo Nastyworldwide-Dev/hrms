@@ -49,38 +49,18 @@ class AppraisalCycle(Document):
 
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
-		self.validate_evaluation_method_change()
-		self.validate_section_percentages()
-		self.validate_blend_weights()
+		self.validate_a1_a2_weights()
 
-	def validate_section_percentages(self):
-		total = flt(self.section_a_pct or 70) + flt(self.section_b_pct or 20) + flt(self.section_c_pct or 10)
-		if flt(total, 2) != 100.0:
+	def validate_a1_a2_weights(self):
+		from frappe.utils import cint
+
+		a1 = cint(self.a1_weight_pct) or 70
+		if a1 < 50 or a1 > 80:
 			frappe.throw(
-				_("Section percentages (A + B + C) must total 100. Currently, it is {0}").format(total),
-				title=_("Invalid Section Percentages"),
+				_("A1 Weight must be between 50 and 80. Currently, it is {0}").format(a1),
+				title=_("Invalid A1 Weight"),
 			)
-
-	def validate_blend_weights(self):
-		if self.scoring_method == "Blended":
-			total = flt(self.achievement_weight_pct or 50) + flt(self.manager_rating_weight_pct or 50)
-			if flt(total, 2) != 100.0:
-				frappe.throw(
-					_("Achievement Weight % and Manager Rating Weight % must total 100. Currently, it is {0}").format(total),
-					title=_("Invalid Blend Weights"),
-				)
-
-	def validate_evaluation_method_change(self):
-		if self.is_new():
-			return
-
-		if self.has_value_changed("kra_evaluation_method") and self.check_if_appraisals_exist():
-			frappe.throw(
-				_(
-					"Evaluation Method cannot be changed as there are existing appraisals created for this cycle"
-				),
-				title=_("Not Allowed"),
-			)
+		self.a2_weight_pct = 80 - a1
 
 	def check_if_appraisals_exist(self):
 		return frappe.db.exists(

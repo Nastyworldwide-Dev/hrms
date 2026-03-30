@@ -4,7 +4,6 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder.functions import Avg
 from frappe.utils import cint, flt, get_link_to_form, now
 
 from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
@@ -13,37 +12,52 @@ from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
 )
 from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
-from hrms.payroll.utils import sanitize_expression
+
+
+# Lookup table: weighted average score range → conversion factor
+# Used for both A1 (Output KPIs) and A2 (Competency)
+SCORE_CONVERSION_TABLE = [
+	(4.5, 0.80, "Exceptional"),
+	(3.5, 0.75, "Strong"),
+	(2.5, 0.71, "Meets Expectation"),
+	(1.5, 0.60, "Needs Improvement"),
+	(1.0, 0.50, "Unsatisfactory"),
+]
+
+
+def get_conversion_factor(weighted_avg):
+	"""Convert a 1-5 weighted average score to a percentage factor using the lookup table"""
+	weighted_avg = flt(weighted_avg, 2)
+	for threshold, factor, _label in SCORE_CONVERSION_TABLE:
+		if weighted_avg >= threshold:
+			return factor
+	return 0.50  # below 1.0 = Unsatisfactory
 
 
 class Appraisal(Document, AppraisalMixin):
 	def validate(self):
-		self.set_section_percentages()
-		self.set_scoring_method()
+		self.set_a1_a2_weights()
 
 		validate_active_employee(self.employee)
 		validate_active_appraisal_cycle(self.appraisal_cycle)
 		self.validate_duplicate()
 		self.set_personal_particulars()
-		self.validate_section_percentages()
-		self.validate_blend_weights()
+		self.validate_a1_a2_weights()
 
-		# Weightage validation using dynamic section percentages
-		section_a_pct = flt(self.section_a_pct or 70)
-		section_b_pct = flt(self.section_b_pct or 20)
-		section_c_pct = flt(self.section_c_pct or 10)
-		self.validate_total_weightage("appraisal_kra", "KRAs (Section A)", section_a_pct)
-		self.validate_total_weightage("functional_competencies", "Functional Competencies (Section B)", section_b_pct)
-		self.validate_total_weightage("extra_initiatives", "Extra Initiatives (Section C)", section_c_pct)
+		# Weightage validation: A1 KRAs must sum to a1_weight_pct, A2 to a2_weight_pct
+		a1_weight = cint(self.a1_weight_pct) or 70
+		a2_weight = cint(self.a2_weight_pct) or 10
+		self.validate_total_weightage("appraisal_kra", "KRAs (A1)", a1_weight)
+		if self.functional_competencies:
+			self.validate_total_weightage("functional_competencies", "Competencies (A2)", a2_weight)
 		self.validate_total_weightage("self_ratings", "Self Ratings")
 
-		# Calculate all section scores
-		self.calculate_section_a_score()
-		self.calculate_section_b_score()
-		self.calculate_section_c_score()
+		# Calculate Section A using lookup table
+		self.calculate_a1_score()
+		self.calculate_a2_score()
+		self.section_a_score = flt(flt(self.a1_score) + flt(self.a2_score), 2)
 		self.calculate_pms_total()
 
-		self.set_goal_score()
 		self.calculate_self_appraisal_score()
 		self.calculate_avg_feedback_score()
 		self.calculate_final_score()
@@ -82,50 +96,24 @@ class Appraisal(Document, AppraisalMixin):
 				title=_("Duplicate Entry"),
 			)
 
-	def set_section_percentages(self):
-		"""Populate section percentages from cycle on first save"""
+	def set_a1_a2_weights(self):
+		"""Populate A1/A2 weights from cycle on first save"""
 		if not self.appraisal_cycle or not self.is_new():
 			return
 
 		cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
-		if not self.section_a_pct:
-			self.section_a_pct = flt(cycle.section_a_pct or 70)
-		if not self.section_b_pct:
-			self.section_b_pct = flt(cycle.section_b_pct or 20)
-		if not self.section_c_pct:
-			self.section_c_pct = flt(cycle.section_c_pct or 10)
+		if not self.a1_weight_pct:
+			self.a1_weight_pct = cint(cycle.a1_weight_pct) or 70
+		self.a2_weight_pct = 80 - cint(self.a1_weight_pct)
 
-	def validate_section_percentages(self):
-		total = flt(self.section_a_pct or 70) + flt(self.section_b_pct or 20) + flt(self.section_c_pct or 10)
-		if flt(total, 2) != 100.0:
+	def validate_a1_a2_weights(self):
+		a1 = cint(self.a1_weight_pct) or 70
+		if a1 < 50 or a1 > 80:
 			frappe.throw(
-				_("Section percentages (A + B + C) must total 100. Currently, it is {0}").format(total),
-				title=_("Invalid Section Percentages"),
+				_("A1 Weight must be between 50 and 80. Currently, it is {0}").format(a1),
+				title=_("Invalid A1 Weight"),
 			)
-
-	def set_scoring_method(self):
-		"""Populate scoring method fields from cycle on first save"""
-		if not self.appraisal_cycle or not self.is_new():
-			return
-
-		cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
-		if not self.scoring_method or self.scoring_method == "Manager Rating Only":
-			self.scoring_method = cycle.scoring_method or "Manager Rating Only"
-		if not self.allow_over_achievement:
-			self.allow_over_achievement = cint(cycle.allow_over_achievement)
-		if not self.achievement_weight_pct:
-			self.achievement_weight_pct = flt(cycle.achievement_weight_pct or 50)
-		if not self.manager_rating_weight_pct:
-			self.manager_rating_weight_pct = flt(cycle.manager_rating_weight_pct or 50)
-
-	def validate_blend_weights(self):
-		if self.scoring_method == "Blended":
-			total = flt(self.achievement_weight_pct or 50) + flt(self.manager_rating_weight_pct or 50)
-			if flt(total, 2) != 100.0:
-				frappe.throw(
-					_("Achievement Weight % and Manager Rating Weight % must total 100. Currently, it is {0}").format(total),
-					title=_("Invalid Blend Weights"),
-				)
+		self.a2_weight_pct = 80 - a1
 
 	def set_personal_particulars(self):
 		"""Fetch personal particulars from Employee record and appraisal cycle"""
@@ -152,76 +140,63 @@ class Appraisal(Document, AppraisalMixin):
 			if cycle.start_date and cycle.end_date:
 				self.performance_period = f"{cycle.start_date} to {cycle.end_date}"
 
-	def calculate_section_a_score(self):
-		"""Calculate Section A: KRA/KPI score
+	def calculate_a1_score(self):
+		"""Calculate A1: Output KPI score using lookup table conversion.
 
-		Supports three scoring methods:
-		- Manager Rating Only: weighted_score = per_weightage × (rating × 5) / 5
-		- Achievement Based: weighted_score = per_weightage × min(achievement, cap) / 100
-		- Blended: weighted average of achievement score and rating score
+		Each KRA row has a manager_rating (Frappe Rating: 0-1 fraction = 1-5 stars)
+		and a per_weightage. We compute a weighted average score (1-5), then convert
+		via the lookup table to get the A1 percentage.
 
-		Note: Frappe Rating field stores values as 0-1 fractions (0, 0.2, 0.4, 0.6, 0.8, 1.0)
-		representing a 1-5 star scale. We multiply by 5 to get the 1-5 value.
+		weighted_score per row = per_weightage × (rating × 5) / 5 (for display)
 		"""
-		scoring_method = self.scoring_method or "Manager Rating Only"
-		allow_over = cint(self.allow_over_achievement)
-		aw = flt(self.achievement_weight_pct or 50) / 100
-		rw = flt(self.manager_rating_weight_pct or 50) / 100
+		a1_weight = cint(self.a1_weight_pct) or 70
+		total_weightage = 0
+		weighted_sum = 0
 
-		section_a = 0
 		for row in self.appraisal_kra:
-			# Calculate achievement
-			if flt(row.target):
-				achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
-			else:
-				achievement = 0
+			rating_value = flt(row.manager_rating) * 5  # 0-1 → 1-5
+			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			weighted_sum += flt(row.per_weightage) * rating_value / 5
+			total_weightage += flt(row.per_weightage)
 
-			if not allow_over:
-				achievement = min(achievement, 100)
-			row.achievement = achievement
+		# Weighted average on 1-5 scale
+		if total_weightage:
+			weighted_avg = flt(weighted_sum / total_weightage * 5, 2)
+		else:
+			weighted_avg = 0
 
-			# Rating field stores 0-1 (fraction), multiply by 5 to get 1-5 scale
-			rating_value = flt(row.manager_rating) * 5
-			rating_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
-			achievement_score = flt(flt(row.per_weightage) * achievement / 100, 2)
+		conversion = get_conversion_factor(weighted_avg)
+		self.a1_score = flt(conversion * a1_weight, 2)
 
-			if scoring_method == "Achievement Based":
-				row.weighted_score = achievement_score
-			elif scoring_method == "Blended":
-				row.weighted_score = flt(achievement_score * aw + rating_score * rw, 2)
-			else:
-				# Manager Rating Only (default)
-				row.weighted_score = rating_score
+	def calculate_a2_score(self):
+		"""Calculate A2: Competency score using the same lookup table conversion."""
+		a2_weight = cint(self.a2_weight_pct) or 10
+		if not self.functional_competencies:
+			self.a2_score = 0
+			return
 
-			section_a += flt(row.weighted_score)
+		total_weightage = 0
+		weighted_sum = 0
 
-		self.section_a_score = flt(section_a, 2)
-
-	def calculate_section_b_score(self):
-		"""Calculate Section B: Functional Competency score (max 20)"""
-		section_b = 0
 		for row in self.functional_competencies:
 			rating_value = flt(row.manager_rating) * 5
 			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
-			section_b += flt(row.score)
+			weighted_sum += flt(row.per_weightage) * rating_value / 5
+			total_weightage += flt(row.per_weightage)
 
-		self.section_b_score = flt(section_b, 2)
+		if total_weightage:
+			weighted_avg = flt(weighted_sum / total_weightage * 5, 2)
+		else:
+			weighted_avg = 0
 
-	def calculate_section_c_score(self):
-		"""Calculate Section C: Extra Functions & Initiatives score (max 10)"""
-		section_c = 0
-		for row in self.extra_initiatives:
-			rating_value = flt(row.manager_rating) * 5
-			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
-			section_c += flt(row.score)
-
-		self.section_c_score = flt(section_c, 2)
+		conversion = get_conversion_factor(weighted_avg)
+		self.a2_score = flt(conversion * a2_weight, 2)
 
 	def calculate_pms_total(self):
-		"""Calculate total PMS score and determine grade"""
-		self.pms_total_score = flt(
-			flt(self.section_a_score) + flt(self.section_b_score) + flt(self.section_c_score), 2
-		)
+		"""Calculate total PMS score and determine grade.
+		Phase 1: Section A only. Phase 2 will add Section B and demerits.
+		"""
+		self.pms_total_score = flt(self.section_a_score, 2)
 		self.overall_grade = get_grade(self.pms_total_score)
 
 	@frappe.whitelist()
@@ -267,10 +242,10 @@ class Appraisal(Document, AppraisalMixin):
 
 		template = frappe.get_doc("Appraisal Template", self.appraisal_template)
 
-		# Template goals sum to 100%; scale to section_a_pct for Section A
+		# Template goals sum to 100%; scale to a1_weight_pct for A1 KPIs
 		template_total = sum(flt(e.per_weightage) for e in template.goals) or 100
-		section_a_max = flt(self.section_a_pct or 70)
-		scale = section_a_max / template_total
+		a1_max = cint(self.a1_weight_pct) or 70
+		scale = a1_max / template_total
 
 		for entry in template.goals:
 			self.append(
@@ -281,16 +256,14 @@ class Appraisal(Document, AppraisalMixin):
 					"kra_category": entry.get("kra_category"),
 					"kpi": entry.get("kpi"),
 					"kpi_description": entry.get("kpi_description"),
-					"target": flt(entry.get("default_target")),
-					"unit_of_measure": entry.get("unit_of_measure"),
 				},
 			)
 
-		# Fix rounding so rows sum to exactly section_a_max
+		# Fix rounding so rows sum to exactly a1_max
 		rows = self.get("appraisal_kra")
 		if rows:
 			rounded_total = sum(flt(r.per_weightage) for r in rows)
-			diff = flt(section_a_max - rounded_total, 2)
+			diff = flt(a1_max - rounded_total, 2)
 			if diff:
 				rows[-1].per_weightage = flt(rows[-1].per_weightage + diff, 2)
 
@@ -306,26 +279,8 @@ class Appraisal(Document, AppraisalMixin):
 		return self
 
 	def calculate_total_score(self):
-		total_weightage, goal_score_percentage = 0, 0
-		expected_total = flt(self.section_a_pct or 70)
-
-		for entry in self.appraisal_kra:
-			goal_score_percentage += flt(entry.goal_score)
-			total_weightage += flt(entry.per_weightage)
-
-		self.goal_score_percentage = flt(goal_score_percentage, self.precision("goal_score_percentage"))
-		# convert goal score percentage to total score out of 5
-		total = flt(goal_score_percentage) / 20
-
-		if total_weightage and flt(total_weightage, 2) != flt(expected_total, 2):
-			frappe.throw(
-				_("Total weightage for all {0} must add up to {1}. Currently, it is {2}%").format(
-					_("KRAs"), expected_total, total_weightage
-				),
-				title=_("Incorrect Weightage Allocation"),
-			)
-
-		self.total_score = flt(total, self.precision("total_score"))
+		"""Legacy method — kept for backward compatibility but no longer used in scoring."""
+		pass
 
 	def calculate_self_appraisal_score(self):
 		total = 0
@@ -351,38 +306,8 @@ class Appraisal(Document, AppraisalMixin):
 			self.db_update()
 
 	def calculate_final_score(self):
-		# Use PMS total score as the final score
-		if flt(self.pms_total_score):
-			self.final_score = flt(self.pms_total_score, self.precision("final_score"))
-			return
-
-		# Fallback to legacy formula-based calculation
-		final_score = 0
-		appraisal_cycle_doc = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
-
-		formula = appraisal_cycle_doc.final_score_formula
-		based_on_formula = appraisal_cycle_doc.calculate_final_score_based_on_formula
-
-		if based_on_formula:
-			data = {
-				"goal_score": flt(self.total_score),
-				"average_feedback_score": flt(self.avg_feedback_score),
-				"self_appraisal_score": flt(self.self_score),
-				"section_a_score": flt(self.section_a_score),
-				"section_b_score": flt(self.section_b_score),
-				"section_c_score": flt(self.section_c_score),
-				"pms_total_score": flt(self.pms_total_score),
-				"total_score": flt(self.total_score),
-				"self_score": flt(self.self_score),
-				"avg_feedback_score": flt(self.avg_feedback_score),
-			}
-
-			sanitized_formula = sanitize_expression(formula)
-			final_score = frappe.safe_eval(sanitized_formula, data)
-		else:
-			final_score = (flt(self.total_score) + flt(self.avg_feedback_score) + flt(self.self_score)) / 3
-
-		self.final_score = flt(final_score, self.precision("final_score"))
+		"""Final score = PMS total (Phase 2 will add Section B and demerits)"""
+		self.final_score = flt(self.pms_total_score, self.precision("final_score"))
 
 	@frappe.whitelist()
 	def add_feedback(self, feedback, feedback_ratings):
@@ -412,37 +337,10 @@ class Appraisal(Document, AppraisalMixin):
 		return feedback
 
 	def set_goal_score(self, update=False):
-		# Single grouped query instead of N+1 per KRA
-		Goal = frappe.qb.DocType("Goal")
-		avg_by_kra = {
-			row.kra: flt(row.avg_progress)
-			for row in (
-				frappe.qb.from_(Goal)
-				.select(Goal.kra, Avg(Goal.progress).as_("avg_progress"))
-				.where(
-					(Goal.employee == self.employee)
-					& (Goal.appraisal_cycle == self.appraisal_cycle)
-					& (Goal.status != "Archived")
-					& ((Goal.parent_goal == "") | (Goal.parent_goal.isnull()))
-				)
-				.groupby(Goal.kra)
-			).run(as_dict=True)
-		}
-
-		for kra in self.appraisal_kra:
-			avg_goal_completion = avg_by_kra.get(kra.kra, 0)
-			kra.goal_completion = flt(avg_goal_completion, kra.precision("goal_completion"))
-			kra.goal_score = flt(kra.goal_completion * kra.per_weightage / 100, kra.precision("goal_score"))
-
-			if update:
-				kra.db_update()
-
-		self.calculate_total_score()
-
+		"""Legacy method — goal-based scoring no longer used. Kept for API compatibility."""
 		if update:
 			self.calculate_final_score()
 			self.db_update()
-
 		return self
 
 

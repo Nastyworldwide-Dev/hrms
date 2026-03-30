@@ -31,6 +31,10 @@
   "kra_tab",
   "appraisal_template",
   "rate_goals_manually",
+  "a1_a2_weight_section",
+  "a1_weight_pct",
+  "column_break_a1a2",
+  "a2_weight_pct",
   "scoring_method_section",
   "scoring_method",
   "allow_over_achievement",
@@ -45,6 +49,10 @@
   "section_break_kras",
   "appraisal_kra",
   "goal_score_percentage",
+  "a1_score",
+  "section_a2_heading",
+  "functional_competencies",
+  "a2_score",
   "section_break_goals",
   "goals",
   "remarks",
@@ -52,7 +60,6 @@
   "total_score",
   "competency_tab",
   "section_b_heading",
-  "functional_competencies",
   "competency_score",
   "initiatives_tab",
   "section_c_heading",
@@ -179,7 +186,7 @@
   {
    "fieldname": "total_score",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Total Goal Score",
    "no_copy": 1,
    "oldfieldname": "total_score",
@@ -280,73 +287,105 @@
    "label": "Remarks"
   },
   {
+   "fieldname": "a1_a2_weight_section",
+   "fieldtype": "Section Break",
+   "label": "A1/A2 Weight Split (within 80%)"
+  },
+  {
+   "default": "70",
+   "description": "Output KPI weight within Section A (80%). A2 = 80 \u2212 A1.",
+   "fieldname": "a1_weight_pct",
+   "fieldtype": "Int",
+   "label": "A1 \u2014 Output KPI Weight %"
+  },
+  {
+   "fieldname": "column_break_a1a2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "description": "Competency weight (auto-calculated: 80 \u2212 A1)",
+   "fieldname": "a2_weight_pct",
+   "fieldtype": "Int",
+   "label": "A2 \u2014 Competency Weight %",
+   "read_only": 1
+  },
+  {
    "fieldname": "scoring_method_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Scoring Method"
   },
   {
    "default": "Manager Rating Only",
    "fieldname": "scoring_method",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Scoring Method",
    "options": "Manager Rating Only\nAchievement Based\nBlended"
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.scoring_method === 'Achievement Based' || doc.scoring_method === 'Blended'",
    "fieldname": "allow_over_achievement",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Allow Over-Achievement"
   },
   {
    "fieldname": "column_break_asm",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "default": "50",
-   "depends_on": "eval:doc.scoring_method === 'Blended'",
    "fieldname": "achievement_weight_pct",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Achievement Weight %"
   },
   {
    "default": "50",
-   "depends_on": "eval:doc.scoring_method === 'Blended'",
    "fieldname": "manager_rating_weight_pct",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Manager Rating Weight %"
   },
   {
    "fieldname": "section_pct_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Section Percentages"
   },
   {
    "default": "70",
    "fieldname": "section_a_pct",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section A %"
   },
   {
    "default": "20",
    "fieldname": "section_b_pct",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section B %"
   },
   {
    "fieldname": "column_break_apct",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "default": "10",
    "fieldname": "section_c_pct",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section C %"
   },
   {
    "fieldname": "section_break_kras",
    "fieldtype": "Section Break",
-   "label": "Section A: KRA/KPI"
+   "label": "A1 \u2014 Output KPIs"
   },
   {
    "fieldname": "section_break_goals",
@@ -375,7 +414,7 @@
   {
    "fieldname": "kra_tab",
    "fieldtype": "Tab Break",
-   "label": "KRAs",
+   "label": "Section A: Core Performance",
    "oldfieldtype": "Section Break",
    "show_dashboard": 1
   },
@@ -384,6 +423,29 @@
    "fieldtype": "Float",
    "hidden": 1,
    "label": "Goal Score (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "a1_score",
+   "fieldtype": "Float",
+   "label": "A1 Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_a2_heading",
+   "fieldtype": "Section Break",
+   "label": "A2 \u2014 Competency"
+  },
+  {
+   "fieldname": "functional_competencies",
+   "fieldtype": "Table",
+   "label": "Competencies",
+   "options": "Appraisal Functional Competency"
+  },
+  {
+   "fieldname": "a2_score",
+   "fieldtype": "Float",
+   "label": "A2 Score",
    "read_only": 1
   },
   {
@@ -397,7 +459,7 @@
   },
   {
    "depends_on": "appraisal_cycle",
-   "description": "PMS Total Score (Section A + B + C), or legacy formula-based calculation",
+   "description": "Section A (A1 + A2) score. Section B and demerits will be added in Phase 2.",
    "fieldname": "final_score",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -456,18 +518,14 @@
   {
    "fieldname": "competency_tab",
    "fieldtype": "Tab Break",
+   "hidden": 1,
    "label": "Functional Competency"
   },
   {
    "fieldname": "section_b_heading",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Section B: Functional Competency"
-  },
-  {
-   "fieldname": "functional_competencies",
-   "fieldtype": "Table",
-   "label": "Functional Competencies",
-   "options": "Appraisal Functional Competency"
   },
   {
    "fieldname": "competency_score",
@@ -479,16 +537,19 @@
   {
    "fieldname": "initiatives_tab",
    "fieldtype": "Tab Break",
+   "hidden": 1,
    "label": "Extra Functions & Initiatives"
   },
   {
    "fieldname": "section_c_heading",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Section C: Extra Functions & Initiatives"
   },
   {
    "fieldname": "extra_initiatives",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Extra Initiatives",
    "options": "Appraisal Extra Initiative"
   },
@@ -507,18 +568,20 @@
   {
    "fieldname": "section_a_score",
    "fieldtype": "Float",
-   "label": "Section A \u2014 KRA/KPI",
+   "label": "Section A \u2014 Core Performance (max 80%)",
    "read_only": 1
   },
   {
    "fieldname": "section_b_score",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section B \u2014 Functional Competency",
    "read_only": 1
   },
   {
    "fieldname": "section_c_score",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Section C \u2014 Extra Functions",
    "read_only": 1
   },

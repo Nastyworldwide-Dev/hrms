@@ -9,11 +9,28 @@ const GRADE_SCALE = [
 	[0, "Unsatisfactory"],
 ];
 
+// Lookup table: weighted average score → conversion factor
+// Same table used for both A1 (Output KPIs) and A2 (Competency)
+const SCORE_CONVERSION_TABLE = [
+	[4.5, 0.80, "Exceptional"],
+	[3.5, 0.75, "Strong"],
+	[2.5, 0.71, "Meets Expectation"],
+	[1.5, 0.60, "Needs Improvement"],
+	[1.0, 0.50, "Unsatisfactory"],
+];
+
 function get_grade(score) {
 	for (let [threshold, grade] of GRADE_SCALE) {
 		if (score >= threshold) return grade;
 	}
 	return GRADE_SCALE[GRADE_SCALE.length - 1][1];
+}
+
+function get_conversion_factor(weighted_avg) {
+	for (let [threshold, factor] of SCORE_CONVERSION_TABLE) {
+		if (weighted_avg >= threshold) return factor;
+	}
+	return 0.5;
 }
 
 frappe.ui.form.on("Appraisal", {
@@ -70,6 +87,7 @@ frappe.ui.form.on("Appraisal", {
 		if (frm.doc.appraisal_template) {
 			frm.call("set_kras_and_rating_criteria", () => {
 				frm.refresh_field("appraisal_kra");
+				frm.refresh_field("functional_competencies");
 				frm.refresh_field("feedback_ratings");
 			});
 		}
@@ -83,35 +101,10 @@ frappe.ui.form.on("Appraisal", {
 						frappe.db.get_value(
 							"Appraisal Cycle",
 							frm.doc.appraisal_cycle,
-							[
-								"section_a_pct",
-								"section_b_pct",
-								"section_c_pct",
-								"scoring_method",
-								"allow_over_achievement",
-								"achievement_weight_pct",
-								"manager_rating_weight_pct",
-							],
+							["a1_weight_pct", "a2_weight_pct"],
 							(r) => {
-								frm.set_value("section_a_pct", flt(r.section_a_pct) || 70);
-								frm.set_value("section_b_pct", flt(r.section_b_pct) || 20);
-								frm.set_value("section_c_pct", flt(r.section_c_pct) || 10);
-								frm.set_value(
-									"scoring_method",
-									r.scoring_method || "Manager Rating Only",
-								);
-								frm.set_value(
-									"allow_over_achievement",
-									cint(r.allow_over_achievement),
-								);
-								frm.set_value(
-									"achievement_weight_pct",
-									flt(r.achievement_weight_pct) || 50,
-								);
-								frm.set_value(
-									"manager_rating_weight_pct",
-									flt(r.manager_rating_weight_pct) || 50,
-								);
+								frm.set_value("a1_weight_pct", cint(r.a1_weight_pct) || 70);
+								frm.set_value("a2_weight_pct", cint(r.a2_weight_pct) || 10);
 								frm.trigger("update_section_labels");
 							},
 						);
@@ -127,32 +120,25 @@ frappe.ui.form.on("Appraisal", {
 		}
 	},
 
-	section_a_pct(frm) {
+	a1_weight_pct(frm) {
+		let a1 = cint(frm.doc.a1_weight_pct) || 70;
+		frm.set_value("a2_weight_pct", 80 - a1);
 		frm.trigger("update_section_labels");
-	},
-	section_b_pct(frm) {
-		frm.trigger("update_section_labels");
-	},
-	section_c_pct(frm) {
-		frm.trigger("update_section_labels");
+		frm.trigger("calculate_a1");
+		frm.trigger("calculate_a2");
 	},
 
 	update_section_labels(frm) {
-		let a = flt(frm.doc.section_a_pct) || 70;
-		let b = flt(frm.doc.section_b_pct) || 20;
-		let c = flt(frm.doc.section_c_pct) || 10;
+		let a1 = cint(frm.doc.a1_weight_pct) || 70;
+		let a2 = cint(frm.doc.a2_weight_pct) || 10;
 
 		if (frm.fields_dict.section_break_kras) {
-			frm.fields_dict.section_break_kras.df.label = `Section A: KRA/KPI (${a}%)`;
+			frm.fields_dict.section_break_kras.df.label = `A1 \u2014 Output KPIs (${a1}%)`;
 			frm.fields_dict.section_break_kras.refresh();
 		}
-		if (frm.fields_dict.section_b_heading) {
-			frm.fields_dict.section_b_heading.df.label = `Section B: Functional Competency (${b}% Weight)`;
-			frm.fields_dict.section_b_heading.refresh();
-		}
-		if (frm.fields_dict.section_c_heading) {
-			frm.fields_dict.section_c_heading.df.label = `Section C: Extra Functions & Initiatives (${c}% Weight)`;
-			frm.fields_dict.section_c_heading.refresh();
+		if (frm.fields_dict.section_a2_heading) {
+			frm.fields_dict.section_a2_heading.df.label = `A2 \u2014 Competency (${a2}%)`;
+			frm.fields_dict.section_a2_heading.refresh();
 		}
 	},
 
@@ -178,19 +164,16 @@ frappe.ui.form.on("Appraisal", {
 	},
 
 	setup_chart(frm) {
-		let a_pct = flt(frm.doc.section_a_pct) || 70;
-		let b_pct = flt(frm.doc.section_b_pct) || 20;
-		let c_pct = flt(frm.doc.section_c_pct) || 10;
+		let a1 = cint(frm.doc.a1_weight_pct) || 70;
+		let a2 = cint(frm.doc.a2_weight_pct) || 10;
 		const labels = [
-			`Section A - KRA/KPI (${a_pct}%)`,
-			`Section B - Competency (${b_pct}%)`,
-			`Section C - Initiatives (${c_pct}%)`,
+			`A1 \u2014 Output KPIs (${a1}%)`,
+			`A2 \u2014 Competency (${a2}%)`,
 		];
-		const maximum_scores = [a_pct, b_pct, c_pct];
+		const maximum_scores = [a1, a2];
 		const scores = [
-			flt(frm.doc.section_a_score) || 0,
-			flt(frm.doc.section_b_score) || 0,
-			flt(frm.doc.section_c_score) || 0,
+			flt(frm.doc.a1_score) || 0,
+			flt(frm.doc.a2_score) || 0,
 		];
 
 		if (scores.some((s) => s > 0)) {
@@ -210,7 +193,7 @@ frappe.ui.form.on("Appraisal", {
 						},
 					],
 				},
-				title: __("PMS Scores"),
+				title: __("Section A \u2014 Core Performance (max 80%)"),
 				height: 250,
 				type: "bar",
 				barOptions: {
@@ -221,57 +204,68 @@ frappe.ui.form.on("Appraisal", {
 		}
 	},
 
-	calculate_section_a(frm) {
-		let total = 0;
-		(frm.doc.appraisal_kra || []).forEach((d) => {
-			total += flt(d.weighted_score);
+	calculate_a1(frm) {
+		let rows = frm.doc.appraisal_kra || [];
+		let total_weightage = 0;
+		let weighted_sum = 0;
+
+		rows.forEach((d) => {
+			let rating_value = flt(d.manager_rating) * 5;
+			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
+			total_weightage += flt(d.per_weightage);
 		});
-		frm.set_value("section_a_score", flt(total, 2));
+
+		let weighted_avg = total_weightage
+			? flt((weighted_sum / total_weightage) * 5, 2)
+			: 0;
+		let conversion = get_conversion_factor(weighted_avg);
+		let a1_weight = cint(frm.doc.a1_weight_pct) || 70;
+		frm.set_value("a1_score", flt(conversion * a1_weight, 2));
 		frm.trigger("calculate_pms_total");
 	},
 
-	calculate_section_b(frm) {
-		let total = 0;
-		(frm.doc.functional_competencies || []).forEach((d) => {
-			total += flt(d.score);
-		});
-		frm.set_value("section_b_score", flt(total, 2));
-		frm.trigger("calculate_pms_total");
-	},
+	calculate_a2(frm) {
+		let rows = frm.doc.functional_competencies || [];
+		if (!rows.length) {
+			frm.set_value("a2_score", 0);
+			frm.trigger("calculate_pms_total");
+			return;
+		}
 
-	calculate_section_c(frm) {
-		let total = 0;
-		(frm.doc.extra_initiatives || []).forEach((d) => {
-			total += flt(d.score);
+		let total_weightage = 0;
+		let weighted_sum = 0;
+
+		rows.forEach((d) => {
+			let rating_value = flt(d.manager_rating) * 5;
+			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
+			total_weightage += flt(d.per_weightage);
 		});
-		frm.set_value("section_c_score", flt(total, 2));
+
+		let weighted_avg = total_weightage
+			? flt((weighted_sum / total_weightage) * 5, 2)
+			: 0;
+		let conversion = get_conversion_factor(weighted_avg);
+		let a2_weight = cint(frm.doc.a2_weight_pct) || 10;
+		frm.set_value("a2_score", flt(conversion * a2_weight, 2));
 		frm.trigger("calculate_pms_total");
 	},
 
 	calculate_pms_total(frm) {
-		let total =
-			flt(frm.doc.section_a_score) +
-			flt(frm.doc.section_b_score) +
-			flt(frm.doc.section_c_score);
-		frm.set_value("pms_total_score", flt(total, 2));
-		frm.set_value("overall_grade", get_grade(total));
+		let section_a = flt(frm.doc.a1_score) + flt(frm.doc.a2_score);
+		frm.set_value("section_a_score", flt(section_a, 2));
+		frm.set_value("pms_total_score", flt(section_a, 2));
+		frm.set_value("overall_grade", get_grade(section_a));
 	},
 });
 
-// Section A: Appraisal KRA child table handlers
+// A1: Appraisal KRA child table handlers
 frappe.ui.form.on("Appraisal KRA", {
 	kpi(frm, cdt, cdn) {
 		let row = frappe.get_doc(cdt, cdn);
 		if (row.kpi) {
-			frappe.db.get_value("KPI", row.kpi, ["title", "default_target", "unit_of_measure"], (r) => {
+			frappe.db.get_value("KPI", row.kpi, ["title"], (r) => {
 				if (r) {
 					frappe.model.set_value(cdt, cdn, "kpi_description", r.title);
-					if (flt(r.default_target)) {
-						frappe.model.set_value(cdt, cdn, "target", r.default_target);
-					}
-					if (r.unit_of_measure) {
-						frappe.model.set_value(cdt, cdn, "unit_of_measure", r.unit_of_measure);
-					}
 				}
 			});
 		}
@@ -279,55 +273,26 @@ frappe.ui.form.on("Appraisal KRA", {
 	manager_rating(frm, cdt, cdn) {
 		calculate_kra_row(frm, cdt, cdn);
 	},
-	actual(frm, cdt, cdn) {
-		calculate_kra_row(frm, cdt, cdn);
-	},
-	target(frm, cdt, cdn) {
-		calculate_kra_row(frm, cdt, cdn);
-	},
 	per_weightage(frm, cdt, cdn) {
 		calculate_kra_row(frm, cdt, cdn);
 	},
 	appraisal_kra_remove(frm) {
-		frm.trigger("calculate_section_a");
+		frm.trigger("calculate_a1");
 	},
 });
 
 function calculate_kra_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
-	let scoring_method = frm.doc.scoring_method || "Manager Rating Only";
-	let allow_over = cint(frm.doc.allow_over_achievement);
-
-	let achievement = 0;
-	if (flt(row.target)) {
-		achievement = flt((flt(row.actual) / flt(row.target)) * 100, 2);
-	}
-	if (!allow_over) {
-		achievement = Math.min(achievement, 100);
-	}
-	frappe.model.set_value(cdt, cdn, "achievement", achievement);
 
 	// Rating field stores 0-1 (fraction), multiply by 5 to get 1-5 scale
 	let rating_value = flt(row.manager_rating) * 5;
-	let rating_score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
-	let achievement_score = flt((flt(row.per_weightage) * achievement) / 100, 2);
-
-	let weighted_score;
-	if (scoring_method === "Achievement Based") {
-		weighted_score = achievement_score;
-	} else if (scoring_method === "Blended") {
-		let aw = flt(frm.doc.achievement_weight_pct || 50) / 100;
-		let rw = flt(frm.doc.manager_rating_weight_pct || 50) / 100;
-		weighted_score = flt(achievement_score * aw + rating_score * rw, 2);
-	} else {
-		weighted_score = rating_score;
-	}
+	let weighted_score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
 	frappe.model.set_value(cdt, cdn, "weighted_score", weighted_score);
 
-	frm.trigger("calculate_section_a");
+	frm.trigger("calculate_a1");
 }
 
-// Section B: Functional Competency child table handlers
+// A2: Functional Competency child table handlers (repurposed for A2)
 frappe.ui.form.on("Appraisal Functional Competency", {
 	manager_rating(frm, cdt, cdn) {
 		calculate_competency_row(frm, cdt, cdn);
@@ -336,7 +301,7 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 		calculate_competency_row(frm, cdt, cdn);
 	},
 	functional_competencies_remove(frm) {
-		frm.trigger("calculate_section_b");
+		frm.trigger("calculate_a2");
 	},
 });
 
@@ -347,28 +312,5 @@ function calculate_competency_row(frm, cdt, cdn) {
 	let score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
 	frappe.model.set_value(cdt, cdn, "score", score);
 
-	frm.trigger("calculate_section_b");
-}
-
-// Section C: Extra Initiative child table handlers
-frappe.ui.form.on("Appraisal Extra Initiative", {
-	manager_rating(frm, cdt, cdn) {
-		calculate_initiative_row(frm, cdt, cdn);
-	},
-	per_weightage(frm, cdt, cdn) {
-		calculate_initiative_row(frm, cdt, cdn);
-	},
-	extra_initiatives_remove(frm) {
-		frm.trigger("calculate_section_c");
-	},
-});
-
-function calculate_initiative_row(frm, cdt, cdn) {
-	let row = frappe.get_doc(cdt, cdn);
-
-	let rating_value = flt(row.manager_rating) * 5;
-	let score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
-	frappe.model.set_value(cdt, cdn, "score", score);
-
-	frm.trigger("calculate_section_c");
+	frm.trigger("calculate_a2");
 }

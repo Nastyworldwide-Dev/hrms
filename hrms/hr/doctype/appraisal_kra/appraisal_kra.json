@@ -74,25 +74,26 @@
   {
    "fieldname": "target",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Target"
   },
   {
    "fieldname": "actual",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Actual"
   },
   {
    "fieldname": "achievement",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Achievement (%)",
    "read_only": 1
   },
   {
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Unit of Measure"
   },
   {

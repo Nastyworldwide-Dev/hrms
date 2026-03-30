@@ -28,6 +28,7 @@
   {
    "fieldname": "proficiency_level",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Proficiency Level",
    "options": "\n1 - Awareness\n2 - Developing\n3 - Proficient\n4 - Advanced\n5 - Expert / Mastery"
   },
@@ -45,7 +46,7 @@
   {
    "fieldname": "self_rating",
    "fieldtype": "Rating",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Self Rating"
   },
   {
@@ -57,6 +58,7 @@
   {
    "fieldname": "justification",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Justification"
   },
   {
@@ -73,6 +75,7 @@
   {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Remarks"
   }
  ],
