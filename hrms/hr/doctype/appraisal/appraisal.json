@@ -26,6 +26,7 @@
   "staff_no",
   "unit",
   "job_grade",
+  "employee_band",
   "section_break_aeb0",
   "final_score",
   "kra_tab",
@@ -74,6 +75,14 @@
   "column_break_demerit",
   "has_written_warning",
   "has_serious_misconduct",
+  "leadership_tab",
+  "is_leader",
+  "leadership_gate_info",
+  "leadership_scorecard",
+  "leadership_summary_section",
+  "leadership_score_pct",
+  "column_break_leadership",
+  "leadership_gate_passed",
   "competency_tab",
   "section_b_heading",
   "competency_score",
@@ -89,6 +98,13 @@
   "pms_total_score",
   "overall_grade",
   "grade_scale_html",
+  "second_validator_section",
+  "requires_second_validator",
+  "second_validator",
+  "column_break_sv",
+  "second_validator_approved",
+  "second_validator_comments",
+  "second_validator_sign_date",
   "feedback_tab",
   "feedback_html",
   "section_break_20",
@@ -532,6 +548,14 @@
    "read_only": 1
   },
   {
+   "description": "Performance Band from Employee record (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
+   "fetch_from": "employee.performance_band",
+   "fieldname": "employee_band",
+   "fieldtype": "Data",
+   "label": "Performance Band",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_b_tab",
    "fieldtype": "Tab Break",
    "label": "Section B: Differentiator"
@@ -631,6 +655,56 @@
    "read_only": 1
   },
   {
+   "depends_on": "is_leader",
+   "fieldname": "leadership_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leadership Gate"
+  },
+  {
+   "default": "0",
+   "description": "Auto-set based on employee band (B, C, or D)",
+   "fieldname": "is_leader",
+   "fieldtype": "Check",
+   "label": "Leadership Gate Applicable",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leadership_gate_info",
+   "fieldtype": "HTML",
+   "label": "Leadership Gate Info"
+  },
+  {
+   "description": "Two-Key Rule: Leaders must pass both KPI output AND leadership score \u2265 60% to unlock Rating B or A.",
+   "fieldname": "leadership_scorecard",
+   "fieldtype": "Table",
+   "label": "Leadership Scorecard",
+   "options": "Leadership Scorecard"
+  },
+  {
+   "fieldname": "leadership_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Leadership Gate Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "leadership_score_pct",
+   "fieldtype": "Float",
+   "label": "Leadership Score %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_leadership",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Score \u2265 60% required. Failure caps final score at 80% (Rating C max).",
+   "fieldname": "leadership_gate_passed",
+   "fieldtype": "Check",
+   "label": "Leadership Gate Passed",
+   "read_only": 1
+  },
+  {
    "fieldname": "competency_tab",
    "fieldtype": "Tab Break",
    "hidden": 1,
@@ -720,6 +794,49 @@
    "fieldname": "grade_scale_html",
    "fieldtype": "HTML",
    "label": "Grade Scale"
+  },
+  {
+   "depends_on": "requires_second_validator",
+   "fieldname": "second_validator_section",
+   "fieldtype": "Section Break",
+   "label": "Second Validator (required for scores > 90%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "requires_second_validator",
+   "fieldtype": "Check",
+   "label": "Requires Second Validator",
+   "read_only": 1
+  },
+  {
+   "depends_on": "requires_second_validator",
+   "fieldname": "second_validator",
+   "fieldtype": "Link",
+   "label": "Second Validator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_sv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "second_validator_approved",
+   "fieldtype": "Check",
+   "label": "Second Validator Approved",
+   "permlevel": 4
+  },
+  {
+   "fieldname": "second_validator_comments",
+   "fieldtype": "Text Editor",
+   "label": "Second Validator Comments",
+   "permlevel": 4
+  },
+  {
+   "fieldname": "second_validator_sign_date",
+   "fieldtype": "Date",
+   "label": "Second Validator Sign Date",
+   "permlevel": 4
   },
   {
    "fieldname": "signoff_tab",

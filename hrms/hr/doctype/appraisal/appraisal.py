@@ -44,6 +44,7 @@ class Appraisal(Document, AppraisalMixin):
 		self.set_personal_particulars()
 		self.validate_a1_a2_weights()
 		self.detect_new_joiner()
+		self.set_leadership_gate_applicability()
 
 		# Weightage validation: A1 KRAs must sum to a1_weight_pct, A2 to a2_weight_pct
 		a1_weight = cint(self.a1_weight_pct) or 70
@@ -58,14 +59,23 @@ class Appraisal(Document, AppraisalMixin):
 		self.calculate_a2_score()
 		self.section_a_score = flt(flt(self.a1_score) + flt(self.a2_score), 2)
 
-		# Calculate Section B (evidence-based) and demerits
+		# Calculate Section B (evidence-based), demerits, and leadership gate
 		self.calculate_demerits()
 		self.calculate_section_b_score()
+		self.calculate_leadership_gate()
 		self.calculate_pms_total()
+		self.set_second_validator_flag()
 
 		self.calculate_self_appraisal_score()
 		self.calculate_avg_feedback_score()
 		self.calculate_final_score()
+
+	def before_submit(self):
+		if cint(self.requires_second_validator) and not cint(self.second_validator_approved):
+			frappe.throw(
+				_("Score is above 90%. Second validator approval is required before submission."),
+				title=_("Second Validator Required"),
+			)
 
 	def validate_duplicate(self):
 		Appraisal = frappe.qb.DocType("Appraisal")
@@ -350,6 +360,36 @@ class Appraisal(Document, AppraisalMixin):
 			row.points = 0
 		return row.points
 
+	def set_leadership_gate_applicability(self):
+		"""Set is_leader based on employee band (B, C, D are leaders)"""
+		band = (self.employee_band or "").strip()
+		self.is_leader = 1 if band in ("B", "C", "D") else 0
+
+	def calculate_leadership_gate(self):
+		"""Calculate leadership scorecard average and gate pass/fail.
+		Leaders must score >= 60% on the scorecard to pass the gate.
+		"""
+		if not cint(self.is_leader):
+			self.leadership_score_pct = 0
+			self.leadership_gate_passed = 0
+			return
+
+		if not self.leadership_scorecard:
+			self.leadership_score_pct = 0
+			self.leadership_gate_passed = 0
+			return
+
+		total_score = sum(flt(row.score_pct) for row in self.leadership_scorecard)
+		count = len(self.leadership_scorecard)
+		avg_score = flt(total_score / count, 2) if count else 0
+
+		self.leadership_score_pct = avg_score
+		self.leadership_gate_passed = 1 if avg_score >= 60 else 0
+
+	def set_second_validator_flag(self):
+		"""Auto-set requires_second_validator when PMS score > 90%"""
+		self.requires_second_validator = 1 if flt(self.pms_total_score) > 90 else 0
+
 	def calculate_pms_total(self):
 		"""Calculate total PMS score: Section A + Section B bonus - demerits, with hard caps"""
 		raw_score = flt(self.section_a_score) + flt(self.section_b_score) - flt(self.total_demerit_pct)
@@ -358,6 +398,10 @@ class Appraisal(Document, AppraisalMixin):
 		# Hard cap: serious misconduct caps at 59%
 		if cint(self.has_serious_misconduct):
 			raw_score = min(raw_score, 59)
+
+		# Hard cap: leadership gate failed caps at 80% (Rating C)
+		if cint(self.is_leader) and not cint(self.leadership_gate_passed):
+			raw_score = min(raw_score, 80)
 
 		self.pms_total_score = flt(raw_score, 2)
 		self.overall_grade = get_grade(self.pms_total_score)

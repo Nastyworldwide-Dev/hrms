@@ -209,6 +209,14 @@ def get_custom_fields():
 				"insert_after": "holiday_list",
 			},
 			{
+				"fieldname": "performance_band",
+				"fieldtype": "Select",
+				"label": _("Performance Band"),
+				"options": "\nB\nC\nD\nE1\nE2\nF",
+				"insert_after": "grade",
+				"description": _("Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"),
+			},
+			{
 				"collapsible": 1,
 				"fieldname": "health_insurance_section",
 				"fieldtype": "Section Break",

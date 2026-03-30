@@ -267,8 +267,42 @@ frappe.ui.form.on("Appraisal", {
 			raw = Math.min(raw, 59);
 		}
 
+		// Hard cap: leadership gate failed
+		if (cint(frm.doc.is_leader) && !cint(frm.doc.leadership_gate_passed)) {
+			raw = Math.min(raw, 80);
+		}
+
 		frm.set_value("pms_total_score", flt(raw, 2));
 		frm.set_value("overall_grade", get_grade(raw));
+
+		// Second validator flag
+		frm.set_value("requires_second_validator", raw > 90 ? 1 : 0);
+	},
+
+	calculate_leadership_gate(frm) {
+		if (!cint(frm.doc.is_leader)) {
+			frm.set_value("leadership_score_pct", 0);
+			frm.set_value("leadership_gate_passed", 0);
+			return;
+		}
+
+		let rows = frm.doc.leadership_scorecard || [];
+		if (!rows.length) {
+			frm.set_value("leadership_score_pct", 0);
+			frm.set_value("leadership_gate_passed", 0);
+			frm.trigger("calculate_pms_total");
+			return;
+		}
+
+		let total = 0;
+		rows.forEach((d) => {
+			total += flt(d.score_pct);
+		});
+		let avg = flt(total / rows.length, 2);
+
+		frm.set_value("leadership_score_pct", avg);
+		frm.set_value("leadership_gate_passed", avg >= 60 ? 1 : 0);
+		frm.trigger("calculate_pms_total");
 	},
 
 	calculate_section_b(frm) {
@@ -483,3 +517,13 @@ function set_demerit_expiry(cdt, cdn) {
 	// Serious Misconduct and False Evidence: no expiry
 	frappe.model.set_value(cdt, cdn, "expiry_date", expiry);
 }
+
+// Leadership Scorecard child table handlers
+frappe.ui.form.on("Leadership Scorecard", {
+	score_pct(frm) {
+		frm.trigger("calculate_leadership_gate");
+	},
+	leadership_scorecard_remove(frm) {
+		frm.trigger("calculate_leadership_gate");
+	},
+});
