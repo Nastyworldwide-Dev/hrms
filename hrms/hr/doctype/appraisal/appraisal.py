@@ -43,6 +43,7 @@ class Appraisal(Document, AppraisalMixin):
 		self.validate_duplicate()
 		self.set_personal_particulars()
 		self.validate_a1_a2_weights()
+		self.detect_new_joiner()
 
 		# Weightage validation: A1 KRAs must sum to a1_weight_pct, A2 to a2_weight_pct
 		a1_weight = cint(self.a1_weight_pct) or 70
@@ -56,6 +57,10 @@ class Appraisal(Document, AppraisalMixin):
 		self.calculate_a1_score()
 		self.calculate_a2_score()
 		self.section_a_score = flt(flt(self.a1_score) + flt(self.a2_score), 2)
+
+		# Calculate Section B (evidence-based) and demerits
+		self.calculate_demerits()
+		self.calculate_section_b_score()
 		self.calculate_pms_total()
 
 		self.calculate_self_appraisal_score()
@@ -192,11 +197,169 @@ class Appraisal(Document, AppraisalMixin):
 		conversion = get_conversion_factor(weighted_avg)
 		self.a2_score = flt(conversion * a2_weight, 2)
 
-	def calculate_pms_total(self):
-		"""Calculate total PMS score and determine grade.
-		Phase 1: Section A only. Phase 2 will add Section B and demerits.
+	def detect_new_joiner(self):
+		"""Auto-set is_new_joiner if employee joined after month 6 of the cycle"""
+		if not self.appraisal_cycle or not self.employee:
+			return
+
+		cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
+		if not cycle.start_date or not cycle.end_date:
+			return
+
+		from frappe.utils import add_months, getdate
+
+		midpoint = add_months(cycle.start_date, 6)
+		date_of_joining = frappe.db.get_value("Employee", self.employee, "date_of_joining")
+
+		if date_of_joining and getdate(date_of_joining) > getdate(midpoint):
+			self.is_new_joiner = 1
+		else:
+			self.is_new_joiner = 0
+
+	def calculate_demerits(self):
+		"""Calculate demerit penalties with rolling expiry and set flags"""
+		from frappe.utils import add_months, getdate
+
+		total_penalty = 0
+		has_written = 0
+		has_serious = 0
+		has_false_evidence = 0
+
+		# Get cycle end date for active check
+		cycle_end = None
+		if self.appraisal_cycle:
+			cycle_end = frappe.db.get_value("Appraisal Cycle", self.appraisal_cycle, "end_date")
+
+		for row in self.demerits:
+			# Calculate expiry date based on type
+			if row.demerit_type == "Verbal Warning":
+				row.expiry_date = add_months(row.date_issued, 12) if row.date_issued else None
+				row.penalty_pct = 5
+			elif row.demerit_type == "Written Warning":
+				row.expiry_date = add_months(row.date_issued, 24) if row.date_issued else None
+				row.penalty_pct = 10
+				has_written = 1
+			elif row.demerit_type == "Repeated Tardiness":
+				row.expiry_date = add_months(row.date_issued, 12) if row.date_issued else None
+				row.penalty_pct = 3
+			elif row.demerit_type == "Serious Misconduct":
+				row.expiry_date = None  # permanent
+				row.penalty_pct = 20
+				has_serious = 1
+			elif row.demerit_type == "False Evidence":
+				row.expiry_date = None  # cycle-scoped
+				row.penalty_pct = 0  # disqualifies Section B entirely
+				has_false_evidence = 1
+
+			# Determine if active (not expired relative to cycle end)
+			if row.demerit_type == "Serious Misconduct":
+				row.active = 1  # permanent
+			elif row.expiry_date and cycle_end:
+				row.active = 1 if getdate(row.expiry_date) >= getdate(cycle_end) else 0
+			else:
+				row.active = 1
+
+			if row.active:
+				total_penalty += flt(row.penalty_pct)
+
+		self.total_demerit_pct = flt(total_penalty, 2)
+		self.has_written_warning = has_written
+		self.has_serious_misconduct = has_serious
+		# Store false evidence flag for Section B calculation
+		self._has_false_evidence = has_false_evidence
+
+	def calculate_section_b_score(self):
+		"""Calculate Section B: evidence-based B4/B5 with progression gates.
+
+		Gates:
+		- New joiner: Section B = 0
+		- Section A < 71%: Section B locked
+		- B5 requires full B4 (15+ pts) AND no written warning AND no serious misconduct
+		- B5 replaces B4 (not additive)
+		- False Evidence demerit: Section B disqualified
 		"""
-		self.pms_total_score = flt(self.section_a_score, 2)
+		# Gate: new joiner
+		if cint(self.is_new_joiner):
+			self.section_b_score = 0
+			self.section_b_gate_status = "New Joiner Rule: Section B not assessed this cycle. Rating based on Section A only."
+			return
+
+		# Gate: false evidence
+		if getattr(self, "_has_false_evidence", 0):
+			self.section_b_score = 0
+			self.section_b_gate_status = "False Evidence: Section B disqualified for this cycle."
+			return
+
+		# Gate: Section A < 71%
+		section_a = flt(self.section_a_score)
+		if section_a < 71:
+			self.section_b_score = 0
+			self.section_b_gate_status = (
+				"Section B locked: Section A must reach \u2265 71% first. "
+				"A weak foundation cannot be compensated by Section B evidence."
+			)
+			return
+
+		# Calculate B4 points
+		b4_pts = sum(self._evidence_points(row) for row in self.b4_evidence)
+		self.b4_total_points = b4_pts
+
+		b4_score = 0
+		if 8 <= b4_pts <= 14:
+			b4_score = 5
+		elif b4_pts >= 15:
+			b4_score = 10
+
+		# Calculate B5 (requires full B4 15+ pts, no written warning, no serious misconduct)
+		b5_score = 0
+		self.b5_total_points = 0
+
+		if b4_pts >= 15 and not cint(self.has_written_warning) and not cint(self.has_serious_misconduct):
+			b5_pts = sum(self._evidence_points(row) for row in self.b5_evidence)
+			self.b5_total_points = b5_pts
+
+			if 8 <= b5_pts <= 13:
+				b5_score = 15
+			elif b5_pts >= 14:
+				b5_score = 20
+		elif b4_pts < 15 and self.b5_evidence:
+			self.section_b_gate_status = (
+				"B5 locked: Full B4 score (15+ pts) required before B5 can be claimed."
+			)
+		elif (cint(self.has_written_warning) or cint(self.has_serious_misconduct)) and self.b5_evidence:
+			self.section_b_gate_status = (
+				"B5 locked: Active written warning or serious misconduct blocks B5 access."
+			)
+
+		# B5 replaces B4 (not additive)
+		if b5_score > 0:
+			self.section_b_score = flt(b5_score)
+			self.section_b_gate_status = ""
+		else:
+			self.section_b_score = flt(b4_score)
+			if b4_score > 0 and not self.section_b_gate_status:
+				self.section_b_gate_status = ""
+
+	def _evidence_points(self, row):
+		"""Convert evidence quality to points and set on row"""
+		if row.evidence_quality == "Strong":
+			row.points = 3
+		elif row.evidence_quality == "Partial":
+			row.points = 2
+		else:
+			row.points = 0
+		return row.points
+
+	def calculate_pms_total(self):
+		"""Calculate total PMS score: Section A + Section B bonus - demerits, with hard caps"""
+		raw_score = flt(self.section_a_score) + flt(self.section_b_score) - flt(self.total_demerit_pct)
+		raw_score = max(0, min(100, raw_score))
+
+		# Hard cap: serious misconduct caps at 59%
+		if cint(self.has_serious_misconduct):
+			raw_score = min(raw_score, 59)
+
+		self.pms_total_score = flt(raw_score, 2)
 		self.overall_grade = get_grade(self.pms_total_score)
 
 	@frappe.whitelist()

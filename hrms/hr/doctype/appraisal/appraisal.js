@@ -167,33 +167,37 @@ frappe.ui.form.on("Appraisal", {
 		let a1 = cint(frm.doc.a1_weight_pct) || 70;
 		let a2 = cint(frm.doc.a2_weight_pct) || 10;
 		const labels = [
-			`A1 \u2014 Output KPIs (${a1}%)`,
+			`A1 \u2014 KPIs (${a1}%)`,
 			`A2 \u2014 Competency (${a2}%)`,
+			"B \u2014 Differentiator",
+			"Demerits",
 		];
-		const maximum_scores = [a1, a2];
+		const maximum_scores = [a1, a2, 20, 0];
 		const scores = [
 			flt(frm.doc.a1_score) || 0,
 			flt(frm.doc.a2_score) || 0,
+			flt(frm.doc.section_b_score) || 0,
+			-(flt(frm.doc.total_demerit_pct) || 0),
 		];
 
-		if (scores.some((s) => s > 0)) {
+		if (scores.some((s) => s !== 0)) {
 			frm.dashboard.render_graph({
 				data: {
 					labels: labels,
 					datasets: [
 						{
-							name: "Maximum Score",
+							name: "Maximum",
 							chartType: "bar",
 							values: maximum_scores,
 						},
 						{
-							name: "Score Obtained",
+							name: "Actual",
 							chartType: "bar",
 							values: scores,
 						},
 					],
 				},
-				title: __("Section A \u2014 Core Performance (max 80%)"),
+				title: __("PMS Score Breakdown"),
 				height: 250,
 				type: "bar",
 				barOptions: {
@@ -253,8 +257,102 @@ frappe.ui.form.on("Appraisal", {
 	calculate_pms_total(frm) {
 		let section_a = flt(frm.doc.a1_score) + flt(frm.doc.a2_score);
 		frm.set_value("section_a_score", flt(section_a, 2));
-		frm.set_value("pms_total_score", flt(section_a, 2));
-		frm.set_value("overall_grade", get_grade(section_a));
+
+		let section_b = flt(frm.doc.section_b_score);
+		let demerits = flt(frm.doc.total_demerit_pct);
+		let raw = Math.max(0, Math.min(100, section_a + section_b - demerits));
+
+		// Hard cap: serious misconduct
+		if (cint(frm.doc.has_serious_misconduct)) {
+			raw = Math.min(raw, 59);
+		}
+
+		frm.set_value("pms_total_score", flt(raw, 2));
+		frm.set_value("overall_grade", get_grade(raw));
+	},
+
+	calculate_section_b(frm) {
+		// New joiner gate
+		if (cint(frm.doc.is_new_joiner)) {
+			frm.set_value("section_b_score", 0);
+			frm.set_value("section_b_gate_status",
+				"New Joiner Rule: Section B not assessed this cycle.");
+			frm.trigger("calculate_pms_total");
+			return;
+		}
+
+		// False evidence gate
+		let has_false = (frm.doc.demerits || []).some(
+			(d) => d.demerit_type === "False Evidence"
+		);
+		if (has_false) {
+			frm.set_value("section_b_score", 0);
+			frm.set_value("section_b_gate_status",
+				"False Evidence: Section B disqualified for this cycle.");
+			frm.trigger("calculate_pms_total");
+			return;
+		}
+
+		// Section A gate
+		let section_a = flt(frm.doc.a1_score) + flt(frm.doc.a2_score);
+		if (section_a < 71) {
+			frm.set_value("section_b_score", 0);
+			frm.set_value("section_b_gate_status",
+				"Section B locked: Section A must reach \u2265 71% first.");
+			frm.trigger("calculate_pms_total");
+			return;
+		}
+
+		// B4 points
+		let b4_pts = 0;
+		(frm.doc.b4_evidence || []).forEach((d) => {
+			b4_pts += cint(d.points);
+		});
+		frm.set_value("b4_total_points", b4_pts);
+
+		let b4_score = 0;
+		if (b4_pts >= 15) b4_score = 10;
+		else if (b4_pts >= 8) b4_score = 5;
+
+		// B5 points (requires full B4 15+, no written warning, no serious misconduct)
+		let b5_score = 0;
+		let b5_pts = 0;
+		if (
+			b4_pts >= 15 &&
+			!cint(frm.doc.has_written_warning) &&
+			!cint(frm.doc.has_serious_misconduct)
+		) {
+			(frm.doc.b5_evidence || []).forEach((d) => {
+				b5_pts += cint(d.points);
+			});
+			if (b5_pts >= 14) b5_score = 20;
+			else if (b5_pts >= 8) b5_score = 15;
+		}
+		frm.set_value("b5_total_points", b5_pts);
+
+		// B5 replaces B4
+		frm.set_value("section_b_score", b5_score > 0 ? b5_score : b4_score);
+		frm.set_value("section_b_gate_status", "");
+		frm.trigger("calculate_pms_total");
+	},
+
+	calculate_demerits(frm) {
+		let total = 0;
+		let has_written = 0;
+		let has_serious = 0;
+
+		(frm.doc.demerits || []).forEach((d) => {
+			if (cint(d.active)) {
+				total += flt(d.penalty_pct);
+			}
+			if (d.demerit_type === "Written Warning") has_written = 1;
+			if (d.demerit_type === "Serious Misconduct") has_serious = 1;
+		});
+
+		frm.set_value("total_demerit_pct", flt(total, 2));
+		frm.set_value("has_written_warning", has_written);
+		frm.set_value("has_serious_misconduct", has_serious);
+		frm.trigger("calculate_section_b");
 	},
 });
 
@@ -313,4 +411,75 @@ function calculate_competency_row(frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "score", score);
 
 	frm.trigger("calculate_a2");
+}
+
+// B4 Evidence child table handlers
+frappe.ui.form.on("Appraisal B4 Evidence", {
+	evidence_quality(frm, cdt, cdn) {
+		set_evidence_points(cdt, cdn);
+		frm.trigger("calculate_section_b");
+	},
+	b4_evidence_remove(frm) {
+		frm.trigger("calculate_section_b");
+	},
+});
+
+// B5 Evidence child table handlers
+frappe.ui.form.on("Appraisal B5 Evidence", {
+	evidence_quality(frm, cdt, cdn) {
+		set_evidence_points(cdt, cdn);
+		frm.trigger("calculate_section_b");
+	},
+	b5_evidence_remove(frm) {
+		frm.trigger("calculate_section_b");
+	},
+});
+
+function set_evidence_points(cdt, cdn) {
+	let row = frappe.get_doc(cdt, cdn);
+	let points = 0;
+	if (row.evidence_quality === "Strong") points = 3;
+	else if (row.evidence_quality === "Partial") points = 2;
+	frappe.model.set_value(cdt, cdn, "points", points);
+}
+
+// Demerit child table handlers
+frappe.ui.form.on("Appraisal Demerit", {
+	demerit_type(frm, cdt, cdn) {
+		set_demerit_penalty(cdt, cdn);
+		frm.trigger("calculate_demerits");
+	},
+	date_issued(frm, cdt, cdn) {
+		set_demerit_expiry(cdt, cdn);
+		frm.trigger("calculate_demerits");
+	},
+	demerits_remove(frm) {
+		frm.trigger("calculate_demerits");
+	},
+});
+
+function set_demerit_penalty(cdt, cdn) {
+	let row = frappe.get_doc(cdt, cdn);
+	let penalty = 0;
+	if (row.demerit_type === "Verbal Warning") penalty = 5;
+	else if (row.demerit_type === "Written Warning") penalty = 10;
+	else if (row.demerit_type === "Repeated Tardiness") penalty = 3;
+	else if (row.demerit_type === "Serious Misconduct") penalty = 20;
+	frappe.model.set_value(cdt, cdn, "penalty_pct", penalty);
+	frappe.model.set_value(cdt, cdn, "active", 1);
+	set_demerit_expiry(cdt, cdn);
+}
+
+function set_demerit_expiry(cdt, cdn) {
+	let row = frappe.get_doc(cdt, cdn);
+	if (!row.date_issued || !row.demerit_type) return;
+
+	let expiry = null;
+	if (row.demerit_type === "Verbal Warning" || row.demerit_type === "Repeated Tardiness") {
+		expiry = frappe.datetime.add_months(row.date_issued, 12);
+	} else if (row.demerit_type === "Written Warning") {
+		expiry = frappe.datetime.add_months(row.date_issued, 24);
+	}
+	// Serious Misconduct and False Evidence: no expiry
+	frappe.model.set_value(cdt, cdn, "expiry_date", expiry);
 }

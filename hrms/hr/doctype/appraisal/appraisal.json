@@ -58,6 +58,22 @@
   "remarks",
   "total_section",
   "total_score",
+  "section_b_tab",
+  "is_new_joiner",
+  "section_b_gate_status",
+  "b4_section",
+  "b4_evidence",
+  "b4_total_points",
+  "b5_section",
+  "b5_evidence",
+  "b5_total_points",
+  "demerit_tab",
+  "demerits",
+  "demerit_summary_section",
+  "total_demerit_pct",
+  "column_break_demerit",
+  "has_written_warning",
+  "has_serious_misconduct",
   "competency_tab",
   "section_b_heading",
   "competency_score",
@@ -516,6 +532,105 @@
    "read_only": 1
   },
   {
+   "fieldname": "section_b_tab",
+   "fieldtype": "Tab Break",
+   "label": "Section B: Differentiator"
+  },
+  {
+   "default": "0",
+   "description": "Auto-set if employee joined after month 6 of the appraisal cycle. Section B not assessed.",
+   "fieldname": "is_new_joiner",
+   "fieldtype": "Check",
+   "label": "New Joiner (Section B not assessed)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b_gate_status",
+   "fieldtype": "Small Text",
+   "label": "Gate Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "b4_section",
+   "fieldtype": "Section Break",
+   "label": "B4 \u2014 Exceeds Expectations (+5% to +10%)"
+  },
+  {
+   "description": "8 criteria \u00d7 max 3 pts = 24 pts possible. Score 8\u201314 = +5%. Score 15\u201324 = +10%. Requires Section A \u2265 71%.",
+   "fieldname": "b4_evidence",
+   "fieldtype": "Table",
+   "label": "B4 Evidence",
+   "options": "Appraisal B4 Evidence"
+  },
+  {
+   "default": "0",
+   "fieldname": "b4_total_points",
+   "fieldtype": "Int",
+   "label": "B4 Total Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "b5_section",
+   "fieldtype": "Section Break",
+   "label": "B5 \u2014 Outstanding (+15% to +20%)"
+  },
+  {
+   "description": "Requires full B4 (15+ pts) AND no written warning AND no serious misconduct. B5 replaces B4 (not additive).",
+   "fieldname": "b5_evidence",
+   "fieldtype": "Table",
+   "label": "B5 Evidence",
+   "options": "Appraisal B5 Evidence"
+  },
+  {
+   "default": "0",
+   "fieldname": "b5_total_points",
+   "fieldtype": "Int",
+   "label": "B5 Total Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "demerit_tab",
+   "fieldtype": "Tab Break",
+   "label": "Demerits"
+  },
+  {
+   "description": "Demerits must be documented by HR. Link to Employee Grievance for traceability.",
+   "fieldname": "demerits",
+   "fieldtype": "Table",
+   "label": "Demerits",
+   "options": "Appraisal Demerit"
+  },
+  {
+   "fieldname": "demerit_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Demerit Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_demerit_pct",
+   "fieldtype": "Float",
+   "label": "Total Demerit %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_demerit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_written_warning",
+   "fieldtype": "Check",
+   "label": "Has Written Warning (blocks B5)",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "has_serious_misconduct",
+   "fieldtype": "Check",
+   "label": "Has Serious Misconduct (caps at 59%)",
+   "read_only": 1
+  },
+  {
    "fieldname": "competency_tab",
    "fieldtype": "Tab Break",
    "hidden": 1,
@@ -574,8 +689,7 @@
   {
    "fieldname": "section_b_score",
    "fieldtype": "Float",
-   "hidden": 1,
-   "label": "Section B \u2014 Functional Competency",
+   "label": "Section B \u2014 Differentiator (bonus)",
    "read_only": 1
   },
   {
