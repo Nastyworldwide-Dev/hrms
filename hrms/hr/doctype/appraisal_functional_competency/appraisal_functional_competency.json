@@ -20,10 +20,10 @@
  "fields": [
   {
    "fieldname": "competency",
-   "fieldtype": "Small Text",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Competency",
-   "reqd": 1
+   "options": "Competency"
   },
   {
    "fieldname": "proficiency_level",
@@ -36,8 +36,7 @@
    "fieldname": "per_weightage",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Weight",
-   "reqd": 1
+   "label": "Weight"
   },
   {
    "fieldname": "column_break_1",
