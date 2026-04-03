@@ -174,11 +174,10 @@ class Appraisal(Document, AppraisalMixin):
 		return cycle.score_conversion_table or None
 
 	def calculate_a1_score(self):
-		"""Calculate A1: Output KPI score using lookup table conversion.
+		"""Calculate A1: Output KPI score.
 
-		Each KRA row has a manager_rating (Frappe Rating: 0-1 fraction = 1-5 stars)
-		and a per_weightage. We compute a weighted average score (1-5), then convert
-		via the lookup table to get the A1 percentage.
+		Default: direct proportional — score = (weighted avg / 5) × A1 weight.
+		Optional: if cycle has a Score Conversion Table, use band-based lookup instead.
 
 		weighted_score per row = per_weightage × (rating × 5) / 5 (for display)
 		"""
@@ -204,11 +203,17 @@ class Appraisal(Document, AppraisalMixin):
 		else:
 			weighted_avg = 0
 
-		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
-		self.a1_score = flt(conversion * a1_weight, 2)
+		conversion_table = self._get_conversion_table()
+		if conversion_table:
+			# Band-based scoring (optional override from cycle)
+			conversion = get_conversion_factor(weighted_avg, conversion_table)
+			self.a1_score = flt(conversion * a1_weight, 2)
+		else:
+			# Direct proportional (default): score = (avg / 5) × weight
+			self.a1_score = flt(weighted_avg / 5 * a1_weight, 2)
 
 	def calculate_a2_score(self):
-		"""Calculate A2: Competency score using the same lookup table conversion."""
+		"""Calculate A2: Competency score. Same logic as A1."""
 		a2_weight = cint(self.a2_weight_pct) or 10
 		if not self.functional_competencies:
 			self.a2_score = 0
@@ -228,8 +233,12 @@ class Appraisal(Document, AppraisalMixin):
 		else:
 			weighted_avg = 0
 
-		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
-		self.a2_score = flt(conversion * a2_weight, 2)
+		conversion_table = self._get_conversion_table()
+		if conversion_table:
+			conversion = get_conversion_factor(weighted_avg, conversion_table)
+			self.a2_score = flt(conversion * a2_weight, 2)
+		else:
+			self.a2_score = flt(weighted_avg / 5 * a2_weight, 2)
 
 	def detect_new_joiner(self):
 		"""Auto-set is_new_joiner if employee joined after month 6 of the cycle"""

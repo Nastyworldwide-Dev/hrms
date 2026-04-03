@@ -56,15 +56,6 @@ class AppraisalCycle(Document):
 	def onload(self):
 		self.set_onload("appraisals_created", self.check_if_appraisals_exist())
 
-	def before_insert(self):
-		if not self.score_conversion_table:
-			for min_score, conversion_pct, label in DEFAULT_SCORE_CONVERSION:
-				self.append("score_conversion_table", {
-					"min_score": min_score,
-					"conversion_pct": conversion_pct,
-					"label": label,
-				})
-
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
 		self.validate_a1_a2_weights()
