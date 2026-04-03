@@ -14,9 +14,8 @@ from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
 
 
-# Lookup table: weighted average score range → conversion factor
-# Used for both A1 (Output KPIs) and A2 (Competency)
-SCORE_CONVERSION_TABLE = [
+# Default lookup table — used as fallback when cycle has no conversion table
+DEFAULT_SCORE_CONVERSION = [
 	(4.5, 0.80, "Exceptional"),
 	(3.5, 0.75, "Strong"),
 	(2.5, 0.71, "Meets Expectation"),
@@ -25,13 +24,27 @@ SCORE_CONVERSION_TABLE = [
 ]
 
 
-def get_conversion_factor(weighted_avg):
-	"""Convert a 1-5 weighted average score to a percentage factor using the lookup table"""
+def get_conversion_factor(weighted_avg, conversion_table=None):
+	"""Convert a 1-5 weighted average score to a percentage factor.
+
+	Args:
+		weighted_avg: The weighted average score on a 1-5 scale
+		conversion_table: Optional list of Score Conversion Row docs from Appraisal Cycle.
+			Falls back to DEFAULT_SCORE_CONVERSION if not provided.
+	"""
 	weighted_avg = flt(weighted_avg, 2)
-	for threshold, factor, _label in SCORE_CONVERSION_TABLE:
+
+	if conversion_table:
+		for row in conversion_table:
+			if weighted_avg >= flt(row.min_score):
+				return flt(row.conversion_pct)
+		# Below lowest threshold
+		return flt(conversion_table[-1].conversion_pct) if conversion_table else 0.50
+
+	for threshold, factor, _label in DEFAULT_SCORE_CONVERSION:
 		if weighted_avg >= threshold:
 			return factor
-	return 0.50  # below 1.0 = Unsatisfactory
+	return 0.50
 
 
 class Appraisal(Document, AppraisalMixin):
@@ -153,6 +166,13 @@ class Appraisal(Document, AppraisalMixin):
 			if cycle.start_date and cycle.end_date:
 				self.performance_period = f"{cycle.start_date} to {cycle.end_date}"
 
+	def _get_conversion_table(self):
+		"""Get score conversion table from the linked Appraisal Cycle, or None for default."""
+		if not self.appraisal_cycle:
+			return None
+		cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
+		return cycle.score_conversion_table or None
+
 	def calculate_a1_score(self):
 		"""Calculate A1: Output KPI score using lookup table conversion.
 
@@ -184,7 +204,7 @@ class Appraisal(Document, AppraisalMixin):
 		else:
 			weighted_avg = 0
 
-		conversion = get_conversion_factor(weighted_avg)
+		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
 		self.a1_score = flt(conversion * a1_weight, 2)
 
 	def calculate_a2_score(self):
@@ -208,7 +228,7 @@ class Appraisal(Document, AppraisalMixin):
 		else:
 			weighted_avg = 0
 
-		conversion = get_conversion_factor(weighted_avg)
+		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
 		self.a2_score = flt(conversion * a2_weight, 2)
 
 	def detect_new_joiner(self):

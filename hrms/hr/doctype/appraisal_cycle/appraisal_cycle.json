@@ -20,6 +20,8 @@
   "a1_weight_pct",
   "column_break_vhzx",
   "a2_weight_pct",
+  "score_conversion_section",
+  "score_conversion_table",
   "kra_evaluation_method",
   "scoring_method_section",
   "scoring_method",
@@ -169,6 +171,18 @@
    "fieldtype": "Int",
    "label": "A2 \u2014 Competency Weight %",
    "read_only": 1
+  },
+  {
+   "fieldname": "score_conversion_section",
+   "fieldtype": "Section Break",
+   "label": "Score Conversion Table"
+  },
+  {
+   "description": "Maps weighted average rating (1-5) to conversion factor. Rows must be ordered highest score first. Locked once appraisals are created.",
+   "fieldname": "score_conversion_table",
+   "fieldtype": "Table",
+   "label": "Score Conversion",
+   "options": "Score Conversion Row"
   },
   {
    "default": "Automated Based on Goal Progress",

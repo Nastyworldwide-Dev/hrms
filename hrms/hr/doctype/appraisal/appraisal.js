@@ -11,7 +11,8 @@ const GRADE_SCALE = [
 
 // Lookup table: weighted average score → conversion factor
 // Same table used for both A1 (Output KPIs) and A2 (Competency)
-const SCORE_CONVERSION_TABLE = [
+// Default fallback — used when cycle has no conversion table
+const DEFAULT_SCORE_CONVERSION = [
 	[4.5, 0.80, "Exceptional"],
 	[3.5, 0.75, "Strong"],
 	[2.5, 0.71, "Meets Expectation"],
@@ -26,8 +27,15 @@ function get_grade(score) {
 	return GRADE_SCALE[GRADE_SCALE.length - 1][1];
 }
 
-function get_conversion_factor(weighted_avg) {
-	for (let [threshold, factor] of SCORE_CONVERSION_TABLE) {
+function get_conversion_factor(weighted_avg, table) {
+	// Use cycle's configurable table if available, otherwise default
+	if (table && table.length) {
+		for (let row of table) {
+			if (weighted_avg >= flt(row.min_score)) return flt(row.conversion_pct);
+		}
+		return flt(table[table.length - 1].conversion_pct);
+	}
+	for (let [threshold, factor] of DEFAULT_SCORE_CONVERSION) {
 		if (weighted_avg >= threshold) return factor;
 	}
 	return 0.5;
@@ -35,6 +43,27 @@ function get_conversion_factor(weighted_avg) {
 
 frappe.ui.form.on("Appraisal", {
 	refresh(frm) {
+		// Fetch score conversion table from cycle for live calculations
+		if (frm.doc.appraisal_cycle && !frm._score_conversion_table) {
+			frappe.call({
+				method: "frappe.client.get_list",
+				args: {
+					doctype: "Score Conversion Row",
+					filters: {
+						parent: frm.doc.appraisal_cycle,
+						parenttype: "Appraisal Cycle",
+					},
+					fields: ["min_score", "conversion_pct", "label"],
+					order_by: "min_score desc",
+					limit_page_length: 0,
+				},
+				async: false,
+				callback(r) {
+					frm._score_conversion_table = r.message || [];
+				},
+			});
+		}
+
 		if (!frm.doc.__islocal) {
 			frm.trigger("add_custom_buttons");
 			frm.trigger("show_feedback_history");
@@ -111,6 +140,25 @@ frappe.ui.form.on("Appraisal", {
 							},
 						);
 					}
+				},
+				() => {
+					// Fetch configurable score conversion table from cycle
+					frappe.call({
+						method: "frappe.client.get_list",
+						args: {
+							doctype: "Score Conversion Row",
+							filters: {
+								parent: frm.doc.appraisal_cycle,
+								parenttype: "Appraisal Cycle",
+							},
+							fields: ["min_score", "conversion_pct", "label"],
+							order_by: "min_score desc",
+							limit_page_length: 0,
+						},
+						callback(r) {
+							frm._score_conversion_table = r.message || [];
+						},
+					});
 				},
 				() => {
 					frm.call({
@@ -237,7 +285,7 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_avg = total_weightage
 			? flt((weighted_sum / total_weightage) * 5, 2)
 			: 0;
-		let conversion = get_conversion_factor(weighted_avg);
+		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
 		let a1_weight = cint(frm.doc.a1_weight_pct) || 70;
 		frm.set_value("a1_score", flt(conversion * a1_weight, 2));
 		frm.trigger("calculate_pms_total");
@@ -263,7 +311,7 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_avg = total_weightage
 			? flt((weighted_sum / total_weightage) * 5, 2)
 			: 0;
-		let conversion = get_conversion_factor(weighted_avg);
+		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
 		let a2_weight = cint(frm.doc.a2_weight_pct) || 10;
 		frm.set_value("a2_score", flt(conversion * a2_weight, 2));
 		frm.trigger("calculate_pms_total");

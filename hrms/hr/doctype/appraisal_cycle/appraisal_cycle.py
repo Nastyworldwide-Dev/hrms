@@ -43,13 +43,54 @@ def get_department_template(department):
 	return None
 
 
+DEFAULT_SCORE_CONVERSION = [
+	(4.5, 0.80, "Exceptional"),
+	(3.5, 0.75, "Strong"),
+	(2.5, 0.71, "Meets Expectation"),
+	(1.5, 0.60, "Needs Improvement"),
+	(1.0, 0.50, "Unsatisfactory"),
+]
+
+
 class AppraisalCycle(Document):
 	def onload(self):
 		self.set_onload("appraisals_created", self.check_if_appraisals_exist())
 
+	def before_insert(self):
+		if not self.score_conversion_table:
+			for min_score, conversion_pct, label in DEFAULT_SCORE_CONVERSION:
+				self.append("score_conversion_table", {
+					"min_score": min_score,
+					"conversion_pct": conversion_pct,
+					"label": label,
+				})
+
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
 		self.validate_a1_a2_weights()
+		self.validate_score_conversion_table()
+
+	def validate_score_conversion_table(self):
+		if not self.score_conversion_table:
+			return
+
+		# Ensure rows sorted descending by min_score
+		prev_score = None
+		for row in self.score_conversion_table:
+			if prev_score is not None and flt(row.min_score) >= flt(prev_score):
+				frappe.throw(
+					_("Score Conversion rows must be ordered from highest to lowest min_score"),
+					title=_("Invalid Score Conversion Table"),
+				)
+			prev_score = row.min_score
+
+		# Lock table once appraisals exist
+		if not self.is_new() and self.has_value_changed("score_conversion_table"):
+			if self.check_if_appraisals_exist():
+				frappe.throw(
+					_("Score Conversion Table cannot be changed as appraisals already exist for this cycle"),
+					title=_("Not Allowed"),
+				)
 
 	def validate_a1_a2_weights(self):
 		from frappe.utils import cint
