@@ -43,6 +43,13 @@ frappe.ui.form.on("Appraisal", {
 
 		frm.trigger("update_section_labels");
 
+		// Filter KRA by employee's department
+		frm.set_query("kra", "appraisal_kra", () => {
+			return {
+				filters: { department: ["in", [frm.doc.department, ""]] },
+			};
+		});
+
 		// Filter KPI by KRA in Appraisal KRA table
 		frm.set_query("kpi", "appraisal_kra", (doc, cdt, cdn) => {
 			let row = frappe.get_doc(cdt, cdn);
