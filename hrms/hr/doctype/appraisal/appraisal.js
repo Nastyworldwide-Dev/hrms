@@ -74,20 +74,15 @@ frappe.ui.form.on("Appraisal", {
 		}
 
 		// Filter appraisal_template by employee's department tree (self + ancestors)
-		if (frm.doc.department) {
-			frappe.call({
-				method: "hrms.hr.doctype.appraisal.appraisal.get_department_ancestors",
-				args: { department: frm.doc.department },
-				callback: (r) => {
-					let departments = r.message || [];
-					frm.set_query("appraisal_template", () => ({
-						filters: {
-							department: ["in", departments],
-						},
-					}));
-				},
-			});
-		}
+		// Uses a server-side query that runs when dropdown is opened, so it always
+		// has the latest department value — no race condition with async calls.
+		frm.set_query("appraisal_template", () => {
+			if (!frm.doc.department) return {};
+			return {
+				query: "hrms.hr.doctype.appraisal.appraisal.get_templates_for_department",
+				filters: { department: frm.doc.department },
+			};
+		});
 	},
 
 	appraisal_template(frm) {

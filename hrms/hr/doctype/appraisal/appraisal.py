@@ -657,6 +657,33 @@ def get_department_ancestors(department):
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
+def get_templates_for_department(doctype, txt, searchfield, start, page_len, filters):
+	"""Return appraisal templates matching the department tree (self + ancestors).
+	Used as a server-side query so the filter is always applied when dropdown opens.
+	"""
+	department = filters.get("department")
+	departments = get_department_ancestors(department) if department else []
+
+	conditions = ""
+	if departments:
+		dept_list = ", ".join(frappe.db.escape(d) for d in departments)
+		conditions = f"AND `department` IN ({dept_list})"
+
+	return frappe.db.sql(
+		f"""
+		SELECT `name`, `template_title`
+		FROM `tabAppraisal Template`
+		WHERE (`template_title` LIKE %(txt)s OR `name` LIKE %(txt)s)
+		{conditions}
+		ORDER BY `template_title` ASC
+		LIMIT %(page_len)s OFFSET %(start)s
+		""",
+		{"txt": f"%{txt}%", "page_len": page_len, "start": start},
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def get_kras_for_employee(doctype, txt, searchfield, start, page_len, filters):
 	appraisal = frappe.db.get_value(
 		"Appraisal",
