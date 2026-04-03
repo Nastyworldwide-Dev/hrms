@@ -402,12 +402,24 @@ frappe.ui.form.on("Appraisal KRA", {
 	kpi(frm, cdt, cdn) {
 		let row = frappe.get_doc(cdt, cdn);
 		if (row.kpi) {
-			frappe.db.get_value("KPI", row.kpi, ["title"], (r) => {
+			frappe.db.get_value("KPI", row.kpi, ["title", "default_target", "unit_of_measure"], (r) => {
 				if (r) {
 					frappe.model.set_value(cdt, cdn, "kpi_description", r.title);
+					if (flt(r.default_target)) {
+						frappe.model.set_value(cdt, cdn, "target", r.default_target);
+					}
+					if (r.unit_of_measure) {
+						frappe.model.set_value(cdt, cdn, "unit_of_measure", r.unit_of_measure);
+					}
 				}
 			});
 		}
+	},
+	target(frm, cdt, cdn) {
+		calculate_achievement(cdt, cdn);
+	},
+	actual(frm, cdt, cdn) {
+		calculate_achievement(cdt, cdn);
 	},
 	manager_rating(frm, cdt, cdn) {
 		calculate_kra_row(frm, cdt, cdn);
@@ -438,6 +450,15 @@ function calculate_kra_row(frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "weighted_score", weighted_score);
 
 	frm.trigger("calculate_a1");
+}
+
+function calculate_achievement(cdt, cdn) {
+	let row = frappe.get_doc(cdt, cdn);
+	let achievement = 0;
+	if (flt(row.target)) {
+		achievement = flt((flt(row.actual) / flt(row.target)) * 100, 2);
+	}
+	frappe.model.set_value(cdt, cdn, "achievement", achievement);
 }
 
 // A2: Functional Competency child table handlers (repurposed for A2)

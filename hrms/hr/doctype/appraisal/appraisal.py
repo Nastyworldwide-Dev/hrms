@@ -167,6 +167,12 @@ class Appraisal(Document, AppraisalMixin):
 		weighted_sum = 0
 
 		for row in self.appraisal_kra:
+			# Calculate achievement (informational — supports the rating)
+			if flt(row.target):
+				row.achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
+			else:
+				row.achievement = 0
+
 			rating_value = flt(row.manager_rating) * 5  # 0-1 → 1-5
 			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			weighted_sum += flt(row.per_weightage) * rating_value / 5
@@ -456,6 +462,8 @@ class Appraisal(Document, AppraisalMixin):
 					"per_weightage": flt(entry.per_weightage, 2),
 					"kpi": entry.get("kpi"),
 					"kpi_description": entry.get("kpi_description"),
+					"target": flt(entry.get("default_target")),
+					"unit_of_measure": entry.get("unit_of_measure"),
 				},
 			)
 

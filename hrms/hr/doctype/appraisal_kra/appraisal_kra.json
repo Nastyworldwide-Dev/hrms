@@ -74,29 +74,32 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Set by manager at cycle start",
    "fieldname": "target",
    "fieldtype": "Float",
-   "hidden": 1,
+   "in_list_view": 1,
    "label": "Target"
   },
   {
+   "description": "Set during review — what the staff actually achieved",
    "fieldname": "actual",
    "fieldtype": "Float",
-   "hidden": 1,
+   "in_list_view": 1,
    "label": "Actual"
   },
   {
+   "description": "Auto-calculated: (Actual / Target) \u00d7 100",
    "fieldname": "achievement",
    "fieldtype": "Float",
-   "hidden": 1,
+   "in_list_view": 1,
    "label": "Achievement (%)",
    "read_only": 1
   },
   {
    "fieldname": "unit_of_measure",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Unit of Measure"
+   "fieldtype": "Link",
+   "label": "UOM",
+   "options": "UOM"
   },
   {
    "fieldname": "manager_rating",
