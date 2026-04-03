@@ -127,6 +127,19 @@ frappe.ui.form.on("Appraisal", {
 		}
 	},
 
+	auto_recalc_weightage(frm) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			if ((frm.doc.appraisal_kra || []).length) {
+				redistribute_weightage(frm, "appraisal_kra");
+				frm.trigger("calculate_a1");
+			}
+			if ((frm.doc.functional_competencies || []).length) {
+				redistribute_weightage(frm, "functional_competencies");
+				frm.trigger("calculate_a2");
+			}
+		}
+	},
+
 	a1_weight_pct(frm) {
 		let a1 = cint(frm.doc.a1_weight_pct) || 70;
 		frm.set_value("a2_weight_pct", 80 - a1);
@@ -429,8 +442,10 @@ frappe.ui.form.on("Appraisal KRA", {
 	},
 	appraisal_kra_add(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
-			redistribute_weightage(frm, "appraisal_kra");
-			frm.trigger("calculate_a1");
+			setTimeout(() => {
+				redistribute_weightage(frm, "appraisal_kra");
+				frm.trigger("calculate_a1");
+			}, 100);
 		}
 	},
 	appraisal_kra_remove(frm) {
@@ -471,8 +486,10 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 	},
 	functional_competencies_add(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
-			redistribute_weightage(frm, "functional_competencies");
-			frm.trigger("calculate_a2");
+			setTimeout(() => {
+				redistribute_weightage(frm, "functional_competencies");
+				frm.trigger("calculate_a2");
+			}, 100);
 		}
 	},
 	functional_competencies_remove(frm) {
@@ -497,17 +514,14 @@ function redistribute_weightage(frm, table_name) {
 	let rows = frm.doc[table_name] || [];
 	if (!rows.length) return;
 
-	let each = flt(100 / rows.length, 2);
+	let count = rows.length;
+	let each = flt(100 / count, 2);
 	let total = 0;
 
 	rows.forEach((row, i) => {
-		if (i < rows.length - 1) {
-			row.per_weightage = each;
-			total += each;
-		} else {
-			// Last row gets remainder to ensure exact 100
-			row.per_weightage = flt(100 - total, 2);
-		}
+		let value = i < count - 1 ? each : flt(100 - total, 2);
+		total += each;
+		frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
 	});
 
 	frm.refresh_field(table_name);
