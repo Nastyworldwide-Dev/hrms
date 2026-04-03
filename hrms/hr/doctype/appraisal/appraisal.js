@@ -515,14 +515,72 @@ function redistribute_weightage(frm, table_name) {
 	if (!rows.length) return;
 
 	let count = rows.length;
-	let each = flt(100 / count, 2);
-	let total = 0;
+	let existing_total = 0;
+	let empty_rows = [];
+	let filled_rows = [];
 
-	rows.forEach((row, i) => {
-		let value = i < count - 1 ? each : flt(100 - total, 2);
-		total += each;
-		frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+	rows.forEach((row) => {
+		if (flt(row.per_weightage) > 0) {
+			filled_rows.push(row);
+			existing_total += flt(row.per_weightage);
+		} else {
+			empty_rows.push(row);
+		}
 	});
+
+	if (empty_rows.length && filled_rows.length) {
+		// New row(s) added — carve out equal share from existing rows
+		let new_share = flt(100 / count, 2);
+		let total_to_free = flt(new_share * empty_rows.length, 2);
+		let scale = existing_total > 0
+			? flt((existing_total - total_to_free) / existing_total, 6)
+			: 0;
+
+		// Prevent negative scaling
+		if (scale < 0) scale = 0;
+
+		let running = 0;
+		filled_rows.forEach((row, i) => {
+			let value;
+			if (i < filled_rows.length - 1) {
+				value = flt(flt(row.per_weightage) * scale, 2);
+			} else {
+				// Last filled row absorbs rounding
+				value = flt(100 - running - new_share * empty_rows.length, 2);
+			}
+			running += value;
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+		});
+
+		empty_rows.forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", new_share);
+		});
+	} else if (!empty_rows.length && existing_total > 0) {
+		// All rows have values (remove case, or checkbox toggled) — scale to 100
+		let scale = flt(100 / existing_total, 6);
+		let running = 0;
+
+		rows.forEach((row, i) => {
+			let value;
+			if (i < count - 1) {
+				value = flt(flt(row.per_weightage) * scale, 2);
+				running += value;
+			} else {
+				value = flt(100 - running, 2);
+			}
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+		});
+	} else {
+		// All rows empty — equal distribution
+		let each = flt(100 / count, 2);
+		let running = 0;
+
+		rows.forEach((row, i) => {
+			let value = i < count - 1 ? each : flt(100 - running, 2);
+			running += each;
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+		});
+	}
 
 	frm.refresh_field(table_name);
 }
