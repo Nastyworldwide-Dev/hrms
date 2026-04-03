@@ -408,7 +408,16 @@ frappe.ui.form.on("Appraisal KRA", {
 	per_weightage(frm, cdt, cdn) {
 		calculate_kra_row(frm, cdt, cdn);
 	},
+	appraisal_kra_add(frm) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			redistribute_weightage(frm, "appraisal_kra");
+			frm.trigger("calculate_a1");
+		}
+	},
 	appraisal_kra_remove(frm) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			redistribute_weightage(frm, "appraisal_kra");
+		}
 		frm.trigger("calculate_a1");
 	},
 });
@@ -432,7 +441,16 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 	per_weightage(frm, cdt, cdn) {
 		calculate_competency_row(frm, cdt, cdn);
 	},
+	functional_competencies_add(frm) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			redistribute_weightage(frm, "functional_competencies");
+			frm.trigger("calculate_a2");
+		}
+	},
 	functional_competencies_remove(frm) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			redistribute_weightage(frm, "functional_competencies");
+		}
 		frm.trigger("calculate_a2");
 	},
 });
@@ -445,6 +463,26 @@ function calculate_competency_row(frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "score", score);
 
 	frm.trigger("calculate_a2");
+}
+
+function redistribute_weightage(frm, table_name) {
+	let rows = frm.doc[table_name] || [];
+	if (!rows.length) return;
+
+	let each = flt(100 / rows.length, 2);
+	let total = 0;
+
+	rows.forEach((row, i) => {
+		if (i < rows.length - 1) {
+			row.per_weightage = each;
+			total += each;
+		} else {
+			// Last row gets remainder to ensure exact 100
+			row.per_weightage = flt(100 - total, 2);
+		}
+	});
+
+	frm.refresh_field(table_name);
 }
 
 // B4 Evidence child table handlers

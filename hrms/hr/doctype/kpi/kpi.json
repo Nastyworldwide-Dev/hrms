@@ -43,9 +43,10 @@
   },
   {
    "fieldname": "unit_of_measure",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Unit of Measure"
+   "label": "Unit of Measure",
+   "options": "UOM"
   },
   {
    "fieldname": "section_break_desc",

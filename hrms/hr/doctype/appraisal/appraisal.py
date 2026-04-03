@@ -46,12 +46,10 @@ class Appraisal(Document, AppraisalMixin):
 		self.detect_new_joiner()
 		self.set_leadership_gate_applicability()
 
-		# Weightage validation: A1 KRAs must sum to a1_weight_pct, A2 to a2_weight_pct
-		a1_weight = cint(self.a1_weight_pct) or 70
-		a2_weight = cint(self.a2_weight_pct) or 10
-		self.validate_total_weightage("appraisal_kra", "KRAs (A1)", a1_weight)
+		# Weightage validation: all tables always sum to 100%
+		self.validate_total_weightage("appraisal_kra", "KRAs (A1)", 100)
 		if self.functional_competencies:
-			self.validate_total_weightage("functional_competencies", "Competencies (A2)", a2_weight)
+			self.validate_total_weightage("functional_competencies", "Competencies (A2)", 100)
 		self.validate_total_weightage("self_ratings", "Self Ratings")
 
 		# Calculate Section A using lookup table
@@ -449,30 +447,17 @@ class Appraisal(Document, AppraisalMixin):
 
 		template = frappe.get_doc("Appraisal Template", self.appraisal_template)
 
-		# Template goals sum to 100%; scale to a1_weight_pct for A1 KPIs
-		template_total = sum(flt(e.per_weightage) for e in template.goals) or 100
-		a1_max = cint(self.a1_weight_pct) or 70
-		scale = a1_max / template_total
-
+		# Template goals already sum to 100% — copy directly
 		for entry in template.goals:
 			self.append(
 				"appraisal_kra",
 				{
 					"kra": entry.key_result_area,
-					"per_weightage": flt(entry.per_weightage * scale, 2),
-					"kra_category": entry.get("kra_category"),
+					"per_weightage": flt(entry.per_weightage, 2),
 					"kpi": entry.get("kpi"),
 					"kpi_description": entry.get("kpi_description"),
 				},
 			)
-
-		# Fix rounding so rows sum to exactly a1_max
-		rows = self.get("appraisal_kra")
-		if rows:
-			rounded_total = sum(flt(r.per_weightage) for r in rows)
-			diff = flt(a1_max - rounded_total, 2)
-			if diff:
-				rows[-1].per_weightage = flt(rows[-1].per_weightage + diff, 2)
 
 		for entry in template.rating_criteria:
 			self.append(

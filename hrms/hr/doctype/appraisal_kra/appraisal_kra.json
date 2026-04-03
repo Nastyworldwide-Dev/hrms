@@ -48,6 +48,7 @@
   {
    "fieldname": "kra_category",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Category",
    "options": "\nStakeholder Goal\nFinancial Goal\nContinuous Growth Goal\nOperational Goal\nPeople Goal"
   },

@@ -36,6 +36,7 @@
   "a1_weight_pct",
   "column_break_a1a2",
   "a2_weight_pct",
+  "auto_recalc_weightage",
   "scoring_method_section",
   "scoring_method",
   "allow_over_achievement",
@@ -341,6 +342,13 @@
    "fieldtype": "Int",
    "label": "A2 \u2014 Competency Weight %",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "When checked, adding or removing rows auto-redistributes weightage equally across all rows (100% / n)",
+   "fieldname": "auto_recalc_weightage",
+   "fieldtype": "Check",
+   "label": "Auto-Redistribute Weightage"
   },
   {
    "fieldname": "scoring_method_section",

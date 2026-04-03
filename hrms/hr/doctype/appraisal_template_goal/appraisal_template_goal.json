@@ -8,7 +8,6 @@
  "field_order": [
   "key_result_area",
   "kpi",
-  "kra_category",
   "kpi_description",
   "per_weightage",
   "column_break_tg",
@@ -46,7 +45,7 @@
   {
    "fieldname": "kra_category",
    "fieldtype": "Select",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Category",
    "options": "\nStakeholder Goal\nFinancial Goal\nContinuous Growth Goal\nOperational Goal\nPeople Goal"
   },
@@ -66,8 +65,9 @@
   },
   {
    "fieldname": "unit_of_measure",
-   "fieldtype": "Data",
-   "label": "Unit of Measure"
+   "fieldtype": "Link",
+   "label": "Unit of Measure",
+   "options": "UOM"
   }
  ],
  "idx": 1,
