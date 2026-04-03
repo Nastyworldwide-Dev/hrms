@@ -286,14 +286,9 @@ frappe.ui.form.on("Appraisal", {
 			? flt((weighted_sum / total_weightage) * 5, 2)
 			: 0;
 		let a1_weight = cint(frm.doc.a1_weight_pct) || 70;
-		let table = frm._score_conversion_table;
-
-		let a1_score;
-		if (table && table.length) {
-			a1_score = flt(get_conversion_factor(weighted_avg, table) * a1_weight, 2);
-		} else {
-			a1_score = flt((weighted_avg / 5) * a1_weight, 2);
-		}
+		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
+		// Factor is out of 0.80 (Section A max). Scale to sub-section weight.
+		let a1_score = flt((conversion / 0.80) * a1_weight, 2);
 		frm.set_value("a1_score", a1_score);
 		frm.trigger("calculate_pms_total");
 	},
@@ -319,14 +314,8 @@ frappe.ui.form.on("Appraisal", {
 			? flt((weighted_sum / total_weightage) * 5, 2)
 			: 0;
 		let a2_weight = cint(frm.doc.a2_weight_pct) || 10;
-		let table = frm._score_conversion_table;
-
-		let a2_score;
-		if (table && table.length) {
-			a2_score = flt(get_conversion_factor(weighted_avg, table) * a2_weight, 2);
-		} else {
-			a2_score = flt((weighted_avg / 5) * a2_weight, 2);
-		}
+		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
+		let a2_score = flt((conversion / 0.80) * a2_weight, 2);
 		frm.set_value("a2_score", a2_score);
 		frm.trigger("calculate_pms_total");
 	},
