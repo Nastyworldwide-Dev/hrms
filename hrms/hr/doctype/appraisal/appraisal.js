@@ -130,11 +130,11 @@ frappe.ui.form.on("Appraisal", {
 	auto_recalc_weightage(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
 			if ((frm.doc.appraisal_kra || []).length) {
-				redistribute_weightage(frm, "appraisal_kra");
+				normalize_weightage(frm, "appraisal_kra");
 				frm.trigger("calculate_a1");
 			}
 			if ((frm.doc.functional_competencies || []).length) {
-				redistribute_weightage(frm, "functional_competencies");
+				normalize_weightage(frm, "functional_competencies");
 				frm.trigger("calculate_a2");
 			}
 		}
@@ -438,19 +438,22 @@ frappe.ui.form.on("Appraisal KRA", {
 		calculate_kra_row(frm, cdt, cdn);
 	},
 	per_weightage(frm, cdt, cdn) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			adjust_other_rows(frm, "appraisal_kra", cdn);
+		}
 		calculate_kra_row(frm, cdt, cdn);
 	},
 	appraisal_kra_add(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
 			setTimeout(() => {
-				redistribute_weightage(frm, "appraisal_kra");
+				add_row_weightage(frm, "appraisal_kra");
 				frm.trigger("calculate_a1");
-			}, 100);
+			}, 200);
 		}
 	},
 	appraisal_kra_remove(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
-			redistribute_weightage(frm, "appraisal_kra");
+			normalize_weightage(frm, "appraisal_kra");
 		}
 		frm.trigger("calculate_a1");
 	},
@@ -482,19 +485,22 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 		calculate_competency_row(frm, cdt, cdn);
 	},
 	per_weightage(frm, cdt, cdn) {
+		if (cint(frm.doc.auto_recalc_weightage)) {
+			adjust_other_rows(frm, "functional_competencies", cdn);
+		}
 		calculate_competency_row(frm, cdt, cdn);
 	},
 	functional_competencies_add(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
 			setTimeout(() => {
-				redistribute_weightage(frm, "functional_competencies");
+				add_row_weightage(frm, "functional_competencies");
 				frm.trigger("calculate_a2");
-			}, 100);
+			}, 200);
 		}
 	},
 	functional_competencies_remove(frm) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
-			redistribute_weightage(frm, "functional_competencies");
+			normalize_weightage(frm, "functional_competencies");
 		}
 		frm.trigger("calculate_a2");
 	},
@@ -510,59 +516,77 @@ function calculate_competency_row(frm, cdt, cdn) {
 	frm.trigger("calculate_a2");
 }
 
-function redistribute_weightage(frm, table_name) {
+/**
+ * Called when a NEW row is added.
+ * Reduces each existing row proportionally to carve out space for the new row.
+ * Example: 3 rows at 40/35/25, add 4th → new row gets ~25%, existing scale down.
+ */
+function add_row_weightage(frm, table_name) {
 	let rows = frm.doc[table_name] || [];
-	if (!rows.length) return;
-
-	let count = rows.length;
-	let existing_total = 0;
-	let empty_rows = [];
-	let filled_rows = [];
-
-	rows.forEach((row) => {
-		if (flt(row.per_weightage) > 0) {
-			filled_rows.push(row);
-			existing_total += flt(row.per_weightage);
-		} else {
-			empty_rows.push(row);
+	if (rows.length <= 1) {
+		// First row — just set to 100
+		if (rows.length === 1) {
+			frappe.model.set_value(rows[0].doctype, rows[0].name, "per_weightage", 100);
 		}
-	});
+		frm.refresh_field(table_name);
+		return;
+	}
 
-	if (empty_rows.length && filled_rows.length) {
-		// New row(s) added — carve out equal share from existing rows
-		let new_share = flt(100 / count, 2);
-		let total_to_free = flt(new_share * empty_rows.length, 2);
-		let scale = existing_total > 0
-			? flt((existing_total - total_to_free) / existing_total, 6)
-			: 0;
+	// The new row is the last one (just added), with per_weightage = 0
+	let new_row = rows[rows.length - 1];
+	let others = rows.slice(0, -1);
+	let others_total = others.reduce((sum, r) => sum + flt(r.per_weightage), 0);
 
-		// Prevent negative scaling
-		if (scale < 0) scale = 0;
+	// New row gets equal share: 100 / total_rows
+	let new_share = flt(100 / rows.length, 2);
 
+	if (others_total > 0) {
+		// Scale existing rows down proportionally
+		let scale = (100 - new_share) / others_total;
 		let running = 0;
-		filled_rows.forEach((row, i) => {
+
+		others.forEach((row, i) => {
 			let value;
-			if (i < filled_rows.length - 1) {
+			if (i < others.length - 1) {
 				value = flt(flt(row.per_weightage) * scale, 2);
 			} else {
-				// Last filled row absorbs rounding
-				value = flt(100 - running - new_share * empty_rows.length, 2);
+				value = flt(100 - new_share - running, 2);
 			}
 			running += value;
 			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
 		});
+	}
 
-		empty_rows.forEach((row) => {
-			frappe.model.set_value(row.doctype, row.name, "per_weightage", new_share);
-		});
-	} else if (!empty_rows.length && existing_total > 0) {
-		// All rows have values (remove case, or checkbox toggled) — scale to 100
-		let scale = flt(100 / existing_total, 6);
+	frappe.model.set_value(new_row.doctype, new_row.name, "per_weightage", new_share);
+	frm.refresh_field(table_name);
+}
+
+/**
+ * Called when a row is REMOVED or checkbox toggled on.
+ * Scales all remaining rows proportionally so they sum to exactly 100%.
+ */
+function normalize_weightage(frm, table_name) {
+	let rows = frm.doc[table_name] || [];
+	if (!rows.length) return;
+
+	let total = rows.reduce((sum, r) => sum + flt(r.per_weightage), 0);
+
+	if (total === 0) {
+		// All zero — equal split
+		let each = flt(100 / rows.length, 2);
 		let running = 0;
-
+		rows.forEach((row, i) => {
+			let value = i < rows.length - 1 ? each : flt(100 - running, 2);
+			running += each;
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+		});
+	} else if (flt(total, 2) !== 100) {
+		// Scale proportionally to 100
+		let scale = 100 / total;
+		let running = 0;
 		rows.forEach((row, i) => {
 			let value;
-			if (i < count - 1) {
+			if (i < rows.length - 1) {
 				value = flt(flt(row.per_weightage) * scale, 2);
 				running += value;
 			} else {
@@ -570,13 +594,49 @@ function redistribute_weightage(frm, table_name) {
 			}
 			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
 		});
-	} else {
-		// All rows empty — equal distribution
-		let each = flt(100 / count, 2);
-		let running = 0;
+	}
 
-		rows.forEach((row, i) => {
-			let value = i < count - 1 ? each : flt(100 - running, 2);
+	frm.refresh_field(table_name);
+}
+
+/**
+ * Called when user manually CHANGES a row's weightage.
+ * Adjusts all OTHER rows proportionally so total stays at 100%.
+ * The changed row keeps its new value; others scale to fill the remainder.
+ */
+function adjust_other_rows(frm, table_name, changed_cdn) {
+	let rows = frm.doc[table_name] || [];
+	if (rows.length <= 1) return;
+
+	let changed_row = rows.find((r) => r.name === changed_cdn);
+	if (!changed_row) return;
+
+	let changed_value = flt(changed_row.per_weightage);
+	let remainder = flt(100 - changed_value, 2);
+	if (remainder < 0) remainder = 0;
+
+	let others = rows.filter((r) => r.name !== changed_cdn);
+	let others_total = others.reduce((sum, r) => sum + flt(r.per_weightage), 0);
+
+	if (others_total > 0) {
+		let scale = remainder / others_total;
+		let running = 0;
+		others.forEach((row, i) => {
+			let value;
+			if (i < others.length - 1) {
+				value = flt(flt(row.per_weightage) * scale, 2);
+				running += value;
+			} else {
+				value = flt(remainder - running, 2);
+			}
+			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
+		});
+	} else {
+		// Others are all zero — split remainder equally
+		let each = flt(remainder / others.length, 2);
+		let running = 0;
+		others.forEach((row, i) => {
+			let value = i < others.length - 1 ? each : flt(remainder - running, 2);
 			running += each;
 			frappe.model.set_value(row.doctype, row.name, "per_weightage", value);
 		});
