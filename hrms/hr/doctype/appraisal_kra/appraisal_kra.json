@@ -39,10 +39,11 @@
    "width": "200px"
   },
   {
+   "columns": 2,
    "fieldname": "kpi",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "KPI",
+   "label": "KPI *",
    "options": "KPI",
    "reqd": 1
   },
