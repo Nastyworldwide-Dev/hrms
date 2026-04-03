@@ -57,8 +57,7 @@
   {
    "fieldname": "justification",
    "fieldtype": "Small Text",
-   "hidden": 1,
-   "label": "Justification"
+   "label": "Justification / Evidence"
   },
   {
    "fieldname": "column_break_2",
