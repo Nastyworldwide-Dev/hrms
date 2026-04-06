@@ -243,8 +243,49 @@ def _parse_sheet(ws):
 	return positions
 
 
+def _get_or_create_department(dept_name):
+	"""Find existing department or create a new one.
+
+	Tries: exact match → match with company suffix (e.g. "Sales - NSTY") → auto-create.
+	"""
+	# Exact match
+	if frappe.db.exists("Department", dept_name):
+		return dept_name
+
+	# Match with company suffix pattern: "Dept - Company"
+	matches = frappe.get_all("Department", filters={"name": ["like", f"{dept_name} -%"]}, limit=1)
+	if matches:
+		return matches[0].name
+
+	# Auto-create under default company's root department
+	company = frappe.defaults.get_defaults().get("company")
+	if not company:
+		company = frappe.db.get_single_value("Global Defaults", "default_company")
+
+	if not company:
+		return None
+
+	parent = frappe.db.get_value(
+		"Department",
+		{"company": company, "is_group": 1, "parent_department": ["in", ["", None]]},
+		"name",
+	)
+
+	dept = frappe.get_doc({
+		"doctype": "Department",
+		"department_name": dept_name,
+		"company": company,
+		"parent_department": parent or "",
+	}).insert(ignore_permissions=True)
+
+	return dept.name
+
+
 def _create_records_for_position(pos, dept_name, summary):
 	"""Create KRA, KPI, and Appraisal Template records for one position."""
+
+	# Resolve department — find existing or create
+	resolved_dept = _get_or_create_department(dept_name)
 
 	template_title = f"{dept_name} - {pos['title']}"
 
@@ -265,7 +306,7 @@ def _create_records_for_position(pos, dept_name, summary):
 				frappe.get_doc({
 					"doctype": "KRA",
 					"title": kra_name,
-					"department": dept_name if frappe.db.exists("Department", dept_name) else None,
+					"department": resolved_dept,
 				}).insert(ignore_permissions=True)
 				summary["kras_created"] += 1
 			except Exception as e:
@@ -308,7 +349,7 @@ def _create_records_for_position(pos, dept_name, summary):
 		template = frappe.get_doc({
 			"doctype": "Appraisal Template",
 			"template_title": template_title,
-			"department": dept_name if frappe.db.exists("Department", dept_name) else None,
+			"department": resolved_dept,
 			"goals": goals,
 		})
 		template.insert(ignore_permissions=True)
