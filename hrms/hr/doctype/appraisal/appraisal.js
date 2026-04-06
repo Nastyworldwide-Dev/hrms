@@ -9,17 +9,6 @@ const GRADE_SCALE = [
 	[0, "Unsatisfactory"],
 ];
 
-// Lookup table: weighted average score → conversion factor
-// Same table used for both A1 (Output KPIs) and A2 (Competency)
-// Default fallback — used when cycle has no conversion table
-const DEFAULT_SCORE_CONVERSION = [
-	[4.5, 0.80, "Exceptional"],
-	[3.5, 0.75, "Strong"],
-	[2.5, 0.71, "Meets Expectation"],
-	[1.5, 0.60, "Needs Improvement"],
-	[1.0, 0.50, "Unsatisfactory"],
-];
-
 function get_grade(score) {
 	for (let [threshold, grade] of GRADE_SCALE) {
 		if (score >= threshold) return grade;
@@ -27,37 +16,8 @@ function get_grade(score) {
 	return GRADE_SCALE[GRADE_SCALE.length - 1][1];
 }
 
-function get_conversion_factor(weighted_avg, table) {
-	// Use cycle's configurable table if available, otherwise default
-	if (table && table.length) {
-		for (let row of table) {
-			if (weighted_avg >= flt(row.min_score)) return flt(row.conversion_pct);
-		}
-		return flt(table[table.length - 1].conversion_pct);
-	}
-	for (let [threshold, factor] of DEFAULT_SCORE_CONVERSION) {
-		if (weighted_avg >= threshold) return factor;
-	}
-	return 0.5;
-}
-
 frappe.ui.form.on("Appraisal", {
 	refresh(frm) {
-		// Fetch score conversion table from cycle for live calculations
-		if (frm.doc.appraisal_cycle && !frm._score_conversion_table) {
-			frappe.call({
-				method: "frappe.client.get",
-				args: {
-					doctype: "Appraisal Cycle",
-					name: frm.doc.appraisal_cycle,
-				},
-				async: false,
-				callback(r) {
-					frm._score_conversion_table = (r.message && r.message.score_conversion_table) || [];
-				},
-			});
-		}
-
 		if (!frm.doc.__islocal) {
 			frm.trigger("add_custom_buttons");
 			frm.trigger("show_feedback_history");
@@ -146,19 +106,6 @@ frappe.ui.form.on("Appraisal", {
 							},
 						);
 					}
-				},
-				() => {
-					// Fetch configurable score conversion table from cycle
-					frappe.call({
-						method: "frappe.client.get",
-						args: {
-							doctype: "Appraisal Cycle",
-							name: frm.doc.appraisal_cycle,
-						},
-						callback(r) {
-							frm._score_conversion_table = (r.message && r.message.score_conversion_table) || [];
-						},
-					});
 				},
 				() => {
 					frm.call({
@@ -288,22 +235,21 @@ frappe.ui.form.on("Appraisal", {
 
 	calculate_a1(frm) {
 		let rows = frm.doc.appraisal_kra || [];
+		let ach_w = flt(frm.doc.achievement_weight_pct) / 100;
+		let mgr_w = flt(frm.doc.manager_rating_weight_pct) / 100;
 		let total_weightage = 0;
 		let weighted_sum = 0;
 
 		rows.forEach((d) => {
-			let rating_value = flt(d.manager_rating) * 5;
-			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
+			let ach_score = flt(d.achievement); // 0-100
+			let mgr_score = flt(d.manager_rating) * 100; // 0-1 → 0-100
+			let blended = ach_w * ach_score + mgr_w * mgr_score;
+			weighted_sum += flt(d.per_weightage) * blended;
 			total_weightage += flt(d.per_weightage);
 		});
 
-		let weighted_avg = total_weightage
-			? flt((weighted_sum / total_weightage) * 5, 2)
-			: 0;
-		let a1_weight = cint(frm.doc.a1_weight_pct) || 70;
-		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
-		// Factor is out of 0.80 (Section A max). Scale to sub-section weight.
-		let a1_score = flt((conversion / 0.80) * a1_weight, 2);
+		let a1_raw = total_weightage ? flt(weighted_sum / total_weightage, 2) : 0;
+		let a1_score = flt(a1_raw * flt(frm.doc.a1_weight_pct) / 100, 2);
 		frm.set_value("a1_score", a1_score);
 		frm.trigger("calculate_pms_total");
 	},
@@ -320,17 +266,13 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_sum = 0;
 
 		rows.forEach((d) => {
-			let rating_value = flt(d.manager_rating) * 5;
-			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
+			let row_score = flt(d.manager_rating) * 100; // 0-1 → 0-100
+			weighted_sum += flt(d.per_weightage) * row_score;
 			total_weightage += flt(d.per_weightage);
 		});
 
-		let weighted_avg = total_weightage
-			? flt((weighted_sum / total_weightage) * 5, 2)
-			: 0;
-		let a2_weight = cint(frm.doc.a2_weight_pct) || 10;
-		let conversion = get_conversion_factor(weighted_avg, frm._score_conversion_table);
-		let a2_score = flt((conversion / 0.80) * a2_weight, 2);
+		let a2_raw = total_weightage ? flt(weighted_sum / total_weightage, 2) : 0;
+		let a2_score = flt(a2_raw * flt(frm.doc.a2_weight_pct) / 100, 2);
 		frm.set_value("a2_score", a2_score);
 		frm.trigger("calculate_pms_total");
 	},
@@ -523,9 +465,12 @@ frappe.ui.form.on("Appraisal KRA", {
 function calculate_kra_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 
-	// Rating field stores 0-1 (fraction), multiply by 5 to get 1-5 scale
-	let rating_value = flt(row.manager_rating) * 5;
-	let weighted_score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
+	let ach_w = flt(frm.doc.achievement_weight_pct) / 100;
+	let mgr_w = flt(frm.doc.manager_rating_weight_pct) / 100;
+	let ach_score = flt(row.achievement); // 0-100
+	let mgr_score = flt(row.manager_rating) * 100; // 0-1 → 0-100
+	let blended = ach_w * ach_score + mgr_w * mgr_score;
+	let weighted_score = flt((flt(row.per_weightage) / 100) * blended, 2);
 	frappe.model.set_value(cdt, cdn, "weighted_score", weighted_score);
 
 	frm.trigger("calculate_a1");
@@ -570,8 +515,8 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 function calculate_competency_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 
-	let rating_value = flt(row.manager_rating) * 5;
-	let score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
+	let row_score = flt(row.manager_rating) * 100; // 0-1 → 0-100
+	let score = flt((flt(row.per_weightage) / 100) * row_score, 2);
 	frappe.model.set_value(cdt, cdn, "score", score);
 
 	frm.trigger("calculate_a2");
