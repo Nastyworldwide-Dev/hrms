@@ -84,6 +84,13 @@ frappe.ui.form.on("Appraisal", {
 			return { filters: { kra: row.kra } };
 		});
 
+		// Filter Competency by employee's department
+		frm.set_query("competency", "functional_competencies", () => {
+			return {
+				filters: { department: ["in", [frm.doc.department, ""]] },
+			};
+		});
+
 		// don't allow removing image (fetched from employee)
 		frm.sidebar.image_wrapper.find(".sidebar-image-actions").addClass("hide");
 
