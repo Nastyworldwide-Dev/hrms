@@ -67,6 +67,11 @@ frappe.ui.form.on("Appraisal", {
 
 		frm.trigger("update_section_labels");
 
+		// Show Section B gate status as alert
+		if (frm.doc.section_b_gate_status) {
+			frm.dashboard.add_comment(frm.doc.section_b_gate_status, "yellow", true);
+		}
+
 		// Filter KRA by employee's department
 		frm.set_query("kra", "appraisal_kra", () => {
 			return {
@@ -87,7 +92,7 @@ frappe.ui.form.on("Appraisal", {
 		if (frm.fields_dict.grade_scale_html) {
 			let parts = GRADE_SCALE.map(([threshold, grade], i) => {
 				if (i < GRADE_SCALE.length - 1) {
-					let upper = i > 0 ? GRADE_SCALE[i - 1][0] : 100;
+					let upper = i > 0 ? GRADE_SCALE[i - 1][0] - 1 : 100;
 					return `${threshold}\u2013${upper}: ${grade}`;
 				}
 				return `&lt;${GRADE_SCALE[i - 1][0]}: ${grade}`;

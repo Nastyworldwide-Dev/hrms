@@ -586,11 +586,11 @@ def get_grade_scale_html():
 	parts = []
 	for i, (threshold, grade) in enumerate(GRADE_SCALE):
 		if i < len(GRADE_SCALE) - 1:
-			next_threshold = GRADE_SCALE[i - 1][0] if i > 0 else 100
-			parts.append(f"{threshold}\u2013{next_threshold}: {grade}")
+			upper = (GRADE_SCALE[i - 1][0] - 1) if i > 0 else 100
+			parts.append(f"{threshold}\u2013{upper}: {grade}")
 		else:
-			prev_threshold = GRADE_SCALE[i - 1][0]
-			parts.append(f"&lt;{prev_threshold}: {grade}")
+			prev_threshold = GRADE_SCALE[i - 1][0] - 1
+			parts.append(f"&lt;{prev_threshold + 1}: {grade}")
 	return (
 		"<div style='margin-top:10px; padding:10px; background:#f5f5f5; "
 		"border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>"

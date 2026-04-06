@@ -8,6 +8,14 @@ frappe.ui.form.on("Appraisal Template", {
 			{ fieldname: "per_weightage", columns: 5 },
 		];
 
+		// Filter KRA by template's department (+ generic KRAs with no department)
+		frm.set_query("key_result_area", "goals", () => {
+			if (!frm.doc.department) return {};
+			return {
+				filters: { department: ["in", [frm.doc.department, ""]] },
+			};
+		});
+
 		// Filter KPI by KRA in goals table
 		frm.set_query("kpi", "goals", (doc, cdt, cdn) => {
 			let row = frappe.get_doc(cdt, cdn);

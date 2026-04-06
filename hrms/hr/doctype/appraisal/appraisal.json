@@ -1028,6 +1028,22 @@
    "permlevel": 3,
    "read": 1,
    "role": "Employee"
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",
