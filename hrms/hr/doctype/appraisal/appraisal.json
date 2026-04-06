@@ -630,7 +630,8 @@
    "fieldname": "demerits",
    "fieldtype": "Table",
    "label": "Demerits",
-   "options": "Appraisal Demerit"
+   "options": "Appraisal Demerit",
+   "permlevel": 3
   },
   {
    "fieldname": "demerit_summary_section",
