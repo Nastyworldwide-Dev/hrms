@@ -203,8 +203,8 @@ class Appraisal(Document, AppraisalMixin):
 			weighted_avg = 0
 
 		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
-		# Factor is out of 0.80 (Section A max). Scale to sub-section weight.
-		self.a1_score = flt(conversion / 0.80 * a1_weight, 2)
+		# Factor is out of 0.80 (Section A max). Scale to sub-section weight, clamped to max.
+		self.a1_score = min(flt(conversion / 0.80 * a1_weight, 2), a1_weight)
 
 	def calculate_a2_score(self):
 		"""Calculate A2: Competency score. Same lookup table logic as A1."""
@@ -228,7 +228,7 @@ class Appraisal(Document, AppraisalMixin):
 			weighted_avg = 0
 
 		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
-		self.a2_score = flt(conversion / 0.80 * a2_weight, 2)
+		self.a2_score = min(flt(conversion / 0.80 * a2_weight, 2), a2_weight)
 
 	def detect_new_joiner(self):
 		"""Auto-set is_new_joiner if employee joined after month 6 of the cycle"""
