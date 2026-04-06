@@ -8,15 +8,19 @@ Usage:
   bench --site <site> execute hrms.hr.doctype.appraisal.import_kra_kpi.import_kra_kpi_from_excel \
     --kwargs '{"file_path": "/path/to/KRA-KPI_NAsty 2026.xlsx"}'
 
-Or from browser console:
+Or from browser console (with Frappe File doc name or file_url):
   frappe.call({
     method: "hrms.hr.doctype.appraisal.import_kra_kpi.import_kra_kpi_from_excel",
-    args: { file_path: "/path/to/file.xlsx" },
+    args: { file_path: "FILE-00001" },
     callback: (r) => console.log(r.message)
   })
 """
 
+import io
+import os
+
 import frappe
+import requests
 from frappe import _
 from frappe.utils import flt
 
@@ -26,19 +30,18 @@ def import_kra_kpi_from_excel(file_path):
 	"""Read all department sheets from the KRA-KPI Excel and create records.
 
 	Args:
-		file_path: Absolute path to the .xlsx file, or a Frappe file URL
-			(e.g. /files/KRA-KPI_NAsty 2026.xlsx)
+		file_path: One of:
+			- Absolute local path (e.g. /home/user/file.xlsx)
+			- Frappe file URL (e.g. /files/file.xlsx, /private/files/file.xlsx)
+			- Frappe File doc name (e.g. FILE-00001)
+			- S3 file URL (e.g. /api/method/frappe_s3_attachment.controller.generate_file?key=...)
 
 	Returns:
 		dict with counts of created records
 	"""
 	import openpyxl
 
-	# Resolve Frappe file URL to absolute path
-	if file_path.startswith("/files/") or file_path.startswith("/private/files/"):
-		file_path = frappe.get_site_path(file_path.lstrip("/"))
-
-	wb = openpyxl.load_workbook(file_path, data_only=True)
+	wb = openpyxl.load_workbook(_resolve_file(file_path), data_only=True)
 
 	summary = {
 		"kras_created": 0,
@@ -85,6 +88,93 @@ def import_kra_kpi_from_excel(file_path):
 			print(f"  ERROR: {err}")
 
 	return summary
+
+
+def _resolve_file(file_path):
+	"""Resolve file_path to a file-like object or local path.
+
+	Handles: local paths, Frappe file URLs, File doc names, S3 presigned URLs.
+	Returns: file path string (local) or BytesIO (remote/S3).
+	"""
+	# 1. Local file path
+	if os.path.exists(file_path):
+		return file_path
+
+	# 2. Frappe local file URL (/files/... or /private/files/...)
+	if file_path.startswith("/files/") or file_path.startswith("/private/files/"):
+		local_path = frappe.get_site_path(file_path.lstrip("/"))
+		if os.path.exists(local_path):
+			return local_path
+		# Fall through to S3 resolution
+
+	# 3. Resolve File doc — either by name or by file_url
+	file_doc = None
+	if not file_path.startswith("/"):
+		# Looks like a File doc name (e.g. FILE-00001)
+		if frappe.db.exists("File", file_path):
+			file_doc = frappe.get_doc("File", file_path)
+	else:
+		# Looks like a URL — find the File doc
+		results = frappe.get_all("File", filters={"file_url": file_path}, limit=1)
+		if results:
+			file_doc = frappe.get_doc("File", results[0].name)
+
+	if not file_doc:
+		frappe.throw(_(f"File not found: {file_path}"))
+
+	# 4. Check if file is on local filesystem (non-S3)
+	if file_doc.file_url:
+		local_path = frappe.get_site_path(file_doc.file_url.lstrip("/"))
+		if os.path.exists(local_path):
+			return local_path
+
+	# 5. S3 file — get presigned URL and download
+	return _download_s3_file(file_doc)
+
+
+def _download_s3_file(file_doc):
+	"""Download file from S3 via presigned URL. Returns BytesIO."""
+	from frappe_s3_attachment.controller import S3Operations
+
+	key = _extract_s3_key(file_doc.file_url)
+	if not key:
+		frappe.throw(_(f"Cannot extract S3 key from file URL: {file_doc.file_url}"))
+
+	s3 = S3Operations()
+	presigned_url = s3.get_url(key, file_doc.file_name)
+
+	response = requests.get(presigned_url, timeout=60)
+	response.raise_for_status()
+
+	return io.BytesIO(response.content)
+
+
+def _extract_s3_key(file_url):
+	"""Extract S3 key from frappe_s3_attachment URL.
+
+	Private files: /api/method/frappe_s3_attachment.controller.generate_file?key={key}&file_name={name}
+	Public files: https://s3.endpoint.com/bucket/key (key is the path after bucket)
+	"""
+	if not file_url:
+		return None
+
+	from urllib.parse import parse_qs, urlparse
+
+	parsed = urlparse(file_url)
+
+	# Private file — key is in query string
+	if "generate_file" in (parsed.path or ""):
+		qs = parse_qs(parsed.query)
+		keys = qs.get("key", [])
+		return keys[0] if keys else None
+
+	# Public file — key is the path after /bucket/
+	# URL format: https://endpoint/bucket/key
+	path_parts = parsed.path.strip("/").split("/", 1)
+	if len(path_parts) > 1:
+		return path_parts[1]
+
+	return None
 
 
 def _parse_sheet(ws):
