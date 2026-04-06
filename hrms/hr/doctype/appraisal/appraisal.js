@@ -46,20 +46,15 @@ frappe.ui.form.on("Appraisal", {
 		// Fetch score conversion table from cycle for live calculations
 		if (frm.doc.appraisal_cycle && !frm._score_conversion_table) {
 			frappe.call({
-				method: "frappe.client.get_list",
+				method: "frappe.client.get",
 				args: {
-					doctype: "Score Conversion Row",
-					filters: {
-						parent: frm.doc.appraisal_cycle,
-						parenttype: "Appraisal Cycle",
-					},
-					fields: ["min_score", "conversion_pct", "label"],
-					order_by: "min_score desc",
-					limit_page_length: 0,
+					doctype: "Appraisal Cycle",
+					name: frm.doc.appraisal_cycle,
+					fields: ["name"],
 				},
 				async: false,
 				callback(r) {
-					frm._score_conversion_table = r.message || [];
+					frm._score_conversion_table = (r.message && r.message.score_conversion_table) || [];
 				},
 			});
 		}
@@ -144,19 +139,14 @@ frappe.ui.form.on("Appraisal", {
 				() => {
 					// Fetch configurable score conversion table from cycle
 					frappe.call({
-						method: "frappe.client.get_list",
+						method: "frappe.client.get",
 						args: {
-							doctype: "Score Conversion Row",
-							filters: {
-								parent: frm.doc.appraisal_cycle,
-								parenttype: "Appraisal Cycle",
-							},
-							fields: ["min_score", "conversion_pct", "label"],
-							order_by: "min_score desc",
-							limit_page_length: 0,
+							doctype: "Appraisal Cycle",
+							name: frm.doc.appraisal_cycle,
+							fields: ["name"],
 						},
 						callback(r) {
-							frm._score_conversion_table = r.message || [];
+							frm._score_conversion_table = (r.message && r.message.score_conversion_table) || [];
 						},
 					});
 				},
