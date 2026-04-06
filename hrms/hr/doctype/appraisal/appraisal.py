@@ -14,6 +14,39 @@ from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
 
 
+# Default lookup table — used as fallback when cycle has no conversion table
+DEFAULT_SCORE_CONVERSION = [
+	(4.5, 0.80, "Exceptional"),
+	(3.5, 0.75, "Strong"),
+	(2.5, 0.71, "Meets Expectation"),
+	(1.5, 0.60, "Needs Improvement"),
+	(1.0, 0.50, "Unsatisfactory"),
+]
+
+
+def get_conversion_factor(weighted_avg, conversion_table=None):
+	"""Convert a 1-5 weighted average score to a percentage factor.
+
+	Args:
+		weighted_avg: The weighted average score on a 1-5 scale
+		conversion_table: Optional list of Score Conversion Row docs from Appraisal Cycle.
+			Falls back to DEFAULT_SCORE_CONVERSION if not provided.
+	"""
+	weighted_avg = flt(weighted_avg, 2)
+
+	if conversion_table:
+		for row in conversion_table:
+			if weighted_avg >= flt(row.min_score):
+				return flt(row.conversion_pct)
+		# Below lowest threshold
+		return flt(conversion_table[-1].conversion_pct) if conversion_table else 0.50
+
+	for threshold, factor, _label in DEFAULT_SCORE_CONVERSION:
+		if weighted_avg >= threshold:
+			return factor
+	return 0.50
+
+
 class Appraisal(Document, AppraisalMixin):
 	def validate(self):
 		self.set_a1_a2_weights()
@@ -133,63 +166,69 @@ class Appraisal(Document, AppraisalMixin):
 			if cycle.start_date and cycle.end_date:
 				self.performance_period = f"{cycle.start_date} to {cycle.end_date}"
 
+	def _get_conversion_table(self):
+		"""Get score conversion table from the linked Appraisal Cycle, or None for default."""
+		if not self.appraisal_cycle:
+			return None
+		cycle = frappe.get_cached_doc("Appraisal Cycle", self.appraisal_cycle)
+		return cycle.score_conversion_table or None
+
 	def calculate_a1_score(self):
-		"""Calculate A1: weighted average of KRA blended scores (0-100).
+		"""Calculate A1: Output KPI score using lookup table.
 
-		Each KRA row contributes (per_weightage / total) × blended_score.
-		blended_score = achievement_weight_pct% × achievement_pct
-		              + manager_rating_weight_pct% × (manager_rating / 5 × 100)
+		The conversion factor represents the absolute Section A score out of 80%.
+		Per sub-section: score = (factor / 0.80) × sub_weight.
+		Example: factor 0.80 (Exceptional), A1=70% → (0.80/0.80) × 70 = 70 (full marks).
 		"""
-		ach_w = flt(self.achievement_weight_pct) / 100
-		mgr_w = flt(self.manager_rating_weight_pct) / 100
-
+		a1_weight = cint(self.a1_weight_pct) or 70
 		total_weightage = 0
-		weighted_sum = 0.0
+		weighted_sum = 0
 
 		for row in self.appraisal_kra:
-			# Calculate achievement %
+			# Calculate achievement (informational — supports the rating)
 			if flt(row.target):
 				row.achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
 			else:
 				row.achievement = 0
 
-			ach_score = flt(row.achievement)  # already 0-100
-			mgr_score = flt(row.manager_rating) * 100  # 0-1 → 0-100
-			blended = ach_w * ach_score + mgr_w * mgr_score
-			row.weighted_score = flt(flt(row.per_weightage) / 100 * blended, 2)
-
-			weighted_sum += flt(row.per_weightage) * blended
+			rating_value = flt(row.manager_rating) * 5  # 0-1 → 1-5
+			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			weighted_sum += flt(row.per_weightage) * rating_value / 5
 			total_weightage += flt(row.per_weightage)
 
+		# Weighted average on 1-5 scale
 		if total_weightage:
-			a1_raw = flt(weighted_sum / total_weightage, 2)
+			weighted_avg = flt(weighted_sum / total_weightage * 5, 2)
 		else:
-			a1_raw = 0
+			weighted_avg = 0
 
-		self.a1_score = flt(a1_raw * flt(self.a1_weight_pct) / 100, 2)
+		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
+		# Factor is out of 0.80 (Section A max). Scale to sub-section weight.
+		self.a1_score = flt(conversion / 0.80 * a1_weight, 2)
 
 	def calculate_a2_score(self):
-		"""Calculate A2: weighted average of functional competency scores (0-100)."""
+		"""Calculate A2: Competency score. Same lookup table logic as A1."""
+		a2_weight = cint(self.a2_weight_pct) or 10
 		if not self.functional_competencies:
 			self.a2_score = 0
 			return
 
 		total_weightage = 0
-		weighted_sum = 0.0
+		weighted_sum = 0
 
 		for row in self.functional_competencies:
-			# manager_rating is 0-1 (Rating field), convert to 0-100
-			row_score = flt(row.manager_rating) * 100
-			row.score = flt(flt(row.per_weightage) / 100 * row_score, 2)
-			weighted_sum += flt(row.per_weightage) * row_score
+			rating_value = flt(row.manager_rating) * 5
+			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
+			weighted_sum += flt(row.per_weightage) * rating_value / 5
 			total_weightage += flt(row.per_weightage)
 
 		if total_weightage:
-			a2_raw = flt(weighted_sum / total_weightage, 2)
+			weighted_avg = flt(weighted_sum / total_weightage * 5, 2)
 		else:
-			a2_raw = 0
+			weighted_avg = 0
 
-		self.a2_score = flt(a2_raw * flt(self.a2_weight_pct) / 100, 2)
+		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
+		self.a2_score = flt(conversion / 0.80 * a2_weight, 2)
 
 	def detect_new_joiner(self):
 		"""Auto-set is_new_joiner if employee joined after month 6 of the cycle"""
