@@ -124,6 +124,7 @@
   "appraiser_section",
   "appraiser_comments",
   "appraiser_decision",
+  "pip",
   "appraiser_sign_date",
   "reviewer_section",
   "reviewer_comments",
@@ -893,6 +894,14 @@
    "label": "Appraiser Decision",
    "options": "\nFor employee records and improvement\nConfirm employee\nExtend probation\nSet for PIP/PDP",
    "permlevel": 2
+  },
+  {
+   "depends_on": "eval:doc.appraiser_decision === 'Set for PIP/PDP'",
+   "fieldname": "pip",
+   "fieldtype": "Link",
+   "label": "Performance Improvement Plan",
+   "options": "Performance Improvement Plan",
+   "read_only": 1
   },
   {
    "fieldname": "appraiser_sign_date",

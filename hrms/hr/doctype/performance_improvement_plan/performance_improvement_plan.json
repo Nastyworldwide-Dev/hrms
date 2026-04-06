@@ -1,0 +1,374 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-04-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "employee",
+  "employee_name",
+  "department",
+  "designation",
+  "column_break_1",
+  "company",
+  "appraisal",
+  "appraiser",
+  "appraiser_name",
+  "timeline_section",
+  "pip_start_date",
+  "pip_end_date",
+  "column_break_timeline",
+  "review_frequency",
+  "pip_status",
+  "reason_section",
+  "reason",
+  "milestones_section",
+  "milestones",
+  "reviews_section",
+  "reviews",
+  "signoff_section",
+  "manager_comments",
+  "manager_sign_date",
+  "hr_section",
+  "hr_comments",
+  "hr_sign_date",
+  "employee_section",
+  "employee_acknowledgement",
+  "employee_sign_date",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR-PIP-.YYYY.-",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "The appraisal that triggered this PIP",
+   "fieldname": "appraisal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Appraisal",
+   "options": "Appraisal"
+  },
+  {
+   "description": "Manager responsible for this PIP",
+   "fieldname": "appraiser",
+   "fieldtype": "Link",
+   "label": "Appraiser",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "appraiser.employee_name",
+   "fieldname": "appraiser_name",
+   "fieldtype": "Data",
+   "label": "Appraiser Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timeline_section",
+   "fieldtype": "Section Break",
+   "label": "Timeline"
+  },
+  {
+   "fieldname": "pip_start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "PIP Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pip_end_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "PIP End Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_timeline",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Monthly",
+   "fieldname": "review_frequency",
+   "fieldtype": "Select",
+   "label": "Review Frequency",
+   "options": "Weekly\nBi-weekly\nMonthly"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "pip_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "PIP Status",
+   "options": "Draft\nActive\nOn Track\nAt Risk\nCompleted - Improved\nCompleted - Not Improved\nTerminated"
+  },
+  {
+   "fieldname": "reason_section",
+   "fieldtype": "Section Break",
+   "label": "Reason for PIP"
+  },
+  {
+   "description": "Explain why this PIP was initiated and what areas need improvement",
+   "fieldname": "reason",
+   "fieldtype": "Text Editor",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "milestones_section",
+   "fieldtype": "Section Break",
+   "label": "Improvement Milestones"
+  },
+  {
+   "description": "Set specific, measurable targets the employee must achieve during the PIP period",
+   "fieldname": "milestones",
+   "fieldtype": "Table",
+   "label": "Milestones",
+   "options": "PIP Milestone"
+  },
+  {
+   "fieldname": "reviews_section",
+   "fieldtype": "Section Break",
+   "label": "Review Log"
+  },
+  {
+   "description": "Record periodic check-ins based on review frequency",
+   "fieldname": "reviews",
+   "fieldtype": "Table",
+   "label": "Reviews",
+   "options": "PIP Review"
+  },
+  {
+   "fieldname": "signoff_section",
+   "fieldtype": "Section Break",
+   "label": "Manager Sign-Off"
+  },
+  {
+   "fieldname": "manager_comments",
+   "fieldtype": "Text Editor",
+   "label": "Manager Comments",
+   "permlevel": 2
+  },
+  {
+   "fieldname": "manager_sign_date",
+   "fieldtype": "Date",
+   "label": "Manager Sign Date",
+   "permlevel": 2
+  },
+  {
+   "fieldname": "hr_section",
+   "fieldtype": "Section Break",
+   "label": "HR Sign-Off"
+  },
+  {
+   "fieldname": "hr_comments",
+   "fieldtype": "Text Editor",
+   "label": "HR Comments",
+   "permlevel": 3
+  },
+  {
+   "fieldname": "hr_sign_date",
+   "fieldtype": "Date",
+   "label": "HR Sign Date",
+   "permlevel": 3
+  },
+  {
+   "fieldname": "employee_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Acknowledgement"
+  },
+  {
+   "fieldname": "employee_acknowledgement",
+   "fieldtype": "Select",
+   "label": "Employee Acknowledgement",
+   "options": "\nI acknowledge and accept\nI wish to appeal"
+  },
+  {
+   "fieldname": "employee_sign_date",
+   "fieldtype": "Date",
+   "label": "Employee Sign Date"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Performance Improvement Plan",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [
+  {
+   "link_doctype": "Appraisal",
+   "link_fieldname": "pip"
+  }
+ ],
+ "modified": "2026-04-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Performance Improvement Plan",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Employee",
+   "share": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "search_fields": "employee, employee_name, pip_status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Gray",
+   "title": "Draft"
+  },
+  {
+   "color": "Blue",
+   "title": "Active"
+  },
+  {
+   "color": "Green",
+   "title": "On Track"
+  },
+  {
+   "color": "Orange",
+   "title": "At Risk"
+  },
+  {
+   "color": "Green",
+   "title": "Completed - Improved"
+  },
+  {
+   "color": "Red",
+   "title": "Completed - Not Improved"
+  },
+  {
+   "color": "Red",
+   "title": "Terminated"
+  }
+ ],
+ "timeline_field": "employee",
+ "title_field": "employee_name",
+ "track_changes": 1
+}

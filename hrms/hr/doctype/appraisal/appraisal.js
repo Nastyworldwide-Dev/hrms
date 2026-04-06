@@ -207,6 +207,21 @@ frappe.ui.form.on("Appraisal", {
 			};
 			frappe.set_route("Tree", "Goal");
 		});
+
+		// Show "Create PIP" button when decision is PIP/PDP and no PIP linked yet
+		if (
+			frm.doc.appraiser_decision === "Set for PIP/PDP" &&
+			!frm.doc.pip
+		) {
+			frm.add_custom_button(__("Create PIP"), function () {
+				frappe.new_doc("Performance Improvement Plan", {
+					employee: frm.doc.employee,
+					company: frm.doc.company,
+					appraisal: frm.doc.name,
+					pip_start_date: frappe.datetime.get_today(),
+				});
+			}, __("Actions"));
+		}
 	},
 
 	show_feedback_history(frm) {
