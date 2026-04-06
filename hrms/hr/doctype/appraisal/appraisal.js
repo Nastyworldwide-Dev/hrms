@@ -50,7 +50,6 @@ frappe.ui.form.on("Appraisal", {
 				args: {
 					doctype: "Appraisal Cycle",
 					name: frm.doc.appraisal_cycle,
-					fields: ["name"],
 				},
 				async: false,
 				callback(r) {
@@ -148,7 +147,6 @@ frappe.ui.form.on("Appraisal", {
 						args: {
 							doctype: "Appraisal Cycle",
 							name: frm.doc.appraisal_cycle,
-							fields: ["name"],
 						},
 						callback(r) {
 							frm._score_conversion_table = (r.message && r.message.score_conversion_table) || [];
