@@ -15,6 +15,17 @@ build-backend = "flit_core.buildapi"
 [tool.ruff]
 line-length = 110
 target-version = "py310"
+force-exclude = true
+extend-exclude = [
+    "frontend",
+    "frappe-ui",
+    "roster",
+    "**/node_modules",
+    "**/dist",
+    "**/*.lock",
+    "**/yarn.lock",
+    "**/package-lock.json",
+]
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "I", "UP", "B", "RUF"]

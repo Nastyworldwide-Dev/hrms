@@ -229,7 +229,7 @@ class TestDepartmentTemplateResolution(FrappeTestCase):
 		"""Create Operations → Logistics, Procurement department tree"""
 		from erpnext.setup.doctype.department.department import get_abbreviated_name
 
-		company_abbr = frappe.get_cached_value("Company", self.company, "abbr")
+		frappe.get_cached_value("Company", self.company, "abbr")
 
 		# Parent department
 		ops_name = get_abbreviated_name("Operations", self.company)

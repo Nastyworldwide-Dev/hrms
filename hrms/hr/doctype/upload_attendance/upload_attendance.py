@@ -90,14 +90,14 @@ def get_data(args):
 			employee_holiday_list = get_holiday_list_for_employee(employee.name)
 
 			row = [
-				existing_attendance and existing_attendance.name or "",
+				(existing_attendance and existing_attendance.name) or "",
 				employee.name,
 				employee.employee_name,
 				date,
-				existing_attendance and existing_attendance.status or "",
-				existing_attendance and existing_attendance.leave_type or "",
+				(existing_attendance and existing_attendance.status) or "",
+				(existing_attendance and existing_attendance.leave_type) or "",
 				employee.company,
-				existing_attendance and existing_attendance.naming_series or get_naming_series(),
+				(existing_attendance and existing_attendance.naming_series) or get_naming_series(),
 			]
 			if date in holidays[employee_holiday_list]:
 				row[4] = "Holiday"
@@ -210,7 +210,9 @@ def import_attendances(rows):
 			pass
 		except Exception as e:
 			error = True
-			ret.append("Error for row (#%d) %s : %s" % (row_idx, len(row) > 1 and row[1] or "", cstr(e)))
+			ret.append(
+				"Error for row (#{}) {} : {}".format(row_idx, (len(row) > 1 and row[1]) or "", cstr(e))
+			)
 			frappe.errprint(frappe.get_traceback())
 
 	if error:

@@ -27,7 +27,7 @@ test_dependencies = ["Fiscal Year"]
 class TestSalaryStructure(FrappeTestCase):
 	def setUp(self):
 		for dt in ["Salary Slip", "Salary Structure", "Salary Structure Assignment"]:
-			frappe.db.sql("delete from `tab%s`" % dt)
+			frappe.db.sql(f"delete from `tab{dt}`")
 
 		self.make_holiday_list()
 		frappe.db.set_value(
@@ -92,8 +92,8 @@ class TestSalaryStructure(FrappeTestCase):
 
 	def test_whitespaces_in_formula_conditions_fields(self):
 		def add_whitespaces(row):
-			row.formula = "\n%s\n\n" % row.formula
-			row.condition = "\n%s\n\n" % row.condition
+			row.formula = f"\n{row.formula}\n\n"
+			row.condition = f"\n{row.condition}\n\n"
 
 		salary_structure = make_salary_structure("Salary Structure Sample", "Monthly", dont_submit=True)
 		for table in ("earnings", "deductions"):

@@ -13,7 +13,6 @@ from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
 from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
 
-
 # Default lookup table — used as fallback when cycle has no conversion table
 DEFAULT_SCORE_CONVERSION = [
 	(4.5, 0.80, "Exceptional"),
@@ -155,9 +154,7 @@ class Appraisal(Document, AppraisalMixin):
 
 		# Set confirmation due from Employee
 		self.confirmation_due = (
-			employee.get("final_confirmation_date")
-			or employee.get("scheduled_confirmation_date")
-			or None
+			employee.get("final_confirmation_date") or employee.get("scheduled_confirmation_date") or None
 		)
 
 		# Auto-fill performance period from cycle dates
@@ -177,8 +174,8 @@ class Appraisal(Document, AppraisalMixin):
 		"""Calculate A1: Output KPI score using lookup table.
 
 		The conversion factor represents the absolute Section A score out of 80%.
-		Per sub-section: score = (factor / 0.80) × sub_weight.
-		Example: factor 0.80 (Exceptional), A1=70% → (0.80/0.80) × 70 = 70 (full marks).
+		Per sub-section: score = (factor / 0.80) x sub_weight.
+		Example: factor 0.80 (Exceptional), A1=70% → (0.80/0.80) x 70 = 70 (full marks).
 		"""
 		a1_weight = cint(self.a1_weight_pct) or 70
 		total_weightage = 0
@@ -314,7 +311,9 @@ class Appraisal(Document, AppraisalMixin):
 		# Gate: new joiner
 		if cint(self.is_new_joiner):
 			self.section_b_score = 0
-			self.section_b_gate_status = "New Joiner Rule: Section B not assessed this cycle. Rating based on Section A only."
+			self.section_b_gate_status = (
+				"New Joiner Rule: Section B not assessed this cycle. Rating based on Section A only."
+			)
 			return
 
 		# Gate: false evidence
@@ -454,9 +453,7 @@ class Appraisal(Document, AppraisalMixin):
 
 		# 3. Fall back to designation
 		if not appraisal_template and self.designation:
-			appraisal_template = frappe.db.get_value(
-				"Designation", self.designation, "appraisal_template"
-			)
+			appraisal_template = frappe.db.get_value("Designation", self.designation, "appraisal_template")
 
 		if appraisal_template:
 			self.appraisal_template = appraisal_template
@@ -593,9 +590,7 @@ def get_grade_scale_html():
 			parts.append(f"&lt;{prev_threshold + 1}: {grade}")
 	return (
 		"<div style='margin-top:10px; padding:10px; background:#f5f5f5; "
-		"border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>"
-		+ " | ".join(parts)
-		+ "</div>"
+		"border-radius:4px; font-size:12px;'><strong>Grade Scale:</strong><br>" + " | ".join(parts) + "</div>"
 	)
 
 

@@ -19,8 +19,9 @@ Or from browser console (with Frappe File doc name or file_url):
 import io
 import os
 
-import frappe
 import requests
+
+import frappe
 from frappe import _
 from frappe.utils import flt
 
