@@ -346,11 +346,15 @@ $.extend(hrms, {
 				const fd = new FormData();
 				fd.append("file", file, filename);
 				fd.append("is_private", "0");
-				fd.append("doctype", frm.doctype);
+				// Only pass doctype/docname/fieldname when we have a real, saved
+				// docname — otherwise Frappe's upload_file throws "Attached To Name
+				// must be a string or an integer". For unsaved records, upload the
+				// file standalone and just write the returned file_url to selfie_image.
 				if (frm.doc.name && !frm.doc.__islocal) {
+					fd.append("doctype", frm.doctype);
 					fd.append("docname", frm.doc.name);
+					fd.append("fieldname", "selfie_image");
 				}
-				fd.append("fieldname", "selfie_image");
 
 				const res = await fetch("/api/method/upload_file", {
 					method: "POST",

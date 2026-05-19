@@ -334,8 +334,11 @@ async function uploadSelfie(dataUrl) {
 	const fd = new FormData()
 	fd.append("file", file, filename)
 	fd.append("is_private", "0")
-	fd.append("doctype", DOCTYPE)
-	fd.append("fieldname", "selfie_image")
+	// Intentionally NOT setting doctype/docname/fieldname: the Employee Checkin
+	// record doesn't exist yet, and passing doctype without a valid docname makes
+	// Frappe error with "Attached To Name must be a string or an integer". The
+	// file is created standalone; the returned file_url is then written onto the
+	// new Employee Checkin via the insert payload's selfie_image field.
 
 	const headers = { "X-Frappe-Site-Name": window.location.hostname }
 	if (window.csrf_token) {
