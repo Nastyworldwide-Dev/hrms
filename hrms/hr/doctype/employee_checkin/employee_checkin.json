@@ -22,6 +22,10 @@
   "section_break_ksbo",
   "fetch_geolocation",
   "geolocation",
+  "selfie_section",
+  "capture_selfie",
+  "column_break_selfie",
+  "selfie_image",
   "shift_timings_section",
   "shift_start",
   "shift_end",
@@ -174,6 +178,25 @@
    "hidden": 1,
    "label": "Off-shift",
    "read_only": 1
+  },
+  {
+   "fieldname": "selfie_section",
+   "fieldtype": "Section Break",
+   "label": "Check-in Selfie"
+  },
+  {
+   "fieldname": "capture_selfie",
+   "fieldtype": "Button",
+   "label": "Capture Selfie"
+  },
+  {
+   "fieldname": "column_break_selfie",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "selfie_image",
+   "fieldtype": "Attach Image",
+   "label": "Selfie Image"
   }
  ],
  "links": [],
