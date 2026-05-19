@@ -38,8 +38,9 @@
 		trigger="open-checkin-modal"
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
+		@ionModalWillDismiss="onModalDismiss"
 	>
-		<div class="h-120 w-full flex flex-col items-center justify-center gap-5 p-4 mb-5">
+		<div class="h-120 w-full flex flex-col items-center justify-center gap-4 p-4 mb-5">
 			<div class="flex flex-col gap-1.5 mt-2 items-center justify-center">
 				<div class="font-bold text-xl">
 					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
@@ -69,7 +70,86 @@
 				</div>
 			</template>
 
-			<Button :loading="checkins.insert.loading" variant="solid" class="w-full py-5 text-sm disabled:bg-gray-700" @click="submitLog(nextAction.action)">
+			<!-- Selfie capture: optional photo evidence per check-in (mirrors the
+			     React CheckInDialog used in ncig-merchandiser POS). -->
+			<div class="w-full flex flex-col items-center gap-2">
+				<template v-if="cameraStatus === 'idle'">
+					<Button
+						variant="outline"
+						class="w-full py-3 text-sm"
+						@click="startCamera"
+					>
+						<template #prefix>
+							<FeatherIcon name="camera" class="w-4" />
+						</template>
+						{{ __("Take Selfie") }}
+					</Button>
+				</template>
+
+				<template v-else-if="cameraStatus === 'live'">
+					<div
+						class="rounded overflow-hidden w-full"
+						style="aspect-ratio: 4 / 3; background: #000;"
+					>
+						<video
+							ref="videoEl"
+							autoplay
+							playsinline
+							muted
+							class="w-full h-full object-cover"
+							style="transform: scaleX(-1);"
+						></video>
+					</div>
+					<Button
+						variant="solid"
+						class="w-full py-3 text-sm"
+						@click="takeSelfie"
+					>
+						<template #prefix>
+							<FeatherIcon name="aperture" class="w-4" />
+						</template>
+						{{ __("Capture") }}
+					</Button>
+				</template>
+
+				<template v-else>
+					<div
+						class="rounded overflow-hidden w-full"
+						style="aspect-ratio: 4 / 3; background: #000;"
+					>
+						<img
+							v-if="selfieDataUrl"
+							:src="selfieDataUrl"
+							alt="selfie preview"
+							class="w-full h-full object-cover"
+						/>
+					</div>
+					<Button
+						variant="outline"
+						class="w-full py-3 text-sm"
+						:disabled="cameraStatus === 'uploading'"
+						@click="retakeSelfie"
+					>
+						<template #prefix>
+							<FeatherIcon name="refresh-cw" class="w-4" />
+						</template>
+						{{ cameraStatus === "uploading" ? __("Uploading...") : __("Retake") }}
+					</Button>
+				</template>
+
+				<canvas ref="canvasEl" class="hidden"></canvas>
+
+				<div v-if="cameraError" class="text-xs text-red-500 text-center">
+					{{ cameraError }}
+				</div>
+			</div>
+
+			<Button
+				:loading="checkins.insert.loading || cameraStatus === 'uploading'"
+				variant="solid"
+				class="w-full py-5 text-sm disabled:bg-gray-700"
+				@click="submitLog(nextAction.action)"
+			>
 				{{ __("Confirm {0}", [nextAction.label]) }}
 			</Button>
 		</div>
@@ -78,7 +158,7 @@
 
 <script setup>
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, ref, onMounted, onBeforeUnmount } from "vue"
+import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -93,6 +173,16 @@ const checkinTimestamp = ref(null)
 const latitude = ref(0)
 const longitude = ref(0)
 const locationStatus = ref("")
+
+// Selfie capture state
+const videoEl = ref(null)
+const canvasEl = ref(null)
+let cameraStream = null
+// idle | live | uploading | captured
+const cameraStatus = ref("idle")
+const selfieDataUrl = ref(null)
+const selfieFileUrl = ref(null)
+const cameraError = ref(null)
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
 	auto: true,
@@ -157,41 +247,150 @@ const handleEmployeeCheckin = () => {
 
 const submitLog = (logType) => {
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
+	const payload = {
+		employee: employee.data.name,
+		log_type: logType,
+		time: checkinTimestamp.value,
+		latitude: latitude.value,
+		longitude: longitude.value,
+	}
+	if (selfieFileUrl.value) {
+		payload.selfie_image = selfieFileUrl.value
+	}
 
-	checkins.insert.submit(
-		{
-			employee: employee.data.name,
-			log_type: logType,
-			time: checkinTimestamp.value,
-			latitude: latitude.value,
-			longitude: longitude.value,
+	checkins.insert.submit(payload, {
+		onSuccess() {
+			modalController.dismiss()
+			toast({
+				title: __("Success"),
+				text: __("{0} successful!", [actionLabel]),
+				icon: "check-circle",
+				position: "bottom-center",
+				iconClasses: "text-green-500",
+			})
 		},
-		{
-			onSuccess() {
-				modalController.dismiss()
-				toast({
-					title: __("Success"),
-					text: __("{0} successful!", [actionLabel]),
-					icon: "check-circle",
-					position: "bottom-center",
-					iconClasses: "text-green-500",
-				})
-			},
-			onError(error) {
-				let messages = error.messages || []
+		onError(error) {
+			let messages = error.messages || []
 
-				for (const message of messages) {
-					toast({
-						title: __("Error"),
-						text: message || __("{0} failed!", [actionLabel]),
-						icon: "alert-circle",
-						position: "bottom-center",
-						iconClasses: "text-red-500",
-					})
-				}
+			for (const message of messages) {
+				toast({
+					title: __("Error"),
+					text: message || __("{0} failed!", [actionLabel]),
+					icon: "alert-circle",
+					position: "bottom-center",
+					iconClasses: "text-red-500",
+				})
+			}
+		},
+	})
+}
+
+async function startCamera() {
+	cameraError.value = null
+	if (!navigator.mediaDevices?.getUserMedia) {
+		cameraError.value = __("Camera not supported on this device")
+		return
+	}
+	try {
+		cameraStream = await navigator.mediaDevices.getUserMedia({
+			video: {
+				facingMode: "user",
+				width: { ideal: 640 },
+				height: { ideal: 480 },
 			},
+		})
+		cameraStatus.value = "live"
+		await nextTick()
+		if (videoEl.value) {
+			videoEl.value.srcObject = cameraStream
 		}
-	)
+		console.info("[Selfie] Camera started")
+	} catch (err) {
+		console.error("[Selfie] Camera error:", err)
+		cameraError.value = __("Camera access denied. Please allow camera permission.")
+	}
+}
+
+function stopCamera() {
+	if (cameraStream) {
+		cameraStream.getTracks().forEach((t) => t.stop())
+		cameraStream = null
+		console.info("[Selfie] Camera stopped")
+	}
+}
+
+async function takeSelfie() {
+	const video = videoEl.value
+	const canvas = canvasEl.value
+	if (!video || !canvas || !video.videoWidth) {
+		console.warn("[Selfie] Video not ready")
+		return
+	}
+	canvas.width = video.videoWidth
+	canvas.height = video.videoHeight
+	const ctx = canvas.getContext("2d")
+	// Mirror the front-camera frame so the saved image matches the preview.
+	ctx.translate(canvas.width, 0)
+	ctx.scale(-1, 1)
+	ctx.drawImage(video, 0, 0)
+	ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+	selfieDataUrl.value = canvas.toDataURL("image/jpeg", 0.8)
+	stopCamera()
+	cameraStatus.value = "uploading"
+	await uploadSelfie(selfieDataUrl.value)
+}
+
+async function retakeSelfie() {
+	selfieDataUrl.value = null
+	selfieFileUrl.value = null
+	cameraStatus.value = "idle"
+	cameraError.value = null
+	await startCamera()
+}
+
+async function uploadSelfie(dataUrl) {
+	try {
+		const blob = await (await fetch(dataUrl)).blob()
+		const filename = `selfie-${employee.data.name}-${Date.now()}.jpg`
+		const file = new File([blob], filename, { type: "image/jpeg" })
+		const fd = new FormData()
+		fd.append("file", file, filename)
+		fd.append("is_private", "0")
+		fd.append("doctype", DOCTYPE)
+		fd.append("fieldname", "selfie_image")
+
+		const headers = { "X-Frappe-Site-Name": window.location.hostname }
+		if (window.csrf_token) {
+			headers["X-Frappe-CSRF-Token"] = window.csrf_token
+		}
+
+		const res = await fetch("/api/method/upload_file", {
+			method: "POST",
+			headers,
+			body: fd,
+		})
+		const out = await res.json()
+		if (!res.ok || !out?.message?.file_url) {
+			throw new Error(out?.exception || __("Upload failed"))
+		}
+		selfieFileUrl.value = out.message.file_url
+		cameraStatus.value = "captured"
+		console.info("[Selfie] Uploaded:", selfieFileUrl.value)
+	} catch (err) {
+		console.error("[Selfie] Upload error:", err)
+		cameraError.value = __("Failed to upload selfie: {0}", [err.message || err])
+		// Keep the preview so the user can retake or skip.
+		cameraStatus.value = "captured"
+	}
+}
+
+function onModalDismiss() {
+	stopCamera()
+	selfieDataUrl.value = null
+	selfieFileUrl.value = null
+	cameraStatus.value = "idle"
+	cameraError.value = null
 }
 
 onMounted(() => {
@@ -206,5 +405,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
+	stopCamera()
 })
 </script>
