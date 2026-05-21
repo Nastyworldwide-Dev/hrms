@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mockup — HRMS-only User Permission scope</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .doctype-pill { font-size: 12px; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+  .check-row { transition: background 0.2s; }
+  .check-row:hover { background: #f9fafb; }
+  .fade-in { animation: fadeIn 0.25s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .stripe { background: repeating-linear-gradient(45deg, transparent, transparent 8px, #fef2f2 8px, #fef2f2 16px); }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<div class="max-w-6xl mx-auto p-6">
+
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Mockup — HRMS-only User Permission scope</h1>
+    <p class="text-sm text-gray-500 mt-1">Toggle the new checkbox on the right to see how the User Permission for this employee's user narrows from <em>every doctype</em> to <em>HRMS doctypes only</em>.</p>
+  </header>
+
+  <!-- ============== Employee Form Snippet ============== -->
+  <section class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-gray-700">Employee › HR-EMP-00042 — Aisha Bakar</span>
+        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Active</span>
+      </div>
+      <span class="text-xs text-gray-400">Section: User &amp; Permissions</span>
+    </div>
+
+    <div class="p-5 grid grid-cols-2 gap-x-8 gap-y-4">
+      <div>
+        <label class="block text-xs uppercase text-gray-500 mb-1">User ID</label>
+        <div class="text-sm border border-gray-300 rounded px-3 py-2 bg-gray-50">aisha.bakar@nasty.example</div>
+      </div>
+      <div>
+        <label class="block text-xs uppercase text-gray-500 mb-1">Reports To</label>
+        <div class="text-sm border border-gray-300 rounded px-3 py-2 bg-gray-50">HR-EMP-00010 — Faizal Rahman</div>
+      </div>
+
+      <!-- Existing core checkbox -->
+      <label class="check-row flex items-start gap-3 col-span-2 p-2 rounded cursor-pointer border border-gray-100">
+        <input id="cup" type="checkbox" checked class="mt-1 h-4 w-4 text-blue-600 rounded" onchange="render()" />
+        <div>
+          <div class="text-sm font-medium">Create User Permission</div>
+          <div class="text-xs text-gray-500">Restricts this user to records linked to this Employee (core HRMS field).</div>
+        </div>
+      </label>
+
+      <!-- NEW checkbox -->
+      <label id="restrict-row" class="check-row flex items-start gap-3 col-span-2 p-2 rounded cursor-pointer border border-blue-200 bg-blue-50">
+        <input id="restrict" type="checkbox" class="mt-1 h-4 w-4 text-blue-600 rounded" onchange="render()" />
+        <div>
+          <div class="text-sm font-medium flex items-center gap-2">
+            Restrict User Permission to HRMS Module Only
+            <span class="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">NEW · nsty</span>
+          </div>
+          <div class="text-xs text-gray-500">When checked, the User Permission only restricts HRMS doctypes (Employee, Attendance, Leave, Salary Slip, etc.). All other doctypes (Sales, Stock, Accounts, etc.) are unaffected.</div>
+        </div>
+      </label>
+    </div>
+  </section>
+
+  <!-- ============== Effect Preview ============== -->
+  <section class="grid grid-cols-2 gap-6">
+
+    <!-- BEFORE: scope = ALL -->
+    <div id="panel-all" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <div class="text-sm font-semibold">User Permission · current state</div>
+        <div class="text-xs text-gray-500">User=<code>aisha.bakar@nasty.example</code> · Allow=<code>Employee</code> · For Value=<code>HR-EMP-00042</code></div>
+      </div>
+      <div class="p-4">
+        <div class="text-xs uppercase text-gray-500 mb-2">apply_to_all_doctypes</div>
+        <div id="apply-flag" class="text-sm font-mono mb-4 px-2 py-1 rounded inline-block">—</div>
+
+        <div class="text-xs uppercase text-gray-500 mb-2">Affects these doctypes</div>
+        <div id="affected" class="flex flex-wrap gap-1.5"></div>
+
+        <div class="text-xs uppercase text-gray-500 mt-4 mb-2">Caption</div>
+        <p id="caption" class="text-sm text-gray-700"></p>
+      </div>
+    </div>
+
+    <!-- Reporting hierarchy demo -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <div class="text-sm font-semibold">Reporting hierarchy · unaffected</div>
+        <div class="text-xs text-gray-500">Manager ↔ subordinate visibility still works either way</div>
+      </div>
+      <div class="p-4 text-sm">
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-bold">FR</div>
+            <div>
+              <div class="font-medium">Faizal Rahman</div>
+              <div class="text-xs text-gray-500">Head of HR · HR-EMP-00010</div>
+            </div>
+          </div>
+          <div class="ml-4 border-l-2 border-gray-200 pl-4 space-y-2">
+            <div class="flex items-center gap-3">
+              <div class="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">AB</div>
+              <div>
+                <div class="font-medium">Aisha Bakar <span class="text-xs text-gray-400">(this employee)</span></div>
+                <div class="text-xs text-gray-500">HR Executive · HR-EMP-00042</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 opacity-70">
+              <div class="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">SL</div>
+              <div>
+                <div class="font-medium">Siti Lim</div>
+                <div class="text-xs text-gray-500">HR Intern · HR-EMP-00077 — reports to Aisha</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-600 mt-4 leading-relaxed bg-gray-50 border border-gray-200 rounded p-3">
+          The new checkbox <strong>only narrows which doctypes</strong> the User Permission applies to. It does <strong>not</strong> change the reports-to chain. Aisha still sees her subordinate Siti's HRMS records, and her superior Faizal still sees Aisha's — exactly as before.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Side-by-side doctype universe ============== -->
+  <section class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="px-4 py-3 border-b border-gray-200">
+      <div class="text-sm font-semibold">Doctype universe — what changes</div>
+      <div class="text-xs text-gray-500">Green = restricted by this User Permission · Gray = unaffected</div>
+    </div>
+    <div class="p-4 grid grid-cols-2 gap-4">
+      <div>
+        <div class="text-xs uppercase text-gray-500 mb-2 flex items-center gap-2">
+          <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span> HRMS module (always restricted)
+        </div>
+        <div id="hrms-list" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div>
+        <div class="text-xs uppercase text-gray-500 mb-2 flex items-center gap-2">
+          <span id="other-dot" class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+          <span id="other-label">Other modules (currently restricted)</span>
+        </div>
+        <div id="other-list" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mt-6 text-xs text-gray-400 text-center">
+    Mockup only · no live data · feature implemented in <code>apps/nsty/</code>
+  </footer>
+</div>
+
+<script>
+  const HRMS_DOCTYPES = [
+    "Employee", "Attendance", "Attendance Request", "Leave Application", "Leave Type",
+    "Shift Request", "Shift Assignment", "Employee Checkin",
+    "Salary Slip", "Employee Benefit Application",
+    "Expense Claim", "Employee Advance",
+    "Compensatory Leave Request", "Employee Grievance", "Employee Referral",
+    "Travel Request", "Timesheet", "Training Feedback",
+    "Employee Tax Exemption Declaration", "Employee Tax Exemption Proof Submission",
+    "Holiday List", "Company"
+  ];
+
+  const OTHER_DOCTYPES = [
+    "Sales Invoice", "Sales Order", "Quotation", "Customer",
+    "Purchase Invoice", "Purchase Order", "Supplier",
+    "Item", "Stock Entry", "Delivery Note", "Warehouse",
+    "Journal Entry", "Payment Entry", "GL Entry",
+    "Project", "Task", "Issue", "Lead", "Opportunity",
+    "Cost Center", "Account", "Bank Account"
+  ];
+
+  function pill(name, cls) {
+    return `<span class="doctype-pill ${cls}">${name}</span>`;
+  }
+
+  function render() {
+    const cupOn = document.getElementById("cup").checked;
+    const restrictOn = document.getElementById("restrict").checked;
+    const restrictRow = document.getElementById("restrict-row");
+    const applyFlag = document.getElementById("apply-flag");
+    const affected = document.getElementById("affected");
+    const caption = document.getElementById("caption");
+    const otherDot = document.getElementById("other-dot");
+    const otherLabel = document.getElementById("other-label");
+    const otherList = document.getElementById("other-list");
+    const hrmsList = document.getElementById("hrms-list");
+
+    // Restrict row only meaningful when parent box is on
+    restrictRow.style.opacity = cupOn ? "1" : "0.4";
+    restrictRow.style.pointerEvents = cupOn ? "auto" : "none";
+    if (!cupOn) document.getElementById("restrict").checked = false;
+
+    hrmsList.innerHTML = HRMS_DOCTYPES.map(d => pill(d, "bg-emerald-50 text-emerald-700 border border-emerald-200")).join("");
+
+    if (!cupOn) {
+      applyFlag.textContent = "n/a — no User Permission created";
+      applyFlag.className = "text-sm font-mono mb-4 px-2 py-1 rounded inline-block bg-gray-100 text-gray-600";
+      affected.innerHTML = `<span class="text-sm text-gray-500 italic">No restrictions in effect.</span>`;
+      caption.textContent = "Create User Permission is off — user has whatever roles allow them; no scoping happens.";
+      otherList.innerHTML = OTHER_DOCTYPES.map(d => pill(d, "bg-gray-50 text-gray-500 border border-gray-200")).join("");
+      otherDot.className = "inline-block h-2 w-2 rounded-full bg-gray-400";
+      otherLabel.textContent = "Other modules (unaffected)";
+      return;
+    }
+
+    if (!restrictOn) {
+      // Default behavior — restrict to ALL
+      applyFlag.textContent = "apply_to_all_doctypes = 1   (default)";
+      applyFlag.className = "text-sm font-mono mb-4 px-2 py-1 rounded inline-block bg-red-50 text-red-700 border border-red-200 stripe fade-in";
+      const all = [...HRMS_DOCTYPES, ...OTHER_DOCTYPES];
+      affected.innerHTML = all.map(d => pill(d, "bg-red-50 text-red-700 border border-red-200")).join("");
+      caption.innerHTML = `Every link to Employee — across <strong>HRMS, Sales, Stock, Accounts, Projects</strong> — is restricted to this employee. This is what bothers you: a Sales Invoice that happens to link to Employee gets locked down too.`;
+      otherList.innerHTML = OTHER_DOCTYPES.map(d => pill(d, "bg-red-50 text-red-700 border border-red-200")).join("");
+      otherDot.className = "inline-block h-2 w-2 rounded-full bg-red-500";
+      otherLabel.textContent = "Other modules (currently restricted — undesired)";
+    } else {
+      // NEW behavior — restrict to HRMS only
+      applyFlag.textContent = "apply_to_all_doctypes = 0   ·   applicable_for = [22 HRMS doctypes]";
+      applyFlag.className = "text-sm font-mono mb-4 px-2 py-1 rounded inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 fade-in";
+      affected.innerHTML = HRMS_DOCTYPES.map(d => pill(d, "bg-emerald-50 text-emerald-700 border border-emerald-200 fade-in")).join("");
+      caption.innerHTML = `Only HRMS doctypes are scoped. <strong>Sales, Stock, Accounts, Projects are free</strong> — the user can see them according to their roles, with no Employee-link filter.`;
+      otherList.innerHTML = OTHER_DOCTYPES.map(d => pill(d, "bg-gray-50 text-gray-500 border border-gray-200")).join("");
+      otherDot.className = "inline-block h-2 w-2 rounded-full bg-gray-400";
+      otherLabel.textContent = "Other modules (unaffected)";
+    }
+  }
+
+  render();
+</script>
+
+</body>
+</html>

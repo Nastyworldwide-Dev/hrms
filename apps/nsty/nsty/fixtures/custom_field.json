@@ -1,0 +1,20 @@
+[
+  {
+    "doctype": "Custom Field",
+    "dt": "Employee",
+    "module": "Nsty",
+    "name": "Employee-restrict_user_permission_to_hrms",
+    "fieldname": "restrict_user_permission_to_hrms",
+    "fieldtype": "Check",
+    "label": "Restrict User Permission to HRMS Module Only",
+    "description": "When checked together with 'Create User Permission', the User Permission for this employee only restricts HRMS doctypes (Employee, Attendance, Leave, Salary Slip, etc.). Other modules (Sales, Stock, Accounts, Projects) are unaffected.",
+    "insert_after": "create_user_permission",
+    "depends_on": "eval:doc.create_user_permission",
+    "default": "0",
+    "in_list_view": 0,
+    "in_standard_filter": 0,
+    "in_global_search": 0,
+    "translatable": 0,
+    "permlevel": 0
+  }
+]

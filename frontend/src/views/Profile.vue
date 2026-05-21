@@ -68,6 +68,30 @@
 							</div>
 						</div>
 
+						<!-- HR Contacts -->
+						<div class="flex flex-col gap-5 my-4 w-full">
+							<div class="flex flex-col bg-white rounded">
+								<router-link
+									:to="{ name: 'HRContacts' }"
+									class="flex flex-row cursor-pointer flex-start p-4 items-center justify-between border-b"
+								>
+									<div class="flex flex-row items-center gap-3 grow">
+										<FeatherIcon
+											name="users"
+											class="h-5 w-5 text-gray-500"
+										/>
+										<div class="text-base font-normal text-gray-800">
+											{{ __("HR Contacts") }}
+										</div>
+									</div>
+									<FeatherIcon
+										name="chevron-right"
+										class="h-5 w-5 text-gray-500"
+									/>
+								</router-link>
+							</div>
+						</div>
+
 						<!-- Settings -->
 						<div
 							class="flex flex-col gap-5 my-4 w-full"
@@ -117,7 +141,22 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
+				<ContactInfoSheet
+					v-if="selectedItem?.kind === 'contact'"
+					:self-data="
+						selectedItem.fields.map((field) => {
+							const [label, fieldtype] = getFieldInfo(field)
+							return {
+								fieldname: field,
+								value: employeeDoc.doc[field],
+								label: label,
+								fieldtype: fieldtype,
+							}
+						})
+					"
+				/>
 				<ProfileInfoModal
+					v-else-if="selectedItem"
 					:title="selectedItem.title"
 					:data="
 						selectedItem.fields.map((field) => {
@@ -146,6 +185,7 @@ import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
+import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
 
 import { arePushNotificationsEnabled } from "@/data/notifications"
 
@@ -188,6 +228,7 @@ const profileLinks = [
 	{
 		icon: "book",
 		title: __("Contact Information"),
+		kind: "contact",
 		fields: [
 			"cell_number",
 			"personal_email",

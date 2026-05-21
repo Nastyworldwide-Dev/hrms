@@ -68,6 +68,11 @@ const routes = [
 		component: () => import("@/views/AppSettings.vue"),
 	},
 	{
+		path: "/hr-contacts",
+		name: "HRContacts",
+		component: () => import("@/views/HRContacts.vue"),
+	},
+	{
 		path: "/invalid-employee",
 		name: "InvalidEmployee",
 		component: () => import("@/views/InvalidEmployee.vue"),
