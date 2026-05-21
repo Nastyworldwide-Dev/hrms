@@ -83,34 +83,44 @@ def get_reporting_manager(employee: str | None = None) -> dict | None:
 def list_hr_contacts() -> list[dict]:
 	"""Return curated active HR contacts from the HR Contact doctype.
 
-	Reads `HR Contact` rows with is_active=1, sorted by display_order then
-	employee, and joins each to the Employee record for the card payload.
-	Inactive Employees are filtered out.
+	A row appears only if ALL of the following hold:
+	- HR Contact.is_active = 1
+	- Employee.status = 'Active'
+	- The linked User still has HR Manager or HR User role
+	  (so revoking the role hides the contact automatically, no re-save needed)
+
+	Ordered by HR Contact.display_order ASC, then employee ID ASC.
 	"""
-	rows = frappe.get_all(
-		"HR Contact",
-		filters={"is_active": 1},
-		fields=["employee", "display_order"],
-		order_by="display_order asc, employee asc",
+	rows = frappe.db.sql(
+		"""
+		SELECT
+			e.name AS name,
+			e.employee_name,
+			e.designation,
+			e.company_email,
+			e.prefered_email,
+			e.personal_email,
+			e.cell_number,
+			e.image,
+			e.user_id,
+			hc.display_order
+		FROM `tabHR Contact` hc
+		INNER JOIN `tabEmployee` e
+			ON e.name = hc.employee
+		INNER JOIN `tabHas Role` r
+			ON r.parent = e.user_id
+		   AND r.parenttype = 'User'
+		   AND r.role IN %(roles)s
+		WHERE hc.is_active = 1
+		  AND e.status = 'Active'
+		GROUP BY e.name, hc.display_order
+		ORDER BY hc.display_order ASC, e.name ASC
+		""",
+		{"roles": HR_ROLES},
+		as_dict=True,
 	)
-	if not rows:
-		logger.info("[hr_contacts] list_hr_contacts -> 0 (no curated rows)")
-		return []
-
-	employee_ids = [r["employee"] for r in rows]
-	employees = frappe.get_all(
-		"Employee",
-		filters={"name": ["in", employee_ids], "status": "Active"},
-		fields=_CONTACT_FIELDS,
-	)
-	by_id = {e["name"]: e for e in employees}
-
-	cards = []
-	for r in rows:
-		e = by_id.get(r["employee"])
-		if e:
-			cards.append(_to_contact_card(e))
-	logger.info("[hr_contacts] list_hr_contacts -> %d (curated)", len(cards))
+	cards = [_to_contact_card(r) for r in rows if r]
+	logger.info("[hr_contacts] list_hr_contacts -> %d (role-checked)", len(cards))
 	return cards
 
 
