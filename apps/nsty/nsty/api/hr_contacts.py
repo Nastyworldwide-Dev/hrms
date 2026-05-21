@@ -81,27 +81,75 @@ def get_reporting_manager(employee: str | None = None) -> dict | None:
 
 @frappe.whitelist()
 def list_hr_contacts() -> list[dict]:
-	"""Return all active employees whose linked User has an HR role."""
-	hr_users = frappe.get_all(
-		"Has Role",
-		filters={
-			"role": ["in", HR_ROLES],
-			"parenttype": "User",
-		},
-		pluck="parent",
+	"""Return curated active HR contacts from the HR Contact doctype.
+
+	Reads `HR Contact` rows with is_active=1, sorted by display_order then
+	employee, and joins each to the Employee record for the card payload.
+	Inactive Employees are filtered out.
+	"""
+	rows = frappe.get_all(
+		"HR Contact",
+		filters={"is_active": 1},
+		fields=["employee", "display_order"],
+		order_by="display_order asc, employee asc",
 	)
-	if not hr_users:
+	if not rows:
+		logger.info("[hr_contacts] list_hr_contacts -> 0 (no curated rows)")
 		return []
 
-	rows = frappe.get_all(
+	employee_ids = [r["employee"] for r in rows]
+	employees = frappe.get_all(
 		"Employee",
-		filters={
-			"user_id": ["in", list(set(hr_users))],
-			"status": "Active",
-		},
+		filters={"name": ["in", employee_ids], "status": "Active"},
 		fields=_CONTACT_FIELDS,
-		order_by="employee_name asc",
 	)
-	cards = [_to_contact_card(r) for r in rows if r]
-	logger.info("[hr_contacts] list_hr_contacts -> %d", len(cards))
+	by_id = {e["name"]: e for e in employees}
+
+	cards = []
+	for r in rows:
+		e = by_id.get(r["employee"])
+		if e:
+			cards.append(_to_contact_card(e))
+	logger.info("[hr_contacts] list_hr_contacts -> %d (curated)", len(cards))
 	return cards
+
+
+@frappe.whitelist()
+def employee_with_hr_role_query(
+	doctype: str,
+	txt: str,
+	searchfield: str,
+	start: int,
+	page_len: int,
+	filters: dict | None = None,
+):
+	"""Link-field query used by the HR Contact form to limit the Employee
+	picker to active Employees whose linked User has an HR role.
+	"""
+	logger.info(
+		"[hr_contacts] picker query txt=%r start=%s page_len=%s",
+		txt,
+		start,
+		page_len,
+	)
+	return frappe.db.sql(
+		"""
+		SELECT e.name, e.employee_name, e.designation
+		FROM `tabEmployee` e
+		INNER JOIN `tabHas Role` r
+			ON r.parent = e.user_id
+		   AND r.parenttype = 'User'
+		   AND r.role IN %(roles)s
+		WHERE e.status = 'Active'
+		  AND (e.name LIKE %(txt)s OR e.employee_name LIKE %(txt)s)
+		GROUP BY e.name
+		ORDER BY e.employee_name
+		LIMIT %(start)s, %(page_len)s
+		""",
+		{
+			"roles": HR_ROLES,
+			"txt": f"%{txt or ''}%",
+			"start": int(start) if start else 0,
+			"page_len": int(page_len) if page_len else 20,
+		},
+	)
