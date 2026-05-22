@@ -73,6 +73,11 @@ const routes = [
 		component: () => import("@/views/HRContacts.vue"),
 	},
 	{
+		path: "/remote-approvals",
+		name: "RemoteApprovals",
+		component: () => import("@/views/RemoteApprovals.vue"),
+	},
+	{
 		path: "/invalid-employee",
 		name: "InvalidEmployee",
 		component: () => import("@/views/InvalidEmployee.vue"),

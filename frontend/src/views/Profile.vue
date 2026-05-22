@@ -92,6 +92,40 @@
 							</div>
 						</div>
 
+						<!-- Pending Approvals (only if any) -->
+						<div
+							class="flex flex-col gap-5 my-4 w-full"
+							v-if="pendingApprovalsCount > 0"
+						>
+							<div class="flex flex-col bg-white rounded">
+								<router-link
+									:to="{ name: 'RemoteApprovals' }"
+									class="flex flex-row cursor-pointer flex-start p-4 items-center justify-between border-b"
+								>
+									<div class="flex flex-row items-center gap-3 grow">
+										<FeatherIcon
+											name="check-square"
+											class="h-5 w-5 text-amber-600"
+										/>
+										<div class="text-base font-normal text-gray-800">
+											{{ __("Pending Approvals") }}
+										</div>
+									</div>
+									<div class="flex flex-row items-center gap-2">
+										<span
+											class="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full"
+										>
+											{{ pendingApprovalsCount }}
+										</span>
+										<FeatherIcon
+											name="chevron-right"
+											class="h-5 w-5 text-gray-500"
+										/>
+									</div>
+								</router-link>
+							</div>
+						</div>
+
 						<!-- Settings -->
 						<div
 							class="flex flex-col gap-5 my-4 w-full"
@@ -187,6 +221,8 @@ import { formatCurrency } from "@/utils/formatters"
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
 
+import { pendingCountResource } from "@/data/remoteCheckin"
+
 import { arePushNotificationsEnabled } from "@/data/notifications"
 
 const DOCTYPE = "Employee"
@@ -263,6 +299,8 @@ const allowPushNotifications = computed(
 		arePushNotificationsEnabled.data
 )
 
+const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
+
 const openInfoModal = async (request) => {
 	selectedItem.value = request
 	isInfoModalOpen.value = true
@@ -314,6 +352,7 @@ onMounted(() => {
 			employeeDoc.reload()
 		}
 	})
+	pendingCountResource.fetch()
 })
 
 onBeforeUnmount(() => {

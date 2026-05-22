@@ -115,6 +115,16 @@
 			</Button>
 		</div>
 	</ion-modal>
+
+	<RemoteCheckinDialog
+		:is-open="remoteDialogOpen"
+		:request-name="remoteRequest.name"
+		:log-type="remoteRequest.logType"
+		:distance-m="remoteRequest.distanceM"
+		:approver-name="remoteRequest.approverName"
+		@close="remoteDialogOpen = false"
+		@submitted="checkins.reload()"
+	/>
 </template>
 
 <script setup>
@@ -123,6 +133,7 @@ import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount } from "vue
 import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
+import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -149,13 +160,44 @@ const settings = createResource({
 
 const checkins = createListResource({
 	doctype: DOCTYPE,
-	fields: ["name", "employee", "employee_name", "log_type", "time", "device_id"],
+	fields: [
+		"name",
+		"employee",
+		"employee_name",
+		"log_type",
+		"time",
+		"device_id",
+		"requires_remote_approval",
+		"remote_approval_status",
+	],
 	filters: {
 		employee: employee.data.name,
 	},
 	orderBy: "time desc",
 })
 checkins.reload()
+
+// Remote checkin dialog state
+const remoteDialogOpen = ref(false)
+const remoteRequest = ref({ name: "", logType: "IN", distanceM: 0, approverName: "" })
+
+const fetchRemoteRequest = createResource({
+	url: "frappe.client.get_list",
+	makeParams(values) {
+		return {
+			doctype: "Remote Checkin Request",
+			filters: { checkin: values.checkin },
+			fields: [
+				"name",
+				"log_type",
+				"distance_m",
+				"approver",
+				"status",
+			],
+			limit_page_length: 1,
+		}
+	},
+})
 
 const lastLog = computed(() => {
 	if (checkins.list.loading || !checkins.data) return {}
@@ -166,10 +208,28 @@ const lastLogType = computed(() => {
 	return lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"
 })
 
+// Sessions roll over at 06:00 local the day after check-in.
+// If a user checks IN late at night, they can still check OUT during OT
+// up until 06:00 the next morning. After that the open IN is treated as
+// stale and the button flips back to "Check In".
+const STALE_AFTER_HOUR = 6
+
+function isSessionStale(checkinTime) {
+	if (!checkinTime) return true
+	const t = new Date(checkinTime)
+	if (Number.isNaN(t.getTime())) return true
+	const expiry = new Date(t)
+	expiry.setDate(t.getDate() + 1)
+	expiry.setHours(STALE_AFTER_HOUR, 0, 0, 0)
+	return Date.now() >= expiry.getTime()
+}
+
 const nextAction = computed(() => {
-	return lastLog?.value?.log_type === "IN"
-		? { action: "OUT", label: __("Check Out") }
-		: { action: "IN", label: __("Check In") }
+	const last = lastLog?.value
+	if (!last || last.log_type !== "IN" || isSessionStale(last.time)) {
+		return { action: "IN", label: __("Check In") }
+	}
+	return { action: "OUT", label: __("Check Out") }
 })
 
 function handleLocationSuccess(position) {
@@ -246,8 +306,28 @@ const submitLog = async (logType) => {
 	}
 
 	checkins.insert.submit(payload, {
-		onSuccess() {
+		async onSuccess(doc) {
 			modalController.dismiss()
+
+			if (doc?.requires_remote_approval) {
+				try {
+					const rows = await fetchRemoteRequest.submit({ checkin: doc.name })
+					const req = rows?.[0]
+					if (req) {
+						remoteRequest.value = {
+							name: req.name,
+							logType: req.log_type || logType,
+							distanceM: Number(req.distance_m) || 0,
+							approverName: req.approver || "",
+						}
+						remoteDialogOpen.value = true
+						return
+					}
+				} catch (err) {
+					console.warn("[RemoteCheckin] could not load request:", err)
+				}
+			}
+
 			toast({
 				title: __("Success"),
 				text: __("{0} successful!", [actionLabel]),

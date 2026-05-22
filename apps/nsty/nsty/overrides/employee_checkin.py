@@ -18,6 +18,7 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import EmployeeCheckin
 from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
+from hrms.hr.utils import get_distance_between_coordinates
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,74 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			self.employee,
 			log_time,
 			best_delta or 0,
+		)
+
+	def validate_distance_from_shift_location(self):
+		"""Replace HRMS strict geofence rejection with the remote-checkin flow.
+
+		Behaviour:
+		  - Geolocation tracking disabled -> nothing to do.
+		  - No active Shift Assignment with shift_location -> nothing to do
+		    (employee not tied to any geofence).
+		  - Inside the configured radius -> accept silently.
+		  - Outside the radius -> ALLOW the save and flag the doc so the
+		    after_insert hook auto-creates a Remote Checkin Request awaiting
+		    manager approval.
+		"""
+		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+			return
+
+		if not (self.latitude and self.longitude):
+			# No coordinates captured — fall through to upstream behaviour which
+			# throws. The frontend always sends lat/long when geo is enabled.
+			return super().validate_distance_from_shift_location()
+
+		assignment_locations = frappe.get_all(
+			"Shift Assignment",
+			filters={
+				"employee": self.employee,
+				"shift_type": self.shift,
+				"start_date": ["<=", self.time],
+				"shift_location": ["is", "set"],
+				"docstatus": 1,
+				"status": "Active",
+			},
+			or_filters=[["end_date", ">=", self.time], ["end_date", "is", "not set"]],
+			pluck="shift_location",
+		)
+		if not assignment_locations:
+			return
+
+		shift_loc_name = assignment_locations[0]
+		row = frappe.db.get_value(
+			"Shift Location",
+			shift_loc_name,
+			["checkin_radius", "latitude", "longitude"],
+			as_dict=True,
+		)
+		if not row or not row.checkin_radius or row.checkin_radius <= 0:
+			return
+
+		distance = get_distance_between_coordinates(
+			row.latitude, row.longitude, self.latitude, self.longitude
+		)
+		if distance <= row.checkin_radius:
+			# Inside the geofence — happy path.
+			return
+
+		# Outside the geofence — allow but flag for approval.
+		self.requires_remote_approval = 1
+		self.remote_approval_status = "Pending"
+		# Stash for after_insert hook (these are doc attrs, not DB columns).
+		self._remote_distance_m = max(0.0, distance - (row.checkin_radius or 0))
+		self._remote_nearest_location = shift_loc_name
+		logger.info(
+			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s distance=%.1fm radius=%sm location=%s",
+			self.employee,
+			self.log_type,
+			distance,
+			row.checkin_radius,
+			shift_loc_name,
 		)
 
 
