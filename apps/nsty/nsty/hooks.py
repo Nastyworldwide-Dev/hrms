@@ -33,8 +33,18 @@ fixtures = [
 					"Employee-restrict_user_permission_to_hrms",
 					"Employee Checkin-requires_remote_approval",
 					"Employee Checkin-remote_approval_status",
+					"Employee Checkin-is_abandoned",
 				],
 			]
 		],
 	},
 ]
+
+scheduler_events = {
+	"cron": {
+		# 10:00 local time daily — sweep IN logs >36h old without a matching OUT
+		"0 10 * * *": [
+			"nsty.scheduler.sweep_stale_ins",
+		],
+	},
+}

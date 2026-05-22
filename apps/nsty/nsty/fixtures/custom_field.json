@@ -50,5 +50,22 @@
     "in_standard_filter": 1,
     "translatable": 0,
     "permlevel": 0
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Employee Checkin",
+    "module": "Nsty",
+    "name": "Employee Checkin-is_abandoned",
+    "fieldname": "is_abandoned",
+    "fieldtype": "Check",
+    "label": "Is Abandoned",
+    "description": "Auto-set by the nightly stale-IN sweeper when an IN log has no matching OUT and is older than the configured threshold (default 36 hours).",
+    "insert_after": "remote_approval_status",
+    "default": "0",
+    "read_only": 1,
+    "in_list_view": 0,
+    "in_standard_filter": 1,
+    "translatable": 0,
+    "permlevel": 0
   }
 ]
