@@ -206,6 +206,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			self.shift,
 			reason,
 		)
+		_record_geofence_reject(self, ctx, shift_loc_name)
 		if reason == REASON_NO_SHIFT_LOCATION:
 			frappe.throw(
 				frappe._(
@@ -229,6 +230,47 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				"Move closer to check in. Remote approval is not available for this shift."
 			).format(ctx.get("distance_m") or 0.0, shift_loc_name or "", ctx.get("radius_m") or 0),
 			exc=CheckinRadiusExceededError,
+		)
+
+
+def _record_geofence_reject(doc, ctx, shift_loc_name):
+	"""Persist a Geofence Reject Log row before the strict throw.
+
+	Failure to write must not block the user-facing throw — the log is for
+	auditing, not flow control. Any error here is downgraded to a warning.
+	"""
+	try:
+		log = frappe.new_doc("Geofence Reject Log")
+		log.update(
+			{
+				"employee": doc.employee,
+				"log_type": doc.log_type or "IN",
+				"rejected_at": doc.time or frappe.utils.now_datetime(),
+				"shift_type": doc.shift,
+				"shift_location": shift_loc_name,
+				"reason": ctx.get("reason"),
+				"distance_m": ctx.get("distance_m"),
+				"radius_m": ctx.get("radius_m"),
+				"overshoot_m": ctx.get("overshoot_m"),
+				"latitude": doc.latitude,
+				"longitude": doc.longitude,
+				"device_id": getattr(doc, "device_id", None),
+			}
+		)
+		log.flags.ignore_permissions = True
+		log.insert()
+		logger.info(
+			"[employee_checkin] Wrote Geofence Reject Log %s employee=%s reason=%s",
+			log.name,
+			doc.employee,
+			ctx.get("reason"),
+		)
+	except Exception as exc:
+		logger.warning(
+			"[employee_checkin] Failed to write Geofence Reject Log employee=%s reason=%s: %s",
+			doc.employee,
+			ctx.get("reason"),
+			exc,
 		)
 
 

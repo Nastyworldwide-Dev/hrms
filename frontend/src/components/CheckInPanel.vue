@@ -174,6 +174,17 @@
 		@submitted="checkins.reload()"
 	/>
 
+	<StrictRejectionDialog
+		:is-open="strictDialogOpen"
+		:reason="strictRejection.reason"
+		:shift-type="strictRejection.shiftType"
+		:shift-location="strictRejection.shiftLocation"
+		:distance-m="strictRejection.distanceM"
+		:radius-m="strictRejection.radiusM"
+		:overshoot-m="strictRejection.overshootM"
+		@close="strictDialogOpen = false"
+	/>
+
 	<LateCheckoutDialog
 		:is-open="lateCheckoutOpen"
 		:in-checkin-name="lastLog?.name || ''"
@@ -190,6 +201,7 @@ import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
+import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
 
 const DOCTYPE = "Employee Checkin"
@@ -238,6 +250,25 @@ checkins.reload()
 // Remote checkin dialog state
 const remoteDialogOpen = ref(false)
 const remoteRequest = ref({ name: "", logType: "IN", distanceM: 0, approverName: "" })
+
+// Strict-mode rejection dialog state (used when the preflight tells us the
+// server would throw CheckinRadiusExceededError — we abort the insert).
+const strictDialogOpen = ref(false)
+const strictRejection = ref({
+	reason: "outside_radius",
+	shiftType: "",
+	shiftLocation: "",
+	distanceM: 0,
+	radiusM: 0,
+	overshootM: 0,
+})
+
+const preflightGeofence = createResource({
+	url: "nsty.api.geofence.check_geofence",
+	makeParams(values) {
+		return values
+	},
+})
 
 // Late-checkout dialog state
 const lateCheckoutOpen = ref(false)
@@ -332,6 +363,42 @@ const handleEmployeeCheckin = () => {
 
 const submitLog = async (logType) => {
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
+
+	// Preflight strict geofence: if the assigned Shift Type has
+	// enable_strict_geofence and we're outside the radius (or the shift is
+	// misconfigured), the server-side validate will throw. Catch this here
+	// so the user sees the explanatory dialog instead of a generic toast.
+	if (settings.data?.allow_geolocation_tracking && latitude.value && longitude.value) {
+		try {
+			const result = await preflightGeofence.submit({
+				employee: employee.data.name,
+				log_type: logType,
+				latitude: latitude.value,
+				longitude: longitude.value,
+				time: checkinTimestamp.value,
+			})
+			if (result && result.ok === false && result.mode === "strict_block") {
+				console.info("[Preflight] strict block:", result)
+				stopCamera()
+				modalController.dismiss()
+				strictRejection.value = {
+					reason: result.reason || "outside_radius",
+					shiftType: result.shift_type || "",
+					shiftLocation: result.shift_location || "",
+					distanceM: Number(result.distance_m) || 0,
+					radiusM: Number(result.radius_m) || 0,
+					overshootM: Number(result.overshoot_m) || 0,
+				}
+				strictDialogOpen.value = true
+				return
+			}
+		} catch (err) {
+			// Preflight is advisory — if it fails, fall through and let the
+			// real insert path enforce policy. Avoid blocking the user on a
+			// transient network blip.
+			console.warn("[Preflight] check_geofence failed, falling through:", err)
+		}
+	}
 
 	// Capture + upload the selfie first, then submit the checkin with the
 	// resulting file URL. If the camera failed to start (denied / no device)

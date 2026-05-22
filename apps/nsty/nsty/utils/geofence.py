@@ -28,11 +28,10 @@ Public API:
 from __future__ import annotations
 
 import logging
-from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-GeofenceDecision = Optional[Tuple[str, dict]]
+GeofenceDecision = tuple[str, dict] | None
 
 REASON_NO_SHIFT_LOCATION = "no_shift_location"
 REASON_NO_RADIUS = "no_radius"
@@ -43,7 +42,7 @@ def evaluate_geofence(
 	strict: bool,
 	has_shift_location: bool,
 	radius_m: int,
-	distance_m: Optional[float],
+	distance_m: float | None,
 ) -> GeofenceDecision:
 	"""Decide how to handle a check-in given its geofence inputs.
 

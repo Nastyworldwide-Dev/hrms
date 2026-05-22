@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Strict Geofence — Mockup v1</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script src="https://unpkg.com/feather-icons"></script>
+		<style>
+			body {
+				font-family:
+					ui-sans-serif,
+					system-ui,
+					-apple-system,
+					"Segoe UI",
+					Roboto,
+					sans-serif;
+				background: #f3f4f6;
+			}
+			.phone {
+				width: 384px;
+				border-radius: 36px;
+				background: #111;
+				padding: 12px;
+				box-shadow:
+					0 25px 50px -12px rgba(0, 0, 0, 0.25),
+					0 0 0 6px #1f2937 inset;
+			}
+			.phone-screen {
+				border-radius: 28px;
+				overflow: hidden;
+				background: #fff;
+				height: 760px;
+			}
+			.scrollbox {
+				scrollbar-width: thin;
+			}
+			.mono {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			}
+		</style>
+	</head>
+	<body class="text-gray-900">
+		<div class="max-w-[1480px] mx-auto px-8 py-10">
+			<header class="mb-8">
+				<h1 class="text-2xl font-bold">Strict Geofence — Mockup v1</h1>
+				<p class="text-sm text-gray-500 mt-1">
+					Two surfaces for the new
+					<span class="mono text-xs bg-gray-200 px-1 py-0.5 rounded">Shift Type.enable_strict_geofence</span>
+					flag: the mobile rejection screen the employee sees, and the admin dashboard for auditing out-of-radius
+					activity.
+				</p>
+			</header>
+
+			<div class="grid grid-cols-1 xl:grid-cols-[auto_1fr] gap-10 items-start">
+				<!-- ============================================ -->
+				<!-- MOBILE — STRICT REJECTION                    -->
+				<!-- ============================================ -->
+				<section>
+					<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">A — Mobile: strict rejection</h2>
+					<div class="phone">
+						<div class="phone-screen flex flex-col">
+							<!-- status bar -->
+							<div class="bg-white flex items-center justify-between px-5 pt-3 pb-2 text-xs text-gray-700">
+								<span class="font-semibold">9:41</span>
+								<span class="flex items-center gap-1.5">
+									<i data-feather="signal" class="h-3 w-3"></i>
+									<i data-feather="wifi" class="h-3 w-3"></i>
+									<i data-feather="battery" class="h-3 w-3"></i>
+								</span>
+							</div>
+
+							<!-- header -->
+							<div class="flex items-center px-4 py-3 border-b">
+								<button class="text-gray-600 mr-2">
+									<i data-feather="chevron-left" class="h-5 w-5"></i>
+								</button>
+								<h2 class="text-base font-semibold text-gray-900">Check-in</h2>
+							</div>
+
+							<!-- map preview -->
+							<div class="relative h-44 bg-gradient-to-br from-slate-100 to-slate-200 border-b">
+								<svg class="absolute inset-0 w-full h-full" viewBox="0 0 380 180" preserveAspectRatio="none">
+									<defs>
+										<pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+											<path d="M 20 0 L 0 0 0 20" fill="none" stroke="#d1d5db" stroke-width="0.5" />
+										</pattern>
+									</defs>
+									<rect width="380" height="180" fill="url(#grid)" />
+									<!-- radius circle around shift location (center) -->
+									<circle cx="160" cy="100" r="42" fill="#10b98115" stroke="#10b981" stroke-width="2" stroke-dasharray="4 3" />
+									<circle cx="160" cy="100" r="6" fill="#10b981" />
+									<!-- user position (outside) -->
+									<circle cx="290" cy="60" r="9" fill="#ef4444" stroke="white" stroke-width="3" />
+									<!-- distance line -->
+									<line x1="160" y1="100" x2="290" y2="60" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3" />
+								</svg>
+								<div class="absolute bottom-2 left-2 bg-white/95 rounded-md px-2 py-1 text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+									<span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+									Shift Location
+									<span class="ml-2 inline-block h-2 w-2 rounded-full bg-red-500"></span>
+									You
+								</div>
+							</div>
+
+							<!-- error block -->
+							<div class="flex flex-col items-center pt-6 pb-4 px-6 border-b">
+								<div class="h-14 w-14 rounded-full bg-red-100 flex items-center justify-center mb-3">
+									<i data-feather="slash" class="h-7 w-7 text-red-600"></i>
+								</div>
+								<div class="text-base font-bold text-gray-900 text-center">Check-in blocked</div>
+								<div class="text-xs text-gray-500 mt-1 text-center leading-relaxed">
+									You are outside the shift location radius. Remote approval is not available for this shift.
+								</div>
+							</div>
+
+							<!-- detail card -->
+							<div class="px-4 pt-4 flex flex-col gap-2">
+								<div class="bg-red-50 border border-red-200 rounded-md px-3 py-2.5">
+									<div class="flex justify-between text-xs text-red-800">
+										<span>Distance from geofence</span>
+										<span class="mono font-semibold">218 m over</span>
+									</div>
+									<div class="flex justify-between text-xs text-red-700 mt-1">
+										<span>Allowed radius</span>
+										<span class="mono">100 m</span>
+									</div>
+								</div>
+
+								<div class="border border-gray-200 rounded-md px-3 py-2.5 mt-1">
+									<div class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Shift Location</div>
+									<div class="text-sm font-medium text-gray-900 mt-0.5">KL HQ Office</div>
+									<div class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mt-2">Shift</div>
+									<div class="text-sm font-medium text-gray-900 mt-0.5">Office 9–5 (Strict)</div>
+								</div>
+							</div>
+
+							<!-- footer actions -->
+							<div class="mt-auto px-4 py-4 border-t bg-white flex flex-col gap-2">
+								<button class="w-full h-10 rounded-md bg-gray-900 text-white text-sm font-semibold">
+									Move closer and retry
+								</button>
+								<button class="w-full h-9 text-xs text-gray-500 underline">
+									Contact HR
+								</button>
+							</div>
+						</div>
+					</div>
+					<p class="text-[11px] text-gray-500 mt-3 max-w-[384px] leading-relaxed">
+						Replaces <span class="mono">RemoteCheckinDialog</span> when the Shift Type has
+						<span class="mono">enable_strict_geofence=1</span>. Map shows the radius and the user's offset visually
+						instead of just a distance number. No "Submit Request" CTA — the only paths forward are physical movement
+						or a human conversation.
+					</p>
+				</section>
+
+				<!-- ============================================ -->
+				<!-- ADMIN — REPORTING DASHBOARD                  -->
+				<!-- ============================================ -->
+				<section>
+					<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">B — Admin: out-of-radius report</h2>
+
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+						<!-- header -->
+						<div class="px-5 py-4 border-b flex items-center justify-between">
+							<div>
+								<h2 class="text-lg font-semibold text-gray-900">Out-of-radius activity</h2>
+								<p class="text-xs text-gray-500 mt-0.5">Geofence rejects and approved remote check-ins, last 7 days</p>
+							</div>
+							<div class="flex items-center gap-2">
+								<button class="text-xs px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
+									<i data-feather="download" class="h-3.5 w-3.5"></i> Export CSV
+								</button>
+								<button class="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-black flex items-center gap-1.5">
+									<i data-feather="refresh-cw" class="h-3.5 w-3.5"></i> Refresh
+								</button>
+							</div>
+						</div>
+
+						<!-- KPI row -->
+						<div class="grid grid-cols-4 divide-x divide-gray-200 border-b">
+							<div class="p-4">
+								<div class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Strict Blocks · today</div>
+								<div class="flex items-baseline gap-2 mt-1">
+									<span class="text-2xl font-bold text-red-600">7</span>
+									<span class="text-[11px] text-red-500">↑ 3 vs yesterday</span>
+								</div>
+							</div>
+							<div class="p-4">
+								<div class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Pending Approvals</div>
+								<div class="flex items-baseline gap-2 mt-1">
+									<span class="text-2xl font-bold text-amber-600">12</span>
+									<span class="text-[11px] text-gray-400">awaiting manager</span>
+								</div>
+							</div>
+							<div class="p-4">
+								<div class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Approved · 7d</div>
+								<div class="flex items-baseline gap-2 mt-1">
+									<span class="text-2xl font-bold text-emerald-600">34</span>
+									<span class="text-[11px] text-gray-400">79% rate</span>
+								</div>
+							</div>
+							<div class="p-4">
+								<div class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Avg distance · over</div>
+								<div class="flex items-baseline gap-2 mt-1">
+									<span class="text-2xl font-bold text-gray-900 mono">186</span>
+									<span class="text-[11px] text-gray-400">m beyond radius</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- filters -->
+						<div class="px-5 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
+							<div class="flex items-center gap-1">
+								<button class="text-xs px-3 py-1.5 rounded-full bg-gray-900 text-white font-semibold">All</button>
+								<button class="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1">
+									<span class="inline-block h-1.5 w-1.5 rounded-full bg-red-500"></span> Blocked
+								</button>
+								<button class="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1">
+									<span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span> Pending
+								</button>
+								<button class="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1">
+									<span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Approved
+								</button>
+								<button class="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1">
+									<span class="inline-block h-1.5 w-1.5 rounded-full bg-gray-400"></span> Rejected
+								</button>
+							</div>
+							<div class="ml-auto flex items-center gap-2">
+								<div class="relative">
+									<i data-feather="search" class="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+									<input type="text" placeholder="Employee, shift, location…" class="text-xs pl-8 pr-3 py-1.5 border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+								</div>
+								<button class="text-xs px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 hover:bg-white flex items-center gap-1.5">
+									<i data-feather="calendar" class="h-3.5 w-3.5"></i> Last 7 days
+								</button>
+							</div>
+						</div>
+
+						<!-- table -->
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead class="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wide">
+									<tr>
+										<th class="text-left font-semibold px-5 py-2.5">Employee</th>
+										<th class="text-left font-semibold px-3 py-2.5">Time</th>
+										<th class="text-left font-semibold px-3 py-2.5">Type</th>
+										<th class="text-left font-semibold px-3 py-2.5">Shift / Location</th>
+										<th class="text-right font-semibold px-3 py-2.5">Distance</th>
+										<th class="text-left font-semibold px-3 py-2.5">Status</th>
+										<th class="text-right font-semibold px-5 py-2.5">Reason</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-gray-100">
+
+									<!-- Strict block — no row in DB normally, derived from log -->
+									<tr class="hover:bg-red-50/40">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Aisyah Tan</div>
+											<div class="text-[11px] text-gray-500">EMP-0014 · Sales</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">22 May 09:14</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700">IN</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Office 9–5 (Strict)</div>
+											<div class="text-[11px] text-gray-500">KL HQ Office</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs">
+											<span class="text-red-600 font-semibold">+218 m</span>
+											<span class="text-gray-400 block text-[10px]">over 100 m</span>
+										</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-red-100 text-red-700 flex items-center gap-1 w-fit">
+												<i data-feather="slash" class="h-3 w-3"></i> Blocked
+											</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-gray-500">strict mode</td>
+									</tr>
+
+									<tr class="hover:bg-amber-50/30">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Faizal Rahman</div>
+											<div class="text-[11px] text-gray-500">EMP-0023 · Operations</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">22 May 08:47</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700">IN</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Field Visit</div>
+											<div class="text-[11px] text-gray-500">Klang Warehouse</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs">
+											<span class="text-amber-600 font-semibold">+45 m</span>
+											<span class="text-gray-400 block text-[10px]">over 200 m</span>
+										</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-amber-100 text-amber-700">Pending</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-gray-500 truncate max-w-[180px]" title="Client meeting at office X">Client meeting…</td>
+									</tr>
+
+									<tr class="hover:bg-gray-50">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Aisyah Tan</div>
+											<div class="text-[11px] text-gray-500">EMP-0014 · Sales</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">22 May 08:52</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700">IN</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Office 9–5 (Strict)</div>
+											<div class="text-[11px] text-gray-500">KL HQ Office</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs">
+											<span class="text-red-600 font-semibold">+312 m</span>
+											<span class="text-gray-400 block text-[10px]">over 100 m</span>
+										</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-red-100 text-red-700 flex items-center gap-1 w-fit">
+												<i data-feather="slash" class="h-3 w-3"></i> Blocked
+											</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-gray-500">strict mode</td>
+									</tr>
+
+									<tr class="hover:bg-gray-50">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Lim Wei Chen</div>
+											<div class="text-[11px] text-gray-500">EMP-0008 · Marketing</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">21 May 17:33</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-orange-100 text-orange-700">OUT</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Field Visit</div>
+											<div class="text-[11px] text-gray-500">Penang Outlet</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs">
+											<span class="text-emerald-600 font-semibold">+12 m</span>
+											<span class="text-gray-400 block text-[10px]">over 200 m</span>
+										</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700">Approved</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-gray-500 truncate max-w-[180px]" title="Traffic on highway">Traffic on highway</td>
+									</tr>
+
+									<tr class="hover:bg-gray-50">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Nur Hidayah</div>
+											<div class="text-[11px] text-gray-500">EMP-0031 · HR</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">21 May 09:08</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700">IN</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Office 9–5 (Lenient)</div>
+											<div class="text-[11px] text-gray-500">KL HQ Office</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs">
+											<span class="text-gray-700 font-semibold">+38 m</span>
+											<span class="text-gray-400 block text-[10px]">over 100 m</span>
+										</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-gray-200 text-gray-700">Rejected</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-gray-500 truncate max-w-[180px]" title="No valid reason">No valid reason</td>
+									</tr>
+
+									<tr class="hover:bg-gray-50">
+										<td class="px-5 py-3">
+											<div class="font-medium text-gray-900">Aisyah Tan</div>
+											<div class="text-[11px] text-gray-500">EMP-0014 · Sales</div>
+										</td>
+										<td class="px-3 py-3 mono text-xs text-gray-700">20 May 14:21</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-red-100 text-red-700">CFG</span>
+										</td>
+										<td class="px-3 py-3">
+											<div class="text-xs text-gray-900">Office 9–5 (Strict)</div>
+											<div class="text-[11px] text-red-500">No Shift Location</div>
+										</td>
+										<td class="px-3 py-3 text-right mono text-xs text-gray-400">—</td>
+										<td class="px-3 py-3">
+											<span class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-red-100 text-red-700 flex items-center gap-1 w-fit">
+												<i data-feather="alert-triangle" class="h-3 w-3"></i> Misconfig
+											</span>
+										</td>
+										<td class="px-5 py-3 text-right text-[11px] text-red-600">assignment missing geofence</td>
+									</tr>
+
+								</tbody>
+							</table>
+						</div>
+
+						<!-- footer -->
+						<div class="px-5 py-3 border-t flex items-center justify-between text-xs text-gray-500">
+							<span>Showing 6 of 53 events</span>
+							<div class="flex items-center gap-1">
+								<button class="px-2 py-1 rounded hover:bg-gray-100 disabled:text-gray-300" disabled>
+									<i data-feather="chevron-left" class="h-3.5 w-3.5"></i>
+								</button>
+								<span class="px-2 py-1">Page 1 / 9</span>
+								<button class="px-2 py-1 rounded hover:bg-gray-100">
+									<i data-feather="chevron-right" class="h-3.5 w-3.5"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<p class="text-[11px] text-gray-500 mt-3 leading-relaxed max-w-[820px]">
+						Strict-mode blocks aren't currently persisted (the check-in never inserts), so to populate this report we'd need
+						either a new lightweight <span class="mono">Geofence Reject Log</span> doctype written from the override, or
+						mining the existing server log. The mock assumes the doctype — much cheaper to query than parsing logs.
+						"Misconfig" rows (last) surface Shift Assignments where strict mode is on but the assignment has no
+						<span class="mono">shift_location</span> — admins want these visible because they're silent productivity blockers.
+					</p>
+				</section>
+			</div>
+
+			<footer class="mt-12 text-xs text-gray-400 border-t pt-4">
+				v1 — please mark up anything you'd change. Once approved I'll wire it into
+				<span class="mono">RemoteCheckinDialog.vue</span> (mobile branch) and a new
+				<span class="mono">GeofenceActivity.vue</span> admin view.
+			</footer>
+		</div>
+
+		<script>
+			feather.replace();
+		</script>
+	</body>
+</html>
