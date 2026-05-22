@@ -116,14 +116,14 @@ class ShiftType(Document):
 			if len(logs) > 1000 or frappe.flags.test_bg_job:
 				job_id = "process_auto_attendance_" + self.name
 				job = frappe.enqueue(self._process, logs=logs, timeout=1200, job_id=job_id, deduplicate=True)
-				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job',job.id,label='here')}"
+				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job', job.id, label='here')}"
 			else:
 				try:
 					self._process(logs)
 					return "Attendance has been marked as per employee check-ins."
 				except Exception as e:
 					error_log = frappe.log_error(e)
-					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log',error_log.name,label='here')}"
+					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log', error_log.name, label='here')}"
 		else:
 			self._process(logs)
 
@@ -215,6 +215,7 @@ class ShiftType(Document):
 		total_working_hours, in_time, out_time = calculate_working_hours(
 			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
 		)
+		total_working_hours = self._deduct_unpaid_breaks(total_working_hours, in_time, out_time)
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time
@@ -242,6 +243,32 @@ class ShiftType(Document):
 			return "Half Day", total_working_hours, late_entry, early_exit, in_time, out_time
 
 		return "Present", total_working_hours, late_entry, early_exit, in_time, out_time
+
+	def _deduct_unpaid_breaks(self, total_working_hours, in_time, out_time):
+		"""Subtract configured unpaid breaks from working hours.
+
+		Gap-aware: only deducts the portion of the break window NOT already
+		excluded by a real check-out/check-in gap, so workers who actually
+		log out for lunch aren't double-penalised.
+		"""
+		if not (in_time and out_time) or not getattr(self, "breaks", None):
+			return total_working_hours
+
+		from nsty.utils.break_calculation import get_shift_break_minutes
+
+		in_dt = get_datetime(in_time)
+		out_dt = get_datetime(out_time)
+		break_min = get_shift_break_minutes(self.name, in_dt, out_dt)
+		if break_min <= 0:
+			return total_working_hours
+
+		span_min = (out_dt - in_dt).total_seconds() / 60.0
+		worked_min = float(total_working_hours) * 60.0
+		gap_min = max(0.0, span_min - worked_min)
+		extra_deduct_min = max(0.0, break_min - gap_min)
+		if extra_deduct_min <= 0:
+			return total_working_hours
+		return max(0.0, total_working_hours - extra_deduct_min / 60.0)
 
 	def mark_absent_for_dates_with_no_attendance(self, employee: str):
 		"""Marks Absents for the given employee on working days in this shift that have no attendance marked.

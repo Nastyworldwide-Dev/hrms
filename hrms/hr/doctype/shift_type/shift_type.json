@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "prompt",
  "creation": "2018-04-13 16:22:52.954783",
  "doctype": "DocType",
@@ -30,7 +31,9 @@
   "late_entry_grace_period",
   "column_break_18",
   "enable_early_exit_marking",
-  "early_exit_grace_period"
+  "early_exit_grace_period",
+  "breaks_section",
+  "breaks"
  ],
  "fields": [
   {
@@ -185,6 +188,18 @@
    "fieldname": "auto_update_last_sync",
    "fieldtype": "Check",
    "label": "Automatically update Last Sync of Checkin"
+  },
+  {
+   "fieldname": "breaks_section",
+   "fieldtype": "Section Break",
+   "label": "Unpaid Breaks"
+  },
+  {
+   "description": "Time windows (per day of week) that are deducted from working hours. Use 'Normal only' for non-Ramadan rows and 'Ramadan only' for rows that apply inside the Ramadan window configured in HR Settings.",
+   "fieldname": "breaks",
+   "fieldtype": "Table",
+   "label": "Breaks",
+   "options": "Shift Break"
   }
  ],
  "links": [],

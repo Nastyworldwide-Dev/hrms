@@ -52,6 +52,8 @@
   "attendance_settings_section",
   "allow_employee_checkin_from_mobile_app",
   "allow_geolocation_tracking",
+  "ramadan_start_date",
+  "ramadan_end_date",
   "unlink_payment_section",
   "unlink_payment_on_cancellation_of_employee_advance"
  ],
@@ -317,6 +319,18 @@
    "fieldname": "allow_geolocation_tracking",
    "fieldtype": "Check",
    "label": "Allow Geolocation Tracking"
+  },
+  {
+   "description": "First day of Ramadan (inclusive). Shift breaks marked 'Ramadan only' apply between this date and Ramadan End Date.",
+   "fieldname": "ramadan_start_date",
+   "fieldtype": "Date",
+   "label": "Ramadan Start Date"
+  },
+  {
+   "description": "Last day of Ramadan (inclusive).",
+   "fieldname": "ramadan_end_date",
+   "fieldtype": "Date",
+   "label": "Ramadan End Date"
   },
   {
    "fieldname": "attendance_settings_section",
