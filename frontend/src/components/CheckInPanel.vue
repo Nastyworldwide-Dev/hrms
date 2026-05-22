@@ -13,22 +13,51 @@
 				</router-link>
 			</div>
 
-			<!-- Forgot-to-check-out banner: open IN session that has gone past the 6 AM cutoff -->
+			<!-- Forgot-to-check-out banner: open IN past 6 AM cutoff OR tagged abandoned by nightly sweeper -->
 			<div
 				v-if="hasStaleOpenIn"
-				class="mt-4 flex flex-row items-center gap-3 bg-orange-50 border border-orange-200 rounded-md px-3 py-2 cursor-pointer"
+				class="mt-4 flex flex-row items-center gap-3 rounded-md px-3 py-2 cursor-pointer border"
+				:class="
+					isAbandoned
+						? 'bg-red-50 border-red-200'
+						: 'bg-orange-50 border-orange-200'
+				"
 				@click="lateCheckoutOpen = true"
 			>
-				<FeatherIcon name="clock" class="h-4 w-4 text-orange-600 shrink-0" />
+				<FeatherIcon
+					:name="isAbandoned ? 'alert-triangle' : 'clock'"
+					class="h-4 w-4 shrink-0"
+					:class="isAbandoned ? 'text-red-600' : 'text-orange-600'"
+				/>
 				<div class="flex flex-col flex-1 min-w-0">
-					<div class="text-sm font-semibold text-orange-800">
-						{{ __("Forgot to check out from {0}?", [formatTimestamp(lastLog?.time)]) }}
+					<div
+						class="text-sm font-semibold"
+						:class="isAbandoned ? 'text-red-800' : 'text-orange-800'"
+					>
+						<template v-if="isAbandoned">
+							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(lastLog?.time)]) }}
+						</template>
+						<template v-else>
+							{{ __("Forgot to check out from {0}?", [formatTimestamp(lastLog?.time)]) }}
+						</template>
 					</div>
-					<div class="text-xs text-orange-700">
-						{{ __("Tap to submit a late check-out for approval.") }}
+					<div
+						class="text-xs"
+						:class="isAbandoned ? 'text-red-700' : 'text-orange-700'"
+					>
+						<template v-if="isAbandoned">
+							{{ __("Submit a late check-out now to resolve.") }}
+						</template>
+						<template v-else>
+							{{ __("Tap to submit a late check-out for approval.") }}
+						</template>
 					</div>
 				</div>
-				<FeatherIcon name="chevron-right" class="h-4 w-4 text-orange-500 shrink-0" />
+				<FeatherIcon
+					name="chevron-right"
+					class="h-4 w-4 shrink-0"
+					:class="isAbandoned ? 'text-red-500' : 'text-orange-500'"
+				/>
 			</div>
 
 			<Button
@@ -197,6 +226,7 @@ const checkins = createListResource({
 		"device_id",
 		"requires_remote_approval",
 		"remote_approval_status",
+		"is_abandoned",
 	],
 	filters: {
 		employee: employee.data.name,
@@ -215,6 +245,7 @@ const hasStaleOpenIn = computed(() => {
 	const last = lastLog?.value
 	return !!(last && last.log_type === "IN" && isSessionStale(last.time))
 })
+const isAbandoned = computed(() => !!lastLog?.value?.is_abandoned)
 
 const fetchRemoteRequest = createResource({
 	url: "frappe.client.get_list",
