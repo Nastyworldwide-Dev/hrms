@@ -26,3 +26,14 @@ export const rejectResource = createResource({
 	url: "nsty.api.remote_checkin.reject",
 	auto: false,
 })
+
+export const openInSessionResource = createResource({
+	url: "nsty.api.remote_checkin.get_open_in_session",
+	cache: "nsty:remote-checkin-open-in",
+	auto: false,
+})
+
+export const submitLateCheckoutResource = createResource({
+	url: "nsty.api.remote_checkin.submit_late_checkout",
+	auto: false,
+})

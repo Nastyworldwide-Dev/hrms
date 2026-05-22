@@ -345,6 +345,10 @@ const logout = async () => {
 	}
 }
 
+const onRemoteCheckinEvent = () => {
+	pendingCountResource.reload()
+}
+
 onMounted(() => {
 	socket.emit("doctype_subscribe", DOCTYPE)
 	socket.on("list_update", (data) => {
@@ -352,11 +356,13 @@ onMounted(() => {
 			employeeDoc.reload()
 		}
 	})
+	socket.on("nsty:remote_checkin_request", onRemoteCheckinEvent)
 	pendingCountResource.fetch()
 })
 
 onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
+	socket.off("nsty:remote_checkin_request", onRemoteCheckinEvent)
 })
 </script>

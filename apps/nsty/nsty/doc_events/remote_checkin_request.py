@@ -152,28 +152,34 @@ def _send_email(user: str, subject: str, body: str, request) -> None:
 
 
 def _send_push(user: str, subject: str, body: str, request) -> None:
-	"""Push notification via HRMS push relay if configured."""
+	"""Always emit a realtime socket event for the PWA AND attempt the HRMS push relay.
+
+	The PWA subscribes to `nsty:remote_checkin_request` on the current user's
+	socket — this keeps the approver inbox and employee badge live without
+	relying on push being configured.
+	"""
+	payload = {
+		"request": request.name,
+		"status": request.status,
+		"log_type": request.log_type,
+		"is_late_checkout": int(request.get("is_late_checkout") or 0),
+		"subject": subject,
+		"body": body,
+	}
+	try:
+		frappe.publish_realtime(
+			event="nsty:remote_checkin_request",
+			message=payload,
+			user=user,
+		)
+	except Exception as exc:
+		logger.warning("[remote_checkin_request] realtime push failed: %s", exc)
+
+	# Best-effort web push via HRMS push relay if available.
 	try:
 		from hrms.hr.notifications import push_notification_for_user
 	except ImportError:
-		push_notification_for_user = None
-
-	if not push_notification_for_user:
-		# Fall back to publish_realtime — the PWA listens on its own socket.
-		try:
-			frappe.publish_realtime(
-				event="nsty:remote_checkin_request",
-				message={
-					"request": request.name,
-					"subject": subject,
-					"body": body,
-				},
-				user=user,
-			)
-		except Exception as exc:
-			logger.warning("[remote_checkin_request] realtime push failed: %s", exc)
 		return
-
 	try:
 		push_notification_for_user(
 			user=user,

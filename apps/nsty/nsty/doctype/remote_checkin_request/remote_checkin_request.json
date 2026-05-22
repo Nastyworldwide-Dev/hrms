@@ -16,6 +16,7 @@
   "approver",
   "approved_at",
   "parent_request",
+  "is_late_checkout",
   "section_location",
   "latitude",
   "longitude",
@@ -104,6 +105,16 @@
    "fieldtype": "Link",
    "label": "Parent IN Request",
    "options": "Remote Checkin Request",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Retroactive check-out submitted by the employee for a forgotten session.",
+   "fieldname": "is_late_checkout",
+   "fieldtype": "Check",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "label": "Late Check-Out",
    "read_only": 1
   },
   {

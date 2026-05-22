@@ -99,6 +99,8 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		"""Replace HRMS strict geofence rejection with the remote-checkin flow.
 
 		Behaviour:
+		  - flags.is_late_checkout set -> skip entirely (retroactive submission,
+		    no current location to validate against).
 		  - Geolocation tracking disabled -> nothing to do.
 		  - No active Shift Assignment with shift_location -> nothing to do
 		    (employee not tied to any geofence).
@@ -107,6 +109,13 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		    after_insert hook auto-creates a Remote Checkin Request awaiting
 		    manager approval.
 		"""
+		if getattr(self.flags, "is_late_checkout", False):
+			logger.info(
+				"[employee_checkin] Skipping geofence validation for late checkout %s",
+				self.name or "(new)",
+			)
+			return
+
 		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
 			return
 

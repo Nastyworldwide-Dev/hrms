@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref } from "vue"
+import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRouter } from "vue-router"
 import { IonPage, IonContent, IonModal } from "@ionic/vue"
 import { FeatherIcon, Button, toast } from "frappe-ui"
@@ -188,6 +188,7 @@ import {
 } from "@/data/remoteCheckin"
 
 const __ = inject("$translate")
+const socket = inject("$socket")
 const router = useRouter()
 
 const pending = pendingForApproverResource
@@ -197,8 +198,27 @@ const decisionRemarks = ref("")
 const activeReq = ref(null)
 const submitting = ref(false)
 
+const onRealtime = (event) => {
+	console.info("[RemoteApprovals] realtime event:", event)
+	pending.reload()
+	if (event?.status === "Pending") {
+		toast({
+			title: __("New approval request"),
+			text: event.subject || __("A team member submitted a remote check-in."),
+			icon: "bell",
+			position: "bottom-center",
+			iconClasses: "text-blue-500",
+		})
+	}
+}
+
 onMounted(() => {
 	pending.fetch()
+	socket?.on?.("nsty:remote_checkin_request", onRealtime)
+})
+
+onBeforeUnmount(() => {
+	socket?.off?.("nsty:remote_checkin_request", onRealtime)
 })
 
 const reload = () => pending.reload()

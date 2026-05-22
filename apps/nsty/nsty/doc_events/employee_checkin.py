@@ -37,7 +37,12 @@ def create_remote_request_if_needed(doc, method=None):
 
 	parent_req = None
 	inherited = False
-	if doc.log_type == "OUT":
+	is_late = bool(getattr(doc.flags, "is_late_checkout", False))
+	late_reason = getattr(doc, "_late_checkout_reason", None)
+
+	# Late checkouts never inherit — they are retroactive submissions that
+	# always require their own approval.
+	if not is_late and doc.log_type == "OUT":
 		parent_req = _find_approved_in_request_today(doc.employee, get_datetime(doc.time))
 		if parent_req:
 			inherited = True
@@ -57,7 +62,8 @@ def create_remote_request_if_needed(doc, method=None):
 			"approver": parent_req["approver"] if inherited else resolve_approver(doc.employee),
 			"parent_request": parent_req["name"] if inherited else None,
 			"approved_at": now_datetime() if inherited else None,
-			"employee_remarks": None,
+			"employee_remarks": late_reason,
+			"is_late_checkout": 1 if is_late else 0,
 		}
 	)
 	request.flags.ignore_permissions = True

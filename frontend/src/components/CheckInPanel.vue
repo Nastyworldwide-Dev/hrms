@@ -12,6 +12,25 @@
 					<span @click="navigate" class="underline">View List</span>
 				</router-link>
 			</div>
+
+			<!-- Forgot-to-check-out banner: open IN session that has gone past the 6 AM cutoff -->
+			<div
+				v-if="hasStaleOpenIn"
+				class="mt-4 flex flex-row items-center gap-3 bg-orange-50 border border-orange-200 rounded-md px-3 py-2 cursor-pointer"
+				@click="lateCheckoutOpen = true"
+			>
+				<FeatherIcon name="clock" class="h-4 w-4 text-orange-600 shrink-0" />
+				<div class="flex flex-col flex-1 min-w-0">
+					<div class="text-sm font-semibold text-orange-800">
+						{{ __("Forgot to check out from {0}?", [formatTimestamp(lastLog?.time)]) }}
+					</div>
+					<div class="text-xs text-orange-700">
+						{{ __("Tap to submit a late check-out for approval.") }}
+					</div>
+				</div>
+				<FeatherIcon name="chevron-right" class="h-4 w-4 text-orange-500 shrink-0" />
+			</div>
+
 			<Button
 				class="mt-4 mb-1 drop-shadow-sm py-5 text-base"
 				id="open-checkin-modal"
@@ -125,6 +144,14 @@
 		@close="remoteDialogOpen = false"
 		@submitted="checkins.reload()"
 	/>
+
+	<LateCheckoutDialog
+		:is-open="lateCheckoutOpen"
+		:in-checkin-name="lastLog?.name || ''"
+		:in-checkin-time="lastLog?.time || ''"
+		@close="lateCheckoutOpen = false"
+		@submitted="checkins.reload()"
+	/>
 </template>
 
 <script setup>
@@ -134,6 +161,7 @@ import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
+import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -180,6 +208,13 @@ checkins.reload()
 // Remote checkin dialog state
 const remoteDialogOpen = ref(false)
 const remoteRequest = ref({ name: "", logType: "IN", distanceM: 0, approverName: "" })
+
+// Late-checkout dialog state
+const lateCheckoutOpen = ref(false)
+const hasStaleOpenIn = computed(() => {
+	const last = lastLog?.value
+	return !!(last && last.log_type === "IN" && isSessionStale(last.time))
+})
 
 const fetchRemoteRequest = createResource({
 	url: "frappe.client.get_list",

@@ -138,3 +138,127 @@ def approve(request: str, approver_remarks: str = "") -> dict:
 @frappe.whitelist()
 def reject(request: str, approver_remarks: str = "") -> dict:
 	return _decide(request, "Rejected", approver_remarks)
+
+
+@frappe.whitelist()
+def get_open_in_session() -> dict | None:
+	"""Return the current user's open IN session that has no matching OUT, if any.
+
+	Used by the PWA to decide whether to show the 'forgot to check out'
+	banner. Returns None when the last IN is already closed, or when the
+	user has no IN today/yesterday.
+	"""
+	user = frappe.session.user
+	employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
+	if not employee:
+		return None
+
+	last = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee},
+		fields=["name", "log_type", "time", "shift"],
+		order_by="time desc",
+		limit_page_length=1,
+	)
+	if not last or last[0]["log_type"] != "IN":
+		return None
+
+	logger.info(
+		"[remote_checkin] open_in_session user=%s checkin=%s time=%s",
+		user,
+		last[0]["name"],
+		last[0]["time"],
+	)
+	return last[0]
+
+
+@frappe.whitelist()
+def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
+	"""Retroactively submit a forgotten check-out.
+
+	Validates that:
+	  - `in_checkin` is an IN log belonging to the current user
+	  - `checkout_datetime` is after the IN's time and not in the future
+	  - the IN isn't already followed by an OUT
+
+	Creates an Employee Checkin with log_type=OUT at the given time
+	(skipping geofence validation) and a Pending Remote Checkin Request
+	with is_late_checkout=1 (via the after_insert hook).
+	"""
+	from frappe.utils import get_datetime, now_datetime
+
+	if not in_checkin or not checkout_datetime or not (reason or "").strip():
+		frappe.throw(_("Check-in reference, checkout time, and reason are required."))
+
+	in_doc = frappe.db.get_value(
+		"Employee Checkin",
+		in_checkin,
+		["name", "employee", "time", "log_type", "shift"],
+		as_dict=True,
+	)
+	if not in_doc:
+		frappe.throw(_("Original check-in not found."))
+
+	employee_user = frappe.db.get_value("Employee", in_doc.employee, "user_id")
+	if employee_user != frappe.session.user:
+		frappe.throw(
+			_("You can only submit a late check-out for your own session."),
+			frappe.PermissionError,
+		)
+
+	if in_doc.log_type != "IN":
+		frappe.throw(_("Selected record is not a check-in."))
+
+	out_dt = get_datetime(checkout_datetime)
+	in_dt = get_datetime(in_doc.time)
+	if out_dt <= in_dt:
+		frappe.throw(_("Check-out time must be after the check-in time ({0}).").format(in_doc.time))
+
+	if out_dt > now_datetime():
+		frappe.throw(_("Check-out time cannot be in the future."))
+
+	later_out = frappe.db.exists(
+		"Employee Checkin",
+		{
+			"employee": in_doc.employee,
+			"log_type": "OUT",
+			"time": [">=", in_doc.time],
+		},
+	)
+	if later_out:
+		frappe.throw(_("A check-out for this session already exists."))
+
+	out_doc = frappe.new_doc("Employee Checkin")
+	out_doc.update(
+		{
+			"employee": in_doc.employee,
+			"log_type": "OUT",
+			"time": out_dt,
+			"shift": in_doc.shift,
+			"requires_remote_approval": 1,
+			"remote_approval_status": "Pending",
+		}
+	)
+	out_doc.flags.is_late_checkout = True
+	out_doc._late_checkout_reason = reason.strip()
+	out_doc.flags.ignore_permissions = True
+	out_doc.insert()
+
+	logger.info(
+		"[remote_checkin] submit_late_checkout in=%s out=%s time=%s by=%s",
+		in_checkin,
+		out_doc.name,
+		out_dt,
+		frappe.session.user,
+	)
+
+	request_name = frappe.db.get_value(
+		"Remote Checkin Request",
+		{"checkin": out_doc.name},
+		"name",
+	)
+	return {
+		"ok": True,
+		"checkin": out_doc.name,
+		"request": request_name,
+	}
