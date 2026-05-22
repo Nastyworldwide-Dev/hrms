@@ -14,11 +14,21 @@ import logging
 import frappe
 from frappe.utils import get_datetime
 
-from hrms.hr.doctype.employee_checkin.employee_checkin import EmployeeCheckin
+from hrms.hr.doctype.employee_checkin.employee_checkin import (
+	CheckinRadiusExceededError,
+	EmployeeCheckin,
+)
 from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
 from hrms.hr.utils import get_distance_between_coordinates
+
+from nsty.utils.geofence import (
+	REASON_NO_RADIUS,
+	REASON_NO_SHIFT_LOCATION,
+	REASON_OUTSIDE_RADIUS,
+	evaluate_geofence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,18 +106,18 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		)
 
 	def validate_distance_from_shift_location(self):
-		"""Replace HRMS strict geofence rejection with the remote-checkin flow.
+		"""Geofence validation with two modes.
 
-		Behaviour:
-		  - flags.is_late_checkout set -> skip entirely (retroactive submission,
-		    no current location to validate against).
-		  - Geolocation tracking disabled -> nothing to do.
-		  - No active Shift Assignment with shift_location -> nothing to do
-		    (employee not tied to any geofence).
-		  - Inside the configured radius -> accept silently.
-		  - Outside the radius -> ALLOW the save and flag the doc so the
-		    after_insert hook auto-creates a Remote Checkin Request awaiting
-		    manager approval.
+		Mode is driven by Shift Type.enable_strict_geofence:
+		  - Lenient (default): out-of-radius check-ins are allowed and flagged
+		    for the after_insert hook to spawn a Remote Checkin Request.
+		  - Strict: out-of-radius check-ins are rejected outright with
+		    CheckinRadiusExceededError. Missing shift location or zero radius
+		    on the assignment also throw under strict mode.
+
+		Late check-outs (flags.is_late_checkout) bypass geofencing entirely
+		in both modes — they are retroactive submissions and have no current
+		location to validate against.
 		"""
 		if getattr(self.flags, "is_late_checkout", False):
 			logger.info(
@@ -124,6 +134,10 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			# throws. The frontend always sends lat/long when geo is enabled.
 			return super().validate_distance_from_shift_location()
 
+		strict = bool(
+			frappe.db.get_value("Shift Type", self.shift, "enable_strict_geofence") if self.shift else 0
+		)
+
 		assignment_locations = frappe.get_all(
 			"Shift Assignment",
 			filters={
@@ -137,39 +151,84 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			or_filters=[["end_date", ">=", self.time], ["end_date", "is", "not set"]],
 			pluck="shift_location",
 		)
-		if not assignment_locations:
-			return
+		shift_loc_name = assignment_locations[0] if assignment_locations else None
 
-		shift_loc_name = assignment_locations[0]
-		row = frappe.db.get_value(
-			"Shift Location",
-			shift_loc_name,
-			["checkin_radius", "latitude", "longitude"],
-			as_dict=True,
+		row = None
+		if shift_loc_name:
+			row = frappe.db.get_value(
+				"Shift Location",
+				shift_loc_name,
+				["checkin_radius", "latitude", "longitude"],
+				as_dict=True,
+			)
+
+		radius_m = int(row.checkin_radius) if row and row.checkin_radius else 0
+		distance = None
+		if row and row.latitude is not None and row.longitude is not None:
+			distance = get_distance_between_coordinates(
+				row.latitude, row.longitude, self.latitude, self.longitude
+			)
+
+		decision = evaluate_geofence(
+			strict=strict,
+			has_shift_location=bool(shift_loc_name and row),
+			radius_m=radius_m,
+			distance_m=distance,
 		)
-		if not row or not row.checkin_radius or row.checkin_radius <= 0:
+		if decision is None:
 			return
 
-		distance = get_distance_between_coordinates(
-			row.latitude, row.longitude, self.latitude, self.longitude
-		)
-		if distance <= row.checkin_radius:
-			# Inside the geofence — happy path.
+		action, ctx = decision
+		if action == "throw":
+			self._throw_strict_geofence(ctx, shift_loc_name)
 			return
 
-		# Outside the geofence — allow but flag for approval.
+		# action == "require_remote" — lenient mode, out of radius
 		self.requires_remote_approval = 1
 		self.remote_approval_status = "Pending"
 		# Stash for after_insert hook (these are doc attrs, not DB columns).
-		self._remote_distance_m = max(0.0, distance - (row.checkin_radius or 0))
+		self._remote_distance_m = ctx["overshoot_m"]
 		self._remote_nearest_location = shift_loc_name
 		logger.info(
-			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s distance=%.1fm radius=%sm location=%s",
+			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s distance=%.1fm radius=%dm location=%s",
 			self.employee,
 			self.log_type,
-			distance,
-			row.checkin_radius,
+			ctx["distance_m"],
+			ctx["radius_m"],
 			shift_loc_name,
+		)
+
+	def _throw_strict_geofence(self, ctx, shift_loc_name):
+		reason = ctx.get("reason")
+		logger.info(
+			"[employee_checkin] Strict geofence reject employee=%s shift=%s reason=%s",
+			self.employee,
+			self.shift,
+			reason,
+		)
+		if reason == REASON_NO_SHIFT_LOCATION:
+			frappe.throw(
+				frappe._(
+					"Strict geofencing is enabled for shift {0}, but no Shift Location "
+					"is configured on your Shift Assignment. Contact your HR administrator."
+				).format(self.shift or ""),
+				exc=CheckinRadiusExceededError,
+			)
+		if reason == REASON_NO_RADIUS:
+			frappe.throw(
+				frappe._(
+					"Strict geofencing is enabled for shift {0}, but Shift Location {1} "
+					"has no check-in radius configured. Contact your HR administrator."
+				).format(self.shift or "", shift_loc_name or ""),
+				exc=CheckinRadiusExceededError,
+			)
+		# REASON_OUTSIDE_RADIUS
+		frappe.throw(
+			frappe._(
+				"You are {0:.0f} m outside the {1} check-in radius ({2} m). "
+				"Move closer to check in. Remote approval is not available for this shift."
+			).format(ctx.get("distance_m") or 0.0, shift_loc_name or "", ctx.get("radius_m") or 0),
+			exc=CheckinRadiusExceededError,
 		)
 
 

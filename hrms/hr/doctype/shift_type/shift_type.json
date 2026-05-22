@@ -32,6 +32,8 @@
   "column_break_18",
   "enable_early_exit_marking",
   "early_exit_grace_period",
+  "geofence_section",
+  "enable_strict_geofence",
   "breaks_section",
   "breaks"
  ],
@@ -188,6 +190,18 @@
    "fieldname": "auto_update_last_sync",
    "fieldtype": "Check",
    "label": "Automatically update Last Sync of Checkin"
+  },
+  {
+   "fieldname": "geofence_section",
+   "fieldtype": "Section Break",
+   "label": "Geofencing"
+  },
+  {
+   "default": "0",
+   "description": "When enabled, employees can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright — no Remote Checkin Request is created. Requires HR Settings → Allow Geolocation Tracking.",
+   "fieldname": "enable_strict_geofence",
+   "fieldtype": "Check",
+   "label": "Strict Shift Location Check-in"
   },
   {
    "fieldname": "breaks_section",
