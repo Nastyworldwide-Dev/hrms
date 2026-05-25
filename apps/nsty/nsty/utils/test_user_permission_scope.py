@@ -11,26 +11,21 @@ from nsty.utils.user_permission_scope import (
 
 
 class TestShouldScopeToHrms(unittest.TestCase):
-	def test_both_off(self):
-		self.assertFalse(should_scope_to_hrms(0, 0))
+	def test_off(self):
+		self.assertFalse(should_scope_to_hrms(0))
 
-	def test_only_create_user_permission(self):
-		self.assertFalse(should_scope_to_hrms(1, 0))
-
-	def test_only_restrict_to_hrms(self):
-		# Restrict without create_user_permission is a no-op — no UP row exists
-		# for the handler to scope.
-		self.assertFalse(should_scope_to_hrms(0, 1))
-
-	def test_both_on(self):
-		self.assertTrue(should_scope_to_hrms(1, 1))
+	def test_on(self):
+		self.assertTrue(should_scope_to_hrms(1))
 
 	def test_truthy_non_int_values(self):
-		# Frappe sometimes hands us "1" / "0" / True / False — handler must
-		# tolerate all of them.
-		self.assertTrue(should_scope_to_hrms("1", True))
-		self.assertFalse(should_scope_to_hrms("", 1))
-		self.assertFalse(should_scope_to_hrms(None, None))
+		# Frappe sometimes hands us "1" / "0" / True / False / None —
+		# handler must tolerate all of them.
+		self.assertTrue(should_scope_to_hrms(True))
+		self.assertTrue(should_scope_to_hrms("1"))
+		self.assertFalse(should_scope_to_hrms(False))
+		self.assertFalse(should_scope_to_hrms(""))
+		self.assertFalse(should_scope_to_hrms(None))
+		self.assertFalse(should_scope_to_hrms(0))
 
 
 class TestMergeDoctypeList(unittest.TestCase):

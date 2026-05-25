@@ -50,9 +50,16 @@ DEFAULT_HRMS_DOCTYPES: list[str] = [
 ]
 
 
-def should_scope_to_hrms(create_user_permission, restrict_user_permission_to_hrms) -> bool:
-	"""Return True only when both flags are set on the Employee."""
-	return bool(create_user_permission) and bool(restrict_user_permission_to_hrms)
+def should_scope_to_hrms(restrict_user_permission_to_hrms) -> bool:
+	"""Return True when the Employee has 'Restrict User Permission to HRMS
+	Module Only' ticked.
+
+	The scope applies to every User Permission for the employee's user_id
+	regardless of which mechanism originally created it (the Employee
+	create_user_permission flow, the User Permissions Manager, default
+	company hooks, etc.).
+	"""
+	return bool(restrict_user_permission_to_hrms)
 
 
 def merge_doctype_list(custom_rows, fallback) -> list[str]:

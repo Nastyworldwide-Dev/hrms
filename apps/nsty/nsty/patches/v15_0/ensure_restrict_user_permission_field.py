@@ -26,13 +26,14 @@ def execute():
 					"fieldtype": "Check",
 					"label": "Restrict User Permission to HRMS Module Only",
 					"insert_after": "create_user_permission",
-					"depends_on": "eval:doc.create_user_permission",
+					"depends_on": "",
 					"default": "0",
 					"description": (
-						"When checked together with 'Create User Permission', the User "
-						"Permission for this employee only restricts HRMS doctypes "
-						"(Employee, Attendance, Leave, Salary Slip, etc.). Other modules "
-						"(Sales, Stock, Accounts, Projects) are unaffected."
+						"When checked, ALL User Permissions for this employee's user "
+						"account are scoped to HRMS-related doctypes only (Employee, "
+						"Attendance, Leave, Salary Slip, etc.). Other modules (Sales, "
+						"Stock, Accounts, Purchase) are unaffected. Works independently "
+						"of 'Create User Permission'."
 					),
 					"module": "Nsty",
 					"translatable": 0,
