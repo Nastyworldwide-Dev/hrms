@@ -55,7 +55,9 @@
   "ramadan_start_date",
   "ramadan_end_date",
   "unlink_payment_section",
-  "unlink_payment_on_cancellation_of_employee_advance"
+  "unlink_payment_on_cancellation_of_employee_advance",
+  "hrms_user_permission_scope_section",
+  "scoped_hrms_doctypes"
  ],
  "fields": [
   {
@@ -347,6 +349,18 @@
    "fieldname": "unlink_payment_on_cancellation_of_employee_advance",
    "fieldtype": "Check",
    "label": " Unlink Payment on Cancellation of Employee Advance"
+  },
+  {
+   "fieldname": "hrms_user_permission_scope_section",
+   "fieldtype": "Section Break",
+   "label": "HRMS-Only User Permission Scope"
+  },
+  {
+   "description": "DocTypes the scoped User Permission applies to when an Employee has 'Restrict to HRMS doctypes only' ticked. If left empty, a built-in default list of 14 HR-related doctypes is used (Leave Application, Attendance, Salary Slip, Expense Claim, etc.).",
+   "fieldname": "scoped_hrms_doctypes",
+   "fieldtype": "Table",
+   "label": "Scoped HRMS Doctypes",
+   "options": "Scoped HRMS Doctype"
   },
   {
    "default": "0",

@@ -6,28 +6,12 @@ import logging
 
 import frappe
 
+from nsty.utils.user_permission_scope import (
+	get_scoped_doctypes,
+	should_scope_to_hrms,
+)
+
 logger = logging.getLogger(__name__)
-
-
-def _hrms_employee_doctypes() -> list[str]:
-	"""Pull the HRMS-module doctype list live from hrms.setup.
-
-	Source of truth: hrms.setup.get_user_types_data()["Employee Self Service"]["doctypes"].
-	Adding "Employee" itself so the reports-to chain evaluates against this
-	scoped permission too.
-	"""
-	try:
-		from hrms.setup import get_user_types_data
-	except ImportError:
-		logger.warning("[doc_events.employee] hrms.setup not importable — falling back to static list")
-		return ["Employee"]
-
-	data = get_user_types_data() or {}
-	ess = data.get("Employee Self Service") or {}
-	doctypes = list((ess.get("doctypes") or {}).keys())
-	if "Employee" not in doctypes:
-		doctypes.append("Employee")
-	return sorted(set(doctypes))
 
 
 def sync_hrms_only_user_permission(doc, method=None):
@@ -35,9 +19,14 @@ def sync_hrms_only_user_permission(doc, method=None):
 
 	- If `create_user_permission` is 1 AND `restrict_user_permission_to_hrms`
 	  is 1 -> set apply_to_all_doctypes=0 and populate `for_value_doctypes`
-	  with HRMS-module doctypes only.
+	  with the HRMS-only doctype list (configured in HR Settings, with a
+	  built-in fallback).
 	- Otherwise -> apply_to_all_doctypes=1 and clear `for_value_doctypes`
 	  (i.e. revert to default Frappe behaviour).
+
+	Runs after Employee.after_save, AFTER ERPNext's own on_update has
+	created or deleted the broad User Permission row. We only act on rows
+	that already exist; we never create or delete the parent row.
 	"""
 	user_id = doc.get("user_id")
 	if not user_id:
@@ -55,10 +44,13 @@ def sync_hrms_only_user_permission(doc, method=None):
 	if not perm_names:
 		return
 
-	scope_hrms = bool(doc.get("create_user_permission") and doc.get("restrict_user_permission_to_hrms"))
+	scope_hrms = should_scope_to_hrms(
+		doc.get("create_user_permission"),
+		doc.get("restrict_user_permission_to_hrms"),
+	)
 
 	if scope_hrms:
-		applicable = _hrms_employee_doctypes()
+		applicable = get_scoped_doctypes()
 		logger.info(
 			"[doc_events.employee] Scoping User Permission to %d HRMS doctypes for employee=%s user=%s",
 			len(applicable),

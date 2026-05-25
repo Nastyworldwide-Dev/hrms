@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>HRMS-Only User Permission — Mockup v1</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script src="https://unpkg.com/feather-icons"></script>
+		<style>
+			body {
+				font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				background: #f3f4f6;
+			}
+			.mono {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			}
+			/* Mimic the Frappe Desk form look */
+			.fld-label {
+				font-size: 11px;
+				color: #6b7280;
+				text-transform: none;
+				margin-bottom: 3px;
+				font-weight: 500;
+			}
+			.fld-input {
+				background: #fff;
+				border: 1px solid #d1d5db;
+				border-radius: 6px;
+				padding: 6px 9px;
+				font-size: 13px;
+				color: #111827;
+				width: 100%;
+			}
+			.fld-link {
+				position: relative;
+			}
+			.fld-link::after {
+				content: "↗";
+				position: absolute;
+				right: 10px;
+				top: 7px;
+				color: #6b7280;
+				font-size: 12px;
+			}
+			.check-row {
+				display: flex;
+				align-items: flex-start;
+				gap: 8px;
+				font-size: 13px;
+			}
+			.check-row input {
+				margin-top: 3px;
+			}
+		</style>
+	</head>
+	<body class="text-gray-900">
+		<div class="max-w-[1280px] mx-auto px-8 py-10">
+			<header class="mb-6">
+				<h1 class="text-2xl font-bold">HRMS-Only User Permission — Mockup v1</h1>
+				<p class="text-sm text-gray-500 mt-1 max-w-3xl">
+					New checkbox on <span class="mono text-xs bg-gray-200 px-1 py-0.5 rounded">Employee</span> that scopes the
+					auto-created User Permission to HRMS doctypes only — so creating an employee's user account doesn't
+					accidentally hide Sales Invoice, Purchase Order, and the rest of the ERP from them.
+				</p>
+			</header>
+
+			<!-- =========================================================== -->
+			<!-- 1. WHY                                                       -->
+			<!-- =========================================================== -->
+			<section class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex gap-3">
+				<i data-feather="alert-triangle" class="h-5 w-5 text-amber-600 shrink-0 mt-0.5"></i>
+				<div class="text-sm text-amber-900">
+					<div class="font-semibold mb-1">Problem today</div>
+					Ticking <span class="mono bg-amber-100 px-1 rounded">Create User Permission</span> on Employee creates a User
+					Permission row with <span class="mono bg-amber-100 px-1 rounded">Apply to All Doctypes = ✓</span>. That hides
+					every cross-doctype record the user touches — Sales Invoice, Sales Order, Purchase Invoice, Purchase Order,
+					Item, Customer — unless they're explicitly linked to that one employee. Most of the time we only want HR
+					isolation, not company-wide isolation.
+				</div>
+			</section>
+
+			<!-- =========================================================== -->
+			<!-- 2. THE FORM CHANGE                                          -->
+			<!-- =========================================================== -->
+			<section class="mb-8">
+				<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">A — Employee form (User Settings section)</h2>
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					<!-- Form header -->
+					<div class="border-b px-5 py-3 flex items-center justify-between">
+						<div class="flex items-center gap-3">
+							<div class="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-bold">AT</div>
+							<div>
+								<div class="text-sm font-semibold">EMP-0014 · Aisyah Tan</div>
+								<div class="text-[11px] text-gray-500">Sales · Active</div>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<button class="text-xs px-2.5 py-1 border border-gray-300 rounded text-gray-700">Refresh</button>
+							<button class="text-xs px-2.5 py-1 bg-blue-600 text-white rounded">Save</button>
+						</div>
+					</div>
+
+					<!-- Tab bar -->
+					<div class="border-b px-5 flex gap-5 text-sm">
+						<div class="px-1 py-2 text-gray-500">Overview</div>
+						<div class="px-1 py-2 text-gray-500">Address & Contacts</div>
+						<div class="px-1 py-2 text-gray-500">Attendance</div>
+						<div class="px-1 py-2 border-b-2 border-blue-600 text-gray-900 font-medium">Settings</div>
+						<div class="px-1 py-2 text-gray-500">Salary</div>
+					</div>
+
+					<!-- Section: User Settings -->
+					<div class="p-5">
+						<div class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3 border-b pb-2">User Settings</div>
+
+						<div class="grid grid-cols-2 gap-x-8 gap-y-4">
+							<div>
+								<div class="fld-label">User ID</div>
+								<div class="fld-input fld-link">aisyah.tan@nastyworldwide.com</div>
+							</div>
+							<div>
+								<div class="fld-label">Notification</div>
+								<select class="fld-input bg-white">
+									<option>Allow</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="mt-4 space-y-3">
+							<label class="check-row">
+								<input type="checkbox" checked />
+								<div>
+									<div class="text-gray-900 font-medium">Create User Permission</div>
+									<div class="text-[11px] text-gray-500 mt-0.5">Link the User to this Employee so they can only see their own HR data.</div>
+								</div>
+							</label>
+
+							<!-- NEW CHECKBOX — visually offset so it reads as a sub-option -->
+							<div class="ml-6 pl-3 border-l-2 border-blue-200">
+								<label class="check-row">
+									<input type="checkbox" checked />
+									<div>
+										<div class="text-gray-900 font-medium flex items-center gap-2">
+											Restrict to HRMS doctypes only
+											<span class="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold">NEW</span>
+										</div>
+										<div class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+											Apply the permission only to HR-related doctypes (Leave Application, Attendance, Salary Slip, Expense Claim, etc.).
+											The user keeps full visibility on Sales, Purchase, Stock, and Accounting documents granted by their roles.
+											<a href="#scope-list" class="underline">View the 14 included doctypes</a>.
+										</div>
+									</div>
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- =========================================================== -->
+			<!-- 3. WHAT GETS CREATED — BEFORE / AFTER                       -->
+			<!-- =========================================================== -->
+			<section class="mb-8">
+				<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">B — User Permissions auto-created behind the scenes</h2>
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+					<!-- BEFORE -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+						<div class="px-4 py-2.5 border-b bg-gray-50 flex items-center justify-between">
+							<div class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+								<span class="h-2 w-2 rounded-full bg-gray-400"></span>
+								Today — checkbox <span class="mono text-xs">OFF</span>
+							</div>
+							<span class="text-[10px] text-gray-500 font-semibold uppercase">1 row created</span>
+						</div>
+						<table class="w-full text-xs">
+							<thead class="bg-gray-50 text-gray-500 uppercase text-[10px]">
+								<tr>
+									<th class="text-left font-semibold px-3 py-2">User</th>
+									<th class="text-left font-semibold px-3 py-2">Allow</th>
+									<th class="text-left font-semibold px-3 py-2">For Value</th>
+									<th class="text-left font-semibold px-3 py-2">Applicable For</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr class="border-t">
+									<td class="px-3 py-2 mono">aisyah.tan@…</td>
+									<td class="px-3 py-2">Employee</td>
+									<td class="px-3 py-2 mono">EMP-0014</td>
+									<td class="px-3 py-2 text-amber-700 font-semibold">All Doctypes ⚠</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="px-4 py-3 bg-amber-50 text-[11px] text-amber-800 border-t border-amber-200">
+							<i data-feather="alert-triangle" class="h-3.5 w-3.5 inline mr-1"></i>
+							Side effect: cross-doctype lookups (Sales Invoice → "Sales Person → Employee", item ownership chains, etc.) get filtered too.
+						</div>
+					</div>
+
+					<!-- AFTER -->
+					<div class="bg-white rounded-lg shadow-sm border-2 border-blue-300 overflow-hidden">
+						<div class="px-4 py-2.5 border-b bg-blue-50 flex items-center justify-between">
+							<div class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+								<span class="h-2 w-2 rounded-full bg-blue-500"></span>
+								New — checkbox <span class="mono text-xs">ON</span>
+							</div>
+							<span class="text-[10px] text-gray-500 font-semibold uppercase">14 scoped rows</span>
+						</div>
+						<table class="w-full text-xs">
+							<thead class="bg-gray-50 text-gray-500 uppercase text-[10px]">
+								<tr>
+									<th class="text-left font-semibold px-3 py-2">User</th>
+									<th class="text-left font-semibold px-3 py-2">Allow</th>
+									<th class="text-left font-semibold px-3 py-2">For Value</th>
+									<th class="text-left font-semibold px-3 py-2">Applicable For</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Leave Application</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Leave Allocation</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Attendance</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Attendance Request</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Employee Checkin</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Salary Slip</td></tr>
+								<tr class="border-t bg-blue-50/30"><td class="px-3 py-2 mono">aisyah.tan@…</td><td class="px-3 py-2">Employee</td><td class="px-3 py-2 mono">EMP-0014</td><td class="px-3 py-2 mono text-blue-700">Expense Claim</td></tr>
+								<tr class="border-t">
+									<td class="px-3 py-2 text-gray-400 italic" colspan="4">+ 7 more (Compensatory Leave, Travel Request, Loan, Goal, Appraisal, Training Result, Performance Feedback)</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="px-4 py-3 bg-emerald-50 text-[11px] text-emerald-800 border-t border-emerald-200">
+							<i data-feather="check-circle" class="h-3.5 w-3.5 inline mr-1"></i>
+							Sales Invoice, Purchase Order, Item, Customer, Supplier, BOM, Stock Ledger Entry — all unaffected.
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- =========================================================== -->
+			<!-- 4. EFFECT — WHAT THE USER SEES                              -->
+			<!-- =========================================================== -->
+			<section class="mb-8">
+				<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">C — What Aisyah sees after the change</h2>
+
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+					<!-- Sales Invoice list — UNCHANGED -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+						<div class="px-4 py-2 border-b bg-gray-50 flex items-center justify-between">
+							<div class="text-xs font-semibold text-gray-700 mono">/app/sales-invoice</div>
+							<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold uppercase">Unaffected</span>
+						</div>
+						<div class="px-4 py-2 border-b text-sm font-semibold text-gray-900">Sales Invoice</div>
+						<ul class="divide-y text-xs">
+							<li class="px-4 py-2 flex justify-between"><span class="mono">SINV-2026-0119</span><span class="text-gray-500">RM 4,200.00</span></li>
+							<li class="px-4 py-2 flex justify-between"><span class="mono">SINV-2026-0118</span><span class="text-gray-500">RM 1,850.00</span></li>
+							<li class="px-4 py-2 flex justify-between"><span class="mono">SINV-2026-0117</span><span class="text-gray-500">RM 12,650.00</span></li>
+							<li class="px-4 py-2 flex justify-between"><span class="mono">SINV-2026-0116</span><span class="text-gray-500">RM 980.00</span></li>
+							<li class="px-4 py-2 flex justify-between text-gray-400"><span class="mono">…</span><span>219 records total</span></li>
+						</ul>
+						<div class="px-4 py-2 border-t bg-emerald-50/50 text-[11px] text-emerald-800">
+							Role-based permissions still apply (so a non-Sales user wouldn't see this list either — that's the user's role talking, not our scoping).
+						</div>
+					</div>
+
+					<!-- Leave Application list — RESTRICTED -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+						<div class="px-4 py-2 border-b bg-gray-50 flex items-center justify-between">
+							<div class="text-xs font-semibold text-gray-700 mono">/app/leave-application</div>
+							<span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold uppercase">Scoped</span>
+						</div>
+						<div class="px-4 py-2 border-b text-sm font-semibold text-gray-900 flex items-center justify-between">
+							Leave Application
+							<span class="text-[10px] text-gray-500">Filter: Employee = EMP-0014</span>
+						</div>
+						<ul class="divide-y text-xs">
+							<li class="px-4 py-2 flex justify-between"><span class="mono">HR-LAP-2026-00018</span><span class="text-gray-500">Annual · 2 days</span></li>
+							<li class="px-4 py-2 flex justify-between"><span class="mono">HR-LAP-2026-00014</span><span class="text-gray-500">Sick · 1 day</span></li>
+							<li class="px-4 py-2 flex justify-between"><span class="mono">HR-LAP-2026-00006</span><span class="text-gray-500">Annual · 5 days</span></li>
+							<li class="px-4 py-2 flex justify-between text-gray-400"><span class="mono">…</span><span>own records only</span></li>
+						</ul>
+						<div class="px-4 py-2 border-t bg-blue-50/40 text-[11px] text-blue-800">
+							Other employees' leave records are filtered out automatically by the scoped User Permission.
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- =========================================================== -->
+			<!-- 5. SCOPE LIST — the doctypes that get the scoped permission -->
+			<!-- =========================================================== -->
+			<section id="scope-list" class="mb-8">
+				<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">D — HRMS doctype list (default)</h2>
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+					<p class="text-xs text-gray-500 mb-3">
+						Default scope when the checkbox is on. Configurable in
+						<span class="mono bg-gray-100 px-1 rounded">HR Settings → Scoped HRMS Doctypes</span>
+						(child table) — admins can add/remove entries; the standard list seeds on install.
+					</p>
+					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Leave Application</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Leave Allocation</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Compensatory Leave Request</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Attendance</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Attendance Request</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Employee Checkin</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Salary Slip</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Expense Claim</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Travel Request</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Loan</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Goal</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Appraisal</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Training Result</div>
+						<div class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded mono text-blue-900">Performance Feedback</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- =========================================================== -->
+			<!-- 6. OPEN QUESTIONS                                           -->
+			<!-- =========================================================== -->
+			<section class="mb-8">
+				<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">E — Decisions I need from you before building</h2>
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 divide-y">
+					<div class="p-4 text-sm">
+						<div class="font-semibold text-gray-900">1. Where does the doctype list live?</div>
+						<ul class="mt-1.5 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+							<li>Hardcoded in code (simplest, requires release to change)</li>
+							<li><strong>Child table on HR Settings</strong> (recommended — admins can add/remove without a deploy)</li>
+							<li>Per-employee override (most flexible, most admin overhead)</li>
+						</ul>
+					</div>
+					<div class="p-4 text-sm">
+						<div class="font-semibold text-gray-900">2. Default for the new checkbox?</div>
+						<ul class="mt-1.5 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+							<li><strong>OFF</strong> — preserves today's behaviour, opt-in (safe rollout)</li>
+							<li>ON — flips the default; new employees get scoped permission by default</li>
+						</ul>
+					</div>
+					<div class="p-4 text-sm">
+						<div class="font-semibold text-gray-900">3. Existing employees with broad User Permission?</div>
+						<ul class="mt-1.5 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+							<li><strong>Leave them as-is</strong> (no migration; only new/edited employees pick up the new behaviour)</li>
+							<li>One-off bench command <span class="mono">bench --site X rescope-employee-permissions</span> to migrate everyone</li>
+						</ul>
+					</div>
+					<div class="p-4 text-sm">
+						<div class="font-semibold text-gray-900">4. What happens when the checkbox is later <em>unticked</em>?</div>
+						<ul class="mt-1.5 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+							<li><strong>Delete the 14 scoped rows + recreate one broad row</strong> (matches current "Create User Permission" semantics)</li>
+							<li>Just delete the 14 rows — leave it to admin to re-tick "Create User Permission"</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<footer class="mt-10 text-xs text-gray-400 border-t pt-4">
+				v1 — comment with the choices for E1–E4 and any layout tweaks. Once approved I'll wire the field on Employee
+				(<span class="mono">restrict_user_permission_to_hrms</span>), the HR Settings child table
+				(<span class="mono">Scoped HRMS Doctype</span>), and the doc-event that creates the per-doctype User Permission
+				rows on Employee save / on_update.
+			</footer>
+		</div>
+
+		<script>
+			feather.replace();
+		</script>
+	</body>
+</html>

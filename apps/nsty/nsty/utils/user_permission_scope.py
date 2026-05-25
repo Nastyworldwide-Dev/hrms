@@ -1,0 +1,124 @@
+"""HRMS-only User Permission scope helpers.
+
+Used by `nsty.doc_events.employee.sync_hrms_only_user_permission` to decide
+whether a User Permission row should be scoped and which doctypes it
+applies to.
+
+Source-of-truth precedence for the doctype list:
+    1. HR Settings -> Scoped HRMS Doctypes (child table) if non-empty.
+    2. Live HRMS Employee Self Service list (hrms.setup.get_user_types_data)
+       if HRMS is importable.
+    3. The static DEFAULT_HRMS_DOCTYPES list below — last-ditch fallback.
+
+The pure helpers (`should_scope_to_hrms`, `merge_doctype_list`) are
+unit-tested without Frappe; `get_scoped_doctypes` is the Frappe-bound
+wrapper.
+"""
+
+from __future__ import annotations
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Always present in the scope — the Employee record itself is the anchor.
+ANCHOR_DOCTYPE = "Employee"
+
+# Last-ditch fallback when neither HR Settings nor HRMS module is available.
+# Mirrors what hrms.setup.get_user_types_data() returns for the "Employee
+# Self Service" user type as of HRMS v15, plus a few obvious additions.
+DEFAULT_HRMS_DOCTYPES: list[str] = [
+	"Employee",
+	"Leave Application",
+	"Leave Allocation",
+	"Compensatory Leave Request",
+	"Attendance",
+	"Attendance Request",
+	"Employee Checkin",
+	"Shift Request",
+	"Salary Slip",
+	"Expense Claim",
+	"Travel Request",
+	"Employee Advance",
+	"Loan",
+	"Loan Application",
+	"Goal",
+	"Appraisal",
+	"Training Result",
+	"Performance Feedback",
+	"Employee Grievance",
+]
+
+
+def should_scope_to_hrms(create_user_permission, restrict_user_permission_to_hrms) -> bool:
+	"""Return True only when both flags are set on the Employee."""
+	return bool(create_user_permission) and bool(restrict_user_permission_to_hrms)
+
+
+def merge_doctype_list(custom_rows, fallback) -> list[str]:
+	"""Resolve which doctypes go into for_value_doctypes.
+
+	Rules:
+	  - If `custom_rows` is non-empty, use them as the base.
+	  - Else use `fallback`.
+	  - Always include ANCHOR_DOCTYPE (Employee).
+	  - Return de-duplicated and alphabetically sorted.
+	"""
+	base = list(custom_rows) if custom_rows else list(fallback or [])
+	if ANCHOR_DOCTYPE not in base:
+		base.append(ANCHOR_DOCTYPE)
+	return sorted({d for d in base if d})
+
+
+def _live_hrms_employee_self_service_doctypes() -> list[str]:
+	"""Pull the live HRMS Employee Self Service doctype list.
+
+	Returns the static DEFAULT_HRMS_DOCTYPES if hrms.setup isn't
+	importable (e.g. when nsty is loaded without HRMS installed).
+	"""
+	try:
+		from hrms.setup import get_user_types_data
+	except ImportError:
+		logger.warning("[user_permission_scope] hrms.setup not importable — using DEFAULT_HRMS_DOCTYPES")
+		return list(DEFAULT_HRMS_DOCTYPES)
+
+	try:
+		data = get_user_types_data() or {}
+		ess = data.get("Employee Self Service") or {}
+		doctypes = list((ess.get("doctypes") or {}).keys())
+		if not doctypes:
+			return list(DEFAULT_HRMS_DOCTYPES)
+		return doctypes
+	except Exception as exc:
+		logger.warning(
+			"[user_permission_scope] hrms.setup.get_user_types_data() failed: %s",
+			exc,
+		)
+		return list(DEFAULT_HRMS_DOCTYPES)
+
+
+def get_scoped_doctypes() -> list[str]:
+	"""Frappe-bound: resolve the final doctype list for the User Permission scope.
+
+	Checks HR Settings first; falls back to the live HRMS list, then to the
+	hardcoded DEFAULT_HRMS_DOCTYPES.
+	"""
+	import frappe
+
+	rows = frappe.get_all(
+		"Scoped HRMS Doctype",
+		filters={"parent": "HR Settings", "parenttype": "HR Settings"},
+		pluck="doctype_name",
+	)
+	if rows:
+		merged = merge_doctype_list(rows, [])
+		logger.info("[user_permission_scope] using %d doctype(s) from HR Settings", len(merged))
+		return merged
+
+	fallback = _live_hrms_employee_self_service_doctypes()
+	merged = merge_doctype_list(None, fallback)
+	logger.info(
+		"[user_permission_scope] HR Settings empty — using %d doctype(s) from fallback",
+		len(merged),
+	)
+	return merged
