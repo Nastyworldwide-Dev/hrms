@@ -284,7 +284,9 @@ const documents = createResource({
 
 const createPermission = createResource({
 	url: "frappe.client.has_permission",
-	params: { doctype: props.doctype, docname: null, perm_type: "create" },
+	// Frappe's Pydantic-validated handler rejects `docname: null` — pass an
+	// empty string for the "do I have create perm at all" probe.
+	params: { doctype: props.doctype, docname: "", perm_type: "create" },
 	auto: true,
 })
 
