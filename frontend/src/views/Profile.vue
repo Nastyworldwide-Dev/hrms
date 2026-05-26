@@ -356,13 +356,13 @@ onMounted(() => {
 			employeeDoc.reload()
 		}
 	})
-	socket.on("nsty:remote_checkin_request", onRemoteCheckinEvent)
+	socket.on("hrms:remote_checkin_request", onRemoteCheckinEvent)
 	pendingCountResource.fetch()
 })
 
 onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
-	socket.off("nsty:remote_checkin_request", onRemoteCheckinEvent)
+	socket.off("hrms:remote_checkin_request", onRemoteCheckinEvent)
 })
 </script>

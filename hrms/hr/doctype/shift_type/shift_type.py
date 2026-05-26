@@ -254,7 +254,7 @@ class ShiftType(Document):
 		if not (in_time and out_time) or not getattr(self, "breaks", None):
 			return total_working_hours
 
-		from nsty.utils.break_calculation import get_shift_break_minutes
+		from hrms.utils.break_calculation import get_shift_break_minutes
 
 		in_dt = get_datetime(in_time)
 		out_dt = get_datetime(out_time)

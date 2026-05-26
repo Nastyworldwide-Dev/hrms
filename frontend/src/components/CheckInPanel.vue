@@ -264,7 +264,7 @@ const strictRejection = ref({
 })
 
 const preflightGeofence = createResource({
-	url: "nsty.api.geofence.check_geofence",
+	url: "hrms.api.geofence.check_geofence",
 	makeParams(values) {
 		return values
 	},

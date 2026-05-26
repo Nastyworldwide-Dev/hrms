@@ -151,6 +151,7 @@ override_doctype_class = {
 	"Timesheet": "hrms.overrides.employee_timesheet.EmployeeTimesheet",
 	"Payment Entry": "hrms.overrides.employee_payment_entry.EmployeePaymentEntry",
 	"Project": "hrms.overrides.employee_project.EmployeeProject",
+	"Employee Checkin": "hrms.overrides.employee_checkin_override.CustomEmployeeCheckin",
 }
 
 # Document Events
@@ -208,8 +209,15 @@ doc_events = {
 			"hrms.overrides.employee_master.publish_update",
 		],
 		"after_insert": "hrms.overrides.employee_master.update_job_applicant_and_offer",
+		"after_save": "hrms.overrides.employee_hrms_scope.sync_hrms_only_user_permission",
 		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
+	},
+	"Employee Checkin": {
+		"after_insert": "hrms.overrides.employee_checkin_after_insert.create_remote_request_if_needed",
+	},
+	"Remote Checkin Request": {
+		"on_update": "hrms.overrides.remote_checkin_request_hooks.propagate_approval_decision",
 	},
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
@@ -237,6 +245,12 @@ scheduler_events = {
 		"hrms.hr.doctype.interview.interview.send_daily_feedback_reminder",
 		"hrms.hr.doctype.job_opening.job_opening.close_expired_job_openings",
 	],
+	"cron": {
+		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
+		"0 10 * * *": [
+			"hrms.utils.checkin_sweeper.sweep_stale_ins",
+		],
+	},
 	"daily_long": [
 		"hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry.process_expired_allocation",
 		"hrms.hr.utils.generate_leave_encashment",

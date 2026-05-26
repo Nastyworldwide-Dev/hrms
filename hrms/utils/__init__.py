@@ -1,9 +1,33 @@
 from collections.abc import Generator
 
-import requests
+try:
+	import requests
+except ImportError:  # pragma: no cover — pure unit tests outside bench
+	requests = None
 
-import frappe
-from frappe.utils import add_days, date_diff
+try:
+	import frappe
+	from frappe.utils import add_days, date_diff
+except ImportError:  # pragma: no cover — pure unit tests outside bench
+	import types as _types
+
+	frappe = _types.SimpleNamespace(
+		whitelist=lambda *a, **kw: lambda fn: fn,
+	)
+
+	def add_days(date, days):
+		from datetime import datetime, timedelta
+
+		base = datetime.fromisoformat(date) if isinstance(date, str) else date
+		return (base + timedelta(days=days)).date().isoformat()
+
+	def date_diff(end, start):
+		from datetime import datetime
+
+		s = datetime.fromisoformat(start) if isinstance(start, str) else start
+		e = datetime.fromisoformat(end) if isinstance(end, str) else end
+		return (e - s).days
+
 
 country_info = {}
 

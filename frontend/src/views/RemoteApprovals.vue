@@ -214,11 +214,11 @@ const onRealtime = (event) => {
 
 onMounted(() => {
 	pending.fetch()
-	socket?.on?.("nsty:remote_checkin_request", onRealtime)
+	socket?.on?.("hrms:remote_checkin_request", onRealtime)
 })
 
 onBeforeUnmount(() => {
-	socket?.off?.("nsty:remote_checkin_request", onRealtime)
+	socket?.off?.("hrms:remote_checkin_request", onRealtime)
 })
 
 const reload = () => pending.reload()
