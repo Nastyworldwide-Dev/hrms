@@ -207,9 +207,15 @@ doc_events = {
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
+			# Runs LAST on purpose: ERPNext's Employee.on_update controller method
+			# fires before this hook and may delete any `allow=Employee` User
+			# Permissions when `create_user_permission` is unticked. Running our
+			# handler in after_save (the previous wiring) meant ERPNext nuked the
+			# 16 scoped UPs we just inserted. Hooking to on_update runs us AFTER
+			# the controller, so the UPs survive.
+			"hrms.overrides.employee_hrms_scope.sync_hrms_only_user_permission",
 		],
 		"after_insert": "hrms.overrides.employee_master.update_job_applicant_and_offer",
-		"after_save": "hrms.overrides.employee_hrms_scope.sync_hrms_only_user_permission",
 		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
 	},
