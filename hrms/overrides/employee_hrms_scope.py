@@ -1,4 +1,25 @@
-"""Employee doc_event handlers."""
+"""Employee doc_event handler — keeps User Permissions in sync with
+Employee.restrict_user_permission_to_hrms.
+
+Data model: this site uses Frappe's modern User Permission schema where
+`applicable_for` is a SCALAR field on the parent row, not a child table.
+To scope an Employee anchor across N doctypes, we create N parent UPs
+(one per doctype), each carrying the same allow/for_value plus its own
+applicable_for. This replaces the old `for_value_doctypes` child-table
+approach which fails on sites missing the legacy child table.
+
+Branching:
+  - scoped  — flag=1: delete every existing UP for the user, then create
+              one UP per HRMS-scope doctype that exists on this site.
+              All anchored to allow=Employee, for_value=<this employee>.
+              Trade-off: any admin-curated broad UP for this user
+              (Company isolation, etc.) is wiped. Untick the flag on
+              that employee if this isn't desired.
+  - revert  — flag=0 AND UPs exist: delete the scoped UPs, create one
+              broad UP (apply_to_all_doctypes=1) so the user is back to
+              the standard "create_user_permission" shape.
+  - noop    — flag=0 AND no UPs: nothing to do.
+"""
 
 from __future__ import annotations
 
@@ -17,25 +38,6 @@ logger = logging.getLogger(__name__)
 
 
 def sync_hrms_only_user_permission(doc, method=None):
-	"""Keep User Permissions in sync with Employee.restrict_user_permission_to_hrms.
-
-	Branching (see plan_user_permission_sync_action):
-	  - "scoped"  — flag is on: upsert the Employee anchor UP for this
-	                employee (allow=Employee, for_value=<doc.name>) AND
-	                reshape every UP for the user to apply_to_all_doctypes=0
-	                with the HRMS doctype scope. The anchor is what makes
-	                the user see only their own Employee row; without it,
-	                other UPs (Company, Department, etc.) only narrow
-	                scope by doctype list, not by Employee identity.
-	  - "revert"  — flag is off AND UPs exist: broaden each row back to
-	                apply_to_all_doctypes=1 / cleared for_value_doctypes.
-	  - "noop"    — flag is off AND no UPs exist: nothing to do.
-
-	Runs after Employee.after_save. Trade-off (scoped branch): an
-	admin-curated broad UP for this user (e.g. a true single-Company
-	isolation) will be narrowed when the flag is on — untick the flag on
-	that employee if this isn't desired.
-	"""
 	user_id = doc.get("user_id")
 	if not user_id:
 		return
@@ -49,88 +51,69 @@ def sync_hrms_only_user_permission(doc, method=None):
 		doc.get("restrict_user_permission_to_hrms"),
 		has_existing_perms=bool(perm_names),
 	)
+	logger.info(
+		"[employee_hrms_scope] employee=%s user=%s action=%s existing_ups=%d",
+		doc.name,
+		user_id,
+		action,
+		len(perm_names),
+	)
 
 	if action == ACTION_SCOPED:
 		_apply_hrms_scope(doc, user_id, perm_names)
 		return
 
 	if action == ACTION_REVERT:
-		_revert_perms_to_broad(doc, user_id, perm_names)
+		_revert_to_broad_anchor(doc, user_id, perm_names)
 		return
-
-	# ACTION_NOOP — flag off, no UPs.
-	logger.debug(
-		"[doc_events.employee] noop employee=%s user=%s (flag off, no UPs)",
-		doc.name,
-		user_id,
-	)
 
 
 def _apply_hrms_scope(doc, user_id, perm_names):
-	"""When flag=1: ensure the Employee anchor UP exists for this
-	employee, then narrow ALL UPs for the user to HRMS scope.
-
-	Why the anchor matters: a UP row with `allow=Employee,
-	for_value=<EMP-001>` is what restricts which Employee records the
-	user can see. Without it, reshaping a `Company` UP only narrows
-	which doctypes the company-scope applies to — the user can still
-	see every Employee within the company. The anchor is the missing
-	piece that produced Bug A's "user still sees other employees".
+	"""Flag is on. Wipe all UPs for this user, then create one
+	allow=Employee UP per HRMS-scope doctype that exists on the site.
 	"""
-	applicable = get_scoped_doctypes()
-	anchor_name = _ensure_employee_anchor(doc, user_id, applicable)
-
-	# Re-query so the anchor (if just inserted) is included in the reshape.
-	all_perm_names = frappe.get_all(
-		"User Permission",
-		filters={"user": user_id},
-		pluck="name",
-	)
+	applicable = [dt for dt in get_scoped_doctypes() if frappe.db.exists("DocType", dt)]
 	logger.info(
-		"[doc_events.employee] Scoping %d User Permission row(s) to %d HRMS doctypes for employee=%s user=%s anchor=%s",
-		len(all_perm_names),
-		len(applicable),
+		"[employee_hrms_scope] scoping employee=%s user=%s — wiping %d UP(s), creating %d new (%s)",
 		doc.name,
 		user_id,
-		anchor_name,
+		len(perm_names),
+		len(applicable),
+		applicable,
 	)
-	for name in all_perm_names:
-		up = frappe.get_doc("User Permission", name)
-		up.apply_to_all_doctypes = 0
-		up.set(
-			"for_value_doctypes",
-			[{"applicable_for": dt} for dt in applicable],
+
+	for name in perm_names:
+		frappe.delete_doc("User Permission", name, ignore_permissions=True)
+
+	for dt in applicable:
+		up = frappe.new_doc("User Permission")
+		up.update(
+			{
+				"user": user_id,
+				"allow": "Employee",
+				"for_value": doc.name,
+				"apply_to_all_doctypes": 0,
+				"applicable_for": dt,
+			}
 		)
 		up.flags.ignore_permissions = True
-		up.save()
+		up.insert()
+
 	frappe.clear_cache(user=user_id)
 
 
-def _ensure_employee_anchor(doc, user_id, applicable):
-	"""Upsert the Employee anchor UP. Returns the row name.
-
-	Idempotent: if a UP with user=<user_id>, allow=Employee,
-	for_value=<doc.name> already exists, returns its name without
-	inserting. Otherwise inserts a fresh row with apply_to_all_doctypes=0
-	and the HRMS scope.
+def _revert_to_broad_anchor(doc, user_id, perm_names):
+	"""Flag is off. Wipe the scoped UPs and leave a single broad anchor
+	for this employee (the standard create_user_permission shape).
 	"""
-	existing = frappe.db.get_value(
-		"User Permission",
-		{
-			"user": user_id,
-			"allow": "Employee",
-			"for_value": doc.name,
-		},
-		"name",
+	logger.info(
+		"[employee_hrms_scope] reverting employee=%s user=%s — wiping %d UP(s), creating 1 broad anchor",
+		doc.name,
+		user_id,
+		len(perm_names),
 	)
-	if existing:
-		logger.info(
-			"[doc_events.employee] anchor exists %s for employee=%s user=%s",
-			existing,
-			doc.name,
-			user_id,
-		)
-		return existing
+	for name in perm_names:
+		frappe.delete_doc("User Permission", name, ignore_permissions=True)
 
 	up = frappe.new_doc("User Permission")
 	up.update(
@@ -138,41 +121,10 @@ def _ensure_employee_anchor(doc, user_id, applicable):
 			"user": user_id,
 			"allow": "Employee",
 			"for_value": doc.name,
-			"apply_to_all_doctypes": 0,
+			"apply_to_all_doctypes": 1,
 		}
-	)
-	up.set(
-		"for_value_doctypes",
-		[{"applicable_for": dt} for dt in applicable],
 	)
 	up.flags.ignore_permissions = True
 	up.insert()
-	logger.info(
-		"[doc_events.employee] Created anchor User Permission %s for employee=%s user=%s (%d HRMS doctype(s))",
-		up.name,
-		doc.name,
-		user_id,
-		len(applicable),
-	)
-	return up.name
 
-
-def _revert_perms_to_broad(doc, user_id, perm_names):
-	reverted = 0
-	for name in perm_names:
-		up = frappe.get_doc("User Permission", name)
-		if up.apply_to_all_doctypes and not up.get("for_value_doctypes"):
-			continue
-		up.apply_to_all_doctypes = 1
-		up.set("for_value_doctypes", [])
-		up.flags.ignore_permissions = True
-		up.save()
-		reverted += 1
-	if reverted:
-		logger.info(
-			"[doc_events.employee] Reverted %d User Permission row(s) to all-doctypes for employee=%s user=%s",
-			reverted,
-			doc.name,
-			user_id,
-		)
-		frappe.clear_cache(user=user_id)
+	frappe.clear_cache(user=user_id)
