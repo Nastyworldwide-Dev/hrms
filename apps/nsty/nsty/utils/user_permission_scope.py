@@ -62,8 +62,7 @@ def should_scope_to_hrms(restrict_user_permission_to_hrms) -> bool:
 	return bool(restrict_user_permission_to_hrms)
 
 
-ACTION_CREATE = "create"
-ACTION_RESHAPE = "reshape"
+ACTION_SCOPED = "scoped"
 ACTION_REVERT = "revert"
 ACTION_NOOP = "noop"
 
@@ -80,9 +79,13 @@ def plan_user_permission_sync_action(
 	                            currently exists for this employee's user_id
 
 	Returns one of:
-	    "create"  — flag is on AND no UPs exist → insert the anchor
-	                Employee UP scoped to HRMS doctypes
-	    "reshape" — flag is on AND UPs exist → narrow each row's scope
+	    "scoped"  — flag is on → upsert the Employee anchor UP for this
+	                employee AND reshape every UP for the user to
+	                apply_to_all_doctypes=0 + HRMS doctype scope. The
+	                anchor is what actually restricts which Employee
+	                records are visible — without it, the user can still
+	                see siblings via other UPs (Company, Department,
+	                etc.) that don't narrow by employee.
 	    "revert"  — flag is off AND UPs exist → broaden each row back
 	                to apply_to_all_doctypes=1
 	    "noop"    — flag is off AND no UPs exist → nothing to do
@@ -91,11 +94,9 @@ def plan_user_permission_sync_action(
 	without touching Frappe.
 	"""
 	scope = should_scope_to_hrms(restrict_flag)
-	if scope and not has_existing_perms:
-		return ACTION_CREATE
-	if scope and has_existing_perms:
-		return ACTION_RESHAPE
-	if not scope and has_existing_perms:
+	if scope:
+		return ACTION_SCOPED
+	if has_existing_perms:
 		return ACTION_REVERT
 	return ACTION_NOOP
 

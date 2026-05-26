@@ -3,10 +3,9 @@
 import unittest
 
 from nsty.utils.user_permission_scope import (
-	ACTION_CREATE,
 	ACTION_NOOP,
-	ACTION_RESHAPE,
 	ACTION_REVERT,
+	ACTION_SCOPED,
 	ANCHOR_DOCTYPE,
 	DEFAULT_HRMS_DOCTYPES,
 	merge_doctype_list,
@@ -80,22 +79,31 @@ class TestMergeDoctypeList(unittest.TestCase):
 
 
 class TestPlanUserPermissionSyncAction(unittest.TestCase):
-	"""Regression: when the user has no existing UPs and ticks the
-	HRMS-only flag, the handler must create the anchor Employee UP.
-	Before this fix, the handler returned early and nothing happened —
-	leaving the user with broad permissions despite the tick. (Bug 1.)
+	"""Regressions:
+
+	Bug 1 (v15.76.0): flag on + no existing UPs must trigger the anchor
+	upsert. Before the fix, the handler returned early at the empty list
+	check and the user was left unrestricted.
+
+	Bug A (v15.76.1): flag on + existing UPs (e.g. a Company UP) must
+	ALSO trigger the anchor upsert — otherwise reshaping the Company UP
+	narrows scope across HRMS but leaves the user able to see every
+	Employee row in their company. Both branches now collapse to
+	ACTION_SCOPED.
 	"""
 
-	def test_flag_on_no_perms_creates_anchor(self):
+	def test_flag_on_no_perms_returns_scoped(self):
+		# Triggers anchor insert + scope.
 		self.assertEqual(
 			plan_user_permission_sync_action(1, has_existing_perms=False),
-			ACTION_CREATE,
+			ACTION_SCOPED,
 		)
 
-	def test_flag_on_with_perms_reshapes(self):
+	def test_flag_on_with_perms_returns_scoped(self):
+		# Must also ensure the Employee anchor exists, not just reshape.
 		self.assertEqual(
 			plan_user_permission_sync_action(1, has_existing_perms=True),
-			ACTION_RESHAPE,
+			ACTION_SCOPED,
 		)
 
 	def test_flag_off_with_perms_reverts(self):
@@ -110,15 +118,15 @@ class TestPlanUserPermissionSyncAction(unittest.TestCase):
 			ACTION_NOOP,
 		)
 
-	def test_truthy_flag_variants_create(self):
-		# Frappe may hand the flag in as "1" / True; both must trigger create.
+	def test_truthy_flag_variants_scoped(self):
+		# Frappe may hand the flag in as "1" / True; both must trigger scope.
 		self.assertEqual(
 			plan_user_permission_sync_action("1", has_existing_perms=False),
-			ACTION_CREATE,
+			ACTION_SCOPED,
 		)
 		self.assertEqual(
-			plan_user_permission_sync_action(True, has_existing_perms=False),
-			ACTION_CREATE,
+			plan_user_permission_sync_action(True, has_existing_perms=True),
+			ACTION_SCOPED,
 		)
 
 	def test_falsy_flag_variants_noop(self):
