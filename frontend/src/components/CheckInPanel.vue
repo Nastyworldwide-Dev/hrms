@@ -298,7 +298,24 @@ const fetchRemoteRequest = createResource({
 
 const lastLog = computed(() => {
 	if (checkins.list.loading || !checkins.data) return {}
-	return checkins.data[0]
+	const row = checkins.data[0]
+	// Diagnostic for the "Last check-out shown after a check-in" bug — when
+	// the displayed log_type doesn't match what the user just submitted, the
+	// console row is the first thing to look at: did the IN reach the SPA?
+	// Cheap, runs once per checkins reload.
+	if (row) {
+		console.info(
+			"[CheckInPanel] lastLog resolved:",
+			{
+				name: row.name,
+				log_type: row.log_type,
+				time: row.time,
+				requires_remote_approval: row.requires_remote_approval,
+				is_abandoned: row.is_abandoned,
+			}
+		)
+	}
+	return row
 })
 
 const lastLogType = computed(() => {

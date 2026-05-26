@@ -62,6 +62,44 @@ def should_scope_to_hrms(restrict_user_permission_to_hrms) -> bool:
 	return bool(restrict_user_permission_to_hrms)
 
 
+ACTION_CREATE = "create"
+ACTION_RESHAPE = "reshape"
+ACTION_REVERT = "revert"
+ACTION_NOOP = "noop"
+
+
+def plan_user_permission_sync_action(
+	restrict_flag,
+	has_existing_perms: bool,
+) -> str:
+	"""Decide what the Employee.after_save handler should do.
+
+	Inputs:
+	    restrict_flag         — value of Employee.restrict_user_permission_to_hrms
+	    has_existing_perms    — True if at least one User Permission row
+	                            currently exists for this employee's user_id
+
+	Returns one of:
+	    "create"  — flag is on AND no UPs exist → insert the anchor
+	                Employee UP scoped to HRMS doctypes
+	    "reshape" — flag is on AND UPs exist → narrow each row's scope
+	    "revert"  — flag is off AND UPs exist → broaden each row back
+	                to apply_to_all_doctypes=1
+	    "noop"    — flag is off AND no UPs exist → nothing to do
+
+	Extracted as a pure function so the branching can be unit-tested
+	without touching Frappe.
+	"""
+	scope = should_scope_to_hrms(restrict_flag)
+	if scope and not has_existing_perms:
+		return ACTION_CREATE
+	if scope and has_existing_perms:
+		return ACTION_RESHAPE
+	if not scope and has_existing_perms:
+		return ACTION_REVERT
+	return ACTION_NOOP
+
+
 def merge_doctype_list(custom_rows, fallback) -> list[str]:
 	"""Resolve which doctypes go into for_value_doctypes.
 

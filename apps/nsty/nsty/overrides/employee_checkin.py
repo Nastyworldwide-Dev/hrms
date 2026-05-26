@@ -127,16 +127,33 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			return
 
 		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+			logger.info(
+				"[employee_checkin] geofence skipped employee=%s — HR Settings.allow_geolocation_tracking is off",
+				self.employee,
+			)
 			return
 
 		if not (self.latitude and self.longitude):
 			# No coordinates captured — fall through to upstream behaviour which
 			# throws. The frontend always sends lat/long when geo is enabled.
+			logger.info(
+				"[employee_checkin] geofence deferred to upstream employee=%s — no lat/long on doc",
+				self.employee,
+			)
 			return super().validate_distance_from_shift_location()
 
-		strict = bool(
-			frappe.db.get_value("Shift Type", self.shift, "enable_strict_geofence") if self.shift else 0
-		)
+		if not self.shift:
+			# fetch_shift() couldn't resolve a Shift Type (no assignment, or
+			# multi-assignment edge case where every option failed). We can't
+			# look up a Shift Location without a shift_type, so we silently
+			# allow — but log it so FC operators can diagnose missing dialogs.
+			logger.info(
+				"[employee_checkin] geofence silent-allow employee=%s — no shift resolved (self.shift is None)",
+				self.employee,
+			)
+			return
+
+		strict = bool(frappe.db.get_value("Shift Type", self.shift, "enable_strict_geofence"))
 
 		assignment_locations = frappe.get_all(
 			"Shift Assignment",
@@ -176,6 +193,40 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			distance_m=distance,
 		)
 		if decision is None:
+			# Lenient silent-allow paths land here. Spell out which one fired
+			# so the FC logs can pin down "why didn't the remote dialog appear?".
+			if not shift_loc_name:
+				logger.info(
+					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — no shift_location on active Shift Assignment",
+					self.employee,
+					self.shift,
+					strict,
+				)
+			elif not row:
+				logger.info(
+					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — Shift Location %s row missing",
+					self.employee,
+					self.shift,
+					strict,
+					shift_loc_name,
+				)
+			elif radius_m <= 0:
+				logger.info(
+					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — Shift Location %s has no check-in radius",
+					self.employee,
+					self.shift,
+					strict,
+					shift_loc_name,
+				)
+			else:
+				logger.info(
+					"[employee_checkin] geofence inside radius employee=%s shift=%s distance=%.1fm radius=%dm location=%s",
+					self.employee,
+					self.shift,
+					distance or 0.0,
+					radius_m,
+					shift_loc_name,
+				)
 			return
 
 		action, ctx = decision
