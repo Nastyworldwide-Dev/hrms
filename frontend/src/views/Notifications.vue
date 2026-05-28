@@ -85,8 +85,9 @@
 									</div>
 
 									<!-- Inline approve/reject for pending Remote Checkin Requests.
-									     Lets the approver act on the request without leaving the
-									     notifications feed. Hidden once the request is decided. -->
+									     Tapping either opens a remarks sheet so the approver
+									     can leave a note before confirming, matching the
+									     RemoteApprovals view. -->
 									<div
 										v-if="isRemoteRequestPending(item)"
 										class="flex flex-row gap-2 mt-2"
@@ -96,13 +97,7 @@
 											variant="outline"
 											theme="red"
 											class="flex-1"
-											:loading="
-												decisionLoading.name === item.reference_document_name &&
-												decisionLoading.kind === 'reject'
-											"
-											@click.stop.prevent="
-												decideOnNotification(item, 'reject')
-											"
+											@click.stop.prevent="openDecision(item, 'reject')"
 										>
 											{{ __("Reject") }}
 										</Button>
@@ -110,13 +105,7 @@
 											size="sm"
 											theme="green"
 											class="flex-1"
-											:loading="
-												decisionLoading.name === item.reference_document_name &&
-												decisionLoading.kind === 'approve'
-											"
-											@click.stop.prevent="
-												decideOnNotification(item, 'approve')
-											"
+											@click.stop.prevent="openDecision(item, 'approve')"
 										>
 											{{ __("Approve") }}
 										</Button>
@@ -138,12 +127,71 @@
 					</div>
 				</div>
 			</div>
+			<ion-modal
+				:is-open="decisionOpen"
+				@didDismiss="decisionOpen = false"
+				:initial-breakpoint="1"
+				:breakpoints="[0, 1]"
+			>
+				<div class="bg-white w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)]">
+					<div class="flex flex-col gap-1 pt-8 pb-5 border-b items-center">
+						<span class="text-gray-900 font-bold text-base">
+							{{
+								decisionKind === "approve"
+									? __("Approve this check-in?")
+									: __("Reject this check-in?")
+							}}
+						</span>
+						<span class="text-xs text-gray-500">{{ activeItemLabel }}</span>
+					</div>
+
+					<div class="flex flex-col gap-2 px-4 pt-4">
+						<label class="text-xs uppercase text-gray-500 tracking-wide">
+							{{ __("Remarks (optional)") }}
+						</label>
+						<textarea
+							v-model="decisionRemarks"
+							rows="3"
+							maxlength="500"
+							:placeholder="
+								decisionKind === 'approve'
+									? __('e.g. Approved — you were at the client site.')
+									: __('e.g. Please retry from inside the office radius.')
+							"
+							class="w-full text-sm border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						/>
+					</div>
+
+					<div class="flex flex-row gap-2 px-4 pt-3">
+						<Button
+							variant="outline"
+							class="flex-1"
+							@click="decisionOpen = false"
+							:disabled="decisionSubmitting"
+						>
+							{{ __("Cancel") }}
+						</Button>
+						<Button
+							class="flex-1"
+							:theme="decisionKind === 'approve' ? 'green' : 'red'"
+							:loading="decisionSubmitting"
+							@click="submitDecision"
+						>
+							{{
+								decisionKind === "approve"
+									? __("Confirm Approve")
+									: __("Confirm Reject")
+							}}
+						</Button>
+					</div>
+				</div>
+			</ion-modal>
 		</ion-content>
 	</ion-page>
 </template>
 
 <script setup>
-import { IonContent, IonPage } from "@ionic/vue"
+import { IonContent, IonPage, IonModal } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { createResource, FeatherIcon, Button, toast } from "frappe-ui"
 
@@ -173,7 +221,15 @@ const pageLength = 10
 // decided (whether the user acted here, in RemoteApprovals, or someone else
 // raced them).
 const remoteRequestStatus = ref({})
-const decisionLoading = ref({ name: null, kind: null })
+
+// Decision modal state — opened from the inline Approve/Reject buttons
+// on a Remote Checkin Request notification card. Lets the approver
+// leave optional remarks before confirming, matching RemoteApprovals.
+const decisionOpen = ref(false)
+const decisionKind = ref("approve") // 'approve' | 'reject'
+const decisionRemarks = ref("")
+const decisionSubmitting = ref(false)
+const decisionTarget = ref(null) // the notification item being acted on
 
 const remoteRequestStatusResource = createResource({
 	url: "frappe.client.get_list",
@@ -267,15 +323,34 @@ function getItemRoute(item) {
 	}
 }
 
-async function decideOnNotification(item, kind) {
+const activeItemLabel = computed(() => {
+	const item = decisionTarget.value
+	if (!item) return ""
+	// Strip HTML for the modal subtitle since item.message is rich text.
+	const plain = stripHtml(item.message)
+	return plain || (item.reference_document_name || "")
+})
+
+function openDecision(item, kind) {
+	if (!item?.reference_document_name) return
+	decisionTarget.value = item
+	decisionKind.value = kind
+	decisionRemarks.value = ""
+	decisionOpen.value = true
+}
+
+async function submitDecision() {
+	const item = decisionTarget.value
+	if (!item) return
 	const requestName = item.reference_document_name
-	if (!requestName) return
-	decisionLoading.value = { name: requestName, kind }
+	const kind = decisionKind.value
+	decisionSubmitting.value = true
 	const resource = kind === "approve" ? approveResource : rejectResource
 	try {
-		await resource.submit({ request: requestName, approver_remarks: "" })
-		// Optimistic local update so the buttons disappear immediately, even
-		// before the next refreshRemoteStatuses() round-trip lands.
+		await resource.submit({
+			request: requestName,
+			approver_remarks: decisionRemarks.value.trim(),
+		})
 		remoteRequestStatus.value = {
 			...remoteRequestStatus.value,
 			[requestName]: kind === "approve" ? "Approved" : "Rejected",
@@ -287,11 +362,11 @@ async function decideOnNotification(item, kind) {
 			position: "bottom-center",
 			iconClasses: "text-green-500",
 		})
-		// Mark the source notification read since the action implicitly handles it.
 		if (!item.read) {
 			markAsRead(item.name)
 		}
 		pendingCountResource.reload?.()
+		decisionOpen.value = false
 	} catch (err) {
 		console.error("[Notifications] decision failed:", err)
 		toast({
@@ -302,7 +377,7 @@ async function decideOnNotification(item, kind) {
 			iconClasses: "text-red-500",
 		})
 	} finally {
-		decisionLoading.value = { name: null, kind: null }
+		decisionSubmitting.value = false
 	}
 }
 
