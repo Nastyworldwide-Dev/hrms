@@ -22,11 +22,47 @@ def resolve_approver(employee: str) -> str | None:
 	"""Resolve the approver user for an employee.
 
 	Priority:
-	  1. Employee.reports_to -> Employee.user_id
-	  2. Any user with HR Manager role (oldest creation)
-	  3. None
+	  1. Employee.shift_request_approver  (mirrors Shift Request's approver flow)
+	  2. Department Approver row with parentfield='shift_request_approver'
+	  3. Employee.reports_to -> Employee.user_id
+	  4. Any user with HR Manager role (oldest creation)
+	  5. None
 	"""
-	reports_to = frappe.db.get_value("Employee", employee, "reports_to")
+	emp = (
+		frappe.db.get_value(
+			"Employee",
+			employee,
+			["shift_request_approver", "department", "reports_to"],
+			as_dict=True,
+		)
+		or {}
+	)
+
+	shift_approver = emp.get("shift_request_approver")
+	if shift_approver:
+		logger.info(
+			"[remote_checkin_request] approver=shift_request_approver employee=%s -> %s",
+			employee,
+			shift_approver,
+		)
+		return shift_approver
+
+	department = emp.get("department")
+	if department:
+		dept_approver = frappe.db.get_value(
+			"Department Approver",
+			{"parent": department, "parentfield": "shift_request_approver", "idx": 1},
+			"approver",
+		)
+		if dept_approver:
+			logger.info(
+				"[remote_checkin_request] approver=department_shift_approver employee=%s -> %s",
+				employee,
+				dept_approver,
+			)
+			return dept_approver
+
+	reports_to = emp.get("reports_to")
 	if reports_to:
 		user_id = frappe.db.get_value("Employee", reports_to, "user_id")
 		if user_id:
