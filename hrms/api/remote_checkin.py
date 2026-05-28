@@ -62,13 +62,26 @@ def _ensure_approver(request_name: str) -> dict:
 
 @frappe.whitelist()
 def submit_remarks(request: str, employee_remarks: str = "") -> dict:
-	"""Backfill the employee's reason after the check-in was saved."""
+	"""Backfill the employee's reason after the check-in was saved.
+
+	An OUT request that inherits an earlier Approved IN is already in
+	status=Approved by the time the dialog reaches the user; storing a
+	reason against it is harmless (and useful for audit), so we don't
+	throw there. Rejected requests block the write because the row is
+	closed and the user is being asked to amend a decision that's gone
+	the wrong way for them.
+	"""
 	row = _ensure_owner(request)
-	if row.status != "Pending":
-		frappe.throw(_("This request has already been decided."))
+	if row.status == "Rejected":
+		frappe.throw(_("This request has been rejected and can no longer be edited."))
 	frappe.db.set_value("Remote Checkin Request", request, "employee_remarks", employee_remarks or "")
-	logger.info("[remote_checkin] submit_remarks request=%s by=%s", request, frappe.session.user)
-	return {"ok": True, "name": request}
+	logger.info(
+		"[remote_checkin] submit_remarks request=%s status=%s by=%s",
+		request,
+		row.status,
+		frappe.session.user,
+	)
+	return {"ok": True, "name": request, "status": row.status}
 
 
 @frappe.whitelist()

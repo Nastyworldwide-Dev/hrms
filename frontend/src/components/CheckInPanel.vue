@@ -668,7 +668,11 @@ const submitLog = async (logType) => {
 				try {
 					const rows = await fetchRemoteRequest.submit({ checkin: doc.name })
 					const req = rows?.[0]
-					if (req) {
+					// OUT logs that inherit a same-day Approved IN land here
+					// already in status=Approved (auto-inherit by
+					// create_remote_request_if_needed). Don't pop the reason
+					// dialog for those — there's nothing left to decide.
+					if (req && req.status === "Pending") {
 						remoteRequest.value = {
 							name: req.name,
 							logType: req.log_type || logType,
@@ -676,6 +680,28 @@ const submitLog = async (logType) => {
 							approverName: req.approver || "",
 						}
 						remoteDialogOpen.value = true
+						return
+					}
+					if (req && req.status === "Approved") {
+						toast({
+							title: __("{0} approved", [actionLabel]),
+							text: __("Inherited from your earlier approved check-in."),
+							icon: "check-circle",
+							position: "bottom-center",
+							iconClasses: "text-green-500",
+						})
+						return
+					}
+					if (req && req.status === "Rejected") {
+						toast({
+							title: __("{0} blocked", [actionLabel]),
+							text: __(
+								"A prior remote check-in request today was rejected — please contact HR."
+							),
+							icon: "alert-circle",
+							position: "bottom-center",
+							iconClasses: "text-red-500",
+						})
 						return
 					}
 				} catch (err) {
