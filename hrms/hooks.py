@@ -140,6 +140,17 @@ before_app_uninstall = "hrms.setup.before_app_uninstall"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
+permission_query_conditions = {
+	# Scope notification reads to the recipient. Doctype-level perms only grant
+	# read to Employee + System Manager; HR Managers acting as approvers would
+	# otherwise see an empty feed even when their unread count is nonzero.
+	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.get_permission_query_conditions",
+}
+
+has_permission = {
+	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.has_permission",
+}
+
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
 
 # DocType Class
