@@ -70,9 +70,16 @@
 								<EmployeeAvatar :userID="item.from_user" size="lg" />
 								<div class="flex flex-col gap-0.5 grow ml-3">
 									<div
+										v-if="item.message && stripHtml(item.message)"
 										class="text-sm leading-5 font-normal text-gray-800"
 										v-html="item.message"
 									></div>
+									<div
+										v-else
+										class="text-sm leading-5 font-normal text-gray-500 italic"
+									>
+										{{ fallbackMessage(item) }}
+									</div>
 									<div class="text-xs font-normal text-gray-500">
 										{{ dayjs(item.creation).fromNow() }}
 									</div>
@@ -206,6 +213,26 @@ function isRemoteRequestPending(item) {
 		item.reference_document_type === "Remote Checkin Request" &&
 		remoteRequestStatus.value[item.reference_document_name] === "Pending"
 	)
+}
+
+// Defensive: some legacy notification rows persisted with an empty
+// message field (rich-text sanitiser stripped plain text). Render a
+// derived label so the user at least sees what the row references.
+function stripHtml(html) {
+	if (!html) return ""
+	return String(html).replace(/<[^>]*>/g, "").trim()
+}
+
+function fallbackMessage(item) {
+	const docType = item.reference_document_type || __("Notification")
+	const status = remoteRequestStatus.value[item.reference_document_name]
+	if (item.reference_document_type === "Remote Checkin Request") {
+		if (status === "Pending") return __("Remote check-in awaiting your decision.")
+		if (status === "Approved") return __("Remote check-in approved.")
+		if (status === "Rejected") return __("Remote check-in rejected.")
+		return __("Remote check-in update.")
+	}
+	return __("New {0}", [docType])
 }
 
 

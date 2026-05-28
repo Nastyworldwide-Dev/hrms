@@ -186,15 +186,32 @@ def _create_pwa_notification(to_user: str, from_user: str | None, body: str, req
 	The Notification Log row above feeds the Desk bell; this one feeds the
 	PWA. They're separate doctypes by design.
 	"""
+	if not body:
+		logger.warning(
+			"[remote_checkin_request] empty body for PWA notification request=%s",
+			request.name,
+		)
+		body = _("Remote check-in update for {0}").format(request.name)
+
+	# PWA Notification.message is a Text Editor (rich-HTML) field. Plain text
+	# gets sanitised to an empty string by the editor's allow-list, which is
+	# why earlier rows showed up unread but blank. Escape + wrap before save.
+	html_body = "<p>{}</p>".format(frappe.utils.escape_html(body).replace("\n", "<br>"))
+
 	try:
 		notification = frappe.new_doc("PWA Notification")
 		notification.to_user = to_user
 		if from_user:
 			notification.from_user = from_user
-		notification.message = body
+		notification.message = html_body
 		notification.reference_document_type = "Remote Checkin Request"
 		notification.reference_document_name = request.name
 		notification.insert(ignore_permissions=True)
+		logger.info(
+			"[remote_checkin_request] pwa_notification created request=%s to=%s",
+			request.name,
+			to_user,
+		)
 	except Exception as exc:
 		logger.warning("[remote_checkin_request] pwa_notification failed: %s", exc)
 
