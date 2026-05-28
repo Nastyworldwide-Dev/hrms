@@ -55,7 +55,8 @@
 							class="flex flex-col bg-white rounded"
 							v-if="notifications.data?.length"
 						>
-							<router-link
+							<component
+								:is="isRemoteRequestPending(item) ? 'div' : 'router-link'"
 								:class="[
 									'flex flex-row items-start p-4 justify-between border-b before:mt-3',
 									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5 before:rounded-full`,
@@ -63,8 +64,8 @@
 								]"
 								v-for="item in notifications.data"
 								:key="item.name"
-								:to="getItemRoute(item)"
-								@click="markAsRead(item.name)"
+								:to="isRemoteRequestPending(item) ? null : getItemRoute(item)"
+								@click="!isRemoteRequestPending(item) && markAsRead(item.name)"
 							>
 								<EmployeeAvatar :userID="item.from_user" size="lg" />
 								<div class="flex flex-col gap-0.5 grow ml-3">
@@ -75,9 +76,47 @@
 									<div class="text-xs font-normal text-gray-500">
 										{{ dayjs(item.creation).fromNow() }}
 									</div>
+
+									<!-- Inline approve/reject for pending Remote Checkin Requests.
+									     Lets the approver act on the request without leaving the
+									     notifications feed. Hidden once the request is decided. -->
+									<div
+										v-if="isRemoteRequestPending(item)"
+										class="flex flex-row gap-2 mt-2"
+									>
+										<Button
+											size="sm"
+											variant="outline"
+											theme="red"
+											class="flex-1"
+											:loading="
+												decisionLoading.name === item.reference_document_name &&
+												decisionLoading.kind === 'reject'
+											"
+											@click.stop.prevent="
+												decideOnNotification(item, 'reject')
+											"
+										>
+											{{ __("Reject") }}
+										</Button>
+										<Button
+											size="sm"
+											theme="green"
+											class="flex-1"
+											:loading="
+												decisionLoading.name === item.reference_document_name &&
+												decisionLoading.kind === 'approve'
+											"
+											@click.stop.prevent="
+												decideOnNotification(item, 'approve')
+											"
+										>
+											{{ __("Approve") }}
+										</Button>
+									</div>
 								</div>
-							</router-link>
-							
+							</component>
+
 						</div>
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
 							<Button
@@ -99,9 +138,9 @@
 <script setup>
 import { IonContent, IonPage } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import { createResource, FeatherIcon } from "frappe-ui"
+import { createResource, FeatherIcon, Button, toast } from "frappe-ui"
 
-import { computed, inject, onMounted, ref } from "vue"
+import { computed, inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 import EmptyState from "@/components/EmptyState.vue"
 
@@ -110,12 +149,64 @@ import {
 	notifications,
 	arePushNotificationsEnabled,
 } from "@/data/notifications"
+import {
+	approveResource,
+	rejectResource,
+	pendingCountResource,
+} from "@/data/remoteCheckin"
 
 const dayjs = inject("$dayjs")
 const router = useRouter()
 const __ = inject("$translate")
 const currentStart = ref(0)
 const pageLength = 10
+
+// Status of each Remote Checkin Request referenced by a visible notification,
+// keyed by request docname. Lets us hide Approve/Reject once the request is
+// decided (whether the user acted here, in RemoteApprovals, or someone else
+// raced them).
+const remoteRequestStatus = ref({})
+const decisionLoading = ref({ name: null, kind: null })
+
+const remoteRequestStatusResource = createResource({
+	url: "frappe.client.get_list",
+	makeParams(values) {
+		return {
+			doctype: "Remote Checkin Request",
+			filters: { name: ["in", values.names] },
+			fields: ["name", "status"],
+			limit_page_length: values.names.length,
+		}
+	},
+	onSuccess(rows) {
+		const next = { ...remoteRequestStatus.value }
+		for (const row of rows || []) {
+			next[row.name] = row.status
+		}
+		remoteRequestStatus.value = next
+	},
+})
+
+function refreshRemoteStatuses() {
+	const names = (notifications.data || [])
+		.filter((n) => n.reference_document_type === "Remote Checkin Request")
+		.map((n) => n.reference_document_name)
+		.filter(Boolean)
+	if (!names.length) {
+		remoteRequestStatus.value = {}
+		return
+	}
+	remoteRequestStatusResource.submit({ names })
+}
+
+watch(() => notifications.data, refreshRemoteStatuses, { immediate: true })
+
+function isRemoteRequestPending(item) {
+	return (
+		item.reference_document_type === "Remote Checkin Request" &&
+		remoteRequestStatus.value[item.reference_document_name] === "Pending"
+	)
+}
 
 
 const allowPushNotifications = computed(
@@ -146,6 +237,45 @@ function getItemRoute(item) {
 	return {
 		name: `${item.reference_document_type.replace(/\s+/g, "")}DetailView`,
 		params: { id: item.reference_document_name },
+	}
+}
+
+async function decideOnNotification(item, kind) {
+	const requestName = item.reference_document_name
+	if (!requestName) return
+	decisionLoading.value = { name: requestName, kind }
+	const resource = kind === "approve" ? approveResource : rejectResource
+	try {
+		await resource.submit({ request: requestName, approver_remarks: "" })
+		// Optimistic local update so the buttons disappear immediately, even
+		// before the next refreshRemoteStatuses() round-trip lands.
+		remoteRequestStatus.value = {
+			...remoteRequestStatus.value,
+			[requestName]: kind === "approve" ? "Approved" : "Rejected",
+		}
+		toast({
+			title: kind === "approve" ? __("Approved") : __("Rejected"),
+			text: __("The employee has been notified."),
+			icon: "check-circle",
+			position: "bottom-center",
+			iconClasses: "text-green-500",
+		})
+		// Mark the source notification read since the action implicitly handles it.
+		if (!item.read) {
+			markAsRead(item.name)
+		}
+		pendingCountResource.reload?.()
+	} catch (err) {
+		console.error("[Notifications] decision failed:", err)
+		toast({
+			title: __("Could not save"),
+			text: err?.messages?.[0] || __("Try again."),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
+	} finally {
+		decisionLoading.value = { name: null, kind: null }
 	}
 }
 
