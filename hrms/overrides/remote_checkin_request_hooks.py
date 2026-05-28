@@ -120,7 +120,11 @@ def notify_approver(request) -> None:
 		time=request.checkin_time,
 	)
 
+	from_user = frappe.db.get_value("Employee", request.employee, "user_id") or None
+
+	_share_request_with_approver(request)
 	_create_notification_log(request.approver, subject, body, request)
+	_create_pwa_notification(request.approver, from_user, body, request)
 	_send_email(request.approver, subject, body, request)
 	_send_push(request.approver, subject, body, request)
 	logger.info(
@@ -146,6 +150,7 @@ def _notify_employee(request, decision: str) -> None:
 	)
 
 	_create_notification_log(user_id, subject, body, request)
+	_create_pwa_notification(user_id, request.approver, body, request)
 	_send_email(user_id, subject, body, request)
 	_send_push(user_id, subject, body, request)
 	logger.info(
@@ -171,6 +176,51 @@ def _create_notification_log(user: str, subject: str, body: str, request) -> Non
 		).insert(ignore_permissions=True)
 	except Exception as exc:
 		logger.warning("[remote_checkin_request] notification_log failed: %s", exc)
+
+
+def _create_pwa_notification(to_user: str, from_user: str | None, body: str, request) -> None:
+	"""Create a PWA Notification row so the mobile Notifications feed can
+	render the message — and, for Pending requests, inline Approve/Reject
+	buttons keyed off reference_document_type=Remote Checkin Request.
+
+	The Notification Log row above feeds the Desk bell; this one feeds the
+	PWA. They're separate doctypes by design.
+	"""
+	try:
+		notification = frappe.new_doc("PWA Notification")
+		notification.to_user = to_user
+		if from_user:
+			notification.from_user = from_user
+		notification.message = body
+		notification.reference_document_type = "Remote Checkin Request"
+		notification.reference_document_name = request.name
+		notification.insert(ignore_permissions=True)
+	except Exception as exc:
+		logger.warning("[remote_checkin_request] pwa_notification failed: %s", exc)
+
+
+def _share_request_with_approver(request) -> None:
+	"""Approvers may not have a role with read perm on Remote Checkin Request;
+	share the doc directly so frappe.client.get_list returns it from the PWA
+	(needed for the inline Approve/Reject status check)."""
+	if not request.approver:
+		return
+	try:
+		# Skip if approver already has permission via role.
+		if frappe.has_permission(
+			doctype=request.doctype, doc=request.name, ptype="read", user=request.approver
+		):
+			return
+		frappe.share.add_docshare(
+			request.doctype,
+			request.name,
+			request.approver,
+			read=1,
+			write=1,
+			flags={"ignore_share_permission": True},
+		)
+	except Exception as exc:
+		logger.warning("[remote_checkin_request] share-with-approver failed: %s", exc)
 
 
 def _send_email(user: str, subject: str, body: str, request) -> None:
