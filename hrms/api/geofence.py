@@ -96,12 +96,11 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 
 	at = get_datetime(time) if time else now_datetime()
 
-	# Resolve the strict flag via active Shift Assignment + Shift Type.
+	# Strict flag now lives on Shift Assignment (moved from Shift Type in v15.77.4).
 	assignment = frappe.db.sql(
 		"""
-		SELECT sa.name, sa.shift_type, sa.shift_location, st.enable_strict_geofence
+		SELECT sa.name, sa.shift_type, sa.shift_location, sa.enable_strict_geofence
 		FROM `tabShift Assignment` sa
-		JOIN `tabShift Type` st ON st.name = sa.shift_type
 		WHERE sa.employee = %s
 		  AND sa.docstatus = 1
 		  AND sa.status = 'Active'
@@ -163,3 +162,58 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 	# lenient mode). Defensive — treat anything unexpected as pass-through.
 	logger.warning("[geofence.api] unexpected decision under strict mode: %s", decision)
 	return _ok()
+
+
+@frappe.whitelist()
+def get_active_shift_location(employee: str, time: str | None = None) -> dict | None:
+	"""Return the Shift Location attached to the employee's active assignment,
+	along with the strict flag, for the SPA's check-in map.
+
+	Lightweight read used by the check-in modal to draw the location pin +
+	radius circle before the user submits. Returns None when no active
+	assignment matches or the assignment has no shift_location.
+	"""
+	if not employee:
+		return None
+
+	at = get_datetime(time) if time else now_datetime()
+	logger.debug("[geofence.api] get_active_shift_location employee=%s at=%s", employee, at)
+
+	row = frappe.db.sql(
+		"""
+		SELECT sa.shift_location, sa.enable_strict_geofence, sa.shift_type
+		FROM `tabShift Assignment` sa
+		WHERE sa.employee = %s
+		  AND sa.docstatus = 1
+		  AND sa.status = 'Active'
+		  AND sa.start_date <= %s
+		  AND (sa.end_date IS NULL OR sa.end_date >= %s)
+		  AND sa.shift_location IS NOT NULL
+		ORDER BY sa.start_date DESC
+		LIMIT 1
+		""",
+		(employee, at.date(), at.date()),
+		as_dict=True,
+	)
+	if not row:
+		return None
+
+	r = row[0]
+	loc = frappe.db.get_value(
+		"Shift Location",
+		r.shift_location,
+		["name", "location_name", "latitude", "longitude", "checkin_radius"],
+		as_dict=True,
+	)
+	if not loc or loc.latitude is None or loc.longitude is None:
+		return None
+
+	return {
+		"shift_location": loc.name,
+		"label": loc.location_name or loc.name,
+		"latitude": float(loc.latitude),
+		"longitude": float(loc.longitude),
+		"checkin_radius": int(loc.checkin_radius or 0),
+		"shift_type": r.shift_type,
+		"strict": bool(r.enable_strict_geofence),
+	}

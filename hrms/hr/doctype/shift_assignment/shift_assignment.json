@@ -16,6 +16,7 @@
   "shift_details_section",
   "shift_type",
   "shift_location",
+  "enable_strict_geofence",
   "status",
   "column_break_brkq",
   "start_date",
@@ -123,6 +124,14 @@
    "fieldtype": "Link",
    "label": "Shift Location",
    "options": "Shift Location"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.shift_location",
+   "description": "When enabled, employees on this assignment can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright — no Remote Checkin Request is created. Requires HR Settings → Allow Geolocation Tracking.",
+   "fieldname": "enable_strict_geofence",
+   "fieldtype": "Check",
+   "label": "Strict Shift Location Check-in"
   },
   {
    "fieldname": "column_break_brkq",

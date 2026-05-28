@@ -107,7 +107,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 	def validate_distance_from_shift_location(self):
 		"""Geofence validation with two modes.
 
-		Mode is driven by Shift Type.enable_strict_geofence:
+		Mode is driven by Shift Assignment.enable_strict_geofence:
 		  - Lenient (default): out-of-radius check-ins are allowed and flagged
 		    for the after_insert hook to spawn a Remote Checkin Request.
 		  - Strict: out-of-radius check-ins are rejected outright with
@@ -152,9 +152,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			)
 			return
 
-		strict = bool(frappe.db.get_value("Shift Type", self.shift, "enable_strict_geofence"))
-
-		assignment_locations = frappe.get_all(
+		assignments = frappe.get_all(
 			"Shift Assignment",
 			filters={
 				"employee": self.employee,
@@ -165,9 +163,15 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				"status": "Active",
 			},
 			or_filters=[["end_date", ">=", self.time], ["end_date", "is", "not set"]],
-			pluck="shift_location",
+			fields=["shift_location", "enable_strict_geofence"],
+			order_by="start_date desc",
+			limit=1,
 		)
-		shift_loc_name = assignment_locations[0] if assignment_locations else None
+		shift_loc_name = assignments[0].shift_location if assignments else None
+		# Strict flag now lives on Shift Assignment (was on Shift Type up to v15.77.3).
+		# When no active assignment matches, default to lenient so untagged check-ins
+		# fall through to the existing silent-allow/remote-approval paths.
+		strict = bool(assignments[0].enable_strict_geofence) if assignments else False
 
 		row = None
 		if shift_loc_name:

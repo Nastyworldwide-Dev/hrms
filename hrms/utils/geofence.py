@@ -4,7 +4,7 @@ Pure helper called from `hrms.overrides.employee_checkin_override.CustomEmployee
 .validate_distance_from_shift_location`. Keeps the branching out of the
 Frappe-bound override so it can be unit-tested without a DB.
 
-Decision rules (see Shift Type.enable_strict_geofence):
+Decision rules (see Shift Assignment.enable_strict_geofence):
     Lenient mode (default):
       - No shift location on assignment   -> allow (None)
       - Radius <= 0                       -> allow (None)

@@ -35,3 +35,4 @@ hrms.patches.v15_0.update_advance_payment_ledger_amount #2025-09-23
 hrms.patches.v15_0.call_set_total_advance_paid_on_advance_documents #2025-09-23
 hrms.patches.v15_0.add_leave_type_permission_for_ess
 hrms.patches.v15_77_0.install_hrms_extension_custom_fields
+hrms.patches.v15_77_4.move_strict_geofence_to_shift_assignment

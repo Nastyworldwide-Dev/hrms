@@ -100,23 +100,26 @@
 			</div>
 
 			<template v-if="settings.data?.allow_geolocation_tracking">
-				<span v-if="locationStatus" class="font-medium text-gray-500 text-sm">
-					{{ locationStatus }}
-				</span>
-
-				<div class="rounded border-4 translate-z-0 block overflow-hidden w-full h-170">
-					<iframe
-						width="100%"
-						height="170"
-						frameborder="0"
-						scrolling="no"
-						marginheight="0"
-						marginwidth="0"
-						style="border: 0"
-						:src="`https://maps.google.com/maps?q=${latitude},${longitude}&hl=en&z=15&amp;output=embed`"
+				<div class="w-full flex flex-row items-center justify-between text-xs">
+					<span class="font-medium text-gray-500">{{ locationStatus }}</span>
+					<span
+						v-if="shiftLocation.data && distanceToShift !== null"
+						class="font-mono font-semibold"
+						:class="
+							isInsideRadius
+								? 'text-emerald-700'
+								: 'text-amber-700'
+						"
 					>
-					</iframe>
+						{{ formattedDistanceToShift }}
+					</span>
 				</div>
+
+				<div
+					ref="mapEl"
+					class="rounded border-4 border-white shadow translate-z-0 block overflow-hidden w-full"
+					style="height: 200px; z-index: 0;"
+				></div>
 			</template>
 
 			<!-- Live selfie preview — camera auto-starts when the modal opens;
@@ -196,7 +199,7 @@
 
 <script setup>
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount } from "vue"
+import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -214,6 +217,22 @@ const checkinTimestamp = ref(null)
 const latitude = ref(0)
 const longitude = ref(0)
 const locationStatus = ref("")
+
+// Live check-in map state — initialised when the modal presents,
+// torn down on dismiss. See onModalPresent / onModalDismiss.
+const mapEl = ref(null)
+let leafletMap = null
+let userMarker = null
+let shiftMarker = null
+let radiusCircle = null
+let geoWatchId = null
+
+const shiftLocation = createResource({
+	url: "hrms.api.geofence.get_active_shift_location",
+	makeParams() {
+		return { employee: employee.data.name }
+	},
+})
 
 // Selfie capture state
 const videoEl = ref(null)
@@ -354,26 +373,212 @@ function handleLocationSuccess(position) {
 		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
 		__("Longitude: {0}°", [Number(longitude.value).toFixed(5)]),
 	].join(", ")
+
+	updateUserMarker()
 }
 
 function handleLocationError(error) {
 	locationStatus.value = "Unable to retrieve your location"
 	if (error) locationStatus.value += `: ERROR(${error.code}): ${error.message}`
+	console.warn("[CheckInPanel] geolocation error:", error)
 }
 
 const fetchLocation = () => {
 	if (!navigator.geolocation) {
 		locationStatus.value = __("Geolocation is not supported by your current browser")
-	} else {
-		locationStatus.value = __("Locating...")
-		navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError)
+		return
+	}
+	locationStatus.value = __("Locating...")
+	// watchPosition gives us live updates while the modal is open so the
+	// user pin moves in real time as the device's GPS drifts/refines.
+	if (geoWatchId !== null) {
+		navigator.geolocation.clearWatch(geoWatchId)
+	}
+	geoWatchId = navigator.geolocation.watchPosition(
+		handleLocationSuccess,
+		handleLocationError,
+		{ enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+	)
+}
+
+function stopWatchingLocation() {
+	if (geoWatchId !== null && navigator.geolocation) {
+		navigator.geolocation.clearWatch(geoWatchId)
+		geoWatchId = null
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Leaflet map — shift location pin + radius circle + live user pin
+// ---------------------------------------------------------------------------
+
+const distanceToShift = computed(() => {
+	const loc = shiftLocation.data
+	if (!loc || !latitude.value || !longitude.value) return null
+	if (!window.L) return null
+	return window.L.latLng(loc.latitude, loc.longitude).distanceTo(
+		window.L.latLng(latitude.value, longitude.value)
+	)
+})
+
+const isInsideRadius = computed(() => {
+	const loc = shiftLocation.data
+	const d = distanceToShift.value
+	if (!loc || d === null) return false
+	return loc.checkin_radius > 0 && d <= loc.checkin_radius
+})
+
+const formattedDistanceToShift = computed(() => {
+	const d = distanceToShift.value
+	if (d === null) return ""
+	const label = isInsideRadius.value ? __("inside") : __("from office")
+	return d >= 1000 ? `${(d / 1000).toFixed(2)} km ${label}` : `${Math.round(d)} m ${label}`
+})
+
+async function initMap() {
+	// Leaflet is loaded via <script> in index.html. If the network hiccups,
+	// retry a couple of times before giving up — never block the check-in.
+	for (let i = 0; i < 10; i++) {
+		if (window.L) break
+		await new Promise((r) => setTimeout(r, 100))
+	}
+	if (!window.L) {
+		console.warn("[CheckInPanel] Leaflet not available; map will be skipped")
+		return
+	}
+	if (!mapEl.value || leafletMap) return
+
+	const loc = shiftLocation.data
+	const center = loc
+		? [loc.latitude, loc.longitude]
+		: latitude.value && longitude.value
+			? [latitude.value, longitude.value]
+			: [3.139, 101.6869] // KL fallback so the tile layer renders something
+	const zoom = loc ? 16 : 13
+
+	leafletMap = window.L.map(mapEl.value, {
+		zoomControl: false,
+		attributionControl: false,
+		dragging: true,
+		tap: true,
+	}).setView(center, zoom)
+
+	window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+		maxZoom: 19,
+	}).addTo(leafletMap)
+
+	if (loc) {
+		const shiftLatLng = window.L.latLng(loc.latitude, loc.longitude)
+		shiftMarker = window.L.marker(shiftLatLng, {
+			title: loc.label,
+		}).addTo(leafletMap)
+		shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
+			permanent: true,
+			direction: "top",
+			offset: [0, -28],
+			className: "shift-loc-tooltip",
+		})
+		if (loc.checkin_radius > 0) {
+			radiusCircle = window.L.circle(shiftLatLng, {
+				radius: loc.checkin_radius,
+				color: loc.strict ? "#dc2626" : "#2563eb",
+				weight: 2,
+				fillColor: loc.strict ? "#dc2626" : "#3b82f6",
+				fillOpacity: 0.12,
+			}).addTo(leafletMap)
+		}
+	}
+
+	updateUserMarker()
+	fitMapBounds()
+}
+
+function updateUserMarker() {
+	if (!leafletMap || !window.L) return
+	if (!latitude.value || !longitude.value) return
+
+	const here = window.L.latLng(latitude.value, longitude.value)
+	if (!userMarker) {
+		// Custom blue dot — Leaflet's default icon is a tall pin which reads
+		// awkwardly for "this is you right now"; a dot is the convention.
+		const dotIcon = window.L.divIcon({
+			className: "user-pin",
+			html: '<div class="user-pin-dot"></div><div class="user-pin-ring"></div>',
+			iconSize: [22, 22],
+			iconAnchor: [11, 11],
+		})
+		userMarker = window.L.marker(here, {
+			icon: dotIcon,
+			title: __("You"),
+			zIndexOffset: 1000,
+		}).addTo(leafletMap)
+	} else {
+		userMarker.setLatLng(here)
+	}
+}
+
+function fitMapBounds() {
+	if (!leafletMap || !window.L) return
+	const points = []
+	if (shiftMarker) points.push(shiftMarker.getLatLng())
+	if (userMarker) points.push(userMarker.getLatLng())
+	if (points.length === 2) {
+		leafletMap.fitBounds(window.L.latLngBounds(points), {
+			padding: [40, 40],
+			maxZoom: 17,
+		})
+	} else if (points.length === 1) {
+		leafletMap.setView(points[0], 16)
+	}
+}
+
+function destroyMap() {
+	if (leafletMap) {
+		leafletMap.remove()
+		leafletMap = null
+	}
+	userMarker = null
+	shiftMarker = null
+	radiusCircle = null
+}
+
+// If the shift-location fetch finishes after the map is already up
+// (slow network on first open), paint the pin + circle now.
+watch(
+	() => shiftLocation.data,
+	(loc) => {
+		if (!leafletMap || !window.L || !loc) return
+		if (!shiftMarker) {
+			const shiftLatLng = window.L.latLng(loc.latitude, loc.longitude)
+			shiftMarker = window.L.marker(shiftLatLng).addTo(leafletMap)
+			shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
+				permanent: true,
+				direction: "top",
+				offset: [0, -28],
+				className: "shift-loc-tooltip",
+			})
+			if (loc.checkin_radius > 0) {
+				radiusCircle = window.L.circle(shiftLatLng, {
+					radius: loc.checkin_radius,
+					color: loc.strict ? "#dc2626" : "#2563eb",
+					weight: 2,
+					fillColor: loc.strict ? "#dc2626" : "#3b82f6",
+					fillOpacity: 0.12,
+				}).addTo(leafletMap)
+			}
+			fitMapBounds()
+		}
+	}
+)
 
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
 	if (settings.data?.allow_geolocation_tracking) {
+		// Kick off the shift-location fetch + live geolocation in parallel.
+		// The map waits for one of them via initMap(); whichever arrives first
+		// renders, the second updates in-place.
+		shiftLocation.reload()
 		fetchLocation()
 	}
 }
@@ -591,12 +796,21 @@ async function uploadSelfie(dataUrl) {
 function onModalPresent() {
 	// Auto-start the camera as soon as the check-in sheet is fully open.
 	startCamera()
+	// Defer one tick so the map container has its final size before Leaflet
+	// measures it. Without this, the tile layer renders at 0x0 on first paint.
+	nextTick(() => {
+		if (settings.data?.allow_geolocation_tracking) {
+			initMap()
+		}
+	})
 }
 
 function onModalDismiss() {
 	stopCamera()
 	cameraStatus.value = "idle"
 	cameraError.value = null
+	stopWatchingLocation()
+	destroyMap()
 }
 
 onMounted(() => {
@@ -612,5 +826,52 @@ onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
 	stopCamera()
+	stopWatchingLocation()
+	destroyMap()
 })
 </script>
+
+<style>
+/* Live "you are here" pin — solid blue dot with a pulsing outer ring. */
+.user-pin { position: relative; width: 22px; height: 22px; }
+.user-pin-dot {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 14px;
+	height: 14px;
+	margin: -7px 0 0 -7px;
+	border-radius: 50%;
+	background: #2563eb;
+	border: 2px solid #ffffff;
+	box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
+}
+.user-pin-ring {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 22px;
+	height: 22px;
+	margin: -11px 0 0 -11px;
+	border-radius: 50%;
+	border: 2px solid rgba(37, 99, 235, 0.6);
+	animation: user-pin-pulse 2s ease-out infinite;
+}
+@keyframes user-pin-pulse {
+	0%   { transform: scale(0.8); opacity: 0.9; }
+	100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Shift-location label sitting above its pin. */
+.shift-loc-tooltip {
+	background: #111827 !important;
+	color: #f9fafb !important;
+	border: none !important;
+	font-size: 11px !important;
+	font-weight: 600 !important;
+	padding: 2px 6px !important;
+	border-radius: 4px !important;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
+.shift-loc-tooltip:before { display: none !important; }
+</style>
