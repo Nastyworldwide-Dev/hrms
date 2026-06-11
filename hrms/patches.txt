@@ -36,3 +36,4 @@ hrms.patches.v15_0.add_leave_type_permission_for_ess
 hrms.patches.v15_77_0.install_hrms_extension_custom_fields
 hrms.patches.v15_77_4.move_strict_geofence_to_shift_assignment
 hrms.patches.v15_77_11.backfill_empty_pwa_messages
+hrms.patches.v15_77_12.add_notice_period_unit_to_employee
