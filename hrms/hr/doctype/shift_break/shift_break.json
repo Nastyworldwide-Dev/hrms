@@ -7,6 +7,8 @@
  "field_order": [
   "day_of_week",
   "period",
+  "break_type",
+  "break_hours",
   "start_time",
   "end_time"
  ],
@@ -30,23 +32,45 @@
    "reqd": 1
   },
   {
+   "default": "Fixed",
+   "description": "'Fixed' deducts only the part of the Start-End window that overlaps worked time. 'Flexible' has no window — the Break Duration is deducted whenever the break is taken.",
+   "fieldname": "break_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Break Type",
+   "options": "Fixed\nFlexible",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.break_type === 'Flexible'",
+   "description": "Length of the flexible break in hours (e.g. 1 = one hour, 0.5 = 30 minutes).",
+   "fieldname": "break_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Break Duration (Hours)",
+   "mandatory_depends_on": "eval:doc.break_type === 'Flexible'",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.break_type !== 'Flexible'",
    "fieldname": "start_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Start Time",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.break_type !== 'Flexible'"
   },
   {
+   "depends_on": "eval:doc.break_type !== 'Flexible'",
    "fieldname": "end_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "End Time",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.break_type !== 'Flexible'"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-05-22 00:00:00.000000",
+ "modified": "2026-06-12 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Break",

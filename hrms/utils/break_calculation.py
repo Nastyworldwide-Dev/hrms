@@ -1,10 +1,19 @@
 """Unpaid-break overlap calculation for working-hours deduction.
 
 A Shift Type carries a `breaks` child table (Shift Break rows). Each row
-holds a day-of-week, a start/end time, and a `period` flag — either
-"Normal only" (applies outside the Ramadan window) or "Ramadan only"
-(applies inside it). The Ramadan window itself is configured in
-HR Settings via `ramadan_start_date` / `ramadan_end_date`.
+holds a day-of-week, a `period` flag — either "Normal only" (applies
+outside the Ramadan window) or "Ramadan only" (applies inside it) — and
+a `break_type`:
+
+  - "Fixed" (default, also used for legacy rows with no break_type):
+    a start/end time window; only the overlap with actual worked time
+    is deducted.
+  - "Flexible": no window — `break_hours` is deducted for each
+    applicable day, capped at the time worked that day. The employee
+    may take the break whenever they like.
+
+The Ramadan window itself is configured in HR Settings via
+`ramadan_start_date` / `ramadan_end_date`.
 
 Public API:
     get_break_minutes(work_start, work_end, break_rows,
@@ -113,6 +122,32 @@ def get_break_minutes(
 			row_period = row["period"] if isinstance(row, dict) else row.period
 			if not _row_applies(row_period, is_ramadan):
 				continue
+
+			row_type = row.get("break_type") if isinstance(row, dict) else getattr(row, "break_type", None)
+			if (row_type or "Fixed") == "Flexible":
+				# No fixed window — deduct the configured duration, capped
+				# at the time actually worked within this calendar day.
+				row_hours = (
+					row.get("break_hours") if isinstance(row, dict) else getattr(row, "break_hours", 0)
+				)
+				duration_min = int(float(row_hours or 0) * 60)
+				if duration_min <= 0:
+					continue
+				slice_min = int((slice_end - slice_start).total_seconds() // 60)
+				minutes = min(duration_min, slice_min)
+				if minutes:
+					logger.info(
+						"[break_calculation] %s %s flexible=%dm (work %s-%s, configured %dm)",
+						day,
+						weekday_name,
+						minutes,
+						slice_start,
+						slice_end,
+						duration_min,
+					)
+					total += minutes
+				continue
+
 			row_start_t = _coerce_time(row["start_time"] if isinstance(row, dict) else row.start_time)
 			row_end_t = _coerce_time(row["end_time"] if isinstance(row, dict) else row.end_time)
 			if row_end_t <= row_start_t:

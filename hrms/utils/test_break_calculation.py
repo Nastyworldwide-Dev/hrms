@@ -21,6 +21,17 @@ def _mk_row(day_of_week, period, start, end):
 	}
 
 
+def _mk_flexible_row(day_of_week, period, hours):
+	return {
+		"day_of_week": day_of_week,
+		"period": period,
+		"break_type": "Flexible",
+		"break_hours": hours,
+		"start_time": None,
+		"end_time": None,
+	}
+
+
 # Reusable Malaysian shift break setup
 MY_MON_THU_LUNCH = [
 	_mk_row(d, "Normal only", time(13, 0), time(14, 0))
@@ -138,6 +149,65 @@ class TestBreakOverlap(unittest.TestCase):
 			ramadan_start=date(2026, 2, 17),
 			ramadan_end=date(2026, 3, 18),
 		)
+		self.assertEqual(got, 60)
+
+
+MON_FLEX_1H = [_mk_flexible_row("Monday", "Normal only", 1.0)]
+
+
+class TestFlexibleBreaks(unittest.TestCase):
+	def test_flexible_deducts_full_duration(self):
+		# Monday 9-17 with a 1h flexible break -> 60 min regardless of when taken
+		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 17), MON_FLEX_1H)
+		self.assertEqual(got, 60)
+
+	def test_flexible_capped_at_work_span(self):
+		# Worked only 30 min -> can't deduct more than the span
+		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 9, 30), MON_FLEX_1H)
+		self.assertEqual(got, 30)
+
+	def test_flexible_day_of_week_mismatch(self):
+		# Row is for Monday; 2026-05-26 is a Tuesday -> 0
+		got = get_break_minutes(datetime(2026, 5, 26, 9), datetime(2026, 5, 26, 17), MON_FLEX_1H)
+		self.assertEqual(got, 0)
+
+	def test_flexible_respects_ramadan_period(self):
+		rows = [_mk_flexible_row("Tuesday", "Ramadan only", 0.5)]
+		# Inside Ramadan -> 30 min
+		got = get_break_minutes(
+			datetime(2026, 2, 17, 9),
+			datetime(2026, 2, 17, 17),
+			rows,
+			ramadan_start=date(2026, 2, 17),
+			ramadan_end=date(2026, 3, 18),
+		)
+		self.assertEqual(got, 30)
+		# Outside Ramadan -> 0
+		got = get_break_minutes(datetime(2026, 5, 26, 9), datetime(2026, 5, 26, 17), rows)
+		self.assertEqual(got, 0)
+
+	def test_mixed_fixed_and_flexible_sum(self):
+		# Monday fixed 13-14 lunch (60) + 0.5h flexible (30) -> 90
+		rows = [*MY_MON_THU_LUNCH, _mk_flexible_row("Monday", "Normal only", 0.5)]
+		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 17), rows)
+		self.assertEqual(got, 90)
+
+	def test_flexible_zero_or_missing_hours_ignored(self):
+		rows = [
+			_mk_flexible_row("Monday", "Normal only", 0),
+			_mk_flexible_row("Monday", "Normal only", None),
+		]
+		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 17), rows)
+		self.assertEqual(got, 0)
+
+	def test_flexible_midnight_crossing_applies_on_row_day(self):
+		# Night shift Mon 22:00 -> Tue 06:00: Monday slice is 2h -> full 60 min deducted there
+		got = get_break_minutes(datetime(2026, 5, 25, 22), datetime(2026, 5, 26, 6), MON_FLEX_1H)
+		self.assertEqual(got, 60)
+
+	def test_rows_without_break_type_still_treated_as_fixed(self):
+		# Legacy rows (no break_type key) must keep behaving as fixed windows
+		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 17), MY_MON_THU_LUNCH)
 		self.assertEqual(got, 60)
 
 
