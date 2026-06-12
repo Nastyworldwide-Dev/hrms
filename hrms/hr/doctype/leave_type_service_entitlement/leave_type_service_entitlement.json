@@ -5,11 +5,21 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "grade",
   "from_years",
   "to_years",
   "leave_days"
  ],
  "fields": [
+  {
+   "columns": 2,
+   "description": "Leave blank to apply to employees of all grades. A row with a grade takes precedence over rows without one.",
+   "fieldname": "grade",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Grade",
+   "options": "Employee Grade"
+  },
   {
    "columns": 3,
    "description": "Minimum completed years of service for this entitlement",
@@ -31,7 +41,7 @@
    "reqd": 1
   },
   {
-   "columns": 3,
+   "columns": 2,
    "fieldname": "leave_days",
    "fieldtype": "Float",
    "in_list_view": 1,

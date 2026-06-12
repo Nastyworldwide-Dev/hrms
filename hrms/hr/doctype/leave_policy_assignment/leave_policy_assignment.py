@@ -103,7 +103,10 @@ class LeavePolicyAssignment(Document):
 					annual_allocation = leave_policy_detail.annual_allocation
 					if leave_details.based_on_years_of_service:
 						service_based_leave_days = get_service_based_leave_days(
-							leave_details.name, date_of_joining, self.effective_from
+							leave_details.name,
+							date_of_joining,
+							self.effective_from,
+							frappe.db.get_value("Employee", self.employee, "grade"),
 						)
 						if service_based_leave_days is not None:
 							annual_allocation = service_based_leave_days

@@ -37,6 +37,53 @@ class TestLeaveType(FrappeTestCase):
 		)
 		self.assertRaises(frappe.ValidationError, leave_type.insert)
 
+	def test_overlapping_ranges_allowed_for_different_grades(self):
+		create_employee_grade("_Test Senior Grade")
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[
+				{"from_years": 0, "to_years": 5, "leave_days": 10},
+				{"from_years": 0, "to_years": 5, "leave_days": 15, "grade": "_Test Senior Grade"},
+			]
+		)
+		leave_type.insert()  # should not throw
+
+	def test_overlapping_ranges_not_allowed_within_same_grade(self):
+		create_employee_grade("_Test Senior Grade")
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[
+				{"from_years": 0, "to_years": 5, "leave_days": 10, "grade": "_Test Senior Grade"},
+				{"from_years": 3, "to_years": 8, "leave_days": 15, "grade": "_Test Senior Grade"},
+			]
+		)
+		self.assertRaises(frappe.ValidationError, leave_type.insert)
+
+	def test_get_service_based_leave_days_with_grade(self):
+		create_employee_grade("_Test Senior Grade")
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[
+				{"from_years": 0, "to_years": 5, "leave_days": 10},
+				{"from_years": 0, "to_years": 5, "leave_days": 15, "grade": "_Test Senior Grade"},
+			]
+		)
+		leave_type.insert()
+
+		# grade-specific slab wins over the generic slab
+		self.assertEqual(
+			get_service_based_leave_days(
+				leave_type.name, "2023-01-15", "2026-01-01", grade="_Test Senior Grade"
+			),
+			15,
+		)
+		# employees without a grade (or with another grade) fall back to the generic slab
+		self.assertEqual(get_service_based_leave_days(leave_type.name, "2023-01-15", "2026-01-01"), 10)
+
+		# no generic fallback -> None for other grades
+		leave_type.service_entitlements = [
+			row for row in leave_type.service_entitlements if row.grade == "_Test Senior Grade"
+		]
+		leave_type.save()
+		self.assertIsNone(get_service_based_leave_days(leave_type.name, "2023-01-15", "2026-01-01"))
+
 	def test_get_service_based_leave_days(self):
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[
@@ -56,6 +103,11 @@ class TestLeaveType(FrappeTestCase):
 		leave_type.service_entitlements = leave_type.service_entitlements[1:]
 		leave_type.save()
 		self.assertIsNone(get_service_based_leave_days(leave_type.name, "2025-06-01", "2026-01-01"))
+
+
+def create_employee_grade(grade_name):
+	if not frappe.db.exists("Employee Grade", grade_name):
+		frappe.get_doc({"doctype": "Employee Grade", "__newname": grade_name}).insert()
 
 
 def new_service_based_leave_type(service_entitlements):

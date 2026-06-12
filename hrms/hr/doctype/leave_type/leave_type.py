@@ -96,23 +96,27 @@ class LeaveType(Document):
 				title=_("Service Entitlements Missing"),
 			)
 
-		rows = sorted(self.service_entitlements, key=lambda row: row.from_years)
-		for row in rows:
+		rows_by_grade = {}
+		for row in self.service_entitlements:
 			if row.to_years < row.from_years:
 				frappe.throw(
 					_("Row #{0}: {1} cannot be less than {2}").format(
 						row.idx, bold(_("To (Years of Service)")), bold(_("From (Years of Service)"))
 					)
 				)
+			rows_by_grade.setdefault(row.grade or "", []).append(row)
 
-		for previous, current in pairwise(rows):
-			if current.from_years <= previous.to_years:
-				frappe.throw(
-					_("Row #{0}: Years of service range overlaps with row #{1}").format(
-						current.idx, previous.idx
-					),
-					title=_("Overlapping Service Entitlements"),
-				)
+		# ranges may overlap across grades, but not within the same grade
+		for rows in rows_by_grade.values():
+			rows = sorted(rows, key=lambda row: row.from_years)
+			for previous, current in pairwise(rows):
+				if current.from_years <= previous.to_years:
+					frappe.throw(
+						_("Row #{0}: Years of service range overlaps with row #{1}").format(
+							current.idx, previous.idx
+						),
+						title=_("Overlapping Service Entitlements"),
+					)
 
 	def clear_cache(self):
 		from hrms.payroll.doctype.salary_slip.salary_slip import LEAVE_TYPE_MAP
@@ -121,28 +125,37 @@ class LeaveType(Document):
 		return super().clear_cache()
 
 
-def get_service_based_leave_days(leave_type: str, date_of_joining, on_date) -> float | None:
+def get_service_based_leave_days(leave_type: str, date_of_joining, on_date, grade=None) -> float | None:
 	"""Returns entitled leave days for the slab matching the employee's completed
-	years of service as on `on_date`, or None if no slab covers it."""
+	years of service as on `on_date`, or None if no slab covers it.
+	A slab for the employee's grade takes precedence over slabs without a grade."""
 	from dateutil.relativedelta import relativedelta
 
 	if not date_of_joining:
 		return None
 
 	years_of_service = relativedelta(getdate(on_date), getdate(date_of_joining)).years
-	leave_days = frappe.db.get_value(
+	slabs = frappe.get_all(
 		"Leave Type Service Entitlement",
-		{
+		filters={
+			"parenttype": "Leave Type",
 			"parent": leave_type,
 			"from_years": ("<=", years_of_service),
 			"to_years": (">=", years_of_service),
 		},
-		"leave_days",
+		fields=["grade", "leave_days"],
 	)
+
+	matched = next((slab for slab in slabs if grade and slab.grade == grade), None) or next(
+		(slab for slab in slabs if not slab.grade), None
+	)
+	leave_days = matched.leave_days if matched else None
+
 	frappe.logger("leave").info(
-		"[leave_type] Service-based entitlement for %s: %s completed years -> %s days",
+		"[leave_type] Service-based entitlement for %s: %s completed years, grade %s -> %s days",
 		leave_type,
 		years_of_service,
+		grade,
 		leave_days,
 	)
 	return leave_days
@@ -157,5 +170,5 @@ def get_service_based_leave_days_for_employee(
 	if not frappe.db.get_value("Leave Type", leave_type, "based_on_years_of_service"):
 		return None
 
-	date_of_joining = frappe.db.get_value("Employee", employee, "date_of_joining")
-	return get_service_based_leave_days(leave_type, date_of_joining, on_date or today())
+	date_of_joining, grade = frappe.db.get_value("Employee", employee, ["date_of_joining", "grade"])
+	return get_service_based_leave_days(leave_type, date_of_joining, on_date or today(), grade)
