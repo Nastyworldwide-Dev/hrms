@@ -77,12 +77,37 @@ class TestLeaveType(FrappeTestCase):
 		# employees without a grade (or with another grade) fall back to the generic slab
 		self.assertEqual(get_service_based_leave_days(leave_type.name, "2023-01-15", "2026-01-01"), 10)
 
-		# no generic fallback -> None for other grades
-		leave_type.service_entitlements = [
-			row for row in leave_type.service_entitlements if row.grade == "_Test Senior Grade"
-		]
+		# grade slab not covering the employee's service years
+		# -> generic slab of another range applies
+		leave_type.set("service_entitlements", [])
+		leave_type.extend(
+			"service_entitlements",
+			[
+				{"from_years": 0, "to_years": 5, "leave_days": 10},
+				{"from_years": 6, "to_years": 10, "leave_days": 20, "grade": "_Test Senior Grade"},
+			],
+		)
 		leave_type.save()
-		self.assertIsNone(get_service_based_leave_days(leave_type.name, "2023-01-15", "2026-01-01"))
+		self.assertEqual(
+			get_service_based_leave_days(
+				leave_type.name, "2023-01-15", "2026-01-01", grade="_Test Senior Grade"
+			),
+			10,
+		)
+		self.assertEqual(
+			get_service_based_leave_days(
+				leave_type.name, "2018-01-15", "2026-01-01", grade="_Test Senior Grade"
+			),
+			20,
+		)
+
+		# no generic fallback -> None for employees outside the grade slabs
+		leave_type.set(
+			"service_entitlements",
+			[row for row in leave_type.service_entitlements if row.grade == "_Test Senior Grade"],
+		)
+		leave_type.save()
+		self.assertIsNone(get_service_based_leave_days(leave_type.name, "2018-01-15", "2026-01-01"))
 
 	def test_get_service_based_leave_days(self):
 		leave_type = new_service_based_leave_type(
