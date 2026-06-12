@@ -14,6 +14,14 @@ class TestLeaveType(FrappeTestCase):
 		leave_type = new_service_based_leave_type(service_entitlements=[])
 		self.assertRaises(frappe.ValidationError, leave_type.insert)
 
+	def test_service_entitlement_not_allowed_with_earned_leave(self):
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[{"from_years": 0, "to_years": 5, "leave_days": 10}]
+		)
+		leave_type.is_earned_leave = 1
+		leave_type.earned_leave_frequency = "Monthly"
+		self.assertRaises(frappe.ValidationError, leave_type.insert)
+
 	def test_invalid_service_entitlement_range(self):
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[{"from_years": 5, "to_years": 2, "leave_days": 10}]

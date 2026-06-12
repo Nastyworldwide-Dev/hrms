@@ -118,7 +118,8 @@
   },
   {
    "default": "0",
-   "description": "Allocate leave days as per the entitlement table below, based on the employee's completed years of service. This overrides the Annual Allocation set in the Leave Policy.",
+   "depends_on": "eval:doc.is_earned_leave == 0 && doc.is_compensatory == 0",
+   "description": "Allocate leave days as per the entitlement table below, based on the employee's completed years of service. This overrides the Annual Allocation set in the Leave Policy. If no row covers the employee's years of service, the Leave Policy's Annual Allocation is used.",
    "fieldname": "based_on_years_of_service",
    "fieldtype": "Check",
    "label": "Entitlement Based on Years of Service"

@@ -78,6 +78,18 @@ class LeaveType(Document):
 		if not self.based_on_years_of_service:
 			return
 
+		# earned leaves accrue periodically from the policy's annual allocation and
+		# compensatory leaves are allocated per request, so slabs cannot apply to them
+		if self.is_earned_leave or self.is_compensatory:
+			frappe.throw(
+				_("{0} cannot be combined with {1} or {2}").format(
+					bold(_("Entitlement Based on Years of Service")),
+					bold(_("Is Earned Leave")),
+					bold(_("Is Compensatory")),
+				),
+				title=_("Not Allowed"),
+			)
+
 		if not self.service_entitlements:
 			frappe.throw(
 				_("Please add at least one row in the Service Entitlements table"),

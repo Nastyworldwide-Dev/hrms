@@ -144,6 +144,8 @@ frappe.ui.form.on("Leave Allocation", {
 	},
 
 	set_service_based_leaves: function (frm) {
+		// editable default like the leave_policy trigger below; allocations linked
+		// to a Leave Policy get their value from the policy/assignment flow instead
 		if (frm.doc.docstatus !== 0 || !frm.doc.employee || !frm.doc.leave_type || frm.doc.leave_policy)
 			return;
 
