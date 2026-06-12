@@ -2,10 +2,12 @@
 # License: GNU General Public License v3. See license.txt
 
 
+from itertools import pairwise
+
 import frappe
 from frappe import _, bold
 from frappe.model.document import Document
-from frappe.utils import today
+from frappe.utils import getdate, today
 
 
 class LeaveType(Document):
@@ -13,6 +15,7 @@ class LeaveType(Document):
 		self.validate_lwp()
 		self.validate_leave_types()
 		self.validate_allocated_earned_leave()
+		self.validate_service_entitlements()
 
 	def validate_lwp(self):
 		if self.is_lwp:
@@ -71,8 +74,76 @@ class LeaveType(Document):
 					),
 				)
 
+	def validate_service_entitlements(self):
+		if not self.based_on_years_of_service:
+			return
+
+		if not self.service_entitlements:
+			frappe.throw(
+				_("Please add at least one row in the Service Entitlements table"),
+				title=_("Service Entitlements Missing"),
+			)
+
+		rows = sorted(self.service_entitlements, key=lambda row: row.from_years)
+		for row in rows:
+			if row.to_years < row.from_years:
+				frappe.throw(
+					_("Row #{0}: {1} cannot be less than {2}").format(
+						row.idx, bold(_("To (Years of Service)")), bold(_("From (Years of Service)"))
+					)
+				)
+
+		for previous, current in pairwise(rows):
+			if current.from_years <= previous.to_years:
+				frappe.throw(
+					_("Row #{0}: Years of service range overlaps with row #{1}").format(
+						current.idx, previous.idx
+					),
+					title=_("Overlapping Service Entitlements"),
+				)
+
 	def clear_cache(self):
 		from hrms.payroll.doctype.salary_slip.salary_slip import LEAVE_TYPE_MAP
 
 		frappe.cache().delete_value(LEAVE_TYPE_MAP)
 		return super().clear_cache()
+
+
+def get_service_based_leave_days(leave_type: str, date_of_joining, on_date) -> float | None:
+	"""Returns entitled leave days for the slab matching the employee's completed
+	years of service as on `on_date`, or None if no slab covers it."""
+	from dateutil.relativedelta import relativedelta
+
+	if not date_of_joining:
+		return None
+
+	years_of_service = relativedelta(getdate(on_date), getdate(date_of_joining)).years
+	leave_days = frappe.db.get_value(
+		"Leave Type Service Entitlement",
+		{
+			"parent": leave_type,
+			"from_years": ("<=", years_of_service),
+			"to_years": (">=", years_of_service),
+		},
+		"leave_days",
+	)
+	frappe.logger("leave").info(
+		"[leave_type] Service-based entitlement for %s: %s completed years -> %s days",
+		leave_type,
+		years_of_service,
+		leave_days,
+	)
+	return leave_days
+
+
+@frappe.whitelist()
+def get_service_based_leave_days_for_employee(
+	leave_type: str, employee: str, on_date: str | None = None
+) -> float | None:
+	frappe.has_permission("Employee", "read", doc=employee, throw=True)
+
+	if not frappe.db.get_value("Leave Type", leave_type, "based_on_years_of_service"):
+		return None
+
+	date_of_joining = frappe.db.get_value("Employee", employee, "date_of_joining")
+	return get_service_based_leave_days(leave_type, date_of_joining, on_date or today())

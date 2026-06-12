@@ -22,6 +22,9 @@
   "allow_over_allocation",
   "include_holiday",
   "is_compensatory",
+  "based_on_years_of_service",
+  "service_entitlement_section",
+  "service_entitlements",
   "carry_forward_section",
   "maximum_carry_forwarded_leaves",
   "expire_carry_forwarded_leaves_after_days",
@@ -112,6 +115,26 @@
    "fieldname": "is_compensatory",
    "fieldtype": "Check",
    "label": "Is Compensatory"
+  },
+  {
+   "default": "0",
+   "description": "Allocate leave days as per the entitlement table below, based on the employee's completed years of service. This overrides the Annual Allocation set in the Leave Policy.",
+   "fieldname": "based_on_years_of_service",
+   "fieldtype": "Check",
+   "label": "Entitlement Based on Years of Service"
+  },
+  {
+   "depends_on": "eval:doc.based_on_years_of_service == 1",
+   "fieldname": "service_entitlement_section",
+   "fieldtype": "Section Break",
+   "label": "Entitlement Based on Years of Service"
+  },
+  {
+   "fieldname": "service_entitlements",
+   "fieldtype": "Table",
+   "label": "Service Entitlements",
+   "mandatory_depends_on": "eval:doc.based_on_years_of_service == 1",
+   "options": "Leave Type Service Entitlement"
   },
   {
    "collapsible": 1,
