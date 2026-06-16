@@ -3,12 +3,16 @@
 Public API:
     get_ot_pay(employee, start_date, end_date, basic, day_type='normal') -> float
 
-Rules (Employment Act 1955, Malaysia):
-  - hourly_rate = basic / (26 * 8)
+Rates are configured per shift on the Shift Type "Overtime" tab (the
+constants below are the Employment Act 1955 defaults used as fallbacks):
+  - hourly_rate = basic / (working_days_per_month * normal_hours_per_day)  # 26 * 8
   - Normal day:        1.5x
   - Rest day (Sunday): 2.0x
   - Off day  (Saturday): 1.5x first 4 hrs, 2.0x after
   - Public holiday:    3.0x
+
+Overtime is only priced for shifts with `enable_overtime` set; the day's
+rates, hourly-rate divisors, grace and caps are read from that shift.
 
 Sessions are paired IN -> OUT in chronological order. If a session
 crosses midnight, OT hours are SPLIT at the date boundary: pre-midnight
@@ -23,26 +27,70 @@ from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 
 import frappe
-from frappe.utils import get_datetime, getdate
+from frappe.utils import cint, flt, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
 WORKING_DAYS_PER_MONTH = 26
 HOURS_PER_DAY = 8
+OFF_DAY_BAND_HOURS = 4.0
 
 OT_MULTIPLIERS = {
 	"normal": 1.5,
 	"rest": 2.0,
-	"off": 1.5,  # first 4 hours; >4 uses off_excess
+	"off": 1.5,  # first OFF_DAY_BAND_HOURS hours; beyond uses off_excess
 	"off_excess": 2.0,
 	"public_holiday": 3.0,
 }
 
 
-def _hourly_rate(basic):
-	if not basic or basic <= 0:
+def _hourly_rate(basic, days_per_month=WORKING_DAYS_PER_MONTH, hours_per_day=HOURS_PER_DAY):
+	if not basic or basic <= 0 or days_per_month <= 0 or hours_per_day <= 0:
 		return 0.0
-	return basic / (WORKING_DAYS_PER_MONTH * HOURS_PER_DAY)
+	return basic / (days_per_month * hours_per_day)
+
+
+def _get_shift_ot_config(shift_name):
+	"""Read the Overtime tab settings off a Shift Type. Returns None when the
+	shift is missing or overtime is disabled (so no OT is priced)."""
+	if not shift_name:
+		return None
+
+	shift = frappe.get_cached_value(
+		"Shift Type",
+		shift_name,
+		[
+			"enable_overtime",
+			"minimum_overtime_minutes",
+			"overtime_working_days_per_month",
+			"overtime_normal_hours_per_day",
+			"overtime_normal_day_multiplier",
+			"overtime_rest_day_multiplier",
+			"overtime_off_day_multiplier",
+			"overtime_off_day_band_hours",
+			"overtime_off_day_excess_multiplier",
+			"overtime_public_holiday_multiplier",
+			"daily_overtime_cap_hours",
+			"monthly_overtime_cap_hours",
+		],
+		as_dict=True,
+	)
+	if not shift or not shift.enable_overtime:
+		return None
+
+	return {
+		"min_minutes": cint(shift.minimum_overtime_minutes),
+		"days_per_month": shift.overtime_working_days_per_month or WORKING_DAYS_PER_MONTH,
+		"hours_per_day": shift.overtime_normal_hours_per_day or HOURS_PER_DAY,
+		"normal": shift.overtime_normal_day_multiplier or OT_MULTIPLIERS["normal"],
+		"rest": shift.overtime_rest_day_multiplier or OT_MULTIPLIERS["rest"],
+		"off": shift.overtime_off_day_multiplier or OT_MULTIPLIERS["off"],
+		"off_band_hours": shift.overtime_off_day_band_hours or OFF_DAY_BAND_HOURS,
+		"off_excess": shift.overtime_off_day_excess_multiplier or OT_MULTIPLIERS["off_excess"],
+		"public_holiday": shift.overtime_public_holiday_multiplier or OT_MULTIPLIERS["public_holiday"],
+		"daily_cap": flt(shift.daily_overtime_cap_hours),
+		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
+	}
 
 
 def _classify_day(employee, day, default_day_type):
@@ -78,21 +126,25 @@ def _classify_day(employee, day, default_day_type):
 	return default_day_type or "normal"
 
 
-def _ot_amount_for_day(ot_hours, hourly_rate, day_type):
+def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
 	logger.info(
 		"[ot_calculation] amount ot_hours=%.2f rate=%.2f day_type=%s", ot_hours, hourly_rate, day_type
 	)
 	if ot_hours <= 0 or hourly_rate <= 0:
 		return 0.0
 	if day_type == "off":
-		first = min(ot_hours, 4.0)
-		excess = max(0.0, ot_hours - 4.0)
+		band = config["off_band_hours"]
+		first = min(ot_hours, band)
+		excess = max(0.0, ot_hours - band)
 		return round(
-			(first * hourly_rate * OT_MULTIPLIERS["off"])
-			+ (excess * hourly_rate * OT_MULTIPLIERS["off_excess"]),
+			(first * hourly_rate * config["off"]) + (excess * hourly_rate * config["off_excess"]),
 			2,
 		)
-	multiplier = OT_MULTIPLIERS.get(day_type, OT_MULTIPLIERS["normal"])
+	multiplier = {
+		"normal": config["normal"],
+		"rest": config["rest"],
+		"public_holiday": config["public_holiday"],
+	}.get(day_type, config["normal"])
 	return round(ot_hours * hourly_rate * multiplier, 2)
 
 
@@ -109,7 +161,6 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
-	hourly_rate = _hourly_rate(basic)
 
 	fetch_start = start_date - timedelta(days=1)
 	fetch_end = end_date + timedelta(days=1)
@@ -123,6 +174,7 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 			"name",
 			"time",
 			"log_type",
+			"shift",
 			"shift_actual_start",
 			"shift_actual_end",
 			"remote_approval_status",
@@ -133,23 +185,41 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 	sessions = _pair_sessions(checkins)
 
 	per_day_hours: dict[date, float] = defaultdict(float)
+	per_day_shift: dict[date, str] = {}
 	for s in sessions:
 		if not s.get("shift_start") or not s.get("shift_end"):
 			logger.info("[ot_calculation] Skipping session in=%s — no shift bounds", s.get("first_in"))
 			continue
 		if s["first_in"] < s["shift_start"]:
-			_accumulate_range_by_day(per_day_hours, s["first_in"], s["shift_start"])
+			_accumulate_range_by_day(
+				per_day_hours, per_day_shift, s["shift"], s["first_in"], s["shift_start"]
+			)
 		if s["last_out"] > s["shift_end"]:
-			_accumulate_range_by_day(per_day_hours, s["shift_end"], s["last_out"])
+			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], s["shift_end"], s["last_out"])
 
 	total_pay = 0.0
+	monthly_ot_hours = 0.0
 	for day, hours in sorted(per_day_hours.items()):
-		if not (start_date <= day <= end_date):
+		if not (start_date <= day <= end_date) or hours <= 0:
 			continue
-		if hours <= 0:
+
+		config = _get_shift_ot_config(per_day_shift.get(day))
+		if not config:
+			# shift missing or overtime disabled for this shift
 			continue
+		if hours * 60.0 < config["min_minutes"]:
+			continue
+		if config["daily_cap"] > 0:
+			hours = min(hours, config["daily_cap"])
+		if config["monthly_cap"] > 0:
+			hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
+			if hours <= 0:
+				continue
+		monthly_ot_hours += hours
+
 		resolved_day_type = _classify_day(employee, day, day_type)
-		amount = _ot_amount_for_day(hours, hourly_rate, resolved_day_type)
+		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
+		amount = _ot_amount_for_day(hours, hourly_rate, resolved_day_type, config)
 		logger.info(
 			"[ot_calculation] %s %s ot_hours=%.2f day_type=%s amount=%.2f",
 			employee,
@@ -164,8 +234,9 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 	return round(total_pay, 2)
 
 
-def _accumulate_range_by_day(buckets, start_dt, end_dt):
-	"""Add (start_dt, end_dt) duration to `buckets`, splitting at midnight."""
+def _accumulate_range_by_day(buckets, shift_buckets, shift_name, start_dt, end_dt):
+	"""Add (start_dt, end_dt) duration to `buckets`, splitting at midnight.
+	Records the contributing shift per day in `shift_buckets`."""
 	if end_dt <= start_dt:
 		return
 	cursor = start_dt
@@ -175,6 +246,7 @@ def _accumulate_range_by_day(buckets, start_dt, end_dt):
 		hours = (slice_end - cursor).total_seconds() / 3600.0
 		if hours > 0:
 			buckets[cursor.date()] += hours
+			shift_buckets[cursor.date()] = shift_name
 			logger.info(
 				"[ot_calculation] slice %s += %.2fh (%s -> %s)",
 				cursor.date(),
@@ -205,6 +277,7 @@ def _pair_sessions(checkins):
 				)
 			current = {
 				"first_in": log_time,
+				"shift": row.get("shift"),
 				"shift_start": get_datetime(row["shift_actual_start"])
 				if row.get("shift_actual_start")
 				else None,
@@ -212,6 +285,8 @@ def _pair_sessions(checkins):
 			}
 		elif log_type == "OUT" and current is not None:
 			current["last_out"] = log_time
+			if not current.get("shift") and row.get("shift"):
+				current["shift"] = row.get("shift")
 			if not current["shift_start"] and row.get("shift_actual_start"):
 				current["shift_start"] = get_datetime(row["shift_actual_start"])
 			if not current["shift_end"] and row.get("shift_actual_end"):

@@ -33,7 +33,25 @@
   "enable_early_exit_marking",
   "early_exit_grace_period",
   "breaks_section",
-  "breaks"
+  "breaks",
+  "overtime_tab",
+  "enable_overtime",
+  "overtime_measurement_section",
+  "minimum_overtime_minutes",
+  "overtime_rate_basis_section",
+  "overtime_working_days_per_month",
+  "overtime_normal_hours_per_day",
+  "overtime_multipliers_section",
+  "overtime_normal_day_multiplier",
+  "overtime_rest_day_multiplier",
+  "overtime_public_holiday_multiplier",
+  "overtime_multipliers_column",
+  "overtime_off_day_multiplier",
+  "overtime_off_day_band_hours",
+  "overtime_off_day_excess_multiplier",
+  "overtime_limits_section",
+  "daily_overtime_cap_hours",
+  "monthly_overtime_cap_hours"
  ],
  "fields": [
   {
@@ -200,6 +218,140 @@
    "fieldtype": "Table",
    "label": "Breaks",
    "options": "Shift Break"
+  },
+  {
+   "fieldname": "overtime_tab",
+   "fieldtype": "Tab Break",
+   "label": "Overtime"
+  },
+  {
+   "default": "0",
+   "description": "When enabled, time worked outside this shift's window is priced as overtime using the rates below (Employment Act 1955 defaults).",
+   "fieldname": "enable_overtime",
+   "fieldtype": "Check",
+   "label": "Enable Overtime"
+  },
+  {
+   "depends_on": "enable_overtime",
+   "fieldname": "overtime_measurement_section",
+   "fieldtype": "Section Break",
+   "label": "Measurement"
+  },
+  {
+   "default": "0",
+   "description": "Trailing minutes below this grace are not counted as overtime. (Zero to disable)",
+   "fieldname": "minimum_overtime_minutes",
+   "fieldtype": "Int",
+   "label": "Minimum Overtime to Qualify (Minutes)",
+   "non_negative": 1
+  },
+  {
+   "depends_on": "enable_overtime",
+   "description": "Hourly Rate of Pay = Basic Salary ÷ (Working Days per Month × Normal Hours per Day)",
+   "fieldname": "overtime_rate_basis_section",
+   "fieldtype": "Section Break",
+   "label": "Rate Basis"
+  },
+  {
+   "default": "26",
+   "description": "Ordinary Rate of Pay divisor (Employment Act default: 26)",
+   "fieldname": "overtime_working_days_per_month",
+   "fieldtype": "Int",
+   "label": "Working Days per Month",
+   "non_negative": 1
+  },
+  {
+   "default": "8",
+   "description": "Hourly Rate of Pay divisor (default: 8)",
+   "fieldname": "overtime_normal_hours_per_day",
+   "fieldtype": "Float",
+   "label": "Normal Hours per Day",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "depends_on": "enable_overtime",
+   "fieldname": "overtime_multipliers_section",
+   "fieldtype": "Section Break",
+   "label": "Rate Multipliers (× Hourly Rate)"
+  },
+  {
+   "default": "1.5",
+   "fieldname": "overtime_normal_day_multiplier",
+   "fieldtype": "Float",
+   "label": "Normal Working Day",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "2.0",
+   "fieldname": "overtime_rest_day_multiplier",
+   "fieldtype": "Float",
+   "label": "Rest Day",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "3.0",
+   "fieldname": "overtime_public_holiday_multiplier",
+   "fieldtype": "Float",
+   "label": "Public Holiday",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "overtime_multipliers_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1.5",
+   "description": "Applied to overtime up to the band below.",
+   "fieldname": "overtime_off_day_multiplier",
+   "fieldtype": "Float",
+   "label": "Off Day — First Hours",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "4",
+   "fieldname": "overtime_off_day_band_hours",
+   "fieldtype": "Float",
+   "label": "Off Day — First Band (Hours)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "2.0",
+   "description": "Applied to overtime beyond the band above.",
+   "fieldname": "overtime_off_day_excess_multiplier",
+   "fieldtype": "Float",
+   "label": "Off Day — Beyond Band",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "depends_on": "enable_overtime",
+   "fieldname": "overtime_limits_section",
+   "fieldtype": "Section Break",
+   "label": "Limits"
+  },
+  {
+   "default": "0",
+   "description": "Maximum overtime hours paid per day. (Zero for no limit)",
+   "fieldname": "daily_overtime_cap_hours",
+   "fieldtype": "Float",
+   "label": "Daily OT Cap (Hours)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "104",
+   "description": "Maximum overtime hours paid per month (Employment Act ceiling: 104). (Zero for no limit)",
+   "fieldname": "monthly_overtime_cap_hours",
+   "fieldtype": "Float",
+   "label": "Monthly OT Cap (Hours)",
+   "non_negative": 1,
+   "precision": "2"
   }
  ],
  "links": [],
