@@ -22,7 +22,7 @@
   },
   {
    "columns": 3,
-   "description": "Minimum years of service, inclusive. E.g. 2 covers employees with 2 or more years of service.",
+   "description": "Lower limit of years of service, inclusive. For a continuous table, set this equal to the previous row's To.",
    "fieldname": "from_years",
    "fieldtype": "Int",
    "in_list_view": 1,

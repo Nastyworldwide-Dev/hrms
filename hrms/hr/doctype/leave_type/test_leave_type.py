@@ -28,6 +28,13 @@ class TestLeaveType(FrappeTestCase):
 		)
 		self.assertRaises(frappe.ValidationError, leave_type.insert)
 
+	def test_empty_service_entitlement_range(self):
+		# To is exclusive, so To == From is an empty range and must be rejected
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[{"from_years": 5, "to_years": 5, "leave_days": 10}]
+		)
+		self.assertRaises(frappe.ValidationError, leave_type.insert)
+
 	def test_overlapping_service_entitlement_ranges(self):
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[
