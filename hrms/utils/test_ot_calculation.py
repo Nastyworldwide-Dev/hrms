@@ -14,6 +14,7 @@ from hrms.utils.ot_calculation import (
 	_hourly_rate,
 	_ot_amount_for_day,
 	_pair_sessions,
+	get_ot_pay,
 )
 
 # Employment Act 1955 defaults, as a plain config dict for the pure-function tests.
@@ -184,6 +185,12 @@ class TestOTCalculation(FrappeTestCase):
 		]
 		# the OUT is rejected -> the IN stays unpaired -> no completed session
 		self.assertEqual(_pair_sessions(rows), [])
+
+	def test_get_ot_pay_exposed_to_salary_formula(self):
+		# the engine is reachable from a Salary Component formula
+		slip = frappe.new_doc("Salary Slip")
+		self.assertIn("get_ot_pay", slip.whitelisted_globals)
+		self.assertIs(slip.whitelisted_globals["get_ot_pay"], get_ot_pay)
 
 	def test_accumulate_range_splits_at_midnight(self):
 		buckets = defaultdict(float)

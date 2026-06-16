@@ -38,3 +38,4 @@ hrms.patches.v15_77_4.move_strict_geofence_to_shift_assignment
 hrms.patches.v15_77_11.backfill_empty_pwa_messages
 hrms.patches.v15_77_12.add_notice_period_unit_to_employee
 hrms.patches.v15_78_0.set_break_type_fixed_on_existing_shift_breaks
+hrms.patches.v15_83_0.drop_legacy_overtime_multiplier_columns

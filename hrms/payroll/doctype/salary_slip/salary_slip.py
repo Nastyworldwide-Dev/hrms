@@ -55,6 +55,7 @@ from hrms.payroll.doctype.salary_slip.salary_slip_loan_utils import (
 )
 from hrms.payroll.utils import sanitize_expression
 from hrms.utils.holiday_list import get_holiday_dates_between
+from hrms.utils.ot_calculation import get_ot_pay
 
 # cache keys
 HOLIDAYS_BETWEEN_DATES = "holidays_between_dates"
@@ -79,6 +80,9 @@ class SalarySlip(TransactionBase):
 			"get_last_day": get_last_day,
 			"ceil": ceil,
 			"floor": floor,
+			# usage in a Salary Component formula:
+			#   get_ot_pay(employee, start_date, end_date, base)
+			"get_ot_pay": get_ot_pay,
 		}
 
 	def autoname(self):
