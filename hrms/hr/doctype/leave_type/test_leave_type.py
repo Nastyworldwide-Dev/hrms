@@ -32,10 +32,21 @@ class TestLeaveType(FrappeTestCase):
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[
 				{"from_years": 0, "to_years": 5, "leave_days": 10},
-				{"from_years": 5, "to_years": 10, "leave_days": 15},
+				{"from_years": 4, "to_years": 10, "leave_days": 15},
 			]
 		)
 		self.assertRaises(frappe.ValidationError, leave_type.insert)
+
+	def test_adjacent_ranges_allowed(self):
+		# "To" is exclusive, so one row's To may equal the next row's From
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[
+				{"from_years": 0, "to_years": 2, "leave_days": 8},
+				{"from_years": 2, "to_years": 5, "leave_days": 12},
+				{"from_years": 5, "to_years": 99, "leave_days": 16},
+			]
+		)
+		leave_type.insert()  # should not throw
 
 	def test_overlapping_ranges_allowed_for_different_grades(self):
 		create_employee_grade("_Test Senior Grade")
@@ -110,20 +121,27 @@ class TestLeaveType(FrappeTestCase):
 		self.assertIsNone(get_service_based_leave_days(leave_type.name, "2018-01-15", "2026-01-01"))
 
 	def test_get_service_based_leave_days(self):
+		# contiguous ranges: [0, 2) -> 8, [2, 5) -> 12, [5, 99) -> 16
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[
-				{"from_years": 0, "to_years": 1, "leave_days": 8},
+				{"from_years": 0, "to_years": 2, "leave_days": 8},
 				{"from_years": 2, "to_years": 5, "leave_days": 12},
-				{"from_years": 6, "to_years": 99, "leave_days": 16},
+				{"from_years": 5, "to_years": 99, "leave_days": 16},
 			]
 		)
 		leave_type.insert()
 
-		# completed years of service on 2026-01-01 for someone who joined on 2023-01-15 = 2
-		self.assertEqual(get_service_based_leave_days(leave_type.name, "2023-01-15", "2026-01-01"), 12)
-		# exactly on the slab boundaries
+		# below 2 years of service falls in the first slab
+		# 1 year 8 months of service -> still "below 2 years" -> 8 days
+		self.assertEqual(get_service_based_leave_days(leave_type.name, "2024-05-01", "2026-01-01"), 8)
+		# brand new joiner -> 8 days
 		self.assertEqual(get_service_based_leave_days(leave_type.name, "2025-06-01", "2026-01-01"), 8)
-		self.assertEqual(get_service_based_leave_days(leave_type.name, "2019-01-01", "2026-01-01"), 16)
+		# exactly 2 completed years -> moves to the second slab (To is exclusive)
+		self.assertEqual(get_service_based_leave_days(leave_type.name, "2024-01-01", "2026-01-01"), 12)
+		# 4 years 11 months -> still "below 5 years" -> 12 days
+		self.assertEqual(get_service_based_leave_days(leave_type.name, "2021-02-01", "2026-01-01"), 12)
+		# exactly 5 completed years -> third slab
+		self.assertEqual(get_service_based_leave_days(leave_type.name, "2021-01-01", "2026-01-01"), 16)
 		# service years not covered by any slab
 		leave_type.service_entitlements = leave_type.service_entitlements[1:]
 		leave_type.save()

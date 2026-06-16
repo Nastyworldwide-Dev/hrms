@@ -84,10 +84,10 @@ class TestLeavePolicyAssignment(FrappeTestCase):
 		create_employee_grade("_Test Senior Grade")
 		leave_type = new_service_based_leave_type(
 			service_entitlements=[
-				{"from_years": 0, "to_years": 1, "leave_days": 8},
+				{"from_years": 0, "to_years": 2, "leave_days": 8},
 				{"from_years": 2, "to_years": 5, "leave_days": 12},
 				{"from_years": 2, "to_years": 5, "leave_days": 14, "grade": "_Test Senior Grade"},
-				{"from_years": 6, "to_years": 99, "leave_days": 16},
+				{"from_years": 5, "to_years": 99, "leave_days": 16},
 			]
 		)
 		leave_type.insert()

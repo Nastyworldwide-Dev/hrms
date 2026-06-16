@@ -22,7 +22,7 @@
   },
   {
    "columns": 3,
-   "description": "Minimum completed years of service for this entitlement",
+   "description": "Minimum years of service, inclusive. E.g. 2 covers employees with 2 or more years of service.",
    "fieldname": "from_years",
    "fieldtype": "Int",
    "in_list_view": 1,
@@ -32,7 +32,7 @@
   },
   {
    "columns": 3,
-   "description": "Maximum completed years of service for this entitlement (inclusive)",
+   "description": "Upper limit of years of service, exclusive. E.g. 2 means 'below 2 years'. For a continuous table, set this equal to the next row's From.",
    "fieldname": "to_years",
    "fieldtype": "Int",
    "in_list_view": 1,

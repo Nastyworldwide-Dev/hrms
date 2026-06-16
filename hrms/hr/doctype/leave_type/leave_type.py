@@ -98,19 +98,23 @@ class LeaveType(Document):
 
 		rows_by_grade = {}
 		for row in self.service_entitlements:
-			if row.to_years < row.from_years:
+			# "To" is the exclusive upper bound (e.g. From 0, To 2 means "below 2 years"),
+			# so it must be strictly greater than "From"
+			if row.to_years <= row.from_years:
 				frappe.throw(
-					_("Row #{0}: {1} cannot be less than {2}").format(
+					_("Row #{0}: {1} must be greater than {2}").format(
 						row.idx, bold(_("To (Years of Service)")), bold(_("From (Years of Service)"))
 					)
 				)
 			rows_by_grade.setdefault(row.grade or "", []).append(row)
 
-		# ranges may overlap across grades, but not within the same grade
+		# ranges may overlap across grades, but not within the same grade.
+		# adjacent rows are allowed (one row's "To" may equal the next row's "From")
+		# since "To" is exclusive
 		for rows in rows_by_grade.values():
 			rows = sorted(rows, key=lambda row: row.from_years)
 			for previous, current in pairwise(rows):
-				if current.from_years <= previous.to_years:
+				if current.from_years < previous.to_years:
 					frappe.throw(
 						_("Row #{0}: Years of service range overlaps with row #{1}").format(
 							current.idx, previous.idx
@@ -128,7 +132,9 @@ class LeaveType(Document):
 def get_service_based_leave_days(leave_type: str, date_of_joining, on_date, grade=None) -> float | None:
 	"""Returns entitled leave days for the slab matching the employee's completed
 	years of service as on `on_date`, or None if no slab covers it.
-	A slab for the employee's grade takes precedence over slabs without a grade."""
+	A slab covers years_of_service when from_years <= years_of_service < to_years
+	("To" is exclusive). A slab for the employee's grade takes precedence over slabs
+	without a grade."""
 	from dateutil.relativedelta import relativedelta
 
 	if not date_of_joining:
@@ -141,7 +147,7 @@ def get_service_based_leave_days(leave_type: str, date_of_joining, on_date, grad
 			"parenttype": "Leave Type",
 			"parent": leave_type,
 			"from_years": ("<=", years_of_service),
-			"to_years": (">=", years_of_service),
+			"to_years": (">", years_of_service),
 		},
 		fields=["grade", "leave_days"],
 	)
