@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "creation": "2026-06-16 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "day_type",
+  "from_hour",
+  "from_minute",
+  "to_hour",
+  "to_minute",
+  "rate"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "day_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Day Type",
+   "options": "Normal Day\nRest Day\nOff Day\nPublic Holiday",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "Cumulative overtime, inclusive",
+   "fieldname": "from_hour",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "From (Hr)",
+   "non_negative": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "from_minute",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "From (Min)",
+   "non_negative": 1
+  },
+  {
+   "columns": 1,
+   "description": "Cumulative overtime, exclusive",
+   "fieldname": "to_hour",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "To (Hr)",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "to_minute",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "To (Min)",
+   "non_negative": 1
+  },
+  {
+   "columns": 2,
+   "description": "Multiplier applied to the Hourly Rate of Pay for this band",
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate (× Hourly)",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Shift Overtime Rate",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -2,8 +2,9 @@
 # For license information, please see license.txt
 
 
+import logging
 from datetime import datetime, timedelta
-from itertools import groupby
+from itertools import groupby, pairwise
 
 import frappe
 from frappe import _
@@ -31,6 +32,8 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between
 
+logger = logging.getLogger(__name__)
+
 EMPLOYEE_CHUNK_SIZE = 50
 
 
@@ -41,6 +44,8 @@ class ShiftType(Document):
 		self.validate_same_start_and_end(start, end)
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
+		self.validate_overtime_rates()
+		logger.debug("[shift_type] validated %s", self.name)
 
 	def validate_same_start_and_end(self, start_time: datetime.time, end_time: datetime.time):
 		if start_time == end_time:
@@ -105,6 +110,54 @@ class ShiftType(Document):
 			"Employee Checkin",
 			{"shift": self.name, "attendance": ["is", "not set"], "skip_auto_attendance": 0, "offshift": 0},
 		)
+
+	def validate_overtime_rates(self):
+		if not self.enable_overtime:
+			return
+
+		# seed Employment Act defaults the first time overtime is turned on
+		if not self.overtime_rates:
+			self.set_default_overtime_rates()
+			return
+
+		rows_by_type = {}
+		for row in self.overtime_rates:
+			from_min = (row.from_hour or 0) * 60 + (row.from_minute or 0)
+			to_min = (row.to_hour or 0) * 60 + (row.to_minute or 0)
+			if to_min <= from_min:
+				frappe.throw(
+					_("Row #{0}: {1} must be later than {2}").format(
+						row.idx, frappe.bold(_("To")), frappe.bold(_("From"))
+					)
+				)
+			rows_by_type.setdefault(row.day_type, []).append((from_min, to_min, row.idx))
+
+		# bands within the same day type may not overlap (adjacent ranges are fine)
+		for rows in rows_by_type.values():
+			rows.sort()
+			for (_pf, prev_to, prev_idx), (cur_from, _ct, cur_idx) in pairwise(rows):
+				if cur_from < prev_to:
+					frappe.throw(
+						_("Row #{0}: Overtime hour range overlaps with row #{1}").format(cur_idx, prev_idx),
+						title=_("Overlapping Overtime Rates"),
+					)
+
+	def set_default_overtime_rates(self):
+		from hrms.utils.ot_calculation import DEFAULT_OT_RATE_BANDS
+
+		for day_type, bands in DEFAULT_OT_RATE_BANDS.items():
+			for from_hour, from_minute, to_hour, to_minute, rate in bands:
+				self.append(
+					"overtime_rates",
+					{
+						"day_type": day_type,
+						"from_hour": from_hour,
+						"from_minute": from_minute,
+						"to_hour": to_hour,
+						"to_minute": to_minute,
+						"rate": rate,
+					},
+				)
 
 	@frappe.whitelist()
 	def process_auto_attendance(self, is_manually_triggered=False):

@@ -41,14 +41,8 @@
   "overtime_rate_basis_section",
   "overtime_working_days_per_month",
   "overtime_normal_hours_per_day",
-  "overtime_multipliers_section",
-  "overtime_normal_day_multiplier",
-  "overtime_rest_day_multiplier",
-  "overtime_public_holiday_multiplier",
-  "overtime_multipliers_column",
-  "overtime_off_day_multiplier",
-  "overtime_off_day_band_hours",
-  "overtime_off_day_excess_multiplier",
+  "overtime_rates_section",
+  "overtime_rates",
   "overtime_limits_section",
   "daily_overtime_cap_hours",
   "monthly_overtime_cap_hours"
@@ -271,63 +265,16 @@
   },
   {
    "depends_on": "enable_overtime",
-   "fieldname": "overtime_multipliers_section",
+   "description": "Each tier sets the multiplier for a band of cumulative overtime hours on that day type. Defaults (Employment Act 1955) are added when overtime is enabled.",
+   "fieldname": "overtime_rates_section",
    "fieldtype": "Section Break",
-   "label": "Rate Multipliers (× Hourly Rate)"
+   "label": "Overtime Rates by Hour Range"
   },
   {
-   "default": "1.5",
-   "fieldname": "overtime_normal_day_multiplier",
-   "fieldtype": "Float",
-   "label": "Normal Working Day",
-   "non_negative": 1,
-   "precision": "2"
-  },
-  {
-   "default": "2.0",
-   "fieldname": "overtime_rest_day_multiplier",
-   "fieldtype": "Float",
-   "label": "Rest Day",
-   "non_negative": 1,
-   "precision": "2"
-  },
-  {
-   "default": "3.0",
-   "fieldname": "overtime_public_holiday_multiplier",
-   "fieldtype": "Float",
-   "label": "Public Holiday",
-   "non_negative": 1,
-   "precision": "2"
-  },
-  {
-   "fieldname": "overtime_multipliers_column",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1.5",
-   "description": "Applied to overtime up to the band below.",
-   "fieldname": "overtime_off_day_multiplier",
-   "fieldtype": "Float",
-   "label": "Off Day — First Hours",
-   "non_negative": 1,
-   "precision": "2"
-  },
-  {
-   "default": "4",
-   "fieldname": "overtime_off_day_band_hours",
-   "fieldtype": "Float",
-   "label": "Off Day — First Band (Hours)",
-   "non_negative": 1,
-   "precision": "2"
-  },
-  {
-   "default": "2.0",
-   "description": "Applied to overtime beyond the band above.",
-   "fieldname": "overtime_off_day_excess_multiplier",
-   "fieldtype": "Float",
-   "label": "Off Day — Beyond Band",
-   "non_negative": 1,
-   "precision": "2"
+   "fieldname": "overtime_rates",
+   "fieldtype": "Table",
+   "label": "Overtime Rates",
+   "options": "Shift Overtime Rate"
   },
   {
    "depends_on": "enable_overtime",

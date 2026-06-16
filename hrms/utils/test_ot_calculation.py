@@ -16,17 +16,18 @@ from hrms.utils.ot_calculation import (
 	_pair_sessions,
 )
 
-# Employment Act 1955 defaults, as a plain config dict for the pure-function tests
+# Employment Act 1955 defaults, as a plain config dict for the pure-function tests.
+# bands are keyed by resolved day type: list of (from_hours, to_hours, rate).
 DEFAULT_CONFIG = {
 	"min_minutes": 0,
 	"days_per_month": 26,
 	"hours_per_day": 8,
-	"normal": 1.5,
-	"rest": 2.0,
-	"off": 1.5,
-	"off_band_hours": 4.0,
-	"off_excess": 2.0,
-	"public_holiday": 3.0,
+	"bands": {
+		"normal": [(0.0, 24.0, 1.5)],
+		"rest": [(0.0, 24.0, 2.0)],
+		"off": [(0.0, 4.0, 1.5), (4.0, 24.0, 2.0)],
+		"public_holiday": [(0.0, 24.0, 3.0)],
+	},
 	"daily_cap": 0.0,
 	"monthly_cap": 104.0,
 }
@@ -62,6 +63,17 @@ class TestOTCalculation(FrappeTestCase):
 		# 6h: first 4h * 1.5 + 2h * 2.0 = 60 + 40
 		self.assertEqual(_ot_amount_for_day(6, 10.0, "off", DEFAULT_CONFIG), 100.0)
 
+	def test_amount_tiered_rate(self):
+		# the screenshot's rest-day model: first 8h @ 1.5, beyond @ 2.0
+		config = {**DEFAULT_CONFIG, "bands": {"rest": [(0.0, 8.0, 1.5), (8.0, 12.0, 2.0)]}}
+		# 10h -> 8h * 10 * 1.5 + 2h * 10 * 2.0 = 120 + 40
+		self.assertEqual(_ot_amount_for_day(10, 10.0, "rest", config), 160.0)
+
+	def test_amount_unconfigured_day_type_is_zero(self):
+		# no bands for the resolved day type -> no OT priced
+		config = {**DEFAULT_CONFIG, "bands": {"normal": [(0.0, 24.0, 1.5)]}}
+		self.assertEqual(_ot_amount_for_day(3, 10.0, "rest", config), 0.0)
+
 	def test_amount_zero_guards(self):
 		self.assertEqual(_ot_amount_for_day(0, 10.0, "normal", DEFAULT_CONFIG), 0.0)
 		self.assertEqual(_ot_amount_for_day(3, 0, "normal", DEFAULT_CONFIG), 0.0)
@@ -71,37 +83,66 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertIsNone(_get_shift_ot_config(shift))
 		self.assertIsNone(_get_shift_ot_config(None))
 
-	def test_shift_config_reads_overtime_tab(self):
+	def test_shift_config_auto_seeds_defaults(self):
+		# enabling overtime with no rows seeds the Employment Act default bands
+		shift = create_shift_type("_Test OT Shift Defaults", enable_overtime=1)
+		config = _get_shift_ot_config(shift)
+		self.assertEqual(config["days_per_month"], 26)
+		self.assertIn("normal", config["bands"])
+		self.assertIn("rest", config["bands"])
+		self.assertEqual(_ot_amount_for_day(3, 10.0, "normal", config), 45.0)
+		self.assertEqual(_ot_amount_for_day(6, 10.0, "off", config), 100.0)
+
+	def test_shift_config_reads_custom_bands(self):
 		shift = create_shift_type(
-			"_Test OT Shift Enabled",
+			"_Test OT Shift Custom",
 			enable_overtime=1,
 			overtime_working_days_per_month=22,
-			overtime_normal_hours_per_day=8,
-			overtime_normal_day_multiplier=1.25,
-			overtime_rest_day_multiplier=2.0,
-			overtime_public_holiday_multiplier=3.0,
-			overtime_off_day_multiplier=1.5,
-			overtime_off_day_band_hours=4,
-			overtime_off_day_excess_multiplier=2.0,
 			minimum_overtime_minutes=30,
 			daily_overtime_cap_hours=4,
 			monthly_overtime_cap_hours=104,
+			overtime_rates=[
+				rate_row("Rest Day", 0, 0, 8, 0, 1.5),
+				rate_row("Rest Day", 8, 0, 23, 59, 2.0),
+			],
 		)
 		config = _get_shift_ot_config(shift)
 		self.assertEqual(config["days_per_month"], 22)
-		self.assertEqual(config["normal"], 1.25)
 		self.assertEqual(config["min_minutes"], 30)
 		self.assertEqual(config["daily_cap"], 4.0)
-		self.assertEqual(config["monthly_cap"], 104.0)
-		# the custom rate flows through pricing: 2h * RM10/h * 1.25 = 25.0
-		self.assertEqual(_ot_amount_for_day(2, 10.0, "normal", config), 25.0)
+		# tiered rest: 10h -> 8h @ 1.5 + 2h @ 2.0 at RM10/h = 120 + 40
+		self.assertEqual(_ot_amount_for_day(10, 10.0, "rest", config), 160.0)
 
 	def test_shift_config_honours_configured_zero(self):
-		# a deliberate 0x multiplier must not be coerced to the 1.5x default
-		shift = create_shift_type("_Test OT Shift Zero", enable_overtime=1, overtime_normal_day_multiplier=0)
+		# a deliberate 0x band must not be coerced to a default rate
+		shift = create_shift_type(
+			"_Test OT Shift Zero",
+			enable_overtime=1,
+			overtime_rates=[rate_row("Normal Day", 0, 0, 23, 59, 0)],
+		)
 		config = _get_shift_ot_config(shift)
-		self.assertEqual(config["normal"], 0)
 		self.assertEqual(_ot_amount_for_day(3, 10.0, "normal", config), 0.0)
+
+	def test_overlapping_bands_rejected(self):
+		self.assertRaises(
+			frappe.ValidationError,
+			create_shift_type,
+			"_Test OT Shift Overlap",
+			enable_overtime=1,
+			overtime_rates=[
+				rate_row("Rest Day", 0, 0, 8, 0, 1.5),
+				rate_row("Rest Day", 4, 0, 12, 0, 2.0),
+			],
+		)
+
+	def test_invalid_band_range_rejected(self):
+		self.assertRaises(
+			frappe.ValidationError,
+			create_shift_type,
+			"_Test OT Shift Bad Range",
+			enable_overtime=1,
+			overtime_rates=[rate_row("Rest Day", 8, 0, 4, 0, 1.5)],
+		)
 
 	def test_pair_sessions_carries_shift(self):
 		rows = [
@@ -133,6 +174,17 @@ class TestOTCalculation(FrappeTestCase):
 		# both calendar days are attributed to the contributing shift
 		self.assertEqual(shifts[date(2025, 1, 7)], "S1")
 		self.assertEqual(shifts[date(2025, 1, 8)], "S1")
+
+
+def rate_row(day_type, from_hour, from_minute, to_hour, to_minute, rate):
+	return {
+		"day_type": day_type,
+		"from_hour": from_hour,
+		"from_minute": from_minute,
+		"to_hour": to_hour,
+		"to_minute": to_minute,
+		"rate": rate,
+	}
 
 
 def _checkin(time, log_type, **args):

@@ -3,16 +3,19 @@
 Public API:
     get_ot_pay(employee, start_date, end_date, basic, day_type='normal') -> float
 
-Rates are configured per shift on the Shift Type "Overtime" tab (the
-constants below are the Employment Act 1955 defaults used as fallbacks):
+Rates are configured per shift on the Shift Type "Overtime" tab as a table
+of hour-range bands per day type (the bands below are the Employment Act 1955
+defaults seeded when overtime is enabled):
   - hourly_rate = basic / (working_days_per_month * normal_hours_per_day)  # 26 * 8
-  - Normal day:        1.5x
-  - Rest day (Sunday): 2.0x
+  - Normal day:        1.5x for all OT hours
+  - Rest day (Sunday): 2.0x for all OT hours
   - Off day  (Saturday): 1.5x first 4 hrs, 2.0x after
-  - Public holiday:    3.0x
+  - Public holiday:    3.0x for all OT hours
+Each day type can define multiple tiers (e.g. first 8 hrs at 1.5x, beyond at
+2.0x); the day's OT hours are priced by walking its bands.
 
 Overtime is only priced for shifts with `enable_overtime` set; the day's
-rates, hourly-rate divisors, grace and caps are read from that shift.
+rate bands, hourly-rate divisors, grace and caps are read from that shift.
 
 Sessions are paired IN -> OUT in chronological order. If a session
 crosses midnight, OT hours are SPLIT at the date boundary: pre-midnight
@@ -33,14 +36,23 @@ logger = logging.getLogger(__name__)
 
 WORKING_DAYS_PER_MONTH = 26
 HOURS_PER_DAY = 8
-OFF_DAY_BAND_HOURS = 4.0
 
-OT_MULTIPLIERS = {
-	"normal": 1.5,
-	"rest": 2.0,
-	"off": 1.5,  # first OFF_DAY_BAND_HOURS hours; beyond uses off_excess
-	"off_excess": 2.0,
-	"public_holiday": 3.0,
+# Maps the day types resolved by _classify_day to the Shift Overtime Rate
+# "Day Type" select stored on the shift.
+DAY_TYPE_LABELS = {
+	"normal": "Normal Day",
+	"rest": "Rest Day",
+	"off": "Off Day",
+	"public_holiday": "Public Holiday",
+}
+
+# Employment Act 1955 default bands, keyed by Day Type label.
+# Each band is (from_hour, from_minute, to_hour, to_minute, rate).
+DEFAULT_OT_RATE_BANDS = {
+	"Normal Day": [(0, 0, 23, 59, 1.5)],
+	"Rest Day": [(0, 0, 23, 59, 2.0)],
+	"Off Day": [(0, 0, 4, 0, 1.5), (4, 0, 23, 59, 2.0)],
+	"Public Holiday": [(0, 0, 23, 59, 3.0)],
 }
 
 
@@ -56,45 +68,31 @@ def _get_shift_ot_config(shift_name):
 	if not shift_name:
 		return None
 
-	shift = frappe.get_cached_value(
-		"Shift Type",
-		shift_name,
-		[
-			"enable_overtime",
-			"minimum_overtime_minutes",
-			"overtime_working_days_per_month",
-			"overtime_normal_hours_per_day",
-			"overtime_normal_day_multiplier",
-			"overtime_rest_day_multiplier",
-			"overtime_off_day_multiplier",
-			"overtime_off_day_band_hours",
-			"overtime_off_day_excess_multiplier",
-			"overtime_public_holiday_multiplier",
-			"daily_overtime_cap_hours",
-			"monthly_overtime_cap_hours",
-		],
-		as_dict=True,
-	)
+	shift = frappe.get_cached_doc("Shift Type", shift_name)
 	if not shift or not shift.enable_overtime:
 		return None
 
-	# Only fall back to defaults when a field is unset (None). A configured 0 is
-	# honoured — e.g. a deliberate 0x multiplier must not silently become 1.5x.
 	def _or_default(value, default):
+		# fall back only when unset (None); a configured 0 is honoured
 		return default if value is None else value
+
+	label_to_key = {label: key for key, label in DAY_TYPE_LABELS.items()}
+	bands: dict[str, list] = defaultdict(list)
+	for row in shift.overtime_rates:
+		key = label_to_key.get(row.day_type)
+		if not key:
+			continue
+		from_hours = (row.from_hour or 0) + (row.from_minute or 0) / 60.0
+		to_hours = (row.to_hour or 0) + (row.to_minute or 0) / 60.0
+		bands[key].append((from_hours, to_hours, flt(row.rate)))
+	for key in bands:
+		bands[key].sort()
 
 	return {
 		"min_minutes": cint(shift.minimum_overtime_minutes),
 		"days_per_month": _or_default(shift.overtime_working_days_per_month, WORKING_DAYS_PER_MONTH),
 		"hours_per_day": _or_default(shift.overtime_normal_hours_per_day, HOURS_PER_DAY),
-		"normal": _or_default(shift.overtime_normal_day_multiplier, OT_MULTIPLIERS["normal"]),
-		"rest": _or_default(shift.overtime_rest_day_multiplier, OT_MULTIPLIERS["rest"]),
-		"off": _or_default(shift.overtime_off_day_multiplier, OT_MULTIPLIERS["off"]),
-		"off_band_hours": _or_default(shift.overtime_off_day_band_hours, OFF_DAY_BAND_HOURS),
-		"off_excess": _or_default(shift.overtime_off_day_excess_multiplier, OT_MULTIPLIERS["off_excess"]),
-		"public_holiday": _or_default(
-			shift.overtime_public_holiday_multiplier, OT_MULTIPLIERS["public_holiday"]
-		),
+		"bands": dict(bands),
 		"daily_cap": flt(shift.daily_overtime_cap_hours),
 		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
 	}
@@ -139,20 +137,16 @@ def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
 	)
 	if ot_hours <= 0 or hourly_rate <= 0:
 		return 0.0
-	if day_type == "off":
-		band = config["off_band_hours"]
-		first = min(ot_hours, band)
-		excess = max(0.0, ot_hours - band)
-		return round(
-			(first * hourly_rate * config["off"]) + (excess * hourly_rate * config["off_excess"]),
-			2,
-		)
-	multiplier = {
-		"normal": config["normal"],
-		"rest": config["rest"],
-		"public_holiday": config["public_holiday"],
-	}.get(day_type, config["normal"])
-	return round(ot_hours * hourly_rate * multiplier, 2)
+
+	# walk the day type's hour-range bands, pricing the slice of OT hours that
+	# falls in each band at that band's rate. Bands are (from_hours, to_hours, rate).
+	bands = config.get("bands", {}).get(day_type, [])
+	amount = 0.0
+	for from_hours, to_hours, rate in bands:
+		slice_hours = min(ot_hours, to_hours) - from_hours
+		if slice_hours > 0:
+			amount += slice_hours * hourly_rate * rate
+	return round(amount, 2)
 
 
 def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
