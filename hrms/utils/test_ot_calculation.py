@@ -1,13 +1,19 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from collections import defaultdict
+from datetime import date
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import get_datetime
 
 from hrms.utils.ot_calculation import (
+	_accumulate_range_by_day,
 	_get_shift_ot_config,
 	_hourly_rate,
 	_ot_amount_for_day,
+	_pair_sessions,
 )
 
 # Employment Act 1955 defaults, as a plain config dict for the pure-function tests
@@ -89,6 +95,55 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertEqual(config["monthly_cap"], 104.0)
 		# the custom rate flows through pricing: 2h * RM10/h * 1.25 = 25.0
 		self.assertEqual(_ot_amount_for_day(2, 10.0, "normal", config), 25.0)
+
+	def test_shift_config_honours_configured_zero(self):
+		# a deliberate 0x multiplier must not be coerced to the 1.5x default
+		shift = create_shift_type("_Test OT Shift Zero", enable_overtime=1, overtime_normal_day_multiplier=0)
+		config = _get_shift_ot_config(shift)
+		self.assertEqual(config["normal"], 0)
+		self.assertEqual(_ot_amount_for_day(3, 10.0, "normal", config), 0.0)
+
+	def test_pair_sessions_carries_shift(self):
+		rows = [
+			_checkin("2025-01-07 09:00:00", "IN"),
+			_checkin("2025-01-07 21:00:00", "OUT"),
+		]
+		sessions = _pair_sessions(rows)
+		self.assertEqual(len(sessions), 1)
+		self.assertEqual(sessions[0]["shift"], "S1")
+		self.assertEqual(sessions[0]["first_in"], get_datetime("2025-01-07 09:00:00"))
+		self.assertEqual(sessions[0]["last_out"], get_datetime("2025-01-07 21:00:00"))
+
+	def test_pair_sessions_skips_rejected(self):
+		rows = [
+			_checkin("2025-01-07 09:00:00", "IN"),
+			_checkin("2025-01-07 21:00:00", "OUT", remote_approval_status="Rejected"),
+		]
+		# the OUT is rejected -> the IN stays unpaired -> no completed session
+		self.assertEqual(_pair_sessions(rows), [])
+
+	def test_accumulate_range_splits_at_midnight(self):
+		buckets = defaultdict(float)
+		shifts = {}
+		_accumulate_range_by_day(
+			buckets, shifts, "S1", get_datetime("2025-01-07 22:00:00"), get_datetime("2025-01-08 02:00:00")
+		)
+		self.assertAlmostEqual(buckets[date(2025, 1, 7)], 2.0)
+		self.assertAlmostEqual(buckets[date(2025, 1, 8)], 2.0)
+		# both calendar days are attributed to the contributing shift
+		self.assertEqual(shifts[date(2025, 1, 7)], "S1")
+		self.assertEqual(shifts[date(2025, 1, 8)], "S1")
+
+
+def _checkin(time, log_type, **args):
+	return {
+		"time": time,
+		"log_type": log_type,
+		"shift": args.get("shift", "S1"),
+		"shift_actual_start": "2025-01-07 09:00:00",
+		"shift_actual_end": "2025-01-07 18:00:00",
+		"remote_approval_status": args.get("remote_approval_status"),
+	}
 
 
 def create_shift_type(name, **args):

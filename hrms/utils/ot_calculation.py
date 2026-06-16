@@ -78,16 +78,23 @@ def _get_shift_ot_config(shift_name):
 	if not shift or not shift.enable_overtime:
 		return None
 
+	# Only fall back to defaults when a field is unset (None). A configured 0 is
+	# honoured — e.g. a deliberate 0x multiplier must not silently become 1.5x.
+	def _or_default(value, default):
+		return default if value is None else value
+
 	return {
 		"min_minutes": cint(shift.minimum_overtime_minutes),
-		"days_per_month": shift.overtime_working_days_per_month or WORKING_DAYS_PER_MONTH,
-		"hours_per_day": shift.overtime_normal_hours_per_day or HOURS_PER_DAY,
-		"normal": shift.overtime_normal_day_multiplier or OT_MULTIPLIERS["normal"],
-		"rest": shift.overtime_rest_day_multiplier or OT_MULTIPLIERS["rest"],
-		"off": shift.overtime_off_day_multiplier or OT_MULTIPLIERS["off"],
-		"off_band_hours": shift.overtime_off_day_band_hours or OFF_DAY_BAND_HOURS,
-		"off_excess": shift.overtime_off_day_excess_multiplier or OT_MULTIPLIERS["off_excess"],
-		"public_holiday": shift.overtime_public_holiday_multiplier or OT_MULTIPLIERS["public_holiday"],
+		"days_per_month": _or_default(shift.overtime_working_days_per_month, WORKING_DAYS_PER_MONTH),
+		"hours_per_day": _or_default(shift.overtime_normal_hours_per_day, HOURS_PER_DAY),
+		"normal": _or_default(shift.overtime_normal_day_multiplier, OT_MULTIPLIERS["normal"]),
+		"rest": _or_default(shift.overtime_rest_day_multiplier, OT_MULTIPLIERS["rest"]),
+		"off": _or_default(shift.overtime_off_day_multiplier, OT_MULTIPLIERS["off"]),
+		"off_band_hours": _or_default(shift.overtime_off_day_band_hours, OFF_DAY_BAND_HOURS),
+		"off_excess": _or_default(shift.overtime_off_day_excess_multiplier, OT_MULTIPLIERS["off_excess"]),
+		"public_holiday": _or_default(
+			shift.overtime_public_holiday_multiplier, OT_MULTIPLIERS["public_holiday"]
+		),
 		"daily_cap": flt(shift.daily_overtime_cap_hours),
 		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
 	}
