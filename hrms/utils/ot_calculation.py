@@ -138,12 +138,24 @@ def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
 	if ot_hours <= 0 or hourly_rate <= 0:
 		return 0.0
 
-	# walk the day type's hour-range bands, pricing the slice of OT hours that
-	# falls in each band at that band's rate. Bands are (from_hours, to_hours, rate).
+	# walk the day type's hour-range bands (validated contiguous from 0), pricing
+	# the slice of OT hours in each band at that band's rate. Bands are
+	# (from_hours, to_hours, rate); the last band is open-ended so any OT beyond
+	# its upper bound is still paid at the top rate.
 	bands = config.get("bands", {}).get(day_type, [])
+	if not bands:
+		logger.warning(
+			"[ot_calculation] No overtime bands configured for day_type=%s — pricing %.2fh as 0",
+			day_type,
+			ot_hours,
+		)
+		return 0.0
+
 	amount = 0.0
-	for from_hours, to_hours, rate in bands:
-		slice_hours = min(ot_hours, to_hours) - from_hours
+	last = len(bands) - 1
+	for i, (from_hours, to_hours, rate) in enumerate(bands):
+		upper = ot_hours if i == last else min(ot_hours, to_hours)
+		slice_hours = upper - from_hours
 		if slice_hours > 0:
 			amount += slice_hours * hourly_rate * rate
 	return round(amount, 2)

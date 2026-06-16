@@ -115,9 +115,11 @@ class ShiftType(Document):
 		if not self.enable_overtime:
 			return
 
-		# seed Employment Act defaults the first time overtime is turned on
+		# seed Employment Act defaults only when overtime is first turned on,
+		# so an intentionally-cleared table stays empty
 		if not self.overtime_rates:
-			self.set_default_overtime_rates()
+			if self.is_new() or self.has_value_changed("enable_overtime"):
+				self.set_default_overtime_rates()
 			return
 
 		rows_by_type = {}
@@ -132,14 +134,27 @@ class ShiftType(Document):
 				)
 			rows_by_type.setdefault(row.day_type, []).append((from_min, to_min, row.idx))
 
-		# bands within the same day type may not overlap (adjacent ranges are fine)
-		for rows in rows_by_type.values():
+		# bands for a day type must be contiguous from 0: no gaps, no overlaps, so
+		# the engine never silently drops paid overtime between two bands
+		for day_type, rows in rows_by_type.items():
 			rows.sort()
+			if rows[0][0] != 0:
+				frappe.throw(
+					_("{0}: the first overtime band must start at 0").format(frappe.bold(_(day_type))),
+					title=_("Invalid Overtime Rates"),
+				)
 			for (_pf, prev_to, prev_idx), (cur_from, _ct, cur_idx) in pairwise(rows):
 				if cur_from < prev_to:
 					frappe.throw(
 						_("Row #{0}: Overtime hour range overlaps with row #{1}").format(cur_idx, prev_idx),
 						title=_("Overlapping Overtime Rates"),
+					)
+				if cur_from > prev_to:
+					frappe.throw(
+						_("Row #{0}: Overtime hour range leaves a gap after row #{1}").format(
+							cur_idx, prev_idx
+						),
+						title=_("Non-continuous Overtime Rates"),
 					)
 
 	def set_default_overtime_rates(self):

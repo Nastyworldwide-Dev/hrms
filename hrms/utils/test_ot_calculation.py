@@ -144,6 +144,28 @@ class TestOTCalculation(FrappeTestCase):
 			overtime_rates=[rate_row("Rest Day", 8, 0, 4, 0, 1.5)],
 		)
 
+	def test_gap_between_bands_rejected(self):
+		# 8h -> 10h is an unpriced gap; must be contiguous
+		self.assertRaises(
+			frappe.ValidationError,
+			create_shift_type,
+			"_Test OT Shift Gap",
+			enable_overtime=1,
+			overtime_rates=[
+				rate_row("Rest Day", 0, 0, 8, 0, 1.5),
+				rate_row("Rest Day", 10, 0, 12, 0, 2.0),
+			],
+		)
+
+	def test_first_band_must_start_at_zero(self):
+		self.assertRaises(
+			frappe.ValidationError,
+			create_shift_type,
+			"_Test OT Shift Nonzero Start",
+			enable_overtime=1,
+			overtime_rates=[rate_row("Rest Day", 2, 0, 8, 0, 1.5)],
+		)
+
 	def test_pair_sessions_carries_shift(self):
 		rows = [
 			_checkin("2025-01-07 09:00:00", "IN"),
