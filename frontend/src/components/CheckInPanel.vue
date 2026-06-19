@@ -664,6 +664,12 @@ const submitLog = async (logType) => {
 		async onSuccess(doc) {
 			modalController.dismiss()
 
+			// Refresh the log list so lastLog (and the stale "Forgot to check out"
+			// banner / button state) reflect the log just inserted. The socket
+			// list_update handler also reloads, but it's unreliable on mobile
+			// (disconnected/backgrounded), so reload explicitly like the dialogs do.
+			checkins.reload()
+
 			if (doc?.requires_remote_approval) {
 				try {
 					const rows = await fetchRemoteRequest.submit({ checkin: doc.name })
