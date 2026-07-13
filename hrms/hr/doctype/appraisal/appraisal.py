@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
 
 # ptypes that stay restricted to the employee's own appraisal (+ HR roles);
-# read-like ptypes additionally extend to direct reports via Employee.reports_to
+# read-like ptypes additionally extend down the Employee.reports_to chain
 WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amend"})
 
 # Default lookup table — used as fallback when cycle has no conversion table
@@ -742,21 +742,26 @@ def _get_own_employees(user: str) -> list[str]:
 
 def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
 	"""None = unrestricted access; otherwise the Employee names whose appraisals
-	`user` may read — their own records plus direct reports (Employee.reports_to)."""
+	`user` may read — their own records plus the whole reporting chain below
+	them (Employee.reports_to, followed transitively)."""
 	user = user or frappe.session.user
 	if _has_unrestricted_appraisal_access(user):
 		employees = None
 	else:
 		employees = _get_own_employees(user)
-		if employees:
-			employees += frappe.get_all("Employee", filters={"reports_to": ("in", employees)}, pluck="name")
+		frontier = employees
+		while frontier:
+			frontier = frappe.get_all("Employee", filters={"reports_to": ("in", frontier)}, pluck="name")
+			# guard against reports_to cycles in dirty data
+			frontier = [e for e in frontier if e not in employees]
+			employees += frontier
 	logger.debug("[appraisal] allowed appraisal employees for user=%s: %s", user, employees)
 	return employees
 
 
 def get_permission_query_conditions(user: str | None = None) -> str:
 	"""Scope Appraisal list reads to the session user's own employee record
-	plus direct reports.
+	plus the reporting chain below them.
 
 	Doctype-level perms grant the Employee role blanket read, so without
 	this every employee can browse everyone else's appraisals.
@@ -774,7 +779,8 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	"""Per-doc check: employees act on their own appraisal; managers get
-	read-only access to direct reports' appraisals (write stays own + HR)."""
+	read-only access to appraisals down their reporting chain (write stays
+	own + HR)."""
 	user = user or frappe.session.user
 	if not doc.employee:
 		# new/unsaved doc — let role perms decide

@@ -33,9 +33,7 @@ class TestWeightageScaling(FrappeTestCase):
 		engineer.appraisal_template = self.template.name
 		engineer.save()
 
-		self.employee = make_employee(
-			"pms_test@example.com", company=self.company, designation="Engineer"
-		)
+		self.employee = make_employee("pms_test@example.com", company=self.company, designation="Engineer")
 
 	def test_kras_scaled_to_70(self):
 		"""Template KRAs (30+70=100) should become (21+49=70) on appraisal"""
@@ -73,9 +71,7 @@ class TestWeightageScaling(FrappeTestCase):
 				"employee": self.employee,
 				"company": self.company,
 				"appraisal_template": template.name,
-				"appraisal_cycle": create_appraisal_cycle(
-					name="Q-Odd", designation="Engineer"
-				).name,
+				"appraisal_cycle": create_appraisal_cycle(name="Q-Odd", designation="Engineer").name,
 			}
 		)
 		appraisal.set_kras_and_rating_criteria()
@@ -179,9 +175,7 @@ class TestKRAMetadataCopy(FrappeTestCase):
 				"employee": self.employee,
 				"company": self.company,
 				"appraisal_template": template.name,
-				"appraisal_cycle": create_appraisal_cycle(
-					name="Q-NoMeta", designation="Engineer"
-				).name,
+				"appraisal_cycle": create_appraisal_cycle(name="Q-NoMeta", designation="Engineer").name,
 			}
 		)
 		appraisal.set_kras_and_rating_criteria()
@@ -426,9 +420,7 @@ class TestAppraisalTemplateResolution(FrappeTestCase):
 				"doctype": "Appraisal",
 				"employee": self.employee,
 				"company": self.company,
-				"appraisal_cycle": create_appraisal_cycle(
-					name="Q-Resolve", designation="Analyst"
-				).name,
+				"appraisal_cycle": create_appraisal_cycle(name="Q-Resolve", designation="Analyst").name,
 			}
 		)
 		appraisal.set_appraisal_template()
@@ -476,9 +468,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 		engineer.appraisal_template = self.template.name
 		engineer.save()
 
-		self.employee = make_employee(
-			"score_test@example.com", company=self.company, designation="Engineer"
-		)
+		self.employee = make_employee("score_test@example.com", company=self.company, designation="Engineer")
 
 	def test_section_a_score_calculation(self):
 		"""weighted_score = per_weightage * (rating * 5) / 5 = per_weightage * rating"""
@@ -700,12 +690,8 @@ class TestAppraisalVisibility(FrappeTestCase):
 
 	def test_employee_cannot_read_others_appraisal(self):
 		"""Doc-level read on a colleague's appraisal is denied"""
-		self.assertTrue(
-			frappe.has_permission("Appraisal", doc=self.appraisal_a, user=self.user_a)
-		)
-		self.assertFalse(
-			frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a)
-		)
+		self.assertTrue(frappe.has_permission("Appraisal", doc=self.appraisal_a, user=self.user_a))
+		self.assertFalse(frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a))
 
 	def test_hr_user_sees_all_appraisals(self):
 		"""HR User role is exempt from the own-employee restriction"""
@@ -731,9 +717,7 @@ class TestAppraisalVisibility(FrappeTestCase):
 		frappe.set_user(self.user_a)
 		# own appraisal still works
 		self.assertIsNotNone(get_feedback_history(self.employee_a, self.appraisal_a))
-		self.assertRaises(
-			frappe.PermissionError, get_feedback_history, self.employee_b, self.appraisal_b
-		)
+		self.assertRaises(frappe.PermissionError, get_feedback_history, self.employee_b, self.appraisal_b)
 
 	def test_kra_search_api_denied_for_others(self):
 		"""KRA link search cannot enumerate a colleague's appraisal KRAs"""
@@ -762,9 +746,7 @@ class TestAppraisalVisibility(FrappeTestCase):
 
 		frappe.set_user("Administrator")
 		rows = get_data(frappe._dict())
-		self.assertEqual(
-			{row.employee for row in rows}, {self.employee_a, self.employee_b}
-		)
+		self.assertEqual({row.employee for row in rows}, {self.employee_a, self.employee_b})
 
 	def test_cycle_summary_hidden_from_plain_employee(self):
 		"""Cycle-wide completion stats are only returned to unrestricted roles"""
@@ -780,7 +762,7 @@ class TestAppraisalVisibility(FrappeTestCase):
 
 
 class TestManagerAppraisalVisibility(FrappeTestCase):
-	"""Managers (reports_to) get read-only visibility of direct reports' appraisals"""
+	"""Managers (reports_to) get read-only visibility of the whole reporting chain below them"""
 
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -794,21 +776,23 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 		engineer.appraisal_template = self.template.name
 		engineer.save()
 
+		# chain: manager -> report -> grand_report; `other` is outside the chain
 		self.manager_user = "appraisal_mgr@example.com"
 		self.report_user = "appraisal_mgr_report@example.com"
+		self.grand_user = "appraisal_mgr_grand@example.com"
 		self.other_user = "appraisal_mgr_other@example.com"
 		self.manager = make_employee(self.manager_user, company=self.company, designation="Engineer")
 		self.report = make_employee(self.report_user, company=self.company, designation="Engineer")
+		self.grand = make_employee(self.grand_user, company=self.company, designation="Engineer")
 		self.other = make_employee(self.other_user, company=self.company, designation="Engineer")
 
 		frappe.db.set_value("Employee", self.report, "reports_to", self.manager)
+		frappe.db.set_value("Employee", self.grand, "reports_to", self.report)
 
 		# isolate the code-level restriction from any User Permission rows
-		frappe.db.delete(
-			"User Permission",
-			{"user": ("in", [self.manager_user, self.report_user, self.other_user])},
-		)
-		for user in (self.manager_user, self.report_user, self.other_user):
+		users = [self.manager_user, self.report_user, self.grand_user, self.other_user]
+		frappe.db.delete("User Permission", {"user": ("in", users)})
+		for user in users:
 			frappe.clear_cache(user=user)
 
 		cycle = create_appraisal_cycle(name="Q-Mgr", designation="Engineer")
@@ -816,18 +800,30 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 
 		self.manager_appraisal = frappe.db.get_value("Appraisal", {"employee": self.manager}, "name")
 		self.report_appraisal = frappe.db.get_value("Appraisal", {"employee": self.report}, "name")
+		self.grand_appraisal = frappe.db.get_value("Appraisal", {"employee": self.grand}, "name")
 		self.other_appraisal = frappe.db.get_value("Appraisal", {"employee": self.other}, "name")
 		self.addCleanup(frappe.set_user, "Administrator")
 
-	def test_manager_sees_own_and_direct_reports(self):
+	def test_manager_sees_own_and_whole_chain(self):
 		frappe.set_user(self.manager_user)
 		visible = set(frappe.get_list("Appraisal", pluck="name"))
-		self.assertEqual(visible, {self.manager_appraisal, self.report_appraisal})
+		self.assertEqual(visible, {self.manager_appraisal, self.report_appraisal, self.grand_appraisal})
+
+	def test_mid_manager_sees_own_and_subtree_only(self):
+		frappe.set_user(self.report_user)
+		visible = set(frappe.get_list("Appraisal", pluck="name"))
+		self.assertEqual(visible, {self.report_appraisal, self.grand_appraisal})
+
+	def test_manager_read_but_not_write_on_indirect_report(self):
+		self.assertTrue(frappe.has_permission("Appraisal", doc=self.grand_appraisal, user=self.manager_user))
+		self.assertFalse(
+			frappe.has_permission(
+				"Appraisal", doc=self.grand_appraisal, ptype="write", user=self.manager_user
+			)
+		)
 
 	def test_manager_read_but_not_write_on_reports_appraisal(self):
-		self.assertTrue(
-			frappe.has_permission("Appraisal", doc=self.report_appraisal, user=self.manager_user)
-		)
+		self.assertTrue(frappe.has_permission("Appraisal", doc=self.report_appraisal, user=self.manager_user))
 		self.assertFalse(
 			frappe.has_permission(
 				"Appraisal", doc=self.report_appraisal, ptype="write", user=self.manager_user
@@ -842,14 +838,12 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 		)
 
 	def test_manager_cannot_see_non_reports(self):
-		self.assertFalse(
-			frappe.has_permission("Appraisal", doc=self.other_appraisal, user=self.manager_user)
-		)
+		self.assertFalse(frappe.has_permission("Appraisal", doc=self.other_appraisal, user=self.manager_user))
 
-	def test_subordinate_cannot_see_manager(self):
-		frappe.set_user(self.report_user)
+	def test_bottom_of_chain_sees_only_own(self):
+		frappe.set_user(self.grand_user)
 		visible = frappe.get_list("Appraisal", pluck="name")
-		self.assertEqual(visible, [self.report_appraisal])
+		self.assertEqual(visible, [self.grand_appraisal])
 
 	def test_manager_feedback_api_and_report_access(self):
 		from hrms.hr.doctype.appraisal.appraisal import get_feedback_history
@@ -858,4 +852,4 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 		frappe.set_user(self.manager_user)
 		self.assertIsNotNone(get_feedback_history(self.report, self.report_appraisal))
 		rows = get_data(frappe._dict())
-		self.assertEqual({row.employee for row in rows}, {self.manager, self.report})
+		self.assertEqual({row.employee for row in rows}, {self.manager, self.report, self.grand})
