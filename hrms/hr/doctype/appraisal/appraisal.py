@@ -22,8 +22,10 @@ logger = logging.getLogger(__name__)
 UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
 
 # ptypes that stay restricted to the employee's own appraisal (+ HR roles);
-# read-like ptypes additionally extend down the Employee.reports_to chain
-WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amend"})
+# read-like ptypes additionally extend down the Employee.reports_to chain.
+# "share" is write-equivalent: frappe.share.add can grant third parties
+# persistent read/write on the doc, so it must not extend to subordinates.
+WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amend", "share"})
 
 # Default lookup table — used as fallback when cycle has no conversion table
 DEFAULT_SCORE_CONVERSION = [

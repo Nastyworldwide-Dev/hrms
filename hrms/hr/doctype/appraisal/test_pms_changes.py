@@ -840,6 +840,14 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 	def test_manager_cannot_see_non_reports(self):
 		self.assertFalse(frappe.has_permission("Appraisal", doc=self.other_appraisal, user=self.manager_user))
 
+	def test_manager_cannot_share_subordinates_appraisal(self):
+		"""share is write-equivalent (frappe.share.add grants third-party access)"""
+		self.assertFalse(
+			frappe.has_permission(
+				"Appraisal", doc=self.report_appraisal, ptype="share", user=self.manager_user
+			)
+		)
+
 	def test_bottom_of_chain_sees_only_own(self):
 		frappe.set_user(self.grand_user)
 		visible = frappe.get_list("Appraisal", pluck="name")
