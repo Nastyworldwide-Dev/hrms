@@ -6,6 +6,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.share import get_shared
 from frappe.utils import cint, flt, get_link_to_form, now
 
 from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
@@ -26,6 +27,17 @@ UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
 # "share" is write-equivalent: frappe.share.add can grant third parties
 # persistent read/write on the doc, so it must not extend to subordinates.
 WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amend", "share"})
+
+# DocShare rights that can satisfy a ptype — mirrors frappe's own shared-doc
+# fallback. Manual HR grants (sidebar Share) extend exactly these accesses.
+SHARE_RIGHT_FOR_PTYPE = {
+	"read": "read",
+	"email": "read",
+	"print": "read",
+	"write": "write",
+	"share": "share",
+	"submit": "submit",
+}
 
 # Default lookup table — used as fallback when cycle has no conversion table
 DEFAULT_SCORE_CONVERSION = [
@@ -742,6 +754,14 @@ def _get_own_employees(user: str) -> list[str]:
 	return frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
 
 
+def _is_shared_with(name: str, ptype: str, user: str) -> bool:
+	"""Manual HR grant: a DocShare row extends access to this one appraisal."""
+	right = SHARE_RIGHT_FOR_PTYPE.get(ptype)
+	if not right or not name:
+		return False
+	return name in get_shared("Appraisal", user, rights=[right])
+
+
 def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
 	"""None = unrestricted access; otherwise the Employee names whose appraisals
 	`user` may read — their own records plus the whole reporting chain below
@@ -762,8 +782,8 @@ def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None
 
 
 def get_permission_query_conditions(user: str | None = None) -> str:
-	"""Scope Appraisal list reads to the session user's own employee record
-	plus the reporting chain below them.
+	"""Scope Appraisal list reads to the session user's own employee record,
+	the reporting chain below them, and documents manually shared with them.
 
 	Doctype-level perms grant the Employee role blanket read, so without
 	this every employee can browse everyone else's appraisals.
@@ -772,17 +792,28 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	employees = get_allowed_appraisal_employees(user)
 	if employees is None:
 		return ""
-	if not employees:
-		return "1=0"
 
-	values = ", ".join(frappe.db.escape(e) for e in employees)
-	return f"`tabAppraisal`.`employee` in ({values})"
+	conditions = []
+	if employees:
+		values = ", ".join(frappe.db.escape(e) for e in employees)
+		conditions.append(f"`tabAppraisal`.`employee` in ({values})")
+
+	# manual HR grants via the sidebar Share button
+	shared = get_shared("Appraisal", user)
+	if shared:
+		names = ", ".join(frappe.db.escape(n) for n in shared)
+		conditions.append(f"`tabAppraisal`.`name` in ({names})")
+
+	logger.debug("[appraisal] query scope user=%s employees=%d shared=%d", user, len(employees), len(shared))
+	if not conditions:
+		return "1=0"
+	return "(" + " or ".join(conditions) + ")"
 
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	"""Per-doc check: employees act on their own appraisal; managers get
 	read-only access to appraisals down their reporting chain (write stays
-	own + HR)."""
+	own + HR). DocShare rows extend exactly the rights they carry."""
 	user = user or frappe.session.user
 	if not doc.employee:
 		# new/unsaved doc — let role perms decide
@@ -790,9 +821,11 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	elif _has_unrestricted_appraisal_access(user):
 		allowed = True
 	elif ptype in WRITE_PTYPES:
-		allowed = doc.employee in _get_own_employees(user)
+		allowed = doc.employee in _get_own_employees(user) or _is_shared_with(doc.name, ptype, user)
 	else:
-		allowed = doc.employee in (get_allowed_appraisal_employees(user) or [])
+		allowed = doc.employee in (get_allowed_appraisal_employees(user) or []) or _is_shared_with(
+			doc.name, ptype, user
+		)
 	logger.debug(
 		"[appraisal] has_permission user=%s ptype=%s appraisal=%s allowed=%s", user, ptype, doc.name, allowed
 	)

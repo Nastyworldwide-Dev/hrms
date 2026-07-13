@@ -5,6 +5,7 @@ import logging
 
 import frappe
 from frappe import _
+from frappe.share import get_shared
 
 from hrms.hr.doctype.appraisal.appraisal import get_allowed_appraisal_employees
 
@@ -73,10 +74,13 @@ def get_columns() -> list[dict]:
 
 def get_data(filters: dict | None = None) -> list[dict]:
 	# frappe.qb bypasses permission_query_conditions — apply the same
-	# own-employee scope the Appraisal doctype enforces
+	# own-employee + manual-share scope the Appraisal doctype enforces
 	allowed_employees = get_allowed_appraisal_employees()
-	if allowed_employees is not None and not allowed_employees:
-		logger.info("[appraisal_overview] user=%s has no Employee record — empty report", frappe.session.user)
+	shared_appraisals = get_shared("Appraisal", frappe.session.user) if allowed_employees is not None else []
+	if allowed_employees is not None and not allowed_employees and not shared_appraisals:
+		logger.info(
+			"[appraisal_overview] user=%s has no visible appraisals — empty report", frappe.session.user
+		)
 		return []
 
 	Appraisal = frappe.qb.DocType("Appraisal")
@@ -98,7 +102,11 @@ def get_data(filters: dict | None = None) -> list[dict]:
 	)
 
 	if allowed_employees is not None:
-		query = query.where(Appraisal.employee.isin(allowed_employees))
+		scope = Appraisal.employee.isin(allowed_employees) if allowed_employees else None
+		if shared_appraisals:
+			shared_scope = Appraisal.name.isin(shared_appraisals)
+			scope = shared_scope if scope is None else (scope | shared_scope)
+		query = query.where(scope)
 
 	for condition in ["appraisal_cycle", "employee", "department", "designation", "company"]:
 		if filters.get(condition):

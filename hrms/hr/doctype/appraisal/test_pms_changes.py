@@ -860,3 +860,86 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 		self.assertIsNotNone(get_feedback_history(self.report, self.report_appraisal))
 		rows = get_data(frappe._dict())
 		self.assertEqual({row.employee for row in rows}, {self.manager, self.report, self.grand})
+
+
+class TestAppraisalShareGrant(FrappeTestCase):
+	"""HR can manually grant per-document visibility via the native Share (DocShare)"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+		frappe.db.delete("DocShare", {"share_doctype": "Appraisal"})
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.user_a = "appraisal_share_a@example.com"
+		self.user_b = "appraisal_share_b@example.com"
+		self.employee_a = make_employee(self.user_a, company=self.company, designation="Engineer")
+		self.employee_b = make_employee(self.user_b, company=self.company, designation="Engineer")
+
+		# isolate the code-level restriction from any User Permission rows
+		frappe.db.delete("User Permission", {"user": ("in", [self.user_a, self.user_b])})
+		frappe.clear_cache(user=self.user_a)
+		frappe.clear_cache(user=self.user_b)
+
+		cycle = create_appraisal_cycle(name="Q-Share", designation="Engineer")
+		cycle.create_appraisals()
+
+		self.appraisal_a = frappe.db.get_value("Appraisal", {"employee": self.employee_a}, "name")
+		self.appraisal_b = frappe.db.get_value("Appraisal", {"employee": self.employee_b}, "name")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_share_grants_read_only_visibility(self):
+		import frappe.share
+
+		frappe.share.add("Appraisal", self.appraisal_b, self.user_a)
+
+		frappe.set_user(self.user_a)
+		visible = set(frappe.get_list("Appraisal", pluck="name"))
+		self.assertEqual(visible, {self.appraisal_a, self.appraisal_b})
+		self.assertTrue(frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a))
+		# read grant does not imply write
+		self.assertFalse(
+			frappe.has_permission("Appraisal", doc=self.appraisal_b, ptype="write", user=self.user_a)
+		)
+
+	def test_share_with_write_grants_write(self):
+		import frappe.share
+
+		frappe.share.add("Appraisal", self.appraisal_b, self.user_a, write=1)
+		self.assertTrue(
+			frappe.has_permission("Appraisal", doc=self.appraisal_b, ptype="write", user=self.user_a)
+		)
+
+	def test_revoking_share_removes_access(self):
+		import frappe.share
+
+		frappe.share.add("Appraisal", self.appraisal_b, self.user_a)
+		frappe.share.remove("Appraisal", self.appraisal_b, self.user_a)
+
+		frappe.set_user(self.user_a)
+		self.assertEqual(frappe.get_list("Appraisal", pluck="name"), [self.appraisal_a])
+		self.assertFalse(frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a))
+
+	def test_share_extends_feedback_api_and_report(self):
+		import frappe.share
+
+		from hrms.hr.doctype.appraisal.appraisal import get_feedback_history
+		from hrms.hr.report.appraisal_overview.appraisal_overview import get_data
+
+		frappe.share.add("Appraisal", self.appraisal_b, self.user_a)
+
+		frappe.set_user(self.user_a)
+		self.assertIsNotNone(get_feedback_history(self.employee_b, self.appraisal_b))
+		rows = get_data(frappe._dict())
+		self.assertEqual({row.employee for row in rows}, {self.employee_a, self.employee_b})
+
+	def test_unshared_colleague_still_hidden(self):
+		frappe.set_user(self.user_a)
+		self.assertEqual(frappe.get_list("Appraisal", pluck="name"), [self.appraisal_a])
