@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 # own-employee visibility restriction
 UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
 
+# ptypes that stay restricted to the employee's own appraisal (+ HR roles);
+# read-like ptypes additionally extend to direct reports via Employee.reports_to
+WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amend"})
+
 # Default lookup table — used as fallback when cycle has no conversion table
 DEFAULT_SCORE_CONVERSION = [
 	(4.5, 0.80, "Exceptional"),
@@ -732,20 +736,27 @@ def _has_unrestricted_appraisal_access(user: str) -> bool:
 	return user == "Administrator" or bool(set(UNRESTRICTED_APPRAISAL_ROLES) & set(frappe.get_roles(user)))
 
 
+def _get_own_employees(user: str) -> list[str]:
+	return frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
+
+
 def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
-	"""None = unrestricted access; otherwise the Employee names whose appraisals `user` may see."""
+	"""None = unrestricted access; otherwise the Employee names whose appraisals
+	`user` may read — their own records plus direct reports (Employee.reports_to)."""
 	user = user or frappe.session.user
-	employees = (
-		None
-		if _has_unrestricted_appraisal_access(user)
-		else frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
-	)
+	if _has_unrestricted_appraisal_access(user):
+		employees = None
+	else:
+		employees = _get_own_employees(user)
+		if employees:
+			employees += frappe.get_all("Employee", filters={"reports_to": ("in", employees)}, pluck="name")
 	logger.debug("[appraisal] allowed appraisal employees for user=%s: %s", user, employees)
 	return employees
 
 
 def get_permission_query_conditions(user: str | None = None) -> str:
-	"""Scope Appraisal list reads to the session user's own employee record.
+	"""Scope Appraisal list reads to the session user's own employee record
+	plus direct reports.
 
 	Doctype-level perms grant the Employee role blanket read, so without
 	this every employee can browse everyone else's appraisals.
@@ -762,14 +773,18 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
-	"""Per-doc check: employees can only act on their own appraisal."""
+	"""Per-doc check: employees act on their own appraisal; managers get
+	read-only access to direct reports' appraisals (write stays own + HR)."""
 	user = user or frappe.session.user
-	# empty employee = new/unsaved doc — let role perms decide
-	allowed = (
-		_has_unrestricted_appraisal_access(user)
-		or not doc.employee
-		or frappe.db.get_value("Employee", doc.employee, "user_id") == user
-	)
+	if not doc.employee:
+		# new/unsaved doc — let role perms decide
+		allowed = True
+	elif _has_unrestricted_appraisal_access(user):
+		allowed = True
+	elif ptype in WRITE_PTYPES:
+		allowed = doc.employee in _get_own_employees(user)
+	else:
+		allowed = doc.employee in (get_allowed_appraisal_employees(user) or [])
 	logger.debug(
 		"[appraisal] has_permission user=%s ptype=%s appraisal=%s allowed=%s", user, ptype, doc.name, allowed
 	)

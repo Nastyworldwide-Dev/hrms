@@ -777,3 +777,85 @@ class TestAppraisalVisibility(FrappeTestCase):
 
 		frappe.set_user("Administrator")
 		self.assertEqual(get_appraisal_cycle_summary(cycle)["appraisees"], 2)
+
+
+class TestManagerAppraisalVisibility(FrappeTestCase):
+	"""Managers (reports_to) get read-only visibility of direct reports' appraisals"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.manager_user = "appraisal_mgr@example.com"
+		self.report_user = "appraisal_mgr_report@example.com"
+		self.other_user = "appraisal_mgr_other@example.com"
+		self.manager = make_employee(self.manager_user, company=self.company, designation="Engineer")
+		self.report = make_employee(self.report_user, company=self.company, designation="Engineer")
+		self.other = make_employee(self.other_user, company=self.company, designation="Engineer")
+
+		frappe.db.set_value("Employee", self.report, "reports_to", self.manager)
+
+		# isolate the code-level restriction from any User Permission rows
+		frappe.db.delete(
+			"User Permission",
+			{"user": ("in", [self.manager_user, self.report_user, self.other_user])},
+		)
+		for user in (self.manager_user, self.report_user, self.other_user):
+			frappe.clear_cache(user=user)
+
+		cycle = create_appraisal_cycle(name="Q-Mgr", designation="Engineer")
+		cycle.create_appraisals()
+
+		self.manager_appraisal = frappe.db.get_value("Appraisal", {"employee": self.manager}, "name")
+		self.report_appraisal = frappe.db.get_value("Appraisal", {"employee": self.report}, "name")
+		self.other_appraisal = frappe.db.get_value("Appraisal", {"employee": self.other}, "name")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_manager_sees_own_and_direct_reports(self):
+		frappe.set_user(self.manager_user)
+		visible = set(frappe.get_list("Appraisal", pluck="name"))
+		self.assertEqual(visible, {self.manager_appraisal, self.report_appraisal})
+
+	def test_manager_read_but_not_write_on_reports_appraisal(self):
+		self.assertTrue(
+			frappe.has_permission("Appraisal", doc=self.report_appraisal, user=self.manager_user)
+		)
+		self.assertFalse(
+			frappe.has_permission(
+				"Appraisal", doc=self.report_appraisal, ptype="write", user=self.manager_user
+			)
+		)
+
+	def test_manager_keeps_write_on_own_appraisal(self):
+		self.assertTrue(
+			frappe.has_permission(
+				"Appraisal", doc=self.manager_appraisal, ptype="write", user=self.manager_user
+			)
+		)
+
+	def test_manager_cannot_see_non_reports(self):
+		self.assertFalse(
+			frappe.has_permission("Appraisal", doc=self.other_appraisal, user=self.manager_user)
+		)
+
+	def test_subordinate_cannot_see_manager(self):
+		frappe.set_user(self.report_user)
+		visible = frappe.get_list("Appraisal", pluck="name")
+		self.assertEqual(visible, [self.report_appraisal])
+
+	def test_manager_feedback_api_and_report_access(self):
+		from hrms.hr.doctype.appraisal.appraisal import get_feedback_history
+		from hrms.hr.report.appraisal_overview.appraisal_overview import get_data
+
+		frappe.set_user(self.manager_user)
+		self.assertIsNotNone(get_feedback_history(self.report, self.report_appraisal))
+		rows = get_data(frappe._dict())
+		self.assertEqual({row.employee for row in rows}, {self.manager, self.report})
