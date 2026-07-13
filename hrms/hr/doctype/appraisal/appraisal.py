@@ -732,6 +732,18 @@ def _has_unrestricted_appraisal_access(user: str) -> bool:
 	return user == "Administrator" or bool(set(UNRESTRICTED_APPRAISAL_ROLES) & set(frappe.get_roles(user)))
 
 
+def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
+	"""None = unrestricted access; otherwise the Employee names whose appraisals `user` may see."""
+	user = user or frappe.session.user
+	employees = (
+		None
+		if _has_unrestricted_appraisal_access(user)
+		else frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
+	)
+	logger.debug("[appraisal] allowed appraisal employees for user=%s: %s", user, employees)
+	return employees
+
+
 def get_permission_query_conditions(user: str | None = None) -> str:
 	"""Scope Appraisal list reads to the session user's own employee record.
 
@@ -739,11 +751,9 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	this every employee can browse everyone else's appraisals.
 	"""
 	user = user or frappe.session.user
-	if _has_unrestricted_appraisal_access(user):
+	employees = get_allowed_appraisal_employees(user)
+	if employees is None:
 		return ""
-
-	employees = frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
-	logger.debug("[appraisal] scoping list for user=%s to employees=%s", user, employees)
 	if not employees:
 		return "1=0"
 

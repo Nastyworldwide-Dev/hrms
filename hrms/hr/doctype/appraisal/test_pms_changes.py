@@ -751,3 +751,17 @@ class TestAppraisalVisibility(FrappeTestCase):
 			20,
 			{"appraisal_cycle": cycle, "employee": self.employee_b},
 		)
+
+	def test_appraisal_overview_report_scoped(self):
+		"""Appraisal Overview report (frappe.qb) applies the own-employee scope"""
+		from hrms.hr.report.appraisal_overview.appraisal_overview import get_data
+
+		frappe.set_user(self.user_a)
+		rows = get_data(frappe._dict())
+		self.assertEqual({row.employee for row in rows}, {self.employee_a})
+
+		frappe.set_user("Administrator")
+		rows = get_data(frappe._dict())
+		self.assertEqual(
+			{row.employee for row in rows}, {self.employee_a, self.employee_b}
+		)

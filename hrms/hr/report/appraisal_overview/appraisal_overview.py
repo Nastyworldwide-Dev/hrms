@@ -1,8 +1,14 @@
 # Copyright (c) 2023, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import logging
+
 import frappe
 from frappe import _
+
+from hrms.hr.doctype.appraisal.appraisal import get_allowed_appraisal_employees
+
+logger = logging.getLogger(__name__)
 
 
 def execute(filters: dict | None = None) -> tuple:
@@ -66,6 +72,13 @@ def get_columns() -> list[dict]:
 
 
 def get_data(filters: dict | None = None) -> list[dict]:
+	# frappe.qb bypasses permission_query_conditions — apply the same
+	# own-employee scope the Appraisal doctype enforces
+	allowed_employees = get_allowed_appraisal_employees()
+	if allowed_employees is not None and not allowed_employees:
+		logger.info("[appraisal_overview] user=%s has no Employee record — empty report", frappe.session.user)
+		return []
+
 	Appraisal = frappe.qb.DocType("Appraisal")
 	query = (
 		frappe.qb.from_(Appraisal)
@@ -83,6 +96,9 @@ def get_data(filters: dict | None = None) -> list[dict]:
 		)
 		.where(Appraisal.docstatus != 2)
 	)
+
+	if allowed_employees is not None:
+		query = query.where(Appraisal.employee.isin(allowed_employees))
 
 	for condition in ["appraisal_cycle", "employee", "department", "designation", "company"]:
 		if filters.get(condition):
