@@ -604,6 +604,8 @@ def get_grade_scale_html():
 
 @frappe.whitelist()
 def get_feedback_history(employee, appraisal):
+	frappe.has_permission("Appraisal", doc=appraisal, throw=True)
+
 	data = frappe._dict()
 	data.feedback_history = frappe.get_list(
 		"Employee Performance Feedback",
@@ -715,6 +717,8 @@ def get_kras_for_employee(doctype, txt, searchfield, start, page_len, filters):
 		},
 		"name",
 	)
+	if appraisal:
+		frappe.has_permission("Appraisal", doc=appraisal, throw=True)
 
 	return frappe.get_all(
 		"Appraisal KRA",

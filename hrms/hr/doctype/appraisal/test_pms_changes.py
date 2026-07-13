@@ -723,3 +723,31 @@ class TestAppraisalVisibility(FrappeTestCase):
 		from hrms.hr.doctype.appraisal.appraisal import get_permission_query_conditions
 
 		self.assertEqual(get_permission_query_conditions("no_employee@example.com"), "1=0")
+
+	def test_feedback_history_api_denied_for_others(self):
+		"""Whitelisted feedback API cannot leak a colleague's appraisal feedback"""
+		from hrms.hr.doctype.appraisal.appraisal import get_feedback_history
+
+		frappe.set_user(self.user_a)
+		# own appraisal still works
+		self.assertIsNotNone(get_feedback_history(self.employee_a, self.appraisal_a))
+		self.assertRaises(
+			frappe.PermissionError, get_feedback_history, self.employee_b, self.appraisal_b
+		)
+
+	def test_kra_search_api_denied_for_others(self):
+		"""KRA link search cannot enumerate a colleague's appraisal KRAs"""
+		from hrms.hr.doctype.appraisal.appraisal import get_kras_for_employee
+
+		cycle = frappe.db.get_value("Appraisal", self.appraisal_b, "appraisal_cycle")
+		frappe.set_user(self.user_a)
+		self.assertRaises(
+			frappe.PermissionError,
+			get_kras_for_employee,
+			"Appraisal KRA",
+			"",
+			"name",
+			0,
+			20,
+			{"appraisal_cycle": cycle, "employee": self.employee_b},
+		)
