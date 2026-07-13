@@ -658,3 +658,68 @@ class TestGoalScoreGroupedQuery(FrappeTestCase):
 		# Quality KRA, 21% weight, 75% completion → goal_score = 75 * 21 / 100 = 15.75
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 75)
 		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15.75)
+
+
+class TestAppraisalVisibility(FrappeTestCase):
+	"""Employees may only see their own Appraisal; HR roles see everything"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test PMS").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+
+		self.user_a = "appraisal_vis_a@example.com"
+		self.user_b = "appraisal_vis_b@example.com"
+		self.employee_a = make_employee(self.user_a, company=self.company, designation="Engineer")
+		self.employee_b = make_employee(self.user_b, company=self.company, designation="Engineer")
+
+		# isolate the code-level restriction from any User Permission rows
+		frappe.db.delete("User Permission", {"user": ("in", [self.user_a, self.user_b])})
+		frappe.clear_cache(user=self.user_a)
+		frappe.clear_cache(user=self.user_b)
+
+		cycle = create_appraisal_cycle(name="Q-Visibility", designation="Engineer")
+		cycle.create_appraisals()
+
+		self.appraisal_a = frappe.db.get_value("Appraisal", {"employee": self.employee_a}, "name")
+		self.appraisal_b = frappe.db.get_value("Appraisal", {"employee": self.employee_b}, "name")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_employee_sees_only_own_appraisal_in_list(self):
+		"""get_list as a plain employee returns only their own appraisal"""
+		frappe.set_user(self.user_a)
+		visible = frappe.get_list("Appraisal", pluck="name")
+		self.assertEqual(visible, [self.appraisal_a])
+
+	def test_employee_cannot_read_others_appraisal(self):
+		"""Doc-level read on a colleague's appraisal is denied"""
+		self.assertTrue(
+			frappe.has_permission("Appraisal", doc=self.appraisal_a, user=self.user_a)
+		)
+		self.assertFalse(
+			frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a)
+		)
+
+	def test_hr_user_sees_all_appraisals(self):
+		"""HR User role is exempt from the own-employee restriction"""
+		hr_email = "appraisal_vis_hr@example.com"
+		make_employee(hr_email, company=self.company, designation="Engineer")
+		frappe.get_doc("User", hr_email).add_roles("HR User")
+
+		frappe.set_user(hr_email)
+		visible = frappe.get_list("Appraisal", pluck="name")
+		self.assertIn(self.appraisal_a, visible)
+		self.assertIn(self.appraisal_b, visible)
+
+	def test_user_without_employee_sees_nothing(self):
+		"""A desk user with no Employee record gets an empty appraisal list"""
+		from hrms.hr.doctype.appraisal.appraisal import get_permission_query_conditions
+
+		self.assertEqual(get_permission_query_conditions("no_employee@example.com"), "1=0")

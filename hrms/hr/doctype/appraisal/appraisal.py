@@ -1,6 +1,8 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -12,6 +14,12 @@ from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
 )
 from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
+
+logger = logging.getLogger(__name__)
+
+# Roles that manage the appraisal cycle for everyone and bypass the
+# own-employee visibility restriction
+UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
 
 # Default lookup table — used as fallback when cycle has no conversion table
 DEFAULT_SCORE_CONVERSION = [
@@ -714,3 +722,41 @@ def get_kras_for_employee(doctype, txt, searchfield, start, page_len, filters):
 		fields=["kra"],
 		as_list=1,
 	)
+
+
+def _has_unrestricted_appraisal_access(user: str) -> bool:
+	return user == "Administrator" or bool(set(UNRESTRICTED_APPRAISAL_ROLES) & set(frappe.get_roles(user)))
+
+
+def get_permission_query_conditions(user: str | None = None) -> str:
+	"""Scope Appraisal list reads to the session user's own employee record.
+
+	Doctype-level perms grant the Employee role blanket read, so without
+	this every employee can browse everyone else's appraisals.
+	"""
+	user = user or frappe.session.user
+	if _has_unrestricted_appraisal_access(user):
+		return ""
+
+	employees = frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
+	logger.debug("[appraisal] scoping list for user=%s to employees=%s", user, employees)
+	if not employees:
+		return "1=0"
+
+	values = ", ".join(frappe.db.escape(e) for e in employees)
+	return f"`tabAppraisal`.`employee` in ({values})"
+
+
+def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
+	"""Per-doc check: employees can only act on their own appraisal."""
+	user = user or frappe.session.user
+	# empty employee = new/unsaved doc — let role perms decide
+	allowed = (
+		_has_unrestricted_appraisal_access(user)
+		or not doc.employee
+		or frappe.db.get_value("Employee", doc.employee, "user_id") == user
+	)
+	logger.debug(
+		"[appraisal] has_permission user=%s ptype=%s appraisal=%s allowed=%s", user, ptype, doc.name, allowed
+	)
+	return allowed

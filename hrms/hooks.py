@@ -141,6 +141,9 @@ before_app_uninstall = "hrms.setup.before_app_uninstall"
 # }
 
 permission_query_conditions = {
+	# Employees may only see their own Appraisal; HR User/Manager and
+	# System Manager keep full visibility for the rating workflow.
+	"Appraisal": "hrms.hr.doctype.appraisal.appraisal.get_permission_query_conditions",
 	# Scope notification reads to the recipient. Doctype-level perms only grant
 	# read to Employee + System Manager; HR Managers acting as approvers would
 	# otherwise see an empty feed even when their unread count is nonzero.
@@ -148,6 +151,7 @@ permission_query_conditions = {
 }
 
 has_permission = {
+	"Appraisal": "hrms.hr.doctype.appraisal.appraisal.has_permission",
 	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.has_permission",
 }
 
