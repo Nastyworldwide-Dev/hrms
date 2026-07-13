@@ -180,6 +180,10 @@ doc_events = {
 			"hrms.overrides.employee_master.update_approver_user_roles",
 		],
 	},
+	"DocShare": {
+		# manual appraisal grants stay per-user and non-transferable
+		"validate": "hrms.hr.doctype.appraisal.appraisal.validate_appraisal_doc_share",
+	},
 	"Company": {
 		"validate": "hrms.overrides.company.validate_default_accounts",
 		"on_update": [

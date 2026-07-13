@@ -943,3 +943,43 @@ class TestAppraisalShareGrant(FrappeTestCase):
 	def test_unshared_colleague_still_hidden(self):
 		frappe.set_user(self.user_a)
 		self.assertEqual(frappe.get_list("Appraisal", pluck="name"), [self.appraisal_a])
+
+	def test_everyone_share_blocked(self):
+		"""Appraisals can never be shared with Everyone, not even by admins"""
+		import frappe.share
+
+		self.assertRaises(
+			frappe.ValidationError,
+			frappe.share.add,
+			"Appraisal",
+			self.appraisal_b,
+			everyone=1,
+		)
+
+	def test_can_share_right_blocked(self):
+		"""DocShare rows on Appraisal can never carry the Can Share right"""
+		import frappe.share
+
+		self.assertRaises(
+			frappe.ValidationError,
+			frappe.share.add,
+			"Appraisal",
+			self.appraisal_b,
+			self.user_a,
+			share=1,
+		)
+
+	def test_shared_user_cannot_onward_share(self):
+		"""A read grant cannot be re-shared to third parties by the grantee"""
+		import frappe.share
+
+		frappe.share.add("Appraisal", self.appraisal_b, self.user_a)
+
+		frappe.set_user(self.user_a)
+		self.assertRaises(
+			frappe.PermissionError,
+			frappe.share.add,
+			"Appraisal",
+			self.appraisal_b,
+			self.user_b,
+		)

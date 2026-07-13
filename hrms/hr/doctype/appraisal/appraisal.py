@@ -30,12 +30,13 @@ WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "delete", "amen
 
 # DocShare rights that can satisfy a ptype — mirrors frappe's own shared-doc
 # fallback. Manual HR grants (sidebar Share) extend exactly these accesses.
+# "share" is deliberately absent: re-sharing stays own+HR, and
+# validate_appraisal_doc_share blocks share=1 rows from existing at all.
 SHARE_RIGHT_FOR_PTYPE = {
 	"read": "read",
 	"email": "read",
 	"print": "read",
 	"write": "write",
-	"share": "share",
 	"submit": "submit",
 }
 
@@ -757,9 +758,25 @@ def _get_own_employees(user: str) -> list[str]:
 def _is_shared_with(name: str, ptype: str, user: str) -> bool:
 	"""Manual HR grant: a DocShare row extends access to this one appraisal."""
 	right = SHARE_RIGHT_FOR_PTYPE.get(ptype)
-	if not right or not name:
-		return False
-	return name in get_shared("Appraisal", user, rights=[right])
+	shared = bool(right and name and name in get_shared("Appraisal", user, rights=[right]))
+	logger.debug("[appraisal] share check user=%s ptype=%s name=%s shared=%s", user, ptype, name, shared)
+	return shared
+
+
+def validate_appraisal_doc_share(doc, method=None):
+	"""DocShare guard: keep manual appraisal grants per-user and non-transferable.
+
+	Blocks Everyone-shares (would expose the appraisal to every user in the
+	system) and the 'Can Share' right (would let a grantee onward-share a
+	subordinate's appraisal outside HR control).
+	"""
+	if doc.share_doctype != "Appraisal":
+		return
+	logger.debug("[appraisal] validating DocShare %s -> user=%s", doc.share_name, doc.user)
+	if cint(doc.everyone):
+		frappe.throw(_("Appraisals cannot be shared with Everyone. Share with specific users instead."))
+	if cint(doc.share):
+		frappe.throw(_("Appraisal shares cannot carry the 'Can Share' right."))
 
 
 def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
