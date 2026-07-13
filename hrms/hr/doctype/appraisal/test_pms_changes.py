@@ -765,3 +765,15 @@ class TestAppraisalVisibility(FrappeTestCase):
 		self.assertEqual(
 			{row.employee for row in rows}, {self.employee_a, self.employee_b}
 		)
+
+	def test_cycle_summary_hidden_from_plain_employee(self):
+		"""Cycle-wide completion stats are only returned to unrestricted roles"""
+		from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import get_appraisal_cycle_summary
+
+		cycle = frappe.db.get_value("Appraisal", self.appraisal_a, "appraisal_cycle")
+
+		frappe.set_user(self.user_a)
+		self.assertIsNone(get_appraisal_cycle_summary(cycle))
+
+		frappe.set_user("Administrator")
+		self.assertEqual(get_appraisal_cycle_summary(cycle)["appraisees"], 2)

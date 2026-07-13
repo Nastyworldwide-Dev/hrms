@@ -1,12 +1,16 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import Count
 from frappe.query_builder.terms import SubQuery
 from frappe.utils import flt
+
+logger = logging.getLogger(__name__)
 
 
 def get_department_template(department):
@@ -59,11 +63,14 @@ class AppraisalCycle(Document):
 	def before_insert(self):
 		if not self.score_conversion_table:
 			for min_score, conversion_pct, label in DEFAULT_SCORE_CONVERSION:
-				self.append("score_conversion_table", {
-					"min_score": min_score,
-					"conversion_pct": conversion_pct,
-					"label": label,
-				})
+				self.append(
+					"score_conversion_table",
+					{
+						"min_score": min_score,
+						"conversion_pct": conversion_pct,
+						"label": label,
+					},
+				)
 
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
@@ -121,9 +128,8 @@ class AppraisalCycle(Document):
 
 			for data in employees:
 				# Priority: department tree → designation → None
-				template = (
-					get_department_template(data.department)
-					or designation_templates.get(data.designation)
+				template = get_department_template(data.department) or designation_templates.get(
+					data.designation
 				)
 
 				if not template:
@@ -289,7 +295,15 @@ def validate_active_appraisal_cycle(appraisal_cycle: str) -> None:
 
 
 @frappe.whitelist()
-def get_appraisal_cycle_summary(cycle_name: str) -> dict:
+def get_appraisal_cycle_summary(cycle_name: str) -> dict | None:
+	# cycle-wide stats are for HR/system roles; scoped users get no summary
+	# (deferred import — appraisal.py imports from this module)
+	from hrms.hr.doctype.appraisal.appraisal import get_allowed_appraisal_employees
+
+	if get_allowed_appraisal_employees() is not None:
+		logger.debug("[appraisal_cycle] summary hidden for scoped user=%s", frappe.session.user)
+		return None
+
 	summary = frappe._dict()
 
 	summary["appraisees"] = frappe.db.count(
