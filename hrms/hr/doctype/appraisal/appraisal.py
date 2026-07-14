@@ -747,6 +747,80 @@ def get_kras_for_employee(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def appraisal_employee_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Employee picker for the Appraisal form.
+
+	Team leads may have no doctype-level read/select on Employee, so the
+	standard link search 403s before they can pick an appraisee. Mirror the
+	Appraisal list rule instead (get_allowed_appraisal_employees): own
+	employee records plus the reports_to chain below, everyone for HR.
+	Deliberately bypasses Employee role/user permissions — the allowed-set
+	filter is the guard.
+	"""
+	allowed = get_allowed_appraisal_employees()
+	logger.debug(
+		"[appraisal] employee picker user=%s txt=%r allowed=%s",
+		frappe.session.user,
+		txt,
+		"all" if allowed is None else len(allowed),
+	)
+	if allowed is not None and not allowed:
+		return []
+
+	emp_filters = {"status": "Active"}
+	if allowed is not None:
+		emp_filters["name"] = ("in", allowed)
+
+	return frappe.get_all(
+		"Employee",
+		filters=emp_filters,
+		or_filters={
+			"name": ("like", f"%{txt}%"),
+			"employee_name": ("like", f"%{txt}%"),
+		},
+		fields=["name", "employee_name"],
+		order_by="employee_name asc",
+		limit_start=start,
+		limit_page_length=page_len,
+		as_list=True,
+	)
+
+
+@frappe.whitelist()
+def get_employee_particulars_for_appraisal(employee: str) -> dict:
+	"""Particulars for the Appraisal form's fetch-from fields.
+
+	Used by appraisal.js when the session user lacks read/select on
+	Employee (the built-in client-side link fetch would 403). Guarded by
+	the same visibility rule as the picker: own employee + reports_to chain.
+	"""
+	allowed = get_allowed_appraisal_employees()
+	if allowed is not None and employee not in allowed:
+		logger.info("[appraisal] particulars denied user=%s employee=%s", frappe.session.user, employee)
+		frappe.throw(_("You are not permitted to appraise this employee."), frappe.PermissionError)
+
+	return (
+		frappe.db.get_value(
+			"Employee",
+			employee,
+			[
+				"employee_name",
+				"department",
+				"designation",
+				"image",
+				"date_of_joining",
+				"branch",
+				"grade",
+				"performance_band",
+			],
+			as_dict=True,
+		)
+		or frappe._dict()
+	)
+
+
 def _has_unrestricted_appraisal_access(user: str) -> bool:
 	return user == "Administrator" or bool(set(UNRESTRICTED_APPRAISAL_ROLES) & set(frappe.get_roles(user)))
 

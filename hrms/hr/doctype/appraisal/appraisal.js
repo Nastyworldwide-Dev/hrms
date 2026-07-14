@@ -71,6 +71,23 @@ frappe.ui.form.on("Appraisal", {
 			frm.dashboard.add_comment(frm.doc.section_b_gate_status, "yellow", true);
 		}
 
+		// Employee picker follows the appraisal visibility rule: own record +
+		// reports_to chain below (HR sees everyone). Server-side query bypasses
+		// the Employee doctype perms that 403 team leads on the standard search.
+		frm.set_query("employee", () => {
+			return { query: "hrms.hr.doctype.appraisal.appraisal.appraisal_employee_query" };
+		});
+
+		// Without read/select on Employee, the built-in link validation and
+		// fetch-from would 403 — skip them; the employee trigger fills the
+		// particulars via a guarded endpoint instead.
+		frm._manual_employee_fetch =
+			!(frappe.boot.user.can_read || []).includes("Employee") &&
+			!(frappe.boot.user.can_select || []).includes("Employee");
+		if (frm._manual_employee_fetch) {
+			frm.get_field("employee").df.ignore_link_validation = true;
+		}
+
 		// Filter KRA by employee's department
 		frm.set_query("kra", "appraisal_kra", () => {
 			return {
@@ -117,6 +134,31 @@ frappe.ui.form.on("Appraisal", {
 				query: "hrms.hr.doctype.appraisal.appraisal.get_templates_for_department",
 				filters: { department: frm.doc.department },
 			};
+		});
+	},
+
+	employee(frm) {
+		// Manual replacement for the fetch-from fields skipped when the user
+		// has no read/select on Employee (see refresh)
+		if (!frm._manual_employee_fetch || !frm.doc.employee) return;
+		frappe.call({
+			method: "hrms.hr.doctype.appraisal.appraisal.get_employee_particulars_for_appraisal",
+			args: { employee: frm.doc.employee },
+			callback(r) {
+				if (!r.message) return;
+				const p = r.message;
+				frm.set_value({
+					employee_name: p.employee_name,
+					department: p.department,
+					designation: p.designation,
+					employee_image: p.image,
+					date_joined: p.date_of_joining,
+					staff_no: frm.doc.employee,
+					unit: p.branch,
+					job_grade: p.grade,
+					employee_band: p.performance_band,
+				});
+			},
 		});
 	},
 

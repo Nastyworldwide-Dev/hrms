@@ -983,3 +983,71 @@ class TestAppraisalShareGrant(FrappeTestCase):
 			self.appraisal_b,
 			self.user_b,
 		)
+
+
+class TestAppraisalEmployeeQuery(FrappeTestCase):
+	"""Employee picker on the Appraisal form follows the appraisal list rule:
+	own employee + reports_to chain below, bypassing Employee doctype perms"""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.company = create_company("_Test PMS").name
+
+		# chain: manager -> report -> grand_report; `other` is outside the chain
+		self.manager_user = "appraisal_query_mgr@example.com"
+		self.report_user = "appraisal_query_report@example.com"
+		self.grand_user = "appraisal_query_grand@example.com"
+		self.other_user = "appraisal_query_other@example.com"
+		self.manager = make_employee(self.manager_user, company=self.company)
+		self.report = make_employee(self.report_user, company=self.company)
+		self.grand = make_employee(self.grand_user, company=self.company)
+		self.other = make_employee(self.other_user, company=self.company)
+
+		frappe.db.set_value("Employee", self.report, "reports_to", self.manager)
+		frappe.db.set_value("Employee", self.grand, "reports_to", self.report)
+
+		# isolate the code-level restriction from any User Permission rows
+		users = [self.manager_user, self.report_user, self.grand_user, self.other_user]
+		frappe.db.delete("User Permission", {"user": ("in", users)})
+		for user in users:
+			frappe.clear_cache(user=user)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def _query(self, txt="", page_len=20):
+		from hrms.hr.doctype.appraisal.appraisal import appraisal_employee_query
+
+		return {row[0] for row in appraisal_employee_query("Employee", txt, "name", 0, page_len, {})}
+
+	def test_manager_gets_own_and_chain(self):
+		frappe.set_user(self.manager_user)
+		self.assertEqual(self._query(), {self.manager, self.report, self.grand})
+
+	def test_leaf_employee_gets_only_self(self):
+		frappe.set_user(self.grand_user)
+		self.assertEqual(self._query(), {self.grand})
+
+	def test_search_text_filters_results(self):
+		frappe.set_user(self.manager_user)
+		emp_name = frappe.db.get_value("Employee", self.report, "employee_name")
+		self.assertEqual(self._query(emp_name), {self.report})
+
+	def test_unrestricted_user_sees_beyond_chain(self):
+		frappe.set_user("Administrator")
+		self.assertEqual(
+			self._query("appraisal_query_"), {self.manager, self.report, self.grand, self.other}
+		)
+
+	def test_particulars_denied_outside_chain(self):
+		from hrms.hr.doctype.appraisal.appraisal import get_employee_particulars_for_appraisal
+
+		frappe.set_user(self.manager_user)
+		self.assertRaises(frappe.PermissionError, get_employee_particulars_for_appraisal, self.other)
+
+	def test_particulars_returned_for_subordinate(self):
+		from hrms.hr.doctype.appraisal.appraisal import get_employee_particulars_for_appraisal
+
+		frappe.set_user(self.manager_user)
+		particulars = get_employee_particulars_for_appraisal(self.grand)
+		self.assertEqual(
+			particulars.employee_name, frappe.db.get_value("Employee", self.grand, "employee_name")
+		)
