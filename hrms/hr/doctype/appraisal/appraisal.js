@@ -364,7 +364,9 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_sum = 0;
 
 		rows.forEach((d) => {
-			let rating_value = flt(d.manager_rating) * 5;
+			// Clamp to 0-100% (floor guards against negative actuals)
+			let capped = Math.max(0, Math.min(flt(d.achievement), 100));
+			let rating_value = (flt(capped) / 100) * 5;
 			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
 			total_weightage += flt(d.per_weightage);
 		});
@@ -586,8 +588,11 @@ function calculate_achievement(frm, cdt, cdn) {
 
 // A2: Functional Competency child table handlers (repurposed for A2)
 frappe.ui.form.on("Appraisal Functional Competency", {
-	manager_rating(frm, cdt, cdn) {
-		calculate_competency_row(frm, cdt, cdn);
+	target(frm, cdt, cdn) {
+		calculate_competency_achievement(frm, cdt, cdn);
+	},
+	actual(frm, cdt, cdn) {
+		calculate_competency_achievement(frm, cdt, cdn);
 	},
 	per_weightage(frm, cdt, cdn) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
@@ -614,11 +619,24 @@ frappe.ui.form.on("Appraisal Functional Competency", {
 function calculate_competency_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 
-	let rating_value = flt(row.manager_rating) * 5;
+	// Clamp to 0-100% (floor guards against negative actuals)
+	let capped = Math.max(0, Math.min(flt(row.achievement), 100));
+	let rating_value = (flt(capped) / 100) * 5;
 	let score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
 	frappe.model.set_value(cdt, cdn, "score", score);
 
 	frm.trigger("calculate_a2");
+}
+
+function calculate_competency_achievement(frm, cdt, cdn) {
+	let row = frappe.get_doc(cdt, cdn);
+	let achievement = 0;
+	if (flt(row.target)) {
+		achievement = flt((flt(row.actual) / flt(row.target)) * 100, 2);
+	}
+	frappe.model.set_value(cdt, cdn, "achievement", achievement);
+	// Achievement now drives the score — recompute the row and Section A2
+	calculate_competency_row(frm, cdt, cdn);
 }
 
 /**

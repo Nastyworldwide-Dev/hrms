@@ -559,6 +559,48 @@ class TestSectionScoreCalculation(FrappeTestCase):
 		# ...but it contributes zero weighted score (floored at 0)
 		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 0.0)
 
+	def test_a2_competency_scored_by_achievement(self):
+		"""A2 competencies score by achievement, same method as A1."""
+		cycle = create_appraisal_cycle(name="Q-A2Ach", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		appraisal.append(
+			"functional_competencies",
+			{"per_weightage": 100, "target": 100, "actual": 100},
+		)
+		appraisal.save()
+
+		# Full achievement on the sole competency → A2 = full A2 weight (10)
+		self.assertEqual(appraisal.functional_competencies[0].achievement, 100.0)
+		self.assertEqual(appraisal.functional_competencies[0].score, 100.0)
+		self.assertEqual(appraisal.a2_score, 10.0)
+
+	def test_a2_overachievement_capped_at_100(self):
+		"""A2 overachievement is capped at 100%; A2 cannot exceed its weight."""
+		cycle = create_appraisal_cycle(name="Q-A2Over", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		appraisal.append(
+			"functional_competencies",
+			{"per_weightage": 100, "target": 100, "actual": 250},
+		)
+		appraisal.save()
+
+		# Raw achievement preserved, but scored as if 100%
+		self.assertEqual(appraisal.functional_competencies[0].achievement, 250.0)
+		self.assertEqual(appraisal.functional_competencies[0].score, 100.0)
+		self.assertEqual(appraisal.a2_score, 10.0)
+
 	def test_achievement_calculation(self):
 		"""achievement = actual / target * 100"""
 		cycle = create_appraisal_cycle(name="Q-Achieve", designation="Engineer")

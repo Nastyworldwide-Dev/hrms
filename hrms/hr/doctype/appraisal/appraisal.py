@@ -241,7 +241,7 @@ class Appraisal(Document, AppraisalMixin):
 		)
 
 	def calculate_a2_score(self):
-		"""Calculate A2: Competency score. Same lookup table logic as A1."""
+		"""Calculate A2: Competency score from achievement. Same method as A1."""
 		a2_weight = cint(self.a2_weight_pct) or 10
 		if not self.functional_competencies:
 			self.a2_score = 0
@@ -251,7 +251,15 @@ class Appraisal(Document, AppraisalMixin):
 		weighted_sum = 0
 
 		for row in self.functional_competencies:
-			rating_value = flt(row.manager_rating) * 5
+			# Achievement drives the score; keep the raw ratio for transparency
+			if flt(row.target):
+				row.achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
+			else:
+				row.achievement = 0
+
+			# Clamp to 0-100% (floor guards against negative actuals), map onto the 0-5 scale
+			capped_achievement = max(0, min(flt(row.achievement), 100))
+			rating_value = flt(capped_achievement) / 100 * 5
 			row.score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			weighted_sum += flt(row.per_weightage) * rating_value / 5
 			total_weightage += flt(row.per_weightage)
@@ -263,6 +271,12 @@ class Appraisal(Document, AppraisalMixin):
 
 		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
 		self.a2_score = min(flt(conversion / 0.80 * a2_weight, 2), a2_weight)
+		logger.info(
+			"[appraisal] A2 achievement-scored appraisal=%s weighted_avg=%s a2_score=%s",
+			self.name,
+			weighted_avg,
+			self.a2_score,
+		)
 
 	def detect_new_joiner(self):
 		"""Auto-set is_new_joiner if employee joined after month 6 of the cycle"""
