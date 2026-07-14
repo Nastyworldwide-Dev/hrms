@@ -148,11 +148,17 @@ permission_query_conditions = {
 	# read to Employee + System Manager; HR Managers acting as approvers would
 	# otherwise see an empty feed even when their unread count is nonzero.
 	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.get_permission_query_conditions",
+	# Participants only: both doctypes carry Employee Link fields that ignore
+	# user permissions, so row scope lives entirely in these hooks.
+	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.get_permission_query_conditions",
+	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.get_permission_query_conditions",
 }
 
 has_permission = {
 	"Appraisal": "hrms.hr.doctype.appraisal.appraisal.has_permission",
 	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.has_permission",
+	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.has_permission",
+	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
