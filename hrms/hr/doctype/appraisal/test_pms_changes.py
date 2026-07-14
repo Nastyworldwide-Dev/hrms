@@ -1033,9 +1033,7 @@ class TestAppraisalEmployeeQuery(FrappeTestCase):
 
 	def test_unrestricted_user_sees_beyond_chain(self):
 		frappe.set_user("Administrator")
-		self.assertEqual(
-			self._query("appraisal_query_"), {self.manager, self.report, self.grand, self.other}
-		)
+		self.assertEqual(self._query("appraisal_query_"), {self.manager, self.report, self.grand, self.other})
 
 	def test_particulars_denied_outside_chain(self):
 		from hrms.hr.doctype.appraisal.appraisal import get_employee_particulars_for_appraisal
@@ -1050,4 +1048,12 @@ class TestAppraisalEmployeeQuery(FrappeTestCase):
 		particulars = get_employee_particulars_for_appraisal(self.grand)
 		self.assertEqual(
 			particulars.employee_name, frappe.db.get_value("Employee", self.grand, "employee_name")
+		)
+
+	def test_particulars_rejects_non_string_employee(self):
+		from hrms.hr.doctype.appraisal.appraisal import get_employee_particulars_for_appraisal
+
+		frappe.set_user("Administrator")
+		self.assertRaises(
+			frappe.ValidationError, get_employee_particulars_for_appraisal, {"name": ("like", "%")}
 		)

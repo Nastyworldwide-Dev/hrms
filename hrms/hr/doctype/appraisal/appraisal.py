@@ -759,6 +759,11 @@ def appraisal_employee_query(doctype, txt, searchfield, start, page_len, filters
 	Deliberately bypasses Employee role/user permissions — the allowed-set
 	filter is the guard.
 	"""
+	# `filters`/`searchfield` come with the link-query signature but must stay
+	# unused: merging client-sent filters could override the allowed-set
+	# restriction that makes the permission bypass safe.
+	del filters, searchfield
+
 	allowed = get_allowed_appraisal_employees()
 	logger.debug(
 		"[appraisal] employee picker user=%s txt=%r allowed=%s",
@@ -796,6 +801,9 @@ def get_employee_particulars_for_appraisal(employee: str) -> dict:
 	Employee (the built-in client-side link fetch would 403). Guarded by
 	the same visibility rule as the picker: own employee + reports_to chain.
 	"""
+	if not isinstance(employee, str):
+		frappe.throw(_("Invalid employee"))
+
 	allowed = get_allowed_appraisal_employees()
 	if allowed is not None and employee not in allowed:
 		logger.info("[appraisal] particulars denied user=%s employee=%s", frappe.session.user, employee)
