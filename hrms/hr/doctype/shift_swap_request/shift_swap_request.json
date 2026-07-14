@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:HR-SWP-{YYYY}-{#####}",
+ "creation": "2026-07-14 04:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "requesting_employee",
+  "requesting_employee_name",
+  "target_employee",
+  "target_employee_name",
+  "column_break_details",
+  "shift_assignment",
+  "shift_type",
+  "shift_date",
+  "status",
+  "company",
+  "section_break_content",
+  "reason",
+  "new_shift_assignment"
+ ],
+ "fields": [
+  {
+   "fieldname": "requesting_employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Requesting Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "requesting_employee.employee_name",
+   "fieldname": "requesting_employee_name",
+   "fieldtype": "Data",
+   "label": "Requesting Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Covering Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "target_employee.employee_name",
+   "fieldname": "target_employee_name",
+   "fieldtype": "Data",
+   "label": "Covering Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shift_assignment",
+   "fieldtype": "Link",
+   "label": "Shift Assignment",
+   "options": "Shift Assignment",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "shift_assignment.shift_type",
+   "fieldname": "shift_type",
+   "fieldtype": "Link",
+   "label": "Shift Type",
+   "options": "Shift Type",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "shift_assignment.start_date",
+   "fieldname": "shift_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Shift Date",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "requesting_employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_content",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "new_shift_assignment",
+   "fieldtype": "Link",
+   "label": "Replacement Shift Assignment",
+   "options": "Shift Assignment",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-14 04:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Shift Swap Request",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Employee",
+   "write": 1
+  }
+ ],
+ "search_fields": "requesting_employee_name, target_employee_name, shift_date, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "requesting_employee_name"
+}

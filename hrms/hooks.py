@@ -152,6 +152,7 @@ permission_query_conditions = {
 	# user permissions, so row scope lives entirely in these hooks.
 	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.get_permission_query_conditions",
 	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.get_permission_query_conditions",
+	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -159,6 +160,7 @@ has_permission = {
 	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.has_permission",
 	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.has_permission",
 	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.has_permission",
+	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
