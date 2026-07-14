@@ -54,6 +54,7 @@ from hrms.payroll.doctype.salary_slip.salary_slip_loan_utils import (
 	set_loan_repayment,
 )
 from hrms.payroll.utils import sanitize_expression
+from hrms.regional.china.utils import get_china_social_insurance
 from hrms.regional.malaysia.utils import get_eis_contribution, get_socso_contribution
 from hrms.utils.holiday_list import get_holiday_dates_between
 from hrms.utils.ot_calculation import get_ot_pay
@@ -89,6 +90,9 @@ class SalarySlip(TransactionBase):
 			#   get_eis_contribution(base)
 			"get_socso_contribution": get_socso_contribution,
 			"get_eis_contribution": get_eis_contribution,
+			# China social insurance / housing fund (city-specific bands):
+			#   get_china_social_insurance(base, 'pension', 'employee', 'shanghai')
+			"get_china_social_insurance": get_china_social_insurance,
 		}
 
 	def autoname(self):

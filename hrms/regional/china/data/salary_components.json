@@ -1,0 +1,96 @@
+[
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Pension Employee (China)",
+        "description": "养老保险 employee share — city-specific rate and base band",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'pension', 'employee', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Pension Employer (China)",
+        "description": "养老保险 employer share — city-specific rate and base band",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'pension', 'employer', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Medical Employee (China)",
+        "description": "医疗保险 employee share — city-specific rate and base band",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'medical', 'employee', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Medical Employer (China)",
+        "description": "医疗保险 employer share — city-specific rate and base band",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'medical', 'employer', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Unemployment Employee (China)",
+        "description": "失业保险 employee share — city-specific rate and base band",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'unemployment', 'employee', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Unemployment Employer (China)",
+        "description": "失业保险 employer share — city-specific rate and base band",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'unemployment', 'employer', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Work Injury Employer (China)",
+        "description": "工伤保险 employer-only, industry-rated — city-specific",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'injury', 'employer', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Housing Fund Employee (China)",
+        "description": "住房公积金 employee share — city-specific rate (5-12%, commonly 7%)",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'housing_fund', 'employee', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "Housing Fund Employer (China)",
+        "description": "住房公积金 employer share — city-specific rate (5-12%, commonly 7%)",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_china_social_insurance(base, 'housing_fund', 'employer', 'shanghai')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "IIT (China)",
+        "description": "个人所得税 — configure a China Income Tax Slab (annual brackets 3-45% after the ¥60,000 standard deduction) and assign it on the Salary Structure Assignment",
+        "type": "Deduction",
+        "variable_based_on_taxable_salary": 1,
+        "is_income_tax_component": 1
+    }
+]
