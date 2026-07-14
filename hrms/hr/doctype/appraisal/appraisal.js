@@ -334,7 +334,9 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_sum = 0;
 
 		rows.forEach((d) => {
-			let rating_value = flt(d.manager_rating) * 5;
+			// Cap overachievement at 100%, map 0-100% onto the 0-5 scale
+			let capped = Math.min(flt(d.achievement), 100);
+			let rating_value = (flt(capped) / 100) * 5;
 			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
 			total_weightage += flt(d.per_weightage);
 		});
@@ -532,13 +534,10 @@ frappe.ui.form.on("Appraisal KRA", {
 		}
 	},
 	target(frm, cdt, cdn) {
-		calculate_achievement(cdt, cdn);
+		calculate_achievement(frm, cdt, cdn);
 	},
 	actual(frm, cdt, cdn) {
-		calculate_achievement(cdt, cdn);
-	},
-	manager_rating(frm, cdt, cdn) {
-		calculate_kra_row(frm, cdt, cdn);
+		calculate_achievement(frm, cdt, cdn);
 	},
 	per_weightage(frm, cdt, cdn) {
 		if (cint(frm.doc.auto_recalc_weightage)) {
@@ -565,21 +564,24 @@ frappe.ui.form.on("Appraisal KRA", {
 function calculate_kra_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 
-	// Rating field stores 0-1 (fraction), multiply by 5 to get 1-5 scale
-	let rating_value = flt(row.manager_rating) * 5;
+	// Cap overachievement at 100%, map 0-100% onto the 0-5 scale
+	let capped = Math.min(flt(row.achievement), 100);
+	let rating_value = (flt(capped) / 100) * 5;
 	let weighted_score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
 	frappe.model.set_value(cdt, cdn, "weighted_score", weighted_score);
 
 	frm.trigger("calculate_a1");
 }
 
-function calculate_achievement(cdt, cdn) {
+function calculate_achievement(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 	let achievement = 0;
 	if (flt(row.target)) {
 		achievement = flt((flt(row.actual) / flt(row.target)) * 100, 2);
 	}
 	frappe.model.set_value(cdt, cdn, "achievement", achievement);
+	// Achievement now drives the score — recompute the row and Section A1
+	calculate_kra_row(frm, cdt, cdn);
 }
 
 // A2: Functional Competency child table handlers (repurposed for A2)

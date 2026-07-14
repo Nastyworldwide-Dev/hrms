@@ -198,24 +198,28 @@ class Appraisal(Document, AppraisalMixin):
 		return cycle.score_conversion_table or None
 
 	def calculate_a1_score(self):
-		"""Calculate A1: Output KPI score using lookup table.
+		"""Calculate A1: Output KPI score from measured achievement.
 
-		The conversion factor represents the absolute Section A score out of 80%.
-		Per sub-section: score = (factor / 0.80) x sub_weight.
-		Example: factor 0.80 (Exceptional), A1=70% → (0.80/0.80) x 70 = 70 (full marks).
+		Each KRA is scored by its achievement ratio (actual / target x 100),
+		capped at 100% so overachievement earns no bonus. The capped achievement
+		is expressed on a 0-5 scale, weighted by per_weightage, and converted to a
+		Section-A percentage via the cycle's score conversion table.
+		Example: all KRAs at 100% achievement, A1=70% → (0.80/0.80) x 70 = 70 (full marks).
 		"""
 		a1_weight = cint(self.a1_weight_pct) or 70
 		total_weightage = 0
 		weighted_sum = 0
 
 		for row in self.appraisal_kra:
-			# Calculate achievement (informational — supports the rating)
+			# Achievement drives the score; keep the raw ratio for transparency
 			if flt(row.target):
 				row.achievement = flt(flt(row.actual) / flt(row.target) * 100, 2)
 			else:
 				row.achievement = 0
 
-			rating_value = flt(row.manager_rating) * 5  # 0-1 → 1-5
+			# Cap overachievement at 100%, then map 0-100% onto the 0-5 scale
+			capped_achievement = min(flt(row.achievement), 100)
+			rating_value = flt(capped_achievement) / 100 * 5
 			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			weighted_sum += flt(row.per_weightage) * rating_value / 5
 			total_weightage += flt(row.per_weightage)
@@ -229,6 +233,12 @@ class Appraisal(Document, AppraisalMixin):
 		conversion = get_conversion_factor(weighted_avg, self._get_conversion_table())
 		# Factor is out of 0.80 (Section A max). Scale to sub-section weight, clamped to max.
 		self.a1_score = min(flt(conversion / 0.80 * a1_weight, 2), a1_weight)
+		logger.info(
+			"[appraisal] A1 achievement-scored appraisal=%s weighted_avg=%s a1_score=%s",
+			self.name,
+			weighted_avg,
+			self.a1_score,
+		)
 
 	def calculate_a2_score(self):
 		"""Calculate A2: Competency score. Same lookup table logic as A1."""

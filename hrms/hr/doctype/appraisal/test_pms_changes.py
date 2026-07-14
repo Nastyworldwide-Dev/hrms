@@ -470,8 +470,11 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 		self.employee = make_employee("score_test@example.com", company=self.company, designation="Engineer")
 
-	def test_section_a_score_calculation(self):
-		"""weighted_score = per_weightage * (rating * 5) / 5 = per_weightage * rating"""
+	def test_section_a_score_from_achievement(self):
+		"""weighted_score derives from capped achievement, not manager rating.
+
+		weighted_score = per_weightage * min(achievement, 100) / 100
+		"""
 		cycle = create_appraisal_cycle(name="Q-ScoreA", designation="Engineer")
 		cycle.create_appraisals()
 
@@ -480,17 +483,62 @@ class TestSectionScoreCalculation(FrappeTestCase):
 			{"appraisal_cycle": cycle.name, "employee": self.employee},
 		)
 
-		# Set ratings (0-1 fraction, where 1.0 = 5 stars)
-		appraisal.appraisal_kra[0].manager_rating = 1.0  # 5/5 on 21% weight
-		appraisal.appraisal_kra[1].manager_rating = 0.8  # 4/5 on 49% weight
+		# 100% achievement on 21% weight, 80% achievement on 49% weight
+		appraisal.appraisal_kra[0].target = 100
+		appraisal.appraisal_kra[0].actual = 100
+		appraisal.appraisal_kra[1].target = 100
+		appraisal.appraisal_kra[1].actual = 80
 		appraisal.save()
 
-		# Row 0: 21 * (1.0*5) / 5 = 21.0
+		# Row 0: 21 * 100/100 = 21.0
 		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 21.0)
-		# Row 1: 49 * (0.8*5) / 5 = 49 * 0.8 = 39.2
+		# Row 1: 49 * 80/100 = 39.2
 		self.assertEqual(appraisal.appraisal_kra[1].weighted_score, 39.2)
-		# Total Section A: 21.0 + 39.2 = 60.2
-		self.assertEqual(appraisal.section_a_score, 60.2)
+		# manager_rating no longer influences the score
+		self.assertEqual(flt(appraisal.appraisal_kra[0].manager_rating), 0.0)
+
+	def test_a1_full_achievement_is_full_marks(self):
+		"""All KRAs at 100% achievement → Section A = full A1 weight (70)."""
+		cycle = create_appraisal_cycle(name="Q-FullAch", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		for row in appraisal.appraisal_kra:
+			row.target = 100
+			row.actual = 100
+		appraisal.save()
+
+		self.assertEqual(appraisal.section_a_score, 70.0)
+
+	def test_a1_overachievement_capped_at_100(self):
+		"""actual > target is scored as 100%; a single KRA cannot inflate Section A."""
+		cycle = create_appraisal_cycle(name="Q-OverAch", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		# Every KRA doubles its target
+		for row in appraisal.appraisal_kra:
+			row.target = 100
+			row.actual = 200
+		appraisal.save()
+
+		# Raw achievement is preserved for transparency...
+		self.assertEqual(appraisal.appraisal_kra[0].achievement, 200.0)
+		# ...but the weighted score is capped as if 100%
+		self.assertEqual(
+			appraisal.appraisal_kra[0].weighted_score,
+			appraisal.appraisal_kra[0].per_weightage,
+		)
+		# Section A does not exceed the full A1 weight
+		self.assertEqual(appraisal.section_a_score, 70.0)
 
 	def test_achievement_calculation(self):
 		"""achievement = actual / target * 100"""
@@ -504,7 +552,6 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 		appraisal.appraisal_kra[0].target = 100
 		appraisal.appraisal_kra[0].actual = 85
-		appraisal.appraisal_kra[0].manager_rating = 0.8
 		appraisal.save()
 
 		self.assertEqual(appraisal.appraisal_kra[0].achievement, 85.0)
@@ -521,7 +568,6 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 		appraisal.appraisal_kra[0].target = 0
 		appraisal.appraisal_kra[0].actual = 50
-		appraisal.appraisal_kra[0].manager_rating = 0.6
 		appraisal.save()
 
 		self.assertEqual(appraisal.appraisal_kra[0].achievement, 0)
@@ -536,13 +582,14 @@ class TestSectionScoreCalculation(FrappeTestCase):
 			{"appraisal_cycle": cycle.name, "employee": self.employee},
 		)
 
-		# Max out all ratings
+		# Max out achievement on every KRA (actual == target → 100%)
 		for row in appraisal.appraisal_kra:
-			row.manager_rating = 1.0  # 5/5
+			row.target = 100
+			row.actual = 100
 
 		appraisal.save()
 
-		# Section A should be 70 (all 5/5 on total 70% weight)
+		# Section A should be 70 (all at 100% achievement on total 70% weight)
 		self.assertEqual(appraisal.section_a_score, 70.0)
 		# No Section B/C rows, so PMS total = 70
 		self.assertEqual(appraisal.pms_total_score, 70.0)
@@ -559,7 +606,8 @@ class TestSectionScoreCalculation(FrappeTestCase):
 		)
 
 		for row in appraisal.appraisal_kra:
-			row.manager_rating = 1.0
+			row.target = 100
+			row.actual = 100
 		appraisal.save()
 
 		self.assertEqual(appraisal.final_score, appraisal.pms_total_score)
