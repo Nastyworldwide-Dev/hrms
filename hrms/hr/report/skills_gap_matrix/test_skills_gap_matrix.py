@@ -73,7 +73,7 @@ class TestSkillsGapMatrix(FrappeTestCase):
 
 	def test_skill_without_ratings_still_shows_expectation(self):
 		frappe.db.delete("Employee Skill Map")
-		columns, data = execute({"designation": "_Test Retail Associate"})
+		_columns, data = execute({"designation": "_Test Retail Associate"})
 
 		row = next(r for r in data if r["designation"] == "_Test Retail Associate")
 		self.assertEqual(row[frappe.scrub("_Test POS Ops")], "— / 4.0")
