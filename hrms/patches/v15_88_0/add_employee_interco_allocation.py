@@ -3,9 +3,8 @@
 Section break + child table (Employee Interco Allocation: Territory + %)
 holding the percentage of work each employee does per interco. The report
 "Intercompany Salary Cost Allocation" splits total employer cost by these
-rows, falling back to Cost Tag at 100% when the table is empty. Also ships
-in hrms.setup.get_custom_fields for fresh installs; this patch upserts on
-existing sites (idempotent — update=True).
+rows. Also ships in hrms.setup.get_custom_fields for fresh installs; this
+patch upserts on existing sites (idempotent — update=True).
 """
 
 import logging
@@ -26,7 +25,7 @@ def execute():
 					"fieldname": "interco_allocation_section",
 					"fieldtype": "Section Break",
 					"label": "Interco Cost Allocation",
-					"insert_after": "cost_tag",
+					"insert_after": "performance_band",
 				},
 				{
 					"fieldname": "interco_cost_allocation",

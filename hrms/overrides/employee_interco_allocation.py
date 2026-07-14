@@ -15,7 +15,7 @@ TOLERANCE = 0.005
 def validate_interco_allocation(doc, method=None):
 	"""Employee.validate hook: interco allocation rows must cover exactly
 	100% with no duplicate intercos. An empty table is allowed — the
-	allocation report then falls back to the employee's Cost Tag at 100%."""
+	allocation report then shows the employee's full cost as unallocated."""
 	rows = doc.get("interco_cost_allocation") or []
 	if not rows:
 		return

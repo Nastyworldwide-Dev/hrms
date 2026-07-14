@@ -20,29 +20,28 @@ def execute(filters=None):
 
 	slips = _get_salary_slips(filters)
 	employer_costs = _get_employer_contributions([s.name for s in slips])
-	allocations, cost_tags = _get_employee_allocations({s.employee for s in slips})
+	allocations = _get_employee_allocations({s.employee for s in slips})
 
-	rows = build_allocation_rows(slips, employer_costs, allocations, cost_tags)
+	rows = build_allocation_rows(slips, employer_costs, allocations)
 	if filters.territory:
 		rows = [r for r in rows if r["territory"] == filters.territory]
 	logger.info("[interco_report] user=%s slips=%d rows=%d", frappe.session.user, len(slips), len(rows))
 	return _get_columns(), rows
 
 
-def build_allocation_rows(slips, employer_costs, allocations, cost_tags) -> list[dict]:
+def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
 	"""Split each slip's total employer cost across the employee's interco
 	allocations. Pure function — the last allocation row absorbs the
 	rounding remainder so the per-employee split always sums exactly.
 
-	Employees without allocation rows fall back to their Cost Tag at 100%.
+	Employees without allocation rows appear as a single 100% row with a
+	blank Interco so their cost stays visible until the table is filled.
 	"""
 	rows = []
 	for slip in slips:
 		contributions = flt(employer_costs.get(slip.name, 0))
 		total_cost = flt(slip.gross_pay) + contributions
-		employee_allocations = allocations.get(slip.employee) or [
-			{"territory": cost_tags.get(slip.employee), "percentage": 100.0}
-		]
+		employee_allocations = allocations.get(slip.employee) or [{"territory": None, "percentage": 100.0}]
 
 		allocated_so_far = 0.0
 		for i, allocation in enumerate(employee_allocations):
@@ -105,7 +104,7 @@ def _get_employer_contributions(slip_names) -> dict:
 
 def _get_employee_allocations(employees):
 	if not employees:
-		return {}, {}
+		return {}
 	allocation_rows = frappe.get_all(
 		"Employee Interco Allocation",
 		filters={"parenttype": "Employee", "parent": ("in", list(employees))},
@@ -117,14 +116,10 @@ def _get_employee_allocations(employees):
 		allocations.setdefault(row.parent, []).append(
 			{"territory": row.territory, "percentage": flt(row.percentage)}
 		)
-
-	cost_tags = {
-		e.name: e.cost_tag
-		for e in frappe.get_all(
-			"Employee", filters={"name": ("in", list(employees))}, fields=["name", "cost_tag"]
-		)
-	}
-	return allocations, cost_tags
+	logger.debug(
+		"[interco_report] allocations loaded employees=%d allocated=%d", len(employees), len(allocations)
+	)
+	return allocations
 
 
 def _get_columns():

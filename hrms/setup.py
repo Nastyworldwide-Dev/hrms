@@ -241,20 +241,11 @@ def get_custom_fields():
 				),
 			},
 			{
-				"fieldname": "cost_tag",
-				"fieldtype": "Link",
-				"ignore_user_permissions": 1,
-				"label": _("Cost Tag"),
-				"options": "Territory",
-				"insert_after": "performance_band",
-				"description": _("Home interco — used at 100% when no allocation rows are set below"),
-			},
-			{
 				"collapsible": 1,
 				"fieldname": "interco_allocation_section",
 				"fieldtype": "Section Break",
 				"label": _("Interco Cost Allocation"),
-				"insert_after": "cost_tag",
+				"insert_after": "performance_band",
 			},
 			{
 				"fieldname": "interco_cost_allocation",
