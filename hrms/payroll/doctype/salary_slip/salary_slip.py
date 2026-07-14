@@ -54,6 +54,7 @@ from hrms.payroll.doctype.salary_slip.salary_slip_loan_utils import (
 	set_loan_repayment,
 )
 from hrms.payroll.utils import sanitize_expression
+from hrms.regional.malaysia.utils import get_eis_contribution, get_socso_contribution
 from hrms.utils.holiday_list import get_holiday_dates_between
 from hrms.utils.ot_calculation import get_ot_pay
 
@@ -83,6 +84,11 @@ class SalarySlip(TransactionBase):
 			# usage in a Salary Component formula:
 			#   get_ot_pay(employee, start_date, end_date, base)
 			"get_ot_pay": get_ot_pay,
+			# Malaysia statutory schedules:
+			#   get_socso_contribution(base, 'employee'|'employer')
+			#   get_eis_contribution(base)
+			"get_socso_contribution": get_socso_contribution,
+			"get_eis_contribution": get_eis_contribution,
 		}
 
 	def autoname(self):
