@@ -75,6 +75,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "columns": 1,
    "description": "Set by manager at cycle start",
    "fieldname": "target",
    "fieldtype": "Float",
@@ -83,6 +84,7 @@
   },
   {
    "description": "Set during review — what the staff actually achieved",
+   "columns": 1,
    "fieldname": "actual",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -90,6 +92,7 @@
   },
   {
    "description": "Auto-calculated: (Actual / Target) \u00d7 100",
+   "columns": 1,
    "fieldname": "achievement",
    "fieldtype": "Float",
    "in_list_view": 1,
