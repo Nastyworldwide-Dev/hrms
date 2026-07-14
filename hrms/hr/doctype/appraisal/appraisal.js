@@ -334,8 +334,8 @@ frappe.ui.form.on("Appraisal", {
 		let weighted_sum = 0;
 
 		rows.forEach((d) => {
-			// Cap overachievement at 100%, map 0-100% onto the 0-5 scale
-			let capped = Math.min(flt(d.achievement), 100);
+			// Clamp to 0-100% (floor guards against negative actuals)
+			let capped = Math.max(0, Math.min(flt(d.achievement), 100));
 			let rating_value = (flt(capped) / 100) * 5;
 			weighted_sum += (flt(d.per_weightage) * rating_value) / 5;
 			total_weightage += flt(d.per_weightage);
@@ -564,8 +564,8 @@ frappe.ui.form.on("Appraisal KRA", {
 function calculate_kra_row(frm, cdt, cdn) {
 	let row = frappe.get_doc(cdt, cdn);
 
-	// Cap overachievement at 100%, map 0-100% onto the 0-5 scale
-	let capped = Math.min(flt(row.achievement), 100);
+	// Clamp to 0-100% (floor guards against negative actuals)
+	let capped = Math.max(0, Math.min(flt(row.achievement), 100));
 	let rating_value = (flt(capped) / 100) * 5;
 	let weighted_score = flt((flt(row.per_weightage) * rating_value) / 5, 2);
 	frappe.model.set_value(cdt, cdn, "weighted_score", weighted_score);

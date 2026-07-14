@@ -540,6 +540,25 @@ class TestSectionScoreCalculation(FrappeTestCase):
 		# Section A does not exceed the full A1 weight
 		self.assertEqual(appraisal.section_a_score, 70.0)
 
+	def test_a1_negative_actual_floored_at_zero(self):
+		"""A negative actual is floored to 0% achievement, never dragging the score negative."""
+		cycle = create_appraisal_cycle(name="Q-NegAch", designation="Engineer")
+		cycle.create_appraisals()
+
+		appraisal = frappe.get_doc(
+			"Appraisal",
+			{"appraisal_cycle": cycle.name, "employee": self.employee},
+		)
+
+		appraisal.appraisal_kra[0].target = 100
+		appraisal.appraisal_kra[0].actual = -50  # e.g. a bad negative adjustment
+		appraisal.save()
+
+		# Raw achievement reflects the negative ratio for transparency...
+		self.assertEqual(appraisal.appraisal_kra[0].achievement, -50.0)
+		# ...but it contributes zero weighted score (floored at 0)
+		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 0.0)
+
 	def test_achievement_calculation(self):
 		"""achievement = actual / target * 100"""
 		cycle = create_appraisal_cycle(name="Q-Achieve", designation="Engineer")

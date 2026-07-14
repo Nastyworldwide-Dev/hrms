@@ -217,8 +217,8 @@ class Appraisal(Document, AppraisalMixin):
 			else:
 				row.achievement = 0
 
-			# Cap overachievement at 100%, then map 0-100% onto the 0-5 scale
-			capped_achievement = min(flt(row.achievement), 100)
+			# Clamp to 0-100% (floor guards against negative actuals), map onto the 0-5 scale
+			capped_achievement = max(0, min(flt(row.achievement), 100))
 			rating_value = flt(capped_achievement) / 100 * 5
 			row.weighted_score = flt(flt(row.per_weightage) * rating_value / 5, 2)
 			weighted_sum += flt(row.per_weightage) * rating_value / 5
