@@ -1,0 +1,20 @@
+[
+    {
+        "doctype": "Salary Component",
+        "salary_component": "GPSSA Employee (UAE)",
+        "description": "GPSSA pension employee share for UAE nationals — 5% (employees registered under Law 57/2023 pay 11%; adjust the formula on their Salary Structure)",
+        "type": "Deduction",
+        "amount_based_on_formula": 1,
+        "formula": "base * 0.05"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "GPSSA Employer (UAE)",
+        "description": "GPSSA pension employer share for UAE nationals — 12.5% (15% for employees registered under Law 57/2023; adjust the formula on their Salary Structure)",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "base * 0.125"
+    }
+]
