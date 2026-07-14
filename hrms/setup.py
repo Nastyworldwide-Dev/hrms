@@ -236,7 +236,17 @@ def get_custom_fields():
 				"label": _("Performance Band"),
 				"options": "\nB\nC\nD\nE1\nE2\nF",
 				"insert_after": "grade",
-				"description": _("Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"),
+				"description": _(
+					"Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"
+				),
+			},
+			{
+				"fieldname": "cost_tag",
+				"fieldtype": "Link",
+				"ignore_user_permissions": 1,
+				"label": _("Cost Tag"),
+				"options": "Territory",
+				"insert_after": "performance_band",
 			},
 			{
 				"collapsible": 1,
