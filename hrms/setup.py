@@ -247,6 +247,22 @@ def get_custom_fields():
 				"label": _("Cost Tag"),
 				"options": "Territory",
 				"insert_after": "performance_band",
+				"description": _("Home interco — used at 100% when no allocation rows are set below"),
+			},
+			{
+				"collapsible": 1,
+				"fieldname": "interco_allocation_section",
+				"fieldtype": "Section Break",
+				"label": _("Interco Cost Allocation"),
+				"insert_after": "cost_tag",
+			},
+			{
+				"fieldname": "interco_cost_allocation",
+				"fieldtype": "Table",
+				"label": _("Interco Cost Allocation"),
+				"options": "Employee Interco Allocation",
+				"insert_after": "interco_allocation_section",
+				"description": _("Percentage of work per interco (Territory); rows must total 100%"),
 			},
 			{
 				"collapsible": 1,
