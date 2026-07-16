@@ -255,11 +255,13 @@ def _send_email(user: str, subject: str, body: str, request) -> None:
 
 
 def _send_push(user: str, subject: str, body: str, request) -> None:
-	"""Always emit a realtime socket event for the PWA AND attempt the HRMS push relay.
+	"""Emit a realtime socket event for the PWA.
 
 	The PWA subscribes to `hrms:remote_checkin_request` on the current user's
 	socket — this keeps the approver inbox and employee badge live without
-	relying on push being configured.
+	relying on push being configured. Native web push is NOT sent here: the
+	PWA Notification row created by _create_pwa_notification already sends it
+	on after_insert when the push relay is enabled.
 	"""
 	payload = {
 		"request": request.name,
@@ -277,21 +279,6 @@ def _send_push(user: str, subject: str, body: str, request) -> None:
 		)
 	except Exception as exc:
 		logger.warning("[remote_checkin_request] realtime push failed: %s", exc)
-
-	# Best-effort web push via HRMS push relay if available.
-	try:
-		from hrms.hr.notifications import push_notification_for_user
-	except ImportError:
-		return
-	try:
-		push_notification_for_user(
-			user=user,
-			title=subject,
-			body=body,
-			data={"request": request.name, "doctype": "Remote Checkin Request"},
-		)
-	except Exception as exc:
-		logger.warning("[remote_checkin_request] push relay failed user=%s: %s", user, exc)
 
 
 # ---------------------------------------------------------------------------

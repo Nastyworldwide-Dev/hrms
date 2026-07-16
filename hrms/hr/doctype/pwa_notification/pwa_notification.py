@@ -43,6 +43,9 @@ class PWANotification(Document):
 			return f"{base_url}/leave-applications/{self.reference_document_name}"
 		elif self.reference_document_type == "Expense Claim":
 			return f"{base_url}/expense-claims/{self.reference_document_name}"
+		elif self.reference_document_type == "Remote Checkin Request":
+			# no per-request PWA route; land on the feed with inline Approve/Reject
+			return f"{base_url}/notifications"
 
 		return base_url
 
