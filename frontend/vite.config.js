@@ -26,6 +26,13 @@ export default defineConfig({
 				display: "standalone",
 				name: "Frappe HR",
 				short_name: "Frappe HR",
+				// Explicit id + scope: without them vite-plugin-pwa fills scope
+				// from the Vite base (/assets/hrms/frontend/), which doesn't
+				// contain start_url — Chrome then discards it and falls back to
+				// scope "/", making the installed app capture the whole origin
+				// and collide with other PWAs on the site (e.g. HandaPOS at /pos).
+				id: "/hrms",
+				scope: "/hrms",
 				start_url: "/hrms",
 				description: "Everyday HR & Payroll operations at your fingertips",
 				theme_color: "#ffffff",
