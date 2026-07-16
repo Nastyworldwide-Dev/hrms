@@ -14,6 +14,7 @@ class TestPWANotification(FrappeTestCase):
 			("Expense Claim", "EXP-0001", f"{base_url}/expense-claims/EXP-0001"),
 			("Remote Checkin Request", "RCR-0001", f"{base_url}/notifications"),
 			("Attendance Request", "ATT-0001", base_url),
+			(None, None, base_url),
 		]
 		for reference_doctype, reference_name, expected in cases:
 			notification = frappe.new_doc("PWA Notification")
