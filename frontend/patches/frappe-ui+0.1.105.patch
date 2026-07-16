@@ -1,17 +1,23 @@
 diff --git a/node_modules/frappe-ui/src/resources/documentResource.js b/node_modules/frappe-ui/src/resources/documentResource.js
-index a93673e..7bc4761 100644
+index a93673e..e55219e 100644
 --- a/node_modules/frappe-ui/src/resources/documentResource.js
 +++ b/node_modules/frappe-ui/src/resources/documentResource.js
-@@ -41,18 +41,23 @@ export function createDocumentResource(options, vm) {
+@@ -41,18 +41,27 @@ export function createDocumentResource(options, vm) {
        }
      },
      beforeSubmit(params) {
 -      out.previousDoc = JSON.stringify(out.doc)
 -      Object.assign(out.doc, params.fieldname || {})
+-      // update data in list resources
+-      updateRowInListResource(out.doctype, out.doc)
 +      out.previousDoc = JSON.stringify(out.doc ?? null)
-+      Object.assign(out.doc || {}, params.fieldname || {})
-       // update data in list resources
-       updateRowInListResource(out.doctype, out.doc)
++      // optimistic update only applies when the doc is loaded; the server
++      // call itself gets its values from makeParams, not out.doc
++      if (out.doc) {
++        Object.assign(out.doc, params.fieldname || {})
++        // update data in list resources
++        updateRowInListResource(out.doctype, out.doc)
++      }
      },
      onSuccess(data) {
        out.doc = transform(data)
@@ -30,7 +36,7 @@ index a93673e..7bc4761 100644
        options.setValue?.onError?.call(vm, error)
        // revert data in list resource
        revertRowInListResource(out.doctype, out.doc)
-@@ -80,7 +85,7 @@ export function createDocumentResource(options, vm) {
+@@ -80,7 +89,7 @@ export function createDocumentResource(options, vm) {
          onSuccess(data) {
            saveLocal(cacheKey, data)
            out.doc = transform(data)
