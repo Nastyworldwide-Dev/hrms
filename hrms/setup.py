@@ -224,6 +224,16 @@ def get_custom_fields():
 				"insert_after": "branch",
 			},
 			{
+				"fieldname": "shift_location",
+				"fieldtype": "Link",
+				"label": _("Shift Location"),
+				"options": "Shift Location",
+				"insert_after": "grade",
+				"description": _(
+					"Where this employee physically clocks in — drives the automatic Shift Assignment rules"
+				),
+			},
+			{
 				"fieldname": "default_shift",
 				"fieldtype": "Link",
 				"label": _("Default Shift"),

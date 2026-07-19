@@ -23,7 +23,8 @@
   "end_date",
   "shift_request",
   "shift_schedule_assignment",
-  "amended_from"
+  "amended_from",
+  "created_by_shift_rule"
  ],
  "fields": [
   {
@@ -128,7 +129,7 @@
   {
    "default": "0",
    "depends_on": "eval:doc.shift_location",
-   "description": "When enabled, employees on this assignment can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright — no Remote Checkin Request is created. Requires HR Settings → Allow Geolocation Tracking.",
+   "description": "When enabled, employees on this assignment can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright \u2014 no Remote Checkin Request is created. Requires HR Settings \u2192 Allow Geolocation Tracking.",
    "fieldname": "enable_strict_geofence",
    "fieldtype": "Check",
    "label": "Strict Shift Location Check-in"
@@ -142,6 +143,16 @@
    "fieldtype": "Link",
    "label": "Shift Schedule Assignment",
    "options": "Shift Schedule Assignment",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Set by the location/department shift rule sync. Auto assignments are reconciled daily; manual assignments always take precedence.",
+   "fieldname": "created_by_shift_rule",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Created by Shift Rule",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

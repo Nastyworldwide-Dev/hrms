@@ -237,6 +237,9 @@ doc_events = {
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
+			# Reconcile the rule-managed Shift Assignment when shift_location /
+			# department changes (no-op otherwise; never blocks the save).
+			"hrms.hr.shift_rules.reconcile_on_employee_update",
 			# Runs LAST on purpose: ERPNext's Employee.on_update controller method
 			# fires before this hook and may delete any `allow=Employee` User
 			# Permissions when `create_user_permission` is unticked. Running our
@@ -275,6 +278,8 @@ scheduler_events = {
 		"hrms.hr.doctype.shift_schedule_assignment.shift_schedule_assignment.process_auto_shift_creation",
 	],
 	"daily": [
+		"hrms.hr.shift_rules.sync_shift_assignments",
+		"hrms.hr.leave_rules.auto_assign_leave_policies",
 		"hrms.controllers.employee_reminders.send_birthday_reminders",
 		"hrms.controllers.employee_reminders.send_work_anniversary_reminders",
 		"hrms.hr.doctype.daily_work_summary_group.daily_work_summary_group.send_summary",
