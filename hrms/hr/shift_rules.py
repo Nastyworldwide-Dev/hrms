@@ -64,7 +64,7 @@ def reconcile_employee_shift(employee: str) -> str:
 	"""Reconciles one employee against the shift rules.
 
 	Returns the action taken: created | swapped | closed | noop |
-	skipped-manual | skipped-no-rule.
+	skipped-manual | skipped-schedule | skipped-no-rule.
 	"""
 	today = nowdate()
 	desired = resolve_shift_for_employee(employee)
@@ -82,12 +82,25 @@ def reconcile_employee_shift(employee: str) -> str:
 			"created_by_shift_rule",
 		],
 	)
+	auto_rows = [row for row in current if row.created_by_shift_rule]
+
+	# Mutual exclusion with the Shift Schedule machinery: an enabled Shift
+	# Schedule Assignment means process_auto_shift_creation owns this
+	# employee's shifts. An open-ended auto row would make every dated
+	# schedule insert fail overlap validation (silently — that job swallows
+	# errors), so the rule layer stands down and closes its own rows.
+	if frappe.db.exists("Shift Schedule Assignment", {"employee": employee, "enabled": 1}):
+		for row in auto_rows:
+			_close_assignment(row, today)
+		logger.info(
+			"[shift_rules] %s: enabled Shift Schedule Assignment exists — skipped (schedule wins)",
+			employee,
+		)
+		return "skipped-schedule"
 
 	if any(not row.created_by_shift_rule for row in current):
 		logger.info("[shift_rules] %s: manual assignment exists — skipped (manual wins)", employee)
 		return "skipped-manual"
-
-	auto_rows = [row for row in current if row.created_by_shift_rule]
 	matching = next(
 		(
 			row
@@ -139,16 +152,22 @@ def sync_shift_assignments():
 	)
 
 	counters = {}
-	for employee in employees:
+	for index, employee in enumerate(employees, start=1):
+		# savepoint per employee: one bad record must not poison the
+		# transaction for everyone after it
+		frappe.db.savepoint("shift_rule_employee")
 		try:
 			action = reconcile_employee_shift(employee)
 		except Exception:
+			frappe.db.rollback(save_point="shift_rule_employee")
 			action = "error"
 			logger.exception("[shift_rules] reconcile failed for %s", employee)
 			frappe.log_error(
 				title=f"Shift rule sync failed for {employee}",
 				message=frappe.get_traceback(),
 			)
+		if index % 50 == 0 and not frappe.flags.in_test:
+			frappe.db.commit()  # nosemgrep: keep progress on long employee lists
 		counters[action] = counters.get(action, 0) + 1
 
 	logger.info("[shift_rules] sync done — %d employees: %s", len(employees), counters)

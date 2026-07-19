@@ -2,6 +2,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate, nowdate
 
+from erpnext.setup.doctype.department.department import get_abbreviated_name
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
@@ -15,22 +16,17 @@ COMPANY = "_Test Company"
 
 
 def make_department(department_name, parent_department=None, is_group=0):
-	existing = frappe.db.exists("Department", {"department_name": department_name, "company": COMPANY})
-	if existing:
-		return existing
-	return (
-		frappe.get_doc(
-			{
-				"doctype": "Department",
-				"department_name": department_name,
-				"company": COMPANY,
-				"parent_department": parent_department or "All Departments",
-				"is_group": is_group,
-			}
-		)
-		.insert()
-		.name
-	)
+	docname = get_abbreviated_name(department_name, COMPANY)
+	if frappe.db.exists("Department", docname):
+		return docname
+
+	department = frappe.new_doc("Department")
+	department.update({"department_name": department_name, "company": COMPANY, "is_group": is_group})
+	# only set an explicit parent; otherwise let the NestedSet controller
+	# default to the root (its name varies across sites)
+	if parent_department:
+		department.parent_department = parent_department
+	return department.insert().name
 
 
 def make_shift_location(location_name, rules):
@@ -177,3 +173,62 @@ class TestShiftRules(FrappeTestCase):
 		self._set_employee(shift_location=None)
 		sync_shift_assignments()
 		self.assertEqual(self._active_assignments(), [])
+
+	def test_shift_schedule_assignment_wins_and_closes_auto_rows(self):
+		reconcile_employee_shift(self.employee)
+		self.assertEqual(len(self._active_assignments(auto=1)), 1)
+
+		schedule = frappe.get_doc(
+			{
+				"doctype": "Shift Schedule",
+				"frequency": "Every Week",
+				"shift_type": self.shift_day.name,
+				"repeat_on_days": [{"day": "Monday"}],
+			}
+		).insert()
+		schedule.submit()
+		frappe.get_doc(
+			{
+				"doctype": "Shift Schedule Assignment",
+				"employee": self.employee,
+				"company": COMPANY,
+				"shift_schedule": schedule.name,
+				"enabled": 1,
+				"create_shifts_after": nowdate(),
+			}
+		).insert()
+
+		action = reconcile_employee_shift(self.employee)
+		self.assertEqual(action, "skipped-schedule")
+		open_autos = [a for a in self._active_assignments(auto=1) if not a.end_date]
+		self.assertEqual(open_autos, [])
+
+	def test_on_update_hook_reconciles_on_employee_save(self):
+		# start from no location, then set it through a real save so the
+		# hooks.py on_update wiring (reconcile_on_employee_update) is exercised
+		self._set_employee(shift_location=None)
+		doc = frappe.get_doc("Employee", self.employee)
+		doc.shift_location = self.location
+		doc.save()
+
+		assignments = self._active_assignments(auto=1)
+		self.assertEqual(len(assignments), 1)
+		self.assertEqual(assignments[0].shift_type, self.shift_day.name)
+
+	def test_duplicate_rule_rows_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			make_shift_location(
+				"Rule Loc Duplicates",
+				[
+					{"shift_type": self.shift_day.name},
+					{"shift_type": self.shift_night.name},
+				],
+			)
+		with self.assertRaises(frappe.ValidationError):
+			make_shift_location(
+				"Rule Loc Duplicates 2",
+				[
+					{"department": self.parent_dept, "shift_type": self.shift_day.name},
+					{"department": self.parent_dept, "shift_type": self.shift_night.name},
+				],
+			)

@@ -41,7 +41,12 @@ def auto_assign_leave_policies():
 	)
 
 	counters = {"created": 0, "skipped": 0, "error": 0}
-	for employee in employees:
+	for index, employee in enumerate(employees, start=1):
+		if index % 50 == 0 and not frappe.flags.in_test:
+			frappe.db.commit()  # nosemgrep: keep progress on long employee lists
+		# savepoint per employee: one bad record must not poison the
+		# transaction for everyone after it
+		frappe.db.savepoint("leave_rule_employee")
 		try:
 			if has_assignment_covering(employee.name, today):
 				counters["skipped"] += 1
@@ -49,6 +54,7 @@ def auto_assign_leave_policies():
 			create_policy_assignment(employee, grade_policies[employee.grade], today)
 			counters["created"] += 1
 		except Exception:
+			frappe.db.rollback(save_point="leave_rule_employee")
 			counters["error"] += 1
 			logger.exception("[leave_rules] assignment failed for %s", employee.name)
 			frappe.log_error(
