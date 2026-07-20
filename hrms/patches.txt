@@ -43,3 +43,4 @@ hrms.patches.v15_87_0.add_employee_cost_tag_field
 hrms.patches.v15_88_0.add_employee_interco_allocation
 hrms.patches.v15_88_2.remove_employee_cost_tag_field
 hrms.patches.v15_91_0.add_employee_shift_location_field
+hrms.patches.v15_91_1.seed_last_sync_for_auto_update_shifts

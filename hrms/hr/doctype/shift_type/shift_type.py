@@ -17,6 +17,7 @@ from frappe.utils import (
 	get_link_to_form,
 	get_time,
 	getdate,
+	now_datetime,
 	time_diff,
 )
 
@@ -45,7 +46,21 @@ class ShiftType(Document):
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
 		self.validate_overtime_rates()
+		self.seed_last_sync_of_checkin()
 		logger.debug("[shift_type] validated %s", self.name)
+
+	def seed_last_sync_of_checkin(self):
+		# Auto mode needs a concrete baseline: with last_sync_of_checkin empty,
+		# has_incorrect_shift_config() skips the shift entirely and the hourly
+		# advance only recovers after the next shift end passes — so ticking
+		# auto_update_last_sync on an empty value would process nothing.
+		# Server-side so API writes behave the same as form saves.
+		if self.auto_update_last_sync and not self.last_sync_of_checkin:
+			self.last_sync_of_checkin = now_datetime()
+			logger.info(
+				"[shift_type] %s: seeded last_sync_of_checkin (auto update on, value was empty)",
+				self.name,
+			)
 
 	def validate_same_start_and_end(self, start_time: datetime.time, end_time: datetime.time):
 		if start_time == end_time:
