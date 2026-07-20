@@ -33,6 +33,11 @@ class TestShiftType(FrappeTestCase):
 		to_date = get_year_ending(getdate())
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
 
+	def tearDown(self):
+		# several tests mock the clock via frappe.flags.current_datetime;
+		# clear it so it can't leak into later tests
+		frappe.flags.pop("current_datetime", None)
+
 	def test_auto_update_last_sync_of_checkin_for_single_day_shift(self):
 		shift_type = setup_shift_type()
 		shift_type.last_sync_of_checkin = None

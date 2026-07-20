@@ -61,6 +61,13 @@ class ShiftType(Document):
 				"[shift_type] %s: seeded last_sync_of_checkin (auto update on, value was empty)",
 				self.name,
 			)
+			frappe.msgprint(
+				_("Last Sync of Checkin was empty and has been set to {0}.").format(
+					frappe.bold(self.last_sync_of_checkin)
+				),
+				alert=True,
+				indicator="blue",
+			)
 
 	def validate_same_start_and_end(self, start_time: datetime.time, end_time: datetime.time):
 		if start_time == end_time:
