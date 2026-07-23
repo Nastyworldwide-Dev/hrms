@@ -61,6 +61,104 @@
 	--shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
 	--shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
 	--shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+
+	/* RGB triplets consumed by tailwind.config.js as
+	   `rgb(var(--m-*) / <alpha-value>)` so utilities (bg-accent, text-ink-600,
+	   bg-inkbase/[0.04], …) follow the light/dark switch. Keep in sync with the
+	   hex tokens above. */
+	--m-ground: 243 242 242;
+	--m-surface: 234 233 233;
+	--m-inkbase: 32 30 29;
+	--m-divider-color: rgba(32, 30, 29, 0.4);
+	--m-ink-100: 248 244 244;
+	--m-ink-200: 234 231 231;
+	--m-ink-300: 215 211 211;
+	--m-ink-400: 186 182 182;
+	--m-ink-500: 155 151 151;
+	--m-ink-600: 125 121 121;
+	--m-ink-700: 96 93 93;
+	--m-ink-800: 68 65 65;
+	--m-ink-900: 45 43 43;
+	--m-accent: 11 49 58;
+	--m-accent-100: 234 250 242;
+	--m-accent-200: 161 238 201;
+	--m-accent-300: 127 220 178;
+	--m-accent-400: 76 196 146;
+	--m-accent-500: 26 154 116;
+	--m-accent-600: 22 74 86;
+	--m-accent-700: 11 49 58;
+	--m-accent-800: 8 36 44;
+	--m-accent-900: 5 24 30;
+}
+
+/* Dark theme — warm near-black ground, mint takes over the accent role
+   (buttons/chips/indicators become mint with dark text via var(--color-bg)),
+   both ramps invert so muted/emphasis relationships hold. Toggled by
+   data/theme.js putting `.dark` on <html> (light / dark / system modes,
+   HandaPOS-style). */
+:root.dark {
+	--color-bg: #191817;
+	--color-surface: #242220;
+	--color-text: #f3f2f2;
+	--color-accent: #a1eec9;
+	--color-accent-2: #6fae97;
+	--color-divider: color-mix(in srgb, #f3f2f2 28%, transparent);
+
+	--color-neutral-100: #2d2b2b;
+	--color-neutral-200: #444141;
+	--color-neutral-300: #605d5d;
+	--color-neutral-400: #7d7979;
+	--color-neutral-500: #9b9797;
+	--color-neutral-600: #bab6b6;
+	--color-neutral-700: #d7d3d3;
+	--color-neutral-800: #eae7e7;
+	--color-neutral-900: #f8f4f4;
+
+	--color-accent-100: #05181e;
+	--color-accent-200: #08242c;
+	--color-accent-300: #0b313a;
+	--color-accent-400: #164a56;
+	--color-accent-500: #1a9a74;
+	--color-accent-600: #4cc492;
+	--color-accent-700: #7fdcb2;
+	--color-accent-800: #a1eec9;
+	--color-accent-900: #eafaf2;
+
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+	--shadow-md: 0 3px 10px rgba(0, 0, 0, 0.55);
+	--shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+
+	--m-ground: 25 24 23;
+	--m-surface: 36 34 32;
+	--m-inkbase: 243 242 242;
+	--m-divider-color: rgba(243, 242, 242, 0.28);
+	--m-ink-100: 45 43 43;
+	--m-ink-200: 68 65 65;
+	--m-ink-300: 96 93 93;
+	--m-ink-400: 125 121 121;
+	--m-ink-500: 155 151 151;
+	--m-ink-600: 186 182 182;
+	--m-ink-700: 215 211 211;
+	--m-ink-800: 234 231 231;
+	--m-ink-900: 248 244 244;
+	--m-accent: 161 238 201;
+	--m-accent-100: 5 24 30;
+	--m-accent-200: 8 36 44;
+	--m-accent-300: 11 49 58;
+	--m-accent-400: 22 74 86;
+	--m-accent-500: 26 154 116;
+	--m-accent-600: 76 196 146;
+	--m-accent-700: 127 220 178;
+	--m-accent-800: 161 238 201;
+	--m-accent-900: 234 250 242;
+}
+
+/* Theme-switch circular reveal (data/theme.js drives the clip-path animation
+   on ::view-transition-new(root); disable the default crossfade). */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
 }
 
 /* — base — */

@@ -85,3 +85,16 @@ http://ionicframework.com/docs/theming/ */
 	--ion-color-light-shade: #d7d8da;
 	--ion-color-light-tint: #f5f6f9;
 }
+
+/* Dark theme (html.dark set by src/data/theme.js) — mirrors modernist.css */
+.dark {
+	--ion-background-color: #191817;
+	--ion-text-color: #f3f2f2;
+	--ion-tab-bar-color-selected: #a1eec9;
+	--ion-color-primary: #a1eec9;
+	--ion-color-primary-rgb: 161, 238, 201;
+	--ion-color-primary-contrast: #191817;
+	--ion-color-primary-contrast-rgb: 25, 24, 23;
+	--ion-color-primary-shade: #7fdcb2;
+	--ion-color-primary-tint: #eafaf2;
+}

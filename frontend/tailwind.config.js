@@ -4,6 +4,7 @@ import frappeUIPreset from "frappe-ui/src/tailwind/preset"
 // canonical palette) — change them there first, then here.
 export default {
 	presets: [frappeUIPreset],
+	darkMode: "class",
 	content: [
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
@@ -26,34 +27,36 @@ export default {
 			sans: ["Archivo", "system-ui", "sans-serif"],
 		},
 		extend: {
+			// Values resolve through the --m-* RGB triplets in theme/modernist.css
+			// (:root light / .dark dark) so every utility follows the theme switch.
 			colors: {
 				ink: {
-					100: "#f8f4f4",
-					200: "#eae7e7",
-					300: "#d7d3d3",
-					400: "#bab6b6",
-					500: "#9b9797",
-					600: "#7d7979",
-					700: "#605d5d",
-					800: "#444141",
-					900: "#2d2b2b",
+					100: "rgb(var(--m-ink-100) / <alpha-value>)",
+					200: "rgb(var(--m-ink-200) / <alpha-value>)",
+					300: "rgb(var(--m-ink-300) / <alpha-value>)",
+					400: "rgb(var(--m-ink-400) / <alpha-value>)",
+					500: "rgb(var(--m-ink-500) / <alpha-value>)",
+					600: "rgb(var(--m-ink-600) / <alpha-value>)",
+					700: "rgb(var(--m-ink-700) / <alpha-value>)",
+					800: "rgb(var(--m-ink-800) / <alpha-value>)",
+					900: "rgb(var(--m-ink-900) / <alpha-value>)",
 				},
 				accent: {
-					DEFAULT: "#0b313a",
-					100: "#eafaf2",
-					200: "#a1eec9",
-					300: "#7fdcb2",
-					400: "#4cc492",
-					500: "#1a9a74",
-					600: "#164a56",
-					700: "#0b313a",
-					800: "#08242c",
-					900: "#05181e",
+					DEFAULT: "rgb(var(--m-accent) / <alpha-value>)",
+					100: "rgb(var(--m-accent-100) / <alpha-value>)",
+					200: "rgb(var(--m-accent-200) / <alpha-value>)",
+					300: "rgb(var(--m-accent-300) / <alpha-value>)",
+					400: "rgb(var(--m-accent-400) / <alpha-value>)",
+					500: "rgb(var(--m-accent-500) / <alpha-value>)",
+					600: "rgb(var(--m-accent-600) / <alpha-value>)",
+					700: "rgb(var(--m-accent-700) / <alpha-value>)",
+					800: "rgb(var(--m-accent-800) / <alpha-value>)",
+					900: "rgb(var(--m-accent-900) / <alpha-value>)",
 				},
-				ground: "#f3f2f2",
-				surface: "#eae9e9",
-				inkbase: "#201e1d",
-				divider: "rgba(32,30,29,0.4)",
+				ground: "rgb(var(--m-ground) / <alpha-value>)",
+				surface: "rgb(var(--m-surface) / <alpha-value>)",
+				inkbase: "rgb(var(--m-inkbase) / <alpha-value>)",
+				divider: "var(--m-divider-color)",
 			},
 			screens: {
 				standalone: {

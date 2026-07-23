@@ -56,8 +56,8 @@ ion-tab-bar.m-tab-bar {
 	--background: transparent;
 }
 ion-tab-button.m-tab-btn {
-	--color: #9b9797; /* ink-500 */
-	--color-selected: #201e1d; /* inkbase */
+	--color: var(--color-neutral-500);
+	--color-selected: var(--color-text);
 	--background: transparent;
 	--background-focused: transparent;
 	--ripple-color: transparent;

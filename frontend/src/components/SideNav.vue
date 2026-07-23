@@ -76,8 +76,8 @@
 					class="flex items-center gap-3 px-[18px] py-3 border-l-[3px] text-[11px] font-extrabold uppercase tracking-[0.08em] text-left"
 					:class="
 						isActive(item.route)
-							? 'border-accent bg-[rgba(32,30,29,0.06)] text-inkbase'
-							: 'border-transparent text-ink-600 hover:bg-[rgba(32,30,29,0.05)]'
+							? 'border-accent bg-inkbase/[0.06] text-inkbase'
+							: 'border-transparent text-ink-600 hover:bg-inkbase/[0.05]'
 					"
 					@click="navigate"
 				>
@@ -92,7 +92,7 @@
 		<!-- Profile -->
 		<router-link
 			:to="{ name: 'Profile' }"
-			class="flex items-center gap-2.5 px-[18px] py-4 border-t-2 border-divider hover:bg-[rgba(32,30,29,0.05)]"
+			class="flex items-center gap-2.5 px-[18px] py-4 border-t-2 border-divider hover:bg-inkbase/[0.05]"
 		>
 			<img
 				v-if="employeeImage"

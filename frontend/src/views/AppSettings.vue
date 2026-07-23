@@ -19,6 +19,34 @@
 					</header>
 
 					<div class="flex flex-col gap-4 w-full p-4">
+						<span class="m-kicker">{{ __("Appearance") }}</span>
+						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
+							<div class="flex items-center gap-3">
+								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent" />
+								<div class="flex flex-col">
+									<span class="text-sm font-semibold text-inkbase">
+										{{ __("Theme") }}
+									</span>
+									<span class="text-xs text-ink-600">{{ currentThemeLabel }}</span>
+								</div>
+							</div>
+							<div class="flex w-full border border-divider">
+								<button
+									v-for="mode in THEME_MODES"
+									:key="mode"
+									type="button"
+									class="flex-1 py-2 text-[11px] uppercase tracking-[0.08em] font-sans font-extrabold border-r border-divider last:border-r-0"
+									:class="
+										theme.mode === mode
+											? 'bg-accent text-ground'
+											: 'bg-transparent text-ink-700 hover:bg-inkbase/[0.04]'
+									"
+									@click="setTheme(mode, $event)"
+								>
+									{{ __(themeLabels[mode]) }}
+								</button>
+							</div>
+						</div>
 						<span class="m-kicker">{{ __("Notifications") }}</span>
 						<div class="flex flex-col border-t-2 border-divider pt-4">
 							<Switch
@@ -56,9 +84,16 @@ import { FeatherIcon, Switch, toast, LoadingIndicator } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import { arePushNotificationsEnabled } from "@/data/notifications"
+import { theme, setTheme, THEME_MODES } from "@/data/theme"
 
 const __ = inject("$translate")
 const router = useRouter()
+
+// __("Light"), __("Dark"), __("System"), __("System default")
+const themeLabels = { light: "Light", dark: "Dark", system: "System" }
+const currentThemeLabel = computed(() =>
+	theme.mode === "system" ? __("System default") : __(themeLabels[theme.mode])
+)
 const pushNotificationState = ref(
 	window.frappePushNotification?.isNotificationEnabled()
 )
