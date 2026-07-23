@@ -1,8 +1,8 @@
 <template>
 	<ion-header class="ion-no-border">
-		<div class="w-full sm:max-w-2xl sm:mx-auto">
+		<div class="w-full sm:max-w-2xl sm:mx-auto lg:max-w-none lg:mx-0">
 			<div
-				class="flex flex-row bg-ground py-4 px-3 items-center justify-between border-b border-divider"
+				class="flex flex-row bg-ground py-4 px-3 items-center justify-between border-b border-divider lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<div class="flex flex-row items-center">
 					<Button variant="ghost" class="!px-1 mr-1 hover:bg-transparent" @click="router.back()">

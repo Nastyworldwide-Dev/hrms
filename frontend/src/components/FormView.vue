@@ -1,12 +1,12 @@
 <template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
-		<div class="w-full h-full bg-ground sm:max-w-2xl sm:mx-auto flex flex-col">
+		<div class="w-full h-full bg-ground flex flex-col">
 			<header
-				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000]"
+				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000] lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<Button
 					variant="ghost"
-					class="!pl-0 hover:bg-transparent"
+					class="!pl-0 hover:bg-transparent lg:hidden"
 					@click="router.back()"
 				>
 					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
@@ -49,13 +49,31 @@
 						}"
 					/>
 				</div>
-				<h2 v-else class="text-2xl font-extrabold text-inkbase tracking-tight">
+				<h2
+					v-else
+					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-[19px]"
+				>
 					{{ __('New {0}', [__(doctype)], props.doctype) }}
 				</h2>
+				<span
+					v-if="!id"
+					class="hidden lg:inline ml-auto text-[10px] uppercase tracking-[0.1em] text-ink-600"
+				>
+					{{ dateKicker }}
+				</span>
 			</header>
 
 			<!-- Form -->
 			<div class="bg-ground grow overflow-y-auto">
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
+				<button
+					type="button"
+					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-600 hover:text-inkbase"
+					@click="router.back()"
+				>
+					<FeatherIcon name="arrow-left" class="h-4 w-4" />
+					{{ __("Back") }}
+				</button>
 				<!-- Tabs -->
 				<template v-if="tabbedView">
 					<div
@@ -165,6 +183,7 @@
 						@handleFileDelete="handleFileDelete"
 					/>
 				</div>
+				</div>
 			</div>
 
 			<!-- Form Primary/Secondary Button -->
@@ -173,7 +192,9 @@
 				v-if="!showFormButton"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<slot name="formButton"></slot>
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
+					<slot name="formButton"></slot>
+				</div>
 			</div>
 
 			<!-- workflow actions -->
@@ -189,6 +210,7 @@
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
 				<ErrorMessage
 					class="mb-2"
 					:message="
@@ -211,6 +233,7 @@
 				>
 					{{ __(formButton) }}
 				</Button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -381,6 +404,12 @@ const emit = defineEmits(["validateForm", "update:modelValue"])
 const router = useRouter()
 
 const __ = inject("$translate")
+const $dayjs = inject("$dayjs")
+
+// Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
+const dateKicker = computed(() =>
+	$dayjs().format("dddd, D MMMM YYYY").toUpperCase()
+)
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])

@@ -6,13 +6,18 @@
 			>
 				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
 					<div class="order-1"><AttendanceCalendar /></div>
+				</div>
+
+				<div
+					class="contents lg:grid lg:grid-cols-2 lg:gap-x-3 lg:gap-y-8 lg:content-start lg:items-stretch lg:border-l lg:border-divider lg:pl-8"
+				>
 
 				<router-link
 					:to="{ name: 'AttendanceRequestFormView' }"
 					v-slot="{ navigate }"
-					class="order-2"
+					class="order-2 lg:order-1"
 				>
-					<button type="button" class="m-btn-primary" @click="navigate">
+					<button type="button" class="m-btn-primary h-full" @click="navigate">
 						{{ __("Request Attendance") }}
 						<svg
 							width="17"
@@ -34,11 +39,11 @@
 				<router-link
 					:to="{ name: 'ShiftRequestFormView' }"
 					v-slot="{ navigate }"
-					class="order-5"
+					class="order-5 lg:order-2"
 				>
 					<button
 						type="button"
-						class="flex items-center w-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
 						@click="navigate"
 					>
 						{{ __("Request a Shift") }}
@@ -58,13 +63,8 @@
 						</svg>
 					</button>
 				</router-link>
-				</div>
 
-				<div
-					class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8"
-				>
-
-				<div class="order-3">
+				<div class="order-3 lg:order-3 lg:col-span-2">
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker">{{ __("Recent Attendance Requests") }}</span>
 						<router-link
@@ -81,7 +81,7 @@
 					/>
 				</div>
 
-				<div class="order-4">
+				<div class="order-4 lg:order-4 lg:col-span-2">
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker">{{ __("Upcoming Shifts") }}</span>
 						<router-link
@@ -100,7 +100,7 @@
 				</div>
 
 
-				<div class="order-6">
+				<div class="order-6 lg:order-5 lg:col-span-2">
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker">{{ __("Recent Shift Requests") }}</span>
 						<router-link

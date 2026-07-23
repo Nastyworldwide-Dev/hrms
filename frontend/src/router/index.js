@@ -87,11 +87,17 @@ const routes = [
 		name: "InvalidEmployee",
 		component: () => import("@/views/InvalidEmployee.vue"),
 	},
-	...attendanceRoutes,
-	...leaveRoutes,
-	...claimRoutes,
-	...employeeAdvanceRoutes,
-	...salarySlipRoutes,
+	{
+		path: "/",
+		component: () => import("@/views/FormShell.vue"),
+		children: [
+			...attendanceRoutes,
+			...leaveRoutes,
+			...claimRoutes,
+			...employeeAdvanceRoutes,
+			...salarySlipRoutes,
+		],
+	},
 ]
 
 const router = createRouter({

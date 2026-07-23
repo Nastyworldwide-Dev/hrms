@@ -289,9 +289,15 @@ ion-action-sheet {
 	--border-radius: 0;
 }
 
-/* Tablet/desktop: sheets present as a centered column, not edge-to-edge. */
+/* Tablet/desktop: drag-up sheets present as centered window popups. */
 @media (min-width: 640px) {
 	ion-modal {
 		--width: min(640px, 92vw);
+	}
+	ion-modal.modal-sheet {
+		align-items: center;
+	}
+	ion-modal.modal-sheet::part(handle) {
+		display: none;
 	}
 }

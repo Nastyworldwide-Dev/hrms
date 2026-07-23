@@ -7,6 +7,7 @@
 				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4',
 		]"
 	>
+		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">
 		<Button
 			v-if="props.view === 'form' || actions.length > 2"
 			@click="showTransitions()"
@@ -33,6 +34,7 @@
 				{{ __(action.text, null, props.doc?.doctype) }}
 			</Button>
 		</template>
+		</div>
 	</div>
 
 	<ion-action-sheet
