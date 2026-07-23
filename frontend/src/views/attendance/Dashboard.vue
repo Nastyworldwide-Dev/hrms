@@ -1,10 +1,17 @@
 <template>
 	<BaseLayout :pageTitle="__('Attendance')">
 		<template #body>
-			<div class="flex flex-col px-4 pt-6 pb-8 gap-8">
-				<AttendanceCalendar />
+			<div
+				class="flex flex-col px-4 pt-6 pb-8 gap-8 lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+			>
+				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
+					<div class="order-1"><AttendanceCalendar /></div>
 
-				<router-link :to="{ name: 'AttendanceRequestFormView' }" v-slot="{ navigate }">
+				<router-link
+					:to="{ name: 'AttendanceRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-2"
+				>
 					<button type="button" class="m-btn-primary" @click="navigate">
 						{{ __("Request Attendance") }}
 						<svg
@@ -24,42 +31,11 @@
 					</button>
 				</router-link>
 
-				<div>
-					<div class="flex items-baseline justify-between mb-2.5">
-						<span class="m-kicker">{{ __("Recent Attendance Requests") }}</span>
-						<router-link
-							:to="{ name: 'AttendanceRequestListView' }"
-							class="text-[11px] text-accent underline underline-offset-[3px]"
-						>
-							{{ __("View list") }}
-						</router-link>
-					</div>
-					<hr class="m-rule" />
-					<RequestList
-						:component="markRaw(AttendanceRequestItem)"
-						:items="myAttendanceRequests?.data?.slice(0, 5)"
-					/>
-				</div>
-
-				<div>
-					<div class="flex items-baseline justify-between mb-2.5">
-						<span class="m-kicker">{{ __("Upcoming Shifts") }}</span>
-						<router-link
-							:to="{ name: 'ShiftAssignmentListView' }"
-							class="text-[11px] text-accent underline underline-offset-[3px]"
-						>
-							{{ __("View list") }}
-						</router-link>
-					</div>
-					<hr class="m-rule" />
-					<RequestList
-						:component="markRaw(ShiftAssignmentItem)"
-						:items="upcomingShifts"
-						:emptyStateMessage="__('You have no upcoming shifts')"
-					/>
-				</div>
-
-				<router-link :to="{ name: 'ShiftRequestFormView' }" v-slot="{ navigate }">
+				<router-link
+					:to="{ name: 'ShiftRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-5"
+				>
 					<button
 						type="button"
 						class="flex items-center w-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
@@ -82,8 +58,49 @@
 						</svg>
 					</button>
 				</router-link>
+				</div>
 
-				<div>
+				<div
+					class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8"
+				>
+
+				<div class="order-3">
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker">{{ __("Recent Attendance Requests") }}</span>
+						<router-link
+							:to="{ name: 'AttendanceRequestListView' }"
+							class="text-[11px] text-accent underline underline-offset-[3px]"
+						>
+							{{ __("View list") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
+					<RequestList
+						:component="markRaw(AttendanceRequestItem)"
+						:items="myAttendanceRequests?.data?.slice(0, 5)"
+					/>
+				</div>
+
+				<div class="order-4">
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker">{{ __("Upcoming Shifts") }}</span>
+						<router-link
+							:to="{ name: 'ShiftAssignmentListView' }"
+							class="text-[11px] text-accent underline underline-offset-[3px]"
+						>
+							{{ __("View list") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
+					<RequestList
+						:component="markRaw(ShiftAssignmentItem)"
+						:items="upcomingShifts"
+						:emptyStateMessage="__('You have no upcoming shifts')"
+					/>
+				</div>
+
+
+				<div class="order-6">
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker">{{ __("Recent Shift Requests") }}</span>
 						<router-link
@@ -98,6 +115,7 @@
 						:component="markRaw(ShiftRequestItem)"
 						:items="myShiftRequests?.data?.slice(0, 5)"
 					/>
+					</div>
 				</div>
 			</div>
 		</template>

@@ -19,7 +19,7 @@
 					{{ __("Pending") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
-					{{ formatCurrency(summary.data?.total_pending_amount, company_currency) }}
+					{{ formatCurrency(summary.data?.total_pending_amount || 0, company_currency) }}
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 px-3 border-l border-divider">
@@ -27,7 +27,7 @@
 					{{ __("Approved") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
-					{{ formatCurrency(summary.data?.total_approved_amount, company_currency) }}
+					{{ formatCurrency(summary.data?.total_approved_amount || 0, company_currency) }}
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 pl-3 pr-0.5 border-l border-divider">
@@ -37,9 +37,9 @@
 				<span class="font-sans font-extrabold text-base tabular-nums text-accent-700">
 					{{
 						formatCurrency(
-							summary.data?.total_rejected_amount +
-								(summary.data?.total_claimed_in_approved -
-									summary.data?.total_approved_amount),
+							(summary.data?.total_rejected_amount || 0) +
+								((summary.data?.total_claimed_in_approved || 0) -
+									(summary.data?.total_approved_amount || 0)),
 							company_currency
 						)
 					}}

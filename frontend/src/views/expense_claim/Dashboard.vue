@@ -1,13 +1,18 @@
 <template>
 	<BaseLayout :pageTitle="__('Expense Claims')">
 		<template #body>
-			<div class="flex flex-col gap-8 px-4 pt-6 pb-8">
-				<ExpenseClaimSummary />
+			<div
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-[1fr_1.2fr] lg:gap-x-0 lg:p-7 lg:items-start"
+			>
+				<div class="lg:col-start-1 lg:pr-8">
+					<ExpenseClaimSummary />
+				</div>
 
 				<!-- Claim an expense -->
 				<router-link
 					:to="{ name: 'ExpenseClaimFormView' }"
 					v-slot="{ navigate }"
+					class="lg:col-start-1 lg:pr-8"
 				>
 					<button class="m-btn-primary" @click="navigate">
 						{{ __("Claim an Expense") }}
@@ -29,7 +34,9 @@
 				</router-link>
 
 				<!-- Recent expenses -->
-				<div>
+				<div
+					class="lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:border-l lg:border-divider lg:pl-8"
+				>
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker !text-ink-600 text-[11px]">
 							{{ __("Recent Expenses") }}
@@ -49,7 +56,7 @@
 				</div>
 
 				<!-- Advance balance -->
-				<div>
+				<div class="lg:col-start-1 lg:pr-8">
 					<div class="flex items-baseline justify-between mb-2.5">
 						<span class="m-kicker !text-ink-600 text-[11px]">
 							{{ __("Advance Balance") }}

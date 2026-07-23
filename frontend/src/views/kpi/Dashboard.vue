@@ -1,10 +1,13 @@
 <template>
 	<BaseLayout :pageTitle="__('My KPI')">
 		<template #body>
-			<div class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8">
+			<div
+				class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8 lg:max-w-none lg:mx-0 lg:grid lg:grid-cols-[1fr_1.1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+			>
 				<template v-if="current">
+					<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
 					<!-- Hero: overall score -->
-					<div>
+					<div class="order-1">
 						<div class="m-kicker">
 							{{ __("Appraisal cycle") }} · {{ current.cycle }}
 						</div>
@@ -66,8 +69,66 @@
 						</div>
 					</div>
 
+					<!-- Score trend -->
+					<div v-if="trend.length > 1" class="order-3">
+						<div
+							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+						>
+							{{ __("Score trend") }}
+						</div>
+						<div class="border-t-2 border-divider pt-3">
+							<svg :viewBox="`0 0 320 110`" class="w-full">
+								<line
+									v-for="g in [0, 50, 100]"
+									:key="g"
+									:y1="trendY(g)"
+									:y2="trendY(g)"
+									x1="24"
+									x2="312"
+									stroke="currentColor"
+									class="text-ink-300"
+									stroke-width="1"
+								/>
+								<text
+									v-for="g in [0, 50, 100]"
+									:key="'l' + g"
+									x="20"
+									:y="trendY(g) + 3"
+									text-anchor="end"
+									fill="currentColor" class="text-ink-500"
+									font-size="9"
+								>
+									{{ g }}
+								</text>
+								<polyline
+									fill="none"
+									stroke="currentColor"
+									class="text-inkbase"
+									stroke-width="2"
+									:points="trendPoints"
+								/>
+								<g v-for="(p, i) in trend" :key="'p' + i">
+									<circle :cx="trendX(i)" :cy="trendY(p.total_score)" r="3" fill="currentColor" class="text-inkbase" />
+									<text
+										:x="trendX(i)"
+										y="106"
+										text-anchor="middle"
+										fill="currentColor" class="text-ink-500"
+										font-size="9"
+									>
+										{{ p.cycle }}
+									</text>
+								</g>
+							</svg>
+						</div>
+					</div>
+					</div>
+
+					<div
+						class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8"
+					>
 					<!-- KRA list -->
-					<div>
+					<div class="order-2">
 						<div
 							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 						>
@@ -123,62 +184,8 @@
 						</div>
 					</div>
 
-					<!-- Score trend -->
-					<div v-if="trend.length > 1">
-						<div
-							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
-						>
-							{{ __("Score trend") }}
-						</div>
-						<div class="border-t-2 border-divider pt-3">
-							<svg :viewBox="`0 0 320 110`" class="w-full">
-								<line
-									v-for="g in [0, 50, 100]"
-									:key="g"
-									:y1="trendY(g)"
-									:y2="trendY(g)"
-									x1="24"
-									x2="312"
-									stroke="currentColor"
-									class="text-ink-300"
-									stroke-width="1"
-								/>
-								<text
-									v-for="g in [0, 50, 100]"
-									:key="'l' + g"
-									x="20"
-									:y="trendY(g) + 3"
-									text-anchor="end"
-									fill="currentColor" class="text-ink-500"
-									font-size="9"
-								>
-									{{ g }}
-								</text>
-								<polyline
-									fill="none"
-									stroke="currentColor"
-									class="text-inkbase"
-									stroke-width="2"
-									:points="trendPoints"
-								/>
-								<g v-for="(p, i) in trend" :key="'p' + i">
-									<circle :cx="trendX(i)" :cy="trendY(p.total_score)" r="3" fill="currentColor" class="text-inkbase" />
-									<text
-										:x="trendX(i)"
-										y="106"
-										text-anchor="middle"
-										fill="currentColor" class="text-ink-500"
-										font-size="9"
-									>
-										{{ p.cycle }}
-									</text>
-								</g>
-							</svg>
-						</div>
-					</div>
-
 					<!-- Feedback -->
-					<div>
+					<div class="order-4">
 						<div class="border-t-2 border-divider">
 							<div class="m-row flex items-center justify-between py-3">
 								<span class="text-sm">
@@ -192,6 +199,7 @@
 						<span class="block text-[11px] text-ink-600 mt-3">
 							🔒 {{ __("You can only see your own scores") }}
 						</span>
+					</div>
 					</div>
 				</template>
 

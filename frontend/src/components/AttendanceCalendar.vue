@@ -91,13 +91,14 @@ const __ = inject("$translate")
 const firstOfMonth = ref(dayjs().date(1).startOf("D"))
 
 // Day-cell styles for the mono/accent scheme. Work From Home folds into the
-// Present style (mirrors the summary rollup); Holiday maps to the muted
-// neutral treatment since the design's swatch set is Present/Half/Absent/Leave.
+// User-tuned scheme: present = mint (accent-200, like the logo tile), absent =
+// accent fill, on-leave = accent outline, half-day = mint half + on-leave
+// outline. WFH mirrors Present (summary rollup); Holiday stays muted.
 const dayStyle = {
-	Present: "background:var(--color-neutral-300)",
-	"Work From Home": "background:var(--color-neutral-300)",
+	Present: "background:var(--color-accent-200);color:var(--color-accent-800)",
+	"Work From Home": "background:var(--color-accent-200);color:var(--color-accent-800)",
 	"Half Day":
-		"background:linear-gradient(135deg,var(--color-neutral-400) 50%,var(--color-neutral-200) 50%)",
+		"background:linear-gradient(135deg,var(--color-accent-200) 50%,transparent 50%);border:2px solid var(--color-accent);color:var(--color-accent-700);font-weight:600",
 	Absent: "background:var(--color-accent);color:var(--color-bg);font-weight:600",
 	"On Leave": "border:2px solid var(--color-accent);color:var(--color-accent-700);font-weight:600",
 	Holiday: "color:var(--color-neutral-400)",
@@ -105,9 +106,9 @@ const dayStyle = {
 
 // 9px legend swatches mirroring each day-cell style.
 const swatchStyle = {
-	Present: "background:var(--color-neutral-300)",
+	Present: "background:var(--color-accent-200)",
 	"Half Day":
-		"background:linear-gradient(135deg,var(--color-neutral-400) 50%,var(--color-neutral-200) 50%)",
+		"background:linear-gradient(135deg,var(--color-accent-200) 50%,transparent 50%);border:1.5px solid var(--color-accent)",
 	Absent: "background:var(--color-accent)",
 	"On Leave": "border:1.5px solid var(--color-accent)",
 }

@@ -46,7 +46,7 @@
 						</div>
 
 						<!-- Profile Links -->
-						<div class="flex flex-col mt-2 border-t-2 border-divider">
+						<div class="flex flex-col mt-2">
 							<div
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 								v-for="link in profileLinks"

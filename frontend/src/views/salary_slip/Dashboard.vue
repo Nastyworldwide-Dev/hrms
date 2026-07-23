@@ -1,7 +1,10 @@
 <template>
 	<BaseLayout :pageTitle="__('Salary Slips')">
 		<template #body>
-			<div class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8">
+			<div
+				class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8 lg:max-w-none lg:mx-0 lg:grid lg:grid-cols-[320px_1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+			>
+				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
 				<!-- Year to date -->
 				<div
 					v-if="lastSalarySlip && lastSalarySlip.year_to_date"
@@ -34,9 +37,10 @@
 						:options="payrollPeriods.data"
 					/>
 				</div>
+				</div>
 
 				<!-- Slip table -->
-				<div>
+				<div class="lg:border-l lg:border-divider lg:pl-8">
 					<div
 						v-if="documents.data?.length"
 						class="flex flex-col overflow-auto w-full"
