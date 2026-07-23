@@ -5,19 +5,15 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-white w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)]">
+		<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
 			<div
-				class="w-full flex flex-col gap-2 pt-8 pb-5 border-b items-center sticky top-0 z-[100] bg-white"
+				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-[100] bg-ground px-4"
 			>
-				<div
-					class="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center"
-				>
-					<FeatherIcon name="map-pin" class="h-6 w-6 text-amber-700" />
-				</div>
-				<span class="text-gray-900 font-bold text-base">
+				<div class="m-kicker">{{ __("Remote check-in") }}</div>
+				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
 					{{ __("You're outside the office geofence") }}
 				</span>
-				<span class="text-xs text-gray-500 px-6 text-center">
+				<span class="text-xs text-ink-600">
 					{{
 						__(
 							"Submit a remote {0} request. Your reporting manager will be notified for approval.",
@@ -27,49 +23,46 @@
 				</span>
 			</div>
 
-			<div class="w-full flex flex-col px-4 pt-4 gap-3">
-				<div class="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-xs text-amber-800">
+			<div class="w-full flex flex-col px-4 gap-3">
+				<div class="bg-accent-100 border border-accent px-3 py-2 text-xs text-accent-800">
 					<div class="flex justify-between">
 						<span>{{ __("Distance from geofence") }}</span>
-						<span class="font-mono font-semibold">{{ formattedDistance }}</span>
+						<span class="font-mono font-semibold tabular-nums">{{ formattedDistance }}</span>
 					</div>
 				</div>
 
-				<label class="text-xs uppercase text-gray-500 tracking-wide">
+				<label class="text-xs uppercase text-ink-700 tracking-wide">
 					{{ __("Reason for remote {0}", [logType === "IN" ? "check-in" : "check-out"]) }}
 				</label>
 				<textarea
 					v-model="remarks"
 					rows="4"
 					maxlength="500"
-					class="w-full text-sm border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					class="w-full text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent"
 					:placeholder="
 						__('e.g. Client meeting at office X, traffic to KLCC, etc.')
 					"
 				/>
-				<div class="text-[10px] text-gray-400 text-right">
+				<div class="text-[10px] text-ink-500 text-right">
 					{{ remarks.length }}/500
 				</div>
 			</div>
 
-			<div class="flex flex-row gap-2 px-4 pt-2">
-				<Button
-					variant="outline"
-					class="flex-1"
+			<div class="flex flex-row gap-2.5 px-4 pt-2">
+				<button
+					class="flex-1 bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-[13px] cursor-pointer text-left hover:bg-inkbase/[0.07] disabled:opacity-60"
 					@click="cancel"
 					:disabled="submitting"
 				>
 					{{ __("Cancel") }}
-				</Button>
-				<Button
-					class="flex-1"
-					theme="blue"
+				</button>
+				<button
+					class="flex-1 bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-[13px] cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60"
 					@click="submit"
-					:loading="submitting"
-					:disabled="!remarks.trim()"
+					:disabled="submitting || !remarks.trim()"
 				>
-					{{ __("Submit Request") }}
-				</Button>
+					{{ submitting ? __("Submitting…") : __("Submit Request") }}
+				</button>
 			</div>
 		</div>
 	</ion-modal>
@@ -78,7 +71,7 @@
 <script setup>
 import { computed, inject, ref, watch } from "vue"
 import { IonModal } from "@ionic/vue"
-import { FeatherIcon, Button, toast } from "frappe-ui"
+import { toast } from "frappe-ui"
 
 import { submitRemarksResource } from "@/data/remoteCheckin"
 

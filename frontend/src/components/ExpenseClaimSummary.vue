@@ -1,76 +1,55 @@
 <template>
-	<div class="flex flex-col w-full gap-5" v-if="summary.data">
-		<div class="text-lg text-gray-800 font-bold">{{ __("Expense Claim Summary") }}</div>
-		<div
-			class="flex flex-col gap-4 bg-white py-3 px-3.5 rounded-lg border-none"
-		>
-			<div class="flex flex-col gap-1.5">
-				<span class="text-gray-600 text-base font-medium leading-5">
-					{{ __("Total Claimed Amount") }}
+	<div class="flex flex-col w-full" v-if="summary.data">
+		<!-- Poster: total claimed -->
+		<div class="m-poster px-4 pt-5 pb-[22px]">
+			<div class="font-sans font-extrabold text-[10px] tracking-[0.1em] uppercase text-accent-200">
+				{{ __("Total Claimed") }}
+			</div>
+			<div
+				class="font-sans font-extrabold text-[38px] leading-[1.05] tabular-nums text-ground mt-1.5"
+			>
+				{{ formatCurrency(total_claimed_amount, company_currency) }}
+			</div>
+		</div>
+
+		<!-- Stat cells: pending / approved / rejected -->
+		<div class="grid grid-cols-3 border-b-2 border-divider">
+			<div class="flex flex-col gap-0.5 py-3 pl-0.5 pr-3">
+				<span class="text-[9px] tracking-[0.08em] uppercase text-ink-600">
+					{{ __("Pending") }}
 				</span>
-				<span class="text-gray-800 text-lg font-bold leading-6">
-					{{ formatCurrency(total_claimed_amount, company_currency) }}
+				<span class="font-sans font-extrabold text-base tabular-nums">
+					{{ formatCurrency(summary.data?.total_pending_amount, company_currency) }}
 				</span>
 			</div>
-
-			<div class="flex flex-row justify-between">
-				<div class="flex flex-col gap-1">
-					<div class="flex flex-row gap-1 items-center">
-						<span class="text-gray-600 text-sm font-medium leading-5">
-							{{ __("Pending") }}
-						</span>
-						<FeatherIcon name="alert-circle" class="text-yellow-500 h-3 w-3" />
-					</div>
-					<span class="text-gray-800 text-base font-semibold leading-6">
-						{{
-							formatCurrency(
-								summary.data?.total_pending_amount,
-								company_currency
-							)
-						}}
-					</span>
-				</div>
-				<div class="flex flex-col gap-1">
-					<div class="flex flex-row gap-1 items-center">
-						<span class="text-gray-600 text-sm font-medium leading-5">
-							{{ __("Approved") }}
-						</span>
-						<FeatherIcon name="check-circle" class="text-green-500 h-3 w-3" />
-					</div>
-					<span class="text-gray-800 text-base font-semibold leading-6">
-						{{
-							formatCurrency(
-								summary.data?.total_approved_amount,
-								company_currency
-							)
-						}}
-					</span>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<div class="flex flex-row gap-1 items-center">
-						<span class="text-gray-600 text-sm font-medium leading-5">
-							{{ __("Rejected") }}
-						</span>
-						<FeatherIcon name="x-circle" class="text-red-500 h-3 w-3" />
-					</div>
-					<span class="text-gray-800 text-base font-semibold leading-6">
-						{{
-							formatCurrency(
-								summary.data?.total_rejected_amount + 
-								(summary.data?.total_claimed_in_approved - summary.data?.total_approved_amount),
-								company_currency
-							)
-						}}
-					</span>
-				</div>
+			<div class="flex flex-col gap-0.5 py-3 px-3 border-l border-divider">
+				<span class="text-[9px] tracking-[0.08em] uppercase text-ink-600">
+					{{ __("Approved") }}
+				</span>
+				<span class="font-sans font-extrabold text-base tabular-nums">
+					{{ formatCurrency(summary.data?.total_approved_amount, company_currency) }}
+				</span>
+			</div>
+			<div class="flex flex-col gap-0.5 py-3 pl-3 pr-0.5 border-l border-divider">
+				<span class="text-[9px] tracking-[0.08em] uppercase text-accent-700">
+					{{ __("Rejected") }}
+				</span>
+				<span class="font-sans font-extrabold text-base tabular-nums text-accent-700">
+					{{
+						formatCurrency(
+							summary.data?.total_rejected_amount +
+								(summary.data?.total_claimed_in_approved -
+									summary.data?.total_approved_amount),
+							company_currency
+						)
+					}}
+				</span>
 			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { FeatherIcon } from "frappe-ui"
 import { computed } from "vue"
 
 import { expenseClaimSummary as summary } from "@/data/claims"

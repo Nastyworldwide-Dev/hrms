@@ -1,37 +1,37 @@
 <template>
-	<div class="flex flex-row justify-between items-center">
-		<h2 class="text-base font-semibold text-gray-800">
+	<div class="flex flex-row justify-between items-center pb-2 border-b-2 border-divider">
+		<h2 class="m-kicker">
 			{{ __("Settle against Advances") }}
 		</h2>
 	</div>
 
-	<div class="flex flex-col gap-2.5" v-if="expenseClaim.advances?.length">
-		<!-- Advance Card -->
+	<div class="flex flex-col" v-if="expenseClaim.advances?.length">
+		<!-- Advance Row -->
 		<div
 			v-for="advance in expenseClaim.advances"
 			:key="advance.name"
-			class="flex flex-col bg-white border shadow-sm rounded p-3.5"
+			class="flex flex-col py-3 border-b border-divider"
 			:class="[
-				advance.selected ? 'border-gray-500' : '',
+				advance.selected ? 'bg-surface' : '',
 				isReadOnly ? '' : 'cursor-pointer',
 			]"
 			@click="toggleAdvanceSelection(advance)"
 		>
-			<div class="flex flex-row justify-between items-center">
+			<div class="flex flex-row justify-between items-center px-1">
 				<div class="flex flex-row items-start gap-3">
 					<FormControl
 						type="checkbox"
-						class="mt-[0.5px]"
+						class="mt-[0.5px] text-accent"
 						v-model="advance.selected"
 						:disabled="isReadOnly"
 					/>
 
 					<div class="flex flex-col items-start gap-1.5">
-						<div class="text-base font-semibold text-gray-800">
+						<div class="text-[15px] font-semibold text-inkbase">
 							{{ advance.purpose || advance.employee_advance }}
 						</div>
 						<div class="flex flex-row items-center gap-3 justify-between">
-							<div class="text-xs font-normal text-gray-500">
+							<div class="text-xs font-normal text-ink-600">
 								{{ __("{0}: {1}", [
 									__("Unclaimed Amount"),
 									formatCurrency(advance.unclaimed_amount, currency),
@@ -42,12 +42,12 @@
 				</div>
 
 				<div class="flex flex-row items-center gap-2">
-					<span class="text-normal">
+					<span class="text-normal text-ink-600">
 						{{ currencySymbol }}
 					</span>
 					<Input
 						type="number"
-						class="w-20"
+						class="w-20 advance-input"
 						v-model="advance.allocated_amount"
 						@input="(v) => (advance.selected = v)"
 						@click.stop
@@ -91,3 +91,17 @@ function toggleAdvanceSelection(advance) {
 	advance.selected = !advance.selected
 }
 </script>
+
+<style scoped>
+.advance-input :deep(input) {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	color: var(--color-text);
+}
+.advance-input :deep(input:focus) {
+	border-color: var(--color-accent);
+	box-shadow: none;
+	outline: none;
+}
+</style>

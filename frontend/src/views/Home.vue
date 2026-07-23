@@ -1,10 +1,16 @@
 <template>
 	<BaseLayout>
 		<template #body>
-			<div class="flex flex-col items-center my-7 p-4 gap-7">
-				<CheckInPanel />
-				<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
-				<RequestPanel />
+			<div
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-2 lg:gap-0 lg:p-7"
+			>
+				<div class="flex flex-col gap-8 lg:pr-8">
+					<CheckInPanel />
+					<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
+				</div>
+				<div class="lg:border-l lg:border-divider lg:pl-8">
+					<RequestPanel />
+				</div>
 			</div>
 		</template>
 	</BaseLayout>

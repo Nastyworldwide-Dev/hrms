@@ -1,39 +1,35 @@
 <template>
-	<div class="flex flex-col bg-white rounded w-full py-6 px-4 border-none">
-		<h2 class="text-lg font-bold text-gray-900">
+	<div class="flex flex-col w-full">
+		<div class="m-kicker">
+			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
+		</div>
+		<h1
+			class="text-[30px] lg:text-[36px] leading-[1.08] tracking-[-0.015em] text-inkbase mt-2 mb-1.5"
+		>
 			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
-		</h2>
+		</h1>
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
-			<div class="font-medium text-sm text-gray-500 mt-1.5" v-if="lastLog">
+			<div class="text-[13px] text-ink-600" v-if="lastLog">
 				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
-					<span @click="navigate" class="underline">View List</span>
+					<span @click="navigate" class="underline underline-offset-[3px] text-ink-800">{{ __("View List") }}</span>
 				</router-link>
 			</div>
 
 			<!-- Forgot-to-check-out banner: open IN past 6 AM cutoff OR tagged abandoned by nightly sweeper -->
 			<div
 				v-if="hasStaleOpenIn"
-				class="mt-4 flex flex-row items-center gap-3 rounded-md px-3 py-2 cursor-pointer border"
-				:class="
-					isAbandoned
-						? 'bg-red-50 border-red-200'
-						: 'bg-orange-50 border-orange-200'
-				"
+				class="mt-3.5 flex flex-row items-center gap-3 border border-accent border-l-4 bg-accent-100 px-3 py-2.5 cursor-pointer"
 				@click="lateCheckoutOpen = true"
 			>
 				<FeatherIcon
 					:name="isAbandoned ? 'alert-triangle' : 'clock'"
-					class="h-4 w-4 shrink-0"
-					:class="isAbandoned ? 'text-red-600' : 'text-orange-600'"
+					class="h-4 w-4 shrink-0 text-accent-800"
 				/>
-				<div class="flex flex-col flex-1 min-w-0">
-					<div
-						class="text-sm font-semibold"
-						:class="isAbandoned ? 'text-red-800' : 'text-orange-800'"
-					>
+				<div class="flex flex-col flex-1 min-w-0 gap-0.5">
+					<div class="text-[12.5px] font-semibold text-accent-800">
 						<template v-if="isAbandoned">
 							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(lastLog?.time)]) }}
 						</template>
@@ -41,10 +37,7 @@
 							{{ __("Forgot to check out from {0}?", [formatTimestamp(lastLog?.time)]) }}
 						</template>
 					</div>
-					<div
-						class="text-xs"
-						:class="isAbandoned ? 'text-red-700' : 'text-orange-700'"
-					>
+					<div class="text-[11px] text-accent-800/80">
 						<template v-if="isAbandoned">
 							{{ __("Submit a late check-out now to resolve.") }}
 						</template>
@@ -53,29 +46,20 @@
 						</template>
 					</div>
 				</div>
-				<FeatherIcon
-					name="chevron-right"
-					class="h-4 w-4 shrink-0"
-					:class="isAbandoned ? 'text-red-500' : 'text-orange-500'"
-				/>
+				<span class="m-chip m-chip-solid shrink-0">{{ __("Resolve") }}</span>
 			</div>
 
-			<Button
-				class="mt-4 mb-1 drop-shadow-sm py-5 text-base"
+			<button
 				id="open-checkin-modal"
+				class="m-btn-primary mt-5"
 				@click="handleEmployeeCheckin"
 			>
-				<template #prefix>
-					<FeatherIcon
-						:name="nextAction.action === 'IN' ? 'arrow-right-circle' : 'arrow-left-circle'"
-						class="w-4"
-					/>
-				</template>
-				{{ nextAction.label }}
-			</Button>
+				<span>{{ nextAction.label }}</span>
+				<FeatherIcon name="arrow-right" class="w-[17px] h-[17px] ml-auto" />
+			</button>
 		</template>
 
-		<div v-else class="font-medium text-sm text-gray-500 mt-1.5">
+		<div v-else class="text-[13px] text-ink-600 mt-1">
 			{{ dayjs().format("ddd, D MMMM, YYYY") }}
 		</div>
 	</div>
@@ -83,32 +67,34 @@
 	<ion-modal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
 		ref="modal"
+		class="checkin-sheet"
 		trigger="open-checkin-modal"
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 		@ionModalDidPresent="onModalPresent"
 		@ionModalWillDismiss="onModalDismiss"
 	>
-		<div class="h-120 w-full flex flex-col items-center justify-center gap-4 p-4 mb-5">
-			<div class="flex flex-col gap-1.5 mt-2 items-center justify-center">
-				<div class="font-bold text-xl">
+		<div class="w-full flex flex-col gap-4 px-4 pt-6 pb-8 border-t-[3px] border-inkbase bg-ground">
+			<div class="flex flex-col gap-1">
+				<div class="m-kicker">{{ nextAction.label }}</div>
+				<div class="font-extrabold text-[36px] leading-[1.05] tabular-nums text-inkbase">
 					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
 				</div>
-				<div class="font-medium text-gray-500 text-sm">
+				<div class="text-xs text-ink-600">
 					{{ dayjs().format("D MMM, YYYY") }}
 				</div>
 			</div>
 
 			<template v-if="settings.data?.allow_geolocation_tracking">
 				<div class="w-full flex flex-row items-center justify-between text-xs">
-					<span class="font-medium text-gray-500">{{ locationStatus }}</span>
+					<span class="text-ink-600">{{ locationStatus }}</span>
 					<span
 						v-if="shiftLocation.data && distanceToShift !== null"
-						class="font-mono font-semibold"
+						class="font-mono font-semibold tabular-nums"
 						:class="
 							isInsideRadius
-								? 'text-emerald-700'
-								: 'text-amber-700'
+								? 'text-accent-700'
+								: 'text-inkbase'
 						"
 					>
 						{{ formattedDistanceToShift }}
@@ -117,7 +103,7 @@
 
 				<div
 					ref="mapEl"
-					class="rounded border-4 border-white shadow translate-z-0 block overflow-hidden w-full"
+					class="border border-divider translate-z-0 block overflow-hidden w-full"
 					style="height: 200px; z-index: 0;"
 				></div>
 			</template>
@@ -127,7 +113,7 @@
 			     in one action (mirrors the React CheckInDialog UX). -->
 			<div class="w-full flex flex-col items-center gap-2">
 				<div
-					class="rounded overflow-hidden w-full relative"
+					class="overflow-hidden w-full relative border border-divider"
 					style="aspect-ratio: 4 / 3; background: #000;"
 				>
 					<video
@@ -155,15 +141,18 @@
 				<canvas ref="canvasEl" class="hidden"></canvas>
 			</div>
 
-			<Button
-				:loading="checkins.insert.loading || cameraStatus === 'submitting'"
-				:disabled="cameraStatus === 'starting'"
-				variant="solid"
-				class="w-full py-5 text-sm disabled:bg-gray-700"
+			<button
+				:disabled="cameraStatus === 'starting' || checkins.insert.loading || cameraStatus === 'submitting'"
+				class="m-btn-primary disabled:opacity-60"
 				@click="submitLog(nextAction.action)"
 			>
-				{{ __("Confirm {0}", [nextAction.label]) }}
-			</Button>
+				<span>{{ __("Confirm {0}", [nextAction.label]) }}</span>
+				<FeatherIcon
+					:name="(checkins.insert.loading || cameraStatus === 'submitting') ? 'loader' : 'check'"
+					class="w-[17px] h-[17px] ml-auto"
+					:class="(checkins.insert.loading || cameraStatus === 'submitting') && 'animate-spin'"
+				/>
+			</button>
 		</div>
 	</ion-modal>
 
@@ -906,4 +895,23 @@ onBeforeUnmount(() => {
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
 }
 .shift-loc-tooltip:before { display: none !important; }
+
+/* On tablet/desktop the check-in sheet presents as a centered dialog instead
+   of a bottom sheet (design section 2). Logic/props unchanged — CSS only. */
+@media (min-width: 1024px) {
+	ion-modal.checkin-sheet {
+		--width: 460px;
+		--height: auto;
+	}
+	ion-modal.checkin-sheet::part(content) {
+		position: relative;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 460px;
+		max-height: 88vh;
+		overflow-y: auto;
+		border-radius: 0;
+	}
+}
 </style>

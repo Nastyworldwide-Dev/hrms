@@ -1,22 +1,22 @@
 <template>
-	<div class="flex flex-col h-full w-full" v-if="isFormReady">
-		<div class="w-full h-full bg-white sm:w-96 flex flex-col">
+	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
+		<div class="w-full h-full bg-ground sm:w-96 flex flex-col">
 			<header
-				class="flex flex-row bg-white shadow-sm py-4 px-3 items-center sticky top-0 z-[1000]"
+				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000]"
 			>
 				<Button
 					variant="ghost"
-					class="!pl-0 hover:bg-white"
+					class="!pl-0 hover:bg-transparent"
 					@click="router.back()"
 				>
-					<FeatherIcon name="chevron-left" class="h-5 w-5" />
+					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 				</Button>
 				<div
 					v-if="id"
 					class="flex flex-row items-center gap-2 overflow-hidden grow"
 				>
 					<h2
-						class="text-xl font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
+						class="text-xl font-extrabold text-inkbase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
 					>
 						{{ __(props.doctype) }}
 					</h2>
@@ -49,27 +49,27 @@
 						}"
 					/>
 				</div>
-				<h2 v-else class="text-2xl font-semibold text-gray-900">
+				<h2 v-else class="text-2xl font-extrabold text-inkbase tracking-tight">
 					{{ __('New {0}', [__(doctype)], props.doctype) }}
 				</h2>
 			</header>
 
 			<!-- Form -->
-			<div class="bg-white grow overflow-y-auto">
+			<div class="bg-ground grow overflow-y-auto">
 				<!-- Tabs -->
 				<template v-if="tabbedView">
 					<div
-						class="px-4 sticky top-0 z-[100] bg-white text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700"
+						class="px-4 sticky top-0 z-[100] bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 					>
 						<ul class="flex -mb-px overflow-auto hide-scrollbar">
 							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs">
 								<button
 									@click="activeTab = tab.name"
-									class="inline-block py-4 px-2 border-b-2 border-transparent rounded-t-lg"
+									class="inline-block py-4 px-2 border-b-2 border-transparent"
 									:class="[
 										activeTab === tab.name
-											? '!text-gray-800 !border-gray-800'
-											: 'hover:text-gray-600 hover:border-gray-300',
+											? '!text-accent !border-accent !font-extrabold'
+											: 'hover:text-inkbase hover:border-divider',
 									]"
 								>
 									{{ __(tab.name, null, props.doctype) }}
@@ -115,8 +115,8 @@
 								class="flex flex-row gap-2 items-center justify-center p-5"
 								v-if="isFileUploading"
 							>
-								<LoadingIndicator class="w-3 h-3 text-gray-800" />
-								<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+								<LoadingIndicator class="w-3 h-3 text-accent" />
+								<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 							</div>
 
 							<FileUploaderView
@@ -154,8 +154,8 @@
 						class="flex flex-row gap-2 items-center justify-center p-5"
 						v-if="isFileUploading"
 					>
-						<LoadingIndicator class="w-3 h-3 text-gray-800" />
-						<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+						<LoadingIndicator class="w-3 h-3 text-accent" />
+						<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 					</div>
 
 					<FileUploaderView
@@ -171,7 +171,7 @@
 			<!-- custom form button eg: Download button in salary slips -->
 			<div
 				v-if="!showFormButton"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<slot name="formButton"></slot>
 			</div>
@@ -187,7 +187,7 @@
 			<!-- save/submit/cancel -->
 			<div
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<ErrorMessage
 					class="mb-2"
@@ -199,8 +199,10 @@
 				/>
 
 				<Button
-					class="w-full rounded py-5 text-base disabled:bg-gray-700 disabled:text-white"
-					:class="formButton === 'Cancel' ? 'shadow' : ''"
+					class="w-full py-5 text-base disabled:opacity-60"
+					:class="formButton === 'Cancel'
+						? '!bg-transparent !border !border-divider !text-inkbase'
+						: '!bg-accent hover:!bg-accent-600 !text-ground !border-none'"
 					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 					:variant="formButton === 'Cancel' ? 'subtle' : 'solid'"
 					:loading="
@@ -765,3 +767,23 @@ onMounted(async () => {
 	}
 })
 </script>
+
+<style scoped>
+/* Modernist form controls: surface fill, hairline divider border, square, 14px. */
+.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"])),
+.form-view-root :deep(textarea),
+.form-view-root :deep(select) {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	font-size: 14px;
+	color: var(--color-text);
+}
+.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
+.form-view-root :deep(textarea:focus),
+.form-view-root :deep(select:focus) {
+	border-color: var(--color-accent);
+	box-shadow: none;
+	outline: none;
+}
+</style>

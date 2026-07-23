@@ -1,24 +1,26 @@
 <template>
 	<div
-		class="bg-white w-full flex flex-col items-center justify-center pb-5 max-h-[calc(100vh-5rem)]"
+		class="bg-ground w-full flex flex-col pb-6 max-h-[calc(100vh-5rem)] overflow-y-auto border-t-[3px] border-inkbase"
 	>
 		<!-- Header -->
 		<div
-			class="w-full flex flex-row gap-2 pt-8 pb-5 border-b justify-center items-center sticky top-0 z-[100]"
+			class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-[100] bg-ground"
 		>
-			<span class="text-gray-900 font-bold text-lg text-center">
+			<span class="m-kicker">{{ __("Employee") }}</span>
+			<span class="font-sans font-extrabold text-[22px] text-inkbase">
 				{{ title }}
 			</span>
 		</div>
 
-		<div class="w-full flex flex-col items-center justify-center gap-4 p-4">
+		<div class="w-full flex flex-col px-4 border-t-2 border-divider">
 			<div
 				v-for="item in data"
 				:key="item.fieldname"
-				class="flex flex-row items-center justify-between w-full"
+				class="flex flex-row items-center justify-between w-full gap-4 py-3.5 border-b border-divider"
 			>
-				<div class="text-gray-600 text-base">{{ item.label }}</div>
+				<div class="text-ink-600 text-xs shrink-0">{{ item.label }}</div>
 				<FormattedField
+					class="text-sm text-inkbase text-right"
 					:value="item.value"
 					:fieldtype="item.fieldtype"
 					:fieldname="item.fieldname"
@@ -29,8 +31,11 @@
 </template>
 
 <script setup>
+import { inject } from "vue"
 import { FeatherIcon } from "frappe-ui"
 import FormattedField from "@/components/FormattedField.vue"
+
+const __ = inject("$translate")
 
 const props = defineProps({
 	title: {

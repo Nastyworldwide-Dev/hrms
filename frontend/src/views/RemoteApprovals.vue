@@ -1,26 +1,26 @@
 <template>
 	<ion-page>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+			<div class="flex flex-col h-screen w-screen bg-ground">
+				<div class="w-full max-w-[680px] mx-auto">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="ghost"
-								class="!pl-0 hover:bg-white"
+								class="!pl-0 hover:bg-transparent"
 								@click="router.back()"
 							>
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Pending Approvals") }}
 							</h2>
 						</div>
 						<Button
 							variant="ghost"
-							class="hover:bg-white"
+							class="hover:bg-transparent"
 							@click="reload"
 							:loading="pending.loading"
 						>
@@ -28,85 +28,77 @@
 						</Button>
 					</header>
 
-					<div class="flex flex-col mt-3 p-3 gap-3">
-						<div v-if="pending.loading && !pending.data" class="space-y-3">
+					<div class="flex flex-col p-4 gap-4">
+						<div v-if="pending.loading && !pending.data" class="flex flex-col gap-3">
 							<div
 								v-for="i in 3"
 								:key="i"
-								class="h-28 bg-gray-100 animate-pulse rounded-md"
+								class="h-28 bg-ink-200 animate-pulse"
 							/>
 						</div>
 
 						<div
 							v-else-if="!pending.data || pending.data.length === 0"
-							class="flex flex-col items-center justify-center py-16 px-6 text-center"
+							class="flex flex-col gap-1 border-t-2 border-divider py-8 px-0.5"
 						>
-							<div
-								class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-3"
-							>
-								<FeatherIcon name="check-circle" class="h-7 w-7 text-gray-400" />
-							</div>
-							<div class="text-sm font-medium text-gray-700">
+							<span class="font-sans font-extrabold text-sm text-inkbase">
 								{{ __("Nothing to approve right now") }}
-							</div>
-							<div class="text-xs text-gray-500 mt-1">
+							</span>
+							<span class="text-xs text-ink-600">
 								{{ __("Remote check-ins from your team will show up here.") }}
-							</div>
+							</span>
 						</div>
 
 						<div
 							v-else
 							v-for="req in pending.data"
 							:key="req.name"
-							class="bg-white rounded-md border border-gray-200 p-3 flex flex-col gap-2"
+							class="border border-divider border-t-2 p-3.5 flex flex-col gap-2"
 						>
 							<div class="flex flex-row items-center justify-between">
-								<div class="text-sm font-semibold text-gray-900 truncate">
+								<div class="font-sans font-extrabold text-[15px] text-inkbase truncate">
 									{{ req.employee_name || req.employee }}
 								</div>
 								<span
-									class="text-[10px] font-semibold px-2 py-0.5 rounded uppercase"
+									class="text-[10px] font-sans font-extrabold px-2 py-[3px] uppercase tracking-[0.06em]"
 									:class="
 										req.log_type === 'IN'
-											? 'bg-emerald-100 text-emerald-700'
-											: 'bg-orange-100 text-orange-700'
+											? 'bg-inkbase text-ground'
+											: 'border border-accent text-accent-700'
 									"
 								>
 									{{ req.log_type }}
 								</span>
 							</div>
-							<div class="flex flex-row items-center justify-between text-xs text-gray-500">
+							<div class="flex flex-row items-center justify-between text-[11.5px] text-ink-600">
 								<span>{{ formatTimestamp(req.checkin_time) }}</span>
-								<span class="font-mono">{{ formatDistance(req.distance_m) }}</span>
+								<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 							</div>
 							<div
 								v-if="req.employee_remarks"
-								class="text-xs text-gray-700 bg-gray-50 border border-gray-100 rounded p-2"
+								class="text-xs text-inkbase bg-surface border border-divider p-2.5"
 							>
 								{{ req.employee_remarks }}
 							</div>
 							<div
 								v-else
-								class="text-xs text-gray-400 italic"
+								class="text-xs text-ink-500 italic"
 							>
 								{{ __("No reason provided.") }}
 							</div>
-							<div class="flex flex-row gap-2 mt-1">
-								<Button
-									variant="outline"
-									class="flex-1"
-									theme="red"
+							<div class="flex flex-row gap-2.5 mt-1">
+								<button
+									class="flex-1 flex items-center justify-center bg-transparent border border-accent text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
 									@click="openDecision(req, 'reject')"
 								>
 									{{ __("Reject") }}
-								</Button>
-								<Button
-									class="flex-1"
-									theme="green"
+								</button>
+								<button
+									class="flex-1 flex items-center justify-center bg-accent text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
 									@click="openDecision(req, 'approve')"
 								>
 									{{ __("Approve") }}
-								</Button>
+								</button>
 							</div>
 						</div>
 					</div>
@@ -119,54 +111,54 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<div class="bg-white w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)]">
-					<div class="flex flex-col gap-1 pt-8 pb-5 border-b items-center">
-						<span class="text-gray-900 font-bold text-base">
+				<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
+					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
+						<span class="m-kicker">{{ __("Remote check-in") }}</span>
+						<span class="font-sans font-extrabold text-[22px] text-inkbase">
 							{{
 								decision === "approve"
 									? __("Approve this check-in?")
 									: __("Reject this check-in?")
 							}}
 						</span>
-						<span class="text-xs text-gray-500">
+						<span class="text-xs text-ink-600">
 							{{ activeReq?.employee_name }} &middot; {{ activeReq?.log_type }} &middot;
 							{{ formatTimestamp(activeReq?.checkin_time) }}
 						</span>
 					</div>
 
-					<div class="flex flex-col gap-2 px-4 pt-4">
-						<label class="text-xs uppercase text-gray-500 tracking-wide">
+					<div class="flex flex-col gap-1.5 px-4 pt-1">
+						<label class="text-xs text-ink-700">
 							{{ __("Remarks (optional)") }}
 						</label>
 						<textarea
 							v-model="decisionRemarks"
 							rows="3"
 							maxlength="500"
-							class="w-full text-sm border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="w-full text-sm bg-surface border border-divider text-inkbase caret-accent p-2.5 resize-y outline-none focus:border-accent"
 						/>
 					</div>
 
-					<div class="flex flex-row gap-2 px-4 pt-3">
-						<Button
-							variant="outline"
-							class="flex-1"
+					<div class="flex flex-row gap-2.5 px-4 pt-4">
+						<button
+							class="flex-1 flex items-center justify-center bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-ink-200 disabled:opacity-60"
 							@click="decisionOpen = false"
 							:disabled="submitting"
 						>
 							{{ __("Cancel") }}
-						</Button>
-						<Button
-							class="flex-1"
-							:theme="decision === 'approve' ? 'green' : 'red'"
+						</button>
+						<button
+							class="flex-1 flex items-center justify-center gap-2 bg-accent text-ground px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-accent-600 disabled:opacity-60"
 							@click="submitDecision"
-							:loading="submitting"
+							:disabled="submitting"
 						>
+							<LoadingIndicator v-if="submitting" class="w-4 h-4" />
 							{{
 								decision === "approve"
 									? __("Confirm Approve")
 									: __("Confirm Reject")
 							}}
-						</Button>
+						</button>
 					</div>
 				</div>
 			</ion-modal>
@@ -178,7 +170,7 @@
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRouter } from "vue-router"
 import { IonPage, IonContent, IonModal } from "@ionic/vue"
-import { FeatherIcon, Button, toast } from "frappe-ui"
+import { FeatherIcon, Button, LoadingIndicator, toast } from "frappe-ui"
 
 import { formatTimestamp } from "@/utils/formatters"
 import {
@@ -207,7 +199,7 @@ const onRealtime = (event) => {
 			text: event.subject || __("A team member submitted a remote check-in."),
 			icon: "bell",
 			position: "bottom-center",
-			iconClasses: "text-blue-500",
+			iconClasses: "text-accent-500",
 		})
 	}
 }

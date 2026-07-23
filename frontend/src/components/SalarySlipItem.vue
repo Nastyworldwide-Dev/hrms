@@ -1,39 +1,25 @@
 <template>
 	<ListItem>
 		<template #left>
-			<SalaryIcon class="h-5 w-5 text-gray-500" />
-			<div class="flex flex-col items-start gap-1.5">
-				<div class="text-base font-normal text-gray-800">
-					{{ title }}
-				</div>
-				<div v-if="doc?.gross_pay" class="text-xs font-normal text-gray-500">
-					<span>
-						{{
-							__("{0}: {1}", [
-								__("Gross Pay"),
-								formatCurrency(doc.gross_pay, doc.currency),
-							])
-						}}
-					</span>
-					<span class="whitespace-pre"> &middot; </span>
-				</div>
+			<div class="text-[15px] font-semibold text-inkbase">
+				{{ title }}
 			</div>
 		</template>
 		<template #right>
-			<span v-if="doc?.net_pay" class="text-gray-700 font-normal rounded text-base">
-				{{ formatCurrency(doc.net_pay, doc.currency) }}
+			<span class="w-24 text-right text-[13px] text-ink-600 tabular-nums">
+				{{ doc?.gross_pay ? formatCurrency(doc.gross_pay, doc.currency) : "" }}
 			</span>
-			<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
+			<span class="w-28 text-right text-[15px] font-bold tabular-nums text-inkbase">
+				{{ doc?.net_pay ? formatCurrency(doc.net_pay, doc.currency) : "" }}
+			</span>
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
 import { computed, inject } from "vue"
-import { FeatherIcon } from "frappe-ui"
 
 import ListItem from "@/components/ListItem.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
 
 import { formatCurrency } from "@/utils/formatters"
 

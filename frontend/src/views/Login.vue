@@ -1,56 +1,110 @@
 <template>
 	<ion-page>
-		<ion-content class="ion-padding">
-			<div class="flex h-screen w-screen flex-col justify-center bg-white">
-				<div class="flex flex-col mx-auto gap-3 items-center">
-					<FrappeHRLogo class="h-8 w-8" />
-					<div class="text-3xl font-semibold text-gray-900 text-center">
-						{{ __("Login to Frappe HR") }}
+		<ion-content class="ion-no-padding">
+			<div class="flex h-screen w-screen bg-ground">
+				<!-- Accent side panel (tablet / desktop only) -->
+				<div
+					class="hidden lg:flex lg:w-[44%] bg-accent text-ground flex-col justify-between p-10"
+				>
+					<FrappeHRLogo class="h-12 w-12" />
+					<div>
+						<div
+							class="font-sans font-extrabold text-5xl leading-[1.05] tracking-tight"
+						>
+							{{ __("Employee") }}<br />{{ __("self-service.") }}
+						</div>
+						<div class="text-[13px] mt-3.5 opacity-85">
+							{{ __("Attendance · Leaves · Expenses · Payroll") }}
+						</div>
+					</div>
+					<div class="text-[10px] uppercase tracking-[0.1em] font-extrabold opacity-70">
+						{{ __("Frappe HR · Mobile & Tablet") }}
 					</div>
 				</div>
 
-				<div class="mx-auto mt-10 w-full px-8 sm:w-96">
-					<form v-if="!user_pass_login_disabled.data" class="flex flex-col space-y-4" @submit.prevent="submit">
-						<Input
-							:label="__('Email')"
-							:placeholder="__('johndoe@mail.com')"
-							v-model="email"
-							type="text"
-							autocomplete="username"
-						/>
-						<Input
-							:label="__('Password')"
-							type="password"
-							placeholder="••••••"
-							v-model="password"
-							autocomplete="current-password"
-						/>
-						<ErrorMessage :message="errorMessage" />
-						<Button
-							:loading="session.login.loading"
-							variant="solid"
-							class="disabled:bg-gray-700 disabled:text-white !mt-6"
+				<!-- Login form -->
+				<div
+					class="flex-1 flex flex-col justify-center px-7 lg:px-[72px]"
+				>
+					<div class="mx-auto w-full max-w-[360px]">
+						<FrappeHRLogo class="h-11 w-11 lg:hidden" />
+						<h1
+							class="font-sans font-extrabold text-[30px] leading-[1.08] tracking-tight mt-5 lg:mt-0 mb-1.5"
 						>
-							{{ __("Login") }}
-						</Button>
-					</form>
+							{{ __("Login to Frappe HR") }}<span class="text-accent">.</span>
+						</h1>
+						<p class="text-[13px] text-ink-600 mb-7">
+							{{ __("Employee self-service portal") }}
+						</p>
 
-					<template v-if="authProviders.data?.length">
-						<div v-if="!user_pass_login_disabled.data" class="text-center text-sm text-gray-600 my-4">or</div>
-						<div class="space-y-4">
-							<a
-								v-for="provider in authProviders.data"
-								:key="provider.name"
-								class="flex items-center justify-center gap-2 transition-colors focus:outline-none text-gray-800 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 focus-visible:ring focus-visible:ring-gray-400 h-7 text-base p-2 rounded"
-								:href="provider.auth_url"
+						<form
+							v-if="!user_pass_login_disabled.data"
+							class="flex flex-col gap-4"
+							@submit.prevent="submit"
+						>
+							<div>
+								<label class="block text-xs mb-1.5 text-ink-700">{{ __("Email") }}</label>
+								<input
+									v-model="email"
+									type="text"
+									autocomplete="username"
+									:placeholder="__('johndoe@mail.com')"
+									class="w-full min-h-[38px] px-2.5 py-1.5 text-sm bg-surface border border-divider text-inkbase caret-accent outline-none focus:border-accent"
+								/>
+							</div>
+							<div>
+								<label class="block text-xs mb-1.5 text-ink-700">{{ __("Password") }}</label>
+								<input
+									v-model="password"
+									type="password"
+									autocomplete="current-password"
+									placeholder="••••••"
+									class="w-full min-h-[38px] px-2.5 py-1.5 text-sm bg-surface border border-divider text-inkbase caret-accent outline-none focus:border-accent"
+								/>
+							</div>
+							<ErrorMessage :message="errorMessage" />
+							<button
+								type="submit"
+								class="m-btn-primary !mt-2 disabled:opacity-60"
+								:disabled="session.login.loading"
 							>
-								<img class="h-4 w-4" :src="provider.icon" :alt="provider.provider_name" />
-								<span>Login with {{ provider.provider_name }}</span>
-							</a>
-						</div>
-					</template>
+								<span>{{ __("Login") }}</span>
+								<LoadingIndicator v-if="session.login.loading" class="w-4 h-4 ml-auto" />
+								<svg
+									v-else
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									class="ml-auto"
+								>
+									<line x1="5" y1="12" x2="19" y2="12"></line>
+									<polyline points="12 5 19 12 12 19"></polyline>
+								</svg>
+							</button>
+						</form>
 
-					<div v-else-if="user_pass_login_disabled.data" class="text-center text-gray-600 py-8">{{ __("No login methods are available. Please contact your administrator.") }}</div>
+						<template v-if="authProviders.data?.length">
+							<div v-if="!user_pass_login_disabled.data" class="text-center text-sm text-ink-600 my-4">or</div>
+							<div class="flex flex-col gap-3">
+								<a
+									v-for="provider in authProviders.data"
+									:key="provider.name"
+									class="flex items-center justify-center gap-2 transition-colors focus:outline-none text-inkbase bg-surface border border-divider hover:bg-ink-200 h-9 text-sm px-2"
+									:href="provider.auth_url"
+								>
+									<img class="h-4 w-4" :src="provider.icon" :alt="provider.provider_name" />
+									<span>Login with {{ provider.provider_name }}</span>
+								</a>
+							</div>
+						</template>
+
+						<div v-else-if="user_pass_login_disabled.data" class="text-center text-ink-600 py-8">{{ __("No login methods are available. Please contact your administrator.") }}</div>
+					</div>
 				</div>
 			</div>
 
@@ -65,7 +119,7 @@
 				</template>
 				<template #actions>
 					<a
-						class="inline-flex items-center justify-center gap-2 transition-colors focus:outline-none text-white bg-gray-900 hover:bg-gray-800 active:bg-gray-700 focus-visible:ring focus-visible:ring-gray-400 h-7 text-base px-2 rounded"
+						class="inline-flex items-center justify-center gap-2 transition-colors focus:outline-none text-ground bg-accent hover:bg-accent-600 active:bg-accent-800 focus-visible:ring focus-visible:ring-accent-300 h-8 text-sm font-bold px-3"
 						:href="resetPassword.link"
 						target="_blank"
 					>
@@ -95,7 +149,7 @@
 						<Button
 							:loading="session.otp.loading"
 							variant="solid"
-							class="disabled:bg-gray-700 disabled:text-white !mt-6"
+							class="!bg-accent hover:!bg-accent-600 !text-ground disabled:opacity-60 !mt-6"
 						>
 							{{ __("Verify") }}
 						</Button>
@@ -109,7 +163,7 @@
 <script setup>
 import { IonPage, IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
-import { Input, Button, ErrorMessage, Dialog, createResource } from "frappe-ui"
+import { Input, Button, ErrorMessage, Dialog, LoadingIndicator, createResource } from "frappe-ui"
 
 import FrappeHRLogo from "@/components/icons/FrappeHRLogo.vue"
 

@@ -1,7 +1,7 @@
 <template>
-	<div class="flex flex-col bg-white rounded mt-5 overflow-auto" v-if="props.items?.length">
+	<div class="flex flex-col overflow-auto" v-if="props.items?.length">
 		<div
-			class="flex flex-row p-3.5 items-center justify-between border-b cursor-pointer"
+			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
 			v-for="link in props.items"
 			:key="link.name"
 			@click="openRequestModal(link)"
@@ -22,7 +22,7 @@
 			<Button
 				variant="ghost"
 				@click="navigate"
-				class="w-full !text-gray-600 py-6 text-sm border-none bg-white hover:bg-white"
+				class="w-full !text-ink-600 py-6 text-sm border-none bg-transparent hover:bg-transparent"
 			>
 				{{ __("View List") }}
 			</Button>

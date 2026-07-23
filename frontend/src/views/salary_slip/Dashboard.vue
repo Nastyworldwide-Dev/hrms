@@ -1,24 +1,33 @@
 <template>
 	<BaseLayout :pageTitle="__('Salary Slips')">
 		<template #body>
-			<div class="flex flex-col items-center my-7 p-4">
-				<div class="flex flex-col w-full bg-white rounded py-5 px-3.5 gap-5">
-					<div v-if="lastSalarySlip && lastSalarySlip.year_to_date" class="flex flex-col w-full gap-1.5">
-						<span class="text-gray-600 text-sm font-medium leading-5">
-							{{ __("Year To Date") }}
-						</span>
-						<span class="text-gray-800 text-xl font-bold leading-6">
-							{{
-								formatCurrency(
-									lastSalarySlip.year_to_date,
-									lastSalarySlip.currency
-								)
-							}}
-						</span>
+			<div class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8">
+				<!-- Year to date -->
+				<div
+					v-if="lastSalarySlip && lastSalarySlip.year_to_date"
+					class="border-t-2 border-divider pt-3.5"
+				>
+					<div
+						class="text-[10px] tracking-[0.1em] uppercase text-ink-600 font-sans font-extrabold"
+					>
+						{{ __("Year To Date") }}
 					</div>
+					<div class="font-sans font-extrabold text-[34px] leading-[1.05] mt-1.5 tabular-nums">
+						{{
+							formatCurrency(
+								lastSalarySlip.year_to_date,
+								lastSalarySlip.currency
+							)
+						}}
+					</div>
+				</div>
 
+				<!-- Payroll period selector -->
+				<div>
+					<label class="block text-xs mb-1.5 text-ink-700">
+						{{ __("Payroll Period") }}
+					</label>
 					<Autocomplete
-						:label="__('Payroll Period')"
 						class="w-full"
 						:placeholder="__('Select Payroll Period')"
 						v-model="selectedPeriod"
@@ -26,13 +35,33 @@
 					/>
 				</div>
 
-				<div class="flex flex-col items-center mt-5 mb-7 w-full">
+				<!-- Slip table -->
+				<div>
 					<div
 						v-if="documents.data?.length"
-						class="flex flex-col bg-white rounded mt-5 overflow-auto w-full"
+						class="flex flex-col overflow-auto w-full"
 					>
 						<div
-							class="p-3.5 items-center justify-between border-b cursor-pointer"
+							class="flex flex-row items-center justify-between border-b-2 border-divider pb-2"
+						>
+							<span class="text-[10px] tracking-[0.08em] uppercase text-ink-600">
+								{{ __("Period") }}
+							</span>
+							<div class="flex flex-row gap-2">
+								<span
+									class="w-24 text-[10px] tracking-[0.08em] uppercase text-ink-600 text-right"
+								>
+									{{ __("Gross") }}
+								</span>
+								<span
+									class="w-28 text-[10px] tracking-[0.08em] uppercase text-ink-600 text-right"
+								>
+									{{ __("Net Pay") }}
+								</span>
+							</div>
+						</div>
+						<div
+							class="m-row cursor-pointer"
 							v-for="link in documents.data"
 							:key="link.name"
 						>
@@ -45,6 +74,9 @@
 							>
 								<SalarySlipItem :doc="link" @click="navigate" />
 							</router-link>
+						</div>
+						<div class="text-[11px] text-ink-500 mt-2.5">
+							{{ __("Tap a row to view the full slip · PDF download available per slip") }}
 						</div>
 					</div>
 					<EmptyState :message="__('No salary slips found')" v-else />

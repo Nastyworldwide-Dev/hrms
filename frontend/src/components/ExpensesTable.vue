@@ -1,15 +1,15 @@
 <template>
 	<!-- Header -->
-	<div class="flex flex-row justify-between items-center mt-2">
-		<h2 class="text-base font-semibold text-gray-800">{{ __("Expenses") }} </h2>
+	<div class="flex flex-row justify-between items-center mt-2 pb-2 border-b-2 border-divider">
+		<h2 class="m-kicker">{{ __("Expenses") }} </h2>
 		<div class="flex flex-row gap-3 items-center">
-			<span class="text-base font-semibold text-gray-800">
+			<span class="text-base font-extrabold text-inkbase">
 				{{ formatCurrency(expenseClaim.total_claimed_amount, currency) }}
 			</span>
 			<Button
 				v-if="!isReadOnly"
 				id="add-expense-modal"
-				class="text-sm"
+				class="text-sm !border !border-divider !bg-transparent"
 				icon="plus"
 				variant="subtle"
 				@click="openModal()"
@@ -20,10 +20,10 @@
 	<!-- Table -->
 	<div
 		v-if="expenseClaim.expenses"
-		class="flex flex-col bg-white mt-5 rounded border overflow-auto"
+		class="flex flex-col overflow-auto"
 	>
 		<div
-			class="flex flex-row p-3.5 items-center justify-between border-b cursor-pointer"
+			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
 			v-for="(item, idx) in expenseClaim.expenses"
 			:key="idx"
 			@click="openModal(item, idx)"
@@ -32,10 +32,10 @@
 				<div class="flex flex-row items-center justify-between">
 					<div class="flex flex-row items-start gap-3 grow">
 						<div class="flex flex-col items-start gap-1.5">
-							<div class="text-base font-normal text-gray-800">
+							<div class="text-[15px] font-semibold text-inkbase">
 								{{ __(item.expense_type) }}
 							</div>
-							<div class="text-xs font-normal text-gray-500">
+							<div class="text-xs font-normal text-ink-600">
 								<span>
 									{{
 										__("{0}: {1}", [
@@ -52,10 +52,10 @@
 						</div>
 					</div>
 					<div class="flex flex-row justify-end items-center gap-2">
-						<span class="text-gray-700 font-normal rounded text-base">
+						<span class="text-inkbase font-semibold text-base">
 							{{ formatCurrency(item.amount, currency) }}
 						</span>
-						<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
+						<FeatherIcon name="chevron-right" class="h-5 w-5 text-ink-500" />
 					</div>
 				</div>
 			</div>
@@ -67,15 +67,16 @@
 		<template #actionSheet>
 			<!-- Add Expense Action Sheet -->
 			<div
-				class="bg-white w-full flex flex-col items-center justify-center pb-5"
+				class="bg-ground w-full flex flex-col pb-5 border-t-[3px] border-inkbase"
 			>
-				<div class="w-full pt-8 pb-5 border-b text-center">
-					<span class="text-gray-900 font-bold text-lg">
+				<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
+					<div class="m-kicker">{{ __("Expense") }}</div>
+					<span class="text-inkbase font-extrabold text-[22px] leading-tight">
 						{{ modalTitle }}
 					</span>
 				</div>
 				<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
-					<div class="flex flex-col w-full space-y-4 overflow-y-auto">
+					<div class="flex flex-col w-full space-y-4 overflow-y-auto expense-fields">
 						<FormField
 							v-for="field in expensesTableFields.data"
 							:key="field.fieldname"
@@ -98,7 +99,7 @@
 					>
 						<Button
 							v-if="editingIdx !== null"
-							class="border-red-600 text-red-600 py-5 text-sm"
+							class="!border !border-red-600 !text-red-600 !bg-transparent py-5 text-sm"
 							variant="outline"
 							theme="red"
 							@click="deleteExpenseItem()"
@@ -110,7 +111,7 @@
 						</Button>
 						<Button
 							variant="solid"
-							class="w-full py-5 text-sm disabled:bg-gray-700 disabled:text-white"
+							class="w-full py-5 text-sm !bg-accent hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
 							@click="updateExpenseItem()"
 							:disabled="addButtonDisabled"
 						>
@@ -244,3 +245,22 @@ watch(
 	}
 )
 </script>
+
+<style scoped>
+.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"])),
+.expense-fields :deep(textarea),
+.expense-fields :deep(select) {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	font-size: 14px;
+	color: var(--color-text);
+}
+.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
+.expense-fields :deep(textarea:focus),
+.expense-fields :deep(select:focus) {
+	border-color: var(--color-accent);
+	box-shadow: none;
+	outline: none;
+}
+</style>

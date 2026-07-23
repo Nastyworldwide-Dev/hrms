@@ -1,28 +1,29 @@
 <template>
 	<!-- Header -->
-	<div class="flex flex-row justify-between items-center">
-		<h2 class="text-base font-semibold text-gray-800">{{ type }}</h2>
-		<span class="text-base font-semibold text-gray-800">
+	<div
+		class="flex flex-row justify-between items-baseline border-b-2 border-divider pb-2"
+	>
+		<span class="text-[10px] tracking-[0.08em] uppercase text-ink-600">
+			{{ type }}
+		</span>
+		<span class="font-sans font-extrabold text-sm tabular-nums">
 			{{ total }}
 		</span>
 	</div>
 
 	<!-- Table -->
-	<div
-		v-if="items"
-		class="flex flex-col bg-white mt-5 rounded border overflow-auto"
-	>
+	<div v-if="items" class="flex flex-col overflow-auto">
 		<div
-			class="flex flex-row p-3.5 items-center justify-between border-b"
+			class="m-row flex flex-row py-3.5 items-center justify-between gap-3"
 			v-for="(item, idx) in items"
 			:key="idx"
 		>
 			<div
-				class="text-base font-normal whitespace-nowrap overflow-hidden text-ellipsis text-gray-800"
+				class="font-sans font-semibold text-[15px] whitespace-nowrap overflow-hidden text-ellipsis"
 			>
 				{{ item.salary_component }}
 			</div>
-			<span class="text-gray-700 font-normal rounded text-base">
+			<span class="font-sans font-extrabold text-[15px] tabular-nums">
 				{{ formatCurrency(item.amount, salarySlip.currency) }}
 			</span>
 		</div>

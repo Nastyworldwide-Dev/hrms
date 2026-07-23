@@ -5,19 +5,20 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-white w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)]">
+		<div class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
 			<div
-				class="w-full flex flex-col gap-2 pt-8 pb-5 border-b items-center sticky top-0 z-[100] bg-white"
+				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-[100] bg-ground"
 			>
 				<div
-					class="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center"
+					class="h-12 w-12 bg-red-100 flex items-center justify-center"
 				>
 					<FeatherIcon name="slash" class="h-6 w-6 text-red-600" />
 				</div>
-				<span class="text-gray-900 font-bold text-base">
+				<div class="m-kicker">{{ __("Check-in") }}</div>
+				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
 					{{ title }}
 				</span>
-				<span class="text-xs text-gray-500 px-6 text-center">
+				<span class="text-xs text-ink-600">
 					{{ subtitle }}
 				</span>
 			</div>
@@ -25,7 +26,7 @@
 			<div class="w-full flex flex-col px-4 pt-4 gap-3">
 				<!-- outside_radius: distance card + location summary -->
 				<template v-if="reason === 'outside_radius'">
-					<div class="bg-red-50 border border-red-200 rounded-md px-3 py-2.5">
+					<div class="bg-red-50 border border-red-200 px-3 py-2.5">
 						<div class="flex justify-between text-xs text-red-800">
 							<span>{{ __("Distance from geofence") }}</span>
 							<span class="font-mono font-semibold">
@@ -38,19 +39,17 @@
 						</div>
 					</div>
 
-					<div class="border border-gray-200 rounded-md px-3 py-2.5">
-						<div class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">
+					<div class="bg-surface border border-divider px-3 py-2.5">
+						<div class="m-kicker">
 							{{ __("Shift Location") }}
 						</div>
-						<div class="text-sm font-medium text-gray-900 mt-0.5">
+						<div class="text-sm font-medium text-inkbase mt-0.5">
 							{{ shiftLocation || __("(unnamed)") }}
 						</div>
-						<div
-							class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mt-2"
-						>
+						<div class="m-kicker mt-2">
 							{{ __("Shift") }}
 						</div>
-						<div class="text-sm font-medium text-gray-900 mt-0.5">
+						<div class="text-sm font-medium text-inkbase mt-0.5">
 							{{ shiftType || __("(unknown)") }}
 						</div>
 					</div>
@@ -58,7 +57,7 @@
 
 				<!-- no_shift_location / no_radius: admin misconfiguration -->
 				<template v-else>
-					<div class="bg-red-50 border border-red-200 rounded-md px-3 py-3">
+					<div class="bg-red-50 border border-red-200 px-3 py-3">
 						<div class="flex items-start gap-2">
 							<FeatherIcon
 								name="alert-triangle"
@@ -73,11 +72,11 @@
 			</div>
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
-				<Button class="w-full" theme="gray" variant="solid" @click="close">
+				<Button class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none" variant="solid" @click="close">
 					{{ __("OK") }}
 				</Button>
 				<button
-					class="w-full text-xs text-gray-500 underline py-2"
+					class="w-full text-xs text-ink-600 underline py-2"
 					@click="contactHR"
 				>
 					{{ __("Contact HR") }}

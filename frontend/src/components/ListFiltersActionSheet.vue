@@ -1,14 +1,15 @@
 <template>
 	<!-- Filter Action Sheet -->
 	<div
-		class="bg-white w-full flex flex-col items-center justify-center pb-5 max-h-[calc(100vh-5rem)]"
+		class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
 	>
-		<div class="w-full pt-8 pb-5 border-b text-center sticky top-0 z-[100]">
-			<span class="text-gray-900 font-bold text-lg">{{ __("Filters") }} </span>
+		<div class="w-full pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-[100] bg-ground flex flex-col gap-1">
+			<div class="m-kicker">{{ __("Refine") }}</div>
+			<span class="text-inkbase font-extrabold text-[22px] leading-tight">{{ __("Filters") }}</span>
 		</div>
 
 		<div class="w-full p-4 overflow-auto">
-			<div class="flex flex-col gap-5 items-center justify-center">
+			<div class="flex flex-col gap-5">
 				<div
 					v-for="filter in filterConfig"
 					:key="filter.fieldname"
@@ -19,7 +20,7 @@
 						class="flex flex-col gap-1.5"
 						v-if="['status', 'approval_status'].includes(filter.fieldname)"
 					>
-						<div class="text-gray-800 font-semibold text-base">
+						<div class="m-kicker">
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row gap-2 mt-2 flex-wrap">
@@ -27,11 +28,11 @@
 								v-for="option in filter.options"
 								variant="outline"
 								@click="setStatusFilter(filter.fieldname, option)"
-								class="text-sm text-gray-800"
+								class="text-sm"
 								:class="[
 									option === filters[filter.fieldname].value
-										? '!border !border-gray-800 !text-gray-900 !bg-gray-50 !font-medium'
-										: '!font-normal',
+										? '!border !border-accent !text-accent !bg-accent-100 !font-extrabold'
+										: '!border !border-divider !text-inkbase !font-normal',
 								]"
 							>
 								{{ __(option) }}
@@ -41,7 +42,7 @@
 
 					<!-- Field filters -->
 					<div v-else class="flex flex-col gap-2">
-						<div class="text-gray-800 font-semibold text-base">
+						<div class="m-kicker">
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row items-center gap-3">
@@ -66,19 +67,19 @@
 
 		<!-- Filter Buttons -->
 		<div
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t p-4 z[100]"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground p-4 z-[100]"
 		>
 			<Button
 				@click="emit('clear-filters')"
 				variant="outline"
-				class="w-full py-5 text-sm"
+				class="w-full py-5 text-sm !bg-transparent !border !border-divider !text-inkbase"
 			>
 				{{ __("Clear All") }}
 			</Button>
 			<Button
 				@click="emit('apply-filters')"
 				variant="solid"
-				class="w-full py-5 text-sm"
+				class="w-full py-5 text-sm !bg-accent hover:!bg-accent-600 !text-ground !border-none"
 			>
 				{{ __("Apply Filters") }}
 			</Button>

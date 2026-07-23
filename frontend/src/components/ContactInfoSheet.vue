@@ -1,29 +1,31 @@
 <template>
 	<div
-		class="bg-white w-full flex flex-col items-center pb-5 max-h-[calc(100vh-5rem)] overflow-y-auto"
+		class="bg-ground w-full flex flex-col pb-6 max-h-[calc(100vh-5rem)] overflow-y-auto border-t-[3px] border-inkbase"
 	>
 		<!-- Header -->
 		<div
-			class="w-full flex flex-row gap-2 pt-8 pb-5 border-b justify-center items-center sticky top-0 z-[100] bg-white"
+			class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-[100] bg-ground"
 		>
-			<span class="text-gray-900 font-bold text-lg text-center">
+			<span class="m-kicker">{{ __("Contact") }}</span>
+			<span class="font-sans font-extrabold text-[22px] text-inkbase">
 				{{ __("Contact Information") }}
 			</span>
 		</div>
 
 		<!-- Section 1: My Contact -->
-		<div class="w-full px-4 pt-4">
-			<div class="text-xs uppercase text-gray-500 mb-2 tracking-wide">
+		<div class="w-full px-4 pt-2">
+			<div class="m-kicker mb-2.5">
 				{{ __("My Contact") }}
 			</div>
-			<div class="bg-white rounded-md border border-gray-100 divide-y divide-gray-100">
+			<div class="flex flex-col border-t-2 border-divider">
 				<div
 					v-for="item in selfData"
 					:key="item.fieldname"
-					class="flex flex-row items-center justify-between px-3 py-3"
+					class="flex flex-row items-center justify-between gap-4 py-3.5 border-b border-divider"
 				>
-					<div class="text-gray-600 text-sm">{{ item.label }}</div>
+					<div class="text-ink-600 text-xs shrink-0">{{ item.label }}</div>
 					<FormattedField
+						class="text-sm text-inkbase text-right"
 						:value="item.value"
 						:fieldtype="item.fieldtype"
 						:fieldname="item.fieldname"
@@ -33,12 +35,14 @@
 		</div>
 
 		<!-- Section 2: Reporting Manager -->
-		<div v-if="managerResource.loading || managerResource.data" class="w-full px-4 pt-5">
-			<div class="text-xs uppercase text-gray-500 mb-2 tracking-wide">
+		<div v-if="managerResource.loading || managerResource.data" class="w-full px-4 pt-6">
+			<div class="m-kicker mb-2.5">
 				{{ __("Reporting Manager") }}
 			</div>
-			<div v-if="managerResource.loading" class="h-20 bg-gray-100 animate-pulse rounded-md" />
-			<ContactCard v-else :contact="managerResource.data" />
+			<div v-if="managerResource.loading" class="h-20 bg-ink-200 animate-pulse" />
+			<div v-else class="border-t-2 border-divider">
+				<ContactCard :contact="managerResource.data" />
+			</div>
 		</div>
 	</div>
 </template>

@@ -8,7 +8,7 @@
 		</ion-toolbar>
 	</ion-header>
 	<ion-content>
-		<div class="bg-white h-full w-full overflow-auto touch-pinch-zoom">
+		<div class="bg-ground h-full w-full overflow-auto touch-pinch-zoom">
 			<img v-if="isImageFile" :src="src" class="h-auto image-preview" />
 			<iframe v-else :src="src" class="w-full h-full"></iframe>
 		</div>
@@ -56,5 +56,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .image-preview {
 	image-orientation: from-image;
+}
+ion-toolbar {
+	--background: var(--color-bg);
+	--color: var(--color-text);
 }
 </style>

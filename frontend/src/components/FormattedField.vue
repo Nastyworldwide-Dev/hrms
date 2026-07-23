@@ -1,5 +1,5 @@
 <template>
-	<div v-if="!props.value" class="text-gray-600 text-base">-</div>
+	<div v-if="!props.value" class="text-ink-600 text-base">-</div>
 
 	<Badge
 		v-else-if="props.fieldtype === 'Select'"
@@ -9,7 +9,7 @@
 		size="md"
 	/>
 
-	<div v-else-if="props.fieldtype === 'Date'" class="text-gray-900 text-base">
+	<div v-else-if="props.fieldtype === 'Date'" class="text-inkbase text-base">
 		{{ dayjs(props.value).format("D MMM YYYY") }}
 	</div>
 
@@ -19,12 +19,12 @@
 		label=""
 		v-model="props.value"
 		:disabled="true"
-		class="rounded-sm text-gray-800"
+		class="text-accent"
 	/>
 
 	<div
 		v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
-		class="text-gray-900 text-base bg-gray-100 rounded py-3 pl-3 mt-2"
+		class="text-inkbase text-sm bg-surface border border-divider py-3 px-3 mt-2"
 	>
 		{{ props.value }}
 	</div>
@@ -37,7 +37,7 @@
 
 	<div
 		v-else-if="props.fieldtype === 'geolocation'"
-		class="rounded border-4 translate-z-0 block overflow-hidden w-full h-170 mt-2"
+		class="border border-divider translate-z-0 block overflow-hidden w-full h-170 mt-2"
 	>
 		<iframe
 			width="100%"
@@ -54,7 +54,7 @@
 		</iframe>
 	</div>
 
-	<div v-else class="text-gray-900 text-base">{{ props.value }}</div>
+	<div v-else class="text-inkbase text-base">{{ props.value }}</div>
 </template>
 
 <script setup>

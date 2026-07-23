@@ -1,25 +1,26 @@
 <template>
 	<ion-page>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+			<div class="flex flex-col h-screen w-screen bg-ground">
+				<div class="w-full max-w-[620px] mx-auto">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="ghost"
-								class="!pl-0 hover:bg-white"
+								class="!pl-0 hover:bg-transparent"
 								@click="router.back()"
 							>
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Settings") }} </h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Settings") }}</h2>
 						</div>
 					</header>
 
-					<div class="flex flex-col gap-5 my-4 w-full p-4">
-						<div class="flex flex-col bg-white rounded">
+					<div class="flex flex-col gap-4 w-full p-4">
+						<span class="m-kicker">{{ __("Notifications") }}</span>
+						<div class="flex flex-col border-t-2 border-divider pt-4">
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
@@ -33,10 +34,10 @@
 						<!-- Loading Indicator -->
 						<div
 							v-if="isLoading"
-							class="flex -mt-2 items-center justify-center gap-2"
+							class="flex -mt-1 items-center gap-2"
 						>
-							<LoadingIndicator class="w-3 h-3 text-gray-800" />
-							<span class="text-gray-900 text-sm">
+							<LoadingIndicator class="w-3 h-3 text-inkbase" />
+							<span class="text-inkbase text-sm">
 								{{ pushNotificationState ? __("Disabling Push Notifications...") : __("Enabling Push Notifications...") }}
 							</span>
 						</div>

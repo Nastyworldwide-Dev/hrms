@@ -1,27 +1,27 @@
 <template>
 	<ion-page>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+			<div class="flex flex-col h-screen w-screen bg-ground">
+				<div class="w-full max-w-[620px] mx-auto">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="ghost"
-								class="!pl-0 hover:bg-white"
+								class="!pl-0 hover:bg-transparent"
 								@click="router.back()"
 							>
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Notifications") }} </h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Notifications") }}</h2>
 						</div>
 					</header>
 
 					<div class="flex flex-col gap-4 mt-5 p-4">
 						<div class="flex flex-row justify-between items-center">
 							<div
-								class="text-lg text-gray-800 font-semibold"
+								class="font-sans font-extrabold text-[22px] text-inkbase"
 								v-if="unreadNotificationsCount.data"
 							>
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
@@ -52,35 +52,40 @@
 						</div>
 
 						<div
-							class="flex flex-col bg-white rounded"
+							class="flex flex-col border-t-2 border-divider"
 							v-if="notifications.data?.length"
 						>
 							<component
 								:is="isRemoteRequestPending(item) ? 'div' : 'router-link'"
 								:class="[
-									'flex flex-row items-start p-4 justify-between border-b before:mt-3',
-									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5 before:rounded-full`,
-									item.read ? 'bg-white-500' : 'before:bg-blue-500',
+									'flex flex-row items-start p-4 justify-between border-b border-divider before:mt-2',
+									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5`,
+									item.read ? 'before:bg-transparent' : 'before:bg-accent',
 								]"
 								v-for="item in notifications.data"
 								:key="item.name"
 								:to="isRemoteRequestPending(item) ? null : getItemRoute(item)"
 								@click="!isRemoteRequestPending(item) && markAsRead(item.name)"
 							>
-								<EmployeeAvatar :userID="item.from_user" size="lg" />
+								<span class="m-avatar-sq grayscale shrink-0">
+									<EmployeeAvatar :userID="item.from_user" size="lg" />
+								</span>
 								<div class="flex flex-col gap-0.5 grow ml-3">
 									<div
 										v-if="item.message && stripHtml(item.message)"
-										class="text-sm leading-5 font-normal text-gray-800"
+										:class="[
+											'text-sm leading-5',
+											item.read ? 'font-normal text-ink-700' : 'font-medium text-inkbase',
+										]"
 										v-html="item.message"
 									></div>
 									<div
 										v-else
-										class="text-sm leading-5 font-normal text-gray-500 italic"
+										class="text-sm leading-5 font-normal text-ink-500 italic"
 									>
 										{{ fallbackMessage(item) }}
 									</div>
-									<div class="text-xs font-normal text-gray-500">
+									<div class="text-xs font-normal text-ink-600">
 										{{ dayjs(item.creation).fromNow() }}
 									</div>
 
@@ -90,25 +95,20 @@
 									     RemoteApprovals view. -->
 									<div
 										v-if="isRemoteRequestPending(item)"
-										class="flex flex-row gap-2 mt-2"
+										class="flex flex-row gap-2.5 mt-2"
 									>
-										<Button
-											size="sm"
-											variant="outline"
-											theme="red"
-											class="flex-1"
+										<button
+											class="flex-1 flex items-center justify-center bg-transparent border border-accent text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
 											@click.stop.prevent="openDecision(item, 'reject')"
 										>
 											{{ __("Reject") }}
-										</Button>
-										<Button
-											size="sm"
-											theme="green"
-											class="flex-1"
+										</button>
+										<button
+											class="flex-1 flex items-center justify-center bg-accent text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
 											@click.stop.prevent="openDecision(item, 'approve')"
 										>
 											{{ __("Approve") }}
-										</Button>
+										</button>
 									</div>
 								</div>
 							</component>
@@ -133,20 +133,21 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<div class="bg-white w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)]">
-					<div class="flex flex-col gap-1 pt-8 pb-5 border-b items-center">
-						<span class="text-gray-900 font-bold text-base">
+				<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
+					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
+						<span class="m-kicker">{{ __("Remote check-in") }}</span>
+						<span class="font-sans font-extrabold text-[22px] text-inkbase">
 							{{
 								decisionKind === "approve"
 									? __("Approve this check-in?")
 									: __("Reject this check-in?")
 							}}
 						</span>
-						<span class="text-xs text-gray-500">{{ activeItemLabel }}</span>
+						<span class="text-xs text-ink-600">{{ activeItemLabel }}</span>
 					</div>
 
-					<div class="flex flex-col gap-2 px-4 pt-4">
-						<label class="text-xs uppercase text-gray-500 tracking-wide">
+					<div class="flex flex-col gap-1.5 px-4 pt-1">
+						<label class="text-xs text-ink-700">
 							{{ __("Remarks (optional)") }}
 						</label>
 						<textarea
@@ -158,31 +159,30 @@
 									? __('e.g. Approved — you were at the client site.')
 									: __('e.g. Please retry from inside the office radius.')
 							"
-							class="w-full text-sm border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							class="w-full text-sm bg-surface border border-divider text-inkbase caret-accent p-2.5 resize-y outline-none focus:border-accent"
 						/>
 					</div>
 
-					<div class="flex flex-row gap-2 px-4 pt-3">
-						<Button
-							variant="outline"
-							class="flex-1"
+					<div class="flex flex-row gap-2.5 px-4 pt-4">
+						<button
+							class="flex-1 flex items-center justify-center bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-ink-200 disabled:opacity-60"
 							@click="decisionOpen = false"
 							:disabled="decisionSubmitting"
 						>
 							{{ __("Cancel") }}
-						</Button>
-						<Button
-							class="flex-1"
-							:theme="decisionKind === 'approve' ? 'green' : 'red'"
-							:loading="decisionSubmitting"
+						</button>
+						<button
+							class="flex-1 flex items-center justify-center gap-2 bg-accent text-ground px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-accent-600 disabled:opacity-60"
+							:disabled="decisionSubmitting"
 							@click="submitDecision"
 						>
+							<LoadingIndicator v-if="decisionSubmitting" class="w-4 h-4" />
 							{{
 								decisionKind === "approve"
 									? __("Confirm Approve")
 									: __("Confirm Reject")
 							}}
-						</Button>
+						</button>
 					</div>
 				</div>
 			</ion-modal>
@@ -193,7 +193,7 @@
 <script setup>
 import { IonContent, IonPage, IonModal } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import { createResource, FeatherIcon, Button, toast } from "frappe-ui"
+import { createResource, FeatherIcon, Button, LoadingIndicator, toast } from "frappe-ui"
 
 import { computed, inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"

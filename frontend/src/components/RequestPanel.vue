@@ -1,5 +1,10 @@
 <template>
 	<div class="w-full">
+		<div
+			class="hidden lg:block font-sans font-extrabold text-[10px] tracking-[0.1em] uppercase text-ink-600 mb-4"
+		>
+			{{ __("Requests") }}
+		</div>
 		<TabButtons
 			:buttons="TAB_BUTTONS"
 			v-model="activeTab"
@@ -32,6 +37,7 @@ import { useListUpdate } from "@/composables/realtime"
 
 const activeTab = ref("My Requests")
 const socket = inject("$socket")
+const __ = inject("$translate")
 
 const TAB_BUTTONS = ["My Requests", "Team Requests"] // __("My Requests"), __("Team Requests")
 

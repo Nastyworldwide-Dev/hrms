@@ -1,47 +1,67 @@
 <template>
 	<BaseLayout :pageTitle="__('Expense Claims')">
 		<template #body>
-			<div class="flex flex-col mt-7 mb-7 p-4 gap-7">
+			<div class="flex flex-col gap-8 px-4 pt-6 pb-8">
 				<ExpenseClaimSummary />
 
-				<div class="w-full">
-					<router-link
-						:to="{ name: 'ExpenseClaimFormView' }"
-						v-slot="{ navigate }"
-					>
-						<Button
-							@click="navigate"
-							variant="solid"
-							class="w-full py-5 text-base"
+				<!-- Claim an expense -->
+				<router-link
+					:to="{ name: 'ExpenseClaimFormView' }"
+					v-slot="{ navigate }"
+				>
+					<button class="m-btn-primary" @click="navigate">
+						{{ __("Claim an Expense") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
 						>
-							{{ __("Claim an Expense") }}
-						</Button>
-					</router-link>
-				</div>
+							<line x1="5" y1="12" x2="19" y2="12"></line>
+							<polyline points="12 5 19 12 12 19"></polyline>
+						</svg>
+					</button>
+				</router-link>
 
+				<!-- Recent expenses -->
 				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Expenses") }}</div>
-					<RequestList
-						:component="markRaw(ExpenseClaimItem)"
-						:items="myClaims.data"
-						:addListButton="true"
-						listButtonRoute="ExpenseClaimListView"
-					/>
-				</div>
-
-				<div>
-					<div class="flex flex-row justify-between items-center">
-						<div class="text-lg text-gray-800 font-bold">
-							{{ __("Employee Advance Balance") }}
-						</div>
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker !text-ink-600 text-[11px]">
+							{{ __("Recent Expenses") }}
+						</span>
 						<router-link
-							:to="{ name: 'EmployeeAdvanceListView' }"
-							class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
+							:to="{ name: 'ExpenseClaimListView' }"
+							class="text-[11px] text-accent-700 underline underline-offset-[3px] cursor-pointer"
 						>
 							{{ __("View List") }}
 						</router-link>
 					</div>
+					<hr class="m-rule" />
+					<RequestList
+						:component="markRaw(ExpenseClaimItem)"
+						:items="myClaims.data"
+					/>
+				</div>
 
+				<!-- Advance balance -->
+				<div>
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker !text-ink-600 text-[11px]">
+							{{ __("Advance Balance") }}
+						</span>
+						<router-link
+							:to="{ name: 'EmployeeAdvanceListView' }"
+							class="text-[11px] text-accent-700 underline underline-offset-[3px] cursor-pointer"
+						>
+							{{ __("View List") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
 					<EmployeeAdvanceBalance :items="advanceBalance.data" />
 				</div>
 			</div>
