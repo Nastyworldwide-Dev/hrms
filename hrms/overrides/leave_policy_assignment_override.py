@@ -20,7 +20,8 @@ tenure correctly instead of always resolving to 0 completed years.
 """
 
 import frappe
-from frappe.utils import add_days, add_months, flt, getdate
+from frappe import _
+from frappe.utils import add_days, add_months, flt, formatdate, getdate
 
 from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import LeavePolicyAssignment
 
@@ -54,6 +55,8 @@ class CustomLeavePolicyAssignment(LeavePolicyAssignment):
 		current anniversary for the Joining Date basis, the leave period start
 		for the Leave Period basis (unchanged stock dates for every other basis).
 		"""
+		supplied_to = getdate(self.effective_to) if self.effective_to else None
+
 		super().set_dates()
 
 		if self.assignment_based_on != "Joining Date":
@@ -64,16 +67,29 @@ class CustomLeavePolicyAssignment(LeavePolicyAssignment):
 			return
 
 		anniversary = current_service_anniversary(date_of_joining)
+		computed_to = add_days(add_months(anniversary, 12), -1)
 		frappe.logger("hrms").info(
 			"[leave_policy_assignment_override] %s: Joining Date window normalized from (%s, %s) to (%s, %s)",
 			self.employee,
 			self.effective_from,
 			self.effective_to,
 			anniversary,
-			add_days(add_months(anniversary, 12), -1),
+			computed_to,
 		)
+		if supplied_to and supplied_to != computed_to:
+			# surface the normalization instead of silently discarding the
+			# supplied end date (also fires when a draft's window rolls over
+			# to the next anniversary before submission)
+			frappe.msgprint(
+				_(
+					"Effective dates follow the current joining-anniversary year: {0} to {1}. "
+					"The supplied end date {2} was replaced."
+				).format(formatdate(anniversary), formatdate(computed_to), formatdate(supplied_to)),
+				indicator="orange",
+				alert=True,
+			)
 		self.effective_from = anniversary
-		self.effective_to = add_days(add_months(anniversary, 12), -1)
+		self.effective_to = computed_to
 
 	def get_new_leaves(self, annual_allocation, leave_details, date_of_joining):
 		if self.should_skip_proration(leave_details):

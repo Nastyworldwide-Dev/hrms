@@ -31,7 +31,14 @@ def find_misbanded_allocations() -> list[dict]:
 	allocated days differ from what the fixed rules produce today."""
 	frappe.only_for(("System Manager", "HR Manager"))
 
-	banded_leave_types = frappe.get_all("Leave Type", filters={"based_on_years_of_service": 1}, pluck="name")
+	# earned/compensatory types accrue via their own schedules and never hold
+	# the flat band amount; the fork's Leave Type validation forbids combining
+	# them with service bands, but legacy rows predating that rule may exist
+	banded_leave_types = frappe.get_all(
+		"Leave Type",
+		filters={"based_on_years_of_service": 1, "is_earned_leave": 0, "is_compensatory": 0},
+		pluck="name",
+	)
 	if not banded_leave_types:
 		return []
 

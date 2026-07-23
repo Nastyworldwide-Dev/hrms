@@ -143,6 +143,14 @@ class TestServiceBandAssignment(FrappeTestCase):
 
 	# --- BUG 1 + BUG 2: Joining Date basis ---
 
+	def test_anniversary_helper_edge_dates(self):
+		# Feb-29 DOJ clamps to Feb 28 in non-leap years...
+		self.assertEqual(current_service_anniversary("2024-02-29", "2026-07-23"), getdate("2026-02-28"))
+		# ...and lands back on Feb 29 in leap years
+		self.assertEqual(current_service_anniversary("2024-02-29", "2028-03-01"), getdate("2028-02-29"))
+		# a future DOJ clamps to zero completed years -> anniversary is the DOJ itself
+		self.assertEqual(current_service_anniversary("2030-07-01", "2026-07-23"), getdate("2030-07-01"))
+
 	def test_tenured_employee_gets_current_band_and_one_year_window(self):
 		doj = add_months(getdate(), -55)  # ~4.6 years of service
 		employee = make_band_employee("band_d_tenured@example.com", GRADE_D, doj)
