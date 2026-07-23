@@ -33,7 +33,7 @@
 						)
 							? 'flex-col gap-1'
 							: 'flex-row items-center justify-between gap-4',
-						'flex w-full py-3 border-b border-divider',
+						'flex w-full py-3 border-b border-divider last:border-b-0',
 					]"
 				>
 					<div class="text-ink-600 text-xs shrink-0">{{ __(field.label, null, props.modelValue?.doctype) }}</div>

@@ -288,3 +288,10 @@ ion-action-sheet {
 	--background: var(--color-bg);
 	--border-radius: 0;
 }
+
+/* Tablet/desktop: sheets present as a centered column, not edge-to-edge. */
+@media (min-width: 640px) {
+	ion-modal {
+		--width: min(640px, 92vw);
+	}
+}

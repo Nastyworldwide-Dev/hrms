@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
-		<div class="w-full h-full bg-ground sm:w-96 flex flex-col">
+		<div class="w-full h-full bg-ground sm:max-w-2xl sm:mx-auto flex flex-col">
 			<header
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000]"
 			>
@@ -171,7 +171,7 @@
 			<!-- custom form button eg: Download button in salary slips -->
 			<div
 				v-if="!showFormButton"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<slot name="formButton"></slot>
 			</div>
@@ -187,7 +187,7 @@
 			<!-- save/submit/cancel -->
 			<div
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<ErrorMessage
 					class="mb-2"
