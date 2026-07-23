@@ -10,6 +10,11 @@ mutates anything.
 Run it any of these ways (no arguments needed):
   bench --site {site} execute hrms.hr.service_band_audit.find_misbanded_allocations
   POST /api/method/hrms.hr.service_band_audit.find_misbanded_allocations
+
+Known limitation: expected values are computed from the employee's CURRENT
+grade and date of joining (mirroring how granting itself works), so an
+allocation that was correct under a since-changed grade will be flagged —
+review the rows before cancelling.
 """
 
 import frappe
