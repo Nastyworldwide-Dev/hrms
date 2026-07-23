@@ -1,6 +1,9 @@
 /* Ionic Variables and Theming. For more info, please see:
 http://ionicframework.com/docs/theming/ */
 
+/* Palette values mirror src/theme/modernist.css (the canonical palette) —
+   change them there first, then here. */
+
 /** Ionic CSS Variables **/
 
 :root {

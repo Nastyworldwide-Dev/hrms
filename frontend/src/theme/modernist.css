@@ -1,6 +1,17 @@
 /* Modernist — design-system tokens + shared component classes for the HR PWA
    redesign. Teal "Frappe HR" accent ramp baked in over the base system.
-   Source of truth: mockups/hr-pwa-redesign/_ds/modernist-*/styles.css */
+   Source of truth: mockups/hr-pwa-redesign/_ds/modernist-<id>/styles.css
+
+   CANONICAL PALETTE. The same hex values are duplicated (by necessity — Tailwind
+   opacity modifiers do not compose with runtime CSS vars) in:
+     - tailwind.config.js  (extend.colors ink/accent/ground/surface/inkbase/divider)
+     - src/theme/variables.css  (--ion-* vars)
+   Any palette change MUST be applied to all three files.
+
+   Usage rule: cross-component visual primitives come from the .m-* classes
+   below; per-screen one-offs use Tailwind utilities. Nav label sizes (9px tab
+   bar, 11px sidebar) and the ink-600 date kicker are design-prescribed
+   variants, not .m-kicker drift. */
 
 :root {
 	--color-bg: #f3f2f2;

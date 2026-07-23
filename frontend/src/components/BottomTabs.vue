@@ -28,50 +28,15 @@
 <script setup>
 import { useRoute } from "vue-router"
 
-import { IonTabBar, IonTabButton, IonLabel } from "@ionic/vue"
+import { IonTabBar, IonTabButton } from "@ionic/vue"
 
-import HomeIcon from "@/components/icons/HomeIcon.vue"
-import LeaveIcon from "@/components/icons/LeaveIcon.vue"
-import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
-import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
-import KPIIcon from "@/components/icons/KPIIcon.vue"
 import { inject } from "vue"
+
+import { NAV_ITEMS } from "@/data/navItems"
 
 const __ = inject("$translate")
 
 const route = useRoute()
 
-const tabItems = [
-	{
-		icon: HomeIcon,
-		title: __("Home"),
-		route: "/home",
-	},
-	{
-		icon: AttendanceIcon,
-		title: __("Attendance"),
-		route: "/dashboard/attendance",
-	},
-	{
-		icon: LeaveIcon,
-		title: __("Leaves"),
-		route: "/dashboard/leaves",
-	},
-	{
-		icon: ExpenseIcon,
-		title: __("Expenses"),
-		route: "/dashboard/expense-claims",
-	},
-	{
-		icon: SalaryIcon,
-		title: __("Salary"),
-		route: "/dashboard/salary-slips",
-	},
-	{
-		icon: KPIIcon,
-		title: __("My KPI"),
-		route: "/dashboard/kpi",
-	},
-]
+const tabItems = NAV_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
 </script>

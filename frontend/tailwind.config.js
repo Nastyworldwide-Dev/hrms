@@ -1,4 +1,7 @@
 import frappeUIPreset from "frappe-ui/src/tailwind/preset"
+
+// Palette values in extend.colors mirror src/theme/modernist.css (the
+// canonical palette) — change them there first, then here.
 export default {
 	presets: [frappeUIPreset],
 	content: [
@@ -36,14 +39,14 @@ export default {
 					900: "#2d2b2b",
 				},
 				accent: {
-					DEFAULT: "#0B313A",
+					DEFAULT: "#0b313a",
 					100: "#eafaf2",
-					200: "#A1EEC9",
+					200: "#a1eec9",
 					300: "#7fdcb2",
 					400: "#4cc492",
 					500: "#1a9a74",
 					600: "#164a56",
-					700: "#0B313A",
+					700: "#0b313a",
 					800: "#08242c",
 					900: "#05181e",
 				},

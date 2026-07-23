@@ -20,6 +20,7 @@
 							:to="{ name: 'Notifications' }"
 							v-slot="{ navigate }"
 							class="flex flex-col items-center"
+							:aria-label="__('Notifications')"
 						>
 							<span class="relative inline-block" @click="navigate">
 								<FeatherIcon name="bell" class="h-5 w-5" />

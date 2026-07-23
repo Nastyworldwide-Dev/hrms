@@ -37,7 +37,8 @@
 									cy="42"
 									r="34"
 									fill="none"
-									stroke="#d7d3d3"
+									stroke="currentColor"
+									class="text-ink-300"
 									stroke-width="7"
 								/>
 								<circle
@@ -45,7 +46,8 @@
 									cy="42"
 									r="34"
 									fill="none"
-									stroke="#0B313A"
+									stroke="currentColor"
+									class="text-accent"
 									stroke-width="7"
 									:stroke-dasharray="`${ringDash} 213.6`"
 									transform="rotate(-90 42 42)"
@@ -54,7 +56,7 @@
 									x="42"
 									y="47"
 									text-anchor="middle"
-									fill="#201e1d"
+									fill="currentColor" class="text-inkbase"
 									font-size="15"
 									font-weight="800"
 								>
@@ -137,7 +139,8 @@
 									:y2="trendY(g)"
 									x1="24"
 									x2="312"
-									stroke="#d7d3d3"
+									stroke="currentColor"
+									class="text-ink-300"
 									stroke-width="1"
 								/>
 								<text
@@ -146,24 +149,25 @@
 									x="20"
 									:y="trendY(g) + 3"
 									text-anchor="end"
-									fill="#9b9797"
+									fill="currentColor" class="text-ink-500"
 									font-size="9"
 								>
 									{{ g }}
 								</text>
 								<polyline
 									fill="none"
-									stroke="#201e1d"
+									stroke="currentColor"
+									class="text-inkbase"
 									stroke-width="2"
 									:points="trendPoints"
 								/>
 								<g v-for="(p, i) in trend" :key="'p' + i">
-									<circle :cx="trendX(i)" :cy="trendY(p.total_score)" r="3" fill="#201e1d" />
+									<circle :cx="trendX(i)" :cy="trendY(p.total_score)" r="3" fill="currentColor" class="text-inkbase" />
 									<text
 										:x="trendX(i)"
 										y="106"
 										text-anchor="middle"
-										fill="#9b9797"
+										fill="currentColor" class="text-ink-500"
 										font-size="9"
 									>
 										{{ p.cycle }}

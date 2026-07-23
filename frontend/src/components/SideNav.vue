@@ -40,6 +40,8 @@
 			<button
 				type="button"
 				class="flex items-center gap-3 px-[18px] py-3 mb-1.5 border-l-[3px] border-transparent text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-500 hover:text-inkbase text-left"
+				:aria-label="collapsed ? __('Expand sidebar') : __('Collapse sidebar')"
+				:aria-expanded="String(!collapsed)"
 				@click="toggleCollapse"
 			>
 				<svg
@@ -124,12 +126,7 @@
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
 
-import HomeIcon from "@/components/icons/HomeIcon.vue"
-import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
-import LeaveIcon from "@/components/icons/LeaveIcon.vue"
-import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
-import KPIIcon from "@/components/icons/KPIIcon.vue"
+import { NAV_ITEMS } from "@/data/navItems"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -145,14 +142,7 @@ const toggleCollapse = () => {
 	localStorage.setItem(STORAGE_KEY, String(collapsed.value))
 }
 
-const navItems = [
-	{ icon: HomeIcon, title: __("Home"), route: "/home" },
-	{ icon: AttendanceIcon, title: __("Attendance"), route: "/dashboard/attendance" },
-	{ icon: LeaveIcon, title: __("Leaves"), route: "/dashboard/leaves" },
-	{ icon: ExpenseIcon, title: __("Expenses"), route: "/dashboard/expense-claims" },
-	{ icon: SalaryIcon, title: __("Salary"), route: "/dashboard/salary-slips" },
-	{ icon: KPIIcon, title: __("My KPI"), route: "/dashboard/kpi" },
-]
+const navItems = NAV_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
 
 const isActive = (path) => route.path === path
 
