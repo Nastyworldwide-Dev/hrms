@@ -1,9 +1,12 @@
 import { createResource, createListResource } from "frappe-ui"
 import { userResource } from "./user"
 
+// No localStorage cache: this is a live counter. Caching it restored a stale
+// non-zero value on load and lit the bell dot even after every notification was
+// read/cleared server-side. initialData 0 + auto keeps the dot off until the
+// server confirms genuinely-unread notifications.
 export const unreadNotificationsCount = createResource({
 	url: "hrms.api.get_unread_notifications_count",
-	cache: "hrms:unread_notifications_count",
 	initialData: 0,
 	auto: true,
 })

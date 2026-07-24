@@ -2,12 +2,12 @@
 	<BaseLayout :pageTitle="__('My KPI')">
 		<template #body>
 			<div
-				class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8 lg:max-w-none lg:mx-0 lg:grid lg:grid-cols-[1fr_1.1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+				class="flex flex-col w-full max-w-3xl mx-auto px-4 py-7 gap-8 lg:px-7 lg:py-9"
 			>
 				<!-- Filters -->
 				<div
 					v-if="years.length"
-					class="flex flex-wrap items-end gap-x-6 gap-y-3 lg:col-span-2 border-b-2 border-divider pb-5"
+					class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 				>
 					<div class="flex flex-col gap-1.5">
 						<label class="m-kicker" for="kpi-year-filter">{{ __("Year") }}</label>
@@ -37,9 +37,9 @@
 				</div>
 
 				<template v-if="current">
-					<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
+					<div class="contents">
 					<!-- Hero: overall score -->
-					<div class="order-1">
+					<div>
 						<div class="m-kicker">
 							<template v-if="current.is_average">
 								{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
@@ -110,7 +110,7 @@
 					</div>
 
 					<!-- Score trend -->
-					<div v-if="trend.length > 1" class="order-3">
+					<div v-if="trend.length > 1">
 						<div
 							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 						>
@@ -164,11 +164,9 @@
 					</div>
 					</div>
 
-					<div
-						class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8"
-					>
+					<div class="contents">
 					<!-- KRA list -->
-					<div class="order-2">
+					<div>
 						<div
 							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 						>
@@ -209,9 +207,9 @@
 								</div>
 								<div class="flex flex-wrap gap-x-3 text-[11px] text-ink-500">
 									<span v-if="row.target">
-										{{ __("Target") }} {{ row.target }}
+										{{ __("Target") }} {{ formatNumber(row.target) }}
 									</span>
-									<span v-if="row.actual">{{ __("Actual") }} {{ row.actual }}</span>
+									<span v-if="row.actual">{{ __("Actual") }} {{ formatNumber(row.actual) }}</span>
 									<span v-if="row.weighted_score">
 										{{ __("Weighted") }} {{ formatScore(row.weighted_score) }}
 									</span>
@@ -225,7 +223,7 @@
 					</div>
 
 					<!-- Feedback -->
-					<div class="order-4">
+					<div>
 						<div class="border-t-2 border-divider">
 							<div class="m-row flex items-center justify-between py-3">
 								<span class="text-sm">
@@ -315,6 +313,14 @@ const ringDash = computed(() =>
 
 function formatScore(value) {
 	return Number(value || 0).toFixed(1).replace(/\.0$/, "")
+}
+
+// Thousands-separated target/actual (e.g. 23083692 -> "23,083,692").
+// Non-numeric values (rare free-text targets) pass through untouched.
+function formatNumber(value) {
+	const n = Number(value)
+	if (!Number.isFinite(n)) return value
+	return n.toLocaleString("en-US", { maximumFractionDigits: 2 })
 }
 
 // KRA rows may be achievement-based (auto) or manager-rated (manual)
