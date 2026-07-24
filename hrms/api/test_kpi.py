@@ -114,6 +114,21 @@ class TestMyKPIDashboard(FrappeTestCase):
 		self.assertEqual(len(data["history"]), 2)
 		self.assertIn(2022, data["years"])
 
+	def test_all_cycles_preserves_distinct_kpis(self):
+		# Regression: _year_average grouped by KRA name alone, collapsing sibling
+		# KPIs that share a KRA (e.g. three "Product Presence" KPIs) into one row,
+		# so the "All Appraisal Cycles" view no longer matched the single cycle.
+		# With one cycle in the year, ALL_CYCLES must present the same (KRA, KPI)
+		# rows and same total as selecting that cycle.
+		frappe.set_user(self.user_a)
+		single = get_my_kpi_dashboard(year=2022, cycle=self.cycle.name)
+		allc = get_my_kpi_dashboard(year=2022, cycle="_all")
+
+		single_pairs = sorted((k["kra"], k["kpi"]) for k in single["current"]["kras"])
+		all_pairs = sorted((k["kra"], k["kpi"]) for k in allc["current"]["kras"])
+		self.assertEqual(all_pairs, single_pairs)
+		self.assertEqual(allc["current"]["total_score"], single["current"]["total_score"])
+
 	def test_year_without_appraisals_returns_empty_current(self):
 		frappe.set_user(self.user_a)
 		data = get_my_kpi_dashboard(year=1999)

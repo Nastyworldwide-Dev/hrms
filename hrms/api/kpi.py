@@ -66,8 +66,10 @@ def _bar_percent(row) -> float:
 def _year_average(year_appraisals, year: int) -> dict:
 	"""Synthetic "current" block averaging every appraisal cycle of the year.
 
-	KRA rows are grouped by KRA and averaged; target/actual are omitted
-	because free-text targets cannot be averaged across cycles.
+	KRA rows are grouped by (KRA, KPI) so each distinct KPI stays its own row and
+	is averaged across cycles — grouping by KRA name alone collapsed sibling KPIs
+	(e.g. the three "Product Presence" KPIs) into one row, which no longer matched
+	the single-cycle view. target/actual are averaged too (numeric KPIs).
 	"""
 	docs = []
 	for a in year_appraisals:
@@ -81,7 +83,7 @@ def _year_average(year_appraisals, year: int) -> dict:
 	for doc in docs:
 		for row in doc.appraisal_kra:
 			group = grouped.setdefault(
-				row.kra,
+				(row.kra, row.kpi),
 				{
 					"kra": row.kra,
 					"kpi": row.kpi,
@@ -89,12 +91,15 @@ def _year_average(year_appraisals, year: int) -> dict:
 					"weightages": [],
 					"percents": [],
 					"weighted_scores": [],
+					"targets": [],
+					"actuals": [],
 				},
 			)
-			group["kpi"] = group["kpi"] or row.kpi
 			group["weightages"].append(flt(row.per_weightage))
 			group["percents"].append(_bar_percent(row))
 			group["weighted_scores"].append(flt(row.weighted_score))
+			group["targets"].append(flt(row.target))
+			group["actuals"].append(flt(row.actual))
 
 	def avg(values):
 		return sum(values) / len(values) if values else 0.0
@@ -109,6 +114,8 @@ def _year_average(year_appraisals, year: int) -> dict:
 			# existing bar logic renders it without a special case
 			"achievement": avg(group["percents"]),
 			"weighted_score": avg(group["weighted_scores"]),
+			"target": avg(group["targets"]),
+			"actual": avg(group["actuals"]),
 			"cycles": len(group["percents"]),
 		}
 		for group in grouped.values()
