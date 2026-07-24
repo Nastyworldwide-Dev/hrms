@@ -39,6 +39,70 @@ class TestAttendance(FrappeTestCase):
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
 		frappe.db.delete("Attendance")
 
+	def test_overtime_populated_from_breakdown(self):
+		from unittest.mock import patch
+
+		employee = make_employee("test_ot_attendance@example.com", company="_Test Company")
+		shift = frappe.get_doc(
+			{
+				"doctype": "Shift Type",
+				"name": "_Test OT Shift",
+				"start_time": "09:00:00",
+				"end_time": "18:00:00",
+				"enable_overtime": 1,
+			}
+		).insert(ignore_if_duplicate=True)
+
+		attendance = frappe.get_doc(
+			{
+				"doctype": "Attendance",
+				"employee": employee,
+				"attendance_date": nowdate(),
+				"status": "Present",
+				"company": "_Test Company",
+				"shift": shift.name,
+			}
+		)
+		fake = {
+			"ot_hours": 6.0,
+			"day_type": "off",
+			"ot_amount": 100.0,
+			"bands": [
+				{"day_type": "off", "rate": 1.5, "hours": 4.0, "amount": 60.0},
+				{"day_type": "off", "rate": 2.0, "hours": 2.0, "amount": 40.0},
+			],
+		}
+		with patch("hrms.utils.ot_calculation.get_day_ot_breakdown", return_value=fake):
+			attendance.set_overtime()
+
+		self.assertEqual(attendance.ot_hours, 6.0)
+		self.assertEqual(attendance.ot_amount, 100.0)
+		self.assertEqual(len(attendance.ot_rate_bands), 2)
+		# internal day-type key is mapped to its human label for the grid
+		self.assertEqual(attendance.ot_rate_bands[0].day_type, "Off Day")
+		self.assertEqual(attendance.ot_rate_bands[0].hours, 4.0)
+		self.assertEqual(attendance.ot_rate_bands[1].rate, 2.0)
+
+	def test_overtime_cleared_when_not_worked(self):
+		employee = make_employee("test_ot_absent@example.com", company="_Test Company")
+		attendance = frappe.get_doc(
+			{
+				"doctype": "Attendance",
+				"employee": employee,
+				"attendance_date": nowdate(),
+				"status": "Absent",
+				"company": "_Test Company",
+			}
+		)
+		attendance.ot_hours = 5
+		attendance.append("ot_rate_bands", {"day_type": "Off Day", "rate": 2.0, "hours": 3.0, "amount": 60.0})
+
+		attendance.set_overtime()
+
+		self.assertEqual(attendance.ot_hours, 0)
+		self.assertEqual(attendance.ot_amount, 0)
+		self.assertEqual(len(attendance.ot_rate_bands), 0)
+
 	def test_duplicate_attendance(self):
 		employee = make_employee("test_duplicate_attendance@example.com", company="_Test Company")
 		date = nowdate()

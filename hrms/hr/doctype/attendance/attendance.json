@@ -12,6 +12,10 @@
   "employee",
   "employee_name",
   "working_hours",
+  "overtime_section",
+  "ot_hours",
+  "ot_amount",
+  "ot_rate_bands",
   "status",
   "leave_type",
   "leave_application",
@@ -77,6 +81,34 @@
    "fieldtype": "Float",
    "label": "Working Hours",
    "precision": "2",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "overtime_section",
+   "fieldtype": "Section Break",
+   "label": "Overtime"
+  },
+  {
+   "description": "Beyond-shift hours after minimum-OT and the daily cap. The monthly cap is applied at payroll.",
+   "fieldname": "ot_hours",
+   "fieldtype": "Float",
+   "label": "Overtime Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "OT pay for the day at the configured rate bands. 0 until a basic salary is assigned.",
+   "fieldname": "ot_amount",
+   "fieldtype": "Currency",
+   "label": "Overtime Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ot_rate_bands",
+   "fieldtype": "Table",
+   "label": "Overtime by Rate",
+   "options": "Attendance Overtime Band",
    "read_only": 1
   },
   {

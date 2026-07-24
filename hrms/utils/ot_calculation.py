@@ -131,50 +131,54 @@ def _classify_day(employee, day, default_day_type):
 	return default_day_type or "normal"
 
 
-def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
-	logger.info(
-		"[ot_calculation] amount ot_hours=%.2f rate=%.2f day_type=%s", ot_hours, hourly_rate, day_type
-	)
-	if ot_hours <= 0 or hourly_rate <= 0:
-		return 0.0
+def _ot_bands_for_day(ot_hours, hourly_rate, day_type, config):
+	"""Split a day's OT hours across the day type's rate bands, returning one
+	entry per non-empty band: {day_type, rate, hours, amount}. Band *hours* are
+	computed even when hourly_rate is 0 (no basic salary resolved yet), so the
+	rate breakdown is always available — only the amount depends on basic.
+	Bands are (from_hours, to_hours, rate); the last is open-ended."""
+	logger.info("[ot_calculation] band-split day_type=%s ot_hours=%.2f", day_type, ot_hours)
+	if ot_hours <= 0:
+		return []
 
-	# walk the day type's hour-range bands (validated contiguous from 0), pricing
-	# the slice of OT hours in each band at that band's rate. Bands are
-	# (from_hours, to_hours, rate); the last band is open-ended so any OT beyond
-	# its upper bound is still paid at the top rate.
 	bands = config.get("bands", {}).get(day_type, [])
 	if not bands:
 		logger.warning(
-			"[ot_calculation] No overtime bands configured for day_type=%s — pricing %.2fh as 0",
+			"[ot_calculation] No overtime bands configured for day_type=%s — %.2fh unpriced",
 			day_type,
 			ot_hours,
 		)
-		return 0.0
+		return []
 
-	amount = 0.0
+	result = []
 	last = len(bands) - 1
 	for i, (from_hours, to_hours, rate) in enumerate(bands):
 		upper = ot_hours if i == last else min(ot_hours, to_hours)
 		slice_hours = upper - from_hours
 		if slice_hours > 0:
-			amount += slice_hours * hourly_rate * rate
-	return round(amount, 2)
+			result.append(
+				{
+					"day_type": day_type,
+					"rate": rate,
+					"hours": round(slice_hours, 2),
+					"amount": round(slice_hours * hourly_rate * rate, 2),
+				}
+			)
+	return result
 
 
-def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
-	logger.info(
-		"[ot_calculation] get_ot_pay employee=%s start=%s end=%s basic=%s",
-		employee,
-		start_date,
-		end_date,
-		basic,
-	)
-	if not employee or not basic:
+def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
+	"""Total OT pay for a day = sum of its rate-band amounts."""
+	if ot_hours <= 0 or hourly_rate <= 0:
 		return 0.0
+	return round(sum(b["amount"] for b in _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)), 2)
 
-	start_date = getdate(start_date)
-	end_date = getdate(end_date)
 
+def _per_day_ot_hours(employee, start_date, end_date):
+	"""Fetch checkins around [start, end], pair IN→OUT sessions, and bucket the
+	beyond-shift (pre-start + post-end) hours per calendar day, split at midnight.
+	Returns (per_day_hours, per_day_shift)."""
+	logger.info("[ot_calculation] per-day OT hours employee=%s %s..%s", employee, start_date, end_date)
 	fetch_start = start_date - timedelta(days=1)
 	fetch_end = end_date + timedelta(days=1)
 	checkins = frappe.get_all(
@@ -209,8 +213,18 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 			)
 		if s["last_out"] > s["shift_end"]:
 			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], s["shift_end"], s["last_out"])
+	return per_day_hours, per_day_shift
 
-	total_pay = 0.0
+
+def _iter_day_ot(employee, start_date, end_date, basic, default_day_type):
+	"""Yield the priced OT for each qualifying day in [start, end], applying
+	min-minutes, the daily cap and the running monthly cap. Shared by get_ot_pay
+	(sums amounts) and get_ot_breakdown (records the per-day split)."""
+	start_date = getdate(start_date)
+	end_date = getdate(end_date)
+	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)
+	per_day_hours, per_day_shift = _per_day_ot_hours(employee, start_date, end_date)
+
 	monthly_ot_hours = 0.0
 	for day, hours in sorted(per_day_hours.items()):
 		if not (start_date <= day <= end_date) or hours <= 0:
@@ -230,9 +244,10 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 				continue
 		monthly_ot_hours += hours
 
-		resolved_day_type = _classify_day(employee, day, day_type)
+		resolved_day_type = _classify_day(employee, day, default_day_type)
 		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
-		amount = _ot_amount_for_day(hours, hourly_rate, resolved_day_type, config)
+		bands = _ot_bands_for_day(hours, hourly_rate, resolved_day_type, config)
+		amount = round(sum(b["amount"] for b in bands), 2)
 		logger.info(
 			"[ot_calculation] %s %s ot_hours=%.2f day_type=%s amount=%.2f",
 			employee,
@@ -241,10 +256,66 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 			resolved_day_type,
 			amount,
 		)
-		total_pay += amount
+		yield {
+			"day": day,
+			"ot_hours": round(hours, 2),
+			"day_type": resolved_day_type,
+			"hourly_rate": hourly_rate,
+			"bands": bands,
+			"amount": amount,
+		}
 
-	logger.info("[ot_calculation] total_pay employee=%s -> %.2f", employee, total_pay)
+
+def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
+	logger.info(
+		"[ot_calculation] get_ot_pay employee=%s start=%s end=%s basic=%s",
+		employee,
+		start_date,
+		end_date,
+		basic,
+	)
+	if not employee or not basic:
+		return 0.0
+
+	total_pay = sum(d["amount"] for d in _iter_day_ot(employee, start_date, end_date, basic, day_type))
+	logger.info("[ot_calculation] total_pay employee=%s -> %.2f", employee, round(total_pay, 2))
 	return round(total_pay, 2)
+
+
+def get_ot_breakdown(employee, start_date, end_date, basic, day_type="normal"):
+	"""Per-day working/OT breakdown for reporting and the Attendance controller.
+
+	Returns {date: {ot_hours, day_type, bands: [{day_type, rate, hours, amount}],
+	ot_amount}}. Unlike get_ot_pay this does NOT require basic — band hours are
+	always populated; amounts are 0 until a basic salary is resolved.
+	"""
+	logger.info(
+		"[ot_calculation] get_ot_breakdown employee=%s start=%s end=%s", employee, start_date, end_date
+	)
+	if not employee:
+		return {}
+
+	breakdown = {}
+	for d in _iter_day_ot(employee, start_date, end_date, basic or 0, day_type):
+		breakdown[d["day"]] = {
+			"ot_hours": d["ot_hours"],
+			"day_type": d["day_type"],
+			"bands": d["bands"],
+			"ot_amount": d["amount"],
+		}
+	return breakdown
+
+
+def get_day_ot_breakdown(employee, day, basic):
+	"""OT breakdown for a single day — used by the Attendance controller."""
+	day = getdate(day)
+	logger.info("[ot_calculation] get_day_ot_breakdown employee=%s day=%s", employee, day)
+	return get_ot_breakdown(employee, day, day, basic).get(day) or {
+		"ot_hours": 0.0,
+		"day_type": None,
+		"bands": [],
+		"ot_amount": 0.0,
+	}
 
 
 def _accumulate_range_by_day(buckets, shift_buckets, shift_name, start_dt, end_dt):

@@ -13,6 +13,7 @@ from hrms.utils.ot_calculation import (
 	_get_shift_ot_config,
 	_hourly_rate,
 	_ot_amount_for_day,
+	_ot_bands_for_day,
 	_pair_sessions,
 	get_ot_pay,
 )
@@ -78,6 +79,34 @@ class TestOTCalculation(FrappeTestCase):
 	def test_amount_zero_guards(self):
 		self.assertEqual(_ot_amount_for_day(0, 10.0, "normal", DEFAULT_CONFIG), 0.0)
 		self.assertEqual(_ot_amount_for_day(3, 0, "normal", DEFAULT_CONFIG), 0.0)
+
+	def test_bands_split_off_day(self):
+		# 6h off day -> first 4h @ 1.5, next 2h @ 2.0, each carrying hours + amount
+		bands = _ot_bands_for_day(6, 10.0, "off", DEFAULT_CONFIG)
+		self.assertEqual(
+			[(b["rate"], b["hours"], b["amount"]) for b in bands],
+			[(1.5, 4.0, 60.0), (2.0, 2.0, 40.0)],
+		)
+
+	def test_bands_hours_present_without_basic(self):
+		# hourly_rate 0 (no basic resolved yet): hours are still split by band,
+		# only the amount is 0 — so Attendance can show the rate breakdown.
+		bands = _ot_bands_for_day(6, 0.0, "off", DEFAULT_CONFIG)
+		self.assertEqual([b["hours"] for b in bands], [4.0, 2.0])
+		self.assertEqual([b["rate"] for b in bands], [1.5, 2.0])
+		self.assertEqual([b["amount"] for b in bands], [0.0, 0.0])
+
+	def test_bands_empty_for_zero_hours(self):
+		self.assertEqual(_ot_bands_for_day(0, 10.0, "normal", DEFAULT_CONFIG), [])
+
+	def test_amount_equals_sum_of_band_amounts(self):
+		# _ot_amount_for_day must stay the sum of the band split (shared path).
+		for hours, day_type in [(3, "normal"), (6, "off"), (5, "public_holiday")]:
+			bands = _ot_bands_for_day(hours, 10.0, day_type, DEFAULT_CONFIG)
+			self.assertEqual(
+				_ot_amount_for_day(hours, 10.0, day_type, DEFAULT_CONFIG),
+				round(sum(b["amount"] for b in bands), 2),
+			)
 
 	def test_shift_config_disabled_returns_none(self):
 		shift = create_shift_type("_Test OT Shift Disabled", enable_overtime=0)
