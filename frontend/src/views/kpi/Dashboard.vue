@@ -4,12 +4,49 @@
 			<div
 				class="flex flex-col w-full max-w-2xl mx-auto px-4 py-7 gap-8 lg:max-w-none lg:mx-0 lg:grid lg:grid-cols-[1fr_1.1fr] lg:gap-x-0 lg:p-7 lg:items-start"
 			>
+				<!-- Filters -->
+				<div
+					v-if="years.length"
+					class="flex flex-wrap items-end gap-x-6 gap-y-3 lg:col-span-2 border-b-2 border-divider pb-5"
+				>
+					<div class="flex flex-col gap-1.5">
+						<label class="m-kicker" for="kpi-year-filter">{{ __("Year") }}</label>
+						<select
+							id="kpi-year-filter"
+							v-model="selectedYear"
+							@change="onYearChange"
+							class="kpi-filter"
+						>
+							<option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+						</select>
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<label class="m-kicker" for="kpi-cycle-filter">
+							{{ __("Appraisal cycle") }}
+						</label>
+						<select
+							id="kpi-cycle-filter"
+							v-model="selectedCycle"
+							@change="refetch"
+							class="kpi-filter"
+						>
+							<option :value="ALL_CYCLES">{{ __("All Appraisal Cycles") }}</option>
+							<option v-for="c in cycles" :key="c" :value="c">{{ c }}</option>
+						</select>
+					</div>
+				</div>
+
 				<template v-if="current">
 					<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
 					<!-- Hero: overall score -->
 					<div class="order-1">
 						<div class="m-kicker">
-							{{ __("Appraisal cycle") }} · {{ current.cycle }}
+							<template v-if="current.is_average">
+								{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
+							</template>
+							<template v-else>
+								{{ __("Appraisal cycle") }} · {{ current.cycle }}
+							</template>
 						</div>
 						<div
 							class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4"
@@ -24,6 +61,9 @@
 								<div class="flex items-center gap-2.5">
 									<span v-if="current.grade" class="m-chip m-chip-solid">
 										{{ current.grade }}
+									</span>
+									<span v-if="current.is_average" class="m-chip m-chip-outline">
+										{{ __("Avg of {0} cycles", [current.cycles_count]) }}
 									</span>
 									<span
 										v-if="delta !== null"
@@ -189,7 +229,11 @@
 						<div class="border-t-2 border-divider">
 							<div class="m-row flex items-center justify-between py-3">
 								<span class="text-sm">
-									{{ __("Feedback received this cycle") }}
+									{{
+										current.is_average
+											? __("Feedback received this year")
+											: __("Feedback received this cycle")
+									}}
 								</span>
 								<span class="font-sans font-extrabold text-base tabular-nums">
 									{{ dashboard.data.feedback.count }}
@@ -213,7 +257,7 @@
 </template>
 
 <script setup>
-import { computed, inject } from "vue"
+import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -221,10 +265,39 @@ import EmptyState from "@/components/EmptyState.vue"
 
 const __ = inject("$translate")
 
+// Sentinel understood by the API: average across every cycle of the year.
+const ALL_CYCLES = "_all"
+
+const selectedYear = ref(null)
+const selectedCycle = ref(null)
+
 const dashboard = createResource({
 	url: "hrms.api.kpi.get_my_kpi_dashboard",
 	auto: true,
+	onSuccess(data) {
+		console.info("[MyKPI] dashboard loaded:", {
+			year: data.selected_year,
+			cycle: data.selected_cycle,
+			cycles: data.cycles?.length,
+		})
+		selectedYear.value = data.selected_year
+		selectedCycle.value = data.selected_cycle
+	},
 })
+
+const years = computed(() => dashboard.data?.years || [])
+const cycles = computed(() => dashboard.data?.cycles || [])
+
+function refetch() {
+	dashboard.submit({ year: selectedYear.value, cycle: selectedCycle.value })
+}
+
+function onYearChange() {
+	// Switching year starts from the yearly average, then the user can
+	// narrow down to a single cycle of that year.
+	selectedCycle.value = ALL_CYCLES
+	refetch()
+}
 
 const current = computed(() => dashboard.data?.current)
 const trend = computed(() => dashboard.data?.history || [])
@@ -266,3 +339,22 @@ const trendPoints = computed(() =>
 	trend.value.map((p, i) => `${trendX(i)},${trendY(p.total_score)}`).join(" ")
 )
 </script>
+
+<style scoped>
+/* Modernist filter selects: surface fill, hairline border, square. */
+.kpi-filter {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	color: var(--color-text);
+	font-size: 13px;
+	font-weight: 600;
+	padding: 8px 32px 8px 12px;
+	min-width: 150px;
+}
+.kpi-filter:focus {
+	border-color: var(--color-accent);
+	outline: none;
+	box-shadow: none;
+}
+</style>

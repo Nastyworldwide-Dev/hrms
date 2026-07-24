@@ -5,7 +5,7 @@ import logging
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import cint, flt, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,8 @@ KRA_ROW_FIELDS = (
 	"goal_score",
 )
 
-HISTORY_LIMIT = 6
+# Sentinel cycle value meaning "average across every cycle of the year".
+ALL_CYCLES = "_all"
 
 
 def _get_session_employee() -> str:
@@ -33,20 +34,95 @@ def _get_session_employee() -> str:
 	return employee
 
 
+def _bar_percent(row) -> float:
+	"""Single progress metric for a KRA row, mirroring the PWA bar logic:
+	achievement/goal rows carry a percentage, manual rows a 1-5 rating."""
+	return flt(row.achievement) or flt(row.goal_completion) or flt(row.manager_rating) / 5 * 100
+
+
+def _year_average(year_appraisals, year: int) -> dict:
+	"""Synthetic "current" block averaging every appraisal cycle of the year.
+
+	KRA rows are grouped by KRA and averaged; target/actual are omitted
+	because free-text targets cannot be averaged across cycles.
+	"""
+	docs = []
+	for a in year_appraisals:
+		doc = frappe.get_doc("Appraisal", a.name)
+		# Defense in depth: the own-employee rule in Appraisal.has_permission
+		# must allow this read; fail loudly if the visibility scope ever changes.
+		frappe.has_permission("Appraisal", doc=doc, throw=True)
+		docs.append(doc)
+
+	grouped = {}
+	for doc in docs:
+		for row in doc.appraisal_kra:
+			group = grouped.setdefault(
+				row.kra,
+				{
+					"kra": row.kra,
+					"kpi": row.kpi,
+					"kra_category": row.kra_category,
+					"weightages": [],
+					"percents": [],
+					"weighted_scores": [],
+				},
+			)
+			group["kpi"] = group["kpi"] or row.kpi
+			group["weightages"].append(flt(row.per_weightage))
+			group["percents"].append(_bar_percent(row))
+			group["weighted_scores"].append(flt(row.weighted_score))
+
+	def avg(values):
+		return sum(values) / len(values) if values else 0.0
+
+	kras = [
+		{
+			"kra": group["kra"],
+			"kpi": group["kpi"],
+			"kra_category": group["kra_category"],
+			"per_weightage": avg(group["weightages"]),
+			# averaged bar percentage rides in `achievement` so the PWA's
+			# existing bar logic renders it without a special case
+			"achievement": avg(group["percents"]),
+			"weighted_score": avg(group["weighted_scores"]),
+			"cycles": len(group["percents"]),
+		}
+		for group in grouped.values()
+	]
+
+	logger.info("[kpi] year-average year=%s cycles=%d kras=%d", year, len(docs), len(kras))
+
+	return {
+		"appraisal": None,
+		"cycle": str(year),
+		"is_average": True,
+		"cycles_count": len(docs),
+		"total_score": avg([flt(doc.pms_total_score) for doc in docs]),
+		"grade": None,
+		"docstatus": None,
+		"kras": kras,
+	}
+
+
 @frappe.whitelist()
-def get_my_kpi_dashboard() -> dict:
+def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None) -> dict:
 	"""Personal KRA/KPI dashboard for the logged-in employee (PWA "My KPI").
 
-	Deliberately takes no arguments: the appraisal visibility hooks in
+	Deliberately takes no employee argument: the appraisal visibility hooks in
 	appraisal.py do not cover whitelisted endpoints, so this endpoint is
 	scoped to the session user's own Employee by construction.
+
+	year: calendar year (of the appraisal end date); defaults to the latest.
+	cycle: an Appraisal Cycle name within that year, or ALL_CYCLES ("_all")
+	to average across every cycle of the year; defaults to the latest cycle.
 	"""
 	employee = _get_session_employee()
 	emp = frappe.db.get_value(
 		"Employee", employee, ["name", "employee_name", "designation", "image"], as_dict=True
 	)
 
-	history = frappe.get_all(
+	appraisals = frappe.get_all(
 		"Appraisal",
 		filters={"employee": employee, "docstatus": ("<", 2)},
 		fields=[
@@ -59,51 +135,64 @@ def get_my_kpi_dashboard() -> dict:
 			"docstatus",
 		],
 		order_by="end_date desc, modified desc",
-		limit=HISTORY_LIMIT,
-	)
-	logger.info(
-		"[kpi] dashboard user=%s employee=%s appraisals=%d",
-		frappe.session.user,
-		employee,
-		len(history),
 	)
 
-	if not history:
+	years = sorted({getdate(a.end_date).year for a in appraisals if a.end_date}, reverse=True)
+	selected_year = cint(year) if year else (years[0] if years else None)
+	year_appraisals = [a for a in appraisals if a.end_date and getdate(a.end_date).year == selected_year]
+	cycles = list(dict.fromkeys(a.appraisal_cycle for a in year_appraisals))
+
+	logger.info(
+		"[kpi] dashboard user=%s employee=%s appraisals=%d year=%s cycle=%s",
+		frappe.session.user,
+		employee,
+		len(appraisals),
+		selected_year,
+		cycle,
+	)
+
+	if not year_appraisals:
 		return {
 			"employee": emp,
 			"current": None,
 			"previous_score": None,
 			"history": [],
 			"feedback": {"count": 0},
+			"years": years,
+			"cycles": cycles,
+			"selected_year": selected_year,
+			"selected_cycle": None,
 		}
-
-	doc = frappe.get_doc("Appraisal", history[0].name)
-	# Defense in depth: the own-employee rule in Appraisal.has_permission
-	# must allow this read; fail loudly if the visibility scope ever changes.
-	frappe.has_permission("Appraisal", doc=doc, throw=True)
-
-	kras = [{field: row.get(field) for field in KRA_ROW_FIELDS} for row in doc.appraisal_kra]
-
-	previous_score = next((flt(h.pms_total_score) for h in history[1:] if h.docstatus == 1), None)
-
-	feedback_count = frappe.db.count(
-		"Employee Performance Feedback", {"employee": employee, "appraisal": doc.name}
-	)
 
 	trend = [
 		{
-			"appraisal": h.name,
-			"cycle": h.appraisal_cycle,
-			"end_date": h.end_date,
-			"total_score": flt(h.pms_total_score),
-			"grade": h.overall_grade,
+			"appraisal": a.name,
+			"cycle": a.appraisal_cycle,
+			"end_date": a.end_date,
+			"total_score": flt(a.pms_total_score),
+			"grade": a.overall_grade,
 		}
-		for h in reversed(history)
+		for a in reversed(year_appraisals)
 	]
 
-	return {
-		"employee": emp,
-		"current": {
+	if cycle == ALL_CYCLES:
+		current = _year_average(year_appraisals, selected_year)
+		selected_cycle = ALL_CYCLES
+		previous_score = None
+		feedback_count = frappe.db.count(
+			"Employee Performance Feedback",
+			{"employee": employee, "appraisal": ("in", [a.name for a in year_appraisals])},
+		)
+	else:
+		selected = next((a for a in year_appraisals if a.appraisal_cycle == cycle), year_appraisals[0])
+		doc = frappe.get_doc("Appraisal", selected.name)
+		# Defense in depth: the own-employee rule in Appraisal.has_permission
+		# must allow this read; fail loudly if the visibility scope ever changes.
+		frappe.has_permission("Appraisal", doc=doc, throw=True)
+
+		kras = [{field: row.get(field) for field in KRA_ROW_FIELDS} for row in doc.appraisal_kra]
+
+		current = {
 			"appraisal": doc.name,
 			"cycle": doc.appraisal_cycle,
 			"start_date": doc.start_date,
@@ -121,8 +210,26 @@ def get_my_kpi_dashboard() -> dict:
 			"self_score": flt(doc.self_score),
 			"avg_feedback_score": flt(doc.avg_feedback_score),
 			"kras": kras,
-		},
+		}
+		selected_cycle = doc.appraisal_cycle
+
+		selected_index = next(i for i, a in enumerate(appraisals) if a.name == selected.name)
+		previous_score = next(
+			(flt(a.pms_total_score) for a in appraisals[selected_index + 1 :] if a.docstatus == 1),
+			None,
+		)
+		feedback_count = frappe.db.count(
+			"Employee Performance Feedback", {"employee": employee, "appraisal": doc.name}
+		)
+
+	return {
+		"employee": emp,
+		"current": current,
 		"previous_score": previous_score,
 		"history": trend,
 		"feedback": {"count": feedback_count},
+		"years": years,
+		"cycles": cycles,
+		"selected_year": selected_year,
+		"selected_cycle": selected_cycle,
 	}

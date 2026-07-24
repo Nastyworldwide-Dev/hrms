@@ -75,7 +75,53 @@ class TestMyKPIDashboard(FrappeTestCase):
 		# The endpoint must never accept a target employee: the appraisal
 		# visibility hooks do not protect whitelisted endpoints, so scope
 		# is enforced by deriving the employee from the session user only.
-		self.assertEqual(list(inspect.signature(get_my_kpi_dashboard).parameters), [])
+		# Only presentation filters (year / cycle) are permitted.
+		self.assertEqual(list(inspect.signature(get_my_kpi_dashboard).parameters), ["year", "cycle"])
+
+	def _create_second_cycle(self, score: float):
+		cycle = create_appraisal_cycle(
+			designation="Engineer", name="Q2", start_date="2022-04-01", end_date="2022-06-30"
+		)
+		cycle.create_appraisals()
+		appraisal = frappe.db.get_value("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.emp_a})
+		frappe.db.set_value("Appraisal", appraisal, "pms_total_score", score)
+		return appraisal
+
+	def test_cycle_filter_selects_specific_appraisal(self):
+		self._create_second_cycle(60.5)
+
+		frappe.set_user(self.user_a)
+		data = get_my_kpi_dashboard(year=2022, cycle="Q1")
+
+		self.assertEqual(data["current"]["appraisal"], self.appraisal_a)
+		self.assertEqual(data["current"]["total_score"], 81.5)
+		self.assertEqual(data["selected_year"], 2022)
+		self.assertEqual(data["selected_cycle"], "Q1")
+		self.assertEqual(set(data["cycles"]), {"Q1", "Q2"})
+
+	def test_all_cycles_averages_across_the_year(self):
+		self._create_second_cycle(60.5)
+
+		frappe.set_user(self.user_a)
+		data = get_my_kpi_dashboard(year=2022, cycle="_all")
+
+		self.assertTrue(data["current"]["is_average"])
+		self.assertEqual(data["current"]["cycles_count"], 2)
+		self.assertAlmostEqual(data["current"]["total_score"], (81.5 + 60.5) / 2)
+		self.assertIsNone(data["current"]["grade"])
+		self.assertIsNone(data["previous_score"])
+		self.assertEqual(data["selected_cycle"], "_all")
+		self.assertEqual(len(data["history"]), 2)
+		self.assertIn(2022, data["years"])
+
+	def test_year_without_appraisals_returns_empty_current(self):
+		frappe.set_user(self.user_a)
+		data = get_my_kpi_dashboard(year=1999)
+
+		self.assertIsNone(data["current"])
+		self.assertEqual(data["cycles"], [])
+		self.assertEqual(data["selected_year"], 1999)
+		self.assertIn(2022, data["years"])
 
 	def test_user_without_employee_is_rejected(self):
 		frappe.set_user("test@example.com")
