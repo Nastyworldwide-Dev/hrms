@@ -896,22 +896,17 @@ onBeforeUnmount(() => {
 }
 .shift-loc-tooltip:before { display: none !important; }
 
-/* On tablet/desktop the check-in sheet presents as a centered dialog instead
-   of a bottom sheet (design section 2). Logic/props unchanged — CSS only. */
-@media (min-width: 1024px) {
+/* On tablet/desktop the check-in sheet presents as a centered dialog.
+   Centering comes from the global modal-sheet rule in modernist.css —
+   adding transforms here double-centers and pushes the dialog off-screen.
+   Only the narrower width and internal scroll are set per-modal. */
+@media (min-width: 640px) {
 	ion-modal.checkin-sheet {
-		--width: 460px;
-		--height: auto;
+		--width: min(460px, 92vw);
 	}
 	ion-modal.checkin-sheet::part(content) {
-		position: relative;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 460px;
 		max-height: 88vh;
 		overflow-y: auto;
-		border-radius: 0;
 	}
 }
 </style>
