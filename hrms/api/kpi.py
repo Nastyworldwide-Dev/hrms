@@ -34,6 +34,29 @@ def _get_session_employee() -> str:
 	return employee
 
 
+def _get_cycle_dates(cycle_names) -> dict:
+	"""Map each Appraisal Cycle to its end (or start) date, used to backfill the
+	period for appraisals whose own start/end dates are empty — e.g. the NHSB
+	flow populates only `performance_period` and the cycle, not the date fields."""
+	if not cycle_names:
+		return {}
+	rows = frappe.get_all(
+		"Appraisal Cycle",
+		filters={"name": ("in", list(cycle_names))},
+		fields=["name", "start_date", "end_date"],
+	)
+	logger.info("[kpi] resolved dates for %d appraisal cycle(s)", len(rows))
+	return {row.name: (row.end_date or row.start_date) for row in rows}
+
+
+def _effective_appraisal_date(appraisal, cycle_dates):
+	"""Best available date for year-grouping. Never returns None, so an appraisal
+	is never dropped for a missing end_date: own end/start → cycle → creation."""
+	cyc = cycle_dates.get(appraisal.appraisal_cycle)
+	raw = appraisal.end_date or appraisal.start_date or cyc or appraisal.creation
+	return getdate(raw)
+
+
 def _bar_percent(row) -> float:
 	"""Single progress metric for a KRA row, mirroring the PWA bar logic:
 	achievement/goal rows carry a percentage, manual rows a 1-5 rating."""
@@ -113,7 +136,8 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	appraisal.py do not cover whitelisted endpoints, so this endpoint is
 	scoped to the session user's own Employee by construction.
 
-	year: calendar year (of the appraisal end date); defaults to the latest.
+	year: calendar year of the appraisal's effective date (its end/start date, or
+	its cycle's, or its creation date); defaults to the latest.
 	cycle: an Appraisal Cycle name within that year, or ALL_CYCLES ("_all")
 	to average across every cycle of the year; defaults to the latest cycle.
 	"""
@@ -133,13 +157,23 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 			"pms_total_score",
 			"overall_grade",
 			"docstatus",
+			"creation",
 		],
-		order_by="end_date desc, modified desc",
+		order_by="modified desc",
 	)
 
-	years = sorted({getdate(a.end_date).year for a in appraisals if a.end_date}, reverse=True)
+	# Resolve each appraisal's effective date and order newest-first by it. Custom
+	# appraisals (NHSB) can leave start_date/end_date empty and keep the period only
+	# on the cycle, so grouping on end_date alone silently dropped them and blanked
+	# My KPI (v15.94.0 regression). _effective_appraisal_date never returns None.
+	cycle_dates = _get_cycle_dates({a.appraisal_cycle for a in appraisals if a.appraisal_cycle})
+	for a in appraisals:
+		a.effective_date = _effective_appraisal_date(a, cycle_dates)
+	appraisals.sort(key=lambda a: a.effective_date, reverse=True)
+
+	years = sorted({a.effective_date.year for a in appraisals}, reverse=True)
 	selected_year = cint(year) if year else (years[0] if years else None)
-	year_appraisals = [a for a in appraisals if a.end_date and getdate(a.end_date).year == selected_year]
+	year_appraisals = [a for a in appraisals if a.effective_date.year == selected_year]
 	cycles = list(dict.fromkeys(a.appraisal_cycle for a in year_appraisals))
 
 	logger.info(
@@ -168,7 +202,7 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 		{
 			"appraisal": a.name,
 			"cycle": a.appraisal_cycle,
-			"end_date": a.end_date,
+			"end_date": a.end_date or a.effective_date,
 			"total_score": flt(a.pms_total_score),
 			"grade": a.overall_grade,
 		}

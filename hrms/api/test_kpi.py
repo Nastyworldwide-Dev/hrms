@@ -123,6 +123,35 @@ class TestMyKPIDashboard(FrappeTestCase):
 		self.assertEqual(data["selected_year"], 1999)
 		self.assertIn(2022, data["years"])
 
+	def test_appraisal_without_own_dates_resolves_via_cycle(self):
+		# Regression (v15.94.0): the year filter grouped appraisals by
+		# getdate(end_date).year and dropped any appraisal whose own end_date was
+		# empty. NHSB-style appraisals leave start_date/end_date blank and carry
+		# the period only on their Appraisal Cycle, so My KPI blanked out. The
+		# effective date must fall back to the cycle's dates.
+		frappe.db.set_value("Appraisal", self.appraisal_a, {"start_date": None, "end_date": None})
+
+		frappe.set_user(self.user_a)
+		data = get_my_kpi_dashboard()
+
+		self.assertIsNotNone(data["current"], "appraisal with no own dates must still appear")
+		self.assertEqual(data["current"]["appraisal"], self.appraisal_a)
+		# cycle end_date is 2022-03-31 -> year 2022
+		self.assertIn(2022, data["years"])
+		self.assertEqual(data["selected_year"], 2022)
+
+	def test_appraisal_without_any_dates_falls_back_to_creation(self):
+		# Even with no dates anywhere (appraisal and cycle both blank), the
+		# appraisal must still surface, bucketed by its creation year.
+		frappe.db.set_value("Appraisal", self.appraisal_a, {"start_date": None, "end_date": None})
+		frappe.db.set_value("Appraisal Cycle", self.cycle.name, {"start_date": None, "end_date": None})
+
+		frappe.set_user(self.user_a)
+		data = get_my_kpi_dashboard()
+
+		self.assertIsNotNone(data["current"])
+		self.assertEqual(data["current"]["appraisal"], self.appraisal_a)
+
 	def test_user_without_employee_is_rejected(self):
 		frappe.set_user("test@example.com")
 		self.assertRaises(frappe.PermissionError, get_my_kpi_dashboard)
