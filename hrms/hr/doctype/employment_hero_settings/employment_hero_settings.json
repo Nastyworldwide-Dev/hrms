@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "creation": "2026-07-24 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "connection_section",
+  "enabled",
+  "environment",
+  "column_break_conn",
+  "organisation_id",
+  "credentials_section",
+  "client_id",
+  "client_secret",
+  "column_break_cred",
+  "redirect_uri",
+  "endpoints_section",
+  "authorize_url",
+  "token_url",
+  "column_break_ep",
+  "api_base_url",
+  "status_section",
+  "access_token",
+  "refresh_token",
+  "column_break_status",
+  "token_expiry",
+  "code_verifier"
+ ],
+ "fields": [
+  {
+   "fieldname": "connection_section",
+   "fieldtype": "Section Break",
+   "label": "Connection"
+  },
+  {
+   "default": "0",
+   "description": "Master switch. When off, the ERP does not push anything to Employment Hero.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "Sandbox",
+   "fieldname": "environment",
+   "fieldtype": "Select",
+   "label": "Environment",
+   "options": "Sandbox\nProduction"
+  },
+  {
+   "fieldname": "column_break_conn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The :organisation_id used in Employment Hero API paths.",
+   "fieldname": "organisation_id",
+   "fieldtype": "Data",
+   "label": "Organisation ID"
+  },
+  {
+   "fieldname": "credentials_section",
+   "fieldtype": "Section Break",
+   "label": "OAuth Credentials"
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client ID"
+  },
+  {
+   "description": "Stored encrypted (Frappe __Auth table); never shown in plaintext.",
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret"
+  },
+  {
+   "fieldname": "column_break_cred",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Register this exact URL as the redirect/callback in your Employment Hero app: https://<your-site>/api/method/hrms.hr.doctype.employment_hero_settings.employment_hero_settings.oauth_callback",
+   "fieldname": "redirect_uri",
+   "fieldtype": "Data",
+   "label": "Redirect URI"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "endpoints_section",
+   "fieldtype": "Section Break",
+   "label": "Endpoints"
+  },
+  {
+   "default": "https://oauth.employmenthero.com/oauth2/authorize",
+   "description": "Confirm against the Employment Hero developer docs.",
+   "fieldname": "authorize_url",
+   "fieldtype": "Data",
+   "label": "Authorize URL"
+  },
+  {
+   "default": "https://oauth.employmenthero.com/oauth2/token",
+   "fieldname": "token_url",
+   "fieldtype": "Data",
+   "label": "Token URL"
+  },
+  {
+   "fieldname": "column_break_ep",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "https://api.employmenthero.com",
+   "fieldname": "api_base_url",
+   "fieldtype": "Data",
+   "label": "API Base URL"
+  },
+  {
+   "collapsible": 1,
+   "description": "Populated automatically after you connect. Do not edit.",
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Connection Status"
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "Refresh Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Access Token Expires At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "code_verifier",
+   "fieldtype": "Password",
+   "hidden": 1,
+   "label": "PKCE Code Verifier",
+   "read_only": 1
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-24 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Employment Hero Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
