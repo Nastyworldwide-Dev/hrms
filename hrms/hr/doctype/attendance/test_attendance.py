@@ -66,17 +66,18 @@ class TestAttendance(FrappeTestCase):
 		fake = {
 			"ot_hours": 6.0,
 			"day_type": "off",
-			"ot_amount": 100.0,
+			"rate_weighted_hours": 10.0,
 			"bands": [
-				{"day_type": "off", "rate": 1.5, "hours": 4.0, "amount": 60.0},
-				{"day_type": "off", "rate": 2.0, "hours": 2.0, "amount": 40.0},
+				{"day_type": "off", "rate": 1.5, "hours": 4.0},
+				{"day_type": "off", "rate": 2.0, "hours": 2.0},
 			],
 		}
 		with patch("hrms.utils.ot_calculation.get_day_ot_breakdown", return_value=fake):
 			attendance.set_overtime()
 
 		self.assertEqual(attendance.ot_hours, 6.0)
-		self.assertEqual(attendance.ot_amount, 100.0)
+		# ERP stops at hours: the salary-free rate-weighted total goes to payroll
+		self.assertEqual(attendance.ot_rate_weighted_hours, 10.0)
 		self.assertEqual(len(attendance.ot_rate_bands), 2)
 		# internal day-type key is mapped to its human label for the grid
 		self.assertEqual(attendance.ot_rate_bands[0].day_type, "Off Day")
@@ -95,12 +96,12 @@ class TestAttendance(FrappeTestCase):
 			}
 		)
 		attendance.ot_hours = 5
-		attendance.append("ot_rate_bands", {"day_type": "Off Day", "rate": 2.0, "hours": 3.0, "amount": 60.0})
+		attendance.append("ot_rate_bands", {"day_type": "Off Day", "rate": 2.0, "hours": 3.0})
 
 		attendance.set_overtime()
 
 		self.assertEqual(attendance.ot_hours, 0)
-		self.assertEqual(attendance.ot_amount, 0)
+		self.assertEqual(attendance.ot_rate_weighted_hours, 0)
 		self.assertEqual(len(attendance.ot_rate_bands), 0)
 
 	def test_duplicate_attendance(self):

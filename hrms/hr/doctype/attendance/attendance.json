@@ -14,7 +14,7 @@
   "working_hours",
   "overtime_section",
   "ot_hours",
-  "ot_amount",
+  "ot_rate_weighted_hours",
   "ot_rate_bands",
   "status",
   "leave_type",
@@ -98,10 +98,11 @@
    "read_only": 1
   },
   {
-   "description": "OT pay for the day at the configured rate bands. 0 until a basic salary is assigned.",
-   "fieldname": "ot_amount",
-   "fieldtype": "Currency",
-   "label": "Overtime Amount",
+   "description": "Σ(band hours × multiplier) — the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
+   "fieldname": "ot_rate_weighted_hours",
+   "fieldtype": "Float",
+   "label": "OT Rate-Weighted Hours",
+   "precision": "2",
    "read_only": 1
   },
   {

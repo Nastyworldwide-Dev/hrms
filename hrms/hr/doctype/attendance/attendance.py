@@ -11,7 +11,6 @@ from frappe.utils import (
 	add_days,
 	cint,
 	cstr,
-	flt,
 	format_date,
 	get_datetime,
 	get_link_to_form,
@@ -28,12 +27,6 @@ from hrms.hr.utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _get_base_salary(employee, on_date):
-	filters = {"employee": employee, "docstatus": 1, "from_date": ["<=", getdate(on_date)]}
-	base = frappe.db.get_value("Salary Structure Assignment", filters, "base", order_by="from_date desc")
-	return flt(base)
 
 
 class DuplicateAttendanceError(frappe.ValidationError):
@@ -65,7 +58,8 @@ class Attendance(Document):
 		"""Populate working-day overtime hours + the rate-band split from the
 		employee's check-ins for this date. Only for worked days on a shift with
 		overtime enabled; otherwise OT is cleared. Working hours already live on
-		`working_hours`; the amount needs a basic salary and is 0 until assigned."""
+		`working_hours`. The ERP stops at hours — money is priced on the payroll
+		platform from rate_weighted_hours, so no salary is read here."""
 		from hrms.utils.ot_calculation import DAY_TYPE_LABELS, get_day_ot_breakdown
 
 		logger.info(
@@ -75,13 +69,12 @@ class Attendance(Document):
 		ot_enabled = self.shift and frappe.db.get_value("Shift Type", self.shift, "enable_overtime")
 		if not (worked and ot_enabled):
 			self.ot_hours = 0
-			self.ot_amount = 0
+			self.ot_rate_weighted_hours = 0
 			self.set("ot_rate_bands", [])
 			return
-		basic = _get_base_salary(self.employee, self.attendance_date)
-		breakdown = get_day_ot_breakdown(self.employee, self.attendance_date, basic)
+		breakdown = get_day_ot_breakdown(self.employee, self.attendance_date)
 		self.ot_hours = breakdown["ot_hours"]
-		self.ot_amount = breakdown["ot_amount"]
+		self.ot_rate_weighted_hours = breakdown["rate_weighted_hours"]
 		self.set("ot_rate_bands", [])
 		for band in breakdown["bands"]:
 			self.append(
@@ -90,7 +83,6 @@ class Attendance(Document):
 					"day_type": DAY_TYPE_LABELS.get(band["day_type"], band["day_type"]),
 					"rate": band["rate"],
 					"hours": band["hours"],
-					"amount": band["amount"],
 				},
 			)
 

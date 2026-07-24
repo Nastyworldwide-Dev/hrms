@@ -15,6 +15,7 @@ from hrms.utils.ot_calculation import (
 	_ot_amount_for_day,
 	_ot_bands_for_day,
 	_pair_sessions,
+	_rate_weighted_hours,
 	get_ot_pay,
 )
 
@@ -98,6 +99,13 @@ class TestOTCalculation(FrappeTestCase):
 
 	def test_bands_empty_for_zero_hours(self):
 		self.assertEqual(_ot_bands_for_day(0, 10.0, "normal", DEFAULT_CONFIG), [])
+
+	def test_rate_weighted_hours(self):
+		# off day 6h -> 4h @ 1.5 + 2h @ 2.0 = 6 + 4 = 10 rate-weighted hours.
+		# Computed from band hours + multiplier only — no salary needed (rate 0).
+		bands = _ot_bands_for_day(6, 0.0, "off", DEFAULT_CONFIG)
+		self.assertEqual(_rate_weighted_hours(bands), 10.0)
+		self.assertEqual(_rate_weighted_hours([]), 0.0)
 
 	def test_amount_equals_sum_of_band_amounts(self):
 		# _ot_amount_for_day must stay the sum of the band split (shared path).

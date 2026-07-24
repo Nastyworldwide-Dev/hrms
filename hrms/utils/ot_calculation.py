@@ -174,6 +174,13 @@ def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
 	return round(sum(b["amount"] for b in _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)), 2)
 
 
+def _rate_weighted_hours(bands):
+	"""Rate-weighted OT hours = sum(band hours x multiplier). The salary-free figure
+	a payroll platform (e.g. Employment Hero) multiplies by its own hourly rate —
+	the ERP stops here and never needs the salary."""
+	return round(sum(b["hours"] * b["rate"] for b in bands), 2)
+
+
 def _per_day_ot_hours(employee, start_date, end_date):
 	"""Fetch checkins around [start, end], pair IN→OUT sessions, and bucket the
 	beyond-shift (pre-start + post-end) hours per calendar day, split at midnight.
@@ -301,19 +308,26 @@ def get_ot_breakdown(employee, start_date, end_date, basic, day_type="normal"):
 			"ot_hours": d["ot_hours"],
 			"day_type": d["day_type"],
 			"bands": d["bands"],
+			"rate_weighted_hours": _rate_weighted_hours(d["bands"]),
 			"ot_amount": d["amount"],
 		}
 	return breakdown
 
 
-def get_day_ot_breakdown(employee, day, basic):
-	"""OT breakdown for a single day — used by the Attendance controller."""
+def get_day_ot_breakdown(employee, day, basic=0):
+	"""OT breakdown for a single day — used by the Attendance controller.
+
+	basic is optional: with salary held on the payroll platform, the ERP stops
+	at hours, so callers pass no basic and read ot_hours + bands (hours x rate)
+	+ rate_weighted_hours. ot_amount is 0 unless a basic is supplied.
+	"""
 	day = getdate(day)
 	logger.info("[ot_calculation] get_day_ot_breakdown employee=%s day=%s", employee, day)
 	return get_ot_breakdown(employee, day, day, basic).get(day) or {
 		"ot_hours": 0.0,
 		"day_type": None,
 		"bands": [],
+		"rate_weighted_hours": 0.0,
 		"ot_amount": 0.0,
 	}
 
