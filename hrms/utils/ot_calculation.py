@@ -30,7 +30,7 @@ from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 
 import frappe
-from frappe.utils import cint, flt, get_datetime, getdate
+from frappe.utils import cint, flt, get_datetime, get_time, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,35 @@ def _get_shift_ot_config(shift_name):
 		"bands": dict(bands),
 		"daily_cap": flt(shift.daily_overtime_cap_hours),
 		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
+		# Shift window — OT is measured against the *real* shift end (not the padded
+		# shift_actual_end = end + allow_check_out_after buffer, which silently ate OT).
+		"start_time": shift.start_time,
+		"end_time": shift.end_time,
+		"allow_check_out_after": cint(shift.allow_check_out_after_shift_end_time),
 	}
+
+
+def _real_shift_end_dt(start_time, end_time, work_date):
+	"""Real shift-end datetime for a work date, ignoring the check-out grace buffer.
+	Handles overnight shifts (end <= start rolls to the next calendar day)."""
+	start_t = get_time(start_time)
+	end_t = get_time(end_time)
+	end_dt = datetime.combine(work_date, end_t)
+	if end_t <= start_t:
+		end_dt += timedelta(days=1)
+	logger.debug("[ot_calculation] real shift end %s..%s on %s -> %s", start_t, end_t, work_date, end_dt)
+	return end_dt
+
+
+def _real_end_from_actual(shift_name, shift_actual_end):
+	"""Reconstruct the real shift end from a checkin's padded shift_actual_end by
+	removing the allow_check_out_after_shift_end_time buffer (see shift_assignment
+	get_actual_start_end_datetime_of_shift). Returns None if the shift is gone."""
+	buffer_minutes = frappe.db.get_value("Shift Type", shift_name, "allow_check_out_after_shift_end_time")
+	if buffer_minutes is None:
+		logger.warning("[ot_calculation] shift %s missing — cannot resolve real end", shift_name)
+		return None
+	return shift_actual_end - timedelta(minutes=cint(buffer_minutes))
 
 
 def _classify_day(employee, day, default_day_type):
@@ -211,15 +239,15 @@ def _per_day_ot_hours(employee, start_date, end_date):
 	per_day_hours: dict[date, float] = defaultdict(float)
 	per_day_shift: dict[date, str] = {}
 	for s in sessions:
-		if not s.get("shift_start") or not s.get("shift_end"):
+		if not s.get("shift") or not s.get("shift_end"):
 			logger.info("[ot_calculation] Skipping session in=%s — no shift bounds", s.get("first_in"))
 			continue
-		if s["first_in"] < s["shift_start"]:
-			_accumulate_range_by_day(
-				per_day_hours, per_day_shift, s["shift"], s["first_in"], s["shift_start"]
-			)
-		if s["last_out"] > s["shift_end"]:
-			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], s["shift_end"], s["last_out"])
+		# OT is post-shift-end only, measured against the REAL shift end (the padded
+		# shift_actual_end = end + allow_check_out_after buffer would silently drop OT).
+		# Pre-shift (early check-in) time is never counted as overtime.
+		real_end = _real_end_from_actual(s["shift"], s["shift_end"])
+		if real_end and s["last_out"] > real_end:
+			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], real_end, s["last_out"])
 	return per_day_hours, per_day_shift
 
 
@@ -323,12 +351,66 @@ def get_day_ot_breakdown(employee, day, basic=0):
 	"""
 	day = getdate(day)
 	logger.info("[ot_calculation] get_day_ot_breakdown employee=%s day=%s", employee, day)
-	return get_ot_breakdown(employee, day, day, basic).get(day) or {
-		"ot_hours": 0.0,
-		"day_type": None,
-		"bands": [],
-		"rate_weighted_hours": 0.0,
-		"ot_amount": 0.0,
+	return get_ot_breakdown(employee, day, day, basic).get(day) or _empty_breakdown()
+
+
+def _empty_breakdown():
+	return {"ot_hours": 0.0, "day_type": None, "bands": [], "rate_weighted_hours": 0.0, "ot_amount": 0.0}
+
+
+def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, basic=0):
+	"""Per-attendance OT priced from the attendance's OWN shift + last check-out.
+
+	Post-shift-end only: OT = max(0, out_time - real shift end), where the real end
+	ignores the allow_check_out_after grace buffer. Unlike the day-level checkin scan
+	(get_day_ot_breakdown), this reads the attendance's own shift and out_time, so it
+	is robust when the day has duplicate/reassigned attendances. Returns the same
+	shape: {ot_hours, day_type, bands, rate_weighted_hours, ot_amount}. Salary lives
+	on the payroll platform, so basic defaults to 0 and amounts stay 0."""
+	attendance_date = getdate(attendance_date)
+	logger.info(
+		"[ot_calculation] get_shift_ot_breakdown employee=%s shift=%s date=%s out=%s",
+		employee,
+		shift,
+		attendance_date,
+		out_time,
+	)
+	if not (shift and out_time):
+		return _empty_breakdown()
+
+	config = _get_shift_ot_config(shift)
+	if not config:
+		# shift missing or overtime disabled
+		return _empty_breakdown()
+
+	out_dt = get_datetime(out_time)
+	real_end = _real_shift_end_dt(config["start_time"], config["end_time"], attendance_date)
+	ot_hours = max(0.0, (out_dt - real_end).total_seconds() / 3600.0)
+
+	if ot_hours * 60.0 < config["min_minutes"]:
+		logger.info(
+			"[ot_calculation] %s %s below min-OT (%.2fh) — no OT", employee, attendance_date, ot_hours
+		)
+		return _empty_breakdown()
+	if config["daily_cap"] > 0:
+		ot_hours = min(ot_hours, config["daily_cap"])
+
+	day_type = _classify_day(employee, attendance_date, "normal")
+	hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
+	bands = _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)
+	logger.info(
+		"[ot_calculation] %s %s ot_hours=%.2f day_type=%s (attendance-centric)",
+		employee,
+		attendance_date,
+		ot_hours,
+		day_type,
+	)
+	return {
+		"ot_hours": round(ot_hours, 2),
+		"day_type": day_type,
+		"bands": bands,
+		"rate_weighted_hours": _rate_weighted_hours(bands),
+		"ot_amount": round(sum(b["amount"] for b in bands), 2),
 	}
 
 

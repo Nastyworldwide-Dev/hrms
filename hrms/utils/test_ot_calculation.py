@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -16,8 +16,18 @@ from hrms.utils.ot_calculation import (
 	_ot_bands_for_day,
 	_pair_sessions,
 	_rate_weighted_hours,
+	_real_end_from_actual,
+	_real_shift_end_dt,
 	get_ot_pay,
+	get_shift_ot_breakdown,
 )
+
+# Weekdays used by the attendance-centric OT tests (no employee holiday list ->
+# _classify_day falls back to weekday: Wed=normal, Sat=off, Sun=rest).
+NORMAL_WED = "2026-07-22"
+OFF_SAT = "2026-07-25"
+REST_SUN = "2026-07-26"
+OT_EMP = "_T-OT-EMP-DUMMY"  # non-existent employee -> weekday classification
 
 # Employment Act 1955 defaults, as a plain config dict for the pure-function tests.
 # bands are keyed by resolved day type: list of (from_hours, to_hours, rate).
@@ -241,6 +251,111 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertEqual(shifts[date(2025, 1, 7)], "S1")
 		self.assertEqual(shifts[date(2025, 1, 8)], "S1")
 
+	# --- Real shift end (bug fix: OT measured vs real end, not padded actual_end) ---
+
+	def test_real_shift_end_same_day(self):
+		self.assertEqual(
+			_real_shift_end_dt("09:00:00", "18:00:00", date(2026, 7, 22)),
+			datetime(2026, 7, 22, 18, 0, 0),
+		)
+
+	def test_real_shift_end_overnight_rolls_to_next_day(self):
+		self.assertEqual(
+			_real_shift_end_dt("22:00:00", "07:00:00", date(2026, 7, 22)),
+			datetime(2026, 7, 23, 7, 0, 0),
+		)
+
+	def test_config_exposes_shift_window_and_strips_buffer(self):
+		# real end reconstructed from a checkin's padded shift_actual_end by removing
+		# the 120-min allow_check_out_after buffer: 20:00 -> 18:00.
+		shift = ot_shift("_Test OT Window")
+		config = _get_shift_ot_config(shift)
+		self.assertEqual(config["allow_check_out_after"], 120)
+		self.assertEqual(
+			_real_end_from_actual(shift, get_datetime("2026-07-22 20:00:00")),
+			get_datetime("2026-07-22 18:00:00"),
+		)
+
+	# --- Attendance-centric OT breakdown (get_shift_ot_breakdown) ---
+
+	def test_ot_below_minimum_is_zero(self):
+		# 56-min overstay with a 60-min minimum -> no OT
+		shift = ot_shift("_Test OT Below Min")
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 18:56:00")
+		self.assertEqual(b["ot_hours"], 0.0)
+		self.assertEqual(b["bands"], [])
+
+	def test_ot_above_minimum_uses_threshold_semantics(self):
+		# 73-min overstay -> the FULL 73 min (~1.22h), not the 13-min deductible
+		shift = ot_shift("_Test OT Above Min")
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 19:13:05")
+		self.assertEqual(b["ot_hours"], 1.22)
+		self.assertEqual(b["day_type"], "normal")
+		self.assertEqual([(x["rate"], x["hours"]) for x in b["bands"]], [(1.5, 1.22)])
+		self.assertEqual(b["rate_weighted_hours"], 1.83)
+
+	def test_ot_ignores_checkout_grace_buffer(self):
+		# out 19:13 is INSIDE the 120-min checkout buffer (padded end 20:00) yet OT
+		# still registers — this is the exact bug that zeroed production OT.
+		shift = ot_shift("_Test OT Buffer")
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 19:13:05")
+		self.assertGreater(b["ot_hours"], 0.0)
+
+	def test_ot_regression_hr_att_2026_07334(self):
+		# the reported record: 10AM-7PM shift, out 20:13:05 -> 73 min beyond 19:00
+		shift = ot_shift(
+			"_Test OT 07334",
+			start_time="10:00:00",
+			end_time="19:00:00",
+			begin_check_in_before_shift_start_time=30,
+		)
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 20:13:05")
+		self.assertEqual(b["ot_hours"], 1.22)
+		self.assertEqual([(x["rate"], x["hours"]) for x in b["bands"]], [(1.5, 1.22)])
+		self.assertEqual(b["rate_weighted_hours"], 1.83)
+
+	def test_ot_daily_cap_clips(self):
+		shift = ot_shift("_Test OT Cap2", daily_overtime_cap_hours=2)
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 22:00:00")  # 4h -> 2h
+		self.assertEqual(b["ot_hours"], 2.0)
+		self.assertEqual(round(sum(x["hours"] for x in b["bands"]), 2), 2.0)
+
+	def test_ot_daily_cap_zero_is_uncapped(self):
+		# the reported "cap=0 zeroes OT" symptom: 0 must mean UNCAPPED, not cap-at-zero
+		shift = ot_shift("_Test OT Cap0", daily_overtime_cap_hours=0)
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 22:00:00")  # 4h
+		self.assertEqual(b["ot_hours"], 4.0)
+
+	def test_ot_rest_day_rate(self):
+		shift = ot_shift("_Test OT Rest")
+		b = get_shift_ot_breakdown(OT_EMP, shift, REST_SUN, "2026-07-26 19:13:05")
+		self.assertEqual(b["day_type"], "rest")
+		self.assertEqual(b["bands"][0]["rate"], 2.0)
+
+	def test_ot_off_day_tiered_bands(self):
+		# 5h on a Saturday off day -> 4h @ 1.5 + 1h @ 2.0; rate-weighted 8.0
+		shift = ot_shift("_Test OT Off")
+		b = get_shift_ot_breakdown(OT_EMP, shift, OFF_SAT, "2026-07-25 23:00:00")
+		self.assertEqual(b["day_type"], "off")
+		self.assertEqual([(x["rate"], x["hours"]) for x in b["bands"]], [(1.5, 4.0), (2.0, 1.0)])
+		self.assertEqual(b["rate_weighted_hours"], 8.0)
+
+	def test_ot_no_checkout_is_empty(self):
+		shift = ot_shift("_Test OT NoOut")
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, None)
+		self.assertEqual(b["ot_hours"], 0.0)
+
+	def test_ot_leaving_before_shift_end_is_zero(self):
+		# post-shift-end only: leaving early is never OT (and pre-shift time never is)
+		shift = ot_shift("_Test OT Early")
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 17:30:00")
+		self.assertEqual(b["ot_hours"], 0.0)
+
+	def test_ot_disabled_shift_is_empty(self):
+		shift = create_shift_type("_Test OT Disabled Shift", enable_overtime=0)
+		b = get_shift_ot_breakdown(OT_EMP, shift, NORMAL_WED, "2026-07-22 22:00:00")
+		self.assertEqual(b["ot_hours"], 0.0)
+
 
 def rate_row(day_type, from_hour, from_minute, to_hour, to_minute, rate):
 	return {
@@ -262,6 +377,15 @@ def _checkin(time, log_type, **args):
 		"shift_actual_end": "2025-01-07 18:00:00",
 		"remote_approval_status": args.get("remote_approval_status"),
 	}
+
+
+def ot_shift(name, **args):
+	"""A default 09:00-18:00 OT-enabled shift with a 120-min checkout grace buffer
+	and a 60-min OT minimum — the shape that exposed the padded-end bug in prod."""
+	args.setdefault("enable_overtime", 1)
+	args.setdefault("minimum_overtime_minutes", 60)
+	args.setdefault("allow_check_out_after_shift_end_time", 120)
+	return create_shift_type(name, **args)
 
 
 def create_shift_type(name, **args):

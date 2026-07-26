@@ -11,6 +11,7 @@ from frappe.utils import (
 	add_days,
 	cint,
 	cstr,
+	flt,
 	format_date,
 	get_datetime,
 	get_link_to_form,
@@ -55,24 +56,24 @@ class Attendance(Document):
 		self.set_overtime()
 
 	def set_overtime(self):
-		"""Populate working-day overtime hours + the rate-band split from the
-		employee's check-ins for this date. Only for worked days on a shift with
-		overtime enabled; otherwise OT is cleared. Working hours already live on
-		`working_hours`. The ERP stops at hours — money is priced on the payroll
-		platform from rate_weighted_hours, so no salary is read here."""
-		from hrms.utils.ot_calculation import DAY_TYPE_LABELS, get_day_ot_breakdown
-
+		"""Populate OT hours + rate-band split for this attendance: time worked past
+		this record's own shift end (the REAL end, not the padded shift_actual_end
+		checkout-grace boundary). Post-shift-end only — pre-shift early check-in is
+		never OT. Cleared unless worked + OT-enabled shift + a recorded check-out.
+		The ERP stops at hours; pay is computed on the payroll platform."""
 		logger.info(
 			"[attendance] set_overtime %s %s status=%s", self.employee, self.attendance_date, self.status
 		)
+		from hrms.utils.ot_calculation import DAY_TYPE_LABELS, get_shift_ot_breakdown
+
 		worked = self.status in ("Present", "Half Day", "Work From Home")
 		ot_enabled = self.shift and frappe.db.get_value("Shift Type", self.shift, "enable_overtime")
-		if not (worked and ot_enabled):
+		if not (worked and ot_enabled and self.out_time):
 			self.ot_hours = 0
 			self.ot_rate_weighted_hours = 0
 			self.set("ot_rate_bands", [])
 			return
-		breakdown = get_day_ot_breakdown(self.employee, self.attendance_date)
+		breakdown = get_shift_ot_breakdown(self.employee, self.shift, self.attendance_date, self.out_time)
 		self.ot_hours = breakdown["ot_hours"]
 		self.ot_rate_weighted_hours = breakdown["rate_weighted_hours"]
 		self.set("ot_rate_bands", [])
@@ -433,3 +434,49 @@ def get_unmarked_days(employee, from_date, to_date, exclude_holidays=0):
 		from_date = add_days(from_date, 1)
 
 	return unmarked_days
+
+
+@frappe.whitelist()
+def recompute_ot_backfill(from_date, to_date, dry_run=1):
+	"""Recompute OT (ot_hours / ot_rate_weighted_hours / ot_rate_bands) for submitted
+	Attendance in [from_date, to_date] using the corrected engine. dry_run=1 (default)
+	only reports what WOULD change; pass dry_run=0 to write (submit-safe via db_set).
+	Run: bench --site <site> execute
+	hrms.hr.doctype.attendance.attendance.recompute_ot_backfill
+	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\""""
+	dry_run = cint(dry_run)
+	logger.info("[attendance] OT backfill %s..%s dry_run=%s", from_date, to_date, dry_run)
+	names = frappe.get_all(
+		"Attendance",
+		filters={"docstatus": 1, "attendance_date": ["between", [from_date, to_date]]},
+		pluck="name",
+	)
+	changed = []
+	for name in names:
+		doc = frappe.get_doc("Attendance", name)
+		old_hours, old_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
+		doc.set_overtime()
+		new_hours, new_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
+		if new_hours == old_hours and new_weighted == old_weighted:
+			continue
+		changed.append(
+			{
+				"attendance": name,
+				"employee": doc.employee,
+				"date": str(doc.attendance_date),
+				"old_ot_hours": old_hours,
+				"new_ot_hours": new_hours,
+				"old_rate_weighted": old_weighted,
+				"new_rate_weighted": new_weighted,
+			}
+		)
+		if not dry_run:
+			doc.db_set("ot_hours", new_hours, update_modified=False)
+			doc.db_set("ot_rate_weighted_hours", new_weighted, update_modified=False)
+			for band in doc.ot_rate_bands:
+				band.docstatus = doc.docstatus
+			doc.update_child_table("ot_rate_bands")
+	if not dry_run:
+		frappe.db.commit()
+	logger.info("[attendance] OT backfill done scanned=%d changed=%d", len(names), len(changed))
+	return {"dry_run": bool(dry_run), "scanned": len(names), "changed": len(changed), "records": changed}
