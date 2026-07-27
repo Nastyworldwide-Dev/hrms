@@ -58,6 +58,10 @@ frappe.ui.form.on("Leave Control Panel", {
 		frm.trigger("get_employees");
 	},
 
+	min_years_of_service(frm) {
+		frm.trigger("get_employees");
+	},
+
 	dates_based_on(frm) {
 		frm.trigger("reset_leave_details");
 		frm.trigger("get_employees");

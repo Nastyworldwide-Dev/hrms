@@ -200,4 +200,8 @@ class LeaveControlPanel(Document):
 					filters.append(["grade", "=", self.get(d)])
 				else:
 					filters.append([d, "=", self.get(d)])
+
+		if self.get("min_years_of_service"):
+			filters.append(["years_of_service", ">=", cint(self.min_years_of_service)])
+
 		return filters

@@ -234,6 +234,7 @@ doc_events = {
 		"validate": [
 			"hrms.overrides.employee_master.validate_onboarding_process",
 			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
+			"hrms.overrides.employee_master.set_years_of_service",
 		],
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
@@ -281,6 +282,7 @@ scheduler_events = {
 	"daily": [
 		"hrms.hr.shift_rules.sync_shift_assignments",
 		"hrms.hr.leave_rules.auto_assign_leave_policies",
+		"hrms.overrides.employee_master.update_all_years_of_service",
 		"hrms.controllers.employee_reminders.send_birthday_reminders",
 		"hrms.controllers.employee_reminders.send_work_anniversary_reminders",
 		"hrms.hr.doctype.daily_work_summary_group.daily_work_summary_group.send_summary",

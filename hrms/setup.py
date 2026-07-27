@@ -202,6 +202,18 @@ def get_custom_fields():
 		],
 		"Employee": [
 			{
+				"fieldname": "years_of_service",
+				"fieldtype": "Int",
+				"label": _("Years of Service"),
+				"insert_after": "date_of_joining",
+				"read_only": 1,
+				"no_copy": 1,
+				"in_standard_filter": 1,
+				"description": _(
+					"Whole completed years since Date of Joining. Auto-calculated on save and refreshed daily."
+				),
+			},
+			{
 				"fieldname": "employment_type",
 				"fieldtype": "Link",
 				"ignore_user_permissions": 1,
