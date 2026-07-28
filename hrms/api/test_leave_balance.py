@@ -173,6 +173,12 @@ class TestLeaveBalanceMap(FrappeTestCase):
 
 		self.assertNotIn(lwp_type, get_leave_balance_map(employee))
 
+	def test_unknown_employee_is_rejected(self):
+		# permission guard doubles as a clean 404 for bad ids (no TypeError
+		# from unpacking a missing Employee row)
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_leave_balance_map("HR-EMP-DOES-NOT-EXIST")
+
 	def test_every_entry_has_positive_denominator(self):
 		# the card must never render n/0 regardless of how leave was granted
 		leave_type = make_plain_leave_type("_Test Balance Odd Leave")

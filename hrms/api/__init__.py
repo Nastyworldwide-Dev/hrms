@@ -382,7 +382,8 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 	denominator, resolved in order:
 	1. service-entitlement slab for the employee's grade and completed years of
 	   service as of the allocation start — the same lookup the Leave Policy
-	   Assignment ran at grant time, so the two never disagree
+	   Assignment ran at grant time (recomputed from current employee/slab
+	   data, so it follows later grade/DOJ/slab corrections)
 	2. annual_allocation of the Leave Policy assigned for the current period
 	3. the allocated leaves themselves (manual/compensatory allocations)
 
@@ -396,6 +397,10 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 		get_leave_type_details,
 	)
 	from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
+
+	# also guards the policy/entitlement reads below, which bypass row-level
+	# permissions (frappe.get_all), and rejects unknown employee ids cleanly
+	frappe.has_permission("Employee", "read", doc=employee, throw=True)
 
 	date = getdate()
 	leave_map = {}
@@ -425,6 +430,8 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 		if entitlement is None:
 			entitlement = policy_allocations.get(leave_type)
 		if not entitlement:
+			# deliberately falsy, not `is None`: a 0 policy allocation must
+			# never become the gauge denominator (n/0)
 			entitlement = allocated
 
 		leave_map[leave_type] = {
@@ -435,7 +442,7 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 			"from_date": record.get("from_date"),
 		}
 
-	frappe.logger("hrms").info(
+	frappe.logger("hrms").debug(
 		"[api] Leave balance map for %s: %s",
 		employee,
 		{k: v["annual_entitlement"] for k, v in leave_map.items()},

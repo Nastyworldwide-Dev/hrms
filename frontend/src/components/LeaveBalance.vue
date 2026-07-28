@@ -33,7 +33,7 @@
 						/{{ formatLeaveDays(allocation.annual_entitlement) }}</span
 					>
 				</div>
-				<div class="m-bar relative" style="height: 4px">
+				<div class="m-bar" style="height: 4px">
 					<div
 						class="m-bar-fill"
 						:style="{ width: `${allocation.balance_percentage}%` }"

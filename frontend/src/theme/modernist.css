@@ -241,6 +241,7 @@ h6 {
 
 /* Thin progress track + fill. */
 .m-bar {
+	position: relative; /* anchors .m-bar-band */
 	height: 6px;
 	background: var(--color-neutral-300);
 	overflow: hidden;
@@ -251,8 +252,8 @@ h6 {
 }
 /* Hatched tail of the balance gauge: the band between a pro-rated allocation
    and the full annual entitlement (headroom the employee does not get this
-   year) — muted and distinct from the plain "used" track. Host .m-bar needs
-   `relative`. Neutral ramp inverts in dark mode, no override needed. */
+   year) — muted and distinct from the plain "used" track. Neutral ramp
+   inverts in dark mode, no override needed. */
 .m-bar-band {
 	position: absolute;
 	top: 0;
