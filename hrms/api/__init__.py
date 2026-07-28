@@ -3,7 +3,7 @@ from frappe import _
 from frappe.model import get_permitted_fields
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder import Order
-from frappe.utils import add_days, date_diff, getdate, strip_html
+from frappe.utils import add_days, cint, date_diff, flt, getdate, strip_html
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
@@ -369,25 +369,103 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 	"""
 	Returns a map of leave type and balance details like:
 	{
-	        'Casual Leave': {'allocated_leaves': 10.0, 'balance_leaves': 5.0},
-	        'Earned Leave': {'allocated_leaves': 3.0, 'balance_leaves': 3.0},
+	        'Casual Leave': {
+	                'allocated_leaves': 10.0,
+	                'balance_leaves': 5.0,
+	                'annual_entitlement': 14.0,
+	                'carry_forwarded_leaves': 0.0,
+	                'from_date': '2026-01-01',
+	        },
 	}
+
+	annual_entitlement is the full-year entitlement used as the balance-card
+	denominator, resolved in order:
+	1. service-entitlement slab for the employee's grade and completed years of
+	   service as of the allocation start — the same lookup the Leave Policy
+	   Assignment ran at grant time, so the two never disagree
+	2. annual_allocation of the Leave Policy assigned for the current period
+	3. the allocated leaves themselves (manual/compensatory allocations)
+
+	LWP leave types carry no meaningful balance and are excluded.
 	"""
-	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
+	from hrms.hr.doctype.leave_application.leave_application import (
+		get_leave_allocation_records,
+		get_leave_details,
+	)
+	from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
+		get_leave_type_details,
+	)
+	from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
 
 	date = getdate()
 	leave_map = {}
 
 	leave_details = get_leave_details(employee, date)
 	allocation = leave_details["leave_allocation"]
+	lwps = set(leave_details["lwps"])
+
+	allocation_records = get_leave_allocation_records(employee, date)
+	leave_types = get_leave_type_details()
+	policy_allocations = get_policy_annual_allocations(employee, date)
+	date_of_joining, grade = frappe.db.get_value("Employee", employee, ["date_of_joining", "grade"])
+	precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2
 
 	for leave_type, details in allocation.items():
+		if leave_type in lwps:
+			continue
+
+		record = allocation_records.get(leave_type, frappe._dict())
+		allocated = flt(details.get("total_leaves"))
+
+		entitlement = None
+		if leave_types.get(leave_type, frappe._dict()).based_on_years_of_service:
+			entitlement = get_service_based_leave_days(
+				leave_type, date_of_joining, record.from_date or date, grade
+			)
+		if entitlement is None:
+			entitlement = policy_allocations.get(leave_type)
+		if not entitlement:
+			entitlement = allocated
+
 		leave_map[leave_type] = {
-			"allocated_leaves": details.get("total_leaves"),
+			"allocated_leaves": allocated,
 			"balance_leaves": details.get("remaining_leaves"),
+			"annual_entitlement": flt(entitlement, precision),
+			"carry_forwarded_leaves": flt(record.get("unused_leaves"), precision),
+			"from_date": record.get("from_date"),
 		}
 
+	frappe.logger("hrms").info(
+		"[api] Leave balance map for %s: %s",
+		employee,
+		{k: v["annual_entitlement"] for k, v in leave_map.items()},
+	)
 	return leave_map
+
+
+def get_policy_annual_allocations(employee: str, date) -> dict[str, float]:
+	"""annual_allocation per leave type from the employee's Leave Policy
+	Assignment effective on `date` (empty when none is assigned)."""
+	policy = frappe.db.get_value(
+		"Leave Policy Assignment",
+		{
+			"employee": employee,
+			"docstatus": 1,
+			"effective_from": ("<=", date),
+			"effective_to": (">=", date),
+		},
+		"leave_policy",
+	)
+	if not policy:
+		frappe.logger("hrms").debug("[api] No Leave Policy Assignment covering %s for %s", date, employee)
+		return {}
+
+	details = frappe.get_all(
+		"Leave Policy Detail",
+		filters={"parenttype": "Leave Policy", "parent": policy},
+		fields=["leave_type", "annual_allocation"],
+	)
+	return {d.leave_type: flt(d.annual_allocation) for d in details}
 
 
 @frappe.whitelist()

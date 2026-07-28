@@ -32,6 +32,12 @@ export const formatCurrency = (value, currency) => {
 	)
 }
 
+export const formatLeaveDays = (value) => {
+	// one decimal only when fractional: 10.5 (not 10.50), 11 (not 11.0)
+	const rounded = Math.round((Number(value) || 0) * 10) / 10
+	return rounded.toString()
+}
+
 export const formatTimestamp = (timestamp) => {
 	const formattedTime = dayjs(timestamp).format("hh:mm a")
 

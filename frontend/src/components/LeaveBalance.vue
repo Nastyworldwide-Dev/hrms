@@ -28,19 +28,41 @@
 				:class="index % 3 !== 0 ? 'border-l border-divider' : ''"
 			>
 				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
-					{{ allocation.balance_leaves
+					{{ formatLeaveDays(allocation.balance_leaves)
 					}}<span class="text-[13px] font-normal text-ink-500">
-						/{{ allocation.allocated_leaves }}</span
+						/{{ formatLeaveDays(allocation.annual_entitlement) }}</span
 					>
 				</div>
-				<div class="m-bar" style="height: 4px">
+				<div class="m-bar relative" style="height: 4px">
 					<div
 						class="m-bar-fill"
 						:style="{ width: `${allocation.balance_percentage}%` }"
 					></div>
+					<div
+						v-if="allocation.prorated"
+						class="m-bar-band"
+						:style="{ width: `${allocation.prorated_percentage}%` }"
+					></div>
 				</div>
 				<div class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
 					{{ __(leave_type, null, "Leave Type") }}
+				</div>
+				<div
+					v-if="allocation.prorated"
+					class="text-[9px] text-ink-600 leading-tight"
+				>
+					{{
+						__("Pro-rated: {0} allocated for {1}", [
+							formatLeaveDays(allocation.allocated_leaves),
+							allocation.period_year,
+						])
+					}}
+				</div>
+				<div
+					v-if="allocation.carry_forwarded_leaves > 0"
+					class="text-[9px] text-ink-600 leading-tight"
+				>
+					{{ __("incl. carry-forward") }}
 				</div>
 			</div>
 		</div>
@@ -51,6 +73,7 @@
 
 <script setup>
 import { leaveBalance } from "@/data/leaves"
+import { formatLeaveDays } from "@/utils/formatters"
 import { inject } from "vue"
 
 const __ = inject("$translate")
