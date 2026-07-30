@@ -122,20 +122,23 @@
    "description": "Allocate leave days as per the entitlement table below, based on the employee's completed years of service. This overrides the Annual Allocation set in the Leave Policy. If no row covers the employee's years of service, the Leave Policy's Annual Allocation is used.",
    "fieldname": "based_on_years_of_service",
    "fieldtype": "Check",
-   "label": "Entitlement Based on Years of Service"
+   "label": "Entitlement Based on Years of Service",
+   "permlevel": 1
   },
   {
    "depends_on": "eval:doc.based_on_years_of_service == 1",
    "fieldname": "service_entitlement_section",
    "fieldtype": "Section Break",
-   "label": "Entitlement Based on Years of Service"
+   "label": "Entitlement Based on Years of Service",
+   "permlevel": 1
   },
   {
    "fieldname": "service_entitlements",
    "fieldtype": "Table",
    "label": "Service Entitlements",
    "mandatory_depends_on": "eval:doc.based_on_years_of_service == 1",
-   "options": "Leave Type Service Entitlement"
+   "options": "Leave Type Service Entitlement",
+   "permlevel": 1
   },
   {
    "collapsible": 1,
@@ -259,7 +262,7 @@
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2024-12-18 19:51:44.162375",
+ "modified": "2026-07-30 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Type",
@@ -291,6 +294,24 @@
   {
    "read": 1,
    "role": "Employee"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
   }
  ],
  "sort_field": "modified",
