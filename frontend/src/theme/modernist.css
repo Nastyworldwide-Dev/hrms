@@ -183,6 +183,18 @@ h6 {
 	letter-spacing: -0.015em;
 }
 
+/* Chrome paints autofilled inputs with its own near-white background while
+   the page's ink color still applies — in dark mode that's white-on-white
+   (unreadable saved email on the login form). The inset box-shadow repaints
+   the field with the surface token; text-fill pins the text on both themes. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+	-webkit-box-shadow: 0 0 0 1000px rgb(var(--m-surface)) inset;
+	-webkit-text-fill-color: rgb(var(--m-inkbase));
+	caret-color: rgb(var(--m-inkbase));
+}
+
 /* ── shared component classes (consumed by later restyle slices) ────────── */
 
 /* Small uppercase accent eyebrow label. */
