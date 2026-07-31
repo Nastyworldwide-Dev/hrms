@@ -27,11 +27,11 @@ test("posts the email to frappe's guest reset_password endpoint", async () => {
 	assert.deepEqual(JSON.parse(options.body), { user: "jane@example.com" })
 })
 
-test("404 (unknown user) surfaces an account-not-found message", async () => {
-	await assert.rejects(
-		() => sendPasswordResetLink("nobody@example.com", mockFetcher(404)),
-		/No account found/
-	)
+test("404 (pre-hardening frappe's unknown-user answer) resolves like success — no enumeration oracle", async () => {
+	// Current frappe v15 always answers 200 regardless of user existence
+	// (CWE-204); older releases answered 404 for unknown users. The client
+	// must not let the two outcomes look different.
+	assert.equal(await sendPasswordResetLink("nobody@example.com", mockFetcher(404)), true)
 })
 
 test("429 (rate limited) surfaces a try-again-later message", async () => {
@@ -41,9 +41,11 @@ test("429 (rate limited) surfaces a try-again-later message", async () => {
 	)
 })
 
-test("other server errors surface a generic failure", async () => {
-	await assert.rejects(
-		() => sendPasswordResetLink("jane@example.com", mockFetcher(500)),
-		/Could not send/
-	)
+test("other server errors surface a generic failure without detail", async () => {
+	for (const status of [417, 500]) {
+		await assert.rejects(
+			() => sendPasswordResetLink("jane@example.com", mockFetcher(status)),
+			/Could not send/
+		)
+	}
 })
