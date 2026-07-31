@@ -64,7 +64,7 @@
 								<div class="flex justify-end mt-1.5">
 									<button
 										type="button"
-										class="text-xs text-ink-700 underline underline-offset-[3px]"
+										class="text-xs text-ink-700 underline underline-offset-[3px] py-2.5 -my-1.5 px-1 -mx-1"
 										@click="openForgotDialog"
 									>
 										{{ __("Forgot Password?") }}
@@ -152,7 +152,7 @@
 						/>
 						<ErrorMessage :message="forgot.error" />
 						<p v-if="forgot.sent" class="text-sm text-accent-700">
-							{{ __("Password reset instructions have been sent to your email.") }}
+							{{ __("If this email is registered, password reset instructions have been sent to it.") }}
 						</p>
 						<Button
 							v-else

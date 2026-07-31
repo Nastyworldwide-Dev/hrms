@@ -215,6 +215,11 @@ let userMarker = null
 let shiftMarker = null
 let radiusCircle = null
 let geoWatchId = null
+// Per-modal-session geolocation state. latitude/longitude refs persist across
+// modal open/close, so "do we have a fix yet" must NOT be derived from them —
+// both are reset in fetchLocation() each time the modal opens.
+let hasSessionFix = false
+let coarseFallbackRequested = false
 
 const shiftLocation = createResource({
 	url: "hrms.api.geofence.get_active_shift_location",
@@ -363,7 +368,13 @@ function handleLocationSuccess(position) {
 		__("Longitude: {0}°", [Number(longitude.value).toFixed(5)]),
 	].join(", ")
 
+	const firstFixThisSession = !hasSessionFix
+	hasSessionFix = true
 	updateUserMarker()
+	// On reopen the marker already exists at last session's stale coords, so
+	// the creation-time recenter doesn't fire — re-fit on this session's
+	// first real fix instead.
+	if (firstFixThisSession) fitMapBounds()
 }
 
 function handleLocationError(error) {
@@ -373,11 +384,16 @@ function handleLocationError(error) {
 
 	// High-accuracy watch timed out before any fix (common on Android
 	// indoors): grab one coarse network-based position so the map still
-	// centers on the user instead of staying on the fallback view. Only
-	// while we have no fix — never downgrade a real one.
-	if (!latitude.value && !longitude.value && navigator.geolocation) {
+	// centers on the user instead of staying on the fallback view. One
+	// attempt per modal session (watch TIMEOUT recurs every ~15s), and
+	// re-checked at resolution so a slower coarse result never overwrites
+	// a real fix that landed in the meantime.
+	if (!hasSessionFix && !coarseFallbackRequested && navigator.geolocation) {
+		coarseFallbackRequested = true
 		navigator.geolocation.getCurrentPosition(
-			handleLocationSuccess,
+			(position) => {
+				if (!hasSessionFix) handleLocationSuccess(position)
+			},
 			() => {},
 			{ enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
 		)
@@ -390,6 +406,8 @@ const fetchLocation = () => {
 		return
 	}
 	locationStatus.value = __("Locating...")
+	hasSessionFix = false
+	coarseFallbackRequested = false
 	// watchPosition gives us live updates while the modal is open so the
 	// user pin moves in real time as the device's GPS drifts/refines.
 	if (geoWatchId !== null) {
