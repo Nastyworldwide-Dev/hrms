@@ -6,6 +6,14 @@ permissions entirely, so hardening the JSONs alone does nothing on nasty-live
 JSONs, enforces the Employee (erpnext-owned) matrix unconditionally,
 permlevel-locks Employee pay/ID fields, and turns on the self-approval blocks.
 Idempotent — safe to re-run.
+
+Phases run GRANTS FIRST (HR permlevel-1 rows), revokes last, so a mid-patch
+failure can never strand a site with staff stripped and HR not yet restored.
+
+NOTE: the approver fence and these perms assume staff hold ONLY
+Employee + Employee Self Service. Accounts also holding HR roles are exempt
+from the fence by design — the rollout's role-hygiene sweep (Staff Role
+Profile) is part of the lockdown, not optional.
 """
 
 import logging
@@ -16,8 +24,9 @@ from frappe.permissions import add_permission, setup_custom_perms, update_permis
 
 logger = logging.getLogger(__name__)
 
+from hrms.hr.utils import HR_ROLES
+
 ESS = "Employee Self Service"
-HR_L1_ROLES = ("HR User", "HR Manager", "System Manager")
 
 # (doctype, role, permlevel, flags to zero) — applied only where custom rows exist
 STRIP_FLAGS = [
@@ -46,6 +55,10 @@ DROP_ROWS = [
 # doctypes whose permlevel-1 fields need HR read/write rows in custom perms
 L1_HR_DOCTYPES = ("Leave Type", "Shift Type", "Employee", "Employee Checkin")
 
+# staff must keep level-0 read here (names only — config sits at permlevel 1).
+# Where custom rows exist the JSON's read row is inert, so restore it.
+STAFF_READ_DOCTYPES = ("Leave Type", "Shift Type")
+
 # Employee pay/ID fields hidden from the employee's own permlevel-0 view
 EMPLOYEE_SENSITIVE_FIELDS = (
 	"salary_mode",
@@ -68,15 +81,28 @@ CUSTOM_FIELD_KEEP_L0 = {
 
 def execute():
 	logger.info("[staff_lockdown] patch start")
-	ensure_employee_custom_perms()
-	strip_flags()
-	drop_rows()
-	ensure_hr_permlevel_rows()
-	lock_employee_sensitive_fields()
-	lock_custom_fields()
-	set_self_approval_flags()
+	phases = (
+		# grants first
+		ensure_employee_custom_perms,
+		ensure_hr_permlevel_rows,
+		ensure_staff_read_rows,
+		# then revokes/locks
+		lock_employee_sensitive_fields,
+		lock_custom_fields,
+		strip_flags,
+		drop_rows,
+		set_self_approval_flags,
+	)
+	done = []
+	try:
+		for phase in phases:
+			phase()
+			done.append(phase.__name__)
+	except Exception:
+		logger.error("[staff_lockdown] FAILED after phases %s", done, exc_info=True)
+		raise
 	frappe.clear_cache()
-	logger.info("[staff_lockdown] patch done")
+	logger.info("[staff_lockdown] patch done: %s", done)
 
 
 def ensure_employee_custom_perms():
@@ -112,7 +138,7 @@ def ensure_hr_permlevel_rows():
 	for doctype in L1_HR_DOCTYPES:
 		if not frappe.db.exists("Custom DocPerm", {"parent": doctype}):
 			continue  # no custom perms — hardened JSON governs
-		for role in HR_L1_ROLES:
+		for role in sorted(HR_ROLES):
 			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 1}):
 				add_permission(doctype, role, permlevel=1)
 			update_permission_property(doctype, role, 1, "write", 1, validate=False)
@@ -121,6 +147,21 @@ def ensure_hr_permlevel_rows():
 			"Custom DocPerm", {"parent": doctype, "role": "Employee", "permlevel": 1}
 		):
 			add_permission(doctype, "Employee", permlevel=1)
+
+
+def ensure_staff_read_rows():
+	"""Any Custom DocPerm row on a doctype makes its JSON permissions inert, so
+	staff would lose Leave Type / Shift Type read entirely (breaking the PWA
+	leave flow) unless the level-0 read row is restored as a custom row."""
+	logger.info("[staff_lockdown] ensuring staff level-0 read rows")
+	for doctype in STAFF_READ_DOCTYPES:
+		if not frappe.db.exists("Custom DocPerm", {"parent": doctype}):
+			continue  # no custom perms — hardened JSON already grants read
+		for role in ("Employee", ESS):
+			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}):
+				add_permission(doctype, role, permlevel=0)
+			update_permission_property(doctype, role, 0, "read", 1, validate=False)
+			logger.info("[staff_lockdown] %s/%s L0 read ensured", doctype, role)
 
 
 def lock_employee_sensitive_fields():

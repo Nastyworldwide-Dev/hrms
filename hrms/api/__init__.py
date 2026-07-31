@@ -7,6 +7,8 @@ from frappe.utils import add_days, cint, date_diff, flt, getdate, strip_html
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
+from hrms.hr.utils import HR_ROLES
+
 SUPPORTED_FIELD_TYPES = [
 	"Link",
 	"Select",
@@ -58,8 +60,6 @@ def get_current_employee_info() -> dict:
 	)
 	return employee
 
-
-HR_ROLES = {"HR User", "HR Manager", "System Manager"}
 
 # staff lockdown: non-HR callers get a minimal PDPA-safe directory
 STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", "image"]
@@ -186,6 +186,7 @@ def get_shift_requests(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Shift Request", employee, approver_id, for_approval)
 	fields = [
 		"name",
@@ -224,6 +225,7 @@ def get_attendance_requests(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Attendance Request", employee, None, for_approval)
 	fields = [
 		"name",
@@ -288,6 +290,7 @@ def get_filters(
 
 @frappe.whitelist()
 def get_shift_request_approvers(employee: str) -> str | list[str]:
+	_ensure_own_employee_or_permitted(employee)
 	shift_request_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -318,6 +321,7 @@ def get_shift_request_approvers(employee: str) -> str | list[str]:
 
 @frappe.whitelist()
 def get_shifts(employee: str) -> list[dict[str, str]]:
+	_ensure_own_employee_or_permitted(employee)
 	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
 	ShiftType = frappe.qb.DocType("Shift Type")
 	return (
@@ -349,6 +353,7 @@ def get_leave_applications(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Leave Application", employee, approver_id, for_approval)
 	fields = [
 		"name",
@@ -500,6 +505,7 @@ def get_policy_annual_allocations(employee: str, date) -> dict[str, float]:
 
 @frappe.whitelist()
 def get_holidays_for_employee(employee: str) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
 	if not holiday_list:
 		return []
@@ -520,6 +526,7 @@ def get_holidays_for_employee(employee: str) -> list[dict]:
 
 @frappe.whitelist()
 def get_leave_approval_details(employee: str) -> dict:
+	_ensure_own_employee_or_permitted(employee)
 	leave_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -579,6 +586,7 @@ def get_department_approvers(department: str, parentfield: str) -> list[str]:
 
 @frappe.whitelist()
 def get_leave_types(employee: str, date: str) -> list:
+	_ensure_own_employee_or_permitted(employee)
 	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
 
 	date = date or getdate()
@@ -597,6 +605,7 @@ def get_expense_claims(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Expense Claim", employee, approver_id, for_approval)
 	fields = [
 		"`tabExpense Claim`.name",
@@ -635,6 +644,7 @@ def get_expense_claims(
 
 @frappe.whitelist()
 def get_expense_claim_summary(employee: str) -> dict:
+	_ensure_own_employee_or_permitted(employee)
 	from frappe.query_builder.functions import Sum
 
 	Claim = frappe.qb.DocType("Expense Claim")
@@ -693,6 +703,7 @@ def get_expense_claim_types() -> list[dict]:
 
 @frappe.whitelist()
 def get_expense_approval_details(employee: str) -> dict:
+	_ensure_own_employee_or_permitted(employee)
 	expense_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -723,6 +734,7 @@ def get_expense_approval_details(employee: str) -> dict:
 # Employee Advance
 @frappe.whitelist()
 def get_employee_advance_balance(employee: str) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	Advance = frappe.qb.DocType("Employee Advance")
 
 	advances = (
@@ -813,6 +825,7 @@ def get_doctype_states(doctype: str) -> dict:
 # File
 @frappe.whitelist()
 def get_attachments(dt: str, dn: str):
+	frappe.has_permission(dt, doc=dn, throw=True)
 	return frappe.get_list(
 		"File",
 		fields=["name", "file_name", "file_url", "is_private"],
@@ -829,6 +842,9 @@ def upload_base64_file(content, filename, dt=None, dn=None, fieldname=None):
 	from PIL import Image, ImageOps
 
 	from frappe.handler import ALLOWED_MIMETYPES
+
+	if dt and dn:
+		frappe.has_permission(dt, ptype="write", doc=dn, throw=True)
 
 	decoded_content = base64.b64decode(content)
 	content_type = guess_type(filename)[0]

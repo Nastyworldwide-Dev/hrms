@@ -218,11 +218,31 @@ def punch(
 		}
 	)
 	if selfie_image:
+		# only accept a file this user actually uploaded — a stale or borrowed
+		# file_url must not stand in as proof of presence
+		owner = frappe.db.get_value("File", {"file_url": selfie_image}, "owner")
+		if owner != frappe.session.user:
+			logger.warning(
+				"[remote_checkin] rejected selfie %s (owner=%s) for %s",
+				selfie_image,
+				owner,
+				frappe.session.user,
+			)
+			frappe.throw(_("Invalid selfie attachment."), frappe.PermissionError)
 		doc.selfie_image = selfie_image
 	doc.flags.ignore_permissions = True
 	doc.insert()
 
-	return doc
+	# minimal contract — don't expose the full doc as the endpoint's API
+	return frappe._dict(
+		name=doc.name,
+		employee=doc.employee,
+		employee_name=doc.employee_name,
+		log_type=doc.log_type,
+		time=doc.time,
+		requires_remote_approval=doc.requires_remote_approval,
+		remote_approval_status=doc.remote_approval_status,
+	)
 
 
 @frappe.whitelist()

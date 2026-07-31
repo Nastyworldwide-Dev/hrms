@@ -235,22 +235,6 @@ const profileLinks = [
 			"preferred_email",
 		],
 	},
-	{
-		icon: "dollar-sign",
-		title: __("Salary Information"),
-		fields: [
-			"ctc",
-			"payroll_cost_center",
-			"pan_number",
-			"provident_fund_account",
-			"salary_mode",
-			"bank_name",
-			"bank_ac_no",
-			"ifsc_code",
-			"micr_code",
-			"iban",
-		],
-	},
 ]
 
 const isInfoModalOpen = ref(false)

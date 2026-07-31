@@ -134,6 +134,53 @@ class TestStaffLockdown(FrappeTestCase):
 		self.assertTrue(rows)
 		self.assertIn("user_id", rows[0])
 
+	# --- patch behaviour on a custom-perm site ---------------------------
+
+	def test_patch_keeps_staff_read_when_custom_perms_exist(self):
+		"""Any Custom DocPerm row makes a doctype's JSON perms inert — the patch
+		must restore staff level-0 read or the PWA leave flow breaks."""
+		from frappe.permissions import setup_custom_perms
+
+		from hrms.patches.v15_99_0.staff_perm_lockdown import execute
+
+		for doctype in ("Leave Type", "Shift Type"):
+			setup_custom_perms(doctype)
+		self.assertTrue(frappe.db.exists("Custom DocPerm", {"parent": "Leave Type"}))
+
+		execute()
+		frappe.clear_cache()
+
+		frappe.set_user(self.staff_user)
+		for doctype in ("Leave Type", "Shift Type"):
+			self.assertTrue(
+				frappe.has_permission(doctype, "read"),
+				f"staff lost read on {doctype} after patch",
+			)
+			self.assertFalse(frappe.has_permission(doctype, "write"))
+
+	def test_patch_is_idempotent(self):
+		from hrms.patches.v15_99_0.staff_perm_lockdown import execute
+
+		execute()
+		execute()  # must not raise
+		self.assertTrue(frappe.db.get_single_value("HR Settings", "prevent_self_leave_approval"))
+		self.assertTrue(frappe.db.get_single_value("HR Settings", "prevent_self_expense_approval"))
+
+	def test_staff_cannot_file_request_for_another_employee(self):
+		frappe.set_user(self.staff_user)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Leave Application",
+				"employee": self.friend,
+				"leave_type": "_Test Leave Type",
+				"from_date": now_datetime().date(),
+				"to_date": now_datetime().date(),
+				"leave_approver": self.manager_user,
+				"status": "Open",
+			}
+		)
+		self.assertRaises(frappe.PermissionError, doc.validate_staff_approver)
+
 	def test_attendance_calendar_scoped_to_own_employee(self):
 		frappe.set_user(self.staff_user)
 		self.assertRaises(

@@ -2,6 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import datetime
+import logging
 
 import frappe
 from frappe import _, qb
@@ -41,6 +42,11 @@ from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
 )
 
 DateTimeLikeObject = str | datetime.date | datetime.datetime
+
+logger = logging.getLogger(__name__)
+
+# single source of truth for "who counts as HR" in staff-lockdown guards
+HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 
 
 class DuplicateDeclarationError(frappe.ValidationError):
@@ -725,16 +731,13 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 	themselves. HR roles and other editors (e.g. the approver) are exempt;
 	doctype permissions govern those.
 	"""
-	import logging
-
-	logger = logging.getLogger(__name__)
 	logger.info("[staff_lockdown] approver fence: %s.%s", doc.doctype, approver_field)
 	approver = doc.get(approver_field)
 	if not approver:
 		return
 
 	user = frappe.session.user
-	if user == "Administrator" or {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
+	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
 		return
 
 	info = frappe.db.get_value(
@@ -743,7 +746,21 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		["user_id", employee_approver_field, "reports_to", "department"],
 		as_dict=True,
 	)
-	if not info or info.user_id != user:
+	if not info:
+		frappe.throw(_("Employee {0} not found.").format(doc.employee))
+
+	if info.user_id != user:
+		# filing for someone else — fail CLOSED. Own-record scoping normally
+		# comes from a User Permission, but that binding has broken before on
+		# this fork, so never fall through to "no checks at all" here.
+		if not frappe.has_permission("Employee", ptype="write", doc=doc.employee):
+			logger.warning(
+				"[staff_lockdown] %s tried to file %s for employee %s", user, doc.doctype, doc.employee
+			)
+			frappe.throw(
+				_("You can only submit requests for yourself."),
+				frappe.PermissionError,
+			)
 		return
 
 	if approver == user:

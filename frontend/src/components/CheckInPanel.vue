@@ -644,10 +644,10 @@ const submitLog = async (logType) => {
 		}
 	}
 
+	// no `time` in the payload — the punch endpoint stamps the server clock
 	const payload = {
 		employee: employee.data.name,
 		log_type: logType,
-		time: checkinTimestamp.value,
 		latitude: latitude.value,
 		longitude: longitude.value,
 	}
