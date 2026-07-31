@@ -61,6 +61,15 @@
 									placeholder="••••••"
 									class="w-full min-h-[38px] px-2.5 py-1.5 text-sm bg-surface border border-divider text-inkbase caret-accent outline-none focus:border-accent"
 								/>
+								<div class="flex justify-end mt-1.5">
+									<button
+										type="button"
+										class="text-xs text-ink-700 underline underline-offset-[3px]"
+										@click="openForgotDialog"
+									>
+										{{ __("Forgot Password?") }}
+									</button>
+								</div>
 							</div>
 							<ErrorMessage :message="errorMessage" />
 							<button
@@ -128,6 +137,35 @@
 				</template>
 			</Dialog>
 
+			<Dialog v-model="forgot.showDialog">
+				<template #body-title>
+					<h2 class="text-lg font-bold">{{ __("Forgot Password") }}</h2>
+				</template>
+				<template #body-content>
+					<form class="flex flex-col space-y-4" @submit.prevent="sendResetLink">
+						<Input
+							:label="__('Email')"
+							type="text"
+							:placeholder="__('johndoe@mail.com')"
+							v-model="forgot.email"
+							autocomplete="username"
+						/>
+						<ErrorMessage :message="forgot.error" />
+						<p v-if="forgot.sent" class="text-sm text-accent-700">
+							{{ __("Password reset instructions have been sent to your email.") }}
+						</p>
+						<Button
+							v-else
+							:loading="forgot.loading"
+							variant="solid"
+							class="!bg-accent hover:!bg-accent-600 !text-ground disabled:opacity-60 !mt-2"
+						>
+							{{ __("Send Reset Link") }}
+						</Button>
+					</form>
+				</template>
+			</Dialog>
+
 			<Dialog v-model="otp.showDialog">
 				<template #body-title>
 					<h2 class="text-lg font-bold">{{ __("OTP Verification") }}</h2>
@@ -166,10 +204,44 @@ import { inject, reactive, ref } from "vue"
 import { Input, Button, ErrorMessage, Dialog, LoadingIndicator, createResource } from "frappe-ui"
 
 import FrappeHRLogo from "@/components/icons/FrappeHRLogo.vue"
+import { sendPasswordResetLink } from "@/utils/resetPassword"
 
 const email = ref(null)
 const password = ref(null)
 const errorMessage = ref("")
+
+const forgot = reactive({
+	showDialog: false,
+	email: "",
+	error: "",
+	sent: false,
+	loading: false,
+})
+
+function openForgotDialog() {
+	forgot.email = email.value || ""
+	forgot.error = ""
+	forgot.sent = false
+	forgot.showDialog = true
+}
+
+async function sendResetLink() {
+	if (!forgot.email) {
+		forgot.error = __("Please enter your email")
+		return
+	}
+	forgot.error = ""
+	forgot.loading = true
+	try {
+		await sendPasswordResetLink(forgot.email.trim())
+		forgot.sent = true
+		console.info("[Login] Password reset link requested")
+	} catch (err) {
+		forgot.error = __(err.message)
+	} finally {
+		forgot.loading = false
+	}
+}
 
 const resetPassword = reactive({
 	showDialog: false,

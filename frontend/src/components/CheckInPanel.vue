@@ -376,6 +376,18 @@ function handleLocationError(error) {
 	locationStatus.value = "Unable to retrieve your location"
 	if (error) locationStatus.value += `: ERROR(${error.code}): ${error.message}`
 	console.warn("[CheckInPanel] geolocation error:", error)
+
+	// High-accuracy watch timed out before any fix (common on Android
+	// indoors): grab one coarse network-based position so the map still
+	// centers on the user instead of staying on the fallback view. Only
+	// while we have no fix — never downgrade a real one.
+	if (!latitude.value && !longitude.value && navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition(
+			handleLocationSuccess,
+			() => {},
+			{ enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+		)
+	}
 }
 
 const fetchLocation = () => {
@@ -389,10 +401,14 @@ const fetchLocation = () => {
 	if (geoWatchId !== null) {
 		navigator.geolocation.clearWatch(geoWatchId)
 	}
+	// maximumAge 60s: Android's high-accuracy provider cold-starts slowly and
+	// with maximumAge 0 even a seconds-old cached fix is rejected, so indoor
+	// users timed out with no pin at all. A recent cached fix is fine for a
+	// check-in radius measured in tens of meters.
 	geoWatchId = navigator.geolocation.watchPosition(
 		handleLocationSuccess,
 		handleLocationError,
-		{ enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+		{ enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }
 	)
 }
 
@@ -433,7 +449,9 @@ const formattedDistanceToShift = computed(() => {
 async function initMap() {
 	// Leaflet is loaded via <script> in index.html. If the network hiccups,
 	// retry a couple of times before giving up — never block the check-in.
-	for (let i = 0; i < 10; i++) {
+	// 5s budget: on slow mobile radios the deferred CDN script can easily
+	// take longer than the 1s this used to wait.
+	for (let i = 0; i < 50; i++) {
 		if (window.L) break
 		await new Promise((r) => setTimeout(r, 100))
 	}
@@ -456,6 +474,10 @@ async function initMap() {
 		attributionControl: false,
 		dragging: true,
 		tap: true,
+		// Android Chrome/WebView intermittently fails to composite the SVG
+		// overlay pane inside the transformed modal container, leaving the
+		// radius circle invisible; the canvas renderer is immune.
+		preferCanvas: true,
 	}).setView(center, zoom)
 
 	window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -486,6 +508,16 @@ async function initMap() {
 
 	updateUserMarker()
 	fitMapBounds()
+
+	// The ion-modal sheet can still be settling when Leaflet measures the
+	// container (Android animates longer than the deferred tick) — re-measure
+	// after the animation so tiles and overlays aren't offset from the view.
+	setTimeout(() => {
+		if (leafletMap) {
+			leafletMap.invalidateSize()
+			fitMapBounds()
+		}
+	}, 400)
 }
 
 function updateUserMarker() {
@@ -507,6 +539,11 @@ function updateUserMarker() {
 			title: __("You"),
 			zIndexOffset: 1000,
 		}).addTo(leafletMap)
+		// On Android the first GPS fix usually lands after initMap already
+		// centered the map (fallback or office) — bring the new pin and the
+		// radius circle into one view. Later fixes only move the pin so we
+		// don't fight the user's own panning.
+		fitMapBounds()
 	} else {
 		userMarker.setLatLng(here)
 	}
