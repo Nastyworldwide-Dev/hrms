@@ -379,7 +379,7 @@
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-28 10:37:35.977951",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
@@ -408,10 +408,6 @@
    "read": 1,
    "role": "HR User",
    "share": 1
-  },
-  {
-   "read": 1,
-   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",

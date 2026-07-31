@@ -718,6 +718,69 @@ def share_doc_with_approver(doc, user):
 			frappe.share.remove(doc.doctype, doc.name, doc_before_save.get(approver))
 
 
+def validate_staff_approver(doc, approver_field, employee_approver_field, department_parentfield):
+	"""Staff lockdown: when the applicant edits their own request, the approver
+	must be one of their designated approvers (reporting manager, the explicit
+	approver on their Employee record, or a department approver) — never
+	themselves. HR roles and other editors (e.g. the approver) are exempt;
+	doctype permissions govern those.
+	"""
+	import logging
+
+	logger = logging.getLogger(__name__)
+	logger.info("[staff_lockdown] approver fence: %s.%s", doc.doctype, approver_field)
+	approver = doc.get(approver_field)
+	if not approver:
+		return
+
+	user = frappe.session.user
+	if user == "Administrator" or {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
+		return
+
+	info = frappe.db.get_value(
+		"Employee",
+		doc.employee,
+		["user_id", employee_approver_field, "reports_to", "department"],
+		as_dict=True,
+	)
+	if not info or info.user_id != user:
+		return
+
+	if approver == user:
+		logger.warning("[staff_lockdown] %s attempted self-approval routing on %s", user, doc.doctype)
+		frappe.throw(_("You cannot set yourself as your own approver."))
+
+	allowed = set()
+	if info.get(employee_approver_field):
+		allowed.add(info.get(employee_approver_field))
+	if info.reports_to:
+		if manager_user := frappe.db.get_value("Employee", info.reports_to, "user_id"):
+			allowed.add(manager_user)
+	if info.department:
+		allowed.update(
+			frappe.get_all(
+				"Department Approver",
+				filters={"parent": info.department, "parentfield": department_parentfield},
+				pluck="approver",
+			)
+		)
+
+	if approver not in allowed:
+		logger.warning(
+			"[staff_lockdown] %s set non-designated approver %s on %s %s (allowed=%s)",
+			user,
+			approver,
+			doc.doctype,
+			doc.name,
+			sorted(allowed),
+		)
+		frappe.throw(
+			_("{0} is not one of your designated approvers. Please select your reporting manager.").format(
+				approver
+			)
+		)
+
+
 def validate_active_employee(employee, method=None):
 	if isinstance(employee, dict | Document):
 		employee = employee.get("employee")

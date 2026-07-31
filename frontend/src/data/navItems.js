@@ -4,7 +4,6 @@ import HomeIcon from "@/components/icons/HomeIcon.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
 
 // Single source of truth for primary navigation, consumed by both shells
@@ -30,12 +29,6 @@ export const NAV_ITEMS = [
 		title: "Expenses",
 		shortTitle: "Expenses",
 		route: "/dashboard/expense-claims",
-	},
-	{
-		icon: markRaw(SalaryIcon),
-		title: "Salary",
-		shortTitle: "Salary",
-		route: "/dashboard/salary-slips",
 	},
 	{
 		icon: markRaw(KPIIcon),

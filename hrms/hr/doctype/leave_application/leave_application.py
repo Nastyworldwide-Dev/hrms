@@ -33,6 +33,7 @@ from hrms.hr.utils import (
 	set_employee_name,
 	share_doc_with_approver,
 	validate_active_employee,
+	validate_staff_approver,
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
@@ -87,6 +88,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		if frappe.db.get_value("Leave Type", self.leave_type, "is_optional_leave"):
 			self.validate_optional_leave()
 		self.validate_applicable_after()
+		self.validate_staff_approver()
+
+	def validate_staff_approver(self):
+		validate_staff_approver(self, "leave_approver", "leave_approver", "leave_approvers")
 
 	def on_update(self):
 		if self.status == "Open" and self.docstatus < 1:

@@ -5,7 +5,6 @@ import attendanceRoutes from "./attendance"
 import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import employeeAdvanceRoutes from "./advances"
-import salarySlipRoutes from "./salary_slips"
 
 const routes = [
 	{
@@ -39,11 +38,6 @@ const routes = [
 				path: "/dashboard/expense-claims",
 				name: "ExpenseClaimsDashboard",
 				component: () => import("@/views/expense_claim/Dashboard.vue"),
-			},
-			{
-				path: "/dashboard/salary-slips",
-				name: "SalarySlipsDashboard",
-				component: () => import("@/views/salary_slip/Dashboard.vue"),
 			},
 			{
 				path: "/dashboard/kpi",
@@ -95,7 +89,6 @@ const routes = [
 			...leaveRoutes,
 			...claimRoutes,
 			...employeeAdvanceRoutes,
-			...salarySlipRoutes,
 		],
 	},
 ]

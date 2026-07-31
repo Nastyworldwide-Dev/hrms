@@ -746,7 +746,7 @@
  "idx": 9,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-07-01 21:25:36.651583",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Salary Slip",
@@ -776,11 +776,6 @@
    "share": 1,
    "submit": 1,
    "write": 1
-  },
-  {
-   "print": 1,
-   "read": 1,
-   "role": "Employee"
   }
  ],
  "search_fields": "employee_name",

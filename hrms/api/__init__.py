@@ -59,11 +59,16 @@ def get_current_employee_info() -> dict:
 	return employee
 
 
+HR_ROLES = {"HR User", "HR Manager", "System Manager"}
+
+# staff lockdown: non-HR callers get a minimal PDPA-safe directory
+STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", "image"]
+
+
 @frappe.whitelist()
 def get_all_employees() -> list[dict]:
-	return frappe.get_all(
-		"Employee",
-		fields=[
+	if HR_ROLES & set(frappe.get_roles()):
+		fields = [
 			"name",
 			"employee_name",
 			"designation",
@@ -73,9 +78,14 @@ def get_all_employees() -> list[dict]:
 			"user_id",
 			"image",
 			"status",
-		],
-		limit=999999,
-	)
+		]
+		filters = {}
+	else:
+		frappe.logger("hrms").info("[api] minimal directory served to %s", frappe.session.user)
+		fields = STAFF_DIRECTORY_FIELDS
+		filters = {"status": "Active"}
+
+	return frappe.get_all("Employee", fields=fields, filters=filters, limit=999999)
 
 
 # HR Settings
@@ -118,8 +128,21 @@ def are_push_notifications_enabled() -> bool:
 
 
 # Attendance
+def _ensure_own_employee_or_permitted(employee: str) -> None:
+	"""Staff lockdown: staff may only query their own employee; HR and users
+	with real read permission on the Employee doc (approvers etc.) pass."""
+	employee_user = frappe.db.get_value("Employee", employee, "user_id")
+	if employee_user == frappe.session.user:
+		return
+	if frappe.has_permission("Employee", doc=employee):
+		return
+	frappe.logger("hrms").warning("[api] %s denied access to employee %s data", frappe.session.user, employee)
+	frappe.throw(_("Not permitted to view this employee's data."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def get_attendance_calendar_events(employee: str, from_date: str, to_date: str) -> dict[str, str]:
+	_ensure_own_employee_or_permitted(employee)
 	holidays = get_holidays_for_calendar(employee, from_date, to_date)
 	attendance = get_attendance_for_calendar(employee, from_date, to_date)
 	events = {}
@@ -840,25 +863,6 @@ def upload_base64_file(content, filename, dt=None, dn=None, fieldname=None):
 @frappe.whitelist()
 def delete_attachment(filename: str):
 	frappe.delete_doc("File", filename)
-
-
-@frappe.whitelist()
-def download_salary_slip(name: str):
-	import base64
-
-	from frappe.utils.print_format import download_pdf
-
-	default_print_format = frappe.get_meta("Salary Slip").default_print_format or "Standard"
-
-	try:
-		download_pdf("Salary Slip", name, format=default_print_format)
-	except Exception:
-		frappe.throw(_("Failed to download Salary Slip PDF"))
-
-	base64content = base64.b64encode(frappe.local.response.filecontent)
-	content_type = frappe.local.response.type
-
-	return f"data:{content_type};base64," + base64content.decode("utf-8")
 
 
 # Workflow

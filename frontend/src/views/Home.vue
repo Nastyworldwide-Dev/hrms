@@ -28,7 +28,6 @@ import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import EmployeeAdvanceIcon from "@/components/icons/EmployeeAdvanceIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
 
 const __ = inject("$translate")
@@ -58,11 +57,6 @@ const quickLinks = [
 		icon: markRaw(EmployeeAdvanceIcon),
 		title: __("Request an Advance"),
 		route: "EmployeeAdvanceFormView",
-	},
-	{
-		icon: markRaw(SalaryIcon),
-		title: __("View Salary Slips"),
-		route: "SalarySlipsDashboard",
 	},
 	{
 		icon: markRaw(KPIIcon),

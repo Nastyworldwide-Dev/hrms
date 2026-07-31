@@ -186,6 +186,46 @@ def get_open_in_session() -> dict | None:
 
 
 @frappe.whitelist()
+def punch(
+	employee: str,
+	log_type: str,
+	latitude=None,
+	longitude=None,
+	selfie_image: str | None = None,
+	time: str | None = None,
+) -> dict:
+	"""PWA check-in/out. Staff desk permissions on Employee Checkin are
+	read-only, so this endpoint is the only staff write path. The stored time
+	is ALWAYS the server clock — any client-supplied `time` is ignored, which
+	kills typed-in/backdated punches at the source.
+	"""
+	logger.info("[remote_checkin] punch %s %s by %s", employee, log_type, frappe.session.user)
+	employee_user = frappe.db.get_value("Employee", employee, "user_id")
+	if not employee_user or employee_user != frappe.session.user:
+		frappe.throw(_("You can only check in as yourself."), frappe.PermissionError)
+
+	if log_type not in ("IN", "OUT"):
+		frappe.throw(_("Invalid log type."))
+
+	doc = frappe.new_doc("Employee Checkin")
+	doc.update(
+		{
+			"employee": employee,
+			"log_type": log_type,
+			"time": now_datetime(),
+			"latitude": latitude,
+			"longitude": longitude,
+		}
+	)
+	if selfie_image:
+		doc.selfie_image = selfie_image
+	doc.flags.ignore_permissions = True
+	doc.insert()
+
+	return doc
+
+
+@frappe.whitelist()
 def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
 	"""Retroactively submit a forgotten check-out.
 

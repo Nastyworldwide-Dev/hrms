@@ -142,15 +142,15 @@
 			</div>
 
 			<button
-				:disabled="cameraStatus === 'starting' || checkins.insert.loading || cameraStatus === 'submitting'"
+				:disabled="cameraStatus === 'starting' || punchCheckin.loading || cameraStatus === 'submitting'"
 				class="m-btn-primary disabled:opacity-60"
 				@click="submitLog(nextAction.action)"
 			>
 				<span>{{ __("Confirm {0}", [nextAction.label]) }}</span>
 				<FeatherIcon
-					:name="(checkins.insert.loading || cameraStatus === 'submitting') ? 'loader' : 'check'"
+					:name="(punchCheckin.loading || cameraStatus === 'submitting') ? 'loader' : 'check'"
 					class="w-[17px] h-[17px] ml-auto"
-					:class="(checkins.insert.loading || cameraStatus === 'submitting') && 'animate-spin'"
+					:class="(punchCheckin.loading || cameraStatus === 'submitting') && 'animate-spin'"
 				/>
 			</button>
 		</div>
@@ -254,6 +254,12 @@ const checkins = createListResource({
 	orderBy: "time desc",
 })
 checkins.reload()
+
+// Staff lockdown: desk create perms on Employee Checkin are stripped, so the
+// punch goes through a server-side endpoint (owner check + server clock).
+const punchCheckin = createResource({
+	url: "hrms.api.remote_checkin.punch",
+})
 
 // Remote checkin dialog state
 const remoteDialogOpen = ref(false)
@@ -649,7 +655,7 @@ const submitLog = async (logType) => {
 		payload.selfie_image = selfieUrl
 	}
 
-	checkins.insert.submit(payload, {
+	punchCheckin.submit(payload, {
 		async onSuccess(doc) {
 			modalController.dismiss()
 
