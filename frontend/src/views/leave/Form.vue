@@ -17,7 +17,7 @@
 
 <script setup>
 import { IonPage, IonContent } from "@ionic/vue"
-import { createResource } from "frappe-ui"
+import { createResource, toast } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 
 import FormView from "@/components/FormView.vue"
@@ -77,6 +77,18 @@ const leaveTypes = createResource({
 	},
 	onSuccess(data) {
 		setLeaveTypes(data)
+	},
+	onError() {
+		// without this, a failed fetch leaves the dropdown as a silent
+		// "No results found" that reads like the employee has no leave
+		console.warn("[LeaveForm] Failed to fetch leave types:", currEmployee.value)
+		toast({
+			title: __("Error"),
+			text: __("Could not load leave types. Please contact HR."),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
 	},
 })
 

@@ -187,3 +187,40 @@ class TestLeaveBalanceMap(FrappeTestCase):
 
 		for entry in get_leave_balance_map(employee).values():
 			self.assertGreater(flt(entry["annual_entitlement"]), 0.0)
+
+
+class TestGetLeaveTypes(FrappeTestCase):
+	"""hrms.api.get_leave_types feeds the PWA leave application dropdown. It
+	must keep working for a staff user whose role set lost Leave Type read
+	(role drift): a permission-checked lookup here 403s the endpoint and the
+	dropdown silently shows "No results found" while allocations exist."""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		for doctype in ["Leave Application", "Leave Allocation", "Leave Ledger Entry"]:
+			frappe.db.delete(doctype)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_leave_types_resolve_without_leave_type_read_permission(self):
+		from hrms.api import get_leave_types
+
+		today = getdate()
+		year_start = today.replace(month=1, day=1)
+		leave_type = make_plain_leave_type("_Test Dropdown Leave")
+		lwp_type = make_plain_leave_type("_Test Dropdown LWP", is_lwp=1)
+		employee = make_band_employee("dropdown_staff@example.com", GRADE_D, add_months(year_start, -24))
+		make_allocation(employee, leave_type, year_start, get_year_ending(year_start), 10)
+
+		# simulate role drift: the employee's user keeps no roles at all
+		user = frappe.db.get_value("Employee", employee, "user_id")
+		user_doc = frappe.get_doc("User", user)
+		user_doc.roles = []
+		user_doc.save()
+
+		frappe.set_user(user)
+		leave_types = get_leave_types(employee, str(today))
+
+		self.assertIn(leave_type, leave_types)
+		self.assertIn(lwp_type, leave_types)

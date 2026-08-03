@@ -968,8 +968,12 @@ def get_leave_details(employee, date, for_salary_slip=False):
 			"remaining_leaves": flt(remaining_leaves, precision),
 		}
 
-	# is used in set query
-	lwp = frappe.get_list("Leave Type", filters={"is_lwp": 1}, pluck="name")
+	# is used in set query. Names only, fetched without permission checks:
+	# staff must always see applicable leave type names in the PWA dropdown,
+	# even when role drift leaves them without Leave Type read (a get_list
+	# PermissionError here 403s the whole endpoint and silently blanks the
+	# leave application form's dropdown).
+	lwp = frappe.get_all("Leave Type", filters={"is_lwp": 1}, pluck="name")
 
 	return {
 		"leave_allocation": leave_allocation,
