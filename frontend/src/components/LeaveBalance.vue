@@ -28,10 +28,7 @@
 				:class="index % 3 !== 0 ? 'border-l border-divider' : ''"
 			>
 				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
-					{{ formatLeaveDays(allocation.balance_leaves)
-					}}<span class="text-[13px] font-normal text-ink-500">
-						/{{ formatLeaveDays(allocation.annual_entitlement) }}</span
-					>
+					{{ formatLeaveDays(allocation.balance_leaves) }}
 				</div>
 				<div class="m-bar" style="height: 4px">
 					<div
