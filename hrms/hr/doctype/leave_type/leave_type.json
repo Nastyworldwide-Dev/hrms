@@ -290,7 +290,7 @@
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-08-03 11:02:18.334176",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Type",
@@ -333,12 +333,6 @@
    "permlevel": 1,
    "read": 1,
    "role": "HR Manager",
-   "write": 1
-  },
-  {
-   "permlevel": 1,
-   "read": 1,
-   "role": "System Manager",
    "write": 1
   }
  ],
