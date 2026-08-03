@@ -31,10 +31,11 @@ from __future__ import annotations
 import logging
 
 import frappe
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import get_datetime
 
 from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.geofence import evaluate_geofence
+from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,9 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 		# enforce its own "coordinates required" throw.
 		return _ok()
 
-	at = get_datetime(time) if time else now_datetime()
+	# Resolve the shift as of the employee's own wall clock — a site clock in
+	# a different timezone matches the wrong shift near boundary hours.
+	at = get_datetime(time) if time else employee_now(employee)
 
 	# Strict flag now lives on Shift Assignment (moved from Shift Type in v15.77.4).
 	assignment = frappe.db.sql(
@@ -176,7 +179,9 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	if not employee:
 		return None
 
-	at = get_datetime(time) if time else now_datetime()
+	# Resolve the shift as of the employee's own wall clock — a site clock in
+	# a different timezone matches the wrong shift near boundary hours.
+	at = get_datetime(time) if time else employee_now(employee)
 	logger.debug("[geofence.api] get_active_shift_location employee=%s at=%s", employee, at)
 
 	row = frappe.db.sql(

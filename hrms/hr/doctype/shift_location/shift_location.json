@@ -8,6 +8,7 @@
  "field_order": [
   "location_name",
   "checkin_radius",
+  "timezone",
   "column_break_dlgd",
   "latitude",
   "longitude",
@@ -31,6 +32,12 @@
    "fieldname": "checkin_radius",
    "fieldtype": "Int",
    "label": "Checkin Radius"
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Select",
+   "label": "Timezone",
+   "description": "Wall clock this location's attendance is measured in. Leave blank to inherit the employee's company timezone."
   },
   {
    "fieldname": "column_break_dlgd",
@@ -79,7 +86,7 @@
    "link_fieldname": "shift_location"
   }
  ],
- "modified": "2024-10-10 12:54:26.209170",
+ "modified": "2026-08-03 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Location",

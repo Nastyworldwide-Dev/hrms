@@ -3,6 +3,8 @@
 
 frappe.ui.form.on("Shift Location", {
 	refresh: async (frm) => {
+		hrms.set_timezone_options(frm, "timezone");
+
 		const allow_geolocation_tracking = await frappe.db.get_single_value(
 			"HR Settings",
 			"allow_geolocation_tracking",

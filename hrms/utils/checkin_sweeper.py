@@ -11,11 +11,17 @@ from __future__ import annotations
 import logging
 
 import frappe
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, get_datetime, now_datetime
+
+from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
 
 STALE_HOURS = 36
+# Widest possible gap between the system clock and any attendance timezone
+# (UTC-12..UTC+14). The SQL prefilter is loosened by this so no genuinely
+# stale row is missed; the exact per-employee cutoff is applied in Python.
+MAX_TZ_SPREAD_HOURS = 26
 HR_MANAGER_ROLE = "HR Manager"
 
 
@@ -32,14 +38,17 @@ def sweep_stale_ins() -> int:
 	Notifies every active HR Manager with a single in-app alert per run
 	if any rows were tagged.
 	"""
-	cutoff = add_to_date(now_datetime(), hours=-STALE_HOURS)
-	logger.info("[scheduler] sweep_stale_ins cutoff=%s", cutoff)
+	# Prefilter widely on the system clock (oldest first, so real candidates
+	# are never crowded out by the wider window), then apply each employee's
+	# own cutoff below — stored times are their local wall clock.
+	prefilter_cutoff = add_to_date(now_datetime(), hours=-(STALE_HOURS - MAX_TZ_SPREAD_HOURS))
+	logger.info("[scheduler] sweep_stale_ins prefilter_cutoff=%s", prefilter_cutoff)
 
 	candidates = frappe.get_all(
 		"Employee Checkin",
 		filters=[
 			["log_type", "=", "IN"],
-			["time", "<=", cutoff],
+			["time", "<=", prefilter_cutoff],
 			["is_abandoned", "!=", 1],
 		],
 		fields=["name", "employee", "time"],
@@ -50,6 +59,9 @@ def sweep_stale_ins() -> int:
 
 	tagged = 0
 	for row in candidates:
+		cutoff = add_to_date(employee_now(row["employee"]), hours=-STALE_HOURS)
+		if get_datetime(row["time"]) > cutoff:
+			continue
 		if _has_matching_close(row):
 			continue
 		frappe.db.set_value("Employee Checkin", row["name"], "is_abandoned", 1)

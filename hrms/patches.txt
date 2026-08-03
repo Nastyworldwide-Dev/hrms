@@ -47,3 +47,4 @@ hrms.patches.v15_91_1.seed_last_sync_for_auto_update_shifts
 hrms.patches.v15_92_0.add_leave_type_do_not_prorate_field
 hrms.patches.v15_97_0.add_employee_years_of_service_field
 hrms.patches.v15_99_0.staff_perm_lockdown
+hrms.patches.v15_100_0.set_attendance_timezones

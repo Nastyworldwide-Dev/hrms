@@ -15,6 +15,8 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from hrms.utils.timezone import employee_now
+
 logger = logging.getLogger(__name__)
 
 HR_MANAGER_ROLE = "HR Manager"
@@ -130,6 +132,8 @@ def _decide(request: str, decision: str, approver_remarks: str) -> dict:
 	doc = frappe.get_doc("Remote Checkin Request", request)
 	doc.status = decision
 	doc.approver_remarks = approver_remarks or ""
+	# Audit stamp — when the approval happened on this system, not attendance
+	# wall clock. Stays on the system clock (see hrms/utils/timezone.py).
 	doc.approved_at = now_datetime()
 	doc.flags.ignore_permissions = True
 	doc.save()
@@ -198,6 +202,11 @@ def punch(
 	read-only, so this endpoint is the only staff write path. The stored time
 	is ALWAYS the server clock — any client-supplied `time` is ignored, which
 	kills typed-in/backdated punches at the source.
+
+	The stamp is the server clock *in the employee's attendance timezone*, not
+	the site's: shift windows, OT and attendance are all local wall clock, so
+	on a site whose System Settings timezone differs from where staff work
+	(Dubai vs Malaysia) now_datetime() would file every punch hours off.
 	"""
 	logger.info("[remote_checkin] punch %s %s by %s", employee, log_type, frappe.session.user)
 	employee_user = frappe.db.get_value("Employee", employee, "user_id")
@@ -212,7 +221,7 @@ def punch(
 		{
 			"employee": employee,
 			"log_type": log_type,
-			"time": now_datetime(),
+			"time": employee_now(employee),
 			"latitude": latitude,
 			"longitude": longitude,
 		}
@@ -258,7 +267,7 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	(skipping geofence validation) and a Pending Remote Checkin Request
 	with is_late_checkout=1 (via the after_insert hook).
 	"""
-	from frappe.utils import get_datetime, now_datetime
+	from frappe.utils import get_datetime
 
 	if not in_checkin or not checkout_datetime or not (reason or "").strip():
 		frappe.throw(_("Check-in reference, checkout time, and reason are required."))
@@ -287,7 +296,9 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	if out_dt <= in_dt:
 		frappe.throw(_("Check-out time must be after the check-in time ({0}).").format(in_doc.time))
 
-	if out_dt > now_datetime():
+	# Compare against the employee's own wall clock: the submitted time comes
+	# from their device, and stored check-in times are in that same basis.
+	if out_dt > employee_now(in_doc.employee):
 		frappe.throw(_("Check-out time cannot be in the future."))
 
 	later_out = frappe.db.exists(

@@ -179,6 +179,19 @@ $.extend(hrms, {
 		});
 	},
 
+	// Populate an attendance-timezone picker. Mirrors how Frappe fills
+	// System Settings' own time_zone Select, but through an HR-readable
+	// endpoint (frappe's loader is System Manager-only).
+	set_timezone_options: async (frm, fieldname) => {
+		if (!hrms._timezones) {
+			const { message } = await frappe.call({
+				method: "hrms.api.system_settings.get_timezones",
+			});
+			hrms._timezones = message || [];
+		}
+		frm.set_df_property(fieldname, "options", [""].concat(hrms._timezones));
+	},
+
 	fetch_geolocation: async (frm) => {
 		if (!navigator.geolocation) {
 			frappe.msgprint({

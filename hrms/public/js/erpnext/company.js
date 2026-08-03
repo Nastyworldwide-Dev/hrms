@@ -3,6 +3,8 @@
 
 frappe.ui.form.on("Company", {
 	refresh: function (frm) {
+		hrms.set_timezone_options(frm, "hr_attendance_timezone");
+
 		frm.set_query("default_expense_claim_payable_account", function () {
 			return {
 				filters: {

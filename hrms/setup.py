@@ -120,6 +120,15 @@ def get_custom_fields():
 				"options": "Account",
 				"insert_after": "column_break_10",
 			},
+			{
+				"fieldname": "hr_attendance_timezone",
+				"fieldtype": "Select",
+				"label": _("Attendance Timezone"),
+				"description": _(
+					"Wall clock this company's attendance is measured in. A Shift Location's own timezone overrides this."
+				),
+				"insert_after": "default_payroll_payable_account",
+			},
 		],
 		"Department": [
 			{
