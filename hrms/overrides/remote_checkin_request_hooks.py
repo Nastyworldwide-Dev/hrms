@@ -8,6 +8,8 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from hrms.utils.email_flush import flush_email_queue_after_commit
+
 logger = logging.getLogger(__name__)
 
 HR_MANAGER_ROLE = "HR Manager"
@@ -250,6 +252,7 @@ def _send_email(user: str, subject: str, body: str, request) -> None:
 			reference_name=request.name,
 			now=False,
 		)
+		flush_email_queue_after_commit()
 	except Exception as exc:
 		logger.warning("[remote_checkin_request] email send failed user=%s: %s", user, exc)
 

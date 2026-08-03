@@ -6,6 +6,7 @@ import frappe
 from frappe.model.document import Document
 
 import hrms
+from hrms.utils.email_flush import flush_email_queue_after_commit
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,9 @@ class PWANotification(Document):
 
 	def after_insert(self):
 		self.send_push_notification()
+		# emails queued in the same transaction (approver/status notifications)
+		# must land as fast as the push does, not on the next scheduler tick
+		flush_email_queue_after_commit()
 
 	def send_push_notification(self):
 		try:

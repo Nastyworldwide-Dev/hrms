@@ -730,6 +730,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					subject=args.subject,
 					message=args.message,
 				)
+				from hrms.utils.email_flush import flush_email_queue_after_commit
+
+				flush_email_queue_after_commit()
 				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:
 				pass
