@@ -216,11 +216,34 @@ class TestGetLeaveTypes(FrappeTestCase):
 		# simulate role drift: the employee's user keeps no roles at all
 		user = frappe.db.get_value("Employee", employee, "user_id")
 		user_doc = frappe.get_doc("User", user)
+		original_roles = [r.role for r in user_doc.roles]
 		user_doc.roles = []
 		user_doc.save()
+		self.addCleanup(self._restore_roles, user, original_roles)
 
 		frappe.set_user(user)
 		leave_types = get_leave_types(employee, str(today))
 
 		self.assertIn(leave_type, leave_types)
 		self.assertIn(lwp_type, leave_types)
+
+	def test_other_employees_leave_details_stay_guarded(self):
+		from hrms.hr.doctype.leave_application.leave_application import get_leave_details
+
+		today = getdate()
+		year_start = today.replace(month=1, day=1)
+		employee = make_band_employee("dropdown_staff@example.com", GRADE_D, add_months(year_start, -24))
+		other = make_band_employee("dropdown_other@example.com", GRADE_D, add_months(year_start, -24))
+
+		frappe.set_user(frappe.db.get_value("Employee", employee, "user_id"))
+		with self.assertRaises(frappe.PermissionError):
+			get_leave_details(other, today)
+
+	@staticmethod
+	def _restore_roles(user, roles):
+		frappe.set_user("Administrator")
+		user_doc = frappe.get_doc("User", user)
+		user_doc.roles = []
+		for role in roles:
+			user_doc.append("roles", {"role": role})
+		user_doc.save()

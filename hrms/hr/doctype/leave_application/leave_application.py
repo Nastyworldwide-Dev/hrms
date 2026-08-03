@@ -37,6 +37,7 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
+from hrms.utils.email_flush import flush_email_queue_after_commit
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -730,8 +731,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					subject=args.subject,
 					message=args.message,
 				)
-				from hrms.utils.email_flush import flush_email_queue_after_commit
-
 				flush_email_queue_after_commit()
 				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:
@@ -939,8 +938,27 @@ def get_number_of_leave_days(
 	return number_of_days
 
 
+def _ensure_leave_details_permitted(employee: str) -> None:
+	"""get_leave_details is whitelisted with an arbitrary employee id — without
+	a guard any logged-in user can pull any employee's allocation map. Allow
+	the employee's own user, real Employee read permission (HR, managers), and
+	the employee's resolved leave approver (Desk leave form dashboard)."""
+	user = frappe.session.user
+	if user == "Administrator":
+		return
+	if frappe.db.get_value("Employee", employee, "user_id") == user:
+		return
+	if frappe.has_permission("Employee", doc=employee):
+		return
+	if user == get_leave_approver(employee):
+		return
+	frappe.logger("hrms").warning("[leave] %s denied leave details for employee %s", user, employee)
+	frappe.throw(_("Not permitted to view leave details for this employee."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def get_leave_details(employee, date, for_salary_slip=False):
+	_ensure_leave_details_permitted(employee)
 	allocation_records = get_leave_allocation_records(employee, date)
 	leave_allocation = {}
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2

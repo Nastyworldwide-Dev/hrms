@@ -15,21 +15,32 @@ def flush_email_queue_after_commit() -> None:
 
 	frappe.sendmail parks mail in the Email Queue until the scheduler's periodic
 	flush (up to a few minutes on the tick). PWA/realtime notifications fire
-	instantly, so the paired email should leave the server instantly too. The
-	flush runs in a short-queue worker — never inline in the web request — and
-	is deduplicated so bursts of notifications schedule a single flush.
+	instantly, so the paired email should leave the server instantly too.
 
-	Never raises: if scheduling fails the email still goes out on the next
-	scheduler flush, so the notification flow must not break.
+	The enqueue itself is deferred to commit time (frappe.db.after_commit) so
+	the job-id dedup check runs when jobs actually exist — enqueue(...,
+	enqueue_after_commit=True) checks dedup at call time, which lets multiple
+	calls in one transaction schedule duplicate flushes.
+
+	Never raises, at scheduling time or at commit time: if the flush can't be
+	scheduled the email still goes out on the next scheduler tick, and a redis
+	hiccup must not surface as an error after the SQL commit succeeded.
 	"""
+	try:
+		frappe.db.after_commit.add(_enqueue_flush)
+	except Exception:
+		logger.warning("[email_flush] could not register after-commit flush", exc_info=True)
+
+
+def _enqueue_flush() -> None:
+	"""Runs inside frappe.db.after_commit — must swallow every failure."""
 	try:
 		frappe.enqueue(
 			"frappe.email.queue.flush",
 			queue="short",
 			job_id=FLUSH_JOB_ID,
 			deduplicate=True,
-			enqueue_after_commit=True,
 		)
-		logger.info("[email_flush] scheduled instant Email Queue flush after commit")
+		logger.info("[email_flush] scheduled instant Email Queue flush")
 	except Exception:
 		logger.warning("[email_flush] could not schedule instant flush", exc_info=True)
