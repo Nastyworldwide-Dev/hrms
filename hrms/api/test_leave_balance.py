@@ -247,3 +247,24 @@ class TestGetLeaveTypes(FrappeTestCase):
 		for role in roles:
 			user_doc.append("roles", {"role": role})
 		user_doc.save()
+
+	def test_balance_map_resolves_for_role_less_own_employee(self):
+		# staff whose role set lost Employee read must still see their own
+		# cards — the guard's own-employee check runs before has_permission
+		today = getdate()
+		year_start = today.replace(month=1, day=1)
+		leave_type = make_plain_leave_type("_Test Dropdown Leave")
+		employee = make_band_employee("dropdown_staff@example.com", GRADE_D, add_months(year_start, -24))
+		make_allocation(employee, leave_type, year_start, get_year_ending(year_start), 10)
+
+		user = frappe.db.get_value("Employee", employee, "user_id")
+		user_doc = frappe.get_doc("User", user)
+		original_roles = [r.role for r in user_doc.roles]
+		user_doc.roles = []
+		user_doc.save()
+		self.addCleanup(self._restore_roles, user, original_roles)
+
+		frappe.set_user(user)
+		balance_map = get_leave_balance_map(employee)
+
+		self.assertIn(leave_type, balance_map)

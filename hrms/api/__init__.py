@@ -130,7 +130,11 @@ def are_push_notifications_enabled() -> bool:
 # Attendance
 def _ensure_own_employee_or_permitted(employee: str) -> None:
 	"""Staff lockdown: staff may only query their own employee; HR and users
-	with real read permission on the Employee doc (approvers etc.) pass."""
+	with real read permission on the Employee doc (approvers etc.) pass.
+	Unknown ids are rejected explicitly — has_permission short-circuits for
+	Administrator before resolving the doc, so it can't be relied on for 404s."""
+	if not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
 	employee_user = frappe.db.get_value("Employee", employee, "user_id")
 	if employee_user == frappe.session.user:
 		return
@@ -427,8 +431,10 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 	from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
 
 	# also guards the policy/entitlement reads below, which bypass row-level
-	# permissions (frappe.get_all), and rejects unknown employee ids cleanly
-	frappe.has_permission("Employee", "read", doc=employee, throw=True)
+	# permissions (frappe.get_all), and rejects unknown employee ids cleanly.
+	# Own-employee check first: staff whose role set lost Employee read must
+	# still see their own balance cards (same pattern as every other endpoint).
+	_ensure_own_employee_or_permitted(employee)
 
 	date = getdate()
 	leave_map = {}

@@ -19,7 +19,7 @@
 		<!-- Leave Balance stat cells -->
 		<div
 			class="grid grid-cols-3 border-t-2 border-divider"
-			v-if="leaveBalance.data"
+			v-if="hasBalances"
 		>
 			<div
 				v-for="(allocation, leave_type, index) in leaveBalance.data"
@@ -71,7 +71,13 @@
 <script setup>
 import { leaveBalance } from "@/data/leaves"
 import { formatLeaveDays } from "@/utils/formatters"
-import { inject } from "vue"
+import { computed, inject } from "vue"
 
 const __ = inject("$translate")
+
+// an empty map {} is truthy — without this check the section renders as a
+// bare rule instead of the "no leaves allocated" empty state
+const hasBalances = computed(
+	() => leaveBalance.data && Object.keys(leaveBalance.data).length > 0
+)
 </script>
