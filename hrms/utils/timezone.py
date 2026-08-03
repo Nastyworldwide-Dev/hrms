@@ -58,6 +58,26 @@ def _active_shift_location(employee: str) -> str | None:
 	return rows[0]["shift_location"] if rows else None
 
 
+def _optional_timezone_field(doctype: str, name: str, fieldname: str) -> str | None:
+	"""Read a timezone config field, tolerating a schema that doesn't have it.
+
+	Both fields arrive with a migration, and a failed or half-finished migrate
+	leaves this code running against a schema without them (nasty-sg-dev hit
+	exactly that when the lockdown patch aborted first). Punching in must never
+	fail because an optional config column is missing — fall back to the
+	system timezone, which is the pre-existing behaviour.
+	"""
+	try:
+		return frappe.db.get_value(doctype, name, fieldname)
+	except Exception:
+		logger.warning(
+			"[timezone] %s.%s unavailable — has the attendance-timezone patch run?",
+			doctype,
+			fieldname,
+		)
+		return None
+
+
 def get_attendance_timezone(employee: str | None, shift_location: str | None = None) -> str:
 	"""Timezone whose wall clock this employee's attendance is measured in.
 
@@ -77,12 +97,12 @@ def get_attendance_timezone(employee: str | None, shift_location: str | None = N
 	tz = None
 	location = shift_location or (_active_shift_location(employee) if employee else None)
 	if location:
-		tz = frappe.db.get_value("Shift Location", location, "timezone")
+		tz = _optional_timezone_field("Shift Location", location, "timezone")
 
 	if not tz and employee:
 		company = frappe.db.get_value("Employee", employee, "company")
 		if company:
-			tz = frappe.db.get_value("Company", company, "hr_attendance_timezone")
+			tz = _optional_timezone_field("Company", company, "hr_attendance_timezone")
 
 	if not tz:
 		tz = get_system_timezone()

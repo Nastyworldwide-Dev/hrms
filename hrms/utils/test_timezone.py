@@ -107,6 +107,41 @@ class TestAttendanceTimezone(unittest.TestCase):
 			self.assertEqual(self._run(db, None), DUBAI)
 
 
+class TestUnmigratedSchema(unittest.TestCase):
+	"""A failed or pending migrate leaves new code running against an old
+	schema. Attendance must degrade to the system timezone, never 500 —
+	nasty-sg-dev hit exactly this when the lockdown patch aborted before
+	set_attendance_timezones could create Company.hr_attendance_timezone.
+	"""
+
+	def _run_with_missing_column(self, missing_doctype):
+		class _Exploding(_FakeDB):
+			def get_value(self, doctype, filters, fieldname, **kwargs):
+				if doctype == missing_doctype:
+					raise Exception("Unknown column 'hr_attendance_timezone' in 'SELECT'")
+				return super().get_value(doctype, filters, fieldname, **kwargs)
+
+		db = _Exploding(
+			shift_locations={"Damansara": KL},
+			employees={"HR-EMP-001": "Nasty Worldwide Sdn Bhd"},
+			companies={"Nasty Worldwide Sdn Bhd": KL},
+		)
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", db.get_all),
+			patch("hrms.utils.timezone.nowdate", return_value="2026-08-03"),
+			patch.object(frappe, "local", type("L", (), {})()),
+			patch("hrms.utils.timezone.get_system_timezone", return_value=DUBAI),
+		):
+			return get_attendance_timezone("HR-EMP-001")
+
+	def test_missing_company_column_falls_back_instead_of_raising(self):
+		self.assertEqual(self._run_with_missing_column("Company"), DUBAI)
+
+	def test_missing_shift_location_column_falls_back_to_company(self):
+		self.assertEqual(self._run_with_missing_column("Shift Location"), KL)
+
+
 class TestEmployeeNow(unittest.TestCase):
 	def test_returns_naive_wall_clock_of_the_attendance_timezone(self):
 		"""Naive on purpose — stored check-in times are naive wall clock, so

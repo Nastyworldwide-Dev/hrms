@@ -131,6 +131,26 @@ def drop_rows():
 			logger.info("[staff_lockdown] dropped %s/%s L0 row", doctype, role)
 
 
+def _has_level_zero(doctype: str, role: str) -> bool:
+	"""Frappe refuses a permlevel-1 row for a role with no permlevel-0 row
+	("Permission at level 0 must be set before higher levels are set"), and the
+	grant would be meaningless anyway — restricted fields can't be read on a
+	document the role cannot read at all.
+
+	Roles missing at level 0 are left alone rather than granted new level-0
+	access: this patch's job is to preserve access for roles that already have
+	it, not to widen anyone's reach.
+	"""
+	if frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}):
+		return True
+	logger.warning(
+		"[staff_lockdown] %s has no level-0 row on %s — skipping its level-1 grant",
+		role,
+		doctype,
+	)
+	return False
+
+
 def ensure_hr_permlevel_rows():
 	"""Custom rows override the JSON's permlevel-1 rows, so recreate them as
 	custom rows wherever a doctype runs on custom perms."""
@@ -139,12 +159,18 @@ def ensure_hr_permlevel_rows():
 		if not frappe.db.exists("Custom DocPerm", {"parent": doctype}):
 			continue  # no custom perms — hardened JSON governs
 		for role in sorted(HR_ROLES):
+			if not _has_level_zero(doctype, role):
+				continue
 			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 1}):
 				add_permission(doctype, role, permlevel=1)
 			update_permission_property(doctype, role, 1, "write", 1, validate=False)
 		# staff keep read on their own permlevel-1 checkin fields (selfie etc.)
-		if doctype == "Employee Checkin" and not frappe.db.exists(
-			"Custom DocPerm", {"parent": doctype, "role": "Employee", "permlevel": 1}
+		if (
+			doctype == "Employee Checkin"
+			and _has_level_zero(doctype, "Employee")
+			and not frappe.db.exists(
+				"Custom DocPerm", {"parent": doctype, "role": "Employee", "permlevel": 1}
+			)
 		):
 			add_permission(doctype, "Employee", permlevel=1)
 
