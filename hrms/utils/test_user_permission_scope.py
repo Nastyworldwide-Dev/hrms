@@ -7,6 +7,7 @@ from hrms.utils.user_permission_scope import (
 	ACTION_REVERT,
 	ACTION_SCOPED,
 	ANCHOR_DOCTYPE,
+	APPROVER_ROUTED_DOCTYPES,
 	DEFAULT_HRMS_DOCTYPES,
 	merge_doctype_list,
 	plan_user_permission_sync_action,
@@ -35,10 +36,10 @@ class TestShouldScopeToHrms(unittest.TestCase):
 class TestMergeDoctypeList(unittest.TestCase):
 	def test_custom_rows_take_precedence(self):
 		result = merge_doctype_list(
-			["Leave Application", "Attendance"],
+			["Compensatory Leave Request", "Attendance"],
 			["Salary Slip", "Goal"],
 		)
-		self.assertEqual(result, ["Attendance", ANCHOR_DOCTYPE, "Leave Application"])
+		self.assertEqual(result, ["Attendance", "Compensatory Leave Request", ANCHOR_DOCTYPE])
 
 	def test_falls_back_when_custom_empty(self):
 		result = merge_doctype_list([], ["Salary Slip", "Goal"])
@@ -52,11 +53,11 @@ class TestMergeDoctypeList(unittest.TestCase):
 
 	def test_anchor_always_included(self):
 		# Custom rows don't mention Employee — it should still be added.
-		result = merge_doctype_list(["Leave Application"], ["irrelevant"])
+		result = merge_doctype_list(["Attendance Request"], ["irrelevant"])
 		self.assertIn(ANCHOR_DOCTYPE, result)
 
 	def test_anchor_not_duplicated_when_already_present(self):
-		result = merge_doctype_list(["Employee", "Leave Application"], [])
+		result = merge_doctype_list(["Employee", "Attendance Request"], [])
 		self.assertEqual(result.count(ANCHOR_DOCTYPE), 1)
 
 	def test_result_is_sorted(self):
@@ -64,18 +65,27 @@ class TestMergeDoctypeList(unittest.TestCase):
 		self.assertEqual(result, sorted(result))
 
 	def test_result_is_deduplicated(self):
-		result = merge_doctype_list(["Attendance", "Attendance", "Leave Application"], [])
+		result = merge_doctype_list(["Attendance", "Attendance", "Attendance Request"], [])
 		self.assertEqual(result.count("Attendance"), 1)
 
 	def test_drops_empty_strings(self):
-		result = merge_doctype_list(["Attendance", "", None, "Leave Application"], [])
-		self.assertEqual(result, ["Attendance", "Employee", "Leave Application"])
+		result = merge_doctype_list(["Attendance", "", None, "Attendance Request"], [])
+		self.assertEqual(result, ["Attendance", "Attendance Request", "Employee"])
 
 	def test_default_list_is_safe(self):
-		# Sanity: the static fallback constant survives the merge.
+		# Sanity: the static fallback survives the merge, minus the
+		# approver-routed doctypes whose row scope lives in hooks.
 		result = merge_doctype_list(None, DEFAULT_HRMS_DOCTYPES)
-		self.assertEqual(len(result), len(set(DEFAULT_HRMS_DOCTYPES)))
+		expected = {d for d in DEFAULT_HRMS_DOCTYPES if d not in APPROVER_ROUTED_DOCTYPES}
+		self.assertEqual(set(result), expected)
 		self.assertIn(ANCHOR_DOCTYPE, result)
+
+	def test_approver_routed_doctypes_always_excluded(self):
+		# a UP on these doctypes would row-scope the APPROVER too — excluded
+		# no matter which source supplied them (HR Settings rows included)
+		result = merge_doctype_list(list(APPROVER_ROUTED_DOCTYPES), ["Salary Slip"])
+		for doctype in APPROVER_ROUTED_DOCTYPES:
+			self.assertNotIn(doctype, result)
 
 
 class TestPlanUserPermissionSyncAction(unittest.TestCase):

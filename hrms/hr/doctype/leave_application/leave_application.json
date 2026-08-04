@@ -57,7 +57,8 @@
    "label": "Employee",
    "options": "Employee",
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "ignore_user_permissions": 1
   },
   {
    "fetch_from": "employee.employee_name",
