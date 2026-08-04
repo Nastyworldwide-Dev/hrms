@@ -227,6 +227,8 @@ class TestAttendanceRequest(FrappeTestCase):
 			employee.user_id = "test_employee@example.com"
 			employee.save()
 		add_role(employee.user_id, "System Manager")
+		# don't strand System Manager on the shared test user if the run commits
+		self.addCleanup(lambda: frappe.get_doc("User", employee.user_id).remove_roles("System Manager"))
 
 		today = getdate()
 		attendance_request = frappe.get_doc(
