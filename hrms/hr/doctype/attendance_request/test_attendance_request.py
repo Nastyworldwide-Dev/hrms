@@ -216,6 +216,41 @@ class TestAttendanceRequest(FrappeTestCase):
 		)
 		self.assertEqual(half_day_status, "Absent")
 
+	def test_self_submission_blocked(self):
+		"""Submission is the approval act for this doctype — the employee on the
+		request must never submit it themselves, whatever roles (System Manager
+		included) they hold."""
+		from frappe.utils.user import add_role
+
+		employee = self.employee
+		if not employee.user_id:
+			employee.user_id = "test_employee@example.com"
+			employee.save()
+		add_role(employee.user_id, "System Manager")
+
+		today = getdate()
+		attendance_request = frappe.get_doc(
+			{
+				"doctype": "Attendance Request",
+				"employee": employee.name,
+				"from_date": add_days(today, -1),
+				"to_date": today,
+				"reason": "On Duty",
+				"company": "_Test Company",
+			}
+		).insert()
+
+		frappe.set_user(employee.user_id)
+		try:
+			self.assertRaises(frappe.ValidationError, attendance_request.submit)
+		finally:
+			frappe.set_user("Administrator")
+
+		# a different user submitting the same request remains the approval act
+		attendance_request.reload()
+		attendance_request.submit()
+		self.assertEqual(attendance_request.docstatus, 1)
+
 	def test_half_day_status_change_when_existing_attendance_is_updated(self):
 		# when existing attendance is updated via attendance request
 		frappe.get_doc(

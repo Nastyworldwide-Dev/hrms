@@ -405,6 +405,7 @@ const router = useRouter()
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
+const employee = inject("$employee")
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
 const dateKicker = computed(() =>
@@ -641,7 +642,11 @@ const formButton = computed(() => {
 	if (props.id && props.isSubmittable && !isFormDirty.value) {
 		const requiredStatuses = SUBMIT_REQUIRES_STATUS[props.doctype]
 		const submitBlocked =
-			requiredStatuses && !requiredStatuses.includes(formModel.value.status)
+			(requiredStatuses && !requiredStatuses.includes(formModel.value.status)) ||
+			// Attendance Request: submitting IS the approval — the server rejects
+			// self-submission, so never offer Submit on your own request
+			(props.doctype === "Attendance Request" &&
+				formModel.value.employee === employee.data?.name)
 
 		if (formModel.value.docstatus === 0 && hasPermission("submit") && !submitBlocked) {
 			return "Submit"

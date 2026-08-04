@@ -2,15 +2,20 @@
 # For license information, please see license.txt
 
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.workflow import get_workflow_name
 from frappe.utils import add_days, date_diff, format_date, get_link_to_form, getdate
 
 from erpnext.setup.doctype.employee.employee import is_holiday
 
 import hrms
 from hrms.hr.utils import validate_active_employee, validate_dates
+
+logger = logging.getLogger(__name__)
 
 
 class OverlappingAttendanceRequestError(frappe.ValidationError):
@@ -72,7 +77,20 @@ class AttendanceRequest(Document):
 		frappe.throw(msg, title=_("Overlapping Attendance Request"), exc=OverlappingAttendanceRequestError)
 
 	def on_submit(self):
+		self.validate_for_self_approval()
 		self.create_attendance_records()
+
+	def validate_for_self_approval(self):
+		# This doctype has no approver/status flow — submitting the draft IS the
+		# approval, so the employee on the request must never be the submitter,
+		# regardless of role (System Manager / HR roles hold submit permission).
+		# Mirrors LeaveApplication.validate_for_self_approval.
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		if employee_user == frappe.session.user and not get_workflow_name("Attendance Request"):
+			logger.warning(
+				"[attendance_request] self-submission blocked: %s by %s", self.name, frappe.session.user
+			)
+			frappe.throw(_("Self-approval for Attendance Requests is not allowed"))
 
 	def on_cancel(self):
 		attendance_list = frappe.get_all(
