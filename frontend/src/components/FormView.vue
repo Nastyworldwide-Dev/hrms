@@ -628,11 +628,22 @@ const permittedWriteFields = createResource({
 	params: { doctype: props.doctype },
 })
 
+// doctypes whose server controller rejects submit until the approver has
+// set one of these statuses — offering Submit earlier can only ever error
+const SUBMIT_REQUIRES_STATUS = {
+	"Leave Application": ["Approved", "Rejected"],
+	"Shift Request": ["Approved", "Rejected"],
+}
+
 const formButton = computed(() => {
 	if (!props.showFormButton) return
 
 	if (props.id && props.isSubmittable && !isFormDirty.value) {
-		if (formModel.value.docstatus === 0 && hasPermission("submit")) {
+		const requiredStatuses = SUBMIT_REQUIRES_STATUS[props.doctype]
+		const submitBlocked =
+			requiredStatuses && !requiredStatuses.includes(formModel.value.status)
+
+		if (formModel.value.docstatus === 0 && hasPermission("submit") && !submitBlocked) {
 			return "Submit"
 		} else if (formModel.value.docstatus === 1 && hasPermission("cancel")) {
 			return "Cancel"

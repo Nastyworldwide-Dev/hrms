@@ -62,6 +62,17 @@ def should_scope_to_hrms(restrict_user_permission_to_hrms) -> bool:
 	return bool(restrict_user_permission_to_hrms)
 
 
+# Approver-routed request doctypes take their row scope from
+# hrms.overrides.approval_row_scope hooks, never from per-employee User
+# Permissions: a UP (allow=Employee, for_value=<own employee>) scopes the
+# APPROVER to their own records too, which 403s every approval for their
+# team. Maps doctype -> approver field.
+APPROVER_ROUTED_DOCTYPES: dict[str, str] = {
+	"Leave Application": "leave_approver",
+	"Expense Claim": "expense_approver",
+	"Shift Request": "approver",
+}
+
 ACTION_SCOPED = "scoped"
 ACTION_REVERT = "revert"
 ACTION_NOOP = "noop"
@@ -113,7 +124,9 @@ def merge_doctype_list(custom_rows, fallback) -> list[str]:
 	base = list(custom_rows) if custom_rows else list(fallback or [])
 	if ANCHOR_DOCTYPE not in base:
 		base.append(ANCHOR_DOCTYPE)
-	return sorted({d for d in base if d})
+	# approver-routed doctypes are excluded regardless of source (HR Settings
+	# rows included) — their row scope lives in approval_row_scope hooks
+	return sorted({d for d in base if d and d not in APPROVER_ROUTED_DOCTYPES})
 
 
 def _live_hrms_employee_self_service_doctypes() -> list[str]:

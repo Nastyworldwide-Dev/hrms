@@ -316,10 +316,13 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 					iconClasses: "text-green-500",
 				})
 			},
-			onError() {
+			onError(error) {
+				// the server's message says WHY (permissions, validation) —
+				// a bare "Approval failed!" is undebuggable from the field
+				console.warn("[RequestActionSheet] action failed:", error)
 				toast({
 					title: __("Error"),
-					text: getFailureMessage({ status, docstatus }),
+					text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

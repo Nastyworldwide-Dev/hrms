@@ -153,6 +153,12 @@ permission_query_conditions = {
 	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.get_permission_query_conditions",
 	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.get_permission_query_conditions",
 	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.get_permission_query_conditions",
+	# Approver-routed requests: own + named approver + shared + HR. Row scope
+	# lives here, NOT in per-employee User Permissions (which would 403 the
+	# approver) — see hrms/overrides/approval_row_scope.py.
+	"Leave Application": "hrms.overrides.approval_row_scope.leave_application_query_conditions",
+	"Expense Claim": "hrms.overrides.approval_row_scope.expense_claim_query_conditions",
+	"Shift Request": "hrms.overrides.approval_row_scope.shift_request_query_conditions",
 }
 
 has_permission = {
@@ -161,6 +167,9 @@ has_permission = {
 	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.has_permission",
 	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.has_permission",
 	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.has_permission",
+	"Leave Application": "hrms.overrides.approval_row_scope.has_permission",
+	"Expense Claim": "hrms.overrides.approval_row_scope.has_permission",
+	"Shift Request": "hrms.overrides.approval_row_scope.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
