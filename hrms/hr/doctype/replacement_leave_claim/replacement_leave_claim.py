@@ -13,6 +13,7 @@ from hrms.hr.doctype.ot_request.ot_request import HOURS_PER_HALF_DAY, get_replac
 from hrms.hr.utils import (
 	get_leave_period,
 	validate_active_employee,
+	validate_filing_for_self,
 	validate_mandatory_attachment,
 	validate_self_submission,
 )
@@ -25,15 +26,18 @@ REPLACEMENT_LEAVE_TYPE = "Replacement Leave"
 class ReplacementLeaveClaim(Document):
 	def validate(self):
 		validate_active_employee(self.employee)
+		validate_filing_for_self(self)
 		self.set_claim_basis()
 		self.validate_claimed_days()
 
 	def set_claim_basis(self):
-		# claims always convert the CURRENT month's bank — the month is pinned
-		# at first save so approval landing next month still converts the
-		# right bank
-		if self.is_new() or not self.bank_month:
-			self.bank_month = get_first_day(getdate())
+		logger.info("[rl_claim] claim basis for %s (%s)", self.name, self.employee)
+		# claims convert the bank of the month they were FILED in — derived
+		# from the server-controlled creation timestamp on every validate, so
+		# a tampered draft can't point at another month's bank, while approval
+		# landing next month still converts the right one
+		filed_on = getdate(self.creation) if not self.is_new() else getdate()
+		self.bank_month = get_first_day(filed_on)
 		self.leave_type = REPLACEMENT_LEAVE_TYPE
 		bank = get_replacement_leave_bank(self.employee, self.bank_month)
 		# exclude this claim's own draft cost when revalidating an existing row
@@ -93,6 +97,10 @@ class ReplacementLeaveClaim(Document):
 
 		allocation = self.get_existing_allocation(valid_from)
 		if allocation:
+			# NOTE: persisting total_leaves_allocated into new_leaves_allocated
+			# mirrors CompensatoryLeaveRequest.on_submit exactly and is only
+			# drift-free while the leave type keeps is_carry_forward=0 (as the
+			# ensure patch creates it and nasty-live configures it)
 			allocation.new_leaves_allocated += days
 			allocation.validate()
 			allocation.db_set("new_leaves_allocated", allocation.total_leaves_allocated)

@@ -225,6 +225,7 @@ def get_custom_fields():
 			{
 				"fieldname": "eligible_for_overtime_pay",
 				"fieldtype": "Check",
+				"permlevel": 1,
 				"label": _("Eligible for Overtime Pay"),
 				"insert_after": "years_of_service",
 				"no_copy": 1,

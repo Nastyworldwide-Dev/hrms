@@ -738,6 +738,23 @@ def validate_self_submission(doc):
 		frappe.throw(_("Self-approval for {0} is not allowed").format(_(doc.doctype)))
 
 
+def validate_filing_for_self(doc):
+	"""Doctypes without an approver field carry no routing to catch a request
+	forged in a colleague's name — so non-HR users may only file for their own
+	Employee record. HR roles and users with real Employee write access are
+	exempt (they file on staff's behalf legitimately)."""
+	logger.info("[self_submission] filing fence: %s %s", doc.doctype, doc.name)
+	user = frappe.session.user
+	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
+		return
+	if frappe.db.get_value("Employee", doc.employee, "user_id") == user:
+		return
+	if frappe.has_permission("Employee", ptype="write", doc=doc.employee):
+		return
+	logger.warning("[self_submission] %s tried to file %s for employee %s", user, doc.doctype, doc.employee)
+	frappe.throw(_("You can only file requests for yourself."), frappe.PermissionError)
+
+
 def validate_mandatory_attachment(doc):
 	"""Requests must carry supporting evidence (a stored file, not just a File
 	row) before an approver can submit them."""

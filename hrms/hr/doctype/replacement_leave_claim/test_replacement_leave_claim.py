@@ -105,6 +105,16 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 		make_claim(self.employee, 1.0, submit=False)  # draft reserves 8h
 		self.assertRaises(frappe.ValidationError, make_claim, self.employee, 1.0, False)
 
+	def test_ot_cancel_allowed_when_nothing_claimed(self):
+		# regression: the cancel guard must not double-count the row being
+		# cancelled (docstatus=2 is already persisted when on_cancel runs)
+		self.bank_hours()
+		ot_request = frappe.get_doc(
+			"OT Request", {"employee": self.employee, "claimed_hours": 8, "docstatus": 1}
+		)
+		ot_request.cancel()
+		self.assertEqual(ot_request.docstatus, 2)
+
 	def test_ot_cancel_blocked_when_hours_claimed(self):
 		self.bank_hours()
 		make_claim(self.employee, 1.0)

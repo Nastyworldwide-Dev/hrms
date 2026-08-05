@@ -22,6 +22,7 @@ def execute():
 				{
 					"fieldname": "eligible_for_overtime_pay",
 					"fieldtype": "Check",
+					"permlevel": 1,
 					"label": "Eligible for Overtime Pay",
 					"insert_after": "years_of_service",
 					"no_copy": 1,

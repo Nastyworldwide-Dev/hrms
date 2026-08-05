@@ -8,7 +8,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_first_day, get_last_day, getdate
 
-from hrms.hr.utils import validate_active_employee, validate_mandatory_attachment, validate_self_submission
+from hrms.hr.utils import (
+	validate_active_employee,
+	validate_filing_for_self,
+	validate_mandatory_attachment,
+	validate_self_submission,
+)
 from hrms.utils.ot_calculation import get_day_ot_breakdown
 
 logger = logging.getLogger(__name__)
@@ -23,6 +28,7 @@ HOURS_PER_HALF_DAY = 4
 class OTRequest(Document):
 	def validate(self):
 		validate_active_employee(self.employee)
+		validate_filing_for_self(self)
 		self.validate_same_month_filing()
 		self.set_compensation()
 		self.set_punch_verified_cap()
@@ -31,8 +37,9 @@ class OTRequest(Document):
 
 	def validate_same_month_filing(self):
 		# unclaimed punch OT expires with its month — the claim must be filed
-		# inside the month the OT was worked
-		if not self.is_new():
+		# inside the month the OT was worked. Amendments re-file a copy of an
+		# in-month original, so the window doesn't apply to them.
+		if not self.is_new() or self.amended_from:
 			return
 		today = getdate()
 		ot_date = getdate(self.ot_date)
@@ -110,8 +117,11 @@ class OTRequest(Document):
 		if self.compensation != REPLACEMENT_LEAVE:
 			return
 		month_start = get_first_day(self.ot_date)
-		bank = get_replacement_leave_bank(self.employee, month_start)
-		remaining_after_cancel = bank["hours_total"] - cint(self.claimed_hours) - bank["hours_claimed"]
+		# exclude self explicitly: by the time on_cancel runs, docstatus=2 is
+		# already persisted so the sum would exclude it anyway — but the guard
+		# must not depend on that ordering
+		bank = get_replacement_leave_bank(self.employee, month_start, exclude_request=self.name)
+		remaining_after_cancel = bank["hours_total"] - bank["hours_claimed"]
 		logger.info(
 			"[ot_request] cancel %s: bank %s, claimed %s, after-cancel %s",
 			self.name,
@@ -128,26 +138,23 @@ class OTRequest(Document):
 			)
 
 
-def get_replacement_leave_bank(employee: str, month_start=None) -> dict:
+def get_replacement_leave_bank(employee: str, month_start=None, exclude_request: str | None = None) -> dict:
 	"""The month's convertible hours: approved replacement-leave OT hours minus
 	hours consumed by claims filed against that month (drafts included, so a
 	pending claim can't be double-funded)."""
+	logger.info("[ot_request] bank query %s month=%s exclude=%s", employee, month_start, exclude_request)
 	month_start = get_first_day(month_start or getdate())
 	month_end = get_last_day(month_start)
 
-	hours_total = (
-		frappe.db.get_value(
-			"OT Request",
-			{
-				"employee": employee,
-				"compensation": REPLACEMENT_LEAVE,
-				"docstatus": 1,
-				"ot_date": ("between", [month_start, month_end]),
-			},
-			"sum(claimed_hours)",
-		)
-		or 0
-	)
+	ot_filters = {
+		"employee": employee,
+		"compensation": REPLACEMENT_LEAVE,
+		"docstatus": 1,
+		"ot_date": ("between", [month_start, month_end]),
+	}
+	if exclude_request:
+		ot_filters["name"] = ("!=", exclude_request)
+	hours_total = frappe.db.get_value("OT Request", ot_filters, "sum(claimed_hours)") or 0
 	hours_claimed = (
 		frappe.db.get_value(
 			"Replacement Leave Claim",

@@ -275,7 +275,8 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 	(sums amounts) and get_ot_breakdown (records the per-day split).
 
 	With approved_hours_map (payroll pricing), a day is priced only when it has
-	an approved OT-Pay request, and at no more than its approved hours."""
+	an approved OT-Pay request, and at no more than its approved hours — the
+	daily/monthly caps then apply to those approved hours, not all worked OT."""
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
 	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)

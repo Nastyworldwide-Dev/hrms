@@ -155,6 +155,12 @@ class TestOTRequest(FrappeTestCase):
 		frappe.set_user(user)
 		self.assertRaises(frappe.ValidationError, request.submit)
 
+	def test_filing_for_colleague_blocked(self):
+		colleague = make_employee("otr_colleague@example.com", company="_Test Company")
+		make_ot_checkins(colleague, today())
+		frappe.set_user(frappe.db.get_value("Employee", self.employee, "user_id"))
+		self.assertRaises(frappe.PermissionError, make_ot_request, colleague, claimed_hours=1, submit=False)
+
 	def test_ot_pay_priced_only_when_approved(self):
 		frappe.db.set_value("Employee", self.employee, "eligible_for_overtime_pay", 1)
 		make_ot_checkins(self.employee, today())
