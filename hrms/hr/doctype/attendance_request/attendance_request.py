@@ -105,7 +105,15 @@ class AttendanceRequest(Document):
 	def validate_mandatory_attachment(self):
 		# every request must carry supporting evidence (photo/document) before
 		# an approver can turn it into attendance
-		if not frappe.db.exists("File", {"attached_to_doctype": self.doctype, "attached_to_name": self.name}):
+		if not frappe.db.exists(
+			"File",
+			{
+				"attached_to_doctype": self.doctype,
+				"attached_to_name": self.name,
+				# a partial upload leaves a File row without a stored file
+				"file_url": ("is", "set"),
+			},
+		):
 			logger.info("[attendance_request] submit blocked, no attachment: %s", self.name)
 			frappe.throw(_("A supporting attachment is required before this request can be approved"))
 
