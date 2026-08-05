@@ -82,6 +82,16 @@ watch(
 	}
 )
 
+watch(
+	() => [attendanceRequest.value.in_time, attendanceRequest.value.out_time],
+	([in_time, out_time]) => {
+		const out_time_field = formFields.data.find((field) => field.fieldname === "out_time")
+		if (!out_time_field) return
+		out_time_field.error_message =
+			!!in_time !== !!out_time ? __("Both In Time and Out Time are required") : ""
+	}
+)
+
 // helper functions
 function setFormReadOnly() {
 	formFields.data.map((field) => (field.read_only = true))

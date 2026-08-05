@@ -19,6 +19,8 @@
   "half_day_date",
   "include_holidays",
   "shift",
+  "in_time",
+  "out_time",
   "reason_section",
   "reason",
   "column_break_4",
@@ -128,6 +130,18 @@
    "options": "Shift Type"
   },
   {
+   "description": "Optional: actual worked hours applied to each requested day. Times on existing attendance records are never overwritten.",
+   "fieldname": "in_time",
+   "fieldtype": "Time",
+   "label": "In Time"
+  },
+  {
+   "description": "An Out Time at or before In Time means the session ends the next day (overnight shift).",
+   "fieldname": "out_time",
+   "fieldtype": "Time",
+   "label": "Out Time"
+  },
+  {
    "default": "0",
    "fieldname": "include_holidays",
    "fieldtype": "Check",
@@ -136,7 +150,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-08-05 04:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance Request",

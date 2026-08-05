@@ -3,12 +3,13 @@
 
 
 import logging
+from datetime import datetime, timedelta
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.workflow import get_workflow_name
-from frappe.utils import add_days, date_diff, format_date, get_link_to_form, getdate
+from frappe.utils import add_days, date_diff, format_date, get_link_to_form, get_time, getdate
 
 from erpnext.setup.doctype.employee.employee import is_holiday
 
@@ -27,6 +28,7 @@ class AttendanceRequest(Document):
 		validate_active_employee(self.employee)
 		validate_dates(self, self.from_date, self.to_date, False)
 		self.validate_half_day()
+		self.validate_in_out_times()
 		self.validate_request_overlap()
 		self.validate_no_attendance_to_create()
 
@@ -47,6 +49,22 @@ class AttendanceRequest(Document):
 					"Please check if employee is on leave or attendance with the same status exists for selected day(s)."
 				),
 			)
+
+	def validate_in_out_times(self):
+		if not (self.in_time or self.out_time):
+			return
+		if not (self.in_time and self.out_time):
+			frappe.throw(_("Both In Time and Out Time are required when entering worked hours"))
+
+	def get_in_out_datetimes(self, date: str) -> tuple[datetime, datetime]:
+		# one session per requested day; an out time at or before the in time
+		# means the session ends on the next calendar day (overnight shift)
+		in_dt = datetime.combine(getdate(date), get_time(self.in_time))
+		out_dt = datetime.combine(getdate(date), get_time(self.out_time))
+		if out_dt <= in_dt:
+			out_dt += timedelta(days=1)
+		logger.debug("[attendance_request] %s session %s -> %s", self.name, in_dt, out_dt)
+		return in_dt, out_dt
 
 	def validate_request_overlap(self):
 		if not self.name:
@@ -148,6 +166,9 @@ class AttendanceRequest(Document):
 			doc.attendance_request = self.name
 			doc.status = status
 			doc.half_day_status = "Absent" if status == "Half Day" else None
+			if self.in_time and self.out_time:
+				doc.in_time, doc.out_time = self.get_in_out_datetimes(date)
+				doc.working_hours = round((doc.out_time - doc.in_time).total_seconds() / 3600, 2)
 			doc.insert(ignore_permissions=True)
 			doc.submit()
 
