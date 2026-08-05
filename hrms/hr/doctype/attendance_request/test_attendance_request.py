@@ -192,6 +192,7 @@ class TestAttendanceRequest(FrappeTestCase):
 		# adding an extra day to the attendance request
 		attendance_request.to_date = add_days(today, 1)
 		attendance_request.save()
+		attach_supporting_file(attendance_request)
 		attendance_request.submit()
 		# attendance created for the third day
 		records = self.get_attendance_records(attendance_request.name)
@@ -211,6 +212,7 @@ class TestAttendanceRequest(FrappeTestCase):
 				"company": "_Test Company",
 			}
 		).save()
+		attach_supporting_file(attendance_request)
 		attendance_request.submit()
 
 		half_day_status = frappe.get_value(
@@ -219,10 +221,13 @@ class TestAttendanceRequest(FrappeTestCase):
 		self.assertEqual(half_day_status, "Absent")
 
 	def test_in_out_times_applied_to_created_attendance(self):
+		today = getdate()
 		attendance_request = create_attendance_request(
 			employee=self.employee.name,
 			reason="Work From Home",
 			company="_Test Company",
+			from_date=add_days(today, -1),
+			to_date=today,
 			in_time="09:00:00",
 			out_time="18:00:00",
 		)
@@ -283,6 +288,84 @@ class TestAttendanceRequest(FrappeTestCase):
 		self.assertIsNone(record.in_time)
 		self.assertIsNone(record.out_time)
 
+	def test_same_in_out_time_rejected(self):
+		attendance_request = frappe.get_doc(
+			{
+				"doctype": "Attendance Request",
+				"employee": self.employee.name,
+				"from_date": getdate(),
+				"to_date": getdate(),
+				"reason": "On Duty",
+				"company": "_Test Company",
+				"in_time": "09:00:00",
+				"out_time": "09:00:00",
+			}
+		)
+		self.assertRaises(frappe.ValidationError, attendance_request.save)
+
+	def test_half_day_date_keeps_no_times(self):
+		today = getdate()
+		attendance_request = create_attendance_request(
+			employee=self.employee.name,
+			reason="On Duty",
+			company="_Test Company",
+			from_date=add_days(today, -1),
+			to_date=today,
+			half_day=1,
+			half_day_date=today,
+			in_time="09:00:00",
+			out_time="18:00:00",
+		)
+		records = {
+			r.attendance_date: r
+			for r in frappe.db.get_all(
+				"Attendance",
+				{"attendance_request": attendance_request.name},
+				["attendance_date", "status", "in_time", "out_time", "working_hours"],
+			)
+		}
+		self.assertEqual(records[add_days(today, -1)].working_hours, 9.0)
+		self.assertEqual(records[today].status, "Half Day")
+		self.assertIsNone(records[today].in_time)
+		self.assertIsNone(records[today].out_time)
+
+	def test_times_not_applied_to_existing_attendance(self):
+		today = getdate()
+		existing = mark_attendance(self.employee.name, today, "Absent")
+
+		create_attendance_request(
+			employee=self.employee.name,
+			reason="Work From Home",
+			company="_Test Company",
+			from_date=today,
+			to_date=today,
+			in_time="09:00:00",
+			out_time="18:00:00",
+		)
+		record = frappe.db.get_value("Attendance", existing, ["status", "in_time", "out_time"], as_dict=True)
+		# status overwritten, times deliberately untouched
+		self.assertEqual(record.status, "Work From Home")
+		self.assertIsNone(record.in_time)
+		self.assertIsNone(record.out_time)
+
+	def test_submit_without_attachment_blocked(self):
+		attendance_request = frappe.get_doc(
+			{
+				"doctype": "Attendance Request",
+				"employee": self.employee.name,
+				"from_date": getdate(),
+				"to_date": getdate(),
+				"reason": "On Duty",
+				"company": "_Test Company",
+			}
+		).insert()
+		self.assertRaises(frappe.ValidationError, attendance_request.submit)
+
+		attendance_request.reload()
+		attach_supporting_file(attendance_request)
+		attendance_request.submit()
+		self.assertEqual(attendance_request.docstatus, 1)
+
 	def test_self_submission_blocked(self):
 		"""Submission is the approval act for this doctype — the employee on the
 		request must never submit it themselves, whatever roles (System Manager
@@ -317,6 +400,7 @@ class TestAttendanceRequest(FrappeTestCase):
 
 		# a different user submitting the same request remains the approval act
 		attendance_request.reload()
+		attach_supporting_file(attendance_request)
 		attendance_request.submit()
 		self.assertEqual(attendance_request.docstatus, 1)
 
@@ -344,6 +428,7 @@ class TestAttendanceRequest(FrappeTestCase):
 				"company": "_Test Company",
 			}
 		).save()
+		attach_supporting_file(attendance_request)
 		attendance_request.submit()
 
 		half_day_status = frappe.get_value(
@@ -354,6 +439,18 @@ class TestAttendanceRequest(FrappeTestCase):
 
 def get_employee():
 	return frappe.get_doc("Employee", "_T-Employee-00001")
+
+
+def attach_supporting_file(doc):
+	frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"supporting-{doc.name}.txt",
+			"content": "supporting document",
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
+		}
+	).insert(ignore_permissions=True)
 
 
 def create_attendance_request(**args: dict) -> dict:
@@ -374,4 +471,6 @@ def create_attendance_request(**args: dict) -> dict:
 	if args:
 		attendance_request.update(args)
 
+	attendance_request.insert()
+	attach_supporting_file(attendance_request)
 	return attendance_request.submit()

@@ -394,6 +394,11 @@ const props = defineProps({
 		required: false,
 		default: false,
 	},
+	requireAttachment: {
+		type: Boolean,
+		required: false,
+		default: false,
+	},
 	showFormButton: {
 		type: Boolean,
 		required: false,
@@ -676,6 +681,10 @@ function isFieldReadOnly(field) {
 
 function handleDocInsert() {
 	if (!validateMandatoryFields()) return
+	if (props.requireAttachment && !fileAttachments.value.length) {
+		formErrorMessage.value = __("A supporting attachment is required")
+		return
+	}
 	docList.insert.submit(formModel.value)
 }
 

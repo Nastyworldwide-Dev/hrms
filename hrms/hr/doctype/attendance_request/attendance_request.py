@@ -55,6 +55,9 @@ class AttendanceRequest(Document):
 			return
 		if not (self.in_time and self.out_time):
 			frappe.throw(_("Both In Time and Out Time are required when entering worked hours"))
+		if get_time(self.in_time) == get_time(self.out_time):
+			# equal times would roll over to a full 24h session
+			frappe.throw(_("In Time and Out Time cannot be the same"))
 
 	def get_in_out_datetimes(self, date: str) -> tuple[datetime, datetime]:
 		# one session per requested day; an out time at or before the in time
@@ -96,7 +99,15 @@ class AttendanceRequest(Document):
 
 	def on_submit(self):
 		self.validate_for_self_approval()
+		self.validate_mandatory_attachment()
 		self.create_attendance_records()
+
+	def validate_mandatory_attachment(self):
+		# every request must carry supporting evidence (photo/document) before
+		# an approver can turn it into attendance
+		if not frappe.db.exists("File", {"attached_to_doctype": self.doctype, "attached_to_name": self.name}):
+			logger.info("[attendance_request] submit blocked, no attachment: %s", self.name)
+			frappe.throw(_("A supporting attachment is required before this request can be approved"))
 
 	def validate_for_self_approval(self):
 		# This doctype has no approver/status flow — submitting the draft IS the
@@ -132,6 +143,15 @@ class AttendanceRequest(Document):
 
 		if doc:
 			# update existing attendance, change the status
+			if self.in_time and self.out_time:
+				frappe.msgprint(
+					_(
+						"Proposed hours were not applied for {0} — attendance record {1} already exists"
+					).format(
+						frappe.bold(format_date(date)),
+						get_link_to_form("Attendance", doc.name),
+					)
+				)
 			old_status = doc.status
 
 			if old_status != status:
@@ -166,7 +186,9 @@ class AttendanceRequest(Document):
 			doc.attendance_request = self.name
 			doc.status = status
 			doc.half_day_status = "Absent" if status == "Half Day" else None
-			if self.in_time and self.out_time:
+			# half-day dates keep no proposed times: stamping the full-day span
+			# would contradict the Half Day status and inflate OT
+			if self.in_time and self.out_time and status != "Half Day":
 				doc.in_time, doc.out_time = self.get_in_out_datetimes(date)
 				doc.working_hours = round((doc.out_time - doc.in_time).total_seconds() / 3600, 2)
 			doc.insert(ignore_permissions=True)

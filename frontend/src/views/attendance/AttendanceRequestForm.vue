@@ -8,6 +8,8 @@
 				:isSubmittable="true"
 				:fields="formFields.data"
 				:id="props.id"
+				:showAttachmentView="true"
+				:requireAttachment="true"
 				@validateForm="validateForm"
 			/>
 		</ion-content>
