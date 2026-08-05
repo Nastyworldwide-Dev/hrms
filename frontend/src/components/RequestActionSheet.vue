@@ -300,6 +300,10 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	let updateValues = {}
 
 	if (status) updateValues[approvalField.value] = status
+	// approving IS the decision — submit in the same server call instead of
+	// making the approver tap Submit as a second step (single transaction:
+	// if submit-side validation fails, the status change rolls back too)
+	if (status === "Approved" && hasPermission("submit")) docstatus = 1
 	if (docstatus) updateValues.docstatus = docstatus
 
 	document.setValue.submit(
