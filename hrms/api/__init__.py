@@ -592,7 +592,12 @@ def get_department_approvers(department: str, parentfield: str) -> list[str]:
 
 @frappe.whitelist()
 def get_leave_types(employee: str, date: str) -> list:
-	_ensure_own_employee_or_permitted(employee)
+	# Scope is enforced by get_leave_details' own guard, which — unlike
+	# _ensure_own_employee_or_permitted — also admits the applicant's leave
+	# approver. Approvers open this form for their team, and a 403 here blanks
+	# the dropdown behind a "Could not load leave types" toast.
+	if not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
 	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
 
 	date = date or getdate()

@@ -96,13 +96,18 @@ const leaveTypes = createResource({
 watch(
 	() => leaveApplication.value.employee,
 	(employee_id) => {
+		// the form model is transiently empty across save/reload cycles —
+		// refetching with a blank employee 404s and toasts "Could not load
+		// leave types" once per cycle
+		if (!employee_id) return
+
 		if (props.id && employee_id !== currEmployee.value) {
 			// if employee is not the current user, set form as read only
 			setFormReadOnly()
 		}
 		currEmployee.value = employee_id
 		leaveTypes.fetch({ employee: currEmployee.value, date: today })
-		leaveApprovalDetails.fetch({ employee: currEmployee.value })		
+		leaveApprovalDetails.fetch({ employee: currEmployee.value })
 	}
 )
 watch(
