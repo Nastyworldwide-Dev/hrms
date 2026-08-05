@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "@ionic/vue-router"
 
 import TabbedView from "@/views/TabbedView.vue"
 import attendanceRoutes from "./attendance"
+import otRoutes from "./ot"
 import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import employeeAdvanceRoutes from "./advances"
@@ -86,6 +87,7 @@ const routes = [
 		component: () => import("@/views/FormShell.vue"),
 		children: [
 			...attendanceRoutes,
+			...otRoutes,
 			...leaveRoutes,
 			...claimRoutes,
 			...employeeAdvanceRoutes,

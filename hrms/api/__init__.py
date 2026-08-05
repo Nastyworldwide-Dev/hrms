@@ -1,13 +1,17 @@
+import logging
+
 import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder import Order
-from frappe.utils import add_days, cint, date_diff, flt, getdate, strip_html
+from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, strip_html
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
 from hrms.hr.utils import HR_ROLES
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_FIELD_TYPES = [
 	"Link",
@@ -262,6 +266,107 @@ def get_attendance_requests(
 	return attendance_requests
 
 
+@frappe.whitelist()
+def get_ot_requests(
+	employee: str,
+	for_approval: bool = False,
+	limit: int | None = None,
+) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
+	filters = get_filters("OT Request", employee, None, for_approval)
+	logger.info("[api] ot requests employee=%s for_approval=%s", employee, for_approval)
+	return frappe.get_list(
+		"OT Request",
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"ot_date",
+			"shift",
+			"punch_ot_hours",
+			"claimed_hours",
+			"compensation",
+			"docstatus",
+			"creation",
+		],
+		filters=filters,
+		order_by="creation desc",
+		limit=limit,
+	)
+
+
+@frappe.whitelist()
+def get_replacement_leave_claims(
+	employee: str,
+	for_approval: bool = False,
+	limit: int | None = None,
+) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
+	filters = get_filters("Replacement Leave Claim", employee, None, for_approval)
+	logger.info("[api] rl claims employee=%s for_approval=%s", employee, for_approval)
+	return frappe.get_list(
+		"Replacement Leave Claim",
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"bank_month",
+			"claimed_days",
+			"hours_cost",
+			"available_hours",
+			"docstatus",
+			"creation",
+		],
+		filters=filters,
+		order_by="creation desc",
+		limit=limit,
+	)
+
+
+@frappe.whitelist()
+def get_ot_claim_summary(employee: str, date: str) -> dict:
+	"""Live form helper: what the punches prove for a day, and how this
+	employee's approved OT is compensated."""
+	from hrms.utils.ot_calculation import get_day_ot_breakdown
+
+	_ensure_own_employee_or_permitted(employee)
+	breakdown = get_day_ot_breakdown(employee, date)
+	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
+	shift = frappe.db.get_value(
+		"Attendance",
+		{"employee": employee, "attendance_date": date, "docstatus": ("<", 2)},
+		"shift",
+	)
+	return {
+		"shift": shift,
+		"punch_ot_hours": int(flt(breakdown["ot_hours"])),
+		"raw_ot_hours": flt(breakdown["ot_hours"]),
+		"eligible_for_overtime_pay": eligible,
+		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+	}
+
+
+@frappe.whitelist()
+def get_replacement_leave_bank_summary(employee: str) -> dict:
+	"""The current month's convertible OT hours plus the requests feeding it."""
+	from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
+
+	_ensure_own_employee_or_permitted(employee)
+	bank = get_replacement_leave_bank(employee)
+	bank["requests"] = frappe.get_all(
+		"OT Request",
+		filters={
+			"employee": employee,
+			"compensation": "Replacement Leave",
+			"docstatus": 1,
+			"ot_date": ("between", [bank["month_start"], get_last_day(bank["month_start"])]),
+		},
+		fields=["name", "ot_date", "claimed_hours"],
+		order_by="ot_date asc",
+	)
+	return bank
+
+
 def get_filters(
 	doctype: str,
 	employee: str,
@@ -276,7 +381,7 @@ def get_filters(
 		if workflow := get_workflow(doctype):
 			allowed_states = get_allowed_states_for_workflow(workflow, approver_id)
 			filters[workflow.workflow_state_field] = ("in", allowed_states)
-		elif doctype != "Attendance Request":
+		elif doctype not in ("Attendance Request", "OT Request", "Replacement Leave Claim"):
 			approver_field_map = {
 				"Shift Request": "approver",
 				"Leave Application": "leave_approver",

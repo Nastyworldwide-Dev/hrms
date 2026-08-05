@@ -251,10 +251,31 @@ def _per_day_ot_hours(employee, start_date, end_date):
 	return per_day_hours, per_day_shift
 
 
-def _iter_day_ot(employee, start_date, end_date, basic, default_day_type):
+def _approved_ot_pay_hours(employee, start_date, end_date):
+	"""OT is paid only when explicitly requested and approved: map of
+	{ot_date: claimed whole hours} from submitted OT-Pay OT Requests."""
+	rows = frappe.get_all(
+		"OT Request",
+		filters={
+			"employee": employee,
+			"docstatus": 1,
+			"compensation": "Overtime Pay",
+			"ot_date": ["between", [start_date, end_date]],
+		},
+		fields=["ot_date", "claimed_hours"],
+	)
+	approved = {getdate(r.ot_date): flt(r.claimed_hours) for r in rows}
+	logger.info("[ot_calculation] approved OT-Pay days employee=%s: %s", employee, len(approved))
+	return approved
+
+
+def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approved_hours_map=None):
 	"""Yield the priced OT for each qualifying day in [start, end], applying
 	min-minutes, the daily cap and the running monthly cap. Shared by get_ot_pay
-	(sums amounts) and get_ot_breakdown (records the per-day split)."""
+	(sums amounts) and get_ot_breakdown (records the per-day split).
+
+	With approved_hours_map (payroll pricing), a day is priced only when it has
+	an approved OT-Pay request, and at no more than its approved hours."""
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
 	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)
@@ -264,6 +285,11 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type):
 	for day, hours in sorted(per_day_hours.items()):
 		if not (start_date <= day <= end_date) or hours <= 0:
 			continue
+
+		if approved_hours_map is not None:
+			if day not in approved_hours_map:
+				continue
+			hours = min(hours, approved_hours_map[day])
 
 		config = _get_shift_ot_config(per_day_shift.get(day))
 		if not config:
@@ -312,7 +338,11 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 	if not employee or not basic:
 		return 0.0
 
-	total_pay = sum(d["amount"] for d in _iter_day_ot(employee, start_date, end_date, basic, day_type))
+	approved = _approved_ot_pay_hours(employee, start_date, end_date)
+	total_pay = sum(
+		d["amount"]
+		for d in _iter_day_ot(employee, start_date, end_date, basic, day_type, approved_hours_map=approved)
+	)
 	logger.info("[ot_calculation] total_pay employee=%s -> %.2f", employee, round(total_pay, 2))
 	return round(total_pay, 2)
 

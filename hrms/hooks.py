@@ -157,6 +157,10 @@ permission_query_conditions = {
 	# lives here, NOT in per-employee User Permissions (which would 403 the
 	# approver) — see hrms/overrides/approval_row_scope.py.
 	"Leave Application": "hrms.overrides.approval_row_scope.leave_application_query_conditions",
+	# OT money-flow doctypes: own + direct reports + HR (no approver field —
+	# submission is the approval)
+	"OT Request": "hrms.overrides.ot_row_scope.ot_request_query_conditions",
+	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.replacement_leave_claim_query_conditions",
 	"Expense Claim": "hrms.overrides.approval_row_scope.expense_claim_query_conditions",
 	"Shift Request": "hrms.overrides.approval_row_scope.shift_request_query_conditions",
 }
@@ -170,6 +174,8 @@ has_permission = {
 	"Leave Application": "hrms.overrides.approval_row_scope.has_permission",
 	"Expense Claim": "hrms.overrides.approval_row_scope.has_permission",
 	"Shift Request": "hrms.overrides.approval_row_scope.has_permission",
+	"OT Request": "hrms.overrides.ot_row_scope.has_permission",
+	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}

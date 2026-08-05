@@ -37,6 +37,62 @@
 				</router-link>
 
 				<router-link
+					:to="{ name: 'OTRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-6 lg:order-3"
+				>
+					<button
+						type="button"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						@click="navigate"
+					>
+						{{ __("Request Overtime") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<router-link
+					:to="{ name: 'ReplacementLeaveView' }"
+					v-slot="{ navigate }"
+					class="order-7 lg:order-4"
+				>
+					<button
+						type="button"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						@click="navigate"
+					>
+						{{ __("Replacement Leave") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<router-link
 					:to="{ name: 'ShiftRequestFormView' }"
 					v-slot="{ navigate }"
 					class="order-5 lg:order-2"

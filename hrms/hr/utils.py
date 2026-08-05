@@ -724,6 +724,35 @@ def share_doc_with_approver(doc, user):
 			frappe.share.remove(doc.doctype, doc.name, doc_before_save.get(approver))
 
 
+def validate_self_submission(doc):
+	"""Doctypes with no approver/status flow treat submission AS the approval —
+	the employee on the request must never be the submitter, whatever roles
+	they hold. Mirrors AttendanceRequest.validate_for_self_approval; sites that
+	attach a Workflow govern self-approval through it instead."""
+	logger.info("[self_submission] fence: %s %s", doc.doctype, doc.name)
+	from frappe.model.workflow import get_workflow_name
+
+	employee_user = frappe.db.get_value("Employee", doc.employee, "user_id")
+	if employee_user == frappe.session.user and not get_workflow_name(doc.doctype):
+		logger.warning("[self_submission] blocked: %s %s by %s", doc.doctype, doc.name, frappe.session.user)
+		frappe.throw(_("Self-approval for {0} is not allowed").format(_(doc.doctype)))
+
+
+def validate_mandatory_attachment(doc):
+	"""Requests must carry supporting evidence (a stored file, not just a File
+	row) before an approver can submit them."""
+	if not frappe.db.exists(
+		"File",
+		{
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
+			"file_url": ("is", "set"),
+		},
+	):
+		logger.info("[self_submission] submit blocked, no attachment: %s %s", doc.doctype, doc.name)
+		frappe.throw(_("A supporting attachment is required before this request can be approved"))
+
+
 def validate_staff_approver(doc, approver_field, employee_approver_field, department_parentfield):
 	"""Staff lockdown: when the applicant edits their own request, the approver
 	must be one of their designated approvers (reporting manager, the explicit

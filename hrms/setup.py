@@ -223,6 +223,18 @@ def get_custom_fields():
 				),
 			},
 			{
+				"fieldname": "eligible_for_overtime_pay",
+				"fieldtype": "Check",
+				"label": _("Eligible for Overtime Pay"),
+				"insert_after": "years_of_service",
+				"no_copy": 1,
+				"in_standard_filter": 1,
+				"description": _(
+					"Checked: approved OT Requests are paid out. Unchecked: approved OT hours "
+					"convert to Replacement Leave via a Replacement Leave Claim."
+				),
+			},
+			{
 				"fieldname": "employment_type",
 				"fieldtype": "Link",
 				"ignore_user_permissions": 1,
