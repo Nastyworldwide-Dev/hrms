@@ -8,9 +8,9 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_first_day, get_link_to_form, getdate
 
-from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import create_additional_leave_ledger_entry
 from hrms.hr.doctype.ot_request.ot_request import HOURS_PER_HALF_DAY, get_replacement_leave_bank
 from hrms.hr.utils import (
+	create_additional_leave_ledger_entry,
 	get_leave_period,
 	validate_active_employee,
 	validate_filing_for_self,
