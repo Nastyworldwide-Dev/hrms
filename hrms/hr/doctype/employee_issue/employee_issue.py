@@ -70,7 +70,9 @@ class EmployeeIssue(Document):
 			notification.from_user = employee_user or frappe.session.user
 			notification.to_user = user
 			notification.message = _("{0} reported a new {1} issue: {2}").format(
-				bold(self.employee_name or self.employee), bold(self.issue_type), self.name
+				bold(frappe.utils.escape_html(self.employee_name or self.employee)),
+				bold(self.issue_type),
+				self.name,
 			)
 			notification.reference_document_type = self.doctype
 			notification.reference_document_name = self.name

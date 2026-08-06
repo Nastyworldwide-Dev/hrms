@@ -49,11 +49,25 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	return "(" + " or ".join(conditions) + ")"
 
 
+# employees only ever look at their tickets — every mutating ptype is HR's
+READ_PTYPES = frozenset({"read", "select", "print", "email"})
+
+
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
-	"""Per-row check: HR unrestricted, otherwise only the reporting employee."""
+	"""Per-row check: HR unrestricted; the reporting employee may read but
+	never mutate — enforced here as defense-in-depth so the invariant survives
+	even if someone later loosens the DocPerm matrix (SEC-01)."""
 	user = user or frappe.session.user
 	if _unrestricted(user):
 		return True
+	if ptype not in READ_PTYPES:
+		logger.debug(
+			"[employee_issue_row_scope] denying ptype=%s for %s on %s",
+			ptype,
+			user,
+			getattr(doc, "name", None),
+		)
+		return False
 	owner_user = frappe.db.get_value("Employee", doc.employee, "user_id")
 	allowed = owner_user == user
 	logger.debug(

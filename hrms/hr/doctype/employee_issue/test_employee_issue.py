@@ -99,6 +99,14 @@ class TestEmployeeIssue(FrappeTestCase):
 		self.assertTrue(has_permission(doc, "read", STAFF_A))
 		self.assertFalse(has_permission(doc, "read", STAFF_B))
 
+	def test_row_scope_denies_mutations_even_for_owner(self):
+		# defense-in-depth: the hook itself blocks non-read ptypes for staff,
+		# independent of the DocPerm matrix
+		doc = self.make_issue(self.staff_a)
+		self.assertFalse(has_permission(doc, "write", STAFF_A))
+		self.assertFalse(has_permission(doc, "delete", STAFF_A))
+		self.assertTrue(has_permission(doc, "write", HR_USER))
+
 	def test_hr_filed_ticket_owned_by_subject_employee(self):
 		# if_owner keys on owner; an HR-filed ticket must still be readable
 		# by the employee it is about
