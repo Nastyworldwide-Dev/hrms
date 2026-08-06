@@ -21,6 +21,7 @@
 import { computed, inject, markRaw } from "vue"
 
 import { userResource } from "@/data/user"
+import { hasHRRole } from "@/utils/issueBoard"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
@@ -37,10 +38,7 @@ import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 const __ = inject("$translate")
 
-const HR_BOARD_ROLES = ["HR User", "HR Manager", "System Manager"]
-const isHR = computed(() =>
-	(userResource.data?.roles || []).some((role) => HR_BOARD_ROLES.includes(role))
-)
+const isHR = computed(() => hasHRRole(userResource.data?.roles))
 
 const baseQuickLinks = [
 	{
@@ -78,17 +76,16 @@ const baseQuickLinks = [
 		title: __("Report an Issue"),
 		route: "EmployeeIssueFormView",
 	},
-	{
-		icon: markRaw(SupportIcon),
-		title: __("My Issues"),
-		route: "EmployeeIssueListView",
-	},
 ]
 
+// same destination for both — the Issues tab renders the board for HR roles
+// and the personal list for everyone else; only the label differs
 const quickLinks = computed(() => [
 	...baseQuickLinks,
-	...(isHR.value
-		? [{ icon: markRaw(SupportIcon), title: __("HR Issue Board"), route: "HRIssueBoard" }]
-		: []),
+	{
+		icon: markRaw(SupportIcon),
+		title: isHR.value ? __("Issue Board") : __("My Issues"),
+		route: "EmployeeIssueListView",
+	},
 ])
 </script>

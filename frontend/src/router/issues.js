@@ -1,21 +1,6 @@
-import { userResource } from "@/data/user"
-
-const HR_BOARD_ROLES = ["HR User", "HR Manager", "System Manager"]
-
-// router.beforeEach reloads userResource before any guarded route resolves,
-// so roles are present here; fail toward Home if not
-const requireHRRole = (to, from, next) => {
-	const roles = userResource.data?.roles || []
-	if (roles.some((role) => HR_BOARD_ROLES.includes(role))) {
-		next()
-	} else {
-		console.warn("[issues] blocked non-HR user from HR issue board")
-		next({ name: "Home" })
-	}
-}
-
-// the My Issues LIST route lives in router/index.js under TabbedView so the
-// tab shell stays visible; only form/detail/board render in the FormShell
+// the Issues LIST/BOARD tab route lives in router/index.js under TabbedView
+// (IssuesTab.vue switches board vs personal list by role — server row scope
+// is the real protection); only form + detail render in the FormShell
 const routes = [
 	{
 		name: "EmployeeIssueFormView",
@@ -29,10 +14,9 @@ const routes = [
 		component: () => import("@/views/issues/IssueForm.vue"),
 	},
 	{
-		name: "HRIssueBoard",
+		// legacy deep links from the v15.105.0 quick link
 		path: "/hr/issues",
-		beforeEnter: requireHRRole,
-		component: () => import("@/views/issues/HRIssueBoard.vue"),
+		redirect: "/issues",
 	},
 ]
 

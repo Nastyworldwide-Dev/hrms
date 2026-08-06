@@ -4,7 +4,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { countByStatus, filterIssues } from "../src/utils/issueBoard.js"
+import { countByStatus, filterIssues, hasHRRole } from "../src/utils/issueBoard.js"
 
 const ISSUES = [
 	{
@@ -85,6 +85,15 @@ test("countByStatus tallies statuses and open high-urgency", () => {
 	assert.equal(counts["Completed"], 1)
 	// high urgency counts only unresolved tickets — the Completed one is excluded
 	assert.equal(counts.high, 2)
+})
+
+test("hasHRRole gates the board to HR User / HR Manager / System Manager", () => {
+	assert.equal(hasHRRole(["Employee", "ESS", "HR User"]), true)
+	assert.equal(hasHRRole(["HR Manager"]), true)
+	assert.equal(hasHRRole(["System Manager"]), true)
+	assert.equal(hasHRRole(["Employee", "ESS"]), false)
+	assert.equal(hasHRRole([]), false)
+	assert.equal(hasHRRole(undefined), false)
 })
 
 test("countByStatus handles empty input", () => {

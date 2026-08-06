@@ -47,10 +47,11 @@ const routes = [
 				component: () => import("@/views/kpi/Dashboard.vue"),
 			},
 			{
-				// lives in the tab shell (bottom tabs / side nav stay visible)
+				// lives in the tab shell (bottom tabs / side nav stay visible);
+				// renders the HR board or the personal list depending on role
 				path: "/issues",
 				name: "EmployeeIssueListView",
-				component: () => import("@/views/issues/IssueList.vue"),
+				component: () => import("@/views/issues/IssuesTab.vue"),
 			},
 		],
 	},

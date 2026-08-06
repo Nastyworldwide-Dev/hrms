@@ -3,6 +3,12 @@
 
 export const ISSUE_STATUSES = ["Open", "In Progress", "Completed"]
 
+// who gets the board instead of the personal list (presentation only —
+// server-side row scope is the real protection)
+export const HR_BOARD_ROLES = ["HR User", "HR Manager", "System Manager"]
+export const hasHRRole = (roles) =>
+	(roles || []).some((role) => HR_BOARD_ROLES.includes(role))
+
 export const filterIssues = (issues, { status, issueType, search } = {}) => {
 	const query = (search || "").toLowerCase().trim()
 	return (issues || []).filter((issue) => {

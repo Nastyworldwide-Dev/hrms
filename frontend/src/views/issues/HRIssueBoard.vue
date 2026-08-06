@@ -1,21 +1,11 @@
 <template>
-	<ion-page>
-		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen bg-ground">
-				<div class="w-full max-w-[620px] mx-auto">
-					<header
-						class="flex flex-row bg-ground py-3.5 px-4 items-center gap-2.5 border-b-2 border-divider sticky top-0 z-10"
-					>
-						<Button variant="ghost" class="!pl-0 hover:bg-transparent" @click="router.back()">
-							<FeatherIcon name="arrow-left" class="h-5 w-5" />
-						</Button>
-						<div class="flex flex-col">
-							<span class="m-kicker">{{ __("HR · People & Culture") }}</span>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase leading-tight">
-								{{ __("Issue Board") }}
-							</h2>
-						</div>
-					</header>
+	<BaseLayout :pageTitle="__('Issue Board')">
+		<template #body>
+			<div class="flex flex-col w-full pt-2 pb-8">
+				<div class="w-full max-w-[720px] lg:mx-0 mx-auto">
+					<div class="px-4 pt-4">
+						<span class="m-kicker">{{ __("HR · People & Culture") }}</span>
+					</div>
 
 					<!-- stats -->
 					<div class="flex gap-2 px-4 pt-3.5">
@@ -177,21 +167,21 @@
 					</div>
 				</div>
 			</ion-modal>
-		</ion-content>
-	</ion-page>
+		</template>
+	</BaseLayout>
 </template>
 
 <script setup>
-import { IonPage, IonContent, IonModal } from "@ionic/vue"
-import { createListResource, createResource, FeatherIcon, toast } from "frappe-ui"
+import { IonModal } from "@ionic/vue"
+import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, ref } from "vue"
-import { useRouter } from "vue-router"
+
+import BaseLayout from "@/components/BaseLayout.vue"
 
 import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
-const router = useRouter()
 
 const ISSUE_TYPES = [
 	"Leave Balance Discrepancy",
