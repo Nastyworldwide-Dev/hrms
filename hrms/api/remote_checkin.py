@@ -255,6 +255,57 @@ def punch(
 
 
 @frappe.whitelist()
+def get_unresolved_stale_in() -> dict:
+	"""The session the 'Forgot to check out?' banner should offer to resolve:
+	the employee's NEWEST IN with no OUT inside its session window that is
+	already past the 06:00-next-day cutoff (employee wall clock).
+
+	Walking the recent log — instead of only looking at the last row — is the
+	point: checking in the next morning buries yesterday's forgotten checkout
+	under a newer IN, and the sweeper's abandoned tag lands on the old row."""
+	from datetime import timedelta
+
+	from frappe.utils import add_days, cint, get_datetime
+
+	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	if not employee:
+		return {}
+
+	now = employee_now(employee)
+	rows = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "time": [">=", add_days(now, -10)]},
+		fields=["name", "time", "log_type", "is_abandoned"],
+		order_by="time asc",
+		limit=200,
+	)
+
+	unresolved = {}
+	for i, row in enumerate(rows):
+		if row.log_type != "IN":
+			continue
+		next_row = rows[i + 1] if i + 1 < len(rows) else None
+		if next_row and next_row.log_type == "OUT":
+			continue  # session closed (a pending late-OUT also closes it)
+		in_time = get_datetime(row.time)
+		cutoff = (in_time + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
+		if now < cutoff:
+			continue  # still a live session (button shows Check Out)
+		unresolved = {
+			"name": row.name,
+			"time": row.time,
+			"is_abandoned": cint(row.is_abandoned),
+		}
+
+	logger.info(
+		"[remote_checkin] unresolved stale IN for %s: %s",
+		employee,
+		unresolved.get("name") or "none",
+	)
+	return unresolved
+
+
+@frappe.whitelist()
 def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
 	"""Retroactively submit a forgotten check-out.
 
@@ -301,12 +352,27 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	if out_dt > employee_now(in_doc.employee):
 		frappe.throw(_("Check-out time cannot be in the future."))
 
+	# only OUTs inside THIS session window count: an OUT that belongs to a
+	# newer session (after the employee's next IN) must not block resolving a
+	# buried forgotten checkout
+	from datetime import timedelta
+
+	out_time_filter = [">=", in_doc.time]
+	next_in_time = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": in_doc.employee, "log_type": "IN", "time": [">", in_doc.time]},
+		"min(time)",
+	)
+	if next_in_time:
+		out_time_filter = ["between", [in_doc.time, get_datetime(next_in_time) - timedelta(seconds=1)]]
+		if out_dt >= get_datetime(next_in_time):
+			frappe.throw(_("Check-out time must be before your next check-in ({0}).").format(next_in_time))
 	later_out = frappe.db.exists(
 		"Employee Checkin",
 		{
 			"employee": in_doc.employee,
 			"log_type": "OUT",
-			"time": [">=", in_doc.time],
+			"time": out_time_filter,
 		},
 	)
 	if later_out:

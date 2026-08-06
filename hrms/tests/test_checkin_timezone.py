@@ -82,16 +82,21 @@ class TestLateCheckoutUsesAttendanceClock(unittest.TestCase):
 
 		in_time = _kl_now() - datetime.timedelta(hours=8)
 		db = MagicMock()
-		db.get_value.side_effect = lambda doctype, name, fields=None, **kw: {
-			"Employee Checkin": frappe._dict(
-				name="EMP-CKIN-1",
-				employee="HR-EMP-001",
-				time=in_time,
-				log_type="IN",
-				shift="9AM - 6PM",
-			),
-			"Employee": "staff@example.com",
-		}.get(doctype)
+		db.get_value.side_effect = lambda doctype, name, fields=None, **kw: (
+			# filter-dict lookups (next-IN window probe) find nothing
+			None
+			if isinstance(name, dict)
+			else {
+				"Employee Checkin": frappe._dict(
+					name="EMP-CKIN-1",
+					employee="HR-EMP-001",
+					time=in_time,
+					log_type="IN",
+					shift="9AM - 6PM",
+				),
+				"Employee": "staff@example.com",
+			}.get(doctype)
+		)
 		db.exists.return_value = None
 
 		session = frappe._dict(user="staff@example.com")
@@ -201,6 +206,116 @@ class TestSweeperUsesAttendanceClock(unittest.TestCase):
 	def test_leaves_a_session_that_is_not_yet_stale_there(self):
 		"""Inside the prefilter net but under 36h on the employee's own clock."""
 		self.assertEqual(self._sweep(checkin_age_hours=20, attendance_now=_kl_now()), 0)
+
+
+class TestBuriedForgottenCheckout(unittest.TestCase):
+	"""The reported bug: checking IN the next morning buried yesterday's
+	forgotten checkout — the banner (last-log based) vanished and
+	submit_late_checkout rejected the session because ANY later OUT counted."""
+
+	def _rows(self, now):
+		"""yesterday: IN never closed; today: normal IN+OUT session."""
+		yesterday_in = now - datetime.timedelta(days=1, hours=2)
+		return [
+			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", is_abandoned=1),
+			frappe._dict(
+				name="CKIN-NEW", time=now - datetime.timedelta(hours=8), log_type="IN", is_abandoned=0
+			),
+			frappe._dict(
+				name="CKOUT-NEW", time=now - datetime.timedelta(hours=1), log_type="OUT", is_abandoned=0
+			),
+		]
+
+	def _unresolved(self, rows, now):
+		from hrms.api import remote_checkin
+
+		db = MagicMock()
+		db.get_value.return_value = "HR-EMP-001"
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "session", frappe._dict(user="staff@example.com")),
+			patch.object(frappe, "local", _fresh_local()),
+			patch.object(frappe, "get_all", return_value=rows),
+			patch.object(remote_checkin, "employee_now", return_value=now),
+		):
+			return remote_checkin.get_unresolved_stale_in()
+
+	def test_buried_stale_in_is_found_despite_newer_session(self):
+		now = _kl_now()
+		result = self._unresolved(self._rows(now), now)
+		self.assertEqual(result.get("name"), "CKIN-OLD")
+		self.assertEqual(result.get("is_abandoned"), 1)
+
+	def test_closed_sessions_are_not_flagged(self):
+		now = _kl_now()
+		yesterday_in = now - datetime.timedelta(days=1, hours=2)
+		rows = [
+			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", is_abandoned=0),
+			frappe._dict(
+				name="CKOUT-OLD",
+				time=yesterday_in + datetime.timedelta(hours=9),
+				log_type="OUT",
+				is_abandoned=0,
+			),
+		]
+		self.assertEqual(self._unresolved(rows, now), {})
+
+	def test_fresh_open_in_is_not_flagged(self):
+		now = _kl_now()
+		rows = [
+			frappe._dict(
+				name="CKIN-TODAY", time=now - datetime.timedelta(hours=3), log_type="IN", is_abandoned=0
+			)
+		]
+		self.assertEqual(self._unresolved(rows, now), {})
+
+	def test_late_checkout_allowed_when_out_belongs_to_newer_session(self):
+		"""submit_late_checkout: today's OUT must not close yesterday's IN."""
+		from hrms.api import remote_checkin
+
+		now = _kl_now()
+		yesterday_in = now - datetime.timedelta(days=1, hours=4)
+		next_in = now - datetime.timedelta(hours=8)
+
+		def get_value(doctype, name, fields=None, **kw):
+			if isinstance(name, dict):
+				# the next-IN window probe finds today's IN
+				return next_in if name.get("log_type") == "IN" else None
+			return {
+				"Employee Checkin": frappe._dict(
+					name="CKIN-OLD",
+					employee="HR-EMP-001",
+					time=yesterday_in,
+					log_type="IN",
+					shift="9AM - 6PM",
+				),
+				"Employee": "staff@example.com",
+			}.get(doctype)
+
+		db = MagicMock()
+		db.get_value.side_effect = get_value
+		captured = {}
+		db.exists.side_effect = lambda doctype, filters: captured.update(filters) or None
+
+		out_doc = MagicMock()
+		out_doc.name = "CKOUT-LATE"
+
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "session", frappe._dict(user="staff@example.com")),
+			patch.object(frappe, "local", _fresh_local()),
+			patch.object(frappe, "new_doc", return_value=out_doc),
+			patch.object(remote_checkin, "employee_now", return_value=now),
+		):
+			remote_checkin.submit_late_checkout(
+				in_checkin="CKIN-OLD",
+				checkout_datetime=(yesterday_in + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S"),
+				reason="forgot to check out",
+			)
+
+		# the later-OUT probe must be bounded by the next IN, not open-ended
+		self.assertEqual(captured["time"][0], "between")
+		self.assertLess(captured["time"][1][1], next_in)
 
 
 if __name__ == "__main__":

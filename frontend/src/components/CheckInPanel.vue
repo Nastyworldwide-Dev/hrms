@@ -31,10 +31,10 @@
 				<div class="flex flex-col flex-1 min-w-0 gap-0.5">
 					<div class="text-[12.5px] font-semibold text-accent-800">
 						<template v-if="isAbandoned">
-							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(lastLog?.time)]) }}
+							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
 						</template>
 						<template v-else>
-							{{ __("Forgot to check out from {0}?", [formatTimestamp(lastLog?.time)]) }}
+							{{ __("Forgot to check out from {0}?", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
 						</template>
 					</div>
 					<div class="text-[11px] text-accent-800/80">
@@ -179,10 +179,15 @@
 
 	<LateCheckoutDialog
 		:is-open="lateCheckoutOpen"
-		:in-checkin-name="lastLog?.name || ''"
-		:in-checkin-time="lastLog?.time || ''"
+		:in-checkin-name="unresolvedStaleIn.data?.name || ''"
+		:in-checkin-time="unresolvedStaleIn.data?.time || ''"
 		@close="lateCheckoutOpen = false"
-		@submitted="checkins.reload()"
+		@submitted="
+			() => {
+				checkins.reload()
+				unresolvedStaleIn.reload()
+			}
+		"
 	/>
 </template>
 
@@ -289,13 +294,19 @@ const preflightGeofence = createResource({
 	},
 })
 
-// Late-checkout dialog state
+// Late-checkout dialog state. Server-resolved: the banner must survive the
+// employee checking IN the next morning (which buries the stale IN below
+// newer rows, so last-log inspection goes blind).
 const lateCheckoutOpen = ref(false)
-const hasStaleOpenIn = computed(() => {
-	const last = lastLog?.value
-	return !!(last && last.log_type === "IN" && isSessionStale(last.time))
+const unresolvedStaleIn = createResource({
+	url: "hrms.api.remote_checkin.get_unresolved_stale_in",
+	auto: true,
+	onError() {
+		console.warn("[CheckInPanel] Failed to fetch unresolved stale check-in")
+	},
 })
-const isAbandoned = computed(() => !!lastLog?.value?.is_abandoned)
+const hasStaleOpenIn = computed(() => !!unresolvedStaleIn.data?.name)
+const isAbandoned = computed(() => !!unresolvedStaleIn.data?.is_abandoned)
 
 const fetchRemoteRequest = createResource({
 	url: "frappe.client.get_list",
@@ -719,6 +730,7 @@ const submitLog = async (logType) => {
 			// list_update handler also reloads, but it's unreliable on mobile
 			// (disconnected/backgrounded), so reload explicitly like the dialogs do.
 			checkins.reload()
+			unresolvedStaleIn.reload()
 
 			if (doc?.requires_remote_approval) {
 				try {
@@ -900,6 +912,7 @@ onMounted(() => {
 	socket.on("list_update", (data) => {
 		if (data.doctype == DOCTYPE) {
 			checkins.reload()
+			unresolvedStaleIn.reload()
 		}
 	})
 })
