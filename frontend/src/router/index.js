@@ -6,6 +6,7 @@ import otRoutes from "./ot"
 import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import employeeAdvanceRoutes from "./advances"
+import issueRoutes from "./issues"
 
 const routes = [
 	{
@@ -91,6 +92,7 @@ const routes = [
 			...leaveRoutes,
 			...claimRoutes,
 			...employeeAdvanceRoutes,
+			...issueRoutes,
 		],
 	},
 ]

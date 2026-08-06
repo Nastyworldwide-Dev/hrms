@@ -50,6 +50,8 @@ class PWANotification(Document):
 		elif self.reference_document_type == "Remote Checkin Request":
 			# no per-request PWA route; land on the feed with inline Approve/Reject
 			return f"{base_url}/notifications"
+		elif self.reference_document_type == "Employee Issue":
+			return f"{base_url}/issues/{self.reference_document_name}"
 
 		return base_url
 

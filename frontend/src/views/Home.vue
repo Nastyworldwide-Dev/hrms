@@ -18,7 +18,9 @@
 </template>
 
 <script setup>
-import { inject, markRaw } from "vue"
+import { computed, inject, markRaw } from "vue"
+
+import { userResource } from "@/data/user"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
@@ -31,10 +33,16 @@ import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import EmployeeAdvanceIcon from "@/components/icons/EmployeeAdvanceIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
+import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 const __ = inject("$translate")
 
-const quickLinks = [
+const HR_BOARD_ROLES = ["HR User", "HR Manager", "System Manager"]
+const isHR = computed(() =>
+	(userResource.data?.roles || []).some((role) => HR_BOARD_ROLES.includes(role))
+)
+
+const baseQuickLinks = [
 	{
 		icon: markRaw(AttendanceIcon),
 		title: __("Request Attendance"),
@@ -65,5 +73,22 @@ const quickLinks = [
 		title: __("My KPI"),
 		route: "KPIDashboard",
 	},
+	{
+		icon: markRaw(SupportIcon),
+		title: __("Report an Issue"),
+		route: "EmployeeIssueFormView",
+	},
+	{
+		icon: markRaw(SupportIcon),
+		title: __("My Issues"),
+		route: "EmployeeIssueListView",
+	},
 ]
+
+const quickLinks = computed(() => [
+	...baseQuickLinks,
+	...(isHR.value
+		? [{ icon: markRaw(SupportIcon), title: __("HR Issue Board"), route: "HRIssueBoard" }]
+		: []),
+])
 </script>

@@ -163,6 +163,8 @@ permission_query_conditions = {
 	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.replacement_leave_claim_query_conditions",
 	"Expense Claim": "hrms.overrides.approval_row_scope.expense_claim_query_conditions",
 	"Shift Request": "hrms.overrides.approval_row_scope.shift_request_query_conditions",
+	# Helpdesk tickets: private employee↔HR, no reports_to visibility
+	"Employee Issue": "hrms.overrides.employee_issue_row_scope.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -176,6 +178,7 @@ has_permission = {
 	"Shift Request": "hrms.overrides.approval_row_scope.has_permission",
 	"OT Request": "hrms.overrides.ot_row_scope.has_permission",
 	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.has_permission",
+	"Employee Issue": "hrms.overrides.employee_issue_row_scope.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
