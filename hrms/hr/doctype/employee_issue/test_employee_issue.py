@@ -99,6 +99,13 @@ class TestEmployeeIssue(FrappeTestCase):
 		self.assertTrue(has_permission(doc, "read", STAFF_A))
 		self.assertFalse(has_permission(doc, "read", STAFF_B))
 
+	def test_hr_filed_ticket_owned_by_subject_employee(self):
+		# if_owner keys on owner; an HR-filed ticket must still be readable
+		# by the employee it is about
+		frappe.set_user(HR_USER)
+		doc = self.make_issue(self.staff_a)
+		self.assertEqual(doc.owner, STAFF_A)
+
 	def test_hr_notes_is_hr_only(self):
 		meta = frappe.get_meta("Employee Issue")
 		self.assertEqual(meta.get_field("hr_notes").permlevel, 1)

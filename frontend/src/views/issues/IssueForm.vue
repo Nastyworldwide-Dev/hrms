@@ -80,7 +80,9 @@ const applyConditionalSections = (fields, issueType) => {
 watch(
 	() => issue.value.issue_type,
 	(issueType) => {
-		if (!formFields.data || props.id) return
+		// runs on detail views too, once FormView loads the doc — a leave
+		// ticket shouldn't render the empty attendance section
+		if (!formFields.data) return
 		applyConditionalSections(formFields.data, issueType)
 	}
 )

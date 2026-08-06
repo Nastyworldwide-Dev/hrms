@@ -35,7 +35,23 @@ class EmployeeIssue(Document):
 			self.status = "Open"
 
 	def after_insert(self):
+		self.align_owner_with_employee()
 		self.notify_hr_users()
+
+	def align_owner_with_employee(self):
+		"""When HR files on behalf, hand ownership to the subject employee —
+		the Employee role reads via if_owner, which keys on owner, while the
+		row-scope hooks key on employee.user_id; without this an HR-filed
+		ticket is invisible to the very employee it is about."""
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		if employee_user and employee_user != self.owner:
+			logger.info(
+				"[employee_issue] %s: reassigning owner %s -> %s",
+				self.name,
+				self.owner,
+				employee_user,
+			)
+			self.db_set("owner", employee_user, update_modified=False)
 
 	def on_update(self):
 		before = self.get_doc_before_save()
