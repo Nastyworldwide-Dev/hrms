@@ -5,6 +5,7 @@ import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
+import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
@@ -35,5 +36,11 @@ export const NAV_ITEMS = [
 		title: "My KPI",
 		shortTitle: "My KPI",
 		route: "/dashboard/kpi",
+	},
+	{
+		icon: markRaw(SupportIcon),
+		title: "Issues",
+		shortTitle: "Issues",
+		route: "/issues",
 	},
 ]

@@ -29,6 +29,9 @@ export default {
 		extend: {
 			// Values resolve through the --m-* RGB triplets in theme/modernist.css
 			// (:root light / .dark dark) so every utility follows the theme switch.
+			backgroundColor: {
+				surface: { DEFAULT: "rgb(var(--m-surface) / <alpha-value>)" },
+			},
 			colors: {
 				ink: {
 					100: "rgb(var(--m-ink-100) / <alpha-value>)",
@@ -55,6 +58,13 @@ export default {
 				},
 				ground: "rgb(var(--m-ground) / <alpha-value>)",
 				surface: "rgb(var(--m-surface) / <alpha-value>)",
+				// ^ colors.surface alone never reaches bg-surface: the frappe-ui
+				// plugin extends backgroundColor.surface with its own shade map
+				// (surface-gray-1 …) and no DEFAULT, which shadows this for bg-*
+				// utilities — so bg-surface was silently never generated and
+				// inputs fell back to the UA's white background (unreadable in
+				// dark mode). The backgroundColor extend below restores the bare
+				// utility while keeping the plugin's named shades.
 				inkbase: "rgb(var(--m-inkbase) / <alpha-value>)",
 				divider: "var(--m-divider-color)",
 			},

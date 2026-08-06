@@ -7,7 +7,7 @@
 				<Button
 					variant="ghost"
 					class="!pl-0 hover:bg-transparent lg:hidden"
-					@click="router.back()"
+					@click="goBackOrHome(router)"
 				>
 					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 				</Button>
@@ -69,7 +69,7 @@
 				<button
 					type="button"
 					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-600 hover:text-inkbase"
-					@click="router.back()"
+					@click="goBackOrHome(router)"
 				>
 					<FeatherIcon name="arrow-left" class="h-4 w-4" />
 					{{ __("Back") }}
@@ -337,6 +337,8 @@
 <script setup>
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
+
+import { goBackOrHome } from "@/utils/navigation"
 import {
 	ErrorMessage,
 	Badge,

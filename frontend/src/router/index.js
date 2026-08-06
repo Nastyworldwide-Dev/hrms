@@ -46,6 +46,12 @@ const routes = [
 				name: "KPIDashboard",
 				component: () => import("@/views/kpi/Dashboard.vue"),
 			},
+			{
+				// lives in the tab shell (bottom tabs / side nav stay visible)
+				path: "/issues",
+				name: "EmployeeIssueListView",
+				component: () => import("@/views/issues/IssueList.vue"),
+			},
 		],
 	},
 	{

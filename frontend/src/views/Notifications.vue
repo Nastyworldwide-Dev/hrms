@@ -10,7 +10,7 @@
 							<Button
 								variant="ghost"
 								class="!pl-0 hover:bg-transparent"
-								@click="router.back()"
+								@click="goBackOrHome(router)"
 							>
 								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
@@ -193,6 +193,8 @@
 <script setup>
 import { IonContent, IonPage, IonModal } from "@ionic/vue"
 import { useRouter } from "vue-router"
+
+import { goBackOrHome } from "@/utils/navigation"
 import { createResource, FeatherIcon, Button, LoadingIndicator, toast } from "frappe-ui"
 
 import { computed, inject, onMounted, ref, watch } from "vue"

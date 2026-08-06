@@ -14,12 +14,9 @@ const requireHRRole = (to, from, next) => {
 	}
 }
 
+// the My Issues LIST route lives in router/index.js under TabbedView so the
+// tab shell stays visible; only form/detail/board render in the FormShell
 const routes = [
-	{
-		name: "EmployeeIssueListView",
-		path: "/issues",
-		component: () => import("@/views/issues/IssueList.vue"),
-	},
 	{
 		name: "EmployeeIssueFormView",
 		path: "/issues/new",

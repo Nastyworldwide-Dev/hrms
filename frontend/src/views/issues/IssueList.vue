@@ -1,75 +1,73 @@
 <template>
-	<ion-page>
-		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen bg-ground">
-				<div class="w-full max-w-[620px] mx-auto">
-					<header
-						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
-					>
-						<div class="flex flex-row items-center gap-2.5">
-							<Button
-								variant="ghost"
-								class="!pl-0 hover:bg-transparent"
-								@click="router.back()"
-							>
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
-								{{ __("My Issues") }}
-							</h2>
-						</div>
-						<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
-							<Button variant="solid" @click="navigate">
-								<template #prefix><FeatherIcon name="plus" class="w-4" /></template>
-								{{ __("Report") }}
-							</Button>
-						</router-link>
-					</header>
-
-					<div class="flex flex-col gap-2.5 w-full p-4">
-						<router-link
-							v-for="issue in myIssues.data || []"
-							:key="issue.name"
-							:to="{ name: 'EmployeeIssueDetailView', params: { id: issue.name } }"
-							class="bg-surface border border-divider p-3 cursor-pointer no-underline"
+	<BaseLayout :pageTitle="__('My Issues')">
+		<template #body>
+			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-[720px]">
+				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
+					<button @click="navigate" class="m-btn-primary">
+						{{ __("Report an Issue") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
 						>
-							<div class="flex justify-between items-center mb-1.5">
-								<span class="text-[10px] font-extrabold tracking-wide text-ink-600">
-									{{ issue.name }}
-								</span>
-								<span
-									class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 border"
-									:class="STATUS_CHIP[issue.status]"
-								>
-									{{ __(issue.status) }}
-								</span>
-							</div>
-							<div class="text-[13px] font-extrabold text-inkbase mb-0.5">
-								{{ __(issue.issue_type) }}
-							</div>
-							<div class="text-[11px] text-ink-600 truncate">
-								{{ dayjs(issue.creation).format("D MMM, HH:mm") }} · {{ issue.details }}
-							</div>
-						</router-link>
+							<line x1="5" y1="12" x2="19" y2="12"></line>
+							<polyline points="12 5 19 12 12 19"></polyline>
+						</svg>
+					</button>
+				</router-link>
 
-						<EmptyState v-if="!myIssues.loading && !myIssues.data?.length" :message="__('Nothing reported yet')" />
-					</div>
+				<span class="m-kicker mt-2">{{ __("Reported by you") }}</span>
+				<div class="flex flex-col gap-2.5 border-t-2 border-divider pt-4">
+					<router-link
+						v-for="issue in myIssues.data || []"
+						:key="issue.name"
+						:to="{ name: 'EmployeeIssueDetailView', params: { id: issue.name } }"
+						class="bg-surface border border-divider p-3 cursor-pointer no-underline"
+					>
+						<div class="flex justify-between items-center mb-1.5">
+							<span class="text-[10px] font-extrabold tracking-wide text-ink-600">
+								{{ issue.name }}
+							</span>
+							<span
+								class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 border"
+								:class="STATUS_CHIP[issue.status]"
+							>
+								{{ __(issue.status) }}
+							</span>
+						</div>
+						<div class="text-[13px] font-extrabold text-inkbase mb-0.5">
+							{{ __(issue.issue_type) }}
+						</div>
+						<div class="text-[11px] text-ink-600 truncate">
+							{{ dayjs(issue.creation).format("D MMM, HH:mm") }} · {{ issue.details }}
+						</div>
+					</router-link>
+
+					<EmptyState
+						v-if="!myIssues.loading && !myIssues.data?.length"
+						:message="__('Nothing reported yet')"
+					/>
 				</div>
 			</div>
-		</ion-content>
-	</ion-page>
+		</template>
+	</BaseLayout>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
-import { createListResource, FeatherIcon } from "frappe-ui"
+import { createListResource } from "frappe-ui"
 import { inject } from "vue"
-import { useRouter } from "vue-router"
+
+import BaseLayout from "@/components/BaseLayout.vue"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 const employee = inject("$employee")
-const router = useRouter()
 
 const STATUS_CHIP = {
 	Open: "text-amber-700 border-amber-700 dark:text-amber-500 dark:border-amber-500",
