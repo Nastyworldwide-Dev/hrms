@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref } from "vue"
+import { inject, onMounted, onUnmounted, ref } from "vue"
 import { IonModal } from "@ionic/vue"
 import { toast } from "frappe-ui"
 
@@ -68,6 +68,7 @@ import {
 	enablePushNotifications,
 } from "@/data/notifications"
 import {
+	escalatesOnDismiss,
 	hasDeclined,
 	recordDecline,
 	shouldShowPushPrompt,
@@ -81,6 +82,12 @@ const enabling = ref(false)
 // set once the user has answered (enabled, blocked, or declined) so a
 // programmatic close isn't mistaken for a swipe-away in onDismiss
 let decided = false
+// the eligibility chain and reopen timer outlive quick Home visits; this
+// keeps them from touching refs on a dead component instance
+let unmounted = false
+onUnmounted(() => {
+	unmounted = true
+})
 
 const benefits = [
 	__("Your leave & requests — approved or rejected"),
@@ -93,7 +100,7 @@ const benefits = [
 const waitForSdkInit = async (timeoutMs = 10000, intervalMs = 400) => {
 	console.info("[PushPrompt] Waiting for push SDK initialization")
 	const start = Date.now()
-	while (Date.now() - start < timeoutMs) {
+	while (!unmounted && Date.now() - start < timeoutMs) {
 		if (window.frappePushNotification?.initialized) return true
 		await new Promise((resolve) => setTimeout(resolve, intervalMs))
 	}
@@ -120,19 +127,23 @@ onMounted(async () => {
 		declined: hasDeclined(),
 		sdkInitialized,
 	}
-	if (!shouldShowPushPrompt(context)) {
+	if (unmounted || !shouldShowPushPrompt(context)) {
 		console.info("[PushPrompt] Auto-prompt skipped", context)
 		return
 	}
 	// small grace so the sheet doesn't fight the page-load transition
-	setTimeout(() => (isOpen.value = true), 1200)
+	setTimeout(() => {
+		if (!unmounted) isOpen.value = true
+	}, 1200)
 })
 
 const enable = () => {
+	// answered as soon as the tap lands: a swipe-away while the permission
+	// ask is in flight must not re-escalate the sheet
+	decided = true
 	enabling.value = true
 	enablePushNotifications()
 		.then((data) => {
-			decided = true
 			isOpen.value = false
 			if (data.permission_granted) {
 				toast({
@@ -155,7 +166,6 @@ const enable = () => {
 			}
 		})
 		.catch((error) => {
-			decided = true
 			isOpen.value = false
 			toast({
 				title: __("Error"),
@@ -188,15 +198,15 @@ const decline = () => {
 }
 
 const onDismiss = () => {
-	if (decided) return
-	// swiping away the soft ask counts as "Not now" → escalate once to the
-	// confirm step; swiping away the confirm step records nothing, so the
-	// prompt returns on the next app open
-	if (step.value === 1) {
-		step.value = 2
-		setTimeout(() => (isOpen.value = true), 150)
-	} else {
-		isOpen.value = false
-	}
+	// Ionic dismisses the overlay without writing back to the one-way
+	// :is-open binding — reset the ref first, or the reopen assignment
+	// below is an Object.is no-op and the confirm step never shows
+	const escalate = escalatesOnDismiss(step.value, decided)
+	isOpen.value = false
+	if (!escalate) return
+	step.value = 2
+	setTimeout(() => {
+		if (!unmounted) isOpen.value = true
+	}, 150)
 }
 </script>

@@ -6,6 +6,7 @@ import assert from "node:assert/strict"
 
 import {
 	DECLINE_KEY,
+	escalatesOnDismiss,
 	hasDeclined,
 	recordDecline,
 	shouldShowPushPrompt,
@@ -68,6 +69,15 @@ test("decline flag round-trips through storage under DECLINE_KEY", () => {
 	recordDecline(storage)
 	assert.equal(hasDeclined(storage), true)
 	assert.ok(storage.getItem(DECLINE_KEY) !== null)
+})
+
+test("swipe-away of the soft ask escalates to the confirm step, once", () => {
+	assert.equal(escalatesOnDismiss(1, false), true)
+	// confirm step swiped away → no escalation, no decline recorded
+	assert.equal(escalatesOnDismiss(2, false), false)
+	// an answered sheet (enabled, blocked, or declined) never reopens
+	assert.equal(escalatesOnDismiss(1, true), false)
+	assert.equal(escalatesOnDismiss(2, true), false)
 })
 
 test("recorded decline blocks the prompt", () => {

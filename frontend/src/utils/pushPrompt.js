@@ -12,6 +12,10 @@ export const recordDecline = (storage = window.localStorage) => {
 	storage.setItem(DECLINE_KEY, new Date().toISOString())
 }
 
+// Swiping away the soft ask counts as "Not now" → escalate to the confirm
+// step once; a decided sheet (enabled/blocked/declined) never reopens.
+export const escalatesOnDismiss = (step, decided) => !decided && step === 1
+
 export const shouldShowPushPrompt = ({
 	relayConfigured,
 	siteEnabled,
