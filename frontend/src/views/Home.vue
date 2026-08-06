@@ -12,6 +12,7 @@
 					<RequestPanel />
 				</div>
 			</div>
+			<PushNotificationPrompt />
 		</template>
 	</BaseLayout>
 </template>
@@ -23,6 +24,7 @@ import CheckInPanel from "@/components/CheckInPanel.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
+import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"

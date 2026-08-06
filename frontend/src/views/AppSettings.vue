@@ -83,7 +83,10 @@ import { FeatherIcon, Switch, toast, LoadingIndicator } from "frappe-ui"
 
 import { computed, inject, ref } from "vue"
 
-import { arePushNotificationsEnabled } from "@/data/notifications"
+import {
+	arePushNotificationsEnabled,
+	enablePushNotifications as requestPushEnable,
+} from "@/data/notifications"
 import { theme, setTheme, THEME_MODES } from "@/data/theme"
 
 const __ = inject("$translate")
@@ -153,8 +156,7 @@ const togglePushNotifications = (newValue) => {
 const enablePushNotifications = () => {
 	isLoading.value = true
 
-	window.frappePushNotification
-		.enableNotification()
+	requestPushEnable()
 		.then((data) => {
 			if (data.permission_granted) {
 				pushNotificationState.value = true
