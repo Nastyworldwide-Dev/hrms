@@ -275,10 +275,13 @@ def get_unresolved_stale_in() -> dict:
 	rows = frappe.get_all(
 		"Employee Checkin",
 		filters={"employee": employee, "time": [">=", add_days(now, -10)]},
-		fields=["name", "time", "log_type", "is_abandoned"],
+		fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
 		order_by="time asc",
 		limit=200,
 	)
+	# a REJECTED late-OUT doesn't close its session (mirrors the OT pairing
+	# engine) — the employee must be able to resubmit a corrected time
+	rows = [r for r in rows if not (r.log_type == "OUT" and r.remote_approval_status == "Rejected")]
 
 	unresolved = {}
 	for i, row in enumerate(rows):
@@ -367,13 +370,18 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 		out_time_filter = ["between", [in_doc.time, get_datetime(next_in_time) - timedelta(seconds=1)]]
 		if out_dt >= get_datetime(next_in_time):
 			frappe.throw(_("Check-out time must be before your next check-in ({0}).").format(next_in_time))
+	# a rejected late-OUT must not block resubmitting a corrected time — but a
+	# bare != filter would ALSO skip legacy rows with NULL status (SQL
+	# three-valued logic), so probe non-rejected and never-set separately
+	base_out_filters = {
+		"employee": in_doc.employee,
+		"log_type": "OUT",
+		"time": out_time_filter,
+	}
 	later_out = frappe.db.exists(
-		"Employee Checkin",
-		{
-			"employee": in_doc.employee,
-			"log_type": "OUT",
-			"time": out_time_filter,
-		},
+		"Employee Checkin", {**base_out_filters, "remote_approval_status": ["!=", "Rejected"]}
+	) or frappe.db.exists(
+		"Employee Checkin", {**base_out_filters, "remote_approval_status": ["is", "not set"]}
 	)
 	if later_out:
 		frappe.throw(_("A check-out for this session already exists."))

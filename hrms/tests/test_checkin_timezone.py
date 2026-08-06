@@ -260,6 +260,24 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 		]
 		self.assertEqual(self._unresolved(rows, now), {})
 
+	def test_rejected_late_out_reopens_the_session(self):
+		"""A rejected late-OUT must not hide the banner — the employee needs
+		to resubmit a corrected time."""
+		now = _kl_now()
+		yesterday_in = now - datetime.timedelta(days=1, hours=2)
+		rows = [
+			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", is_abandoned=0),
+			frappe._dict(
+				name="CKOUT-REJECTED",
+				time=yesterday_in + datetime.timedelta(hours=9),
+				log_type="OUT",
+				is_abandoned=0,
+				remote_approval_status="Rejected",
+			),
+		]
+		result = self._unresolved(rows, now)
+		self.assertEqual(result.get("name"), "CKIN-OLD")
+
 	def test_fresh_open_in_is_not_flagged(self):
 		now = _kl_now()
 		rows = [
@@ -294,8 +312,8 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 
 		db = MagicMock()
 		db.get_value.side_effect = get_value
-		captured = {}
-		db.exists.side_effect = lambda doctype, filters: captured.update(filters) or None
+		probes = []
+		db.exists.side_effect = lambda doctype, filters: probes.append(dict(filters)) or None
 
 		out_doc = MagicMock()
 		out_doc.name = "CKOUT-LATE"
@@ -313,9 +331,17 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 				reason="forgot to check out",
 			)
 
-		# the later-OUT probe must be bounded by the next IN, not open-ended
-		self.assertEqual(captured["time"][0], "between")
-		self.assertLess(captured["time"][1][1], next_in)
+		# the later-OUT probes must be bounded by the next IN, not open-ended,
+		# and must cover BOTH non-rejected and never-set statuses (a bare !=
+		# filter would skip NULL-status legacy OUTs — SQL three-valued logic)
+		self.assertEqual(len(probes), 2)
+		for probe in probes:
+			self.assertEqual(probe["time"][0], "between")
+			self.assertLess(probe["time"][1][1], next_in)
+		self.assertEqual(
+			[p["remote_approval_status"] for p in probes],
+			[["!=", "Rejected"], ["is", "not set"]],
+		)
 
 
 if __name__ == "__main__":
