@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('SOPs')">
 		<template #body>
 			<div
-				class="flex flex-col gap-[18px] w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-[18px] w-full max-w-[720px] mx-auto px-4 pt-[18px] pb-24 lg:p-7"
 			>
 				<!-- Essentials (pinned) -->
 				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">

@@ -30,7 +30,7 @@
 		<div class="grow overflow-y-auto">
 			<div
 				v-if="sop.data"
-				class="flex flex-col gap-3.5 w-full max-w-[720px] px-4 pt-[18px] pb-16 lg:p-7"
+				class="flex flex-col gap-3.5 w-full max-w-[820px] mx-auto px-4 pt-[18px] pb-16 lg:my-8 lg:bg-surface lg:border lg:border-divider lg:shadow-sm lg:px-14 lg:py-11"
 			>
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
@@ -154,50 +154,133 @@ const attachmentKind = computed(() => {
 </script>
 
 <style scoped>
-/* mockup prose styling for the Text Editor body */
+/* document-grade rendering for the Text Editor body — headings, lists,
+   tables and quotes read like a print format, not chat text */
+.sop-prose {
+	font-size: 13.5px;
+	line-height: 1.75;
+	color: var(--color-neutral-800);
+}
 .sop-prose :deep(h1),
 .sop-prose :deep(h2),
 .sop-prose :deep(h3),
-.sop-prose :deep(h4) {
+.sop-prose :deep(h4),
+.sop-prose :deep(h5),
+.sop-prose :deep(h6) {
 	font-family: var(--font-heading);
 	font-weight: 800;
-	font-size: 14px;
-	margin: 4px 0 0;
 	color: var(--color-text);
+	margin: 22px 0 6px;
+	line-height: 1.3;
+}
+.sop-prose :deep(h1) {
+	font-size: 19px;
+	padding-bottom: 6px;
+	border-bottom: 2px solid var(--color-divider);
+}
+.sop-prose :deep(h2) {
+	font-size: 16px;
+}
+.sop-prose :deep(h3) {
+	font-size: 14.5px;
+}
+.sop-prose :deep(h4),
+.sop-prose :deep(h5),
+.sop-prose :deep(h6) {
+	font-size: 13.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.sop-prose :deep(h1:first-child),
+.sop-prose :deep(h2:first-child),
+.sop-prose :deep(h3:first-child),
+.sop-prose :deep(p:first-child) {
+	margin-top: 0;
 }
 .sop-prose :deep(p) {
-	font-size: 13px;
-	line-height: 1.6;
-	color: var(--color-neutral-800);
-	margin: 8px 0 0;
+	margin: 0 0 10px;
+}
+.sop-prose :deep(strong),
+.sop-prose :deep(b) {
+	font-weight: 700;
+	color: var(--color-text);
+}
+.sop-prose :deep(a) {
+	color: var(--color-accent);
+	text-decoration: underline;
 }
 .sop-prose :deep(ul),
 .sop-prose :deep(ol) {
-	list-style: none;
-	padding: 0;
-	margin: 8px 0 0;
+	margin: 0 0 12px;
+	padding-left: 22px;
 	display: flex;
 	flex-direction: column;
-	gap: 7px;
+	gap: 5px;
 }
-.sop-prose :deep(li) {
-	position: relative;
-	padding-left: 16px;
-	font-size: 13px;
-	line-height: 1.5;
-	color: var(--color-neutral-800);
+.sop-prose :deep(ul) {
+	list-style: square;
 }
-.sop-prose :deep(li)::before {
-	content: "";
-	position: absolute;
-	left: 0;
-	top: 6px;
-	width: 6px;
-	height: 6px;
-	background: var(--color-accent-500);
+.sop-prose :deep(ol) {
+	list-style: decimal;
+}
+.sop-prose :deep(li)::marker {
+	color: var(--color-accent);
+	font-weight: 700;
+}
+.sop-prose :deep(li > ul),
+.sop-prose :deep(li > ol) {
+	margin: 5px 0 0;
+}
+.sop-prose :deep(blockquote) {
+	margin: 0 0 12px;
+	padding: 6px 0 6px 14px;
+	border-left: 3px solid var(--color-accent);
+	color: var(--color-neutral-700);
+	font-style: italic;
+}
+.sop-prose :deep(hr) {
+	border: 0;
+	border-top: 2px solid var(--color-divider);
+	margin: 18px 0;
+}
+.sop-prose :deep(table) {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 4px 0 14px;
+	font-size: 12.5px;
+	display: block;
+	overflow-x: auto;
+}
+.sop-prose :deep(th) {
+	font-family: var(--font-heading);
+	font-weight: 800;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	text-align: left;
+	color: var(--color-text);
+	border-bottom: 2px solid var(--color-text);
+	padding: 7px 10px 7px 0;
+}
+.sop-prose :deep(td) {
+	border-bottom: 1px solid var(--color-divider);
+	padding: 7px 10px 7px 0;
+	vertical-align: top;
 }
 .sop-prose :deep(img) {
 	max-width: 100%;
 	height: auto;
+	margin: 4px 0 12px;
+}
+.sop-prose :deep(pre),
+.sop-prose :deep(code) {
+	font-size: 12px;
+	background: var(--color-neutral-100);
+	padding: 2px 5px;
+}
+.sop-prose :deep(pre) {
+	padding: 10px 12px;
+	overflow-x: auto;
+	margin: 0 0 12px;
 }
 </style>

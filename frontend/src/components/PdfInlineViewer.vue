@@ -22,6 +22,9 @@
 				<span class="text-[12.5px] text-ink-700">
 					{{ __("This PDF could not be displayed here.") }}
 				</span>
+				<span v-if="errorDetail" class="text-[10px] text-ink-500 break-all">
+					{{ errorDetail }}
+				</span>
 				<a
 					:href="props.fileUrl"
 					target="_blank"
@@ -47,12 +50,16 @@
 // legacy build: no Promise.withResolvers requirement (older Android
 // WebViews) and installs under the FC bench image's Node 18
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs"
-import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url"
+// ?worker: Vite bundles the worker into its own .js chunk — a raw ?url .mjs
+// asset 404s on Frappe Cloud's asset serving and pdf.js dies workerless
+import PdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker"
 import { inject, nextTick, onBeforeUnmount, ref, watch } from "vue"
 
-// Vite-native worker wiring: the URL import is emitted as a real asset, so no
-// CDN and no separate worker bundle config is needed.
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
+const ensureWorker = () => {
+	if (!pdfjsLib.GlobalWorkerOptions.workerPort) {
+		pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker()
+	}
+}
 
 const __ = inject("$translate")
 
@@ -63,6 +70,7 @@ const props = defineProps({
 const scroller = ref(null)
 const loading = ref(true)
 const error = ref(false)
+const errorDetail = ref("")
 const pageCount = ref(0)
 const currentPage = ref(1)
 
@@ -84,6 +92,7 @@ const render = async () => {
 	try {
 		await nextTick()
 		clearPages()
+		ensureWorker()
 		// same-origin request — the session cookie covers private files
 		pdfDoc = await pdfjsLib.getDocument(props.fileUrl).promise
 		pageCount.value = pdfDoc.numPages
@@ -118,6 +127,7 @@ const render = async () => {
 	} catch (err) {
 		console.warn("[SOP] Failed to render PDF:", err)
 		error.value = true
+		errorDetail.value = err?.message || String(err)
 		pageCount.value = 0
 	} finally {
 		loading.value = false
