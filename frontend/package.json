@@ -21,7 +21,7 @@
 		"feather-icons": "^4.29.1",
 		"firebase": "^10.8.0",
 		"frappe-ui": "0.1.105",
-		"pdfjs-dist": "4.10.38",
+		"pdfjs-dist": "4.4.168",
 		"postcss": "^8.4.5",
 		"tailwindcss": "^3.4.3",
 		"vite": "^5.4.10",

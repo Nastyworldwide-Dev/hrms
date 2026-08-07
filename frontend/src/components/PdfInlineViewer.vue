@@ -44,8 +44,10 @@
 </template>
 
 <script setup>
-import * as pdfjsLib from "pdfjs-dist"
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
+// legacy build: no Promise.withResolvers requirement (older Android
+// WebViews) and installs under the FC bench image's Node 18
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs"
+import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url"
 import { inject, nextTick, onBeforeUnmount, ref, watch } from "vue"
 
 // Vite-native worker wiring: the URL import is emitted as a real asset, so no
