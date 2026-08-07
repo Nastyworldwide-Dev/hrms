@@ -1,4 +1,4 @@
-__version__ = "15.106.7"
+__version__ = "15.106.8"
 
 
 def refetch_resource(cache_key: str | list, user=None):
