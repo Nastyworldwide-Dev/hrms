@@ -16,10 +16,19 @@
 							v-for="sop in pinned"
 							:key="sop.name"
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-							class="flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
+							class="relative flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
 							style="transition: transform var(--motion-press), background-color var(--motion-press)"
 						>
 							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
+							<button
+								v-if="isHR"
+								type="button"
+								class="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-ground"
+								:aria-label="__('Edit {0}', [sop.title])"
+								@click.prevent.stop="openEdit(sop)"
+							>
+								<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
+							</button>
 							<span class="flex flex-col gap-0.5">
 								<span class="font-extrabold text-[13px] leading-tight">
 									{{ sop.title }}
