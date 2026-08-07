@@ -16,6 +16,15 @@
 			>
 				{{ sop.data?.title || __("SOP") }}
 			</h2>
+			<button
+				v-if="isHR"
+				type="button"
+				class="ml-auto flex h-11 w-11 -my-2 -mr-2 flex-none items-center justify-center text-accent-700"
+				:aria-label="__('Edit {0}', [sop.data?.title || __('SOP')])"
+				@click="sheetOpen = true"
+			>
+				<FeatherIcon name="edit" class="h-[17px] w-[17px]" />
+			</button>
 		</header>
 
 		<div class="grow overflow-y-auto">
@@ -90,15 +99,24 @@
 				:message="__('This SOP is not available')"
 			/>
 		</div>
+
+		<SopFormSheet
+			v-if="isHR"
+			:open="sheetOpen"
+			:sopName="props.id"
+			@update:open="sheetOpen = $event"
+			@saved="sop.reload()"
+		/>
 	</div>
 </template>
 
 <script setup>
 import { createResource, FeatherIcon } from "frappe-ui"
-import { computed, inject } from "vue"
+import { computed, inject, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import PdfInlineViewer from "@/components/PdfInlineViewer.vue"
+import SopFormSheet from "./SopFormSheet.vue"
 import { goBackOrHome } from "@/utils/navigation"
 
 const __ = inject("$translate")
@@ -118,7 +136,11 @@ const sop = createResource({
 	},
 })
 
+const sheetOpen = ref(false)
+
 const isGeneral = computed(() => sop.data?.scope !== "Department")
+// server-declared flag — same source of truth as the list payload
+const isHR = computed(() => !!sop.data?.is_hr)
 const attachment = computed(() => sop.data?.attachment || null)
 
 // inline full view: images and PDFs render in place, everything else falls

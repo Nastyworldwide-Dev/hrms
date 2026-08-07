@@ -136,6 +136,7 @@ def get_sop(name: str) -> dict:
 
 	logger.info("[sop] get_sop %s served to %s (is_hr=%s)", name, user, is_hr)
 	return {
+		"is_hr": is_hr,
 		"name": doc.name,
 		"title": doc.title,
 		"scope": doc.scope,

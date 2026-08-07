@@ -369,6 +369,10 @@ class TestGetSop(unittest.TestCase):
 		with self.assertRaises(frappe.PermissionError):
 			self._get(STAFF, "HR-SOP-00005")
 
+	def test_detail_carries_is_hr_flag(self):
+		self.assertFalse(self._get(STAFF, "HR-SOP-00003")["is_hr"])
+		self.assertTrue(self._get(HR, "HR-SOP-00002")["is_hr"])
+
 	def test_hr_reads_unpublished_sop_with_attachment(self):
 		data = self._get(HR, "HR-SOP-00002")
 		self.assertEqual(data["attachment"], {"file_name": "contacts.pdf", "file_url": "/files/contacts.pdf"})
