@@ -7,11 +7,13 @@ import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
 import SupportIcon from "@/components/icons/SupportIcon.vue"
 import SopIcon from "@/components/icons/SopIcon.vue"
+import MoreIcon from "@/components/icons/MoreIcon.vue"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
 // source strings — consumers must wrap them with the injected $translate.
-// `shortTitle` is the design's compact tab-bar label (7 tabs on phones).
+// `shortTitle` is the design's compact tab-bar label. The phone bar shows
+// TAB_ITEMS (5 primaries + More); SideNav shows the full NAV_ITEMS list.
 export const NAV_ITEMS = [
 	{ icon: markRaw(HomeIcon), title: "Home", shortTitle: "Home", route: "/home" },
 	{
@@ -51,3 +53,18 @@ export const NAV_ITEMS = [
 		route: "/sop",
 	},
 ]
+
+// Phone tab bar: the last two NAV_ITEMS (Issues, SOPs) live under More.
+// `routes` lists every path the More tab claims for its active state.
+export const TAB_ITEMS = [
+	...NAV_ITEMS.slice(0, 5),
+	{
+		icon: markRaw(MoreIcon),
+		title: "More",
+		shortTitle: "More",
+		route: "/more",
+		routes: ["/more", "/issues", "/sop"],
+	},
+]
+
+export const MORE_ITEMS = NAV_ITEMS.slice(5)

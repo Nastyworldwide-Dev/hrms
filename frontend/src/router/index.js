@@ -61,6 +61,12 @@ const routes = [
 				name: "SopListView",
 				component: () => import("@/views/sop/SopList.vue"),
 			},
+			{
+				// overflow hub for the phone tab bar (Issues, SOPs)
+				path: "/more",
+				name: "MoreView",
+				component: () => import("@/views/More.vue"),
+			},
 		],
 	},
 	{

@@ -12,7 +12,7 @@
 		>
 			<span
 				class="block w-full h-[3px] mb-[7px] flex-none"
-				:class="route.path === item.route ? 'bg-accent' : 'bg-transparent'"
+				:class="isActive(item) ? 'bg-accent' : 'bg-transparent'"
 			></span>
 			<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
 			<span
@@ -31,16 +31,22 @@ import { IonTabBar, IonTabButton } from "@ionic/vue"
 
 import { inject } from "vue"
 
-import { NAV_ITEMS } from "@/data/navItems"
+import { TAB_ITEMS } from "@/data/navItems"
 
 const __ = inject("$translate")
 
 const route = useRoute()
 
-const tabItems = NAV_ITEMS.map((item) => ({
+const tabItems = TAB_ITEMS.map((item) => ({
 	...item,
 	shortTitle: __(item.shortTitle),
 }))
+
+// More claims its child routes (`routes`) so the indicator stays lit on them
+const isActive = (item) =>
+	item.routes
+		? item.routes.some((path) => route.path.startsWith(path))
+		: route.path === item.route
 </script>
 
 <style scoped>
