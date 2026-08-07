@@ -2,6 +2,8 @@
 	<div class="relative bg-divider">
 		<div
 			ref="scroller"
+			role="group"
+			:aria-label="__('PDF preview, page {0} of {1}', [currentPage, pageCount || 1])"
 			class="relative flex flex-col gap-2.5 p-2.5 max-h-[70vh] overflow-y-auto"
 			@scroll="onScroll"
 		>

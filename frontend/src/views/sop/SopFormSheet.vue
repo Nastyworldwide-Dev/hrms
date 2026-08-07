@@ -18,7 +18,7 @@
 				</h3>
 				<button
 					type="button"
-					class="flex p-1 text-inkbase"
+					class="flex h-11 w-11 -m-3 items-center justify-center text-inkbase"
 					:aria-label="__('Close')"
 					@click="close"
 				>
@@ -29,8 +29,9 @@
 			<!-- body -->
 			<div class="flex flex-col gap-4 p-4 overflow-y-auto">
 				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label">{{ __("Title") }}</label>
+					<label class="m-field-label" for="sop-title">{{ __("Title") }}</label>
 					<input
+						id="sop-title"
 						v-model="form.title"
 						type="text"
 						:placeholder="__('e.g. Cash Handling Procedure')"
@@ -49,12 +50,14 @@
 							v-for="scope in SCOPES"
 							:key="scope"
 							type="button"
-							class="flex-1 py-2.5 px-2 border text-[11px] font-extrabold uppercase tracking-[0.05em]"
+							class="flex-1 min-h-11 py-2.5 px-2 border text-[11px] font-extrabold uppercase tracking-[0.05em]"
 							:class="
 								form.scope === scope
 									? 'bg-accent text-ground border-accent'
 									: 'bg-surface text-ink-700 border-divider'
 							"
+							:aria-pressed="form.scope === scope"
+							style="transition: background-color var(--motion-glide), color var(--motion-glide), border-color var(--motion-glide)"
 							@click="setScope(scope)"
 						>
 							{{ __(scope) }}
@@ -63,8 +66,9 @@
 				</div>
 
 				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label">{{ __("Department") }}</label>
+					<label class="m-field-label" for="sop-department">{{ __("Department") }}</label>
 					<select
+						id="sop-department"
 						v-model="form.department"
 						:disabled="form.scope !== 'Department'"
 						class="m-field-input disabled:opacity-45"
@@ -96,25 +100,34 @@
 						<span class="text-[13px] font-bold text-inkbase">
 							{{ __(toggle.label) }}
 						</span>
-						<span class="text-[11px] text-ink-600">{{ __(toggle.hint) }}</span>
+						<span class="text-[11px] text-ink-700">{{ __(toggle.hint) }}</span>
 					</span>
 					<button
 						type="button"
-						class="relative h-[22px] w-[42px] flex-none"
-						:class="form[toggle.field] ? 'bg-accent' : 'bg-ink-300'"
+						role="switch"
+						class="flex h-11 w-[52px] -my-2.5 -mr-[5px] flex-none items-center justify-center"
 						:aria-label="__(toggle.label)"
+						:aria-checked="form[toggle.field]"
 						@click="form[toggle.field] = !form[toggle.field]"
 					>
 						<span
-							class="absolute top-0.5 left-0.5 h-[18px] w-[18px] bg-ground transition-transform"
-							:class="form[toggle.field] ? 'translate-x-5' : ''"
-						></span>
+							class="relative h-[22px] w-[42px]"
+							:class="form[toggle.field] ? 'bg-accent' : 'bg-ink-400'"
+							style="transition: background-color var(--motion-glide)"
+						>
+							<span
+								class="absolute top-0.5 left-0.5 h-[18px] w-[18px] bg-ground"
+								:class="form[toggle.field] ? 'translate-x-5' : ''"
+								style="transition: transform var(--motion-glide)"
+							></span>
+						</span>
 					</button>
 				</div>
 
 				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label">{{ __("Content") }}</label>
+					<label class="m-field-label" for="sop-content">{{ __("Content") }}</label>
 					<textarea
+						id="sop-content"
 						v-model="form.content"
 						rows="4"
 						:placeholder="__('Write the procedure…')"
@@ -348,6 +361,12 @@ const save = async () => {
 		if (attachmentCleared.value) values.attachment = ""
 
 		let docname = props.sopName
+		const isCreate = !docname
+		// Create + pending upload: insert unpublished, publish only once the file
+		// is actually attached — a failed upload must never publish an SOP whose
+		// attachment is missing.
+		const deferPublish = isCreate && !!selectedFile.value && values.published === 1
+
 		if (docname) {
 			await updateSop.fetch({
 				doctype: "SOP Document",
@@ -355,12 +374,40 @@ const save = async () => {
 				fieldname: values,
 			})
 		} else {
-			const doc = await sopDocs.insert.submit(values)
+			const doc = await sopDocs.insert.submit(
+				deferPublish ? { ...values, published: 0 } : values
+			)
 			docname = doc?.name || sopDocs.insert.data?.name
 		}
 
-		if (selectedFile.value && docname)
-			await uploadAttachment(docname, selectedFile.value)
+		if (selectedFile.value && docname) {
+			try {
+				await uploadAttachment(docname, selectedFile.value)
+			} catch (error) {
+				// on edit the old attachment survives — let the generic handler
+				// report it; on create the draft exists and must stay unpublished
+				if (!isCreate) throw error
+				console.warn("[SOP] Attachment upload failed after create:", error)
+				toast({
+					title: __("Attachment failed"),
+					text: __(
+						"Saved as an unpublished draft without the attachment — open it to retry."
+					),
+					icon: "alert-circle",
+					position: "bottom-center",
+					iconClasses: "text-red-500",
+				})
+				emit("saved")
+				close()
+				return
+			}
+			if (deferPublish)
+				await updateSop.fetch({
+					doctype: "SOP Document",
+					name: docname,
+					fieldname: { published: 1 },
+				})
+		}
 
 		toast({
 			title: __("Success"),
@@ -394,7 +441,7 @@ const save = async () => {
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 0.07em;
-	color: rgb(var(--m-ink-600));
+	color: rgb(var(--m-ink-700));
 	font-family: var(--font-heading);
 }
 .m-field-input {

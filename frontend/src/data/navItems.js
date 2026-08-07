@@ -11,7 +11,7 @@ import SopIcon from "@/components/icons/SopIcon.vue"
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
 // source strings — consumers must wrap them with the injected $translate.
-// `shortTitle` is the design's compact tab-bar label (fits 6 tabs on phones).
+// `shortTitle` is the design's compact tab-bar label (7 tabs on phones).
 export const NAV_ITEMS = [
 	{ icon: markRaw(HomeIcon), title: "Home", shortTitle: "Home", route: "/home" },
 	{

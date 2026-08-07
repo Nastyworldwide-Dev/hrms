@@ -16,7 +16,7 @@
 			></span>
 			<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
 			<span
-				class="mt-[5px] text-[8.5px] uppercase font-extrabold tracking-[0.08em] whitespace-nowrap"
+				class="mt-[5px] max-w-full overflow-hidden text-ellipsis text-[8.5px] uppercase font-extrabold tracking-[0.08em] whitespace-nowrap"
 			>
 				{{ item.shortTitle }}
 			</span>

@@ -18,37 +18,17 @@ import os
 import frappe
 from frappe import _
 
-from hrms.hr.utils import HR_ROLES
+# single source of truth for "who is unrestricted", "who is asking" and "what
+# may they see" — the row-scope hook module owns all three (see FIX B rationale
+# in sop_document_row_scope.record_visible)
+from hrms.overrides.sop_document_row_scope import _active_employee, _unrestricted, record_visible
 
 logger = logging.getLogger(__name__)
 
 LIST_FIELDS = ("name", "title", "scope", "department", "pinned", "published", "modified", "attachment")
 
-
-def _is_hr(user: str) -> bool:
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
-
-
-def _active_employee(user: str):
-	if not user or user == "Guest":
-		return None
-	return frappe.db.get_value(
-		"Employee",
-		{"user_id": user, "status": "Active"},
-		["name", "department"],
-		as_dict=True,
-	)
-
-
-def _visible(row, is_hr: bool, department: str | None) -> bool:
-	"""The one visibility predicate, shared by list and detail."""
-	if is_hr:
-		return True
-	if not row.published:
-		return False
-	if row.scope == "General":
-		return True
-	return bool(row.department) and row.department == department
+NO_EMPLOYEE_MSG = "No active Employee record is linked to your user."
+OUT_OF_SCOPE_MSG = "This SOP is not available to you."
 
 
 def _card(row) -> dict:
@@ -69,11 +49,11 @@ def _card(row) -> dict:
 def get_sops() -> dict:
 	"""Everything the SOP Library screen needs, scoped to the session user."""
 	user = frappe.session.user
-	is_hr = _is_hr(user)
+	is_hr = _unrestricted(user)
 	employee = _active_employee(user)
 	if not is_hr and not employee:
 		logger.warning("[sop] denying get_sops for %s — no active Employee record", user)
-		raise frappe.PermissionError(_("No active Employee record is linked to your user."))
+		raise frappe.PermissionError(_(NO_EMPLOYEE_MSG))
 
 	department = employee.department if employee else None
 	filters = {} if is_hr else {"published": 1}
@@ -87,7 +67,7 @@ def get_sops() -> dict:
 
 	pinned, general, by_department = [], [], {}
 	for row in rows:
-		if not _visible(row, is_hr, department):
+		if not is_hr and not record_visible(row.published, row.scope, row.department, department):
 			continue
 		card = _card(row)
 		if card["pinned"]:
@@ -120,17 +100,18 @@ def get_sop(name: str) -> dict:
 	"""Full SOP for the reader sheet. Guarded twice: the same predicate the list
 	uses, plus the framework's own permission check."""
 	user = frappe.session.user
-	is_hr = _is_hr(user)
+	is_hr = _unrestricted(user)
 	employee = _active_employee(user)
 	if not is_hr and not employee:
 		logger.warning("[sop] denying get_sop(%s) for %s — no active Employee record", name, user)
-		raise frappe.PermissionError
+		raise frappe.PermissionError(_(NO_EMPLOYEE_MSG))
 
 	doc = frappe.get_doc("SOP Document", name)
 	department = employee.department if employee else None
-	if not _visible(doc, is_hr, department) or not frappe.has_permission("SOP Document", "read", doc=doc):
+	visible = is_hr or record_visible(doc.published, doc.scope, doc.department, department)
+	if not visible or not frappe.has_permission("SOP Document", "read", doc=doc):
 		logger.warning("[sop] denying get_sop(%s) for %s — out of scope", name, user)
-		raise frappe.PermissionError
+		raise frappe.PermissionError(_(OUT_OF_SCOPE_MSG))
 
 	logger.info("[sop] get_sop %s served to %s (is_hr=%s)", name, user, is_hr)
 	return {

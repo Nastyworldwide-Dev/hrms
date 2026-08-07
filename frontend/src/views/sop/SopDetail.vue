@@ -5,7 +5,7 @@
 		>
 			<button
 				type="button"
-				class="flex p-1 -ml-1 text-inkbase"
+				class="flex h-11 w-11 -my-2 -ml-3 items-center justify-center text-inkbase"
 				:aria-label="__('Back')"
 				@click="goBackOrHome(router)"
 			>
@@ -31,10 +31,13 @@
 					>
 						{{ isGeneral ? __("General") : sop.data.department }}
 					</span>
-					<span v-if="!sop.data.published" class="m-chip m-chip-muted">
+					<span
+						v-if="!sop.data.published"
+						class="m-chip m-chip-muted !text-ink-700"
+					>
 						{{ __("Draft") }}
 					</span>
-					<span class="text-[11px] text-ink-600">
+					<span class="text-[11px] text-ink-700">
 						{{ __("Updated") }} {{ dayjs(sop.data.modified).format("D MMM YYYY") }}
 					</span>
 				</div>
@@ -60,7 +63,7 @@
 								:href="attachment.file_url"
 								target="_blank"
 								rel="noopener"
-								class="flex-none inline-flex h-[30px] w-[30px] items-center justify-center border border-accent text-accent no-underline"
+								class="relative flex-none inline-flex h-[30px] w-[30px] items-center justify-center border border-accent text-accent no-underline before:absolute before:-inset-2 before:content-['']"
 								:title="__('Download')"
 								:aria-label="__('Download')"
 							>

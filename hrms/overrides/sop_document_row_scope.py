@@ -35,6 +35,15 @@ def _active_employee(user: str):
 	)
 
 
+def record_visible(published, scope, department, employee_department) -> bool:
+	"""The one record-visibility rule, shared by the row-scope hook and the read
+	API (hrms/api/sop.py): a restricted reader sees a published SOP only when it
+	is General or addressed to their own department."""
+	return bool(published) and (
+		scope == "General" or (bool(department) and department == employee_department)
+	)
+
+
 def get_permission_query_conditions(user: str | None = None) -> str:
 	"""List scope: published General SOPs plus the employee's own department."""
 	user = user or frappe.session.user
@@ -79,9 +88,7 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	if not employee:
 		return False
 
-	allowed = bool(doc.published) and (
-		doc.scope == "General" or (bool(doc.department) and doc.department == employee.department)
-	)
+	allowed = record_visible(doc.published, doc.scope, doc.department, employee.department)
 	logger.debug(
 		"[sop_document_row_scope] has_permission user=%s name=%s allowed=%s",
 		user,

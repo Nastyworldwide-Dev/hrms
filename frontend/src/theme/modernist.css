@@ -58,6 +58,11 @@
 	--radius-md: 0px;
 	--radius-lg: 0px;
 
+	/* Kinetics vocabulary (mockup contract: /root/mockups/mockup-sop-library.html)
+	   — press for tap feedback, glide for state changes. */
+	--motion-press: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+	--motion-glide: 220ms cubic-bezier(0.22, 1, 0.36, 1);
+
 	--shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
 	--shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
 	--shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
@@ -166,6 +171,19 @@
 *::before,
 *::after {
 	box-sizing: border-box;
+}
+
+/* Accessibility floor: honour the OS "reduce motion" setting everywhere.
+   Additive — no existing rule changes for users who allow motion. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
 }
 body {
 	background: var(--color-bg);

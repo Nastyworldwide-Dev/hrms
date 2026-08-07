@@ -16,7 +16,8 @@
 							v-for="sop in pinned"
 							:key="sop.name"
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-							class="flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline"
+							class="flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
+							style="transition: transform var(--motion-press), background-color var(--motion-press)"
 						>
 							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
 							<span class="flex flex-col gap-0.5">
@@ -42,7 +43,8 @@
 					<input
 						v-model="query"
 						:placeholder="__('Search SOPs…')"
-						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-[13px] text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent"
+						:aria-label="__('Search SOPs')"
+						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-[13px] text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
 					/>
 				</div>
 
@@ -59,7 +61,8 @@
 								v-for="sop in section.sops"
 								:key="sop.name"
 								:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline"
+								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline active:scale-[0.985] active:bg-ink-200"
+								style="transition: transform var(--motion-press), background-color var(--motion-press)"
 							>
 								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
 									<span class="flex items-center gap-1.5 min-w-0">
@@ -70,20 +73,20 @@
 										</span>
 										<span
 											v-if="!sop.published"
-											class="m-chip m-chip-muted flex-none"
+											class="m-chip m-chip-muted !text-ink-700 flex-none"
 										>
 											{{ __("Draft") }}
 										</span>
 									</span>
-									<span class="text-[11px] text-ink-600">
+									<span class="text-[11px] text-ink-700">
 										{{ __("Updated") }} {{ dayjs(sop.modified).format("D MMM YYYY") }}
 									</span>
 								</span>
 								<button
 									v-if="isHR"
 									type="button"
-									class="flex-none flex p-[5px] text-accent-500"
-									:aria-label="__('Edit')"
+									class="flex-none flex h-11 w-11 -my-2.5 -mr-1.5 items-center justify-center text-accent-700"
+									:aria-label="__('Edit {0}', [sop.title])"
 									@click.prevent.stop="openEdit(sop)"
 								>
 									<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
@@ -104,7 +107,7 @@
 				>
 					<FeatherIcon name="search" class="h-[34px] w-[34px] text-ink-300" />
 					<div class="text-[13px]">
-						{{ __("No SOPs match") }} “<b class="text-inkbase">{{ query }}</b>”.<br />
+						{{ __('No SOPs match “{0}”.', [query]) }}<br />
 						{{ __("Try a different search term.") }}
 					</div>
 				</div>
@@ -118,7 +121,8 @@
 			<button
 				v-if="isHR"
 				type="button"
-				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent text-ground shadow-md active:scale-90 transition-transform lg:bottom-8"
+				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent text-ground shadow-md active:scale-90 lg:bottom-8"
+				style="transition: transform var(--motion-press)"
 				:aria-label="__('New SOP')"
 				@click="openCreate"
 			>

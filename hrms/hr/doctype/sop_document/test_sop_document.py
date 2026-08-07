@@ -39,6 +39,14 @@ EMPLOYEES = {
 	"nodept@example.com": ("HR-EMP-005", None, "Active"),
 }
 
+# Department is a nested-set tree: only leaf departments have direct members
+DEPARTMENTS = {
+	# name: is_group
+	"Operations - N": 0,
+	"Finance - N": 0,
+	"All Departments - N": 1,
+}
+
 SOPS = [
 	{
 		"name": "HR-SOP-00001",
@@ -120,6 +128,8 @@ def _fake_db():
 			return values.get(fieldname)
 		if doctype == "File":
 			return "contacts.pdf"
+		if doctype == "Department" and fieldname == "is_group":
+			return DEPARTMENTS.get(filters)
 		return None
 
 	db.get_value.side_effect = get_value
@@ -289,7 +299,13 @@ class TestGetSop(unittest.TestCase):
 	def _get(self, user, name):
 		doc = frappe._dict(next(row for row in SOPS if row["name"] == name))
 		doc.content = "<p>body</p>"
-		with _Ctx(user), patch.object(frappe, "get_doc", return_value=doc):
+		# frappe's translator needs a bench log dir — the denial messages only
+		# need a string
+		with (
+			_Ctx(user),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch("hrms.api.sop._", lambda msg: msg),
+		):
 			return sop_api.get_sop(name)
 
 	def test_employee_reads_own_department_sop(self):
@@ -299,8 +315,15 @@ class TestGetSop(unittest.TestCase):
 		self.assertIsNone(data["attachment"])
 
 	def test_employee_denied_other_department_sop(self):
-		with self.assertRaises(frappe.PermissionError):
+		with self.assertRaises(frappe.PermissionError) as caught:
 			self._get(STAFF, "HR-SOP-00004")
+		# denials carry a translated message, like get_sops (not a bare raise)
+		self.assertEqual(str(caught.exception), sop_api.OUT_OF_SCOPE_MSG)
+
+	def test_user_without_employee_is_denied_with_message(self):
+		with self.assertRaises(frappe.PermissionError) as caught:
+			self._get(NOBODY, "HR-SOP-00001")
+		self.assertEqual(str(caught.exception), sop_api.NO_EMPLOYEE_MSG)
 
 	def test_employee_denied_unpublished_sop(self):
 		with self.assertRaises(frappe.PermissionError):
@@ -320,6 +343,8 @@ def _no_translation():
 			"hrms.hr.doctype.sop_document.sop_document.frappe.throw",
 			side_effect=frappe.ValidationError,
 		),
+		# validate_scope reads Department.is_group
+		patch.object(frappe, "db", _fake_db()),
 	)
 
 
@@ -354,6 +379,19 @@ class TestSopDocumentController(unittest.TestCase):
 		with _no_translation():
 			SOPDocument.validate(doc)
 		self.assertEqual(doc.department, "Operations - N")
+
+	def test_department_scope_rejects_group_department(self):
+		# exact-equality row scope means a group department publishes to nobody
+		doc = self._doc("Department", "All Departments - N")
+		with _no_translation():
+			with self.assertRaises(frappe.ValidationError):
+				SOPDocument.validate(doc)
+
+	def test_department_scope_accepts_leaf_department(self):
+		doc = self._doc("Department", "Finance - N")
+		with _no_translation():
+			SOPDocument.validate(doc)
+		self.assertEqual(doc.department, "Finance - N")
 
 	def test_general_scope_clears_department(self):
 		doc = self._doc("General", "Operations - N")
