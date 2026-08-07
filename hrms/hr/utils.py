@@ -796,6 +796,15 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		frappe.throw(_("Employee {0} not found.").format(doc.employee))
 
 	if info.user_id != user:
+		# the designated approver acts on someone else's request legitimately
+		# (approve/submit sets status + docstatus, which re-runs validate).
+		# Trust only the value ALREADY STORED on the document — reading the
+		# incoming payload would let anyone name themselves approver in the
+		# same save and walk through this fence.
+		if not doc.is_new() and frappe.db.get_value(doc.doctype, doc.name, approver_field) == user:
+			logger.info("[staff_lockdown] %s acting as stored approver on %s %s", user, doc.doctype, doc.name)
+			return
+
 		# filing for someone else — fail CLOSED. Own-record scoping normally
 		# comes from a User Permission, but that binding has broken before on
 		# this fork, so never fall through to "no checks at all" here.

@@ -51,3 +51,4 @@ hrms.patches.v15_100_0.set_attendance_timezones
 hrms.patches.v15_101_0.drop_approval_doctype_user_permissions
 hrms.patches.v15_103_0.add_employee_ot_pay_eligibility_field
 hrms.patches.v15_103_0.ensure_replacement_leave_type
+hrms.patches.v15_106_3.allow_staff_cancel_own_requests
