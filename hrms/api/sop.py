@@ -14,6 +14,7 @@ document API, gated by the DocType's permission matrix.
 
 import logging
 import os
+from urllib.parse import parse_qs, quote, urlparse
 
 import frappe
 from frappe import _
@@ -116,25 +117,31 @@ def get_sops() -> dict:
 	}
 
 
-@frappe.whitelist()
-def get_sop(name: str) -> dict:
-	"""Full SOP for the reader sheet. Guarded twice: the same predicate the list
-	uses, plus the framework's own permission check."""
+def _get_visible_doc(name: str, caller: str) -> tuple:
+	"""Shared guard for the detail endpoints: same predicate as the list, plus
+	the framework's own permission check. Returns (doc, is_hr)."""
 	user = frappe.session.user
 	is_hr = _unrestricted(user)
 	employee = _active_employee(user)
 	if not is_hr and not employee:
-		logger.warning("[sop] denying get_sop(%s) for %s — no active Employee record", name, user)
+		logger.warning("[sop] denying %s(%s) for %s — no active Employee record", caller, name, user)
 		raise frappe.PermissionError(_(NO_EMPLOYEE_MSG))
 
 	doc = frappe.get_doc("SOP Document", name)
 	department = employee.department if employee else None
 	visible = is_hr or record_visible(doc.published, doc.scope, doc.department, department)
 	if not visible or not frappe.has_permission("SOP Document", "read", doc=doc):
-		logger.warning("[sop] denying get_sop(%s) for %s — out of scope", name, user)
+		logger.warning("[sop] denying %s(%s) for %s — out of scope", caller, name, user)
 		raise frappe.PermissionError(_(OUT_OF_SCOPE_MSG))
+	return doc, is_hr
 
-	logger.info("[sop] get_sop %s served to %s (is_hr=%s)", name, user, is_hr)
+
+@frappe.whitelist()
+def get_sop(name: str) -> dict:
+	"""Full SOP for the reader sheet."""
+	doc, is_hr = _get_visible_doc(name, "get_sop")
+
+	logger.info("[sop] get_sop %s served to %s (is_hr=%s)", name, frappe.session.user, is_hr)
 	return {
 		"is_hr": is_hr,
 		"name": doc.name,
@@ -151,11 +158,14 @@ def get_sop(name: str) -> dict:
 
 def _attachment(doc) -> dict | None:
 	logger.debug("[sop] resolving attachment for %s (field set=%s)", doc.name, bool(doc.attachment))
+	# same-origin proxy for in-page rendering: external storage (S3 presigned
+	# redirects) has no CORS headers, so pdf.js must fetch through our server
+	content_url = "/api/method/hrms.api.sop.attachment_content?name=" + quote(doc.name)
 	if doc.attachment:
 		file_name = frappe.db.get_value(
 			"File", {"file_url": doc.attachment}, "file_name"
 		) or os.path.basename(doc.attachment.split("?")[0])
-		return {"file_name": file_name, "file_url": doc.attachment}
+		return {"file_name": file_name, "file_url": doc.attachment, "content_url": content_url}
 
 	# attachment field empty — fall back to the newest File row attached to the
 	# SOP (Desk sidebar attach, or older PWA uploads that never set the field)
@@ -169,4 +179,59 @@ def _attachment(doc) -> dict | None:
 	if not rows:
 		return None
 	logger.info("[sop] %s attachment served via File-row fallback", doc.name)
-	return {"file_name": rows[0].file_name, "file_url": rows[0].file_url}
+	return {"file_name": rows[0].file_name, "file_url": rows[0].file_url, "content_url": content_url}
+
+
+def _s3_presigned_location(file_url: str) -> str | None:
+	"""If the URL is a frappe_s3_attachment redirect link, resolve the presigned
+	S3 location in-process (server side has no CORS constraint)."""
+	parsed = urlparse(file_url)
+	if not parsed.path.endswith("frappe_s3_attachment.controller.generate_file"):
+		return None
+	query = parse_qs(parsed.query)
+	saved_response = frappe.local.response
+	frappe.local.response = frappe._dict()
+	try:
+		frappe.get_attr("frappe_s3_attachment.controller.generate_file")(
+			key=query.get("key", [None])[0], file_name=query.get("file_name", [""])[0]
+		)
+		location = frappe.local.response.get("location")
+	finally:
+		frappe.local.response = saved_response
+	logger.info("[sop] resolved S3 presigned location for %s", parsed.path)
+	return location
+
+
+@frappe.whitelist()
+def attachment_content(name: str):
+	"""Stream the SOP's attachment bytes same-origin so the inline viewer can
+	fetch them (S3-backed files redirect to presigned URLs without CORS
+	headers, which pdf.js cannot follow cross-origin)."""
+	logger.debug("[sop] attachment_content requested for %s by %s", name, frappe.session.user)
+	doc, _is_hr = _get_visible_doc(name, "attachment_content")
+	attachment = _attachment(doc)
+	if not attachment:
+		raise frappe.DoesNotExistError(_("This SOP has no attachment."))
+
+	file_url = attachment["file_url"]
+	location = _s3_presigned_location(file_url)
+	if location:
+		import requests
+
+		response = requests.get(location, timeout=30)
+		response.raise_for_status()
+		content = response.content
+	else:
+		file_doc = frappe.get_doc("File", {"file_url": file_url})
+		content = file_doc.get_content()
+
+	logger.info(
+		"[sop] streaming attachment for %s to %s (%d bytes, s3=%s)",
+		name,
+		frappe.session.user,
+		len(content),
+		bool(location),
+	)
+	frappe.local.response.filename = attachment["file_name"]
+	frappe.local.response.filecontent = content
+	frappe.local.response.type = "binary"

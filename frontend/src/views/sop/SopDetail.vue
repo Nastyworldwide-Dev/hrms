@@ -88,7 +88,7 @@
 						/>
 						<PdfInlineViewer
 							v-else-if="attachmentKind === 'pdf'"
-							:fileUrl="attachment.file_url"
+							:fileUrl="attachment.content_url || attachment.file_url"
 						/>
 					</div>
 				</div>

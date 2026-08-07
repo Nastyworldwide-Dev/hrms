@@ -139,6 +139,7 @@ def _fake_db():
 def _fresh_local():
 	local = types.SimpleNamespace()
 	local.flags = frappe._dict(in_test=False)
+	local.response = frappe._dict()
 	return local
 
 
@@ -345,7 +346,12 @@ class TestGetSop(unittest.TestCase):
 		]
 		data = self._get(STAFF, "HR-SOP-00003")
 		self.assertEqual(
-			data["attachment"], {"file_name": "opening.pdf", "file_url": "/private/files/opening.pdf"}
+			data["attachment"],
+			{
+				"file_name": "opening.pdf",
+				"file_url": "/private/files/opening.pdf",
+				"content_url": "/api/method/hrms.api.sop.attachment_content?name=HR-SOP-00003",
+			},
 		)
 
 	def test_employee_reads_own_department_sop(self):
@@ -375,7 +381,52 @@ class TestGetSop(unittest.TestCase):
 
 	def test_hr_reads_unpublished_sop_with_attachment(self):
 		data = self._get(HR, "HR-SOP-00002")
-		self.assertEqual(data["attachment"], {"file_name": "contacts.pdf", "file_url": "/files/contacts.pdf"})
+		self.assertEqual(
+			data["attachment"],
+			{
+				"file_name": "contacts.pdf",
+				"file_url": "/files/contacts.pdf",
+				"content_url": "/api/method/hrms.api.sop.attachment_content?name=HR-SOP-00002",
+			},
+		)
+
+	def test_attachment_content_denied_out_of_scope(self):
+		with self.assertRaises(frappe.PermissionError):
+			doc = frappe._dict(next(row for row in SOPS if row["name"] == "HR-SOP-00004"))
+			with (
+				_Ctx(STAFF),
+				patch.object(frappe, "get_doc", return_value=doc),
+				patch("hrms.api.sop._", lambda msg: msg),
+			):
+				sop_api.attachment_content("HR-SOP-00004")
+
+
+class TestS3PresignedLocation(unittest.TestCase):
+	S3_URL = (
+		"/api/method/frappe_s3_attachment.controller.generate_file"
+		"?key=2026%2F08%2F07%2FSOP+Document%2FYUE3OPT3_handbook.pdf&file_name=handbook.pdf"
+	)
+
+	def test_plain_file_url_is_not_s3(self):
+		self.assertIsNone(sop_api._s3_presigned_location("/private/files/handbook.pdf"))
+
+	def test_s3_redirect_resolved_in_process(self):
+		captured = {}
+
+		def fake_generate_file(key=None, file_name=None):
+			captured["key"] = key
+			captured["file_name"] = file_name
+			frappe.local.response["location"] = "https://bucket.s3.amazonaws.com/presigned"
+
+		with _Ctx(HR), patch.object(frappe, "get_attr", return_value=fake_generate_file):
+			original_response = frappe.local.response
+			location = sop_api._s3_presigned_location(self.S3_URL)
+			# the request-scoped response object must survive the in-process call
+			self.assertIs(frappe.local.response, original_response)
+
+		self.assertEqual(location, "https://bucket.s3.amazonaws.com/presigned")
+		self.assertEqual(captured["key"], "2026/08/07/SOP Document/YUE3OPT3_handbook.pdf")
+		self.assertEqual(captured["file_name"], "handbook.pdf")
 
 
 def _no_translation():
