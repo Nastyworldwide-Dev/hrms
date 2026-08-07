@@ -7,6 +7,7 @@ import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import employeeAdvanceRoutes from "./advances"
 import issueRoutes from "./issues"
+import sopRoutes from "./sop"
 
 const routes = [
 	{
@@ -52,6 +53,13 @@ const routes = [
 				path: "/issues",
 				name: "EmployeeIssueListView",
 				component: () => import("@/views/issues/IssuesTab.vue"),
+			},
+			{
+				// SOP library tab: one list for everyone, HR additionally gets
+				// every department group, drafts and the authoring sheet
+				path: "/sop",
+				name: "SopListView",
+				component: () => import("@/views/sop/SopList.vue"),
 			},
 		],
 	},
@@ -100,6 +108,7 @@ const routes = [
 			...claimRoutes,
 			...employeeAdvanceRoutes,
 			...issueRoutes,
+			...sopRoutes,
 		],
 	},
 ]

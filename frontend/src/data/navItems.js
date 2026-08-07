@@ -6,6 +6,7 @@ import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
 import SupportIcon from "@/components/icons/SupportIcon.vue"
+import SopIcon from "@/components/icons/SopIcon.vue"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
@@ -42,5 +43,11 @@ export const NAV_ITEMS = [
 		title: "Issues",
 		shortTitle: "Issues",
 		route: "/issues",
+	},
+	{
+		icon: markRaw(SopIcon),
+		title: "SOPs",
+		shortTitle: "SOPs",
+		route: "/sop",
 	},
 ]

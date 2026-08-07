@@ -1,0 +1,201 @@
+<template>
+	<BaseLayout :pageTitle="__('SOPs')">
+		<template #body>
+			<div
+				class="flex flex-col gap-[18px] w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7"
+			>
+				<!-- Essentials (pinned) -->
+				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">
+					<div class="flex items-center justify-between">
+						<span v-if="pinned.length" class="m-kicker">{{ __("Essentials") }}</span>
+						<span v-else></span>
+						<span v-if="isHR" class="m-chip m-chip-solid">{{ __("HR") }}</span>
+					</div>
+					<div v-if="pinned.length" class="grid grid-cols-2 gap-2.5">
+						<router-link
+							v-for="sop in pinned"
+							:key="sop.name"
+							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
+							class="flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline"
+						>
+							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
+							<span class="flex flex-col gap-0.5">
+								<span class="font-extrabold text-[13px] leading-tight">
+									{{ sop.title }}
+								</span>
+								<span
+									class="text-[10px] uppercase tracking-[0.08em] font-bold opacity-75"
+								>
+									{{ scopeLabel(sop) }}
+								</span>
+							</span>
+						</router-link>
+					</div>
+				</div>
+
+				<!-- Search -->
+				<div class="relative">
+					<FeatherIcon
+						name="search"
+						class="absolute left-2.5 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-ink-500 pointer-events-none"
+					/>
+					<input
+						v-model="query"
+						:placeholder="__('Search SOPs…')"
+						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-[13px] text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent"
+					/>
+				</div>
+
+				<!-- Sections -->
+				<div v-if="!isEmpty" class="flex flex-col gap-[18px]">
+					<div
+						v-for="section in sections"
+						:key="section.key"
+						class="flex flex-col gap-2"
+					>
+						<span class="m-kicker">{{ sectionLabel(section) }}</span>
+						<div class="flex flex-col border-t-2 border-divider">
+							<router-link
+								v-for="sop in section.sops"
+								:key="sop.name"
+								:to="{ name: 'SopDetailView', params: { id: sop.name } }"
+								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline"
+							>
+								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
+									<span class="flex items-center gap-1.5 min-w-0">
+										<span
+											class="font-extrabold text-[13px] text-inkbase truncate"
+										>
+											{{ sop.title }}
+										</span>
+										<span
+											v-if="!sop.published"
+											class="m-chip m-chip-muted flex-none"
+										>
+											{{ __("Draft") }}
+										</span>
+									</span>
+									<span class="text-[11px] text-ink-600">
+										{{ __("Updated") }} {{ dayjs(sop.modified).format("D MMM YYYY") }}
+									</span>
+								</span>
+								<button
+									v-if="isHR"
+									type="button"
+									class="flex-none flex p-[5px] text-accent-500"
+									:aria-label="__('Edit')"
+									@click.prevent.stop="openEdit(sop)"
+								>
+									<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
+								</button>
+								<FeatherIcon
+									name="chevron-right"
+									class="h-4 w-4 flex-none text-ink-400"
+								/>
+							</router-link>
+						</div>
+					</div>
+				</div>
+
+				<!-- Empty state -->
+				<div
+					v-else-if="query"
+					class="flex flex-col items-center gap-2 px-5 py-11 text-center text-ink-600"
+				>
+					<FeatherIcon name="search" class="h-[34px] w-[34px] text-ink-300" />
+					<div class="text-[13px]">
+						{{ __("No SOPs match") }} “<b class="text-inkbase">{{ query }}</b>”.<br />
+						{{ __("Try a different search term.") }}
+					</div>
+				</div>
+				<EmptyState
+					v-else-if="!sops.loading"
+					:message="__('No SOPs published yet')"
+				/>
+			</div>
+
+			<!-- HR: create -->
+			<button
+				v-if="isHR"
+				type="button"
+				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent text-ground shadow-md active:scale-90 transition-transform lg:bottom-8"
+				:aria-label="__('New SOP')"
+				@click="openCreate"
+			>
+				<FeatherIcon name="plus" class="h-[22px] w-[22px]" />
+			</button>
+
+			<SopFormSheet
+				v-if="isHR"
+				:open="sheetOpen"
+				:sopName="editingName"
+				@update:open="sheetOpen = $event"
+				@saved="sops.reload()"
+			/>
+		</template>
+	</BaseLayout>
+</template>
+
+<script setup>
+import { createResource, FeatherIcon } from "frappe-ui"
+import { computed, inject, ref } from "vue"
+
+import BaseLayout from "@/components/BaseLayout.vue"
+import SopFormSheet from "./SopFormSheet.vue"
+
+import { userResource } from "@/data/user"
+import { hasHRRole } from "@/utils/issueBoard"
+import { buildSopSections } from "@/utils/sopLibrary"
+
+const __ = inject("$translate")
+const dayjs = inject("$dayjs")
+
+const query = ref("")
+const sheetOpen = ref(false)
+const editingName = ref(null)
+
+// the server scopes rows (published + General + own department, everything for
+// HR) — the client only groups and searches what it is given
+const sops = createResource({
+	url: "hrms.api.sop.get_sops",
+	cache: "hrms:sops",
+	auto: true,
+	onError(error) {
+		console.warn("[SOP] Failed to load:", error)
+	},
+})
+
+// the payload's is_hr is the single source of truth; the role check only
+// covers the first paint, before the request lands
+const isHR = computed(() =>
+	sops.data ? !!sops.data.is_hr : hasHRRole(userResource.data?.roles)
+)
+
+const grouped = computed(() => buildSopSections(sops.data, query.value))
+const pinned = computed(() => grouped.value.pinned)
+const sections = computed(() => grouped.value.sections)
+const isEmpty = computed(() => grouped.value.isEmpty)
+
+const scopeLabel = (sop) =>
+	sop.scope === "Department" && sop.department ? sop.department : __("General")
+
+const sectionLabel = (section) => {
+	if (!section.department) return __("General")
+	// an employee only ever gets their own department group — name it as such;
+	// HR gets every department, where the plain name reads better
+	return isHR.value
+		? section.department
+		: __("My Department — {0}", [section.department])
+}
+
+const openCreate = () => {
+	editingName.value = null
+	sheetOpen.value = true
+}
+
+const openEdit = (sop) => {
+	console.info("[SOP] editing:", sop.name)
+	editingName.value = sop.name
+	sheetOpen.value = true
+}
+</script>
