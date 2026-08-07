@@ -55,10 +55,31 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs"
 import PdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker"
 import { inject, nextTick, onBeforeUnmount, ref, watch } from "vue"
 
-const ensureWorker = () => {
-	if (!pdfjsLib.GlobalWorkerOptions.workerPort) {
-		pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker()
+// each viewer owns its worker: pdf.js destroys the worker with the document,
+// so a shared GlobalWorkerOptions.workerPort dies on the first unmount and
+// every later getDocument hangs on the dead port (page "never loads")
+let workerThread = null
+let pdfWorker = null
+
+const destroyPdf = () => {
+	try {
+		pdfDoc?.destroy()
+	} catch (err) {
+		console.warn("[SOP] pdf doc destroy failed:", err)
 	}
+	try {
+		pdfWorker?.destroy()
+	} catch (err) {
+		console.warn("[SOP] pdf worker destroy failed:", err)
+	}
+	try {
+		workerThread?.terminate()
+	} catch (err) {
+		console.warn("[SOP] worker thread terminate failed:", err)
+	}
+	pdfDoc = null
+	pdfWorker = null
+	workerThread = null
 }
 
 const __ = inject("$translate")
@@ -92,9 +113,14 @@ const render = async () => {
 	try {
 		await nextTick()
 		clearPages()
-		ensureWorker()
+		destroyPdf()
+		workerThread = new PdfWorker()
+		pdfWorker = new pdfjsLib.PDFWorker({ port: workerThread })
 		// same-origin request — the session cookie covers private files
-		pdfDoc = await pdfjsLib.getDocument(props.fileUrl).promise
+		pdfDoc = await pdfjsLib.getDocument({
+			url: props.fileUrl,
+			worker: pdfWorker,
+		}).promise
 		pageCount.value = pdfDoc.numPages
 
 		// fit-to-screen: CSS width == container width, backing store multiplied
@@ -149,8 +175,5 @@ const onScroll = () => {
 
 watch(() => props.fileUrl, render, { immediate: true })
 
-onBeforeUnmount(() => {
-	pdfDoc?.destroy?.()
-	pdfDoc = null
-})
+onBeforeUnmount(destroyPdf)
 </script>

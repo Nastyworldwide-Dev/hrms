@@ -494,6 +494,47 @@ class TestSopDocumentController(unittest.TestCase):
 			SOPDocument.validate(doc)
 		self.assertIsNone(doc.department)
 
+	def _cleanup_doc(self, old_attachment, new_attachment):
+		doc = types.SimpleNamespace(name="HR-SOP-00009", doctype="SOP Document", attachment=new_attachment)
+		doc.get_doc_before_save = lambda: (
+			frappe._dict(attachment=old_attachment) if old_attachment is not None else None
+		)
+		doc.cleanup_replaced_attachment = lambda: SOPDocument.cleanup_replaced_attachment(doc)
+		return doc
+
+	def test_cleared_attachment_deletes_file_row(self):
+		# the File-row fallback would resurrect a merely-cleared attachment
+		doc = self._cleanup_doc("/old.pdf", "")
+		with (
+			patch.object(frappe, "get_all", return_value=["FILE-0001"]) as get_all,
+			patch.object(frappe, "delete_doc") as delete_doc,
+		):
+			doc.cleanup_replaced_attachment()
+		self.assertEqual(get_all.call_args.kwargs["filters"]["file_url"], "/old.pdf")
+		delete_doc.assert_called_once_with("File", "FILE-0001", ignore_permissions=True)
+
+	def test_replaced_attachment_deletes_only_old_row(self):
+		doc = self._cleanup_doc("/old.pdf", "/new.pdf")
+		with (
+			patch.object(frappe, "get_all", return_value=["FILE-0001"]) as get_all,
+			patch.object(frappe, "delete_doc") as delete_doc,
+		):
+			doc.cleanup_replaced_attachment()
+		self.assertEqual(get_all.call_args.kwargs["filters"]["file_url"], "/old.pdf")
+		delete_doc.assert_called_once()
+
+	def test_unchanged_attachment_keeps_file_rows(self):
+		doc = self._cleanup_doc("/same.pdf", "/same.pdf")
+		with patch.object(frappe, "delete_doc") as delete_doc:
+			doc.cleanup_replaced_attachment()
+		delete_doc.assert_not_called()
+
+	def test_new_document_skips_cleanup(self):
+		doc = self._cleanup_doc(None, "/new.pdf")
+		with patch.object(frappe, "delete_doc") as delete_doc:
+			doc.cleanup_replaced_attachment()
+		delete_doc.assert_not_called()
+
 
 if __name__ == "__main__":
 	unittest.main()

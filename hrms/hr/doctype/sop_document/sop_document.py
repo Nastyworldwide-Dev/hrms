@@ -14,6 +14,38 @@ class SOPDocument(Document):
 	def validate(self):
 		self.validate_scope()
 
+	def on_update(self):
+		self.cleanup_replaced_attachment()
+
+	def cleanup_replaced_attachment(self):
+		"""'Remove attachment' only clears the field — the attached File row
+		would survive, and the API's File-row fallback would resurrect it on
+		the next read. Deleting the cleared/replaced row makes removal real
+		(and stops orphaned File rows accumulating on every replace)."""
+		before = self.get_doc_before_save()
+		old = before.get("attachment") if before else None
+		if not old or old == self.attachment:
+			return
+		file_names = frappe.get_all(
+			"File",
+			filters={
+				"attached_to_doctype": self.doctype,
+				"attached_to_name": self.name,
+				"file_url": old,
+			},
+			pluck="name",
+		)
+		for file_name in file_names:
+			# the actor already held write on this SOP for the save itself; the
+			# File cleanup is a cascade of that edit, not a separate privilege
+			frappe.delete_doc("File", file_name, ignore_permissions=True)
+		logger.info(
+			"[sop_document] %s: removed %d file row(s) for replaced attachment %s",
+			self.name,
+			len(file_names),
+			old,
+		)
+
 	def validate_scope(self):
 		"""Scope and department must agree: a Department SOP is meaningless
 		without a department, and a stale department on a General SOP would
