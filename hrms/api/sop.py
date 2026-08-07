@@ -31,8 +31,9 @@ NO_EMPLOYEE_MSG = "No active Employee record is linked to your user."
 OUT_OF_SCOPE_MSG = "This SOP is not available to you."
 
 
-def _card(row) -> dict:
+def _card(row, attached_names=()) -> dict:
 	"""List payload: metadata only — never the content or the file body."""
+	logger.debug("[sop] card %s attachment_field=%s", row.name, bool(row.attachment))
 	return {
 		"name": row.name,
 		"title": row.title,
@@ -41,8 +42,25 @@ def _card(row) -> dict:
 		"pinned": bool(row.pinned),
 		"published": bool(row.published),
 		"modified": row.modified,
-		"has_attachment": bool(row.attachment),
+		"has_attachment": bool(row.attachment) or row.name in attached_names,
 	}
+
+
+def _names_with_file_rows(names: list[str]) -> set[str]:
+	"""SOPs whose file arrived as a File row without the attachment field being
+	set (Desk sidebar attach, or older PWA uploads) — fall back to the File
+	table so those attachments still surface."""
+	if not names:
+		return set()
+	attached = set(
+		frappe.get_all(
+			"File",
+			filters={"attached_to_doctype": "SOP Document", "attached_to_name": ("in", names)},
+			pluck="attached_to_name",
+		)
+	)
+	logger.info("[sop] File-row attachment fallback matched %d of %d SOPs", len(attached), len(names))
+	return attached
 
 
 @frappe.whitelist()
@@ -65,11 +83,14 @@ def get_sops() -> dict:
 		limit_page_length=0,
 	)
 
+	visible_rows = [
+		row for row in rows if is_hr or record_visible(row.published, row.scope, row.department, department)
+	]
+	attached_names = _names_with_file_rows([row.name for row in visible_rows if not row.attachment])
+
 	pinned, general, by_department = [], [], {}
-	for row in rows:
-		if not is_hr and not record_visible(row.published, row.scope, row.department, department):
-			continue
-		card = _card(row)
+	for row in visible_rows:
+		card = _card(row, attached_names)
 		if card["pinned"]:
 			pinned.append(card)
 		elif row.scope == "General":
@@ -123,14 +144,28 @@ def get_sop(name: str) -> dict:
 		"published": bool(doc.published),
 		"modified": doc.modified,
 		"content": doc.content,
-		"attachment": _attachment(doc.attachment),
+		"attachment": _attachment(doc),
 	}
 
 
-def _attachment(file_url: str | None) -> dict | None:
-	if not file_url:
-		return None
-	file_name = frappe.db.get_value("File", {"file_url": file_url}, "file_name") or os.path.basename(
-		file_url.split("?")[0]
+def _attachment(doc) -> dict | None:
+	logger.debug("[sop] resolving attachment for %s (field set=%s)", doc.name, bool(doc.attachment))
+	if doc.attachment:
+		file_name = frappe.db.get_value(
+			"File", {"file_url": doc.attachment}, "file_name"
+		) or os.path.basename(doc.attachment.split("?")[0])
+		return {"file_name": file_name, "file_url": doc.attachment}
+
+	# attachment field empty — fall back to the newest File row attached to the
+	# SOP (Desk sidebar attach, or older PWA uploads that never set the field)
+	rows = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "SOP Document", "attached_to_name": doc.name},
+		fields=["file_name", "file_url"],
+		order_by="creation desc",
+		limit=1,
 	)
-	return {"file_name": file_name, "file_url": file_url}
+	if not rows:
+		return None
+	logger.info("[sop] %s attachment served via File-row fallback", doc.name)
+	return {"file_name": rows[0].file_name, "file_url": rows[0].file_url}

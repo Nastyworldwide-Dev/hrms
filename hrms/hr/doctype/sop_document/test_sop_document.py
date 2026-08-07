@@ -151,9 +151,10 @@ def _roles_for(user):
 class _Ctx:
 	"""Patch the frappe surface these modules touch, for one session user."""
 
-	def __init__(self, user, sops=None):
+	def __init__(self, user, sops=None, file_rows=None):
 		self.user = user
 		self.sops = sops if sops is not None else SOPS
+		self.file_rows = file_rows or []
 
 	def __enter__(self):
 		def get_list(doctype, filters=None, fields=None, **kwargs):
@@ -161,12 +162,22 @@ class _Ctx:
 			# in code as well (defense in depth), not rely on the query alone
 			return [frappe._dict(row) for row in self.sops]
 
+		def get_all(doctype, filters=None, fields=None, pluck=None, **kwargs):
+			# only the File-table attachment fallback queries get_all here
+			if doctype != "File":
+				return []
+			rows = [frappe._dict(row) for row in self.file_rows]
+			if pluck:
+				return [row.get(pluck) for row in rows]
+			return rows
+
 		self.patches = [
 			patch.object(frappe, "db", _fake_db()),
 			patch.object(frappe, "session", frappe._dict(user=self.user)),
 			patch.object(frappe, "local", _fresh_local()),
 			patch.object(frappe, "get_roles", side_effect=_roles_for),
 			patch.object(frappe, "get_list", side_effect=get_list),
+			patch.object(frappe, "get_all", side_effect=get_all),
 			patch.object(frappe, "has_permission", return_value=True),
 		]
 		for p in self.patches:
@@ -267,6 +278,19 @@ class TestGetSops(unittest.TestCase):
 		self.assertTrue(data["pinned"][0]["has_attachment"])
 		self.assertFalse(data["general"][0]["has_attachment"])
 
+	def test_file_row_fallback_sets_has_attachment(self):
+		# field empty but a File row is attached (Desk sidebar / older uploads)
+		file_rows = [
+			{
+				"attached_to_name": "HR-SOP-00001",
+				"file_name": "guide.pdf",
+				"file_url": "/private/files/guide.pdf",
+			}
+		]
+		with _Ctx(STAFF, file_rows=file_rows):
+			data = sop_api.get_sops()
+		self.assertTrue(data["general"][0]["has_attachment"])
+
 	def test_employee_without_department_sees_general_only(self):
 		with _Ctx("nodept@example.com"):
 			data = sop_api.get_sops()
@@ -302,11 +326,27 @@ class TestGetSop(unittest.TestCase):
 		# frappe's translator needs a bench log dir — the denial messages only
 		# need a string
 		with (
-			_Ctx(user),
+			_Ctx(user, file_rows=self.file_rows),
 			patch.object(frappe, "get_doc", return_value=doc),
 			patch("hrms.api.sop._", lambda msg: msg),
 		):
 			return sop_api.get_sop(name)
+
+	def setUp(self):
+		self.file_rows = []
+
+	def test_detail_serves_attachment_via_file_row_fallback(self):
+		self.file_rows = [
+			{
+				"attached_to_name": "HR-SOP-00003",
+				"file_name": "opening.pdf",
+				"file_url": "/private/files/opening.pdf",
+			}
+		]
+		data = self._get(STAFF, "HR-SOP-00003")
+		self.assertEqual(
+			data["attachment"], {"file_name": "opening.pdf", "file_url": "/private/files/opening.pdf"}
+		)
 
 	def test_employee_reads_own_department_sop(self):
 		data = self._get(STAFF, "HR-SOP-00003")

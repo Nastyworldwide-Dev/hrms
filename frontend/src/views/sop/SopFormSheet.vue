@@ -341,6 +341,9 @@ const uploadAttachment = async (docname, file) => {
 		throw new Error(result?.exception || __("Upload failed"))
 	}
 	console.info("[SOP] Attachment uploaded:", result.message.file_url)
+	// Frappe's upload_file only creates the File row — it never writes the
+	// file_url back into the docfield, so the caller must persist it.
+	return result.message.file_url
 }
 
 const save = async () => {
@@ -381,8 +384,9 @@ const save = async () => {
 		}
 
 		if (selectedFile.value && docname) {
+			let fileUrl
 			try {
-				await uploadAttachment(docname, selectedFile.value)
+				fileUrl = await uploadAttachment(docname, selectedFile.value)
 			} catch (error) {
 				// on edit the old attachment survives — let the generic handler
 				// report it; on create the draft exists and must stay unpublished
@@ -401,12 +405,13 @@ const save = async () => {
 				close()
 				return
 			}
-			if (deferPublish)
-				await updateSop.fetch({
-					doctype: "SOP Document",
-					name: docname,
-					fieldname: { published: 1 },
-				})
+			await updateSop.fetch({
+				doctype: "SOP Document",
+				name: docname,
+				fieldname: deferPublish
+					? { attachment: fileUrl, published: 1 }
+					: { attachment: fileUrl },
+			})
 		}
 
 		toast({
