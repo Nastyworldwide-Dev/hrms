@@ -9,6 +9,8 @@ from frappe.utils import cstr, flt, get_datetime, get_link_to_form
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
+from hrms.utils.company_settings import get_company_setting
+
 
 class Gratuity(AccountsController):
 	def validate(self):
@@ -177,7 +179,11 @@ class Gratuity(AccountsController):
 
 		total_working_days = (get_datetime(relieving_date) - get_datetime(date_of_joining)).days
 
-		payroll_based_on = frappe.db.get_single_value("Payroll Settings", "payroll_based_on") or "Leave"
+		# Gratuity is statutory in the UAE and computed on a country-specific
+		# basis, so the accrual basis resolves per company. `self.company` is
+		# fetched from the employee but may not be populated yet on a fresh doc.
+		company = self.company or frappe.db.get_value("Employee", self.employee, "company")
+		payroll_based_on = get_company_setting(company, "payroll_based_on") or "Leave"
 		if payroll_based_on == "Leave":
 			total_lwp = self.get_non_working_days(relieving_date, "On Leave")
 			total_working_days -= total_lwp

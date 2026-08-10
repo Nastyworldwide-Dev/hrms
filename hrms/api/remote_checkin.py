@@ -13,8 +13,11 @@ import logging
 
 import frappe
 from frappe import _
+from frappe.query_builder import Order
+from frappe.query_builder.functions import Count
 from frappe.utils import now_datetime
 
+from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -86,28 +89,63 @@ def submit_remarks(request: str, employee_remarks: str = "") -> dict:
 	return {"ok": True, "name": request, "status": row.status}
 
 
+PENDING_REQUEST_FIELDS = (
+	"name",
+	"employee",
+	"employee_name",
+	"checkin",
+	"checkin_time",
+	"log_type",
+	"latitude",
+	"longitude",
+	"distance_m",
+	"employee_remarks",
+	"nearest_shift_location",
+)
+
+
+def _pending_for_approver_query(user: str):
+	"""Pending requests routed to `user`, fenced to their permitted companies.
+
+	Remote Checkin Request carries no company field, so the fence rides on the
+	requesting Employee. Being named as approver is not by itself authority to
+	see the row: a group HR user fenced to one company must not be handed
+	another company's out-of-radius punches.
+	"""
+	RemoteCheckinRequest = frappe.qb.DocType("Remote Checkin Request")
+	query = (
+		frappe.qb.from_(RemoteCheckinRequest)
+		.where(RemoteCheckinRequest.status == "Pending")
+		.where(RemoteCheckinRequest.approver == user)
+	)
+
+	companies = permitted_company_filter(endpoint="remote_checkin.list_pending_for_approver")
+	if companies is not None:
+		Employee = frappe.qb.DocType("Employee")
+		query = (
+			query.left_join(Employee)
+			.on(RemoteCheckinRequest.employee == Employee.name)
+			.where(Employee.company.isin(companies))
+		)
+		logger.info(
+			"[api] remote_checkin pending fenced to %d company(ies) for %s",
+			len(companies),
+			user,
+		)
+
+	return query, RemoteCheckinRequest
+
+
 @frappe.whitelist()
 def list_pending_for_approver() -> list[dict]:
 	"""List pending requests where the current user is the approver."""
 	user = frappe.session.user
-	rows = frappe.get_all(
-		"Remote Checkin Request",
-		filters={"status": "Pending", "approver": user},
-		fields=[
-			"name",
-			"employee",
-			"employee_name",
-			"checkin",
-			"checkin_time",
-			"log_type",
-			"latitude",
-			"longitude",
-			"distance_m",
-			"employee_remarks",
-			"nearest_shift_location",
-		],
-		order_by="checkin_time desc",
-		limit_page_length=200,
+	query, RemoteCheckinRequest = _pending_for_approver_query(user)
+	rows = (
+		query.select(*[RemoteCheckinRequest[field] for field in PENDING_REQUEST_FIELDS])
+		.orderby(RemoteCheckinRequest.checkin_time, order=Order.desc)
+		.limit(200)
+		.run(as_dict=True)
 	)
 	logger.info("[remote_checkin] list_pending_for_approver user=%s rows=%d", user, len(rows))
 	return rows
@@ -115,11 +153,11 @@ def list_pending_for_approver() -> list[dict]:
 
 @frappe.whitelist()
 def get_pending_count() -> int:
+	"""Badge count — must use the same fence as the list it opens."""
 	user = frappe.session.user
-	count = frappe.db.count(
-		"Remote Checkin Request",
-		filters={"status": "Pending", "approver": user},
-	)
+	query, RemoteCheckinRequest = _pending_for_approver_query(user)
+	result = query.select(Count(RemoteCheckinRequest.name)).run()
+	count = result[0][0] if result else 0
 	logger.info("[remote_checkin] pending_count user=%s -> %d", user, count)
 	return int(count or 0)
 

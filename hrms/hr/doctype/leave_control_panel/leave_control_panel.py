@@ -2,6 +2,8 @@
 # License: GNU General Public License v3. See license.txt
 
 
+import logging
+
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_link_to_form
@@ -9,6 +11,9 @@ from frappe.utils import cint, flt, get_link_to_form
 from erpnext import get_default_company
 
 from hrms.hr.utils import validate_bulk_tool_fields
+from hrms.utils.company_scope import get_permitted_companies, resolve_single_company
+
+logger = logging.getLogger(__name__)
 
 
 class LeaveControlPanel(Document):
@@ -173,15 +178,44 @@ class LeaveControlPanel(Document):
 
 	@frappe.whitelist()
 	def get_latest_leave_period(self):
+		company = self.company or self.get_scoped_default_company()
+		if not company:
+			logger.info(
+				"[api] leave_control_panel.get_latest_leave_period: no company in scope for %s",
+				frappe.session.user,
+			)
+			return None
 		return frappe.db.get_value(
 			"Leave Period",
 			{
 				"is_active": 1,
-				"company": self.company or get_default_company(),
+				"company": company,
 			},
 			"name",
 			order_by="from_date desc",
 		)
+
+	def get_scoped_default_company(self) -> str | None:
+		"""Company to assume when the panel's own company field is empty.
+
+		A caller with no Company User Permission keeps the old user-default
+		behaviour. A company-fenced caller gets their single permitted company;
+		one permitted several gets None, so no leave period is auto-picked —
+		bulk-allocating from the wrong company's leave period across 15
+		companies is not a mistake a later filter change can undo.
+		"""
+		permitted = get_permitted_companies()
+		if permitted is None:
+			return get_default_company()
+
+		company = resolve_single_company(permitted)
+		if not company:
+			logger.info(
+				"[api] leave_control_panel: %s is permitted %d companies — company must be set explicitly",
+				frappe.session.user,
+				len(permitted),
+			)
+		return company
 
 	def get_filters(self):
 		filter_fields = [
@@ -203,5 +237,18 @@ class LeaveControlPanel(Document):
 
 		if self.get("min_years_of_service"):
 			filters.append(["years_of_service", ">=", cint(self.min_years_of_service)])
+
+		# A blank Company must not mean "every company". This panel bulk-allocates
+		# leave, so an unfenced employee list here would both expose and write
+		# across another company's population.
+		if not self.get("company"):
+			permitted = get_permitted_companies()
+			if permitted:
+				frappe.logger("hrms").info(
+					"[leave_control_panel] scoping blank company to %s for %s",
+					permitted,
+					frappe.session.user,
+				)
+				filters.append(["company", "in", permitted])
 
 		return filters

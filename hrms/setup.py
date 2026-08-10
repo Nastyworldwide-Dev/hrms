@@ -9,6 +9,7 @@ from frappe.desk.page.setup_wizard.setup_wizard import make_records
 from frappe.permissions import add_permission, update_permission_property
 
 from hrms.overrides.company import delete_company_fixtures
+from hrms.utils.company_fence import create_company_fence_roles
 
 
 def after_install():
@@ -21,6 +22,9 @@ def after_install():
 	set_single_defaults()
 	setup_repost_defaults()
 	create_default_role_profiles()
+	# fresh installs record patches as already applied, so the company fence
+	# roles must be created here as well as by the v16_0 patch
+	create_company_fence_roles()
 	run_post_install_patches()
 	add_default_hr_permissions()
 
@@ -71,6 +75,114 @@ def create_performance_band_field():
 	)
 	frappe.db.commit()
 	print("performance_band custom field created on Employee")
+
+
+def get_company_hr_policy_fields():
+	"""Per-company overrides for HR / Payroll policies that used to be global.
+
+	A blank value means "inherit the global HR / Payroll Settings value", which
+	is why the boolean-ish policies are a ""/"Yes"/"No" Select rather than a
+	Check — an unchecked Check cannot be told apart from "not configured".
+	Resolution lives in `hrms.utils.company_settings.get_company_setting`.
+	"""
+	inherit = _("Leave blank to inherit the global value.")
+	tribool = "\nYes\nNo"
+
+	return [
+		{
+			"fieldname": "hr_policy_overrides_section",
+			"fieldtype": "Section Break",
+			"label": _("HR Policy Overrides"),
+			"description": _(
+				"Policies that would otherwise apply to every company on this site. Leave a field blank to inherit the global HR / Payroll Settings value."
+			),
+			"insert_after": "hr_attendance_timezone",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "hr_ramadan_start_date",
+			"fieldtype": "Date",
+			"label": _("Ramadan Start Date"),
+			"description": inherit,
+			"insert_after": "hr_policy_overrides_section",
+		},
+		{
+			"fieldname": "hr_ramadan_end_date",
+			"fieldtype": "Date",
+			"label": _("Ramadan End Date"),
+			"description": inherit,
+			"insert_after": "hr_ramadan_start_date",
+		},
+		{
+			"fieldname": "hr_allow_geolocation_tracking",
+			"fieldtype": "Select",
+			"label": _("Allow Geolocation Tracking"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_ramadan_end_date",
+		},
+		{
+			"fieldname": "hr_send_holiday_reminders",
+			"fieldtype": "Select",
+			"label": _("Send Holiday Reminders"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_allow_geolocation_tracking",
+		},
+		{
+			"fieldname": "hr_holiday_reminder_frequency",
+			"fieldtype": "Select",
+			"label": _("Holiday Reminder Frequency"),
+			"options": "\nWeekly\nMonthly",
+			"description": inherit,
+			"insert_after": "hr_send_holiday_reminders",
+		},
+		{
+			"fieldname": "hr_policy_overrides_column_break",
+			"fieldtype": "Column Break",
+			"insert_after": "hr_holiday_reminder_frequency",
+		},
+		{
+			"fieldname": "hr_send_birthday_reminders",
+			"fieldtype": "Select",
+			"label": _("Send Birthday Reminders"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_policy_overrides_column_break",
+		},
+		{
+			"fieldname": "hr_send_work_anniversary_reminders",
+			"fieldtype": "Select",
+			"label": _("Send Work Anniversary Reminders"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_send_birthday_reminders",
+		},
+		{
+			"fieldname": "hr_email_salary_slip_to_employee",
+			"fieldtype": "Select",
+			"label": _("Email Salary Slip to Employee"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_send_work_anniversary_reminders",
+		},
+		{
+			"fieldname": "hr_process_payroll_entry_based_on_employee",
+			"fieldtype": "Select",
+			"label": _("Process Payroll Accounting Entry based on Employee"),
+			"options": tribool,
+			"description": inherit,
+			"insert_after": "hr_email_salary_slip_to_employee",
+		},
+		{
+			"fieldname": "hr_payroll_based_on",
+			"fieldtype": "Select",
+			"label": _("Calculate Payroll Working Days Based On"),
+			"options": "\nLeave\nAttendance",
+			"description": inherit,
+			"insert_after": "hr_process_payroll_entry_based_on_employee",
+		},
+	]
 
 
 def get_custom_fields():
@@ -131,6 +243,7 @@ def get_custom_fields():
 				),
 				"insert_after": "default_payroll_payable_account",
 			},
+			*get_company_hr_policy_fields(),
 		],
 		"Department": [
 			{

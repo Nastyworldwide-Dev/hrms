@@ -19,6 +19,17 @@ Branching:
               broad UP (apply_to_all_doctypes=1) so the user is back to
               the standard "create_user_permission" shape.
   - noop    — flag=0 AND no UPs: nothing to do.
+
+Company fence (multi-company hub): after the branching above, a user holding
+the "HR (Company)" role gets exactly one `allow=Company` User Permission for
+their own Employee.company (see hrms/utils/company_fence.py). It runs last
+because the branches above wipe every UP the user has. Users holding neither
+fence role — i.e. everyone on a single-company site — are never touched.
+
+Hook wiring note: this module is registered on Employee.on_update, NOT
+after_save, because ERPNext's Employee.on_update controller deletes
+`allow=Employee` User Permissions and would otherwise nuke everything we
+insert. The company fence rides the same hook for the same reason.
 """
 
 from __future__ import annotations
@@ -27,6 +38,7 @@ import logging
 
 import frappe
 
+from hrms.utils.company_fence import ACTION_FENCE, COMPANY_HR_ROLE, plan_company_fence
 from hrms.utils.user_permission_scope import (
 	ACTION_REVERT,
 	ACTION_SCOPED,
@@ -41,6 +53,7 @@ def sync_hrms_only_user_permission(doc, method=None):
 	user_id = doc.get("user_id")
 	if not user_id:
 		return
+	logger.debug("[employee_hrms_scope] syncing user permissions for employee=%s user=%s", doc.name, user_id)
 
 	perm_names = frappe.get_all(
 		"User Permission",
@@ -61,11 +74,73 @@ def sync_hrms_only_user_permission(doc, method=None):
 
 	if action == ACTION_SCOPED:
 		_apply_hrms_scope(doc, user_id, perm_names)
+	elif action == ACTION_REVERT:
+		_revert_to_broad_anchor(doc, user_id, perm_names)
+
+	# LAST on purpose: both branches above wipe every User Permission the user
+	# has, the Company fence included. Re-provisioning it here keeps an
+	# "HR (Company)" user fenced across saves.
+	sync_company_user_permission(doc, user_id)
+
+
+def sync_company_user_permission(doc, user_id: str):
+	"""Keep the `allow=Company` fence of an "HR (Company)" user in step with
+	their own Employee.company.
+
+	No-op for everyone else — a user holding neither fence role keeps whatever
+	User Permissions an admin gave them, so existing sites are unaffected.
+	"""
+	existing = frappe.get_all(
+		"User Permission",
+		filters={"user": user_id, "allow": "Company"},
+		fields=["name", "for_value"],
+	)
+	action, create, stale = plan_company_fence(
+		frappe.get_roles(user_id),
+		doc.get("company"),
+		[row.for_value for row in existing],
+	)
+	logger.info(
+		"[employee_hrms_scope] company fence employee=%s user=%s action=%s create=%s stale=%s",
+		doc.name,
+		user_id,
+		action,
+		create,
+		stale,
+	)
+	if action != ACTION_FENCE:
 		return
 
-	if action == ACTION_REVERT:
-		_revert_to_broad_anchor(doc, user_id, perm_names)
-		return
+	for row in existing:
+		if row.for_value in stale:
+			logger.info(
+				"[employee_hrms_scope] dropping stale Company UP %s (%s) for %s",
+				row.name,
+				row.for_value,
+				user_id,
+			)
+			frappe.delete_doc("User Permission", row.name, ignore_permissions=True)
+
+	if create:
+		up = frappe.new_doc("User Permission")
+		up.update(
+			{
+				"user": user_id,
+				"allow": "Company",
+				"for_value": create,
+				"apply_to_all_doctypes": 1,
+			}
+		)
+		up.flags.ignore_permissions = True
+		up.insert()
+		logger.info(
+			"[employee_hrms_scope] fenced %s to company %s (%s)",
+			user_id,
+			create,
+			COMPANY_HR_ROLE,
+		)
+
+	frappe.clear_cache(user=user_id)
 
 
 def _apply_hrms_scope(doc, user_id, perm_names):

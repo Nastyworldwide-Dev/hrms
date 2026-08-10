@@ -12,8 +12,9 @@ a `break_type`:
     applicable day, capped at the time worked that day. The employee
     may take the break whenever they like.
 
-The Ramadan window itself is configured in HR Settings via
-`ramadan_start_date` / `ramadan_end_date`.
+The Ramadan window itself is configured per company (Company
+`hr_ramadan_start_date` / `hr_ramadan_end_date`), falling back to the
+global HR Settings `ramadan_start_date` / `ramadan_end_date`.
 
 Public API:
     get_break_minutes(work_start, work_end, break_rows,
@@ -23,9 +24,10 @@ Public API:
         are handled — each calendar day is evaluated independently with
         that day's day-of-week rules.
 
-    get_shift_break_minutes(shift_type_name, work_start, work_end) -> int
+    get_shift_break_minutes(shift_type_name, work_start, work_end,
+                            company=None) -> int
         Convenience wrapper that loads the rows from a Shift Type and the
-        Ramadan window from HR Settings, then calls get_break_minutes.
+        Ramadan window for `company`, then calls get_break_minutes.
 """
 
 from __future__ import annotations
@@ -173,13 +175,22 @@ def get_break_minutes(
 	return total
 
 
-def get_shift_break_minutes(shift_type_name: str, work_start: datetime, work_end: datetime) -> int:
+def get_shift_break_minutes(
+	shift_type_name: str, work_start: datetime, work_end: datetime, company: str | None = None
+) -> int:
 	"""Frappe-bound wrapper: fetch the Shift Type's break rows and the
-	Ramadan window from HR Settings, then compute overlap minutes."""
+	Ramadan window, then compute overlap minutes.
+
+	The Ramadan window is resolved per company (UAE entities observe it,
+	Malaysian and Chinese ones must not inherit it); with no company override
+	configured it is the global HR Settings window, as before.
+	"""
 	if not shift_type_name or work_end <= work_start:
 		return 0
 
 	import frappe
+
+	from hrms.utils.company_settings import get_company_setting
 
 	try:
 		shift = frappe.get_cached_doc("Shift Type", shift_type_name)
@@ -191,8 +202,8 @@ def get_shift_break_minutes(shift_type_name: str, work_start: datetime, work_end
 	if not rows:
 		return 0
 
-	ramadan_start = frappe.db.get_single_value("HR Settings", "ramadan_start_date")
-	ramadan_end = frappe.db.get_single_value("HR Settings", "ramadan_end_date")
+	ramadan_start = get_company_setting(company, "ramadan_start_date")
+	ramadan_end = get_company_setting(company, "ramadan_end_date")
 	if isinstance(ramadan_start, str):
 		ramadan_start = datetime.strptime(ramadan_start, "%Y-%m-%d").date()
 	if isinstance(ramadan_end, str):

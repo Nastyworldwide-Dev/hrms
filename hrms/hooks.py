@@ -169,6 +169,10 @@ permission_query_conditions = {
 	"Employee Issue": "hrms.overrides.employee_issue_row_scope.get_permission_query_conditions",
 	# SOP Library: published General SOPs + the reader's own department; HR sees all
 	"SOP Document": "hrms.overrides.sop_document_row_scope.get_permission_query_conditions",
+	# Multi-company hub: a user carrying an allow=Company User Permission
+	# ("HR (Company)") never sees another company's Employee. No-op for users
+	# without one — see hrms/overrides/company_scope.py.
+	"Employee": "hrms.overrides.company_scope.employee_query_conditions",
 }
 
 has_permission = {
@@ -184,6 +188,7 @@ has_permission = {
 	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.has_permission",
 	"Employee Issue": "hrms.overrides.employee_issue_row_scope.has_permission",
 	"SOP Document": "hrms.overrides.sop_document_row_scope.has_permission",
+	"Employee": "hrms.overrides.company_scope.employee_has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}

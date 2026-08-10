@@ -31,6 +31,7 @@ from erpnext.accounts.utils import get_fiscal_year
 
 from hrms.payroll.doctype.salary_slip.salary_slip_loan_utils import if_lending_app_installed
 from hrms.payroll.doctype.salary_withholding.salary_withholding import link_bank_entry_in_salary_withholdings
+from hrms.utils.company_settings import is_company_setting_enabled
 
 
 class PayrollEntry(Document):
@@ -347,7 +348,7 @@ class PayrollEntry(Document):
 			submit_salary_slips_for_employees(self, salary_slips, publish_progress=False)
 
 	def email_salary_slip(self, submitted_ss):
-		if frappe.db.get_single_value("Payroll Settings", "email_salary_slip_to_employee"):
+		if is_company_setting_enabled(self.company, "email_salary_slip_to_employee"):
 			for ss in submitted_ss:
 				ss.email_salary_slip()
 
@@ -562,8 +563,8 @@ class PayrollEntry(Document):
 
 	def make_accrual_jv_entry(self, submitted_salary_slips):
 		self.check_permission("write")
-		employee_wise_accounting_enabled = frappe.db.get_single_value(
-			"Payroll Settings", "process_payroll_accounting_entry_based_on_employee"
+		employee_wise_accounting_enabled = is_company_setting_enabled(
+			self.company, "process_payroll_accounting_entry_based_on_employee"
 		)
 		self.employee_based_payroll_payable_entries = {}
 		self._advance_deduction_entries = []
@@ -917,8 +918,8 @@ class PayrollEntry(Document):
 	def make_bank_entry(self, for_withheld_salaries: bool = False) -> Document | None:
 		self.check_permission("write")
 		self.employee_based_payroll_payable_entries = {}
-		employee_wise_accounting_enabled = frappe.db.get_single_value(
-			"Payroll Settings", "process_payroll_accounting_entry_based_on_employee"
+		employee_wise_accounting_enabled = is_company_setting_enabled(
+			self.company, "process_payroll_accounting_entry_based_on_employee"
 		)
 
 		salary_slip_total = 0

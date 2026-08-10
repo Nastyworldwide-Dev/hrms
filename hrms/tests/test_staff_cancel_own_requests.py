@@ -102,33 +102,61 @@ class TestAllowStaffCancelOwnRequests(unittest.TestCase):
 		granted = _run({("Custom DocPerm", dt, role): 1 for dt in DOCTYPES for role in ("Employee", ESS)})
 		self.assertFalse(granted)
 
-	def test_patch_is_registered_last_in_patches_txt(self):
+	def test_patch_is_registered_in_patches_txt(self):
+		# no longer required to be the LAST entry — v16 appends its own patches
+		# after it — but it must still be registered exactly once
 		entries = [
 			line.strip()
 			for line in (HRMS_ROOT / "patches.txt").read_text(encoding="utf-8").splitlines()
 			if line.strip() and not line.strip().startswith("#")
 		]
-		self.assertEqual(entries[-1], "hrms.patches.v15_106_3.allow_staff_cancel_own_requests")
+		self.assertEqual(entries.count("hrms.patches.v15_106_3.allow_staff_cancel_own_requests"), 1)
 
 
 class TestDoctypeJsonCancelRows(unittest.TestCase):
+	"""Staff-cancel must be granted at RUNTIME, never in doctype JSON.
+
+	This class originally asserted the opposite — that the Employee row carried
+	`cancel: 1` in the shipped JSON. That invariant was wrong and it cost us the
+	first v16 install on verifica-live: Frappe's `check_permission_dependency`
+	refuses `cancel` without `submit`, and `validate_permissions_for_doctype`
+	runs over every row whenever anything calls `add_permission()` — which
+	hrms's own `after_install` does when it creates the Employee Self Service
+	user type. The whole install aborted.
+
+	It stayed invisible on nasty-live because Custom DocPerm rows make doctype
+	JSON permissions inert there, and because the v15_106_3 patch grants the
+	flag through `update_permission_property(..., validate=False)`, which
+	bypasses the check by design. Only a fresh install loads these rows and
+	validates them.
+
+	So the JSON must stay clean and the patch must do the granting. Fixed in
+	05d07b33b; `test_doctype_permission_integrity.py` guards the general rule.
+	"""
+
 	def _employee_rows(self, doctype):
 		perms = json.loads(DOCTYPE_JSONS[doctype].read_text(encoding="utf-8"))["permissions"]
 		return [p for p in perms if p.get("role") == "Employee" and not p.get("permlevel")]
 
-	def test_employee_level_zero_row_allows_cancel(self):
+	def test_employee_level_zero_row_has_no_json_cancel(self):
+		"""cancel in JSON without submit aborts a fresh install — see class docstring."""
 		for doctype in DOCTYPES:
 			with self.subTest(doctype=doctype):
 				rows = self._employee_rows(doctype)
-				self.assertTrue(rows)
-				self.assertTrue(all(row.get("cancel") for row in rows))
+				self.assertTrue(rows, "the Employee level-0 row must still exist")
+				for row in rows:
+					self.assertFalse(
+						row.get("cancel") and not row.get("submit"),
+						f"{doctype}: Employee row grants cancel without submit in JSON; "
+						"grant it at runtime in the v15_106_3 patch instead",
+					)
 
-	def test_other_roles_are_untouched_by_the_json_edit(self):
-		"""Only the Employee row was widened — no blanket cancel sweep."""
+	def test_other_roles_are_untouched(self):
+		"""No blanket cancel sweep crept into the other roles."""
 		perms = json.loads(DOCTYPE_JSONS["Leave Application"].read_text(encoding="utf-8"))["permissions"]
 		ess_rows = [p for p in perms if p.get("role") == ESS and not p.get("permlevel")]
 		for row in ess_rows:
-			self.assertFalse(row.get("cancel"))
+			self.assertFalse(row.get("cancel") and not row.get("submit"))
 
 
 if __name__ == "__main__":

@@ -39,6 +39,24 @@ logger = logging.getLogger(__name__)
 EMPLOYEE_CHUNK_SIZE = 50
 
 
+def _company_of_logs(logs) -> str | None:
+	"""Company of the employee these check-in logs belong to.
+
+	Used to resolve company-scoped policy (the Ramadan break window). All logs
+	in a group belong to one employee by contract, so the first row decides.
+	Returns None when it can't be resolved, which makes the resolver fall back
+	to the global setting — i.e. the pre-multi-company behaviour.
+	"""
+	employee = logs[0].employee if logs else None
+	if not employee:
+		return None
+	try:
+		return frappe.get_cached_value("Employee", employee, "company")
+	except Exception:
+		logger.warning("[shift_type] Could not resolve company for employee %s", employee)
+		return None
+
+
 class ShiftType(Document):
 	def validate(self):
 		start = get_time(self.start_time)
@@ -326,7 +344,9 @@ class ShiftType(Document):
 		total_working_hours, in_time, out_time = calculate_working_hours(
 			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
 		)
-		total_working_hours = self._deduct_unpaid_breaks(total_working_hours, in_time, out_time)
+		total_working_hours = self._deduct_unpaid_breaks(
+			total_working_hours, in_time, out_time, company=_company_of_logs(logs)
+		)
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time
@@ -352,12 +372,15 @@ class ShiftType(Document):
 
 		return "Present", total_working_hours, late_entry, early_exit, in_time, out_time
 
-	def _deduct_unpaid_breaks(self, total_working_hours, in_time, out_time):
+	def _deduct_unpaid_breaks(self, total_working_hours, in_time, out_time, company=None):
 		"""Subtract configured unpaid breaks from working hours.
 
 		Gap-aware: only deducts the portion of the break window NOT already
 		excluded by a real check-out/check-in gap, so workers who actually
 		log out for lunch aren't double-penalised.
+
+		`company` selects whose Ramadan window applies — see
+		hrms.utils.company_settings.
 		"""
 		if not (in_time and out_time) or not getattr(self, "breaks", None):
 			return total_working_hours
@@ -366,7 +389,7 @@ class ShiftType(Document):
 
 		in_dt = get_datetime(in_time)
 		out_dt = get_datetime(out_time)
-		break_min = get_shift_break_minutes(self.name, in_dt, out_dt)
+		break_min = get_shift_break_minutes(self.name, in_dt, out_dt, company=company)
 		if break_min <= 0:
 			return total_working_hours
 

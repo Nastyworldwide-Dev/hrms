@@ -26,7 +26,17 @@ from hrms.overrides.sop_document_row_scope import _active_employee, _unrestricte
 
 logger = logging.getLogger(__name__)
 
-LIST_FIELDS = ("name", "title", "scope", "department", "pinned", "published", "modified", "attachment")
+LIST_FIELDS = (
+	"name",
+	"title",
+	"scope",
+	"department",
+	"company",
+	"pinned",
+	"published",
+	"modified",
+	"attachment",
+)
 
 NO_EMPLOYEE_MSG = "No active Employee record is linked to your user."
 OUT_OF_SCOPE_MSG = "This SOP is not available to you."
@@ -75,6 +85,7 @@ def get_sops() -> dict:
 		raise frappe.PermissionError(_(NO_EMPLOYEE_MSG))
 
 	department = employee.department if employee else None
+	company = employee.company if employee else None
 	filters = {} if is_hr else {"published": 1}
 	rows = frappe.get_list(
 		"SOP Document",
@@ -85,7 +96,10 @@ def get_sops() -> dict:
 	)
 
 	visible_rows = [
-		row for row in rows if is_hr or record_visible(row.published, row.scope, row.department, department)
+		row
+		for row in rows
+		if is_hr
+		or record_visible(row.published, row.scope, row.department, department, row.get("company"), company)
 	]
 	attached_names = _names_with_file_rows([row.name for row in visible_rows if not row.attachment])
 
@@ -129,7 +143,10 @@ def _get_visible_doc(name: str, caller: str) -> tuple:
 
 	doc = frappe.get_doc("SOP Document", name)
 	department = employee.department if employee else None
-	visible = is_hr or record_visible(doc.published, doc.scope, doc.department, department)
+	company = employee.company if employee else None
+	visible = is_hr or record_visible(
+		doc.published, doc.scope, doc.department, department, getattr(doc, "company", None), company
+	)
 	if not visible or not frappe.has_permission("SOP Document", "read", doc=doc):
 		logger.warning("[sop] denying %s(%s) for %s — out of scope", caller, name, user)
 		raise frappe.PermissionError(_(OUT_OF_SCOPE_MSG))

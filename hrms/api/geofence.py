@@ -34,6 +34,7 @@ import frappe
 from frappe.utils import get_datetime
 
 from hrms.hr.utils import get_distance_between_coordinates
+from hrms.utils.company_settings import is_company_setting_enabled
 from hrms.utils.geofence import evaluate_geofence
 from hrms.utils.timezone import employee_now
 
@@ -81,7 +82,11 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 	if not employee:
 		return _ok()
 
-	if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+	# Geolocated check-in is rolled out per company. A company with no override
+	# inherits the global HR Settings flag — i.e. today's behaviour exactly.
+	company = frappe.db.get_value("Employee", employee, "company")
+	if not is_company_setting_enabled(company, "allow_geolocation_tracking"):
+		logger.info("[geofence.api] geolocation tracking off for company=%s — pass-through", company)
 		return _ok()
 
 	try:

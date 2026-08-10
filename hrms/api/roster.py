@@ -8,6 +8,11 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import ShiftAssignment
 from hrms.hr.doctype.shift_assignment_tool.shift_assignment_tool import create_shift_assignment
 from hrms.hr.doctype.shift_schedule.shift_schedule import get_or_insert_shift_schedule
 from hrms.telemetry import capture
+from hrms.utils.company_scope import (
+	get_permitted_companies,
+	resolve_single_company,
+	scope_employee_filters,
+)
 
 ALLOWED_EMPLOYEE_FILTERS = {
 	"status",
@@ -26,12 +31,41 @@ ALLOWED_SHIFT_FILTERS = {
 
 
 def _validate_employee_filters(employee_filters: dict[str, str]) -> None:
-	for key in employee_filters:
+	for key, value in (employee_filters or {}).items():
 		if key not in ALLOWED_EMPLOYEE_FILTERS:
 			frappe.throw(
 				_("Invalid employee filter: {0}").format(frappe.bold(key)),
 				frappe.PermissionError,
 			)
+		# Values arrive as JSON from the roster UI and are always plain
+		# strings. Rejecting anything else keeps the caller from smuggling in
+		# an operator form (["in", [...]]) — the shape company fencing itself
+		# uses to widen a query across the caller's permitted companies.
+		if value is not None and not isinstance(value, str):
+			frappe.logger("hrms").warning(
+				"[api] roster rejected non-scalar employee filter %s from %s",
+				key,
+				frappe.session.user,
+			)
+			frappe.throw(
+				_("Invalid employee filter: {0}").format(frappe.bold(key)),
+				frappe.PermissionError,
+			)
+
+
+def _apply_employee_where(query, Employee, employee_filters: dict):
+	"""Add the (already company-scoped) employee filters to a query.
+
+	Understands the `["in", [...]]` form that `scope_employee_filters` emits
+	for a caller permitted to see several companies; everything else is a
+	plain equality filter.
+	"""
+	for key, value in employee_filters.items():
+		if isinstance(value, list | tuple) and len(value) == 2 and str(value[0]).lower() == "in":
+			query = query.where(Employee[key].isin(list(value[1])))
+		else:
+			query = query.where(Employee[key] == value)
+	return query
 
 
 def _validate_shift_filters(shift_filters: dict[str, str]) -> None:
@@ -45,7 +79,25 @@ def _validate_shift_filters(shift_filters: dict[str, str]) -> None:
 
 @frappe.whitelist()
 def get_default_company() -> str:
-	return frappe.defaults.get_user_default("Company")
+	"""Company the roster header should preselect.
+
+	The user default is only trustworthy for a caller who isn't company-fenced.
+	A fenced caller gets their single permitted company; a caller permitted to
+	see several gets nothing preselected — silently picking one of 15 companies
+	for a group HR user is how the wrong roster ends up on screen.
+	"""
+	permitted = get_permitted_companies()
+	if permitted is None:
+		return frappe.defaults.get_user_default("Company")
+
+	company = resolve_single_company(permitted)
+	if not company:
+		frappe.logger("hrms").info(
+			"[api] roster.get_default_company: %s is permitted %d companies — no preselection",
+			frappe.session.user,
+			len(permitted),
+		)
+	return company or ""
 
 
 @frappe.whitelist()
@@ -269,6 +321,7 @@ def insert_shift(
 
 def get_holidays(month_start: str, month_end: str, employee_filters: dict[str, str]) -> dict[str, list[dict]]:
 	_validate_employee_filters(employee_filters)
+	employee_filters = scope_employee_filters(employee_filters, endpoint="roster.get_holidays")
 	holidays = {}
 	holiday_lists = {}
 
@@ -290,6 +343,7 @@ def get_holidays(month_start: str, month_end: str, employee_filters: dict[str, s
 
 def get_leaves(month_start: str, month_end: str, employee_filters: dict[str, str]) -> dict[str, list[dict]]:
 	_validate_employee_filters(employee_filters)
+	employee_filters = scope_employee_filters(employee_filters, endpoint="roster.get_leaves")
 	LeaveApplication = frappe.qb.DocType("Leave Application")
 	Employee = frappe.qb.DocType("Employee")
 
@@ -313,8 +367,7 @@ def get_leaves(month_start: str, month_end: str, employee_filters: dict[str, str
 
 	query = query.left_join(Employee).on(LeaveApplication.employee == Employee.name)
 
-	for filter in employee_filters:
-		query = query.where(Employee[filter] == employee_filters[filter])
+	query = _apply_employee_where(query, Employee, employee_filters)
 
 	return group_by_employee(query.run(as_dict=True))
 
@@ -324,6 +377,7 @@ def get_shifts(
 ) -> dict[str, list[dict]]:
 	_validate_employee_filters(employee_filters)
 	_validate_shift_filters(shift_filters)
+	employee_filters = scope_employee_filters(employee_filters, endpoint="roster.get_shifts")
 	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
 	ShiftType = frappe.qb.DocType("Shift Type")
 	Employee = frappe.qb.DocType("Employee")
@@ -359,8 +413,7 @@ def get_shifts(
 		.on(ShiftAssignment.employee == Employee.name)
 	)
 
-	for filter in employee_filters:
-		query = query.where(Employee[filter] == employee_filters[filter])
+	query = _apply_employee_where(query, Employee, employee_filters)
 
 	for filter in shift_filters:
 		query = query.where(ShiftAssignment[filter] == shift_filters[filter])

@@ -1,6 +1,8 @@
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, comma_sep, getdate, today
@@ -8,32 +10,41 @@ from frappe.utils import add_days, add_months, comma_sep, getdate, today
 from erpnext.setup.doctype.employee.employee import get_all_employee_emails, get_employee_email
 
 from hrms.hr.utils import get_holidays_for_employee
+from hrms.utils.company_settings import get_company_setting, is_company_setting_enabled
+
+logger = logging.getLogger(__name__)
 
 
 # -----------------
 # HOLIDAY REMINDERS
 # -----------------
-def send_reminders_in_advance_weekly():
-	to_send_in_advance = int(frappe.db.get_single_value("HR Settings", "send_holiday_reminders"))
-	frequency = frappe.db.get_single_value("HR Settings", "frequency")
-	if not (to_send_in_advance and frequency == "Weekly"):
-		return
+def _holiday_reminders_due(company: str | None, frequency: str) -> bool:
+	"""Does `company` want holiday reminders at this cadence?
 
+	Reminder cadence is local HR practice, so both the on/off flag and the
+	frequency resolve per company; a company with no override answers with the
+	global HR Settings values, which is the pre-multi-company behaviour.
+	"""
+	if not is_company_setting_enabled(company, "send_holiday_reminders"):
+		return False
+	return get_company_setting(company, "frequency") == frequency
+
+
+def send_reminders_in_advance_weekly():
 	send_advance_holiday_reminders("Weekly")
 
 
 def send_reminders_in_advance_monthly():
-	to_send_in_advance = int(frappe.db.get_single_value("HR Settings", "send_holiday_reminders"))
-	frequency = frappe.db.get_single_value("HR Settings", "frequency")
-	if not (to_send_in_advance and frequency == "Monthly"):
-		return
-
 	send_advance_holiday_reminders("Monthly")
 
 
 def send_advance_holiday_reminders(frequency):
 	"""Send Holiday Reminders in Advance to Employees
 	`frequency` (str): 'Weekly' or 'Monthly'
+
+	Both scheduled entry points always reach here; whether an employee is
+	actually mailed is decided by that employee's *company* policy, so two
+	companies can run different cadences (or none at all) on one site.
 	"""
 	if frequency == "Weekly":
 		start_date = getdate()
@@ -45,22 +56,38 @@ def send_advance_holiday_reminders(frequency):
 	else:
 		return
 
-	employees = frappe.db.get_all("Employee", filters={"status": "Active"}, pluck="name")
+	employees = frappe.db.get_all("Employee", filters={"status": "Active"}, fields=["name", "company"])
+	due = {}
+	sent = skipped = 0
 	for employee in employees:
+		if employee.company not in due:
+			due[employee.company] = _holiday_reminders_due(employee.company, frequency)
+		if not due[employee.company]:
+			skipped += 1
+			continue
+
 		holidays = get_holidays_for_employee(
-			employee, start_date, end_date, only_non_weekly=True, raise_exception=False
+			employee.name, start_date, end_date, only_non_weekly=True, raise_exception=False
 		)
 
-		send_holidays_reminder_in_advance(employee, holidays)
+		send_holidays_reminder_in_advance(employee.name, holidays, frequency=frequency)
+		sent += 1
+
+	logger.info(
+		"[employee_reminders] %s holiday reminders: considered=%d skipped_by_company_policy=%d",
+		frequency,
+		sent,
+		skipped,
+	)
 
 
-def send_holidays_reminder_in_advance(employee, holidays):
+def send_holidays_reminder_in_advance(employee, holidays, frequency=None):
 	if not holidays:
 		return
 
 	employee_doc = frappe.get_doc("Employee", employee)
 	employee_email = get_employee_email(employee_doc)
-	frequency = frappe.db.get_single_value("HR Settings", "frequency")
+	frequency = frequency or get_company_setting(employee_doc.company, "frequency")
 	sender_email = get_sender_email()
 	email_header = _("Holidays this Month.") if frequency == "Monthly" else _("Holidays this Week.")
 	frappe.sendmail(
@@ -85,16 +112,19 @@ def send_holidays_reminder_in_advance(employee, holidays):
 # BIRTHDAY REMINDERS
 # ------------------
 def send_birthday_reminders():
-	"""Send Employee birthday reminders if no 'Stop Birthday Reminders' is not set."""
+	"""Send Employee birthday reminders for every company that asks for them.
 
-	to_send = int(frappe.db.get_single_value("HR Settings", "send_birthday_reminders"))
-	if not to_send:
-		return
-
+	The employees are already grouped by company, so the flag is resolved per
+	company; companies with no override inherit the global HR Settings flag.
+	"""
 	sender = get_sender_email()
 	employees_born_today = get_employees_who_are_born_today()
 
 	for company, birthday_persons in employees_born_today.items():
+		if not is_company_setting_enabled(company, "send_birthday_reminders"):
+			logger.info("[employee_reminders] birthday reminders off for company=%s", company)
+			continue
+
 		employee_emails = get_all_employee_emails(company)
 		birthday_person_emails = [get_employee_email(doc) for doc in birthday_persons]
 		recipients = list(set(employee_emails) - set(birthday_person_emails))
@@ -205,11 +235,11 @@ def get_employees_having_an_event_today(event_type):
 # WORK ANNIVERSARY REMINDERS
 # --------------------------
 def send_work_anniversary_reminders():
-	"""Send Employee Work Anniversary Reminders if 'Send Work Anniversary Reminders' is checked"""
-	to_send = int(frappe.db.get_single_value("HR Settings", "send_work_anniversary_reminders"))
-	if not to_send:
-		return
+	"""Send Work Anniversary Reminders for every company that asks for them.
 
+	Resolved per company (the employees are already grouped that way); a company
+	with no override inherits the global HR Settings flag.
+	"""
 	sender = get_sender_email()
 	employees_joined_today = get_employees_having_an_event_today("work_anniversary")
 
@@ -218,6 +248,10 @@ def send_work_anniversary_reminders():
 	message += _("Everyone, let’s congratulate them on their work anniversary!")
 
 	for company, anniversary_persons in employees_joined_today.items():
+		if not is_company_setting_enabled(company, "send_work_anniversary_reminders"):
+			logger.info("[employee_reminders] work anniversary reminders off for company=%s", company)
+			continue
+
 		employee_emails = get_all_employee_emails(company)
 		anniversary_person_emails = [get_employee_email(doc) for doc in anniversary_persons]
 		recipients = list(set(employee_emails) - set(anniversary_person_emails))
