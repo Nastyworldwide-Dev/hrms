@@ -117,3 +117,92 @@ class TestERPInstanceDoctype(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+def _load_controller():
+	"""Load the controller module with a stub frappe — no bench needed.
+
+	Only `normalise_instance_url` is exercised here; it is pure by design so the
+	URL rules can be pinned without a site.
+	"""
+	import importlib.util
+	import sys
+	import types
+
+	frappe_stub = types.ModuleType("frappe")
+	frappe_stub.throw = lambda *a, **kw: (_ for _ in ()).throw(AssertionError("unexpected throw"))
+	frappe_stub.bold = str
+	frappe_stub._ = lambda s: s
+	model = types.ModuleType("frappe.model")
+	document = types.ModuleType("frappe.model.document")
+	document.Document = object
+	saved = {k: sys.modules.get(k) for k in ("frappe", "frappe.model", "frappe.model.document")}
+	sys.modules.update(
+		{"frappe": frappe_stub, "frappe.model": model, "frappe.model.document": document}
+	)
+	try:
+		path = HRMS_ROOT / "hr/doctype/hrms_erp_instance/hrms_erp_instance.py"
+		spec = importlib.util.spec_from_file_location("_erp_instance_ctrl", path)
+		mod = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(mod)
+	finally:
+		for k, v in saved.items():
+			if v is not None:
+				sys.modules[k] = v
+			else:
+				sys.modules.pop(k, None)
+	return mod
+
+
+class TestInstanceUrlNormalisation(unittest.TestCase):
+	"""The URL is both the PWA redirect and the sync's API base.
+
+	A trailing '?' was entered in production on the first real configuration:
+	'https://host?' + '/api/method/x' puts the whole API path in the query
+	string, so requests hit the site root and return the login page with a 200 —
+	the failure is silent, which is why these rules are pinned.
+	"""
+
+	def setUp(self):
+		self.normalise = _load_controller().normalise_instance_url
+
+	def test_trailing_question_mark_is_stripped(self):
+		url, err = self.normalise("https://nasty-sg-dev.s.frappe.cloud?")
+		self.assertIsNone(err)
+		self.assertEqual(url, "https://nasty-sg-dev.s.frappe.cloud")
+
+	def test_normalised_url_builds_a_real_api_path(self):
+		from urllib.parse import urlparse
+
+		url, _err = self.normalise("https://host.example?")
+		self.assertTrue(urlparse(f"{url}/api/method/x").path.startswith("/api/method"))
+
+	def test_trailing_slash_and_fragment_are_stripped(self):
+		for raw in ("https://host.example/", "  https://host.example#  ", "https://host.example/?"):
+			with self.subTest(raw=raw):
+				url, err = self.normalise(raw)
+				self.assertIsNone(err)
+				self.assertEqual(url, "https://host.example")
+
+	def test_already_clean_url_is_unchanged(self):
+		url, err = self.normalise("https://host.example")
+		self.assertIsNone(err)
+		self.assertEqual(url, "https://host.example")
+
+	def test_non_http_scheme_is_rejected(self):
+		_url, err = self.normalise("ftp://host.example")
+		self.assertIsNotNone(err)
+
+	def test_query_string_is_rejected(self):
+		_url, err = self.normalise("https://host.example?foo=1")
+		self.assertIsNotNone(err)
+
+	def test_path_is_rejected(self):
+		_url, err = self.normalise("https://host.example/app/employee")
+		self.assertIsNotNone(err)
+
+	def test_empty_is_rejected(self):
+		for raw in ("", None, "   "):
+			with self.subTest(raw=raw):
+				_url, err = self.normalise(raw)
+				self.assertIsNotNone(err)
