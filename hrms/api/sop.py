@@ -235,3 +235,36 @@ def attachment_content(name: str):
 	frappe.local.response.filename = attachment["file_name"]
 	frappe.local.response.filecontent = content
 	frappe.local.response.type = "binary"
+
+
+@frappe.whitelist()
+def remove_attachment(name: str):
+	"""Explicit removal of the SOP's attachment. The controller's on_update
+	cleanup only sees field transitions — legacy rows (and Desk sidebar
+	attaches) carry their file purely as a File row with an empty field, so
+	'clear the field' is a no-op there and the File-row fallback resurrects
+	the file. This deletes every attached File row, whatever the field says."""
+	logger.debug("[sop] remove_attachment requested for %s by %s", name, frappe.session.user)
+	doc, _is_hr = _get_visible_doc(name, "remove_attachment")
+	if not frappe.has_permission("SOP Document", "write", doc=doc):
+		logger.warning("[sop] denying remove_attachment(%s) for %s — no write", name, frappe.session.user)
+		raise frappe.PermissionError(_("You cannot edit this SOP."))
+
+	file_names = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "SOP Document", "attached_to_name": name},
+		pluck="name",
+	)
+	for file_name in file_names:
+		# write on the SOP was just proven; File cleanup is a cascade of it
+		frappe.delete_doc("File", file_name, ignore_permissions=True)
+	if doc.attachment:
+		doc.db_set("attachment", "")
+
+	logger.info(
+		"[sop] remove_attachment %s by %s — deleted %d file row(s)",
+		name,
+		frappe.session.user,
+		len(file_names),
+	)
+	return {"removed": len(file_names)}

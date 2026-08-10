@@ -390,6 +390,43 @@ class TestGetSop(unittest.TestCase):
 			},
 		)
 
+	def test_remove_attachment_deletes_all_file_rows(self):
+		doc = frappe._dict(next(row for row in SOPS if row["name"] == "HR-SOP-00002"))
+		doc.db_set = MagicMock()
+		file_rows = [
+			{"name": "FILE-0001", "attached_to_name": "HR-SOP-00002"},
+			{"name": "FILE-0002", "attached_to_name": "HR-SOP-00002"},
+		]
+		with (
+			_Ctx(HR, file_rows=file_rows),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "delete_doc") as delete_doc,
+			patch("hrms.api.sop._", lambda msg: msg),
+		):
+			result = sop_api.remove_attachment("HR-SOP-00002")
+		self.assertEqual(result, {"removed": 2})
+		self.assertEqual(delete_doc.call_count, 2)
+		delete_doc.assert_any_call("File", "FILE-0001", ignore_permissions=True)
+		doc.db_set.assert_called_once_with("attachment", "")
+
+	def test_remove_attachment_denied_without_write(self):
+		# visible to the employee (own department) but not writable
+		doc = frappe._dict(next(row for row in SOPS if row["name"] == "HR-SOP-00003"))
+
+		def ptype_aware(doctype, ptype="read", doc=None):
+			return ptype != "write"
+
+		with (
+			_Ctx(STAFF),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "has_permission", side_effect=ptype_aware),
+			patch.object(frappe, "delete_doc") as delete_doc,
+			patch("hrms.api.sop._", lambda msg: msg),
+		):
+			with self.assertRaises(frappe.PermissionError):
+				sop_api.remove_attachment("HR-SOP-00003")
+		delete_doc.assert_not_called()
+
 	def test_attachment_content_denied_out_of_scope(self):
 		with self.assertRaises(frappe.PermissionError):
 			doc = frappe._dict(next(row for row in SOPS if row["name"] == "HR-SOP-00004"))

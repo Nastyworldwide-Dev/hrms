@@ -267,6 +267,9 @@ const detail = createResource({
 const sopDocs = createListResource({ doctype: "SOP Document" })
 
 const updateSop = createResource({ url: "frappe.client.set_value" })
+// clearing the field is not enough: legacy/Desk-attached files live only as
+// File rows (empty field) and the server fallback would resurrect them
+const removeAttachment = createResource({ url: "hrms.api.sop.remove_attachment" })
 
 const prefill = () => {
 	Object.assign(form, emptyForm())
@@ -371,6 +374,10 @@ const save = async () => {
 		const deferPublish = isCreate && !!selectedFile.value && values.published === 1
 
 		if (docname) {
+			if (attachmentCleared.value) {
+				await removeAttachment.fetch({ name: docname })
+				console.info("[SOP] Attachment removed:", docname)
+			}
 			await updateSop.fetch({
 				doctype: "SOP Document",
 				name: docname,
