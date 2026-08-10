@@ -68,6 +68,41 @@ DEFAULT_SYNC_DOCTYPES = (
 	"Leave Ledger Entry",
 )
 
+#: What each doctype's rows point at. If a prerequisite fails, its dependents are
+#: SKIPPED, never attempted.
+#:
+#: Learned the hard way on verifica-live 2026-08-10 (SYNC-00002): Company and
+#: Employee both failed, the run carried on regardless, and 5,821 Attendance,
+#: Employee Checkin and Leave Ledger Entry rows landed pointing at an employee
+#: and a company that did not exist on the destination. Per-doctype failure
+#: containment is right for INDEPENDENT doctypes and actively harmful for
+#: dependent ones — ordering alone buys nothing without this.
+SYNC_DEPENDENCIES = {
+	"Employee": ("Company",),
+	"Attendance": ("Employee",),
+	"Employee Checkin": ("Employee",),
+	"Leave Ledger Entry": ("Employee",),
+}
+
+
+def blocked_by(doctype: str, failed: set[str] | frozenset[str]) -> list[str]:
+	"""Prerequisites of `doctype` that failed, transitively.
+
+	Transitive matters: Company failing must block Attendance, which only names
+	Employee as its prerequisite.
+	"""
+	blockers, seen, queue = [], set(), list(SYNC_DEPENDENCIES.get(doctype, ()))
+	while queue:
+		dep = queue.pop(0)
+		if dep in seen:
+			continue
+		seen.add(dep)
+		if dep in failed:
+			blockers.append(dep)
+		queue.extend(SYNC_DEPENDENCIES.get(dep, ()))
+	return blockers
+
+
 #: Mirrored **create-only**: absent locally -> create a shell; present locally ->
 #: never touched, not even to refresh the identity fields.
 #:
@@ -86,7 +121,27 @@ MIRRORED_FIELDS = {
 	"Company": ("company_name", "abbr", "default_currency", "country"),
 }
 
+#: Values the DESTINATION requires that the identity projection above omits.
+#:
+#: `Company.on_update` builds the default chart of accounts, and it is not
+#: optional — `doc.insert()` runs post-save hooks, so there is no way to create a
+#: Company shell without it. With `chart_of_accounts` unset, ERPNext indexes into
+#: an empty template list and the insert dies with "list index out of range",
+#: which is exactly how Company failed on verifica-live in SYNC-00002.
+#:
+#: Consequence worth knowing: each mirrored Company therefore brings a standard
+#: account tree onto this hub. Harmless here — these companies are HR-only, with
+#: no ledger activity — but it is not the weightless row the name "shell" implies.
+_REQUIRED_DEFAULTS = {
+	"Company": {"chart_of_accounts": "Standard"},
+}
+
 PAGE_SIZE = 500
+
+#: Per-row failures recorded verbatim on the run before truncating. Schema drift
+#: usually hits every row the same way, so a handful is diagnostic and 4,000
+#: would just bury the run record.
+MAX_ROW_ERRORS_REPORTED = 10
 
 #: Never copied from the remote row: framework bookkeeping that must be owned
 #: by this site, or that Frappe recomputes on write.
@@ -159,6 +214,10 @@ def _mirror_payload(row: dict, instance_name: str, doctype: str | None = None) -
 	else:
 		payload = {k: v for k, v in row.items() if k not in _UNMIRRORED_FIELDS and not isinstance(v, list)}
 	payload.pop("name", None)
+
+	for key, value in _REQUIRED_DEFAULTS.get(doctype, {}).items():
+		payload.setdefault(key, value)
+
 	payload[PROVENANCE_FIELD] = instance_name
 	return payload
 
@@ -225,7 +284,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	if since:
 		remote_filters["modified"] = (">", since)
 
-	pulled = written = inserted = updated = skipped = 0
+	pulled = written = inserted = updated = skipped = errored = 0
+	row_errors: list[str] = []
 	seen = set()
 	start = 0
 
@@ -250,7 +310,23 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				continue
 
 			seen.add(remote_name)
-			outcome = _write_row(doctype, remote_name, _mirror_payload(row, client.instance_name, doctype))
+			try:
+				outcome = _write_row(
+					doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
+				)
+			except Exception as e:  # one bad row must not lose the other 5,000
+				# Almost always schema drift: the source holds a value this site's
+				# field definition cannot represent (a Select option added there
+				# and not here). Surface it per row and keep going — silently
+				# coercing the value would corrupt the mirror, and failing the
+				# whole doctype loses good rows for one bad one.
+				errored += 1
+				if len(row_errors) < MAX_ROW_ERRORS_REPORTED:
+					row_errors.append(f"{remote_name}: {e}")
+				_log().error("[sync] %s %s could not be written: %s", doctype, remote_name, e)
+				frappe.db.rollback()
+				continue
+
 			if outcome == "inserted":
 				written += 1
 				inserted += 1
@@ -268,15 +344,22 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		skipped += _count_local_orphans(doctype, client.instance_name, seen)
 
 	_log().info(
-		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s (since=%s)",
+		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s errored=%s (since=%s)",
 		doctype,
 		client.instance_name,
 		pulled,
 		inserted,
 		updated,
 		skipped,
+		errored,
 		since or "beginning",
 	)
+
+	# Every row failing is not "tolerated drift", it is a broken doctype — and a
+	# dependent doctype must not then be told its prerequisite succeeded.
+	if pulled and errored == pulled:
+		raise RuntimeError(f"every row failed ({errored}/{pulled}): {'; '.join(row_errors)}")
+
 	return {
 		"doctype": doctype,
 		"pulled": pulled,
@@ -284,6 +367,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		"inserted": inserted,
 		"updated": updated,
 		"skipped": skipped,
+		"errored": errored,
+		"row_errors": row_errors,
 	}
 
 
@@ -350,11 +435,22 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	results, errors, failed = [], [], []
 	status = "Failed"
 
+	blocked = []
 	try:
 		for doctype in doctypes:
+			# A dependent doctype is not attempted once its prerequisite failed:
+			# its rows would reference employees or companies that do not exist
+			# here. Skipping is the only safe outcome — see SYNC_DEPENDENCIES.
+			blockers = blocked_by(doctype, set(failed))
+			if blockers:
+				blocked.append(doctype)
+				errors.append(f"{doctype}: skipped — depends on failed {', '.join(blockers)}")
+				_log().warning("[sync] %s skipped: prerequisite(s) %s failed", doctype, ", ".join(blockers))
+				continue
+
 			try:
 				result = sync_doctype(client, doctype, since=since)
-			except Exception as e:  # one doctype must not abort the run
+			except Exception as e:  # an independent doctype must not abort the run
 				failed.append(doctype)
 				errors.append(f"{doctype}: {e}")
 				_log().error("[sync] %s failed: %s", doctype, e, exc_info=True)
@@ -366,9 +462,10 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 				totals[key] += result[key]
 			frappe.db.commit()
 
-		if not failed:
+		unfinished = len(failed) + len(blocked)
+		if not unfinished:
 			status = "Completed"
-		elif len(failed) < len(doctypes):
+		elif unfinished < len(doctypes):
 			status = "Partial"
 		else:
 			status = "Failed"
@@ -379,6 +476,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			"since": since,
 			"results": results,
 			"failed": failed,
+			"blocked": blocked,
 			**totals,
 		}
 	except Exception as e:

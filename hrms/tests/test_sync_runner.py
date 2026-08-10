@@ -363,8 +363,25 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 		runner.sync_doctype(self.client(), "Company")
 
 		row = self.store.rows("Company")["Acme"]
-		for field in ("default_bank_account", "chart_of_accounts", "cost_center"):
+		for field in ("default_bank_account", "cost_center"):
 			self.assertNotIn(field, row, f"{field} is finance config and must not be mirrored")
+
+	def test_remote_chart_of_accounts_is_never_copied(self):
+		"""`chart_of_accounts` is set, but to OUR default — never the source's.
+
+		The distinction matters: copying the remote's value would import another
+		site's finance configuration, while omitting the field entirely kills the
+		insert (`Company.on_update` builds the account tree and indexes into an
+		empty template list — the SYNC-00002 'list index out of range').
+		"""
+		remote_with_coa = [dict(row, chart_of_accounts="Remote Bespoke CoA") for row in COMPANIES]
+		client = self.client(remote={"Company": remote_with_coa, "Employee": EMPLOYEES})
+
+		runner.sync_doctype(client, "Company")
+
+		written = self.store.rows("Company")["Acme"]
+		self.assertNotEqual(written.get("chart_of_accounts"), "Remote Bespoke CoA")
+		self.assertEqual(written.get("chart_of_accounts"), "Standard")
 
 	def test_existing_company_is_never_modified(self):
 		local = {
@@ -491,6 +508,70 @@ class TestRunRecordAlwaysFinalised(_RunnerTestCase):
 
 		self.assertEqual(len(self.runs()), 1, "exactly one audit record per run")
 		self.assertEqual(self.store.inserts[0][0], "HRMS Sync Run")
+
+
+class TestDependentDoctypesAreBlocked(_RunnerTestCase):
+	"""A dependent doctype is never attempted once its prerequisite failed.
+
+	Regression for SYNC-00002 on verifica-live (2026-08-10): Company and Employee
+	both failed, the run continued, and 5,821 Attendance / Employee Checkin /
+	Leave Ledger Entry rows were written referencing an employee and a company
+	that did not exist on the destination. Per-doctype failure containment is
+	correct for INDEPENDENT doctypes and actively harmful for dependent ones.
+	"""
+
+	def _remote(self):
+		return {
+			"Company": COMPANIES,
+			"Employee": EMPLOYEES,
+			"Attendance": [{"name": "ATT-1", "employee": "EMP-1", "company": "Acme"}],
+		}
+
+	def test_employee_failure_blocks_attendance(self):
+		client = self.client(self._remote(), fail_for=("Employee",))
+		result = runner.sync_instance(
+			client, doctypes=("Company", "Employee", "Attendance"), incremental=False
+		)
+
+		self.assertIn("Employee", result["failed"])
+		self.assertIn("Attendance", result["blocked"])
+		self.assertEqual(
+			self.store.rows("Attendance"), {}, "orphan attendance written despite Employee failing"
+		)
+
+	def test_company_failure_blocks_attendance_transitively(self):
+		"""Attendance names Employee as its prerequisite, not Company — the block
+		must still propagate through the chain."""
+		client = self.client(self._remote(), fail_for=("Company",))
+		result = runner.sync_instance(
+			client, doctypes=("Company", "Employee", "Attendance"), incremental=False
+		)
+
+		self.assertIn("Company", result["failed"])
+		self.assertIn("Employee", result["blocked"])
+		self.assertIn("Attendance", result["blocked"])
+		self.assertEqual(self.store.rows("Attendance"), {})
+		self.assertEqual(self.store.rows("Employee"), {})
+
+	def test_independent_doctypes_still_run_after_a_failure(self):
+		"""Containment must survive: a failure only blocks its DEPENDENTS."""
+		remote = dict(self._remote())
+		client = self.client(remote, fail_for=("Company",))
+		result = runner.sync_instance(client, doctypes=("Company", "Employee"), incremental=False)
+
+		self.assertEqual(result["status"], "Failed")
+		self.assertIn("Company", result["failed"])
+		self.assertIn("Employee", result["blocked"])
+
+	def test_clean_run_blocks_nothing(self):
+		client = self.client(self._remote())
+		result = runner.sync_instance(
+			client, doctypes=("Company", "Employee", "Attendance"), incremental=False
+		)
+
+		self.assertEqual(result["blocked"], [])
+		self.assertEqual(result["status"], "Completed")
+		self.assertEqual(len(self.store.rows("Attendance")), 1)
 
 
 if __name__ == "__main__":
