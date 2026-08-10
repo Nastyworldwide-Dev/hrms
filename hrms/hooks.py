@@ -142,6 +142,50 @@ before_app_uninstall = "hrms.setup.before_app_uninstall"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
+permission_query_conditions = {
+	# Employees may only see their own Appraisal; HR User/Manager and
+	# System Manager keep full visibility for the rating workflow.
+	"Appraisal": "hrms.hr.doctype.appraisal.appraisal.get_permission_query_conditions",
+	# Scope notification reads to the recipient. Doctype-level perms only grant
+	# read to Employee + System Manager; HR Managers acting as approvers would
+	# otherwise see an empty feed even when their unread count is nonzero.
+	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.get_permission_query_conditions",
+	# Participants only: both doctypes carry Employee Link fields that ignore
+	# user permissions, so row scope lives entirely in these hooks.
+	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.get_permission_query_conditions",
+	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.get_permission_query_conditions",
+	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.get_permission_query_conditions",
+	# Approver-routed requests: own + named approver + shared + HR. Row scope
+	# lives here, NOT in per-employee User Permissions (which would 403 the
+	# approver) — see hrms/overrides/approval_row_scope.py.
+	"Leave Application": "hrms.overrides.approval_row_scope.leave_application_query_conditions",
+	# OT money-flow doctypes: own + direct reports + HR (no approver field —
+	# submission is the approval)
+	"OT Request": "hrms.overrides.ot_row_scope.ot_request_query_conditions",
+	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.replacement_leave_claim_query_conditions",
+	"Expense Claim": "hrms.overrides.approval_row_scope.expense_claim_query_conditions",
+	"Shift Request": "hrms.overrides.approval_row_scope.shift_request_query_conditions",
+	# Helpdesk tickets: private employee↔HR, no reports_to visibility
+	"Employee Issue": "hrms.overrides.employee_issue_row_scope.get_permission_query_conditions",
+	# SOP Library: published General SOPs + the reader's own department; HR sees all
+	"SOP Document": "hrms.overrides.sop_document_row_scope.get_permission_query_conditions",
+}
+
+has_permission = {
+	"Appraisal": "hrms.hr.doctype.appraisal.appraisal.has_permission",
+	"PWA Notification": "hrms.hr.doctype.pwa_notification.pwa_notification.has_permission",
+	"Employee One On One": "hrms.hr.doctype.employee_one_on_one.employee_one_on_one.has_permission",
+	"Employee Instant Feedback": "hrms.hr.doctype.employee_instant_feedback.employee_instant_feedback.has_permission",
+	"Shift Swap Request": "hrms.hr.doctype.shift_swap_request.shift_swap_request.has_permission",
+	"Leave Application": "hrms.overrides.approval_row_scope.has_permission",
+	"Expense Claim": "hrms.overrides.approval_row_scope.has_permission",
+	"Shift Request": "hrms.overrides.approval_row_scope.has_permission",
+	"OT Request": "hrms.overrides.ot_row_scope.has_permission",
+	"Replacement Leave Claim": "hrms.overrides.ot_row_scope.has_permission",
+	"Employee Issue": "hrms.overrides.employee_issue_row_scope.has_permission",
+	"SOP Document": "hrms.overrides.sop_document_row_scope.has_permission",
+}
+
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
 
 # DocType Class
@@ -153,6 +197,8 @@ override_doctype_class = {
 	"Timesheet": "hrms.overrides.employee_timesheet.EmployeeTimesheet",
 	"Payment Entry": "hrms.overrides.employee_payment_entry.EmployeePaymentEntry",
 	"Project": "hrms.overrides.employee_project.EmployeeProject",
+	"Employee Checkin": "hrms.overrides.employee_checkin_override.CustomEmployeeCheckin",
+	"Leave Policy Assignment": "hrms.overrides.leave_policy_assignment_override.CustomLeavePolicyAssignment",
 }
 
 # Document Events
@@ -165,6 +211,10 @@ doc_events = {
 			"erpnext.setup.doctype.employee.employee.validate_employee_role",
 			"hrms.overrides.employee_master.update_approver_user_roles",
 		],
+	},
+	"DocShare": {
+		# manual appraisal grants stay per-user and non-transferable
+		"validate": "hrms.hr.doctype.appraisal.appraisal.validate_appraisal_doc_share",
 	},
 	"Company": {
 		"validate": "hrms.overrides.company.validate_default_accounts",
@@ -204,10 +254,24 @@ doc_events = {
 	},
 	"Loan": {"validate": "hrms.hr.utils.validate_loan_repay_from_salary"},
 	"Employee": {
-		"validate": "hrms.overrides.employee_master.validate_onboarding_process",
+		"validate": [
+			"hrms.overrides.employee_master.validate_onboarding_process",
+			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
+			"hrms.overrides.employee_master.set_years_of_service",
+		],
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
+			# Reconcile the rule-managed Shift Assignment when shift_location /
+			# department changes (no-op otherwise; never blocks the save).
+			"hrms.hr.shift_rules.reconcile_on_employee_update",
+			# Runs LAST on purpose: ERPNext's Employee.on_update controller method
+			# fires before this hook and may delete any `allow=Employee` User
+			# Permissions when `create_user_permission` is unticked. Running our
+			# handler in after_save (the previous wiring) meant ERPNext nuked the
+			# 16 scoped UPs we just inserted. Hooking to on_update runs us AFTER
+			# the controller, so the UPs survive.
+			"hrms.overrides.employee_hrms_scope.sync_hrms_only_user_permission",
 		],
 		"after_insert": [
 			"hrms.overrides.employee_master.update_job_applicant_and_offer",
@@ -215,6 +279,12 @@ doc_events = {
 		],
 		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
+	},
+	"Employee Checkin": {
+		"after_insert": "hrms.overrides.employee_checkin_after_insert.create_remote_request_if_needed",
+	},
+	"Remote Checkin Request": {
+		"on_update": "hrms.overrides.remote_checkin_request_hooks.propagate_approval_decision",
 	},
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
@@ -251,6 +321,9 @@ scheduler_events = {
 		"hrms.hr.doctype.shift_schedule_assignment.shift_schedule_assignment.process_auto_shift_creation",
 	],
 	"daily": [
+		"hrms.hr.shift_rules.sync_shift_assignments",
+		"hrms.hr.leave_rules.auto_assign_leave_policies",
+		"hrms.overrides.employee_master.update_all_years_of_service",
 		"hrms.controllers.employee_reminders.send_birthday_reminders",
 		"hrms.controllers.employee_reminders.send_work_anniversary_reminders",
 		"hrms.hr.doctype.daily_work_summary_group.daily_work_summary_group.send_summary",
@@ -259,6 +332,12 @@ scheduler_events = {
 		"hrms.hr.doctype.job_opening.job_opening.close_expired_job_openings",
 		"hrms.telemetry.capture_daily_attendance_pulse",
 	],
+	"cron": {
+		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
+		"0 10 * * *": [
+			"hrms.utils.checkin_sweeper.sweep_stale_ins",
+		],
+	},
 	"daily_long": [
 		"hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry.process_expired_allocation",
 		"hrms.hr.utils.generate_leave_encashment",

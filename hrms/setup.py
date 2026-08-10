@@ -51,6 +51,28 @@ def before_app_uninstall(app_name):
 	remove_lending_docperms_from_ess()
 
 
+@frappe.whitelist()
+def create_performance_band_field():
+	"""Create the performance_band custom field on Employee. Call via bench execute."""
+	create_custom_fields(
+		{
+			"Employee": [
+				{
+					"fieldname": "performance_band",
+					"fieldtype": "Select",
+					"label": "Performance Band",
+					"options": "\nB\nC\nD\nE1\nE2\nF",
+					"insert_after": "grade",
+					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
+				},
+			]
+		},
+		ignore_validate=True,
+	)
+	frappe.db.commit()
+	print("performance_band custom field created on Employee")
+
+
 def get_custom_fields():
 	"""HR specific custom fields that need to be added to the masters in ERPNext"""
 	return {
@@ -99,6 +121,15 @@ def get_custom_fields():
 				"no_copy": 1,
 				"options": "Account",
 				"insert_after": "column_break_10",
+			},
+			{
+				"fieldname": "hr_attendance_timezone",
+				"fieldtype": "Select",
+				"label": _("Attendance Timezone"),
+				"description": _(
+					"Wall clock this company's attendance is measured in. A Shift Location's own timezone overrides this."
+				),
+				"insert_after": "default_payroll_payable_account",
 			},
 		],
 		"Department": [
@@ -182,6 +213,31 @@ def get_custom_fields():
 		],
 		"Employee": [
 			{
+				"fieldname": "years_of_service",
+				"fieldtype": "Int",
+				"label": _("Years of Service"),
+				"insert_after": "date_of_joining",
+				"read_only": 1,
+				"no_copy": 1,
+				"in_standard_filter": 1,
+				"description": _(
+					"Whole completed years since Date of Joining. Auto-calculated on save and refreshed daily."
+				),
+			},
+			{
+				"fieldname": "eligible_for_overtime_pay",
+				"fieldtype": "Check",
+				"permlevel": 1,
+				"label": _("Eligible for Overtime Pay"),
+				"insert_after": "years_of_service",
+				"no_copy": 1,
+				"in_standard_filter": 1,
+				"description": _(
+					"Checked: approved OT Requests are paid out. Unchecked: approved OT hours "
+					"convert to Replacement Leave via a Replacement Leave Claim."
+				),
+			},
+			{
 				"fieldname": "employment_type",
 				"fieldtype": "Link",
 				"ignore_user_permissions": 1,
@@ -205,11 +261,46 @@ def get_custom_fields():
 				"insert_after": "branch",
 			},
 			{
+				"fieldname": "shift_location",
+				"fieldtype": "Link",
+				"label": _("Shift Location"),
+				"options": "Shift Location",
+				"insert_after": "grade",
+				"description": _(
+					"Where this employee physically clocks in — drives the automatic Shift Assignment rules"
+				),
+			},
+			{
 				"fieldname": "default_shift",
 				"fieldtype": "Link",
 				"label": _("Default Shift"),
 				"options": "Shift Type",
 				"insert_after": "holiday_list",
+			},
+			{
+				"fieldname": "performance_band",
+				"fieldtype": "Select",
+				"label": _("Performance Band"),
+				"options": "\nB\nC\nD\nE1\nE2\nF",
+				"insert_after": "grade",
+				"description": _(
+					"Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"
+				),
+			},
+			{
+				"collapsible": 1,
+				"fieldname": "interco_allocation_section",
+				"fieldtype": "Section Break",
+				"label": _("Interco Cost Allocation"),
+				"insert_after": "performance_band",
+			},
+			{
+				"fieldname": "interco_cost_allocation",
+				"fieldtype": "Table",
+				"label": _("Interco Cost Allocation"),
+				"options": "Employee Interco Allocation",
+				"insert_after": "interco_allocation_section",
+				"description": _("Percentage of work per interco (Territory); rows must total 100%"),
 			},
 			{
 				"collapsible": 1,
