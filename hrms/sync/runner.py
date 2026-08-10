@@ -488,15 +488,42 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 		_finish_run(run_name, status, totals, errors)
 
 
+def parse_doctypes(doctypes) -> tuple[str, ...] | None:
+	"""Accept what a human would actually type.
+
+	`Company,Employee` is the obvious thing to put in a URL, and requiring a JSON
+	array meant the browser ate the quotes and the caller got
+	`JSONDecodeError: Expecting value` — a parser complaint that says nothing
+	about what to do instead. Both forms are accepted now; None means "the
+	defaults".
+	"""
+	if doctypes is None or doctypes == "":
+		return None
+	if not isinstance(doctypes, str):
+		return tuple(doctypes)
+
+	text = doctypes.strip()
+	if text.startswith("["):
+		try:
+			return tuple(json.loads(text))
+		except json.JSONDecodeError:
+			# Very likely quotes stripped by a URL bar: [Company,Employee]
+			text = text.strip("[]")
+
+	names = tuple(part.strip().strip("\"'") for part in text.split(",") if part.strip())
+	if not names:
+		raise ValueError(f"could not read a doctype list from {doctypes!r}")
+	return names
+
+
 @frappe.whitelist()
 def run_sync(instance_name: str, doctypes: str | None = None, incremental: int = 1) -> dict:
 	"""Desk/bench entry point. Kept thin: it only builds the client."""
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.sync.client import RemoteInstanceClient
 
-	selected = json.loads(doctypes) if isinstance(doctypes, str) and doctypes else doctypes
 	return sync_instance(
 		RemoteInstanceClient(instance_name),
-		doctypes=selected,
+		doctypes=parse_doctypes(doctypes),
 		incremental=bool(int(incremental)),
 	)

@@ -574,5 +574,38 @@ class TestDependentDoctypesAreBlocked(_RunnerTestCase):
 		self.assertEqual(len(self.store.rows("Attendance")), 1)
 
 
+class TestParseDoctypes(unittest.TestCase):
+	"""`doctypes` must accept what a human types, not only strict JSON.
+
+	Requiring a JSON array meant pasting the documented URL into a browser lost
+	the quotes and produced `JSONDecodeError: Expecting value: line 1 column 2` —
+	a parser complaint that tells the caller nothing about what to send instead.
+	"""
+
+	def test_json_array(self):
+		self.assertEqual(runner.parse_doctypes('["Company","Employee"]'), ("Company", "Employee"))
+
+	def test_brackets_without_quotes(self):
+		"""Exactly what a browser address bar produces."""
+		self.assertEqual(runner.parse_doctypes("[Company,Employee]"), ("Company", "Employee"))
+
+	def test_plain_comma_separated(self):
+		self.assertEqual(runner.parse_doctypes("Company,Employee"), ("Company", "Employee"))
+
+	def test_single_name(self):
+		self.assertEqual(runner.parse_doctypes("Company"), ("Company",))
+
+	def test_whitespace_and_single_quotes(self):
+		self.assertEqual(runner.parse_doctypes(" Company , Employee "), ("Company", "Employee"))
+		self.assertEqual(runner.parse_doctypes("['Company','Employee']"), ("Company", "Employee"))
+
+	def test_empty_means_defaults(self):
+		self.assertIsNone(runner.parse_doctypes(None))
+		self.assertIsNone(runner.parse_doctypes(""))
+
+	def test_sequence_passes_through(self):
+		self.assertEqual(runner.parse_doctypes(["Company"]), ("Company",))
+
+
 if __name__ == "__main__":
 	unittest.main(verbosity=2)
