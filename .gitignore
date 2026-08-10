@@ -20,3 +20,5 @@ hrms/public/frontend
 hrms/www/hrms.html
 hrms/public/roster
 hrms/www/roster.html
+hrms/hr/doctype/appraisal/TODO.md
+hrms/hr/doctype/appraisal/UI_TEST_CHECKLIST.md
