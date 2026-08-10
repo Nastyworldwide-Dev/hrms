@@ -115,9 +115,6 @@ class TestERPInstanceDoctype(unittest.TestCase):
 				self.assertIn(perm["role"], at_zero)
 
 
-if __name__ == "__main__":
-	unittest.main()
-
 
 def _load_controller():
 	"""Load the controller module with a stub frappe — no bench needed.
@@ -206,3 +203,6 @@ class TestInstanceUrlNormalisation(unittest.TestCase):
 			with self.subTest(raw=raw):
 				_url, err = self.normalise(raw)
 				self.assertIsNotNone(err)
+
+if __name__ == "__main__":
+	unittest.main()
