@@ -18,19 +18,94 @@
   "appraisal_cycle",
   "start_date",
   "end_date",
+  "personal_particulars_section",
+  "date_joined",
+  "confirmation_due",
+  "performance_period",
+  "column_break_pp",
+  "staff_no",
+  "unit",
+  "job_grade",
+  "employee_band",
   "section_break_aeb0",
   "final_score",
   "kra_tab",
   "appraisal_template",
   "rate_goals_manually",
+  "a1_a2_weight_section",
+  "a1_weight_pct",
+  "column_break_a1a2",
+  "a2_weight_pct",
+  "auto_recalc_weightage",
+  "scoring_method_section",
+  "scoring_method",
+  "allow_over_achievement",
+  "column_break_asm",
+  "achievement_weight_pct",
+  "manager_rating_weight_pct",
+  "section_pct_section",
+  "section_a_pct",
+  "section_b_pct",
+  "column_break_apct",
+  "section_c_pct",
   "section_break_kras",
   "appraisal_kra",
   "goal_score_percentage",
+  "a1_score",
+  "section_a2_heading",
+  "functional_competencies",
+  "a2_score",
   "section_break_goals",
   "goals",
   "remarks",
   "total_section",
   "total_score",
+  "section_b_tab",
+  "is_new_joiner",
+  "section_b_gate_status",
+  "b4_section",
+  "b4_evidence",
+  "b4_total_points",
+  "b5_section",
+  "b5_evidence",
+  "b5_total_points",
+  "demerit_tab",
+  "demerits",
+  "demerit_summary_section",
+  "total_demerit_pct",
+  "column_break_demerit",
+  "has_written_warning",
+  "has_serious_misconduct",
+  "leadership_tab",
+  "is_leader",
+  "leadership_gate_info",
+  "leadership_scorecard",
+  "leadership_summary_section",
+  "leadership_score_pct",
+  "column_break_leadership",
+  "leadership_gate_passed",
+  "competency_tab",
+  "section_b_heading",
+  "competency_score",
+  "initiatives_tab",
+  "section_c_heading",
+  "extra_initiatives",
+  "initiatives_score",
+  "scoring_summary_tab",
+  "section_a_score",
+  "section_b_score",
+  "section_c_score",
+  "column_break_scoring",
+  "pms_total_score",
+  "overall_grade",
+  "grade_scale_html",
+  "second_validator_section",
+  "requires_second_validator",
+  "second_validator",
+  "column_break_sv",
+  "second_validator_approved",
+  "second_validator_comments",
+  "second_validator_sign_date",
   "feedback_tab",
   "feedback_html",
   "section_break_20",
@@ -41,6 +116,19 @@
   "self_score",
   "reflections_section",
   "reflections",
+  "signoff_tab",
+  "appraisee_section",
+  "appraisee_comments",
+  "appraisee_agreement",
+  "appraisee_sign_date",
+  "appraiser_section",
+  "appraiser_comments",
+  "appraiser_decision",
+  "pip",
+  "appraiser_sign_date",
+  "reviewer_section",
+  "reviewer_comments",
+  "reviewer_sign_date",
   "amended_from"
  ],
  "fields": [
@@ -118,7 +206,6 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval: !doc.rate_goals_manually",
    "fieldname": "appraisal_kra",
    "fieldtype": "Table",
    "label": "KRA vs Goals",
@@ -133,7 +220,7 @@
   {
    "fieldname": "total_score",
    "fieldtype": "Float",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Total Goal Score",
    "no_copy": 1,
    "oldfieldname": "total_score",
@@ -220,22 +307,126 @@
    "fieldtype": "Text Editor"
   },
   {
-   "depends_on": "rate_goals_manually",
    "fieldname": "goals",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Goals",
    "options": "Appraisal Goal"
   },
   {
-   "depends_on": "rate_goals_manually",
    "description": "Any other remarks, noteworthy effort that should go in the records",
    "fieldname": "remarks",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Remarks"
   },
   {
+   "fieldname": "a1_a2_weight_section",
+   "fieldtype": "Section Break",
+   "label": "A1/A2 Weight Split (within 80%)"
+  },
+  {
+   "default": "70",
+   "description": "Output KPI weight within Section A (80%). A2 = 80 \u2212 A1.",
+   "fieldname": "a1_weight_pct",
+   "fieldtype": "Int",
+   "label": "A1 \u2014 Output KPI Weight %"
+  },
+  {
+   "fieldname": "column_break_a1a2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "description": "Competency weight (auto-calculated: 80 \u2212 A1)",
+   "fieldname": "a2_weight_pct",
+   "fieldtype": "Int",
+   "label": "A2 \u2014 Competency Weight %",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "When checked, adding or removing rows auto-redistributes weightage equally across all rows (100% / n)",
+   "fieldname": "auto_recalc_weightage",
+   "fieldtype": "Check",
+   "label": "Auto-Redistribute Weightage"
+  },
+  {
+   "fieldname": "scoring_method_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Scoring Method"
+  },
+  {
+   "default": "Manager Rating Only",
+   "fieldname": "scoring_method",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Scoring Method",
+   "options": "Manager Rating Only\nAchievement Based\nBlended"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_over_achievement",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Allow Over-Achievement"
+  },
+  {
+   "fieldname": "column_break_asm",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "default": "50",
+   "fieldname": "achievement_weight_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Achievement Weight %"
+  },
+  {
+   "default": "50",
+   "fieldname": "manager_rating_weight_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Manager Rating Weight %"
+  },
+  {
+   "fieldname": "section_pct_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Section Percentages"
+  },
+  {
+   "default": "70",
+   "fieldname": "section_a_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section A %"
+  },
+  {
+   "default": "20",
+   "fieldname": "section_b_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section B %"
+  },
+  {
+   "fieldname": "column_break_apct",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "default": "10",
+   "fieldname": "section_c_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section C %"
+  },
+  {
    "fieldname": "section_break_kras",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "A1 \u2014 Output KPIs"
   },
   {
    "fieldname": "section_break_goals",
@@ -245,6 +436,7 @@
    "default": "0",
    "fieldname": "rate_goals_manually",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Rate Goals Manually",
    "read_only": 1
   },
@@ -263,15 +455,38 @@
   {
    "fieldname": "kra_tab",
    "fieldtype": "Tab Break",
-   "label": "KRAs",
+   "label": "Section A: Core Performance",
    "oldfieldtype": "Section Break",
    "show_dashboard": 1
   },
   {
-   "depends_on": "eval: !doc.rate_goals_manually",
    "fieldname": "goal_score_percentage",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Goal Score (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "a1_score",
+   "fieldtype": "Float",
+   "label": "A1 Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_a2_heading",
+   "fieldtype": "Section Break",
+   "label": "A2 \u2014 Competency"
+  },
+  {
+   "fieldname": "functional_competencies",
+   "fieldtype": "Table",
+   "label": "Competencies",
+   "options": "Appraisal Functional Competency"
+  },
+  {
+   "fieldname": "a2_score",
+   "fieldtype": "Float",
+   "label": "A2 Score",
    "read_only": 1
   },
   {
@@ -285,12 +500,431 @@
   },
   {
    "depends_on": "appraisal_cycle",
-   "description": "Average of Goal Score, Feedback Score, and Self Appraisal Score",
+   "description": "Section A (A1 + A2) score. Section B and demerits will be added in Phase 2.",
    "fieldname": "final_score",
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Final Score",
    "read_only": 1
+  },
+  {
+   "fieldname": "personal_particulars_section",
+   "fieldtype": "Section Break",
+   "label": "Personal Particulars"
+  },
+  {
+   "fetch_from": "employee.date_of_joining",
+   "fieldname": "date_joined",
+   "fieldtype": "Date",
+   "label": "Date Joined",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confirmation_due",
+   "fieldtype": "Date",
+   "label": "Confirmation Due",
+   "read_only": 1
+  },
+  {
+   "fieldname": "performance_period",
+   "fieldtype": "Data",
+   "label": "Performance Period"
+  },
+  {
+   "fieldname": "column_break_pp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "employee.employee",
+   "fieldname": "staff_no",
+   "fieldtype": "Data",
+   "label": "Staff No",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.branch",
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.grade",
+   "fieldname": "job_grade",
+   "fieldtype": "Link",
+   "label": "Job Grade",
+   "options": "Employee Grade",
+   "read_only": 1
+  },
+  {
+   "description": "Performance Band from Employee record (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
+   "fetch_from": "employee.performance_band",
+   "fieldname": "employee_band",
+   "fieldtype": "Data",
+   "label": "Performance Band",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b_tab",
+   "fieldtype": "Tab Break",
+   "label": "Section B: Differentiator"
+  },
+  {
+   "default": "0",
+   "description": "Auto-set if employee joined after month 6 of the appraisal cycle. Section B not assessed.",
+   "fieldname": "is_new_joiner",
+   "fieldtype": "Check",
+   "label": "New Joiner (Section B not assessed)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b_gate_status",
+   "fieldtype": "Small Text",
+   "label": "Gate Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "b4_section",
+   "fieldtype": "Section Break",
+   "label": "B4 \u2014 Exceeds Expectations (+5% to +10%)"
+  },
+  {
+   "description": "8 criteria \u00d7 max 3 pts = 24 pts possible. Score 8\u201314 = +5%. Score 15\u201324 = +10%. Requires Section A \u2265 71%.",
+   "fieldname": "b4_evidence",
+   "fieldtype": "Table",
+   "label": "B4 Evidence",
+   "options": "Appraisal B4 Evidence"
+  },
+  {
+   "default": "0",
+   "fieldname": "b4_total_points",
+   "fieldtype": "Int",
+   "label": "B4 Total Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "b5_section",
+   "fieldtype": "Section Break",
+   "label": "B5 \u2014 Outstanding (+15% to +20%)"
+  },
+  {
+   "description": "Requires full B4 (15+ pts) AND no written warning AND no serious misconduct. B5 replaces B4 (not additive).",
+   "fieldname": "b5_evidence",
+   "fieldtype": "Table",
+   "label": "B5 Evidence",
+   "options": "Appraisal B5 Evidence"
+  },
+  {
+   "default": "0",
+   "fieldname": "b5_total_points",
+   "fieldtype": "Int",
+   "label": "B5 Total Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "demerit_tab",
+   "fieldtype": "Tab Break",
+   "label": "Demerits"
+  },
+  {
+   "description": "Demerits must be documented by HR. Link to Employee Grievance for traceability.",
+   "fieldname": "demerits",
+   "fieldtype": "Table",
+   "label": "Demerits",
+   "options": "Appraisal Demerit",
+   "permlevel": 3
+  },
+  {
+   "fieldname": "demerit_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Demerit Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_demerit_pct",
+   "fieldtype": "Float",
+   "label": "Total Demerit %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_demerit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_written_warning",
+   "fieldtype": "Check",
+   "label": "Has Written Warning (blocks B5)",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "has_serious_misconduct",
+   "fieldtype": "Check",
+   "label": "Has Serious Misconduct (caps at 59%)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "is_leader",
+   "fieldname": "leadership_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leadership Gate"
+  },
+  {
+   "default": "0",
+   "description": "Auto-set based on employee band (B, C, or D)",
+   "fieldname": "is_leader",
+   "fieldtype": "Check",
+   "label": "Leadership Gate Applicable",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leadership_gate_info",
+   "fieldtype": "HTML",
+   "label": "Leadership Gate Info"
+  },
+  {
+   "description": "Two-Key Rule: Leaders must pass both KPI output AND leadership score \u2265 60% to unlock Rating B or A.",
+   "fieldname": "leadership_scorecard",
+   "fieldtype": "Table",
+   "label": "Leadership Scorecard",
+   "options": "Leadership Scorecard"
+  },
+  {
+   "fieldname": "leadership_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Leadership Gate Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "leadership_score_pct",
+   "fieldtype": "Float",
+   "label": "Leadership Score %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_leadership",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Score \u2265 60% required. Failure caps final score at 80% (Rating C max).",
+   "fieldname": "leadership_gate_passed",
+   "fieldtype": "Check",
+   "label": "Leadership Gate Passed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "competency_tab",
+   "fieldtype": "Tab Break",
+   "hidden": 1,
+   "label": "Functional Competency"
+  },
+  {
+   "fieldname": "section_b_heading",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Section B: Functional Competency"
+  },
+  {
+   "fieldname": "competency_score",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section B Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "initiatives_tab",
+   "fieldtype": "Tab Break",
+   "hidden": 1,
+   "label": "Extra Functions & Initiatives"
+  },
+  {
+   "fieldname": "section_c_heading",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Section C: Extra Functions & Initiatives"
+  },
+  {
+   "fieldname": "extra_initiatives",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Extra Initiatives",
+   "options": "Appraisal Extra Initiative"
+  },
+  {
+   "fieldname": "initiatives_score",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section C Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scoring_summary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Scoring Summary"
+  },
+  {
+   "fieldname": "section_a_score",
+   "fieldtype": "Float",
+   "label": "Section A \u2014 Core Performance (max 80%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b_score",
+   "fieldtype": "Float",
+   "label": "Section B \u2014 Differentiator (bonus)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_c_score",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section C \u2014 Extra Functions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_scoring",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "pms_total_score",
+   "fieldtype": "Float",
+   "label": "Total PMS Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "overall_grade",
+   "fieldtype": "Data",
+   "label": "Overall Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grade_scale_html",
+   "fieldtype": "HTML",
+   "label": "Grade Scale"
+  },
+  {
+   "depends_on": "requires_second_validator",
+   "fieldname": "second_validator_section",
+   "fieldtype": "Section Break",
+   "label": "Second Validator (required for scores > 90%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "requires_second_validator",
+   "fieldtype": "Check",
+   "label": "Requires Second Validator",
+   "read_only": 1
+  },
+  {
+   "depends_on": "requires_second_validator",
+   "fieldname": "second_validator",
+   "fieldtype": "Link",
+   "label": "Second Validator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_sv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "second_validator_approved",
+   "fieldtype": "Check",
+   "label": "Second Validator Approved",
+   "permlevel": 4
+  },
+  {
+   "fieldname": "second_validator_comments",
+   "fieldtype": "Text Editor",
+   "label": "Second Validator Comments",
+   "permlevel": 4
+  },
+  {
+   "fieldname": "second_validator_sign_date",
+   "fieldtype": "Date",
+   "label": "Second Validator Sign Date",
+   "permlevel": 4
+  },
+  {
+   "fieldname": "signoff_tab",
+   "fieldtype": "Tab Break",
+   "label": "Comments & Sign-Off"
+  },
+  {
+   "fieldname": "appraisee_section",
+   "fieldtype": "Section Break",
+   "label": "Appraisee"
+  },
+  {
+   "fieldname": "appraisee_comments",
+   "fieldtype": "Text Editor",
+   "label": "Appraisee Comments",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "appraisee_agreement",
+   "fieldtype": "Select",
+   "label": "Appraisee Agreement",
+   "options": "\nI agree and accept the reviews and feedback\nI request extension for improvement",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "appraisee_sign_date",
+   "fieldtype": "Date",
+   "label": "Appraisee Sign Date",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "appraiser_section",
+   "fieldtype": "Section Break",
+   "label": "Appraiser"
+  },
+  {
+   "fieldname": "appraiser_comments",
+   "fieldtype": "Text Editor",
+   "label": "Appraiser Comments",
+   "permlevel": 2
+  },
+  {
+   "fieldname": "appraiser_decision",
+   "fieldtype": "Select",
+   "label": "Appraiser Decision",
+   "options": "\nFor employee records and improvement\nConfirm employee\nExtend probation\nSet for PIP/PDP",
+   "permlevel": 2
+  },
+  {
+   "depends_on": "eval:doc.appraiser_decision === 'Set for PIP/PDP'",
+   "fieldname": "pip",
+   "fieldtype": "Link",
+   "label": "Performance Improvement Plan",
+   "options": "Performance Improvement Plan",
+   "read_only": 1
+  },
+  {
+   "fieldname": "appraiser_sign_date",
+   "fieldtype": "Date",
+   "label": "Appraiser Sign Date",
+   "permlevel": 2
+  },
+  {
+   "fieldname": "reviewer_section",
+   "fieldtype": "Section Break",
+   "label": "Reviewer"
+  },
+  {
+   "fieldname": "reviewer_comments",
+   "fieldtype": "Text Editor",
+   "label": "Reviewer Comments",
+   "permlevel": 3
+  },
+  {
+   "fieldname": "reviewer_sign_date",
+   "fieldtype": "Date",
+   "label": "Reviewer Sign Date",
+   "permlevel": 3
   }
  ],
  "icon": "fa fa-thumbs-up",
@@ -298,7 +932,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-24 15:40:29.669135",
+ "modified": "2026-03-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal",
@@ -355,6 +989,71 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Employee",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 3,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "HR User"
+  },
+  {
+   "permlevel": 4,
+   "read": 1,
+   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",

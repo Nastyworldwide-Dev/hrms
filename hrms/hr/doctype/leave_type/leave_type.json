@@ -22,6 +22,9 @@
   "allow_over_allocation",
   "include_holiday",
   "is_compensatory",
+  "based_on_years_of_service",
+  "service_entitlement_section",
+  "service_entitlements",
   "carry_forward_section",
   "maximum_carry_forwarded_leaves",
   "expire_carry_forwarded_leaves_after_days",
@@ -52,13 +55,15 @@
   {
    "fieldname": "max_leaves_allowed",
    "fieldtype": "Float",
-   "label": "Maximum Leave Allocation Allowed per Leave Period"
+   "label": "Maximum Leave Allocation Allowed per Leave Period",
+   "permlevel": 1
   },
   {
    "description": "Minimum calendar days required since Date of Joining to apply for this leave",
    "fieldname": "applicable_after",
    "fieldtype": "Int",
-   "label": "Allow Leave Application After (Calendar Days)"
+   "label": "Allow Leave Application After (Calendar Days)",
+   "permlevel": 1
   },
   {
    "fieldname": "max_continuous_days_allowed",
@@ -66,11 +71,13 @@
    "in_list_view": 1,
    "label": "Maximum Consecutive Leaves Allowed",
    "oldfieldname": "max_days_allowed",
-   "oldfieldtype": "Data"
+   "oldfieldtype": "Data",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "permlevel": 1
   },
   {
    "default": "0",
@@ -79,118 +86,161 @@
    "in_list_view": 1,
    "label": "Is Carry Forward",
    "oldfieldname": "is_carry_forward",
-   "oldfieldtype": "Check"
+   "oldfieldtype": "Check",
+   "permlevel": 1
   },
   {
    "default": "0",
    "depends_on": "eval:doc.is_ppl == 0",
    "fieldname": "is_lwp",
    "fieldtype": "Check",
-   "label": "Is Leave Without Pay"
+   "label": "Is Leave Without Pay",
+   "permlevel": 1
   },
   {
    "default": "0",
    "description": "These leaves are holidays permitted by the company however, availing it is optional for an Employee.",
    "fieldname": "is_optional_leave",
    "fieldtype": "Check",
-   "label": "Is Optional Leave"
+   "label": "Is Optional Leave",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "allow_negative",
    "fieldtype": "Check",
-   "label": "Allow Negative Balance"
+   "label": "Allow Negative Balance",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "include_holiday",
    "fieldtype": "Check",
-   "label": "Include holidays within leaves as leaves"
+   "label": "Include holidays within leaves as leaves",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "is_compensatory",
    "fieldtype": "Check",
-   "label": "Is Compensatory"
+   "label": "Is Compensatory",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.is_earned_leave == 0 && doc.is_compensatory == 0",
+   "description": "Allocate leave days as per the entitlement table below, based on the employee's completed years of service. This overrides the Annual Allocation set in the Leave Policy. If no row covers the employee's years of service, the Leave Policy's Annual Allocation is used.",
+   "fieldname": "based_on_years_of_service",
+   "fieldtype": "Check",
+   "label": "Entitlement Based on Years of Service",
+   "permlevel": 1
+  },
+  {
+   "depends_on": "eval:doc.based_on_years_of_service == 1",
+   "fieldname": "service_entitlement_section",
+   "fieldtype": "Section Break",
+   "label": "Entitlement Based on Years of Service",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "service_entitlements",
+   "fieldtype": "Table",
+   "label": "Service Entitlements",
+   "mandatory_depends_on": "eval:doc.based_on_years_of_service == 1",
+   "options": "Leave Type Service Entitlement",
+   "permlevel": 1
   },
   {
    "collapsible": 1,
    "depends_on": "eval: doc.is_carry_forward == 1",
    "fieldname": "carry_forward_section",
    "fieldtype": "Section Break",
-   "label": "Carry Forward"
+   "label": "Carry Forward",
+   "permlevel": 1
   },
   {
    "description": "Calculated in days",
    "fieldname": "expire_carry_forwarded_leaves_after_days",
    "fieldtype": "Int",
-   "label": "Expire Carry Forwarded Leaves (Days)"
+   "label": "Expire Carry Forwarded Leaves (Days)",
+   "permlevel": 1
   },
   {
    "collapsible": 1,
    "fieldname": "encashment",
    "fieldtype": "Section Break",
-   "label": "Encashment"
+   "label": "Encashment",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "allow_encashment",
    "fieldtype": "Check",
-   "label": "Allow Encashment"
+   "label": "Allow Encashment",
+   "permlevel": 1
   },
   {
    "depends_on": "allow_encashment",
    "fieldname": "earning_component",
    "fieldtype": "Link",
    "label": "Earning Component",
-   "options": "Salary Component"
+   "options": "Salary Component",
+   "permlevel": 1
   },
   {
    "collapsible": 1,
    "fieldname": "earned_leave",
    "fieldtype": "Section Break",
-   "label": "Earned Leave"
+   "label": "Earned Leave",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "is_earned_leave",
    "fieldtype": "Check",
-   "label": "Is Earned Leave"
+   "label": "Is Earned Leave",
+   "permlevel": 1
   },
   {
    "depends_on": "is_earned_leave",
    "fieldname": "earned_leave_frequency",
    "fieldtype": "Select",
    "label": "Earned Leave Frequency",
-   "options": "Monthly\nQuarterly\nHalf-Yearly\nYearly"
+   "options": "Monthly\nQuarterly\nHalf-Yearly\nYearly",
+   "permlevel": 1
   },
   {
    "depends_on": "is_earned_leave",
    "fieldname": "rounding",
    "fieldtype": "Select",
    "label": "Rounding",
-   "options": "\n0.25\n0.5\n1.0"
+   "options": "\n0.25\n0.5\n1.0",
+   "permlevel": 1
   },
   {
    "depends_on": "is_carry_forward",
    "fieldname": "maximum_carry_forwarded_leaves",
    "fieldtype": "Float",
-   "label": "Maximum Carry Forwarded Leaves"
+   "label": "Maximum Carry Forwarded Leaves",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_17",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_22",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "permlevel": 1
   },
   {
    "default": "0",
    "depends_on": "eval:doc.is_lwp == 0",
    "fieldname": "is_ppl",
    "fieldtype": "Check",
-   "label": "Is Partially Paid Leave"
+   "label": "Is Partially Paid Leave",
+   "permlevel": 1
   },
   {
    "depends_on": "eval:doc.is_ppl == 1",
@@ -198,14 +248,16 @@
    "fieldname": "fraction_of_daily_salary_per_leave",
    "fieldtype": "Float",
    "label": "Fraction of Daily Salary per Leave",
-   "mandatory_depends_on": "eval:doc.is_ppl == 1"
+   "mandatory_depends_on": "eval:doc.is_ppl == 1",
+   "permlevel": 1
   },
   {
    "default": "0",
    "description": "Allows allocating more leaves than the number of days in the allocation period.",
    "fieldname": "allow_over_allocation",
    "fieldtype": "Check",
-   "label": "Allow Over Allocation"
+   "label": "Allow Over Allocation",
+   "permlevel": 1
   },
   {
    "default": "Last Day",
@@ -214,14 +266,16 @@
    "fieldname": "allocate_on_day",
    "fieldtype": "Select",
    "label": "Allocate on Day",
-   "options": "First Day\nLast Day\nDate of Joining"
+   "options": "First Day\nLast Day\nDate of Joining",
+   "permlevel": 1
   },
   {
    "depends_on": "allow_encashment",
    "fieldname": "max_encashable_leaves",
    "fieldtype": "Int",
    "label": "Maximum Encashable Leaves",
-   "non_negative": 1
+   "non_negative": 1,
+   "permlevel": 1
   },
   {
    "depends_on": "allow_encashment",
@@ -229,13 +283,14 @@
    "fieldname": "non_encashable_leaves",
    "fieldtype": "Int",
    "label": "Non-Encashable Leaves",
-   "non_negative": 1
+   "non_negative": 1,
+   "permlevel": 1
   }
  ],
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2026-05-07 18:26:27.583525",
+ "modified": "2026-08-03 11:02:18.334176",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Type",
@@ -267,6 +322,18 @@
   {
    "read": 1,
    "role": "Employee"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
   }
  ],
  "sort_field": "creation",

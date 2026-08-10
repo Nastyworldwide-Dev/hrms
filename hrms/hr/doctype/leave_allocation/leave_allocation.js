@@ -124,12 +124,33 @@ frappe.ui.form.on("Leave Allocation", {
 	},
 
 	employee: function (frm) {
+		frm.trigger("set_service_based_leaves");
 		frm.trigger("calculate_total_leaves_allocated");
 	},
 
 	leave_type: function (frm) {
 		frm.trigger("leave_policy");
+		frm.trigger("set_service_based_leaves");
 		frm.trigger("calculate_total_leaves_allocated");
+	},
+
+	set_service_based_leaves: function (frm) {
+		// editable default like the leave_policy trigger below; allocations linked
+		// to a Leave Policy get their value from the policy/assignment flow instead
+		if (frm.doc.docstatus !== 0 || !frm.doc.employee || !frm.doc.leave_type || frm.doc.leave_policy)
+			return;
+
+		frappe.call({
+			method: "hrms.hr.doctype.leave_type.leave_type.get_service_based_leave_days_for_employee",
+			args: {
+				leave_type: frm.doc.leave_type,
+				employee: frm.doc.employee,
+				on_date: frm.doc.from_date,
+			},
+			callback: function (r) {
+				if (r.message != null) frm.set_value("new_leaves_allocated", flt(r.message));
+			},
+		});
 	},
 
 	carry_forward: function (frm) {

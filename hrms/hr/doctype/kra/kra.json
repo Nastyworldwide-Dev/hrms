@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "department",
   "description"
  ],
  "fields": [
@@ -20,13 +21,26 @@
    "unique": 1
   },
   {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department"
+  },
+  {
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
+ "links": [
+  {
+   "link_doctype": "KPI",
+   "link_fieldname": "kra"
+  }
+ ],
  "modified": "2026-04-09 18:47:44.330762",
  "modified_by": "Administrator",
  "module": "HR",

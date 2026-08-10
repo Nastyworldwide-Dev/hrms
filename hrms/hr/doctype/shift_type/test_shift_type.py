@@ -30,11 +30,20 @@ class TestShiftType(HRMSTestSuite):
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
 		make_holiday_list("_Test Half Day", from_date=from_date, to_date=to_date)
 
+	def tearDown(self):
+		# several tests mock the clock via frappe.flags.current_datetime;
+		# clear it so it can't leak into later tests
+		frappe.flags.pop("current_datetime", None)
+
 	def test_auto_update_last_sync_of_checkin_for_single_day_shift(self):
 		shift_type = setup_shift_type()
 		shift_type.last_sync_of_checkin = None
 		shift_type.auto_update_last_sync = 1
 		shift_type.save()
+		# validate() now seeds an empty last sync; re-null it directly so this
+		# test keeps exercising the scheduler's recovery from None
+		shift_type.db_set("last_sync_of_checkin", None)
+		shift_type.reload()
 
 		employee = make_employee("test_employee_checkin@example.com", company="_Test Company")
 		date = getdate()
@@ -63,6 +72,10 @@ class TestShiftType(HRMSTestSuite):
 		shift_type.last_sync_of_checkin = None
 		shift_type.auto_update_last_sync = 1
 		shift_type.save()
+		# validate() now seeds an empty last sync; re-null it directly so this
+		# test keeps exercising the scheduler's recovery from None
+		shift_type.db_set("last_sync_of_checkin", None)
+		shift_type.reload()
 
 		employee = make_employee("test_employee_checkin3@example.com", company="_Test Company")
 		date = add_days(getdate(), -4)
@@ -81,6 +94,38 @@ class TestShiftType(HRMSTestSuite):
 		shift_type.reload()
 		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("01:01:00")))
 
+	def test_last_sync_and_auto_update_coexist_on_save(self):
+		# regression: the Shift Type form used to clear last_sync_of_checkin
+		# whenever auto_update_last_sync was ticked — both must survive a save
+		shift_type = setup_shift_type()
+		last_sync = datetime.combine(getdate(), get_time("10:00:00"))
+		shift_type.last_sync_of_checkin = last_sync
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		shift_type.reload()
+		self.assertEqual(shift_type.auto_update_last_sync, 1)
+		self.assertEqual(shift_type.last_sync_of_checkin, last_sync)
+
+	def test_empty_last_sync_is_seeded_when_auto_update_enabled(self):
+		shift_type = setup_shift_type()
+		shift_type.last_sync_of_checkin = None
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		shift_type.reload()
+		self.assertIsNotNone(shift_type.last_sync_of_checkin)
+
+	def test_empty_last_sync_stays_empty_without_auto_update(self):
+		shift_type = setup_shift_type()
+		shift_type.db_set("last_sync_of_checkin", None)
+		shift_type.reload()
+		shift_type.auto_update_last_sync = 0
+		shift_type.save()
+
+		shift_type.reload()
+		self.assertIsNone(shift_type.last_sync_of_checkin)
+
 	def test_auto_update_last_sync_of_checkin_for_two_day_shift(self):
 		shift_type = setup_shift_type(
 			shift_type="_Test Night Shift", start_time="22:00:00", end_time="06:00:00"
@@ -88,6 +133,10 @@ class TestShiftType(HRMSTestSuite):
 		shift_type.last_sync_of_checkin = None
 		shift_type.auto_update_last_sync = 1
 		shift_type.save()
+		# validate() now seeds an empty last sync; re-null it directly so this
+		# test keeps exercising the scheduler's recovery from None
+		shift_type.db_set("last_sync_of_checkin", None)
+		shift_type.reload()
 
 		employee = make_employee("test_employee_checkin2@example.com", company="_Test Company")
 		date = add_days(getdate(), -4)
@@ -112,6 +161,10 @@ class TestShiftType(HRMSTestSuite):
 		shift_type.last_sync_of_checkin = None
 		shift_type.auto_update_last_sync = 1
 		shift_type.save()
+		# validate() now seeds an empty last sync; re-null it directly so this
+		# test keeps exercising the scheduler's recovery from None
+		shift_type.db_set("last_sync_of_checkin", None)
+		shift_type.reload()
 
 		frappe.flags.current_datetime = datetime.combine(add_days(getdate(), 1), get_time("00:01:00"))
 		update_last_sync_of_checkin()

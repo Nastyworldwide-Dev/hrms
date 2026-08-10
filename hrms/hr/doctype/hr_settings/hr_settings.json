@@ -44,6 +44,8 @@
   "attendance_settings_section",
   "allow_employee_checkin_from_mobile_app",
   "allow_geolocation_tracking",
+  "ramadan_start_date",
+  "ramadan_end_date",
   "tenure_tab",
   "employee_exit_settings_section",
   "exit_questionnaire_web_form",
@@ -58,7 +60,9 @@
   "feedback_reminder_notification_template",
   "column_break_4",
   "hiring_sender",
-  "hiring_sender_email"
+  "hiring_sender_email",
+  "hrms_user_permission_scope_section",
+  "scoped_hrms_doctypes"
  ],
  "fields": [
   {
@@ -294,6 +298,18 @@
    "label": "Allow Geolocation Tracking"
   },
   {
+   "description": "First day of Ramadan (inclusive). Shift breaks marked 'Ramadan only' apply between this date and Ramadan End Date.",
+   "fieldname": "ramadan_start_date",
+   "fieldtype": "Date",
+   "label": "Ramadan Start Date"
+  },
+  {
+   "description": "Last day of Ramadan (inclusive).",
+   "fieldname": "ramadan_end_date",
+   "fieldtype": "Date",
+   "label": "Ramadan End Date"
+  },
+  {
    "fieldname": "attendance_settings_section",
    "fieldtype": "Section Break",
    "label": "Attendance Settings"
@@ -303,6 +319,18 @@
    "fieldname": "unlink_payment_on_cancellation_of_employee_advance",
    "fieldtype": "Check",
    "label": " Unlink Payment on Cancellation of Employee Advance"
+  },
+  {
+   "fieldname": "hrms_user_permission_scope_section",
+   "fieldtype": "Section Break",
+   "label": "HRMS-Only User Permission Scope"
+  },
+  {
+   "description": "DocTypes the scoped User Permission applies to when an Employee has 'Restrict to HRMS doctypes only' ticked. If left empty, a built-in default list of 14 HR-related doctypes is used (Leave Application, Attendance, Salary Slip, Expense Claim, etc.).",
+   "fieldname": "scoped_hrms_doctypes",
+   "fieldtype": "Table",
+   "label": "Scoped HRMS Doctypes",
+   "options": "Scoped HRMS Doctype"
   },
   {
    "default": "0",
@@ -380,7 +408,7 @@
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-29 16:25:06.271352",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
@@ -409,10 +437,6 @@
    "read": 1,
    "role": "HR User",
    "share": 1
-  },
-  {
-   "read": 1,
-   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",

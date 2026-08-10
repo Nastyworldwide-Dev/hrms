@@ -28,6 +28,10 @@ frappe.ui.form.on("Employee Checkin", {
 		hrms.fetch_geolocation(frm);
 	},
 
+	capture_selfie: (frm) => {
+		hrms.capture_selfie(frm);
+	},
+
 	add_fetch_shift_button(frm) {
 		if (frm.doc.attendance) return;
 		frm.add_custom_button(__("Fetch Shift"), function () {

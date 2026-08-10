@@ -12,6 +12,10 @@
   "employee",
   "employee_name",
   "working_hours",
+  "overtime_section",
+  "ot_hours",
+  "ot_rate_weighted_hours",
+  "ot_rate_bands",
   "status",
   "leave_type",
   "leave_application",
@@ -82,6 +86,35 @@
    "fieldtype": "Float",
    "label": "Working Hours",
    "precision": "2",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "overtime_section",
+   "fieldtype": "Section Break",
+   "label": "Overtime"
+  },
+  {
+   "description": "Beyond-shift hours after minimum-OT and the daily cap. The monthly cap is applied at payroll.",
+   "fieldname": "ot_hours",
+   "fieldtype": "Float",
+   "label": "Overtime Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "Σ(band hours × multiplier) — the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
+   "fieldname": "ot_rate_weighted_hours",
+   "fieldtype": "Float",
+   "label": "OT Rate-Weighted Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ot_rate_bands",
+   "fieldtype": "Table",
+   "label": "Overtime by Rate",
+   "options": "Attendance Overtime Band",
    "read_only": 1
   },
   {

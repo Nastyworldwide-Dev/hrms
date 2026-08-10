@@ -34,10 +34,12 @@ from hrms.hr.utils import (
 	set_employee_name,
 	share_doc_with_approver,
 	validate_active_employee,
+	validate_staff_approver,
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
 from hrms.utils.holiday_list import get_holiday_dates_between_range
+from hrms.utils.email_flush import flush_email_queue_after_commit
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -92,6 +94,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.validate_for_self_approval()
 		self.validate_leave_approver()
 		self.set_leave_approver_name()
+		self.validate_staff_approver()
+
+	def validate_staff_approver(self):
+		validate_staff_approver(self, "leave_approver", "leave_approver", "leave_approvers")
 
 	def on_update(self):
 		if self.status == "Open" and self.docstatus < 1:
@@ -453,7 +459,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					self.show_insufficient_balance_message(leave_balance_for_consumption)
 
 	def show_insufficient_balance_message(self, leave_balance_for_consumption: float) -> None:
-		alloc_on_from_date, alloc_on_to_date = self.get_allocation_based_on_application_dates()
+		_alloc_on_from_date, _alloc_on_to_date = self.get_allocation_based_on_application_dates()
 
 		if frappe.db.get_value("Leave Type", self.leave_type, "allow_negative"):
 			if leave_balance_for_consumption != self.leave_balance:
@@ -753,6 +759,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					subject=args.subject,
 					message=args.message,
 				)
+				flush_email_queue_after_commit()
 				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:
 				pass
@@ -972,10 +979,27 @@ def get_number_of_leave_days(
 	return number_of_days
 
 
+def _ensure_leave_details_permitted(employee: str) -> None:
+	"""get_leave_details is whitelisted with an arbitrary employee id — without
+	a guard any logged-in user can pull any employee's allocation map. Allow
+	the employee's own user, real Employee read permission (HR, managers), and
+	the employee's resolved leave approver (Desk leave form dashboard)."""
+	user = frappe.session.user
+	if user == "Administrator":
+		return
+	if frappe.db.get_value("Employee", employee, "user_id") == user:
+		return
+	if frappe.has_permission("Employee", doc=employee):
+		return
+	if user == get_leave_approver(employee):
+		return
+	frappe.logger("hrms").warning("[leave] %s denied leave details for employee %s", user, employee)
+	frappe.throw(_("Not permitted to view leave details for this employee."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def get_leave_details(employee: str, date: str | datetime.date, for_salary_slip: bool = False) -> dict:
-	validate_leave_access(employee)
-
+	_ensure_leave_details_permitted(employee)
 	allocation_records = get_leave_allocation_records(employee, date)
 	leave_allocation = {}
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2
@@ -1003,8 +1027,12 @@ def get_leave_details(employee: str, date: str | datetime.date, for_salary_slip:
 			"remaining_leaves": flt(remaining_leaves, precision),
 		}
 
-	# is used in set query
-	lwp = frappe.get_list("Leave Type", filters={"is_lwp": 1}, pluck="name")
+	# is used in set query. Names only, fetched without permission checks:
+	# staff must always see applicable leave type names in the PWA dropdown,
+	# even when role drift leaves them without Leave Type read (a get_list
+	# PermissionError here 403s the whole endpoint and silently blanks the
+	# leave application form's dropdown).
+	lwp = frappe.get_all("Leave Type", filters={"is_lwp": 1}, pluck="name")
 
 	return {
 		"leave_allocation": leave_allocation,

@@ -23,7 +23,12 @@ from erpnext.accounts.utils import (
 from erpnext.controllers.accounts_controller import AccountsController
 
 import hrms
-from hrms.hr.utils import set_employee_name, share_doc_with_approver, validate_active_employee
+from hrms.hr.utils import (
+	set_employee_name,
+	share_doc_with_approver,
+	validate_active_employee,
+	validate_staff_approver,
+)
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 
@@ -52,6 +57,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def validate(self):
 		validate_active_employee(self.employee)
 		set_employee_name(self)
+		self.validate_staff_approver()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
 		self.validate_advances()
@@ -107,6 +113,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 					_("Department {0} does not belong to company: {1}").format(self.department, self.company),
 					exc=MismatchError,
 				)
+
+	def validate_staff_approver(self):
+		validate_staff_approver(self, "expense_approver", "expense_approver", "expense_approvers")
 
 	def validate_for_self_approval(self):
 		self_expense_approval_not_allowed = frappe.db.get_single_value(

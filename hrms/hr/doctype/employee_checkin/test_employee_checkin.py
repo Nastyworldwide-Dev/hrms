@@ -66,6 +66,23 @@ class TestEmployeeCheckin(HRMSTestSuite):
 			),
 		)
 
+	def test_selfie_image_field_persists(self):
+		# Regression guard: the Capture Selfie feature relies on the
+		# `selfie_image` Attach Image field existing on Employee Checkin and
+		# round-tripping a file URL set from the camera dialog.
+		employee = make_employee("test_selfie_image_field@example.com")
+		meta = frappe.get_meta("Employee Checkin")
+		field = meta.get_field("selfie_image")
+		self.assertIsNotNone(field, "selfie_image field missing on Employee Checkin")
+		self.assertEqual(field.fieldtype, "Attach Image")
+
+		checkin = make_checkin(employee)
+		checkin.selfie_image = "/files/selfie-test.jpg"
+		checkin.save()
+
+		reloaded = frappe.get_doc("Employee Checkin", checkin.name)
+		self.assertEqual(reloaded.selfie_image, "/files/selfie-test.jpg")
+
 	def test_add_log_based_on_employee_field(self):
 		employee = make_employee("test_add_log_based_on_employee_field@example.com", company="_Test Company")
 		employee = frappe.get_doc("Employee", employee)

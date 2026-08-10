@@ -11,7 +11,11 @@ from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
 	create_assignment,
 	create_assignment_for_multiple_employees,
 )
-from hrms.hr.doctype.leave_type.test_leave_type import create_leave_type
+from hrms.hr.doctype.leave_type.test_leave_type import (
+	create_employee_grade,
+	create_leave_type,
+	new_service_based_leave_type,
+)
 from hrms.tests.utils import HRMSTestSuite
 
 
@@ -19,7 +23,15 @@ class TestLeavePolicyAssignment(HRMSTestSuite):
 	def setUp(self):
 		employee = get_employee()
 		self.original_doj = employee.date_of_joining
+		self.original_grade = employee.grade
 		self.employee = employee
+
+	def tearDown(self):
+		frappe.db.set_value(
+			"Employee",
+			self.employee.name,
+			{"date_of_joining": self.original_doj, "grade": self.original_grade},
+		)
 
 	def test_grant_leaves(self):
 		leave_period = get_leave_period(current=True)
@@ -54,6 +66,45 @@ class TestLeavePolicyAssignment(HRMSTestSuite):
 		self.assertEqual(getdate(leave_alloc_doc.to_date), getdate(leave_period.to_date))
 		self.assertEqual(leave_alloc_doc.leave_policy, leave_policy.name)
 		self.assertEqual(leave_alloc_doc.leave_policy_assignment, assignments[0])
+
+	def test_grant_leaves_based_on_years_of_service(self):
+		leave_period = get_leave_period()
+		create_employee_grade("_Test Senior Grade")
+		leave_type = new_service_based_leave_type(
+			service_entitlements=[
+				{"from_years": 0, "to_years": 2, "leave_days": 8},
+				{"from_years": 2, "to_years": 5, "leave_days": 12},
+				{"from_years": 2, "to_years": 5, "leave_days": 14, "grade": "_Test Senior Grade"},
+				{"from_years": 5, "to_years": 99, "leave_days": 16},
+			]
+		)
+		leave_type.insert()
+
+		leave_policy = create_leave_policy(leave_type=leave_type.name, annual_allocation=10)
+		leave_policy.submit()
+
+		# 3 completed years of service at the start of the leave period
+		# -> grade-specific 14 days slab wins over the generic 12 days slab
+		self.employee.date_of_joining = add_months(leave_period.from_date, -36)
+		self.employee.grade = "_Test Senior Grade"
+		self.employee.save()
+
+		data = frappe._dict(
+			{
+				"assignment_based_on": "Leave Period",
+				"leave_policy": leave_policy.name,
+				"leave_period": leave_period.name,
+			}
+		)
+		assignments = create_assignment_for_multiple_employees([self.employee.name], data)
+
+		new_leaves_allocated = frappe.db.get_value(
+			"Leave Allocation",
+			{"leave_policy_assignment": assignments[0]},
+			"new_leaves_allocated",
+		)
+		# slab days override the policy's annual allocation of 10
+		self.assertEqual(new_leaves_allocated, 14)
 
 	def test_allow_to_grant_all_leave_after_cancellation_of_every_leave_allocation(self):
 		leave_period = get_leave_period(current=True)

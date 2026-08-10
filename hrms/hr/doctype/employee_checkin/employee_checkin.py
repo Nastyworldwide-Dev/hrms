@@ -153,6 +153,12 @@ def add_log_based_on_employee_field(
 	:longitude: (optional) Longitude of the shift location.
 	"""
 
+	# staff lockdown: this is a device/integration endpoint — the caller must
+	# hold real create permission on Employee Checkin (staff roles are
+	# read-only and punch via hrms.api.remote_checkin.punch instead)
+	if not frappe.has_permission("Employee Checkin", "create"):
+		frappe.throw(_("Not permitted to create Employee Checkin."), frappe.PermissionError)
+
 	if not employee_field_value or not timestamp:
 		frappe.throw(_("'employee_field_value' and 'timestamp' are required."))
 

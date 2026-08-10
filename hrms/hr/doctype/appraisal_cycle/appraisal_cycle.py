@@ -1,32 +1,114 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import Count
 from frappe.query_builder.terms import SubQuery
+from frappe.utils import flt
+
+logger = logging.getLogger(__name__)
+
+
+def get_department_template(department):
+	"""Find appraisal template by walking up the department tree"""
+	if not department:
+		return None
+
+	dept = frappe.db.get_value("Department", department, ["lft", "rgt"], as_dict=True)
+	if not dept:
+		return None
+
+	# Get all ancestor departments (including self), ordered nearest-first
+	ancestors = frappe.get_all(
+		"Department",
+		filters={
+			"lft": ("<=", dept.lft),
+			"rgt": (">=", dept.rgt),
+			"disabled": 0,
+		},
+		order_by="lft desc",
+		pluck="name",
+	)
+
+	# Find first ancestor that has an appraisal template
+	for ancestor in ancestors:
+		template = frappe.db.get_value(
+			"Appraisal Template",
+			{"department": ancestor},
+			"name",
+		)
+		if template:
+			return template
+
+	return None
+
+
+DEFAULT_SCORE_CONVERSION = [
+	(4.5, 0.80, "Exceptional"),
+	(3.5, 0.75, "Strong"),
+	(2.5, 0.71, "Meets Expectation"),
+	(1.5, 0.60, "Needs Improvement"),
+	(1.0, 0.50, "Unsatisfactory"),
+]
 
 
 class AppraisalCycle(Document):
 	def onload(self):
 		self.set_onload("appraisals_created", self.check_if_appraisals_exist())
 
+	def before_insert(self):
+		if not self.score_conversion_table:
+			for min_score, conversion_pct, label in DEFAULT_SCORE_CONVERSION:
+				self.append(
+					"score_conversion_table",
+					{
+						"min_score": min_score,
+						"conversion_pct": conversion_pct,
+						"label": label,
+					},
+				)
+
 	def validate(self):
 		self.validate_from_to_dates("start_date", "end_date")
-		self.validate_evaluation_method_change()
+		self.validate_a1_a2_weights()
+		self.validate_score_conversion_table()
 
-	def validate_evaluation_method_change(self):
-		if self.is_new():
+	def validate_score_conversion_table(self):
+		if not self.score_conversion_table:
 			return
 
-		if self.has_value_changed("kra_evaluation_method") and self.check_if_appraisals_exist():
+		# Ensure rows sorted descending by min_score
+		prev_score = None
+		for row in self.score_conversion_table:
+			if prev_score is not None and flt(row.min_score) >= flt(prev_score):
+				frappe.throw(
+					_("Score Conversion rows must be ordered from highest to lowest min_score"),
+					title=_("Invalid Score Conversion Table"),
+				)
+			prev_score = row.min_score
+
+		# Lock table once appraisals exist
+		if not self.is_new() and self.has_value_changed("score_conversion_table"):
+			if self.check_if_appraisals_exist():
+				frappe.throw(
+					_("Score Conversion Table cannot be changed as appraisals already exist for this cycle"),
+					title=_("Not Allowed"),
+				)
+
+	def validate_a1_a2_weights(self):
+		from frappe.utils import cint
+
+		a1 = cint(self.a1_weight_pct) or 70
+		if a1 < 50 or a1 > 80:
 			frappe.throw(
-				_(
-					"Evaluation Method cannot be changed as there are existing appraisals created for this cycle"
-				),
-				title=_("Not Allowed"),
+				_("A1 Weight must be between 50 and 80. Currently, it is {0}").format(a1),
+				title=_("Invalid A1 Weight"),
 			)
+		self.a2_weight_pct = 80 - a1
 
 	def check_if_appraisals_exist(self):
 		return frappe.db.exists(
@@ -39,14 +121,19 @@ class AppraisalCycle(Document):
 		"""Pull employees in appraisee list based on selected filters"""
 		self.check_permission("write")
 		employees = self.get_employees_for_appraisal()
-		appraisal_templates = self.get_appraisal_template_map()
+		designation_templates = self.get_appraisal_template_map()
 
 		if employees:
 			self.set("appraisees", [])
 			template_missing = False
 
 			for data in employees:
-				if not appraisal_templates.get(data.designation):
+				# Priority: department tree → designation → None
+				template = get_department_template(data.department) or designation_templates.get(
+					data.designation
+				)
+
+				if not template:
 					template_missing = True
 
 				self.append(
@@ -57,7 +144,7 @@ class AppraisalCycle(Document):
 						"branch": data.branch,
 						"designation": data.designation,
 						"department": data.department,
-						"appraisal_template": appraisal_templates.get(data.designation),
+						"appraisal_template": template,
 					},
 				)
 
@@ -133,11 +220,14 @@ class AppraisalCycle(Document):
 			self.reload()
 
 	def show_missing_template_message(self, raise_exception=False):
-		msg = _("Appraisal Template not found for some designations.")
+		msg = _("Appraisal Template not found for some employees.")
 		msg += "<br><br>"
 		msg += _(
-			"Please set the Appraisal Template for all the {0} or select the template in the Employees table below."
-		).format(f"""<a href='{frappe.utils.get_url_to_list("Designation")}'>Designations</a>""")
+			"Please set the Appraisal Template for the relevant {0} or {1}, or select the template in the Employees table below."
+		).format(
+			f"""<a href='{frappe.utils.get_url_to_list("Department")}'>Departments</a>""",
+			f"""<a href='{frappe.utils.get_url_to_list("Designation")}'>Designations</a>""",
+		)
 
 		frappe.msgprint(
 			msg, title=_("Appraisal Template Missing"), indicator="yellow", raise_exception=raise_exception
@@ -181,9 +271,6 @@ def create_appraisals_for_cycle(appraisal_cycle: AppraisalCycle, publish_progres
 				}
 			)
 
-			appraisal.rate_goals_manually = (
-				1 if appraisal_cycle.kra_evaluation_method == "Manual Rating" else 0
-			)
 			appraisal.set_kras_and_rating_criteria()
 			appraisal.insert()
 
@@ -209,8 +296,16 @@ def validate_active_appraisal_cycle(appraisal_cycle: str) -> None:
 
 
 @frappe.whitelist()
-def get_appraisal_cycle_summary(cycle_name: str) -> dict:
+def get_appraisal_cycle_summary(cycle_name: str) -> dict | None:
 	frappe.has_permission("Appraisal Cycle", "read", cycle_name, throw=True)
+	# cycle-wide stats are for HR/system roles; scoped users get no summary
+	# (deferred import — appraisal.py imports from this module)
+	from hrms.hr.doctype.appraisal.appraisal import get_allowed_appraisal_employees
+
+	if get_allowed_appraisal_employees() is not None:
+		logger.debug("[appraisal_cycle] summary hidden for scoped user=%s", frappe.session.user)
+		return None
+
 	summary = frappe._dict()
 
 	summary["appraisees"] = frappe.db.count(

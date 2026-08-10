@@ -1,0 +1,49 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-04-03 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "min_score",
+  "conversion_pct",
+  "label"
+ ],
+ "fields": [
+  {
+   "description": "Minimum weighted average score (1-5) for this band",
+   "fieldname": "min_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Min Score",
+   "reqd": 1
+  },
+  {
+   "description": "Conversion factor (e.g. 0.80 = 80% of section weight)",
+   "fieldname": "conversion_pct",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Conversion Factor",
+   "reqd": 1
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Score Conversion Row",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

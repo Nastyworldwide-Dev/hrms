@@ -10,7 +10,8 @@
  "field_order": [
   "default_salary_structure",
   "currency",
-  "default_base_pay"
+  "default_base_pay",
+  "default_leave_policy"
  ],
  "fields": [
   {
@@ -34,6 +35,13 @@
    "label": "Currency",
    "options": "Currency",
    "read_only": 1
+  },
+  {
+   "description": "Assigned automatically to every active employee of this grade by the daily leave policy sync; leave days then come from each Leave Type's years-of-service entitlement slabs.",
+   "fieldname": "default_leave_policy",
+   "fieldtype": "Link",
+   "label": "Default Leave Policy",
+   "options": "Leave Policy"
   }
  ],
  "index_web_pages_for_search": 1,

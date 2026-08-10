@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "prompt",
  "creation": "2018-04-13 16:22:52.954783",
  "doctype": "DocType",
@@ -31,9 +32,23 @@
   "column_break_18",
   "enable_early_exit_marking",
   "early_exit_grace_period",
+  "breaks_section",
+  "breaks",
   "overtime_section",
   "allow_overtime",
-  "overtime_type"
+  "overtime_type",
+  "overtime_tab",
+  "enable_overtime",
+  "overtime_measurement_section",
+  "minimum_overtime_minutes",
+  "overtime_rate_basis_section",
+  "overtime_working_days_per_month",
+  "overtime_normal_hours_per_day",
+  "overtime_rates_section",
+  "overtime_rates",
+  "overtime_limits_section",
+  "daily_overtime_cap_hours",
+  "monthly_overtime_cap_hours"
  ],
  "fields": [
   {
@@ -54,7 +69,8 @@
    "fieldname": "holiday_list",
    "fieldtype": "Link",
    "label": "Holiday List",
-   "options": "Holiday List"
+   "options": "Holiday List",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_3",
@@ -68,78 +84,90 @@
    "fieldname": "determine_check_in_and_check_out",
    "fieldtype": "Select",
    "label": "Determine Check-in and Check-out",
-   "options": "Alternating entries as IN and OUT during the same shift\nStrictly based on Log Type in Employee Checkin"
+   "options": "Alternating entries as IN and OUT during the same shift\nStrictly based on Log Type in Employee Checkin",
+   "permlevel": 1
   },
   {
    "fieldname": "working_hours_calculation_based_on",
    "fieldtype": "Select",
    "label": "Working Hours Calculation Based On",
-   "options": "First Check-in and Last Check-out\nEvery Valid Check-in and Check-out"
+   "options": "First Check-in and Last Check-out\nEvery Valid Check-in and Check-out",
+   "permlevel": 1
   },
   {
    "description": "Working hours below which Half Day is marked. (Zero to disable)",
    "fieldname": "working_hours_threshold_for_half_day",
    "fieldtype": "Float",
    "label": "Working Hours Threshold for Half Day",
-   "precision": "2"
+   "precision": "2",
+   "permlevel": 1
   },
   {
    "description": "Working hours below which Absent is marked. (Zero to disable)",
    "fieldname": "working_hours_threshold_for_absent",
    "fieldtype": "Float",
    "label": "Working Hours Threshold for Absent",
-   "precision": "2"
+   "precision": "2",
+   "permlevel": 1
   },
   {
    "default": "60",
    "description": "The time before the shift start time during which Employee Check-in is considered for attendance.",
    "fieldname": "begin_check_in_before_shift_start_time",
    "fieldtype": "Int",
-   "label": "Begin check-in before shift start time (in minutes)"
+   "label": "Begin check-in before shift start time (in minutes)",
+   "permlevel": 1
   },
   {
    "depends_on": "enable_late_entry_marking",
    "description": "The time after the shift start time when check-in is considered as late (in minutes).",
    "fieldname": "late_entry_grace_period",
    "fieldtype": "Int",
-   "label": "Late Entry Grace Period"
+   "label": "Late Entry Grace Period",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_18",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "permlevel": 1
   },
   {
    "depends_on": "enable_early_exit_marking",
    "description": "The time before the shift end time when check-out is considered as early (in minutes).",
    "fieldname": "early_exit_grace_period",
    "fieldtype": "Int",
-   "label": "Early Exit Grace Period"
+   "label": "Early Exit Grace Period",
+   "permlevel": 1
   },
   {
    "default": "60",
    "description": "Time after the end of shift during which check-out is considered for attendance.",
    "fieldname": "allow_check_out_after_shift_end_time",
    "fieldtype": "Int",
-   "label": "Allow check-out after shift end time (in minutes)"
+   "label": "Allow check-out after shift end time (in minutes)",
+   "permlevel": 1
   },
   {
    "depends_on": "enable_auto_attendance",
    "fieldname": "auto_attendance_settings_section",
    "fieldtype": "Section Break",
-   "label": "Auto Attendance Settings"
+   "label": "Auto Attendance Settings",
+   "permlevel": 1
   },
   {
    "depends_on": "enable_auto_attendance",
    "fieldname": "grace_period_settings_auto_attendance_section",
    "fieldtype": "Section Break",
-   "label": "Late Entry & Early Exit Settings for Auto Attendance"
+   "label": "Late Entry & Early Exit Settings for Auto Attendance",
+   "permlevel": 1
   },
   {
    "default": "0",
    "description": "Mark attendance based on 'Employee Checkin' for Employees assigned to this shift.",
    "fieldname": "enable_auto_attendance",
    "fieldtype": "Check",
-   "label": "Enable Auto Attendance"
+   "label": "Enable Auto Attendance",
+   "permlevel": 1
   },
   {
    "default": "Today",
@@ -147,47 +175,54 @@
    "fieldname": "process_attendance_after",
    "fieldtype": "Date",
    "label": "Process Attendance After",
-   "mandatory_depends_on": "enable_auto_attendance"
+   "mandatory_depends_on": "enable_auto_attendance",
+   "permlevel": 1
   },
   {
    "description": "Last Known Successful Sync of Employee Checkin. Reset this only if you are sure that all Logs are synced from all the locations. Please don't modify this if you are unsure.",
    "fieldname": "last_sync_of_checkin",
    "fieldtype": "Datetime",
    "label": "Last Sync of Checkin",
-   "read_only_depends_on": "auto_update_last_sync"
+   "read_only_depends_on": "auto_update_last_sync",
+   "permlevel": 1
   },
   {
    "default": "0",
    "description": "If enabled, auto attendance will be marked on holidays if Employee Checkins exist",
    "fieldname": "mark_auto_attendance_on_holidays",
    "fieldtype": "Check",
-   "label": "Mark Auto Attendance on Holidays"
+   "label": "Mark Auto Attendance on Holidays",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "enable_late_entry_marking",
    "fieldtype": "Check",
-   "label": "Enable Late Entry Marking"
+   "label": "Enable Late Entry Marking",
+   "permlevel": 1
   },
   {
    "default": "0",
    "fieldname": "enable_early_exit_marking",
    "fieldtype": "Check",
-   "label": "Enable Early Exit Marking"
+   "label": "Enable Early Exit Marking",
+   "permlevel": 1
   },
   {
    "default": "Blue",
    "fieldname": "color",
    "fieldtype": "Select",
    "label": "Roster Color",
-   "options": "Blue\nCyan\nFuchsia\nGreen\nLime\nOrange\nPink\nRed\nViolet\nYellow"
+   "options": "Blue\nCyan\nFuchsia\nGreen\nLime\nOrange\nPink\nRed\nViolet\nYellow",
+   "permlevel": 1
   },
   {
    "default": "0",
    "description": "Recommended for a single biometric device / checkins via mobile app",
    "fieldname": "auto_update_last_sync",
    "fieldtype": "Check",
-   "label": "Automatically update Last Sync of Checkin"
+   "label": "Automatically update Last Sync of Checkin",
+   "permlevel": 1
   },
   {
    "fieldname": "overtime_section",
@@ -207,10 +242,123 @@
    "label": "Overtime Type",
    "mandatory_depends_on": "eval:doc.allow_overtime == 1",
    "options": "Overtime Type"
+  },
+  {
+   "fieldname": "breaks_section",
+   "fieldtype": "Section Break",
+   "label": "Unpaid Breaks",
+   "permlevel": 1
+  },
+  {
+   "description": "Time windows (per day of week) that are deducted from working hours. Use 'Normal only' for non-Ramadan rows and 'Ramadan only' for rows that apply inside the Ramadan window configured in HR Settings.",
+   "fieldname": "breaks",
+   "fieldtype": "Table",
+   "label": "Breaks",
+   "options": "Shift Break",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "overtime_tab",
+   "fieldtype": "Tab Break",
+   "label": "Overtime",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "When enabled, time worked outside this shift's window is priced as overtime using the rates below (Employment Act 1955 defaults).",
+   "fieldname": "enable_overtime",
+   "fieldtype": "Check",
+   "label": "Enable Overtime",
+   "permlevel": 1
+  },
+  {
+   "depends_on": "enable_overtime",
+   "fieldname": "overtime_measurement_section",
+   "fieldtype": "Section Break",
+   "label": "Measurement",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "Trailing minutes below this grace are not counted as overtime. (Zero to disable)",
+   "fieldname": "minimum_overtime_minutes",
+   "fieldtype": "Int",
+   "label": "Minimum Overtime to Qualify (Minutes)",
+   "non_negative": 1,
+   "permlevel": 1
+  },
+  {
+   "depends_on": "enable_overtime",
+   "description": "Hourly Rate of Pay = Basic Salary ÷ (Working Days per Month × Normal Hours per Day)",
+   "fieldname": "overtime_rate_basis_section",
+   "fieldtype": "Section Break",
+   "label": "Rate Basis",
+   "permlevel": 1
+  },
+  {
+   "default": "26",
+   "description": "Ordinary Rate of Pay divisor (Employment Act default: 26)",
+   "fieldname": "overtime_working_days_per_month",
+   "fieldtype": "Int",
+   "label": "Working Days per Month",
+   "non_negative": 1,
+   "permlevel": 1
+  },
+  {
+   "default": "8",
+   "description": "Hourly Rate of Pay divisor (default: 8)",
+   "fieldname": "overtime_normal_hours_per_day",
+   "fieldtype": "Float",
+   "label": "Normal Hours per Day",
+   "non_negative": 1,
+   "precision": "2",
+   "permlevel": 1
+  },
+  {
+   "depends_on": "enable_overtime",
+   "description": "Each tier sets the multiplier for a band of cumulative overtime hours on that day type. Defaults (Employment Act 1955) are added when overtime is enabled.",
+   "fieldname": "overtime_rates_section",
+   "fieldtype": "Section Break",
+   "label": "Overtime Rates by Hour Range",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "overtime_rates",
+   "fieldtype": "Table",
+   "label": "Overtime Rates",
+   "options": "Shift Overtime Rate",
+   "permlevel": 1
+  },
+  {
+   "depends_on": "enable_overtime",
+   "fieldname": "overtime_limits_section",
+   "fieldtype": "Section Break",
+   "label": "Limits",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "Maximum overtime hours paid per day. (Zero for no limit)",
+   "fieldname": "daily_overtime_cap_hours",
+   "fieldtype": "Float",
+   "label": "Daily OT Cap (Hours)",
+   "non_negative": 1,
+   "precision": "2",
+   "permlevel": 1
+  },
+  {
+   "default": "104",
+   "description": "Maximum overtime hours paid per month (Employment Act ceiling: 104). (Zero for no limit)",
+   "fieldname": "monthly_overtime_cap_hours",
+   "fieldtype": "Float",
+   "label": "Monthly OT Cap (Hours)",
+   "non_negative": 1,
+   "precision": "2",
+   "permlevel": 1
   }
  ],
  "links": [],
- "modified": "2025-12-16 16:32:49.169920",
+ "modified": "2026-08-03 11:02:41.907553",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Type",
@@ -230,13 +378,8 @@
    "write": 1
   },
   {
-   "email": 1,
-   "export": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Employee",
-   "share": 1
+   "role": "Employee"
   },
   {
    "create": 1,
@@ -247,6 +390,18 @@
    "report": 1,
    "role": "HR User",
    "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager",
    "write": 1
   }
  ],

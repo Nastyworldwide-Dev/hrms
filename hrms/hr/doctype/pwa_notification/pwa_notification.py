@@ -1,9 +1,14 @@
 # Copyright (c) 2023, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
+import logging
+
 import frappe
 from frappe.model.document import Document
 
 import hrms
+from hrms.utils.email_flush import flush_email_queue_after_commit
+
+logger = logging.getLogger(__name__)
 
 
 class PWANotification(Document):
@@ -12,6 +17,9 @@ class PWANotification(Document):
 
 	def after_insert(self):
 		self.send_push_notification()
+		# emails queued in the same transaction (approver/status notifications)
+		# must land as fast as the push does, not on the next scheduler tick
+		flush_email_queue_after_commit()
 
 	def send_push_notification(self):
 		try:
@@ -39,5 +47,44 @@ class PWANotification(Document):
 			return f"{base_url}/leave-applications/{self.reference_document_name}"
 		elif self.reference_document_type == "Expense Claim":
 			return f"{base_url}/expense-claims/{self.reference_document_name}"
+		elif self.reference_document_type == "Remote Checkin Request":
+			# no per-request PWA route; land on the feed with inline Approve/Reject
+			return f"{base_url}/notifications"
+		elif self.reference_document_type == "Employee Issue":
+			return f"{base_url}/issues/{self.reference_document_name}"
 
 		return base_url
+
+
+def get_permission_query_conditions(user: str | None = None) -> str:
+	"""Scope PWA Notification list reads to rows addressed to the current user.
+
+	Without this, the doctype-level perms (Employee + System Manager only)
+	hide every row from any user whose role isn't on the list — including
+	HR Managers acting as remote-checkin approvers. The unread count uses
+	`frappe.db.count` which ignores perms, so the badge reads "1 unread"
+	while the feed comes back empty.
+	"""
+	if not user:
+		user = frappe.session.user
+	if user == "Administrator":
+		return ""
+	logger.debug("[pwa_notification] scoping list to to_user=%s", user)
+	return f"`tabPWA Notification`.`to_user` = {frappe.db.escape(user)}"
+
+
+def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
+	"""Per-row read/write check: a user can act on PWA Notifications they own."""
+	if not user:
+		user = frappe.session.user
+	if user == "Administrator":
+		return True
+	owned = getattr(doc, "to_user", None) == user
+	logger.debug(
+		"[pwa_notification] has_permission user=%s ptype=%s name=%s owned=%s",
+		user,
+		ptype,
+		getattr(doc, "name", None),
+		owned,
+	)
+	return owned

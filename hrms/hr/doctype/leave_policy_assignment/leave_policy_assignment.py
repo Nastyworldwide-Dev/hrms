@@ -26,6 +26,8 @@ from frappe.utils import (
 	rounded,
 )
 
+from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
+
 
 class LeavePolicyAssignment(Document):
 	def validate(self):
@@ -93,14 +95,24 @@ class LeavePolicyAssignment(Document):
 			leave_type_details = get_leave_type_details()
 
 			leave_policy = frappe.get_doc("Leave Policy", self.leave_policy)
-			date_of_joining = frappe.db.get_value("Employee", self.employee, "date_of_joining")
+			date_of_joining, grade = frappe.db.get_value(
+				"Employee", self.employee, ["date_of_joining", "grade"]
+			)
 
 			for leave_policy_detail in leave_policy.leave_policy_details:
 				leave_details = leave_type_details.get(leave_policy_detail.leave_type)
 
 				if not leave_details.is_lwp:
+					annual_allocation = leave_policy_detail.annual_allocation
+					if leave_details.based_on_years_of_service:
+						service_based_leave_days = get_service_based_leave_days(
+							leave_details.name, date_of_joining, self.effective_from, grade
+						)
+						if service_based_leave_days is not None:
+							annual_allocation = service_based_leave_days
+
 					leave_allocation, new_leaves_allocated = self.create_leave_allocation(
-						leave_policy_detail.annual_allocation,
+						annual_allocation,
 						leave_details,
 						date_of_joining,
 					)
@@ -537,6 +549,7 @@ def get_leave_type_details():
 			"is_lwp",
 			"is_earned_leave",
 			"is_compensatory",
+			"based_on_years_of_service",
 			"allocate_on_day",
 			"is_carry_forward",
 			"expire_carry_forwarded_leaves_after_days",

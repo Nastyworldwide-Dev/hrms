@@ -23,6 +23,10 @@
   "section_break_ksbo",
   "fetch_geolocation",
   "geolocation",
+  "selfie_section",
+  "capture_selfie",
+  "column_break_selfie",
+  "selfie_image",
   "shift_timings_section",
   "shift_start",
   "shift_end",
@@ -182,10 +186,29 @@
    "hidden": 1,
    "label": "Overtime Type",
    "options": "Overtime Type"
+  },
+  {
+   "fieldname": "selfie_section",
+   "fieldtype": "Section Break",
+   "label": "Check-in Selfie"
+  },
+  {
+   "fieldname": "capture_selfie",
+   "fieldtype": "Button",
+   "label": "Capture Selfie"
+  },
+  {
+   "fieldname": "column_break_selfie",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "selfie_image",
+   "fieldtype": "Attach Image",
+   "label": "Selfie Image"
   }
  ],
  "links": [],
- "modified": "2025-07-09 10:47:34.591144",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Checkin",
@@ -232,11 +255,8 @@
    "write": 1
   },
   {
-   "create": 1,
-   "delete": 1,
    "read": 1,
-   "role": "Employee",
-   "write": 1
+   "role": "Employee"
   },
   {
    "delete": 1,

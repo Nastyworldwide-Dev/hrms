@@ -2,8 +2,9 @@
 # For license information, please see license.txt
 
 
+import logging
 from datetime import datetime, timedelta
-from itertools import groupby
+from itertools import groupby, pairwise
 
 import frappe
 from frappe import _
@@ -17,6 +18,7 @@ from frappe.utils import (
 	get_link_to_form,
 	get_time,
 	getdate,
+	now_datetime,
 	time_diff,
 )
 
@@ -32,6 +34,8 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between
 
+logger = logging.getLogger(__name__)
+
 EMPLOYEE_CHUNK_SIZE = 50
 
 
@@ -42,6 +46,29 @@ class ShiftType(Document):
 		self.validate_same_start_and_end(start, end)
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
+		self.validate_overtime_rates()
+		self.seed_last_sync_of_checkin()
+		logger.debug("[shift_type] validated %s", self.name)
+
+	def seed_last_sync_of_checkin(self):
+		# Auto mode needs a concrete baseline: with last_sync_of_checkin empty,
+		# has_incorrect_shift_config() skips the shift entirely and the hourly
+		# advance only recovers after the next shift end passes — so ticking
+		# auto_update_last_sync on an empty value would process nothing.
+		# Server-side so API writes behave the same as form saves.
+		if self.auto_update_last_sync and not self.last_sync_of_checkin:
+			self.last_sync_of_checkin = now_datetime()
+			logger.info(
+				"[shift_type] %s: seeded last_sync_of_checkin (auto update on, value was empty)",
+				self.name,
+			)
+			frappe.msgprint(
+				_("Last Sync of Checkin was empty and has been set to {0}.").format(
+					frappe.bold(self.last_sync_of_checkin)
+				),
+				alert=True,
+				indicator="blue",
+			)
 
 	def validate_same_start_and_end(self, start_time: datetime.time, end_time: datetime.time):
 		if start_time == end_time:
@@ -107,6 +134,69 @@ class ShiftType(Document):
 			{"shift": self.name, "attendance": ["is", "not set"], "skip_auto_attendance": 0, "offshift": 0},
 		)
 
+	def validate_overtime_rates(self):
+		if not self.enable_overtime:
+			return
+
+		# seed Employment Act defaults only when overtime is first turned on,
+		# so an intentionally-cleared table stays empty
+		if not self.overtime_rates:
+			if self.is_new() or self.has_value_changed("enable_overtime"):
+				self.set_default_overtime_rates()
+			return
+
+		rows_by_type = {}
+		for row in self.overtime_rates:
+			from_min = (row.from_hour or 0) * 60 + (row.from_minute or 0)
+			to_min = (row.to_hour or 0) * 60 + (row.to_minute or 0)
+			if to_min <= from_min:
+				frappe.throw(
+					_("Row #{0}: {1} must be later than {2}").format(
+						row.idx, frappe.bold(_("To")), frappe.bold(_("From"))
+					)
+				)
+			rows_by_type.setdefault(row.day_type, []).append((from_min, to_min, row.idx))
+
+		# bands for a day type must be contiguous from 0: no gaps, no overlaps, so
+		# the engine never silently drops paid overtime between two bands
+		for day_type, rows in rows_by_type.items():
+			rows.sort()
+			if rows[0][0] != 0:
+				frappe.throw(
+					_("{0}: the first overtime band must start at 0").format(frappe.bold(_(day_type))),
+					title=_("Invalid Overtime Rates"),
+				)
+			for (_pf, prev_to, prev_idx), (cur_from, _ct, cur_idx) in pairwise(rows):
+				if cur_from < prev_to:
+					frappe.throw(
+						_("Row #{0}: Overtime hour range overlaps with row #{1}").format(cur_idx, prev_idx),
+						title=_("Overlapping Overtime Rates"),
+					)
+				if cur_from > prev_to:
+					frappe.throw(
+						_("Row #{0}: Overtime hour range leaves a gap after row #{1}").format(
+							cur_idx, prev_idx
+						),
+						title=_("Non-continuous Overtime Rates"),
+					)
+
+	def set_default_overtime_rates(self):
+		from hrms.utils.ot_calculation import DEFAULT_OT_RATE_BANDS
+
+		for day_type, bands in DEFAULT_OT_RATE_BANDS.items():
+			for from_hour, from_minute, to_hour, to_minute, rate in bands:
+				self.append(
+					"overtime_rates",
+					{
+						"day_type": day_type,
+						"from_hour": from_hour,
+						"from_minute": from_minute,
+						"to_hour": to_hour,
+						"to_minute": to_minute,
+						"rate": rate,
+					},
+				)
+
 	@frappe.whitelist()
 	def process_auto_attendance(self, is_manually_triggered: int | bool = False) -> None | str:
 		if self.has_incorrect_shift_config():
@@ -117,14 +207,14 @@ class ShiftType(Document):
 			if len(logs) > 1000 or frappe.flags.test_bg_job:
 				job_id = "process_auto_attendance_" + self.name
 				job = frappe.enqueue(self._process, logs=logs, timeout=1200, job_id=job_id, deduplicate=True)
-				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job',job.id,label='here')}"
+				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job', job.id, label='here')}"
 			else:
 				try:
 					self._process(logs)
 					return "Attendance has been marked as per employee check-ins."
 				except Exception as e:
 					error_log = frappe.log_error(e)
-					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log',error_log.name,label='here')}"
+					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log', error_log.name, label='here')}"
 		else:
 			self._process(logs)
 
@@ -236,6 +326,7 @@ class ShiftType(Document):
 		total_working_hours, in_time, out_time = calculate_working_hours(
 			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
 		)
+		total_working_hours = self._deduct_unpaid_breaks(total_working_hours, in_time, out_time)
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time
@@ -260,6 +351,32 @@ class ShiftType(Document):
 			return "Half Day", total_working_hours, late_entry, early_exit, in_time, out_time
 
 		return "Present", total_working_hours, late_entry, early_exit, in_time, out_time
+
+	def _deduct_unpaid_breaks(self, total_working_hours, in_time, out_time):
+		"""Subtract configured unpaid breaks from working hours.
+
+		Gap-aware: only deducts the portion of the break window NOT already
+		excluded by a real check-out/check-in gap, so workers who actually
+		log out for lunch aren't double-penalised.
+		"""
+		if not (in_time and out_time) or not getattr(self, "breaks", None):
+			return total_working_hours
+
+		from hrms.utils.break_calculation import get_shift_break_minutes
+
+		in_dt = get_datetime(in_time)
+		out_dt = get_datetime(out_time)
+		break_min = get_shift_break_minutes(self.name, in_dt, out_dt)
+		if break_min <= 0:
+			return total_working_hours
+
+		span_min = (out_dt - in_dt).total_seconds() / 60.0
+		worked_min = float(total_working_hours) * 60.0
+		gap_min = max(0.0, span_min - worked_min)
+		extra_deduct_min = max(0.0, break_min - gap_min)
+		if extra_deduct_min <= 0:
+			return total_working_hours
+		return max(0.0, total_working_hours - extra_deduct_min / 60.0)
 
 	def mark_absent_for_dates_with_no_attendance(self, employee: str):
 		"""Marks Absents for the given employee on working days in this shift that have no attendance marked.

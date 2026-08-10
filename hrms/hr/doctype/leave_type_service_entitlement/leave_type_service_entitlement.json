@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2026-06-12 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "grade",
+  "from_years",
+  "to_years",
+  "leave_days"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "description": "Leave blank to apply to employees of all grades. A row with a grade takes precedence over rows without one.",
+   "fieldname": "grade",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Grade",
+   "options": "Employee Grade"
+  },
+  {
+   "columns": 3,
+   "description": "Lower limit of years of service, inclusive. For a continuous table, set this equal to the previous row's To.",
+   "fieldname": "from_years",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "From (Years of Service)",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 3,
+   "description": "Upper limit of years of service, exclusive. E.g. 2 means 'below 2 years'. For a continuous table, set this equal to the next row's From.",
+   "fieldname": "to_years",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "To (Years of Service)",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "leave_days",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Leave Days",
+   "non_negative": 1,
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-12 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Leave Type Service Entitlement",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

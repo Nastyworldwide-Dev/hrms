@@ -88,7 +88,8 @@
    "oldfieldtype": "Link",
    "options": "Employee",
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "ignore_user_permissions": 1
   },
   {
    "fetch_from": "employee.employee_name",
@@ -531,6 +532,7 @@
    "write": 1
   },
   {
+   "cancel": 1,
    "create": 1,
    "email": 1,
    "print": 1,

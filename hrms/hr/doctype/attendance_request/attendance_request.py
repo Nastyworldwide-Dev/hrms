@@ -2,15 +2,21 @@
 # For license information, please see license.txt
 
 
+import logging
+from datetime import datetime, timedelta
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, date_diff, format_date, get_link_to_form, getdate
+from frappe.model.workflow import get_workflow_name
+from frappe.utils import add_days, date_diff, format_date, get_link_to_form, get_time, getdate
 
 from erpnext.setup.doctype.employee.employee import is_holiday
 
 import hrms
 from hrms.hr.utils import validate_active_employee, validate_dates
+
+logger = logging.getLogger(__name__)
 
 
 class OverlappingAttendanceRequestError(frappe.ValidationError):
@@ -23,6 +29,7 @@ class AttendanceRequest(Document):
 		validate_dates(self, self.from_date, self.to_date, False)
 		self.validate_shifts()
 		self.validate_half_day()
+		self.validate_in_out_times()
 		self.validate_request_overlap()
 		self.validate_no_attendance_to_create()
 
@@ -82,6 +89,24 @@ class AttendanceRequest(Document):
 		)
 
 		return list(set(shifts))
+	def validate_in_out_times(self):
+		if not (self.in_time or self.out_time):
+			return
+		if not (self.in_time and self.out_time):
+			frappe.throw(_("Both In Time and Out Time are required when entering worked hours"))
+		if get_time(self.in_time) == get_time(self.out_time):
+			# equal times would roll over to a full 24h session
+			frappe.throw(_("In Time and Out Time cannot be the same"))
+
+	def get_in_out_datetimes(self, date: str) -> tuple[datetime, datetime]:
+		# one session per requested day; an out time at or before the in time
+		# means the session ends on the next calendar day (overnight shift)
+		in_dt = datetime.combine(getdate(date), get_time(self.in_time))
+		out_dt = datetime.combine(getdate(date), get_time(self.out_time))
+		if out_dt <= in_dt:
+			out_dt += timedelta(days=1)
+		logger.debug("[attendance_request] %s session %s -> %s", self.name, in_dt, out_dt)
+		return in_dt, out_dt
 
 	def validate_request_overlap(self):
 		if not self.name:
@@ -117,7 +142,36 @@ class AttendanceRequest(Document):
 		frappe.throw(msg, title=_("Overlapping Attendance Request"), exc=OverlappingAttendanceRequestError)
 
 	def on_submit(self):
+		self.validate_for_self_approval()
+		self.validate_mandatory_attachment()
 		self.create_attendance_records()
+
+	def validate_mandatory_attachment(self):
+		# every request must carry supporting evidence (photo/document) before
+		# an approver can turn it into attendance
+		if not frappe.db.exists(
+			"File",
+			{
+				"attached_to_doctype": self.doctype,
+				"attached_to_name": self.name,
+				# a partial upload leaves a File row without a stored file
+				"file_url": ("is", "set"),
+			},
+		):
+			logger.info("[attendance_request] submit blocked, no attachment: %s", self.name)
+			frappe.throw(_("A supporting attachment is required before this request can be approved"))
+
+	def validate_for_self_approval(self):
+		# This doctype has no approver/status flow — submitting the draft IS the
+		# approval, so the employee on the request must never be the submitter,
+		# regardless of role (System Manager / HR roles hold submit permission).
+		# Mirrors LeaveApplication.validate_for_self_approval.
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		if employee_user == frappe.session.user and not get_workflow_name("Attendance Request"):
+			logger.warning(
+				"[attendance_request] self-submission blocked: %s by %s", self.name, frappe.session.user
+			)
+			frappe.throw(_("Self-approval for Attendance Requests is not allowed"))
 
 	def on_cancel(self):
 		attendance_list = frappe.get_all(
@@ -141,6 +195,15 @@ class AttendanceRequest(Document):
 
 		if doc:
 			# update existing attendance, change the status
+			if self.in_time and self.out_time:
+				frappe.msgprint(
+					_(
+						"Proposed hours were not applied for {0} — attendance record {1} already exists"
+					).format(
+						frappe.bold(format_date(date)),
+						get_link_to_form("Attendance", doc.name),
+					)
+				)
 			old_status = doc.status
 
 			if old_status != status:
@@ -194,6 +257,11 @@ class AttendanceRequest(Document):
 			doc.attendance_request = self.name
 			doc.status = status
 			doc.half_day_status = "Absent" if status == "Half Day" else None
+			# half-day dates keep no proposed times: stamping the full-day span
+			# would contradict the Half Day status and inflate OT
+			if self.in_time and self.out_time and status != "Half Day":
+				doc.in_time, doc.out_time = self.get_in_out_datetimes(date)
+				doc.working_hours = round((doc.out_time - doc.in_time).total_seconds() / 3600, 2)
 			doc.insert(ignore_permissions=True)
 			doc.submit()
 

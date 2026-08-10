@@ -3,6 +3,7 @@
 
 
 from datetime import date
+import logging
 
 import frappe
 from frappe import _
@@ -13,6 +14,7 @@ from frappe.utils import (
 	cint,
 	create_batch,
 	cstr,
+	flt,
 	format_date,
 	get_datetime,
 	get_link_to_form,
@@ -28,6 +30,8 @@ from hrms.hr.utils import (
 	validate_active_employee,
 )
 from hrms.utils.holiday_list import get_holiday_dates_between_range
+
+logger = logging.getLogger(__name__)
 
 
 class DuplicateAttendanceError(frappe.ValidationError):
@@ -53,6 +57,39 @@ class Attendance(Document):
 		self.validate_overlapping_shift_attendance()
 		self.validate_employee_status()
 		self.check_leave_record()
+		self.set_overtime()
+
+	def set_overtime(self):
+		"""Populate OT hours + rate-band split for this attendance: time worked past
+		this record's own shift end (the REAL end, not the padded shift_actual_end
+		checkout-grace boundary). Post-shift-end only — pre-shift early check-in is
+		never OT. Cleared unless worked + OT-enabled shift + a recorded check-out.
+		The ERP stops at hours; pay is computed on the payroll platform."""
+		logger.info(
+			"[attendance] set_overtime %s %s status=%s", self.employee, self.attendance_date, self.status
+		)
+		from hrms.utils.ot_calculation import DAY_TYPE_LABELS, get_shift_ot_breakdown
+
+		worked = self.status in ("Present", "Half Day", "Work From Home")
+		ot_enabled = self.shift and frappe.db.get_value("Shift Type", self.shift, "enable_overtime")
+		if not (worked and ot_enabled and self.out_time):
+			self.ot_hours = 0
+			self.ot_rate_weighted_hours = 0
+			self.set("ot_rate_bands", [])
+			return
+		breakdown = get_shift_ot_breakdown(self.employee, self.shift, self.attendance_date, self.out_time)
+		self.ot_hours = breakdown["ot_hours"]
+		self.ot_rate_weighted_hours = breakdown["rate_weighted_hours"]
+		self.set("ot_rate_bands", [])
+		for band in breakdown["bands"]:
+			self.append(
+				"ot_rate_bands",
+				{
+					"day_type": DAY_TYPE_LABELS.get(band["day_type"], band["day_type"]),
+					"rate": band["rate"],
+					"hours": band["hours"],
+				},
+			)
 
 	def on_cancel(self):
 		self.unlink_attendance_from_checkins()
@@ -479,3 +516,46 @@ def get_employee_shift(employee: str, for_date: str | date | None = None) -> str
 		return default_shift
 
 	return None
+def recompute_ot_backfill(from_date, to_date, dry_run=1):
+	"""Recompute OT (ot_hours / ot_rate_weighted_hours / ot_rate_bands) for submitted
+	Attendance in [from_date, to_date] using the corrected engine. dry_run=1 (default)
+	only reports what WOULD change; pass dry_run=0 to write (submit-safe via db_set).
+	Run: bench --site <site> execute
+	hrms.hr.doctype.attendance.attendance.recompute_ot_backfill
+	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\""""
+	dry_run = cint(dry_run)
+	logger.info("[attendance] OT backfill %s..%s dry_run=%s", from_date, to_date, dry_run)
+	names = frappe.get_all(
+		"Attendance",
+		filters={"docstatus": 1, "attendance_date": ["between", [from_date, to_date]]},
+		pluck="name",
+	)
+	changed = []
+	for name in names:
+		doc = frappe.get_doc("Attendance", name)
+		old_hours, old_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
+		doc.set_overtime()
+		new_hours, new_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
+		if new_hours == old_hours and new_weighted == old_weighted:
+			continue
+		changed.append(
+			{
+				"attendance": name,
+				"employee": doc.employee,
+				"date": str(doc.attendance_date),
+				"old_ot_hours": old_hours,
+				"new_ot_hours": new_hours,
+				"old_rate_weighted": old_weighted,
+				"new_rate_weighted": new_weighted,
+			}
+		)
+		if not dry_run:
+			doc.db_set("ot_hours", new_hours, update_modified=False)
+			doc.db_set("ot_rate_weighted_hours", new_weighted, update_modified=False)
+			for band in doc.ot_rate_bands:
+				band.docstatus = doc.docstatus
+			doc.update_child_table("ot_rate_bands")
+	if not dry_run:
+		frappe.db.commit()
+	logger.info("[attendance] OT backfill done scanned=%d changed=%d", len(names), len(changed))
+	return {"dry_run": bool(dry_run), "scanned": len(names), "changed": len(changed), "records": changed}

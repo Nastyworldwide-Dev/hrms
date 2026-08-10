@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-07-24 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "day_type",
+  "rate",
+  "hours"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "day_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Day Type",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate (× Hourly)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "OT Hours",
+   "precision": "2",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Attendance Overtime Band",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

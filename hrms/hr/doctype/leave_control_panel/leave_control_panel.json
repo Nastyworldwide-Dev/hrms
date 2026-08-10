@@ -24,6 +24,7 @@
   "employment_type",
   "designation",
   "employee_grade",
+  "min_years_of_service",
   "advanced_filters_section",
   "filter_list",
   "select_employees_section",
@@ -70,6 +71,13 @@
    "fieldtype": "Link",
    "label": "Employee Grade",
    "options": "Employee Grade"
+  },
+  {
+   "description": "Only show employees with at least this many completed years of service",
+   "fieldname": "min_years_of_service",
+   "fieldtype": "Int",
+   "label": "Min. Years of Service",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break1",

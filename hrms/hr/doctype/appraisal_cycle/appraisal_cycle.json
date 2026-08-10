@@ -17,8 +17,23 @@
   "section_break_4",
   "description",
   "settings_section",
+  "a1_weight_pct",
   "column_break_vhzx",
+  "a2_weight_pct",
+  "score_conversion_section",
+  "score_conversion_table",
   "kra_evaluation_method",
+  "scoring_method_section",
+  "scoring_method",
+  "allow_over_achievement",
+  "column_break_sm",
+  "achievement_weight_pct",
+  "manager_rating_weight_pct",
+  "section_percentages_section",
+  "section_a_pct",
+  "section_b_pct",
+  "column_break_pct",
+  "section_c_pct",
   "section_break_zykh",
   "calculate_final_score_based_on_formula",
   "final_score_formula",
@@ -140,12 +155,40 @@
   {
    "fieldname": "settings_section",
    "fieldtype": "Section Break",
-   "label": "Settings"
+   "label": "A1/A2 Weight Split (within Section A = 80%)"
+  },
+  {
+   "default": "70",
+   "description": "Output KPI weight within Section A (80%). A2 auto-calculated as 80 \u2212 A1.",
+   "fieldname": "a1_weight_pct",
+   "fieldtype": "Int",
+   "label": "A1 \u2014 Output KPI Weight %"
+  },
+  {
+   "default": "10",
+   "description": "Competency weight (auto: 80 \u2212 A1)",
+   "fieldname": "a2_weight_pct",
+   "fieldtype": "Int",
+   "label": "A2 \u2014 Competency Weight %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "score_conversion_section",
+   "fieldtype": "Section Break",
+   "label": "Score Conversion Table"
+  },
+  {
+   "description": "Maps weighted average rating (1-5) to conversion factor. Rows must be ordered highest score first. Locked once appraisals are created.",
+   "fieldname": "score_conversion_table",
+   "fieldtype": "Table",
+   "label": "Score Conversion",
+   "options": "Score Conversion Row"
   },
   {
    "default": "Automated Based on Goal Progress",
    "fieldname": "kra_evaluation_method",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "KRA Evaluation Method",
    "options": "Automated Based on Goal Progress\nManual Rating"
   },
@@ -160,19 +203,18 @@
    "read_only": 1
   },
   {
-   "depends_on": "calculate_final_score_based_on_formula",
    "fieldname": "final_score_formula",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "Final Score Formula",
-   "mandatory_depends_on": "calculate_final_score_based_on_formula",
    "max_height": "5rem",
    "options": "PythonExpression"
   },
   {
    "default": "0",
-   "description": "By default, the Final Score is calculated as the average of Goal Score, Feedback Score, and Self Appraisal Score. Enable this to set a different formula",
    "fieldname": "calculate_final_score_based_on_formula",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Calculate Final Score based on Formula"
   },
   {
@@ -183,6 +225,78 @@
    "fieldname": "section_break_zykh",
    "fieldtype": "Section Break",
    "hide_border": 1
+  },
+  {
+   "fieldname": "scoring_method_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Scoring Method"
+  },
+  {
+   "default": "Manager Rating Only",
+   "fieldname": "scoring_method",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Scoring Method",
+   "options": "Manager Rating Only\nAchievement Based\nBlended"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_over_achievement",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Allow Over-Achievement"
+  },
+  {
+   "fieldname": "column_break_sm",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "default": "50",
+   "fieldname": "achievement_weight_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Achievement Weight %"
+  },
+  {
+   "default": "50",
+   "fieldname": "manager_rating_weight_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Manager Rating Weight %"
+  },
+  {
+   "fieldname": "section_percentages_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Section Percentages"
+  },
+  {
+   "default": "70",
+   "fieldname": "section_a_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section A %"
+  },
+  {
+   "default": "20",
+   "fieldname": "section_b_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section B %"
+  },
+  {
+   "fieldname": "column_break_pct",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "default": "10",
+   "fieldname": "section_c_pct",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Section C %"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -200,7 +314,7 @@
    "link_fieldname": "appraisal_cycle"
   }
  ],
- "modified": "2024-05-29 18:15:06.443594",
+ "modified": "2026-03-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal Cycle",

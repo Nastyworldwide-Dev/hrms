@@ -5,7 +5,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "skill"
+  "skill",
+  "expected_proficiency"
  ],
  "fields": [
   {
@@ -14,6 +15,12 @@
    "in_list_view": 1,
    "label": "Skill",
    "options": "Skill"
+  },
+  {
+   "fieldname": "expected_proficiency",
+   "fieldtype": "Rating",
+   "in_list_view": 1,
+   "label": "Expected Proficiency"
   }
  ],
  "istable": 1,

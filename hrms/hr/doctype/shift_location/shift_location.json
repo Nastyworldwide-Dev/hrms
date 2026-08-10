@@ -8,12 +8,15 @@
  "field_order": [
   "location_name",
   "checkin_radius",
+  "timezone",
   "column_break_dlgd",
   "latitude",
   "longitude",
   "section_break_xxli",
   "fetch_geolocation",
-  "geolocation"
+  "geolocation",
+  "shift_rules_section",
+  "shift_rules"
  ],
  "fields": [
   {
@@ -29,6 +32,12 @@
    "fieldname": "checkin_radius",
    "fieldtype": "Int",
    "label": "Checkin Radius"
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Select",
+   "label": "Timezone",
+   "description": "Wall clock this location's attendance is measured in. Leave blank to inherit the employee's company timezone."
   },
   {
    "fieldname": "column_break_dlgd",
@@ -57,6 +66,18 @@
    "fieldname": "fetch_geolocation",
    "fieldtype": "Button",
    "label": "Fetch Geolocation"
+  },
+  {
+   "fieldname": "shift_rules_section",
+   "fieldtype": "Section Break",
+   "label": "Shift Rules"
+  },
+  {
+   "description": "Which shift the people at this location work. The row matching the employee's department (or its parent) wins; the row with a blank department is the site default. The daily sync creates Shift Assignments from these rules.",
+   "fieldname": "shift_rules",
+   "fieldtype": "Table",
+   "label": "Shift Rules",
+   "options": "Shift Location Rule"
   }
  ],
  "links": [
@@ -65,7 +86,7 @@
    "link_fieldname": "shift_location"
   }
  ],
- "modified": "2024-10-10 12:54:26.209170",
+ "modified": "2026-08-03 09:14:37.482915",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Location",

@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-03-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "competency",
+  "proficiency_level",
+  "per_weightage",
+  "target",
+  "actual",
+  "achievement",
+  "column_break_1",
+  "self_rating",
+  "manager_rating",
+  "justification",
+  "column_break_2",
+  "score",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "competency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Competency",
+   "options": "Competency"
+  },
+  {
+   "fieldname": "proficiency_level",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Proficiency Level",
+   "options": "\n1 - Awareness\n2 - Developing\n3 - Proficient\n4 - Advanced\n5 - Expert / Mastery"
+  },
+  {
+   "columns": 1,
+   "fieldname": "per_weightage",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weightage (%)"
+  },
+  {
+   "columns": 1,
+   "description": "Set by manager at cycle start",
+   "fieldname": "target",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Target"
+  },
+  {
+   "description": "Set during review — what the staff actually achieved",
+   "columns": 1,
+   "fieldname": "actual",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual"
+  },
+  {
+   "description": "Auto-calculated: (Actual / Target) × 100",
+   "columns": 1,
+   "fieldname": "achievement",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Achievement (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "self_rating",
+   "fieldtype": "Rating",
+   "hidden": 1,
+   "label": "Self Rating"
+  },
+  {
+   "description": "Deprecated: score now derives from Achievement (Actual/Target). Kept for history.",
+   "fieldname": "manager_rating",
+   "fieldtype": "Rating",
+   "hidden": 1,
+   "label": "Manager Rating"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Small Text",
+   "label": "Justification / Evidence"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Appraisal Functional Competency",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

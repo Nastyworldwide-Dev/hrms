@@ -2,6 +2,7 @@
 # See license.txt
 
 import frappe
+from frappe.utils import flt
 
 from erpnext.setup.doctype.designation.test_designation import create_designation
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -55,24 +56,25 @@ class TestAppraisal(HRMSTestSuite):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# 30% weightage
-		appraisal.goals[0].score = 5
-		# 70% weightage
-		appraisal.goals[1].score = 3
+		# Weights scaled: 30% → 21%, 70% → 49%
+		appraisal.goals[0].score = 5  # 21% weightage
+		appraisal.goals[1].score = 3  # 49% weightage
 		appraisal.save()
 
-		self.assertEqual(appraisal.goals[0].score_earned, 1.5)
-		self.assertEqual(appraisal.goals[1].score_earned, 2.1)
+		# score_earned = score * per_weightage / 100
+		self.assertEqual(appraisal.goals[0].score_earned, flt(5 * 21.0 / 100))  # 1.05
+		self.assertEqual(appraisal.goals[1].score_earned, flt(3 * 49.0 / 100))  # 1.47
 
-		self.assertEqual(appraisal.total_score, 3.6)
-		self.assertEqual(appraisal.final_score, 1.2)
+		self.assertEqual(appraisal.total_score, flt(1.05 + 1.47, 3))  # 2.52
 
 	def test_final_score(self):
 		cycle = create_appraisal_cycle(designation="Engineer", kra_evaluation_method="Manual Rating")
 		cycle.create_appraisals()
 		appraisal = self.setup_appraisal(cycle)
 
-		self.assertEqual(appraisal.final_score, 3.77)
+		# total_score=2.52, self_score=3.85, avg_feedback=3.85
+		# final = (2.52 + 3.85 + 3.85) / 3 = 3.407
+		self.assertEqual(appraisal.final_score, 3.407)
 
 	def test_final_score_using_formula(self):
 		cycle = create_appraisal_cycle(designation="Engineer", kra_evaluation_method="Manual Rating")
@@ -87,15 +89,15 @@ class TestAppraisal(HRMSTestSuite):
 
 		appraisal = self.setup_appraisal(cycle)
 
-		self.assertEqual(appraisal.final_score, 3.77)
+		self.assertEqual(appraisal.final_score, 3.407)
 
 	def setup_appraisal(self, cycle):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# GOAL SCORE
-		appraisal.goals[0].score = 5  # 30% weightage
-		appraisal.goals[1].score = 3  # 70% weightage
+		# GOAL SCORE (weights scaled: 30→21%, 70→49%)
+		appraisal.goals[0].score = 5  # 21% weightage
+		appraisal.goals[1].score = 3  # 49% weightage
 
 		# SELF APPRAISAL SCORE
 		ratings = appraisal.self_ratings
@@ -150,17 +152,17 @@ class TestAppraisal(HRMSTestSuite):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# Quality KRA, 30% weightage
+		# Quality KRA, 21% weightage (scaled from 30%)
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 12.5)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 3.75)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 2.62)
 
-		# Development KRA, 70% weightage
+		# Development KRA, 49% weightage (scaled from 70%)
 		self.assertEqual(appraisal.appraisal_kra[1].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 35)
+		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 24.5)
 
-		self.assertEqual(appraisal.goal_score_percentage, 38.75)
-		self.assertEqual(appraisal.total_score, 1.94)
-		self.assertEqual(appraisal.final_score, 0.65)
+		self.assertEqual(appraisal.goal_score_percentage, 27.12)
+		self.assertEqual(appraisal.total_score, 1.356)
+		self.assertEqual(appraisal.final_score, 0.452)
 
 	def test_goal_score_after_parent_goal_change(self):
 		"""
@@ -195,24 +197,24 @@ class TestAppraisal(HRMSTestSuite):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# Quality KRA, 30% weightage
+		# Quality KRA, 21% weightage (scaled from 30%)
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 10.5)
 
-		# Development KRA, 70% weightage
+		# Development KRA, 49% weightage (scaled from 70%)
 		self.assertEqual(appraisal.appraisal_kra[1].goal_completion, 25)
-		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 17.5)
+		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 12.25)
 
 		# Parent changed. Old parent's KRA score should be updated
 		child2_1.parent_goal = parent1.name
 		child2_1.save()
 		appraisal.reload()
 
-		# Quality KRA, 30% weightage
+		# Quality KRA, 21% weightage
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 10.5)
 
-		# Development KRA, 70% weightage
+		# Development KRA, 49% weightage
 		self.assertEqual(appraisal.appraisal_kra[1].goal_completion, 0)
 		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 0)
 
@@ -225,9 +227,9 @@ class TestAppraisal(HRMSTestSuite):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# Quality KRA, 30% weightage
+		# Quality KRA, 21% weightage (scaled from 30%)
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 10.5)
 
 		goal.kra = "Development"
 		goal.save()
@@ -238,7 +240,7 @@ class TestAppraisal(HRMSTestSuite):
 		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 0)
 
 		self.assertEqual(appraisal.appraisal_kra[1].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 35)
+		self.assertEqual(appraisal.appraisal_kra[1].goal_score, 24.5)
 
 	def test_goal_score_after_goal_deletion(self):
 		cycle = create_appraisal_cycle(designation="Engineer")
@@ -249,9 +251,9 @@ class TestAppraisal(HRMSTestSuite):
 		appraisal = frappe.db.exists("Appraisal", {"appraisal_cycle": cycle.name, "employee": self.employee1})
 		appraisal = frappe.get_doc("Appraisal", appraisal)
 
-		# Quality KRA, 30% weightage
+		# Quality KRA, 21% weightage (scaled from 30%)
 		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 50)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15)
+		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 10.5)
 
 		goal.delete()
 		appraisal.reload()

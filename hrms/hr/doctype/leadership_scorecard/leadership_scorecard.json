@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-03-30 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "criterion",
+  "score_pct",
+  "column_break_1",
+  "evidence",
+  "column_break_2",
+  "data_source"
+ ],
+ "fields": [
+  {
+   "fieldname": "criterion",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Criterion",
+   "options": "Team KPI Performance\nTeam Retention\nDownward Feedback Score\nDecision Quality\nConflict & Escalation Record\nTeam Development\nStaff Development Rate\nTeam KPI Trajectory",
+   "reqd": 1
+  },
+  {
+   "fieldname": "score_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Score %"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Evidence"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "How the score was derived (e.g. HR turnover data, team survey, KPI averages)",
+   "fieldname": "data_source",
+   "fieldtype": "Small Text",
+   "label": "Data Source"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-30 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Leadership Scorecard",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

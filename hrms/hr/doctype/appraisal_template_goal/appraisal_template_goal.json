@@ -7,7 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "key_result_area",
-  "per_weightage"
+  "kpi",
+  "kpi_description",
+  "per_weightage",
+  "column_break_tg",
+  "default_target",
+  "unit_of_measure"
  ],
  "fields": [
   {
@@ -29,12 +34,47 @@
    "label": "KRA",
    "options": "KRA",
    "reqd": 1
+  },
+  {
+   "fieldname": "kpi",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "KPI",
+   "options": "KPI",
+   "reqd": 1
+  },
+  {
+   "fieldname": "kra_category",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Category",
+   "options": "\nStakeholder Goal\nFinancial Goal\nContinuous Growth Goal\nOperational Goal\nPeople Goal"
+  },
+  {
+   "fieldname": "kpi_description",
+   "fieldtype": "Small Text",
+   "label": "KPI Description"
+  },
+  {
+   "fieldname": "column_break_tg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_target",
+   "fieldtype": "Float",
+   "label": "Default Target"
+  },
+  {
+   "fieldname": "unit_of_measure",
+   "fieldtype": "Link",
+   "label": "Unit of Measure",
+   "options": "UOM"
   }
  ],
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-03-27 13:06:32.229356",
+ "modified": "2026-03-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal Template Goal",

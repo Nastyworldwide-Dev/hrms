@@ -11,9 +11,21 @@ frappe.ui.form.on("Appraisal Cycle", {
 			};
 		});
 
+		// Lock score conversion table once appraisals exist
+		let appraisals_created = frm.doc.__onload?.appraisals_created;
+		if (appraisals_created) {
+			frm.set_df_property("score_conversion_table", "read_only", 1);
+			frm.set_df_property("a1_weight_pct", "read_only", 1);
+		}
+
 		frm.trigger("show_custom_buttons");
 		frm.trigger("show_appraisal_summary");
 		frm.trigger("set_autocompletions_for_final_score_formula");
+	},
+
+	a1_weight_pct(frm) {
+		let a1 = cint(frm.doc.a1_weight_pct) || 70;
+		frm.set_value("a2_weight_pct", 80 - a1);
 	},
 
 	show_custom_buttons(frm) {
