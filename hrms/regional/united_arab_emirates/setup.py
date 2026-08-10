@@ -1,11 +1,52 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import logging
+
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+from hrms.setup import delete_custom_fields
+
+logger = logging.getLogger(__name__)
+
+# Employee identifiers required by the WPS SIF salary file
+WPS_EMPLOYEE_CUSTOM_FIELDS = {
+	"Employee": [
+		{
+			"fieldname": "labour_card_number",
+			"label": "Labour Card Number (WPS)",
+			"fieldtype": "Data",
+			"insert_after": "bank_ac_no",
+			"translatable": 0,
+		},
+		{
+			"fieldname": "wps_agent_id",
+			"label": "WPS Agent ID",
+			"fieldtype": "Data",
+			"insert_after": "labour_card_number",
+			"description": "9-digit routing code of the employee's bank or exchange house",
+			"translatable": 0,
+		},
+	]
+}
 
 
 def setup():
+	make_custom_fields()
 	create_gratuity_rules_for_uae()
+
+
+def uninstall():
+	delete_custom_fields(WPS_EMPLOYEE_CUSTOM_FIELDS)
+
+
+def make_custom_fields(update=True):
+	logger.info(
+		"[uae_setup] creating %d Employee custom fields for WPS",
+		len(WPS_EMPLOYEE_CUSTOM_FIELDS["Employee"]),
+	)
+	create_custom_fields(WPS_EMPLOYEE_CUSTOM_FIELDS, update=update)
 
 
 def create_gratuity_rules_for_uae():

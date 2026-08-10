@@ -56,7 +56,10 @@ from hrms.payroll.utils import (
 	get_component_eval_context,
 	throw_error_message,
 )
+from hrms.regional.china.utils import get_china_social_insurance
+from hrms.regional.malaysia.utils import get_eis_contribution, get_socso_contribution
 from hrms.utils.holiday_list import get_holiday_dates_between
+from hrms.utils.ot_calculation import get_ot_pay
 
 # cache keys
 HOLIDAYS_BETWEEN_DATES = "holidays_between_dates"
@@ -69,6 +72,21 @@ class SalarySlip(TransactionBase):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.whitelisted_globals = COMPONENT_EVAL_GLOBALS.copy()
+		self.whitelisted_globals.update(
+			{
+				# usage in a Salary Component formula:
+				#   get_ot_pay(employee, start_date, end_date, base)
+				"get_ot_pay": get_ot_pay,
+				# Malaysia statutory schedules:
+				#   get_socso_contribution(base, 'employee'|'employer')
+				#   get_eis_contribution(base)
+				"get_socso_contribution": get_socso_contribution,
+				"get_eis_contribution": get_eis_contribution,
+				# China social insurance / housing fund (city-specific bands):
+				#   get_china_social_insurance(base, 'pension', 'employee', 'shanghai')
+				"get_china_social_insurance": get_china_social_insurance,
+			}
+		)
 
 	@property
 	def default_series(self):
@@ -1825,7 +1843,7 @@ class SalarySlip(TransactionBase):
 		)
 
 		# Structured tax amount
-		eval_locals, default_data = self.get_data_for_eval()
+		eval_locals, _default_data = self.get_data_for_eval()
 		self.total_structured_tax_amount, __ = calculate_tax_by_tax_slab(
 			self.total_taxable_earnings_without_full_tax_addl_components,
 			self.tax_slab,

@@ -295,7 +295,7 @@
  "icon": "fa fa-flag",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-08 17:39:39.847210",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Salary Component",
@@ -304,28 +304,13 @@
  "permissions": [
   {
    "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Employee"
-  },
-  {
-   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "HR Manager",
+   "role": "HR User",
    "share": 1,
    "write": 1
   }

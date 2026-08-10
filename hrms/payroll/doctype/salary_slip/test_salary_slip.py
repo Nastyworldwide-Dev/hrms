@@ -924,7 +924,7 @@ class TestSalarySlip(HRMSTestSuite):
 
 	def test_payroll_frequency(self):
 		fiscal_year = get_fiscal_year(nowdate(), company="_Test Company")[0]
-		month = "%02d" % getdate(nowdate()).month
+		month = f"{getdate(nowdate()).month:02d}"
 		m = get_month_details(fiscal_year, month)
 
 		for payroll_frequency in ["Monthly", "Bimonthly", "Fortnightly", "Weekly", "Daily"]:

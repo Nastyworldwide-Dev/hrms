@@ -1,0 +1,67 @@
+[
+    {
+        "doctype": "Salary Component",
+        "salary_component": "EPF Employee",
+        "description": "KWSP/EPF employee share (11% for members under 60)",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "base * 0.11"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "EPF Employer",
+        "description": "KWSP/EPF employer share (13% for monthly wages up to RM5,000, 12% above)",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "base * 0.13 if base <= 5000 else base * 0.12"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "SOCSO Employee",
+        "description": "PERKESO employee share, banded schedule (Category 1)",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_socso_contribution(base, 'employee')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "SOCSO Employer",
+        "description": "PERKESO employer share, banded schedule (Category 1)",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_socso_contribution(base, 'employer')"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "EIS Employee",
+        "description": "SIP/EIS employee share (0.2%, banded)",
+        "type": "Deduction",
+        "exempted_from_income_tax": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_eis_contribution(base)"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "EIS Employer",
+        "description": "SIP/EIS employer share (0.2%, banded)",
+        "type": "Deduction",
+        "statistical_component": 1,
+        "do_not_include_in_total": 1,
+        "amount_based_on_formula": 1,
+        "formula": "get_eis_contribution(base)"
+    },
+    {
+        "doctype": "Salary Component",
+        "salary_component": "PCB",
+        "description": "Monthly Tax Deduction (PCB/MTD) — configure a Malaysia Income Tax Slab and assign it on the Salary Structure Assignment",
+        "type": "Deduction",
+        "variable_based_on_taxable_salary": 1,
+        "is_income_tax_component": 1
+    }
+]
