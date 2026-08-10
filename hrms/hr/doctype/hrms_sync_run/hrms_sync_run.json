@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:SYNC-{#####}",
+ "creation": "2026-08-10 14:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "source_instance",
+  "status",
+  "started_at",
+  "finished_at",
+  "column_break_counts",
+  "rows_pulled",
+  "rows_written",
+  "rows_skipped",
+  "detail_section",
+  "doctypes_synced",
+  "error_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_instance",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source Instance",
+   "options": "HRMS ERP Instance",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "Running",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Running\nCompleted\nFailed\nPartial",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finished_at",
+   "fieldtype": "Datetime",
+   "label": "Finished At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_counts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Rows read from the source instance.",
+   "fieldname": "rows_pulled",
+   "fieldtype": "Int",
+   "label": "Rows Pulled",
+   "read_only": 1
+  },
+  {
+   "description": "Rows inserted or updated locally.",
+   "fieldname": "rows_written",
+   "fieldtype": "Int",
+   "label": "Rows Written",
+   "read_only": 1
+  },
+  {
+   "description": "Rows left untouched, including local rows no longer present remotely. Nothing is ever deleted.",
+   "fieldname": "rows_skipped",
+   "fieldtype": "Int",
+   "label": "Rows Skipped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "detail_section",
+   "fieldtype": "Section Break",
+   "label": "Detail"
+  },
+  {
+   "fieldname": "doctypes_synced",
+   "fieldtype": "Small Text",
+   "label": "Doctypes Synced",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_log",
+   "fieldtype": "Long Text",
+   "label": "Error Log",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-10 14:00:00",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "HRMS Sync Run",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -187,7 +187,9 @@ def get_company_hr_policy_fields():
 
 def get_custom_fields():
 	"""HR specific custom fields that need to be added to the masters in ERPNext"""
-	return {
+	from hrms.sync.runner import get_provenance_custom_fields
+
+	fields = {
 		"Company": [
 			{
 				"fieldname": "hr_and_payroll_tab",
@@ -534,6 +536,13 @@ def get_custom_fields():
 			},
 		],
 	}
+
+	# provenance stamp for cross-instance mirroring — created by the install
+	# path too, because a fresh site records every patch as already applied
+	for doctype, provenance_fields in get_provenance_custom_fields().items():
+		fields.setdefault(doctype, []).extend(provenance_fields)
+
+	return fields
 
 
 def make_fixtures():
