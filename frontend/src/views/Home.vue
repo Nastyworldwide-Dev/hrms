@@ -1,32 +1,46 @@
 <template>
 	<BaseLayout>
 		<template #body>
-			<div class="flex flex-col items-center my-7 p-4 gap-7">
-				<CheckInPanel />
-				<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
-				<RequestPanel />
+			<div
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-2 lg:gap-0 lg:p-7"
+			>
+				<div class="flex flex-col gap-8 lg:pr-8">
+					<CheckInPanel />
+					<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
+				</div>
+				<div class="lg:border-l lg:border-divider lg:pl-8">
+					<RequestPanel />
+				</div>
 			</div>
+			<PushNotificationPrompt />
 		</template>
 	</BaseLayout>
 </template>
 
 <script setup>
-import { inject, markRaw } from "vue"
+import { computed, inject, markRaw } from "vue"
+
+import { userResource } from "@/data/user"
+import { hasHRRole } from "@/utils/issueBoard"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
+import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import EmployeeAdvanceIcon from "@/components/icons/EmployeeAdvanceIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
+import KPIIcon from "@/components/icons/KPIIcon.vue"
+import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 const __ = inject("$translate")
 
-const quickLinks = [
+const isHR = computed(() => hasHRRole(userResource.data?.roles))
+
+const baseQuickLinks = [
 	{
 		icon: markRaw(AttendanceIcon),
 		title: __("Request Attendance"),
@@ -53,9 +67,25 @@ const quickLinks = [
 		route: "EmployeeAdvanceFormView",
 	},
 	{
-		icon: markRaw(SalaryIcon),
-		title: __("View Salary Slips"),
-		route: "SalarySlipsDashboard",
+		icon: markRaw(KPIIcon),
+		title: __("My KPI"),
+		route: "KPIDashboard",
+	},
+	{
+		icon: markRaw(SupportIcon),
+		title: __("Report an Issue"),
+		route: "EmployeeIssueFormView",
 	},
 ]
+
+// same destination for both — the Issues tab renders the board for HR roles
+// and the personal list for everyone else; only the label differs
+const quickLinks = computed(() => [
+	...baseQuickLinks,
+	{
+		icon: markRaw(SupportIcon),
+		title: isHR.value ? __("Issue Board") : __("My Issues"),
+		route: "EmployeeIssueListView",
+	},
+])
 </script>

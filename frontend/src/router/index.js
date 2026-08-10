@@ -2,10 +2,12 @@ import { createRouter, createWebHistory } from "@ionic/vue-router"
 
 import TabbedView from "@/views/TabbedView.vue"
 import attendanceRoutes from "./attendance"
+import otRoutes from "./ot"
 import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import employeeAdvanceRoutes from "./advances"
-import salarySlipRoutes from "./salary_slips"
+import issueRoutes from "./issues"
+import sopRoutes from "./sop"
 
 const routes = [
 	{
@@ -41,9 +43,29 @@ const routes = [
 				component: () => import("@/views/expense_claim/Dashboard.vue"),
 			},
 			{
-				path: "/dashboard/salary-slips",
-				name: "SalarySlipsDashboard",
-				component: () => import("@/views/salary_slip/Dashboard.vue"),
+				path: "/dashboard/kpi",
+				name: "KPIDashboard",
+				component: () => import("@/views/kpi/Dashboard.vue"),
+			},
+			{
+				// lives in the tab shell (bottom tabs / side nav stay visible);
+				// renders the HR board or the personal list depending on role
+				path: "/issues",
+				name: "EmployeeIssueListView",
+				component: () => import("@/views/issues/IssuesTab.vue"),
+			},
+			{
+				// SOP library tab: one list for everyone, HR additionally gets
+				// every department group, drafts and the authoring sheet
+				path: "/sop",
+				name: "SopListView",
+				component: () => import("@/views/sop/SopList.vue"),
+			},
+			{
+				// overflow hub for the phone tab bar (Issues, SOPs)
+				path: "/more",
+				name: "MoreView",
+				component: () => import("@/views/More.vue"),
 			},
 		],
 	},
@@ -78,15 +100,33 @@ const routes = [
 		component: () => import("@/views/ChangePassword.vue"),
 	},
 	{
+		path: "/hr-contacts",
+		name: "HRContacts",
+		component: () => import("@/views/HRContacts.vue"),
+	},
+	{
+		path: "/remote-approvals",
+		name: "RemoteApprovals",
+		component: () => import("@/views/RemoteApprovals.vue"),
+	},
+	{
 		path: "/invalid-employee",
 		name: "InvalidEmployee",
 		component: () => import("@/views/InvalidEmployee.vue"),
 	},
-	...attendanceRoutes,
-	...leaveRoutes,
-	...claimRoutes,
-	...employeeAdvanceRoutes,
-	...salarySlipRoutes,
+	{
+		path: "/",
+		component: () => import("@/views/FormShell.vue"),
+		children: [
+			...attendanceRoutes,
+			...otRoutes,
+			...leaveRoutes,
+			...claimRoutes,
+			...employeeAdvanceRoutes,
+			...issueRoutes,
+			...sopRoutes,
+		],
+	},
 ]
 
 const router = createRouter({

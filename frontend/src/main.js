@@ -32,6 +32,8 @@ import "@ionic/vue/css/core.css"
 import "./theme/variables.css"
 
 import "./main.css"
+import "./theme/modernist.css"
+import "./data/theme"
 
 const app = createApp(App)
 const socket = initSocket()

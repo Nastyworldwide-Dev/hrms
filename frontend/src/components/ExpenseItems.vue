@@ -2,10 +2,10 @@
 	<!-- Table -->
 	<div
 		v-if="doc?.expenses"
-		class="flex flex-col bg-white mt-5 rounded border overflow-auto"
+		class="flex flex-col mt-5 border-t-2 border-divider overflow-auto"
 	>
 		<div
-			class="flex flex-row p-3.5 items-center justify-between cursor-pointer"
+			class="flex flex-row py-3.5 px-0.5 items-center justify-between cursor-pointer border-b border-divider"
 			v-for="(item, idx) in doc?.expenses"
 			:key="idx"
 		>
@@ -13,10 +13,10 @@
 				<div class="flex flex-row items-center justify-between">
 					<div class="flex flex-row items-start gap-3 grow">
 						<div class="flex flex-col items-start gap-1.5">
-							<div class="text-base font-normal text-gray-800">
+							<div class="text-[15px] font-semibold text-inkbase">
 								{{ __(item.expense_type) }}
 							</div>
-							<div class="text-xs font-normal text-gray-500">
+							<div class="text-xs font-normal text-ink-600">
 								<span>
 									{{
 										__("{0}: {1}", [
@@ -32,7 +32,7 @@
 							</div>
 						</div>
 					</div>
-					<span class="text-gray-700 font-normal rounded text-base">
+					<span class="text-[15px] font-bold tabular-nums text-inkbase">
 						{{ formatCurrency(item.amount, doc.currency) }}
 					</span>
 				</div>

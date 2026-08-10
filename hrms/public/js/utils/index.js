@@ -179,6 +179,19 @@ $.extend(hrms, {
 		});
 	},
 
+	// Populate an attendance-timezone picker. Mirrors how Frappe fills
+	// System Settings' own time_zone Select, but through an HR-readable
+	// endpoint (frappe's loader is System Manager-only).
+	set_timezone_options: async (frm, fieldname) => {
+		if (!hrms._timezones) {
+			const { message } = await frappe.call({
+				method: "hrms.api.system_settings.get_timezones",
+			});
+			hrms._timezones = message || [];
+		}
+		frm.set_df_property(fieldname, "options", [""].concat(hrms._timezones));
+	},
+
 	fetch_geolocation: async (frm) => {
 		if (!navigator.geolocation) {
 			frappe.msgprint({
@@ -216,6 +229,177 @@ $.extend(hrms, {
 				});
 			},
 		);
+	},
+
+	capture_selfie: async (frm) => {
+		// Selfie check-in/check-out: opens the device camera, captures a JPEG,
+		// uploads via /api/method/upload_file, and sets the `selfie_image`
+		// field. Mirrors the React CheckInDialog used in the ncig-merchandiser
+		// POS app (front camera, 4:3 aspect, mirrored preview, 0.8 quality).
+		console.info("[Selfie] capture_selfie invoked for", frm.doctype, frm.doc.name);
+
+		if (!navigator.mediaDevices?.getUserMedia) {
+			frappe.msgprint({
+				message: __("Camera is not supported by your current browser"),
+				title: __("Camera Error"),
+				indicator: "red",
+			});
+			return;
+		}
+
+		let stream = null;
+		let captured_data_url = null;
+
+		const dialog = new frappe.ui.Dialog({
+			title: __("Capture Selfie"),
+			fields: [
+				{
+					fieldname: "selfie_html",
+					fieldtype: "HTML",
+					options: `
+						<div class="selfie-wrap" style="text-align:center;">
+							<div style="position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3;">
+								<video class="selfie-video" autoplay playsinline muted
+									style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
+								<img class="selfie-preview" alt="Selfie preview"
+									style="display:none;width:100%;height:100%;object-fit:cover;" />
+							</div>
+							<canvas class="selfie-canvas" style="display:none;"></canvas>
+							<div class="selfie-error text-danger small mt-2" style="display:none;"></div>
+						</div>
+					`,
+				},
+			],
+			primary_action_label: __("Take Photo"),
+			primary_action: () => takePhoto(),
+			secondary_action_label: __("Cancel"),
+			secondary_action: () => dialog.hide(),
+		});
+
+		const $wrap = $(dialog.body).find(".selfie-wrap");
+		const $video = $wrap.find(".selfie-video");
+		const $preview = $wrap.find(".selfie-preview");
+		const $canvas = $wrap.find(".selfie-canvas");
+		const $error = $wrap.find(".selfie-error");
+
+		const startCamera = async () => {
+			try {
+				stream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						facingMode: "user",
+						width: { ideal: 640 },
+						height: { ideal: 480 },
+					},
+				});
+				$video[0].srcObject = stream;
+				$error.hide();
+				console.info("[Selfie] Camera started");
+			} catch (err) {
+				console.error("[Selfie] Camera error:", err);
+				$error
+					.text(__("Camera access denied. Please allow camera permission."))
+					.show();
+			}
+		};
+
+		const stopCamera = () => {
+			if (stream) {
+				stream.getTracks().forEach((t) => t.stop());
+				stream = null;
+				console.info("[Selfie] Camera stopped");
+			}
+		};
+
+		const takePhoto = () => {
+			const video = $video[0];
+			const canvas = $canvas[0];
+			if (!video || !video.videoWidth) {
+				console.warn("[Selfie] Video not ready");
+				return;
+			}
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			const ctx = canvas.getContext("2d");
+			// Mirror the front-camera frame so the saved image matches preview.
+			ctx.translate(canvas.width, 0);
+			ctx.scale(-1, 1);
+			ctx.drawImage(video, 0, 0);
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+			captured_data_url = canvas.toDataURL("image/jpeg", 0.8);
+			$preview.attr("src", captured_data_url).show();
+			$video.hide();
+			stopCamera();
+
+			dialog.set_primary_action(__("Use Photo"), () =>
+				uploadAndAttach(captured_data_url),
+			);
+			dialog.set_secondary_action_label(__("Retake"));
+			dialog.set_secondary_action(retake);
+			console.info("[Selfie] Photo captured, awaiting confirmation");
+		};
+
+		const retake = async () => {
+			captured_data_url = null;
+			$preview.hide();
+			$video.show();
+			dialog.set_primary_action(__("Take Photo"), takePhoto);
+			dialog.set_secondary_action_label(__("Cancel"));
+			dialog.set_secondary_action(() => dialog.hide());
+			await startCamera();
+		};
+
+		const uploadAndAttach = async (data_url) => {
+			frappe.dom.freeze(__("Uploading selfie") + "...");
+			try {
+				const blob = await (await fetch(data_url)).blob();
+				const filename = `selfie-${frm.doctype}-${frm.doc.name || "new"}-${Date.now()}.jpg`;
+				const file = new File([blob], filename, { type: "image/jpeg" });
+
+				const fd = new FormData();
+				fd.append("file", file, filename);
+				fd.append("is_private", "0");
+				// Only pass doctype/docname/fieldname when we have a real, saved
+				// docname — otherwise Frappe's upload_file throws "Attached To Name
+				// must be a string or an integer". For unsaved records, upload the
+				// file standalone and just write the returned file_url to selfie_image.
+				if (frm.doc.name && !frm.doc.__islocal) {
+					fd.append("doctype", frm.doctype);
+					fd.append("docname", frm.doc.name);
+					fd.append("fieldname", "selfie_image");
+				}
+
+				const res = await fetch("/api/method/upload_file", {
+					method: "POST",
+					headers: { "X-Frappe-CSRF-Token": frappe.csrf_token },
+					body: fd,
+				});
+				const out = await res.json();
+				if (!res.ok || !out?.message?.file_url) {
+					throw new Error(out?.exception || __("Upload failed"));
+				}
+				await frm.set_value("selfie_image", out.message.file_url);
+				frappe.show_alert({
+					message: __("Selfie captured"),
+					indicator: "green",
+				});
+				console.info("[Selfie] Uploaded:", out.message.file_url);
+				dialog.hide();
+			} catch (err) {
+				console.error("[Selfie] Upload error:", err);
+				frappe.msgprint({
+					message: __("Failed to attach selfie: {0}", [err.message || err]),
+					title: __("Upload Error"),
+					indicator: "red",
+				});
+			} finally {
+				frappe.dom.unfreeze();
+			}
+		};
+
+		dialog.$wrapper.on("hidden.bs.modal", stopCamera);
+		dialog.show();
+		await startCamera();
 	},
 
 	get_doctype_fields_for_autocompletion: (doctype) => {

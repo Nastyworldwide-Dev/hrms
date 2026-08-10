@@ -1,14 +1,14 @@
 <template>
 	<ion-header class="ion-no-border">
-		<div class="w-full sm:w-96">
+		<div class="w-full sm:max-w-2xl sm:mx-auto lg:max-w-none lg:mx-0">
 			<div
-				class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b"
+				class="flex flex-row bg-ground py-4 px-3 items-center justify-between border-b border-divider lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<div class="flex flex-row items-center">
-					<Button variant="ghost" class="!px-1 mr-1 hover:bg-white" @click="router.back()">
-						<FeatherIcon name="chevron-left" class="h-5 w-5" />
+					<Button variant="ghost" class="!px-1 mr-1 hover:bg-transparent" @click="router.back()">
+						<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 					</Button>
-					<h2 class="text-xl font-semibold text-gray-900">{{ pageTitle }}</h2>
+					<h2 class="text-xl font-extrabold text-inkbase tracking-tight">{{ pageTitle }}</h2>
 				</div>
 
 				<div class="flex flex-row gap-2">
@@ -18,8 +18,8 @@
 						variant="subtle"
 						:class="[
 							areFiltersApplied
-								? '!border !border-gray-800 !bg-white !text-gray-900 !font-semibold'
-								: '',
+								? '!border !border-accent !bg-accent-100 !text-accent !font-extrabold'
+								: '!border !border-divider !bg-transparent',
 						]"
 					/>
 					<router-link
@@ -45,7 +45,7 @@
 		</ion-refresher>
 
 		<div
-			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:w-96 overflow-y-auto"
+			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto bg-ground"
 			ref="scrollContainer"
 			@scroll="() => handleScroll()"
 		>
@@ -58,11 +58,11 @@
 				/>
 
 				<div
-					class="flex flex-col bg-white rounded mt-5"
+					class="flex flex-col mt-5"
 					v-if="!documents.loading && documents.data?.length"
 				>
 					<div
-						class="p-3.5 items-center justify-between border-b cursor-pointer"
+						class="py-3 items-center justify-between border-b border-divider cursor-pointer"
 						v-for="link in documents.data"
 						:key="link.name"
 					>
@@ -96,7 +96,7 @@
 
 				<!-- Loading Indicator -->
 				<div v-if="documents.loading" class="flex mt-2 items-center justify-center">
-					<LoadingIndicator class="w-8 h-8 text-gray-800" />
+					<LoadingIndicator class="w-8 h-8 text-accent" />
 				</div>
 			</div>
 		</div>
@@ -284,6 +284,8 @@ const documents = createResource({
 
 const createPermission = createResource({
 	url: "frappe.client.has_permission",
+	// Frappe's Pydantic-validated handler rejects `docname: null` — pass an
+	// empty string for the "do I have create perm at all" probe.
 	params: { doctype: props.doctype, docname: "", perm_type: "create" },
 	auto: true,
 })
@@ -403,3 +405,9 @@ onMounted(async () => {
 	useListUpdate(socket, props.doctype, () => fetchDocumentList())
 })
 </script>
+
+<style scoped>
+ion-content {
+	--background: var(--color-bg);
+}
+</style>

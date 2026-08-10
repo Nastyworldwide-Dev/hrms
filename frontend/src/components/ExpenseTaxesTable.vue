@@ -1,15 +1,15 @@
 <template>
 	<template v-if="expenseClaim.expenses">
-		<div class="flex flex-row justify-between items-center pt-4">
-			<h2 class="text-base font-semibold text-gray-800">{{ __("Taxes & Charges") }} </h2>
+		<div class="flex flex-row justify-between items-center pt-4 pb-2 border-b-2 border-divider">
+			<h2 class="m-kicker">{{ __("Taxes & Charges") }} </h2>
 			<div class="flex flex-row gap-3 items-center">
-				<span class="text-base font-semibold text-gray-800">
+				<span class="text-base font-extrabold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
 				</span>
 				<Button
 					v-if="!isReadOnly"
 					id="add-taxes-modal"
-					class="text-sm"
+					class="text-sm !border !border-divider !bg-transparent"
 					icon="plus"
 					variant="subtle"
 					@click="openModal()"
@@ -19,10 +19,10 @@
 
 		<div
 			v-if="expenseClaim.taxes?.length"
-			class="flex flex-col bg-white mt-5 rounded border overflow-auto"
+			class="flex flex-col overflow-auto"
 		>
 			<div
-				class="flex flex-row p-3.5 items-center justify-between border-b cursor-pointer"
+				class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
 				v-for="(item, idx) in expenseClaim.taxes"
 				:key="item.name"
 				@click="openModal(item, idx)"
@@ -31,10 +31,10 @@
 					<div class="flex flex-row items-center justify-between">
 						<div class="flex flex-row items-start gap-3 grow">
 							<div class="flex flex-col items-start gap-1.5">
-								<div class="text-base font-normal text-gray-800">
+								<div class="text-[15px] font-semibold text-inkbase">
 									{{ item.account_head }}
 								</div>
-								<div class="text-xs font-normal text-gray-500">
+								<div class="text-xs font-normal text-ink-600">
 									<span> Rate: {{ formatCurrency(item.rate, expenseClaim.currency) }} </span>
 									<span class="whitespace-pre"> &middot; </span>
 									<span class="whitespace-nowrap">
@@ -44,10 +44,10 @@
 							</div>
 						</div>
 						<div class="flex flex-row justify-end items-center gap-2">
-							<span class="text-gray-700 font-normal rounded text-base">
+							<span class="text-inkbase font-semibold text-base">
 								{{ formatCurrency(item.total, expenseClaim.currency) }}
 							</span>
-							<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
+							<FeatherIcon name="chevron-right" class="h-5 w-5 text-ink-500" />
 						</div>
 					</div>
 				</div>
@@ -59,17 +59,18 @@
 			<template #actionSheet>
 				<!-- Add Expense Tax Action Sheet -->
 				<div
-					class="bg-white w-full flex flex-col items-center justify-center pb-5"
+					class="bg-ground w-full flex flex-col pb-5 border-t-[3px] border-inkbase"
 				>
-					<div class="w-full pt-8 pb-5 border-b text-center">
-						<span class="text-gray-900 font-bold text-xl">
+					<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
+						<div class="m-kicker">{{ __("Tax") }}</div>
+						<span class="text-inkbase font-extrabold text-[22px] leading-tight">
 							{{ modalTitle }}
 						</span>
 					</div>
 					<div
 						class="w-full flex flex-col items-center justify-center gap-5 p-4"
 					>
-						<div class="flex flex-col w-full space-y-4">
+						<div class="flex flex-col w-full space-y-4 expense-fields">
 							<FormField
 								v-for="field in taxesTableFields.data"
 								:key="field.fieldname"
@@ -93,7 +94,7 @@
 						>
 							<Button
 								v-if="editingIdx !== null"
-								class="border-red-600 text-red-600 py-5 text-sm"
+								class="!border !border-red-600 !text-red-600 !bg-transparent py-5 text-sm"
 								variant="outline"
 								theme="red"
 								@click="deleteExpenseTax()"
@@ -105,7 +106,7 @@
 							</Button>
 							<Button
 								variant="solid"
-								class="w-full py-5 text-sm disabled:bg-gray-700 disabled:text-white"
+								class="w-full py-5 text-sm !bg-accent hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
 								@click="updateExpenseTax()"
 								:disabled="addButtonDisabled"
 							>
@@ -267,3 +268,22 @@ function calculateTotalTax() {
 		parseFloat(expenseTax.value.tax_amount)
 }
 </script>
+
+<style scoped>
+.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"])),
+.expense-fields :deep(textarea),
+.expense-fields :deep(select) {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	font-size: 14px;
+	color: var(--color-text);
+}
+.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
+.expense-fields :deep(textarea:focus),
+.expense-fields :deep(select:focus) {
+	border-color: var(--color-accent);
+	box-shadow: none;
+	outline: none;
+}
+</style>

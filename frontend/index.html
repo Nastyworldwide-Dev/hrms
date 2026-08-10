@@ -12,7 +12,7 @@
 		<meta name="apple-mobile-web-app-title" content="Frappe HR" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="white" />
 		<!-- required for setting the status bar bg as white -->
-		<meta name="theme-color" content="#fff" />
+		<meta name="theme-color" content="#f3f2f2" />
 
 		<!-- PWA -->
 		<link
@@ -176,6 +176,32 @@
 			href="/assets/hrms/manifest/apple-splash-1136-640.jpg"
 			media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
 		/>
+
+		<!-- Archivo (Modernist redesign type family) -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link
+			rel="preconnect"
+			href="https://fonts.gstatic.com"
+			crossorigin
+		/>
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap"
+		/>
+
+		<!-- Leaflet (used by CheckInPanel for the live check-in map). MIT-licensed. -->
+		<link
+			rel="stylesheet"
+			href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+			integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+			crossorigin=""
+		/>
+		<script
+			src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+			integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+			crossorigin=""
+			defer
+		></script>
 	</head>
 	<body class="antialiased">
 		<div id="app"></div>

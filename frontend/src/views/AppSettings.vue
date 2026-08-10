@@ -1,50 +1,54 @@
 <template>
 	<ion-page>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+			<div class="flex flex-col h-screen w-screen bg-ground">
+				<div class="w-full max-w-[620px] mx-auto">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="ghost"
-								class="!pl-0 hover:bg-white"
+								class="!pl-0 hover:bg-transparent"
 								@click="router.back()"
 							>
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Settings") }} </h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Settings") }}</h2>
 						</div>
 					</header>
 
-					<div class="flex flex-col gap-5 my-4 w-full p-4">
-						<div class="flex flex-col bg-white rounded">
-							<div
-								class="flex flex-row cursor-pointer flex-start p-4 items-center justify-between border-b"
-							>
-								<router-link
-									:to="{ name: 'ChangePassword' }"
-									class="flex flex-row items-center justify-between w-full"
+					<div class="flex flex-col gap-4 w-full p-4">
+						<span class="m-kicker">{{ __("Appearance") }}</span>
+						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
+							<div class="flex items-center gap-3">
+								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent" />
+								<div class="flex flex-col">
+									<span class="text-sm font-semibold text-inkbase">
+										{{ __("Theme") }}
+									</span>
+									<span class="text-xs text-ink-600">{{ currentThemeLabel }}</span>
+								</div>
+							</div>
+							<div class="flex w-full border border-divider">
+								<button
+									v-for="mode in THEME_MODES"
+									:key="mode"
+									type="button"
+									class="flex-1 py-2 text-[11px] uppercase tracking-[0.08em] font-sans font-extrabold border-r border-divider last:border-r-0"
+									:class="
+										theme.mode === mode
+											? 'bg-accent text-ground'
+											: 'bg-transparent text-ink-700 hover:bg-inkbase/[0.04]'
+									"
+									@click="setTheme(mode, $event)"
 								>
-									<div class="flex flex-row items-center gap-3 grow">
-										<FeatherIcon
-											name="lock"
-											class="h-5 w-5 text-gray-500"
-										/>
-										<div class="text-base font-normal text-gray-800">
-											{{ __("Change Password") }}
-										</div>
-									</div>
-									<FeatherIcon
-										name="chevron-right"
-										class="h-5 w-5 text-gray-500"
-									/>
-								</router-link>
+									{{ __(themeLabels[mode]) }}
+								</button>
 							</div>
 						</div>
-
-						<div class="flex flex-col bg-white rounded">
+						<span class="m-kicker">{{ __("Notifications") }}</span>
+						<div class="flex flex-col border-t-2 border-divider pt-4">
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
@@ -58,12 +62,28 @@
 
 						<div
 							v-if="isLoading"
-							class="flex -mt-2 items-center justify-center gap-2"
+							class="flex -mt-1 items-center gap-2"
 						>
-							<LoadingIndicator class="w-3 h-3 text-gray-800" />
-							<span class="text-gray-900 text-sm">
+							<LoadingIndicator class="w-3 h-3 text-inkbase" />
+							<span class="text-inkbase text-sm">
 								{{ pushNotificationState ? __("Disabling Push Notifications...") : __("Enabling Push Notifications...") }}
 							</span>
+						</div>
+
+						<span class="m-kicker">{{ __("Account") }}</span>
+						<div class="flex flex-col border-t-2 border-divider pt-1">
+							<router-link
+								:to="{ name: 'ChangePassword' }"
+								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
+							>
+								<div class="flex flex-row items-center gap-3 grow">
+									<FeatherIcon name="lock" class="h-[18px] w-[18px] text-inkbase" />
+									<div class="text-[15px] text-inkbase">
+										{{ __("Change Password") }}
+									</div>
+								</div>
+								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+							</router-link>
 						</div>
 					</div>
 				</div>
@@ -79,11 +99,20 @@ import { FeatherIcon, Switch, toast, LoadingIndicator, Button } from "frappe-ui"
 
 import { computed, inject, ref } from "vue"
 
-import { arePushNotificationsEnabled } from "@/data/notifications"
+import {
+	arePushNotificationsEnabled,
+	enablePushNotifications as requestPushEnable,
+} from "@/data/notifications"
+import { theme, setTheme, THEME_MODES } from "@/data/theme"
 
 const __ = inject("$translate")
 const router = useRouter()
 
+// __("Light"), __("Dark"), __("System"), __("System default")
+const themeLabels = { light: "Light", dark: "Dark", system: "System" }
+const currentThemeLabel = computed(() =>
+	theme.mode === "system" ? __("System default") : __(themeLabels[theme.mode])
+)
 const pushNotificationState = ref(
 	window.frappePushNotification?.isNotificationEnabled()
 )
@@ -141,8 +170,7 @@ const togglePushNotifications = (newValue) => {
 const enablePushNotifications = () => {
 	isLoading.value = true
 
-	window.frappePushNotification
-		.enableNotification()
+	requestPushEnable()
 		.then((data) => {
 			if (data.permission_granted) {
 				pushNotificationState.value = true

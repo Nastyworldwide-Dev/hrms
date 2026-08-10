@@ -3,14 +3,15 @@
 		v-if="actions.length > 0"
 		:class="[
 			props.view === 'form'
-				? 'px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg'
-				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t z-[100] p-4',
+				? 'px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider'
+				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4',
 		]"
 	>
+		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">
 		<Button
 			v-if="props.view === 'form' || actions.length > 2"
 			@click="showTransitions()"
-			class="w-full rounded py-5 text-base disabled:bg-gray-700 disabled:text-white"
+			class="w-full py-5 text-base !bg-accent hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
 			variant="solid"
 		>
 			<template #prefix>
@@ -33,6 +34,7 @@
 				{{ __(action.text, null, props.doc?.doctype) }}
 			</Button>
 		</template>
+		</div>
 	</div>
 
 	<ion-action-sheet
@@ -132,6 +134,6 @@ onMounted(() => getTransitions())
 
 <style scoped>
 ion-action-sheet {
-	--button-color: var(--text-gray-500);
+	--button-color: var(--color-text);
 }
 </style>

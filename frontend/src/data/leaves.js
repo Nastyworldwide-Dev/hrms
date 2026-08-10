@@ -56,11 +56,25 @@ export const leaveBalance = createResource({
 	auto: true,
 	cache: "hrms:leave_balance",
 	transform: (data) => {
-		// Calculate balance percentage for each leave type
+		// Gauge denominator = annual entitlement; the server falls back to
+		// allocated, the || below only covers older cached payloads
 		return Object.fromEntries(
 			Object.entries(data).map(([leave_type, allocation]) => {
-				allocation.balance_percentage =
-					(allocation.balance_leaves / allocation.allocated_leaves) * 100
+				const entitlement =
+					allocation.annual_entitlement || allocation.allocated_leaves
+				allocation.annual_entitlement = entitlement
+				allocation.balance_percentage = entitlement
+					? Math.min((allocation.balance_leaves / entitlement) * 100, 100)
+					: 0
+				// band between allocated and entitlement = headroom a pro-rated
+				// joiner does not get this year
+				allocation.prorated = entitlement - allocation.allocated_leaves > 0.01
+				allocation.prorated_percentage = allocation.prorated
+					? ((entitlement - allocation.allocated_leaves) / entitlement) * 100
+					: 0
+				allocation.period_year = allocation.from_date
+					? dayjs(allocation.from_date).year()
+					: dayjs().year()
 				return [leave_type, allocation]
 			})
 		)

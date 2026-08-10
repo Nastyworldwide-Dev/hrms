@@ -1,21 +1,25 @@
 /* Ionic Variables and Theming. For more info, please see:
 http://ionicframework.com/docs/theming/ */
 
+/* Palette values mirror src/theme/modernist.css (the canonical palette) —
+   change them there first, then here. */
+
 /** Ionic CSS Variables **/
 
 :root {
-	--ion-background-color: #f4f5f6;
-	--ion-font-family: "InterVar", sans-serif;
-	--ion-tab-bar-color-selected: #525252;
+	--ion-background-color: #f3f2f2;
+	--ion-font-family: "Archivo", system-ui, sans-serif;
+	--ion-text-color: #201e1d;
+	--ion-tab-bar-color-selected: #0b313a;
 	--ion-tab-bar-background-focused: #e2e2e2;
 
 	/** primary **/
-	--ion-color-primary: #3880ff;
-	--ion-color-primary-rgb: 56, 128, 255;
-	--ion-color-primary-contrast: #ffffff;
-	--ion-color-primary-contrast-rgb: 255, 255, 255;
-	--ion-color-primary-shade: #3171e0;
-	--ion-color-primary-tint: #4c8dff;
+	--ion-color-primary: #0b313a;
+	--ion-color-primary-rgb: 11, 49, 58;
+	--ion-color-primary-contrast: #f3f2f2;
+	--ion-color-primary-contrast-rgb: 243, 242, 242;
+	--ion-color-primary-shade: #08242c;
+	--ion-color-primary-tint: #164a56;
 
 	/** secondary **/
 	--ion-color-secondary: #3dc2ff;
@@ -34,12 +38,12 @@ http://ionicframework.com/docs/theming/ */
 	--ion-color-tertiary-tint: #6370ff;
 
 	/** success **/
-	--ion-color-success: #2dd36f;
-	--ion-color-success-rgb: 45, 211, 111;
+	--ion-color-success: #1a9a74;
+	--ion-color-success-rgb: 26, 154, 116;
 	--ion-color-success-contrast: #ffffff;
 	--ion-color-success-contrast-rgb: 255, 255, 255;
-	--ion-color-success-shade: #28ba62;
-	--ion-color-success-tint: #42d77d;
+	--ion-color-success-shade: #178766;
+	--ion-color-success-tint: #31a482;
 
 	/** warning **/
 	--ion-color-warning: #ffc409;
@@ -80,4 +84,17 @@ http://ionicframework.com/docs/theming/ */
 	--ion-color-light-contrast-rgb: 0, 0, 0;
 	--ion-color-light-shade: #d7d8da;
 	--ion-color-light-tint: #f5f6f9;
+}
+
+/* Dark theme (html.dark set by src/data/theme.js) — mirrors modernist.css */
+.dark {
+	--ion-background-color: #191817;
+	--ion-text-color: #f3f2f2;
+	--ion-tab-bar-color-selected: #a1eec9;
+	--ion-color-primary: #a1eec9;
+	--ion-color-primary-rgb: 161, 238, 201;
+	--ion-color-primary-contrast: #191817;
+	--ion-color-primary-contrast-rgb: 25, 24, 23;
+	--ion-color-primary-shade: #7fdcb2;
+	--ion-color-primary-tint: #eafaf2;
 }

@@ -1,49 +1,177 @@
 <template>
-	<BaseLayout pageTitle="Attendance">
+	<BaseLayout :pageTitle="__('Attendance')">
 		<template #body>
-			<div class="flex flex-col mt-7 mb-7 p-4 gap-7">
-				<AttendanceCalendar />
-				<div class="w-full">
-					<router-link :to="{ name: 'AttendanceRequestFormView' }" v-slot="{ navigate }">
-						<Button @click="navigate" variant="solid" class="w-full py-5 text-base">
-							{{ __("Request Attendance") }}
-						</Button>
-					</router-link>
+			<div
+				class="flex flex-col px-4 pt-6 pb-8 gap-8 lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+			>
+				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
+					<div class="order-1"><AttendanceCalendar /></div>
 				</div>
-				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Attendance Requests") }}</div>
+
+				<div
+					class="contents lg:grid lg:grid-cols-2 lg:gap-x-3 lg:gap-y-8 lg:content-start lg:items-stretch lg:border-l lg:border-divider lg:pl-8"
+				>
+
+				<router-link
+					:to="{ name: 'AttendanceRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-2 lg:order-1"
+				>
+					<button type="button" class="m-btn-primary h-full" @click="navigate">
+						{{ __("Request Attendance") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<router-link
+					:to="{ name: 'OTRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-6 lg:order-3"
+				>
+					<button
+						type="button"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						@click="navigate"
+					>
+						{{ __("Request Overtime") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<router-link
+					:to="{ name: 'ReplacementLeaveView' }"
+					v-slot="{ navigate }"
+					class="order-7 lg:order-4"
+				>
+					<button
+						type="button"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						@click="navigate"
+					>
+						{{ __("Replacement Leave") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<router-link
+					:to="{ name: 'ShiftRequestFormView' }"
+					v-slot="{ navigate }"
+					class="order-5 lg:order-2"
+				>
+					<button
+						type="button"
+						class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
+						@click="navigate"
+					>
+						{{ __("Request a Shift") }}
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-auto"
+						>
+							<line x1="5" y1="12" x2="19" y2="12" />
+							<polyline points="12 5 19 12 12 19" />
+						</svg>
+					</button>
+				</router-link>
+
+				<div class="order-3 lg:order-3 lg:col-span-2">
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker">{{ __("Recent Attendance Requests") }}</span>
+						<router-link
+							:to="{ name: 'AttendanceRequestListView' }"
+							class="text-[11px] text-accent underline underline-offset-[3px]"
+						>
+							{{ __("View list") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
 					<RequestList
 						:component="markRaw(AttendanceRequestItem)"
 						:items="myAttendanceRequests?.data?.slice(0, 5)"
-						:addListButton="true"
-						:listButtonRoute="__('AttendanceRequestListView')"
 					/>
 				</div>
-				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Upcoming Shifts") }}</div>
+
+				<div class="order-4 lg:order-4 lg:col-span-2">
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker">{{ __("Upcoming Shifts") }}</span>
+						<router-link
+							:to="{ name: 'ShiftAssignmentListView' }"
+							class="text-[11px] text-accent underline underline-offset-[3px]"
+						>
+							{{ __("View list") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
 					<RequestList
 						:component="markRaw(ShiftAssignmentItem)"
 						:items="upcomingShifts"
-						:addListButton="true"
-						listButtonRoute="ShiftAssignmentListView"
 						:emptyStateMessage="__('You have no upcoming shifts')"
 					/>
 				</div>
-				<div class="w-full">
-					<router-link :to="{ name: 'ShiftRequestFormView' }" v-slot="{ navigate }">
-						<Button @click="navigate" variant="solid" class="w-full py-5 text-base">
-							{{ __("Request a Shift") }}
-						</Button>
-					</router-link>
-				</div>
-				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Shift Requests") }}</div>
+
+
+				<div class="order-6 lg:order-5 lg:col-span-2">
+					<div class="flex items-baseline justify-between mb-2.5">
+						<span class="m-kicker">{{ __("Recent Shift Requests") }}</span>
+						<router-link
+							:to="{ name: 'ShiftRequestListView' }"
+							class="text-[11px] text-accent underline underline-offset-[3px]"
+						>
+							{{ __("View list") }}
+						</router-link>
+					</div>
+					<hr class="m-rule" />
 					<RequestList
 						:component="markRaw(ShiftRequestItem)"
 						:items="myShiftRequests?.data?.slice(0, 5)"
-						:addListButton="true"
-						listButtonRoute="ShiftRequestListView"
 					/>
+					</div>
 				</div>
 			</div>
 		</template>

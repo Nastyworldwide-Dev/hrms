@@ -1,40 +1,65 @@
 <template>
 	<div class="flex flex-col w-full">
-		<div class="flex flex-row justify-between items-center px-4">
-			<div class="text-lg text-gray-800 font-bold">{{ __("Leave Balance") }} </div>
+		<div class="flex flex-row items-baseline justify-between mb-3">
+			<span class="m-kicker">{{ __("Leave Balance") }}</span>
 			<router-link
 				:to="{ name: 'LeaveApplicationListView' }"
 				v-slot="{ navigate }"
 				v-if="leaveBalance.data"
 			>
-				<div
+				<span
 					@click="navigate"
-					class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
+					class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
 				>
 					{{ __("View Leave History") }}
-				</div>
+				</span>
 			</router-link>
 		</div>
 
-		<!-- Leave Balance Dashboard -->
+		<!-- Leave Balance stat cells -->
 		<div
-			class="flex flex-row gap-4 overflow-x-auto py-2 mt-3"
-			v-if="leaveBalance.data"
+			class="grid grid-cols-3 border-t-2 border-divider"
+			v-if="hasBalances"
 		>
 			<div
 				v-for="(allocation, leave_type, index) in leaveBalance.data"
 				:key="leave_type"
-				class="flex flex-col bg-white border-none rounded-lg drop-shadow-md gap-2 p-4 items-start first:ml-4"
+				class="flex flex-col gap-1.5 px-3 py-3.5"
+				:class="index % 3 !== 0 ? 'border-l border-divider' : ''"
 			>
-				<SemicircleChart
-					:percentage="allocation.balance_percentage"
-					:colorClass="getChartColor(index)"
-				/>
-				<div class="text-gray-800 font-bold text-base">
-					{{ `${allocation.balance_leaves}/${allocation.allocated_leaves}` }}
+				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
+					{{ formatLeaveDays(allocation.balance_leaves) }}
 				</div>
-				<div class="text-gray-600 font-normal text-sm w-24 leading-4">
-					{{ __("{0} balance", [__(leave_type, null, "Leave Type")]) }}
+				<div class="m-bar" style="height: 4px">
+					<div
+						class="m-bar-fill"
+						:style="{ width: `${allocation.balance_percentage}%` }"
+					></div>
+					<div
+						v-if="allocation.prorated"
+						class="m-bar-band"
+						:style="{ width: `${allocation.prorated_percentage}%` }"
+					></div>
+				</div>
+				<div class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
+					{{ __(leave_type, null, "Leave Type") }}
+				</div>
+				<div
+					v-if="allocation.prorated"
+					class="text-[9px] text-ink-600 leading-tight"
+				>
+					{{
+						__("Pro-rated: {0} allocated for {1}", [
+							formatLeaveDays(allocation.allocated_leaves),
+							allocation.period_year,
+						])
+					}}
+				</div>
+				<div
+					v-if="allocation.carry_forwarded_leaves > 0"
+					class="text-[9px] text-ink-600 leading-tight"
+				>
+					{{ __("incl. carry-forward") }}
 				</div>
 			</div>
 		</div>
@@ -44,14 +69,15 @@
 </template>
 
 <script setup>
-import SemicircleChart from "@/components/SemicircleChart.vue"
 import { leaveBalance } from "@/data/leaves"
-import { inject } from "vue"
+import { formatLeaveDays } from "@/utils/formatters"
+import { computed, inject } from "vue"
 
 const __ = inject("$translate")
-const getChartColor = (index) => {
-	// note: tw colors - rose-400, pink-400 & purple-500 of the old frappeui palette #918ef5
-	const chartColors = ["text-[#fb7185]", "text-[#f472b6]", "text-[#918ef5]"]
-	return chartColors[index % chartColors.length]
-}
+
+// an empty map {} is truthy — without this check the section renders as a
+// bare rule instead of the "no leaves allocated" empty state
+const hasBalances = computed(
+	() => leaveBalance.data && Object.keys(leaveBalance.data).length > 0
+)
 </script>

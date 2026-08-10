@@ -1,22 +1,22 @@
 <template>
-	<div class="flex flex-col h-full w-full" v-if="isFormReady">
-		<div class="w-full h-full bg-white sm:w-96 flex flex-col">
+	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
+		<div class="w-full h-full bg-ground flex flex-col">
 			<header
-				class="flex flex-row bg-white shadow-sm py-4 px-3 items-center sticky top-0 z-[1000]"
+				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000] lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<Button
 					variant="ghost"
-					class="!pl-0 hover:bg-white"
-					@click="router.back()"
+					class="!pl-0 hover:bg-transparent lg:hidden"
+					@click="goBackOrHome(router)"
 				>
-					<FeatherIcon name="chevron-left" class="h-5 w-5" />
+					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 				</Button>
 				<div
 					v-if="id"
 					class="flex flex-row items-center gap-2 overflow-hidden grow"
 				>
 					<h2
-						class="text-xl font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
+						class="text-xl font-extrabold text-inkbase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
 					>
 						{{ __(props.doctype) }}
 					</h2>
@@ -54,27 +54,45 @@
 						}"
 					/>
 				</div>
-				<h2 v-else class="text-2xl font-semibold text-gray-900">
+				<h2
+					v-else
+					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-[19px]"
+				>
 					{{ __('New {0}', [__(doctype)], props.doctype) }}
 				</h2>
+				<span
+					v-if="!id"
+					class="hidden lg:inline ml-auto text-[10px] uppercase tracking-[0.1em] text-ink-600"
+				>
+					{{ dateKicker }}
+				</span>
 			</header>
 
 			<!-- Form -->
-			<div class="bg-white grow overflow-y-auto">
+			<div class="bg-ground grow overflow-y-auto">
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
+				<button
+					type="button"
+					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-600 hover:text-inkbase"
+					@click="goBackOrHome(router)"
+				>
+					<FeatherIcon name="arrow-left" class="h-4 w-4" />
+					{{ __("Back") }}
+				</button>
 				<!-- Tabs -->
 				<template v-if="tabbedView">
 					<div
-						class="px-4 sticky top-0 z-[100] bg-white text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700"
+						class="px-4 sticky top-0 z-[100] bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 					>
 						<ul class="flex -mb-px overflow-auto hide-scrollbar">
 							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs">
 								<button
 									@click="activeTab = tab.name"
-									class="inline-block py-4 px-2 border-b-2 border-transparent rounded-t-lg"
+									class="inline-block py-4 px-2 border-b-2 border-transparent"
 									:class="[
 										activeTab === tab.name
-											? '!text-gray-800 !border-gray-800'
-											: 'hover:text-gray-600 hover:border-gray-300',
+											? '!text-accent !border-accent !font-extrabold'
+											: 'hover:text-inkbase hover:border-divider',
 									]"
 								>
 									{{ __(tab.name, null, props.doctype) }}
@@ -120,8 +138,8 @@
 								class="flex flex-row gap-2 items-center justify-center p-5"
 								v-if="isFileUploading"
 							>
-								<LoadingIndicator class="w-3 h-3 text-gray-800" />
-								<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+								<LoadingIndicator class="w-3 h-3 text-accent" />
+								<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 							</div>
 
 							<FileUploaderView
@@ -159,8 +177,8 @@
 						class="flex flex-row gap-2 items-center justify-center p-5"
 						v-if="isFileUploading"
 					>
-						<LoadingIndicator class="w-3 h-3 text-gray-800" />
-						<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+						<LoadingIndicator class="w-3 h-3 text-accent" />
+						<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 					</div>
 
 					<FileUploaderView
@@ -170,15 +188,18 @@
 						@handleFileDelete="handleFileDelete"
 					/>
 				</div>
+				</div>
 			</div>
 
 			<!-- Form Primary/Secondary Button -->
 			<!-- custom form button eg: Download button in salary slips -->
 			<div
 				v-if="!showFormButton"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<slot name="formButton"></slot>
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
+					<slot name="formButton"></slot>
+				</div>
 			</div>
 
 			<!-- workflow actions -->
@@ -192,8 +213,9 @@
 			<!-- save/submit/cancel -->
 			<div
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
-				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
 				<ErrorMessage
 					class="mb-2"
 					:message="
@@ -204,8 +226,10 @@
 				/>
 
 				<Button
-					class="w-full rounded py-5 text-base disabled:bg-gray-700 disabled:text-white"
-					:class="formButton === 'Cancel' ? 'shadow' : ''"
+					class="w-full py-5 text-base disabled:opacity-60"
+					:class="formButton === 'Cancel'
+						? '!bg-transparent !border !border-divider !text-inkbase'
+						: '!bg-accent hover:!bg-accent-600 !text-ground !border-none'"
 					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 					:variant="formButton === 'Cancel' ? 'subtle' : 'solid'"
 					:loading="
@@ -214,6 +238,7 @@
 				>
 					{{ __(formButton) }}
 				</Button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -317,6 +342,8 @@
 <script setup>
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
+
+import { goBackOrHome } from "@/utils/navigation"
 import {
 	ErrorMessage,
 	Badge,
@@ -375,6 +402,11 @@ const props = defineProps({
 		required: false,
 		default: false,
 	},
+	requireAttachment: {
+		type: Boolean,
+		required: false,
+		default: false,
+	},
 	showFormButton: {
 		type: Boolean,
 		required: false,
@@ -391,6 +423,13 @@ const router = useRouter()
 const { downloadPDF } = useDownloadPDF()
 
 const __ = inject("$translate")
+const $dayjs = inject("$dayjs")
+const employee = inject("$employee")
+
+// Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
+const dateKicker = computed(() =>
+	$dayjs().format("dddd, D MMMM YYYY").toUpperCase()
+)
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
@@ -608,11 +647,26 @@ const permittedWriteFields = createResource({
 	params: { doctype: props.doctype },
 })
 
+// doctypes whose server controller rejects submit until the approver has
+// set one of these statuses — offering Submit earlier can only ever error
+const SUBMIT_REQUIRES_STATUS = {
+	"Leave Application": ["Approved", "Rejected"],
+	"Shift Request": ["Approved", "Rejected"],
+}
+
 const formButton = computed(() => {
 	if (!props.showFormButton) return
 
 	if (props.id && props.isSubmittable && !isFormDirty.value) {
-		if (formModel.value.docstatus === 0 && hasPermission("submit")) {
+		const requiredStatuses = SUBMIT_REQUIRES_STATUS[props.doctype]
+		const submitBlocked =
+			(requiredStatuses && !requiredStatuses.includes(formModel.value.status)) ||
+			// Attendance Request: submitting IS the approval — the server rejects
+			// self-submission, so never offer Submit on your own request
+			(props.doctype === "Attendance Request" &&
+				formModel.value.employee === employee.data?.name)
+
+		if (formModel.value.docstatus === 0 && hasPermission("submit") && !submitBlocked) {
 			return "Submit"
 		} else if (formModel.value.docstatus === 1 && hasPermission("cancel")) {
 			return "Cancel"
@@ -640,6 +694,10 @@ function isFieldReadOnly(field) {
 
 function handleDocInsert() {
 	if (!validateMandatoryFields()) return
+	if (props.requireAttachment && !fileAttachments.value.length) {
+		formErrorMessage.value = __("A supporting attachment is required")
+		return
+	}
 	docList.insert.submit(formModel.value)
 }
 
@@ -785,3 +843,23 @@ onMounted(async () => {
 	}
 })
 </script>
+
+<style scoped>
+/* Modernist form controls: surface fill, hairline divider border, square, 14px. */
+.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"])),
+.form-view-root :deep(textarea),
+.form-view-root :deep(select) {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	font-size: 14px;
+	color: var(--color-text);
+}
+.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
+.form-view-root :deep(textarea:focus),
+.form-view-root :deep(select:focus) {
+	border-color: var(--color-accent);
+	box-shadow: none;
+	outline: none;
+}
+</style>

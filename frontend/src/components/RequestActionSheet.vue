@@ -1,26 +1,29 @@
 <template>
 	<div
 		v-if="document?.doc"
-		class="bg-white w-full flex flex-col items-center justify-center pb-5 max-h-[calc(100vh-5rem)]"
+		class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
 	>
 		<!-- Header -->
 		<div
-			class="w-full flex flex-row gap-2 pt-8 pb-5 border-b justify-center items-center sticky top-0 z-[100]"
+			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-[100] bg-ground"
 		>
-			<span class="text-gray-900 font-bold text-lg text-center">
-				{{ __(document?.doctype) }}
-			</span>
+			<div class="flex flex-col gap-1">
+				<div class="m-kicker">{{ __("Request") }}</div>
+				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+					{{ __(document?.doctype) }}
+				</span>
+			</div>
 			<FeatherIcon
 				v-if="props.showOpenForm"
 				name="external-link"
-				class="h-4 w-4 text-gray-500 cursor-pointer"
+				class="h-4 w-4 text-ink-600 cursor-pointer shrink-0"
 				@click="openFormView"
 			/>
 		</div>
 
 		<!-- Request Summary -->
-		<div class="w-full p-4 overflow-auto">
-			<div class="flex flex-col items-center justify-center gap-5">
+		<div class="w-full px-4 overflow-auto">
+			<div class="flex flex-col w-full">
 				<div
 					v-for="field in fieldsWithValues"
 					:key="field.fieldname"
@@ -28,12 +31,12 @@
 						['Small Text', 'Text', 'Long Text', 'Table', 'geolocation'].includes(
 							field.fieldtype
 						)
-							? 'flex-col'
-							: 'flex-row items-center justify-between',
-						'flex w-full',
+							? 'flex-col gap-1'
+							: 'flex-row items-center justify-between gap-4',
+						'flex w-full py-3 border-b border-divider last:border-b-0',
 					]"
 				>
-					<div class="text-gray-600 text-base">{{ __(field.label, null, props.modelValue?.doctype) }}</div>
+					<div class="text-ink-600 text-xs shrink-0">{{ __(field.label, null, props.modelValue?.doctype) }}</div>
 					<component
 						v-if="field.fieldtype === 'Table'"
 						:is="field.component"
@@ -41,6 +44,7 @@
 					/>
 					<FormattedField
 						v-else
+						class="text-sm text-inkbase text-right"
 						:value="field.value"
 						:fieldtype="field.fieldtype"
 						:fieldname="field.fieldname"
@@ -49,18 +53,18 @@
 
 				<!-- Attachments -->
 				<div
-					class="flex flex-col gap-2 w-full"
+					class="flex flex-col gap-2 w-full py-3"
 					v-if="attachedFiles?.data?.length"
 				>
-					<div class="text-gray-600 text-base">{{ __('Attachments') }}</div>
+					<div class="m-kicker">{{ __('Attachments') }}</div>
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
-							class="bg-gray-100 rounded p-2 w-full"
+							class="bg-surface border border-divider p-2 w-full"
 							v-for="(file, index) in attachedFiles.data"
 							:key="index"
 						>
 							<div
-								class="flex flex-row items-center justify-between text-gray-700 text-sm"
+								class="flex flex-row items-center justify-between text-inkbase text-sm"
 							>
 								<span class="grow" @click="showFilePreview(file)">
 									{{ file.file_name || file.name }}
@@ -82,11 +86,11 @@
 
 		<div
 			v-else-if="['Open', 'Draft'].includes(document?.doc?.[approvalField]) && hasPermission('approval')"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ status: 'Rejected' })"
-				class="w-full py-5"
+				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
 				variant="subtle"
 				theme="red"
 			>
@@ -98,9 +102,8 @@
 
 			<Button
 				@click="updateDocumentStatus({ status: 'Approved' })"
-				class="w-full py-5"
+				class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
-				theme="green"
 			>
 				<template #prefix>
 					<FeatherIcon name="check" class="w-4" />
@@ -112,15 +115,17 @@
 		<div
 			v-else-if="
 				document?.doc?.docstatus === 0 &&
-				(document?.doc?.doctype === 'Attendance Request' ||
+				(['Attendance Request', 'OT Request', 'Replacement Leave Claim'].includes(
+					document?.doc?.doctype
+				) ||
 					['Approved', 'Rejected'].includes(document?.doc?.[approvalField])) &&
 				hasPermission('submit')
 			"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 1 })"
-				class="w-full py-5"
+				class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
 			>
 				{{ __("Submit") }}
@@ -129,11 +134,11 @@
 
 		<div
 			v-else-if="document?.doc?.docstatus === 1 && hasPermission('cancel')"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 2 })"
-				class="w-full py-5"
+				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
 				variant="subtle"
 				theme="red"
 			>
@@ -305,6 +310,10 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	let updateValues = {}
 
 	if (status) updateValues[approvalField.value] = status
+	// approving IS the decision — submit in the same server call instead of
+	// making the approver tap Submit as a second step (single transaction:
+	// if submit-side validation fails, the status change rolls back too)
+	if (status === "Approved" && hasPermission("submit")) docstatus = 1
 	if (docstatus) updateValues.docstatus = docstatus
 
 	document.setValue.submit(
@@ -321,10 +330,13 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 					iconClasses: "text-green-500",
 				})
 			},
-			onError() {
+			onError(error) {
+				// the server's message says WHY (permissions, validation) —
+				// a bare "Approval failed!" is undebuggable from the field
+				console.warn("[RequestActionSheet] action failed:", error)
 				toast({
 					title: __("Error"),
-					text: getFailureMessage({ status, docstatus }),
+					text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

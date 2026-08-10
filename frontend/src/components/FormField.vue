@@ -6,7 +6,7 @@
 			:class="[
 				// mark field as mandatory
 				props.reqd ? `after:content-['_*'] after:text-red-600` : ``,
-				`block text-sm leading-5 text-gray-700`,
+				`block text-xs uppercase tracking-wide text-ink-700`,
 			]"
 		>
 			{{ props.label }}
@@ -67,7 +67,7 @@
 			@change="(v) => emit('change', v)"
 			v-bind="$attrs"
 			:disabled="isReadOnly"
-			class="rounded-sm text-gray-800"
+			class="text-accent"
 		/>
 
 		<!-- Data field -->
@@ -108,11 +108,8 @@
 			v-else-if="props.fieldtype === 'Section Break'"
 			:class="props.addSectionPadding ? 'mt-2' : ''"
 		>
-			<h2
-				v-if="props.label"
-				class="text-base font-semibold text-gray-800"
-				:class="props.addSectionPadding ? 'pt-4' : ''"
-			>
+			<hr v-if="props.addSectionPadding" class="m-rule mb-3" />
+			<h2 v-if="props.label" class="m-kicker">
 				{{ props.label }}
 			</h2>
 		</div>
@@ -134,6 +131,17 @@
 		/>
 
 		<!-- Time -->
+		<Input
+			v-else-if="props.fieldtype === 'Time'"
+			type="time"
+			:value="modelValue"
+			:placeholder="__('Select {0}', [props.label])"
+			@input="(v) => emit('update:modelValue', v)"
+			@change="(v) => emit('change', v)"
+			v-bind="$attrs"
+			:disabled="isReadOnly"
+		/>
+
 		<!-- Datetime -->
 		<DateTimePicker
 			v-else-if="props.fieldtype === 'Datetime'"

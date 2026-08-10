@@ -1,110 +1,132 @@
 <template>
 	<ion-page>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+			<div class="flex flex-col h-screen w-screen bg-ground">
+				<div class="w-full max-w-[620px] mx-auto">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="ghost"
-								class="!pl-0 hover:bg-white"
+								class="!pl-0 hover:bg-transparent"
 								@click="router.back()"
 							>
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Profile") }}</h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Profile") }}</h2>
 						</div>
 					</header>
 
-					<div class="flex flex-col items-center mt-5 p-4">
-						<!-- Profile Image -->
-						<img
-							v-if="user.data.user_image"
-							class="h-24 w-24 rounded-full object-cover"
-							:src="user.data.user_image"
-							:alt="user.data.first_name"
-						/>
-						<div
-							v-else
-							class="flex items-center justify-center bg-gray-200 uppercase text-gray-600 h-24 w-24 rounded-full object-cover"
-						>
-							{{ user.data.first_name[0] }}
-						</div>
-
-						<div class="flex flex-col gap-1.5 items-center mt-2 mb-5">
-							<span v-if="employee" class="text-lg font-bold text-gray-900">{{
-								employee?.data?.employee_name
-							}}</span>
-							<span v-if="employee" class="font-normal text-sm text-gray-500">{{
-								employee?.data?.designation
-							}}</span>
+					<div class="flex flex-col p-4">
+						<!-- Identity block -->
+						<div class="flex flex-row items-center gap-4 pb-5 border-b-2 border-divider">
+							<div class="m-avatar-sq shrink-0">
+								<img
+									v-if="user.data.user_image"
+									class="h-[72px] w-[72px] object-cover grayscale"
+									:src="user.data.user_image"
+									:alt="user.data.first_name"
+								/>
+								<div
+									v-else
+									class="flex items-center justify-center bg-ink-300 uppercase font-sans font-extrabold text-ink-700 h-[72px] w-[72px] text-2xl"
+								>
+									{{ user.data.first_name[0] }}
+								</div>
+							</div>
+							<div class="flex flex-col gap-1 min-w-0">
+								<span v-if="employee" class="font-sans font-extrabold text-[20px] tracking-tight text-inkbase truncate">{{
+									employee?.data?.employee_name
+								}}</span>
+								<span v-if="employee" class="text-[10px] uppercase tracking-[0.1em] text-ink-600 truncate">{{
+									employee?.data?.designation
+								}}</span>
+							</div>
 						</div>
 
 						<!-- Profile Links -->
-						<div class="flex flex-col gap-5 my-4 w-full">
-							<div class="flex flex-col bg-white rounded">
-								<div
-									class="flex flex-row cursor-pointer flex-start p-4 items-center justify-between border-b"
-									v-for="link in profileLinks"
-									:key="link.title"
-									@click="openInfoModal(link)"
-								>
-									<div class="flex flex-row items-center gap-3 grow">
-										<FeatherIcon
-											:name="link.icon"
-											class="h-5 w-5 text-gray-500"
-										/>
-										<div class="text-base font-normal text-gray-800">
-											{{ link.title }}
-										</div>
-									</div>
+						<div class="flex flex-col mt-2">
+							<div
+								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
+								v-for="link in profileLinks"
+								:key="link.title"
+								@click="openInfoModal(link)"
+							>
+								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon
-										name="chevron-right"
-										class="h-5 w-5 text-gray-500"
+										:name="link.icon"
+										class="h-[18px] w-[18px] text-inkbase"
 									/>
+									<div class="text-[15px] text-inkbase">
+										{{ link.title }}
+									</div>
 								</div>
+								<FeatherIcon
+									name="chevron-right"
+									class="h-[18px] w-[18px] text-ink-600"
+								/>
 							</div>
-						</div>
 
-						<!-- Settings -->
-						<div
-							class="flex flex-col gap-5 my-4 w-full"
-						>
-							<div class="flex flex-col bg-white rounded">
-								<router-link
-									:to="{ name: 'Settings' }"
-									class="flex flex-row cursor-pointer flex-start p-4 items-center justify-between border-b"
-								>
-									<div class="flex flex-row items-center gap-3 grow">
-										<FeatherIcon
-											name="settings"
-											class="h-5 w-5 text-gray-500"
-										/>
-										<div class="text-base font-normal text-gray-800">
-											{{ __("Settings") }}
-										</div>
+							<!-- HR Contacts -->
+							<router-link
+								:to="{ name: 'HRContacts' }"
+								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
+							>
+								<div class="flex flex-row items-center gap-3 grow">
+									<FeatherIcon name="users" class="h-[18px] w-[18px] text-inkbase" />
+									<div class="text-[15px] text-inkbase">
+										{{ __("HR Contacts") }}
 									</div>
-									<FeatherIcon
-										name="chevron-right"
-										class="h-5 w-5 text-gray-500"
-									/>
-								</router-link>
-							</div>
+								</div>
+								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+							</router-link>
+
+							<!-- Pending Approvals (only if any) -->
+							<router-link
+								v-if="pendingApprovalsCount > 0"
+								:to="{ name: 'RemoteApprovals' }"
+								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
+							>
+								<div class="flex flex-row items-center gap-3 grow">
+									<FeatherIcon name="check-square" class="h-[18px] w-[18px] text-inkbase" />
+									<div class="text-[15px] text-inkbase">
+										{{ __("Pending Approvals") }}
+									</div>
+								</div>
+								<div class="flex flex-row items-center gap-2">
+									<span
+										class="inline-flex bg-accent text-ground text-[10px] font-sans font-extrabold px-1.5 py-0.5"
+									>
+										{{ pendingApprovalsCount }}
+									</span>
+									<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+								</div>
+							</router-link>
+
+							<!-- Settings -->
+							<router-link
+								v-if="allowPushNotifications"
+								:to="{ name: 'Settings' }"
+								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
+							>
+								<div class="flex flex-row items-center gap-3 grow">
+									<FeatherIcon name="settings" class="h-[18px] w-[18px] text-inkbase" />
+									<div class="text-[15px] text-inkbase">
+										{{ __("Settings") }}
+									</div>
+								</div>
+								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+							</router-link>
 						</div>
 
-						<Button
+						<button
 							@click="logout"
-							variant="outline"
-							theme="red"
-							class="w-full shadow py-4 mt-5"
+							class="flex items-center gap-2 w-full bg-transparent border border-accent text-accent-700 px-4 py-3.5 font-sans font-extrabold text-[13px] mt-7 hover:bg-accent-100"
 						>
-							<template #prefix>
-								<FeatherIcon name="log-out" class="w-4" />
-							</template>
+							<FeatherIcon name="log-out" class="w-4 h-4" />
 							{{ __("Log Out") }}
-						</Button>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -116,8 +138,22 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
+				<ContactInfoSheet
+					v-if="selectedItem?.kind === 'contact'"
+					:self-data="
+						selectedItem.fields.map((field) => {
+							const [label, fieldtype] = getFieldInfo(field)
+							return {
+								fieldname: field,
+								value: employeeDoc.doc[field],
+								label: label,
+								fieldtype: fieldtype,
+							}
+						})
+					"
+				/>
 				<ProfileInfoModal
-					v-if="selectedItem"
+					v-else-if="selectedItem"
 					:title="selectedItem.title"
 					:data="
 						selectedItem.fields.map((field) => {
@@ -147,6 +183,9 @@ import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
+import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
+
+import { pendingCountResource } from "@/data/remoteCheckin"
 
 import { arePushNotificationsEnabled } from "@/data/notifications"
 
@@ -189,27 +228,12 @@ const profileLinks = [
 	{
 		icon: "book",
 		title: __("Contact Information"),
+		kind: "contact",
 		fields: [
 			"cell_number",
 			"personal_email",
 			"company_email",
 			"preferred_email",
-		],
-	},
-	{
-		icon: "dollar-sign",
-		title: __("Salary Information"),
-		fields: [
-			"ctc",
-			"payroll_cost_center",
-			"pan_number",
-			"provident_fund_account",
-			"salary_mode",
-			"bank_name",
-			"bank_ac_no",
-			"ifsc_code",
-			"micr_code",
-			"iban",
 		],
 	},
 ]
@@ -222,6 +246,8 @@ const allowPushNotifications = computed(
 		window.frappe?.boot.push_relay_server_url &&
 		arePushNotificationsEnabled.data
 )
+
+const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
 
 const openInfoModal = async (request) => {
 	selectedItem.value = request
@@ -290,7 +316,9 @@ const logout = async () => {
 	}
 }
 
-
+const onRemoteCheckinEvent = () => {
+	pendingCountResource.reload()
+}
 
 onMounted(() => {
 	socket.emit("doctype_subscribe", DOCTYPE)
@@ -299,10 +327,13 @@ onMounted(() => {
 			employeeDoc.reload()
 		}
 	})
+	socket.on("hrms:remote_checkin_request", onRemoteCheckinEvent)
+	pendingCountResource.fetch()
 })
 
 onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
+	socket.off("hrms:remote_checkin_request", onRemoteCheckinEvent)
 })
 </script>

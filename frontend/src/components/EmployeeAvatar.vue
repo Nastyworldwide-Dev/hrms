@@ -1,22 +1,25 @@
 <template>
 	<div v-if="showLabel" class="flex flex-row items-center gap-2">
+		<span class="m-avatar-sq grayscale inline-flex">
+			<Avatar
+				v-if="employee"
+				:label="employee?.employee_name"
+				:image="employee?.image"
+				:size="props.size"
+			/>
+		</span>
+		<div class="text-base text-ink-800 grow">
+			{{ employee?.employee_name }}
+		</div>
+	</div>
+
+	<span v-else class="m-avatar-sq grayscale inline-flex">
 		<Avatar
-			v-if="employee"
 			:label="employee?.employee_name"
 			:image="employee?.image"
 			:size="props.size"
 		/>
-		<div class="text-base text-gray-800 grow">
-			{{ employee?.employee_name || props.employeeID }}
-		</div>
-	</div>
-
-	<Avatar
-		v-else
-		:label="employee?.employee_name"
-		:image="employee?.image"
-		:size="props.size"
-	/>
+	</span>
 </template>
 
 <script setup>

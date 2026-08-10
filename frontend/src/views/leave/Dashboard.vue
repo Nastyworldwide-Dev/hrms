@@ -1,32 +1,66 @@
 <template>
 	<BaseLayout :pageTitle="__('Leaves & Holidays')">
 		<template #body>
-			<div class="flex flex-col items-center mt-7 mb-7 py-4">
-				<LeaveBalance />
+			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full lg:p-7 lg:gap-10">
+				<!-- Top band: balance stat cells + primary action -->
+				<div
+					class="contents lg:grid lg:grid-cols-[1fr_280px] lg:gap-x-0 lg:items-stretch"
+				>
+					<div class="lg:pr-8"><LeaveBalance /></div>
 
-				<div class="flex flex-col gap-7 mt-5 px-4 w-full">
 					<router-link
 						:to="{ name: 'LeaveApplicationFormView' }"
 						v-slot="{ navigate }"
+						class="lg:border-l lg:border-divider lg:pl-8 lg:flex lg:items-center"
 					>
-						<Button
-							@click="navigate"
-							variant="solid"
-							class="py-5 text-base w-full"
-						>
+						<button @click="navigate" class="m-btn-primary">
 							{{ __("Request a Leave") }}
-						</Button>
+							<svg
+								width="17"
+								height="17"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="ml-auto"
+							>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+								<polyline points="12 5 19 12 12 19"></polyline>
+							</svg>
+						</button>
 					</router-link>
-					<div>
-						<div class="text-lg text-gray-800 font-bold">{{ __('Recent Leaves') }} </div>
-						<RequestList
-							:component="markRaw(LeaveRequestItem)"
-							:items="myLeaves.data"
-							:addListButton="true"
-							listButtonRoute="LeaveApplicationListView"
-						/>
+				</div>
+
+				<!-- Bottom: recent leaves | upcoming holidays -->
+				<div class="contents lg:grid lg:grid-cols-2 lg:gap-x-0 lg:items-start">
+					<div class="lg:pr-8">
+						<div class="flex flex-row items-baseline justify-between mb-2.5">
+							<span class="m-kicker">{{ __("Recent Leaves") }}</span>
+							<router-link
+								:to="{ name: 'LeaveApplicationListView' }"
+								v-slot="{ navigate }"
+							>
+								<span
+									@click="navigate"
+									class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
+								>
+									{{ __("View List") }}
+								</span>
+							</router-link>
+						</div>
+						<div class="border-t-2 border-divider">
+							<RequestList
+								:component="markRaw(LeaveRequestItem)"
+								:items="myLeaves.data"
+							/>
+						</div>
 					</div>
-					<Holidays />
+
+					<div class="lg:border-l lg:border-divider lg:pl-8">
+						<Holidays />
+					</div>
 				</div>
 			</div>
 		</template>

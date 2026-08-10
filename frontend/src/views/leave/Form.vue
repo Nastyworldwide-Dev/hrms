@@ -17,7 +17,7 @@
 
 <script setup>
 import { IonPage, IonContent } from "@ionic/vue"
-import { createResource } from "frappe-ui"
+import { createResource, toast } from "frappe-ui"
 import { ref, watch, inject, nextTick } from "vue"
 
 import FormView from "@/components/FormView.vue"
@@ -95,19 +95,36 @@ const leaveTypes = createResource({
 	onSuccess(data) {
 		setLeaveTypes(data)
 	},
+	onError() {
+		// without this, a failed fetch leaves the dropdown as a silent
+		// "No results found" that reads like the employee has no leave
+		console.warn("[LeaveForm] Failed to fetch leave types:", currEmployee.value)
+		toast({
+			title: __("Error"),
+			text: __("Could not load leave types. Please contact HR."),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
+	},
 })
 
 // form scripts
 watch(
 	() => leaveApplication.value.employee,
 	(employee_id) => {
+		// the form model is transiently empty across save/reload cycles —
+		// refetching with a blank employee 404s and toasts "Could not load
+		// leave types" once per cycle
+		if (!employee_id) return
+
 		if (props.id && employee_id !== currEmployee.value) {
 			// if employee is not the current user, set form as read only
 			setFormReadOnly()
 		}
 		currEmployee.value = employee_id
 		leaveTypes.fetch({ employee: currEmployee.value, date: today })
-		leaveApprovalDetails.fetch({ employee: currEmployee.value })		
+		leaveApprovalDetails.fetch({ employee: currEmployee.value })
 	}
 )
 watch(
