@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from dateutil.relativedelta import relativedelta
+
 import frappe
 from frappe import _
 from frappe.model.naming import set_name_by_naming_series
@@ -117,6 +119,55 @@ def update_employee_transfer(doc, method=None):
 	if frappe.db.exists("Employee Transfer", {"new_employee_id": doc.name, "docstatus": 1}):
 		emp_transfer = frappe.get_doc("Employee Transfer", {"new_employee_id": doc.name, "docstatus": 1})
 		emp_transfer.db_set("new_employee_id", "")
+
+
+def compute_years_of_service(date_of_joining, as_on=None):
+	"""Whole completed years between ``date_of_joining`` and ``as_on`` (default: today).
+
+	Returns 0 when the joining date is missing or lies in the future. Uses
+	``relativedelta`` so leap years and uneven month lengths are handled correctly
+	(e.g. an employee who joined on 2020-01-15 completes 6 years on 2026-01-15).
+	"""
+	if not date_of_joining:
+		return 0
+
+	doj = getdate(date_of_joining)
+	as_on = getdate(as_on)
+	if doj > as_on:
+		return 0
+
+	return relativedelta(as_on, doj).years
+
+
+def set_years_of_service(doc, method=None):
+	"""Employee.validate hook: keep the stored years_of_service in sync on every save."""
+	doc.years_of_service = compute_years_of_service(doc.date_of_joining)
+
+
+def update_all_years_of_service():
+	"""Daily scheduler: refresh years_of_service for all Active employees.
+
+	The value only changes on a joining anniversary, so this is a cheap nightly sweep
+	that writes only the rows that actually rolled over. ``update_modified=False`` keeps
+	us from churning modified timestamps or firing doc events for untouched employees.
+	"""
+	today = getdate()
+	employees = frappe.get_all(
+		"Employee",
+		filters={"status": "Active", "date_of_joining": ["is", "set"]},
+		fields=["name", "date_of_joining", "years_of_service"],
+	)
+
+	updated = 0
+	for emp in employees:
+		years = compute_years_of_service(emp.date_of_joining, today)
+		if years != (emp.years_of_service or 0):
+			frappe.db.set_value("Employee", emp.name, "years_of_service", years, update_modified=False)
+			updated += 1
+
+	frappe.logger("hrms").info(
+		f"[employee_master] update_all_years_of_service: refreshed {updated} of {len(employees)} active employees"
+	)
 
 
 @frappe.whitelist()
