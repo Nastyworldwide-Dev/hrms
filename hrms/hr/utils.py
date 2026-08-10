@@ -3,6 +3,7 @@
 
 import calendar
 import datetime
+import logging
 
 import frappe
 from frappe import _, qb
@@ -43,6 +44,11 @@ from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
 )
 
 DateTimeLikeObject = str | datetime.date | datetime.datetime
+
+logger = logging.getLogger(__name__)
+
+# single source of truth for "who counts as HR" in staff-lockdown guards
+HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 
 
 class DuplicateDeclarationError(frappe.ValidationError):
@@ -815,6 +821,135 @@ def share_doc_with_approver(doc, user):
 		approver = approvers.get(doc.doctype)
 		if doc_before_save.get(approver) != doc.get(approver):
 			frappe.share.remove(doc.doctype, doc.name, doc_before_save.get(approver))
+
+
+def validate_self_submission(doc):
+	"""Doctypes with no approver/status flow treat submission AS the approval —
+	the employee on the request must never be the submitter, whatever roles
+	they hold. Mirrors AttendanceRequest.validate_for_self_approval; sites that
+	attach a Workflow govern self-approval through it instead."""
+	logger.info("[self_submission] fence: %s %s", doc.doctype, doc.name)
+	from frappe.model.workflow import get_workflow_name
+
+	employee_user = frappe.db.get_value("Employee", doc.employee, "user_id")
+	if employee_user == frappe.session.user and not get_workflow_name(doc.doctype):
+		logger.warning("[self_submission] blocked: %s %s by %s", doc.doctype, doc.name, frappe.session.user)
+		frappe.throw(_("Self-approval for {0} is not allowed").format(_(doc.doctype)))
+
+
+def validate_filing_for_self(doc):
+	"""Doctypes without an approver field carry no routing to catch a request
+	forged in a colleague's name — so non-HR users may only file for their own
+	Employee record. HR roles and users with real Employee write access are
+	exempt (they file on staff's behalf legitimately)."""
+	logger.info("[self_submission] filing fence: %s %s", doc.doctype, doc.name)
+	user = frappe.session.user
+	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
+		return
+	if frappe.db.get_value("Employee", doc.employee, "user_id") == user:
+		return
+	if frappe.has_permission("Employee", ptype="write", doc=doc.employee):
+		return
+	logger.warning("[self_submission] %s tried to file %s for employee %s", user, doc.doctype, doc.employee)
+	frappe.throw(_("You can only file requests for yourself."), frappe.PermissionError)
+
+
+def validate_mandatory_attachment(doc):
+	"""Requests must carry supporting evidence (a stored file, not just a File
+	row) before an approver can submit them."""
+	if not frappe.db.exists(
+		"File",
+		{
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
+			"file_url": ("is", "set"),
+		},
+	):
+		logger.info("[self_submission] submit blocked, no attachment: %s %s", doc.doctype, doc.name)
+		frappe.throw(_("A supporting attachment is required before this request can be approved"))
+
+
+def validate_staff_approver(doc, approver_field, employee_approver_field, department_parentfield):
+	"""Staff lockdown: when the applicant edits their own request, the approver
+	must be one of their designated approvers (reporting manager, the explicit
+	approver on their Employee record, or a department approver) — never
+	themselves. HR roles and other editors (e.g. the approver) are exempt;
+	doctype permissions govern those.
+	"""
+	logger.info("[staff_lockdown] approver fence: %s.%s", doc.doctype, approver_field)
+	approver = doc.get(approver_field)
+	if not approver:
+		return
+
+	user = frappe.session.user
+	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
+		return
+
+	info = frappe.db.get_value(
+		"Employee",
+		doc.employee,
+		["user_id", employee_approver_field, "reports_to", "department"],
+		as_dict=True,
+	)
+	if not info:
+		frappe.throw(_("Employee {0} not found.").format(doc.employee))
+
+	if info.user_id != user:
+		# the designated approver acts on someone else's request legitimately
+		# (approve/submit sets status + docstatus, which re-runs validate).
+		# Trust only the value ALREADY STORED on the document — reading the
+		# incoming payload would let anyone name themselves approver in the
+		# same save and walk through this fence.
+		if not doc.is_new() and frappe.db.get_value(doc.doctype, doc.name, approver_field) == user:
+			logger.info("[staff_lockdown] %s acting as stored approver on %s %s", user, doc.doctype, doc.name)
+			return
+
+		# filing for someone else — fail CLOSED. Own-record scoping normally
+		# comes from a User Permission, but that binding has broken before on
+		# this fork, so never fall through to "no checks at all" here.
+		if not frappe.has_permission("Employee", ptype="write", doc=doc.employee):
+			logger.warning(
+				"[staff_lockdown] %s tried to file %s for employee %s", user, doc.doctype, doc.employee
+			)
+			frappe.throw(
+				_("You can only submit requests for yourself."),
+				frappe.PermissionError,
+			)
+		return
+
+	if approver == user:
+		logger.warning("[staff_lockdown] %s attempted self-approval routing on %s", user, doc.doctype)
+		frappe.throw(_("You cannot set yourself as your own approver."))
+
+	allowed = set()
+	if info.get(employee_approver_field):
+		allowed.add(info.get(employee_approver_field))
+	if info.reports_to:
+		if manager_user := frappe.db.get_value("Employee", info.reports_to, "user_id"):
+			allowed.add(manager_user)
+	if info.department:
+		allowed.update(
+			frappe.get_all(
+				"Department Approver",
+				filters={"parent": info.department, "parentfield": department_parentfield},
+				pluck="approver",
+			)
+		)
+
+	if approver not in allowed:
+		logger.warning(
+			"[staff_lockdown] %s set non-designated approver %s on %s %s (allowed=%s)",
+			user,
+			approver,
+			doc.doctype,
+			doc.name,
+			sorted(allowed),
+		)
+		frappe.throw(
+			_("{0} is not one of your designated approvers. Please select your reporting manager.").format(
+				approver
+			)
+		)
 
 
 def validate_active_employee(employee, method=None):
