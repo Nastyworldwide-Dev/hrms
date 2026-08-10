@@ -1,11 +1,17 @@
+import logging
+
 import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder import Order
-from frappe.utils import add_days, date_diff, getdate, strip_html
+from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, strip_html
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
+
+from hrms.hr.utils import HR_ROLES
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_FIELD_TYPES = [
 	"Link",
@@ -59,11 +65,14 @@ def get_current_employee_info() -> dict:
 	return employee
 
 
+# staff lockdown: non-HR callers get a minimal PDPA-safe directory
+STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", "image"]
+
+
 @frappe.whitelist()
 def get_all_employees() -> list[dict]:
-	return frappe.get_list(
-		"Employee",
-		fields=[
+	if HR_ROLES & set(frappe.get_roles()):
+		fields = [
 			"name",
 			"employee_name",
 			"designation",
@@ -73,9 +82,14 @@ def get_all_employees() -> list[dict]:
 			"user_id",
 			"image",
 			"status",
-		],
-		limit=999999,
-	)
+		]
+		filters = {}
+	else:
+		frappe.logger("hrms").info("[api] minimal directory served to %s", frappe.session.user)
+		fields = STAFF_DIRECTORY_FIELDS
+		filters = {"status": "Active"}
+
+	return frappe.get_all("Employee", fields=fields, filters=filters, limit=999999)
 
 
 @frappe.whitelist()
@@ -137,9 +151,25 @@ def are_push_notifications_enabled() -> bool:
 
 
 # Attendance
+def _ensure_own_employee_or_permitted(employee: str) -> None:
+	"""Staff lockdown: staff may only query their own employee; HR and users
+	with real read permission on the Employee doc (approvers etc.) pass.
+	Unknown ids are rejected explicitly — has_permission short-circuits for
+	Administrator before resolving the doc, so it can't be relied on for 404s."""
+	if not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
+	employee_user = frappe.db.get_value("Employee", employee, "user_id")
+	if employee_user == frappe.session.user:
+		return
+	if frappe.has_permission("Employee", doc=employee):
+		return
+	frappe.logger("hrms").warning("[api] %s denied access to employee %s data", frappe.session.user, employee)
+	frappe.throw(_("Not permitted to view this employee's data."), frappe.PermissionError)
+
+
 @frappe.whitelist()
-def get_attendance_calendar_events(from_date: str, to_date: str) -> dict[str, str]:
-	employee = get_current_employee()
+def get_attendance_calendar_events(employee: str, from_date: str, to_date: str) -> dict[str, str]:
+	_ensure_own_employee_or_permitted(employee)
 	holidays = get_holidays_for_calendar(employee, from_date, to_date)
 	attendance = get_attendance_for_calendar(employee, from_date, to_date)
 	events = {}
@@ -183,6 +213,7 @@ def get_shift_requests(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Shift Request", employee, approver_id, for_approval)
 	fields = [
 		"name",
@@ -221,6 +252,7 @@ def get_attendance_requests(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Attendance Request", employee, None, for_approval)
 	fields = [
 		"name",
@@ -253,6 +285,107 @@ def get_attendance_requests(
 	return attendance_requests
 
 
+@frappe.whitelist()
+def get_ot_requests(
+	employee: str,
+	for_approval: bool = False,
+	limit: int | None = None,
+) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
+	filters = get_filters("OT Request", employee, None, for_approval)
+	logger.info("[api] ot requests employee=%s for_approval=%s", employee, for_approval)
+	return frappe.get_list(
+		"OT Request",
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"ot_date",
+			"shift",
+			"punch_ot_hours",
+			"claimed_hours",
+			"compensation",
+			"docstatus",
+			"creation",
+		],
+		filters=filters,
+		order_by="creation desc",
+		limit=limit,
+	)
+
+
+@frappe.whitelist()
+def get_replacement_leave_claims(
+	employee: str,
+	for_approval: bool = False,
+	limit: int | None = None,
+) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
+	filters = get_filters("Replacement Leave Claim", employee, None, for_approval)
+	logger.info("[api] rl claims employee=%s for_approval=%s", employee, for_approval)
+	return frappe.get_list(
+		"Replacement Leave Claim",
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"bank_month",
+			"claimed_days",
+			"hours_cost",
+			"available_hours",
+			"docstatus",
+			"creation",
+		],
+		filters=filters,
+		order_by="creation desc",
+		limit=limit,
+	)
+
+
+@frappe.whitelist()
+def get_ot_claim_summary(employee: str, date: str) -> dict:
+	"""Live form helper: what the punches prove for a day, and how this
+	employee's approved OT is compensated."""
+	from hrms.utils.ot_calculation import get_day_ot_breakdown
+
+	_ensure_own_employee_or_permitted(employee)
+	breakdown = get_day_ot_breakdown(employee, date)
+	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
+	shift = frappe.db.get_value(
+		"Attendance",
+		{"employee": employee, "attendance_date": date, "docstatus": ("<", 2)},
+		"shift",
+	)
+	return {
+		"shift": shift,
+		"punch_ot_hours": int(flt(breakdown["ot_hours"])),
+		"raw_ot_hours": flt(breakdown["ot_hours"]),
+		"eligible_for_overtime_pay": eligible,
+		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+	}
+
+
+@frappe.whitelist()
+def get_replacement_leave_bank_summary(employee: str) -> dict:
+	"""The current month's convertible OT hours plus the requests feeding it."""
+	from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
+
+	_ensure_own_employee_or_permitted(employee)
+	bank = get_replacement_leave_bank(employee)
+	bank["requests"] = frappe.get_all(
+		"OT Request",
+		filters={
+			"employee": employee,
+			"compensation": "Replacement Leave",
+			"docstatus": 1,
+			"ot_date": ("between", [bank["month_start"], get_last_day(bank["month_start"])]),
+		},
+		fields=["name", "ot_date", "claimed_hours"],
+		order_by="ot_date asc",
+	)
+	return bank
+
+
 def get_filters(
 	doctype: str,
 	employee: str,
@@ -267,7 +400,7 @@ def get_filters(
 		if workflow := get_workflow(doctype):
 			allowed_states = get_allowed_states_for_workflow(workflow, approver_id)
 			filters[workflow.workflow_state_field] = ("in", allowed_states)
-		elif doctype != "Attendance Request":
+		elif doctype not in ("Attendance Request", "OT Request", "Replacement Leave Claim"):
 			approver_field_map = {
 				"Shift Request": "approver",
 				"Leave Application": "leave_approver",
@@ -285,8 +418,7 @@ def get_filters(
 
 @frappe.whitelist()
 def get_shift_request_approvers(employee: str) -> str | list[str]:
-	frappe.has_permission("Employee", "read", employee, throw=True)
-
+	_ensure_own_employee_or_permitted(employee)
 	shift_request_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -317,8 +449,8 @@ def get_shift_request_approvers(employee: str) -> str | list[str]:
 
 
 @frappe.whitelist()
-def get_shifts() -> list[dict[str, str]]:
-	employee = get_current_employee()
+def get_shifts(employee: str) -> list[dict[str, str]]:
+	_ensure_own_employee_or_permitted(employee)
 	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
 	ShiftType = frappe.qb.DocType("Shift Type")
 	return (
@@ -350,6 +482,7 @@ def get_leave_applications(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Leave Application", employee, approver_id, for_approval)
 	fields = [
 		"name",
@@ -393,11 +526,40 @@ def get_leave_balance_map() -> dict[str, dict[str, float]]:
 	"""
 	Returns a map of leave type and balance details like:
 	{
-	        'Casual Leave': {'allocated_leaves': 10.0, 'balance_leaves': 5.0},
-	        'Earned Leave': {'allocated_leaves': 3.0, 'balance_leaves': 3.0},
+	        'Casual Leave': {
+	                'allocated_leaves': 10.0,
+	                'balance_leaves': 5.0,
+	                'annual_entitlement': 14.0,
+	                'carry_forwarded_leaves': 0.0,
+	                'from_date': '2026-01-01',
+	        },
 	}
+
+	annual_entitlement is the full-year entitlement used as the balance-card
+	denominator, resolved in order:
+	1. service-entitlement slab for the employee's grade and completed years of
+	   service as of the allocation start — the same lookup the Leave Policy
+	   Assignment ran at grant time (recomputed from current employee/slab
+	   data, so it follows later grade/DOJ/slab corrections)
+	2. annual_allocation of the Leave Policy assigned for the current period
+	3. the allocated leaves themselves (manual/compensatory allocations)
+
+	LWP leave types carry no meaningful balance and are excluded.
 	"""
-	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
+	from hrms.hr.doctype.leave_application.leave_application import (
+		get_leave_allocation_records,
+		get_leave_details,
+	)
+	from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
+		get_leave_type_details,
+	)
+	from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
+
+	# also guards the policy/entitlement reads below, which bypass row-level
+	# permissions (frappe.get_all), and rejects unknown employee ids cleanly.
+	# Own-employee check first: staff whose role set lost Employee read must
+	# still see their own balance cards (same pattern as every other endpoint).
+	_ensure_own_employee_or_permitted(employee)
 
 	employee = get_current_employee()
 
@@ -406,18 +568,77 @@ def get_leave_balance_map() -> dict[str, dict[str, float]]:
 
 	leave_details = get_leave_details(employee, date)
 	allocation = leave_details["leave_allocation"]
+	lwps = set(leave_details["lwps"])
+
+	allocation_records = get_leave_allocation_records(employee, date)
+	leave_types = get_leave_type_details()
+	policy_allocations = get_policy_annual_allocations(employee, date)
+	date_of_joining, grade = frappe.db.get_value("Employee", employee, ["date_of_joining", "grade"])
+	precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2
 
 	for leave_type, details in allocation.items():
+		if leave_type in lwps:
+			continue
+
+		record = allocation_records.get(leave_type, frappe._dict())
+		allocated = flt(details.get("total_leaves"))
+
+		entitlement = None
+		if leave_types.get(leave_type, frappe._dict()).based_on_years_of_service:
+			entitlement = get_service_based_leave_days(
+				leave_type, date_of_joining, record.from_date or date, grade
+			)
+		if entitlement is None:
+			entitlement = policy_allocations.get(leave_type)
+		if not entitlement:
+			# deliberately falsy, not `is None`: a 0 policy allocation must
+			# never become the gauge denominator (n/0)
+			entitlement = allocated
+
 		leave_map[leave_type] = {
-			"allocated_leaves": details.get("total_leaves"),
+			"allocated_leaves": allocated,
 			"balance_leaves": details.get("remaining_leaves"),
+			"annual_entitlement": flt(entitlement, precision),
+			"carry_forwarded_leaves": flt(record.get("unused_leaves"), precision),
+			"from_date": record.get("from_date"),
 		}
 
+	frappe.logger("hrms").debug(
+		"[api] Leave balance map for %s: %s",
+		employee,
+		{k: v["annual_entitlement"] for k, v in leave_map.items()},
+	)
 	return leave_map
+
+
+def get_policy_annual_allocations(employee: str, date) -> dict[str, float]:
+	"""annual_allocation per leave type from the employee's Leave Policy
+	Assignment effective on `date` (empty when none is assigned)."""
+	policy = frappe.db.get_value(
+		"Leave Policy Assignment",
+		{
+			"employee": employee,
+			"docstatus": 1,
+			"effective_from": ("<=", date),
+			"effective_to": (">=", date),
+		},
+		"leave_policy",
+	)
+	if not policy:
+		frappe.logger("hrms").debug("[api] No Leave Policy Assignment covering %s for %s", date, employee)
+		return {}
+
+	details = frappe.get_all(
+		"Leave Policy Detail",
+		filters={"parenttype": "Leave Policy", "parent": policy},
+		fields=["leave_type", "annual_allocation"],
+	)
+	return {d.leave_type: flt(d.annual_allocation) for d in details}
 
 
 @frappe.whitelist()
 def get_holidays_for_employee(employee: str) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
 	if not holiday_list:
 		return []
@@ -440,7 +661,7 @@ def get_holidays_for_employee(employee: str) -> list[dict]:
 
 @frappe.whitelist()
 def get_leave_approval_details(employee: str) -> dict:
-	frappe.has_permission("Employee", "read", employee, throw=True)
+	_ensure_own_employee_or_permitted(employee)
 	leave_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -501,6 +722,12 @@ def get_department_approvers(department: str, parentfield: str) -> list[str]:
 
 @frappe.whitelist()
 def get_leave_types(employee: str, date: str) -> list:
+	# Scope is enforced by get_leave_details' own guard, which — unlike
+	# _ensure_own_employee_or_permitted — also admits the applicant's leave
+	# approver. Approvers open this form for their team, and a 403 here blanks
+	# the dropdown behind a "Could not load leave types" toast.
+	if not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
 	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
 
 	date = date or getdate()
@@ -520,6 +747,7 @@ def get_expense_claims(
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Expense Claim", employee, approver_id, for_approval)
 	fields = [
 		"`tabExpense Claim`.name",
@@ -558,9 +786,8 @@ def get_expense_claims(
 
 
 @frappe.whitelist()
-def get_expense_claim_summary() -> dict:
-	employee = get_current_employee()
-
+def get_expense_claim_summary(employee: str) -> dict:
+	_ensure_own_employee_or_permitted(employee)
 	from frappe.query_builder.functions import Sum
 
 	Claim = frappe.qb.DocType("Expense Claim")
@@ -619,7 +846,7 @@ def get_expense_claim_types() -> list[dict]:
 
 @frappe.whitelist()
 def get_expense_approval_details(employee: str) -> dict:
-	frappe.has_permission("Employee", "read", employee, throw=True)
+	_ensure_own_employee_or_permitted(employee)
 	expense_approver, department = frappe.get_cached_value(
 		"Employee",
 		employee,
@@ -650,8 +877,8 @@ def get_expense_approval_details(employee: str) -> dict:
 
 # Employee Advance
 @frappe.whitelist()
-def get_employee_advance_balance() -> list[dict]:
-	employee = get_current_employee()
+def get_employee_advance_balance(employee: str) -> list[dict]:
+	_ensure_own_employee_or_permitted(employee)
 	Advance = frappe.qb.DocType("Employee Advance")
 
 	advances = (
@@ -738,6 +965,7 @@ def get_doctype_states(doctype: str) -> dict:
 # File
 @frappe.whitelist()
 def get_attachments(dt: str, dn: str):
+	frappe.has_permission(dt, doc=dn, throw=True)
 	return frappe.get_list(
 		"File",
 		fields=["name", "file_name", "file_url", "is_private"],
@@ -756,6 +984,9 @@ def upload_base64_file(
 	from PIL import Image, ImageOps
 
 	from frappe.handler import ALLOWED_MIMETYPES
+
+	if dt and dn:
+		frappe.has_permission(dt, ptype="write", doc=dn, throw=True)
 
 	decoded_content = base64.b64decode(content)
 	content_type = guess_type(filename)[0]
