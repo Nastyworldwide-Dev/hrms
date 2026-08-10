@@ -31,15 +31,28 @@ API_SECRET = "sk_live_super_secret_value"
 
 
 class _FakeDB:
-	"""Stands in for frappe.db — answers HRMS ERP Instance lookups from a canned table."""
+	"""Stands in for frappe.db — answers HRMS ERP Instance lookups from a canned table.
+
+	`get_value` is asked for a field list; it answers with only the requested
+	fields, so a test can prove the client never reads more than it names. The
+	`api_secret` column is deliberately absent from every canned row: Password
+	fields do not live on the table, they come back via `_decrypt_secret`.
+	"""
 
 	def __init__(self, instances=None):
 		self.instances = instances or {}
+		self.reads = []
 
 	def get_value(self, doctype, filters, fieldname, **kwargs):
 		if doctype != "HRMS ERP Instance":
 			return None
-		return self.instances.get(filters.get("instance_name"))
+		row = self.instances.get(filters.get("instance_name"))
+		self.reads.append((doctype, tuple(fieldname) if isinstance(fieldname, list) else fieldname))
+		if row is None:
+			return None
+		if isinstance(fieldname, list):
+			return {field: row.get(field) for field in fieldname}
+		return row.get(fieldname)
 
 
 class _FakeResponse:
@@ -111,28 +124,54 @@ def _load_module():
 
 sc = _load_module()
 
-ENABLED_NASTY = {"url": "https://nasty-live.example.com/", "enabled": 1}
+ENABLED_NASTY = {"name": "nasty-live", "url": "https://nasty-live.example.com/", "enabled": 1}
 
 
 class _ClientTestCase(unittest.TestCase):
-	"""Swaps frappe.db / frappe.conf / client.requests for the duration of a test."""
+	"""Swaps frappe.db / frappe.conf / client.requests for the duration of a test.
+
+	Credentials default to the site-config fallback, because that is what every
+	pre-existing test in this file was written against — the doctype path is
+	exercised by `TestCredentialsFromDoctype`, which fills in the doctype row.
+	"""
 
 	def setUp(self):
 		import frappe
 
 		self.frappe = frappe
-		self._saved = (getattr(frappe, "db", None), getattr(frappe, "conf", None), sc.requests, sc._sleep)
+		self._saved = (
+			getattr(frappe, "db", None),
+			getattr(frappe, "conf", None),
+			sc.requests,
+			sc._sleep,
+			sc._decrypt_secret,
+		)
 		frappe.db = _FakeDB({"nasty-live": dict(ENABLED_NASTY)})
 		frappe.conf = {
 			sc.CREDENTIALS_CONFIG_KEY: {"nasty-live": {"api_key": API_KEY, "api_secret": API_SECRET}}
 		}
+		# Password fields are encrypted at rest; outside a bench there is no
+		# `__Auth` table, so the decrypt hop is stubbed from a canned store.
+		self.secrets = {}
+		self.decrypt_calls = []
+		sc._decrypt_secret = self._decrypt
 		self.requests = _FakeRequests()
 		sc.requests = self.requests
 		self.slept = []
 		sc._sleep = self.slept.append
 
+	def _decrypt(self, docname):
+		self.decrypt_calls.append(docname)
+		return self.secrets.get(docname, "")
+
 	def tearDown(self):
-		self.frappe.db, self.frappe.conf, sc.requests, sc._sleep = self._saved
+		(
+			self.frappe.db,
+			self.frappe.conf,
+			sc.requests,
+			sc._sleep,
+			sc._decrypt_secret,
+		) = self._saved
 
 	def client(self, instance_name="nasty-live"):
 		return sc.RemoteInstanceClient(instance_name)
@@ -166,6 +205,101 @@ class TestReadOnlyByConstruction(_ClientTestCase):
 		self.queue(_FakeResponse(200, {"data": [{"name": "HR-EMP-001"}]}))
 		self.client().get_list("Employee")
 		self.assertEqual(len(self.requests.calls), 1)
+
+
+class TestCredentialsFromDoctype(_ClientTestCase):
+	"""The primary source: the HRMS ERP Instance record, so HR can self-serve.
+
+	Before this, credentials lived only in site_config.json, which needs bench
+	access. They now live on the doctype at permlevel 1 — see
+	`test_erp_instance_doctype.py` for the structural half of that guarantee.
+	"""
+
+	def configure_doctype(self, api_key=API_KEY, api_secret=API_SECRET):
+		self.frappe.db = _FakeDB({"nasty-live": dict(ENABLED_NASTY, api_key=api_key)})
+		if api_secret:
+			self.secrets["nasty-live"] = api_secret
+
+	def test_doctype_credentials_are_used(self):
+		self.configure_doctype(api_key="ak_doctype", api_secret="sk_doctype")
+		self.queue(_FakeResponse(200, {"data": []}))
+
+		self.client().get_list("Employee")
+
+		header = self.requests.calls[0]["headers"]["Authorization"]
+		self.assertEqual(header, "token ak_doctype:sk_doctype")
+
+	def test_doctype_beats_site_config(self):
+		"""conf still holds the old pair; the doctype is authoritative."""
+		self.configure_doctype(api_key="ak_doctype", api_secret="sk_doctype")
+		self.queue(_FakeResponse(200, {"data": []}))
+
+		self.client().get_list("Employee")
+
+		header = self.requests.calls[0]["headers"]["Authorization"]
+		self.assertNotIn(API_SECRET, header)
+		self.assertNotIn(API_KEY, header)
+
+	def test_secret_is_read_through_the_decrypt_hop(self):
+		"""`api_secret` is a Password field — it is never on the row itself."""
+		self.configure_doctype()
+		self.client()
+		self.assertEqual(self.decrypt_calls, ["nasty-live"])
+
+	def test_credential_columns_are_the_only_extra_read(self):
+		self.configure_doctype()
+		self.client()
+		self.assertIn(("HRMS ERP Instance", ("name", "api_key")), self.frappe.db.reads)
+
+	def test_key_without_secret_is_reported_not_silently_fallen_back(self):
+		"""A half-configured record must not quietly use a stale site-config pair."""
+		self.configure_doctype(api_key="ak_doctype", api_secret=None)
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			self.client()
+		self.assertIn("api_secret", str(ctx.exception))
+		self.assertNotIn(API_SECRET, str(ctx.exception))
+
+	def test_secret_without_key_is_reported(self):
+		self.configure_doctype(api_key=None, api_secret="sk_doctype")
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			self.client()
+		self.assertIn("api_key", str(ctx.exception))
+
+	def test_doctype_secret_never_appears_in_repr_or_errors(self):
+		self.configure_doctype(api_key="ak_doctype", api_secret="sk_doctype")
+		client = self.client()
+		self.assertNotIn("sk_doctype", repr(client))
+		self.assertNotIn("ak_doctype", repr(client))
+
+		self.queue(_FakeResponse(403, {}))
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			client.get_list("Employee")
+		self.assertNotIn("sk_doctype", str(ctx.exception))
+
+
+class TestCredentialsFallBackToSiteConfig(_ClientTestCase):
+	"""Blank doctype fields keep working off site_config.json, as before."""
+
+	def test_blank_doctype_fields_fall_back_to_site_config(self):
+		self.queue(_FakeResponse(200, {"data": []}))
+		self.client().get_list("Employee")
+		self.assertEqual(self.requests.calls[0]["headers"]["Authorization"], f"token {API_KEY}:{API_SECRET}")
+
+	def test_fallback_error_names_both_sources(self):
+		self.frappe.conf = {}
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			self.client()
+		message = str(ctx.exception)
+		self.assertIn(sc.CREDENTIALS_CONFIG_KEY, message)
+		self.assertIn("HRMS ERP Instance", message)
+
+	def test_source_is_logged_but_never_the_value(self):
+		with self.assertLogs(sc.logger, level="INFO") as captured:
+			self.client()
+		logged = "\n".join(captured.output)
+		self.assertIn(sc.CREDENTIALS_CONFIG_KEY, logged)
+		self.assertNotIn(API_SECRET, logged)
+		self.assertNotIn(API_KEY, logged)
 
 
 class TestCredentials(_ClientTestCase):

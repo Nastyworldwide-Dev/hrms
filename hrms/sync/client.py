@@ -11,8 +11,18 @@ module is that it can never write to it:
   file that can emit POST/PUT/PATCH/DELETE, so adding one is a visible diff, not
   an accident.
 
-Credentials live in site config (`hrms_sync_credentials`), never in a DocType,
-and are redacted from `repr()` and from every error this module raises.
+Credentials live on the `HRMS ERP Instance` record itself, so HR can rotate them
+from the Desk without bench access. Both fields are **permlevel 1** there: the
+doctype is readable by the Employee role (the PWA resolves a staff member's
+instance URL from it) and staff must never reach the key or the secret. The
+secret is a Password field — encrypted at rest, read back with
+`frappe.utils.password.get_decrypted_password`, exactly as project-board's
+`board/federation.py` does it.
+
+Site config (`hrms_sync_credentials`) remains a fallback for instances that were
+configured that way before the move; whichever source is used is logged, the
+value never is. Credentials are redacted from `repr()` and from every error this
+module raises.
 """
 
 import json
@@ -32,8 +42,13 @@ logger = logging.getLogger(__name__)
 #: The only HTTP method this client may ever issue.
 ALLOWED_HTTP_METHOD = "GET"
 
-#: Site-config key holding `{instance_name: {"api_key": ..., "api_secret": ...}}`.
+#: Legacy fallback: site-config key holding
+#: `{instance_name: {"api_key": ..., "api_secret": ...}}`.
 CREDENTIALS_CONFIG_KEY = "hrms_sync_credentials"
+
+#: Where the credentials that were actually used came from — logged, never the value.
+SOURCE_DOCTYPE = "HRMS ERP Instance"
+SOURCE_SITE_CONFIG = f"site config '{CREDENTIALS_CONFIG_KEY}'"
 
 #: (connect, read) seconds. Always passed — a request with no timeout can hang a worker forever.
 TIMEOUT = (10, 60)
@@ -81,6 +96,18 @@ def _sleep(seconds: float) -> None:
 	time.sleep(seconds)
 
 
+def _decrypt_secret(docname: str) -> str:
+	"""Read the encrypted `api_secret` off an HRMS ERP Instance row.
+
+	Password fields never come back from `db.get_value`; they live in `__Auth`.
+	`raise_exception=False` because "not configured yet" is a normal state that
+	this module reports itself, with a message that names no value.
+	"""
+	from frappe.utils.password import get_decrypted_password
+
+	return get_decrypted_password(SOURCE_DOCTYPE, docname, "api_secret", raise_exception=False) or ""
+
+
 class RemoteInstanceClient:
 	"""Reads documents from another ERPNext instance. Cannot write to it.
 
@@ -123,14 +150,44 @@ class RemoteInstanceClient:
 
 	@staticmethod
 	def _load_credentials(instance_name: str) -> tuple[str, str]:
-		"""From site config only — deliberately not readable through the Desk."""
+		"""Doctype first (HR self-serves from the Desk), site config as fallback.
+
+		Only a *completely blank* doctype record falls through to site config: a
+		half-filled one is a configuration mistake and is reported as such,
+		rather than silently using a stale key from site_config.json.
+		"""
+		row = (
+			frappe.db.get_value(
+				SOURCE_DOCTYPE,
+				{"instance_name": instance_name},
+				["name", "api_key"],
+				as_dict=True,
+			)
+			or {}
+		)
+		api_key = (row.get("api_key") or "").strip()
+		docname = row.get("name") or instance_name
+		api_secret = _decrypt_secret(docname).strip() if row else ""
+
+		if api_key or api_secret:
+			missing = [
+				label for label, value in (("api_key", api_key), ("api_secret", api_secret)) if not value
+			]
+			if missing:
+				raise RemoteInstanceError(
+					f"{SOURCE_DOCTYPE} {instance_name!r} is missing {', '.join(missing)}"
+				)
+			logger.info("[sync] credentials for %s loaded from %s", instance_name, SOURCE_DOCTYPE)
+			return api_key, api_secret
+
 		credentials = frappe.conf.get(CREDENTIALS_CONFIG_KEY, {}) or {}
 		entry = credentials.get(instance_name) or {}
 
 		if not entry:
 			raise RemoteInstanceError(
-				f"site config key '{CREDENTIALS_CONFIG_KEY}' has no entry for instance "
-				f"{instance_name!r}; add {{'api_key': ..., 'api_secret': ...}} to site_config.json"
+				f"no credentials for instance {instance_name!r}: set API Key / API Secret on the "
+				f"{SOURCE_DOCTYPE} record, or add {{'api_key': ..., 'api_secret': ...}} under "
+				f"site config key '{CREDENTIALS_CONFIG_KEY}'"
 			)
 
 		missing = [key for key in ("api_key", "api_secret") if not entry.get(key)]
@@ -139,6 +196,7 @@ class RemoteInstanceClient:
 				f"site config '{CREDENTIALS_CONFIG_KEY}.{instance_name}' is missing {', '.join(missing)}"
 			)
 
+		logger.info("[sync] credentials for %s loaded from %s", instance_name, SOURCE_SITE_CONFIG)
 		return entry["api_key"], entry["api_secret"]
 
 	def __repr__(self) -> str:

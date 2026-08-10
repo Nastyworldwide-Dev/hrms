@@ -12,6 +12,10 @@
   "column_break_meta",
   "url",
   "description",
+  "credentials_section",
+  "api_key",
+  "column_break_credentials",
+  "api_secret",
   "companies_section",
   "companies"
  ],
@@ -48,6 +52,32 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "description": "Used by the one-way shadow sync to read from this instance. Visible to System Manager only (permlevel 1) — the Employee role can read this doctype for the PWA redirect and must never reach these.",
+   "fieldname": "credentials_section",
+   "fieldtype": "Section Break",
+   "label": "Sync Credentials",
+   "permlevel": 1
+  },
+  {
+   "description": "API key of a dedicated, least-privilege read-only user on that instance.",
+   "fieldname": "api_key",
+   "fieldtype": "Data",
+   "label": "API Key",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "column_break_credentials",
+   "fieldtype": "Column Break",
+   "permlevel": 1
+  },
+  {
+   "description": "API secret for the SAME user the key belongs to. Encrypted at rest.",
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret",
+   "permlevel": 1
   },
   {
    "fieldname": "companies_section",
@@ -102,6 +132,12 @@
    "read": 1,
    "role": "Employee",
    "select": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
   }
  ],
  "sort_field": "modified",

@@ -156,5 +156,37 @@ class TestCutoverReadiness(unittest.TestCase):
 		self.assertFalse(self.mod.is_cutover_ready([], required_clean_runs=4)["ready"])
 
 
+class TestGateCoversExactlyWhatIsMirrored(unittest.TestCase):
+	"""The gate's doctype list must equal the runner's, or it lies in one of two ways.
+
+	Report on something the runner never mirrors and the local count is always
+	zero, so parity is unreachable and cutover never authorises. Omit something
+	the runner does mirror and a failed sync for that doctype is invisible — the
+	gate calls it clean. Both are silent, so this is pinned rather than trusted.
+	"""
+
+	def _tuple_from(self, path, name):
+		"""Read a module-level tuple without importing the module (no bench needed)."""
+		import ast
+
+		tree = ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
+		for node in tree.body:
+			if isinstance(node, ast.Assign) and any(
+				isinstance(t, ast.Name) and t.id == name for t in node.targets
+			):
+				return tuple(ast.literal_eval(node.value))
+		raise AssertionError(f"{name} not found in {path}")
+
+	def test_parity_and_runner_agree(self):
+		gate = self._tuple_from(HRMS_ROOT / "sync" / "parity.py", "MIRRORED_DOCTYPES")
+		runner = self._tuple_from(HRMS_ROOT / "sync" / "runner.py", "DEFAULT_SYNC_DOCTYPES")
+		self.assertEqual(
+			sorted(gate),
+			sorted(runner),
+			"parity.MIRRORED_DOCTYPES and runner.DEFAULT_SYNC_DOCTYPES have drifted; "
+			"the cutover gate must cover exactly what the sync mirrors",
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()

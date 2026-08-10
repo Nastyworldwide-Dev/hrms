@@ -18,12 +18,16 @@ import frappe
 
 logger = logging.getLogger(__name__)
 
-# Mirrored during the parallel run. Order is reporting order, not sync order.
+# Must stay identical to hrms.sync.runner.DEFAULT_SYNC_DOCTYPES. A gate that
+# reports on a doctype the runner never mirrors can never reach parity, and one
+# that omits a mirrored doctype would call a failed sync clean — both defeat the
+# point. Not imported from the runner so this module stays loadable without a
+# bench; `test_sync_parity` fails if the two lists ever drift apart.
 MIRRORED_DOCTYPES = (
+	"Company",
 	"Employee",
 	"Attendance",
 	"Employee Checkin",
-	"Leave Application",
 	"Leave Ledger Entry",
 )
 

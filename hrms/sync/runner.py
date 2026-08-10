@@ -50,14 +50,41 @@ def _log():
 #: Custom field stamped on every mirrored row. Read by `hrms.sync.parity`.
 PROVENANCE_FIELD = "synced_from_instance"
 
-#: Mirrored during the parallel run, in dependency order — Employee first, so
-#: rows that link to it have something to point at.
+#: Mirrored during the parallel run, in **dependency order** — the tuple order is
+#: the sync order and is load-bearing, not incidental:
+#:
+#: 1. Company — `Employee.company` is a Link, so the target must already exist
+#:    locally or every mirrored Employee lands with a dangling company.
+#: 2. Employee — rows that link to it have something to point at.
+#: 3. the rest, all of which link to Employee.
+#:
+#: `test_sync_runner` asserts Company precedes Employee, so a reorder is a
+#: failing test rather than a silent breakage.
 DEFAULT_SYNC_DOCTYPES = (
+	"Company",
 	"Employee",
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
 )
+
+#: Mirrored **create-only**: absent locally -> create a shell; present locally ->
+#: never touched, not even to refresh the identity fields.
+#:
+#: Company is here because a local Company owns finance configuration — chart of
+#: accounts, cost centres, default accounts — that a mirror has no business
+#: overwriting. Creating a shell Company is nevertheless safe on this hub: the
+#: companies mirrored here are HR-only on this site (no ledger, no transactions);
+#: the record exists so `Employee.company` resolves. Requiring HR to hand-create
+#: them instead would be strictly worse — one typo and every mirrored Employee
+#: links to a company that does not exist.
+CREATE_ONLY_DOCTYPES = frozenset({"Company"})
+
+#: Identity-only projection for create-only doctypes. Everything else on the
+#: remote row — accounting defaults above all — is deliberately dropped.
+MIRRORED_FIELDS = {
+	"Company": ("company_name", "abbr", "default_currency", "country"),
+}
 
 PAGE_SIZE = 500
 
@@ -120,21 +147,37 @@ def get_watermark(instance_name: str) -> str | None:
 	return watermark
 
 
-def _mirror_payload(row: dict, instance_name: str) -> dict:
-	"""Remote row -> the flat fields written locally, provenance included."""
-	payload = {k: v for k, v in row.items() if k not in _UNMIRRORED_FIELDS and not isinstance(v, list)}
+def _mirror_payload(row: dict, instance_name: str, doctype: str | None = None) -> dict:
+	"""Remote row -> the flat fields written locally, provenance included.
+
+	Doctypes listed in `MIRRORED_FIELDS` are narrowed to an allow-list; every
+	other doctype copies whatever the remote returned minus `_UNMIRRORED_FIELDS`.
+	"""
+	allowed = MIRRORED_FIELDS.get(doctype)
+	if allowed:
+		payload = {k: row[k] for k in allowed if row.get(k) is not None}
+	else:
+		payload = {k: v for k, v in row.items() if k not in _UNMIRRORED_FIELDS and not isinstance(v, list)}
 	payload.pop("name", None)
 	payload[PROVENANCE_FIELD] = instance_name
 	return payload
 
 
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
-	"""Upsert one row keyed by the remote name. Returns "inserted" or "updated".
+	"""Upsert one row keyed by the remote name.
+
+	Returns "inserted", "updated", or "skipped" (create-only doctype that already
+	exists locally).
 
 	Updates go through `db.set_value` rather than `save()` on purpose: mirrored
 	Attendance rows arrive submitted, and a mirror must not re-run the source
 	instance's validation against this site's (possibly different) masters.
 	"""
+	if doctype in CREATE_ONLY_DOCTYPES and frappe.db.exists(doctype, remote_name):
+		# Not even the identity fields: whatever is here locally wins, always.
+		_log().debug("[sync] %s %s already exists locally, left untouched", doctype, remote_name)
+		return "skipped"
+
 	if frappe.db.exists(doctype, remote_name):
 		frappe.db.set_value(doctype, remote_name, payload, update_modified=False)
 		return "updated"
@@ -207,12 +250,15 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				continue
 
 			seen.add(remote_name)
-			outcome = _write_row(doctype, remote_name, _mirror_payload(row, client.instance_name))
-			written += 1
+			outcome = _write_row(doctype, remote_name, _mirror_payload(row, client.instance_name, doctype))
 			if outcome == "inserted":
+				written += 1
 				inserted += 1
-			else:
+			elif outcome == "updated":
+				written += 1
 				updated += 1
+			else:  # create-only doctype, already present locally
+				skipped += 1
 
 		if len(page) < page_size:
 			break

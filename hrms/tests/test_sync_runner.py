@@ -312,6 +312,112 @@ class TestProvenance(_RunnerTestCase):
 			self.assertTrue(definitions[0]["allow_on_submit"], "Attendance arrives submitted")
 
 
+COMPANIES = [
+	{
+		"name": "Acme",
+		"company_name": "Acme",
+		"abbr": "AC",
+		"default_currency": "MYR",
+		"country": "Malaysia",
+		"default_bank_account": "REMOTE-BANK",
+		"chart_of_accounts": "Remote Standard",
+		"cost_center": "Main - AC",
+		"modified": "2026-08-01 09:00:00",
+	}
+]
+
+
+class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
+	"""Company exists in the sync only so `Employee.company` resolves locally.
+
+	Two properties, both load-bearing: it is created when absent (otherwise every
+	mirrored Employee links to nothing, or HR hand-types the name and gets it
+	wrong once), and it is NEVER updated when present (a local Company owns chart
+	of accounts / cost centres a mirror must not clobber).
+	"""
+
+	def client(self, remote=None, fail_for=()):
+		return super().client(remote or {"Company": COMPANIES, "Employee": EMPLOYEES}, fail_for)
+
+	def test_company_syncs_before_employee(self):
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertIn("Company", order)
+		self.assertLess(
+			order.index("Company"),
+			order.index("Employee"),
+			"Employee.company is a Link — the Company must be mirrored first",
+		)
+
+	def test_absent_company_is_created_as_a_shell(self):
+		result = runner.sync_doctype(self.client(), "Company")
+
+		self.assertEqual(result["inserted"], 1)
+		row = self.store.rows("Company")["Acme"]
+		self.assertEqual(row["company_name"], "Acme")
+		self.assertEqual(row["abbr"], "AC")
+		self.assertEqual(row["default_currency"], "MYR")
+		self.assertEqual(row["country"], "Malaysia")
+		self.assertEqual(row[runner.PROVENANCE_FIELD], "nasty-live")
+
+	def test_accounting_configuration_is_not_mirrored(self):
+		runner.sync_doctype(self.client(), "Company")
+
+		row = self.store.rows("Company")["Acme"]
+		for field in ("default_bank_account", "chart_of_accounts", "cost_center"):
+			self.assertNotIn(field, row, f"{field} is finance config and must not be mirrored")
+
+	def test_existing_company_is_never_modified(self):
+		local = {
+			"name": "Acme",
+			"company_name": "Acme Holdings Sdn Bhd",
+			"abbr": "AHSB",
+			"default_currency": "USD",
+			"country": "Singapore",
+			"chart_of_accounts": "Local Standard",
+		}
+		self.store.tables["Company"] = {"Acme": dict(local)}
+
+		result = runner.sync_doctype(self.client(), "Company")
+
+		self.assertEqual(self.store.rows("Company")["Acme"], local, "a local Company was overwritten")
+		self.assertEqual(self.store.updates, [], "create-only doctype must issue no writes")
+		self.assertEqual(result["updated"], 0)
+		self.assertEqual(result["inserted"], 0)
+		self.assertEqual(result["written"], 0)
+		self.assertEqual(result["skipped"], 1)
+
+	def test_existing_company_is_not_even_stamped_with_provenance(self):
+		self.store.tables["Company"] = {"Acme": {"name": "Acme", "company_name": "Acme"}}
+
+		runner.sync_doctype(self.client(), "Company")
+
+		self.assertNotIn(runner.PROVENANCE_FIELD, self.store.rows("Company")["Acme"])
+
+	def test_rerun_after_creation_does_not_touch_it_again(self):
+		client = self.client()
+		runner.sync_doctype(client, "Company")
+		self.store.updates.clear()
+
+		second = runner.sync_doctype(client, "Company")
+
+		self.assertEqual(second["skipped"], 1)
+		self.assertEqual(self.store.updates, [])
+
+	def test_create_only_applies_to_company_alone(self):
+		"""Every other doctype still updates in place."""
+		self.assertEqual(runner.CREATE_ONLY_DOCTYPES, frozenset({"Company"}))
+
+		client = self.client()
+		runner.sync_doctype(client, "Employee")
+		second = runner.sync_doctype(client, "Employee")
+
+		self.assertEqual(second["updated"], 2)
+
+	def test_provenance_field_is_created_for_company_too(self):
+		"""Nothing can stamp `Company.synced_from_instance` unless it exists."""
+		self.assertIn("Company", runner.get_provenance_custom_fields())
+
+
 class TestNeverDeletes(_RunnerTestCase):
 	def test_record_absent_remotely_is_left_alone_and_counted_as_skipped(self):
 		self.store.tables["Employee"] = {

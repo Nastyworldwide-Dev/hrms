@@ -74,6 +74,46 @@ class TestERPInstanceDoctype(unittest.TestCase):
 			self.assertFalse(perm.get("create"))
 			self.assertFalse(perm.get("delete"))
 
+	# -- shadow-sync credentials ----------------------------------------------
+
+	def test_credential_fields_exist_with_the_right_types(self):
+		fields = {f["fieldname"]: f for f in self.parent["fields"]}
+		self.assertIn("api_key", fields, "the sync needs a Desk-editable API key")
+		self.assertEqual(fields["api_key"]["fieldtype"], "Data")
+		self.assertIn("api_secret", fields)
+		self.assertEqual(
+			fields["api_secret"]["fieldtype"],
+			"Password",
+			"the secret must be a Password field so it is encrypted at rest",
+		)
+
+	def test_credential_fields_are_permlevel_one(self):
+		"""The Employee role can READ this doctype (see the test above), so the
+		credentials only stay out of staff hands if they sit above permlevel 0."""
+		fields = {f["fieldname"]: f for f in self.parent["fields"]}
+		for fieldname in ("api_key", "api_secret"):
+			self.assertEqual(
+				fields[fieldname].get("permlevel"),
+				1,
+				f"{fieldname} at permlevel 0 is readable by every role that can read the doctype",
+			)
+
+	def test_only_system_manager_holds_permlevel_one(self):
+		elevated = [p for p in self.parent["permissions"] if (p.get("permlevel") or 0) > 0]
+		self.assertTrue(elevated, "the credential fields need a permlevel-1 grant to be editable at all")
+		self.assertEqual(
+			sorted({p["role"] for p in elevated}),
+			["System Manager"],
+			"only System Manager may see the shadow-sync credentials",
+		)
+
+	def test_permlevel_one_roles_also_have_a_level_zero_row(self):
+		"""Frappe's `check_level_zero_is_set` aborts migrate otherwise."""
+		at_zero = {p.get("role") for p in self.parent["permissions"] if not p.get("permlevel")}
+		for perm in self.parent["permissions"]:
+			if (perm.get("permlevel") or 0) > 0:
+				self.assertIn(perm["role"], at_zero)
+
 
 if __name__ == "__main__":
 	unittest.main()
