@@ -371,6 +371,9 @@ scheduler_events = {
 		"hrms.hr.doctype.shift_assignment.shift_assignment.mark_expired_shift_assignments_as_inactive",
 		"hrms.hr.doctype.job_opening.job_opening.close_expired_job_openings",
 		"hrms.telemetry.capture_daily_attendance_pulse",
+		# Re-reconcile fence-role users against the instance registry and
+		# report HR users the fail-open fence default leaves unfenced.
+		"hrms.utils.company_fence.nightly_fence_hygiene",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).

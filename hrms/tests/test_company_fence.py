@@ -35,7 +35,9 @@ from hrms.utils.company_fence import (
 	ACTION_SKIP,
 	COMPANY_HR_ROLE,
 	GROUP_HR_ROLE,
+	INSTANCE_HR_ROLE,
 	plan_company_fence,
+	unfenced_by_omission,
 )
 
 WWSB = "Wonder World Sdn Bhd"
@@ -260,32 +262,98 @@ class TestEmployeeCompanyFence(unittest.TestCase):
 			self.assertEqual(company_scope.employee_query_conditions("Administrator"), "")
 
 
+NASTY_COMPANIES = [WWSB, "Nasty Holdings Sdn Bhd", "Nasty Cigs Sdn Bhd"]
+
+
 class TestPlanCompanyFence(unittest.TestCase):
 	def test_company_hr_gets_their_own_company(self):
-		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], WWSB, []), (ACTION_FENCE, WWSB, []))
+		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], WWSB, []), (ACTION_FENCE, [WWSB], []))
 
 	def test_existing_correct_permission_is_left_alone(self):
-		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], WWSB, [WWSB]), (ACTION_FENCE, None, []))
+		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], WWSB, [WWSB]), (ACTION_FENCE, [], []))
 
 	def test_stale_company_permission_is_dropped(self):
 		self.assertEqual(
 			plan_company_fence([COMPANY_HR_ROLE], WWSB, [VRFC]),
-			(ACTION_FENCE, WWSB, [VRFC]),
+			(ACTION_FENCE, [WWSB], [VRFC]),
 		)
 
 	def test_group_hr_is_never_fenced(self):
-		self.assertEqual(plan_company_fence([GROUP_HR_ROLE], WWSB, []), (ACTION_SKIP, None, []))
+		self.assertEqual(plan_company_fence([GROUP_HR_ROLE], WWSB, []), (ACTION_SKIP, [], []))
 		# group wins when a user somehow holds both
 		self.assertEqual(
 			plan_company_fence([GROUP_HR_ROLE, COMPANY_HR_ROLE], WWSB, [VRFC]),
-			(ACTION_SKIP, None, []),
+			(ACTION_SKIP, [], []),
 		)
 
 	def test_user_with_neither_role_is_untouched(self):
-		self.assertEqual(plan_company_fence(["HR Manager"], WWSB, [VRFC]), (ACTION_SKIP, None, []))
+		self.assertEqual(plan_company_fence(["HR Manager"], WWSB, [VRFC]), (ACTION_SKIP, [], []))
 
 	def test_employee_without_company_is_untouched(self):
-		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], None, []), (ACTION_SKIP, None, []))
+		self.assertEqual(plan_company_fence([COMPANY_HR_ROLE], None, []), (ACTION_SKIP, [], []))
+
+	def test_instance_hr_gets_every_company_of_their_instance(self):
+		self.assertEqual(
+			plan_company_fence([INSTANCE_HR_ROLE], WWSB, [], instance_companies=NASTY_COMPANIES),
+			(ACTION_FENCE, sorted(NASTY_COMPANIES), []),
+		)
+
+	def test_instance_hr_diff_is_incremental(self):
+		# Already fenced to one instance company plus a stale outsider: only
+		# the delta moves.
+		action, create, stale = plan_company_fence(
+			[INSTANCE_HR_ROLE], WWSB, [WWSB, VRFC], instance_companies=NASTY_COMPANIES
+		)
+		self.assertEqual(action, ACTION_FENCE)
+		self.assertEqual(create, sorted(set(NASTY_COMPANIES) - {WWSB}))
+		self.assertEqual(stale, [VRFC])
+
+	def test_instance_hr_with_no_mapping_falls_back_to_own_company(self):
+		# Fail-closed: an unmapped company must narrow the fence, never widen it.
+		self.assertEqual(
+			plan_company_fence([INSTANCE_HR_ROLE], WWSB, [], instance_companies=[]),
+			(ACTION_FENCE, [WWSB], []),
+		)
+
+	def test_instance_role_wins_over_company_role(self):
+		# Holding both means the broader grant was deliberate.
+		action, create, _stale = plan_company_fence(
+			[INSTANCE_HR_ROLE, COMPANY_HR_ROLE], WWSB, [], instance_companies=NASTY_COMPANIES
+		)
+		self.assertEqual(action, ACTION_FENCE)
+		self.assertEqual(create, sorted(NASTY_COMPANIES))
+
+	def test_group_wins_over_instance(self):
+		self.assertEqual(
+			plan_company_fence(
+				[GROUP_HR_ROLE, INSTANCE_HR_ROLE], WWSB, [], instance_companies=NASTY_COMPANIES
+			),
+			(ACTION_SKIP, [], []),
+		)
+
+
+class TestUnfencedByOmission(unittest.TestCase):
+	def test_flags_only_hr_users_with_no_fence_of_any_kind(self):
+		self.assertEqual(
+			unfenced_by_omission(
+				hr_role_holders=[PLAIN_HR, GROUP_HR, COMPANY_HR, "instancehr@example.com", "Administrator"],
+				group_holders=[GROUP_HR],
+				fence_role_holders=[COMPANY_HR, "instancehr@example.com"],
+				up_holders=[],
+			),
+			[PLAIN_HR],
+		)
+
+	def test_a_manual_company_up_counts_as_fenced(self):
+		self.assertEqual(
+			unfenced_by_omission(
+				hr_role_holders=[PLAIN_HR],
+				group_holders=[],
+				fence_role_holders=[],
+				up_holders=[PLAIN_HR],
+			),
+			[],
+		)
 
 
 class TestSyncCompanyUserPermission(unittest.TestCase):
@@ -337,6 +405,28 @@ class TestSyncCompanyUserPermission(unittest.TestCase):
 		inserted.insert.assert_not_called()
 		delete_doc.assert_not_called()
 
+	def test_instance_hr_gets_one_permission_per_instance_company(self):
+		doc = frappe._dict(name="HR-EMP-003", user_id=COMPANY_HR, company=WWSB)
+		inserted = MagicMock()
+		inserted.flags = frappe._dict()
+
+		with (
+			patch.object(frappe, "get_all", return_value=[]),
+			patch.object(frappe, "get_roles", return_value=[INSTANCE_HR_ROLE]),
+			patch.object(frappe, "new_doc", return_value=inserted),
+			patch.object(frappe, "delete_doc"),
+			patch.object(frappe, "clear_cache"),
+			patch.object(
+				employee_hrms_scope, "get_instance_companies", return_value=NASTY_COMPANIES
+			) as resolver,
+		):
+			employee_hrms_scope.sync_company_user_permission(doc, COMPANY_HR)
+
+		resolver.assert_called_once_with(WWSB)
+		self.assertEqual(inserted.insert.call_count, len(NASTY_COMPANIES))
+		fenced = [call.args[0]["for_value"] for call in inserted.update.call_args_list]
+		self.assertEqual(sorted(fenced), sorted(NASTY_COMPANIES))
+
 
 class TestFenceRolesAreWiredForFreshInstallAndMigrate(unittest.TestCase):
 	def test_after_install_creates_the_roles(self):
@@ -349,6 +439,15 @@ class TestFenceRolesAreWiredForFreshInstallAndMigrate(unittest.TestCase):
 
 		patches = (pathlib.Path(__file__).resolve().parents[1] / "patches.txt").read_text(encoding="utf-8")
 		self.assertIn("hrms.patches.v16_0.create_company_fence_roles", patches)
+		# the HR (Instance) role postdates that patch, so existing sites need a
+		# second idempotent run
+		self.assertIn("hrms.patches.v16_0.add_hr_instance_fence_role", patches)
+
+	def test_nightly_hygiene_is_scheduled(self):
+		import pathlib
+
+		hooks = (pathlib.Path(__file__).resolve().parents[1] / "hooks.py").read_text(encoding="utf-8")
+		self.assertIn("hrms.utils.company_fence.nightly_fence_hygiene", hooks)
 
 	def test_roles_are_created_idempotently(self):
 		from hrms.utils.company_fence import COMPANY_FENCE_ROLES, create_company_fence_roles

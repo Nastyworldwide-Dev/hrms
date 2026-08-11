@@ -38,7 +38,12 @@ import logging
 
 import frappe
 
-from hrms.utils.company_fence import ACTION_FENCE, COMPANY_HR_ROLE, plan_company_fence
+from hrms.utils.company_fence import (
+	ACTION_FENCE,
+	INSTANCE_HR_ROLE,
+	get_instance_companies,
+	plan_company_fence,
+)
 from hrms.utils.user_permission_scope import (
 	ACTION_REVERT,
 	ACTION_SCOPED,
@@ -84,21 +89,26 @@ def sync_hrms_only_user_permission(doc, method=None):
 
 
 def sync_company_user_permission(doc, user_id: str):
-	"""Keep the `allow=Company` fence of an "HR (Company)" user in step with
-	their own Employee.company.
+	"""Keep the `allow=Company` fence of a fence-role user in step with the
+	registry: one UP for "HR (Company)", one per instance company for
+	"HR (Instance)" (their Employee.company -> its HRMS ERP Instance -> that
+	instance's full company list).
 
-	No-op for everyone else — a user holding neither fence role keeps whatever
+	No-op for everyone else — a user holding no fence role keeps whatever
 	User Permissions an admin gave them, so existing sites are unaffected.
 	"""
+	roles = frappe.get_roles(user_id)
 	existing = frappe.get_all(
 		"User Permission",
 		filters={"user": user_id, "allow": "Company"},
 		fields=["name", "for_value"],
 	)
+	instance_companies = get_instance_companies(doc.get("company")) if INSTANCE_HR_ROLE in roles else None
 	action, create, stale = plan_company_fence(
-		frappe.get_roles(user_id),
+		roles,
 		doc.get("company"),
 		[row.for_value for row in existing],
+		instance_companies,
 	)
 	logger.info(
 		"[employee_hrms_scope] company fence employee=%s user=%s action=%s create=%s stale=%s",
@@ -121,24 +131,19 @@ def sync_company_user_permission(doc, user_id: str):
 			)
 			frappe.delete_doc("User Permission", row.name, ignore_permissions=True)
 
-	if create:
+	for company in create:
 		up = frappe.new_doc("User Permission")
 		up.update(
 			{
 				"user": user_id,
 				"allow": "Company",
-				"for_value": create,
+				"for_value": company,
 				"apply_to_all_doctypes": 1,
 			}
 		)
 		up.flags.ignore_permissions = True
 		up.insert()
-		logger.info(
-			"[employee_hrms_scope] fenced %s to company %s (%s)",
-			user_id,
-			create,
-			COMPANY_HR_ROLE,
-		)
+		logger.info("[employee_hrms_scope] fenced %s to company %s", user_id, company)
 
 	frappe.clear_cache(user=user_id)
 
