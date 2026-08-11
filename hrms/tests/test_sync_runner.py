@@ -26,6 +26,7 @@ import pathlib
 import sys
 import types
 import unittest
+from typing import ClassVar
 
 HRMS_ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODULE_PATH = HRMS_ROOT / "sync" / "runner.py"
@@ -185,10 +186,27 @@ ATTENDANCE = [
 class _RunnerTestCase(unittest.TestCase):
 	"""Installs a fake frappe + store around each test."""
 
+	#: Parents the fixtures point at. Referential integrity is enforced per row,
+	#: so a store without these writes nothing — mirroring the real destination,
+	#: where a company must exist before its employees can land.
+	SEED: ClassVar[dict] = {
+		"Company": {"Acme": {"name": "Acme", "company_name": "Acme"}},
+		"Employee": {
+			"HR-EMP-0001": {"name": "HR-EMP-0001", "company": "Acme"},
+			"HR-EMP-0002": {"name": "HR-EMP-0002", "company": "Acme"},
+		},
+	}
+
+	#: Doctypes whose own rows the test asserts on; seeding those would pollute
+	#: the counts, so each subclass drops what it is actually syncing.
+	SEED_EXCLUDE: ClassVar[tuple] = ()
+
 	def setUp(self):
 		import frappe
 
-		self.store = _FakeStore()
+		self.store = _FakeStore(
+			{dt: rows for dt, rows in self.SEED.items() if dt not in self.SEED_EXCLUDE}
+		)
 		self._saved = (frappe.db, frappe.get_all, frappe.get_doc)
 		frappe.db = self.store
 		frappe.get_all = self.store.get_all
@@ -207,6 +225,10 @@ class _RunnerTestCase(unittest.TestCase):
 		frappe.db, frappe.get_all, frappe.get_doc = self._saved
 		runner.now_datetime, runner._ = self._saved_runner
 
+	def seed_parent(self, doctype, name, **fields):
+		"""Put a parent row in place for tests whose class excludes it from SEED."""
+		self.store.tables.setdefault(doctype, {})[name] = dict(fields, name=name)
+
 	def client(self, remote=None, fail_for=()):
 		return _FakeClient(
 			"nasty-live", remote or {"Employee": EMPLOYEES, "Attendance": ATTENDANCE}, fail_for
@@ -217,6 +239,8 @@ class _RunnerTestCase(unittest.TestCase):
 
 
 class TestIdempotency(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_rerun_writes_no_duplicates(self):
 		client = self.client()
 
@@ -233,11 +257,14 @@ class TestIdempotency(_RunnerTestCase):
 		)
 
 	def test_local_name_equals_remote_name(self):
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme")
 		runner.sync_doctype(self.client(), "Attendance")
 		self.assertEqual(list(self.store.rows("Attendance")), ["HR-ATT-0001"])
 
 
 class TestIncremental(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_watermark_reaches_the_remote_as_a_modified_filter(self):
 		client = self.client()
 
@@ -276,6 +303,8 @@ class TestIncremental(_RunnerTestCase):
 
 
 class TestProvenance(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_every_mirrored_row_records_its_source_instance(self):
 		runner.sync_instance(self.client(), doctypes=["Employee", "Attendance"])
 
@@ -336,17 +365,23 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 	of accounts / cost centres a mirror must not clobber).
 	"""
 
+	SEED_EXCLUDE = ("Company",)
+
 	def client(self, remote=None, fail_for=()):
 		return super().client(remote or {"Company": COMPANIES, "Employee": EMPLOYEES}, fail_for)
 
-	def test_company_syncs_before_employee(self):
-		order = list(runner.DEFAULT_SYNC_DOCTYPES)
-		self.assertIn("Company", order)
-		self.assertLess(
-			order.index("Company"),
-			order.index("Employee"),
-			"Employee.company is a Link — the Company must be mirrored first",
-		)
+	def test_company_is_not_synced_automatically(self):
+		"""Creating a Company means running ERPNext's setup, and on this version
+		that path is broken two ways — "list index out of range" without
+		`chart_of_accounts`, `'Company' object has no attribute
+		'update_default_account'` with it. Both were hit on verifica-live. A human
+		creates companies; the sync only reports which are missing."""
+		self.assertNotIn("Company", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertIn("Employee", runner.DEFAULT_SYNC_DOCTYPES)
+
+	def test_employee_declares_company_as_a_row_dependency(self):
+		"""Company is still a prerequisite — enforced per row instead."""
+		self.assertEqual(runner.ROW_DEPENDENCIES["Employee"], {"company": "Company"})
 
 	def test_absent_company_is_created_as_a_shell(self):
 		result = runner.sync_doctype(self.client(), "Company")
@@ -422,6 +457,7 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 
 	def test_create_only_applies_to_company_alone(self):
 		"""Every other doctype still updates in place."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
 		self.assertEqual(runner.CREATE_ONLY_DOCTYPES, frozenset({"Company"}))
 
 		client = self.client()
@@ -430,12 +466,16 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 
 		self.assertEqual(second["updated"], 2)
 
-	def test_provenance_field_is_created_for_company_too(self):
-		"""Nothing can stamp `Company.synced_from_instance` unless it exists."""
-		self.assertIn("Company", runner.get_provenance_custom_fields())
+	def test_provenance_covers_exactly_the_synced_doctypes(self):
+		"""Only mirrored doctypes need the stamp, and every one of them does —
+		`parity.py` counts local rows by it, so a gap here silently understates."""
+		fields = runner.get_provenance_custom_fields()
+		self.assertEqual(sorted(fields), sorted(runner.DEFAULT_SYNC_DOCTYPES))
 
 
 class TestNeverDeletes(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_record_absent_remotely_is_left_alone_and_counted_as_skipped(self):
 		self.store.tables["Employee"] = {
 			"HR-EMP-0009": {
@@ -454,6 +494,8 @@ class TestNeverDeletes(_RunnerTestCase):
 
 
 class TestPartialRuns(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_one_doctype_failing_yields_partial_and_the_rest_still_sync(self):
 		client = self.client(fail_for=["Attendance"])
 
@@ -490,6 +532,8 @@ class TestPartialRuns(_RunnerTestCase):
 
 
 class TestRunRecordAlwaysFinalised(_RunnerTestCase):
+
+	SEED_EXCLUDE = ("Employee",)
 	def test_run_is_finalised_when_the_run_itself_raises(self):
 		self.store.commit_error_once = True
 
@@ -520,11 +564,13 @@ class TestDependentDoctypesAreBlocked(_RunnerTestCase):
 	correct for INDEPENDENT doctypes and actively harmful for dependent ones.
 	"""
 
+	SEED_EXCLUDE = ("Company", "Employee")
+
 	def _remote(self):
 		return {
 			"Company": COMPANIES,
 			"Employee": EMPLOYEES,
-			"Attendance": [{"name": "ATT-1", "employee": "EMP-1", "company": "Acme"}],
+			"Attendance": [{"name": "ATT-1", "employee": "HR-EMP-0001", "company": "Acme"}],
 		}
 
 	def test_employee_failure_blocks_attendance(self):
@@ -605,6 +651,50 @@ class TestParseDoctypes(unittest.TestCase):
 
 	def test_sequence_passes_through(self):
 		self.assertEqual(runner.parse_doctypes(["Company"]), ("Company",))
+
+
+class TestRowsWithMissingParentsAreNeverWritten(_RunnerTestCase):
+	"""Referential integrity, enforced per row.
+
+	Regression for SYNC-00003 on verifica-live (2026-08-10). Doctype-level gating
+	was not enough: Company pulled 10 rows, errored on 9 and skipped 1, so it
+	wrote NOTHING yet never raised — row-level error tolerance (added the same day
+	to stop one bad Performance Band killing 5,000 good rows) swallowed every
+	failure. Employee then ran against a green light and 266 employees landed
+	pointing at companies that did not exist. The run reported "Completed".
+	"""
+
+	SEED_EXCLUDE = ("Company", "Employee")
+
+	def test_employee_without_its_company_is_skipped_not_written(self):
+		with self.assertRaises(RuntimeError):
+			runner.sync_doctype(self.client({"Employee": EMPLOYEES}), "Employee")
+
+		self.assertEqual(self.store.rows("Employee"), {}, "orphan employee written")
+
+	def test_the_missing_parent_is_named(self):
+		"""An operator has to know WHAT to create; a bare count is useless."""
+		with self.assertRaises(RuntimeError) as caught:
+			runner.sync_doctype(self.client({"Employee": EMPLOYEES}), "Employee")
+		self.assertIn("Company: Acme", str(caught.exception))
+
+	def test_writing_nothing_raises_so_dependents_stay_blocked(self):
+		"""The precise hole in SYNC-00003: pulled>0, written==0, yet no raise."""
+		client = self.client({"Employee": EMPLOYEES, "Attendance": ATTENDANCE})
+		result = runner.sync_instance(client, doctypes=("Employee", "Attendance"), incremental=False)
+
+		self.assertIn("Employee", result["failed"])
+		self.assertIn("Attendance", result["blocked"])
+		self.assertNotEqual(result["status"], "Completed")
+		self.assertEqual(self.store.rows("Attendance"), {})
+
+	def test_rows_with_parents_present_still_write(self):
+		"""The check must not become a blanket refusal."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		result = runner.sync_doctype(self.client({"Employee": EMPLOYEES}), "Employee")
+
+		self.assertEqual(result["written"], 2)
+		self.assertEqual(result["orphaned"], 0)
 
 
 if __name__ == "__main__":

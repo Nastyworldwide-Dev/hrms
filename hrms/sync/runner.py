@@ -60,13 +60,51 @@ PROVENANCE_FIELD = "synced_from_instance"
 #:
 #: `test_sync_runner` asserts Company precedes Employee, so a reorder is a
 #: failing test rather than a silent breakage.
+#: Company is deliberately NOT here. Creating one programmatically means running
+#: ERPNext's company setup, and on this version that path is broken two different
+#: ways: with `chart_of_accounts` unset it dies on "list index out of range", and
+#: with it set it dies on `'Company' object has no attribute
+#: 'update_default_account'`. Both were hit on verifica-live (SYNC-00002 and
+#: SYNC-00003). A mirror has no business fighting the destination's setup wizard,
+#: so companies are created by a human through the UI and the sync merely reports
+#: which ones are missing — see `missing_parents` in each doctype's result.
 DEFAULT_SYNC_DOCTYPES = (
-	"Company",
 	"Employee",
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
 )
+
+#: Link fields whose target must already exist locally before a row may be
+#: written: doctype -> {fieldname: parent doctype}.
+#:
+#: Checked PER ROW, which is the lesson of SYNC-00003. Doctype-level gating was
+#: not enough: Company "completed" having written nothing (its rows errored
+#: individually, so it never raised), Employee proceeded, and 266 employees
+#: landed pointing at companies that did not exist. A row whose parent is absent
+#: is skipped and counted — never written, never guessed at.
+ROW_DEPENDENCIES = {
+	"Employee": {"company": "Company"},
+	"Attendance": {"employee": "Employee"},
+	"Employee Checkin": {"employee": "Employee"},
+	"Leave Ledger Entry": {"employee": "Employee"},
+}
+
+
+def missing_parents(doctype: str, row: dict) -> list[str]:
+	"""Parents this row points at that do not exist here yet.
+
+	Returned as "Doctype: name" so the caller can tell an operator exactly what to
+	create, which is the whole point — the alternative is a foreign key error
+	buried in a traceback, or worse, an orphan.
+	"""
+	missing = []
+	for fieldname, parent_doctype in ROW_DEPENDENCIES.get(doctype, {}).items():
+		value = row.get(fieldname)
+		if value and not frappe.db.exists(parent_doctype, value):
+			missing.append(f"{parent_doctype}: {value}")
+	return missing
+
 
 #: What each doctype's rows point at. If a prerequisite fails, its dependents are
 #: SKIPPED, never attempted.
@@ -284,7 +322,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	if since:
 		remote_filters["modified"] = (">", since)
 
-	pulled = written = inserted = updated = skipped = errored = 0
+	pulled = written = inserted = updated = skipped = errored = orphaned = 0
+	unmet_parents: set[str] = set()
 	row_errors: list[str] = []
 	seen = set()
 	start = 0
@@ -310,6 +349,18 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				continue
 
 			seen.add(remote_name)
+
+			# Referential integrity, per row. Writing a row whose parent is absent
+			# is what produced 5,821 orphan attendance records and then 266 orphan
+			# employees; skipping is the only honest outcome.
+			absent = missing_parents(doctype, row)
+			if absent:
+				orphaned += 1
+				for parent in absent:
+					unmet_parents.add(parent)
+				_log().warning("[sync] %s %s skipped: missing %s", doctype, remote_name, ", ".join(absent))
+				continue
+
 			try:
 				outcome = _write_row(
 					doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
@@ -355,10 +406,14 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		since or "beginning",
 	)
 
-	# Every row failing is not "tolerated drift", it is a broken doctype — and a
-	# dependent doctype must not then be told its prerequisite succeeded.
-	if pulled and errored == pulled:
-		raise RuntimeError(f"every row failed ({errored}/{pulled}): {'; '.join(row_errors)}")
+	# A doctype that pulled rows and wrote NONE has not succeeded, whatever the
+	# mix of errors and skips. SYNC-00003 slipped through the old
+	# `errored == pulled` check because one of ten rows was skipped rather than
+	# errored, so Company reported success having written nothing and Employee
+	# ran on that basis.
+	if pulled and not written and (errored or orphaned):
+		detail = "; ".join(row_errors) or f"{orphaned} row(s) missing parents: {sorted(unmet_parents)}"
+		raise RuntimeError(f"no rows written out of {pulled}: {detail}")
 
 	return {
 		"doctype": doctype,
@@ -368,6 +423,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		"updated": updated,
 		"skipped": skipped,
 		"errored": errored,
+		"orphaned": orphaned,
+		"missing_parents": sorted(unmet_parents),
 		"row_errors": row_errors,
 	}
 
@@ -431,7 +488,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 		since = get_watermark(instance_name)
 
 	run_name = _start_run(instance_name, doctypes)
-	totals = {"pulled": 0, "written": 0, "skipped": 0}
+	totals = {"pulled": 0, "written": 0, "skipped": 0, "errored": 0, "orphaned": 0}
 	results, errors, failed = [], [], []
 	status = "Failed"
 

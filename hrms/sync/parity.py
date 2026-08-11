@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 # point. Not imported from the runner so this module stays loadable without a
 # bench; `test_sync_parity` fails if the two lists ever drift apart.
 MIRRORED_DOCTYPES = (
-	"Company",
 	"Employee",
 	"Attendance",
 	"Employee Checkin",
