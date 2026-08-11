@@ -289,6 +289,9 @@ doc_events = {
 			"hrms.sync.write_block.block_mirrored_writes",
 			"hrms.overrides.employee_master.update_employee_transfer",
 		],
+		# rename_doc fires before_rename, never validate — without this hook a
+		# rename bypasses the guard and breaks the name-keyed mirror (SEC-01).
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
 	},
 	# ONE entry per doctype: a duplicate key in this dict literal silently
@@ -301,20 +304,23 @@ doc_events = {
 			"hrms.telemetry.on_employee_checkin",
 		],
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	# Mirrored during the parallel run (hrms/sync/runner.py): every write path
-	# — edit, update-after-submit, cancel, delete — runs the single-writer guard.
+	# — edit, update-after-submit, cancel, delete, rename — runs the guard.
 	"Attendance": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Leave Ledger Entry": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Remote Checkin Request": {
 		"on_update": "hrms.overrides.remote_checkin_request_hooks.propagate_approval_decision",

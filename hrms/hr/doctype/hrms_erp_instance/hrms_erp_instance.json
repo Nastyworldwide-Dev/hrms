@@ -41,7 +41,8 @@
    "description": "Cutover switch: allow local edits to rows mirrored from this instance. Leave off during the parallel run \u2014 the single-writer write-block enforces read-only while this is unchecked.",
    "fieldname": "unlock_mirrored_writes",
    "fieldtype": "Check",
-   "label": "Unlock Mirrored Writes"
+   "label": "Unlock Mirrored Writes",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_meta",

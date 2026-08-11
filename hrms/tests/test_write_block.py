@@ -33,6 +33,7 @@ import pathlib
 import sys
 import types
 import unittest
+from typing import ClassVar
 
 HRMS_ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODULE_PATH = HRMS_ROOT / "sync" / "write_block.py"
@@ -120,6 +121,30 @@ class TestPlanMirrorWrite(unittest.TestCase):
 		action, _reason = self._plan("nasty-live", is_system_manager=True)
 		self.assertEqual(action, wb.ALLOW_OVERRIDE)
 
+	def test_rename_gets_no_break_glass(self):
+		# Renaming a mirrored row guarantees a duplicate on the next pull —
+		# corruption, not repair, whoever performs it (SEC-01).
+		action, reason = self._plan("nasty-live", is_system_manager=True, is_rename=True)
+		self.assertEqual(action, wb.BLOCK)
+		self.assertIn("renam", reason.lower())
+
+	def test_rename_is_allowed_once_the_instance_is_unlocked(self):
+		# After cutover the sync has stopped; a rename can no longer collide.
+		action, _reason = self._plan("nasty-live", unlocked=True, is_rename=True)
+		self.assertEqual(action, wb.ALLOW)
+
+
+class TestStampToPersist(unittest.TestCase):
+	def test_existing_rows_always_keep_the_db_value(self):
+		# Restores a stripped stamp AND discards a forged one (SEC-03).
+		self.assertEqual(wb.stamp_to_persist("nasty-live", None, is_new=False), "nasty-live")
+		self.assertIsNone(wb.stamp_to_persist(None, "nasty-live", is_new=False))
+
+	def test_new_rows_keep_their_payload(self):
+		# The only stamped inserts that reach this point are the sync's own —
+		# a forged stamped insert is BLOCKed before persistence is decided.
+		self.assertEqual(wb.stamp_to_persist(None, "nasty-live", is_new=True), "nasty-live")
+
 
 class TestHooksWiring(unittest.TestCase):
 	@classmethod
@@ -152,6 +177,43 @@ class TestHooksWiring(unittest.TestCase):
 		duplicates = sorted({k for k in keys if keys.count(k) > 1})
 		self.assertEqual(duplicates, [], f"duplicate doc_events keys silently drop handlers: {duplicates}")
 
+	# Submittable doctypes add the update-after-submit and cancel paths; every
+	# doctype needs rename covered, because rename_doc never fires validate.
+	REQUIRED_EVENTS: ClassVar[dict[str, tuple[str, ...]]] = {
+		"Employee": ("validate", "on_trash", "before_rename"),
+		"Employee Checkin": ("validate", "on_trash", "before_rename"),
+		"Attendance": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Leave Ledger Entry": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+	}
+
+	def _events_carrying_guard(self, doctype):
+		for key, value in zip(self.doc_events.keys, self.doc_events.values, strict=True):
+			if isinstance(key, ast.Constant) and key.value == doctype and isinstance(value, ast.Dict):
+				return {
+					event.value
+					for event, handlers in zip(value.keys, value.values, strict=True)
+					if isinstance(event, ast.Constant)
+					and GUARD
+					in {
+						n.value
+						for n in ast.walk(handlers)
+						if isinstance(n, ast.Constant) and isinstance(n.value, str)
+					}
+				}
+		return set()
+
 	def test_guard_is_wired_for_every_mirrored_doctype(self):
 		for doctype in wb.MIRRORED_DOCTYPES:
 			self.assertIn(
@@ -159,6 +221,13 @@ class TestHooksWiring(unittest.TestCase):
 				self._strings_under(doctype),
 				f"{doctype} is mirrored but carries no write-block guard in hooks.py",
 			)
+
+	def test_every_write_path_carries_the_guard(self):
+		self.assertEqual(set(self.REQUIRED_EVENTS), set(wb.MIRRORED_DOCTYPES))
+		for doctype, events in self.REQUIRED_EVENTS.items():
+			covered = self._events_carrying_guard(doctype)
+			missing = [e for e in events if e not in covered]
+			self.assertEqual(missing, [], f"{doctype}: guard missing on {missing}")
 
 	def test_checkin_keeps_both_after_insert_handlers(self):
 		# The two handlers the duplicate key used to clobber must both survive.
@@ -191,6 +260,9 @@ class TestCutoverSwitch(unittest.TestCase):
 		self.assertIsNotNone(field, "HRMS ERP Instance needs the unlock_mirrored_writes cutover switch")
 		self.assertEqual(field.get("fieldtype"), "Check")
 		self.assertIn("unlock_mirrored_writes", doc.get("field_order", []))
+		# SEC-02: the cutover switch disables single-writer protection for an
+		# entire instance — System-Manager-only, like the credentials beside it.
+		self.assertEqual(field.get("permlevel"), 1, "cutover switch must be permlevel 1")
 
 
 if __name__ == "__main__":

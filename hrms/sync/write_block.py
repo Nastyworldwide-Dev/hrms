@@ -60,6 +60,7 @@ def plan_mirror_write(
 	maintenance_active: bool = False,
 	unlocked: bool = False,
 	is_system_manager: bool = False,
+	is_rename: bool = False,
 ) -> tuple[str, str]:
 	"""Decide one write on a (possibly) mirrored row. Pure.
 
@@ -68,6 +69,10 @@ def plan_mirror_write(
 	for existing rows — stripping the stamp from a request must not unlock
 	the row — while a NEW row is judged on its payload: only the sync may
 	insert stamped rows.
+
+	A rename gets NO break-glass: the mirror upserts on the remote `name`, so
+	renaming a mirrored row guarantees a duplicate on the next pull — that is
+	data corruption whoever performs it, not an emergency repair (SEC-01).
 	"""
 	if sync_active:
 		return ALLOW, "shadow sync is the writer"
@@ -79,11 +84,28 @@ def plan_mirror_write(
 		return ALLOW, "not a mirrored row"
 	if unlocked:
 		return ALLOW, f"instance {effective} unlocked for local writes (cutover)"
-	if is_system_manager:
+	if is_system_manager and not is_rename:
 		return ALLOW_OVERRIDE, f"System Manager break-glass on a row mirrored from {effective}"
+	if is_rename:
+		return BLOCK, (
+			f"mirrored from {effective} — renaming would break the name-keyed mirror and "
+			f"duplicate the row on the next pull"
+		)
 	return BLOCK, (
 		f"mirrored from {effective} — during the parallel run this row is owned by its source instance"
 	)
+
+
+def stamp_to_persist(db_stamp, incoming_stamp, is_new: bool):
+	"""The provenance value an allowed write may carry. Pure.
+
+	For an existing row the DB value always wins — restoring a stripped stamp
+	AND discarding a forged one (SEC-03: injecting a stamp onto a local row
+	would corrupt parity counts, or self-lock the row read-only). A new row
+	keeps its payload: a forged stamped insert is already BLOCKed upstream,
+	so the only stamped inserts left are the sync's own.
+	"""
+	return incoming_stamp if is_new else db_stamp
 
 
 def _instance_unlocked(instance_name) -> bool:
@@ -93,9 +115,10 @@ def _instance_unlocked(instance_name) -> bool:
 	return bool(frappe.db.get_value("HRMS ERP Instance", instance_name, "unlock_mirrored_writes"))
 
 
-def block_mirrored_writes(doc, method=None):
+def block_mirrored_writes(doc, method=None, *args):
 	"""Doc-event hook (validate / before_update_after_submit / before_cancel /
-	on_trash) for every mirrored doctype."""
+	on_trash / before_rename) for every mirrored doctype. `*args` swallows the
+	extra (old, new, merge) arguments the rename event passes."""
 	is_new = bool(doc.is_new())
 	db_stamp = None if is_new else frappe.db.get_value(doc.doctype, doc.name, PROVENANCE_FIELD)
 	incoming_stamp = doc.get(PROVENANCE_FIELD)
@@ -113,6 +136,7 @@ def block_mirrored_writes(doc, method=None):
 		),
 		unlocked=_instance_unlocked(db_stamp or incoming_stamp),
 		is_system_manager=(frappe.session.user == "Administrator" or "System Manager" in frappe.get_roles()),
+		is_rename=(method == "before_rename"),
 	)
 
 	if action == BLOCK:
@@ -141,15 +165,25 @@ def block_mirrored_writes(doc, method=None):
 			doc.name,
 			reason,
 		)
+		# Break-glass must be discoverable from the Desk, not only in server
+		# logs a System Manager may never read (SEC-04). Error Log is the
+		# lightest persistent, UI-queryable audit record available.
+		frappe.log_error(
+			title=f"Mirror write override: {doc.doctype} {doc.name}",
+			message=f"{method or 'write'} by {frappe.session.user}: {reason}",
+		)
 
 	# Whatever was allowed, provenance itself must not drift: parity counts by
-	# this stamp, so an edit that strips or rewrites it would corrupt the
-	# cutover evidence silently.
-	if not is_new and db_stamp and incoming_stamp != db_stamp and method == "validate":
-		logger.info(
-			"[write_block] restoring provenance stamp on %s %s (payload carried %r)",
-			doc.doctype,
-			doc.name,
-			incoming_stamp,
-		)
-		doc.set(PROVENANCE_FIELD, db_stamp)
+	# this stamp, so an edit that strips OR FORGES it would corrupt the
+	# cutover evidence silently (SEC-03).
+	if method == "validate":
+		desired = stamp_to_persist(db_stamp, incoming_stamp, is_new)
+		if incoming_stamp != desired:
+			logger.warning(
+				"[write_block] discarding provenance drift on %s %s (payload carried %r, keeping %r)",
+				doc.doctype,
+				doc.name,
+				incoming_stamp,
+				desired,
+			)
+			doc.set(PROVENANCE_FIELD, desired)
