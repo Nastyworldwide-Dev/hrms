@@ -91,12 +91,26 @@ def plan_company_fence(
 		)
 		return (ACTION_SKIP, [], [])
 
+	existing = {c for c in (existing_companies or []) if c}
+
 	if INSTANCE_HR_ROLE in roles:
 		target = {c for c in (instance_companies or []) if c}
 		if not target:
+			if existing:
+				# The registry can be transiently empty mid-edit; narrowing an
+				# established user's fence on that timing would be a silent,
+				# undecided permission change. Leave them alone and let the
+				# nightly hygiene surface it if it persists.
+				logger.warning(
+					"[company_fence] %s user's company %r maps to no HRMS ERP Instance but "
+					"they already hold Company UPs — leaving them untouched",
+					INSTANCE_HR_ROLE,
+					employee_company,
+				)
+				return (ACTION_SKIP, [], [])
 			logger.warning(
 				"[company_fence] %s user's company %r maps to no HRMS ERP Instance — "
-				"falling back to their own company only",
+				"bootstrapping the fence to their own company only",
 				INSTANCE_HR_ROLE,
 				employee_company,
 			)
@@ -104,7 +118,6 @@ def plan_company_fence(
 	else:
 		target = {employee_company}
 
-	existing = {c for c in (existing_companies or []) if c}
 	return (ACTION_FENCE, sorted(target - existing), sorted(existing - target))
 
 
@@ -114,13 +127,20 @@ def get_instance_companies(company) -> list[str]:
 	Empty when the company is unmapped — the caller's plan then falls back to
 	the narrowest fence. Enabled is deliberately ignored: the registry defines
 	the grouping; `enabled` gates the sync client and the staff redirect.
+	A company cannot be claimed by two instances (the doctype's
+	validate_company_not_claimed_twice enforces it); order_by is belt and
+	braces so a data-integrity slip stays deterministic rather than flapping.
 	"""
 	import frappe
 
 	if not company:
 		return []
 	parent = frappe.get_all(
-		"HRMS ERP Instance Company", filters={"company": company}, fields=["parent"], limit=1
+		"HRMS ERP Instance Company",
+		filters={"company": company},
+		fields=["parent"],
+		order_by="parent asc",
+		limit=1,
 	)
 	if not parent:
 		return []
@@ -206,16 +226,34 @@ def reconcile_company_fences() -> list[str]:
 
 	reconciled = []
 	for user in sorted(holders & enabled):
-		employee = frappe.db.get_value(
-			"Employee", {"user_id": user, "status": "Active"}, ["name", "company"], as_dict=True
-		)
-		if not employee:
-			logger.warning("[company_fence] fence-role user %s has no active Employee — skipped", user)
-			continue
-		sync_company_user_permission(
-			frappe._dict(name=employee.name, user_id=user, company=employee.company), user
-		)
-		reconciled.append(user)
+		# One bad user must not abort the night for everyone after them, nor
+		# suppress the hygiene report that runs next.
+		try:
+			employees = frappe.get_all(
+				"Employee",
+				filters={"user_id": user, "status": "Active"},
+				fields=["name", "company"],
+				order_by="creation asc",
+			)
+			if not employees:
+				logger.warning("[company_fence] fence-role user %s has no active Employee — skipped", user)
+				continue
+			if len(employees) > 1:
+				# ERPNext validates against this, but the fence must not flap if
+				# it ever slips through: the oldest record anchors it.
+				logger.warning(
+					"[company_fence] user %s has %d active Employees — anchoring fence to %s",
+					user,
+					len(employees),
+					employees[0].name,
+				)
+			employee = employees[0]
+			sync_company_user_permission(
+				frappe._dict(name=employee.name, user_id=user, company=employee.company), user
+			)
+			reconciled.append(user)
+		except Exception:
+			logger.error("[company_fence] reconcile failed for %s — continuing", user, exc_info=True)
 
 	logger.info("[company_fence] nightly reconcile: %d fence-role user(s)", len(reconciled))
 	return reconciled

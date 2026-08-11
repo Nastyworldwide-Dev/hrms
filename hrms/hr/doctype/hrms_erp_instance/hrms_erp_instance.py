@@ -48,6 +48,41 @@ class HRMSERPInstance(Document):
 	def validate(self):
 		self.validate_url()
 		self.validate_company_not_claimed_twice()
+		self.validate_companies_locked()
+
+	def validate_companies_locked(self):
+		"""The `companies` table is a permission boundary: `get_instance_companies`
+		builds every HR (Instance) user's allow=Company fence from it, so editing
+		it IS editing other users' visibility (SEC-01). Permlevel 1 hides it from
+		the Desk for non-System-Managers; this guard closes the API path too —
+		the invariant survives an ACL loosened later. The assisted company-shell
+		registration passes ignore_permissions and stays allowed; it only appends
+		companies read from the instance's own source ERP.
+		"""
+		logger.info("[erp_instance] companies-lock check for %s", self.name)
+		if self.flags.ignore_permissions or frappe.session.user == "Administrator":
+			return
+		if "System Manager" in frappe.get_roles():
+			return
+
+		before = self.get_doc_before_save()
+		old = {row.company for row in (before.companies if before else []) if row.company}
+		new = {row.company for row in (self.companies or []) if row.company}
+		if old != new:
+			logger.warning(
+				"[erp_instance] %s tried to change %s companies %s -> %s — blocked",
+				frappe.session.user,
+				self.name,
+				sorted(old),
+				sorted(new),
+			)
+			frappe.throw(
+				_(
+					"Only System Manager may change the companies an instance serves — "
+					"this list drives the company permission fence."
+				),
+				frappe.PermissionError,
+			)
 
 	def validate_url(self):
 		raw = self.url

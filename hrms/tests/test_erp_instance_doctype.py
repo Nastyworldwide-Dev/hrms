@@ -59,6 +59,20 @@ class TestERPInstanceDoctype(unittest.TestCase):
 		self.assertTrue(field.get("reqd"), "autoname field must be mandatory")
 		self.assertTrue(field.get("unique"), "autoname field must be unique")
 
+	def test_fence_bearing_fields_are_permlevel_one(self):
+		# The companies table builds every HR (Instance) user's fence and the
+		# unlock switch disables the write-block — System-Manager-only, like
+		# the credentials (SEC-01/SEC-02).
+		for fieldname in ("companies_section", "companies", "unlock_mirrored_writes"):
+			field = next(f for f in self.parent["fields"] if f["fieldname"] == fieldname)
+			self.assertEqual(field.get("permlevel"), 1, f"{fieldname} must be permlevel 1")
+
+	def test_controller_guards_the_companies_table(self):
+		# Permlevel hides the table from the Desk; the controller guard closes
+		# the API path — both must exist for the boundary to hold.
+		controller = (PARENT.parent / "hrms_erp_instance.py").read_text(encoding="utf-8")
+		self.assertIn("validate_companies_locked", controller)
+
 	def test_field_order_matches_fields(self):
 		ordered = set(self.parent.get("field_order") or [])
 		defined = {f["fieldname"] for f in self.parent["fields"]}
@@ -115,7 +129,6 @@ class TestERPInstanceDoctype(unittest.TestCase):
 				self.assertIn(perm["role"], at_zero)
 
 
-
 def _load_controller():
 	"""Load the controller module with a stub frappe — no bench needed.
 
@@ -134,9 +147,7 @@ def _load_controller():
 	document = types.ModuleType("frappe.model.document")
 	document.Document = object
 	saved = {k: sys.modules.get(k) for k in ("frappe", "frappe.model", "frappe.model.document")}
-	sys.modules.update(
-		{"frappe": frappe_stub, "frappe.model": model, "frappe.model.document": document}
-	)
+	sys.modules.update({"frappe": frappe_stub, "frappe.model": model, "frappe.model.document": document})
 	try:
 		path = HRMS_ROOT / "hr/doctype/hrms_erp_instance/hrms_erp_instance.py"
 		spec = importlib.util.spec_from_file_location("_erp_instance_ctrl", path)
@@ -203,6 +214,7 @@ class TestInstanceUrlNormalisation(unittest.TestCase):
 			with self.subTest(raw=raw):
 				_url, err = self.normalise(raw)
 				self.assertIsNotNone(err)
+
 
 if __name__ == "__main__":
 	unittest.main()

@@ -34,7 +34,8 @@
    "fieldname": "enabled",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Enabled"
+   "label": "Enabled",
+   "description": "Gates the sync client and the staff redirect only. Does NOT affect the permission fence \u2014 HR (Instance) users stay fenced to this instance's companies even while it is disabled."
   },
   {
    "default": "0",
@@ -91,14 +92,16 @@
   {
    "fieldname": "companies_section",
    "fieldtype": "Section Break",
-   "label": "Companies Served"
+   "label": "Companies Served",
+   "permlevel": 1
   },
   {
    "description": "Employees of these companies are sent to this instance.",
    "fieldname": "companies",
    "fieldtype": "Table",
    "label": "Companies",
-   "options": "HRMS ERP Instance Company"
+   "options": "HRMS ERP Instance Company",
+   "permlevel": 1
   }
  ],
  "index_web_pages_for_search": 1,

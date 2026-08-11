@@ -308,11 +308,19 @@ class TestPlanCompanyFence(unittest.TestCase):
 		self.assertEqual(create, sorted(set(NASTY_COMPANIES) - {WWSB}))
 		self.assertEqual(stale, [VRFC])
 
-	def test_instance_hr_with_no_mapping_falls_back_to_own_company(self):
+	def test_instance_hr_with_no_mapping_bootstraps_to_own_company(self):
 		# Fail-closed: an unmapped company must narrow the fence, never widen it.
 		self.assertEqual(
 			plan_company_fence([INSTANCE_HR_ROLE], WWSB, [], instance_companies=[]),
 			(ACTION_FENCE, [WWSB], []),
+		)
+
+	def test_instance_hr_with_no_mapping_but_existing_ups_is_left_alone(self):
+		# A transiently empty registry (admin mid-edit) must not silently narrow
+		# an established user's fence — leave it and let hygiene surface it.
+		self.assertEqual(
+			plan_company_fence([INSTANCE_HR_ROLE], WWSB, NASTY_COMPANIES, instance_companies=[]),
+			(ACTION_SKIP, [], []),
 		)
 
 	def test_instance_role_wins_over_company_role(self):
