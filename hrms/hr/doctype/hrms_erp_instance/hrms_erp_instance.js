@@ -15,7 +15,9 @@ function pull_companies(frm) {
 		method: "hrms.sync.company_shells.preview_company_shells",
 		args: { instance_name: frm.doc.name },
 		freeze: true,
-		freeze_message: __("Reading companies from {0}…", [frm.doc.name]),
+		freeze_message: __("Reading companies from {0}…", [
+			frappe.utils.escape_html(frm.doc.name),
+		]),
 		callback: (r) => {
 			const plan = r.message || {};
 			const missing = (plan.to_create || []).map((p) => p.company_name);
@@ -85,6 +87,10 @@ function result_html(result) {
 		parts.push(`<p>${__("Added to this instance's company list")}: ${result.registered.map(esc).join(", ")}</p>`);
 	for (const row of result.failed || [])
 		parts.push(`<p>${__("Failed")}: <b>${esc(row.company)}</b> — ${esc(row.error)}</p>`);
+	for (const row of result.registration_errors || [])
+		parts.push(
+			`<p>${__("Created but not added to the company list")}: <b>${esc(row.company)}</b> — ${esc(row.error)}</p>`,
+		);
 	if (!parts.length) parts.push(`<p>${__("Nothing was created.")}</p>`);
 
 	return parts.join("");

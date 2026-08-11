@@ -47,6 +47,37 @@ REQUIRED_IDENTITY_FIELDS = ("company_name", "abbr", "default_currency", "country
 #: "list index out of range" half of SYNC-00002).
 SHELL_DEFAULTS = {"chart_of_accounts": "Standard"}
 
+#: Hard ceiling on one run's creations. The group is 15 companies; a source
+#: returning hundreds means a misconfigured or compromised remote, and the
+#: honest response is to refuse loudly, not to grind through an unbounded
+#: insert loop in one HTTP worker (SEC-02).
+MAX_SHELLS_PER_RUN = 50
+
+
+def _ensure_unfenced_operator():
+	"""Registry actions are hub-wide, so the caller must be unfenced.
+
+	`frappe.only_for` above checks roles only; a user holding plain HR Manager
+	PLUS an `allow=Company` fence ("HR (Company)") would otherwise use these
+	endpoints to see every source company and rewrite the shared redirect
+	table — scope-widening the fence exists to prevent (SEC-01).
+	`allowed_companies()` is the fence's single source of truth; empty means
+	unfenced (group HR, System Manager, Administrator).
+	"""
+	from hrms.overrides.company_scope import allowed_companies
+
+	fence = allowed_companies()
+	if fence:
+		logger.warning(
+			"[company_shells] refusing registry action for %s — company-fenced to %s",
+			frappe.session.user,
+			fence,
+		)
+		frappe.throw(
+			_("Company-fenced HR users cannot manage the ERP instance registry."),
+			frappe.PermissionError,
+		)
+
 
 def shell_payload(row: dict) -> dict:
 	"""Remote Company row -> the fields a local shell is allowed to carry."""
@@ -117,20 +148,34 @@ def _plan_for_instance(instance_name: str) -> dict:
 def preview_company_shells(instance_name: str) -> dict:
 	"""What `create_company_shells` would do, without doing it."""
 	frappe.only_for(("System Manager", "HR Manager"))
+	_ensure_unfenced_operator()
 	return _plan_for_instance(instance_name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_company_shells(instance_name: str) -> dict:
 	"""Create every missing Company as a 4-field shell, one at a time.
 
-	Per-company containment, same shape as the sync runner: one company whose
-	insert fails (a currency this site lacks, an abbr collision) is reported
-	and must not lose the others. Each success is committed immediately so a
-	later failure cannot roll it back.
+	Per-company containment: one company whose insert fails (a currency this
+	site lacks, an abbr collision) is reported and must not lose the others.
+	Each success is committed immediately so a later failure cannot roll it
+	back — deliberately FINER granularity than `runner.py`'s per-doctype
+	commit, because every committed row here is an individually validated
+	Company, not one page of a larger pull.
+
+	POST-only: this endpoint mutates state, and a GET mutation is a CSRF
+	vector (SEC-03). The preview stays GET — it writes nothing.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	_ensure_unfenced_operator()
 	plan = _plan_for_instance(instance_name)
+
+	if len(plan["to_create"]) > MAX_SHELLS_PER_RUN:
+		frappe.throw(
+			_(
+				"Refusing to create {0} companies in one run (limit {1}) — verify the source instance before retrying."
+			).format(len(plan["to_create"]), MAX_SHELLS_PER_RUN)
+		)
 
 	created, failed = [], []
 	for payload in plan["to_create"]:
@@ -152,41 +197,43 @@ def create_company_shells(instance_name: str) -> dict:
 				exc_info=True,
 			)
 
+	registered, registration_errors = _register_companies(instance_name, created)
 	return {
 		**plan,
 		"created": created,
 		"failed": failed,
-		"registered": _register_companies(instance_name, created),
+		"registered": registered,
+		"registration_errors": registration_errors,
 	}
 
 
-def _register_companies(instance_name: str, companies: list[str]) -> list[str]:
+def _register_companies(instance_name: str, companies: list[str]) -> tuple[list[str], list[dict]]:
 	"""List newly created companies on the instance's `companies` child table.
 
 	Only companies this call created: they demonstrably belong to this source,
 	whereas mapping pre-existing companies is a human decision (the table
 	drives the staff redirect and the duplicate-claim guard). Goes through
-	`save()` so `validate_company_not_claimed_twice` runs. A registration
-	failure is logged, not raised — it must not undo the created companies.
+	`save()` so `validate_company_not_claimed_twice` runs — one company at a
+	time, so a single clash (another instance claimed a company between plan
+	and save) is reported for that company alone instead of aborting the whole
+	batch. Failures are reported, never raised — they must not undo the
+	created companies.
 	"""
-	if not companies:
-		return []
-
-	try:
-		doc = frappe.get_doc("HRMS ERP Instance", instance_name)
-		listed = {row.company for row in (doc.companies or [])}
-		added = [company for company in companies if company not in listed]
-		for company in added:
+	added, errors = [], []
+	for company in companies:
+		try:
+			doc = frappe.get_doc("HRMS ERP Instance", instance_name)
+			if company in {row.company for row in (doc.companies or [])}:
+				continue
 			doc.append("companies", {"company": company})
-		if added:
 			doc.save(ignore_permissions=True)
 			frappe.db.commit()
-			logger.info("[company_shells] registered %s on %s", ", ".join(added), instance_name)
-		return added
-	except Exception as e:
-		frappe.db.rollback()
-		logger.error("[company_shells] could not register companies on %s: %s", instance_name, e)
-		frappe.msgprint(
-			_("Companies were created but could not be added to this instance's list: {0}").format(e)
-		)
-		return []
+			added.append(company)
+		except Exception as e:
+			frappe.db.rollback()
+			errors.append({"company": company, "error": str(e)})
+			logger.error("[company_shells] could not register %s on %s: %s", company, instance_name, e)
+
+	if added:
+		logger.info("[company_shells] registered %s on %s", ", ".join(added), instance_name)
+	return added, errors

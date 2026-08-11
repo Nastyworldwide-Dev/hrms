@@ -144,5 +144,57 @@ class TestInsertPathStaysNormal(unittest.TestCase):
 		)
 
 
+class TestEndpointHardening(unittest.TestCase):
+	"""The security-review findings (SEC-01/02/03), locked structurally so a
+	refactor cannot quietly drop them."""
+
+	@classmethod
+	def setUpClass(cls):
+		import ast
+
+		cls.ast = ast
+		tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+		cls.functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+
+	def _names_in(self, function_name):
+		names = set()
+		for node in self.ast.walk(self.functions[function_name]):
+			if isinstance(node, self.ast.Name):
+				names.add(node.id)
+			elif isinstance(node, self.ast.Attribute):
+				names.add(node.attr)
+		return names
+
+	def test_create_endpoint_is_post_only(self):
+		# SEC-03: a state-mutating whitelisted method reachable via GET is a
+		# CSRF vector. The preview may stay GET — it writes nothing.
+		methods = []
+		for dec in self.functions["create_company_shells"].decorator_list:
+			if isinstance(dec, self.ast.Call):
+				for kw in dec.keywords:
+					if kw.arg == "methods":
+						methods = [el.value for el in kw.value.elts]
+		self.assertEqual(methods, ["POST"], "create_company_shells must be POST-only (SEC-03)")
+
+	def test_both_endpoints_reject_company_fenced_callers(self):
+		# SEC-01: frappe.only_for checks roles only; a company-fenced
+		# "HR (Company)" user must not reach the hub-wide registry.
+		for endpoint in ("preview_company_shells", "create_company_shells"):
+			self.assertIn(
+				"_ensure_unfenced_operator",
+				self._names_in(endpoint),
+				f"{endpoint} must reject company-fenced HR users (SEC-01)",
+			)
+
+	def test_create_endpoint_enforces_the_per_run_cap(self):
+		# SEC-02: the create loop must be bounded — a misbehaving source must
+		# not drive an unbounded insert loop in one HTTP worker.
+		self.assertIn(
+			"MAX_SHELLS_PER_RUN",
+			self._names_in("create_company_shells"),
+			"create loop must be bounded by MAX_SHELLS_PER_RUN (SEC-02)",
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()
