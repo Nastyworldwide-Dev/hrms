@@ -260,6 +260,9 @@ doc_events = {
 	"Loan": {"validate": "hrms.hr.utils.validate_loan_repay_from_salary"},
 	"Employee": {
 		"validate": [
+			# First on purpose: a mirrored row must be rejected before any other
+			# validate handler runs side effects (single-writer, see write_block).
+			"hrms.sync.write_block.block_mirrored_writes",
 			"hrms.overrides.employee_master.validate_onboarding_process",
 			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
 			"hrms.overrides.employee_master.set_years_of_service",
@@ -282,11 +285,36 @@ doc_events = {
 			"hrms.overrides.employee_master.update_job_applicant_and_offer",
 			"hrms.telemetry.on_milestone_insert",
 		],
-		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
+		"on_trash": [
+			"hrms.sync.write_block.block_mirrored_writes",
+			"hrms.overrides.employee_master.update_employee_transfer",
+		],
 		"after_delete": "hrms.overrides.employee_master.publish_update",
 	},
+	# ONE entry per doctype: a duplicate key in this dict literal silently
+	# drops the earlier one — a second "Employee Checkin" key did exactly that
+	# to the out-of-radius handler in the v16 port (test_write_block pins it).
 	"Employee Checkin": {
-		"after_insert": "hrms.overrides.employee_checkin_after_insert.create_remote_request_if_needed",
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"after_insert": [
+			"hrms.overrides.employee_checkin_after_insert.create_remote_request_if_needed",
+			"hrms.telemetry.on_employee_checkin",
+		],
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	# Mirrored during the parallel run (hrms/sync/runner.py): every write path
+	# — edit, update-after-submit, cancel, delete — runs the single-writer guard.
+	"Attendance": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	"Leave Ledger Entry": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Remote Checkin Request": {
 		"on_update": "hrms.overrides.remote_checkin_request_hooks.propagate_approval_decision",
@@ -298,7 +326,8 @@ doc_events = {
 	"Expense Claim": {"on_submit": "hrms.telemetry.on_expense_claim_submit"},
 	"Attendance Request": {"on_submit": "hrms.telemetry.on_attendance_request_submit"},
 	"Shift Request": {"on_submit": "hrms.telemetry.on_shift_request_submit"},
-	"Employee Checkin": {"after_insert": "hrms.telemetry.on_employee_checkin"},
+	# (Employee Checkin telemetry lives in the single entry above — a second
+	# key here would silently clobber it.)
 	# ---- Activation telemetry: post-install setup funnel (first-time milestones) ----
 	"Shift Type": {"after_insert": "hrms.telemetry.on_milestone_insert"},
 	"Leave Type": {"after_insert": "hrms.telemetry.on_milestone_insert"},

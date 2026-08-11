@@ -9,6 +9,7 @@
  "field_order": [
   "instance_name",
   "enabled",
+  "unlock_mirrored_writes",
   "column_break_meta",
   "url",
   "description",
@@ -36,6 +37,13 @@
    "label": "Enabled"
   },
   {
+   "default": "0",
+   "description": "Cutover switch: allow local edits to rows mirrored from this instance. Leave off during the parallel run \u2014 the single-writer write-block enforces read-only while this is unchecked.",
+   "fieldname": "unlock_mirrored_writes",
+   "fieldtype": "Check",
+   "label": "Unlock Mirrored Writes"
+  },
+  {
    "fieldname": "column_break_meta",
    "fieldtype": "Column Break"
   },
@@ -54,7 +62,7 @@
    "label": "Description"
   },
   {
-   "description": "Used by the one-way shadow sync to read from this instance. Visible to System Manager only (permlevel 1) — the Employee role can read this doctype for the PWA redirect and must never reach these.",
+   "description": "Used by the one-way shadow sync to read from this instance. Visible to System Manager only (permlevel 1) \u2014 the Employee role can read this doctype for the PWA redirect and must never reach these.",
    "fieldname": "credentials_section",
    "fieldtype": "Section Break",
    "label": "Sync Credentials",
@@ -94,7 +102,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-10 13:00:00",
+ "modified": "2026-08-11 12:00:00",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HRMS ERP Instance",

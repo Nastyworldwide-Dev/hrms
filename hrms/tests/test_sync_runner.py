@@ -157,6 +157,7 @@ def _load_module():
 		frappe.logger = lambda *a, **kw: logging.getLogger("hrms-test")
 		frappe.whitelist = lambda *a, **kw: lambda fn: fn
 		frappe.only_for = lambda *a, **kw: None
+		frappe.flags = types.SimpleNamespace()
 		frappe.db = None
 		frappe.get_all = None
 		frappe.get_doc = None
@@ -204,9 +205,7 @@ class _RunnerTestCase(unittest.TestCase):
 	def setUp(self):
 		import frappe
 
-		self.store = _FakeStore(
-			{dt: rows for dt, rows in self.SEED.items() if dt not in self.SEED_EXCLUDE}
-		)
+		self.store = _FakeStore({dt: rows for dt, rows in self.SEED.items() if dt not in self.SEED_EXCLUDE})
 		self._saved = (frappe.db, frappe.get_all, frappe.get_doc)
 		frappe.db = self.store
 		frappe.get_all = self.store.get_all
@@ -239,8 +238,8 @@ class _RunnerTestCase(unittest.TestCase):
 
 
 class TestIdempotency(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_rerun_writes_no_duplicates(self):
 		client = self.client()
 
@@ -263,8 +262,8 @@ class TestIdempotency(_RunnerTestCase):
 
 
 class TestIncremental(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_watermark_reaches_the_remote_as_a_modified_filter(self):
 		client = self.client()
 
@@ -303,8 +302,8 @@ class TestIncremental(_RunnerTestCase):
 
 
 class TestProvenance(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_every_mirrored_row_records_its_source_instance(self):
 		runner.sync_instance(self.client(), doctypes=["Employee", "Attendance"])
 
@@ -474,8 +473,8 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 
 
 class TestNeverDeletes(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_record_absent_remotely_is_left_alone_and_counted_as_skipped(self):
 		self.store.tables["Employee"] = {
 			"HR-EMP-0009": {
@@ -494,8 +493,8 @@ class TestNeverDeletes(_RunnerTestCase):
 
 
 class TestPartialRuns(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_one_doctype_failing_yields_partial_and_the_rest_still_sync(self):
 		client = self.client(fail_for=["Attendance"])
 
@@ -532,8 +531,8 @@ class TestPartialRuns(_RunnerTestCase):
 
 
 class TestRunRecordAlwaysFinalised(_RunnerTestCase):
-
 	SEED_EXCLUDE = ("Employee",)
+
 	def test_run_is_finalised_when_the_run_itself_raises(self):
 		self.store.commit_error_once = True
 

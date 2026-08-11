@@ -493,6 +493,9 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	status = "Failed"
 
 	blocked = []
+	# The write-block (hrms/sync/write_block.py) exempts this flag: the sync is
+	# the one legitimate writer of mirrored rows during the parallel run.
+	frappe.flags.in_shadow_sync = True
 	try:
 		for doctype in doctypes:
 			# A dependent doctype is not attempted once its prerequisite failed:
@@ -542,6 +545,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 		_log().error("[sync] run %s aborted", run_name, exc_info=True)
 		raise
 	finally:
+		frappe.flags.in_shadow_sync = False
 		_finish_run(run_name, status, totals, errors)
 
 

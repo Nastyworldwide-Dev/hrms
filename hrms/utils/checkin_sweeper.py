@@ -50,6 +50,10 @@ def sweep_stale_ins() -> int:
 			["log_type", "=", "IN"],
 			["time", "<=", prefilter_cutoff],
 			["is_abandoned", "!=", 1],
+			# Mirrored punches are owned by their source instance (single-writer,
+			# hrms/sync/write_block.py). db.set_value below bypasses doc events,
+			# so the exclusion must happen here at the query.
+			["synced_from_instance", "is", "not set"],
 		],
 		fields=["name", "employee", "time"],
 		order_by="time asc",
