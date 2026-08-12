@@ -11,3 +11,11 @@ export const hasTeam = createResource({
 export const teamStatus = createResource({
 	url: "hrms.api.team.get_team_status",
 })
+
+// HR-only: managers with direct reports, for the "Team of" selector.
+// Non-HR users receive [] and the selector stays hidden.
+export const teamManagers = createResource({
+	url: "hrms.api.team.get_managers",
+	auto: true,
+	cache: "hrms:team_managers",
+})

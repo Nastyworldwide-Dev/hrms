@@ -10,8 +10,10 @@ status. Users without reports get an empty payload, never an error.
 import logging
 
 import frappe
+from frappe import _
 from frappe.utils import get_time, getdate, now_datetime
 
+from hrms.hr.utils import HR_ROLES
 from hrms.utils.team_status import derive_member_status
 
 logger = logging.getLogger(__name__)
@@ -21,30 +23,69 @@ def _my_employee() -> str | None:
 	return frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
 
 
+def _is_hr() -> bool:
+	user = frappe.session.user
+	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+
+
 @frappe.whitelist()
 def has_team() -> bool:
-	"""Nav gate: does the current user have direct reports?"""
+	"""Nav gate: direct reports, or HR (who browse teams via the selector)."""
+	if _is_hr():
+		return True
 	employee = _my_employee()
 	if not employee:
+		logger.debug("[team] has_team: no employee for %s", frappe.session.user)
 		return False
 	return bool(frappe.db.exists("Employee", {"reports_to": employee, "status": "Active"}))
 
 
 @frappe.whitelist()
-def get_team_status(date: str | None = None) -> dict:
+def get_managers() -> list[dict]:
+	"""HR-only selector data: active employees with ≥1 active direct report.
+	Non-HR callers get [] — their view is always their own team."""
+	if not _is_hr():
+		return []
+	manager_ids = frappe.get_all(
+		"Employee",
+		filters={"status": "Active", "reports_to": ("is", "set")},
+		pluck="reports_to",
+		distinct=True,
+		ignore_permissions=True,
+	)
+	if not manager_ids:
+		return []
+	managers = frappe.get_all(
+		"Employee",
+		filters={"name": ("in", manager_ids), "status": "Active"},
+		fields=["name", "employee_name"],
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)
+	logger.info("[team] managers list for %s: %d", frappe.session.user, len(managers))
+	return managers
+
+
+@frappe.whitelist()
+def get_team_status(date: str | None = None, manager: str | None = None) -> dict:
 	# getdate returns None (not an exception) for some malformed strings —
 	# fail closed to today instead of sending "None 00:00:00" into a filter
 	day = getdate(date) or getdate()
 	today = getdate()
 	now_time = now_datetime().time()
 	employee = _my_employee()
-	empty = {"date": str(day), "members": [], "summary": {}}
-	if not employee:
+	# HR may browse any manager's team; everyone else is pinned to their own
+	if manager and manager != employee and not _is_hr():
+		logger.warning("[team] %s denied manager override %s", frappe.session.user, manager)
+		frappe.throw(_("Only HR can view another manager's team."), frappe.PermissionError)
+	team_of = manager or employee
+	empty = {"date": str(day), "manager": team_of, "members": [], "summary": {}}
+	if not team_of:
 		return empty
 
 	members = frappe.get_all(
 		"Employee",
-		filters={"reports_to": employee, "status": "Active"},
+		filters={"reports_to": team_of, "status": "Active"},
 		fields=["name", "employee_name", "designation", "default_shift", "holiday_list"],
 		order_by="employee_name asc",
 		ignore_permissions=True,
@@ -144,5 +185,5 @@ def get_team_status(date: str | None = None) -> dict:
 				"half_day": bool(leave and leave.half_day),
 			}
 		)
-	logger.info("[team] %s viewed %s: %d members", employee, day, len(out))
-	return {"date": str(day), "members": out, "summary": summary}
+	logger.info("[team] %s viewed team of %s on %s: %d members", frappe.session.user, team_of, day, len(out))
+	return {"date": str(day), "manager": team_of, "members": out, "summary": summary}

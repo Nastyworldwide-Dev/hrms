@@ -12,6 +12,8 @@ Doctype-level perms grant the Employee/ESS roles broad level-0 read/write, so
 these hooks are the ONLY row fence for staff. Access is granted to:
   - the employee the document belongs to (their user_id),
   - the named approver on the document,
+  - the employee's direct manager (Employee.reports_to) — READ ONLY: managers
+    see their staff's requests without gaining edit/approve rights,
   - users the document is shared with (DocShare — share_doc_with_approver
     keeps historical approvers working),
   - HR User / HR Manager / System Manager / Administrator (unrestricted).
@@ -42,6 +44,20 @@ def _own_employees(user: str) -> list[str]:
 	return frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
 
 
+def _report_employees(user: str) -> list[str]:
+	"""Active employees who report directly to any of the user's ACTIVE employees.
+	The manager side is status-filtered too: an offboarded manager whose User
+	account is still enabled must not keep reading their former team."""
+	own = frappe.get_all("Employee", filters={"user_id": user, "status": "Active"}, pluck="name")
+	if not own:
+		return []
+	reports = frappe.get_all(
+		"Employee", filters={"reports_to": ("in", own), "status": "Active"}, pluck="name"
+	)
+	logger.debug("[approval_row_scope] %s manages %d direct reports", user, len(reports))
+	return reports
+
+
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
 	"""List scope: own records, records the user approves, and shared docs."""
 	user = user or frappe.session.user
@@ -51,9 +67,11 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	approver_field = APPROVER_ROUTED_DOCTYPES[doctype]
 	conditions = [f"`tab{doctype}`.`{approver_field}` = {frappe.db.escape(user)}"]
 
-	own = _own_employees(user)
-	if own:
-		values = ", ".join(frappe.db.escape(e) for e in own)
+	# own records + direct reports' records (list visibility; write rights
+	# stay approver-only via has_permission)
+	visible = _own_employees(user) + _report_employees(user)
+	if visible:
+		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.append(f"`tab{doctype}`.`employee` in ({values})")
 
 	shared = get_shared(doctype, user)
@@ -62,10 +80,10 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 		conditions.append(f"`tab{doctype}`.`name` in ({names})")
 
 	logger.debug(
-		"[approval_row_scope] query scope doctype=%s user=%s own=%d shared=%d",
+		"[approval_row_scope] query scope doctype=%s user=%s visible=%d shared=%d",
 		doctype,
 		user,
-		len(own),
+		len(visible),
 		len(shared),
 	)
 	return "(" + " or ".join(conditions) + ")"
@@ -89,6 +107,9 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		or doc.employee in _own_employees(user)
 		or bool(doc.get("name") and doc.name in get_shared(doc.doctype, user, rights=rights))
 	)
+	if not allowed and ptype == "read":
+		# direct managers may READ their reports' requests, never mutate them
+		allowed = doc.employee in _report_employees(user)
 	if not allowed:
 		logger.warning(
 			"[approval_row_scope] %s denied %s on %s %s (employee=%s approver=%s)",

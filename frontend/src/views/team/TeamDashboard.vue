@@ -2,6 +2,28 @@
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
 			<div class="flex flex-col gap-5 w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7">
+				<!-- HR-only team selector -->
+				<div
+					v-if="teamManagers.data?.length"
+					class="flex flex-row items-center gap-2"
+				>
+					<span class="m-kicker flex-none">{{ __("Team of") }}</span>
+					<select
+						v-model="selectedManager"
+						@change="fetchDay"
+						class="flex-1 min-w-0 bg-surface border border-divider text-inkbase font-semibold text-[12px] p-2 appearance-none"
+					>
+						<option value="">{{ __("My team") }}</option>
+						<option
+							v-for="manager in teamManagers.data"
+							:key="manager.name"
+							:value="manager.name"
+						>
+							{{ manager.employee_name }}
+						</option>
+					</select>
+				</div>
+
 				<!-- day navigation -->
 				<div class="flex flex-row items-center justify-between">
 					<button
@@ -113,16 +135,21 @@ import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import EmptyState from "@/components/EmptyState.vue"
-import { teamStatus } from "@/data/team"
+import { teamManagers, teamStatus } from "@/data/team"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
 const selectedDate = ref(dayjs().format("YYYY-MM-DD"))
+const selectedManager = ref("")
 const expandedRow = ref(null)
 
 function fetchDay() {
-	teamStatus.fetch({ date: selectedDate.value })
+	expandedRow.value = null
+	teamStatus.fetch({
+		date: selectedDate.value,
+		manager: selectedManager.value || undefined,
+	})
 }
 fetchDay()
 
