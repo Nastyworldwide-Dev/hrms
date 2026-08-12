@@ -63,7 +63,7 @@ export const TAB_ITEMS = [
 		title: "More",
 		shortTitle: "More",
 		route: "/more",
-		routes: ["/more", "/issues", "/sop"],
+		routes: ["/more", "/issues", "/sop", "/team"],
 	},
 ]
 

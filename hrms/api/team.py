@@ -1,0 +1,148 @@
+"""Manager team view — who is present / on leave / not in / absent on a day.
+
+Fencing: every query below is hard-filtered to the session user's DIRECT
+reports (Employee.reports_to). That fence is the security boundary, so the
+reads run ignore_permissions — staff roles can't read colleague checkin times
+(permlevel 1) or leave rows, but a manager may see their own reports' day
+status. Users without reports get an empty payload, never an error.
+"""
+
+import logging
+
+import frappe
+from frappe.utils import get_time, getdate, now_datetime
+
+from hrms.utils.team_status import derive_member_status
+
+logger = logging.getLogger(__name__)
+
+
+def _my_employee() -> str | None:
+	return frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
+
+
+@frappe.whitelist()
+def has_team() -> bool:
+	"""Nav gate: does the current user have direct reports?"""
+	employee = _my_employee()
+	if not employee:
+		return False
+	return bool(frappe.db.exists("Employee", {"reports_to": employee, "status": "Active"}))
+
+
+@frappe.whitelist()
+def get_team_status(date: str | None = None) -> dict:
+	# getdate returns None (not an exception) for some malformed strings —
+	# fail closed to today instead of sending "None 00:00:00" into a filter
+	day = getdate(date) or getdate()
+	today = getdate()
+	now_time = now_datetime().time()
+	employee = _my_employee()
+	empty = {"date": str(day), "members": [], "summary": {}}
+	if not employee:
+		return empty
+
+	members = frappe.get_all(
+		"Employee",
+		filters={"reports_to": employee, "status": "Active"},
+		fields=["name", "employee_name", "designation", "default_shift", "holiday_list"],
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)
+	if not members:
+		return empty
+	ids = [m.name for m in members]
+
+	attendance = {
+		row.employee: row
+		for row in frappe.get_all(
+			"Attendance",
+			filters={"employee": ("in", ids), "attendance_date": day, "docstatus": ("<", 2)},
+			fields=["employee", "status", "shift"],
+			ignore_permissions=True,
+		)
+	}
+	leaves = {
+		row.employee: row
+		for row in frappe.get_all(
+			"Leave Application",
+			filters={
+				"employee": ("in", ids),
+				"status": "Approved",
+				"docstatus": 1,
+				"from_date": ("<=", day),
+				"to_date": (">=", day),
+			},
+			fields=["employee", "leave_type", "to_date", "half_day"],
+			ignore_permissions=True,
+		)
+	}
+	punches = {}
+	for row in frappe.get_all(
+		"Employee Checkin",
+		filters={
+			"employee": ("in", ids),
+			"time": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
+		},
+		fields=["employee", "log_type", "time"],
+		order_by="time asc",
+		ignore_permissions=True,
+	):
+		slot = punches.setdefault(row.employee, {"first_in": None, "last_out": None})
+		if row.log_type == "IN" and not slot["first_in"]:
+			slot["first_in"] = row.time
+		elif row.log_type == "OUT":
+			slot["last_out"] = row.time
+
+	shift_bounds = {}
+
+	def bounds(shift):
+		if not shift:
+			return (None, None)
+		if shift not in shift_bounds:
+			row = frappe.db.get_value("Shift Type", shift, ["start_time", "end_time"], as_dict=True)
+			shift_bounds[shift] = (get_time(row.start_time), get_time(row.end_time)) if row else (None, None)
+		return shift_bounds[shift]
+
+	out = []
+	summary = {"Present": 0, "On Leave": 0, "Not In Yet": 0, "Absent": 0, "Off": 0, "Scheduled": 0}
+	for member in members:
+		att = attendance.get(member.name)
+		leave = leaves.get(member.name)
+		punch = punches.get(member.name) or {}
+		shift = (att and att.shift) or member.default_shift
+		shift_start, shift_end = bounds(shift)
+		is_holiday = bool(
+			member.holiday_list
+			and frappe.db.exists("Holiday", {"parent": member.holiday_list, "holiday_date": day})
+		)
+		member_status = derive_member_status(
+			day=day,
+			today=today,
+			now_time=now_time,
+			on_leave={"leave_type": leave.leave_type} if leave else None,
+			is_holiday=is_holiday,
+			attendance_status=att and att.status,
+			has_checkin=bool(punch.get("first_in") or punch.get("last_out")),
+			shift_start=shift_start,
+			shift_end=shift_end,
+		)
+		summary[member_status] += 1
+		out.append(
+			{
+				"employee": member.name,
+				"employee_name": member.employee_name,
+				"designation": member.designation,
+				"status": member_status,
+				"shift": shift,
+				"shift_start": str(shift_start) if shift_start else None,
+				"shift_end": str(shift_end) if shift_end else None,
+				"first_in": punch.get("first_in"),
+				"last_out": punch.get("last_out"),
+				"leave_type": leave and leave.leave_type,
+				"leave_until": str(leave.to_date) if leave else None,
+				"half_day": bool(leave and leave.half_day),
+			}
+		)
+	logger.info("[team] %s viewed %s: %d members", employee, day, len(out))
+	return {"date": str(day), "members": out, "summary": summary}
