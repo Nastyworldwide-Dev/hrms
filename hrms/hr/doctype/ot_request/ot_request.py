@@ -14,6 +14,7 @@ from hrms.hr.utils import (
 	validate_mandatory_attachment,
 	validate_self_submission,
 )
+from hrms.utils.filing_window import OT_FILING_GRACE_DAY, is_within_ot_filing_window
 from hrms.utils.ot_calculation import get_day_ot_breakdown
 
 logger = logging.getLogger(__name__)
@@ -29,28 +30,29 @@ class OTRequest(Document):
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_filing_for_self(self)
-		self.validate_same_month_filing()
+		self.validate_filing_window()
 		self.set_compensation()
 		self.set_punch_verified_cap()
 		self.validate_claimed_hours()
 		self.validate_duplicate_request()
 
-	def validate_same_month_filing(self):
-		# unclaimed punch OT expires with its month — the claim must be filed
-		# inside the month the OT was worked. Amendments re-file a copy of an
-		# in-month original, so the window doesn't apply to them.
+	def validate_filing_window(self):
+		# unclaimed punch OT expires with its filing window — the month it was
+		# worked plus a grace window until the payroll cutoff of the following
+		# month (day OT_FILING_GRACE_DAY, inclusive). Amendments re-file a copy
+		# of an in-window original, so the window doesn't apply to them.
 		if not self.is_new() or self.amended_from:
 			return
 		today = getdate()
 		ot_date = getdate(self.ot_date)
 		if ot_date > today:
 			frappe.throw(_("OT Date cannot be in the future"))
-		if (ot_date.year, ot_date.month) != (today.year, today.month):
-			logger.info("[ot_request] out-of-month filing rejected: %s for %s", self.employee, ot_date)
+		if not is_within_ot_filing_window(ot_date, today):
+			logger.info("[ot_request] out-of-window filing rejected: %s for %s", self.employee, ot_date)
 			frappe.throw(
 				_(
-					"OT for {0} can no longer be claimed — OT must be requested within the same month it was worked."
-				).format(frappe.bold(str(ot_date)))
+					"OT for {0} can no longer be claimed — OT must be requested within the month it was worked, or by day {1} of the following month."
+				).format(frappe.bold(str(ot_date)), frappe.bold(OT_FILING_GRACE_DAY))
 			)
 
 	def set_compensation(self):

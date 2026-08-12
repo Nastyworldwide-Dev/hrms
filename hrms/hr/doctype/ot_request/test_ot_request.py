@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_months, get_datetime, getdate, today
@@ -108,17 +110,42 @@ class TestOTRequest(FrappeTestCase):
 			frappe.ValidationError, make_ot_request, self.employee, claimed_hours=1, submit=False
 		)
 
-	def test_out_of_month_filing_rejected(self):
-		last_month = add_months(getdate(), -1)
-		make_ot_checkins(self.employee, last_month)
+	def test_out_of_window_filing_rejected(self):
+		# two months back is outside the filing window on every calendar day,
+		# so this stays deterministic regardless of when the suite runs
+		stale = add_months(getdate(), -2)
+		make_ot_checkins(self.employee, stale)
 		self.assertRaises(
 			frappe.ValidationError,
 			make_ot_request,
 			self.employee,
-			ot_date=last_month,
+			ot_date=stale,
 			claimed_hours=1,
 			submit=False,
 		)
+
+	def test_grace_window_filing(self):
+		# OT worked at month end stays claimable until day 7 of the next month
+		ot_date = getdate("2026-07-31")
+		make_ot_checkins(self.employee, ot_date)
+
+		def frozen_today(frozen):
+			return lambda value=None: getdate(value if value is not None else frozen)
+
+		with patch("hrms.hr.doctype.ot_request.ot_request.getdate", side_effect=frozen_today("2026-08-05")):
+			request = make_ot_request(self.employee, ot_date=ot_date, claimed_hours=1, submit=False)
+		self.assertEqual(request.docstatus, 0)
+
+		frappe.db.delete("OT Request")
+		with patch("hrms.hr.doctype.ot_request.ot_request.getdate", side_effect=frozen_today("2026-08-08")):
+			self.assertRaises(
+				frappe.ValidationError,
+				make_ot_request,
+				self.employee,
+				ot_date=ot_date,
+				claimed_hours=1,
+				submit=False,
+			)
 
 	def test_compensation_forced_by_employee_flag(self):
 		make_ot_checkins(self.employee, today())
