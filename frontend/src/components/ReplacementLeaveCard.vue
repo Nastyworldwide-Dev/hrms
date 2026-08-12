@@ -1,0 +1,63 @@
+<template>
+	<div class="flex flex-col w-full">
+		<div class="flex flex-row items-baseline justify-between mb-3">
+			<span class="m-kicker">{{ __("Replacement Leave") }}</span>
+			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
+				<span
+					@click="navigate"
+					class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
+				>
+					{{ __("View Claims") }}
+				</span>
+			</router-link>
+		</div>
+
+		<div class="flex flex-row items-center justify-between border-t-2 border-divider px-3 py-3.5">
+			<div class="flex flex-col gap-1.5">
+				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
+					{{ formatLeaveDays(bank.data?.balance_days ?? 0) }}
+				</div>
+				<div class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
+					{{ __("days available") }}
+				</div>
+				<div class="text-[11px] text-ink-600 leading-tight">
+					{{
+						__("{0} bank: {1} h unclaimed · 0.5 day = 4 h", [
+							monthLabel,
+							bank.data?.hours_available ?? 0,
+						])
+					}}
+				</div>
+			</div>
+			<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
+				<button
+					@click="navigate"
+					class="flex items-center justify-center bg-accent text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide hover:bg-accent-600"
+				>
+					{{ __("Claim") }}
+				</button>
+			</router-link>
+		</div>
+	</div>
+</template>
+
+<script setup>
+import { createResource } from "frappe-ui"
+import { computed, inject } from "vue"
+
+import { formatLeaveDays } from "@/utils/formatters"
+
+const employee = inject("$employee")
+const __ = inject("$translate")
+const dayjs = inject("$dayjs")
+
+const bank = createResource({
+	url: "hrms.api.get_replacement_leave_bank_summary",
+	params: { employee: employee.data.name },
+	auto: true,
+})
+
+const monthLabel = computed(() =>
+	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : ""
+)
+</script>

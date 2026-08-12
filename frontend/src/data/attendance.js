@@ -93,6 +93,22 @@ export const teamShiftRequests = createResource({
 		return transformShiftRequests(data)
 	},
 })
+// decided by me — the approval trail Team Requests loses on decision
+export const historyShiftRequests = createResource({
+	url: "hrms.api.get_shift_requests",
+	params: {
+		employee: employeeResource.data.name,
+		approver_id: employeeResource.data.user_id,
+		history: 1,
+		limit: 10,
+	},
+	auto: true,
+	cache: "hrms:history_shift_requests",
+	transform(data) {
+		return transformShiftRequests(data)
+	},
+})
+
 export const teamAttendanceRequests = createResource({
 	url: "hrms.api.get_attendance_requests",
 	params: {

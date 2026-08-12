@@ -193,9 +193,10 @@ def get_shift_requests(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Shift Request", employee, approver_id, for_approval)
+	filters = get_filters("Shift Request", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"name",
 		"employee",
@@ -348,11 +349,24 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 
 @frappe.whitelist()
 def get_replacement_leave_bank_summary(employee: str) -> dict:
-	"""The current month's convertible OT hours plus the requests feeding it."""
+	"""The current month's convertible OT hours plus the requests feeding it,
+	and the Replacement Leave allocation balance so the dashboard can show a
+	card even before the first claim (an RL allocation only exists after one)."""
+	from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
 	from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
+	from hrms.hr.doctype.replacement_leave_claim.replacement_leave_claim import (
+		REPLACEMENT_LEAVE_TYPE,
+	)
 
 	_ensure_own_employee_or_permitted(employee)
 	bank = get_replacement_leave_bank(employee)
+	bank["balance_days"] = flt(get_leave_balance_on(employee, REPLACEMENT_LEAVE_TYPE, getdate()) or 0)
+	logger.info(
+		"[api] rl_bank_summary %s: balance %s days, bank %sh",
+		employee,
+		bank["balance_days"],
+		bank["hours_available"],
+	)
 	bank["requests"] = frappe.get_all(
 		"OT Request",
 		filters={
@@ -367,14 +381,33 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 	return bank
 
 
+APPROVER_FIELD_MAP = {
+	"Shift Request": "approver",
+	"Leave Application": "leave_approver",
+	"Expense Claim": "expense_approver",
+}
+
+
 def get_filters(
 	doctype: str,
 	employee: str,
 	approver_id: str | None = None,
 	for_approval: bool = False,
+	history: bool = False,
 ) -> dict:
 	filters = frappe._dict()
-	if for_approval:
+	if history:
+		# decided requests where the current user was the approver — the
+		# approval trail the Team tabs lose the moment a request is decided
+		filters.docstatus = ("!=", 2)
+		filters.employee = ("!=", employee)
+		# Expense Claim keeps its decision in approval_status; status tracks payment
+		status_field = "approval_status" if doctype == "Expense Claim" else "status"
+		filters[status_field] = ("in", ["Approved", "Rejected"])
+		if approver_id and doctype in APPROVER_FIELD_MAP:
+			filters[APPROVER_FIELD_MAP[doctype]] = approver_id
+		logger.info("[api] history filters %s approver=%s", doctype, approver_id)
+	elif for_approval:
 		filters.docstatus = 0
 		filters.employee = ("!=", employee)
 
@@ -382,14 +415,9 @@ def get_filters(
 			allowed_states = get_allowed_states_for_workflow(workflow, approver_id)
 			filters[workflow.workflow_state_field] = ("in", allowed_states)
 		elif doctype not in ("Attendance Request", "OT Request", "Replacement Leave Claim"):
-			approver_field_map = {
-				"Shift Request": "approver",
-				"Leave Application": "leave_approver",
-				"Expense Claim": "expense_approver",
-			}
 			filters.status = "Open" if doctype == "Leave Application" else "Draft"
 			if approver_id:
-				filters[approver_field_map[doctype]] = approver_id
+				filters[APPROVER_FIELD_MAP[doctype]] = approver_id
 	else:
 		filters.docstatus = ("!=", 2)
 		filters.employee = employee
@@ -461,9 +489,10 @@ def get_leave_applications(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Leave Application", employee, approver_id, for_approval)
+	filters = get_filters("Leave Application", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"name",
 		"posting_date",
@@ -720,9 +749,10 @@ def get_expense_claims(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Expense Claim", employee, approver_id, for_approval)
+	filters = get_filters("Expense Claim", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"`tabExpense Claim`.name",
 		"`tabExpense Claim`.posting_date",

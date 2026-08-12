@@ -6,7 +6,10 @@
 				<div
 					class="contents lg:grid lg:grid-cols-[1fr_280px] lg:gap-x-0 lg:items-stretch"
 				>
-					<div class="lg:pr-8"><LeaveBalance /></div>
+					<div class="lg:pr-8 flex flex-col gap-8">
+						<LeaveBalance />
+						<ReplacementLeaveCard />
+					</div>
 
 					<router-link
 						:to="{ name: 'LeaveApplicationFormView' }"
@@ -72,6 +75,7 @@ import { markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import LeaveBalance from "@/components/LeaveBalance.vue"
+import ReplacementLeaveCard from "@/components/ReplacementLeaveCard.vue"
 import RequestList from "@/components/RequestList.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import Holidays from "@/components/Holidays.vue"

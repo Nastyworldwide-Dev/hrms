@@ -51,6 +51,22 @@ export const teamLeaves = createResource({
 	},
 })
 
+// decided by me — the approval trail Team Requests loses on decision
+export const historyLeaves = createResource({
+	url: "hrms.api.get_leave_applications",
+	params: {
+		employee: employeeResource.data.name,
+		approver_id: employeeResource.data.user_id,
+		history: 1,
+		limit: 10,
+	},
+	auto: true,
+	cache: "hrms:history_leaves",
+	transform(data) {
+		return transformLeaveData(data)
+	},
+})
+
 export const leaveBalance = createResource({
 	url: "hrms.api.get_leave_balance_map",
 	params: {
