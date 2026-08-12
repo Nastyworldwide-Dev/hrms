@@ -40,6 +40,11 @@
    "width": "240px"
   }, 
   {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
    "allow_on_submit": 0, 
    "bold": 0, 
    "collapsible": 0, 
@@ -206,7 +211,7 @@
  "issingle": 0, 
  "istable": 1, 
  "max_attachments": 0, 
- "modified": "2025-09-24 15:39:16.891078", 
+ "modified": "2026-08-12 12:00:00.000000", 
  "modified_by": "Administrator", 
  "module": "HR", 
  "name": "Appraisal Goal", 

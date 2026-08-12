@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "criterion",
+  "description",
   "evidence_quality",
   "quarter",
   "column_break_1",
@@ -23,6 +24,11 @@
    "label": "Criterion",
    "options": "Proactive Accessibility\nPersonal Efficiency\nData & Systems Discipline\nContinuous Self-Learning\nTeam Support & Collaboration\nProactive Communication\nQuality Consistency\nOwnership & Completion",
    "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   },
   {
    "fieldname": "evidence_quality",
@@ -71,7 +77,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-03-30 00:00:00.000000",
+ "modified": "2026-08-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal B4 Evidence",
