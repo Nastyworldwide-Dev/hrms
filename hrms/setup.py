@@ -188,6 +188,7 @@ def get_company_hr_policy_fields():
 def get_custom_fields():
 	"""HR specific custom fields that need to be added to the masters in ERPNext"""
 	from hrms.sync.runner import get_provenance_custom_fields
+	from hrms.utils.extension_custom_fields import get_extension_custom_fields
 
 	fields = {
 		"Company": [
@@ -541,6 +542,11 @@ def get_custom_fields():
 	# path too, because a fresh site records every patch as already applied
 	for doctype, provenance_fields in get_provenance_custom_fields().items():
 		fields.setdefault(doctype, []).extend(provenance_fields)
+
+	# ...and for the same reason, the HR extension fields the geofenced
+	# check-in flow and the HRMS-only User Permission scope query at runtime
+	for doctype, extension_fields in get_extension_custom_fields().items():
+		fields.setdefault(doctype, []).extend(extension_fields)
 
 	return fields
 

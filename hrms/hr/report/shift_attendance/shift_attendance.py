@@ -10,9 +10,16 @@ from frappe.utils import cint, flt, format_datetime, format_duration
 
 from erpnext.accounts.utils import build_qb_match_conditions
 
+from hrms.utils.report_scope import apply_employee_scope
+
 
 def execute(filters=None):
+	# Script Report SQL bypasses row scope entirely, so the fence lives here:
+	# staff see only their own attendance, HR sees their permitted companies.
+	filters = apply_employee_scope(filters)
 	columns = get_columns()
+	if filters is None:
+		return columns, [], None, None, None
 	data = get_data(filters)
 	chart = get_chart_data(data)
 	report_summary = get_report_summary(data)

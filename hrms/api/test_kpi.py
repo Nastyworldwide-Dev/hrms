@@ -168,7 +168,17 @@ class TestMyKPIDashboard(FrappeTestCase):
 		self.assertEqual(data["current"]["appraisal"], self.appraisal_a)
 
 	def test_user_without_employee_is_rejected(self):
-		frappe.set_user("test@example.com")
+		# "test@example.com" is an erpnext fixture user and DOES carry an active
+		# Employee (_T-Employee-00001), so it never exercised this path. Use a
+		# user with no Employee at all — the case _get_session_employee guards.
+		email = "kpi_no_employee@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc(
+				{"doctype": "User", "email": email, "first_name": "No Employee", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		self.assertFalse(frappe.db.exists("Employee", {"user_id": email, "status": "Active"}))
+
+		frappe.set_user(email)
 		self.assertRaises(frappe.PermissionError, get_my_kpi_dashboard)
 
 	def test_employee_without_appraisals_gets_empty_state(self):

@@ -115,6 +115,75 @@ def _instance_unlocked(instance_name) -> bool:
 	return bool(frappe.db.get_value("HRMS ERP Instance", instance_name, "unlock_mirrored_writes"))
 
 
+#: Transactions that write MIRRORED rows for an employee without ever touching a
+#: mirrored document themselves. Leave Application is the case found in audit:
+#: `on_submit` creates Leave Ledger Entry rows, and `on_cancel` reverses them.
+#: Those ledger rows ARE mirrored, but a newly inserted one carries no
+#: provenance stamp, so `plan_mirror_write` correctly reads it as "not a
+#: mirrored row" and lets it through — the guard never fires, the source
+#: instance never learns, and `hrms.sync.parity` (which counts BY stamp) cannot
+#: see the divergence. Single-writer therefore has to be enforced one level up,
+#: on the transaction, using the EMPLOYEE's provenance.
+EMPLOYEE_SCOPED_TRANSACTIONS = ("Leave Application",)
+
+
+def block_transactions_for_mirrored_employee(doc, method=None, *args):
+	"""Refuse hub-side transactions that would move a mirrored employee's balances.
+
+	Same escape hatches, same precedence, as `block_mirrored_writes` — the sync
+	itself, migrate/patch/install, the per-instance cutover unlock, and a logged
+	System Manager break-glass. Everything else is refused with the instance
+	named, because the correct place to file that leave during the parallel run
+	is the source instance.
+	"""
+	employee = doc.get("employee")
+	if not employee:
+		return
+
+	stamp = frappe.db.get_value("Employee", employee, PROVENANCE_FIELD)
+	if not stamp:
+		return
+
+	flags = frappe.flags
+	if getattr(flags, "in_shadow_sync", False):
+		return
+	if any(getattr(flags, f, False) for f in ("in_migrate", "in_patch", "in_install")):
+		return
+	if _instance_unlocked(stamp):
+		return
+
+	if frappe.session.user == "Administrator" or "System Manager" in frappe.get_roles():
+		logger.warning(
+			"[write_block] OVERRIDE: %s by %s on %s %s for employee mirrored from %s",
+			method or "transaction",
+			frappe.session.user,
+			doc.doctype,
+			doc.name,
+			stamp,
+		)
+		frappe.log_error(
+			title=f"Mirrored-employee transaction override: {doc.doctype} {doc.name}",
+			message=f"{method or 'transaction'} by {frappe.session.user} for employee {employee} (mirrored from {stamp})",
+		)
+		return
+
+	logger.warning(
+		"[write_block] blocked %s on %s %s: employee %s is mirrored from %s",
+		method or "transaction",
+		doc.doctype,
+		doc.name,
+		employee,
+		stamp,
+	)
+	frappe.throw(
+		_(
+			"{0} is mirrored from {1} during the parallel run, so {2} cannot be processed here — "
+			"it would change leave balances this site does not own. Process it on the source instance instead."
+		).format(_("Employee") + " " + employee, stamp, _(doc.doctype)),
+		frappe.PermissionError,
+	)
+
+
 def block_mirrored_writes(doc, method=None, *args):
 	"""Doc-event hook (validate / before_update_after_submit / before_cancel /
 	on_trash / before_rename) for every mirrored doctype. `*args` swallows the

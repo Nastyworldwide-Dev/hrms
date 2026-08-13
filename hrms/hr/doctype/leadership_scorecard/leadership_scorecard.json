@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "criterion",
+  "description",
   "score_pct",
   "column_break_1",
   "evidence",
@@ -47,6 +48,11 @@
    "fieldname": "data_source",
    "fieldtype": "Small Text",
    "label": "Data Source"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "istable": 1,

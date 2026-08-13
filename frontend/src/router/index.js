@@ -62,7 +62,14 @@ const routes = [
 				component: () => import("@/views/sop/SopList.vue"),
 			},
 			{
-				// overflow hub for the phone tab bar (Issues, SOPs)
+				// manager day view; reached via More, server returns empty
+				// for users without direct reports
+				path: "/team",
+				name: "TeamView",
+				component: () => import("@/views/team/TeamDashboard.vue"),
+			},
+			{
+				// overflow hub for the phone tab bar (Issues, SOPs, Team)
 				path: "/more",
 				name: "MoreView",
 				component: () => import("@/views/More.vue"),

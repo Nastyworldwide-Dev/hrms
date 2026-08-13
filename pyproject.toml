@@ -4,7 +4,11 @@ authors = [
     { name = "Frappe Technologies Pvt Ltd", email = "developers@frappe.io" },
 ]
 description = "Open Source HR & Payroll Software"
-requires-python = ">=3.10"
+# Mirrors the hard floor of the required frappe v16 (">=3.14,<3.15"): hrms
+# cannot install on anything older, because frappe itself will not. CI runs
+# 3.14 (.github/workflows/ci.yml); patch.yml additionally provisions 3.11/3.13
+# only to walk an old backup up through the v14 -> v15 -> v16 chain.
+requires-python = ">=3.14,<3.15"
 readme = "README.md"
 dynamic = ["version"]
 
@@ -17,6 +21,12 @@ max_module_depth = 0
 
 [tool.ruff]
 line-length = 110
+# Deliberately BELOW requires-python. target-version only chooses which
+# modernisations ruff suggests, and it is the conservative direction: raising it
+# to py314 asks ruff to unquote TYPE_CHECKING-only annotations (UP037) whose
+# runtime safety then rests on PEP 649 deferred evaluation and on how frappe's
+# typing_validations resolves them. That is a separate, reviewable change — not
+# something to bundle with a migration.
 target-version = "py310"
 force-exclude = true
 extend-exclude = [

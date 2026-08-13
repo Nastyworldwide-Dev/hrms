@@ -1719,7 +1719,7 @@ def get_payroll_entries_for_jv(
 		frappe.qb.from_(PayrollEntry)
 		.select(PayrollEntry.name)
 		.where(PayrollEntry.docstatus == 1)
-		.where(PayrollEntry[searchfield].like("%%%s%%" % txt))
+		.where(PayrollEntry[searchfield].like(f"%{txt}%"))
 		.where(PayrollEntry.name.notin(linked_entries))
 		.orderby(PayrollEntry.name)
 		.limit(page_len)

@@ -17,6 +17,33 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from hrms.overrides.remote_checkin_request_hooks import resolve_approver
 
 
+def _ensure_department(company: str = "_Test Company") -> str:
+	"""A real, non-group Department for this suite.
+
+	`make_employee` leaves the employee on the root "All Departments" node.
+	That node is a group and ships without the `company` that Department.save
+	requires, so appending approver rows to it fails on a fresh site — and a
+	group node is not where department approvers live anyway.
+	"""
+	name = frappe.db.get_value(
+		"Department", {"department_name": "_Test OOR Department", "company": company}, "name"
+	)
+	if name:
+		return name
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Department",
+				"department_name": "_Test OOR Department",
+				"company": company,
+				"is_group": 0,
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
+
+
 def _ensure_user(email: str) -> str:
 	if frappe.db.exists("User", email):
 		return email
@@ -43,6 +70,7 @@ class TestResolveApprover(FrappeTestCase):
 			"oor-employee@example.com",
 			company="_Test Company",
 		)
+		self.department = _ensure_department()
 		# reset every tier; tests opt in to whichever they need
 		frappe.db.set_value(
 			"Employee",
@@ -50,6 +78,7 @@ class TestResolveApprover(FrappeTestCase):
 			{
 				"shift_request_approver": None,
 				"reports_to": None,
+				"department": self.department,
 			},
 		)
 

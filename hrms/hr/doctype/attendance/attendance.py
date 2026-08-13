@@ -2,8 +2,8 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from datetime import date
 import logging
+from datetime import date
 
 import frappe
 from frappe import _
@@ -516,13 +516,15 @@ def get_employee_shift(employee: str, for_date: str | date | None = None) -> str
 		return default_shift
 
 	return None
+
+
 def recompute_ot_backfill(from_date, to_date, dry_run=1):
 	"""Recompute OT (ot_hours / ot_rate_weighted_hours / ot_rate_bands) for submitted
 	Attendance in [from_date, to_date] using the corrected engine. dry_run=1 (default)
 	only reports what WOULD change; pass dry_run=0 to write (submit-safe via db_set).
 	Run: bench --site <site> execute
 	hrms.hr.doctype.attendance.attendance.recompute_ot_backfill
-	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\""""
+	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\" """
 	dry_run = cint(dry_run)
 	logger.info("[attendance] OT backfill %s..%s dry_run=%s", from_date, to_date, dry_run)
 	names = frappe.get_all(

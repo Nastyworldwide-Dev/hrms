@@ -29,6 +29,19 @@ def create_kras(kras):
 			).insert()
 
 
+def create_kpis(kras):
+	"""One KPI per KRA. `kpi` is mandatory on Appraisal Template Goal since the
+	KRA/KPI master work, so a goal row without one cannot be inserted."""
+	names = {}
+	for entry in kras:
+		title = f"{entry} KPI"
+		name = f"{entry}-{title}"  # KPI autoname is format:{kra}-{title}
+		if not frappe.db.exists("KPI", name):
+			frappe.get_doc({"doctype": "KPI", "title": title, "kra": entry}).insert()
+		names[entry] = name
+	return names
+
+
 def create_criteria(criteria):
 	for entry in criteria:
 		if not frappe.db.exists("Employee Feedback Criteria", entry):
@@ -71,6 +84,9 @@ def create_appraisal_template(title=None, kras=None, rating_criteria=None):
 		]
 
 	create_kras([entry["key_result_area"] for entry in kras])
+	kpis = create_kpis([entry["key_result_area"] for entry in kras])
+	for entry in kras:
+		entry.setdefault("kpi", kpis[entry["key_result_area"]])
 	create_criteria([entry["criteria"] for entry in rating_criteria])
 
 	appraisal_template = frappe.new_doc("Appraisal Template")

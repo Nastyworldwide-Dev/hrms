@@ -12,7 +12,8 @@
   "column_break_4",
   "score",
   "section_break_6",
-  "score_earned"
+  "score_earned",
+  "description"
  ],
  "fields": [
   {
@@ -72,6 +73,11 @@
    "print_width": "70px",
    "read_only": 1,
    "width": "70px"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "idx": 1,

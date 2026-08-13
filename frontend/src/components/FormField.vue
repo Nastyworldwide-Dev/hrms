@@ -131,13 +131,15 @@
 		/>
 
 		<!-- Time -->
-		<Input
+		<!-- native input: frappe-ui's Input drops unsupported types like "time",
+			 so it renders as a plain text box with no picker and no validation -->
+		<input
 			v-else-if="props.fieldtype === 'Time'"
 			type="time"
+			class="form-input block w-full border-gray-400 placeholder-gray-500"
 			:value="modelValue"
-			:placeholder="__('Select {0}', [props.label])"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
+			@input="(e) => emit('update:modelValue', e.target.value)"
+			@change="(e) => emit('change', e.target.value)"
 			v-bind="$attrs"
 			:disabled="isReadOnly"
 		/>

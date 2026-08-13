@@ -33,12 +33,22 @@
 
 <script setup>
 import { FeatherIcon } from "frappe-ui"
-import { inject } from "vue"
+import { computed, inject, markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import TeamIcon from "@/components/icons/TeamIcon.vue"
 import { MORE_ITEMS } from "@/data/navItems"
+import { hasTeam } from "@/data/team"
 
 const __ = inject("$translate")
 
-const moreItems = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
+// Team is manager-only: the entry appears once has_team confirms direct reports
+// (or the caller is HR, who browse teams via the selector)
+const moreItems = computed(() => {
+	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
+	if (hasTeam.data) {
+		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
+	}
+	return items
+})
 </script>

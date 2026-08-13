@@ -118,7 +118,7 @@ class _FakeStore:
 def _matches(row, filters):
 	for field, condition in (filters or {}).items():
 		value = row.get(field)
-		if isinstance(condition, (tuple, list)):
+		if isinstance(condition, tuple | list):
 			operator, operand = condition
 			if operator == "in" and value not in operand:
 				return False

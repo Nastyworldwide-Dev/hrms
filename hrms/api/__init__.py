@@ -9,7 +9,7 @@ from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, 
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
-from hrms.hr.utils import HR_ROLES
+from hrms.hr.utils import HR_ROLES, get_designated_approvers
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +104,14 @@ def get_reports_to_employee_name(employee: str) -> str:
 
 
 def get_current_employee() -> str:
-	employee = get_current_employee_info().get("name")
+	# get_current_employee_info returns None (not {}) when the session user has
+	# no active Employee — a User created without an Employee mapping, or one
+	# whose Employee was set Inactive. Calling .get() on that raised
+	# AttributeError, so those callers got a 500 instead of the intended
+	# permission error on every PWA endpoint that resolves the current employee.
+	employee = (get_current_employee_info() or {}).get("name")
 	if not employee:
+		logger.info("[api] no active Employee for %s", frappe.session.user)
 		frappe.throw(_("Employee not found"), frappe.PermissionError)
 	return employee
 
@@ -212,9 +218,10 @@ def get_shift_requests(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Shift Request", employee, approver_id, for_approval)
+	filters = get_filters("Shift Request", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"name",
 		"employee",
@@ -367,11 +374,24 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 
 @frappe.whitelist()
 def get_replacement_leave_bank_summary(employee: str) -> dict:
-	"""The current month's convertible OT hours plus the requests feeding it."""
+	"""The current month's convertible OT hours plus the requests feeding it,
+	and the Replacement Leave allocation balance so the dashboard can show a
+	card even before the first claim (an RL allocation only exists after one)."""
+	from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
 	from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
+	from hrms.hr.doctype.replacement_leave_claim.replacement_leave_claim import (
+		REPLACEMENT_LEAVE_TYPE,
+	)
 
 	_ensure_own_employee_or_permitted(employee)
 	bank = get_replacement_leave_bank(employee)
+	bank["balance_days"] = flt(get_leave_balance_on(employee, REPLACEMENT_LEAVE_TYPE, getdate()) or 0)
+	logger.info(
+		"[api] rl_bank_summary %s: balance %s days, bank %sh",
+		employee,
+		bank["balance_days"],
+		bank["hours_available"],
+	)
 	bank["requests"] = frappe.get_all(
 		"OT Request",
 		filters={
@@ -386,14 +406,33 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 	return bank
 
 
+APPROVER_FIELD_MAP = {
+	"Shift Request": "approver",
+	"Leave Application": "leave_approver",
+	"Expense Claim": "expense_approver",
+}
+
+
 def get_filters(
 	doctype: str,
 	employee: str,
 	approver_id: str | None = None,
 	for_approval: bool = False,
+	history: bool = False,
 ) -> dict:
 	filters = frappe._dict()
-	if for_approval:
+	if history:
+		# decided requests where the current user was the approver — the
+		# approval trail the Team tabs lose the moment a request is decided
+		filters.docstatus = ("!=", 2)
+		filters.employee = ("!=", employee)
+		# Expense Claim keeps its decision in approval_status; status tracks payment
+		status_field = "approval_status" if doctype == "Expense Claim" else "status"
+		filters[status_field] = ("in", ["Approved", "Rejected"])
+		if approver_id and doctype in APPROVER_FIELD_MAP:
+			filters[APPROVER_FIELD_MAP[doctype]] = approver_id
+		logger.info("[api] history filters %s approver=%s", doctype, approver_id)
+	elif for_approval:
 		filters.docstatus = 0
 		filters.employee = ("!=", employee)
 
@@ -401,14 +440,9 @@ def get_filters(
 			allowed_states = get_allowed_states_for_workflow(workflow, approver_id)
 			filters[workflow.workflow_state_field] = ("in", allowed_states)
 		elif doctype not in ("Attendance Request", "OT Request", "Replacement Leave Claim"):
-			approver_field_map = {
-				"Shift Request": "approver",
-				"Leave Application": "leave_approver",
-				"Expense Claim": "expense_approver",
-			}
 			filters.status = "Open" if doctype == "Leave Application" else "Draft"
 			if approver_id:
-				filters[approver_field_map[doctype]] = approver_id
+				filters[APPROVER_FIELD_MAP[doctype]] = approver_id
 	else:
 		filters.docstatus = ("!=", 2)
 		filters.employee = employee
@@ -481,9 +515,10 @@ def get_leave_applications(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Leave Application", employee, approver_id, for_approval)
+	filters = get_filters("Leave Application", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"name",
 		"posting_date",
@@ -555,13 +590,14 @@ def get_leave_balance_map() -> dict[str, dict[str, float]]:
 	)
 	from hrms.hr.doctype.leave_type.leave_type import get_service_based_leave_days
 
-	# also guards the policy/entitlement reads below, which bypass row-level
-	# permissions (frappe.get_all), and rejects unknown employee ids cleanly.
-	# Own-employee check first: staff whose role set lost Employee read must
-	# still see their own balance cards (same pattern as every other endpoint).
-	_ensure_own_employee_or_permitted(employee)
-
+	# Resolve first, THEN guard. The endpoint became session-scoped (the PWA
+	# calls it with no arguments) but the guard was left above the assignment,
+	# so every call raised UnboundLocalError before reaching any of this.
 	employee = get_current_employee()
+
+	# Guards the policy/entitlement reads below, which bypass row-level
+	# permissions (frappe.get_all), and rejects unknown employee ids cleanly.
+	_ensure_own_employee_or_permitted(employee)
 
 	date = getdate()
 	leave_map = {}
@@ -677,10 +713,11 @@ def get_leave_approval_details(employee: str) -> dict:
 		)
 
 	leave_approver_name = frappe.db.get_value("User", leave_approver, "full_name", cache=True)
-	department_approvers = get_department_approvers(department, "leave_approvers")
-
-	if leave_approver and leave_approver not in [approver.name for approver in department_approvers]:
-		department_approvers.append({"name": leave_approver, "full_name": leave_approver_name})
+	# Options come from the same list validate_staff_approver enforces. Using
+	# get_department_approvers here instead would offer the whole department
+	# ANCESTOR chain, and picking one of those failed on save with "not one of
+	# your designated approvers".
+	department_approvers = _approver_options(employee, "leave_approver", "leave_approvers")
 
 	return dict(
 		leave_approver=leave_approver,
@@ -690,6 +727,22 @@ def get_leave_approval_details(employee: str) -> dict:
 			"HR Settings", "leave_approver_mandatory_in_leave_application"
 		),
 	)
+
+
+def _approver_options(employee: str, employee_approver_field: str, department_parentfield: str) -> list[dict]:
+	"""Selector options, built from the list the backend fence actually accepts.
+
+	The PWA renders these as the approver dropdown. Keeping it identical to
+	`validate_staff_approver`'s allowed set is the whole point: a selector that
+	offers more than the fence accepts produces a save-time rejection on a value
+	the form itself suggested.
+	"""
+	approvers = get_designated_approvers(employee, employee_approver_field, department_parentfield)
+	frappe.logger("hrms").debug("[api] %d approver option(s) for %s", len(approvers), employee)
+	return [
+		{"name": user, "full_name": frappe.db.get_value("User", user, "full_name", cache=True) or user}
+		for user in approvers
+	]
 
 
 def get_department_approvers(department: str, parentfield: str) -> list[str]:
@@ -746,9 +799,10 @@ def get_expense_claims(
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
+	history: bool = False,
 ) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
-	filters = get_filters("Expense Claim", employee, approver_id, for_approval)
+	filters = get_filters("Expense Claim", employee, approver_id, for_approval, cint(history))
 	fields = [
 		"`tabExpense Claim`.name",
 		"`tabExpense Claim`.posting_date",
@@ -862,10 +916,8 @@ def get_expense_approval_details(employee: str) -> dict:
 		)
 
 	expense_approver_name = frappe.db.get_value("User", expense_approver, "full_name", cache=True)
-	department_approvers = get_department_approvers(department, "expense_approvers")
-
-	if expense_approver and expense_approver not in [approver.name for approver in department_approvers]:
-		department_approvers.append({"name": expense_approver, "full_name": expense_approver_name})
+	# same source of truth as the backend fence — see get_leave_approval_details
+	department_approvers = _approver_options(employee, "expense_approver", "expense_approvers")
 
 	return dict(
 		expense_approver=expense_approver,

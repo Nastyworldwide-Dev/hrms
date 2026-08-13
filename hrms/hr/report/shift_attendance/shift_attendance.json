@@ -29,10 +29,10 @@
    "role": "HR Manager"
   },
   {
-   "role": "Employee Self Service"
+   "role": "Employee"
   },
   {
-   "role": "Employee"
+   "role": "Employee Self Service"
   }
  ]
 }

@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "competency",
+  "description",
   "proficiency_level",
   "per_weightage",
   "target",
@@ -51,16 +52,16 @@
    "label": "Target"
   },
   {
-   "description": "Set during review — what the staff actually achieved",
    "columns": 1,
+   "description": "Set during review \u2014 what the staff actually achieved",
    "fieldname": "actual",
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Actual"
   },
   {
-   "description": "Auto-calculated: (Actual / Target) × 100",
    "columns": 1,
+   "description": "Auto-calculated: (Actual / Target) \u00d7 100",
    "fieldname": "achievement",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -106,6 +107,11 @@
    "fieldtype": "Small Text",
    "hidden": 1,
    "label": "Remarks"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "istable": 1,

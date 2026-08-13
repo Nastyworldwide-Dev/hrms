@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "criterion",
+  "description",
   "evidence_quality",
   "quarter",
   "column_break_1",
@@ -67,6 +68,11 @@
    "in_list_view": 1,
    "label": "Points",
    "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "istable": 1,

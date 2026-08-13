@@ -7,11 +7,19 @@ import frappe
 from frappe import _, msgprint, scrub
 from frappe.query_builder import Order
 
+from hrms.utils.report_scope import apply_employee_scope
+
 
 def execute(filters=None):
 	if not filters:
 		filters = frappe._dict()
 	filters = frappe._dict(filters)
+
+	# Script Report SQL bypasses row scope entirely — staff see only their own
+	# advances, HR sees their permitted companies.
+	filters = apply_employee_scope(filters)
+	if filters is None:
+		return get_columns(), []
 
 	advances_list = get_advances(filters)
 	columns = get_columns()

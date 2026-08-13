@@ -5,6 +5,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import flt
+from frappe.utils.nestedset import rebuild_tree
 
 from erpnext.setup.doctype.designation.test_designation import create_designation
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -270,7 +271,8 @@ class TestDepartmentTemplateResolution(FrappeTestCase):
 			self.procurement = proc_name
 
 		# Rebuild tree to set lft/rgt
-		frappe.get_doc("Department", self.operations).rebuild_tree()
+		# Frappe v16 moved rebuild_tree off the Document and onto the module
+		rebuild_tree("Department")
 
 	def test_exact_department_match(self):
 		"""Procurement has its own template — should use it directly"""

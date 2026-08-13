@@ -46,6 +46,22 @@ export const teamClaims = createResource({
 	},
 })
 
+// decided by me — the approval trail Team Requests loses on decision
+export const historyClaims = createResource({
+	url: "hrms.api.get_expense_claims",
+	params: {
+		employee: employeeResource.data.name,
+		approver_id: employeeResource.data.user_id,
+		history: 1,
+		limit: 10,
+	},
+	auto: true,
+	cache: "hrms:history_claims",
+	transform(data) {
+		return transformClaimData(data)
+	},
+})
+
 export let claimTypesByID = reactive({})
 
 export const claimTypesResource = createResource({

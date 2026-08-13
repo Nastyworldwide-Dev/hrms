@@ -10,6 +10,7 @@ from hrms.hr.doctype.leave_period.test_leave_period import create_leave_period
 from hrms.hr.doctype.leave_policy_assignment.test_service_band_assignment import (
 	AL_SLABS,
 	GRADE_D,
+	GRADE_F,
 	make_band_employee,
 	make_banded_leave_type,
 	make_policy,
@@ -17,6 +18,33 @@ from hrms.hr.doctype.leave_policy_assignment.test_service_band_assignment import
 from hrms.hr.doctype.leave_type.test_leave_type import create_employee_grade
 
 test_dependencies = ["Employee"]
+
+
+def as_employee(employee):
+	"""Run the block as that employee's own user.
+
+	`get_leave_balance_map` is session-scoped — it resolves the caller's own
+	Employee and takes no argument — so a test must BE the employee rather
+	than name one.
+	"""
+	return ChangeUser(frappe.db.get_value("Employee", employee, "user_id"))
+
+
+class ChangeUser:
+	"""Session-user swap that always restores, even when the block raises."""
+
+	def __init__(self, user):
+		self.user = user
+		self.previous = None
+
+	def __enter__(self):
+		self.previous = frappe.session.user
+		frappe.set_user(self.user)
+		return self
+
+	def __exit__(self, *exc):
+		frappe.set_user(self.previous)
+		return False
 
 
 def make_plain_leave_type(name, **kwargs):
@@ -53,7 +81,11 @@ class TestLeaveBalanceMap(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		# AL_SLABS references both grades; creating only GRADE_D made this suite
+		# pass solely when the service-band suite happened to run first in the
+		# same session and left GRADE_F behind
 		create_employee_grade(GRADE_D)
+		create_employee_grade(GRADE_F)
 
 	def setUp(self):
 		for doctype in [
@@ -99,7 +131,8 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		employee = make_band_employee("balance_prorated@example.com", GRADE_D, doj)
 		self.submit_period_assignment(employee)
 
-		entry = get_leave_balance_map(employee)[self.annual]
+		with as_employee(employee):
+			entry = get_leave_balance_map()[self.annual]
 
 		self.assertEqual(flt(entry["annual_entitlement"]), 14.0)
 		self.assertLess(flt(entry["allocated_leaves"]), 14.0)
@@ -112,7 +145,8 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		employee = make_band_employee("balance_full_year@example.com", GRADE_D, doj)
 		self.submit_period_assignment(employee)
 
-		entry = get_leave_balance_map(employee)[self.annual]
+		with as_employee(employee):
+			entry = get_leave_balance_map()[self.annual]
 
 		self.assertEqual(flt(entry["annual_entitlement"]), 18.0)
 		self.assertEqual(flt(entry["allocated_leaves"]), 18.0)
@@ -126,7 +160,8 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		)
 		make_allocation(employee, leave_type, self.period_start, get_year_ending(self.period_start), 3)
 
-		entry = get_leave_balance_map(employee)[leave_type]
+		with as_employee(employee):
+			entry = get_leave_balance_map()[leave_type]
 
 		self.assertEqual(flt(entry["annual_entitlement"]), 3.0)
 		self.assertEqual(flt(entry["allocated_leaves"]), 3.0)
@@ -138,7 +173,8 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		employee = make_band_employee("balance_no_grade@example.com", None, doj)
 		self.submit_period_assignment(employee)
 
-		entry = get_leave_balance_map(employee)[self.annual]
+		with as_employee(employee):
+			entry = get_leave_balance_map()[self.annual]
 
 		self.assertEqual(flt(entry["annual_entitlement"]), 99.0)
 		self.assertLess(flt(entry["allocated_leaves"]), 99.0)
@@ -159,7 +195,8 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		)
 		self.submit_period_assignment(employee, policy=policy, carry_forward=1)
 
-		entry = get_leave_balance_map(employee)[cf_type]
+		with as_employee(employee):
+			entry = get_leave_balance_map()[cf_type]
 
 		self.assertEqual(flt(entry["annual_entitlement"]), 18.0)
 		self.assertEqual(flt(entry["allocated_leaves"]), 36.0)
@@ -167,17 +204,29 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		self.assertEqual(flt(entry["balance_leaves"]), 36.0)
 
 	def test_lwp_type_excluded_from_map(self):
+		# Leave without pay cannot be allocated at all (ERPNext refuses it), so
+		# the guard is that the balance map never invents a card for the LWP
+		# types get_leave_details reports alongside the real allocations.
 		lwp_type = make_plain_leave_type("_Test Balance LWP", is_lwp=1)
+		paid_type = make_plain_leave_type("_Test Balance Paid")
 		employee = make_band_employee("balance_lwp@example.com", GRADE_D, add_months(self.period_start, -24))
-		make_allocation(employee, lwp_type, self.period_start, get_year_ending(self.period_start), 5)
+		make_allocation(employee, paid_type, self.period_start, get_year_ending(self.period_start), 5)
 
-		self.assertNotIn(lwp_type, get_leave_balance_map(employee))
+		with as_employee(employee):
+			self.assertNotIn(lwp_type, get_leave_balance_map())
 
-	def test_unknown_employee_is_rejected(self):
-		# permission guard doubles as a clean 404 for bad ids (no TypeError
-		# from unpacking a missing Employee row)
-		with self.assertRaises(frappe.DoesNotExistError):
-			get_leave_balance_map("HR-EMP-DOES-NOT-EXIST")
+	def test_caller_without_an_employee_record_is_rejected(self):
+		# The endpoint no longer accepts an employee id, so the old "unknown id"
+		# case is now "the caller has no Employee": get_current_employee raises
+		# rather than returning an empty map that renders as a blank card.
+		email = "balance_no_employee@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({"doctype": "User", "email": email, "first_name": "No Employee"}).insert(
+				ignore_permissions=True
+			)
+
+		with ChangeUser(email), self.assertRaises(frappe.PermissionError):
+			get_leave_balance_map()
 
 	def test_every_entry_has_positive_denominator(self):
 		# the card must never render n/0 regardless of how leave was granted
@@ -185,7 +234,9 @@ class TestLeaveBalanceMap(FrappeTestCase):
 		employee = make_band_employee("balance_odd@example.com", GRADE_D, add_months(self.period_start, -24))
 		make_allocation(employee, leave_type, self.period_start, get_year_ending(self.period_start), 0.5)
 
-		for entry in get_leave_balance_map(employee).values():
+		with as_employee(employee):
+			balance_map = get_leave_balance_map()
+		for entry in balance_map.values():
 			self.assertGreater(flt(entry["annual_entitlement"]), 0.0)
 
 
@@ -194,6 +245,13 @@ class TestGetLeaveTypes(FrappeTestCase):
 	must keep working for a staff user whose role set lost Leave Type read
 	(role drift): a permission-checked lookup here 403s the endpoint and the
 	dropdown silently shows "No results found" while allocations exist."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		# make_band_employee assigns GRADE_D; without it every employee insert
+		# here fails on a site where the service-band suite has not run
+		create_employee_grade(GRADE_D)
 
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -265,6 +323,6 @@ class TestGetLeaveTypes(FrappeTestCase):
 		self.addCleanup(self._restore_roles, user, original_roles)
 
 		frappe.set_user(user)
-		balance_map = get_leave_balance_map(employee)
+		balance_map = get_leave_balance_map()
 
 		self.assertIn(leave_type, balance_map)

@@ -399,10 +399,13 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	from datetime import timedelta
 
 	out_time_filter = [">=", in_doc.time]
+	# earliest following IN. Frappe v16 refuses "min(time)" as a SELECT string,
+	# so the same row is taken with an ordered limit instead.
 	next_in_time = frappe.db.get_value(
 		"Employee Checkin",
 		{"employee": in_doc.employee, "log_type": "IN", "time": [">", in_doc.time]},
-		"min(time)",
+		"time",
+		order_by="time asc",
 	)
 	if next_in_time:
 		out_time_filter = ["between", [in_doc.time, get_datetime(next_in_time) - timedelta(seconds=1)]]

@@ -163,7 +163,9 @@ class SalaryBreakupReport:
 		for component in (
 			self.earning_components + self.deduction_components + self.employer_contribution_components
 		):
-			component["salary_component"] = f"{component.get("salary_component")} ({component.get("abbr")})"
+			# single quotes inside: reusing the outer double quote is a SyntaxError
+			# before Python 3.12 (PEP 701), and this app supports >=3.10
+			component["salary_component"] = f"{component.get('salary_component')} ({component.get('abbr')})"
 			component["type"] = "Formula" if component.get("amount_based_on_formula") else "Fixed"
 			component["formula"] = (
 				component.get("formula") or "-"

@@ -2,6 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import datetime
+import logging
 
 import frappe
 from frappe import _
@@ -38,8 +39,8 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
-from hrms.utils.holiday_list import get_holiday_dates_between_range
 from hrms.utils.email_flush import flush_email_queue_after_commit
+from hrms.utils.holiday_list import get_holiday_dates_between_range
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -56,6 +57,9 @@ class AttendanceAlreadyMarkedError(frappe.ValidationError):
 
 class NotAnOptionalHoliday(frappe.ValidationError):
 	pass
+
+
+logger = logging.getLogger(__name__)
 
 
 class InsufficientLeaveBalanceError(frappe.ValidationError):
@@ -896,11 +900,22 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				create_leave_ledger_entry(self, args, submit)
 
 	def validate_leave_approver(self):
+		"""Mandatory approver is enforced at SUBMIT, never on a draft.
+
+		The rule exists so no leave is APPROVED without a named approver. Firing
+		it on every save (the original `docstatus != 2`) meant an employee whose
+		Employee record carries no `leave_approver`, no `reports_to` and no
+		department approver could not so much as save a draft — the request was
+		unreachable for them, and the approver they needed is exactly what HR
+		sets up afterwards. `validate` runs again on submit with docstatus 1, so
+		the guarantee is unchanged where it matters.
+		"""
 		if (
-			self.docstatus != 2
+			self.docstatus == 1
 			and not self.leave_approver
 			and frappe.db.get_single_value("HR Settings", "leave_approver_mandatory_in_leave_application")
 		):
+			logger.info("[leave_application] submit blocked, no approver: %s", self.name)
 			frappe.throw(_("Leave Approver is mandatory"))
 
 	def set_leave_approver_name(self):
@@ -1372,7 +1387,7 @@ def get_holidays(employee: str, from_date: str | datetime.date, to_date: str | d
 def is_lwp(leave_type):
 	LeaveType = frappe.qb.DocType("Leave Type")
 	lwp = (frappe.qb.from_(LeaveType).select(LeaveType.is_lwp).where(LeaveType.name == leave_type)).run()
-	return lwp and cint(lwp[0][0]) or 0
+	return (lwp and cint(lwp[0][0])) or 0
 
 
 @frappe.whitelist()

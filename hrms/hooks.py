@@ -173,6 +173,44 @@ permission_query_conditions = {
 	# ("HR (Company)") never sees another company's Employee. No-op for users
 	# without one — see hrms/overrides/company_scope.py.
 	"Employee": "hrms.overrides.company_scope.employee_query_conditions",
+	# ---- Employee-owned HR records -------------------------------------
+	# Each of these grants the Employee/ESS role level-0 rights, so without a
+	# hook the grant means "every employee's rows" — pay, benefits, promotions,
+	# attendance, check-ins — through Desk, /api/resource, report view and CSV
+	# export. Scope is own + DocShare, with HR broad INSIDE its company fence.
+	# Listed literally so a reviewer can see the whole boundary in one place;
+	# tests/test_employee_role_fence_integrity.py fails if one goes missing or
+	# is wired on only one of the two hooks.
+	# See hrms/overrides/employee_owned_row_scope.py.
+	"Attendance": "hrms.overrides.employee_owned_row_scope.query_attendance",
+	"Attendance Request": "hrms.overrides.employee_owned_row_scope.query_attendance_request",
+	"Compensatory Leave Request": "hrms.overrides.employee_owned_row_scope.query_compensatory_leave_request",
+	"Employee Checkin": "hrms.overrides.employee_owned_row_scope.query_employee_checkin",
+	"Remote Checkin Request": "hrms.overrides.employee_owned_row_scope.query_remote_checkin_request",
+	"Shift Assignment": "hrms.overrides.employee_owned_row_scope.query_shift_assignment",
+	"Shift Schedule Assignment": "hrms.overrides.employee_owned_row_scope.query_shift_schedule_assignment",
+	"Employee Advance": "hrms.overrides.employee_owned_row_scope.query_employee_advance",
+	"Employee Benefit Application": "hrms.overrides.employee_owned_row_scope.query_employee_benefit_application",
+	"Employee Benefit Claim": "hrms.overrides.employee_owned_row_scope.query_employee_benefit_claim",
+	"Employee Benefit Ledger": "hrms.overrides.employee_owned_row_scope.query_employee_benefit_ledger",
+	"Employee Incentive": "hrms.overrides.employee_owned_row_scope.query_employee_incentive",
+	"Employee Other Income": "hrms.overrides.employee_owned_row_scope.query_employee_other_income",
+	"Employee Tax Exemption Declaration": "hrms.overrides.employee_owned_row_scope.query_employee_tax_exemption_declaration",
+	"Employee Tax Exemption Proof Submission": "hrms.overrides.employee_owned_row_scope.query_employee_tax_exemption_proof_submission",
+	"Leave Encashment": "hrms.overrides.employee_owned_row_scope.query_leave_encashment",
+	"Overtime Slip": "hrms.overrides.employee_owned_row_scope.query_overtime_slip",
+	"Payroll Correction": "hrms.overrides.employee_owned_row_scope.query_payroll_correction",
+	"Retention Bonus": "hrms.overrides.employee_owned_row_scope.query_retention_bonus",
+	"Salary Structure Assignment": "hrms.overrides.employee_owned_row_scope.query_salary_structure_assignment",
+	"Salary Withholding": "hrms.overrides.employee_owned_row_scope.query_salary_withholding",
+	"Employee Transfer": "hrms.overrides.employee_owned_row_scope.query_employee_transfer",
+	"Employee Promotion": "hrms.overrides.employee_owned_row_scope.query_employee_promotion",
+	"Employee Performance Feedback": "hrms.overrides.employee_owned_row_scope.query_employee_performance_feedback",
+	"Performance Improvement Plan": "hrms.overrides.employee_owned_row_scope.query_performance_improvement_plan",
+	"Goal": "hrms.overrides.employee_owned_row_scope.query_goal",
+	"Training Feedback": "hrms.overrides.employee_owned_row_scope.query_training_feedback",
+	"Employee Referral": "hrms.overrides.employee_owned_row_scope.query_employee_referral",
+	"Employee Grievance": "hrms.overrides.employee_owned_row_scope.query_employee_grievance",
 }
 
 has_permission = {
@@ -189,6 +227,39 @@ has_permission = {
 	"Employee Issue": "hrms.overrides.employee_issue_row_scope.has_permission",
 	"SOP Document": "hrms.overrides.sop_document_row_scope.has_permission",
 	"Employee": "hrms.overrides.company_scope.employee_has_permission",
+	# Document-level twin of the query scope above. A query condition filters
+	# list views only — frappe.client.get, form loads, print/PDF and attachment
+	# fetches all route through has_permission, so both must be wired or the
+	# doctype is only half-fenced.
+	"Attendance": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Attendance Request": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Compensatory Leave Request": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Checkin": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Remote Checkin Request": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Shift Assignment": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Shift Schedule Assignment": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Advance": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Benefit Application": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Benefit Claim": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Benefit Ledger": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Incentive": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Other Income": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Tax Exemption Declaration": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Tax Exemption Proof Submission": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Leave Encashment": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Overtime Slip": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Payroll Correction": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Retention Bonus": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Salary Structure Assignment": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Salary Withholding": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Transfer": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Promotion": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Performance Feedback": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Performance Improvement Plan": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Goal": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Training Feedback": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Referral": "hrms.overrides.employee_owned_row_scope.has_permission",
+	"Employee Grievance": "hrms.overrides.employee_owned_row_scope.has_permission",
 }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
@@ -328,7 +399,16 @@ doc_events = {
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
 	# ---- Usage telemetry: recurring feature usage (see hrms/telemetry.py) ----
-	"Leave Application": {"on_submit": "hrms.telemetry.on_leave_application_submit"},
+	# ONE entry per doctype (see the Employee Checkin note above). Leave
+	# Application carries both the telemetry hook and the single-writer guard:
+	# submit/cancel write Leave Ledger Entry rows, which are mirrored, so a
+	# hub-side approval for a mirrored employee would silently diverge from the
+	# source and stay invisible to hrms.sync.parity.
+	"Leave Application": {
+		"on_submit": "hrms.telemetry.on_leave_application_submit",
+		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
+		"before_cancel": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
+	},
 	"Expense Claim": {"on_submit": "hrms.telemetry.on_expense_claim_submit"},
 	"Attendance Request": {"on_submit": "hrms.telemetry.on_attendance_request_submit"},
 	"Shift Request": {"on_submit": "hrms.telemetry.on_shift_request_submit"},

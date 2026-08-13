@@ -5,6 +5,7 @@ import logging
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
 logger = logging.getLogger(__name__)
@@ -89,16 +90,19 @@ def _get_employer_contributions(slip_names) -> dict:
 	Employer etc.) — they never hit net pay but are real employer cost."""
 	if not slip_names:
 		return {}
-	rows = frappe.get_all(
-		"Salary Detail",
-		filters={
-			"parent": ("in", slip_names),
-			"parentfield": "deductions",
-			"statistical_component": 1,
-		},
-		fields=["parent", "sum(amount) as total"],
-		group_by="parent",
-	)
+	# Frappe v16 refuses SQL functions as SELECT strings, so the aggregate is
+	# expressed through the query builder.
+	SalaryDetail = frappe.qb.DocType("Salary Detail")
+	rows = (
+		frappe.qb.from_(SalaryDetail)
+		.select(SalaryDetail.parent, Sum(SalaryDetail.amount).as_("total"))
+		.where(
+			SalaryDetail.parent.isin(slip_names)
+			& (SalaryDetail.parentfield == "deductions")
+			& (SalaryDetail.statistical_component == 1)
+		)
+		.groupby(SalaryDetail.parent)
+	).run(as_dict=True)
 	return {row.parent: flt(row.total) for row in rows}
 
 

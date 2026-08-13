@@ -26,16 +26,10 @@
    "role": "Accounts User"
   },
   {
-   "role": "Employee"
-  },
-  {
    "role": "Projects User"
   },
   {
    "role": "Manufacturing User"
-  },
-  {
-   "role": "Employee Self Service"
   },
   {
    "role": "HR Manager"

@@ -50,6 +50,17 @@ logger = logging.getLogger(__name__)
 # single source of truth for "who counts as HR" in staff-lockdown guards
 HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 
+# See-all set for row scopes over CONFIDENTIAL employee data — team activity
+# (leave, claims, shift/OT requests) and employee-owned records (pay, benefits,
+# promotions, PIPs). System Manager is deliberately excluded: it is a technical
+# role handed out for Desk administration, and holding it must not carry
+# HR-wide sight of other people's requests or pay. Administrator is handled
+# separately by each scope as exceptional framework authority.
+#
+# HR_ROLES stays as it is for the WRITE-side fences (filing for someone else,
+# approver assignment), where System Manager acting as an operator is expected.
+HR_SEE_ALL_ROLES = frozenset({"HR User", "HR Manager"})
+
 
 class DuplicateDeclarationError(frappe.ValidationError):
 	pass
@@ -869,6 +880,105 @@ def validate_mandatory_attachment(doc):
 		frappe.throw(_("A supporting attachment is required before this request can be approved"))
 
 
+def get_direct_report_employees(user: str) -> list[str]:
+	"""Active employees reporting directly to any of this user's ACTIVE employees.
+
+	One definition of "my team", shared by every row scope that grants a manager
+	sight of their reports — duplicating it would let the fences drift apart.
+
+	Both sides are status-filtered: an offboarded manager whose User account is
+	still enabled keeps nothing, and inactive reports drop out.
+
+	Narrowed to the manager's permitted companies when they carry a Company User
+	Permission. A manager fenced to one company must not read another company's
+	records just because the reporting line crosses the boundary; a manager with
+	no Company UP is unfenced, matching hrms.overrides.company_scope.
+	"""
+	from hrms.overrides.company_scope import allowed_companies
+
+	own = frappe.get_all("Employee", filters={"user_id": user, "status": "Active"}, pluck="name")
+	if not own:
+		return []
+
+	filters = {"reports_to": ("in", own), "status": "Active"}
+	companies = allowed_companies(user)
+	if companies:
+		filters["company"] = ("in", companies)
+
+	reports = frappe.get_all("Employee", filters=filters, pluck="name")
+	logger.debug(
+		"[team_scope] %s manages %d direct report(s), company fence=%s",
+		user,
+		len(reports),
+		companies or "none",
+	)
+	return reports
+
+
+def get_designated_approvers(
+	employee: str, employee_approver_field: str, department_parentfield: str
+) -> list[str]:
+	"""Who this employee may route a request to. THE source of truth.
+
+	Both the PWA's approver selector and the server-side fence
+	(`validate_staff_approver`) read this list, because when they disagree the
+	form offers a choice the save then rejects — which is what
+	"{0} is not one of your designated approvers" looked like from the
+	employee's side.
+
+	The set is deliberately narrow: the explicit approver on the Employee
+	record, the reporting manager, and the approvers named on the employee's
+	OWN department. It does not walk up the department tree. Nothing in this
+	repo or in the donor branch says a parent-department approver may approve
+	for a child department, so the fence keeps the narrower boundary until HR
+	says otherwise; widening it would hand approval authority to people nobody
+	has authorised.
+
+	The employee's own user is never included — self-approval is refused
+	separately, with its own message.
+	"""
+	info = frappe.db.get_value(
+		"Employee",
+		employee,
+		["user_id", employee_approver_field, "reports_to", "department"],
+		as_dict=True,
+	)
+	if not info:
+		logger.warning("[staff_lockdown] no Employee %s while resolving approvers", employee)
+		return []
+
+	approvers = []
+	if info.get(employee_approver_field):
+		approvers.append(info.get(employee_approver_field))
+	if info.reports_to:
+		if manager_user := frappe.db.get_value("Employee", info.reports_to, "user_id"):
+			approvers.append(manager_user)
+	if info.department:
+		approvers.extend(
+			frappe.get_all(
+				"Department Approver",
+				filters={"parent": info.department, "parentfield": department_parentfield},
+				pluck="approver",
+			)
+		)
+
+	# de-duplicate but keep order: the Employee-record approver is the default
+	seen = set()
+	ordered = []
+	for approver in approvers:
+		if approver and approver != info.user_id and approver not in seen:
+			seen.add(approver)
+			ordered.append(approver)
+
+	logger.info(
+		"[staff_lockdown] %s designated approver(s) for %s via %s",
+		len(ordered),
+		employee,
+		department_parentfield,
+	)
+	return ordered
+
+
 def validate_staff_approver(doc, approver_field, employee_approver_field, department_parentfield):
 	"""Staff lockdown: when the applicant edits their own request, the approver
 	must be one of their designated approvers (reporting manager, the explicit
@@ -921,20 +1031,8 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		logger.warning("[staff_lockdown] %s attempted self-approval routing on %s", user, doc.doctype)
 		frappe.throw(_("You cannot set yourself as your own approver."))
 
-	allowed = set()
-	if info.get(employee_approver_field):
-		allowed.add(info.get(employee_approver_field))
-	if info.reports_to:
-		if manager_user := frappe.db.get_value("Employee", info.reports_to, "user_id"):
-			allowed.add(manager_user)
-	if info.department:
-		allowed.update(
-			frappe.get_all(
-				"Department Approver",
-				filters={"parent": info.department, "parentfield": department_parentfield},
-				pluck="approver",
-			)
-		)
+	# same list the PWA selector is built from — see get_designated_approvers
+	allowed = set(get_designated_approvers(doc.employee, employee_approver_field, department_parentfield))
 
 	if approver not in allowed:
 		logger.warning(
