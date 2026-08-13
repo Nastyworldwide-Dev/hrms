@@ -48,6 +48,11 @@ logger = logging.getLogger(__name__)
 # single source of truth for "who counts as HR" in staff-lockdown guards
 HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 
+# see-all set for TEAM-ACTIVITY row scopes (leave, claims, shift/OT requests):
+# System Manager is deliberately excluded — holding it must not expose other
+# teams' requests (user rule 2026-08-12). Administrator is handled separately.
+HR_SEE_ALL_ROLES = frozenset({"HR User", "HR Manager"})
+
 
 class DuplicateDeclarationError(frappe.ValidationError):
 	pass

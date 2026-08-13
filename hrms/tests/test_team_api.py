@@ -49,6 +49,14 @@ class TestTeamApi(FrappeTestCase):
 		self.assertRaises(frappe.PermissionError, get_team_status, manager=self.manager)
 		self.assertEqual(get_managers(), [])
 
+	def test_system_manager_cannot_browse_teams(self):
+		# user rule 2026-08-12: System Manager is not enough to see other teams
+		frappe.set_user("Administrator")
+		frappe.get_doc("User", "team_member@example.com").add_roles("System Manager")
+		frappe.set_user("team_member@example.com")
+		self.assertRaises(frappe.PermissionError, get_team_status, manager=self.manager)
+		self.assertEqual(get_managers(), [])
+
 	def test_hr_browses_any_team_and_gets_selector_data(self):
 		hr_user = frappe.get_doc("User", "team_outsider@example.com")
 		hr_user.add_roles("HR User")

@@ -16,7 +16,8 @@ these hooks are the ONLY row fence for staff. Access is granted to:
     see their staff's requests without gaining edit/approve rights,
   - users the document is shared with (DocShare — share_doc_with_approver
     keeps historical approvers working),
-  - HR User / HR Manager / System Manager / Administrator (unrestricted).
+  - HR User / HR Manager / Administrator (unrestricted; System Manager is
+    deliberately NOT enough to see other teams' requests).
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import HR_ROLES
+from hrms.hr.utils import HR_SEE_ALL_ROLES
 from hrms.utils.user_permission_scope import APPROVER_ROUTED_DOCTYPES
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,8 @@ _SHARE_RIGHTS = {"read", "write", "share", "submit"}
 
 
 def _unrestricted(user: str) -> bool:
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+	# HR User / HR Manager only — System Manager does NOT see other teams
+	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
 
 
 def _own_employees(user: str) -> list[str]:

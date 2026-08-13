@@ -13,7 +13,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_time, getdate, now_datetime
 
-from hrms.hr.utils import HR_ROLES
+from hrms.hr.utils import HR_SEE_ALL_ROLES
 from hrms.utils.team_status import derive_member_status
 
 logger = logging.getLogger(__name__)
@@ -24,8 +24,9 @@ def _my_employee() -> str | None:
 
 
 def _is_hr() -> bool:
+	# HR User / HR Manager only — System Manager cannot browse other teams
 	user = frappe.session.user
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
 
 
 @frappe.whitelist()

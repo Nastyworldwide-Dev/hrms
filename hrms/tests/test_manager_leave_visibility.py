@@ -43,6 +43,18 @@ class TestManagerLeaveVisibility(FrappeTestCase):
 		for ptype in ("write", "submit", "cancel", "delete", "share", "amend"):
 			self.assertFalse(has_permission(doc, ptype, "mlv_mgr@example.com"))
 
+	def test_system_manager_role_is_not_see_all(self):
+		# user rule 2026-08-12: only HR User / HR Manager see other teams
+		sysmgr = make_employee("mlv_sysmgr@example.com", company="_Test Company")
+		frappe.get_doc("User", "mlv_sysmgr@example.com").add_roles("System Manager")
+		conditions = get_permission_query_conditions("Leave Application", "mlv_sysmgr@example.com")
+		self.assertNotEqual(conditions, "")
+		self.assertNotIn(frappe.db.escape(self.report), conditions)
+		self.assertIn(frappe.db.escape(sysmgr), conditions)
+
+		frappe.get_doc("User", "mlv_sysmgr@example.com").add_roles("HR User")
+		self.assertEqual(get_permission_query_conditions("Leave Application", "mlv_sysmgr@example.com"), "")
+
 	def test_unrelated_staff_still_sees_nothing(self):
 		outsider = make_employee("mlv_outsider@example.com", company="_Test Company")
 		doc = frappe._dict(
