@@ -1,116 +1,115 @@
-# Plan — port donor G8: remove employee advance requests
+# Plan — close the recorded test debt (buckets 1 and 2), per the senior's rulings
 
-Branch: `nz-version-16` (HEAD `b38be575f`, clean, pushed). Donor `origin/as-hr_kpi` moved
-`2fb61f399` → `a4debd2b6` (v15.111.1 → v15.112.0) with one substantive commit:
-**`ddbdd6235 feat(hrms): remove employee advance requests`** (16 files, +111/−453).
+Branch `nz-version-16` (HEAD `35281548c`, clean, pushed). Bench at `/home/nabil/verify-bench`
+(`fresh.local`, `test.local`).
 
-## Why this is required, not optional
+## Senior's rulings (received, and they decide bucket 2)
 
-Company policy: staff may not request an advance and the company does not issue them.
-The senior explicitly rejected a UI-only fix — *"Hiding the PWA buttons alone would have
-been cosmetic — the routes stay reachable by deep link and the create API stays open."*
+1. **KRA row weights stay summing to 100** — the code is authoritative, the test is stale.
+2. **Rewrite the rating-driven appraisal tests around achievement.**
+3. **Reorder the score-conversion-table test** rather than relax the guard.
 
-`nz-version-16` is entirely un-migrated: all PWA files present, and `Employee Advance`
-still grants the `Employee` role `create` + `write`. Proven by running the donor's own
-bench-free test against our JSON:
+No product behaviour changes. Every edit below is to a test or fixture; `appraisal.py`,
+`appraisal_cycle.py` and the scoring model are not touched.
+
+## Bucket 1 — provable fixture bugs
+
+**B1a `test_expense_claim::test_expense_approver_perms`.** The test asserts *"changing the
+approver revokes the previous approver's DocShare"* and picks `test@example.com` as the
+intermediate approver purely for convenience. But `make_expense_claim` with no employee
+argument selects the first active employee in `_Test Company` — `_T-Employee-00001`, whose
+`user_id` **is** `test@example.com`. So the claim's own employee becomes their own approver
+and the fork's staff-lockdown fence correctly throws. Self-approval is collateral, not the
+assertion. Fix: a third, unrelated user for that step. The assertion is untouched.
+
+**B1b `test_pms_changes`.** Employees are created in `create_company("_Test PMS")`, but
+`create_appraisal_cycle` defaults to `company = "_Test Appraisal"`, and
+`get_employees_for_appraisal` filters on company — so zero appraisees, hence 42 ×
+"Please select employees to create appraisals for". Fix: pass `company=self.company` at the
+call sites in that suite. Verified this is the only suite with the mismatch; the other four
+callers already use `_Test Appraisal`, which matches the default.
+
+## Bucket 2 — per the rulings
+
+**B2a `test_appraisal_cycle::test_create_appraisals`** — `expected_weights` becomes
+`[30.0, 70.0]` and the stale comment goes. Ruling 1: template goals already sum to 100 and
+are copied verbatim (`set_kras_and_rating_criteria`: *"Template goals already sum to 100% —
+copy directly"*); the Section-A 70% is applied later in `calculate_a1_score`
+(`a1_score = min(conversion / 0.80 * a1_weight, a1_weight)`). `validate_total_weightage(...100)`
+independently confirms rows must sum to 100, which 21+49=70 would fail.
+
+**B2b `test_appraisal.py`** — rewrite around achievement. These tests drive
+`appraisal.goals[i].score` and assert `score_earned` / `total_score`, but the fork **never
+populates the legacy `goals` table** (no `self.set("goals", …)` anywhere in `appraisal.py`),
+which is why they raise `IndexError: list index out of range`. Scoring is entirely
+`appraisal_kra` + achievement:
 
 ```
-FAIL  Employee: create must be revoked — advances are not issued
-FAIL  Expense Approver: create must be revoked — advances are not issued
+achievement    = actual / target * 100        (capped at 100)
+rating_value   = capped / 100 * 5
+weighted_score = per_weightage * rating_value / 5
+weighted_avg   = weighted_sum / total_weightage * 5
+a1_score       = min(conversion / 0.80 * a1_weight, a1_weight)
 ```
 
-So today a staff member can still create an advance via Desk or `/api/resource`.
+So the tests set `target`/`actual` on `appraisal_kra` rows and assert `weighted_score` and
+`a1_score`. The docstring's own worked example — all KRAs at 100% achievement, A1=70 →
+`(0.80/0.80) × 70 = 70` — is the anchor case.
 
-## The one judgement call, and its evidence
-
-**Keep `Employee Advance Summary` staff-visible, self-scoped.** The donor deliberately
-keeps `read`/`report`/`export` on the doctype "so historical records stay visible to
-reporting and to expense claims that reference them". A report showing the caller their
-*own* advances is that same intent; making it HR-only would invent a stricter policy than
-the senior wrote. My existing `utils/report_scope.apply_employee_scope` already pins it to
-the caller.
-
-## Work
-
-1. **PWA removal** — delete `views/employee_advance/{Form,List}.vue`,
-   `components/{EmployeeAdvanceBalance,EmployeeAdvanceItem}.vue`,
-   `components/icons/EmployeeAdvanceIcon.vue`, `data/advances.js`, `router/advances.js`;
-   strip the references in `components/ListView.vue`, `views/Home.vue`,
-   `views/expense_claim/Dashboard.vue`. Keep the advance table inside the expense claim
-   form so claims referencing an advance still render.
-2. **Server lockdown** — harden `employee_advance.json` to read/report/export only, and
-   port `patches/v15_112_0/lock_employee_advance_readonly.py` (Custom DocPerm rows ignore
-   doctype JSON, so the patch aligns existing rows; it passes `if_owner` through because
-   `update_permission_property` defaults it to 0 and would otherwise skip those rows).
-3. **Test** — port `tests/test_employee_advance_readonly.py` (bench-free static check).
-
-## v16 adaptations (the reason this is a port, not a cherry-pick)
-
-- `frontend/src/router/index.js` — apply the advance-route removal **while keeping the
-  `/team` route** added for G3.
-- `hrms/patches.txt` — append after the two `v16_0` patches already added.
-- `Home.vue` / `expense_claim/Dashboard.vue` / `ListView.vue` may have diverged from the
-  donor; edit v16's versions rather than overwriting them.
-- **Layering:** `overrides/employee_owned_row_scope.py` keeps `Employee Advance`. The
-  donor leaves `read` org-wide; our fence narrows it to own records + HR-in-company, so
-  the combination is strictly stronger than either alone. The fence-integrity guard still
-  requires a fence because `read` remains — it is present, so the guard stays green.
+**B2c** — reorder the score-conversion-table test so the table is set **before** appraisals
+exist, respecting the guard rather than weakening it.
 
 ## FLOW
 
 ```mermaid
 graph TD
-  subgraph Remove["PWA entry points removed"]
-    HOME["views/Home.vue<br/>quick action"]
-    EXPD["views/expense_claim/Dashboard.vue<br/>balance card + request button"]
-    ROUTES["router/index.js + router/advances.js<br/>/employee-advances"]
-    ORPH["7 orphaned files<br/>views/employee_advance/*, components/*, data/advances.js"]
+  subgraph B1["Bucket 1 — fixture bugs (mechanical)"]
+    EXP["test_expense_claim<br/>3rd user as intermediate approver"]
+    PMS1["test_pms_changes<br/>company=self.company on the cycle"]
   end
-  subgraph Server["Server lockdown"]
-    JSON["employee_advance.json<br/>read/report/export only"]
-    PATCH["patches/v15_112_0/lock_employee_advance_readonly.py<br/>aligns Custom DocPerm rows"]
-    TEST["tests/test_employee_advance_readonly.py"]
+  subgraph B2["Bucket 2 — senior's rulings (tests only)"]
+    CYC["test_appraisal_cycle<br/>expected_weights 30/70"]
+    APR["test_appraisal<br/>goals[].score -> appraisal_kra[].target/actual"]
+    SCT["score-conversion test<br/>set table before appraisals"]
   end
-  subgraph Keep["Deliberately kept"]
-    CLAIM["Expense Claim advance table"]
-    FENCE["employee_owned_row_scope<br/>read scoped to own + HR-in-company"]
-    RPT["Employee Advance Summary<br/>self-scoped via report_scope"]
+  subgraph Code["UNCHANGED — product code"]
+    A["appraisal.py calculate_a1_score"]
+    C["appraisal_cycle.py"]
   end
-  HOME --> ROUTES --> ORPH
-  EXPD --> ROUTES
-  JSON --> PATCH --> TEST
-  JSON --> FENCE --> RPT
-  CLAIM -.->|unaffected: write path uses db_set| JSON
+  PMS1 -->|unblocks 42 errors so B2 assertions can run| APR
+  CYC -.->|asserts, never edits| A
+  APR -.->|asserts, never edits| A
+  SCT -.->|respects guard| C
 ```
 
 ## MOCKUP
 
-MOCKUP: NOT NEEDED (this removes UI, it adds none). The visible change is the
-disappearance of an existing quick action, card, button and route; no new screen,
-layout or component is introduced, so there is no design contract to agree.
+MOCKUP: NOT NEEDED (no UI). Every change is to a Python test or fixture; no screen,
+component, route or user-visible behaviour is added or altered.
 
 ## EXPECTED OUTPUT
 
-**UI result** — the Home "advance" quick action, the Expenses-dashboard advance balance
-card and its request button, and the `/employee-advances` routes are gone. Deep-linking
-to them no longer resolves. Expense claims that reference an advance still render their
-advance table. Employees can still see their own advance history in the self-scoped
-report.
+**UI result** — none. No product behaviour changes; appraisal scores, weights and
+permissions are all computed exactly as they are today.
 
-**Code changed** — deleted: 7 PWA files. Modified: `router/index.js`, `Home.vue`,
-`expense_claim/Dashboard.vue`, `ListView.vue`, `employee_advance.json`, `patches.txt`.
-Added: `patches/v15_112_0/{__init__,lock_employee_advance_readonly}.py`,
-`tests/test_employee_advance_readonly.py`.
+**Code changed** — `hrms/hr/doctype/expense_claim/test_expense_claim.py`,
+`hrms/hr/doctype/appraisal/test_pms_changes.py`,
+`hrms/hr/doctype/appraisal_cycle/test_appraisal_cycle.py`,
+`hrms/hr/doctype/appraisal/test_appraisal.py`. No non-test module is touched — that is the
+check that ruling 1 was honoured.
 
-**How it ships** — the JSON hardening reaches fresh installs; the patch aligns existing
-sites' Custom DocPerm rows on `bench migrate`. One commit on `nz-version-16`, pushed.
+**How it ships** — one commit on `nz-version-16`, pushed. Nothing to migrate.
 
-**Verification** — donor's static test + my fence/report/doctype-permission guards +
-`ruff` (CI-pinned 0.3.7) + `node --test` + `yarn build` (catches dangling imports from the
-deletions) + fresh & upgraded `bench migrate` + patch idempotency + the affected bench
-suites, on the disposable v16 site already built.
+**Verification** — the previously red suites go green on `fresh.local`:
+`test_expense_claim`, `test_appraisal`, `test_appraisal_cycle`, `test_pms_changes`, plus
+`test_kpi`, `test_appraisal_overview`, `test_employee_performance_feedback`,
+`test_appraisal_template` as regression. Guards (`fence`, `report-role`,
+`doctype-permission`, `write_block`) and `ruff` (CI-pinned 0.3.7) stay green.
 
 ## Guardrails
 
-Only `nz-version-16` is modified; `version-16`, `version-15`, `as-hr_kpi` stay read-only.
-No force-push, no history rewrite. `.reference/` stays ignored.
+Only `nz-version-16`. `version-16`, `version-15`, `as-hr_kpi` read-only. No force-push.
+**No assertion is weakened to obtain green** — B2a changes an expected value only because
+the senior ruled the code authoritative and two independent code paths agree with it; if
+any suite still fails for a reason that implies a product defect, I stop and report rather
+than adjust the number.

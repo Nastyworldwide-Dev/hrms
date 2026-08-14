@@ -528,6 +528,10 @@ class Appraisal(Document, AppraisalMixin):
 					"kra": entry.key_result_area,
 					"per_weightage": flt(entry.per_weightage, 2),
 					"kpi": entry.get("kpi"),
+					# copied alongside kpi_description: the column is configured on
+					# the template and was deliberately unhidden on Appraisal KRA
+					# (19daa8fbb), so leaving it out rendered an always-empty column
+					"kra_category": entry.get("kra_category"),
 					"kpi_description": entry.get("kpi_description"),
 					"target": flt(entry.get("default_target")),
 					"unit_of_measure": entry.get("unit_of_measure"),

@@ -504,19 +504,37 @@ class TestExpenseClaim(HRMSTestSuite):
 	def test_expense_approver_perms(self):
 		user = "test_approver_perm_emp@example.com"
 		make_employee(user, "_Test Company")
+		# The claim must belong to SOMEONE ELSE: make_expense_claim with no
+		# employee picks the first active employee of the company, which can be
+		# the approver we just created. The approver would then be approving
+		# their own claim and the staff-lockdown fence rejects it on submit.
+		claimant = make_employee("test_approver_perm_claimant@example.com", "_Test Company")
 
 		# check doc shared
 		payable_account = get_payable_account("_Test Company")
 		expense_claim = make_expense_claim(
-			payable_account, 300, 200, "_Test Company", "Travel Expenses - _TC", do_not_submit=True
+			payable_account,
+			300,
+			200,
+			"_Test Company",
+			"Travel Expenses - _TC",
+			do_not_submit=True,
+			employee=claimant,
 		)
 		expense_claim.expense_approver = user
 		expense_claim.save()
 		self.assertTrue(expense_claim.name in frappe.share.get_shared("Expense Claim", user))
 
-		# check shared doc revoked
+		# check shared doc revoked. The intermediate approver must be a THIRD
+		# party: make_expense_claim defaults to the first active employee of the
+		# company, which is _T-Employee-00001 whose user_id is test@example.com,
+		# so naming that user here would make the claim's own employee their own
+		# approver and trip the staff-lockdown self-approval fence.
+		other_approver = "test_approver_perm_other@example.com"
+		make_employee(other_approver, "_Test Company")
+
 		expense_claim.reload()
-		expense_claim.expense_approver = "test@example.com"
+		expense_claim.expense_approver = other_approver
 		expense_claim.save()
 		self.assertTrue(expense_claim.name not in frappe.share.get_shared("Expense Claim", user))
 

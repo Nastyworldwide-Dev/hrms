@@ -40,8 +40,10 @@ class TestAppraisalCycle(HRMSTestSuite):
 
 		appraisal = frappe.get_doc("Appraisal", appraisals[0].name)
 
-		# Template weights (30+70=100) are scaled to 70% for Section A
-		expected_weights = [21.0, 49.0]
+		# Template goals are copied verbatim and keep summing to 100; the
+		# Section-A 70% is applied later in calculate_a1_score, and
+		# validate_total_weightage requires these rows to total 100.
+		expected_weights = [30.0, 70.0]
 
 		for i in range(2):
 			# check if KRAs are set

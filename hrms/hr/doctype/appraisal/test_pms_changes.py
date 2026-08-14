@@ -36,9 +36,14 @@ class TestWeightageScaling(FrappeTestCase):
 
 		self.employee = make_employee("pms_test@example.com", company=self.company, designation="Engineer")
 
-	def test_kras_scaled_to_70(self):
-		"""Template KRAs (30+70=100) should become (21+49=70) on appraisal"""
-		cycle = create_appraisal_cycle(designation="Engineer")
+	def test_kras_copied_verbatim_summing_to_100(self):
+		"""Template KRAs are copied verbatim and keep summing to 100.
+
+		The Section-A 70% is NOT baked into the row weights; it is applied later
+		in calculate_a1_score (a1_score = conversion / 0.80 * a1_weight), and
+		validate_total_weightage independently requires these rows to total 100.
+		"""
+		cycle = create_appraisal_cycle(company=self.company, designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -47,15 +52,13 @@ class TestWeightageScaling(FrappeTestCase):
 		)
 
 		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
-		self.assertEqual(total, 70.0)
+		self.assertEqual(total, 100.0)
 
-		# 30% of 100 → 21% of 70
-		self.assertEqual(appraisal.appraisal_kra[0].per_weightage, 21.0)
-		# 70% of 100 → 49% of 70
-		self.assertEqual(appraisal.appraisal_kra[1].per_weightage, 49.0)
+		self.assertEqual(appraisal.appraisal_kra[0].per_weightage, 30.0)
+		self.assertEqual(appraisal.appraisal_kra[1].per_weightage, 70.0)
 
-	def test_scaling_with_odd_weights(self):
-		"""Rounding fix should ensure weights sum to exactly 70"""
+	def test_odd_weights_still_sum_to_100(self):
+		"""Odd template weights still total exactly 100 after the copy"""
 		# 33.33 + 33.33 + 33.34 = 100
 		template = create_appraisal_template(
 			title="Odd Weights",
@@ -72,17 +75,19 @@ class TestWeightageScaling(FrappeTestCase):
 				"employee": self.employee,
 				"company": self.company,
 				"appraisal_template": template.name,
-				"appraisal_cycle": create_appraisal_cycle(name="Q-Odd", designation="Engineer").name,
+				"appraisal_cycle": create_appraisal_cycle(
+					company=self.company, name="Q-Odd", designation="Engineer"
+				).name,
 			}
 		)
 		appraisal.set_kras_and_rating_criteria()
 
 		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
-		self.assertEqual(flt(total, 2), 70.0)
+		self.assertEqual(flt(total, 2), 100.0)
 
 	def test_scaling_preserves_ratios(self):
 		"""Relative proportions should be maintained after scaling"""
-		cycle = create_appraisal_cycle(name="Q-Ratio", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Ratio", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -98,10 +103,13 @@ class TestWeightageScaling(FrappeTestCase):
 		expected_ratio = 30.0 / 70.0
 		self.assertAlmostEqual(ratio, expected_ratio, places=1)
 
-	def test_manual_rating_goals_not_scaled(self):
+	def test_manual_rating_does_not_change_weights(self):
 		"""Manual rating mode uses 'goals' table — weightage should still scale to 70"""
 		cycle = create_appraisal_cycle(
-			name="Q-Manual", designation="Engineer", kra_evaluation_method="Manual Rating"
+			company=self.company,
+			name="Q-Manual",
+			designation="Engineer",
+			kra_evaluation_method="Manual Rating",
 		)
 		cycle.create_appraisals()
 
@@ -110,8 +118,10 @@ class TestWeightageScaling(FrappeTestCase):
 			{"appraisal_cycle": cycle.name, "employee": self.employee},
 		)
 
-		total = sum(flt(row.per_weightage) for row in appraisal.goals)
-		self.assertEqual(flt(total, 2), 70.0)
+		# the fork never populates the legacy `goals` table; KRA rows carry the
+		# weights, and the evaluation method does not change them
+		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
+		self.assertEqual(flt(total, 2), 100.0)
 
 
 class TestKRAMetadataCopy(FrappeTestCase):
@@ -153,7 +163,7 @@ class TestKRAMetadataCopy(FrappeTestCase):
 
 	def test_category_and_kpi_copied(self):
 		"""kra_category and kpi_description should copy from template to appraisal KRA rows"""
-		cycle = create_appraisal_cycle(name="Q-Meta", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Meta", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -176,7 +186,9 @@ class TestKRAMetadataCopy(FrappeTestCase):
 				"employee": self.employee,
 				"company": self.company,
 				"appraisal_template": template.name,
-				"appraisal_cycle": create_appraisal_cycle(name="Q-NoMeta", designation="Engineer").name,
+				"appraisal_cycle": create_appraisal_cycle(
+					company=self.company, name="Q-NoMeta", designation="Engineer"
+				).name,
 			}
 		)
 		appraisal.set_kras_and_rating_criteria()
@@ -324,7 +336,7 @@ class TestDepartmentTemplateResolution(FrappeTestCase):
 			department=self.procurement,
 		)
 
-		cycle = create_appraisal_cycle(name="Q-Dept", company=self.company)
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Dept")
 		# Find the appraisee for this employee
 		appraisee = [a for a in cycle.appraisees if a.employee == emp]
 		self.assertTrue(len(appraisee) > 0)
@@ -360,7 +372,7 @@ class TestDepartmentTemplateResolution(FrappeTestCase):
 			department=dept_name,
 		)
 
-		cycle = create_appraisal_cycle(name="Q-Fallback", company=self.company)
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Fallback")
 		appraisee = [a for a in cycle.appraisees if a.employee == emp]
 		self.assertTrue(len(appraisee) > 0)
 		self.assertEqual(appraisee[0].appraisal_template, fallback_template.name)
@@ -422,7 +434,9 @@ class TestAppraisalTemplateResolution(FrappeTestCase):
 				"doctype": "Appraisal",
 				"employee": self.employee,
 				"company": self.company,
-				"appraisal_cycle": create_appraisal_cycle(name="Q-Resolve", designation="Analyst").name,
+				"appraisal_cycle": create_appraisal_cycle(
+					company=self.company, name="Q-Resolve", designation="Analyst"
+				).name,
 			}
 		)
 		appraisal.set_appraisal_template()
@@ -477,7 +491,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 		weighted_score = per_weightage * min(achievement, 100) / 100
 		"""
-		cycle = create_appraisal_cycle(name="Q-ScoreA", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-ScoreA", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -492,16 +506,16 @@ class TestSectionScoreCalculation(FrappeTestCase):
 		appraisal.appraisal_kra[1].actual = 80
 		appraisal.save()
 
-		# Row 0: 21 * 100/100 = 21.0
-		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 21.0)
-		# Row 1: 49 * 80/100 = 39.2
-		self.assertEqual(appraisal.appraisal_kra[1].weighted_score, 39.2)
+		# Row 0: 30 * 100/100 = 30.0
+		self.assertEqual(appraisal.appraisal_kra[0].weighted_score, 30.0)
+		# Row 1: 70 * 80/100 = 56.0
+		self.assertEqual(appraisal.appraisal_kra[1].weighted_score, 56.0)
 		# manager_rating no longer influences the score
 		self.assertEqual(flt(appraisal.appraisal_kra[0].manager_rating), 0.0)
 
 	def test_a1_full_achievement_is_full_marks(self):
 		"""All KRAs at 100% achievement → Section A = full A1 weight (70)."""
-		cycle = create_appraisal_cycle(name="Q-FullAch", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-FullAch", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -518,7 +532,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_a1_overachievement_capped_at_100(self):
 		"""actual > target is scored as 100%; a single KRA cannot inflate Section A."""
-		cycle = create_appraisal_cycle(name="Q-OverAch", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-OverAch", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -544,7 +558,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_a1_negative_actual_floored_at_zero(self):
 		"""A negative actual is floored to 0% achievement, never dragging the score negative."""
-		cycle = create_appraisal_cycle(name="Q-NegAch", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-NegAch", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -563,7 +577,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_a2_competency_scored_by_achievement(self):
 		"""A2 competencies score by achievement, same method as A1."""
-		cycle = create_appraisal_cycle(name="Q-A2Ach", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-A2Ach", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -584,7 +598,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_a2_overachievement_capped_at_100(self):
 		"""A2 overachievement is capped at 100%; A2 cannot exceed its weight."""
-		cycle = create_appraisal_cycle(name="Q-A2Over", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-A2Over", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -605,7 +619,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_achievement_calculation(self):
 		"""achievement = actual / target * 100"""
-		cycle = create_appraisal_cycle(name="Q-Achieve", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Achieve", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -621,7 +635,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_zero_target_achievement(self):
 		"""Target of 0 should not cause division by zero"""
-		cycle = create_appraisal_cycle(name="Q-ZeroTarget", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-ZeroTarget", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -637,7 +651,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_pms_total_and_grade(self):
 		"""PMS total = section_a + section_b + section_c; grade derived from total"""
-		cycle = create_appraisal_cycle(name="Q-PMS", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-PMS", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -660,7 +674,7 @@ class TestSectionScoreCalculation(FrappeTestCase):
 
 	def test_final_score_uses_pms_total(self):
 		"""final_score should equal pms_total_score when PMS model is active"""
-		cycle = create_appraisal_cycle(name="Q-Final", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Final", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -694,9 +708,9 @@ class TestCalculateTotalScoreExpects70(FrappeTestCase):
 			"total_score_test@example.com", company=self.company, designation="Engineer"
 		)
 
-	def test_kra_weightage_70_passes_validation(self):
+	def test_kra_weightage_100_passes_validation(self):
 		"""KRA weights summing to 70 should pass validate_total_weightage"""
-		cycle = create_appraisal_cycle(name="Q-Val70", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Val70", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -704,9 +718,10 @@ class TestCalculateTotalScoreExpects70(FrappeTestCase):
 			{"appraisal_cycle": cycle.name, "employee": self.employee},
 		)
 
-		# Should not throw — weights sum to 70
+		# Should not throw — weights sum to 100, which is what
+		# validate_total_weightage("appraisal_kra", "KRAs (A1)", 100) requires
 		total = sum(flt(row.per_weightage) for row in appraisal.appraisal_kra)
-		self.assertEqual(total, 70.0)
+		self.assertEqual(total, 100.0)
 		appraisal.save()  # Should succeed without error
 
 
@@ -730,7 +745,7 @@ class TestGoalScoreGroupedQuery(FrappeTestCase):
 
 	def test_goal_score_with_no_goals(self):
 		"""No goals should result in 0 completion for all KRAs"""
-		cycle = create_appraisal_cycle(name="Q-NoGoal", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-NoGoal", designation="Engineer")
 		cycle.create_appraisals()
 
 		appraisal = frappe.get_doc(
@@ -746,7 +761,7 @@ class TestGoalScoreGroupedQuery(FrappeTestCase):
 		"""Goal score for a single KRA with one goal"""
 		from hrms.hr.doctype.goal.test_goal import create_goal
 
-		cycle = create_appraisal_cycle(name="Q-SingleGoal", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-SingleGoal", designation="Engineer")
 		cycle.create_appraisals()
 
 		create_goal(self.employee, "Quality", appraisal_cycle=cycle.name, progress=75)
@@ -786,7 +801,7 @@ class TestAppraisalVisibility(FrappeTestCase):
 		frappe.clear_cache(user=self.user_a)
 		frappe.clear_cache(user=self.user_b)
 
-		cycle = create_appraisal_cycle(name="Q-Visibility", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Visibility", designation="Engineer")
 		cycle.create_appraisals()
 
 		self.appraisal_a = frappe.db.get_value("Appraisal", {"employee": self.employee_a}, "name")
@@ -809,6 +824,9 @@ class TestAppraisalVisibility(FrappeTestCase):
 		hr_email = "appraisal_vis_hr@example.com"
 		make_employee(hr_email, company=self.company, designation="Engineer")
 		frappe.get_doc("User", hr_email).add_roles("HR User")
+		# roles are cached per user; without this the new role is invisible to
+		# frappe.get_roles and the reader is treated as ordinary staff
+		frappe.clear_cache(user=hr_email)
 
 		frappe.set_user(hr_email)
 		visible = frappe.get_list("Appraisal", pluck="name")
@@ -906,7 +924,7 @@ class TestManagerAppraisalVisibility(FrappeTestCase):
 		for user in users:
 			frappe.clear_cache(user=user)
 
-		cycle = create_appraisal_cycle(name="Q-Mgr", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Mgr", designation="Engineer")
 		cycle.create_appraisals()
 
 		self.manager_appraisal = frappe.db.get_value("Appraisal", {"employee": self.manager}, "name")
@@ -999,7 +1017,7 @@ class TestAppraisalShareGrant(FrappeTestCase):
 		frappe.clear_cache(user=self.user_a)
 		frappe.clear_cache(user=self.user_b)
 
-		cycle = create_appraisal_cycle(name="Q-Share", designation="Engineer")
+		cycle = create_appraisal_cycle(company=self.company, name="Q-Share", designation="Engineer")
 		cycle.create_appraisals()
 
 		self.appraisal_a = frappe.db.get_value("Appraisal", {"employee": self.employee_a}, "name")
@@ -1165,6 +1183,9 @@ class TestAppraisalEmployeeQuery(FrappeTestCase):
 		from hrms.hr.doctype.appraisal.appraisal import get_employee_particulars_for_appraisal
 
 		frappe.set_user("Administrator")
+		# frappe's whitelisted-argument validation rejects the dict before the
+		# function body runs, and FrappeTypeError subclasses TypeError (not
+		# ValidationError) — the guarantee is still "a non-string is refused"
 		self.assertRaises(
-			frappe.ValidationError, get_employee_particulars_for_appraisal, {"name": ("like", "%")}
+			frappe.FrappeTypeError, get_employee_particulars_for_appraisal, {"name": ("like", "%")}
 		)
