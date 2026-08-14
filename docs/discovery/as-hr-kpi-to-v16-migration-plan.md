@@ -1,6 +1,6 @@
 # `as-hr_kpi` → v16 Migration Plan
 
-- **Last updated:** 2026-08-13 (Round 4 — migration implemented and verified on a live v16 site)
+- **Last updated:** 2026-08-14 (Round 5 — donor advanced to v15.112.0; G8 ported)
 - **Working branch:** `nz-version-16` — implementation complete and **uncommitted**. Nothing staged, committed or pushed. See §10b for final dispositions and verification.
 - **Evidence tags:** **[V]** verified from code/config · **[I]** inferred (strong, not executed) · **[U]** unknown / needs site or stakeholder input
 - Companion: [`hrms-system-baseline.md`](./hrms-system-baseline.md)
@@ -317,8 +317,46 @@ Bench at `/home/nabil/verify-bench`, sites `test.local` (upgrade-shaped) and `fr
 | **G5** | OT grace window to day 7 | **IMPLEMENTED** — intent clearly evidenced | `utils/filing_window.py` + `ot_request.validate_filing_window` | **[RT]** `test_filing_window` 7/7, `test_ot_request` 12/12 |
 | **G6** | `description` on appraisal child tables | **PORTED** | 7 child-table JSONs, donor field + grid position | **[S]** JSON validity, install |
 | **G7** | PWA time picker | **REIMPLEMENTED** | native `<input type="time">` on v16's diverged `FormField.vue` | **[S]** `formfield-time-input.test.mjs` passes |
+| **G8** | Remove employee advance requests | **PORTED (adapted)** | 7 PWA files deleted, entry points stripped from `Home.vue` / `expense_claim/Dashboard.vue` / `ListView.vue` / `router/index.js`; `employee_advance.json` read-only; `patches/v15_112_0/lock_employee_advance_readonly.py` aligns Custom DocPerm rows | **[RT]** read-only proven for every role on the live site; `test_employee_advance_readonly` 1/1, `test_employee_advance` 17/17 |
 
 **G5 residual (the one irreducible decision):** the *value* 7 rests solely on the donor's comment `# payroll cutoff day of the following month (inclusive) — confirmed with HR 2026-08-12`. There is no config field in either tree, so changing it is a code edit. Also carried over deliberately: the replacement-leave **bank** claim window is untouched, so leave-branch OT filed during grace funds a bank whose own window has already closed. **Owner: HR/payroll.**
+
+### Round 5 — donor advanced to v15.112.0
+
+**[V] `origin/as-hr_kpi` moved `2fb61f399` → `a4debd2b6`** with one substantive commit,
+`ddbdd6235 feat(hrms): remove employee advance requests`. Company policy: staff may not
+request an advance and the company does not issue them. The senior removed the capability
+on **both** sides, explicitly rejecting a UI-only fix — *"the routes stay reachable by deep
+link and the create API stays open"*.
+
+`nz-version-16` was entirely un-migrated: all PWA files present and the `Employee` role
+still held `create` + `write`. The donor's own bench-free test failed against our JSON,
+which is what proved the gap rather than an assertion.
+
+**Adaptations made (why this is a port, not a cherry-pick):**
+- `router/index.js` — advance routes removed while keeping the `/team` route from G3.
+- `employee_advance.json` — the donor's file could **not** be taken wholesale: upstream v16
+  renamed `exchange_rate` → `base_paid_amount`, so copying it would have reverted a v16
+  schema change. Only the permission rows were hardened; the v16 field set is intact.
+- `patches.txt` — appended after the two `v16_0` patches.
+- `ListView.vue`, `Home.vue`, `expense_claim/Dashboard.vue` were byte-identical to the
+  donor's pre-commit state, so those were taken wholesale.
+
+**Judgement call recorded:** `Employee Advance Summary` stays staff-visible and
+self-scoped. The donor deliberately keeps `read`/`report`/`export` "so historical records
+stay visible"; a report showing the caller their own advances is that same intent, and
+making it HR-only would invent a stricter policy than the senior wrote.
+
+**Layering:** the donor leaves `read` org-wide. `overrides/employee_owned_row_scope.py`
+already narrows `Employee Advance` to own records + HR-in-company, so the combination is
+strictly stronger than either change alone.
+
+**New pre-existing failure recorded, not fixed:** `test_expense_claim::test_expense_approver_perms`
+sets an employee as their own expense approver, which the fork's staff-lockdown fence has
+forbidden since long before this work (the throw is unchanged diff context at the
+pre-migration base `768792f65`, and the test was never touched here). Same class as the
+appraisal suites: an upstream test versus fork policy. Deciding whether the self-approval
+ban deserves an exemption is HR policy, not a test fix.
 
 ### v16 defects fixed
 

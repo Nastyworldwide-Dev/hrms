@@ -32,7 +32,6 @@ import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import EmployeeAdvanceIcon from "@/components/icons/EmployeeAdvanceIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
 import SupportIcon from "@/components/icons/SupportIcon.vue"
 
@@ -60,11 +59,6 @@ const baseQuickLinks = [
 		icon: markRaw(ExpenseIcon),
 		title: __("Claim an Expense"),
 		route: "ExpenseClaimFormView",
-	},
-	{
-		icon: markRaw(EmployeeAdvanceIcon),
-		title: __("Request an Advance"),
-		route: "EmployeeAdvanceFormView",
 	},
 	{
 		icon: markRaw(KPIIcon),
