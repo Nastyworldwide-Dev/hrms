@@ -15,6 +15,8 @@
   "rows_pulled",
   "rows_written",
   "rows_skipped",
+  "rows_orphaned",
+  "rows_errored",
   "detail_section",
   "doctypes_synced",
   "error_log"
@@ -76,6 +78,20 @@
    "fieldname": "rows_skipped",
    "fieldtype": "Int",
    "label": "Rows Skipped",
+   "read_only": 1
+  },
+  {
+   "description": "Pulled but not written because a linked parent (usually Company) does not exist here yet. Any value above zero holds the incremental watermark so these rows are re-pulled.",
+   "fieldname": "rows_orphaned",
+   "fieldtype": "Int",
+   "label": "Rows Orphaned",
+   "read_only": 1
+  },
+  {
+   "description": "Pulled but not written because the row raised, usually schema drift. Any value above zero holds the incremental watermark so these rows are re-pulled.",
+   "fieldname": "rows_errored",
+   "fieldtype": "Int",
+   "label": "Rows Errored",
    "read_only": 1
   },
   {

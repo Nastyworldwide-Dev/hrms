@@ -168,7 +168,15 @@ class _FakeClient:
 		self.calls = []
 
 	def get_list(self, doctype, filters=None, fields=None, limit=None, start=0, order_by=None):
-		self.calls.append({"doctype": doctype, "filters": filters, "limit": limit, "start": start})
+		self.calls.append(
+			{
+				"doctype": doctype,
+				"filters": filters,
+				"limit": limit,
+				"start": start,
+				"order_by": order_by,
+			}
+		)
 		if doctype in self.fail_for:
 			raise RuntimeError(f"remote refused {doctype}")
 		rows = [dict(row) for row in self.remote.get(doctype, []) if _matches(row, filters)]
@@ -789,6 +797,239 @@ class TestUserStatusIsReconciled(_RunnerTestCase):
 		self._sync("Left")
 
 		self.assertEqual(self.store.rows("User"), {})
+
+
+class TestCheckpointNeverSkipsAnUnwrittenRow(_RunnerTestCase):
+	"""A watermark may only advance past rows this site actually holds.
+
+	The incident: an employee exists on Nasty ERP, the sync ran and reported
+	Completed, and the employee is nevertheless absent here — permanently, because
+	every later incremental run asks for `modified > <that run's start>` and the
+	employee has not been touched on the source since.
+
+	`sync_doctype` skips a row whose parent Company does not exist locally
+	(referential integrity, SYNC-00003) and counts it as `orphaned`. It also counts
+	a row that raised as `errored`. Neither counted towards `unfinished`, so the run
+	was Completed, so `get_watermark` — which accepts only Completed runs — moved
+	past rows that were never written.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	REMOTE: ClassVar[list] = [
+		{
+			"name": "HR-EMP-0001",
+			"employee_name": "Aisha",
+			"company": "Acme",
+			"modified": "2026-08-01 09:00:00",
+		},
+		{
+			"name": "HR-EMP-0009",
+			"employee_name": "Nadia",
+			"company": "Nasty Sdn Bhd",
+			"modified": "2026-08-02 09:00:00",
+		},
+	]
+
+	def run_with_one_orphan(self):
+		"""Acme exists locally; the second employee's company does not."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		return runner.sync_instance(self.client({"Employee": self.REMOTE}), doctypes=["Employee"])
+
+	def test_a_run_that_skipped_a_row_is_not_completed(self):
+		result = self.run_with_one_orphan()
+
+		self.assertEqual(result["written"], 1)
+		self.assertEqual(result["orphaned"], 1)
+		self.assertNotEqual(
+			result["status"],
+			"Completed",
+			"a run that left a row unwritten reported Completed, so the watermark advanced past it",
+		)
+
+	def test_the_watermark_does_not_advance_past_a_skipped_row(self):
+		self.run_with_one_orphan()
+
+		self.assertIsNone(
+			runner.get_watermark("nasty-live"),
+			"the next incremental run will ask for modified > this run and never see the skipped employee",
+		)
+
+	def test_the_skipped_employee_is_still_reachable_after_the_company_arrives(self):
+		"""The operator's actual repair path: create the missing company, re-run."""
+		self.run_with_one_orphan()
+		self.seed_parent("Company", "Nasty Sdn Bhd", company_name="Nasty Sdn Bhd")
+
+		since = runner.get_watermark("nasty-live")
+		result = runner.sync_doctype(self.client({"Employee": self.REMOTE}), "Employee", since=since)
+
+		self.assertIn("HR-EMP-0009", self.store.rows("Employee"))
+		self.assertEqual(result["orphaned"], 0)
+
+	def test_an_errored_row_also_holds_the_watermark(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [
+			dict(self.REMOTE[0]),
+			{"name": "HR-EMP-0010", "company": "Acme", "modified": "2026-08-02 09:00:00", "bad": object()},
+		]
+		original = runner._write_row
+
+		def explode(doctype, remote_name, payload):
+			if remote_name == "HR-EMP-0010":
+				raise RuntimeError("schema drift: unknown Select option")
+			return original(doctype, remote_name, payload)
+
+		runner._write_row = explode
+		try:
+			result = runner.sync_instance(self.client({"Employee": remote}), doctypes=["Employee"])
+		finally:
+			runner._write_row = original
+
+		self.assertEqual(result["errored"], 1)
+		self.assertNotEqual(result["status"], "Completed")
+		self.assertIsNone(runner.get_watermark("nasty-live"))
+
+	def test_a_clean_run_still_completes_and_advances(self):
+		"""The guard must not make every run Partial."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		result = runner.sync_instance(self.client({"Employee": EMPLOYEES}), doctypes=["Employee"])
+
+		self.assertEqual(result["orphaned"], 0)
+		self.assertEqual(result["errored"], 0)
+		self.assertEqual(result["status"], "Completed")
+		self.assertEqual(runner.get_watermark("nasty-live"), NOW)
+
+	def test_legitimate_skips_do_not_hold_the_watermark(self):
+		"""`skipped` conflates two things. A create-only doctype that already
+		exists locally, and a local row the remote no longer returns, are both
+		counted as skipped and neither is unfinished work."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.seed_parent("Employee", "HR-EMP-9999", company="Acme", synced_from_instance="nasty-live")
+
+		result = runner.sync_instance(self.client({"Employee": EMPLOYEES}), doctypes=["Employee"])
+
+		self.assertGreaterEqual(result["skipped"], 1, "the local-only row should be counted as skipped")
+		self.assertEqual(result["status"], "Completed")
+
+
+class TestRunRecordShowsWhatWasNotWritten(_RunnerTestCase):
+	"""An operator reading the run record has to be able to see that rows were
+	left behind. Before this, `Completed` with `rows_skipped: 0` was the only
+	visible outcome of a run that silently dropped an employee."""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_orphaned_and_errored_counts_are_recorded(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		runner.sync_instance(
+			self.client({"Employee": TestCheckpointNeverSkipsAnUnwrittenRow.REMOTE}), doctypes=["Employee"]
+		)
+
+		run = self.runs()[0]
+		self.assertEqual(run["rows_orphaned"], 1)
+		self.assertEqual(run["rows_errored"], 0)
+		self.assertEqual(run["status"], "Partial")
+
+	def test_the_missing_parent_is_named_on_the_run(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		runner.sync_instance(
+			self.client({"Employee": TestCheckpointNeverSkipsAnUnwrittenRow.REMOTE}), doctypes=["Employee"]
+		)
+
+		self.assertIn("Company: Nasty Sdn Bhd", self.runs()[0]["error_log"])
+
+
+class TestPaginationIsDeterministic(_RunnerTestCase):
+	"""Offset pagination over a non-unique sort key can skip rows.
+
+	`modified asc` alone leaves ties unordered, and a bulk update on the source
+	gives thousands of employees the same `modified` to the second. If the remote
+	returns those ties in a different order between page 1 and page 2 — which it
+	is entitled to do — a row at the boundary is never returned to us at all.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_the_sort_key_is_unique(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client()
+
+		runner.sync_doctype(client, "Employee")
+
+		order_by = client.calls[0]["order_by"]
+		self.assertIn("modified", order_by)
+		self.assertIn("name", order_by, "ties on `modified` must break on the unique key")
+
+
+class TestTheRunnerWalksEveryPage(_RunnerTestCase):
+	"""The runner keeps its own offset loop on top of the client's paging.
+
+	`sync_doctype` stops when a page comes back shorter than `page_size`, so a
+	remote holding exactly one full page plus one row must still yield that last
+	row — otherwise the employee at position 501 is invisible.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def remote(self, count):
+		return [
+			{
+				"name": f"HR-EMP-{i:04d}",
+				"employee_name": f"Staff {i}",
+				"company": "Acme",
+				"modified": f"2026-08-01 09:00:{i % 60:02d}",
+			}
+			for i in range(1, count + 1)
+		]
+
+	def test_a_row_past_the_first_page_still_lands(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		rows = self.remote(5)
+
+		result = runner.sync_doctype(self.client({"Employee": rows}), "Employee", page_size=2)
+
+		self.assertEqual(result["pulled"], 5)
+		self.assertEqual(result["written"], 5)
+		self.assertIn("HR-EMP-0005", self.store.rows("Employee"))
+
+	def test_every_page_asks_for_the_same_total_order(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": self.remote(5)})
+
+		runner.sync_doctype(client, "Employee", page_size=2)
+
+		self.assertGreater(len(client.calls), 1, "the fixture must span more than one page")
+		self.assertEqual({call["order_by"] for call in client.calls}, {runner.PAGE_ORDER})
+		self.assertEqual([call["start"] for call in client.calls], [0, 2, 4])
+
+
+class TestMalformedSourceRows(_RunnerTestCase):
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_a_row_without_a_name_is_skipped_not_guessed_at(self):
+		"""The remote `name` is the upsert key. A row without one cannot be
+		written idempotently, so inventing a name would create a duplicate on
+		every future run."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		rows = [dict(EMPLOYEES[0]), {"employee_name": "Nameless", "company": "Acme"}]
+
+		result = runner.sync_doctype(self.client({"Employee": rows}), "Employee")
+
+		self.assertEqual(result["written"], 1)
+		self.assertEqual(result["skipped"], 1)
+		self.assertEqual(list(self.store.rows("Employee")), ["HR-EMP-0001"])
+
+	def test_a_duplicate_source_identifier_yields_one_local_row(self):
+		"""Two remote rows sharing a `name` are the same record seen twice, and
+		the upsert has to collapse them rather than double-write."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		rows = [dict(EMPLOYEES[0]), dict(EMPLOYEES[0], employee_name="Aisha Renamed")]
+
+		result = runner.sync_doctype(self.client({"Employee": rows}), "Employee")
+
+		self.assertEqual(result["pulled"], 2)
+		self.assertEqual(len(self.store.rows("Employee")), 1)
+		self.assertEqual(self.store.rows("Employee")["HR-EMP-0001"]["employee_name"], "Aisha Renamed")
 
 
 if __name__ == "__main__":

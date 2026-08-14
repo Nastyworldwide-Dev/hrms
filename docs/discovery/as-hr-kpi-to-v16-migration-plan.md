@@ -663,6 +663,192 @@ and untouched: `test_leave_application` 7 (`test_leave_approver_mandatory`,
 `test_overlap_with_half_day_on_today`) and `test_leave_encashment` 1
 (`test_status_of_leave_encashment_after_payment_via_salary_slip`).
 
+## 10f. Employee never arrives from Nasty ERP — diagnosis and fix (2026-08-14)
+
+**Status: diagnosed + code-fixed.** Not *deployed*, not *access-verified*, not *HR-verified* —
+the affected HRMS sandbox is not reachable from this environment (see "Sandbox access" below).
+
+### Architecture, as confirmed in the repository
+
+`hrms/sync/client.py` states the direction outright: *"Used by the one-way shadow sync
+(**nasty-live → verifica-live**)"*, and its worked example is
+`RemoteInstanceClient("nasty-live")`. **Nasty ERP is the source; `verifica-live` is the
+destination HRMS hub** — a site *name*, not a data owner. Every `verifica-live` mention in
+this repository (SYNC-00002, SYNC-00003, the fresh-install incidents) refers to the
+destination. Nothing anywhere derives source authority from a hostname, a site name or an
+email domain:
+
+```
+grep -rn "frappe.local.site|get_url()|request.host|hostname" hrms/sync/ hrms/api/erp_instance.py
+  -> no matches
+```
+
+Source selection is explicit throughout: `run_sync(instance_name)` is whitelisted and takes
+the instance by name, and company→instance resolves through the `HRMS ERP Instance Company`
+child table, which `HRMSERPInstance.validate_company_not_claimed_twice` holds to exactly one
+instance per company.
+
+### First failing boundary
+
+**Boundary 5 — "Nasty ERP returns it but HRMS skips the row" — compounded by boundary 4,
+"the incremental checkpoint then skips it forever".**
+
+`sync_doctype` refuses to write an Employee whose `company` does not exist locally
+(referential integrity, the lesson of SYNC-00003) and counts it as `orphaned`. `sync_instance`
+then computed the run status as:
+
+```python
+unfinished = len(failed) + len(blocked)   # doctypes that raised, or were blocked
+if not unfinished:
+    status = "Completed"
+```
+
+Orphaned and errored **rows** never counted. So a run that pulled 500 employees, wrote 499 and
+skipped one reported **Completed** — and `get_watermark` accepts Completed runs *only*,
+precisely so that unfinished work gets re-pulled. The watermark therefore advanced past the
+skipped employee, and every later incremental run asked for `modified > <that run's start>`.
+The employee had not been touched on Nasty ERP since, so **they were never requested again**.
+Permanently absent, with the run record saying Completed.
+
+The module's own docstring already stated the correct rule — *"Only Completed advances it — a
+Partial run left some doctype behind, and moving the watermark past it would lose those rows
+forever"* — but the implementation applied it at **doctype** granularity and never at **row**
+granularity. This was a restoration of a documented invariant, not a new policy.
+
+### Contributing causes, each fixed
+
+| # | Cause | Effect |
+|---|---|---|
+| C1 | Run status ignored `orphaned` / `errored` rows | Watermark advanced past rows never written — **the root cause** |
+| C2 | `HRMS Sync Run` stored no orphaned/errored counts, and `missing_parents` was recorded only when the whole doctype failed | An operator saw `Completed` and could not tell that rows were dropped, nor which Company to create |
+| C3 | `order_by="modified asc"` with offset pagination | Non-unique sort key: a bulk update on the source gives thousands of employees the same `modified`, and ties reordered between pages can drop a row at a page boundary |
+| C4 | `hrms/api/erp_instance.py::get_instance_for_company` used `limit=1` with no `order_by` | A first-match on source routing; its sibling `company_fence.get_instance_companies` already ordered, so the two could disagree about which instance owns a company |
+
+### Historical provenance — proven, not assumed
+
+| Commit | Date | What it did |
+|---|---|---|
+| `99cede1f3` | 2026-08-10 | Shipped the sync engine **and** `get_watermark`'s Completed-only rule |
+| `966047310` | 2026-08-10 | Introduced `unfinished = len(failed) + len(blocked)` — rows never counted |
+| `7251ff4a4` | 2026-08-11 | Added per-row referential integrity, i.e. **created the `orphaned` skip** that the status rule ignores |
+
+All three are on **`origin/version-16` as well as `nz-version-16`**, and a direct diff of
+`hrms/sync/runner.py` between the two branches shows the watermark and status logic
+**identical**. The defect is older than every recent `nz-version-16` change and is not
+specific to this branch.
+
+**Relationship of the recent work — `2f0b738fb` (identity):** it touched `runner.py`
+**additively only** (+72 lines, 0 deletions): `LOCALLY_OWNED_FIELDS` so a later sync stops
+clobbering the hub-owned `user_id`, and `_reconcile_user_status` so `User.enabled` follows
+`Employee.status`. Those closed reported causes **8** (a later sync clears `user_id`) and part
+of **10** (a stale User state denies access), and **changed the resulting error message** from
+a generic dialog to a named reason. They did not touch — and could not have touched — whether
+the Employee row arrives from Nasty ERP at all, which is causes 4 and 5. Verdict:
+**the recent work partially addressed the chain and changed the resulting error; it neither
+caused nor concealed this defect.**
+
+### Blast radius
+
+Every mirrored doctype, not only Employee: `Attendance`, `Employee Checkin` and
+`Leave Ledger Entry` all carry `ROW_DEPENDENCIES` and are skipped the same way when their
+parent Employee is absent — so one dropped employee silently drops that person's entire
+attendance and leave history too, and the checkpoint hides all of it identically. Any source
+instance, any company. Read-path only: nothing was written incorrectly, rows were simply never
+written at all.
+
+### Fix
+
+* **`sync_instance`** — a run is `Completed` only when `orphaned == 0 and errored == 0` as well
+  as no doctype failing; otherwise `Partial`, which `get_watermark` already refuses to advance
+  past. `skipped` is deliberately **not** counted: it means a create-only doctype already
+  present locally, or a local row the remote no longer returns — neither is outstanding work.
+  Self-healing: the moment the missing Company is created, the next run completes and the
+  watermark advances.
+* **Run record** — new `rows_orphaned` and `rows_errored` (Int, read-only), plus every
+  `missing_parents` and per-row error appended to `error_log` even when the doctype itself did
+  not fail. The operator now reads *"Employee: 1 row(s) skipped, missing Company: X"*.
+* **`PAGE_ORDER = "modified asc, name asc"`** — a unique total order, so offset pagination
+  cannot drop a row at a page boundary.
+* **`get_instance_for_company`** — ordered, matching its fence sibling, so source routing is
+  deterministic even if the one-instance-per-company invariant is ever breached.
+
+No patch is required: `bench migrate` syncs the doctype JSON, and both new columns were
+confirmed present on a fresh site and an upgraded site.
+
+### Deliberately NOT done
+
+* **No scheduler entry for the sync.** `run_sync` requires an explicit `instance_name` and
+  there is no safe default; adding a scheduled job that picked one would be exactly the
+  "first source" routing this work removes. Cadence and instance are an **operations
+  decision**, and one nobody has recorded — the sync is currently manual-only, which is a
+  legitimate finding in its own right.
+* **No historical row repair.** No deterministic rule exists: which employees a past run
+  dropped is only recoverable by re-reading Nasty ERP.
+* **The `HR (Company)` fail-open fence default** is a separate, documented decision with its
+  own nightly hygiene report (`unfenced_by_omission`). Out of scope here.
+
+### Tests — 84 bench-free + 26 bench-backed, all green
+
+`hrms/tests/test_sync_runner.py` 45 → **58**, `hrms/tests/test_erp_instance_doctype.py`
+22 → **26**, plus two new bench-backed suites covering what the bench-free harness has to
+fake: `hrms/sync/test_runner.py` (**12** — the `HRMS Sync Run` round-trip, i.e. `_finish_run`
+writing the row that `get_watermark` reads back, on a real database) and
+`hrms/api/test_erp_instance.py` (**14** — source routing against real registry rows: a mapped
+company resolves, an unmapped one resolves to *nothing* rather than to the only configured
+instance, a disabled instance serves nobody, a company cannot be claimed twice, both
+resolvers agree, resolution is stable across repeats, and credentials never reach the PWA
+payload). Both pass on `fresh.local` and `test.local`. New coverage: a run that skipped a row is not Completed · the watermark does not
+advance past it · the skipped employee is reachable once the Company arrives · an errored row
+holds the watermark too · a clean run still completes and advances · legitimate skips do not
+hold it · orphaned/errored counts are recorded on the run · the missing parent is named on the
+run · the sort key is unique · a row past the first page still lands · every page asks for the
+same total order · a row without a source `name` is skipped rather than guessed at · a
+duplicate source identifier yields one local row · both source resolvers order before limiting
+· both order the same way · the one-instance-per-company validator is still wired · the two
+new run fields exist and are read-only.
+
+### Regression evidence
+
+Baseline measured by stashing the change and re-running the identical 19-module bench sweep on
+`fresh.local`; the post-fix result is **byte-identical** — zero new failures. Pre-existing and
+untouched: `test_leave_application` 7 (`test_leave_approver_mandatory`,
+`test_leave_approver_perms`, `test_overlap`, `test_overlap_with_half_day_1/2/3`,
+`test_overlap_with_half_day_on_today`).
+
+### Sandbox access — the incident cannot be closed from here
+
+No affected HRMS site is reachable from this environment. The only sites present are the
+disposable `fresh.local` and `test.local`, both of which report:
+
+```
+ERP INSTANCES: 0          SYNC RUNS: 0        EMPLOYEE mirrored: 0
+site config hrms_sync_credentials set: False  scheduler disabled: True
+run_sync scheduled: False
+```
+
+So the deployed SHA, the configured source instance, and the affected employee's actual
+disposition are **unverified**. Whoever holds sandbox access must run, on the affected site:
+
+```python
+# 1. is Nasty ERP registered, enabled, credentialed, and does it claim this company?
+frappe.get_all("HRMS ERP Instance", fields=["name", "enabled", "url"])
+frappe.get_all("HRMS ERP Instance Company", filters={"company": "<company>"}, fields=["parent"])
+
+# 2. what did the runs actually do? (rows_orphaned / rows_errored exist after this fix)
+frappe.get_all("HRMS Sync Run", fields=["name","source_instance","status","started_at",
+        "rows_pulled","rows_written","rows_skipped","error_log"], order_by="started_at desc", limit=20)
+
+# 3. is the employee here at all, and under which source?
+frappe.get_all("Employee", filters={"company_email": "<address>"},
+        fields=["name","status","company","synced_from_instance","user_id"])
+```
+
+Interpretation: **Completed runs with a non-empty `error_log`, or any company on Nasty ERP
+absent from `tabCompany` here, mean rows were dropped and the watermark moved past them.**
+The recovery for those, after this fix is deployed, is one full pull:
+`run_sync("<nasty instance>", incremental=0)` — deterministic, idempotent, and it will now
+report `Partial` with the missing Company named if anything is still unresolvable.
+
 ## 11. Appendix — capability → commit SHAs (reverse traceability)
 
 Abbreviated SHAs in the range `dd6c388f7..2fb61f399`.

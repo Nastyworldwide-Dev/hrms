@@ -162,6 +162,82 @@ def _load_controller():
 	return mod
 
 
+class TestSourceRoutingIsDeterministic(unittest.TestCase):
+	"""Which ERP instance serves a company must be the same answer every time.
+
+	Two resolvers answer it — `hrms.api.erp_instance.get_instance_for_company`
+	for the staff redirect, and `hrms.utils.company_fence.get_instance_companies`
+	for the HR (Instance) permission fence. Both take `limit=1` over the
+	company->instance child table. `HRMSERPInstance.validate_company_not_claimed_twice`
+	is what keeps that to one row, but a `limit=1` with no `order_by` is a
+	first-match: should the invariant ever be breached, an unordered query can
+	return a different instance per request and the two resolvers can disagree
+	with each other about who owns a company.
+
+	Static, over the source — no bench, no site.
+	"""
+
+	SOURCES = (
+		HRMS_ROOT / "api/erp_instance.py",
+		HRMS_ROOT / "utils/company_fence.py",
+	)
+
+	def resolver_query(self, path):
+		text = path.read_text(encoding="utf-8")
+		start = text.index('"HRMS ERP Instance Company"')
+		return text[start : text.index(")", start)]
+
+	def test_both_resolvers_order_before_limiting(self):
+		for path in self.SOURCES:
+			with self.subTest(source=path.name):
+				query = self.resolver_query(path)
+				self.assertIn("limit=1", query)
+				self.assertIn("order_by=", query, f"{path.name} resolves the source by first match")
+
+	def test_both_resolvers_order_the_same_way(self):
+		orders = set()
+		for path in self.SOURCES:
+			query = self.resolver_query(path)
+			after = query.split("order_by=", 1)[1]
+			orders.add(after.split(",")[0].strip())
+		self.assertEqual(len(orders), 1, f"the two resolvers order differently: {orders}")
+
+	def test_the_controller_still_enforces_one_instance_per_company(self):
+		controller = (HRMS_ROOT / "hr/doctype/hrms_erp_instance/hrms_erp_instance.py").read_text(
+			encoding="utf-8"
+		)
+		self.assertIn("def validate_company_not_claimed_twice", controller)
+		self.assertIn("validate_company_not_claimed_twice()", controller)
+
+
+class TestSyncRunRecordsUnwrittenRows(unittest.TestCase):
+	"""An operator has to be able to see that a run left rows behind.
+
+	`Completed` with no other signal was the only visible outcome of a run that
+	silently dropped an employee for a missing Company.
+	"""
+
+	RUN = HRMS_ROOT / "hr/doctype/hrms_sync_run/hrms_sync_run.json"
+
+	def setUp(self):
+		self.doc = _load(self.RUN)
+		self.fields = {f["fieldname"]: f for f in self.doc["fields"]}
+
+	def test_orphaned_and_errored_counts_are_stored(self):
+		for fieldname in ("rows_orphaned", "rows_errored"):
+			self.assertIn(fieldname, self.fields)
+			self.assertEqual(self.fields[fieldname]["fieldtype"], "Int")
+			self.assertEqual(self.fields[fieldname].get("read_only"), 1)
+
+	def test_field_order_matches_fields(self):
+		order = self.doc.get("field_order")
+		if order:
+			self.assertEqual(sorted(order), sorted(self.fields))
+
+	def test_partial_is_a_reachable_status(self):
+		self.assertIn("Partial", self.fields["status"]["options"].split("\n"))
+
+
 class TestInstanceUrlNormalisation(unittest.TestCase):
 	"""The URL is both the PWA redirect and the sync's API base.
 

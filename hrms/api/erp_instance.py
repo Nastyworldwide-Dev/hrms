@@ -29,10 +29,19 @@ def get_instance_for_company(company: str) -> dict | None:
 	if not company:
 		return None
 
+	# `order_by` is not decoration. `HRMSERPInstance.validate_company_not_claimed_twice`
+	# keeps a company on exactly one instance, but a `limit=1` with no order is a
+	# first-match: if that invariant is ever breached — a row written before the
+	# validator existed, or two operators saving concurrently — this would return a
+	# different instance from one request to the next, and the staff redirect would
+	# flap between two ERPs. `hrms.utils.company_fence.get_instance_companies`
+	# already orders for exactly this reason; the two must not disagree about which
+	# instance serves a company.
 	rows = frappe.get_all(
 		"HRMS ERP Instance Company",
 		filters={"company": company},
 		fields=["parent"],
+		order_by="parent asc",
 		limit=1,
 	)
 	if not rows:

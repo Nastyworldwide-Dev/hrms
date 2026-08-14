@@ -176,6 +176,18 @@ _REQUIRED_DEFAULTS = {
 
 PAGE_SIZE = 500
 
+#: Sort key for the paged pull, and it must be UNIQUE.
+#:
+#: Pagination is offset-based (`limit_start`), so the remote has to return a
+#: stable total order or an offset means nothing. `modified asc` alone does not
+#: give one: a bulk update on the source stamps thousands of employees with the
+#: same `modified` to the second, and the remote is entitled to return those ties
+#: in a different order for page 1 than for page 2. A row sitting on a page
+#: boundary is then either returned twice — harmless, the upsert is idempotent —
+#: or never returned at all, which is an employee that silently does not exist
+#: here. `name` is the primary key, so appending it makes the order total.
+PAGE_ORDER = "modified asc, name asc"
+
 #: Per-row failures recorded verbatim on the run before truncating. Schema drift
 #: usually hits every row the same way, so a handful is diagnostic and 4,000
 #: would just bury the run record.
@@ -407,7 +419,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 			fields=["*"],
 			limit=page_size,
 			start=start,
-			order_by="modified asc",
+			order_by=PAGE_ORDER,
 		)
 		if not page:
 			break
@@ -530,17 +542,21 @@ def _finish_run(run_name: str, status: str, totals: dict, errors: list) -> None:
 				"rows_pulled": totals.get("pulled", 0),
 				"rows_written": totals.get("written", 0),
 				"rows_skipped": totals.get("skipped", 0),
+				"rows_orphaned": totals.get("orphaned", 0),
+				"rows_errored": totals.get("errored", 0),
 				"error_log": "\n".join(errors)[:100000] if errors else None,
 			},
 		)
 		frappe.db.commit()
 		_log().info(
-			"[sync] run %s finished: status=%s pulled=%s written=%s skipped=%s",
+			"[sync] run %s finished: status=%s pulled=%s written=%s skipped=%s orphaned=%s errored=%s",
 			run_name,
 			status,
 			totals.get("pulled", 0),
 			totals.get("written", 0),
 			totals.get("skipped", 0),
+			totals.get("orphaned", 0),
+			totals.get("errored", 0),
 		)
 	except Exception:
 		_log().error("[sync] run %s: could not record outcome", run_name, exc_info=True)
@@ -592,15 +608,48 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			results.append(result)
 			for key in totals:
 				totals[key] += result[key]
+			# Named, not merely counted: an operator who reads "1 row orphaned"
+			# still does not know WHICH company to create. This line is the entire
+			# repair instruction, and without it the run record said Completed and
+			# nothing else.
+			if result["missing_parents"]:
+				errors.append(
+					f"{doctype}: {result['orphaned']} row(s) skipped, missing "
+					f"{', '.join(result['missing_parents'])}"
+				)
+			for row_error in result["row_errors"]:
+				errors.append(f"{doctype}: {row_error}")
 			frappe.db.commit()
 
+		# Rows count, not only doctypes. `get_watermark` accepts Completed runs
+		# alone precisely so unfinished work is re-pulled next time — but
+		# "unfinished" used to mean only a doctype that raised. A doctype that
+		# pulled 500 employees, wrote 499 and skipped one for a missing Company
+		# still reported Completed, so the watermark moved past that employee and
+		# no later incremental run ever asked for them again. They existed on the
+		# source and simply were not here, permanently, until somebody happened to
+		# run a full pull by hand.
+		#
+		# `skipped` is deliberately NOT counted: it means a create-only doctype
+		# that already exists locally, or a local row the remote no longer
+		# returns. Neither is outstanding work.
+		unwritten = totals["orphaned"] + totals["errored"]
+		if unwritten:
+			errors.append(
+				f"{unwritten} row(s) not written (orphaned={totals['orphaned']} "
+				f"errored={totals['errored']}) — watermark held so they are re-pulled"
+			)
+			_log().warning(
+				"[sync] run %s left %s row(s) unwritten; holding the watermark", run_name, unwritten
+			)
+
 		unfinished = len(failed) + len(blocked)
-		if not unfinished:
+		if not unfinished and not unwritten:
 			status = "Completed"
-		elif unfinished < len(doctypes):
-			status = "Partial"
-		else:
+		elif unfinished >= len(doctypes):
 			status = "Failed"
+		else:
+			status = "Partial"
 		return {
 			"run": run_name,
 			"instance": instance_name,
