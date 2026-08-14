@@ -12,6 +12,7 @@ from frappe.utils import add_days, cint, cstr, get_link_to_form, get_time, getda
 
 from hrms.hr.utils import validate_active_employee
 from hrms.utils import generate_date_range
+from hrms.utils.identity import get_employee_info
 
 
 class OverlappingShiftError(frappe.ValidationError):
@@ -165,9 +166,7 @@ def has_overlapping_timings(shift_1: str, shift_2: str) -> bool:
 
 @frappe.whitelist()
 def get_events(start: str | date, end: str | date, filters: list | None = None):
-	employee = frappe.db.get_value(
-		"Employee", {"user_id": frappe.session.user}, ["name", "company"], as_dict=True
-	)
+	employee = get_employee_info(fields=("name", "company"))
 	if employee:
 		employee = employee.name
 	else:

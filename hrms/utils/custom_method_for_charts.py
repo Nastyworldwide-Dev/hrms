@@ -5,11 +5,12 @@ from erpnext import get_default_company
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
 from hrms.utils.holiday_list import get_assigned_holiday_list
+from hrms.utils.identity import get_employee
 
 
 @frappe.whitelist()
 def get_upcoming_holidays():
-	employee = frappe.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	employee = get_employee()
 	if employee:
 		holiday_list = get_holiday_list_for_employee(employee, raise_exception=False, as_on=getdate())
 	else:

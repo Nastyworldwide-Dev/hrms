@@ -14,13 +14,14 @@ from frappe import _
 from frappe.utils import get_time, getdate, now_datetime
 
 from hrms.hr.utils import HR_SEE_ALL_ROLES
+from hrms.utils.identity import get_employee
 from hrms.utils.team_status import derive_member_status
 
 logger = logging.getLogger(__name__)
 
 
 def _my_employee() -> str | None:
-	return frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
+	return get_employee()
 
 
 def _is_hr() -> bool:

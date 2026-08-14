@@ -14,6 +14,8 @@ import logging
 
 import frappe
 
+from hrms.utils.identity import get_employee
+
 logger = logging.getLogger(__name__)
 
 HR_ROLES = ("HR Manager", "HR User")
@@ -45,8 +47,7 @@ def _to_contact_card(row: dict) -> dict:
 
 
 def _current_employee() -> str | None:
-	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
-	return employee
+	return get_employee()
 
 
 @frappe.whitelist()

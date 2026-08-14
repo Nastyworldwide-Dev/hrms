@@ -24,6 +24,7 @@ import logging
 import frappe
 
 from hrms.hr.utils import HR_SEE_ALL_ROLES
+from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def apply_employee_scope(filters: dict | None, employee_field: str = "employee")
 			logger.info("[report_scope] HR caller fenced to %d company(ies)", len(companies))
 		return filters
 
-	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	employee = get_employee()
 	if not employee:
 		logger.info("[report_scope] %s has no Employee record — empty report", frappe.session.user)
 		return None

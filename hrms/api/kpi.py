@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate
 
+from hrms.utils.identity import require_employee
+
 logger = logging.getLogger(__name__)
 
 KRA_ROW_FIELDS = (
@@ -28,10 +30,7 @@ ALL_CYCLES = "_all"
 
 
 def _get_session_employee() -> str:
-	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
-	if not employee:
-		frappe.throw(_("No active Employee record is linked to your user."), frappe.PermissionError)
-	return employee
+	return require_employee()
 
 
 def _get_cycle_dates(cycle_names) -> dict:

@@ -16,6 +16,7 @@ from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
 from hrms.hr.utils import HR_SEE_ALL_ROLES, validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
 from hrms.overrides.company_scope import allowed_companies, company_visible
+from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
 
@@ -594,7 +595,7 @@ class Appraisal(Document, AppraisalMixin):
 				"employee": self.employee,
 				"added_on": now(),
 				"feedback": feedback,
-				"reviewer": frappe.db.get_value("Employee", {"user_id": frappe.session.user}),
+				"reviewer": get_employee(),
 			}
 		)
 

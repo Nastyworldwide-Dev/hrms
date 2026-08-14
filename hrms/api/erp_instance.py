@@ -12,6 +12,8 @@ import logging
 
 import frappe
 
+from hrms.utils.identity import resolve_employee_identity
+
 logger = logging.getLogger(__name__)
 
 #: Everything this API is allowed to hand to a staff member. The
@@ -57,11 +59,7 @@ def get_my_erp_instance() -> dict | None:
 	Self-scoped by construction: the employee is derived from the session, never
 	taken from the caller, so this cannot be used to probe another company.
 	"""
-	company = frappe.db.get_value(
-		"Employee",
-		{"user_id": frappe.session.user, "status": "Active"},
-		"company",
-	)
+	company = resolve_employee_identity().company
 	if not company:
 		logger.debug("[erp_instance] no active employee for user %s", frappe.session.user)
 		return None

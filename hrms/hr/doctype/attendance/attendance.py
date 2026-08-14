@@ -30,6 +30,7 @@ from hrms.hr.utils import (
 	validate_active_employee,
 )
 from hrms.utils.holiday_list import get_holiday_dates_between_range
+from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +296,7 @@ class Attendance(Document):
 
 @frappe.whitelist()
 def get_events(start: date | str, end: date | str, filters: str | list | None = None) -> list[dict]:
-	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user})
+	employee = get_employee()
 	if not employee:
 		return []
 

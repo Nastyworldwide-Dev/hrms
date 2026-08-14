@@ -18,6 +18,7 @@ from frappe.query_builder.functions import Count
 from frappe.utils import now_datetime
 
 from hrms.utils.company_scope import permitted_company_filter
+from hrms.utils.identity import get_employee
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -305,7 +306,7 @@ def get_unresolved_stale_in() -> dict:
 
 	from frappe.utils import add_days, cint, get_datetime
 
-	employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	employee = get_employee()
 	if not employee:
 		return {}
 

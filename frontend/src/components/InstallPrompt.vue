@@ -87,8 +87,6 @@ window.addEventListener("beforeinstallprompt", (e) => {
 	} else {
 		showDialog.value = true
 	}
-	// Optionally, send analytics event that PWA install promo was shown.
-	console.log(`'beforeinstallprompt' event was fired.`)
 })
 
 window.addEventListener("appinstalled", () => {
@@ -96,8 +94,18 @@ window.addEventListener("appinstalled", () => {
 	deferredPrompt.value = null
 })
 
+// Only ever reached from the Install button's @click — browsers reject prompt()
+// outside a user gesture, and the captured event is single-use, so it is dropped
+// after firing rather than left to throw "already been used" on a second click.
 async function install() {
-	deferredPrompt.value.prompt()
+	const prompt = deferredPrompt.value
 	showDialog.value = false
+	if (!prompt) return
+	deferredPrompt.value = null
+	try {
+		await prompt.prompt()
+	} catch (err) {
+		console.warn("[InstallPrompt] Install prompt failed:", err?.message)
+	}
 }
 </script>

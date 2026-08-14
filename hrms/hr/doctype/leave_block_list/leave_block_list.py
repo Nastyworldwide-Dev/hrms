@@ -9,6 +9,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+from hrms.utils.identity import get_employee
+
 
 class LeaveBlockList(Document):
 	def validate(self):
@@ -64,7 +66,7 @@ def get_applicable_block_lists(employee=None, company=None, all_lists=False, lea
 				block_lists.append(d)
 
 	if not employee:
-		employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user})
+		employee = get_employee()
 
 	if not company and employee:
 		company = frappe.db.get_value("Employee", employee, "company")

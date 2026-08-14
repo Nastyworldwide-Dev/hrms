@@ -199,6 +199,30 @@ _UNMIRRORED_FIELDS = frozenset(
 	}
 )
 
+#: Fields this hub owns even on a mirrored row: the mirror neither writes nor
+#: overwrites them.
+#:
+#: `Employee.user_id` is the login mapping, and it belongs to whichever site the
+#: person signs in to — not to the source instance. Mirroring it was actively
+#: harmful in three ways:
+#:
+#:   * `User` is not a synced doctype, so a mirrored `user_id` regularly pointed
+#:     at a User that does not exist here (inserts pass `ignore_links=True`, and
+#:     updates go through `db.set_value`, so nothing objected);
+#:   * a source ERP that manages staff without portal users mirrors `user_id`
+#:     empty, and the person can then never resolve on this hub;
+#:   * worst, it made the fix *look* like it worked. Setting `user_id` here by
+#:     hand survived exactly until the next incremental pull, which quietly put
+#:     it back. That is why the login failure kept coming back for one user at a
+#:     time and why a per-user database fix was never the answer.
+#:
+#: `hrms.utils.identity` now establishes the link on first login, from
+#: `company_email` — which IS mirrored, so the ERP stays authoritative for the
+#: identity *data* while the hub owns the *mapping*.
+LOCALLY_OWNED_FIELDS = {
+	"Employee": ("user_id",),
+}
+
 
 def get_provenance_custom_fields() -> dict:
 	"""Custom field definitions merged into `hrms.setup.get_custom_fields()`.
@@ -253,11 +277,57 @@ def _mirror_payload(row: dict, instance_name: str, doctype: str | None = None) -
 		payload = {k: v for k, v in row.items() if k not in _UNMIRRORED_FIELDS and not isinstance(v, list)}
 	payload.pop("name", None)
 
+	for field in LOCALLY_OWNED_FIELDS.get(doctype, ()):
+		payload.pop(field, None)
+
 	for key, value in _REQUIRED_DEFAULTS.get(doctype, {}).items():
 		payload.setdefault(key, value)
 
 	payload[PROVENANCE_FIELD] = instance_name
 	return payload
+
+
+def _reconcile_user_status(employee: str) -> None:
+	"""Restore the `User.enabled` <-> `Employee.status` invariant that `db.set_value` skips.
+
+	ERPNext enforces it in `Employee.on_update` -> `update_user_status()`. The
+	mirror updates existing rows with `frappe.db.set_value`, which fires no doc
+	events, so the invariant silently rotted in both directions:
+
+	  * an employee set Left or Inactive on the source instance kept an ENABLED
+	    User here — they authenticated normally and then dead-ended on
+	    `/hrms/invalid-employee`, which reads as a broken app rather than as the
+	    correct refusal it actually is;
+	  * a re-activated employee kept a DISABLED User and could not authenticate
+	    at all, which reads the same way and is a genuine lockout.
+
+	Idempotent, and silent when there is nothing to change. Never raises: a
+	mirror run must not abort because one linked User could not be saved.
+	"""
+	user_id, status = frappe.db.get_value("Employee", employee, ["user_id", "status"]) or (None, None)
+	if not user_id or not frappe.db.exists("User", user_id):
+		return
+
+	should_be_enabled = 1 if status == "Active" else 0
+	if frappe.db.get_value("User", user_id, "enabled") == should_be_enabled:
+		return
+
+	try:
+		user = frappe.get_doc("User", user_id)
+		user.enabled = should_be_enabled
+		user.flags.ignore_permissions = True
+		user.save(ignore_permissions=True)
+	except Exception as e:
+		_log().error("[sync] could not reconcile User %s with employee %s: %s", user_id, employee, e)
+		return
+
+	_log().warning(
+		"[sync] User %s %s to match employee %s status %s",
+		user_id,
+		"enabled" if should_be_enabled else "disabled",
+		employee,
+		status,
+	)
 
 
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
@@ -277,6 +347,8 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 
 	if frappe.db.exists(doctype, remote_name):
 		frappe.db.set_value(doctype, remote_name, payload, update_modified=False)
+		if doctype == "Employee":
+			_reconcile_user_status(remote_name)
 		return "updated"
 
 	doc = frappe.get_doc({"doctype": doctype, **payload})

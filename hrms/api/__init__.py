@@ -10,6 +10,13 @@ from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
 from hrms.hr.utils import HR_ROLES, get_designated_approvers
+from hrms.utils.identity import (
+	denial_message,
+	get_employee,
+	get_employee_info,
+	require_employee,
+	resolve_employee_identity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,23 +53,29 @@ def get_current_user_info() -> dict:
 
 @frappe.whitelist()
 def get_current_employee_info() -> dict:
-	current_user = frappe.session.user
-	employee = frappe.db.get_value(
-		"Employee",
-		{"user_id": current_user, "status": "Active"},
-		[
-			"name",
-			"first_name",
-			"employee_name",
-			"designation",
-			"department",
-			"company",
-			"reports_to",
-			"user_id",
-		],
-		as_dict=True,
-	)
-	return employee
+	# Returns None when the caller resolves to no Employee — the PWA router keys
+	# its /hrms/invalid-employee redirect off exactly that, so the contract is
+	# preserved. What changed is *how* the employee is found: one canonical rule
+	# in hrms.utils.identity, which normalizes the login, refuses ambiguity
+	# instead of silently picking a row, and establishes the User <-> Employee
+	# link for SSO users whose Employee carries their company email.
+	return get_employee_info()
+
+
+@frappe.whitelist()
+def get_employee_identity_status() -> dict:
+	"""Why the caller was denied, for the invalid-employee page.
+
+	Split out rather than folded into `get_current_employee_info` so the happy
+	path keeps returning a bare employee dict (or None) exactly as before. Costs
+	one extra request, and only on the failure page.
+	"""
+	identity = resolve_employee_identity()
+	return {
+		"reason": identity.reason,
+		"message": denial_message(identity.reason),
+		"user": frappe.session.user,
+	}
 
 
 # staff lockdown: non-HR callers get a minimal PDPA-safe directory
@@ -94,9 +107,8 @@ def get_all_employees() -> list[dict]:
 
 @frappe.whitelist()
 def get_reports_to_employee_name(employee: str) -> str:
-	reports_to = frappe.db.get_value(
-		"Employee", {"user_id": frappe.session.user, "status": "Active"}, "reports_to"
-	)
+	caller = get_employee()
+	reports_to = frappe.db.get_value("Employee", caller, "reports_to") if caller else None
 	if not reports_to or reports_to != employee:
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
@@ -104,16 +116,11 @@ def get_reports_to_employee_name(employee: str) -> str:
 
 
 def get_current_employee() -> str:
-	# get_current_employee_info returns None (not {}) when the session user has
-	# no active Employee — a User created without an Employee mapping, or one
-	# whose Employee was set Inactive. Calling .get() on that raised
-	# AttributeError, so those callers got a 500 instead of the intended
-	# permission error on every PWA endpoint that resolves the current employee.
-	employee = (get_current_employee_info() or {}).get("name")
-	if not employee:
-		logger.info("[api] no active Employee for %s", frappe.session.user)
-		frappe.throw(_("Employee not found"), frappe.PermissionError)
-	return employee
+	# Still a PermissionError when the caller has no active Employee — a User
+	# created without an Employee mapping, or one whose Employee went Inactive —
+	# but the message now says which of those it is instead of a bare
+	# "Employee not found" that sent people to the wrong support queue.
+	return require_employee()
 
 
 # HR Settings

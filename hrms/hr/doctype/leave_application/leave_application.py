@@ -72,6 +72,8 @@ class LeaveAcrossAllocationsError(frappe.ValidationError):
 
 from frappe.model.document import Document
 
+from hrms.utils.identity import get_employee_info
+
 
 class LeaveApplication(Document, PWANotificationsMixin):
 	def get_feed(self):
@@ -1401,9 +1403,7 @@ def get_events(start: str, end: str, filters: str | None = None) -> list[dict]:
 
 	events = []
 
-	employee = frappe.db.get_value(
-		"Employee", filters={"user_id": frappe.session.user}, fieldname=["name", "company"], as_dict=True
-	)
+	employee = get_employee_info(fields=("name", "company"))
 
 	if employee:
 		employee, company = employee.name, employee.company

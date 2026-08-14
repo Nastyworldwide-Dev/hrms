@@ -55,6 +55,23 @@ class _FakeDoc:
 		return self
 
 
+class _FakeStoredDoc:
+	"""An existing row loaded by (doctype, name); `save()` writes it back."""
+
+	def __init__(self, store, doctype, name):
+		self._store = store
+		self.doctype = doctype
+		self.name = name
+		self.flags = types.SimpleNamespace()
+		self.__dict__.update(store.rows(doctype).get(name, {}))
+
+	def save(self, ignore_permissions=False):
+		row = self._store.tables.setdefault(self.doctype, {}).setdefault(self.name, {"name": self.name})
+		row.update({k: v for k, v in self.__dict__.items() if not k.startswith("_") and k != "flags"})
+		self._store.updates.append((self.doctype, self.name, dict(row)))
+		return self
+
+
 class _FakeStore:
 	"""Canned local database: doctype -> {name: row}. Records every write."""
 
@@ -111,7 +128,19 @@ class _FakeStore:
 			return [{f: row.get(f) for f in fields} for row in matched]
 		return [dict(row) for row in matched]
 
-	def get_doc(self, data):
+	def get_value(self, doctype, name, fieldname=None, **kwargs):
+		row = self.rows(doctype).get(name) if isinstance(name, str) else None
+		if row is None:
+			return None
+		if isinstance(fieldname, list | tuple):
+			return [row.get(f) for f in fieldname]
+		return row.get(fieldname)
+
+	def get_doc(self, data, name=None):
+		"""Two shapes, both of which runner.py uses: a dict to insert, and
+		(doctype, name) to load an existing row (the linked User)."""
+		if name is not None:
+			return _FakeStoredDoc(self, data, name)
 		return _FakeDoc(self, dict(data))
 
 
@@ -694,6 +723,72 @@ class TestRowsWithMissingParentsAreNeverWritten(_RunnerTestCase):
 
 		self.assertEqual(result["written"], 2)
 		self.assertEqual(result["orphaned"], 0)
+
+
+class TestLoginMappingIsHubOwned(_RunnerTestCase):
+	"""`Employee.user_id` is this site's login mapping, not the source's.
+
+	Mirroring it made a fixed login break again on the next pull: setting
+	`user_id` on the hub survived only until the mirror put the source's value
+	(usually empty) back, so the same person was locked out again days later and
+	the per-user database fix looked like it had "stopped working".
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_user_id_is_never_written_by_the_mirror(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [dict(EMPLOYEES[0], user_id="someone@source-erp.example")]
+
+		runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertNotIn("user_id", self.store.rows("Employee")["HR-EMP-0001"])
+
+	def test_an_existing_local_link_survives_a_pull(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", user_id="aisha@hub.example")
+		remote = [dict(EMPLOYEES[0], user_id=None, employee_name="Aisha Renamed")]
+
+		runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		row = self.store.rows("Employee")["HR-EMP-0001"]
+		self.assertEqual(row["user_id"], "aisha@hub.example", "the mirror clobbered the login mapping")
+		self.assertEqual(row["employee_name"], "Aisha Renamed", "other fields must still mirror")
+
+
+class TestUserStatusIsReconciled(_RunnerTestCase):
+	"""`db.set_value` fires no doc events, so ERPNext's `update_user_status`
+	never ran on a mirrored update and `User.enabled` drifted from
+	`Employee.status` in both directions."""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def _sync(self, status):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		runner.sync_doctype(self.client({"Employee": [dict(EMPLOYEES[0], status=status)]}), "Employee")
+
+	def test_a_left_employee_has_their_user_disabled(self):
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", user_id="aisha@hub.example")
+		self.seed_parent("User", "aisha@hub.example", enabled=1)
+
+		self._sync("Left")
+
+		self.assertEqual(self.store.rows("User")["aisha@hub.example"]["enabled"], 0)
+
+	def test_a_reactivated_employee_has_their_user_re_enabled(self):
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", user_id="aisha@hub.example")
+		self.seed_parent("User", "aisha@hub.example", enabled=0)
+
+		self._sync("Active")
+
+		self.assertEqual(self.store.rows("User")["aisha@hub.example"]["enabled"], 1)
+
+	def test_an_unlinked_employee_touches_no_user(self):
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme")
+
+		self._sync("Left")
+
+		self.assertEqual(self.store.rows("User"), {})
 
 
 if __name__ == "__main__":

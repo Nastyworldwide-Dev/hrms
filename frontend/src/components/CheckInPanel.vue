@@ -196,10 +196,24 @@ import { createResource, createListResource, toast, FeatherIcon } from "frappe-u
 import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 
+import L from "leaflet"
+import "leaflet/dist/leaflet.css"
+import markerIcon from "leaflet/dist/images/marker-icon.png"
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
+import markerShadow from "leaflet/dist/images/marker-shadow.png"
+
 import { formatTimestamp } from "@/utils/formatters"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
+
+// Bundled Leaflet cannot derive its default marker icon paths (it guesses them
+// from where leaflet.css was served), so hand it the URLs Vite emits.
+L.Icon.Default.mergeOptions({
+	iconRetinaUrl: markerIcon2x,
+	iconUrl: markerIcon,
+	shadowUrl: markerShadow,
+})
 
 const DOCTYPE = "Employee Checkin"
 
@@ -455,9 +469,9 @@ function stopWatchingLocation() {
 const distanceToShift = computed(() => {
 	const loc = shiftLocation.data
 	if (!loc || !latitude.value || !longitude.value) return null
-	if (!window.L) return null
-	return window.L.latLng(loc.latitude, loc.longitude).distanceTo(
-		window.L.latLng(latitude.value, longitude.value)
+	if (!L) return null
+	return L.latLng(loc.latitude, loc.longitude).distanceTo(
+		L.latLng(latitude.value, longitude.value)
 	)
 })
 
@@ -476,18 +490,10 @@ const formattedDistanceToShift = computed(() => {
 })
 
 async function initMap() {
-	// Leaflet is loaded via <script> in index.html. If the network hiccups,
-	// retry a couple of times before giving up — never block the check-in.
-	// 5s budget: on slow mobile radios the deferred CDN script can easily
-	// take longer than the 1s this used to wait.
-	for (let i = 0; i < 50; i++) {
-		if (window.L) break
-		await new Promise((r) => setTimeout(r, 100))
-	}
-	if (!window.L) {
-		console.warn("[CheckInPanel] Leaflet not available; map will be skipped")
-		return
-	}
+	// Leaflet is bundled, so it is present the moment this module is. The 5s
+	// poll that used to sit here waited on a deferred CDN <script> that could
+	// simply never arrive on a slow or filtered network — the map was blank or
+	// silently skipped, and check-in evidence went with it.
 	if (!mapEl.value || leafletMap) return
 
 	const loc = shiftLocation.data
@@ -498,7 +504,7 @@ async function initMap() {
 			: [3.139, 101.6869] // KL fallback so the tile layer renders something
 	const zoom = loc ? 16 : 13
 
-	leafletMap = window.L.map(mapEl.value, {
+	leafletMap = L.map(mapEl.value, {
 		zoomControl: false,
 		attributionControl: false,
 		dragging: true,
@@ -509,13 +515,13 @@ async function initMap() {
 		preferCanvas: true,
 	}).setView(center, zoom)
 
-	window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+	L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 		maxZoom: 19,
 	}).addTo(leafletMap)
 
 	if (loc) {
-		const shiftLatLng = window.L.latLng(loc.latitude, loc.longitude)
-		shiftMarker = window.L.marker(shiftLatLng, {
+		const shiftLatLng = L.latLng(loc.latitude, loc.longitude)
+		shiftMarker = L.marker(shiftLatLng, {
 			title: loc.label,
 		}).addTo(leafletMap)
 		shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
@@ -525,7 +531,7 @@ async function initMap() {
 			className: "shift-loc-tooltip",
 		})
 		if (loc.checkin_radius > 0) {
-			radiusCircle = window.L.circle(shiftLatLng, {
+			radiusCircle = L.circle(shiftLatLng, {
 				radius: loc.checkin_radius,
 				color: loc.strict ? "#dc2626" : "#2563eb",
 				weight: 2,
@@ -550,20 +556,20 @@ async function initMap() {
 }
 
 function updateUserMarker() {
-	if (!leafletMap || !window.L) return
+	if (!leafletMap || !L) return
 	if (!latitude.value || !longitude.value) return
 
-	const here = window.L.latLng(latitude.value, longitude.value)
+	const here = L.latLng(latitude.value, longitude.value)
 	if (!userMarker) {
 		// Custom blue dot — Leaflet's default icon is a tall pin which reads
 		// awkwardly for "this is you right now"; a dot is the convention.
-		const dotIcon = window.L.divIcon({
+		const dotIcon = L.divIcon({
 			className: "user-pin",
 			html: '<div class="user-pin-dot"></div><div class="user-pin-ring"></div>',
 			iconSize: [22, 22],
 			iconAnchor: [11, 11],
 		})
-		userMarker = window.L.marker(here, {
+		userMarker = L.marker(here, {
 			icon: dotIcon,
 			title: __("You"),
 			zIndexOffset: 1000,
@@ -579,12 +585,12 @@ function updateUserMarker() {
 }
 
 function fitMapBounds() {
-	if (!leafletMap || !window.L) return
+	if (!leafletMap || !L) return
 	const points = []
 	if (shiftMarker) points.push(shiftMarker.getLatLng())
 	if (userMarker) points.push(userMarker.getLatLng())
 	if (points.length === 2) {
-		leafletMap.fitBounds(window.L.latLngBounds(points), {
+		leafletMap.fitBounds(L.latLngBounds(points), {
 			padding: [40, 40],
 			maxZoom: 17,
 		})
@@ -608,10 +614,10 @@ function destroyMap() {
 watch(
 	() => shiftLocation.data,
 	(loc) => {
-		if (!leafletMap || !window.L || !loc) return
+		if (!leafletMap || !L || !loc) return
 		if (!shiftMarker) {
-			const shiftLatLng = window.L.latLng(loc.latitude, loc.longitude)
-			shiftMarker = window.L.marker(shiftLatLng).addTo(leafletMap)
+			const shiftLatLng = L.latLng(loc.latitude, loc.longitude)
+			shiftMarker = L.marker(shiftLatLng).addTo(leafletMap)
 			shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
 				permanent: true,
 				direction: "top",
@@ -619,7 +625,7 @@ watch(
 				className: "shift-loc-tooltip",
 			})
 			if (loc.checkin_radius > 0) {
-				radiusCircle = window.L.circle(shiftLatLng, {
+				radiusCircle = L.circle(shiftLatLng, {
 					radius: loc.checkin_radius,
 					color: loc.strict ? "#dc2626" : "#2563eb",
 					weight: 2,

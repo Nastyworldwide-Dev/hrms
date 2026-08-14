@@ -458,6 +458,88 @@ counts; `create_appraisals` leaves the cycle doc stale, so completing it needed 
 
 HRMS now enforces the intended model against its **effective local** roles and scopes: HR broad access composes with the company fence rather than bypassing it, `System Manager` carries no confidential HR sight, seniority grants nothing, managers get only `reports_to` scope inside their company, `Administrator` keeps framework authority, and every unresolved case fails closed. **End-to-end ERP provisioning and revocation remains unverifiable here and stays WP-10** — nothing was invented to fill it.
 
+## 10d. Login / provisioning failure — root cause and fix (2026-08-14)
+
+**Symptom.** Microsoft authentication completes, the browser lands on
+`/hrms/invalid-employee` with "No active employee found associated with the email ID",
+and two `401`s appear against `/api/method/login`. Reported for an HR login test.
+
+### What actually failed
+
+**Not one user's data — the absence of an identity layer.** The only `User -> Employee`
+rule in the app was a raw `Employee.user_id == frappe.session.user` query, copy-pasted into
+**13 call sites**, 7 of which spelled `status = "Active"` and 6 of which did not.
+
+| # | Defect | Evidence | Effect |
+|---|---|---|---|
+| R1 | Nothing establishes the link for an SSO user | `frappe/utils/oauth.py::login_oauth_user` loads-or-creates a `User` from the ID-token email; no HRMS code reconciles it with an Employee | An ERP master that manages staff without portal users mirrors Employees with `user_id` empty → the person authenticates and is bounced forever |
+| R2 | The mirror clobbers the link | `hrms/sync/runner.py::_mirror_payload` copied `user_id` verbatim from the source | Setting `user_id` by hand survived only until the next incremental pull. **This is precisely why a one-user database workaround was the wrong fix** — it silently un-fixed itself |
+| R3 | The mirror desyncs `User.enabled` from `Employee.status` | `_write_row` updates via `frappe.db.set_value`, which fires no doc events, so ERPNext's `Employee.on_update -> update_user_status()` never runs | A Left employee keeps an *enabled* User (authenticates, then dead-ends); a re-activated one keeps a *disabled* User and cannot authenticate at all |
+| R4 | Ambiguity resolved silently | `_write_row` inserts with `ignore_validate=True`, so `validate_duplicate_user_id` never runs; `frappe.db.get_value` then returns whichever row comes first | Two Active Employees can share a `user_id` and one person is handed the other's record |
+| R5 | No diagnosis | One dialog string for five causes; nothing logged server-side | Every cause looked identical to the user and to support |
+
+**The two `401`s were password attempts, not SSO.** `call("login", ...)` is reachable only
+from `Login.vue`'s submit handler (`frontend/src/data/session.js:28,33` are its sole
+callers; grep of `frontend/src` finds no other). An SSO-provisioned User is created with
+`"new_password": frappe.generate_hash()`, so a password login by such a user can only ever
+`401`. Microsoft authentication itself **did** create a valid Frappe session — the PWA
+router only reaches `/invalid-employee` on the `isLoggedIn` branch
+(`frontend/src/main.js:133`), so the redirect is proof the session existed.
+
+### What was fixed, by ownership layer
+
+**Canonical identity mapping — new `hrms/utils/identity.py`.** Normalizes the login
+(`strip().lower()`); requires exactly one **Active** Employee claiming it; refuses ambiguity
+rather than arbitrating it; distinguishes "no record" from "inactive record" from
+"ambiguous". A single email fallback exists solely to *establish* the permanent link:
+unique normalized match on `company_email`, Employee `user_id` still empty, written once and
+audit-logged to Error Log. `personal_email` is deliberately excluded — `company_email` is
+the employer-controlled address an IdP assertion corresponds to. No role is granted, no
+domain is matched, no first-match is taken. All 13 call sites now route through it, so
+inactive and ambiguous are denied everywhere, not only at login.
+
+**Provisioning / sync — `hrms/sync/runner.py`.** `LOCALLY_OWNED_FIELDS` drops `user_id`
+from every mirrored payload: the ERP stays authoritative for the identity *data*
+(`company_email`, `status`, `company`) while this hub owns the login *mapping*.
+`_reconcile_user_status()` restores the `User.enabled` <-> `Employee.status` invariant that
+`db.set_value` skips.
+
+**Diagnosis.** New whitelisted `hrms.api.get_employee_identity_status()` returns the reason
+and a message that names no other employee, company or record; `InvalidEmployee.vue` shows
+it. Every denial is logged server-side with the reason and, for ambiguity, the conflicting
+employee IDs.
+
+### Invariant deliberately NOT changed
+
+**An HR user still needs an Employee record to enter the PWA.** The product evidence is
+explicit — `frontend/src/main.js:137` ("user should be an employee to access the app since
+all views are employee specific") — and no evidence of a contrary intent exists in either
+branch. Desk access is unaffected. HR was not exempted from Employee validation, and no
+blanket permission was added.
+
+### Residual, for an HR decision — not fixed here
+
+Sites mirrored **before** this change may hold Users still enabled whose Employee is
+`Left`/`Inactive` (R3's historical residue). The mirror now corrects each such row the next
+time it is pulled, but a row modified before the fix will not be re-pulled. Deliberately
+**not** mass-disabled by a patch: bulk account changes need HR sign-off. Query to list them:
+
+```sql
+SELECT e.name, e.status, e.user_id FROM `tabEmployee` e
+JOIN `tabUser` u ON u.name = e.user_id
+WHERE e.status != 'Active' AND u.enabled = 1 AND e.synced_from_instance IS NOT NULL;
+```
+
+### Console messages, classified
+
+| Message | Status |
+|---|---|
+| `apple-mobile-web-app-capable` deprecated | **Fixed** — `mobile-web-app-capable` added; the Apple tag stays, iOS Safari reads only that one |
+| Leaflet from `unpkg.com` (CSS **and** JS) | **Fixed** — `leaflet@1.9.4` is now a package dependency, imported by `CheckInPanel.vue`; marker icons inline as data URIs, so the map has no third-party request and works offline. The 5-second poll that waited for the deferred CDN script is gone with it |
+| `'beforeinstallprompt' event was fired.` | **Fixed** — removed; `install()` now null-guards the single-use captured event, and is still called only from the Install button's `@click` |
+| `tile.openstreetmap.org` tile requests | **Expected** — a map needs a tile server; not a tracking dependency of the app shell |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **Unrelated** to this fix and left alone — same third-party class as Leaflet was, and a candidate for the same treatment if the policy extends to webfonts |
+
 ## 11. Appendix — capability → commit SHAs (reverse traceability)
 
 Abbreviated SHAs in the range `dd6c388f7..2fb61f399`.

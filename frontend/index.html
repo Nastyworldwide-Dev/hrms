@@ -8,6 +8,9 @@
 		/>
 		<title>Frappe HR</title>
 
+		<!-- Standard name; Chrome warns that the apple- one is deprecated. Both are
+		     kept: iOS Safari still reads only the apple- prefixed tag. -->
+		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-title" content="Frappe HR" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="white" />
@@ -189,19 +192,6 @@
 			href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap"
 		/>
 
-		<!-- Leaflet (used by CheckInPanel for the live check-in map). MIT-licensed. -->
-		<link
-			rel="stylesheet"
-			href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-			integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-			crossorigin=""
-		/>
-		<script
-			src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-			integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-			crossorigin=""
-			defer
-		></script>
 	</head>
 	<body class="antialiased">
 		<div id="app"></div>
