@@ -540,6 +540,129 @@ WHERE e.status != 'Active' AND u.enabled = 1 AND e.synced_from_instance IS NOT N
 | `tile.openstreetmap.org` tile requests | **Expected** — a map needs a tile server; not a tracking dependency of the app shell |
 | `fonts.googleapis.com` / `fonts.gstatic.com` | **Unrelated** to this fix and left alone — same third-party class as Leaflet was, and a candidate for the same treatment if the policy extends to webfonts |
 
+## 10e. Leave approval never finalized — root cause and fix (2026-08-14)
+
+**Complaint.** "When a Leave Application is approved, it is not finalized automatically.
+It remains in a state that requires an HR Manager to submit or resubmit it manually."
+
+### Reproduced on `fresh.local`, synthetic personas only
+
+| Case | Payload the UI actually sent | docstatus | status | ledger |
+|---|---|---|---|---|
+| approve, named approver | `{status: Approved, docstatus: 1}` | 1 | Approved | 1 |
+| **reject, named approver** | `{status: Rejected}` | **0** | Rejected | **0** |
+| **approve, status only** | `{status: Approved}` | **0** | Approved | **0** |
+| ...then the redundant HR step | `{docstatus: 1}` | 1 | Approved | 1 |
+| unrelated approver | denied outright (`get_doc_permissions` → `{None: 0}`) |
+| double coupled approve | idempotent; ledger stays 1 |
+
+### Root cause
+
+The decision-to-final-state coupling lived in the **frontend**, in
+`RequestActionSheet.vue::updateDocumentStatus`:
+
+```js
+if (status === "Approved" && hasPermission("submit")) docstatus = 1
+```
+
+Three defects in one line:
+
+1. **Asymmetric** — only `Approved` was coupled, so **every rejection** parked at
+   `docstatus 0` and the sheet then rendered its separate Submit button.
+2. **Client-decided** — the coupling depended on a client-side read of
+   `frappe.client.get_doc_permissions`, which runs this fork's `approval_row_scope`
+   `has_permission` hook per document. When it returned `submit: 0`, or had simply not
+   loaded, the approval degraded to a half-transition with **no error**.
+3. **Not centralized** — nothing server-side required a decided request to reach
+   `docstatus 1`, so every other caller reproduced the same half-state.
+
+### The intended state machine, derived from evidence
+
+* `Leave Application.on_submit` — *"Only Leave Applications with status 'Approved' and
+  'Rejected' can be submitted"*. `Shift Request` and `Expense Claim` state the identical
+  rule in their own `on_submit`.
+* `status` is `permlevel 1`, `reqd`, `no_copy`, and **not** `allow_on_submit` — so the
+  decision cannot be made after submission; it must ride the same save. There is
+  therefore **no legal resting state where a request is decided but still a draft**.
+* **No Workflow exists** on Leave Application: `frappe.get_all("Workflow", ...)` is empty
+  and `tabLeave Application` has no `workflow_state` column. Not a workflow-mapping defect.
+* `Employee` and `Employee Self Service` hold no `submit` right, so **the draft *is* the
+  pending-approval state** — confirmed by `on_update`, which notifies the approver exactly
+  on `status == "Open" and docstatus < 1`.
+* `Leave Approver` holds level-0 `submit` **and** permlevel-1 `write` in both DocPerm and
+  Custom DocPerm, so the approver could always complete the transition. The frontend was
+  simply not asking them to.
+
+So: **draft+Open (pending) → one decision, which sets the status and submits in the same
+save → docstatus 1 + Approved/Rejected (final) → cancel → docstatus 2 + Cancelled.**
+
+### Entry points, and how each is treated
+
+| Entry point | Treatment |
+|---|---|
+| PWA Approve / Reject (`RequestActionSheet`) — Leave Application, Shift Request, Expense Claim | **Fixed** — now calls `hrms.api.approval.decide` |
+| PWA Submit / Cancel buttons (same sheet) | Unchanged; still the repair path for rows already stuck half-transitioned |
+| PWA `FormView` status field + Submit | Unchanged **by decision** — an explicit two-step form edit, not a silent half-transition; `report_half_transitioned` catches anything left behind |
+| Desk edit-then-submit | Unchanged — Frappe's native model; blocking it would be a regression |
+| `WorkflowActionSheet` | Inert: no Workflow is defined on any of these doctypes |
+| Direct `frappe.client.set_value` / REST | Still legal (Desk depends on it); the resulting half-state is now reportable |
+| Email / notification actions | None exist for these doctypes on this branch |
+
+### Fix
+
+**New `hrms/api/approval.py::decide(doctype, name, status)`** — one whitelisted, POST-only
+server-side transition for the three decide-then-submit doctypes. Takes a row lock,
+re-checks state under it, sets the decision field and calls `doc.submit()`, so one
+authorized action performs decision + finalization + ledger in **one Frappe save cycle and
+one transaction**.
+
+Permissions stay entirely with Frappe — `check_permission("write")`,
+`check_permission("submit")`, permlevel enforcement on the decision field, the
+`approval_row_scope` `has_permission` hook, and `before_submit` →
+`block_transactions_for_mirrored_employee`. **No `ignore_permissions`, no `db_set`, no
+flag manipulation.** The doctype list is an allow-list, not a caller-supplied fieldname,
+so the endpoint cannot be turned into a write-anything.
+
+Idempotent by construction: already decided the same way → no-op success; decided
+differently, or cancelled → refused.
+
+### Persona and lifecycle results — 27 tests, green on `fresh.local` and `test.local`
+
+Draft is the pending state · one approval reaches the final state · **rejection now
+reaches it too** · exactly one ledger entry (`leaves = -1.0`) · no second HR submission ·
+repeated and triple approval stay at one ledger entry · reversing a decision refused ·
+cancelled request cannot be decided · ordinary employee, unrelated approver and
+System-Manager-without-HR all denied · HR User, HR Manager, Administrator permitted ·
+cross-company HR denied · arbitrary doctype refused · only Approved/Rejected accepted ·
+failing downstream step rolls back to draft+Open with no ledger · cancellation removes the
+ledger effect · amendment starts undecided (`status` is `no_copy`) · **mirrored employee
+refused** · half-transitioned report finds and repairs nothing.
+
+### Existing inconsistent records — reported, not repaired
+
+`hrms.api.approval.report_half_transitioned()` (HR User / HR Manager / System Manager
+only) returns counts and rows for all three doctypes. Deliberately **not** auto-submitted:
+submitting one writes Leave Ledger Entries and consumes the employee's balance, and
+nothing in the row distinguishes a real decision that never landed from an abandoned
+click. **HR decision required.** Equivalent SQL:
+
+```sql
+SELECT name, employee, company, status, modified, modified_by
+FROM `tabLeave Application` WHERE docstatus = 0 AND status IN ('Approved','Rejected');
+-- same shape for `tabShift Request`.status
+-- and for `tabExpense Claim`.approval_status, where 'Draft' is the undecided value
+```
+
+### Regression evidence
+
+Baseline was measured by stashing the change and re-running the identical 21-module sweep.
+The only difference post-fix is `test_leave_approval_lifecycle` going from 0 tests (module
+absent) to **27 passing**; every other module's failure set is byte-identical. Pre-existing
+and untouched: `test_leave_application` 7 (`test_leave_approver_mandatory`,
+`test_leave_approver_perms`, `test_overlap`, `test_overlap_with_half_day_1/2/3`,
+`test_overlap_with_half_day_on_today`) and `test_leave_encashment` 1
+(`test_status_of_leave_encashment_after_payment_via_salary_slip`).
+
 ## 11. Appendix — capability → commit SHAs (reverse traceability)
 
 Abbreviated SHAs in the range `dd6c388f7..2fb61f399`.

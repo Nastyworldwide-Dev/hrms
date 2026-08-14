@@ -237,6 +237,14 @@ const permittedWriteFields = createResource({
 	auto: true,
 })
 
+// Doctypes whose `on_submit` refuses an undecided document, so deciding and
+// finalizing are one transition rather than two. The server owns it —
+// hrms/api/approval.py holds the same list and is the authority; this copy only
+// decides which call to make.
+const DECIDE_THEN_SUBMIT = ["Leave Application", "Shift Request", "Expense Claim"]
+
+const decision = createResource({ url: "hrms.api.approval.decide" })
+
 const sessionEmployee = inject("$employee")
 
 function hasPermission(action) {
@@ -306,42 +314,74 @@ const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	}
 }
 
-const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
-	let updateValues = {}
+const onActionSuccess = ({ status, docstatus, dismiss }) => {
+	if (dismiss) modalController.dismiss()
+	toast({
+		title: __("Success"),
+		text: getSuccessMessage({ status, docstatus }),
+		icon: "check-circle",
+		position: "bottom-center",
+		iconClasses: "text-green-500",
+	})
+}
 
+const onActionError = ({ status, docstatus }) => (error) => {
+	// the server's message says WHY (permissions, validation) —
+	// a bare "Approval failed!" is undebuggable from the field
+	console.warn("[RequestActionSheet] action failed:", error)
+	toast({
+		title: __("Error"),
+		text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
+		icon: "alert-circle",
+		position: "bottom-center",
+		iconClasses: "text-red-500",
+	})
+}
+
+const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
+	// A decision goes to the server as a decision. This used to be assembled
+	// here — status, plus docstatus=1 but only for "Approved" and only when a
+	// client-side permission read said the user could submit. Rejections
+	// therefore never finalized at all, and an approval quietly degraded into a
+	// half-transitioned document whenever that read said no or had not loaded,
+	// leaving HR to press Submit on something already approved.
+	if (status && DECIDE_THEN_SUBMIT.includes(props.modelValue.doctype)) {
+		return decision.submit(
+			{
+				doctype: props.modelValue.doctype,
+				name: props.modelValue.name,
+				status,
+			},
+			{
+				onSuccess(result) {
+					// render what the server did, not what we asked for
+					document.reload?.()
+					onActionSuccess({
+						status,
+						docstatus: result?.docstatus ?? 1,
+						dismiss: true,
+					})
+				},
+				onError: onActionError({ status, docstatus: 0 }),
+			}
+		)
+	}
+
+	// plain submit / cancel. Today nothing else reaches here: the Approve and
+	// Reject buttons only render when the document HAS a decision field, and the
+	// three doctypes that have one are all listed above. `status` is still
+	// forwarded so a fourth doctype added to the sheet degrades to the old
+	// behaviour rather than silently dropping the decision.
+	const updateValues = { docstatus }
 	if (status) updateValues[approvalField.value] = status
-	// approving IS the decision — submit in the same server call instead of
-	// making the approver tap Submit as a second step (single transaction:
-	// if submit-side validation fails, the status change rolls back too)
-	if (status === "Approved" && hasPermission("submit")) docstatus = 1
-	if (docstatus) updateValues.docstatus = docstatus
 
 	document.setValue.submit(
-		{ ...updateValues },
+		updateValues,
 		{
 			onSuccess() {
-				if (docstatus !== 0) modalController.dismiss()
-
-				toast({
-					title: __("Success"),
-					text: getSuccessMessage({ status, docstatus }),
-					icon: "check-circle",
-					position: "bottom-center",
-					iconClasses: "text-green-500",
-				})
+				onActionSuccess({ status, docstatus, dismiss: docstatus !== 0 })
 			},
-			onError(error) {
-				// the server's message says WHY (permissions, validation) —
-				// a bare "Approval failed!" is undebuggable from the field
-				console.warn("[RequestActionSheet] action failed:", error)
-				toast({
-					title: __("Error"),
-					text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
-				})
-			},
+			onError: onActionError({ status, docstatus }),
 		}
 	)
 }
