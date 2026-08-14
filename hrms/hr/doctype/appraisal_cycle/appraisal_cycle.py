@@ -91,8 +91,13 @@ class AppraisalCycle(Document):
 				)
 			prev_score = row.min_score
 
-		# Lock table once appraisals exist
-		if not self.is_new() and self.has_value_changed("score_conversion_table"):
+		# Lock the table once appraisals exist — but only on a REAL edit.
+		# has_value_changed() reports a child table as changed on every save
+		# (row `modified` stamps differ), so relying on it made the guard fire
+		# for any save at all: setting status, or completing the cycle, became
+		# impossible for every cycle that had appraisals. Compare the row values
+		# instead, which is what "the table changed" actually means.
+		if not self.is_new() and self._conversion_table_changed():
 			if self.check_if_appraisals_exist():
 				frappe.throw(
 					_("Score Conversion Table cannot be changed as appraisals already exist for this cycle"),
@@ -109,6 +114,28 @@ class AppraisalCycle(Document):
 				title=_("Invalid A1 Weight"),
 			)
 		self.a2_weight_pct = 80 - a1
+
+	@staticmethod
+	def _conversion_row_signature(rows):
+		"""Value-only fingerprint of the score conversion table."""
+		from frappe.utils import flt
+
+		return [
+			(flt(row.min_score), flt(row.conversion_pct), (row.get("label") or "").strip())
+			for row in rows or []
+		]
+
+	def _conversion_table_changed(self) -> bool:
+		"""True only when the conversion ROWS differ from what is stored."""
+		before = self.get_doc_before_save()
+		if not before:
+			return False
+		changed = self._conversion_row_signature(before.get("score_conversion_table")) != (
+			self._conversion_row_signature(self.score_conversion_table)
+		)
+		if changed:
+			logger.info("[appraisal_cycle] score conversion table edited on %s", self.name)
+		return changed
 
 	def check_if_appraisals_exist(self):
 		return frappe.db.exists(

@@ -726,7 +726,12 @@ class TestCalculateTotalScoreExpects70(FrappeTestCase):
 
 
 class TestGoalScoreGroupedQuery(FrappeTestCase):
-	"""Tests that the grouped query in set_goal_score produces same results as N+1"""
+	"""set_goal_score is a retired API-compatibility no-op.
+
+	It must not populate goal_completion / goal_score; achievement scoring
+	replaced it. These tests pin that retirement so the columns are not
+	quietly resurrected.
+	"""
 
 	def setUp(self):
 		frappe.db.delete("Goal")
@@ -757,8 +762,8 @@ class TestGoalScoreGroupedQuery(FrappeTestCase):
 			self.assertEqual(kra.goal_completion, 0)
 			self.assertEqual(kra.goal_score, 0)
 
-	def test_goal_score_single_kra(self):
-		"""Goal score for a single KRA with one goal"""
+	def test_goal_no_longer_feeds_the_appraisal(self):
+		"""A Goal linked to the cycle does not write goal_completion/goal_score."""
 		from hrms.hr.doctype.goal.test_goal import create_goal
 
 		cycle = create_appraisal_cycle(company=self.company, name="Q-SingleGoal", designation="Engineer")
@@ -771,9 +776,13 @@ class TestGoalScoreGroupedQuery(FrappeTestCase):
 			{"appraisal_cycle": cycle.name, "employee": self.employee},
 		)
 
-		# Quality KRA, 21% weight, 75% completion → goal_score = 75 * 21 / 100 = 15.75
-		self.assertEqual(appraisal.appraisal_kra[0].goal_completion, 75)
-		self.assertEqual(appraisal.appraisal_kra[0].goal_score, 15.75)
+		# Goal-based scoring is RETIRED: Appraisal.set_goal_score is an explicit
+		# no-op in this branch and in the as-hr_kpi donor, so a Goal no longer
+		# feeds the appraisal. The columns survive only so historical rows keep
+		# rendering (hrms/api/kpi.py reads them behind `achievement`). Scoring
+		# now comes from target/actual — see TestSectionAScoring.
+		self.assertEqual(flt(appraisal.appraisal_kra[0].goal_completion), 0.0)
+		self.assertEqual(flt(appraisal.appraisal_kra[0].goal_score), 0.0)
 
 
 class TestAppraisalVisibility(FrappeTestCase):
@@ -819,19 +828,72 @@ class TestAppraisalVisibility(FrappeTestCase):
 		self.assertTrue(frappe.has_permission("Appraisal", doc=self.appraisal_a, user=self.user_a))
 		self.assertFalse(frappe.has_permission("Appraisal", doc=self.appraisal_b, user=self.user_a))
 
-	def test_hr_user_sees_all_appraisals(self):
-		"""HR User role is exempt from the own-employee restriction"""
-		hr_email = "appraisal_vis_hr@example.com"
-		make_employee(hr_email, company=self.company, designation="Engineer")
-		frappe.get_doc("User", hr_email).add_roles("HR User")
+	def _make_hr_user(self, email, company=None):
+		# deliberately NOT designation="Engineer": the cycle selects appraisees by
+		# designation, and an HR fixture that matches would silently join the
+		# cycle and skew appraisee counts in the other tests
+		make_employee(email, company=company or self.company)
+		user = frappe.get_doc("User", email)
+		user.add_roles("HR User")
+		# Same isolation setUp applies to the staff users: creating an Employee
+		# also creates an allow=Employee User Permission, which narrows
+		# get_list to that one employee regardless of role. These tests are
+		# about the CODE-level scope, so the row is removed; the company fence
+		# is then applied explicitly where a test needs it.
+		frappe.db.delete("User Permission", {"user": email, "allow": "Employee"})
 		# roles are cached per user; without this the new role is invisible to
 		# frappe.get_roles and the reader is treated as ordinary staff
-		frappe.clear_cache(user=hr_email)
+		frappe.clear_cache(user=email)
+		return user
+
+	def test_hr_user_sees_their_company_appraisals(self):
+		"""HR is exempt from the own-employee restriction, within its own company."""
+		hr_email = "appraisal_vis_hr@example.com"
+		self._make_hr_user(hr_email)
 
 		frappe.set_user(hr_email)
 		visible = frappe.get_list("Appraisal", pluck="name")
 		self.assertIn(self.appraisal_a, visible)
 		self.assertIn(self.appraisal_b, visible)
+
+	def test_company_fenced_hr_user_cannot_see_another_company(self):
+		"""HR breadth stops at the company fence — it is not global.
+
+		An HR user carrying an allow=Company User Permission reads that
+		company's appraisals and no others, exactly as every other HR surface
+		on this fork behaves.
+		"""
+		hr_email = "appraisal_vis_hr_fenced@example.com"
+		self._make_hr_user(hr_email)
+		other_company = create_company("_Test PMS Other").name
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": hr_email,
+				"allow": "Company",
+				"for_value": other_company,
+			}
+		).insert(ignore_permissions=True)
+		frappe.clear_cache(user=hr_email)
+
+		frappe.set_user(hr_email)
+		visible = frappe.get_list("Appraisal", pluck="name")
+		self.assertNotIn(self.appraisal_a, visible)
+		self.assertNotIn(self.appraisal_b, visible)
+		self.assertFalse(frappe.has_permission("Appraisal", doc=self.appraisal_a, user=hr_email))
+
+	def test_system_manager_gets_no_hr_wide_visibility(self):
+		"""System Manager is a technical role, not an HR one."""
+		sm_email = "appraisal_vis_sysmgr@example.com"
+		make_employee(sm_email, company=self.company)
+		user = frappe.get_doc("User", sm_email)
+		user.add_roles("System Manager")
+		frappe.clear_cache(user=sm_email)
+
+		frappe.set_user(sm_email)
+		visible = frappe.get_list("Appraisal", pluck="name")
+		self.assertNotIn(self.appraisal_a, visible)
+		self.assertNotIn(self.appraisal_b, visible)
 
 	def test_user_without_employee_sees_nothing(self):
 		"""A desk user with no Employee record gets an empty appraisal list"""

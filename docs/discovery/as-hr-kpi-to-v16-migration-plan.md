@@ -1,6 +1,6 @@
 # `as-hr_kpi` → v16 Migration Plan
 
-- **Last updated:** 2026-08-14 (Round 5 — donor advanced to v15.112.0; G8 ported)
+- **Last updated:** 2026-08-14 (Round 6 — PMS/Appraisal/KPI domain closed)
 - **Working branch:** `nz-version-16` — implementation complete and **uncommitted**. Nothing staged, committed or pushed. See §10b for final dispositions and verification.
 - **Evidence tags:** **[V]** verified from code/config · **[I]** inferred (strong, not executed) · **[U]** unknown / needs site or stakeholder input
 - Companion: [`hrms-system-baseline.md`](./hrms-system-baseline.md)
@@ -357,6 +357,68 @@ forbidden since long before this work (the throw is unchanged diff context at th
 pre-migration base `768792f65`, and the test was never touched here). Same class as the
 appraisal suites: an upstream test versus fork policy. Deciding whether the self-approval
 ban deserves an exemption is HR policy, not a test fix.
+
+### Round 6 — PMS / Appraisal / KPI domain closure
+
+**The scoring contract (authoritative, read out of the code and identical in the donor):**
+
+```
+achievement    = actual / target * 100          (0 when target is 0)
+capped         = clamp(achievement, 0, 100)     (overachievement earns no bonus)
+rating_value   = capped / 100 * 5
+weighted_score = per_weightage * capped / 100
+weighted_avg   = weighted_sum / total_weightage * 5
+conversion     = band lookup (cycle table, else DEFAULT_SCORE_CONVERSION)
+a1_score       = min(conversion / 0.80 * a1_weight, a1_weight)
+section_a      = a1_score + a2_score
+pms_total      = clamp(section_a + section_b - demerits, 0, 100), with misconduct/leadership caps
+final_score    = pms_total_score
+```
+
+KRA rows are copied from the template verbatim and **sum to 100**; the Section-A
+weight is applied at scoring time, never baked into the row weights.
+Bands are inclusive lower bounds and there is no 0% row, so an all-zero
+achievement still lands on the floor band (0.50 → a1 43.75 at a1_weight 70).
+
+**`goal_completion` / `goal_score` lifecycle — resolved: they are intentionally
+dead.** `Appraisal.set_goal_score` is an explicit no-op — *"Legacy method — goal-based
+scoring no longer used. Kept for API compatibility."* — and is **byte-identical in
+`nz-version-16` and in the `as-hr_kpi` donor**, so this is the senior's deliberate
+retirement, not a port regression. The columns survive so historical rows keep
+rendering, and `hrms/api/kpi.py` reads them only as a fallback *behind* `achievement`.
+Nothing should write them; `test_goal_scoring_is_retired` and
+`test_goal_no_longer_feeds_the_appraisal` pin that so they cannot be quietly resurrected.
+No migration was run and no stored historical result was recalculated.
+
+**Appraisal authorization, aligned with the model:**
+
+| Persona | Behaviour |
+|---|---|
+| Ordinary employee | own appraisal only (list and document) |
+| Manager | read-only down the `reports_to` chain |
+| HR User / HR Manager | broad **within their authorised companies** |
+| Company-fenced HR | another company's appraisals are invisible and unreadable |
+| `System Manager` | **no** HR-wide visibility (removed from `UNRESTRICTED_APPRAISAL_ROLES`) |
+| `Administrator` | framework authority |
+| No employee, no scope | `1=0` — fails closed |
+
+`UNRESTRICTED_APPRAISAL_ROLES` now derives from `HR_SEE_ALL_ROLES`, and both
+`get_permission_query_conditions` and `has_permission` compose HR access with
+`hrms.overrides.company_scope` instead of returning blanket access.
+
+**Product defects found and fixed while tracing the workflow:**
+
+| Defect | Impact |
+|---|---|
+| `kra_category` never copied from template to Appraisal KRA | The column the fork deliberately unhid rendered empty on every appraisal |
+| Score-conversion guard used `has_value_changed` on a **child table**, which reports a change on every save | `complete_cycle` was impossible for any cycle that had appraisals — i.e. every real one. Now compares row values |
+| `System Manager` counted as HR for appraisal visibility | Confidential appraisals visible to a technical role |
+| HR appraisal access ignored the company fence | HR could read other companies' appraisals |
+
+**Test-fixture defects corrected** (no assertion weakened): HR fixtures carried an
+`allow=Employee` User Permission that silently narrowed `get_list` regardless of role;
+HR fixtures matched the cycle's designation filter and joined it as appraisees, skewing
+counts; `create_appraisals` leaves the cycle doc stale, so completing it needed a reload.
 
 ### v16 defects fixed
 

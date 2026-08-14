@@ -13,14 +13,19 @@ from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import (
 	get_department_template,
 	validate_active_appraisal_cycle,
 )
-from hrms.hr.utils import validate_active_employee
+from hrms.hr.utils import HR_SEE_ALL_ROLES, validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
+from hrms.overrides.company_scope import allowed_companies, company_visible
 
 logger = logging.getLogger(__name__)
 
-# Roles that manage the appraisal cycle for everyone and bypass the
-# own-employee visibility restriction
-UNRESTRICTED_APPRAISAL_ROLES = ("System Manager", "HR Manager", "HR User")
+# Roles that manage the appraisal cycle and bypass the own-employee visibility
+# restriction — HR User / HR Manager only. System Manager is a TECHNICAL role
+# handed out for Desk administration; holding it must not confer sight of other
+# people's appraisals, which are confidential HR records. A System Manager who
+# needs them holds an HR role too. Their reach is still bounded by the company
+# fence below: HR is broad WITHIN its authorised companies, never across them.
+UNRESTRICTED_APPRAISAL_ROLES = tuple(sorted(HR_SEE_ALL_ROLES))
 
 # ptypes that stay restricted to the employee's own appraisal (+ HR roles);
 # read-like ptypes additionally extend down the Employee.reports_to chain.
@@ -859,7 +864,23 @@ def get_employee_particulars_for_appraisal(employee: str) -> dict:
 
 
 def _has_unrestricted_appraisal_access(user: str) -> bool:
+	"""Administrator, or an HR role. HR is still company-fenced by the callers."""
 	return user == "Administrator" or bool(set(UNRESTRICTED_APPRAISAL_ROLES) & set(frappe.get_roles(user)))
+
+
+def _hr_company_condition(user: str) -> str:
+	"""SQL fencing HR's broad appraisal access to their permitted companies.
+
+	Empty string means the user carries no Company User Permission and is
+	therefore unfenced, matching hrms.overrides.company_scope. Administrator is
+	handled by the caller and never reaches this.
+	"""
+	companies = allowed_companies(user)
+	if not companies:
+		return ""
+	values = ", ".join(frappe.db.escape(c) for c in companies)
+	logger.info("[appraisal] HR reader %s fenced to %d company(ies)", user, len(companies))
+	return f"`tabAppraisal`.`company` in ({values})"
 
 
 def _get_own_employees(user: str) -> list[str]:
@@ -917,9 +938,13 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	this every employee can browse everyone else's appraisals.
 	"""
 	user = user or frappe.session.user
+	if user == "Administrator":
+		return ""
+
 	employees = get_allowed_appraisal_employees(user)
 	if employees is None:
-		return ""
+		# HR: broad, but only inside the companies they are authorised for
+		return _hr_company_condition(user)
 
 	conditions = []
 	if employees:
@@ -946,8 +971,11 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	if not doc.employee:
 		# new/unsaved doc — let role perms decide
 		allowed = True
-	elif _has_unrestricted_appraisal_access(user):
+	elif user == "Administrator":
 		allowed = True
+	elif _has_unrestricted_appraisal_access(user):
+		# HR is broad within its authorised companies, never across them
+		allowed = company_visible(doc.get("company"), user)
 	elif ptype in WRITE_PTYPES:
 		allowed = doc.employee in _get_own_employees(user) or _is_shared_with(doc.name, ptype, user)
 	else:

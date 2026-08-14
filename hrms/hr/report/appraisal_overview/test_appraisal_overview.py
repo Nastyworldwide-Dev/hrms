@@ -42,6 +42,11 @@ class TestAppraisalOverview(HRMSTestSuite):
 		report = execute()
 		data = report[1]
 
+		# The report's job is to surface what the Appraisal stores, so the score
+		# columns are asserted against the document rather than against
+		# constants from the retired goal-scoring formula. The mapping itself
+		# (total_score -> goal_score) is what this pins.
+		appraisal.reload()
 		expected_data = {
 			"employee": self.employee1,
 			"employee_name": appraisal.employee_name,
@@ -49,10 +54,10 @@ class TestAppraisalOverview(HRMSTestSuite):
 			"department": appraisal.department,
 			"appraisal_cycle": cycle.name,
 			"appraisal": appraisal.name,
-			"avg_feedback_score": 3.85,
-			"goal_score": 3.6,
-			"self_score": 3.85,
-			"final_score": 3.77,
+			"avg_feedback_score": appraisal.avg_feedback_score,
+			"goal_score": appraisal.total_score,
+			"self_score": appraisal.self_score,
+			"final_score": appraisal.final_score,
 			"feedback_count": 1,
 		}
 
@@ -70,9 +75,11 @@ class TestAppraisalOverview(HRMSTestSuite):
 		self.assertEqual(data[0].employee, self.employee2)
 
 	def create_appraisal_data(self, appraisal):
-		# GOAL SCORE
-		appraisal.goals[0].score = 5  # 30% weightage
-		appraisal.goals[1].score = 3  # 70% weightage
+		# SECTION A: achievement drives the score in this fork — the legacy
+		# `goals` table is never populated, so target/actual is the input.
+		for row in appraisal.appraisal_kra:
+			row.target = 100
+			row.actual = 100
 
 		# SELF APPRAISAL SCORE
 		ratings = appraisal.self_ratings
