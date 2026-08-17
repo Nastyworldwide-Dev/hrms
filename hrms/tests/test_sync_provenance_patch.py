@@ -162,16 +162,22 @@ class TestPatchCreatesTheFields(_PatchTestCase):
 		self.assertEqual(len(CREATED), 1)
 		self.assertEqual(CREATED[0]["fields"], runner.get_provenance_custom_fields())
 
-	def test_it_covers_exactly_the_mirrored_doctypes(self):
-		"""Company is no longer mirrored — creating one runs ERPNext's setup, which
-		is broken two ways on this version (see runner). The patch must track
-		DEFAULT_SYNC_DOCTYPES rather than a hand-written list, or `parity.py`
-		silently undercounts whatever the two disagree about."""
+	def test_it_covers_exactly_the_stamped_doctypes(self):
+		"""The patch must track `STAMPED_DOCTYPES` rather than a hand-written list,
+		or `parity.py` silently undercounts whatever the two disagree about.
+
+		Neither Company nor the create-only masters belong here: both are HR-owned
+		on this hub and carry no stamp, so creating the field on them would suggest
+		a provenance that is never written. Because the stamped set is unchanged by
+		the master work, no re-run of this patch is needed on live sites.
+		"""
 		patch.execute()
 
 		created_for = set(CREATED[0]["fields"])
-		self.assertEqual(created_for, set(runner.DEFAULT_SYNC_DOCTYPES))
+		self.assertEqual(created_for, set(runner.STAMPED_DOCTYPES))
 		self.assertNotIn("Company", created_for)
+		for master in runner.MASTER_DOCTYPES:
+			self.assertNotIn(master, created_for)
 
 	def test_the_field_is_the_one_the_mirror_and_parity_read(self):
 		patch.execute()

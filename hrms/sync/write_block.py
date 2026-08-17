@@ -35,10 +35,16 @@ logger = logging.getLogger(__name__)
 
 PROVENANCE_FIELD = "synced_from_instance"
 
-#: Must stay identical to `hrms.sync.runner.DEFAULT_SYNC_DOCTYPES` — a doctype
-#: that is mirrored but unguarded defeats the block. Not imported so this
-#: module stays loadable without dragging the runner in; `test_write_block`
-#: fails if the two lists ever drift apart.
+#: Must stay identical to `hrms.sync.runner.STAMPED_DOCTYPES` — a doctype that is
+#: mirrored but unguarded defeats the block.
+#:
+#: STAMPED_DOCTYPES, not the wider DEFAULT_SYNC_DOCTYPES: the guard fires on the
+#: provenance stamp, and the create-only masters a run also pulls carry none. They
+#: are HR-owned on this hub, so guarding them would lock HR out of editing their
+#: own Leave Types.
+#:
+#: Not imported so this module stays loadable without dragging the runner in;
+#: `test_write_block` fails if the two lists ever drift apart.
 MIRRORED_DOCTYPES = (
 	"Employee",
 	"Attendance",

@@ -178,13 +178,21 @@ class TestGateCoversExactlyWhatIsMirrored(unittest.TestCase):
 		raise AssertionError(f"{name} not found in {path}")
 
 	def test_parity_and_runner_agree(self):
+		"""The gate counts local rows BY THE PROVENANCE STAMP, so it must track the
+		stamped doctypes — not everything a run pulls.
+
+		`DEFAULT_SYNC_DOCTYPES` also carries the create-only masters (Leave Type,
+		Designation, ...), which are HR-owned here and deliberately unstamped.
+		Comparing against that list would ask parity to count rows that carry no
+		stamp, and every run would report a variance that no cutover could clear.
+		"""
 		gate = self._tuple_from(HRMS_ROOT / "sync" / "parity.py", "MIRRORED_DOCTYPES")
-		runner = self._tuple_from(HRMS_ROOT / "sync" / "runner.py", "DEFAULT_SYNC_DOCTYPES")
+		stamped = self._tuple_from(HRMS_ROOT / "sync" / "runner.py", "STAMPED_DOCTYPES")
 		self.assertEqual(
 			sorted(gate),
-			sorted(runner),
-			"parity.MIRRORED_DOCTYPES and runner.DEFAULT_SYNC_DOCTYPES have drifted; "
-			"the cutover gate must cover exactly what the sync mirrors",
+			sorted(stamped),
+			"parity.MIRRORED_DOCTYPES and runner.STAMPED_DOCTYPES have drifted; "
+			"the cutover gate must cover exactly what the sync stamps",
 		)
 
 

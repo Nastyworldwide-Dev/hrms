@@ -10,9 +10,10 @@ cannot count mirrored rows, which blocks cutover.
 
 This patch closes that gap for existing sites. It deliberately imports the SAME
 definitions the install path uses rather than restating them, so the two paths
-cannot drift: add a doctype to `DEFAULT_SYNC_DOCTYPES` and both fresh installs and
-this patch pick it up (Company, added for the create-only Company mirror, is the
-first case of that).
+cannot drift: add a doctype to `STAMPED_DOCTYPES` and both fresh installs and this
+patch pick it up. Only the stamped doctypes appear there — Company and the
+create-only masters are HR-owned on this hub and carry no stamp, so giving them
+the field would advertise a provenance that is never written.
 
 Idempotent: `create_custom_fields(..., update=True)` is a no-op on a field that is
 already there and correct, so a re-run — or a run on a site where the fresh-install

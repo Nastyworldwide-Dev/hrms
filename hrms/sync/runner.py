@@ -58,8 +58,8 @@ PROVENANCE_FIELD = "synced_from_instance"
 #: 2. Employee — rows that link to it have something to point at.
 #: 3. the rest, all of which link to Employee.
 #:
-#: `test_sync_runner` asserts Company precedes Employee, so a reorder is a
-#: failing test rather than a silent breakage.
+#: `test_sync_runner` asserts the order, so a reorder is a failing test rather
+#: than a silent breakage.
 #: Company is deliberately NOT here. Creating one programmatically means running
 #: ERPNext's company setup, and on this version that path is broken two different
 #: ways: with `chart_of_accounts` unset it dies on "list index out of range", and
@@ -68,12 +68,50 @@ PROVENANCE_FIELD = "synced_from_instance"
 #: SYNC-00003). A mirror has no business fighting the destination's setup wizard,
 #: so companies are created by a human through the UI and the sync merely reports
 #: which ones are missing — see `missing_parents` in each doctype's result.
-DEFAULT_SYNC_DOCTYPES = (
+#:
+#: Masters the mirrored rows LINK to. Pulled first, create-only, never stamped.
+#:
+#: `_write_row` inserts with `ignore_links=True`, so before this existed a
+#: mirrored employee whose designation was absent here landed pointing at nothing,
+#: and a mirrored Leave Ledger Entry produced a balance for a leave type this site
+#: could not name. Neither failed; the data was simply wrong in a way only a
+#: person reading a report would catch.
+#:
+#: They are NOT stamped and NOT write-blocked, exactly like the Company shells:
+#: on this hub HR owns them. `_write_row` leaves an existing local row untouched,
+#: so a Leave Type whose flags HR has tuned here — and those flags drive balance
+#: arithmetic — is never reverted to the source's copy.
+#:
+#: Two are deliberately absent, because they would CORRUPT rather than dangle:
+#:
+#: * `Department` is a NestedSet. Its `lft`/`rgt` describe a position in the
+#:   SOURCE's tree; writing them here produces a tree that is wrong on both sides.
+#: * `Holiday List` keeps its holidays in a child table, and `/api/resource` does
+#:   not return child tables even with `fields=["*"]`. It would arrive as an empty
+#:   calendar, and an empty calendar does not fail — it silently miscomputes
+#:   attendance and leave.
+#:
+#: A dangling link is visible and recoverable. Either of those is neither.
+MASTER_DOCTYPES = (
+	"Leave Type",
+	"Designation",
+	"Branch",
+	"Employee Grade",
+)
+
+#: The mirror proper: stamped with provenance, held read-only by
+#: `hrms.sync.write_block` during the parallel run, and counted by
+#: `hrms.sync.parity`. Order is load-bearing — Employee first so the three
+#: doctypes that link to it have something to point at.
+STAMPED_DOCTYPES = (
 	"Employee",
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
 )
+
+#: What a run pulls, in order: every master before every row that links to one.
+DEFAULT_SYNC_DOCTYPES = MASTER_DOCTYPES + STAMPED_DOCTYPES
 
 #: Link fields whose target must already exist locally before a row may be
 #: written: doctype -> {fieldname: parent doctype}.
@@ -119,7 +157,10 @@ SYNC_DEPENDENCIES = {
 	"Employee": ("Company",),
 	"Attendance": ("Employee",),
 	"Employee Checkin": ("Employee",),
-	"Leave Ledger Entry": ("Employee",),
+	# Leave Type as well as Employee: a ledger row whose leave type never landed
+	# still writes, and then reports a balance against a type this site cannot
+	# name. Better to skip the pass and say so than to publish a nameless balance.
+	"Leave Ledger Entry": ("Employee", "Leave Type"),
 }
 
 
@@ -151,7 +192,7 @@ def blocked_by(doctype: str, failed: set[str] | frozenset[str]) -> list[str]:
 #: the record exists so `Employee.company` resolves. Requiring HR to hand-create
 #: them instead would be strictly worse — one typo and every mirrored Employee
 #: links to a company that does not exist.
-CREATE_ONLY_DOCTYPES = frozenset({"Company"})
+CREATE_ONLY_DOCTYPES = frozenset({"Company", *MASTER_DOCTYPES})
 
 #: Identity-only projection for create-only doctypes. Everything else on the
 #: remote row — accounting defaults above all — is deliberately dropped.
@@ -254,7 +295,10 @@ def get_provenance_custom_fields() -> dict:
 		"print_hide": 1,
 		"search_index": 1,
 	}
-	return {doctype: [dict(definition)] for doctype in DEFAULT_SYNC_DOCTYPES}
+	# STAMPED_DOCTYPES, not DEFAULT_SYNC_DOCTYPES: the masters are HR-owned here
+	# and must stay unstamped, or the write-block would lock HR out of their own
+	# Leave Types and `parity` would count masters as mirrored rows.
+	return {doctype: [dict(definition)] for doctype in STAMPED_DOCTYPES}
 
 
 def get_watermark(instance_name: str) -> str | None:
@@ -276,7 +320,7 @@ def get_watermark(instance_name: str) -> str | None:
 	return watermark
 
 
-def _mirror_payload(row: dict, instance_name: str, doctype: str | None = None) -> dict:
+def _mirror_payload(row: dict, instance_name: str, doctype: str) -> dict:
 	"""Remote row -> the flat fields written locally, provenance included.
 
 	Doctypes listed in `MIRRORED_FIELDS` are narrowed to an allow-list; every
@@ -295,7 +339,10 @@ def _mirror_payload(row: dict, instance_name: str, doctype: str | None = None) -
 	for key, value in _REQUIRED_DEFAULTS.get(doctype, {}).items():
 		payload.setdefault(key, value)
 
-	payload[PROVENANCE_FIELD] = instance_name
+	# Masters and Company shells stay unstamped — they are HR-owned on this hub,
+	# and a stamp would hand them to the write-block and to parity's row counts.
+	if doctype in STAMPED_DOCTYPES:
+		payload[PROVENANCE_FIELD] = instance_name
 	return payload
 
 
@@ -393,6 +440,63 @@ def _count_local_orphans(doctype: str, instance_name: str, seen: set) -> int:
 			orphans[0],
 		)
 	return len(orphans)
+
+
+#: Doctypes carrying a `company` Link the SOURCE can filter on directly.
+#: `Employee Checkin` is absent because it has no such field — see `scope_filter`.
+COMPANY_SCOPED_DOCTYPES = frozenset({"Employee", "Attendance", "Leave Ledger Entry"})
+
+#: An allow-list that filtered down to nothing must still be an allow-list. Sent
+#: as an empty `IN ()` it is a SQL error on the remote; dropped entirely it
+#: becomes "no filter", which is how a scoped run quietly pulls the whole source.
+_MATCHES_NOTHING = "__hrms_sync_no_such_row__"
+
+
+def instance_companies(instance_name: str) -> list[str]:
+	"""The companies this instance is registered to serve, in a stable order.
+
+	Empty means unmapped, and unmapped means "pull everything" — the behaviour
+	every existing instance already has. Narrowing silently to nothing because a
+	table has not been filled in would be a worse failure than the one this fixes.
+	"""
+	return frappe.get_all(
+		"HRMS ERP Instance Company",
+		filters={"parent": instance_name},
+		pluck="company",
+		order_by="company asc",
+	)
+
+
+def scope_filter(doctype: str, companies: list[str], instance_name: str) -> dict | None:
+	"""Restrict the remote read to the companies this instance actually serves.
+
+	The `Companies Served` table was already the answer to "whose employees belong
+	on this hub" — it drives the staff ERP redirect and every HR (Instance) user's
+	fence — but `sync_instance` never passed it down, so a hub registered for 7 of
+	the source's 10 companies mirrored all 10. Nothing was even reported: every
+	company existed locally, so no row was skipped for a missing parent.
+
+	`Employee Checkin` carries no `company` field, so it is fenced by the employees
+	the Employee pass just mirrored instead. That is why this is evaluated per
+	doctype inside the loop rather than computed up front, and why Employee must
+	precede Employee Checkin in `DEFAULT_SYNC_DOCTYPES` — it does.
+
+	Masters have no company at all and are never filtered: sending them a `company`
+	filter would make the remote reject the read.
+	"""
+	if not companies:
+		return None
+
+	if doctype in COMPANY_SCOPED_DOCTYPES:
+		return {"company": ("in", list(companies))}
+
+	if doctype == "Employee Checkin":
+		employees = frappe.get_all("Employee", filters={PROVENANCE_FIELD: instance_name}, pluck="name")
+		# ponytail: inlines the employee list into the request. Fine at the group's
+		# ~10^2 staff; at 10^4 this wants a saved filter on the source instead.
+		return {"employee": ("in", employees or [_MATCHES_NOTHING])}
+
+	return None
 
 
 def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, filters=None) -> dict:
@@ -572,6 +676,16 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	doctypes = list(doctypes or DEFAULT_SYNC_DOCTYPES)
 	instance_name = client.instance_name
 
+	companies = instance_companies(instance_name)
+	if companies:
+		_log().info("[sync] %s scoped to %s: %s", instance_name, len(companies), ", ".join(companies))
+	else:
+		_log().warning(
+			"[sync] %s serves no registered companies — pulling every company on the source. "
+			"Fill in Companies Served to scope it.",
+			instance_name,
+		)
+
 	if since is None and incremental:
 		since = get_watermark(instance_name)
 
@@ -597,7 +711,11 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 				continue
 
 			try:
-				result = sync_doctype(client, doctype, since=since)
+				# Evaluated here, not up front: Employee Checkin's scope is the
+				# employees the Employee pass has just written.
+				result = sync_doctype(
+					client, doctype, since=since, filters=scope_filter(doctype, companies, instance_name)
+				)
 			except Exception as e:  # an independent doctype must not abort the run
 				failed.append(doctype)
 				errors.append(f"{doctype}: {e}")

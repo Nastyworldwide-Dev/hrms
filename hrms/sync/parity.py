@@ -18,11 +18,17 @@ import frappe
 
 logger = logging.getLogger(__name__)
 
-# Must stay identical to hrms.sync.runner.DEFAULT_SYNC_DOCTYPES. A gate that
-# reports on a doctype the runner never mirrors can never reach parity, and one
-# that omits a mirrored doctype would call a failed sync clean — both defeat the
-# point. Not imported from the runner so this module stays loadable without a
-# bench; `test_sync_parity` fails if the two lists ever drift apart.
+# Must stay identical to hrms.sync.runner.STAMPED_DOCTYPES. A gate that reports on
+# a doctype the runner never mirrors can never reach parity, and one that omits a
+# mirrored doctype would call a failed sync clean — both defeat the point.
+#
+# STAMPED_DOCTYPES specifically, not the wider DEFAULT_SYNC_DOCTYPES: local rows
+# are counted BY THE PROVENANCE STAMP, and the create-only masters a run also
+# pulls (Leave Type, Designation, ...) are HR-owned here and carry no stamp.
+# Counting them would report a variance on every run that no cutover could clear.
+#
+# Not imported from the runner so this module stays loadable without a bench;
+# `test_sync_parity` fails if the two lists ever drift apart.
 MIRRORED_DOCTYPES = (
 	"Employee",
 	"Attendance",

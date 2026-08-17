@@ -368,9 +368,11 @@ class TestProvenance(_RunnerTestCase):
 		source = SETUP_PATH.read_text(encoding="utf-8")
 		self.assertIn("get_provenance_custom_fields", source)
 
-	def test_provenance_field_ships_for_every_mirrored_doctype(self):
+	def test_provenance_field_ships_for_every_stamped_doctype(self):
+		# STAMPED_DOCTYPES, not DEFAULT_SYNC_DOCTYPES: the latter now also carries
+		# the create-only masters, which are HR-owned here and must stay unstamped.
 		fields = runner.get_provenance_custom_fields()
-		self.assertEqual(set(fields), set(runner.DEFAULT_SYNC_DOCTYPES))
+		self.assertEqual(set(fields), set(runner.STAMPED_DOCTYPES))
 		for definitions in fields.values():
 			self.assertEqual(definitions[0]["fieldname"], runner.PROVENANCE_FIELD)
 			self.assertTrue(definitions[0]["read_only"], "mirrored provenance must not be hand-editable")
@@ -428,7 +430,20 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 		self.assertEqual(row["abbr"], "AC")
 		self.assertEqual(row["default_currency"], "MYR")
 		self.assertEqual(row["country"], "Malaysia")
-		self.assertEqual(row[runner.PROVENANCE_FIELD], "nasty-live")
+
+	def test_a_company_shell_carries_no_provenance_stamp(self):
+		"""It never really did — the stamp went into a field Company does not have.
+
+		`get_provenance_custom_fields` has only ever created `synced_from_instance`
+		on the four stamped doctypes, so the value the old payload set was dropped
+		by `get_valid_dict` on the way to the database and survived only in this
+		suite's fake store. Now the two ways a Company can be created here —
+		`company_shells` and this path — agree: a Company on the hub is HR-owned
+		and unstamped.
+		"""
+		runner.sync_doctype(self.client(), "Company")
+
+		self.assertNotIn(runner.PROVENANCE_FIELD, self.store.rows("Company")["Acme"])
 
 	def test_accounting_configuration_is_not_mirrored(self):
 		runner.sync_doctype(self.client(), "Company")
@@ -491,10 +506,18 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 		self.assertEqual(second["skipped"], 1)
 		self.assertEqual(self.store.updates, [])
 
-	def test_create_only_applies_to_company_alone(self):
-		"""Every other doctype still updates in place."""
+	def test_create_only_covers_company_and_every_master(self):
+		"""Create-only means the local row always wins.
+
+		Right for Company and right for the masters: HR tunes a Leave Type on this
+		hub — the flags that drive balance arithmetic — and a mirror that reverted
+		it to the source's copy on every run would be a silent data change nobody
+		asked for. The stamped doctypes still update in place.
+		"""
 		self.seed_parent("Company", "Acme", company_name="Acme")
-		self.assertEqual(runner.CREATE_ONLY_DOCTYPES, frozenset({"Company"}))
+		self.assertEqual(runner.CREATE_ONLY_DOCTYPES, frozenset({"Company", *runner.MASTER_DOCTYPES}))
+		for doctype in runner.STAMPED_DOCTYPES:
+			self.assertNotIn(doctype, runner.CREATE_ONLY_DOCTYPES)
 
 		client = self.client()
 		runner.sync_doctype(client, "Employee")
@@ -502,11 +525,152 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 
 		self.assertEqual(second["updated"], 2)
 
-	def test_provenance_covers_exactly_the_synced_doctypes(self):
-		"""Only mirrored doctypes need the stamp, and every one of them does —
-		`parity.py` counts local rows by it, so a gap here silently understates."""
+	def test_provenance_covers_exactly_the_stamped_doctypes(self):
+		"""Only the stamped doctypes need it, and every one of them has it —
+		`parity.py` counts local rows by the stamp, so a gap here silently
+		understates.
+
+		Masters are deliberately excluded: they are HR-owned here, exactly like the
+		Company shells, and stamping them would hand them to the write-block and
+		lock HR out of their own masters.
+		"""
 		fields = runner.get_provenance_custom_fields()
-		self.assertEqual(sorted(fields), sorted(runner.DEFAULT_SYNC_DOCTYPES))
+		self.assertEqual(sorted(fields), sorted(runner.STAMPED_DOCTYPES))
+		for master in runner.MASTER_DOCTYPES:
+			self.assertNotIn(master, fields)
+
+
+class TestMastersAreMirroredSoLinksResolve(_RunnerTestCase):
+	"""Employee and Leave Ledger Entry link to masters that were never pulled.
+
+	`_write_row` inserts with `ignore_links=True`, so a mirrored employee whose
+	designation does not exist here lands pointing at nothing, and a ledger row
+	whose leave type is absent produces a balance for a type the site cannot name.
+	Nothing failed loudly; the data was simply wrong in a way only a person
+	reading a report would notice.
+	"""
+
+	def test_masters_precede_the_rows_that_link_to_them(self):
+		"""Tuple order IS sync order. Leave Type after Leave Ledger Entry would
+		make the pull pointless on a first run."""
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		for master in runner.MASTER_DOCTYPES:
+			self.assertIn(master, order)
+		self.assertLess(order.index("Leave Type"), order.index("Leave Ledger Entry"))
+		for master in runner.MASTER_DOCTYPES:
+			self.assertLess(order.index(master), order.index("Employee"))
+
+	def test_a_master_is_not_stamped_with_provenance(self):
+		payload = runner._mirror_payload(
+			{"name": "Annual Leave", "leave_type_name": "Annual Leave"}, "nasty-live", "Leave Type"
+		)
+		self.assertNotIn(runner.PROVENANCE_FIELD, payload)
+
+	def test_a_stamped_doctype_still_carries_provenance(self):
+		payload = runner._mirror_payload({"name": "HR-EMP-0001"}, "nasty-live", "Employee")
+		self.assertEqual(payload[runner.PROVENANCE_FIELD], "nasty-live")
+
+	def test_a_master_that_already_exists_locally_is_left_alone(self):
+		self.seed_parent("Leave Type", "Annual Leave", leave_type_name="Annual Leave", max_leaves_allowed=20)
+		client = self.client({"Leave Type": [{"name": "Annual Leave", "max_leaves_allowed": 5}]})
+
+		result = runner.sync_doctype(client, "Leave Type")
+
+		self.assertEqual(result["skipped"], 1)
+		self.assertEqual(self.store.rows("Leave Type")["Annual Leave"]["max_leaves_allowed"], 20)
+
+	def test_a_missing_master_never_blocks_an_employee(self):
+		"""Designation is optional metadata. Skipping an employee because their
+		designation has not landed would deny them the app over a job title."""
+		self.assertNotIn("designation", runner.ROW_DEPENDENCIES.get("Employee", {}))
+		self.assertNotIn("grade", runner.ROW_DEPENDENCIES.get("Employee", {}))
+
+	def test_a_department_or_holiday_list_is_never_mirrored(self):
+		"""Both would corrupt rather than merely dangle — Department is a NestedSet
+		whose lft/rgt belong to the source's tree, and a Holiday List arrives
+		without its holidays because /api/resource omits child tables."""
+		self.assertNotIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertNotIn("Holiday List", runner.DEFAULT_SYNC_DOCTYPES)
+
+
+class TestThePullIsScopedToTheServedCompanies(_RunnerTestCase):
+	"""The `Companies Served` table said 7 of the source's 10 companies, and the
+	runner pulled all 10 anyway: `sync_instance` never passed the `filters`
+	argument `sync_doctype` has always accepted. Employees of three companies the
+	hub was never meant to hold landed in it, and because every company existed
+	locally nothing was even reported as skipped.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def register(self, *companies):
+		for company in companies:
+			self.store.tables.setdefault("HRMS ERP Instance Company", {})[f"row-{company}"] = {
+				"name": f"row-{company}",
+				"parent": "nasty-live",
+				"company": company,
+			}
+
+	def test_only_the_served_companies_are_requested(self):
+		self.register("Acme")
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.seed_parent("Company", "Other", company_name="Other")
+		remote = {
+			"Employee": [
+				*EMPLOYEES,
+				{"name": "HR-EMP-9001", "company": "Other", "modified": "2026-08-09 09:00:00"},
+			]
+		}
+		client = self.client(remote)
+
+		runner.sync_instance(client, doctypes=["Employee"], incremental=False)
+
+		employee_call = next(c for c in client.calls if c["doctype"] == "Employee")
+		self.assertEqual(employee_call["filters"], {"company": ("in", ["Acme"])})
+		self.assertNotIn("HR-EMP-9001", self.store.rows("Employee"))
+
+	def test_an_unmapped_instance_still_pulls_everything(self):
+		"""Backwards compatible on purpose: an instance whose table nobody has
+		filled in must keep the behaviour it has today, not silently narrow to
+		nothing."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": EMPLOYEES})
+
+		runner.sync_instance(client, doctypes=["Employee"], incremental=False)
+
+		employee_call = next(c for c in client.calls if c["doctype"] == "Employee")
+		self.assertIsNone(employee_call["filters"])
+
+	def test_employee_checkin_is_scoped_by_employee_because_it_has_no_company(self):
+		"""Employee Checkin carries no `company` field, so the fence has to be the
+		employees the Employee pass just mirrored — which is why Employee precedes
+		it in the sync order."""
+		self.register("Acme")
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.store.tables.setdefault("Employee", {})["HR-EMP-0001"] = {
+			"name": "HR-EMP-0001",
+			"company": "Acme",
+			runner.PROVENANCE_FIELD: "nasty-live",
+		}
+
+		scope = runner.scope_filter("Employee Checkin", ["Acme"], "nasty-live")
+
+		self.assertEqual(scope, {"employee": ("in", ["HR-EMP-0001"])})
+
+	def test_no_mirrored_employee_yet_asks_for_nothing_rather_than_everything(self):
+		"""An empty allow-list must not degrade into "no filter" — that is how a
+		scoped run quietly pulls the whole source."""
+		scope = runner.scope_filter("Employee Checkin", ["Acme"], "nasty-live")
+
+		self.assertIsNotNone(scope)
+		self.assertEqual(scope["employee"][0], "in")
+		self.assertNotIn("", scope["employee"][1])
+		self.assertTrue(scope["employee"][1], "the sentinel must be non-empty so the remote gets a valid IN")
+
+	def test_a_master_is_never_company_filtered(self):
+		"""Leave Type has no company field; sending one would make the remote
+		reject the read."""
+		self.assertIsNone(runner.scope_filter("Leave Type", ["Acme"], "nasty-live"))
 
 
 class TestNeverDeletes(_RunnerTestCase):

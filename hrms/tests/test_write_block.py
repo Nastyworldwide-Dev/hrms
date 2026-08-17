@@ -238,8 +238,18 @@ class TestHooksWiring(unittest.TestCase):
 
 class TestListsStayAligned(unittest.TestCase):
 	def test_mirrored_doctypes_match_the_runner(self):
+		"""The guard keys off the provenance stamp, so it must cover exactly the
+		stamped doctypes.
+
+		Not `DEFAULT_SYNC_DOCTYPES`: that now also lists the create-only masters,
+		and those are HR-owned on this hub. Blocking writes to them would lock HR
+		out of editing their own Leave Types — a row the guard would refuse for
+		carrying a stamp it was never given.
+		"""
 		runner = _load(RUNNER_PATH, "runner_for_write_block_test")
-		self.assertEqual(tuple(wb.MIRRORED_DOCTYPES), tuple(runner.DEFAULT_SYNC_DOCTYPES))
+		self.assertEqual(tuple(wb.MIRRORED_DOCTYPES), tuple(runner.STAMPED_DOCTYPES))
+		for master in runner.MASTER_DOCTYPES:
+			self.assertNotIn(master, wb.MIRRORED_DOCTYPES)
 
 
 class TestSetValueWriters(unittest.TestCase):
