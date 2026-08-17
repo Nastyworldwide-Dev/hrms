@@ -36,6 +36,11 @@ MIRRORED_DOCTYPES = (
 	"Leave Ledger Entry",
 	"Shift Schedule Assignment",
 	"Shift Assignment",
+	"Leave Policy Assignment",
+	"Leave Allocation",
+	"Leave Application",
+	"Attendance Request",
+	"Shift Request",
 )
 
 
@@ -99,14 +104,13 @@ UNMIRRORED_CANDIDATES = (
 	"Additional Salary",
 	"Employee Benefit Application",
 	"Gratuity",
-	# Leave documents — deliberately excluded from the mirror because their
-	# `on_submit` would double every balance, but their VOLUME still tells you how
-	# much history stays behind on the source at cutover.
-	"Leave Allocation",
-	"Leave Application",
-	"Leave Policy",
-	"Leave Policy Assignment",
-	"Leave Period",
+	# The rest of the leave chain. Allocation, Application, Policy, Policy
+	# Assignment and Period WERE listed here — kept out of the mirror precisely
+	# because their `on_submit` would double every balance. That is fixed at the
+	# write path now (a mirrored row is inserted as a draft and never walks a
+	# lifecycle), so they are mirrored and have left this list.
+	#
+	# Leave Encashment stays: payroll-adjacent, and payroll is empty on the source.
 	"Leave Encashment",
 	# Org structure and lifecycle
 	"Department",
@@ -125,11 +129,17 @@ UNMIRRORED_CANDIDATES = (
 	"Job Opening",
 	"Job Applicant",
 	"Interview",
-	# Attendance adjacents
-	"Attendance Request",
-	"Shift Request",
-	"Employee Attendance Tool",
-	"Upload Attendance",
+	# Deliberately NOT surveyed, both removed after `test_parity` caught them:
+	#
+	# `Upload Attendance` does not exist on v16 at all — `patches.v16_0.
+	# delete_upload_attendance_doctype` removes it — so asking the source for a
+	# count returned 404 and the survey filed it under "not on that source",
+	# indistinguishable from good news, for ever.
+	#
+	# `Employee Attendance Tool` is a Single: a screen, not a table. Counting its
+	# rows answers nothing. It was also one of the three doctypes the source
+	# refused to read, so it had been sitting in the "grant access first" bucket
+	# asking for a permission that would have bought nothing.
 )
 
 
@@ -248,9 +258,7 @@ def compare_doctype(client, doctype: str, company: str | None = None, remote_fil
 			# here is parity; rows here with none there is still a real divergence
 			# and falls out of the delta below.
 			logger.info("[parity] %s is not present on %s", doctype, client.instance_name)
-			return ParityLine(
-				doctype, remote=0, local=_local_count(doctype, None, client.instance_name)
-			)
+			return ParityLine(doctype, remote=0, local=_local_count(doctype, None, client.instance_name))
 		logger.warning("[parity] %s: remote count failed: %s", doctype, e)
 		return ParityLine(doctype, remote=0, local=0, error=str(e))
 
@@ -272,9 +280,7 @@ def parity_report(client, company: str | None = None, doctypes=None, scope=None)
 	doctype is reported so the operator sees an incomplete run rather than a
 	falsely clean one."""
 	lines = [
-		compare_doctype(
-			client, dt, company, remote_filters=scope(dt) if scope else None
-		)
+		compare_doctype(client, dt, company, remote_filters=scope(dt) if scope else None)
 		for dt in (doctypes or MIRRORED_DOCTYPES)
 	]
 	mismatched = [ln for ln in lines if not ln.in_parity]
@@ -318,9 +324,7 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	companies = instance_companies(instance_name)
 	scope = (lambda dt: scope_filter(dt, companies, instance_name)) if companies else None
 
-	return parity_report(
-		RemoteInstanceClient(instance_name), company=company, scope=scope
-	)
+	return parity_report(RemoteInstanceClient(instance_name), company=company, scope=scope)
 
 
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:

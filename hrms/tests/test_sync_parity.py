@@ -53,9 +53,7 @@ def _install_runner(frappe_stub):
 	frappe_stub.utils = utils
 	sys.modules["frappe.utils"] = utils
 
-	spec = importlib.util.spec_from_file_location(
-		"hrms.sync.runner", HRMS_ROOT / "sync" / "runner.py"
-	)
+	spec = importlib.util.spec_from_file_location("hrms.sync.runner", HRMS_ROOT / "sync" / "runner.py")
 	runner = importlib.util.module_from_spec(spec)
 	sys.modules["hrms.sync.runner"] = runner
 	spec.loader.exec_module(runner)
@@ -64,7 +62,7 @@ def _install_runner(frappe_stub):
 def _load(fake_db):
 	frappe_stub = types.ModuleType("frappe")
 	frappe_stub.db = fake_db
-	frappe_stub.whitelist = lambda *a, **kw: (lambda fn: fn)
+	frappe_stub.whitelist = lambda *a, **kw: lambda fn: fn
 	frappe_stub.only_for = lambda *a, **kw: None
 	saved = sys.modules.get("frappe")
 	sys.modules["frappe"] = frappe_stub
@@ -277,9 +275,7 @@ class TestALongFilterIsCountedInChunks(unittest.TestCase):
 				return len(filters["employee"][1])
 
 		client = _Chunked({})
-		line = mod.compare_doctype(
-			client, "Employee Checkin", remote_filters={"employee": ("in", names)}
-		)
+		line = mod.compare_doctype(client, "Employee Checkin", remote_filters={"employee": ("in", names)})
 
 		self.assertIsNone(line.error, "an over-long filter must be split, not reported as failure")
 		self.assertEqual(line.remote, 250, "every chunk must be counted, and summed")
@@ -443,9 +439,7 @@ class TestTheGateIsReachable(unittest.TestCase):
 		functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
 		self.assertIn("parity_check", functions, "parity has no whitelisted entry point")
 
-		decorators = [
-			d for d in functions["parity_check"].decorator_list
-		]
+		decorators = [d for d in functions["parity_check"].decorator_list]
 		self.assertTrue(decorators, "parity_check is not whitelisted")
 
 	def test_parity_check_is_read_only_on_both_sides(self):
@@ -457,6 +451,36 @@ class TestTheGateIsReachable(unittest.TestCase):
 	def test_it_refuses_callers_who_are_not_hr(self):
 		source = MODULE_PATH.read_text(encoding="utf-8")
 		self.assertIn("only_for", source)
+
+
+class TestTheTwoListsCannotOverlap(unittest.TestCase):
+	"""`UNMIRRORED_CANDIDATES` is hand-written, and it answers "what is on the
+	source that we do NOT bring across?". A doctype that appears in it AND in the
+	runner's sync list makes that answer a lie in the most expensive direction:
+	the survey reports it as an outstanding gap, so someone goes and re-solves a
+	problem that is already solved.
+
+	This is not hypothetical — the leave chain sat in both lists the moment it was
+	added to the runner, which is exactly when the survey would have started
+	reporting 936 Leave Applications as missing while mirroring all 936.
+	"""
+
+	def setUp(self):
+		self.parity = _load(_FakeDB())
+		self.runner = sys.modules["hrms.sync.runner"]
+
+	def test_no_doctype_is_both_mirrored_and_listed_as_unmirrored(self):
+		overlap = sorted(set(self.parity.UNMIRRORED_CANDIDATES) & set(self.runner.DEFAULT_SYNC_DOCTYPES))
+		self.assertEqual(
+			overlap,
+			[],
+			"these are mirrored, so the survey must stop calling them gaps: " + ", ".join(overlap),
+		)
+
+	def test_the_lists_are_both_populated(self):
+		"""Guards the guard — two empty sets never overlap."""
+		self.assertGreater(len(self.parity.UNMIRRORED_CANDIDATES), 10)
+		self.assertGreater(len(self.runner.DEFAULT_SYNC_DOCTYPES), 10)
 
 
 if __name__ == "__main__":

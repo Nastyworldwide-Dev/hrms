@@ -423,14 +423,56 @@ doc_events = {
 	# submit/cancel write Leave Ledger Entry rows, which are mirrored, so a
 	# hub-side approval for a mirrored employee would silently diverge from the
 	# source and stay invisible to hrms.sync.parity.
+	# Leave Application is now MIRRORED as well, so it carries both guards. They
+	# answer different questions and neither replaces the other:
+	# `block_transactions_for_mirrored_employee` refuses a NEW hub-side transaction
+	# for someone the source owns; `block_mirrored_writes` refuses an edit to a row
+	# the sync itself wrote. Merged into this one key rather than added as a second
+	# — a duplicate doctype key in a dict literal silently drops the earlier entry,
+	# which is how the out-of-radius handler was lost in the v16 port.
 	"Leave Application": {
 		"on_submit": "hrms.telemetry.on_leave_application_submit",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
-		"before_cancel": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": [
+			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
+			"hrms.sync.write_block.block_mirrored_writes",
+		],
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Expense Claim": {"on_submit": "hrms.telemetry.on_expense_claim_submit"},
-	"Attendance Request": {"on_submit": "hrms.telemetry.on_attendance_request_submit"},
-	"Shift Request": {"on_submit": "hrms.telemetry.on_shift_request_submit"},
+	"Attendance Request": {
+		"on_submit": "hrms.telemetry.on_attendance_request_submit",
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	"Shift Request": {
+		"on_submit": "hrms.telemetry.on_shift_request_submit",
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	"Leave Allocation": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	"Leave Policy Assignment": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
 	# (Employee Checkin telemetry lives in the single entry above — a second
 	# key here would silently clobber it.)
 	# ---- Activation telemetry: post-install setup funnel (first-time milestones) ----

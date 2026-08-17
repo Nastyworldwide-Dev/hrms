@@ -93,6 +93,18 @@ PROVENANCE_FIELD = "synced_from_instance"
 #: A dangling link is visible and recoverable; that is not.
 MASTER_DOCTYPES = (
 	"Leave Type",
+	# Leave Period and Leave Policy are configuration, so they belong here rather
+	# than in the mirror proper: HR own them on this hub, and a policy edited here
+	# must not be stomped by the next pull. Both precede Leave Policy Assignment,
+	# which links to both, and Leave Policy follows Leave Type because its
+	# `leave_policy_details` rows name one.
+	#
+	# Leave Policy is submittable and its child table IS the policy — a row of
+	# `leave_policy_details` per leave type with the days it grants. Mirrored
+	# without them it is an empty envelope, which is why it joins
+	# `CHILD_TABLE_DOCTYPES`.
+	"Leave Period",
+	"Leave Policy",
 	"Designation",
 	"Branch",
 	"Employee Grade",
@@ -123,6 +135,29 @@ STAMPED_DOCTYPES = (
 	"Leave Ledger Entry",
 	"Shift Schedule Assignment",
 	"Shift Assignment",
+	# The leave chain, measured by `parity.source_survey` on 2026-08-17 and absent
+	# here to the row: 102 Leave Policy Assignments, 486 Leave Allocations, 936
+	# Leave Applications. This is what an empty leave balance actually was — not a
+	# UI fault and not a permission fault.
+	#
+	# Leave Ledger Entry alone cannot produce a balance. `get_leave_balance_on`
+	# reads allocations; the ledger is the movement, the allocation is the grant.
+	# Mirroring 1283 ledger rows without the 486 grants they belong to gives every
+	# employee a correct-looking history against nothing.
+	#
+	# APPENDED, deliberately, rather than slotted in before Leave Ledger Entry:
+	# the ledger's link to its allocation is a Dynamic Link, which nothing here
+	# gates on, and reordering doctypes already proven in parity buys nothing for
+	# the risk.
+	"Leave Policy Assignment",
+	"Leave Allocation",
+	"Leave Application",
+	# The two request types the PWA's My/Team/History tabs read. Small (16 and 3)
+	# and cheap, and their absence is indistinguishable on screen from the endpoint
+	# faults fixed in ed96d6e5 — which is exactly why both had to be fixed before
+	# either could be judged.
+	"Attendance Request",
+	"Shift Request",
 )
 
 #: What a run pulls, in order: every master before every row that links to one.
@@ -143,6 +178,17 @@ ROW_DEPENDENCIES = {
 	"Leave Ledger Entry": {"employee": "Employee"},
 	"Shift Schedule Assignment": {"employee": "Employee", "shift_schedule": "Shift Schedule"},
 	"Shift Assignment": {"employee": "Employee", "shift_type": "Shift Type"},
+	"Leave Policy Assignment": {
+		"employee": "Employee",
+		"leave_policy": "Leave Policy",
+		"leave_period": "Leave Period",
+	},
+	# Not `leave_policy_assignment`: an allocation may be granted directly, with no
+	# assignment behind it, so requiring one would skip every manual grant.
+	"Leave Allocation": {"employee": "Employee", "leave_type": "Leave Type"},
+	"Leave Application": {"employee": "Employee", "leave_type": "Leave Type"},
+	"Attendance Request": {"employee": "Employee"},
+	"Shift Request": {"employee": "Employee", "shift_type": "Shift Type"},
 }
 
 
@@ -180,6 +226,14 @@ SYNC_DEPENDENCIES = {
 	"Leave Ledger Entry": ("Employee", "Leave Type"),
 	"Shift Schedule Assignment": ("Employee", "Shift Schedule"),
 	"Shift Assignment": ("Employee", "Shift Type"),
+	"Leave Policy Assignment": ("Employee", "Leave Policy", "Leave Period"),
+	# Leave Type as well as Employee, for the reason given above: an allocation
+	# whose leave type never landed reports days against a type this site cannot
+	# name, which reads as a real balance and is not one.
+	"Leave Allocation": ("Employee", "Leave Type"),
+	"Leave Application": ("Employee", "Leave Type"),
+	"Attendance Request": ("Employee",),
+	"Shift Request": ("Employee", "Shift Type"),
 }
 
 
@@ -295,8 +349,25 @@ _UNMIRRORED_FIELDS = frozenset(
 #: here is low-cardinality policy (a handful of calendars and shift patterns per
 #: company), so one extra request per row is the cheap half of the trade against
 #: mirroring a Holiday List with no holidays in it.
+#: `Leave Policy` is here because its child table IS the policy: without
+#: `leave_policy_details` it grants nothing, and 30 extra requests is the cheap
+#: half of that trade.
+#:
+#: `Leave Allocation` is deliberately NOT here, though it does carry
+#: `earned_leave_schedule`. That table is forward-looking accrual bookkeeping and
+#: nothing on this hub runs it — mirrored allocations are write-blocked, so no
+#: scheduler acts on them, and the balance comes from the ledger. Adding it would
+#: cost 486 extra round trips to copy a table this site never reads.
+#: ponytail: revisit if this hub ever becomes the writer for leave.
 CHILD_TABLE_DOCTYPES = frozenset(
-	{"Holiday List", "Shift Type", "Shift Schedule", "Shift Location", "Overtime Type"}
+	{
+		"Holiday List",
+		"Shift Type",
+		"Shift Schedule",
+		"Shift Location",
+		"Overtime Type",
+		"Leave Policy",
+	}
 )
 
 #: Framework bookkeeping stripped from every CHILD row, on top of the parent set.

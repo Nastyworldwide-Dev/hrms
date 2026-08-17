@@ -205,6 +205,42 @@ class TestHooksWiring(unittest.TestCase):
 		),
 		# Not submittable: no update-after-submit or cancel path exists to guard.
 		"Shift Schedule Assignment": ("validate", "on_trash", "before_rename"),
+		# The leave chain — all submittable, so all five paths.
+		"Leave Policy Assignment": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Leave Allocation": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Leave Application": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Attendance Request": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Shift Request": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
 	}
 
 	def _events_carrying_guard(self, doctype):

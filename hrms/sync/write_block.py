@@ -52,6 +52,15 @@ MIRRORED_DOCTYPES = (
 	"Leave Ledger Entry",
 	"Shift Schedule Assignment",
 	"Shift Assignment",
+	# The leave chain, mirrored from 2026-08-17. Read-only here for the same
+	# reason as everything above: the source is the writer during the parallel
+	# run, and an approval recorded on this hub would be invisible over there and
+	# overwritten on the next pull.
+	"Leave Policy Assignment",
+	"Leave Allocation",
+	"Leave Application",
+	"Attendance Request",
+	"Shift Request",
 )
 
 ALLOW = "allow"
