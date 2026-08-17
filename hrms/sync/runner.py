@@ -926,6 +926,11 @@ def parse_doctypes(doctypes) -> tuple[str, ...] | None:
 SYNC_QUEUE = "long"
 SYNC_JOB_TIMEOUT = 1500
 
+#: A `Running` row older than the job could possibly live was abandoned by a
+#: worker that died without reaching `_finish_run`. Past this it no longer counts
+#: as "in flight", or one killed worker would block the button for ever.
+STALE_RUN_AFTER_SECONDS = SYNC_JOB_TIMEOUT + 300
+
 
 def sync_job_id(instance_name: str) -> str:
 	"""One in-flight run per source instance.
@@ -937,38 +942,162 @@ def sync_job_id(instance_name: str) -> str:
 	return f"hrms-sync-{instance_name}"
 
 
+def _job_status(job_id: str):
+	"""rq's view of this instance's job, or None when there is nothing to see.
+
+	Indirected through a module function so the bench-free tests can drive it, and
+	so a redis hiccup is a None rather than a traceback out of a Desk button.
+	"""
+	from frappe.utils.background_jobs import get_job_status
+
+	return get_job_status(job_id)
+
+
+def _queue_workers(queue: str = SYNC_QUEUE) -> int:
+	"""How many workers are actually consuming `queue`."""
+	from frappe.utils.background_jobs import get_workers
+
+	return len(get_workers(queue) or [])
+
+
+def _clear_job(job_id: str) -> None:
+	"""Drop a stuck rq job so a fresh one can take its place."""
+	from frappe.utils.background_jobs import get_job
+
+	job = get_job(job_id)
+	if job:
+		job.delete()
+		_log().warning("[sync] cleared stuck job %s at an operator's request", job_id)
+
+
+def _probe(fn, *args):
+	"""Run an introspection call, or return None if it cannot answer.
+
+	Fails OPEN by design. Redis unreachable, rq's API moved, a queue name this
+	deployment does not have — none of that is a reason to refuse a sync. A run
+	that happens twice is idempotent; a button that can never be pressed is not
+	recoverable from the UI at all, which is exactly the hole this whole function
+	exists to close.
+	"""
+	try:
+		return fn(*args)
+	except Exception as e:
+		_log().warning("[sync] could not inspect the background queue: %s", e)
+		return None
+
+
+def running_run(instance_name: str) -> str | None:
+	"""The run genuinely still in flight for this instance, if any.
+
+	A `Running` row past `STALE_RUN_AFTER_SECONDS` is not in flight, it is the
+	corpse of a worker that was killed before `_finish_run` — `_close_stale_runs`
+	marks it Failed when the next run starts, and until then it must not be
+	mistaken for a live one.
+	"""
+	rows = frappe.get_all(
+		"HRMS Sync Run",
+		filters={"source_instance": instance_name, "status": "Running"},
+		fields=["name", "started_at"],
+		order_by="started_at desc",
+		limit=1,
+	)
+	if not rows:
+		return None
+
+	started_at = rows[0].get("started_at")
+	try:
+		if started_at and (now_datetime() - started_at).total_seconds() > STALE_RUN_AFTER_SECONDS:
+			return None
+	except TypeError:  # unparseable timestamp — treat it as live and let a human look
+		pass
+	return rows[0]["name"]
+
+
 @frappe.whitelist(methods=["POST"])
-def enqueue_sync(instance_name: str, doctypes: str | None = None, incremental: int = 1) -> dict:
+def enqueue_sync(
+	instance_name: str, doctypes: str | None = None, incremental: int = 1, force: int = 0
+) -> dict:
 	"""Queue a run and return immediately. The button's entry point.
 
 	`run_sync` stays callable directly for bench and for tests; what it must not do
 	any more is run inside a web request, where the gateway kills the worker
 	partway and `sync_instance`'s `finally` never gets to record what happened.
 
-	Progress needs no polling from here: `_start_run` writes the `HRMS Sync Run`
-	row before the first remote read, and the Desk list view updates itself.
+	Every refusal names a REASON the operator can act on. The first version of this
+	returned a bare "already in progress" whenever rq held a live job id, which on
+	verifica-live meant a job sitting QUEUED on a queue with no worker: nothing was
+	running, nothing ever would, and the button was permanently dead with a week-old
+	Partial as the only thing to look at. Queue health is therefore part of the
+	answer, and the authoritative "is a sync in flight" signal is the run record —
+	something the operator can actually open — not an rq job id they cannot see.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	if not instance_name:
 		frappe.throw(_("instance_name is required"))
+
+	run = running_run(instance_name)
+	if run:
+		return {"queued": False, "reason": "already_running", "instance": instance_name, "run": run}
+
+	status = _probe(_job_status, sync_job_id(instance_name))
+	workers = _probe(_queue_workers, SYNC_QUEUE)
+
+	# `workers == 0` is knowable and fatal; `workers is None` means we could not
+	# ask, and not being able to ask must never block the operator.
+	if workers == 0:
+		_log().error(
+			"[sync] refusing to queue %s: no worker is consuming the %s queue",
+			instance_name,
+			SYNC_QUEUE,
+		)
+		return {
+			"queued": False,
+			"reason": "no_worker",
+			"instance": instance_name,
+			"queue": SYNC_QUEUE,
+		}
+
+	if status == "started":
+		return {"queued": False, "reason": "already_running", "instance": instance_name, "run": None}
+
+	if status == "queued":
+		# `force` is the operator's escape hatch for a job that is queued and never
+		# starts. It is deliberately unable to touch a RUNNING one — the guard above
+		# returns first — because that would kill live work mid-write. Without this
+		# the only cure is a bench console, which a Frappe Cloud operator has not got.
+		if not int(force or 0):
+			return {"queued": False, "reason": "already_queued", "instance": instance_name}
+		_probe(_clear_job, sync_job_id(instance_name))
 
 	job = frappe.enqueue(
 		"hrms.sync.runner.run_sync",
 		queue=SYNC_QUEUE,
 		timeout=SYNC_JOB_TIMEOUT,
 		job_id=sync_job_id(instance_name),
-		deduplicate=True,
 		instance_name=instance_name,
 		doctypes=doctypes,
 		incremental=incremental,
 	)
 
-	if job is None:
-		_log().info("[sync] a run for %s is already in flight; not queueing another", instance_name)
-		return {"queued": False, "reason": "already_running", "instance": instance_name}
-
-	_log().info("[sync] queued a background run for %s", instance_name)
+	_log().info("[sync] queued a background run for %s (job %s)", instance_name, getattr(job, "id", None))
 	return {"queued": True, "instance": instance_name}
+
+
+@frappe.whitelist()
+def sync_status(instance_name: str) -> dict:
+	"""What is actually happening for this instance, in terms the operator can use.
+
+	Read-only, and deliberately whitelisted separately from `enqueue_sync` so the
+	form can answer "is it stuck?" without starting anything.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	return {
+		"instance": instance_name,
+		"run": running_run(instance_name),
+		"job": _probe(_job_status, sync_job_id(instance_name)),
+		"workers": _probe(_queue_workers, SYNC_QUEUE),
+		"queue": SYNC_QUEUE,
+	}
 
 
 @frappe.whitelist(methods=["POST"])

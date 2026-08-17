@@ -1088,24 +1088,44 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 		import frappe
 
 		self.enqueued = []
-		self.in_flight = set()
+		#: What rq would say about this instance's job, and how many workers are
+		#: consuming the queue. An Exception value means introspection blew up.
+		self.job_status = None
+		self.workers = 1
 
 		def fake_enqueue(method, **kwargs):
-			if kwargs.get("deduplicate") and kwargs.get("job_id") in self.in_flight:
-				return None
-			self.in_flight.add(kwargs.get("job_id"))
 			self.enqueued.append({"method": method, **kwargs})
 			return types.SimpleNamespace(id=kwargs.get("job_id"))
 
-		self._saved = (getattr(frappe, "enqueue", None), getattr(frappe, "throw", None))
+		def probe(value):
+			if isinstance(value, Exception):
+				raise value
+			return value
+
+		self._saved = (
+			getattr(frappe, "enqueue", None),
+			getattr(frappe, "throw", None),
+			getattr(frappe, "get_all", None),
+			runner._job_status,
+			runner._queue_workers,
+		)
 		frappe.enqueue = fake_enqueue
 		frappe.throw = lambda msg, *a, **kw: (_ for _ in ()).throw(ValueError(msg))
+		frappe.get_all = lambda *a, **kw: []
+		runner._job_status = lambda job_id: probe(self.job_status)
+		runner._queue_workers = lambda queue=None: probe(self.workers)
 		self.addCleanup(self._restore)
 
 	def _restore(self):
 		import frappe
 
-		frappe.enqueue, frappe.throw = self._saved
+		(
+			frappe.enqueue,
+			frappe.throw,
+			frappe.get_all,
+			runner._job_status,
+			runner._queue_workers,
+		) = self._saved
 
 	def test_it_queues_rather_than_running_inline(self):
 		result = runner.enqueue_sync("Nasty-Dev", incremental=0)
@@ -1122,19 +1142,7 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 		self.assertEqual(self.enqueued[0]["queue"], "long")
 		self.assertGreaterEqual(self.enqueued[0]["timeout"], 1500)
 
-	def test_a_second_click_does_not_start_a_second_pull(self):
-		"""Idempotent writes make a double run harmless to the DATA, but it doubles
-		the read load on a live production source and leaves two run records for
-		one intent."""
-		self.assertTrue(runner.enqueue_sync("Nasty-Dev")["queued"])
-
-		second = runner.enqueue_sync("Nasty-Dev")
-
-		self.assertFalse(second["queued"])
-		self.assertEqual(second["reason"], "already_running")
-		self.assertEqual(len(self.enqueued), 1)
-
-	def test_deduplication_is_per_instance(self):
+	def test_the_job_is_named_per_instance(self):
 		"""Two different sources may legitimately sync at once."""
 		runner.enqueue_sync("Nasty-Dev")
 		runner.enqueue_sync("Other-ERP")
@@ -1147,6 +1155,86 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 		with self.assertRaises(ValueError):
 			runner.enqueue_sync("")
 		self.assertEqual(self.enqueued, [])
+
+	def test_a_queued_job_nobody_will_ever_take_is_reported_not_hidden(self):
+		"""verifica-live, 2026-08-17: the button said "A sync is already in
+		progress" and the HRMS Sync Run list held nothing but a week-old Partial.
+
+		The job was sitting QUEUED on a queue with no worker consuming it. With rq
+		deduplication that was not merely slow, it was a LOCKOUT: every later click
+		saw a live job id and refused, so the button was dead for good and the
+		operator had no way to tell a busy sync from a dead one. The queue's own
+		health has to be part of the answer.
+		"""
+		self.job_status = "queued"
+		self.workers = 0
+
+		result = runner.enqueue_sync("Nasty-Dev")
+
+		self.assertFalse(result["queued"])
+		self.assertEqual(result["reason"], "no_worker")
+
+	def test_a_queued_job_with_a_live_worker_is_simply_waiting(self):
+		self.job_status = "queued"
+		self.workers = 2
+
+		result = runner.enqueue_sync("Nasty-Dev")
+
+		self.assertFalse(result["queued"])
+		self.assertEqual(result["reason"], "already_queued")
+		self.assertEqual(self.enqueued, [], "a waiting job must not be duplicated")
+
+	def test_nothing_is_queued_onto_a_queue_with_no_worker(self):
+		"""Reporting "queued" for work that cannot start is the lie that cost an
+		afternoon. Refuse and name the reason instead."""
+		self.workers = 0
+
+		result = runner.enqueue_sync("Nasty-Dev")
+
+		self.assertFalse(result["queued"])
+		self.assertEqual(result["reason"], "no_worker")
+		self.assertEqual(self.enqueued, [])
+
+	def test_force_clears_a_stuck_job_and_queues_a_fresh_one(self):
+		"""The escape hatch for a job that is queued and never starts.
+
+		Without it the only cure is a bench console, which a Frappe Cloud operator
+		does not have — so "it is stuck" would mean "raise a ticket and wait".
+		"""
+		self.job_status = "queued"
+		self.workers = 1
+		cleared = []
+		runner._clear_job = lambda job_id: cleared.append(job_id)
+
+		result = runner.enqueue_sync("Nasty-Dev", force=1)
+
+		self.assertTrue(result["queued"])
+		self.assertEqual(cleared, ["hrms-sync-Nasty-Dev"])
+		self.assertEqual(len(self.enqueued), 1)
+
+	def test_force_never_interrupts_a_run_that_is_genuinely_running(self):
+		"""Force is for a stuck QUEUE, not for killing live work mid-write."""
+		import frappe
+
+		frappe.get_all = lambda *a, **kw: [{"name": "SYNC-00009", "started_at": NOW}]
+
+		result = runner.enqueue_sync("Nasty-Dev", force=1)
+
+		self.assertFalse(result["queued"])
+		self.assertEqual(result["reason"], "already_running")
+		self.assertEqual(self.enqueued, [])
+
+	def test_an_unknown_queue_state_never_blocks_the_operator(self):
+		"""Redis unreachable, rq changed, whatever: an introspection failure must
+		fail OPEN. A sync that runs twice is idempotent; a button that can never be
+		pressed is not recoverable from the UI at all."""
+		self.job_status = RuntimeError("redis is unreachable")
+		self.workers = RuntimeError("redis is unreachable")
+
+		result = runner.enqueue_sync("Nasty-Dev")
+
+		self.assertTrue(result["queued"])
+		self.assertEqual(len(self.enqueued), 1)
 
 	def test_the_enqueue_endpoint_is_post_only(self):
 		import ast

@@ -18,52 +18,96 @@ function sync_now(frm) {
 			`<p class="text-muted">${__(
 				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported.",
 			)}</p>`,
-		() => {
-			console.info("[HRMSERPInstance] queueing full sync from", frm.doc.name);
-			frappe.call({
-				// Queued, never inline. A full pull takes minutes and the gateway
-				// kills the request at ~2 — which does not merely fail, it kills the
-				// worker mid-write and leaves the run record stuck at Running.
-				method: "hrms.sync.runner.enqueue_sync",
-				// Full pull, not incremental: the operator reaches for this button
-				// after fixing something, and a watermark would hide the repair.
-				args: { instance_name: frm.doc.name, incremental: 0 },
-				freeze: true,
-				freeze_message: __("Queueing…"),
-				callback: (r) => report_queued(r.message || {}),
-				error: (e) => console.warn("[HRMSERPInstance] could not queue the sync:", e),
-			});
-		},
+		() => start_sync(frm, 0),
 	);
 }
 
-function report_queued(res) {
+function start_sync(frm, force) {
+	console.info("[HRMSERPInstance] queueing full sync from", frm.doc.name, "force:", force);
+	frappe.call({
+		// Queued, never inline. A full pull takes minutes and the gateway kills the
+		// request at ~2 — which does not merely fail, it kills the worker mid-write
+		// and leaves the run record stuck at Running.
+		method: "hrms.sync.runner.enqueue_sync",
+		// Full pull, not incremental: the operator reaches for this button after
+		// fixing something, and a watermark would hide the repair.
+		args: { instance_name: frm.doc.name, incremental: 0, force: force || 0 },
+		freeze: true,
+		freeze_message: __("Queueing…"),
+		callback: (r) => report_queued(r.message || {}, frm),
+		error: (e) => console.warn("[HRMSERPInstance] could not queue the sync:", e),
+	});
+}
+
+function report_queued(res, frm) {
 	// No polling: the run record is written before the first remote read, and the
 	// Desk list view refreshes itself as the run finishes.
 	const runs = `<a href="/app/hrms-sync-run?source_instance=${encodeURIComponent(res.instance || "")}">${__(
-		"Open HRMS Sync Run to watch it",
+		"Open HRMS Sync Run",
 	)}</a>`;
 
-	if (!res.queued) {
-		console.warn("[HRMSERPInstance] not queued:", res.reason, res);
+	if (res.queued) {
+		console.info("[HRMSERPInstance] sync queued for", res.instance);
 		frappe.msgprint({
-			title: __("Already running"),
-			indicator: "orange",
-			message: `<p>${__("A sync from {0} is already in progress.", [
-				frappe.utils.escape_html(res.instance || ""),
-			])}</p><p>${runs}</p>`,
+			title: __("Sync queued"),
+			indicator: "blue",
+			message: `<p>${__(
+				"Running in the background — this takes minutes, and you can leave this page.",
+			)}</p><p>${runs}</p>`,
 		});
 		return;
 	}
 
-	console.info("[HRMSERPInstance] sync queued for", res.instance);
+	console.warn("[HRMSERPInstance] not queued:", res.reason, res);
+
+	// Every refusal names something the operator can act on. A bare "already in
+	// progress" is what hid a job queued on a worker-less queue for an afternoon.
+	if (res.reason === "no_worker") {
+		frappe.msgprint({
+			title: __("No background worker"),
+			indicator: "red",
+			message:
+				`<p>${__(
+					"Nothing is consuming the {0} queue on this site, so a queued sync would never start. No job was created.",
+					[`<b>${frappe.utils.escape_html(res.queue || "long")}</b>`],
+				)}</p>` +
+				`<p>${__("Ask whoever runs this site to start a background worker for that queue.")}</p>`,
+		});
+		return;
+	}
+
+	if (res.reason === "already_queued") {
+		frappe.msgprint({
+			title: __("Already queued"),
+			indicator: "orange",
+			message:
+				`<p>${__("A sync from {0} is queued and waiting for a worker.", [
+					frappe.utils.escape_html(res.instance || ""),
+				])}</p>` +
+				`<p>${__("If it has been waiting a long time it is stuck, and you can clear it and start again.")}</p>`,
+			primary_action: {
+				label: __("Clear it and start again"),
+				action() {
+					frappe.hide_msgprint();
+					start_sync(frm, 1);
+				},
+			},
+		});
+		return;
+	}
+
 	frappe.msgprint({
-		title: __("Sync queued"),
-		indicator: "blue",
+		title: __("Already running"),
+		indicator: "orange",
 		message:
-			`<p>${__(
-				"Running in the background — this takes minutes, and you can leave this page.",
-			)}</p><p>${runs}</p>`,
+			`<p>${__("A sync from {0} is in progress.", [
+				frappe.utils.escape_html(res.instance || ""),
+			])}</p>` +
+			(res.run
+				? `<p><a href="/app/hrms-sync-run/${encodeURIComponent(res.run)}">${__(
+						"Open the run in progress",
+					)}</a></p>`
+				: `<p>${runs}</p>`),
 	});
 }
 
