@@ -2322,5 +2322,76 @@ class TestTheMirrorNeverWalksALifecycle(_RunnerTestCase):
 		self.assertEqual([u for u in self.store.updates if u[1] == "HR-LA-9005"], [])
 
 
+class TestAnUnconstrainedSelectConstrainsNothing(unittest.TestCase):
+	"""A Select declaring no options must not narrow anything.
+
+	Frappe skips its own check for exactly this case — `_validate_selects` reads
+	`if ... or not df.options: continue` — so the site stores any value in such a
+	field. Reading it as a constraint produced the option set `{""}`: only the
+	empty string storable, every real value dropped. That is the mirror being
+	STRICTER than the site it writes to, and silent by design, because the value
+	goes missing and the row still saves.
+
+	It cost every Shift Location its timezone. `Shift Location.timezone` is a
+	Select with no options, so Asia/Dubai, Asia/Kuala_Lumpur and CST6CDT were all
+	discarded from a field this site stores perfectly well — on a hub whose job
+	includes knowing which wall clock a punch was measured against.
+
+	Drives the REAL `_local_schema` against a stub meta; the suite above replaces
+	that function wholesale, so this is the only place it is exercised.
+	"""
+
+	class _Field:
+		def __init__(self, fieldname, fieldtype, options=None):
+			self.fieldname = fieldname
+			self.fieldtype = fieldtype
+			self.options = options
+
+	class _Meta:
+		def __init__(self, fields):
+			self.fields = fields
+
+		def get_valid_columns(self):
+			return [f.fieldname for f in self.fields]
+
+		def get_table_fields(self):
+			return []
+
+	def _schema(self, *fields):
+		import frappe
+
+		meta = self._Meta(list(fields))
+		saved = getattr(frappe, "get_meta", None)
+		frappe.get_meta = lambda doctype: meta
+		try:
+			return runner._local_schema("Shift Location")
+		finally:
+			frappe.get_meta = saved
+
+	def test_a_select_without_options_is_left_alone(self):
+		_columns, selects = self._schema(self._Field("timezone", "Select", None))
+		self.assertNotIn(
+			"timezone",
+			selects,
+			"a Select with no options constrains nothing — frappe does not check it either",
+		)
+
+	def test_an_options_string_of_only_blanks_is_left_alone_too(self):
+		"""`"\\n"` is how an emptied Select round-trips through the fixture."""
+		_columns, selects = self._schema(self._Field("timezone", "Select", "\n"))
+		self.assertNotIn("timezone", selects)
+
+	def test_a_real_option_list_still_narrows(self):
+		"""The point is not to stop narrowing — performance_band must still drop
+		E3, which is the whole reason the mechanism exists."""
+		_columns, selects = self._schema(self._Field("performance_band", "Select", "\nB\nB2\nC"))
+		self.assertEqual(selects["performance_band"], {"", "B", "B2", "C"})
+
+	def test_the_column_is_kept_either_way(self):
+		"""Narrowing is about VALUES. The field is storable regardless."""
+		columns, _selects = self._schema(self._Field("timezone", "Select", None))
+		self.assertIn("timezone", columns)
+
+
 if __name__ == "__main__":
 	unittest.main(verbosity=2)

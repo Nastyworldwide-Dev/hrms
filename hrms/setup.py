@@ -345,21 +345,6 @@ def get_custom_fields():
 				"translatable": 0,
 			},
 			{
-				"fieldname": "performance_band",
-				"fieldtype": "Select",
-				"label": "Performance Band",
-				# The band scheme, and nothing else. E3 was briefly added here
-				# because the source ERP held it; HR have confirmed that was their
-				# own data-entry error. Widening a destination to accommodate bad
-				# source data is the wrong direction of fix, and it is not needed:
-				# `runner._narrow_to_local_schema` drops a value this site cannot
-				# represent and names it on the run, so an unexpected band costs one
-				# field rather than the whole employee.
-				"options": "\nB\nC\nD\nE1\nE2\nF",
-				"insert_after": "grade",
-				"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
-			},
-			{
 				"fieldname": "years_of_service",
 				"fieldtype": "Int",
 				"label": _("Years of Service"),
@@ -428,7 +413,16 @@ def get_custom_fields():
 				"fieldname": "performance_band",
 				"fieldtype": "Select",
 				"label": _("Performance Band"),
-				"options": "\nB\nC\nD\nE1\nE2\nF",
+				# HR own this list; it is not derived from what the source happens
+				# to hold. B2 is a real band in use and belongs here. E3 is not and
+				# never was — it was a data-entry mistake on the source, confirmed
+				# by HR, and it stays out.
+				#
+				# Widening the schema to accept whatever arrives is the wrong
+				# direction of fix, and it is not needed: an unrepresentable value
+				# is dropped and NAMED on the run, so a bad band costs one field
+				# rather than the whole employee, and HR can see which to correct.
+				"options": "\nB\nB2\nC\nD\nE1\nE2\nF",
 				"insert_after": "grade",
 				"description": _(
 					"Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"

@@ -487,11 +487,30 @@ def _local_schema(doctype: str) -> tuple[set, dict]:
 	# was built to prevent: a calendar with no holidays does not fail, it counts
 	# every weekend as a working day.
 	columns = set(meta.get_valid_columns()) | {field.fieldname for field in meta.get_table_fields()}
-	selects = {
-		field.fieldname: {option.strip() for option in (field.options or "").split("\n")}
-		for field in meta.fields
-		if field.fieldtype == "Select"
-	}
+
+	selects = {}
+	for field in meta.fields:
+		if field.fieldtype != "Select":
+			continue
+		options = {option.strip() for option in (field.options or "").split("\n")}
+		# A Select with no options constrains NOTHING. Frappe skips its own
+		# validation for exactly this case — `base_document._validate_selects`
+		# reads `if ... or not df.options: continue` — so the site will happily
+		# store any value in such a field.
+		#
+		# Reading it as a constraint made the option set `{""}`: only the empty
+		# string storable, every real value dropped. That is this mirror being
+		# STRICTER than the site it writes to, which is never right and is silent
+		# by design — the value goes missing and the row still saves.
+		#
+		# It cost every Shift Location its timezone. `Shift Location.timezone` is
+		# a Select declaring no options, and Asia/Dubai, Asia/Kuala_Lumpur and
+		# CST6CDT were all discarded from a field this site can store perfectly
+		# well, on a hub whose whole job is knowing which wall clock a punch was
+		# measured against.
+		if options - {""}:
+			selects[field.fieldname] = options
+
 	return columns, selects
 
 
