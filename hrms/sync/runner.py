@@ -585,14 +585,39 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 			_reconcile_user_status(remote_name)
 		return "updated"
 
-	# Frappe refuses to insert straight into docstatus 2: a document must be
-	# submitted before it can be cancelled. A mirror copies an END STATE rather
-	# than walking a lifecycle, so a cancelled source row is written as submitted
-	# and then marked cancelled — through `db.set_value`, the same route every
-	# other mirrored update takes, so no `on_cancel` side effects replay here.
-	cancelled = str(payload.get("docstatus") or 0) == "2"
-	if cancelled:
-		payload = dict(payload, docstatus=1)
+	# A mirror copies an END STATE; it does not walk a lifecycle. Frappe derives
+	# `_action` from the docstatus it is handed, so `insert()` with docstatus 1
+	# means `_action == "submit"` and `on_submit` runs — here, against this site's
+	# data, re-doing work the source instance already did.
+	#
+	# Measured rather than assumed: inserting one submitted Leave Allocation on a
+	# test site created a Leave Ledger Entry. Inserting the same row as a draft
+	# and then setting the docstatus created none, and the docstatus still stuck.
+	#
+	# That is a cascade, not a detail, because every on_submit in this app writes
+	# into a doctype the mirror already holds at exact parity:
+	#
+	#   Leave Policy Assignment -> Leave Allocation -> Leave Ledger Entry
+	#   Leave Application       -> Attendance
+	#   Attendance Request      -> Attendance
+	#   Shift Request           -> Shift Assignment
+	#
+	# Firing them would stack locally-generated rows on top of the mirrored ones —
+	# leave balances roughly doubled, from a sync that reported success.
+	#
+	# It has not bitten yet only because the three submittables mirrored until now
+	# (Attendance, Leave Ledger Entry, Shift Assignment) happen to define no
+	# `on_submit` at all. Luck, not design, and it runs out the moment the leave
+	# chain is mirrored.
+	#
+	# So every row is inserted as a DRAFT and moved to its final docstatus through
+	# `db.set_value` — the same hook-free route every mirrored UPDATE already takes,
+	# and the route the cancelled case has always used. This generalises that case
+	# rather than adding a second mechanism beside it: docstatus 2 also stops
+	# needing its submit-then-cancel dance, because nothing is being walked at all.
+	final_docstatus = int(payload.get("docstatus") or 0)
+	if final_docstatus:
+		payload = dict(payload, docstatus=0)
 
 	doc = frappe.get_doc({"doctype": doctype, **payload})
 	doc.flags.ignore_permissions = True
@@ -601,9 +626,14 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	doc.flags.ignore_links = True
 	doc.insert(set_name=remote_name, ignore_if_duplicate=True)
 
-	if cancelled:
-		frappe.db.set_value(doctype, remote_name, {"docstatus": 2}, update_modified=False)
-		_log().info("[sync] %s %s mirrored as cancelled", doctype, remote_name)
+	if final_docstatus:
+		frappe.db.set_value(doctype, remote_name, {"docstatus": final_docstatus}, update_modified=False)
+		_log().debug(
+			"[sync] %s %s mirrored at docstatus %s without running submit hooks",
+			doctype,
+			remote_name,
+			final_docstatus,
+		)
 	return "inserted"
 
 

@@ -262,11 +262,27 @@ FAKE_HOLIDAY_LIST_COLUMNS = {"name", "holiday_list_name", "from_date", "to_date"
 FAKE_HOLIDAY_LIST_TABLES = {"holidays"}
 
 
+#: A SUBMITTABLE doctype whose `on_submit` writes into another mirrored doctype —
+#: the shape the lifecycle rule exists for.
+FAKE_LEAVE_ALLOCATION_COLUMNS = {
+	"name",
+	"employee",
+	"leave_type",
+	"from_date",
+	"to_date",
+	"new_leaves_allocated",
+	"docstatus",
+	"synced_from_instance",
+}
+
+
 def _fake_local_schema(doctype):
 	if doctype == "Employee":
 		return set(FAKE_EMPLOYEE_COLUMNS), dict(FAKE_EMPLOYEE_SELECTS)
 	if doctype == "Holiday List":
 		return set(FAKE_HOLIDAY_LIST_COLUMNS) | set(FAKE_HOLIDAY_LIST_TABLES), {}
+	if doctype == "Leave Allocation":
+		return set(FAKE_LEAVE_ALLOCATION_COLUMNS), {}
 	raise RuntimeError(f"no meta for {doctype} in this harness")
 
 
@@ -1172,9 +1188,7 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 	def test_the_run_record_says_which_doctype_the_source_lacks(self):
 		self.seed_parent("Company", "Acme", company_name="Acme")
 
-		runner.sync_instance(
-			self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False
-		)
+		runner.sync_instance(self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False)
 
 		log = self.runs()[0]["error_log"]
 		self.assertIn("Leave Type", log)
@@ -1184,9 +1198,7 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		"""The whole point — one version gap must not cost the other thirteen."""
 		self.seed_parent("Company", "Acme", company_name="Acme")
 
-		runner.sync_instance(
-			self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False
-		)
+		runner.sync_instance(self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False)
 
 		self.assertEqual(len(self.store.rows("Employee")), 2)
 
@@ -1196,9 +1208,7 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		self.seed_parent("Company", "Acme", company_name="Acme")
 		client = self.client({"Employee": EMPLOYEES}, fail_for=["Attendance"])
 
-		result = runner.sync_instance(
-			client, doctypes=["Employee", "Attendance"], incremental=False
-		)
+		result = runner.sync_instance(client, doctypes=["Employee", "Attendance"], incremental=False)
 
 		self.assertEqual(result["status"], "Partial")
 		self.assertIn("Attendance", result["failed"])
@@ -1292,9 +1302,7 @@ class TestHolidayAssignmentsAreDerivedNotMirrored(_RunnerTestCase):
 		self.seed_parent("Company", "Acme", company_name="Acme")
 		derived = []
 		runner._derive_holiday_assignments = lambda: derived.append(True)
-		self.addCleanup(
-			setattr, runner, "_derive_holiday_assignments", runner._derive_holiday_assignments
-		)
+		self.addCleanup(setattr, runner, "_derive_holiday_assignments", runner._derive_holiday_assignments)
 
 		runner.sync_instance(self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False)
 
@@ -1461,9 +1469,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 
 	def test_an_unstamped_doctype_is_unaffected(self):
 		"""Masters carry no stamp by design, so their payloads never contain one."""
-		payload, _dropped = runner._narrow_to_local_schema(
-			"Holiday List", {"holiday_list_name": "2026 MY"}
-		)
+		payload, _dropped = runner._narrow_to_local_schema("Holiday List", {"holiday_list_name": "2026 MY"})
 		self.assertEqual(payload, {"holiday_list_name": "2026 MY"})
 
 	def test_a_child_table_is_never_mistaken_for_a_missing_column(self):
@@ -1530,7 +1536,9 @@ class TestALongFilterIsSplitAcrossRequests(_RunnerTestCase):
 	def test_splitting_loses_nobody(self):
 		names = [f"HR-EMP-{i:05d}" for i in range(250)]
 
-		rebuilt = [n for chunk in runner._split_filters({"employee": ("in", names)}) for n in chunk["employee"][1]]
+		rebuilt = [
+			n for chunk in runner._split_filters({"employee": ("in", names)}) for n in chunk["employee"][1]
+		]
 
 		self.assertEqual(rebuilt, names)
 
@@ -2227,6 +2235,91 @@ class TestMalformedSourceRows(_RunnerTestCase):
 		self.assertEqual(result["pulled"], 2)
 		self.assertEqual(len(self.store.rows("Employee")), 1)
 		self.assertEqual(self.store.rows("Employee")["HR-EMP-0001"]["employee_name"], "Aisha Renamed")
+
+
+class TestTheMirrorNeverWalksALifecycle(_RunnerTestCase):
+	"""A mirrored row is an end state, so no submit hook may run to reach it.
+
+	Frappe derives `_action` from the docstatus it is handed. `insert()` with
+	docstatus 1 therefore means `_action == "submit"`, and `on_submit` runs on THIS
+	site — re-doing work the source instance already did. Measured on a real site,
+	not inferred: inserting one submitted Leave Allocation created a Leave Ledger
+	Entry; inserting it as a draft and then setting the docstatus created none.
+
+	That is a cascade, because every `on_submit` in this app writes into a doctype
+	the mirror already holds at exact parity:
+
+	    Leave Policy Assignment -> Leave Allocation -> Leave Ledger Entry
+	    Leave Application       -> Attendance
+	    Attendance Request      -> Attendance
+	    Shift Request           -> Shift Assignment
+
+	Locally generated rows would stack on top of mirrored ones and roughly double
+	the leave balances, reported by a run that said `Completed`.
+
+	It has not bitten yet only because the three submittables mirrored until now —
+	Attendance, Leave Ledger Entry, Shift Assignment — define no `on_submit` at
+	all. That is luck, and it runs out the moment the leave chain is mirrored, so
+	the rule is pinned here rather than remembered later.
+	"""
+
+	SEED_EXCLUDE: ClassVar[tuple] = ("Leave Allocation",)
+
+	def _insert(self, name, docstatus):
+		"""Writes one row, returning the docstatus frappe saw at INSERT time.
+
+		The distinction the whole rule rests on: what reaches `insert()` decides
+		whether `on_submit` fires, and it cannot be read back off the row afterwards
+		because the second write lands on the same dict.
+		"""
+		import frappe
+
+		runner._write_row.dropped_fields = {}
+		seen = {}
+		original = self.store.get_doc
+
+		def spy(data, name=None):
+			if name is None:
+				seen["docstatus"] = dict(data).get("docstatus")
+			return original(data, name)
+
+		frappe.get_doc = spy
+		try:
+			runner._write_row(
+				"Leave Allocation",
+				name,
+				{"employee": "HR-EMP-0001", "leave_type": "Annual Leave", "docstatus": docstatus},
+			)
+		finally:
+			frappe.get_doc = original
+		return seen["docstatus"]
+
+	def test_a_submitted_row_reaches_insert_as_a_draft(self):
+		self.assertEqual(
+			self._insert("HR-LA-9001", 1),
+			0,
+			"a submitted row must be inserted as a draft, or frappe runs on_submit",
+		)
+
+	def test_a_cancelled_row_reaches_insert_as_a_draft_too(self):
+		"""This case used to insert at docstatus 1 and then cancel, because frappe
+		refuses a direct insert at 2. Going through draft removes the exception
+		rather than keeping a second mechanism beside the rule."""
+		self.assertEqual(self._insert("HR-LA-9002", 2), 0)
+
+	def test_the_final_docstatus_is_applied_hook_free(self):
+		for name, docstatus in (("HR-LA-9003", 1), ("HR-LA-9004", 2)):
+			self._insert(name, docstatus)
+			self.assertIn(
+				("Leave Allocation", name, {"docstatus": docstatus}),
+				self.store.updates,
+				f"docstatus {docstatus} must be applied by db.set_value, which runs no hooks",
+			)
+
+	def test_a_draft_row_is_written_once(self):
+		"""No second write for the common case — drafts are already their end state."""
+		self._insert("HR-LA-9005", 0)
+		self.assertEqual([u for u in self.store.updates if u[1] == "HR-LA-9005"], [])
 
 
 if __name__ == "__main__":
