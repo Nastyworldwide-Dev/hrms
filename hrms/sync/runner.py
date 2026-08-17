@@ -467,7 +467,13 @@ def _local_schema(doctype: str) -> tuple[set, dict]:
 	so a meta failure is recoverable rather than fatal.
 	"""
 	meta = frappe.get_meta(doctype)
-	columns = set(meta.get_valid_columns())
+	# Child tables are storable but are NOT parent columns — their rows live in
+	# their own table, so `get_valid_columns` omits them. Leaving them out here
+	# stripped `holidays`, `breaks`, `overtime_rates` and `repeat_on_days` from
+	# every master, which is the exact silent-wrong-answer `CHILD_TABLE_DOCTYPES`
+	# was built to prevent: a calendar with no holidays does not fail, it counts
+	# every weekend as a working day.
+	columns = set(meta.get_valid_columns()) | {field.fieldname for field in meta.get_table_fields()}
 	selects = {
 		field.fieldname: {option.strip() for option in (field.options or "").split("\n")}
 		for field in meta.fields
@@ -647,6 +653,41 @@ def scope_filter(doctype: str, companies: list[str], instance_name: str) -> dict
 	return None
 
 
+#: Longest `in` list to put into a single request. The filters travel in the GET
+#: query string, and a proxy rejects an over-long request line with 400 — which is
+#: what Employee Checkin started returning once the mirrored employee list grew
+#: from 116 to 289. Not transient and not retryable, so it would have stayed
+#: broken as the mirror got HEALTHIER: a failure that arrives with success.
+MAX_FILTER_VALUES = 100
+
+
+def _split_filters(filters):
+	"""Yield filter sets small enough to survive a GET request line.
+
+	Splits on the first over-long `in` list and repeats every other condition on
+	each chunk, so the union of the chunks is exactly the original query. Order is
+	preserved, and nothing is dropped: the pages within a chunk still walk their
+	own total order, and the caller's counters accumulate across chunks.
+	"""
+	if not filters:
+		yield filters
+		return
+
+	for field, condition in filters.items():
+		if (
+			isinstance(condition, tuple | list)
+			and len(condition) == 2
+			and condition[0] == "in"
+			and len(condition[1]) > MAX_FILTER_VALUES
+		):
+			values = list(condition[1])
+			for start in range(0, len(values), MAX_FILTER_VALUES):
+				yield {**filters, field: ("in", values[start : start + MAX_FILTER_VALUES])}
+			return
+
+	yield filters
+
+
 def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, filters=None) -> dict:
 	"""Mirror one doctype from `client` into this site.
 
@@ -663,75 +704,78 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	unmet_parents: set[str] = set()
 	row_errors: list[str] = []
 	seen = set()
-	start = 0
 
-	while True:
-		page = client.get_list(
-			doctype,
-			filters=remote_filters or None,
-			fields=["*"],
-			limit=page_size,
-			start=start,
-			order_by=PAGE_ORDER,
-		)
-		if not page:
-			break
+	for chunk in _split_filters(remote_filters):
+		start = 0
+		while True:
+			page = client.get_list(
+				doctype,
+				filters=chunk or None,
+				fields=["*"],
+				limit=page_size,
+				start=start,
+				order_by=PAGE_ORDER,
+			)
+			if not page:
+				break
 
-		for row in page:
-			pulled += 1
-			remote_name = row.get("name")
-			if not remote_name:
-				skipped += 1
-				_log().warning("[sync] %s: remote row without a name, skipped", doctype)
-				continue
+			for row in page:
+				pulled += 1
+				remote_name = row.get("name")
+				if not remote_name:
+					skipped += 1
+					_log().warning("[sync] %s: remote row without a name, skipped", doctype)
+					continue
 
-			seen.add(remote_name)
+				seen.add(remote_name)
 
-			# The list endpoint cannot return child tables, so anything whose
-			# children are load-bearing is re-read in full before it is written.
-			if doctype in CHILD_TABLE_DOCTYPES:
-				row = client.get_doc(doctype, remote_name) or row
+				# The list endpoint cannot return child tables, so anything whose
+				# children are load-bearing is re-read in full before it is written.
+				if doctype in CHILD_TABLE_DOCTYPES:
+					row = client.get_doc(doctype, remote_name) or row
 
-			# Referential integrity, per row. Writing a row whose parent is absent
-			# is what produced 5,821 orphan attendance records and then 266 orphan
-			# employees; skipping is the only honest outcome.
-			absent = missing_parents(doctype, row)
-			if absent:
-				orphaned += 1
-				for parent in absent:
-					unmet_parents.add(parent)
-				_log().warning("[sync] %s %s skipped: missing %s", doctype, remote_name, ", ".join(absent))
-				continue
+				# Referential integrity, per row. Writing a row whose parent is absent
+				# is what produced 5,821 orphan attendance records and then 266 orphan
+				# employees; skipping is the only honest outcome.
+				absent = missing_parents(doctype, row)
+				if absent:
+					orphaned += 1
+					for parent in absent:
+						unmet_parents.add(parent)
+					_log().warning(
+						"[sync] %s %s skipped: missing %s", doctype, remote_name, ", ".join(absent)
+					)
+					continue
 
-			try:
-				outcome = _write_row(
-					doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
-				)
-			except Exception as e:  # one bad row must not lose the other 5,000
-				# Almost always schema drift: the source holds a value this site's
-				# field definition cannot represent (a Select option added there
-				# and not here). Surface it per row and keep going — silently
-				# coercing the value would corrupt the mirror, and failing the
-				# whole doctype loses good rows for one bad one.
-				errored += 1
-				if len(row_errors) < MAX_ROW_ERRORS_REPORTED:
-					row_errors.append(f"{remote_name}: {e}")
-				_log().error("[sync] %s %s could not be written: %s", doctype, remote_name, e)
-				frappe.db.rollback()
-				continue
+				try:
+					outcome = _write_row(
+						doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
+					)
+				except Exception as e:  # one bad row must not lose the other 5,000
+					# Almost always schema drift: the source holds a value this site's
+					# field definition cannot represent (a Select option added there
+					# and not here). Surface it per row and keep going — silently
+					# coercing the value would corrupt the mirror, and failing the
+					# whole doctype loses good rows for one bad one.
+					errored += 1
+					if len(row_errors) < MAX_ROW_ERRORS_REPORTED:
+						row_errors.append(f"{remote_name}: {e}")
+					_log().error("[sync] %s %s could not be written: %s", doctype, remote_name, e)
+					frappe.db.rollback()
+					continue
 
-			if outcome == "inserted":
-				written += 1
-				inserted += 1
-			elif outcome == "updated":
-				written += 1
-				updated += 1
-			else:  # create-only doctype, already present locally
-				skipped += 1
+				if outcome == "inserted":
+					written += 1
+					inserted += 1
+				elif outcome == "updated":
+					written += 1
+					updated += 1
+				else:  # create-only doctype, already present locally
+					skipped += 1
 
-		if len(page) < page_size:
-			break
-		start += page_size
+			if len(page) < page_size:
+				break
+			start += page_size
 
 	if not since:
 		# STAMPED only: masters carry no provenance column, and filtering on one

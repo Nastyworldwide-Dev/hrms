@@ -256,10 +256,18 @@ FAKE_EMPLOYEE_COLUMNS = {
 FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "C", "D", "E1", "E2", "F"}}
 
 
+#: A child-table doctype, so the narrowing can be shown to keep its children.
+#: `holidays` is deliberately NOT a column — that is the whole point.
+FAKE_HOLIDAY_LIST_COLUMNS = {"name", "holiday_list_name", "from_date", "to_date"}
+FAKE_HOLIDAY_LIST_TABLES = {"holidays"}
+
+
 def _fake_local_schema(doctype):
-	if doctype != "Employee":
-		raise RuntimeError(f"no meta for {doctype} in this harness")
-	return set(FAKE_EMPLOYEE_COLUMNS), dict(FAKE_EMPLOYEE_SELECTS)
+	if doctype == "Employee":
+		return set(FAKE_EMPLOYEE_COLUMNS), dict(FAKE_EMPLOYEE_SELECTS)
+	if doctype == "Holiday List":
+		return set(FAKE_HOLIDAY_LIST_COLUMNS) | set(FAKE_HOLIDAY_LIST_TABLES), {}
+	raise RuntimeError(f"no meta for {doctype} in this harness")
 
 
 class _RunnerTestCase(unittest.TestCase):
@@ -1340,6 +1348,27 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 				self.assertNotIn("performance_band", payload)
 				self.assertIn("performance_band", dropped)
 
+	def test_a_child_table_is_never_mistaken_for_a_missing_column(self):
+		"""The regression this shipped with.
+
+		`meta.get_valid_columns()` lists PARENT columns, and a child table is not
+		one — its rows live in their own table. So narrowing stripped `holidays`,
+		`breaks`, `overtime_rates` and `repeat_on_days`, and the run said so plainly:
+
+		    Holiday List: this site cannot store holidays — written without them
+
+		A Holiday List without its holidays is the silent-wrong-answer this whole
+		child-table path exists to prevent — every weekend counted as a working day,
+		and nothing raising.
+		"""
+		payload, dropped = runner._narrow_to_local_schema(
+			"Holiday List", {"holiday_list_name": "2026 MY", "holidays": [{"holiday_date": "2026-01-01"}]}
+		)
+
+		self.assertIn("holidays", payload)
+		self.assertEqual(payload["holidays"], [{"holiday_date": "2026-01-01"}])
+		self.assertNotIn("holidays", dropped)
+
 	def test_narrowing_is_skipped_when_the_schema_cannot_be_read(self):
 		"""Fails open: if meta is unavailable the payload passes through unchanged
 		rather than the mirror silently writing nothing."""
@@ -1351,6 +1380,67 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 
 		self.assertEqual(payload, {"anything": 1})
 		self.assertEqual(dropped, set())
+
+
+class TestALongFilterIsSplitAcrossRequests(_RunnerTestCase):
+	"""`Employee Checkin: remote rejected the read (status=400)`.
+
+	Employee Checkin has no company field, so it is scoped by the employees the
+	Employee pass just mirrored — and that list goes into the GET query string. At
+	116 employees it worked and the doctype reached parity; at 289 the request line
+	grew past what the remote's proxy accepts and every checkin stopped arriving.
+
+	400 is not transient and not retryable, so it would simply have stayed broken
+	as the mirror got healthier — the worst kind of failure, the one that arrives
+	with success.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_a_short_filter_is_sent_as_one_request(self):
+		chunks = list(runner._split_filters({"employee": ("in", ["a", "b"])}))
+		self.assertEqual(chunks, [{"employee": ("in", ["a", "b"])}])
+
+	def test_a_long_filter_is_split(self):
+		names = [f"HR-EMP-{i:05d}" for i in range(250)]
+
+		chunks = list(runner._split_filters({"employee": ("in", names)}))
+
+		self.assertGreater(len(chunks), 1)
+		self.assertLessEqual(max(len(c["employee"][1]) for c in chunks), runner.MAX_FILTER_VALUES)
+
+	def test_splitting_loses_nobody(self):
+		names = [f"HR-EMP-{i:05d}" for i in range(250)]
+
+		rebuilt = [n for chunk in runner._split_filters({"employee": ("in", names)}) for n in chunk["employee"][1]]
+
+		self.assertEqual(rebuilt, names)
+
+	def test_other_filters_ride_along_on_every_chunk(self):
+		names = [f"HR-EMP-{i:05d}" for i in range(150)]
+
+		chunks = list(runner._split_filters({"employee": ("in", names), "modified": (">", "2026-01-01")}))
+
+		self.assertTrue(all(c["modified"] == (">", "2026-01-01") for c in chunks))
+
+	def test_every_chunk_is_actually_requested(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		for i in range(runner.MAX_FILTER_VALUES + 5):
+			self.store.tables.setdefault("Employee", {})[f"HR-EMP-{i:05d}"] = {
+				"name": f"HR-EMP-{i:05d}",
+				"company": "Acme",
+				runner.PROVENANCE_FIELD: "nasty-live",
+			}
+		client = self.client({"Employee Checkin": []})
+
+		runner.sync_doctype(
+			client,
+			"Employee Checkin",
+			filters=runner.scope_filter("Employee Checkin", ["Acme"], "nasty-live"),
+		)
+
+		checkin_calls = [c for c in client.calls if c["doctype"] == "Employee Checkin"]
+		self.assertGreaterEqual(len(checkin_calls), 2, "a long employee list must be split")
 
 
 class TestSyncRunsInTheBackground(unittest.TestCase):
