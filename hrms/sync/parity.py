@@ -80,6 +80,120 @@ def _local_count(doctype: str, company: str | None, instance_name: str) -> int:
 	return frappe.db.count(doctype, filters)
 
 
+#: HR doctypes this mirror does NOT carry, surveyed by `source_inventory` so the
+#: decision to add one is made against a row count rather than an argument.
+#:
+#: Payroll is the reason this exists. Whether the hub must mirror salary
+#: structures and slips is a scope question nobody could answer, and the answer
+#: was always sitting on the source as a number. A doctype holding 0 rows is not
+#: a gap however important it sounds; one holding thousands is not optional
+#: however inconvenient.
+UNMIRRORED_CANDIDATES = (
+	# Payroll
+	"Salary Structure",
+	"Salary Structure Assignment",
+	"Salary Slip",
+	"Payroll Entry",
+	"Payroll Period",
+	"Income Tax Slab",
+	"Additional Salary",
+	"Employee Benefit Application",
+	"Gratuity",
+	# Leave documents — deliberately excluded from the mirror because their
+	# `on_submit` would double every balance, but their VOLUME still tells you how
+	# much history stays behind on the source at cutover.
+	"Leave Allocation",
+	"Leave Application",
+	"Leave Policy",
+	"Leave Policy Assignment",
+	"Leave Period",
+	"Leave Encashment",
+	# Org structure and lifecycle
+	"Department",
+	"Employee Onboarding",
+	"Employee Separation",
+	"Employee Promotion",
+	"Employee Transfer",
+	"Employee Grievance",
+	# Expenses and claims
+	"Expense Claim",
+	"Employee Advance",
+	"Travel Request",
+	# Performance and recruitment
+	"Appraisal",
+	"Appraisal Cycle",
+	"Job Opening",
+	"Job Applicant",
+	"Interview",
+	# Attendance adjacents
+	"Attendance Request",
+	"Shift Request",
+	"Employee Attendance Tool",
+	"Upload Attendance",
+)
+
+
+@frappe.whitelist()
+def source_survey(instance_name: str) -> dict:
+	"""What the source holds that this hub does not mirror. Read-only.
+
+	The whitelisted entry point for `source_inventory` — see there for why this
+	exists rather than a discussion.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	from hrms.sync.client import RemoteInstanceClient
+
+	return source_inventory(RemoteInstanceClient(instance_name))
+
+
+def source_inventory(client, doctypes=None) -> dict:
+	"""Count each unmirrored candidate on the source, and sort them by what to do.
+
+	Four buckets, because four different decisions follow:
+
+	* `has_data` — rows exist over there and do not exist here. The only bucket
+	  that is a gap, ordered by size so the argument starts with the biggest one.
+	* `empty` — the doctype exists and nobody uses it. Not a gap; mirroring it
+	  would be work for nothing.
+	* `not_on_source` — an older HRMS over there has no such concept. Nothing to
+	  bring, and nothing to fix.
+	* `unreadable` — the API user cannot read it. Not an answer, a permission to
+	  grant before the survey means anything.
+
+	Never raises for a data reason: an unreachable doctype is reported so the rest
+	of the survey still stands.
+	"""
+	has_data, empty, absent, unreadable = [], [], [], []
+
+	for doctype in doctypes or UNMIRRORED_CANDIDATES:
+		try:
+			rows = client.count(doctype)
+		except Exception as e:
+			if getattr(e, "status_code", None) == 404:
+				absent.append(doctype)
+			else:
+				unreadable.append({"doctype": doctype, "error": str(e)})
+			continue
+		(has_data if rows else empty).append({"doctype": doctype, "rows": rows})
+
+	has_data.sort(key=lambda row: row["rows"], reverse=True)
+	logger.info(
+		"[parity] %s survey: %s with data, %s empty, %s absent, %s unreadable",
+		client.instance_name,
+		len(has_data),
+		len(empty),
+		len(absent),
+		len(unreadable),
+	)
+	return {
+		"instance": client.instance_name,
+		"has_data": has_data,
+		"empty": [row["doctype"] for row in empty],
+		"not_on_source": absent,
+		"unreadable": unreadable,
+	}
+
+
 def compare_doctype(client, doctype: str, company: str | None = None, remote_filters=None) -> ParityLine:
 	"""Compare one doctype. A remote failure becomes a reported error, not a raise —
 	a single unreachable doctype must not hide the parity of the others.

@@ -218,6 +218,67 @@ class TestADoctypeTheSourceDoesNotHave(unittest.TestCase):
 		self.assertIsNotNone(line.error)
 
 
+class TestWhatElseIsOnTheSource(unittest.TestCase):
+	"""Turns "what are we still not bringing across?" into a number.
+
+	Every gap this migration has hit was argued about before it was measured —
+	payroll most of all. The mirror carries 13 doctypes; the source has more, and
+	the only honest way to decide whether a doctype matters is to ask how many rows
+	it holds over there. A doctype with 0 rows is not a gap, however important it
+	sounds.
+
+	Read-only, and tolerant: a source that lacks a doctype answers 404, and a user
+	who cannot read it answers 403. Neither is a failure of the survey — both are
+	part of the answer.
+	"""
+
+	def test_it_counts_only_doctypes_the_mirror_does_not_carry(self):
+		mod = _load(_FakeDB())
+		self.assertTrue(mod.UNMIRRORED_CANDIDATES)
+		for doctype in mod.UNMIRRORED_CANDIDATES:
+			self.assertNotIn(doctype, mod.MIRRORED_DOCTYPES)
+
+	def test_a_doctype_with_rows_is_reported_as_a_gap(self):
+		mod = _load(_FakeDB())
+		client = _FakeClient({"Salary Structure": 12})
+
+		report = mod.source_inventory(client, doctypes=["Salary Structure"])
+
+		self.assertEqual(report["has_data"], [{"doctype": "Salary Structure", "rows": 12}])
+		self.assertEqual(report["empty"], [])
+
+	def test_an_empty_doctype_is_not_a_gap(self):
+		"""The whole point — payroll nobody uses is not payroll we have to mirror."""
+		mod = _load(_FakeDB())
+
+		report = mod.source_inventory(_FakeClient({"Salary Slip": 0}), doctypes=["Salary Slip"])
+
+		self.assertEqual(report["has_data"], [])
+		self.assertEqual(report["empty"], ["Salary Slip"])
+
+	def test_a_doctype_the_source_lacks_is_reported_separately(self):
+		"""Not a gap and not an error: that source simply has no such concept."""
+		mod = _load(_FakeDB())
+
+		class _Absent(_FakeClient):
+			def count(self, doctype, filters=None):
+				error = RuntimeError("remote rejected the read (status=404)")
+				error.status_code = 404
+				raise error
+
+		report = mod.source_inventory(_Absent({}), doctypes=["Gratuity"])
+
+		self.assertEqual(report["not_on_source"], ["Gratuity"])
+
+	def test_an_unreadable_doctype_is_named_rather_than_swallowed(self):
+		mod = _load(_FakeDB())
+
+		report = mod.source_inventory(_FakeClient({}, fail={"Salary Slip"}), doctypes=["Salary Slip"])
+
+		self.assertEqual(len(report["unreadable"]), 1)
+		self.assertEqual(report["unreadable"][0]["doctype"], "Salary Slip")
+
+
 class TestCutoverReadiness(unittest.TestCase):
 	def setUp(self):
 		self.mod = _load(_FakeDB())

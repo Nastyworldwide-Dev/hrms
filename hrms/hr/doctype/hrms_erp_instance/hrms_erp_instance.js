@@ -10,8 +10,59 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Pull Companies from Source"), () => pull_companies(frm));
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
+		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
 	},
 });
+
+function survey_source(frm) {
+	// Counts every HR doctype the mirror does NOT carry. Turns "should we also
+	// bring payroll?" into a row count instead of an argument — a doctype holding
+	// nothing is not a gap however important it sounds.
+	console.info("[HRMSERPInstance] surveying unmirrored doctypes on", frm.doc.name);
+	frappe.call({
+		method: "hrms.sync.parity.source_survey",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Counting what the source holds…"),
+		callback: (r) => report_survey(r.message || {}),
+		error: (e) => console.warn("[HRMSERPInstance] survey failed:", e),
+	});
+}
+
+function report_survey(report) {
+	const esc = frappe.utils.escape_html;
+	const gaps = report.has_data || [];
+
+	console.info("[HRMSERPInstance] survey:", gaps.length, "doctype(s) with data not mirrored");
+
+	const rows = gaps
+		.map(
+			(line) =>
+				`<tr><td>${esc(line.doctype)}</td><td style="text-align:right">${line.rows}</td></tr>`,
+		)
+		.join("");
+
+	const aside = (label, list) =>
+		(list || []).length
+			? `<p class="text-muted">${label}: ${list.map((x) => esc(x.doctype || x)).join(", ")}</p>`
+			: "";
+
+	frappe.msgprint({
+		title: gaps.length ? __("Not mirrored, and not empty") : __("Nothing left behind"),
+		indicator: gaps.length ? "orange" : "green",
+		message:
+			(gaps.length
+				? `<table class="table table-bordered" style="margin:0">
+						<thead><tr><th>${__("Doctype")}</th><th style="text-align:right">${__("Rows on source")}</th></tr></thead>
+						<tbody>${rows}</tbody>
+					</table>
+					<p>${__("These exist on the source and are not brought across. Largest first — that is the order worth arguing about.")}</p>`
+				: `<p>${__("Every unmirrored doctype checked is empty on the source.")}</p>`) +
+			aside(__("Empty over there"), report.empty) +
+			aside(__("Not on that source at all"), report.not_on_source) +
+			aside(__("Could not read — grant the API user access first"), report.unreadable),
+	});
+}
 
 function check_parity(frm) {
 	// Reads both sides and writes to neither. This is the number that says whether
