@@ -34,6 +34,9 @@ MIRRORED_DOCTYPES = (
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
+	"Holiday List Assignment",
+	"Shift Schedule Assignment",
+	"Shift Assignment",
 )
 
 

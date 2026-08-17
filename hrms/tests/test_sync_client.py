@@ -181,10 +181,17 @@ class _ClientTestCase(unittest.TestCase):
 
 
 class TestReadOnlyByConstruction(_ClientTestCase):
-	def test_only_two_public_methods_exist(self):
-		"""Adding any third public method is a deliberate, visible change."""
+	def test_the_public_surface_is_exactly_these_three_readers(self):
+		"""Adding any fourth public method is a deliberate, visible change.
+
+		`get_doc` was the third, added because `get_list` structurally cannot see a
+		child table — `/api/resource/<doctype>` routes to `frappe.client.get_list`,
+		which selects parent columns only. A Holiday List fetched through the list
+		endpoint arrives with no holidays in it, and an empty holiday calendar does
+		not fail: it silently counts every weekend as a working day.
+		"""
 		public = {name for name in dir(sc.RemoteInstanceClient) if not name.startswith("_")}
-		self.assertEqual(public, {"get_list", "count"})
+		self.assertEqual(public, {"get_list", "get_doc", "count"})
 
 	def test_module_never_names_a_write_verb_on_requests(self):
 		source = MODULE_PATH.read_text(encoding="utf-8")
@@ -205,6 +212,59 @@ class TestReadOnlyByConstruction(_ClientTestCase):
 		self.queue(_FakeResponse(200, {"data": [{"name": "HR-EMP-001"}]}))
 		self.client().get_list("Employee")
 		self.assertEqual(len(self.requests.calls), 1)
+
+
+class TestSingleDocumentReads(_ClientTestCase):
+	"""`get_doc` exists for one reason: child tables.
+
+	`/api/resource/<doctype>` is `frappe.client.get_list` and returns parent
+	columns only, even with `fields=["*"]`. `/api/resource/<doctype>/<name>` builds
+	a real Document and serialises its children with it. Holiday List keeps its
+	holidays there, Shift Type its breaks — mirroring either through the list
+	endpoint produces a record that looks complete and is empty where it counts.
+	"""
+
+	def test_it_hits_the_single_document_route(self):
+		self.queue(
+			_FakeResponse(200, {"data": {"name": "2026 MY", "holidays": [{"holiday_date": "2026-01-01"}]}})
+		)
+
+		self.client().get_doc("Holiday List", "2026 MY")
+
+		url = self.requests.calls[0]["url"]
+		self.assertTrue(url.endswith("/api/resource/Holiday%20List/2026%20MY"), url)
+
+	def test_it_returns_the_child_rows(self):
+		self.queue(
+			_FakeResponse(200, {"data": {"name": "2026 MY", "holidays": [{"holiday_date": "2026-01-01"}]}})
+		)
+
+		doc = self.client().get_doc("Holiday List", "2026 MY")
+
+		self.assertEqual(doc["holidays"], [{"holiday_date": "2026-01-01"}])
+
+	def test_a_name_with_a_slash_cannot_escape_the_route(self):
+		"""Document names are user data. An unencoded "/" would rewrite the path."""
+		self.queue(_FakeResponse(200, {"data": {}}))
+
+		self.client().get_doc("Holiday List", "2026/MY")
+
+		self.assertIn("2026%2FMY", self.requests.calls[0]["url"])
+		self.assertNotIn("2026/MY", self.requests.calls[0]["url"])
+
+	def test_a_missing_document_is_an_error_not_an_empty_dict(self):
+		"""Silently mirroring {} would blank the local row."""
+		self.queue(_FakeResponse(404, {}))
+
+		with self.assertRaises(sc.RemoteInstanceError):
+			self.client().get_doc("Holiday List", "nope")
+
+	def test_it_requires_both_arguments(self):
+		client = self.client()
+		for doctype, name in (("", "x"), ("Holiday List", "")):
+			with self.assertRaises(ValueError):
+				client.get_doc(doctype, name)
+		self.assertEqual(self.requests.calls, [])
 
 
 class TestCredentialsFromDoctype(_ClientTestCase):

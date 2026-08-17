@@ -4,7 +4,8 @@ Used by the one-way shadow sync (nasty-live -> verifica-live). The remote is
 **live production for ten companies**, so the non-negotiable property of this
 module is that it can never write to it:
 
-* the class exposes exactly two public data methods, `get_list` and `count`;
+* the class exposes exactly three public data methods — `get_list`, `get_doc`
+  and `count` — every one of them a read;
 * every request funnels through `_request`, which refuses any HTTP method other
   than GET before a socket is opened;
 * the actual call is a hard-coded `requests.get` — there is no code path in this
@@ -262,6 +263,33 @@ class RemoteInstanceClient:
 
 		logger.info("[sync] %s %s -> %s rows", self.instance_name, endpoint, len(rows))
 		return rows
+
+	def get_doc(self, doctype: str, name: str) -> dict:
+		"""One full document from the remote, child tables included.
+
+		`get_list` structurally cannot return them: `/api/resource/<doctype>` is
+		`frappe.client.get_list`, which selects parent columns and nothing else, even
+		with `fields=["*"]`. The single-document route builds a real Document and
+		serialises its children with it.
+
+		That difference is not cosmetic. A Holiday List keeps its dates in the
+		`holidays` child table and a Shift Type its `breaks` — mirrored through the
+		list endpoint each arrives looking complete and empty exactly where it
+		counts. An empty holiday calendar does not fail; it silently counts every
+		weekend and public holiday as a working day.
+
+		`name` is user data, so it is path-encoded with no safe characters: an
+		unescaped "/" in a document name would otherwise rewrite the route.
+		"""
+		if not doctype:
+			raise ValueError("doctype is required")
+		if not name:
+			raise ValueError("name is required")
+
+		endpoint = f"/api/resource/{quote(doctype)}/{quote(str(name), safe='')}"
+		document = self._get(endpoint, {}).get("data") or {}
+		logger.info("[sync] %s %s -> %s field(s)", self.instance_name, endpoint, len(document))
+		return document
 
 	def count(self, doctype: str, filters=None) -> int:
 		"""How many `doctype` rows match on the remote."""

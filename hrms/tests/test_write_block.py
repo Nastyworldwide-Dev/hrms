@@ -196,6 +196,22 @@ class TestHooksWiring(unittest.TestCase):
 			"on_trash",
 			"before_rename",
 		),
+		"Holiday List Assignment": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		"Shift Assignment": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
+		# Not submittable: no update-after-submit or cancel path exists to guard.
+		"Shift Schedule Assignment": ("validate", "on_trash", "before_rename"),
 	}
 
 	def _events_carrying_guard(self, doctype):

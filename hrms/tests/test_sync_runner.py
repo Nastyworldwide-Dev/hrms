@@ -585,12 +585,16 @@ class TestMastersAreMirroredSoLinksResolve(_RunnerTestCase):
 		self.assertNotIn("designation", runner.ROW_DEPENDENCIES.get("Employee", {}))
 		self.assertNotIn("grade", runner.ROW_DEPENDENCIES.get("Employee", {}))
 
-	def test_a_department_or_holiday_list_is_never_mirrored(self):
-		"""Both would corrupt rather than merely dangle — Department is a NestedSet
-		whose lft/rgt belong to the source's tree, and a Holiday List arrives
-		without its holidays because /api/resource omits child tables."""
+	def test_department_is_never_mirrored(self):
+		"""It would CORRUPT rather than merely dangle: Department is a NestedSet and
+		its `lft`/`rgt` describe a position in the SOURCE's tree, so writing them
+		here leaves a tree that is wrong on both sides.
+
+		Holiday List used to be excluded alongside it for a weaker reason — the list
+		endpoint cannot see a child table — which was a limit of how we were reading,
+		not of what could safely be written. `client.get_doc` removed it.
+		"""
 		self.assertNotIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
-		self.assertNotIn("Holiday List", runner.DEFAULT_SYNC_DOCTYPES)
 
 
 class TestThePullIsScopedToTheServedCompanies(_RunnerTestCase):
@@ -878,6 +882,192 @@ class TestRunSyncEndpointIsPostOnly(unittest.TestCase):
 						methods = [element.value for element in keyword.value.elts]
 
 		self.assertEqual(methods, ["POST"], "run_sync must be POST-only (SEC-03)")
+
+
+class TestChildTablesArriveWithTheirParent(_RunnerTestCase):
+	"""A Holiday List with no holidays in it is worse than no Holiday List.
+
+	`get_list` returns parent columns only, so a calendar mirrored through it
+	arrives looking complete and empty exactly where it counts — and an empty
+	calendar does not raise. It silently counts every weekend and public holiday
+	as a working day, in leave arithmetic and in attendance alike.
+
+	These doctypes are therefore re-read one at a time through the single-document
+	endpoint. They are low-cardinality policy records — a handful of calendars and
+	shift patterns per company — so N+1 requests is the cheap half of the trade.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	REMOTE_LIST: ClassVar[list] = [{"name": "2026 MY", "modified": "2026-08-01 09:00:00"}]
+	FULL_DOC: ClassVar[dict] = {
+		"name": "2026 MY",
+		"holiday_list_name": "2026 MY",
+		"from_date": "2026-01-01",
+		"to_date": "2026-12-31",
+		"holidays": [{"holiday_date": "2026-01-01", "description": "New Year"}],
+	}
+
+	def client(self, remote=None, fail_for=()):
+		client = super().client(remote or {"Holiday List": self.REMOTE_LIST}, fail_for)
+		client.docs = {("Holiday List", "2026 MY"): dict(self.FULL_DOC)}
+		client.doc_calls = []
+
+		def get_doc(doctype, name):
+			client.doc_calls.append((doctype, name))
+			return dict(client.docs.get((doctype, name), {}))
+
+		client.get_doc = get_doc
+		return client
+
+	def test_the_full_document_is_fetched_for_a_child_table_doctype(self):
+		client = self.client()
+
+		runner.sync_doctype(client, "Holiday List")
+
+		self.assertEqual(client.doc_calls, [("Holiday List", "2026 MY")])
+
+	def test_the_child_rows_are_written(self):
+		runner.sync_doctype(self.client(), "Holiday List")
+
+		row = self.store.rows("Holiday List")["2026 MY"]
+		self.assertEqual(len(row["holidays"]), 1)
+		self.assertEqual(row["holidays"][0]["holiday_date"], "2026-01-01")
+
+	def test_source_bookkeeping_is_stripped_from_child_rows(self):
+		"""A child row carrying the source's `name`/`parent` would be inserted under
+		another instance's identifiers and belong to nothing here."""
+		payload = runner._mirror_payload(
+			{
+				"name": "2026 MY",
+				"holidays": [
+					{
+						"name": "abc123",
+						"parent": "2026 MY",
+						"parenttype": "Holiday List",
+						"owner": "someone@source",
+						"creation": "2020-01-01",
+						"docstatus": 0,
+						"idx": 1,
+						"holiday_date": "2026-01-01",
+					}
+				],
+			},
+			"nasty-live",
+			"Holiday List",
+		)
+
+		child = payload["holidays"][0]
+		self.assertEqual(child["holiday_date"], "2026-01-01")
+		# `idx` goes too: Frappe numbers children from the list order on insert, and
+		# the source's numbering would only be authoritative until a row is dropped.
+		for stripped in ("name", "parent", "parenttype", "owner", "creation", "docstatus", "idx"):
+			self.assertNotIn(stripped, child)
+
+	def test_child_row_order_is_preserved(self):
+		"""Ordering has to come from somewhere once `idx` is stripped — the list."""
+		payload = runner._mirror_payload(
+			{
+				"name": "2026 MY",
+				"holidays": [
+					{"idx": 1, "holiday_date": "2026-01-01"},
+					{"idx": 2, "holiday_date": "2026-02-01"},
+				],
+			},
+			"nasty-live",
+			"Holiday List",
+		)
+
+		self.assertEqual(
+			[child["holiday_date"] for child in payload["holidays"]], ["2026-01-01", "2026-02-01"]
+		)
+
+	def test_a_doctype_without_child_tables_is_never_re_fetched(self):
+		"""N+1 is paid only where a child table makes it necessary."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": EMPLOYEES})
+		client.docs = {}
+
+		runner.sync_doctype(client, "Employee")
+
+		self.assertEqual(client.doc_calls, [])
+
+	def test_every_child_table_doctype_is_actually_mirrored(self):
+		"""A doctype listed for the expensive path but never pulled is dead config."""
+		for doctype in runner.CHILD_TABLE_DOCTYPES:
+			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+
+
+class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
+	"""What an employee record needs before HR can be done here rather than on the
+	source ERP.
+
+	The gap this closes: leave application THREW on the hub — `get_holidays` ->
+	`get_holiday_dates_between_range` defaults to `raise_exception=True`, and no
+	`Holiday List Assignment` existed for any mirrored employee or their company.
+	Roster and charts pass `raise_exception=False` and so returned no holidays at
+	all, silently. Shift planning had nothing to plan with.
+	"""
+
+	def test_holiday_policy_is_mirrored(self):
+		for doctype in ("Holiday List", "Holiday List Assignment"):
+			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+
+	def test_shift_planning_is_mirrored(self):
+		for doctype in ("Shift Type", "Shift Schedule", "Shift Schedule Assignment", "Shift Assignment"):
+			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+
+	def test_policy_records_are_hr_owned_and_operational_rows_are_not(self):
+		"""The authority split. A calendar or a shift pattern is policy: seeded once,
+		then owned here, so an HR edit survives every later run. A per-employee
+		assignment is operational: stamped, and superseded by adding a newer record
+		rather than by mutating a mirrored one — which is what keeps provenance and
+		parity honest.
+		"""
+		for policy in ("Holiday List", "Shift Type", "Shift Schedule"):
+			self.assertIn(policy, runner.CREATE_ONLY_DOCTYPES)
+		for operational in ("Holiday List Assignment", "Shift Assignment", "Shift Schedule Assignment"):
+			self.assertIn(operational, runner.STAMPED_DOCTYPES)
+			self.assertNotIn(operational, runner.CREATE_ONLY_DOCTYPES)
+
+	def test_an_hr_edit_to_a_mirrored_calendar_survives_the_next_run(self):
+		"""The whole point of create-only for policy: HR changes a holiday here and
+		the mirror does not quietly put the source's version back."""
+		self.seed_parent("Holiday List", "2026 MY", holiday_list_name="2026 MY", to_date="2026-12-30")
+		client = self.client({"Holiday List": [{"name": "2026 MY", "to_date": "2026-12-31"}]})
+		client.get_doc = lambda doctype, name: {"name": "2026 MY", "to_date": "2026-12-31"}
+
+		result = runner.sync_doctype(client, "Holiday List")
+
+		self.assertEqual(result["skipped"], 1)
+		self.assertEqual(self.store.rows("Holiday List")["2026 MY"]["to_date"], "2026-12-30")
+
+	def test_shift_rows_declare_their_parents(self):
+		"""A shift assignment whose employee or shift type never landed would point
+		at nothing; `ignore_links=True` means nothing objects at write time."""
+		self.assertEqual(
+			runner.ROW_DEPENDENCIES["Shift Assignment"],
+			{"employee": "Employee", "shift_type": "Shift Type"},
+		)
+		self.assertEqual(
+			runner.ROW_DEPENDENCIES["Shift Schedule Assignment"],
+			{"employee": "Employee", "shift_schedule": "Shift Schedule"},
+		)
+		self.assertEqual(runner.ROW_DEPENDENCIES["Holiday List Assignment"], {"holiday_list": "Holiday List"})
+
+	def test_masters_precede_the_assignments_that_point_at_them(self):
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertLess(order.index("Holiday List"), order.index("Holiday List Assignment"))
+		self.assertLess(order.index("Shift Type"), order.index("Shift Assignment"))
+		self.assertLess(order.index("Shift Schedule"), order.index("Shift Schedule Assignment"))
+		self.assertLess(order.index("Employee"), order.index("Shift Assignment"))
+
+	def test_shift_rows_are_scoped_to_the_served_companies(self):
+		"""Both carry `company`, so neither needs the employee-list fallback."""
+		for doctype in ("Shift Assignment", "Shift Schedule Assignment"):
+			self.assertEqual(
+				runner.scope_filter(doctype, ["Acme"], "nasty-live"), {"company": ("in", ["Acme"])}
+			)
 
 
 class TestSyncRunsInTheBackground(unittest.TestCase):

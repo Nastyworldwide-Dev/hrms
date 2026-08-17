@@ -393,6 +393,32 @@ doc_events = {
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
+	# Holiday policy and shift planning. The MASTERS these point at — Holiday List,
+	# Shift Type, Shift Schedule — are deliberately NOT guarded: they are mirrored
+	# create-only and owned by HR here, so a policy change made on this hub must be
+	# allowed and must survive the next run. The per-employee ASSIGNMENTS are the
+	# mirror proper, and a policy change supersedes one by adding a newer record
+	# rather than by editing a mirrored one — which is what keeps parity honest.
+	"Holiday List Assignment": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	"Shift Assignment": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	# Not submittable, so it has no update-after-submit or cancel path to guard.
+	"Shift Schedule Assignment": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
 	"Remote Checkin Request": {
 		"on_update": "hrms.overrides.remote_checkin_request_hooks.propagate_approval_decision",
 	},

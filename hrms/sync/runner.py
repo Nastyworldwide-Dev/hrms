@@ -82,21 +82,23 @@ PROVENANCE_FIELD = "synced_from_instance"
 #: so a Leave Type whose flags HR has tuned here — and those flags drive balance
 #: arithmetic — is never reverted to the source's copy.
 #:
-#: Two are deliberately absent, because they would CORRUPT rather than dangle:
+#: `Holiday List`, `Shift Type` and `Shift Schedule` carry child tables, so they
+#: are re-read one at a time through `client.get_doc` — see `CHILD_TABLE_DOCTYPES`.
+#: A calendar mirrored without its `holidays` does not fail; it silently counts
+#: every weekend and public holiday as a working day.
 #:
-#: * `Department` is a NestedSet. Its `lft`/`rgt` describe a position in the
-#:   SOURCE's tree; writing them here produces a tree that is wrong on both sides.
-#: * `Holiday List` keeps its holidays in a child table, and `/api/resource` does
-#:   not return child tables even with `fields=["*"]`. It would arrive as an empty
-#:   calendar, and an empty calendar does not fail — it silently miscomputes
-#:   attendance and leave.
-#:
-#: A dangling link is visible and recoverable. Either of those is neither.
+#: `Department` remains deliberately absent, because it would CORRUPT rather than
+#: dangle: it is a NestedSet, and its `lft`/`rgt` describe a position in the
+#: SOURCE's tree. Writing them here produces a tree that is wrong on both sides.
+#: A dangling link is visible and recoverable; that is not.
 MASTER_DOCTYPES = (
 	"Leave Type",
 	"Designation",
 	"Branch",
 	"Employee Grade",
+	"Holiday List",
+	"Shift Type",
+	"Shift Schedule",
 )
 
 #: The mirror proper: stamped with provenance, held read-only by
@@ -108,6 +110,9 @@ STAMPED_DOCTYPES = (
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
+	"Holiday List Assignment",
+	"Shift Schedule Assignment",
+	"Shift Assignment",
 )
 
 #: What a run pulls, in order: every master before every row that links to one.
@@ -126,6 +131,13 @@ ROW_DEPENDENCIES = {
 	"Attendance": {"employee": "Employee"},
 	"Employee Checkin": {"employee": "Employee"},
 	"Leave Ledger Entry": {"employee": "Employee"},
+	# `assigned_to` is a Dynamic Link (Employee OR Company) and cannot be declared
+	# here, which is fine: the calendar is the link that matters. An assignment
+	# pointing at a Holiday List this site does not have resolves to no holidays,
+	# and no holidays is the silent-wrong-answer this whole group exists to end.
+	"Holiday List Assignment": {"holiday_list": "Holiday List"},
+	"Shift Schedule Assignment": {"employee": "Employee", "shift_schedule": "Shift Schedule"},
+	"Shift Assignment": {"employee": "Employee", "shift_type": "Shift Type"},
 }
 
 
@@ -161,6 +173,9 @@ SYNC_DEPENDENCIES = {
 	# still writes, and then reports a balance against a type this site cannot
 	# name. Better to skip the pass and say so than to publish a nameless balance.
 	"Leave Ledger Entry": ("Employee", "Leave Type"),
+	"Holiday List Assignment": ("Holiday List",),
+	"Shift Schedule Assignment": ("Employee", "Shift Schedule"),
+	"Shift Assignment": ("Employee", "Shift Type"),
 }
 
 
@@ -252,6 +267,41 @@ _UNMIRRORED_FIELDS = frozenset(
 	}
 )
 
+#: Doctypes whose child tables are load-bearing, so each row is re-read through
+#: the single-document endpoint before it is written.
+#:
+#: `client.get_list` cannot see a child table at all — `/api/resource/<doctype>`
+#: is `frappe.client.get_list`, which selects parent columns only. Everything
+#: here is low-cardinality policy (a handful of calendars and shift patterns per
+#: company), so one extra request per row is the cheap half of the trade against
+#: mirroring a Holiday List with no holidays in it.
+CHILD_TABLE_DOCTYPES = frozenset({"Holiday List", "Shift Type", "Shift Schedule"})
+
+#: Framework bookkeeping stripped from every CHILD row, on top of the parent set.
+#:
+#: A child carrying the source's `name`/`parent` would be inserted under another
+#: instance's identifiers and belong to nothing here. `idx` goes with them
+#: (it is already in `_UNMIRRORED_FIELDS`): Frappe numbers children from the list
+#: order on insert, and the source's numbering would only stay authoritative
+#: until a row is dropped. Order therefore comes from the list, and only from it.
+_UNMIRRORED_CHILD_FIELDS = _UNMIRRORED_FIELDS | {
+	"name",
+	"parent",
+	"parenttype",
+	"parentfield",
+	"docstatus",
+}
+
+
+def _mirror_children(rows: list) -> list:
+	"""Child rows, scrubbed of the source's bookkeeping, in the source's order."""
+	return [
+		{key: value for key, value in row.items() if key not in _UNMIRRORED_CHILD_FIELDS}
+		for row in rows
+		if isinstance(row, dict)
+	]
+
+
 #: Fields this hub owns even on a mirrored row: the mirror neither writes nor
 #: overwrites them.
 #:
@@ -330,7 +380,19 @@ def _mirror_payload(row: dict, instance_name: str, doctype: str) -> dict:
 	if allowed:
 		payload = {k: row[k] for k in allowed if row.get(k) is not None}
 	else:
-		payload = {k: v for k, v in row.items() if k not in _UNMIRRORED_FIELDS and not isinstance(v, list)}
+		# Child tables are dropped except where they ARE the record: a Holiday List
+		# without its `holidays` is an empty calendar, and an empty calendar does
+		# not fail — it counts every weekend as a working day.
+		keep_children = doctype in CHILD_TABLE_DOCTYPES
+		payload = {}
+		for key, value in row.items():
+			if key in _UNMIRRORED_FIELDS:
+				continue
+			if isinstance(value, list):
+				if keep_children and value:
+					payload[key] = _mirror_children(value)
+				continue
+			payload[key] = value
 	payload.pop("name", None)
 
 	for field in LOCALLY_OWNED_FIELDS.get(doctype, ()):
@@ -444,7 +506,9 @@ def _count_local_orphans(doctype: str, instance_name: str, seen: set) -> int:
 
 #: Doctypes carrying a `company` Link the SOURCE can filter on directly.
 #: `Employee Checkin` is absent because it has no such field — see `scope_filter`.
-COMPANY_SCOPED_DOCTYPES = frozenset({"Employee", "Attendance", "Leave Ledger Entry"})
+COMPANY_SCOPED_DOCTYPES = frozenset(
+	{"Employee", "Attendance", "Leave Ledger Entry", "Shift Assignment", "Shift Schedule Assignment"}
+)
 
 #: An allow-list that filtered down to nothing must still be an allow-list. Sent
 #: as an empty `IN ()` it is a SQL error on the remote; dropped entirely it
@@ -537,6 +601,11 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				continue
 
 			seen.add(remote_name)
+
+			# The list endpoint cannot return child tables, so anything whose
+			# children are load-bearing is re-read in full before it is written.
+			if doctype in CHILD_TABLE_DOCTYPES:
+				row = client.get_doc(doctype, remote_name) or row
 
 			# Referential integrity, per row. Writing a row whose parent is absent
 			# is what produced 5,821 orphan attendance records and then 266 orphan
