@@ -97,6 +97,17 @@ MASTER_DOCTYPES = (
 	"Branch",
 	"Employee Grade",
 	"Holiday List",
+	# Before Shift Type, which links to it, and before every stamped doctype that
+	# does: Attendance, Employee Checkin and Shift Assignment all carry
+	# `overtime_type`. Without it the overtime rates resolve to nothing and the
+	# Replacement Leave bank the PWA shows has no rule behind it.
+	"Overtime Type",
+	# Employees arrive with `shift_location` set — "where this employee physically
+	# clocks in", per the field's own description, and the carrier of the
+	# `shift_rules` that drive automatic Shift Assignment. Mirrored without it,
+	# those employees pointed at a record this site did not have and the rules had
+	# nothing to run.
+	"Shift Location",
 	"Shift Type",
 	"Shift Schedule",
 )
@@ -284,7 +295,9 @@ _UNMIRRORED_FIELDS = frozenset(
 #: here is low-cardinality policy (a handful of calendars and shift patterns per
 #: company), so one extra request per row is the cheap half of the trade against
 #: mirroring a Holiday List with no holidays in it.
-CHILD_TABLE_DOCTYPES = frozenset({"Holiday List", "Shift Type", "Shift Schedule"})
+CHILD_TABLE_DOCTYPES = frozenset(
+	{"Holiday List", "Shift Type", "Shift Schedule", "Shift Location", "Overtime Type"}
+)
 
 #: Framework bookkeeping stripped from every CHILD row, on top of the parent set.
 #:
@@ -482,7 +495,7 @@ def _local_schema(doctype: str) -> tuple[set, dict]:
 	return columns, selects
 
 
-def _narrow_to_local_schema(doctype: str, payload: dict) -> tuple[dict, set]:
+def _narrow_to_local_schema(doctype: str, payload: dict, stamped=None, columns=None) -> tuple[dict, dict]:
 	"""Reduce a remote payload to what THIS site can actually store.
 
 	The source's Employee is not this site's Employee. Two shapes of drift, one
@@ -504,11 +517,27 @@ def _narrow_to_local_schema(doctype: str, payload: dict) -> tuple[dict, set]:
 	Fails open: if the schema cannot be read the payload passes through unchanged,
 	because writing nothing is worse than writing what we were given.
 	"""
-	try:
-		columns, selects = _local_schema(doctype)
-	except Exception as e:
-		_log().warning("[sync] could not read local schema for %s: %s", doctype, e)
-		return payload, {}
+	selects = {}
+	if columns is None:
+		try:
+			columns, selects = _local_schema(doctype)
+		except Exception as e:
+			_log().warning("[sync] could not read local schema for %s: %s", doctype, e)
+			return payload, {}
+
+	# The provenance stamp is the one column that must never be dropped quietly.
+	# On a site where `add_sync_provenance_fields` has not run it IS a column this
+	# site lacks, and narrowing it away lands every row unstamped: parity counts
+	# zero however many arrive, the write-block stops recognising mirrored rows
+	# and lets anyone edit them, and the orphan count sees nothing. Three
+	# guarantees broken at once, announced as a success. Failing loudly costs one
+	# run and names `bench migrate` as the fix.
+	is_stamped = doctype in STAMPED_DOCTYPES if stamped is None else stamped
+	if is_stamped and PROVENANCE_FIELD in payload and PROVENANCE_FIELD not in columns:
+		raise ValueError(
+			f"{doctype} has no {PROVENANCE_FIELD} column on this site — run `bench migrate` "
+			f"before syncing, or every mirrored row lands unstamped and unprotected"
+		)
 
 	narrowed, dropped = {}, {}
 	for field, value in payload.items():

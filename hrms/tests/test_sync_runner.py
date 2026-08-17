@@ -1204,6 +1204,63 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		self.assertIn("Attendance", result["failed"])
 
 
+class TestTheMastersThatCarryFunction(_RunnerTestCase):
+	"""Two of the senior's own doctypes were referenced by mirrored rows and never
+	brought across, so the features they drive were inert on the hub.
+
+	A link scan over every mirrored doctype found 21 targets the mirror does not
+	carry. Most are correctly absent — `User` is hub-owned, payroll is a separate
+	decision, request documents stay on the source. Two were not:
+
+	* `Overtime Type` — referenced by Shift Type, Attendance, Employee Checkin AND
+	  Shift Assignment. Without it, overtime rates resolve to nothing and the
+	  Replacement Leave bank the PWA shows has no rule behind it.
+	* `Shift Location` — carries a `shift_rules` child table described on the
+	  Employee form as "drives the automatic Shift Assignment rules". Employees
+	  arrived with `shift_location` set to a record that does not exist here, so
+	  the rules had nothing to run.
+
+	Both are flat, unsubmittable and free of lifecycle hooks, so they mirror as
+	create-only masters exactly like Holiday List — HR owns them here once seeded.
+	"""
+
+	def test_both_are_mirrored(self):
+		for doctype in ("Overtime Type", "Shift Location"):
+			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+			self.assertIn(doctype, runner.MASTER_DOCTYPES)
+
+	def test_they_precede_everything_that_links_to_them(self):
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		for dependent in ("Shift Type", "Employee", "Attendance", "Employee Checkin", "Shift Assignment"):
+			self.assertLess(order.index("Overtime Type"), order.index(dependent))
+		for dependent in ("Employee", "Shift Schedule Assignment", "Shift Assignment"):
+			self.assertLess(order.index("Shift Location"), order.index(dependent))
+
+	def test_shift_location_brings_its_rules(self):
+		"""`shift_rules` is the whole point — a Shift Location without them is a
+		label, and automatic shift assignment has nothing to act on."""
+		self.assertIn("Shift Location", runner.CHILD_TABLE_DOCTYPES)
+
+	def test_overtime_type_brings_its_components(self):
+		self.assertIn("Overtime Type", runner.CHILD_TABLE_DOCTYPES)
+
+	def test_they_are_hr_owned_once_seeded(self):
+		for doctype in ("Overtime Type", "Shift Location"):
+			self.assertIn(doctype, runner.CREATE_ONLY_DOCTYPES)
+			self.assertNotIn(doctype, runner.STAMPED_DOCTYPES)
+
+	def test_department_stays_out(self):
+		"""302 rows and a NestedSet. Its `lft`/`rgt` describe the SOURCE's tree, so
+		mirroring produces one that is wrong on both sides.
+
+		The cost is named rather than hidden: Department carries `leave_approvers`,
+		`expense_approvers` and `shift_request_approver`, so department-based
+		approver routing does not follow the employees across. Approvers on the
+		Employee record itself do.
+		"""
+		self.assertNotIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
+
+
 class TestHolidayAssignmentsAreDerivedNotMirrored(_RunnerTestCase):
 	"""A Holiday List Assignment is derived data, so mirroring it was the wrong
 	shape — and the wrong shape is what produced three workarounds.
@@ -1378,6 +1435,36 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 
 		self.assertIn("custom_reports_to_name", result["dropped_fields"])
 		self.assertNotIn("custom_reports_to_name (", " ".join(result["dropped_fields"]))
+
+	def test_the_provenance_stamp_is_never_narrowed_away(self):
+		"""The one drop that must never be silent.
+
+		Narrowing removes any column this site lacks — and on a site where
+		`add_sync_provenance_fields` has not run, `synced_from_instance` IS such a
+		column. Dropped quietly, every row lands unstamped: parity counts zero
+		however many arrive, the write-block stops recognising mirrored rows and
+		lets anyone edit them, and `_count_local_orphans` sees nothing. A silent
+		success that has broken three separate guarantees at once.
+
+		Loud is the only safe behaviour: the row fails, the run reports it, and
+		`bench migrate` is the fix.
+		"""
+		with self.assertRaises(Exception) as ctx:
+			runner._narrow_to_local_schema(
+				"Employee",
+				{"employee_name": "Aisha", runner.PROVENANCE_FIELD: "nasty-live"},
+				stamped=True,
+				columns={"employee_name"},
+			)
+
+		self.assertIn(runner.PROVENANCE_FIELD, str(ctx.exception))
+
+	def test_an_unstamped_doctype_is_unaffected(self):
+		"""Masters carry no stamp by design, so their payloads never contain one."""
+		payload, _dropped = runner._narrow_to_local_schema(
+			"Holiday List", {"holiday_list_name": "2026 MY"}
+		)
+		self.assertEqual(payload, {"holiday_list_name": "2026 MY"})
 
 	def test_a_child_table_is_never_mistaken_for_a_missing_column(self):
 		"""The regression this shipped with.
