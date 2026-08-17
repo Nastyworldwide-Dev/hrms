@@ -14,6 +14,7 @@ import logging
 
 import frappe
 
+from hrms.api import _ensure_own_employee_or_permitted
 from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,19 @@ def get_reporting_manager(employee: str | None = None) -> dict | None:
 	employee = employee or _current_employee()
 	if not employee:
 		return None
+
+	# Fenced BEFORE the lookup. `db.get_value` never consults the permission
+	# layer, so any signed-in employee could pass a colleague's id and receive
+	# that colleague's manager — `_CONTACT_FIELDS` includes `personal_email` and
+	# `cell_number`, and employee ids are sequential, so the whole reporting line
+	# was enumerable with personal phone numbers attached.
+	#
+	# The directory itself is not in question: `list_hr_contacts` publishes HR's
+	# cards to everyone on purpose. What was wrong was answering about SOMEBODY
+	# ELSE. Your own manager still resolves (the guard passes your own employee),
+	# HR and approvers still resolve anyone's (real read permission on Employee),
+	# and the PWA's no-argument call is unaffected.
+	_ensure_own_employee_or_permitted(employee)
 
 	reports_to = frappe.db.get_value("Employee", employee, "reports_to")
 	if not reports_to:

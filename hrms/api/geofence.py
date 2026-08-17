@@ -33,6 +33,7 @@ import logging
 import frappe
 from frappe.utils import get_datetime
 
+from hrms.api import _ensure_own_employee_or_permitted
 from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_company_setting_enabled
 from hrms.utils.geofence import evaluate_geofence
@@ -70,6 +71,19 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 		time: optional ISO datetime; defaults to now. Used to resolve which
 		      shift assignment is active.
 	"""
+	# Everything below reads through raw SQL and `db.get_value`, both of which
+	# bypass the document permission layer — so before this line, nothing in the
+	# call refused anybody. Measured rather than assumed: acting as a plain
+	# Employee-role user, this answered `{"ok": True, "mode": "ok"}` for a
+	# COLLEAGUE, which is a live answer to "is that person at their work site
+	# right now". Every other open read here leaked a fact about somebody; this
+	# one tracked them.
+	#
+	# Not self-only — the helper also passes anyone with real read permission on
+	# the Employee doc, so HR and approvers keep working. The PWA only ever asks
+	# about the signed-in user.
+	_ensure_own_employee_or_permitted(employee)
+
 	logger.info(
 		"[geofence.api] preflight employee=%s log_type=%s lat=%s lng=%s time=%s",
 		employee,
@@ -183,6 +197,11 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	"""
 	if not employee:
 		return None
+
+	# Same fence, same reason as check_geofence: the SQL below answers with a
+	# colleague's work coordinates — location_name, latitude, longitude, radius —
+	# and nothing in the query has any notion of who is asking.
+	_ensure_own_employee_or_permitted(employee)
 
 	# Resolve the shift as of the employee's own wall clock — a site clock in
 	# a different timezone matches the wrong shift near boundary hours.
