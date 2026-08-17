@@ -9,8 +9,69 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		// Employee whose company is absent here is skipped, not written.
 		frm.add_custom_button(__("Pull Companies from Source"), () => pull_companies(frm));
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
+		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 	},
 });
+
+function check_parity(frm) {
+	// Reads both sides and writes to neither. This is the number that says whether
+	// the data actually landed — an empty leave balance looks the same whether the
+	// sync never ran or ran and wrote nothing.
+	console.info("[HRMSERPInstance] checking parity against", frm.doc.name);
+	frappe.call({
+		method: "hrms.sync.parity.parity_check",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Counting rows on both sides…"),
+		callback: (r) => report_parity(r.message || {}),
+		error: (e) => console.warn("[HRMSERPInstance] parity check failed:", e),
+	});
+}
+
+function report_parity(report) {
+	const esc = frappe.utils.escape_html;
+	const lines = report.lines || [];
+	const clean = report.in_parity;
+
+	if (clean) console.info("[HRMSERPInstance] in full parity");
+	else console.warn("[HRMSERPInstance] parity variance:", report.mismatched, report.errored);
+
+	const rows = lines
+		.map((line) => {
+			const state = line.error
+				? `<span style="color:var(--red-500)">${esc(line.error)}</span>`
+				: line.delta === 0
+					? `<span style="color:var(--green-600)">${__("in parity")}</span>`
+					: `<span style="color:var(--orange-500)">${__("{0} missing here", [line.delta])}</span>`;
+			return `<tr>
+				<td>${esc(line.doctype)}</td>
+				<td style="text-align:right">${line.remote ?? "—"}</td>
+				<td style="text-align:right">${line.local ?? "—"}</td>
+				<td>${state}</td>
+			</tr>`;
+		})
+		.join("");
+
+	frappe.msgprint({
+		title: clean ? __("In parity") : __("Not in parity"),
+		indicator: clean ? "green" : "orange",
+		message:
+			`<table class="table table-bordered" style="margin:0">
+				<thead><tr>
+					<th>${__("Doctype")}</th>
+					<th style="text-align:right">${__("On source")}</th>
+					<th style="text-align:right">${__("Here")}</th>
+					<th>${__("State")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>` +
+			(clean
+				? `<p>${__("Every mirrored doctype matches the source.")}</p>`
+				: `<p>${__(
+						"A positive difference means rows have not landed here yet. Run a full sync; anything still missing afterwards is named in the run's error log.",
+					)}</p>`),
+	});
+}
 
 function sync_now(frm) {
 	frappe.confirm(

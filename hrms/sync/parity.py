@@ -128,6 +128,24 @@ def parity_report(client, company: str | None = None, doctypes=None) -> dict:
 	return report
 
 
+@frappe.whitelist()
+def parity_check(instance_name: str, company: str | None = None) -> dict:
+	"""Remote-vs-local row counts, per mirrored doctype. The gate, made reachable.
+
+	This module's entire purpose is to answer "did the data actually land?", and
+	until now the only way to get that answer was a bench console — which a Frappe
+	Cloud operator has not got. Somebody looking at an empty leave balance could not
+	tell a sync that never ran from one that ran and wrote nothing, and both look
+	identical from the Desk.
+
+	GET is correct here: it compares and never reconciles, on either side.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	from hrms.sync.client import RemoteInstanceClient
+
+	return parity_report(RemoteInstanceClient(instance_name), company=company)
+
+
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:
 	"""Apply the exit criterion to a sequence of runs, oldest first.
 

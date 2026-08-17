@@ -36,6 +36,8 @@ class _FakeDB:
 def _load(fake_db):
 	frappe_stub = types.ModuleType("frappe")
 	frappe_stub.db = fake_db
+	frappe_stub.whitelist = lambda *a, **kw: (lambda fn: fn)
+	frappe_stub.only_for = lambda *a, **kw: None
 	saved = sys.modules.get("frappe")
 	sys.modules["frappe"] = frappe_stub
 	try:
@@ -194,6 +196,40 @@ class TestGateCoversExactlyWhatIsMirrored(unittest.TestCase):
 			"parity.MIRRORED_DOCTYPES and runner.STAMPED_DOCTYPES have drifted; "
 			"the cutover gate must cover exactly what the sync stamps",
 		)
+
+
+class TestTheGateIsReachable(unittest.TestCase):
+	"""The number that authorises cutover has to be obtainable by the person who
+	needs it.
+
+	This module's whole purpose is to answer "did the data actually land?" — and
+	`parity_report` was whitelisted nowhere and had no button, so the only way to
+	get the answer was a bench console. An operator staring at an empty leave
+	balance could not tell a sync that never ran from one that ran and wrote
+	nothing.
+	"""
+
+	def test_parity_check_is_whitelisted(self):
+		import ast
+
+		tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+		functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+		self.assertIn("parity_check", functions, "parity has no whitelisted entry point")
+
+		decorators = [
+			d for d in functions["parity_check"].decorator_list
+		]
+		self.assertTrue(decorators, "parity_check is not whitelisted")
+
+	def test_parity_check_is_read_only_on_both_sides(self):
+		"""It compares; it must never reconcile. A gate that writes is not a gate."""
+		source = MODULE_PATH.read_text(encoding="utf-8")
+		for writer in ("set_value", "insert(", "delete_doc", "db.sql"):
+			self.assertNotIn(writer, source, f"parity must not write: found {writer}")
+
+	def test_it_refuses_callers_who_are_not_hr(self):
+		source = MODULE_PATH.read_text(encoding="utf-8")
+		self.assertIn("only_for", source)
 
 
 if __name__ == "__main__":
