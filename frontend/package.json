@@ -10,7 +10,8 @@
 		"build": "vite build --base=/assets/hrms/frontend/ && yarn copy-html-entry",
 		"ionic:build": "npm run build",
 		"ionic:serve": "vite dev --host",
-		"copy-html-entry": "cp ../hrms/public/frontend/index.html ../hrms/www/hrms.html"
+		"copy-html-entry": "cp ../hrms/public/frontend/index.html ../hrms/www/hrms.html",
+		"test:e2e": "playwright test --config=e2e/playwright.config.js"
 	},
 	"dependencies": {
 		"@ionic/vue": "^7.4.3",
@@ -33,6 +34,7 @@
 		"workbox-precaching": "^7.0.0"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.62.1",
 		"eslint": "^8.39.0",
 		"eslint-plugin-vue": "^9.11.0",
 		"patch-package": "^8.0.1",

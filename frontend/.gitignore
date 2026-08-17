@@ -4,3 +4,8 @@ dev-dist
 dist
 dist-ssr
 *.local
+# Playwright e2e output
+e2e/test-results/
+e2e/playwright-report/
+test-results/
+playwright-report/
