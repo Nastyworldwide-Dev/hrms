@@ -880,6 +880,162 @@ class TestRunSyncEndpointIsPostOnly(unittest.TestCase):
 		self.assertEqual(methods, ["POST"], "run_sync must be POST-only (SEC-03)")
 
 
+class TestSyncRunsInTheBackground(unittest.TestCase):
+	"""A full pull cannot run inside an HTTP request.
+
+	verifica-live, 2026-08-17: the operator clicked "Sync Employee Data" and got
+	"Request Timed Out". A full pull of ~10^2 employees plus their attendance,
+	check-ins and ledger takes minutes; the gateway gives the request ~2. Worse
+	than the wait, the worker is KILLED rather than allowed to raise, so
+	`sync_instance`'s `finally` never runs and the `HRMS Sync Run` row stays
+	`Running` forever — indistinguishable from a live run.
+
+	The long queue's ceiling is 1500s against the gateway's ~120s, and the pull
+	then owns its own lifetime instead of borrowing a request's.
+	"""
+
+	def setUp(self):
+		import frappe
+
+		self.enqueued = []
+		self.in_flight = set()
+
+		def fake_enqueue(method, **kwargs):
+			if kwargs.get("deduplicate") and kwargs.get("job_id") in self.in_flight:
+				return None
+			self.in_flight.add(kwargs.get("job_id"))
+			self.enqueued.append({"method": method, **kwargs})
+			return types.SimpleNamespace(id=kwargs.get("job_id"))
+
+		self._saved = (getattr(frappe, "enqueue", None), getattr(frappe, "throw", None))
+		frappe.enqueue = fake_enqueue
+		frappe.throw = lambda msg, *a, **kw: (_ for _ in ()).throw(ValueError(msg))
+		self.addCleanup(self._restore)
+
+	def _restore(self):
+		import frappe
+
+		frappe.enqueue, frappe.throw = self._saved
+
+	def test_it_queues_rather_than_running_inline(self):
+		result = runner.enqueue_sync("Nasty-Dev", incremental=0)
+
+		self.assertTrue(result["queued"])
+		self.assertEqual(len(self.enqueued), 1)
+		self.assertEqual(self.enqueued[0]["method"], "hrms.sync.runner.run_sync")
+		self.assertEqual(self.enqueued[0]["instance_name"], "Nasty-Dev")
+
+	def test_it_uses_the_long_queue_with_a_real_ceiling(self):
+		"""`default` is 300s — still short of a full pull. `long` is 1500s."""
+		runner.enqueue_sync("Nasty-Dev")
+
+		self.assertEqual(self.enqueued[0]["queue"], "long")
+		self.assertGreaterEqual(self.enqueued[0]["timeout"], 1500)
+
+	def test_a_second_click_does_not_start_a_second_pull(self):
+		"""Idempotent writes make a double run harmless to the DATA, but it doubles
+		the read load on a live production source and leaves two run records for
+		one intent."""
+		self.assertTrue(runner.enqueue_sync("Nasty-Dev")["queued"])
+
+		second = runner.enqueue_sync("Nasty-Dev")
+
+		self.assertFalse(second["queued"])
+		self.assertEqual(second["reason"], "already_running")
+		self.assertEqual(len(self.enqueued), 1)
+
+	def test_deduplication_is_per_instance(self):
+		"""Two different sources may legitimately sync at once."""
+		runner.enqueue_sync("Nasty-Dev")
+		runner.enqueue_sync("Other-ERP")
+
+		self.assertEqual(len(self.enqueued), 2)
+		self.assertNotEqual(self.enqueued[0]["job_id"], self.enqueued[1]["job_id"])
+
+	def test_a_blank_instance_is_refused_before_queueing(self):
+		"""Otherwise the failure surfaces minutes later, in a worker log."""
+		with self.assertRaises(ValueError):
+			runner.enqueue_sync("")
+		self.assertEqual(self.enqueued, [])
+
+	def test_the_enqueue_endpoint_is_post_only(self):
+		import ast
+
+		tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+		functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+		methods = []
+		for decorator in functions["enqueue_sync"].decorator_list:
+			if isinstance(decorator, ast.Call):
+				for keyword in decorator.keywords:
+					if keyword.arg == "methods":
+						methods = [element.value for element in keyword.value.elts]
+
+		self.assertEqual(methods, ["POST"], "enqueue_sync starts a pull; it must be POST-only")
+
+
+class TestStaleRunsAreClosedOut(_RunnerTestCase):
+	"""A killed worker leaves `Running` behind forever.
+
+	`_finish_run` is called from a `finally`, so a run only stays `Running` when
+	the process was killed rather than allowed to raise — a gateway timeout, an rq
+	job timeout, or a redeploy mid-run. That row then looks live for ever, and the
+	operator cannot tell a stuck run from a working one.
+
+	Safe to close out at the start of the next run because `enqueue_sync`
+	deduplicates per instance: at most one run per source is ever genuinely in
+	flight, and this only executes at the start of that one.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_an_orphaned_running_row_is_marked_failed(self):
+		self.store.tables.setdefault("HRMS Sync Run", {})["SYNC-00009"] = {
+			"name": "SYNC-00009",
+			"source_instance": "nasty-live",
+			"status": "Running",
+		}
+
+		runner._close_stale_runs("nasty-live")
+
+		self.assertEqual(self.store.rows("HRMS Sync Run")["SYNC-00009"]["status"], "Failed")
+
+	def test_a_finished_run_is_never_touched(self):
+		for name, status in (("SYNC-1", "Completed"), ("SYNC-2", "Partial"), ("SYNC-3", "Failed")):
+			self.store.tables.setdefault("HRMS Sync Run", {})[name] = {
+				"name": name,
+				"source_instance": "nasty-live",
+				"status": status,
+			}
+
+		runner._close_stale_runs("nasty-live")
+
+		rows = self.store.rows("HRMS Sync Run")
+		self.assertEqual(rows["SYNC-1"]["status"], "Completed")
+		self.assertEqual(rows["SYNC-2"]["status"], "Partial")
+
+	def test_another_instances_run_is_never_touched(self):
+		self.store.tables.setdefault("HRMS Sync Run", {})["SYNC-OTHER"] = {
+			"name": "SYNC-OTHER",
+			"source_instance": "some-other-erp",
+			"status": "Running",
+		}
+
+		runner._close_stale_runs("nasty-live")
+
+		self.assertEqual(self.store.rows("HRMS Sync Run")["SYNC-OTHER"]["status"], "Running")
+
+	def test_starting_a_run_closes_the_stale_ones_first(self):
+		self.store.tables.setdefault("HRMS Sync Run", {})["SYNC-STUCK"] = {
+			"name": "SYNC-STUCK",
+			"source_instance": "nasty-live",
+			"status": "Running",
+		}
+
+		runner.sync_instance(self.client({"Employee": []}), doctypes=["Employee"], incremental=False)
+
+		self.assertEqual(self.store.rows("HRMS Sync Run")["SYNC-STUCK"]["status"], "Failed")
+
+
 class TestRowsWithMissingParentsAreNeverWritten(_RunnerTestCase):
 	"""Referential integrity, enforced per row.
 

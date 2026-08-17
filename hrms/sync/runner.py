@@ -617,7 +617,42 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	}
 
 
+def _close_stale_runs(instance_name: str) -> int:
+	"""Mark orphaned `Running` rows for this instance as Failed, and say so.
+
+	`_finish_run` is called from a `finally`, so the only way a run stays `Running`
+	is a process that was KILLED rather than allowed to raise: the gateway timing
+	out the old synchronous endpoint, an rq job timeout, or a redeploy mid-run.
+	Left alone that row is indistinguishable from a live run for ever, and the
+	operator has no way to tell a stuck sync from a working one.
+
+	Safe to do at the start of the next run because `enqueue_sync` deduplicates per
+	instance — at most one run per source is ever genuinely in flight, and this
+	only ever executes at the start of that one. Scoped to the instance so a
+	concurrent pull of a DIFFERENT source is never touched.
+	"""
+	stale = frappe.get_all(
+		"HRMS Sync Run",
+		filters={"source_instance": instance_name, "status": "Running"},
+		pluck="name",
+	)
+	for name in stale:
+		frappe.db.set_value(
+			"HRMS Sync Run",
+			name,
+			{
+				"status": "Failed",
+				"error_log": "Run did not finish — the worker was killed before it could "
+				"report. Counts are whatever had been committed at that point; the "
+				"watermark did not advance, so nothing was lost.",
+			},
+		)
+		_log().warning("[sync] closed out stale run %s for %s", name, instance_name)
+	return len(stale)
+
+
 def _start_run(instance_name: str, doctypes) -> str:
+	_close_stale_runs(instance_name)
 	run = frappe.get_doc(
 		{
 			"doctype": "HRMS Sync Run",
@@ -814,6 +849,57 @@ def parse_doctypes(doctypes) -> tuple[str, ...] | None:
 	if not names:
 		raise ValueError(f"could not read a doctype list from {doctypes!r}")
 	return names
+
+
+#: A full pull is minutes, not seconds. `default` tops out at 300s and the HTTP
+#: gateway gives up long before that — verifica-live, 2026-08-17: "Request Timed
+#: Out" on the first full pull, worker killed mid-run. `long` is 1500s.
+SYNC_QUEUE = "long"
+SYNC_JOB_TIMEOUT = 1500
+
+
+def sync_job_id(instance_name: str) -> str:
+	"""One in-flight run per source instance.
+
+	A second concurrent pull cannot corrupt anything — the upsert keys on the
+	remote name — but it doubles the read load on what is live production for ten
+	companies, and leaves two run records for one operator intent.
+	"""
+	return f"hrms-sync-{instance_name}"
+
+
+@frappe.whitelist(methods=["POST"])
+def enqueue_sync(instance_name: str, doctypes: str | None = None, incremental: int = 1) -> dict:
+	"""Queue a run and return immediately. The button's entry point.
+
+	`run_sync` stays callable directly for bench and for tests; what it must not do
+	any more is run inside a web request, where the gateway kills the worker
+	partway and `sync_instance`'s `finally` never gets to record what happened.
+
+	Progress needs no polling from here: `_start_run` writes the `HRMS Sync Run`
+	row before the first remote read, and the Desk list view updates itself.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	if not instance_name:
+		frappe.throw(_("instance_name is required"))
+
+	job = frappe.enqueue(
+		"hrms.sync.runner.run_sync",
+		queue=SYNC_QUEUE,
+		timeout=SYNC_JOB_TIMEOUT,
+		job_id=sync_job_id(instance_name),
+		deduplicate=True,
+		instance_name=instance_name,
+		doctypes=doctypes,
+		incremental=incremental,
+	)
+
+	if job is None:
+		_log().info("[sync] a run for %s is already in flight; not queueing another", instance_name)
+		return {"queued": False, "reason": "already_running", "instance": instance_name}
+
+	_log().info("[sync] queued a background run for %s", instance_name)
+	return {"queued": True, "instance": instance_name}
 
 
 @frappe.whitelist(methods=["POST"])
