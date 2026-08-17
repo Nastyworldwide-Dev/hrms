@@ -720,6 +720,41 @@ def _close_stale_runs(instance_name: str) -> int:
 	return len(stale)
 
 
+def _notify_run_finished(run_name: str, instance_name: str, status: str, totals: dict) -> None:
+	"""Put the outcome where a Desk user already looks: the bell.
+
+	A pull takes minutes, and before this the operator was expected to sit on a
+	list view and guess. A Notification Log entry survives them closing the tab,
+	which a realtime toast does not.
+
+	Addressed to whoever asked for the run — `frappe.enqueue` carries the session
+	user into the worker, so that is the person who pressed the button.
+	"""
+	user = getattr(frappe.session, "user", None) if hasattr(frappe, "session") else None
+	if not user or user == "Guest":
+		return
+
+	clean = status == "Completed"
+	frappe.get_doc(
+		{
+			"doctype": "Notification Log",
+			"for_user": user,
+			"type": "Alert",
+			"document_type": "HRMS Sync Run",
+			"document_name": run_name,
+			"subject": _("Sync from {0}: {1}").format(instance_name, status),
+			"email_content": _("Pulled {0}, written {1}, skipped {2}, orphaned {3}, errored {4}.").format(
+				totals.get("pulled", 0),
+				totals.get("written", 0),
+				totals.get("skipped", 0),
+				totals.get("orphaned", 0),
+				totals.get("errored", 0),
+			)
+			+ ("" if clean else " " + _("Rows were left unwritten; the watermark is held.")),
+		}
+	).insert(ignore_permissions=True)
+
+
 def _start_run(instance_name: str, doctypes) -> str:
 	_close_stale_runs(instance_name)
 	run = frappe.get_doc(
@@ -733,6 +768,11 @@ def _start_run(instance_name: str, doctypes) -> str:
 	)
 	run.flags.ignore_permissions = True
 	run.insert(ignore_permissions=True)
+	# Committed immediately, and on purpose. In a web request Frappe commits at the
+	# end; in a background job a later crash rolls the whole transaction back and
+	# takes the evidence with it — which is how a run could vanish between
+	# "queued" and the list view a minute later.
+	frappe.db.commit()
 	_log().info("[sync] run %s started for %s (%s)", run.name, instance_name, ", ".join(doctypes))
 	return run.name
 
@@ -890,6 +930,12 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	finally:
 		frappe.flags.in_shadow_sync = False
 		_finish_run(run_name, status, totals, errors)
+		# Telling somebody is strictly less important than the pull itself, so a
+		# bell that will not ring must never turn a finished run into a failed one.
+		try:
+			_notify_run_finished(run_name, instance_name, status, totals)
+		except Exception as e:
+			_log().warning("[sync] could not notify %s about run %s: %s", instance_name, run_name, e)
 
 
 def parse_doctypes(doctypes) -> tuple[str, ...] | None:
@@ -1111,8 +1157,42 @@ def run_sync(instance_name: str, doctypes: str | None = None, incremental: int =
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.sync.client import RemoteInstanceClient
 
-	return sync_instance(
-		RemoteInstanceClient(instance_name),
+	return run_sync_with_client(
+		instance_name,
+		RemoteInstanceClient,
 		doctypes=parse_doctypes(doctypes),
 		incremental=bool(int(incremental)),
 	)
+
+
+def run_sync_with_client(instance_name: str, build_client, doctypes=None, incremental: bool = True) -> dict:
+	"""Run a sync, recording a Failed run if the client cannot even be built.
+
+	Building a `RemoteInstanceClient` resolves the URL and decrypts the
+	credentials, so it raises on a rotated secret, a disabled instance or an
+	unreachable host. That used to happen OUTSIDE anything that writes a run
+	record: in a web request it surfaced as a red dialog, but moved into a
+	background job it surfaced as nothing at all — the job died, no `HRMS Sync Run`
+	appeared, and the operator could not tell "never started" from "still running".
+	verifica-live, 2026-08-17: "Sync queued" at 13:02, and at 13:03 the newest run
+	was still a week old.
+
+	A run that cannot start is still a run, and has to say so.
+
+	`build_client` is injected so this is testable without a bench; `run_sync`
+	passes the real class.
+	"""
+	try:
+		client = build_client(instance_name)
+	except Exception as e:
+		run_name = _start_run(instance_name, doctypes or DEFAULT_SYNC_DOCTYPES)
+		_finish_run(
+			run_name,
+			"Failed",
+			{"pulled": 0, "written": 0, "skipped": 0, "errored": 0, "orphaned": 0},
+			[f"could not connect to {instance_name}: {e}"],
+		)
+		_log().error("[sync] %s: could not build a client: %s", instance_name, e)
+		raise
+
+	return sync_instance(client, doctypes=doctypes, incremental=incremental)

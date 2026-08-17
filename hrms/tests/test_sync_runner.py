@@ -83,6 +83,7 @@ class _FakeStore:
 		self.commits = 0
 		self.rollbacks = 0
 		self.commit_error_once = False
+		self.commit_error_after = 0
 		self._counter = 0
 
 	def autoname(self, doctype):
@@ -103,7 +104,9 @@ class _FakeStore:
 		self.updates.append((doctype, name, payload))
 
 	def commit(self):
-		if self.commit_error_once:
+		# `commit_error_after` lets a test aim the failure past the run record's own
+		# commit — `_start_run` makes that one durable before any doctype is pulled.
+		if self.commit_error_once and self.commits >= self.commit_error_after:
 			self.commit_error_once = False
 			raise RuntimeError("deadlock on commit")
 		self.commits += 1
@@ -243,7 +246,8 @@ class _RunnerTestCase(unittest.TestCase):
 		import frappe
 
 		self.store = _FakeStore({dt: rows for dt, rows in self.SEED.items() if dt not in self.SEED_EXCLUDE})
-		self._saved = (frappe.db, frappe.get_all, frappe.get_doc)
+		self._saved = (frappe.db, frappe.get_all, frappe.get_doc, getattr(frappe, "session", None))
+		frappe.session = types.SimpleNamespace(user="hr@example.com")
 		frappe.db = self.store
 		frappe.get_all = self.store.get_all
 		frappe.get_doc = self.store.get_doc
@@ -258,7 +262,7 @@ class _RunnerTestCase(unittest.TestCase):
 	def _restore(self):
 		import frappe
 
-		frappe.db, frappe.get_all, frappe.get_doc = self._saved
+		frappe.db, frappe.get_all, frappe.get_doc, frappe.session = self._saved
 		runner.now_datetime, runner._ = self._saved_runner
 
 	def seed_parent(self, doctype, name, **fields):
@@ -740,6 +744,9 @@ class TestRunRecordAlwaysFinalised(_RunnerTestCase):
 
 	def test_run_is_finalised_when_the_run_itself_raises(self):
 		self.store.commit_error_once = True
+		# Past the run record's own commit: this test is about a failure DURING the
+		# pull, not about failing to record that a pull began.
+		self.store.commit_error_after = 1
 
 		with self.assertRaises(RuntimeError):
 			runner.sync_instance(self.client(), doctypes=["Employee", "Attendance"])
@@ -1249,6 +1256,87 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 						methods = [element.value for element in keyword.value.elts]
 
 		self.assertEqual(methods, ["POST"], "enqueue_sync starts a pull; it must be POST-only")
+
+
+class TestAFailedStartStillLeavesEvidence(_RunnerTestCase):
+	"""verifica-live, 2026-08-17 13:02: "Sync queued". 13:03: still one run record,
+	dated a week earlier.
+
+	`run_sync` built the `RemoteInstanceClient` — which resolves the URL and
+	decrypts the credentials, and raises on a bad secret, a disabled instance or an
+	unreachable host — BEFORE anything wrote a run record. In a web request that
+	surfaced as a red dialog. In a background job it surfaces as nothing at all:
+	the job dies, the operator sees no record, and cannot tell "never started" from
+	"still running".
+
+	A run that cannot start is still a run, and has to say so.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_a_client_that_cannot_be_built_still_records_a_failed_run(self):
+		def explode(instance_name):
+			raise RuntimeError("remote rejected the read (status=401)")
+
+		with self.assertRaises(RuntimeError):
+			runner.run_sync_with_client("Nasty-Dev", explode)
+
+		runs = list(self.store.rows("HRMS Sync Run").values())
+		self.assertEqual(len(runs), 1)
+		self.assertEqual(runs[0]["status"], "Failed")
+		self.assertIn("401", runs[0]["error_log"])
+
+	def test_the_recorded_failure_names_the_instance(self):
+		def explode(instance_name):
+			raise RuntimeError("boom")
+
+		with self.assertRaises(RuntimeError):
+			runner.run_sync_with_client("Nasty-Dev", explode)
+
+		runs = list(self.store.rows("HRMS Sync Run").values())
+		self.assertEqual(runs[0]["source_instance"], "Nasty-Dev")
+
+	def test_a_working_client_records_nothing_extra(self):
+		"""The guard must not double-count a run that started normally."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": EMPLOYEES})
+
+		runner.run_sync_with_client("nasty-live", lambda name: client, doctypes=["Employee"])
+
+		self.assertEqual(len(self.store.rows("HRMS Sync Run")), 1)
+
+
+class TestTheOperatorIsToldWhenItFinishes(_RunnerTestCase):
+	"""Answering "will I get notified?" — previously, no.
+
+	A run takes minutes and the operator was expected to sit on a list view and
+	guess. The bell is the one place a Desk user already looks, and it survives
+	them closing the tab.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_finishing_a_run_notifies_whoever_asked_for_it(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+
+		runner.sync_instance(self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False)
+
+		logs = list(self.store.rows("Notification Log").values())
+		self.assertEqual(len(logs), 1)
+		self.assertIn("nasty-live", logs[0]["subject"])
+
+	def test_a_notification_failure_never_breaks_the_run(self):
+		"""Telling somebody is strictly less important than the pull itself."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		saved = runner._notify_run_finished
+		self.addCleanup(setattr, runner, "_notify_run_finished", saved)
+		runner._notify_run_finished = lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("no bell"))
+
+		result = runner.sync_instance(
+			self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False
+		)
+
+		self.assertEqual(result["status"], "Completed")
 
 
 class TestStaleRunsAreClosedOut(_RunnerTestCase):

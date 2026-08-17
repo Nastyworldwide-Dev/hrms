@@ -76,3 +76,49 @@ class TestDoctypeModuleIntegrity(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestTheMigrationToolsAreReachable(unittest.TestCase):
+	"""The registry and its run log must be findable without typing a URL.
+
+	Seven workspaces carried 162 links between them and neither `HRMS ERP Instance`
+	nor `HRMS Sync Run` appeared in any of them — so the only way to reach the one
+	screen that starts and reports a migration was to edit the address bar. An
+	operator who cannot find a tool cannot use it, and a run they cannot see is
+	indistinguishable from one that never happened.
+	"""
+
+	WORKSPACES = pathlib.Path(__file__).resolve().parents[1] / "hr" / "workspace"
+
+	def _all_links(self):
+		targets = set()
+		for path in self.WORKSPACES.glob("*/*.json"):
+			for link in json.loads(path.read_text(encoding="utf-8")).get("links", []):
+				if link.get("link_to"):
+					targets.add(link["link_to"])
+		return targets
+
+	def test_the_erp_instance_registry_is_in_a_workspace(self):
+		self.assertIn("HRMS ERP Instance", self._all_links())
+
+	def test_the_sync_run_log_is_in_a_workspace(self):
+		self.assertIn("HRMS Sync Run", self._all_links())
+
+	def test_every_card_declares_the_number_of_links_under_it(self):
+		"""Frappe slices links by the card's `link_count`; a wrong count silently
+		drops the tail of a card off the sidebar."""
+		for path in self.WORKSPACES.glob("*/*.json"):
+			links = json.loads(path.read_text(encoding="utf-8")).get("links", [])
+			card, seen = None, 0
+			for link in [*links, {"type": "Card Break", "label": "<end>", "link_count": 0}]:
+				if link["type"] == "Card Break":
+					if card:
+						self.assertEqual(
+							seen,
+							card["link_count"],
+							f"{path.name}: card {card['label']!r} declares "
+							f"{card['link_count']} links but {seen} follow it",
+						)
+					card, seen = link, 0
+				else:
+					seen += 1
