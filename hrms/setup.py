@@ -305,7 +305,45 @@ def get_custom_fields():
 				"insert_after": "required_skills_section",
 			},
 		],
+		"Leave Type": [
+			{
+				# Same gap as `notice_period_unit`: created for existing sites by
+				# v15_92_0 and never on a fresh v16 install. `should_skip_proration`
+				# degrades to stock behaviour when the field is absent, so the
+				# opt-out does not crash — it silently stops working, and every
+				# allocation gets pro-rated whether HR asked for it or not.
+				"fieldname": "custom_do_not_prorate",
+				"fieldtype": "Check",
+				"label": "Do Not Pro-rate on Policy Assignment",
+				"insert_after": "include_holiday",
+				"default": "0",
+				"description": (
+					"When checked, Leave Policy Assignment allocates the full "
+					"annual amount for this leave type even if the employee "
+					"joins mid-way through the leave period (no pro-rating). "
+					"Has no effect on Earned or Compensatory leave types."
+				),
+				"module": "HR",
+				"translatable": 0,
+			},
+		],
 		"Employee": [
+			{
+				# Created for existing sites by v15_77_12, and defined here so a
+				# FRESH install gets it too: `install_app` records every patch as
+				# already applied, so a v16 install never runs that patch and the
+				# field silently does not exist. Reproduced on verifica-live, where
+				# the mirror reported it as a column this site cannot store.
+				"fieldname": "notice_period_unit",
+				"fieldtype": "Select",
+				"label": "Notice Period Unit",
+				"options": "\nDays\nWeeks\nMonths",
+				"default": "Days",
+				"insert_after": "notice_number_of_days",
+				"description": "Unit in which the Notice Period Duration is expressed.",
+				"module": "HR",
+				"translatable": 0,
+			},
 			{
 				"fieldname": "performance_band",
 				"fieldtype": "Select",
