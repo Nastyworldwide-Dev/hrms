@@ -95,21 +95,33 @@ class TestNoFieldIsDefinedTwice(unittest.TestCase):
 
 
 class TestPerformanceBandIsHROwned(unittest.TestCase):
+	"""Six bands. Values arriving from the source do not get to add a seventh.
+
+	B2 and E3 both reach the mirror from the source ERP, and NEITHER has ever
+	appeared in this code — checked across version-16, as-hr_kpi and the hotfix
+	branch, which all carry the same six. They are data-entry values, and HR have
+	confirmed both are mistakes to fix over there.
+
+	B2 was briefly added here on a first reading of that conversation, which is the
+	whole reason this class is explicit about both: the pressure to widen a
+	destination until it accepts whatever arrives is constant, feels helpful, and
+	ends with a Select that constrains nothing — the same state `Shift Location.
+	timezone` was already in.
+	"""
+
 	def _options(self):
 		employee = _definitions()["Employee"]
 		band = next(d for d in employee if d["fieldname"] == "performance_band")
 		return [option for option in band["options"].split("\n") if option]
 
-	def test_b2_is_a_real_band(self):
-		self.assertIn("B2", self._options(), "HR confirmed B2 is in use")
-
-	def test_e3_is_not(self):
-		"""A source ERP holding E3 is HR's data to fix over there. The mirror names
-		the dropped value on the run; it does not widen to swallow it."""
-		self.assertNotIn("E3", self._options())
+	def test_neither_source_only_value_is_accepted(self):
+		"""Refusing costs one field and names it on the run; the employee still
+		writes, and the value self-heals once HR correct it at the source."""
+		for value in ("B2", "E3"):
+			self.assertNotIn(value, self._options(), f"{value} is source data, not a band")
 
 	def test_the_scheme_is_intact(self):
-		self.assertEqual(self._options(), ["B", "B2", "C", "D", "E1", "E2", "F"])
+		self.assertEqual(self._options(), ["B", "C", "D", "E1", "E2", "F"])
 
 
 if __name__ == "__main__":

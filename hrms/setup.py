@@ -413,16 +413,20 @@ def get_custom_fields():
 				"fieldname": "performance_band",
 				"fieldtype": "Select",
 				"label": _("Performance Band"),
-				# HR own this list; it is not derived from what the source happens
-				# to hold. B2 is a real band in use and belongs here. E3 is not and
-				# never was — it was a data-entry mistake on the source, confirmed
-				# by HR, and it stays out.
+				# The six bands, and nothing else. B2 and E3 both reach the mirror
+				# from the source ERP and NEITHER has ever appeared in this code —
+				# not on version-16, not on as-hr_kpi, not on the hotfix branch, not
+				# anywhere. They are data-entry values, and HR have confirmed both
+				# are mistakes to be corrected over there.
 				#
-				# Widening the schema to accept whatever arrives is the wrong
-				# direction of fix, and it is not needed: an unrepresentable value
-				# is dropped and NAMED on the run, so a bad band costs one field
-				# rather than the whole employee, and HR can see which to correct.
-				"options": "\nB\nB2\nC\nD\nE1\nE2\nF",
+				# B2 was briefly added here on a first reading of that conversation.
+				# It was the wrong direction of fix and this comment is the record of
+				# why: widening a destination to accept whatever arrives stops it
+				# being a schema. Nothing is lost by refusing — an unrepresentable
+				# value is dropped and NAMED on the run, so a bad band costs one
+				# field rather than the whole employee, and HR can see exactly which
+				# rows to correct at the source. It then self-heals on the next pull.
+				"options": "\nB\nC\nD\nE1\nE2\nF",
 				"insert_after": "grade",
 				"description": _(
 					"Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"
