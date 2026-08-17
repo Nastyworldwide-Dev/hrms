@@ -128,6 +128,52 @@ class TestParityReport(unittest.TestCase):
 		self.assertIn("Attendance", report["errored"])
 
 
+class TestTheGateComparesLikeForLike(unittest.TestCase):
+	"""The remote side must be counted under the same scope the sync pulls under.
+
+	verifica-live, 2026-08-17: the report read `Employee 308 on source, 116 here,
+	192 missing`. The source holds 308 employees across ten companies and every
+	status; the sync is scoped to the seven companies this instance serves. The two
+	numbers were never comparable, so the delta was noise and the gate could never
+	reach zero however healthy the mirror was.
+
+	A gate that cannot reach zero is worse than no gate: it reports a permanent
+	variance that trains everyone to ignore it.
+	"""
+
+	def test_the_remote_count_honours_an_explicit_filter(self):
+		db = _FakeDB({"Employee": 116})
+		mod = _load(db)
+		client = _FakeClient({"Employee": 116})
+
+		mod.compare_doctype(client, "Employee", remote_filters={"company": ("in", ["Acme"])})
+
+		self.assertEqual(client.calls[-1][1], {"company": ("in", ["Acme"])})
+
+	def test_the_local_count_stays_keyed_on_provenance_alone(self):
+		"""Local rows are already only the scoped ones — they carry the stamp
+		BECAUSE the sync chose them. Filtering them again by company would drop
+		mirrored rows whose doctype has no company field."""
+		db = _FakeDB({"Employee": 116})
+		mod = _load(db)
+
+		mod.compare_doctype(
+			_FakeClient({"Employee": 116}), "Employee", remote_filters={"company": ("in", ["Acme"])}
+		)
+
+		_, filters = db.calls[-1]
+		self.assertEqual(filters, {"synced_from_instance": "nasty-live"})
+
+	def test_a_scoped_comparison_can_reach_parity(self):
+		"""The whole point: same scope on both sides, so zero is attainable."""
+		mod = _load(_FakeDB({"Employee": 116}))
+		line = mod.compare_doctype(
+			_FakeClient({"Employee": 116}), "Employee", remote_filters={"company": ("in", ["Acme"])}
+		)
+		self.assertTrue(line.in_parity)
+		self.assertEqual(line.delta, 0)
+
+
 class TestCutoverReadiness(unittest.TestCase):
 	def setUp(self):
 		self.mod = _load(_FakeDB())

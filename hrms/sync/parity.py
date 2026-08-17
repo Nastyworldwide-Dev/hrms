@@ -81,17 +81,35 @@ def _local_count(doctype: str, company: str | None, instance_name: str) -> int:
 	return frappe.db.count(doctype, filters)
 
 
-def compare_doctype(client, doctype: str, company: str | None = None) -> ParityLine:
+def compare_doctype(client, doctype: str, company: str | None = None, remote_filters=None) -> ParityLine:
 	"""Compare one doctype. A remote failure becomes a reported error, not a raise —
-	a single unreachable doctype must not hide the parity of the others."""
-	remote_filters = {"company": company} if company else None
+	a single unreachable doctype must not hide the parity of the others.
+
+	`remote_filters` exists so the remote side can be counted under exactly the
+	scope the SYNC pulls under. Without it the report compared the source's whole
+	population against the subset this instance is registered to serve — on
+	verifica-live, 308 employees across ten companies against the 116 belonging to
+	the seven it serves — and called the difference a variance. The gate could
+	never reach zero, which is worse than having no gate, because a permanent
+	variance trains everyone to ignore it.
+
+	The LOCAL side stays keyed on provenance alone: those rows carry the stamp
+	because the sync chose them, so they are already scoped. Filtering them again
+	by company would silently drop every mirrored doctype that has no company
+	field — Employee Checkin among them.
+	"""
+	# Captured BEFORE defaulting: an explicitly scoped comparison keeps the local
+	# side on provenance alone, a legacy `company=` comparison filters both.
+	scoped = remote_filters is not None
+	if remote_filters is None:
+		remote_filters = {"company": company} if company else None
 	try:
 		remote = client.count(doctype, filters=remote_filters)
 	except Exception as e:  # deliberately broad — surfaced in the report, never raised
 		logger.warning("[parity] %s: remote count failed: %s", doctype, e)
 		return ParityLine(doctype, remote=0, local=0, error=str(e))
 
-	local = _local_count(doctype, company, client.instance_name)
+	local = _local_count(doctype, None if scoped else company, client.instance_name)
 	line = ParityLine(doctype, remote=remote, local=local)
 	logger.info(
 		"[parity] %s company=%s remote=%s local=%s delta=%s",
@@ -104,11 +122,16 @@ def compare_doctype(client, doctype: str, company: str | None = None) -> ParityL
 	return line
 
 
-def parity_report(client, company: str | None = None, doctypes=None) -> dict:
+def parity_report(client, company: str | None = None, doctypes=None, scope=None) -> dict:
 	"""One run's evidence. Never raises for data reasons — an unreachable
 	doctype is reported so the operator sees an incomplete run rather than a
 	falsely clean one."""
-	lines = [compare_doctype(client, dt, company) for dt in (doctypes or MIRRORED_DOCTYPES)]
+	lines = [
+		compare_doctype(
+			client, dt, company, remote_filters=scope(dt) if scope else None
+		)
+		for dt in (doctypes or MIRRORED_DOCTYPES)
+	]
 	mismatched = [ln for ln in lines if not ln.in_parity]
 
 	report = {
@@ -142,8 +165,15 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.sync.client import RemoteInstanceClient
+	from hrms.sync.runner import instance_companies, scope_filter
 
-	return parity_report(RemoteInstanceClient(instance_name), company=company)
+	# The runner's own scope, imported rather than restated: two definitions of
+	# "which rows belong here" would drift, and a gate that drifts from the sync it
+	# grades is the exact failure this argument exists to fix.
+	companies = instance_companies(instance_name)
+	scope = (lambda dt: scope_filter(dt, companies, instance_name)) if companies else None
+
+	return parity_report(RemoteInstanceClient(instance_name), company=company, scope=scope)
 
 
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:
