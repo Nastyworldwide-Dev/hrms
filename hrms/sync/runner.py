@@ -110,7 +110,6 @@ STAMPED_DOCTYPES = (
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
-	"Holiday List Assignment",
 	"Shift Schedule Assignment",
 	"Shift Assignment",
 )
@@ -131,11 +130,6 @@ ROW_DEPENDENCIES = {
 	"Attendance": {"employee": "Employee"},
 	"Employee Checkin": {"employee": "Employee"},
 	"Leave Ledger Entry": {"employee": "Employee"},
-	# `assigned_to` is a Dynamic Link (Employee OR Company) and cannot be declared
-	# here, which is fine: the calendar is the link that matters. An assignment
-	# pointing at a Holiday List this site does not have resolves to no holidays,
-	# and no holidays is the silent-wrong-answer this whole group exists to end.
-	"Holiday List Assignment": {"holiday_list": "Holiday List"},
 	"Shift Schedule Assignment": {"employee": "Employee", "shift_schedule": "Shift Schedule"},
 	"Shift Assignment": {"employee": "Employee", "shift_type": "Shift Type"},
 }
@@ -173,38 +167,9 @@ SYNC_DEPENDENCIES = {
 	# still writes, and then reports a balance against a type this site cannot
 	# name. Better to skip the pass and say so than to publish a nameless balance.
 	"Leave Ledger Entry": ("Employee", "Leave Type"),
-	"Holiday List Assignment": ("Holiday List",),
 	"Shift Schedule Assignment": ("Employee", "Shift Schedule"),
 	"Shift Assignment": ("Employee", "Shift Type"),
 }
-
-
-def unavailable_doctypes(instance_name: str) -> set[str]:
-	"""Doctypes the operator has declared this source does not have.
-
-	Declared rather than inferred, because 403 cannot tell "no such doctype" from
-	"you may not read it". verifica-live showed both faces of one missing doctype:
-	404 while the API user held System Manager, 403 the moment it was removed —
-	Frappe checks permission before existence, and `has_permission` on an unknown
-	doctype is False for anyone who is not System Manager.
-
-	Inferring absence from 403 would therefore turn a revoked read on Employee into
-	a clean, cutover-authorising run. That is the single worst outcome available
-	here, so the operator states the version gap and everything undeclared stays a
-	loud failure.
-	"""
-	# By docname: the doctype autonames `field:instance_name`, so the two are the
-	# same string, and every caller here already holds the instance name.
-	#
-	# Guarded because the column only exists after `bench migrate`, and a deploy
-	# that lands before its migrate must degrade to "nothing declared" rather than
-	# taking the whole mirror down over an optional refinement.
-	try:
-		raw = frappe.db.get_value("HRMS ERP Instance", instance_name, "unavailable_doctypes")
-	except Exception as e:
-		_log().warning("[sync] could not read unavailable_doctypes for %s: %s", instance_name, e)
-		return set()
-	return {line.strip() for line in (raw or "").replace(",", "\n").splitlines() if line.strip()}
 
 
 def is_absent_on_source(error) -> bool:
@@ -783,6 +748,20 @@ def _close_stale_runs(instance_name: str) -> int:
 	return len(stale)
 
 
+def _derive_holiday_assignments() -> None:
+	"""Create any missing Holiday List Assignment from what the mirror just wrote.
+
+	Reuses HRMS's own migration rather than restating its query: it already derives
+	assignments from `Employee.holiday_list` and `Company.default_holiday_list`, and
+	it is idempotent by construction — it creates only what does not exist. Two
+	copies of that logic would drift, and a hub whose holiday arithmetic disagreed
+	with the framework's would be a bad way to find that out.
+	"""
+	from hrms.patches.v16_0.create_holiday_list_assignments import execute
+
+	execute()
+
+
 def _notify_run_finished(run_name: str, instance_name: str, status: str, totals: dict) -> None:
 	"""Put the outcome where a Desk user already looks: the bell.
 
@@ -884,13 +863,6 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	instance_name = client.instance_name
 
 	companies = instance_companies(instance_name)
-	declared_absent = unavailable_doctypes(instance_name)
-	if declared_absent:
-		_log().info(
-			"[sync] %s declares no %s — those are skipped, not requested",
-			instance_name,
-			", ".join(sorted(declared_absent)),
-		)
 	if companies:
 		_log().info("[sync] %s scoped to %s: %s", instance_name, len(companies), ", ".join(companies))
 	else:
@@ -917,11 +889,6 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			# A dependent doctype is not attempted once its prerequisite failed:
 			# its rows would reference employees or companies that do not exist
 			# here. Skipping is the only safe outcome — see SYNC_DEPENDENCIES.
-			if doctype in declared_absent:
-				absent.append(doctype)
-				errors.append(f"{doctype}: not present on the source instance — skipped")
-				continue
-
 			blockers = blocked_by(doctype, set(failed))
 			if blockers:
 				blocked.append(doctype)
@@ -1013,6 +980,17 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 		raise
 	finally:
 		frappe.flags.in_shadow_sync = False
+		# Derived, never mirrored. A Holiday List Assignment is computed from
+		# `Employee.holiday_list` and `Company.default_holiday_list`, both of which
+		# have just landed — so pulling it over the wire as well would be two routes
+		# to one state, and the source (an older HRMS) has no such doctype to pull
+		# from anyway. Deriving is also what the hub wants: holiday policy is HR's
+		# to own here, and a derived row carries no provenance stamp, so nothing
+		# reverts an HR decision on the next run.
+		try:
+			_derive_holiday_assignments()
+		except Exception as e:
+			_log().warning("[sync] could not derive holiday list assignments: %s", e)
 		_finish_run(run_name, status, totals, errors)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.

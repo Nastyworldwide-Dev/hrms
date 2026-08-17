@@ -399,13 +399,6 @@ doc_events = {
 	# allowed and must survive the next run. The per-employee ASSIGNMENTS are the
 	# mirror proper, and a policy change supersedes one by adding a newer record
 	# rather than by editing a mirrored one — which is what keeps parity honest.
-	"Holiday List Assignment": {
-		"validate": "hrms.sync.write_block.block_mirrored_writes",
-		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
-		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
-		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
-		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
-	},
 	"Shift Assignment": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",

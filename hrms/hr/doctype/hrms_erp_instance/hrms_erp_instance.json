@@ -17,7 +17,6 @@
   "api_key",
   "column_break_credentials",
   "api_secret",
-  "unavailable_doctypes",
   "companies_section",
   "companies"
  ],
@@ -102,13 +101,6 @@
    "fieldtype": "Table",
    "label": "Companies",
    "options": "HRMS ERP Instance Company",
-   "permlevel": 1
-  },
-  {
-   "description": "Doctypes this source does not have, one per line. The sync skips them without asking, and the cutover gate treats them as not applicable rather than as a permanent variance. Use this ONLY for a genuine version gap — a doctype that is merely unreadable is a permission problem and must stay visible as a failure.",
-   "fieldname": "unavailable_doctypes",
-   "fieldtype": "Small Text",
-   "label": "Doctypes Not On This Source",
    "permlevel": 1
   }
  ],

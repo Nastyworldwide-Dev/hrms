@@ -1023,9 +1023,10 @@ class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
 	all, silently. Shift planning had nothing to plan with.
 	"""
 
-	def test_holiday_policy_is_mirrored(self):
-		for doctype in ("Holiday List", "Holiday List Assignment"):
-			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+	def test_holiday_calendars_are_mirrored(self):
+		"""The calendar comes over; the ASSIGNMENT is derived from it plus the
+		employee — see TestHolidayAssignmentsAreDerivedNotMirrored."""
+		self.assertIn("Holiday List", runner.DEFAULT_SYNC_DOCTYPES)
 
 	def test_shift_planning_is_mirrored(self):
 		for doctype in ("Shift Type", "Shift Schedule", "Shift Schedule Assignment", "Shift Assignment"):
@@ -1040,7 +1041,7 @@ class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
 		"""
 		for policy in ("Holiday List", "Shift Type", "Shift Schedule"):
 			self.assertIn(policy, runner.CREATE_ONLY_DOCTYPES)
-		for operational in ("Holiday List Assignment", "Shift Assignment", "Shift Schedule Assignment"):
+		for operational in ("Shift Assignment", "Shift Schedule Assignment"):
 			self.assertIn(operational, runner.STAMPED_DOCTYPES)
 			self.assertNotIn(operational, runner.CREATE_ONLY_DOCTYPES)
 
@@ -1067,11 +1068,9 @@ class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
 			runner.ROW_DEPENDENCIES["Shift Schedule Assignment"],
 			{"employee": "Employee", "shift_schedule": "Shift Schedule"},
 		)
-		self.assertEqual(runner.ROW_DEPENDENCIES["Holiday List Assignment"], {"holiday_list": "Holiday List"})
 
 	def test_masters_precede_the_assignments_that_point_at_them(self):
 		order = list(runner.DEFAULT_SYNC_DOCTYPES)
-		self.assertLess(order.index("Holiday List"), order.index("Holiday List Assignment"))
 		self.assertLess(order.index("Shift Type"), order.index("Shift Assignment"))
 		self.assertLess(order.index("Shift Schedule"), order.index("Shift Schedule Assignment"))
 		self.assertLess(order.index("Employee"), order.index("Shift Assignment"))
@@ -1102,7 +1101,7 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 
 	SEED_EXCLUDE = ("Employee",)
 
-	def absent_client(self, doctype="Holiday List Assignment"):
+	def absent_client(self, doctype="Leave Type"):
 		client = self.client({"Employee": EMPLOYEES})
 		real = client.get_list
 
@@ -1119,23 +1118,23 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 
 		result = runner.sync_instance(
 			self.absent_client(),
-			doctypes=["Employee", "Holiday List Assignment"],
+			doctypes=["Employee", "Leave Type"],
 			incremental=False,
 		)
 
 		self.assertEqual(result["status"], "Completed")
-		self.assertIn("Holiday List Assignment", result["absent"])
-		self.assertNotIn("Holiday List Assignment", result["failed"])
+		self.assertIn("Leave Type", result["absent"])
+		self.assertNotIn("Leave Type", result["failed"])
 
 	def test_the_run_record_says_which_doctype_the_source_lacks(self):
 		self.seed_parent("Company", "Acme", company_name="Acme")
 
 		runner.sync_instance(
-			self.absent_client(), doctypes=["Employee", "Holiday List Assignment"], incremental=False
+			self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False
 		)
 
 		log = self.runs()[0]["error_log"]
-		self.assertIn("Holiday List Assignment", log)
+		self.assertIn("Leave Type", log)
 		self.assertIn("not present", log.lower())
 
 	def test_the_rest_of_the_run_still_writes(self):
@@ -1143,7 +1142,7 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		self.seed_parent("Company", "Acme", company_name="Acme")
 
 		runner.sync_instance(
-			self.absent_client(), doctypes=["Employee", "Holiday List Assignment"], incremental=False
+			self.absent_client(), doctypes=["Employee", "Leave Type"], incremental=False
 		)
 
 		self.assertEqual(len(self.store.rows("Employee")), 2)
@@ -1162,215 +1161,58 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		self.assertIn("Attendance", result["failed"])
 
 
-class TestADoctypeDeclaredAbsentIsNeverRequested(_RunnerTestCase):
-	"""403 cannot tell "no such doctype" from "you may not read it".
+class TestHolidayAssignmentsAreDerivedNotMirrored(_RunnerTestCase):
+	"""A Holiday List Assignment is derived data, so mirroring it was the wrong
+	shape — and the wrong shape is what produced three workarounds.
 
-	verifica-live proved it: `Holiday List Assignment` answered 404 while the API
-	user held System Manager and 403 the moment that was removed — same missing
-	doctype, two different statuses depending on the caller's roles. Frappe checks
-	permission before it checks existence, and `has_permission` on an unknown
-	doctype is False for everyone except System Manager.
+	It is computed from `Employee.holiday_list` and `Company.default_holiday_list`,
+	both of which the mirror already carries. HRMS derives it exactly that way in
+	`v16_0.create_holiday_list_assignments`. Pulling it over the wire as well meant
+	two routes to one state, and because the source predates the doctype the
+	mirrored route could never work — which is what the 403, the 404 and the
+	declared-absent list were each patching around.
 
-	So inferring "absent" from 403 would quietly turn a revoked read on Employee
-	into a clean run, which is the one mistake this whole mirror exists to avoid.
-	It has to be declared, not guessed: `unavailable_doctypes` on the instance is
-	the operator saying "that source has no such concept", and anything NOT
-	declared stays a loud failure.
+	Deriving it locally also happens to be what the hub wants: holiday policy is
+	HR's to own here, and derived rows carry no provenance stamp, so nothing
+	reverts an HR decision on the next run.
 	"""
 
 	SEED_EXCLUDE = ("Employee",)
 
-	def declare_absent(self, *doctypes):
-		self.store.tables.setdefault("HRMS ERP Instance", {})["nasty-live"] = {
-			"name": "nasty-live",
-			"instance_name": "nasty-live",
-			"unavailable_doctypes": "\n".join(doctypes),
-		}
+	def test_it_is_not_pulled_from_the_source(self):
+		self.assertNotIn("Holiday List Assignment", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertNotIn("Holiday List Assignment", runner.STAMPED_DOCTYPES)
 
-	def test_a_declared_doctype_is_skipped_without_asking(self):
-		"""Not requested at all — asking a source for something it has not got is
-		one more way to fail."""
+	def test_nothing_declares_it_as_a_dependency_any_more(self):
+		"""Leftover graph entries for a doctype nobody pulls would skip real work."""
+		self.assertNotIn("Holiday List Assignment", runner.ROW_DEPENDENCIES)
+		self.assertNotIn("Holiday List Assignment", runner.SYNC_DEPENDENCIES)
+
+	def test_a_run_derives_them_afterwards(self):
 		self.seed_parent("Company", "Acme", company_name="Acme")
-		self.declare_absent("Holiday List Assignment")
-		client = self.client({"Employee": EMPLOYEES})
-
-		result = runner.sync_instance(
-			client, doctypes=["Employee", "Holiday List Assignment"], incremental=False
+		derived = []
+		runner._derive_holiday_assignments = lambda: derived.append(True)
+		self.addCleanup(
+			setattr, runner, "_derive_holiday_assignments", runner._derive_holiday_assignments
 		)
 
-		self.assertIn("Holiday List Assignment", result["absent"])
-		self.assertNotIn(
-			"Holiday List Assignment",
-			[call["doctype"] for call in client.calls],
-			"a declared-absent doctype must never reach the network",
-		)
+		runner.sync_instance(self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False)
 
-	def test_the_run_still_completes(self):
-		"""The point: one version gap must not cost the migration its exit
-		criterion for ever."""
+		self.assertEqual(derived, [True])
+
+	def test_a_derivation_failure_never_fails_the_run(self):
+		"""Derived from data that has already landed — worth retrying next run, not
+		worth discarding a successful pull over."""
 		self.seed_parent("Company", "Acme", company_name="Acme")
-		self.declare_absent("Holiday List Assignment")
-
-		result = runner.sync_instance(
-			self.client({"Employee": EMPLOYEES}),
-			doctypes=["Employee", "Holiday List Assignment"],
-			incremental=False,
-		)
-
-		self.assertEqual(result["status"], "Completed")
-
-	def test_an_undeclared_403_is_still_a_failure(self):
-		"""A permission mistake must stay loud. Silently accepting 403 as "absent"
-		would let a revoked read on Employee report a clean run."""
-		self.seed_parent("Company", "Acme", company_name="Acme")
-		client = self.client({"Employee": EMPLOYEES})
-		real = client.get_list
-
-		def get_list(dt, **kwargs):
-			if dt == "Attendance":
-				error = RuntimeError("the source refused this read (status=403)")
-				error.status_code = 403
-				raise error
-			return real(dt, **kwargs)
-
-		client.get_list = get_list
-
-		result = runner.sync_instance(client, doctypes=["Employee", "Attendance"], incremental=False)
-
-		self.assertEqual(result["status"], "Partial")
-		self.assertIn("Attendance", result["failed"])
-
-	def test_a_missing_column_does_not_take_the_mirror_down(self):
-		"""The field only exists after `bench migrate`. A deploy that lands before
-		its migrate must degrade to "nothing declared", not break every sync."""
-		import frappe
-
-		def explode(*a, **kw):
-			raise RuntimeError("Unknown column 'unavailable_doctypes' in 'SELECT'")
-
-		saved = self.store.get_value
-		self.store.get_value = explode
-		self.addCleanup(setattr, self.store, "get_value", saved)
-
-		self.assertEqual(runner.unavailable_doctypes("nasty-live"), set())
-
-	def test_nothing_declared_changes_nothing(self):
-		self.seed_parent("Company", "Acme", company_name="Acme")
+		saved = runner._derive_holiday_assignments
+		self.addCleanup(setattr, runner, "_derive_holiday_assignments", saved)
+		runner._derive_holiday_assignments = lambda: (_ for _ in ()).throw(RuntimeError("nope"))
 
 		result = runner.sync_instance(
 			self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False
 		)
 
-		self.assertEqual(result["absent"], [])
 		self.assertEqual(result["status"], "Completed")
-
-
-class TestMastersHaveNoProvenanceColumnToCountBy(_RunnerTestCase):
-	"""SYNC-00053 killed eleven of fourteen doctypes with one query.
-
-	    Leave Type: (1054, "Unknown column 'synced_from_instance' in 'WHERE'")
-
-	...and the same for Designation, Branch, Employee Grade, Holiday List, Shift
-	Type and Shift Schedule. `_count_local_orphans` filters on the provenance stamp,
-	and masters deliberately do not carry one — they are HR-owned here, which is the
-	whole reason `get_provenance_custom_fields` covers STAMPED_DOCTYPES alone. I
-	split the two groups and left the orphan count querying the stamp on both.
-
-	Then the dependency graph did its job perfectly and made it far worse: Leave
-	Type failing skipped Leave Ledger Entry, Holiday List skipped Holiday List
-	Assignment, Shift Type skipped Shift Assignment, Shift Schedule skipped Shift
-	Schedule Assignment. Empty leave balances, no holidays and no shifts all trace
-	to this one line.
-	"""
-
-	SEED_EXCLUDE = ("Employee",)
-
-	def test_a_master_is_never_counted_by_a_stamp_it_does_not_carry(self):
-		calls = []
-		real = self.store.get_all
-
-		def get_all(doctype, filters=None, **kwargs):
-			calls.append((doctype, dict(filters or {})))
-			if doctype in runner.MASTER_DOCTYPES and runner.PROVENANCE_FIELD in (filters or {}):
-				raise RuntimeError("(1054, \"Unknown column 'synced_from_instance' in 'WHERE'\")")
-			return real(doctype, filters=filters, **kwargs)
-
-		import frappe
-
-		frappe.get_all = get_all
-		self.addCleanup(setattr, frappe, "get_all", real)
-
-		client = self.client({"Leave Type": [{"name": "Annual", "modified": "2026-08-01 09:00:00"}]})
-		client.get_doc = lambda dt, name: {"name": name}
-
-		result = runner.sync_doctype(client, "Leave Type")
-
-		self.assertEqual(result["inserted"], 1)
-
-	def test_the_stamped_doctypes_are_still_checked_for_orphans(self):
-		"""Never deleting is only safe if divergence is still counted."""
-		self.seed_parent("Company", "Acme", company_name="Acme")
-		self.store.tables.setdefault("Employee", {})["HR-EMP-GONE"] = {
-			"name": "HR-EMP-GONE",
-			"company": "Acme",
-			runner.PROVENANCE_FIELD: "nasty-live",
-		}
-
-		result = runner.sync_doctype(self.client({"Employee": EMPLOYEES}), "Employee")
-
-		self.assertEqual(result["skipped"], 1, "a local row the remote no longer has must be counted")
-		self.assertIn("HR-EMP-GONE", self.store.rows("Employee"), "and never deleted")
-
-
-class TestACancelledRowFromTheSource(_RunnerTestCase):
-	"""SYNC-00053:
-
-	    Attendance: HR-ATT-2026-10631: Cannot change docstatus from 0 (Draft) to 2 (Cancelled)
-
-	The source holds cancelled attendance, and Frappe refuses to insert a document
-	straight into docstatus 2 — a doc must be submitted before it can be cancelled.
-	A mirror is copying an end state, not walking a lifecycle, so it has to land
-	the row and then mark it cancelled without replaying the transition.
-
-	Left unhandled these rows error on every run for ever, which holds the
-	watermark and keeps the run Partial — the same permanent-failure shape as the
-	masters above.
-	"""
-
-	SEED_EXCLUDE = ("Employee",)
-
-	CANCELLED: ClassVar[list] = [
-		{
-			"name": "HR-ATT-CANCELLED",
-			"employee": "HR-EMP-0001",
-			"docstatus": 2,
-			"modified": "2026-08-09 10:00:00",
-		}
-	]
-
-	def setUp(self):
-		super().setUp()
-		# Attendance declares Employee as a row dependency, so the parent has to be
-		# here or the row is correctly skipped as an orphan before docstatus matters.
-		self.seed_parent("Employee", "HR-EMP-0001", company="Acme")
-
-	def test_a_cancelled_row_lands_cancelled(self):
-		result = runner.sync_doctype(self.client({"Attendance": self.CANCELLED}), "Attendance")
-
-		self.assertEqual(result["errored"], 0, "a cancelled source row must not error")
-		self.assertEqual(result["inserted"], 1)
-		self.assertEqual(self.store.rows("Attendance")["HR-ATT-CANCELLED"]["docstatus"], 2)
-
-	def test_it_is_inserted_submitted_then_marked_cancelled(self):
-		"""Frappe forbids 0 -> 2 in one step, so the row is written as submitted and
-		the final state set afterwards — the same `db.set_value` route every other
-		mirrored update already takes, so no cancel side effects replay."""
-		runner.sync_doctype(self.client({"Attendance": self.CANCELLED}), "Attendance")
-
-		self.assertIn(
-			("Attendance", "HR-ATT-CANCELLED", {"docstatus": 2}),
-			self.store.updates,
-		)
 
 
 class TestSyncRunsInTheBackground(unittest.TestCase):

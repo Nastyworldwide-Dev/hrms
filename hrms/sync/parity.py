@@ -34,7 +34,6 @@ MIRRORED_DOCTYPES = (
 	"Attendance",
 	"Employee Checkin",
 	"Leave Ledger Entry",
-	"Holiday List Assignment",
 	"Shift Schedule Assignment",
 	"Shift Assignment",
 )
@@ -175,7 +174,7 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.sync.client import RemoteInstanceClient
-	from hrms.sync.runner import instance_companies, scope_filter, unavailable_doctypes
+	from hrms.sync.runner import instance_companies, scope_filter
 
 	# The runner's own scope, imported rather than restated: two definitions of
 	# "which rows belong here" would drift, and a gate that drifts from the sync it
@@ -183,17 +182,9 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	companies = instance_companies(instance_name)
 	scope = (lambda dt: scope_filter(dt, companies, instance_name)) if companies else None
 
-	# A doctype the operator has declared this source does not have is not a
-	# variance and must not keep the gate red for ever — there is nothing over
-	# there to be out of parity WITH.
-	absent = unavailable_doctypes(instance_name)
-	doctypes = [dt for dt in MIRRORED_DOCTYPES if dt not in absent]
-
-	report = parity_report(
-		RemoteInstanceClient(instance_name), company=company, doctypes=doctypes, scope=scope
+	return parity_report(
+		RemoteInstanceClient(instance_name), company=company, scope=scope
 	)
-	report["not_on_source"] = sorted(absent & set(MIRRORED_DOCTYPES))
-	return report
 
 
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:

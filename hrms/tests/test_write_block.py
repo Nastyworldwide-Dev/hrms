@@ -196,13 +196,6 @@ class TestHooksWiring(unittest.TestCase):
 			"on_trash",
 			"before_rename",
 		),
-		"Holiday List Assignment": (
-			"validate",
-			"before_update_after_submit",
-			"before_cancel",
-			"on_trash",
-			"before_rename",
-		),
 		"Shift Assignment": (
 			"validate",
 			"before_update_after_submit",
