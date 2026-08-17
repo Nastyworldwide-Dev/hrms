@@ -14,6 +14,7 @@
 					</router-link>
 				</div>
 
+				<ResourceError :resource="bank" what="your replacement leave bank" />
 				<!-- month bank -->
 				<div class="border border-divider p-4 flex flex-col gap-2" v-if="bank.data">
 					<span class="m-kicker">{{ monthLabel }} {{ __("bank") }}</span>

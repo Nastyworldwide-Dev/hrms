@@ -9,6 +9,12 @@
 			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
 		</h1>
 
+		<!-- A failed settings read hides check-in entirely, and the employee standing
+		     at the door has no way to tell that from the feature being switched off
+		     for them. Of everything in this app that renders nothing on error, this
+		     is the one that stops someone being paid correctly. -->
+		<ResourceError :resource="settings" what="your check-in settings" />
+
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
 			<div class="text-[13px] text-ink-600" v-if="lastLog">
 				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>

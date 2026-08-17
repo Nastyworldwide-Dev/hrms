@@ -11,6 +11,7 @@
 				:showAttachmentView="true"
 				@validateForm="validateForm"
 			/>
+			<ResourceError :resource="formFields" what="the issue form" />
 		</ion-content>
 	</ion-page>
 </template>

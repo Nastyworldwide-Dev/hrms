@@ -12,6 +12,7 @@
 				:requireAttachment="true"
 				@validateForm="validateForm"
 			/>
+			<ResourceError :resource="formFields" what="the attendance request form" />
 		</ion-content>
 	</ion-page>
 </template>

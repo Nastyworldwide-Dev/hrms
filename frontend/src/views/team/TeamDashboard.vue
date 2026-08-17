@@ -47,6 +47,7 @@
 					</button>
 				</div>
 
+				<ResourceError :resource="teamStatus" what="your team's status" />
 				<!-- summary tiles -->
 				<div class="grid grid-cols-4 border-t-2 border-divider" v-if="teamStatus.data">
 					<div

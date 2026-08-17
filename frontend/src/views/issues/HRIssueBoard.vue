@@ -99,6 +99,7 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
+				<ResourceError :resource="detail" what="this issue" />
 				<div
 					v-if="detail.data"
 					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] overflow-y-auto border-t-[3px] border-inkbase"

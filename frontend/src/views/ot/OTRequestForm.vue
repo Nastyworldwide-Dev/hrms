@@ -12,6 +12,7 @@
 				:requireAttachment="true"
 				@validateForm="validateForm"
 			/>
+			<ResourceError :resource="formFields" what="the overtime request form" />
 		</ion-content>
 	</ion-page>
 </template>

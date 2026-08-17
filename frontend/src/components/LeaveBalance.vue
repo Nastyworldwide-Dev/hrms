@@ -64,6 +64,13 @@
 			</div>
 		</div>
 
+		<!-- Order matters, and this is the exact confusion HR reported. `hasBalances`
+		     is false when the request FAILED just as surely as when the employee
+		     genuinely has none, so the empty state was asserting "you have no leaves
+		     allocated" about a question that had never been answered. Whatever else
+		     is wrong, telling someone their entitlement is zero when we could not
+		     read it is the worst available answer. -->
+		<ResourceError v-else-if="leaveBalance.error" :resource="leaveBalance" what="your leave balance" />
 		<EmptyState :message="__('You have no leaves allocated')" v-else />
 	</div>
 </template>

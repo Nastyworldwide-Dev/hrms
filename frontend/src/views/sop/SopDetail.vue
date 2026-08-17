@@ -28,6 +28,7 @@
 		</header>
 
 		<div class="grow overflow-y-auto">
+			<ResourceError :resource="sop" what="this document" />
 			<div
 				v-if="sop.data"
 				class="flex flex-col gap-3.5 w-full max-w-[820px] mx-auto px-4 pt-[18px] pb-16 lg:my-8 lg:bg-surface lg:border lg:border-divider lg:shadow-sm lg:px-14 lg:py-11"

@@ -11,6 +11,7 @@
 				:showAttachmentView="true"
 				@validateForm="validateForm"
 			/>
+			<ResourceError :resource="formFields" what="the leave application form" />
 		</ion-content>
 	</ion-page>
 </template>

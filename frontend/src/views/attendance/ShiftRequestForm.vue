@@ -10,6 +10,7 @@
 				:id="props.id"
 				@validateForm="validateForm"
 			/>
+			<ResourceError :resource="formFields" what="the shift request form" />
 		</ion-content>
 	</ion-page>
 </template>

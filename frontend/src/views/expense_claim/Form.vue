@@ -43,6 +43,7 @@
 					/>
 				</template>
 			</FormView>
+			<ResourceError :resource="formFields" what="the expense claim form" />
 		</ion-content>
 	</ion-page>
 </template>

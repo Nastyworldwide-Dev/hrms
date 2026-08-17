@@ -7,6 +7,7 @@ import { Button, Input, setConfig, frappeRequest, resourcesPlugin, FormControl }
 import { makeLoudRequest } from "@/utils/loudRequest"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import EmptyState from "@/components/EmptyState.vue"
+import ResourceError from "@/components/ResourceError.vue"
 
 import { IonicVue } from "@ionic/vue"
 
@@ -43,6 +44,10 @@ app.component("Button", Button)
 app.component("Input", Input)
 app.component("FormControl", FormControl)
 app.component("EmptyState", EmptyState)
+// Registered globally beside EmptyState, for the same reason: it belongs on every
+// screen that renders a resource, so requiring a per-file import is how it ends up
+// on none of them.
+app.component("ResourceError", ResourceError)
 
 app.use(router)
 app.use(IonicVue, getIonicConfig())
