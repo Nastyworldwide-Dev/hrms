@@ -13,7 +13,7 @@ manual, so confidence decayed the moment anyone stopped looking.
 
 ```bash
 cd frontend
-yarn install
+# no e2e dependency to install — the runner is fetched on demand by npx
 npx playwright install chromium        # once — downloads the browser
 
 HRMS_E2E_URL=https://verifica-live.s.frappe.cloud \
