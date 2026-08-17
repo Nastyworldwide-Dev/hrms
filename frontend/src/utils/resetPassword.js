@@ -3,12 +3,28 @@
 const RESET_PASSWORD_URL = "/api/method/frappe.core.doctype.user.user.reset_password"
 
 export async function sendPasswordResetLink(email, fetcher = globalThis.fetch) {
+	const headers = {
+		"Content-Type": "application/json",
+		Accept: "application/json",
+	}
+
+	// Guest does NOT mean exempt. `hrms/www/hrms.py` renders this page through
+	// `frappe.sessions.get_csrf_token()`, which GENERATES a token for the guest
+	// session — and a generated token is exactly what arms frappe's check
+	// (`auth.py`: it returns early only when no token was saved, or the header
+	// matches, or the referrer is in an allowlist that is empty by default).
+	//
+	// So loading the login page is what makes a header-less POST from it fail:
+	// 400 CSRFTokenError, thrown before `reset_password` runs a single line.
+	// Three other raw fetches in this app already send the header; this one was
+	// written without it, which is why Forgot Password could never send anything.
+	if (globalThis.csrf_token) headers["X-Frappe-CSRF-Token"] = globalThis.csrf_token
+	else
+		console.warn("[ResetPassword] no csrf_token on the page — expect 400 from", RESET_PASSWORD_URL)
+
 	const res = await fetcher(RESET_PASSWORD_URL, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		},
+		headers,
 		body: JSON.stringify({ user: email }),
 	})
 
