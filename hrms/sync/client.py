@@ -354,8 +354,19 @@ class RemoteInstanceClient:
 				elif status >= 400:
 					# Client errors are deterministic — retrying only burns the remote.
 					logger.warning("[sync] %s %s failed with %s", self.instance_name, endpoint, status)
+					# 403 is the one status that already says what is wrong, so it should
+					# not have to be derived. 401 means the credentials, 404 the doctype;
+					# 403 means both are fine and the user behind the API key simply
+					# cannot read that doctype THERE. On verifica-live it was exactly one
+					# doctype out of fourteen, and working that out took a permission
+					# matrix comparison that the message can carry instead.
 					raise RemoteInstanceError(
-						"remote rejected the read", status_code=status, endpoint=endpoint
+						"the source refused this read: the API user has no read permission "
+						"on this doctype there"
+						if status == 403
+						else "remote rejected the read",
+						status_code=status,
+						endpoint=endpoint,
 					)
 				else:
 					try:

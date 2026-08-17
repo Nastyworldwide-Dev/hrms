@@ -214,6 +214,50 @@ class TestReadOnlyByConstruction(_ClientTestCase):
 		self.assertEqual(len(self.requests.calls), 1)
 
 
+class TestAForbiddenReadNamesItsCause(_ClientTestCase):
+	"""403 is the one status that already tells you exactly what is wrong.
+
+	verifica-live, 2026-08-17: parity reported
+	`remote rejected the read (status=403)` for Holiday List Assignment while every
+	other doctype counted fine. 401 would mean the credentials; 404 the doctype;
+	403 means the credentials are good, the doctype is there, and the user behind
+	the API key cannot read it — on that source, that doctype grants read to
+	System Manager and HR Manager only, and every doctype that worked also grants
+	HR User.
+
+	Deriving that from a bare status code took a permission-matrix comparison. The
+	message should carry it.
+	"""
+
+	def test_a_403_says_it_is_a_permission_problem_on_the_source(self):
+		self.queue(_FakeResponse(403, {}))
+
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			self.client().get_list("Holiday List Assignment")
+
+		message = str(ctx.exception)
+		self.assertIn("permission", message.lower())
+		self.assertIn("403", message)
+
+	def test_a_401_is_still_reported_as_credentials(self):
+		"""The two must stay tellable apart — they have different fixes."""
+		self.queue(_FakeResponse(401, {}))
+
+		with self.assertRaises(sc.RemoteInstanceError) as ctx:
+			self.client().get_list("Employee")
+
+		self.assertNotIn("permission", str(ctx.exception).lower())
+
+	def test_no_status_code_leaks_a_credential(self):
+		for status in (401, 403, 404):
+			with self.subTest(status=status):
+				self.queue(_FakeResponse(status, {}))
+				with self.assertRaises(sc.RemoteInstanceError) as ctx:
+					self.client().get_list("Employee")
+				self.assertNotIn(API_SECRET, str(ctx.exception))
+				self.assertNotIn(API_KEY, str(ctx.exception))
+
+
 class TestSingleDocumentReads(_ClientTestCase):
 	"""`get_doc` exists for one reason: child tables.
 
