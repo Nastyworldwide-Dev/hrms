@@ -33,6 +33,34 @@ class _FakeDB:
 		return self.counts.get(doctype, 0)
 
 
+def _install_runner(frappe_stub):
+	"""Make the REAL `hrms.sync.runner` importable under the stub.
+
+	`parity._count_remote` splits an over-long filter using the runner's own
+	splitter, imported rather than restated — the gate counting under different
+	rules from the sync it grades is the class of bug this file exists to catch.
+	Stubbing the splitter here would test a copy and prove nothing.
+	"""
+	import logging
+
+	frappe_stub._ = lambda text: text
+	frappe_stub.logger = lambda *a, **kw: logging.getLogger("hrms-test")
+	frappe_stub.flags = types.SimpleNamespace()
+	frappe_stub.get_all = lambda *a, **kw: []
+	frappe_stub.get_doc = lambda *a, **kw: None
+	utils = types.ModuleType("frappe.utils")
+	utils.now_datetime = lambda: None
+	frappe_stub.utils = utils
+	sys.modules["frappe.utils"] = utils
+
+	spec = importlib.util.spec_from_file_location(
+		"hrms.sync.runner", HRMS_ROOT / "sync" / "runner.py"
+	)
+	runner = importlib.util.module_from_spec(spec)
+	sys.modules["hrms.sync.runner"] = runner
+	spec.loader.exec_module(runner)
+
+
 def _load(fake_db):
 	frappe_stub = types.ModuleType("frappe")
 	frappe_stub.db = fake_db
@@ -40,6 +68,7 @@ def _load(fake_db):
 	frappe_stub.only_for = lambda *a, **kw: None
 	saved = sys.modules.get("frappe")
 	sys.modules["frappe"] = frappe_stub
+	_install_runner(frappe_stub)
 	try:
 		spec = importlib.util.spec_from_file_location("_parity_under_test", MODULE_PATH)
 		module = importlib.util.module_from_spec(spec)
@@ -216,6 +245,53 @@ class TestADoctypeTheSourceDoesNotHave(unittest.TestCase):
 		mod = _load(_FakeDB({"Employee": 5}))
 		line = mod.compare_doctype(_FakeClient({}, fail={"Employee"}), "Employee")
 		self.assertIsNotNone(line.error)
+
+
+class TestALongFilterIsCountedInChunks(unittest.TestCase):
+	"""SYNC-00057 completed cleanly and parity still could not count check-ins:
+
+	    Employee Checkin: remote rejected the read (status=400)
+
+	Employee Checkin has no company field, so both sides scope it by the mirrored
+	employee list — and at 289 names that list overruns the request line. The SYNC
+	learned to split it; the GATE did not, so the one doctype whose scope needs
+	splitting was the one the gate could never measure.
+
+	Fixing it in one place and not the other is how a mirror ends up healthier than
+	the instrument watching it.
+	"""
+
+	def test_a_long_filter_is_summed_across_requests(self):
+		mod = _load(_FakeDB({"Employee Checkin": 1474}))
+		names = [f"HR-EMP-{i:05d}" for i in range(250)]
+
+		class _Chunked(_FakeClient):
+			def count(self, doctype, filters=None):
+				self.calls.append((doctype, filters))
+				# Refuse anything that would overrun the request line, as the
+				# remote's proxy does.
+				if filters and len(filters["employee"][1]) > 100:
+					error = RuntimeError("remote rejected the read (status=400)")
+					error.status_code = 400
+					raise error
+				return len(filters["employee"][1])
+
+		client = _Chunked({})
+		line = mod.compare_doctype(
+			client, "Employee Checkin", remote_filters={"employee": ("in", names)}
+		)
+
+		self.assertIsNone(line.error, "an over-long filter must be split, not reported as failure")
+		self.assertEqual(line.remote, 250, "every chunk must be counted, and summed")
+		self.assertGreater(len(client.calls), 1)
+
+	def test_a_short_filter_is_still_one_request(self):
+		mod = _load(_FakeDB({"Employee": 5}))
+		client = _FakeClient({"Employee": 5})
+
+		mod.compare_doctype(client, "Employee", remote_filters={"company": ("in", ["Acme"])})
+
+		self.assertEqual(len(client.calls), 1)
 
 
 class TestWhatElseIsOnTheSource(unittest.TestCase):

@@ -194,6 +194,28 @@ def source_inventory(client, doctypes=None) -> dict:
 	}
 
 
+def _count_remote(client, doctype: str, filters) -> int:
+	"""Count on the source, splitting a filter too long for one request line.
+
+	Employee Checkin has no company field, so both the sync and this gate scope it
+	by the mirrored employee list — and at 289 names that list overruns the
+	request line and the remote answers 400. The sync learned to split it; this
+	did not, so the single doctype whose scope needs splitting was the one the gate
+	could never measure. SYNC-00057 completed cleanly with check-ins still reading
+	as an error here.
+
+	Splitting is imported from the runner rather than restated: the gate counting
+	under different rules from the sync it grades is the whole class of bug this
+	file keeps finding.
+	"""
+	try:
+		from hrms.sync.runner import _split_filters
+	except Exception:  # keeps this module loadable without the runner
+		return client.count(doctype, filters=filters)
+
+	return sum(client.count(doctype, filters=chunk) for chunk in _split_filters(filters))
+
+
 def compare_doctype(client, doctype: str, company: str | None = None, remote_filters=None) -> ParityLine:
 	"""Compare one doctype. A remote failure becomes a reported error, not a raise —
 	a single unreachable doctype must not hide the parity of the others.
@@ -217,7 +239,7 @@ def compare_doctype(client, doctype: str, company: str | None = None, remote_fil
 	if remote_filters is None:
 		remote_filters = {"company": company} if company else None
 	try:
-		remote = client.count(doctype, filters=remote_filters)
+		remote = _count_remote(client, doctype, remote_filters)
 	except Exception as e:  # deliberately broad — surfaced in the report, never raised
 		if getattr(e, "status_code", None) == 404:
 			# The source has no such doctype — an older HRMS over there, not a
