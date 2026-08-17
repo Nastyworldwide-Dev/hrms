@@ -3,14 +3,8 @@ import App from "./App.vue"
 import router from "./router"
 import { initSocket } from "./socket"
 
-import {
-	Button,
-	Input,
-	setConfig,
-	frappeRequest,
-	resourcesPlugin,
-	FormControl,
-} from "frappe-ui"
+import { Button, Input, setConfig, frappeRequest, resourcesPlugin, FormControl } from "frappe-ui"
+import { makeLoudRequest } from "@/utils/loudRequest"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import EmptyState from "@/components/EmptyState.vue"
 
@@ -38,7 +32,10 @@ import "./data/theme"
 const app = createApp(App)
 const socket = initSocket()
 
-setConfig("resourceFetcher", frappeRequest)
+// Wrapped, never raw: this is the one seam every resource in the app passes
+// through, so it is the only place a failure can be reported once instead of in
+// seventeen templates. See utils/loudRequest.js for why that matters.
+setConfig("resourceFetcher", makeLoudRequest(frappeRequest))
 app.use(resourcesPlugin)
 app.use(translationsPlugin)
 
@@ -107,7 +104,7 @@ router.isReady().then(async () => {
 		})
 	}
 
-	await translationsPlugin.isReady();
+	await translationsPlugin.isReady()
 	registerServiceWorker()
 	app.mount("#app")
 })
@@ -134,10 +131,7 @@ router.beforeEach(async (to, _, next) => {
 		await employeeResource.promise
 		// user should be an employee to access the app
 		// since all views are employee specific
-		if (
-			!employeeResource?.data ||
-			employeeResource?.data?.user_id !== userResource.data.name
-		) {
+		if (!employeeResource?.data || employeeResource?.data?.user_id !== userResource.data.name) {
 			next({ name: "InvalidEmployee" })
 		} else if (["Login", "ForgotPassword"].includes(to.name)) {
 			next({ name: "Home" })
