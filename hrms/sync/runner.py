@@ -179,6 +179,22 @@ SYNC_DEPENDENCIES = {
 }
 
 
+def is_absent_on_source(error) -> bool:
+	"""True when the remote answered "no such doctype" rather than failing.
+
+	A source running an older HRMS simply does not have every doctype this hub
+	mirrors — `Holiday List Assignment` on verifica-live, 2026-08-17. That is a
+	version gap, not outstanding work, and treating it as a failure is permanent:
+	the run degrades to Partial for ever, the watermark never advances because
+	`Completed` requires nothing outstanding, and the cutover gate can never
+	authorise however healthy the mirror is.
+
+	404 only. A 500, a timeout or a dropped connection IS outstanding work and must
+	still hold the watermark.
+	"""
+	return getattr(error, "status_code", None) == 404
+
+
 def blocked_by(doctype: str, failed: set[str] | frozenset[str]) -> list[str]:
 	"""Prerequisites of `doctype` that failed, transitively.
 
@@ -835,7 +851,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 
 	run_name = _start_run(instance_name, doctypes)
 	totals = {"pulled": 0, "written": 0, "skipped": 0, "errored": 0, "orphaned": 0}
-	results, errors, failed = [], [], []
+	results, errors, failed, absent = [], [], [], []
 	status = "Failed"
 
 	blocked = []
@@ -861,10 +877,18 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 					client, doctype, since=since, filters=scope_filter(doctype, companies, instance_name)
 				)
 			except Exception as e:  # an independent doctype must not abort the run
+				frappe.db.rollback()
+				if is_absent_on_source(e):
+					# A version gap, not a failure. Recorded so an operator can see
+					# WHY nothing arrived, but it leaves no outstanding work, so it
+					# must not hold the watermark or block the cutover gate.
+					absent.append(doctype)
+					errors.append(f"{doctype}: not present on the source instance — skipped")
+					_log().warning("[sync] %s is not present on %s; skipping", doctype, instance_name)
+					continue
 				failed.append(doctype)
 				errors.append(f"{doctype}: {e}")
 				_log().error("[sync] %s failed: %s", doctype, e, exc_info=True)
-				frappe.db.rollback()
 				continue
 
 			results.append(result)
@@ -920,6 +944,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			"results": results,
 			"failed": failed,
 			"blocked": blocked,
+			"absent": absent,
 			**totals,
 		}
 	except Exception as e:

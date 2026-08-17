@@ -174,6 +174,50 @@ class TestTheGateComparesLikeForLike(unittest.TestCase):
 		self.assertEqual(line.delta, 0)
 
 
+class TestADoctypeTheSourceDoesNotHave(unittest.TestCase):
+	"""404 from the source is a version gap, not a variance.
+
+	verifica-live: `Holiday List Assignment` does not exist on nasty-sg-dev, which
+	runs an older HRMS. Reported as an error the gate stays red for ever — and a
+	gate that can never go green is one nobody reads.
+
+	Zero there and zero here IS parity. Rows here with none there is a real
+	divergence and must still show.
+	"""
+
+	def _absent_client(self):
+		class _Absent(_FakeClient):
+			def count(self, doctype, filters=None):
+				self.calls.append((doctype, filters))
+				error = RuntimeError("remote rejected the read (status=404)")
+				error.status_code = 404
+				raise error
+
+		return _Absent({})
+
+	def test_absent_there_and_empty_here_is_parity(self):
+		mod = _load(_FakeDB({"Holiday List Assignment": 0}))
+
+		line = mod.compare_doctype(self._absent_client(), "Holiday List Assignment")
+
+		self.assertIsNone(line.error, "a version gap must not read as an error")
+		self.assertTrue(line.in_parity)
+
+	def test_absent_there_but_rows_here_is_still_a_divergence(self):
+		"""Rows mirrored before the source lost the doctype are a real finding."""
+		mod = _load(_FakeDB({"Holiday List Assignment": 12}))
+
+		line = mod.compare_doctype(self._absent_client(), "Holiday List Assignment")
+
+		self.assertFalse(line.in_parity)
+		self.assertEqual(line.delta, -12)
+
+	def test_a_real_remote_failure_is_still_an_error(self):
+		mod = _load(_FakeDB({"Employee": 5}))
+		line = mod.compare_doctype(_FakeClient({}, fail={"Employee"}), "Employee")
+		self.assertIsNotNone(line.error)
+
+
 class TestCutoverReadiness(unittest.TestCase):
 	def setUp(self):
 		self.mod = _load(_FakeDB())

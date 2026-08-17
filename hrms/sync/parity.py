@@ -106,6 +106,16 @@ def compare_doctype(client, doctype: str, company: str | None = None, remote_fil
 	try:
 		remote = client.count(doctype, filters=remote_filters)
 	except Exception as e:  # deliberately broad — surfaced in the report, never raised
+		if getattr(e, "status_code", None) == 404:
+			# The source has no such doctype — an older HRMS over there, not a
+			# variance. Reported as an error the gate stays red for ever, and a gate
+			# that can never go green is one nobody reads. Zero there against zero
+			# here is parity; rows here with none there is still a real divergence
+			# and falls out of the delta below.
+			logger.info("[parity] %s is not present on %s", doctype, client.instance_name)
+			return ParityLine(
+				doctype, remote=0, local=_local_count(doctype, None, client.instance_name)
+			)
 		logger.warning("[parity] %s: remote count failed: %s", doctype, e)
 		return ParityLine(doctype, remote=0, local=0, error=str(e))
 

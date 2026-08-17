@@ -224,6 +224,13 @@ ATTENDANCE = [
 ]
 
 
+def runner_absent_error(doctype):
+	"""The shape `RemoteInstanceClient` raises when the source has no such doctype."""
+	error = RuntimeError(f"remote rejected the read (status=404, endpoint=/api/resource/{doctype})")
+	error.status_code = 404
+	return error
+
+
 class _RunnerTestCase(unittest.TestCase):
 	"""Installs a fake frappe + store around each test."""
 
@@ -1075,6 +1082,84 @@ class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
 			self.assertEqual(
 				runner.scope_filter(doctype, ["Acme"], "nasty-live"), {"company": ("in", ["Acme"])}
 			)
+
+
+class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
+	"""A version gap is not a failure, and must not behave like one.
+
+	verifica-live, 2026-08-17: `Holiday List Assignment` returned 403, then 404
+	once permissions were bypassed. The source runs an HRMS predating that doctype,
+	so it simply is not there. (403 first because `has_permission` on an unknown
+	doctype is False for anyone who is not System Manager; bypass that and the
+	existence check answers instead.)
+
+	Treated as a failure it is permanent: every run degrades to Partial, and since
+	`Completed` requires nothing outstanding, the watermark never advances and the
+	cutover gate can never authorise. The mirror has to be able to say "that source
+	does not have this" and carry on — there is no outstanding work to come back
+	for.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def absent_client(self, doctype="Holiday List Assignment"):
+		client = self.client({"Employee": EMPLOYEES})
+		real = client.get_list
+
+		def get_list(dt, **kwargs):
+			if dt == doctype:
+				raise runner_absent_error(dt)
+			return real(dt, **kwargs)
+
+		client.get_list = get_list
+		return client
+
+	def test_an_absent_doctype_does_not_fail_the_run(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+
+		result = runner.sync_instance(
+			self.absent_client(),
+			doctypes=["Employee", "Holiday List Assignment"],
+			incremental=False,
+		)
+
+		self.assertEqual(result["status"], "Completed")
+		self.assertIn("Holiday List Assignment", result["absent"])
+		self.assertNotIn("Holiday List Assignment", result["failed"])
+
+	def test_the_run_record_says_which_doctype_the_source_lacks(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+
+		runner.sync_instance(
+			self.absent_client(), doctypes=["Employee", "Holiday List Assignment"], incremental=False
+		)
+
+		log = self.runs()[0]["error_log"]
+		self.assertIn("Holiday List Assignment", log)
+		self.assertIn("not present", log.lower())
+
+	def test_the_rest_of_the_run_still_writes(self):
+		"""The whole point — one version gap must not cost the other thirteen."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+
+		runner.sync_instance(
+			self.absent_client(), doctypes=["Employee", "Holiday List Assignment"], incremental=False
+		)
+
+		self.assertEqual(len(self.store.rows("Employee")), 2)
+
+	def test_a_real_remote_failure_is_still_a_failure(self):
+		"""404 means "not there". Anything else still degrades the run — a 500 or a
+		dropped connection is outstanding work, and must hold the watermark."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": EMPLOYEES}, fail_for=["Attendance"])
+
+		result = runner.sync_instance(
+			client, doctypes=["Employee", "Attendance"], incremental=False
+		)
+
+		self.assertEqual(result["status"], "Partial")
+		self.assertIn("Attendance", result["failed"])
 
 
 class TestSyncRunsInTheBackground(unittest.TestCase):
