@@ -65,15 +65,17 @@ def create_performance_band_field():
 					"fieldname": "performance_band",
 					"fieldtype": "Select",
 					"label": "Performance Band",
-					# E3 is present in the source ERP's own employee data — SYNC-00053
-					# rejected 173 employees on this one value alone, and losing a
-					# person's record over a dropdown option is not a trade worth
-					# making. The source is authoritative for employee data; if E3
-					# turns out to be bad data over there, correct it there and drop
-					# this option again.
-					"options": "\nB\nC\nD\nE1\nE2\nE3\nF",
+					# The band scheme, and nothing else. E3 was briefly added here
+					# because the source held it; HR have since confirmed it was
+					# their own data-entry error. Widening a destination's field to
+					# accommodate bad source data is the wrong direction of fix, and
+					# it is no longer needed either: `runner._narrow_to_local_schema`
+					# drops a value this site cannot represent and names it on the
+					# run, so an unexpected band costs one field rather than the
+					# whole employee.
+					"options": "\nB\nC\nD\nE1\nE2\nF",
 					"insert_after": "grade",
-					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, E3=Junior Executive, F=Operator)",
+					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
 				},
 			]
 		},

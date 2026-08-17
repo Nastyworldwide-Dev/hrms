@@ -253,7 +253,7 @@ FAKE_EMPLOYEE_COLUMNS = {
 	"synced_from_instance",
 }
 
-FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "C", "D", "E1", "E2", "E3", "F"}}
+FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "C", "D", "E1", "E2", "F"}}
 
 
 def _fake_local_schema(doctype):
@@ -1320,6 +1320,25 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
 
 		self.assertIn("custom_reports_to_name", result["dropped_fields"])
+
+	def test_no_select_field_can_cost_a_whole_record(self):
+		"""The general rule, stated once.
+
+		The mirrored doctypes carry 23 Select fields between them. Before this,
+		every one could reject an entire row on a value the source had and this site
+		had not — `performance_band` is simply the one that fired. Widening the
+		destination each time it happens is a queue, not a fix, and it points the
+		correction in the wrong direction: E3 turned out to be an HR data-entry
+		error on the source, so the hub had been widened to accept bad data.
+		"""
+		for value in ("E3", "B2", "anything-the-source-invents"):
+			with self.subTest(value=value):
+				payload, dropped = runner._narrow_to_local_schema(
+					"Employee", {"employee_name": "Aisha", "performance_band": value}
+				)
+				self.assertEqual(payload["employee_name"], "Aisha", "the record must still land")
+				self.assertNotIn("performance_band", payload)
+				self.assertIn("performance_band", dropped)
 
 	def test_narrowing_is_skipped_when_the_schema_cannot_be_read(self):
 		"""Fails open: if meta is unavailable the payload passes through unchanged
