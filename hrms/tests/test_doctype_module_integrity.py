@@ -74,10 +74,6 @@ class TestDoctypeModuleIntegrity(unittest.TestCase):
 				)
 
 
-if __name__ == "__main__":
-	unittest.main()
-
-
 class TestTheMigrationToolsAreReachable(unittest.TestCase):
 	"""The registry and its run log must be findable without typing a URL.
 
@@ -88,11 +84,25 @@ class TestTheMigrationToolsAreReachable(unittest.TestCase):
 	indistinguishable from one that never happened.
 	"""
 
-	WORKSPACES = pathlib.Path(__file__).resolve().parents[1] / "hr" / "workspace"
+	#: Workspaces live under EVERY module, not just `hr` — `payroll` owns Payroll and
+	#: Tax & Benefits. Globbing one module silently exempts the others from the
+	#: link_count check below, which is the sort of gap that leaves half a sidebar
+	#: missing and every test still green.
+	HRMS_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+	def _workspace_files(self):
+		return sorted(self.HRMS_ROOT.glob("*/workspace/*/*.json"))
+
+	def test_every_module_with_workspaces_is_scanned(self):
+		"""Guards the guard: if this drops below the known set, the checks above
+		stopped covering something."""
+		modules = {path.parents[2].name for path in self._workspace_files()}
+		self.assertEqual(modules, {"hr", "payroll"})
+		self.assertEqual(len(self._workspace_files()), 9)
 
 	def _all_links(self):
 		targets = set()
-		for path in self.WORKSPACES.glob("*/*.json"):
+		for path in self._workspace_files():
 			for link in json.loads(path.read_text(encoding="utf-8")).get("links", []):
 				if link.get("link_to"):
 					targets.add(link["link_to"])
@@ -107,7 +117,7 @@ class TestTheMigrationToolsAreReachable(unittest.TestCase):
 	def test_every_card_declares_the_number_of_links_under_it(self):
 		"""Frappe slices links by the card's `link_count`; a wrong count silently
 		drops the tail of a card off the sidebar."""
-		for path in self.WORKSPACES.glob("*/*.json"):
+		for path in self._workspace_files():
 			links = json.loads(path.read_text(encoding="utf-8")).get("links", [])
 			card, seen = None, 0
 			for link in [*links, {"type": "Card Break", "label": "<end>", "link_count": 0}]:
@@ -122,3 +132,7 @@ class TestTheMigrationToolsAreReachable(unittest.TestCase):
 					card, seen = link, 0
 				else:
 					seen += 1
+
+
+if __name__ == "__main__":
+	unittest.main()
