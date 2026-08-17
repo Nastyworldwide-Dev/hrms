@@ -1265,6 +1265,114 @@ class TestADoctypeDeclaredAbsentIsNeverRequested(_RunnerTestCase):
 		self.assertEqual(result["status"], "Completed")
 
 
+class TestMastersHaveNoProvenanceColumnToCountBy(_RunnerTestCase):
+	"""SYNC-00053 killed eleven of fourteen doctypes with one query.
+
+	    Leave Type: (1054, "Unknown column 'synced_from_instance' in 'WHERE'")
+
+	...and the same for Designation, Branch, Employee Grade, Holiday List, Shift
+	Type and Shift Schedule. `_count_local_orphans` filters on the provenance stamp,
+	and masters deliberately do not carry one — they are HR-owned here, which is the
+	whole reason `get_provenance_custom_fields` covers STAMPED_DOCTYPES alone. I
+	split the two groups and left the orphan count querying the stamp on both.
+
+	Then the dependency graph did its job perfectly and made it far worse: Leave
+	Type failing skipped Leave Ledger Entry, Holiday List skipped Holiday List
+	Assignment, Shift Type skipped Shift Assignment, Shift Schedule skipped Shift
+	Schedule Assignment. Empty leave balances, no holidays and no shifts all trace
+	to this one line.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_a_master_is_never_counted_by_a_stamp_it_does_not_carry(self):
+		calls = []
+		real = self.store.get_all
+
+		def get_all(doctype, filters=None, **kwargs):
+			calls.append((doctype, dict(filters or {})))
+			if doctype in runner.MASTER_DOCTYPES and runner.PROVENANCE_FIELD in (filters or {}):
+				raise RuntimeError("(1054, \"Unknown column 'synced_from_instance' in 'WHERE'\")")
+			return real(doctype, filters=filters, **kwargs)
+
+		import frappe
+
+		frappe.get_all = get_all
+		self.addCleanup(setattr, frappe, "get_all", real)
+
+		client = self.client({"Leave Type": [{"name": "Annual", "modified": "2026-08-01 09:00:00"}]})
+		client.get_doc = lambda dt, name: {"name": name}
+
+		result = runner.sync_doctype(client, "Leave Type")
+
+		self.assertEqual(result["inserted"], 1)
+
+	def test_the_stamped_doctypes_are_still_checked_for_orphans(self):
+		"""Never deleting is only safe if divergence is still counted."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.store.tables.setdefault("Employee", {})["HR-EMP-GONE"] = {
+			"name": "HR-EMP-GONE",
+			"company": "Acme",
+			runner.PROVENANCE_FIELD: "nasty-live",
+		}
+
+		result = runner.sync_doctype(self.client({"Employee": EMPLOYEES}), "Employee")
+
+		self.assertEqual(result["skipped"], 1, "a local row the remote no longer has must be counted")
+		self.assertIn("HR-EMP-GONE", self.store.rows("Employee"), "and never deleted")
+
+
+class TestACancelledRowFromTheSource(_RunnerTestCase):
+	"""SYNC-00053:
+
+	    Attendance: HR-ATT-2026-10631: Cannot change docstatus from 0 (Draft) to 2 (Cancelled)
+
+	The source holds cancelled attendance, and Frappe refuses to insert a document
+	straight into docstatus 2 — a doc must be submitted before it can be cancelled.
+	A mirror is copying an end state, not walking a lifecycle, so it has to land
+	the row and then mark it cancelled without replaying the transition.
+
+	Left unhandled these rows error on every run for ever, which holds the
+	watermark and keeps the run Partial — the same permanent-failure shape as the
+	masters above.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	CANCELLED: ClassVar[list] = [
+		{
+			"name": "HR-ATT-CANCELLED",
+			"employee": "HR-EMP-0001",
+			"docstatus": 2,
+			"modified": "2026-08-09 10:00:00",
+		}
+	]
+
+	def setUp(self):
+		super().setUp()
+		# Attendance declares Employee as a row dependency, so the parent has to be
+		# here or the row is correctly skipped as an orphan before docstatus matters.
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme")
+
+	def test_a_cancelled_row_lands_cancelled(self):
+		result = runner.sync_doctype(self.client({"Attendance": self.CANCELLED}), "Attendance")
+
+		self.assertEqual(result["errored"], 0, "a cancelled source row must not error")
+		self.assertEqual(result["inserted"], 1)
+		self.assertEqual(self.store.rows("Attendance")["HR-ATT-CANCELLED"]["docstatus"], 2)
+
+	def test_it_is_inserted_submitted_then_marked_cancelled(self):
+		"""Frappe forbids 0 -> 2 in one step, so the row is written as submitted and
+		the final state set afterwards — the same `db.set_value` route every other
+		mirrored update already takes, so no cancel side effects replay."""
+		runner.sync_doctype(self.client({"Attendance": self.CANCELLED}), "Attendance")
+
+		self.assertIn(
+			("Attendance", "HR-ATT-CANCELLED", {"docstatus": 2}),
+			self.store.updates,
+		)
+
+
 class TestSyncRunsInTheBackground(unittest.TestCase):
 	"""A full pull cannot run inside an HTTP request.
 

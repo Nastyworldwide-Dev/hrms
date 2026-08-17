@@ -516,12 +516,25 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 			_reconcile_user_status(remote_name)
 		return "updated"
 
+	# Frappe refuses to insert straight into docstatus 2: a document must be
+	# submitted before it can be cancelled. A mirror copies an END STATE rather
+	# than walking a lifecycle, so a cancelled source row is written as submitted
+	# and then marked cancelled — through `db.set_value`, the same route every
+	# other mirrored update takes, so no `on_cancel` side effects replay here.
+	cancelled = str(payload.get("docstatus") or 0) == "2"
+	if cancelled:
+		payload = dict(payload, docstatus=1)
+
 	doc = frappe.get_doc({"doctype": doctype, **payload})
 	doc.flags.ignore_permissions = True
 	doc.flags.ignore_validate = True
 	doc.flags.ignore_mandatory = True
 	doc.flags.ignore_links = True
 	doc.insert(set_name=remote_name, ignore_if_duplicate=True)
+
+	if cancelled:
+		frappe.db.set_value(doctype, remote_name, {"docstatus": 2}, update_modified=False)
+		_log().info("[sync] %s %s mirrored as cancelled", doctype, remote_name)
 	return "inserted"
 
 
@@ -693,7 +706,13 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		start += page_size
 
 	if not since:
-		skipped += _count_local_orphans(doctype, client.instance_name, seen)
+		# STAMPED only: masters carry no provenance column, and filtering on one
+		# they do not have is an OperationalError that fails the whole doctype —
+		# then takes every dependent down with it. SYNC-00053 lost eleven of
+		# fourteen doctypes to exactly this. Nothing is lost by skipping the check
+		# either: a create-only master is never deleted here in the first place.
+		if doctype in STAMPED_DOCTYPES:
+			skipped += _count_local_orphans(doctype, client.instance_name, seen)
 
 	_log().info(
 		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s errored=%s (since=%s)",

@@ -65,9 +65,15 @@ def create_performance_band_field():
 					"fieldname": "performance_band",
 					"fieldtype": "Select",
 					"label": "Performance Band",
-					"options": "\nB\nC\nD\nE1\nE2\nF",
+					# E3 is present in the source ERP's own employee data — SYNC-00053
+					# rejected 173 employees on this one value alone, and losing a
+					# person's record over a dropdown option is not a trade worth
+					# making. The source is authoritative for employee data; if E3
+					# turns out to be bad data over there, correct it there and drop
+					# this option again.
+					"options": "\nB\nC\nD\nE1\nE2\nE3\nF",
 					"insert_after": "grade",
-					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
+					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, E3=Junior Executive, F=Operator)",
 				},
 			]
 		},
