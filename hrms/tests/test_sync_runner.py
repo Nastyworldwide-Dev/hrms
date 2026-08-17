@@ -1162,6 +1162,109 @@ class TestADoctypeTheSourceDoesNotHave(_RunnerTestCase):
 		self.assertIn("Attendance", result["failed"])
 
 
+class TestADoctypeDeclaredAbsentIsNeverRequested(_RunnerTestCase):
+	"""403 cannot tell "no such doctype" from "you may not read it".
+
+	verifica-live proved it: `Holiday List Assignment` answered 404 while the API
+	user held System Manager and 403 the moment that was removed — same missing
+	doctype, two different statuses depending on the caller's roles. Frappe checks
+	permission before it checks existence, and `has_permission` on an unknown
+	doctype is False for everyone except System Manager.
+
+	So inferring "absent" from 403 would quietly turn a revoked read on Employee
+	into a clean run, which is the one mistake this whole mirror exists to avoid.
+	It has to be declared, not guessed: `unavailable_doctypes` on the instance is
+	the operator saying "that source has no such concept", and anything NOT
+	declared stays a loud failure.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def declare_absent(self, *doctypes):
+		self.store.tables.setdefault("HRMS ERP Instance", {})["nasty-live"] = {
+			"name": "nasty-live",
+			"instance_name": "nasty-live",
+			"unavailable_doctypes": "\n".join(doctypes),
+		}
+
+	def test_a_declared_doctype_is_skipped_without_asking(self):
+		"""Not requested at all — asking a source for something it has not got is
+		one more way to fail."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.declare_absent("Holiday List Assignment")
+		client = self.client({"Employee": EMPLOYEES})
+
+		result = runner.sync_instance(
+			client, doctypes=["Employee", "Holiday List Assignment"], incremental=False
+		)
+
+		self.assertIn("Holiday List Assignment", result["absent"])
+		self.assertNotIn(
+			"Holiday List Assignment",
+			[call["doctype"] for call in client.calls],
+			"a declared-absent doctype must never reach the network",
+		)
+
+	def test_the_run_still_completes(self):
+		"""The point: one version gap must not cost the migration its exit
+		criterion for ever."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.declare_absent("Holiday List Assignment")
+
+		result = runner.sync_instance(
+			self.client({"Employee": EMPLOYEES}),
+			doctypes=["Employee", "Holiday List Assignment"],
+			incremental=False,
+		)
+
+		self.assertEqual(result["status"], "Completed")
+
+	def test_an_undeclared_403_is_still_a_failure(self):
+		"""A permission mistake must stay loud. Silently accepting 403 as "absent"
+		would let a revoked read on Employee report a clean run."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		client = self.client({"Employee": EMPLOYEES})
+		real = client.get_list
+
+		def get_list(dt, **kwargs):
+			if dt == "Attendance":
+				error = RuntimeError("the source refused this read (status=403)")
+				error.status_code = 403
+				raise error
+			return real(dt, **kwargs)
+
+		client.get_list = get_list
+
+		result = runner.sync_instance(client, doctypes=["Employee", "Attendance"], incremental=False)
+
+		self.assertEqual(result["status"], "Partial")
+		self.assertIn("Attendance", result["failed"])
+
+	def test_a_missing_column_does_not_take_the_mirror_down(self):
+		"""The field only exists after `bench migrate`. A deploy that lands before
+		its migrate must degrade to "nothing declared", not break every sync."""
+		import frappe
+
+		def explode(*a, **kw):
+			raise RuntimeError("Unknown column 'unavailable_doctypes' in 'SELECT'")
+
+		saved = self.store.get_value
+		self.store.get_value = explode
+		self.addCleanup(setattr, self.store, "get_value", saved)
+
+		self.assertEqual(runner.unavailable_doctypes("nasty-live"), set())
+
+	def test_nothing_declared_changes_nothing(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+
+		result = runner.sync_instance(
+			self.client({"Employee": EMPLOYEES}), doctypes=["Employee"], incremental=False
+		)
+
+		self.assertEqual(result["absent"], [])
+		self.assertEqual(result["status"], "Completed")
+
+
 class TestSyncRunsInTheBackground(unittest.TestCase):
 	"""A full pull cannot run inside an HTTP request.
 

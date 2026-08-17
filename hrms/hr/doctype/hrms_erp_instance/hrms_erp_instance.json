@@ -17,6 +17,7 @@
   "api_key",
   "column_break_credentials",
   "api_secret",
+  "unavailable_doctypes",
   "companies_section",
   "companies"
  ],
@@ -31,15 +32,15 @@
   },
   {
    "default": "1",
+   "description": "Gates the sync client and the staff redirect only. Does NOT affect the permission fence — HR (Instance) users stay fenced to this instance's companies even while it is disabled.",
    "fieldname": "enabled",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Enabled",
-   "description": "Gates the sync client and the staff redirect only. Does NOT affect the permission fence \u2014 HR (Instance) users stay fenced to this instance's companies even while it is disabled."
+   "label": "Enabled"
   },
   {
    "default": "0",
-   "description": "Cutover switch: allow local edits to rows mirrored from this instance. Leave off during the parallel run \u2014 the single-writer write-block enforces read-only while this is unchecked.",
+   "description": "Cutover switch: allow local edits to rows mirrored from this instance. Leave off during the parallel run — the single-writer write-block enforces read-only while this is unchecked.",
    "fieldname": "unlock_mirrored_writes",
    "fieldtype": "Check",
    "label": "Unlock Mirrored Writes",
@@ -64,7 +65,7 @@
    "label": "Description"
   },
   {
-   "description": "Used by the one-way shadow sync to read from this instance. Visible to System Manager only (permlevel 1) \u2014 the Employee role can read this doctype for the PWA redirect and must never reach these.",
+   "description": "Used by the one-way shadow sync to read from this instance. Visible to System Manager only (permlevel 1) — the Employee role can read this doctype for the PWA redirect and must never reach these.",
    "fieldname": "credentials_section",
    "fieldtype": "Section Break",
    "label": "Sync Credentials",
@@ -101,6 +102,13 @@
    "fieldtype": "Table",
    "label": "Companies",
    "options": "HRMS ERP Instance Company",
+   "permlevel": 1
+  },
+  {
+   "description": "Doctypes this source does not have, one per line. The sync skips them without asking, and the cutover gate treats them as not applicable rather than as a permanent variance. Use this ONLY for a genuine version gap — a doctype that is merely unreadable is a permission problem and must stay visible as a failure.",
+   "fieldname": "unavailable_doctypes",
+   "fieldtype": "Small Text",
+   "label": "Doctypes Not On This Source",
    "permlevel": 1
   }
  ],

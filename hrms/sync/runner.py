@@ -179,6 +179,34 @@ SYNC_DEPENDENCIES = {
 }
 
 
+def unavailable_doctypes(instance_name: str) -> set[str]:
+	"""Doctypes the operator has declared this source does not have.
+
+	Declared rather than inferred, because 403 cannot tell "no such doctype" from
+	"you may not read it". verifica-live showed both faces of one missing doctype:
+	404 while the API user held System Manager, 403 the moment it was removed —
+	Frappe checks permission before existence, and `has_permission` on an unknown
+	doctype is False for anyone who is not System Manager.
+
+	Inferring absence from 403 would therefore turn a revoked read on Employee into
+	a clean, cutover-authorising run. That is the single worst outcome available
+	here, so the operator states the version gap and everything undeclared stays a
+	loud failure.
+	"""
+	# By docname: the doctype autonames `field:instance_name`, so the two are the
+	# same string, and every caller here already holds the instance name.
+	#
+	# Guarded because the column only exists after `bench migrate`, and a deploy
+	# that lands before its migrate must degrade to "nothing declared" rather than
+	# taking the whole mirror down over an optional refinement.
+	try:
+		raw = frappe.db.get_value("HRMS ERP Instance", instance_name, "unavailable_doctypes")
+	except Exception as e:
+		_log().warning("[sync] could not read unavailable_doctypes for %s: %s", instance_name, e)
+		return set()
+	return {line.strip() for line in (raw or "").replace(",", "\n").splitlines() if line.strip()}
+
+
 def is_absent_on_source(error) -> bool:
 	"""True when the remote answered "no such doctype" rather than failing.
 
@@ -837,6 +865,13 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	instance_name = client.instance_name
 
 	companies = instance_companies(instance_name)
+	declared_absent = unavailable_doctypes(instance_name)
+	if declared_absent:
+		_log().info(
+			"[sync] %s declares no %s — those are skipped, not requested",
+			instance_name,
+			", ".join(sorted(declared_absent)),
+		)
 	if companies:
 		_log().info("[sync] %s scoped to %s: %s", instance_name, len(companies), ", ".join(companies))
 	else:
@@ -863,6 +898,11 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			# A dependent doctype is not attempted once its prerequisite failed:
 			# its rows would reference employees or companies that do not exist
 			# here. Skipping is the only safe outcome — see SYNC_DEPENDENCIES.
+			if doctype in declared_absent:
+				absent.append(doctype)
+				errors.append(f"{doctype}: not present on the source instance — skipped")
+				continue
+
 			blockers = blocked_by(doctype, set(failed))
 			if blockers:
 				blocked.append(doctype)

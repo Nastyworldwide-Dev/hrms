@@ -65,6 +65,11 @@ function report_parity(report) {
 				</tr></thead>
 				<tbody>${rows}</tbody>
 			</table>` +
+			((report.not_on_source || []).length
+				? `<p class="text-muted">${__("Not on this source, so not compared: {0}", [
+						report.not_on_source.map(esc).join(", "),
+					])}</p>`
+				: "") +
 			(clean
 				? `<p>${__("Every mirrored doctype matches the source.")}</p>`
 				: `<p>${__(
