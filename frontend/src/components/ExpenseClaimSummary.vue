@@ -47,6 +47,13 @@
 			</div>
 		</div>
 	</div>
+	<!-- Without this the component rendered NOTHING when its request failed:
+	     no calendar, no message, nothing to search for. Four features were
+	     reported "missing" that were in fact erroring. -->
+	<div v-else-if="summary.error" class="text-p-sm text-ink-500 py-6 text-center">
+		{{ __("Could not load the expense summary. Refresh to try again.") }}
+	</div>
+
 </template>
 
 <script setup>

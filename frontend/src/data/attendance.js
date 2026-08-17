@@ -48,9 +48,14 @@ const transformShiftRequests = (data) =>
 
 export const myAttendanceRequests = createResource({
 	url: "hrms.api.get_attendance_requests",
-	params: {
-		employee: employeeResource.data.name,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:my_attendance_requests",
@@ -68,9 +73,14 @@ const transformAttendanceRequests = (data) => {
 }
 export const myShiftRequests = createResource({
 	url: "hrms.api.get_shift_requests",
-	params: {
-		employee: employeeResource.data.name,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:my_shift_requests",
@@ -81,11 +91,16 @@ export const myShiftRequests = createResource({
 
 export const teamShiftRequests = createResource({
 	url: "hrms.api.get_shift_requests",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		for_approval: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:team_shift_requests",
@@ -96,11 +111,16 @@ export const teamShiftRequests = createResource({
 // decided by me — the approval trail Team Requests loses on decision
 export const historyShiftRequests = createResource({
 	url: "hrms.api.get_shift_requests",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		history: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:history_shift_requests",
@@ -111,10 +131,15 @@ export const historyShiftRequests = createResource({
 
 export const teamAttendanceRequests = createResource({
 	url: "hrms.api.get_attendance_requests",
-	params: {
-		employee: employeeResource.data.name,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
 		for_approval: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:team_attendance_requests",

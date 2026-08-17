@@ -17,9 +17,14 @@ const transformClaimData = (data) => {
 
 export const myClaims = createResource({
 	url: "hrms.api.get_expense_claims",
-	params: {
-		employee: employeeResource.data.name,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:my_claims",
@@ -33,11 +38,16 @@ export const myClaims = createResource({
 
 export const teamClaims = createResource({
 	url: "hrms.api.get_expense_claims",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		for_approval: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:team_claims",
@@ -49,11 +59,16 @@ export const teamClaims = createResource({
 // decided by me — the approval trail Team Requests loses on decision
 export const historyClaims = createResource({
 	url: "hrms.api.get_expense_claims",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		history: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:history_claims",

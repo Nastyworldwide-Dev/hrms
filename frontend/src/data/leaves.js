@@ -22,9 +22,14 @@ export const getLeaveDates = (leave) => {
 
 export const myLeaves = createResource({
 	url: "hrms.api.get_leave_applications",
-	params: {
-		employee: employeeResource.data.name,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:my_leaves",
@@ -38,11 +43,16 @@ export const myLeaves = createResource({
 
 export const teamLeaves = createResource({
 	url: "hrms.api.get_leave_applications",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		for_approval: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:team_leaves",
@@ -54,11 +64,16 @@ export const teamLeaves = createResource({
 // decided by me — the approval trail Team Requests loses on decision
 export const historyLeaves = createResource({
 	url: "hrms.api.get_leave_applications",
-	params: {
-		employee: employeeResource.data.name,
-		approver_id: employeeResource.data.user_id,
+	// Read per request, not once at module load: `employeeResource`
+	// may not have resolved when this file is first imported, and a
+	// captured `undefined` employee silently blanks the panel.
+	makeParams() {
+		return {
+		employee: employeeResource.data?.name,
+		approver_id: employeeResource.data?.user_id,
 		history: 1,
 		limit: 10,
+		}
 	},
 	auto: true,
 	cache: "hrms:history_leaves",

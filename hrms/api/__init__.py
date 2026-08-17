@@ -181,7 +181,15 @@ def _ensure_own_employee_or_permitted(employee: str) -> None:
 
 
 @frappe.whitelist()
-def get_attendance_calendar_events(employee: str, from_date: str, to_date: str) -> dict[str, str]:
+def get_attendance_calendar_events(
+	from_date: str, to_date: str, employee: str | None = None
+) -> dict[str, str]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	holidays = get_holidays_for_calendar(employee, from_date, to_date)
 	attendance = get_attendance_for_calendar(employee, from_date, to_date)
@@ -221,12 +229,18 @@ def get_holidays_for_calendar(employee: str, from_date: str, to_date: str) -> li
 
 @frappe.whitelist()
 def get_shift_requests(
-	employee: str,
+	employee: str | None = None,
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 	history: bool = False,
 ) -> list[dict]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Shift Request", employee, approver_id, for_approval, cint(history))
 	fields = [
@@ -262,10 +276,16 @@ def get_shift_requests(
 
 @frappe.whitelist()
 def get_attendance_requests(
-	employee: str,
+	employee: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Attendance Request", employee, None, for_approval)
 	fields = [
@@ -490,7 +510,13 @@ def get_shift_request_approvers(employee: str) -> str | list[str]:
 
 
 @frappe.whitelist()
-def get_shifts(employee: str) -> list[dict[str, str]]:
+def get_shifts(employee: str | None = None) -> list[dict[str, str]]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
 	ShiftType = frappe.qb.DocType("Shift Type")
@@ -518,12 +544,18 @@ def get_shifts(employee: str) -> list[dict[str, str]]:
 # Leaves and Holidays
 @frappe.whitelist()
 def get_leave_applications(
-	employee: str,
+	employee: str | None = None,
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 	history: bool = False,
 ) -> list[dict]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Leave Application", employee, approver_id, for_approval, cint(history))
 	fields = [
@@ -802,12 +834,18 @@ def get_leave_types(employee: str, date: str) -> list:
 # Expense Claims
 @frappe.whitelist()
 def get_expense_claims(
-	employee: str,
+	employee: str | None = None,
 	approver_id: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 	history: bool = False,
 ) -> list[dict]:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Expense Claim", employee, approver_id, for_approval, cint(history))
 	fields = [
@@ -847,7 +885,13 @@ def get_expense_claims(
 
 
 @frappe.whitelist()
-def get_expense_claim_summary(employee: str) -> dict:
+def get_expense_claim_summary(employee: str | None = None) -> dict:
+	# `employee` is optional because the PWA is session-scoped: it knows who is
+	# signed in, not their Employee id. Required, this raised TypeError before a
+	# line of the body ran, and the UI rendered a blank panel rather than an
+	# error. Passing one explicitly still works and is still permission-checked —
+	# that is how a manager reads their team.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	from frappe.query_builder.functions import Sum
 
