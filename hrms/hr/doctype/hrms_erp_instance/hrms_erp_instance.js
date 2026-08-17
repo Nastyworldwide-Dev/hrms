@@ -60,8 +60,27 @@ function report_survey(report) {
 				: `<p>${__("Every unmirrored doctype checked is empty on the source.")}</p>`) +
 			aside(__("Empty over there"), report.empty) +
 			aside(__("Not on that source at all"), report.not_on_source) +
-			aside(__("Could not read — grant the API user access first"), report.unreadable),
+			// Not `aside`: it renders names only, and here the name is the least
+			// useful half. `source_inventory` has always collected the remote's error
+			// per doctype and this dialog dropped it — so "could not read" read as
+			// "grant a permission" whether or not a permission was the cause. Advice
+			// presented as a diagnosis, with the diagnosis in hand the whole time.
+			unreadable_html(report.unreadable),
 	});
+}
+
+// Each unreadable doctype with what the source actually SAID. A permission is
+// the usual cause and not the only one, and the two are only distinguishable
+// from the error text.
+function unreadable_html(list) {
+	if (!(list || []).length) return "";
+	console.warn("[HRMSERPInstance] unreadable on source:", list);
+	const esc = frappe.utils.escape_html;
+	const rows = list
+		.map((row) => `<li><b>${esc(row.doctype || row)}</b> — ${esc(row.error || __("no reason given"))}</li>`)
+		.join("");
+	return `<p class="text-muted">${__("Could not read — the source answered:")}</p>
+		<ul class="text-muted" style="margin:0 0 0 1em">${rows}</ul>`;
 }
 
 function check_parity(frm) {
