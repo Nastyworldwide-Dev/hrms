@@ -40,18 +40,11 @@ FULL_INSTANCE_ROW = {
 class _FakeDB:
 	"""Answers only the fields it is asked for — like the real `db.get_value`."""
 
-	def __init__(self, instances=None, employees=None):
+	def __init__(self, instances=None):
 		self.instances = instances or {}
-		self.employees = employees or {}
 		self.requested_fields = []
 
 	def get_value(self, doctype, filters, fieldname, **kwargs):
-		if doctype == "Employee":
-			for row in self.employees.values():
-				if all(row.get(k) == v for k, v in filters.items()):
-					return row.get(fieldname)
-			return None
-
 		if doctype != "HRMS ERP Instance":
 			return None
 
@@ -64,6 +57,28 @@ class _FakeDB:
 		return None
 
 
+def _ensure_identity_importable():
+	"""`erp_instance` imports `resolve_employee_identity` at module level.
+
+	It did not always: the API used to run its own
+	`db.get_value("Employee", {"user_id": ...})`, which this file's fake answered.
+	When it moved onto the canonical resolver the fake kept answering a question
+	nobody asked any more, the module-level import broke the standalone run, and
+	under bench the resolver reached for a query builder this file never stubs —
+	so `get_my_erp_instance()` returned None and the two assertions that matter
+	most here, that a staff payload carries no credentials, stopped running at all.
+
+	Stubbing the import restores the bench-free contract this file's docstring
+	promises. Under `bench run-tests` the real package is already in `sys.modules`
+	and is left alone; `_ApiTestCase` stubs the resolver itself either way.
+	"""
+	for name in ("hrms", "hrms.utils", "hrms.utils.identity"):
+		sys.modules.setdefault(name, types.ModuleType(name))
+	identity = sys.modules["hrms.utils.identity"]
+	if not hasattr(identity, "resolve_employee_identity"):
+		identity.resolve_employee_identity = lambda user=None: types.SimpleNamespace(company=None)
+
+
 def _load_module():
 	"""Import api/erp_instance.py with a stub `frappe`, no bench required."""
 	if "frappe" not in sys.modules:
@@ -73,6 +88,8 @@ def _load_module():
 		frappe.whitelist = lambda *a, **kw: lambda fn: fn
 		frappe.session = types.SimpleNamespace(user="staff@example.com")
 		sys.modules["frappe"] = frappe
+
+	_ensure_identity_importable()
 
 	import frappe
 
@@ -104,25 +121,24 @@ class _ApiTestCase(unittest.TestCase):
 			getattr(frappe, "get_all", None),
 			getattr(frappe, "session", None),
 		)
-		self.db = _FakeDB(
-			instances={"nasty-live": dict(FULL_INSTANCE_ROW)},
-			employees={
-				"HR-EMP-0001": {
-					"name": "HR-EMP-0001",
-					"user_id": "staff@example.com",
-					"status": "Active",
-					"company": "Acme",
-				}
-			},
-		)
+		self.db = _FakeDB(instances={"nasty-live": dict(FULL_INSTANCE_ROW)})
 		frappe.db = self.db
 		frappe.get_all = self.get_all
 		frappe.session = types.SimpleNamespace(user="staff@example.com")
 		self.mappings = [{"parent": "nasty-live"}]
+
+		# The caller is resolved through `hrms.utils.identity`, so that is what
+		# gets stubbed — never a hand-rolled Employee query, which is exactly the
+		# duplication the resolver exists to end. Identity has its own suite
+		# (`test_identity`, bench-backed); this file is about the allow-list.
+		self.identity = types.SimpleNamespace(employee="HR-EMP-0001", company="Acme", reason="OK")
+		self._saved_resolver = api.resolve_employee_identity
+		api.resolve_employee_identity = lambda user=None: self.identity
 		self.addCleanup(self._restore)
 
 	def _restore(self):
 		self.frappe.db, self.frappe.get_all, self.frappe.session = self._saved
+		api.resolve_employee_identity = self._saved_resolver
 
 	def get_all(self, doctype, filters=None, fields=None, limit=None, **kwargs):
 		if doctype != "HRMS ERP Instance Company":
@@ -171,8 +187,20 @@ class TestResolution(_ApiTestCase):
 		self.assertIsNone(api.get_my_erp_instance())
 
 	def test_user_without_an_active_employee_returns_none(self):
-		self.frappe.session = types.SimpleNamespace(user="stranger@example.com")
+		self.identity = types.SimpleNamespace(employee=None, company=None, reason="NO_EMPLOYEE")
 		self.assertIsNone(api.get_my_erp_instance())
+
+	def test_identity_comes_from_the_canonical_resolver(self):
+		"""Pinned because this file already rotted once when it stopped being true.
+
+		Thirteen hand-rolled `Employee.user_id == session.user` queries were the
+		original defect — seven checked `status = "Active"` and six did not, so an
+		inactive employee was refused a login and still resolved for attendance,
+		leave and reporting. This endpoint must keep asking the one resolver.
+		"""
+		source = MODULE_PATH.read_text(encoding="utf-8")
+		self.assertIn("resolve_employee_identity", source)
+		self.assertNotIn('"Employee"', source, "identity must come from hrms.utils.identity")
 
 
 if __name__ == "__main__":
