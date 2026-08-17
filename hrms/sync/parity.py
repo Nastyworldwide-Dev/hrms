@@ -112,8 +112,8 @@ UNMIRRORED_CANDIDATES = (
 	#
 	# Leave Encashment stays: payroll-adjacent, and payroll is empty on the source.
 	"Leave Encashment",
-	# Org structure and lifecycle
-	"Department",
+	# Org structure and lifecycle. Department has left this list — it is mirrored,
+	# tree arithmetic recomputed locally and approver tables included.
 	"Employee Onboarding",
 	"Employee Separation",
 	"Employee Promotion",

@@ -655,16 +655,23 @@ class TestMastersAreMirroredSoLinksResolve(_RunnerTestCase):
 		self.assertNotIn("designation", runner.ROW_DEPENDENCIES.get("Employee", {}))
 		self.assertNotIn("grade", runner.ROW_DEPENDENCIES.get("Employee", {}))
 
-	def test_department_is_never_mirrored(self):
-		"""It would CORRUPT rather than merely dangle: Department is a NestedSet and
-		its `lft`/`rgt` describe a position in the SOURCE's tree, so writing them
-		here leaves a tree that is wrong on both sides.
+	def test_department_is_mirrored_without_the_sources_tree_arithmetic(self):
+		"""Department was excluded because mirroring it would CORRUPT rather than
+		merely dangle: it is a NestedSet, and `lft`/`rgt` describe a position in the
+		SOURCE's tree.
 
-		Holiday List used to be excluded alongside it for a weaker reason — the list
+		That reason was right about the arithmetic and wrong about the doctype.
+		Excluding it left 289 employees pointing at departments this site does not
+		have, and cost department-based approver routing entirely. The positions are
+		dropped and recomputed here; the shape is mirrored.
+
+		Holiday List was once excluded alongside it for a weaker reason — the list
 		endpoint cannot see a child table — which was a limit of how we were reading,
-		not of what could safely be written. `client.get_doc` removed it.
+		not of what could safely be written. `client.get_doc` removed it, and it is
+		what lets Department bring its approver tables across too.
 		"""
-		self.assertNotIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertEqual(runner.LOCALLY_OWNED_FIELDS["Department"], ("lft", "rgt", "old_parent"))
 
 
 class TestThePullIsScopedToTheServedCompanies(_RunnerTestCase):
@@ -1259,16 +1266,21 @@ class TestTheMastersThatCarryFunction(_RunnerTestCase):
 			self.assertIn(doctype, runner.CREATE_ONLY_DOCTYPES)
 			self.assertNotIn(doctype, runner.STAMPED_DOCTYPES)
 
-	def test_department_stays_out(self):
-		"""302 rows and a NestedSet. Its `lft`/`rgt` describe the SOURCE's tree, so
-		mirroring produces one that is wrong on both sides.
+	def test_department_brings_its_approvers_with_it(self):
+		"""The cost this test used to NAME is the cost it now prevents.
 
-		The cost is named rather than hidden: Department carries `leave_approvers`,
-		`expense_approvers` and `shift_request_approver`, so department-based
-		approver routing does not follow the employees across. Approvers on the
-		Employee record itself do.
+		While Department stayed out, `leave_approvers`, `expense_approvers` and
+		`shift_request_approver` did not follow the employees across, so
+		department-based approver routing resolved to nobody. They are Table fields
+		HRMS adds to Department as custom fields — absent from ERPNext's department
+		JSON, and therefore absent from any check that reads only the JSON.
+
+		They are the reason to mirror Department at all. A hierarchy with no
+		approvers in it routes nothing, so `CHILD_TABLE_DOCTYPES` membership is not
+		an optimisation here — without it this whole change would look done and
+		deliver none of it.
 		"""
-		self.assertNotIn("Department", runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertIn("Department", runner.CHILD_TABLE_DOCTYPES)
 
 
 class TestHolidayAssignmentsAreDerivedNotMirrored(_RunnerTestCase):
@@ -2320,6 +2332,74 @@ class TestTheMirrorNeverWalksALifecycle(_RunnerTestCase):
 		"""No second write for the common case — drafts are already their end state."""
 		self._insert("HR-LA-9005", 0)
 		self.assertEqual([u for u in self.store.updates if u[1] == "HR-LA-9005"], [])
+
+
+class TestDepartmentKeepsItsShapeAndNotItsArithmetic(_RunnerTestCase):
+	"""A NestedSet mirrors as parent links, never as positions.
+
+	Department was kept out of the mirror entirely for this reason, and the reason
+	was sound: `lft`/`rgt` are not data, they are a position in the SOURCE's tree.
+	Copied here they describe a shape this site does not have, and every ancestor
+	and descendant query — "everyone under this department", which is how approver
+	routing and team scoping resolve — answers confidently from them. Nothing
+	raises. That is why it was excluded where a dangling link would have been
+	tolerated.
+
+	It is no longer a reason to leave 289 employees pointing at a department this
+	site does not have. The shape (`parent_department`) is mirrored, the arithmetic
+	is dropped at the payload, and `_rebuild_department_tree` recomputes it once the
+	whole pass has landed — which is the only correct moment, because rows arrive in
+	`modified` order and a child routinely precedes its parent.
+	"""
+
+	def test_the_positions_are_never_copied(self):
+		payload = runner._mirror_payload(
+			{
+				"name": "Engineering - NW",
+				"department_name": "Engineering",
+				"parent_department": "All Departments - NW",
+				"company": "Nasty Worldwide Sdn Bhd",
+				"lft": 41,
+				"rgt": 58,
+				"old_parent": "Operations - NW",
+			},
+			"nasty-live",
+			"Department",
+		)
+		for positional in ("lft", "rgt", "old_parent"):
+			self.assertNotIn(
+				positional,
+				payload,
+				f"{positional} describes the source's tree, not this one",
+			)
+
+	def test_the_shape_is_copied(self):
+		"""Dropping the parent link as well would mirror a flat list of departments
+		and call it a hierarchy."""
+		payload = runner._mirror_payload(
+			{"name": "Engineering - NW", "parent_department": "All Departments - NW"},
+			"nasty-live",
+			"Department",
+		)
+		self.assertEqual(payload["parent_department"], "All Departments - NW")
+
+	def test_a_department_precedes_the_employees_that_point_at_it(self):
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertLess(order.index("Department"), order.index("Employee"))
+
+	def test_a_department_is_not_gated_on_its_parent_landing_first(self):
+		"""`modified` order means a child routinely arrives before its parent.
+		Gating on it would skip real departments for an ordering accident."""
+		self.assertNotIn("parent_department", runner.ROW_DEPENDENCIES["Department"])
+		self.assertEqual(runner.ROW_DEPENDENCIES["Department"]["company"], "Company")
+
+	def test_the_rebuild_cannot_fail_the_run(self):
+		"""The departments are already written and their links already right; a
+		failed renumber is an alarm, not a reason to discard 8,000 pulled rows."""
+		source = (HRMS_ROOT / "sync" / "runner.py").read_text(encoding="utf-8")
+		call = source.index("_rebuild_department_tree()", source.index("def sync_instance"))
+		self.assertIn("try:", source[call - 200 : call])
+		self.assertIn("except Exception", source[call : call + 200])
 
 
 class TestAnUnconstrainedSelectConstrainsNothing(unittest.TestCase):

@@ -87,11 +87,18 @@ PROVENANCE_FIELD = "synced_from_instance"
 #: A calendar mirrored without its `holidays` does not fail; it silently counts
 #: every weekend and public holiday as a working day.
 #:
-#: `Department` remains deliberately absent, because it would CORRUPT rather than
-#: dangle: it is a NestedSet, and its `lft`/`rgt` describe a position in the
-#: SOURCE's tree. Writing them here produces a tree that is wrong on both sides.
-#: A dangling link is visible and recoverable; that is not.
+#: `Department` was deliberately absent for exactly one reason: it is a NestedSet,
+#: and its `lft`/`rgt` describe a position in the SOURCE's tree. Writing them here
+#: produces a tree wrong on both sides, and a dangling link is visible and
+#: recoverable where that is not.
+#:
+#: That reason survives; it just is not a reason to leave 289 employees pointing
+#: at a department this site does not have. `_UNMIRRORED_BY_DOCTYPE` drops the
+#: three positional columns at the payload, and `_rebuild_department_tree` recomputes
+#: them here after the pass. The source's tree SHAPE (`parent_department`) is
+#: mirrored; the source's tree ARITHMETIC never is.
 MASTER_DOCTYPES = (
+	"Department",
 	"Leave Type",
 	# Leave Period and Leave Policy are configuration, so they belong here rather
 	# than in the mirror proper: HR own them on this hub, and a policy edited here
@@ -172,6 +179,11 @@ DEFAULT_SYNC_DOCTYPES = MASTER_DOCTYPES + STAMPED_DOCTYPES
 #: landed pointing at companies that did not exist. A row whose parent is absent
 #: is skipped and counted — never written, never guessed at.
 ROW_DEPENDENCIES = {
+	# Not `parent_department`: rows arrive in `modified` order, so a child
+	# routinely precedes its parent. Gating on it would skip real departments for
+	# an ordering accident, and the link resolves as soon as the parent lands —
+	# `_rebuild_department_tree` then recomputes the arithmetic over the finished set.
+	"Department": {"company": "Company"},
 	"Employee": {"company": "Company"},
 	"Attendance": {"employee": "Employee"},
 	"Employee Checkin": {"employee": "Employee"},
@@ -217,6 +229,7 @@ def missing_parents(doctype: str, row: dict) -> list[str]:
 #: containment is right for INDEPENDENT doctypes and actively harmful for
 #: dependent ones — ordering alone buys nothing without this.
 SYNC_DEPENDENCIES = {
+	"Department": ("Company",),
 	"Employee": ("Company",),
 	"Attendance": ("Employee",),
 	"Employee Checkin": ("Employee",),
@@ -367,6 +380,13 @@ CHILD_TABLE_DOCTYPES = frozenset(
 		"Shift Location",
 		"Overtime Type",
 		"Leave Policy",
+		# `shift_request_approver`, `leave_approvers` and `expense_approvers` are
+		# Table fields HRMS adds to Department — invisible in ERPNext's department
+		# JSON, which is how they were missed on the first pass here. They are also
+		# the entire reason to mirror Department: a hierarchy with no approvers in
+		# it routes nothing, so mirroring the tree without them would have looked
+		# like the fix and delivered none of it.
+		"Department",
 	}
 )
 
@@ -415,8 +435,19 @@ def _mirror_children(rows: list) -> list:
 #: `hrms.utils.identity` now establishes the link on first login, from
 #: `company_email` — which IS mirrored, so the ERP stays authoritative for the
 #: identity *data* while the hub owns the *mapping*.
+#: Department's tree arithmetic belongs to the same rule. `lft`/`rgt` are not
+#: data, they are a position in a particular tree — the source's — and copied here
+#: they describe a shape this site does not have, which every ancestor and
+#: descendant query then silently answers from. `old_parent` is rename bookkeeping
+#: for a move that happened over there.
+#:
+#: The tree's SHAPE is mirrored, in `parent_department`. Only the arithmetic is
+#: local, recomputed by `_rebuild_department_tree` once the whole pass has landed —
+#: which it must be, because rows arrive in `modified` order and a child routinely
+#: lands before its parent.
 LOCALLY_OWNED_FIELDS = {
 	"Employee": ("user_id",),
+	"Department": ("lft", "rgt", "old_parent"),
 }
 
 
@@ -1015,6 +1046,26 @@ def _close_stale_runs(instance_name: str) -> int:
 	return len(stale)
 
 
+def _rebuild_department_tree() -> None:
+	"""Recompute Department's `lft`/`rgt` from the parent links just mirrored.
+
+	The source's tree arithmetic is never copied (`LOCALLY_OWNED_FIELDS`), so after
+	a pass the parent links are right and the positions are unset. Frappe's own
+	`rebuild_tree` walks `parent_department` and renumbers the whole tree, which is
+	the only correct moment to do it: rows arrive in `modified` order, so a child
+	routinely lands before its parent and any per-row numbering would be wrong
+	until the last row.
+
+	Left/right numbering drives every ancestor and descendant query — "everyone
+	under this department", which is how approver routing and team scoping resolve.
+	Wrong numbers do not raise; they answer confidently with the wrong people.
+	"""
+	from frappe.utils.nestedset import rebuild_tree
+
+	rebuild_tree("Department")
+	_log().info("[sync] rebuilt the Department tree from mirrored parent links")
+
+
 def _derive_holiday_assignments() -> None:
 	"""Create any missing Holiday List Assignment from what the mirror just wrote.
 
@@ -1266,6 +1317,15 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			_derive_holiday_assignments()
 		except Exception as e:
 			_log().warning("[sync] could not derive holiday list assignments: %s", e)
+
+		# Same shape, same reason it cannot be fatal: the departments are already
+		# written and their parent links are already right. A failed renumber leaves
+		# the tree's ORDER wrong, which is worth an alarm and is not worth throwing
+		# away a completed pull of 8,000 rows.
+		try:
+			_rebuild_department_tree()
+		except Exception as e:
+			_log().warning("[sync] could not rebuild the Department tree: %s", e)
 		_finish_run(run_name, status, totals, errors)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.
