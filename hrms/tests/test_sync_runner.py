@@ -2334,6 +2334,88 @@ class TestTheMirrorNeverWalksALifecycle(_RunnerTestCase):
 		self.assertEqual([u for u in self.store.updates if u[1] == "HR-LA-9005"], [])
 
 
+class TestCompaniesGetTheirHolidayCalendar(_RunnerTestCase):
+	"""A mirrored company must end up pointing at a Holiday List.
+
+	`MIRRORED_FIELDS["Company"]` is an identity projection because a local Company
+	owns finance configuration a mirror must not overwrite. `default_holiday_list`
+	was swept up in that, and it is not finance — it decides which calendar an
+	employee's leave and attendance are measured against.
+
+	The cost was exact and silent. `get_holiday_list_for_employee` reads
+	`Employee.holiday_list` and falls back to `Company.default_holiday_list`; for
+	any employee whose source relies on the company default both were empty here,
+	so the PWA said "You have no upcoming holidays" in a month with two Malaysian
+	public holidays in it. `_derive_holiday_assignments` reads the same two fields
+	and so derived nothing either. Nothing raised.
+	"""
+
+	SEED_EXCLUDE: ClassVar[tuple] = ()
+
+	class _Remote:
+		def __init__(self, docs):
+			self.docs = docs
+
+		def get_doc(self, doctype, name):
+			return self.docs.get((doctype, name), {})
+
+	def _run(self, remote_docs, seed_companies, seed_lists=("2026 MY",)):
+		for company, existing in seed_companies.items():
+			self.store.tables.setdefault("Company", {})[company] = {
+				"name": company,
+				"default_holiday_list": existing,
+			}
+		for name in seed_lists:
+			self.store.tables.setdefault("Holiday List", {})[name] = {"name": name}
+		return runner._mirror_company_holiday_defaults(self._Remote(remote_docs))
+
+	def test_an_unset_company_takes_the_sources_list(self):
+		updated = self._run({("Company", "Acme"): {"default_holiday_list": "2026 MY"}}, {"Acme": None})
+		self.assertEqual(updated, 1)
+		self.assertEqual(self.store.tables["Company"]["Acme"]["default_holiday_list"], "2026 MY")
+
+	def test_an_existing_choice_is_never_overwritten(self):
+		"""HR picking a calendar on this hub is a decision, and the create-only rule
+		that protects the rest of the Company record protects this too."""
+		updated = self._run(
+			{("Company", "Acme"): {"default_holiday_list": "2026 MY"}}, {"Acme": "HR's own list"}
+		)
+		self.assertEqual(updated, 0)
+		self.assertEqual(self.store.tables["Company"]["Acme"]["default_holiday_list"], "HR's own list")
+
+	def test_a_list_that_did_not_land_here_is_not_linked(self):
+		"""A dangling default is no better than the empty field it replaced — and
+		it is worse, because it looks configured."""
+		updated = self._run({("Company", "Acme"): {"default_holiday_list": "2026 SG"}}, {"Acme": None})
+		self.assertEqual(updated, 0)
+		self.assertIsNone(self.store.tables["Company"]["Acme"]["default_holiday_list"])
+
+	def test_a_remote_that_errors_does_not_stop_the_others(self):
+		class Exploding(self._Remote):
+			def get_doc(self, doctype, name):
+				if name == "Boom":
+					raise RuntimeError("remote refused")
+				return super().get_doc(doctype, name)
+
+		for company in ("Boom", "Acme"):
+			self.store.tables.setdefault("Company", {})[company] = {"name": company}
+		self.store.tables.setdefault("Holiday List", {})["2026 MY"] = {"name": "2026 MY"}
+		updated = runner._mirror_company_holiday_defaults(
+			Exploding({("Company", "Acme"): {"default_holiday_list": "2026 MY"}})
+		)
+		self.assertEqual(updated, 1)
+
+	def test_it_runs_before_the_assignments_are_derived(self):
+		"""The derivation reads this exact field, so the order is load-bearing."""
+		source = (HRMS_ROOT / "sync" / "runner.py").read_text(encoding="utf-8")
+		body = source[source.index("def sync_instance") :]
+		self.assertLess(
+			body.index("_mirror_company_holiday_defaults("),
+			body.index("_derive_holiday_assignments()"),
+			"holiday defaults must be mirrored before assignments are derived from them",
+		)
+
+
 class TestDepartmentKeepsItsShapeAndNotItsArithmetic(_RunnerTestCase):
 	"""A NestedSet mirrors as parent links, never as positions.
 

@@ -44,6 +44,21 @@ EXEMPT = {
 
 GATE = re.compile(r'v-if="[\w.?]*\b(\w+)\.data')
 
+#: An EmptyState whose own branch does not test `.data` renders when the request
+#: FAILED as readily as when the answer was genuinely empty.
+EMPTY_STATE = re.compile(r"<EmptyState\b((?:[^>]|\n)*?)/?>")
+BRANCH = re.compile(r'v-(?:else-)?if="([^"]*)"')
+
+#: Empty states that are honest despite not testing `.data`, each because the
+#: emptiness it reports is not the resource's.
+HONEST_EMPTY_STATES = {
+	"components/RequestList.vue": "renders props.items — the parent owns the resource and the error",
+	"components/ExpenseAdvancesTable.vue": "props-only, same reason",
+	"components/ExpensesTable.vue": "'No expenses added' is about rows the USER added to the form, not about its field-definition resource",
+	"components/ExpenseTaxesTable.vue": "same — 'No taxes added' counts form rows",
+	"views/kpi/Dashboard.vue": "'No KRAs in this appraisal' sits inside an appraisal that only renders once dashboard.data exists",
+}
+
 
 def _components_gating_on_data():
 	"""{path: True} for every component whose render depends on a resource."""
@@ -90,6 +105,57 @@ class TestEveryDataGatedScreenReportsFailure(unittest.TestCase):
 		it here just grows a list nobody prunes."""
 		stale = [name for name in EXEMPT if name not in self.components]
 		self.assertEqual(stale, [], "exemptions that no longer gate on .data: " + ", ".join(stale))
+
+
+class TestAnEmptyStateNeverStandsInForAFailure(unittest.TestCase):
+	"""The hole the first version of this file left open.
+
+	It only looked at components gating on `resource.data`, so anything gating on
+	a DERIVED value was invisible to it — and that is where the next one was
+	hiding. `Holidays.vue` renders `v-if="upcomingHolidays?.length"` with a bare
+	`v-else`, so a failed request produced "You have no upcoming holidays" in a
+	month with two Malaysian public holidays in it. The guard passed the whole
+	time.
+
+	`ListView.vue` was worse for being shared: "No {doctype} found" on every list
+	screen in the app, whenever the fetch failed.
+
+	So the rule is about the EMPTY STATE rather than the render gate. An
+	`<EmptyState>` may only render on a branch that tests `.data` — otherwise the
+	component has to handle `.error`, or say here why its emptiness is not the
+	resource's.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		cls.offenders = []
+		for path in sorted(FRONTEND.rglob("*.vue")):
+			source = path.read_text(encoding="utf-8")
+			name = str(path.relative_to(FRONTEND))
+			if "<EmptyState" not in source or name in HONEST_EMPTY_STATES:
+				continue
+			if not re.search(r'createResource|from "@/data/', source):
+				continue
+			if "ResourceError" in source or re.search(r"\w+\.error", source):
+				continue
+			for match in EMPTY_STATE.finditer(source):
+				branch = BRANCH.search(match.group(1))
+				if not (branch and ".data" in branch.group(1)):
+					line = source[: match.start()].count("\n") + 1
+					cls.offenders.append(f"{name}:{line}")
+
+	def test_no_empty_state_can_render_on_a_failed_request(self):
+		self.assertEqual(
+			self.offenders,
+			[],
+			"these say 'nothing here' when they may mean 'we could not read it' — add "
+			"<ResourceError>, gate the EmptyState on .data, or list it in "
+			"HONEST_EMPTY_STATES with the reason: " + ", ".join(self.offenders),
+		)
+
+	def test_the_exemptions_still_exist(self):
+		missing = [name for name in HONEST_EMPTY_STATES if not (FRONTEND / name).exists()]
+		self.assertEqual(missing, [], "stale exemptions hide the next offender: " + ", ".join(missing))
 
 
 class TestTheLeaveBalanceDoesNotLieAboutZero(unittest.TestCase):

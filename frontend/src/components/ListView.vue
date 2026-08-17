@@ -89,6 +89,11 @@
 						</router-link>
 					</div>
 				</div>
+				<ResourceError
+					v-else-if="documents.error"
+					:resource="documents"
+					:what="props.doctype?.toLowerCase()"
+				/>
 				<EmptyState
 					:message="__('No {0} found', [props.doctype?.toLowerCase()])"
 					v-else-if="!documents.loading"

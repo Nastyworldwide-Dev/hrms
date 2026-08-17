@@ -1066,6 +1066,53 @@ def _rebuild_department_tree() -> None:
 	_log().info("[sync] rebuilt the Department tree from mirrored parent links")
 
 
+def _mirror_company_holiday_defaults(client) -> int:
+	"""Point each mirrored Company at the Holiday List the source gives it.
+
+	`MIRRORED_FIELDS["Company"]` is an identity projection — company_name, abbr,
+	currency, country — because a local Company owns finance configuration a
+	mirror has no business overwriting. `default_holiday_list` was swept up in
+	that and it is not finance: it is the field that decides which calendar an
+	employee's leave and attendance are measured against.
+
+	The cost was exact and invisible. `get_holiday_list_for_employee` resolves
+	`Employee.holiday_list` first and falls back to `Company.default_holiday_list`;
+	for any employee whose source relies on the company default, BOTH were empty
+	here, so `get_holidays_for_employee` returned `[]` and the PWA said "You have
+	no upcoming holidays" — in a month with two Malaysian public holidays in it.
+	`_derive_holiday_assignments` reads the same two fields, so it derived nothing
+	either, and neither failure raised anything.
+
+	Runs AFTER the doctype passes, deliberately: the Holiday List has to exist here
+	before a company can point at it.
+
+	Never overwrites. A company that already names a list keeps it — HR choosing a
+	calendar on this hub is a decision, and the create-only rule that protects the
+	rest of the Company record protects this too.
+	"""
+	updated = 0
+	for company in frappe.get_all("Company", pluck="name"):
+		if frappe.db.get_value("Company", company, "default_holiday_list"):
+			continue
+		try:
+			remote = client.get_doc("Company", company)
+		except Exception as e:
+			_log().warning("[sync] could not read Company %s for its holiday list: %s", company, e)
+			continue
+
+		holiday_list = (remote or {}).get("default_holiday_list")
+		# The list must be here already, or the link dangles and the fallback is
+		# no better than the empty field it replaced.
+		if not holiday_list or not frappe.db.exists("Holiday List", holiday_list):
+			continue
+
+		frappe.db.set_value("Company", company, "default_holiday_list", holiday_list, update_modified=False)
+		updated += 1
+		_log().info("[sync] %s now defaults to holiday list %s", company, holiday_list)
+
+	return updated
+
+
 def _derive_holiday_assignments() -> None:
 	"""Create any missing Holiday List Assignment from what the mirror just wrote.
 
@@ -1313,6 +1360,13 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 		# from anyway. Deriving is also what the hub wants: holiday policy is HR's
 		# to own here, and a derived row carries no provenance stamp, so nothing
 		# reverts an HR decision on the next run.
+		# Before deriving assignments, because the derivation reads exactly this
+		# field and finds nothing without it.
+		try:
+			_mirror_company_holiday_defaults(client)
+		except Exception as e:
+			_log().warning("[sync] could not mirror company holiday defaults: %s", e)
+
 		try:
 			_derive_holiday_assignments()
 		except Exception as e:

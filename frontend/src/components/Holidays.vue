@@ -26,6 +26,7 @@
 			</div>
 		</div>
 
+		<ResourceError v-else-if="holidays.error" :resource="holidays" what="your holiday calendar" />
 		<EmptyState :message="__('You have no upcoming holidays')" v-else />
 	</div>
 

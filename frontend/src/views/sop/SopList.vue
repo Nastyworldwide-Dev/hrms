@@ -120,6 +120,7 @@
 						{{ __("Try a different search term.") }}
 					</div>
 				</div>
+				<ResourceError v-else-if="sops.error" :resource="sops" what="the SOP list" />
 				<EmptyState
 					v-else-if="!sops.loading"
 					:message="__('No SOPs published yet')"
