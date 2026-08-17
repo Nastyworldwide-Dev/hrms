@@ -460,6 +460,64 @@ def _reconcile_user_status(employee: str) -> None:
 	)
 
 
+def _local_schema(doctype: str) -> tuple[set, dict]:
+	"""(columns this site stores, {select fieldname: values it can represent}).
+
+	Indirected through a module function so the bench-free tests can drive it and
+	so a meta failure is recoverable rather than fatal.
+	"""
+	meta = frappe.get_meta(doctype)
+	columns = set(meta.get_valid_columns())
+	selects = {
+		field.fieldname: {option.strip() for option in (field.options or "").split("\n")}
+		for field in meta.fields
+		if field.fieldtype == "Select"
+	}
+	return columns, selects
+
+
+def _narrow_to_local_schema(doctype: str, payload: dict) -> tuple[dict, set]:
+	"""Reduce a remote payload to what THIS site can actually store.
+
+	The source's Employee is not this site's Employee. Two shapes of drift, one
+	root, and both were costing whole records:
+
+	* a column that exists only over there — `custom_reports_to_name` on
+	  nasty-sg-dev. An INSERT survives it, because Frappe drops unknown keys in
+	  `get_valid_dict`; an UPDATE goes through `db.set_value`, which builds a SET
+	  clause from whatever it is handed, so 100+ existing employees failed on
+	  every run with "Unknown column ... in 'SET'";
+	* a Select the source has widened — E3 cost 173 people, B2 was next. Select
+	  validation rejects the whole document, not the field.
+
+	Chasing those one value and one field at a time never ends. An employee
+	arriving without one unrepresentable field beats an employee not arriving, so
+	the field is dropped and NAMED — silently discarding it would be the same
+	class of hole in a different place.
+
+	Fails open: if the schema cannot be read the payload passes through unchanged,
+	because writing nothing is worse than writing what we were given.
+	"""
+	try:
+		columns, selects = _local_schema(doctype)
+	except Exception as e:
+		_log().warning("[sync] could not read local schema for %s: %s", doctype, e)
+		return payload, set()
+
+	narrowed, dropped = {}, set()
+	for field, value in payload.items():
+		if field not in columns:
+			dropped.add(field)
+			continue
+		allowed = selects.get(field)
+		# An empty value always fits: Frappe's own Select options carry a blank.
+		if allowed and value not in ("", None) and value not in allowed:
+			dropped.add(field)
+			continue
+		narrowed[field] = value
+	return narrowed, dropped
+
+
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	"""Upsert one row keyed by the remote name.
 
@@ -470,6 +528,10 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	Attendance rows arrive submitted, and a mirror must not re-run the source
 	instance's validation against this site's (possibly different) masters.
 	"""
+	payload, dropped = _narrow_to_local_schema(doctype, payload)
+	if dropped:
+		_write_row.dropped_fields = getattr(_write_row, "dropped_fields", set()) | dropped
+
 	if doctype in CREATE_ONLY_DOCTYPES and frappe.db.exists(doctype, remote_name):
 		# Not even the identity fields: whatever is here locally wins, always.
 		_log().debug("[sync] %s %s already exists locally, left untouched", doctype, remote_name)
@@ -597,6 +659,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		remote_filters["modified"] = (">", since)
 
 	pulled = written = inserted = updated = skipped = errored = orphaned = 0
+	_write_row.dropped_fields = set()
 	unmet_parents: set[str] = set()
 	row_errors: list[str] = []
 	seen = set()
@@ -711,6 +774,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		"orphaned": orphaned,
 		"missing_parents": sorted(unmet_parents),
 		"row_errors": row_errors,
+		"dropped_fields": sorted(getattr(_write_row, "dropped_fields", set())),
 	}
 
 
@@ -928,6 +992,14 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 				errors.append(
 					f"{doctype}: {result['orphaned']} row(s) skipped, missing "
 					f"{', '.join(result['missing_parents'])}"
+				)
+			if result.get("dropped_fields"):
+				# Named, not merely dropped: a field this site cannot store is a
+				# real difference from the source, and an operator who never hears
+				# about it will eventually wonder why a column is empty.
+				errors.append(
+					f"{doctype}: this site cannot store "
+					f"{', '.join(result['dropped_fields'])} — written without them"
 				)
 			for row_error in result["row_errors"]:
 				errors.append(f"{doctype}: {row_error}")

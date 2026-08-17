@@ -231,6 +231,37 @@ def runner_absent_error(doctype):
 	return error
 
 
+#: What THIS site's Employee can store, for the schema-narrowing tests. Only
+#: Employee is described: `_local_schema` raises for anything else, which makes
+#: the narrowing fail open and leaves every other test's payload untouched —
+#: exactly the production behaviour when meta cannot be read.
+FAKE_EMPLOYEE_COLUMNS = {
+	"name",
+	"employee_name",
+	"company",
+	"status",
+	"user_id",
+	"company_email",
+	"department",
+	"designation",
+	"branch",
+	"grade",
+	"holiday_list",
+	"reports_to",
+	"performance_band",
+	"docstatus",
+	"synced_from_instance",
+}
+
+FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "C", "D", "E1", "E2", "E3", "F"}}
+
+
+def _fake_local_schema(doctype):
+	if doctype != "Employee":
+		raise RuntimeError(f"no meta for {doctype} in this harness")
+	return set(FAKE_EMPLOYEE_COLUMNS), dict(FAKE_EMPLOYEE_SELECTS)
+
+
 class _RunnerTestCase(unittest.TestCase):
 	"""Installs a fake frappe + store around each test."""
 
@@ -261,6 +292,10 @@ class _RunnerTestCase(unittest.TestCase):
 
 		# under `bench run-tests` the real frappe is already imported, and both
 		# of these need a site; the module under test only ever calls them.
+		self._saved_schema = runner._local_schema
+		runner._local_schema = _fake_local_schema
+		self.addCleanup(setattr, runner, "_local_schema", self._saved_schema)
+
 		self._saved_runner = (runner.now_datetime, runner._)
 		runner.now_datetime = lambda: NOW
 		runner._ = lambda text: text
@@ -1213,6 +1248,90 @@ class TestHolidayAssignmentsAreDerivedNotMirrored(_RunnerTestCase):
 		)
 
 		self.assertEqual(result["status"], "Completed")
+
+
+class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
+	"""Two shapes of schema drift, one root: the source's Employee is not this
+	site's Employee, and the mirror was copying it verbatim.
+
+	    Employee: HR-EMP-00282: (1054, "Unknown column 'custom_reports_to_name' in 'SET'")
+	    Employee: HR-EMP-00115:  Performance Band cannot be "B2".
+
+	`custom_reports_to_name` is a customisation on nasty-sg-dev that this hub has
+	never had. An INSERT survives it — Frappe drops unknown keys in
+	`get_valid_dict` — but an UPDATE goes through `db.set_value`, which builds a
+	SET clause from whatever it is handed, so 100+ existing employees failed on
+	every run. And a Select the source has widened rejects the whole document on
+	insert, which is how E3 cost 173 people and B2 was about to cost more.
+
+	Chasing these one value and one field at a time is endless. The mirror narrows
+	each payload to what THIS site can actually store, and reports what it dropped
+	— an employee arriving without one unrepresentable field beats an employee not
+	arriving at all, and the report is what makes the difference visible rather
+	than silent.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_a_column_this_site_does_not_have_is_dropped(self):
+		payload, dropped = runner._narrow_to_local_schema(
+			"Employee", {"employee_name": "Aisha", "custom_reports_to_name": "Someone"}
+		)
+
+		self.assertNotIn("custom_reports_to_name", payload)
+		self.assertEqual(payload["employee_name"], "Aisha")
+		self.assertIn("custom_reports_to_name", dropped)
+
+	def test_a_select_value_this_site_cannot_represent_is_dropped(self):
+		payload, dropped = runner._narrow_to_local_schema(
+			"Employee", {"employee_name": "Aisha", "performance_band": "B2"}
+		)
+
+		self.assertNotIn("performance_band", payload)
+		self.assertIn("performance_band", dropped)
+
+	def test_a_select_value_this_site_does_know_is_kept(self):
+		payload, _ = runner._narrow_to_local_schema("Employee", {"performance_band": "E2"})
+		self.assertEqual(payload["performance_band"], "E2")
+
+	def test_an_empty_select_value_is_always_allowed(self):
+		payload, dropped = runner._narrow_to_local_schema("Employee", {"performance_band": ""})
+		self.assertEqual(payload["performance_band"], "")
+		self.assertEqual(dropped, set())
+
+	def test_the_row_still_lands(self):
+		"""The whole point: one unrepresentable field must not cost the record."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [
+			dict(EMPLOYEES[0], performance_band="B2", custom_reports_to_name="Someone"),
+		]
+
+		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertEqual(result["errored"], 0)
+		self.assertEqual(result["inserted"], 1)
+		self.assertNotIn("custom_reports_to_name", self.store.rows("Employee")["HR-EMP-0001"])
+
+	def test_what_was_dropped_is_reported(self):
+		"""Silently discarding a field is the hole; naming it is the fix."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [dict(EMPLOYEES[0], custom_reports_to_name="Someone")]
+
+		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertIn("custom_reports_to_name", result["dropped_fields"])
+
+	def test_narrowing_is_skipped_when_the_schema_cannot_be_read(self):
+		"""Fails open: if meta is unavailable the payload passes through unchanged
+		rather than the mirror silently writing nothing."""
+		saved = runner._local_schema
+		self.addCleanup(setattr, runner, "_local_schema", saved)
+		runner._local_schema = lambda doctype: (_ for _ in ()).throw(RuntimeError("no meta"))
+
+		payload, dropped = runner._narrow_to_local_schema("Employee", {"anything": 1})
+
+		self.assertEqual(payload, {"anything": 1})
+		self.assertEqual(dropped, set())
 
 
 class TestSyncRunsInTheBackground(unittest.TestCase):
