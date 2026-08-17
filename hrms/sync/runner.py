@@ -698,9 +698,14 @@ def parse_doctypes(doctypes) -> tuple[str, ...] | None:
 	return names
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def run_sync(instance_name: str, doctypes: str | None = None, incremental: int = 1) -> dict:
-	"""Desk/bench entry point. Kept thin: it only builds the client."""
+	"""Desk/bench entry point. Kept thin: it only builds the client.
+
+	POST-only for the same reason `company_shells.create_company_shells` is: this
+	writes thousands of rows, and a state-mutating endpoint reachable by GET is a
+	CSRF vector — a logged-in HR Manager loading an image tag would start a pull.
+	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.sync.client import RemoteInstanceClient
 

@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import logging
+
 from dateutil.relativedelta import relativedelta
 
 import frappe
@@ -11,6 +13,12 @@ from frappe.query_builder.functions import Count, CurDate, UnixTimestamp
 from frappe.utils import add_years, cint, get_link_to_form, getdate
 
 from erpnext.setup.doctype.employee.employee import Employee
+
+logger = logging.getLogger(__name__)
+
+#: Framework accounts that must never be provisioned: Administrator already holds
+#: everything, and a role on Guest is a hole, not a convenience.
+_NON_PROVISIONABLE_USERS = frozenset({"Administrator", "Guest"})
 
 
 class EmployeeMaster(Employee):
@@ -87,6 +95,58 @@ def update_job_applicant_and_offer(doc, method=None):
 			msg += "<br>" + _("You may add additional details, if any, and submit the offer.")
 
 		frappe.msgprint(msg)
+
+
+def ensure_employee_role(user: str | None) -> bool:
+	"""Give a user linked to an Employee the baseline `Employee` role.
+
+	ERPNext grants it in `Employee.update_user()`, reached only from
+	`Employee.on_update` when `user_id` is set — and on this hub nothing ever
+	reaches it. The mirror does not write `user_id` at all
+	(`runner.LOCALLY_OWNED_FIELDS`), so its insert runs `on_update` with the field
+	empty; and `hrms.utils.identity._link` writes the mapping with
+	`frappe.db.set_value`, which fires no doc events. A mirrored employee would
+	therefore authenticate into an account holding no HR role whatsoever, which
+	reads as a broken app rather than as the missing provisioning step it is.
+
+	Returns True only when the role is actually on the user afterwards — never
+	merely because the append was attempted. ERPNext's `validate_employee_role`
+	User hook removes it again unless an Employee already carries this user in
+	`user_id`, and it does that with a `msgprint`, not an exception. So the caller
+	MUST establish the link first; `hrms.utils.identity` does, which is why this is
+	called after `_link` and not before.
+
+	Idempotent and never fatal: this runs on the identity path, and a sign-in must
+	not fail because a role could not be appended.
+	"""
+	if not user or user in _NON_PROVISIONABLE_USERS:
+		return False
+
+	# `frappe.get_roles` is request-cached, so the common case — already
+	# provisioned — costs no query and no write.
+	if "Employee" in frappe.get_roles(user):
+		return False
+
+	try:
+		doc = frappe.get_doc("User", user)
+		doc.flags.ignore_permissions = True
+		doc.add_roles("Employee")
+	except Exception as e:
+		logger.error("[employee_master] could not grant the Employee role to %s: %s", user, e)
+		return False
+
+	# `User.on_update` clears the user's cache, so `get_roles` is already fresh.
+	if "Employee" not in frappe.get_roles(user):
+		logger.warning(
+			"[employee_master] the Employee role did not stick for %s — no Employee claims "
+			"this user in user_id, so erpnext's validate_employee_role removed it again",
+			user,
+		)
+		return False
+
+	logger.info("[employee_master] granted the Employee role to %s", user)
+	frappe.logger("hrms").info("[employee_master] granted the Employee role to %s", user)
+	return True
 
 
 def update_approver_role(doc, method=None):

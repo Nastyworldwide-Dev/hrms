@@ -41,9 +41,19 @@ mapping is owned by *this* hub, not by the source instance, which is also why
 `hrms.sync.runner` no longer mirrors `user_id` at all. Nothing else about the
 Employee is touched.
 
-What this module never does: grant a role, infer authority from a designation or
-an email domain, or widen anyone's scope. It answers one question — which
-Employee is this session — and authorization is layered on top of the answer
+What this module never does: decide anyone's authority. It does not infer
+authority from a designation or an email domain, and it grants nothing beyond the
+baseline: on a successful resolution it calls
+`hrms.overrides.employee_master.ensure_employee_role`, which appends the
+`Employee` role if the user has none.
+
+That single call is not scope-widening, it is the provisioning step ERPNext
+performs in `Employee.update_user()` and that this hub structurally never
+reaches — the mirror never writes `user_id`, and `_link` writes it with
+`frappe.db.set_value`, so no doc event ever fires. Without it a person resolves
+correctly and still cannot read their own HR data. The decision of *which* role
+stays where role decisions live; this module only answers which Employee is this
+session, and every wider authorization is layered on top of that answer
 elsewhere.
 """
 
@@ -151,10 +161,31 @@ def _link(employee: str, user: str) -> bool:
 		message=(
 			f"User {user} authenticated with no linked Employee. Exactly one Active Employee "
 			f"({employee}) carries that address as its company email and had no user_id, so the "
-			f"link was established. No role or permission was granted."
+			f"link was established. Only the baseline Employee role follows; no approver role, "
+			f"no company scope and no User Permission was granted."
 		),
 	)
 	return True
+
+
+def _provision(user: str) -> None:
+	"""Baseline provisioning for a resolved employee, once, quietly.
+
+	Called on every successful resolution rather than only from `_link`: employees
+	linked before this existed — and any linked by hand through a path that skipped
+	doc events — would otherwise stay role-less forever, because rule 2 answers for
+	them and `_link` never runs again. The helper short-circuits on the cached role
+	list, so the common case is a dict lookup.
+
+	Skipped entirely on read-only requests, exactly like `_link`: resolution must
+	still succeed there and the write lands on the next writable request.
+	"""
+	if getattr(frappe.flags, "read_only", False):
+		return
+
+	from hrms.overrides.employee_master import ensure_employee_role
+
+	ensure_employee_role(user)
 
 
 def resolve_employee_identity(user: str | None = None) -> frappe._dict:
@@ -174,6 +205,7 @@ def resolve_employee_identity(user: str | None = None) -> frappe._dict:
 	active = [row for row in claims if row.status == "Active"]
 
 	if len(active) == 1:
+		_provision(normalized)
 		return frappe._dict(employee=active[0].name, reason=OK, company=active[0].company, linked=False)
 
 	if len(active) > 1:
@@ -198,6 +230,7 @@ def resolve_employee_identity(user: str | None = None) -> frappe._dict:
 	candidates = _linkable_by_company_email(normalized)
 	if len(candidates) == 1:
 		linked = _link(candidates[0].name, normalized)
+		_provision(normalized)
 		return frappe._dict(
 			employee=candidates[0].name, reason=OK, company=candidates[0].company, linked=linked
 		)

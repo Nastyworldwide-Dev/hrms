@@ -189,18 +189,59 @@ class TestCompanyEmailFallback(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Employee", self.employee, "user_id"), "identity.fb@example.com")
 		self.assertFalse(resolve_employee_identity("identity.fb@example.com").linked)
 
-	def test_fallback_grants_no_roles(self):
+	def test_fallback_grants_only_the_baseline_employee_role(self):
+		"""Resolving establishes that this person IS an employee here, so the
+		baseline `Employee` role follows — and nothing else does.
+
+		The role is not scope-widening; it is the provisioning ERPNext performs in
+		`Employee.update_user()` and that this hub structurally never reaches (the
+		mirror never writes `user_id`, and `_link` writes it with `db.set_value`,
+		so no doc event fires). Without it the person resolves correctly and can
+		still read nothing.
+
+		What must NEVER appear is an approver, HR or manager role: those are
+		decided by the HR team and are never inferred from an email match.
+		Asserted on `Has Role` rows rather than `frappe.get_roles`, which also
+		reports derived pseudo-roles like `Desk User` that nobody granted.
+		"""
 		unlink(self.employee)
 		frappe.db.set_value(
 			"Employee", self.employee, "company_email", "identity.noroles@example.com", update_modified=False
 		)
 		make_user("identity.noroles@example.com")
-		before = set(frappe.get_roles("identity.noroles@example.com"))
+		before = {
+			row.role
+			for row in frappe.db.get_all("Has Role", {"parent": "identity.noroles@example.com"}, ["role"])
+		}
 
 		resolve_employee_identity("identity.noroles@example.com")
 
 		frappe.clear_cache(user="identity.noroles@example.com")
-		self.assertEqual(set(frappe.get_roles("identity.noroles@example.com")), before)
+		after = {
+			row.role
+			for row in frappe.db.get_all("Has Role", {"parent": "identity.noroles@example.com"}, ["role"])
+		}
+		self.assertEqual(after - before, {"Employee"})
+
+	def test_an_already_linked_employee_is_provisioned_too(self):
+		"""Provisioning hangs off resolution, not off `_link`.
+
+		Anyone linked before this existed — every employee HR mapped by hand, and
+		everyone the fallback linked in an earlier release — takes the primary path
+		forever after, so `_link` never runs for them again. Hanging the grant off
+		the link alone would leave exactly those people role-less with no way back.
+		"""
+		frappe.db.set_value(
+			"Employee", self.employee, "user_id", "identity.prelinked@example.com", update_modified=False
+		)
+		make_user("identity.prelinked@example.com")
+
+		identity = resolve_employee_identity("identity.prelinked@example.com")
+
+		self.assertEqual(identity.reason, OK)
+		self.assertFalse(identity.linked, "already linked — the fallback must not re-link")
+		frappe.clear_cache(user="identity.prelinked@example.com")
+		self.assertIn("Employee", frappe.get_roles("identity.prelinked@example.com"))
 
 	def test_personal_email_is_never_matched(self):
 		# A self-declared address must not adopt an employee record.

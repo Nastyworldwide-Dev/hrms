@@ -689,6 +689,33 @@ class TestParseDoctypes(unittest.TestCase):
 		self.assertEqual(runner.parse_doctypes(["Company"]), ("Company",))
 
 
+class TestRunSyncEndpointIsPostOnly(unittest.TestCase):
+	"""SEC-03, same ruling as `company_shells.create_company_shells`.
+
+	`run_sync` writes thousands of rows into the real doctypes. Reachable by GET,
+	a logged-in HR Manager who loads a page carrying `<img src=".../run_sync?
+	instance_name=...">` starts a full pull without ever clicking anything. The
+	decorator is read from source rather than from the imported function because
+	the bench-free stub replaces `frappe.whitelist` with a pass-through, so the
+	kwargs never survive the import.
+	"""
+
+	def test_run_sync_is_post_only(self):
+		import ast
+
+		tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+		functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+
+		methods = []
+		for decorator in functions["run_sync"].decorator_list:
+			if isinstance(decorator, ast.Call):
+				for keyword in decorator.keywords:
+					if keyword.arg == "methods":
+						methods = [element.value for element in keyword.value.elts]
+
+		self.assertEqual(methods, ["POST"], "run_sync must be POST-only (SEC-03)")
+
+
 class TestRowsWithMissingParentsAreNeverWritten(_RunnerTestCase):
 	"""Referential integrity, enforced per row.
 

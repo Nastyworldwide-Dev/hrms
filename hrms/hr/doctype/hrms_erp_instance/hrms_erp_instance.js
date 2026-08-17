@@ -5,9 +5,66 @@ frappe.ui.form.on("HRMS ERP Instance", {
 	refresh(frm) {
 		if (frm.is_new() || !frm.doc.enabled) return;
 
+		// Ordered as the operator must run them: companies first, because an
+		// Employee whose company is absent here is skipped, not written.
 		frm.add_custom_button(__("Pull Companies from Source"), () => pull_companies(frm));
+		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 	},
 });
+
+function sync_now(frm) {
+	frappe.confirm(
+		__("Pull HR data from {0} into this hub?", [frappe.utils.escape_html(frm.doc.name)]) +
+			`<p class="text-muted">${__(
+				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported.",
+			)}</p>`,
+		() => {
+			console.info("[HRMSERPInstance] starting full sync from", frm.doc.name);
+			frappe.call({
+				method: "hrms.sync.runner.run_sync",
+				// Full pull, not incremental: the operator reaches for this button
+				// after fixing something, and a watermark would hide the repair.
+				args: { instance_name: frm.doc.name, incremental: 0 },
+				freeze: true,
+				// ponytail: synchronous. SYNC-00002 pulled 5,821 rows in 25s, well
+				// inside the gateway timeout. Move to frappe.enqueue with a realtime
+				// notification if a run ever approaches it.
+				freeze_message: __("Syncing from {0}…", [frappe.utils.escape_html(frm.doc.name)]),
+				callback: (r) => report_run(r.message || {}),
+				error: (e) => console.warn("[HRMSERPInstance] sync call failed:", e),
+			});
+		},
+	);
+}
+
+function report_run(res) {
+	// "Completed" requires nothing left unwritten, so anything else has to name
+	// what to fix — a bare status tells the operator to guess.
+	const clean = res.status === "Completed";
+	if (clean) console.info("[HRMSERPInstance] sync completed:", res.run, res.written, "row(s) written");
+	else console.warn("[HRMSERPInstance] sync ended", res.status, "run:", res.run, res);
+
+	frappe.msgprint({
+		title: __("Sync {0}", [res.status || __("finished")]),
+		indicator: clean ? "green" : "orange",
+		message:
+			`<p>${__("Pulled {0}, written {1}, skipped {2}, orphaned {3}, errored {4}.", [
+				res.pulled ?? 0,
+				res.written ?? 0,
+				res.skipped ?? 0,
+				res.orphaned ?? 0,
+				res.errored ?? 0,
+			])}</p>` +
+			(clean
+				? ""
+				: `<p>${__("Rows were left unwritten, so the watermark is held and they are re-pulled next run.")}</p>`) +
+			(res.run
+				? `<p><a href="/app/hrms-sync-run/${encodeURIComponent(res.run)}">${__(
+						"Open the run record for the reason",
+					)}</a></p>`
+				: ""),
+	});
+}
 
 function pull_companies(frm) {
 	// Preview first: HR sees exactly what would be created before anything is.
