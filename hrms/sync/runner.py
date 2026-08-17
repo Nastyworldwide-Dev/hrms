@@ -508,17 +508,18 @@ def _narrow_to_local_schema(doctype: str, payload: dict) -> tuple[dict, set]:
 		columns, selects = _local_schema(doctype)
 	except Exception as e:
 		_log().warning("[sync] could not read local schema for %s: %s", doctype, e)
-		return payload, set()
+		return payload, {}
 
-	narrowed, dropped = {}, set()
+	narrowed, dropped = {}, {}
 	for field, value in payload.items():
 		if field not in columns:
-			dropped.add(field)
+			# No offending value to report — the column simply is not here.
+			dropped[field] = None
 			continue
 		allowed = selects.get(field)
 		# An empty value always fits: Frappe's own Select options carry a blank.
 		if allowed and value not in ("", None) and value not in allowed:
-			dropped.add(field)
+			dropped[field] = value
 			continue
 		narrowed[field] = value
 	return narrowed, dropped
@@ -535,8 +536,14 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	instance's validation against this site's (possibly different) masters.
 	"""
 	payload, dropped = _narrow_to_local_schema(doctype, payload)
-	if dropped:
-		_write_row.dropped_fields = getattr(_write_row, "dropped_fields", set()) | dropped
+	for field, value in dropped.items():
+		# Keyed by field, collecting the distinct VALUES that could not be stored.
+		# Naming the field tells an operator something is wrong; naming the value
+		# tells HR what to go and correct on the source, which is the only place
+		# it can be fixed.
+		seen_values = _write_row.dropped_fields.setdefault(field, set())
+		if value is not None:
+			seen_values.add(str(value))
 
 	if doctype in CREATE_ONLY_DOCTYPES and frappe.db.exists(doctype, remote_name):
 		# Not even the identity fields: whatever is here locally wins, always.
@@ -700,7 +707,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		remote_filters["modified"] = (">", since)
 
 	pulled = written = inserted = updated = skipped = errored = orphaned = 0
-	_write_row.dropped_fields = set()
+	_write_row.dropped_fields = {}
 	unmet_parents: set[str] = set()
 	row_errors: list[str] = []
 	seen = set()
@@ -818,7 +825,10 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		"orphaned": orphaned,
 		"missing_parents": sorted(unmet_parents),
 		"row_errors": row_errors,
-		"dropped_fields": sorted(getattr(_write_row, "dropped_fields", set())),
+		"dropped_fields": [
+			f"{field} ({', '.join(sorted(values))})" if values else field
+			for field, values in sorted(getattr(_write_row, "dropped_fields", {}).items())
+		],
 	}
 
 

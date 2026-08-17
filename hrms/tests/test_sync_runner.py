@@ -1305,7 +1305,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 	def test_an_empty_select_value_is_always_allowed(self):
 		payload, dropped = runner._narrow_to_local_schema("Employee", {"performance_band": ""})
 		self.assertEqual(payload["performance_band"], "")
-		self.assertEqual(dropped, set())
+		self.assertEqual(dropped, {})
 
 	def test_the_row_still_lands(self):
 		"""The whole point: one unrepresentable field must not cost the record."""
@@ -1348,6 +1348,37 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 				self.assertNotIn("performance_band", payload)
 				self.assertIn("performance_band", dropped)
 
+	def test_a_rejected_select_value_is_named_so_hr_can_correct_it(self):
+		"""Naming the FIELD tells an operator something is wrong. Naming the VALUE
+		tells HR what to go and fix.
+
+		E3 was a data-entry mistake on the source, and the only way it surfaced was
+		173 employees failing to load. Now the record lands and the run says which
+		value it could not represent — the same information, without the loss, and
+		pointed at the system that can actually correct it.
+		"""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [
+			dict(EMPLOYEES[0], performance_band="E3"),
+			dict(EMPLOYEES[1], performance_band="B2"),
+		]
+
+		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertEqual(result["errored"], 0)
+		report = result["dropped_fields"]
+		self.assertIn("performance_band (B2, E3)", report)
+
+	def test_a_missing_column_is_named_without_a_value(self):
+		"""There is no offending value to report — the column simply is not here."""
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [dict(EMPLOYEES[0], custom_reports_to_name="Someone")]
+
+		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertIn("custom_reports_to_name", result["dropped_fields"])
+		self.assertNotIn("custom_reports_to_name (", " ".join(result["dropped_fields"]))
+
 	def test_a_child_table_is_never_mistaken_for_a_missing_column(self):
 		"""The regression this shipped with.
 
@@ -1379,7 +1410,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 		payload, dropped = runner._narrow_to_local_schema("Employee", {"anything": 1})
 
 		self.assertEqual(payload, {"anything": 1})
-		self.assertEqual(dropped, set())
+		self.assertEqual(dropped, {})
 
 
 class TestALongFilterIsSplitAcrossRequests(_RunnerTestCase):

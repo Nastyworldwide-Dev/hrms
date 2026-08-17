@@ -55,36 +55,6 @@ def before_app_uninstall(app_name):
 	remove_lending_docperms_from_ess()
 
 
-@frappe.whitelist()
-def create_performance_band_field():
-	"""Create the performance_band custom field on Employee. Call via bench execute."""
-	create_custom_fields(
-		{
-			"Employee": [
-				{
-					"fieldname": "performance_band",
-					"fieldtype": "Select",
-					"label": "Performance Band",
-					# The band scheme, and nothing else. E3 was briefly added here
-					# because the source held it; HR have since confirmed it was
-					# their own data-entry error. Widening a destination's field to
-					# accommodate bad source data is the wrong direction of fix, and
-					# it is no longer needed either: `runner._narrow_to_local_schema`
-					# drops a value this site cannot represent and names it on the
-					# run, so an unexpected band costs one field rather than the
-					# whole employee.
-					"options": "\nB\nC\nD\nE1\nE2\nF",
-					"insert_after": "grade",
-					"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
-				},
-			]
-		},
-		ignore_validate=True,
-	)
-	frappe.db.commit()
-	print("performance_band custom field created on Employee")
-
-
 def get_company_hr_policy_fields():
 	"""Per-company overrides for HR / Payroll policies that used to be global.
 
@@ -336,6 +306,21 @@ def get_custom_fields():
 			},
 		],
 		"Employee": [
+			{
+				"fieldname": "performance_band",
+				"fieldtype": "Select",
+				"label": "Performance Band",
+				# The band scheme, and nothing else. E3 was briefly added here
+				# because the source ERP held it; HR have confirmed that was their
+				# own data-entry error. Widening a destination to accommodate bad
+				# source data is the wrong direction of fix, and it is not needed:
+				# `runner._narrow_to_local_schema` drops a value this site cannot
+				# represent and names it on the run, so an unexpected band costs one
+				# field rather than the whole employee.
+				"options": "\nB\nC\nD\nE1\nE2\nF",
+				"insert_after": "grade",
+				"description": "Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)",
+			},
 			{
 				"fieldname": "years_of_service",
 				"fieldtype": "Int",
