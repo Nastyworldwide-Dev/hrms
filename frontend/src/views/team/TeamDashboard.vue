@@ -3,10 +3,7 @@
 		<template #body>
 			<div class="flex flex-col gap-5 w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7">
 				<!-- HR-only team selector -->
-				<div
-					v-if="teamManagers.data?.length"
-					class="flex flex-row items-center gap-2"
-				>
+				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
 					<span class="m-kicker flex-none">{{ __("Team of") }}</span>
 					<select
 						v-model="selectedManager"
@@ -14,11 +11,7 @@
 						class="flex-1 min-w-0 bg-surface border border-divider text-inkbase font-semibold text-[12px] p-2 appearance-none"
 					>
 						<option value="">{{ __("My team") }}</option>
-						<option
-							v-for="manager in teamManagers.data"
-							:key="manager.name"
-							:value="manager.name"
-						>
+						<option v-for="manager in teamManagers.data" :key="manager.name" :value="manager.name">
 							{{ manager.employee_name }}
 						</option>
 					</select>
@@ -65,58 +58,64 @@
 					</div>
 				</div>
 
-				<!-- member rows -->
+				<!-- member rows, sectioned by department. Presentation only: the
+				     member SET is exactly the reports_to team the server returned —
+				     frontend/tests/team-grouping.test.mjs pins that grouping can
+				     never add, drop, or leak a member. -->
 				<div
 					class="flex flex-col border-t-2 border-divider"
 					v-if="teamStatus.data?.members?.length"
 				>
-					<div
-						v-for="member in teamStatus.data.members"
-						:key="member.employee"
-						class="flex flex-col bg-surface border-b border-divider p-3 cursor-pointer"
-						@click="toggleRow(member.employee)"
-					>
-						<div class="flex flex-row items-center justify-between gap-2">
-							<div class="flex flex-col min-w-0">
-								<span class="font-semibold text-[14px] text-inkbase truncate">
-									{{ member.employee_name }}
-								</span>
-								<span class="text-[11px] text-ink-600 truncate">
-									{{ member.designation }}
+					<template v-for="group in departmentGroups" :key="group.department">
+						<div class="m-kicker px-3 pt-4 pb-1.5">
+							{{ group.department }} ({{ group.members.length }})
+						</div>
+						<div
+							v-for="member in group.members"
+							:key="member.employee"
+							class="flex flex-col bg-surface border-b border-divider p-3 cursor-pointer"
+							@click="toggleRow(member.employee)"
+						>
+							<div class="flex flex-row items-center justify-between gap-2">
+								<div class="flex flex-col min-w-0">
+									<span class="font-semibold text-[14px] text-inkbase truncate">
+										{{ member.employee_name }}
+									</span>
+									<span class="text-[11px] text-ink-600 truncate">
+										{{ member.designation }}
+									</span>
+								</div>
+								<span class="m-chip flex-none" :class="statusChipClass(member.status)">
+									{{ __(member.status) }}
 								</span>
 							</div>
-							<span class="m-chip flex-none" :class="statusChipClass(member.status)">
-								{{ __(member.status) }}
-							</span>
-						</div>
-						<span class="text-[11px] text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
+							<span class="text-[11px] text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
 
-						<!-- expanded detail -->
-						<div
-							v-if="expandedRow === member.employee"
-							class="flex flex-col gap-1 mt-2.5 pt-2.5 border-t border-divider text-[11px] text-ink-600"
-						>
-							<span v-if="member.shift">
-								{{ __("Shift") }}: {{ member.shift }} ·
-								{{ formatTime(member.shift_start) }}–{{ formatTime(member.shift_end) }}
-							</span>
-							<span>
-								{{ __("First in") }}: {{ formatPunch(member.first_in) }} ·
-								{{ __("Last out") }}: {{ formatPunch(member.last_out) }}
-							</span>
-							<span v-if="member.leave_type">
-								{{ __(member.leave_type, null, "Leave Type") }}
-								<template v-if="member.half_day">({{ __("Half Day") }})</template>
-								· {{ __("until") }} {{ dayjs(member.leave_until).format("D MMM") }}
-							</span>
+							<!-- expanded detail -->
+							<div
+								v-if="expandedRow === member.employee"
+								class="flex flex-col gap-1 mt-2.5 pt-2.5 border-t border-divider text-[11px] text-ink-600"
+							>
+								<span v-if="member.shift">
+									{{ __("Shift") }}: {{ member.shift }} · {{ formatTime(member.shift_start) }}–{{
+										formatTime(member.shift_end)
+									}}
+								</span>
+								<span>
+									{{ __("First in") }}: {{ formatPunch(member.first_in) }} · {{ __("Last out") }}:
+									{{ formatPunch(member.last_out) }}
+								</span>
+								<span v-if="member.leave_type">
+									{{ __(member.leave_type, null, "Leave Type") }}
+									<template v-if="member.half_day">({{ __("Half Day") }})</template>
+									· {{ __("until") }} {{ dayjs(member.leave_until).format("D MMM") }}
+								</span>
+							</div>
 						</div>
-					</div>
+					</template>
 				</div>
 
-				<EmptyState
-					:message="__('No direct reports found')"
-					v-else-if="!teamStatus.loading"
-				/>
+				<EmptyState :message="__('No direct reports found')" v-else-if="!teamStatus.loading" />
 
 				<div v-if="teamStatus.loading" class="flex mt-2 items-center justify-center">
 					<LoadingIndicator class="w-8 h-8 text-accent" />
@@ -137,12 +136,15 @@ import { computed, inject, ref } from "vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import { teamManagers, teamStatus } from "@/data/team"
+import { groupByDepartment } from "@/utils/team"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
 const selectedDate = ref(dayjs().format("YYYY-MM-DD"))
 const selectedManager = ref("")
+const departmentGroups = computed(() => groupByDepartment(teamStatus.data?.members))
+
 const expandedRow = ref(null)
 
 function fetchDay() {
@@ -207,10 +209,14 @@ function summaryLine(member) {
 		return `${type} · ${__("until")} ${dayjs(member.leave_until).format("D MMM")}`
 	}
 	if (member.first_in || member.last_out) {
-		return `${__("IN")} ${formatPunch(member.first_in)} · ${__("OUT")} ${formatPunch(member.last_out)}`
+		return `${__("IN")} ${formatPunch(member.first_in)} · ${__("OUT")} ${formatPunch(
+			member.last_out
+		)}`
 	}
 	if (member.status === "Not In Yet" && member.shift_start) {
-		return `${__("Shift")} ${formatTime(member.shift_start)}–${formatTime(member.shift_end)} · ${__("no punch yet")}`
+		return `${__("Shift")} ${formatTime(member.shift_start)}–${formatTime(
+			member.shift_end
+		)} · ${__("no punch yet")}`
 	}
 	if (member.status === "Absent") {
 		return __("No punch · no leave filed")

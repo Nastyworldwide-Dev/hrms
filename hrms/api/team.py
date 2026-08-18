@@ -111,7 +111,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	members = frappe.get_all(
 		"Employee",
 		filters=member_filters,
-		fields=["name", "employee_name", "designation", "default_shift", "holiday_list"],
+		fields=["name", "employee_name", "designation", "department", "default_shift", "holiday_list"],
 		order_by="employee_name asc",
 		ignore_permissions=True,
 	)
@@ -207,6 +207,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 				"employee": member.name,
 				"employee_name": member.employee_name,
 				"designation": member.designation,
+				"department": member.department,
 				"status": member_status,
 				"shift": shift,
 				"shift_start": str(shift_start) if shift_start else None,
