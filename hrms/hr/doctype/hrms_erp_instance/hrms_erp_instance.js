@@ -11,9 +11,119 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
+		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
 		show_sync_headline(frm);
 	},
 });
+
+//: canonical gap prefix -> what an operator should read it as
+const GAP_KINDS = {
+	"field:": __("column the hub does not store"),
+	"value:": __("value the hub refuses"),
+	"absent:": __("doctype the source does not have"),
+	"unmirrored:": __("source data not brought across"),
+	"unreadable:": __("source refuses the read"),
+};
+
+function describe_gap(key) {
+	for (const [prefix, label] of Object.entries(GAP_KINDS)) {
+		if (key.startsWith(prefix)) return `${key.slice(prefix.length)} — ${label}`;
+	}
+	return key;
+}
+
+function review_schema_gaps(frm) {
+	// One screen, zero typing. The machine already knows every canonical key —
+	// readiness reports them — so the operator only supplies the DECISION.
+	// Hand-copying keys like value:Employee.performance_band=E3 into the child
+	// table was the workflow this replaces: one typo and a ruling never matches
+	// its gap, blocking READY while looking done.
+	frappe
+		.call({
+			method: "hrms.sync.parity.cutover_readiness",
+			args: { instance_name: frm.doc.name },
+		})
+		.then((r) => {
+			const v = r.message || {};
+			const unruled = v.unruled || [];
+			const unmet = v.unmet || [];
+			if (!unruled.length && !unmet.length) {
+				frappe.msgprint({
+					title: __("Nothing outstanding"),
+					indicator: "green",
+					message: __(
+						"Every reported schema gap carries a ruling, and none are pending work."
+					),
+				});
+				return;
+			}
+
+			const fields = [];
+			if (unmet.length) {
+				fields.push({
+					fieldtype: "HTML",
+					options:
+						`<p class="text-muted" style="margin-bottom:0.5em">${__(
+							"Ruled, still outstanding — these clear on their own when the gap stops appearing:"
+						)}</p>` +
+						`<ul style="margin:0 0 0.5em 1em">${unmet
+							.map(
+								(key) => `<li>${frappe.utils.escape_html(describe_gap(key))}</li>`
+							)
+							.join("")}</ul>`,
+				});
+			}
+			unruled.forEach((key, index) => {
+				fields.push({
+					fieldtype: "Select",
+					fieldname: `ruling_${index}`,
+					label: describe_gap(key),
+					options: [
+						"",
+						__("Not needed on hub"),
+						__("Add before cutover"),
+						__("Fix at source"),
+					].join("\n"),
+				});
+			});
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("Review Schema Gaps"),
+				fields,
+				primary_action_label: __("Record Rulings"),
+				primary_action(values) {
+					// untranslate: the ledger stores the canonical English rulings
+					const canonical = {
+						[__("Not needed on hub")]: "Not needed on hub",
+						[__("Add before cutover")]: "Add before cutover",
+						[__("Fix at source")]: "Fix at source",
+					};
+					let recorded = 0;
+					unruled.forEach((key, index) => {
+						const choice = canonical[values[`ruling_${index}`]];
+						if (!choice) return; // undecided rows stay unruled — deciding later is allowed
+						const row = frm.add_child("schema_gap_rulings");
+						row.gap = key;
+						row.ruling = choice;
+						recorded += 1;
+					});
+					dialog.hide();
+					if (!recorded) return;
+					frm.refresh_field("schema_gap_rulings");
+					frm.save().then(() => {
+						console.info(
+							"[HRMSERPInstance] recorded",
+							recorded,
+							"schema gap ruling(s)"
+						);
+						show_sync_headline(frm); // the READY math may have just changed
+					});
+				},
+			});
+			dialog.show();
+		})
+		.catch((e) => console.warn("[HRMSERPInstance] could not load gaps for review:", e));
+}
 
 function show_sync_headline(frm) {
 	// set_headline APPENDS — verifica-live 2026-08-18 showed "1 of 4" stacked
