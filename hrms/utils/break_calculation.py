@@ -26,6 +26,12 @@ Public API:
     get_shift_break_minutes(shift_type_name, work_start, work_end) -> int
         Convenience wrapper that loads the rows from a Shift Type and the
         Ramadan window from HR Settings, then calls get_break_minutes.
+
+    fixed_break_hours(start_time, end_time) -> float
+        Length of a fixed break window in hours (0.0 when the window is
+        missing or inverted). Used to mirror the window into a row's
+        break_hours so the grid's Break Duration column shows the real
+        deduction.
 """
 
 from __future__ import annotations
@@ -75,6 +81,21 @@ def _row_applies(period: str, is_ramadan: bool) -> bool:
 		return is_ramadan
 	# Unknown period -> ignore to be safe rather than over-deduct
 	return False
+
+
+def fixed_break_hours(start_time, end_time) -> float:
+	"""Window length of a Fixed break in hours; 0.0 if either bound is
+	missing or end <= start (mirrors get_break_minutes, which skips such
+	rows instead of deducting)."""
+	if start_time in (None, "") or end_time in (None, ""):
+		return 0.0
+	start = _coerce_time(start_time)
+	end = _coerce_time(end_time)
+	if end <= start:
+		logger.debug("[break_calculation] inverted/empty fixed window %s-%s -> 0h", start, end)
+		return 0.0
+	seconds = (end.hour - start.hour) * 3600 + (end.minute - start.minute) * 60 + (end.second - start.second)
+	return round(seconds / 3600, 2)
 
 
 def _overlap_minutes(a_start: datetime, a_end: datetime, b_start: datetime, b_end: datetime) -> int:

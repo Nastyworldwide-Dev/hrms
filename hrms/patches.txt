@@ -53,3 +53,4 @@ hrms.patches.v15_103_0.add_employee_ot_pay_eligibility_field
 hrms.patches.v15_103_0.ensure_replacement_leave_type
 hrms.patches.v15_106_3.allow_staff_cancel_own_requests
 hrms.patches.v15_112_0.lock_employee_advance_readonly
+hrms.patches.v15_112_1.backfill_fixed_break_hours

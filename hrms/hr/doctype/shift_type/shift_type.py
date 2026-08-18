@@ -46,8 +46,39 @@ class ShiftType(Document):
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
 		self.validate_overtime_rates()
+		self.validate_breaks()
 		self.seed_last_sync_of_checkin()
 		logger.debug("[shift_type] validated %s", self.name)
+
+	def validate_breaks(self):
+		"""Fixed rows must carry a usable window — get_break_minutes silently
+		skips end <= start, so reject it here instead of deducting nothing.
+		Mirror the window length into break_hours so the grid's Break
+		Duration column shows the real deduction."""
+		from hrms.utils.break_calculation import fixed_break_hours
+
+		logger.debug("[shift_type] %s: validating %d break rows", self.name, len(self.breaks or []))
+		for row in self.breaks or []:
+			if (row.break_type or "Fixed") == "Flexible":
+				continue
+			hours = fixed_break_hours(row.start_time, row.end_time)
+			if hours <= 0:
+				frappe.throw(
+					title=_("Invalid Break Window"),
+					msg=_("Row #{0}: a Fixed break needs an End Time later than its Start Time.").format(
+						row.idx
+					),
+				)
+			if row.break_hours != hours:
+				logger.info(
+					"[shift_type] %s: break row #%s duration synced to %sh from window %s-%s",
+					self.name,
+					row.idx,
+					hours,
+					row.start_time,
+					row.end_time,
+				)
+				row.break_hours = hours
 
 	def seed_last_sync_of_checkin(self):
 		# Auto mode needs a concrete baseline: with last_sync_of_checkin empty,

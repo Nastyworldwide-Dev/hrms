@@ -7,9 +7,9 @@ or via bench:
 """
 
 import unittest
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
-from hrms.utils.break_calculation import get_break_minutes
+from hrms.utils.break_calculation import fixed_break_hours, get_break_minutes
 
 
 def _mk_row(day_of_week, period, start, end):
@@ -209,6 +209,44 @@ class TestFlexibleBreaks(unittest.TestCase):
 		# Legacy rows (no break_type key) must keep behaving as fixed windows
 		got = get_break_minutes(datetime(2026, 5, 25, 9), datetime(2026, 5, 25, 17), MY_MON_THU_LUNCH)
 		self.assertEqual(got, 60)
+
+
+class TestFixedBreakHours(unittest.TestCase):
+	"""fixed_break_hours mirrors a Fixed row's window length into break_hours
+	so the grid's Break Duration column shows the real deduction."""
+
+	def test_one_hour_lunch(self):
+		self.assertEqual(fixed_break_hours(time(12, 0), time(13, 0)), 1.0)
+
+	def test_two_hour_friday_window(self):
+		self.assertEqual(fixed_break_hours(time(12, 30), time(14, 30)), 2.0)
+
+	def test_fractional_hours(self):
+		self.assertEqual(fixed_break_hours(time(12, 0), time(12, 45)), 0.75)
+
+	def test_string_times(self):
+		# Desk sends Time fields as HH:MM:SS strings
+		self.assertEqual(fixed_break_hours("12:00:00", "13:30:00"), 1.5)
+
+	def test_timedelta_times(self):
+		# MariaDB TIME columns load as timedelta
+		self.assertEqual(fixed_break_hours(timedelta(hours=12), timedelta(hours=13)), 1.0)
+
+	def test_missing_end_is_zero(self):
+		self.assertEqual(fixed_break_hours(time(12, 0), None), 0.0)
+
+	def test_missing_start_is_zero(self):
+		self.assertEqual(fixed_break_hours(None, time(13, 0)), 0.0)
+
+	def test_empty_string_is_zero(self):
+		self.assertEqual(fixed_break_hours("", "13:00:00"), 0.0)
+
+	def test_inverted_window_is_zero(self):
+		# get_break_minutes skips end <= start, so the mirrored duration is 0
+		self.assertEqual(fixed_break_hours(time(13, 0), time(12, 0)), 0.0)
+
+	def test_equal_times_is_zero(self):
+		self.assertEqual(fixed_break_hours(time(12, 0), time(12, 0)), 0.0)
 
 
 if __name__ == "__main__":
