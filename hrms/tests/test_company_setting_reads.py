@@ -49,6 +49,67 @@ def _registered_settings() -> dict:
 	raise AssertionError("COMPANY_OVERRIDES not found in hrms/utils/company_settings.py")
 
 
+def _singles_dict_reads():
+	"""Yield (relpath, lineno, setting) where a registered key is read off a
+	`get_singles_dict(<singleton>)` result.
+
+	The second read path. `get_hr_settings` served the PWA the GLOBAL
+	`allow_geolocation_tracking` through exactly this shape — `settings =
+	get_singles_dict("HR Settings")` then `settings.allow_geolocation_tracking`
+	— and CheckInPanel gates coordinate capture on that value, so a company
+	that switched the override ON (global OFF) would have had no coordinates
+	captured while the per-company insert path requires them: the rollout flag
+	would have BLOCKED that company's check-ins. The get_single_value scan
+	below cannot see this; this one can.
+
+	Heuristic on purpose: any name assigned from get_singles_dict of a
+	registered singleton taints attribute/subscript access of a registered key
+	within the same function. Over-matching is acceptable — the fix (resolve
+	that key through the company layer) is always valid.
+	"""
+	registered = _registered_settings()
+	singletons = set(registered.values())
+	for path in sorted(HRMS.rglob("*.py")):
+		rel = path.relative_to(HRMS).as_posix()
+		if rel in EXEMPT or rel.startswith(EXEMPT_DIRS) or "__pycache__" in rel:
+			continue
+		try:
+			tree = ast.parse(path.read_text())
+		except SyntaxError:  # pragma: no cover
+			continue
+		for func in ast.walk(tree):
+			if not isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef):
+				continue
+			tainted = set()
+			for node in ast.walk(func):
+				if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
+					continue
+				call = node.value
+				if getattr(call.func, "attr", None) != "get_singles_dict" or not call.args:
+					continue
+				arg = call.args[0]
+				if isinstance(arg, ast.Constant) and arg.value in singletons:
+					tainted |= {t.id for t in node.targets if isinstance(t, ast.Name)}
+			if not tainted:
+				continue
+			for node in ast.walk(func):
+				if (
+					isinstance(node, ast.Attribute)
+					and isinstance(node.value, ast.Name)
+					and node.value.id in tainted
+					and node.attr in registered
+				):
+					yield rel, node.lineno, node.attr
+				if (
+					isinstance(node, ast.Subscript)
+					and isinstance(node.value, ast.Name)
+					and node.value.id in tainted
+					and isinstance(node.slice, ast.Constant)
+					and node.slice.value in registered
+				):
+					yield rel, node.lineno, node.slice.value
+
+
 def _global_reads():
 	"""Yield (relpath, lineno, setting) for every get_single_value of a registered key."""
 	registered = _registered_settings()
@@ -80,6 +141,18 @@ class TestCompanySettingReads(unittest.TestCase):
 		self.assertIn("allow_geolocation_tracking", registered)
 		self.assertIn("email_salary_slip_to_employee", registered)
 		self.assertEqual(registered["email_salary_slip_to_employee"], "Payroll Settings")
+
+	def test_no_singles_dict_reads_of_overridable_settings(self):
+		offenders = list(_singles_dict_reads())
+		self.assertEqual(
+			offenders,
+			[],
+			"These read a company-overridable setting off a get_singles_dict() "
+			"result, so the Company override is ignored on that path (the exact "
+			"shape that had get_hr_settings hand the PWA the global geolocation "
+			"flag). Resolve the key through hrms.utils.company_settings instead:\n"
+			+ "\n".join(f"  {f}:{n} -> {s}" for f, n, s in offenders),
+		)
 
 	def test_no_direct_global_reads_of_overridable_settings(self):
 		offenders = list(_global_reads())

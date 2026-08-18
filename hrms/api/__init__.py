@@ -126,10 +126,27 @@ def get_current_employee() -> str:
 # HR Settings
 @frappe.whitelist()
 def get_hr_settings() -> dict:
+	"""Settings the PWA renders against, resolved for the SESSION EMPLOYEE.
+
+	`allow_geolocation_tracking` is per COMPANY (a registered override in
+	hrms.utils.company_settings), and this endpoint is the value CheckInPanel
+	gates coordinate capture on. Served globally, a company with the override ON
+	and the global OFF had the PWA capture no coordinates while the enforcing
+	insert (CustomEmployeeCheckin.validate_distance_from_shift_location, itself
+	per company) requires them — so enabling the per-entity rollout flag would
+	have blocked that company's check-ins outright. The screen and the fence
+	must resolve the flag the same way.
+
+	The other two keys stay global: neither is company-overridable.
+	"""
+	from hrms.utils.company_settings import is_setting_enabled_for_employee
+
 	settings = frappe.db.get_singles_dict("HR Settings", cast=True)
 	return frappe._dict(
 		allow_employee_checkin_from_mobile_app=settings.allow_employee_checkin_from_mobile_app,
-		allow_geolocation_tracking=settings.allow_geolocation_tracking,
+		allow_geolocation_tracking=is_setting_enabled_for_employee(
+			get_employee(), "allow_geolocation_tracking"
+		),
 		prevent_self_leave_approval=settings.prevent_self_leave_approval,
 	)
 
