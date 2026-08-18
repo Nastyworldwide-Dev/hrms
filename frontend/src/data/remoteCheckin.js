@@ -32,12 +32,6 @@ export const rejectResource = createResource({
 	auto: false,
 })
 
-export const openInSessionResource = createResource({
-	url: "hrms.api.remote_checkin.get_open_in_session",
-	cache: "nsty:remote-checkin-open-in",
-	auto: false,
-})
-
 export const submitLateCheckoutResource = createResource({
 	url: "hrms.api.remote_checkin.submit_late_checkout",
 	auto: false,

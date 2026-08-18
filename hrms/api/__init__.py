@@ -958,8 +958,12 @@ def get_expense_claim_summary(employee: str | None = None) -> dict:
 		.where((Claim.docstatus != 2) & (Claim.employee == employee))
 	).run(as_dict=True)[0]
 
-	currency = frappe.db.get_value("Company", summary.company, "default_currency")
-	summary["currency"] = currency
+	# The employee's OWN company, not the aggregate row's: with no GROUP BY,
+	# summary.company is an arbitrary claim's company, so an employee holding
+	# claims in two companies got a nondeterministic currency on the card.
+	company = frappe.db.get_value("Employee", employee, "company")
+	summary["company"] = company
+	summary["currency"] = frappe.db.get_value("Company", company, "default_currency")
 
 	return summary
 
@@ -1152,11 +1156,16 @@ def upload_base64_file(
 
 @frappe.whitelist()
 def delete_attachment(filename: str):
-	attached_to_doctype, attached_to_name = frappe.db.get_value(
-		"File", filename, ["attached_to_doctype", "attached_to_name"]
+	attached_to_doctype, attached_to_name, owner = frappe.db.get_value(
+		"File", filename, ["attached_to_doctype", "attached_to_name", "owner"]
 	)
 	if attached_to_doctype and attached_to_name:
 		frappe.has_permission(attached_to_doctype, "write", attached_to_name, throw=True)
+	elif owner != frappe.session.user and "System Manager" not in frappe.get_roles():
+		# an UNattached file has no parent document to borrow a permission
+		# check from — without this, any signed-in user could delete any
+		# orphan File by name
+		frappe.throw(_("You can only delete your own attachments."), frappe.PermissionError)
 	frappe.delete_doc("File", filename)
 
 

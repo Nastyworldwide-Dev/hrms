@@ -85,31 +85,49 @@ def sweep_stale_ins() -> int:
 
 
 def _has_matching_close(in_row: dict) -> bool:
-	"""True if this IN session has either a paired OUT or a late-checkout request."""
-	later_out = frappe.db.exists(
+	"""True if THIS IN's session has a closing OUT or a late-checkout request.
+
+	Session-bounded, matching submit_late_checkout's rule: an OUT (or request)
+	only closes this IN when it falls before the employee's NEXT IN. The old
+	any-later-OUT check meant a buried forgotten checkout — IN Mon, IN Tue,
+	OUT Tue — was never tagged: Tuesday's OUT "closed" Monday's session, so
+	HR's abandoned-IN alert stayed silent about the very row the PWA banner
+	(get_unresolved_stale_in) was surfacing to the employee. A REJECTED
+	late-OUT does not close the session either, mirroring the OT pairing
+	engine — the employee must be able to resubmit a corrected time.
+	"""
+	out_time_filter = [">", in_row["time"]]
+	next_in = frappe.db.get_value(
 		"Employee Checkin",
-		{
-			"employee": in_row["employee"],
-			"log_type": "OUT",
-			"time": [">", in_row["time"]],
-		},
+		{"employee": in_row["employee"], "log_type": "IN", "time": [">", in_row["time"]]},
+		"time",
+		order_by="time asc",
 	)
+	if next_in:
+		out_time_filter = ["between", [in_row["time"], next_in]]
+
+	# a bare != would also drop legacy rows with NULL status (SQL three-valued
+	# logic), so non-rejected and never-set are probed separately — the same
+	# two-probe shape submit_late_checkout uses
+	base = {"employee": in_row["employee"], "log_type": "OUT", "time": out_time_filter}
+	later_out = frappe.db.exists(
+		"Employee Checkin", {**base, "remote_approval_status": ["!=", "Rejected"]}
+	) or frappe.db.exists("Employee Checkin", {**base, "remote_approval_status": ["is", "not set"]})
 	if later_out:
 		logger.info(
-			"[scheduler] skip %s — later OUT exists for employee=%s",
+			"[scheduler] skip %s — session-closing OUT exists for employee=%s",
 			in_row["name"],
 			in_row["employee"],
 		)
 		return True
 
-	pending_request = frappe.db.exists(
-		"Remote Checkin Request",
-		{
-			"employee": in_row["employee"],
-			"log_type": "OUT",
-			"checkin_time": [">", in_row["time"]],
-		},
-	)
+	request_filters = {
+		"employee": in_row["employee"],
+		"log_type": "OUT",
+		"checkin_time": out_time_filter if not next_in else ["between", [in_row["time"], next_in]],
+		"status": ["!=", "Rejected"],
+	}
+	pending_request = frappe.db.exists("Remote Checkin Request", request_filters)
 	if pending_request:
 		logger.info(
 			"[scheduler] skip %s — late-checkout request exists for employee=%s",

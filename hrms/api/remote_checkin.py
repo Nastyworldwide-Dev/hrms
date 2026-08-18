@@ -224,38 +224,6 @@ def reject(request: str, approver_remarks: str = "") -> dict:
 
 
 @frappe.whitelist()
-def get_open_in_session() -> dict | None:
-	"""Return the current user's open IN session that has no matching OUT, if any.
-
-	Used by the PWA to decide whether to show the 'forgot to check out'
-	banner. Returns None when the last IN is already closed, or when the
-	user has no IN today/yesterday.
-	"""
-	user = frappe.session.user
-	employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
-	if not employee:
-		return None
-
-	last = frappe.get_all(
-		"Employee Checkin",
-		filters={"employee": employee},
-		fields=["name", "log_type", "time", "shift"],
-		order_by="time desc",
-		limit_page_length=1,
-	)
-	if not last or last[0]["log_type"] != "IN":
-		return None
-
-	logger.info(
-		"[remote_checkin] open_in_session user=%s checkin=%s time=%s",
-		user,
-		last[0]["name"],
-		last[0]["time"],
-	)
-	return last[0]
-
-
-@frappe.whitelist()
 def punch(
 	employee: str,
 	log_type: str,
