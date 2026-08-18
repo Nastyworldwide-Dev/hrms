@@ -14,6 +14,7 @@ from frappe import _
 from frappe.utils import get_time, getdate, now_datetime
 
 from hrms.hr.utils import HR_SEE_ALL_ROLES
+from hrms.overrides.company_scope import allowed_companies
 from hrms.utils.identity import get_employee
 from hrms.utils.team_status import derive_member_status
 
@@ -48,18 +49,32 @@ def get_managers() -> list[dict]:
 	Non-HR callers get [] — their view is always their own team."""
 	if not _is_hr():
 		return []
+	# The reads below run ignore_permissions (the manager fence IS the security
+	# boundary for staff), so the company fence has to be restated here: an
+	# "HR (Company)" user holds HR Manager and passed _is_hr, and without this
+	# the selector handed them every company's managers.
+	fence = allowed_companies()
+	member_filters = {"status": "Active", "reports_to": ("is", "set")}
+	if fence:
+		member_filters["company"] = ("in", fence)
 	manager_ids = frappe.get_all(
 		"Employee",
-		filters={"status": "Active", "reports_to": ("is", "set")},
+		filters=member_filters,
 		pluck="reports_to",
 		distinct=True,
 		ignore_permissions=True,
 	)
 	if not manager_ids:
 		return []
+	manager_filters = {"name": ("in", manager_ids), "status": "Active"}
+	if fence:
+		# a manager may sit in a holding company outside the fence while their
+		# reports are inside it; fencing the MEMBERS (above) is the data
+		# boundary, fencing the manager list keeps the selector coherent
+		manager_filters["company"] = ("in", fence)
 	managers = frappe.get_all(
 		"Employee",
-		filters={"name": ("in", manager_ids), "status": "Active"},
+		filters=manager_filters,
 		fields=["name", "employee_name"],
 		order_by="employee_name asc",
 		ignore_permissions=True,
@@ -85,9 +100,18 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	if not team_of:
 		return empty
 
+	# Everything below runs ignore_permissions, so the company fence must be
+	# restated at the member read — role checks alone let an "HR (Company)"
+	# user browse another company's punches and leave through the override.
+	# A manager browsing their OWN team is never fenced: their reports are
+	# their reports whichever company employs them.
+	fence = allowed_companies() if team_of != employee else []
+	member_filters = {"reports_to": team_of, "status": "Active"}
+	if fence:
+		member_filters["company"] = ("in", fence)
 	members = frappe.get_all(
 		"Employee",
-		filters={"reports_to": team_of, "status": "Active"},
+		filters=member_filters,
 		fields=["name", "employee_name", "designation", "default_shift", "holiday_list"],
 		order_by="employee_name asc",
 		ignore_permissions=True,

@@ -97,6 +97,16 @@ def get_all_employees() -> list[dict]:
 			"status",
 		]
 		filters = {}
+		# frappe.get_all bypasses the row-scope hooks, so the company fence has
+		# to be restated: an "HR (Company)" user holds HR User/Manager and took
+		# this branch, and without it the full directory — user_id included —
+		# crossed their fence. The STAFF branch below stays group-wide on
+		# purpose: it is the deliberately minimal PDPA-safe directory.
+		from hrms.overrides.company_scope import allowed_companies
+
+		fence = allowed_companies()
+		if fence:
+			filters["company"] = ("in", fence)
 	else:
 		frappe.logger("hrms").info("[api] minimal directory served to %s", frappe.session.user)
 		fields = STAFF_DIRECTORY_FIELDS
