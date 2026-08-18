@@ -4,16 +4,8 @@
 		:style="{ width: collapsed ? '72px' : '216px' }"
 	>
 		<!-- Logo header (64px) -->
-		<div
-			class="h-16 flex items-center gap-2.5 px-4 border-b-2 border-divider flex-none"
-		>
-			<svg
-				width="32"
-				height="32"
-				viewBox="0 0 117 117"
-				fill="none"
-				class="flex-none"
-			>
+		<div class="h-16 flex items-center gap-2.5 px-4 border-b-2 border-divider flex-none">
+			<svg width="32" height="32" viewBox="0 0 117 117" fill="none" class="flex-none">
 				<path
 					d="M93.4394 0H23.5606C10.5485 0 0 10.5485 0 23.5606V93.4394C0 106.452 10.5485 117 23.5606 117H93.4394C106.452 117 117 106.452 117 93.4394V23.5606C117 10.5485 106.452 0 93.4394 0Z"
 					fill="#A1EEC9"
@@ -59,9 +51,7 @@
 					<polyline points="11 17 6 12 11 7" />
 					<polyline points="18 17 13 12 18 7" />
 				</svg>
-				<span v-show="!collapsed" class="whitespace-nowrap">{{
-					__("Collapse")
-				}}</span>
+				<span v-show="!collapsed" class="whitespace-nowrap">{{ __("Collapse") }}</span>
 			</button>
 
 			<router-link
@@ -82,9 +72,7 @@
 					@click="navigate"
 				>
 					<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
-					<span v-show="!collapsed" class="whitespace-nowrap">{{
-						item.title
-					}}</span>
+					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
 				</button>
 			</router-link>
 		</div>
@@ -107,9 +95,7 @@
 				{{ employeeName ? employeeName[0] : "?" }}
 			</div>
 			<div v-show="!collapsed" class="flex flex-col gap-px min-w-0">
-				<span
-					class="font-extrabold text-[12.5px] whitespace-nowrap truncate text-inkbase"
-				>
+				<span class="font-extrabold text-[12.5px] whitespace-nowrap truncate text-inkbase">
 					{{ employeeName }}
 				</span>
 				<span
@@ -126,7 +112,11 @@
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
 
+import { markRaw } from "vue"
+
 import { NAV_ITEMS } from "@/data/navItems"
+import { hasTeam } from "@/data/team"
+import TeamIcon from "@/components/icons/TeamIcon.vue"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -142,7 +132,15 @@ const toggleCollapse = () => {
 	localStorage.setItem(STORAGE_KEY, String(collapsed.value))
 }
 
-const navItems = NAV_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
+// Team was reachable ONLY through the phone More menu — a manager on desktop
+// had no path to their own team page at all (true on v15 live as well; this
+// closes it for both). Same gate More.vue uses: the entry appears once
+// has_team confirms direct reports, or the caller is HR browsing via the
+// selector. hasTeam auto-fetches and is cached, so this costs nothing extra.
+const navItems = computed(() => [
+	...NAV_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
+	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
+])
 
 const isActive = (path) => route.path === path
 
