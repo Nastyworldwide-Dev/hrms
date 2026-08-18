@@ -2,6 +2,7 @@
 	<BaseLayout :pageTitle="__('My Issues')">
 		<template #body>
 			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-[720px]">
+				<ResourceError :resource="myIssues" what="your issues" />
 				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
 					<button @click="navigate" class="m-btn-primary">
 						{{ __("Report an Issue") }}
@@ -64,6 +65,7 @@ import { createListResource } from "frappe-ui"
 import { inject } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import ResourceError from "@/components/ResourceError.vue"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")

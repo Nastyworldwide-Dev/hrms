@@ -11,6 +11,7 @@
 				</span>
 			</router-link>
 		</div>
+		<ResourceError :resource="bank" what="your replacement leave bank" />
 
 		<div class="flex flex-row items-center justify-between border-t-2 border-divider px-3 py-3.5">
 			<div class="flex flex-col gap-1.5">
@@ -61,3 +62,4 @@ const monthLabel = computed(() =>
 	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : ""
 )
 </script>
+import ResourceError from "@/components/ResourceError.vue"

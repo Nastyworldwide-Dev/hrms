@@ -1,9 +1,8 @@
 <template>
 	<BaseLayout :pageTitle="__('My KPI')">
 		<template #body>
-			<div
-				class="flex flex-col w-full max-w-3xl mx-auto px-4 py-7 gap-8 lg:px-7 lg:py-9"
-			>
+			<div class="flex flex-col w-full max-w-3xl mx-auto px-4 py-7 gap-8 lg:px-7 lg:py-9">
+				<ResourceError :resource="dashboard" what="your KPI dashboard" />
 				<!-- Filters -->
 				<div
 					v-if="years.length"
@@ -38,217 +37,216 @@
 
 				<template v-if="current">
 					<div class="contents">
-					<!-- Hero: overall score -->
-					<div>
-						<div class="m-kicker">
-							<template v-if="current.is_average">
-								{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
-							</template>
-							<template v-else>
-								{{ __("Appraisal cycle") }} · {{ current.cycle }}
-							</template>
-						</div>
-						<div
-							class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4"
-						>
-							<div class="flex flex-col gap-2">
-								<div class="font-sans font-extrabold text-[44px] leading-none tabular-nums">
-									{{ formatScore(current.total_score) }}<span
-										class="text-[15px] text-ink-500 font-normal"
-									>
-										/ 100</span>
-								</div>
-								<div class="flex items-center gap-2.5">
-									<span v-if="current.grade" class="m-chip m-chip-solid">
-										{{ current.grade }}
-									</span>
-									<span v-if="current.is_average" class="m-chip m-chip-outline">
-										{{ __("Avg of {0} cycles", [current.cycles_count]) }}
-									</span>
-									<span
-										v-if="delta !== null"
-										class="text-xs font-sans font-extrabold text-ink-700"
-									>
-										{{ delta >= 0 ? "+" : "−" }}{{ Math.abs(delta).toFixed(1) }}
-										{{ __("vs last cycle") }}
-									</span>
-								</div>
+						<!-- Hero: overall score -->
+						<div>
+							<div class="m-kicker">
+								<template v-if="current.is_average">
+									{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
+								</template>
+								<template v-else> {{ __("Appraisal cycle") }} · {{ current.cycle }} </template>
 							</div>
-							<svg width="84" height="84" viewBox="0 0 84 84">
-								<circle
-									cx="42"
-									cy="42"
-									r="34"
-									fill="none"
-									stroke="currentColor"
-									class="text-ink-300"
-									stroke-width="7"
-								/>
-								<circle
-									cx="42"
-									cy="42"
-									r="34"
-									fill="none"
-									stroke="currentColor"
-									class="text-accent"
-									stroke-width="7"
-									:stroke-dasharray="`${ringDash} 213.6`"
-									transform="rotate(-90 42 42)"
-								/>
-								<text
-									x="42"
-									y="47"
-									text-anchor="middle"
-									fill="currentColor" class="text-inkbase"
-									font-size="15"
-									font-weight="800"
-								>
-									{{ formatScore(current.total_score) }}
-								</text>
-							</svg>
-						</div>
-					</div>
-
-					<!-- Score trend -->
-					<div v-if="trend.length > 1">
-						<div
-							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
-						>
-							{{ __("Score trend") }}
-						</div>
-						<div class="border-t-2 border-divider pt-3">
-							<svg :viewBox="`0 0 320 110`" class="w-full">
-								<line
-									v-for="g in [0, 50, 100]"
-									:key="g"
-									:y1="trendY(g)"
-									:y2="trendY(g)"
-									x1="24"
-									x2="312"
-									stroke="currentColor"
-									class="text-ink-300"
-									stroke-width="1"
-								/>
-								<text
-									v-for="g in [0, 50, 100]"
-									:key="'l' + g"
-									x="20"
-									:y="trendY(g) + 3"
-									text-anchor="end"
-									fill="currentColor" class="text-ink-500"
-									font-size="9"
-								>
-									{{ g }}
-								</text>
-								<polyline
-									fill="none"
-									stroke="currentColor"
-									class="text-inkbase"
-									stroke-width="2"
-									:points="trendPoints"
-								/>
-								<g v-for="(p, i) in trend" :key="'p' + i">
-									<circle :cx="trendX(i)" :cy="trendY(p.total_score)" r="3" fill="currentColor" class="text-inkbase" />
+							<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
+								<div class="flex flex-col gap-2">
+									<div class="font-sans font-extrabold text-[44px] leading-none tabular-nums">
+										{{ formatScore(current.total_score)
+										}}<span class="text-[15px] text-ink-500 font-normal"> / 100</span>
+									</div>
+									<div class="flex items-center gap-2.5">
+										<span v-if="current.grade" class="m-chip m-chip-solid">
+											{{ current.grade }}
+										</span>
+										<span v-if="current.is_average" class="m-chip m-chip-outline">
+											{{ __("Avg of {0} cycles", [current.cycles_count]) }}
+										</span>
+										<span
+											v-if="delta !== null"
+											class="text-xs font-sans font-extrabold text-ink-700"
+										>
+											{{ delta >= 0 ? "+" : "−" }}{{ Math.abs(delta).toFixed(1) }}
+											{{ __("vs last cycle") }}
+										</span>
+									</div>
+								</div>
+								<svg width="84" height="84" viewBox="0 0 84 84">
+									<circle
+										cx="42"
+										cy="42"
+										r="34"
+										fill="none"
+										stroke="currentColor"
+										class="text-ink-300"
+										stroke-width="7"
+									/>
+									<circle
+										cx="42"
+										cy="42"
+										r="34"
+										fill="none"
+										stroke="currentColor"
+										class="text-accent"
+										stroke-width="7"
+										:stroke-dasharray="`${ringDash} 213.6`"
+										transform="rotate(-90 42 42)"
+									/>
 									<text
-										:x="trendX(i)"
-										y="106"
+										x="42"
+										y="47"
 										text-anchor="middle"
-										fill="currentColor" class="text-ink-500"
+										fill="currentColor"
+										class="text-inkbase"
+										font-size="15"
+										font-weight="800"
+									>
+										{{ formatScore(current.total_score) }}
+									</text>
+								</svg>
+							</div>
+						</div>
+
+						<!-- Score trend -->
+						<div v-if="trend.length > 1">
+							<div
+								class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+							>
+								{{ __("Score trend") }}
+							</div>
+							<div class="border-t-2 border-divider pt-3">
+								<svg :viewBox="`0 0 320 110`" class="w-full">
+									<line
+										v-for="g in [0, 50, 100]"
+										:key="g"
+										:y1="trendY(g)"
+										:y2="trendY(g)"
+										x1="24"
+										x2="312"
+										stroke="currentColor"
+										class="text-ink-300"
+										stroke-width="1"
+									/>
+									<text
+										v-for="g in [0, 50, 100]"
+										:key="'l' + g"
+										x="20"
+										:y="trendY(g) + 3"
+										text-anchor="end"
+										fill="currentColor"
+										class="text-ink-500"
 										font-size="9"
 									>
-										{{ p.cycle }}
+										{{ g }}
 									</text>
-								</g>
-							</svg>
+									<polyline
+										fill="none"
+										stroke="currentColor"
+										class="text-inkbase"
+										stroke-width="2"
+										:points="trendPoints"
+									/>
+									<g v-for="(p, i) in trend" :key="'p' + i">
+										<circle
+											:cx="trendX(i)"
+											:cy="trendY(p.total_score)"
+											r="3"
+											fill="currentColor"
+											class="text-inkbase"
+										/>
+										<text
+											:x="trendX(i)"
+											y="106"
+											text-anchor="middle"
+											fill="currentColor"
+											class="text-ink-500"
+											font-size="9"
+										>
+											{{ p.cycle }}
+										</text>
+									</g>
+								</svg>
+							</div>
 						</div>
-					</div>
 					</div>
 
 					<div class="contents">
-					<!-- KRA list -->
-					<div>
-						<div
-							class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
-						>
-							{{ __("My KRAs") }}
-						</div>
-						<div class="border-t-2 border-divider">
+						<!-- KRA list -->
+						<div>
 							<div
-								v-for="(row, idx) in current.kras"
-								:key="idx"
-								class="m-row flex flex-col gap-1.5 py-3"
+								class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 							>
-								<div class="flex items-center justify-between gap-2">
-									<span class="font-sans font-semibold text-[15px]">
-										{{ row.kra }}
-									</span>
-									<span
-										v-if="row.per_weightage"
-										class="m-chip m-chip-muted whitespace-nowrap"
-									>
-										{{ formatScore(row.per_weightage) }}%
-									</span>
-								</div>
-								<span v-if="row.kpi" class="text-xs text-ink-600 leading-4">
-									{{ row.kpi }}
-								</span>
-								<div class="flex items-center gap-2.5">
-									<div class="m-bar flex-1">
-										<div
-											class="h-full bg-accent"
-											:style="{ width: `${Math.min(barValue(row), 100)}%` }"
-										/>
+								{{ __("My KRAs") }}
+							</div>
+							<div class="border-t-2 border-divider">
+								<div
+									v-for="(row, idx) in current.kras"
+									:key="idx"
+									class="m-row flex flex-col gap-1.5 py-3"
+								>
+									<div class="flex items-center justify-between gap-2">
+										<span class="font-sans font-semibold text-[15px]">
+											{{ row.kra }}
+										</span>
+										<span v-if="row.per_weightage" class="m-chip m-chip-muted whitespace-nowrap">
+											{{ formatScore(row.per_weightage) }}%
+										</span>
 									</div>
-									<span
-										class="font-sans font-extrabold text-[11px] tabular-nums w-12 text-right"
-									>
-										{{ formatScore(barValue(row)) }}%
+									<span v-if="row.kpi" class="text-xs text-ink-600 leading-4">
+										{{ row.kpi }}
 									</span>
+									<div class="flex items-center gap-2.5">
+										<div class="m-bar flex-1">
+											<div
+												class="h-full bg-accent"
+												:style="{ width: `${Math.min(barValue(row), 100)}%` }"
+											/>
+										</div>
+										<span
+											class="font-sans font-extrabold text-[11px] tabular-nums w-12 text-right"
+										>
+											{{ formatScore(barValue(row)) }}%
+										</span>
+									</div>
+									<div class="flex flex-wrap gap-x-3 text-[11px] text-ink-500">
+										<span v-if="row.target">
+											{{ __("Target") }} {{ formatNumber(row.target) }}
+										</span>
+										<span v-if="row.actual"
+											>{{ __("Actual") }} {{ formatNumber(row.actual) }}</span
+										>
+										<span v-if="row.weighted_score">
+											{{ __("Weighted") }} {{ formatScore(row.weighted_score) }}
+										</span>
+									</div>
 								</div>
-								<div class="flex flex-wrap gap-x-3 text-[11px] text-ink-500">
-									<span v-if="row.target">
-										{{ __("Target") }} {{ formatNumber(row.target) }}
-									</span>
-									<span v-if="row.actual">{{ __("Actual") }} {{ formatNumber(row.actual) }}</span>
-									<span v-if="row.weighted_score">
-										{{ __("Weighted") }} {{ formatScore(row.weighted_score) }}
-									</span>
-								</div>
+								<EmptyState
+									v-if="!current.kras.length"
+									:message="__('No KRAs in this appraisal')"
+								/>
 							</div>
-							<EmptyState
-								v-if="!current.kras.length"
-								:message="__('No KRAs in this appraisal')"
-							/>
 						</div>
-					</div>
 
-					<!-- Feedback -->
-					<div>
-						<div class="border-t-2 border-divider">
-							<div class="m-row flex items-center justify-between py-3">
-								<span class="text-sm">
-									{{
-										current.is_average
-											? __("Feedback received this year")
-											: __("Feedback received this cycle")
-									}}
-								</span>
-								<span class="font-sans font-extrabold text-base tabular-nums">
-									{{ dashboard.data.feedback.count }}
-								</span>
+						<!-- Feedback -->
+						<div>
+							<div class="border-t-2 border-divider">
+								<div class="m-row flex items-center justify-between py-3">
+									<span class="text-sm">
+										{{
+											current.is_average
+												? __("Feedback received this year")
+												: __("Feedback received this cycle")
+										}}
+									</span>
+									<span class="font-sans font-extrabold text-base tabular-nums">
+										{{ dashboard.data.feedback.count }}
+									</span>
+								</div>
 							</div>
+							<span class="block text-[11px] text-ink-600 mt-3">
+								🔒 {{ __("You can only see your own scores") }}
+							</span>
 						</div>
-						<span class="block text-[11px] text-ink-600 mt-3">
-							🔒 {{ __("You can only see your own scores") }}
-						</span>
-					</div>
 					</div>
 				</template>
 
-				<EmptyState
-					v-else-if="dashboard.data"
-					:message="__('No appraisals found for you yet')"
-				/>
+				<EmptyState v-else-if="dashboard.data" :message="__('No appraisals found for you yet')" />
 			</div>
 		</template>
 	</BaseLayout>
@@ -260,6 +258,7 @@ import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import EmptyState from "@/components/EmptyState.vue"
+import ResourceError from "@/components/ResourceError.vue"
 
 const __ = inject("$translate")
 
@@ -312,7 +311,9 @@ const ringDash = computed(() =>
 )
 
 function formatScore(value) {
-	return Number(value || 0).toFixed(1).replace(/\.0$/, "")
+	return Number(value || 0)
+		.toFixed(1)
+		.replace(/\.0$/, "")
 }
 
 // Thousands-separated target/actual (e.g. 23083692 -> "23,083,692").

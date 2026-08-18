@@ -6,6 +6,7 @@
 			>
 				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
 					<div class="order-1"><AttendanceCalendar /></div>
+					<ResourceError :resource="shifts" what="your shifts" />
 				</div>
 
 				<div
@@ -207,6 +208,7 @@ import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import OTRequestItem from "@/components/OTRequestItem.vue"
 import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import RequestList from "@/components/RequestList.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
 
 import {
