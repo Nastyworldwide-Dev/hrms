@@ -31,6 +31,8 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from hrms.overrides.company_scope import require_unfenced
+
 _LOGGER = None
 
 
@@ -1544,6 +1546,7 @@ def enqueue_sync(
 	something the operator can actually open — not an rq job id they cannot see.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced(_("start a sync"))
 	if not instance_name:
 		frappe.throw(_("instance_name is required"))
 
@@ -1603,6 +1606,7 @@ def sync_status(instance_name: str) -> dict:
 	form can answer "is it stuck?" without starting anything.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced(_("inspect the sync queue"))
 	return {
 		"instance": instance_name,
 		"run": running_run(instance_name),
@@ -1621,6 +1625,7 @@ def run_sync(instance_name: str, doctypes: str | None = None, incremental: int =
 	CSRF vector — a logged-in HR Manager loading an image tag would start a pull.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced(_("run a sync"))
 	from hrms.sync.client import RemoteInstanceClient
 
 	return run_sync_with_client(

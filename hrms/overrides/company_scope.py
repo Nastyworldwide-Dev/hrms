@@ -104,3 +104,35 @@ def employee_has_permission(doc, ptype: str = "read", user: str | None = None) -
 			user,
 		)
 	return allowed
+
+
+def require_unfenced(action: str) -> None:
+	"""Refuse a hub-wide action to a company-fenced caller.
+
+	Role checks (`frappe.only_for`) answer "is this person HR?" and nothing
+	more. On a multi-company hub that is not the whole question: a user holding
+	plain HR Manager PLUS an `allow=Company` fence ("HR (Company)") is HR for
+	ONE company, and must not reach an action whose blast radius is every
+	company on the site — starting a sync that pulls seven companies, or
+	counting rows across the whole source instance.
+
+	`hrms.sync.company_shells` has guarded this since SEC-01; the sync and
+	parity endpoints were left role-checked only, so the fence stopped at the
+	registry and not at the pull. `allowed_companies()` is the single source of
+	truth — empty means unfenced (group HR, System Manager, Administrator), so
+	this is a no-op on a single-company site.
+	"""
+	fence = allowed_companies()
+	if not fence:
+		return
+
+	logger.warning(
+		"[company_scope] refusing %s for %s — company-fenced to %s",
+		action,
+		frappe.session.user,
+		fence,
+	)
+	frappe.throw(
+		frappe._("Company-fenced HR users cannot {0}.").format(action),
+		frappe.PermissionError,
+	)

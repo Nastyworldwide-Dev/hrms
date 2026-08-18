@@ -16,6 +16,8 @@ import logging
 
 import frappe
 
+from hrms.overrides.company_scope import require_unfenced
+
 logger = logging.getLogger(__name__)
 
 # Must stay identical to hrms.sync.runner.STAMPED_DOCTYPES. A gate that reports on
@@ -151,6 +153,7 @@ def source_survey(instance_name: str) -> dict:
 	exists rather than a discussion.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("survey a source instance")
 	from hrms.sync.client import RemoteInstanceClient
 
 	return source_inventory(RemoteInstanceClient(instance_name))
@@ -315,6 +318,7 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	GET is correct here: it compares and never reconciles, on either side.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("check hub-wide data parity")
 	from hrms.sync.client import RemoteInstanceClient
 	from hrms.sync.runner import instance_companies, scope_filter
 

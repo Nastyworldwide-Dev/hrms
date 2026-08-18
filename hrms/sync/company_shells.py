@@ -57,26 +57,13 @@ MAX_SHELLS_PER_RUN = 50
 def _ensure_unfenced_operator():
 	"""Registry actions are hub-wide, so the caller must be unfenced.
 
-	`frappe.only_for` above checks roles only; a user holding plain HR Manager
-	PLUS an `allow=Company` fence ("HR (Company)") would otherwise use these
-	endpoints to see every source company and rewrite the shared redirect
-	table — scope-widening the fence exists to prevent (SEC-01).
-	`allowed_companies()` is the fence's single source of truth; empty means
-	unfenced (group HR, System Manager, Administrator).
+	Delegates to the shared guard — the sync and parity endpoints need the same
+	rule, and a second copy of it is how the fence came to stop at the registry
+	while `enqueue_sync` let a company-fenced HR Manager pull every company.
 	"""
-	from hrms.overrides.company_scope import allowed_companies
+	from hrms.overrides.company_scope import require_unfenced
 
-	fence = allowed_companies()
-	if fence:
-		logger.warning(
-			"[company_shells] refusing registry action for %s — company-fenced to %s",
-			frappe.session.user,
-			fence,
-		)
-		frappe.throw(
-			_("Company-fenced HR users cannot manage the ERP instance registry."),
-			frappe.PermissionError,
-		)
+	require_unfenced(_("manage the ERP instance registry"))
 
 
 def shell_payload(row: dict) -> dict:
