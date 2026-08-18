@@ -367,6 +367,19 @@ def run_parity_check(instance_name: str, company: str | None = None) -> dict:
 
 	report = _scoped_parity_report(instance_name, company)
 
+	# The survey rides every recorded check so readiness always has fresh
+	# unmirrored/unreadable evidence on the same trail it already reads. A
+	# survey failure is reported, never fatal — the parity half still records.
+	from hrms.sync.client import RemoteInstanceClient
+
+	unmirrored, unreadable = [], []
+	try:
+		survey = source_inventory(RemoteInstanceClient(instance_name))
+		unmirrored = [f"unmirrored:{row['doctype']}" for row in survey.get("has_data") or []]
+		unreadable = [f"unreadable:{row['doctype']}" for row in survey.get("unreadable") or []]
+	except Exception as e:
+		logger.warning("[parity] survey alongside check failed for %s: %s", instance_name, e)
+
 	from frappe.utils import now_datetime
 
 	check = frappe.get_doc(
@@ -377,6 +390,8 @@ def run_parity_check(instance_name: str, company: str | None = None) -> dict:
 			"in_parity": 1 if report.get("in_parity") else 0,
 			"mismatched": ", ".join(report.get("mismatched") or []),
 			"errored": ", ".join(report.get("errored") or []),
+			"unmirrored_with_data": ", ".join(unmirrored),
+			"unreadable": ", ".join(unreadable),
 		}
 	)
 	check.flags.ignore_permissions = True
@@ -403,7 +418,60 @@ def _readiness(instance_name: str) -> dict:
 	verdict = is_cutover_ready(reports, required_clean_runs=REQUIRED_CLEAN_RUNS)
 	verdict["last_checked_at"] = str(rows[0].checked_at) if rows else None
 	verdict["checks_recorded"] = len(rows)
+
+	# The dispositions gate: a clean streak is necessary, not sufficient. Every
+	# gap the latest evidence reports must carry a ruling, and every ruling
+	# other than "Not needed on hub" must be DONE (its gap gone), or READY
+	# stays off — this is what makes the standing schema narration impossible
+	# to ignore past the point it becomes irreversible.
+	gaps = list(_latest_run_gaps(instance_name))
+	if rows:
+		latest = frappe.db.get_value(
+			"HRMS Parity Check",
+			{"source_instance": instance_name},
+			["unmirrored_with_data", "unreadable"],
+			order_by="checked_at desc",
+			as_dict=True,
+		)
+		for field in ("unmirrored_with_data", "unreadable"):
+			gaps += [key.strip() for key in ((latest and latest.get(field)) or "").split(",") if key.strip()]
+
+	dispositions = evaluate_dispositions(gaps, _instance_rulings(instance_name))
+	verdict["unruled"] = dispositions["unruled"]
+	verdict["unmet"] = dispositions["unmet"]
+	verdict["ready"] = bool(verdict["ready"] and not dispositions["blocking"])
 	return verdict
+
+
+def _latest_run_gaps(instance_name: str):
+	"""Canonical gap keys off the newest sync run, [] when unreadable."""
+	import json as _json
+
+	try:
+		raw = frappe.db.get_value(
+			"HRMS Sync Run",
+			{"source_instance": instance_name},
+			"schema_gaps",
+			order_by="started_at desc",
+		)
+		return _json.loads(raw) if raw else []
+	except Exception as e:
+		logger.warning("[parity] could not read latest run gaps for %s: %s", instance_name, e)
+		return []
+
+
+def _instance_rulings(instance_name: str) -> dict:
+	"""{gap: ruling} from the instance's child table, {} when unreadable."""
+	try:
+		rows = frappe.get_all(
+			"HRMS Schema Gap Ruling",
+			filters={"parent": instance_name, "parenttype": "HRMS ERP Instance"},
+			fields=["gap", "ruling"],
+		)
+		return {row.gap: row.ruling for row in rows}
+	except Exception as e:
+		logger.warning("[parity] could not read rulings for %s: %s", instance_name, e)
+		return {}
 
 
 @frappe.whitelist()
@@ -415,6 +483,28 @@ def cutover_readiness(instance_name: str) -> dict:
 	frappe.only_for(("System Manager", "HR Manager"))
 	require_unfenced("read cutover readiness")
 	return _readiness(instance_name)
+
+
+def evaluate_dispositions(gaps, rulings) -> dict:
+	"""Which reported gaps block a cutover, given the recorded rulings. Pure.
+
+	`gaps` — canonical keys from the LATEST evidence (sync run + survey);
+	`rulings` — {gap key: ruling} off the instance's Schema Gap Rulings table.
+
+	One rule, no special cases:
+	  * a gap with NO ruling is `unruled` — nobody has decided, so it blocks;
+	  * `Not needed on hub` is met by existing — recorded intent, never blocks;
+	  * any other ruling is met only when its gap STOPS appearing in the
+	    evidence, so while it still appears it is `unmet` work — it blocks.
+
+	A ruling whose gap no longer appears is simply done and costs nothing.
+	This is what turns the standing "written without them" narration from
+	wallpaper into a burn-down list the READY light enforces.
+	"""
+	gaps = sorted(set(gaps or ()))
+	unruled = [gap for gap in gaps if gap not in (rulings or {})]
+	unmet = [gap for gap in gaps if (rulings or {}).get(gap) not in (None, "Not needed on hub")]
+	return {"unruled": unruled, "unmet": unmet, "blocking": bool(unruled or unmet)}
 
 
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:

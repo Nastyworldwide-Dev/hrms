@@ -1026,6 +1026,18 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 			f"{field} ({', '.join(sorted(values))})" if values else field
 			for field, values in sorted(getattr(_write_row, "dropped_fields", {}).items())
 		],
+		# Canonical, machine-readable twins of the narration above. Cutover
+		# readiness reads these off the run record so a gap cannot outlive the
+		# dialogs unruled — the formats are documented on HRMS Schema Gap Ruling.
+		"schema_gaps": [
+			key
+			for field, values in sorted(getattr(_write_row, "dropped_fields", {}).items())
+			for key in (
+				[f"value:{doctype}.{field}={value}" for value in sorted(values)]
+				if values
+				else [f"field:{doctype}.{field}"]
+			)
+		],
 	}
 
 
@@ -1201,7 +1213,7 @@ def _start_run(instance_name: str, doctypes) -> str:
 	return run.name
 
 
-def _finish_run(run_name: str, status: str, totals: dict, errors: list) -> None:
+def _finish_run(run_name: str, status: str, totals: dict, errors: list, gaps=None, notes=None) -> None:
 	"""Close the audit record. Called from a finally block, so it must not
 	raise — a failure to record the outcome would mask the real failure."""
 	try:
@@ -1217,6 +1229,8 @@ def _finish_run(run_name: str, status: str, totals: dict, errors: list) -> None:
 				"rows_orphaned": totals.get("orphaned", 0),
 				"rows_errored": totals.get("errored", 0),
 				"error_log": "\n".join(errors)[:100000] if errors else None,
+				"schema_gaps": json.dumps(sorted(set(gaps))) if gaps else None,
+				"schema_notes": "\n".join(notes)[:100000] if notes else None,
 			},
 		)
 		frappe.db.commit()
@@ -1232,6 +1246,22 @@ def _finish_run(run_name: str, status: str, totals: dict, errors: list) -> None:
 		)
 	except Exception:
 		_log().error("[sync] run %s: could not record outcome", run_name, exc_info=True)
+
+
+def _gap_rulings(instance_name: str) -> dict:
+	"""{canonical gap key: ruling} for this instance. FAIL-OPEN on any error:
+	a ruling table that cannot be read must never stop a sync — it only means
+	every gap reports as unruled, which is the conservative direction."""
+	try:
+		rows = frappe.get_all(
+			"HRMS Schema Gap Ruling",
+			filters={"parent": instance_name, "parenttype": "HRMS ERP Instance"},
+			fields=["gap", "ruling"],
+		)
+		return {row.gap: row.ruling for row in rows}
+	except Exception as e:
+		_log().warning("[sync] could not read schema gap rulings for %s: %s", instance_name, e)
+		return {}
 
 
 def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -> dict:
@@ -1260,6 +1290,9 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	run_name = _start_run(instance_name, doctypes)
 	totals = {"pulled": 0, "written": 0, "skipped": 0, "errored": 0, "orphaned": 0}
 	results, errors, failed, absent = [], [], [], []
+	rulings = _gap_rulings(instance_name)
+	run_gaps: list[str] = []
+	schema_notes: list[str] = []
 	status = "Failed"
 
 	blocked = []
@@ -1291,7 +1324,13 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 					# WHY nothing arrived, but it leaves no outstanding work, so it
 					# must not hold the watermark or block the cutover gate.
 					absent.append(doctype)
-					errors.append(f"{doctype}: not present on the source instance — skipped")
+					absent_key = f"absent:{doctype}"
+					run_gaps.append(absent_key)
+					line = f"{doctype}: not present on the source instance — skipped"
+					if absent_key in rulings:
+						schema_notes.append(f"{line} (per ruling: {rulings[absent_key]})")
+					else:
+						errors.append(line)
 					_log().warning("[sync] %s is not present on %s; skipping", doctype, instance_name)
 					continue
 				failed.append(doctype)
@@ -1311,14 +1350,23 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 					f"{doctype}: {result['orphaned']} row(s) skipped, missing "
 					f"{', '.join(result['missing_parents'])}"
 				)
+			run_gaps.extend(result.get("schema_gaps") or [])
 			if result.get("dropped_fields"):
 				# Named, not merely dropped: a field this site cannot store is a
 				# real difference from the source, and an operator who never hears
-				# about it will eventually wonder why a column is empty.
-				errors.append(
+				# about it will eventually wonder why a column is empty. RULED gaps
+				# move to Schema Notes — a standing fact with a decision on record
+				# is not an error, and an Error Log that repeats settled facts
+				# trains its readers to skim past the unsettled ones.
+				line = (
 					f"{doctype}: this site cannot store "
 					f"{', '.join(result['dropped_fields'])} — written without them"
 				)
+				keys = result.get("schema_gaps") or []
+				if keys and all(key in rulings for key in keys):
+					schema_notes.append(f"{line} (per ruling: {rulings[keys[0]]})")
+				else:
+					errors.append(line)
 			for row_error in result["row_errors"]:
 				errors.append(f"{doctype}: {row_error}")
 			frappe.db.commit()
@@ -1397,7 +1445,7 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			_rebuild_department_tree()
 		except Exception as e:
 			_log().warning("[sync] could not rebuild the Department tree: %s", e)
-		_finish_run(run_name, status, totals, errors)
+		_finish_run(run_name, status, totals, errors, gaps=run_gaps, notes=schema_notes)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.
 		try:

@@ -18,7 +18,9 @@
   "column_break_credentials",
   "api_secret",
   "companies_section",
-  "companies"
+  "companies",
+  "schema_gap_rulings_section",
+  "schema_gap_rulings"
  ],
  "fields": [
   {
@@ -102,11 +104,24 @@
    "label": "Companies",
    "options": "HRMS ERP Instance Company",
    "permlevel": 1
+  },
+  {
+   "collapsible": 1,
+   "description": "Every schema gap the sync or the survey reports must carry a ruling here before cutover readiness can say READY. 'Not needed on hub' is met by existing; the other two are met only when the gap stops appearing in the latest evidence.",
+   "fieldname": "schema_gap_rulings_section",
+   "fieldtype": "Section Break",
+   "label": "Schema Gap Rulings"
+  },
+  {
+   "fieldname": "schema_gap_rulings",
+   "fieldtype": "Table",
+   "label": "Rulings",
+   "options": "HRMS Schema Gap Ruling"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 12:00:00",
+ "modified": "2026-08-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HRMS ERP Instance",

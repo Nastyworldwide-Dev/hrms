@@ -19,7 +19,9 @@
   "rows_errored",
   "detail_section",
   "doctypes_synced",
-  "error_log"
+  "error_log",
+  "schema_gaps",
+  "schema_notes"
  ],
  "fields": [
   {
@@ -110,11 +112,25 @@
    "fieldtype": "Long Text",
    "label": "Error Log",
    "read_only": 1
+  },
+  {
+   "description": "Canonical gap keys this run reported (JSON list) — machine-read by cutover readiness so no gap can outlive the dialogs unruled.",
+   "fieldname": "schema_gaps",
+   "fieldtype": "Small Text",
+   "label": "Schema Gaps",
+   "read_only": 1
+  },
+  {
+   "description": "Gap narration whose key already carries a ruling — standing facts per decision, kept out of Error Log so that field always means action.",
+   "fieldname": "schema_notes",
+   "fieldtype": "Small Text",
+   "label": "Schema Notes (ruled)",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-10 14:00:00",
+ "modified": "2026-08-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HRMS Sync Run",

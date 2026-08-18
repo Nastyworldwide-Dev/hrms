@@ -10,7 +10,9 @@
   "checked_at",
   "in_parity",
   "mismatched",
-  "errored"
+  "errored",
+  "unmirrored_with_data",
+  "unreadable"
  ],
  "fields": [
   {
@@ -52,12 +54,26 @@
    "fieldtype": "Small Text",
    "label": "Errored Doctypes",
    "read_only": 1
+  },
+  {
+   "description": "unmirrored:{Doctype} keys with source row counts, from the survey run alongside this check.",
+   "fieldname": "unmirrored_with_data",
+   "fieldtype": "Small Text",
+   "label": "Unmirrored With Data",
+   "read_only": 1
+  },
+  {
+   "description": "unreadable:{Doctype} keys the source refused, from the survey run alongside this check.",
+   "fieldname": "unreadable",
+   "fieldtype": "Small Text",
+   "label": "Unreadable On Source",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-08-18 00:00:00.000000",
+ "modified": "2026-08-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HRMS Parity Check",

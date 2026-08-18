@@ -63,11 +63,17 @@ function show_cutover_readiness(frm) {
 		.then((r) => {
 			const v = r.message || {};
 			if (!v.checks_recorded) return;
+			const blockers = (v.unruled || []).length + (v.unmet || []).length;
 			const label = v.ready
 				? __("READY — {0} consecutive clean parity checks (need {1}).", [
 						v.consecutive_clean_runs,
 						v.required,
 				  ])
+				: blockers
+				? __(
+						"Cutover: {0} of {1} clean checks; {2} schema ruling(s) outstanding — see Schema Gap Rulings below.",
+						[v.consecutive_clean_runs, v.required, blockers]
+				  )
 				: __("Cutover: {0} of {1} consecutive clean parity checks.", [
 						v.consecutive_clean_runs,
 						v.required,
