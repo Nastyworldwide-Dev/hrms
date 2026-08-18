@@ -133,7 +133,7 @@ def _instance_unlocked(instance_name) -> bool:
 
 
 #: Transactions that write MIRRORED rows for an employee without ever touching a
-#: mirrored document themselves. Leave Application is the case found in audit:
+#: mirrored document themselves. Leave Application was the case found in audit:
 #: `on_submit` creates Leave Ledger Entry rows, and `on_cancel` reverses them.
 #: Those ledger rows ARE mirrored, but a newly inserted one carries no
 #: provenance stamp, so `plan_mirror_write` correctly reads it as "not a
@@ -141,7 +141,26 @@ def _instance_unlocked(instance_name) -> bool:
 #: instance never learns, and `hrms.sync.parity` (which counts BY stamp) cannot
 #: see the divergence. Single-writer therefore has to be enforced one level up,
 #: on the transaction, using the EMPLOYEE's provenance.
-EMPLOYEE_SCOPED_TRANSACTIONS = ("Leave Application",)
+#:
+#: The full cascade set, which `hrms.sync.runner`'s draft-insert comment has
+#: enumerated all along — this list just never grew past its first entry:
+#:
+#:   Leave Application          -> Leave Ledger Entry (and Attendance)
+#:   Attendance Request         -> Attendance
+#:   Shift Request              -> Shift Assignment
+#:   Compensatory Leave Request -> Leave Allocation (+= days on submit)
+#:
+#: Deliberately NOT listed: OT Request and Replacement Leave Claim. They write
+#: the Replacement Leave bank, which is hub-native — the source ERP has no such
+#: concept, so there is nothing over there for a hub-side write to diverge
+#: from. If that ruling changes, they join this tuple and the hooks wiring the
+#: test pins.
+EMPLOYEE_SCOPED_TRANSACTIONS = (
+	"Leave Application",
+	"Attendance Request",
+	"Shift Request",
+	"Compensatory Leave Request",
+)
 
 
 def block_transactions_for_mirrored_employee(doc, method=None, *args):

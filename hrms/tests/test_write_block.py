@@ -274,6 +274,49 @@ class TestHooksWiring(unittest.TestCase):
 			missing = [e for e in events if e not in covered]
 			self.assertEqual(missing, [], f"{doctype}: guard missing on {missing}")
 
+	#: The transaction guard is a different rule from the row guard: it refuses a
+	#: NEW hub-side transaction whose on_submit/on_cancel writes mirrored data for
+	#: a mirrored employee, using the EMPLOYEE's provenance rather than the row's.
+	#: Every doctype in EMPLOYEE_SCOPED_TRANSACTIONS must carry it on BOTH the
+	#: submit and the cancel path — the cascade runs in both directions.
+	TRANSACTION_GUARD: ClassVar[str] = "hrms.sync.write_block.block_transactions_for_mirrored_employee"
+
+	def _events_carrying(self, doctype, handler):
+		for key, value in zip(self.doc_events.keys, self.doc_events.values, strict=True):
+			if isinstance(key, ast.Constant) and key.value == doctype and isinstance(value, ast.Dict):
+				return {
+					event.value
+					for event, handlers in zip(value.keys, value.values, strict=True)
+					if isinstance(event, ast.Constant)
+					and handler
+					in {
+						n.value
+						for n in ast.walk(handlers)
+						if isinstance(n, ast.Constant) and isinstance(n.value, str)
+					}
+				}
+		return set()
+
+	def test_transaction_guard_covers_every_listed_cascade(self):
+		"""EMPLOYEE_SCOPED_TRANSACTIONS grew from one entry to the four cascades
+		runner.py's own draft-insert comment enumerates. This keeps the list and
+		the hooks wiring from drifting apart again — a doctype named in the list
+		but unwired is a guard that exists and never fires."""
+		self.assertEqual(
+			set(wb.EMPLOYEE_SCOPED_TRANSACTIONS),
+			{"Leave Application", "Attendance Request", "Shift Request", "Compensatory Leave Request"},
+			"EMPLOYEE_SCOPED_TRANSACTIONS changed — update this test AND the hooks wiring together",
+		)
+		for doctype in wb.EMPLOYEE_SCOPED_TRANSACTIONS:
+			covered = self._events_carrying(doctype, self.TRANSACTION_GUARD)
+			missing = [e for e in ("before_submit", "before_cancel") if e not in covered]
+			self.assertEqual(
+				missing,
+				[],
+				f"{doctype}: transaction guard missing on {missing} — a hub-side "
+				f"{doctype} for a mirrored employee would write mirrored data unguarded",
+			)
+
 	def test_checkin_keeps_both_after_insert_handlers(self):
 		# The two handlers the duplicate key used to clobber must both survive.
 		strings = self._strings_under("Employee Checkin")

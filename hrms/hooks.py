@@ -443,21 +443,40 @@ doc_events = {
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Expense Claim": {"on_submit": "hrms.telemetry.on_expense_claim_submit"},
+	# Both guards, for the same reason as Leave Application above: the ROW guard
+	# refuses edits to a mirrored request, the TRANSACTION guard refuses a NEW
+	# hub-side request whose on_submit writes mirrored data (Attendance Request
+	# -> Attendance, Shift Request -> Shift Assignment) for an employee the
+	# source instance owns.
 	"Attendance Request": {
 		"on_submit": "hrms.telemetry.on_attendance_request_submit",
+		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
-		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": [
+			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
+			"hrms.sync.write_block.block_mirrored_writes",
+		],
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	"Shift Request": {
 		"on_submit": "hrms.telemetry.on_shift_request_submit",
+		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
-		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": [
+			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
+			"hrms.sync.write_block.block_mirrored_writes",
+		],
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
+	# Not mirrored itself (no row guard), but its on_submit adds days to a Leave
+	# Allocation and its on_cancel takes them back — mirrored balances either way.
+	"Compensatory Leave Request": {
+		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
+		"before_cancel": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 	},
 	"Leave Allocation": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
