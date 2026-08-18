@@ -331,6 +331,12 @@ PAGE_SIZE = 500
 #: here. `name` is the primary key, so appending it makes the order total.
 PAGE_ORDER = "modified asc, name asc"
 
+#: Savepoint wrapping each row write, so a row that fails rolls back ITSELF and
+#: not the whole uncommitted pass. `sync_instance` commits once per doctype, so
+#: without this every per-row failure discarded every row written since the last
+#: commit — thousands of rows, still counted as written on the run record.
+ROW_SAVEPOINT = "hrms_sync_row"
+
 #: Per-row failures recorded verbatim on the run before truncating. Schema drift
 #: usually hits every row the same way, so a handful is diagnostic and 4,000
 #: would just bury the run record.
@@ -934,6 +940,15 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 					)
 					continue
 
+				# Savepoint per row, the same shape hrms.hr.leave_rules and
+				# hrms.hr.shift_rules already use. A bare rollback() here undid the
+				# WHOLE uncommitted pass — `sync_instance` only commits once a
+				# doctype finishes, so a failure at row 4,000 discarded the 3,999
+				# rows already written while `written`/`inserted` kept counting them.
+				# The run then reported thousands of rows it had just thrown away,
+				# and only the rows after the LAST error in a pass survived. The
+				# comment below has always claimed the opposite; now it is true.
+				frappe.db.savepoint(ROW_SAVEPOINT)
 				try:
 					outcome = _write_row(
 						doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
@@ -948,7 +963,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 					if len(row_errors) < MAX_ROW_ERRORS_REPORTED:
 						row_errors.append(f"{remote_name}: {e}")
 					_log().error("[sync] %s %s could not be written: %s", doctype, remote_name, e)
-					frappe.db.rollback()
+					frappe.db.rollback(save_point=ROW_SAVEPOINT)
 					continue
 
 				if outcome == "inserted":
