@@ -111,8 +111,19 @@ class _FakeStore:
 			raise RuntimeError("deadlock on commit")
 		self.commits += 1
 
-	def rollback(self):
-		self.rollbacks += 1
+	def rollback(self, save_point=None):
+		# save_point arrived with the per-row isolation fix (7376d8fc0): a named
+		# rollback undoes ONE row, a bare one undoes the pass. This store applies
+		# writes immediately, so the semantic the runner tests actually rely on —
+		# "a failed row does not destroy its predecessors" — holds by construction;
+		# the counter records which flavour was asked for.
+		if save_point is None:
+			self.rollbacks += 1
+		else:
+			self.savepoint_rollbacks = getattr(self, "savepoint_rollbacks", 0) + 1
+
+	def savepoint(self, name):
+		self.savepoints = getattr(self, "savepoints", 0) + 1
 
 	def delete_doc(self, doctype, name, **kwargs):  # pragma: no cover — must never be called
 		self.deletes.append((doctype, name))
@@ -253,7 +264,7 @@ FAKE_EMPLOYEE_COLUMNS = {
 	"synced_from_instance",
 }
 
-FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "C", "D", "E1", "E2", "F"}}
+FAKE_EMPLOYEE_SELECTS = {"performance_band": {"", "B", "B2", "C", "D", "E1", "E2", "F"}}
 
 
 #: A child-table doctype, so the narrowing can be shown to keep its children.
@@ -319,6 +330,13 @@ class _RunnerTestCase(unittest.TestCase):
 		self._saved_schema = runner._local_schema
 		runner._local_schema = _fake_local_schema
 		self.addCleanup(setattr, runner, "_local_schema", self._saved_schema)
+		# The company fence (3fe9d6f03) resolves the session user's User
+		# Permissions — a table this store does not describe. The harness runs
+		# UNFENCED, which is the single-company default; the fence's own
+		# behaviour has its own tests.
+		self._saved_fence = runner.require_unfenced
+		runner.require_unfenced = lambda *a, **k: None
+		self.addCleanup(setattr, runner, "require_unfenced", self._saved_fence)
 
 		self._saved_runner = (runner.now_datetime, runner._)
 		runner.now_datetime = lambda: NOW
@@ -1347,7 +1365,8 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 	`get_valid_dict` — but an UPDATE goes through `db.set_value`, which builds a
 	SET clause from whatever it is handed, so 100+ existing employees failed on
 	every run. And a Select the source has widened rejects the whole document on
-	insert, which is how E3 cost 173 people and B2 was about to cost more.
+	insert, which is how E3 cost 173 people — and how B2, later confirmed a real
+	band that was merely unoccupied, was briefly refused with it.
 
 	Chasing these one value and one field at a time is endless. The mirror narrows
 	each payload to what THIS site can actually store, and reports what it dropped
@@ -1369,7 +1388,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 
 	def test_a_select_value_this_site_cannot_represent_is_dropped(self):
 		payload, dropped = runner._narrow_to_local_schema(
-			"Employee", {"employee_name": "Aisha", "performance_band": "B2"}
+			"Employee", {"employee_name": "Aisha", "performance_band": "E3"}
 		)
 
 		self.assertNotIn("performance_band", payload)
@@ -1388,7 +1407,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 		"""The whole point: one unrepresentable field must not cost the record."""
 		self.seed_parent("Company", "Acme", company_name="Acme")
 		remote = [
-			dict(EMPLOYEES[0], performance_band="B2", custom_reports_to_name="Someone"),
+			dict(EMPLOYEES[0], performance_band="E3", custom_reports_to_name="Someone"),
 		]
 
 		result = runner.sync_doctype(self.client({"Employee": remote}), "Employee")
@@ -1416,7 +1435,7 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 		correction in the wrong direction: E3 turned out to be an HR data-entry
 		error on the source, so the hub had been widened to accept bad data.
 		"""
-		for value in ("E3", "B2", "anything-the-source-invents"):
+		for value in ("E3", "anything-the-source-invents"):
 			with self.subTest(value=value):
 				payload, dropped = runner._narrow_to_local_schema(
 					"Employee", {"employee_name": "Aisha", "performance_band": value}
@@ -1444,7 +1463,10 @@ class TestTheMirrorAdaptsToThisSitesSchema(_RunnerTestCase):
 
 		self.assertEqual(result["errored"], 0)
 		report = result["dropped_fields"]
-		self.assertIn("performance_band (B2, E3)", report)
+		# E3 is named for HR to fix at the source; B2 is a REAL band
+		# (2026-08-18 ruling — unoccupied is not invalid) and lands intact.
+		self.assertIn("performance_band (E3)", report)
+		self.assertEqual(self.store.rows("Employee")["HR-EMP-0002"]["performance_band"], "B2")
 
 	def test_a_missing_column_is_named_without_a_value(self):
 		"""There is no offending value to report — the column simply is not here."""
@@ -1625,6 +1647,12 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 		frappe.get_all = lambda *a, **kw: []
 		runner._job_status = lambda job_id: probe(self.job_status)
 		runner._queue_workers = lambda queue=None: probe(self.workers)
+		# unfenced, same as _RunnerTestCase: this class's frappe stub has no
+		# session for the fence to resolve, and fence behaviour is not what
+		# these queue tests are about
+		self._saved_fence = runner.require_unfenced
+		runner.require_unfenced = lambda *a, **k: None
+		self.addCleanup(setattr, runner, "require_unfenced", self._saved_fence)
 		self.addCleanup(self._restore)
 
 	def _restore(self):

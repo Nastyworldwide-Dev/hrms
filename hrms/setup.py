@@ -431,20 +431,24 @@ def get_custom_fields():
 				"fieldname": "performance_band",
 				"fieldtype": "Select",
 				"label": _("Performance Band"),
-				# The six bands, and nothing else. B2 and E3 both reach the mirror
-				# from the source ERP and NEITHER has ever appeared in this code —
-				# not on version-16, not on as-hr_kpi, not on the hotfix branch, not
-				# anywhere. They are data-entry values, and HR have confirmed both
-				# are mistakes to be corrected over there.
+				# The seven bands. This list has flipped on B2 twice, so the ruling
+				# is recorded in full:
 				#
-				# B2 was briefly added here on a first reading of that conversation.
-				# It was the wrong direction of fix and this comment is the record of
-				# why: widening a destination to accept whatever arrives stops it
-				# being a schema. Nothing is lost by refusing — an unrepresentable
-				# value is dropped and NAMED on the run, so a bad band costs one
-				# field rather than the whole employee, and HR can see exactly which
-				# rows to correct at the source. It then self-heals on the next pull.
-				"options": "\nB\nC\nD\nE1\nE2\nF",
+				# * B2 IS a real band — HR confirmed on 2026-08-18 that it exists in
+				#   the live band structure and is merely UNOCCUPIED at the moment.
+				#   An option list defines what is VALID, not what is currently in
+				#   use; removing a band because nobody holds it today was the
+				#   mistake, and it silently blanked the band on every mirrored
+				#   employee who carried it.
+				# * E3 is NOT a band — a data-entry error on the source, confirmed
+				#   by HR, and it stays out. The mirror drops it and NAMES it on the
+				#   run so HR can correct it over there; it self-heals on the next
+				#   full pull. Widening this end to store E3 would stop this field
+				#   being a schema.
+				#
+				# Both rulings are pinned by test_custom_field_definitions — moving
+				# either band is a failing build until the test moves with it.
+				"options": "\nB\nB2\nC\nD\nE1\nE2\nF",
 				"insert_after": "grade",
 				"description": _(
 					"Band capability level for KPI Framework (B=Head of Function, C=Senior Manager, D=Manager, E1=Senior Executive, E2=Executive, F=Operator)"

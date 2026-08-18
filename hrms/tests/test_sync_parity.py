@@ -443,10 +443,33 @@ class TestTheGateIsReachable(unittest.TestCase):
 		self.assertTrue(decorators, "parity_check is not whitelisted")
 
 	def test_parity_check_is_read_only_on_both_sides(self):
-		"""It compares; it must never reconcile. A gate that writes is not a gate."""
-		source = MODULE_PATH.read_text(encoding="utf-8")
-		for writer in ("set_value", "insert(", "delete_doc", "db.sql"):
-			self.assertNotIn(writer, source, f"parity must not write: found {writer}")
+		"""It compares; it must never reconcile. A gate that writes is not a gate.
+
+		Refined when run_parity_check landed: the module now has exactly ONE
+		sanctioned writer — the POST that persists an HRMS Parity Check audit
+		row, whose purity split (pure GET / persisting POST, one shared report
+		body) is pinned function-by-function in test_parity_persistence. This
+		guard keeps its original teeth for everything else: outside that one
+		function, the module must never write.
+		"""
+		import ast
+
+		tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+		for node in ast.walk(tree):
+			if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+				if node.name == "run_parity_check":
+					continue
+				calls = {
+					getattr(n.func, "attr", None) or getattr(n.func, "id", None)
+					for n in ast.walk(node)
+					if isinstance(n, ast.Call)
+				}
+				writers = calls & {"set_value", "insert", "delete_doc", "sql", "save", "submit"}
+				self.assertFalse(
+					writers,
+					f"parity.{node.name} must not write: found {sorted(writers)} — "
+					f"the one sanctioned writer is run_parity_check",
+				)
 
 	def test_it_refuses_callers_who_are_not_hr(self):
 		source = MODULE_PATH.read_text(encoding="utf-8")

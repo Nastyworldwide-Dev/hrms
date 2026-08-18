@@ -12,9 +12,12 @@ a definition changes anything, which is worse, because the next person reads the
 block they found and believes it.
 
 The band list is pinned alongside, because it is not derived from the data — HR
-own it. B2 is a band in use and belongs. E3 was a data-entry mistake on the
-source, confirmed by HR, and stays out: a destination that widens to accept
-whatever arrives has stopped being a schema.
+own it. B2 is a real band (confirmed 2026-08-18: it exists in the live band
+structure and is merely unoccupied — validity is not occupancy) and belongs.
+E3 was a data-entry mistake on the source, confirmed by HR, and stays out: a
+destination that widens to accept whatever arrives has stopped being a schema.
+This file's asserts briefly said otherwise about B2 while this very paragraph
+said this — the paragraph was right.
 
 Read with AST rather than imported, like every other static guard here, so it
 needs no site and no stub of frappe's import graph to drift against. Run as a
@@ -117,11 +120,11 @@ class TestPerformanceBandIsHROwned(unittest.TestCase):
 	def test_neither_source_only_value_is_accepted(self):
 		"""Refusing costs one field and names it on the run; the employee still
 		writes, and the value self-heals once HR correct it at the source."""
-		for value in ("B2", "E3"):
-			self.assertNotIn(value, self._options(), f"{value} is source data, not a band")
+		self.assertIn("B2", self._options(), "B2 is a real band — unoccupied is not invalid")
+		self.assertNotIn("E3", self._options(), "E3 is source data-entry error, not a band")
 
 	def test_the_scheme_is_intact(self):
-		self.assertEqual(self._options(), ["B", "C", "D", "E1", "E2", "F"])
+		self.assertEqual(self._options(), ["B", "B2", "C", "D", "E1", "E2", "F"])
 
 
 if __name__ == "__main__":
