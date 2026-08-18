@@ -16,6 +16,10 @@ frappe.ui.form.on("HRMS ERP Instance", {
 });
 
 function show_sync_headline(frm) {
+	// set_headline APPENDS — verifica-live 2026-08-18 showed "1 of 4" stacked
+	// above "2 of 4" after the second parity check. One standing answer at a
+	// time: clear before writing.
+	frm.dashboard.clear_headline();
 	// "Is it running?" answered on the form itself, not by refreshing the list
 	// blind. sync_status was built for exactly this and had no caller. The call
 	// fails SILENTLY on purpose: a company-fenced HR user gets a PermissionError
