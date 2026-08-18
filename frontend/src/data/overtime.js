@@ -10,7 +10,7 @@ import dayjs from "@/utils/dayjs"
 // carrying an approve/submit branch for both doctypes. Only the resources that
 // feed the Requests panel were missing.
 
-export const getOTDate = (row) => (row.ot_date ? dayjs(row.ot_date).format("D MMM") : "")
+const getOTDate = (row) => (row.ot_date ? dayjs(row.ot_date).format("D MMM") : "")
 
 const transformOTRequests = (data) =>
 	data.map((request) => {
