@@ -11,12 +11,13 @@ import logging
 
 import frappe
 from frappe import _
-from frappe.utils import get_time, getdate, now_datetime
+from frappe.utils import get_time, getdate
 
 from hrms.hr.utils import HR_SEE_ALL_ROLES
 from hrms.overrides.company_scope import allowed_companies
 from hrms.utils.identity import get_employee
 from hrms.utils.team_status import derive_member_status
+from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +89,6 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	# getdate returns None (not an exception) for some malformed strings —
 	# fail closed to today instead of sending "None 00:00:00" into a filter
 	day = getdate(date) or getdate()
-	today = getdate()
-	now_time = now_datetime().time()
 	employee = _my_employee()
 	# HR may browse any manager's team; everyone else is pinned to their own
 	if manager and manager != employee and not _is_hr():
@@ -183,10 +182,18 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 			member.holiday_list
 			and frappe.db.exists("Holiday", {"parent": member.holiday_list, "holiday_date": day})
 		)
+		# The MEMBER's wall clock, not the site's. "Has the shift ended" and
+		# "is this day still today" are questions about where the member works:
+		# on a Dubai site a Malaysian member's 17:00 shift end read as 13:00
+		# server time, so the team view said "Not In Yet" for four hours after
+		# an absence was already real — the exact skew hrms.utils.timezone
+		# exists to remove. employee_now memoizes per request, so a team of N
+		# costs the resolution once per member, not once per row.
+		member_now = employee_now(member.name)
 		member_status = derive_member_status(
 			day=day,
-			today=today,
-			now_time=now_time,
+			today=member_now.date(),
+			now_time=member_now.time(),
 			on_leave={"leave_type": leave.leave_type} if leave else None,
 			is_holiday=is_holiday,
 			attendance_status=att and att.status,

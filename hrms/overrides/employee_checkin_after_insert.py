@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import frappe
-from frappe.utils import get_datetime, getdate, now_datetime
+from frappe.utils import get_datetime, now_datetime
 
 from hrms.overrides.remote_checkin_request_hooks import (
 	notify_approver,
@@ -43,7 +43,7 @@ def create_remote_request_if_needed(doc, method=None):
 	# Late checkouts never inherit — they are retroactive submissions that
 	# always require their own approval.
 	if not is_late and doc.log_type == "OUT":
-		parent_req = _find_approved_in_request_today(doc.employee, get_datetime(doc.time))
+		parent_req = _find_approved_in_request_for_session(doc.employee, get_datetime(doc.time))
 		if parent_req:
 			inherited = True
 
@@ -93,26 +93,47 @@ def create_remote_request_if_needed(doc, method=None):
 		notify_approver(request)
 
 
-def _find_approved_in_request_today(employee: str, log_dt) -> dict | None:
-	"""Look for the most recent Approved IN Remote Checkin Request earlier today."""
-	day_start = f"{getdate(log_dt)} 00:00:00"
-	rows = frappe.get_all(
-		"Remote Checkin Request",
+def _find_approved_in_request_for_session(employee: str, log_dt) -> dict | None:
+	"""The Approved IN request belonging to THIS session, if any.
+
+	Keyed to the session, not the calendar day. The OUT inherits its IN's
+	approval only when the latest IN check-in before this OUT carries an
+	Approved Remote Checkin Request:
+
+	  * an overnight shift's next-morning OUT now inherits — the old
+	    same-calendar-day window could never see yesterday's approved IN, so
+	    every remote overnight checkout demanded a second approval;
+	  * an OUT no longer inherits ACROSS a newer session — under the day
+	    window, an approved 08:00 IN blessed an 18:00 OUT even when an
+	    unapproved second IN sat between them.
+	"""
+	last_in = frappe.get_all(
+		"Employee Checkin",
 		filters=[
 			["employee", "=", employee],
 			["log_type", "=", "IN"],
-			["status", "=", "Approved"],
-			["checkin_time", ">=", day_start],
-			["checkin_time", "<=", log_dt],
+			["time", "<=", log_dt],
 		],
-		fields=["name", "approver"],
-		order_by="checkin_time desc",
+		fields=["name"],
+		order_by="time desc",
 		limit_page_length=1,
 	)
-	logger.info(
-		"[doc_events.employee_checkin] inherit-lookup employee=%s upto=%s found=%s",
-		employee,
-		log_dt,
-		rows[0]["name"] if rows else None,
+	if not last_in:
+		logger.info(
+			"[doc_events.employee_checkin] inherit-lookup employee=%s: no IN before %s", employee, log_dt
+		)
+		return None
+
+	row = frappe.db.get_value(
+		"Remote Checkin Request",
+		{"checkin": last_in[0]["name"], "log_type": "IN", "status": "Approved"},
+		["name", "approver"],
+		as_dict=True,
 	)
-	return rows[0] if rows else None
+	logger.info(
+		"[doc_events.employee_checkin] inherit-lookup employee=%s in=%s found=%s",
+		employee,
+		last_in[0]["name"],
+		row["name"] if row else None,
+	)
+	return row
