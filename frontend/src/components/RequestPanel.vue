@@ -5,10 +5,7 @@
 		>
 			{{ __("Requests") }}
 		</div>
-		<TabButtons
-			:buttons="TAB_BUTTONS"
-			v-model="activeTab"
-		/>
+		<TabButtons :buttons="TAB_BUTTONS" v-model="activeTab" />
 		<RequestList v-if="activeTab == 'My Requests'" :items="myRequests" />
 		<RequestList
 			v-else-if="activeTab == 'Team Requests'"
@@ -29,14 +26,28 @@ import { ref, inject, onMounted, computed, markRaw } from "vue"
 import TabButtons from "@/components/TabButtons.vue"
 import RequestList from "@/components/RequestList.vue"
 
-import { historyShiftRequests, myAttendanceRequests, myShiftRequests, teamShiftRequests, teamAttendanceRequests } from "@/data/attendance"
+import {
+	historyShiftRequests,
+	myAttendanceRequests,
+	myShiftRequests,
+	teamShiftRequests,
+	teamAttendanceRequests,
+} from "@/data/attendance"
 import { historyClaims, myClaims, teamClaims } from "@/data/claims"
 import { historyLeaves, myLeaves, teamLeaves } from "@/data/leaves"
+import {
+	myOTRequests,
+	teamOTRequests,
+	myReplacementLeaveClaims,
+	teamReplacementLeaveClaims,
+} from "@/data/overtime"
 
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
+import OTRequestItem from "@/components/OTRequestItem.vue"
+import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
 
 import { useListUpdate } from "@/composables/realtime"
 
@@ -47,30 +58,59 @@ const __ = inject("$translate")
 const TAB_BUTTONS = ["My Requests", "Team Requests", "History"] // __("My Requests"), __("Team Requests"), __("History")
 
 const myRequests = computed(() =>
-	updateRequestDetails(myLeaves, myClaims, myShiftRequests, myAttendanceRequests)
+	updateRequestDetails(
+		myLeaves,
+		myClaims,
+		myShiftRequests,
+		myAttendanceRequests,
+		myOTRequests,
+		myReplacementLeaveClaims
+	)
 )
 
 const teamRequests = computed(() =>
-	updateRequestDetails(teamLeaves, teamClaims, teamShiftRequests, teamAttendanceRequests)
-)
-
-// Attendance Request is docstatus-driven (no status/approver fields), so the
-// history trail covers leaves, claims and shift requests only
-const historyRequests = computed(() =>
-	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null)
-)
-
-function updateRequestDetails(leaves, claims, shiftRequests, attendanceRequests) {
-	const requests = [leaves, claims, shiftRequests, attendanceRequests].reduce(
-		(acc, resource) => acc.concat(resource?.data || []),
-		[]
+	updateRequestDetails(
+		teamLeaves,
+		teamClaims,
+		teamShiftRequests,
+		teamAttendanceRequests,
+		teamOTRequests,
+		teamReplacementLeaveClaims
 	)
+)
+
+// Attendance Request, OT Request and Replacement Leave Claim are all
+// docstatus-driven (no status/approver field), so the history trail — which is
+// "decided, and I was the named approver" — covers leaves, claims and shift
+// requests only.
+const historyRequests = computed(() =>
+	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null)
+)
+
+function updateRequestDetails(
+	leaves,
+	claims,
+	shiftRequests,
+	attendanceRequests,
+	otRequests,
+	replacementLeaveClaims
+) {
+	const requests = [
+		leaves,
+		claims,
+		shiftRequests,
+		attendanceRequests,
+		otRequests,
+		replacementLeaveClaims,
+	].reduce((acc, resource) => acc.concat(resource?.data || []), [])
 
 	const componentMap = {
 		"Leave Application": LeaveRequestItem,
 		"Expense Claim": ExpenseClaimItem,
 		"Shift Request": ShiftRequestItem,
 		"Attendance Request": AttendanceRequestItem,
+		"OT Request": OTRequestItem,
+		"Replacement Leave Claim": ReplacementLeaveClaimItem,
 	}
 	requests.forEach((request) => {
 		request.component = markRaw(componentMap[request.doctype])
@@ -102,5 +142,7 @@ onMounted(() => {
 		historyShiftRequests.reload()
 	})
 	useListUpdate(socket, "Attendance Request", () => teamAttendanceRequests.reload())
+	useListUpdate(socket, "OT Request", () => teamOTRequests.reload())
+	useListUpdate(socket, "Replacement Leave Claim", () => teamReplacementLeaveClaims.reload())
 })
 </script>

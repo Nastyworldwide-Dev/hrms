@@ -254,3 +254,74 @@ export const EMPLOYEE_CHECKIN_FIELDS = [
 		fieldtype: "geolocation",
 	},
 ]
+
+export const OT_REQUEST_FIELDS = [
+	{
+		fieldname: "name",
+		label: "ID",
+		fieldtype: "Data",
+	},
+	{
+		fieldname: "employee",
+		label: "Employee",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "ot_date",
+		label: "OT Date",
+		fieldtype: "Date",
+	},
+	{
+		fieldname: "shift",
+		label: "Shift",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "punch_ot_hours",
+		label: "Hours From Punches",
+		fieldtype: "Float",
+	},
+	{
+		fieldname: "claimed_hours",
+		label: "Claimed Hours",
+		fieldtype: "Float",
+	},
+	{
+		fieldname: "compensation",
+		label: "Compensation",
+		fieldtype: "Select",
+	},
+]
+
+export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
+	{
+		fieldname: "name",
+		label: "ID",
+		fieldtype: "Data",
+	},
+	{
+		fieldname: "employee",
+		label: "Employee",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "bank_month",
+		label: "Bank Month",
+		fieldtype: "Date",
+	},
+	{
+		fieldname: "claimed_days",
+		label: "Claimed Days",
+		fieldtype: "Float",
+	},
+	{
+		fieldname: "hours_cost",
+		label: "Hours Used",
+		fieldtype: "Float",
+	},
+	{
+		fieldname: "available_hours",
+		label: "Hours Available",
+		fieldtype: "Float",
+	},
+]

@@ -37,10 +37,7 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<RequestActionSheet
-			:fields="fieldsMap[selectedRequest?.doctype]" 
-			v-model="selectedRequest"
-		/>
+		<RequestActionSheet :fields="fieldsMap[selectedRequest?.doctype]" v-model="selectedRequest" />
 	</ion-modal>
 </template>
 
@@ -55,6 +52,8 @@ import {
 	ATTENDANCE_REQUEST_FIELDS,
 	SHIFT_REQUEST_FIELDS,
 	SHIFT_FIELDS,
+	OT_REQUEST_FIELDS,
+	REPLACEMENT_LEAVE_CLAIM_FIELDS,
 } from "@/data/config/requestSummaryFields"
 
 const __ = inject("$translate")
@@ -89,6 +88,8 @@ const fieldsMap = {
 	"Attendance Request": ATTENDANCE_REQUEST_FIELDS,
 	"Shift Request": SHIFT_REQUEST_FIELDS,
 	"Shift Assignment": SHIFT_FIELDS,
+	"OT Request": OT_REQUEST_FIELDS,
+	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
 }
 
 const isRequestModalOpen = ref(false)
