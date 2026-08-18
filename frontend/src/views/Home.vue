@@ -1,10 +1,9 @@
 <template>
 	<BaseLayout>
 		<template #body>
-			<div
-				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-2 lg:gap-0 lg:p-7"
-			>
+			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-2 lg:gap-0 lg:p-7">
 				<div class="flex flex-col gap-8 lg:pr-8">
+					<PendingApprovalsBanner />
 					<CheckInPanel />
 					<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
 				</div>
@@ -24,6 +23,7 @@ import { userResource } from "@/data/user"
 import { hasHRRole } from "@/utils/issueBoard"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
+import PendingApprovalsBanner from "@/components/PendingApprovalsBanner.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
