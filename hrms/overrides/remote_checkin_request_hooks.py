@@ -308,10 +308,22 @@ def propagate_approval_decision(doc, method=None):
 			{"requires_remote_approval": 0, "remote_approval_status": "Approved"},
 		)
 	else:  # Rejected
+		# skip_auto_attendance as well, or the rejection is cosmetic: the OT
+		# pairing engine and the PWA banner both read remote_approval_status,
+		# but attendance marking (ShiftType.get_employee_checkins) filters on
+		# skip_auto_attendance alone — so a punch HR explicitly rejected still
+		# marked the employee Present with working hours. A rejection that
+		# lands AFTER the hourly attendance job has already marked the day
+		# still needs a manual attendance correction; this closes the
+		# from-now-on path, which is the one that ran on every punch.
 		frappe.db.set_value(
 			"Employee Checkin",
 			doc.checkin,
-			{"requires_remote_approval": 0, "remote_approval_status": "Rejected"},
+			{
+				"requires_remote_approval": 0,
+				"remote_approval_status": "Rejected",
+				"skip_auto_attendance": 1,
+			},
 		)
 
 	logger.info(
