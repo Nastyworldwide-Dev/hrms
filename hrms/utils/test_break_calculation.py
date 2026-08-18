@@ -8,6 +8,7 @@ or via bench:
 
 import unittest
 from datetime import date, datetime, time
+from typing import ClassVar
 
 from hrms.utils.break_calculation import get_break_minutes
 
@@ -213,3 +214,36 @@ class TestFlexibleBreaks(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestOvernightFlexibleBreaks(unittest.TestCase):
+	"""An overnight session must take its flexible break ONCE.
+
+	Each calendar day used to apply its own flexible row, so a Mon 22:00 ->
+	Tue 06:00 session with the standard one-row-per-working-day config
+	deducted the break twice — 2h docked for a break taken once."""
+
+	ROWS: ClassVar[list] = [
+		{"day_of_week": "Monday", "period": "Normal only", "break_type": "Flexible", "break_hours": 1},
+		{"day_of_week": "Tuesday", "period": "Normal only", "break_type": "Flexible", "break_hours": 1},
+	]
+
+	def test_overnight_session_deducts_once(self):
+		# Mon 2026-08-17 22:00 -> Tue 06:00
+		minutes = get_break_minutes(datetime(2026, 8, 17, 22, 0), datetime(2026, 8, 18, 6, 0), self.ROWS)
+		self.assertEqual(minutes, 60)
+
+	def test_overnight_short_first_slice_still_gets_the_full_break(self):
+		# 23:30 -> 06:00: only 30min before midnight, but the SESSION is long
+		# enough for the whole 60min break — capping at the first day's slice
+		# would halve it.
+		minutes = get_break_minutes(datetime(2026, 8, 17, 23, 30), datetime(2026, 8, 18, 6, 0), self.ROWS)
+		self.assertEqual(minutes, 60)
+
+	def test_same_day_session_unchanged(self):
+		minutes = get_break_minutes(datetime(2026, 8, 17, 9, 0), datetime(2026, 8, 17, 18, 0), self.ROWS)
+		self.assertEqual(minutes, 60)
+
+	def test_short_session_caps_at_session_length(self):
+		minutes = get_break_minutes(datetime(2026, 8, 17, 23, 30), datetime(2026, 8, 18, 0, 10), self.ROWS)
+		self.assertEqual(minutes, 40)

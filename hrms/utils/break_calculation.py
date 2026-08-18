@@ -127,24 +127,33 @@ def get_break_minutes(
 
 			row_type = row.get("break_type") if isinstance(row, dict) else getattr(row, "break_type", None)
 			if (row_type or "Fixed") == "Flexible":
-				# No fixed window — deduct the configured duration, capped
-				# at the time actually worked within this calendar day.
+				# ONE flexible deduction per worked session, keyed to the day the
+				# session STARTED. Evaluating every calendar day the session touches
+				# deducted twice for an overnight shift — the Monday row against the
+				# pre-midnight slice and the Tuesday row against the post-midnight
+				# one — for a single break the employee takes once. Same-day
+				# sessions are unchanged: their start day is their only day.
+				if day != work_start.date():
+					continue
 				row_hours = (
 					row.get("break_hours") if isinstance(row, dict) else getattr(row, "break_hours", 0)
 				)
 				duration_min = int(float(row_hours or 0) * 60)
 				if duration_min <= 0:
 					continue
-				slice_min = int((slice_end - slice_start).total_seconds() // 60)
-				minutes = min(duration_min, slice_min)
+				# capped at the WHOLE session, not the first day's slice: an
+				# overnight session is long enough for its full break even when
+				# the pre-midnight slice alone is not.
+				session_min = int((work_end - work_start).total_seconds() // 60)
+				minutes = min(duration_min, session_min)
 				if minutes:
 					logger.info(
-						"[break_calculation] %s %s flexible=%dm (work %s-%s, configured %dm)",
+						"[break_calculation] %s %s flexible=%dm (session %s-%s, configured %dm)",
 						day,
 						weekday_name,
 						minutes,
-						slice_start,
-						slice_end,
+						work_start,
+						work_end,
 						duration_min,
 					)
 					total += minutes

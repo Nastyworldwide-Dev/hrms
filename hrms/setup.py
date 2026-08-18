@@ -153,6 +153,24 @@ def get_company_hr_policy_fields():
 			"insert_after": "hr_email_salary_slip_to_employee",
 		},
 		{
+			"fieldname": "hr_weekly_rest_day",
+			"fieldtype": "Select",
+			"label": _("Weekly Rest Day (Overtime)"),
+			"options": "\nMonday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday",
+			"description": _(
+				"Day priced at the Rest Day overtime rate. Blank = Sunday. Set per company for entities observing a Friday-Saturday weekend."
+			),
+			"insert_after": "hr_payroll_based_on",
+		},
+		{
+			"fieldname": "hr_weekly_off_day",
+			"fieldtype": "Select",
+			"label": _("Weekly Off Day (Overtime)"),
+			"options": "\nMonday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday",
+			"description": _("Day priced at the Off Day overtime rate. Blank = Saturday."),
+			"insert_after": "hr_weekly_rest_day",
+		},
+		{
 			"fieldname": "hr_payroll_based_on",
 			"fieldtype": "Select",
 			"label": _("Calculate Payroll Working Days Based On"),

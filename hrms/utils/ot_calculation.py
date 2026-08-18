@@ -115,29 +115,92 @@ def _real_shift_end_dt(start_time, end_time, work_date):
 	return end_dt
 
 
-def _real_end_from_actual(shift_name, shift_actual_end):
-	"""Reconstruct the real shift end from a checkin's padded shift_actual_end by
-	removing the allow_check_out_after_shift_end_time buffer (see shift_assignment
-	get_actual_start_end_datetime_of_shift). Returns None if the shift is gone."""
+def _real_shift_end_for_session(shift_name, session) -> datetime | None:
+	"""The real shift end a session's OT is measured against.
+
+	From the shift's CONFIGURED start/end anchored on the session's own shift
+	start — the same derivation get_shift_ot_breakdown uses, so the two OT
+	paths cannot disagree. The old derivation subtracted the CURRENT
+	allow_check_out_after buffer from the punch-time shift_actual_end
+	snapshot, so raising that buffer 60 -> 240 silently inflated every
+	HISTORICAL session's OT by 3h. Shift start/end changes carry no such
+	risk: ShiftType.validate refuses a start_time change while unprocessed
+	check-ins exist.
+
+	Falls back to snapshot-minus-buffer when the session has no shift_start
+	(older rows), and to None when the shift itself is gone.
+	"""
+	config = _get_shift_ot_config(shift_name)
+	anchor = session.get("shift_start")
+	if config and anchor:
+		return _real_shift_end_dt(config["start_time"], config["end_time"], anchor.date())
+
 	buffer_minutes = frappe.db.get_value("Shift Type", shift_name, "allow_check_out_after_shift_end_time")
 	if buffer_minutes is None:
 		logger.warning("[ot_calculation] shift %s missing — cannot resolve real end", shift_name)
 		return None
-	return shift_actual_end - timedelta(minutes=cint(buffer_minutes))
+	return session["shift_end"] - timedelta(minutes=cint(buffer_minutes))
+
+
+_WEEKDAY_INDEX = {
+	"Monday": 0,
+	"Tuesday": 1,
+	"Wednesday": 2,
+	"Thursday": 3,
+	"Friday": 4,
+	"Saturday": 5,
+	"Sunday": 6,
+}
+
+#: Historical hardcode, kept as the blank-field default so every existing
+#: company prices exactly as before.
+DEFAULT_REST_WEEKDAY = 6  # Sunday
+DEFAULT_OFF_WEEKDAY = 5  # Saturday
+
+
+def _company_weekend(company) -> tuple[int, int]:
+	"""(rest_weekday, off_weekday) for a company, tolerating an unmigrated schema.
+
+	Rest day pays 2.0x against the off day's 1.5x first-band, so hardcoding
+	Sunday/Saturday was wrong money for any Friday-Saturday-weekend entity
+	(Malaysia's east-coast states, KSA). Configured per company on
+	`hr_weekly_rest_day` / `hr_weekly_off_day`; blank keeps the historical
+	Sunday/Saturday. A missing column degrades to the defaults — the same
+	fail-open shape as hrms.utils.timezone._optional_timezone_field, and for
+	the same reason: pricing OT must not crash on a half-finished migrate.
+	"""
+	if not company:
+		return DEFAULT_REST_WEEKDAY, DEFAULT_OFF_WEEKDAY
+	try:
+		rest_name, off_name = frappe.db.get_value(
+			"Company", company, ["hr_weekly_rest_day", "hr_weekly_off_day"]
+		) or (None, None)
+	except Exception:
+		logger.warning("[ot_calculation] weekend fields unavailable — has the custom-field sync run?")
+		return DEFAULT_REST_WEEKDAY, DEFAULT_OFF_WEEKDAY
+	return (
+		_WEEKDAY_INDEX.get(rest_name, DEFAULT_REST_WEEKDAY),
+		_WEEKDAY_INDEX.get(off_name, DEFAULT_OFF_WEEKDAY),
+	)
 
 
 def _classify_day(employee, day, default_day_type):
-	"""Resolve day_type per work date using the employee's Holiday List."""
+	"""Resolve day_type per work date using the employee's Holiday List and
+	their company's configured weekend."""
 	logger.info("[ot_calculation] classify day=%s employee=%s default=%s", day, employee, default_day_type)
 	holiday_list = None
+	company = None
 	try:
-		holiday_list = frappe.db.get_value("Employee", employee, "holiday_list")
-		if not holiday_list:
-			company = frappe.db.get_value("Employee", employee, "company")
-			if company:
-				holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
+		holiday_list, company = frappe.db.get_value("Employee", employee, ["holiday_list", "company"]) or (
+			None,
+			None,
+		)
+		if not holiday_list and company:
+			holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
 	except Exception as exc:
 		logger.warning("[ot_calculation] Could not resolve holiday list for %s: %s", employee, exc)
+
+	rest_weekday, off_weekday = _company_weekend(company)
 
 	if holiday_list:
 		row = frappe.db.get_value(
@@ -149,12 +212,12 @@ def _classify_day(employee, day, default_day_type):
 		if row:
 			if not row.weekly_off:
 				return "public_holiday"
-			return "rest" if day.weekday() == 6 else "off"
+			return "rest" if day.weekday() == rest_weekday else "off"
 
 	weekday = day.weekday()
-	if weekday == 6:
+	if weekday == rest_weekday:
 		return "rest"
-	if weekday == 5:
+	if weekday == off_weekday:
 		return "off"
 	return default_day_type or "normal"
 
@@ -195,13 +258,6 @@ def _ot_bands_for_day(ot_hours, hourly_rate, day_type, config):
 	return result
 
 
-def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
-	"""Total OT pay for a day = sum of its rate-band amounts."""
-	if ot_hours <= 0 or hourly_rate <= 0:
-		return 0.0
-	return round(sum(b["amount"] for b in _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)), 2)
-
-
 def _rate_weighted_hours(bands):
 	"""Rate-weighted OT hours = sum(band hours x multiplier). The salary-free figure
 	a payroll platform (e.g. Employment Hero) multiplies by its own hourly rate —
@@ -211,8 +267,8 @@ def _rate_weighted_hours(bands):
 
 def _per_day_ot_hours(employee, start_date, end_date):
 	"""Fetch checkins around [start, end], pair IN→OUT sessions, and bucket the
-	beyond-shift (pre-start + post-end) hours per calendar day, split at midnight.
-	Returns (per_day_hours, per_day_shift)."""
+	post-shift-end hours per calendar day, split at midnight. Pre-shift (early
+	check-in) time is never overtime. Returns (per_day_hours, per_day_shift)."""
 	logger.info("[ot_calculation] per-day OT hours employee=%s %s..%s", employee, start_date, end_date)
 	fetch_start = start_date - timedelta(days=1)
 	fetch_end = end_date + timedelta(days=1)
@@ -245,7 +301,7 @@ def _per_day_ot_hours(employee, start_date, end_date):
 		# OT is post-shift-end only, measured against the REAL shift end (the padded
 		# shift_actual_end = end + allow_check_out_after buffer would silently drop OT).
 		# Pre-shift (early check-in) time is never counted as overtime.
-		real_end = _real_end_from_actual(s["shift"], s["shift_end"])
+		real_end = _real_shift_end_for_session(s["shift"], s)
 		if real_end and s["last_out"] > real_end:
 			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], real_end, s["last_out"])
 	return per_day_hours, per_day_shift
@@ -283,9 +339,18 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 	per_day_hours, per_day_shift = _per_day_ot_hours(employee, start_date, end_date)
 
 	monthly_ot_hours = 0.0
+	cap_month = None
 	for day, hours in sorted(per_day_hours.items()):
 		if not (start_date <= day <= end_date) or hours <= 0:
 			continue
+
+		# The cap is MONTHLY, so the accumulator resets on a month boundary.
+		# Accumulated across the whole queried range it silently tightened for
+		# any range spanning two months — a 26th-to-25th payroll period reached
+		# the cap once for what are two distinct months' entitlements.
+		if (day.year, day.month) != cap_month:
+			cap_month = (day.year, day.month)
+			monthly_ot_hours = 0.0
 
 		if approved_hours_map is not None:
 			if day not in approved_hours_map:
