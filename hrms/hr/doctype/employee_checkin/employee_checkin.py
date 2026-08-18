@@ -94,7 +94,10 @@ class EmployeeCheckin(Document):
 			self.overtime_type = shift_actual_timings.overtime_type or None
 
 	def validate_distance_from_shift_location(self):
-		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+		# Per company — geolocated check-in is a per-entity rollout decision.
+		from hrms.utils.company_settings import is_setting_enabled_for_employee
+
+		if not is_setting_enabled_for_employee(self.employee, "allow_geolocation_tracking"):
 			return
 
 		if not (self.latitude or self.longitude):

@@ -120,9 +120,15 @@ def process_loan_interest_accrual_and_demand(doc: "SalarySlip"):
 def make_loan_repayment_entry(doc: "SalarySlip"):
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import create_repayment_entry
 
+	from hrms.utils.company_settings import is_company_setting_enabled
+
 	payroll_payable_account = get_payroll_payable_account(doc.company, doc.payroll_entry)
-	process_payroll_accounting_entry_based_on_employee = frappe.db.get_single_value(
-		"Payroll Settings", "process_payroll_accounting_entry_based_on_employee"
+	# Per company, matching PayrollEntry — which already resolves this setting
+	# through the override. Read globally here, a company's per-entity accounting
+	# basis was honoured by the payroll run and ignored by the loan repayment
+	# entry the same run produced.
+	process_payroll_accounting_entry_based_on_employee = is_company_setting_enabled(
+		doc.company, "process_payroll_accounting_entry_based_on_employee"
 	)
 
 	if not doc.get("loans"):

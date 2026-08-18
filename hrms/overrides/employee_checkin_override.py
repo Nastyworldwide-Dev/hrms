@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 
 import frappe
+from frappe import _
 from frappe.utils import get_datetime
 
 from hrms.hr.doctype.employee_checkin.employee_checkin import (
@@ -22,6 +23,7 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
 from hrms.hr.utils import get_distance_between_coordinates
+from hrms.utils.company_settings import is_setting_enabled_for_employee
 from hrms.utils.geofence import (
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
@@ -125,21 +127,28 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			)
 			return
 
-		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+		# Per COMPANY, not the global singleton. Geolocated check-in is a
+		# per-entity rollout decision, and reading the global here meant a company
+		# that had switched it ON was warned by the preflight
+		# (`hrms.api.geofence.check_geofence`, which always asked per company) and
+		# never blocked at the insert — the flag did nothing where it counted.
+		if not is_setting_enabled_for_employee(self.employee, "allow_geolocation_tracking"):
 			logger.info(
-				"[employee_checkin] geofence skipped employee=%s — HR Settings.allow_geolocation_tracking is off",
+				"[employee_checkin] geofence skipped employee=%s — geolocation tracking off for their company",
 				self.employee,
 			)
 			return
 
 		if not (self.latitude and self.longitude):
-			# No coordinates captured — fall through to upstream behaviour which
-			# throws. The frontend always sends lat/long when geo is enabled.
+			# Thrown here rather than delegated to `super()`. Upstream re-reads the
+			# GLOBAL flag, so delegating reopened the same bypass one level down;
+			# it also guards on `or`, which let a half-supplied coordinate pair
+			# through to a distance calculation against None.
 			logger.info(
-				"[employee_checkin] geofence deferred to upstream employee=%s — no lat/long on doc",
+				"[employee_checkin] geofence refused employee=%s — no usable lat/long on doc",
 				self.employee,
 			)
-			return super().validate_distance_from_shift_location()
+			frappe.throw(_("Latitude and longitude values are required for checking in."))
 
 		if not self.shift:
 			# fetch_shift() couldn't resolve a Shift Type (no assignment, or

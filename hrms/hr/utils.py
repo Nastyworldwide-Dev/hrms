@@ -1227,7 +1227,14 @@ def notify_bulk_action_status(doctype: str, failure: list, success: list) -> Non
 
 @frappe.whitelist()
 def set_geolocation_from_coordinates(doc: Document):
-	if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):
+	# Per company where the doc names one. Called for BOTH Employee Checkin
+	# (which names an employee) and Shift Location (a master, which names
+	# neither) — an unresolved company falls through to the global value, so
+	# the Shift Location path behaves exactly as it did.
+	from hrms.utils.company_settings import employee_company, is_company_setting_enabled
+
+	company = employee_company(doc.get("employee")) or doc.get("company")
+	if not is_company_setting_enabled(company, "allow_geolocation_tracking"):
 		return
 
 	if not (doc.latitude and doc.longitude):

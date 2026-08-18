@@ -144,3 +144,28 @@ def is_company_setting_enabled(company: str | None, setting: str) -> bool:
 	from frappe.utils import cint
 
 	return bool(cint(get_company_setting(company, setting, default=0)))
+
+
+def employee_company(employee: str | None) -> str | None:
+	"""The company an employee belongs to, or None.
+
+	`db.get_value` on purpose: this decides which POLICY applies to a row, not
+	whether the caller may read it. Routing it through the permission layer
+	would make a geofence depend on the reader's rights over Employee.
+	"""
+	if not employee:
+		return None
+	return frappe.db.get_value("Employee", employee, "company")
+
+
+def is_setting_enabled_for_employee(employee: str | None, setting: str) -> bool:
+	"""`is_company_setting_enabled`, keyed on the employee's own company.
+
+	Every path that enforces an employee-scoped policy has to resolve the
+	company the SAME way. `allow_geolocation_tracking` is why this exists: the
+	preflight (`hrms.api.geofence.check_geofence`) asked the per-company
+	override while all three enforcing paths read the global singleton, so a
+	company that switched geolocation ON was warned in the UI and never blocked
+	at the insert — the rollout flag did nothing where it mattered.
+	"""
+	return is_company_setting_enabled(employee_company(employee), setting)

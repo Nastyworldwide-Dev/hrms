@@ -228,10 +228,13 @@ class SalarySlip(TransactionBase):
 			make_loan_repayment_entry(self)
 
 			if not frappe.flags.via_payroll_entry and not frappe.flags.in_patch:
-				email_salary_slip = cint(
-					frappe.db.get_single_value("Payroll Settings", "email_salary_slip_to_employee")
-				)
-				if email_salary_slip:
+				# Per company, matching `PayrollEntry.email_salary_slip`. Reading the
+				# global singleton here meant the bulk payroll run honoured a
+				# company's opt-out while an individually submitted slip still
+				# emailed it — the same setting answering two ways on two paths.
+				from hrms.utils.company_settings import is_company_setting_enabled
+
+				if is_company_setting_enabled(self.company, "email_salary_slip_to_employee"):
 					self.email_salary_slip()
 
 		self.update_payment_status_for_gratuity_and_leave_encashment()
