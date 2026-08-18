@@ -29,6 +29,8 @@ from hrms.utils.geofence import (
 	REASON_NO_SHIFT_LOCATION,
 	REASON_OUTSIDE_RADIUS,
 	evaluate_geofence,
+	resolve_assignment,
+	resolve_location,
 )
 
 logger = logging.getLogger(__name__)
@@ -161,35 +163,19 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			)
 			return
 
-		assignments = frappe.get_all(
-			"Shift Assignment",
-			filters={
-				"employee": self.employee,
-				"shift_type": self.shift,
-				"start_date": ["<=", self.time],
-				"shift_location": ["is", "set"],
-				"docstatus": 1,
-				"status": "Active",
-			},
-			or_filters=[["end_date", ">=", self.time], ["end_date", "is", "not set"]],
-			fields=["shift_location", "enable_strict_geofence"],
-			order_by="start_date desc",
-			limit=1,
-		)
-		shift_loc_name = assignments[0].shift_location if assignments else None
-		# Strict flag now lives on Shift Assignment (was on Shift Type up to v15.77.3).
-		# When no active assignment matches, default to lenient so untagged check-ins
-		# fall through to the existing silent-allow/remote-approval paths.
-		strict = bool(assignments[0].enable_strict_geofence) if assignments else False
+		# One resolver, shared with the preflight. It deliberately does NOT filter
+		# on `shift_location is set`: `enable_strict_geofence` is read off the row
+		# the filter selects, so a strict assignment with no location used to match
+		# nothing and silently degrade to lenient — the one combination that most
+		# needs to throw.
+		assignment = resolve_assignment(self.employee, self.time, shift_type=self.shift)
+		shift_loc_name = assignment.shift_location if assignment else None
+		# Strict flag lives on Shift Assignment (was on Shift Type up to v15.77.3).
+		# No active assignment at all still means lenient, so untagged check-ins
+		# keep falling through to the silent-allow / remote-approval paths.
+		strict = bool(assignment.enable_strict_geofence) if assignment else False
 
-		row = None
-		if shift_loc_name:
-			row = frappe.db.get_value(
-				"Shift Location",
-				shift_loc_name,
-				["checkin_radius", "latitude", "longitude"],
-				as_dict=True,
-			)
+		row = resolve_location(shift_loc_name)
 
 		radius_m = int(row.checkin_radius) if row and row.checkin_radius else 0
 		distance = None

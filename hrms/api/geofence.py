@@ -35,8 +35,8 @@ from frappe.utils import get_datetime
 
 from hrms.api import _ensure_own_employee_or_permitted
 from hrms.hr.utils import get_distance_between_coordinates
-from hrms.utils.company_settings import is_company_setting_enabled
-from hrms.utils.geofence import evaluate_geofence
+from hrms.utils.company_settings import is_setting_enabled_for_employee
+from hrms.utils.geofence import evaluate_geofence, resolve_assignment, resolve_location
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -98,9 +98,8 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 
 	# Geolocated check-in is rolled out per company. A company with no override
 	# inherits the global HR Settings flag — i.e. today's behaviour exactly.
-	company = frappe.db.get_value("Employee", employee, "company")
-	if not is_company_setting_enabled(company, "allow_geolocation_tracking"):
-		logger.info("[geofence.api] geolocation tracking off for company=%s — pass-through", company)
+	if not is_setting_enabled_for_employee(employee, "allow_geolocation_tracking"):
+		logger.info("[geofence.api] geolocation tracking off for %s's company — pass-through", employee)
 		return _ok()
 
 	try:
@@ -118,27 +117,13 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 	# a different timezone matches the wrong shift near boundary hours.
 	at = get_datetime(time) if time else employee_now(employee)
 
-	# Strict flag now lives on Shift Assignment (moved from Shift Type in v15.77.4).
-	assignment = frappe.db.sql(
-		"""
-		SELECT sa.name, sa.shift_type, sa.shift_location, sa.enable_strict_geofence
-		FROM `tabShift Assignment` sa
-		WHERE sa.employee = %s
-		  AND sa.docstatus = 1
-		  AND sa.status = 'Active'
-		  AND sa.start_date <= %s
-		  AND (sa.end_date IS NULL OR sa.end_date >= %s)
-		ORDER BY sa.start_date DESC
-		LIMIT 1
-		""",
-		(employee, at.date(), at.date()),
-		as_dict=True,
-	)
-	if not assignment:
+	# Strict flag lives on Shift Assignment (moved from Shift Type in v15.77.4).
+	# Resolved through the SAME helper the enforcing insert uses, so the screen
+	# that warns and the code that blocks cannot drift apart again.
+	row = resolve_assignment(employee, at.date())
+	if not row:
 		logger.info("[geofence.api] no active shift assignment for %s — pass-through", employee)
 		return _ok()
-
-	row = assignment[0]
 	strict = bool(row.enable_strict_geofence)
 	if not strict:
 		# Lenient mode is handled post-insert by the existing
@@ -147,14 +132,7 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 
 	shift_loc_name = row.shift_location
 
-	loc = None
-	if shift_loc_name:
-		loc = frappe.db.get_value(
-			"Shift Location",
-			shift_loc_name,
-			["checkin_radius", "latitude", "longitude"],
-			as_dict=True,
-		)
+	loc = resolve_location(shift_loc_name)
 
 	radius_m = int(loc.checkin_radius) if loc and loc.checkin_radius else 0
 	distance_m = None
@@ -208,26 +186,13 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	at = get_datetime(time) if time else employee_now(employee)
 	logger.debug("[geofence.api] get_active_shift_location employee=%s at=%s", employee, at)
 
-	row = frappe.db.sql(
-		"""
-		SELECT sa.shift_location, sa.enable_strict_geofence, sa.shift_type
-		FROM `tabShift Assignment` sa
-		WHERE sa.employee = %s
-		  AND sa.docstatus = 1
-		  AND sa.status = 'Active'
-		  AND sa.start_date <= %s
-		  AND (sa.end_date IS NULL OR sa.end_date >= %s)
-		  AND sa.shift_location IS NOT NULL
-		ORDER BY sa.start_date DESC
-		LIMIT 1
-		""",
-		(employee, at.date(), at.date()),
-		as_dict=True,
-	)
-	if not row:
+	# Third copy of this lookup, now the same one. This variant additionally
+	# required a shift_location — harmless here (the map pin needs one anyway),
+	# but it is the filter that hid the strict flag on the enforcing path, so it
+	# does not get to survive in a second place. The None check below covers it.
+	r = resolve_assignment(employee, at.date())
+	if not r or not r.shift_location:
 		return None
-
-	r = row[0]
 	loc = frappe.db.get_value(
 		"Shift Location",
 		r.shift_location,

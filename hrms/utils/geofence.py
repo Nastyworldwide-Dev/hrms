@@ -91,3 +91,71 @@ def evaluate_geofence(
 		radius_m,
 	)
 	return ("require_remote", context)
+
+
+#: Fields the geofence decision needs off the Shift Assignment in force.
+_ASSIGNMENT_FIELDS = ("name", "shift_type", "shift_location", "enable_strict_geofence")
+
+
+def resolve_assignment(employee: str, at, shift_type: str | None = None):
+	"""The Shift Assignment whose geofence policy governs a punch, or None.
+
+	ONE query, shared by the preflight (`hrms.api.geofence.check_geofence`) and
+	the enforcing insert (`CustomEmployeeCheckin`). They used to run two
+	different ones and disagree in a way that always favoured the attacker:
+
+	* the insert filtered on `shift_location is set`. `enable_strict_geofence`
+	  is read off the row that filter selects, so an assignment with strict ON
+	  and NO location matched nothing, `strict` fell back to False, and the
+	  "strict + no shift location -> throw" rule in `evaluate_geofence` was
+	  unreachable from the only path that can actually stop a check-in;
+	* the preflight did not filter on it, so the PWA refused the very punch the
+	  API accepted.
+
+	The location filter is therefore gone: the row is selected on the shift
+	policy alone and `evaluate_geofence` decides what a missing location means.
+
+	`shift_type` narrows to the shift the check-in already resolved. The
+	preflight has not resolved one yet and passes None; with overlapping
+	assignments across shift types it may therefore preview a different
+	assignment than the insert enforces. That is inherent to previewing a punch
+	before its shift is known, and it is advisory either way — the insert is
+	authoritative.
+
+	`frappe` is imported inside the function so this module stays importable,
+	and unit-testable, without a bench.
+	"""
+	import frappe
+
+	filters = {
+		"employee": employee,
+		"start_date": ["<=", at],
+		"docstatus": 1,
+		"status": "Active",
+	}
+	if shift_type:
+		filters["shift_type"] = shift_type
+
+	rows = frappe.get_all(
+		"Shift Assignment",
+		filters=filters,
+		or_filters=[["end_date", ">=", at], ["end_date", "is", "not set"]],
+		fields=list(_ASSIGNMENT_FIELDS),
+		order_by="start_date desc",
+		limit=1,
+	)
+	return rows[0] if rows else None
+
+
+def resolve_location(shift_location: str | None):
+	"""The Shift Location row a geofence measures against, or None."""
+	if not shift_location:
+		return None
+	import frappe
+
+	return frappe.db.get_value(
+		"Shift Location",
+		shift_location,
+		["checkin_radius", "latitude", "longitude"],
+		as_dict=True,
+	)
