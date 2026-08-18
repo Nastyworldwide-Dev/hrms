@@ -14,7 +14,9 @@
 							>
 								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Notifications") }}</h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
+								{{ __("Notifications") }}
+							</h2>
 						</div>
 					</header>
 
@@ -51,12 +53,9 @@
 							</div>
 						</div>
 
-						<div
-							class="flex flex-col border-t-2 border-divider"
-							v-if="notifications.data?.length"
-						>
+						<div class="flex flex-col border-t-2 border-divider" v-if="notifications.data?.length">
 							<component
-								:is="isRemoteRequestPending(item) ? 'div' : 'router-link'"
+								:is="isItemNavigable(item) ? 'router-link' : 'div'"
 								:class="[
 									'flex flex-row items-start p-4 justify-between border-b border-divider before:mt-2',
 									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5`,
@@ -64,7 +63,7 @@
 								]"
 								v-for="item in notifications.data"
 								:key="item.name"
-								:to="isRemoteRequestPending(item) ? null : getItemRoute(item)"
+								:to="isItemNavigable(item) ? getItemRoute(item) : null"
 								@click="!isRemoteRequestPending(item) && markAsRead(item.name)"
 							>
 								<span class="m-avatar-sq grayscale shrink-0">
@@ -79,10 +78,7 @@
 										]"
 										v-html="item.message"
 									></div>
-									<div
-										v-else
-										class="text-sm leading-5 font-normal text-ink-500 italic"
-									>
+									<div v-else class="text-sm leading-5 font-normal text-ink-500 italic">
 										{{ fallbackMessage(item) }}
 									</div>
 									<div class="text-xs font-normal text-ink-600">
@@ -93,10 +89,7 @@
 									     Tapping either opens a remarks sheet so the approver
 									     can leave a note before confirming, matching the
 									     RemoteApprovals view. -->
-									<div
-										v-if="isRemoteRequestPending(item)"
-										class="flex flex-row gap-2.5 mt-2"
-									>
+									<div v-if="isRemoteRequestPending(item)" class="flex flex-row gap-2.5 mt-2">
 										<button
 											class="flex-1 flex items-center justify-center bg-transparent border border-accent text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
 											@click.stop.prevent="openDecision(item, 'reject')"
@@ -112,18 +105,16 @@
 									</div>
 								</div>
 							</component>
-
 						</div>
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
-							<Button
-								variant="outline"
-								class="ml-auto"
-								@click="loadMore"
-							>
-								{{ __('Load more') }}
+							<Button variant="outline" class="ml-auto" @click="loadMore">
+								{{ __("Load more") }}
 							</Button>
 						</div>
-						<EmptyState v-else-if="!notifications.data" :message="__('You have no notifications')" />
+						<EmptyState
+							v-else-if="!notifications.data"
+							:message="__('You have no notifications')"
+						/>
 					</div>
 				</div>
 			</div>
@@ -133,7 +124,9 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
+				<div
+					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
+				>
 					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
 						<span class="m-kicker">{{ __("Remote check-in") }}</span>
 						<span class="font-sans font-extrabold text-[22px] text-inkbase">
@@ -177,11 +170,7 @@
 							@click="submitDecision"
 						>
 							<LoadingIndicator v-if="decisionSubmitting" class="w-4 h-4" />
-							{{
-								decisionKind === "approve"
-									? __("Confirm Approve")
-									: __("Confirm Reject")
-							}}
+							{{ decisionKind === "approve" ? __("Confirm Approve") : __("Confirm Reject") }}
 						</button>
 					</div>
 				</div>
@@ -206,11 +195,7 @@ import {
 	notifications,
 	arePushNotificationsEnabled,
 } from "@/data/notifications"
-import {
-	approveResource,
-	rejectResource,
-	pendingCountResource,
-} from "@/data/remoteCheckin"
+import { approveResource, rejectResource, pendingCountResource } from "@/data/remoteCheckin"
 
 const dayjs = inject("$dayjs")
 const router = useRouter()
@@ -278,7 +263,9 @@ function isRemoteRequestPending(item) {
 // derived label so the user at least sees what the row references.
 function stripHtml(html) {
 	if (!html) return ""
-	return String(html).replace(/<[^>]*>/g, "").trim()
+	return String(html)
+		.replace(/<[^>]*>/g, "")
+		.trim()
 }
 
 function fallbackMessage(item) {
@@ -293,11 +280,8 @@ function fallbackMessage(item) {
 	return __("New {0}", [docType])
 }
 
-
 const allowPushNotifications = computed(
-	() =>
-		window.frappe?.boot.push_relay_server_url &&
-		arePushNotificationsEnabled.data
+	() => window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data
 )
 
 const markAllAsRead = createResource({
@@ -319,10 +303,21 @@ function markAsRead(name) {
 }
 
 function getItemRoute(item) {
-	return {
-		name: `${item.reference_document_type.replace(/\s+/g, "")}DetailView`,
-		params: { id: item.reference_document_name },
-	}
+	// The route name is DERIVED from a server-supplied doctype, so the pairing is
+	// a contract with nothing enforcing it. "Remote Checkin Request" resolves to
+	// RemoteCheckinRequestDetailView, which is not a registered route — a DECIDED
+	// remote check-in therefore rendered as a router-link that pushed a route
+	// vue-router cannot resolve, i.e. a tap that silently did nothing. (Pending
+	// ones are fine; they render as a div with inline approve/reject.)
+	const name = `${item.reference_document_type?.replace(/\s+/g, "") ?? ""}DetailView`
+	if (!name || !router.hasRoute(name)) return null
+	return { name, params: { id: item.reference_document_name } }
+}
+
+// Navigable = not an inline decision AND we have a route that actually exists.
+// Anything else renders as plain content rather than a link that goes nowhere.
+function isItemNavigable(item) {
+	return !isRemoteRequestPending(item) && Boolean(getItemRoute(item))
 }
 
 const activeItemLabel = computed(() => {
@@ -330,7 +325,7 @@ const activeItemLabel = computed(() => {
 	if (!item) return ""
 	// Strip HTML for the modal subtitle since item.message is rich text.
 	const plain = stripHtml(item.message)
-	return plain || (item.reference_document_name || "")
+	return plain || item.reference_document_name || ""
 })
 
 function openDecision(item, kind) {
@@ -384,9 +379,7 @@ async function submitDecision() {
 }
 
 onMounted(() => {
-	notifications.start = 0,
-	notifications.pageLength = 10,
-	notifications.fetch()
+	;(notifications.start = 0), (notifications.pageLength = 10), notifications.fetch()
 })
 
 function loadMore() {
