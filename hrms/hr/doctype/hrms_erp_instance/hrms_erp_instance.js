@@ -11,8 +11,39 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
+		show_running_sync(frm);
 	},
 });
+
+function show_running_sync(frm) {
+	// "Is it running?" answered on the form itself, not by refreshing the list
+	// blind. sync_status was built for exactly this and had no caller. The call
+	// fails SILENTLY on purpose: a company-fenced HR user gets a PermissionError
+	// from the endpoint (registry actions are hub-wide), and a form that loads
+	// fine without a headline beats one that throws on open.
+	frappe
+		.call({ method: "hrms.sync.runner.sync_status", args: { instance_name: frm.doc.name } })
+		.then((r) => {
+			const status = r.message || {};
+			if (status.run) {
+				frm.dashboard.set_headline(
+					__("Sync in progress: {0} — the run record updates as it finishes.", [
+						`<a href="/app/hrms-sync-run/${encodeURIComponent(
+							status.run
+						)}">${frappe.utils.escape_html(status.run)}</a>`,
+					])
+				);
+			} else if (status.workers === 0) {
+				frm.dashboard.set_headline(
+					__(
+						"No background worker is consuming the {0} queue — a queued sync would never start.",
+						[frappe.utils.escape_html(status.queue || "long")]
+					)
+				);
+			}
+		})
+		.catch(() => {});
+}
 
 function survey_source(frm) {
 	// Counts every HR doctype the mirror does NOT carry. Turns "should we also
@@ -38,13 +69,17 @@ function report_survey(report) {
 	const rows = gaps
 		.map(
 			(line) =>
-				`<tr><td>${esc(line.doctype)}</td><td style="text-align:right">${line.rows}</td></tr>`,
+				`<tr><td>${esc(line.doctype)}</td><td style="text-align:right">${
+					line.rows
+				}</td></tr>`
 		)
 		.join("");
 
 	const aside = (label, list) =>
 		(list || []).length
-			? `<p class="text-muted">${label}: ${list.map((x) => esc(x.doctype || x)).join(", ")}</p>`
+			? `<p class="text-muted">${label}: ${list
+					.map((x) => esc(x.doctype || x))
+					.join(", ")}</p>`
 			: "";
 
 	frappe.msgprint({
@@ -53,10 +88,14 @@ function report_survey(report) {
 		message:
 			(gaps.length
 				? `<table class="table table-bordered" style="margin:0">
-						<thead><tr><th>${__("Doctype")}</th><th style="text-align:right">${__("Rows on source")}</th></tr></thead>
+						<thead><tr><th>${__("Doctype")}</th><th style="text-align:right">${__(
+						"Rows on source"
+				  )}</th></tr></thead>
 						<tbody>${rows}</tbody>
 					</table>
-					<p>${__("These exist on the source and are not brought across. Largest first — that is the order worth arguing about.")}</p>`
+					<p>${__(
+						"These exist on the source and are not brought across. Largest first — that is the order worth arguing about."
+					)}</p>`
 				: `<p>${__("Every unmirrored doctype checked is empty on the source.")}</p>`) +
 			aside(__("Empty over there"), report.empty) +
 			aside(__("Not on that source at all"), report.not_on_source) +
@@ -77,7 +116,12 @@ function unreadable_html(list) {
 	console.warn("[HRMSERPInstance] unreadable on source:", list);
 	const esc = frappe.utils.escape_html;
 	const rows = list
-		.map((row) => `<li><b>${esc(row.doctype || row)}</b> — ${esc(row.error || __("no reason given"))}</li>`)
+		.map(
+			(row) =>
+				`<li><b>${esc(row.doctype || row)}</b> — ${esc(
+					row.error || __("no reason given")
+				)}</li>`
+		)
 		.join("");
 	return `<p class="text-muted">${__("Could not read — the source answered:")}</p>
 		<ul class="text-muted" style="margin:0 0 0 1em">${rows}</ul>`;
@@ -111,8 +155,10 @@ function report_parity(report) {
 			const state = line.error
 				? `<span style="color:var(--red-500)">${esc(line.error)}</span>`
 				: line.delta === 0
-					? `<span style="color:var(--green-600)">${__("in parity")}</span>`
-					: `<span style="color:var(--orange-500)">${__("{0} missing here", [line.delta])}</span>`;
+				? `<span style="color:var(--green-600)">${__("in parity")}</span>`
+				: `<span style="color:var(--orange-500)">${__("{0} missing here", [
+						line.delta,
+				  ])}</span>`;
 			return `<tr>
 				<td>${esc(line.doctype)}</td>
 				<td style="text-align:right">${line.remote ?? "—"}</td>
@@ -138,13 +184,13 @@ function report_parity(report) {
 			((report.not_on_source || []).length
 				? `<p class="text-muted">${__("Not on this source, so not compared: {0}", [
 						report.not_on_source.map(esc).join(", "),
-					])}</p>`
+				  ])}</p>`
 				: "") +
 			(clean
 				? `<p>${__("Every mirrored doctype matches the source.")}</p>`
 				: `<p>${__(
-						"A positive difference means rows have not landed here yet. Run a full sync; anything still missing afterwards is named in the run's error log.",
-					)}</p>`),
+						"A positive difference means rows have not landed here yet. Run a full sync; anything still missing afterwards is named in the run's error log."
+				  )}</p>`),
 	});
 }
 
@@ -152,9 +198,9 @@ function sync_now(frm) {
 	frappe.confirm(
 		__("Pull HR data from {0} into this hub?", [frappe.utils.escape_html(frm.doc.name)]) +
 			`<p class="text-muted">${__(
-				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported.",
+				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported."
 			)}</p>`,
-		() => start_sync(frm, 0),
+		() => start_sync(frm, 0)
 	);
 }
 
@@ -178,9 +224,9 @@ function start_sync(frm, force) {
 function report_queued(res, frm) {
 	// No polling: the run record is written before the first remote read, and the
 	// Desk list view refreshes itself as the run finishes.
-	const runs = `<a href="/app/hrms-sync-run?source_instance=${encodeURIComponent(res.instance || "")}">${__(
-		"Open HRMS Sync Run",
-	)}</a>`;
+	const runs = `<a href="/app/hrms-sync-run?source_instance=${encodeURIComponent(
+		res.instance || ""
+	)}">${__("Open HRMS Sync Run")}</a>`;
 
 	if (res.queued) {
 		console.info("[HRMSERPInstance] sync queued for", res.instance);
@@ -188,7 +234,7 @@ function report_queued(res, frm) {
 			title: __("Sync queued"),
 			indicator: "blue",
 			message: `<p>${__(
-				"Running in the background — this takes minutes, and you can leave this page.",
+				"Running in the background — this takes minutes, and you can leave this page."
 			)}</p><p>${runs}</p>`,
 		});
 		return;
@@ -205,9 +251,11 @@ function report_queued(res, frm) {
 			message:
 				`<p>${__(
 					"Nothing is consuming the {0} queue on this site, so a queued sync would never start. No job was created.",
-					[`<b>${frappe.utils.escape_html(res.queue || "long")}</b>`],
+					[`<b>${frappe.utils.escape_html(res.queue || "long")}</b>`]
 				)}</p>` +
-				`<p>${__("Ask whoever runs this site to start a background worker for that queue.")}</p>`,
+				`<p>${__(
+					"Ask whoever runs this site to start a background worker for that queue."
+				)}</p>`,
 		});
 		return;
 	}
@@ -220,7 +268,9 @@ function report_queued(res, frm) {
 				`<p>${__("A sync from {0} is queued and waiting for a worker.", [
 					frappe.utils.escape_html(res.instance || ""),
 				])}</p>` +
-				`<p>${__("If it has been waiting a long time it is stuck, and you can clear it and start again.")}</p>`,
+				`<p>${__(
+					"If it has been waiting a long time it is stuck, and you can clear it and start again."
+				)}</p>`,
 			primary_action: {
 				label: __("Clear it and start again"),
 				action() {
@@ -241,8 +291,8 @@ function report_queued(res, frm) {
 			])}</p>` +
 			(res.run
 				? `<p><a href="/app/hrms-sync-run/${encodeURIComponent(res.run)}">${__(
-						"Open the run in progress",
-					)}</a></p>`
+						"Open the run in progress"
+				  )}</a></p>`
 				: `<p>${runs}</p>`),
 	});
 }
@@ -272,7 +322,7 @@ function pull_companies(frm) {
 			frappe.confirm(
 				__("Create {0} missing company record(s) as HR shells?", [missing.length]) +
 					summary_html(plan, missing),
-				() => create_shells(frm),
+				() => create_shells(frm)
 			);
 		},
 	});
@@ -309,10 +359,12 @@ function summary_html(plan, missing) {
 			`<p>${__("Cannot create {0} — source is missing {1}", [
 				`<b>${esc(row.name)}</b>`,
 				esc(row.missing.join(", ")),
-			])}</p>`,
+			])}</p>`
 		);
 
-	return parts.length ? `<hr>${parts.join("")}` : `<p>${__("All source companies exist here.")}</p>`;
+	return parts.length
+		? `<hr>${parts.join("")}`
+		: `<p>${__("All source companies exist here.")}</p>`;
 }
 
 function result_html(result) {
@@ -322,12 +374,18 @@ function result_html(result) {
 	if ((result.created || []).length)
 		parts.push(`<p>${__("Created")}: <b>${result.created.map(esc).join(", ")}</b></p>`);
 	if ((result.registered || []).length)
-		parts.push(`<p>${__("Added to this instance's company list")}: ${result.registered.map(esc).join(", ")}</p>`);
+		parts.push(
+			`<p>${__("Added to this instance's company list")}: ${result.registered
+				.map(esc)
+				.join(", ")}</p>`
+		);
 	for (const row of result.failed || [])
 		parts.push(`<p>${__("Failed")}: <b>${esc(row.company)}</b> — ${esc(row.error)}</p>`);
 	for (const row of result.registration_errors || [])
 		parts.push(
-			`<p>${__("Created but not added to the company list")}: <b>${esc(row.company)}</b> — ${esc(row.error)}</p>`,
+			`<p>${__("Created but not added to the company list")}: <b>${esc(
+				row.company
+			)}</b> — ${esc(row.error)}</p>`
 		);
 	if (!parts.length) parts.push(`<p>${__("Nothing was created.")}</p>`);
 
