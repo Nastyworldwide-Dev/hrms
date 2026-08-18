@@ -745,8 +745,17 @@ def get_holidays_for_employee(employee: str) -> list[dict]:
 	if not holiday_list:
 		return []
 
-	frappe.has_permission("Holiday List", "read", holiday_list, throw=True)
-
+	# No doctype-level Holiday List check here, DELIBERATELY. The fence above is
+	# the authorization ("may you ask about this employee"), and the list name is
+	# resolved SERVER-SIDE from that employee — the caller never supplies it, so
+	# there is nothing for a doctype read check to protect. The check that used
+	# to sit here 403'd every hub-provisioned user: they carry the bare Employee
+	# role (ensure_employee_role, by design), while Holiday List read ships only
+	# inside the ESS user-type bundle this hub deliberately does not use — and
+	# the SAME dates already flow to the SAME user through
+	# get_holidays_for_calendar, which never asked. One rule for both readers;
+	# do not re-add the check in a hardening pass without also deciding the ESS
+	# provisioning question.
 	Holiday = frappe.qb.DocType("Holiday")
 	holidays = (
 		frappe.qb.from_(Holiday)
