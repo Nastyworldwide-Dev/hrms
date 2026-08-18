@@ -11,11 +11,11 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
-		show_running_sync(frm);
+		show_sync_headline(frm);
 	},
 });
 
-function show_running_sync(frm) {
+function show_sync_headline(frm) {
 	// "Is it running?" answered on the form itself, not by refreshing the list
 	// blind. sync_status was built for exactly this and had no caller. The call
 	// fails SILENTLY on purpose: a company-fenced HR user gets a PermissionError
@@ -40,7 +40,39 @@ function show_running_sync(frm) {
 						[frappe.utils.escape_html(status.queue || "long")]
 					)
 				);
+			} else {
+				show_cutover_readiness(frm);
 			}
+		})
+		.catch(() => {});
+}
+
+function show_cutover_readiness(frm) {
+	// The standing answer to "can we cut over?" — the trailing streak of clean
+	// parity checks against the exit criterion. Nothing recorded yet renders
+	// nothing: a site that never runs the gate should not see a scary NOT READY.
+	frappe
+		.call({
+			method: "hrms.sync.parity.cutover_readiness",
+			args: { instance_name: frm.doc.name },
+		})
+		.then((r) => {
+			const v = r.message || {};
+			if (!v.checks_recorded) return;
+			const label = v.ready
+				? __("READY — {0} consecutive clean parity checks (need {1}).", [
+						v.consecutive_clean_runs,
+						v.required,
+				  ])
+				: __("Cutover: {0} of {1} consecutive clean parity checks.", [
+						v.consecutive_clean_runs,
+						v.required,
+				  ]);
+			frm.dashboard.set_headline(
+				`${label} <a href="/app/hrms-parity-check?source_instance=${encodeURIComponent(
+					frm.doc.name
+				)}">${__("History")}</a>`
+			);
 		})
 		.catch(() => {});
 }
@@ -133,11 +165,17 @@ function check_parity(frm) {
 	// sync never ran or ran and wrote nothing.
 	console.info("[HRMSERPInstance] checking parity against", frm.doc.name);
 	frappe.call({
-		method: "hrms.sync.parity.parity_check",
+		// The PERSISTING entry point: same comparison as the pure GET
+		// parity_check, plus an HRMS Parity Check row — the cutover criterion
+		// counts consecutive clean runs, so the verdict must outlive this dialog.
+		method: "hrms.sync.parity.run_parity_check",
 		args: { instance_name: frm.doc.name },
 		freeze: true,
 		freeze_message: __("Counting rows on both sides…"),
-		callback: (r) => report_parity(r.message || {}),
+		callback: (r) => {
+			report_parity(r.message || {});
+			show_sync_headline(frm); // streak may have just changed
+		},
 		error: (e) => console.warn("[HRMSERPInstance] parity check failed:", e),
 	});
 }

@@ -1,0 +1,84 @@
+{
+ "actions": [],
+ "autoname": "format:PARITY-{#####}",
+ "creation": "2026-08-18 00:00:00.000000",
+ "description": "One parity run's verdict, persisted. The cutover exit criterion is N consecutive clean runs, so the evidence has to outlive the dialog that showed it — hrms.sync.parity.cutover_readiness counts the trailing streak off these rows.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "source_instance",
+  "checked_at",
+  "in_parity",
+  "mismatched",
+  "errored"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_instance",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source Instance",
+   "options": "HRMS ERP Instance",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "checked_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Checked At",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "in_parity",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "In Parity",
+   "read_only": 1
+  },
+  {
+   "description": "Doctypes whose remote and local counts disagreed on this run.",
+   "fieldname": "mismatched",
+   "fieldtype": "Small Text",
+   "label": "Mismatched Doctypes",
+   "read_only": 1
+  },
+  {
+   "description": "Doctypes whose remote count could not be read on this run.",
+   "fieldname": "errored",
+   "fieldtype": "Small Text",
+   "label": "Errored Doctypes",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-08-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "HRMS Parity Check",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

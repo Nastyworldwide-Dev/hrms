@@ -305,20 +305,9 @@ def parity_report(client, company: str | None = None, doctypes=None, scope=None)
 	return report
 
 
-@frappe.whitelist()
-def parity_check(instance_name: str, company: str | None = None) -> dict:
-	"""Remote-vs-local row counts, per mirrored doctype. The gate, made reachable.
-
-	This module's entire purpose is to answer "did the data actually land?", and
-	until now the only way to get that answer was a bench console — which a Frappe
-	Cloud operator has not got. Somebody looking at an empty leave balance could not
-	tell a sync that never ran from one that ran and wrote nothing, and both look
-	identical from the Desk.
-
-	GET is correct here: it compares and never reconciles, on either side.
-	"""
-	frappe.only_for(("System Manager", "HR Manager"))
-	require_unfenced("check hub-wide data parity")
+def _scoped_parity_report(instance_name: str, company: str | None = None) -> dict:
+	"""One parity run under the runner's own scope — shared by the pure GET and
+	the persisting POST, so the two cannot count under different rules."""
 	from hrms.sync.client import RemoteInstanceClient
 	from hrms.sync.runner import instance_companies, scope_filter
 
@@ -329,6 +318,103 @@ def parity_check(instance_name: str, company: str | None = None) -> dict:
 	scope = (lambda dt: scope_filter(dt, companies, instance_name)) if companies else None
 
 	return parity_report(RemoteInstanceClient(instance_name), company=company, scope=scope)
+
+
+@frappe.whitelist()
+def parity_check(instance_name: str, company: str | None = None) -> dict:
+	"""Remote-vs-local row counts, per mirrored doctype. The gate, made reachable.
+
+	This module's entire purpose is to answer "did the data actually land?", and
+	until now the only way to get that answer was a bench console — which a Frappe
+	Cloud operator has not got. Somebody looking at an empty leave balance could not
+	tell a sync that never ran from one that ran and wrote nothing, and both look
+	identical from the Desk.
+
+	GET is correct here, and this endpoint stays PURE — it compares and never
+	reconciles OR RECORDS, on either side. The Desk button calls
+	`run_parity_check` instead, which persists the verdict; a GET that writes
+	would break this module's own contract.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("check hub-wide data parity")
+	return _scoped_parity_report(instance_name, company)
+
+
+#: The exit criterion: this many consecutive clean checks authorise a cutover.
+REQUIRED_CLEAN_RUNS = 4
+
+#: Streak window read from the audit trail. Wider than the requirement so the
+#: headline can say "7 consecutive" rather than capping at the minimum.
+_READINESS_WINDOW = 30
+
+
+@frappe.whitelist(methods=["POST"])
+def run_parity_check(instance_name: str, company: str | None = None) -> dict:
+	"""One parity run, RECORDED. The Desk button's entry point.
+
+	Identical comparison to `parity_check` — one shared body, so the pure and
+	the persisting path cannot drift — plus an `HRMS Parity Check` row. The
+	exit criterion is consecutive clean runs, so the evidence has to outlive
+	the dialog that showed it: before this, `is_cutover_ready` existed with
+	nothing to read and no caller, and "are we ready to cut over?" was
+	answerable only from an operator's memory of dialogs.
+
+	POST-only: it writes an audit row, and the pure GET above keeps this
+	module's read-only promise intact.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("check hub-wide data parity")
+
+	report = _scoped_parity_report(instance_name, company)
+
+	from frappe.utils import now_datetime
+
+	check = frappe.get_doc(
+		{
+			"doctype": "HRMS Parity Check",
+			"source_instance": instance_name,
+			"checked_at": now_datetime(),
+			"in_parity": 1 if report.get("in_parity") else 0,
+			"mismatched": ", ".join(report.get("mismatched") or []),
+			"errored": ", ".join(report.get("errored") or []),
+		}
+	)
+	check.flags.ignore_permissions = True
+	check.insert(ignore_permissions=True)
+	logger.info(
+		"[parity] recorded %s for %s (in_parity=%s)", check.name, instance_name, report.get("in_parity")
+	)
+
+	return {**report, "parity_check": check.name, "readiness": _readiness(instance_name)}
+
+
+def _readiness(instance_name: str) -> dict:
+	"""Trailing-streak verdict from the stored audit trail — `is_cutover_ready`'s
+	one caller, which un-strands the exit criterion the module docstring has
+	promised all along."""
+	rows = frappe.get_all(
+		"HRMS Parity Check",
+		filters={"source_instance": instance_name},
+		fields=["in_parity", "checked_at"],
+		order_by="checked_at desc",
+		limit=_READINESS_WINDOW,
+	)
+	reports = [{"in_parity": bool(row.in_parity)} for row in reversed(rows)]
+	verdict = is_cutover_ready(reports, required_clean_runs=REQUIRED_CLEAN_RUNS)
+	verdict["last_checked_at"] = str(rows[0].checked_at) if rows else None
+	verdict["checks_recorded"] = len(rows)
+	return verdict
+
+
+@frappe.whitelist()
+def cutover_readiness(instance_name: str) -> dict:
+	"""The standing answer to "can we cut over?", for the instance form headline.
+
+	Read-only: counts the stored trail, runs nothing against the source.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("read cutover readiness")
+	return _readiness(instance_name)
 
 
 def is_cutover_ready(reports, required_clean_runs: int = 4) -> dict:
