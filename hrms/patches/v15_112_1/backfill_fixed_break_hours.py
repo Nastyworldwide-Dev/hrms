@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def execute():
 	rows = frappe.get_all(
 		"Shift Break",
+		filters={"parenttype": "Shift Type"},
 		fields=["name", "parent", "break_type", "break_hours", "start_time", "end_time"],
 	)
 	logger.info("[backfill_fixed_break_hours] scanning %d Shift Break rows", len(rows))
@@ -29,7 +30,19 @@ def execute():
 		if (row.break_type or "Fixed") == "Flexible":
 			continue
 		hours = fixed_break_hours(row.start_time, row.end_time)
-		if hours > 0 and row.break_hours != hours:
+		if hours <= 0:
+			# validate_breaks now rejects this row — surface it at migrate
+			# time so HR is not ambushed on their next unrelated save.
+			logger.warning(
+				"[backfill_fixed_break_hours] %s on Shift Type %r has an unusable window %s-%s; "
+				"fix this row or its parent will not save",
+				row.name,
+				row.parent,
+				row.start_time,
+				row.end_time,
+			)
+			continue
+		if row.break_hours != hours:
 			frappe.db.set_value("Shift Break", row.name, "break_hours", hours, update_modified=False)
 			logger.info(
 				"[backfill_fixed_break_hours] %s (%s): %s-%s -> %sh",

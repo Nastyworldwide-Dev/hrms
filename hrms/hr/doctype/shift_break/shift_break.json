@@ -49,7 +49,8 @@
    "in_list_view": 1,
    "label": "Break Duration (Hours)",
    "mandatory_depends_on": "eval:doc.break_type === 'Flexible'",
-   "precision": "2"
+   "precision": "2",
+   "read_only_depends_on": "eval:doc.break_type !== 'Flexible'"
   },
   {
    "depends_on": "eval:doc.break_type !== 'Flexible'",

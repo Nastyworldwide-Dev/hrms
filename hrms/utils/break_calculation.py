@@ -30,8 +30,9 @@ Public API:
     fixed_break_hours(start_time, end_time) -> float
         Length of a fixed break window in hours (0.0 when the window is
         missing or inverted). Used to mirror the window into a row's
-        break_hours so the grid's Break Duration column shows the real
-        deduction.
+        break_hours so the grid's Break Duration column shows the
+        configured window length (the maximum deduction — the actual
+        deduction is the overlap with worked time).
 """
 
 from __future__ import annotations

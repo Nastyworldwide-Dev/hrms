@@ -42,7 +42,7 @@ frappe.ui.form.on("Shift Type", {
 });
 
 // Mirror a Fixed break's window length into Break Duration (Hours) as the
-// row is edited, so the grid shows the real deduction before save. The
+// row is edited, so the grid shows the configured window before save. The
 // server recomputes on validate — this is display-only convenience.
 function sync_break_duration(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
@@ -64,7 +64,19 @@ function sync_break_duration(frm, cdt, cdn) {
 }
 
 frappe.ui.form.on("Shift Break", {
-	break_type: sync_break_duration,
+	break_type(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (row.break_type === "Flexible") {
+			// A window-derived value must not silently become the Flexible
+			// deduction — clear it so the user enters the duration explicitly.
+			if (row.break_hours) {
+				console.info("[ShiftType] Break row flipped to Flexible, clearing derived duration:", row.break_hours);
+				frappe.model.set_value(cdt, cdn, "break_hours", 0);
+			}
+			return;
+		}
+		sync_break_duration(frm, cdt, cdn);
+	},
 	start_time: sync_break_duration,
 	end_time: sync_break_duration,
 });

@@ -51,23 +51,37 @@ class ShiftType(Document):
 		logger.debug("[shift_type] validated %s", self.name)
 
 	def validate_breaks(self):
-		"""Fixed rows must carry a usable window — get_break_minutes silently
-		skips end <= start, so reject it here instead of deducting nothing.
-		Mirror the window length into break_hours so the grid's Break
-		Duration column shows the real deduction."""
+		"""Break rows must be usable — get_break_minutes silently skips a
+		Fixed row with a missing/inverted window and deducts nothing for a
+		Flexible row without a duration, so reject those here instead.
+		Mirror the Fixed window length into break_hours so the grid's Break
+		Duration column shows the configured window length (the maximum
+		deduction — the actual deduction is the overlap with worked time)."""
 		from hrms.utils.break_calculation import fixed_break_hours
 
 		logger.debug("[shift_type] %s: validating %d break rows", self.name, len(self.breaks or []))
 		for row in self.breaks or []:
 			if (row.break_type or "Fixed") == "Flexible":
+				if not row.break_hours or row.break_hours <= 0:
+					frappe.throw(
+						title=_("Invalid Break"),
+						msg=_("Row #{0}: a Flexible break needs a Break Duration above zero.").format(
+							row.idx
+						),
+					)
 				continue
+			if row.start_time in (None, "") or row.end_time in (None, ""):
+				frappe.throw(
+					title=_("Invalid Break Window"),
+					msg=_("Row #{0}: a Fixed break needs both a Start Time and an End Time.").format(row.idx),
+				)
 			hours = fixed_break_hours(row.start_time, row.end_time)
 			if hours <= 0:
 				frappe.throw(
 					title=_("Invalid Break Window"),
-					msg=_("Row #{0}: a Fixed break needs an End Time later than its Start Time.").format(
-						row.idx
-					),
+					msg=_(
+						"Row #{0}: a Fixed break's End Time must be later than its Start Time. For a break crossing midnight, add two rows: one ending 23:59:59 and one starting 00:00:00 on the next day of week."
+					).format(row.idx),
 				)
 			if row.break_hours != hours:
 				logger.info(
