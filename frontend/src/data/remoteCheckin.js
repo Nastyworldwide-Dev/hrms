@@ -11,6 +11,11 @@ export const pendingForApproverResource = createResource({
 	auto: false,
 })
 
+export const decidedForApproverResource = createResource({
+	url: "hrms.api.remote_checkin.list_decided_for_approver",
+	auto: false,
+})
+
 export const pendingCountResource = createResource({
 	url: "hrms.api.remote_checkin.get_pending_count",
 	cache: "nsty:remote-checkin-pending-count",

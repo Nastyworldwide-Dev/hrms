@@ -75,27 +75,47 @@ def resolve_approver(employee: str) -> str | None:
 			)
 			return user_id
 
-	hr_user = frappe.db.sql(
-		"""
+	# Fallback 4 prefers an HR Manager WITHIN the employee's own company.
+	# Assignment and visibility must use the same rule: the approver queue
+	# (list_pending_for_approver) is fenced by the viewer's permitted
+	# companies, so a request assigned to an HR Manager fenced to a DIFFERENT
+	# company landed in a queue its owner could never see — Pending forever,
+	# surfaced by nobody. The site-wide oldest-HR-Manager pick stays as the
+	# last resort so a request is never left approver-less.
+	company = frappe.db.get_value("Employee", employee, "company")
+	for scope_to_company in [True, False] if company else [False]:
+		company_join = (
+			"""
+        INNER JOIN `tabEmployee` e ON e.user_id = r.parent
+          AND e.status = 'Active'
+          AND e.company = %(company)s
+        """
+			if scope_to_company
+			else ""
+		)
+		hr_user = frappe.db.sql(
+			f"""
         SELECT r.parent
         FROM `tabHas Role` r
         INNER JOIN `tabUser` u ON u.name = r.parent
+        {company_join}
         WHERE r.role = %(role)s
           AND r.parenttype = 'User'
           AND u.enabled = 1
         ORDER BY u.creation ASC
         LIMIT 1
         """,
-		{"role": HR_MANAGER_ROLE},
-		as_dict=True,
-	)
-	if hr_user:
-		logger.info(
-			"[remote_checkin_request] approver=hr_manager_fallback employee=%s -> %s",
-			employee,
-			hr_user[0]["parent"],
+			{"role": HR_MANAGER_ROLE, "company": company},
+			as_dict=True,
 		)
-		return hr_user[0]["parent"]
+		if hr_user:
+			logger.info(
+				"[remote_checkin_request] approver=hr_manager_fallback employee=%s -> %s (company_scoped=%s)",
+				employee,
+				hr_user[0]["parent"],
+				scope_to_company,
+			)
+			return hr_user[0]["parent"]
 
 	logger.warning(
 		"[remote_checkin_request] no approver resolvable for employee=%s",

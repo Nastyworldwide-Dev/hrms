@@ -105,18 +105,19 @@ PENDING_REQUEST_FIELDS = (
 )
 
 
-def _pending_for_approver_query(user: str):
-	"""Pending requests routed to `user`, fenced to their permitted companies.
+def _pending_for_approver_query(user: str, statuses: tuple[str, ...] = ("Pending",)):
+	"""Requests in `statuses` routed to `user`, fenced to their permitted companies.
 
 	Remote Checkin Request carries no company field, so the fence rides on the
 	requesting Employee. Being named as approver is not by itself authority to
 	see the row: a group HR user fenced to one company must not be handed
-	another company's out-of-radius punches.
+	another company's out-of-radius punches. ONE query for the pending queue,
+	the badge count and the decided history — three surfaces, one scope.
 	"""
 	RemoteCheckinRequest = frappe.qb.DocType("Remote Checkin Request")
 	query = (
 		frappe.qb.from_(RemoteCheckinRequest)
-		.where(RemoteCheckinRequest.status == "Pending")
+		.where(RemoteCheckinRequest.status.isin(list(statuses)))
 		.where(RemoteCheckinRequest.approver == user)
 	)
 
@@ -149,6 +150,32 @@ def list_pending_for_approver() -> list[dict]:
 		.run(as_dict=True)
 	)
 	logger.info("[remote_checkin] list_pending_for_approver user=%s rows=%d", user, len(rows))
+	return rows
+
+
+DECIDED_REQUEST_FIELDS = (*PENDING_REQUEST_FIELDS, "status", "approved_at", "approver_remarks")
+
+
+@frappe.whitelist()
+def list_decided_for_approver(limit: int = 50) -> list[dict]:
+	"""Requests this approver has already decided — the History tab.
+
+	Until this existed a decided request was visible NOWHERE: it left the
+	pending queue on decision, and the notification card stopped linking
+	anywhere. Same shape and — deliberately — the same company fence as
+	`list_pending_for_approver`: assignment, queue and history must all answer
+	from one scope, or a request can be decided in one view and unreviewable in
+	the next.
+	"""
+	user = frappe.session.user
+	query, RemoteCheckinRequest = _pending_for_approver_query(user, statuses=("Approved", "Rejected"))
+	rows = (
+		query.select(*[RemoteCheckinRequest[field] for field in DECIDED_REQUEST_FIELDS])
+		.orderby(RemoteCheckinRequest.approved_at, order=Order.desc)
+		.limit(min(int(limit or 50), 200))
+		.run(as_dict=True)
+	)
+	logger.info("[remote_checkin] list_decided_for_approver user=%s rows=%d", user, len(rows))
 	return rows
 
 

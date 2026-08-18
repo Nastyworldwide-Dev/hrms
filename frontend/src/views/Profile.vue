@@ -7,14 +7,12 @@
 						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button
-								variant="ghost"
-								class="!pl-0 hover:bg-transparent"
-								@click="router.back()"
-							>
+							<Button variant="ghost" class="!pl-0 hover:bg-transparent" @click="router.back()">
 								<FeatherIcon name="arrow-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Profile") }}</h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
+								{{ __("Profile") }}
+							</h2>
 						</div>
 					</header>
 
@@ -36,12 +34,16 @@
 								</div>
 							</div>
 							<div class="flex flex-col gap-1 min-w-0">
-								<span v-if="employee" class="font-sans font-extrabold text-[20px] tracking-tight text-inkbase truncate">{{
-									employee?.data?.employee_name
-								}}</span>
-								<span v-if="employee" class="text-[10px] uppercase tracking-[0.1em] text-ink-600 truncate">{{
-									employee?.data?.designation
-								}}</span>
+								<span
+									v-if="employee"
+									class="font-sans font-extrabold text-[20px] tracking-tight text-inkbase truncate"
+									>{{ employee?.data?.employee_name }}</span
+								>
+								<span
+									v-if="employee"
+									class="text-[10px] uppercase tracking-[0.1em] text-ink-600 truncate"
+									>{{ employee?.data?.designation }}</span
+								>
 							</div>
 						</div>
 
@@ -54,18 +56,12 @@
 								@click="openInfoModal(link)"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon
-										:name="link.icon"
-										class="h-[18px] w-[18px] text-inkbase"
-									/>
+									<FeatherIcon :name="link.icon" class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-[15px] text-inkbase">
 										{{ link.title }}
 									</div>
 								</div>
-								<FeatherIcon
-									name="chevron-right"
-									class="h-[18px] w-[18px] text-ink-600"
-								/>
+								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
 							</div>
 
 							<!-- HR Contacts -->
@@ -82,20 +78,24 @@
 								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
 							</router-link>
 
-							<!-- Pending Approvals (only if any) -->
+							<!-- Remote Approvals. ALWAYS shown, badge only when pending:
+							     gating the whole row on the count meant the entry point
+							     vanished the moment the queue emptied — an approver could
+							     never reach their decision History, and a decided request
+							     was reviewable nowhere. The count stays as a badge. -->
 							<router-link
-								v-if="pendingApprovalsCount > 0"
 								:to="{ name: 'RemoteApprovals' }"
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon name="check-square" class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-[15px] text-inkbase">
-										{{ __("Pending Approvals") }}
+										{{ __("Remote Approvals") }}
 									</div>
 								</div>
 								<div class="flex flex-row items-center gap-2">
 									<span
+										v-if="pendingApprovalsCount > 0"
 										class="inline-flex bg-accent text-ground text-[10px] font-sans font-extrabold px-1.5 py-0.5"
 									>
 										{{ pendingApprovalsCount }}
@@ -168,9 +168,8 @@
 					"
 				/>
 			</ion-modal>
-
-	</ion-content>
-</ion-page>
+		</ion-content>
+	</ion-page>
 </template>
 
 <script setup>
@@ -229,12 +228,7 @@ const profileLinks = [
 		icon: "book",
 		title: __("Contact Information"),
 		kind: "contact",
-		fields: [
-			"cell_number",
-			"personal_email",
-			"company_email",
-			"preferred_email",
-		],
+		fields: ["cell_number", "personal_email", "company_email", "preferred_email"],
 	},
 ]
 
@@ -242,9 +236,7 @@ const isInfoModalOpen = ref(false)
 const selectedItem = ref(null)
 
 const allowPushNotifications = computed(
-	() =>
-		window.frappe?.boot.push_relay_server_url &&
-		arePushNotificationsEnabled.data
+	() => window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data
 )
 
 const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
@@ -290,9 +282,7 @@ const employeeDocType = createResource({
 })
 
 const getFieldInfo = (fieldname) => {
-	const field = employeeDocType.data.find(
-		(field) => field.fieldname === fieldname
-	)
+	const field = employeeDocType.data.find((field) => field.fieldname === fieldname)
 	return [__(field?.label, null, "Employee"), field?.fieldtype]
 }
 
