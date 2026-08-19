@@ -35,7 +35,7 @@ scope_stub.require_unfenced = lambda *a, **k: None
 sys.modules.setdefault("hrms.overrides.company_scope", scope_stub)
 sys.path.insert(0, str(ROOT.parent))
 
-from hrms.sync.provisioning import plan_portal_accounts  # noqa: E402
+from hrms.sync.provisioning import plan_portal_accounts
 
 
 def emp(name, email=None, user_id=None, employee_name=""):
