@@ -78,12 +78,14 @@
 								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
 							</router-link>
 
-							<!-- Remote Approvals. ALWAYS shown, badge only when pending:
-							     gating the whole row on the count meant the entry point
-							     vanished the moment the queue emptied — an approver could
-							     never reach their decision History, and a decided request
-							     was reviewable nowhere. The count stays as a badge. -->
+							<!-- Remote Approvals. Shown to APPROVERS (isApprover — HR,
+							     managers, named approvers), never gated on the pending
+							     COUNT: count-gating once made the entry vanish the moment
+							     the queue emptied, stranding an approver away from their
+							     decision History. A normal employee, whom no approval work
+							     can ever reach, sees no approvals surface at all. -->
 							<router-link
+								v-if="isApprover.data"
 								:to="{ name: 'RemoteApprovals' }"
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
@@ -188,6 +190,7 @@ import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
+import { isApprover } from "@/data/team"
 
 const DOCTYPE = "Employee"
 
