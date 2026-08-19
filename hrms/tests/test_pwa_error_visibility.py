@@ -32,17 +32,26 @@ import unittest
 
 FRONTEND = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src"
 MAIN = FRONTEND / "main.js"
+CONFIG = FRONTEND / "resourceConfig.js"
 WRAPPER = FRONTEND / "utils" / "loudRequest.js"
 
 
 class TestTheSeamIsWired(unittest.TestCase):
+	"""The seam moved OUT of main.js on 2026-08-19, deliberately: frappe-ui
+	fires `auto` resources synchronously at module scope, so configuring the
+	fetcher in main.js's BODY let those fetches race it and go out unprefixed
+	(the Team-endpoints 404 incident). The wiring now lives in
+	resourceConfig.js, which must be main.js's FIRST import — pinned both here
+	and in frontend/tests/resource-config-first.test.mjs."""
+
 	@classmethod
 	def setUpClass(cls):
+		cls.config = CONFIG.read_text(encoding="utf-8")
 		cls.main = MAIN.read_text(encoding="utf-8")
 
 	def test_the_resource_fetcher_is_wrapped(self):
-		fetcher = re.search(r'setConfig\(\s*["\']resourceFetcher["\']\s*,\s*([^)]+)\)', self.main)
-		self.assertIsNotNone(fetcher, "main.js must configure a resourceFetcher")
+		fetcher = re.search(r'setConfig\(\s*["\']resourceFetcher["\']\s*,\s*([^)]+)\)', self.config)
+		self.assertIsNotNone(fetcher, "resourceConfig.js must configure a resourceFetcher")
 		self.assertIn(
 			"makeLoudRequest",
 			fetcher.group(1),
@@ -51,11 +60,18 @@ class TestTheSeamIsWired(unittest.TestCase):
 		)
 
 	def test_the_wrapper_is_imported(self):
-		# Matched on the import statement itself. Splitting on "setConfig" to find
-		# "everything above the call" does not work — `setConfig` is also a NAME in
-		# frappe-ui's import list, so the split lands above the import being checked.
 		self.assertRegex(
-			self.main, r'import\s*\{[^}]*makeLoudRequest[^}]*\}\s*from\s*["\'][^"\']*loudRequest'
+			self.config, r'import\s*\{[^}]*makeLoudRequest[^}]*\}\s*from\s*["\'][^"\']*loudRequest'
+		)
+
+	def test_main_loads_the_config_first(self):
+		first_import = re.search(r"^import .*$", self.main, re.MULTILINE)
+		self.assertIsNotNone(first_import)
+		self.assertIn(
+			"./resourceConfig",
+			first_import.group(0),
+			"the config must be main.js's FIRST import, or module-scope auto "
+			"resources fetch before it and go out unprefixed",
 		)
 
 

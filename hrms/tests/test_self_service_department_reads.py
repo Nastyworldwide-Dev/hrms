@@ -77,5 +77,56 @@ class TestApproverSelectorsServeBareEmployees(unittest.TestCase):
 			)
 
 
+class TestExpenseFormServesBareEmployees(unittest.TestCase):
+	"""The expense form's two data needs follow the same rule as the approver
+	selectors. Found by sweeping for siblings of the Department toast:
+
+	* `get_company_cost_center_and_expense_account` demanded Company read —
+	  another upstream v16 addition absent from v15 — so a bare-Employee user
+	  prefilling THEIR OWN claim got a toast. Now: the caller's own company
+	  answers with no Desk read; a DIFFERENT company still requires real
+	  Company read (Desk/HR callers).
+	* `salary_currency` was fetched with raw frappe.client.get_value on
+	  Employee — the permission-fragile path this codebase avoids everywhere
+	  else. `get_salary_currency` answers through the own-employee fence.
+	"""
+
+	def setUp(self):
+		self.tree = ast.parse(SOURCE.read_text())
+
+	def test_company_defaults_use_the_own_company_fence(self):
+		fn = _function(self.tree, "get_company_cost_center_and_expense_account")
+		names = {node.id for node in ast.walk(fn) if isinstance(node, ast.Name)}
+		self.assertIn(
+			"get_employee_info",
+			names,
+			"the endpoint must recognise the caller's OWN company before demanding any Desk permission",
+		)
+		top_level_perm_demands = [
+			node
+			for node in ast.walk(fn)
+			if isinstance(node, ast.Expr)
+			and isinstance(node.value, ast.Call)
+			and isinstance(node.value.func, ast.Attribute)
+			and node.value.func.attr == "has_permission"
+			and node in fn.body
+		]
+		self.assertEqual(
+			top_level_perm_demands,
+			[],
+			"the Company read demand must be the FALLBACK for other-company "
+			"callers, never the first gate — bare employees have no Company read",
+		)
+
+	def test_salary_currency_rides_the_fenced_endpoint(self):
+		fn = _function(self.tree, "get_salary_currency")
+		calls = {
+			node.func.id
+			for node in ast.walk(fn)
+			if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+		}
+		self.assertIn("_ensure_own_employee_or_permitted", calls)
+
+
 if __name__ == "__main__":
 	unittest.main()

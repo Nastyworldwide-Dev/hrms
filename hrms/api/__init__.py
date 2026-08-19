@@ -1078,10 +1078,37 @@ def get_currency_symbols() -> dict:
 
 @frappe.whitelist()
 def get_company_cost_center_and_expense_account(company: str) -> dict:
-	frappe.has_permission("Company", "read", company, throw=True)
+	# Own company answers without any Desk read. Upstream v16 added a Company
+	# read demand here that v15 never had — the Department disease again: a
+	# bare-Employee user prefilling THEIR OWN expense claim has no Company
+	# read and got a toast instead of a form. Asking about a DIFFERENT
+	# company still requires real Company read (Desk/HR callers). Pinned by
+	# test_self_service_department_reads.
+	own = get_employee_info(fields=("company",))
+	if not (own and own.get("company") == company):
+		frappe.has_permission("Company", "read", company, throw=True)
 	return frappe.db.get_value(
 		"Company", company, ["cost_center", "default_expense_claim_payable_account"], as_dict=True
 	)
+
+
+@frappe.whitelist()
+def get_salary_currency(employee: str | None = None) -> str | None:
+	"""The currency an expense claim should default to for `employee`.
+
+	Exists so the expense form stops raw-reading Employee through
+	frappe.client.get_value — the permission-fragile path a bare-Employee
+	user cannot always take. Same fence as every self-service read: your own
+	record always answers; someone else's requires real Employee read
+	(approvers and HR reviewing a claim).
+	"""
+	employee = employee or get_employee()
+	if not employee:
+		return None
+	_ensure_own_employee_or_permitted(employee)
+	currency = frappe.db.get_value("Employee", employee, "salary_currency")
+	logger.info("[api] salary_currency %s -> %s", employee, currency)
+	return currency
 
 
 # Form View APIs

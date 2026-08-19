@@ -60,7 +60,6 @@ import ExpenseAdvancesTable from "@/components/ExpenseAdvancesTable.vue"
 import { getCompanyCurrency } from "@/data/currencies"
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
 
-
 const dayjs = inject("$dayjs")
 
 const today = dayjs().format("YYYY-MM-DD")
@@ -69,7 +68,6 @@ const isReadOnly = ref(false)
 const sessionEmployee = inject("$employee")
 const currEmployee = ref(sessionEmployee.data.name)
 const employeeCompany = ref(sessionEmployee.data.company)
-
 
 const props = defineProps({
 	id: {
@@ -115,17 +113,13 @@ const formFields = createResource({
 })
 formFields.reload()
 
-useCurrencyConversion(
-	formFields,
-	expenseClaim,
-	[
-		"total_sanctioned_amount",
-		"total_taxes_and_charges",
-		"total_advance_amount",
-		"grand_total",
-		"total_claimed_amount"
-	]
-)
+useCurrencyConversion(formFields, expenseClaim, [
+	"total_sanctioned_amount",
+	"total_taxes_and_charges",
+	"total_advance_amount",
+	"grand_total",
+	"total_claimed_amount",
+])
 
 // resources & helper functions
 const advances = createResource({
@@ -179,29 +173,27 @@ const expenseApproverDetails = createResource({
 	},
 })
 
+// Through the fenced endpoint, never frappe.client.get_value on Employee:
+// the raw read needs Desk permission on the doctype and a bare-Employee
+// user has none — same failure family as the Department toast.
 const employeeCurrency = createResource({
-	url: "frappe.client.get_value",
+	url: "hrms.api.get_salary_currency",
 	makeParams() {
-		return {
-			doctype: "Employee",
-			fieldname: ["salary_currency"],
-			filters: { name: currEmployee.value },
-		};
+		return { employee: currEmployee.value }
 	},
 	onSuccess(data) {
-		if (data?.salary_currency) {
-			expenseClaim.value.currency = data.salary_currency;
+		if (data) {
+			expenseClaim.value.currency = data
 		}
-	}
-});
+	},
+})
 
 const companyDetails = createResource({
 	url: "hrms.api.get_company_cost_center_and_expense_account",
 	params: { company: expenseClaim.value.company },
 	onSuccess(data) {
 		expenseClaim.value.cost_center = data?.cost_center
-		expenseClaim.value.payable_account =
-			data?.default_expense_claim_payable_account
+		expenseClaim.value.payable_account = data?.default_expense_claim_payable_account
 	},
 })
 
@@ -223,7 +215,7 @@ watch(
 		currEmployee.value = employee_id
 		expenseApproverDetails.fetch({ employee: currEmployee.value })
 		employeeCurrency.fetch()
-	},
+	}
 )
 
 watch(
@@ -268,12 +260,7 @@ watch(
 function getFilteredFields(fields) {
 	// reduce noise from the form view by excluding unnecessary fields
 	// eg: employee and other details can be fetched from the session user
-	const excludeFields = [
-		"naming_series",
-		"task",
-		"taxes_and_charges_sb",
-		"advance_payments_sb",
-	]
+	const excludeFields = ["naming_series", "task", "taxes_and_charges_sb", "advance_payments_sb"]
 	const extraFields = [
 		"employee",
 		"employee_name",
@@ -320,18 +307,12 @@ function applyFilters(field) {
 }
 
 function setExpenseApprover(data) {
-	const expense_approver = formFields.data?.find(
-		(field) => field.fieldname === "expense_approver"
-	)
+	const expense_approver = formFields.data?.find((field) => field.fieldname === "expense_approver")
 	expense_approver.reqd = data?.is_mandatory
-	expense_approver.documentList = data?.department_approvers.map(
-		(approver) => ({
-			label: approver.full_name
-				? `${approver.name} : ${approver.full_name}`
-				: approver.name,
-			value: approver.name,
-		})
-	)
+	expense_approver.documentList = data?.department_approvers.map((approver) => ({
+		label: approver.full_name ? `${approver.name} : ${approver.full_name}` : approver.name,
+		value: approver.name,
+	}))
 
 	expenseClaim.value.expense_approver = data?.expense_approver
 	expenseClaim.value.expense_approver_name = data?.expense_approver_name
@@ -398,13 +379,11 @@ function calculateTaxes() {
 	expenseClaim.value?.taxes?.forEach((item) => {
 		if (item.rate) {
 			item.tax_amount =
-				parseFloat(expenseClaim.value.total_sanctioned_amount) *
-				parseFloat(item.rate / 100)
+				parseFloat(expenseClaim.value.total_sanctioned_amount) * parseFloat(item.rate / 100)
 		}
 
 		item.total =
-			parseFloat(item.tax_amount) +
-			parseFloat(expenseClaim.value.total_sanctioned_amount)
+			parseFloat(item.tax_amount) + parseFloat(expenseClaim.value.total_sanctioned_amount)
 		total_taxes_and_charges += parseFloat(item.tax_amount)
 	})
 	expenseClaim.value.total_taxes_and_charges = total_taxes_and_charges
@@ -476,9 +455,7 @@ function validateForm() {
 
 function setExchangeRate() {
 	if (!expenseClaim.value.currency || !formFields.data) return
-	const exchange_rate_field = formFields.data?.find(
-		(field) => field.fieldname === "exchange_rate"
-	)
+	const exchange_rate_field = formFields.data?.find((field) => field.fieldname === "exchange_rate")
 
 	exchangeRate.fetch({
 		from_currency: expenseClaim.value.currency,
