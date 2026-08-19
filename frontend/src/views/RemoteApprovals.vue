@@ -206,7 +206,7 @@
 
 <script setup>
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { IonPage, IonContent, IonModal } from "@ionic/vue"
 import { FeatherIcon, Button, LoadingIndicator, toast } from "frappe-ui"
 
@@ -222,11 +222,14 @@ import {
 const __ = inject("$translate")
 const socket = inject("$socket")
 const router = useRouter()
+const route = useRoute()
 
 const pending = pendingForApproverResource
 const decided = decidedForApproverResource
 const TAB_BUTTONS = ["Pending", "History"] // __("Pending"), __("History")
-const activeTab = ref("Pending")
+// ?tab=History deep-links a decided request's notification straight to its
+// History entry; anything else lands on the queue.
+const activeTab = ref(route.query.tab === "History" ? "History" : "Pending")
 const decisionOpen = ref(false)
 const decision = ref("approve")
 const decisionRemarks = ref("")
