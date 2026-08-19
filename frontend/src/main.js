@@ -1,10 +1,13 @@
+// FIRST import, before anything that can declare an auto resource — see the
+// comment inside; moving it below App.vue re-breaks the Team feature.
+import "./resourceConfig"
+
 import { createApp } from "vue"
 import App from "./App.vue"
 import router from "./router"
 import { initSocket } from "./socket"
 
-import { Button, Input, setConfig, frappeRequest, resourcesPlugin, FormControl } from "frappe-ui"
-import { makeLoudRequest } from "@/utils/loudRequest"
+import { Button, Input, resourcesPlugin, FormControl } from "frappe-ui"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import EmptyState from "@/components/EmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
@@ -33,10 +36,9 @@ import "./data/theme"
 const app = createApp(App)
 const socket = initSocket()
 
-// Wrapped, never raw: this is the one seam every resource in the app passes
-// through, so it is the only place a failure can be reported once instead of in
-// seventeen templates. See utils/loudRequest.js for why that matters.
-setConfig("resourceFetcher", makeLoudRequest(frappeRequest))
+// The resourceFetcher config lives in ./resourceConfig, imported FIRST —
+// setting it here (after the import graph evaluated) let module-scope
+// auto resources fire against the unconfigured bare fetcher.
 app.use(resourcesPlugin)
 app.use(translationsPlugin)
 
