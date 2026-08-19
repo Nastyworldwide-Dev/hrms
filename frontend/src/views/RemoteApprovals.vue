@@ -217,6 +217,7 @@ import {
 	decidedForApproverResource,
 	approveResource,
 	rejectResource,
+	pendingCountResource,
 } from "@/data/remoteCheckin"
 
 const __ = inject("$translate")
@@ -292,7 +293,11 @@ const submitDecision = async () => {
 			iconClasses: "text-green-500",
 		})
 		decisionOpen.value = false
-		await pending.reload()
+		// All three surfaces this decision changed. The realtime event cannot
+		// cover them: the backend publishes the decision to the EMPLOYEE, not
+		// to the deciding approver — without these the History tab misses the
+		// row just decided and the Home/Profile badge keeps the old count.
+		await Promise.all([pending.reload(), decided.reload(), pendingCountResource.reload()])
 	} catch (err) {
 		console.error("[RemoteApprovals] decision failed:", err)
 		toast({
