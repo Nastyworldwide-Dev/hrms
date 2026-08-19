@@ -718,6 +718,42 @@ def _narrow_to_local_schema(doctype: str, payload: dict, stamped=None, columns=N
 	return narrowed, dropped
 
 
+def _child_table_map(doctype: str) -> dict:
+	"""fieldname -> child doctype, from local meta. Indirected like
+	`_local_schema` so the bench-free tests can drive it."""
+	return {field.fieldname: field.options for field in frappe.get_meta(doctype).get_table_fields()}
+
+
+def _replace_children(doctype: str, name: str, children: dict) -> None:
+	"""Hook-free child-table replacement for a mirrored UPDATE.
+
+	Same contract as the flat update it rides beside: the mirror copies an END
+	STATE and runs no doc events. Local child rows for each table are deleted
+	and the source's rows written in list order — `db_insert` fires nothing,
+	matching `db.set_value` on the parent. Parent rows are still never
+	deleted; this touches only the rows that BELONG to one mirrored parent.
+	"""
+	table_map = _child_table_map(doctype)
+	parent_docstatus = frappe.db.get_value(doctype, name, "docstatus") or 0
+	for fieldname, rows in children.items():
+		child_doctype = table_map.get(fieldname)
+		if not child_doctype:
+			_log().warning("[sync] %s.%s is not a child table here — rows dropped", doctype, fieldname)
+			continue
+		frappe.db.delete(child_doctype, {"parent": name, "parenttype": doctype, "parentfield": fieldname})
+		for idx, row in enumerate(rows, start=1):
+			child = frappe.new_doc(child_doctype)
+			child.update(row)
+			child.parent = name
+			child.parenttype = doctype
+			child.parentfield = fieldname
+			child.idx = idx
+			child.docstatus = parent_docstatus
+			child.name = frappe.generate_hash(length=10)
+			child.db_insert()
+		_log().debug("[sync] replaced %d %s row(s) under %s %s", len(rows), fieldname, doctype, name)
+
+
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	"""Upsert one row keyed by the remote name.
 
@@ -744,7 +780,18 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 		return "skipped"
 
 	if frappe.db.exists(doctype, remote_name):
-		frappe.db.set_value(doctype, remote_name, payload, update_modified=False)
+		# Children may not ride db.set_value: it builds a SET clause from
+		# whatever it is handed, and a python list is SQL error 1064 —
+		# SYNC-00074 failed all 20 Appraisal updates exactly that way. The
+		# masters in CHILD_TABLE_DOCTYPES never reach this branch (create-only
+		# rows are skipped above); a STAMPED doctype with child tables does,
+		# and Appraisal was the first ever mirrored.
+		children = {key: value for key, value in payload.items() if isinstance(value, list)}
+		flat = {key: value for key, value in payload.items() if not isinstance(value, list)}
+		if flat:
+			frappe.db.set_value(doctype, remote_name, flat, update_modified=False)
+		if children:
+			_replace_children(doctype, remote_name, children)
 		if doctype == "Employee":
 			_reconcile_user_status(remote_name)
 		return "updated"

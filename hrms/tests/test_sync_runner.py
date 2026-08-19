@@ -99,9 +99,26 @@ class _FakeStore:
 
 	def set_value(self, doctype, name, fieldname, value=None, update_modified=True):
 		payload = fieldname if isinstance(fieldname, dict) else {fieldname: value}
+		for key, item in payload.items():
+			# Faithful to MariaDB: a python list in a SET clause is SQL error
+			# 1064 — SYNC-00074 failed all 20 Appraisal updates exactly here.
+			# The store used to accept lists silently, which is why the
+			# harness never caught it.
+			if isinstance(item, list | dict):
+				raise Exception(f"(1064, \"You have an error in your SQL syntax near '{item!r}'\") [{key}]")
 		row = self.tables.setdefault(doctype, {}).setdefault(name, {"name": name})
 		row.update(payload)
 		self.updates.append((doctype, name, payload))
+
+	def delete(self, doctype, filters=None):
+		# frappe.db.delete — used ONLY for child-table replacement on a
+		# mirrored UPDATE. Parent rows are still never deleted (delete_doc
+		# below stays the must-never-be-called probe).
+		table = self.tables.get(doctype, {})
+		for name in [n for n, row in table.items() if _matches(row, filters)]:
+			table.pop(name)
+		self.child_deletes = getattr(self, "child_deletes", [])
+		self.child_deletes.append((doctype, dict(filters or {})))
 
 	def commit(self):
 		# `commit_error_after` lets a test aim the failure past the run record's own
@@ -1094,6 +1111,133 @@ class TestChildTablesArriveWithTheirParent(_RunnerTestCase):
 		"""A doctype listed for the expensive path but never pulled is dead config."""
 		for doctype in runner.CHILD_TABLE_DOCTYPES:
 			self.assertIn(doctype, runner.DEFAULT_SYNC_DOCTYPES)
+
+
+class TestChildTablesSurviveAnUpdate(_RunnerTestCase):
+	"""SYNC-00074, 2026-08-19: every one of 20 Appraisal UPDATEs died with SQL
+	1064. `db.set_value` builds a SET clause from whatever it is handed, and
+	the payload of a doctype in CHILD_TABLE_DOCTYPES carries LISTS. Masters
+	never reach the update branch — create-only rows are skipped once present
+	— so Appraisal, the first STAMPED doctype with load-bearing child tables,
+	was the first write in the mirror's life to take that path. The update
+	branch must strip children out of `set_value` and replace the child rows
+	hook-free instead; the store's `set_value` now refuses lists exactly like
+	MariaDB, so this class cannot quietly regress.
+	"""
+
+	KRA_ROWS: ClassVar[list] = [
+		{"kra": "Sales Achievement vs Target", "score": 4},
+		{"kra": "Device Deployment", "score": 3},
+	]
+
+	def setUp(self):
+		super().setUp()
+		import frappe
+
+		def schema(doctype):
+			if doctype == "Appraisal":
+				return {
+					"name",
+					"employee",
+					"company",
+					"docstatus",
+					"synced_from_instance",
+					"appraisal_kra",
+				}, {}
+			return _fake_local_schema(doctype)
+
+		runner._local_schema = schema
+
+		if hasattr(runner, "_child_table_map"):
+			self._saved_map = runner._child_table_map
+			runner._child_table_map = lambda doctype: {"appraisal_kra": "Appraisal KRA"}
+			self.addCleanup(setattr, runner, "_child_table_map", self._saved_map)
+
+		store = self.store
+
+		class _NewChild:
+			def __init__(self, doctype):
+				self.doctype = doctype
+				self.flags = types.SimpleNamespace()
+
+			def update(self, values):
+				self.__dict__.update(values)
+
+			def db_insert(self):
+				row = {k: v for k, v in self.__dict__.items() if not k.startswith("_") and k != "flags"}
+				store.tables.setdefault(self.doctype, {})[self.name] = row
+				store.inserts.append((self.doctype, self.name))
+
+		self._counter = [0]
+
+		def fake_hash(length=10):
+			self._counter[0] += 1
+			return f"child{self._counter[0]:04d}"
+
+		self._saved_frappe = (getattr(frappe, "new_doc", None), getattr(frappe, "generate_hash", None))
+		frappe.new_doc = _NewChild
+		frappe.generate_hash = fake_hash
+		self.addCleanup(self._restore_frappe)
+
+	def _restore_frappe(self):
+		import frappe
+
+		frappe.new_doc, frappe.generate_hash = self._saved_frappe
+
+	def _update_existing(self, docstatus=1):
+		runner._write_row.dropped_fields = {}
+		self.seed_parent(
+			"Appraisal",
+			"HR-APR-2026-00011",
+			employee="HR-EMP-0001",
+			docstatus=docstatus,
+			appraisal_kra="stale-marker",
+		)
+		return runner._write_row(
+			"Appraisal",
+			"HR-APR-2026-00011",
+			{
+				"employee": "HR-EMP-0001",
+				"docstatus": docstatus,
+				"appraisal_kra": [dict(row) for row in self.KRA_ROWS],
+			},
+		)
+
+	def test_an_update_with_children_writes_instead_of_raising_1064(self):
+		self.assertEqual(self._update_existing(), "updated")
+		for _doctype, _name, payload in self.store.updates:
+			for value in payload.values():
+				self.assertNotIsInstance(value, list, "a list reached db.set_value — SQL 1064")
+
+	def test_children_are_replaced_not_appended(self):
+		self._update_existing()
+		self.assertIn(
+			(
+				"Appraisal KRA",
+				{"parent": "HR-APR-2026-00011", "parenttype": "Appraisal", "parentfield": "appraisal_kra"},
+			),
+			getattr(self.store, "child_deletes", []),
+			"old child rows must be deleted before the source's are written",
+		)
+		rows = list(self.store.rows("Appraisal KRA").values())
+		self.assertEqual(len(rows), 2)
+		self.assertEqual([row["idx"] for row in rows], [1, 2], "order comes from the list")
+		for row in rows:
+			self.assertEqual(row["parent"], "HR-APR-2026-00011")
+			self.assertEqual(row["parentfield"], "appraisal_kra")
+
+	def test_replaced_children_carry_the_parents_docstatus(self):
+		"""The insert path leaves children at 0 under a submitted parent (a
+		known cosmetic wart); the replacement path should at least not add a
+		second inconsistency of its own."""
+		self._update_existing(docstatus=1)
+		for row in self.store.rows("Appraisal KRA").values():
+			self.assertEqual(row["docstatus"], 1)
+
+	def test_the_flat_fields_still_reach_set_value(self):
+		self._update_existing()
+		flats = [p for d, n, p in self.store.updates if d == "Appraisal"]
+		self.assertTrue(any("employee" in p for p in flats), "flat fields must still be updated")
 
 
 class TestTheHubCanRunHrOnItsOwn(_RunnerTestCase):
