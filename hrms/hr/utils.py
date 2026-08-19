@@ -57,23 +57,30 @@ HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 # HR-wide sight of other people's requests or pay. Administrator is handled
 # separately by each scope as exceptional framework authority.
 #
-# HR_ROLES stays as it is for the WRITE-side fences (filing for someone else,
+# HR_ROLES is WRITE-side ONLY (filing for someone else,
 # approver assignment), where System Manager acting as an operator is expected.
 HR_SEE_ALL_ROLES = frozenset({"HR User", "HR Manager"})
 
 
 def is_hr_operator(user: str | None = None) -> bool:
-	"""The HR_ROLES rule as a predicate — content/operations authority
-	(SOP management, the HR issue board, staff-lockdown guards).
+	"""Who may USE and SEE the HR-only surfaces: the issue board, SOPs, the
+	full HR directory, 1-on-1 records, WPS files, and the PWA's `is_hr` flag.
 
-	The ONE implementation. Before this existed the same line lived in
-	sop_document_row_scope, employee_issue_row_scope AND the PWA hardcoded
-	its own copy of the role list — three chances to drift. Row scopes
-	delegate here and `get_current_user_info` ships the verdict to the
-	frontend as `is_hr`, so no JS carries a role list again.
+	HR User / HR Manager only — NOT HR_ROLES. Policy ruling 2026-08-19:
+	non-HR never sees HR-only surfaces, System Manager included. That
+	deliberately departs from the v15 production behaviour (which showed the
+	board to System Manager) and also cures v15's self-contradiction: SM
+	"must not see pay" yet could pull WPS salary files. HR_ROLES — which
+	keeps System Manager — now serves ONLY the write-side operator fences
+	below (filing on behalf, approver assignment), where SM acts without
+	seeing.
+
+	Kept as its own name rather than folded into `sees_all_employee_data`:
+	the two intents (operate HR content vs. see people's data) converged by
+	ruling, and the seam stays so a future ruling can split them again
+	without hunting call sites. Pinned by test_is_hr_single_source.
 	"""
-	user = user or frappe.session.user
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+	return sees_all_employee_data(user)
 
 
 def sees_all_employee_data(user: str | None = None) -> bool:

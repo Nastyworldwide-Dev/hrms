@@ -37,19 +37,37 @@ def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
 
 
 class TestTheTwoImplementations(unittest.TestCase):
-	def test_both_predicates_live_beside_their_role_sets(self):
+	def test_the_seeing_predicate_is_built_on_its_role_set(self):
 		tree = ast.parse(HR_UTILS.read_text())
-		for predicate, role_set in (
-			("is_hr_operator", "HR_ROLES"),
-			("sees_all_employee_data", "HR_SEE_ALL_ROLES"),
-		):
-			fn = _function(tree, predicate)
-			names = {node.id for node in ast.walk(fn) if isinstance(node, ast.Name)}
-			self.assertIn(
-				role_set,
-				names,
-				f"{predicate} must be built on {role_set} — it IS the implementation",
-			)
+		fn = _function(tree, "sees_all_employee_data")
+		names = {node.id for node in ast.walk(fn) if isinstance(node, ast.Name)}
+		self.assertIn("HR_SEE_ALL_ROLES", names)
+
+	def test_hr_surfaces_never_open_to_system_manager(self):
+		"""Policy ruling 2026-08-19 (explicit, three times): non-HR NEVER sees
+		HR-only surfaces — the Issue Board, SOPs, the HR directory, 1-on-1s,
+		WPS salary files. is_hr_operator gates all of them, so it must NOT be
+		built on HR_ROLES (which includes System Manager for WRITE-side
+		operator fences); it delegates to sees_all_employee_data, the
+		HR User / HR Manager rule. This deliberately departs from v15, which
+		let System Manager see the board — and it also cures v15's own
+		self-contradiction, where SM 'must not see pay' yet could pull WPS
+		salary files."""
+		tree = ast.parse(HR_UTILS.read_text())
+		fn = _function(tree, "is_hr_operator")
+		names = {node.id for node in ast.walk(fn) if isinstance(node, ast.Name)}
+		self.assertNotIn(
+			"HR_ROLES",
+			names,
+			"is_hr_operator built on HR_ROLES hands every HR-only SURFACE to "
+			"System Manager — the exact lingering breach the ruling closed",
+		)
+		calls = {
+			node.func.id
+			for node in ast.walk(fn)
+			if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+		}
+		self.assertIn("sees_all_employee_data", calls)
 
 
 class TestApiShipsTheVerdict(unittest.TestCase):
