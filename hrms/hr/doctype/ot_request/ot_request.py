@@ -145,6 +145,10 @@ def get_replacement_leave_bank(employee: str, month_start=None, exclude_request:
 	hours consumed by claims filed against that month (drafts included, so a
 	pending claim can't be double-funded)."""
 	logger.info("[ot_request] bank query %s month=%s exclude=%s", employee, month_start, exclude_request)
+	# CALENDAR month by decision (2026-08-19): only the FILING window follows
+	# the 16th-to-15th payroll cycle (utils/filing_window.py). The bank month
+	# and the OT cap keep the 1st-to-31st counting the older branches always
+	# had — the cutoff was the only thing staff ever reported.
 	month_start = get_first_day(month_start or getdate())
 	month_end = get_last_day(month_start)
 

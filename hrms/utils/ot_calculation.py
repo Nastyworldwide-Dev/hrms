@@ -348,6 +348,9 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 		# Accumulated across the whole queried range it silently tightened for
 		# any range spanning two months — a 26th-to-25th payroll period reached
 		# the cap once for what are two distinct months' entitlements.
+		# CALENDAR month by decision (2026-08-19): the 16th-to-15th payroll
+		# cycle governs only the filing window (utils/filing_window.py); the
+		# cap keeps the counting the older branches always had.
 		if (day.year, day.month) != cap_month:
 			cap_month = (day.year, day.month)
 			monthly_ot_hours = 0.0
