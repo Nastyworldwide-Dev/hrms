@@ -15,11 +15,14 @@ export function sessionUser() {
 
 function handleLogin(response) {
 	if (response.message === "Logged In") {
-		userResource.reload()
-		employeeResource.reload()
-
 		session.user = sessionUser()
-		router.replace({ path: "/" })
+		console.info("[session] logged in as", session.user, "— full reload")
+		// FULL page load, not router.replace: module-scope auto resources
+		// already fired (and were held by the guest gate) while this tab was
+		// on the login page — only a fresh evaluation of the import graph
+		// refetches them with the session cookie present. Mirrors what
+		// logout always did with window.location.reload().
+		window.location.replace("/hrms")
 	}
 }
 

@@ -17,10 +17,12 @@ const read = (p) =>
 // side-effect module evaluated before anything that can declare a resource.
 
 test("resourceConfig sets the fetcher at module scope", () => {
+	// guestQuiet wraps OUTSIDE loud: a held guest request must never reach
+	// the reporter. Order matters and is pinned.
 	const source = read("../src/resourceConfig.js")
 	assert.match(
 		source,
-		/setConfig\("resourceFetcher", makeLoudRequest\(frappeRequest\)\)/
+		/setConfig\("resourceFetcher", guestQuiet\(makeLoudRequest\(frappeRequest\)\)\)/
 	)
 })
 

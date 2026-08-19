@@ -27,4 +27,36 @@
 import { setConfig, frappeRequest } from "frappe-ui"
 import { makeLoudRequest } from "@/utils/loudRequest"
 
-setConfig("resourceFetcher", makeLoudRequest(frappeRequest))
+// The only resources the LOGIN PAGE itself needs — both are allow_guest on
+// the server. Everything else the app declares assumes a session.
+const GUEST_URLS = new Set([
+	"hrms.api.system_settings.get_user_pass_login_disabled",
+	"hrms.api.oauth.oauth_providers",
+])
+
+// Guest gate, observed live on 2026-08-19: the module-scope auto resources
+// fire on the LOGIN page too, the server rightly answers 403 for a Guest, and
+// the loud-error seam then toasts "not permitted" over the login form —
+// correct plumbing, wrong audience. A Guest's non-login resources are simply
+// never sent: the returned promise stays pending, the resource stays
+// `loading`, nothing toasts. Correctness after login comes from
+// data/session.js, which performs a FULL page load on success so every
+// module-scope resource re-evaluates with the session cookie present
+// (pinned together with this file by login-guest-quiet.test.mjs).
+//
+// The cookie is read inline, never via data/session.js: importing that here
+// would pull the data modules into this file's import graph and re-create the
+// very evaluate-before-config race this module exists to close.
+function guestQuiet(fetcher) {
+	return (options) => {
+		const cookies = new URLSearchParams(document.cookie.split("; ").join("&"))
+		const user = cookies.get("user_id")
+		if ((!user || user === "Guest") && !GUEST_URLS.has(options.url)) {
+			console.info("[resourceConfig] guest session — holding", options.url)
+			return new Promise(() => {})
+		}
+		return fetcher(options)
+	}
+}
+
+setConfig("resourceFetcher", guestQuiet(makeLoudRequest(frappeRequest)))
