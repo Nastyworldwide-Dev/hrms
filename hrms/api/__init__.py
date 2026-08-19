@@ -471,6 +471,16 @@ APPROVER_FIELD_MAP = {
 	"Expense Claim": "expense_approver",
 }
 
+# SCOPING INVARIANT (2026-08-19, pinned by test_approval_scoping_invariant):
+# the system never GUESSES across a company boundary; a human may ASSIGN
+# across one. These queues key on approver fields HR filled in by hand, so
+# they carry NO company fence on purpose — the assignment IS the
+# authorization, and a fence here would strand every deliberate cross-company
+# assignment in a queue its owner can never see. The company-fenced path is
+# the remote-checkin queue, whose approver an ALGORITHM picks. If HR ever
+# wants same-company-only approvers, enforce it where the assignment is
+# written, not here.
+
 
 def get_filters(
 	doctype: str,
