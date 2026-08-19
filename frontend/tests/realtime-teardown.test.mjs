@@ -1,0 +1,77 @@
+import test from "node:test"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+
+import { useListUpdate } from "../src/composables/realtime.js"
+
+function fakeSocket() {
+	const handlers = []
+	return {
+		handlers,
+		emit() {},
+		on(event, fn) {
+			handlers.push({ event, fn })
+		},
+		off(event, fn) {
+			const i = handlers.findIndex((h) => h.event === event && h.fn === fn)
+			if (i !== -1) handlers.splice(i, 1)
+		},
+		fire(event, data) {
+			for (const h of [...handlers]) if (h.event === event) h.fn(data)
+		},
+	}
+}
+
+test("events for the doctype reach the callback; others do not", () => {
+	const socket = fakeSocket()
+	const seen = []
+	useListUpdate(socket, "Leave Application", (name) => seen.push(name))
+	socket.fire("list_update", { doctype: "Leave Application", name: "HR-LAP-1" })
+	socket.fire("list_update", { doctype: "Expense Claim", name: "EXP-1" })
+	assert.deepEqual(seen, ["HR-LAP-1"])
+})
+
+test("the returned detach removes exactly this handler, leaving siblings", () => {
+	const socket = fakeSocket()
+	const a = []
+	const b = []
+	const offA = useListUpdate(socket, "Shift Request", (n) => a.push(n))
+	useListUpdate(socket, "Attendance Request", (n) => b.push(n))
+	assert.equal(socket.handlers.length, 2)
+
+	offA()
+	assert.equal(socket.handlers.length, 1)
+	socket.fire("list_update", { doctype: "Shift Request", name: "SR-1" })
+	socket.fire("list_update", { doctype: "Attendance Request", name: "AR-1" })
+	assert.deepEqual(a, [])
+	assert.deepEqual(b, ["AR-1"])
+})
+
+test("re-registering after detach does not stack ghost handlers", () => {
+	const socket = fakeSocket()
+	const seen = []
+	const off1 = useListUpdate(socket, "OT Request", (n) => seen.push(n))
+	off1()
+	useListUpdate(socket, "OT Request", (n) => seen.push(n))
+	socket.fire("list_update", { doctype: "OT Request", name: "OT-1" })
+	assert.deepEqual(seen, ["OT-1"])
+})
+
+test("a missing socket is a no-op, not a crash", () => {
+	const off = useListUpdate(null, "Leave Application", () => {})
+	assert.equal(typeof off, "function")
+	off()
+})
+
+// Mutation pin: the behavioral tests above run outside a component, so they
+// cannot see the auto-detach wiring. This line is what makes remounted
+// components clean up — deleting it reverts the leak without failing a
+// behavioral test, so it is pinned textually.
+test("component-context auto-detach stays wired", () => {
+	const source = readFileSync(
+		fileURLToPath(new URL("../src/composables/realtime.js", import.meta.url)),
+		"utf8"
+	)
+	assert.match(source, /if \(getCurrentInstance\(\)\) onBeforeUnmount\(off\)/)
+})
