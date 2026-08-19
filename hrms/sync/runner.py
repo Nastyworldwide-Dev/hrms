@@ -131,6 +131,14 @@ MASTER_DOCTYPES = (
 	"Shift Location",
 	"Shift Type",
 	"Shift Schedule",
+	# The appraisal configuration chain, in link order: Appraisal Template's
+	# `goals` rows name a KRA, Appraisal points at both a template and a cycle.
+	# Masters, not mirror: HR own appraisal config on this hub post-cutover, so
+	# create-only is the right ceiling — same reasoning as Leave Policy above.
+	# The 20 Appraisals themselves are the mirror proper (STAMPED_DOCTYPES).
+	"KRA",
+	"Appraisal Template",
+	"Appraisal Cycle",
 )
 
 #: The mirror proper: stamped with provenance, held read-only by
@@ -167,6 +175,14 @@ STAMPED_DOCTYPES = (
 	# either could be judged.
 	"Attendance Request",
 	"Shift Request",
+	# Appraisals, mirrored from 2026-08-19 — the survey measured 20 on the
+	# source and the schema-gap ledger ruled them "Add before cutover". The KPI
+	# content lives entirely in child tables (KRA scores, evidence, scorecard),
+	# which is why Appraisal is also in CHILD_TABLE_DOCTYPES. Submitted ones
+	# arrive at docstatus 1 through the draft-then-set route like every other
+	# submittable here; `pip` and `second_validator` links that cannot resolve
+	# ride on `ignore_links` rather than blocking the row.
+	"Appraisal",
 )
 
 #: What a run pulls, in order: every master before every row that links to one.
@@ -203,6 +219,16 @@ ROW_DEPENDENCIES = {
 	"Leave Application": {"employee": "Employee", "leave_type": "Leave Type"},
 	"Attendance Request": {"employee": "Employee"},
 	"Shift Request": {"employee": "Employee", "shift_type": "Shift Type"},
+	"Appraisal Cycle": {"company": "Company"},
+	# Template and cycle both gated: an appraisal is scores AGAINST a template's
+	# KRAs inside a cycle's window — landed without either it reads as a filed
+	# review with no rubric. Both fields are optional on the source, and
+	# `missing_parents` only gates values that are actually set.
+	"Appraisal": {
+		"employee": "Employee",
+		"appraisal_cycle": "Appraisal Cycle",
+		"appraisal_template": "Appraisal Template",
+	},
 }
 
 
@@ -249,6 +275,8 @@ SYNC_DEPENDENCIES = {
 	"Leave Application": ("Employee", "Leave Type"),
 	"Attendance Request": ("Employee",),
 	"Shift Request": ("Employee", "Shift Type"),
+	"Appraisal Cycle": ("Company",),
+	"Appraisal": ("Employee", "Appraisal Cycle", "Appraisal Template"),
 }
 
 
@@ -395,6 +423,13 @@ CHILD_TABLE_DOCTYPES = frozenset(
 		# it routes nothing, so mirroring the tree without them would have looked
 		# like the fix and delivered none of it.
 		"Department",
+		# The appraisal chain: a template's `goals` ARE the rubric, a cycle's
+		# `appraisees` ARE its scope, and an Appraisal's scores, evidence and
+		# scorecard all live in its nine child tables — the parent row alone is
+		# a header. 20-odd extra `get_doc` round trips, the cheap half again.
+		"Appraisal Template",
+		"Appraisal Cycle",
+		"Appraisal",
 	}
 )
 
@@ -792,7 +827,14 @@ def _count_local_orphans(doctype: str, instance_name: str, seen: set) -> int:
 #: Doctypes carrying a `company` Link the SOURCE can filter on directly.
 #: `Employee Checkin` is absent because it has no such field — see `scope_filter`.
 COMPANY_SCOPED_DOCTYPES = frozenset(
-	{"Employee", "Attendance", "Leave Ledger Entry", "Shift Assignment", "Shift Schedule Assignment"}
+	{
+		"Employee",
+		"Attendance",
+		"Leave Ledger Entry",
+		"Shift Assignment",
+		"Shift Schedule Assignment",
+		"Appraisal",
+	}
 )
 
 #: An allow-list that filtered down to nothing must still be an allow-list. Sent

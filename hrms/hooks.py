@@ -393,6 +393,16 @@ doc_events = {
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
+	# Mirrored from 2026-08-19; same guard set as Attendance. The appraisal
+	# masters (KRA, Appraisal Template, Appraisal Cycle) stay unguarded —
+	# create-only, HR-owned here.
+	"Appraisal": {
+		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
+	},
 	# Holiday policy and shift planning. The MASTERS these point at — Holiday List,
 	# Shift Type, Shift Schedule — are deliberately NOT guarded: they are mirrored
 	# create-only and owned by HR here, so a policy change made on this hub must be

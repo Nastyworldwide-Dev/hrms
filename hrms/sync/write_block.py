@@ -61,6 +61,12 @@ MIRRORED_DOCTYPES = (
 	"Leave Application",
 	"Attendance Request",
 	"Shift Request",
+	# Mirrored from 2026-08-19. An appraisal edited on this hub during the
+	# parallel run would be invisible on the source and overwritten on the next
+	# pull — same single-writer rule as everything above. The appraisal MASTERS
+	# (KRA, Appraisal Template, Appraisal Cycle) are create-only and unguarded,
+	# HR-owned here like every other master.
+	"Appraisal",
 )
 
 ALLOW = "allow"

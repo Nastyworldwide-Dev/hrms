@@ -241,6 +241,13 @@ class TestHooksWiring(unittest.TestCase):
 			"on_trash",
 			"before_rename",
 		),
+		"Appraisal": (
+			"validate",
+			"before_update_after_submit",
+			"before_cancel",
+			"on_trash",
+			"before_rename",
+		),
 	}
 
 	def _events_carrying_guard(self, doctype):

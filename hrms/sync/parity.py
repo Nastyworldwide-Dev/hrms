@@ -43,6 +43,8 @@ MIRRORED_DOCTYPES = (
 	"Leave Application",
 	"Attendance Request",
 	"Shift Request",
+	# Mirrored from 2026-08-19, so its rows are stamped and countable.
+	"Appraisal",
 )
 
 
@@ -131,9 +133,10 @@ UNMIRRORED_CANDIDATES = (
 	"Expense Claim",
 	"Employee Advance",
 	"Travel Request",
-	# Performance and recruitment
-	"Appraisal",
-	"Appraisal Cycle",
+	# Recruitment. Appraisal and Appraisal Cycle have left this list — the
+	# survey measured 20 and 5 rows, the ledger ruled "Add before cutover", and
+	# both are mirrored since 2026-08-19 (Appraisal stamped, its config chain
+	# KRA / Appraisal Template / Appraisal Cycle create-only masters).
 	"Job Opening",
 	"Job Applicant",
 	"Interview",
