@@ -310,6 +310,17 @@ class TestWhatElseIsOnTheSource(unittest.TestCase):
 		for doctype in mod.UNMIRRORED_CANDIDATES:
 			self.assertNotIn(doctype, mod.MIRRORED_DOCTYPES)
 
+	def test_hub_native_doctypes_with_a_v15_twin_stay_surveyed(self):
+		"""Employee Issue and SOP Document are this fork's own doctypes — but
+		they exist on BOTH branches, and rows filed on the v15 production site
+		never cross (neither is mirrored). The survey count is the only thing
+		pricing what cutover would leave behind; the issue board 'why doesn't
+		it show what the other branch shows' confusion of 2026-08-19 was
+		exactly this blind spot."""
+		mod = _load(_FakeDB())
+		for doctype in ("Employee Issue", "SOP Document"):
+			self.assertIn(doctype, mod.UNMIRRORED_CANDIDATES)
+
 	def test_the_interco_child_table_stays_surveyed(self):
 		"""The Employee mirror drops child tables and the schema-gap report is
 		column-shaped, so `Employee Interco Allocation` rows on the source are

@@ -129,6 +129,13 @@ UNMIRRORED_CANDIDATES = (
 	# mirror nor the schema-gap report — a column-shaped detector cannot see a
 	# table. Counting rows here is the one place that blind spot shows up.
 	"Employee Interco Allocation",
+	# Hub-native doctypes with a v15 TWIN: the fork ships Employee Issue and
+	# SOP Document on both branches, so the production v15 site accumulates
+	# rows that never cross (neither doctype is mirrored). Surveying them
+	# prices what cutover would leave behind — the same argument that turned
+	# "should we bring appraisals?" into the number 20.
+	"Employee Issue",
+	"SOP Document",
 	# Expenses and claims
 	"Expense Claim",
 	"Employee Advance",
