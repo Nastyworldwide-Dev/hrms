@@ -75,3 +75,27 @@ test("component-context auto-detach stays wired", () => {
 	)
 	assert.match(source, /if \(getCurrentInstance\(\)\) onBeforeUnmount\(off\)/)
 })
+
+// Adversarial review proved (by executing a real mount) that Vue unsets the
+// component instance at an async hook's FIRST await — a useListUpdate call
+// after it silently skips teardown registration and leaks. ListView is the
+// caller that had exactly that shape, so its ordering is pinned.
+test("ListView registers its listener before any await in onMounted", () => {
+	const source = readFileSync(
+		fileURLToPath(new URL("../src/components/ListView.vue", import.meta.url)),
+		"utf8"
+	)
+	const mounted = source.slice(source.indexOf("onMounted(async"))
+	const listUpdateAt = mounted.indexOf("useListUpdate(")
+	const firstAwaitAt = mounted.indexOf("await ")
+	assert.ok(
+		listUpdateAt !== -1,
+		"ListView must register a list_update listener"
+	)
+	assert.ok(firstAwaitAt !== -1, "expected the workflow await to still exist")
+	assert.ok(
+		listUpdateAt < firstAwaitAt,
+		"useListUpdate must run BEFORE the first await — after it, " +
+			"getCurrentInstance() is null and the unmount teardown never registers"
+	)
+})

@@ -57,10 +57,7 @@
 					v-model="activeTab"
 				/>
 
-				<div
-					class="flex flex-col mt-5"
-					v-if="!documents.loading && documents.data?.length"
-				>
+				<div class="flex flex-col mt-5" v-if="!documents.loading && documents.data?.length">
 					<div
 						class="py-3 items-center justify-between border-b border-divider cursor-pointer"
 						v-for="link in documents.data"
@@ -400,12 +397,16 @@ watch(
 )
 
 onMounted(async () => {
+	// BEFORE the await: Vue unsets the component instance at an async hook's
+	// first await, so a useListUpdate call after it would find
+	// getCurrentInstance() null and its onBeforeUnmount teardown would never
+	// register — this exact line leaked one permanent handler per mount.
+	useListUpdate(socket, props.doctype, () => fetchDocumentList())
+
 	const workflow = useWorkflow(props.doctype)
 	await workflow.workflowDoc.promise
 	workflowStateField.value = workflow.getWorkflowStateField()
 	fetchDocumentList()
-
-	useListUpdate(socket, props.doctype, () => fetchDocumentList())
 })
 </script>
 
