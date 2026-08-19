@@ -14,7 +14,7 @@ import logging
 
 import frappe
 
-from hrms.hr.utils import HR_ROLES
+from hrms.hr.utils import is_hr_operator
 from hrms.overrides.company_scope import company_condition, company_visible
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ READ_PTYPES = frozenset({"read", "select"})
 
 
 def _unrestricted(user: str) -> bool:
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+	return is_hr_operator(user)
 
 
 def _active_employee(user: str):

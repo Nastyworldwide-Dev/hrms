@@ -4,7 +4,11 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { countByStatus, filterIssues, hasHRRole } from "../src/utils/issueBoard.js"
+import {
+	countByStatus,
+	filterIssues,
+	hasHRRole,
+} from "../src/utils/issueBoard.js"
 
 const ISSUES = [
 	{
@@ -87,12 +91,12 @@ test("countByStatus tallies statuses and open high-urgency", () => {
 	assert.equal(counts.high, 2)
 })
 
-test("hasHRRole gates the board to HR User / HR Manager / System Manager", () => {
-	assert.equal(hasHRRole(["Employee", "ESS", "HR User"]), true)
-	assert.equal(hasHRRole(["HR Manager"]), true)
-	assert.equal(hasHRRole(["System Manager"]), true)
-	assert.equal(hasHRRole(["Employee", "ESS"]), false)
-	assert.equal(hasHRRole([]), false)
+test("hasHRRole trusts only the server-computed is_hr flag", () => {
+	assert.equal(hasHRRole({ is_hr: true }), true)
+	assert.equal(hasHRRole({ is_hr: 1 }), true)
+	assert.equal(hasHRRole({ is_hr: false }), false)
+	assert.equal(hasHRRole({ roles: ["HR Manager"] }), false) // roles alone no longer decide
+	assert.equal(hasHRRole({}), false)
 	assert.equal(hasHRRole(undefined), false)
 })
 

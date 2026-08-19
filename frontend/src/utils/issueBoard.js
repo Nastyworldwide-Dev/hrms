@@ -3,11 +3,12 @@
 
 export const ISSUE_STATUSES = ["Open", "In Progress", "Completed"]
 
-// who gets the board instead of the personal list (presentation only —
-// server-side row scope is the real protection)
-export const HR_BOARD_ROLES = ["HR User", "HR Manager", "System Manager"]
-export const hasHRRole = (roles) =>
-	(roles || []).some((role) => HR_BOARD_ROLES.includes(role))
+// Who gets the board instead of the personal list (presentation only —
+// server-side row scope is the real protection). The verdict comes from the
+// server (get_current_user_info().is_hr, computed from the same HR_ROLES rule
+// the row scope enforces) — this file deliberately carries NO role list of its
+// own, so the two sides cannot drift. Pass userResource.data.
+export const hasHRRole = (user) => Boolean(user?.is_hr)
 
 export const filterIssues = (issues, { status, issueType, search } = {}) => {
 	const query = (search || "").toLowerCase().trim()

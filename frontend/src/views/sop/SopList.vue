@@ -17,7 +17,9 @@
 							:key="sop.name"
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
 							class="relative flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
-							style="transition: transform var(--motion-press), background-color var(--motion-press)"
+							style="
+								transition: transform var(--motion-press), background-color var(--motion-press);
+							"
 						>
 							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
 							<button
@@ -33,9 +35,7 @@
 								<span class="font-extrabold text-[13px] leading-tight">
 									{{ sop.title }}
 								</span>
-								<span
-									class="text-[10px] uppercase tracking-[0.08em] font-bold opacity-75"
-								>
+								<span class="text-[10px] uppercase tracking-[0.08em] font-bold opacity-75">
 									{{ scopeLabel(sop) }}
 								</span>
 							</span>
@@ -59,11 +59,7 @@
 
 				<!-- Sections -->
 				<div v-if="!isEmpty" class="flex flex-col gap-[18px]">
-					<div
-						v-for="section in sections"
-						:key="section.key"
-						class="flex flex-col gap-2"
-					>
+					<div v-for="section in sections" :key="section.key" class="flex flex-col gap-2">
 						<span class="m-kicker">{{ sectionLabel(section) }}</span>
 						<div class="flex flex-col border-t-2 border-divider">
 							<router-link
@@ -71,13 +67,13 @@
 								:key="sop.name"
 								:to="{ name: 'SopDetailView', params: { id: sop.name } }"
 								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline active:scale-[0.985] active:bg-ink-200"
-								style="transition: transform var(--motion-press), background-color var(--motion-press)"
+								style="
+									transition: transform var(--motion-press), background-color var(--motion-press);
+								"
 							>
 								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
 									<span class="flex items-center gap-1.5 min-w-0">
-										<span
-											class="font-extrabold text-[13px] text-inkbase truncate"
-										>
+										<span class="font-extrabold text-[13px] text-inkbase truncate">
 											{{ sop.title }}
 										</span>
 										<span
@@ -100,10 +96,7 @@
 								>
 									<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
 								</button>
-								<FeatherIcon
-									name="chevron-right"
-									class="h-4 w-4 flex-none text-ink-400"
-								/>
+								<FeatherIcon name="chevron-right" class="h-4 w-4 flex-none text-ink-400" />
 							</router-link>
 						</div>
 					</div>
@@ -116,15 +109,12 @@
 				>
 					<FeatherIcon name="search" class="h-[34px] w-[34px] text-ink-300" />
 					<div class="text-[13px]">
-						{{ __('No SOPs match “{0}”.', [query]) }}<br />
+						{{ __("No SOPs match “{0}”.", [query]) }}<br />
 						{{ __("Try a different search term.") }}
 					</div>
 				</div>
 				<ResourceError v-else-if="sops.error" :resource="sops" what="the SOP list" />
-				<EmptyState
-					v-else-if="!sops.loading"
-					:message="__('No SOPs published yet')"
-				/>
+				<EmptyState v-else-if="!sops.loading" :message="__('No SOPs published yet')" />
 			</div>
 
 			<!-- HR: create -->
@@ -179,11 +169,10 @@ const sops = createResource({
 	},
 })
 
-// the payload's is_hr is the single source of truth; the role check only
-// covers the first paint, before the request lands
-const isHR = computed(() =>
-	sops.data ? !!sops.data.is_hr : hasHRRole(userResource.data?.roles)
-)
+// the payload's is_hr is the single source of truth; the user flag (computed
+// server-side from the same HR_ROLES rule) only covers the first paint,
+// before the request lands
+const isHR = computed(() => (sops.data ? !!sops.data.is_hr : hasHRRole(userResource.data)))
 
 const grouped = computed(() => buildSopSections(sops.data, query.value))
 const pinned = computed(() => grouped.value.pinned)
@@ -197,9 +186,7 @@ const sectionLabel = (section) => {
 	if (!section.department) return __("General")
 	// an employee only ever gets their own department group — name it as such;
 	// HR gets every department, where the plain name reads better
-	return isHR.value
-		? section.department
-		: __("My Department — {0}", [section.department])
+	return isHR.value ? section.department : __("My Department — {0}", [section.department])
 }
 
 const openCreate = () => {

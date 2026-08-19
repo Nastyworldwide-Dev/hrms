@@ -9,7 +9,7 @@ from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, 
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
-from hrms.hr.utils import HR_ROLES, get_designated_approvers
+from hrms.hr.utils import HR_ROLES, get_designated_approvers, is_hr_operator
 from hrms.utils.identity import (
 	denial_message,
 	get_employee,
@@ -47,6 +47,11 @@ def get_current_user_info() -> dict:
 		"User", current_user, ["name", "first_name", "full_name", "user_image"], as_dict=True
 	)
 	user["roles"] = frappe.get_roles(current_user)
+	# The PWA renders its HR gates (issue board, SOP management) from this
+	# flag rather than carrying its own copy of the role list — the server's
+	# HR_ROLES rule is the one implementation (test_is_hr_single_source pins
+	# both ends).
+	user["is_hr"] = is_hr_operator(current_user)
 
 	return user
 

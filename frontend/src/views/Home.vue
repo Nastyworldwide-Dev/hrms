@@ -37,7 +37,7 @@ import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 const __ = inject("$translate")
 
-const isHR = computed(() => hasHRRole(userResource.data?.roles))
+const isHR = computed(() => hasHRRole(userResource.data))
 
 const baseQuickLinks = [
 	{

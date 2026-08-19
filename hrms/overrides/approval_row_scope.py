@@ -30,7 +30,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import HR_SEE_ALL_ROLES, get_direct_report_employees
+from hrms.hr.utils import get_direct_report_employees, sees_all_employee_data
 from hrms.utils.user_permission_scope import APPROVER_ROUTED_DOCTYPES
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ _SHARE_RIGHTS = {"read", "write", "share", "submit"}
 def _unrestricted(user: str) -> bool:
 	# HR User / HR Manager only — System Manager is a technical role and must
 	# not carry sight of other teams' leave, claims and shift requests.
-	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+	return sees_all_employee_data(user)
 
 
 def _own_employees(user: str) -> list[str]:

@@ -62,6 +62,32 @@ HR_ROLES = frozenset({"HR User", "HR Manager", "System Manager"})
 HR_SEE_ALL_ROLES = frozenset({"HR User", "HR Manager"})
 
 
+def is_hr_operator(user: str | None = None) -> bool:
+	"""The HR_ROLES rule as a predicate — content/operations authority
+	(SOP management, the HR issue board, staff-lockdown guards).
+
+	The ONE implementation. Before this existed the same line lived in
+	sop_document_row_scope, employee_issue_row_scope AND the PWA hardcoded
+	its own copy of the role list — three chances to drift. Row scopes
+	delegate here and `get_current_user_info` ships the verdict to the
+	frontend as `is_hr`, so no JS carries a role list again.
+	"""
+	user = user or frappe.session.user
+	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+
+
+def sees_all_employee_data(user: str | None = None) -> bool:
+	"""The HR_SEE_ALL_ROLES rule as a predicate — sight over other people's
+	confidential data (team browsing, leave/claims/shift approval scopes).
+	System Manager is deliberately excluded; see the comment on the set.
+
+	The ONE implementation, for the same reason as `is_hr_operator`: the
+	line was previously duplicated in team.py and approval_row_scope.py.
+	"""
+	user = user or frappe.session.user
+	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+
+
 class DuplicateDeclarationError(frappe.ValidationError):
 	pass
 

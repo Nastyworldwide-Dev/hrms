@@ -14,14 +14,14 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import HR_ROLES
+from hrms.hr.utils import is_hr_operator
 from hrms.overrides.company_scope import allowed_companies, company_condition, company_visible
 
 logger = logging.getLogger(__name__)
 
 
 def _unrestricted(user: str) -> bool:
-	return user == "Administrator" or bool(HR_ROLES & set(frappe.get_roles(user)))
+	return is_hr_operator(user)
 
 
 def _own_employees(user: str) -> list[str]:
