@@ -29,11 +29,7 @@
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
 							<div class="flex ml-auto gap-1">
-								<Button
-									v-if="allowPushNotifications"
-									variant="outline"
-									@click="router.push({ name: 'Settings' })"
-								>
+								<Button variant="outline" @click="router.push({ name: 'Settings' })">
 									<template #prefix>
 										<FeatherIcon name="settings" class="w-4" />
 									</template>
@@ -111,15 +107,11 @@ import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
 import { createResource, FeatherIcon, Button } from "frappe-ui"
 
-import { computed, inject, onMounted, ref, watch } from "vue"
+import { inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 import EmptyState from "@/components/EmptyState.vue"
 
-import {
-	unreadNotificationsCount,
-	notifications,
-	arePushNotificationsEnabled,
-} from "@/data/notifications"
+import { unreadNotificationsCount, notifications } from "@/data/notifications"
 
 const dayjs = inject("$dayjs")
 const router = useRouter()
@@ -188,10 +180,6 @@ function fallbackMessage(item) {
 	}
 	return __("New {0}", [docType])
 }
-
-const allowPushNotifications = computed(
-	() => window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data
-)
 
 const markAllAsRead = createResource({
 	url: "hrms.api.mark_all_notifications_as_read",

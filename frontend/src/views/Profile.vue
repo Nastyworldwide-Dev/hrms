@@ -104,9 +104,12 @@
 								</div>
 							</router-link>
 
-							<!-- Settings -->
+							<!-- Settings. Never gated: this screen also holds the theme switcher
+							     and the only path to Change Password, so hiding it behind the
+							     push-relay check (the old v-if) locked every user out of both
+							     on sites with no push relay configured. AppSettings itself
+							     degrades the push toggle when the relay is absent. -->
 							<router-link
-								v-if="allowPushNotifications"
 								:to="{ name: 'Settings' }"
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
@@ -186,8 +189,6 @@ import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
 
-import { arePushNotificationsEnabled } from "@/data/notifications"
-
 const DOCTYPE = "Employee"
 
 const socket = inject("$socket")
@@ -234,10 +235,6 @@ const profileLinks = [
 
 const isInfoModalOpen = ref(false)
 const selectedItem = ref(null)
-
-const allowPushNotifications = computed(
-	() => window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data
-)
 
 const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
 
