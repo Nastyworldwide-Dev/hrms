@@ -2,19 +2,19 @@
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
 			<div class="flex flex-col gap-5 w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7">
-				<!-- HR-only team selector -->
+				<!-- HR-only team selector: grouped by department, searchable,
+				     "My team" pinned first, team size beside each manager
+				     (HR request 2026-08-19; options built by utils/team.js,
+				     pinned by tests/manager-options.test.mjs) -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
 					<span class="m-kicker flex-none">{{ __("Team of") }}</span>
-					<select
-						v-model="selectedManager"
-						@change="fetchDay"
-						class="flex-1 min-w-0 bg-surface border border-divider text-inkbase font-semibold text-[12px] p-2 appearance-none"
-					>
-						<option value="">{{ __("My team") }}</option>
-						<option v-for="manager in teamManagers.data" :key="manager.name" :value="manager.name">
-							{{ manager.employee_name }}
-						</option>
-					</select>
+					<Autocomplete
+						class="flex-1 min-w-0"
+						:options="managerOptions"
+						:modelValue="selectedOption"
+						:placeholder="__('My team')"
+						@update:modelValue="onManagerPicked"
+					/>
 				</div>
 
 				<!-- day navigation -->
@@ -130,19 +130,29 @@
 </template>
 
 <script setup>
-import { FeatherIcon, LoadingIndicator } from "frappe-ui"
+import { Autocomplete, FeatherIcon, LoadingIndicator } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import { teamManagers, teamStatus } from "@/data/team"
-import { groupByDepartment } from "@/utils/team"
+import { buildManagerOptions, groupByDepartment } from "@/utils/team"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
 const selectedDate = ref(dayjs().format("YYYY-MM-DD"))
 const selectedManager = ref("")
+const selectedOption = ref(null) // null renders the placeholder: "My team"
+const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("My team")))
+
+function onManagerPicked(option) {
+	console.info("[TeamDashboard] team selected:", option?.label || "My team")
+	selectedOption.value = option
+	selectedManager.value = option?.value || ""
+	fetchDay()
+}
+
 const departmentGroups = computed(() => groupByDepartment(teamStatus.data?.members))
 
 const expandedRow = ref(null)

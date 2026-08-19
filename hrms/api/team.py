@@ -8,6 +8,7 @@ status. Users without reports get an empty payload, never an error.
 """
 
 import logging
+from collections import Counter
 
 import frappe
 from frappe import _
@@ -100,16 +101,18 @@ def get_managers() -> list[dict]:
 	member_filters = {"status": "Active", "reports_to": ("is", "set")}
 	if fence:
 		member_filters["company"] = ("in", fence)
-	manager_ids = frappe.get_all(
+	# Names, not a distinct pluck: the same rows give the manager list AND
+	# each team's headcount, which the selector shows next to the name.
+	reports = frappe.get_all(
 		"Employee",
 		filters=member_filters,
 		pluck="reports_to",
-		distinct=True,
 		ignore_permissions=True,
 	)
-	if not manager_ids:
+	if not reports:
 		return []
-	manager_filters = {"name": ("in", manager_ids), "status": "Active"}
+	team_sizes = Counter(reports)
+	manager_filters = {"name": ("in", list(team_sizes)), "status": "Active"}
 	if fence:
 		# a manager may sit in a holding company outside the fence while their
 		# reports are inside it; fencing the MEMBERS (above) is the data
@@ -118,10 +121,15 @@ def get_managers() -> list[dict]:
 	managers = frappe.get_all(
 		"Employee",
 		filters=manager_filters,
-		fields=["name", "employee_name"],
+		# department rides along so the selector can group by it (HR request
+		# 2026-08-19); mirrored department names carry the company suffix,
+		# which is what disambiguates same-named departments across companies
+		fields=["name", "employee_name", "department"],
 		order_by="employee_name asc",
 		ignore_permissions=True,
 	)
+	for manager in managers:
+		manager["team_size"] = team_sizes.get(manager["name"], 0)
 	logger.info("[team] managers list for %s: %d", frappe.session.user, len(managers))
 	return managers
 

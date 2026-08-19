@@ -7,6 +7,30 @@
 
 export const UNASSIGNED_DEPARTMENT = "No Department"
 
+// The "Team of" selector's option tree (HR request 2026-08-19): "My team"
+// pinned first as its own label-less group, then managers grouped by
+// department (alphabetical, No Department last — groupByDepartment's rule),
+// each labelled "Name · team size". Shaped for frappe-ui's Autocomplete,
+// which renders {group, items} natively and searches across labels.
+export const buildManagerOptions = (managers, myTeamLabel = "My team") => {
+	const pinned = {
+		group: myTeamLabel,
+		hideLabel: true,
+		items: [{ label: myTeamLabel, value: "" }],
+	}
+	const grouped = groupByDepartment(managers).map(({ department, members }) => ({
+		group: department,
+		items: members.map((manager) => ({
+			label: manager.team_size
+				? `${manager.employee_name} · ${manager.team_size}`
+				: manager.employee_name,
+			value: manager.name,
+		})),
+	}))
+	console.info("[team] manager options:", grouped.length, "department group(s)")
+	return [pinned, ...grouped]
+}
+
 export const groupByDepartment = (members) => {
 	const groups = new Map()
 	for (const member of members || []) {

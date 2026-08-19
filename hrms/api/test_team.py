@@ -116,13 +116,45 @@ class TestIsApproverRule(unittest.TestCase):
 		self.assertIn("reports_to", constants, "the reporting-manager route must be checked")
 
 	def test_is_whitelisted(self):
-		decorators = {
-			ast.unparse(d)
-			for d in self.fn.decorator_list
-		}
+		decorators = {ast.unparse(d) for d in self.fn.decorator_list}
 		self.assertTrue(
 			any("whitelist" in d for d in decorators),
 			"is_approver is called by the PWA and must be whitelisted",
+		)
+
+
+class TestManagerSelectorPayload(unittest.TestCase):
+	"""HR request 2026-08-19: the 'Team of' selector groups managers by
+	department and shows each team's size. Both facts must come from the
+	server in one payload — the frontend's grouping util is presentation
+	only and can't invent fields."""
+
+	def setUp(self):
+		self.tree = ast.parse(SOURCE.read_text())
+		self.fn = _function(self.tree, "get_managers")
+
+	def test_managers_carry_their_department(self):
+		constants = {
+			node.value
+			for node in ast.walk(self.fn)
+			if isinstance(node, ast.Constant) and isinstance(node.value, str)
+		}
+		self.assertIn(
+			"department",
+			constants,
+			"get_managers must return department — the selector groups by it",
+		)
+
+	def test_managers_carry_their_team_size(self):
+		constants = {
+			node.value
+			for node in ast.walk(self.fn)
+			if isinstance(node, ast.Constant) and isinstance(node.value, str)
+		}
+		self.assertIn(
+			"team_size",
+			constants,
+			"get_managers must return team_size — the selector shows it per manager",
 		)
 
 
