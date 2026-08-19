@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed, markRaw } from "vue"
+import { ref, inject, onMounted, computed, markRaw, watch } from "vue"
 
 import TabButtons from "@/components/TabButtons.vue"
 import RequestList from "@/components/RequestList.vue"
@@ -62,6 +62,16 @@ const __ = inject("$translate")
 const TAB_BUTTONS = computed(() =>
 	isApprover.data ? ["My Requests", "Team Requests", "History"] : ["My Requests"]
 )
+
+// The cached isApprover verdict hydrates async and can flip true -> false
+// after paint; without this clamp a user parked on a vanished tab renders an
+// empty panel (no v-if branch matches).
+watch(TAB_BUTTONS, (tabs) => {
+	if (!tabs.includes(activeTab.value)) {
+		console.info("[RequestPanel] active tab vanished, falling back:", activeTab.value)
+		activeTab.value = "My Requests"
+	}
+})
 
 const myRequests = computed(() =>
 	updateRequestDetails(
