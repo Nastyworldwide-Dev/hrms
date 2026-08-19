@@ -43,6 +43,49 @@ def has_team() -> bool:
 	return bool(frappe.db.exists("Employee", {"reports_to": employee, "status": "Active"}))
 
 
+#: The explicit approver fields on Employee — how leave, expense and shift
+#: requests route to a named person. Mirrors the triplets each doctype's
+#: validate_staff_approver call names (test_team pins the list).
+EMPLOYEE_APPROVER_FIELDS = ("leave_approver", "expense_approver", "shift_request_approver")
+
+#: The Department Approver child tables' parentfields. NOT symmetrical with the
+#: Employee fields on purpose: the shift table is `shift_request_approver`
+#: (singular) in setup.py, and renaming a deployed parentfield for symmetry
+#: would orphan every existing row.
+DEPARTMENT_APPROVER_PARENTFIELDS = ("leave_approvers", "expense_approvers", "shift_request_approver")
+
+
+@frappe.whitelist()
+def is_approver() -> bool:
+	"""Gate for the RequestPanel's Team tabs: does ANY approval work route here?
+
+	`has_team` is the wrong gate for those tabs — it is reports_to-shaped, and
+	an explicitly-assigned approver who manages nobody has a real queue while a
+	manager can exist without one. This covers every routing shape a request
+	takes to a person: HR sees all; attendance/OT/RL route to the reporting
+	manager (direct reports); leave/expense/shift route by the Employee
+	approver fields or the Department approver tables. Presentation gate only —
+	the queue endpoints enforce their own scope regardless.
+	"""
+	if _is_hr():
+		return True
+	user = frappe.session.user
+	employee = _my_employee()
+	if employee and frappe.db.exists("Employee", {"reports_to": employee, "status": "Active"}):
+		return True
+	for field in EMPLOYEE_APPROVER_FIELDS:
+		if frappe.db.exists("Employee", {field: user, "status": "Active"}):
+			return True
+	found = bool(
+		frappe.db.exists(
+			"Department Approver",
+			{"approver": user, "parentfield": ("in", DEPARTMENT_APPROVER_PARENTFIELDS)},
+		)
+	)
+	logger.debug("[team] is_approver via department tables for %s: %s", user, found)
+	return found
+
+
 @frappe.whitelist()
 def get_managers() -> list[dict]:
 	"""HR-only selector data: active employees with ≥1 active direct report.

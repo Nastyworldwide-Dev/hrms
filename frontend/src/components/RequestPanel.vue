@@ -35,6 +35,7 @@ import {
 } from "@/data/attendance"
 import { historyClaims, myClaims, teamClaims } from "@/data/claims"
 import { historyLeaves, myLeaves, teamLeaves } from "@/data/leaves"
+import { isApprover } from "@/data/team"
 import {
 	myOTRequests,
 	teamOTRequests,
@@ -55,7 +56,12 @@ const activeTab = ref("My Requests")
 const socket = inject("$socket")
 const __ = inject("$translate")
 
-const TAB_BUTTONS = ["My Requests", "Team Requests", "History"] // __("My Requests"), __("Team Requests"), __("History")
+// Team tabs only for people approval work can actually route to — everyone
+// else got a permanently empty "Team Requests" tab before this gate.
+// __("My Requests"), __("Team Requests"), __("History")
+const TAB_BUTTONS = computed(() =>
+	isApprover.data ? ["My Requests", "Team Requests", "History"] : ["My Requests"]
+)
 
 const myRequests = computed(() =>
 	updateRequestDetails(
