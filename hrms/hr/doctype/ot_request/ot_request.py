@@ -14,7 +14,7 @@ from hrms.hr.utils import (
 	validate_mandatory_attachment,
 	validate_self_submission,
 )
-from hrms.utils.filing_window import OT_FILING_GRACE_DAY, is_within_ot_filing_window
+from hrms.utils.filing_window import earliest_filable_date, is_within_ot_filing_window
 from hrms.utils.ot_calculation import get_day_ot_breakdown
 
 logger = logging.getLogger(__name__)
@@ -37,10 +37,10 @@ class OTRequest(Document):
 		self.validate_duplicate_request()
 
 	def validate_filing_window(self):
-		# unclaimed punch OT expires with its filing window — the month it was
-		# worked plus a grace window until the payroll cutoff of the following
-		# month (day OT_FILING_GRACE_DAY, inclusive). Amendments re-file a copy
-		# of an in-window original, so the window doesn't apply to them.
+		# HR's cutoff rule (2026-08-19): cycles run the 16th through the 15th,
+		# backdating reaches two cycles, and filing after a cycle's cutoff is
+		# NOT refused — it just pays in the next payroll. Amendments re-file a
+		# copy of an in-window original, so the window doesn't apply to them.
 		if not self.is_new() or self.amended_from:
 			return
 		today = getdate()
@@ -51,8 +51,8 @@ class OTRequest(Document):
 			logger.info("[ot_request] out-of-window filing rejected: %s for %s", self.employee, ot_date)
 			frappe.throw(
 				_(
-					"OT for {0} can no longer be claimed — OT must be requested within the month it was worked, or by day {1} of the following month."
-				).format(frappe.bold(str(ot_date)), frappe.bold(OT_FILING_GRACE_DAY))
+					"OT for {0} can no longer be claimed — backdating reaches two payroll cycles; the earliest claimable date today is {1}."
+				).format(frappe.bold(str(ot_date)), frappe.bold(str(earliest_filable_date(today))))
 			)
 
 	def set_compensation(self):
