@@ -12,9 +12,96 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
 		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
+		frm.add_custom_button(__("Provision Portal Accounts"), () => provision_portal_accounts(frm));
 		show_sync_headline(frm);
 	},
 });
+
+// Mirrored employees arrive with no User and no password — SSO is the only
+// self-service door. This creates the missing hub accounts (welcome email sets
+// the first password) in batches, and names the employees who can NEVER log in
+// because the source holds no company_email for them.
+function provision_portal_accounts(frm) {
+	frappe.call({
+		method: "hrms.sync.provisioning.preview_portal_accounts",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Checking who is missing an account…"),
+		callback: (r) => {
+			const preview = r.message || {};
+			console.info("[ERPInstance] provisioning preview:", preview);
+			const no_email_rows = (preview.no_email || [])
+				.map((row) => {
+					console.info("[ERPInstance] no company email:", row.employee);
+					return `<li>${frappe.utils.escape_html(row.employee_name || row.employee)}</li>`;
+				})
+				.join("");
+			const summary = [
+				`<p>${__("Accounts to create: {0}", [`<b>${preview.to_create || 0}</b>`])}</p>`,
+				`<p class="text-muted">${__("Already linked: {0} · User exists, links on next login: {1}", [
+					preview.linked || 0,
+					preview.user_exists || 0,
+				])}</p>`,
+				no_email_rows
+					? `<p>${__("No company email on the source — these people can NEVER log in until HR fills it in over there:")}</p><ul>${no_email_rows}</ul>`
+					: "",
+			].join("");
+
+			if (!preview.to_create) {
+				frappe.msgprint({
+					title: __("Nothing to provision"),
+					indicator: no_email_rows ? "orange" : "green",
+					message:
+						summary +
+						`<p>${__("Every employee with a company email already has an account.")}</p>`,
+				});
+				return;
+			}
+
+			frappe.confirm(
+				summary +
+					`<p>${__(
+						"Each new user receives the standard welcome email to set their own password."
+					)}</p>`,
+				() => run_provisioning_batches(frm),
+				null,
+				__("Create {0} portal account(s)?", [preview.to_create])
+			);
+		},
+	});
+}
+
+function run_provisioning_batches(frm, totals = { created: 0, failed: [] }) {
+	frappe.call({
+		method: "hrms.sync.provisioning.provision_portal_accounts",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Creating accounts… ({0} done)", [totals.created]),
+		callback: (r) => {
+			const result = r.message || {};
+			totals.created += result.created || 0;
+			totals.failed.push(...(result.failed || []));
+			console.info("[ERPInstance] provisioning batch:", result, "totals:", totals);
+			if (result.remaining > 0 && result.created > 0) {
+				run_provisioning_batches(frm, totals);
+				return;
+			}
+			const failed_rows = totals.failed
+				.map(
+					(row) =>
+						`<li>${frappe.utils.escape_html(row.employee)} — ${frappe.utils.escape_html(row.error)}</li>`
+				)
+				.join("");
+			frappe.msgprint({
+				title: __("Provisioning finished"),
+				indicator: totals.failed.length ? "orange" : "green",
+				message:
+					`<p>${__("Created {0} account(s); welcome emails are on their way.", [totals.created])}</p>` +
+					(failed_rows ? `<p>${__("Could not create:")}</p><ul>${failed_rows}</ul>` : ""),
+			});
+		},
+	});
+}
 
 //: canonical gap prefix -> what an operator should read it as
 const GAP_KINDS = {
