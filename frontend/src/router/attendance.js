@@ -36,11 +36,9 @@ const routes = [
 		path: "/shift-assignments",
 		component: () => import("@/views/attendance/ShiftAssignmentList.vue"),
 	},
-	{
-		name: "ShiftAssignmentFormView",
-		path: "/shift-assignments/new",
-		component: () => import("@/views/attendance/ShiftAssignmentForm.vue"),
-	},
+	// No FormView route: shift assignments are made by HR/rules on Desk, and
+	// nothing in the app ever linked to /shift-assignments/new. The shared
+	// ShiftAssignmentForm.vue component stays — DetailView renders it.
 	{
 		name: "ShiftAssignmentDetailView",
 		path: "/shift-assignments/:id",

@@ -993,11 +993,6 @@ def get_expense_claim_summary(employee: str | None = None) -> dict:
 
 
 @frappe.whitelist()
-def get_expense_type_description(expense_type: str) -> str:
-	return frappe.db.get_value("Expense Claim Type", expense_type, "description")
-
-
-@frappe.whitelist()
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
 
@@ -1033,35 +1028,11 @@ def get_expense_approval_details(employee: str) -> dict:
 	)
 
 
-# Employee Advance
-@frappe.whitelist()
-def get_employee_advance_balance(employee: str) -> list[dict]:
-	_ensure_own_employee_or_permitted(employee)
-	Advance = frappe.qb.DocType("Employee Advance")
-
-	advances = (
-		frappe.qb.from_(Advance)
-		.select(
-			Advance.name,
-			Advance.employee,
-			Advance.status,
-			Advance.purpose,
-			Advance.paid_amount,
-			(Advance.paid_amount - (Advance.claimed_amount + Advance.return_amount)).as_("balance_amount"),
-			Advance.posting_date,
-			Advance.currency,
-		)
-		.where(
-			(Advance.docstatus == 1)
-			& (Advance.paid_amount)
-			& (Advance.employee == employee)
-			# don't need claimed & returned advances, only partly or completely paid ones
-			& (Advance.status.isin(["Paid", "Partially Paid", "Unpaid"]))
-		)
-		.orderby(Advance.posting_date, order=Order.desc)
-	).run(as_dict=True)
-
-	return advances
+# Employee Advance intentionally has no PWA endpoint: the doctype is
+# read-only company-wide by policy (patches/v15_112_0) — staff may not
+# request advances and the company does not issue them. The old
+# get_employee_advance_balance reader had no caller anywhere and was
+# removed with the dead ShiftAssignmentFormView route on 2026-08-19.
 
 
 # Company
