@@ -310,6 +310,14 @@ class TestWhatElseIsOnTheSource(unittest.TestCase):
 		for doctype in mod.UNMIRRORED_CANDIDATES:
 			self.assertNotIn(doctype, mod.MIRRORED_DOCTYPES)
 
+	def test_the_interco_child_table_stays_surveyed(self):
+		"""The Employee mirror drops child tables and the schema-gap report is
+		column-shaped, so `Employee Interco Allocation` rows on the source are
+		invisible to both. The survey count is the ONLY detector that can see
+		them — removing it from the candidates reopens the blind spot."""
+		mod = _load(_FakeDB())
+		self.assertIn("Employee Interco Allocation", mod.UNMIRRORED_CANDIDATES)
+
 	def test_a_doctype_with_rows_is_reported_as_a_gap(self):
 		mod = _load(_FakeDB())
 		client = _FakeClient({"Salary Structure": 12})

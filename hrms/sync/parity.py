@@ -121,6 +121,12 @@ UNMIRRORED_CANDIDATES = (
 	"Employee Promotion",
 	"Employee Transfer",
 	"Employee Grievance",
+	# A CHILD table, and the only one surveyed. The Employee mirror drops child
+	# tables (`_mirror_payload` keeps them for CHILD_TABLE_DOCTYPES only), so
+	# interco cost allocations riding on source Employees cross neither the
+	# mirror nor the schema-gap report — a column-shaped detector cannot see a
+	# table. Counting rows here is the one place that blind spot shows up.
+	"Employee Interco Allocation",
 	# Expenses and claims
 	"Expense Claim",
 	"Employee Advance",
