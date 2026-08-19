@@ -534,7 +534,11 @@ def get_shift_request_approvers(employee: str) -> str | list[str]:
 
 	department_approvers = []
 	if department:
-		frappe.has_permission("Department", "read", department, throw=True)
+		# NO Department read demand here (upstream v16 added one; v15 never had
+		# it). The own-employee fence above is the authorization, and this list
+		# is exactly what the save-time fence reads permissionlessly — a
+		# bare-Employee user must be able to see who they may route to.
+		# Pinned by test_self_service_department_reads.
 		department_approvers = get_department_approvers(department, "shift_request_approver")
 		if not shift_request_approver:
 			shift_request_approver = frappe.db.get_value(
@@ -799,7 +803,8 @@ def get_leave_approval_details(employee: str) -> dict:
 	)
 
 	if not leave_approver and department:
-		frappe.has_permission("Department", "read", department, throw=True)
+		# No Department read demand — see get_shift_request_approvers; pinned
+		# by test_self_service_department_reads.
 		leave_approver = frappe.db.get_value(
 			"Department Approver",
 			{"parent": department, "parentfield": "leave_approvers", "idx": 1},
@@ -1013,7 +1018,8 @@ def get_expense_approval_details(employee: str) -> dict:
 	)
 
 	if not expense_approver and department:
-		frappe.has_permission("Department", "read", department, throw=True)
+		# No Department read demand — see get_shift_request_approvers; pinned
+		# by test_self_service_department_reads.
 		expense_approver = frappe.db.get_value(
 			"Department Approver",
 			{"parent": department, "parentfield": "expense_approvers", "idx": 1},
