@@ -77,6 +77,60 @@ class TestApiShipsTheVerdict(unittest.TestCase):
 		)
 
 
+class TestNoStrayCopiesAnywhere(unittest.TestCase):
+	"""Repo-wide sweep: the role-set intersection may be WRITTEN only in
+	hr/utils.py. Everywhere else must delegate — the adversarial review of the
+	first consolidation pass found four more hand copies (ot_row_scope,
+	report_scope, employee_one_on_one, wps) plus a shadow HR_ROLES tuple, so a
+	per-site cleanup provably does not stay clean without this sweep."""
+
+	ALLOWED = frozenset({HR_UTILS.resolve()})
+	ROLE_SET_NAMES = frozenset({"HR_ROLES", "HR_SEE_ALL_ROLES"})
+
+	def _module_files(self):
+		for path in ROOT.rglob("*.py"):
+			if "__pycache__" in path.parts or path.resolve() in self.ALLOWED:
+				continue
+			if path.name.startswith("test_") or path.parts[-2] == "tests":
+				continue
+			yield path
+
+	def test_no_intersection_outside_the_home_module(self):
+		offenders = []
+		for path in self._module_files():
+			tree = ast.parse(path.read_text())
+			for node in ast.walk(tree):
+				if (
+					isinstance(node, ast.BinOp)
+					and isinstance(node.op, ast.BitAnd)
+					and any(isinstance(n, ast.Name) and n.id in self.ROLE_SET_NAMES for n in ast.walk(node))
+				):
+					offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+		self.assertEqual(
+			offenders,
+			[],
+			"role-set intersections re-implemented outside hr/utils.py — "
+			"delegate to is_hr_operator / sees_all_employee_data instead",
+		)
+
+	def test_no_shadow_role_set_constants(self):
+		offenders = []
+		for path in self._module_files():
+			tree = ast.parse(path.read_text())
+			for node in ast.walk(tree):
+				if isinstance(node, ast.Assign) and any(
+					isinstance(t, ast.Name) and t.id in self.ROLE_SET_NAMES for t in node.targets
+				):
+					offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+		self.assertEqual(
+			offenders,
+			[],
+			"a local HR_ROLES / HR_SEE_ALL_ROLES shadows the real sets in "
+			"hr/utils.py — wps.py's private tuple already drifted once (it "
+			"reordered the roles); import the predicate instead",
+		)
+
+
 class TestFrontendCarriesNoRoleList(unittest.TestCase):
 	def test_issue_board_js_reads_the_flag_not_a_list(self):
 		source = ISSUE_BOARD_JS.read_text()

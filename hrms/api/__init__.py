@@ -9,7 +9,7 @@ from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, 
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
-from hrms.hr.utils import HR_ROLES, get_designated_approvers, is_hr_operator
+from hrms.hr.utils import get_designated_approvers, is_hr_operator
 from hrms.utils.identity import (
 	denial_message,
 	get_employee,
@@ -89,7 +89,11 @@ STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", 
 
 @frappe.whitelist()
 def get_all_employees() -> list[dict]:
-	if HR_ROLES & set(frappe.get_roles()):
+	# is_hr_operator, not a hand-rolled intersection. One reachable delta from
+	# the old `HR_ROLES & roles` body: Administrator now gets the HR field set
+	# instead of the PDPA-minimal one — consistent with every other predicate,
+	# where Administrator is exceptional framework authority.
+	if is_hr_operator():
 		fields = [
 			"name",
 			"employee_name",

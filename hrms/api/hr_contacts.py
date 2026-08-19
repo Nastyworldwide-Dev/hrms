@@ -19,7 +19,13 @@ from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
 
-HR_ROLES = ("HR Manager", "HR User")
+# Which roles qualify someone to be PUBLISHED as an HR contact — a curation
+# rule owned here, read by both the listing filter below and the HR Contact
+# doctype's validate (test_hr_contact pins the pairing). Deliberately NOT one
+# of the authorization predicates in hr/utils: sharing a member set with
+# HR_SEE_ALL_ROLES today does not make "who may be a contact" the same
+# decision as "who sees all employee data".
+HR_CONTACT_ROLES = ("HR Manager", "HR User")
 _CONTACT_FIELDS = [
 	"name",
 	"employee_name",
@@ -131,7 +137,7 @@ def list_hr_contacts() -> list[dict]:
 		GROUP BY e.name, hc.display_order
 		ORDER BY hc.display_order ASC, e.name ASC
 		""",
-		{"roles": HR_ROLES},
+		{"roles": HR_CONTACT_ROLES},
 		as_dict=True,
 	)
 	cards = [_to_contact_card(r) for r in rows if r]
@@ -172,7 +178,7 @@ def employee_with_hr_role_query(
 		LIMIT %(start)s, %(page_len)s
 		""",
 		{
-			"roles": HR_ROLES,
+			"roles": HR_CONTACT_ROLES,
 			"txt": f"%{txt or ''}%",
 			"start": int(start) if start else 0,
 			"page_len": int(page_len) if page_len else 20,

@@ -7,9 +7,9 @@ import frappe
 from frappe import _
 from frappe.utils import flt, get_datetime, getdate
 
-logger = logging.getLogger(__name__)
+from hrms.hr.utils import is_hr_operator
 
-HR_ROLES = ("System Manager", "HR Manager", "HR User")
+logger = logging.getLogger(__name__)
 
 
 def build_sif_content(
@@ -133,7 +133,6 @@ def get_wps_sif(payroll_entry: str, employer_unique_id: str, payer_bank_code: st
 
 
 def _check_access():
-	user = frappe.session.user
-	if user == "Administrator" or set(HR_ROLES) & set(frappe.get_roles(user)):
+	if is_hr_operator(frappe.session.user):
 		return
 	frappe.throw(_("You are not permitted to generate WPS files."), frappe.PermissionError)

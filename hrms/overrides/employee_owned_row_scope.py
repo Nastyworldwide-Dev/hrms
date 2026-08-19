@@ -55,7 +55,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import HR_SEE_ALL_ROLES, get_direct_report_employees
+from hrms.hr.utils import get_direct_report_employees, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies, company_visible
 
 logger = logging.getLogger(__name__)
@@ -140,10 +140,10 @@ def _is_administrator(user: str) -> bool:
 
 
 def _is_hr(user: str) -> bool:
-	# HR User / HR Manager only. These doctypes carry pay, benefits, promotions
-	# and PIPs, so the technical System Manager role must not confer sight of
-	# them; a System Manager who needs HR data holds an HR role too.
-	return bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+	# HR User / HR Manager only (System Manager must not see pay/PIPs). The
+	# delegate also answers True for Administrator, which the old body did not
+	# — reachably identical, as both call sites check _is_administrator first.
+	return sees_all_employee_data(user)
 
 
 def _own_employees(user: str) -> list[str]:

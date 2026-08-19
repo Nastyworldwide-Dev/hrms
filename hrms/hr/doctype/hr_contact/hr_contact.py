@@ -7,9 +7,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-logger = logging.getLogger(__name__)
+from hrms.api.hr_contacts import HR_CONTACT_ROLES
 
-HR_ROLES = {"HR Manager", "HR User"}
+logger = logging.getLogger(__name__)
 
 
 class HRContact(Document):
@@ -22,7 +22,7 @@ class HRContact(Document):
 			frappe.throw(_("Employee {0} has no linked User account.").format(self.employee))
 
 		roles = set(frappe.get_roles(user_id))
-		if not roles & HR_ROLES:
+		if not roles & set(HR_CONTACT_ROLES):
 			frappe.throw(
 				_(
 					"Employee {0} (user {1}) does not have an HR role. "

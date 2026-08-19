@@ -7,13 +7,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-logger = logging.getLogger(__name__)
+from hrms.hr.utils import is_hr_operator
 
-HR_ROLES = ("System Manager", "HR Manager", "HR User")
+logger = logging.getLogger(__name__)
 
 
 def _has_hr_access(user: str) -> bool:
-	return user == "Administrator" or bool(set(HR_ROLES) & set(frappe.get_roles(user)))
+	return is_hr_operator(user)
 
 
 def _get_own_employees(user: str) -> list[str]:

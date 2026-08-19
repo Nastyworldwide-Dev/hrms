@@ -23,7 +23,7 @@ import logging
 
 import frappe
 
-from hrms.hr.utils import HR_SEE_ALL_ROLES
+from hrms.hr.utils import sees_all_employee_data
 from hrms.utils.identity import get_employee
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 def is_hr(user: str | None = None) -> bool:
 	"""HR User / HR Manager, or Administrator. System Manager is not HR."""
-	user = user or frappe.session.user
-	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+	return sees_all_employee_data(user)
 
 
 def apply_employee_scope(filters: dict | None, employee_field: str = "employee") -> dict | None:

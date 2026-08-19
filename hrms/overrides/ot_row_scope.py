@@ -13,7 +13,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import HR_SEE_ALL_ROLES
+from hrms.hr.utils import sees_all_employee_data
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def _unrestricted(user: str) -> bool:
 	# HR User / HR Manager only — System Manager is a technical role and must
 	# not see other teams' OT and replacement-leave claims.
-	return user == "Administrator" or bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+	return sees_all_employee_data(user)
 
 
 def _own_employees(user: str) -> list[str]:
