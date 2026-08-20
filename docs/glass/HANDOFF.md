@@ -1,21 +1,23 @@
 # HANDOFF
-prompt:   4.3 (tab bar, side nav, More)
+prompt:   4.4 (phase 4 complete — shell done)
 status:   done
-commit:   71e1de252 on nz-glass
-files:    frontend/src/data/navItems.js (TAB_ITEMS 6 → 5)
-          frontend/src/components/BottomTabs.vue (floating pill)
-          frontend/src/components/SideNav.vue (glass, two groups per §20.2)
-          frontend/src/views/More.vue (GListPanel + GListRow)
-          frontend/src/theme/glass-components.css (tab bar + side nav)
-          design/gates/usage.mjs (direct-import rule tightened)
-verify:   cd frontend && yarn gates && yarn build
-flags:    FLOATING PILL WORKS WITHOUT REPLACING ion-tab-bar — the host is light DOM, so
-          position/inset/radius/backdrop-filter are ours; only the interior needed
-          custom properties. Per-tab navigation stacks untouched
-          BRIEF WAS WRONG TWICE: TAB_ITEMS had 6 entries not 8; and §13.1's PAY has no
-          route — no salary-slip screen exists, building one is out of scope (§1).
-          Expenses takes the 4th slot. DECISION 2 + the PAY substitution both pending P&C
-          Remote Approvals had NO entry in any nav surface — URL-only. Now behind More per §13.1
-          usage gate fired on comment prose for the 3rd time in this project; direct-import
-          now matches real import/@import only, verified against both forms
-next:     phase 5 — the 41 screens. Usage gate should flip to --strict at its start
+commit:   3a7b1df5c on nz-glass
+files:    design/gates/usage.mjs (views strict)
+          design/gates/surfaces.mjs (rebuilt: counts what renders)
+          design/gates/run.mjs (summary line)
+          docs/glass/phase5-plan.md
+verify:   cd frontend && yarn gates
+flags:    SURFACE COUNTS: 9 tab destinations at 1/6 (chrome only), More at 2/6, everything
+          else 0. NOTHING exceeds 6 — content counts are 0 because phase 5 has not composed
+          the components yet, which is the expected state, not a passing grade
+          §15.2 FLATTENING now ASSERTED not remembered: GBalanceGrid 1 (was 4), GStatPanel 1
+          (was 3), GListPanel 1, and four GIssueCards still 4. Always fails if broken
+          surfaces gate left REPORT-ONLY: it has nothing to measure until screens compose
+          components. Flip to --strict when batch 1 lands, not before
+          counter bug fixed: the router parse sliced past TabbedView's children and gave the
+          tab bar to Login/ForgotPassword/ChangePassword/AppSettings
+          28 of 38 screens have NO §12 anatomy. HRIssueBoard and expense_claim/Dashboard
+          need a ruling before their batch; the rest genuinely follow settled patterns
+          5 files still use frappe-ui Dialog and must swap to GModal — FormView.vue is the
+          one that matters, it backs all 7 form screens
+next:     phase 5 batch 1 (Home), then flip surfaces to --strict
