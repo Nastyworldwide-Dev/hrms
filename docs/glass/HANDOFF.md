@@ -1,11 +1,12 @@
 # HANDOFF
-prompt:   1.3
+prompt:   1.4
 status:   done
-commit:   f50c29ee2 on nz-glass
-files:    frontend/src/main.js
-          frontend/src/data/theme.js
-          frontend/tailwind.config.js
-verify:   cd frontend && yarn build && grep -c -- '--g-' ../hrms/public/frontend/assets/index-*.css
-flags:    colors.ink collided with --m- shade map — glass ink re-nested as ink.DEFAULT, shades kept
-          no --g-/--m-/--ion- name collisions; main CSS 120.99→128.11 kB
-next:     phase 2 builds glass components on the new utilities
+commit:   a3f72af6b on nz-glass
+files:    frontend/src/theme/fonts.css
+          frontend/src/main.js
+          frontend/package.json
+          frontend/yarn.lock
+verify:   cd frontend && yarn build && ls ../hrms/public/frontend/assets/ | grep -E 'inter-tight|jetbrains'
+flags:    Inter NOT installed — frappe-ui already bundles it (style.css); fontsource css bypassed (wrong family names, all subsets)
+          Archivo CDN link KEPT — base font of all 103 Modernist views until phase 3
+next:     phase 2 builds glass components; retire Archivo + Modernist in phase 3
