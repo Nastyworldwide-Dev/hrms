@@ -186,13 +186,82 @@
 						<GProgressRing :score="0" loading />
 					</div>
 				</section>
+
+				<h2 class="spec__title">Tier C</h2>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GCALENDAR (§10.2 #18) — legend labels every state</h2>
+					<GCalendar title="August 2026" :days="calendarDays" :leading-blanks="4" @select="log('day')" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GSCOREPANEL (§10.2 #15)</h2>
+					<GScorePanel :score="4.2" verdict="Exceeds expectations" cycle="H1 2026 review" />
+					<GScorePanel :score="0" verdict="" loading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GKRAPANEL (§10.2 #16) — track solid per §6.3</h2>
+					<GKraPanel :rows="kraRows" />
+					<GKraPanel loading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GGOALSPANEL (§10.2 #17)</h2>
+					<GGoalsPanel :count="4" label="Goals in progress" sublabel="2 due this month" @click="log('GGoalsPanel')" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GMAPPANEL (§10.2 #19) — gradient body, glass caption chip</h2>
+					<GMapPanel caption="3.1390° N, 101.6869° E" />
+					<GMapPanel loading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GSELFIEPANEL (§10.2 #20)</h2>
+					<GSelfiePanel @click="log('GSelfiePanel')" />
+					<GSelfiePanel loading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GCLOCK (§10.2 #21) — seconds decorative, aria-hidden</h2>
+					<GClock time="6:17" seconds="42" suffix="pm" />
+					<GClock time="9:05" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GLOGOWELL (§10.2 #23)</h2>
+					<div class="spec__row">
+						<GLogoWell label="Frappe HR" />
+						<GLogoWell mark="NZ" />
+					</div>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GAPPHEADER (§10.3 #24) — avatar hides at lg:, kicker appears</h2>
+					<GAppHeader
+						title="My KPI"
+						:unread="3"
+						kicker="Wednesday, 20 August"
+						avatar-label="Siti Rahman"
+						@notifications="log('notifications')"
+						@profile="log('profile')"
+					/>
+					<GAppHeader title="Attendance" avatar-label="Siti Rahman" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GSEGMENTED (§10.3) — TabButtons API</h2>
+					<GSegmented v-model="segment" :buttons="segments" label="Request type" />
+					<p class="spec__note">selected: {{ segment }}</p>
+				</section>
 			</div>
 		</ion-content>
 	</ion-page>
 </template>
 
 <script setup>
-import { computed, reactive } from "vue"
+import { computed, reactive, ref } from "vue"
 import { IonPage, IonContent } from "@ionic/vue"
 import { theme, setTheme, resolvedTheme, transparency, setTransparency } from "@/data/theme"
 import GButton from "@/components/glass/GButton.vue"
@@ -213,9 +282,42 @@ import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GIssueCard from "@/components/glass/GIssueCard.vue"
 import GProgressRing from "@/components/glass/GProgressRing.vue"
+import GCalendar from "@/components/glass/GCalendar.vue"
+import GScorePanel from "@/components/glass/GScorePanel.vue"
+import GKraPanel from "@/components/glass/GKraPanel.vue"
+import GGoalsPanel from "@/components/glass/GGoalsPanel.vue"
+import GMapPanel from "@/components/glass/GMapPanel.vue"
+import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
+import GClock from "@/components/glass/GClock.vue"
+import GLogoWell from "@/components/glass/GLogoWell.vue"
+import GAppHeader from "@/components/glass/GAppHeader.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
 
 const statuses = ["Draft", "Submitted", "Approved", "Rejected", "Cancelled"]
 const form = reactive({ date: "", hours: "3", locked: "Siti Rahman", reason: "" })
+const segment = ref("all")
+const segments = [
+	{ key: "all", label: "All" },
+	{ key: "mine", label: "Mine" },
+	{ key: "team", label: "Team" },
+]
+const kraRows = [
+	{ label: "Data accuracy", weight: "30%", score: 4.5, max: 5 },
+	{ label: "Response time", weight: "25%", score: 3.8, max: 5 },
+	{ label: "Team collaboration", weight: "25%", score: 4.2, max: 5 },
+	{ label: "Process adherence", weight: "20%", score: 4.0, max: 5 },
+]
+// one month of mixed states so every calendar treatment is on screen at once
+const calendarDays = Array.from({ length: 31 }, (_, i) => {
+	const day = i + 1
+	const weekday = (i + 4) % 7
+	let state = "present"
+	if (weekday >= 5) state = "rest"
+	else if (day === 12 || day === 13) state = "leave"
+	else if (day === 19) state = "absent"
+	else if (day > 20) state = "none"
+	return { day, state }
+})
 const resolved = computed(() => (theme.mode, resolvedTheme()))
 
 function log(name) {
@@ -285,5 +387,10 @@ function log(name) {
 	flex-wrap: wrap;
 	gap: var(--g-stack-sm);
 	align-items: center;
+}
+.spec__note {
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	color: var(--g-ink2);
 }
 </style>

@@ -641,6 +641,472 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink);
 }
 
+/* ---------- icons (§9): 16-grid, stroke 1.55, currentColor at 0.85 ---------- */
+
+.g-icon {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.55;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0.85;
+}
+
+/* ---------- GCalendar (§10.2 #18) ---------- */
+
+.g-cal {
+	padding: 15px 13px;
+	border-radius: var(--g-radius-action);
+}
+.g-cal__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 11px;
+}
+.g-cal__title {
+	font-family: var(--g-type-panel-title-family);
+	font-size: var(--g-type-panel-title-size);
+	font-weight: var(--g-type-panel-title-weight);
+	letter-spacing: var(--g-type-panel-title-tracking);
+	line-height: var(--g-type-panel-title-line-height);
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+.g-cal__grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 4px;
+}
+.g-cal__dow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding-bottom: 4px;
+	font-family: var(--g-type-micro-label-family);
+	font-size: var(--g-type-micro-label-size);
+	font-weight: var(--g-type-micro-label-weight);
+	letter-spacing: var(--g-type-micro-label-tracking);
+	text-transform: uppercase;
+	color: var(--g-ink3);
+}
+/* every day cell is a 44px touch target (§5) without moving the 10.5px numeral */
+.g-cal__day {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	font-family: var(--g-type-caption-family);
+	font-size: 10.5px; /* §10.2 #18 states the size; §4.2 has no 10.5px UI step */
+	font-weight: var(--g-type-card-title-weight);
+	font-variant-numeric: tabular-nums;
+	/* day numbers use --ink-muted (§14.4 exception 2) */
+	color: var(--g-ink-muted);
+}
+.g-cal__day--empty {
+	visibility: hidden;
+}
+/* Present — light: solid brand + on-brand (16.63). dark: brand-19% tint with
+   brand numerals (8.65), the same pattern as the OPEN badge. */
+.g-cal__day--present {
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+}
+html[data-theme="dark"] .g-cal__day--present {
+	background: rgba(var(--g-brand-rgb) / 0.19);
+	color: var(--g-brand);
+}
+.g-cal__day--leave {
+	background: rgba(var(--g-leave-rgb) / 0.26);
+	color: var(--g-leave-ink);
+}
+/* Rest day — --ink3 as a NON-TEXT marker (3.07 light / 3.61 dark), never as
+   the numeral colour, and never with an opacity multiplier (§2.5, §14.4 ex 2) */
+.g-cal__day--rest {
+	border-color: var(--g-ink3);
+}
+.g-cal__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 11px;
+	margin-top: 12px;
+}
+.g-cal__key {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
+.g-cal__swatch {
+	width: 7px;
+	height: 7px;
+	border-radius: 2.5px;
+	flex: none;
+}
+.g-cal__swatch--present { background: var(--g-brand); }
+.g-cal__swatch--leave { background: var(--g-leave); }
+.g-cal__swatch--rest { background: var(--g-ink3); }
+.g-cal__swatch--absent { background: var(--g-danger); }
+
+/* ---------- GScorePanel (§10.2 #15) ---------- */
+
+.g-score {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	padding: 17px 15px;
+	border-radius: var(--g-radius-panel);
+}
+.g-score__verdict {
+	font-family: var(--g-type-panel-title-family);
+	font-size: var(--g-type-panel-title-size);
+	font-weight: var(--g-type-panel-title-weight);
+	letter-spacing: var(--g-type-panel-title-tracking);
+	color: var(--g-ink);
+}
+.g-score__pill {
+	display: inline-block;
+	margin-top: 7px;
+	padding: var(--g-pad-badge);
+	border-radius: var(--g-radius-pill);
+	background: var(--g-icon-bg);
+	font-family: var(--g-type-eyebrow-family);
+	font-size: var(--g-type-eyebrow-size);
+	font-weight: var(--g-type-eyebrow-weight);
+	letter-spacing: var(--g-type-eyebrow-tracking);
+	text-transform: uppercase;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink2);
+}
+
+/* ---------- GKraPanel (§10.2 #16) ---------- */
+
+.g-kra {
+	padding: 0 15px;
+	border-radius: var(--g-radius-panel);
+}
+.g-kra__row {
+	padding: 11px 0;
+}
+.g-kra__row + .g-kra__row {
+	border-top: 1px solid var(--g-hair);
+}
+.g-kra__top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 9px;
+}
+.g-kra__label {
+	font-family: var(--g-type-kra-label-family);
+	font-size: var(--g-type-kra-label-size);
+	font-weight: var(--g-type-kra-label-weight);
+	line-height: var(--g-type-kra-label-line-height);
+	color: var(--g-ink);
+}
+.g-kra__weight {
+	font-family: var(--g-font-mono);
+	font-size: var(--g-type-data-system-size);
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink-muted);
+}
+.g-kra__score {
+	font-family: var(--g-font-display);
+	/* §10.2 #16 says 13/800; §4.2's nearest step is card-title 12.5px */
+	font-size: var(--g-type-card-title-size);
+	font-weight: var(--g-type-display-number-weight);
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+/* §6.3: KRA bars are named explicitly — solid track, never --icon-bg */
+.g-kra__bar {
+	height: 4px;
+	margin-top: 7px;
+	border-radius: var(--g-radius-pill);
+	background: var(--g-track-solid);
+	overflow: hidden;
+}
+.g-kra__fill {
+	height: 100%;
+	border-radius: inherit;
+	background: var(--g-brand);
+}
+
+/* ---------- GGoalsPanel (§10.2 #17) ---------- */
+
+.g-goals {
+	display: flex;
+	align-items: center;
+	gap: 13px;
+	width: 100%;
+	padding: var(--g-pad-panel);
+	border-radius: var(--g-radius-card);
+	text-align: left;
+	cursor: pointer;
+}
+.g-goals__numeral {
+	font-family: var(--g-type-stat-number-family);
+	font-size: var(--g-type-stat-number-size);
+	font-weight: var(--g-type-stat-number-weight);
+	letter-spacing: var(--g-type-stat-number-tracking);
+	line-height: var(--g-type-stat-number-line-height);
+	font-variant-numeric: tabular-nums;
+	color: var(--g-accent-ink);
+}
+.g-goals__body {
+	flex: 1;
+	min-width: 0;
+}
+.g-goals__label {
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+	color: var(--g-ink);
+}
+.g-goals__sub {
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
+
+/* ---------- GMapPanel (§10.2 #19) ---------- */
+
+/* NOT glass: the panel is a themed gradient, so the caption chip inside it can
+   be glass without nesting (§15) */
+.g-map {
+	position: relative;
+	height: 150px;
+	border-radius: var(--g-radius-action);
+	overflow: hidden;
+	background: linear-gradient(160deg, var(--g-icon-bg), var(--g-track-solid));
+	border: 1px solid var(--g-glass-rim);
+}
+.g-map__grid {
+	position: absolute;
+	inset: 0;
+	background-image:
+		repeating-linear-gradient(90deg, var(--g-hair) 0 1px, transparent 1px 34px),
+		repeating-linear-gradient(0deg, var(--g-hair) 0 1px, transparent 1px 34px);
+	transform: perspective(180px) rotateX(52deg) scale(1.9);
+	transform-origin: 50% 100%;
+	pointer-events: none;
+}
+.g-map__pin {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 13px;
+	height: 13px;
+	margin: -7px 0 0 -7px;
+	border-radius: 50%;
+	background: var(--g-brand);
+	box-shadow: 0 0 10px var(--g-accent-glow);
+}
+/* rings animate transform + opacity only (§8, §15) */
+.g-map__ring {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	border: 1.5px solid var(--g-brand);
+	animation: g-pin-ring 2400ms ease-out infinite;
+}
+.g-map__ring:nth-child(2) {
+	animation-delay: 800ms;
+}
+@keyframes g-pin-ring {
+	from { transform: scale(1); opacity: 0.7; }
+	to { transform: scale(3.4); opacity: 0; }
+}
+.g-map__caption {
+	position: absolute;
+	left: 9px;
+	bottom: 9px;
+	padding: 5px 8px;
+	border-radius: var(--g-radius-pill);
+	font-family: var(--g-font-mono);
+	font-size: var(--g-type-data-system-size);
+	line-height: var(--g-type-data-system-line-height);
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+
+/* ---------- GSelfiePanel (§10.2 #20) ---------- */
+
+.g-selfie {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 118px;
+	border-radius: var(--g-radius-action);
+}
+.g-selfie__ring {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	border: 1px dashed var(--g-accent-ink);
+	border-radius: 50%;
+	color: var(--g-accent-ink);
+}
+
+/* ---------- GClock (§10.2 #21) ---------- */
+
+.g-clock {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+.g-clock__time {
+	font-family: var(--g-type-clock-family);
+	font-size: var(--g-type-clock-size);
+	font-weight: var(--g-type-clock-weight);
+	letter-spacing: var(--g-type-clock-tracking);
+	line-height: var(--g-type-clock-line-height);
+}
+/* §10.2 #21: decorative, not information — hence aria-hidden in the component.
+   The .55 sits on --ink (18.39 → 4.26 light), not on --ink2/--ink3, so §2.5's
+   prohibition does not bite; see the component header. */
+.g-clock__seconds {
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-card-title-weight);
+	opacity: 0.55;
+}
+
+/* ---------- GLogoWell (§10.2 #23) ---------- */
+
+.g-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--g-radius-action);
+	font-family: var(--g-font-display);
+	/* §10.2 #23 says 23px; §4.2's nearest step is stat-number 22px */
+	font-size: var(--g-type-stat-number-size);
+	font-weight: var(--g-type-stat-number-weight);
+	letter-spacing: var(--g-type-stat-number-tracking);
+	color: var(--g-accent-ink);
+}
+
+/* ---------- GAppHeader (§10.3 #24) ---------- */
+
+/* Deliberately NOT glass: §15.2's per-screen arithmetic counts no header, and
+   a glass header plus the tab bar would spend 2 of the 6 budget on chrome. */
+.g-header {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 13px var(--g-screen-gutter);
+	background: var(--g-bg);
+	border-bottom: 1px solid var(--g-hair);
+}
+.g-header__title {
+	flex: 1;
+	min-width: 0;
+	font-family: var(--g-type-screen-title-family);
+	font-size: var(--g-type-screen-title-size);
+	font-weight: var(--g-type-screen-title-weight);
+	letter-spacing: var(--g-type-screen-title-tracking);
+	line-height: var(--g-type-screen-title-line-height);
+	color: var(--g-ink);
+}
+.g-header__kicker {
+	display: none; /* lg: only — matches the existing BaseLayout header */
+	font-family: var(--g-type-micro-label-family);
+	font-size: var(--g-type-micro-label-size);
+	font-weight: var(--g-type-micro-label-weight);
+	letter-spacing: var(--g-type-micro-label-tracking);
+	text-transform: uppercase;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink2);
+}
+.g-header__action {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border: 0;
+	border-radius: var(--g-radius-well);
+	background: transparent;
+	color: var(--g-ink);
+	cursor: pointer;
+}
+.g-header__dot {
+	position: absolute;
+	top: 9px;
+	right: 9px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--g-brand);
+}
+.g-header__avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: var(--g-radius-well);
+	background: var(--g-icon-bg);
+	object-fit: cover;
+	font-family: var(--g-font-display);
+	font-size: var(--g-type-kra-label-size);
+	font-weight: var(--g-type-display-number-weight);
+	color: var(--g-ink2);
+}
+@media (min-width: 1024px) {
+	.g-header__kicker {
+		display: inline;
+	}
+	/* the side nav carries identity at lg: (§20.2), as it does today */
+	.g-header__avatar-link {
+		display: none;
+	}
+}
+
+/* ---------- GSegmented (§10.3 treatment list) ---------- */
+
+.g-seg {
+	display: flex;
+	padding: 3px;
+	border-radius: var(--g-radius-input);
+	background: var(--g-icon-bg);
+}
+.g-seg__option {
+	flex: 1 1 auto;
+	min-height: 38px;
+	padding: 9px 14px;
+	border: 0;
+	border-radius: var(--g-radius-pill);
+	background: transparent;
+	font-family: var(--g-type-badge-family);
+	font-size: var(--g-type-badge-size);
+	font-weight: var(--g-type-badge-weight);
+	letter-spacing: var(--g-type-badge-tracking);
+	text-transform: uppercase;
+	color: var(--g-ink2);
+	cursor: pointer;
+	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
+}
+.g-seg__option--selected {
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+}
+
 /* ---------- reduced motion (§8, §14.1): shimmer and pending bar go static ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -655,7 +1121,13 @@ html[data-theme="dark"] .g-badge--open {
 	}
 	.g-btn,
 	.g-ghost-btn,
-	.g-row {
+	.g-row,
+	.g-seg__option {
 		transition: none;
+	}
+	/* the map pin rings stop pulsing; the pin itself stays visible */
+	.g-map__ring {
+		animation: none;
+		opacity: 0;
 	}
 }

@@ -24,7 +24,7 @@
 					<GSkeleton width="58%" height="11px" />
 				</span>
 			</div>
-			<span class="g-list__sr">{{ __("Loading") }}</span>
+			<span class="g-list__sr">{{ t("Loading") }}</span>
 		</template>
 
 		<div v-else-if="empty" class="g-list__empty">
@@ -37,12 +37,15 @@
 
 <script setup>
 import GSkeleton from "./GSkeleton.vue"
+import { useTranslate } from "./translate"
 
 defineProps({
 	loading: { type: Boolean, default: false },
 	rows: { type: Number, default: 3 },
 	empty: { type: Boolean, default: false },
 })
+
+const t = useTranslate()
 </script>
 
 <style scoped>
