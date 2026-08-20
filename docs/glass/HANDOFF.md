@@ -1,25 +1,25 @@
 # HANDOFF
-prompt:   5.1 (phase 5 batch 1 — Home)
-status:   done, with one anatomy conflict flagged
-commit:   9440b341a on nz-glass
-files:    frontend/src/components/glass/GConfirm.vue (new)
-          frontend/src/components/FormView.vue, FileUploaderView.vue,
-          InstallPrompt.vue, views/InvalidEmployee.vue (Dialog → GModal/GConfirm)
-          frontend/src/components/QuickLinks.vue, PendingApprovalsBanner.vue,
-          RequestPanel.vue
-          design/gates/surfaces.mjs (strict by default)
+prompt:   5.2 (v1.5 ruling + batch 2 Check-in)
+status:   partial — Check-in done, attendance/Dashboard not started
+commit:   be722ddaf on nz-glass
+files:    docs/glass/spec/…v1.1.md → v1.5 (§0, §12 Home + Check in)
+          docs/glass/decisions/home-balance-grid.md (candidate)
+          docs/glass/phase5-plan.md (§1a: check anatomy before building)
+          frontend/src/components/{LateCheckout,RemoteCheckin,StrictRejection}Dialog.vue
+          frontend/src/components/CheckInPanel.vue
+          frontend/src/components/glass/{GModal,GMapPanel,GSelfiePanel}.vue
 verify:   cd frontend && yarn gates && yarn build
-flags:    HOME = 3/6 (GBanner + GListPanel + tab bar). Nothing over budget anywhere
-          §12's Home anatomy lists a BALANCE GRID (2 cards). The shipped Home has no
-          balance data and no such call — adding it is a content change, not a re-skin.
-          NOT BUILT. Needs a ruling: amend §12, or add it as a feature in its own prompt
-          §12 also omits RequestPanel, which Home does have. Anatomy vs reality differs
-          in both directions
-          4 of 5 Dialog swaps done. Login's 3 DEFERRED — they hold forms with validation,
-          not confirmations; batch 9 owns them
-          Home's primary opens the check-in sheet and does not await the server, so pending
-          would be misleading there. The button that DOES punch (sheet Confirm) already
-          carries :pending from 3.3b — §11.4 is satisfied on the right button
-          surfaces gate counts modal contents even when closed (conservative). Form screens
-          read 4/6 largely because GConfirm's ghost cancel is a glass surface
-next:     batch 2 (Check-in) — needs the 3 geofence dialogs, still unbuilt
+flags:    HOME NOW 5/6 — the counter counts the check-in sheet's map + selfie even while the
+          sheet is CLOSED. Conservative; a closed ion-modal composites nothing. Worth a
+          model decision before a screen is genuinely near the limit
+          4 CHECK-IN ANATOMY DIVERGENCES, all recorded in §12: it is a SHEET not a route (no
+          tab bar); eyebrow is the action label not a location name; map 200px → the spec's
+          150px (anatomy won); selfie 118px → a FLOOR, because a live face preview at 118px
+          is unusable (app won)
+          GMapPanel and GSelfiePanel gained SLOTS — the app has a real Leaflet map and a live
+          camera where the spec describes decorative placeholders. Placeholder = empty state
+          GModal now forwards did-present / will-dismiss; the camera and map initialise on them
+          NOT DONE: attendance/Dashboard, the other half of batch 2. Its AttendanceCalendar
+          still needs to become GCalendar, and it has its own divergences — no 3-up stat
+          panel, action buttons where the anatomy says one ghost action
+next:     finish batch 2 (attendance/Dashboard + GCalendar), then batch 3 (Leave)
