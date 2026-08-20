@@ -45,6 +45,8 @@
 	--g-rim-hi: rgba(255,255,255,.95);
 	--g-rim-lo: rgba(16,22,34,.06);
 	--g-sheen: rgba(255,255,255,.55);
+	--g-track-solid: #ECEDEF;
+	--g-track-solid-rgb: 236 237 239;
 	/* color-semantic (light) */
 	--g-danger-ink: #DC2626;
 	--g-danger-ink-rgb: 220 38 38;
@@ -209,6 +211,8 @@ html[data-theme="dark"] {
 	--g-rim-hi: rgba(255,255,255,.28);
 	--g-rim-lo: rgba(0,0,0,.28);
 	--g-sheen: rgba(255,255,255,.13);
+	--g-track-solid: #313133;
+	--g-track-solid-rgb: 49 49 51;
 	/* color-semantic (dark) */
 	--g-danger-ink: #F87171;
 	--g-danger-ink-rgb: 248 113 113;

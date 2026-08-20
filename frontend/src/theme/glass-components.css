@@ -514,7 +514,9 @@ html[data-theme="dark"] .g-badge--open {
 	height: 3px;
 	margin-top: 8px;
 	border-radius: var(--g-radius-pill);
-	background: var(--g-icon-bg);
+	/* solid, not --icon-bg: the bar reads a leave balance, and §6.3 forbids a
+	   disputable number being read through a translucent tint */
+	background: var(--g-track-solid);
 	overflow: hidden;
 }
 .g-balance__fill {
@@ -614,7 +616,8 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-ring__track {
 	fill: none;
-	stroke: var(--g-icon-bg);
+	/* §6.3: the KPI ring track is solid in both themes, never translucent */
+	stroke: var(--g-track-solid);
 	stroke-width: 7;
 }
 .g-ring__arc {

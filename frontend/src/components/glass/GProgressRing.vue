@@ -1,9 +1,12 @@
 <!--
   GProgressRing — KPI ring (spec §10.1 #9). Not a surface; it sits on one.
   88×88, r38, stroke 7, round cap, circumference 238.8,
-  dashoffset = 238.8 × (1 − score/max), track --icon-bg, arc --brand,
-  centre display 25/800 tabular, svg rotated −90deg so the arc starts at 12
-  o'clock. Identical at both breakpoints (§20.7).
+  dashoffset = 238.8 × (1 − score/max), arc --brand, centre display 25/800
+  tabular, svg rotated −90deg so the arc starts at 12 o'clock.
+  Identical at both breakpoints (§20.7).
+
+  Track is --track-solid, NOT --icon-bg: §6.3 overrides §10.1 #9's visual
+  description — a performance rating must not be read through a moving tint.
 
   Announces as "Score 4.2 out of 5" (§14.1) — the numeral alone is not the
   signal, and the ring itself is decorative to assistive tech.

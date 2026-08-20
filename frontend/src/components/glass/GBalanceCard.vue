@@ -2,7 +2,9 @@
   GBalanceCard — leave balance cell (spec §10.1 #6). A CELL, not a surface:
   it lives inside GBalanceGrid, which is the single glass panel (§15.2).
   pad-panel, radius-card 17px, number display 31/800/−0.02em tabular,
-  label 10px/600/0.13em, 3px bar — track --icon-bg, fill --brand + glow.
+  label 10px/600/0.13em, 3px bar — track --track-solid, fill --brand + glow.
+  The track is solid, NOT --icon-bg: §6.3 names leave balances, and the bar
+  reads a balance, so it may not be read through a moving tint.
   Identical at both breakpoints (§20.7); only the parent grid reflows (§20.5).
 
   PRO-RATED HEADROOM BAND — ported from .m-bar-band (modernist.css). It marks

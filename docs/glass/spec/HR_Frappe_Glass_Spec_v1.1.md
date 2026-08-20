@@ -256,6 +256,8 @@ Apple shipped Liquid Glass without an adequate version of this, added one under 
 ### 6.3 Where glass must stop
 Performance ratings, payslip figures and leave balances sit on the most opaque available surface in both themes. The KPI ring track, the KRA bars and payslip line items use solid values, never translucency. **A number a person may dispute with their manager must not be read through a moving tint.** Do not apply glass to these for visual consistency.
 
+**This section overrides the component entries in §10 where they conflict.** Those entries describe the visual; they do not grant an exemption. The token is **`--track-solid`** (`#ECEDEF` light / `#313133` dark — the exact composite of `--icon-bg` over glass, so the appearance is unchanged while the value stops shifting with whatever sits behind it). It backs the KPI ring track (§10.1 #9), the balance bar track (§10.1 #6) and the KRA bars (§10.2 #16). `--icon-bg` remains correct for icon wells, which carry no number.
+
 ---
 
 ## 7. Presentation material vs app material — new
@@ -325,10 +327,10 @@ No public icon set matches this grid and weight. The 9 existing hand-drawn icons
 | 3 | **List row** | `pad-row` 11.5px 15px, gap 11px, well 27×27 r9, label 12.5/500, chevron `--ink3`, divider 1px `--hair` inset 15px each side, first row exempt, min-height 44px | Padding |
 | 4 | **Input field** | `pad` 13px 14px, `radius-input` 14px, 12.5px, placeholder `--ink-muted`, filled `--ink` | Placeholder token; focus ring redesigned |
 | 5 | **Textarea** | Input variant, height 66px, `align-items: flex-start` | Newly specified |
-| 6 | **Balance card** | `pad-panel` 14px 13px, `radius-card` 17px, number display 31/800/−0.02em tabular, label 10px/600/0.13em, bar 3px track `--icon-bg` fill `--brand` + glow | Tracking; label size |
+| 6 | **Balance card** | `pad-panel` 14px 13px, `radius-card` 17px, number display 31/800/−0.02em tabular, label 10px/600/0.13em, bar 3px track **`--track-solid` — solid per §6.3, which governs here: the bar reads a leave balance** fill `--brand` + glow | Tracking; label size; **track solid (§6.3)** |
 | 7 | **Badge** | 10px/700/0.09em, `pad-badge` 3.5px 8px, `radius-pill` 6px. OPEN: light `--brand` on `--on-brand`, dark brand-18% tint. RESOLVED: light `--success-ink` on teal-20%, dark `--success` | Size; resolved ink |
 | 8 | **Tab bar** | Glass, `radius-tabbar` 22px, pad 11px 6px 9px, label 10px/600/0.07em, well 19×19 r7, active well `--brand` + glow, pinned above safe area | Label size; five fixed items |
-| 9 | **Progress ring** | 88×88, r38, stroke 7, round cap, circumference 238.8, `dashoffset = 238.8 × (1 − score/max)`, track `--icon-bg`, arc `--brand`, centre display 25/800 | Unchanged |
+| 9 | **Progress ring** | 88×88, r38, stroke 7, round cap, circumference 238.8, `dashoffset = 238.8 × (1 − score/max)`, track **`--track-solid` — solid per §6.3, which governs here**, arc `--brand`, centre display 25/800 | **Track solid (§6.3)** |
 | 10 | **Banner** | Glass, `radius-banner` 16px, pad 13px 14px, left rule 3px full height — info `--brand`, warning `--warn`, error `--danger` | Radius named |
 | 11 | **Empty state** | 1px **dashed** `--glass-rim`, pad 26px 18px, centred, title display 13.5/700, body 11px `--ink2` | Unchanged |
 | 12 | **Skeleton** | Mirrors the real layout — same panel, same radii, same block sizes. Block `--icon-bg` r6. Shimmer `translateX` 1400ms. **No spinners anywhere in this app** | Unchanged |
