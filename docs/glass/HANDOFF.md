@@ -1,14 +1,23 @@
 # HANDOFF
-prompt:   3.5 (phase 3 complete)
-status:   done
-commit:   2451ddcff on nz-glass
-files:    frontend/tailwind.config.js (borderRadius only)
-          docs/glass/phase3-radius-diff.md (visual-review checklist)
-verify:   cd frontend && yarn gates && yarn build — then eyeball /design and the
-          four frappe-ui wrappers per the diff doc §3
-flags:    89 occurrences / 51 files move off zero: 5 app, 48 in rendered frappe-ui, 36 dormant. 2xl+3xl have ZERO occurrences today
-          STRUCTURAL DEFECT recorded not fixed: four 20x20px boxes take 9px (45% of the box) and read as blobs. Only frappe-ui Toast's close button renders here
-          GModal (20px) and frappe-ui Dialog (17px) now differ by 3px — two dialog systems, unreconciled
-          3.1 inventory corrected: 84 utilities not 106 (the earlier count included rounded-full); formatters.js + GAvatar hits were prose/variable false positives
-          no table element and no full-bleed container gains a radius — checked, not assumed
-next:     phase 4 — shell + desktop (§20). Radius review is a visual pass, not a gate
+prompt:   4.1 (light field)
+status:   partial — BLOCKED on a §3.3 ruling before 4.2
+commit:   814c9c3ec on nz-glass
+files:    frontend/src/components/glass/GLightField.vue
+          frontend/src/components/BaseLayout.vue (field mounted in ion-page)
+          frontend/src/theme/glass-components.css (.g-field, .g-page)
+          design/tokens.json + build-tokens.mjs (13 field tokens)
+          design/gates/contrast.mjs (§3.3 assertion — replaces the 1.5 SKIP)
+          frontend/e2e/light-field.spec.js + light-field-isolation.html
+verify:   cd frontend && yarn gates   (contrast RED by design — read below)
+          npx playwright@1.62.1 test --config=e2e/playwright.config.js e2e/light-field.spec.js
+flags:    CONTRAST GATE IS RED: 9/30 pairs fail. §3's blob coordinates violate §3.3 —
+          all three CENTRES sit inside the content column (§3.3 measured box origin
+          left:-46, not centre left+size/2=69). Gate reproduces the spec's own 1.26:1
+          FIX IS A SPEC DECISION, not applied: blob A left -46→-100, B right -58→-90,
+          C left -30→-75 puts every centre outside. Lowering blob-opacity instead needs
+          dark 0.85→~0.22, which guts the field's purpose
+          §3.2 trap VERIFIED in Chromium, not assumed: inside-page rgb(124,160,21) vs
+          outside-page rgb(24,24,27). Placement is a child of <ion-page> in BaseLayout
+          field costs NOTHING against §15's budget — it carries no backdrop-filter; confirmed
+          field reaches 11 BaseLayout views only; 27 standalone ion-page views wait for 4.2
+next:     rule on §3.3 geometry, then 4.2 scaffold (which also unifies the 27 pages)
