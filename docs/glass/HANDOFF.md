@@ -1,11 +1,16 @@
 # HANDOFF
-prompt:   2.3 amendments (spec v1.2)
+prompt:   2.4 (phase 2 complete)
 status:   done
-commit:   615419a4f on nz-glass
-files:    docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-verify:   grep -n '^### v1.2\|^### 15.3\|scale is closed' docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-flags:    10.5px was ALREADY a scale step (Caption/Eyebrow) — my 2.3 flag was wrong; #18 needed a token name, not a new size
-          ruling applied to SIZE only; weights in §10 entries stand (KRA score stays 12.5/800)
-          §20.7 count corrected 24→23; filename kept at _v1.1.md, §0 carries the version
-          GCalendar still hardcodes 10.5px instead of --g-type-caption-size — one-line follow-up, docs-only prompt
-next:     phase 2 prompt 4 — remaining components
+commit:   cdaaa3c4c on nz-glass
+files:    frontend/src/components/glass/ (10 new: GModal, GActionSheet, GSearchBar,
+          GAvatar, GDataTable, GFileUpload, GLinkPicker, GDatePicker,
+          GPullRefresh + toast.js) — 37 components total
+          frontend/src/theme/glass-components.css
+          frontend/src/views/DesignSpecimen.vue
+          design/tokens.json (scrim token) + regenerated theme files
+verify:   cd frontend && yarn gates && yarn build
+flags:    frappe-ui installed is 0.1.105, NOT 0.1.278 — Combobox absent, so GLinkPicker wraps Autocomplete; adopting it means DECISION 6
+          ion-refresher inner icons are shadow DOM with no published vars — spinner switched off (§11.2 wants that), indicator replaced in light DOM
+          new scrim token (backdrop) not in the spec token table; toast + Autocomplete skins couple to frappe-ui internal markup
+          §10.3 remaining unbuilt: geofence dialogs (3), PDF viewer, push-notification prompt
+next:     phase 3 — retire Modernist; phase 4 — shell + desktop
