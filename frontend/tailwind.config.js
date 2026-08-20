@@ -1,7 +1,15 @@
 import frappeUIPreset from "frappe-ui/src/tailwind/preset"
+import glassTheme from "./src/theme/glass.tailwind.cjs"
 
 // Palette values in extend.colors mirror src/theme/modernist.css (the
 // canonical palette) — change them there first, then here.
+
+// Glass fragment is generated from design/tokens.json (yarn tokens).
+// colors.ink collides with the --m- ink shade map below, so it is split out
+// and re-nested as ink.DEFAULT — text-ink (glass) and text-ink-100…900
+// (modernist) coexist until phase 3.
+const { colors: glassColors, ...glassExtend } = glassTheme
+const { ink: glassInk, ...glassOtherColors } = glassColors
 export default {
 	presets: [frappeUIPreset],
 	darkMode: "class",
@@ -27,13 +35,19 @@ export default {
 			sans: ["Archivo", "system-ui", "sans-serif"],
 		},
 		extend: {
+			// Glass semantic scales: backdropBlur, borderRadius (panel/action/…,
+			// additive — the zeroed scale above is untouched), boxShadow.lift,
+			// fontFamily, fontSize, opacity, spacing, transitionDuration/-TimingFunction
+			...glassExtend,
 			// Values resolve through the --m-* RGB triplets in theme/modernist.css
 			// (:root light / .dark dark) so every utility follows the theme switch.
 			backgroundColor: {
 				surface: { DEFAULT: "rgb(var(--m-surface) / <alpha-value>)" },
 			},
 			colors: {
+				...glassOtherColors,
 				ink: {
+					DEFAULT: glassInk,
 					100: "rgb(var(--m-ink-100) / <alpha-value>)",
 					200: "rgb(var(--m-ink-200) / <alpha-value>)",
 					300: "rgb(var(--m-ink-300) / <alpha-value>)",

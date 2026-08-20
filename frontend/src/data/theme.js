@@ -22,7 +22,10 @@ export function resolvedTheme(mode = theme.mode) {
 
 function applyTheme() {
 	const dark = resolvedTheme() === "dark"
+	// .dark drives Modernist + Tailwind dark:, data-theme drives glass.css;
+	// both stay until Modernist is retired in phase 3
 	document.documentElement.classList.toggle("dark", dark)
+	document.documentElement.setAttribute("data-theme", dark ? "dark" : "light")
 	document
 		.querySelector('meta[name="theme-color"]')
 		?.setAttribute("content", dark ? "#191817" : "#f3f2f2")
