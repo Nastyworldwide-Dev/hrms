@@ -2,9 +2,15 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
+		<!-- viewport-fit=cover is what makes env(safe-area-inset-*) return non-zero
+		     on iOS. It was space-separated from maximum-scale, so the directive list
+		     was malformed and safe-area handling may never have worked (spec §13.2).
+		     user-scalable=no and maximum-scale are removed: they block zoom, which
+		     fails §14. Removing maximum-scale restores iOS focus-zoom on inputs
+		     below 16px — DECISION 3, deliberately left for a human. -->
 		<meta
 			name="viewport"
-			content="width=device-width, initial-scale=1.0, viewport-fit=cover maximum-scale=1.0, user-scalable=no"
+			content="width=device-width, initial-scale=1.0, viewport-fit=cover"
 		/>
 		<title>Frappe HR</title>
 

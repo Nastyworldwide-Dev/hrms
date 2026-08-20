@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ion-content :fullscreen="true">
 			<FormView
 				v-if="formFields.data"
@@ -13,11 +13,12 @@
 			/>
 			<ResourceError :resource="formFields" what="the leave application form" />
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
+import { IonContent } from "@ionic/vue"
 import { createResource, toast } from "frappe-ui"
 import { ref, watch, inject, nextTick } from "vue"
 

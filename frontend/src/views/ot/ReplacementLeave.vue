@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ion-content :fullscreen="true">
 			<div class="flex flex-col gap-5 p-4 pt-6">
 				<div class="flex items-center justify-between">
@@ -72,11 +72,12 @@
 				</div>
 			</div>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
+import { IonContent } from "@ionic/vue"
 import { Badge, Button, createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 

@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage :field="false">
 		<ion-content :fullscreen="true">
 			<div class="flex flex-col h-full w-full">
 				<div class="w-full h-full bg-white sm:w-96 flex flex-col">
@@ -58,11 +58,12 @@
 				</div>
 			</div>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
+import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { FeatherIcon, toast, createResource, Input, ErrorMessage, Button } from "frappe-ui"
 

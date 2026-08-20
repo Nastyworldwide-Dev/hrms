@@ -51,7 +51,12 @@
 .g-page ion-content {
 	--background: transparent;
 }
-/* content sits above the field; the field is z-index 0 */
+/* Everything Ionic lays out inside the page sits above the field, which is at
+   z-index 0. A descendant selector rather than a per-view class: list views
+   nest their header and content inside a ListView component, so a direct-child
+   rule would miss them and the field would paint over the content. */
+.g-page ion-header,
+.g-page ion-content,
 .g-page__content {
 	position: relative;
 	z-index: 1;
@@ -63,9 +68,14 @@
 	.g-field {
 		position: fixed;
 	}
-	.g-field__blob--a { width: 32vw; height: 32vw; }
-	.g-field__blob--b { width: 29vw; height: 29vw; }
-	.g-field__blob--c { width: 25vw; height: 25vw; }
+	/* Size AND origin scale together. Scaling only the size — which is how 4.1
+	   first wrote this — grows the blob while its origin stays put, so the
+	   centre marches into the content column and §3.3 fails from 1280px up
+	   (measured: dark ink-muted 1.08 at 1440). The origin:size ratio is held
+	   at the value solved for mobile, so the clearance scales with the blob. */
+	.g-field__blob--a { width: 32vw; height: 32vw; left: -25.04vw; }
+	.g-field__blob--b { width: 29vw; height: 29vw; right: -22.51vw; }
+	.g-field__blob--c { width: 25vw; height: 25vw; left: -19.03vw; }
 }
 
 /* §3.1 is not negotiable, and reduced motion must not be the only thing

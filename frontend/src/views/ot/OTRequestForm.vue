@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ion-content :fullscreen="true">
 			<FormView
 				v-if="formFields.data"
@@ -14,11 +14,12 @@
 			/>
 			<ResourceError :resource="formFields" what="the overtime request form" />
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
+import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 

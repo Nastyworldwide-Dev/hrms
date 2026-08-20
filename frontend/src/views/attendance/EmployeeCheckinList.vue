@@ -1,16 +1,16 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ListView
 			doctype="Employee Checkin"
 			:pageTitle="__('Employee Checkin History')"
 			:fields="EMPLOYEE_CHECKIN_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
 import ListView from "@/components/ListView.vue"
 import { inject } from "vue"
 

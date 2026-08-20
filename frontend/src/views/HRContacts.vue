@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col h-screen w-screen bg-ground">
 				<div class="w-full max-w-content-column-lg mx-auto">
@@ -75,13 +75,14 @@
 				</div>
 			</div>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
+import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { IonPage, IonContent } from "@ionic/vue"
+import { IonContent } from "@ionic/vue"
 import { FeatherIcon, Button } from "frappe-ui"
 
 import ContactCard from "@/components/ContactCard.vue"

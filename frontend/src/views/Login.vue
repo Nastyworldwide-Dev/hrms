@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage :field="false">
 		<ion-content class="ion-no-padding">
 			<div class="flex h-screen w-screen bg-ground">
 				<!-- Accent side panel (tablet / desktop only) -->
@@ -186,12 +186,13 @@
 				</template>
 			</Dialog>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
+import GPage from "@/components/glass/GPage.vue"
 import GButton from "@/components/glass/GButton.vue"
-import { IonPage, IonContent } from "@ionic/vue"
+import { IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
 import { Input, Button, ErrorMessage, Dialog, LoadingIndicator, createResource } from "frappe-ui"
 

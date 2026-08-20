@@ -1,17 +1,17 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ListView
 			doctype="Shift Assignment"
 			:pageTitle="__('Shift Assignment History')"
 			:fields="SHIFT_ASSIGNMENT_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
+import GPage from "@/components/glass/GPage.vue"
 import { inject } from "vue"
-import { IonPage } from "@ionic/vue"
 import ListView from "@/components/ListView.vue"
 
 const __ = inject("$translate")

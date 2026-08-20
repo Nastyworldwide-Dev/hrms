@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage :field="false">
 		<ion-content class="ion-padding">
 			<div class="flex h-screen w-screen flex-col justify-center bg-ground">
 				<Dialog
@@ -25,11 +25,12 @@
 				/>
 			</div>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import { IonPage, IonContent } from "@ionic/vue"
+import GPage from "@/components/glass/GPage.vue"
+import { IonContent } from "@ionic/vue"
 import { computed, inject, ref } from "vue"
 import { Dialog, createResource } from "frappe-ui"
 

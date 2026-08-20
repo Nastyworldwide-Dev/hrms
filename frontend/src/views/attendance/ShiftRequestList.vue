@@ -1,5 +1,5 @@
 <template>
-	<ion-page>
+	<GPage>
 		<ListView
 			doctype="Shift Request"
 			pageTitle="Shift Request History"
@@ -7,12 +7,12 @@
 			:fields="SHIFT_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
+import GPage from "@/components/glass/GPage.vue"
 import { inject } from "vue"
-import { IonPage } from "@ionic/vue"
 import ListView from "@/components/ListView.vue"
 
 const __ = inject("$translate")

@@ -1,55 +1,16 @@
 <template>
-	<ion-page class="g-page">
-		<!-- §3.2: the field is a child of THIS ion-page, not of ion-app or body.
-		     Ionic animates transform+opacity on .ion-page during transitions,
-		     making it a backdrop root; a field mounted outside it would be
-		     invisible to every backdrop-filter inside it after the first
-		     navigation. Keep it here. -->
-		<GLightField />
-
+	<GPage>
 		<ion-header class="ion-no-border g-page__content">
 			<div class="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
-				<div
-					class="flex flex-row justify-between items-center bg-ground border-b-2 border-divider px-4 py-3.5 lg:h-16 lg:px-7 lg:py-0"
-				>
-					<h2
-						class="font-extrabold tracking-tight text-lg lg:text-screen-title text-inkbase"
-					>
-						{{ props.pageTitle || __("Frappe HR") }}
-					</h2>
-					<div class="flex flex-row items-center gap-3.5 lg:gap-4 ml-auto">
-						<span
-							class="hidden lg:inline text-micro-label uppercase text-ink-600"
-						>
-							{{ dateKicker }}
-						</span>
-						<router-link
-							:to="{ name: 'Notifications' }"
-							v-slot="{ navigate }"
-							class="flex flex-col items-center"
-							:aria-label="__('Notifications')"
-						>
-							<span class="relative inline-block" @click="navigate">
-								<FeatherIcon name="bell" class="h-5 w-5" />
-								<span
-									v-if="unreadNotificationsCount.data"
-									class="absolute top-0 right-0.5 inline-block w-2 h-2 bg-accent"
-								>
-								</span>
-							</span>
-						</router-link>
-						<router-link
-							:to="{ name: 'Profile' }"
-							class="flex flex-col items-center lg:hidden"
-						>
-							<Avatar
-								:image="user.data.user_image"
-								:label="user.data.first_name"
-								size="xl"
-							/>
-						</router-link>
-					</div>
-				</div>
+				<GAppHeader
+					:title="props.pageTitle || __('Frappe HR')"
+					:unread="unreadNotificationsCount.data || 0"
+					:kicker="dateKicker"
+					:avatar-url="user.data.user_image"
+					:avatar-label="user.data.first_name"
+					@notifications="router.push({ name: 'Notifications' })"
+					@profile="router.push({ name: 'Profile' })"
+				/>
 			</div>
 		</ion-header>
 
@@ -60,18 +21,20 @@
 				<slot name="body"></slot>
 			</div>
 		</ion-content>
-	</ion-page>
+	</GPage>
 </template>
 
 <script setup>
-import GLightField from "@/components/glass/GLightField.vue"
-import { IonHeader, IonContent, IonPage } from "@ionic/vue"
-import { FeatherIcon, Avatar } from "frappe-ui"
+import GPage from "@/components/glass/GPage.vue"
+import GAppHeader from "@/components/glass/GAppHeader.vue"
+import { IonHeader, IonContent } from "@ionic/vue"
 
 import { unreadNotificationsCount } from "@/data/notifications"
 
+import { useRouter } from "vue-router"
 import { inject, computed } from "vue"
 
+const router = useRouter()
 const user = inject("$user")
 const $dayjs = inject("$dayjs")
 const __ = inject("$translate")

@@ -170,6 +170,82 @@ for (const theme of ["light", "dark"]) {
 	}
 }
 
+// ---------- §3.3 at lg: (§20.4) ----------
+//
+// §20.4 says the constraint "continues to apply at every breakpoint", but the
+// geometry is different: the field is fixed to the viewport, the blobs are
+// vw-sized, and the content column is 720px left-aligned AFTER the side nav
+// (§20.2, §20.3) rather than centred. So the column sits further right than on
+// mobile, which moves it toward blob B and away from A and C.
+
+const LG = {
+	// §20.4 blob sizes as a fraction of viewport width, matching glass-components.css
+	scale: { a: 0.32, b: 0.29, c: 0.25 },
+	// §20.2 side nav: collapsed and expanded are both real states
+	nav: [72, 216],
+	// §20.1 breakpoint, plus common desktop widths
+	viewports: [1024, 1280, 1440, 1920],
+	column: 720, // §20.3
+	gutter: 15,
+};
+
+let lgClear = 0;
+for (const vw of LG.viewports) {
+	for (const nav of LG.nav) {
+		const colStart = nav + LG.gutter;
+		const colEnd = Math.min(colStart + LG.column, vw - LG.gutter);
+
+		for (const id of ["a", "b", "c"]) {
+			const size = vw * LG.scale[id];
+			const r = size / 2;
+			const f = tokens.field;
+			// offsets scale with the size at lg: (glass-components.css holds the
+			// origin:size ratio solved for mobile), so the model must too
+			const mobileSize = parseFloat(f[`blob-${id}-size`].value);
+			const isLeft = Boolean(f[`blob-${id}-left`]);
+			const mobileOffset = parseFloat(f[`blob-${id}-${isLeft ? "left" : "right"}`].value);
+			const offset = (mobileOffset / mobileSize) * size;
+			const cx = isLeft ? offset + r : vw - offset - r;
+
+			const nearest = Math.min(Math.max(cx, colStart), colEnd);
+			const dist = Math.abs(cx - nearest);
+			const alpha = dist >= r * 0.7 ? 0 : parse(f[`blob-${id}-color`].value).a * (1 - dist / (r * 0.7));
+			if (alpha <= 0) {
+				// no overlap at all is the strongest pass there is — record it,
+				// or a silent loop looks like a missing check
+				lgClear++;
+				continue;
+			}
+
+			for (const theme of ["light", "dark"]) {
+				const bg = parse(themedValue("bg", theme)).rgb;
+				const op = tokens["color-themed"]["blob-opacity"].value[theme];
+				const colour = parse(f[`blob-${id}-color`].value);
+				const surface = over(
+					parse(themedValue("glass-fill", theme)),
+					over({ rgb: colour.rgb, a: alpha * op }, bg)
+				);
+				for (const inkName of ["ink2", "ink-muted"]) {
+					const r2 = ratio(parse(themedValue(inkName, theme)).rgb, surface);
+					const ok = r2 >= 4.5;
+					checked++;
+					if (!ok) failures++;
+					console.log(
+						`[contrast] ${ok ? "PASS" : "FAIL"} lg ${vw}px nav:${nav} ${theme.padEnd(5)} ` +
+							`${inkName} over blob ${id.toUpperCase()} = ${r2.toFixed(2)} (min 4.5, §3.3/§20.4)`
+					);
+				}
+			}
+		}
+	}
+}
+
+console.log(
+	`[contrast] PASS lg — ${lgClear} blob×viewport×nav combinations reach the content column with ZERO alpha ` +
+		`(${LG.viewports.length} widths × ${LG.nav.length} nav states × 3 blobs, §3.3/§20.4)`
+);
+checked += lgClear;
+
 for (const s of SKIPPED) console.log(`[contrast] SKIP ${s}`);
 console.log(`GATE_RESULT ${JSON.stringify({ gate: "contrast", checked, failures, skipped: SKIPPED.length })}`);
 process.exit(failures ? 1 : 0);
