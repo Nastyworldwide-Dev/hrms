@@ -86,13 +86,113 @@
 					<h2 class="spec__label">GNOTEPANEL (§10.2 #22)</h2>
 					<GNotePanel>OT eligible after 6:00 pm on working days. Claims close on the 25th.</GNotePanel>
 				</section>
+
+				<h2 class="spec__title">Tier B</h2>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GLISTPANEL + GLISTROW (§10.1 #3) — one surface</h2>
+					<GListPanel>
+						<GListRow label="Apply for leave" @click="log('row')">
+							<template #icon>&rarr;</template>
+						</GListRow>
+						<GListRow label="Claim overtime" sublabel="Closes on the 25th" />
+						<GListRow label="Payslip" amount="RM 4,250.00" />
+						<GListRow label="Report an issue">
+							<template #badge><GBadge variant="open">Open</GBadge></template>
+						</GListRow>
+						<GListRow label="Sign out" destructive :chevron="false" />
+					</GListPanel>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GLISTPANEL — loading (§11.2) and empty (§11.1)</h2>
+					<GListPanel loading />
+					<GListPanel empty>
+						<template #empty>
+							<GEmptyState
+								title="Nothing reported"
+								body="If something looks wrong, tell us — a screenshot helps"
+							/>
+						</template>
+					</GListPanel>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GINPUT / GTEXTAREA (§10.1 #4, #5)</h2>
+					<GInput v-model="form.date" label="Date worked" placeholder="20 August 2026" />
+					<GInput v-model="form.hours" label="Hours" error="You have 2.5 days available and applied for 3." />
+					<GInput v-model="form.locked" label="Approver" disabled />
+					<GTextarea v-model="form.reason" label="Explanation" placeholder="What did you work on?" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GBALANCEGRID + GBALANCECARD (§15.2) — 2-up, 4-up at lg:</h2>
+					<GBalanceGrid>
+						<GBalanceCard label="Annual leave" :remaining="7.5" :allocated="8" />
+						<GBalanceCard label="Medical" :remaining="12" :allocated="14" :prorated-percentage="22" />
+						<GBalanceCard label="Replacement" :remaining="1" :allocated="4" />
+						<GBalanceCard label="Unpaid" :remaining="0" :allocated="0" />
+					</GBalanceGrid>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GBALANCEGRID — loading and empty</h2>
+					<GBalanceGrid loading />
+					<GBalanceGrid empty>
+						<template #empty>
+							<GEmptyState
+								title="No leave allocated yet"
+								body="People &amp; Culture are setting this up. Check back shortly."
+							/>
+						</template>
+					</GBalanceGrid>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GSTATPANEL + GSTATTILE (§10.2 #13) — one surface</h2>
+					<GStatPanel>
+						<GStatTile :value="10" label="Present" />
+						<GStatTile :value="2" label="Leave" />
+						<GStatTile :value="1" label="Absent" />
+					</GStatPanel>
+					<GStatPanel loading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GISSUECARD (§10.2 #14)</h2>
+					<GIssueCard
+						issue-id="HR-2026-0043"
+						title="Payslip shows the wrong shift allowance"
+						meta="Reported 2 days ago"
+						@click="log('GIssueCard')"
+					>
+						<template #badge><GBadge variant="open">Open</GBadge></template>
+					</GIssueCard>
+					<GIssueCard
+						issue-id="HR-2026-0031"
+						title="Check-in did not register at the Klang site"
+						meta="Resolved 20 August 2026"
+					>
+						<template #badge><GBadge variant="resolved">Resolved</GBadge></template>
+					</GIssueCard>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GPROGRESSRING (§10.1 #9)</h2>
+					<div class="spec__row">
+						<GProgressRing :score="4.2" />
+						<GProgressRing :score="0" />
+						<GProgressRing :score="5" />
+						<GProgressRing :score="0" loading />
+					</div>
+				</section>
 			</div>
 		</ion-content>
 	</ion-page>
 </template>
 
 <script setup>
-import { computed } from "vue"
+import { computed, reactive } from "vue"
 import { IonPage, IonContent } from "@ionic/vue"
 import { theme, setTheme, resolvedTheme, transparency, setTransparency } from "@/data/theme"
 import GButton from "@/components/glass/GButton.vue"
@@ -103,8 +203,19 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GNotePanel from "@/components/glass/GNotePanel.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
+import GInput from "@/components/glass/GInput.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
+import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
+import GBalanceCard from "@/components/glass/GBalanceCard.vue"
+import GStatPanel from "@/components/glass/GStatPanel.vue"
+import GStatTile from "@/components/glass/GStatTile.vue"
+import GIssueCard from "@/components/glass/GIssueCard.vue"
+import GProgressRing from "@/components/glass/GProgressRing.vue"
 
 const statuses = ["Draft", "Submitted", "Approved", "Rejected", "Cancelled"]
+const form = reactive({ date: "", hours: "3", locked: "Siti Rahman", reason: "" })
 const resolved = computed(() => (theme.mode, resolvedTheme()))
 
 function log(name) {
