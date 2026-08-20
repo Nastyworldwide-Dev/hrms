@@ -15,35 +15,32 @@
 				</router-link>
 
 				<span class="text-eyebrow uppercase text-accent-ink mt-2">{{ __("Reported by you") }}</span>
-				<div class="flex flex-col gap-2.5 border-t-2 border-divider pt-4">
-					<router-link
-						v-for="issue in myIssues.data || []"
-						:key="issue.name"
-						:to="{ name: 'EmployeeIssueDetailView', params: { id: issue.name } }"
-						class="bg-surface border border-divider p-3 cursor-pointer no-underline"
-					>
-						<div class="flex justify-between items-center mb-1.5">
-							<span class="text-caption font-extrabold tracking-wide text-ink-600">
-								{{ issue.name }}
-							</span>
-							<span
-								class="text-micro-label font-extrabold uppercase tracking-wider px-2 py-0.5 border"
-								:class="STATUS_CHIP[issue.status]"
-							>
-								{{ __(issue.status) }}
-							</span>
-						</div>
-						<div class="text-card-title font-extrabold text-inkbase mb-0.5">
-							{{ __(issue.issue_type) }}
-						</div>
-						<div class="text-kra-label text-ink-600 truncate">
-							{{ dayjs(issue.creation).format("D MMM, HH:mm") }} · {{ issue.details }}
-						</div>
-					</router-link>
+				<div class="flex flex-col gap-2.5 pt-1">
+					<!-- §15.1/§15.2: a LIST of issues is unbounded, and N glass cards
+					     are N surfaces — an employee with eight open tickets would
+					     blow the budget of 6 on its own. So the list flattens to ONE
+					     panel, exactly as the balance grid and stat row do.
+					     GIssueCard stays for the dashboard context, where §15.2
+					     counts a bounded two or three. -->
+					<GListPanel v-if="myIssues.loading || myIssues.data?.length" :loading="myIssues.loading">
+						<GListRow
+							v-for="issue in myIssues.data || []"
+							:key="issue.name"
+							:label="__(issue.issue_type)"
+							:sublabel="`${issue.name} · ${dayjs(issue.creation).format('D MMM, HH:mm')} · ${issue.details}`"
+							@click="router.push({ name: 'EmployeeIssueDetailView', params: { id: issue.name } })"
+						>
+							<template #badge>
+								<GStatusChip :status="issue.status" :label="__(issue.status)" />
+							</template>
+						</GListRow>
+					</GListPanel>
 
-					<EmptyState
+					<!-- §11.1 -->
+					<GEmptyState
 						v-if="!myIssues.loading && !myIssues.data?.length"
-						:message="__('Nothing reported yet')"
+						:title="__('Nothing reported')"
+						:body="__('If something looks wrong, tell us — a screenshot helps')"
 					/>
 				</div>
 			</div>
@@ -52,6 +49,11 @@
 </template>
 
 <script setup>
+import GListRow from "@/components/glass/GListRow.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
+import { useRouter } from "vue-router"
 import GButton from "@/components/glass/GButton.vue"
 import { createListResource } from "frappe-ui"
 import { inject } from "vue"
@@ -59,15 +61,11 @@ import { inject } from "vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
+const router = useRouter()
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 const employee = inject("$employee")
 
-const STATUS_CHIP = {
-	Open: "text-amber-700 border-amber-700 dark:text-amber-500 dark:border-amber-500",
-	"In Progress": "text-accent-500 border-accent-500 bg-accent-100/40",
-	Completed: "text-accent-900 border-transparent bg-accent-200",
-}
 
 // row scope already limits staff to their own rows; the explicit filter keeps
 // an HR user's "My Issues" personal instead of listing the whole site

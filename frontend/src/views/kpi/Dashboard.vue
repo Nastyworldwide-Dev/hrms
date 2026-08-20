@@ -67,39 +67,16 @@
 										</span>
 									</div>
 								</div>
-								<svg width="84" height="84" viewBox="0 0 84 84">
-									<circle
-										cx="42"
-										cy="42"
-										r="34"
-										fill="none"
-										stroke="currentColor"
-										class="text-ink-300"
-										stroke-width="7"
-									/>
-									<circle
-										cx="42"
-										cy="42"
-										r="34"
-										fill="none"
-										stroke="currentColor"
-										class="text-accent"
-										stroke-width="7"
-										:stroke-dasharray="`${ringDash} 213.6`"
-										transform="rotate(-90 42 42)"
-									/>
-									<text
-										x="42"
-										y="47"
-										text-anchor="middle"
-										fill="currentColor"
-										class="text-inkbase"
-										font-size="15"
-										font-weight="800"
-									>
-										{{ formatScore(current.total_score) }}
-									</text>
-								</svg>
+<!-- §10.1 #9 geometry (88×88, r38, circumference 238.8) and, per §6.3,
+								     a SOLID track: a performance score argued about in a
+								     review must not be read through a moving tint. The
+								     hand-rolled ring this replaces was 84×84 with an
+								     --ink3 track. -->
+								<GProgressRing
+									:score="Number(current.total_score) || 0"
+									:max="100"
+									:label="__('Overall score')"
+								/>
 							</div>
 						</div>
 
@@ -253,6 +230,7 @@
 </template>
 
 <script setup>
+import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
@@ -307,9 +285,6 @@ const delta = computed(() => {
 })
 
 // ring circumference: 2 * PI * 34 ≈ 213.6
-const ringDash = computed(() =>
-	current.value ? Math.max((current.value.total_score / 100) * 213.6, 0) : 0
-)
 
 function formatScore(value) {
 	return Number(value || 0)

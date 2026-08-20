@@ -7,26 +7,26 @@
 						<span class="text-eyebrow uppercase text-accent-ink">{{ __("HR · People & Culture") }}</span>
 					</div>
 
-					<!-- stats -->
-					<div class="flex gap-2 px-4 pt-3.5">
-						<div
-							v-for="stat in statTiles"
-							:key="stat.label"
-							class="flex-1 bg-surface border border-divider py-2 text-center"
-						>
-							<div class="text-lg font-extrabold" :class="stat.classes">{{ stat.value }}</div>
-							<div class="text-micro-label uppercase tracking-wider font-extrabold text-ink-600">
-								{{ stat.label }}
-							</div>
-						</div>
+					<!-- stats: ONE surface with internal dividers (§15.2), not one
+					     per tile. The count is dynamic, and the panel is 1 either way. -->
+					<div class="px-4 pt-3.5">
+						<GStatPanel :columns="statTiles.length === 4 ? 4 : 3">
+							<GStatTile
+								v-for="stat in statTiles"
+								:key="stat.label"
+								:value="stat.value"
+								:label="stat.label"
+							/>
+						</GStatPanel>
 					</div>
 
 					<!-- search + type filter -->
 					<div class="flex gap-2 px-4 pt-2.5">
-						<input
+						<GSearchBar
 							v-model="search"
+							class="flex-1"
 							:placeholder="__('Search name, id, text…')"
-							class="flex-1 text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent"
+							:label="__('Search issues')"
 						/>
 						<select
 							v-model="issueType"
@@ -39,21 +39,14 @@
 						</select>
 					</div>
 
-					<!-- status tabs -->
-					<div class="flex border-b-2 border-divider mt-2.5 px-4">
-						<button
-							v-for="status in ISSUE_STATUSES"
-							:key="status"
-							class="flex-1 py-2.5 text-micro-label font-extrabold uppercase tracking-wide border-b-[3px] -mb-0.5"
-							:class="
-								activeStatus === status
-									? 'text-inkbase border-accent'
-									: 'text-ink-600 border-transparent'
-							"
-							@click="activeStatus = status"
-						>
-							{{ __(status) }} ({{ counts[status] }})
-						</button>
+					<!-- status tabs: counts stay in the label, so the selected state
+					     is never carried by colour alone (§14.1) -->
+					<div class="px-4 mt-2.5">
+						<GSegmented
+							v-model="activeStatus"
+							:buttons="statusButtons"
+							:label="__('Issue status')"
+						/>
 					</div>
 
 					<!-- cards -->
@@ -84,9 +77,10 @@
 							</div>
 						</div>
 
-						<EmptyState
+						<GEmptyState
 							v-if="!issues.loading && !visibleIssues.length"
-							:message="__('No {0} issues', [activeStatus.toLowerCase()])"
+							:title="__('Nothing in {0}', [__(activeStatus).toLowerCase()])"
+							:body="__('Issues move here as they are triaged')"
 						/>
 					</div>
 				</div>
@@ -173,6 +167,11 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
+import GSearchBar from "@/components/glass/GSearchBar.vue"
+import GStatTile from "@/components/glass/GStatTile.vue"
+import GStatPanel from "@/components/glass/GStatPanel.vue"
 import { IonModal } from "@ionic/vue"
 import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, ref } from "vue"
@@ -225,6 +224,12 @@ const issues = createListResource({
 	pageLength: 500,
 	auto: true,
 })
+
+// GSegmented takes {key,label}; the count rides in the label so the selected
+// state is never signalled by colour alone (§14.1)
+const statusButtons = computed(() =>
+	ISSUE_STATUSES.map((status) => ({ key: status, label: `${__(status)} (${counts.value?.[status] ?? 0})` }))
+)
 
 const counts = computed(() => countByStatus(issues.data))
 const visibleIssues = computed(() =>

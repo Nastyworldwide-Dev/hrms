@@ -8,9 +8,7 @@
 						:to="{ name: 'ReplacementLeaveClaimFormView' }"
 						v-slot="{ navigate }"
 					>
-						<Button variant="solid" @click="navigate">
-							{{ __("New Claim") }}
-						</Button>
+						<GButton :label="__('New Claim')" @click="navigate" />
 					</router-link>
 				</div>
 
@@ -52,7 +50,11 @@
 				<!-- claims -->
 				<div class="flex flex-col gap-1.5">
 					<span class="text-eyebrow uppercase text-accent-ink">{{ __("My Claims") }}</span>
-					<EmptyState v-if="!claims.data?.length" :message="__('No claims yet')" />
+					<GEmptyState
+						v-if="!claims.data?.length"
+						:title="__('No replacement leave claimed')"
+						:body="__('Worked a rest day? Claim the time back here')"
+					/>
 					<router-link
 						v-for="claimRow in claims.data"
 						:key="claimRow.name"
@@ -65,9 +67,9 @@
 							</span>
 							<span class="text-xs text-ink-600">{{ claimRow.name }}</span>
 						</div>
-						<Badge :theme="claimRow.docstatus === 1 ? 'green' : 'orange'" variant="subtle">
+						<GStatusChip :status="claimRow.docstatus === 1 ? 'Approved' : 'Draft'" :label="claimRow.docstatus === 1 ? __('Approved') : __('Draft')">
 							{{ claimRow.docstatus === 1 ? __("Approved") : __("Pending") }}
-						</Badge>
+						</GStatusChip>
 					</router-link>
 				</div>
 			</div>
@@ -76,12 +78,14 @@
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GButton from "@/components/glass/GButton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { Badge, Button, createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
-import EmptyState from "@/components/EmptyState.vue"
 
 const employee = inject("$employee")
 const __ = inject("$translate")

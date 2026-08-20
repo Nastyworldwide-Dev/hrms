@@ -553,7 +553,19 @@ Home is the worked example (v1.5): the mockup's balance grid was removed because
 | **Attendance** | Eyebrow + title → calendar panel → stat panel (**4-up**, one surface) → primary → action list (3 rows, one surface) → request lists → tab bar | REQUEST ATTENDANCE |
 | **Overtime** | Eyebrow + title → date field → hours field → eligibility note panel → explanation field (66px) → primary → routing caption → tab bar | SEND TO APPROVER |
 | **KPI** | Eyebrow + title → score panel (ring + verdict + pill) → KRA field label → KRA panel (4 rows) → goals panel → tab bar | none — read-only |
-| **Issues** | Eyebrow + title → stat panel (3-up, **one surface**) → issue cards → primary → screenshot hint caption → tab bar | REPORT AN ISSUE |
+| **Issues** (staff) | Eyebrow + title → primary → eyebrow "REPORTED BY YOU" → issue list (**one panel**, not N cards) → tab bar | REPORT AN ISSUE |
+| **Issue board** (HR) | Eyebrow → stat panel (N-up, one surface) → search + type filter → status segmented control with counts → issue list → detail sheet | none — triage, not creation |
+
+**Issues and KPI diverge** (reconciled in v1.6, batch 4):
+
+| Anatomy said | The app has | Resolved |
+|---|---|---|
+| One Issues screen | **Two** — `IssuesTab` routes HR to a board and staff to their own list. Server-side row scope is the real protection; the switch is presentation | **App.** Both are now in the table above; the HR board had no anatomy at all and one is written here |
+| Issue **cards** | A list of unbounded length | **§15.** N glass cards are N surfaces, so eight open tickets would exceed the budget of 6 on their own. The staff list flattens to one panel; `GIssueCard` stays for the bounded dashboard context §15.2 counted |
+| Stat panel 3-up on Issues | The **staff** list has no stat panel; the **HR board** has one, N-up | **App** |
+| KPI: score panel (ring + verdict + cycle pill) | Score out of 100, a grade badge, a delta against the last cycle, and the cycle in the eyebrow — no verdict line | **App.** The ring itself now follows §10.1 #9 (88×88, r38) with a `--track-solid` track per §6.3, replacing a hand-rolled 84×84 ring on an `--ink3` track |
+| KPI: goals panel | No goals panel; `goal_completion` is a KRA row field | **App** — nothing to style |
+| KPI: KRA panel (4 rows) | N rows, each with a KRA name, a KPI description, a weightage badge, a bar and a score | **App** — richer than the four-row shape, and the bar already uses `--track-solid` |
 
 **Leave diverges** (reconciled in v1.6, batch 3):
 

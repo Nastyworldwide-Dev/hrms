@@ -92,7 +92,19 @@ function costFile(file, seen = new Set()) {
 		else screen += n;
 	};
 
-	for (const line of tpl.split("\n")) {
+	const lines = tpl.split("\n");
+	// a component tag often spans several lines, with v-for below the tag name.
+	// Look ahead to the element's ">" so a multi-line <GIssueCard\n v-for=…> is
+	// still recognised as N surfaces at runtime (§15.1).
+	const elementHasVFor = (idx) => {
+		for (let k = idx; k < Math.min(idx + 12, lines.length); k++) {
+			if (/\bv-for=/.test(lines[k])) return true;
+			if (/>/.test(lines[k]) && k > idx) return false;
+			if (k === idx && /\/?>/.test(lines[k].replace(/<[A-Za-z][^\s>]*/, ""))) return /\bv-for=/.test(lines[k]);
+		}
+		return false;
+	};
+	for (const [lineIndex, line] of lines.entries()) {
 		const opens = [...line.matchAll(/<([A-Za-z][A-Za-z0-9-]*)\b(?![^>]*\/>)/g)].filter((m) =>
 			SHEET_TAGS.test(m[1])
 		).length;
@@ -118,7 +130,7 @@ function costFile(file, seen = new Set()) {
 				lineTotal += c.screen;
 				sheets.push(...c.sheets);
 			}
-			if (c.screen > 0 && /\bv-for=/.test(line)) loopedHere.push(child);
+			if (c.screen > 0 && elementHasVFor(lineIndex)) loopedHere.push(child);
 		}
 
 		if (/\bv-if=/.test(line)) {
