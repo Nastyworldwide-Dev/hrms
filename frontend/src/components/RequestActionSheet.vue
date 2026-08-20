@@ -1,11 +1,11 @@
 <template>
 	<div
 		v-if="document?.doc"
-		class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
+		class="bg-ground w-full flex flex-col pb-5 max-h-sheet border-t-[3px] border-inkbase"
 	>
 		<!-- Header -->
 		<div
-			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-[100] bg-ground"
+			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-overlay bg-ground"
 		>
 			<div class="flex flex-col gap-1">
 				<div class="m-kicker">{{ __("Request") }}</div>
@@ -86,7 +86,7 @@
 
 		<div
 			v-else-if="['Open', 'Draft'].includes(document?.doc?.[approvalField]) && hasPermission('approval')"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ status: 'Rejected' })"
@@ -121,7 +121,7 @@
 					['Approved', 'Rejected'].includes(document?.doc?.[approvalField])) &&
 				hasPermission('submit')
 			"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 1 })"
@@ -134,7 +134,7 @@
 
 		<div
 			v-else-if="document?.doc?.docstatus === 1 && hasPermission('cancel')"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 2 })"

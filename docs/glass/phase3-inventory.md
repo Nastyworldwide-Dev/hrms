@@ -68,9 +68,10 @@ call site.
 | Group | Count | Absorbs into |
 |---|---|---|
 | `h-[18px]` `w-[18px]` `w-[17px]` `h-[17px]` `h-[15px]` `w-[15px]` `h-[19px]` `w-[19px]` `h-[22px]` | 51 | §9's icon convention — 14×14 in a 27×27 well. Today every call site picks its own icon size |
-| `border-t-[3px]` | 14 | `GBanner` (§10.1 #10's 3px rule) |
-| `w-[34px]` `h-[34px]` | 10 | `GAvatar`'s `size` prop |
-| `max-h-[calc(100vh-5rem)]` (partial) | 5 | `GModal` sheet height |
+| `border-t-[3px]` | 14 | **`GModal`, not `GBanner` — corrected in 3.2.** These are `border-t-[3px] border-inkbase` on bottom-sheet containers: the Modernist sheet *top edge*, not §10.1 #10's 3px left rule. Under Glass the sheet carries a radius and a rim, so this value does not survive the swap at all |
+| `w-[34px]` `h-[34px]` | 10 | `GAvatar`'s `size` prop — already absorbed in 2.4 |
+| `max-h-[calc(100vh-5rem)]` | 10 | `GModal` sheet ceiling. Reclassified whole: 3.1 split this 5 ABSORB / 5 PROMOTE, but it is one shape with one owner |
+| `border-l-[3px]` | 2 | The side-nav active indicator — belongs to the **phase 4 shell** (§20.2), not to any phase 3 component |
 
 **PROMOTE — 48.** No Glass token exists and none should; these are real scale
 entries the Tailwind theme should name.

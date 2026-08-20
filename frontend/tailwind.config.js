@@ -87,6 +87,18 @@ export default {
 					raw: "(display-mode: standalone)",
 				},
 			},
+			// Promoted from arbitrary values in phase 3.2. Not design tokens —
+			// they carry no theme meaning — so they are named here rather than in
+			// design/tokens.json. The z-index scale IS a token (--g-layer-*) and
+			// arrives through the generated fragment above.
+			textUnderlineOffset: {
+				link: "3px",
+			},
+			maxHeight: {
+				// bottom-sheet ceiling; GModal owns this shape (spec §10.3 #25).
+				// Reads the token so the utility and glass-components.css cannot drift.
+				sheet: "var(--g-sheet-max-height)",
+			},
 			padding: {
 				"safe-top": "env(safe-area-inset-top)",
 				"safe-right": "env(safe-area-inset-right)",

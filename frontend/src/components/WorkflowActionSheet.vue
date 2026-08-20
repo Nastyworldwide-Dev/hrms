@@ -4,7 +4,7 @@
 		:class="[
 			props.view === 'form'
 				? 'px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider'
-				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-[100] p-4',
+				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4',
 		]"
 	>
 		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">

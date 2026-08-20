@@ -5,7 +5,7 @@
 			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
 				<span
 					@click="navigate"
-					class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
+					class="text-[11px] text-accent underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Claims") }}
 				</span>

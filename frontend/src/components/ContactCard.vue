@@ -32,7 +32,7 @@
 				<a
 					v-if="contact.email"
 					:href="`mailto:${contact.email}`"
-					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-[3px]"
+					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-link"
 				>
 					<FeatherIcon name="mail" class="h-3 w-3 shrink-0" />
 					<span class="truncate">{{ contact.email }}</span>
@@ -40,7 +40,7 @@
 				<a
 					v-if="contact.phone"
 					:href="`tel:${contact.phone}`"
-					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-[3px]"
+					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-link"
 				>
 					<FeatherIcon name="phone" class="h-3 w-3 shrink-0" />
 					<span>{{ contact.phone }}</span>

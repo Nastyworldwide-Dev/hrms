@@ -9,7 +9,7 @@
 			>
 				<span
 					@click="navigate"
-					class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
+					class="text-[11px] text-accent underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Leave History") }}
 				</span>

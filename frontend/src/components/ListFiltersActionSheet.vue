@@ -1,9 +1,9 @@
 <template>
 	<!-- Filter Action Sheet -->
 	<div
-		class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
+		class="bg-ground w-full flex flex-col pb-5 max-h-sheet border-t-[3px] border-inkbase"
 	>
-		<div class="w-full pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-[100] bg-ground flex flex-col gap-1">
+		<div class="w-full pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground flex flex-col gap-1">
 			<div class="m-kicker">{{ __("Refine") }}</div>
 			<span class="text-inkbase font-extrabold text-[22px] leading-tight">{{ __("Filters") }}</span>
 		</div>
@@ -67,7 +67,7 @@
 
 		<!-- Filter Buttons -->
 		<div
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground p-4 z-[100]"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground p-4 z-overlay"
 		>
 			<Button
 				@click="emit('clear-filters')"

@@ -1,6 +1,6 @@
-# HR Frappe · Glass — Implementation Specification v1.2
+# HR Frappe · Glass — Implementation Specification v1.3
 
-**Supersedes** v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
+**Supersedes** v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
@@ -37,6 +37,17 @@ Each of these was a conflict found while building the components, not a change o
 | 1.4 | §15.3 added: **chrome counted separately**; the app header is **not** a glass surface, the tab bar **is** | §15.2's arithmetic never counted a header, leaving its material undefined. A glass header above glass content would also nest, which §15 forbids |
 | 1.5 | §20.7 gains **#24 App header** — avatar hidden, kicker shown at `lg:` | The v1.1 list was incomplete: the shipped header already differs at `lg:`, so "identical at both breakpoints" was untrue on arrival |
 | 1.6 | §10.2 #21 records the **only §2.5 exemption** — clock seconds, with its measured 4.26:1 and the condition that voids it | An unrecorded opacity multiplier reads as an oversight and gets "fixed" or copied; both outcomes are wrong |
+
+### v1.3 — rulings raised by the phase 3 inventory
+
+Both follow from `docs/glass/phase3-inventory.md`, which measured what earlier
+sections had estimated.
+
+| # | Change | Reason |
+|---|---|---|
+| 2.1 | §16.3: the **`--ion-color-*` ramps are not deleted**. Only background, text and font-family map to Glass | The ramps are Ionic's internal contract, not app design tokens. No Glass token corresponds to a shade or tint step, so deleting them breaks `color="primary"` and buys nothing |
+| 2.2 | §16.2: file counts corrected — `rounded-*` touches **4 app files, not 103**; arbitrary values are **403, not 303** | Both figures were estimates that drove planning. The measured radius exposure is 106 utilities across 47 `frappe-ui` components, not app source |
+| 2.3 | §16.2: the radius scale is **remapped onto the Glass ladder**, not restored to Tailwind defaults and not left at 0 | At 0, frappe-ui renders square against rounded Glass surfaces; at Tailwind defaults it renders off-ladder. Remapping makes 17 third-party components inherit Glass-consistent rounding without touching one of them |
 
 ---
 
@@ -612,11 +623,25 @@ A screen therefore spends **one** of its six on chrome — the tab bar below `lg
 - Switched by `data-theme` on the root element. No duplicated stylesheets, no second component set, no theme prop threaded through components.
 - `darkMode: ['selector', '[data-theme="dark"]']` — note this is also what `frappe-ui` ≥ 0.1.2xx expects.
 - Tailwind tokens are **semantic** — `bg-glass`, `text-ink-2`, `rounded-panel`. A hardcoded `bg-white/[0.075]` cannot be re-themed later.
-- **`borderRadius` is currently zeroed** in `tailwind.config.js` for the Modernist look. Restoring the scale will silently round every element relying on it being 0. Audit that change specifically.
-- **303 arbitrary Tailwind values** (`text-[8.5px]`, `border-l-[3px]`, `h-[19px]`) across 103 files hardcode Modernist metrics at call sites and are invisible to a token swap. They are swept after the scale exists.
+- **`borderRadius` is currently zeroed** in `tailwind.config.js` for the Modernist look. **Measured in phase 3.1** (`docs/glass/phase3-inventory.md`): `rounded-*` appears in **4 app files, 6 usages** — not the ~103 files earlier drafts of this section assumed. The real exposure is **106 utilities across 47 `frappe-ui` component files**, which sit inside the Tailwind content glob; 17 of those components are used by this app.
+- **The generic radius scale is remapped, not restored and not left at 0.** At 0 those 47 frappe-ui components render square against rounded Glass surfaces; at Tailwind's defaults they render off-ladder. Remapping makes frappe-ui inherit Glass-consistent rounding for free:
+
+  | Step | Value | Glass ladder equivalent |
+  |---|---|---|
+  | `sm` | 6px | `radius-pill` |
+  | `DEFAULT` | 9px | `radius-well` |
+  | `md` | 9px | `radius-well` |
+  | `lg` | 14px | `radius-input` |
+  | `xl` | 17px | `radius-card` |
+  | `2xl` | 20px | `radius-panel` |
+  | `3xl` | 22px | `radius-tabbar` |
+
+  `none` (0) and `full` (9999px) are unchanged. This lands in **its own commit** with visual verification over `/design` and the four frappe-ui wrappers (`GLinkPicker`, `GDatePicker`, `GToast`, `GAvatar`), never bundled into the Modernist deletion.
+- **403 arbitrary Tailwind values** (`text-[8.5px]`, `border-l-[3px]`, `h-[19px]`) hardcode Modernist metrics at call sites and are invisible to a token swap — measured, where earlier drafts said 303. They are swept after the scale exists.
 
 ### 16.3 Ionic
 - Ionic components are Shadow DOM. Theme via published CSS custom properties and `::part()` only.
+- **The `--ion-color-*` ramps are Ionic's internal contract, not app design tokens, and are NOT deleted.** `theme/variables.css` carries 40 hex values across nine ramps (primary/secondary/tertiary/success/warning/danger/dark/medium/light, each with `-rgb`, `-contrast`, `-shade`, `-tint`). Only **`--ion-background-color`, `--ion-text-color` and `--ion-font-family`** map to Glass tokens; the ramps are left alone. Deleting them would break any component using `color="primary"` and gains nothing — they are not part of the palette Glass owns, and no Glass token corresponds to a shade or tint step. They stay hand-written in `variables.css` and are therefore **exempt from the token-discipline gate**, which is why that file keeps a baseline entry rather than being cleaned.
 - `ion-content` → `--background: transparent` so the page's light field shows through.
 - `ion-tab-bar` host is positionable — the floating pill is achievable without replacing the component. Per-tab navigation stacks are retained.
 - `ion-modal` / `ion-action-sheet` → `--background`, `--border-radius`, `--backdrop-opacity`.
@@ -762,4 +787,4 @@ The side nav itself sits in §10.3's treatment list and is specified by §20.2. 
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.2 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the seven exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.3 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the seven exceptions recorded in §14.4.*

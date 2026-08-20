@@ -2,7 +2,7 @@
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
 		<div class="w-full h-full bg-ground flex flex-col">
 			<header
-				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-[1000] lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
+				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<Button
 					variant="ghost"
@@ -82,7 +82,7 @@
 				<!-- Tabs -->
 				<template v-if="tabbedView">
 					<div
-						class="px-4 sticky top-0 z-[100] bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
+						class="px-4 sticky top-0 z-overlay bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 					>
 						<ul class="flex -mb-px overflow-auto hide-scrollbar">
 							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs">

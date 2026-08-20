@@ -81,6 +81,18 @@
 	--g-blur-panel: 20px;
 	/* shadow */
 	--g-shadow-action: 0 10px 30px rgba(var(--g-brand-rgb) / 0.34), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.14);
+	/* layer */
+	--g-layer-overlay: 100;
+	--g-layer-scrim: 10000;
+	--g-layer-sticky: 1000;
+	/* layout */
+	--g-content-column: calc(100% - 30px);
+	--g-content-column-lg: 720px;
+	--g-sheet-max-height: calc(100vh - 5rem);
+	--g-tabbar-gap: 9px;
+	--g-touch-target-min: 44px;
+	--g-viewport-height: 844px;
+	--g-viewport-width: 390px;
 	/* type */
 	--g-font-display: -apple-system, BlinkMacSystemFont, 'Inter Tight', 'Inter', 'Segoe UI', Roboto, sans-serif;
 	--g-font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;

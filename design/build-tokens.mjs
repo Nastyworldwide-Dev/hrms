@@ -33,7 +33,7 @@ const isHex = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
 const isVal = (v) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
 const sorted = (obj) => Object.keys(obj).sort();
 
-for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "type", "motion"]) {
+for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "type", "motion"]) {
 	if (!tokens[group] || typeof tokens[group] !== "object") bad(group, "missing group");
 }
 if (errors.length) die();
@@ -48,7 +48,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 			bad(`${group}.${name}`, "value must be { light, dark }");
 	}
 }
-for (const group of ["spacing", "radius", "blur", "shadow"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout"]) {
 	for (const name of sorted(tokens[group])) {
 		if (!isVal(tokens[group][name].value)) bad(`${group}.${name}`, "value must be a non-empty string");
 	}
@@ -111,12 +111,14 @@ for (const group of ["color-themed", "color-semantic"]) {
 	}
 }
 
-for (const group of ["spacing", "radius", "blur", "shadow"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout"]) {
 	light.push(`\t/* ${group} */`);
-	// shadow token names get the group prefix (--g-shadow-action); the others
-	// already carry theirs (radius-panel, blur-ghost) or read fine bare
+	// shadow and layer names take the group prefix (--g-shadow-action,
+	// --g-layer-scrim); the rest already carry theirs (radius-panel,
+	// blur-ghost) or read fine bare
+	const prefixed = group === "shadow" || group === "layer";
 	for (const name of sorted(tokens[group]))
-		light.push(decl(group === "shadow" ? `shadow-${name}` : name, tokens[group][name].value));
+		light.push(decl(prefixed ? `${group}-${name}` : name, tokens[group][name].value));
 }
 
 light.push("\t/* type */");
@@ -215,6 +217,18 @@ for (const name of sorted(tokens.motion)) {
 const boxShadow = { lift: "var(--g-lift)" };
 for (const name of sorted(tokens.shadow)) boxShadow[name] = `var(--g-shadow-${name})`;
 
+// the layering contract: one named scale so call sites stop inventing z-values
+const zIndex = {};
+for (const name of sorted(tokens.layer)) zIndex[name] = `var(--g-layer-${name})`;
+
+// only layout values that are actually widths become maxWidth utilities — a
+// gap or a touch-target minimum is neither a width nor a max
+const maxWidth = {};
+for (const name of sorted(tokens.layout)) {
+	const value = String(tokens.layout[name].value);
+	if (/column|width/.test(name) && /^(\d|calc)/.test(value)) maxWidth[name] = `var(--g-${name})`;
+}
+
 const fragment = {
 	backdropBlur,
 	borderRadius,
@@ -222,10 +236,12 @@ const fragment = {
 	colors,
 	fontFamily,
 	fontSize,
+	maxWidth,
 	opacity: { blob: "var(--g-blob-opacity)" },
 	spacing,
 	transitionDuration,
 	transitionTimingFunction,
+	zIndex,
 };
 
 function cjs(value, depth) {

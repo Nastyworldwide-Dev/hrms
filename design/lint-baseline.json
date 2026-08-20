@@ -14,13 +14,13 @@
 	"components/CheckInPanel.vue": {
 		"hex": 13,
 		"colorfn": 3,
-		"arbitrary": 16
+		"arbitrary": 15
 	},
 	"components/ContactCard.vue": {
-		"arbitrary": 9
+		"arbitrary": 7
 	},
 	"components/ContactInfoSheet.vue": {
-		"arbitrary": 4
+		"arbitrary": 2
 	},
 	"components/CustomIonModal.vue": {
 		"arbitrary": 1
@@ -53,25 +53,25 @@
 		"arbitrary": 2
 	},
 	"components/FormView.vue": {
-		"arbitrary": 9
+		"arbitrary": 7
 	},
 	"components/Holidays.vue": {
-		"arbitrary": 5
+		"arbitrary": 4
 	},
 	"components/InstallPrompt.vue": {
 		"arbitrary": 1
 	},
 	"components/LateCheckoutDialog.vue": {
-		"arbitrary": 7
+		"arbitrary": 5
 	},
 	"components/LeaveBalance.vue": {
-		"arbitrary": 7
+		"arbitrary": 6
 	},
 	"components/LeaveRequestItem.vue": {
 		"arbitrary": 1
 	},
 	"components/ListFiltersActionSheet.vue": {
-		"arbitrary": 6
+		"arbitrary": 3
 	},
 	"components/OTRequestItem.vue": {
 		"arbitrary": 1
@@ -84,7 +84,7 @@
 		"arbitrary": 3
 	},
 	"components/ProfileInfoModal.vue": {
-		"arbitrary": 4
+		"arbitrary": 2
 	},
 	"components/PushNotificationPrompt.vue": {
 		"arbitrary": 3
@@ -93,16 +93,16 @@
 		"arbitrary": 8
 	},
 	"components/RemoteCheckinDialog.vue": {
-		"arbitrary": 7
+		"arbitrary": 5
 	},
 	"components/ReplacementLeaveCard.vue": {
-		"arbitrary": 6
+		"arbitrary": 5
 	},
 	"components/ReplacementLeaveClaimItem.vue": {
 		"arbitrary": 1
 	},
 	"components/RequestActionSheet.vue": {
-		"arbitrary": 7
+		"arbitrary": 2
 	},
 	"components/RequestPanel.vue": {
 		"arbitrary": 2
@@ -121,13 +121,10 @@
 		"arbitrary": 20
 	},
 	"components/StrictRejectionDialog.vue": {
-		"arbitrary": 4
+		"arbitrary": 2
 	},
 	"components/TabButtons.vue": {
 		"arbitrary": 2
-	},
-	"components/WorkflowActionSheet.vue": {
-		"arbitrary": 1
 	},
 	"components/icons/FrappeHRLogo.vue": {
 		"hex": 3

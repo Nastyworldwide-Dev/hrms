@@ -5,9 +5,9 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
+		<div class="bg-ground w-full flex flex-col pb-8 max-h-sheet border-t-[3px] border-inkbase">
 			<div
-				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-[100] bg-ground px-4"
+				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-ground px-4"
 			>
 				<div class="m-kicker">{{ __("Remote check-in") }}</div>
 				<span class="text-inkbase font-extrabold text-[22px] leading-tight">

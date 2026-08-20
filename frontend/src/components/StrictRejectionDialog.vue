@@ -5,9 +5,9 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-ground w-full flex flex-col pb-5 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase">
+		<div class="bg-ground w-full flex flex-col pb-5 max-h-sheet border-t-[3px] border-inkbase">
 			<div
-				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-[100] bg-ground"
+				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground"
 			>
 				<div
 					class="h-12 w-12 bg-red-100 flex items-center justify-center"

@@ -147,6 +147,11 @@ module.exports = {
 			lineHeight: "1.2",
 		}],
 	},
+	maxWidth: {
+		"content-column": "var(--g-content-column)",
+		"content-column-lg": "var(--g-content-column-lg)",
+		"viewport-width": "var(--g-viewport-width)",
+	},
 	opacity: {
 		blob: "var(--g-blob-opacity)",
 	},
@@ -172,5 +177,10 @@ module.exports = {
 		"sheet-present": "var(--g-motion-sheet-present-easing)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-easing)",
 		"theme-change": "var(--g-motion-theme-change-easing)",
+	},
+	zIndex: {
+		overlay: "var(--g-layer-overlay)",
+		scrim: "var(--g-layer-scrim)",
+		sticky: "var(--g-layer-sticky)",
 	},
 };

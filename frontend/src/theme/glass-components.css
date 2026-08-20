@@ -1132,12 +1132,16 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-scrim {
 	position: fixed;
 	inset: 0;
-	z-index: 10000;
+	z-index: var(--g-layer-scrim);
 	margin-top: 0;
 	background: var(--g-scrim);
 	cursor: pointer;
 }
 .g-sheet {
+	/* absorbed in phase 3.2: the sheet ceiling was an arbitrary viewport
+	   calc repeated at eleven Modernist call sites; GModal owns the shape now */
+	max-height: var(--g-sheet-max-height);
+	overflow-y: auto;
 	padding: var(--g-pad-panel);
 	padding-bottom: max(var(--g-pad-panel), env(safe-area-inset-bottom));
 }
