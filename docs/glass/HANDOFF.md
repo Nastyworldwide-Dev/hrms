@@ -1,18 +1,23 @@
 # HANDOFF
-prompt:   4.1 ruling (§3.3 geometry)
-status:   done — gate green, line released for 4.2
-commit:   fb0a63f3c on nz-glass
-files:    design/tokens.json (3 origins) + regenerated glass.css
-          docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md → v1.4 (§3, §3.3, §14.4 #8, §0)
-verify:   cd frontend && yarn gates    (contrast 30/30, was 21/30)
-flags:    20px margin is INSUFFICIENT — the gradient is ~80px wide, so clearance must exceed
-          its reach. Solved per blob: A 80px, B 73px, C 62px → left -180, right -163, left -137
-          VERTICAL needs no rule: the column is horizontal and full-height, so no y exists where
-          content is absent; x clearance is necessary and sufficient. Recorded in §3.3
-          margins are TIGHT by construction (ink-muted 4.54–4.56) — solved for the minimum, so
-          any future rise in blob-opacity or fall in glass-fill re-breaks it. The gate will catch it
-          VISUAL REVIEW: field now reads as three corner glows, not visible cores — a core bright
-          enough to see is too bright to read text over. Differs from the mockup on purpose
-          lg: NOT covered — the assertion models the 390 reference viewport only. At lg the blobs
-          are vw-sized and the column is offset by the sidebar; needs its own check in 4.2
-next:     4.2 scaffold — unify the 27 standalone ion-page views, then add the lg: §3.3 check
+prompt:   4.2 (scaffold, header, safe area, lg: check)
+status:   done
+commit:   7078f8536 on nz-glass
+files:    frontend/src/components/glass/GPage.vue (new scaffold)
+          25 views migrated ion-page → GPage
+          frontend/src/components/BaseLayout.vue (GPage + GAppHeader)
+          frontend/index.html (viewport meta)
+          frontend/src/theme/glass-components.css (layering, lg: geometry)
+          design/gates/contrast.mjs (lg: §3.3 assertion)
+verify:   cd frontend && yarn gates && yarn build
+flags:    lg: ASSERTION CAUGHT A 4.1 BUG — scaling blob size with vw but not the offsets
+          marched centres into the column (dark ink-muted 1.08 at 1440px). Origin:size ratio
+          now held; 54/54 pass, and at lg no blob reaches the column at all
+          4 auth/error screens take :field="false" — Login, ForgotPassword, ChangePassword,
+          InvalidEmployee render before a session and have no glass to sit behind
+          2 routers (FormShell, TabbedView) keep a bare ion-page: §3.2 needs the field in the
+          CHILD page Ionic transforms, not the parent that hosts the outlet
+          SAFE AREA: meta now parses as 3 directives (was 2, viewport-fit swallowed) and env()
+          resolves. Non-zero insets CANNOT be verified without an iOS device — human must check
+          DECISION 3 OPEN: removing maximum-scale restores iOS focus-zoom on sub-16px inputs.
+          Recorded, not decided; no input font sizes changed
+next:     4.3 tab bar + side nav (both untouched here)
