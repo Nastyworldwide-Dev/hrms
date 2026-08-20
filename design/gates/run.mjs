@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const STRICT = process.argv.includes("--strict");
-const GATES = ["lint", "contrast", "surfaces", "a11y"];
+const GATES = ["lint", "usage", "contrast", "surfaces", "a11y"];
 
 const results = [];
 for (const gate of GATES) {
@@ -27,7 +27,7 @@ console.log("\n━━ summary " + "━".repeat(45));
 console.log("gate       status  detail");
 for (const { gate, code, info } of results) {
 	const detail =
-		gate === "lint" ? `${info.total ?? "?"} known, ${info.new ?? "?"} new`
+		gate === "lint" || gate === "usage" ? `${info.total ?? "?"} known, ${info.new ?? "?"} new`
 		: gate === "contrast" ? `${info.checked ?? "?"} pairs, ${info.failures ?? "?"} failed, ${info.skipped ?? 0} skipped`
 		: gate === "surfaces" ? `${info.surfaces ?? "?"} surfaces, ${info.over ?? "?"} screens over ${6}`
 		: `${info.status ?? "?"} (report-only)`;
