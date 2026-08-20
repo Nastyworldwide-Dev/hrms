@@ -27,89 +27,21 @@
 						</GButton>
 					</router-link>
 
-					<router-link
-						:to="{ name: 'OTRequestFormView' }"
-						v-slot="{ navigate }"
-						class="order-6 lg:order-3"
-					>
-						<button
-							type="button"
-							class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
-							@click="navigate"
-						>
-							{{ __("Request Overtime") }}
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="ml-auto"
-							>
-								<line x1="5" y1="12" x2="19" y2="12" />
-								<polyline points="12 5 19 12 12 19" />
-							</svg>
-						</button>
-					</router-link>
+										<!-- §15.2 flattening: three separate ghost actions were three glass
+					     surfaces and put this screen at 7 of 6. One panel with three rows
+					     is one surface, and the actions read as a group rather than three
+					     floating buttons. -->
+					<div class="order-6 lg:order-3 lg:col-span-2">
+						<GListPanel>
+						<GListRow :label="__('Request Overtime')" @click="router.push({ name: 'OTRequestFormView' })" />
+						<GListRow :label="__('Replacement Leave')" @click="router.push({ name: 'ReplacementLeaveView' })" />
+						<GListRow :label="__('Request a Shift')" @click="router.push({ name: 'ShiftRequestFormView' })" />
+						</GListPanel>
+					</div>
 
-					<router-link
-						:to="{ name: 'ReplacementLeaveView' }"
-						v-slot="{ navigate }"
-						class="order-7 lg:order-4"
-					>
-						<button
-							type="button"
-							class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
-							@click="navigate"
-						>
-							{{ __("Replacement Leave") }}
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="ml-auto"
-							>
-								<line x1="5" y1="12" x2="19" y2="12" />
-								<polyline points="12 5 19 12 12 19" />
-							</svg>
-						</button>
-					</router-link>
+					
 
-					<router-link
-						:to="{ name: 'ShiftRequestFormView' }"
-						v-slot="{ navigate }"
-						class="order-5 lg:order-2"
-					>
-						<button
-							type="button"
-							class="flex items-center w-full h-full bg-transparent text-inkbase border border-divider px-4 py-3.5 font-bold text-sm text-left hover:bg-ink-200"
-							@click="navigate"
-						>
-							{{ __("Request a Shift") }}
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="ml-auto"
-							>
-								<line x1="5" y1="12" x2="19" y2="12" />
-								<polyline points="12 5 19 12 12 19" />
-							</svg>
-						</button>
-					</router-link>
+					
 
 					<div class="order-3 lg:order-3 lg:col-span-2">
 						<div class="flex items-baseline justify-between mb-2.5">
@@ -190,6 +122,9 @@
 </template>
 
 <script setup>
+import { useRouter } from "vue-router"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { computed, inject, markRaw } from "vue"
 import { createResource } from "frappe-ui"
@@ -212,6 +147,7 @@ import {
 } from "@/data/attendance"
 import { myOTRequests } from "@/data/overtime"
 
+const router = useRouter()
 const dayjs = inject("$dayjs")
 
 const shifts = createResource({

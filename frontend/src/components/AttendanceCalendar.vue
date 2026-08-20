@@ -1,100 +1,97 @@
 <template>
-	<div class="flex flex-col w-full" v-if="calendarEvents.data">
-		<!-- Month heading + navigation -->
-		<div class="flex items-center justify-between mb-4">
-			<h2 class="text-stat-number leading-none">
-				{{ firstOfMonth.format("MMMM") }} {{ firstOfMonth.format("YYYY") }}
-			</h2>
-			<div class="flex gap-2">
-				<button
-					type="button"
-					class="w-9 h-9 flex items-center justify-center border border-divider text-inkbase hover:bg-ink-200"
-					@click="firstOfMonth = firstOfMonth.subtract(1, 'M')"
-				>
-					<svg
-						width="15"
-						height="15"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
+	<div class="flex flex-col w-full gap-[13px]" v-if="calendarEvents.data">
+		<GCalendar
+			:title="`${firstOfMonth.format('MMMM')} ${firstOfMonth.format('YYYY')}`"
+			:days="days"
+			:leading-blanks="firstOfMonth.get('d')"
+			:weekdays="DAYS"
+			:legend="LEGEND"
+		>
+			<template #action>
+				<span class="flex gap-2">
+					<button
+						type="button"
+						class="g-cal__nav g-focusable"
+						:aria-label="__('Previous month')"
+						@click="firstOfMonth = firstOfMonth.subtract(1, 'M')"
 					>
-						<polyline points="15 18 9 12 15 6" />
-					</svg>
-				</button>
-				<button
-					type="button"
-					class="w-9 h-9 flex items-center justify-center border border-divider text-inkbase hover:bg-ink-200"
-					@click="firstOfMonth = firstOfMonth.add(1, 'M')"
-				>
-					<svg
-						width="15"
-						height="15"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
+						<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+							<polyline points="10 3 5 8 10 13" />
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="g-cal__nav g-focusable"
+						:aria-label="__('Next month')"
+						@click="firstOfMonth = firstOfMonth.add(1, 'M')"
 					>
-						<polyline points="9 18 15 12 9 6" />
-					</svg>
-				</button>
-			</div>
-		</div>
-
-		<!-- Calendar grid -->
-		<div class="grid grid-cols-7 gap-y-2 border-t-2 border-divider pt-3">
-			<div
-				v-for="day in DAYS"
-				class="text-center text-micro-label uppercase text-ink-500 font-bold"
-			>
-				{{ day }}
-			</div>
-			<div v-for="_ in firstOfMonth.get('d')" />
-			<div v-for="index in firstOfMonth.endOf('M').get('D')" class="flex justify-center">
-				<div
-					class="aspect-square w-full max-w-[40px] flex items-center justify-center text-card-title"
-					:style="getEventOnDate(index) && dayStyle[getEventOnDate(index)]"
-				>
-					{{ index }}
-				</div>
-			</div>
-		</div>
-
-		<!-- Summary -->
-		<div class="grid grid-cols-4 border-t-2 border-divider mt-4 pt-3">
-			<div v-for="status in summaryStatuses" class="flex flex-col gap-0.5">
-				<span class="text-stat-number" style="font-size: 20px">
-					{{ summary[status] || 0 }}
+						<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+							<polyline points="6 3 11 8 6 13" />
+						</svg>
+					</button>
 				</span>
-				<span
-					class="flex items-center gap-1.5 text-micro-label uppercase text-ink-600"
-				>
-					<span class="flex-none w-[9px] h-[9px]" :style="swatchStyle[status]" />
-					{{ __(status) }}
-				</span>
-			</div>
-		</div>
+			</template>
+		</GCalendar>
+
+		<!-- The month summary. §12's Attendance anatomy says a 3-up stat panel;
+		     this screen summarises FOUR statuses, so GStatPanel takes columns=4
+		     (v1.5: the app governs scope). -->
+		<GStatPanel :columns="4">
+			<GStatTile
+				v-for="status in summaryStatuses"
+				:key="status"
+				:value="summary[status] || 0"
+				:label="__(status)"
+			/>
+		</GStatPanel>
 	</div>
+
 	<!-- Without this the component rendered NOTHING when its request failed:
 	     no calendar, no message, nothing to search for. Four features were
 	     reported "missing" that were in fact erroring. -->
-	<div v-else-if="calendarEvents.error" class="text-p-sm text-ink-500 py-6 text-center">
+	<GBanner v-else-if="calendarEvents.error" variant="error">
 		{{ __("Could not load the attendance calendar. Refresh to try again.") }}
-	</div>
-
+	</GBanner>
 </template>
 
 <script setup>
+import GBanner from "@/components/glass/GBanner.vue"
+import GStatTile from "@/components/glass/GStatTile.vue"
+import GStatPanel from "@/components/glass/GStatPanel.vue"
+import GCalendar from "@/components/glass/GCalendar.vue"
 import { computed, inject, ref, watch } from "vue"
 import { createResource } from "frappe-ui"
 
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
 const firstOfMonth = ref(dayjs().date(1).startOf("D"))
+
+// The API's attendance statuses → GCalendar's states. Work From Home folds
+// into Present exactly as the summary rollup does, so the calendar and the
+// counts below it cannot disagree.
+const STATE = {
+	Present: "present",
+	"Work From Home": "present",
+	"Half Day": "half",
+	Absent: "absent",
+	"On Leave": "leave",
+	Holiday: "rest",
+}
+
+const LEGEND = [
+	{ state: "present", label: __("Present") },
+	{ state: "half", label: __("Half Day") },
+	{ state: "absent", label: __("Absent") },
+	{ state: "leave", label: __("On Leave") },
+	{ state: "rest", label: __("Holiday") },
+]
+
+const days = computed(() =>
+	Array.from({ length: firstOfMonth.value.endOf("M").get("D") }, (_, i) => {
+		const day = i + 1
+		return { day, state: STATE[getEventOnDate(day)] ?? "none" }
+	})
+)
 
 // Day-cell styles for the mono/accent scheme. Work From Home folds into the
 // User-tuned scheme: present = mint (accent-200, like the logo tile), absent =

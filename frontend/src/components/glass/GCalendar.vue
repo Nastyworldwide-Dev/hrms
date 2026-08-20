@@ -12,6 +12,10 @@
     present      --on-brand on --brand 16.63 light; --brand on brand-19% 8.65 dark
     on leave     --leave-ink on leave-26%  4.56 / 7.03
     rest day     --ink3 as a NON-TEXT border marker  3.07 / 3.61
+    half day     --accent-ink on brand-26%            6.88 / 6.87  (added in
+                 phase 5 batch 2: the attendance calendar has a Half Day state
+                 the mockup never drew, and a state with no treatment renders
+                 as a plain day, which is wrong rather than merely unstyled)
   §14.4 exception 2: rest days carry no opacity multiplier and their numerals
   use --ink-muted like every other day — --ink3 marks the cell, never the text.
 
@@ -77,6 +81,7 @@ const props = defineProps({
 		default: () => [
 			{ state: "present", label: "Present" },
 			{ state: "leave", label: "On leave" },
+			{ state: "half", label: "Half day" },
 			{ state: "rest", label: "Rest day" },
 			{ state: "absent", label: "Absent" },
 		],

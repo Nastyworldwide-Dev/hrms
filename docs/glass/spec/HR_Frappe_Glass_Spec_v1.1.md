@@ -1,6 +1,6 @@
-# HR Frappe · Glass — Implementation Specification v1.5
+# HR Frappe · Glass — Implementation Specification v1.6
 
-**Supersedes** v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
+**Supersedes** v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
@@ -67,6 +67,12 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.6 — surface counting corrected to what composites
+
+| # | Change | Reason |
+|---|---|---|
+| 5.1 | §15.1: a sheet's contents are **their own surface set**, asserted against the same limit while presented; the parent screen does not inherit them | A closed `ion-modal` renders nothing. Counting its contents put Home at 5 of 6 for a screen that shows three surfaces, and would eventually block a legitimate build |
 
 ---
 
@@ -533,10 +539,18 @@ Home is the worked example (v1.5): the mockup's balance grid was removed because
 | **Home** | Status → eyebrow date + greeting → last-punch caption → *banner if unresolved punch* → primary → quick-link list (4 rows) → **request panel** → tab bar | CHECK IN / CHECK OUT |
 | **Check in** | *A bottom sheet, not a route — see the note below the table.* Eyebrow (the action label) → clock (36px) → date line → location status + distance → map panel (150px) → selfie panel (live preview) → primary | CONFIRM CHECK IN |
 | **Leave** | Eyebrow + title → balance panel (2×2, **one surface**) → primary → RECENT field label → history list → tab bar | APPLY FOR LEAVE |
-| **Attendance** | Eyebrow + title → calendar panel → stat panel (3-up, **one surface**) → ghost action → tab bar | none — ghost only |
+| **Attendance** | Eyebrow + title → calendar panel → stat panel (**4-up**, one surface) → primary → action list (3 rows, one surface) → request lists → tab bar | REQUEST ATTENDANCE |
 | **Overtime** | Eyebrow + title → date field → hours field → eligibility note panel → explanation field (66px) → primary → routing caption → tab bar | SEND TO APPROVER |
 | **KPI** | Eyebrow + title → score panel (ring + verdict + pill) → KRA field label → KRA panel (4 rows) → goals panel → tab bar | none — read-only |
 | **Issues** | Eyebrow + title → stat panel (3-up, **one surface**) → issue cards → primary → screenshot hint caption → tab bar | REPORT AN ISSUE |
+
+**Attendance diverges too** (reconciled in v1.6, batch 2):
+
+| Anatomy said | The app has | Resolved |
+|---|---|---|
+| Stat panel 3-up | Four statuses — Present, Half Day, Absent, On Leave | **App** — `GStatPanel` takes a `columns` prop |
+| One ghost action | Four actions, and three request lists the anatomy omits | **App** — but the three secondary actions were three glass surfaces, putting the screen at 7 of 6, so §15.2 flattening applies: one panel, three rows |
+| — | A **Half Day** calendar state the mockup never drew | **App** — `GCalendar` gains a `half` state, `--accent-ink` on brand-26%, measured 6.88 / 6.87 |
 
 **Check in is a sheet, not a screen** (reconciled in v1.5, batch 2). It presents from Home's primary action, so it has no tab bar and overlays the Home surfaces rather than replacing them. Four further divergences, all resolved under v1.5's rule:
 
@@ -660,6 +674,10 @@ This design uses `backdrop-filter`, which is GPU-expensive. These limits are not
 
 ### 15.1 Counting rule
 A glass container and its child rows count as **one** surface. A grid of N glass cards counts as **N**.
+
+**Count only what composites (v1.6).** A closed sheet or modal renders nothing and costs nothing, so its contents are **not** part of the screen's count. They form their own surface set, asserted against the same limit of 6 **while presented**. A screen that owns a sheet is not charged for it.
+
+The reason is practical: the Check-in sheet adds two surfaces to Home, which read 5 of 6 on a screen that shows three. Charging screens for sheets they are not showing inflates every screen that owns one, and would eventually block a build that is nowhere near the compositing limit. `design/gates/surfaces.mjs` implements both counts and fails on either.
 
 ### 15.2 Flattening — required
 Counted as the mockup draws them, three screens sit at exactly 6 before any state is added — and §11 requires banner, empty, loading, error and offline states on top of the happy path.
@@ -864,4 +882,4 @@ The side nav itself sits in §10.3's treatment list and is specified by §20.2. 
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.5 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.6 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*

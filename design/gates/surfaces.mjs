@@ -1,33 +1,30 @@
 // Gate 3 — glass surfaces per screen (§15 limit of 6, counting rule §15.1).
 //
-// This counts what RENDERS, not what greps. The first version matched the
-// literal class in view files, which over-counted mutually exclusive v-if
-// branches and class names appearing in comment prose, and — worse —
-// under-counted every screen that composes a G* component instead of writing
-// the class itself. Prompt 2.2 had to verify flattening by SSR-rendering the
-// components because this gate could not be trusted.
+// This counts what RENDERS, not what greps. It resolves component composition
+// recursively, so a screen that composes GListPanel is counted even though it
+// never writes the class itself.
 //
-// The model:
-//   cost(component) = its own glass elements + the cost of every component it
-//   renders, resolved recursively with memoisation.
-// Mutually exclusive branches (v-if / v-else-if / v-else) contribute the MAX of
-// the branch costs, not the sum — one of them renders.
+// Three rules the naive version got wrong, each of which mis-counted every
+// screen:
+//   1. Mutually exclusive branches (v-if / v-else-if / v-else) contribute the
+//      MAX of the group, not the sum — including when the branch is a child
+//      COMPONENT, e.g. an error banner replacing the content it stands in for.
+//   2. Components are costed by FILE PATH, not by name. Four views are called
+//      Dashboard.vue; a name-keyed cache silently returns another one's count.
+//   3. COUNT ONLY WHAT COMPOSITES (v1.6). A closed sheet renders nothing, so
+//      its contents form a SEPARATE surface set, asserted against the same
+//      limit while presented. The parent screen does not inherit them.
 //
 // §15.1  a glass container plus its child rows is ONE; a grid of N glass cards
-//        is N. Rows are not glass, so the container's cost is 1 either way; a
-//        surface component under v-for is N at runtime and is flagged.
+//        is N. A surface component under v-for is N at runtime and is flagged.
 // §15.3  the tab bar IS counted (chrome, +1 on tab destinations); the app
 //        header is NOT a surface; the side nav replaces the tab bar at lg: for
-//        net zero, so the chrome cost is 1 at every breakpoint.
-// §3     the light field is not a glass surface (confirmed in 4.1) — it is
-//        what the glass blurs, and carries no backdrop-filter.
+//        net zero, so chrome costs 1 at every breakpoint.
+// §3     the light field is not a glass surface (confirmed in 4.1).
 //
-// STRICT BY DEFAULT as of phase 5 batch 1. Until Home composed real
-// components this gate had nothing to measure, so it reported; now that
-// screens carry surfaces, a screen over budget or a surface that cannot be
-// counted statically fails the build.
-//   node surfaces.mjs                exit 1 over budget, on a broken flattening
-//                                    invariant, or on an uncountable v-for surface
+//   node surfaces.mjs                exit 1 over budget (screen or sheet), on a
+//                                    broken flattening invariant, or on an
+//                                    uncountable v-for surface
 //   node surfaces.mjs --report-only  print the counts and exit 0
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -40,6 +37,9 @@ const LIMIT = 6;
 const REPORT_ONLY = process.argv.includes("--report-only");
 
 const GLASS = /(?<!-)\bg-glass(?:-ghost)?\b(?!-)/g;
+// anything that presents over the page rather than in it
+const SHEET_TAGS = /^(GModal|GConfirm|GActionSheet|ion-modal)$/;
+
 const stripComments = (s) =>
 	s.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -52,72 +52,117 @@ function* walk(dir) {
 	}
 }
 
-// name → file, for every component that could carry or compose a surface
+// name → file, for resolving child TAGS (referenced by imported name, so
+// basename is right there). Screens are costed by path — see rule 2.
 const components = new Map();
 for (const f of walk(join(SRC, "components"))) components.set(basename(f, ".vue"), f);
-for (const f of walk(join(SRC, "views"))) components.set(basename(f, ".vue"), f);
+for (const f of walk(join(SRC, "views"))) {
+	const b = basename(f, ".vue");
+	if (!components.has(b)) components.set(b, f);
+}
 
 const template = (file) => {
 	const m = readFileSync(file, "utf8").match(/<template>([\s\S]*)<\/template>/);
 	return m ? stripComments(m[1]) : "";
 };
 
-// A line carrying v-if/v-else-if/v-else opens a branch group; only one of the
-// group renders, so the group contributes its maximum, not its sum.
-function ownCost(tpl) {
-	let plain = 0;
-	const branches = [];
-	let current = null;
-	for (const line of tpl.split("\n")) {
-		const glass = (line.match(GLASS) || []).length;
-		if (/\bv-if=/.test(line)) {
-			if (current) branches.push(current);
-			current = glass;
-			continue;
-		}
-		if (/\bv-else-if=|\bv-else\b/.test(line)) {
-			current = Math.max(current ?? 0, glass);
-			continue;
-		}
-		if (current !== null && glass) {
-			// continuation of the open branch's element
-			current = Math.max(current, glass);
-			continue;
-		}
-		plain += glass;
-	}
-	if (current !== null) branches.push(current);
-	return plain + branches.reduce((a, b) => a + b, 0);
-}
-
 const memo = new Map();
 const loops = new Map(); // component → [child names rendered under v-for]
 
-function cost(name, seen = new Set()) {
-	if (memo.has(name)) return memo.get(name);
-	const file = components.get(name);
-	if (!file || seen.has(name)) return 0;
-	seen.add(name);
-	const tpl = template(file);
-	let total = ownCost(tpl);
+/** @returns {{screen: number, sheets: number[]}} */
+function costFile(file, seen = new Set()) {
+	if (memo.has(file)) return memo.get(file);
+	if (seen.has(file)) return { screen: 0, sheets: [] };
+	seen.add(file);
 
+	const name = basename(file, ".vue");
+	const tpl = template(file);
+
+	let screen = 0;
+	const sheets = [];
+	let sheetDepth = 0;
+	let openSheet = 0;
+	let branch = null;
 	const loopedHere = [];
+
+	// route a count to the screen, or to the sheet currently open
+	const add = (n) => {
+		if (!n) return;
+		if (sheetDepth > 0) openSheet += n;
+		else screen += n;
+	};
+
 	for (const line of tpl.split("\n")) {
+		const opens = [...line.matchAll(/<([A-Za-z][A-Za-z0-9-]*)\b(?![^>]*\/>)/g)].filter((m) =>
+			SHEET_TAGS.test(m[1])
+		).length;
+		const closes = [...line.matchAll(/<\/([A-Za-z][A-Za-z0-9-]*)>/g)].filter((m) =>
+			SHEET_TAGS.test(m[1])
+		).length;
+		if (opens) {
+			if (sheetDepth === 0) openSheet = 0;
+			sheetDepth += opens;
+		}
+
+		// everything this line contributes: its own glass plus the screen cost
+		// of every component it renders
+		let lineTotal = (line.match(GLASS) || []).length;
 		for (const m of line.matchAll(/<([A-Z][A-Za-z0-9]*)\b/g)) {
 			const child = m[1];
 			if (!components.has(child) || child === name) continue;
-			const c = cost(child, new Set(seen));
-			total += c;
-			if (c > 0 && /\bv-for=/.test(line)) loopedHere.push(child);
+			const c = costFile(components.get(child), new Set(seen));
+			if (SHEET_TAGS.test(child)) {
+				// a child that IS a sheet never adds to the screen
+				sheets.push(...c.sheets, c.screen);
+			} else {
+				lineTotal += c.screen;
+				sheets.push(...c.sheets);
+			}
+			if (c.screen > 0 && /\bv-for=/.test(line)) loopedHere.push(child);
+		}
+
+		if (/\bv-if=/.test(line)) {
+			if (branch !== null) add(branch);
+			branch = lineTotal;
+		} else if (/\bv-else-if=|\bv-else\b/.test(line)) {
+			branch = Math.max(branch ?? 0, lineTotal);
+		} else if (branch !== null && lineTotal) {
+			// A v-if with no v-else must not swallow everything after it: the
+			// group closes as soon as a line with no branch directive carries a
+			// surface. Without this, Home's check-in sheet reported 1 surface
+			// where it renders 2 — the map is inside a v-if, the selfie is not.
+			add(branch);
+			branch = null;
+			add(lineTotal);
+		} else {
+			add(lineTotal);
+		}
+
+		if (closes) {
+			sheetDepth = Math.max(0, sheetDepth - closes);
+			if (sheetDepth === 0 && openSheet > 0) {
+				sheets.push(openSheet);
+				openSheet = 0;
+			}
 		}
 	}
+
+	if (branch !== null) add(branch);
+	if (sheetDepth > 0 && openSheet > 0) sheets.push(openSheet);
 	if (loopedHere.length) loops.set(name, loopedHere);
-	memo.set(name, total);
-	return total;
+
+	const result = { screen, sheets: sheets.filter((n) => n > 0) };
+	memo.set(file, result);
+	return result;
 }
 
+const cost = (name) => {
+	const file = components.get(name);
+	return file ? costFile(file) : { screen: 0, sheets: [] };
+};
+
 // which views sit under TabbedView, and therefore render the tab bar (§15.3)
-let tabbed = new Set();
+const tabbed = new Set();
 try {
 	const router = readFileSync(join(SRC, "router", "index.js"), "utf8");
 	// bracket-match TabbedView's own children array — slicing to the next known
@@ -130,44 +175,57 @@ try {
 		if (router[end] === "[") depth++;
 		else if (router[end] === "]" && --depth === 0) break;
 	}
-	const block = router.slice(start, end);
-	for (const m of block.matchAll(/@\/views\/([A-Za-z0-9/]+)\.vue/g)) tabbed.add(basename(m[1]));
+	for (const m of router.slice(start, end).matchAll(/@\/views\/([A-Za-z0-9/]+)\.vue/g))
+		tabbed.add(basename(m[1]));
 } catch {
-	/* router shape changed — chrome falls back to 0 and is reported as unknown */
+	/* router shape changed — chrome falls back to 0 */
 }
 
 const rows = [];
 for (const file of walk(join(SRC, "views"))) {
 	const name = basename(file, ".vue");
-	if (name === "DesignSpecimen") continue; // the specimen renders every component by design
-	const content = cost(name);
-	const chrome = tabbed.has(name) ? 1 : 0; // tab bar below lg:, side nav above — net 1
-	rows.push({ name, rel: relative(SRC, file), content, chrome, total: content + chrome });
+	if (name === "DesignSpecimen") continue; // renders every component by design
+	const c = costFile(file);
+	const chrome = tabbed.has(name) ? 1 : 0;
+	rows.push({
+		rel: relative(SRC, file),
+		content: c.screen,
+		sheets: c.sheets,
+		chrome,
+		total: c.screen + chrome,
+	});
 }
 
 let over = 0;
-for (const r of rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))) {
-	if (r.total === 0) continue;
-	const flag = r.total > LIMIT ? "OVER" : "ok";
+for (const r of rows.sort((a, b) => b.total - a.total || a.rel.localeCompare(b.rel))) {
+	if (r.total === 0 && !r.sheets.length) continue;
 	if (r.total > LIMIT) over++;
 	console.log(
-		`[surfaces] ${flag.padEnd(4)} ${r.rel.padEnd(44)} ${String(r.total).padStart(2)}/${LIMIT}` +
-			`  (content ${r.content}${r.chrome ? " + tab bar 1" : ""})`
+		`[surfaces] ${(r.total > LIMIT ? "OVER" : "ok").padEnd(4)} ${r.rel.padEnd(44)} ` +
+			`${String(r.total).padStart(2)}/${LIMIT}  (content ${r.content}${r.chrome ? " + tab bar 1" : ""})` +
+			(r.sheets.length ? `  · sheets: ${r.sheets.join(", ")}` : "")
 	);
 }
 
-const flagged = [...loops.entries()].filter(([n]) => components.has(n));
-for (const [name, children] of flagged) {
-	console.log(`[surfaces] NOTE ${name}: ${children.join(", ")} render under v-for — N surfaces at runtime, counted as 1 each (§15.1)`);
+// each sheet is asserted on its own — that is what composites while presented
+let sheetOver = 0;
+for (const r of rows) {
+	for (const [i, n] of r.sheets.entries()) {
+		if (n > LIMIT) {
+			sheetOver++;
+			console.log(`[surfaces] OVER ${r.rel} sheet ${i + 1}: ${n}/${LIMIT} while presented (§15.1)`);
+		}
+	}
 }
 
+for (const [name, children] of loops)
+	console.log(
+		`[surfaces] NOTE ${name}: ${children.join(", ")} render under v-for — N surfaces at runtime, counted as 1 each (§15.1)`
+	);
+
 // ---------- §15.2 flattening invariant ----------
-//
-// The mockup's 2×2 balance grid and 3-up stat row were four and three glass
-// surfaces; flattened they are ONE panel each with internal --hair dividers.
-// That is what bought the headroom §11's states need, so it is asserted here
-// rather than trusted: if someone re-glasses the cells, three screens silently
-// go back over budget.
+// Asserted rather than trusted: if someone re-glasses the cells, three screens
+// silently go back over budget without any screen changing.
 const FLATTENED = [
 	{ name: "GBalanceGrid", expect: 1, was: 4, note: "2×2 balance grid → one panel (§15.2)" },
 	{ name: "GStatPanel", expect: 1, was: 3, note: "3-up stat row → one panel (§15.2)" },
@@ -175,27 +233,35 @@ const FLATTENED = [
 ];
 let flatteningBroken = 0;
 for (const f of FLATTENED) {
-	const actual = cost(f.name);
+	const actual = cost(f.name).screen;
 	const ok = actual === f.expect;
 	if (!ok) flatteningBroken++;
 	console.log(
 		`[surfaces] ${ok ? "PASS" : "FAIL"} ${f.name} renders ${actual} surface(s), expected ${f.expect}` +
-			(f.was ? ` — was ${f.was} before flattening` : "") + ` · ${f.note}`
+			(f.was ? ` — was ${f.was} before flattening` : "") +
+			` · ${f.note}`
 	);
 }
-// and the counter-case: N glass cards must count as N, not collapse to 1
-const cardCost = cost("GIssueCard");
-const gridOfFour = cardCost * 4;
+// the counter-case: N glass cards must count as N, not collapse to 1
+const gridOfFour = cost("GIssueCard").screen * 4;
+if (gridOfFour !== 4) flatteningBroken++;
 console.log(
 	`[surfaces] ${gridOfFour === 4 ? "PASS" : "FAIL"} four GIssueCards render ${gridOfFour} surfaces ` +
 		`— §15.1's "a grid of N glass cards counts as N", the rule flattening must not break`
 );
-if (gridOfFour !== 4) flatteningBroken++;
 
 console.log(
-	`[surfaces] ${rows.filter((r) => r.total > 0).length} screens counted, ${over} over the limit of ${LIMIT}`
+	`[surfaces] ${rows.filter((r) => r.total > 0).length} screens counted, ${over} over the limit of ${LIMIT}` +
+		`; ${rows.reduce((a, r) => a + r.sheets.length, 0)} sheet surface sets, ${sheetOver} over`
 );
-console.log(`GATE_RESULT ${JSON.stringify({ gate: "surfaces", screens: rows.length, over, flattening: flatteningBroken, looped: flagged.length })}`);
-// a broken flattening invariant always fails: it is how three screens go back
-// over budget without any screen changing
-process.exit(!REPORT_ONLY && (over || flatteningBroken || flagged.length) ? 1 : 0);
+console.log(
+	`GATE_RESULT ${JSON.stringify({
+		gate: "surfaces",
+		screens: rows.length,
+		over,
+		sheetOver,
+		flattening: flatteningBroken,
+		looped: loops.size,
+	})}`
+);
+process.exit(!REPORT_ONLY && (over || sheetOver || flatteningBroken || loops.size) ? 1 : 0);

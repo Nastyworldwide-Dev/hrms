@@ -689,8 +689,11 @@ html[data-theme="dark"] .g-badge--open {
 .g-cellgrid--balance {
 	grid-template-columns: repeat(2, 1fr);
 }
-.g-cellgrid--stat {
+.g-cellgrid--stat-3 {
 	grid-template-columns: repeat(3, 1fr);
+}
+.g-cellgrid--stat-4 {
+	grid-template-columns: repeat(4, 1fr);
 }
 .g-cell {
 	padding: var(--g-pad-panel);
@@ -708,7 +711,8 @@ html[data-theme="dark"] .g-badge--open {
 .g-cellgrid--balance > .g-cell:nth-child(n + 3) {
 	border-top: 1px solid var(--g-hair);
 }
-.g-cellgrid--stat > .g-cell + .g-cell {
+.g-cellgrid--stat-3 > .g-cell + .g-cell,
+.g-cellgrid--stat-4 > .g-cell + .g-cell {
 	border-left: 1px solid var(--g-hair);
 }
 /* §20.5: balance grid 2-up mobile → 4-up at lg:, one row, no top dividers.
@@ -910,6 +914,18 @@ html[data-theme="dark"] .g-badge--open {
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink);
 }
+.g-cal__nav {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--g-hair);
+	border-radius: var(--g-radius-well);
+	background: transparent;
+	color: var(--g-ink2);
+	cursor: pointer;
+}
 .g-cal__grid {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
@@ -956,6 +972,13 @@ html[data-theme="dark"] .g-cal__day--present {
 	background: rgba(var(--g-brand-rgb) / 0.19);
 	color: var(--g-brand);
 }
+/* half day: a brand tint with the accent ink, 6.88 light / 6.87 dark */
+.g-cal__day--half {
+	background: rgba(var(--g-brand-rgb) / 0.26);
+	color: var(--g-accent-ink);
+	border-color: var(--g-accent-ink);
+}
+.g-cal__swatch--half { background: rgba(var(--g-brand-rgb) / 0.26); }
 .g-cal__day--leave {
 	background: rgba(var(--g-leave-rgb) / 0.26);
 	color: var(--g-leave-ink);
