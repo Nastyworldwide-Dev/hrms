@@ -33,6 +33,7 @@ import "./main.css"
 import "./theme/modernist.css"
 /* Glass theme (generated, see design/tokens.json) — runs alongside Modernist
    until phase 3; must stay after the modernist/variables imports */
+import "./theme/fonts.css"
 import "./theme/glass.css"
 import "./theme/glass.variables.css"
 import "./data/theme"
