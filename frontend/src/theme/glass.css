@@ -44,6 +44,7 @@
 	--g-lift: 0 10px 30px rgba(20,26,40,.10);
 	--g-rim-hi: rgba(255,255,255,.95);
 	--g-rim-lo: rgba(16,22,34,.06);
+	--g-scrim: rgba(11,12,16,.32);
 	--g-sheen: rgba(255,255,255,.55);
 	--g-track-solid: #ECEDEF;
 	--g-track-solid-rgb: 236 237 239;
@@ -210,6 +211,7 @@ html[data-theme="dark"] {
 	--g-lift: 0 8px 26px rgba(0,0,0,.34);
 	--g-rim-hi: rgba(255,255,255,.28);
 	--g-rim-lo: rgba(0,0,0,.28);
+	--g-scrim: rgba(0,0,0,.56);
 	--g-sheen: rgba(255,255,255,.13);
 	--g-track-solid: #313133;
 	--g-track-solid-rgb: 49 49 51;

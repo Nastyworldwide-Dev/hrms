@@ -1107,6 +1107,318 @@ html[data-theme="dark"] .g-cal__day--present {
 	color: var(--g-on-brand);
 }
 
+/* ---------- GModal / GActionSheet (§10.3 #25, #26) ---------- */
+
+/* ion-modal is shadow DOM: theme through its published custom properties only
+   (§16.3). The surface is SOLID, not glass — a modal always floats above page
+   content that is itself glass, and glass over glass is nested glass (§15). */
+.g-modal {
+	--background: var(--g-glass-fill-fallback);
+	--border-radius: var(--g-radius-panel);
+	--box-shadow: var(--g-lift);
+	/* the built-in backdrop is disabled by backdrop-breakpoint=1 (the
+	   focus-trap workaround); .g-scrim below does the dimming instead */
+	--backdrop-opacity: 0;
+}
+/* §20.7 #25/#26: bottom sheet on mobile, centred dialog at lg: */
+@media (min-width: 1024px) {
+	.g-modal {
+		--width: 480px;
+		--max-width: calc(100% - 30px);
+		--height: auto;
+		--max-height: 80vh;
+	}
+}
+.g-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	margin-top: 0;
+	background: var(--g-scrim);
+	cursor: pointer;
+}
+.g-sheet {
+	padding: var(--g-pad-panel);
+	padding-bottom: max(var(--g-pad-panel), env(safe-area-inset-bottom));
+}
+.g-sheet__title {
+	padding: 0 2px 9px;
+	font-family: var(--g-type-panel-title-family);
+	font-size: var(--g-type-panel-title-size);
+	font-weight: var(--g-type-panel-title-weight);
+	letter-spacing: var(--g-type-panel-title-tracking);
+	color: var(--g-ink);
+}
+.g-sheet__action {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	width: 100%;
+	min-height: 44px;
+	padding: var(--g-pad-row);
+	border: 0;
+	border-radius: var(--g-radius-input);
+	background: transparent;
+	text-align: left;
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+	color: var(--g-ink);
+	cursor: pointer;
+	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
+}
+.g-sheet__action:active {
+	background: var(--g-icon-bg);
+}
+.g-sheet__action--destructive {
+	color: var(--g-danger-ink);
+}
+.g-sheet__action[aria-disabled="true"] {
+	color: var(--g-ink3);
+	cursor: not-allowed;
+}
+
+/* ---------- GToast (§10.3 #27) — skins frappe-ui's toast root ---------- */
+
+/* frappe-ui renders toasts as plain DOM into #frappeui-toast-root (no shadow
+   DOM), so the Glass skin can reach them. Coupled to frappe-ui's markup —
+   re-verify on the 0.1.278 upgrade (DECISION 6). */
+#frappeui-toast-root > div > div {
+	background: var(--g-glass-fill-fallback) !important;
+	border-color: var(--g-glass-rim) !important;
+	border-radius: var(--g-radius-banner) !important;
+	box-shadow: var(--g-lift) !important;
+	color: var(--g-ink);
+}
+#frappeui-toast-root p:first-child {
+	font-family: var(--g-type-card-title-family);
+	font-size: var(--g-type-card-title-size);
+	font-weight: var(--g-type-card-title-weight);
+	color: var(--g-ink);
+}
+#frappeui-toast-root p + p {
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
+
+/* ---------- GSearchBar (§10.3 treatment list) ---------- */
+
+/* The input IS the bar — icon and clear sit over it. An inner input with the
+   ring on a wrapper would either double the native outline or hide focus
+   behind a parent selector; here one element owns border, fill and ring. */
+.g-search {
+	position: relative;
+	display: block;
+	width: 100%;
+	color: var(--g-ink3);
+}
+.g-search__input {
+	width: 100%;
+	min-height: 44px;
+	/* room for the 16px icon and the 44px clear target */
+	padding: 12px 48px 12px 35px;
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-input);
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+}
+.g-search__input::placeholder {
+	color: var(--g-ink-muted);
+	opacity: 1;
+}
+.g-search__input:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--g-ink),
+		0 0 0 5px var(--g-brand);
+}
+.g-search__icon {
+	position: absolute;
+	top: 50%;
+	left: 12px;
+	transform: translateY(-50%);
+	pointer-events: none;
+}
+.g-search__clear {
+	position: absolute;
+	top: 50%;
+	right: 0;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border: 0;
+	background: transparent;
+	color: var(--g-ink3);
+	cursor: pointer;
+}
+
+/* ---------- GAvatar (§10.3 treatment list) ---------- */
+
+/* .m-avatar-sq exists only to force frappe-ui's Avatar to radius 0 for
+   Modernist. Under Glass the rounding returns, so that class is NOT ported. */
+.g-avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	overflow: hidden;
+	border-radius: var(--g-radius-well);
+	background: var(--g-icon-bg);
+	color: var(--g-ink2);
+	font-family: var(--g-font-display);
+	font-weight: var(--g-type-display-number-weight);
+	object-fit: cover;
+}
+.g-avatar--round {
+	border-radius: 50%;
+}
+
+/* ---------- GDataTable (§10.3, §6.3) ---------- */
+
+/* §6.3's clearest case: payslip and expense figures are numbers a person may
+   dispute with their manager. SOLID surface, no glass, no translucent track. */
+.g-table {
+	width: 100%;
+	border-radius: var(--g-radius-card);
+	background: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-glass-rim);
+	overflow: hidden;
+	border-collapse: collapse;
+}
+.g-table th,
+.g-table td {
+	padding: var(--g-pad-row);
+	text-align: left;
+	vertical-align: baseline;
+}
+.g-table th {
+	font-family: var(--g-type-field-label-family);
+	font-size: var(--g-type-field-label-size);
+	font-weight: var(--g-type-field-label-weight);
+	letter-spacing: var(--g-type-field-label-tracking);
+	text-transform: uppercase;
+	color: var(--g-ink2);
+}
+.g-table td {
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+	color: var(--g-ink);
+}
+.g-table tbody tr + tr td {
+	border-top: 1px solid var(--g-hair);
+}
+.g-table__num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.g-table__total td {
+	border-top: 1px solid var(--g-glass-rim);
+	font-weight: var(--g-type-display-number-weight);
+}
+.g-table__scroll {
+	width: 100%;
+	overflow-x: auto;
+}
+
+/* ---------- GFileUpload (§10.3 treatment list) ---------- */
+
+.g-files {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+}
+.g-file {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-height: 44px;
+	padding: 9px 11px;
+	border: 1px solid var(--g-hair);
+	border-radius: var(--g-radius-input);
+	background: var(--g-icon-bg);
+}
+.g-file__name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	color: var(--g-ink);
+	background: transparent;
+	border: 0;
+	text-align: left;
+	cursor: pointer;
+}
+.g-file__remove {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 44px;
+	height: 44px;
+	margin: -9px -11px -9px 0;
+	border: 0;
+	background: transparent;
+	color: var(--g-ink3);
+	cursor: pointer;
+}
+.g-file__drop {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 66px;
+	padding: 15px;
+	border: 1px dashed var(--g-glass-rim);
+	border-radius: var(--g-radius-input);
+	background: transparent;
+	color: var(--g-ink2);
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	cursor: pointer;
+}
+
+/* ---------- GPullRefresh (§10.3 treatment list) ---------- */
+
+/* ion-refresher-content's inner icon nodes are shadow DOM with no published
+   custom properties, so the spinner is switched OFF (refreshing-spinner=none,
+   which §11.2 wants anyway) and this bar is ours. See the component header. */
+.g-refresh {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	padding: 11px 0;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	letter-spacing: var(--g-type-caption-tracking);
+	color: var(--g-ink2);
+}
+.g-refresh__bar {
+	width: 34px;
+	height: 3px;
+	border-radius: var(--g-radius-pill);
+	background: var(--g-track-solid);
+	overflow: hidden;
+}
+.g-refresh__fill {
+	width: 40%;
+	height: 100%;
+	background: var(--g-brand);
+	animation: g-indeterminate var(--g-motion-skeleton-shimmer-duration)
+		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
+}
+
 /* ---------- reduced motion (§8, §14.1): shimmer and pending bar go static ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1122,8 +1434,13 @@ html[data-theme="dark"] .g-cal__day--present {
 	.g-btn,
 	.g-ghost-btn,
 	.g-row,
-	.g-seg__option {
+	.g-seg__option,
+	.g-sheet__action {
 		transition: none;
+	}
+	.g-refresh__fill {
+		animation: none;
+		width: 100%;
 	}
 	/* the map pin rings stop pulsing; the pin itself stays visible */
 	.g-map__ring {

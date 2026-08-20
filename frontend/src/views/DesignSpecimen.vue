@@ -7,6 +7,8 @@
 <template>
 	<ion-page>
 		<ion-content>
+			<GPullRefresh @refresh="onRefresh" />
+
 			<div class="spec">
 				<div class="spec__field" aria-hidden="true" />
 
@@ -255,6 +257,95 @@
 					<GSegmented v-model="segment" :buttons="segments" label="Request type" />
 					<p class="spec__note">selected: {{ segment }}</p>
 				</section>
+
+				<h2 class="spec__title">Tier D</h2>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GMODAL / GACTIONSHEET (§10.3 #25, #26) — focus-trap workaround preserved</h2>
+					<GButton label="OPEN ACTION SHEET" @click="sheetOpen = true" />
+					<GActionSheet
+						:is-open="sheetOpen"
+						title="Leave application"
+						:actions="sheetActions"
+						@select="onSheetSelect"
+						@did-dismiss="sheetOpen = false"
+					/>
+					<p class="spec__note">last action: {{ lastAction || "none" }}</p>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GTOAST (§10.3 #27) — wraps frappe-ui toast</h2>
+					<div class="spec__row">
+						<GGhostButton label="SUCCESS" @click="gToast({ title: 'Leave applied', text: 'Your manager has been notified.', variant: 'success' })" />
+						<GGhostButton label="ERROR" @click="gToast({ title: 'Check-in did not save', text: 'Tap to try again — do not punch twice.', variant: 'error' })" />
+					</div>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GSEARCHBAR (§10.3)</h2>
+					<GSearchBar v-model="search" placeholder="Search requests" />
+					<p class="spec__note">query: {{ search || "empty" }}</p>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GAVATAR (§10.3) — rounding returns, .m-avatar-sq not ported</h2>
+					<div class="spec__row">
+						<GAvatar label="Siti Rahman" />
+						<GAvatar label="Siti Rahman" round />
+						<GAvatar label="Ahmad" :size="56" />
+						<GAvatar image="/broken-path.png" label="Fallback" />
+					</div>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GDATATABLE (§10.3 · §6.3) — solid, never glass</h2>
+					<GDataTable :columns="payslipColumns" :rows="payslipRows" caption="August 2026 payslip" />
+					<GDataTable :columns="payslipColumns" loading />
+					<GDataTable :columns="payslipColumns" :rows="[]">
+						<template #empty>
+							<GEmptyState
+								title="No payslips available"
+								body="Your first payslip appears after your first full pay cycle"
+							/>
+						</template>
+					</GDataTable>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GFILEUPLOAD (§10.3)</h2>
+					<GFileUpload :model-value="files" @preview="log('preview')" @remove="log('remove')" />
+					<GFileUpload :model-value="[]" uploading />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GLINKPICKER / GDATEPICKER (§10.3) — frappe-ui 0.1.105</h2>
+					<GLinkPicker v-model="link" :options="linkOptions" label="Approver" placeholder="Search employees" />
+					<GDatePicker v-model="date" label="Date worked" placeholder="Select a date" />
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GMODAL (§10.3 #25) — bottom sheet, centred at lg:</h2>
+					<GButton label="OPEN MODAL" @click="modalOpen = true" />
+					<GModal :is-open="modalOpen" title="Delete attachment" @did-dismiss="modalOpen = false">
+						<p class="spec__note">
+							Ionic's focus trap is worked around here exactly as CustomIonModal does it —
+							an autocomplete inside this sheet stays usable.
+						</p>
+						<GLinkPicker v-model="link" :options="linkOptions" label="Reassign to" />
+					</GModal>
+				</section>
+
+				<section class="spec__section">
+					<h2 class="spec__label">GPULLREFRESH (§10.3) — mounted on this page; pull down to see it</h2>
+					<p class="spec__note">
+						The live refresher sits at the top of this ion-content. Its Ionic spinner is switched off
+						(§11.2); the indicator below is the same markup it renders.
+					</p>
+					<div class="g-refresh">
+						<span class="g-refresh__bar" aria-hidden="true"><span class="g-refresh__fill" /></span>
+						Pull to refresh
+					</div>
+				</section>
 			</div>
 		</ion-content>
 	</ion-page>
@@ -292,6 +383,16 @@ import GClock from "@/components/glass/GClock.vue"
 import GLogoWell from "@/components/glass/GLogoWell.vue"
 import GAppHeader from "@/components/glass/GAppHeader.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
+import GModal from "@/components/glass/GModal.vue"
+import GActionSheet from "@/components/glass/GActionSheet.vue"
+import GSearchBar from "@/components/glass/GSearchBar.vue"
+import GAvatar from "@/components/glass/GAvatar.vue"
+import GDataTable from "@/components/glass/GDataTable.vue"
+import GFileUpload from "@/components/glass/GFileUpload.vue"
+import GLinkPicker from "@/components/glass/GLinkPicker.vue"
+import GDatePicker from "@/components/glass/GDatePicker.vue"
+import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+import { gToast } from "@/components/glass/toast"
 
 const statuses = ["Draft", "Submitted", "Approved", "Rejected", "Cancelled"]
 const form = reactive({ date: "", hours: "3", locked: "Siti Rahman", reason: "" })
@@ -306,6 +407,42 @@ const kraRows = [
 	{ label: "Response time", weight: "25%", score: 3.8, max: 5 },
 	{ label: "Team collaboration", weight: "25%", score: 4.2, max: 5 },
 	{ label: "Process adherence", weight: "20%", score: 4.0, max: 5 },
+]
+const sheetOpen = ref(false)
+const modalOpen = ref(false)
+const lastAction = ref("")
+
+function onRefresh(event) {
+	console.info("[DesignSpecimen] pull-to-refresh")
+	setTimeout(() => event.target.complete(), 900)
+}
+const sheetActions = [
+	{ key: "approve", label: "Approve" },
+	{ key: "open", label: "Open full form" },
+	{ key: "cancel", label: "Cancel request", destructive: true },
+	{ key: "locked", label: "Delete (not permitted)", disabled: true },
+]
+function onSheetSelect(key) {
+	lastAction.value = key
+	sheetOpen.value = false
+}
+const search = ref("")
+const link = ref(null)
+const date = ref("")
+const linkOptions = [
+	{ label: "Siti Rahman", value: "HR-EMP-0001" },
+	{ label: "Ahmad Faiz", value: "HR-EMP-0002" },
+]
+const files = [{ file_name: "receipt-august.pdf" }, { file_name: "medical-cert.jpg" }]
+const payslipColumns = [
+	{ key: "item", label: "Item" },
+	{ key: "amount", label: "Amount", numeric: true },
+]
+const payslipRows = [
+	{ item: "Basic salary", amount: "4,000.00" },
+	{ item: "Shift allowance", amount: "250.00" },
+	{ item: "EPF employee", amount: "−440.00" },
+	{ item: "Net pay", amount: "3,810.00", total: true },
 ]
 // one month of mixed states so every calendar treatment is on screen at once
 const calendarDays = Array.from({ length: 31 }, (_, i) => {

@@ -1,7 +1,7 @@
 // GENERATED FROM design/tokens.json BY design/build-tokens.mjs — DO NOT EDIT BY HAND.
 // Regenerate: yarn tokens  (in frontend/)
 // Merge into tailwind.config.js theme.extend (prompt 1.3).
-// rgba()-based tokens (accent-glow, glass, glass-fallback, rim, hair, icon-bg, rim-hi, rim-lo, sheen)
+// rgba()-based tokens (accent-glow, glass, glass-fallback, rim, hair, icon-bg, rim-hi, rim-lo, scrim, sheen)
 // are plain var() references and do not support Tailwind opacity modifiers.
 module.exports = {
 	backdropBlur: {
@@ -47,6 +47,7 @@ module.exports = {
 		rim: "var(--g-glass-rim)",
 		"rim-hi": "var(--g-rim-hi)",
 		"rim-lo": "var(--g-rim-lo)",
+		scrim: "var(--g-scrim)",
 		sheen: "var(--g-sheen)",
 		success: "rgb(var(--g-success-rgb) / <alpha-value>)",
 		"success-ink": "rgb(var(--g-success-ink-rgb) / <alpha-value>)",
