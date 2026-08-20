@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HR Frappe · Glass — Light &amp; Dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,600&family=Inter+Tight:ital,wght@0,600;0,700;0,800;1,700;1,800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chart:#C8FF00;
+  --teal:#00E5C0;
+  --violet:#7B5CFF;
+  --mx:50%; --my:30%;
+  /* Apple devices resolve to real SF Pro (free, native, no licence issue).
+     Everywhere else falls back to Inter, its closest open-source relative. */
+  --display:-apple-system,BlinkMacSystemFont,'Inter Tight','Inter','Segoe UI',Roboto,sans-serif;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --mono:'SF Mono','JetBrains Mono',ui-monospace,'Cascadia Mono',monospace;
+}
+/* ---------- DARK THEME ---------- */
+html[data-theme="dark"]{
+  --bg:#07070A;
+  --ink:#FFFFFF;
+  --ink2:#A8AEB8;
+  --ink3:#6B7280;
+  --accent-ink:#C8FF00;          /* chartreuse reads fine on black */
+  --accent-glow:rgba(200,255,0,.45);
+  --glass-fill:rgba(255,255,255,.075);
+  --glass-rim:rgba(255,255,255,.14);
+  --rim-hi:rgba(255,255,255,.28);
+  --rim-lo:rgba(0,0,0,.28);
+  --lift:0 8px 26px rgba(0,0,0,.34);
+  --lift-lg:0 22px 60px rgba(0,0,0,.44);
+  --blob-op:.72;
+  --blob-blur:88px;
+  --sheen:rgba(255,255,255,.13);
+  --frame:linear-gradient(160deg,#2A2C33,#0D0E12 42%,#1C1E24);
+  --frame-rim:rgba(255,255,255,.09);
+  --screen-bg:#08090D;
+  --screen-blob-op:.85;
+  --hair:rgba(255,255,255,.075);
+  --icon-bg:rgba(255,255,255,.1);
+  --nav-bg:linear-gradient(180deg,rgba(7,7,10,.86),rgba(7,7,10,.36));
+  --code-bg:rgba(0,0,0,.42);
+  --cursor-light:rgba(255,255,255,.055);
+  --grain-op:.16; --grain-blend:overlay;
+}
+/* ---------- LIGHT THEME ---------- */
+html[data-theme="light"]{
+  --bg:#EDEFF3;
+  --ink:#0B0C10;
+  --ink2:#545C68;
+  --ink3:#8A929E;
+  --accent-ink:#3F5C00;          /* chartreuse darkened until it passes on white */
+  --accent-glow:rgba(63,92,0,.14);
+  --glass-fill:rgba(255,255,255,.56);
+  --glass-rim:rgba(255,255,255,.9);
+  --rim-hi:rgba(255,255,255,.95);
+  --rim-lo:rgba(16,22,34,.06);
+  --lift:0 10px 30px rgba(20,26,40,.10);
+  --lift-lg:0 26px 64px rgba(20,26,40,.14);
+  --blob-op:.60;
+  --blob-blur:92px;
+  --sheen:rgba(255,255,255,.55);
+  --frame:linear-gradient(160deg,#FEFEFF,#C9CFDA 42%,#EAEDF2);
+  --frame-rim:rgba(16,22,34,.10);
+  --screen-bg:#F3F5F9;
+  --screen-blob-op:.62;
+  --hair:rgba(16,22,34,.08);
+  --icon-bg:rgba(16,22,34,.05);
+  --nav-bg:linear-gradient(180deg,rgba(237,239,243,.88),rgba(237,239,243,.42));
+  --code-bg:rgba(255,255,255,.62);
+  --cursor-light:rgba(255,255,255,.5);
+  --grain-op:.10; --grain-blend:multiply;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  font-feature-settings:'cv11','ss01';
+  transition:background .5s ease,color .5s ease}
+
+/* ============ LIGHT FIELD ============ */
+.field{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(var(--blob-blur));opacity:var(--blob-op);will-change:transform;transition:opacity .5s ease}
+.b1{width:60vw;height:60vw;background:radial-gradient(circle,rgba(200,255,0,.68),transparent 66%);top:-16vw;left:-8vw;animation:d1 34s ease-in-out infinite}
+.b2{width:52vw;height:52vw;background:radial-gradient(circle,rgba(0,229,192,.60),transparent 66%);top:34vh;right:-14vw;animation:d2 42s ease-in-out infinite}
+.b3{width:46vw;height:46vw;background:radial-gradient(circle,rgba(123,92,255,.62),transparent 66%);bottom:-12vw;left:18vw;animation:d3 38s ease-in-out infinite}
+.b4{width:34vw;height:34vw;background:radial-gradient(circle,rgba(200,255,0,.42),transparent 68%);bottom:24vh;right:24vw;animation:d1 46s ease-in-out infinite reverse}
+@keyframes d1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(14vw,10vh) scale(1.18)}}
+@keyframes d2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-16vw,-8vh) scale(.86)}}
+@keyframes d3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(10vw,-12vh) scale(1.14)}}
+.cursor-light{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(420px circle at var(--mx) var(--my), var(--cursor-light), transparent 62%);transition:background .18s ease-out}
+.grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:var(--grain-op);mix-blend-mode:var(--grain-blend);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E")}
+.wrap{position:relative;z-index:3;max-width:1280px;margin:0 auto;padding:0 32px}
+
+/* ============ GLASS ============ */
+.g{background:var(--glass-fill);
+  backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo),var(--lift-lg);
+  border-radius:22px;position:relative;overflow:hidden;transition:background .5s,border-color .5s,box-shadow .5s}
+.g::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(150deg,var(--sheen) 0%,transparent 34%,transparent 66%,rgba(255,255,255,.05) 100%)}
+
+/* ============ NAV ============ */
+nav{position:sticky;top:0;z-index:60;padding:13px 0;backdrop-filter:blur(20px);
+  background:var(--nav-bg);border-bottom:1px solid var(--hair);transition:background .5s}
+.nav-in{max-width:1280px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.mark{display:flex;align-items:center;gap:11px}
+.mark-dot{width:9px;height:9px;border-radius:50%;background:var(--chart);box-shadow:0 0 16px var(--chart)}
+.mark-txt{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.14em}
+.mark-txt em{color:var(--accent-ink);font-style:normal}
+.nav-r{display:flex;align-items:center;gap:26px}
+.nav-links{display:flex;gap:24px;font-size:12.5px;color:var(--ink2);letter-spacing:.05em}
+.nav-links a{color:inherit;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--accent-ink)}
+@media(max-width:900px){.nav-links{display:none}}
+/* theme switch */
+.sw-t{display:flex;align-items:center;gap:0;padding:3px;border-radius:100px;background:var(--glass-fill);
+  border:1px solid var(--glass-rim);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 var(--rim-hi)}
+.sw-t button{border:0;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  padding:7px 13px;border-radius:100px;background:transparent;color:var(--ink3);transition:.25s}
+.sw-t button.on{background:var(--chart);color:#0A0C05;font-weight:700;box-shadow:0 2px 10px rgba(200,255,0,.34)}
+
+/* ============ HERO ============ */
+header{padding:84px 0 68px}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+@media(max-width:960px){.hero{grid-template-columns:1fr;gap:44px}}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+  color:var(--accent-ink);text-transform:uppercase;margin-bottom:26px;padding:7px 14px;
+  border:1px solid var(--glass-rim);border-radius:100px;background:var(--glass-fill);backdrop-filter:blur(12px)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(42px,5.7vw,74px);line-height:.98;letter-spacing:-.035em;margin-bottom:24px}
+/* the accent: chartreuse text on dark, chartreuse highlight-block on light */
+.hl{font-style:italic;position:relative;display:inline-block;padding:0 .1em}
+html[data-theme="dark"] .hl{color:var(--chart)}
+html[data-theme="light"] .hl{color:#0B0C10}
+html[data-theme="light"] .hl::before{content:'';position:absolute;left:0;right:0;top:.16em;bottom:.14em;
+  background:var(--chart);z-index:-1;transform:skewX(-9deg)}
+.lede{font-size:17.5px;line-height:1.62;color:var(--ink2);max-width:520px;margin-bottom:14px}
+.lede strong{color:var(--ink);font-weight:600}
+.sub{font-size:14.5px;line-height:1.6;color:var(--ink3);max-width:500px}
+.hero-meta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;color:var(--ink2);padding:8px 13px;
+  border:1px solid var(--glass-rim);border-radius:8px;background:var(--glass-fill);backdrop-filter:blur(10px);text-transform:uppercase}
+.chip b{color:var(--accent-ink);font-weight:600}
+
+/* ============ PHONE ============ */
+.phone{width:302px;border-radius:46px;padding:11px;position:relative;flex:none;background:var(--frame);
+  box-shadow:var(--lift-lg),0 0 0 1px var(--frame-rim),inset 0 1px 1px var(--rim-hi);transition:background .5s,box-shadow .5s}
+.screen{border-radius:36px;height:626px;overflow:hidden;position:relative;background:var(--screen-bg);transition:background .5s}
+.screen-field{position:absolute;inset:0;overflow:hidden}
+.screen-field i{position:absolute;border-radius:50%;filter:blur(36px);display:block;opacity:var(--screen-blob-op);transition:opacity .5s}
+.sf-a{width:230px;height:230px;background:radial-gradient(circle,rgba(200,255,0,.72),transparent 70%);top:-56px;left:-46px}
+.sf-b{width:210px;height:210px;background:radial-gradient(circle,rgba(0,229,192,.62),transparent 70%);bottom:76px;right:-58px}
+.sf-c{width:180px;height:180px;background:radial-gradient(circle,rgba(123,92,255,.66),transparent 70%);bottom:-42px;left:-30px}
+.ui{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:0 15px}
+html[data-theme="dark"] .island{background:#000}
+html[data-theme="light"] .island{background:#14161C}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:88px;height:25px;border-radius:16px;z-index:12}
+.status{display:flex;justify-content:space-between;align-items:center;padding:15px 6px 0;font-size:11px;font-weight:600;
+  color:var(--ink);opacity:.85;z-index:11;position:relative}
+
+.pg{background:var(--glass-fill);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-rim);border-radius:20px;
+  box-shadow:inset 0 1px 0 var(--rim-hi),inset 0 -1px 0 var(--rim-lo),var(--lift);position:relative;overflow:hidden;
+  transition:background .5s,border-color .5s,box-shadow .5s}
+.pg::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(155deg,var(--sheen),transparent 40%)}
+
+.hd{font-family:var(--display);font-weight:800;font-size:21.5px;letter-spacing:-.025em;margin-top:16px}
+.hd .w{opacity:.6;font-weight:600;font-size:10.5px;letter-spacing:.13em;display:block;margin-bottom:5px;font-family:var(--ui);text-transform:uppercase;color:var(--ink2)}
+.tiny{font-size:10.5px;color:var(--ink2);letter-spacing:.02em}
+
+.act{margin-top:14px;border-radius:19px;padding:17px 18px;display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#C8FF00,#A8DC00);
+  box-shadow:0 10px 30px rgba(200,255,0,.34),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(0,0,0,.14);
+  position:relative;overflow:hidden;cursor:pointer}
+.act::before{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:sweep 4.2s ease-in-out infinite}
+@keyframes sweep{0%{left:-70%}55%{left:130%}100%{left:130%}}
+.act b{color:#0A0C05;font-family:var(--display);font-weight:800;font-size:15.5px;letter-spacing:-.01em;position:relative}
+.act span{color:#0A0C05;font-size:17px;font-weight:700;position:relative}
+.act.ghost{background:var(--glass-fill);backdrop-filter:blur(18px);border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--rim-hi),var(--lift)}
+.act.ghost b,.act.ghost span{color:var(--ink)}
+.act.ghost::before{animation:none}
+
+.rows{margin-top:13px;padding:5px 0}
+.row{display:flex;align-items:center;gap:11px;padding:11.5px 15px;position:relative}
+.row+.row::before{content:'';position:absolute;top:0;left:15px;right:15px;height:1px;background:var(--hair)}
+.ic{width:27px;height:27px;border-radius:9px;background:var(--icon-bg);display:flex;align-items:center;justify-content:center;flex:none;
+  border:1px solid var(--glass-rim);color:var(--ink)}
+.ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.sring svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;opacity:.9}
+.row p{font-size:12.5px;font-weight:500;flex:1;color:var(--ink)}
+.row .ch{color:var(--ink3);font-size:13px}
+
+.tabs{margin-top:auto;margin-bottom:9px;display:flex;justify-content:space-around;padding:11px 6px 9px;border-radius:22px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:8.5px;letter-spacing:.07em;color:var(--ink3);font-weight:600}
+.tab.on{color:var(--accent-ink)}
+.tab .d{width:19px;height:19px;border-radius:7px;background:var(--icon-bg);border:1px solid var(--glass-rim);
+  display:flex;align-items:center;justify-content:center}
+.tab.on .d{background:var(--chart);border-color:rgba(200,255,0,.7);box-shadow:0 0 14px rgba(200,255,0,.45)}
+
+.bal{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+.bcard{padding:14px 13px;border-radius:17px}
+.bcard .n{font-family:var(--display);font-weight:800;font-size:31px;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.bcard .l{font-size:8.5px;letter-spacing:.14em;color:var(--ink2);margin-top:5px;font-weight:600}
+.bcard .bar{height:3px;border-radius:3px;background:var(--icon-bg);margin-top:9px;overflow:hidden}
+.bcard .bar i{display:block;height:100%;border-radius:3px;background:var(--chart);box-shadow:0 0 10px rgba(200,255,0,.55)}
+.bcard.hero-b .n{color:var(--accent-ink)}
+html[data-theme="dark"] .bcard.hero-b .n{text-shadow:0 0 26px var(--accent-glow)}
+.pro{font-size:8.5px;color:var(--accent-ink);margin-top:7px;font-family:var(--mono)}
+
+.map{height:150px;border-radius:19px;margin-top:12px;position:relative;overflow:hidden}
+html[data-theme="dark"] .map{background:linear-gradient(140deg,#12331F,#0C1D2B 55%,#101828)}
+html[data-theme="light"] .map{background:linear-gradient(140deg,#DDEFE2,#D3E2EE 55%,#DFE3EC)}
+.map::before{content:'';position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(var(--hair) 1px,transparent 1px),linear-gradient(90deg,var(--hair) 1px,transparent 1px);
+  background-size:26px 26px;transform:perspective(220px) rotateX(52deg) scale(1.5);transform-origin:center 62%}
+html[data-theme="light"] .map::before{opacity:1;background-image:linear-gradient(rgba(16,22,34,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(16,22,34,.13) 1px,transparent 1px)}
+.pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;
+  background:var(--chart);box-shadow:0 0 0 5px rgba(200,255,0,.24),0 0 26px rgba(200,255,0,.8),0 1px 3px rgba(0,0,0,.3)}
+.pin::after{content:'';position:absolute;inset:-16px;border-radius:50%;border:1.5px solid rgba(200,255,0,.55);animation:ping 2.6s ease-out infinite}
+@keyframes ping{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.9);opacity:0}}
+.geo{position:absolute;left:11px;bottom:10px;font-family:var(--mono);font-size:8px;color:var(--ink);
+  background:var(--glass-fill);backdrop-filter:blur(8px);padding:5px 8px;border-radius:7px;border:1px solid var(--glass-rim)}
+.selfie{height:118px;border-radius:19px;margin-top:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px}
+.sring{width:48px;height:48px;border-radius:50%;border:2px dashed var(--accent-ink);display:flex;align-items:center;justify-content:center;font-size:19px;opacity:.8}
+.clock{font-family:var(--display);font-weight:800;font-size:36px;letter-spacing:-.02em;margin-top:11px;line-height:1;color:var(--ink)}
+.clock i{font-style:normal;font-size:15px;opacity:.55;font-weight:600}
+
+.cal{margin-top:12px;padding:15px 13px;border-radius:19px}
+.cal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-h b{font-family:var(--display);font-weight:800;font-size:14.5px}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-g span{font-size:8px;color:var(--ink3);padding:3px 0;font-weight:600}
+.cal-g u{font-size:10.5px;text-decoration:none;padding:5.5px 0;border-radius:8px;color:var(--ink2)}
+.cal-g u.p{background:var(--chart);color:#0A0C05;font-weight:700}
+html[data-theme="dark"] .cal-g u.p{background:rgba(200,255,0,.19);color:var(--chart);border:1px solid rgba(200,255,0,.32)}
+.cal-g u.l{background:rgba(123,92,255,.26);color:var(--violet);border:1px solid rgba(123,92,255,.36)}
+html[data-theme="dark"] .cal-g u.l{color:#C4B5FF}
+.cal-g u.o{color:var(--ink3);opacity:.45}
+.legend{display:flex;gap:11px;margin-top:12px;flex-wrap:wrap}
+.legend i{display:flex;align-items:center;gap:5px;font-size:8.5px;color:var(--ink2);font-style:normal}
+.legend i b{width:7px;height:7px;border-radius:2.5px;display:block}
+
+.field-l{font-size:8.5px;letter-spacing:.16em;color:var(--ink2);margin:14px 0 6px;font-weight:600}
+.input{padding:13px 14px;border-radius:14px;font-size:12.5px;color:var(--ink);display:flex;justify-content:space-between;align-items:center}
+.input.ph{color:var(--ink3)}
+.hint{font-family:var(--mono);font-size:8.5px;color:var(--accent-ink);margin-top:0;line-height:1.5}
+
+.iss{padding:13px;border-radius:16px;margin-top:9px}
+.iss-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.iss-id{font-family:var(--mono);font-size:8px;color:var(--ink3)}
+.badge{font-size:7.5px;letter-spacing:.1em;padding:3.5px 8px;border-radius:6px;font-weight:700}
+.badge.open{background:var(--chart);color:#0A0C05}
+html[data-theme="dark"] .badge.open{background:rgba(200,255,0,.18);color:var(--chart);border:1px solid rgba(200,255,0,.34)}
+.badge.done{background:rgba(0,229,192,.2);color:#00806B;border:1px solid rgba(0,229,192,.4)}
+html[data-theme="dark"] .badge.done{color:var(--teal)}
+.iss b{font-size:12.5px;font-weight:600;display:block;color:var(--ink)}
+.iss p{font-size:10px;color:var(--ink2);margin-top:3px}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px}
+.stat3 div{padding:12px 6px;border-radius:15px;text-align:center}
+.stat3 .n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1;color:var(--ink)}
+.stat3 .l{font-size:7.5px;letter-spacing:.11em;color:var(--ink2);margin-top:4px;font-weight:600}
+
+.login-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:11px;padding-bottom:40px}
+.logo-g{width:56px;height:56px;border-radius:19px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+  font-family:var(--display);font-weight:800;font-size:23px;color:var(--accent-ink)}
+
+
+.bcard .n,.stat3 .n,.clock,.ring .val b,.kra-top s,.goals .g-n,.cal-g u,.tok,.geo,.iss-id{
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+
+/* ===== KPI ===== */
+.score{display:flex;align-items:center;gap:15px;padding:17px 15px;border-radius:20px;margin-top:13px}
+.ring{width:88px;height:88px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg);display:block}
+.ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .val b{font-family:var(--display);font-weight:800;font-size:25px;line-height:1;color:var(--ink);letter-spacing:-.02em}
+.ring .val u{text-decoration:none;font-size:8.5px;color:var(--ink2);letter-spacing:.1em;margin-top:2px;font-weight:600}
+.score-t{flex:1}
+.score-t b{font-family:var(--display);font-weight:800;font-size:14.5px;display:block;color:var(--ink);line-height:1.2}
+.score-t p{font-size:10px;color:var(--ink2);margin-top:5px;line-height:1.45}
+.pill{display:inline-block;font-family:var(--mono);font-size:8px;letter-spacing:.1em;padding:4px 8px;border-radius:6px;margin-top:8px;
+  background:var(--chart);color:#0A0C05;font-weight:700}
+html[data-theme="dark"] .pill{background:rgba(200,255,0,.18);color:var(--chart);border:1px solid rgba(200,255,0,.34)}
+.kra{padding:5px 15px;margin-top:11px}
+.kra-row{padding:11px 0;position:relative}
+.kra-row+.kra-row::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hair)}
+.kra-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;gap:8px}
+.kra-top p{font-size:11.5px;font-weight:600;color:var(--ink);flex:1}
+.kra-top p em{font-style:normal;font-family:var(--mono);font-size:8px;color:var(--ink3);margin-left:5px}
+.kra-top s{text-decoration:none;font-family:var(--display);font-weight:800;font-size:13px;color:var(--ink)}
+.kra-bar{height:4px;border-radius:4px;background:var(--icon-bg);overflow:hidden}
+.kra-bar i{display:block;height:100%;border-radius:4px;background:var(--chart);box-shadow:0 0 8px rgba(200,255,0,.45)}
+.goals{display:flex;align-items:center;gap:11px;padding:13px 15px;border-radius:17px;margin-top:10px}
+.goals .g-n{font-family:var(--display);font-weight:800;font-size:22px;color:var(--accent-ink);line-height:1}
+.goals p{font-size:10.5px;color:var(--ink2);flex:1;line-height:1.4}
+.goals p b{color:var(--ink);display:block;font-size:11.5px;font-weight:600}
+
+/* ============ SECTIONS ============ */
+section{padding:86px 0}
+.sec-head{margin-bottom:44px;max-width:660px}
+.sec-n{font-family:var(--mono);font-size:11px;color:var(--accent-ink);letter-spacing:.2em;margin-bottom:14px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.5vw,42px);line-height:1.07;letter-spacing:-.028em;margin-bottom:16px}
+.sec-head p{color:var(--ink2);font-size:15.5px;line-height:1.65}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(302px,1fr));gap:42px 28px;justify-items:center}
+.spec .phone{transition:transform .45s cubic-bezier(.2,.8,.3,1)}
+.spec:hover .phone{transform:translateY(-12px) scale(1.014)}
+.cap{margin-top:22px;text-align:center;max-width:290px}
+.cap b{font-family:var(--display);font-weight:800;font-size:15.5px;display:block;margin-bottom:6px}
+.cap p{font-size:12.5px;color:var(--ink2);line-height:1.55}
+
+.mat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.mat{grid-template-columns:1fr}}
+.mat-c{padding:28px 24px}
+.mat-c h3{font-family:var(--display);font-weight:800;font-size:17px;margin-bottom:10px}
+.mat-c p{font-size:13.5px;color:var(--ink2);line-height:1.6}
+.mat-c .num{font-family:var(--mono);font-size:10.5px;color:var(--accent-ink);letter-spacing:.16em;margin-bottom:14px}
+
+.tok{padding:34px;border-radius:20px;font-family:var(--mono);font-size:12.5px;line-height:2.05;overflow-x:auto;white-space:pre;
+  background:var(--code-bg);border:1px solid var(--glass-rim);backdrop-filter:blur(20px);color:var(--ink)}
+.tok .c{color:var(--ink3)}
+.tok .k{color:var(--accent-ink)}
+html[data-theme="dark"] .tok .v{color:#9FE8FF}
+html[data-theme="light"] .tok .v{color:#0A5C7A}
+.swatches{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.sw{padding:14px 16px;border-radius:14px;min-width:132px}
+.sw i{width:100%;height:38px;border-radius:9px;display:block;margin-bottom:11px;border:1px solid var(--glass-rim)}
+.sw b{font-family:var(--mono);font-size:11px;display:block;color:var(--ink)}
+.sw span{font-size:10px;color:var(--ink3);letter-spacing:.05em}
+
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:34px}
+@media(max-width:820px){.notes{grid-template-columns:1fr}}
+.note{padding:24px;border-radius:18px}
+.note b{font-family:var(--display);font-weight:800;font-size:14.5px;display:block;margin-bottom:8px}
+.note p{font-size:13px;color:var(--ink2);line-height:1.62}
+.note code{font-family:var(--mono);font-size:11.5px;color:var(--accent-ink);background:var(--icon-bg);padding:2px 6px;border-radius:5px}
+
+footer{padding:54px 0 68px;border-top:1px solid var(--hair);margin-top:40px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.foot p{font-size:12px;color:var(--ink3);letter-spacing:.05em}
+.foot .r{font-family:var(--mono);font-size:11px;color:var(--accent-ink)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="field"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div></div>
+<div class="cursor-light" id="cl"></div>
+<div class="grain"></div>
+
+<nav>
+  <div class="nav-in">
+    <div class="mark"><div class="mark-dot"></div><div class="mark-txt">HR <em>FRAPPE</em> · GLASS</div></div>
+    <div class="nav-r">
+      <div class="nav-links">
+        <a href="#material">Material</a><a href="#screens">Screens</a><a href="#tokens">Tokens</a>
+      </div>
+      <div class="sw-t">
+        <button id="bl" class="on" onclick="setTheme('light')">LIGHT</button>
+        <button id="bd" onclick="setTheme('dark')">DARK</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header>
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Design concept · light &amp; dark</div>
+      <h1>One recipe,<br>either <span class="hl">light.</span></h1>
+      <p class="lede">The same glass, inverted. Translucent panels over a field of moving colour — <strong>light mode is not a second design</strong>, it is the same tokens with the values flipped.</p>
+      <p class="sub">Try the switch, top right. Nothing moves, nothing resizes, no layout changes. Only the material changes state.</p>
+      <div class="hero-meta">
+        <div class="chip">Same <b>markup</b></div>
+        <div class="chip">Same <b>spacing</b></div>
+        <div class="chip"><b>18</b> tokens flip</div>
+        <div class="chip">Chartreuse stays <b>constant</b></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">Friday, 14 August</span>Hey, Mirza 👋</div>
+          <div class="tiny" style="margin-top:5px">Last check-out 6:17 pm yesterday</div>
+          <div class="act"><b>CHECK IN</b><span>→</span></div>
+          <div class="pg rows" style="margin-top:13px">
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg></div><p>Claim overtime</p><div class="ch">›</div></div>
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><rect x="2.2" y="3.4" width="11.6" height="10.4" rx="1.8"/><path d="M2.2 6.7h11.6M5.4 2.1v2.4M10.6 2.1v2.4"/></svg></div><p>Apply for leave</p><div class="ch">›</div></div>
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><path d="M2.9 6.6a5 5 0 0 1 8.8-1.7M13.1 9.4a5 5 0 0 1-8.8 1.7"/><path d="M11.1 2.3l.9 2.8-2.8.5M4.9 13.7L4 10.9l2.8-.5"/></svg></div><p>Replacement leave</p><div class="ch">›</div></div>
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.3"/><path d="M3.8 3.8l2.5 2.5M9.7 9.7l2.5 2.5M12.2 3.8L9.7 6.3M6.3 9.7l-2.5 2.5"/></svg></div><p>Report an issue</p><div class="ch">›</div></div>
+          </div>
+          <div class="bal" style="margin-top:11px">
+            <div class="pg bcard hero-b"><div class="n">7.5</div><div class="l">ANNUAL LEAVE</div>
+              <div class="bar"><i style="width:54%"></i></div><div class="pro">pro-rated · 8 for 2026</div></div>
+            <div class="pg bcard"><div class="n">13</div><div class="l">MEDICAL</div>
+              <div class="bar"><i style="width:72%"></i></div></div>
+          </div>
+          <div class="pg tabs">
+            <div class="tab on"><div class="d"></div>HOME</div><div class="tab"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</header>
+
+<section id="material">
+  <div class="sec-head">
+    <div class="sec-n">01 — WHAT CHANGES</div>
+    <h2>Light glass is not dark glass turned up</h2>
+    <p>Three things genuinely have to change. Everything else is a variable swap.</p>
+  </div>
+  <div class="mat">
+    <div class="g mat-c">
+      <div class="num">CHANGE 01</div>
+      <h3>The rim flips sides</h3>
+      <p>On dark, the top edge catches white light and the bottom falls into shadow. On light, the panel is brighter than its backdrop — so the top edge goes near-white and the bottom picks up a soft grey. Same two lines, opposite values.</p>
+    </div>
+    <div class="g mat-c">
+      <div class="num">CHANGE 02</div>
+      <h3>Chartreuse stops being text</h3>
+      <p>#C8FF00 on near-white fails contrast badly. So on light it never sets type — it becomes a fill behind black text, exactly how the brand uses it in print. Accent text drops to a deep olive derived from the same hue.</p>
+    </div>
+    <div class="g mat-c">
+      <div class="num">CHANGE 03</div>
+      <h3>The fill gets heavier</h3>
+      <p>Dark glass sits at 7% white. Light glass needs 56% — below that the moving colour underneath overwhelms the text. Counter-intuitive, but light glass is more opaque than dark glass, not less.</p>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="sec-head">
+    <div class="sec-n">02 — THE SCREENS</div>
+    <h2>Same screens, both states</h2>
+    <p>Flip the switch and watch these — the layout never moves. That is the test of a real theme system rather than two designs wearing the same name.</p>
+  </div>
+  <div class="gallery">
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="login-wrap">
+            <div class="pg logo-g">N</div>
+            <div class="hd" style="margin:0">Sign in</div>
+            <div class="tiny" style="margin-bottom:16px">NSTY Holding · employee self-service</div>
+            <div class="field-l" style="margin-top:0">COMPANY EMAIL</div>
+            <div class="pg input ph">name@nastyworldwide.com</div>
+            <div class="field-l">PASSWORD</div>
+            <div class="pg input">••••••••••<span style="opacity:.4">◉</span></div>
+            <div class="act" style="margin-top:20px"><b>SIGN IN</b><span>→</span></div>
+            <div class="tiny" style="text-align:center;margin-top:16px">Forgot your password?</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Sign in</b><p>One card floating on light. The chartreuse button is the only saturated thing on screen — in either theme.</p></div>
+    </div>
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd" style="font-size:19px"><span class="w">Checking in</span>Damansara HQ</div>
+          <div class="clock">09:02<i>:14 am</i></div>
+          <div class="pg map"><div class="pin"></div><div class="geo">3.1478° N · 101.5945° E · ±4 m</div></div>
+          <div class="pg selfie"><div class="sring"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.6 9.6h.01M15.4 9.6h.01M8.4 14.6a4.6 4.6 0 0 0 7.2 0"/></svg></div><div class="tiny">Look at the camera</div></div>
+          <div class="act"><b>CONFIRM CHECK IN</b><span>→</span></div>
+          <div class="tiny" style="text-align:center;margin-top:11px">Shift 9:00 am – 6:00 pm · on time</div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab on"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Check in</b><p>The map lightens with the theme. Outdoor readability is the real reason light mode matters here.</p></div>
+    </div>
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">Your balances</span>Leave</div>
+          <div class="bal">
+            <div class="pg bcard hero-b"><div class="n">7.5</div><div class="l">ANNUAL</div>
+              <div class="bar"><i style="width:54%"></i></div><div class="pro">pro-rated · 8 for 2026</div></div>
+            <div class="pg bcard"><div class="n">13</div><div class="l">MEDICAL</div><div class="bar"><i style="width:72%"></i></div></div>
+            <div class="pg bcard"><div class="n">60</div><div class="l">HOSPITALISATION</div><div class="bar"><i style="width:100%"></i></div></div>
+            <div class="pg bcard"><div class="n">1</div><div class="l">BIRTHDAY</div><div class="bar"><i style="width:100%"></i></div></div>
+          </div>
+          <div class="act" style="margin-top:13px"><b>APPLY FOR LEAVE</b><span>→</span></div>
+          <div class="field-l">RECENT</div>
+          <div class="pg rows" style="margin-top:0">
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><rect x="2.2" y="3.4" width="11.6" height="10.4" rx="1.8"/><path d="M2.2 6.7h11.6M5.4 2.1v2.4M10.6 2.1v2.4"/></svg></div><p>Annual · 24 Aug<br><span class="tiny">1 day</span></p><div class="badge open">OPEN</div></div>
+            <div class="row"><div class="ic"><svg viewBox="0 0 16 16"><path d="M8 3.3v9.4M3.3 8h9.4"/></svg></div><p>Medical · 12 Aug<br><span class="tiny">1 day</span></p><div class="badge done">APPROVED</div></div>
+          </div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab"><div class="d"></div>ATTEND</div>
+            <div class="tab on"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Leave balances</b><p>Numbers go ink-black on light. The chartreuse bar still carries the fill, so the reading is identical.</p></div>
+    </div>
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">This month</span>Attendance</div>
+          <div class="pg cal">
+            <div class="cal-h"><b>August 2026</b><span class="tiny">‹ ›</span></div>
+            <div class="cal-g">
+              <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+              <u class="o"></u><u class="o"></u><u class="o"></u><u class="o"></u><u class="o"></u><u class="o">1</u><u class="o">2</u>
+              <u class="p">3</u><u class="p">4</u><u class="p">5</u><u class="p">6</u><u class="p">7</u><u class="o">8</u><u class="o">9</u>
+              <u class="p">10</u><u class="p">11</u><u class="l">12</u><u class="p">13</u><u class="p">14</u><u class="o">15</u><u class="o">16</u>
+              <u>17</u><u>18</u><u>19</u><u>20</u><u>21</u><u class="o">22</u><u class="o">23</u>
+              <u class="l">24</u><u>25</u><u>26</u><u>27</u><u>28</u><u class="o">29</u><u class="o">30</u>
+            </div>
+            <div class="legend">
+              <i><b style="background:#C8FF00"></b>Present</i>
+              <i><b style="background:#7B5CFF"></b>On leave</i>
+              <i><b style="background:#B6BDC9"></b>Rest day</i>
+            </div>
+          </div>
+          <div class="stat3">
+            <div class="pg"><div class="n">10</div><div class="l">PRESENT</div></div>
+            <div class="pg"><div class="n">2</div><div class="l">ON LEAVE</div></div>
+            <div class="pg"><div class="n">0</div><div class="l">ABSENT</div></div>
+          </div>
+          <div class="act ghost" style="margin-top:12px"><b>FIX A MISSING PUNCH</b><span>→</span></div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab on"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Attendance</b><p>On light the present-days become solid chartreuse with black numerals — the print treatment, not a tint.</p></div>
+    </div>
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">New claim</span>Overtime</div>
+          <div class="field-l">DATE WORKED</div>
+          <div class="pg input">10 August 2026<span style="opacity:.4">▾</span></div>
+          <div class="field-l">HOURS PAST SHIFT END</div>
+          <div class="pg input">2.0 hours<span style="opacity:.4">▾</span></div>
+          <div class="pg" style="padding:12px 14px;border-radius:14px;margin-top:9px">
+            <div class="hint">Punched out 20:04 · shift ended 18:00<br>Qualifies — over the 60-minute minimum</div>
+          </div>
+          <div class="field-l">WHAT WERE YOU DOING</div>
+          <div class="pg input ph" style="height:66px;align-items:flex-start">Stock count for the audit…</div>
+          <div class="act" style="margin-top:15px"><b>SEND TO APPROVER</b><span>→</span></div>
+          <div class="tiny" style="text-align:center;margin-top:11px">Goes to Afif Rus · claim by 16 Aug</div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab on"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Claim overtime</b><p>The eligibility note reads as deep olive on light — same information, contrast-safe.</p></div>
+    </div>
+
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">H1 2026 review</span>My KPI</div>
+          <div class="pg score">
+            <div class="ring">
+              <svg width="88" height="88" viewBox="0 0 88 88">
+                <circle cx="44" cy="44" r="38" fill="none" stroke-width="7" style="stroke:var(--icon-bg)"></circle>
+                <circle cx="44" cy="44" r="38" fill="none" stroke-width="7" stroke-linecap="round"
+                  style="stroke:#C8FF00" stroke-dasharray="238.8" stroke-dashoffset="38.2"></circle>
+              </svg>
+              <div class="val"><b>4.2</b><u>OF 5.0</u></div>
+            </div>
+            <div class="score-t">
+              <b>Exceeds<br>expectations</b>
+              <p>Reviewed by Wan Natrah<br>Finalised 30 June</p>
+              <span class="pill">CYCLE CLOSED</span>
+            </div>
+          </div>
+          <div class="field-l">YOUR KEY RESULT AREAS</div>
+          <div class="pg kra" style="margin-top:0">
+            <div class="kra-row">
+              <div class="kra-top"><p>HRMS adoption &amp; support<em>30%</em></p><s>4.6</s></div>
+              <div class="kra-bar"><i style="width:92%"></i></div>
+            </div>
+            <div class="kra-row">
+              <div class="kra-top"><p>Data accuracy<em>25%</em></p><s>4.4</s></div>
+              <div class="kra-bar"><i style="width:88%"></i></div>
+            </div>
+            <div class="kra-row">
+              <div class="kra-top"><p>Project delivery<em>25%</em></p><s>4.0</s></div>
+              <div class="kra-bar"><i style="width:80%"></i></div>
+            </div>
+            <div class="kra-row">
+              <div class="kra-top"><p>Process documentation<em>20%</em></p><s>3.7</s></div>
+              <div class="kra-bar"><i style="width:74%"></i></div>
+            </div>
+          </div>
+          <div class="pg goals">
+            <div class="g-n">12<span style="font-size:12px;opacity:.5">/15</span></div>
+            <p><b>Goals completed</b>Three carried into H2</p>
+            <div class="ch" style="color:var(--ink3)">›</div>
+          </div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab on"><div class="d"></div>KPI</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>My KPI</b><p>Score, weighting and progress in one view — no glass behind the numbers, because performance data has to be unambiguous.</p></div>
+    </div>
+
+    <div class="spec">
+      <div class="phone"><div class="island"></div><div class="screen">
+        <div class="screen-field"><i class="sf-a"></i><i class="sf-b"></i><i class="sf-c"></i></div>
+        <div class="ui">
+          <div class="status"><span>9:41</span><span>▪▪▪ ⌁ 87</span></div>
+          <div class="hd"><span class="w">People &amp; Culture</span>Your issues</div>
+          <div class="stat3" style="margin-top:14px">
+            <div class="pg"><div class="n">1</div><div class="l">OPEN</div></div>
+            <div class="pg"><div class="n">0</div><div class="l">IN PROGRESS</div></div>
+            <div class="pg"><div class="n">1</div><div class="l">DONE</div></div>
+          </div>
+          <div class="pg iss">
+            <div class="iss-top"><div class="iss-id">HR-ISS-26-08-00002</div><div class="badge open">OPEN</div></div>
+            <b>Leave balance looks wrong</b><p>Raised 14 Aug · P&amp;C have seen it</p>
+          </div>
+          <div class="pg iss">
+            <div class="iss-top"><div class="iss-id">HR-ISS-26-08-00001</div><div class="badge done">RESOLVED</div></div>
+            <b>Cannot check in</b><p>Raised 7 Aug · fixed 11 Aug</p>
+          </div>
+          <div class="act" style="margin-top:13px"><b>REPORT AN ISSUE</b><span>→</span></div>
+          <div class="tiny" style="text-align:center;margin-top:10px">A screenshot helps us fix it faster</div>
+          <div class="pg tabs" style="margin-top:auto">
+            <div class="tab"><div class="d"></div>HOME</div><div class="tab"><div class="d"></div>ATTEND</div>
+            <div class="tab"><div class="d"></div>LEAVE</div><div class="tab"><div class="d"></div>PAY</div>
+            <div class="tab on"><div class="d"></div>ISSUES</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Issues</b><p>Status badges swap from tinted to solid on light — legible at arm's length under fluorescent lighting.</p></div>
+    </div>
+
+  </div>
+</section>
+
+<section id="tokens">
+  <div class="sec-head">
+    <div class="sec-n">03 — HANDOFF</div>
+    <h2>The eighteen values that flip</h2>
+    <p>Everything above runs off one attribute on the root element. No duplicated stylesheets, no second component set.</p>
+  </div>
+
+  <div class="tok">
+<span class="c">/* switch the whole app with one attribute */</span>
+<span class="k">html[data-theme="dark"]</span> {
+  <span class="k">--bg</span>: <span class="v">#07070A</span>;           <span class="k">--ink</span>: <span class="v">#FFFFFF</span>;        <span class="k">--ink2</span>: <span class="v">#A8AEB8</span>;
+  <span class="k">--glass-fill</span>: <span class="v">rgba(255,255,255,.075)</span>;   <span class="c">/* 7%  — light passes through */</span>
+  <span class="k">--glass-rim</span>: <span class="v">rgba(255,255,255,.14)</span>;
+  <span class="k">--rim-hi</span>: <span class="v">rgba(255,255,255,.28)</span>;         <span class="c">/* top edge catches       */</span>
+  <span class="k">--rim-lo</span>: <span class="v">rgba(0,0,0,.28)</span>;               <span class="c">/* bottom edge in shadow  */</span>
+  <span class="k">--accent-ink</span>: <span class="v">#C8FF00</span>;                   <span class="c">/* chartreuse can set type */</span>
+}
+<span class="k">html[data-theme="light"]</span> {
+  <span class="k">--bg</span>: <span class="v">#EDEFF3</span>;           <span class="k">--ink</span>: <span class="v">#0B0C10</span>;        <span class="k">--ink2</span>: <span class="v">#545C68</span>;
+  <span class="k">--glass-fill</span>: <span class="v">rgba(255,255,255,.56)</span>;    <span class="c">/* 56% — panel is brighter than backdrop */</span>
+  <span class="k">--glass-rim</span>: <span class="v">rgba(255,255,255,.90)</span>;
+  <span class="k">--rim-hi</span>: <span class="v">rgba(255,255,255,.95)</span>;         <span class="c">/* top edge near-white    */</span>
+  <span class="k">--rim-lo</span>: <span class="v">rgba(16,22,34,.06)</span>;            <span class="c">/* bottom edge soft grey  */</span>
+  <span class="k">--accent-ink</span>: <span class="v">#3F5C00</span>;                   <span class="c">/* chartreuse fails on white — darken for type */</span>
+}
+<span class="c">/* the constant: the primary action is identical in both themes */</span>
+<span class="k">.action</span> { <span class="k">background</span>: <span class="v">linear-gradient(135deg,#C8FF00,#A8DC00)</span>; <span class="k">color</span>: <span class="v">#0A0C05</span>; }
+  </div>
+
+  <div class="swatches">
+    <div class="g sw"><i style="background:#EDEFF3"></i><b>#EDEFF3</b><span>PAPER · light base</span></div>
+    <div class="g sw"><i style="background:#07070A"></i><b>#07070A</b><span>VOID · dark base</span></div>
+    <div class="g sw"><i style="background:#C8FF00"></i><b>#C8FF00</b><span>CHARTREUSE · action</span></div>
+    <div class="g sw"><i style="background:#3F5C00"></i><b>#3F5C00</b><span>OLIVE · accent type, light</span></div>
+    <div class="g sw"><i style="background:#7B5CFF"></i><b>#7B5CFF</b><span>VIOLET · on leave</span></div>
+    <div class="g sw"><i style="background:#00E5C0"></i><b>#00E5C0</b><span>TEAL · resolved</span></div>
+  </div>
+
+  <div class="notes">
+    <div class="g note"><b>Why light mode at all</b>
+      <p>Outdoor readability. Half the workforce punches in on a forecourt or a loading bay in direct sun, where a dark screen is a mirror. This is not a preference feature — it is a legibility feature for the people who use the app most.</p></div>
+    <div class="g note"><b>Follow the system</b>
+      <p>Default to the phone's own setting rather than an in-app default, and remember an explicit override. Most staff never open settings, so the right theme should already be on when they first launch.</p></div>
+    <div class="g note"><b>The contrast trap</b>
+      <p>Chartreuse on white measures about 1.5:1 — nowhere near the 4.5:1 needed for text. Anywhere it currently sets type, swap to <code>#3F5C00</code>. It stays as a fill behind black text, which is how the brand uses it in print anyway.</p></div>
+    <div class="g note"><b>Typography — read this before you build</b>
+      <p>Do not bundle SF Pro. Apple licenses it for use on Apple platforms only, so shipping the files in a web or Android build breaches the licence. Instead lead the stack with <code>-apple-system</code>: iOS and macOS then resolve to genuine SF Pro at no cost, Android gets Roboto, and everything else falls back to <code>Inter</code>, which is the closest open-source relative. One stack, native everywhere, no licensing exposure.</p></div>
+    <div class="g note"><b>Numbers must be tabular</b>
+      <p>Every figure in this app is data — balances, times, scores, ringgit. They are all set with <code>font-variant-numeric: tabular-nums</code> so digits occupy equal width and columns align. Without it a list of times visibly wobbles, which reads as sloppiness on the one screen people check daily.</p></div>
+    <div class="g note"><b>Where glass must stop</b>
+      <p>Performance scores sit on the most opaque surface in the system, in both themes. A rating people will argue about cannot be read through a moving tint — the ring track and the KRA bars use solid values, never translucency.</p></div>
+    <div class="g note"><b>One extra cost</b>
+      <p>Light glass needs a heavier fill (56% against 7%), so the moving colour underneath must be dialled back or text starts to swim. Budget an afternoon of tuning per theme, not a global find-and-replace.</p></div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <p>NSTY HOLDING SDN BHD · GROUP PEOPLE &amp; CULTURE · CONCEPT FOR DISCUSSION</p>
+    <p class="r">Switch themes, top right — the layout never moves</p>
+  </div>
+</footer>
+</div>
+
+<script>
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('bl').classList.toggle('on', t==='light');
+  document.getElementById('bd').classList.toggle('on', t==='dark');
+}
+(function(){
+  var raf=null, tx=50, ty=30;
+  window.addEventListener('pointermove', function(e){
+    tx=(e.clientX/window.innerWidth)*100; ty=(e.clientY/window.innerHeight)*100;
+    if(!raf){raf=requestAnimationFrame(function(){
+      document.documentElement.style.setProperty('--mx',tx+'%');
+      document.documentElement.style.setProperty('--my',ty+'%'); raf=null;});}
+  },{passive:true});
+})();
+</script>
+</body>
+</html>
