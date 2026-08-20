@@ -1733,6 +1733,23 @@ html[data-theme="dark"] .g-cal__day--present {
 	pointer-events: none;
 }
 
+/* ---------- expense line items (§6.3) ---------- */
+
+/* GDataTable is a READ-ONLY table (columns/rows). The expense tables are
+   editable — every row opens a sheet — so they keep their markup and take the
+   §6.3 treatment directly: an opaque surface, because a figure someone
+   disputes with their manager must not be read through a moving tint. Same
+   rule, same fill, different component shape. */
+.g-lineitems {
+	background: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-card);
+	overflow: hidden;
+}
+.g-lineitems__row + .g-lineitems__row {
+	border-top: 1px solid var(--g-hair);
+}
+
 /* ---------- GFileUpload (§10.3 treatment list) ---------- */
 
 .g-files {

@@ -137,7 +137,7 @@
 			<GButton
 				:label="__(&quot;Confirm {0}&quot;, [nextAction.label])"
 				:disabled="cameraStatus === 'starting'"
-				:pending="punchCheckin.loading || cameraStatus === 'submitting'"
+				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
 				<template #trailing>
@@ -367,16 +367,26 @@ const lastLogType = computed(() => {
 // If a user checks IN late at night, they can still check OUT during OT
 // up until 06:00 the next morning. After that the open IN is treated as
 // stale and the button flips back to "Check In".
-const STALE_AFTER_HOUR = 6
+// §16.7 #2 — the button state derives from the employee's OPEN SHIFT, not the
+// calendar date. The old rule expired an open IN at 6am the following day,
+// which fires *during* a night shift: someone who punched in at 22:05 on a
+// 22:00–07:00 shift was offered "Check In" at 06:30, still on shift, and again
+// at 07:10 having simply forgotten to punch out — creating a second open IN
+// either way. Reproduced before this change; see the phase 7 HANDOFF.
+//
+// A punch session stays open until it has run longer than any real shift, or
+// until the server's nightly sweeper marks it abandoned — which is the
+// authoritative "this session is over" signal and already drives the
+// forgot-to-check-out banner above.
+const MAX_OPEN_SHIFT_HOURS = 16
 
 function isSessionStale(checkinTime) {
 	if (!checkinTime) return true
 	const t = new Date(checkinTime)
 	if (Number.isNaN(t.getTime())) return true
-	const expiry = new Date(t)
-	expiry.setDate(t.getDate() + 1)
-	expiry.setHours(STALE_AFTER_HOUR, 0, 0, 0)
-	return Date.now() >= expiry.getTime()
+	// the server has ruled on this session; the client does not second-guess it
+	if (unresolvedStaleIn.data?.is_abandoned) return true
+	return Date.now() - t.getTime() >= MAX_OPEN_SHIFT_HOURS * 60 * 60 * 1000
 }
 
 const nextAction = computed(() => {
@@ -647,7 +657,39 @@ const handleEmployeeCheckin = () => {
 	}
 }
 
+// §11.5 — a second submission of the same action within 60 seconds is rejected
+// client-side. This is not cosmetic: the app has produced up to nine identical
+// check-in records from one user in the same second. `submitting` is set
+// SYNCHRONOUSLY, before the first await, because every await in this function
+// is a window in which another tap lands.
+const DUPLICATE_WINDOW_MS = 60 * 1000
+const submitting = ref(false)
+const lastSubmit = ref({ action: null, at: 0 })
+
 const submitLog = async (logType) => {
+	if (submitting.value) {
+		console.info("[CheckInPanel] punch already in flight, ignoring tap")
+		return
+	}
+	if (lastSubmit.value.action === logType && Date.now() - lastSubmit.value.at < DUPLICATE_WINDOW_MS) {
+		console.warn("[CheckInPanel] duplicate {0} within 60s, rejected".replace("{0}", logType))
+		return
+	}
+	submitting.value = true
+	try {
+		await runSubmitLog(logType)
+		lastSubmit.value = { action: logType, at: Date.now() }
+	} finally {
+		// released on every path — an early return from the geofence preflight
+		// must not leave the button stuck pending
+		submitting.value = false
+	}
+}
+
+// The original body, unchanged. It is wrapped rather than edited because it has
+// several early returns (strict geofence, remote fallback) and each one has to
+// release the guard.
+const runSubmitLog = async (logType) => {
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
 
 	// Preflight strict geofence: if the assigned Shift Type has

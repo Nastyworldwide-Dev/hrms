@@ -11,32 +11,26 @@
 			</span>
 		</div>
 
-		<div class="border-t-2 border-divider" v-if="upcomingHolidays?.length">
-			<div
-				class="flex flex-row items-center justify-between py-3 border-b border-divider"
+		<!-- §15.1: one panel for the list, not one surface per holiday -->
+		<GListPanel v-if="upcomingHolidays?.length">
+			<GListRow
 				v-for="holiday in upcomingHolidays"
 				:key="holiday.holiday_date"
-			>
-				<span class="text-button-label text-inkbase">
-					{{ __(holiday.description) }}
-				</span>
-				<span class="font-sans font-extrabold text-card-title uppercase text-inkbase whitespace-nowrap">
-					{{ compactHolidayDate(holiday) }}
-				</span>
-			</div>
-		</div>
+				:label="__(holiday.description)"
+				:amount="compactHolidayDate(holiday)"
+				:tappable="false"
+			/>
+		</GListPanel>
 
 		<ResourceError v-else-if="holidays.error" :resource="holidays" what="your holiday calendar" />
-		<EmptyState :message="__('You have no upcoming holidays')" v-else />
+		<GEmptyState
+			v-else
+			:title="__('No upcoming holidays')"
+			:body="__('Your holiday calendar will fill in as the year is published')"
+		/>
 	</div>
 
-	<ion-modal
-		ref="modal"
-		v-if="holidays?.data?.length"
-		trigger="open-holiday-list"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
+	<GModal v-if="holidays?.data?.length" trigger="open-holiday-list">
 		<div class="bg-ground w-full flex flex-col items-center justify-center pb-5">
 			<div class="w-full pt-8 pb-5 border-b-2 border-divider text-center">
 				<span class="text-inkbase font-extrabold text-lg">{{ __("Holiday List") }}</span>
@@ -64,12 +58,15 @@
 				</div>
 			</div>
 		</div>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
+import GModal from "@/components/glass/GModal.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GListRow from "@/components/glass/GListRow.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
 import { inject, computed } from "vue"
-import { IonModal } from "@ionic/vue"
 import { FeatherIcon, createResource } from "frappe-ui"
 
 const employee = inject("$employee")

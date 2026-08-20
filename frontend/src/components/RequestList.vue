@@ -28,7 +28,13 @@
 			</Button>
 		</router-link>
 	</div>
-	<EmptyState :message="emptyStateMessage || __('You have no requests')" v-else />
+	<!-- §11.1: callers pass the copy for their list; this is the fallback for
+	     any that has not yet been given one -->
+	<GEmptyState
+		v-else
+		:title="emptyStateTitle || __('Nothing here yet')"
+		:body="emptyStateMessage || __('New requests will appear here once submitted')"
+	/>
 
 	<ion-modal
 		ref="modal"
@@ -42,6 +48,7 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import { ref, inject } from "vue"
 import { IonModal } from "@ionic/vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -73,6 +80,10 @@ const props = defineProps({
 		default: false,
 	},
 	listButtonRoute: {
+		type: String,
+		default: "",
+	},
+	emptyStateTitle: {
 		type: String,
 		default: "",
 	},

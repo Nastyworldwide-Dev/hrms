@@ -18,12 +18,12 @@
 	</div>
 
 	<!-- Table -->
-	<div
-		v-if="expenseClaim.expenses"
-		class="flex flex-col overflow-auto"
-	>
+	<!-- §6.3: an expense figure is a number someone disputes with their
+	     manager, so it sits on an opaque surface — never glass, never a
+	     translucent track. -->
+	<div v-if="expenseClaim.expenses" class="g-lineitems flex flex-col overflow-auto">
 		<div
-			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
+			class="g-lineitems__row flex flex-row py-3 px-3 items-center justify-between cursor-pointer"
 			v-for="(item, idx) in expenseClaim.expenses"
 			:key="idx"
 			@click="openModal(item, idx)"

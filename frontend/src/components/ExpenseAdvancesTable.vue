@@ -5,12 +5,12 @@
 		</h2>
 	</div>
 
-	<div class="flex flex-col" v-if="expenseClaim.advances?.length">
+	<div class="g-lineitems" v-if="expenseClaim.advances?.length">
 		<!-- Advance Row -->
 		<div
 			v-for="advance in expenseClaim.advances"
 			:key="advance.name"
-			class="flex flex-col py-3 border-b border-divider"
+			class="g-lineitems__row flex flex-col py-3 px-3"
 			:class="[
 				advance.selected ? 'bg-surface' : '',
 				isReadOnly ? '' : 'cursor-pointer',

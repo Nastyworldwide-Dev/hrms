@@ -19,10 +19,10 @@
 
 		<div
 			v-if="expenseClaim.taxes?.length"
-			class="flex flex-col overflow-auto"
+			class="g-lineitems flex flex-col overflow-auto"
 		>
 			<div
-				class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
+				class="g-lineitems__row flex flex-row py-3 px-3 items-center justify-between cursor-pointer"
 				v-for="(item, idx) in expenseClaim.taxes"
 				:key="item.name"
 				@click="openModal(item, idx)"
