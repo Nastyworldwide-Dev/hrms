@@ -1,9 +1,13 @@
 # HANDOFF
-prompt:   1.6
+prompt:   2.1
 status:   done
-commit:   dfbf8b60a on nz-glass
-files:    docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-verify:   grep -n '^## 20' docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-flags:    "five tab destinations" in top group would duplicate More — wrote 4 direct + divider + More contents, flagged
-          §19 row 1 also marked resolved (companion edit, not in task list); §1 definition-of-done still mockup-at-390×844 — §20 preamble covers lg:
-next:     phase 2 component contracts must add lg: rows per §20.7
+commit:   d4a714dba on nz-glass
+files:    frontend/src/components/glass/ (8 components)
+          frontend/src/views/DesignSpecimen.vue
+          frontend/src/theme/glass-components.css
+          frontend/src/data/theme.js, router/index.js, main.js
+          design/tokens.json + build-tokens.mjs (shadow.action token)
+verify:   cd frontend && yarn gates && node -e "require('vue/compiler-sfc')" && yarn build
+flags:    GStatusChip mapping is a PROPOSAL (header comment has ratios); rejected=solid danger fill — tinted danger fails 4.5 on light
+          GEmptyState radius (banner 16px) + button press scale(.98) are unspecified guesses; specimen route needs a logged-in dev session
+next:     phase 2 prompt 2 appends the next component tier to /design
