@@ -114,7 +114,11 @@
 					</div>
 				</div>
 				<ResourceError v-else-if="sops.error" :resource="sops" what="the SOP list" />
-				<EmptyState v-else-if="!sops.loading" :message="__('No SOPs published yet')" />
+				<GEmptyState
+					v-else-if="!sops.loading"
+					:title="__('No documents yet')"
+					:body="__('Procedures for your role will appear here')"
+				/>
 			</div>
 
 			<!-- HR: create -->
@@ -141,6 +145,7 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { createResource, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref } from "vue"

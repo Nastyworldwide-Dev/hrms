@@ -88,10 +88,11 @@
 								{{ __("Load more") }}
 							</Button>
 						</div>
-						<EmptyState
-							v-else-if="!notifications.data"
-							:message="__('You have no notifications')"
-						/>
+						<GEmptyState
+					v-else-if="!notifications.data"
+					:title="__('You are all caught up')"
+					:body="__('New notifications will appear here')"
+				/>
 					</div>
 				</div>
 			</div>
@@ -100,6 +101,7 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent} from "@ionic/vue"
 import { useRouter } from "vue-router"

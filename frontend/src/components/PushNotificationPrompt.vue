@@ -1,16 +1,11 @@
 <template>
-	<ion-modal
-		:is-open="isOpen"
-		@didDismiss="onDismiss"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
-		<div class="bg-ground w-full flex flex-col pb-8">
-			<div class="w-full flex flex-col gap-1 pt-6 pb-4 bg-ground px-4">
+	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-8">
+			<div class="w-full flex flex-col gap-1 pt-6 pb-4 bg-bg px-4">
 				<div class="text-eyebrow uppercase text-accent-ink">
 					{{ step === 1 ? __("Notifications") : __("Are you sure?") }}
 				</div>
-				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
+				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ step === 1 ? __("Don't miss an update") : __("Stay in the loop?") }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -30,9 +25,9 @@
 				<div
 					v-for="benefit in benefits"
 					:key="benefit"
-					class="flex items-center gap-2.5 bg-surface border border-divider px-3 py-2.5 text-xs font-semibold text-inkbase"
+					class="flex items-center gap-2.5 bg-track-solid border border-hair px-3 py-2.5 text-xs font-semibold text-ink"
 				>
-					<span class="w-2 h-2 bg-accent-500 shrink-0" />
+					<span class="w-2 h-2 bg-brand shrink-0" />
 					{{ benefit }}
 				</div>
 			</div>
@@ -47,7 +42,7 @@
 					<span aria-hidden="true">→</span>
 				</button>
 				<button
-					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide cursor-pointer hover:text-inkbase disabled:opacity-60"
+					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
 					@click="decline"
 					:disabled="enabling"
 				>
@@ -55,12 +50,12 @@
 				</button>
 			</div>
 		</div>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
+import GModal from "@/components/glass/GModal.vue"
 import { inject, onMounted, onUnmounted, ref } from "vue"
-import { IonModal } from "@ionic/vue"
 import { toast } from "frappe-ui"
 
 import {

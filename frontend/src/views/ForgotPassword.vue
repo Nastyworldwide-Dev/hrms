@@ -52,6 +52,8 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
+import GInput from "@/components/glass/GInput.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRoute, useRouter } from "vue-router"

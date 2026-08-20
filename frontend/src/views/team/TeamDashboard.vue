@@ -113,10 +113,14 @@
 					</template>
 				</div>
 
-				<EmptyState :message="__('No direct reports found')" v-else-if="!teamStatus.loading" />
+				<GEmptyState
+					v-else-if="!teamStatus.loading"
+					:title="__('Nothing waiting on you')"
+					:body="__('Approvals will appear here when your team submits')"
+				/>
 
 				<div v-if="teamStatus.loading" class="flex mt-2 items-center justify-center">
-					<LoadingIndicator class="w-8 h-8 text-accent" />
+					<GSkeleton height="14px" width="42%" />
 				</div>
 
 				<span class="text-caption text-ink-600" v-if="teamStatus.data?.members?.length">
@@ -128,8 +132,10 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
-import { Autocomplete, FeatherIcon, LoadingIndicator } from "frappe-ui"
+import { Autocomplete, FeatherIcon} from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"

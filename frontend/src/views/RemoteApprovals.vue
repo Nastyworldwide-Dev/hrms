@@ -25,7 +25,7 @@
 					</header>
 
 					<div class="flex flex-col p-4 gap-4">
-						<TabButtons :buttons="TAB_BUTTONS" v-model="activeTab" />
+						<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" />
 
 						<template v-if="activeTab === 'History'">
 							<div v-if="decided.loading && !decided.data" class="flex flex-col gap-3">
@@ -194,7 +194,7 @@
 							@click="submitDecision"
 							:disabled="submitting"
 						>
-							<LoadingIndicator v-if="submitting" class="w-4 h-4" />
+							<GSkeleton height="14px" width="42%" />
 							{{ decision === "approve" ? __("Confirm Approve") : __("Confirm Reject") }}
 						</button>
 					</div>
@@ -205,14 +205,15 @@
 </template>
 
 <script setup>
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
-import { FeatherIcon, Button, LoadingIndicator, toast } from "frappe-ui"
+import { FeatherIcon, Button, toast } from "frappe-ui"
 
 import { formatTimestamp } from "@/utils/formatters"
-import TabButtons from "@/components/TabButtons.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
 import {
 	pendingForApproverResource,
 	decidedForApproverResource,

@@ -376,6 +376,38 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	cursor: not-allowed;
 }
 
+/* ---------- GProviderButton (SSO) ---------- */
+
+/* Solid, not glass: the auth screens have no light field to blur (§3, §6.1) */
+.g-provider {
+	display: flex;
+	background: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-glass-rim);
+	align-items: center;
+	justify-content: center;
+	gap: 9px;
+	width: 100%;
+	min-height: 44px;
+	padding: var(--g-pad-action);
+	border-radius: var(--g-radius-action);
+	color: var(--g-ink);
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-button-label-weight);
+	letter-spacing: var(--g-type-button-label-tracking);
+	line-height: var(--g-type-button-label-line-height);
+	text-decoration: none;
+	cursor: pointer;
+}
+/* The provider's mark, exactly as supplied. Deliberately NO filter, tint,
+   radius or mask — see the component header. */
+.g-provider__mark {
+	width: 18px;
+	height: 18px;
+	flex: none;
+	object-fit: contain;
+}
+
 /* ---------- GBadge (§10.1 #7) ---------- */
 
 .g-badge {
@@ -1626,6 +1658,79 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-table__scroll {
 	width: 100%;
 	overflow-x: auto;
+}
+
+/* ---------- PDF viewer (§10.3, §6.3) ---------- */
+
+/* Solid throughout. §6.3 keeps translucency away from anything a person reads
+   and may dispute — a payslip PDF is the strongest case in the app. The
+   skeleton is §11.2's, not a spinner. */
+.g-pdf {
+	position: relative;
+	background: var(--g-track-solid);
+	border-radius: var(--g-radius-card);
+	overflow: hidden;
+}
+.g-pdf__scroller {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 10px;
+	max-height: 70vh;
+	overflow-y: auto;
+}
+.g-pdf__skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	aspect-ratio: 210 / 260;
+	background: var(--g-glass-fill-fallback);
+	border-radius: var(--g-radius-input);
+}
+.g-pdf__skeleton-line {
+	height: 6px;
+	border-radius: var(--g-radius-pill);
+	background: var(--g-icon-bg);
+}
+.g-pdf__skeleton-line--head {
+	height: 10px;
+	width: 60%;
+}
+.g-pdf__error {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 20px;
+	text-align: center;
+	background: var(--g-glass-fill-fallback);
+	border-radius: var(--g-radius-input);
+}
+.g-pdf__retry {
+	padding: 9px 13px;
+	border: 1px solid var(--g-accent-ink);
+	border-radius: var(--g-radius-pill);
+	color: var(--g-accent-ink);
+	font-family: var(--g-type-micro-label-family);
+	font-size: var(--g-type-micro-label-size);
+	font-weight: var(--g-type-micro-label-weight);
+	letter-spacing: var(--g-type-micro-label-tracking);
+	text-transform: uppercase;
+	text-decoration: none;
+}
+.g-pdf__pagecount {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	padding: 4px 8px;
+	border-radius: var(--g-radius-pill);
+	background: var(--g-ink);
+	color: var(--g-bg);
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	font-variant-numeric: tabular-nums;
+	pointer-events: none;
 }
 
 /* ---------- GFileUpload (§10.3 treatment list) ---------- */

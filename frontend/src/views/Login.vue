@@ -91,15 +91,13 @@
 						<template v-if="authProviders.data?.length">
 							<div v-if="!user_pass_login_disabled.data" class="text-center text-sm text-ink-600 my-4">or</div>
 							<div class="flex flex-col gap-3">
-								<a
+								<GProviderButton
 									v-for="provider in authProviders.data"
 									:key="provider.name"
-									class="flex items-center justify-center gap-2 transition-colors focus:outline-none text-inkbase bg-surface border border-divider hover:bg-ink-200 h-9 text-sm px-2"
+									:name="provider.provider_name"
+									:icon="provider.icon"
 									:href="provider.auth_url"
-								>
-									<img class="h-4 w-4" :src="provider.icon" :alt="provider.provider_name" />
-									<span>Login with {{ provider.provider_name }}</span>
-								</a>
+								/>
 							</div>
 						</template>
 
@@ -108,93 +106,87 @@
 				</div>
 			</div>
 
-			<Dialog v-model="resetPassword.showDialog">
-				<template #body-title>
-					<h2 class="text-lg font-bold">{{ __("Reset Password") }} </h2>
-				</template>
-				<template #body-content>
-					<p>
-						{{ __("Your password has expired. Please reset your password to continue") }}
+			<!-- Deferred from 5.1: these three hold forms with their own
+			     validation, not confirmations, so they needed the batch that owns
+			     Login. GModal carries the focus-trap workaround (§16.3), which
+			     matters most here — an OTP field inside a trapped ion-modal is
+			     exactly the bug that workaround exists for. -->
+			<GModal
+				:is-open="resetPassword.showDialog"
+				:title="__('Reset password')"
+				@did-dismiss="resetPassword.showDialog = false"
+			>
+				<p class="g-confirm__body">
+					{{ __("Your password has expired. Please reset your password to continue") }}
+				</p>
+				<a class="g-provider" :href="resetPassword.link" target="_blank">
+					{{ __("Go to Reset Password page") }}
+				</a>
+			</GModal>
+
+			<GModal
+				:is-open="forgot.showDialog"
+				:title="__('Forgot password')"
+				@did-dismiss="forgot.showDialog = false"
+			>
+				<form class="flex flex-col gap-stack-md" @submit.prevent="sendResetLink">
+					<GInput
+						v-model="forgot.email"
+						:label="__('Email')"
+						:placeholder="__('johndoe@mail.com')"
+						:error="forgot.error"
+						autocomplete="username"
+					/>
+					<p v-if="forgot.sent" class="g-confirm__body">
+						{{ __("If this email is registered, password reset instructions have been sent to it.") }}
 					</p>
-				</template>
-				<template #actions>
-					<a
-						class="inline-flex items-center justify-center gap-2 transition-colors focus:outline-none text-ground bg-accent hover:bg-accent-600 active:bg-accent-800 focus-visible:ring focus-visible:ring-accent-300 h-8 text-sm font-bold px-3"
-						:href="resetPassword.link"
-						target="_blank"
-					>
-						{{ __("Go to Reset Password page") }}
-					</a>
-				</template>
-			</Dialog>
+					<GButton
+						v-else
+						type="submit"
+						:label="__('Send Reset Link')"
+						:pending-label="__('Sending…')"
+						:pending="forgot.loading"
+					/>
+				</form>
+			</GModal>
 
-			<Dialog v-model="forgot.showDialog">
-				<template #body-title>
-					<h2 class="text-lg font-bold">{{ __("Forgot Password") }}</h2>
-				</template>
-				<template #body-content>
-					<form class="flex flex-col space-y-4" @submit.prevent="sendResetLink">
-						<Input
-							:label="__('Email')"
-							type="text"
-							:placeholder="__('johndoe@mail.com')"
-							v-model="forgot.email"
-							autocomplete="username"
-						/>
-						<ErrorMessage :message="forgot.error" />
-						<p v-if="forgot.sent" class="text-sm text-accent-700">
-							{{ __("If this email is registered, password reset instructions have been sent to it.") }}
-						</p>
-						<Button
-							v-else
-							:loading="forgot.loading"
-							variant="solid"
-							class="!bg-accent hover:!bg-accent-600 !text-ground disabled:opacity-60 !mt-2"
-						>
-							{{ __("Send Reset Link") }}
-						</Button>
-					</form>
-				</template>
-			</Dialog>
-
-			<Dialog v-model="otp.showDialog">
-				<template #body-title>
-					<h2 class="text-lg font-bold">{{ __("OTP Verification") }}</h2>
-				</template>
-				<template #body-content>
-					<p class="mb-4" v-if="otp.verification.prompt">
-						{{ otp.verification.prompt }}
-					</p>
-
-					<form class="flex flex-col space-y-4" @submit.prevent="submit">
-						<Input
-							:label="__('OTP Code')"
-							type="text"
-							placeholder="000000"
-							v-model="otp.code"
-							autocomplete="one-time-code"
-						/>
-						<ErrorMessage :message="errorMessage" />
-						<Button
-							:loading="session.otp.loading"
-							variant="solid"
-							class="!bg-accent hover:!bg-accent-600 !text-ground disabled:opacity-60 !mt-6"
-						>
-							{{ __("Verify") }}
-						</Button>
-					</form>
-				</template>
-			</Dialog>
+			<GModal
+				:is-open="otp.showDialog"
+				:title="__('OTP verification')"
+				@did-dismiss="otp.showDialog = false"
+			>
+				<p v-if="otp.verification.prompt" class="g-confirm__body">
+					{{ otp.verification.prompt }}
+				</p>
+				<form class="flex flex-col gap-stack-md" @submit.prevent="submit">
+					<GInput
+						v-model="otp.code"
+						:label="__('OTP Code')"
+						placeholder="000000"
+						:error="errorMessage"
+						autocomplete="one-time-code"
+					/>
+					<GButton
+						type="submit"
+						:label="__('Verify')"
+						:pending-label="__('Verifying…')"
+						:pending="session.otp.loading"
+					/>
+				</form>
+			</GModal>
 		</ion-content>
 	</GPage>
 </template>
 
 <script setup>
+import GInput from "@/components/glass/GInput.vue"
+import GModal from "@/components/glass/GModal.vue"
+import GProviderButton from "@/components/glass/GProviderButton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
-import { Input, Button, ErrorMessage, Dialog, LoadingIndicator, createResource } from "frappe-ui"
+import { Input, Button, ErrorMessage, createResource } from "frappe-ui"
 
 import FrappeHRLogo from "@/components/icons/FrappeHRLogo.vue"
 import { sendPasswordResetLink } from "@/utils/resetPassword"

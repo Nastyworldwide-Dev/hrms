@@ -94,10 +94,11 @@
 				</div>
 			</div>
 
-			<EmptyState
-				v-else-if="!sop.loading"
-				:message="__('This SOP is not available')"
-			/>
+			<GEmptyState
+					v-else-if="!sop.loading"
+					:title="__('Nothing to show yet')"
+					:body="__('This procedure has no content published')"
+				/>
 		</div>
 
 		<SopFormSheet
@@ -111,6 +112,7 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { createResource, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref } from "vue"

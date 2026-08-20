@@ -1,5 +1,8 @@
 <template>
-	<div class="relative bg-divider">
+	<!-- §6.3: a document someone is READING gets a solid surface. No glass, no
+	     backdrop-filter, nothing translucent between the reader and the page —
+	     the same rule that keeps payslip figures and KPI scores off glass. -->
+	<div class="g-pdf">
 		<div
 			ref="scroller"
 			role="group"
@@ -10,14 +13,14 @@
 			<!-- pages are appended here as canvases by pdf.js -->
 			<div
 				v-if="loading"
-				class="flex flex-col gap-2 bg-white p-4 aspect-[210/260] animate-pulse"
+				class="g-pdf__skeleton"
 			>
-				<div class="h-2.5 w-3/5 bg-ink-300"></div>
-				<div v-for="line in 8" :key="line" class="h-1.5 bg-ink-200"></div>
+				<div class="g-pdf__skeleton-line g-pdf__skeleton-line--head"></div>
+				<div v-for="line in 8" :key="line" class="g-pdf__skeleton-line"></div>
 			</div>
 			<div
 				v-if="error"
-				class="flex flex-col items-center gap-2 bg-surface p-5 text-center"
+				class="g-pdf__error"
 			>
 				<span class="text-card-title text-ink-700">
 					{{ __("This PDF could not be displayed here.") }}
@@ -29,7 +32,7 @@
 					:href="props.fileUrl"
 					target="_blank"
 					rel="noopener"
-					class="border border-accent text-accent px-3 py-2 text-micro-label font-extrabold uppercase no-underline"
+					class="g-pdf__retry"
 				>
 					{{ __("Download") }}
 				</a>
@@ -38,7 +41,7 @@
 
 		<div
 			v-if="pageCount"
-			class="absolute right-2.5 bottom-2.5 px-2 py-1 text-caption font-extrabold text-white pointer-events-none"
+			class="g-pdf__pagecount"
 			style="background: rgba(15, 40, 40, 0.85)"
 		>
 			{{ currentPage }} / {{ pageCount }}

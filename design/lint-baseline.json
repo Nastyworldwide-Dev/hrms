@@ -33,7 +33,7 @@
 	},
 	"components/PdfInlineViewer.vue": {
 		"colorfn": 1,
-		"arbitrary": 2
+		"arbitrary": 1
 	},
 	"components/QuickLinks.vue": {
 		"arbitrary": 2

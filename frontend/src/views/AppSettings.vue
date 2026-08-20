@@ -64,7 +64,7 @@
 							v-if="isLoading"
 							class="flex -mt-1 items-center gap-2"
 						>
-							<LoadingIndicator class="w-3 h-3 text-inkbase" />
+							<GSkeleton height="14px" width="42%" />
 							<span class="text-inkbase text-sm">
 								{{ pushNotificationState ? __("Disabling Push Notifications...") : __("Enabling Push Notifications...") }}
 							</span>
@@ -93,10 +93,11 @@
 </template>
 
 <script setup>
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import { FeatherIcon, Switch, toast, LoadingIndicator, Button } from "frappe-ui"
+import { FeatherIcon, Switch, toast, Button } from "frappe-ui"
 
 import { computed, inject, ref } from "vue"
 
