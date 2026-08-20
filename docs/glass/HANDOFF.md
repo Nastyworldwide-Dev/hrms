@@ -1,13 +1,14 @@
 # HANDOFF
-prompt:   2.1
+prompt:   2.2
 status:   done
-commit:   d4a714dba on nz-glass
-files:    frontend/src/components/glass/ (8 components)
-          frontend/src/views/DesignSpecimen.vue
+commit:   20cc227d8 on nz-glass
+files:    frontend/src/components/glass/ (10 new: GListRow, GListPanel, GInput,
+          GTextarea, GBalanceCard, GBalanceGrid, GStatTile, GStatPanel,
+          GIssueCard, GProgressRing)
           frontend/src/theme/glass-components.css
-          frontend/src/data/theme.js, router/index.js, main.js
-          design/tokens.json + build-tokens.mjs (shadow.action token)
-verify:   cd frontend && yarn gates && node -e "require('vue/compiler-sfc')" && yarn build
-flags:    GStatusChip mapping is a PROPOSAL (header comment has ratios); rejected=solid danger fill — tinted danger fails 4.5 on light
-          GEmptyState radius (banner 16px) + button press scale(.98) are unspecified guesses; specimen route needs a logged-in dev session
-next:     phase 2 prompt 2 appends the next component tier to /design
+          frontend/src/views/DesignSpecimen.vue
+verify:   cd frontend && yarn gates && yarn build
+flags:    §6.3 (ring track solid) vs §10.1 #9/#6 (track --icon-bg, translucent) — followed the component spec
+          §10.2 #13 label tracking 0.11em not in the §4.2 scale — used micro-label 0.13em; issue-card meta 10px → caption 10.5px
+          surfaces gate counts v-if branches + comment prose; verified 1-per-panel by SSR render instead
+next:     phase 2 prompt 3 — next component tier appends to /design
