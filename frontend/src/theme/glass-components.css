@@ -1,0 +1,302 @@
+/* Glass component layer (spec §6, §10, §11, §14.3). Hand-authored — tokens
+   only, no colour literals; the lint gate is armed against this file.
+   .g-glass is THE surface class: the §15 surface counter keys off it.
+   Never nest one .g-glass inside another (§15). */
+
+/* ---------- the recipe (§6) ---------- */
+
+.g-glass,
+.g-glass-ghost {
+	position: relative;
+	background: var(--g-glass-fill);
+	-webkit-backdrop-filter: blur(var(--_g-blur, var(--g-blur-panel))) saturate(180%);
+	backdrop-filter: blur(var(--_g-blur, var(--g-blur-panel))) saturate(180%);
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-panel);
+	box-shadow:
+		inset 0 1px 0 var(--g-rim-hi),
+		inset 0 -1px 0 var(--g-rim-lo),
+		var(--g-lift);
+}
+
+/* diagonal gloss (§6) */
+.g-glass::after,
+.g-glass-ghost::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(155deg, var(--g-sheen), transparent 40%);
+	pointer-events: none;
+}
+
+/* the ghost variant is standalone — never combined with .g-glass in markup,
+   or the surface counter double-counts */
+.g-glass-ghost {
+	--_g-blur: var(--g-blur-ghost);
+}
+
+/* §6.1 fallback — solid fill, layout unchanged */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.g-glass,
+	.g-glass-ghost {
+		background: var(--g-glass-fill-fallback);
+	}
+}
+
+/* §6.2 reduce-transparency — system preference and the manual override in
+   data/theme.js (html[data-transparency="reduce"]) swap to the fallback fill.
+   Fill only; no layout change. */
+@media (prefers-reduced-transparency: reduce) {
+	.g-glass,
+	.g-glass-ghost {
+		background: var(--g-glass-fill-fallback);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+}
+html[data-transparency="reduce"] .g-glass,
+html[data-transparency="reduce"] .g-glass-ghost {
+	background: var(--g-glass-fill-fallback);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+/* ---------- focus (§14.3): inner ring carries contrast, outer carries brand ---------- */
+
+.g-btn:focus-visible,
+.g-ghost-btn:focus-visible,
+.g-focusable:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--g-ink),
+		0 0 0 5px var(--g-brand);
+}
+
+/* ---------- GButton (§10.1 #1, states §11.4) ---------- */
+
+.g-btn {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: 44px;
+	padding: var(--g-pad-action);
+	border: 0;
+	border-radius: var(--g-radius-action);
+	background: linear-gradient(135deg, var(--g-brand), var(--g-brand-2));
+	color: var(--g-on-brand);
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-button-label-weight);
+	letter-spacing: var(--g-type-button-label-tracking);
+	line-height: var(--g-type-button-label-line-height);
+	box-shadow: var(--g-shadow-action);
+	cursor: pointer;
+	overflow: hidden;
+	transition:
+		transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
+		box-shadow var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
+}
+.g-btn:active:not(.g-btn--disabled):not(.g-btn--pending) {
+	transform: scale(0.98);
+}
+.g-btn--disabled {
+	background: var(--g-icon-bg);
+	color: var(--g-ink3);
+	box-shadow: none;
+	cursor: not-allowed;
+}
+/* §11.4 pending keeps the brand fill; feedback is the label swap + bottom bar */
+.g-btn--pending {
+	cursor: default;
+}
+.g-btn__bar {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 2px;
+	width: 40%;
+	background: var(--g-on-brand);
+	animation: g-indeterminate var(--g-motion-skeleton-shimmer-duration)
+		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
+}
+@keyframes g-indeterminate {
+	from { transform: translateX(-100%); }
+	to { transform: translateX(350%); }
+}
+
+/* ---------- GGhostButton (§10.1 #2) ---------- */
+
+.g-ghost-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: 44px;
+	padding: var(--g-pad-action);
+	border-radius: var(--g-radius-action);
+	color: var(--g-ink);
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-button-label-weight);
+	letter-spacing: var(--g-type-button-label-tracking);
+	line-height: var(--g-type-button-label-line-height);
+	cursor: pointer;
+	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
+}
+.g-ghost-btn:active:not(.g-btn--disabled) {
+	transform: scale(0.98);
+}
+.g-ghost-btn.g-btn--disabled {
+	color: var(--g-ink3);
+	cursor: not-allowed;
+}
+
+/* ---------- GBadge (§10.1 #7) ---------- */
+
+.g-badge {
+	display: inline-block;
+	padding: var(--g-pad-badge);
+	border-radius: var(--g-radius-pill);
+	font-family: var(--g-type-badge-family);
+	font-size: var(--g-type-badge-size);
+	font-weight: var(--g-type-badge-weight);
+	letter-spacing: var(--g-type-badge-tracking);
+	line-height: var(--g-type-badge-line-height);
+	text-transform: uppercase;
+}
+.g-badge--open {
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+}
+html[data-theme="dark"] .g-badge--open {
+	background: rgba(var(--g-brand-rgb) / 0.18);
+	color: var(--g-brand);
+}
+/* --success-ink resolves to --success on dark, so one rule covers both themes */
+.g-badge--resolved {
+	background: rgba(var(--g-success-rgb) / 0.2);
+	color: var(--g-success-ink);
+}
+
+/* ---------- GStatusChip (§10.3 #28 — PROPOSAL, see component header) ---------- */
+
+.g-chip--draft {
+	background: var(--g-icon-bg);
+	color: var(--g-ink2);
+}
+.g-chip--submitted {
+	background: rgba(var(--g-brand-rgb) / 0.14);
+	color: var(--g-accent-ink);
+}
+.g-chip--approved {
+	background: rgba(var(--g-success-rgb) / 0.2);
+	color: var(--g-success-ink);
+}
+.g-chip--rejected {
+	background: var(--g-danger);
+	color: var(--g-on-brand);
+}
+.g-chip--cancelled {
+	background: transparent;
+	border: 1px solid var(--g-hair);
+	color: var(--g-ink-muted);
+}
+
+/* ---------- GEmptyState (§10.1 #11, copy §11.1) ---------- */
+
+.g-empty {
+	padding: 26px 18px;
+	border: 1px dashed var(--g-glass-rim);
+	border-radius: var(--g-radius-banner);
+	text-align: center;
+}
+.g-empty__title {
+	font-family: var(--g-font-display);
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--g-ink);
+}
+.g-empty__body {
+	margin-top: 4px;
+	font-family: var(--g-font-ui);
+	font-size: 11px;
+	line-height: 1.45;
+	color: var(--g-ink2);
+}
+
+/* ---------- GSkeleton (§11.2) — shimmer is transform-only ---------- */
+
+.g-skeleton {
+	position: relative;
+	background: var(--g-icon-bg);
+	border-radius: var(--g-radius-pill);
+	overflow: hidden;
+}
+.g-skeleton::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent, var(--g-sheen), transparent);
+	transform: translateX(-100%);
+	animation: g-shimmer var(--g-motion-skeleton-shimmer-duration)
+		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
+}
+@keyframes g-shimmer {
+	to { transform: translateX(100%); }
+}
+
+/* ---------- GBanner (§10.1 #10) ---------- */
+
+.g-banner {
+	border-radius: var(--g-radius-banner);
+	padding: 13px 14px;
+	padding-left: 17px; /* 14px + the 3px rule */
+	overflow: hidden;
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	line-height: var(--g-type-row-label-line-height);
+	color: var(--g-ink);
+}
+.g-banner::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--g-brand);
+}
+.g-banner--warning::before { background: var(--g-warn); }
+.g-banner--error::before { background: var(--g-danger); }
+
+/* ---------- GNotePanel (§10.2 #22) ---------- */
+
+.g-note {
+	border-radius: var(--g-radius-input);
+	padding: 12px 14px;
+	font-family: var(--g-font-mono);
+	font-size: var(--g-type-data-system-size);
+	line-height: var(--g-type-data-system-line-height);
+	color: var(--g-accent-ink);
+}
+
+/* ---------- reduced motion (§8, §14.1): shimmer and pending bar go static ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+	.g-skeleton::after {
+		animation: none;
+		transform: none;
+	}
+	.g-btn__bar {
+		animation: none;
+		transform: none;
+		width: 100%;
+	}
+	.g-btn,
+	.g-ghost-btn {
+		transition: none;
+	}
+}

@@ -6,6 +6,7 @@ import { reactive } from "vue"
 // from the tapped control.
 
 const STORAGE_KEY = "hrms:theme"
+const TRANSPARENCY_KEY = "hrms:reduce-transparency"
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)")
 
 export const THEME_MODES = ["light", "dark", "system"]
@@ -68,8 +69,28 @@ export function setTheme(mode, event) {
 		.catch(() => {})
 }
 
+// Reduce-transparency (glass spec §6.2) — persisted manual override on top of
+// the prefers-reduced-transparency media query, which CSS honours directly.
+// html[data-transparency="reduce"] swaps every .g-glass to the fallback fill.
+export const transparency = reactive({
+	reduce: localStorage.getItem(TRANSPARENCY_KEY) === "1",
+})
+
+export function setTransparency(reduce) {
+	transparency.reduce = reduce
+	localStorage.setItem(TRANSPARENCY_KEY, reduce ? "1" : "0")
+	applyTransparency()
+}
+
+function applyTransparency() {
+	const mode = transparency.reduce ? "reduce" : "full"
+	console.info("[Theme] Transparency:", { mode })
+	document.documentElement.setAttribute("data-transparency", mode)
+}
+
 systemDark.addEventListener("change", () => {
 	if (theme.mode === "system") applyTheme()
 })
 
 applyTheme()
+applyTransparency()

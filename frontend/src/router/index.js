@@ -134,6 +134,16 @@ const routes = [
 	},
 ]
 
+// Glass specimen route (spec §16.4) — dev bundle only; the guard is statically
+// replaced, so production builds drop the route and the chunk entirely
+if (import.meta.env.DEV) {
+	routes.push({
+		path: "/design",
+		name: "DesignSpecimen",
+		component: () => import("@/views/DesignSpecimen.vue"),
+	})
+}
+
 const router = createRouter({
 	history: createWebHistory("/hrms"),
 	routes,

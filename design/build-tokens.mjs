@@ -33,7 +33,7 @@ const isHex = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
 const isVal = (v) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
 const sorted = (obj) => Object.keys(obj).sort();
 
-for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "type", "motion"]) {
+for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "type", "motion"]) {
 	if (!tokens[group] || typeof tokens[group] !== "object") bad(group, "missing group");
 }
 if (errors.length) die();
@@ -48,7 +48,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 			bad(`${group}.${name}`, "value must be { light, dark }");
 	}
 }
-for (const group of ["spacing", "radius", "blur"]) {
+for (const group of ["spacing", "radius", "blur", "shadow"]) {
 	for (const name of sorted(tokens[group])) {
 		if (!isVal(tokens[group][name].value)) bad(`${group}.${name}`, "value must be a non-empty string");
 	}
@@ -111,9 +111,12 @@ for (const group of ["color-themed", "color-semantic"]) {
 	}
 }
 
-for (const group of ["spacing", "radius", "blur"]) {
+for (const group of ["spacing", "radius", "blur", "shadow"]) {
 	light.push(`\t/* ${group} */`);
-	for (const name of sorted(tokens[group])) light.push(decl(name, tokens[group][name].value));
+	// shadow token names get the group prefix (--g-shadow-action); the others
+	// already carry theirs (radius-panel, blur-ghost) or read fine bare
+	for (const name of sorted(tokens[group]))
+		light.push(decl(group === "shadow" ? `shadow-${name}` : name, tokens[group][name].value));
 }
 
 light.push("\t/* type */");
@@ -209,10 +212,13 @@ for (const name of sorted(tokens.motion)) {
 	if (tokens.motion[name].easing) transitionTimingFunction[name] = `var(--g-motion-${name}-easing)`;
 }
 
+const boxShadow = { lift: "var(--g-lift)" };
+for (const name of sorted(tokens.shadow)) boxShadow[name] = `var(--g-shadow-${name})`;
+
 const fragment = {
 	backdropBlur,
 	borderRadius,
-	boxShadow: { lift: "var(--g-lift)" },
+	boxShadow,
 	colors,
 	fontFamily,
 	fontSize,

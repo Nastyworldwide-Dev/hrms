@@ -76,6 +76,8 @@
 	/* blur */
 	--g-blur-ghost: 18px;
 	--g-blur-panel: 20px;
+	/* shadow */
+	--g-shadow-action: 0 10px 30px rgba(var(--g-brand-rgb) / 0.34), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.14);
 	/* type */
 	--g-font-display: -apple-system, BlinkMacSystemFont, 'Inter Tight', 'Inter', 'Segoe UI', Roboto, sans-serif;
 	--g-font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;

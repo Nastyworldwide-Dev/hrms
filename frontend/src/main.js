@@ -36,6 +36,7 @@ import "./theme/modernist.css"
 import "./theme/fonts.css"
 import "./theme/glass.css"
 import "./theme/glass.variables.css"
+import "./theme/glass-components.css"
 import "./data/theme"
 
 const app = createApp(App)
