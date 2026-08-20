@@ -65,7 +65,7 @@ Every colour comes from this section. There are no one-off hex values in compone
 | `--rest` | `#B6BDC9` | Rest day, calendar legend |
 | `--neutral-dot` | `#8A929E` | Legend and decorative markers |
 
-### 2.2 Themed tokens — 15 values flip
+### 2.2 Themed tokens — 16 values flip
 
 | Token | Dark | Light | Used for |
 |---|---|---|---|
