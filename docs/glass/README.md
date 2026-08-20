@@ -34,3 +34,14 @@ Background reasoning. Read when a decision looks arbitrary.
 ## `decisions/`
 
 One short file per gated decision: context, options, choice, who signed off. Six are open at the time of writing — see build plan §1.1.
+
+## frappe-ui version — important
+
+The `frappe-ui` submodule is pinned at v0.1.278, but the app does NOT use it.
+`frontend/package.json` depends on `frappe-ui@0.1.105` from npm, and that is
+what resolves at build and runtime. The submodule is vestigial.
+
+All Glass components were built against 0.1.105. The 0.1.278 upgrade was
+attempted in phase 0, appeared to succeed because the build was green, and was
+found in prompt 2.4 to have never taken effect. Upgrading is deferred to its
+own project — it is not part of the Glass migration.
