@@ -1,45 +1,40 @@
 <template>
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
-			<div
-				class="flex flex-col gap-2 w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7"
-			>
+			<div class="flex flex-col gap-[13px] w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7">
 				<span class="text-eyebrow uppercase text-accent-ink">{{ __("More") }}</span>
-				<div class="flex flex-col border-t-2 border-divider">
-					<router-link
+
+				<!-- one glass surface for the whole list (§15.1): the panel and its
+				     rows count as ONE, not one per row -->
+				<GListPanel>
+					<GListRow
 						v-for="item in moreItems"
 						:key="item.route"
-						:to="item.route"
-						class="flex items-center gap-3 bg-surface border-b border-divider p-3.5 no-underline active:scale-[0.985] active:bg-ink-200"
-						style="transition: transform var(--motion-press), background-color var(--motion-press)"
+						:label="item.title"
+						@click="router.push(item.route)"
 					>
-						<component
-							:is="item.icon"
-							class="h-[19px] w-[19px] flex-none text-accent-700"
-						/>
-						<span class="flex-1 font-extrabold text-card-title text-inkbase">
-							{{ item.title }}
-						</span>
-						<FeatherIcon
-							name="chevron-right"
-							class="h-4 w-4 flex-none text-ink-400"
-						/>
-					</router-link>
-				</div>
+						<template #icon>
+							<component :is="item.icon" class="h-[17px] w-[17px]" />
+						</template>
+					</GListRow>
+				</GListPanel>
 			</div>
 		</template>
 	</BaseLayout>
 </template>
 
 <script setup>
-import { FeatherIcon } from "frappe-ui"
+import { useRouter } from "vue-router"
 import { computed, inject, markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 import { MORE_ITEMS } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
 
+const router = useRouter()
 const __ = inject("$translate")
 
 // Team is manager-only: the entry appears once has_team confirms direct reports
@@ -48,6 +43,9 @@ const moreItems = computed(() => {
 	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
 	if (hasTeam.data) {
 		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
+		// §13.1 lists Remote Approvals behind More; it had no entry in any nav
+		// surface before, reachable only by typing the URL
+		items.push({ icon: markRaw(TeamIcon), title: __("Remote Approvals"), route: "/remote-approvals" })
 	}
 	return items
 })

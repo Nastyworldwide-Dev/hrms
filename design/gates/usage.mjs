@@ -59,8 +59,10 @@ const RULES = {
 	"hand-panel": (content) =>
 		content.split("\n").filter((l) => RADIUS.test(l) && BACKGROUND.test(l)).length,
 
+	// an actual import, not a mention: a comment naming the file is legitimate
+	// documentation, and matching the bare filename made this fire on prose
 	"direct-import": (content) =>
-		(content.match(/glass-components\.css/g) || []).length,
+		(content.match(/(?:^|\s)(?:@?import\s+[^\n]*|url\(\s*["']?[^)\n]*)glass-components\.css/gm) || []).length,
 };
 
 const current = {};

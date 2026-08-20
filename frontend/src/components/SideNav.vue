@@ -1,6 +1,6 @@
 <template>
 	<aside
-		class="hidden lg:flex flex-col flex-none border-r-2 border-divider overflow-hidden bg-ground transition-[width] duration-200"
+		class="g-sidenav hidden lg:flex flex-col flex-none overflow-hidden transition-[width] duration-200"
 		:style="{ width: collapsed ? '72px' : '216px' }"
 	>
 		<!-- Logo header (64px) -->
@@ -55,7 +55,7 @@
 			</button>
 
 			<router-link
-				v-for="item in navItems"
+				v-for="item in directItems"
 				:key="item.route"
 				:to="item.route"
 				custom
@@ -63,12 +63,31 @@
 			>
 				<button
 					type="button"
-					class="flex items-center gap-3 px-[18px] py-3 border-l-[3px] text-kra-label font-extrabold uppercase text-left"
-					:class="
-						isActive(item.route)
-							? 'border-accent bg-inkbase/[0.06] text-inkbase'
-							: 'border-transparent text-ink-600 hover:bg-inkbase/[0.05]'
-					"
+					class="g-sidenav__item g-focusable"
+					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
+					@click="navigate"
+				>
+					<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
+					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
+				</button>
+			</router-link>
+
+			<!-- §20.2: below a divider, the contents of More as a FLAT list. More
+			     is a container, not a destination — at lg: it dissolves. No
+			     nested menus. -->
+			<hr class="g-sidenav__divider" />
+
+			<router-link
+				v-for="item in moreItems"
+				:key="item.route"
+				:to="item.route"
+				custom
+				v-slot="{ navigate }"
+			>
+				<button
+					type="button"
+					class="g-sidenav__item g-focusable"
+					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
 					@click="navigate"
 				>
 					<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
@@ -114,7 +133,7 @@ import { useRoute } from "vue-router"
 
 import { markRaw } from "vue"
 
-import { NAV_ITEMS } from "@/data/navItems"
+import { TAB_ITEMS, MORE_ITEMS } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 
@@ -137,8 +156,19 @@ const toggleCollapse = () => {
 // closes it for both). Same gate More.vue uses: the entry appears once
 // has_team confirms direct reports, or the caller is HR browsing via the
 // selector. hasTeam auto-fetches and is cached, so this costs nothing extra.
-const navItems = computed(() => [
-	...NAV_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
+// §20.2: four direct destinations above the divider — TAB_ITEMS without the
+// More container, which has no meaning at lg:.
+const directItems = computed(() =>
+	TAB_ITEMS.filter((item) => item.route !== "/more").map((item) => ({
+		...item,
+		title: __(item.title),
+	}))
+)
+
+// …and everything More holds, flat, below it. Team appears only once has_team
+// confirms direct reports (or the caller is HR browsing via the selector).
+const moreItems = computed(() => [
+	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
 	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
 ])
 

@@ -81,6 +81,131 @@
 /* §3.1 is not negotiable, and reduced motion must not be the only thing
    holding it: there is no animation here to suppress. */
 
+/* ---------- tab bar (§10.1 #8, §13.1, §15.3) ---------- */
+
+/* The floating pill lives on the ion-tab-bar HOST. The host is a light-DOM
+   custom element, so position, margin, radius and backdrop-filter are all ours
+   — only the interior needed the published custom properties (see the
+   component). ion-tab-bar is NOT replaced: its per-tab navigation stacks are
+   the reason it exists.
+   §15.3: this IS a counted glass surface, and the side nav replaces it at lg:
+   for net zero. */
+ion-tab-bar.g-tabbar {
+	position: absolute;
+	left: var(--g-screen-gutter);
+	right: var(--g-screen-gutter);
+	/* pinned above the safe area with tabbar-gap beneath (§5) */
+	bottom: calc(env(safe-area-inset-bottom, 0px) + var(--g-tabbar-gap));
+	width: auto;
+	padding: 11px 6px 9px;
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-tabbar);
+	background: var(--g-glass-fill);
+	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	box-shadow:
+		inset 0 1px 0 var(--g-rim-hi),
+		inset 0 -1px 0 var(--g-rim-lo),
+		var(--g-lift);
+}
+/* §6.1 / §6.2 apply to the bar as to any other surface */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	ion-tab-bar.g-tabbar { background: var(--g-glass-fill-fallback); }
+}
+@media (prefers-reduced-transparency: reduce) {
+	ion-tab-bar.g-tabbar {
+		background: var(--g-glass-fill-fallback);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+}
+html[data-transparency="reduce"] ion-tab-bar.g-tabbar {
+	background: var(--g-glass-fill-fallback);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+.g-tabbar__well {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 19px;
+	height: 19px;
+	border-radius: 7px;
+	flex: none;
+}
+.g-tabbar__well--active {
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+	box-shadow: 0 0 10px var(--g-accent-glow);
+}
+.g-tabbar__label {
+	margin-top: 5px;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: var(--g-type-tab-label-family);
+	font-size: var(--g-type-tab-label-size);
+	font-weight: var(--g-type-tab-label-weight);
+	letter-spacing: var(--g-type-tab-label-tracking);
+	line-height: var(--g-type-tab-label-line-height);
+	text-transform: uppercase;
+}
+
+/* ---------- side nav (§20.2) ---------- */
+
+/* Glass surface, and at lg: it REPLACES the tab bar's surface — net zero
+   against the §15 budget (§15.3). */
+.g-sidenav {
+	background: var(--g-glass-fill);
+	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	border-right: 1px solid var(--g-glass-rim);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.g-sidenav { background: var(--g-glass-fill-fallback); }
+}
+html[data-transparency="reduce"] .g-sidenav {
+	background: var(--g-glass-fill-fallback);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+/* the divider between the direct destinations and the flat More list (§20.2) */
+.g-sidenav__divider {
+	height: 1px;
+	margin: 9px 12px;
+	background: var(--g-hair);
+	border: 0;
+}
+.g-sidenav__item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	min-height: 44px;
+	padding: 11px 18px;
+	border: 0;
+	border-left: 3px solid transparent;
+	background: transparent;
+	text-align: left;
+	font-family: var(--g-type-tab-label-family);
+	font-size: var(--g-type-tab-label-size);
+	font-weight: var(--g-type-tab-label-weight);
+	letter-spacing: var(--g-type-tab-label-tracking);
+	text-transform: uppercase;
+	color: var(--g-ink2);
+	cursor: pointer;
+	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
+}
+.g-sidenav__item:hover {
+	background: var(--g-icon-bg);
+}
+.g-sidenav__item--active {
+	border-left-color: var(--g-brand);
+	color: var(--g-ink);
+}
+
 /* ---------- the recipe (§6) ---------- */
 
 .g-glass,

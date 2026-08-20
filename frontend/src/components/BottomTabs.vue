@@ -1,25 +1,20 @@
 <template>
-	<ion-tab-bar
-		slot="bottom"
-		class="m-tab-bar bg-ground border-t-2 border-divider standalone:pb-safe-bottom lg:hidden"
-	>
+	<!-- ion-tab-bar is retained, not replaced: Ionic's per-tab navigation stacks
+	     live in this component, and rebuilding it would lose them. Everything
+	     below is a restyle of the HOST plus its published custom properties. -->
+	<ion-tab-bar slot="bottom" class="g-tabbar lg:hidden">
 		<ion-tab-button
 			v-for="item in tabItems"
 			:key="item.route"
 			:tab="item.route"
 			:href="item.route"
-			class="m-tab-btn"
+			class="g-tabbar__btn"
 		>
-			<span
-				class="block w-full h-[3px] mb-[7px] flex-none"
-				:class="isActive(item) ? 'bg-accent' : 'bg-transparent'"
-			></span>
-			<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
-			<span
-				class="mt-[5px] max-w-full overflow-hidden text-ellipsis text-micro-label uppercase font-extrabold whitespace-nowrap"
-			>
-				{{ item.shortTitle }}
+			<!-- §10.1 #8: 19×19 well, r7; active well takes --brand plus the glow -->
+			<span class="g-tabbar__well" :class="{ 'g-tabbar__well--active': isActive(item) }">
+				<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
 			</span>
+			<span class="g-tabbar__label">{{ item.shortTitle }}</span>
 		</ion-tab-button>
 	</ion-tab-bar>
 </template>
@@ -51,17 +46,22 @@ const isActive = (item) =>
 
 <style scoped>
 /* ion-tab-bar/-button are shadow DOM: Tailwind text classes on the host never
-   reach the inner button, whose color comes from --color/--color-selected —
-   slotted content (icon stroke + label) inherits it. Metrics mirror the design
-   tab bar: in-flow 3px indicator + 7px, 19px icon, 5px, 8.5px label, 12px
-   bottom padding. height:auto lifts Ionic's fixed 50px bar so nothing clips. */
-ion-tab-bar.m-tab-bar {
+   reach the inner button, whose colour comes from --color/--color-selected —
+   slotted content (icon stroke + label) inherits it. height:auto lifts Ionic's
+   fixed 50px bar so nothing clips, and contain:content keeps the rounded
+   corners from being painted over. BOTH are retained from the Modernist
+   implementation; they are the reason this component works at all.
+
+   The floating pill is achieved on the HOST element, which is light DOM and
+   therefore ours to position — see the glass rule in glass-components.css. */
+ion-tab-bar.g-tabbar {
 	height: auto;
 	contain: content;
 	--border: 0;
+	/* transparent inner background so the host's own glass shows through */
 	--background: transparent;
 }
-ion-tab-button.m-tab-btn {
+ion-tab-button.g-tabbar__btn {
 	--color: var(--g-ink3);
 	--color-selected: var(--g-ink);
 	--background: transparent;
@@ -70,6 +70,6 @@ ion-tab-button.m-tab-btn {
 	--padding-start: 0;
 	--padding-end: 0;
 	--padding-top: 0;
-	--padding-bottom: 12px;
+	--padding-bottom: 0;
 }
 </style>
