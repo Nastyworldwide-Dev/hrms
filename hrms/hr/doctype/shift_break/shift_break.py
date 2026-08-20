@@ -56,8 +56,11 @@ class ShiftBreak(Document):
 				)
 			)
 		if self.end_time <= self.start_time:
+			# Guidance adopted from the senior's v15.112.1 hardening: night
+			# shifts are real on this group, and "end must be after start"
+			# alone reads as a dead end for a 23:00-01:00 break.
 			frappe.throw(
-				_("Shift Break end time must be after start time (row: {0} {1}).").format(
-					self.day_of_week, self.period
-				)
+				_(
+					"Shift Break end time must be after start time (row: {0} {1}). For a break crossing midnight, add two rows: one ending 23:59:59 and one starting 00:00:00 on the next day of week."
+				).format(self.day_of_week, self.period)
 			)
