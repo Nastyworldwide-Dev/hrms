@@ -1,6 +1,6 @@
-# HR Frappe · Glass — Implementation Specification v1.4
+# HR Frappe · Glass — Implementation Specification v1.5
 
-**Supersedes** v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
+**Supersedes** v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
@@ -60,6 +60,13 @@ sections had estimated.
 | 3.3 | §3.3: states that **vertical needs no equivalent rule**, with the reason | The column is horizontal and full-height, so `x` clearance alone is necessary and sufficient. Recorded so nobody re-derives it |
 | 3.4 | §14.4 gains **exception 8**, with before/after measurements | The mockup's values failed §14; that is exactly what §14.4 exists to record |
 | 3.5 | The §14.2 pair skipped in phase 1 as "blob not a token" is now **asserted** in `design/gates/contrast.mjs` | The blob is a token as of 4.1, so the prose constraint became a check. It caught this defect |
+
+### v1.5 — anatomy reconciled with the shipped app
+
+| # | Change | Reason |
+|---|---|---|
+| 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
+| 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
 
 ---
 
@@ -513,16 +520,32 @@ A second submission of the same action within **60 seconds** is rejected client-
 
 Stack order top to bottom. Vertical gap is `stack-md` (13px) unless stated. All screens: 15px gutters, tab bar pinned.
 
+**These anatomies were transcribed from the mockup and diverge from the shipped app in both directions** — the mockup drew things the app does not have, and the app has things the mockup never showed. Where they differ:
+
+- **the app governs SCOPE.** An element the mockup drew but the app does not have is a feature request, not a defect, and §1 puts features out of scope. It goes to `docs/glass/decisions/` as a candidate.
+- **the anatomy governs LAYOUT of what exists** — order, spacing, which primitive.
+
+Home is the worked example (v1.5): the mockup's balance grid was removed because the shipped screen has no balance data and no call to fetch it, and the request panel was added because the screen has one. **Check every anatomy against the actual screen before building it.**
+
 | Screen | Stack | Primary action |
 |---|---|---|
 | **Sign in** | Logo well (56×56, r19) → title → subtitle → email field → password field → primary → forgot-password link. Vertically centred, 40px bottom offset | SIGN IN |
-| **Home** | Status → eyebrow date + greeting → last-punch caption → *banner if unresolved punch* → primary → quick-link list (4 rows) → balance grid (2 cards) → tab bar | CHECK IN / CHECK OUT |
-| **Check in** | Eyebrow + location name → clock (36px) → map panel (150px) → selfie panel (118px) → primary → shift status caption → tab bar | CONFIRM CHECK IN |
+| **Home** | Status → eyebrow date + greeting → last-punch caption → *banner if unresolved punch* → primary → quick-link list (4 rows) → **request panel** → tab bar | CHECK IN / CHECK OUT |
+| **Check in** | *A bottom sheet, not a route — see the note below the table.* Eyebrow (the action label) → clock (36px) → date line → location status + distance → map panel (150px) → selfie panel (live preview) → primary | CONFIRM CHECK IN |
 | **Leave** | Eyebrow + title → balance panel (2×2, **one surface**) → primary → RECENT field label → history list → tab bar | APPLY FOR LEAVE |
 | **Attendance** | Eyebrow + title → calendar panel → stat panel (3-up, **one surface**) → ghost action → tab bar | none — ghost only |
 | **Overtime** | Eyebrow + title → date field → hours field → eligibility note panel → explanation field (66px) → primary → routing caption → tab bar | SEND TO APPROVER |
 | **KPI** | Eyebrow + title → score panel (ring + verdict + pill) → KRA field label → KRA panel (4 rows) → goals panel → tab bar | none — read-only |
 | **Issues** | Eyebrow + title → stat panel (3-up, **one surface**) → issue cards → primary → screenshot hint caption → tab bar | REPORT AN ISSUE |
+
+**Check in is a sheet, not a screen** (reconciled in v1.5, batch 2). It presents from Home's primary action, so it has no tab bar and overlays the Home surfaces rather than replacing them. Four further divergences, all resolved under v1.5's rule:
+
+| Anatomy said | The app has | Resolved |
+|---|---|---|
+| Eyebrow = location name | Eyebrow = the action label; location status sits below the clock with the distance readout | **App** — the location is live status, not a title |
+| Map panel 150px | 200px | **Anatomy** — now 150px via `GMapPanel` |
+| Selfie panel 118px | A live 4:3 camera preview | **App** — 118px sizes the mockup's static placeholder; a face framed at 118px is not a usable preview. 118px is now a floor, not a fixed height |
+| Shift status caption | A date line under the clock | **App** — no shift caption exists to style |
 
 **Screens not in the mockup**, inheriting these patterns: Expenses, Employee Advance, Shift Request, Shift Assignment, Salary Slip, SOP list/detail, Team dashboard, Remote approvals, HR contacts, More, Notifications, Profile, App settings, Change password, Forgot password, Invalid employee. Each is built from §10 components with no new primitives. Any screen that appears to need a new primitive raises it against this document instead of inventing one.
 
@@ -841,4 +864,4 @@ The side nav itself sits in §10.3's treatment list and is specified by §20.2. 
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.4 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.5 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*

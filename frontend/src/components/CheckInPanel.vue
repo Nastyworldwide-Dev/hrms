@@ -72,82 +72,67 @@
 		</div>
 	</div>
 
-	<ion-modal
+	<!-- The "Check in" screen of §12 is a bottom sheet here, not a route — see
+	     the anatomy divergence note in the phase 5 HANDOFF. GModal carries the
+	     focus-trap workaround (§16.3) the raw ion-modal did not. -->
+	<GModal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
-		ref="modal"
-		class="checkin-sheet"
 		trigger="open-checkin-modal"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-		@ionModalDidPresent="onModalPresent"
-		@ionModalWillDismiss="onModalDismiss"
+		@did-present="onModalPresent"
+		@will-dismiss="onModalDismiss"
 	>
-		<div class="w-full flex flex-col gap-4 px-4 pt-6 pb-8 bg-ground">
+		<div class="checkin-sheet__stack">
 			<div class="flex flex-col gap-1">
 				<div class="text-eyebrow uppercase text-accent-ink">{{ nextAction.label }}</div>
-				<div class="font-extrabold text-clock tabular-nums text-inkbase">
-					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
-				</div>
-				<div class="text-xs text-ink-600">
-					{{ dayjs().format("D MMM, YYYY") }}
-				</div>
+				<GClock
+					:time="dayjs(checkinTimestamp).format('hh:mm')"
+					:seconds="dayjs(checkinTimestamp).format('ss')"
+					:suffix="dayjs(checkinTimestamp).format('a')"
+				/>
+				<div class="text-caption text-ink-2">{{ dayjs().format("D MMM, YYYY") }}</div>
 			</div>
 
 			<template v-if="settings.data?.allow_geolocation_tracking">
-				<div class="w-full flex flex-row items-center justify-between text-xs">
-					<span class="text-ink-600">{{ locationStatus }}</span>
+				<div class="w-full flex flex-row items-center justify-between text-caption">
+					<span class="text-ink-2">{{ locationStatus }}</span>
 					<span
 						v-if="shiftLocation.data && distanceToShift !== null"
-						class="font-mono font-semibold tabular-nums"
-						:class="
-							isInsideRadius
-								? 'text-accent-700'
-								: 'text-inkbase'
-						"
+						class="font-mono tabular-nums"
+						:class="isInsideRadius ? 'text-accent-ink' : 'text-ink'"
 					>
 						{{ formattedDistanceToShift }}
 					</span>
 				</div>
 
-				<div
-					ref="mapEl"
-					class="border border-divider translate-z-0 block overflow-hidden w-full"
-					style="height: 200px; z-index: 0;"
-				></div>
+				<!-- The real Leaflet map goes in GMapPanel's slot; the panel's
+				     decorative gradient is only its placeholder state. -->
+				<GMapPanel>
+					<div ref="mapEl" class="checkin-sheet__map"></div>
+				</GMapPanel>
 			</template>
 
 			<!-- Live selfie preview — camera auto-starts when the modal opens;
 			     Confirm tap captures the frame, uploads, and submits the log
 			     in one action (mirrors the React CheckInDialog UX). -->
-			<div class="w-full flex flex-col items-center gap-2">
-				<div
-					class="overflow-hidden w-full relative border border-divider"
-					style="aspect-ratio: 4 / 3; background: #000;"
-				>
+			<GSelfiePanel :tappable="false" :label="__('Check-in photo preview')">
+				<div class="checkin-sheet__camera">
 					<video
 						v-show="cameraStatus === 'live' || cameraStatus === 'submitting'"
 						ref="videoEl"
 						autoplay
 						playsinline
 						muted
-						class="w-full h-full object-cover"
-						style="transform: scaleX(-1);"
+						class="checkin-sheet__video"
 					></video>
-					<div
-						v-if="cameraStatus === 'starting'"
-						class="absolute inset-0 flex items-center justify-center text-white text-xs"
-					>
+					<div v-if="cameraStatus === 'starting'" class="checkin-sheet__camera-msg">
 						{{ __("Starting camera...") }}
 					</div>
-					<div
-						v-else-if="cameraStatus === 'error'"
-						class="absolute inset-0 flex items-center justify-center text-white text-xs text-center px-4"
-					>
+					<div v-else-if="cameraStatus === 'error'" class="checkin-sheet__camera-msg">
 						<span>{{ cameraError }}</span>
 					</div>
 				</div>
-				<canvas ref="canvasEl" class="hidden"></canvas>
-			</div>
+			</GSelfiePanel>
+			<canvas ref="canvasEl" class="hidden"></canvas>
 
 			<GButton
 				:label="__(&quot;Confirm {0}&quot;, [nextAction.label])"
@@ -160,7 +145,7 @@
 				</template>
 			</GButton>
 		</div>
-	</ion-modal>
+	</GModal>
 
 	<RemoteCheckinDialog
 		:is-open="remoteDialogOpen"
@@ -198,6 +183,10 @@
 </template>
 
 <script setup>
+import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
+import GMapPanel from "@/components/glass/GMapPanel.vue"
+import GClock from "@/components/glass/GClock.vue"
+import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
@@ -941,6 +930,44 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
+/* ---- check-in sheet layout (phase 5 batch 2) ---- */
+.checkin-sheet__stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--g-stack-md);
+	width: 100%;
+}
+/* the Leaflet canvas fills GMapPanel's frame; §10.2 #19 sets that at 150px */
+.checkin-sheet__map {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+}
+.checkin-sheet__camera {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	background: var(--g-ink);
+}
+.checkin-sheet__video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transform: scaleX(-1);
+}
+.checkin-sheet__camera-msg {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 var(--g-screen-gutter);
+	text-align: center;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	color: var(--g-bg);
+}
+
 /* Live "you are here" pin — solid blue dot with a pulsing outer ring. */
 .user-pin { position: relative; width: 22px; height: 22px; }
 .user-pin-dot {

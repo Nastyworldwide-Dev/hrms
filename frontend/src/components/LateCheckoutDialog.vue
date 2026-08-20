@@ -1,16 +1,11 @@
 <template>
-	<ion-modal
-		:is-open="isOpen"
-		@didDismiss="onDismiss"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
-		<div class="bg-ground w-full flex flex-col pb-8 max-h-sheet">
+	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-8 max-h-sheet">
 			<div
-				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-ground px-4"
+				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4"
 			>
 				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Late check-out") }}</div>
-				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
+				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ __("Forgot to check out?") }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -23,7 +18,7 @@
 			</div>
 
 			<div class="w-full flex flex-col px-4 gap-3">
-				<div class="bg-surface border border-divider px-3 py-2 text-xs text-inkbase">
+				<div class="bg-track-solid border border-hair px-3 py-2 text-xs text-ink">
 					<div class="flex justify-between">
 						<span class="text-ink-600">{{ __("Original check-in") }}</span>
 						<span class="font-mono tabular-nums">{{ formatTimestamp(inCheckinTime) }}</span>
@@ -38,9 +33,9 @@
 					v-model="checkoutTime"
 					:min="minCheckoutTime"
 					:max="maxCheckoutTime"
-					class="w-full text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent"
+					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
 				/>
-				<div v-if="checkoutError" class="text-xs text-red-600">
+				<div v-if="checkoutError" class="text-xs text-danger-ink">
 					{{ checkoutError }}
 				</div>
 
@@ -51,7 +46,7 @@
 					v-model="reason"
 					rows="3"
 					maxlength="500"
-					class="w-full text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent"
+					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
 					:placeholder="
 						__('e.g. left in a rush, low battery, network issue, etc.')
 					"
@@ -63,14 +58,14 @@
 
 			<div class="flex flex-row gap-2.5 px-4 pt-3">
 				<button
-					class="flex-1 bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-inkbase/[0.07] disabled:opacity-60"
+					class="flex-1 bg-transparent border border-hair text-ink px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-ink/[0.07] disabled:opacity-60"
 					@click="cancel"
 					:disabled="submitting"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
-					class="flex-1 bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60"
+					class="flex-1 bg-brand text-on-brand border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-brand disabled:opacity-60"
 					@click="submit"
 					:disabled="submitting || !canSubmit"
 				>
@@ -78,12 +73,12 @@
 				</button>
 			</div>
 		</div>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
+import GModal from "@/components/glass/GModal.vue"
 import { computed, inject, ref, watch } from "vue"
-import { IonModal } from "@ionic/vue"
 import { toast } from "frappe-ui"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -174,7 +169,7 @@ const submit = async () => {
 			text: __("Pending approval from your reporting manager."),
 			icon: "check-circle",
 			position: "bottom-center",
-			iconClasses: "text-green-500",
+			iconClasses: "text-success-ink",
 		})
 		emit("submitted", result)
 		emit("close")
@@ -185,7 +180,7 @@ const submit = async () => {
 			text: err?.messages?.[0] || __("Try again in a moment."),
 			icon: "alert-circle",
 			position: "bottom-center",
-			iconClasses: "text-red-500",
+			iconClasses: "text-danger-ink",
 		})
 	} finally {
 		submitting.value = false

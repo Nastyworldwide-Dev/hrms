@@ -21,6 +21,18 @@ Phase 5 writes screens against three live gates:
 
 ---
 
+## 1a. Before building any batch — check the anatomy against the screen
+
+§12's anatomies were transcribed from the mockup and **diverge from the shipped
+app in both directions**. Batch 1 found Home's row listing a balance grid the
+screen has no data for, and omitting the request panel the screen does have.
+Spec v1.5 records the rule: **the app governs scope, the anatomy governs layout
+of what exists**, and a mockup-only element is a feature request for
+`docs/glass/decisions/`, not a defect to build.
+
+Home is unlikely to be the only one. **Read the screen first, reconcile, and
+record the divergence back into §12 as part of the batch.**
+
 ## 2. Batches
 
 Ordered by dependency. Within a batch the screens are near-identical and share

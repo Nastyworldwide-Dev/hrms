@@ -1,21 +1,16 @@
 <template>
-	<ion-modal
-		:is-open="isOpen"
-		@didDismiss="onDismiss"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
-		<div class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
+	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-5 max-h-sheet">
 			<div
-				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground"
+				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-hair sticky top-0 z-overlay bg-bg"
 			>
 				<div
-					class="h-12 w-12 bg-red-100 flex items-center justify-center"
+					class="h-12 w-12 bg-danger/15 flex items-center justify-center"
 				>
-					<FeatherIcon name="slash" class="h-6 w-6 text-red-600" />
+					<FeatherIcon name="slash" class="h-6 w-6 text-danger-ink" />
 				</div>
 				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Check-in") }}</div>
-				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
+				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ title }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -26,30 +21,30 @@
 			<div class="w-full flex flex-col px-4 pt-4 gap-3">
 				<!-- outside_radius: distance card + location summary -->
 				<template v-if="reason === 'outside_radius'">
-					<div class="bg-red-50 border border-red-200 px-3 py-2.5">
-						<div class="flex justify-between text-xs text-red-800">
+					<div class="bg-danger/10 border border-danger-ink px-3 py-2.5">
+						<div class="flex justify-between text-xs text-danger-ink">
 							<span>{{ __("Distance from geofence") }}</span>
 							<span class="font-mono font-semibold">
 								{{ formattedOvershoot }}
 							</span>
 						</div>
-						<div class="flex justify-between text-xs text-red-700 mt-1">
+						<div class="flex justify-between text-xs text-danger-ink mt-1">
 							<span>{{ __("Allowed radius") }}</span>
 							<span class="font-mono">{{ radiusM }} m</span>
 						</div>
 					</div>
 
-					<div class="bg-surface border border-divider px-3 py-2.5">
+					<div class="bg-track-solid border border-hair px-3 py-2.5">
 						<div class="text-eyebrow uppercase text-accent-ink">
 							{{ __("Shift Location") }}
 						</div>
-						<div class="text-sm font-medium text-inkbase mt-0.5">
+						<div class="text-sm font-medium text-ink mt-0.5">
 							{{ shiftLocation || __("(unnamed)") }}
 						</div>
 						<div class="text-eyebrow uppercase text-accent-ink mt-2">
 							{{ __("Shift") }}
 						</div>
-						<div class="text-sm font-medium text-inkbase mt-0.5">
+						<div class="text-sm font-medium text-ink mt-0.5">
 							{{ shiftType || __("(unknown)") }}
 						</div>
 					</div>
@@ -57,13 +52,13 @@
 
 				<!-- no_shift_location / no_radius: admin misconfiguration -->
 				<template v-else>
-					<div class="bg-red-50 border border-red-200 px-3 py-3">
+					<div class="bg-danger/10 border border-danger-ink px-3 py-3">
 						<div class="flex items-start gap-2">
 							<FeatherIcon
 								name="alert-triangle"
-								class="h-4 w-4 text-red-600 mt-0.5 shrink-0"
+								class="h-4 w-4 text-danger-ink mt-0.5 shrink-0"
 							/>
-							<div class="text-xs text-red-800 leading-relaxed">
+							<div class="text-xs text-danger-ink leading-relaxed">
 								{{ adminMisconfigMessage }}
 							</div>
 						</div>
@@ -72,7 +67,7 @@
 			</div>
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
-				<Button class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none" variant="solid" @click="close">
+				<Button class="w-full py-5 !bg-brand hover:!bg-brand !text-on-brand !border-none" variant="solid" @click="close">
 					{{ __("OK") }}
 				</Button>
 				<button
@@ -83,12 +78,12 @@
 				</button>
 			</div>
 		</div>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
+import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
-import { IonModal } from "@ionic/vue"
 import { FeatherIcon, Button } from "frappe-ui"
 
 const __ = inject("$translate")

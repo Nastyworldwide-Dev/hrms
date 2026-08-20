@@ -11,6 +11,8 @@
   The pin rings animate transform + opacity only (§8, §15) and stop under
   prefers-reduced-motion, leaving the pin itself visible.
 
+  Slot: default — a real map. Omitted, the decorative placeholder renders.
+
   Props:
     caption   string — geo caption, e.g. "3.1390° N, 101.6869° E"
     label     string, default "Check-in location" — accessible name; the map is
@@ -21,14 +23,18 @@
 <template>
 	<GSkeleton v-if="loading" height="150px" radius="var(--g-radius-action)" />
 
-	<div v-else class="g-map" role="img" :aria-label="label">
-		<span class="g-map__grid" aria-hidden="true" />
-		<span class="g-map__pin" aria-hidden="true">
-			<template v-if="rings">
-				<span class="g-map__ring" />
-				<span class="g-map__ring" />
-			</template>
-		</span>
+	<div v-else class="g-map" :role="$slots.default ? undefined : 'img'" :aria-label="$slots.default ? undefined : label">
+		<!-- The gradient, grid and pin are the PLACEHOLDER. A real map goes in
+		     the slot and keeps the panel's 150px frame, radius and caption chip. -->
+		<slot>
+			<span class="g-map__grid" aria-hidden="true" />
+			<span class="g-map__pin" aria-hidden="true">
+				<template v-if="rings">
+					<span class="g-map__ring" />
+					<span class="g-map__ring" />
+				</template>
+			</span>
+		</slot>
 		<span v-if="caption" class="g-glass g-map__caption">{{ caption }}</span>
 	</div>
 </template>

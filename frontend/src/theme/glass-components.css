@@ -1180,7 +1180,11 @@ html[data-theme="dark"] .g-cal__day--present {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	height: 118px;
+	/* §10.2 #20's 118px sizes the PLACEHOLDER. A live camera preview sets its
+	   own height — a face framed in 118px is not a usable preview — so this is
+	   a floor, not a fixed height. Flagged for a spec ruling. */
+	min-height: 118px;
+	overflow: hidden;
 	border-radius: var(--g-radius-action);
 }
 .g-selfie__ring {
