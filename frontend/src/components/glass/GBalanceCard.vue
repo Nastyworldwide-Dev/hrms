@@ -19,9 +19,15 @@
   Props:
     label               string, required — e.g. "Annual leave"
     remaining           number, required — days left
-    allocated           number, required — days allocated
+    allocated           number, required — days allocated; the announced figure
+    entitlement         number — gauge denominator when it exceeds `allocated`
+                        (a pro-rated joiner). Defaults to `allocated`
     proratedPercentage  number, default 0 — band width 0–100; 0 hides the band
     unit                string, default "days" — announced unit only
+  Slot:
+    note  — qualifiers under the label, e.g. the pro-rated allocation or a
+            carry-forward note. Aria-hidden with the rest of the visual block;
+            put anything that must be announced into the label or the props.
 -->
 <template>
 	<div class="g-cell">
@@ -38,6 +44,10 @@
 				/>
 			</div>
 			<div class="g-balance__label">{{ label }}</div>
+			<!-- Real allocations carry qualifiers the mockup never showed:
+			     "Pro-rated: 8 allocated for 2026", "incl. carry-forward". They
+			     belong on the card, not beside it. -->
+			<div v-if="$slots.note" class="g-balance__note"><slot name="note" /></div>
 		</div>
 	</div>
 </template>
@@ -49,6 +59,11 @@ const props = defineProps({
 	label: { type: String, required: true },
 	remaining: { type: Number, required: true },
 	allocated: { type: Number, required: true },
+	// The gauge denominator, when it differs from what was allocated. A
+	// pro-rated joiner is allocated 8 days of a 12-day annual entitlement: the
+	// bar measures against 12 (which is what the hatched band spans), while the
+	// announcement must say 8, because 8 is what they actually have.
+	entitlement: { type: Number, default: 0 },
 	proratedPercentage: { type: Number, default: 0 },
 	unit: { type: String, default: "days" },
 })
@@ -56,8 +71,9 @@ const props = defineProps({
 // guard against a zero or missing allocation — a 0/0 balance is a real state
 // (allocation not yet run) and must not render NaN% or overflow the track
 const fillPercentage = computed(() => {
-	if (!props.allocated) return 0
-	return Math.min(100, Math.max(0, (props.remaining / props.allocated) * 100))
+	const denominator = props.entitlement || props.allocated
+	if (!denominator) return 0
+	return Math.min(100, Math.max(0, (props.remaining / denominator) * 100))
 })
 
 const announcement = computed(

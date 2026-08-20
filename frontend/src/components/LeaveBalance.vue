@@ -9,60 +9,41 @@
 			>
 				<span
 					@click="navigate"
-					class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
+					class="text-kra-label text-accent-ink underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Leave History") }}
 				</span>
 			</router-link>
 		</div>
 
-		<!-- Leave Balance stat cells -->
-		<div
-			class="grid grid-cols-3 border-t-2 border-divider"
-			v-if="hasBalances"
-		>
-			<div
-				v-for="(allocation, leave_type, index) in leaveBalance.data"
+		<!-- §15.2: ONE glass panel with internal --hair dividers, not one card
+		     per leave type. The count is dynamic — an employee may have two
+		     types or five — and the surface cost is 1 either way. -->
+		<GBalanceGrid v-if="hasBalances">
+			<GBalanceCard
+				v-for="(allocation, leave_type) in leaveBalance.data"
 				:key="leave_type"
-				class="flex flex-col gap-1.5 px-3 py-3.5"
-				:class="index % 3 !== 0 ? 'border-l border-divider' : ''"
+				:label="__(leave_type, null, 'Leave Type')"
+				:remaining="Number(formatLeaveDays(allocation.balance_leaves))"
+				:allocated="Number(allocation.allocated_leaves ?? 0)"
+				:entitlement="Number(allocation.annual_entitlement ?? 0)"
+				:prorated-percentage="allocation.prorated ? allocation.prorated_percentage : 0"
 			>
-				<div class="font-sans font-extrabold text-ring-centre leading-none text-inkbase">
-					{{ formatLeaveDays(allocation.balance_leaves) }}
-				</div>
-				<div class="g-balance__bar" style="height: 4px">
-					<div
-						class="g-balance__fill"
-						:style="{ width: `${allocation.balance_percentage}%` }"
-					></div>
-					<div
-						v-if="allocation.prorated"
-						class="g-balance__band"
-						:style="{ width: `${allocation.prorated_percentage}%` }"
-					></div>
-				</div>
-				<div class="text-micro-label uppercase text-ink-600 leading-tight">
-					{{ __(leave_type, null, "Leave Type") }}
-				</div>
-				<div
-					v-if="allocation.prorated"
-					class="text-caption text-ink-600 leading-tight"
-				>
-					{{
-						__("Pro-rated: {0} allocated for {1}", [
-							formatLeaveDays(allocation.allocated_leaves),
-							allocation.period_year,
-						])
-					}}
-				</div>
-				<div
-					v-if="allocation.carry_forwarded_leaves > 0"
-					class="text-caption text-ink-600 leading-tight"
-				>
-					{{ __("incl. carry-forward") }}
-				</div>
-			</div>
-		</div>
+				<template v-if="allocation.prorated || allocation.carry_forwarded_leaves > 0" #note>
+					<template v-if="allocation.prorated">
+						{{
+							__("Pro-rated: {0} allocated for {1}", [
+								formatLeaveDays(allocation.allocated_leaves),
+								allocation.period_year,
+							])
+						}}
+					</template>
+					<template v-if="allocation.carry_forwarded_leaves > 0">
+						{{ __("incl. carry-forward") }}
+					</template>
+				</template>
+			</GBalanceCard>
+		</GBalanceGrid>
 
 		<!-- Order matters, and this is the exact confusion HR reported. `hasBalances`
 		     is false when the request FAILED just as surely as when the employee
@@ -71,11 +52,21 @@
 		     is wrong, telling someone their entitlement is zero when we could not
 		     read it is the worst available answer. -->
 		<ResourceError v-else-if="leaveBalance.error" :resource="leaveBalance" what="your leave balance" />
-		<EmptyState :message="__('You have no leaves allocated')" v-else />
+		<GBalanceGrid v-else empty>
+			<template #empty>
+				<GEmptyState
+					:title="__('No leave allocated yet')"
+					:body="__('People &amp; Culture are setting this up. Check back shortly.')"
+				/>
+			</template>
+		</GBalanceGrid>
 	</div>
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GBalanceCard from "@/components/glass/GBalanceCard.vue"
+import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
 import { leaveBalance } from "@/data/leaves"
 import { formatLeaveDays } from "@/utils/formatters"
 import { computed, inject } from "vue"

@@ -48,6 +48,7 @@
 							<RequestList
 								:component="markRaw(LeaveRequestItem)"
 								:items="myLeaves.data"
+								:emptyStateMessage="__('No leave taken this year. Your applications will appear here once submitted.')"
 							/>
 						</div>
 					</div>

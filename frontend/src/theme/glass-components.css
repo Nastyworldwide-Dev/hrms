@@ -750,6 +750,13 @@ html[data-theme="dark"] .g-badge--open {
 	text-transform: uppercase;
 	color: var(--g-ink2);
 }
+.g-balance__note {
+	margin-top: 4px;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
 .g-balance__bar {
 	position: relative; /* anchors the pro-rated band */
 	height: 3px;

@@ -538,11 +538,20 @@ Home is the worked example (v1.5): the mockup's balance grid was removed because
 | **Sign in** | Logo well (56×56, r19) → title → subtitle → email field → password field → primary → forgot-password link. Vertically centred, 40px bottom offset | SIGN IN |
 | **Home** | Status → eyebrow date + greeting → last-punch caption → *banner if unresolved punch* → primary → quick-link list (4 rows) → **request panel** → tab bar | CHECK IN / CHECK OUT |
 | **Check in** | *A bottom sheet, not a route — see the note below the table.* Eyebrow (the action label) → clock (36px) → date line → location status + distance → map panel (150px) → selfie panel (live preview) → primary | CONFIRM CHECK IN |
-| **Leave** | Eyebrow + title → balance panel (2×2, **one surface**) → primary → RECENT field label → history list → tab bar | APPLY FOR LEAVE |
+| **Leave** | Eyebrow + title → balance panel (**N types, one surface**) → replacement-leave card → primary → RECENT field label → history list → holidays → tab bar | REQUEST A LEAVE |
 | **Attendance** | Eyebrow + title → calendar panel → stat panel (**4-up**, one surface) → primary → action list (3 rows, one surface) → request lists → tab bar | REQUEST ATTENDANCE |
 | **Overtime** | Eyebrow + title → date field → hours field → eligibility note panel → explanation field (66px) → primary → routing caption → tab bar | SEND TO APPROVER |
 | **KPI** | Eyebrow + title → score panel (ring + verdict + pill) → KRA field label → KRA panel (4 rows) → goals panel → tab bar | none — read-only |
 | **Issues** | Eyebrow + title → stat panel (3-up, **one surface**) → issue cards → primary → screenshot hint caption → tab bar | REPORT AN ISSUE |
+
+**Leave diverges** (reconciled in v1.6, batch 3):
+
+| Anatomy said | The app has | Resolved |
+|---|---|---|
+| Balance panel 2×2 — four cards | **N cards**, one per allocated leave type; an employee may have two or five | **App.** `GBalanceGrid` is one surface at any count, so §15.2's flattening holds unchanged |
+| — | A **pro-rated headroom band** and per-card qualifiers ("Pro-rated: 8 allocated for 2026", "incl. carry-forward") | **App.** `GBalanceCard` gained a `note` slot, and an `entitlement` prop: the gauge measures against the annual entitlement while the announcement says what was actually allocated |
+| — | A replacement-leave card and a holidays panel the anatomy omits | **App** |
+| §11.3 inline insufficient-balance error | No client-side balance validation at all | **App** — adding it is new validation, filed as a candidate in `docs/glass/decisions/` |
 
 **Attendance diverges too** (reconciled in v1.6, batch 2):
 
