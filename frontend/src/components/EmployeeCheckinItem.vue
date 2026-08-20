@@ -2,7 +2,7 @@
 	<ListItem>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
-				<div class="text-[15px] font-semibold text-inkbase">
+				<div class="text-button-label font-semibold text-inkbase">
 					{{ formattedTime }}
 				</div>
 				<div class="text-xs text-ink-600">{{ dayLabel }}</div>
@@ -10,8 +10,8 @@
 		</template>
 		<template #right>
 			<span
-				class="m-chip"
-				:class="props.doc.log_type === 'IN' ? 'm-chip-outline' : 'm-chip-solid'"
+				class="g-badge"
+				:class="props.doc.log_type === 'IN' ? 'g-chip--submitted' : 'g-badge--open'"
 			>
 				{{ __(props.doc.log_type, null, "Employee Checkin") }}
 			</span>

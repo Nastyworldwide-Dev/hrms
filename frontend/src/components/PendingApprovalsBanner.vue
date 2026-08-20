@@ -10,15 +10,15 @@
 	>
 		<FeatherIcon name="check-square" class="h-4 w-4 shrink-0 text-accent-800" />
 		<div class="flex flex-col flex-1 min-w-0 gap-0.5">
-			<div class="text-[12.5px] font-semibold text-accent-800">
+			<div class="text-card-title font-semibold text-accent-800">
 				{{ __("{0} remote check-in(s) awaiting your approval", [count]) }}
 			</div>
-			<div class="text-[11px] text-accent-800/80">
+			<div class="text-kra-label text-accent-800/80">
 				{{ __("Tap to review and decide.") }}
 			</div>
 		</div>
 		<span
-			class="inline-flex bg-accent text-ground text-[10px] font-sans font-extrabold px-1.5 py-0.5"
+			class="inline-flex bg-accent text-ground text-caption font-sans font-extrabold px-1.5 py-0.5"
 		>
 			{{ __("Review") }}
 		</span>

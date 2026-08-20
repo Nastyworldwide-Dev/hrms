@@ -22,14 +22,14 @@
 					</h2>
 					<Badge
 						:label="id"
-						class="whitespace-nowrap text-[8px]"
+						class="whitespace-nowrap text-caption"
 						variant="outline"
 					/>
 					<Badge
 						v-if="status"
 						:label="__(status, null, doctype)"
 						:theme="statusColor"
-						class="whitespace-nowrap text-[8px]"
+						class="whitespace-nowrap text-caption"
 					/>
 
 					<Dropdown
@@ -56,13 +56,13 @@
 				</div>
 				<h2
 					v-else
-					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-[19px]"
+					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-screen-title"
 				>
 					{{ __('New {0}', [__(doctype)], props.doctype) }}
 				</h2>
 				<span
 					v-if="!id"
-					class="hidden lg:inline ml-auto text-[10px] uppercase tracking-[0.1em] text-ink-600"
+					class="hidden lg:inline ml-auto text-micro-label uppercase text-ink-600"
 				>
 					{{ dateKicker }}
 				</span>
@@ -73,7 +73,7 @@
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
 				<button
 					type="button"
-					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-600 hover:text-inkbase"
+					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-kra-label font-extrabold uppercase text-ink-600 hover:text-inkbase"
 					@click="goBackOrHome(router)"
 				>
 					<FeatherIcon name="arrow-left" class="h-4 w-4" />

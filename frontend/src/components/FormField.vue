@@ -108,8 +108,8 @@
 			v-else-if="props.fieldtype === 'Section Break'"
 			:class="props.addSectionPadding ? 'mt-2' : ''"
 		>
-			<hr v-if="props.addSectionPadding" class="m-rule mb-3" />
-			<h2 v-if="props.label" class="m-kicker">
+			<hr v-if="props.addSectionPadding" class="h-px border-0 bg-hair mb-3" />
+			<h2 v-if="props.label" class="text-eyebrow uppercase text-accent-ink">
 				{{ props.label }}
 			</h2>
 		</div>

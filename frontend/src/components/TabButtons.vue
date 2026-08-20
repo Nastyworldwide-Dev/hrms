@@ -3,7 +3,7 @@
 		<button
 			v-for="button in buttons"
 			:key="button.key ?? button.label ?? button"
-			class="px-8 py-2.5 transition-colors flex-auto font-bold text-[11px] uppercase tracking-[0.08em]"
+			class="px-8 py-2.5 transition-colors flex-auto font-bold text-kra-label uppercase"
 			:class="
 				modelValue === (button.key ?? button.label ?? button)
 					? 'bg-accent text-ground'

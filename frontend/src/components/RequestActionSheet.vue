@@ -1,15 +1,15 @@
 <template>
 	<div
 		v-if="document?.doc"
-		class="bg-ground w-full flex flex-col pb-5 max-h-sheet border-t-[3px] border-inkbase"
+		class="bg-ground w-full flex flex-col pb-5 max-h-sheet"
 	>
 		<!-- Header -->
 		<div
 			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-overlay bg-ground"
 		>
 			<div class="flex flex-col gap-1">
-				<div class="m-kicker">{{ __("Request") }}</div>
-				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Request") }}</div>
+				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ __(document?.doctype) }}
 				</span>
 			</div>
@@ -56,7 +56,7 @@
 					class="flex flex-col gap-2 w-full py-3"
 					v-if="attachedFiles?.data?.length"
 				>
-					<div class="m-kicker">{{ __('Attachments') }}</div>
+					<div class="text-eyebrow uppercase text-accent-ink">{{ __('Attachments') }}</div>
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
 							class="bg-surface border border-divider p-2 w-full"

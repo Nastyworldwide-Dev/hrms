@@ -1,10 +1,10 @@
 <template>
 	<BaseLayout :pageTitle="__('My Issues')">
 		<template #body>
-			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-[720px]">
+			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg">
 				<ResourceError :resource="myIssues" what="your issues" />
 				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
-					<button @click="navigate" class="m-btn-primary">
+					<button @click="navigate" class="g-btn">
 						{{ __("Report an Issue") }}
 						<svg
 							width="17"
@@ -23,7 +23,7 @@
 					</button>
 				</router-link>
 
-				<span class="m-kicker mt-2">{{ __("Reported by you") }}</span>
+				<span class="text-eyebrow uppercase text-accent-ink mt-2">{{ __("Reported by you") }}</span>
 				<div class="flex flex-col gap-2.5 border-t-2 border-divider pt-4">
 					<router-link
 						v-for="issue in myIssues.data || []"
@@ -32,20 +32,20 @@
 						class="bg-surface border border-divider p-3 cursor-pointer no-underline"
 					>
 						<div class="flex justify-between items-center mb-1.5">
-							<span class="text-[10px] font-extrabold tracking-wide text-ink-600">
+							<span class="text-caption font-extrabold tracking-wide text-ink-600">
 								{{ issue.name }}
 							</span>
 							<span
-								class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 border"
+								class="text-micro-label font-extrabold uppercase tracking-wider px-2 py-0.5 border"
 								:class="STATUS_CHIP[issue.status]"
 							>
 								{{ __(issue.status) }}
 							</span>
 						</div>
-						<div class="text-[13px] font-extrabold text-inkbase mb-0.5">
+						<div class="text-card-title font-extrabold text-inkbase mb-0.5">
 							{{ __(issue.issue_type) }}
 						</div>
-						<div class="text-[11px] text-ink-600 truncate">
+						<div class="text-kra-label text-ink-600 truncate">
 							{{ dayjs(issue.creation).format("D MMM, HH:mm") }} · {{ issue.details }}
 						</div>
 					</router-link>

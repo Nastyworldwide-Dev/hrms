@@ -36,18 +36,18 @@
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
 					<span
-						class="m-chip"
-						:class="isGeneral ? 'm-chip-solid' : 'm-chip-outline'"
+						class="g-badge"
+						:class="isGeneral ? 'g-badge--open' : 'g-chip--submitted'"
 					>
 						{{ isGeneral ? __("General") : sop.data.department }}
 					</span>
 					<span
 						v-if="!sop.data.published"
-						class="m-chip m-chip-muted !text-ink-700"
+						class="g-badge g-chip--cancelled !text-ink-700"
 					>
 						{{ __("Draft") }}
 					</span>
-					<span class="text-[11px] text-ink-700">
+					<span class="text-kra-label text-ink-700">
 						{{ __("Updated") }} {{ dayjs(sop.data.modified).format("D MMM YYYY") }}
 					</span>
 				</div>
@@ -57,7 +57,7 @@
 
 				<!-- attachment -->
 				<div v-if="attachment" class="flex flex-col gap-2">
-					<span class="m-kicker">{{ __("Attachment") }}</span>
+					<span class="text-eyebrow uppercase text-accent-ink">{{ __("Attachment") }}</span>
 					<div class="border border-divider">
 						<div
 							class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5"
@@ -66,7 +66,7 @@
 								name="file-text"
 								class="h-[18px] w-[18px] flex-none text-accent-700"
 							/>
-							<span class="flex-1 text-[12.5px] font-bold text-inkbase truncate">
+							<span class="flex-1 text-card-title font-bold text-inkbase truncate">
 								{{ attachment.file_name }}
 							</span>
 							<a

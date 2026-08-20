@@ -27,9 +27,11 @@ function applyTheme() {
 	// both stay until Modernist is retired in phase 3
 	document.documentElement.classList.toggle("dark", dark)
 	document.documentElement.setAttribute("data-theme", dark ? "dark" : "light")
-	document
-		.querySelector('meta[name="theme-color"]')
-		?.setAttribute("content", dark ? "#191817" : "#f3f2f2")
+	// Browser chrome reads --g-bg rather than a pair of literals, so it cannot
+	// drift from the token. Read after data-theme is set, or it resolves stale.
+	const bg = getComputedStyle(document.documentElement).getPropertyValue("--g-bg").trim()
+	console.info("[Theme] Applied:", { dark, chrome: bg || "unset" })
+	if (bg) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg)
 }
 
 export function setTheme(mode, event) {

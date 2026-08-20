@@ -7,13 +7,13 @@
 		@willPresent="prefill"
 	>
 		<div
-			class="bg-ground w-full flex flex-col max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
+			class="bg-ground w-full flex flex-col max-h-[calc(100vh-5rem)]"
 		>
 			<!-- header -->
 			<div
 				class="flex items-center justify-between p-4 border-b border-divider flex-none"
 			>
-				<h3 class="text-[15px] font-extrabold text-inkbase">
+				<h3 class="text-button-label font-extrabold text-inkbase">
 					{{ props.sopName ? __("Edit SOP") : __("New SOP") }}
 				</h3>
 				<button
@@ -38,7 +38,7 @@
 						class="m-field-input"
 						:class="errors.title ? '!border-red-600' : ''"
 					/>
-					<span v-if="errors.title" class="text-[11px] font-bold text-red-600">
+					<span v-if="errors.title" class="text-kra-label font-bold text-red-600">
 						{{ __("Title is required.") }}
 					</span>
 				</div>
@@ -50,7 +50,7 @@
 							v-for="scope in SCOPES"
 							:key="scope"
 							type="button"
-							class="flex-1 min-h-11 py-2.5 px-2 border text-[11px] font-extrabold uppercase tracking-[0.05em]"
+							class="flex-1 min-h-11 py-2.5 px-2 border text-kra-label font-extrabold uppercase"
 							:class="
 								form.scope === scope
 									? 'bg-accent text-ground border-accent'
@@ -85,7 +85,7 @@
 					</select>
 					<span
 						v-if="errors.department"
-						class="text-[11px] font-bold text-red-600"
+						class="text-kra-label font-bold text-red-600"
 					>
 						{{ __("Pick a department for a department-scoped SOP.") }}
 					</span>
@@ -97,10 +97,10 @@
 					class="flex items-center justify-between"
 				>
 					<span class="flex flex-col gap-0.5">
-						<span class="text-[13px] font-bold text-inkbase">
+						<span class="text-card-title font-bold text-inkbase">
 							{{ __(toggle.label) }}
 						</span>
-						<span class="text-[11px] text-ink-700">{{ __(toggle.hint) }}</span>
+						<span class="text-kra-label text-ink-700">{{ __(toggle.hint) }}</span>
 					</span>
 					<button
 						type="button"
@@ -139,7 +139,7 @@
 					<label class="m-field-label">{{ __("Attachment") }}</label>
 					<div class="flex items-center gap-2 flex-wrap">
 						<label
-							class="flex items-center gap-1.5 bg-ink-100 border border-dashed border-ink-400 text-ink-700 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] cursor-pointer"
+							class="flex items-center gap-1.5 bg-ink-100 border border-dashed border-ink-400 text-ink-700 px-3 py-2.5 text-kra-label font-extrabold uppercase cursor-pointer"
 						>
 							<FeatherIcon name="paperclip" class="h-3.5 w-3.5" />
 							{{ __("Choose file") }}
@@ -147,7 +147,7 @@
 						</label>
 						<span
 							v-if="attachmentName"
-							class="inline-flex items-center gap-1.5 bg-accent-100 text-accent-700 px-2 py-1.5 text-[11px] font-bold"
+							class="inline-flex items-center gap-1.5 bg-accent-100 text-accent-700 px-2 py-1.5 text-kra-label font-bold"
 						>
 							{{ attachmentName }}
 							<button
@@ -169,14 +169,14 @@
 			>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent text-accent text-[12.5px] font-extrabold uppercase tracking-[0.05em]"
+					class="flex-1 py-3 border border-accent text-accent text-card-title font-extrabold uppercase"
 					@click="close"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent bg-accent text-ground text-[12.5px] font-extrabold uppercase tracking-[0.05em] disabled:opacity-60"
+					class="flex-1 py-3 border border-accent bg-accent text-ground text-card-title font-extrabold uppercase disabled:opacity-60"
 					:disabled="saving"
 					@click="save"
 				>

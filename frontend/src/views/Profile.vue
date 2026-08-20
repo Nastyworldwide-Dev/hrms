@@ -19,7 +19,7 @@
 					<div class="flex flex-col p-4">
 						<!-- Identity block -->
 						<div class="flex flex-row items-center gap-4 pb-5 border-b-2 border-divider">
-							<div class="m-avatar-sq shrink-0">
+							<div class="shrink-0">
 								<img
 									v-if="user.data.user_image"
 									class="h-[72px] w-[72px] object-cover grayscale"
@@ -36,12 +36,12 @@
 							<div class="flex flex-col gap-1 min-w-0">
 								<span
 									v-if="employee"
-									class="font-sans font-extrabold text-[20px] tracking-tight text-inkbase truncate"
+									class="font-sans font-extrabold text-screen-title tracking-tight text-inkbase truncate"
 									>{{ employee?.data?.employee_name }}</span
 								>
 								<span
 									v-if="employee"
-									class="text-[10px] uppercase tracking-[0.1em] text-ink-600 truncate"
+									class="text-micro-label uppercase text-ink-600 truncate"
 									>{{ employee?.data?.designation }}</span
 								>
 							</div>
@@ -57,7 +57,7 @@
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon :name="link.icon" class="h-[18px] w-[18px] text-inkbase" />
-									<div class="text-[15px] text-inkbase">
+									<div class="text-button-label text-inkbase">
 										{{ link.title }}
 									</div>
 								</div>
@@ -71,7 +71,7 @@
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon name="users" class="h-[18px] w-[18px] text-inkbase" />
-									<div class="text-[15px] text-inkbase">
+									<div class="text-button-label text-inkbase">
 										{{ __("HR Contacts") }}
 									</div>
 								</div>
@@ -91,14 +91,14 @@
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon name="check-square" class="h-[18px] w-[18px] text-inkbase" />
-									<div class="text-[15px] text-inkbase">
+									<div class="text-button-label text-inkbase">
 										{{ __("Remote Approvals") }}
 									</div>
 								</div>
 								<div class="flex flex-row items-center gap-2">
 									<span
 										v-if="pendingApprovalsCount > 0"
-										class="inline-flex bg-accent text-ground text-[10px] font-sans font-extrabold px-1.5 py-0.5"
+										class="inline-flex bg-accent text-ground text-caption font-sans font-extrabold px-1.5 py-0.5"
 									>
 										{{ pendingApprovalsCount }}
 									</span>
@@ -117,7 +117,7 @@
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon name="settings" class="h-[18px] w-[18px] text-inkbase" />
-									<div class="text-[15px] text-inkbase">
+									<div class="text-button-label text-inkbase">
 										{{ __("Settings") }}
 									</div>
 								</div>
@@ -127,7 +127,7 @@
 
 						<button
 							@click="logout"
-							class="flex items-center gap-2 w-full bg-transparent border border-accent text-accent-700 px-4 py-3.5 font-sans font-extrabold text-[13px] mt-7 hover:bg-accent-100"
+							class="flex items-center gap-2 w-full bg-transparent border border-accent text-accent-700 px-4 py-3.5 font-sans font-extrabold text-card-title mt-7 hover:bg-accent-100"
 						>
 							<FeatherIcon name="log-out" class="w-4 h-4" />
 							{{ __("Log Out") }}

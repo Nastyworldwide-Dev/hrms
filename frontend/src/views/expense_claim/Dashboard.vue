@@ -17,17 +17,17 @@
 				>
 					<div class="order-3 lg:order-1">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="m-kicker !text-ink-600 text-[11px]">
+							<span class="text-eyebrow uppercase text-accent-ink !text-ink-600 text-kra-label">
 								{{ __("Recent Expenses") }}
 							</span>
 							<router-link
 								:to="{ name: 'ExpenseClaimListView' }"
-								class="text-[11px] text-accent-700 underline underline-offset-[3px] cursor-pointer"
+								class="text-kra-label text-accent-700 underline underline-offset-link cursor-pointer"
 							>
 								{{ __("View List") }}
 							</router-link>
 						</div>
-						<hr class="m-rule" />
+						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(ExpenseClaimItem)"
 							:items="myClaims.data"
@@ -40,7 +40,7 @@
 						v-slot="{ navigate }"
 						class="order-2 lg:order-2"
 					>
-						<button class="m-btn-primary" @click="navigate">
+						<button class="g-btn" @click="navigate">
 							{{ __("Claim an Expense") }}
 							<svg
 								width="17"

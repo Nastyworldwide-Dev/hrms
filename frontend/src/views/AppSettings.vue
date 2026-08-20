@@ -19,7 +19,7 @@
 					</header>
 
 					<div class="flex flex-col gap-4 w-full p-4">
-						<span class="m-kicker">{{ __("Appearance") }}</span>
+						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Appearance") }}</span>
 						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
 							<div class="flex items-center gap-3">
 								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent" />
@@ -35,7 +35,7 @@
 									v-for="mode in THEME_MODES"
 									:key="mode"
 									type="button"
-									class="flex-1 py-2 text-[11px] uppercase tracking-[0.08em] font-sans font-extrabold border-r border-divider last:border-r-0"
+									class="flex-1 py-2 text-kra-label uppercase font-sans font-extrabold border-r border-divider last:border-r-0"
 									:class="
 										theme.mode === mode
 											? 'bg-accent text-ground'
@@ -47,7 +47,7 @@
 								</button>
 							</div>
 						</div>
-						<span class="m-kicker">{{ __("Notifications") }}</span>
+						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Notifications") }}</span>
 						<div class="flex flex-col border-t-2 border-divider pt-4">
 							<Switch
 								size="md"
@@ -70,7 +70,7 @@
 							</span>
 						</div>
 
-						<span class="m-kicker">{{ __("Account") }}</span>
+						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Account") }}</span>
 						<div class="flex flex-col border-t-2 border-divider pt-1">
 							<router-link
 								:to="{ name: 'ChangePassword' }"
@@ -78,7 +78,7 @@
 							>
 								<div class="flex flex-row items-center gap-3 grow">
 									<FeatherIcon name="lock" class="h-[18px] w-[18px] text-inkbase" />
-									<div class="text-[15px] text-inkbase">
+									<div class="text-button-label text-inkbase">
 										{{ __("Change Password") }}
 									</div>
 								</div>

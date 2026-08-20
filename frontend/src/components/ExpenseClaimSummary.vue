@@ -1,12 +1,12 @@
 <template>
 	<div class="flex flex-col w-full" v-if="summary.data">
 		<!-- Poster: total claimed -->
-		<div class="m-poster px-4 pt-5 pb-[22px]">
-			<div class="font-sans font-extrabold text-[10px] tracking-[0.1em] uppercase text-accent-200">
+		<div class="bg-brand text-on-brand px-4 pt-5 pb-[22px]">
+			<div class="font-sans font-extrabold text-micro-label uppercase text-accent-200">
 				{{ __("Total Claimed") }}
 			</div>
 			<div
-				class="font-sans font-extrabold text-[38px] leading-[1.05] tabular-nums text-ground mt-1.5"
+				class="font-sans font-extrabold text-clock tabular-nums text-ground mt-1.5"
 			>
 				{{ formatCurrency(total_claimed_amount, company_currency) }}
 			</div>
@@ -15,7 +15,7 @@
 		<!-- Stat cells: pending / approved / rejected -->
 		<div class="grid grid-cols-3 border-b-2 border-divider">
 			<div class="flex flex-col gap-0.5 py-3 pl-0.5 pr-3">
-				<span class="text-[9px] tracking-[0.08em] uppercase text-ink-600">
+				<span class="text-micro-label uppercase text-ink-600">
 					{{ __("Pending") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
@@ -23,7 +23,7 @@
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 px-3 border-l border-divider">
-				<span class="text-[9px] tracking-[0.08em] uppercase text-ink-600">
+				<span class="text-micro-label uppercase text-ink-600">
 					{{ __("Approved") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
@@ -31,7 +31,7 @@
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 pl-3 pr-0.5 border-l border-divider">
-				<span class="text-[9px] tracking-[0.08em] uppercase text-accent-700">
+				<span class="text-micro-label uppercase text-accent-700">
 					{{ __("Rejected") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums text-accent-700">

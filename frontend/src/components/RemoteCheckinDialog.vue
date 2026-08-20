@@ -5,12 +5,12 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-ground w-full flex flex-col pb-8 max-h-sheet border-t-[3px] border-inkbase">
+		<div class="bg-ground w-full flex flex-col pb-8 max-h-sheet">
 			<div
 				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-ground px-4"
 			>
-				<div class="m-kicker">{{ __("Remote check-in") }}</div>
-				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Remote check-in") }}</div>
+				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ __("You're outside the office geofence") }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -43,21 +43,21 @@
 						__('e.g. Client meeting at office X, traffic to KLCC, etc.')
 					"
 				/>
-				<div class="text-[10px] text-ink-500 text-right">
+				<div class="text-caption text-ink-500 text-right">
 					{{ remarks.length }}/500
 				</div>
 			</div>
 
 			<div class="flex flex-row gap-2.5 px-4 pt-2">
 				<button
-					class="flex-1 bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-[13px] cursor-pointer text-left hover:bg-inkbase/[0.07] disabled:opacity-60"
+					class="flex-1 bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-inkbase/[0.07] disabled:opacity-60"
 					@click="cancel"
 					:disabled="submitting"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
-					class="flex-1 bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-[13px] cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60"
+					class="flex-1 bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60"
 					@click="submit"
 					:disabled="submitting || !remarks.trim()"
 				>

@@ -17,7 +17,7 @@
 						v-slot="{ navigate }"
 						class="order-2 lg:order-1"
 					>
-						<button type="button" class="m-btn-primary h-full" @click="navigate">
+						<button type="button" class="g-btn h-full" @click="navigate">
 							{{ __("Request Attendance") }}
 							<svg
 								width="17"
@@ -122,15 +122,15 @@
 
 					<div class="order-3 lg:order-3 lg:col-span-2">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="m-kicker">{{ __("Recent Attendance Requests") }}</span>
+							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Attendance Requests") }}</span>
 							<router-link
 								:to="{ name: 'AttendanceRequestListView' }"
-								class="text-[11px] text-accent underline underline-offset-[3px]"
+								class="text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
 						</div>
-						<hr class="m-rule" />
+						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(AttendanceRequestItem)"
 							:items="myAttendanceRequests?.data?.slice(0, 5)"
@@ -139,15 +139,15 @@
 
 					<div class="order-4 lg:order-4 lg:col-span-2">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="m-kicker">{{ __("Upcoming Shifts") }}</span>
+							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Shifts") }}</span>
 							<router-link
 								:to="{ name: 'ShiftAssignmentListView' }"
-								class="text-[11px] text-accent underline underline-offset-[3px]"
+								class="text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
 						</div>
-						<hr class="m-rule" />
+						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(ShiftAssignmentItem)"
 							:items="upcomingShifts"
@@ -157,15 +157,15 @@
 
 					<div class="order-6 lg:order-5 lg:col-span-2">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="m-kicker">{{ __("Recent Shift Requests") }}</span>
+							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Shift Requests") }}</span>
 							<router-link
 								:to="{ name: 'ShiftRequestListView' }"
-								class="text-[11px] text-accent underline underline-offset-[3px]"
+								class="text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
 						</div>
-						<hr class="m-rule" />
+						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(ShiftRequestItem)"
 							:items="myShiftRequests?.data?.slice(0, 5)"
@@ -177,15 +177,15 @@
 				     link anywhere in the app. -->
 					<div class="order-7 lg:order-6 lg:col-span-2">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="m-kicker">{{ __("Recent OT Requests") }}</span>
+							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent OT Requests") }}</span>
 							<router-link
 								:to="{ name: 'OTRequestListView' }"
-								class="text-[11px] text-accent underline underline-offset-[3px]"
+								class="text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
 						</div>
-						<hr class="m-rule" />
+						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(OTRequestItem)"
 							:items="myOTRequests?.data?.slice(0, 5)"

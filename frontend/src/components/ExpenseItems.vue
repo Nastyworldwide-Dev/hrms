@@ -13,7 +13,7 @@
 				<div class="flex flex-row items-center justify-between">
 					<div class="flex flex-row items-start gap-3 grow">
 						<div class="flex flex-col items-start gap-1.5">
-							<div class="text-[15px] font-semibold text-inkbase">
+							<div class="text-button-label font-semibold text-inkbase">
 								{{ __(item.expense_type) }}
 							</div>
 							<div class="text-xs font-normal text-ink-600">
@@ -32,7 +32,7 @@
 							</div>
 						</div>
 					</div>
-					<span class="text-[15px] font-bold tabular-nums text-inkbase">
+					<span class="text-button-label font-bold tabular-nums text-inkbase">
 						{{ formatCurrency(item.amount, doc.currency) }}
 					</span>
 				</div>

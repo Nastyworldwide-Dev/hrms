@@ -1,13 +1,13 @@
 <template>
 	<div
-		class="bg-ground w-full flex flex-col pb-6 max-h-sheet overflow-y-auto border-t-[3px] border-inkbase"
+		class="bg-ground w-full flex flex-col pb-6 max-h-sheet overflow-y-auto"
 	>
 		<!-- Header -->
 		<div
 			class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-overlay bg-ground"
 		>
-			<span class="m-kicker">{{ __("Employee") }}</span>
-			<span class="font-sans font-extrabold text-[22px] text-inkbase">
+			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Employee") }}</span>
+			<span class="font-sans font-extrabold text-stat-number text-inkbase">
 				{{ title }}
 			</span>
 		</div>

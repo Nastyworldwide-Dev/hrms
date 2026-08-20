@@ -6,7 +6,7 @@
 	>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
-				<div class="text-[15px] font-semibold text-inkbase">
+				<div class="text-button-label font-semibold text-inkbase">
 					{{ claimTitle }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -19,7 +19,7 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="m-chip" :class="chipMap[status] || 'm-chip-muted'">{{ __(status, null, 'Expense Claim') }}</span>
+			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ __(status, null, 'Expense Claim') }}</span>
 		</template>
 	</ListItem>
 </template>
@@ -48,15 +48,15 @@ const props = defineProps({
 })
 
 const chipMap = {
-	Draft: "m-chip-muted",
-	Submitted: "m-chip-outline",
-	Cancelled: "m-chip-solid",
-	Paid: "m-chip-solid",
-	Unpaid: "m-chip-outline",
-	"Approved & Draft": "m-chip-outline",
-	"Approved & Unpaid": "m-chip-outline",
-	"Approved & Submitted": "m-chip-outline",
-	Rejected: "m-chip-solid",
+	Draft: "g-chip--cancelled",
+	Submitted: "g-chip--submitted",
+	Cancelled: "g-badge--open",
+	Paid: "g-badge--open",
+	Unpaid: "g-chip--submitted",
+	"Approved & Draft": "g-chip--submitted",
+	"Approved & Unpaid": "g-chip--submitted",
+	"Approved & Submitted": "g-chip--submitted",
+	Rejected: "g-badge--open",
 }
 
 const status = computed(() => {

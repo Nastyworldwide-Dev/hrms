@@ -2,7 +2,7 @@
 	<div class="flex flex-col w-full" v-if="calendarEvents.data">
 		<!-- Month heading + navigation -->
 		<div class="flex items-center justify-between mb-4">
-			<h2 class="text-[22px] leading-none">
+			<h2 class="text-stat-number leading-none">
 				{{ firstOfMonth.format("MMMM") }} {{ firstOfMonth.format("YYYY") }}
 			</h2>
 			<div class="flex gap-2">
@@ -49,14 +49,14 @@
 		<div class="grid grid-cols-7 gap-y-2 border-t-2 border-divider pt-3">
 			<div
 				v-for="day in DAYS"
-				class="text-center text-[9px] tracking-[0.1em] uppercase text-ink-500 font-bold"
+				class="text-center text-micro-label uppercase text-ink-500 font-bold"
 			>
 				{{ day }}
 			</div>
 			<div v-for="_ in firstOfMonth.get('d')" />
 			<div v-for="index in firstOfMonth.endOf('M').get('D')" class="flex justify-center">
 				<div
-					class="aspect-square w-full max-w-[40px] flex items-center justify-center text-[13px]"
+					class="aspect-square w-full max-w-[40px] flex items-center justify-center text-card-title"
 					:style="getEventOnDate(index) && dayStyle[getEventOnDate(index)]"
 				>
 					{{ index }}
@@ -67,11 +67,11 @@
 		<!-- Summary -->
 		<div class="grid grid-cols-4 border-t-2 border-divider mt-4 pt-3">
 			<div v-for="status in summaryStatuses" class="flex flex-col gap-0.5">
-				<span class="m-statnum" style="font-size: 20px">
+				<span class="text-stat-number" style="font-size: 20px">
 					{{ summary[status] || 0 }}
 				</span>
 				<span
-					class="flex items-center gap-1.5 text-[9px] tracking-[0.08em] uppercase text-ink-600"
+					class="flex items-center gap-1.5 text-micro-label uppercase text-ink-600"
 				>
 					<span class="flex-none w-[9px] h-[9px]" :style="swatchStyle[status]" />
 					{{ __(status) }}

@@ -1,7 +1,7 @@
 <template>
 	<div class="w-full">
 		<div
-			class="hidden lg:block font-sans font-extrabold text-[10px] tracking-[0.1em] uppercase text-ink-600 mb-4"
+			class="hidden lg:block font-sans font-extrabold text-micro-label uppercase text-ink-600 mb-4"
 		>
 			{{ __("Requests") }}
 		</div>

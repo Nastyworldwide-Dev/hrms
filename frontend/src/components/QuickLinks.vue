@@ -1,7 +1,7 @@
 <template>
 	<div class="w-full">
 		<div
-			class="font-sans font-extrabold text-[11px] tracking-[0.08em] uppercase text-ink-600 mb-2.5"
+			class="font-sans font-extrabold text-kra-label uppercase text-ink-600 mb-2.5"
 		>
 			{{ title || __("Quick Links") }}
 		</div>
@@ -14,7 +14,7 @@
 			>
 				<div class="flex flex-row items-center gap-3 grow">
 					<component :is="link.icon" class="h-[18px] w-[18px] text-inkbase" />
-					<div class="text-[15px] text-inkbase">
+					<div class="text-button-label text-inkbase">
 						{{ link.title }}
 					</div>
 				</div>

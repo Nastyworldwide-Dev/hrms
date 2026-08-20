@@ -1,13 +1,13 @@
 <template>
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
-			<div class="flex flex-col gap-5 w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7">
+			<div class="flex flex-col gap-5 w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7">
 				<!-- HR-only team selector: grouped by department, searchable,
 				     "My team" pinned first, team size beside each manager
 				     (HR request 2026-08-19; options built by utils/team.js,
 				     pinned by tests/manager-options.test.mjs) -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
-					<span class="m-kicker flex-none">{{ __("Team of") }}</span>
+					<span class="text-eyebrow uppercase text-accent-ink flex-none">{{ __("Team of") }}</span>
 					<Autocomplete
 						class="flex-1 min-w-0"
 						:options="managerOptions"
@@ -27,7 +27,7 @@
 						<FeatherIcon name="chevron-left" class="h-4 w-4" />
 					</button>
 					<span
-						class="font-sans font-extrabold text-[12px] tracking-[0.08em] uppercase text-inkbase"
+						class="font-sans font-extrabold text-card-title uppercase text-inkbase"
 					>
 						{{ dayLabel }}
 					</span>
@@ -49,10 +49,10 @@
 						class="flex flex-col gap-1 px-2.5 py-3"
 						:class="index !== 0 ? 'border-l border-divider' : ''"
 					>
-						<span class="font-sans font-extrabold text-[22px] leading-none text-inkbase">
+						<span class="font-sans font-extrabold text-stat-number leading-none text-inkbase">
 							{{ tile.count }}
 						</span>
-						<span class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
+						<span class="text-micro-label uppercase text-ink-600 leading-tight">
 							{{ tile.label }}
 						</span>
 					</div>
@@ -67,7 +67,7 @@
 					v-if="teamStatus.data?.members?.length"
 				>
 					<template v-for="group in departmentGroups" :key="group.department">
-						<div class="m-kicker px-3 pt-4 pb-1.5">
+						<div class="text-eyebrow uppercase text-accent-ink px-3 pt-4 pb-1.5">
 							{{ group.department }} ({{ group.members.length }})
 						</div>
 						<div
@@ -78,23 +78,23 @@
 						>
 							<div class="flex flex-row items-center justify-between gap-2">
 								<div class="flex flex-col min-w-0">
-									<span class="font-semibold text-[14px] text-inkbase truncate">
+									<span class="font-semibold text-panel-title text-inkbase truncate">
 										{{ member.employee_name }}
 									</span>
-									<span class="text-[11px] text-ink-600 truncate">
+									<span class="text-kra-label text-ink-600 truncate">
 										{{ member.designation }}
 									</span>
 								</div>
-								<span class="m-chip flex-none" :class="statusChipClass(member.status)">
+								<span class="g-badge flex-none" :class="statusChipClass(member.status)">
 									{{ __(member.status) }}
 								</span>
 							</div>
-							<span class="text-[11px] text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
+							<span class="text-kra-label text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
 
 							<!-- expanded detail -->
 							<div
 								v-if="expandedRow === member.employee"
-								class="flex flex-col gap-1 mt-2.5 pt-2.5 border-t border-divider text-[11px] text-ink-600"
+								class="flex flex-col gap-1 mt-2.5 pt-2.5 border-t border-divider text-kra-label text-ink-600"
 							>
 								<span v-if="member.shift">
 									{{ __("Shift") }}: {{ member.shift }} · {{ formatTime(member.shift_start) }}–{{
@@ -121,7 +121,7 @@
 					<LoadingIndicator class="w-8 h-8 text-accent" />
 				</div>
 
-				<span class="text-[10px] text-ink-600" v-if="teamStatus.data?.members?.length">
+				<span class="text-caption text-ink-600" v-if="teamStatus.data?.members?.length">
 					{{ __("You see your direct reports. Pull the day arrows to browse other dates.") }}
 				</span>
 			</div>
@@ -198,9 +198,9 @@ const summaryTiles = computed(() => {
 function statusChipClass(status) {
 	return (
 		{
-			Present: "m-chip-outline",
-			Absent: "m-chip-solid",
-		}[status] || "m-chip-muted"
+			Present: "g-chip--submitted",
+			Absent: "g-badge--open",
+		}[status] || "g-chip--cancelled"
 	)
 }
 

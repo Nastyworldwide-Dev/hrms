@@ -6,7 +6,7 @@
 	>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
-				<div class="text-[15px] font-semibold text-inkbase">
+				<div class="text-button-label font-semibold text-inkbase">
 					{{ __(props.doc.leave_type, null, "Leave Type") }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -17,7 +17,7 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="m-chip" :class="chipMap[status] || 'm-chip-muted'">{{ __(status, null, 'Leave Application') }}</span>
+			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ __(status, null, 'Leave Application') }}</span>
 		</template>
 	</ListItem>
 </template>
@@ -47,8 +47,8 @@ const status = computed(() => {
 })
 
 const chipMap = {
-	Approved: "m-chip-outline",
-	Rejected: "m-chip-solid",
-	Open: "m-chip-muted",
+	Approved: "g-chip--submitted",
+	Rejected: "g-badge--open",
+	Open: "g-chip--cancelled",
 }
 </script>

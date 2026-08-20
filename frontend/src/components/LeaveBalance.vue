@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="m-kicker">{{ __("Leave Balance") }}</span>
+			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Leave Balance") }}</span>
 			<router-link
 				:to="{ name: 'LeaveApplicationListView' }"
 				v-slot="{ navigate }"
@@ -9,7 +9,7 @@
 			>
 				<span
 					@click="navigate"
-					class="text-[11px] text-accent underline underline-offset-link cursor-pointer"
+					class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Leave History") }}
 				</span>
@@ -27,26 +27,26 @@
 				class="flex flex-col gap-1.5 px-3 py-3.5"
 				:class="index % 3 !== 0 ? 'border-l border-divider' : ''"
 			>
-				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
+				<div class="font-sans font-extrabold text-ring-centre leading-none text-inkbase">
 					{{ formatLeaveDays(allocation.balance_leaves) }}
 				</div>
-				<div class="m-bar" style="height: 4px">
+				<div class="g-balance__bar" style="height: 4px">
 					<div
-						class="m-bar-fill"
+						class="g-balance__fill"
 						:style="{ width: `${allocation.balance_percentage}%` }"
 					></div>
 					<div
 						v-if="allocation.prorated"
-						class="m-bar-band"
+						class="g-balance__band"
 						:style="{ width: `${allocation.prorated_percentage}%` }"
 					></div>
 				</div>
-				<div class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
+				<div class="text-micro-label uppercase text-ink-600 leading-tight">
 					{{ __(leave_type, null, "Leave Type") }}
 				</div>
 				<div
 					v-if="allocation.prorated"
-					class="text-[9px] text-ink-600 leading-tight"
+					class="text-caption text-ink-600 leading-tight"
 				>
 					{{
 						__("Pro-rated: {0} allocated for {1}", [
@@ -57,7 +57,7 @@
 				</div>
 				<div
 					v-if="allocation.carry_forwarded_leaves > 0"
-					class="text-[9px] text-ink-600 leading-tight"
+					class="text-caption text-ink-600 leading-tight"
 				>
 					{{ __("incl. carry-forward") }}
 				</div>

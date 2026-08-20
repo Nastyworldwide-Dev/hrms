@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-row items-start gap-3 py-3.5 border-b border-divider">
 		<!-- Avatar -->
-		<div class="m-avatar-sq shrink-0">
+		<div class="shrink-0">
 			<img
 				v-if="contact.image"
 				class="h-11 w-11 object-cover grayscale"
@@ -10,7 +10,7 @@
 			/>
 			<div
 				v-else
-				class="flex items-center justify-center bg-inkbase uppercase text-ground h-11 w-11 text-[15px] font-sans font-extrabold"
+				class="flex items-center justify-center bg-inkbase uppercase text-ground h-11 w-11 text-button-label font-sans font-extrabold"
 			>
 				{{ initials }}
 			</div>
@@ -18,12 +18,12 @@
 
 		<!-- Body -->
 		<div class="flex-1 min-w-0">
-			<div class="text-[15px] font-sans font-semibold text-inkbase truncate">
+			<div class="text-button-label font-sans font-semibold text-inkbase truncate">
 				{{ contact.employee_name || __("Unnamed Employee") }}
 			</div>
 			<div
 				v-if="contact.designation"
-				class="text-[10px] uppercase tracking-[0.08em] text-ink-600 truncate mt-0.5"
+				class="text-micro-label uppercase text-ink-600 truncate mt-0.5"
 			>
 				{{ contact.designation }}
 			</div>
@@ -32,7 +32,7 @@
 				<a
 					v-if="contact.email"
 					:href="`mailto:${contact.email}`"
-					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-link"
+					class="flex flex-row items-center gap-1.5 text-kra-label text-accent-700 underline underline-offset-link"
 				>
 					<FeatherIcon name="mail" class="h-3 w-3 shrink-0" />
 					<span class="truncate">{{ contact.email }}</span>
@@ -40,14 +40,14 @@
 				<a
 					v-if="contact.phone"
 					:href="`tel:${contact.phone}`"
-					class="flex flex-row items-center gap-1.5 text-[11.5px] text-accent-700 underline underline-offset-link"
+					class="flex flex-row items-center gap-1.5 text-kra-label text-accent-700 underline underline-offset-link"
 				>
 					<FeatherIcon name="phone" class="h-3 w-3 shrink-0" />
 					<span>{{ contact.phone }}</span>
 				</a>
 				<div
 					v-if="!contact.email && !contact.phone"
-					class="text-[11.5px] text-ink-500 italic"
+					class="text-kra-label text-ink-500 italic"
 				>
 					{{ __("No contact details on file") }}
 				</div>

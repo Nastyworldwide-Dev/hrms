@@ -5,7 +5,7 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-ground w-full flex flex-col pb-5 max-h-sheet border-t-[3px] border-inkbase">
+		<div class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
 			<div
 				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground"
 			>
@@ -14,8 +14,8 @@
 				>
 					<FeatherIcon name="slash" class="h-6 w-6 text-red-600" />
 				</div>
-				<div class="m-kicker">{{ __("Check-in") }}</div>
-				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Check-in") }}</div>
+				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ title }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -40,13 +40,13 @@
 					</div>
 
 					<div class="bg-surface border border-divider px-3 py-2.5">
-						<div class="m-kicker">
+						<div class="text-eyebrow uppercase text-accent-ink">
 							{{ __("Shift Location") }}
 						</div>
 						<div class="text-sm font-medium text-inkbase mt-0.5">
 							{{ shiftLocation || __("(unnamed)") }}
 						</div>
-						<div class="m-kicker mt-2">
+						<div class="text-eyebrow uppercase text-accent-ink mt-2">
 							{{ __("Shift") }}
 						</div>
 						<div class="text-sm font-medium text-inkbase mt-0.5">

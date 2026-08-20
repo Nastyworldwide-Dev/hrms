@@ -49,11 +49,11 @@
 								class="border border-divider border-t-2 p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
-									<div class="font-sans font-extrabold text-[15px] text-inkbase truncate">
+									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
 										{{ req.employee_name || req.employee }}
 									</div>
 									<span
-										class="text-[10px] font-sans font-extrabold px-2 py-[3px] uppercase tracking-[0.06em]"
+										class="text-micro-label font-sans font-extrabold px-2 py-[3px] uppercase"
 										:class="
 											req.status === 'Approved'
 												? 'border border-accent text-accent-700'
@@ -63,7 +63,7 @@
 										{{ __(req.status) }} · {{ req.log_type }}
 									</span>
 								</div>
-								<div class="flex flex-row items-center justify-between text-[11.5px] text-ink-600">
+								<div class="flex flex-row items-center justify-between text-kra-label text-ink-600">
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
@@ -100,11 +100,11 @@
 								class="border border-divider border-t-2 p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
-									<div class="font-sans font-extrabold text-[15px] text-inkbase truncate">
+									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
 										{{ req.employee_name || req.employee }}
 									</div>
 									<span
-										class="text-[10px] font-sans font-extrabold px-2 py-[3px] uppercase tracking-[0.06em]"
+										class="text-micro-label font-sans font-extrabold px-2 py-[3px] uppercase"
 										:class="
 											req.log_type === 'IN'
 												? 'bg-inkbase text-ground'
@@ -114,7 +114,7 @@
 										{{ req.log_type }}
 									</span>
 								</div>
-								<div class="flex flex-row items-center justify-between text-[11.5px] text-ink-600">
+								<div class="flex flex-row items-center justify-between text-kra-label text-ink-600">
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
@@ -154,11 +154,11 @@
 				:breakpoints="[0, 1]"
 			>
 				<div
-					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] border-t-[3px] border-inkbase"
+					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)]"
 				>
 					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
-						<span class="m-kicker">{{ __("Remote check-in") }}</span>
-						<span class="font-sans font-extrabold text-[22px] text-inkbase">
+						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Remote check-in") }}</span>
+						<span class="font-sans font-extrabold text-stat-number text-inkbase">
 							{{
 								decision === "approve" ? __("Approve this check-in?") : __("Reject this check-in?")
 							}}
@@ -183,14 +183,14 @@
 
 					<div class="flex flex-row gap-2.5 px-4 pt-4">
 						<button
-							class="flex-1 flex items-center justify-center bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-ink-200 disabled:opacity-60"
+							class="flex-1 flex items-center justify-center bg-transparent border border-divider text-inkbase px-3.5 py-3 font-sans font-extrabold text-card-title hover:bg-ink-200 disabled:opacity-60"
 							@click="decisionOpen = false"
 							:disabled="submitting"
 						>
 							{{ __("Cancel") }}
 						</button>
 						<button
-							class="flex-1 flex items-center justify-center gap-2 bg-accent text-ground px-3.5 py-3 font-sans font-extrabold text-[13px] hover:bg-accent-600 disabled:opacity-60"
+							class="flex-1 flex items-center justify-center gap-2 bg-accent text-ground px-3.5 py-3 font-sans font-extrabold text-card-title hover:bg-accent-600 disabled:opacity-60"
 							@click="submitDecision"
 							:disabled="submitting"
 						>

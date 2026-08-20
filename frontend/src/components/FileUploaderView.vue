@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col gap-3 py-4">
 		<label class="file-select">
-			<h2 class="m-kicker pb-4">{{ __("Attachments") }} </h2>
+			<h2 class="text-eyebrow uppercase text-accent-ink pb-4">{{ __("Attachments") }} </h2>
 			<div class="select-button cursor-pointer">
 				<div
 					class="flex flex-col w-full bg-surface border-2 border-dashed border-divider items-center p-4 gap-2"

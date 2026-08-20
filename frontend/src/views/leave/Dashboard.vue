@@ -16,7 +16,7 @@
 						v-slot="{ navigate }"
 						class="lg:border-l lg:border-divider lg:pl-8 lg:flex lg:items-center"
 					>
-						<button @click="navigate" class="m-btn-primary">
+						<button @click="navigate" class="g-btn">
 							{{ __("Request a Leave") }}
 							<svg
 								width="17"
@@ -40,14 +40,14 @@
 				<div class="contents lg:grid lg:grid-cols-2 lg:gap-x-0 lg:items-start">
 					<div class="lg:pr-8">
 						<div class="flex flex-row items-baseline justify-between mb-2.5">
-							<span class="m-kicker">{{ __("Recent Leaves") }}</span>
+							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Leaves") }}</span>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
 								v-slot="{ navigate }"
 							>
 								<span
 									@click="navigate"
-									class="text-[11px] text-accent underline underline-offset-[3px] cursor-pointer"
+									class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
 								>
 									{{ __("View List") }}
 								</span>

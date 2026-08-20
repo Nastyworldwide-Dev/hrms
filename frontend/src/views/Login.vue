@@ -13,11 +13,11 @@
 						>
 							{{ __("Employee") }}<br />{{ __("self-service.") }}
 						</div>
-						<div class="text-[13px] mt-3.5 opacity-85">
+						<div class="text-card-title mt-3.5 opacity-85">
 							{{ __("Attendance · Leaves · Expenses · Payroll") }}
 						</div>
 					</div>
-					<div class="text-[10px] uppercase tracking-[0.1em] font-extrabold opacity-70">
+					<div class="text-micro-label uppercase font-extrabold opacity-70">
 						{{ __("Frappe HR · Mobile & Tablet") }}
 					</div>
 				</div>
@@ -29,11 +29,11 @@
 					<div class="mx-auto w-full max-w-[360px]">
 						<FrappeHRLogo class="h-11 w-11 lg:hidden" />
 						<h1
-							class="font-sans font-extrabold text-[30px] leading-[1.08] tracking-tight mt-5 lg:mt-0 mb-1.5"
+							class="font-sans font-extrabold text-display-number tracking-tight mt-5 lg:mt-0 mb-1.5"
 						>
 							{{ __("Login to Frappe HR") }}<span class="text-accent">.</span>
 						</h1>
-						<p class="text-[13px] text-ink-600 mb-7">
+						<p class="text-card-title text-ink-600 mb-7">
 							{{ __("Employee self-service portal") }}
 						</p>
 
@@ -64,7 +64,7 @@
 								<div class="flex justify-end mt-1.5">
 									<button
 										type="button"
-										class="text-xs text-ink-700 underline underline-offset-[3px] py-2.5 -my-1.5 px-1 -mx-1"
+										class="text-xs text-ink-700 underline underline-offset-link py-2.5 -my-1.5 px-1 -mx-1"
 										@click="openForgotDialog"
 									>
 										{{ __("Forgot Password?") }}
@@ -74,7 +74,7 @@
 							<ErrorMessage :message="errorMessage" />
 							<button
 								type="submit"
-								class="m-btn-primary !mt-2 disabled:opacity-60"
+								class="g-btn !mt-2 disabled:opacity-60"
 								:disabled="session.login.loading"
 							>
 								<span>{{ __("Login") }}</span>

@@ -1,130 +1,46 @@
 {
 	"components/AttendanceCalendar.vue": {
-		"arbitrary": 9
-	},
-	"components/AttendanceRequestItem.vue": {
-		"arbitrary": 1
-	},
-	"components/BaseLayout.vue": {
 		"arbitrary": 3
 	},
 	"components/BottomTabs.vue": {
-		"arbitrary": 7
+		"arbitrary": 5
 	},
 	"components/CheckInPanel.vue": {
 		"hex": 13,
 		"colorfn": 3,
-		"arbitrary": 15
-	},
-	"components/ContactCard.vue": {
-		"arbitrary": 7
-	},
-	"components/ContactInfoSheet.vue": {
-		"arbitrary": 2
+		"arbitrary": 4
 	},
 	"components/CustomIonModal.vue": {
 		"arbitrary": 1
 	},
-	"components/EmployeeCheckinItem.vue": {
-		"arbitrary": 1
-	},
-	"components/EmptyState.vue": {
-		"arbitrary": 1
-	},
 	"components/ExpenseAdvancesTable.vue": {
-		"arbitrary": 2
-	},
-	"components/ExpenseClaimItem.vue": {
 		"arbitrary": 1
 	},
 	"components/ExpenseClaimSummary.vue": {
-		"arbitrary": 11
-	},
-	"components/ExpenseItems.vue": {
-		"arbitrary": 2
-	},
-	"components/ExpenseTaxesTable.vue": {
-		"arbitrary": 3
+		"arbitrary": 1
 	},
 	"components/ExpensesTable.vue": {
-		"arbitrary": 4
+		"arbitrary": 1
 	},
 	"components/FormField.vue": {
 		"arbitrary": 2
 	},
-	"components/FormView.vue": {
-		"arbitrary": 7
-	},
-	"components/Holidays.vue": {
-		"arbitrary": 4
-	},
 	"components/InstallPrompt.vue": {
 		"arbitrary": 1
 	},
-	"components/LateCheckoutDialog.vue": {
-		"arbitrary": 5
-	},
-	"components/LeaveBalance.vue": {
-		"arbitrary": 6
-	},
-	"components/LeaveRequestItem.vue": {
-		"arbitrary": 1
-	},
 	"components/ListFiltersActionSheet.vue": {
-		"arbitrary": 3
-	},
-	"components/OTRequestItem.vue": {
 		"arbitrary": 1
 	},
 	"components/PdfInlineViewer.vue": {
 		"colorfn": 1,
-		"arbitrary": 8
-	},
-	"components/PendingApprovalsBanner.vue": {
-		"arbitrary": 3
-	},
-	"components/ProfileInfoModal.vue": {
 		"arbitrary": 2
-	},
-	"components/PushNotificationPrompt.vue": {
-		"arbitrary": 3
 	},
 	"components/QuickLinks.vue": {
-		"arbitrary": 8
-	},
-	"components/RemoteCheckinDialog.vue": {
 		"arbitrary": 5
-	},
-	"components/ReplacementLeaveCard.vue": {
-		"arbitrary": 5
-	},
-	"components/ReplacementLeaveClaimItem.vue": {
-		"arbitrary": 1
-	},
-	"components/RequestActionSheet.vue": {
-		"arbitrary": 2
-	},
-	"components/RequestPanel.vue": {
-		"arbitrary": 2
-	},
-	"components/ResourceError.vue": {
-		"arbitrary": 1
-	},
-	"components/ShiftAssignmentItem.vue": {
-		"arbitrary": 1
-	},
-	"components/ShiftRequestItem.vue": {
-		"arbitrary": 1
 	},
 	"components/SideNav.vue": {
 		"hex": 3,
-		"arbitrary": 20
-	},
-	"components/StrictRejectionDialog.vue": {
-		"arbitrary": 2
-	},
-	"components/TabButtons.vue": {
-		"arbitrary": 2
+		"arbitrary": 12
 	},
 	"components/icons/FrappeHRLogo.vue": {
 		"hex": 3
@@ -132,14 +48,11 @@
 	"components/icons/FrappeHRLogoType.vue": {
 		"hex": 4
 	},
-	"data/theme.js": {
-		"hex": 2
-	},
 	"theme/variables.css": {
 		"hex": 47
 	},
 	"views/AppSettings.vue": {
-		"arbitrary": 10
+		"arbitrary": 7
 	},
 	"views/ChangePassword.vue": {
 		"arbitrary": 1
@@ -147,52 +60,43 @@
 	"views/ForgotPassword.vue": {
 		"arbitrary": 1
 	},
-	"views/HRContacts.vue": {
-		"arbitrary": 1
-	},
 	"views/Login.vue": {
-		"arbitrary": 13
-	},
-	"views/More.vue": {
 		"arbitrary": 6
 	},
-	"views/Notifications.vue": {
-		"arbitrary": 3
-	},
-	"views/Profile.vue": {
-		"arbitrary": 30
-	},
-	"views/RemoteApprovals.vue": {
-		"arbitrary": 16
-	},
-	"views/attendance/Dashboard.vue": {
-		"arbitrary": 9
-	},
-	"views/expense_claim/Dashboard.vue": {
+	"views/More.vue": {
 		"arbitrary": 4
 	},
+	"views/Notifications.vue": {
+		"arbitrary": 2
+	},
+	"views/Profile.vue": {
+		"arbitrary": 21
+	},
+	"views/RemoteApprovals.vue": {
+		"arbitrary": 4
+	},
+	"views/attendance/Dashboard.vue": {
+		"arbitrary": 1
+	},
+	"views/expense_claim/Dashboard.vue": {
+		"arbitrary": 1
+	},
 	"views/issues/HRIssueBoard.vue": {
-		"arbitrary": 15
-	},
-	"views/issues/IssueList.vue": {
-		"arbitrary": 5
-	},
-	"views/kpi/Dashboard.vue": {
-		"arbitrary": 10
+		"arbitrary": 4
 	},
 	"views/leave/Dashboard.vue": {
-		"arbitrary": 3
+		"arbitrary": 1
 	},
 	"views/sop/SopDetail.vue": {
-		"arbitrary": 11
+		"arbitrary": 9
 	},
 	"views/sop/SopFormSheet.vue": {
-		"arbitrary": 25
+		"arbitrary": 10
 	},
 	"views/sop/SopList.vue": {
-		"arbitrary": 31
+		"arbitrary": 23
 	},
 	"views/team/TeamDashboard.vue": {
-		"arbitrary": 16
+		"arbitrary": 5
 	}
 }

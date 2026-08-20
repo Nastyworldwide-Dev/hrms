@@ -1,6 +1,6 @@
 <template>
 	<div v-if="showLabel" class="flex flex-row items-center gap-2">
-		<span class="m-avatar-sq grayscale inline-flex">
+		<span class="grayscale inline-flex">
 			<Avatar
 				v-if="employee"
 				:label="employee?.employee_name"
@@ -13,7 +13,7 @@
 		</div>
 	</div>
 
-	<span v-else class="m-avatar-sq grayscale inline-flex">
+	<span v-else class="grayscale inline-flex">
 		<Avatar
 			:label="employee?.employee_name"
 			:image="employee?.image"

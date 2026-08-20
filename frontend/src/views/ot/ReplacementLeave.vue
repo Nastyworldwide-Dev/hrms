@@ -17,7 +17,7 @@
 				<ResourceError :resource="bank" what="your replacement leave bank" />
 				<!-- month bank -->
 				<div class="border border-divider p-4 flex flex-col gap-2" v-if="bank.data">
-					<span class="m-kicker">{{ monthLabel }} {{ __("bank") }}</span>
+					<span class="text-eyebrow uppercase text-accent-ink">{{ monthLabel }} {{ __("bank") }}</span>
 					<div class="flex items-baseline gap-1.5">
 						<span class="text-3xl font-extrabold text-inkbase">
 							{{ bank.data.hours_available }}
@@ -38,7 +38,7 @@
 
 				<!-- approved OT feeding the bank -->
 				<div v-if="bank.data?.requests?.length" class="flex flex-col gap-1.5">
-					<span class="m-kicker">{{ __("Approved OT this month") }}</span>
+					<span class="text-eyebrow uppercase text-accent-ink">{{ __("Approved OT this month") }}</span>
 					<div
 						v-for="request in bank.data.requests"
 						:key="request.name"
@@ -51,7 +51,7 @@
 
 				<!-- claims -->
 				<div class="flex flex-col gap-1.5">
-					<span class="m-kicker">{{ __("My Claims") }}</span>
+					<span class="text-eyebrow uppercase text-accent-ink">{{ __("My Claims") }}</span>
 					<EmptyState v-if="!claims.data?.length" :message="__('No claims yet')" />
 					<router-link
 						v-for="claimRow in claims.data"

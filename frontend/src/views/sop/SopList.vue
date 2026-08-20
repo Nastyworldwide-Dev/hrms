@@ -2,14 +2,14 @@
 	<BaseLayout :pageTitle="__('SOPs')">
 		<template #body>
 			<div
-				class="flex flex-col gap-[18px] w-full max-w-[720px] mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-[18px] w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
 			>
 				<!-- Essentials (pinned) -->
 				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">
 					<div class="flex items-center justify-between">
-						<span v-if="pinned.length" class="m-kicker">{{ __("Essentials") }}</span>
+						<span v-if="pinned.length" class="text-eyebrow uppercase text-accent-ink">{{ __("Essentials") }}</span>
 						<span v-else></span>
-						<span v-if="isHR" class="m-chip m-chip-solid">{{ __("HR") }}</span>
+						<span v-if="isHR" class="g-badge g-badge--open">{{ __("HR") }}</span>
 					</div>
 					<div v-if="pinned.length" class="grid grid-cols-2 gap-2.5">
 						<router-link
@@ -32,10 +32,10 @@
 								<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
 							</button>
 							<span class="flex flex-col gap-0.5">
-								<span class="font-extrabold text-[13px] leading-tight">
+								<span class="font-extrabold text-card-title leading-tight">
 									{{ sop.title }}
 								</span>
-								<span class="text-[10px] uppercase tracking-[0.08em] font-bold opacity-75">
+								<span class="text-micro-label uppercase font-bold opacity-75">
 									{{ scopeLabel(sop) }}
 								</span>
 							</span>
@@ -53,14 +53,14 @@
 						v-model="query"
 						:placeholder="__('Search SOPs…')"
 						:aria-label="__('Search SOPs')"
-						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-[13px] text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
+						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
 					/>
 				</div>
 
 				<!-- Sections -->
 				<div v-if="!isEmpty" class="flex flex-col gap-[18px]">
 					<div v-for="section in sections" :key="section.key" class="flex flex-col gap-2">
-						<span class="m-kicker">{{ sectionLabel(section) }}</span>
+						<span class="text-eyebrow uppercase text-accent-ink">{{ sectionLabel(section) }}</span>
 						<div class="flex flex-col border-t-2 border-divider">
 							<router-link
 								v-for="sop in section.sops"
@@ -73,17 +73,17 @@
 							>
 								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
 									<span class="flex items-center gap-1.5 min-w-0">
-										<span class="font-extrabold text-[13px] text-inkbase truncate">
+										<span class="font-extrabold text-card-title text-inkbase truncate">
 											{{ sop.title }}
 										</span>
 										<span
 											v-if="!sop.published"
-											class="m-chip m-chip-muted !text-ink-700 flex-none"
+											class="g-badge g-chip--cancelled !text-ink-700 flex-none"
 										>
 											{{ __("Draft") }}
 										</span>
 									</span>
-									<span class="text-[11px] text-ink-700">
+									<span class="text-kra-label text-ink-700">
 										{{ __("Updated") }} {{ dayjs(sop.modified).format("D MMM YYYY") }}
 									</span>
 								</span>
@@ -108,7 +108,7 @@
 					class="flex flex-col items-center gap-2 px-5 py-11 text-center text-ink-600"
 				>
 					<FeatherIcon name="search" class="h-[34px] w-[34px] text-ink-300" />
-					<div class="text-[13px]">
+					<div class="text-card-title">
 						{{ __("No SOPs match “{0}”.", [query]) }}<br />
 						{{ __("Try a different search term.") }}
 					</div>

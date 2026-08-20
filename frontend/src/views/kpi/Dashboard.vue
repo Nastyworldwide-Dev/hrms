@@ -9,7 +9,7 @@
 					class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 				>
 					<div class="flex flex-col gap-1.5">
-						<label class="m-kicker" for="kpi-year-filter">{{ __("Year") }}</label>
+						<label class="text-eyebrow uppercase text-accent-ink" for="kpi-year-filter">{{ __("Year") }}</label>
 						<select
 							id="kpi-year-filter"
 							v-model="selectedYear"
@@ -20,7 +20,7 @@
 						</select>
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<label class="m-kicker" for="kpi-cycle-filter">
+						<label class="text-eyebrow uppercase text-accent-ink" for="kpi-cycle-filter">
 							{{ __("Appraisal cycle") }}
 						</label>
 						<select
@@ -39,7 +39,7 @@
 					<div class="contents">
 						<!-- Hero: overall score -->
 						<div>
-							<div class="m-kicker">
+							<div class="text-eyebrow uppercase text-accent-ink">
 								<template v-if="current.is_average">
 									{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
 								</template>
@@ -47,15 +47,15 @@
 							</div>
 							<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
 								<div class="flex flex-col gap-2">
-									<div class="font-sans font-extrabold text-[44px] leading-none tabular-nums">
+									<div class="font-sans font-extrabold text-clock leading-none tabular-nums">
 										{{ formatScore(current.total_score)
-										}}<span class="text-[15px] text-ink-500 font-normal"> / 100</span>
+										}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 									</div>
 									<div class="flex items-center gap-2.5">
-										<span v-if="current.grade" class="m-chip m-chip-solid">
+										<span v-if="current.grade" class="g-badge g-badge--open">
 											{{ current.grade }}
 										</span>
-										<span v-if="current.is_average" class="m-chip m-chip-outline">
+										<span v-if="current.is_average" class="g-badge g-chip--submitted">
 											{{ __("Avg of {0} cycles", [current.cycles_count]) }}
 										</span>
 										<span
@@ -106,7 +106,7 @@
 						<!-- Score trend -->
 						<div v-if="trend.length > 1">
 							<div
-								class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+								class="text-kra-label uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 							>
 								{{ __("Score trend") }}
 							</div>
@@ -170,7 +170,7 @@
 						<!-- KRA list -->
 						<div>
 							<div
-								class="text-[11px] tracking-[0.08em] uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+								class="text-kra-label uppercase font-sans font-extrabold text-ink-600 mb-2.5"
 							>
 								{{ __("My KRAs") }}
 							</div>
@@ -178,13 +178,13 @@
 								<div
 									v-for="(row, idx) in current.kras"
 									:key="idx"
-									class="m-row flex flex-col gap-1.5 py-3"
+									class="border-b border-hair flex flex-col gap-1.5 py-3"
 								>
 									<div class="flex items-center justify-between gap-2">
-										<span class="font-sans font-semibold text-[15px]">
+										<span class="font-sans font-semibold text-button-label">
 											{{ row.kra }}
 										</span>
-										<span v-if="row.per_weightage" class="m-chip m-chip-muted whitespace-nowrap">
+										<span v-if="row.per_weightage" class="g-badge g-chip--cancelled whitespace-nowrap">
 											{{ formatScore(row.per_weightage) }}%
 										</span>
 									</div>
@@ -192,19 +192,19 @@
 										{{ row.kpi }}
 									</span>
 									<div class="flex items-center gap-2.5">
-										<div class="m-bar flex-1">
+										<div class="g-kra__bar flex-1">
 											<div
-												class="h-full bg-accent"
+												class="g-kra__fill"
 												:style="{ width: `${Math.min(barValue(row), 100)}%` }"
 											/>
 										</div>
 										<span
-											class="font-sans font-extrabold text-[11px] tabular-nums w-12 text-right"
+											class="font-sans font-extrabold text-kra-label tabular-nums w-12 text-right"
 										>
 											{{ formatScore(barValue(row)) }}%
 										</span>
 									</div>
-									<div class="flex flex-wrap gap-x-3 text-[11px] text-ink-500">
+									<div class="flex flex-wrap gap-x-3 text-kra-label text-ink-500">
 										<span v-if="row.target">
 											{{ __("Target") }} {{ formatNumber(row.target) }}
 										</span>
@@ -226,7 +226,7 @@
 						<!-- Feedback -->
 						<div>
 							<div class="border-t-2 border-divider">
-								<div class="m-row flex items-center justify-between py-3">
+								<div class="border-b border-hair flex items-center justify-between py-3">
 									<span class="text-sm">
 										{{
 											current.is_average
@@ -239,7 +239,7 @@
 									</span>
 								</div>
 							</div>
-							<span class="block text-[11px] text-ink-600 mt-3">
+							<span class="block text-kra-label text-ink-600 mt-3">
 								🔒 {{ __("You can only see your own scores") }}
 							</span>
 						</div>

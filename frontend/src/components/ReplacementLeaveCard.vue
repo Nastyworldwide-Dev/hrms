@@ -1,11 +1,11 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="m-kicker">{{ __("Replacement Leave") }}</span>
+			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Replacement Leave") }}</span>
 			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
 				<span
 					@click="navigate"
-					class="text-[11px] text-accent underline underline-offset-link cursor-pointer"
+					class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Claims") }}
 				</span>
@@ -15,13 +15,13 @@
 
 		<div class="flex flex-row items-center justify-between border-t-2 border-divider px-3 py-3.5">
 			<div class="flex flex-col gap-1.5">
-				<div class="font-sans font-extrabold text-[26px] leading-none text-inkbase">
+				<div class="font-sans font-extrabold text-ring-centre leading-none text-inkbase">
 					{{ formatLeaveDays(bank.data?.balance_days ?? 0) }}
 				</div>
-				<div class="text-[9px] tracking-[0.08em] uppercase text-ink-600 leading-tight">
+				<div class="text-micro-label uppercase text-ink-600 leading-tight">
 					{{ __("days available") }}
 				</div>
-				<div class="text-[11px] text-ink-600 leading-tight">
+				<div class="text-kra-label text-ink-600 leading-tight">
 					{{
 						__("{0} bank: {1} h unclaimed · 0.5 day = 4 h", [
 							monthLabel,

@@ -2,9 +2,9 @@
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
 			<div
-				class="flex flex-col gap-2 w-full max-w-[720px] px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-2 w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7"
 			>
-				<span class="m-kicker">{{ __("More") }}</span>
+				<span class="text-eyebrow uppercase text-accent-ink">{{ __("More") }}</span>
 				<div class="flex flex-col border-t-2 border-divider">
 					<router-link
 						v-for="item in moreItems"
@@ -17,7 +17,7 @@
 							:is="item.icon"
 							class="h-[19px] w-[19px] flex-none text-accent-700"
 						/>
-						<span class="flex-1 font-extrabold text-[13px] text-inkbase">
+						<span class="flex-1 font-extrabold text-card-title text-inkbase">
 							{{ item.title }}
 						</span>
 						<FeatherIcon

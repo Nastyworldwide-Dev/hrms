@@ -2,7 +2,7 @@
 	<ListItem>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
-				<div class="text-[15px] font-semibold text-inkbase">
+				<div class="text-button-label font-semibold text-inkbase">
 					{{ props.doc.shift_type }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -16,7 +16,7 @@
 			<span v-if="props.doc.shift_timing" class="text-xs font-bold tabular-nums text-inkbase">
 				{{ props.doc.shift_timing }}
 			</span>
-			<span v-else class="m-chip" :class="chipMap[status] || 'm-chip-muted'">{{ status }}</span>
+			<span v-else class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ status }}</span>
 		</template>
 	</ListItem>
 </template>
@@ -39,7 +39,7 @@ const status = computed(() => {
 })
 
 const chipMap = {
-	Draft: "m-chip-muted",
-	Submitted: "m-chip-outline",
+	Draft: "g-chip--cancelled",
+	Submitted: "g-chip--submitted",
 }
 </script>

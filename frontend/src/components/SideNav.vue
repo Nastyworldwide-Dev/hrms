@@ -21,7 +21,7 @@
 			</svg>
 			<span
 				v-show="!collapsed"
-				class="font-extrabold text-[15px] tracking-tight whitespace-nowrap text-inkbase"
+				class="font-extrabold text-button-label tracking-tight whitespace-nowrap text-inkbase"
 			>
 				{{ __("Frappe HR") }}
 			</span>
@@ -31,7 +31,7 @@
 		<div class="flex flex-col py-3.5 flex-1">
 			<button
 				type="button"
-				class="flex items-center gap-3 px-[18px] py-3 mb-1.5 border-l-[3px] border-transparent text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-500 hover:text-inkbase text-left"
+				class="flex items-center gap-3 px-[18px] py-3 mb-1.5 border-l-[3px] border-transparent text-kra-label font-extrabold uppercase text-ink-500 hover:text-inkbase text-left"
 				:aria-label="collapsed ? __('Expand sidebar') : __('Collapse sidebar')"
 				:aria-expanded="String(!collapsed)"
 				@click="toggleCollapse"
@@ -63,7 +63,7 @@
 			>
 				<button
 					type="button"
-					class="flex items-center gap-3 px-[18px] py-3 border-l-[3px] text-[11px] font-extrabold uppercase tracking-[0.08em] text-left"
+					class="flex items-center gap-3 px-[18px] py-3 border-l-[3px] text-kra-label font-extrabold uppercase text-left"
 					:class="
 						isActive(item.route)
 							? 'border-accent bg-inkbase/[0.06] text-inkbase'
@@ -95,11 +95,11 @@
 				{{ employeeName ? employeeName[0] : "?" }}
 			</div>
 			<div v-show="!collapsed" class="flex flex-col gap-px min-w-0">
-				<span class="font-extrabold text-[12.5px] whitespace-nowrap truncate text-inkbase">
+				<span class="font-extrabold text-card-title whitespace-nowrap truncate text-inkbase">
 					{{ employeeName }}
 				</span>
 				<span
-					class="text-[9px] uppercase tracking-[0.08em] text-ink-600 whitespace-nowrap truncate"
+					class="text-micro-label uppercase text-ink-600 whitespace-nowrap truncate"
 				>
 					{{ employeeDesignation }}
 				</span>

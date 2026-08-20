@@ -1,10 +1,10 @@
 <template>
 	<div class="flex flex-col w-full">
-		<div class="m-kicker">
+		<div class="text-eyebrow uppercase text-accent-ink">
 			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
 		</div>
 		<h1
-			class="text-[30px] lg:text-[36px] leading-[1.08] tracking-[-0.015em] text-inkbase mt-2 mb-1.5"
+			class="text-display-number lg:text-clock text-inkbase mt-2 mb-1.5"
 		>
 			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
 		</h1>
@@ -16,7 +16,7 @@
 		<ResourceError :resource="settings" what="your check-in settings" />
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
-			<div class="text-[13px] text-ink-600" v-if="lastLog">
+			<div class="text-card-title text-ink-600" v-if="lastLog">
 				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
@@ -35,7 +35,7 @@
 					class="h-4 w-4 shrink-0 text-accent-800"
 				/>
 				<div class="flex flex-col flex-1 min-w-0 gap-0.5">
-					<div class="text-[12.5px] font-semibold text-accent-800">
+					<div class="text-card-title font-semibold text-accent-800">
 						<template v-if="isAbandoned">
 							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
 						</template>
@@ -43,7 +43,7 @@
 							{{ __("Forgot to check out from {0}?", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
 						</template>
 					</div>
-					<div class="text-[11px] text-accent-800/80">
+					<div class="text-kra-label text-accent-800/80">
 						<template v-if="isAbandoned">
 							{{ __("Submit a late check-out now to resolve.") }}
 						</template>
@@ -52,12 +52,12 @@
 						</template>
 					</div>
 				</div>
-				<span class="m-chip m-chip-solid shrink-0">{{ __("Resolve") }}</span>
+				<span class="g-badge g-badge--open shrink-0">{{ __("Resolve") }}</span>
 			</div>
 
 			<button
 				id="open-checkin-modal"
-				class="m-btn-primary mt-5"
+				class="g-btn mt-5"
 				@click="handleEmployeeCheckin"
 			>
 				<span>{{ nextAction.label }}</span>
@@ -65,7 +65,7 @@
 			</button>
 		</template>
 
-		<div v-else class="text-[13px] text-ink-600 mt-1">
+		<div v-else class="text-card-title text-ink-600 mt-1">
 			{{ dayjs().format("ddd, D MMMM, YYYY") }}
 		</div>
 	</div>
@@ -80,10 +80,10 @@
 		@ionModalDidPresent="onModalPresent"
 		@ionModalWillDismiss="onModalDismiss"
 	>
-		<div class="w-full flex flex-col gap-4 px-4 pt-6 pb-8 border-t-[3px] border-inkbase bg-ground">
+		<div class="w-full flex flex-col gap-4 px-4 pt-6 pb-8 bg-ground">
 			<div class="flex flex-col gap-1">
-				<div class="m-kicker">{{ nextAction.label }}</div>
-				<div class="font-extrabold text-[36px] leading-[1.05] tabular-nums text-inkbase">
+				<div class="text-eyebrow uppercase text-accent-ink">{{ nextAction.label }}</div>
+				<div class="font-extrabold text-clock tabular-nums text-inkbase">
 					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -149,7 +149,7 @@
 
 			<button
 				:disabled="cameraStatus === 'starting' || punchCheckin.loading || cameraStatus === 'submitting'"
-				class="m-btn-primary disabled:opacity-60"
+				class="g-btn disabled:opacity-60"
 				@click="submitLog(nextAction.action)"
 			>
 				<span>{{ __("Confirm {0}", [nextAction.label]) }}</span>

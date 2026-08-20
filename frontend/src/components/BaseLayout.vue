@@ -6,13 +6,13 @@
 					class="flex flex-row justify-between items-center bg-ground border-b-2 border-divider px-4 py-3.5 lg:h-16 lg:px-7 lg:py-0"
 				>
 					<h2
-						class="font-extrabold tracking-tight text-lg lg:text-[19px] text-inkbase"
+						class="font-extrabold tracking-tight text-lg lg:text-screen-title text-inkbase"
 					>
 						{{ props.pageTitle || __("Frappe HR") }}
 					</h2>
 					<div class="flex flex-row items-center gap-3.5 lg:gap-4 ml-auto">
 						<span
-							class="hidden lg:inline text-[10px] uppercase tracking-[0.1em] text-ink-600"
+							class="hidden lg:inline text-micro-label uppercase text-ink-600"
 						>
 							{{ dateKicker }}
 						</span>
@@ -33,7 +33,7 @@
 						</router-link>
 						<router-link
 							:to="{ name: 'Profile' }"
-							class="flex flex-col items-center lg:hidden m-avatar-sq"
+							class="flex flex-col items-center lg:hidden"
 						>
 							<Avatar
 								:image="user.data.user_image"

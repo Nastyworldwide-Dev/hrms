@@ -1,11 +1,11 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-2.5">
-			<span class="m-kicker">{{ __("Upcoming Holidays") }}</span>
+			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Holidays") }}</span>
 			<span
 				v-if="holidays?.data?.length"
 				id="open-holiday-list"
-				class="text-[11px] text-accent underline underline-offset-link cursor-pointer"
+				class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
 			>
 				{{ __("View All") }}
 			</span>
@@ -17,10 +17,10 @@
 				v-for="holiday in upcomingHolidays"
 				:key="holiday.holiday_date"
 			>
-				<span class="text-[15px] text-inkbase">
+				<span class="text-button-label text-inkbase">
 					{{ __(holiday.description) }}
 				</span>
-				<span class="font-sans font-extrabold text-[12px] uppercase text-inkbase whitespace-nowrap">
+				<span class="font-sans font-extrabold text-card-title uppercase text-inkbase whitespace-nowrap">
 					{{ compactHolidayDate(holiday) }}
 				</span>
 			</div>
@@ -49,7 +49,7 @@
 				>
 					<div class="flex flex-row items-center gap-3 grow">
 						<FeatherIcon name="calendar" class="h-5 w-5 text-ink-500" />
-						<div class="text-[15px] font-normal text-inkbase">
+						<div class="text-button-label font-normal text-inkbase">
 							{{ __(holiday.description) }}
 						</div>
 					</div>

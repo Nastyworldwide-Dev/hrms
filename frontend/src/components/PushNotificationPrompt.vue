@@ -5,12 +5,12 @@
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
-		<div class="bg-ground w-full flex flex-col pb-8 border-t-[3px] border-inkbase">
+		<div class="bg-ground w-full flex flex-col pb-8">
 			<div class="w-full flex flex-col gap-1 pt-6 pb-4 bg-ground px-4">
-				<div class="m-kicker">
+				<div class="text-eyebrow uppercase text-accent-ink">
 					{{ step === 1 ? __("Notifications") : __("Are you sure?") }}
 				</div>
-				<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ step === 1 ? __("Don't miss an update") : __("Stay in the loop?") }}
 				</span>
 				<span class="text-xs text-ink-600">
@@ -39,7 +39,7 @@
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
 				<button
-					class="w-full bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-[13px] cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
+					class="w-full bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
 					@click="enable"
 					:disabled="enabling"
 				>

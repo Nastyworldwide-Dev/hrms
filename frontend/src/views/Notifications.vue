@@ -23,7 +23,7 @@
 					<div class="flex flex-col gap-4 mt-5 p-4">
 						<div class="flex flex-row justify-between items-center">
 							<div
-								class="font-sans font-extrabold text-[22px] text-inkbase"
+								class="font-sans font-extrabold text-stat-number text-inkbase"
 								v-if="unreadNotificationsCount.data"
 							>
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
@@ -62,7 +62,7 @@
 								:to="isItemNavigable(item) ? getItemRoute(item) : null"
 								@click="markAsRead(item.name)"
 							>
-								<span class="m-avatar-sq grayscale shrink-0">
+								<span class="grayscale shrink-0">
 									<EmployeeAvatar :userID="item.from_user" size="lg" />
 								</span>
 								<div class="flex flex-col gap-0.5 grow ml-3">

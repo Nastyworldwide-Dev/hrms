@@ -6,7 +6,7 @@
 	>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
-				<div class="text-[15px] font-semibold text-inkbase">
+				<div class="text-button-label font-semibold text-inkbase">
 					{{ __("{0}h overtime", [props.doc.claimed_hours ?? 0]) }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -19,7 +19,7 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="m-chip" :class="chipMap[status] || 'm-chip-muted'">{{ status }}</span>
+			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ status }}</span>
 		</template>
 	</ListItem>
 </template>
@@ -55,8 +55,8 @@ const status = computed(() => {
 })
 
 const chipMap = computed(() => ({
-	[__("Approved")]: "m-chip-outline",
-	[__("Cancelled")]: "m-chip-solid",
-	[__("Pending")]: "m-chip-muted",
+	[__("Approved")]: "g-chip--submitted",
+	[__("Cancelled")]: "g-badge--open",
+	[__("Pending")]: "g-chip--cancelled",
 }))
 </script>

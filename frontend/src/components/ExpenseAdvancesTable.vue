@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-row justify-between items-center pb-2 border-b-2 border-divider">
-		<h2 class="m-kicker">
+		<h2 class="text-eyebrow uppercase text-accent-ink">
 			{{ __("Settle against Advances") }}
 		</h2>
 	</div>
@@ -27,7 +27,7 @@
 					/>
 
 					<div class="flex flex-col items-start gap-1.5">
-						<div class="text-[15px] font-semibold text-inkbase">
+						<div class="text-button-label font-semibold text-inkbase">
 							{{ advance.purpose || advance.employee_advance }}
 						</div>
 						<div class="flex flex-row items-center gap-3 justify-between">

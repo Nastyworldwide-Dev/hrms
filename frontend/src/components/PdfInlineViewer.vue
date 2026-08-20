@@ -19,17 +19,17 @@
 				v-if="error"
 				class="flex flex-col items-center gap-2 bg-surface p-5 text-center"
 			>
-				<span class="text-[12.5px] text-ink-700">
+				<span class="text-card-title text-ink-700">
 					{{ __("This PDF could not be displayed here.") }}
 				</span>
-				<span v-if="errorDetail" class="text-[10px] text-ink-500 break-all">
+				<span v-if="errorDetail" class="text-caption text-ink-500 break-all">
 					{{ errorDetail }}
 				</span>
 				<a
 					:href="props.fileUrl"
 					target="_blank"
 					rel="noopener"
-					class="border border-accent text-accent px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.06em] no-underline"
+					class="border border-accent text-accent px-3 py-2 text-micro-label font-extrabold uppercase no-underline"
 				>
 					{{ __("Download") }}
 				</a>
@@ -38,7 +38,7 @@
 
 		<div
 			v-if="pageCount"
-			class="absolute right-2.5 bottom-2.5 px-2 py-1 text-[9.5px] font-extrabold tracking-[0.08em] text-white pointer-events-none"
+			class="absolute right-2.5 bottom-2.5 px-2 py-1 text-caption font-extrabold text-white pointer-events-none"
 			style="background: rgba(15, 40, 40, 0.85)"
 		>
 			{{ currentPage }} / {{ pageCount }}

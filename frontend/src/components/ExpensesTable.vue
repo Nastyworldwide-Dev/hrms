@@ -1,7 +1,7 @@
 <template>
 	<!-- Header -->
 	<div class="flex flex-row justify-between items-center mt-2 pb-2 border-b-2 border-divider">
-		<h2 class="m-kicker">{{ __("Expenses") }} </h2>
+		<h2 class="text-eyebrow uppercase text-accent-ink">{{ __("Expenses") }} </h2>
 		<div class="flex flex-row gap-3 items-center">
 			<span class="text-base font-extrabold text-inkbase">
 				{{ formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency) }}
@@ -32,7 +32,7 @@
 				<div class="flex flex-row items-center justify-between">
 					<div class="flex flex-row items-start gap-3 grow">
 						<div class="flex flex-col items-start gap-1.5">
-							<div class="text-[15px] font-semibold text-inkbase">
+							<div class="text-button-label font-semibold text-inkbase">
 								{{ __(item.expense_type) }}
 							</div>
 							<div class="text-xs font-normal text-ink-600">
@@ -67,11 +67,11 @@
 		<template #actionSheet>
 			<!-- Add Expense Action Sheet -->
 			<div
-				class="bg-ground w-full flex flex-col pb-5 border-t-[3px] border-inkbase"
+				class="bg-ground w-full flex flex-col pb-5"
 			>
 				<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
-					<div class="m-kicker">{{ __("Expense") }}</div>
-					<span class="text-inkbase font-extrabold text-[22px] leading-tight">
+					<div class="text-eyebrow uppercase text-accent-ink">{{ __("Expense") }}</div>
+					<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 						{{ modalTitle }}
 					</span>
 				</div>

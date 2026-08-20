@@ -2,7 +2,7 @@
 	<ion-page>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col h-screen w-screen bg-ground">
-				<div class="w-full max-w-[720px] mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<header
 						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
 					>

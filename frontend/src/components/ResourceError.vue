@@ -5,7 +5,7 @@
 	<div
 		v-if="resource?.error"
 		role="alert"
-		class="flex flex-col items-center gap-2 p-5 text-[13px] text-ink-600"
+		class="flex flex-col items-center gap-2 p-5 text-card-title text-ink-600"
 	>
 		<span class="text-center">{{ message }}</span>
 		<Button v-if="resource.reload" :loading="resource.loading" @click="retry">
