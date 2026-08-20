@@ -502,6 +502,25 @@ html[data-theme="dark"] .g-badge--open {
 .g-banner--warning::before { background: var(--g-warn); }
 .g-banner--error::before { background: var(--g-danger); }
 
+/* the pending-approvals banner on Home: a GBanner whose whole surface is the
+   affordance, so it takes a pointer and the two-line copy stacks */
+.g-approvals {
+	display: block;
+	cursor: pointer;
+}
+.g-approvals__title {
+	display: block;
+	font-weight: var(--g-type-card-title-weight);
+	color: var(--g-ink);
+}
+.g-approvals__hint {
+	display: block;
+	margin-top: 2px;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	color: var(--g-ink2);
+}
+
 /* ---------- GNotePanel (§10.2 #22) ---------- */
 
 .g-note {
@@ -1370,6 +1389,24 @@ html[data-theme="dark"] .g-cal__day--present {
 	font-weight: var(--g-type-panel-title-weight);
 	letter-spacing: var(--g-type-panel-title-tracking);
 	color: var(--g-ink);
+}
+.g-confirm__body {
+	padding: 0 2px 15px;
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	line-height: var(--g-type-row-label-line-height);
+	color: var(--g-ink2);
+}
+.g-confirm__actions {
+	display: flex;
+	gap: var(--g-stack-sm);
+}
+/* a destructive confirm takes the danger fill; the label still carries the
+   meaning, so colour is not the only signal (§14.1) */
+.g-confirm__destructive.g-btn {
+	background: var(--g-danger);
+	color: var(--g-on-brand);
+	box-shadow: none;
 }
 .g-sheet__action {
 	display: flex;

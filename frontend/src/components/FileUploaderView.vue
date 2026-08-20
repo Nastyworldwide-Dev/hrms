@@ -44,37 +44,18 @@
 				</li>
 			</ul>
 
-			<Dialog v-model="showDialog">
-				<template #body-title>
-					<h2 class="text-lg font-bold">{{ __("Delete Attachment") }} </h2>
-				</template>
-				<template #body-content>
-					<p>
-						{{ __("Are you sure you want to delete the attachment") }}
-						<span class="font-bold">{{ selectedFile.file_name }}</span>
-						?
-					</p>
-				</template>
-				<template #actions>
-					<div class="flex flex-row gap-4">
-						<Button
-							variant="outline"
-							class="py-5 w-full"
-							@click="showDialog = false"
-						>
-							{{ __("Cancel") }}
-						</Button>
-						<Button
-							variant="solid"
-							theme="red"
-							@click="handleFileDelete"
-							class="py-5 w-full"
-						>
-							{{ __("Delete") }}
-						</Button>
-					</div>
-				</template>
-			</Dialog>
+			<GConfirm
+				:is-open="showDialog"
+				:title="__('Delete attachment')"
+				:confirm-label="__('Delete')"
+				:cancel-label="__('Cancel')"
+				destructive
+				@confirm="handleFileDelete"
+				@cancel="showDialog = false"
+			>
+				{{ __("Are you sure you want to delete the attachment") }}
+				{{ selectedFile.file_name }}?
+			</GConfirm>
 
 			<!-- File Preview Modal -->
 			<ion-modal
@@ -89,6 +70,7 @@
 </template>
 
 <script setup>
+import GConfirm from "@/components/glass/GConfirm.vue"
 import { FeatherIcon, Dialog } from "frappe-ui"
 import { ref } from "vue"
 import { IonModal } from "@ionic/vue"

@@ -1,19 +1,11 @@
 <template>
 	<!-- Install PWA dialog -->
-	<Dialog v-model="showDialog">
-		<template #body-title>
-			<h2 class="text-lg font-bold">{{ __("Install Frappe HR") }} </h2>
-		</template>
-		<template #body-content>
-			<p>{{ __("Get the app on your device for easy access & a better experience!") }} </p>
-		</template>
-		<template #actions>
-			<Button variant="solid" @click="() => install()" class="py-5 w-full">
-				<template #prefix><FeatherIcon name="download" class="w-4" /></template>
-				{{ __("Install") }}
-			</Button>
-		</template>
-	</Dialog>
+	<GModal :is-open="showDialog" :title="__('Install Frappe HR')" @did-dismiss="showDialog = false">
+		<p class="g-confirm__body">
+			{{ __("Get the app on your device for easy access & a better experience!") }}
+		</p>
+		<GButton :label="__('Install')" @click="() => install()" />
+	</GModal>
 
 	<!-- iOS installation info message -->
 	<Popover :show="iosInstallMessage" placement="bottom">
@@ -53,6 +45,8 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
+import GModal from "@/components/glass/GModal.vue"
 import { ref } from "vue"
 
 import { Dialog, Popover, FeatherIcon } from "frappe-ui"

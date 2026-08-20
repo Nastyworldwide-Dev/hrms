@@ -243,69 +243,33 @@
 		</div>
 	</div>
 
-	<!-- Confirmation Dialogs -->
-	<Dialog v-model="showDeleteDialog">
-		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Delete {0}", [__(props.doctype)]) }}</h2>
-		</template>
-		<template #body-content>
-			<p>
-				{{ __("Are you sure you want to delete the {0}", [__(props.doctype)])  }}
-				<span class="font-bold">{{ formModel.name }}</span>
-				?
-			</p>
-		</template>
-		<template #actions>
-			<div class="flex flex-row gap-4">
-				<Button
-					variant="outline"
-					class="py-5 w-full"
-					@click="showDeleteDialog = false"
-				>
-					{{ __("Cancel") }}
-				</Button>
-				<Button
-					variant="solid"
-					theme="red"
-					@click="handleDocDelete"
-					class="py-5 w-full"
-				>
-					{{__("Delete") }}
-				</Button>
-			</div>
-		</template>
-	</Dialog>
+	<!-- Confirmation dialogs — GConfirm carries GModal's focus-trap workaround
+	     (§16.3), which frappe-ui's Dialog does not. Same state variables, same
+	     handlers: this is a presentation swap only. -->
+	<GConfirm
+		:is-open="showDeleteDialog"
+		:title="__('Delete {0}', [__(props.doctype)])"
+		:confirm-label="__('Delete')"
+		:cancel-label="__('Cancel')"
+		destructive
+		@confirm="handleDocDelete"
+		@cancel="showDeleteDialog = false"
+	>
+		{{ __("Are you sure you want to delete the {0}", [__(props.doctype)]) }}
+		{{ formModel.name }}?
+	</GConfirm>
 
-	<Dialog v-model="showSubmitDialog">
-		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Confirm") }} </h2>
-		</template>
-		<template #body-content>
-			<p>
-				{{ __("Permanently submit {0}", [__(props.doctype)]) }}
-				<span class="font-bold">{{ formModel.name }}</span>
-				?
-			</p>
-		</template>
-		<template #actions>
-			<div class="flex flex-row gap-4">
-				<Button
-					variant="outline"
-					class="py-5 w-full"
-					@click="showSubmitDialog = false"
-				>
-					{{ __("No") }}
-				</Button>
-				<Button
-					variant="solid"
-					@click="handleDocUpdate('submit')"
-					class="py-5 w-full"
-				>
-					{{ __("Yes") }}
-				</Button>
-			</div>
-		</template>
-	</Dialog>
+	<GConfirm
+		:is-open="showSubmitDialog"
+		:title="__('Confirm')"
+		:confirm-label="__('Yes')"
+		:cancel-label="__('No')"
+		@confirm="handleDocUpdate('submit')"
+		@cancel="showSubmitDialog = false"
+	>
+		{{ __("Permanently submit {0}", [__(props.doctype)]) }}
+		{{ formModel.name }}?
+	</GConfirm>
 
 	<Dialog v-model="showCancelDialog">
 		<template #body-title>
@@ -340,6 +304,7 @@
 </template>
 
 <script setup>
+import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 

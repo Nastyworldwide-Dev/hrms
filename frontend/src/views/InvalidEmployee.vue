@@ -2,33 +2,22 @@
 	<GPage :field="false">
 		<ion-content class="ion-padding">
 			<div class="flex h-screen w-screen flex-col justify-center bg-ground">
-				<Dialog
-					:options="{
-						title: __('Login Failed'),
-						message: reason,
-						size: 'lg',
-						actions: [
-							{
-								label: __('Go to Login'),
-								variant: 'solid',
-								onClick: () => session.logout.submit(),
-							},
-						],
-					}"
-					v-model="showDialog"
-					@close="
-						() => {
-							session.logout.submit()
-							showDialog = false
-						}
-					"
-				/>
+				<GModal
+					:is-open="showDialog"
+					:title="__('Login failed')"
+					@did-dismiss="() => { session.logout.submit(); showDialog = false }"
+				>
+					<p class="g-confirm__body">{{ reason }}</p>
+					<GButton :label="__('Go to Login')" @click="() => session.logout.submit()" />
+				</GModal>
 			</div>
 		</ion-content>
 	</GPage>
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
+import GModal from "@/components/glass/GModal.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { computed, inject, ref } from "vue"

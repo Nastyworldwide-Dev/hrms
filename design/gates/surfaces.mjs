@@ -22,9 +22,13 @@
 // §3     the light field is not a glass surface (confirmed in 4.1) — it is
 //        what the glass blurs, and carries no backdrop-filter.
 //
-//   node surfaces.mjs            report; exit 1 only if a screen exceeds 6
-//   node surfaces.mjs --strict   same, plus exit 1 on any v-for surface that
-//                                cannot be counted statically
+// STRICT BY DEFAULT as of phase 5 batch 1. Until Home composed real
+// components this gate had nothing to measure, so it reported; now that
+// screens carry surfaces, a screen over budget or a surface that cannot be
+// counted statically fails the build.
+//   node surfaces.mjs                exit 1 over budget, on a broken flattening
+//                                    invariant, or on an uncountable v-for surface
+//   node surfaces.mjs --report-only  print the counts and exit 0
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, join, relative, basename } from "node:path";
@@ -33,7 +37,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const SRC = join(ROOT, "frontend", "src");
 const LIMIT = 6;
-const STRICT = process.argv.includes("--strict");
+const REPORT_ONLY = process.argv.includes("--report-only");
 
 const GLASS = /(?<!-)\bg-glass(?:-ghost)?\b(?!-)/g;
 const stripComments = (s) =>
@@ -194,4 +198,4 @@ console.log(
 console.log(`GATE_RESULT ${JSON.stringify({ gate: "surfaces", screens: rows.length, over, flattening: flatteningBroken, looped: flagged.length })}`);
 // a broken flattening invariant always fails: it is how three screens go back
 // over budget without any screen changing
-process.exit(over || flatteningBroken || (STRICT && flagged.length) ? 1 : 0);
+process.exit(!REPORT_ONLY && (over || flatteningBroken || flagged.length) ? 1 : 0);

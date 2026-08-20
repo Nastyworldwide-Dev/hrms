@@ -5,7 +5,7 @@
 		>
 			{{ __("Requests") }}
 		</div>
-		<TabButtons :buttons="TAB_BUTTONS" v-model="activeTab" />
+		<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
 		<RequestList v-if="activeTab == 'My Requests'" :items="myRequests" />
 		<RequestList
 			v-else-if="activeTab == 'Team Requests'"
@@ -23,7 +23,7 @@
 <script setup>
 import { ref, inject, onMounted, computed, markRaw, watch } from "vue"
 
-import TabButtons from "@/components/TabButtons.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
 import RequestList from "@/components/RequestList.vue"
 
 import {
