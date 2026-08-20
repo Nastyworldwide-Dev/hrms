@@ -1,14 +1,17 @@
 # HANDOFF
-prompt:   3.3
+prompt:   3.3b + 3.4 (Modernist retired)
 status:   done
-commit:   7dcf4eed1 on nz-glass
-files:    61 changed under frontend/src (54 type sweep, 13 chips, 7 buttons, 2 bars)
-          frontend/src/data/theme.js (chrome colour reads --g-bg)
-          design/lint-baseline.json (ratcheted 64 → 32 files)
+commit:   7e74ec274 on nz-glass
+files:    frontend/src/components/glass/{GButton,GStatusChip,GBadge}.vue
+          20 call sites swapped to components (7 GButton, 13 chips)
+          frontend/tailwind.config.js (colours + fontFamily off --m-*)
+          frontend/src/theme/modernist.css DELETED; index.html Archivo link removed
+          design/gates/usage.mjs (false-positive fix)
+          docs/glass/spec/…v1.1.md (§10.3 #28 rewritten, v1.3 log 2.4/2.5)
 verify:   cd frontend && yarn gates && yarn build
-flags:    lint 452 → 213 (-239). All 14 .m-* classes at ZERO usages; only doc prose mentions them
-          chips swapped as CLASSES not components — chipMap carries statuses ('Approved & Unpaid') GStatusChip's validator rejects; component swap would change behaviour
-          .m-btn-primary → .g-btn class: buttons keep their trailing arrow child, which GButton has no slot for
-          NOT swept: 51 icon sizes (§9 says 14px; shrinking every icon unreviewed is a phase-5 call), 13 Leaflet map hexes (JS strings, and Glass has no blue), 7 brand-logo SVG hexes
-          modernist.css is now referenced by NOTHING in app code — 3.4 can delete it
-next:     3.4 delete Modernist + repoint tailwind colours/fontFamily + Archivo; then 3.5 remap radius
+flags:    usage baseline for views IS ZERO — 0 violations, empty baseline, verified against a probe
+          GStatusChip: 16 states → 6 variants, unknown falls back to neutral (no throw). attention+danger are outlines/solid because tints fail §14 (warn-ink on warn tint = 4.27 light)
+          gate bug found+fixed: \bg-glass\b matched inside --g-glass-fill-fallback, failing 6 correct components
+          variables.css KEPT (Ionic ramps, v1.3 ruling 2.1) — it holds 47 of the 213 remaining lint violations and is exempt
+          NOT done: 3.5 radius remap (sm 6 · DEFAULT/md 9 · lg 14 · xl 17 · 2xl 20 · 3xl 22) — own commit, visual verification
+next:     3.5 remap borderRadius onto the Glass ladder, then phase 4 shell
