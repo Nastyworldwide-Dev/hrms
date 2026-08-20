@@ -1,13 +1,15 @@
-# HR Frappe · Glass — Implementation Specification v1.1
+# HR Frappe · Glass — Implementation Specification v1.2
 
-**Supersedes** v1.0 (17 Aug 2026).
+**Supersedes** v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
 
 ---
 
-## 0. What changed from v1.0, and why
+## 0. What changed, and why
+
+### v1.1 — from v1.0
 
 | # | Change | Reason |
 |---|---|---|
@@ -22,6 +24,19 @@
 | 0.9 | Glass budget: counting rule added, grids flattened | Three screens sat at the ceiling before any state was added |
 | 0.10 | Added **reduce-transparency mode** and the blob-placement constraint | CSS cannot do adaptive contrast; the field is the only control we have |
 | 0.11 | Implementation section rewritten for the real codebase | v1.0 assumed a greenfield; a token system (Modernist) already ships |
+
+### v1.2 — rulings raised during the phase 2 build
+
+Each of these was a conflict found while building the components, not a change of intent. They are recorded so the conflict does not survive to be re-derived.
+
+| # | Change | Reason |
+|---|---|---|
+| 1.1 | Desktop **in scope**; new §20 governs `lg:` | DECISION 1 resolved — HR admin and managers use desktop regularly (§1, §13.3, §19) |
+| 1.2 | §6.3 stated to **override the §10 component entries**; `--track-solid` token added for the KPI ring, KRA and balance bar tracks | §10.1 #6/#9 named `--icon-bg`, a translucent value, for tracks §6.3 forbids being translucent. The entries described the visual; they did not grant an exemption |
+| 1.3 | §4.2 **scale closed**; four §10.2 entries corrected to their nearest step | Four component entries named sizes the scale does not contain (13, 15, 23px), so every implementer had to invent a resolution. 10.5px was already a step and only needed naming |
+| 1.4 | §15.3 added: **chrome counted separately**; the app header is **not** a glass surface, the tab bar **is** | §15.2's arithmetic never counted a header, leaving its material undefined. A glass header above glass content would also nest, which §15 forbids |
+| 1.5 | §20.7 gains **#24 App header** — avatar hidden, kicker shown at `lg:` | The v1.1 list was incomplete: the shipped header already differs at `lg:`, so "identical at both breakpoints" was untrue on arrival |
+| 1.6 | §10.2 #21 records the **only §2.5 exemption** — clock seconds, with its measured 4.26:1 and the condition that voids it | An unrecorded opacity multiplier reads as an oversight and gets "fixed" or copied; both outcomes are wrong |
 
 ---
 
@@ -111,6 +126,8 @@ Every colour comes from this section. There are no one-off hex values in compone
 
 If a lighter text value is needed, it already exists: `--ink-muted`. If a *fourth* level is needed, raise it rather than inventing one at the call site.
 
+**One exemption exists**, recorded under §10.2 #21: the clock seconds. It is granted only because that element is decorative and `aria-hidden`, and it is void if that ever stops being true. An opacity multiplier anywhere else is a defect, not a precedent.
+
 ---
 
 ## 3. The light field
@@ -182,6 +199,19 @@ Mono is **in-app**, not documentation-only: pro-rated notes, geo coordinates, ti
 | Data / system | mono | **10px** | 400 | 0 | 1.5 | Coordinates, ticket IDs — was 8–9px |
 
 Tracking on the raised sizes is reduced proportionally so the labels occupy roughly their original width. Verify the tab bar and the 4-up balance grid at 390px before sign-off; if a label wraps, shorten the string rather than lowering the size.
+
+**The scale is closed.** Where a component entry in §10 names a size not in this table, the nearest scale step governs and the component entry is corrected. Sizes 13px, 15px, 23px and 10.5px appearing in §10.2 #16, #21, #23 and #18 are superseded by their nearest steps.
+
+Applied, with the resolved sizes now written into those four entries:
+
+| Entry | Named | Nearest step | Resolved |
+|---|---|---|---|
+| §10.2 #16 KRA score | 13px | Card title | **12.5px** |
+| §10.2 #21 Clock seconds | 15px | Button label | **15.5px** |
+| §10.2 #23 Logo well | 23px | Stat number | **22px** |
+| §10.2 #18 Calendar day | 10.5px | Caption | **10.5px** — already a step; the entry now names the token |
+
+This ruling governs **size only**. Weights, tracking and family stated in a §10 entry stand as written: a 12.5px numeral at weight 800 is the Card title *step* carrying the entry's own weight, not a new step.
 
 ### 4.3 Tabular figures — mandatory
 Every number in this app is data. `font-variant-numeric: tabular-nums` on all balances, times, scores, currency, calendar digits and IDs.
@@ -342,14 +372,18 @@ No public icon set matches this grid and weight. The 9 existing hand-drawn icons
 | 13 | **Stat tile** | 3-up grid, `radius-tile` 15px, pad 12px 6px, number display 22/800, label 10px/600/0.11em. **Flattened** — see §15.2 |
 | 14 | **Issue card** | `radius-banner` 16px, pad 13px, mono ID row + badge, title 12.5/600, meta 10px `--ink2` |
 | 15 | **Score panel** | Ring + verdict + cycle pill, pad 17px 15px, `radius-panel` 20px |
-| 16 | **KRA panel** | Rows pad 11px 0, divider `--hair`, label 11.5/600 + mono weight, score display 13/800, bar 4px |
+| 16 | **KRA panel** | Rows pad 11px 0, divider `--hair`, label 11.5/600 + mono weight, score display **12.5/800** *(Card title step — §4.2)*, bar 4px on a **`--track-solid`** track *(§6.3 names KRA bars)* |
 | 17 | **Goals panel** | `radius-card` 17px, numeral display 22/800 `--accent-ink`, chevron |
-| 18 | **Calendar** | `radius-action` 19px, pad 15px 13px, 7-col grid gap 4px, day 10.5px r8. Present: light solid `--brand` + `--on-brand`, dark brand-19% tint. On leave: `--leave-ink` on leave-26%. Rest day: `--ink3` — **no opacity multiplier**. Legend swatches 7×7 r2.5 with text labels |
+| 18 | **Calendar** | `radius-action` 19px, pad 15px 13px, 7-col grid gap 4px, day **10.5px Caption step** r8. Present: light solid `--brand` + `--on-brand`, dark brand-19% tint. On leave: `--leave-ink` on leave-26%. Rest day: `--ink3` — **no opacity multiplier**. Legend swatches 7×7 r2.5 with text labels |
 | 19 | **Map panel** | 150px, `radius-action` 19px, themed gradient + perspective grid, pin `--brand` with rings, geo caption mono 10px in a glass chip |
 | 20 | **Selfie panel** | 118px, `radius-action` 19px, 48px dashed `--accent-ink` ring, 24×24 face icon |
-| 21 | **Clock** | Display 36/800/−0.02em, seconds at 15px/600 opacity .55 — **decorative, not information** |
+| 21 | **Clock** | Display 36/800/−0.02em, seconds at **15.5px**/600 *(Button label step — §4.2)* opacity .55 — **decorative, not information**. §2.5 exemption recorded below the table |
 | 22 | **Note panel** | Eligibility hint — glass, `radius-input` 14px, pad 12px 14px, mono 10px `--accent-ink` |
-| 23 | **Logo well** | 56×56, `radius-action` 19px, glass, display 23px `--accent-ink` |
+| 23 | **Logo well** | 56×56, `radius-action` 19px, glass, display **22px** *(Stat number step — §4.2)* `--accent-ink` |
+
+**§2.5 exemption — clock seconds (#21), the only one granted.** The seconds carry `opacity: .55`, which §2.5 otherwise forbids. It stands because the seconds are **decorative and `aria-hidden`**, and because the multiplier sits on `--ink`, not on `--ink2` or `--ink3`, which is what §2.5's letter names. Measured over glass the result is **4.26:1 on light** (6.03 dark) — below the 4.5 §14.1 requires of body text, and at 15.5px/600 they do not qualify as large text either.
+
+**The exemption is void the moment the element stops being decorative.** If the seconds are ever announced, relied on, or read as information, this becomes the same defect §14.4 exception 1 removed from the screen eyebrow, and the opacity comes off.
 
 ### 10.3 Required by the app, absent from the mockup
 
@@ -550,6 +584,20 @@ Counted as the mockup draws them, three screens sit at exactly 6 before any stat
 
 The 2×2 balance grid and the 3-up stat row become **one glass panel with internal dividers** at `--hair`. Card padding, radii and internal metrics are unchanged; only the surface count changes. This restores headroom for the states §11 requires.
 
+### 15.3 Chrome is counted separately
+
+The counts above are **per-screen content**. App chrome is counted separately, so a screen's content budget is not silently spent before its first panel exists.
+
+| Chrome | Glass surface? | Counted where |
+|---|---|---|
+| **Tab bar** (§10.1 #8) | **Yes** — glass, `radius-tabbar` 22px | Counted, as the §15.2 rows show ("… + tabs") |
+| **App header** (§10.3 #24) | **No** | Not a surface, so nothing to count |
+| **Side nav** at `lg:` (§20.2) | Yes | Replaces the tab bar's surface — net zero |
+
+**The app header is not a glass surface.** It sits above scrolling content, and glass above glass is nested glass, which §15 forbids outright. It takes an opaque `--bg` fill with a `--hair` bottom rule. This is also why §15.2's arithmetic never names a header: there was never one to count.
+
+A screen therefore spends **one** of its six on chrome — the tab bar below `lg:`, the side nav above it — never two.
+
 ---
 
 ## 16. Implementation notes
@@ -704,13 +752,14 @@ Every component contract in §10 must specify `lg:` behaviour **where it differs
 |---|---|---|
 | 6 | Balance card | Card identical; its parent grid reflows per §20.5 (flattened panel 2×2 → 1×4) |
 | 8 | Tab bar | Hidden. SideNav is the navigation surface (§20.2) |
+| 24 | App header | **Avatar hidden** — the side nav carries identity at `lg:` (§20.2) — and a **date kicker appears** beside the title. Both are the shipped `BaseLayout.vue` behaviour, preserved rather than invented |
 | 25 | Modal / bottom sheet | Presents **centred** at content-column width — a viewport-wide bottom sheet is a mobile idiom. Focus-trap workaround retained (§16.3) |
 | 26 | Action sheet | Same ruling as #25: centred dialog, not a full-width bottom strip |
 
-The side nav itself sits in §10.3's treatment list and is specified by §20.2. The remaining 24 components are identical at both breakpoints.
+The side nav itself sits in §10.3's treatment list and is specified by §20.2. The remaining 23 components are identical at both breakpoints.
 
 **Hover** — the mockup defines no hover states because it had no pointer. At `lg:` every interactive component reuses its **pressed-state background as hover** (rows: `--icon-bg` at the `row-tap` duration). No new tokens, and hover is never the only signal (§14).
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.1 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the seven exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.2 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the seven exceptions recorded in §14.4.*
