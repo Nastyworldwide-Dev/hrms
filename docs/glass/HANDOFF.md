@@ -1,29 +1,28 @@
 # HANDOFF
-prompt:   5.7 (batches 6–9 — SOP, team, settings, auth)
-status:   done; phase 5 screens complete, some shared internals remain
-commit:   a23f7495f on nz-glass
-files:    frontend/src/components/{PdfInlineViewer,PushNotificationPrompt}.vue
-          frontend/src/components/glass/GProviderButton.vue (new)
-          frontend/src/views/Login.vue (3 dialogs + SSO)
-          frontend/src/views/{ForgotPassword,ChangePassword}.vue
-          frontend/src/views/{Notifications,AppSettings,RemoteApprovals}.vue
-          frontend/src/views/{sop/SopList,sop/SopDetail,team/TeamDashboard}.vue
+prompt:   7.1 (shared-internals sweep + the two open defects)
+status:   done — both §16.7 defects fixed and verified
+commit:   4765f3828 on nz-glass
+files:    frontend/src/components/CheckInPanel.vue (both defects)
+          frontend/src/components/{ExpensesTable,ExpenseTaxesTable,ExpenseAdvancesTable}.vue
+          frontend/src/components/{Holidays,RequestList}.vue
+          frontend/src/theme/glass-components.css (.g-lineitems)
 verify:   cd frontend && yarn gates && yarn build
-flags:    COUNTS — everything 0–1/6 plus chrome. Login 1/6 with one sheet set. Nothing
-          anywhere in the app is above 5/6
-          NO ANATOMY WRITTEN. Every screen in these four batches follows a settled
-          pattern, so per the 4.4 ruling the pattern is the anatomy. §12 unchanged
-          :field="false" CONFIRMED, and it has a consequence worth stating: those screens
-          have NO light field, so any glass on them is grey fog (§3's opening line).
-          Auth surfaces must be SOLID. GProviderButton is solid for exactly this reason
-          THE GATES CAUGHT THIS: a raw g-glass-ghost class in Login and a v-for of glass
-          provider buttons both failed. Both were mine, both were real
-          SSO is provider-agnostic — GProviderButton reads name and mark from the server
-          record. The mark renders unmodified: no filter, tint, mask or radius. Wording is
-          "Sign in with {name}". No vendor is named anywhere in the code
-          BOTH REMAINING §10.3 ITEMS BUILT: PDF viewer (solid per §6.3, skeleton not
-          spinner) and push prompt (GModal). §10.3's list is now complete
-          STILL UNSTYLED: the three expense tables (ExpensesTable, ExpenseTaxesTable,
-          ExpenseAdvancesTable) → GDataTable, Holidays, RequestList's EmptyState, and
-          KPI's KRA rows → GKraPanel. All shared internals, none screen-level
-next:     sweep the shared internals above, then §18's sign-off checklist
+flags:    NOTHING EXCEEDS §15 — 0 screens over 6, 0 sheet sets over 6, flattening held,
+          no uncountable v-for. Highest anywhere is 5/6
+          §11.5 REPRODUCED FIRST: submitLog had NO guard — no re-entry flag, no timestamp,
+          no disabled state. Three taps 40ms apart = 3 punch records. Now 1. The flag is set
+          SYNCHRONOUSLY before the first await; the body is wrapped in try/finally so the
+          geofence preflight's early returns cannot leave the button stuck pending
+          §16.7 REPRODUCED FIRST: a 22:00–07:00 shift punched in at 22:05 was offered
+          "Check In" at 06:30 (still on shift) and 07:10 (forgot to punch out). Now derives
+          from the punch session, with the server's abandoned flag overriding. Verified at
+          six times of day
+          EXPENSE TABLES ARE **NOT** GDataTable: that component is read-only columns/rows;
+          these are editable, every row opens a sheet. They take §6.3's opaque surface
+          directly — same rule, same fill, different component shape
+          GDataTable currently has NO consumer. It was built for payslips, and there is no
+          payslip route in this app (also why §13.1's PAY tab became Expenses in 4.3)
+          STILL UNSTYLED: KPI's KRA rows keep their own markup — richer than GKraPanel's
+          {label,weight,score} shape (they carry a KPI description and goal completion).
+          Their bars were already on --track-solid from 3.3, so §6.3 is satisfied
+next:     §18 sign-off checklist — most items need a device, not a code change
