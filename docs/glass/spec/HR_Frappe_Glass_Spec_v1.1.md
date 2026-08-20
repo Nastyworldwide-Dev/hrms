@@ -487,6 +487,17 @@ An empty screen is an invitation to act. Always say what to do; never "no record
 | SOPs | No documents yet | Procedures for your role will appear here |
 | Team requests | Nothing waiting on you | Approvals will appear here when your team submits |
 
+**Six more lists, added in v1.6 (batch 5).** The table above covers the screens the mockup drew; `ListView` serves nine doctypes. These are written in the same voice and live in `ListView.vue`'s `EMPTY_COPY` map, which is the single place any of this copy is defined:
+
+| List | Title | Body |
+|---|---|---|
+| Attendance requests | No attendance requests yet | Ask for a day to be corrected and it will appear here |
+| Shift requests | No shift requests yet | Ask to work a different shift and it will appear here |
+| Shift assignments | No shifts assigned yet | Your roster appears here once your manager publishes it |
+| Check-ins | No check-ins recorded | Punch in from Home and your record appears here |
+| Expense claims | No expense claims yet | Paid for something for work? Claim it here |
+| Replacement leave | No replacement leave claimed | Worked a rest day? Claim the time back here |
+
 ### 11.2 Loading
 Skeleton mirrors the real layout. No spinners. Static fill under reduced motion. **The 7 existing `LoadingIndicator` usages are replaced.**
 

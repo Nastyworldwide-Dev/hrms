@@ -616,6 +616,12 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-danger-ink);
 }
 
+/* ListView rows inside the shared GListPanel: the panel owns the surface, the
+   rows own only their divider (§15.1) */
+.g-listview__row + .g-listview__row {
+	border-top: 1px solid var(--g-hair);
+}
+
 /* ---------- GInput / GTextarea (§10.1 #4, #5) ---------- */
 
 .g-field {

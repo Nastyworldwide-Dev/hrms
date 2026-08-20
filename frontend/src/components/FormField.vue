@@ -4,9 +4,9 @@
 		<span
 			v-if="!['Check', 'Section Break', 'Column Break'].includes(props.fieldtype)"
 			:class="[
-				// mark field as mandatory
-				props.reqd ? `after:content-['_*'] after:text-red-600` : ``,
-				`block text-xs uppercase tracking-wide text-ink-700`,
+				// mandatory marker takes the danger ink, not a Tailwind default
+				props.reqd ? `after:content-['_*'] after:text-danger-ink` : ``,
+				`g-field__label`,
 			]"
 		>
 			{{ props.label }}
@@ -45,16 +45,13 @@
 		/>
 
 		<!-- Text -->
-		<Input
+		<GTextarea
 			v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
-			type="textarea"
-			:value="modelValue"
+			:model-value="modelValue"
 			:placeholder="__('Enter {0}', [props.label])"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
 			:disabled="isReadOnly"
-			class="h-15"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<!-- Check -->
@@ -71,14 +68,12 @@
 		/>
 
 		<!-- Data field -->
-		<Input
+		<GInput
 			v-else-if="props.fieldtype === 'Data'"
-			type="text"
-			:value="modelValue"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
+			:model-value="modelValue"
 			:disabled="isReadOnly"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<!-- Read only currency field -->
@@ -160,6 +155,8 @@
 </template>
 
 <script setup>
+import GTextarea from "@/components/glass/GTextarea.vue"
+import GInput from "@/components/glass/GInput.vue"
 import { Autocomplete, DateTimePicker, ErrorMessage, Input, TextEditor } from "frappe-ui"
 import { computed, onMounted, inject } from "vue"
 

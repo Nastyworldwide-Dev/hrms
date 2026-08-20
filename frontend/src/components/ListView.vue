@@ -40,9 +40,7 @@
 	</ion-header>
 
 	<ion-content>
-		<ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
-			<ion-refresher-content></ion-refresher-content>
-		</ion-refresher>
+		<GPullRefresh @refresh="handleRefresh" />
 
 		<div
 			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto bg-ground"
@@ -50,16 +48,26 @@
 			@scroll="() => handleScroll()"
 		>
 			<div class="w-full">
-				<TabButtons
+				<GSegmented
 					v-if="props.tabButtons"
 					class="mt-5"
 					:buttons="props.tabButtons"
 					v-model="activeTab"
+					:label="__('Filter list')"
 				/>
 
-				<div class="flex flex-col mt-5" v-if="!documents.loading && documents.data?.length">
+				<!-- §15.1: ONE glass panel for the whole list, not one surface per
+				     row. §11.2: skeleton rows mirroring the real row shape while
+				     loading — the LoadingIndicator spinner this replaces is one of
+				     the seven §11.2 names. -->
+				<GListPanel
+					v-if="documents.loading || documents.data?.length"
+					class="mt-5"
+					:loading="documents.loading"
+					:rows="4"
+				>
 					<div
-						class="py-3 items-center justify-between border-b border-divider cursor-pointer"
+						class="g-listview__row"
 						v-for="link in documents.data"
 						:key="link.name"
 					>
@@ -85,25 +93,27 @@
 							/>
 						</router-link>
 					</div>
-				</div>
+				</GListPanel>
+
 				<ResourceError
 					v-else-if="documents.error"
 					:resource="documents"
 					:what="props.doctype?.toLowerCase()"
 				/>
-				<EmptyState
-					:message="__('No {0} found', [props.doctype?.toLowerCase()])"
-					v-else-if="!documents.loading"
-				/>
 
-				<!-- Loading Indicator -->
-				<div v-if="documents.loading" class="flex mt-2 items-center justify-center">
-					<LoadingIndicator class="w-8 h-8 text-accent" />
-				</div>
+				<!-- §11.1: an empty screen is an invitation to act. The copy is per
+				     list, never "no records found" and never a generic doctype
+				     string. -->
+				<GEmptyState
+					v-else
+					class="mt-5"
+					:title="emptyCopy.title"
+					:body="emptyCopy.body"
+				/>
 			</div>
 		</div>
 
-		<CustomIonModal trigger="show-filter-modal">
+		<GModal trigger="show-filter-modal">
 			<!-- Filter Action Sheet -->
 			<template #actionSheet>
 				<ListFiltersActionSheet
@@ -113,25 +123,24 @@
 					v-model:filters="filterMap"
 				/>
 			</template>
-		</CustomIonModal>
+		</GModal>
 	</ion-content>
 
-	<ion-modal
-		ref="modal"
-		:is-open="isRequestModalOpen"
-		@didDismiss="closeRequestModal"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
+	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">
 		<RequestActionSheet
 			:fields="EMPLOYEE_CHECKIN_FIELDS"
 			:showOpenForm="false"
 			v-model="selectedRequest"
 		/>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
+import GModal from "@/components/glass/GModal.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
+import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
 import { useRouter } from "vue-router"
 import { inject, ref, markRaw, watch, computed, reactive, onMounted } from "vue"
 import {
@@ -139,13 +148,10 @@ import {
 	IonHeader,
 	IonContent,
 	IonModal,
-	IonRefresher,
-	IonRefresherContent,
 } from "@ionic/vue"
 
-import { FeatherIcon, createResource, LoadingIndicator, debounce } from "frappe-ui"
+import { FeatherIcon, createResource, debounce } from "frappe-ui"
 
-import TabButtons from "@/components/TabButtons.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
@@ -153,7 +159,6 @@ import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
-import CustomIonModal from "@/components/CustomIonModal.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 import { EMPLOYEE_CHECKIN_FIELDS } from "@/data/config/requestSummaryFields"
 
@@ -187,6 +192,59 @@ const props = defineProps({
 		required: true,
 	},
 })
+
+// §11.1 — an empty screen is an invitation to act: say what to do, never
+// "no records found", never a generic doctype string. Three of these are the
+// spec's own words (leave, overtime, issues); the other six are written in the
+// same voice and recorded back into §11.1, because the table covers only the
+// screens the mockup drew.
+const EMPTY_COPY = {
+	"Leave Application": {
+		title: __("No leave taken this year"),
+		body: __("Your applications will appear here once submitted"),
+	},
+	"OT Request": {
+		title: __("No overtime claims yet"),
+		body: __("Stay past your shift end, punch out, and claim it here"),
+	},
+	"Employee Issue": {
+		title: __("Nothing reported"),
+		body: __("If something looks wrong, tell us — a screenshot helps"),
+	},
+	"Attendance Request": {
+		title: __("No attendance requests yet"),
+		body: __("Ask for a day to be corrected and it will appear here"),
+	},
+	"Shift Request": {
+		title: __("No shift requests yet"),
+		body: __("Ask to work a different shift and it will appear here"),
+	},
+	"Shift Assignment": {
+		title: __("No shifts assigned yet"),
+		body: __("Your roster appears here once your manager publishes it"),
+	},
+	"Employee Checkin": {
+		title: __("No check-ins recorded"),
+		body: __("Punch in from Home and your record appears here"),
+	},
+	"Expense Claim": {
+		title: __("No expense claims yet"),
+		body: __("Paid for something for work? Claim it here"),
+	},
+	"Replacement Leave Claim": {
+		title: __("No replacement leave claimed"),
+		body: __("Worked a rest day? Claim the time back here"),
+	},
+}
+
+const emptyCopy = computed(
+	() =>
+		EMPTY_COPY[props.doctype] ?? {
+			title: __("Nothing here yet"),
+			body: __("New records will appear here once they are created"),
+		}
+)
+
 
 const getButtonKey = (tab) => tab?.key ?? tab
 

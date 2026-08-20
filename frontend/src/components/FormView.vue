@@ -1,4 +1,14 @@
-<template>
+				<!-- §11.4: the server has been asked and has not answered, so this
+				     is PENDING, not disabled — disabled means "you cannot do this"
+				     and measures 2.68:1. GButton keeps the brand fill and shows a
+				     transform-animated bar; §11.2's no-spinner rule applies here too. -->
+				<GButton
+					:label="__(formButton)"
+					:pending-label="__('Saving…')"
+					:pending="docList.insert.loading || documentResource?.setValue?.loading"
+					:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
+					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
+				/><template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
 		<div class="w-full h-full bg-ground flex flex-col">
 			<header
@@ -304,6 +314,7 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
