@@ -12,6 +12,7 @@
 		"ionic:serve": "vite dev --host",
 		"copy-html-entry": "cp ../hrms/public/frontend/index.html ../hrms/www/hrms.html",
 		"tokens": "node ../design/build-tokens.mjs",
+		"gates": "node ../design/gates/run.mjs",
 		"test:e2e": "npx --yes playwright@1.62.1 test --config=e2e/playwright.config.js"
 	},
 	"dependencies": {
@@ -37,6 +38,8 @@
 		"workbox-precaching": "^7.0.0"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.13.0",
+		"@playwright/test": "1.62.1",
 		"eslint": "^8.39.0",
 		"eslint-plugin-vue": "^9.11.0",
 		"patch-package": "^8.0.1",

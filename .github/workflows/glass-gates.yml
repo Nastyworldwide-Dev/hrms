@@ -1,0 +1,24 @@
+# Glass design gates (spec §16.5) — report-mode on every push to nz-glass.
+# Fails only on NEW lint debt above design/lint-baseline.json or a contrast
+# regression in design/tokens.json. Not a required check yet (phase 4 flips it).
+name: Glass gates
+
+on:
+  push:
+    branches: [nz-glass]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn gates
