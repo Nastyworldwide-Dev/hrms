@@ -29,7 +29,7 @@ for (const { gate, code, info } of results) {
 	const detail =
 		gate === "lint" || gate === "usage" ? `${info.total ?? "?"} known, ${info.new ?? "?"} new`
 		: gate === "contrast" ? `${info.checked ?? "?"} pairs, ${info.failures ?? "?"} failed, ${info.skipped ?? 0} skipped`
-		: gate === "surfaces" ? `${info.surfaces ?? "?"} surfaces, ${info.over ?? "?"} screens over ${6}`
+		: gate === "surfaces" ? `${info.screens ?? "?"} screens, ${info.over ?? "?"} over 6, flattening ${info.flattening === 0 ? "held" : "BROKEN"}`
 		: `${info.status ?? "?"} (report-only)`;
 	console.log(`${gate.padEnd(10)} ${(code === 0 ? "OK" : "FAIL").padEnd(7)} ${detail}`);
 }

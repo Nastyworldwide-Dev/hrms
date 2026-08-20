@@ -25,7 +25,12 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const SRC = join(ROOT, "frontend", "src");
 const BASELINE_PATH = join(ROOT, "design", "usage-baseline.json");
+// Views are STRICT by default as of phase 4.4: their baseline is zero and
+// phase 5 writes 41 screens through this gate. Anywhere else (shared
+// components mid-migration) keeps the baseline mechanism, so existing
+// exemptions stand. --strict escalates everything.
 const STRICT = process.argv.includes("--strict");
+const isView = (rel) => rel.startsWith("views/");
 const UPDATE = process.argv.includes("--update-baseline");
 
 const SCAN = ["views", "components"];
@@ -98,11 +103,14 @@ try {
 
 const totals = {};
 const fresh = [];
+const strictViews = [];
 for (const [file, counts] of Object.entries(current)) {
 	for (const [rule, n] of Object.entries(counts)) {
 		totals[rule] = (totals[rule] || 0) + n;
 		const allowed = baseline[file]?.[rule] || 0;
 		if (n > allowed) fresh.push(`  ${file} [${rule}] ${allowed} → ${n}`);
+		// a view may not carry ANY violation, baselined or not
+		else if (isView(file) && n > 0) strictViews.push(`  ${file} [${rule}] ${n} — views are strict`);
 	}
 }
 
@@ -116,5 +124,10 @@ if (fresh.length) {
 } else {
 	console.log("[usage] no new violations above baseline");
 }
-console.log(`GATE_RESULT ${JSON.stringify({ gate: "usage", total, new: fresh.length })}`);
-process.exit(STRICT ? (total ? 1 : 0) : fresh.length ? 1 : 0);
+if (strictViews.length) {
+	console.log(`[usage] VIEWS ARE STRICT — baselined violations are not tolerated under views/:\n${strictViews.join("\n")}`);
+}
+console.log(
+	`GATE_RESULT ${JSON.stringify({ gate: "usage", total, new: fresh.length, strictViews: strictViews.length })}`
+);
+process.exit(STRICT ? (total ? 1 : 0) : fresh.length || strictViews.length ? 1 : 0);
