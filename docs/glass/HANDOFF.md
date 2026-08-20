@@ -1,12 +1,9 @@
 # HANDOFF
-prompt:   1.5
+prompt:   1.6
 status:   done
-commit:   196894da7 on nz-glass
-files:    design/gates/{run,lint,contrast,surfaces,a11y}.mjs
-          design/lint-baseline.json
-          frontend/e2e/a11y.spec.js
-          .github/workflows/glass-gates.yml
-verify:   cd frontend && yarn gates
-flags:    baseline 479 (arbitrary 403 vs ~303 estimated, hex 72, colorfn 4, outline 0) in 65 files
-          §14.2 "ink2 over blob edge" skipped — blob not a token; @playwright/test@1.62.1 devDep added (ESM config can't resolve it via npx alone)
-next:     phase 2 components must use .g-glass so the surface counter sees them
+commit:   dfbf8b60a on nz-glass
+files:    docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
+verify:   grep -n '^## 20' docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
+flags:    "five tab destinations" in top group would duplicate More — wrote 4 direct + divider + More contents, flagged
+          §19 row 1 also marked resolved (companion edit, not in task list); §1 definition-of-done still mockup-at-390×844 — §20 preamble covers lg:
+next:     phase 2 component contracts must add lg: rows per §20.7
