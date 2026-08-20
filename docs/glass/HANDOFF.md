@@ -1,23 +1,18 @@
 # HANDOFF
-prompt:   4.1 (light field)
-status:   partial — BLOCKED on a §3.3 ruling before 4.2
-commit:   814c9c3ec on nz-glass
-files:    frontend/src/components/glass/GLightField.vue
-          frontend/src/components/BaseLayout.vue (field mounted in ion-page)
-          frontend/src/theme/glass-components.css (.g-field, .g-page)
-          design/tokens.json + build-tokens.mjs (13 field tokens)
-          design/gates/contrast.mjs (§3.3 assertion — replaces the 1.5 SKIP)
-          frontend/e2e/light-field.spec.js + light-field-isolation.html
-verify:   cd frontend && yarn gates   (contrast RED by design — read below)
-          npx playwright@1.62.1 test --config=e2e/playwright.config.js e2e/light-field.spec.js
-flags:    CONTRAST GATE IS RED: 9/30 pairs fail. §3's blob coordinates violate §3.3 —
-          all three CENTRES sit inside the content column (§3.3 measured box origin
-          left:-46, not centre left+size/2=69). Gate reproduces the spec's own 1.26:1
-          FIX IS A SPEC DECISION, not applied: blob A left -46→-100, B right -58→-90,
-          C left -30→-75 puts every centre outside. Lowering blob-opacity instead needs
-          dark 0.85→~0.22, which guts the field's purpose
-          §3.2 trap VERIFIED in Chromium, not assumed: inside-page rgb(124,160,21) vs
-          outside-page rgb(24,24,27). Placement is a child of <ion-page> in BaseLayout
-          field costs NOTHING against §15's budget — it carries no backdrop-filter; confirmed
-          field reaches 11 BaseLayout views only; 27 standalone ion-page views wait for 4.2
-next:     rule on §3.3 geometry, then 4.2 scaffold (which also unifies the 27 pages)
+prompt:   4.1 ruling (§3.3 geometry)
+status:   done — gate green, line released for 4.2
+commit:   fb0a63f3c on nz-glass
+files:    design/tokens.json (3 origins) + regenerated glass.css
+          docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md → v1.4 (§3, §3.3, §14.4 #8, §0)
+verify:   cd frontend && yarn gates    (contrast 30/30, was 21/30)
+flags:    20px margin is INSUFFICIENT — the gradient is ~80px wide, so clearance must exceed
+          its reach. Solved per blob: A 80px, B 73px, C 62px → left -180, right -163, left -137
+          VERTICAL needs no rule: the column is horizontal and full-height, so no y exists where
+          content is absent; x clearance is necessary and sufficient. Recorded in §3.3
+          margins are TIGHT by construction (ink-muted 4.54–4.56) — solved for the minimum, so
+          any future rise in blob-opacity or fall in glass-fill re-breaks it. The gate will catch it
+          VISUAL REVIEW: field now reads as three corner glows, not visible cores — a core bright
+          enough to see is too bright to read text over. Differs from the mockup on purpose
+          lg: NOT covered — the assertion models the 390 reference viewport only. At lg the blobs
+          are vw-sized and the column is offset by the sidebar; needs its own check in 4.2
+next:     4.2 scaffold — unify the 27 standalone ion-page views, then add the lg: §3.3 check
