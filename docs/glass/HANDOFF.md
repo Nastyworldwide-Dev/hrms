@@ -1,16 +1,14 @@
 # HANDOFF
-prompt:   2.4 (phase 2 complete)
+prompt:   3.1 (analysis only)
 status:   done
-commit:   cdaaa3c4c on nz-glass
-files:    frontend/src/components/glass/ (10 new: GModal, GActionSheet, GSearchBar,
-          GAvatar, GDataTable, GFileUpload, GLinkPicker, GDatePicker,
-          GPullRefresh + toast.js) — 37 components total
-          frontend/src/theme/glass-components.css
-          frontend/src/views/DesignSpecimen.vue
-          design/tokens.json (scrim token) + regenerated theme files
-verify:   cd frontend && yarn gates && yarn build
-flags:    frappe-ui installed is 0.1.105, NOT 0.1.278 — Combobox absent, so GLinkPicker wraps Autocomplete; adopting it means DECISION 6
-          ion-refresher inner icons are shadow DOM with no published vars — spinner switched off (§11.2 wants that), indicator replaced in light DOM
-          new scrim token (backdrop) not in the spec token table; toast + Autocomplete skins couple to frappe-ui internal markup
-          §10.3 remaining unbuilt: geofence dialogs (3), PDF viewer, push-notification prompt
-next:     phase 3 — retire Modernist; phase 4 — shell + desktop
+commit:   17dc38a80 on nz-glass
+files:    docs/glass/phase3-inventory.md
+          design/gates/usage.mjs
+          design/usage-baseline.json
+          design/gates/run.mjs
+verify:   cd frontend && yarn gates    (usage gate now runs as gate 5)
+flags:    §16.2 WRONG on both counts — rounded-* touches 4 app files not 103; real radius risk is 106 utilities in 47 frappe-ui components. Arbitrary values are 403 not 303
+          variables.css CANNOT be deleted as-is: 40 of its 47 hexes are Ionic --ion-color-* ramps with no Glass equivalent — needs a ruling before 3.4
+          modernist.css deletion breaks text-ink-*/bg-ground app-wide (tailwind colours resolve via --m-*); Archivo link must go WITH the fontFamily.sans repoint, not before
+          sequence amended: radius restore split into its own 3.5 commit
+next:     ruling on §6.1 (Ionic ramps), then 3.2 promote/absorb — touches no view
