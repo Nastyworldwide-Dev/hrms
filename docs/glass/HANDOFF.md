@@ -1,13 +1,11 @@
 # HANDOFF
-prompt:   1.2
+prompt:   1.3
 status:   done
-commit:   7989d0862 on nz-glass
-files:    design/build-tokens.mjs
-          frontend/package.json
-          frontend/src/theme/glass.css
-          frontend/src/theme/glass.tailwind.cjs
-          frontend/src/theme/glass.variables.css
-verify:   cd frontend && yarn tokens && git diff --exit-code src/theme
-flags:    rgba tokens (accent-glow, glass, glass-fallback, rim, rim-hi, rim-lo, hair, icon-bg, sheen) take no Tailwind opacity modifier
-          pad-* two-value tokens not in Tailwind spacing; motion `property` + `one-shot` not emitted; --ion-tab-bar-background-focused←icon-bg is a judgment map
-next:     prompt 1.3 wires glass.css + fragment into tailwind.config.js/main.js
+commit:   f50c29ee2 on nz-glass
+files:    frontend/src/main.js
+          frontend/src/data/theme.js
+          frontend/tailwind.config.js
+verify:   cd frontend && yarn build && grep -c -- '--g-' ../hrms/public/frontend/assets/index-*.css
+flags:    colors.ink collided with --m- shade map — glass ink re-nested as ink.DEFAULT, shades kept
+          no --g-/--m-/--ion- name collisions; main CSS 120.99→128.11 kB
+next:     phase 2 builds glass components on the new utilities
