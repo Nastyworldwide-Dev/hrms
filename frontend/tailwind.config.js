@@ -16,15 +16,20 @@ export default {
 		"../node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
 	],
 	theme: {
+		// Remapped onto the Glass radius ladder (spec v1.3 §16.2). Previously all
+		// zeroed for the Modernist flat look. NOT Tailwind's defaults: those sit
+		// off-ladder. This makes frappe-ui — 89 utilities across 47 of its
+		// components, none of which we edit — inherit Glass-consistent rounding.
+		// `none` and `full` are unchanged. See docs/glass/phase3-radius-diff.md.
 		borderRadius: {
 			none: "0",
-			sm: "0",
-			DEFAULT: "0",
-			md: "0",
-			lg: "0",
-			xl: "0",
-			"2xl": "0",
-			"3xl": "0",
+			sm: "6px", // radius-pill
+			DEFAULT: "9px", // radius-well
+			md: "9px", // radius-well
+			lg: "14px", // radius-input
+			xl: "17px", // radius-card
+			"2xl": "20px", // radius-panel
+			"3xl": "22px", // radius-tabbar
 			full: "9999px",
 		},
 		fontFamily: {
