@@ -22,3 +22,5 @@ hrms/public/roster
 hrms/www/roster.html
 hrms/hr/doctype/appraisal/TODO.md
 hrms/hr/doctype/appraisal/UI_TEST_CHECKLIST.md
+.superset/
+.claude/plans/.plan-approved
