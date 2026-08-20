@@ -11,6 +11,7 @@
 		"ionic:build": "npm run build",
 		"ionic:serve": "vite dev --host",
 		"copy-html-entry": "cp ../hrms/public/frontend/index.html ../hrms/www/hrms.html",
+		"tokens": "node ../design/build-tokens.mjs",
 		"test:e2e": "npx --yes playwright@1.62.1 test --config=e2e/playwright.config.js"
 	},
 	"dependencies": {

@@ -1,0 +1,22 @@
+/* GENERATED FROM design/tokens.json BY design/build-tokens.mjs — DO NOT EDIT BY HAND.
+   Regenerate: yarn tokens  (in frontend/) */
+
+/* Ionic variables mapped from glass tokens. The --ion-color-* palettes
+   (primary, secondary, …) in theme/variables.css have no glass equivalents
+   and are deliberately not generated here. */
+
+:root {
+	--ion-background-color: #EDEFF3;
+	--ion-font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--ion-tab-bar-background-focused: rgba(16,22,34,.05);
+	--ion-tab-bar-color-selected: #3F5C00;
+	--ion-text-color: #0B0C10;
+}
+
+html[data-theme="dark"] {
+	--ion-background-color: #07070A;
+	--ion-font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--ion-tab-bar-background-focused: rgba(255,255,255,.10);
+	--ion-tab-bar-color-selected: #C8FF00;
+	--ion-text-color: #FFFFFF;
+}
