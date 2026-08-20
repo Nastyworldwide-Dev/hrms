@@ -30,9 +30,9 @@ import "@ionic/vue/css/core.css"
 import "./theme/variables.css"
 
 import "./main.css"
-import "./theme/modernist.css"
-/* Glass theme (generated, see design/tokens.json) — runs alongside Modernist
-   until phase 3; must stay after the modernist/variables imports */
+/* Glass theme (generated, see design/tokens.json). Modernist was retired in
+   phase 3.4; theme/variables.css stays for Ionic's --ion-color-* ramps only
+   (spec §16.3), and glass.variables.css overrides the three that map. */
 import "./theme/fonts.css"
 import "./theme/glass.css"
 import "./theme/glass.variables.css"

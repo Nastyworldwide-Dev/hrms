@@ -16,12 +16,13 @@
 			<span v-if="props.doc.shift_timing" class="text-xs font-bold tabular-nums text-inkbase">
 				{{ props.doc.shift_timing }}
 			</span>
-			<span v-else class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ status }}</span>
+			<GStatusChip v-else :status="status" :label="status" />
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
@@ -38,8 +39,4 @@ const status = computed(() => {
 	return props.doc.docstatus ? "Submitted" : "Draft"
 })
 
-const chipMap = {
-	Draft: "g-chip--cancelled",
-	Submitted: "g-chip--submitted",
-}
 </script>

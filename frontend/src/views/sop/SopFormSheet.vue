@@ -453,20 +453,20 @@ const save = async () => {
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 0.07em;
-	color: rgb(var(--m-ink-700));
-	font-family: var(--font-heading);
+	color: rgb(var(--g-ink2));
+	font-family: var(--g-font-display);
 }
 .m-field-input {
 	width: 100%;
-	background: rgb(var(--m-surface));
-	border: 1px solid var(--color-divider);
+	background: rgb(var(--g-glass-fill-fallback));
+	border: 1px solid var(--g-hair);
 	padding: 10px 11px;
-	font-family: var(--font-body);
+	font-family: var(--g-font-ui);
 	font-size: 13px;
-	color: rgb(var(--m-inkbase));
+	color: rgb(var(--g-ink));
 	outline: none;
 }
 .m-field-input:focus {
-	border-color: var(--color-accent);
+	border-color: var(--g-accent-ink);
 }
 </style>

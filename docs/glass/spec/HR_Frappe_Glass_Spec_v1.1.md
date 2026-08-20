@@ -48,6 +48,8 @@ sections had estimated.
 | 2.1 | §16.3: the **`--ion-color-*` ramps are not deleted**. Only background, text and font-family map to Glass | The ramps are Ionic's internal contract, not app design tokens. No Glass token corresponds to a shade or tint step, so deleting them breaks `color="primary"` and buys nothing |
 | 2.2 | §16.2: file counts corrected — `rounded-*` touches **4 app files, not 103**; arbitrary values are **403, not 303** | Both figures were estimates that drove planning. The measured radius exposure is 106 utilities across 47 `frappe-ui` components, not app source |
 | 2.3 | §16.2: the radius scale is **remapped onto the Glass ladder**, not restored to Tailwind defaults and not left at 0 | At 0, frappe-ui renders square against rounded Glass surfaces; at Tailwind defaults it renders off-ladder. Remapping makes 17 third-party components inherit Glass-consistent rounding without touching one of them |
+| 2.4 | §10.3 #28: the workflow state set is **open, not five states**; sixteen known states map onto six variants, unknowns render neutral | The five-state list predated reading the code. Real states are composite ("Approved & Unpaid") and Frappe workflows are user-configurable, so a closed validator rejects valid data |
+| 2.5 | §10.1 #1 gains a **`trailing` slot** for the mockup's arrow affordance | The arrow is in the mockup's primary action. Without a slot every call site kept a hand-rolled `<button>`, which is the seam the component library exists to close |
 
 ---
 
@@ -406,7 +408,26 @@ These exist in `nz-version-16` and will be rendered by this system whether or no
 | 25 | **Modal / bottom sheet** | `CustomIonModal.vue` — **retain the focus-trap workaround**, reskin via CSS vars only |
 | 26 | **Action sheet** | `RequestActionSheet`, `WorkflowActionSheet`, `ListFiltersActionSheet` |
 | 27 | **Toast** | frappe-ui `Toasts` |
-| 28 | **Workflow status chip** | Draft / Submitted / Approved / Rejected / Cancelled — badge variants. **Currently undefined in either document** |
+| 28 | **Workflow status chip** | **The state set is open, not the five states earlier drafts named** — see below the table |
+
+**#28 Workflow status chip — the real state set.** Earlier drafts of this row named five states (Draft / Submitted / Approved / Rejected / Cancelled). That was a guess made before the shipped code was read, and the data disagrees: the app's `chipMap`s carry **composite** states, and Frappe workflows are user-configurable, so **any closed list is wrong by construction**.
+
+Sixteen known states map onto **six variants**. An unknown state renders `neutral` rather than failing — a chip that refuses to render is worse than one that renders grey.
+
+| Variant | States | Treatment | Measured light / dark |
+|---|---|---|---|
+| `neutral` | Draft, *and any unknown state* | `--ink2` on `--icon-bg` | 5.75 / 5.85 |
+| `attention` | Open, Pending, Unpaid | `--warn-ink` on glass, 1px `--warn` outline | 4.72 / 8.12 |
+| `progress` | Submitted, Approved & Draft, Approved & Unpaid, Approved & Submitted, On leave | `--accent-ink` on brand-14% | 7.02 / 10.16 |
+| `success` | Approved, Paid, Present | `--success-ink` on success-20% | 4.60 / 6.88 |
+| `danger` | Rejected, Absent | `--on-brand` on **solid** `--danger` | 7.11 / 7.11 |
+| `muted` | Cancelled | `--ink-muted` on glass, 1px `--hair` outline | 4.56 / 4.58 |
+
+Two treatments are outlines rather than tints because the tint fails §14: `warn-ink` on a warn tint measures **4.27** on light, and a danger tint cannot clear 4.5 on light at any usable alpha — hence the solid danger fill.
+
+The status word is always rendered, so colour is never the only signal (§14.1).
+
+**Label chips are not status chips.** A grade, a category, a count or a department is a label; it belongs in `GBadge` (`accent` / `neutral` variants), not in the status chip. Mixing them is how "Cancelled" ended up rendering as a bright brand chip in the Modernist code this replaced.
 
 **Also requiring a treatment, inheriting from the above:** link/autocomplete picker, date picker, file upload and preview, avatar, segmented control (`TabButtons`), data tables (payslip, expenses — **solid per §6.3**), pull-to-refresh, search/filter bar, side nav **[DECISION 1]**, error surface (`ResourceError`, 21 usages), the three geofence dialogs, PDF viewer, push-notification prompt.
 

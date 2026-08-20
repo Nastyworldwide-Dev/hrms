@@ -49,8 +49,11 @@ const BACKGROUND = /\bbackground\s*:|\bbg-(?:glass|glass-fallback|bg|ink|brand|t
 const RULES = {
 	// .g-glass is the surface class the counter keys off; a screen using it
 	// directly has rebuilt a panel instead of composing GListPanel et al.
+	// The guards matter: \b sits between "-" and "g", so a bare \bg-glass\b also
+	// matches inside the TOKEN name --g-glass-fill-fallback, which a component
+	// is entitled to use for a solid surface (§6.1). Match the class only.
 	"glass-class": (content) =>
-		(content.match(/\bg-glass(?:-ghost)?\b/g) || []).length,
+		(content.match(/(?<!-)\bg-glass(?:-ghost)?\b(?!-)/g) || []).length,
 
 	// a line carrying both a Glass radius and a background is a hand-rolled panel
 	"hand-panel": (content) =>

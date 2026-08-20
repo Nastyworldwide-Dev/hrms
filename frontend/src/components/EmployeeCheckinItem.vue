@@ -9,17 +9,17 @@
 			</div>
 		</template>
 		<template #right>
-			<span
-				class="g-badge"
-				:class="props.doc.log_type === 'IN' ? 'g-chip--submitted' : 'g-badge--open'"
+			<GBadge
+				:variant="props.doc.log_type === 'IN' ? 'accent' : 'open'"
 			>
 				{{ __(props.doc.log_type, null, "Employee Checkin") }}
-			</span>
+			</GBadge>
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
+import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"

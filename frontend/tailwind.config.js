@@ -1,13 +1,9 @@
 import frappeUIPreset from "frappe-ui/src/tailwind/preset"
 import glassTheme from "./src/theme/glass.tailwind.cjs"
 
-// Palette values in extend.colors mirror src/theme/modernist.css (the
-// canonical palette) — change them there first, then here.
-
 // Glass fragment is generated from design/tokens.json (yarn tokens).
-// colors.ink collides with the --m- ink shade map below, so it is split out
-// and re-nested as ink.DEFAULT — text-ink (glass) and text-ink-100…900
-// (modernist) coexist until phase 3.
+// colors.ink collides with the ink shade map below, so it is split out and
+// re-nested as ink.DEFAULT: text-ink and text-ink-100…900 both resolve.
 const { colors: glassColors, ...glassExtend } = glassTheme
 const { ink: glassInk, ...glassOtherColors } = glassColors
 export default {
@@ -32,55 +28,55 @@ export default {
 			full: "9999px",
 		},
 		fontFamily: {
-			sans: ["Archivo", "system-ui", "sans-serif"],
+			// self-hosted Inter via theme/fonts.css; -apple-system leads (spec §4.1)
+			sans: "var(--g-font-ui)",
 		},
 		extend: {
 			// Glass semantic scales: backdropBlur, borderRadius (panel/action/…,
 			// additive — the zeroed scale above is untouched), boxShadow.lift,
 			// fontFamily, fontSize, opacity, spacing, transitionDuration/-TimingFunction
 			...glassExtend,
-			// Values resolve through the --m-* RGB triplets in theme/modernist.css
-			// (:root light / .dark dark) so every utility follows the theme switch.
+			// Repointed off Modernist onto Glass tokens (phase 3.4). The nine-step
+			// ink and accent ramps collapse onto Glass's four ink levels and its
+			// single accent ink — Glass has no nine-step ramp and §2.4 forbids brand
+			// setting type on light, so accent-* resolves to --accent-ink, not --brand.
 			backgroundColor: {
-				surface: { DEFAULT: "rgb(var(--m-surface) / <alpha-value>)" },
+				surface: { DEFAULT: "rgb(var(--g-track-solid-rgb) / <alpha-value>)" },
 			},
 			colors: {
 				...glassOtherColors,
 				ink: {
 					DEFAULT: glassInk,
-					100: "rgb(var(--m-ink-100) / <alpha-value>)",
-					200: "rgb(var(--m-ink-200) / <alpha-value>)",
-					300: "rgb(var(--m-ink-300) / <alpha-value>)",
-					400: "rgb(var(--m-ink-400) / <alpha-value>)",
-					500: "rgb(var(--m-ink-500) / <alpha-value>)",
-					600: "rgb(var(--m-ink-600) / <alpha-value>)",
-					700: "rgb(var(--m-ink-700) / <alpha-value>)",
-					800: "rgb(var(--m-ink-800) / <alpha-value>)",
-					900: "rgb(var(--m-ink-900) / <alpha-value>)",
+					100: "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
+					200: "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
+					300: "rgb(var(--g-ink3-rgb) / <alpha-value>)",
+					400: "rgb(var(--g-ink3-rgb) / <alpha-value>)",
+					500: "rgb(var(--g-ink3-rgb) / <alpha-value>)",
+					600: "rgb(var(--g-ink-muted-rgb) / <alpha-value>)",
+					700: "rgb(var(--g-ink2-rgb) / <alpha-value>)",
+					800: "rgb(var(--g-ink-rgb) / <alpha-value>)",
+					900: "rgb(var(--g-ink-rgb) / <alpha-value>)",
 				},
 				accent: {
-					DEFAULT: "rgb(var(--m-accent) / <alpha-value>)",
-					100: "rgb(var(--m-accent-100) / <alpha-value>)",
-					200: "rgb(var(--m-accent-200) / <alpha-value>)",
-					300: "rgb(var(--m-accent-300) / <alpha-value>)",
-					400: "rgb(var(--m-accent-400) / <alpha-value>)",
-					500: "rgb(var(--m-accent-500) / <alpha-value>)",
-					600: "rgb(var(--m-accent-600) / <alpha-value>)",
-					700: "rgb(var(--m-accent-700) / <alpha-value>)",
-					800: "rgb(var(--m-accent-800) / <alpha-value>)",
-					900: "rgb(var(--m-accent-900) / <alpha-value>)",
+					DEFAULT: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					100: "rgb(var(--g-brand-rgb) / <alpha-value>)",
+					200: "rgb(var(--g-brand-rgb) / <alpha-value>)",
+					300: "rgb(var(--g-brand-2-rgb) / <alpha-value>)",
+					400: "rgb(var(--g-brand-2-rgb) / <alpha-value>)",
+					500: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					600: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					700: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					800: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					900: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
 				},
-				ground: "rgb(var(--m-ground) / <alpha-value>)",
-				surface: "rgb(var(--m-surface) / <alpha-value>)",
-				// ^ colors.surface alone never reaches bg-surface: the frappe-ui
-				// plugin extends backgroundColor.surface with its own shade map
-				// (surface-gray-1 …) and no DEFAULT, which shadows this for bg-*
-				// utilities — so bg-surface was silently never generated and
-				// inputs fell back to the UA's white background (unreadable in
-				// dark mode). The backgroundColor extend below restores the bare
-				// utility while keeping the plugin's named shades.
-				inkbase: "rgb(var(--m-inkbase) / <alpha-value>)",
-				divider: "var(--m-divider-color)",
+				ground: "rgb(var(--g-bg-rgb) / <alpha-value>)",
+				surface: "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
+				// ^ colors.surface alone never reaches bg-surface: the frappe-ui plugin
+				// extends backgroundColor.surface with its own shade map and no DEFAULT,
+				// which shadows this for bg-* utilities. The backgroundColor extend
+				// above restores the bare utility while keeping the plugin's shades.
+				inkbase: "rgb(var(--g-ink-rgb) / <alpha-value>)",
+				divider: "var(--g-hair)",
 			},
 			screens: {
 				standalone: {

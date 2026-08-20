@@ -17,23 +17,14 @@
 						v-slot="{ navigate }"
 						class="order-2 lg:order-1"
 					>
-						<button type="button" class="g-btn h-full" @click="navigate">
-							{{ __("Request Attendance") }}
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="ml-auto"
-							>
-								<line x1="5" y1="12" x2="19" y2="12" />
-								<polyline points="12 5 19 12 12 19" />
-							</svg>
-						</button>
+						<GButton :label="__('Request Attendance')" class="h-full" @click="navigate">
+							<template #trailing>
+								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="5" y1="12" x2="19" y2="12"></line>
+									<polyline points="12 5 19 12 12 19"></polyline>
+								</svg>
+							</template>
+						</GButton>
 					</router-link>
 
 					<router-link
@@ -199,6 +190,7 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
 import { computed, inject, markRaw } from "vue"
 import { createResource } from "frappe-ui"
 

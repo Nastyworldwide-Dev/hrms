@@ -85,9 +85,7 @@
 										{{ member.designation }}
 									</span>
 								</div>
-								<span class="g-badge flex-none" :class="statusChipClass(member.status)">
-									{{ __(member.status) }}
-								</span>
+								<GStatusChip class="flex-none" :status="member.status" :label="__(member.status)" />
 							</div>
 							<span class="text-kra-label text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
 
@@ -130,6 +128,7 @@
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { Autocomplete, FeatherIcon, LoadingIndicator } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
@@ -193,16 +192,6 @@ const summaryTiles = computed(() => {
 	]
 })
 
-// app chip semantics (see LeaveRequestItem): solid = demands attention,
-// outline = confirmed good, muted = neutral. The DS has no red variant.
-function statusChipClass(status) {
-	return (
-		{
-			Present: "g-chip--submitted",
-			Absent: "g-badge--open",
-		}[status] || "g-chip--cancelled"
-	)
-}
 
 function formatPunch(value) {
 	return value ? dayjs(value).format("HH:mm") : "—"

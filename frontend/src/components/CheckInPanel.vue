@@ -52,17 +52,19 @@
 						</template>
 					</div>
 				</div>
-				<span class="g-badge g-badge--open shrink-0">{{ __("Resolve") }}</span>
+				<GBadge variant="open" class="shrink-0">{{ __("Resolve") }}</GBadge>
 			</div>
 
-			<button
+			<GButton
 				id="open-checkin-modal"
-				class="g-btn mt-5"
+				class="mt-5"
+				:label="nextAction.label"
 				@click="handleEmployeeCheckin"
 			>
-				<span>{{ nextAction.label }}</span>
-				<FeatherIcon name="arrow-right" class="w-[17px] h-[17px] ml-auto" />
-			</button>
+				<template #trailing>
+					<FeatherIcon name="arrow-right" class="w-[17px] h-[17px]" />
+				</template>
+			</GButton>
 		</template>
 
 		<div v-else class="text-card-title text-ink-600 mt-1">
@@ -147,18 +149,16 @@
 				<canvas ref="canvasEl" class="hidden"></canvas>
 			</div>
 
-			<button
-				:disabled="cameraStatus === 'starting' || punchCheckin.loading || cameraStatus === 'submitting'"
-				class="g-btn disabled:opacity-60"
+			<GButton
+				:label="__(&quot;Confirm {0}&quot;, [nextAction.label])"
+				:disabled="cameraStatus === 'starting'"
+				:pending="punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
-				<span>{{ __("Confirm {0}", [nextAction.label]) }}</span>
-				<FeatherIcon
-					:name="(punchCheckin.loading || cameraStatus === 'submitting') ? 'loader' : 'check'"
-					class="w-[17px] h-[17px] ml-auto"
-					:class="(punchCheckin.loading || cameraStatus === 'submitting') && 'animate-spin'"
-				/>
-			</button>
+				<template #trailing>
+					<FeatherIcon name="check" class="w-[17px] h-[17px]" />
+				</template>
+			</GButton>
 		</div>
 	</ion-modal>
 
@@ -198,6 +198,8 @@
 </template>
 
 <script setup>
+import GBadge from "@/components/glass/GBadge.vue"
+import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
 import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"
 import { IonModal, modalController } from "@ionic/vue"

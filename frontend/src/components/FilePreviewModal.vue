@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
 	image-orientation: from-image;
 }
 ion-toolbar {
-	--background: var(--color-bg);
-	--color: var(--color-text);
+	--background: var(--g-bg);
+	--color: var(--g-ink);
 }
 </style>

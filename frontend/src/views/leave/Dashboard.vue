@@ -16,23 +16,14 @@
 						v-slot="{ navigate }"
 						class="lg:border-l lg:border-divider lg:pl-8 lg:flex lg:items-center"
 					>
-						<button @click="navigate" class="g-btn">
-							{{ __("Request a Leave") }}
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="ml-auto"
-							>
-								<line x1="5" y1="12" x2="19" y2="12"></line>
-								<polyline points="12 5 19 12 12 19"></polyline>
-							</svg>
-						</button>
+						<GButton :label="__('Request a Leave')" @click="navigate">
+							<template #trailing>
+								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="5" y1="12" x2="19" y2="12"></line>
+									<polyline points="12 5 19 12 12 19"></polyline>
+								</svg>
+							</template>
+						</GButton>
 					</router-link>
 				</div>
 
@@ -71,6 +62,7 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
 import { markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"

@@ -255,16 +255,16 @@ watch(
 .expense-fields :deep(input:not([type="checkbox"]):not([type="radio"])),
 .expense-fields :deep(textarea),
 .expense-fields :deep(select) {
-	background-color: var(--color-surface);
-	border: 1px solid var(--color-divider);
+	background-color: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-hair);
 	border-radius: 0;
 	font-size: 14px;
-	color: var(--color-text);
+	color: var(--g-ink);
 }
 .expense-fields :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
 .expense-fields :deep(textarea:focus),
 .expense-fields :deep(select:focus) {
-	border-color: var(--color-accent);
+	border-color: var(--g-accent-ink);
 	box-shadow: none;
 	outline: none;
 }

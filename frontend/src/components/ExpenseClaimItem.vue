@@ -19,12 +19,13 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ __(status, null, 'Expense Claim') }}</span>
+			<GStatusChip :status="status" :label="__(status, null, 'Expense Claim')" />
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
@@ -47,17 +48,6 @@ const props = defineProps({
 	},
 })
 
-const chipMap = {
-	Draft: "g-chip--cancelled",
-	Submitted: "g-chip--submitted",
-	Cancelled: "g-badge--open",
-	Paid: "g-badge--open",
-	Unpaid: "g-chip--submitted",
-	"Approved & Draft": "g-chip--submitted",
-	"Approved & Unpaid": "g-chip--submitted",
-	"Approved & Submitted": "g-chip--submitted",
-	Rejected: "g-badge--open",
-}
 
 const status = computed(() => {
 	if (props.workflowStateField) {

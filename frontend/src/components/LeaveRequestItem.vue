@@ -17,12 +17,13 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ __(status, null, 'Leave Application') }}</span>
+			<GStatusChip :status="status" :label="__(status, null, 'Leave Application')" />
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
@@ -46,9 +47,4 @@ const status = computed(() => {
 	return props.workflowStateField ? props.doc[props.workflowStateField] : props.doc.status
 })
 
-const chipMap = {
-	Approved: "g-chip--submitted",
-	Rejected: "g-badge--open",
-	Open: "g-chip--cancelled",
-}
 </script>

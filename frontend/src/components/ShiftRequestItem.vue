@@ -19,12 +19,13 @@
 			</div>
 		</template>
 		<template #right>
-			<span class="g-badge" :class="chipMap[status] || 'g-chip--cancelled'">{{ status }}</span>
+			<GStatusChip :status="status" :label="status" />
 		</template>
 	</ListItem>
 </template>
 
 <script setup>
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
@@ -49,9 +50,4 @@ const status = computed(() => {
 	return props.doc.docstatus ? props.doc.status : "Open"
 })
 
-const chipMap = {
-	Approved: "g-chip--submitted",
-	Rejected: "g-badge--open",
-	Open: "g-chip--cancelled",
-}
 </script>

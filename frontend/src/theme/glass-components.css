@@ -124,6 +124,13 @@ html[data-transparency="reduce"] .g-glass-ghost {
 .g-btn--pending {
 	cursor: default;
 }
+/* pinned to the trailing edge so the label stays optically centred beside it */
+.g-btn__trailing {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+	padding-left: 9px;
+}
 .g-btn__bar {
 	position: absolute;
 	left: 0;
@@ -195,27 +202,35 @@ html[data-theme="dark"] .g-badge--open {
 
 /* ---------- GStatusChip (§10.3 #28 — PROPOSAL, see component header) ---------- */
 
-.g-chip--draft {
+/* Six VARIANTS, not five states. Real Frappe workflow states are composite and
+   open-ended ("Approved & Unpaid", "Partially Paid"), so GStatusChip maps many
+   states onto these few treatments. Every pair measured over glass, light/dark. */
+.g-chip--neutral {
 	background: var(--g-icon-bg);
 	color: var(--g-ink2);
-}
-.g-chip--submitted {
+} /* 5.75 / 5.85 */
+.g-chip--progress {
 	background: rgba(var(--g-brand-rgb) / 0.14);
 	color: var(--g-accent-ink);
-}
-.g-chip--approved {
+} /* 7.02 / 10.16 */
+.g-chip--success {
 	background: rgba(var(--g-success-rgb) / 0.2);
 	color: var(--g-success-ink);
-}
-.g-chip--rejected {
+} /* 4.60 / 6.88 */
+.g-chip--danger {
 	background: var(--g-danger);
 	color: var(--g-on-brand);
-}
-.g-chip--cancelled {
+} /* 7.11 both — a danger TINT cannot clear 4.5 on light, so this one is solid */
+.g-chip--muted {
 	background: transparent;
 	border: 1px solid var(--g-hair);
 	color: var(--g-ink-muted);
-}
+} /* 4.56 / 4.58 */
+.g-chip--attention {
+	background: transparent;
+	border: 1px solid var(--g-warn);
+	color: var(--g-warn-ink);
+} /* 4.72 / 8.12 — outline, because warn-ink on a warn tint measures 4.27 on light */
 
 /* ---------- GEmptyState (§10.1 #11, copy §11.1) ---------- */
 

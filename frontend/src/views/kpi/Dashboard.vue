@@ -52,12 +52,12 @@
 										}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 									</div>
 									<div class="flex items-center gap-2.5">
-										<span v-if="current.grade" class="g-badge g-badge--open">
+										<GBadge v-if="current.grade" variant="accent">
 											{{ current.grade }}
-										</span>
-										<span v-if="current.is_average" class="g-badge g-chip--submitted">
+										</GBadge>
+										<GBadge v-if="current.is_average" variant="accent">
 											{{ __("Avg of {0} cycles", [current.cycles_count]) }}
-										</span>
+										</GBadge>
 										<span
 											v-if="delta !== null"
 											class="text-xs font-sans font-extrabold text-ink-700"
@@ -184,9 +184,9 @@
 										<span class="font-sans font-semibold text-button-label">
 											{{ row.kra }}
 										</span>
-										<span v-if="row.per_weightage" class="g-badge g-chip--cancelled whitespace-nowrap">
+										<GBadge v-if="row.per_weightage" variant="neutral" class="whitespace-nowrap">
 											{{ formatScore(row.per_weightage) }}%
-										</span>
+										</GBadge>
 									</div>
 									<span v-if="row.kpi" class="text-xs text-ink-600 leading-4">
 										{{ row.kpi }}
@@ -253,6 +253,7 @@
 </template>
 
 <script setup>
+import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
 
@@ -350,17 +351,17 @@ const trendPoints = computed(() =>
 <style scoped>
 /* Modernist filter selects: surface fill, hairline border, square. */
 .kpi-filter {
-	background-color: var(--color-surface);
-	border: 1px solid var(--color-divider);
+	background-color: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-hair);
 	border-radius: 0;
-	color: var(--color-text);
+	color: var(--g-ink);
 	font-size: 13px;
 	font-weight: 600;
 	padding: 8px 32px 8px 12px;
 	min-width: 150px;
 }
 .kpi-filter:focus {
-	border-color: var(--color-accent);
+	border-color: var(--g-accent-ink);
 	outline: none;
 	box-shadow: none;
 }

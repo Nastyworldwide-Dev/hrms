@@ -90,13 +90,13 @@ function toggleAdvanceSelection(advance) {
 
 <style scoped>
 .advance-input :deep(input) {
-	background-color: var(--color-surface);
-	border: 1px solid var(--color-divider);
+	background-color: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-hair);
 	border-radius: 0;
-	color: var(--color-text);
+	color: var(--g-ink);
 }
 .advance-input :deep(input:focus) {
-	border-color: var(--color-accent);
+	border-color: var(--g-accent-ink);
 	box-shadow: none;
 	outline: none;
 }

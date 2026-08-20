@@ -7,14 +7,19 @@
                  falls back to label
     pending      boolean — §11.4: keeps brand fill, swaps label, 2px
                  transform-animated bar on the bottom edge, aria-busy
+    type         "button" (default) | "submit" | "reset"
     disabled     boolean — §11.4: icon-bg fill, ink3 label, aria-disabled;
                  stays focusable so the state is discoverable
   Emits: click — suppressed while pending or disabled (§11.5 duplicate guard
          is the caller's 60s window; this only stops re-entry while pending)
+  Slots:
+    trailing — optional affordance pinned to the trailing edge, typically the
+               mockup's arrow. Decorative and aria-hidden: the label carries
+               the accessible name, so an arrow never adds to it.
 -->
 <template>
 	<button
-		type="button"
+		:type="type"
 		class="g-btn"
 		:class="{ 'g-btn--pending': pending, 'g-btn--disabled': disabled }"
 		:aria-busy="pending || undefined"
@@ -22,6 +27,12 @@
 		@click="onClick"
 	>
 		<span>{{ pending ? pendingLabel || label : label }}</span>
+		<!-- trailing affordance: the mockup's primary action is LABEL → , so the
+		     arrow is part of the design, not a Modernist leftover. Decorative —
+		     the label is the accessible name. -->
+		<span v-if="$slots.trailing" class="g-btn__trailing" aria-hidden="true">
+			<slot name="trailing" />
+		</span>
 		<span v-if="pending" class="g-btn__bar" aria-hidden="true" />
 	</button>
 </template>
@@ -29,6 +40,8 @@
 <script setup>
 const props = defineProps({
 	label: { type: String, required: true },
+	// "submit" matters inside a form — a button that will not submit is a bug
+	type: { type: String, default: "button" },
 	pendingLabel: { type: String, default: "" },
 	pending: { type: Boolean, default: false },
 	disabled: { type: Boolean, default: false },

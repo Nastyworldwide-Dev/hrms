@@ -4,23 +4,14 @@
 			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg">
 				<ResourceError :resource="myIssues" what="your issues" />
 				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
-					<button @click="navigate" class="g-btn">
-						{{ __("Report an Issue") }}
-						<svg
-							width="17"
-							height="17"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="ml-auto"
-						>
-							<line x1="5" y1="12" x2="19" y2="12"></line>
-							<polyline points="12 5 19 12 12 19"></polyline>
-						</svg>
-					</button>
+					<GButton :label="__('Report an Issue')" @click="navigate">
+							<template #trailing>
+								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="5" y1="12" x2="19" y2="12"></line>
+									<polyline points="12 5 19 12 12 19"></polyline>
+								</svg>
+							</template>
+						</GButton>
 				</router-link>
 
 				<span class="text-eyebrow uppercase text-accent-ink mt-2">{{ __("Reported by you") }}</span>
@@ -61,6 +52,7 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
 import { createListResource } from "frappe-ui"
 import { inject } from "vue"
 

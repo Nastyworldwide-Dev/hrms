@@ -412,6 +412,6 @@ onMounted(async () => {
 
 <style scoped>
 ion-content {
-	--background: var(--color-bg);
+	--background: var(--g-bg);
 }
 </style>

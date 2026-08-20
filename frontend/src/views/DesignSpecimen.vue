@@ -35,6 +35,9 @@
 				<section class="spec__section">
 					<h2 class="spec__label">GBUTTON (§10.1 #1 · §11.4)</h2>
 					<GButton label="CHECK IN" @click="log('GButton')" />
+					<GButton label="APPLY FOR LEAVE" @click="log('GButton trailing')">
+						<template #trailing>&rarr;</template>
+					</GButton>
 					<GButton label="CHECK IN" pending-label="Checking in…" pending />
 					<GButton label="CHECK IN" disabled />
 				</section>
@@ -50,6 +53,8 @@
 					<div class="spec__row">
 						<GBadge variant="open">Open</GBadge>
 						<GBadge variant="resolved">Resolved</GBadge>
+						<GBadge variant="accent">Grade A</GBadge>
+						<GBadge variant="neutral">30%</GBadge>
 					</div>
 				</section>
 
@@ -394,7 +399,11 @@ import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import { gToast } from "@/components/glass/toast"
 
-const statuses = ["Draft", "Submitted", "Approved", "Rejected", "Cancelled"]
+const statuses = [
+	"Draft", "Open", "Pending", "Unpaid", "Submitted", "Approved & Unpaid",
+	"Approved", "Paid", "Rejected", "Cancelled", "Present", "Absent",
+	"Something Unmapped",
+]
 const form = reactive({ date: "", hours: "3", locked: "Siti Rahman", reason: "" })
 const segment = ref("all")
 const segments = [

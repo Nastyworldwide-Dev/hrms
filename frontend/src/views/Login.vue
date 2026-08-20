@@ -72,29 +72,20 @@
 								</div>
 							</div>
 							<ErrorMessage :message="errorMessage" />
-							<button
+							<GButton
 								type="submit"
-								class="g-btn !mt-2 disabled:opacity-60"
-								:disabled="session.login.loading"
+								class="!mt-2"
+								:label="__('Login')"
+								:pending-label="__('Signing in…')"
+								:pending="session.login.loading"
 							>
-								<span>{{ __("Login") }}</span>
-								<LoadingIndicator v-if="session.login.loading" class="w-4 h-4 ml-auto" />
-								<svg
-									v-else
-									width="16"
-									height="16"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									class="ml-auto"
-								>
-									<line x1="5" y1="12" x2="19" y2="12"></line>
-									<polyline points="12 5 19 12 12 19"></polyline>
-								</svg>
-							</button>
+								<template #trailing>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="5" y1="12" x2="19" y2="12"></line>
+										<polyline points="12 5 19 12 12 19"></polyline>
+									</svg>
+								</template>
+							</GButton>
 						</form>
 
 						<template v-if="authProviders.data?.length">
@@ -199,6 +190,7 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
 import { IonPage, IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
 import { Input, Button, ErrorMessage, Dialog, LoadingIndicator, createResource } from "frappe-ui"

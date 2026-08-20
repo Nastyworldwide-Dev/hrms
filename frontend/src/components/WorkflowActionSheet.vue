@@ -134,6 +134,6 @@ onMounted(() => getTransitions())
 
 <style scoped>
 ion-action-sheet {
-	--button-color: var(--color-text);
+	--button-color: var(--g-ink);
 }
 </style>

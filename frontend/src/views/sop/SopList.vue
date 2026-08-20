@@ -9,7 +9,7 @@
 					<div class="flex items-center justify-between">
 						<span v-if="pinned.length" class="text-eyebrow uppercase text-accent-ink">{{ __("Essentials") }}</span>
 						<span v-else></span>
-						<span v-if="isHR" class="g-badge g-badge--open">{{ __("HR") }}</span>
+						<GBadge v-if="isHR" variant="accent">{{ __("HR") }}</GBadge>
 					</div>
 					<div v-if="pinned.length" class="grid grid-cols-2 gap-2.5">
 						<router-link
@@ -76,12 +76,12 @@
 										<span class="font-extrabold text-card-title text-inkbase truncate">
 											{{ sop.title }}
 										</span>
-										<span
+										<GBadge
 											v-if="!sop.published"
-											class="g-badge g-chip--cancelled !text-ink-700 flex-none"
+											variant="neutral" class="!text-ink-700 flex-none"
 										>
 											{{ __("Draft") }}
-										</span>
+										</GBadge>
 									</span>
 									<span class="text-kra-label text-ink-700">
 										{{ __("Updated") }} {{ dayjs(sop.modified).format("D MMM YYYY") }}
@@ -141,6 +141,7 @@
 </template>
 
 <script setup>
+import GBadge from "@/components/glass/GBadge.vue"
 import { createResource, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 

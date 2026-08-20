@@ -101,22 +101,22 @@ const firstOfMonth = ref(dayjs().date(1).startOf("D"))
 // accent fill, on-leave = accent outline, half-day = mint half + on-leave
 // outline. WFH mirrors Present (summary rollup); Holiday stays muted.
 const dayStyle = {
-	Present: "background:var(--color-accent-200);color:var(--color-accent-800)",
-	"Work From Home": "background:var(--color-accent-200);color:var(--color-accent-800)",
+	Present: "background:var(--g-accent-glow);color:var(--g-accent-ink)",
+	"Work From Home": "background:var(--g-accent-glow);color:var(--g-accent-ink)",
 	"Half Day":
-		"background:linear-gradient(135deg,var(--color-accent-200) 50%,transparent 50%);border:2px solid var(--color-accent);color:var(--color-accent-700);font-weight:600",
-	Absent: "background:var(--color-accent);color:var(--color-bg);font-weight:600",
-	"On Leave": "border:2px solid var(--color-accent);color:var(--color-accent-700);font-weight:600",
-	Holiday: "color:var(--color-neutral-400)",
+		"background:linear-gradient(135deg,var(--g-accent-glow) 50%,transparent 50%);border:2px solid var(--g-accent-ink);color:var(--g-accent-ink);font-weight:600",
+	Absent: "background:var(--g-accent-ink);color:var(--g-bg);font-weight:600",
+	"On Leave": "border:2px solid var(--g-accent-ink);color:var(--g-accent-ink);font-weight:600",
+	Holiday: "color:var(--g-ink3)",
 }
 
 // 9px legend swatches mirroring each day-cell style.
 const swatchStyle = {
-	Present: "background:var(--color-accent-200)",
+	Present: "background:var(--g-accent-glow)",
 	"Half Day":
-		"background:linear-gradient(135deg,var(--color-accent-200) 50%,transparent 50%);border:1.5px solid var(--color-accent)",
-	Absent: "background:var(--color-accent)",
-	"On Leave": "border:1.5px solid var(--color-accent)",
+		"background:linear-gradient(135deg,var(--g-accent-glow) 50%,transparent 50%);border:1.5px solid var(--g-accent-ink)",
+	Absent: "background:var(--g-accent-ink)",
+	"On Leave": "border:1.5px solid var(--g-accent-ink)",
 }
 
 // __("Present"), __("Half Day"), __("Absent"), __("On Leave"), __("Work From Home")

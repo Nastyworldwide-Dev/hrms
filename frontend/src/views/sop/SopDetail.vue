@@ -35,18 +35,17 @@
 			>
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
-					<span
-						class="g-badge"
-						:class="isGeneral ? 'g-badge--open' : 'g-chip--submitted'"
+					<GBadge
+						:variant="isGeneral ? 'open' : 'accent'"
 					>
 						{{ isGeneral ? __("General") : sop.data.department }}
-					</span>
-					<span
+					</GBadge>
+					<GBadge
 						v-if="!sop.data.published"
-						class="g-badge g-chip--cancelled !text-ink-700"
+						variant="neutral" class="!text-ink-700"
 					>
 						{{ __("Draft") }}
-					</span>
+					</GBadge>
 					<span class="text-kra-label text-ink-700">
 						{{ __("Updated") }} {{ dayjs(sop.data.modified).format("D MMM YYYY") }}
 					</span>
@@ -112,6 +111,7 @@
 </template>
 
 <script setup>
+import GBadge from "@/components/glass/GBadge.vue"
 import { createResource, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -160,7 +160,7 @@ const attachmentKind = computed(() => {
 .sop-prose {
 	font-size: 13.5px;
 	line-height: 1.75;
-	color: var(--color-neutral-800);
+	color: var(--g-ink2);
 }
 .sop-prose :deep(h1),
 .sop-prose :deep(h2),
@@ -168,16 +168,16 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(h4),
 .sop-prose :deep(h5),
 .sop-prose :deep(h6) {
-	font-family: var(--font-heading);
+	font-family: var(--g-font-display);
 	font-weight: 800;
-	color: var(--color-text);
+	color: var(--g-ink);
 	margin: 22px 0 6px;
 	line-height: 1.3;
 }
 .sop-prose :deep(h1) {
 	font-size: 19px;
 	padding-bottom: 6px;
-	border-bottom: 2px solid var(--color-divider);
+	border-bottom: 2px solid var(--g-hair);
 }
 .sop-prose :deep(h2) {
 	font-size: 16px;
@@ -204,10 +204,10 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(strong),
 .sop-prose :deep(b) {
 	font-weight: 700;
-	color: var(--color-text);
+	color: var(--g-ink);
 }
 .sop-prose :deep(a) {
-	color: var(--color-accent);
+	color: var(--g-accent-ink);
 	text-decoration: underline;
 }
 .sop-prose :deep(ul),
@@ -225,7 +225,7 @@ const attachmentKind = computed(() => {
 	list-style: decimal;
 }
 .sop-prose :deep(li)::marker {
-	color: var(--color-accent);
+	color: var(--g-accent-ink);
 	font-weight: 700;
 }
 .sop-prose :deep(li > ul),
@@ -235,13 +235,13 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(blockquote) {
 	margin: 0 0 12px;
 	padding: 6px 0 6px 14px;
-	border-left: 3px solid var(--color-accent);
-	color: var(--color-neutral-700);
+	border-left: 3px solid var(--g-accent-ink);
+	color: var(--g-ink2);
 	font-style: italic;
 }
 .sop-prose :deep(hr) {
 	border: 0;
-	border-top: 2px solid var(--color-divider);
+	border-top: 2px solid var(--g-hair);
 	margin: 18px 0;
 }
 .sop-prose :deep(table) {
@@ -253,18 +253,18 @@ const attachmentKind = computed(() => {
 	overflow-x: auto;
 }
 .sop-prose :deep(th) {
-	font-family: var(--font-heading);
+	font-family: var(--g-font-display);
 	font-weight: 800;
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	text-align: left;
-	color: var(--color-text);
-	border-bottom: 2px solid var(--color-text);
+	color: var(--g-ink);
+	border-bottom: 2px solid var(--g-ink);
 	padding: 7px 10px 7px 0;
 }
 .sop-prose :deep(td) {
-	border-bottom: 1px solid var(--color-divider);
+	border-bottom: 1px solid var(--g-hair);
 	padding: 7px 10px 7px 0;
 	vertical-align: top;
 }
@@ -276,7 +276,7 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(pre),
 .sop-prose :deep(code) {
 	font-size: 12px;
-	background: var(--color-neutral-100);
+	background: var(--g-icon-bg);
 	padding: 2px 5px;
 }
 .sop-prose :deep(pre) {
