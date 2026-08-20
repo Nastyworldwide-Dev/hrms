@@ -33,11 +33,11 @@
 - 8 screens with layout anatomy and stack order
 - Empty, loading, error, offline and pending states — **not in the mockup, built to this document**
 - Accessibility and performance acceptance criteria
+- Desktop layout at `lg:` — no mockup exists; **§20 is the reference** (DECISION 1 resolved, §13.3)
 
 ### Out of scope
 - Any change to business logic, validation, approval routing or data model
 - New features. **Overtime, KPI, Issues, SOP, Team and Remote Approvals already exist** — they are restyled, not built
-- Desktop layout **[DECISION 1]** — see §13.3
 
 ### Definition of done
 A screen is complete when it matches the mockup at 1× on 390 × 844, passes §14, stays inside §15, and switches theme without layout shift.
@@ -454,8 +454,10 @@ width=device-width, initial-scale=1.0, viewport-fit=cover maximum-scale=1.0, use
 
 Note the interaction: removing `maximum-scale=1` restores iOS focus-zoom on inputs below 16px. Accept it, or raise input font-size. **[DECISION 3]**
 
-### 13.3 Desktop **[DECISION 1]**
-`SideNav.vue` exists (72px collapsed / 216px expanded at `lg:`), and the tab bar is `lg:hidden`. v1.0 declared desktop out of scope. Either Glass covers `lg:` in this phase, or the app ships two visual identities on one codebase. This must be answered before §10 begins, because it changes the component contracts.
+### 13.3 Desktop **[DECISION 1 — resolved: in scope]**
+`SideNav.vue` exists (72px collapsed / 216px expanded at `lg:`), and the tab bar is `lg:hidden`. v1.0 declared desktop out of scope. Either Glass covers `lg:` in this phase, or the app ships two visual identities on one codebase.
+
+**Resolved: desktop is in scope.** HR admin and managers use the desktop view regularly. §20 governs the `lg:` layout; there is no desktop mockup, so §20 holds the role the mockup holds for mobile. Component contracts in §10 state `lg:` behaviour where it differs — the list is §20.7, and the default is "identical at both breakpoints".
 
 ---
 
@@ -639,12 +641,73 @@ Per screen, in both themes, on the lowest-spec device available.
 
 | # | Decision | Blocks |
 |---|---|---|
-| 1 | Desktop `lg:` in scope? | §10 component contracts |
+| 1 | Desktop `lg:` in scope? — **resolved: in scope, §20 governs** | §10 component contracts |
 | 2 | Tab bar five — confirm `HOME · ATTEND · LEAVE · PAY · MORE` | §13.1, information architecture |
 | 3 | Accept iOS focus-zoom, or raise input font-size to 16px | §13.2 |
 | 4 | Name the lowest-spec device in the fleet | §15, §18 |
 | 5 | Type floor 10px — P&C sign-off on the change from the mockup | §4.2 |
 | 6 | `frappe-ui` upgrade 0.1.105 → 0.1.278 in this programme, or after | §16.1 sequencing |
+
+---
+
+## 20. Desktop layout
+
+DECISION 1 is resolved: desktop is in scope (§13.3). There is no desktop mockup — **this section is the desktop reference**, holding the role the mockup holds for mobile. The §1 conflict rule reads accordingly at `lg:`: where a value here disagrees with the mobile mockup, this section governs above the breakpoint.
+
+### 20.1 Breakpoint
+
+One breakpoint: `lg:` — **1024px**, matching `SideNav.vue`'s existing usage. Below `lg:` the mobile layout in §12 applies unchanged. There is **no tablet layout**; a 900px viewport gets the mobile layout, full stop. A second breakpoint is a second layout to test on every screen in every state — it earns its place only when a real tablet population shows up in analytics.
+
+### 20.2 Navigation
+
+- The tab bar (§10 #8) is hidden at `lg:` — already the case (`lg:hidden`).
+- `SideNav` becomes a **glass surface** (§6 recipe), retaining its existing 72px collapsed / 216px expanded widths and its collapse toggle.
+- **Top group** — the direct tab destinations from §13.1 in the same order: `HOME · ATTEND · LEAVE · PAY`. More is a container, not a destination; at `lg:` it dissolves.
+- Below a divider (1px `--hair`), the contents of More as a **flat list** in §13.1's order: KPI, Issues, SOPs, Expenses, Team, Remote Approvals. **No nested menus.**
+- Surface accounting: the SideNav surface **replaces** the tab bar surface in the §15 count — net zero against the budget.
+
+### 20.3 Content column
+
+`max-width: 720px`, **left-aligned against the sidebar**, not viewport-centred. Screen gutter stays 15px (§5).
+
+Rationale: at 1440px a centred full-width column strands 12.5px row labels in whitespace — the eye travels further than the content deserves. 720px is a **starting value**, expected to be tuned once on device; it is a single token (added in phase 4 with the shell, not before), not a structural decision.
+
+### 20.4 Light field
+
+Fixed to the **viewport**, not the content column. Blob centres remain outside the content column per §3.3, which continues to apply at every breakpoint — the column moved, the constraint did not. Blob sizes scale with the viewport; the `blob-opacity` tokens are unchanged.
+
+### 20.5 Grid reflow
+
+| Grid | Mobile | `lg:` |
+|---|---|---|
+| Balance grid | 2 columns | 4 columns |
+| Stat tiles | 3-up | 3-up |
+
+Nothing reflows beyond 4 columns. §15.2 flattening applies at **both** breakpoints: the balance panel stays one glass surface with internal `--hair` dividers — 2×2 becomes 1×4, the surface count does not move.
+
+### 20.6 Unchanged at `lg:`
+
+| Invariant | Ruling |
+|---|---|
+| Type scale (§4.2) | Identical. Extra width becomes whitespace, **never larger type** |
+| Touch targets | 44px minimum retained — input is mixed mouse and touch |
+| Glass surface budget (§15) | **6**, unchanged. Desktop shows more at once, which makes §15.2 flattening more important, not less |
+| Tokens, radii, spacing, motion | Identical — no desktop-only token exists except the 720px column (phase 4) |
+
+### 20.7 Component implications
+
+Every component contract in §10 must specify `lg:` behaviour **where it differs**. The default is **"identical at both breakpoints"** and is not restated per component. Of the 28, those that differ:
+
+| # | Component | `lg:` behaviour |
+|---|---|---|
+| 6 | Balance card | Card identical; its parent grid reflows per §20.5 (flattened panel 2×2 → 1×4) |
+| 8 | Tab bar | Hidden. SideNav is the navigation surface (§20.2) |
+| 25 | Modal / bottom sheet | Presents **centred** at content-column width — a viewport-wide bottom sheet is a mobile idiom. Focus-trap workaround retained (§16.3) |
+| 26 | Action sheet | Same ruling as #25: centred dialog, not a full-width bottom strip |
+
+The side nav itself sits in §10.3's treatment list and is specified by §20.2. The remaining 24 components are identical at both breakpoints.
+
+**Hover** — the mockup defines no hover states because it had no pointer. At `lg:` every interactive component reuses its **pressed-state background as hover** (rows: `--icon-bg` at the `row-tap` duration). No new tokens, and hover is never the only signal (§14).
 
 ---
 
