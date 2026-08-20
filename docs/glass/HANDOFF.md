@@ -1,24 +1,25 @@
 # HANDOFF
-prompt:   5.3 (v1.6 counting ruling + batch 2 complete)
-status:   done
-commit:   9b5d23c8f on nz-glass
-files:    design/gates/surfaces.mjs (rewritten)
-          docs/glass/spec/…v1.1.md → v1.6 (§0, §15.1, §12 Attendance)
-          frontend/src/components/AttendanceCalendar.vue
-          frontend/src/views/attendance/Dashboard.vue
-          frontend/src/components/glass/{GCalendar,GStatPanel}.vue
+prompt:   5.4 (batch 3 — Leave)
+status:   partial — Dashboard done; List/Form are shared-component work (batch 5)
+commit:   9e3f79f20 on nz-glass
+files:    frontend/src/components/LeaveBalance.vue
+          frontend/src/components/glass/GBalanceCard.vue (entitlement prop, note slot)
+          frontend/src/views/leave/Dashboard.vue (§11.1 history copy)
+          docs/glass/spec/…v1.1.md (§12 Leave)
+          docs/glass/decisions/leave-insufficient-balance.md
 verify:   cd frontend && yarn gates && yarn build
-flags:    HOME 3/6 (content 2 + tab bar 1), check-in sheet reported separately as 2
-          ATTENDANCE/DASHBOARD 5/6 — was genuinely 7/6 once the counter was fixed; three
-          ghost actions are three surfaces, so §15.2 flattening applied: one panel, 3 rows
-          THE REWRITE FOUND 3 COUNTING BUGS masking each other: costing by NAME collided
-          four Dashboard.vue files; branch-max applied to raw glass but not child
-          components; a v-if with no v-else swallowed every later line
-          CAUGHT BEFORE COMMIT: the flattening left `router` used in the template but never
-          bound — would have thrown at runtime. Compile-check does not catch that; I checked
-          the compiled output for the binding
-          GCalendar gains a HALF DAY state (6.88 / 6.87) the mockup never drew; GStatPanel
-          gains columns=4. Both driven by real data, both recorded in §12
-          3 Attendance divergences recorded: 4-up not 3-up, four actions + three request
-          lists not one ghost action, and the Half Day state
-next:     batch 3 (Leave) — leave/Dashboard, List, Form
+flags:    COUNTS — leave/Dashboard 3/6 (content 2 + tab bar 1); leave/List 0/6;
+          leave/Form 0/6 with four sheet sets of 1 (the GConfirms)
+          PRO-RATED BAND VERIFIED WITH REAL DATA: 12-day entitlement, 8 allocated, 5.5 left
+          → fill 45.83%, band 33.33% — exactly balance_percentage and prorated_percentage
+          from data/leaves.js. Three cards still render ONE glass surface
+          BUG CAUGHT: GBalanceCard derived the fill from remaining/allocated, but the gauge
+          denominator is annual_entitlement. Measuring against allocated would have drawn a
+          FULL bar with a band over it. Split into `entitlement` (gauge) vs `allocated`
+          (announcement) — the employee is told what they have, not the entitlement
+          §11.3 INLINE INSUFFICIENT-BALANCE ERROR NOT BUILT: the app has no client-side
+          balance validation at all; the server rejects. Adding it is new validation.
+          Filed as a candidate — the real question is whether it blocks, not how it looks
+          leave/List + leave/Form are thin wrappers over shared ListView/FormView, which back
+          all 7 pairs. Restyling them is batch 5, not batch 3
+next:     batch 4 (KPI + Issues), or batch 5 to unlock the 7 list/form pairs at once
