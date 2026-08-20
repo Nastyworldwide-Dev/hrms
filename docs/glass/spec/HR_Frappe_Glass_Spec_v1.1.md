@@ -1,6 +1,6 @@
-# HR Frappe · Glass — Implementation Specification v1.3
+# HR Frappe · Glass — Implementation Specification v1.4
 
-**Supersedes** v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
+**Supersedes** v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
@@ -51,6 +51,16 @@ sections had estimated.
 | 2.4 | §10.3 #28: the workflow state set is **open, not five states**; sixteen known states map onto six variants, unknowns render neutral | The five-state list predated reading the code. Real states are composite ("Approved & Unpaid") and Frappe workflows are user-configurable, so a closed validator rejects valid data |
 | 2.5 | §10.1 #1 gains a **`trailing` slot** for the mockup's arrow affordance | The arrow is in the mockup's primary action. Without a slot every call site kept a hand-rolled `<button>`, which is the seam the component library exists to close |
 
+### v1.4 — the light field, corrected against its own constraint
+
+| # | Change | Reason |
+|---|---|---|
+| 3.1 | §3: blob origins corrected — A `left −46→−180`, B `right −58→−163`, C `left −30→−137`. A note now states the values are **box origins** and that §3.3 constrains **centres** | An authoring error in v1.1: the origins were read as centres, so all three centres sat inside the content column and §3 violated §3.3 in the same document |
+| 3.2 | §3.3: the rule is **clearance beyond the gradient reach**, not centre-placement alone; per-blob values recorded (A 80px, B 73px, C 62px) | A centre exactly outside the column still fails, and so does a 20px margin. The gradient is ~80px wide, so the constraint has to be measured against it |
+| 3.3 | §3.3: states that **vertical needs no equivalent rule**, with the reason | The column is horizontal and full-height, so `x` clearance alone is necessary and sufficient. Recorded so nobody re-derives it |
+| 3.4 | §14.4 gains **exception 8**, with before/after measurements | The mockup's values failed §14; that is exactly what §14.4 exists to record |
+| 3.5 | The §14.2 pair skipped in phase 1 as "blob not a token" is now **asserted** in `design/gates/contrast.mjs` | The blob is a token as of 4.1, so the prose constraint became a check. It caught this defect |
+
 ---
 
 ## 1. Scope
@@ -71,7 +81,7 @@ sections had estimated.
 A screen is complete when it matches the mockup at 1× on 390 × 844, passes §14, stays inside §15, and switches theme without layout shift.
 
 ### Conflict rule
-Where this document and the mockup disagree on a **value**, the mockup governs. Where the mockup fails a criterion in §14, **§14 governs** and the exception is recorded in §14.4. There are seven such exceptions and they are listed.
+Where this document and the mockup disagree on a **value**, the mockup governs. Where the mockup fails a criterion in §14, **§14 governs** and the exception is recorded in §14.4. There are eight such exceptions and they are listed.
 
 ---
 
@@ -148,10 +158,19 @@ If a lighter text value is needed, it already exists: `--ink-muted`. If a *fourt
 Glass requires colour behind it or it renders as grey fog. Every screen carries three blurred radial gradients beneath the UI layer.
 
 ```
-blob A   230px   radial-gradient(circle, rgba(200,255,0,.72), transparent 70%)    top:-56  left:-46
-blob B   210px   radial-gradient(circle, rgba(0,229,192,.62), transparent 70%)    bottom:76 right:-58
-blob C   180px   radial-gradient(circle, rgba(123,92,255,.66), transparent 70%)   bottom:-42 left:-30
+blob A   230px   radial-gradient(circle, rgba(200,255,0,.72), transparent 70%)    top:-56   left:-180
+blob B   210px   radial-gradient(circle, rgba(0,229,192,.62), transparent 70%)    bottom:76  right:-163
+blob C   180px   radial-gradient(circle, rgba(123,92,255,.66), transparent 70%)   bottom:-42 left:-137
+```
+**These are box ORIGINS. §3.3 constrains the CENTRE**, which is `origin + size/2`. Reading an origin as a centre is what put all three centres inside the content column in v1.1 — see §14.4 exception 8. The horizontal values above were corrected in v1.4; sizes, colours, blur and vertical offsets are unchanged.
 
+| Blob | Size | Origin (x) | **Centre x** | Clear of the column |
+|---|---|---|---|---|
+| A | 230px | `left: -180` | **−65** | 80px |
+| B | 210px | `right: -163` | **448** | 73px |
+| C | 180px | `left: -137` | **−47** | 62px |
+
+```
 filter: blur(36px);   opacity: var(--blob-opacity);
 ```
 
@@ -166,7 +185,11 @@ Ionic's page transitions animate `transform` and `opacity` on `.ion-page`. **The
 ### 3.3 Blob placement constraint — replaces adaptive contrast
 Native Liquid Glass stays legible over anything because the OS re-samples the backdrop and adjusts the foreground. CSS cannot do this. Our substitute is that we control what sits behind the glass.
 
-**No blob centre may fall inside the content column.** All three centres sit in the negative margins or below the fold, as specified above. Measured worst case if this is violated: `--ink2` over a chartreuse blob centre on **dark** theme drops to **1.26:1**.
+**No blob centre may fall inside the content column** — and, because the gradient is ~80px wide, the centre must clear the column by more than the gradient reaches, not merely sit outside it. Measured worst case if this is violated: `--ink2` over a chartreuse blob centre on **dark** theme drops to **1.26:1**.
+
+The required clearance is a property of each blob's radius, and is asserted numerically in `design/gates/contrast.mjs`, which reads the same tokens the CSS does: **A 80px, B 73px, C 62px**. A centre placed exactly on the column edge still fails; a 20px margin still fails. Only clearance beyond the gradient's own reach passes.
+
+**Vertical needs no equivalent rule.** The content column is defined horizontally (`100% − 30px`) and spans the full scrollable page height, so there is no `y` at which content is absent. Once a centre clears the column on `x`, the nearest content point sits on the same horizontal line and the worst case is fixed regardless of `y`; moving a blob vertically off-screen can only increase the distance, never decrease it.
 
 Any new screen that introduces a fourth blob, moves a centre inward, or raises `--blob-opacity` is a spec change, not a screen decision.
 
@@ -573,7 +596,7 @@ box-shadow:
 The inner ring carries the contrast; the outer ring carries the brand. Applied to every interactive element on `:focus-visible`.
 
 ### 14.4 Recorded exceptions
-The mockup governs values except where it fails a criterion above. Seven exceptions, all resolved in favour of §14:
+The mockup governs values except where it fails a criterion above. Eight exceptions, all resolved in favour of §14:
 
 1. Screen eyebrow `opacity: .6` → removed (2.66 → 6.36)
 2. Calendar rest days `opacity: .45` → removed (1.55 → 3.07 as non-text; day numbers use `--ink-muted`)
@@ -582,6 +605,16 @@ The mockup governs values except where it fails a criterion above. Seven excepti
 5. Badge RESOLVED `#00806B` → `--success-ink` `#007764` (4.09 → 4.60)
 6. Type sizes 7.5 / 8.5px → 10px floor
 7. Focus ring → two-tone (1.11 → 18.40 on the inner ring)
+8. **Light-field blob origins → moved outward (v1.4).** §3's coordinates were read as centres when they are box origins, putting all three centres inside the content column and violating §3.3 in the same document. The conflict rule applies: the mockup governs values except where a criterion in §14 fails, and these coordinates failed it. Measured over glass on the reference viewport, worst case per blob:
+
+   | | Before | After | Threshold |
+   |---|---|---|---|
+   | `--ink2` dark over blob A | **1.26** | **7.75** | 4.5 |
+   | `--ink-muted` dark over blob B | **1.18** | **4.55** | 4.5 |
+   | `--ink2` dark over blob C | **3.44** | **7.75** | 4.5 |
+   | `--ink-muted` light over blob C | **3.71** | **4.55** | 4.5 |
+
+   Fixed by geometry alone — `--blob-opacity` and `--glass-fill` are unchanged. All 12 blob pairs now pass; the gate holds 30/30. **The field's placement now differs visibly from the mockup**: the blobs read as three corner glows rather than visible cores, because a core bright enough to see is a core too bright to read text over. This is on the device-review list.
 
 **Standing risk, dark theme:** `--ink2` over a chartreuse blob **centre** measures 1.26:1. This is why §3.3 is a hard constraint rather than guidance. There is no token fix; the fix is placement.
 
@@ -808,4 +841,4 @@ The side nav itself sits in §10.3's treatment list and is specified by §20.2. 
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.3 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the seven exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.4 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
