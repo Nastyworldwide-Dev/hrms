@@ -71,9 +71,9 @@ const PAIRS = [
 	{ fg: "leave-ink", bg: ["tint", "leave", 0.26], min: 4.5, themes: ["light"] },
 	{ fg: "success-ink", bg: ["tint", "success", 0.2], min: 4.5, themes: ["light", "dark"] },
 ];
-// §14.2 "ink2 over blob edge" is not computable from tokens.json — the blob
-// geometry/colours are not tokens. Verified by §3.3 placement rules instead.
-const SKIPPED = ['"ink2 over blob edge" — blob is not a token; enforced by §3.3 placement'];
+// §14.2's "ink2 over blob edge" pair was skipped in prompt 1.5 because the blob
+// was not a token. Phase 4.1 made it one, so it is asserted below (§3.3 block).
+const SKIPPED = [];
 
 let failures = 0;
 let checked = 0;
@@ -108,6 +108,67 @@ if (brandRatio < 3.0) {
 	console.log(`[contrast] FAIL light brand on glass = ${brandRatio.toFixed(2)} — §2.4 expected failure now passes; brand token changed, re-review every §2.4 permission`);
 }
 checked++;
+
+// ---------- §3.3 blob placement — the substitute for adaptive contrast ----------
+//
+// CSS cannot re-sample the backdrop the way the OS does, so the spec's control
+// is that no blob centre sits inside the content column. This asserts that
+// numerically instead of trusting the prose: it reads the same field tokens the
+// CSS does, finds the strongest blob alpha that lands inside the column, and
+// measures --ink2 and --ink-muted over the composite.
+
+const VIEWPORT = { w: 390, h: 844 }; // §5 reference
+const GUTTER = 15; // content column = 100% − 30px
+
+const px = (name) => parseFloat(tokens.field[name].value);
+
+function blobGeometry(id) {
+	const size = px(`blob-${id}-size`);
+	const r = size / 2;
+	const f = tokens.field;
+	const cx = f[`blob-${id}-left`] ? px(`blob-${id}-left`) + r : VIEWPORT.w - px(`blob-${id}-right`) - r;
+	const cy = f[`blob-${id}-top`] ? px(`blob-${id}-top`) + r : VIEWPORT.h - px(`blob-${id}-bottom`) - r;
+	return { cx, cy, r, colour: parse(f[`blob-${id}-color`].value) };
+}
+
+// radial-gradient(circle, C, transparent 70%): alpha falls linearly to 0 at 70% of r
+const alphaAt = (dist, r, peak) => (dist >= r * 0.7 ? 0 : peak * (1 - dist / (r * 0.7)));
+
+// nearest point of the content column to the blob centre — where the blob is
+// strongest *inside* the column, which is the worst case text can sit on
+function worstAlphaInColumn(b) {
+	const nearestX = Math.min(Math.max(b.cx, GUTTER), VIEWPORT.w - GUTTER);
+	const nearestY = Math.min(Math.max(b.cy, 0), VIEWPORT.h);
+	const dist = Math.hypot(b.cx - nearestX, b.cy - nearestY);
+	return { alpha: alphaAt(dist, b.r, b.colour.a), centreInside: dist === 0 };
+}
+
+for (const theme of ["light", "dark"]) {
+	const bg = parse(themedValue("bg", theme)).rgb;
+	const fieldOpacity = tokens["color-themed"]["blob-opacity"].value[theme];
+
+	for (const id of ["a", "b", "c"]) {
+		const b = blobGeometry(id);
+		const { alpha, centreInside } = worstAlphaInColumn(b);
+		if (alpha <= 0) continue;
+
+		// blob over app bg, then the glass panel over that — text sits on glass
+		const overBg = over({ rgb: b.colour.rgb, a: alpha * fieldOpacity }, bg);
+		const surface = over(parse(themedValue("glass-fill", theme)), overBg);
+
+		for (const inkName of ["ink2", "ink-muted"]) {
+			const r = ratio(parse(themedValue(inkName, theme)).rgb, surface);
+			const ok = r >= 4.5;
+			checked++;
+			if (!ok) failures++;
+			console.log(
+				`[contrast] ${ok ? "PASS" : "FAIL"} ${theme.padEnd(5)} ${inkName} over blob ${id.toUpperCase()} ` +
+					`inside the content column = ${r.toFixed(2)} (min 4.5, §3.3)` +
+					(centreInside ? " — CENTRE IS INSIDE THE COLUMN" : "")
+			);
+		}
+	}
+}
 
 for (const s of SKIPPED) console.log(`[contrast] SKIP ${s}`);
 console.log(`GATE_RESULT ${JSON.stringify({ gate: "contrast", checked, failures, skipped: SKIPPED.length })}`);

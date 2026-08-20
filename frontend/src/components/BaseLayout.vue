@@ -1,6 +1,13 @@
 <template>
-	<ion-page>
-		<ion-header class="ion-no-border">
+	<ion-page class="g-page">
+		<!-- §3.2: the field is a child of THIS ion-page, not of ion-app or body.
+		     Ionic animates transform+opacity on .ion-page during transitions,
+		     making it a backdrop root; a field mounted outside it would be
+		     invisible to every backdrop-filter inside it after the first
+		     navigation. Keep it here. -->
+		<GLightField />
+
+		<ion-header class="ion-no-border g-page__content">
 			<div class="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
 				<div
 					class="flex flex-row justify-between items-center bg-ground border-b-2 border-divider px-4 py-3.5 lg:h-16 lg:px-7 lg:py-0"
@@ -46,7 +53,7 @@
 			</div>
 		</ion-header>
 
-		<ion-content class="ion-no-padding">
+		<ion-content class="ion-no-padding g-page__content">
 			<div
 				class="flex flex-col h-screen w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
 			>
@@ -57,6 +64,7 @@
 </template>
 
 <script setup>
+import GLightField from "@/components/glass/GLightField.vue"
 import { IonHeader, IonContent, IonPage } from "@ionic/vue"
 import { FeatherIcon, Avatar } from "frappe-ui"
 

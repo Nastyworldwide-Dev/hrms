@@ -93,6 +93,20 @@
 	--g-touch-target-min: 44px;
 	--g-viewport-height: 844px;
 	--g-viewport-width: 390px;
+	/* field */
+	--g-field-blob-a-color: rgba(200,255,0,.72);
+	--g-field-blob-a-left: -46px;
+	--g-field-blob-a-size: 230px;
+	--g-field-blob-a-top: -56px;
+	--g-field-blob-b-bottom: 76px;
+	--g-field-blob-b-color: rgba(0,229,192,.62);
+	--g-field-blob-b-right: -58px;
+	--g-field-blob-b-size: 210px;
+	--g-field-blob-c-bottom: -42px;
+	--g-field-blob-c-color: rgba(123,92,255,.66);
+	--g-field-blob-c-left: -30px;
+	--g-field-blob-c-size: 180px;
+	--g-field-blur: 36px;
 	/* type */
 	--g-font-display: -apple-system, BlinkMacSystemFont, 'Inter Tight', 'Inter', 'Segoe UI', Roboto, sans-serif;
 	--g-font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;

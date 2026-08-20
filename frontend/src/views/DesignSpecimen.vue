@@ -5,12 +5,12 @@
   appends its components here.
 -->
 <template>
-	<ion-page>
+	<ion-page class="g-page">
 		<ion-content>
 			<GPullRefresh @refresh="onRefresh" />
 
 			<div class="spec">
-				<div class="spec__field" aria-hidden="true" />
+				<GLightField />
 
 				<header class="spec__head">
 					<h1 class="spec__title">Glass specimens</h1>
@@ -397,6 +397,7 @@ import GFileUpload from "@/components/glass/GFileUpload.vue"
 import GLinkPicker from "@/components/glass/GLinkPicker.vue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+import GLightField from "@/components/glass/GLightField.vue"
 import { gToast } from "@/components/glass/toast"
 
 const statuses = [

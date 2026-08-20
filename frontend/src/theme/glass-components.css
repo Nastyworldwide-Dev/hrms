@@ -3,6 +3,74 @@
    .g-glass is THE surface class: the §15 surface counter keys off it.
    Never nest one .g-glass inside another (§15). */
 
+/* ---------- GLightField (§3) ---------- */
+
+/* Sits inside the page (§3.2), behind everything, and never takes a pointer.
+   No transform/opacity/filter on THIS element — the blur belongs on the blobs,
+   because a filter on the container would make the container a backdrop root
+   and cut the glass off from the very field it is meant to blur. */
+.g-field {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+	contain: paint; /* clip the blobs without creating a backdrop root */
+}
+.g-field__blob {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(var(--g-field-blur));
+	opacity: var(--g-blob-opacity);
+}
+.g-field__blob--a {
+	width: var(--g-field-blob-a-size);
+	height: var(--g-field-blob-a-size);
+	top: var(--g-field-blob-a-top);
+	left: var(--g-field-blob-a-left);
+	background: radial-gradient(circle, var(--g-field-blob-a-color), transparent 70%);
+}
+.g-field__blob--b {
+	width: var(--g-field-blob-b-size);
+	height: var(--g-field-blob-b-size);
+	bottom: var(--g-field-blob-b-bottom);
+	right: var(--g-field-blob-b-right);
+	background: radial-gradient(circle, var(--g-field-blob-b-color), transparent 70%);
+}
+.g-field__blob--c {
+	width: var(--g-field-blob-c-size);
+	height: var(--g-field-blob-c-size);
+	bottom: var(--g-field-blob-c-bottom);
+	left: var(--g-field-blob-c-left);
+	background: radial-gradient(circle, var(--g-field-blob-c-color), transparent 70%);
+}
+
+/* Page carrying a field: ion-content must not paint its own background over it
+   (§16.3 — Ionic is themed through published custom properties only). Scoped
+   to .g-page so pages without a field keep their opaque background. */
+.g-page ion-content {
+	--background: transparent;
+}
+/* content sits above the field; the field is z-index 0 */
+.g-page__content {
+	position: relative;
+	z-index: 1;
+}
+
+/* §20.4 — at lg: the field is fixed to the viewport, not the content column,
+   and the blobs scale with it. Centres stay outside the column (§3.3). */
+@media (min-width: 1024px) {
+	.g-field {
+		position: fixed;
+	}
+	.g-field__blob--a { width: 32vw; height: 32vw; }
+	.g-field__blob--b { width: 29vw; height: 29vw; }
+	.g-field__blob--c { width: 25vw; height: 25vw; }
+}
+
+/* §3.1 is not negotiable, and reduced motion must not be the only thing
+   holding it: there is no animation here to suppress. */
+
 /* ---------- the recipe (§6) ---------- */
 
 .g-glass,

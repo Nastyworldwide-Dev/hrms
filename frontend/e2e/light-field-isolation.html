@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><style>
+  body{margin:0;background:#07070A}
+  .outer{position:relative;width:400px;height:300px}
+  /* the trap: Ionic animates transform+opacity on .ion-page */
+  .page{position:absolute;inset:0;transform:translateX(0);opacity:.999}
+  .field{position:absolute;inset:0;overflow:hidden;contain:paint}
+  .blob{position:absolute;width:230px;height:230px;border-radius:50%;
+        background:radial-gradient(circle,rgba(200,255,0,.72),transparent 70%);
+        filter:blur(36px);opacity:.85;top:20px;left:20px}
+  .glass{position:absolute;top:60px;left:60px;width:160px;height:120px;
+         background:rgba(255,255,255,.075);backdrop-filter:blur(20px) saturate(180%)}
+  #outsideField .blob{left:220px}
+</style>
+<!-- CASE 1: field INSIDE the transformed page (spec §3.2 placement) -->
+<div class="outer"><div class="page">
+  <div class="field"><span class="blob"></span></div>
+  <div class="glass" id="glassInside"></div>
+</div></div>
+<!-- CASE 2: field OUTSIDE the transformed page (the trap) -->
+<div class="outer" id="outsideField">
+  <div class="field"><span class="blob"></span></div>
+  <div class="page"><div class="glass" id="glassOutside"></div></div>
+</div>

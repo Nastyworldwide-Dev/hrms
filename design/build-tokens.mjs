@@ -33,7 +33,7 @@ const isHex = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
 const isVal = (v) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
 const sorted = (obj) => Object.keys(obj).sort();
 
-for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "type", "motion"]) {
+for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "field", "type", "motion"]) {
 	if (!tokens[group] || typeof tokens[group] !== "object") bad(group, "missing group");
 }
 if (errors.length) die();
@@ -48,7 +48,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 			bad(`${group}.${name}`, "value must be { light, dark }");
 	}
 }
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field"]) {
 	for (const name of sorted(tokens[group])) {
 		if (!isVal(tokens[group][name].value)) bad(`${group}.${name}`, "value must be a non-empty string");
 	}
@@ -111,12 +111,12 @@ for (const group of ["color-themed", "color-semantic"]) {
 	}
 }
 
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field"]) {
 	light.push(`\t/* ${group} */`);
 	// shadow and layer names take the group prefix (--g-shadow-action,
 	// --g-layer-scrim); the rest already carry theirs (radius-panel,
 	// blur-ghost) or read fine bare
-	const prefixed = group === "shadow" || group === "layer";
+	const prefixed = group === "shadow" || group === "layer" || group === "field";
 	for (const name of sorted(tokens[group]))
 		light.push(decl(prefixed ? `${group}-${name}` : name, tokens[group][name].value));
 }
