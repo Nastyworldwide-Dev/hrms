@@ -131,9 +131,13 @@
 		<!-- Time -->
 		<!-- native input: frappe-ui's Input drops unsupported types like "time",
 			 so it renders as a plain text box with no picker and no validation -->
+		<!-- aria-label from the field's own label: the visible text sits in a
+			 sibling <span>, not a <label for>, so axe reported this as unlabelled
+			 on 16 screen-themes — one component, not 16 bugs. -->
 		<input
 			v-else-if="props.fieldtype === 'Time'"
 			type="time"
+			:aria-label="props.label"
 			class="form-input block w-full border-gray-400 placeholder-gray-500"
 			:value="modelValue"
 			@input="(e) => emit('update:modelValue', e.target.value)"
