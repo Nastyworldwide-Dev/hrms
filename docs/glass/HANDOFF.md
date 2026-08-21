@@ -1,13 +1,13 @@
 # HANDOFF
 prompt:   8.1–8.5 + a11y gate fix + visual regression gate
 status:   done — every P0 closed
-commit:   <sha> on nz-glass
+commit:   40a7ecf5e (fix) + 149bbce8a (gates/docs) on nz-glass
 files:    frontend/src/theme/glass-components.css, glass/GTag.js + 4 components
           frontend/src/components/{FormView,ListView,BaseLayout,CheckInPanel}.vue + 9 views
           design/gates/{a11y,visual,run}.mjs, design/a11y-baseline.json, design/tokens.json
           frontend/e2e/{screens.mjs,a11y.spec.js,visual.spec.js,playwright.config.js}
           docs/glass/fix-pass-8.md, docs/glass/audit/screens/ (re-shot), spec v1.8
-verify:   node design/gates/run.mjs   (needs AUDIT_PW + a site on :8080)
+verify:   node design/gates/run.mjs   (AUDIT_PW + a site on :8080) — all 6 green
 flags:    143 findings -> 105. P0 20 -> 0. 9 of 23 root causes closed
           `.g-field` WAS DEFINED TWICE — light field + GInput wrapper. position:absolute,
           inset:0, pointer-events:none landed on every form field; LOGIN COULD NOT BE CLICKED
