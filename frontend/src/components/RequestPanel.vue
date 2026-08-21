@@ -1,7 +1,7 @@
 <template>
 	<div class="w-full">
 		<div
-			class="font-sans font-extrabold text-micro-label uppercase text-ink-600 mb-4"
+			class="g-eyebrow mb-4"
 		>
 			{{ __("Requests") }}
 		</div>

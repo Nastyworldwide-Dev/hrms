@@ -9,7 +9,7 @@
 				>
 					<FeatherIcon name="slash" class="h-6 w-6 text-danger-ink" />
 				</div>
-				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Check-in") }}</div>
+				<div class="g-eyebrow">{{ __("Check-in") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ title }}
 				</span>
@@ -35,13 +35,13 @@
 					</div>
 
 					<div class="bg-track-solid border border-hair px-3 py-2.5">
-						<div class="text-eyebrow uppercase text-accent-ink">
+						<div class="g-eyebrow">
 							{{ __("Shift Location") }}
 						</div>
 						<div class="text-sm font-medium text-ink mt-0.5">
 							{{ shiftLocation || __("(unnamed)") }}
 						</div>
-						<div class="text-eyebrow uppercase text-accent-ink mt-2">
+						<div class="g-eyebrow mt-2">
 							{{ __("Shift") }}
 						</div>
 						<div class="text-sm font-medium text-ink mt-0.5">

@@ -13,27 +13,15 @@
 				</div>
 
 				<div class="contents">
-					<router-link
-						:to="{ name: 'AttendanceRequestFormView' }"
-						v-slot="{ navigate }"
-						class="order-2"
-					>
-						<GButton :label="__('Request Attendance')" class="h-full" @click="navigate">
-							<template #trailing>
-								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<line x1="5" y1="12" x2="19" y2="12"></line>
-									<polyline points="12 5 19 12 12 19"></polyline>
-								</svg>
-							</template>
-						</GButton>
-					</router-link>
-
-										<!-- §15.2 flattening: three separate ghost actions were three glass
-					     surfaces and put this screen at 7 of 6. One panel with three rows
-					     is one surface, and the actions read as a group rather than three
-					     floating buttons. -->
-					<div class="order-3">
+					<!-- FOUR PEERS, NO PRIMARY (§18 ranking rule, v1.11). "Request
+					     Attendance" was a chartreuse GButton while Overtime, Replacement
+					     Leave and Shift were list rows — four actions of equal weight with
+					     one arbitrarily promoted. A primary belongs on a screen with one
+					     obvious task; this is a menu, so all four are rows in one panel
+					     (§15.2 keeps that one surface). -->
+					<div class="order-2">
 						<GListPanel>
+						<GListRow :label="__('Request Attendance')" @click="router.push({ name: 'AttendanceRequestFormView' })" />
 						<GListRow :label="__('Request Overtime')" @click="router.push({ name: 'OTRequestFormView' })" />
 						<GListRow :label="__('Replacement Leave')" @click="router.push({ name: 'ReplacementLeaveView' })" />
 						<GListRow :label="__('Request a Shift')" @click="router.push({ name: 'ShiftRequestFormView' })" />
@@ -44,9 +32,9 @@
 
 					
 
-					<div class="order-4">
+					<div class="order-3">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Attendance Requests") }}</span>
+							<span class="g-eyebrow">{{ __("Recent Attendance Requests") }}</span>
 							<router-link
 								:to="{ name: 'AttendanceRequestListView' }"
 								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
@@ -61,9 +49,9 @@
 						/>
 					</div>
 
-					<div class="order-5">
+					<div class="order-4">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Shifts") }}</span>
+							<span class="g-eyebrow">{{ __("Upcoming Shifts") }}</span>
 							<router-link
 								:to="{ name: 'ShiftAssignmentListView' }"
 								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
@@ -79,9 +67,9 @@
 						/>
 					</div>
 
-					<div class="order-6">
+					<div class="order-5">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Shift Requests") }}</span>
+							<span class="g-eyebrow">{{ __("Recent Shift Requests") }}</span>
 							<router-link
 								:to="{ name: 'ShiftRequestListView' }"
 								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
@@ -99,9 +87,9 @@
 					<!-- OT Request was the only request type you could file and never
 				     browse: OTRequestListView existed, was routed, and had no inbound
 				     link anywhere in the app. -->
-					<div class="order-7">
+					<div class="order-6">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent OT Requests") }}</span>
+							<span class="g-eyebrow">{{ __("Recent OT Requests") }}</span>
 							<router-link
 								:to="{ name: 'OTRequestListView' }"
 								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
@@ -126,7 +114,6 @@
 import { useRouter } from "vue-router"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import GButton from "@/components/glass/GButton.vue"
 import { computed, inject, markRaw } from "vue"
 import { createResource } from "frappe-ui"
 

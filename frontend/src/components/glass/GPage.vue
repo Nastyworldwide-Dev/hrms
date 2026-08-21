@@ -26,7 +26,19 @@
 </template>
 
 <script setup>
+import { computed, provide } from "vue"
+import { useRoute } from "vue-router"
 import { IonPage } from "@ionic/vue"
 
+import { TAB_ITEMS } from "@/data/navItems"
+
 defineProps({})
+
+// THE BACK RULE LIVES HERE (§12, v1.11). It used to be a per-screen decision:
+// 26 screens had a back control, 12 did not, and the split was whatever each
+// author chose — four pushed screens simply lacked one. GPage knows whether it
+// is a tab root, so it decides once and every header consumes the answer.
+const route = useRoute()
+const isTabRoot = computed(() => TAB_ITEMS.some((t) => t.route === route.path))
+provide("gShowBack", computed(() => !isTabRoot.value))
 </script>

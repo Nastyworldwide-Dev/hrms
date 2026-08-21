@@ -1,7 +1,7 @@
 <template>
 	<template v-if="expenseClaim.expenses">
 		<div class="flex flex-row justify-between items-center pt-4 pb-2 border-b-2 border-divider">
-			<h2 class="text-eyebrow uppercase text-accent-ink">{{ __("Taxes & Charges") }} </h2>
+			<h2 class="g-eyebrow">{{ __("Taxes & Charges") }} </h2>
 			<div class="flex flex-row gap-3 items-center">
 				<span class="text-base font-extrabold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
@@ -62,7 +62,7 @@
 					class="bg-ground w-full flex flex-col pb-5"
 				>
 					<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
-						<div class="text-eyebrow uppercase text-accent-ink">{{ __("Tax") }}</div>
+						<div class="g-eyebrow">{{ __("Tax") }}</div>
 						<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 							{{ modalTitle }}
 						</span>

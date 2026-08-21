@@ -41,7 +41,7 @@
 								>
 								<span
 									v-if="employee"
-									class="text-micro-label uppercase text-ink-600 truncate"
+									class="g-eyebrow truncate"
 									>{{ employee?.data?.designation }}</span
 								>
 							</div>

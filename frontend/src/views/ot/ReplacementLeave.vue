@@ -1,35 +1,25 @@
 <template>
-	<GPage>
-		<ion-content :fullscreen="true">
+	<BaseLayout :pageTitle="__('Replacement Leave')">
+		<template #body>
 			<div class="flex flex-col gap-5 p-4 pt-6">
-				<div class="flex items-center justify-between">
-					<!-- This screen is reached from Attendance's action list and is
-					     routed OUTSIDE ion-tabs, so it carries no tab bar. Without a
-					     back control there was no way off it at all except the
-					     device gesture. -->
-					<div class="flex items-center gap-1 min-w-0">
-						<button
-							type="button"
-							class="flex items-center justify-center shrink-0"
-							:aria-label="__('Back')"
-							@click="router.back()"
-						>
-							<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
-						</button>
-						<h1 class="text-xl font-bold text-inkbase truncate">{{ __("Replacement Leave") }}</h1>
-					</div>
+				<!-- The header, back control and title now come from the shared shell
+				     like every other screen (§12, v1.11). This screen had NO header
+				     element at all — it was the one view built outside the shell, which
+				     is why it also had a hand-rolled back control and a duplicate
+				     "New Claim" in its empty state. -->
+				<div class="flex items-center justify-end">
 					<router-link
 						:to="{ name: 'ReplacementLeaveClaimFormView' }"
 						v-slot="{ navigate }"
 					>
-						<GButton :label="__('New Claim')" @click="navigate" />
+						<GButton :label="__('New Claim')" class="g-btn--compact" @click="navigate" />
 					</router-link>
 				</div>
 
 				<ResourceError :resource="bank" what="your replacement leave bank" />
 				<!-- month bank -->
 				<div class="border border-divider rounded-panel p-4 flex flex-col gap-2" v-if="bank.data">
-					<span class="text-eyebrow uppercase text-accent-ink">{{ monthLabel }} {{ __("bank") }}</span>
+					<span class="g-eyebrow">{{ monthLabel }} {{ __("bank") }}</span>
 					<div class="flex items-baseline gap-1.5">
 						<span class="text-3xl font-extrabold text-inkbase">
 							{{ bank.data.hours_available }}
@@ -50,7 +40,7 @@
 
 				<!-- approved OT feeding the bank -->
 				<div v-if="bank.data?.requests?.length" class="flex flex-col gap-1.5">
-					<span class="text-eyebrow uppercase text-accent-ink">{{ __("Approved OT this month") }}</span>
+					<span class="g-eyebrow">{{ __("Approved OT this month") }}</span>
 					<div
 						v-for="request in bank.data.requests"
 						:key="request.name"
@@ -63,18 +53,12 @@
 
 				<!-- claims -->
 				<div class="flex flex-col gap-1.5">
-					<span class="text-eyebrow uppercase text-accent-ink">{{ __("My Claims") }}</span>
+					<span class="g-eyebrow">{{ __("My Claims") }}</span>
 					<GEmptyState
 						v-if="!claims.data?.length"
 						:title="__('No replacement leave claimed')"
-						:body="__('Worked a rest day? Claim the time back here')"
-					>
-						<template #action>
-							<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
-								<GButton :label="__('New Claim')" @click="navigate" />
-							</router-link>
-						</template>
-					</GEmptyState>
+						:body="__('Worked a rest day? Use New Claim above to claim the time back')"
+					/>
 					<router-link
 						v-for="claimRow in claims.data"
 						:key="claimRow.name"
@@ -93,8 +77,8 @@
 					</router-link>
 				</div>
 			</div>
-		</ion-content>
-	</GPage>
+		</template>
+	</BaseLayout>
 </template>
 
 <script setup>
@@ -102,8 +86,7 @@ import { useRouter } from "vue-router"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GButton from "@/components/glass/GButton.vue"
-import GPage from "@/components/glass/GPage.vue"
-import { IonContent } from "@ionic/vue"
+import BaseLayout from "@/components/BaseLayout.vue"
 import { Badge, Button, FeatherIcon, createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 

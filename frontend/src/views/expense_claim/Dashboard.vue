@@ -17,7 +17,7 @@
 				>
 					<div class="order-3 lg:order-1">
 						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink !text-ink-600 text-kra-label">
+							<span class="g-eyebrow !text-ink-600">
 								{{ __("Recent Expenses") }}
 							</span>
 							<router-link

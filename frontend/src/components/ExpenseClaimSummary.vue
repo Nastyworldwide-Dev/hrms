@@ -2,7 +2,7 @@
 	<div class="flex flex-col w-full" v-if="summary.data">
 		<!-- Poster: total claimed -->
 		<div class="bg-brand text-on-brand px-4 pt-5 pb-[22px]">
-			<div class="font-sans font-extrabold text-micro-label uppercase text-accent-200">
+			<div class="g-eyebrow text-accent-200">
 				{{ __("Total Claimed") }}
 			</div>
 			<div
@@ -15,7 +15,7 @@
 		<!-- Stat cells: pending / approved / rejected -->
 		<div class="grid grid-cols-3 border-b-2 border-divider">
 			<div class="flex flex-col gap-0.5 py-3 pl-0.5 pr-3">
-				<span class="text-micro-label uppercase text-ink-600">
+				<span class="g-eyebrow">
 					{{ __("Pending") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
@@ -23,7 +23,7 @@
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 px-3 border-l border-divider">
-				<span class="text-micro-label uppercase text-ink-600">
+				<span class="g-eyebrow">
 					{{ __("Approved") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums">
@@ -31,7 +31,7 @@
 				</span>
 			</div>
 			<div class="flex flex-col gap-0.5 py-3 pl-3 pr-0.5 border-l border-divider">
-				<span class="text-micro-label uppercase text-accent-700">
+				<span class="g-eyebrow text-accent-700">
 					{{ __("Rejected") }}
 				</span>
 				<span class="font-sans font-extrabold text-base tabular-nums text-accent-700">

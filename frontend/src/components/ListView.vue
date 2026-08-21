@@ -24,17 +24,17 @@
 					>
 						<FeatherIcon name="filter" class="h-4 w-4" />
 					</GIconButton>
+					<!-- A create action is a GButton wherever it appears (§18, v1.11).
+					     This was a white frappe-ui pill in the header while the same
+					     "create a new X" role rendered as a chartreuse GButton on the
+					     dashboards — one role, two components, two colours. -->
 					<router-link
 						v-if="createPermission?.data?.has_permission && props.doctype != 'Employee Checkin'"
 						:to="{ name: formViewRoute }"
 						v-slot="{ navigate }"
+						class="mr-2 shrink-0"
 					>
-						<Button variant="solid" class="g-touch mr-2" @click="navigate">
-							<template #prefix>
-								<FeatherIcon name="plus" class="w-4" />
-							</template>
-							{{ __("New", null, props.doctype) }}
-						</Button>
+						<GButton :label="__('New', null, props.doctype)" class="g-btn--compact" @click="navigate" />
 					</router-link>
 				</div>
 			</div>
@@ -111,21 +111,17 @@
 				     with nothing in the box to tap — "here" pointed at a button in
 				     the header, if it pointed anywhere. Same route as that button,
 				     shown only when the user may actually create one. -->
+				<!-- No action here (§18, v1.11). 8.11 put a create button in this
+				     slot because three of the copies promised one; the header's
+				     create action is now a GButton too, so an action here made
+				     "New" appear twice on the same screen. The copy references it
+				     instead. -->
 				<GEmptyState
 					v-else
 					class="mt-5"
 					:title="emptyCopy.title"
 					:body="emptyCopy.body"
-				>
-					<template
-						v-if="createPermission?.data?.has_permission && props.doctype != 'Employee Checkin'"
-						#action
-					>
-						<router-link :to="{ name: formViewRoute }" v-slot="{ navigate }">
-							<GButton :label="__('New', null, props.doctype)" @click="navigate" />
-						</router-link>
-					</template>
-				</GEmptyState>
+				/>
 			</div>
 		</div>
 
@@ -223,7 +219,7 @@ const EMPTY_COPY = {
 	},
 	"OT Request": {
 		title: __("No overtime claims yet"),
-		body: __("Stay past your shift end, punch out, and claim it here"),
+		body: __("Stay past your shift end, punch out, then use New above"),
 	},
 	"Employee Issue": {
 		title: __("Nothing reported"),
@@ -247,11 +243,11 @@ const EMPTY_COPY = {
 	},
 	"Expense Claim": {
 		title: __("No expense claims yet"),
-		body: __("Paid for something for work? Claim it here"),
+		body: __("Paid for something for work? Use New above to claim it"),
 	},
 	"Replacement Leave Claim": {
 		title: __("No replacement leave claimed"),
-		body: __("Worked a rest day? Claim the time back here"),
+		body: __("Worked a rest day? Use New above to claim the time back"),
 	},
 }
 

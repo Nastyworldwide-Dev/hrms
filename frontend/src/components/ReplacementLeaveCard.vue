@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Replacement Leave") }}</span>
+			<span class="g-eyebrow">{{ __("Replacement Leave") }}</span>
 			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
 				<span
 					@click="navigate"
@@ -18,7 +18,7 @@
 				<div class="font-sans font-extrabold text-ring-centre leading-none text-inkbase">
 					{{ formatLeaveDays(bank.data?.balance_days ?? 0) }}
 				</div>
-				<div class="text-micro-label uppercase text-ink-600 leading-tight">
+				<div class="g-eyebrow">
 					{{ __("days available") }}
 				</div>
 				<div class="text-kra-label text-ink-600 leading-tight">

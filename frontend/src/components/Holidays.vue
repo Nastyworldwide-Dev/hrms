@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-2.5">
-			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Holidays") }}</span>
+			<span class="g-eyebrow">{{ __("Upcoming Holidays") }}</span>
 			<span
 				v-if="holidays?.data?.length"
 				id="open-holiday-list"

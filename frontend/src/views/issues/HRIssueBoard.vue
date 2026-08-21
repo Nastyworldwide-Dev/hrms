@@ -4,7 +4,7 @@
 			<div class="flex flex-col w-full pt-2 pb-8">
 				<div class="w-full max-w-content-column-lg lg:mx-0 mx-auto">
 					<div class="px-4 pt-4">
-						<span class="text-eyebrow uppercase text-accent-ink">{{ __("HR · People & Culture") }}</span>
+						<span class="g-eyebrow">{{ __("HR · People & Culture") }}</span>
 					</div>
 
 					<!-- stats: ONE surface with internal dividers (§15.2), not one
@@ -62,7 +62,7 @@
 									{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
 								</span>
 								<span
-									class="text-micro-label font-extrabold uppercase tracking-wider px-2 py-0.5 border bg-transparent"
+									class="g-eyebrow tracking-wider px-2 py-0.5 border bg-transparent"
 									:class="URGENCY_CHIP[issue.urgency]"
 								>
 									{{ __(issue.urgency) }}
@@ -99,7 +99,7 @@
 					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
 				>
 					<div class="w-full flex flex-col gap-1 pt-6 pb-3 px-4">
-						<div class="text-eyebrow uppercase text-accent-ink">{{ detail.data.name }}</div>
+						<div class="g-eyebrow">{{ detail.data.name }}</div>
 						<span class="text-inkbase font-extrabold text-screen-title leading-tight">
 							{{ detail.data.employee_name }}
 						</span>
@@ -111,7 +111,7 @@
 
 					<div class="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 px-4 text-xs">
 						<template v-for="row in detailRows" :key="row.label">
-							<div class="text-micro-label uppercase tracking-wide font-extrabold text-ink-600 pt-px">
+							<div class="g-eyebrow pt-px">
 								{{ row.label }}
 							</div>
 							<div class="text-inkbase" :class="row.classes">{{ row.value }}</div>
@@ -126,7 +126,7 @@
 							<button
 								v-for="status in ISSUE_STATUSES"
 								:key="status"
-								class="flex-1 py-2 text-micro-label font-extrabold uppercase border"
+								class="g-eyebrow flex-1 py-2 border"
 								:class="
 									detail.data.status === status
 										? 'bg-accent-ink text-ground border-accent-ink'

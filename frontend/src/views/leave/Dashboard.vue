@@ -33,7 +33,7 @@
 				<div class="flex flex-col gap-8">
 					<div>
 						<div class="flex flex-row items-baseline justify-between mb-2.5">
-							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Leaves") }}</span>
+							<span class="g-eyebrow">{{ __("Recent Leaves") }}</span>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
 								v-slot="{ navigate }"

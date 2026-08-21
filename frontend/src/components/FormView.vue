@@ -84,7 +84,7 @@
 				</h2>
 				<span
 					v-if="!id"
-					class="hidden lg:inline ml-auto text-micro-label uppercase text-ink-600"
+					class="g-eyebrow hidden lg:inline ml-auto"
 				>
 					{{ dateKicker }}
 				</span>
@@ -95,7 +95,7 @@
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
 				<button
 					type="button"
-					class="hidden lg:flex items-center gap-2 px-4 pt-6 text-kra-label font-extrabold uppercase text-ink-600 hover:text-inkbase"
+					class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
 					@click="goBackOrHome(router)"
 				>
 					<FeatherIcon name="arrow-left" class="h-4 w-4" />

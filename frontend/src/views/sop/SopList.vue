@@ -7,7 +7,7 @@
 				<!-- Essentials (pinned) -->
 				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">
 					<div class="flex items-center justify-between">
-						<span v-if="pinned.length" class="text-eyebrow uppercase text-accent-ink">{{ __("Essentials") }}</span>
+						<span v-if="pinned.length" class="g-eyebrow">{{ __("Essentials") }}</span>
 						<span v-else></span>
 						<GBadge v-if="isHR" variant="accent">{{ __("HR") }}</GBadge>
 					</div>
@@ -35,7 +35,7 @@
 								<span class="font-extrabold text-card-title leading-tight">
 									{{ sop.title }}
 								</span>
-								<span class="text-micro-label uppercase font-bold opacity-75">
+								<span class="g-eyebrow font-bold opacity-75">
 									{{ scopeLabel(sop) }}
 								</span>
 							</span>
@@ -60,7 +60,7 @@
 				<!-- Sections -->
 				<div v-if="!isEmpty" class="flex flex-col gap-[18px]">
 					<div v-for="section in sections" :key="section.key" class="flex flex-col gap-2">
-						<span class="text-eyebrow uppercase text-accent-ink">{{ sectionLabel(section) }}</span>
+						<span class="g-eyebrow">{{ sectionLabel(section) }}</span>
 						<div class="flex flex-col border-t-2 border-divider">
 							<router-link
 								v-for="sop in section.sops"

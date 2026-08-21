@@ -1,7 +1,7 @@
 <template>
 	<!-- Header -->
 	<div class="flex flex-row justify-between items-center mt-2 pb-2 border-b-2 border-divider">
-		<h2 class="text-eyebrow uppercase text-accent-ink">{{ __("Expenses") }} </h2>
+		<h2 class="g-eyebrow">{{ __("Expenses") }} </h2>
 		<div class="flex flex-row gap-3 items-center">
 			<span class="text-base font-extrabold text-inkbase">
 				{{ formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency) }}
@@ -70,7 +70,7 @@
 				class="bg-ground w-full flex flex-col pb-5"
 			>
 				<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
-					<div class="text-eyebrow uppercase text-accent-ink">{{ __("Expense") }}</div>
+					<div class="g-eyebrow">{{ __("Expense") }}</div>
 					<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 						{{ modalTitle }}
 					</span>

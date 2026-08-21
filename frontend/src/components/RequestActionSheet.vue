@@ -8,7 +8,7 @@
 			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-overlay bg-ground"
 		>
 			<div class="flex flex-col gap-1">
-				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Request") }}</div>
+				<div class="g-eyebrow">{{ __("Request") }}</div>
 				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ __(document?.doctype) }}
 				</span>
@@ -56,7 +56,7 @@
 					class="flex flex-col gap-2 w-full py-3"
 					v-if="attachedFiles?.data?.length"
 				>
-					<div class="text-eyebrow uppercase text-accent-ink">{{ __('Attachments') }}</div>
+					<div class="g-eyebrow">{{ __('Attachments') }}</div>
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
 							class="bg-surface border border-divider p-2 w-full"

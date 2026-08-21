@@ -4,7 +4,7 @@
 		class="bg-ground w-full flex flex-col pb-5 max-h-sheet"
 	>
 		<div class="w-full pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground flex flex-col gap-1">
-			<div class="text-eyebrow uppercase text-accent-ink">{{ __("Refine") }}</div>
+			<div class="g-eyebrow">{{ __("Refine") }}</div>
 			<span class="text-inkbase font-extrabold text-stat-number leading-tight">{{ __("Filters") }}</span>
 		</div>
 
@@ -20,7 +20,7 @@
 						class="flex flex-col gap-1.5"
 						v-if="['status', 'approval_status'].includes(filter.fieldname)"
 					>
-						<div class="text-eyebrow uppercase text-accent-ink">
+						<div class="g-eyebrow">
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row gap-2 mt-2 flex-wrap">
@@ -42,7 +42,7 @@
 
 					<!-- Field filters -->
 					<div v-else class="flex flex-col gap-2">
-						<div class="text-eyebrow uppercase text-accent-ink">
+						<div class="g-eyebrow">
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row items-center gap-3">

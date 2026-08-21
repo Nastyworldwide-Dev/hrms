@@ -14,7 +14,7 @@
 						</GButton>
 				</router-link>
 
-				<span class="text-eyebrow uppercase text-accent-ink mt-2">{{ __("Reported by you") }}</span>
+				<span class="g-eyebrow mt-2">{{ __("Reported by you") }}</span>
 				<div class="flex flex-col gap-2.5 pt-1">
 					<!-- §15.1/§15.2: a LIST of issues is unbounded, and N glass cards
 					     are N surfaces — an employee with eight open tickets would

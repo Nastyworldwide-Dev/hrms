@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col w-full">
-		<div class="text-eyebrow uppercase text-accent-ink">
+		<div class="g-eyebrow">
 			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
 		</div>
 		<h1
@@ -92,7 +92,7 @@
 	>
 		<div class="checkin-sheet__stack">
 			<div class="flex flex-col gap-1">
-				<div class="text-eyebrow uppercase text-accent-ink">{{ nextAction.label }}</div>
+				<div class="g-eyebrow">{{ nextAction.label }}</div>
 				<GClock
 					:time="dayjs(checkinTimestamp).format('hh:mm')"
 					:seconds="dayjs(checkinTimestamp).format('ss')"

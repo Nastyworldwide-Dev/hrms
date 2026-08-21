@@ -4,7 +4,7 @@
 			<div
 				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4"
 			>
-				<div class="text-eyebrow uppercase text-accent-ink">{{ __("Late check-out") }}</div>
+				<div class="g-eyebrow">{{ __("Late check-out") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ __("Forgot to check out?") }}
 				</span>

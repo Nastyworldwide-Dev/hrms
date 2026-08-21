@@ -10,6 +10,7 @@
 					:avatar-label="user.data.first_name"
 					@notifications="router.push({ name: 'Notifications' })"
 					@profile="router.push({ name: 'Profile' })"
+					@back="router.back()"
 				/>
 			</div>
 		</ion-header>

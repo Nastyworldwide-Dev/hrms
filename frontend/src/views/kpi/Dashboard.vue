@@ -9,7 +9,7 @@
 					class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 				>
 					<div class="flex flex-col gap-1.5">
-						<label class="text-eyebrow uppercase text-accent-ink" for="kpi-year-filter">{{ __("Year") }}</label>
+						<label class="g-eyebrow" for="kpi-year-filter">{{ __("Year") }}</label>
 						<select
 							id="kpi-year-filter"
 							v-model="selectedYear"
@@ -20,7 +20,7 @@
 						</select>
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<label class="text-eyebrow uppercase text-accent-ink" for="kpi-cycle-filter">
+						<label class="g-eyebrow" for="kpi-cycle-filter">
 							{{ __("Appraisal cycle") }}
 						</label>
 						<select
@@ -39,7 +39,7 @@
 					<div class="contents">
 						<!-- Hero: overall score -->
 						<div>
-							<div class="text-eyebrow uppercase text-accent-ink">
+							<div class="g-eyebrow">
 								<template v-if="current.is_average">
 									{{ selectedYear }} · {{ __("All Appraisal Cycles") }}
 								</template>
@@ -83,7 +83,7 @@
 						<!-- Score trend -->
 						<div v-if="trend.length > 1">
 							<div
-								class="text-kra-label uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+								class="g-eyebrow mb-2.5"
 							>
 								{{ __("Score trend") }}
 							</div>
@@ -147,7 +147,7 @@
 						<!-- KRA list -->
 						<div>
 							<div
-								class="text-kra-label uppercase font-sans font-extrabold text-ink-600 mb-2.5"
+								class="g-eyebrow mb-2.5"
 							>
 								{{ __("My KRAs") }}
 							</div>

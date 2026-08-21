@@ -7,7 +7,7 @@
 				     (HR request 2026-08-19; options built by utils/team.js,
 				     pinned by tests/manager-options.test.mjs) -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
-					<span class="text-eyebrow uppercase text-accent-ink flex-none">{{ __("Team of") }}</span>
+					<span class="g-eyebrow flex-none">{{ __("Team of") }}</span>
 					<Autocomplete
 						class="flex-1 min-w-0"
 						:options="managerOptions"
@@ -52,7 +52,7 @@
 						<span class="font-sans font-extrabold text-stat-number leading-none text-inkbase">
 							{{ tile.count }}
 						</span>
-						<span class="text-micro-label uppercase text-ink-600 leading-tight">
+						<span class="g-eyebrow">
 							{{ tile.label }}
 						</span>
 					</div>
@@ -67,7 +67,7 @@
 					v-if="teamStatus.data?.members?.length"
 				>
 					<template v-for="group in departmentGroups" :key="group.department">
-						<div class="text-eyebrow uppercase text-accent-ink px-3 pt-4 pb-1.5">
+						<div class="g-eyebrow px-3 pt-4 pb-1.5">
 							{{ group.department }} ({{ group.members.length }})
 						</div>
 						<div

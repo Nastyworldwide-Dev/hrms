@@ -338,6 +338,29 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	min-height: var(--g-touch-target-min);
 }
 
+/* A GButton sized for a header slot. The component is full-width by default
+   because it is normally a screen's sticky primary; in a header it sits beside
+   a title and must not take the row. Same fill, same component, same role. */
+.g-btn--compact {
+	width: auto;
+	padding: 0 14px;
+	white-space: nowrap;
+}
+
+/* THE section header (§10 eyebrow, v1.11). Six treatments were in use and the
+   specified one accounted for 32 of 145 rendered instances — the most common
+   treatment in the app was not the one the spec defines. One class now, so a
+   section header cannot be spelled a seventh way. */
+.g-eyebrow {
+	font-family: var(--g-type-eyebrow-family);
+	font-size: var(--g-type-eyebrow-size);
+	font-weight: var(--g-type-eyebrow-weight);
+	letter-spacing: var(--g-type-eyebrow-tracking);
+	line-height: var(--g-type-eyebrow-line-height);
+	text-transform: uppercase;
+	color: var(--g-accent-ink);
+}
+
 /* ---------- GIconButton (§14.1) ---------- */
 
 /* The §14.1 minimum is a TARGET, not a glyph size: the icon stays whatever the
@@ -1578,6 +1601,11 @@ html[data-theme="dark"] .g-cal__day--present {
 	padding: 13px var(--g-screen-gutter);
 	background: var(--g-bg);
 	border-bottom: 1px solid var(--g-hair);
+}
+/* the back control, when GPage says this is a pushed screen */
+.g-header__back {
+	margin-right: 4px;
+	color: var(--g-ink);
 }
 .g-header__title {
 	flex: 1;

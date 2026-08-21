@@ -2,7 +2,7 @@
 	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
 		<div class="bg-bg w-full flex flex-col pb-8">
 			<div class="w-full flex flex-col gap-1 pt-6 pb-4 bg-bg px-4">
-				<div class="text-eyebrow uppercase text-accent-ink">
+				<div class="g-eyebrow">
 					{{ step === 1 ? __("Notifications") : __("Are you sure?") }}
 				</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">

@@ -27,6 +27,20 @@
 -->
 <template>
 	<header class="g-header">
+		<!-- Back is GPage's decision, not this component's and not the screen's
+		     (§12, v1.11): a pushed screen gets one, a tab root does not. -->
+		<GIconButton
+			v-if="showBack"
+			:label="__('Back')"
+			flush
+			class="g-header__back"
+			@click="$emit('back', $event)"
+		>
+			<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+				<polyline points="10 3 5 8 10 13" />
+			</svg>
+		</GIconButton>
+
 		<h1 class="g-header__title">{{ title || __("Frappe HR") }}</h1>
 
 		<span v-if="kicker" class="g-header__kicker">{{ kicker }}</span>
@@ -58,8 +72,11 @@
 
 <script setup>
 import { inject } from "vue"
+import GIconButton from "./GIconButton.vue"
 
 const __ = inject("$translate")
+// provided by GPage; false on tab roots
+const showBack = inject("gShowBack", false)
 import { computed } from "vue"
 
 const props = defineProps({
@@ -69,7 +86,7 @@ const props = defineProps({
 	avatarUrl: { type: String, default: "" },
 	avatarLabel: { type: String, default: "" },
 })
-defineEmits(["notifications", "profile"])
+defineEmits(["notifications", "profile", "back"])
 
 const initial = computed(() => (props.avatarLabel || "?").charAt(0).toUpperCase())
 </script>

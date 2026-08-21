@@ -48,7 +48,7 @@
 										{{ req.employee_name || req.employee }}
 									</div>
 									<span
-										class="text-micro-label font-sans font-extrabold px-2 py-[3px] uppercase"
+										class="g-eyebrow px-2 py-[3px]"
 										:class="
 											req.status === 'Approved'
 												? 'border border-accent-ink text-accent-700'
@@ -99,7 +99,7 @@
 										{{ req.employee_name || req.employee }}
 									</div>
 									<span
-										class="text-micro-label font-sans font-extrabold px-2 py-[3px] uppercase"
+										class="g-eyebrow px-2 py-[3px]"
 										:class="
 											req.log_type === 'IN'
 												? 'bg-inkbase text-ground'
@@ -152,7 +152,7 @@
 					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)]"
 				>
 					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
-						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Remote check-in") }}</span>
+						<span class="g-eyebrow">{{ __("Remote check-in") }}</span>
 						<span class="font-sans font-extrabold text-stat-number text-inkbase">
 							{{
 								decision === "approve" ? __("Approve this check-in?") : __("Reject this check-in?")

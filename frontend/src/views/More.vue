@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
 			<div class="flex flex-col gap-[13px] w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7">
-				<span class="text-eyebrow uppercase text-accent-ink">{{ __("More") }}</span>
+				<span class="g-eyebrow">{{ __("More") }}</span>
 
 				<!-- one glass surface for the whole list (§15.1): the panel and its
 				     rows count as ONE, not one per row -->

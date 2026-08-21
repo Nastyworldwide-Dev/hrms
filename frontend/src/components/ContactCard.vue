@@ -23,7 +23,7 @@
 			</div>
 			<div
 				v-if="contact.designation"
-				class="text-micro-label uppercase text-ink-600 truncate mt-0.5"
+				class="g-eyebrow truncate mt-0.5"
 			>
 				{{ contact.designation }}
 			</div>

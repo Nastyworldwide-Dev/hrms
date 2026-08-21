@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Leave Balance") }}</span>
+			<span class="g-eyebrow">{{ __("Leave Balance") }}</span>
 			<router-link
 				:to="{ name: 'LeaveApplicationListView' }"
 				v-slot="{ navigate }"

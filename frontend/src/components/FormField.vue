@@ -107,7 +107,7 @@
 			:class="props.addSectionPadding ? 'mt-2' : ''"
 		>
 			<hr v-if="props.addSectionPadding" class="h-px border-0 bg-hair mb-3" />
-			<h2 v-if="props.label" class="text-eyebrow uppercase text-accent-ink">
+			<h2 v-if="props.label" class="g-eyebrow">
 				{{ props.label }}
 			</h2>
 		</div>

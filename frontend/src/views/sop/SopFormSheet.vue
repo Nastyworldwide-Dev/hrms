@@ -50,7 +50,7 @@
 							v-for="scope in SCOPES"
 							:key="scope"
 							type="button"
-							class="flex-1 min-h-11 py-2.5 px-2 border text-kra-label font-extrabold uppercase"
+							class="g-eyebrow flex-1 min-h-11 py-2.5 px-2 border"
 							:class="
 								form.scope === scope
 									? 'bg-accent-ink text-ground border-accent-ink'
@@ -139,7 +139,7 @@
 					<label class="m-field-label">{{ __("Attachment") }}</label>
 					<div class="flex items-center gap-2 flex-wrap">
 						<label
-							class="g-touch flex items-center gap-1.5 border border-divider rounded-input text-inkbase px-3 py-2.5 text-kra-label font-extrabold uppercase cursor-pointer hover:bg-icon-bg"
+							class="g-eyebrow g-touch flex items-center gap-1.5 border border-divider rounded-input text-inkbase px-3 py-2.5 cursor-pointer hover:bg-icon-bg"
 						>
 							<FeatherIcon name="paperclip" class="h-3.5 w-3.5" />
 							{{ __("Choose file") }}

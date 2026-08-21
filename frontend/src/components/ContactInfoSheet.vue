@@ -6,7 +6,7 @@
 		<div
 			class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-overlay bg-ground"
 		>
-			<span class="text-eyebrow uppercase text-accent-ink">{{ __("Contact") }}</span>
+			<span class="g-eyebrow">{{ __("Contact") }}</span>
 			<span class="font-sans font-extrabold text-stat-number text-inkbase">
 				{{ __("Contact Information") }}
 			</span>
@@ -14,7 +14,7 @@
 
 		<!-- Section 1: My Contact -->
 		<div class="w-full px-4 pt-2">
-			<div class="text-eyebrow uppercase text-accent-ink mb-2.5">
+			<div class="g-eyebrow mb-2.5">
 				{{ __("My Contact") }}
 			</div>
 			<div class="flex flex-col border-t-2 border-divider">
@@ -36,7 +36,7 @@
 
 		<!-- Section 2: Reporting Manager -->
 		<div v-if="managerResource.loading || managerResource.data" class="w-full px-4 pt-6">
-			<div class="text-eyebrow uppercase text-accent-ink mb-2.5">
+			<div class="g-eyebrow mb-2.5">
 				{{ __("Reporting Manager") }}
 			</div>
 			<div v-if="managerResource.loading" class="h-20 bg-ink-200 animate-pulse" />

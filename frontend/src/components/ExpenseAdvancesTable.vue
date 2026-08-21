@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-row justify-between items-center pb-2 border-b-2 border-divider">
-		<h2 class="text-eyebrow uppercase text-accent-ink">
+		<h2 class="g-eyebrow">
 			{{ __("Settle against Advances") }}
 		</h2>
 	</div>
