@@ -18,9 +18,9 @@
 <template>
 	<GSkeleton v-if="loading" height="118px" radius="var(--g-radius-action)" />
 
-	<component
+	<GTag
 		v-else
-		:is="tappable ? 'button' : 'div'"
+		:as="tappable ? 'button' : 'div'"
 		:type="tappable ? 'button' : undefined"
 		class="g-glass g-selfie"
 		:class="{ 'g-focusable': tappable }"
@@ -38,11 +38,12 @@
 				</svg>
 			</span>
 		</slot>
-	</component>
+	</GTag>
 </template>
 
 <script setup>
 import GSkeleton from "./GSkeleton.vue"
+import GTag from "./GTag.js"
 
 defineProps({
 	label: { type: String, default: "Take your check-in photo" },

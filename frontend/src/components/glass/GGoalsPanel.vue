@@ -12,8 +12,8 @@
   Emits: click
 -->
 <template>
-	<component
-		:is="tappable ? 'button' : 'div'"
+	<GTag
+		:as="tappable ? 'button' : 'div'"
 		:type="tappable ? 'button' : undefined"
 		class="g-glass g-goals"
 		:class="{ 'g-focusable': tappable }"
@@ -35,10 +35,12 @@
 				stroke-linejoin="round"
 			/>
 		</svg>
-	</component>
+	</GTag>
 </template>
 
 <script setup>
+import GTag from "./GTag.js"
+
 defineProps({
 	count: { type: [Number, String], required: true },
 	label: { type: String, required: true },

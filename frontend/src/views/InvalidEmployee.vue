@@ -1,7 +1,7 @@
 <template>
 	<GPage>
 		<ion-content class="ion-padding">
-			<div class="flex h-screen w-screen flex-col justify-center bg-ground">
+			<div class="flex min-h-full w-full flex-col justify-center">
 				<GModal
 					:is-open="showDialog"
 					:title="__('Login failed')"

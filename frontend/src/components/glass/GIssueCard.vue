@@ -16,8 +16,8 @@
   Emits: click (tappable only)
 -->
 <template>
-	<component
-		:is="tappable ? 'button' : 'div'"
+	<GTag
+		:as="tappable ? 'button' : 'div'"
 		:type="tappable ? 'button' : undefined"
 		class="g-glass g-issue"
 		:class="{ 'g-focusable': tappable }"
@@ -29,10 +29,12 @@
 		</span>
 		<span class="g-issue__title">{{ title }}</span>
 		<span v-if="meta" class="g-issue__meta">{{ meta }}</span>
-	</component>
+	</GTag>
 </template>
 
 <script setup>
+import GTag from "./GTag.js"
+
 defineProps({
 	issueId: { type: String, required: true },
 	title: { type: String, required: true },

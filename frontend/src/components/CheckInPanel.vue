@@ -25,35 +25,44 @@
 			</div>
 
 			<!-- Forgot-to-check-out banner: open IN past 6 AM cutoff OR tagged abandoned by nightly sweeper -->
-			<div
+			<!-- 8.5 — was a hand-rolled div carrying Modernist utilities:
+			     `bg-accent-100` with `text-accent-800` copy. In dark theme both
+			     resolve to the accent itself, so this rendered as a blank
+			     chartreuse block — text at a MEASURED 1.00 contrast ratio,
+			     present in the DOM and completely invisible. It is a warning
+			     banner, and the system already had one. -->
+			<GBanner
 				v-if="hasStaleOpenIn"
-				class="mt-3.5 flex flex-row items-center gap-3 border border-accent border-l-4 bg-accent-100 px-3 py-2.5 cursor-pointer"
+				variant="warning"
+				class="g-banner--tappable mt-3.5"
 				@click="lateCheckoutOpen = true"
 			>
-				<FeatherIcon
-					:name="isAbandoned ? 'alert-triangle' : 'clock'"
-					class="h-4 w-4 shrink-0 text-accent-800"
-				/>
-				<div class="flex flex-col flex-1 min-w-0 gap-0.5">
-					<div class="text-card-title font-semibold text-accent-800">
-						<template v-if="isAbandoned">
-							{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
-						</template>
-						<template v-else>
-							{{ __("Forgot to check out from {0}?", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
-						</template>
+				<div class="flex flex-row items-center gap-3">
+					<FeatherIcon
+						:name="isAbandoned ? 'alert-triangle' : 'clock'"
+						class="h-4 w-4 shrink-0"
+					/>
+					<div class="flex flex-col flex-1 min-w-0">
+						<span class="g-banner__title">
+							<template v-if="isAbandoned">
+								{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
+							</template>
+							<template v-else>
+								{{ __("Forgot to check out from {0}?", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
+							</template>
+						</span>
+						<span class="g-banner__hint">
+							<template v-if="isAbandoned">
+								{{ __("Submit a late check-out now to resolve.") }}
+							</template>
+							<template v-else>
+								{{ __("Tap to submit a late check-out for approval.") }}
+							</template>
+						</span>
 					</div>
-					<div class="text-kra-label text-accent-800/80">
-						<template v-if="isAbandoned">
-							{{ __("Submit a late check-out now to resolve.") }}
-						</template>
-						<template v-else>
-							{{ __("Tap to submit a late check-out for approval.") }}
-						</template>
-					</div>
+					<GBadge variant="open" class="shrink-0">{{ __("Resolve") }}</GBadge>
 				</div>
-				<GBadge variant="open" class="shrink-0">{{ __("Resolve") }}</GBadge>
-			</div>
+			</GBanner>
 
 			<GButton
 				id="open-checkin-modal"
@@ -188,6 +197,7 @@ import GMapPanel from "@/components/glass/GMapPanel.vue"
 import GClock from "@/components/glass/GClock.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
+import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
 import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"

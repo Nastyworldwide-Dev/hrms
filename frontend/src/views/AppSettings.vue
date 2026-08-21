@@ -1,10 +1,10 @@
 <template>
 	<GPage>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen bg-ground">
+			<div class="flex flex-col min-h-full w-full">
 				<div class="w-full max-w-[620px] mx-auto">
 					<header
-						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
+						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<Button

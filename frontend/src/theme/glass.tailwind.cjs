@@ -157,6 +157,7 @@ module.exports = {
 	},
 	spacing: {
 		"screen-gutter": "var(--g-screen-gutter)",
+		"sheet-pad-bottom": "var(--g-sheet-pad-bottom)",
 		"stack-lg": "var(--g-stack-lg)",
 		"stack-md": "var(--g-stack-md)",
 		"stack-sm": "var(--g-stack-sm)",

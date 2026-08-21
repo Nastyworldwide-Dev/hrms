@@ -24,6 +24,18 @@ const recentlyReported = new Map()
 // resource discovers the session is gone at the same moment.
 const SILENT_EXCEPTIONS = new Set(["AuthenticationError", "SessionExpired", "SessionStopped"])
 
+// Endpoints whose failure is not a page-level event. A link-picker typeahead is
+// the case this exists for: on the expense claim form it 403s for Account,
+// Currency, Branch and Location, and each one raised a "Could not load —
+// Insufficient Permission for Account" toast, anchored bottom-centre, directly
+// ON TOP of the screen's only submit button. Two defects in one: the primary
+// action was covered, and raw backend vocabulary with a capitalised doctype
+// name was shown to an employee filing a claim.
+// The control's own empty state is the right feedback for a lookup that
+// returned nothing. Still logged to the console — silent to the user, never to
+// a developer.
+const SILENT_ENDPOINTS = new Set(["frappe.desk.search.search_link"])
+
 function endpointOf(options) {
 	const url = options?.url || "unknown endpoint"
 	return url.replace(/^\/api\/method\//, "")
@@ -57,7 +69,11 @@ export function makeLoudRequest(request, { notify = toast, now = () => Date.now(
 			// screen is blank" into a named endpoint in one step.
 			console.error("[request] failed:", endpoint, error?.exc_type || "", firstMessage(error))
 
-			if (!SILENT_EXCEPTIONS.has(error?.exc_type) && !isRepeat(endpoint, now())) {
+			if (
+				!SILENT_EXCEPTIONS.has(error?.exc_type) &&
+				!SILENT_ENDPOINTS.has(endpoint) &&
+				!isRepeat(endpoint, now())
+			) {
 				notify({
 					title: "Could not load",
 					text: firstMessage(error),

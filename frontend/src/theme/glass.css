@@ -63,6 +63,7 @@
 	--g-pad-panel: 14px 13px;
 	--g-pad-row: 11.5px 15px;
 	--g-screen-gutter: 15px;
+	--g-sheet-pad-bottom: 14px;
 	--g-stack-lg: 16px;
 	--g-stack-md: 13px;
 	--g-stack-sm: 9px;
@@ -90,6 +91,7 @@
 	--g-content-column-lg: 720px;
 	--g-sheet-max-height: calc(100vh - 5rem);
 	--g-tabbar-gap: 9px;
+	--g-tabbar-height: 58px;
 	--g-touch-target-min: 44px;
 	--g-viewport-height: 844px;
 	--g-viewport-width: 390px;

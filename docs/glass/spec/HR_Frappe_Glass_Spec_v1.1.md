@@ -1,4 +1,4 @@
-# HR Frappe · Glass — Implementation Specification v1.7
+# HR Frappe · Glass — Implementation Specification v1.8
 
 **Supersedes** v1.6, v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
@@ -67,6 +67,15 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.8 — the render-time gates the spec already required
+
+| # | Change | Reason |
+|---|---|---|
+| 8.1 | §16.5 rewritten to say what each gate **actually enforces**, and to mark which read source and which read pixels | §16.5 already required "Playwright visual regression per component per theme" and "axe pass per screen". Neither existed: there was no visual gate at all, and the axe gate ran one route, `/hrms/login`, and called `process.exit(0)` on whatever it found. The spec was right and the build did not follow it — the same failure mode as §12's anatomies in v1.7 |
+| 8.2 | The a11y gate is **enforcing**: serious and critical fail, moderate and minor report | A gate that detects failures and passes is worse than no gate. It reported three serious contrast violations for fifty prompts while the screen it was reporting them on could not be clicked at all |
+| 8.3 | Visual regression added as gate 6, baselined on `docs/glass/audit/screens/` | Four gates read source and one reads the DOM. None could see layout, which is how a login form nobody could click, rows whose icon and label stacked, and content permanently behind the tab bar all shipped with every gate green |
+| 8.4 | **Two components may never share a class name.** `.g-field` was both the §3 light field and the GInput wrapper | The light field's `position:absolute; inset:0; pointer-events:none` landed on every form field in the app. Not a naming preference — a P0 |
 
 ### v1.7 — the auth-screen light field, reversed
 
@@ -788,13 +797,31 @@ A screen therefore spends **one** of its six on chrome — the tab bar below `lg
 A `/design` route inside the app rendering all 28 components in every state, in both themes, on device. The spec's HTML specimens are the right idea; they must live in the app so they cannot drift. `frappe-ui`'s `.story.vue` convention is a reasonable model.
 
 ### 16.5 CI gates
-1. Lint: no hex literals, no arbitrary Tailwind values, no `outline: none` without replacement, no raw `ion-*` styling outside the theme layer
-2. Contrast test over the §14.2 matrix, run on every change to `tokens.json`
-3. Playwright visual regression per component per theme at 390 × 844
-4. axe pass per screen
-5. Glass-surface counter per screen against §15
 
-Without gates, §2's "no one-off hex values" is a wish.
+Six gates, run by `node design/gates/run.mjs`. The split that matters is what
+each one can SEE.
+
+**Read the source** — always run, no site needed:
+
+1. **lint** — no hex literals, no arbitrary Tailwind values, no `outline: none` without replacement, no raw `ion-*` styling outside the theme layer. Debt in `design/lint-baseline.json`; new violations fail
+2. **usage** — screens compose primitives only; strict for `views/`. Debt in `design/usage-baseline.json`
+3. **contrast** — computed WCAG ratios over the §14.2 matrix, from `tokens.json`. Always enforcing
+4. **surfaces** — the §15 budget of 6 and the §15.2 flattening invariant
+
+**Read the rendered page** — need a running site and a chromium; SKIP without one, so a laptop without a bench still runs 1–4:
+
+5. **a11y** — axe over **every screen in `frontend/e2e/screens.mjs`, both themes**. Serious and critical **fail**; moderate and minor report. Debt in `design/a11y-baseline.json`
+6. **visual** — Playwright screenshot diff per screen at 390 dark, 390 light and 1440 dark, baselined on the committed captures in `docs/glass/audit/screens/`
+
+Gates 1–4 cannot see layout. A component can use every correct token, compose
+only approved primitives, sit inside the surface budget, and still render with
+its icon above its label and its chevron in the next row. That is not
+hypothetical: it shipped, with all gates green. Gates 5 and 6 exist because of
+it, and one screen list feeds both plus the audit capture, so a route cannot be
+added to the app and skipped by the gates.
+
+Without gates, §2's "no one-off hex values" is a wish. Without a gate that
+looks at pixels, so is §10.
 
 ### 16.6 Copy
 All label changes ship as **Frappe Translation records** — the PWA's `translationsPlugin` reads `frappe.boot.__messages` and supports context. **Zero code change.** Scope by context so the new wording does not leak into Desk.
@@ -938,4 +965,4 @@ this design**, and is removed.
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.7 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.8 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*

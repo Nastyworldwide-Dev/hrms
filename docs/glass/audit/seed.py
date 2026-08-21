@@ -5,9 +5,12 @@ Runs against verify-bench/fresh.local only. Idempotent-ish: re-running skips
 what exists. Credential comes from the AUDIT_PW environment variable.
 """
 
-import json, datetime, os
+import datetime
+import json
+import os
+
 import frappe
-from frappe.utils import add_days, nowdate, getdate
+from frappe.utils import add_days, getdate, nowdate
 
 log = []
 

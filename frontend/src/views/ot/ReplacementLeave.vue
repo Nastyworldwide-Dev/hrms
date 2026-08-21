@@ -3,7 +3,21 @@
 		<ion-content :fullscreen="true">
 			<div class="flex flex-col gap-5 p-4 pt-6">
 				<div class="flex items-center justify-between">
-					<h1 class="text-xl font-bold text-inkbase">{{ __("Replacement Leave") }}</h1>
+					<!-- This screen is reached from Attendance's action list and is
+					     routed OUTSIDE ion-tabs, so it carries no tab bar. Without a
+					     back control there was no way off it at all except the
+					     device gesture. -->
+					<div class="flex items-center gap-1 min-w-0">
+						<button
+							type="button"
+							class="flex items-center justify-center shrink-0"
+							:aria-label="__('Back')"
+							@click="router.back()"
+						>
+							<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+						</button>
+						<h1 class="text-xl font-bold text-inkbase truncate">{{ __("Replacement Leave") }}</h1>
+					</div>
 					<router-link
 						:to="{ name: 'ReplacementLeaveClaimFormView' }"
 						v-slot="{ navigate }"
@@ -78,12 +92,13 @@
 </template>
 
 <script setup>
+import { useRouter } from "vue-router"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
-import { Badge, Button, createResource } from "frappe-ui"
+import { Badge, Button, FeatherIcon, createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
 
@@ -106,4 +121,6 @@ const claims = createResource({
 const monthLabel = computed(() =>
 	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMMM YYYY") : ""
 )
+
+const router = useRouter()
 </script>

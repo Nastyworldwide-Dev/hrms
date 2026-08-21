@@ -1,59 +1,60 @@
 <template>
 	<GPage>
 		<ion-content :fullscreen="true">
+			<!-- 8.5 — never migrated: imported GPage/GInput/GButton but used only
+			     GPage, and a hardcoded `bg-white` painted over the theme so the dark
+			     capture rendered a white page with a near-white primary on it. -->
 			<div class="flex flex-col h-full w-full">
-				<div class="w-full h-full bg-white sm:w-96 flex flex-col">
+				<div class="w-full h-full sm:w-96 flex flex-col">
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center sticky top-0 z-[1000]"
+						class="flex flex-row bg-ground py-4 px-3 items-center sticky top-0 z-sticky border-b border-divider"
 					>
-						<Button
-							variant="ghost"
-							class="!pl-0 hover:bg-white"
+						<button
+							type="button"
+							class="mr-1 flex items-center justify-center"
+							:aria-label="__('Back')"
 							@click="router.back()"
 						>
-							<FeatherIcon name="chevron-left" class="h-5 w-5" />
-						</Button>
-						<h2 class="text-xl font-semibold text-gray-900">{{ __("Change Password") }}</h2>
+							<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+						</button>
+						<h2 class="text-xl font-extrabold text-inkbase tracking-tight">
+							{{ __("Change Password") }}
+						</h2>
 					</header>
 
-					<div class="bg-white grow overflow-y-auto">
+					<div class="grow overflow-y-auto">
 						<form class="flex flex-col space-y-4 p-4" @submit.prevent="submitPasswordChange">
-							<Input
+							<GInput
 								:label="__('Current Password') + ' *'"
 								type="password"
 								v-model="currentPassword"
 								autocomplete="current-password"
-								required
 							/>
-							<Input
+							<GInput
 								:label="__('New Password') + ' *'"
 								type="password"
 								v-model="newPassword"
 								autocomplete="new-password"
-								required
 							/>
-							<Input
+							<GInput
 								:label="__('Confirm New Password') + ' *'"
 								type="password"
 								v-model="confirmPassword"
 								autocomplete="new-password"
-								required
+								:error="changePasswordError"
 							/>
 						</form>
 					</div>
 
 					<div
-						class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-white sticky bottom-0 w-full drop-shadow-xl z-40 border-t rounded-t-lg"
+						class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 					>
-						<ErrorMessage class="mb-2" :message="changePasswordError" />
-						<Button
-							class="w-full rounded py-5 text-base disabled:bg-gray-700 disabled:text-white"
-							:loading="updatePasswordResource.loading"
-							variant="solid"
+						<GButton
+							:label="__('Update Password')"
+							:pending-label="__('Updating…')"
+							:pending="updatePasswordResource.loading"
 							@click="submitPasswordChange"
-						>
-							{{ __("Update Password") }}
-						</Button>
+						/>
 					</div>
 				</div>
 			</div>
@@ -67,7 +68,7 @@ import GInput from "@/components/glass/GInput.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import { FeatherIcon, toast, createResource, Input, ErrorMessage, Button } from "frappe-ui"
+import { FeatherIcon, toast, createResource } from "frappe-ui"
 
 import { inject, ref } from "vue"
 

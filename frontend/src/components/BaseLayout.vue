@@ -16,7 +16,7 @@
 
 		<ion-content class="ion-no-padding g-page__content">
 			<div
-				class="flex flex-col h-screen w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
+				class="flex flex-col min-h-full w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
 			>
 				<slot name="body"></slot>
 			</div>

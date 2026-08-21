@@ -28,9 +28,9 @@
   does — see that gate for the measured overlap.
 -->
 <template>
-	<div class="g-field" aria-hidden="true">
-		<span class="g-field__blob g-field__blob--a" />
-		<span class="g-field__blob g-field__blob--b" />
-		<span class="g-field__blob g-field__blob--c" />
+	<div class="g-lightfield" aria-hidden="true">
+		<span class="g-lightfield__blob g-lightfield__blob--a" />
+		<span class="g-lightfield__blob g-lightfield__blob--b" />
+		<span class="g-lightfield__blob g-lightfield__blob--c" />
 	</div>
 </template>

@@ -1,10 +1,16 @@
 <template>
 	<GPage>
 		<ion-content class="ion-padding">
-			<div class="flex flex-col h-screen w-screen bg-ground">
+			<div class="flex flex-col min-h-full w-full">
 				<div class="w-full max-w-[620px] mx-auto">
+					<!-- bg-ground belongs on the STICKY element, not an ancestor.
+					     8.4 removed an opaque page-colour fill from the container
+					     above (it was painting over the light field) and this
+					     header, which had no fill of its own, started letting
+					     scrolled rows show straight through the title. Five views
+					     shared the pattern; all five now own their fill. -->
 					<header
-						class="flex flex-row bg-ground py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-10"
+						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<Button
@@ -21,15 +27,19 @@
 					</header>
 
 					<div class="flex flex-col gap-4 mt-5 p-4">
-						<div class="flex flex-row justify-between items-center">
+						<!-- flex-wrap + nowrap labels: the labels used to wrap INSIDE a
+						     fixed-height pill, so "Mark all as read" broke to two lines and
+						     spilled through the pill's top and bottom rim. The row wraps
+						     now; the pills never do. -->
+						<div class="flex flex-row flex-wrap justify-between items-center gap-y-2">
 							<div
-								class="font-sans font-extrabold text-stat-number text-inkbase"
+								class="font-sans font-extrabold text-stat-number text-inkbase whitespace-nowrap"
 								v-if="unreadNotificationsCount.data"
 							>
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
-							<div class="flex ml-auto gap-1">
-								<Button variant="outline" @click="router.push({ name: 'Settings' })">
+							<div class="flex ml-auto gap-1 shrink-0">
+								<Button variant="outline" class="whitespace-nowrap" @click="router.push({ name: 'Settings' })">
 									<template #prefix>
 										<FeatherIcon name="settings" class="w-4" />
 									</template>
@@ -38,6 +48,7 @@
 								<Button
 									v-if="unreadNotificationsCount.data"
 									variant="outline"
+									class="whitespace-nowrap"
 									@click="markAllAsRead.submit"
 									:loading="markAllAsRead.loading"
 								>

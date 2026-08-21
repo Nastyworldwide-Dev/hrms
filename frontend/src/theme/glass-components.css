@@ -8,8 +8,15 @@
 /* Sits inside the page (§3.2), behind everything, and never takes a pointer.
    No transform/opacity/filter on THIS element — the blur belongs on the blobs,
    because a filter on the container would make the container a backdrop root
-   and cut the glass off from the very field it is meant to blur. */
-.g-field {
+   and cut the glass off from the very field it is meant to blur.
+
+   NAMED .g-lightfield, NOT .g-field. It was .g-field until 8.1, colliding with
+   the GInput/GTextarea wrapper of the same name 700 lines below. The wrapper
+   overrode only `display` and `width`, so `position: absolute`, `inset: 0` and
+   `pointer-events: none` still landed on every form field in the app: controls
+   rendered at the page's top-left corner and could not be clicked at all. The
+   login form was unusable. Two components must never share a class name. */
+.g-lightfield {
 	position: absolute;
 	inset: 0;
 	z-index: 0;
@@ -17,27 +24,27 @@
 	pointer-events: none;
 	contain: paint; /* clip the blobs without creating a backdrop root */
 }
-.g-field__blob {
+.g-lightfield__blob {
 	position: absolute;
 	border-radius: 50%;
 	filter: blur(var(--g-field-blur));
 	opacity: var(--g-blob-opacity);
 }
-.g-field__blob--a {
+.g-lightfield__blob--a {
 	width: var(--g-field-blob-a-size);
 	height: var(--g-field-blob-a-size);
 	top: var(--g-field-blob-a-top);
 	left: var(--g-field-blob-a-left);
 	background: radial-gradient(circle, var(--g-field-blob-a-color), transparent 70%);
 }
-.g-field__blob--b {
+.g-lightfield__blob--b {
 	width: var(--g-field-blob-b-size);
 	height: var(--g-field-blob-b-size);
 	bottom: var(--g-field-blob-b-bottom);
 	right: var(--g-field-blob-b-right);
 	background: radial-gradient(circle, var(--g-field-blob-b-color), transparent 70%);
 }
-.g-field__blob--c {
+.g-lightfield__blob--c {
 	width: var(--g-field-blob-c-size);
 	height: var(--g-field-blob-c-size);
 	bottom: var(--g-field-blob-c-bottom);
@@ -50,6 +57,28 @@
    to .g-page so pages without a field keep their opaque background. */
 .g-page ion-content {
 	--background: transparent;
+}
+
+/* 8.3 — RESERVE THE TAB BAR'S SPACE. The bar floats over the content, so
+   nothing in normal flow accounts for it: ion-content reserved 0px against a
+   58px bar and every tab screen ended mid-row behind it, with the scroll
+   unable to reach past. Scoped to ion-tabs because that is exactly where the
+   bar lives — the bar is a SIBLING of the routed page, not a child of it, so
+   the page cannot detect it with :has(). Sub-pages routed outside ion-tabs
+   carry no bar and correctly get no padding.
+   Bar height + the gap beneath it + the safe area + one more gap of breathing
+   room above it, all from the same tokens the bar itself is positioned with. */
+ion-tabs .g-page ion-content {
+	--padding-bottom: calc(
+		var(--g-tabbar-height) + (2 * var(--g-tabbar-gap)) + env(safe-area-inset-bottom, 0px)
+	);
+}
+/* §20.4 — the bar is lg:hidden and the side nav replaces it, so the reservation
+   must come back off or every desktop screen gains 76px of dead scroll. */
+@media (min-width: 1024px) {
+	ion-tabs .g-page ion-content {
+		--padding-bottom: 0px;
+	}
 }
 /* Everything Ionic lays out inside the page sits above the field, which is at
    z-index 0. A descendant selector rather than a per-view class: list views
@@ -65,7 +94,7 @@
 /* §20.4 — at lg: the field is fixed to the viewport, not the content column,
    and the blobs scale with it. Centres stay outside the column (§3.3). */
 @media (min-width: 1024px) {
-	.g-field {
+	.g-lightfield {
 		position: fixed;
 	}
 	/* Size AND origin scale together. Scaling only the size — which is how 4.1
@@ -73,9 +102,9 @@
 	   centre marches into the content column and §3.3 fails from 1280px up
 	   (measured: dark ink-muted 1.08 at 1440). The origin:size ratio is held
 	   at the value solved for mobile, so the clearance scales with the blob. */
-	.g-field__blob--a { width: 32vw; height: 32vw; left: -25.04vw; }
-	.g-field__blob--b { width: 29vw; height: 29vw; right: -22.51vw; }
-	.g-field__blob--c { width: 25vw; height: 25vw; left: -19.03vw; }
+	.g-lightfield__blob--a { width: 32vw; height: 32vw; left: -25.04vw; }
+	.g-lightfield__blob--b { width: 29vw; height: 29vw; right: -22.51vw; }
+	.g-lightfield__blob--c { width: 25vw; height: 25vw; left: -19.03vw; }
 }
 
 /* §3.1 is not negotiable, and reduced motion must not be the only thing
@@ -97,6 +126,11 @@ ion-tab-bar.g-tabbar {
 	/* pinned above the safe area with tabbar-gap beneath (§5) */
 	bottom: calc(env(safe-area-inset-bottom, 0px) + var(--g-tabbar-gap));
 	width: auto;
+	/* Pinned, not intrinsic. The scroll padding that keeps content out from
+	   behind this bar is computed from the same token (see .g-page ion-content
+	   below); if the height were left intrinsic the two could drift and content
+	   would silently slide back under the bar. */
+	height: var(--g-tabbar-height);
 	padding: 11px 6px 9px;
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-tabbar);
@@ -589,17 +623,22 @@ html[data-theme="dark"] .g-badge--open {
 .g-banner--warning::before { background: var(--g-warn); }
 .g-banner--error::before { background: var(--g-danger); }
 
-/* the pending-approvals banner on Home: a GBanner whose whole surface is the
-   affordance, so it takes a pointer and the two-line copy stacks */
+/* a GBanner whose whole surface is the affordance, so it takes a pointer and
+   the two-line copy stacks. Used by Home's pending-approvals banner and the
+   check-out banner in CheckInPanel; .g-approvals* is kept as the original
+   alias so the Home consumer needs no edit. */
+.g-banner--tappable,
 .g-approvals {
 	display: block;
 	cursor: pointer;
 }
+.g-banner__title,
 .g-approvals__title {
 	display: block;
 	font-weight: var(--g-type-card-title-weight);
 	color: var(--g-ink);
 }
+.g-banner__hint,
 .g-approvals__hint {
 	display: block;
 	margin-top: 2px;
@@ -705,6 +744,13 @@ html[data-theme="dark"] .g-badge--open {
 
 /* ListView rows inside the shared GListPanel: the panel owns the surface, the
    rows own only their divider (§15.1) */
+/* 8.4b — rows carried NO padding, so their content sat flush against the
+   panel's rim and the first and last rows had their leading glyph sliced by
+   the corner radius ("On Duty" lost the left of its O). Same pad-row token
+   .g-row uses, so a ListView row and a GListRow are inset identically. */
+.g-listview__row {
+	padding: var(--g-pad-row);
+}
 .g-listview__row + .g-listview__row {
 	border-top: 1px solid var(--g-hair);
 }
@@ -1507,7 +1553,14 @@ html[data-theme="dark"] .g-cal__day--present {
 	max-height: var(--g-sheet-max-height);
 	overflow-y: auto;
 	padding: var(--g-pad-panel);
-	padding-bottom: max(var(--g-pad-panel), env(safe-area-inset-bottom));
+	/* --g-pad-panel is TWO values ("14px 13px"), so the max() this used to be —
+	   max(var(--g-pad-panel), env(safe-area-inset-bottom)) — was invalid CSS.
+	   The declaration was dropped silently and every sheet's primary button sat
+	   flush against the viewport floor with its corner radius sliced flat.
+	   Single-value token, and the inset is ADDED rather than max()'d: the sheet
+	   wants its own padding AND clearance from the home indicator, not whichever
+	   of the two happens to be larger. */
+	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
 }
 .g-sheet__title {
 	padding: 0 2px 9px;

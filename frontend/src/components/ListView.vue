@@ -43,7 +43,7 @@
 		<GPullRefresh @refresh="handleRefresh" />
 
 		<div
-			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto bg-ground"
+			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto"
 			ref="scrollContainer"
 			@scroll="() => handleScroll()"
 		>

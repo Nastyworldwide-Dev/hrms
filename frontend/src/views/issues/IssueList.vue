@@ -26,8 +26,8 @@
 						<GListRow
 							v-for="issue in myIssues.data || []"
 							:key="issue.name"
-							:label="__(issue.issue_type)"
-							:sublabel="`${issue.name} · ${dayjs(issue.creation).format('D MMM, HH:mm')} · ${issue.details}`"
+							:label="__(issue.issue_type) || __('Issue')"
+							:sublabel="issueMeta(issue)"
 							@click="router.push({ name: 'EmployeeIssueDetailView', params: { id: issue.name } })"
 						>
 							<template #badge>
@@ -69,6 +69,15 @@ const employee = inject("$employee")
 
 // row scope already limits staff to their own rows; the explicit filter keeps
 // an HR user's "My Issues" personal instead of listing the whole site
+// An unset optional field interpolated into a template literal renders the
+// LITERAL STRING "null" in the row — which is what shipped: every issue row
+// read "HR-ISS-26-08-00002 · 21 Aug, 07:51 · null". Build the meta line from
+// the parts that actually have a value.
+function issueMeta(issue) {
+	const when = issue.creation ? dayjs(issue.creation).format("D MMM, HH:mm") : ""
+	return [issue.name, when, issue.details].filter(Boolean).join(" · ")
+}
+
 const myIssues = createListResource({
 	doctype: "Employee Issue",
 	filters: { employee: employee.data.name },

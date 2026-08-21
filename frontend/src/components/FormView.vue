@@ -10,7 +10,12 @@
 					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 				/><template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
-		<div class="w-full h-full bg-ground flex flex-col">
+		<!-- No bg-ground here (8.4): this container is full-bleed over the page,
+	     and an opaque page-colour fill painted straight over the light field,
+	     so every form and detail screen rendered flat. The sticky header and
+	     footer below KEEP their fill — they need to be opaque as content
+	     scrolls under them. -->
+		<div class="w-full h-full flex flex-col">
 			<header
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
@@ -79,7 +84,7 @@
 			</header>
 
 			<!-- Form -->
-			<div class="bg-ground grow overflow-y-auto">
+			<div class="grow overflow-y-auto">
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
 				<button
 					type="button"

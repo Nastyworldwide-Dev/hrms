@@ -1,7 +1,15 @@
 # Frontend audit — rendered, not read
 
-Audit only. **Nothing in the app was changed.** Spec v1.7, audited 21 August 2026,
-against the production build in `hrms/public/frontend` (built 01:55, 21 Aug).
+> **STATUS — the fix pass has run.** This document is the *pre-fix* audit and is
+> kept as written, because the findings are the evidence and rewriting them
+> would erase what was actually observed. What changed since is recorded in
+> **[fix-pass-8.md](fix-pass-8.md)**: every P0 is closed, three findings turned
+> out to be wrong, and the screenshots referenced below have been **re-shot
+> against the fixed build**. To see a defect as this document describes it, use
+> git history — `git show f0d15792b:docs/glass/audit/screens/<name>.png`.
+
+Audit only when written. Spec v1.7, audited 21 August 2026, against the
+production build in `hrms/public/frontend` (built 01:55, 21 Aug).
 
 Every finding below was **seen in a screenshot**, and every screenshot is named.
 Where a finding asserts a *cause*, the cause was verified afterwards in the DOM or

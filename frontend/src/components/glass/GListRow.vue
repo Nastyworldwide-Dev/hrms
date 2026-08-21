@@ -20,8 +20,8 @@
   Emits: click (tappable rows only)
 -->
 <template>
-	<component
-		:is="tappable ? 'button' : 'div'"
+	<GTag
+		:as="tappable ? 'button' : 'div'"
 		:type="tappable ? 'button' : undefined"
 		class="g-row"
 		:class="{ 'g-row--tappable': tappable, 'g-row--destructive': destructive }"
@@ -56,10 +56,12 @@
 				stroke-linejoin="round"
 			/>
 		</svg>
-	</component>
+	</GTag>
 </template>
 
 <script setup>
+import GTag from "./GTag.js"
+
 defineProps({
 	label: { type: String, required: true },
 	sublabel: { type: String, default: "" },

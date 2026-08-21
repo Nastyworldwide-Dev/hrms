@@ -20,6 +20,23 @@ import { defineConfig, devices } from "@playwright/test"
 // First run needs the browser binary: `npx playwright install chromium`.
 export default defineConfig({
 	testDir: ".",
+	// Visual-regression baselines ARE the committed audit screens in
+	// docs/glass/audit/screens/ — one set of images, serving as both the
+	// evidence a finding cites and the baseline a regression fails against.
+	// A second parallel set would drift from the first the day someone
+	// re-shot only one of them.
+	// relative to this config's directory (frontend/e2e), so two levels up
+	snapshotPathTemplate: "../../docs/glass/audit/screens/{arg}{ext}",
+	expect: {
+		toHaveScreenshot: {
+			// Antialiasing and font hinting move a few pixels between runs on the
+			// same machine; a real layout regression moves thousands. Tuned to sit
+			// well below "one row shifted" and well above "the text re-hinted".
+			maxDiffPixelRatio: 0.002,
+			animations: "disabled",
+			caret: "hide",
+		},
+	},
 	// One retry, because a real site over a real network is allowed one blip
 	// before a failure is called a failure. More would start hiding flakiness.
 	retries: process.env.CI ? 1 : 0,
