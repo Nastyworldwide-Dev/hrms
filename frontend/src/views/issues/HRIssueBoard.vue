@@ -30,7 +30,7 @@
 						/>
 						<select
 							v-model="issueType"
-							class="w-[130px] text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent"
+							class="w-[130px] text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
 						>
 							<option value="">{{ __("All types") }}</option>
 							<option v-for="type in ISSUE_TYPES" :key="type" :value="type">
@@ -129,7 +129,7 @@
 								class="flex-1 py-2 text-micro-label font-extrabold uppercase border"
 								:class="
 									detail.data.status === status
-										? 'bg-accent text-ground border-accent'
+										? 'bg-accent-ink text-ground border-accent-ink'
 										: 'bg-surface text-ink-700 border-divider'
 								"
 								:disabled="saving"
@@ -148,7 +148,7 @@
 						<textarea
 							v-model="hrNotes"
 							rows="3"
-							class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent"
+							class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent-ink"
 							:placeholder="__('Notes for the HR team…')"
 						/>
 						<Button

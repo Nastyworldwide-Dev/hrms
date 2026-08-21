@@ -21,7 +21,7 @@
 				<div class="flex flex-row items-start gap-3">
 					<FormControl
 						type="checkbox"
-						class="mt-[0.5px] text-accent"
+						class="mt-[0.5px] text-accent-ink"
 						v-model="advance.selected"
 						:disabled="isReadOnly"
 					/>

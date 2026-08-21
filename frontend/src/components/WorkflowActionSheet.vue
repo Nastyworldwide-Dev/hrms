@@ -11,7 +11,7 @@
 		<Button
 			v-if="props.view === 'form' || actions.length > 2"
 			@click="showTransitions()"
-			class="w-full py-5 text-base !bg-accent hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
+			class="w-full py-5 text-base !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
 			variant="solid"
 		>
 			<template #prefix>

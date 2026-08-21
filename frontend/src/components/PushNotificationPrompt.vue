@@ -34,7 +34,7 @@
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
 				<button
-					class="w-full bg-accent text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
+					class="w-full bg-accent-ink text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
 					@click="enable"
 					:disabled="enabling"
 				>

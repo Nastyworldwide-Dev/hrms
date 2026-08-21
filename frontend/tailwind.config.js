@@ -44,7 +44,18 @@ export default {
 			// Repointed off Modernist onto Glass tokens (phase 3.4). The nine-step
 			// ink and accent ramps collapse onto Glass's four ink levels and its
 			// single accent ink — Glass has no nine-step ramp and §2.4 forbids brand
-			// setting type on light, so accent-* resolves to --accent-ink, not --brand.
+			// setting type on light, so the accent-500..900 steps resolve to
+			// --accent-ink, not --brand.
+			//
+			// accent.DEFAULT IS THE BRAND FILL (8.17). It used to be --accent-ink,
+			// so `bg-accent` painted dark olive while `bg-accent-100` painted the
+			// brand — a name that meant the opposite of what it said. Eight form
+			// submits wrote `!bg-accent` expecting chartreuse and got #3F5C00, and
+			// nothing caught it because --accent-ink EQUALS --brand in dark theme:
+			// the two tokens collapse, so the wrong one looks right in the theme
+			// every screenshot was taken in. Every prior use was migrated to the
+			// explicit `-accent-ink` name before this flipped, so no appearance
+			// changed with it.
 			backgroundColor: {
 				surface: { DEFAULT: "rgb(var(--g-track-solid-rgb) / <alpha-value>)" },
 			},
@@ -63,7 +74,7 @@ export default {
 					900: "rgb(var(--g-ink-rgb) / <alpha-value>)",
 				},
 				accent: {
-					DEFAULT: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+					DEFAULT: "rgb(var(--g-brand-rgb) / <alpha-value>)",
 					100: "rgb(var(--g-brand-rgb) / <alpha-value>)",
 					200: "rgb(var(--g-brand-rgb) / <alpha-value>)",
 					300: "rgb(var(--g-brand-2-rgb) / <alpha-value>)",

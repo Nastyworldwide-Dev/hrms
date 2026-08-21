@@ -98,7 +98,7 @@
 								<div class="flex flex-row items-center gap-2">
 									<span
 										v-if="pendingApprovalsCount > 0"
-										class="inline-flex bg-accent text-ground text-caption font-sans font-extrabold px-1.5 py-0.5"
+										class="inline-flex bg-accent-ink text-ground text-caption font-sans font-extrabold px-1.5 py-0.5"
 									>
 										{{ pendingApprovalsCount }}
 									</span>

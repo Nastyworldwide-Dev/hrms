@@ -18,7 +18,7 @@
 						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Appearance") }}</span>
 						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
 							<div class="flex items-center gap-3">
-								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent" />
+								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent-ink" />
 								<div class="flex flex-col">
 									<span class="text-sm font-semibold text-inkbase">
 										{{ __("Theme") }}

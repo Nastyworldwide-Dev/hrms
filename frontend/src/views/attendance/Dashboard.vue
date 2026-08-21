@@ -49,7 +49,7 @@
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Attendance Requests") }}</span>
 							<router-link
 								:to="{ name: 'AttendanceRequestListView' }"
-								class="g-seclink text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -66,7 +66,7 @@
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Shifts") }}</span>
 							<router-link
 								:to="{ name: 'ShiftAssignmentListView' }"
-								class="g-seclink text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -84,7 +84,7 @@
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Shift Requests") }}</span>
 							<router-link
 								:to="{ name: 'ShiftRequestListView' }"
-								class="g-seclink text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -104,7 +104,7 @@
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent OT Requests") }}</span>
 							<router-link
 								:to="{ name: 'OTRequestListView' }"
-								class="g-seclink text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>

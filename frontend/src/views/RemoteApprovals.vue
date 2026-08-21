@@ -51,7 +51,7 @@
 										class="text-micro-label font-sans font-extrabold px-2 py-[3px] uppercase"
 										:class="
 											req.status === 'Approved'
-												? 'border border-accent text-accent-700'
+												? 'border border-accent-ink text-accent-700'
 												: 'bg-inkbase text-ground'
 										"
 									>
@@ -103,7 +103,7 @@
 										:class="
 											req.log_type === 'IN'
 												? 'bg-inkbase text-ground'
-												: 'border border-accent text-accent-700'
+												: 'border border-accent-ink text-accent-700'
 										"
 									>
 										{{ req.log_type }}
@@ -124,13 +124,13 @@
 								</div>
 								<div class="flex flex-row gap-2.5 mt-1">
 									<button
-										class="flex-1 flex items-center justify-center bg-transparent border border-accent text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
+										class="flex-1 flex items-center justify-center bg-transparent border border-accent-ink text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
 										@click="openDecision(req, 'reject')"
 									>
 										{{ __("Reject") }}
 									</button>
 									<button
-										class="flex-1 flex items-center justify-center bg-accent text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
+										class="flex-1 flex items-center justify-center bg-accent-ink text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
 										@click="openDecision(req, 'approve')"
 									>
 										{{ __("Approve") }}
@@ -172,7 +172,7 @@
 							v-model="decisionRemarks"
 							rows="3"
 							maxlength="500"
-							class="w-full text-sm bg-surface border border-divider text-inkbase caret-accent p-2.5 resize-y outline-none focus:border-accent"
+							class="w-full text-sm bg-surface border border-divider text-inkbase caret-accent p-2.5 resize-y outline-none focus:border-accent-ink"
 						/>
 					</div>
 
@@ -185,7 +185,7 @@
 							{{ __("Cancel") }}
 						</button>
 						<button
-							class="flex-1 flex items-center justify-center gap-2 bg-accent text-ground px-3.5 py-3 font-sans font-extrabold text-card-title hover:bg-accent-600 disabled:opacity-60"
+							class="flex-1 flex items-center justify-center gap-2 bg-accent-ink text-ground px-3.5 py-3 font-sans font-extrabold text-card-title hover:bg-accent-600 disabled:opacity-60"
 							@click="submitDecision"
 							:disabled="submitting"
 						>

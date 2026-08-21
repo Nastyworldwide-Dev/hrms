@@ -6,7 +6,7 @@
 			class="px-8 py-2.5 transition-colors flex-auto font-bold text-kra-label uppercase"
 			:class="
 				modelValue === (button.key ?? button.label ?? button)
-					? 'bg-accent text-ground'
+					? 'bg-accent-ink text-ground'
 					: 'bg-transparent text-ink-700'
 			"
 			@click="$emit('update:modelValue', button.key ?? button.label ?? button)"

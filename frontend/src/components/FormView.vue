@@ -113,7 +113,7 @@
 									class="inline-block py-4 px-2 border-b-2 border-transparent"
 									:class="[
 										activeTab === tab.name
-											? '!text-accent !border-accent !font-extrabold'
+											? '!text-accent-ink !border-accent-ink !font-extrabold'
 											: 'hover:text-inkbase hover:border-divider',
 									]"
 								>
@@ -160,7 +160,7 @@
 								class="flex flex-row gap-2 items-center justify-center p-5"
 								v-if="isFileUploading"
 							>
-								<LoadingIndicator class="w-3 h-3 text-accent" />
+								<LoadingIndicator class="w-3 h-3 text-accent-ink" />
 								<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 							</div>
 
@@ -199,7 +199,7 @@
 						class="flex flex-row gap-2 items-center justify-center p-5"
 						v-if="isFileUploading"
 					>
-						<LoadingIndicator class="w-3 h-3 text-accent" />
+						<LoadingIndicator class="w-3 h-3 text-accent-ink" />
 						<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 					</div>
 
@@ -247,19 +247,19 @@
 					"
 				/>
 
-				<Button
-					class="w-full py-5 text-base disabled:opacity-60"
-					:class="formButton === 'Cancel'
-						? '!bg-transparent !border !border-divider !text-inkbase'
-						: '!bg-accent hover:!bg-accent-600 !text-ground !border-none'"
+				<!-- GButton, not a frappe-ui Button painted with utilities (8.17).
+				     This was the ONLY primary action in the product that bypassed
+				     the primary component, which is precisely why it was the only
+				     one that drifted: it wrote `!bg-accent` expecting the brand and
+				     got --accent-ink, dark olive on light. GButton resolves
+				     --g-brand directly, so it cannot. -->
+				<GButton
+					:label="__(formButton)"
+					:pending-label="__('Saving…')"
+					:pending="docList.insert.loading || documentResource?.setValue?.loading"
+					:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
 					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
-					:variant="formButton === 'Cancel' ? 'subtle' : 'solid'"
-					:loading="
-						docList.insert.loading || documentResource?.setValue?.loading
-					"
-				>
-					{{ __(formButton) }}
-				</Button>
+				/>
 				</div>
 			</div>
 		</div>

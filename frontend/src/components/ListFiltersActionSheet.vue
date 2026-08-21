@@ -31,7 +31,7 @@
 								class="text-sm"
 								:class="[
 									option === filters[filter.fieldname].value
-										? '!border !border-accent !text-accent !bg-accent-100 !font-extrabold'
+										? '!border !border-accent-ink !text-accent-ink !bg-accent-100 !font-extrabold'
 										: '!border !border-divider !text-inkbase !font-normal',
 								]"
 							>
@@ -79,7 +79,7 @@
 			<Button
 				@click="emit('apply-filters')"
 				variant="solid"
-				class="w-full py-5 text-sm !bg-accent hover:!bg-accent-600 !text-ground !border-none"
+				class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 			>
 				{{ __("Apply Filters") }}
 			</Button>

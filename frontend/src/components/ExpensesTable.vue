@@ -111,7 +111,7 @@
 						</Button>
 						<Button
 							variant="solid"
-							class="w-full py-5 text-sm !bg-accent hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
+							class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
 							@click="updateExpenseItem()"
 							:disabled="addButtonDisabled"
 						>

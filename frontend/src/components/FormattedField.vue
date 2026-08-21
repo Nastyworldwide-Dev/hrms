@@ -19,7 +19,7 @@
 		label=""
 		v-model="props.value"
 		:disabled="true"
-		class="text-accent"
+		class="text-accent-ink"
 	/>
 
 	<div

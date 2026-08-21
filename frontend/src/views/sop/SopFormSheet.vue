@@ -53,7 +53,7 @@
 							class="flex-1 min-h-11 py-2.5 px-2 border text-kra-label font-extrabold uppercase"
 							:class="
 								form.scope === scope
-									? 'bg-accent text-ground border-accent'
+									? 'bg-accent-ink text-ground border-accent-ink'
 									: 'bg-surface text-ink-700 border-divider'
 							"
 							:aria-pressed="form.scope === scope"
@@ -112,7 +112,7 @@
 					>
 						<span
 							class="relative h-[22px] w-[42px]"
-							:class="form[toggle.field] ? 'bg-accent' : 'bg-ink-400'"
+							:class="form[toggle.field] ? 'bg-accent-ink' : 'bg-ink-400'"
 							style="transition: background-color var(--motion-glide)"
 						>
 							<span
@@ -169,14 +169,14 @@
 			>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent text-accent text-card-title font-extrabold uppercase"
+					class="flex-1 py-3 border border-accent-ink text-accent-ink text-card-title font-extrabold uppercase"
 					@click="close"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent bg-accent text-ground text-card-title font-extrabold uppercase disabled:opacity-60"
+					class="flex-1 py-3 border border-accent-ink bg-accent-ink text-ground text-card-title font-extrabold uppercase disabled:opacity-60"
 					:disabled="saving"
 					@click="save"
 				>

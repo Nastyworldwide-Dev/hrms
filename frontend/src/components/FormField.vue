@@ -66,7 +66,7 @@
 				@change="(v) => emit('change', v)"
 				v-bind="$attrs"
 				:disabled="isReadOnly"
-				class="text-accent"
+				class="text-accent-ink"
 			/>
 		</div>
 

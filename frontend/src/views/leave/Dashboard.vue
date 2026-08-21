@@ -40,7 +40,7 @@
 							>
 								<span
 									@click="navigate"
-									class="g-seclink text-kra-label text-accent underline underline-offset-link cursor-pointer"
+									class="g-seclink text-kra-label text-accent-ink underline underline-offset-link cursor-pointer"
 								>
 									{{ __("View List") }}
 								</span>

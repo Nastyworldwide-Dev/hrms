@@ -102,7 +102,7 @@
 
 			<Button
 				@click="updateDocumentStatus({ status: 'Approved' })"
-				class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none"
+				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
 			>
 				<template #prefix>
@@ -125,7 +125,7 @@
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 1 })"
-				class="w-full py-5 !bg-accent hover:!bg-accent-600 !text-ground !border-none"
+				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
 			>
 				{{ __("Submit") }}

@@ -16,7 +16,7 @@
 							v-for="sop in pinned"
 							:key="sop.name"
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-							class="relative flex flex-col gap-[18px] bg-accent text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
+							class="relative flex flex-col gap-[18px] bg-accent-ink text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
 							style="
 								transition: transform var(--motion-press), background-color var(--motion-press);
 							"
@@ -53,7 +53,7 @@
 						v-model="query"
 						:placeholder="__('Search SOPs…')"
 						:aria-label="__('Search SOPs')"
-						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
+						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent-ink focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
 					/>
 				</div>
 
@@ -125,7 +125,7 @@
 			<button
 				v-if="isHR"
 				type="button"
-				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent text-ground shadow-md active:scale-90 lg:bottom-8"
+				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent-ink text-ground shadow-md active:scale-90 lg:bottom-8"
 				style="transition: transform var(--motion-press)"
 				:aria-label="__('New SOP')"
 				@click="openCreate"
