@@ -17,7 +17,11 @@
    rendered at the page's top-left corner and could not be clicked at all. The
    login form was unusable. Two components must never share a class name. */
 .g-lightfield {
-	position: absolute;
+	/* FIXED, not absolute (8.18). It hangs off ion-app now rather than each
+	   page, so it must be anchored to the viewport — and as a side effect the
+	   notifications list no longer scrolls its blobs away, which it did when
+	   the field was absolute inside a scrolling page. */
+	position: fixed;
 	inset: 0;
 	z-index: 0;
 	overflow: hidden;
@@ -94,9 +98,6 @@ ion-tabs .g-page ion-content {
 /* §20.4 — at lg: the field is fixed to the viewport, not the content column,
    and the blobs scale with it. Centres stay outside the column (§3.3). */
 @media (min-width: 1024px) {
-	.g-lightfield {
-		position: fixed;
-	}
 	/* Size AND origin scale together. Scaling only the size — which is how 4.1
 	   first wrote this — grows the blob while its origin stays put, so the
 	   centre marches into the content column and §3.3 fails from 1280px up

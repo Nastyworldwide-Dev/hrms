@@ -1,4 +1,4 @@
-# HR Frappe · Glass — Implementation Specification v1.10
+# HR Frappe · Glass — Implementation Specification v1.11
 
 **Supersedes** v1.6, v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
@@ -67,6 +67,16 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.11 — the rules the app needed and the spec never wrote
+
+| # | Change | Reason |
+|---|---|---|
+| 11.1 | §18 gains the **ranking rule**: a primary belongs on a screen with ONE obvious task. A navigation hub has no primary — peers are peers | Attendance promoted "Request Attendance" to a chartreuse primary and left Overtime, Replacement Leave and Shift as list rows. Four peers, one arbitrarily elevated. §18 constrained how MANY primaries a screen may have and never said which screens should have one |
+| 11.2 | §3.2: the light field is **owned by the shell, one instance**, not per page | Ionic keeps three pages alive during a push, so a per-page field meant three fields painting at once, all opaque — the overlap a human saw mid-transition. §3.2's in-page requirement was re-verified before moving it: nothing between the shell and a glass surface carries `contain: paint`, a transform or a filter, and the only backdrop root a push creates is a page at `opacity: 0`. The blur survives |
+| 11.3 | `accent.DEFAULT` is the **brand fill** | It resolved to `--accent-ink`, so `bg-accent` painted dark olive and the name meant its opposite. Invisible in dark theme, where the two tokens hold the same value — which is why an audit of 148 findings taken in dark never saw it |
+| 11.4 | §12: **GPage owns the back rule** — a pushed screen gets a back control, a tab root does not. Not a per-screen decision | 26 screens had one, 12 did not, and the split was whatever each author chose. GPage had no opinion at all |
+| 11.5 | §10: **one section-header treatment**, the eyebrow | Six were in use; the specified one accounted for 32 of 145 uses. The most common treatment in the app was not the one the spec defines |
 
 ### v1.10 — a class name has one owner, and one place that owns it
 
@@ -1049,4 +1059,4 @@ it.
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.10 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.11 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
