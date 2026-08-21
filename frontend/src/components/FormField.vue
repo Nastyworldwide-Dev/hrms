@@ -54,18 +54,21 @@
 			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
-		<!-- Check -->
-		<Input
-			v-else-if="props.fieldtype === 'Check'"
-			type="checkbox"
-			:label="props.label"
-			:value="modelValue"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
-			:disabled="isReadOnly"
-			class="text-accent"
-		/>
+		<!-- Check. g-checkfield expands the 16x16 box to a §14.1 target without
+		     resizing the tick itself — frappe-ui renders a 16px input and does
+		     not forward a class to it, so the theme reaches it by descendant. -->
+		<div v-else-if="props.fieldtype === 'Check'" class="g-checkfield">
+			<Input
+				type="checkbox"
+				:label="props.label"
+				:value="modelValue"
+				@input="(v) => emit('update:modelValue', v)"
+				@change="(v) => emit('change', v)"
+				v-bind="$attrs"
+				:disabled="isReadOnly"
+				class="text-accent"
+			/>
+		</div>
 
 		<!-- Data field -->
 		<GInput

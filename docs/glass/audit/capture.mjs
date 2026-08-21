@@ -42,6 +42,22 @@ const VARIANTS = [
 	{ vp: "1440", theme: "light", rt: false, bottom: false },
 ]
 
+
+// A per-screen deadline. `goto` has its own timeout, but nothing else here did:
+// a page that never settles could block `evaluate`, `waitForTimeout` or
+// `screenshot` indefinitely and take the whole run with it — 38 screens x 7
+// variants is a long time to discover one wedged page. Whatever happens, the
+// run logs it and moves to the next screen.
+const SCREEN_DEADLINE_MS = Number(process.env.SCREEN_DEADLINE_MS || 90000)
+
+function withDeadline(promise, ms, label) {
+	let timer
+	const deadline = new Promise((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`deadline ${ms}ms exceeded: ${label}`)), ms)
+	})
+	return Promise.race([promise, deadline]).finally(() => clearTimeout(timer))
+}
+
 const manifest = []
 
 for (const v of VARIANTS) {
@@ -62,7 +78,7 @@ for (const v of VARIANTS) {
 			},
 			[v.theme, v.rt]
 		)
-		const page = await ctx.newPage()
+		let page = await ctx.newPage()
 		const errs = []
 		page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 300)) })
 		page.on("pageerror", (e) => errs.push("PAGEERROR " + String(e).slice(0, 300)))
@@ -72,7 +88,9 @@ for (const v of VARIANTS) {
 			const base = `${s.slug}__${suffix}`
 			errs.length = 0
 			let note = "ok"
+			const started = Date.now()
 			try {
+				await withDeadline((async () => {
 				await page.goto(`${BASE}/hrms${s.path}`, { waitUntil: "networkidle", timeout: 35000 })
 				await page.waitForTimeout(2200)
 				const landed = new URL(page.url()).pathname.replace("/hrms", "") || "/"
@@ -99,11 +117,25 @@ for (const v of VARIANTS) {
 					await page.waitForTimeout(900)
 					await page.screenshot({ path: `${OUT}/${base}__bottom.png` })
 				}
+				})(), SCREEN_DEADLINE_MS, base)
 			} catch (e) {
 				note = "CAPTURE FAIL " + String(e).split("\n")[0].slice(0, 140)
+				// A wedged page can leave the tab unusable for the next screen,
+				// so give the context a fresh one rather than cascading failures.
+				try {
+					await page.close({ runBeforeUnload: false })
+				} catch {}
+				page = await ctx.newPage()
+				page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 300)) })
+				page.on("pageerror", (err) => errs.push("PAGEERROR " + String(err).slice(0, 300)))
 			}
-			manifest.push({ file: base, slug: s.slug, path: s.path, ...v, note, errors: [...new Set(errs)] })
-			console.log(`${base}  ${note}${errs.length ? "  [" + errs.length + " console errors]" : ""}`)
+			const took = Date.now() - started
+			manifest.push({ file: base, slug: s.slug, path: s.path, ...v, note, ms: took, errors: [...new Set(errs)] })
+			console.log(
+				`${base}  ${note}` +
+					(took > 15000 ? `  [SLOW ${Math.round(took / 1000)}s]` : "") +
+					(errs.length ? `  [${errs.length} console errors]` : "")
+			)
 		}
 		await ctx.close()
 	}

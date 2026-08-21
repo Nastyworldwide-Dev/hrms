@@ -643,6 +643,30 @@ html[data-theme="dark"] .g-badge--open {
 	transform: translate(-50%, -50%);
 }
 
+/* A form checkbox renders 16x16 — the smallest control in the app. Expand the
+   hit area around it; the tick keeps its size (§14.1, see the call site). */
+/* The FIELD is 44px tall, so two stacked checkboxes cannot have overlapping
+   targets. Without this "Half Day" and "Include Holidays" sat 32px apart and
+   their expanded areas collided — one stole the other's half, exactly as the
+   calendar's month steppers did at 8px. */
+.g-checkfield {
+	display: flex;
+	align-items: center;
+	min-height: var(--g-touch-target-min);
+}
+.g-checkfield input[type="checkbox"] {
+	position: relative;
+}
+.g-checkfield input[type="checkbox"]::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: var(--g-touch-target-min);
+	height: var(--g-touch-target-min);
+	transform: translate(-50%, -50%);
+}
+
 .g-seclink,
 .g-touch-area {
 	position: relative;

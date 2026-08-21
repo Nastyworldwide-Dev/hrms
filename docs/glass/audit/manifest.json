@@ -13,9 +13,983 @@
     ]
   },
   {
+    "file": "dash-attendance__390-dark",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__390-dark",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__390-dark",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__390-dark",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__390-dark",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__390-dark",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__390-dark",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__390-dark",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__390-dark",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__390-dark",
+    "slug": "team",
+    "path": "/team",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__390-dark",
+    "slug": "more",
+    "path": "/more",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__390-dark",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__390-dark",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__390-dark",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__390-dark",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__390-dark",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__390-dark",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__390-dark",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__390-dark",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__390-dark",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__390-dark",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__390-dark",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__390-dark",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__390-dark",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__390-dark",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__390-dark",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__390-dark",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__390-dark",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__390-dark",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__390-dark",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__390-dark",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__390-dark",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__390-dark",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__390-dark",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__390-dark",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__390-dark",
+    "slug": "login",
+    "path": "/login",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__390-dark",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
+    "vp": "390",
+    "theme": "dark",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
     "file": "home__390-light",
     "slug": "home",
     "path": "/home",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-attendance__390-light",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__390-light",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__390-light",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__390-light",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__390-light",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__390-light",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__390-light",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__390-light",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__390-light",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__390-light",
+    "slug": "team",
+    "path": "/team",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__390-light",
+    "slug": "more",
+    "path": "/more",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__390-light",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__390-light",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__390-light",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__390-light",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__390-light",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__390-light",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__390-light",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__390-light",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__390-light",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__390-light",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__390-light",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__390-light",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__390-light",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__390-light",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__390-light",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__390-light",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__390-light",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__390-light",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__390-light",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__390-light",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__390-light",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__390-light",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__390-light",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__390-light",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__390-light",
+    "slug": "login",
+    "path": "/login",
+    "vp": "390",
+    "theme": "light",
+    "rt": false,
+    "bottom": true,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__390-light",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
     "vp": "390",
     "theme": "light",
     "rt": false,
@@ -39,9 +1013,983 @@
     ]
   },
   {
+    "file": "dash-attendance__390-dark-rt",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__390-dark-rt",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__390-dark-rt",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__390-dark-rt",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__390-dark-rt",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__390-dark-rt",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__390-dark-rt",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__390-dark-rt",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__390-dark-rt",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__390-dark-rt",
+    "slug": "team",
+    "path": "/team",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__390-dark-rt",
+    "slug": "more",
+    "path": "/more",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__390-dark-rt",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__390-dark-rt",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__390-dark-rt",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__390-dark-rt",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__390-dark-rt",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__390-dark-rt",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__390-dark-rt",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__390-dark-rt",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__390-dark-rt",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__390-dark-rt",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__390-dark-rt",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__390-dark-rt",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__390-dark-rt",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__390-dark-rt",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__390-dark-rt",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__390-dark-rt",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__390-dark-rt",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__390-dark-rt",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__390-dark-rt",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__390-dark-rt",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__390-dark-rt",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__390-dark-rt",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__390-dark-rt",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__390-dark-rt",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__390-dark-rt",
+    "slug": "login",
+    "path": "/login",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__390-dark-rt",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
+    "vp": "390",
+    "theme": "dark",
+    "rt": true,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
     "file": "home__768-dark",
     "slug": "home",
     "path": "/home",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-attendance__768-dark",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__768-dark",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__768-dark",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__768-dark",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__768-dark",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__768-dark",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__768-dark",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__768-dark",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__768-dark",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__768-dark",
+    "slug": "team",
+    "path": "/team",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__768-dark",
+    "slug": "more",
+    "path": "/more",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__768-dark",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__768-dark",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__768-dark",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__768-dark",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__768-dark",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__768-dark",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__768-dark",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__768-dark",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__768-dark",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__768-dark",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__768-dark",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__768-dark",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__768-dark",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__768-dark",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__768-dark",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__768-dark",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__768-dark",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__768-dark",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__768-dark",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__768-dark",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__768-dark",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__768-dark",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__768-dark",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__768-dark",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__768-dark",
+    "slug": "login",
+    "path": "/login",
+    "vp": "768",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__768-dark",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
     "vp": "768",
     "theme": "dark",
     "rt": false,
@@ -65,6 +2013,493 @@
     ]
   },
   {
+    "file": "dash-attendance__768-light",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__768-light",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__768-light",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__768-light",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__768-light",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__768-light",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__768-light",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__768-light",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__768-light",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__768-light",
+    "slug": "team",
+    "path": "/team",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__768-light",
+    "slug": "more",
+    "path": "/more",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__768-light",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__768-light",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__768-light",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__768-light",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__768-light",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__768-light",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__768-light",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__768-light",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__768-light",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__768-light",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__768-light",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__768-light",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__768-light",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__768-light",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__768-light",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__768-light",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__768-light",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__768-light",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__768-light",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__768-light",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__768-light",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__768-light",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__768-light",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__768-light",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__768-light",
+    "slug": "login",
+    "path": "/login",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__768-light",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
+    "vp": "768",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
     "file": "home__1440-dark",
     "slug": "home",
     "path": "/home",
@@ -78,9 +2513,983 @@
     ]
   },
   {
+    "file": "dash-attendance__1440-dark",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__1440-dark",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__1440-dark",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__1440-dark",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__1440-dark",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__1440-dark",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__1440-dark",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__1440-dark",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__1440-dark",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__1440-dark",
+    "slug": "team",
+    "path": "/team",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__1440-dark",
+    "slug": "more",
+    "path": "/more",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__1440-dark",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__1440-dark",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__1440-dark",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__1440-dark",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__1440-dark",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__1440-dark",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__1440-dark",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__1440-dark",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__1440-dark",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__1440-dark",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__1440-dark",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__1440-dark",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__1440-dark",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__1440-dark",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__1440-dark",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__1440-dark",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__1440-dark",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__1440-dark",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__1440-dark",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__1440-dark",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__1440-dark",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__1440-dark",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__1440-dark",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__1440-dark",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__1440-dark",
+    "slug": "login",
+    "path": "/login",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__1440-dark",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
+    "vp": "1440",
+    "theme": "dark",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
     "file": "home__1440-light",
     "slug": "home",
     "path": "/home",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-attendance__1440-light",
+    "slug": "dash-attendance",
+    "path": "/dashboard/attendance",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-leaves__1440-light",
+    "slug": "dash-leaves",
+    "path": "/dashboard/leaves",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-expense-claims__1440-light",
+    "slug": "dash-expense-claims",
+    "path": "/dashboard/expense-claims",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "dash-kpi__1440-light",
+    "slug": "dash-kpi",
+    "path": "/dashboard/kpi",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues__1440-light",
+    "slug": "issues",
+    "path": "/issues",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-new__1440-light",
+    "slug": "issues-new",
+    "path": "/issues/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "issues-detail__1440-light",
+    "slug": "issues-detail",
+    "path": "/issues/HR-ISS-26-08-00002",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-issue-board__1440-light",
+    "slug": "hr-issue-board",
+    "path": "/hr/issues",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "sop__1440-light",
+    "slug": "sop",
+    "path": "/sop",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "team__1440-light",
+    "slug": "team",
+    "path": "/team",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "more__1440-light",
+    "slug": "more",
+    "path": "/more",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "profile__1440-light",
+    "slug": "profile",
+    "path": "/profile",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "notifications__1440-light",
+    "slug": "notifications",
+    "path": "/notifications",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "settings__1440-light",
+    "slug": "settings",
+    "path": "/settings",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "change-password__1440-light",
+    "slug": "change-password",
+    "path": "/change-password",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "hr-contacts__1440-light",
+    "slug": "hr-contacts",
+    "path": "/hr-contacts",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "remote-approvals__1440-light",
+    "slug": "remote-approvals",
+    "path": "/remote-approvals",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "invalid-employee__1440-light",
+    "slug": "invalid-employee",
+    "path": "/invalid-employee",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests__1440-light",
+    "slug": "attendance-requests",
+    "path": "/attendance-requests",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-new__1440-light",
+    "slug": "attendance-requests-new",
+    "path": "/attendance-requests/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "attendance-requests-detail__1440-light",
+    "slug": "attendance-requests-detail",
+    "path": "/attendance-requests/HR-ARQ-26-08-00002",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests__1440-light",
+    "slug": "shift-requests",
+    "path": "/shift-requests",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-requests-new__1440-light",
+    "slug": "shift-requests-new",
+    "path": "/shift-requests/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments__1440-light",
+    "slug": "shift-assignments",
+    "path": "/shift-assignments",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "shift-assignments-detail__1440-light",
+    "slug": "shift-assignments-detail",
+    "path": "/shift-assignments/HR-SHA-26-08-00001",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "employee-checkins__1440-light",
+    "slug": "employee-checkins",
+    "path": "/employee-checkins",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims__1440-light",
+    "slug": "expense-claims",
+    "path": "/expense-claims",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "expense-claims-new__1440-light",
+    "slug": "expense-claims-new",
+    "path": "/expense-claims/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "Failed to load resource: the server responded with a status of 403 (FORBIDDEN)",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Currency</strong>",
+      "PAGEERROR Error: /api/method/frappe.desk.search.search_link PermissionError",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Account</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Location</strong>",
+      "[request] failed: frappe.desk.search.search_link PermissionError Insufficient Permission for <strong>Branch</strong>"
+    ]
+  },
+  {
+    "file": "leave-applications__1440-light",
+    "slug": "leave-applications",
+    "path": "/leave-applications",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-new__1440-light",
+    "slug": "leave-applications-new",
+    "path": "/leave-applications/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "leave-applications-detail__1440-light",
+    "slug": "leave-applications-detail",
+    "path": "/leave-applications/HR-LAP-2026-00043",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests__1440-light",
+    "slug": "ot-requests",
+    "path": "/ot-requests",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "ot-requests-new__1440-light",
+    "slug": "ot-requests-new",
+    "path": "/ot-requests/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave__1440-light",
+    "slug": "replacement-leave",
+    "path": "/replacement-leave",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "replacement-leave-new__1440-light",
+    "slug": "replacement-leave-new",
+    "path": "/replacement-leave/claims/new",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "login__1440-light",
+    "slug": "login",
+    "path": "/login",
+    "vp": "1440",
+    "theme": "light",
+    "rt": false,
+    "bottom": false,
+    "note": "ok",
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  {
+    "file": "forgot-password__1440-light",
+    "slug": "forgot-password",
+    "path": "/forgot-password",
     "vp": "1440",
     "theme": "light",
     "rt": false,

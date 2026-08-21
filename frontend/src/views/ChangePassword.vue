@@ -9,14 +9,9 @@
 					<header
 						class="flex flex-row bg-ground py-4 px-3 items-center sticky top-0 z-sticky border-b border-divider"
 					>
-						<button
-							type="button"
-							class="mr-1 flex items-center justify-center"
-							:aria-label="__('Back')"
-							@click="router.back()"
-						>
+						<GIconButton :label="__('Back')" flush class="mr-1" @click="router.back()">
 							<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
-						</button>
+						</GIconButton>
 						<h2 class="text-xl font-extrabold text-inkbase tracking-tight">
 							{{ __("Change Password") }}
 						</h2>
@@ -63,6 +58,7 @@
 </template>
 
 <script setup>
+import GIconButton from "@/components/glass/GIconButton.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GPage from "@/components/glass/GPage.vue"

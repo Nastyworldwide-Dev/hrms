@@ -139,7 +139,7 @@
 					<label class="m-field-label">{{ __("Attachment") }}</label>
 					<div class="flex items-center gap-2 flex-wrap">
 						<label
-							class="flex items-center gap-1.5 bg-ink-100 border border-ink-400 rounded-input text-ink-700 px-3 py-2.5 text-kra-label font-extrabold uppercase cursor-pointer"
+							class="g-touch flex items-center gap-1.5 border border-divider rounded-input text-inkbase px-3 py-2.5 text-kra-label font-extrabold uppercase cursor-pointer hover:bg-icon-bg"
 						>
 							<FeatherIcon name="paperclip" class="h-3.5 w-3.5" />
 							{{ __("Choose file") }}

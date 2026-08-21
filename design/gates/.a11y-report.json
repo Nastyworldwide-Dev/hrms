@@ -69,6 +69,10 @@
     "region": {
       "impact": "moderate",
       "nodes": 5
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
     }
   },
   "dash-kpi:dark": {
@@ -115,6 +119,10 @@
     },
     "label": {
       "impact": "critical",
+      "nodes": 1
+    },
+    "target-size": {
+      "impact": "serious",
       "nodes": 1
     }
   },
@@ -193,7 +201,12 @@
   "profile:dark": {},
   "notifications:dark": {},
   "settings:dark": {},
-  "change-password:dark": {},
+  "change-password:dark": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "hr-contacts:dark": {},
   "remote-approvals:dark": {},
   "invalid-employee:dark": {
@@ -207,6 +220,10 @@
     "label": {
       "impact": "critical",
       "nodes": 2
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 2
     }
   },
   "attendance-requests-detail:dark": {
@@ -217,6 +234,10 @@
     "label": {
       "impact": "critical",
       "nodes": 3
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 2
     }
   },
   "shift-requests:dark": {},
@@ -250,7 +271,12 @@
     }
   },
   "leave-applications:dark": {},
-  "leave-applications-new:dark": {},
+  "leave-applications-new:dark": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "leave-applications-detail:dark": {
     "aria-allowed-attr": {
       "impact": "critical",
@@ -259,21 +285,25 @@
     "label": {
       "impact": "critical",
       "nodes": 2
-    }
-  },
-  "ot-requests:dark": {
-    "scrollable-region-focusable": {
+    },
+    "target-size": {
       "impact": "serious",
       "nodes": 1
     }
   },
+  "ot-requests:dark": {},
   "ot-requests-new:dark": {
     "label": {
       "impact": "critical",
       "nodes": 1
     }
   },
-  "replacement-leave:dark": {},
+  "replacement-leave:dark": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "replacement-leave-new:dark": {
     "label": {
       "impact": "critical",
@@ -281,7 +311,12 @@
     }
   },
   "login:dark": {},
-  "forgot-password:dark": {},
+  "forgot-password:dark": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "home:light": {
     "landmark-banner-is-top-level": {
       "impact": "moderate",
@@ -352,6 +387,10 @@
     "region": {
       "impact": "moderate",
       "nodes": 5
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
     }
   },
   "dash-kpi:light": {
@@ -398,6 +437,10 @@
     },
     "label": {
       "impact": "critical",
+      "nodes": 1
+    },
+    "target-size": {
+      "impact": "serious",
       "nodes": 1
     }
   },
@@ -476,7 +519,12 @@
   "profile:light": {},
   "notifications:light": {},
   "settings:light": {},
-  "change-password:light": {},
+  "change-password:light": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "hr-contacts:light": {},
   "remote-approvals:light": {},
   "invalid-employee:light": {
@@ -490,6 +538,10 @@
     "label": {
       "impact": "critical",
       "nodes": 2
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 2
     }
   },
   "attendance-requests-detail:light": {
@@ -500,6 +552,10 @@
     "label": {
       "impact": "critical",
       "nodes": 3
+    },
+    "target-size": {
+      "impact": "serious",
+      "nodes": 2
     }
   },
   "shift-requests:light": {},
@@ -533,7 +589,12 @@
     }
   },
   "leave-applications:light": {},
-  "leave-applications-new:light": {},
+  "leave-applications-new:light": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "leave-applications-detail:light": {
     "aria-allowed-attr": {
       "impact": "critical",
@@ -542,21 +603,25 @@
     "label": {
       "impact": "critical",
       "nodes": 2
-    }
-  },
-  "ot-requests:light": {
-    "scrollable-region-focusable": {
+    },
+    "target-size": {
       "impact": "serious",
       "nodes": 1
     }
   },
+  "ot-requests:light": {},
   "ot-requests-new:light": {
     "label": {
       "impact": "critical",
       "nodes": 1
     }
   },
-  "replacement-leave:light": {},
+  "replacement-leave:light": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
   "replacement-leave-new:light": {
     "label": {
       "impact": "critical",
@@ -564,5 +629,10 @@
     }
   },
   "login:light": {},
-  "forgot-password:light": {}
+  "forgot-password:light": {
+    "target-size": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  }
 }
