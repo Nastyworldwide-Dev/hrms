@@ -2,16 +2,16 @@
 
 State at the end of the 8.6+ pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` · **Spec** v1.10 · working tree clean apart from the
-regenerated screenshots and the vestigial `frappe-ui` submodule.
+**Branch** `nz-glass` at `559079695`, pushed and in sync · **Spec** v1.10 ·
+working tree clean apart from the vestigial `frappe-ui` submodule.
+
+**All six gates green. 143 findings -> 54. P0 20 -> 0. 23 root causes -> 3.**
 
 ```
-0643670d7  chore(glass): call applyProductName at boot
-ada83d86d  fix(glass): a11y at source, 44px targets, accent discipline, one class one owner
-44676547d  docs(glass): handoff for the 8.1-8.5 fix pass          <- last pushed
+lint     OK  194 known, 0 new        a11y    OK  76 screen-themes, 34 baselined, 0 new
+usage    OK  0 known, 0 new          visual  OK  0 differing
+contrast OK  54 pairs, 0 failed      surfaces OK 41 screens, 0 over 6
 ```
-
-**Two commits are unpushed.** Push them once the gate pass below is green.
 
 ---
 
@@ -70,30 +70,49 @@ renders "NSTY People" from one Translation record.
 
 ---
 
-## 2. Still to run
+## 2. What ran, and what it found
 
-1. **Full re-shoot.** `docs/glass/audit/screens/` currently holds the *8.1–8.5*
-   set — the 8.6+ capture was killed mid-run during the commit recovery and the
-   working copies were reverted to HEAD. Re-run before trusting any screenshot:
-   ```
-   cd frontend && AUDIT_PW=… node ../docs/glass/audit/capture.mjs
-   ```
-2. **Six-gate pass.** `node design/gates/run.mjs` (needs `AUDIT_PW` and a site
-   on :8080). Static four were green at last run; `a11y` and `visual` need the
-   re-shoot first — **`visual` will fail until the baselines are re-shot**,
-   because the screens legitimately changed. Re-baseline with
-   `node design/gates/visual.mjs --update-baseline`.
-3. **a11y re-baseline.** `node design/gates/a11y.mjs --update-baseline`. It was
-   50 screen-themes / 106 nodes; a 12-screen probe now returns zero, so this
-   should collapse. **If it does not, the remainder are per-screen and want
-   naming individually** — that was the point of your ruling.
+All three outstanding items completed.
+
+**Re-shoot** — 266 captures / 342 files against the 8.6+ build, no failures, no
+slow screens.
+
+**a11y re-baseline** — **50 screen-themes / 106 nodes -> 22 / 41**, then 34
+after one more source fix. Not accepted: `label` on 16 screen-themes turned out
+to be **one component** (`FormField`'s Time input labels via a sibling `<span>`,
+not a `<label for>`), the third time this pass a large count collapsed to a
+shared component. Remaining: `aria-allowed-attr` 8, `label` 8 (a
+differently-shaped detail-screen variant), `target-size` 4, and three rules at 2.
+
+**Six-gate pass** — five green first time; `visual` failed with 2, and that
+failure was the gate working. Both were `notifications`, whose **relative
+timestamps** ("in 4 hours" -> "in 5 hours") make its baseline fail an hour after
+it is shot. Self-changing elements now carry `data-visual-mask` and the gate
+excludes them. Verified by re-running against committed baselines 15 minutes
+old, so the timestamp had genuinely drifted: 0 differing.
+
+### Three gate-reporting defects, all of which read as green
+
+Worth carrying forward, because none was a fault in what the gate *checked*:
+
+1. `a11y` printed three serious violations and called `process.exit(0)`.
+2. `visual` reported `FAIL ?` with no reason — `run.mjs` capped every gate at
+   six minutes and SIGTERMed it with its output still buffered.
+3. `visual` compared against baselines **it had written itself**: Playwright
+   rewrites `__` to `-` when it resolves a snapshot path, so the `__` names the
+   capture wrote could never be found. It created a parallel set and passed
+   against its own output. Only a file-count mismatch — 368 where 342 were
+   expected — surfaced it.
+
+Each is fixed, and each was verified by forcing the failure it is meant to
+catch rather than by reading the code.
 
 ---
 
 ## 3. Standing caution — the remaining findings are inference-flagged
 
-`docs/glass/frontend-audit.md` still lists ~105 findings. **Treat every cause
-in it as unverified.** Across 8.1–8.5, **five findings were wrong, and all five
+`docs/glass/frontend-audit.md` lists 143 findings, of which **54 remain**
+(0 P0, 32 P1, 22 P2). **Treat every cause in it as unverified.** Across 8.1–8.5, **five findings were wrong, and all five
 failed the same way**: an accurate observation with a wrong cause inferred on
 top of it.
 
@@ -108,9 +127,13 @@ A screenshot is evidence of *what rendered*. It is never, on its own, evidence
 of *why*. Verify the cause before acting on any remaining finding — and prefer
 measuring the DOM over reading the image, which is how all five were caught.
 
-Two more from this pass, for the same file: RC13's dashed empty state is
-**spec-correct** (§10.1 #11) — the dropzone was the collision, and it moved.
-And the a11y "62 bugs" were six shared components.
+Two more from this pass: RC13's dashed empty state is **spec-correct**
+(§10.1 #11) — the dropzone was the collision, and it moved. And the a11y "62
+bugs" were six shared components.
+
+**Still open (3 of 23 root causes):** RC18 the avatar has three forms · RC19 the
+double-letter gap, cause unknown, needs a device · RC22 the tab bar on list
+screens, which is **intended** and recorded in §12, not a defect.
 
 ---
 

@@ -4,6 +4,12 @@ Companion to **[frontend-audit.md](frontend-audit.md)**, which is left as
 written. This records what changed, what it cost, what closed, and — the part
 worth reading — **three findings from the first pass that were wrong**.
 
+> **This document covers 8.1–8.5 only.** The 8.6+ pass — a11y fixed at source,
+> 44px targets, accent discipline, the scoped-block root cause, the three 7.3
+> rulings and three gate-reporting defects — is in
+> **[session_handoff.md](session_handoff.md)**. Final state after both passes:
+> **143 findings → 54**, 0 P0, 23 root causes → 3, all six gates green.
+
 Every claim below was verified against the running app, by measurement where a
 measurement was possible and by looking at the re-shot screenshot otherwise.
 
