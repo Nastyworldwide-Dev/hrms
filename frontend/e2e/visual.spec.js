@@ -56,7 +56,7 @@ test("visual: every screen matches its baseline", async () => {
 			const page = await ctx.newPage()
 
 			for (const s of batch) {
-				const name = `${s.slug}__${v.tag}.png`
+				const name = `${s.slug}-${v.tag}.png`
 				try {
 					await page.goto(`${BASE}/hrms${s.path}`, { waitUntil: "networkidle", timeout: 35000 })
 					await settle(page)

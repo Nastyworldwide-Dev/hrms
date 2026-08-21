@@ -85,7 +85,10 @@ for (const v of VARIANTS) {
 
 		for (const s of screens) {
 			const suffix = `${v.vp}-${v.theme}${v.rt ? "-rt" : ""}`
-			const base = `${s.slug}__${suffix}`
+			// single dash, not "__": Playwright sanitises a double underscore to a
+			// dash when it resolves a snapshot path, so `__` names could never be
+			// the visual gate's baselines — it silently built a parallel set.
+			const base = `${s.slug}-${suffix}`
 			errs.length = 0
 			let note = "ok"
 			const started = Date.now()
@@ -115,7 +118,7 @@ for (const v of VARIANTS) {
 						window.scrollTo(0, document.body.scrollHeight)
 					})
 					await page.waitForTimeout(900)
-					await page.screenshot({ path: `${OUT}/${base}__bottom.png` })
+					await page.screenshot({ path: `${OUT}/${base}-bottom.png` })
 				}
 				})(), SCREEN_DEADLINE_MS, base)
 			} catch (e) {

@@ -151,7 +151,7 @@ Measured on `/hrms/login`:
 | real Playwright click | **times out after 3000ms** |
 | forced fill (bypasses hit-testing) | succeeds — the control itself is fine |
 
-Evidence: `login__390-dark.png`, `login__768-dark.png`. Both field labels paint at
+Evidence: `login-390-dark.png`, `login-768-dark.png`. Both field labels paint at
 the same coordinates, so "EMAIL" and "PASSWORD" overprint into unreadable glyph
 soup, and both inputs collapse into one box at the top of the screen, 218px above
 the logo.
@@ -184,7 +184,7 @@ Rendered HTML of the first QuickLinks row on `/hrms/home`:
 </button>
 ```
 
-Four consequences, all visible in `home__390-dark.png` and `more__390-dark.png`:
+Four consequences, all visible in `home-390-dark.png` and `more-390-dark.png`:
 
 - `justify-center` **centres the label**; `h-7` forces 28px against `.g-row`'s
   44px `min-height`, so content overflows its own row box
@@ -200,7 +200,7 @@ Affected: `GListRow.vue:24`, `GIssueCard.vue:20`, `GGoalsPanel.vue:16`,
 
 **It is not the components' own CSS.** `.g-row` computes correctly as
 `display:flex; align-items:center; gap:11px`, and `QuickLinks.vue` composes the
-slots properly. Proof that a working row exists: **`profile__390-dark.png` renders
+slots properly. Proof that a working row exists: **`profile-390-dark.png` renders
 its rows correctly** — icon left, label, chevron right — because those rows are
 not built this way.
 
@@ -216,10 +216,10 @@ Measured on `/hrms/home`: `--padding-bottom: 0px`, inner `scrollHeight` 1398 vs
 `clientHeight` 773, tab bar at `y=777`, height `58`, bottom gap `9`. **67px+ of
 content is permanently behind the bar** and the scroll cannot reach past it.
 
-Evidence: `home__390-dark__bottom.png` (a "Privilege Leave / REJECTED" row
-bisected), `dash-leaves__390-dark__bottom.png`, `dash-attendance__390-dark.png`
-(cuts "UPCOMING SHIFTS"), `notifications__390-dark__bottom.png` ("Load more" 10px
-off the viewport floor), `invalid-employee__390-dark.png` (the "Go to Login"
+Evidence: `home-390-dark-bottom.png` (a "Privilege Leave / REJECTED" row
+bisected), `dash-leaves-390-dark-bottom.png`, `dash-attendance-390-dark.png`
+(cuts "UPCOMING SHIFTS"), `notifications-390-dark-bottom.png` ("Load more" 10px
+off the viewport floor), `invalid-employee-390-dark.png` (the "Go to Login"
 button sliced flat on the final pixel row).
 
 **Fix:** one `--padding-bottom` on `.g-page ion-content`.
@@ -238,8 +238,8 @@ Computed from the live DOM:
 | "Forgot to check out from 02:12 am yesterday?" | `rgb(200,255,0)` | `rgb(200,255,0)` | **1.00** | 4.5 |
 | "Tap to submit a late check-out for approval." | `rgba(200,255,0,.8)` | `rgb(200,255,0)` | **1.00** | 4.5 |
 
-Seen directly: in `home__390-dark.png` the banner is a **blank chartreuse
-rectangle**. In `home__390-light.png` the identical banner is fully legible. The
+Seen directly: in `home-390-dark.png` the banner is a **blank chartreuse
+rectangle**. In `home-390-light.png` the identical banner is fully legible. The
 text is there in the DOM the whole time.
 
 This is the one that best explains "content unreadable": it is not cut off, it is
@@ -257,46 +257,46 @@ the scroll-bottom capture.
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC1 | QuickLinks rows: icon centred above, label centred below, chevron floating left into the next row; icons clipped by the panel rim | `home__390-dark.png` |
-| MATERIAL | P0 | RC10 | the check-out banner is a blank chartreuse block — text at 1.00 contrast | `home__390-dark.png` vs `home__390-light.png` |
-| LAYOUT | P0 | RC2 | scroll bottom leaves a request row bisected by the tab bar | `home__390-dark__bottom.png` |
-| HIERARCHY | P1 | RC7 | "MY REQUESTS" is a full-width chartreuse bar competing with "Check In" — it is a **one-option `GSegmented`**, a tab with nothing to switch to, not a header | `home__390-dark.png` |
-| COPY | P1 | RC4 | header wordmark reads "Frappe HR"; at 1440 it appears **twice at once**, in the sidebar and the top bar | `home__390-dark.png`, `home__1440-dark.png` |
-| HIERARCHY | P2 | RC7 | at desktop a correct "REQUESTS" eyebrow sits directly above the chartreuse bar, labelling the section twice | `home__1440-dark.png` |
-| RESPONSIVE | P1 | RC12 | `lg:grid-cols-2`; measured columns 550px / 549px, neither is §20.3's 720px | `home__1440-dark.png` |
-| LAYOUT | P2 | — | the left column ends at y≈690 while the right runs to 800, leaving the halves visibly unbalanced | `home__1440-dark.png` |
+| LAYOUT | P0 | RC1 | QuickLinks rows: icon centred above, label centred below, chevron floating left into the next row; icons clipped by the panel rim | `home-390-dark.png` |
+| MATERIAL | P0 | RC10 | the check-out banner is a blank chartreuse block — text at 1.00 contrast | `home-390-dark.png` vs `home-390-light.png` |
+| LAYOUT | P0 | RC2 | scroll bottom leaves a request row bisected by the tab bar | `home-390-dark-bottom.png` |
+| HIERARCHY | P1 | RC7 | "MY REQUESTS" is a full-width chartreuse bar competing with "Check In" — it is a **one-option `GSegmented`**, a tab with nothing to switch to, not a header | `home-390-dark.png` |
+| COPY | P1 | RC4 | header wordmark reads "Frappe HR"; at 1440 it appears **twice at once**, in the sidebar and the top bar | `home-390-dark.png`, `home-1440-dark.png` |
+| HIERARCHY | P2 | RC7 | at desktop a correct "REQUESTS" eyebrow sits directly above the chartreuse bar, labelling the section twice | `home-1440-dark.png` |
+| RESPONSIVE | P1 | RC12 | `lg:grid-cols-2`; measured columns 550px / 549px, neither is §20.3's 720px | `home-1440-dark.png` |
+| LAYOUT | P2 | — | the left column ends at y≈690 while the right runs to 800, leaving the halves visibly unbalanced | `home-1440-dark.png` |
 | INTERACTION | P1 | RC9 | "View List" is 56×**15**px; the five tab items are 69×**36**px | measured |
 
 ### 4.2 Attendance dashboard
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC2 | "Work From Home / DRAFT" is behind the tab bar in the *unscrolled* view; "UPCOMING SHIFTS" cut at 768 | `dash-attendance__390-dark.png`, `__768-dark.png` |
-| MATERIAL | P2 | RC5 | day cells are **hollow outlined rectangles**. Computed: `border: 1px solid rgb(135,143,155)`, `background: rgba(0,0,0,0)`. Size and radius *are* spec-correct (10.5px, r8) — the tint is missing and a border was used instead | `dash-attendance__390-dark.png` |
-| MATERIAL | P2 | — | the "Half Day" legend dot is dark olive on near-black — effectively invisible | `dash-attendance__390-dark.png` |
-| COPY | P1 | — | "View list" (sentence case) here vs "View List" (title case) on Leaves — same action, two labels | `dash-attendance__390-dark.png` vs `dash-leaves__390-dark.png` |
-| RESPONSIVE | P1 | RC12 | `lg:grid-cols-[1.1fr_1fr]`; ~320px of dead space in the left column while the right overflows the fold | `dash-attendance__1440-dark.png` |
-| RESPONSIVE | P1 | — | at 768 the content column is only ~416px wide, leaving large dead margins | `dash-attendance__768-dark.png` |
-| LAYOUT | P1 | — | the action list sits **after** two request lists on mobile but directly after the primary at desktop — the two orders disagree | `dash-attendance__390-dark.png` vs `__1440-dark.png` |
+| LAYOUT | P0 | RC2 | "Work From Home / DRAFT" is behind the tab bar in the *unscrolled* view; "UPCOMING SHIFTS" cut at 768 | `dash-attendance-390-dark.png`, `__768-dark.png` |
+| MATERIAL | P2 | RC5 | day cells are **hollow outlined rectangles**. Computed: `border: 1px solid rgb(135,143,155)`, `background: rgba(0,0,0,0)`. Size and radius *are* spec-correct (10.5px, r8) — the tint is missing and a border was used instead | `dash-attendance-390-dark.png` |
+| MATERIAL | P2 | — | the "Half Day" legend dot is dark olive on near-black — effectively invisible | `dash-attendance-390-dark.png` |
+| COPY | P1 | — | "View list" (sentence case) here vs "View List" (title case) on Leaves — same action, two labels | `dash-attendance-390-dark.png` vs `dash-leaves-390-dark.png` |
+| RESPONSIVE | P1 | RC12 | `lg:grid-cols-[1.1fr_1fr]`; ~320px of dead space in the left column while the right overflows the fold | `dash-attendance-1440-dark.png` |
+| RESPONSIVE | P1 | — | at 768 the content column is only ~416px wide, leaving large dead margins | `dash-attendance-768-dark.png` |
+| LAYOUT | P1 | — | the action list sits **after** two request lists on mobile but directly after the primary at desktop — the two orders disagree | `dash-attendance-390-dark.png` vs `__1440-dark.png` |
 | INTERACTION | P1 | RC9 | 42 of 58 controls are under 44px; month steppers are 32×32 | measured |
 
 ### 4.3 Leaves dashboard
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P1 | — | the third balance cell renders **inside its own rounded border** that the first two lack, and that border stops at the panel's midpoint leaving a floating corner | `dash-leaves__390-dark.png` |
-| HIERARCHY | P1 | RC7 | two chartreuse filled actions — "CLAIM" and "Request a Leave" — violating §18's one primary | `dash-leaves__390-dark.png` |
-| COMPONENTS | P2 | RC16 | "CLAIM" is square-cornered while "Request a Leave" is a pill | `dash-leaves__390-dark.png` |
-| SPACING | P2 | — | "LEAVE BALANCE" has no divider under it while "REPLACEMENT LEAVE" and "RECENT LEAVES" both do | `dash-leaves__390-dark.png` |
-| SPACING | P2 | — | the replacement-leave figure is indented 24px further than its own section header | `dash-leaves__390-dark.png` |
-| LAYOUT | P0 | RC2 | scroll bottom bisects a row; another row renders *below* the tab bar | `dash-leaves__390-dark__bottom.png` |
-| RESPONSIVE | P1 | RC12 | `lg:grid-cols-[1fr_280px]`; the primary is **stranded top-right** in otherwise empty space; three different content widths (855/555/550) | `dash-leaves__1440-dark.png` |
+| LAYOUT | P1 | — | the third balance cell renders **inside its own rounded border** that the first two lack, and that border stops at the panel's midpoint leaving a floating corner | `dash-leaves-390-dark.png` |
+| HIERARCHY | P1 | RC7 | two chartreuse filled actions — "CLAIM" and "Request a Leave" — violating §18's one primary | `dash-leaves-390-dark.png` |
+| COMPONENTS | P2 | RC16 | "CLAIM" is square-cornered while "Request a Leave" is a pill | `dash-leaves-390-dark.png` |
+| SPACING | P2 | — | "LEAVE BALANCE" has no divider under it while "REPLACEMENT LEAVE" and "RECENT LEAVES" both do | `dash-leaves-390-dark.png` |
+| SPACING | P2 | — | the replacement-leave figure is indented 24px further than its own section header | `dash-leaves-390-dark.png` |
+| LAYOUT | P0 | RC2 | scroll bottom bisects a row; another row renders *below* the tab bar | `dash-leaves-390-dark-bottom.png` |
+| RESPONSIVE | P1 | RC12 | `lg:grid-cols-[1fr_280px]`; the primary is **stranded top-right** in otherwise empty space; three different content widths (855/555/550) | `dash-leaves-1440-dark.png` |
 
 ### 4.4 KPI
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| STATES | P1 | RC13 | the empty state is a **bare centred sentence** with no icon, title/body hierarchy or action, while Attendance and Leaves use a composed bordered panel for the same job | `dash-kpi__390-dark.png` |
+| STATES | P1 | RC13 | the empty state is a **bare centred sentence** with no icon, title/body hierarchy or action, while Attendance and Leaves use a composed bordered panel for the same job | `dash-kpi-390-dark.png` |
 
 *KPI is otherwise **unaudited** — no appraisal data exists on this site (§5).*
 
@@ -304,12 +304,12 @@ the scroll-bottom capture.
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC1 | all three rows broken; the first row's icon is **sliced by the panel's top rim** and the last chevron by its bottom rim — the panel box is shorter than its content | `more__390-dark.png` |
-| LAYOUT | P1 | — | scrolling moves the panel but the clipping persists, confirming the box (not the page) is short | `more__390-dark__bottom.png` |
-| COPY | P1 | — | the header says "More" and a chartreuse eyebrow 47px below says "MORE" | `more__390-dark.png` |
-| LAYOUT | P1 | — | three destinations occupy the top 250px; ~62% of the viewport is empty | `more__390-dark.png` |
-| CHROME | P1 | — | the active tab changes container, shape **and** glyph family at once — a filled glowing squircle with a solid mark against four bare outline glyphs — so it reads as a button dropped into the bar | `more__390-dark.png` |
-| ICONS | P2 | — | tab glyphs are not optically matched; EXPENSES is a dollar sign inside a full circle, denser than its outline siblings | `more__390-dark.png` |
+| LAYOUT | P0 | RC1 | all three rows broken; the first row's icon is **sliced by the panel's top rim** and the last chevron by its bottom rim — the panel box is shorter than its content | `more-390-dark.png` |
+| LAYOUT | P1 | — | scrolling moves the panel but the clipping persists, confirming the box (not the page) is short | `more-390-dark-bottom.png` |
+| COPY | P1 | — | the header says "More" and a chartreuse eyebrow 47px below says "MORE" | `more-390-dark.png` |
+| LAYOUT | P1 | — | three destinations occupy the top 250px; ~62% of the viewport is empty | `more-390-dark.png` |
+| CHROME | P1 | — | the active tab changes container, shape **and** glyph family at once — a filled glowing squircle with a solid mark against four bare outline glyphs — so it reads as a button dropped into the bar | `more-390-dark.png` |
+| ICONS | P2 | — | tab glyphs are not optically matched; EXPENSES is a dollar sign inside a full circle, denser than its outline siblings | `more-390-dark.png` |
 | CHROME | P1 | RC17 | **three** app-header patterns across the app: title+bell+avatar, back+title, back+title+refresh | `more`, `profile`, `hr-contacts` |
 | INTERACTION | P1 | RC9 | avatar 33.5×33.5, bell glyph ~18.5px wide | measured |
 
@@ -317,162 +317,162 @@ the scroll-bottom capture.
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC3 | "EMAIL" and "PASSWORD" overprint at the same coordinates into unreadable glyph soup, glyph tops shaved by the viewport edge | `login__390-dark.png` |
-| LAYOUT | P0 | RC3 | both inputs collapse into one box with both placeholders overprinted; the block sits 218px above the logo it belongs to | `login__390-dark.png` |
+| LAYOUT | P0 | RC3 | "EMAIL" and "PASSWORD" overprint at the same coordinates into unreadable glyph soup, glyph tops shaved by the viewport edge | `login-390-dark.png` |
+| LAYOUT | P0 | RC3 | both inputs collapse into one box with both placeholders overprinted; the block sits 218px above the logo it belongs to | `login-390-dark.png` |
 | INTERACTION | P0 | RC3 | **the form cannot be used** — a real click times out, `elementFromPoint` returns the page div | measured |
-| RESPONSIVE | P0 | RC3 | reproduces identically at 768 | `login__768-dark.png` |
-| SPACING | P1 | RC3 | the input is full-bleed 0→390 with its rim cut flat at both edges while everything else is inset 16px | `login__390-dark.png` |
-| COPY | P2 | — | the mark reads "HR" but the heading names the product "Sign in to NSTY People" — mark and product name disagree | `login__390-dark.png` |
+| RESPONSIVE | P0 | RC3 | reproduces identically at 768 | `login-768-dark.png` |
+| SPACING | P1 | RC3 | the input is full-bleed 0→390 with its rim cut flat at both edges while everything else is inset 16px | `login-390-dark.png` |
+| COPY | P2 | — | the mark reads "HR" but the heading names the product "Sign in to NSTY People" — mark and product name disagree | `login-390-dark.png` |
 
 ### 4.7 Forms (8 screens)
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| COMPONENTS | P0 | RC3 | **the multi-line field is missing on every form** — a label with nothing under it. `EXPLANATION` (attendance, OT, replacement leave), `REASON` (leave), `DESCRIBE THE ISSUE *` (issues — the screen's mandatory field) | `*-new__390-dark.png` |
-| LAYOUT | P1 | RC3 | a ~12px full-bleed slab under the header on exactly the five screens with a missing control — the displaced field itself | `attendance-requests-new__390-dark.png` |
-| MATERIAL | P1 | RC6 | **no light field and no glass on any form screen** — flat `#07070A` at all corners, opaque grey fields. The dashboards at the same viewport show tinted corners | all `*-new__390-dark.png` |
-| COMPONENTS | P1 | — | **four field treatments within 800px**: near-black 6px-radius date inputs, identical time inputs, mid-grey 14px-radius borderless selects, square-cornered bordered numerics | `attendance-requests-new__390-dark.png` |
-| COMPONENTS | P1 | — | date and time fields are **unstyled native controls** — UA calendar/clock glyphs and the literal placeholders `mm/dd/yyyy` and `--:-- --` | `attendance-requests-new__390-dark.png` |
+| COMPONENTS | P0 | RC3 | **the multi-line field is missing on every form** — a label with nothing under it. `EXPLANATION` (attendance, OT, replacement leave), `REASON` (leave), `DESCRIBE THE ISSUE *` (issues — the screen's mandatory field) | `*-new-390-dark.png` |
+| LAYOUT | P1 | RC3 | a ~12px full-bleed slab under the header on exactly the five screens with a missing control — the displaced field itself | `attendance-requests-new-390-dark.png` |
+| MATERIAL | P1 | RC6 | **no light field and no glass on any form screen** — flat `#07070A` at all corners, opaque grey fields. The dashboards at the same viewport show tinted corners | all `*-new-390-dark.png` |
+| COMPONENTS | P1 | — | **four field treatments within 800px**: near-black 6px-radius date inputs, identical time inputs, mid-grey 14px-radius borderless selects, square-cornered bordered numerics | `attendance-requests-new-390-dark.png` |
+| COMPONENTS | P1 | — | date and time fields are **unstyled native controls** — UA calendar/clock glyphs and the literal placeholders `mm/dd/yyyy` and `--:-- --` | `attendance-requests-new-390-dark.png` |
 | CONTENT | P2 | — | US date format `mm/dd/yyyy` throughout, in a Malaysian HR app | all form screens |
-| HIERARCHY | P1 | — | checkbox labels ("Half Day", "Include Holidays") are chartreuse Title Case semibold — two unchecked options are the loudest text on the screen | `attendance-requests-new__390-dark.png` |
-| COMPONENTS | P2 | — | those checkboxes are **circles** — radio geometry for independent toggles | `attendance-requests-new__390-dark.png` |
+| HIERARCHY | P1 | — | checkbox labels ("Half Day", "Include Holidays") are chartreuse Title Case semibold — two unchecked options are the loudest text on the screen | `attendance-requests-new-390-dark.png` |
+| COMPONENTS | P2 | — | those checkboxes are **circles** — radio geometry for independent toggles | `attendance-requests-new-390-dark.png` |
 | TYPOGRAPHY | P1 | — | the required marker is a red/salmon asterisk (~`#e5484d`), a hue absent from the chartreuse/teal/violet palette | all form screens |
 | COMPONENTS | P1 | RC13 | the attachment dropzone is a square-cornered dashed box — dashed borders and square corners exist nowhere else in the system | all form screens |
-| LAYOUT | P0 | RC2 | on attendance-requests-new the dropzone is **sliced by the sticky Save bar** and the page does not scroll, so the clipped edge is the end of reachable content | `attendance-requests-new__390-dark__bottom.png` |
+| LAYOUT | P0 | RC2 | on attendance-requests-new the dropzone is **sliced by the sticky Save bar** and the page does not scroll, so the clipped edge is the end of reachable content | `attendance-requests-new-390-dark-bottom.png` |
 | COPY | P2 | — | section eyebrow and field label duplicate the same word 60px apart — "REASON" / "REASON *", "CURRENCY" / "CURRENCY *" | attendance, expense forms |
 | COPY | P2 | — | three primary-label conventions in one batch: "Save", "Update Password", "Send Reset Link" | forms batch |
 | CONTENT | P2 | — | the approver field is required on expense and shift forms but not on leave — same role, two rules | `leave-applications-new` vs `expense-claims-new` |
 | LAYOUT | P2 | — | 265–530px of dead space between the last field and the Save bar on unscrollable pages | issues, OT, replacement-leave, shift-requests |
-| MATERIAL | P1 | — | shift-requests-new has **no eyebrows, no dividers, no panel** — four bare fields on flat black, unlike every sibling form | `shift-requests-new__390-dark.png` |
+| MATERIAL | P1 | — | shift-requests-new has **no eyebrows, no dividers, no panel** — four bare fields on flat black, unlike every sibling form | `shift-requests-new-390-dark.png` |
 
 ### 4.8 Expense claim form — additional
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC15 | a "Could not load" toast is anchored **over the primary button**, covering its label and middle 60% | `expense-claims-new__390-dark.png` |
-| COPY | P1 | RC15 | the error reads "Insufficient Permission for **Account**" — raw backend vocabulary with a capitalised doctype name, shown to an employee | `expense-claims-new__390-dark.png` |
+| LAYOUT | P0 | RC15 | a "Could not load" toast is anchored **over the primary button**, covering its label and middle 60% | `expense-claims-new-390-dark.png` |
+| COPY | P1 | RC15 | the error reads "Insufficient Permission for **Account**" — raw backend vocabulary with a capitalised doctype name, shown to an employee | `expense-claims-new-390-dark.png` |
 | STATES | P1 | RC15 | the manifest records 7 `PAGEERROR … PermissionError` per capture for Account/Currency/Branch/Location — the link pickers throw **unhandled** rejections rather than rendering an error state | `manifest.json` |
-| MATERIAL | P2 | — | the toast is flat solid near-black with a pure-red icon — no glass, and the red is off-palette | `expense-claims-new__390-dark.png` |
-| TYPOGRAPHY | P2 | — | "EXPENSES" appears as a Title Case 17px tab and an UPPERCASE 11px section header 700px apart | `expense-claims-new__390-dark.png` |
+| MATERIAL | P2 | — | the toast is flat solid near-black with a pure-red icon — no glass, and the red is off-palette | `expense-claims-new-390-dark.png` |
+| TYPOGRAPHY | P2 | — | "EXPENSES" appears as a Title Case 17px tab and an UPPERCASE 11px section header 700px apart | `expense-claims-new-390-dark.png` |
 
 ### 4.9 Detail screens (4)
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | RC2 | **the detail screens do not scroll** — bottom captures are pixel-identical to top — and content is cut at the viewport edge, so approve/reject/submit controls are unreachable | `attendance-requests-detail__390-dark__bottom.png`, `leave-applications-detail__390-dark__bottom.png` |
-| LAYOUT | P0 | — | a line of text reading "morning" is **sliced in half by the header's bottom edge** | `attendance-requests-detail__390-dark.png` |
-| TYPOGRAPHY | P1 | — | the document title truncates to "Employ…" while the 18-character system ID chip beside it renders in full — the least meaningful element wins the space. Also "Leave…", "Attendance R…", "Shift A…" | `issues-detail__390-dark.png` |
-| LAYOUT | P1 | RC3 | orphaned labels with no field: `EMPLOYEE NAME`, `REASON`, and an entirely empty `DETAILS` section | `issues-detail__390-dark.png`, `leave-applications-detail__390-dark.png` |
-| STATES | P1 | — | a document stamped **"Rejected"** renders every field as a live editable control — no read-only or disabled treatment | `leave-applications-detail__390-dark.png` |
-| COMPONENTS | P1 | RC8 | the same status renders as a **filled amber "Open"** pill in the app bar and an **outlined uppercase "OPEN"** on the list. `FormView.vue:33` uses frappe-ui `Badge`; the lists use `GStatusChip` | `issues-detail__390-dark.png` vs `issues__390-dark.png` |
-| COMPONENTS | P1 | — | two primary-button designs: 40px flat centred "Save" here, 53px glowing left-aligned pill with a trailing arrow on the list screens | `issues-detail__390-dark.png` |
+| LAYOUT | P0 | RC2 | **the detail screens do not scroll** — bottom captures are pixel-identical to top — and content is cut at the viewport edge, so approve/reject/submit controls are unreachable | `attendance-requests-detail-390-dark-bottom.png`, `leave-applications-detail-390-dark-bottom.png` |
+| LAYOUT | P0 | — | a line of text reading "morning" is **sliced in half by the header's bottom edge** | `attendance-requests-detail-390-dark.png` |
+| TYPOGRAPHY | P1 | — | the document title truncates to "Employ…" while the 18-character system ID chip beside it renders in full — the least meaningful element wins the space. Also "Leave…", "Attendance R…", "Shift A…" | `issues-detail-390-dark.png` |
+| LAYOUT | P1 | RC3 | orphaned labels with no field: `EMPLOYEE NAME`, `REASON`, and an entirely empty `DETAILS` section | `issues-detail-390-dark.png`, `leave-applications-detail-390-dark.png` |
+| STATES | P1 | — | a document stamped **"Rejected"** renders every field as a live editable control — no read-only or disabled treatment | `leave-applications-detail-390-dark.png` |
+| COMPONENTS | P1 | RC8 | the same status renders as a **filled amber "Open"** pill in the app bar and an **outlined uppercase "OPEN"** on the list. `FormView.vue:33` uses frappe-ui `Badge`; the lists use `GStatusChip` | `issues-detail-390-dark.png` vs `issues-390-dark.png` |
+| COMPONENTS | P1 | — | two primary-button designs: 40px flat centred "Save" here, 53px glowing left-aligned pill with a trailing arrow on the list screens | `issues-detail-390-dark.png` |
 | HIERARCHY | P1 | — | on two detail screens the **only** chartreuse elements are checkbox labels ("Half Day", "Follow via Email") — a notification preference carries the primary-action colour and no primary action exists | `attendance-requests-detail`, `leave-applications-detail` |
 | MATERIAL | P1 | RC6 | no light field, no glass — flat `#07070A`, fully opaque fields with no rim | all four detail screens |
-| COMPONENTS | P1 | — | two boolean shapes on one screen: "Half Day" an unfilled grey circle, "Follow via Email" a chartreuse-filled circle with a check | `leave-applications-detail__390-dark.png` |
+| COMPONENTS | P1 | — | two boolean shapes on one screen: "Half Day" an unfilled grey circle, "Follow via Email" a chartreuse-filled circle with a check | `leave-applications-detail-390-dark.png` |
 | CONTENT | P2 | — | no activity, approval-trail, comment or timeline block on any detail screen | all four |
-| HIERARCHY | P1 | — | shift-assignments-detail has **no action of any kind** and 164px of empty space below the last field | `shift-assignments-detail__390-dark.png` |
+| HIERARCHY | P1 | — | shift-assignments-detail has **no action of any kind** and 164px of empty space below the last field | `shift-assignments-detail-390-dark.png` |
 | SPACING | P2 | — | a leading divider is drawn above the first section eyebrow, separating content from nothing | `shift-assignments-detail`, `issues-new`, `replacement-leave-new` |
 
 ### 4.10 Issues list
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| CONTENT | P1 | RC20 | **rows show no subject** — the only text is `HR-ISS-26-08-00002 · 21 Aug, 07:51 · null`. Both seeded issues have subjects; the list renders none | `issues__390-dark.png` |
-| CONTENT | P1 | RC20 | the literal string **`null`** is printed as the last meta segment on every row | `issues__390-dark.png` |
-| LAYOUT | P0 | RC1 | rows broken: meta line flush against the card's top rim, chip stacked below it, chevron below that crossing the row divider; a 65px empty well runs down the card's left side | `issues__390-dark.png` |
-| MATERIAL | P2 | — | the CTA's glow bleeds ~40px past the pill, tinting the background and washing over the eyebrow below it | `issues__390-dark.png` |
-| ICONS | P2 | — | the notification dot is fully detached from the bell — a clear gap reads as a stray dot | `issues__390-dark.png` |
-| LAYOUT | P2 | — | 478px of empty background between the only card and the tab bar | `issues__390-dark.png` |
+| CONTENT | P1 | RC20 | **rows show no subject** — the only text is `HR-ISS-26-08-00002 · 21 Aug, 07:51 · null`. Both seeded issues have subjects; the list renders none | `issues-390-dark.png` |
+| CONTENT | P1 | RC20 | the literal string **`null`** is printed as the last meta segment on every row | `issues-390-dark.png` |
+| LAYOUT | P0 | RC1 | rows broken: meta line flush against the card's top rim, chip stacked below it, chevron below that crossing the row divider; a 65px empty well runs down the card's left side | `issues-390-dark.png` |
+| MATERIAL | P2 | — | the CTA's glow bleeds ~40px past the pill, tinting the background and washing over the eyebrow below it | `issues-390-dark.png` |
+| ICONS | P2 | — | the notification dot is fully detached from the bell — a clear gap reads as a stray dot | `issues-390-dark.png` |
+| LAYOUT | P2 | — | 478px of empty background between the only card and the tab bar | `issues-390-dark.png` |
 
 ### 4.11 Notifications
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| LAYOUT | P0 | — | "Mark all as read" **wraps to two lines and overflows its fixed-height pill** — caps sit above the rim, "read" is jammed against the bottom | `notifications__390-dark.png` |
-| HIERARCHY | P1 | — | "Settings" and "Mark all as read" are identical grey pills; the bulk action is indistinguishable from a navigation link | `notifications__390-dark.png` |
-| COMPONENTS | P1 | — | each row carries **two** status marks — a blank grey circle with no initials or icon, plus a hard-cornered chartreuse square as the unread flag, in a rounded system | `notifications__390-dark.png` |
-| TYPOGRAPHY | P1 | — | bold is applied to arbitrary mid-sentence fragments, and **"Approved" and "Rejected" are typeset identically in white** — outcome cannot be told apart at a glance | `notifications__390-dark.png` |
-| MATERIAL | P1 | — | the list is unpanelled — rows on flat background — while the same pattern on More is wrapped in a rimmed glass panel | `notifications__390-dark.png` |
-| MATERIAL | P2 | — | the light field is attached to the scrolled document, not fixed to the viewport: the first screen is flat, and the blobs only appear once scrolled to the end | `notifications__390-dark__bottom.png` |
-| CONTENT | P2 | — | document ids break mid-token: `HR-LAP-2026-` / `00043` | `notifications__390-dark.png` |
-| LAYOUT | P1 | RC2 | "Load more" sits 10px from the viewport floor with no trailing padding | `notifications__390-dark__bottom.png` |
+| LAYOUT | P0 | — | "Mark all as read" **wraps to two lines and overflows its fixed-height pill** — caps sit above the rim, "read" is jammed against the bottom | `notifications-390-dark.png` |
+| HIERARCHY | P1 | — | "Settings" and "Mark all as read" are identical grey pills; the bulk action is indistinguishable from a navigation link | `notifications-390-dark.png` |
+| COMPONENTS | P1 | — | each row carries **two** status marks — a blank grey circle with no initials or icon, plus a hard-cornered chartreuse square as the unread flag, in a rounded system | `notifications-390-dark.png` |
+| TYPOGRAPHY | P1 | — | bold is applied to arbitrary mid-sentence fragments, and **"Approved" and "Rejected" are typeset identically in white** — outcome cannot be told apart at a glance | `notifications-390-dark.png` |
+| MATERIAL | P1 | — | the list is unpanelled — rows on flat background — while the same pattern on More is wrapped in a rimmed glass panel | `notifications-390-dark.png` |
+| MATERIAL | P2 | — | the light field is attached to the scrolled document, not fixed to the viewport: the first screen is flat, and the blobs only appear once scrolled to the end | `notifications-390-dark-bottom.png` |
+| CONTENT | P2 | — | document ids break mid-token: `HR-LAP-2026-` / `00043` | `notifications-390-dark.png` |
+| LAYOUT | P1 | RC2 | "Load more" sits 10px from the viewport floor with no trailing padding | `notifications-390-dark-bottom.png` |
 
 ### 4.12 Profile, Settings, HR contacts, Invalid employee
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| COMPONENTS | P1 | RC1 | **Profile's rows render correctly** — icon left, label, chevron right — proving a working row implementation exists alongside the broken one | `profile__390-dark.png` |
-| HIERARCHY | P1 | — | sign-out is the **only** accented element on Profile: a chartreuse-outlined box with chartreuse text and icon. The destructive action wears the primary colour and nothing marks it destructive | `profile__390-dark.png` |
+| COMPONENTS | P1 | RC1 | **Profile's rows render correctly** — icon left, label, chevron right — proving a working row implementation exists alongside the broken one | `profile-390-dark.png` |
+| HIERARCHY | P1 | — | sign-out is the **only** accented element on Profile: a chartreuse-outlined box with chartreuse text and icon. The destructive action wears the primary colour and nothing marks it destructive | `profile-390-dark.png` |
 | COMPONENTS | P1 | RC18 | the same user's avatar is a 72px sharp square, a 33px rounded square and a 28px circle on three screens | `profile`, `more`, `notifications` |
-| CONTENT | P2 | — | a normal-length Malay name truncates on one line: "Nurul Aisyah binti Abdul…"; the desktop sidebar cuts it to "Nurul Aisyah binti …" | `profile__390-dark.png`, `home__1440-dark.png` |
-| COMPONENTS | P1 | RC16 | the theme picker is a **zero-radius rectangle** with a hard-cornered chartreuse segment, no dividers and no thumb — a second, contradictory answer to the "pick one of N" problem the pill tab bar already solves | `settings__390-dark.png` |
-| TYPOGRAPHY | P1 | — | two row-title styles on one screen: "Enable Push Notifications" in the light body face at a larger size, "Theme" and "Change Password" in the bold heading face | `settings__390-dark.png` |
-| SPACING | P1 | — | three different left edges in one list — eyebrows at 16, helper text at 24.5, "Change Password" at 48 | `settings__390-dark.png` |
-| INTERACTION | P1 | RC9 | the push toggle is ~31×17px and its off-state track and knob are two near-identical greys, so "off" is indistinguishable from "disabled" | `settings__390-dark.png` |
+| CONTENT | P2 | — | a normal-length Malay name truncates on one line: "Nurul Aisyah binti Abdul…"; the desktop sidebar cuts it to "Nurul Aisyah binti …" | `profile-390-dark.png`, `home-1440-dark.png` |
+| COMPONENTS | P1 | RC16 | the theme picker is a **zero-radius rectangle** with a hard-cornered chartreuse segment, no dividers and no thumb — a second, contradictory answer to the "pick one of N" problem the pill tab bar already solves | `settings-390-dark.png` |
+| TYPOGRAPHY | P1 | — | two row-title styles on one screen: "Enable Push Notifications" in the light body face at a larger size, "Theme" and "Change Password" in the bold heading face | `settings-390-dark.png` |
+| SPACING | P1 | — | three different left edges in one list — eyebrows at 16, helper text at 24.5, "Change Password" at 48 | `settings-390-dark.png` |
+| INTERACTION | P1 | RC9 | the push toggle is ~31×17px and its off-state track and knob are two near-identical greys, so "off" is indistinguishable from "disabled" | `settings-390-dark.png` |
 | COPY | P1 | — | server vocabulary leaks to employees: "Push notifications have been disabled **on your site**"; "Ask your **administrator** to assign the **HR Manager or HR User role**" | `settings`, `hr-contacts` |
-| STATES | P1 | RC13 | HR contacts' empty state offers **no action**, is not centred (top 137–260px, ~580px empty below), and its icon well is a hard-cornered flat grey square | `hr-contacts__390-dark.png` |
-| LAYOUT | P0 | RC2 | the invalid-employee sheet is clipped — "Go to Login" is still solid chartreuse on the **final pixel row**, its corner radius sliced flat, zero safe area | `invalid-employee__390-dark.png` |
-| MATERIAL | P1 | — | that page's background is `rgb(3,3,4)` where every other screen is `rgb(7,7,10)`, and the sheet is opaque with no rim | `invalid-employee__390-dark.png` |
-| COMPONENTS | P2 | — | the sheet shows a drag handle implying dismissal, but dismissing leaves an empty black page with no route out | `invalid-employee__390-dark.png` |
+| STATES | P1 | RC13 | HR contacts' empty state offers **no action**, is not centred (top 137–260px, ~580px empty below), and its icon well is a hard-cornered flat grey square | `hr-contacts-390-dark.png` |
+| LAYOUT | P0 | RC2 | the invalid-employee sheet is clipped — "Go to Login" is still solid chartreuse on the **final pixel row**, its corner radius sliced flat, zero safe area | `invalid-employee-390-dark.png` |
+| MATERIAL | P1 | — | that page's background is `rgb(3,3,4)` where every other screen is `rgb(7,7,10)`, and the sheet is opaque with no rim | `invalid-employee-390-dark.png` |
+| COMPONENTS | P2 | — | the sheet shows a drag handle implying dismissal, but dismissing leaves an empty black page with no route out | `invalid-employee-390-dark.png` |
 | COPY | P2 | — | the auth pair is labelled four ways: "Log Out", "Login", "Sign in to NSTY People", "Go to Login" | across the batch |
 
 ### 4.13 Team, Remote approvals
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| STATES | P1 | — | a screen titled "Team" renders **no roster at all** — no rows, no avatars, no names, and no empty state for the roster | `team__390-dark.png` |
-| COMPONENTS | P1 | RC16 | the date stepper buttons are perfectly square, sharp-cornered outline boxes, 34×34px | `team__390-dark.png` |
-| COMPONENTS | P1 | RC13 | the empty-state panel uses a **dashed border — the same device as the file-upload dropzone**, so "nothing here" and "drop a file here" are drawn identically | `team__390-dark.png` vs `issues-detail__390-dark.png` |
-| TYPOGRAPHY | P2 | — | "NOT IN YET" wraps, orphaning "YET" and breaking the stat row's baseline | `team__390-dark.png` |
-| COPY | P2 | — | "Approvals will appear here when your team submits" — the sentence has no object | `team__390-dark.png` |
-| COMPONENTS | P1 | RC13 | remote-approvals' empty state is **bare left-aligned text**, a third empty-state treatment | `remote-approvals__390-dark.png` |
-| HIERARCHY | P2 | RC7 | its active segment uses the exact primary-action chartreuse across half the screen width | `remote-approvals__390-dark.png` |
-| ICONS | P2 | RC17 | back is a left **arrow** here and on Settings, a left **chevron** on all four detail screens | `remote-approvals__390-dark.png` |
-| CHROME | P2 | — | content passes under the opaque header with a hard chop — no fade or mask — leaving a bright sliver stuck under the hairline | `team__390-dark__bottom.png`, `issues__390-dark__bottom.png` |
+| STATES | P1 | — | a screen titled "Team" renders **no roster at all** — no rows, no avatars, no names, and no empty state for the roster | `team-390-dark.png` |
+| COMPONENTS | P1 | RC16 | the date stepper buttons are perfectly square, sharp-cornered outline boxes, 34×34px | `team-390-dark.png` |
+| COMPONENTS | P1 | RC13 | the empty-state panel uses a **dashed border — the same device as the file-upload dropzone**, so "nothing here" and "drop a file here" are drawn identically | `team-390-dark.png` vs `issues-detail-390-dark.png` |
+| TYPOGRAPHY | P2 | — | "NOT IN YET" wraps, orphaning "YET" and breaking the stat row's baseline | `team-390-dark.png` |
+| COPY | P2 | — | "Approvals will appear here when your team submits" — the sentence has no object | `team-390-dark.png` |
+| COMPONENTS | P1 | RC13 | remote-approvals' empty state is **bare left-aligned text**, a third empty-state treatment | `remote-approvals-390-dark.png` |
+| HIERARCHY | P2 | RC7 | its active segment uses the exact primary-action chartreuse across half the screen width | `remote-approvals-390-dark.png` |
+| ICONS | P2 | RC17 | back is a left **arrow** here and on Settings, a left **chevron** on all four detail screens | `remote-approvals-390-dark.png` |
+| CHROME | P2 | — | content passes under the opaque header with a hard chop — no fade or mask — leaving a bright sliver stuck under the hairline | `team-390-dark-bottom.png`, `issues-390-dark-bottom.png` |
 
 ### 4.14 List screens (10)
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| SPACING | P0 | RC21 | **list rows have effectively no padding** — the title's first pixel is 1 CSS px from the panel's inner edge and chips end 0.5px from the rim, so the leading glyph is **sliced by the panel's rounded corner**: the "O" of "On Duty", the "0" of "07:26 pm", the "C" of "Casual Leave", the "A" of "Audit Morning Shift" | `attendance-requests__390-dark.png`, `employee-checkins__390-dark.png`, `leave-applications__390-dark.png`, `shift-assignments__390-dark.png` |
-| SPACING | P1 | RC21 | no vertical padding either — 40.5px per row, so the first row's title touches the top rim and the last row's date touches the bottom rim | `attendance-requests__390-dark.png` |
-| CHROME | P1 | RC22 | **eight of the ten list screens have no tab bar at all** — flat black below the content — while issues and sop show it | `leave-applications__390-dark__bottom.png` and 7 others |
+| SPACING | P0 | RC21 | **list rows have effectively no padding** — the title's first pixel is 1 CSS px from the panel's inner edge and chips end 0.5px from the rim, so the leading glyph is **sliced by the panel's rounded corner**: the "O" of "On Duty", the "0" of "07:26 pm", the "C" of "Casual Leave", the "A" of "Audit Morning Shift" | `attendance-requests-390-dark.png`, `employee-checkins-390-dark.png`, `leave-applications-390-dark.png`, `shift-assignments-390-dark.png` |
+| SPACING | P1 | RC21 | no vertical padding either — 40.5px per row, so the first row's title touches the top rim and the last row's date touches the bottom rim | `attendance-requests-390-dark.png` |
+| CHROME | P1 | RC22 | **eight of the ten list screens have no tab bar at all** — flat black below the content — while issues and sop show it | `leave-applications-390-dark-bottom.png` and 7 others |
 | MATERIAL | P1 | RC6 | seven of the ten render on flat `rgb(7,7,10)` with **no light field**; issues, sop and replacement-leave do show the corner blobs | `attendance-requests`, `employee-checkins`, `expense-claims`, `leave-applications`, `ot-requests`, `shift-assignments`, `shift-requests` |
-| CHROME | P0 | — | **replacement-leave has neither a back chevron nor a tab bar** — no navigation affordance anywhere on the screen | `replacement-leave__390-dark.png` |
-| COMPONENTS | P1 | RC8 | three chip constructions of equal importance in one list: REJECTED a light salmon fill `rgb(249,127,127)` with dark text, APPROVED a dark teal fill with light text, OPEN **no fill at all** — a 2px amber outline | `leave-applications__390-dark.png` |
-| HIERARCHY | P1 | RC8 | because REJECTED is the only high-luminance chip, **the eye is pulled to every rejection first** — rejected rows outrank approved ones purely on chip brightness | `leave-applications__390-dark.png` |
-| HIERARCHY | P1 | RC7 | on expense-claims, shift-requests and leave-applications the **only** chartreuse element is the segmented control's thumb, while the real primary "+ New" is a white pill — the brightest object is a view switcher | `expense-claims__390-dark.png`, `shift-requests__390-dark.png` |
-| HIERARCHY | P1 | — | ot-requests has **not a single chartreuse pixel** — no primary action reads as primary | `ot-requests__390-dark.png` |
-| HIERARCHY | P1 | — | on employee-checkins and shift-assignments the accent is spent on **neutral status chips** (IN/OUT, SUBMITTED), the loudest thing on screens with no primary action | `employee-checkins__390-dark.png`, `shift-assignments__390-dark.png` |
+| CHROME | P0 | — | **replacement-leave has neither a back chevron nor a tab bar** — no navigation affordance anywhere on the screen | `replacement-leave-390-dark.png` |
+| COMPONENTS | P1 | RC8 | three chip constructions of equal importance in one list: REJECTED a light salmon fill `rgb(249,127,127)` with dark text, APPROVED a dark teal fill with light text, OPEN **no fill at all** — a 2px amber outline | `leave-applications-390-dark.png` |
+| HIERARCHY | P1 | RC8 | because REJECTED is the only high-luminance chip, **the eye is pulled to every rejection first** — rejected rows outrank approved ones purely on chip brightness | `leave-applications-390-dark.png` |
+| HIERARCHY | P1 | RC7 | on expense-claims, shift-requests and leave-applications the **only** chartreuse element is the segmented control's thumb, while the real primary "+ New" is a white pill — the brightest object is a view switcher | `expense-claims-390-dark.png`, `shift-requests-390-dark.png` |
+| HIERARCHY | P1 | — | ot-requests has **not a single chartreuse pixel** — no primary action reads as primary | `ot-requests-390-dark.png` |
+| HIERARCHY | P1 | — | on employee-checkins and shift-assignments the accent is spent on **neutral status chips** (IN/OUT, SUBMITTED), the loudest thing on screens with no primary action | `employee-checkins-390-dark.png`, `shift-assignments-390-dark.png` |
 | STATES | P1 | RC23 | empty states **promise an action they do not offer**: "Paid for something for work? Claim it here", "claim it here", "Claim the time back here" — the box contains no button or link, so "here" points at nothing | `expense-claims`, `ot-requests`, `replacement-leave` |
 | COMPONENTS | P1 | RC13 | the empty state is a dashed-outline box on five list screens — a border style used nowhere else except the upload dropzone | `expense-claims`, `ot-requests`, `shift-requests`, `replacement-leave`, `sop` |
-| COMPONENTS | P1 | — | **no list row carries a leading icon or type marker** — 18 leave rows differ only by one word, so Casual, Privilege and Sick are indistinguishable at a glance | `leave-applications__390-dark.png` |
+| COMPONENTS | P1 | — | **no list row carries a leading icon or type marker** — 18 leave rows differ only by one word, so Casual, Privilege and Sick are indistinguishable at a glance | `leave-applications-390-dark.png` |
 | COMPONENTS | P1 | — | the create action has **three sizes, two colours and three placements**: a 358×52 full-width chartreuse bar (issues), a 113×50 chartreuse pill (replacement-leave), a 70×28 white pill (five screens) | `issues`, `replacement-leave`, `leave-applications` |
 | CHROME | P1 | RC17 | **three header patterns inside the list family alone**: back+title+filter+"New" (rule at y=120), title+bell+avatar with no back (rule at y=140), and a bare title with no rule and no back | `leave-applications`, `issues`, `replacement-leave` |
-| COPY | P1 | — | expense-claims names one object **four ways**: header "Claim History", tabs "MY CLAIMS / TEAM CLAIMS", empty state "expense claims", tab bar "EXPENSES" | `expense-claims__390-dark.png` |
+| COPY | P1 | — | expense-claims names one object **four ways**: header "Claim History", tabs "MY CLAIMS / TEAM CLAIMS", empty state "expense claims", tab bar "EXPENSES" | `expense-claims-390-dark.png` |
 | COPY | P2 | — | "OT Request" in the header vs "overtime claims" in the empty state; "Employee Checkin History" uses the internal record name | `ot-requests`, `employee-checkins` |
 | COMPONENTS | P2 | — | "MY CLAIMS" is a chartreuse section eyebrow on replacement-leave and a segmented-control thumb on expense-claims — one label, two component roles | `replacement-leave` vs `expense-claims` |
-| MATERIAL | P1 | RC16 | SOP's search field and replacement-leave's "AUGUST 2026 BANK" panel are **zero-radius rectangles** in an 18px-rounded system; the bank panel's fill is identical to the page background | `sop__390-dark.png`, `replacement-leave__390-dark.png` |
-| TYPOGRAPHY | P1 | — | the SOP search placeholder measures **2.7:1** against its own field fill | `sop__390-dark.png` |
-| TYPOGRAPHY | P2 | — | tab bar labels measure **3.6:1** — independently matching my computed 3.84:1 — under the 4.5:1 needed at 10px | `issues__390-dark.png` |
+| MATERIAL | P1 | RC16 | SOP's search field and replacement-leave's "AUGUST 2026 BANK" panel are **zero-radius rectangles** in an 18px-rounded system; the bank panel's fill is identical to the page background | `sop-390-dark.png`, `replacement-leave-390-dark.png` |
+| TYPOGRAPHY | P1 | — | the SOP search placeholder measures **2.7:1** against its own field fill | `sop-390-dark.png` |
+| TYPOGRAPHY | P2 | — | tab bar labels measure **3.6:1** — independently matching my computed 3.84:1 — under the 4.5:1 needed at 10px | `issues-390-dark.png` |
 | INTERACTION | P1 | RC9 | rows are 41px tall, the filter button 28×28, "+ New" 70×28, the SOP search field 39.5px — all under 44px | measured, four screens |
-| SPACING | P2 | — | header and content use different left margins — chevron at 23px, title at 45px, panel rim at 16px | `leave-applications__390-dark.png` +4 |
+| SPACING | P2 | — | header and content use different left margins — chevron at 23px, title at 45px, panel rim at 16px | `leave-applications-390-dark.png` +4 |
 | SPACING | P1 | — | the issues panel insets its divider 16px each side while the leave, attendance and check-in panels draw theirs full-bleed — two list components, two divider rules | `issues` vs `leave-applications` |
-| COMPONENTS | P2 | — | IN and OUT chips alternating down one list use two different fills, so OUT reads lighter than IN for states of identical importance | `employee-checkins__390-dark.png` |
-| TYPOGRAPHY | P2 | — | "Claim History" wraps, orphaning "History", pushing this screen's header rule 38px below every sibling's | `attendance-requests__390-dark.png` |
-| SPACING | P2 | — | the expense-claims segmented thumb is 168px inside a 357px track, so the boundary sits 9px left of centre and the segments are visibly unequal | `expense-claims__390-dark.png` |
+| COMPONENTS | P2 | — | IN and OUT chips alternating down one list use two different fills, so OUT reads lighter than IN for states of identical importance | `employee-checkins-390-dark.png` |
+| TYPOGRAPHY | P2 | — | "Claim History" wraps, orphaning "History", pushing this screen's header rule 38px below every sibling's | `attendance-requests-390-dark.png` |
+| SPACING | P2 | — | the expense-claims segmented thumb is 168px inside a 357px track, so the boundary sits 9px left of centre and the segments are visibly unequal | `expense-claims-390-dark.png` |
 
 ### 4.15 Cross-cutting
 
 | cat | sev | rc | finding | image |
 |---|---|---|---|---|
-| MATERIAL | P1 | RC11 | **`change-password` and `forgot-password` were never migrated** — the `__390-dark` captures render a *white* page with no chartreuse anywhere. Cause: `<div class="w-full h-full bg-white sm:w-96">` paints over the themed page | `change-password__390-dark.png`, `forgot-password__390-dark.png` |
+| MATERIAL | P1 | RC11 | **`change-password` and `forgot-password` were never migrated** — the `__390-dark` captures render a *white* page with no chartreuse anywhere. Cause: `<div class="w-full h-full bg-white sm:w-96">` paints over the themed page | `change-password-390-dark.png`, `forgot-password-390-dark.png` |
 | HIERARCHY | P1 | RC11 | on both, the primary is a **near-white pill on a white page** — no visually primary action exists | same |
 | LAYOUT | P1 | RC11 | on both, the bottom bar's outline enters and exits the frame instead of closing — its side edges are clipped by both screen edges | same |
-| COMPONENTS | P1 | RC11 | the password inputs are near-black fully-rounded pills on white, reading as **redaction bars**; ~24px radius matches nothing else | `change-password__390-dark.png` |
-| STATES | P1 | RC14 | **no catch-all route exists** — any unknown URL renders a blank page. `/design` is dev-only by design, and in the production build it renders as a single flat colour rather than a not-found state | `design-specimen__1440-dark.png` |
-| TYPOGRAPHY | P2 | RC19 | double-letter pairs render with a visible gap, breaking words mid-token: "Request At tendance", "Request a Shif t", "Set t ings", "Not if icat ions", "AT T END". Present at both 1× and 2×, so not a capture artifact. **Cause unconfirmed** — the self-hosted fonts are present and serve 200 | `home__390-dark.png`, `settings__390-dark.png`, `notifications__390-dark.png` |
-| MATERIAL | — | — | **reduce-transparency is correct.** Panels go opaque, rims appear, the tab bar solidifies. §6.2 behaves | `home__390-dark-rt.png` |
+| COMPONENTS | P1 | RC11 | the password inputs are near-black fully-rounded pills on white, reading as **redaction bars**; ~24px radius matches nothing else | `change-password-390-dark.png` |
+| STATES | P1 | RC14 | **no catch-all route exists** — any unknown URL renders a blank page. `/design` is dev-only by design, and in the production build it renders as a single flat colour rather than a not-found state | `design-specimen-1440-dark.png` |
+| TYPOGRAPHY | P2 | RC19 | double-letter pairs render with a visible gap, breaking words mid-token: "Request At tendance", "Request a Shif t", "Set t ings", "Not if icat ions", "AT T END". Present at both 1× and 2×, so not a capture artifact. **Cause unconfirmed** — the self-hosted fonts are present and serve 200 | `home-390-dark.png`, `settings-390-dark.png`, `notifications-390-dark.png` |
+| MATERIAL | — | — | **reduce-transparency is correct.** Panels go opaque, rims appear, the tab bar solidifies. §6.2 behaves | `home-390-dark-rt.png` |
 
 ---
 
@@ -480,7 +480,7 @@ the scroll-bottom capture.
 
 | screen | why |
 |---|---|
-| **HR issue board** (`/hr/issues`) | **silently redirects to the staff Issues view** — my user has no HR role. `issues__390-dark.png` and `hr-issue-board__390-dark.png` are byte-identical (md5 `2d48fd59…`). The board itself was never rendered; findings labelled "issue board" belong to the staff list |
+| **HR issue board** (`/hr/issues`) | **silently redirects to the staff Issues view** — my user has no HR role. `issues-390-dark.png` and `hr-issue-board-390-dark.png` are byte-identical (md5 `2d48fd59…`). The board itself was never rendered; findings labelled "issue board" belong to the staff list |
 | **KPI** | no Appraisal records exist; the screen renders only its empty state |
 | **Team roster** | my user manages nobody, so no member rows render. Avatars, long-name truncation and row anatomy in that list are unassessed |
 | **Remote approvals (populated)** | the PENDING tab is empty and HISTORY was not captured; approval rows and their actions are unassessed |
