@@ -1,0 +1,778 @@
+{
+  "home:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-attendance:dark": {
+    "aria-required-children": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-leaves:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-expense-claims:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-kpi:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "issues:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "issues-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "issues-detail:dark": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "hr-issue-board:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "sop:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "team:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "more:dark": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "profile:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "notifications:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "settings:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "change-password:dark": {},
+  "hr-contacts:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "remote-approvals:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "invalid-employee:dark": {
+    "aria-dialog-name": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "attendance-requests:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "attendance-requests-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "attendance-requests-detail:dark": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 3
+    }
+  },
+  "shift-requests:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "shift-requests-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "shift-assignments:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "shift-assignments-detail:dark": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "employee-checkins:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "scrollable-region-focusable": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "expense-claims:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "expense-claims-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "leave-applications:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "leave-applications-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "leave-applications-detail:dark": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "ot-requests:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "scrollable-region-focusable": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "ot-requests-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "replacement-leave:dark": {},
+  "replacement-leave-new:dark": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "login:dark": {},
+  "forgot-password:dark": {},
+  "home:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-attendance:light": {
+    "aria-required-children": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-leaves:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-expense-claims:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "dash-kpi:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "issues:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "issues-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "issues-detail:light": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "hr-issue-board:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "sop:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "team:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "more:light": {
+    "landmark-banner-is-top-level": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-no-duplicate-banner": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "landmark-unique": {
+      "impact": "moderate",
+      "nodes": 1
+    },
+    "region": {
+      "impact": "moderate",
+      "nodes": 5
+    }
+  },
+  "profile:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "notifications:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "settings:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "change-password:light": {},
+  "hr-contacts:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "remote-approvals:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "invalid-employee:light": {
+    "aria-dialog-name": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "attendance-requests:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "attendance-requests-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "attendance-requests-detail:light": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 3
+    }
+  },
+  "shift-requests:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "shift-requests-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "shift-assignments:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "shift-assignments-detail:light": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "employee-checkins:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "scrollable-region-focusable": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "expense-claims:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "expense-claims-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "leave-applications:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "leave-applications-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "leave-applications-detail:light": {
+    "aria-allowed-attr": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 2
+    }
+  },
+  "ot-requests:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 2
+    },
+    "scrollable-region-focusable": {
+      "impact": "serious",
+      "nodes": 1
+    }
+  },
+  "ot-requests-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "replacement-leave:light": {},
+  "replacement-leave-new:light": {
+    "button-name": {
+      "impact": "critical",
+      "nodes": 1
+    },
+    "label": {
+      "impact": "critical",
+      "nodes": 1
+    }
+  },
+  "login:light": {},
+  "forgot-password:light": {}
+}
