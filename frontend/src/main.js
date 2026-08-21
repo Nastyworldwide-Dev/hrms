@@ -9,8 +9,8 @@ import { initSocket } from "./socket"
 
 import { Button, Input, resourcesPlugin, FormControl } from "frappe-ui"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
-import EmptyState from "@/components/EmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
+import { applyProductName } from "@/utils/productName"
 
 import { IonicVue } from "@ionic/vue"
 
@@ -51,10 +51,14 @@ app.use(translationsPlugin)
 app.component("Button", Button)
 app.component("Input", Input)
 app.component("FormControl", FormControl)
-app.component("EmptyState", EmptyState)
-// Registered globally beside EmptyState, for the same reason: it belongs on every
-// screen that renders a resource, so requiring a per-file import is how it ends up
-// on none of them.
+// EmptyState was registered here too until 8.11. It was the app's SECOND
+// empty-state design — a bare centred sentence, or a thick dashed box for table
+// fields — sitting beside GEmptyState's §10.1 #11 treatment, which is why one
+// condition had three different looks across the app. Every consumer now uses
+// GEmptyState and the component is deleted.
+// ResourceError stays global for the original reason: it belongs on every screen
+// that renders a resource, so requiring a per-file import is how it ends up on
+// none of them.
 app.component("ResourceError", ResourceError)
 
 app.use(router)
@@ -118,6 +122,11 @@ router.isReady().then(async () => {
 	}
 
 	await translationsPlugin.isReady()
+
+	// index.html is static, so the tab title and the PWA install name were the
+	// one place §16.6 could not reach. See utils/productName.js.
+	applyProductName(app.config.globalProperties.__)
+
 	registerServiceWorker()
 	app.mount("#app")
 })
