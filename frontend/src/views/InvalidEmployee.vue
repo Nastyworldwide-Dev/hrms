@@ -1,5 +1,5 @@
 <template>
-	<GPage :field="false">
+	<GPage>
 		<ion-content class="ion-padding">
 			<div class="flex h-screen w-screen flex-col justify-center bg-ground">
 				<GModal

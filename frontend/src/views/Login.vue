@@ -1,107 +1,82 @@
 <template>
-	<GPage :field="false">
+	<GPage>
 		<ion-content class="ion-no-padding">
-			<div class="flex h-screen w-screen bg-ground">
-				<!-- Accent side panel (tablet / desktop only) -->
-				<div
-					class="hidden lg:flex lg:w-[44%] bg-accent text-ground flex-col justify-between p-10"
-				>
-					<FrappeHRLogo class="h-12 w-12" />
+			<!-- §12 Sign in: logo well → title → subtitle → email → password →
+			     primary → forgot-password link. Vertically centred, 40px bottom
+			     offset. The two-panel accent split this replaces was stock Frappe
+			     HR, not this design. §20.8: at lg: the same column simply centres
+			     in the viewport — there is no sidebar to align against. -->
+			<div class="g-auth">
+				<div class="g-auth__column">
+					<GLogoWell :label="__('Frappe HR')" />
+
 					<div>
-						<div
-							class="font-sans font-extrabold text-5xl leading-[1.05] tracking-tight"
-						>
-							{{ __("Employee") }}<br />{{ __("self-service.") }}
-						</div>
-						<div class="text-card-title mt-3.5 opacity-85">
-							{{ __("Attendance · Leaves · Expenses · Payroll") }}
-						</div>
+						<h1 class="g-auth__title">{{ __("Login to Frappe HR") }}</h1>
+						<p class="g-auth__subtitle">{{ __("Employee self-service portal") }}</p>
 					</div>
-					<div class="text-micro-label uppercase font-extrabold opacity-70">
-						{{ __("Frappe HR · Mobile & Tablet") }}
-					</div>
-				</div>
 
-				<!-- Login form -->
-				<div
-					class="flex-1 flex flex-col justify-center px-7 lg:px-[72px]"
-				>
-					<div class="mx-auto w-full max-w-[360px]">
-						<FrappeHRLogo class="h-11 w-11 lg:hidden" />
-						<h1
-							class="font-sans font-extrabold text-display-number tracking-tight mt-5 lg:mt-0 mb-1.5"
+					<form
+						v-if="!user_pass_login_disabled.data"
+						class="flex flex-col gap-stack-md"
+						@submit.prevent="submit"
+					>
+						<GInput
+							v-model="email"
+							type="text"
+							:label="__('Email')"
+							:placeholder="__('johndoe@mail.com')"
+							autocomplete="username"
+						/>
+						<GInput
+							v-model="password"
+							type="password"
+							:label="__('Password')"
+							placeholder="••••••"
+							:error="errorMessage"
+							autocomplete="current-password"
+						/>
+
+						<GButton
+							type="submit"
+							:label="__('Login')"
+							:pending-label="__('Signing in…')"
+							:pending="session.login.loading"
 						>
-							{{ __("Login to Frappe HR") }}<span class="text-accent">.</span>
-						</h1>
-						<p class="text-card-title text-ink-600 mb-7">
-							{{ __("Employee self-service portal") }}
-						</p>
+							<template #trailing>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="5" y1="12" x2="19" y2="12"></line>
+									<polyline points="12 5 19 12 12 19"></polyline>
+								</svg>
+							</template>
+						</GButton>
 
-						<form
-							v-if="!user_pass_login_disabled.data"
-							class="flex flex-col gap-4"
-							@submit.prevent="submit"
-						>
-							<div>
-								<label class="block text-xs mb-1.5 text-ink-700">{{ __("Email") }}</label>
-								<input
-									v-model="email"
-									type="text"
-									autocomplete="username"
-									:placeholder="__('johndoe@mail.com')"
-									class="w-full min-h-[38px] px-2.5 py-1.5 text-sm bg-surface border border-divider text-inkbase caret-accent outline-none focus:border-accent"
-								/>
-							</div>
-							<div>
-								<label class="block text-xs mb-1.5 text-ink-700">{{ __("Password") }}</label>
-								<input
-									v-model="password"
-									type="password"
-									autocomplete="current-password"
-									placeholder="••••••"
-									class="w-full min-h-[38px] px-2.5 py-1.5 text-sm bg-surface border border-divider text-inkbase caret-accent outline-none focus:border-accent"
-								/>
-								<div class="flex justify-end mt-1.5">
-									<button
-										type="button"
-										class="text-xs text-ink-700 underline underline-offset-link py-2.5 -my-1.5 px-1 -mx-1"
-										@click="openForgotDialog"
-									>
-										{{ __("Forgot Password?") }}
-									</button>
-								</div>
-							</div>
-							<ErrorMessage :message="errorMessage" />
-							<GButton
-								type="submit"
-								class="!mt-2"
-								:label="__('Login')"
-								:pending-label="__('Signing in…')"
-								:pending="session.login.loading"
-							>
-								<template #trailing>
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="5" y1="12" x2="19" y2="12"></line>
-										<polyline points="12 5 19 12 12 19"></polyline>
-									</svg>
-								</template>
-							</GButton>
-						</form>
+						<button type="button" class="g-auth__link g-focusable" @click="openForgotDialog">
+							{{ __("Forgot Password?") }}
+						</button>
+					</form>
 
-						<template v-if="authProviders.data?.length">
-							<div v-if="!user_pass_login_disabled.data" class="text-center text-sm text-ink-600 my-4">or</div>
-							<div class="flex flex-col gap-3">
-								<GProviderButton
-									v-for="provider in authProviders.data"
-									:key="provider.name"
-									:name="provider.provider_name"
-									:icon="provider.icon"
-									:href="provider.auth_url"
-								/>
-							</div>
-						</template>
+					<!-- glass-surfaces: bounded — the provider list comes from Social
+					     Login Key records, which an administrator configures and which
+					     number one or two in practice. Unlike an employee's issue
+					     history this cannot grow with usage, so the v-for does not need
+					     §15.2 flattening. See design/gates/surfaces.mjs. -->
+					<template v-if="authProviders.data?.length">
+						<div v-if="!user_pass_login_disabled.data" class="g-auth__or">
+							{{ __("or") }}
+						</div>
+						<div class="flex flex-col gap-stack-sm">
+							<GProviderButton
+								v-for="provider in authProviders.data"
+								:key="provider.name"
+								:name="provider.provider_name"
+								:icon="provider.icon"
+								:href="provider.auth_url"
+							/>
+						</div>
+					</template>
 
-						<div v-else-if="user_pass_login_disabled.data" class="text-center text-ink-600 py-8">{{ __("No login methods are available. Please contact your administrator.") }}</div>
+					<div v-else-if="user_pass_login_disabled.data" class="g-auth__subtitle">
+						{{ __("No login methods are available. Please contact your administrator.") }}
 					</div>
 				</div>
 			</div>
@@ -179,6 +154,7 @@
 </template>
 
 <script setup>
+import GLogoWell from "@/components/glass/GLogoWell.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GProviderButton from "@/components/glass/GProviderButton.vue"

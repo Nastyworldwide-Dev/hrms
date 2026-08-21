@@ -376,13 +376,68 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	cursor: not-allowed;
 }
 
+/* ---------- auth screens (§12 Sign in, §20.8) ---------- */
+
+/* One centred column at every breakpoint. §20.8: auth has no sidebar to align
+   against, so §20.3's left-aligned content column does not apply — the column
+   centres in the viewport instead, same stack, same widths. */
+.g-auth {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100%;
+	padding: var(--g-screen-gutter);
+	padding-bottom: 40px; /* §12's bottom offset */
+}
+.g-auth__column {
+	display: flex;
+	flex-direction: column;
+	gap: var(--g-stack-lg);
+	width: 100%;
+	max-width: 360px;
+}
+.g-auth__title {
+	font-family: var(--g-type-display-number-family);
+	font-size: var(--g-type-display-number-size);
+	font-weight: var(--g-type-display-number-weight);
+	letter-spacing: var(--g-type-display-number-tracking);
+	line-height: var(--g-type-display-number-line-height);
+	color: var(--g-ink);
+}
+.g-auth__subtitle {
+	margin-top: 7px;
+	font-family: var(--g-type-card-title-family);
+	font-size: var(--g-type-card-title-size);
+	line-height: var(--g-type-card-title-line-height);
+	color: var(--g-ink2);
+}
+.g-auth__link {
+	align-self: flex-end;
+	min-height: 44px;
+	padding: 0 4px;
+	border: 0;
+	background: transparent;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	color: var(--g-ink2);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+.g-auth__or {
+	text-align: center;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	color: var(--g-ink2);
+}
+
 /* ---------- GProviderButton (SSO) ---------- */
 
-/* Solid, not glass: the auth screens have no light field to blur (§3, §6.1) */
+/* Glass again as of the v1.7 reversal: the light field is three static CSS
+   gradients needing no session, so it renders on the auth screens too and
+   there is colour behind this button after all. */
 .g-provider {
 	display: flex;
-	background: var(--g-glass-fill-fallback);
-	border: 1px solid var(--g-glass-rim);
 	align-items: center;
 	justify-content: center;
 	gap: 9px;

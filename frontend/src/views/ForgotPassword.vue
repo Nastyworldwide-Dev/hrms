@@ -1,5 +1,5 @@
 <template>
-	<GPage :field="false">
+	<GPage>
 		<ion-content :fullscreen="true">
 			<div class="flex flex-col h-full w-full">
 				<div class="w-full h-full bg-white sm:w-96 flex flex-col">

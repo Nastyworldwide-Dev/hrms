@@ -1,6 +1,6 @@
-# HR Frappe · Glass — Implementation Specification v1.6
+# HR Frappe · Glass — Implementation Specification v1.7
 
-**Supersedes** v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
+**Supersedes** v1.6, v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
 **Owner:** NSTY Group P&C · **Implementer:** NSTY IT
 **Status:** amended for build. Sections marked **[DECISION]** require sign-off before the work they govern begins.
@@ -67,6 +67,15 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.7 — the auth-screen light field, reversed
+
+| # | Change | Reason |
+|---|---|---|
+| 6.1 | The four auth screens carry the **light field like every other screen**; phase 4.2's `:field="false"` is reversed | The field is three static CSS gradients. It needs no session, no data and no fetch, so "renders before a session" was never a reason to omit it. The 4.2 reasoning did not follow |
+| 6.2 | Phase 5.7's "auth surfaces must be solid" is **withdrawn** | It followed only from 6.1. With the field on there is colour behind the glass, so `GProviderButton` and the auth surfaces are glass again |
+| 6.3 | §20.8 added: the auth column is **centred** at `lg:` | §20.3 aligns the content column against the side nav; auth screens have no side nav |
+| 6.4 | Login rebuilt to §12's Sign in anatomy | The anatomy existed and was not followed — the screen shipped a two-panel accent split that is stock Frappe HR, and sentence-case field labels instead of the field-label role |
 
 ### v1.6 — surface counting corrected to what composites
 
@@ -910,8 +919,23 @@ Every component contract in §10 must specify `lg:` behaviour **where it differs
 
 The side nav itself sits in §10.3's treatment list and is specified by §20.2. The remaining 23 components are identical at both breakpoints.
 
+### 20.8 Auth screens at `lg:`
+
+§20.2 and §20.3 assume a side nav to align the content column against. The auth
+screens — sign in, forgot password, change password, invalid employee — have
+none, because they render before a session exists.
+
+**Rule: the sign-in column is centred in the viewport at `lg:`.** Same stack,
+same widths, same order as §12; only the horizontal placement differs from
+§20.3's left-alignment. There is no sidebar, so there is nothing to align to,
+and a left-aligned column against an empty viewport reads as a rendering fault
+rather than a layout.
+
+The two-panel accent split these screens shipped with is **stock Frappe HR, not
+this design**, and is removed.
+
 **Hover** — the mockup defines no hover states because it had no pointer. At `lg:` every interactive component reuses its **pressed-state background as hover** (rows: `--icon-bg` at the `row-tap` duration). No new tokens, and hover is never the only signal (§14).
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.6 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.7 · 20 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*

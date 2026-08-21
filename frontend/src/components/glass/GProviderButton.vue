@@ -14,12 +14,13 @@
   thing those guidelines forbid. If a mark clashes with the surface, that is a
   reason to change the surface.
 
-  NOT a glass surface, deliberately. This button lives on the auth screens,
-  which carry :field="false" (phase 4.2) because they render before a session
-  and have no light field. §3 opens with the reason: "Glass requires colour
-  behind it or it renders as grey fog." A translucent button over a flat
-  background is exactly that fog, so this takes the §6.1 solid fill with the
-  ghost action's metrics — pad-action, radius-action, --ink label.
+  A glass surface, using the ghost action recipe (§10.1 #2) — glass at
+  --blur-ghost, pad-action, radius-action, --ink label.
+
+  Phase 5.7 made this solid on the reasoning that auth screens carry no light
+  field. That was reversed in v1.7: the field is three static CSS gradients
+  with no session or data dependency, so it renders on the auth screens like
+  any other, and there is colour behind this button after all.
 
   Props:
     name     string, required — the provider's display name, from the server
@@ -28,7 +29,7 @@
     label    string — full label override; defaults to "Sign in with {name}"
 -->
 <template>
-	<a class="g-provider" :href="href">
+	<a class="g-glass-ghost g-provider" :href="href">
 		<img v-if="icon" class="g-provider__mark" :src="icon" alt="" aria-hidden="true" />
 		<span>{{ label || `Sign in with ${name}` }}</span>
 	</a>

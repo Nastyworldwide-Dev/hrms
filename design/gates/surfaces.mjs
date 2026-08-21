@@ -230,10 +230,28 @@ for (const r of rows) {
 	}
 }
 
-for (const [name, children] of loops)
+// A glass surface under v-for is N surfaces at runtime and the gate cannot
+// compute N, so the default is to fail: §15.2's answer is to flatten the list
+// into one panel, as the balance grid, stat row and issue list all do.
+//
+// The one legitimate exception is a list bounded by ADMINISTRATOR CONFIGURATION
+// rather than user data — a handful of SSO providers, not an employee's issue
+// history. That exception must be DECLARED in the source, not inferred here, so
+// a reviewer can grep for it:
+//     glass-surfaces: bounded — <reason>
+const BOUNDED = /glass-surfaces:\s*bounded\s*—/;
+let undeclaredLoops = 0;
+for (const [name, children] of loops) {
+	const file = components.get(name);
+	const declared = file && BOUNDED.test(readFileSync(file, "utf8"));
+	if (!declared) undeclaredLoops++;
 	console.log(
-		`[surfaces] NOTE ${name}: ${children.join(", ")} render under v-for — N surfaces at runtime, counted as 1 each (§15.1)`
+		`[surfaces] ${declared ? "NOTE" : "FAIL"} ${name}: ${children.join(", ")} render under v-for — ` +
+			(declared
+				? "N surfaces at runtime, declared bounded in the source (§15.1)"
+				: "N surfaces at runtime and N is not computable. Flatten to one panel (§15.2), or declare it bounded in the source")
 	);
+}
 
 // ---------- §15.2 flattening invariant ----------
 // Asserted rather than trusted: if someone re-glasses the cells, three screens
@@ -274,6 +292,7 @@ console.log(
 		sheetOver,
 		flattening: flatteningBroken,
 		looped: loops.size,
+		undeclaredLoops,
 	})}`
 );
-process.exit(!REPORT_ONLY && (over || sheetOver || flatteningBroken || loops.size) ? 1 : 0);
+process.exit(!REPORT_ONLY && (over || sheetOver || flatteningBroken || undeclaredLoops) ? 1 : 0);
