@@ -60,7 +60,14 @@ test("visual: every screen matches its baseline", async () => {
 				try {
 					await page.goto(`${BASE}/hrms${s.path}`, { waitUntil: "networkidle", timeout: 35000 })
 					await settle(page)
-					await expect(page).toHaveScreenshot(name)
+					// Mask self-changing content. The notifications list renders
+					// relative timestamps ("in 4 hours"), so its baseline failed an
+					// hour after it was shot — a permanently flaky screen, not a
+					// regression. Anything the app marks data-visual-mask is
+					// excluded from the comparison.
+					await expect(page).toHaveScreenshot(name, {
+						mask: [page.locator("[data-visual-mask]")],
+					})
 				} catch (e) {
 					// Collect rather than throw, so one regression does not hide the
 					// other forty. The gate prints the whole list and fails once.

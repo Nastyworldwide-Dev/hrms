@@ -84,7 +84,10 @@
 									<div v-else class="text-sm leading-5 font-normal text-ink-500 italic">
 										{{ fallbackMessage(item) }}
 									</div>
-									<div class="text-xs font-normal text-ink-600">
+									<!-- data-visual-mask: a relative timestamp changes on its own,
+									     so a pixel baseline of it fails an hour later for no reason.
+									     The visual gate masks anything carrying this attribute. -->
+									<div class="text-xs font-normal text-ink-600" data-visual-mask>
 										{{ dayjs(item.creation).fromNow() }}
 									</div>
 								</div>

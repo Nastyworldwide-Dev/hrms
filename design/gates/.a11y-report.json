@@ -207,12 +207,7 @@
     }
   },
   "attendance-requests:dark": {},
-  "attendance-requests-new:dark": {
-    "label": {
-      "impact": "critical",
-      "nodes": 2
-    }
-  },
+  "attendance-requests-new:dark": {},
   "attendance-requests-detail:dark": {
     "aria-allowed-attr": {
       "impact": "critical",
@@ -220,7 +215,7 @@
     },
     "label": {
       "impact": "critical",
-      "nodes": 3
+      "nodes": 1
     }
   },
   "shift-requests:dark": {},
@@ -494,12 +489,7 @@
     }
   },
   "attendance-requests:light": {},
-  "attendance-requests-new:light": {
-    "label": {
-      "impact": "critical",
-      "nodes": 2
-    }
-  },
+  "attendance-requests-new:light": {},
   "attendance-requests-detail:light": {
     "aria-allowed-attr": {
       "impact": "critical",
@@ -507,7 +497,7 @@
     },
     "label": {
       "impact": "critical",
-      "nodes": 3
+      "nodes": 1
     }
   },
   "shift-requests:light": {},
