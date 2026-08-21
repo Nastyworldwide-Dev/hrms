@@ -1,28 +1,30 @@
 # HANDOFF
-prompt:   7.1 (shared-internals sweep + the two open defects)
-status:   done — both §16.7 defects fixed and verified
-commit:   4765f3828 on nz-glass
-files:    frontend/src/components/CheckInPanel.vue (both defects)
-          frontend/src/components/{ExpensesTable,ExpenseTaxesTable,ExpenseAdvancesTable}.vue
-          frontend/src/components/{Holidays,RequestList}.vue
-          frontend/src/theme/glass-components.css (.g-lineitems)
+prompt:   7.2 (auth field reversal + Login rebuild, spec v1.7)
+status:   done
+commit:   1c5662e1c on nz-glass
+files:    frontend/src/views/Login.vue (rebuilt to §12)
+          frontend/src/views/{ForgotPassword,ChangePassword,InvalidEmployee}.vue
+          frontend/src/components/glass/GProviderButton.vue
+          frontend/src/theme/glass-components.css (.g-auth)
+          design/gates/surfaces.mjs (declared-exception mechanism)
+          docs/glass/spec/…v1.1.md → v1.7 (§0, §20.8)
 verify:   cd frontend && yarn gates && yarn build
-flags:    NOTHING EXCEEDS §15 — 0 screens over 6, 0 sheet sets over 6, flattening held,
-          no uncountable v-for. Highest anywhere is 5/6
-          §11.5 REPRODUCED FIRST: submitLog had NO guard — no re-entry flag, no timestamp,
-          no disabled state. Three taps 40ms apart = 3 punch records. Now 1. The flag is set
-          SYNCHRONOUSLY before the first await; the body is wrapped in try/finally so the
-          geofence preflight's early returns cannot leave the button stuck pending
-          §16.7 REPRODUCED FIRST: a 22:00–07:00 shift punched in at 22:05 was offered
-          "Check In" at 06:30 (still on shift) and 07:10 (forgot to punch out). Now derives
-          from the punch session, with the server's abandoned flag overriding. Verified at
-          six times of day
-          EXPENSE TABLES ARE **NOT** GDataTable: that component is read-only columns/rows;
-          these are editable, every row opens a sheet. They take §6.3's opaque surface
-          directly — same rule, same fill, different component shape
-          GDataTable currently has NO consumer. It was built for payslips, and there is no
-          payslip route in this app (also why §13.1's PAY tab became Expenses in 4.3)
-          STILL UNSTYLED: KPI's KRA rows keep their own markup — richer than GKraPanel's
-          {label,weight,score} shape (they carry a KPI description and goal completion).
-          Their bars were already on --track-solid from 3.3, so §6.3 is satisfied
-next:     §18 sign-off checklist — most items need a device, not a code change
+flags:    LOGIN IS 2/6 WITH THE FIELD ON — GLogoWell + GProviderButton. Nothing app-wide
+          exceeds §15
+          THE 4.2 REASONING WAS WRONG, as ruled: the field is three static CSS gradients,
+          no session, no data, no fetch. 5.7's "auth surfaces must be solid" followed only
+          from that premise and is withdrawn. GProviderButton is glass again
+          GATE NOT WEAKENED: a glass surface under v-for still FAILS by default. A list
+          bounded by ADMIN CONFIG (not user data) may declare itself with a greppable
+          "glass-surfaces: bounded — reason". Login's SSO list declares it; an undeclared
+          loop still exits 1, verified by probe
+          TRANSLATIONS WRITTEN to verify-bench/fresh.local (Translation doctype, en):
+            "Login to Frappe HR"          → "Sign in to NSTY People"
+            "Employee self-service portal"→ "Attendance, leave, claims and payslips in one place"
+            "Frappe HR · Mobile & Tablet" → "NSTY Holding · People & Culture"
+          These are DATA, not code — they do not travel with the repo and must be created
+          on the target site too
+          SSO LABEL IS DATA: "Office 365" is Social Login Key → provider_name. Change it in
+          Desk (Social Login Key list → the record → Provider Name), not in code.
+          GProviderButton renders "Sign in with {provider_name}" and names no vendor
+next:     §18 sign-off checklist — device work, not code
