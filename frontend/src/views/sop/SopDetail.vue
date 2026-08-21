@@ -57,7 +57,7 @@
 				<!-- attachment -->
 				<div v-if="attachment" class="flex flex-col gap-2">
 					<span class="text-eyebrow uppercase text-accent-ink">{{ __("Attachment") }}</span>
-					<div class="border border-divider">
+					<div class="border border-divider rounded-panel overflow-hidden">
 						<div
 							class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5"
 						>

@@ -44,16 +44,6 @@ defineProps({
 defineEmits(["click"])
 </script>
 
-<style scoped>
-/* the card stacks; .g-issue owns padding and radius */
-.g-issue {
-	display: block;
-	width: 100%;
-	text-align: left;
-	cursor: pointer;
-}
-.g-issue__title,
-.g-issue__meta {
-	display: block;
-}
-</style>
+<!-- No scoped style for theme-owned classes (8.16) — a scoped rule's
+     [data-v-*] attribute outranks the theme layer, including its media
+     queries, and the lint gate cannot see it. See theme/glass-components.css. -->

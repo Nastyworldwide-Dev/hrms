@@ -37,7 +37,7 @@
 
 	<div
 		v-else-if="props.fieldtype === 'geolocation'"
-		class="border border-divider translate-z-0 block overflow-hidden w-full h-170 mt-2"
+		class="border border-divider rounded-panel translate-z-0 block overflow-hidden w-full h-170 mt-2"
 	>
 		<iframe
 			width="100%"

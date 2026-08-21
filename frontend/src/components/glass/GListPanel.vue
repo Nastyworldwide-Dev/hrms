@@ -3,7 +3,7 @@
 
   THE SURFACE BOUNDARY: this component carries .g-glass; its rows do not.
   Container + child rows = ONE surface against the §15 budget of 6. Never put
-  a glass component (GIssueCard, GNotePanel, GGhostButton) inside it — that
+  a glass component (GIssueCard, GGhostButton) inside it — that
   nests glass, which §15 forbids.
   Identical at both breakpoints (§20.7).
 

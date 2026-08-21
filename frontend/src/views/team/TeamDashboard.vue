@@ -139,7 +139,6 @@ import { Autocomplete, FeatherIcon} from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
-import EmptyState from "@/components/EmptyState.vue"
 import { teamManagers, teamStatus } from "@/data/team"
 import { buildManagerOptions, groupByDepartment } from "@/utils/team"
 

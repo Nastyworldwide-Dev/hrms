@@ -8,7 +8,10 @@
 			:legend="LEGEND"
 		>
 			<template #action>
-				<span class="flex gap-2">
+				<!-- gap-3, not gap-2: each stepper expands its 44px target 6px past its
+				     32px visual, so at 8px apart the two expanded areas overlapped and
+				     one stole the other half. 12px is the first gap that fits both. -->
+				<span class="flex gap-3">
 					<button
 						type="button"
 						class="g-cal__nav g-focusable"

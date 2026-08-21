@@ -1,5 +1,5 @@
 <template>
-	<div class="flex border border-divider">
+	<div class="flex border border-divider rounded-input overflow-hidden">
 		<button
 			v-for="button in buttons"
 			:key="button.key ?? button.label ?? button"

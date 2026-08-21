@@ -1,21 +1,22 @@
 <template>
 	<BaseLayout :pageTitle="__('Attendance')">
 		<template #body>
+			<!-- §20.3: one 720px column (7.3 ruling). Was
+			     lg:grid-cols-[1.1fr_1fr], which left ~320px of dead space in the
+			     left column while the right overflowed the fold. -->
 			<div
-				class="flex flex-col px-4 pt-6 pb-8 gap-8 lg:grid lg:grid-cols-[1.1fr_1fr] lg:gap-x-0 lg:p-7 lg:items-start"
+				class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg lg:p-7"
 			>
-				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
+				<div class="contents">
 					<div class="order-1"><AttendanceCalendar /></div>
 					<ResourceError :resource="shifts" what="your shifts" />
 				</div>
 
-				<div
-					class="contents lg:grid lg:grid-cols-2 lg:gap-x-3 lg:gap-y-8 lg:content-start lg:items-stretch lg:border-l lg:border-divider lg:pl-8"
-				>
+				<div class="contents">
 					<router-link
 						:to="{ name: 'AttendanceRequestFormView' }"
 						v-slot="{ navigate }"
-						class="order-2 lg:order-1"
+						class="order-2"
 					>
 						<GButton :label="__('Request Attendance')" class="h-full" @click="navigate">
 							<template #trailing>
@@ -31,7 +32,7 @@
 					     surfaces and put this screen at 7 of 6. One panel with three rows
 					     is one surface, and the actions read as a group rather than three
 					     floating buttons. -->
-					<div class="order-6 lg:order-3 lg:col-span-2">
+					<div class="order-3">
 						<GListPanel>
 						<GListRow :label="__('Request Overtime')" @click="router.push({ name: 'OTRequestFormView' })" />
 						<GListRow :label="__('Replacement Leave')" @click="router.push({ name: 'ReplacementLeaveView' })" />
@@ -43,12 +44,12 @@
 
 					
 
-					<div class="order-3 lg:order-3 lg:col-span-2">
+					<div class="order-4">
 						<div class="flex items-baseline justify-between mb-2.5">
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Attendance Requests") }}</span>
 							<router-link
 								:to="{ name: 'AttendanceRequestListView' }"
-								class="text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -60,12 +61,12 @@
 						/>
 					</div>
 
-					<div class="order-4 lg:order-4 lg:col-span-2">
+					<div class="order-5">
 						<div class="flex items-baseline justify-between mb-2.5">
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Upcoming Shifts") }}</span>
 							<router-link
 								:to="{ name: 'ShiftAssignmentListView' }"
-								class="text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -78,12 +79,12 @@
 						/>
 					</div>
 
-					<div class="order-6 lg:order-5 lg:col-span-2">
+					<div class="order-6">
 						<div class="flex items-baseline justify-between mb-2.5">
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Shift Requests") }}</span>
 							<router-link
 								:to="{ name: 'ShiftRequestListView' }"
-								class="text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>
@@ -98,12 +99,12 @@
 					<!-- OT Request was the only request type you could file and never
 				     browse: OTRequestListView existed, was routed, and had no inbound
 				     link anywhere in the app. -->
-					<div class="order-7 lg:order-6 lg:col-span-2">
+					<div class="order-7">
 						<div class="flex items-baseline justify-between mb-2.5">
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent OT Requests") }}</span>
 							<router-link
 								:to="{ name: 'OTRequestListView' }"
-								class="text-kra-label text-accent underline underline-offset-link"
+								class="g-seclink text-kra-label text-accent underline underline-offset-link"
 							>
 								{{ __("View list") }}
 							</router-link>

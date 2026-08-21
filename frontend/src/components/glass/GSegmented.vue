@@ -21,7 +21,12 @@
   Emits: update:modelValue
 -->
 <template>
-	<div class="g-seg" role="tablist" :aria-label="label">
+	<!-- A ONE-OPTION CONTROL IS NOT A CONTROL (8.8). For a non-approver
+	     RequestPanel passes a single tab, and the strip rendered one full-width
+	     accent-filled segment — indistinguishable from a primary action, and
+	     the thing a reviewer read as "a section header styled as a button".
+	     With nothing to switch to there is nothing to render. -->
+	<div v-if="buttons.length > 1" class="g-seg" role="tablist" :aria-label="label">
 		<button
 			v-for="button in buttons"
 			:key="keyOf(button)"
@@ -55,9 +60,9 @@ function keyOf(button) {
 }
 </script>
 
-<style scoped>
-/* 38px visual + 3px track padding either side = the 44px target (§5) */
-.g-seg__option {
-	min-height: 38px;
-}
-</style>
+<!-- No scoped style. This block held `min-height: 38px` with the note
+     "38px visual + 3px track padding either side = the 44px target (§5)" —
+     but the track's padding is not part of the option's box: a tap 2px above
+     an option lands on the track, so the real target was 38px, and being
+     scoped it silently outranked the theme layer's own rule by data-v
+     specificity. §14.1 lives in theme/glass-components.css. -->

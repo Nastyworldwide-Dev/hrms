@@ -19,13 +19,14 @@
 			<header
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
-				<Button
-					variant="ghost"
-					class="!pl-0 hover:bg-transparent lg:hidden"
+				<GIconButton
+					:label="__('Back')"
+					flush
+					class="lg:hidden"
 					@click="goBackOrHome(router)"
 				>
 					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
-				</Button>
+				</GIconButton>
 				<div
 					v-if="id"
 					class="flex flex-row items-center gap-2 overflow-hidden grow"
@@ -40,11 +41,17 @@
 						class="whitespace-nowrap text-caption"
 						variant="outline"
 					/>
-					<Badge
+					<!-- GStatusChip, not frappe-ui Badge (8.9). The same value rendered
+					     as a FILLED amber "Open" pill here and an OUTLINED uppercase
+					     "OPEN" on the list — two chip designs for one status, because
+					     the detail header used a different component from every list.
+					     GStatusChip owns the 16-state -> 6-variant map; there is no
+					     second answer now. -->
+					<GStatusChip
 						v-if="status"
+						:status="status"
 						:label="__(status, null, doctype)"
-						:theme="statusColor"
-						class="whitespace-nowrap text-caption"
+						class="whitespace-nowrap"
 					/>
 
 					<Dropdown
@@ -323,6 +330,8 @@ import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
+import GIconButton from "@/components/glass/GIconButton.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
 import {

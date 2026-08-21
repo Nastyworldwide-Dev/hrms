@@ -159,6 +159,14 @@ html[data-transparency="reduce"] ion-tab-bar.g-tabbar {
 	backdrop-filter: none;
 }
 
+/* Each tab is a §14.1 target. Ionic's default ion-tab-button sizing gave 69×36
+   on EVERY screen in the app — the most-tapped control in the product was the
+   one furthest under the minimum. The bar's own height token carries the 44 plus
+   its 11/9 padding (8.6). */
+ion-tab-button.g-tabbar__btn {
+	min-height: var(--g-touch-target-min);
+}
+
 .g-tabbar__well {
 	display: flex;
 	align-items: center;
@@ -320,6 +328,46 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	box-shadow:
 		0 0 0 2px var(--g-ink),
 		0 0 0 5px var(--g-brand);
+}
+
+/* §14.1 opt-in for controls the Glass layer does not own — frappe-ui Buttons
+   render at h-7 (28px), and the theme picker is bespoke. Applying the token
+   rather than a hardcoded height keeps them tied to the same minimum. */
+.g-touch {
+	min-height: var(--g-touch-target-min);
+}
+
+/* ---------- GIconButton (§14.1) ---------- */
+
+/* The §14.1 minimum is a TARGET, not a glyph size: the icon stays whatever the
+   caller renders, the tappable box is 44px. Every icon-only control in the app
+   measured 28×28 before 8.6. */
+.g-iconbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--g-touch-target-min);
+	min-height: var(--g-touch-target-min);
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--g-ink);
+	cursor: pointer;
+}
+/* A 44px box hard against the screen gutter would indent its glyph past the
+   content column, so back buttons looked mis-aligned with the title beside
+   them. Pull the BOX out; the target keeps its full size. */
+.g-iconbtn--flush {
+	margin-left: calc(-1 * (var(--g-touch-target-min) - var(--g-screen-gutter)) / 2);
+}
+/* the boxed variant — a rimmed icon action, e.g. the list filter */
+.g-iconbtn--boxed {
+	border: 1px solid var(--g-hair);
+	border-radius: var(--g-radius-input);
+}
+.g-iconbtn--on {
+	border-color: var(--g-brand);
+	color: var(--g-accent-ink);
 }
 
 /* ---------- GButton (§10.1 #1, states §11.4) ---------- */
@@ -577,6 +625,47 @@ html[data-theme="dark"] .g-badge--open {
 	line-height: 1.45;
 	color: var(--g-ink2);
 }
+/* Section-header links ("View list", "View Claims"). Bare inline text measured
+   56×15 — the smallest interactive element in the app. The hit area is expanded
+   around the text rather than the text being padded, so the header row's
+   baseline alignment is untouched (§14.1). */
+/* the toggle inside a settings row — see the note at the call site */
+.g-switch-row button {
+	position: relative;
+}
+.g-switch-row button::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: var(--g-touch-target-min);
+	height: var(--g-touch-target-min);
+	transform: translate(-50%, -50%);
+}
+
+.g-seclink,
+.g-touch-area {
+	position: relative;
+	display: inline-block;
+}
+/* One expander, two names: .g-seclink for section-header links, .g-touch-area
+   for any control whose visual is deliberately smaller than its target (the
+   push toggle). Expands in BOTH axes to the minimum, centred, so a narrow
+   control gains width as well as height. */
+.g-seclink::before,
+.g-touch-area::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: max(100%, var(--g-touch-target-min));
+	height: var(--g-touch-target-min);
+	transform: translate(-50%, -50%);
+}
+
+.g-empty__action {
+	margin-top: 14px;
+}
 
 /* ---------- GSkeleton (§11.2) — shimmer is transform-only ---------- */
 
@@ -647,17 +736,6 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink2);
 }
 
-/* ---------- GNotePanel (§10.2 #22) ---------- */
-
-.g-note {
-	border-radius: var(--g-radius-input);
-	padding: 12px 14px;
-	font-family: var(--g-font-mono);
-	font-size: var(--g-type-data-system-size);
-	line-height: var(--g-type-data-system-line-height);
-	color: var(--g-accent-ink);
-}
-
 /* ---------- GListPanel + GListRow (§10.1 #3) ---------- */
 
 /* the panel is the ONE surface (§15.1); rows inside are never glass */
@@ -708,6 +786,9 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink2);
 }
 .g-row__body {
+	/* moved out of GListRow.vue's scoped block (8.16) */
+	display: flex;
+	flex-direction: column;
 	flex: 1;
 	min-width: 0;
 }
@@ -748,7 +829,18 @@ html[data-theme="dark"] .g-badge--open {
    panel's rim and the first and last rows had their leading glyph sliced by
    the corner radius ("On Duty" lost the left of its O). Same pad-row token
    .g-row uses, so a ListView row and a GListRow are inset identically. */
+/* The PADDING belongs to the link, not the container. With it on the row, the
+   anchor covered only the text — 39px — and the 11.5px band above and below it
+   was dead: a tap there did nothing. Padding the link makes the whole row the
+   target for its document (§14.1). */
 .g-listview__row {
+	min-height: var(--g-touch-target-min);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+.g-listview__row > * {
+	display: block;
 	padding: var(--g-pad-row);
 }
 .g-listview__row + .g-listview__row {
@@ -954,6 +1046,11 @@ html[data-theme="dark"] .g-badge--open {
 /* ---------- GIssueCard (§10.2 #14) ---------- */
 
 .g-issue {
+	/* moved out of GIssueCard.vue's scoped block (8.16) */
+	display: block;
+	width: 100%;
+	text-align: left;
+	cursor: pointer;
 	padding: 13px;
 	border-radius: var(--g-radius-banner);
 }
@@ -972,6 +1069,8 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink-muted);
 }
 .g-issue__title {
+	/* moved out of GIssueCard.vue's scoped block (8.16) */
+	display: block;
 	margin-top: 7px;
 	font-family: var(--g-type-card-title-family);
 	font-size: var(--g-type-card-title-size);
@@ -980,6 +1079,8 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink);
 }
 .g-issue__meta {
+	/* moved out of GIssueCard.vue's scoped block (8.16) */
+	display: block;
 	margin-top: 4px;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
@@ -1060,17 +1161,33 @@ html[data-theme="dark"] .g-badge--open {
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink);
 }
+/* 44px target, 32px rim. The month steppers are the only way to change the
+   month and measured 32×32; the visible box stays 32 so the calendar head is
+   unchanged, and the tappable area is padded out around it (§14.1). */
 .g-cal__nav {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	width: 32px;
 	height: 32px;
+	position: relative;
 	border: 1px solid var(--g-hair);
 	border-radius: var(--g-radius-well);
 	background: transparent;
 	color: var(--g-ink2);
 	cursor: pointer;
+}
+/* The tappable area, expanded to 44px around the 32px rim. The token's own
+   description is "padded out to 44px WITHOUT moving the visual" — growing the
+   box would have grown the border with it. */
+.g-cal__nav::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: var(--g-touch-target-min);
+	height: var(--g-touch-target-min);
+	transform: translate(-50%, -50%);
 }
 .g-cal__grid {
 	display: grid;
@@ -1131,8 +1248,13 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 /* Rest day — --ink3 as a NON-TEXT marker (3.07 light / 3.61 dark), never as
    the numeral colour, and never with an opacity multiplier (§2.5, §14.4 ex 2) */
+/* §10.2 #18 specifies TINTED cells, and every other day state here is a tint.
+   Rest days were the one exception — a visible --ink3 outline on a transparent
+   cell — so the Sunday column read as a row of selected or focused days, using
+   a marker that appears nowhere in the legend. A quiet fill recedes, which is
+   what a non-working day should do. */
 .g-cal__day--rest {
-	border-color: var(--g-ink3);
+	background: var(--g-icon-bg);
 }
 .g-cal__legend {
 	display: flex;
@@ -1210,6 +1332,9 @@ html[data-theme="dark"] .g-cal__day--present {
 	gap: 9px;
 }
 .g-kra__label {
+	/* moved out of GKraPanel.vue's scoped block (8.16) */
+	flex: 1 1 auto;
+	min-width: 0;
 	font-family: var(--g-type-kra-label-family);
 	font-size: var(--g-type-kra-label-size);
 	font-weight: var(--g-type-kra-label-weight);
@@ -1270,12 +1395,16 @@ html[data-theme="dark"] .g-cal__day--present {
 	min-width: 0;
 }
 .g-goals__label {
+	/* moved out of GGoalsPanel.vue's scoped block (8.16) */
+	display: block;
 	font-family: var(--g-type-row-label-family);
 	font-size: var(--g-type-row-label-size);
 	font-weight: var(--g-type-row-label-weight);
 	color: var(--g-ink);
 }
 .g-goals__sub {
+	/* moved out of GGoalsPanel.vue's scoped block (8.16) */
+	display: block;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
 	line-height: var(--g-type-caption-line-height);
@@ -1346,6 +1475,9 @@ html[data-theme="dark"] .g-cal__day--present {
 /* ---------- GSelfiePanel (§10.2 #20) ---------- */
 
 .g-selfie {
+	/* moved out of GSelfiePanel.vue's scoped block (8.16) */
+	width: 100%;
+	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1464,6 +1596,26 @@ html[data-theme="dark"] .g-cal__day--present {
 	border-radius: 50%;
 	background: var(--g-brand);
 }
+/* Moved out of GAppHeader.vue's scoped block (8.16). It lived there as
+   `display: flex`, and a scoped rule's [data-v-*] attribute outranks a plain
+   class — INCLUDING the one inside the lg: media query below that hides this
+   element because §20.2 gives identity to the side nav. So at desktop the
+   avatar rendered in the header AND the name in the side nav: the same identity
+   twice, because a component's private stylesheet quietly beat the theme's
+   responsive rule. Declared here, the media query wins again. */
+.g-header__avatar-link {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--g-touch-target-min);
+	min-height: var(--g-touch-target-min);
+	padding: 0;
+	border: 0;
+	border-radius: var(--g-radius-well);
+	background: transparent;
+	cursor: pointer;
+}
+
 .g-header__avatar {
 	display: flex;
 	align-items: center;
@@ -1498,7 +1650,9 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-seg__option {
 	flex: 1 1 auto;
-	min-height: 38px;
+	/* 44px, not the 38 this shipped with — the component's own doc comment
+	   claimed §14.1 compliance while the CSS was 6px short of it. */
+	min-height: var(--g-touch-target-min);
 	padding: 9px 14px;
 	border: 0;
 	border-radius: var(--g-radius-pill);
@@ -1512,9 +1666,15 @@ html[data-theme="dark"] .g-cal__day--present {
 	cursor: pointer;
 	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
 }
+/* SELECTED IS NOT PRIMARY (8.8). The thumb used --g-brand, the same fill as the
+   one primary action a screen is allowed, so on Home a one-option tab strip read
+   as a second CTA competing with Check In, and on the list screens the view
+   switcher outshone the actual "+ New" action. A neutral high-contrast thumb
+   still reads unmistakably as selected — and selection is announced through
+   aria-selected regardless, so colour was never carrying it alone. */
 .g-seg__option--selected {
-	background: var(--g-brand);
-	color: var(--g-on-brand);
+	background: var(--g-ink);
+	color: var(--g-bg);
 }
 
 /* ---------- GModal / GActionSheet (§10.3 #25, #26) ---------- */

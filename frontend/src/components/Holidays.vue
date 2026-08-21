@@ -5,7 +5,7 @@
 			<span
 				v-if="holidays?.data?.length"
 				id="open-holiday-list"
-				class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
+				class="g-seclink text-kra-label text-accent underline underline-offset-link cursor-pointer"
 			>
 				{{ __("View All") }}
 			</span>

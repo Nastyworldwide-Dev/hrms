@@ -61,7 +61,7 @@
 			</div>
 		</div>
 	</div>
-	<EmptyState v-else :message="__('No expenses added')" :isTableField="true" />
+	<GEmptyState v-else :title="__('No expenses added')" :body="__('Add each item you paid for with the + above')" />
 
 	<CustomIonModal :isOpen="isModalOpen" @didDismiss="resetSelectedItem()">
 		<template #actionSheet>
@@ -135,7 +135,7 @@ import { FeatherIcon, createResource } from "frappe-ui"
 import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"
-import EmptyState from "@/components/EmptyState.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import CustomIonModal from "@/components/CustomIonModal.vue"
 
 import { claimTypesByID } from "@/data/claims"

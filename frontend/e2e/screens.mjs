@@ -106,3 +106,65 @@ export async function settle(page) {
 	await page.waitForLoadState("networkidle").catch(() => {})
 	await page.waitForTimeout(2200)
 }
+
+/**
+ * Touch targets, HIT-TESTED rather than measured.
+ *
+ * getBoundingClientRect() reports the element's own box. §14.1 allows a target
+ * to be expanded around a smaller visual — the token's description is literally
+ * "padded out to 44px WITHOUT moving the visual" — and the app does that with
+ * ::before overlays on the month steppers, the section-header links and the
+ * push toggle. Measuring boxes reported all of those as failures they are not.
+ * A gate with known false positives gets ignored, so this asks the browser what
+ * is actually at the point instead.
+ *
+ * A control passes when the midpoints of its 44px-tall (and, if it is narrow,
+ * 44px-wide) region resolve back to it.
+ *
+ * Returns [{ label, tag, box, missed }] for controls that FAIL.
+ */
+export async function undersizedTargets(page, min = 44) {
+	return page.evaluate((MIN) => {
+		const SEL = "button, a[href], [role=button], [role=tab], input, select, textarea, ion-tab-button"
+		const out = []
+		for (const el of document.querySelectorAll(SEL)) {
+			const r = el.getBoundingClientRect()
+			if (r.width < 2 || r.height < 2) continue
+			const cs = getComputedStyle(el)
+			if (cs.visibility === "hidden" || cs.display === "none" || cs.pointerEvents === "none") continue
+			// only judge what is actually on screen
+			if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue
+
+			const cx = r.x + r.width / 2
+			const cy = r.y + r.height / 2
+			const reach = MIN / 2 - 1
+            // vertical always; horizontal only when the visual is itself narrow
+			const points = [[cx, cy - reach], [cx, cy + reach]]
+			if (r.width < MIN) points.push([cx - reach, cy], [cx + reach, cy])
+
+			// The floating tab bar covers content at rest by design — scrolling
+			// reveals it — so a point it occludes says nothing about target size.
+			// Same for a point off the viewport: unjudgeable, not a failure.
+			const floating = document.querySelector("ion-tab-bar.g-tabbar")
+			const missed = []
+			for (const [x, y] of points) {
+				if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue
+				const hit = document.elementFromPoint(x, y)
+				if (!hit) continue
+				if (floating && (hit === floating || floating.contains(hit))) continue
+				// the element itself, something inside it, or its own ::before overlay
+				const owns = hit === el || el.contains(hit) || hit.contains(el)
+				if (!owns) missed.push(`${Math.round(x)},${Math.round(y)}`)
+			}
+			if (missed.length) {
+				out.push({
+					label: (el.getAttribute("aria-label") || el.textContent || el.tagName).trim().slice(0, 40),
+					tag: el.tagName.toLowerCase(),
+					box: [Math.round(r.width), Math.round(r.height)],
+					missed,
+				})
+			}
+		}
+		return out
+	}, min)
+}

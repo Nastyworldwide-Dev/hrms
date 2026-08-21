@@ -144,6 +144,15 @@ if (import.meta.env.DEV) {
 	})
 }
 
+// Catch-all, LAST — it must be pushed after the dev-only /design route above,
+// or /design would match this in dev instead of the specimen. Without it any
+// unknown URL rendered a blank page with no message and no way back (8.13).
+routes.push({
+	path: "/:pathMatch(.*)*",
+	name: "NotFound",
+	component: () => import("@/views/NotFound.vue"),
+})
+
 const router = createRouter({
 	history: createWebHistory("/hrms"),
 	routes,

@@ -7,9 +7,9 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button variant="ghost" class="!pl-0 hover:bg-transparent" @click="router.back()">
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
+							<GIconButton :label="__('Back')" flush @click="router.back()">
+								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Profile") }}
 							</h2>
@@ -127,8 +127,12 @@
 
 						<button
 							@click="logout"
-							class="flex items-center gap-2 w-full bg-transparent border border-accent text-accent-700 px-4 py-3.5 font-sans font-extrabold text-card-title mt-7 hover:bg-accent-100"
+							class="flex items-center justify-center gap-2 w-full bg-transparent border border-divider rounded-action text-inkbase px-4 py-3.5 font-sans font-extrabold text-card-title mt-7 hover:bg-icon-bg"
 						>
+							<!-- neutral, not accent (8.14): sign-out wore the same chartreuse the
+						     system reserves for the ONE primary action on a screen, and it
+						     was the only accented element on Profile — so the loudest thing
+						     on the page was the way out of the app. -->
 							<FeatherIcon name="log-out" class="w-4 h-4" />
 							{{ __("Log Out") }}
 						</button>
@@ -183,6 +187,7 @@ import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import { FeatherIcon, createDocumentResource, createResource, toast } from "frappe-ui"
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"

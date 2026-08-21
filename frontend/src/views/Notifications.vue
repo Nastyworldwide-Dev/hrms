@@ -13,13 +13,9 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button
-								variant="ghost"
-								class="!pl-0 hover:bg-transparent"
-								@click="goBackOrHome(router)"
-							>
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
+							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
+								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Notifications") }}
 							</h2>
@@ -39,7 +35,7 @@
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
 							<div class="flex ml-auto gap-1 shrink-0">
-								<Button variant="outline" class="whitespace-nowrap" @click="router.push({ name: 'Settings' })">
+								<Button variant="outline" class="g-touch whitespace-nowrap" @click="router.push({ name: 'Settings' })">
 									<template #prefix>
 										<FeatherIcon name="settings" class="w-4" />
 									</template>
@@ -48,7 +44,7 @@
 								<Button
 									v-if="unreadNotificationsCount.data"
 									variant="outline"
-									class="whitespace-nowrap"
+									class="g-touch whitespace-nowrap"
 									@click="markAllAsRead.submit"
 									:loading="markAllAsRead.loading"
 								>
@@ -95,7 +91,7 @@
 							</component>
 						</div>
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
-							<Button variant="outline" class="ml-auto" @click="loadMore">
+							<Button variant="outline" class="g-touch ml-auto" @click="loadMore">
 								{{ __("Load more") }}
 							</Button>
 						</div>
@@ -116,6 +112,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent} from "@ionic/vue"
 import { useRouter } from "vue-router"
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
@@ -123,7 +120,6 @@ import { createResource, FeatherIcon, Button } from "frappe-ui"
 
 import { inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
-import EmptyState from "@/components/EmptyState.vue"
 
 import { unreadNotificationsCount, notifications } from "@/data/notifications"
 

@@ -53,9 +53,7 @@ defineProps({
 defineEmits(["click"])
 </script>
 
-<style scoped>
-.g-selfie {
-	width: 100%;
-	cursor: pointer;
-}
-</style>
+<!-- No scoped style for theme-owned classes (8.16). A scoped rule carries a
+     [data-v-*] attribute, so it outranks the theme layer — including its
+     media queries — and the lint gate cannot see it because it only reads
+     theme/glass-components.css. These declarations now live there. -->

@@ -91,7 +91,6 @@
 
 				<section class="spec__section">
 					<h2 class="spec__label">GNOTEPANEL (§10.2 #22)</h2>
-					<GNotePanel>OT eligible after 6:00 pm on working days. Claims close on the 25th.</GNotePanel>
 				</section>
 
 				<h2 class="spec__title">Tier B</h2>
@@ -367,7 +366,6 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GBanner from "@/components/glass/GBanner.vue"
-import GNotePanel from "@/components/glass/GNotePanel.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GInput from "@/components/glass/GInput.vue"

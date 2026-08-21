@@ -1,4 +1,4 @@
-# HR Frappe · Glass — Implementation Specification v1.8
+# HR Frappe · Glass — Implementation Specification v1.10
 
 **Supersedes** v1.6, v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
@@ -67,6 +67,24 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.10 — a class name has one owner, and one place that owns it
+
+| # | Change | Reason |
+|---|---|---|
+| 10.1 | §16.5.1: **a component's `<style scoped>` may not redefine a theme-layer class**; `lint` enforces it | Second specificity collision to silently override the design system. `GSegmented` held every segmented option 6px under §14.1; `GAppHeader` un-hid the header avatar at `lg:`, so desktop showed identity twice. Both invisible to a gate that reads one file at a time |
+| 10.2 | §14.1 targets are **hit-tested, not measured** | The token says "padded out to 44px WITHOUT moving the visual", and the app does that with `::before` overlays — which `getBoundingClientRect` cannot see. Measuring reported them as failures. A gate with known false positives gets ignored, so it asks the browser what is at the point |
+| 10.3 | The floating tab bar occluding content at rest is **not** a target failure | It covers scrollable content by design; scrolling reveals it. Recorded so the check does not re-acquire a false positive |
+
+### v1.9 — the anatomy meets the server, and the tab bar meets the stack
+
+| # | Change | Reason |
+|---|---|---|
+| 9.1 | §12: **the tab bar belongs to the tab root**, not to a pushed screen | Eight of ten list screens have no tab bar. They are pushed routes, not tab destinations, and Ionic puts the bar on the tab root. Recorded as intended so it stops being re-found as a defect — but a pushed screen must then carry a back control, which `ReplacementLeave` did not |
+| 9.2 | §12: **the eight form screens are server-ordered**; the anatomy governs their chrome and stops at the field list | `FormView` renders whatever `get_doctype_fields` returns in the order it returns it. Overtime's anatomy named fields in sequence and could never be satisfied by styling. An anatomy that cannot be met by layout is not a spec, it is a wish |
+| 9.3 | §10.2 #22 **GNotePanel deleted**; §21 "drawn but not built" added | Built in phase 2, consumed by nothing but the specimen, and its only intended host is a server-ordered form. §21 now forces every zero-consumer component to be either a pending insertion or dead code, by name |
+| 9.4 | §20.3 enforced: the **two-column `lg:` grids removed** from Home, Leave and Attendance | Measured 550/549, 855/555/550 and 578/524 — never the 720px §20.3 defines. Nothing in §20 authorised a screen splitting in two at desktop; the divergence was invisible below `lg:`, which is how three build batches passed over it |
+| 9.5 | Accent means **primary action**, never *selected* | `GSegmented`'s thumb used `--g-brand`, so a one-option tab strip on Home read as a second CTA beside Check In, and on the list screens the view switcher outshone the real action. Selection is announced through `aria-selected`; it never needed the accent |
 
 ### v1.8 — the render-time gates the spec already required
 
@@ -445,7 +463,7 @@ No public icon set matches this grid and weight. The 9 existing hand-drawn icons
 | 19 | **Map panel** | 150px, `radius-action` 19px, themed gradient + perspective grid, pin `--brand` with rings, geo caption mono 10px in a glass chip |
 | 20 | **Selfie panel** | 118px, `radius-action` 19px, 48px dashed `--accent-ink` ring, 24×24 face icon |
 | 21 | **Clock** | Display 36/800/−0.02em, seconds at **15.5px**/600 *(Button label step — §4.2)* opacity .55 — **decorative, not information**. §2.5 exemption recorded below the table |
-| 22 | **Note panel** | Eligibility hint — glass, `radius-input` 14px, pad 12px 14px, mono 10px `--accent-ink` |
+| 22 | ~~**Note panel**~~ | **Deleted in v1.9.** Drawn by the mockup, never built into any screen — its only consumer was the specimen. The eligibility hint it was for sits on Overtime, whose fields are server-ordered, so there is nowhere for the component to be inserted by styling. See §21 |
 | 23 | **Logo well** | 56×56, `radius-action` 19px, glass, display **22px** *(Stat number step — §4.2)* `--accent-ink` |
 
 **§2.5 exemption — clock seconds (#21), the only one granted.** The seconds carry `opacity: .55`, which §2.5 otherwise forbids. It stands because the seconds are **decorative and `aria-hidden`**, and because the multiplier sits on `--ink`, not on `--ink2` or `--ink3`, which is what §2.5's letter names. Measured over glass the result is **4.26:1 on light** (6.03 dark) — below the 4.5 §14.1 requires of body text, and at 15.5px/600 they do not qualify as large text either.
@@ -562,6 +580,22 @@ Stack order top to bottom. Vertical gap is `stack-md` (13px) unless stated. All 
 
 Home is the worked example (v1.5): the mockup's balance grid was removed because the shipped screen has no balance data and no call to fetch it, and the request panel was added because the screen has one. **Check every anatomy against the actual screen before building it.**
 
+**Two rulings recorded in v1.9 so they stop resurfacing as findings:**
+
+- **The tab bar belongs to the tab ROOT, not to a pushed screen.** Eight of the
+  ten list screens have no tab bar, and that is correct: they are pushed routes
+  reached from a dashboard, not tab destinations, and Ionic's stack semantics
+  put the bar on the tab root. "All screens: tab bar pinned" above means all
+  TAB screens. A pushed screen carries a back control instead — and must carry
+  one, which `ReplacementLeave` did not until 8.14.
+- **The eight form screens are SERVER-ORDERED and no anatomy can govern them.**
+  `FormView` renders whatever `hrms.api.get_doctype_fields` returns, in the
+  order it returns it, so field order is doctype configuration and not a
+  layout decision. §12 governs the CHROME of those screens — header, section
+  eyebrows, the sticky primary, the attachment block — and stops at the field
+  list. An anatomy that names individual fields in order (as Overtime's did)
+  cannot be satisfied by styling and is not a defect when it is not met.
+
 | Screen | Stack | Primary action |
 |---|---|---|
 | **Sign in** | Logo well (56×56, r19) → title → subtitle → email field → password field → primary → forgot-password link. Vertically centred, 40px bottom offset | SIGN IN |
@@ -569,7 +603,7 @@ Home is the worked example (v1.5): the mockup's balance grid was removed because
 | **Check in** | *A bottom sheet, not a route — see the note below the table.* Eyebrow (the action label) → clock (36px) → date line → location status + distance → map panel (150px) → selfie panel (live preview) → primary | CONFIRM CHECK IN |
 | **Leave** | Eyebrow + title → balance panel (**N types, one surface**) → replacement-leave card → primary → RECENT field label → history list → holidays → tab bar | REQUEST A LEAVE |
 | **Attendance** | Eyebrow + title → calendar panel → stat panel (**4-up**, one surface) → primary → action list (3 rows, one surface) → request lists → tab bar | REQUEST ATTENDANCE |
-| **Overtime** | Eyebrow + title → date field → hours field → eligibility note panel → explanation field (66px) → primary → routing caption → tab bar | SEND TO APPROVER |
+| **Overtime** | Server-ordered fields (see the ruling above) inside the standard form chrome → primary → routing caption | SEND TO APPROVER |
 | **KPI** | Eyebrow + title → score panel (ring + verdict + pill) → KRA field label → KRA panel (4 rows) → goals panel → tab bar | none — read-only |
 | **Issues** (staff) | Eyebrow + title → primary → eyebrow "REPORTED BY YOU" → issue list (**one panel**, not N cards) → tab bar | REPORT AN ISSUE |
 | **Issue board** (HR) | Eyebrow → stat panel (N-up, one surface) → search + type filter → status segmented control with counts → issue list → detail sheet | none — triage, not creation |
@@ -820,8 +854,39 @@ hypothetical: it shipped, with all gates green. Gates 5 and 6 exist because of
 it, and one screen list feeds both plus the audit capture, so a route cannot be
 added to the app and skipped by the gates.
 
+### 16.5.1 Two rules the gates now enforce, both learned the hard way
+
+**A class name has ONE owner.** `.g-field` was defined twice inside
+`glass-components.css` — the §3 light field and the `GInput` wrapper, 700 lines
+apart. The later rule overrode `display` and `width` and nothing else, so
+`position: absolute`, `inset: 0` and `pointer-events: none` landed on every form
+field in the app and the login form could not be clicked at all (v1.8, 8.1).
+
+**A component's `<style scoped>` must not redefine a class the theme layer
+owns.** A scoped rule compiles to `.class[data-v-xxxxxxx]`, which outranks a
+plain class — **including one inside a media query**. Two of these were live:
+
+- `GSegmented` set `min-height: 38px` with the note *"38px visual + 3px track
+  padding either side = the 44px target"*. The track's padding is not part of
+  the option's box, so a tap 2px above an option landed on the track; every
+  segmented option in the app was 6px under §14.1, and the theme layer's
+  correct value never applied.
+- `GAppHeader` set `display: flex` on `.g-header__avatar-link`. The theme layer
+  hides that element at `lg:` because §20.2 gives identity to the side nav — so
+  desktop rendered the avatar in the header **and** the name in the side nav,
+  the same identity twice, because a component's private stylesheet beat the
+  theme's responsive rule.
+
+Seven classes were shadowed this way; five only added properties, two changed
+behaviour. The `lint` gate's `scopedOverride` rule now fails on any of them.
+
+**Why both slipped:** the gate read files one at a time and treated
+`glass-components.css` as the only place component styling lives. A collision
+is a relationship between two files, so no single-file rule could see it. Any
+future rule about "where a thing is defined" needs the same cross-file shape.
+
 Without gates, §2's "no one-off hex values" is a wish. Without a gate that
-looks at pixels, so is §10.
+looks at pixels, so is §10. Without one that compares files, so is this.
 
 ### 16.6 Copy
 All label changes ship as **Frappe Translation records** — the PWA's `translationsPlugin` reads `frappe.boot.__messages` and supports context. **Zero code change.** Scope by context so the new wording does not leak into Desk.
@@ -965,4 +1030,23 @@ this design**, and is removed.
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.8 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+## 21. Drawn but not built
+
+The mockup is a drawing; the app is a product. These are things the spec or the
+mockup describes that **no screen uses**, recorded here so each is a decision
+someone made rather than an omission someone will keep re-finding.
+
+| Item | Status | Why |
+|---|---|---|
+| **GNotePanel** (§10.2 #22) | **Deleted in v1.9** | Built in phase 2, never consumed by a screen — only the specimen imported it. It existed for Overtime's eligibility hint, and Overtime's fields are server-ordered (§12), so it could not be inserted by styling. Component, CSS and spec row all removed |
+| **GDataTable** | **Kept, unused** | No screen renders a tabular dataset today. Unlike GNotePanel it has no blocked insertion point — the first screen that needs a table will use it as-is. Reviewed each phase; delete if still unused at sign-off |
+| **PAY tab** (§13.1) | **Not built** | §13.1 recommends HOME · ATTEND · LEAVE · PAY · MORE. There is no Pay screen and building one is a feature (§1). The tab bar substitutes EXPENSES. Tracked as DECISION 2, unsigned |
+
+**The rule this section encodes:** a component with zero consumers is not
+finished work, it is either a pending insertion or dead code. Say which. The
+§16.5 usage gate counts composition, not consumption, so nothing else catches
+it.
+
+---
+
+*HR Frappe · Glass — Implementation Specification v1.10 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*

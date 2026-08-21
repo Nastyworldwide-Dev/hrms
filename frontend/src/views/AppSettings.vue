@@ -7,13 +7,9 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button
-								variant="ghost"
-								class="!pl-0 hover:bg-transparent"
-								@click="router.back()"
-							>
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
+							<GIconButton :label="__('Back')" flush @click="router.back()">
+								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Settings") }}</h2>
 						</div>
 					</header>
@@ -30,15 +26,15 @@
 									<span class="text-xs text-ink-600">{{ currentThemeLabel }}</span>
 								</div>
 							</div>
-							<div class="flex w-full border border-divider">
+							<div class="flex w-full border border-divider rounded-input overflow-hidden">
 								<button
 									v-for="mode in THEME_MODES"
 									:key="mode"
 									type="button"
-									class="flex-1 py-2 text-kra-label uppercase font-sans font-extrabold border-r border-divider last:border-r-0"
+									class="g-touch flex-1 py-2 text-kra-label uppercase font-sans font-extrabold border-r border-divider last:border-r-0"
 									:class="
 										theme.mode === mode
-											? 'bg-accent text-ground'
+											? 'bg-inkbase text-ground'
 											: 'bg-transparent text-ink-700 hover:bg-inkbase/[0.04]'
 									"
 									@click="setTheme(mode, $event)"
@@ -48,7 +44,11 @@
 							</div>
 						</div>
 						<span class="text-eyebrow uppercase text-accent-ink">{{ __("Notifications") }}</span>
-						<div class="flex flex-col border-t-2 border-divider pt-4">
+						<!-- frappe-ui's Switch renders a 32×20 button and does not forward
+						     a class to it, and its row is not clickable — so that button was
+						     the whole target. The wrapper lets the theme expand its hit area
+						     to §14.1 without changing the toggle's visual. -->
+						<div class="flex flex-col border-t-2 border-divider pt-4 g-switch-row">
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
@@ -98,6 +98,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { FeatherIcon, Switch, toast, Button } from "frappe-ui"
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { computed, inject, ref } from "vue"
 

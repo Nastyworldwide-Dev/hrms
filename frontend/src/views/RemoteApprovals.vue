@@ -7,21 +7,16 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button variant="ghost" class="!pl-0 hover:bg-transparent" @click="router.back()">
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
+							<GIconButton :label="__('Back')" flush @click="router.back()">
+								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Remote Approvals") }}
 							</h2>
 						</div>
-						<Button
-							variant="ghost"
-							class="hover:bg-transparent"
-							@click="reload"
-							:loading="pending.loading"
-						>
+						<GIconButton :label="__('Refresh')" @click="reload">
 							<FeatherIcon name="refresh-cw" class="h-4 w-4" />
-						</Button>
+						</GIconButton>
 					</header>
 
 					<div class="flex flex-col p-4 gap-4">
@@ -46,7 +41,7 @@
 								v-else
 								v-for="req in decided.data"
 								:key="req.name"
-								class="border border-divider border-t-2 p-3.5 flex flex-col gap-2"
+								class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
 									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
@@ -97,7 +92,7 @@
 								v-else
 								v-for="req in pending.data"
 								:key="req.name"
-								class="border border-divider border-t-2 p-3.5 flex flex-col gap-2"
+								class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
 									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
@@ -211,6 +206,7 @@ import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
 import { FeatherIcon, Button, toast } from "frappe-ui"
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { formatTimestamp } from "@/utils/formatters"
 import GSegmented from "@/components/glass/GSegmented.vue"

@@ -5,7 +5,7 @@
 			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
 				<span
 					@click="navigate"
-					class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
+					class="g-seclink text-kra-label text-accent underline underline-offset-link cursor-pointer"
 				>
 					{{ __("View Claims") }}
 				</span>
@@ -31,9 +31,12 @@
 				</div>
 			</div>
 			<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
+				<!-- Secondary, not primary (§18: one primary action per screen).
+				     This was a second chartreuse fill on a screen whose primary is
+				     "Request a Leave", square-cornered, and 37px tall. -->
 				<button
 					@click="navigate"
-					class="flex items-center justify-center bg-accent text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide hover:bg-accent-600"
+					class="g-touch flex items-center justify-center border border-divider rounded-action text-inkbase px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide hover:bg-icon-bg"
 				>
 					{{ __("Claim") }}
 				</button>

@@ -36,7 +36,12 @@
 			<slot name="action" />
 		</div>
 
-		<div class="g-cal__grid" role="grid" :aria-label="title">
+		<!-- role="group", not "grid" (8.6). role="grid" promises row and gridcell
+		     descendants and arrow-key navigation between them; this is a CSS grid
+		     of individually-labelled day buttons, so axe reported
+		     aria-required-children. A labelled group is what it actually is, and
+		     each day already carries its own accessible name. -->
+		<div class="g-cal__grid" role="group" :aria-label="title">
 			<span v-for="(w, i) in weekdays" :key="`w${i}`" class="g-cal__dow" aria-hidden="true">
 				{{ w }}
 			</span>

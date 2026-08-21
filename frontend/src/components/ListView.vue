@@ -5,29 +5,31 @@
 				class="flex flex-row bg-ground py-4 px-3 items-center justify-between border-b border-divider lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<div class="flex flex-row items-center">
-					<Button variant="ghost" class="!px-1 mr-1 hover:bg-transparent" @click="router.back()">
+					<GIconButton :label="__('Back')" flush class="mr-1" @click="router.back()">
 						<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
-					</Button>
+					</GIconButton>
 					<h2 class="text-xl font-extrabold text-inkbase tracking-tight">{{ pageTitle }}</h2>
 				</div>
 
 				<div class="flex flex-row gap-2">
-					<Button
+					<!-- GIconButton, not frappe-ui Button: an aria-label bound onto the
+					     latter rendered as aria-label="" — it does not forward the attr —
+					     so this stayed the last button-name violation in the app after
+					     every other icon-only control was fixed. -->
+					<GIconButton
 						id="show-filter-modal"
-						icon="filter"
-						variant="subtle"
-						:class="[
-							areFiltersApplied
-								? '!border !border-accent !bg-accent-100 !text-accent !font-extrabold'
-								: '!border !border-divider !bg-transparent',
-						]"
-					/>
+						:label="__('Filter list')"
+						class="g-iconbtn--boxed"
+						:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
+					>
+						<FeatherIcon name="filter" class="h-4 w-4" />
+					</GIconButton>
 					<router-link
 						v-if="createPermission?.data?.has_permission && props.doctype != 'Employee Checkin'"
 						:to="{ name: formViewRoute }"
 						v-slot="{ navigate }"
 					>
-						<Button variant="solid" class="mr-2" @click="navigate">
+						<Button variant="solid" class="g-touch mr-2" @click="navigate">
 							<template #prefix>
 								<FeatherIcon name="plus" class="w-4" />
 							</template>
@@ -104,12 +106,26 @@
 				<!-- §11.1: an empty screen is an invitation to act. The copy is per
 				     list, never "no records found" and never a generic doctype
 				     string. -->
+				<!-- §11.1 says always say what to do. Three of these bodies said
+				     "Claim it here" / "claim it here" / "Claim the time back here"
+				     with nothing in the box to tap — "here" pointed at a button in
+				     the header, if it pointed anywhere. Same route as that button,
+				     shown only when the user may actually create one. -->
 				<GEmptyState
 					v-else
 					class="mt-5"
 					:title="emptyCopy.title"
 					:body="emptyCopy.body"
-				/>
+				>
+					<template
+						v-if="createPermission?.data?.has_permission && props.doctype != 'Employee Checkin'"
+						#action
+					>
+						<router-link :to="{ name: formViewRoute }" v-slot="{ navigate }">
+							<GButton :label="__('New', null, props.doctype)" @click="navigate" />
+						</router-link>
+					</template>
+				</GEmptyState>
 			</div>
 		</div>
 
@@ -136,6 +152,8 @@
 </template>
 
 <script setup>
+import GButton from "@/components/glass/GButton.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"

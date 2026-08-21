@@ -7,25 +7,16 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<Button
-								variant="ghost"
-								class="!pl-0 hover:bg-transparent"
-								@click="router.back()"
-							>
-								<FeatherIcon name="arrow-left" class="h-5 w-5" />
-							</Button>
+							<GIconButton :label="__('Back')" flush @click="router.back()">
+								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("HR Contacts") }}
 							</h2>
 						</div>
-						<Button
-							variant="ghost"
-							class="hover:bg-transparent"
-							@click="reload"
-							:loading="hrContacts.loading"
-						>
+						<GIconButton :label="__('Refresh')" @click="reload">
 							<FeatherIcon name="refresh-cw" class="h-4 w-4" />
-						</Button>
+						</GIconButton>
 					</header>
 
 					<div class="flex flex-col p-4 gap-4">
@@ -84,6 +75,7 @@ import { inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import { FeatherIcon, Button } from "frappe-ui"
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import ContactCard from "@/components/ContactCard.vue"
 import { hrContactsResource } from "@/data/hrContacts"

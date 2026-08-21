@@ -67,11 +67,6 @@ function fill(row) {
 </script>
 
 <style scoped>
-/* the weight sits between label and score, so the label takes the slack */
-.g-kra__label {
-	flex: 1;
-	min-width: 0;
-}
 .g-kra__row :deep(.g-skeleton) + :deep(.g-skeleton) {
 	margin-top: 7px;
 }

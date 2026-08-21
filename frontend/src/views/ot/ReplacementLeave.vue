@@ -28,7 +28,7 @@
 
 				<ResourceError :resource="bank" what="your replacement leave bank" />
 				<!-- month bank -->
-				<div class="border border-divider p-4 flex flex-col gap-2" v-if="bank.data">
+				<div class="border border-divider rounded-panel p-4 flex flex-col gap-2" v-if="bank.data">
 					<span class="text-eyebrow uppercase text-accent-ink">{{ monthLabel }} {{ __("bank") }}</span>
 					<div class="flex items-baseline gap-1.5">
 						<span class="text-3xl font-extrabold text-inkbase">
@@ -68,12 +68,18 @@
 						v-if="!claims.data?.length"
 						:title="__('No replacement leave claimed')"
 						:body="__('Worked a rest day? Claim the time back here')"
-					/>
+					>
+						<template #action>
+							<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
+								<GButton :label="__('New Claim')" @click="navigate" />
+							</router-link>
+						</template>
+					</GEmptyState>
 					<router-link
 						v-for="claimRow in claims.data"
 						:key="claimRow.name"
 						:to="{ name: 'ReplacementLeaveClaimDetailView', params: { id: claimRow.name } }"
-						class="flex justify-between items-center border border-divider p-3 text-sm"
+						class="flex justify-between items-center border border-divider rounded-panel p-3 text-sm"
 					>
 						<div class="flex flex-col">
 							<span class="font-bold text-inkbase">

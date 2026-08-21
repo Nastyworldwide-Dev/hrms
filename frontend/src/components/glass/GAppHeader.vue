@@ -27,7 +27,7 @@
 -->
 <template>
 	<header class="g-header">
-		<h1 class="g-header__title">{{ title || "Frappe HR" }}</h1>
+		<h1 class="g-header__title">{{ title || __("Frappe HR") }}</h1>
 
 		<span v-if="kicker" class="g-header__kicker">{{ kicker }}</span>
 
@@ -57,6 +57,9 @@
 </template>
 
 <script setup>
+import { inject } from "vue"
+
+const __ = inject("$translate")
 import { computed } from "vue"
 
 const props = defineProps({
@@ -71,17 +74,7 @@ defineEmits(["notifications", "profile"])
 const initial = computed(() => (props.avatarLabel || "?").charAt(0).toUpperCase())
 </script>
 
-<style scoped>
-.g-header__avatar-link {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 44px;
-	min-height: 44px;
-	padding: 0;
-	border: 0;
-	background: transparent;
-	border-radius: var(--g-radius-well);
-	cursor: pointer;
-}
-</style>
+<!-- No scoped style for theme-owned classes (8.16). A scoped rule carries a
+     [data-v-*] attribute, so it outranks the theme layer — including its
+     media queries — and the lint gate cannot see it because it only reads
+     theme/glass-components.css. These declarations now live there. -->

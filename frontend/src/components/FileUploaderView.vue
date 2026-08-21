@@ -4,7 +4,7 @@
 			<h2 class="text-eyebrow uppercase text-accent-ink pb-4">{{ __("Attachments") }} </h2>
 			<div class="select-button cursor-pointer">
 				<div
-					class="flex flex-col w-full bg-surface border-2 border-dashed border-divider items-center p-4 gap-2"
+					class="flex flex-col w-full bg-surface border border-divider rounded-input items-center p-4 gap-2"
 				>
 					<FeatherIcon name="upload" class="h-6 w-6 text-ink-700" />
 					<span class="block text-sm font-normal leading-5 text-ink-700">

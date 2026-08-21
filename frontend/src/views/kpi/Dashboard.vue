@@ -193,9 +193,10 @@
 										</span>
 									</div>
 								</div>
-								<EmptyState
+								<GEmptyState
 									v-if="!current.kras.length"
-									:message="__('No KRAs in this appraisal')"
+									:title="__('No KRAs in this appraisal')"
+									:body="__('Your manager sets these when the cycle opens')"
 								/>
 							</div>
 						</div>
@@ -223,7 +224,11 @@
 					</div>
 				</template>
 
-				<EmptyState v-else-if="dashboard.data" :message="__('No appraisals found for you yet')" />
+				<GEmptyState
+					v-else-if="dashboard.data"
+					:title="__('No appraisals yet')"
+					:body="__('Your KPI appears here once a review cycle opens for you')"
+				/>
 			</div>
 		</template>
 	</BaseLayout>
@@ -236,7 +241,7 @@ import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
-import EmptyState from "@/components/EmptyState.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 const __ = inject("$translate")

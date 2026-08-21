@@ -50,11 +50,58 @@ function outlineViolations(file, content) {
 	return n;
 }
 
+
+// A component's <style scoped> must not redefine a class the theme layer owns.
+//
+// TWICE NOW a specificity collision has silently overridden the design system
+// and this gate was blind to both, because it reads files one at a time and
+// theme/glass-components.css is the only place it expects component styling:
+//
+//   .g-field     was defined twice INSIDE the theme file — the §3 light field
+//                and the GInput wrapper — so position:absolute and
+//                pointer-events:none landed on every form field and the login
+//                screen could not be clicked (8.1).
+//   .g-seg__option / .g-header__avatar-link  were redefined in a component's
+//                scoped block, which carries a [data-v-*] attribute and
+//                therefore outranks the theme layer INCLUDING ITS MEDIA
+//                QUERIES. One made every segmented option 6px under the touch
+//                minimum; the other un-hid the header avatar at lg:, so
+//                identity rendered twice on desktop (8.16).
+//
+// Scoped blocks are still fine for classes the theme layer does not own.
+let themeSelectors = null;
+function themeOwnedClasses() {
+	if (themeSelectors) return themeSelectors;
+	themeSelectors = new Set();
+	const css = readFileSync(join(SRC, "theme/glass-components.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+	for (const m of css.matchAll(/(?:^|\n)([^{}\n]*)\{/g)) {
+		for (const part of m[1].split(",")) {
+			const sel = part.trim();
+			if (/^\.[a-zA-Z0-9_-]+$/.test(sel)) themeSelectors.add(sel.slice(1));
+		}
+	}
+	return themeSelectors;
+}
+
+function scopedOverrides(file, content) {
+	if (!file.endsWith(".vue")) return 0;
+	const owned = themeOwnedClasses();
+	let n = 0;
+	for (const m of content.matchAll(/<style[^>]*\bscoped\b[^>]*>([\s\S]*?)<\/style>/g)) {
+		const body = m[1].replace(/\/\*[\s\S]*?\*\//g, "");
+		for (const r of body.matchAll(/(?:^|\n)\s*\.([a-zA-Z0-9_-]+)\s*[,{]/g)) {
+			if (owned.has(r[1])) n++;
+		}
+	}
+	return n;
+}
+
 const RULES = {
 	hex: (f, c) => count(c, /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g),
 	colorfn: (f, c) => count(c, /\b(?:rgba?|hsla?)\(\s*(?!var\b)/g),
 	arbitrary: (f, c) => count(c, /[a-zA-Z][\w:/.%-]*-\[[^\]\n]+\]/g),
 	outline: outlineViolations,
+	scopedOverride: scopedOverrides,
 };
 
 const current = {};

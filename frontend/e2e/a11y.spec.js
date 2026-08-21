@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { BASE, login, screens, settle } from "./screens.mjs"
+import { BASE, login, screens, settle, undersizedTargets } from "./screens.mjs"
 
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
 const REPORT = join(ROOT, "design", "gates", ".a11y-report.json")
@@ -52,6 +52,18 @@ test("axe: every screen, both themes", async () => {
 					for (const v of results.violations) {
 						// impact is what the gate enforces on; keep it with the count
 						counts[v.id] = { impact: v.impact, nodes: v.nodes.length }
+					}
+
+					// §14.1 touch targets, folded in as a rule so they share the
+					// baseline machinery. HIT-TESTED, not measured: the app expands
+					// several targets around a smaller visual with a ::before, which
+					// getBoundingClientRect cannot see and would report as failures.
+					const small = await undersizedTargets(page)
+					if (small.length) {
+						counts["target-size"] = { impact: "serious", nodes: small.length }
+						for (const t of small.slice(0, 6)) {
+							console.warn(`[a11y]   target-size: ${t.tag} "${t.label}" ${t.box[0]}x${t.box[1]}`)
+						}
 					}
 					report[key] = counts
 					const serious = results.violations.filter((v) =>

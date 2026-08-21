@@ -50,9 +50,6 @@ defineProps({
 defineEmits(["click"])
 </script>
 
-<style scoped>
-.g-goals__label,
-.g-goals__sub {
-	display: block;
-}
-</style>
+<!-- No scoped style for theme-owned classes (8.16) — a scoped rule's
+     [data-v-*] attribute outranks the theme layer, including its media
+     queries, and the lint gate cannot see it. See theme/glass-components.css. -->

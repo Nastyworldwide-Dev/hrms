@@ -60,7 +60,7 @@
 		</div>
 	</div>
 
-	<EmptyState v-else :message="__('No advances found')" :isTableField="true" />
+	<GEmptyState v-else :title="__('No advances found')" :body="__('Advances you have been paid appear here')" />
 </template>
 
 <script setup>

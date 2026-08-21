@@ -1,15 +1,20 @@
 <template>
 	<BaseLayout>
 		<template #body>
-			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-2 lg:gap-0 lg:p-7">
-				<div class="flex flex-col gap-8 lg:pr-8">
-					<PendingApprovalsBanner />
-					<CheckInPanel />
-					<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
-				</div>
-				<div class="lg:border-l lg:border-divider lg:pl-8">
-					<RequestPanel />
-				</div>
+			<!-- §20.3: ONE content column, 720px, left-aligned against the side nav.
+			     Until the 7.3 ruling this split into lg:grid-cols-2 — measured 550px
+			     and 549px, neither of them 720 — with the request panel behind a
+			     border-l. Nothing in §20 authorised a screen splitting in two at
+			     desktop, and the divergence was invisible below lg:, which is how
+			     three build batches passed over it. Same correction on Leave and
+			     Attendance. -->
+			<div
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg lg:p-7"
+			>
+				<PendingApprovalsBanner />
+				<CheckInPanel />
+				<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
+				<RequestPanel />
 			</div>
 			<PushNotificationPrompt />
 		</template>

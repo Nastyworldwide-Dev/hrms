@@ -1,12 +1,14 @@
 <template>
 	<BaseLayout :pageTitle="__('Leaves & Holidays')">
 		<template #body>
-			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full lg:p-7 lg:gap-10">
+			<!-- §20.3: one 720px column, left-aligned (7.3 ruling). Was
+			     lg:grid-cols-[1fr_280px] over the balance band and lg:grid-cols-2 over
+			     the lists, which stranded the primary action in an empty right column
+			     and produced three different content widths on one screen. -->
+			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg lg:p-7 lg:gap-10">
 				<!-- Top band: balance stat cells + primary action -->
-				<div
-					class="contents lg:grid lg:grid-cols-[1fr_280px] lg:gap-x-0 lg:items-stretch"
-				>
-					<div class="lg:pr-8 flex flex-col gap-8">
+				<div class="flex flex-col gap-8">
+					<div class="flex flex-col gap-8">
 						<LeaveBalance />
 						<ReplacementLeaveCard />
 					</div>
@@ -14,7 +16,7 @@
 					<router-link
 						:to="{ name: 'LeaveApplicationFormView' }"
 						v-slot="{ navigate }"
-						class="lg:border-l lg:border-divider lg:pl-8 lg:flex lg:items-center"
+						class="block"
 					>
 						<GButton :label="__('Request a Leave')" @click="navigate">
 							<template #trailing>
@@ -28,8 +30,8 @@
 				</div>
 
 				<!-- Bottom: recent leaves | upcoming holidays -->
-				<div class="contents lg:grid lg:grid-cols-2 lg:gap-x-0 lg:items-start">
-					<div class="lg:pr-8">
+				<div class="flex flex-col gap-8">
+					<div>
 						<div class="flex flex-row items-baseline justify-between mb-2.5">
 							<span class="text-eyebrow uppercase text-accent-ink">{{ __("Recent Leaves") }}</span>
 							<router-link
@@ -38,7 +40,7 @@
 							>
 								<span
 									@click="navigate"
-									class="text-kra-label text-accent underline underline-offset-link cursor-pointer"
+									class="g-seclink text-kra-label text-accent underline underline-offset-link cursor-pointer"
 								>
 									{{ __("View List") }}
 								</span>
@@ -53,7 +55,7 @@
 						</div>
 					</div>
 
-					<div class="lg:border-l lg:border-divider lg:pl-8">
+					<div>
 						<Holidays />
 					</div>
 				</div>
