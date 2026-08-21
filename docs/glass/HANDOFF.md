@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   7.3 (anatomy audit — read-only)
 status:   done, nothing changed
-commit:   see below on nz-glass
+commit:   ff10dc6e5 on nz-glass
 files:    docs/glass/anatomy-audit.md
 verify:   read the audit; findings are template-derived, not browser-observed
 flags:    FOLLOWS 4 — Sign in, Check in, Issues (staff), Issue board
