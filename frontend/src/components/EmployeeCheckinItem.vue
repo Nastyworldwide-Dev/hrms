@@ -5,7 +5,9 @@
 				<div class="text-button-label font-semibold text-inkbase">
 					{{ formattedTime }}
 				</div>
-				<div class="text-xs text-ink-600">{{ dayLabel }}</div>
+				<!-- data-visual-mask: "Yesterday" becomes "20 Aug" once the row ages
+				     past the relative window — a text change with no code change. -->
+				<div class="text-xs text-ink-600" data-visual-mask>{{ dayLabel }}</div>
 			</div>
 		</template>
 		<template #right>

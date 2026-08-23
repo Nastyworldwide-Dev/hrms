@@ -26,8 +26,11 @@
 					>
 						<FeatherIcon name="chevron-left" class="h-4 w-4" />
 					</button>
+					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
+					     becomes "TODAY · SUN 23 AUG" overnight. -->
 					<span
 						class="font-sans font-extrabold text-card-title uppercase text-inkbase"
+						data-visual-mask
 					>
 						{{ dayLabel }}
 					</span>

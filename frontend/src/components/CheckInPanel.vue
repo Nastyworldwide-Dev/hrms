@@ -1,6 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
-		<div class="g-eyebrow">
+		<!-- data-visual-mask: today's date, rots at midnight. -->
+		<div class="g-eyebrow" data-visual-mask>
 			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
 		</div>
 		<h1
@@ -17,7 +18,10 @@
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
 			<div class="text-card-title text-ink-600" v-if="lastLog">
-				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
+				<!-- data-visual-mask: formatTimestamp() returns "… yesterday" for one
+				     day and "… on 20 Aug" the next, so the string changes with no
+				     code change. Masked on the span only, not the row. -->
+				<span data-visual-mask>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
 					<span @click="navigate" class="g-seclink underline underline-offset-link text-ink-800">{{ __("View List") }}</span>
@@ -43,7 +47,9 @@
 						class="h-4 w-4 shrink-0"
 					/>
 					<div class="flex flex-col flex-1 min-w-0">
-						<span class="g-banner__title">
+						<!-- data-visual-mask: both branches embed formatTimestamp(), whose
+						     wording changes as the check-in ages. -->
+						<span class="g-banner__title" data-visual-mask>
 							<template v-if="isAbandoned">
 								{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
 							</template>

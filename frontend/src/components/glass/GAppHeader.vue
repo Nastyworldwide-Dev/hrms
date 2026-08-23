@@ -43,7 +43,10 @@
 
 		<h1 class="g-header__title">{{ title || __("Frappe HR") }}</h1>
 
-		<span v-if="kicker" class="g-header__kicker">{{ kicker }}</span>
+		<!-- data-visual-mask: the kicker is today's date, so its baseline rots at
+		     midnight. Masked here rather than at each caller — BaseLayout and
+		     FormView both feed it. -->
+		<span v-if="kicker" class="g-header__kicker" data-visual-mask>{{ kicker }}</span>
 
 		<button
 			type="button"
