@@ -1,21 +1,107 @@
 # Session handoff — Glass phase 8
 
-State at the end of the 8.6+ pass. Read this before picking the work back up.
+State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `559079695`, pushed and in sync · **Spec** v1.10 ·
+**Branch** `nz-glass` at `57121085d`, pushed and in sync · **Spec** v1.11 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
-**All six gates green. 143 findings -> 54. P0 20 -> 0. 23 root causes -> 3.**
+**Eight gates now, not six. Six green, two open — and both open ones are open
+because `AUDIT_PW` is absent, not because they found something unresolved.**
 
 ```
-lint     OK  194 known, 0 new        a11y    OK  76 screen-themes, 34 baselined, 0 new
-usage    OK  0 known, 0 new          visual  OK  0 differing
-contrast OK  54 pairs, 0 failed      surfaces OK 41 screens, 0 over 6
+lint     OK  194 known, 0 new       tokens     OK    3 bindings, 5 collapses, 0 new
+usage    OK  0 known, 0 new         coherence  OK    38 screens, 0 violations
+contrast OK  54 pairs, 0 failed     a11y       FIXED, UNVERIFIED — 2 new, cause closed
+surfaces OK  41 screens, 0 over 6   visual     64 differ, UNEXAMINED
 ```
+
+**Do not re-baseline `visual` on the count alone.** 64 of 342 differ, 40 dark /
+24 light, which is the right *shape* for seven deliberate appearance changes.
+Shape is not evidence. The diffs were never looked at, and the images are gone —
+a later run cleaned `test-results/` before they were read.
 
 ---
 
-## 1. What landed in 8.6+
+## 1. What landed in the rulings pass
+
+Seven rulings, each verified by **measuring the DOM** rather than reading a
+screenshot — the discipline that caught five wrong causes in 8.1–8.5.
+
+| # | Ruling | Measured |
+|---|--------|----------|
+| 1 | No primary on a navigation hub | Four actions are peer `GListRow`s in one panel. Screens with >1 filled action **1 → 0** |
+| 2 | Light field owned by the shell | Peak fields during a push **3 → 1**; `backdrop-filter` intact at `blur(20px) saturate(1.8)` |
+| 3 | `bg-accent` is the brand fill | Across 38 light screens: accent-ink fills **8 → 0**, brand fills **15 → 26**, all `GButton` |
+| 4 | One section-header treatment | Six treatments → one `.g-eyebrow` |
+| 5 | `GPage` owns back navigation | With back **26 → 31**, without **12 → 7** — exactly the tab-root set |
+| 6 | A create action is a `GButton` | White header pills retired |
+| 7 | replacement-leave on the shared shell | Duplicate *New Claim* removed |
+
+**Ruling 2 overturned a spec clause.** §3.2 required the light field inside the
+page to survive Ionic's backdrop-root, and that fear does not hold: every
+ancestor carries `contain: size layout style`, which creates **no** backdrop
+root — only `paint` does, along with `filter`, `opacity < 1` and mask. The only
+root a push creates is a page at `opacity: 0`. §3.2 now records the measurement,
+not the assumption.
+
+**Ruling 3's real finding was not the one ruled on.** `accent.DEFAULT` resolved
+to `--accent-ink` while `accent-100` resolved to `--brand`, so `bg-accent`
+painted dark olive and the name meant the opposite of what it said. The 50
+existing uses were renamed to explicit `-accent-ink` **first**, so flipping
+`DEFAULT` changed nothing that was already correct.
+
+---
+
+## 2. The three new gates — and what they catch that nothing could before
+
+The app acquired six header treatments, a back control on 26 screens and not on
+12 with no rule connecting them, and one role rendered as a chartreuse
+`GButton` on dashboards and a white frappe-ui pill on lists — **all of it
+passing six green gates**. That is not six gates failing. It is six gates
+answering a question that was never the one being asked.
+
+**Gate 7 — `tokens` (static, no site).** `lint` could already say `bg-accent`
+was not a raw hex. It could not say the name meant the opposite of what it
+said, because the name is spelled correctly. Two checks:
+
+- *Role–token binding* — asserts the alias a **role** depends on resolves to the
+  token that role requires. Three bindings pinned.
+- *Token collapse* — pairs distinct in one theme and identical in the other.
+  This is the mechanism, and `brand|accent-ink` turned out to be one of **five**:
+
+```
+brand|accent-ink   danger|danger-ink   success|success-ink
+warn|warn-ink      glass-fill|hair                    (all dark-only)
+```
+
+Four of those nobody was looking for. Each is a place a fill/ink swap renders
+*correctly* in the only theme this app was ever screenshotted in. That is how
+the olive submit button survived a 148-finding audit.
+
+**Gate 8 — `coherence` (rendered, 38 screens).** Every other gate asks "is this
+screen right?" once per screen; none compares screen A to screen B. It profiles
+every screen and asserts four cross-screen invariants: one primary and it is the
+primary component, back navigation follows one rule, one empty-state component,
+one section-header treatment. It runs in **light** theme deliberately —
+`--accent-ink` equals `--brand` in dark, so a brand/ink swap renders correctly
+there and every dark screenshot ever taken of this app was blind to it.
+
+First run: one violation, `remote-approvals` carrying an ad-hoc empty state
+instead of `GEmptyState`. Now composed.
+
+**And that fix produced the third catch.** Removing the ad-hoc empty state took
+the only focusable child out of the scroll region, so `a11y` fired
+`scrollable-region-focusable` on `ot-requests` in both themes — a keyboard user
+could not scroll it at all. Fixed at the shared `ListView` container, not on
+`ot-requests`, because **every list hits this the moment it is empty**;
+`ot-requests` was only the one empty in the seed.
+
+Three gates chaining a fix into the defect it caused, inside one pass, is the
+argument for running them per root cause rather than at session end.
+
+---
+
+## 3. What landed in 8.6+
 
 **a11y fixed at source, not baselined.** The 50 screen-themes carrying
 serious/critical debt were never 62 separate bugs. `button-name` on 46 of them
@@ -70,7 +156,7 @@ renders "NSTY People" from one Translation record.
 
 ---
 
-## 2. What ran, and what it found
+## 4. What ran, and what it found
 
 All three outstanding items completed.
 
@@ -109,7 +195,7 @@ catch rather than by reading the code.
 
 ---
 
-## 3. Standing caution — the remaining findings are inference-flagged
+## 5. Standing caution — the remaining findings are inference-flagged
 
 `docs/glass/frontend-audit.md` lists 143 findings, of which **54 remain**
 (0 P0, 32 P1, 22 P2). **Treat every cause in it as unverified.** Across 8.1–8.5, **five findings were wrong, and all five
@@ -137,7 +223,7 @@ screens, which is **intended** and recorded in §12, not a defect.
 
 ---
 
-## 4. Environment
+## 6. Environment
 
 - Site `verify-bench/fresh.local`, served on **:8080** (`bench serve`), employee
   `HR-EMP-00001` — *Nurul Aisyah binti Abdul Rahman*, seeded by
@@ -146,3 +232,20 @@ screens, which is **intended** and recorded in §12, not a defect.
   bars at 100%, `_Test Company`, empty KPI and Team screens.
 - `/hr/issues` silently redirects to the staff view without an HR role — the two
   captures are byte-identical, so the HR board has never actually been audited.
+
+---
+
+## 7. Pick up here
+
+Two items, both blocked on the same thing — `AUDIT_PW` is not in the shell, so
+every render-time gate SKIPs at a 401 rather than failing loudly.
+
+1. `AUDIT_PW=... node design/gates/a11y.mjs` — confirm the `ListView`
+   `tabindex` closed `scrollable-region-focusable` on `ot-requests`, both
+   themes. The fix is committed but has never been run against.
+2. `AUDIT_PW=... node design/gates/visual.mjs` — then **look at the 64 diffs**
+   before `--update-baseline`. They are expected to be rulings 1–7 and nothing
+   else; anything outside that set is a regression this pass introduced.
+
+Note that a full-suite run cleans `test-results/`, so read the diff images
+before starting another gate.
