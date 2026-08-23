@@ -146,3 +146,61 @@ Detection only catches `text-transform: uppercase`. Text typed in capitals in
 the source — `DRAFT` written literally — is not in the 284 and is not checked.
 Widening it would change the population; it is recorded here rather than
 silently left out.
+
+---
+
+# Addendum 2 — RC18, and the tolerance that hid it
+
+## Four forms, not three
+
+Measuring the DOM found one more than the audit named, and the extra one was
+invisible to source search because it has no name:
+
+| Form | Size | Radius | Fallback | Filter | Origin |
+|------|------|--------|----------|--------|--------|
+| `GAvatar` | `size` prop px | 9px | missing **and broken** image | none | component |
+| `.g-header__avatar` | fixed 34 | 9px | missing only | none | hand-rolled CSS |
+| Profile hand-rolled | fixed 72 | **0** | missing only | **grayscale** | open-coded Tailwind |
+| `EmployeeAvatar` | frappe-ui: `sm`=20 `lg`=28 | 5–6px | frappe-ui's | **grayscale** | third-party wrapper |
+
+`GAvatar` — the canonical one — rendered on **no production screen**. It was
+used only by the DEV-only design specimen while three non-canonical forms served
+every real screen.
+
+`.m-avatar-sq` has not crept back; it exists only under `.reference/` and in
+comments recording that it was not ported. **The treatment came back without
+it**: `Profile.vue` open-coded `h-[72px] w-[72px] object-cover grayscale` — zero
+radius plus desaturation, reconstructed by hand. A grep for "avatar" does not
+touch it, which is why the rule finds avatars by **shape** rather than by class.
+
+## The visual gate missed all of it
+
+Ten avatars on `notifications` changed from a blank frappe-ui circle to a `?`
+in a 9px box, and `toHaveScreenshot` **passed**. Reproduced exactly, one screen,
+same masks, same tolerance: `1 passed`, `avatars=10`, `avatarsInsideMask=0`.
+
+At 390×844 the 0.2% `maxDiffPixelRatio` is a **658-pixel budget**. Ten small
+glyph-and-corner changes came to roughly 600. The header avatar's initial
+growing 11.5px → 14px across eleven screens was likewise ~100px per screen —
+also invisible.
+
+**And a re-baseline could not repair it.** `--update-snapshots` defaults to
+`changed`, so a screen that passes is never re-shot: under-tolerance means
+"unchanged", permanently. Twenty-six baselines were silently stale and would
+have stayed that way. They were corrected by deleting the gate-owned files for
+the 13 avatar-bearing screens and re-shooting; the capture-only variants
+(`-bottom`, `-rt`), which the gate does not own, were restored untouched.
+
+The lesson is the same one the eyebrow rule taught, in a different instrument:
+**a gate that compares is bounded by its threshold; a gate that asserts is
+not.** `coherence` caught every one of these because it asks "is this the
+avatar component?" rather than "do these pixels match?".
+
+## Baselines drift looser than the app
+
+Third instance this pass. `lint` reported 190 against a baseline of 194 — and
+tightening it dropped `Login.vue` (6), `ForgotPassword.vue` (1) and
+`ChangePassword.vue` (1) entirely: files cleaned in an earlier session whose
+baseline entries were never reduced. A baseline looser than reality is a gate
+that will not notice those violations returning. Worth re-running every
+`--update-baseline` after a cleanup pass, not only after a deliberate change.

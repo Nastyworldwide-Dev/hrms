@@ -54,15 +54,6 @@
 	"views/AppSettings.vue": {
 		"arbitrary": 7
 	},
-	"views/ChangePassword.vue": {
-		"arbitrary": 1
-	},
-	"views/ForgotPassword.vue": {
-		"arbitrary": 1
-	},
-	"views/Login.vue": {
-		"arbitrary": 6
-	},
 	"views/More.vue": {
 		"arbitrary": 4
 	},
@@ -70,7 +61,7 @@
 		"arbitrary": 2
 	},
 	"views/Profile.vue": {
-		"arbitrary": 21
+		"arbitrary": 17
 	},
 	"views/RemoteApprovals.vue": {
 		"arbitrary": 4
