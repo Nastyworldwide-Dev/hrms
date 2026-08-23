@@ -228,6 +228,17 @@ screens, which is **intended** and recorded in §12, not a defect.
 - Site `verify-bench/fresh.local`, served on **:8080** (`bench serve`), employee
   `HR-EMP-00001` — *Nurul Aisyah binti Abdul Rahman*, seeded by
   `docs/glass/audit/seed.py`. `AUDIT_PW` is required by every render-time tool.
+- **The credential lives in `.env` at the repo root — gitignored, mode 600.**
+  Load it with `set -a; . .env; set +a`. The value is not in the repo and must
+  not be put there.
+- **If it is missing or a gate SKIPs at a 401, run
+  `docs/glass/audit/reset-audit-pw.sh`.** It mints a new password, resets the
+  audit user, and rewrites `.env`. `seed.py` only ever *consumed* `$AUDIT_PW`
+  (`u.new_password = SECRET`) and never stored it, so the value dies with the
+  shell that set it — which stalled three sessions before the script existed.
+  The script deliberately does **not** re-run `seed.py`: re-seeding changes
+  content, content changes screenshots, and that would corrupt every
+  visual-regression comparison against the committed baselines.
 - Seeding artifacts that are **not** defects: leave rows showing `0d`, balance
   bars at 100%, `_Test Company`, empty KPI and Team screens.
 - `/hr/issues` silently redirects to the staff view without an HR role — the two

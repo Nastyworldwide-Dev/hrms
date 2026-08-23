@@ -24,3 +24,8 @@ hrms/hr/doctype/appraisal/TODO.md
 hrms/hr/doctype/appraisal/UI_TEST_CHECKLIST.md
 .superset/
 .claude/plans/.plan-approved
+
+# Local audit/gate credentials. design/gates/* and docs/glass/audit/* read
+# AUDIT_PW from here; the value is per-machine and must never be committed.
+.env
+.env.local
