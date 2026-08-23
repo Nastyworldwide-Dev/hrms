@@ -1,23 +1,11 @@
 {
   "attendance-requests-detail:dark": {
     "aria-allowed-attr": 1,
-    "label": 3
+    "label": 1
   },
   "attendance-requests-detail:light": {
     "aria-allowed-attr": 1,
-    "label": 3
-  },
-  "attendance-requests-new:dark": {
-    "label": 2
-  },
-  "attendance-requests-new:light": {
-    "label": 2
-  },
-  "employee-checkins:dark": {
-    "scrollable-region-focusable": 1
-  },
-  "employee-checkins:light": {
-    "scrollable-region-focusable": 1
+    "label": 1
   },
   "expense-claims-new:dark": {
     "button-name": 1,
@@ -62,12 +50,6 @@
   },
   "replacement-leave-new:light": {
     "label": 1
-  },
-  "replacement-leave:dark": {
-    "target-size": 1
-  },
-  "replacement-leave:light": {
-    "target-size": 1
   },
   "shift-assignments-detail:dark": {
     "aria-allowed-attr": 1,
