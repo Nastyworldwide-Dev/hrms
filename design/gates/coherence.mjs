@@ -117,6 +117,34 @@ for (const [key, o] of sectionOffenders) {
 	);
 }
 
+// ---- 5. ONE avatar component (RC18) -----------------------------------------
+// The audit said "the avatar has three forms". Measuring found four, and the
+// fourth was the one no grep for "avatar" could see: Profile open-coded one in
+// Tailwind — `h-[72px] w-[72px] object-cover grayscale` — with no radius and no
+// name. `.m-avatar-sq` was deleted in phase 3, but the Modernist zero-radius
+// treatment came back anyway, without the class that would have flagged it.
+//
+// So the rule cannot key on a class name. The spec probe finds avatars by
+// SHAPE — a small square box holding an image or one-to-two initials — and this
+// asserts that every one of them is GAvatar. A fifth form cannot appear without
+// failing here, whatever it calls itself.
+const avatarForms = new Map();
+for (const [screen, v] of Object.entries(P)) {
+	for (const a of v.avatars || []) {
+		if (a.form === "GAvatar") continue;
+		const key = `${a.form}|${a.tag}|${a.w}x${a.h}|${a.radius}|${a.cls}`;
+		if (!avatarForms.has(key)) avatarForms.set(key, { ...a, screens: [] });
+		avatarForms.get(key).screens.push(screen);
+	}
+}
+for (const [, a] of avatarForms) {
+	const where = a.screens.length > 3 ? `${a.screens.slice(0, 3).join(", ")} +${a.screens.length - 3}` : a.screens.join(", ");
+	const flat = a.radius === "0px" ? " — and it is radius 0, the Modernist forcing §10.3 dropped" : "";
+	fail.push(
+		`avatar not built from GAvatar: <${a.tag} class="${a.cls}"> ${a.w}x${a.h} r=${a.radius} on ${where}${flat}`
+	);
+}
+
 // Per-category baseline. Counts, not identities: identities would freeze at the
 // moment they were written and rot from the next component onward.
 const CAT_BASELINE = join(ROOT, "design", "eyebrow-baseline.json");

@@ -17,6 +17,9 @@
            name. Empty label ⇒ decorative, and the avatar is aria-hidden
     size   number, default 34 — px, square
     round  boolean — full circle instead of radius-well
+    decorative boolean — keep the initial, drop the accessible name. For an
+           avatar inside a control that already names itself (the header's
+           Profile button): without this the name is announced twice.
 -->
 <template>
 	<img
@@ -25,8 +28,8 @@
 		:class="{ 'g-avatar--round': round }"
 		:style="box"
 		:src="image"
-		:alt="label || ''"
-		:aria-hidden="label ? undefined : 'true'"
+		:alt="decorative ? '' : label || ''"
+		:aria-hidden="!decorative && label ? undefined : 'true'"
 		@error="failed = true"
 	/>
 	<span
@@ -34,9 +37,9 @@
 		class="g-avatar"
 		:class="{ 'g-avatar--round': round }"
 		:style="box"
-		:role="label ? 'img' : undefined"
-		:aria-label="label || undefined"
-		:aria-hidden="label ? undefined : 'true'"
+		:role="!decorative && label ? 'img' : undefined"
+		:aria-label="decorative ? undefined : label || undefined"
+		:aria-hidden="!decorative && label ? undefined : 'true'"
 	>
 		{{ initial }}
 	</span>
@@ -50,6 +53,7 @@ const props = defineProps({
 	label: { type: String, default: "" },
 	size: { type: Number, default: 34 },
 	round: { type: Boolean, default: false },
+	decorative: { type: Boolean, default: false },
 })
 
 // a broken image URL must fall back to the initial, not a broken-image glyph

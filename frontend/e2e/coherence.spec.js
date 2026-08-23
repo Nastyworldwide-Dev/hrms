@@ -155,8 +155,53 @@ test("coherence: profile every screen", async () => {
 							}
 						})
 
+					// AVATARS (RC18). Detected by SHAPE, not by class name, so a form
+					// that calls itself something else is still found: a small square
+					// box holding either an image or one-to-two initials.
+					// Declared non-avatars: square marks that are not people. Same
+					// discipline as ROLES — an exclusion is a visible edit here, not a
+					// class someone can sprinkle on markup to silence the gate.
+					const NOT_AVATAR = ".g-logo, [class*='logo'], svg, [data-icon]"
+					const isAvatarish = (e) => {
+						if (e.closest(NOT_AVATAR)) return false
+						const r = e.getBoundingClientRect()
+						if (r.width < 18 || r.width > 96) return false
+						if (Math.abs(r.width - r.height) > 2) return false
+						const cls = (e.className || "").toString()
+						if (/avatar/i.test(cls)) return true
+						const img = e.tagName === "IMG" || e.querySelector(":scope > img")
+						const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("")
+						return !!img || (own.length > 0 && own.length <= 2)
+					}
+					const avatars = [...document.querySelectorAll("img, span, div")]
+						.filter((e) => vis(e) && isAvatarish(e))
+						.map((e) => {
+							const cs = getComputedStyle(e)
+							const r = e.getBoundingClientRect()
+							const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("")
+							return {
+								tag: e.tagName.toLowerCase(),
+								cls: (e.className || "").toString().slice(0, 70),
+								w: Math.round(r.width),
+								h: Math.round(r.height),
+								radius: cs.borderRadius,
+								bg: cs.backgroundColor,
+								color: cs.color,
+								fontSize: cs.fontSize,
+								kind: e.tagName === "IMG" ? "image" : own ? "initials" : "empty",
+								grayscale: /grayscale/.test((e.parentElement?.className || "").toString()) || cs.filter.includes("grayscale"),
+								// which form owns it — the question RC18 asks
+								form: /\bg-avatar\b/.test((e.className || "").toString())
+									? "GAvatar"
+									: /g-header__avatar\b/.test((e.className || "").toString())
+										? "g-header__avatar"
+										: "other",
+							}
+						})
+
 					return {
 						filled,
+						avatars,
 						hasBack: !!back,
 						adHocEmpty:
 							!document.querySelector(".g-empty") &&

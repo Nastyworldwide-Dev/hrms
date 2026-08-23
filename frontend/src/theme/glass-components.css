@@ -1682,20 +1682,11 @@ html[data-theme="dark"] .g-cal__day--present {
 	cursor: pointer;
 }
 
-.g-header__avatar {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 34px;
-	height: 34px;
-	border-radius: var(--g-radius-well);
-	background: var(--g-icon-bg);
-	object-fit: cover;
-	font-family: var(--g-font-display);
-	font-size: var(--g-type-kra-label-size);
-	font-weight: var(--g-type-display-number-weight);
-	color: var(--g-ink2);
-}
+/* .g-header__avatar is gone: it was a second avatar treatment, hand-rolled
+   here, differing from GAvatar only in where the initial's font-size came from
+   (--g-type-kra-label-size instead of 0.4 x the box). The header composes
+   GAvatar now. .g-header__avatar-link stays — it is the 44px hit area, which is
+   a button concern, not an avatar one. */
 @media (min-width: 1024px) {
 	.g-header__kicker {
 		display: inline;

@@ -20,18 +20,11 @@
 						<!-- Identity block -->
 						<div class="flex flex-row items-center gap-4 pb-5 border-b-2 border-divider">
 							<div class="shrink-0">
-								<img
-									v-if="user.data.user_image"
-									class="h-[72px] w-[72px] object-cover grayscale"
-									:src="user.data.user_image"
-									:alt="user.data.first_name"
+								<GAvatar
+									:image="user.data.user_image"
+									:label="user.data.first_name"
+									:size="72"
 								/>
-								<div
-									v-else
-									class="flex items-center justify-center bg-ink-300 uppercase font-sans font-extrabold text-ink-700 h-[72px] w-[72px] text-2xl"
-								>
-									{{ user.data.first_name[0] }}
-								</div>
 							</div>
 							<div class="flex flex-col gap-1 min-w-0">
 								<span
@@ -188,6 +181,7 @@ import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import { FeatherIcon, createDocumentResource, createResource, toast } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
+import GAvatar from "@/components/glass/GAvatar.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"

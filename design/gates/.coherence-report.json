@@ -7,6 +7,21 @@
         "isGButton": true
       }
     ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": [
@@ -185,6 +200,21 @@
   },
   "dash-attendance": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": [
@@ -394,6 +424,21 @@
         "label": "Request a Leave",
         "fill": "brand",
         "isGButton": true
+      }
+    ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
       }
     ],
     "hasBack": false,
@@ -625,6 +670,21 @@
         "isGButton": true
       }
     ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": [
@@ -722,6 +782,21 @@
   },
   "dash-kpi": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -778,6 +853,21 @@
         "label": "Report an Issue",
         "fill": "brand",
         "isGButton": true
+      }
+    ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
       }
     ],
     "hasBack": true,
@@ -865,6 +955,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -932,6 +1023,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1062,6 +1154,21 @@
         "isGButton": true
       }
     ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1141,6 +1248,21 @@
   },
   "sop": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1193,6 +1315,21 @@
   },
   "team": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1290,6 +1427,21 @@
   },
   "more": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1351,18 +1503,166 @@
   },
   "profile": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 72,
+        "h": 72,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "29px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": []
   },
   "notifications": {
     "filled": [],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      },
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 28,
+        "h": 28,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "11px",
+        "kind": "initials",
+        "grayscale": true,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": []
   },
   "settings": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1430,6 +1730,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1464,12 +1765,14 @@
   },
   "hr-contacts": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": []
   },
   "remote-approvals": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1501,6 +1804,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": []
@@ -1513,6 +1817,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1544,6 +1849,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1632,6 +1938,7 @@
   },
   "attendance-requests-detail": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1762,6 +2069,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1793,6 +2101,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1836,6 +2145,7 @@
   },
   "shift-assignments": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1852,6 +2162,7 @@
   },
   "shift-assignments-detail": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -1958,6 +2269,7 @@
   },
   "employee-checkins": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2016,6 +2328,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2047,6 +2360,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2114,6 +2428,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2505,6 +2820,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2584,6 +2900,7 @@
   },
   "leave-applications-detail": {
     "filled": [],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2741,6 +3058,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": []
@@ -2753,6 +3071,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2820,6 +3139,21 @@
         "isGButton": true
       }
     ],
+    "avatars": [
+      {
+        "tag": "span",
+        "cls": "g-avatar",
+        "w": 34,
+        "h": 34,
+        "radius": "9px",
+        "bg": "rgba(16, 22, 34, 0.05)",
+        "color": "rgb(84, 92, 104)",
+        "fontSize": "14px",
+        "kind": "initials",
+        "grayscale": false,
+        "form": "GAvatar"
+      }
+    ],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2851,6 +3185,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2909,6 +3244,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": false,
     "adHocEmpty": false,
     "eyebrows": [
@@ -2940,6 +3276,7 @@
         "isGButton": true
       }
     ],
+    "avatars": [],
     "hasBack": true,
     "adHocEmpty": false,
     "eyebrows": [

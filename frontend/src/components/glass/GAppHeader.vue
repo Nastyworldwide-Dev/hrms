@@ -67,8 +67,8 @@
 			:aria-label="avatarLabel ? `Profile, ${avatarLabel}` : 'Profile'"
 			@click="$emit('profile', $event)"
 		>
-			<img v-if="avatarUrl" class="g-header__avatar" :src="avatarUrl" alt="" />
-			<span v-else class="g-header__avatar" aria-hidden="true">{{ initial }}</span>
+			<!-- decorative: the button above already carries "Profile, <name>" -->
+			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="34" decorative />
 		</button>
 	</header>
 </template>
@@ -76,6 +76,7 @@
 <script setup>
 import { inject } from "vue"
 import GIconButton from "./GIconButton.vue"
+import GAvatar from "./GAvatar.vue"
 
 const __ = inject("$translate")
 // provided by GPage; false on tab roots
@@ -91,7 +92,6 @@ const props = defineProps({
 })
 defineEmits(["notifications", "profile", "back"])
 
-const initial = computed(() => (props.avatarLabel || "?").charAt(0).toUpperCase())
 </script>
 
 <!-- No scoped style for theme-owned classes (8.16). A scoped rule carries a
