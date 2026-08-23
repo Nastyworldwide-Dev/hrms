@@ -1,16 +1,16 @@
 # HANDOFF
-prompt:   rulings 1-7, three gates, visual classification
+prompt:   eyebrow gap - classify 225, enforce the section subset
 status:   done
-commit:   5269bf1cd on nz-glass
-files:    docs/glass/visual-classification.md
-          docs/glass/audit/reset-audit-pw.sh
-          docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-          frontend/src/components/glass/GAppHeader.vue
-          frontend/src/components/{CheckInPanel,EmployeeCheckinItem,ListView}.vue
+commit:   1d5237fed on nz-glass
+files:    frontend/e2e/coherence.spec.js
+          design/gates/coherence.mjs
+          design/eyebrow-baseline.json
+          frontend/src/components/QuickLinks.vue
+          frontend/src/theme/glass-components.css
           frontend/src/views/team/TeamDashboard.vue
-          design/a11y-baseline.json
-          docs/glass/audit/screens/ (72 re-baselined)
-verify:   set -a; . .env; set +a; node design/gates/run.mjs
-flags:    AUDIT_PW was unrecoverable and had to be reset - now in gitignored
-          .env, regenerate with docs/glass/audit/reset-audit-pw.sh
-next:     coherence reports 225 uppercase runs off .g-eyebrow, unenforced
+          docs/glass/visual-classification.md
+          docs/glass/audit/screens/ (3 re-baselined)
+verify:   set -a; . ./.env; set +a; node design/gates/run.mjs
+flags:    detection only sees text-transform:uppercase - literal ALL-CAPS in
+          source is outside the 284 and unchecked
+next:     RC18 avatar has three forms - RC19 double-letter gap needs a device

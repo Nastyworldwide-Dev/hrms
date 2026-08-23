@@ -2,7 +2,7 @@
 
 State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `5269bf1cd`, pushed and in sync · **Spec** v1.12 ·
+**Branch** `nz-glass` at `1d5237fed`, pushed and in sync · **Spec** v1.12 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
 **All eight gates green, nothing skipped.**
@@ -11,7 +11,7 @@ working tree clean apart from the vestigial `frappe-ui` submodule.
 lint     OK  194 known, 0 new       tokens     OK  3 bindings, 5 collapses, 0 new
 usage    OK  0 known, 0 new         a11y       OK  76 screen-themes, 28 baselined, 0 new
 contrast OK  54 pairs, 0 failed     visual     OK  0 differing
-surfaces OK  41 screens, 0 over 6   coherence  OK  38 screens, 0 violations
+surfaces OK  41 screens, 0 over 6   coherence  OK  38 screens, 0 violations, section headers ENFORCED
 ```
 
 `visual` reads 0 because all 64 diffs were classified first — see
@@ -259,18 +259,11 @@ set -a; . .env; set +a; node design/gates/run.mjs
 
 Open, in rough order of value:
 
-1. **`coherence` reports 225 of 284 uppercase runs not using `.g-eyebrow`, and
-   does not enforce it.** The note says chips and tab labels are uppercase too,
-   which is true and is why it is unenforced — but 225 is not a number anyone
-   has actually looked through. Ruling 4 consolidated the six *section-header*
-   treatments; it did not establish which of these 225 are section headers. Until
-   someone classifies them the way the 64 visual diffs were classified, this
-   gate is reporting a number rather than asserting a rule.
-2. **The 0.2% visual tolerance hides small type-colour shifts at 1440.** Ruling
+1. **The 0.2% visual tolerance hides small type-colour shifts at 1440.** Ruling
    4's eyebrow recolour is real on `home-1440-dark` and sat under the threshold.
    Not a bug — but it means `visual` is not the instrument for small colour
    changes, and nobody should read a green `visual` as proof a colour is right.
-3. **Three root causes remain from the 8.6+ audit** (§5): RC18 the avatar has
+2. **Three root causes remain from the 8.6+ audit** (§5): RC18 the avatar has
    three forms · RC19 the double-letter gap, needs a device · RC22 the tab bar
    on list screens, which is intended and recorded in §12.
 
@@ -309,3 +302,46 @@ human saw. Shell ownership is correct and is what ships (`App.vue:15`;
 there is nothing to suppress). §3.2 is rewritten to the measurement and now
 names what *would* break it, so the next person re-measures instead of
 re-assuming. Spec **v1.12**.
+
+---
+
+## 9. The eyebrow gap is closed — the gate asserts now
+
+`coherence` used to print `284 uppercase runs, 225 not using .g-eyebrow
+(reported, not enforced)`. That is not a finding, it is a refusal to make one,
+and it hid a real defect for fifty prompts.
+
+All 284 are now classified by **declared role**, computed in-page from the DOM
+on every run:
+
+| chip 78 · field-label 72 · tabbar 50 · **section 48** · interactive 13 |
+| segmented 8 · column-head 7 · stat-label 7 · nav-label 1 |
+
+236 of the 284 were always correct. Section headers are **enforced**; the other
+eight categories are baselined by category in `design/eyebrow-baseline.json`, so
+a chip becoming a heading moves a number someone is watching.
+
+**What it caught, verified by running the gate before fixing anything:**
+
+- `.g-quicklinks__title` — a **seventh** section-header treatment, living in
+  `QuickLinks.vue`'s `<style scoped>` block. It copied five of the six eyebrow
+  tokens by hand and set the sixth, the colour, to `--ink2`. On `home`,
+  `'Quick Links'` rendered `rgb(84,92,104)` while `'Requests'` two sections below
+  rendered `rgb(63,92,0)` — same screen, same role, same size. Ruling 4
+  consolidated six treatments and missed this one **because it reads as an
+  eyebrow in source**; only the rendered colour, compared against a sibling
+  header, gives it away.
+- the `team` date-stepper label — no role class at all. Moved to
+  `.g-datenav__label` in the theme. `team` did not move a pixel in the visual
+  gate, which is the proof the move was faithful.
+
+**Why the rule is derived, not listed.** The category comes from a structural
+container or a role class the app already owns — not a stored list of 225
+approved strings, which would freeze the day it was written. Adding a role means
+editing `ROLES` in `frontend/e2e/coherence.spec.js`: deliberate and reviewable.
+The gate cannot be quieted by sprinkling classes on markup.
+
+**Known gap, stated rather than buried:** detection only sees
+`text-transform: uppercase`. Text typed in capitals in source — a literal
+`DRAFT` — is not in the 284 and is not checked. Widening it changes the
+population, so it is recorded instead of silently scoped in.
