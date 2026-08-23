@@ -2,13 +2,13 @@
 
 State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `1d5237fed`, pushed and in sync · **Spec** v1.12 ·
+**Branch** `nz-glass` at `00d117a69`, pushed and in sync · **Spec** v1.12 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
 **All eight gates green, nothing skipped.**
 
 ```
-lint     OK  194 known, 0 new       tokens     OK  3 bindings, 5 collapses, 0 new
+lint     OK  190 known, 0 new       tokens     OK  3 bindings, 5 collapses, 0 new
 usage    OK  0 known, 0 new         a11y       OK  76 screen-themes, 28 baselined, 0 new
 contrast OK  54 pairs, 0 failed     visual     OK  0 differing
 surfaces OK  41 screens, 0 over 6   coherence  OK  38 screens, 0 violations, section headers ENFORCED
@@ -345,3 +345,54 @@ The gate cannot be quieted by sprinkling classes on markup.
 `text-transform: uppercase`. Text typed in capitals in source — a literal
 `DRAFT` — is not in the 284 and is not checked. Widening it changes the
 population, so it is recorded instead of silently scoped in.
+
+---
+
+## 10. RC18 closed — one avatar, and a rule against a fifth
+
+The audit said three forms. Measuring found **four**, and the extra one was
+invisible to source search because it has no name.
+
+| Form | Size | Radius | Fallback | Filter | Origin |
+|------|------|--------|----------|--------|--------|
+| `GAvatar` | `size` prop px | 9px | missing **and broken** image | none | component |
+| `.g-header__avatar` | fixed 34 | 9px | missing only | none | hand-rolled CSS |
+| Profile hand-rolled | fixed 72 | **0** | missing only | **grayscale** | open-coded Tailwind |
+| `EmployeeAvatar` | frappe-ui `sm`=20 `lg`=28 | 5–6px | frappe-ui's | **grayscale** | 3rd-party wrapper |
+
+`GAvatar` — the canonical one — rendered on **no production screen**. It served
+only the DEV-only design specimen while three non-canonical forms served every
+real screen.
+
+**`.m-avatar-sq` did not creep back — the treatment did.** The class exists only
+under `.reference/` and in comments recording it was not ported. But
+`Profile.vue` open-coded `h-[72px] w-[72px] object-cover grayscale`: zero radius
+plus desaturation, rebuilt by hand. No grep for "avatar" touches it. That is why
+the new rule finds avatars **by shape** — a small square box holding an image or
+one-to-two initials — rather than by class name.
+
+All three now compose `GAvatar`, sized by prop. It gained `decorative` so the
+header's Profile button is not announced twice.
+
+### What the rule fails on
+
+Run before any fix, it failed on exactly the two that render, and named the
+radius-0 one explicitly. After consolidation: `GAvatar` at 34/28/72px, one
+radius, zero violations.
+
+### The finding that outlasts RC18
+
+**The visual gate missed all of it.** Ten avatars on `notifications` went from a
+blank frappe-ui circle to a `?` in a 9px box and `toHaveScreenshot` passed —
+reproduced exactly: `1 passed`, `avatars=10`, `avatarsInsideMask=0`. At 390×844
+the 0.2% tolerance is a 658-pixel budget; ten glyph-and-corner changes came to
+roughly 600.
+
+**A re-baseline could not repair it either.** `--update-snapshots` defaults to
+`changed`, so a passing screen is never re-shot: under-tolerance means
+"unchanged", permanently. 26 baselines were silently stale. They were corrected
+by deleting the gate-owned files for the 13 avatar-bearing screens and
+re-shooting; the capture-only variants (`-bottom`, `-rt`) were restored
+untouched.
+
+A gate that compares is bounded by its threshold. A gate that asserts is not.
