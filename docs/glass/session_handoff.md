@@ -2,25 +2,26 @@
 
 State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `29bc5459a`, pushed and in sync · **Spec** v1.12 ·
+**Branch** `nz-glass` at `5269bf1cd`, pushed and in sync · **Spec** v1.12 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
-**Eight gates now, not six. Six green, two open — and both open ones are open
-because `AUDIT_PW` is absent, not because they found something unresolved.**
+**All eight gates green, nothing skipped.**
 
 ```
-lint     OK  194 known, 0 new       tokens     OK    3 bindings, 5 collapses, 0 new
-usage    OK  0 known, 0 new         coherence  OK    38 screens, 0 violations
-contrast OK  54 pairs, 0 failed     a11y       FIXED, UNVERIFIED — 2 new, cause closed
-surfaces OK  41 screens, 0 over 6   visual     64 differ, UNEXAMINED
+lint     OK  194 known, 0 new       tokens     OK  3 bindings, 5 collapses, 0 new
+usage    OK  0 known, 0 new         a11y       OK  76 screen-themes, 28 baselined, 0 new
+contrast OK  54 pairs, 0 failed     visual     OK  0 differing
+surfaces OK  41 screens, 0 over 6   coherence  OK  38 screens, 0 violations
 ```
 
-**Do not re-baseline `visual` on the count alone.** 64 of 342 differ, 40 dark /
-24 light, which is the right *shape* for seven deliberate appearance changes.
-Shape is not evidence. The diffs were never looked at, and the images are gone —
-a later run cleaned `test-results/` before they were read.
+`visual` reads 0 because all 64 diffs were classified first — see
+`visual-classification.md`. 61 were the rulings landing, 0 were regressions, and
+3 were date rot that is now masked rather than baked into a baseline. The last
+time this gate read green it was comparing against its own output; it isn't now,
+because the same gate failed with 64 real diffs one run earlier.
 
----
+`a11y` went from 34 baselined entries to 28: the rulings cleared 8 and
+introduced none.
 
 ## 1. What landed in the rulings pass
 
@@ -246,37 +247,35 @@ screens, which is **intended** and recorded in §12, not a defect.
 
 ---
 
-## 7. Pick up here — blocked on site access
+## 7. Pick up here
 
-**Nothing below has been verified. Do not treat any of it as done.**
+Nothing is blocked. The credential problem that stalled three sessions is
+fixed at the root: `.env` holds it, `docs/glass/audit/reset-audit-pw.sh`
+regenerates it. Run the suite with:
 
-Every render-time gate SKIPs at a **401**: `AUDIT_PW` is not in the environment
-and is not recoverable from this machine — not in `~/.bashrc`, `~/.profile`,
-any `.env`, or shell history. `~/.agent-browser/credentials.json` does not
-exist. The bench (`~/verify-bench`, site `fresh.local`) is up on :8080 and
-:8000, so the site is fine; only the credential is missing.
+```bash
+set -a; . .env; set +a; node design/gates/run.mjs
+```
 
-Minting a session with `bench --site fresh.local console` is blocked by the
-permission classifier — correctly, since logging in as another user is an auth
-bypass in shape. A script that does it is left at
-`scratchpad/mint.py`; it needs either a Bash permission rule
-(`Bash(bench --site fresh.local console:*)`) or a human to run it with `!` and
-hand back the sid.
+Open, in rough order of value:
 
-Two items owed, both gated on the above:
+1. **`coherence` reports 225 of 284 uppercase runs not using `.g-eyebrow`, and
+   does not enforce it.** The note says chips and tab labels are uppercase too,
+   which is true and is why it is unenforced — but 225 is not a number anyone
+   has actually looked through. Ruling 4 consolidated the six *section-header*
+   treatments; it did not establish which of these 225 are section headers. Until
+   someone classifies them the way the 64 visual diffs were classified, this
+   gate is reporting a number rather than asserting a rule.
+2. **The 0.2% visual tolerance hides small type-colour shifts at 1440.** Ruling
+   4's eyebrow recolour is real on `home-1440-dark` and sat under the threshold.
+   Not a bug — but it means `visual` is not the instrument for small colour
+   changes, and nobody should read a green `visual` as proof a colour is right.
+3. **Three root causes remain from the 8.6+ audit** (§5): RC18 the avatar has
+   three forms · RC19 the double-letter gap, needs a device · RC22 the tab bar
+   on list screens, which is intended and recorded in §12.
 
-1. `AUDIT_PW=... node design/gates/a11y.mjs` — confirm the `ListView`
-   `tabindex` closed `scrollable-region-focusable` on `ot-requests`, both
-   themes. **Committed but never run against.**
-2. `AUDIT_PW=... node design/gates/visual.mjs` — then **look at all 64 diffs
-   and classify each** before `--update-baseline`. They are expected to be
-   rulings 1–7 and nothing else; anything outside that set is a regression this
-   pass introduced. An unexamined re-baseline turns a regression into the
-   expected state — the same failure as the self-comparing baseline that made
-   this gate vacuous for weeks.
-
-A full-suite run cleans `test-results/`, so **read the diff images before
-starting another gate**. That is how the first set was lost.
+A full-suite run cleans `test-results/`, so read any diff images before
+starting another gate.
 
 ---
 

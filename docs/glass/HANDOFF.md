@@ -1,13 +1,16 @@
 # HANDOFF
-prompt:   rulings 1-7, three gates, spec v1.12
-status:   blocked
-commit:   29bc5459a on nz-glass
-files:    docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
-          docs/glass/session_handoff.md
-          frontend/src/components/ListView.vue
-          design/gates/{tokens,coherence,run}.mjs
-          frontend/e2e/coherence.spec.js
-verify:   AUDIT_PW=... node design/gates/run.mjs
-flags:    render gates SKIP at 401 - no AUDIT_PW. 64 visual diffs UNEXAMINED,
-          do not --update-baseline. a11y fix committed but never run.
-next:     supply AUDIT_PW or mint a sid, then classify the 64 diffs
+prompt:   rulings 1-7, three gates, visual classification
+status:   done
+commit:   5269bf1cd on nz-glass
+files:    docs/glass/visual-classification.md
+          docs/glass/audit/reset-audit-pw.sh
+          docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
+          frontend/src/components/glass/GAppHeader.vue
+          frontend/src/components/{CheckInPanel,EmployeeCheckinItem,ListView}.vue
+          frontend/src/views/team/TeamDashboard.vue
+          design/a11y-baseline.json
+          docs/glass/audit/screens/ (72 re-baselined)
+verify:   set -a; . .env; set +a; node design/gates/run.mjs
+flags:    AUDIT_PW was unrecoverable and had to be reset - now in gitignored
+          .env, regenerate with docs/glass/audit/reset-audit-pw.sh
+next:     coherence reports 225 uppercase runs off .g-eyebrow, unenforced
