@@ -1,4 +1,4 @@
-# HR Frappe · Glass — Implementation Specification v1.11
+# HR Frappe · Glass — Implementation Specification v1.12
 
 **Supersedes** v1.6, v1.5, v1.4, v1.3, v1.2, v1.1 (20 Aug 2026) and v1.0 (17 Aug 2026). The filename stays `…_v1.1.md`: it is referenced by CLAUDE.md, the build prompts and every HANDOFF, and a rename buys nothing. §0 carries the version.
 **Sources reconciled:** `HR_FRAPPE_Glass_Light_and_Dark_2.html` (mockup, governing) · `HR_FRAPPE_Glass_Implementation_Spec__1_.html` (v1.0) · `Nastyworldwide-Dev/hrms@nz-version-16` (target codebase).
@@ -67,6 +67,12 @@ sections had estimated.
 |---|---|---|
 | 4.1 | §12 Home: **balance grid removed**, **request panel added** | The mockup drew a balance grid the shipped Home has no data for and no call to fetch; building it is a feature (§1). The request panel is on the screen and the anatomy omitted it |
 | 4.2 | §12 gains a note: anatomies were transcribed from the mockup and **diverge in both directions**; the app governs SCOPE, the anatomy governs LAYOUT | Found while building batch 1. Unlikely to be the only one, so the rule is stated once rather than re-litigated per screen |
+
+### v1.12 — the spec contradicted itself on the light field
+
+| § | Ruling | Why |
+|---|--------|-----|
+| 3.2 | §3.2's **body** still required the field inside each page while the v1.11 change log recorded the opposite. The body is rewritten to the measurement: `contain: size layout style` creates no backdrop root, only `contain: paint` does | The two halves of the spec disagreed for a full version and the implementation followed the change log. A rule stated in one place and contradicted in another is not a rule |
 
 ### v1.11 — the rules the app needed and the spec never wrote
 
@@ -236,10 +242,20 @@ filter: blur(36px);   opacity: var(--blob-opacity);
 ### 3.1 Static in-app — not negotiable
 The drift animation in the mockup is a presentation device. Continuous animation of blurred layers behind `backdrop-filter` is the single most expensive thing this design can do to a mid-range Android. **The blobs do not move in the app.**
 
-### 3.2 The field lives inside the page — critical
-Chromium's `backdrop-filter` only filters its **own isolation group**. Any ancestor with `opacity`, `filter`, `transform`, `will-change` or `mix-blend-mode` becomes a backdrop root and the blur stops seeing through it.
+### 3.2 The field is owned by the shell, one instance — critical
+Chromium's `backdrop-filter` only filters its **own isolation group**. An ancestor that becomes a *backdrop root* stops the blur seeing through it. The properties that create one are `filter`, `opacity < 1`, a mask, and `contain: paint`.
 
-Ionic's page transitions animate `transform` and `opacity` on `.ion-page`. **Therefore the light field must be rendered inside each page's stacking context, beneath the content layer — never as a global background on `ion-app` or `body`.** A global field will render correctly in dev and turn to grey fog during and after every navigation.
+v1.0 through v1.10 read that list too widely and required the field **inside each page**, on the assumption that Ionic's transitions — which animate `transform` and `opacity` on `.ion-page` — would make every page a permanent backdrop root. **That was never measured, and it is wrong.** The per-page rule caused the defect it was meant to prevent: Ionic keeps three pages alive during a push, so three opaque fields painted at once and a human saw them overlap mid-transition.
+
+Measured before the field was moved:
+
+- Nothing between the shell and a glass surface carries `contain: paint`, a `transform`, or a `filter`. The ancestors carry **`contain: size layout style`**, which creates **no** backdrop root — `paint` is the only value in that property that does.
+- The only backdrop root a push creates is the outgoing page at `opacity: 0`, which is by definition not visible.
+- Peak simultaneous fields during a push: **3 → 1**. `backdrop-filter` measured intact throughout at `blur(20px) saturate(1.8)`.
+
+**Therefore the light field is rendered once, by the shell, above `<ion-router-outlet>`.** No page renders its own, and no page-level suppression is needed — with one field there is nothing to suppress.
+
+What would break this, and must be re-measured if introduced: `contain: paint` (as opposed to `size layout style`), a `filter`, a persistent `opacity < 1`, or a mask on `ion-app`, the router outlet, or any wrapper between them and a glass surface.
 
 ### 3.3 Blob placement constraint — replaces adaptive contrast
 Native Liquid Glass stays legible over anything because the OS re-samples the backdrop and adjusts the foreground. CSS cannot do this. Our substitute is that we control what sits behind the glass.
@@ -1059,4 +1075,4 @@ it.
 
 ---
 
-*HR Frappe · Glass — Implementation Specification v1.11 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
+*HR Frappe · Glass — Implementation Specification v1.12 · 21 August 2026 · NSTY Holding Sdn Bhd, Group People & Culture. Paired with `HR_FRAPPE_Glass_Light_and_Dark_2.html`. Where the two disagree the mockup governs, except for the eight exceptions recorded in §14.4.*
