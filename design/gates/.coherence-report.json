@@ -1,0 +1,1821 @@
+{
+  "home": {
+    "filled": [
+      {
+        "label": "Check In",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "dash-attendance": {
+    "filled": [],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "dash-leaves": {
+    "filled": [
+      {
+        "label": "Request a Leave",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "12px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "dash-expense-claims": {
+    "filled": [
+      {
+        "label": "Claim an Expense",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(108, 114, 123)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "dash-kpi": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "issues": {
+    "filled": [
+      {
+        "label": "Report an Issue",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "issues-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "issues-detail": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "hr-issue-board": {
+    "filled": [
+      {
+        "label": "Report an Issue",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "sop": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "team": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "12.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      }
+    ]
+  },
+  "more": {
+    "filled": [],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(135, 143, 155)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(11, 12, 16)",
+        "size": "10px"
+      }
+    ]
+  },
+  "profile": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": []
+  },
+  "notifications": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": []
+  },
+  "settings": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "change-password": {
+    "filled": [
+      {
+        "label": "Update Password",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "hr-contacts": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": []
+  },
+  "remote-approvals": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": true,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(237, 239, 243)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "invalid-employee": {
+    "filled": [
+      {
+        "label": "Go to Login",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": []
+  },
+  "attendance-requests": {
+    "filled": [
+      {
+        "label": "New",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "attendance-requests-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "attendance-requests-detail": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "shift-requests": {
+    "filled": [
+      {
+        "label": "New",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(237, 239, 243)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "shift-requests-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "shift-assignments": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(63, 92, 0)",
+        "size": "10px"
+      }
+    ]
+  },
+  "shift-assignments-detail": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "employee-checkins": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(63, 92, 0)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(63, 92, 0)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(63, 92, 0)",
+        "size": "10px"
+      }
+    ]
+  },
+  "expense-claims": {
+    "filled": [
+      {
+        "label": "New",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(237, 239, 243)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "expense-claims-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "leave-applications": {
+    "filled": [
+      {
+        "label": "New",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(237, 239, 243)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(0, 119, 100)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(180, 83, 9)",
+        "size": "10px"
+      }
+    ]
+  },
+  "leave-applications-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "leave-applications-detail": {
+    "filled": [],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(10, 12, 5)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "ot-requests": {
+    "filled": [
+      {
+        "label": "New",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": []
+  },
+  "ot-requests-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "replacement-leave": {
+    "filled": [
+      {
+        "label": "New Claim",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "replacement-leave-new": {
+    "filled": [
+      {
+        "label": "Save",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      }
+    ]
+  },
+  "login": {
+    "filled": [
+      {
+        "label": "Login",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": false,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      },
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  },
+  "forgot-password": {
+    "filled": [
+      {
+        "label": "Send Reset Link",
+        "fill": "brand",
+        "isGButton": true
+      }
+    ],
+    "hasBack": true,
+    "adHocEmpty": false,
+    "eyebrows": [
+      {
+        "usesClass": false,
+        "color": "rgb(84, 92, 104)",
+        "size": "10px"
+      }
+    ]
+  }
+}

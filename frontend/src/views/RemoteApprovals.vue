@@ -26,17 +26,11 @@
 							<div v-if="decided.loading && !decided.data" class="flex flex-col gap-3">
 								<div v-for="i in 3" :key="i" class="h-20 bg-ink-200 animate-pulse" />
 							</div>
-							<div
+							<GEmptyState
 								v-else-if="!decided.data || decided.data.length === 0"
-								class="flex flex-col gap-1 border-t-2 border-divider py-8 px-0.5"
-							>
-								<span class="font-sans font-extrabold text-sm text-inkbase">
-									{{ __("No decisions yet") }}
-								</span>
-								<span class="text-xs text-ink-600">
-									{{ __("Remote check-ins you approve or reject stay reviewable here.") }}
-								</span>
-							</div>
+								:title="__('No decisions yet')"
+								:body="__('Remote check-ins you approve or reject stay reviewable here.')"
+							/>
 							<div
 								v-else
 								v-for="req in decided.data"
@@ -76,17 +70,11 @@
 								<div v-for="i in 3" :key="i" class="h-28 bg-ink-200 animate-pulse" />
 							</div>
 
-							<div
+							<GEmptyState
 								v-else-if="!pending.data || pending.data.length === 0"
-								class="flex flex-col gap-1 border-t-2 border-divider py-8 px-0.5"
-							>
-								<span class="font-sans font-extrabold text-sm text-inkbase">
-									{{ __("Nothing to approve right now") }}
-								</span>
-								<span class="text-xs text-ink-600">
-									{{ __("Remote check-ins from your team will show up here.") }}
-								</span>
-							</div>
+								:title="__('Nothing to approve right now')"
+								:body="__('Remote check-ins from your team will show up here.')"
+							/>
 
 							<div
 								v-else
@@ -200,6 +188,7 @@
 </template>
 
 <script setup>
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"

@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const STRICT = process.argv.includes("--strict");
-const GATES = ["lint", "usage", "contrast", "surfaces", "a11y", "visual"];
+const GATES = ["lint", "usage", "contrast", "surfaces", "tokens", "a11y", "visual", "coherence"];
 
 const results = [];
 for (const gate of GATES) {
@@ -22,7 +22,7 @@ for (const gate of GATES) {
 	// visual ~114 — and a 6-minute cap SIGTERMed the visual gate with its output
 	// still buffered, so it reported FAIL with no reason printed. Static gates
 	// keep the short cap; anything that drives a browser gets 30 minutes.
-	const RENDER_GATES = new Set(["a11y", "visual"]);
+	const RENDER_GATES = new Set(["a11y", "visual", "coherence"]);
 	const res = spawnSync(process.execPath, [join(DIR, `${gate}.mjs`), ...(STRICT ? ["--strict"] : [])], {
 		encoding: "utf8",
 		timeout: RENDER_GATES.has(gate) ? 1_800_000 : 360_000,
@@ -40,6 +40,8 @@ for (const { gate, code, info } of results) {
 		: gate === "contrast" ? `${info.checked ?? "?"} pairs, ${info.failures ?? "?"} failed, ${info.skipped ?? 0} skipped`
 		: gate === "surfaces" ? `${info.screens ?? "?"} screens, ${info.over ?? "?"} over 6, flattening ${info.flattening === 0 ? "held" : "BROKEN"}`
 		: gate === "a11y" ? `${info.screens ?? "?"} screen-themes, ${info.known ?? 0} baselined, ${info.new ?? 0} new`
+		: gate === "coherence" ? `${info.screens ?? "?"} screens, ${info.violations ?? "?"} violation(s)`
+		: gate === "tokens" ? `${info.bindings ?? "?"} bindings, ${info.collapses ?? info.newCollapses ?? "?"} collapse(s)`
 		: gate === "visual" ? `${info.differing ?? "?"} screen(s) differ from baseline`
 		: `${info.status ?? "?"}`;
 	console.log(`${gate.padEnd(10)} ${(code === 0 ? "OK" : "FAIL").padEnd(7)} ${detail}`);
