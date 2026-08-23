@@ -28,10 +28,7 @@
 					</button>
 					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
 					     becomes "TODAY · SUN 23 AUG" overnight. -->
-					<span
-						class="font-sans font-extrabold text-card-title uppercase text-inkbase"
-						data-visual-mask
-					>
+					<span class="g-datenav__label" data-visual-mask>
 						{{ dayLabel }}
 					</span>
 					<button

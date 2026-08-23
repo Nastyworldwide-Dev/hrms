@@ -11,96 +11,172 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "SUNDAY, 23 AUGUST 2026",
+        "tag": "div",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": " Resolve ",
+        "tag": "span",
+        "cls": "g-badge g-badge--open shrink-0",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
-        "usesClass": false,
-        "color": "rgb(84, 92, 104)",
-        "size": "10.5px"
-      },
-      {
+        "text": "Quick Links",
+        "tag": "div",
+        "cls": "g-eyebrow mb-2.5",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Requests",
+        "tag": "div",
+        "cls": "g-eyebrow mb-4",
+        "category": "section",
+        "usesClass": true,
+        "color": "rgb(63, 92, 0)",
+        "size": "10.5px"
+      },
+      {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -113,111 +189,199 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "SUN",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "MON",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "TUE",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "WED",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "THU",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "FRI",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "SAT",
+        "tag": "span",
+        "cls": "g-cal__dow",
+        "category": "column-head",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Present",
+        "tag": "div",
+        "cls": "g-stat__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Half Day",
+        "tag": "div",
+        "cls": "g-stat__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Absent",
+        "tag": "div",
+        "cls": "g-stat__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "On Leave",
+        "tag": "div",
+        "cls": "g-stat__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Recent Attendance Requests",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Upcoming Shifts",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Recent Shift Requests",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Recent OT Requests",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -236,121 +400,217 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Leave Balance",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Casual Leave",
+        "tag": "div",
+        "cls": "g-balance__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Privilege Leave",
+        "tag": "div",
+        "cls": "g-balance__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Sick Leave",
+        "tag": "div",
+        "cls": "g-balance__label",
+        "category": "stat-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Replacement Leave",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "days available",
+        "tag": "div",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Claim",
+        "tag": "button",
+        "cls": "g-touch flex items-center justify-center border border-divider rounded-action te",
+        "category": "interactive",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "12px"
       },
       {
+        "text": "Recent Leaves",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Upcoming Holidays",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -369,51 +629,91 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Total Claimed",
+        "tag": "div",
+        "cls": "g-eyebrow text-accent-200",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Pending",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-eyebrow text-accent-700",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Recent Expenses",
+        "tag": "span",
+        "cls": "g-eyebrow !text-ink-600",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(108, 114, 123)",
         "size": "10.5px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -426,26 +726,46 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -464,41 +784,73 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Reported by you",
+        "tag": "span",
+        "cls": "g-eyebrow mt-2",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -517,31 +869,55 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Issue",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "What are you reporting?",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Urgency",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Details",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Describe the issue",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -560,66 +936,118 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention whitespace-nowrap",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Employee",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Employee Name",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Department",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Company",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Issue",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "What are you reporting?",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Urgency",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Status",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Leave Discrepancy",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Details",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Describe the issue",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -638,41 +1066,73 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Reported by you",
+        "tag": "span",
+        "cls": "g-eyebrow mt-2",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -685,26 +1145,46 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -717,51 +1197,91 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Today · Sun 23 Aug",
+        "tag": "span",
+        "cls": "g-datenav__label",
+        "category": "nav-label",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "12.5px"
       },
       {
+        "text": "Present",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "On Leave",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Not In Yet",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Absent",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
@@ -774,31 +1294,55 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Home",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Attend",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Leaves",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(135, 143, 155)",
         "size": "10px"
       },
       {
+        "text": "More",
+        "tag": "span",
+        "cls": "g-tabbar__label",
+        "category": "tabbar",
         "usesClass": false,
         "color": "rgb(11, 12, 16)",
         "size": "10px"
@@ -823,31 +1367,55 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Appearance",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Light",
+        "tag": "button",
+        "cls": "g-eyebrow g-touch flex-1 py-2 border-r border-divider last:border-r-0 bg-inkbase",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Dark",
+        "tag": "button",
+        "cls": "g-eyebrow g-touch flex-1 py-2 border-r border-divider last:border-r-0 bg-transpa",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "System",
+        "tag": "button",
+        "cls": "g-eyebrow g-touch flex-1 py-2 border-r border-divider last:border-r-0 bg-transpa",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Notifications",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Account",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -866,16 +1434,28 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Current Password *",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "New Password *",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Confirm New Password *",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -894,11 +1474,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Pending",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable g-seg__option--selected",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(237, 239, 243)",
         "size": "10px"
       },
       {
+        "text": "History",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -929,11 +1517,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Draft",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -952,46 +1548,82 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "From Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "To Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Shift",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "In Time",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Out Time",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Reason",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Explanation",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1004,66 +1636,118 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Employee",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Employee Name",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Department",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Company",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "From Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "To Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Shift",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "In Time",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Out Time",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Reason",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Explanation",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1082,11 +1766,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "My Requests",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable g-seg__option--selected",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(237, 239, 243)",
         "size": "10px"
       },
       {
+        "text": "Team Requests",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -1105,21 +1797,37 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Shift Type",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Approver",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "From Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "To Date",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -1132,6 +1840,10 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Submitted",
+        "tag": "span",
+        "cls": "g-badge g-chip--progress",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(63, 92, 0)",
         "size": "10px"
@@ -1144,56 +1856,100 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Active",
+        "tag": "span",
+        "cls": "g-badge g-chip--neutral whitespace-nowrap",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Employee Details",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Employee",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Employee Name",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Company",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Department",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Shift Details",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Shift Type",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Status",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Start Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "End Date",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -1206,26 +1962,46 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": " IN ",
+        "tag": "span",
+        "cls": "g-badge g-chip--progress",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(63, 92, 0)",
         "size": "10px"
       },
       {
+        "text": " OUT ",
+        "tag": "span",
+        "cls": "g-badge g-badge--open",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": " IN ",
+        "tag": "span",
+        "cls": "g-badge g-chip--progress",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(63, 92, 0)",
         "size": "10px"
       },
       {
+        "text": " OUT ",
+        "tag": "span",
+        "cls": "g-badge g-badge--open",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": " IN ",
+        "tag": "span",
+        "cls": "g-badge g-chip--progress",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(63, 92, 0)",
         "size": "10px"
@@ -1244,11 +2020,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "My Claims",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable g-seg__option--selected",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(237, 239, 243)",
         "size": "10px"
       },
       {
+        "text": "Team Claims",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -1267,31 +2051,55 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Expense Approver",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Currency",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Currency",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Exchange Rate",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Expenses",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1310,211 +2118,379 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "My Leaves",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable g-seg__option--selected",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(237, 239, 243)",
         "size": "10px"
       },
       {
+        "text": "Team Leaves",
+        "tag": "button",
+        "cls": "g-seg__option g-focusable",
+        "category": "segmented",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Approved",
+        "tag": "span",
+        "cls": "g-badge g-chip--success",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(0, 119, 100)",
         "size": "10px"
       },
       {
+        "text": "Open",
+        "tag": "span",
+        "cls": "g-badge g-chip--attention",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(180, 83, 9)",
         "size": "10px"
@@ -1533,41 +2509,73 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Leave Type",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Dates & Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "From Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "To Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Approval",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Leave Approver",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1580,81 +2588,145 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Rejected",
+        "tag": "span",
+        "cls": "g-badge g-chip--danger whitespace-nowrap",
+        "category": "chip",
         "usesClass": false,
         "color": "rgb(10, 12, 5)",
         "size": "10px"
       },
       {
+        "text": "Employee",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Employee Name",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Leave Type",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Company",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Department",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Dates & Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "From Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "To Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Total Leave Days",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Approval",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Leave Approver",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Posting Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Status",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1685,31 +2757,55 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "OT Date",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Claim",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Claimed Hours",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Explanation",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1728,11 +2824,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "August 2026 bank",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "My Claims",
+        "tag": "span",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1751,26 +2855,46 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Claim",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Days Claimed",
+        "tag": "span",
+        "cls": "after:content-['_*'] after:text-danger-ink g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Reason",
+        "tag": "h2",
+        "cls": "g-eyebrow",
+        "category": "section",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
       },
       {
+        "text": "Explanation",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Attachments",
+        "tag": "h2",
+        "cls": "g-eyebrow pb-4",
+        "category": "interactive",
         "usesClass": true,
         "color": "rgb(63, 92, 0)",
         "size": "10.5px"
@@ -1789,11 +2913,19 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Email",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
       },
       {
+        "text": "Password",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"
@@ -1812,6 +2944,10 @@
     "adHocEmpty": false,
     "eyebrows": [
       {
+        "text": "Email *",
+        "tag": "span",
+        "cls": "g-field__label",
+        "category": "field-label",
         "usesClass": false,
         "color": "rgb(84, 92, 104)",
         "size": "10px"

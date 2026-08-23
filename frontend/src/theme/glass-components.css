@@ -1080,6 +1080,19 @@ html[data-theme="dark"] .g-badge--open {
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink);
 }
+/* The label inside a date stepper — a CONTROL's current value, not a heading.
+   It was ad-hoc Tailwind with no role class, so nothing declared what it was and
+   the coherence gate could only read it as an undeclared section header. */
+.g-datenav__label {
+	font-family: var(--g-type-card-title-family);
+	font-size: var(--g-type-card-title-size);
+	font-weight: 800;
+	letter-spacing: var(--g-type-card-title-tracking);
+	line-height: var(--g-type-card-title-line-height);
+	text-transform: uppercase;
+	color: var(--g-ink);
+}
+
 .g-stat__label {
 	margin-top: 5px;
 	font-family: var(--g-type-micro-label-family);

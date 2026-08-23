@@ -6,7 +6,7 @@
 -->
 <template>
 	<div class="w-full">
-		<div class="g-quicklinks__title">{{ title || __("Quick Links") }}</div>
+		<div class="g-eyebrow mb-2.5">{{ title || __("Quick Links") }}</div>
 
 		<GListPanel :loading="loading" :rows="4" :empty="!loading && !props.items.length">
 			<template #empty>
@@ -59,14 +59,10 @@ const props = defineProps({
 })
 </script>
 
-<style scoped>
-.g-quicklinks__title {
-	margin-bottom: 10px;
-	font-family: var(--g-type-eyebrow-family);
-	font-size: var(--g-type-eyebrow-size);
-	font-weight: var(--g-type-eyebrow-weight);
-	letter-spacing: var(--g-type-eyebrow-tracking);
-	text-transform: uppercase;
-	color: var(--g-ink2);
-}
-</style>
+<!--
+	.g-quicklinks__title used to live here: five of the six eyebrow tokens copied
+	by hand, with the sixth — the colour — set to --ink2 instead of --accent-ink.
+	It read as an eyebrow in source and rendered grey next to olive section
+	headers on the same screen. §10's eyebrow is the treatment; a component does
+	not get its own copy of it.
+-->

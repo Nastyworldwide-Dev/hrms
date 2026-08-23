@@ -14,7 +14,7 @@
 // render-time gates.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, existsSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TAB_ROOTS } from "./coherence-rules.mjs";
@@ -76,11 +76,60 @@ for (const [screen, v] of Object.entries(P)) {
 }
 
 // ---- 4. one section-header treatment ----------------------------------------
-let eyebrowsTotal = 0, eyebrowsOff = 0;
+// This used to print "284 uppercase runs, 225 not using .g-eyebrow (reported,
+// not enforced)". That number asserted nothing. Uppercase is also how this app
+// draws chips, tab labels, field labels, stat labels and column heads, so most
+// of the 225 was correct — and the rule it gestured at was never tested. It hid
+// a real defect for fifty prompts: .g-quicklinks__title copied five of the six
+// eyebrow tokens into a component's scoped block and set the sixth, the colour,
+// to --ink2. On `home`, "QUICK LINKS" rendered rgb(84,92,104) while "REQUESTS"
+// two sections below rendered rgb(63,92,0) — same role, same size, same screen.
+//
+// Now: the spec classifies every run by DECLARED role. Section headers are
+// enforced. The other categories are baselined BY CATEGORY, so a chip becoming
+// a heading moves a number that is being watched, instead of vanishing into a
+// total.
+const catTotal = {};
+const catOff = {};
+const sectionOffenders = new Map();
+let eyebrowsTotal = 0;
 for (const [screen, v] of Object.entries(P)) {
 	for (const e of v.eyebrows || []) {
 		eyebrowsTotal++;
-		if (!e.usesClass) eyebrowsOff++;
+		const c = e.category || "section";
+		catTotal[c] = (catTotal[c] || 0) + 1;
+		if (!e.usesClass) {
+			catOff[c] = (catOff[c] || 0) + 1;
+			if (c === "section") {
+				const key = `${e.text} <${e.tag}> ${e.cls}`;
+				if (!sectionOffenders.has(key)) sectionOffenders.set(key, { ...e, screens: [] });
+				sectionOffenders.get(key).screens.push(screen);
+			}
+		}
+	}
+}
+
+for (const [key, o] of sectionOffenders) {
+	const where = o.screens.length > 3 ? `${o.screens.slice(0, 3).join(", ")} +${o.screens.length - 3}` : o.screens.join(", ");
+	fail.push(
+		`section header "${o.text}" does not use .g-eyebrow — <${o.tag} class="${o.cls}"> on ${where}. ` +
+			`Either it is a section header (use .g-eyebrow) or it has a different role (declare it in ROLES)`
+	);
+}
+
+// Per-category baseline. Counts, not identities: identities would freeze at the
+// moment they were written and rot from the next component onward.
+const CAT_BASELINE = join(ROOT, "design", "eyebrow-baseline.json");
+const shape = { total: catTotal, withoutEyebrow: catOff };
+if (process.argv.includes("--update-baseline")) {
+	writeFileSync(CAT_BASELINE, JSON.stringify(shape, null, "\t") + "\n");
+	console.log(`[coherence] category baseline updated`);
+} else if (existsSync(CAT_BASELINE)) {
+	const prev = JSON.parse(readFileSync(CAT_BASELINE, "utf8"));
+	for (const c of new Set([...Object.keys(prev.total || {}), ...Object.keys(catTotal)])) {
+		const was = prev.total?.[c] || 0;
+		const now = catTotal[c] || 0;
+		if (was !== now) note.push(`category ${c}: ${was} -> ${now} run(s)`);
 	}
 }
 
@@ -90,7 +139,12 @@ if (fail.length) {
 	for (const f of fail) console.log(`  ${f}`);
 }
 for (const n of note) console.log(`[coherence] note: ${n}`);
-console.log(`[coherence] ${screens} screens · ${eyebrowsTotal} uppercase runs, ${eyebrowsOff} not using .g-eyebrow (reported, not enforced — chips and tab labels are uppercase too)`);
+const catLine = Object.entries(catTotal)
+	.sort((a, b) => b[1] - a[1])
+	.map(([c, n]) => `${c} ${n}${catOff[c] ? ` (${catOff[c]} bare)` : ""}`)
+	.join(" · ");
+console.log(`[coherence] ${screens} screens · ${eyebrowsTotal} uppercase runs by declared role: ${catLine}`);
+console.log(`[coherence] section headers enforced: ${catTotal.section || 0} found, ${catOff.section || 0} not using .g-eyebrow`);
 
 if (fail.length) {
 	console.log(`GATE_RESULT ${JSON.stringify({ gate: "coherence", status: "fail", screens, violations: fail.length })}`);

@@ -91,7 +91,48 @@ test("coherence: profile every screen", async () => {
 						(e) => vis(e) && /^back$/i.test((e.getAttribute("aria-label") || "").trim())
 					)
 
-					// section headers: anything uppercase and small enough to read as one
+					// Small uppercase text runs, CLASSIFIED — not counted.
+					//
+					// Reporting "225 uppercase runs, 225 not using .g-eyebrow" asserts
+					// nothing: uppercase is also how this app draws chips, badges, tab
+					// labels and button text, so most of that number is correct and the
+					// rule it was gesturing at ("a SECTION HEADER uses .g-eyebrow") was
+					// never actually tested. A gate that reports a number instead of
+					// asserting a rule is the shape that lets a defect read green.
+					//
+					// The category is derived HERE, from the DOM, on every run — not
+					// stored as a list of 225 approved strings, which would freeze at
+					// the moment it was written and rot from the next component onward.
+					// Anything that is not one of the known non-header roles is a
+					// section header and must carry .g-eyebrow.
+					// A role is DECLARED, never inferred from the words. Each entry is a
+					// structural container or a role class the app already owns, so
+					// adding one is a deliberate, reviewable edit here — the gate cannot
+					// be quieted by sprinkling arbitrary classes on the markup.
+					//
+					// Order matters: a chip inside a button is a chip.
+					const ROLES = [
+						["tabbar", "ion-tab-bar, .g-tabbar"],
+						["segmented", ".g-seg, ion-segment, .g-seg__option"],
+						["chip", ".g-tag, .g-status-chip, .g-badge, [class*='chip'], [class*='badge'], [class*='status']"],
+						// labels ONE control, not a group — §10's eyebrow is the group treatment
+						["field-label", ".g-field__label"],
+						// labels ONE number
+						["stat-label", ".g-stat__label, .g-balance__label"],
+						// labels a COLUMN
+						["column-head", ".g-cal__dow, th, thead, [role='columnheader']"],
+						// the label inside a date stepper — a control, not a heading
+						["nav-label", ".g-datenav__label"],
+						["interactive", "button, [role='button'], a[href], summary, label, .g-btn"],
+						["header-meta", ".g-header__kicker, .g-header, ion-header"],
+					]
+					const classify = (e) => {
+						for (const [role, sel] of ROLES) {
+							if (e.closest(sel)) return role
+						}
+						return "section"
+					}
+
 					const eyebrows = [...document.querySelectorAll("*")]
 						.filter((e) => {
 							if (!vis(e)) return false
@@ -100,11 +141,19 @@ test("coherence: profile every screen", async () => {
 							const cs = getComputedStyle(e)
 							return cs.textTransform === "uppercase" && parseFloat(cs.fontSize) <= 13
 						})
-						.map((e) => ({
-							usesClass: (e.className || "").toString().includes("g-eyebrow"),
-							color: getComputedStyle(e).color,
-							size: getComputedStyle(e).fontSize,
-						}))
+						.map((e) => {
+							const cs = getComputedStyle(e)
+							const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join(" ")
+							return {
+								text: own.slice(0, 40),
+								tag: e.tagName.toLowerCase(),
+								cls: (e.className || "").toString().slice(0, 80),
+								category: classify(e),
+								usesClass: (e.className || "").toString().split(/\s+/).includes("g-eyebrow"),
+								color: cs.color,
+								size: cs.fontSize,
+							}
+						})
 
 					return {
 						filled,

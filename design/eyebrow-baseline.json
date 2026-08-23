@@ -1,0 +1,23 @@
+{
+	"total": {
+		"chip": 78,
+		"column-head": 7,
+		"field-label": 72,
+		"interactive": 13,
+		"nav-label": 1,
+		"section": 48,
+		"segmented": 8,
+		"stat-label": 7,
+		"tabbar": 50
+	},
+	"withoutEyebrow": {
+		"chip": 78,
+		"column-head": 7,
+		"field-label": 72,
+		"interactive": 1,
+		"nav-label": 1,
+		"segmented": 8,
+		"stat-label": 7,
+		"tabbar": 50
+	}
+}
