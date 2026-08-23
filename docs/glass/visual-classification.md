@@ -72,3 +72,77 @@ so the gate never reported it. At 1440×900 the threshold is ~2,500px and the
 label is ~300px. The tolerance is correct for antialiasing, but it means the
 visual gate is not the instrument for small type-colour changes — the contrast
 and token gates are.
+
+---
+
+# Addendum — the 225 uppercase runs, classified
+
+Same method, applied to the number the coherence gate was reporting instead of
+asserting. `284 uppercase runs, 225 not using .g-eyebrow (reported, not
+enforced)` is not a finding; it is a refusal to make one.
+
+## The split, by declared role
+
+| Category | Runs | Bare | Is it a section header? |
+|----------|-----:|-----:|-------------------------|
+| chip | 78 | 78 | No — status/badge text |
+| field-label | 72 | 72 | No — labels ONE control |
+| tabbar | 50 | 50 | No — tab labels |
+| **section** | **48** | **0** | **Yes — enforced** |
+| interactive | 13 | 1 | No — button text |
+| segmented | 8 | 8 | No — segmented options |
+| column-head | 7 | 7 | No — calendar day-of-week |
+| stat-label | 7 | 7 | No — labels ONE number |
+| nav-label | 1 | 1 | No — a date stepper's value |
+
+So 236 of the 284 were correct all along, and the 225 was mostly noise hiding a
+signal of two.
+
+## What it caught
+
+**`.g-quicklinks__title` — a seventh section-header treatment.** It lived in
+`QuickLinks.vue`'s `<style scoped>` block and copied five of the six eyebrow
+tokens by hand — family, size, weight, tracking, transform — then set the sixth,
+the colour, to `--ink2`. Measured on `home`:
+
+```
+'Quick Links'  g-quicklinks__title  rgb(84, 92, 104)  10.5px   grey
+'Requests'     g-eyebrow            rgb(63, 92, 0)    10.5px   accent-ink
+```
+
+Same screen, same role, same size, two colours. Ruling 4 consolidated six
+treatments and missed this one **because it reads as an eyebrow in source** —
+the tokens are right there. Only the rendered colour gives it away, and only
+when compared against a sibling header on the same screen. That is a
+cross-screen/cross-element question, which is exactly what gate 8 exists for and
+exactly what a count cannot ask.
+
+**The `team` date-stepper label** carried no role class at all — ad-hoc
+`font-sans font-extrabold text-card-title uppercase text-inkbase`. Nothing
+declared what it was, so nothing could check it. Moved to `.g-datenav__label`
+in the theme layer, reproducing the previous appearance exactly (`team` did not
+move a pixel in the visual gate, which is the proof).
+
+## Why the rule is derived, not listed
+
+The category is computed **in-page on every run** from the DOM — a structural
+container (`ion-tab-bar`, `.g-seg`) or a role class the app already owns
+(`.g-field__label`, `.g-stat__label`, `.g-cal__dow`). It is not a stored list of
+225 approved strings, which would have frozen on the day it was written and
+rotted from the next component onward — the same failure as a baseline nobody
+re-derives.
+
+Adding a role means editing `ROLES` in `frontend/e2e/coherence.spec.js`, which
+is a deliberate and reviewable act. The gate cannot be quieted by sprinkling
+classes on markup.
+
+The remaining eight categories are baselined **by category** in
+`design/eyebrow-baseline.json`, so a chip becoming a heading moves a number
+someone is watching instead of disappearing into a total.
+
+## Known gap
+
+Detection only catches `text-transform: uppercase`. Text typed in capitals in
+the source — `DRAFT` written literally — is not in the 284 and is not checked.
+Widening it would change the population; it is recorded here rather than
+silently left out.
