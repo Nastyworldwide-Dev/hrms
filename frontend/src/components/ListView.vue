@@ -44,9 +44,16 @@
 	<ion-content>
 		<GPullRefresh @refresh="handleRefresh" />
 
+		<!-- tabindex="0" so a keyboard can reach the scroll. axe's
+		     scrollable-region-focusable fires when a scrollable box has no
+		     focusable child — which happens exactly when the list is EMPTY, so it
+		     only surfaced once the empty state stopped carrying a button. A
+		     keyboard user could not scroll the region at all. -->
 		<div
 			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto"
 			ref="scrollContainer"
+			tabindex="0"
+			:aria-label="pageTitle"
 			@scroll="() => handleScroll()"
 		>
 			<div class="w-full">

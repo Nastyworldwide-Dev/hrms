@@ -891,7 +891,7 @@
   "remote-approvals": {
     "filled": [],
     "hasBack": true,
-    "adHocEmpty": true,
+    "adHocEmpty": false,
     "eyebrows": [
       {
         "usesClass": false,
