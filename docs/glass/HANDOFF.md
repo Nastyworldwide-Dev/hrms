@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   rulings 1-7 + three gates
-status:   partial
-commit:   f33af0c08 on nz-glass
-files:    frontend/src/components/glass/{GPage,GIconButton,GLightField}.vue
-          frontend/src/App.vue
-          frontend/tailwind.config.js
-          frontend/src/views/attendance/Dashboard.vue
-          frontend/src/components/{FormView,ListView}.vue
+prompt:   rulings 1-7, three gates, spec v1.12
+status:   blocked
+commit:   29bc5459a on nz-glass
+files:    docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md
+          docs/glass/session_handoff.md
+          frontend/src/components/ListView.vue
           design/gates/{tokens,coherence,run}.mjs
           frontend/e2e/coherence.spec.js
-          design/gates/coherence-rules.mjs
 verify:   AUDIT_PW=... node design/gates/run.mjs
-flags:    visual 64 diffs unexamined and a11y fix unverified - AUDIT_PW absent, render gates SKIP
-next:     re-export AUDIT_PW, inspect the 64 diffs, re-baseline visual
+flags:    render gates SKIP at 401 - no AUDIT_PW. 64 visual diffs UNEXAMINED,
+          do not --update-baseline. a11y fix committed but never run.
+next:     supply AUDIT_PW or mint a sid, then classify the 64 diffs

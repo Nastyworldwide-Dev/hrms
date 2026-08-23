@@ -2,7 +2,7 @@
 
 State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `57121085d`, pushed and in sync · **Spec** v1.11 ·
+**Branch** `nz-glass` at `29bc5459a`, pushed and in sync · **Spec** v1.12 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
 **Eight gates now, not six. Six green, two open — and both open ones are open
@@ -235,17 +235,67 @@ screens, which is **intended** and recorded in §12, not a defect.
 
 ---
 
-## 7. Pick up here
+## 7. Pick up here — blocked on site access
 
-Two items, both blocked on the same thing — `AUDIT_PW` is not in the shell, so
-every render-time gate SKIPs at a 401 rather than failing loudly.
+**Nothing below has been verified. Do not treat any of it as done.**
+
+Every render-time gate SKIPs at a **401**: `AUDIT_PW` is not in the environment
+and is not recoverable from this machine — not in `~/.bashrc`, `~/.profile`,
+any `.env`, or shell history. `~/.agent-browser/credentials.json` does not
+exist. The bench (`~/verify-bench`, site `fresh.local`) is up on :8080 and
+:8000, so the site is fine; only the credential is missing.
+
+Minting a session with `bench --site fresh.local console` is blocked by the
+permission classifier — correctly, since logging in as another user is an auth
+bypass in shape. A script that does it is left at
+`scratchpad/mint.py`; it needs either a Bash permission rule
+(`Bash(bench --site fresh.local console:*)`) or a human to run it with `!` and
+hand back the sid.
+
+Two items owed, both gated on the above:
 
 1. `AUDIT_PW=... node design/gates/a11y.mjs` — confirm the `ListView`
    `tabindex` closed `scrollable-region-focusable` on `ot-requests`, both
-   themes. The fix is committed but has never been run against.
-2. `AUDIT_PW=... node design/gates/visual.mjs` — then **look at the 64 diffs**
-   before `--update-baseline`. They are expected to be rulings 1–7 and nothing
-   else; anything outside that set is a regression this pass introduced.
+   themes. **Committed but never run against.**
+2. `AUDIT_PW=... node design/gates/visual.mjs` — then **look at all 64 diffs
+   and classify each** before `--update-baseline`. They are expected to be
+   rulings 1–7 and nothing else; anything outside that set is a regression this
+   pass introduced. An unexamined re-baseline turns a regression into the
+   expected state — the same failure as the self-comparing baseline that made
+   this gate vacuous for weeks.
 
-Note that a full-suite run cleans `test-results/`, so read the diff images
-before starting another gate.
+A full-suite run cleans `test-results/`, so **read the diff images before
+starting another gate**. That is how the first set was lost.
+
+---
+
+## 8. The spec was arguing with itself
+
+Found while re-examining §3.2, and worth more than the ruling that surfaced it.
+
+§0's v1.11 change log recorded the light field as **shell-owned, one
+instance**. §3.2's *body* still read "the light field must be rendered inside
+each page's stacking context — never as a global background on `ion-app` or
+`body`." Opposite rules, same document, one version apart. The implementation
+followed the change log; anyone reading §3.2 top-down would have "fixed" the
+app back into the defect.
+
+The old rule rested on one unmeasured assumption: that Ionic's `transform`/
+`opacity` transitions make every page a permanent backdrop root. What is
+actually true — measured, not read:
+
+- Backdrop roots come from `filter`, `opacity < 1`, a mask, and `contain:
+  paint`. The ancestors here carry **`contain: size layout style`**, which
+  creates none.
+- The only backdrop root a push creates is the outgoing page at `opacity: 0`,
+  which is not visible.
+- Peak simultaneous fields during a push **3 → 1**; `backdrop-filter` intact at
+  `blur(20px) saturate(1.8)`.
+
+So the per-page rule prevented a blur failure that cannot happen, and caused a
+real one instead — three opaque fields painting at once during a push, which a
+human saw. Shell ownership is correct and is what ships (`App.vue:15`;
+`GLightField.vue` has no suppression logic and needs none — with one field
+there is nothing to suppress). §3.2 is rewritten to the measurement and now
+names what *would* break it, so the next person re-measures instead of
+re-assuming. Spec **v1.12**.
