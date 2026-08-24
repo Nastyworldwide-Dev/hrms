@@ -400,3 +400,78 @@ re-shooting; the capture-only variants (`-bottom`, `-rt`) were restored
 untouched.
 
 A gate that compares is bounded by its threshold. A gate that asserts is not.
+
+---
+
+## 11. The visual tolerance, measured rather than assumed
+
+RC18 changed the avatar on 26 screens and the gate passed. The old bound was
+`maxDiffPixelRatio: 0.002`, justified by a comment that was never tested:
+*"antialiasing and font hinting move a few pixels between runs; a real layout
+regression moves thousands."* Both halves are wrong here.
+
+**Noise, measured twice and agreeing: 0 px.** A reload-to-reload comparison of
+the same page reports zero differing pixels, and re-shooting every baseline
+across separate runs produces byte-identical PNGs. pixelmatch already runs
+`includeAA:false`, so it discounts anti-aliased edges before counting. There was
+no noise to budget for.
+
+**Signal, measured:**
+
+| change | px |
+|--------|---:|
+| header avatar initial 11.5px → 14px | 34 |
+| ten avatars, blank circle → 9px box | 74 |
+| header avatar **plus a back control appearing** | 648 |
+| profile avatar, radius 0 → 9px, 72px box | 4661 |
+
+The budget was 658 at 390×844. The first three passed — including `sop`, which
+was missing an **entire back control** and came in ten pixels under the line.
+
+**A ratio is the wrong measure.** It scales the budget with viewport AREA, while
+a UI element's pixel footprint is viewport-independent: the same glyph is ~34px
+at 390×844 and ~34px at 1440×900, where the budget quadruples to 2,592. The
+instrument was least sensitive exactly where the screen was largest — and 24 of
+the 30 further stale baselines this exposed are `1440-dark`.
+
+Now `maxDiffPixels: 20`: an order of magnitude above measured noise, below the
+smallest measured real change. Playwright takes `Math.min()` of the two limits,
+so an absolute bound binds everywhere; the ratio is dropped rather than kept as
+a decorative second bound that can never fire. **Per-region was considered and
+rejected** — with noise at zero and each screen compared independently, the
+failure mode (a small element changing on many screens) is already caught; a
+region rule would add machinery for no signal.
+
+### Three things had to change for 20 to be usable
+
+- **`--update-snapshots=all`**, not the bare flag, which presets to `changed`
+  and re-shoots only baselines that FAILED. Under-tolerance meant "unchanged",
+  so a drifted baseline could never be corrected — which is why RC18's 26 stayed
+  stale through a re-baseline meant to fix them.
+- **Masked elements are hidden, not masked.** Playwright's mask paints a box
+  sized to the element, so a masked date whose text length changed moved the box
+  with it. `visibility:hidden` paints nothing, so width no longer matters.
+- **`settle()` waits for webfonts** and explicitly loads every face the page
+  uses. `document.fonts.ready` alone is not enough: a face is only requested
+  once something needs it.
+
+`login` keeps a **measured** per-screen override of 40: its "HR" logo mark
+rasterises inconsistently — 28px in one render of five, surviving every font
+wait. The number is what was measured, not what made the red go away, and the
+cost stays on the one screen.
+
+### Verified by forcing the failure
+
+The header avatar was reverted to its pre-RC18 hand-rolled form and the gate
+**failed on 22 screens** — every screen carrying a header avatar, both themes,
+the exact change that used to pass silently. Restored, and green again on two
+consecutive runs.
+
+### What the tighter bound immediately caught
+
+`.g-eyebrow` sets a colour, and `.g-eyebrow` and Tailwind's `.text-ground` are
+both one class deep — so stylesheet order decided, and the theme layer loads
+later. The settings theme selector asked for light type on a near-black fill and
+rendered accent-ink on ink instead, about 1.6:1. Ruling 4's consolidation had put
+an eyebrow on a control that inverts its own colour. Type and colour are now
+separate: `.g-eyebrow-type` carries the type, `.g-eyebrow` adds the colour.

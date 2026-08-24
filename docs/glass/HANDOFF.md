@@ -1,16 +1,15 @@
 # HANDOFF
-prompt:   RC18 - the avatar has three forms
+prompt:   fix the visual gate's tolerance before desktop
 status:   done
-commit:   8cfec7f6e on nz-glass
-files:    frontend/src/components/glass/{GAvatar,GAppHeader}.vue
-          frontend/src/components/EmployeeAvatar.vue
-          frontend/src/views/Profile.vue
-          frontend/src/theme/glass-components.css
-          frontend/e2e/coherence.spec.js
-          design/gates/coherence.mjs
-          design/lint-baseline.json
-          docs/glass/audit/screens/ (28 re-baselined)
+commit:   01e334499 on nz-glass
+files:    frontend/e2e/playwright.config.js  (ratio -> maxDiffPixels 20)
+          frontend/e2e/visual.spec.js        (hide, not mask; login override)
+          frontend/e2e/screens.mjs           (settle waits for webfonts)
+          design/gates/visual.mjs            (--update-snapshots=all)
+          frontend/src/theme/glass-components.css (eyebrow type/colour split)
+          frontend/src/views/AppSettings.vue
+          docs/glass/audit/screens/ (38 re-baselined)
 verify:   set -a; . ./.env; set +a; node design/gates/run.mjs
-flags:    visual MISSED this - 26 baselines stale under maxDiffPixelRatio, and
-          --update-snapshots=changed could not correct them
-next:     RC19 double-letter gap needs a device - consider visual tolerance
+flags:    30 MORE stale baselines surfaced, 24 of them 1440-dark. lint's
+          colour rule counts literals inside comments.
+next:     desktop - RC19 double-letter gap still needs a device
