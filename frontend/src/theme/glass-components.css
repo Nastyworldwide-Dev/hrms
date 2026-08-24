@@ -356,7 +356,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
    are both one class deep, so stylesheet order decides which wins — and the
    theme loads later. The settings theme selector asked for `text-ground` on its
    selected option (light type on a near-black fill) and rendered
-   rgb(63,92,0) instead: accent-ink on ink.
+   accent-ink on ink instead (63/92/0 on 16/22/34, about 1.6:1).
    A section header wants both halves; a control wants the type only. */
 .g-eyebrow,
 .g-eyebrow-type {
