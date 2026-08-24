@@ -18,6 +18,7 @@
   "distance_m",
   "radius_m",
   "overshoot_m",
+  "accuracy_m",
   "column_break_2",
   "latitude",
   "longitude",
@@ -89,7 +90,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Reason",
-   "options": "outside_radius\nno_shift_location\nno_radius",
+   "options": "outside_radius\nno_shift_location\nno_radius\nimprecise_location",
    "reqd": 1,
    "read_only": 1
   },
@@ -117,6 +118,14 @@
    "fieldname": "overshoot_m",
    "fieldtype": "Float",
    "label": "Overshoot (m)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "How sure the device was about the coordinates it sent (metres, 95% confidence). 0 when the punch carried no estimate, e.g. a biometric device or a Desk entry. A rejection with a large value here is a measurement problem, not an attendance problem.",
+   "fieldname": "accuracy_m",
+   "fieldtype": "Float",
+   "label": "Device Accuracy (m)",
    "precision": "2",
    "read_only": 1
   },

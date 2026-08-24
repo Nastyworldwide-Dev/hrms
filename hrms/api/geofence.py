@@ -47,6 +47,14 @@ def _ok() -> dict:
 
 
 def _strict_block(reason, shift_type, shift_loc_name, ctx) -> dict:
+	logger.info(
+		"[geofence.api] strict block reason=%s shift=%s location=%s distance=%s accuracy=%s",
+		reason,
+		shift_type,
+		shift_loc_name,
+		ctx.get("distance_m"),
+		ctx.get("accuracy_m"),
+	)
 	return {
 		"ok": False,
 		"mode": "strict_block",
@@ -56,11 +64,12 @@ def _strict_block(reason, shift_type, shift_loc_name, ctx) -> dict:
 		"distance_m": ctx.get("distance_m"),
 		"radius_m": ctx.get("radius_m"),
 		"overshoot_m": ctx.get("overshoot_m"),
+		"accuracy_m": ctx.get("accuracy_m"),
 	}
 
 
 @frappe.whitelist()
-def check_geofence(employee, log_type, latitude=None, longitude=None, time=None):
+def check_geofence(employee, log_type, latitude=None, longitude=None, time=None, accuracy=None):
 	"""Preflight a check-in: would inserting it right now succeed under
 	the Shift Type's geofence policy?
 
@@ -70,6 +79,11 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 		latitude, longitude: caller's current GPS reading
 		time: optional ISO datetime; defaults to now. Used to resolve which
 		      shift assignment is active.
+		accuracy: the device's own error estimate for that reading, in metres
+		      (`GeolocationCoordinates.accuracy`). Optional, and omitting it
+		      only makes the preview stricter than the insert — but a preview
+		      stricter than the insert is exactly the drift this endpoint
+		      exists to prevent, so the SPA always sends it.
 	"""
 	# Everything below reads through raw SQL and `db.get_value`, both of which
 	# bypass the document permission layer — so before this line, nothing in the
@@ -85,12 +99,13 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 	_ensure_own_employee_or_permitted(employee)
 
 	logger.info(
-		"[geofence.api] preflight employee=%s log_type=%s lat=%s lng=%s time=%s",
+		"[geofence.api] preflight employee=%s log_type=%s lat=%s lng=%s time=%s accuracy=%s",
 		employee,
 		log_type,
 		latitude,
 		longitude,
 		time,
+		accuracy,
 	)
 
 	if not employee:
@@ -144,18 +159,13 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None)
 		has_shift_location=bool(shift_loc_name and loc),
 		radius_m=radius_m,
 		distance_m=distance_m,
+		accuracy_m=accuracy,
 	)
 	if decision is None:
 		return _ok()
 
 	action, ctx = decision
 	if action == "throw":
-		logger.info(
-			"[geofence.api] strict block employee=%s reason=%s distance=%s",
-			employee,
-			ctx.get("reason"),
-			ctx.get("distance_m"),
-		)
 		return _strict_block(ctx.get("reason"), row.shift_type, shift_loc_name, ctx)
 
 	# Strict path should not return require_remote (helper only emits it for

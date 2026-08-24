@@ -8,6 +8,8 @@ Run with:
 import unittest
 
 from hrms.utils.geofence import (
+	ACCURACY_ALLOWANCE_CAP_M,
+	REASON_IMPRECISE_LOCATION,
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
 	REASON_OUTSIDE_RADIUS,
@@ -84,6 +86,115 @@ class TestEvaluateGeofence(unittest.TestCase):
 		action, ctx = evaluate_geofence(False, has_shift_location=True, radius_m=100, distance_m=None)
 		self.assertEqual(action, "require_remote")
 		self.assertEqual(ctx["reason"], REASON_OUTSIDE_RADIUS)
+
+
+class TestAccuracyAllowance(unittest.TestCase):
+	"""The device's own error estimate is part of the reading.
+
+	A 100 m fence and a handset that says "somewhere within 40 m of here" do
+	not disagree when the reported point is 120 m out — the employee can be
+	standing on the doorstep and produce exactly that. Before the allowance
+	existed, that punch was flagged for a manager to approve, every morning,
+	for every employee whose phone was indoors.
+	"""
+
+	def test_reading_inside_its_own_error_bar_is_allowed(self):
+		# 120 m out, +/-40 m: the doorstep is inside the error bar. Was
+		# require_remote (lenient) and a hard block (strict) before.
+		self.assertIsNone(
+			evaluate_geofence(False, has_shift_location=True, radius_m=100, distance_m=120, accuracy_m=40)
+		)
+		self.assertIsNone(
+			evaluate_geofence(True, has_shift_location=True, radius_m=100, distance_m=120, accuracy_m=40)
+		)
+
+	def test_allowance_does_not_excuse_a_genuine_miss(self):
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=500, accuracy_m=40
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["reason"], REASON_OUTSIDE_RADIUS)
+		# overshoot stays the raw distance-over-radius; the slack is reported
+		# separately so an approver can see how firm the number is.
+		self.assertEqual(ctx["overshoot_m"], 400)
+		self.assertEqual(ctx["accuracy_m"], 40)
+
+	def test_boundary_of_the_allowance_is_inside(self):
+		self.assertIsNone(
+			evaluate_geofence(True, has_shift_location=True, radius_m=100, distance_m=140, accuracy_m=40)
+		)
+
+	def test_unknown_accuracy_behaves_exactly_as_before(self):
+		# Biometric device punches and Desk-entered rows carry no accuracy.
+		# They must keep the pre-allowance decision, not be handed free slack.
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=120, accuracy_m=None
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["accuracy_m"], 0.0)
+
+	# --- Readings too coarse to place anyone ---
+
+	def test_coarse_reading_throws_under_strict(self):
+		# A wired desktop geolocates by IP and reports kilometres.
+		action, ctx = evaluate_geofence(
+			True, has_shift_location=True, radius_m=100, distance_m=3000, accuracy_m=5000
+		)
+		self.assertEqual(action, "throw")
+		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+		self.assertEqual(ctx["accuracy_m"], 5000)
+
+	def test_coarse_reading_routes_to_a_human_under_lenient(self):
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=3000, accuracy_m=5000
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+
+	def test_coarse_reading_cannot_buy_its_way_inside(self):
+		# The direction that gets abused: a city-centre IP fix lands "inside"
+		# a nearby site's fence by luck. Being unplaceable is not presence.
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=10, accuracy_m=5000
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+
+	def test_cap_itself_still_buys_allowance(self):
+		self.assertIsNone(
+			evaluate_geofence(
+				True,
+				has_shift_location=True,
+				radius_m=100,
+				distance_m=100 + ACCURACY_ALLOWANCE_CAP_M,
+				accuracy_m=ACCURACY_ALLOWANCE_CAP_M,
+			)
+		)
+
+	def test_misconfiguration_is_reported_before_imprecision(self):
+		# An admin who never set a Shift Location must hear about that, not
+		# about the employee's wifi.
+		_action, ctx = evaluate_geofence(
+			True, has_shift_location=False, radius_m=100, distance_m=10, accuracy_m=9000
+		)
+		self.assertEqual(ctx["reason"], REASON_NO_SHIFT_LOCATION)
+
+	# --- Values arriving off an HTTP request ---
+
+	def test_accuracy_arrives_as_a_string(self):
+		self.assertIsNone(
+			evaluate_geofence(True, has_shift_location=True, radius_m=100, distance_m=120, accuracy_m="40")
+		)
+
+	def test_junk_accuracy_buys_nothing_and_does_not_crash(self):
+		for junk in ("", "abc", object(), -50):
+			with self.subTest(junk=junk):
+				action, ctx = evaluate_geofence(
+					False, has_shift_location=True, radius_m=100, distance_m=120, accuracy_m=junk
+				)
+				self.assertEqual(action, "require_remote")
+				self.assertEqual(ctx["reason"], REASON_OUTSIDE_RADIUS)
+				self.assertEqual(ctx["accuracy_m"], 0.0)
 
 
 if __name__ == "__main__":

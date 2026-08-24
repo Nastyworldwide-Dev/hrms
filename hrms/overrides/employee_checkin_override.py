@@ -25,6 +25,7 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import (
 from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_setting_enabled_for_employee
 from hrms.utils.geofence import (
+	REASON_IMPRECISE_LOCATION,
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
 	REASON_OUTSIDE_RADIUS,
@@ -184,11 +185,18 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				row.latitude, row.longitude, self.latitude, self.longitude
 			)
 
+		# How sure the device was about the coordinates it sent. Carried as a
+		# flag rather than a column: it is an input to this decision, not a
+		# property of the punch, and a Desk or biometric row has no browser
+		# behind it to supply one. Absent means unknown, which buys nothing.
+		accuracy_m = getattr(self.flags, "location_accuracy_m", None)
+
 		decision = evaluate_geofence(
 			strict=strict,
 			has_shift_location=bool(shift_loc_name and row),
 			radius_m=radius_m,
 			distance_m=distance,
+			accuracy_m=accuracy_m,
 		)
 		if decision is None:
 			# Lenient silent-allow paths land here. Spell out which one fired
@@ -218,11 +226,12 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				)
 			else:
 				logger.info(
-					"[employee_checkin] geofence inside radius employee=%s shift=%s distance=%.1fm radius=%dm location=%s",
+					"[employee_checkin] geofence inside radius employee=%s shift=%s distance=%.1fm radius=%dm accuracy=%sm location=%s",
 					self.employee,
 					self.shift,
 					distance or 0.0,
 					radius_m,
+					accuracy_m,
 					shift_loc_name,
 				)
 			return
@@ -239,11 +248,13 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		self._remote_distance_m = ctx["overshoot_m"]
 		self._remote_nearest_location = shift_loc_name
 		logger.info(
-			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s distance=%.1fm radius=%dm location=%s",
+			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s reason=%s distance=%.1fm radius=%dm accuracy=%.0fm location=%s",
 			self.employee,
 			self.log_type,
+			ctx["reason"],
 			ctx["distance_m"],
 			ctx["radius_m"],
+			ctx.get("accuracy_m") or 0.0,
 			shift_loc_name,
 		)
 
@@ -270,6 +281,18 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 					"Strict geofencing is enabled for shift {0}, but Shift Location {1} "
 					"has no check-in radius configured. Contact your HR administrator."
 				).format(self.shift or "", shift_loc_name or ""),
+				exc=CheckinRadiusExceededError,
+			)
+		if reason == REASON_IMPRECISE_LOCATION:
+			# Deliberately not phrased as "you are N m away" — the whole point
+			# is that we do not know where they are, and quoting a distance
+			# from an unusable fix reads as an accusation the data can't make.
+			frappe.throw(
+				frappe._(
+					"Your device could only place you to within {0} m, which is too "
+					"imprecise to check you in against the {1} geofence. Move somewhere "
+					"with a clearer view of the sky or a known wifi network and try again."
+				).format(int(ctx.get("accuracy_m") or 0), shift_loc_name or ""),
 				exc=CheckinRadiusExceededError,
 			)
 		# REASON_OUTSIDE_RADIUS
@@ -301,6 +324,7 @@ def _record_geofence_reject(doc, ctx, shift_loc_name):
 				"distance_m": ctx.get("distance_m"),
 				"radius_m": ctx.get("radius_m"),
 				"overshoot_m": ctx.get("overshoot_m"),
+				"accuracy_m": ctx.get("accuracy_m"),
 				"latitude": doc.latitude,
 				"longitude": doc.longitude,
 				"device_id": getattr(doc, "device_id", None),

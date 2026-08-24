@@ -18,6 +18,7 @@ from frappe.query_builder.functions import Count
 from frappe.utils import now_datetime
 
 from hrms.utils.company_scope import permitted_company_filter
+from hrms.utils.geofence import usable_accuracy
 from hrms.utils.identity import get_employee
 from hrms.utils.timezone import employee_now
 
@@ -231,18 +232,30 @@ def punch(
 	longitude=None,
 	selfie_image: str | None = None,
 	time: str | None = None,
+	accuracy=None,
 ) -> dict:
-	"""PWA check-in/out. Staff desk permissions on Employee Checkin are
-	read-only, so this endpoint is the only staff write path. The stored time
-	is ALWAYS the server clock — any client-supplied `time` is ignored, which
-	kills typed-in/backdated punches at the source.
-
-	The stamp is the server clock *in the employee's attendance timezone*, not
-	the site's: shift windows, OT and attendance are all local wall clock, so
-	on a site whose System Settings timezone differs from where staff work
-	(Dubai vs Malaysia) now_datetime() would file every punch hours off.
-	"""
-	logger.info("[remote_checkin] punch %s %s by %s", employee, log_type, frappe.session.user)
+	"""PWA check-in/out — the only write path staff have into Employee Checkin."""
+	# Staff desk permissions on Employee Checkin are read-only, so this endpoint
+	# is the whole staff write path. The stored time is ALWAYS the server clock —
+	# any client-supplied `time` is ignored, which kills typed-in and backdated
+	# punches at the source.
+	#
+	# The stamp is the server clock *in the employee's attendance timezone*, not
+	# the site's: shift windows, OT and attendance are all local wall clock, so
+	# on a site whose System Settings timezone differs from where staff work
+	# (Dubai vs Malaysia) now_datetime() would file every punch hours off.
+	#
+	# `accuracy` is the device's error estimate in metres for the coordinates it
+	# sent. Unlike `time` it is taken at face value: it can only widen this
+	# employee's own fence, by a capped amount, and anyone willing to forge it
+	# could forge the coordinates themselves for a better result.
+	logger.info(
+		"[remote_checkin] punch %s %s by %s accuracy=%s",
+		employee,
+		log_type,
+		frappe.session.user,
+		accuracy,
+	)
 	employee_user = frappe.db.get_value("Employee", employee, "user_id")
 	if not employee_user or employee_user != frappe.session.user:
 		frappe.throw(_("You can only check in as yourself."), frappe.PermissionError)
@@ -260,6 +273,13 @@ def punch(
 			"longitude": longitude,
 		}
 	)
+	# Parsed with the same helper the fence uses, so "what counts as a usable
+	# accuracy" has one definition. Unusable is left unset, not zeroed: absent
+	# means "unknown, no allowance", 0 would mean "perfect fix".
+	accuracy_m = usable_accuracy(accuracy) or None
+	if accuracy_m:
+		doc.flags.location_accuracy_m = accuracy_m
+
 	if selfie_image:
 		# only accept a file this user actually uploaded — a stale or borrowed
 		# file_url must not stand in as proof of presence
