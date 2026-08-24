@@ -50,6 +50,32 @@
 					</div>
 				</template>
 
+				<!-- imprecise_location: the reading, not the employee, is the problem -->
+				<template v-else-if="reason === 'imprecise_location'">
+					<div class="bg-danger/10 border border-danger-ink px-3 py-2.5">
+						<div class="flex justify-between text-xs text-danger-ink">
+							<span>{{ __("Your device's accuracy") }}</span>
+							<span class="font-mono font-semibold">
+								{{ formattedAccuracy }}
+							</span>
+						</div>
+						<div class="flex justify-between text-xs text-danger-ink mt-1">
+							<span>{{ __("Allowed radius") }}</span>
+							<span class="font-mono">{{ radiusM }} m</span>
+						</div>
+					</div>
+
+					<div class="bg-track-solid border border-hair px-3 py-2.5">
+						<div class="text-xs text-ink-600 leading-relaxed">
+							{{
+								__(
+									"A phone indoors or a computer without GPS can only guess its position. Move near a window, turn wifi on, or check in from your phone."
+								)
+							}}
+						</div>
+					</div>
+				</template>
+
 				<!-- no_shift_location / no_radius: admin misconfiguration -->
 				<template v-else>
 					<div class="bg-danger/10 border border-danger-ink px-3 py-3">
@@ -85,6 +111,7 @@
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
 import { FeatherIcon, Button } from "frappe-ui"
+import { formatAccuracy } from "@/utils/geolocation"
 
 const __ = inject("$translate")
 
@@ -93,13 +120,14 @@ const props = defineProps({
 	reason: {
 		type: String,
 		default: "outside_radius",
-		// "outside_radius" | "no_shift_location" | "no_radius"
+		// "outside_radius" | "no_shift_location" | "no_radius" | "imprecise_location"
 	},
 	shiftType: { type: String, default: "" },
 	shiftLocation: { type: String, default: "" },
 	distanceM: { type: Number, default: 0 },
 	radiusM: { type: Number, default: 0 },
 	overshootM: { type: Number, default: 0 },
+	accuracyM: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(["close"])
@@ -110,6 +138,8 @@ const title = computed(() => {
 			return __("Check-in unavailable")
 		case "no_radius":
 			return __("Check-in unavailable")
+		case "imprecise_location":
+			return __("Location not precise enough")
 		default:
 			return __("Check-in blocked")
 	}
@@ -120,6 +150,11 @@ const subtitle = computed(() => {
 		case "no_shift_location":
 		case "no_radius":
 			return __("Your shift is configured for strict geofencing but isn't ready yet.")
+		case "imprecise_location":
+			// Deliberately not "you are N metres away". The reading was too
+			// coarse to place anyone, so a distance drawn from it would be an
+			// accusation the data cannot support.
+			return __("Your device could not pin down where you are accurately enough to check you in.")
 		default:
 			return __(
 				"You are outside the shift location radius. Remote approval is not available for this shift."
@@ -140,6 +175,8 @@ const adminMisconfigMessage = computed(() => {
 		[props.shiftLocation || __("(unnamed)")]
 	)
 })
+
+const formattedAccuracy = computed(() => formatAccuracy(props.accuracyM) || __("unknown"))
 
 const formattedOvershoot = computed(() => {
 	const m = Math.round(props.overshootM || 0)

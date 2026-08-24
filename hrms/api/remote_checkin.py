@@ -305,6 +305,7 @@ def punch(
 		time=doc.time,
 		requires_remote_approval=doc.requires_remote_approval,
 		remote_approval_status=doc.remote_approval_status,
+		remote_reason=getattr(doc, "_remote_reason", None),
 	)
 
 

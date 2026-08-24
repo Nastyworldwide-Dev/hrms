@@ -247,6 +247,11 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# Stash for after_insert hook (these are doc attrs, not DB columns).
 		self._remote_distance_m = ctx["overshoot_m"]
 		self._remote_nearest_location = shift_loc_name
+		# Why this punch needs approving. Returned to the PWA by the punch
+		# endpoint so the dialog can say "we could not place you" instead of
+		# "you are 0 m outside the geofence", which is what an unplaceable
+		# reading computes to and is not something anyone should be shown.
+		self._remote_reason = ctx["reason"]
 		logger.info(
 			"[employee_checkin] Remote check-in flagged employee=%s log_type=%s reason=%s distance=%.1fm radius=%dm accuracy=%.0fm location=%s",
 			self.employee,

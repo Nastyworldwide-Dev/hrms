@@ -168,6 +168,7 @@
 		:log-type="remoteRequest.logType"
 		:distance-m="remoteRequest.distanceM"
 		:approver-name="remoteRequest.approverName"
+		:reason="remoteRequest.reason"
 		@close="remoteDialogOpen = false"
 		@submitted="checkins.reload()"
 	/>
@@ -180,6 +181,7 @@
 		:distance-m="strictRejection.distanceM"
 		:radius-m="strictRejection.radiusM"
 		:overshoot-m="strictRejection.overshootM"
+		:accuracy-m="strictRejection.accuracyM"
 		@close="strictDialogOpen = false"
 	/>
 
@@ -216,6 +218,15 @@ import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
 import markerShadow from "leaflet/dist/images/marker-shadow.png"
 
 import { formatTimestamp } from "@/utils/formatters"
+import {
+	GEO_DENIED,
+	GEO_INSECURE,
+	GEO_TIMEOUT,
+	GEO_UNSUPPORTED,
+	describeGeolocationError,
+	formatAccuracy,
+	geolocationBlockedReason,
+} from "@/utils/geolocation"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
@@ -252,6 +263,12 @@ let geoWatchId = null
 // both are reset in fetchLocation() each time the modal opens.
 let hasSessionFix = false
 let coarseFallbackRequested = false
+// How sure the device was about the coordinates above, in metres. Sent with
+// both the preflight and the punch: the fence is tens of metres wide and a
+// phone indoors, an iPad on wifi and a desktop with no radio disagree about
+// their own position by more than that. Without it the server has no way to
+// tell a reading apart from a fact.
+const accuracyM = ref(null)
 
 const shiftLocation = createResource({
 	url: "hrms.api.geofence.get_active_shift_location",
@@ -300,7 +317,13 @@ const punchCheckin = createResource({
 
 // Remote checkin dialog state
 const remoteDialogOpen = ref(false)
-const remoteRequest = ref({ name: "", logType: "IN", distanceM: 0, approverName: "" })
+const remoteRequest = ref({
+	name: "",
+	logType: "IN",
+	distanceM: 0,
+	approverName: "",
+	reason: "outside_radius",
+})
 
 // Strict-mode rejection dialog state (used when the preflight tells us the
 // server would throw CheckinRadiusExceededError — we abort the insert).
@@ -312,6 +335,7 @@ const strictRejection = ref({
 	distanceM: 0,
 	radiusM: 0,
 	overshootM: 0,
+	accuracyM: 0,
 })
 
 const preflightGeofence = createResource({
@@ -416,11 +440,18 @@ const nextAction = computed(() => {
 function handleLocationSuccess(position) {
 	latitude.value = position.coords.latitude
 	longitude.value = position.coords.longitude
+	accuracyM.value = position.coords.accuracy ?? null
 
-	locationStatus.value = [
+	const parts = [
 		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
 		__("Longitude: {0}°", [Number(longitude.value).toFixed(5)]),
-	].join(", ")
+	]
+	// Shown, not swallowed: when a check-in needs approving because the device
+	// could only place it to within a kilometre, that number is the answer to
+	// the question the employee is about to ask.
+	const accuracy = formatAccuracy(accuracyM.value)
+	if (accuracy) parts.push(__("Accuracy: {0}", [accuracy]))
+	locationStatus.value = parts.join(", ")
 
 	const firstFixThisSession = !hasSessionFix
 	hasSessionFix = true
@@ -431,17 +462,42 @@ function handleLocationSuccess(position) {
 	if (firstFixThisSession) fitMapBounds()
 }
 
-function handleLocationError(error) {
-	locationStatus.value = "Unable to retrieve your location"
-	if (error) locationStatus.value += `: ERROR(${error.code}): ${error.message}`
-	console.warn("[CheckInPanel] geolocation error:", error)
+// What to tell someone whose device would not say where it is. The raw
+// GeolocationPositionError used to be printed at them verbatim, which named
+// no cause they could act on and differed per browser for the same failure.
+function locationErrorMessage(code) {
+	switch (code) {
+		case GEO_DENIED:
+			return __(
+				"Location permission is off for this site. Turn it back on in your browser or device settings, then try again."
+			)
+		case GEO_TIMEOUT:
+			return __("Still looking for your location. Move near a window or wait a moment, then try again.")
+		case GEO_INSECURE:
+			return __(
+				"This page is not on a secure (https) connection, so your browser will not share your location. Open the app from its https address."
+			)
+		case GEO_UNSUPPORTED:
+			return __("Geolocation is not supported by your current browser")
+		default:
+			return __("Your device could not determine your location right now.")
+	}
+}
 
-	// High-accuracy watch timed out before any fix (common on Android
-	// indoors): grab one coarse network-based position so the map still
-	// centers on the user instead of staying on the fallback view. One
-	// attempt per modal session (watch TIMEOUT recurs every ~15s), and
-	// re-checked at resolution so a slower coarse result never overwrites
-	// a real fix that landed in the meantime.
+function handleLocationError(error) {
+	const code = describeGeolocationError(error)
+	locationStatus.value = locationErrorMessage(code)
+	console.warn("[CheckInPanel] geolocation error:", code, error)
+
+	// The high-accuracy watch gave up before any fix. This is not one
+	// platform's problem: a handset indoors, an iPad with wifi scanning off
+	// and a desk browser with no radio all land here. Grab one coarse
+	// network-based position so the map still centers on the user instead of
+	// staying on the fallback view — the reading arrives with its own accuracy
+	// attached, and the server decides what a coarse one is worth. One attempt
+	// per modal session (watch TIMEOUT recurs every ~15s), re-checked at
+	// resolution so a slower coarse result never overwrites a real fix that
+	// landed in the meantime.
 	if (!hasSessionFix && !coarseFallbackRequested && navigator.geolocation) {
 		coarseFallbackRequested = true
 		navigator.geolocation.getCurrentPosition(
@@ -455,22 +511,27 @@ function handleLocationError(error) {
 }
 
 const fetchLocation = () => {
-	if (!navigator.geolocation) {
-		locationStatus.value = __("Geolocation is not supported by your current browser")
+	const blocked = geolocationBlockedReason()
+	if (blocked) {
+		locationStatus.value = locationErrorMessage(blocked)
+		console.warn("[CheckInPanel] geolocation unavailable on this page:", blocked)
 		return
 	}
 	locationStatus.value = __("Locating...")
 	hasSessionFix = false
 	coarseFallbackRequested = false
+	accuracyM.value = null
 	// watchPosition gives us live updates while the modal is open so the
 	// user pin moves in real time as the device's GPS drifts/refines.
 	if (geoWatchId !== null) {
 		navigator.geolocation.clearWatch(geoWatchId)
 	}
-	// maximumAge 60s: Android's high-accuracy provider cold-starts slowly and
-	// with maximumAge 0 even a seconds-old cached fix is rejected, so indoor
-	// users timed out with no pin at all. A recent cached fix is fine for a
-	// check-in radius measured in tens of meters.
+	// maximumAge 60s: a high-accuracy provider cold-starts slowly on every
+	// platform, and with maximumAge 0 even a seconds-old cached fix is
+	// rejected, so indoor users timed out with no pin at all. A recent cached
+	// fix is fine for a check-in radius measured in tens of metres — and it
+	// carries its own accuracy, so a stale-ish reading cannot pass itself off
+	// as a sharp one.
 	geoWatchId = navigator.geolocation.watchPosition(
 		handleLocationSuccess,
 		handleLocationError,
@@ -720,6 +781,11 @@ const runSubmitLog = async (logType) => {
 				latitude: latitude.value,
 				longitude: longitude.value,
 				time: checkinTimestamp.value,
+				// Sent here as well as with the punch. The preview and the
+				// insert must decide from identical inputs, or the screen
+				// blocks a punch the server would have taken — the exact
+				// drift the preflight exists to prevent.
+				accuracy: accuracyM.value,
 			})
 			if (result && result.ok === false && result.mode === "strict_block") {
 				console.info("[Preflight] strict block:", result)
@@ -732,6 +798,7 @@ const runSubmitLog = async (logType) => {
 					distanceM: Number(result.distance_m) || 0,
 					radiusM: Number(result.radius_m) || 0,
 					overshootM: Number(result.overshoot_m) || 0,
+					accuracyM: Number(result.accuracy_m) || 0,
 				}
 				strictDialogOpen.value = true
 				return
@@ -777,6 +844,7 @@ const runSubmitLog = async (logType) => {
 		log_type: logType,
 		latitude: latitude.value,
 		longitude: longitude.value,
+		accuracy: accuracyM.value,
 	}
 	if (selfieUrl) {
 		payload.selfie_image = selfieUrl
@@ -807,6 +875,10 @@ const runSubmitLog = async (logType) => {
 							logType: req.log_type || logType,
 							distanceM: Number(req.distance_m) || 0,
 							approverName: req.approver || "",
+							// From the punch response, not the request row: the
+							// row records the distance, not whether the distance
+							// could be trusted in the first place.
+							reason: doc.remote_reason || "outside_radius",
 						}
 						remoteDialogOpen.value = true
 						return

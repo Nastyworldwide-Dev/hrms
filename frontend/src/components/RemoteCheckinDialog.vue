@@ -6,7 +6,7 @@
 			>
 				<div class="g-eyebrow">{{ __("Remote check-in") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
-					{{ __("You're outside the office geofence") }}
+					{{ headline }}
 				</span>
 				<span class="text-xs text-ink-600">
 					{{
@@ -19,7 +19,12 @@
 			</div>
 
 			<div class="w-full flex flex-col px-4 gap-3">
-				<div class="bg-brand/15 border border-brand px-3 py-2 text-xs text-accent-ink">
+				<!-- An unplaceable reading computes to a distance of 0 m, so the
+				     metric row is hidden rather than shown as a reassuring lie. -->
+				<div
+					v-if="reason !== 'imprecise_location'"
+					class="bg-brand/15 border border-brand px-3 py-2 text-xs text-accent-ink"
+				>
 					<div class="flex justify-between">
 						<span>{{ __("Distance from geofence") }}</span>
 						<span class="font-mono font-semibold tabular-nums">{{ formattedDistance }}</span>
@@ -78,12 +83,26 @@ const props = defineProps({
 	logType: { type: String, default: "IN" },
 	distanceM: { type: Number, default: 0 },
 	approverName: { type: String, default: "" },
+	reason: {
+		type: String,
+		default: "outside_radius",
+		// "outside_radius" | "imprecise_location"
+	},
 })
 
 const emit = defineEmits(["close", "submitted"])
 
 const remarks = ref("")
 const submitting = ref(false)
+
+// Two different things send a punch to an approver, and telling someone they
+// left the geofence when their phone simply could not see the sky is both
+// wrong and the kind of wrong that gets argued about at payroll.
+const headline = computed(() =>
+	props.reason === "imprecise_location"
+		? __("We couldn't confirm where you are")
+		: __("You're outside the office geofence")
+)
 
 const formattedDistance = computed(() => {
 	const d = props.distanceM || 0
