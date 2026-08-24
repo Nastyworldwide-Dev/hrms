@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   full-system audit; replan phase 9 A-to-Z against the reference glass technique
 status:   done (planning only - no code changed)
-commit:   <this commit> on nz-glass
+commit:   fcaf1dff1 on nz-glass
 files:    docs/glass/plan/HR_Glass_Phase_9_Work_Order.md (new, the work authority)
           docs/glass/README.md (read order now points at it)
           docs/glass/HANDOFF.md
