@@ -21,6 +21,22 @@ import { BASE, login, screens, settle } from "./screens.mjs"
 // of it: 390 in both themes catches essentially every layout regression, and
 // 1440 dark catches the desktop column. Shooting all seven variants here would
 // triple the runtime for very little extra signal.
+// Per-screen tolerance overrides. The global bound is 20px (see
+// playwright.config.js); these are the screens measured to be genuinely noisy,
+// with the number that was measured rather than a number that made the red go
+// away.
+//
+// login: the "HR" logo mark rasterises inconsistently — one render in five
+// differs by 28px in a single 49x35 region, the glyph coming out a hair bolder
+// and a subpixel right. It survives document.fonts.ready and an explicit load of
+// every face the page uses, so it is rasterisation variance, not a font race.
+// 40 clears it. Login carries no element whose real changes are smaller than
+// that, so the cost is bounded to this screen — which is why this is a per-screen
+// override and not a global loosening.
+const TOLERANCE = {
+	login: { maxDiffPixels: 40 },
+}
+
 const VARIANTS = [
 	{ vp: { width: 390, height: 844 }, dsf: 2, theme: "dark", tag: "390-dark" },
 	{ vp: { width: 390, height: 844 }, dsf: 2, theme: "light", tag: "390-light" },
@@ -65,9 +81,18 @@ test("visual: every screen matches its baseline", async () => {
 					// hour after it was shot — a permanently flaky screen, not a
 					// regression. Anything the app marks data-visual-mask is
 					// excluded from the comparison.
-					await expect(page).toHaveScreenshot(name, {
-						mask: [page.locator("[data-visual-mask]")],
+					// HIDDEN, not masked. Playwright's mask paints a solid box sized
+					// to the element, so a masked element whose TEXT LENGTH changes
+					// changes the box too — "TODAY · FRI 21 AUG" and "TODAY · SUN 23
+					// AUG" are different widths, and the mask drifted with them. That
+					// was tolerable under a 658px budget and is not under 20.
+					// visibility:hidden paints nothing, so the region matches the
+					// background whatever the content's width, and only a change that
+					// moves the SURROUNDING layout can still register.
+					await page.addStyleTag({
+						content: "[data-visual-mask]{visibility:hidden !important}",
 					})
+					await expect(page).toHaveScreenshot(name, TOLERANCE[s.slug] || {})
 				} catch (e) {
 					// Collect rather than throw, so one regression does not hide the
 					// other forty. The gate prints the whole list and fails once.

@@ -29,10 +29,46 @@ export default defineConfig({
 	snapshotPathTemplate: "../../docs/glass/audit/screens/{arg}{ext}",
 	expect: {
 		toHaveScreenshot: {
-			// Antialiasing and font hinting move a few pixels between runs on the
-			// same machine; a real layout regression moves thousands. Tuned to sit
-			// well below "one row shifted" and well above "the text re-hinted".
-			maxDiffPixelRatio: 0.002,
+			// An ABSOLUTE pixel count, not a ratio. The ratio was the fourth
+			// instrument defect of this phase, and the reasoning behind it was never
+			// measured — only assumed:
+			//
+			//   "Antialiasing and font hinting move a few pixels between runs on the
+			//    same machine; a real layout regression moves thousands."
+			//
+			// Both halves are wrong here. MEASURED noise, twice and agreeing: a
+			// reload-to-reload comparison of the same page reports **0** differing
+			// pixels, and re-shooting every baseline across separate runs produces
+			// byte-identical PNGs. pixelmatch already runs with includeAA:false, so
+			// it discounts anti-aliased edges before counting. There is no noise to
+			// budget for.
+			//
+			// And a real change does NOT move thousands. MEASURED signal, from the
+			// RC18 avatar consolidation:
+			//
+			//   header avatar initial 11.5px -> 14px ............  34 px
+			//   ten avatars, blank circle -> 9px box with "?" ...  74 px
+			//   header avatar + a back control appearing ........ 648 px
+			//   profile avatar, radius 0 -> 9px, 72px box ....... 4661 px
+			//
+			// The old budget was 0.002 x 329,160 = 658 px at 390x844, so the first
+			// three passed — including `sop`, which was missing an entire back
+			// control and came in ten pixels under the line.
+			//
+			// A ratio is the wrong measure for this failure. It scales the budget
+			// with viewport AREA, while a UI element's pixel footprint is roughly
+			// viewport-INDEPENDENT: the same avatar glyph is ~34px at 390x844 and
+			// ~34px at 1440x900, but the budget quadruples to 2,592. The instrument
+			// was least sensitive exactly where the screen was largest.
+			//
+			// 20 is an order of magnitude above the measured noise (0) and below the
+			// smallest measured real change (34). Playwright takes Math.min() when
+			// both limits are set, so this binds everywhere; the ratio is dropped
+			// rather than kept as a decorative second bound that can never fire.
+			//
+			// If a browser upgrade ever makes this flaky, re-measure the noise floor
+			// before raising it — do not raise it because a run went red.
+			maxDiffPixels: 20,
 			animations: "disabled",
 			caret: "hide",
 		},

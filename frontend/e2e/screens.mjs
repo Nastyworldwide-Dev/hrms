@@ -104,6 +104,28 @@ export async function screens(request) {
 /** Settle the SPA: route resolved, data in, animations done. */
 export async function settle(page) {
 	await page.waitForLoadState("networkidle").catch(() => {})
+	// Wait for WEBFONTS. §4.1 self-hosts Inter/Inter Tight with font-display:
+	// swap, so text paints in a fallback face first and swaps when the real one
+	// arrives. Without this, one render in five caught the fallback: the login
+	// logo's "HR" came out at a different weight, 28 differing pixels, which is
+	// indistinguishable from a regression and sits right on top of the smallest
+	// real change this gate needs to catch (34px).
+	// document.fonts.ready alone is NOT enough: it resolves for the faces already
+	// requested, and a face is only requested once something needs it. The login
+	// logo kept flapping between a synthesised and a real bold. Ask for every
+	// face the page actually uses, then wait again.
+	await page
+		.evaluate(async () => {
+			await document.fonts.ready
+			const faces = new Set()
+			for (const el of document.querySelectorAll("*")) {
+				const cs = getComputedStyle(el)
+				faces.add(`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`)
+			}
+			await Promise.all([...faces].map((f) => document.fonts.load(f).catch(() => {})))
+			await document.fonts.ready
+		})
+		.catch(() => {})
 	await page.waitForTimeout(2200)
 }
 

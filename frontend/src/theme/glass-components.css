@@ -351,13 +351,23 @@ html[data-transparency="reduce"] .g-glass-ghost {
    specified one accounted for 32 of 145 rendered instances — the most common
    treatment in the app was not the one the spec defines. One class now, so a
    section header cannot be spelled a seventh way. */
-.g-eyebrow {
+/* Type and colour are separate because composing .g-eyebrow onto a CONTROL
+   silently changed the control's colour. `.g-eyebrow` and Tailwind's `.text-*`
+   are both one class deep, so stylesheet order decides which wins — and the
+   theme loads later. The settings theme selector asked for `text-ground` on its
+   selected option (light type on a near-black fill) and rendered
+   rgb(63,92,0) instead: accent-ink on ink.
+   A section header wants both halves; a control wants the type only. */
+.g-eyebrow,
+.g-eyebrow-type {
 	font-family: var(--g-type-eyebrow-family);
 	font-size: var(--g-type-eyebrow-size);
 	font-weight: var(--g-type-eyebrow-weight);
 	letter-spacing: var(--g-type-eyebrow-tracking);
 	line-height: var(--g-type-eyebrow-line-height);
 	text-transform: uppercase;
+}
+.g-eyebrow {
 	color: var(--g-accent-ink);
 }
 

@@ -31,7 +31,17 @@ const args = [
 	"--config=e2e/playwright.config.js",
 	"e2e/visual.spec.js",
 ];
-if (UPDATE) args.push("--update-snapshots");
+// "=all", not the bare flag. Bare `--update-snapshots` presets to "changed",
+// which re-shoots only baselines whose comparison FAILED — so a baseline that
+// drifts under the tolerance can never be corrected, because under-tolerance
+// means "unchanged". That is how 26 baselines went stale through RC18 and
+// stayed stale through a re-baseline that was supposed to fix them.
+//
+// Safe to re-shoot everything: renders here are deterministic (measured noise
+// floor: 0 differing pixels), so an unchanged screen rewrites to a
+// byte-identical PNG and git reports nothing. Only real changes show up in the
+// diff. A baseline you cannot update is a baseline you will eventually ignore.
+if (UPDATE) args.push("--update-snapshots=all");
 
 const res = spawnSync("npx", args, {
 	cwd: join(ROOT, "frontend"),

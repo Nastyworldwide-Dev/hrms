@@ -31,7 +31,7 @@
 									v-for="mode in THEME_MODES"
 									:key="mode"
 									type="button"
-									class="g-eyebrow g-touch flex-1 py-2 border-r border-divider last:border-r-0"
+									class="g-eyebrow-type g-touch flex-1 py-2 border-r border-divider last:border-r-0"
 									:class="
 										theme.mode === mode
 											? 'bg-inkbase text-ground'
