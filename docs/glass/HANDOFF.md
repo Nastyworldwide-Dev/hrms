@@ -1,16 +1,16 @@
 # HANDOFF
-prompt:   geofence ignored GPS accuracy; iOS/desktop parity
+prompt:   persona/residue UX audit; rebrand Frappe HR -> Nadi, both themes
 status:   done
-commit:   95d390367 on nz-glass (backend 9bd167717)
-files:    hrms/utils/geofence.py            (accuracy_m arg, 250 m cap)
-          hrms/overrides/employee_checkin_override.py (flag -> decision)
-          hrms/api/{geofence,remote_checkin}.py       (accept + forward)
-          hrms/hr/doctype/geofence_reject_log/*.json  (accuracy_m, reason opt)
-          frontend/src/utils/geolocation.js           (new)
-          frontend/src/components/{CheckInPanel,RemoteCheckinDialog,StrictRejectionDialog}.vue
-verify:   cd /home/nabil/verify-bench/sites && ../env/bin/python -m unittest \
-          hrms.utils.test_geofence hrms.overrides.test_employee_checkin_override \
-          hrms.api.test_remote_checkin; yarn --cwd frontend test
-flags:    250 m cap is a guess - watch imprecise_location volume before tuning.
-          Reject Log needs `bench migrate` for the two new columns.
-next:     no fix at all still hard-throws "lat/long required" - policy call
+commit:   5854aec26 on nz-glass
+files:    frontend/{vite.config.js,index.html,ionic.config.json,package.json}
+          frontend/src/utils/productName.js (+ test)
+          frontend/src/components/{SideNav,Login,BaseLayout,GAppHeader,GLogoWell,InstallPrompt}.vue
+          hrms/hooks.py, hrms/desktop_icon/*.json (+ rename patch), hrms/{install,uninstall}.py
+          roster/src/components/NavBar.vue, roster/src/icons/NadiLogo.vue (new)
+          hrms/public/{images,manifest}/* (favicon/icons/30 splash screens, regenerated)
+verify:   set -a; . ./.env; set +a; node design/gates/run.mjs   (8/8 clean, run twice)
+flags:    kept --g-brand #C8FF00 for CSS/vector surfaces, not the asset's literal
+          #CEFA05 (near-identical, avoids re-baselining the whole product); the
+          logo file itself had one baked corner - user chose sharp-square icons.
+next:     roster/ has zero dark mode (separate Tailwind app, no token bridge) -
+          the one persona-facing theme gap left. bench migrate needed per instance.
