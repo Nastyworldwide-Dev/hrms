@@ -7,7 +7,7 @@
   (stat-number 22px) is used. Flagged for a §4.2 ruling.
 
   Props:
-    mark   string, default "HR" — the letterform inside the well
+    mark   string, default "N" (Nadi) — the letterform inside the well
     label  string — accessible name; when empty the well is decorative
   Slot: default — an inline SVG mark, replacing the letterform
 -->
@@ -19,7 +19,7 @@
 
 <script setup>
 defineProps({
-	mark: { type: String, default: "HR" },
+	mark: { type: String, default: "N" },
 	label: { type: String, default: "" },
 })
 </script>

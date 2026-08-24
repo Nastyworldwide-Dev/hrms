@@ -1,6 +1,6 @@
 // The browser tab and the PWA install name were the last vendor strings a
 // Translation record could not reach — index.html is static, so <title> and
-// apple-mobile-web-app-title shipped "Frappe HR" to every tenant regardless of
+// apple-mobile-web-app-title shipped "Nadi" to every tenant regardless of
 // what the tenant had translated. Found in the 8.x frontend audit.
 //
 // Run with: node --test "frontend/**/*.test.js"
@@ -10,7 +10,7 @@ import assert from "node:assert/strict"
 import { applyProductName } from "../productName.js"
 
 /** Minimal document stand-in — the meta tag is optional on purpose. */
-function fakeDoc({ title = "Frappe HR", withMeta = true } = {}) {
+function fakeDoc({ title = "Nadi", withMeta = true } = {}) {
 	const meta = { content: null, setAttribute(_, v) { this.content = v } }
 	return {
 		title,
@@ -22,7 +22,7 @@ function fakeDoc({ title = "Frappe HR", withMeta = true } = {}) {
 
 test("applies the translated name to both the title and the install name", () => {
 	const doc = fakeDoc()
-	const name = applyProductName((s) => (s === "Frappe HR" ? "NSTY People" : s), doc)
+	const name = applyProductName((s) => (s === "Nadi" ? "NSTY People" : s), doc)
 
 	assert.equal(name, "NSTY People")
 	assert.equal(doc.title, "NSTY People", "browser tab")
@@ -34,7 +34,7 @@ test("leaves the document alone when nothing is translated", () => {
 	// mistaken for a translation, but it is also not a reason to blank the title.
 	const doc = fakeDoc()
 	applyProductName((s) => s, doc)
-	assert.equal(doc.title, "Frappe HR")
+	assert.equal(doc.title, "Nadi")
 })
 
 test("falls back to the shipped title when there is no translate function", () => {

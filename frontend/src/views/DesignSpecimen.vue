@@ -238,7 +238,7 @@
 				<section class="spec__section">
 					<h2 class="spec__label">GLOGOWELL (§10.2 #23)</h2>
 					<div class="spec__row">
-						<GLogoWell label="Frappe HR" />
+						<GLogoWell label="Nadi" />
 						<GLogoWell mark="NZ" />
 					</div>
 				</section>

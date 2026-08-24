@@ -1,6 +1,6 @@
 <template>
 	<!-- Install PWA dialog -->
-	<GModal :is-open="showDialog" :title="__('Install Frappe HR')" @did-dismiss="showDialog = false">
+	<GModal :is-open="showDialog" :title="__('Install Nadi')" @did-dismiss="showDialog = false">
 		<p class="g-confirm__body">
 			{{ __("Get the app on your device for easy access & a better experience!") }}
 		</p>
@@ -17,7 +17,7 @@
 					class="flex flex-row text-center items-center justify-between mb-1 px-3"
 				>
 					<span class="text-base text-inkbase font-extrabold">
-						{{ __("Install Frappe HR") }}
+						{{ __("Install Nadi") }}
 					</span>
 					<span class="inline-flex items-baseline">
 						<FeatherIcon

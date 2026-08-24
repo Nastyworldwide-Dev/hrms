@@ -3,9 +3,9 @@
  *
  * §16.6 makes copy a data concern: label changes ship as Frappe Translation
  * records, zero code change. `index.html` is static, so `<title>` and
- * `apple-mobile-web-app-title` were the one exception — they shipped the vendor
- * string "Frappe HR" to every tenant, in the browser tab and as the name the
- * PWA installs under, and no record could touch them.
+ * `apple-mobile-web-app-title` were the one exception — they shipped a fixed
+ * string to every tenant, in the browser tab and as the name the PWA installs
+ * under, and no record could touch them.
  *
  * Re-setting them from the SAME translated string the app header uses puts them
  * back under §16.6: one record now covers the header, the tab and the install
@@ -17,7 +17,7 @@
  * @returns {string} the name applied
  */
 export function applyProductName(translate, doc = globalThis.document) {
-	const SOURCE = "Frappe HR"
+	const SOURCE = "Nadi"
 	const name = (typeof translate === "function" && translate(SOURCE)) || doc?.title || SOURCE
 
 	if (doc) {

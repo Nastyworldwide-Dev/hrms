@@ -18,7 +18,7 @@
   @notifications → the Notifications route, @profile → the Profile route.
 
   Props:
-    title       string — falls back to "Frappe HR", as the existing header does
+    title       string — falls back to "Nadi", as the existing header does
     unread      number, default 0 — >0 shows the unread dot
     kicker      string — lg:-only date kicker, e.g. "WEDNESDAY, 20 AUGUST"
     avatarUrl   string — avatar image; falls back to the initial
@@ -41,7 +41,7 @@
 			</svg>
 		</GIconButton>
 
-		<h1 class="g-header__title">{{ title || __("Frappe HR") }}</h1>
+		<h1 class="g-header__title">{{ title || __("Nadi") }}</h1>
 
 		<!-- data-visual-mask: the kicker is today's date, so its baseline rots at
 		     midnight. Masked here rather than at each caller — BaseLayout and

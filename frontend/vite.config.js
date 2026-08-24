@@ -24,8 +24,8 @@ export default defineConfig({
 			},
 			manifest: {
 				display: "standalone",
-				name: "Frappe HR",
-				short_name: "Frappe HR",
+				name: "Nadi",
+				short_name: "Nadi",
 				// Explicit id + scope: without them vite-plugin-pwa fills scope
 				// from the Vite base (/assets/hrms/frontend/), which doesn't
 				// contain start_url — Chrome then discards it and falls back to
@@ -35,7 +35,7 @@ export default defineConfig({
 				scope: "/hrms",
 				start_url: "/hrms",
 				description: "Everyday HR & Payroll operations at your fingertips",
-				theme_color: "#ffffff",
+				theme_color: "#EDEFF3",
 				icons: [
 					{
 						src: "/assets/hrms/manifest/manifest-icon-192.maskable.png",

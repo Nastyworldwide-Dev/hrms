@@ -8,10 +8,10 @@
 			     in the viewport — there is no sidebar to align against. -->
 			<div class="g-auth">
 				<div class="g-auth__column">
-					<GLogoWell :label="__('Frappe HR')" />
+					<GLogoWell :label="__('Nadi')" />
 
 					<div>
-						<h1 class="g-auth__title">{{ __("Login to Frappe HR") }}</h1>
+						<h1 class="g-auth__title">{{ __("Login to Nadi") }}</h1>
 						<p class="g-auth__subtitle">{{ __("Employee self-service portal") }}</p>
 					</div>
 
@@ -164,7 +164,6 @@ import { IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
 import { Input, Button, ErrorMessage, createResource } from "frappe-ui"
 
-import FrappeHRLogo from "@/components/icons/FrappeHRLogo.vue"
 import { sendPasswordResetLink } from "@/utils/resetPassword"
 
 const email = ref(null)
