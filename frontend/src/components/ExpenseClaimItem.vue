@@ -83,9 +83,4 @@ const claimDates = computed(() => {
 		)}`
 	}
 })
-
-
-const approvalStatus = computed(() => {
-	return props.doc.approval_status === "Draft" ? "Pending" : props.doc.approval_status
-})
 </script>

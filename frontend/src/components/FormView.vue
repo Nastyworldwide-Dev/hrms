@@ -107,7 +107,7 @@
 						class="px-4 sticky top-0 z-overlay bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 					>
 						<ul class="flex -mb-px overflow-auto hide-scrollbar">
-							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs">
+							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs" :key="tab.name">
 								<button
 									@click="activeTab = tab.name"
 									class="inline-block py-4 px-2 border-b-2 border-transparent"
@@ -123,7 +123,7 @@
 						</ul>
 					</div>
 
-					<template v-for="(fieldList, tabName, index) in tabFields">
+					<template v-for="(fieldList, tabName, index) in tabFields" :key="tabName">
 						<div
 							v-show="tabName === activeTab"
 							class="flex flex-col space-y-4 p-4"
@@ -645,7 +645,7 @@ const SUBMIT_REQUIRES_STATUS = {
 }
 
 const formButton = computed(() => {
-	if (!props.showFormButton) return
+	if (!props.showFormButton) return null
 
 	if (props.id && props.isSubmittable && !isFormDirty.value) {
 		const requiredStatuses = SUBMIT_REQUIRES_STATUS[props.doctype]
@@ -661,9 +661,12 @@ const formButton = computed(() => {
 		} else if (formModel.value.docstatus === 1 && hasPermission("cancel")) {
 			return "Cancel"
 		}
+		// submitted-and-cancel-blocked, or any other docstatus: no button.
+		return null
 	} else if (formModel.value.docstatus !== 2) {
 		return "Save"
 	}
+	return null
 })
 
 function showDeleteButton() {
@@ -809,6 +812,8 @@ const isFormReadOnly = computed(() => {
 
 	// read only due to workflow based on current user's roles
 	if (workflow.value?.isReadOnly(formModel.value)) return true
+
+	return false
 })
 
 const isFormReady = computed(() => {

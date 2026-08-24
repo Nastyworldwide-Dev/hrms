@@ -96,28 +96,10 @@ const days = computed(() =>
 	})
 )
 
-// Day-cell styles for the mono/accent scheme. Work From Home folds into the
-// User-tuned scheme: present = mint (accent-200, like the logo tile), absent =
-// accent fill, on-leave = accent outline, half-day = mint half + on-leave
-// outline. WFH mirrors Present (summary rollup); Holiday stays muted.
-const dayStyle = {
-	Present: "background:var(--g-accent-glow);color:var(--g-accent-ink)",
-	"Work From Home": "background:var(--g-accent-glow);color:var(--g-accent-ink)",
-	"Half Day":
-		"background:linear-gradient(135deg,var(--g-accent-glow) 50%,transparent 50%);border:2px solid var(--g-accent-ink);color:var(--g-accent-ink);font-weight:600",
-	Absent: "background:var(--g-accent-ink);color:var(--g-bg);font-weight:600",
-	"On Leave": "border:2px solid var(--g-accent-ink);color:var(--g-accent-ink);font-weight:600",
-	Holiday: "color:var(--g-ink3)",
-}
-
-// 9px legend swatches mirroring each day-cell style.
-const swatchStyle = {
-	Present: "background:var(--g-accent-glow)",
-	"Half Day":
-		"background:linear-gradient(135deg,var(--g-accent-glow) 50%,transparent 50%);border:1.5px solid var(--g-accent-ink)",
-	Absent: "background:var(--g-accent-ink)",
-	"On Leave": "border:1.5px solid var(--g-accent-ink)",
-}
+// Day-cell and legend colour-coding for present/absent/leave/holiday now
+// lives in GCalendar itself (state-driven, not inline style strings) — these
+// two maps were the pre-GCalendar implementation and stopped being read by
+// anything once the template below switched to `<GCalendar :days :legend>`.
 
 // __("Present"), __("Half Day"), __("Absent"), __("On Leave"), __("Work From Home")
 const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]

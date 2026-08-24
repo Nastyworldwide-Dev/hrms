@@ -13,7 +13,11 @@ export class FileAttachment {
 	}
 
 	async upload(documentType, documentName, fieldName) {
-		return new Promise(async (resolve, reject) => {
+		// Not `async (resolve, reject) =>` — nothing inside ever awaits, and an
+		// async executor swallows a synchronous throw as an unhandled rejection
+		// on a promise nothing holds, instead of calling reject(): a bad file
+		// object would have hung this upload forever rather than failing it.
+		return new Promise((resolve, reject) => {
 			const reader = getFileReader()
 			const uploader = createResource({
 				url: "hrms.api.upload_base64_file",

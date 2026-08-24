@@ -68,5 +68,6 @@ const employee = computed(() => {
 	} else if (props.userID) {
 		return getEmployeeInfoByUserID(props.userID)
 	}
+	return null
 })
 </script>

@@ -39,7 +39,7 @@
 			<GSkeleton width="62%" height="11px" />
 		</div>
 
-		<div v-for="(file, index) in modelValue" :key="index" class="g-file">
+		<div v-for="file in modelValue" :key="file.file_name || file.name" class="g-file">
 			<button type="button" class="g-file__name g-focusable" @click="$emit('preview', file)">
 				{{ file.file_name || file.name }}
 			</button>

@@ -27,7 +27,10 @@ const props = defineProps({
 	},
 	filters: {
 		type: Object,
-		default: {},
+		// Vue requires a factory here — a literal default is the SAME object
+		// shared by every <Link> that doesn't pass its own filters, which is
+		// also why this warned on every render in dev console before now.
+		default: () => ({}),
 	},
 	disabled: {
 		type: Boolean,

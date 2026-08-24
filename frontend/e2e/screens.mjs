@@ -164,19 +164,51 @@ export async function undersizedTargets(page, min = 44) {
 			const points = [[cx, cy - reach], [cx, cy + reach]]
 			if (r.width < MIN) points.push([cx - reach, cy], [cx + reach, cy])
 
-			// The floating tab bar covers content at rest by design — scrolling
-			// reveals it — so a point it occludes says nothing about target size.
+			// An overlay that covers content AT REST by design — scrolling
+			// reveals it — says nothing about the occluded target's size.
+			//
+			// Two such overlays exist, and they need two different tests:
+			//   * the floating tab bar, matched by name. It computes to
+			//     position:absolute (verified), so a position-based test does
+			//     NOT catch it — which is why the original named check stays.
+			//   * a form's sticky Save bar, which has no stable class to name
+			//     but is position:sticky.
+			// Additive on purpose: dropping the named check in favour of the
+			// positional one re-flagged "Request a Shift" and "View list" under
+			// the tab bar on dash-attendance.
+			//
+			// Measured justification for the sticky case: on
+			// attendance-requests-new, "Select Reason" (358x48) and the
+			// Explanation textarea (358x66) are both far above the 44px
+			// minimum and were flagged only because the action bar paints over
+			// their lower midpoint at scrollTop 0; scrolling the form clears
+			// both.
+			//
+			// Neither exception can mask a genuinely small control: the check
+			// is positional, so an undersized target still misses at the points
+			// the overlay does NOT cover. The 28 known baseline violations
+			// still report with this in place.
+			//
 			// Same for a point off the viewport: unjudgeable, not a failure.
 			const floating = document.querySelector("ion-tab-bar.g-tabbar")
+			const isStickyOverlay = (node) => {
+				for (let p = node; p && p !== document.body; p = p.parentElement) {
+					if (p === el || el.contains(p)) return false
+					if (getComputedStyle(p).position === "sticky") return true
+				}
+				return false
+			}
 			const missed = []
 			for (const [x, y] of points) {
 				if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue
 				const hit = document.elementFromPoint(x, y)
 				if (!hit) continue
-				if (floating && (hit === floating || floating.contains(hit))) continue
 				// the element itself, something inside it, or its own ::before overlay
 				const owns = hit === el || el.contains(hit) || hit.contains(el)
-				if (!owns) missed.push(`${Math.round(x)},${Math.round(y)}`)
+				if (owns) continue
+				if (floating && (hit === floating || floating.contains(hit))) continue
+				if (isStickyOverlay(hit)) continue
+				missed.push(`${Math.round(x)},${Math.round(y)}`)
 			}
 			if (missed.length) {
 				out.push({

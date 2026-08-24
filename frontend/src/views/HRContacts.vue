@@ -74,7 +74,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
-import { FeatherIcon, Button } from "frappe-ui"
+import { FeatherIcon } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import ContactCard from "@/components/ContactCard.vue"

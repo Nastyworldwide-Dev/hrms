@@ -26,6 +26,7 @@
 						<div class="flex flex-row gap-2 mt-2 flex-wrap">
 							<Button
 								v-for="option in filter.options"
+								:key="option"
 								variant="outline"
 								@click="setStatusFilter(filter.fieldname, option)"
 								class="text-sm"

@@ -49,7 +49,7 @@ import GButton from "@/components/glass/GButton.vue"
 import GModal from "@/components/glass/GModal.vue"
 import { ref } from "vue"
 
-import { Dialog, Popover, FeatherIcon } from "frappe-ui"
+import { Popover, FeatherIcon } from "frappe-ui"
 
 // Initialize deferredPrompt for use later to show browser install prompt.
 const deferredPrompt = ref(null)

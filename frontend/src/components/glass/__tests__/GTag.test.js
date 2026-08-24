@@ -15,6 +15,11 @@
 // and this one explains why.
 //
 // Run with: node --test "frontend/**/*.test.js"
+//
+// The collision with the native <button> element is the exact defect this
+// file exists to pin; a component literally named "Button" is the test
+// fixture, not a mistake.
+/* eslint-disable vue/no-reserved-component-names */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { createSSRApp, h, resolveDynamicComponent } from "vue"

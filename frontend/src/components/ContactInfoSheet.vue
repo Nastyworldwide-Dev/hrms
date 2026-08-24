@@ -55,7 +55,7 @@ import { reportingManagerResource } from "@/data/hrContacts"
 
 const __ = inject("$translate")
 
-const props = defineProps({
+defineProps({
 	selfData: {
 		type: Array,
 		required: true,

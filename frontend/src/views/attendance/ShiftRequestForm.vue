@@ -24,6 +24,10 @@ import { ref, watch, inject } from "vue"
 import FormView from "@/components/FormView.vue"
 
 const employee = inject("$employee")
+// validateDates() below reads this — was never injected, so picking a to
+// date before the from date threw ReferenceError instead of showing the
+// friendly message.
+const __ = inject("$translate")
 
 const props = defineProps({
 	id: {

@@ -97,7 +97,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import { FeatherIcon, Switch, toast, Button } from "frappe-ui"
+import { FeatherIcon, Switch, toast } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { computed, inject, ref } from "vue"

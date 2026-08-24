@@ -82,12 +82,11 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GButton from "@/components/glass/GButton.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
-import { Badge, Button, FeatherIcon, createResource } from "frappe-ui"
+import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
 
@@ -110,6 +109,4 @@ const claims = createResource({
 const monthLabel = computed(() =>
 	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMMM YYYY") : ""
 )
-
-const router = useRouter()
 </script>

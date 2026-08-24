@@ -7,7 +7,7 @@ import App from "./App.vue"
 import router from "./router"
 import { initSocket } from "./socket"
 
-import { Button, Input, resourcesPlugin, FormControl } from "frappe-ui"
+import { Button, Input, resourcesPlugin, FormControl, frappeRequest } from "frappe-ui"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import ResourceError from "@/components/ResourceError.vue"
 import { applyProductName } from "@/utils/productName"
@@ -48,7 +48,13 @@ const socket = initSocket()
 app.use(resourcesPlugin)
 app.use(translationsPlugin)
 
+// Deliberate: registers frappe-ui's raw Button/Input globally so bare
+// <Button>/<Input> resolve everywhere without a per-file import. GTag exists
+// specifically to stop this from ever shadowing a real <button>/<input> in
+// the glass rows and cards it renders — see GTag.test.js.
+// eslint-disable-next-line vue/no-reserved-component-names
 app.component("Button", Button)
+// eslint-disable-next-line vue/no-reserved-component-names
 app.component("Input", Input)
 app.component("FormControl", FormControl)
 // EmptyState was registered here too until 8.11. It was the app's SECOND

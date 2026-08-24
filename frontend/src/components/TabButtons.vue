@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
 	buttons: {
 		type: Array,
 		required: true,

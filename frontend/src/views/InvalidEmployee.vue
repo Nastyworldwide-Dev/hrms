@@ -21,7 +21,7 @@ import GModal from "@/components/glass/GModal.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { computed, inject, ref } from "vue"
-import { Dialog, createResource } from "frappe-ui"
+import { createResource } from "frappe-ui"
 
 const session = inject("$session")
 // `__` is a global property, so the template resolves it on its own; script

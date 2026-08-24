@@ -12,27 +12,38 @@
 			{{ props.label }}
 		</span>
 
-		<!-- Select or Link field with predefined options -->
-		<Autocomplete
+		<!-- Select or Link field with predefined options.
+			 Wrapped in .g-linkfield rather than swapped for GLinkPicker: the
+			 wrapper is what carries the glass skin (frappe-ui's Autocomplete
+			 hardcodes a 28px trigger — see the CSS), and wrapping leaves the
+			 v?.value unwrapping and Link.vue's remote-search binding exactly
+			 as they were. GLinkPicker gets the same class, so adopting it
+			 later is a drop-in rather than a re-style. -->
+		<div
 			v-if="props.fieldtype === 'Select' || props.documentList"
-			:class="isReadOnly ? 'pointer-events-none' : ''"
-			:placeholder="__('Select {0}', [props.label])"
-			:options="selectionList"
-			:modelValue="modelValue"
-			v-bind="$attrs"
-			:disabled="isReadOnly"
-			@update:modelValue="(v) => emit('update:modelValue', v?.value)"
-		/>
+			class="g-linkfield"
+		>
+			<Autocomplete
+				:class="isReadOnly ? 'pointer-events-none' : ''"
+				:placeholder="__('Select {0}', [props.label])"
+				:options="selectionList"
+				:modelValue="modelValue"
+				v-bind="$attrs"
+				:disabled="isReadOnly"
+				@update:modelValue="(v) => emit('update:modelValue', v?.value)"
+			/>
+		</div>
 
 		<!-- Link field -->
-		<Link
-			v-else-if="props.fieldtype === 'Link'"
-			:doctype="props.options"
-			:modelValue="modelValue"
-			:filters="props.linkFilters"
-			:disabled="isReadOnly"
-			@update:modelValue="(v) => emit('update:modelValue', v)"
-		/>
+		<div v-else-if="props.fieldtype === 'Link'" class="g-linkfield">
+			<Link
+				:doctype="props.options"
+				:modelValue="modelValue"
+				:filters="props.linkFilters"
+				:disabled="isReadOnly"
+				@update:modelValue="(v) => emit('update:modelValue', v)"
+			/>
+		</div>
 
 		<TextEditor
 			v-else-if="props.fieldtype === 'Text Editor'"
@@ -80,25 +91,23 @@
 		/>
 
 		<!-- Read only currency field -->
-		<Input
+		<GInput
 			v-else-if="props.fieldtype === 'Currency' && isReadOnly"
 			type="text"
-			:value="modelValue"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
+			:model-value="modelValue"
 			:disabled="isReadOnly"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<!-- Float/Int field -->
-		<Input
+		<GInput
 			v-else-if="isNumberType"
 			type="number"
-			:value="modelValue"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
+			:model-value="modelValue"
 			:disabled="isReadOnly"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<!-- Section Break -->
@@ -112,49 +121,46 @@
 			</h2>
 		</div>
 
-		<!-- Date -->
-		<!-- FIXME: default datepicker has poor UI -->
-		<Input
+		<!-- Date. Was a raw native <input type="date">, flagged FIXME "poor UI"
+			 by whoever wrote it — GDatePicker already existed (skins frappe-ui's
+			 real DatePicker popover) but had never been wired into a live form,
+			 only the design specimen page. min/maxDate are forwarded for parity
+			 with the old input's :min/:max, though nothing in this app's backend
+			 has ever populated field.minDate/maxDate on any doctype. -->
+		<GDatePicker
 			v-else-if="props.fieldtype === 'Date'"
-			type="date"
-			:value="modelValue"
+			:model-value="modelValue"
 			:placeholder="__('Select {0}', [props.label])"
-			:formatValue="(val) => dayjs(val).format('DD-MM-YYYY')"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
 			:disabled="isReadOnly"
-			:min="props.minDate"
-			:max="props.maxDate"
+			:min-date="props.minDate"
+			:max-date="props.maxDate"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
-		<!-- Time -->
-		<!-- native input: frappe-ui's Input drops unsupported types like "time",
-			 so it renders as a plain text box with no picker and no validation -->
-		<!-- aria-label from the field's own label: the visible text sits in a
-			 sibling <span>, not a <label for>, so axe reported this as unlabelled
-			 on 16 screen-themes — one component, not 16 bugs. -->
-		<input
+		<!-- Time: a native input, not a hand-rolled picker — the browser's own
+			 time UI is the proven, accessible choice here (frappe-ui ships no
+			 time-only widget). Routed through GInput so it gets the same glass
+			 token styling as every other field, replacing the hardcoded
+			 `border-gray-400` that never adapted to dark mode. -->
+		<GInput
 			v-else-if="props.fieldtype === 'Time'"
 			type="time"
 			:aria-label="props.label"
-			class="form-input block w-full border-gray-400 placeholder-gray-500"
-			:value="modelValue"
-			@input="(e) => emit('update:modelValue', e.target.value)"
-			@change="(e) => emit('change', e.target.value)"
-			v-bind="$attrs"
+			:model-value="modelValue"
 			:disabled="isReadOnly"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<!-- Datetime -->
-		<DateTimePicker
+		<GDateTimePicker
 			v-else-if="props.fieldtype === 'Datetime'"
-			:value="modelValue"
-			:placeholder="`Select ${props.label}`"
-			:formatter="(val) => dayjs(val).format('DD-MM-YYYY HH:mm:ss')"
-			@update:modelValue="(v) => emit('update:modelValue', v)"
-			v-bind="$attrs"
+			:model-value="modelValue"
+			:placeholder="__('Select {0}', [props.label])"
 			:disabled="isReadOnly"
+			v-bind="$attrs"
+			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
 		/>
 
 		<ErrorMessage :message="props.errorMessage" />
@@ -164,7 +170,9 @@
 <script setup>
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GInput from "@/components/glass/GInput.vue"
-import { Autocomplete, DateTimePicker, ErrorMessage, Input, TextEditor } from "frappe-ui"
+import GDatePicker from "@/components/glass/GDatePicker.vue"
+import GDateTimePicker from "@/components/glass/GDateTimePicker.vue"
+import { Autocomplete, ErrorMessage, Input, TextEditor } from "frappe-ui"
 import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"

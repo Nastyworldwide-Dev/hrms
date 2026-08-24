@@ -60,8 +60,8 @@
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
 							class="bg-surface border border-divider p-2 w-full"
-							v-for="(file, index) in attachedFiles.data"
-							:key="index"
+							v-for="file in attachedFiles.data"
+							:key="file.name"
 						>
 							<div
 								class="flex flex-row items-center justify-between text-inkbase text-sm"
@@ -212,7 +212,7 @@ const document = createDocumentResource({
 	doctype: props.modelValue.doctype,
 	name: props.modelValue.name,
 	auto: true,
-	onSuccess(doc) {
+	onSuccess(_doc) {
 		attachedFiles.reload()
 	},
 })

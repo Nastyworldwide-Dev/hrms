@@ -13,11 +13,15 @@
 		{{ dayjs(props.value).format("D MMM YYYY") }}
 	</div>
 
+	<!-- Read-only display: :model-value, not v-model — this component only ever
+	     shows a formatted value, and v-model here silently mutated the "value"
+	     prop (harmless while :disabled locks the box, but wrong data flow and
+	     a real Vue warning either way). -->
 	<Input
 		v-else-if="props.fieldtype === 'Check'"
 		type="checkbox"
 		label=""
-		v-model="props.value"
+		:model-value="props.value"
 		:disabled="true"
 		class="text-accent-ink"
 	/>
@@ -59,7 +63,7 @@
 
 <script setup>
 import { inject } from "vue"
-import { Badge, FormControl, Input } from "frappe-ui"
+import { Badge, Input } from "frappe-ui"
 
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 

@@ -209,7 +209,7 @@ import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
 import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"
-import { IonModal, modalController } from "@ionic/vue"
+import { modalController } from "@ionic/vue"
 
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -256,7 +256,6 @@ const mapEl = ref(null)
 let leafletMap = null
 let userMarker = null
 let shiftMarker = null
-let radiusCircle = null
 let geoWatchId = null
 // Per-modal-session geolocation state. latitude/longitude refs persist across
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
@@ -615,7 +614,7 @@ async function initMap() {
 			className: "shift-loc-tooltip",
 		})
 		if (loc.checkin_radius > 0) {
-			radiusCircle = L.circle(shiftLatLng, {
+			L.circle(shiftLatLng, {
 				radius: loc.checkin_radius,
 				color: loc.strict ? "#dc2626" : "#2563eb",
 				weight: 2,
@@ -690,7 +689,6 @@ function destroyMap() {
 	}
 	userMarker = null
 	shiftMarker = null
-	radiusCircle = null
 }
 
 // If the shift-location fetch finishes after the map is already up
@@ -709,7 +707,7 @@ watch(
 				className: "shift-loc-tooltip",
 			})
 			if (loc.checkin_radius > 0) {
-				radiusCircle = L.circle(shiftLatLng, {
+				L.circle(shiftLatLng, {
 					radius: loc.checkin_radius,
 					color: loc.strict ? "#dc2626" : "#2563eb",
 					weight: 2,

@@ -18,16 +18,20 @@
     modelValue  string — ISO date
     label       string — field label, uppercase like GInput's
     placeholder string
-    disabled    boolean
+    disabled    boolean — forwarded as frappe-ui DatePicker's `readonly`
+                (its real prop; it has no `disabled`, and `readonly` is what
+                actually gates the popover open — see its @focus handler).
+                Kept as `disabled` here so every G* form field shares one
+                name for "can't edit this."
   Emits: update:modelValue
 -->
 <template>
-	<div class="g-field">
+	<div class="g-field g-datefield">
 		<span v-if="label" class="g-field__label">{{ label }}</span>
 		<DatePicker
 			:model-value="modelValue"
 			:placeholder="placeholder"
-			:disabled="disabled"
+			:readonly="disabled"
 			@update:model-value="$emit('update:modelValue', $event)"
 		/>
 	</div>

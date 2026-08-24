@@ -10,6 +10,10 @@
   Props:
     modelValue  string | number — v-model
     label       string — field label, uppercase; also the accessible name
+    ariaLabel   string — accessible name for a caller that renders its OWN
+                visible label elsewhere (FormField.vue's field label is a
+                sibling <span>, not a <label for>, so it associates with
+                nothing without this — see the Time field, §14 a11y audit)
     placeholder string
     type        string, default "text"
     error       string — message shown below; also flips the border and sets
@@ -27,6 +31,7 @@
 			:value="modelValue"
 			:placeholder="placeholder"
 			:disabled="disabled"
+			:aria-label="!label && ariaLabel ? ariaLabel : undefined"
 			:aria-invalid="error ? 'true' : undefined"
 			:aria-disabled="disabled || undefined"
 			@input="$emit('update:modelValue', $event.target.value)"
@@ -39,6 +44,7 @@
 defineProps({
 	modelValue: { type: [String, Number], default: "" },
 	label: { type: String, default: "" },
+	ariaLabel: { type: String, default: "" },
 	placeholder: { type: String, default: "" },
 	type: { type: String, default: "text" },
 	error: { type: String, default: "" },

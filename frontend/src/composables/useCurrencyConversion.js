@@ -5,7 +5,7 @@ export function useCurrencyConversion(formFields, docRef, fieldsToConvert = []) 
 	 * Accepts a formFields resource, a doc ref and an array of fieldnames which are currency fields and need to have the currency in their label
 	 * Watches and updates the labels of the currency fields to include the currency in labels
 	 */
-	const currencyFields = new Set([...fieldsToConvert])
+	const currencyFields = new Set(fieldsToConvert)
 
 	const updateLabels = () => {
 		formFields.data?.forEach((field) => {
@@ -13,7 +13,7 @@ export function useCurrencyConversion(formFields, docRef, fieldsToConvert = []) 
 			if (!currencyFields.has(field.fieldname)) return
 
 			if (!field._original_label && field.label) {
-				field._original_label = field.label.replace(/\([^\)]*\)/g, "").trim()
+				field._original_label = field.label.replace(/\([^)]*\)/g, "").trim()
 			}
 			if (currencyFields.has(field.fieldname)) {
 				field.label = `${field._original_label} (${docRef.value.currency})`

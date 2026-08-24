@@ -70,7 +70,7 @@ export const translationsPlugin = {
 	async isReady() {
 		await load();
 	},
-	install(/** @type {import('vue').App} */ app, options) {
+	install(/** @type {import('vue').App} */ app, _options) {
 		const __ = translate;
 		// app.mixin({ methods: { __ } })
 		app.config.globalProperties.__ = __;

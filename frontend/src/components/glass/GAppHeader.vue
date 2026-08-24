@@ -81,9 +81,8 @@ import GAvatar from "./GAvatar.vue"
 const __ = inject("$translate")
 // provided by GPage; false on tab roots
 const showBack = inject("gShowBack", false)
-import { computed } from "vue"
 
-const props = defineProps({
+defineProps({
 	title: { type: String, default: "" },
 	unread: { type: Number, default: 0 },
 	kicker: { type: String, default: "" },

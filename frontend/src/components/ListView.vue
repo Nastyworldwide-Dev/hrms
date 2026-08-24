@@ -168,7 +168,6 @@ import {
 	modalController,
 	IonHeader,
 	IonContent,
-	IonModal,
 } from "@ionic/vue"
 
 import { FeatherIcon, createResource, debounce } from "frappe-ui"

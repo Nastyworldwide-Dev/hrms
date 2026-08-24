@@ -23,6 +23,7 @@
 		<template v-else>
 			<Button
 				v-for="action in actions"
+				:key="action.text"
 				class="w-full py-5"
 				:variant="action.variant"
 				:theme="action.theme"
@@ -47,7 +48,7 @@
 
 <script setup>
 import { IonActionSheet, modalController } from "@ionic/vue"
-import { computed, ref, onMounted, inject } from "vue"
+import { ref, onMounted, inject } from "vue"
 import { FeatherIcon } from "frappe-ui"
 
 const props = defineProps({

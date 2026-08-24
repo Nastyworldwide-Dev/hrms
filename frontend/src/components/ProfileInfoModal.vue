@@ -32,12 +32,11 @@
 
 <script setup>
 import { inject } from "vue"
-import { FeatherIcon } from "frappe-ui"
 import FormattedField from "@/components/FormattedField.vue"
 
 const __ = inject("$translate")
 
-const props = defineProps({
+defineProps({
 	title: {
 		type: String,
 		required: true,

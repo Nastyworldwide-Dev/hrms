@@ -162,7 +162,7 @@ import GPage from "@/components/glass/GPage.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
-import { Input, Button, ErrorMessage, createResource } from "frappe-ui"
+import { createResource } from "frappe-ui"
 
 import { sendPasswordResetLink } from "@/utils/resetPassword"
 
@@ -217,7 +217,7 @@ const otp = reactive({
 const session = inject("$session")
 const __ = inject("$translate")
 
-async function submit(e) {
+async function submit(_e) {
 	try {
 		let response
 		if (otp.showDialog) {

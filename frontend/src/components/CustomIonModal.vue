@@ -30,7 +30,7 @@
 import { ref } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 
-const props = defineProps({
+defineProps({
 	trigger: {
 		type: String,
 		required: false,

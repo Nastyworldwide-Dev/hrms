@@ -179,7 +179,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
-import { FeatherIcon, createDocumentResource, createResource, toast } from "frappe-ui"
+import { FeatherIcon, createDocumentResource, createResource } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 

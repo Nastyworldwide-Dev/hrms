@@ -26,8 +26,8 @@
 			<ul class="w-full flex flex-col items-center gap-2">
 				<li
 					class="bg-surface border border-divider p-2 w-full"
-					v-for="(file, index) in modelValue"
-					:key="index"
+					v-for="file in modelValue"
+					:key="file.file_name || file.name"
 				>
 					<div
 						class="flex flex-row items-center justify-between text-inkbase text-sm"
@@ -71,13 +71,13 @@
 
 <script setup>
 import GConfirm from "@/components/glass/GConfirm.vue"
-import { FeatherIcon, Dialog } from "frappe-ui"
+import { FeatherIcon } from "frappe-ui"
 import { ref } from "vue"
 import { IonModal } from "@ionic/vue"
 
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 
-const props = defineProps({
+defineProps({
 	modelValue: {
 		type: Object,
 		required: true,

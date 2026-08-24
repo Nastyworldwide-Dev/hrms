@@ -194,7 +194,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
-import { FeatherIcon, Button, toast } from "frappe-ui"
+import { FeatherIcon, toast } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { formatTimestamp } from "@/utils/formatters"

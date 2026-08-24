@@ -46,7 +46,7 @@ import { inject } from "vue"
 
 import { formatCurrency } from "@/utils/formatters"
 
-const props = defineProps({
+defineProps({
 	doc: {
 		type: Object,
 		required: true,

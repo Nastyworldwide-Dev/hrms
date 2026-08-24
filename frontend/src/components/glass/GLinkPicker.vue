@@ -26,7 +26,7 @@
   Emits: update:modelValue
 -->
 <template>
-	<div class="g-field">
+	<div class="g-field g-linkfield">
 		<span v-if="label" class="g-field__label">{{ label }}</span>
 		<Autocomplete
 			:model-value="modelValue"

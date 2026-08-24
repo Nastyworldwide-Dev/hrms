@@ -960,6 +960,77 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink3);
 	cursor: not-allowed;
 }
+
+/* GDatePicker / GDateTimePicker reach their input by DESCENDANT, same reason
+   as .g-checkfield above: they skin frappe-ui's DatePicker, whose TextInput
+   puts the class you pass on its WRAPPER div and keeps its own sizing on the
+   real <input> (see node_modules/frappe-ui/src/components/TextInput.vue —
+   `:class="attrs.class"` on the div, `:class="inputClasses"` on the input).
+   Passing `input-class` therefore styles the box but leaves a 28px-tall
+   focusable target inside it: visually fine, and a WCAG target-size failure
+   the a11y gate caught on attendance-requests-new in both themes. */
+.g-datefield > div {
+	width: 100%;
+}
+.g-datefield input {
+	width: 100%;
+	min-height: var(--g-touch-target-min);
+	padding: 13px 14px;
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-input);
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+	line-height: var(--g-type-row-label-line-height);
+	font-variant-numeric: tabular-nums;
+}
+.g-datefield input::placeholder {
+	color: var(--g-ink-muted);
+	opacity: 1;
+}
+.g-datefield input:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--g-ink),
+		0 0 0 5px var(--g-brand);
+}
+
+/* Select / Link fields, same descendant problem as .g-datefield above.
+   frappe-ui's Autocomplete hardcodes `h-7` (28px) on its trigger button with
+   no prop to change it, so every Select and Link field rendered 28px tall
+   next to 44px date and text fields — the most visible remaining "old frappe"
+   inconsistency on the forms, and a WCAG target-size failure in its own right.
+
+   The `.h-7.w-full` pair is what distinguishes the TRIGGER from the clear
+   button inside the popover, which is `h-7 w-7`. Selecting on frappe-ui's
+   utility classes couples this to its internal markup — the same coupling
+   GLinkPicker.vue's header already documents and flags for re-verification
+   on the deferred 0.1.278 upgrade. */
+.g-linkfield button.h-7.w-full {
+	min-height: var(--g-touch-target-min);
+	height: auto;
+	padding: 13px 14px;
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-input);
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	font-weight: var(--g-type-row-label-weight);
+	line-height: var(--g-type-row-label-line-height);
+}
+.g-linkfield button.h-7.w-full:hover {
+	background: var(--g-icon-bg);
+}
+.g-linkfield button.h-7.w-full:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--g-ink),
+		0 0 0 5px var(--g-brand);
+}
+
 .g-field__error {
 	margin-top: 5px;
 	font-family: var(--g-type-caption-family);

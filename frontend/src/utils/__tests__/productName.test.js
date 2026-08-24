@@ -45,6 +45,6 @@ test("falls back to the shipped title when there is no translate function", () =
 
 test("does not throw when the meta tag is absent", () => {
 	const doc = fakeDoc({ withMeta: false })
-	assert.doesNotThrow(() => applyProductName((s) => "NSTY People", doc))
+	assert.doesNotThrow(() => applyProductName((_s) => "NSTY People", doc))
 	assert.equal(doc.title, "NSTY People")
 })
