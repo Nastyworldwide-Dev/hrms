@@ -4,9 +4,14 @@ Design authority for the HR PWA redesign on branch `nz-glass`.
 
 ## Read order
 
-1. **`plan/HR_Glass_Build_Plan_v1.md`** — start here. Phases, prompt sequence, gate decisions, risks.
+1. **`plan/HR_Glass_Phase_9_Work_Order.md`** — **start here.** The current work
+   authority: locked decisions, measured evidence, the new material, all 62
+   surfaces A to Z, eight phases, the coverage matrix, and the scope ruling on
+   what "migrate off Frappe" means. Written to be worked from alone.
 2. **`spec/HR_Frappe_Glass_Spec_v1.1.md`** — the build authority. Tokens, components, states, screens, accessibility, performance budget.
 3. **`spec/HR_FRAPPE_Glass_Light_and_Dark_2.html`** — the mockup. Governs *values*, except the seven exceptions recorded in spec §14.4.
+4. `plan/HR_Glass_Build_Plan_v1.md` — phases 0–8. Historical; superseded for
+   current work by the phase 9 work order.
 
 ## Authority
 
