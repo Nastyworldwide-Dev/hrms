@@ -2,7 +2,7 @@
 
 State at the end of the rulings pass. Read this before picking the work back up.
 
-**Branch** `nz-glass` at `00d117a69`, pushed and in sync · **Spec** v1.12 ·
+**Branch** `nz-glass` at `4e593e9cd`, pushed and in sync · **Spec** v1.12 ·
 working tree clean apart from the vestigial `frappe-ui` submodule.
 
 **All eight gates green, nothing skipped.**
@@ -240,6 +240,10 @@ screens, which is **intended** and recorded in §12, not a defect.
   The script deliberately does **not** re-run `seed.py`: re-seeding changes
   content, content changes screenshots, and that would corrupt every
   visual-regression comparison against the committed baselines.
+- **Gate run artifacts are gitignored**: `design/gates/.a11y-report.json` and
+  `.coherence-report.json` are written by the e2e spec and read by the gate in
+  the same run. One used to be tracked and the other not, so every gate run left
+  the tree dirty. Neither is tracked now — do not commit them back.
 - Seeding artifacts that are **not** defects: leave rows showing `0d`, balance
   bars at 100%, `_Test Company`, empty KPI and Team screens.
 - `/hr/issues` silently redirects to the staff view without an HR role — the two

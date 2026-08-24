@@ -29,3 +29,10 @@ hrms/hr/doctype/appraisal/UI_TEST_CHECKLIST.md
 # AUDIT_PW from here; the value is per-machine and must never be committed.
 .env
 .env.local
+
+# Gate run artifacts. Written by the e2e spec, read by the gate in the same run,
+# regenerated every time. .coherence-report.json used to be tracked and
+# .a11y-report.json was not, so every gate run left the tree dirty one way or
+# the other.
+design/gates/.a11y-report.json
+design/gates/.coherence-report.json
