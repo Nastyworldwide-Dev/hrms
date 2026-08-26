@@ -94,6 +94,49 @@ class TestPlanCompanyShells(unittest.TestCase):
 		self.assertIn("abbr", plan["incomplete"][0]["missing"])
 		self.assertIn("country", plan["incomplete"][0]["missing"])
 
+	def test_a_company_that_exists_but_is_not_registered_is_named(self):
+		"""The gap behind "Pull Companies from Source isn't working".
+
+		A company already on this hub lands in `existing`, so it is never
+		created — and `_register_companies` only registers what it CREATED, on
+		purpose, because claiming a company for an instance is a human decision.
+		The operator therefore sees "All source companies exist here", green, and
+		the Companies Served table never grows.
+
+		That table is not cosmetic: `runner.scope_filter` reads it to decide
+		whose employees to pull. A company that exists here and is absent from it
+		has EVERY ONE of its employees silently excluded from the sync.
+		"""
+		rows = [
+			dict(REMOTE_ROW, name="NHSB", company_name="NHSB", abbr="NHSB"),
+			dict(REMOTE_ROW, name="NCIG", company_name="NCIG", abbr="NCIG"),
+		]
+		plan = shells.plan_company_shells(
+			rows, existing_names={"NHSB", "NCIG"}, registered_names={"NHSB"}
+		)
+		self.assertEqual(plan["to_create"], [])
+		self.assertEqual(sorted(plan["existing"]), ["NCIG", "NHSB"])
+		self.assertEqual(plan["unregistered"], ["NCIG"])
+
+	def test_nothing_is_unregistered_when_the_table_is_complete(self):
+		rows = [dict(REMOTE_ROW, name="NHSB", company_name="NHSB", abbr="NHSB")]
+		plan = shells.plan_company_shells(rows, existing_names={"NHSB"}, registered_names={"NHSB"})
+		self.assertEqual(plan["unregistered"], [])
+
+	def test_an_unmapped_instance_reports_nothing_unregistered(self):
+		"""An empty Companies Served table means "serve everything"
+		(runner.instance_companies), so nothing is missing from it."""
+		rows = [dict(REMOTE_ROW, name="NHSB", company_name="NHSB", abbr="NHSB")]
+		plan = shells.plan_company_shells(rows, existing_names={"NHSB"}, registered_names=set())
+		self.assertEqual(plan["unregistered"], [])
+
+	def test_a_company_to_be_created_is_not_also_reported_unregistered(self):
+		"""It will be registered by create_company_shells; naming it twice would
+		tell the operator to do something the button is about to do."""
+		rows = [dict(REMOTE_ROW)]
+		plan = shells.plan_company_shells(rows, existing_names=set(), registered_names={"OTHER"})
+		self.assertEqual(plan["unregistered"], [])
+
 	def test_incomplete_rows_are_never_queued_for_creation(self):
 		rows = [{"name": "X", "company_name": "X"}]
 		plan = shells.plan_company_shells(rows, existing_names=set())
@@ -164,6 +207,24 @@ class TestEndpointHardening(unittest.TestCase):
 			elif isinstance(node, self.ast.Attribute):
 				names.add(node.attr)
 		return names
+
+	def test_register_endpoint_is_post_only(self):
+		"""It mutates the table that decides whose employees sync."""
+		decorators = self.ast.unparse(self.functions["register_existing_companies"].decorator_list[0])
+		self.assertIn("POST", decorators)
+
+	def test_register_endpoint_rejects_company_fenced_callers(self):
+		names = self._names_in("register_existing_companies")
+		self.assertIn("_ensure_unfenced_operator", names)
+		self.assertIn("only_for", names)
+
+	def test_register_endpoint_only_accepts_companies_the_source_serves(self):
+		"""It must not become a way to claim an arbitrary company for an
+		instance - the companies table drives the fence and the staff redirect,
+		so the source's own list is the authority for what may go in it."""
+		src = self.ast.unparse(self.functions["register_existing_companies"])
+		self.assertIn("_plan_for_instance", src)
+		self.assertIn("unregistered", src)
 
 	def test_create_endpoint_is_post_only(self):
 		# SEC-03: a state-mutating whitelisted method reachable via GET is a

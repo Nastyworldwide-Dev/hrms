@@ -73,7 +73,7 @@ def shell_payload(row: dict) -> dict:
 	return payload
 
 
-def plan_company_shells(remote_rows, existing_names) -> dict:
+def plan_company_shells(remote_rows, existing_names, registered_names=None) -> dict:
 	"""Partition the source's companies into exists / create / unusable.
 
 	Pure: `existing_names` is the set of remote names that already exist
@@ -81,6 +81,7 @@ def plan_company_shells(remote_rows, existing_names) -> dict:
 	bucket — nothing is silently dropped.
 	"""
 	existing_names = set(existing_names or ())
+	registered_names = set(registered_names or ())
 	to_create, existing, incomplete = [], [], []
 	skipped = 0
 	seen = set()
@@ -105,11 +106,31 @@ def plan_company_shells(remote_rows, existing_names) -> dict:
 
 		to_create.append(shell_payload(row))
 
+	# Companies the source serves that ALREADY exist here but are absent from
+	# this instance's `companies` table.
+	#
+	# This is the gap behind "Pull Companies from Source isn't working". An
+	# existing company is never created, and `_register_companies` registers
+	# only what it CREATED - deliberately, because claiming a company for an
+	# instance is a human decision the duplicate-claim guard depends on. So the
+	# operator sees "All source companies exist here", green, and the table
+	# never grows.
+	#
+	# That table is not cosmetic. `runner.scope_filter` reads it to decide whose
+	# employees to pull, so a company missing from it has EVERY one of its
+	# employees silently excluded from every sync. Naming them is the whole fix:
+	# the decision stays human, it just stops being invisible.
+	#
+	# An EMPTY table means "serve everything" (runner.instance_companies), so
+	# there is nothing missing from it and nothing to report.
+	unregistered = sorted(set(existing) - registered_names) if registered_names else []
+
 	return {
 		"to_create": to_create,
 		"existing": existing,
 		"incomplete": incomplete,
 		"skipped": skipped,
+		"unregistered": unregistered,
 	}
 
 
@@ -119,15 +140,28 @@ def _plan_for_instance(instance_name: str) -> dict:
 	client = RemoteInstanceClient(instance_name)
 	rows = client.get_list("Company", fields=list(REMOTE_COMPANY_FIELDS), order_by="name asc")
 	existing = {row["name"] for row in rows if row.get("name") and frappe.db.exists("Company", row["name"])}
-	plan = plan_company_shells(rows, existing)
+	registered = set(
+		frappe.get_all(
+			"HRMS ERP Instance Company", filters={"parent": instance_name}, pluck="company"
+		)
+	)
+	plan = plan_company_shells(rows, existing, registered)
 	logger.info(
-		"[company_shells] %s: %d remote, %d existing, %d to create, %d incomplete",
+		"[company_shells] %s: %d remote, %d existing, %d to create, %d incomplete, %d unregistered",
 		instance_name,
 		len(rows),
 		len(plan["existing"]),
 		len(plan["to_create"]),
 		len(plan["incomplete"]),
+		len(plan["unregistered"]),
 	)
+	if plan["unregistered"]:
+		logger.warning(
+			"[company_shells] %s serves %s but they are NOT in its companies table — "
+			"their employees are excluded from every sync",
+			instance_name,
+			", ".join(plan["unregistered"]),
+		)
 	return plan
 
 
@@ -137,6 +171,49 @@ def preview_company_shells(instance_name: str) -> dict:
 	frappe.only_for(("System Manager", "HR Manager"))
 	_ensure_unfenced_operator()
 	return _plan_for_instance(instance_name)
+
+
+@frappe.whitelist(methods=["POST"])
+def register_existing_companies(instance_name: str, companies=None) -> dict:
+	"""List companies that already exist here against this instance.
+
+	`create_company_shells` registers only what it CREATED, on purpose: claiming
+	a company for an instance is a human decision, and the duplicate-claim guard
+	depends on it being one. The consequence was that a company already present
+	on this hub could never enter the table at all — and `runner.scope_filter`
+	reads that table to decide whose employees to pull, so every one of its
+	employees was excluded from every sync, silently.
+
+	This is that decision made explicitly, not automatically. The candidate list
+	is the plan's `unregistered` bucket, so the SOURCE's own company list is the
+	authority for what may go in: an arbitrary company cannot be claimed for an
+	instance through this endpoint.
+
+	POST-only for the same reason as `create_company_shells` (SEC-03), and it
+	reuses `_register_companies`, so the per-company save and the
+	duplicate-claim validation are the ones already in use.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	_ensure_unfenced_operator()
+
+	plan = _plan_for_instance(instance_name)
+	candidates = set(plan["unregistered"])
+	if companies is None:
+		chosen = sorted(candidates)
+	else:
+		requested = frappe.parse_json(companies) if isinstance(companies, str) else list(companies)
+		chosen = [c for c in requested if c in candidates]
+		refused = sorted(set(requested) - candidates)
+		if refused:
+			logger.warning(
+				"[company_shells] refused to register %s on %s: not in the source's company list",
+				", ".join(refused),
+				instance_name,
+			)
+
+	registered, errors = _register_companies(instance_name, chosen)
+	logger.info("[company_shells] registered %d existing company(ies) on %s", len(registered), instance_name)
+	return {"registered": registered, "errors": errors, "candidates": sorted(candidates)}
 
 
 @frappe.whitelist(methods=["POST"])
