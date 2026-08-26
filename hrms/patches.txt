@@ -80,3 +80,4 @@ hrms.patches.v16_0.sync_custom_fields_with_code #2026-08-19 Appraisal joins the 
 hrms.patches.v16_0.drop_e3_performance_band_values
 hrms.patches.v16_0.rename_frappe_hr_desktop_icon #2026-08-24 Nadi rebrand
 hrms.patches.v16_0.repair_nadi_desktop_icon_children #2026-08-26 the launcher lost its children
+hrms.patches.v16_0.repair_mirrored_naming_series #2026-08-26 check-in collided with mirrored names

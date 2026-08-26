@@ -26,6 +26,7 @@ including when it blows up.
 
 import json
 import logging
+import re
 
 import frappe
 from frappe import _
@@ -754,6 +755,117 @@ def _replace_children(doctype: str, name: str, children: dict) -> None:
 		_log().debug("[sync] replaced %d %s row(s) under %s %s", len(rows), fieldname, doctype, name)
 
 
+#: Date tokens Frappe expands inside a naming series. Anything else between the
+#: dots is a literal.
+_SERIES_TOKENS = {"YYYY": r"\d{4}", "YY": r"\d{2}", "MM": r"\d{2}", "DD": r"\d{2}"}
+
+
+def series_regex(series: str):
+	"""Compile one declared naming series into a matcher for names it produced.
+
+	Derived from the DOCTYPE's own pattern, never guessed from the names. The
+	first version of this split any name at its last non-digit, which turned the
+	hash-named row `77r5o9d1b4` into prefix `77r5o9d1b` counter 4 and wrote that
+	into tabSeries. Caught on a bench. A table that decides how documents are
+	named is the wrong place to be approximately right.
+
+	`if "#" not in series` mirrors `NamingSeries.__init__`: a `naming_series`
+	option like `HR-ATT-.YYYY.-` carries no hashes and gets the default five.
+	"""
+	if "#" not in series:
+		series += ".#####"
+	parts = []
+	for part in series.split("."):
+		if part and set(part) == {"#"}:
+			parts.append(r"(?P<number>\d+)")
+		elif part in _SERIES_TOKENS:
+			parts.append(_SERIES_TOKENS[part])
+		else:
+			parts.append(re.escape(part))
+	return re.compile("^" + "".join(parts) + "$")
+
+
+def series_matchers(doctype: str) -> list:
+	"""Every naming pattern `doctype` can produce. Empty for hash-named doctypes.
+
+	Empty is the important case and is why this reads meta rather than names:
+	Leave Ledger Entry and Employee autoname to hashes, so they have no counter,
+	and nothing about them should ever reach tabSeries.
+	"""
+	meta = frappe.get_meta(doctype)
+	autoname = meta.autoname or ""
+	if autoname.startswith("naming_series:"):
+		field = meta.get_field("naming_series")
+		options = [o.strip() for o in (field.options or "").split("\n") if o.strip()] if field else []
+	elif autoname and not autoname.startswith(("field:", "hash", "prompt", "format:")):
+		options = [autoname]
+	else:
+		options = []
+	return [series_regex(o) for o in options]
+
+
+def split_series_name(name: str, matchers):
+	"""("EMP-CKIN-08-2026-", 1) when `name` came from one of these series, else None."""
+	for matcher in matchers:
+		match = matcher.match(name or "")
+		if match:
+			return name[: match.start("number")], int(match["number"])
+	return None
+
+
+def advance_series_past(doctype: str, names) -> dict:
+	"""Move `doctype`'s naming counters past the highest number the mirror wrote.
+
+	THE BUG THIS FIXES, reproduced on a real database and seen in production:
+
+	    mirrored 3 rows (EMP-CKIN-08-2026-000001-000003). counter = 0
+	    EMPLOYEE CHECK-IN FAILED -> DuplicateEntryError:
+	        'EMP-CKIN-08-2026-000001' for key 'PRIMARY'
+
+	Employee Checkin autonames from a counter, and `_write_row` inserts with
+	`set_name=remote_name` so the mirror keeps the SOURCE's names. That part is
+	load-bearing — the whole mirror upserts on the remote name, and renumbering
+	locally would duplicate every row on the next pull. But `set_name` bypasses
+	`autoname`, so tabSeries never moved, and the next employee to tap Check In
+	was handed a number the mirror had already taken.
+
+	Not a check-in bug: every mirrored doctype that numbers itself has it —
+	Attendance, Leave Application, the lot. Check-in is just the one an employee
+	touches hourly, so it surfaced first.
+
+	FORWARD ONLY. A hub that has issued 000500 locally and then receives a late
+	mirrored 000003 stays at 500. Winding back would free 000004..000500 for
+	reissue and recreate the collision in the other direction — that time
+	overwriting rows rather than failing loudly.
+	"""
+	from frappe.model.naming import NamingSeries
+
+	matchers = series_matchers(doctype)
+	if not matchers:
+		return {}
+
+	highest: dict[str, int] = {}
+	for name in names:
+		split = split_series_name(name, matchers)
+		if split:
+			prefix, number = split
+			highest[prefix] = max(highest.get(prefix, 0), number)
+
+	moved = {}
+	for prefix, number in highest.items():
+		try:
+			series = NamingSeries(prefix)
+			if number > series.get_current_value():
+				series.update_counter(number)
+				moved[prefix] = number
+		except Exception as e:  # one bad prefix must not fail the whole sync
+			_log().warning("[sync] could not advance series %s to %s: %s", prefix, number, e)
+
+	if moved:
+		_log().info("[sync] %s: advanced %d naming counter(s): %s", doctype, len(moved), moved)
+	return moved
+
+
 def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool, str]:
 	"""May `instance_name` write a row already stamped by someone else? Pure.
 
@@ -1037,6 +1149,9 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	# Names another instance already owns. Capped like row_errors — the count
 	# is the alarm, the names are just enough to go and look.
 	contested_names: list[str] = []
+	# Names the mirror FORCED via set_name, so autoname never issued them and the
+	# counter never moved. Collected across every page, then applied once.
+	forced_names: list[str] = []
 	seen = set()
 
 	for chunk in _split_filters(remote_filters):
@@ -1110,6 +1225,9 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				if outcome == "inserted":
 					written += 1
 					inserted += 1
+					# Only INSERTS can have taken a number the counter has not
+					# issued. An update re-writes a name this hub already holds.
+					forced_names.append(remote_name)
 				elif outcome == "updated":
 					written += 1
 					updated += 1
@@ -1136,6 +1254,10 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		# either: a create-only master is never deleted here in the first place.
 		if doctype in STAMPED_DOCTYPES:
 			skipped += _count_local_orphans(doctype, client.instance_name, seen)
+
+	# Every page is written; do this before the run is called done, so the very
+	# next local create cannot be handed a number the mirror already used.
+	advance_series_past(doctype, forced_names)
 
 	_log().info(
 		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s errored=%s contested=%s (since=%s)",
