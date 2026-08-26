@@ -98,7 +98,7 @@
    "permlevel": 1
   },
   {
-   "description": "Employees of these companies are sent to this instance.",
+   "description": "Which companies this instance serves. LEAVE EMPTY to serve every company on the source — empty is not 'none', it is 'all'. Add rows only to narrow it. Drives the sync scope, the company fence, the staff ERP redirect and the parity scope.",
    "fieldname": "companies",
    "fieldtype": "Table",
    "label": "Companies",

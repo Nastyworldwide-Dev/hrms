@@ -3,7 +3,24 @@
 
 frappe.ui.form.on("HRMS ERP Instance", {
 	refresh(frm) {
-		if (frm.is_new() || !frm.doc.enabled) return;
+		if (frm.is_new()) return;
+
+		// BEFORE the `enabled` gate, both of them deliberately.
+		//
+		// Purge is cleanup for a DECOMMISSIONED instance, and disabling is how
+		// you decommission one — so hiding it behind `enabled` hid it in exactly
+		// the case it exists for. Observed: an operator had to re-enable a dead
+		// instance to clean it up, which is backwards and briefly re-armed the
+		// sync client to do it.
+		//
+		// The scope line has to render for a disabled instance too: the fence
+		// still applies while disabled ("Does NOT affect the permission fence"
+		// is right there on the Enabled field), so what it resolves to is still
+		// the operator's business.
+		frm.add_custom_button(__("Purge Mirrored Data"), () => purge_mirror(frm), __("Danger"));
+		show_company_scope(frm);
+
+		if (!frm.doc.enabled) return;
 
 		// Ordered as the operator must run them: companies first, because an
 		// Employee whose company is absent here is skipped, not written.
@@ -12,10 +29,12 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
 		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
-		// Destructive, so it lives under a group rather than beside the four
-		// read/pull actions, and it opens on the DRY RUN.
-		frm.add_custom_button(__("Purge Mirrored Data"), () => purge_mirror(frm), __("Danger"));
 		show_sync_headline(frm);
+	},
+
+	companies(frm) {
+		// The row count changed, so the effective scope did too.
+		show_company_scope(frm);
 	},
 });
 
@@ -685,4 +704,30 @@ function register_existing(frm, companies) {
 			frm.reload_doc();
 		},
 	});
+}
+
+
+//: State the scope this table is CURRENTLY in effect for.
+//
+// An empty child table under a heading that read "Employees of these companies
+// are sent to this instance" says "none" to every reader, and it means "all".
+// An operator spent an afternoon on that: 312 employees had synced correctly
+// and the form showed a blank table, so it looked like nothing had been fetched.
+//
+// Empty is the PERMISSIVE setting. The form now says so where the emptiness is,
+// rather than leaving the reader to infer it from `runner.instance_companies`.
+function show_company_scope(frm) {
+	const field = frm.get_field("companies");
+	if (!field) return;
+
+	const rows = (frm.doc.companies || []).length;
+	field.df.description = rows
+		? __(
+				"Serving {0} company(ies). Employees of any OTHER company on the source are NOT synced, and HR (Instance) users are fenced to these.",
+				[rows]
+		  )
+		: __(
+				"EMPTY = every company. This instance currently syncs employees from ALL companies on the source — empty is the permissive setting, not a missing one. Add rows only to narrow it."
+		  );
+	field.refresh();
 }
