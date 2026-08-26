@@ -10,7 +10,7 @@ from frappe.utils import cint, flt, format_datetime, format_duration
 
 from erpnext.accounts.utils import build_qb_match_conditions
 
-from hrms.utils.report_scope import apply_employee_scope
+from hrms.utils.report_scope import apply_employee_scope, scoped_companies
 
 
 def execute(filters=None):
@@ -285,6 +285,14 @@ def get_base_attendance_query(filters):
 			continue
 		else:
 			query = query.where(attendance[field] == filters[field])
+
+	# The HR company fence, applied as set membership. It arrives as a LIST
+	# rather than inside `filters` on purpose: the loop above treats every
+	# filter value as an equality operand, so a sequence in there renders as
+	# `company=('in',[…])`, which MariaDB rejects.
+	companies = scoped_companies()
+	if companies:
+		query = query.where(attendance.company.isin(companies))
 
 	query = query.where(Criterion.all(build_qb_match_conditions("Attendance")))
 	return query

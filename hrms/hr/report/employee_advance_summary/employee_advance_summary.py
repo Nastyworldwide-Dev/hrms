@@ -7,7 +7,7 @@ import frappe
 from frappe import _, msgprint, scrub
 from frappe.query_builder import Order
 
-from hrms.utils.report_scope import apply_employee_scope
+from hrms.utils.report_scope import apply_employee_scope, scoped_companies
 
 
 def execute(filters=None):
@@ -266,6 +266,13 @@ def get_advances(filters):
 
 	if filters.get("company"):
 		query = query.where(EmployeeAdvance.company == filters.get("company"))
+
+	# The HR company fence, as set membership. Narrows what the caller chose
+	# rather than replacing it, so an HR (Company) user asking for a company
+	# outside their fence gets nothing instead of everything.
+	companies = scoped_companies()
+	if companies:
+		query = query.where(EmployeeAdvance.company.isin(companies))
 
 	if filters.get("status"):
 		query = query.where(EmployeeAdvance.status == filters.get("status"))
