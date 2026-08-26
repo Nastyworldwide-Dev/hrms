@@ -35,7 +35,14 @@ export default defineConfig({
 				scope: "/hrms",
 				start_url: "/hrms",
 				description: "Everyday HR & Payroll operations at your fingertips",
-				theme_color: "#EDEFF3",
+				// --g-bg dark. The manifest value paints the OS splash and the task
+				// switcher BEFORE any JS runs, so a light literal here flashed white
+				// on every dark launch — and the default theme mode is "system".
+				// The in-browser chrome is not this value: data/theme.js reads --g-bg
+				// after data-theme is set and writes it onto <meta name="theme-color">,
+				// so that half already follows the token and must keep exactly one
+				// such meta tag to query.
+				theme_color: "#07070A",
 				icons: [
 					{
 						src: "/assets/hrms/manifest/manifest-icon-192.maskable.png",
@@ -73,11 +80,24 @@ export default defineConfig({
 	build: {
 		outDir: "../hrms/public/frontend",
 		emptyOutDir: true,
-		target: "es2015",
+		// The floor is not es2015: this app requires backdrop-filter, service
+		// workers and CSS custom properties, so no browser that can run it is
+		// older than es2020. The old target transpiled async/await, spread and
+		// optional chaining into helpers for browsers that could never load it.
+		target: "es2020",
 		commonjsOptions: {
 			include: [/tailwind.config.js/, /node_modules/],
 		},
-		sourcemap: true,
+		// `true` shipped 124 files and 12 MB of full source into
+		// hrms/public/frontend/assets — served, and every one of them reachable.
+		//
+		// "hidden" was the first fix and is the wrong one HERE: it still writes
+		// all 12 MB, it only stops the `//# sourceMappingURL` comment pointing at
+		// them, and it is worth that trade only when something consumes the maps.
+		// Nothing does — there is no error tracker configured anywhere in this
+		// repo. Turn this back to "hidden" the day one is added, and upload the
+		// maps to it rather than deploying them.
+		sourcemap: false,
 		rollupOptions: {
 			output: {
 				manualChunks: {
