@@ -2139,6 +2139,45 @@ html[data-theme="dark"] .g-cal__day--present {
 	pointer-events: none;
 }
 
+/* ---------- expense poster (§6.3) ---------- */
+
+/* The one brand-filled surface on the Expenses dashboard. Deliberately NOT
+   glass: it is the screen's single accent, and glass would flatten it into the
+   panels beside it.
+
+   Its ink is --g-on-brand in BOTH themes, and that is the whole point. The
+   figure used to carry Tailwind's `text-ground`, which resolves to --g-bg:
+   near-black in dark (17.01 against the brand) and near-WHITE in light, where
+   it MEASURED 1.03. The eyebrow carried `text-accent-200`, which resolves to
+   --g-brand itself — 1.00 in both themes, invisible, and only ever readable
+   because `.g-eyebrow` sets a colour one class deep and the theme layer loads
+   later. Two token collapses in nine lines of markup, both correct in the only
+   theme this app was ever screenshotted in.
+
+   Neither was visible to the contrast gate, which checks the §14.2 token
+   matrix: a Tailwind class pairing is not a token pairing. */
+.g-poster {
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+	border-radius: var(--g-radius-panel);
+	padding: var(--g-pad-panel);
+	box-shadow: var(--g-lift);
+}
+/* g-eyebrow-type, not g-eyebrow: the type without the --g-accent-ink colour,
+   which is the split §11 introduced for exactly this case. */
+.g-poster__label {
+	color: var(--g-on-brand);
+	opacity: 0.74;
+}
+.g-poster__figure {
+	font-family: var(--g-type-clock-family);
+	font-size: var(--g-type-clock-size);
+	font-weight: var(--g-type-clock-weight);
+	line-height: var(--g-type-clock-line-height);
+	letter-spacing: var(--g-type-clock-tracking);
+	margin-top: 6px;
+}
+
 /* ---------- expense line items (§6.3) ---------- */
 
 /* GDataTable is a READ-ONLY table (columns/rows). The expense tables are

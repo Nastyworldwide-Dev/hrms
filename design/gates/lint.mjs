@@ -96,12 +96,44 @@ function scopedOverrides(file, content) {
 	return n;
 }
 
+// A THEMED ink over a CONSTANT background is broken in exactly one theme.
+//
+// `--g-brand` and its siblings are color-constant: identical in light and dark.
+// `--g-bg` and the ink ramps are color-themed: they invert. Pair them and the
+// result is legible in whichever theme you happened to look at, and unreadable
+// in the other — which is the failure this system produces most often, because
+// every screenshot ever taken of this app was dark.
+//
+// Measured on `ExpenseClaimSummary`, the one place this occurred: the total
+// figure carried `text-ground` on `bg-brand`, which is 17.01 in dark and
+// **1.03 in light**. The contrast gate could not see it — that gate checks the
+// §14.2 token matrix, and `on-brand over brand` was in it and passing. The
+// component simply was not using `on-brand`.
+//
+// Two flipping tokens together are FINE and common: `text-ground` on
+// `bg-accent-ink` inverts as a pair, so it reads correctly in both themes.
+// Only the mixed case is a defect.
+const CONSTANT_BG = /\bbg-(brand|brand-2|danger|success|warn|leave|on-brand|neutral-dot|rest)\b(?!\/)/;
+const THEMED_INK = /\btext-(ground|inkbase|ink|ink-\d{3}|ink2|ink3|surface|divider)\b/;
+
+function themedInkOnConstant(file, content) {
+	let n = 0;
+	// class="…" / :class="'…'" — one attribute at a time, so the two halves must
+	// land on the SAME element to count.
+	for (const m of content.matchAll(/class="([^"]*)"/g)) {
+		const cls = m[1];
+		if (CONSTANT_BG.test(cls) && THEMED_INK.test(cls)) n++;
+	}
+	return n;
+}
+
 const RULES = {
 	hex: (f, c) => count(c, /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g),
 	colorfn: (f, c) => count(c, /\b(?:rgba?|hsla?)\(\s*(?!var\b)/g),
 	arbitrary: (f, c) => count(c, /[a-zA-Z][\w:/.%-]*-\[[^\]\n]+\]/g),
 	outline: outlineViolations,
 	scopedOverride: scopedOverrides,
+	themedInkOnConstant,
 };
 
 const current = {};
