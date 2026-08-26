@@ -20,8 +20,11 @@ const PASSWORD = process.env.HRMS_E2E_PASSWORD
 
 async function signIn(page) {
 	await page.goto("/hrms/login")
-	await page.getByPlaceholder(/email/i).fill(USER)
-	await page.getByPlaceholder(/password/i).fill(PASSWORD)
+	// By label, for the same reason the assertions below use it: the password
+	// placeholder is "••••••" and matches no /password/i that will ever be
+	// written.
+	await page.getByLabel(/email/i).first().fill(USER)
+	await page.getByLabel(/password/i).first().fill(PASSWORD)
 	await page.getByRole("button", { name: /login/i }).click()
 	await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 })
 }
@@ -30,9 +33,15 @@ test.describe("the login page", () => {
 	test("offers email and password, not SSO alone", async ({ page }) => {
 		// Reported as "users can only sign in with Microsoft SSO". The form was
 		// always rendered; the recovery route out of a bad password was not.
+		// By LABEL, not placeholder. These assertions were red from the day they
+		// were written and nobody knew, because nothing ran this spec: the
+		// password field's placeholder is "••••••", which no /password/i will
+		// ever match. Asserting on the accessible name is also the stronger
+		// claim — GInput draws it from the wrapping <label>, so a field that
+		// passes here is one a screen reader can announce.
 		await page.goto("/hrms/login")
-		await expect(page.getByPlaceholder(/email/i)).toBeVisible()
-		await expect(page.getByPlaceholder(/password/i)).toBeVisible()
+		await expect(page.getByLabel(/email/i).first()).toBeVisible()
+		await expect(page.getByLabel(/password/i).first()).toBeVisible()
 	})
 
 	test("forgot password is accepted, not rejected outright", async ({ page }) => {
@@ -47,7 +56,7 @@ test.describe("the login page", () => {
 			{ timeout: 15000 },
 		)
 		await page.getByText(/forgot password/i).click()
-		await page.getByPlaceholder(/email/i).last().fill("nobody@example.invalid")
+		await page.getByLabel(/email/i).last().fill("nobody@example.invalid")
 		await page.getByRole("button", { name: /send reset link/i }).click()
 
 		const response = await request

@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test"
 
+// ONE definition of where the site is. This file used to carry its own
+// default of :8000 while screens.mjs, a11y.mjs and visual.mjs all said :8080,
+// so `critical-paths.spec.js` silently ran against a different server and its
+// four assertions had never once passed. Two defaults for one thing is how a
+// test suite reports on something nobody asked it about.
+import { BASE } from "./screens.mjs"
+
 // The project's first end-to-end tests. Everything else that guards this app is
 // static or unit-level: those prove SHAPES are right — that an endpoint declares
 // the argument its caller sends, that a mirrored row never fires on_submit — and
@@ -97,7 +104,7 @@ export default defineConfig({
 	workers: 1,
 	reporter: [["list"]],
 	use: {
-		baseURL: process.env.HRMS_E2E_URL || "http://localhost:8000",
+		baseURL: BASE,
 		// Kept only for failures — a trace per passing run is noise nobody opens.
 		trace: "retain-on-failure",
 		screenshot: "only-on-failure",
