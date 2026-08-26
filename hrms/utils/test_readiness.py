@@ -71,6 +71,10 @@ HEALTHY = {
 	"locations_without_radius": [],
 	"orphan_requests": 0,
 	"series_behind": {},
+	"leave_notification_on": True,
+	"leave_templates_set": True,
+	"push_relay_enabled": True,
+	"push_credentials_set": True,
 }
 
 
@@ -128,6 +132,43 @@ class TestTheSilentKillers(unittest.TestCase):
 		the pending list filters on approver, so nobody can ever see it."""
 		found = self.evaluate(facts(orphan_requests=4))
 		self.assertEqual(by_id(found, "orphan_requests")["status"], "fail")
+
+
+class TestNotificationsThatGoNowhere(unittest.TestCase):
+	"""Both send paths fail silently, which is why they need naming here."""
+
+	def setUp(self):
+		self.evaluate = _evaluate()
+
+	def test_leave_notification_on_with_a_blank_template_fails(self):
+		"""get_single_value returns '' and nothing sends. It ALSO makes HR
+		Settings refuse to save on every tab, which is how it was found."""
+		found = self.evaluate(facts(leave_templates_set=False))
+		self.assertEqual(by_id(found, "leave_templates")["status"], "fail")
+
+	def test_a_blank_template_is_fine_when_notifications_are_off(self):
+		"""Nothing is broken and nothing is mandatory — the field is not even
+		shown. Reporting it would be noise."""
+		found = self.evaluate(facts(leave_notification_on=False, leave_templates_set=False))
+		self.assertNotIn("leave_templates", ids(found))
+
+	def test_push_relay_off_is_a_warning(self):
+		"""A deliberate choice on many sites, and in-app notifications still
+		work — only the phone-is-closed case is lost."""
+		found = self.evaluate(facts(push_relay_enabled=False))
+		self.assertEqual(by_id(found, "push_relay")["status"], "warn")
+
+	def test_push_enabled_without_credentials_fails(self):
+		"""The incoherent state: switched on, cannot possibly work, and the send
+		site swallows the error so it looks identical to working."""
+		found = self.evaluate(facts(push_credentials_set=False))
+		self.assertEqual(by_id(found, "push_credentials")["status"], "fail")
+
+	def test_missing_credentials_are_not_reported_when_the_relay_is_off(self):
+		"""One finding per decision. Nobody needs to be told their unused relay
+		also lacks a key."""
+		found = self.evaluate(facts(push_relay_enabled=False, push_credentials_set=False))
+		self.assertNotIn("push_credentials", ids(found))
 
 
 class TestGeofenceConfiguration(unittest.TestCase):

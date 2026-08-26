@@ -116,6 +116,44 @@ def evaluate(facts: dict) -> list[dict]:
 			)
 		)
 
+	if facts.get("leave_notification_on") and not facts.get("leave_templates_set"):
+		out.append(
+			_finding(
+				"leave_templates",
+				FAIL,
+				"Send Leave Notification is on but a notification template is blank. No approver "
+				"is emailed when leave is applied for — get_single_value returns '' and nothing "
+				"sends. It also makes HR Settings refuse to save AT ALL, on every tab.",
+				"Run `bench --site <site> migrate` — "
+				"patches.v16_0.restore_hr_settings_defaults links the shipped templates.",
+			)
+		)
+
+	# Push is wrapped in try/except at the send site, so a missing relay is
+	# indistinguishable from a working one that had nothing to say.
+	if not facts.get("push_relay_enabled"):
+		out.append(
+			_finding(
+				"push_relay",
+				WARN,
+				"The push notification relay is off, so the PWA sends no push notifications. "
+				"In-app notifications still work; nothing reaches a phone that is not open.",
+				"Push Notification Settings -> enable the relay and set the API key and "
+				"secret from your hosting provider.",
+			)
+		)
+	elif not facts.get("push_credentials_set"):
+		out.append(
+			_finding(
+				"push_credentials",
+				FAIL,
+				"The push notification relay is ENABLED but has no API key or secret, so every "
+				"send fails. The send site swallows the error, so this looks identical to "
+				"working.",
+				"Push Notification Settings -> fill in API Key and API Secret.",
+			)
+		)
+
 	orphans = facts.get("orphan_requests", 0)
 	if orphans:
 		out.append(
@@ -222,8 +260,23 @@ def collect_facts() -> dict:
 			except Exception as e:
 				logger.warning("[readiness] could not read series %s: %s", prefix, e)
 
+	push = (
+		frappe.get_single("Push Notification Settings")
+		if frappe.db.exists("DocType", "Push Notification Settings")
+		else None
+	)
+
 	return {
 		"scheduler_inactive": bool(is_scheduler_inactive()),
+		"leave_notification_on": bool(settings.get("send_leave_notification")),
+		"leave_templates_set": bool(
+			settings.get("leave_approval_notification_template")
+			and settings.get("leave_status_notification_template")
+		),
+		# No relay doctype at all means an older framework; treat as enabled so
+		# this does not nag about a feature the site cannot have.
+		"push_relay_enabled": bool(push.enable_push_notification_relay) if push else True,
+		"push_credentials_set": bool(push and push.api_key and push.api_secret),
 		"checkin_enabled": bool(settings.get("allow_employee_checkin_from_mobile_app")),
 		"geo_enabled": bool(settings.get("allow_geolocation_tracking")),
 		"auto_attendance_shifts": sum(1 for s in shifts if s.enable_auto_attendance),
