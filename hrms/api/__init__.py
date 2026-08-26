@@ -1136,12 +1136,50 @@ def get_salary_currency(employee: str | None = None) -> str | None:
 # Form View APIs
 @frappe.whitelist()
 def get_doctype_fields(doctype: str) -> list[dict]:
+	"""The fields this CALLER can actually fill in.
+
+	A Link whose target the caller cannot read is a control that can only error.
+	Reported with a console log: a normal employee opening New Expense Claim was
+	shown Advances and Totals tabs holding Gain Loss Account, Bank / Cash
+	Account, Payable Account, Project and Cost Center, and every picker threw
+
+	    PermissionError: Insufficient Permission for <strong>Account</strong>
+
+	the moment it was touched. Reproduced as a real Employee-role user:
+	search_link("Account") and search_link("Currency") both raise, while
+	search_link("Expense Claim Type") succeeds.
+
+	This used to filter on fieldtype and `amended_from` alone and never asked
+	who was looking — so the accounting half of a finance form was rendered to
+	somebody with no accounting permissions and no way to complete it.
+
+	Only LINK fields are filtered: any other type has no target to check, and
+	dropping one for a permission that does not apply to it would blank the
+	form.
+
+	Optional links are safe to drop — accounts sets them later, and the employee
+	could not fill them anyway. A REQUIRED link must never be dropped: it would
+	move the failure from a visible picker to an unexplainable save. Expense
+	Claim's `currency` is reqd=1 and is handled by
+	`patches.v16_0.grant_employee_currency_read` instead.
+	"""
 	fields = frappe.get_meta(doctype).fields
-	return [
-		field
-		for field in fields
-		if field.fieldtype in SUPPORTED_FIELD_TYPES and field.fieldname != "amended_from"
-	]
+	visible = []
+	for field in fields:
+		if field.fieldtype not in SUPPORTED_FIELD_TYPES or field.fieldname == "amended_from":
+			continue
+		if (
+			field.fieldtype == "Link"
+			and field.options
+			and not field.reqd
+			and not frappe.has_permission(field.options, "read")
+		):
+			logger.debug(
+				"[api] %s.%s hidden — caller cannot read %s", doctype, field.fieldname, field.options
+			)
+			continue
+		visible.append(field)
+	return visible
 
 
 @frappe.whitelist()

@@ -83,3 +83,4 @@ hrms.patches.v16_0.repair_nadi_desktop_icon_children #2026-08-26 the launcher lo
 hrms.patches.v16_0.repair_mirrored_naming_series #2026-08-26 check-in collided with mirrored names
 hrms.patches.v16_0.restore_hr_settings_defaults #2026-08-26 HR Settings was unsaveable; leave emails never sent
 hrms.patches.v16_0.backfill_request_decision_status #2026-08-26 status field added so requests can be declined
+hrms.patches.v16_0.grant_employee_currency_read #2026-08-27 employees could not pick a currency, so could not file an expense
