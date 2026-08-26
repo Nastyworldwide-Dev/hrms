@@ -36,7 +36,6 @@ FRONTEND = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src"
 #: Decoration, not information — each is a thing whose absence IS the correct
 #: rendering of "we could not read it".
 EXEMPT = {
-	"views/Notifications.vue": "the same unread badge count",
 	"views/Profile.vue": "avatar image — falls back to initials, which is already the empty rendering",
 	"views/Login.vue": "SSO provider list — password login still works without it, and an error box on the login page would be alarming and useless",
 }

@@ -102,8 +102,17 @@
 								{{ __("Load more") }}
 							</Button>
 						</div>
+						<!-- Three states, each on its own condition. The empty state used
+						     to be chained (v-else-if) to the LOAD MORE div above and gated
+						     on !data — so a loaded-but-empty list ([]) rendered NOTHING:
+						     the list hidden by length, load-more hidden by length, and
+						     ![] is false. An operator screenshotted exactly that: a blank
+						     page with one floating Settings pill. Meanwhile "all caught
+						     up" showed during loading and on failure — the opposite of
+						     its meaning. -->
+						<ResourceError :resource="notifications" what="your notifications" />
 						<GEmptyState
-							v-else-if="!notifications.data"
+							v-if="notifications.data && !notifications.data.length"
 							:title="__('You are all caught up')"
 							:body="__('New notifications will appear here')"
 						/>
@@ -116,6 +125,7 @@
 
 <script setup>
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
