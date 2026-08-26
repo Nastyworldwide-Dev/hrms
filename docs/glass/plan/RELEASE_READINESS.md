@@ -17,7 +17,7 @@ only the first is currently true.
 
 | Layer | State | What blocks it |
 |---|---|---|
-| ERP → verifica (sync) | works, verified end to end | 3 schema rulings outstanding on Nasty-Dev; R1/R2/R6 undecided |
+| ERP → verifica (sync) | works, verified end to end | 3 schema rulings outstanding on Nasty-Dev; R1 and R2 decided, R6 open |
 | verifica hub (Desk) | functioning | launcher broken until phase 0 deploys; unthemed |
 | ESS PWA | functioning | design incomplete; **no offline handling at all** |
 | Roster SPA | never migrated | no tokens, no dark mode |
@@ -162,7 +162,7 @@ by writing code first.**
 | | Question |
 |---|---|
 | 3 schema rulings | Outstanding on Nasty-Dev. `Review Schema Gaps` on the instance form is the whole workflow — one screen, no typing |
-| **R1** | The company fence **fails open**: an HR user with no Company User Permission sees every company. Flip to fail-closed after cutover, or make fence roles mandatory in onboarding? |
+| **R1** | **DECIDED 26 Aug — no change.** One HR function covers every entity, so company-wide visibility is the requirement, not a hole. `require_unfenced` still gates hub-wide ACTIONS. See `decisions/R1-company-fence-fails-open.md` |
 | **R2** | **Decided: staff transact HERE.** The two blind spots that decision exposed are closed — parity now reports `local_own` beside the mirrored count (`e9d735d27`), and mirrored leave overlapping hub leave is detected daily (`7a8c48227`). One item is still open and is **not** engineering: **should `run_sync` be scheduled?** It is operator-initiated today, so the mirror only moves when somebody presses a button. Unattended writes to a mirror is the question `write_block.py` exists for — see below |
 | **R6** | `user_data_fields` is commented out at `hooks.py:638`. No DSAR or retention path while PII is duplicated across the hub and every source |
 
@@ -170,7 +170,9 @@ by writing code first.**
 
 - [ ] `cutover_readiness` reports **READY** — 4 consecutive clean parity checks
       and zero outstanding rulings
-- [ ] R1, R2, R6 each have a recorded decision, in `docs/glass/decisions/`
+- [x] R1 recorded — `decisions/R1-company-fence-fails-open.md`
+- [x] R2 recorded — staff transact in Nadi; instruments shipped (`e9d735d27`, `7a8c48227`)
+- [ ] R6 still needs a recorded decision in `docs/glass/decisions/`
 
 #### The one R2 question left: schedule the pull, or not
 
