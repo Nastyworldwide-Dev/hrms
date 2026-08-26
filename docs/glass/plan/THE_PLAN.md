@@ -169,7 +169,38 @@ still syncs means the next pull overwrites local edits silently.
 
 ---
 
-## Phase 5 — Design · *3–4 days, and it blocks nothing*
+## Phase 5 — Design · *blocked on instruments, not on effort*
+
+**Nothing here can be verified today.** The visual, a11y and coherence gates all
+need a served site with `AUDIT_PW`, and until they run, any claim that the UI is
+"consistent and coherent" is an assertion. Doing design work blind is precisely
+the mistake that produced Phase 0.
+
+**The unblock, and it is one command on a machine that can serve:**
+
+```sh
+set -a; . .env; set +a          # AUDIT_PW, gitignored, mode 600
+HRMS_E2E_URL=http://localhost:8080 node design/gates/run.mjs
+```
+
+When that prints no `SKIP`, design work becomes checkable and this phase can
+start. Until then it cannot.
+
+### A correction to `RELEASE_READINESS` GATE 4
+
+**9.8a says "delete `theme/variables.css` — `--ion-color-*` referenced 0 times."
+Do not do this.** The premise is true of our source and dangerously incomplete:
+the only two mentions in `src/` are COMMENTS, but `@ionic/core`'s own
+`core.css`, `global.bundle.css` and `typography.css` consume those ramps, and 37
+files still render `<ion-*>` elements. Deleting the file strips the palette
+Ionic paints from.
+
+Same trap as every Phase 0 defect: dead to a text search, live at runtime.
+
+**9.8a therefore depends on removing Ionic, not the reverse.** It is not the
+cheap opener the gate list makes it look like.
+
+
 
 25 items across GATE 2–4 in `RELEASE_READINESS.md`. Real work, properly
 specified, and **not one of them stops a person doing their job.**
