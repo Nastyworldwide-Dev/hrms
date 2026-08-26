@@ -104,7 +104,29 @@ means no timestamp gate, so the fixtures import cleanly and CI goes green.
 The eight design gates are equally blind: all of them render the PWA, and none
 of this is in the PWA.
 
-### The work
+### Status — Phase 0 is DONE (26 August)
+
+| id | Landed | Commit |
+|---|---|---|
+| 0.4 | Launcher discarded; backup at `scratchpad/discarded-launcher/` | — (was uncommitted) |
+| 0.3 | Guard + 11 tests, pre-commit hook, PR-wide CI pass | `e76aebaae` |
+| 0.2 | 13 fixture timestamps bumped + fixture contract test | `695a9fc9b` |
+| 0.1 | Repair patch + 9 tests | `b5f9bdb74` |
+| 0.5 | Folded into 0.2 and 0.1 rather than shipped separately | — |
+
+**28 tests green, `ruff` clean.** The guard was verified by forcing the failure
+it exists to catch: its suite runs it over `5854aec26` and asserts nine files.
+
+Running it over history found **two more** offenders nobody had recorded — the
+`Employee` role removal on both leave-balance reports (`561a9e714`) had never
+reached a site. Those are Script Reports over `Employee` with no row scope of
+their own, so that is the same org-wide-read hole `restrict_staff_script_reports`
+was written to close. It is delivered by 0.2.
+
+**Deploy step:** `bench --site <site> migrate`. The fixtures land first, the
+patch backstops the rest. Confirm with the query above returning zero rows.
+
+### The work as planned
 
 | id | Item |
 |---|---|
