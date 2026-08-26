@@ -106,9 +106,15 @@
 		<div class="checkin-sheet__stack">
 			<div class="flex flex-col gap-1">
 				<div class="g-eyebrow">{{ nextAction.label }}</div>
+				<!-- No :seconds. GClock renders seconds and suffix in the SAME
+				     smaller style, so "02:56" + "44" + "pm" read as one broken
+				     time — an operator filed "what is the 44, is that seconds?".
+				     The component's own note calls the seconds decorative, and
+				     decoration that reads as data is worse than none. Nothing
+				     about a check-in needs second precision on screen; the
+				     stored timestamp keeps it. -->
 				<GClock
 					:time="dayjs(checkinTimestamp).format('hh:mm')"
-					:seconds="dayjs(checkinTimestamp).format('ss')"
 					:suffix="dayjs(checkinTimestamp).format('a')"
 				/>
 				<div class="text-caption text-ink-2">{{ dayjs().format("D MMM, YYYY") }}</div>
