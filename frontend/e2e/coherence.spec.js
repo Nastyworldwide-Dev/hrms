@@ -68,7 +68,9 @@ test("coherence: profile every screen", async () => {
 					const vis = (e) => {
 						const cs = getComputedStyle(e)
 						const r = e.getBoundingClientRect()
-						return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 2 && r.height > 2
+						return (
+							cs.display !== "none" && cs.visibility !== "hidden" && r.width > 2 && r.height > 2
+						)
 					}
 
 					const filled = []
@@ -81,7 +83,11 @@ test("coherence: profile every screen", async () => {
 						if (paint.includes(BRAND) || paint.includes(INK) || isG) {
 							filled.push({
 								label: (e.textContent || "").trim().slice(0, 30),
-								fill: paint.includes(BRAND) ? "brand" : paint.includes(INK) ? "accent-ink" : "other",
+								fill: paint.includes(BRAND)
+									? "brand"
+									: paint.includes(INK)
+									? "accent-ink"
+									: "other",
 								isGButton: isG,
 							})
 						}
@@ -114,11 +120,17 @@ test("coherence: profile every screen", async () => {
 					const ROLES = [
 						["tabbar", "ion-tab-bar, .g-tabbar"],
 						["segmented", ".g-seg, ion-segment, .g-seg__option"],
-						["chip", ".g-tag, .g-status-chip, .g-badge, [class*='chip'], [class*='badge'], [class*='status']"],
+						[
+							"chip",
+							".g-tag, .g-status-chip, .g-badge, [class*='chip'], [class*='badge'], [class*='status']",
+						],
 						// labels ONE control, not a group — §10's eyebrow is the group treatment
 						["field-label", ".g-field__label"],
-						// labels ONE number
-						["stat-label", ".g-stat__label, .g-balance__label"],
+						// labels ONE number. g-poster__label is the poster variant of the
+						// same role — "Total Claimed" over the RM figure — added with
+						// .g-poster and never declared, so the gate filed it as an
+						// undeclared section header.
+						["stat-label", ".g-stat__label, .g-balance__label, .g-poster__label"],
 						// labels a COLUMN
 						["column-head", ".g-cal__dow, th, thead, [role='columnheader']"],
 						// the label inside a date stepper — a control, not a heading
@@ -136,14 +148,20 @@ test("coherence: profile every screen", async () => {
 					const eyebrows = [...document.querySelectorAll("*")]
 						.filter((e) => {
 							if (!vis(e)) return false
-							const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("")
+							const own = [...e.childNodes]
+								.filter((n) => n.nodeType === 3)
+								.map((n) => n.textContent.trim())
+								.join("")
 							if (!own || own.length > 40) return false
 							const cs = getComputedStyle(e)
 							return cs.textTransform === "uppercase" && parseFloat(cs.fontSize) <= 13
 						})
 						.map((e) => {
 							const cs = getComputedStyle(e)
-							const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join(" ")
+							const own = [...e.childNodes]
+								.filter((n) => n.nodeType === 3)
+								.map((n) => n.textContent.trim())
+								.join(" ")
 							return {
 								text: own.slice(0, 40),
 								tag: e.tagName.toLowerCase(),
@@ -170,7 +188,10 @@ test("coherence: profile every screen", async () => {
 						const cls = (e.className || "").toString()
 						if (/avatar/i.test(cls)) return true
 						const img = e.tagName === "IMG" || e.querySelector(":scope > img")
-						const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("")
+						const own = [...e.childNodes]
+							.filter((n) => n.nodeType === 3)
+							.map((n) => n.textContent.trim())
+							.join("")
 						return !!img || (own.length > 0 && own.length <= 2)
 					}
 					const avatars = [...document.querySelectorAll("img, span, div")]
@@ -178,7 +199,10 @@ test("coherence: profile every screen", async () => {
 						.map((e) => {
 							const cs = getComputedStyle(e)
 							const r = e.getBoundingClientRect()
-							const own = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("")
+							const own = [...e.childNodes]
+								.filter((n) => n.nodeType === 3)
+								.map((n) => n.textContent.trim())
+								.join("")
 							return {
 								tag: e.tagName.toLowerCase(),
 								cls: (e.className || "").toString().slice(0, 70),
@@ -189,13 +213,15 @@ test("coherence: profile every screen", async () => {
 								color: cs.color,
 								fontSize: cs.fontSize,
 								kind: e.tagName === "IMG" ? "image" : own ? "initials" : "empty",
-								grayscale: /grayscale/.test((e.parentElement?.className || "").toString()) || cs.filter.includes("grayscale"),
+								grayscale:
+									/grayscale/.test((e.parentElement?.className || "").toString()) ||
+									cs.filter.includes("grayscale"),
 								// which form owns it — the question RC18 asks
 								form: /\bg-avatar\b/.test((e.className || "").toString())
 									? "GAvatar"
 									: /g-header__avatar\b/.test((e.className || "").toString())
-										? "g-header__avatar"
-										: "other",
+									? "g-header__avatar"
+									: "other",
 							}
 						})
 
@@ -206,7 +232,11 @@ test("coherence: profile every screen", async () => {
 						adHocEmpty:
 							!document.querySelector(".g-empty") &&
 							!![...document.querySelectorAll("div,p")].find(
-								(e) => vis(e) && /nothing|no .*(yet|found|added)|all caught up/i.test((e.textContent || "").slice(0, 80))
+								(e) =>
+									vis(e) &&
+									/nothing|no .*(yet|found|added)|all caught up/i.test(
+										(e.textContent || "").slice(0, 80)
+									)
 							),
 						eyebrows,
 					}
