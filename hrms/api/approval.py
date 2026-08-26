@@ -101,13 +101,26 @@ def _require_writable_decision_field(doctype: str, fieldname: str) -> None:
 
 
 def _state(doc) -> dict:
-	"""What the caller should render. The backend's view, not the client's guess."""
-	fieldname = DECIDE_THEN_SUBMIT[doc.doctype][0]
+	"""What the caller should render. The backend's view, not the client's guess.
+
+	`status` is None for a doctype with no decision field — Attendance Request,
+	OT Request, Replacement Leave Claim — where submission IS the decision and
+	docstatus carries the whole answer.
+
+	This used to index DECIDE_THEN_SUBMIT unconditionally, which was safe while
+	`decide` was the only caller: every doctype it serves is in that map.
+	`finalize` exists precisely FOR the doctypes that are not, so it raised
+	KeyError AFTER a successful doc.submit() — the transition ran, the response
+	builder crashed, and the rollback undid the approval. The endpoint written
+	to fix a silent non-approval would itself have produced one. Caught on a
+	real bench, not by reading.
+	"""
+	mapping = DECIDE_THEN_SUBMIT.get(doc.doctype)
 	return {
 		"doctype": doc.doctype,
 		"name": doc.name,
 		"docstatus": doc.docstatus,
-		"status": doc.get(fieldname),
+		"status": doc.get(mapping[0]) if mapping else None,
 	}
 
 
@@ -203,3 +216,87 @@ def report_half_transitioned(doctype: str | None = None) -> dict:
 			logger.warning("[approval] %s %s row(s) decided but still draft", len(rows), dt)
 
 	return out
+
+
+#: docstatus values `finalize` will move a document to. Deliberately not 0:
+#: returning a submitted document to draft is not a transition Frappe offers,
+#: and pretending otherwise is how the bug below started.
+SUBMIT, CANCEL = 1, 2
+
+
+@frappe.whitelist(methods=["POST"])
+def finalize(doctype: str, name: str, docstatus: int) -> dict:
+	"""Submit or cancel a request that carries no decision field.
+
+	THE BUG THIS REPLACES, reported from the field and reproduced in one line:
+	an OT Request was approved and the app went on asking the employee to submit
+	it.
+
+	    set_value REFUSED -> ValidationError Cannot edit standard fields
+	    docstatus still: 0
+
+	`RequestActionSheet` sent `{docstatus: 1}` through frappe-ui's
+	`document.setValue` — `frappe.client.set_value` — which refuses to write
+	docstatus. Correctly: docstatus is a standard field and moving it is a
+	TRANSITION, not an edit. Submitting must run validate, before_submit and
+	on_submit, and an UPDATE that skipped them would be far worse than the
+	refusal — an OT Request would sail past `validate_self_submission` and
+	`validate_mandatory_attachment`.
+
+	So the call threw, a red toast showed for a moment on a phone, and the
+	document stayed a draft. The approver believed they had approved it.
+
+	`decide` cannot serve these doctypes: it writes a decision FIELD, and
+	Attendance Request, OT Request and Replacement Leave Claim have none —
+	submission IS the decision. Cancel had the same hole for EVERY doctype in
+	the sheet, because a cancel sends no status and fell to the same branch.
+
+	Returns the resulting state, so the caller renders what the server did.
+	"""
+	docstatus = int(docstatus)
+	if docstatus not in (SUBMIT, CANCEL):
+		frappe.throw(
+			_("{0} is not a transition this endpoint performs.").format(docstatus),
+			frappe.ValidationError,
+		)
+
+	if not frappe.db.exists(doctype, name):
+		frappe.throw(_("{0} {1} not found.").format(_(doctype), name), frappe.DoesNotExistError)
+
+	# Lock BEFORE reading the state the idempotency check depends on — the same
+	# reasoning as `decide`. Two taps on a phone, or two approvers, must not both
+	# read docstatus 0 and both proceed.
+	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
+
+	doc = frappe.get_doc(doctype, name)
+	doc.check_permission("read")
+
+	# Two taps are one intention. Report the first outcome rather than throwing
+	# at somebody who did nothing wrong.
+	if doc.docstatus == docstatus:
+		logger.info("[approval] %s %s already at docstatus %s — no-op", doctype, name, docstatus)
+		return _state(doc)
+
+	if doc.docstatus == 2:
+		frappe.throw(_("{0} has been cancelled.").format(_(doctype)), frappe.ValidationError)
+	# The real transition: validate -> before_submit -> on_submit (or the cancel
+	# chain). Any failure raises and the whole request rolls back; there is no
+	# path that half-moves the document.
+	#
+	# Spelled out rather than dispatched through getattr: this is the one line
+	# the whole endpoint exists for, and a dynamic call hides it from every
+	# static check — including the test that pins it.
+	if docstatus == SUBMIT:
+		doc.submit()
+	else:
+		doc.cancel()
+
+	logger.info(
+		"[approval] %s %s %s %s -> docstatus %s",
+		frappe.session.user,
+		"submitted" if docstatus == SUBMIT else "cancelled",
+		doctype,
+		name,
+		doc.docstatus,
+	)
+	return _state(doc)

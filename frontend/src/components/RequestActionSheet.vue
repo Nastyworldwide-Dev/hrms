@@ -229,6 +229,13 @@ const permittedWriteFields = createResource({
 const DECIDE_THEN_SUBMIT = ["Leave Application", "Shift Request", "Expense Claim"]
 
 const decision = createResource({ url: "hrms.api.approval.decide" })
+// Submit and cancel for requests with no decision field. NOT document.setValue:
+// frappe.client.set_value refuses to write docstatus ("Cannot edit standard
+// fields"), correctly — moving docstatus is a TRANSITION, not an edit, and it
+// has to run validate/before_submit/on_submit. The old call threw, a toast
+// flashed on a phone, and the document stayed a draft while the approver
+// believed they had approved it.
+const finalize = createResource({ url: "hrms.api.approval.finalize" })
 
 const sessionEmployee = inject("$employee")
 
@@ -350,15 +357,35 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	// three doctypes that have one are all listed above. `status` is still
 	// forwarded so a fourth doctype added to the sheet degrades to the old
 	// behaviour rather than silently dropping the decision.
-	const updateValues = { docstatus }
-	if (status) updateValues[approvalField.value] = status
+	// A decision on a doctype that HAS a field, but is not in the list above,
+	// still needs that field written — keep the old path for it.
+	if (status) {
+		return document.setValue.submit(
+			{ [approvalField.value]: status },
+			{
+				onSuccess() {
+					onActionSuccess({ status, docstatus: 0, dismiss: false })
+				},
+				onError: onActionError({ status, docstatus: 0 }),
+			}
+		)
+	}
 
-	document.setValue.submit(updateValues, {
-		onSuccess() {
-			onActionSuccess({ status, docstatus, dismiss: docstatus !== 0 })
-		},
-		onError: onActionError({ status, docstatus }),
-	})
+	// Pure transition. The server performs it and tells us what it did.
+	finalize.submit(
+		{ doctype: props.modelValue.doctype, name: props.modelValue.name, docstatus },
+		{
+			onSuccess(result) {
+				document.reload?.()
+				onActionSuccess({
+					status,
+					docstatus: result?.docstatus ?? docstatus,
+					dismiss: true,
+				})
+			},
+			onError: onActionError({ status, docstatus }),
+		}
+	)
 }
 
 const openFormView = () => {
