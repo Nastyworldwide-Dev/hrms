@@ -105,6 +105,42 @@ Found, understood, not yet fixed.
 | 3.2 | Run `docs/glass/runbook/find-duplicate-employees.sql`. Project Board shares this Employee table, so a duplicate splits project assignments AND leave history |
 | 3.3 | 3 pre-existing test failures — `test_erp_instance_doctype` (child table points at the wrong doctype), `test_pwa_resource_states` (`BaseLayout.vue`), `test_pwa_session_scope` (`get_ot_requests` needs an `employee` it is not sent). All three predate this session |
 | 3.4 | Classify the 16 visual diffs, then re-baseline. Cause known; "known" is not "checked" |
+| 3.5 | **An approver cannot DECLINE.** The Approve/Reject pair renders only when `doc.status` is `Open`/`Draft`, and OT Request, Attendance Request and Replacement Leave Claim have no `status` field — so the approver gets Submit and nothing else. Fix is a `status` field so they join the Leave Application family. **Schema change on a money path: needs a ruling first** |
+| 3.6 | **Appraisal has no screen.** The data is mirrored and the Performance workspace exists in Desk; the PWA has no route. Cheapest item here — a front door onto data already present |
+| 3.7 | **`employee_advance`** exists in upstream `version-16` and not in this fork. Port it, unless it falls under the same sensitivity rule as payroll |
+
+**Dropped, not deferred:** a payslip screen. Salary is out of Verifica by HR
+ruling — see `decisions/payroll-stays-out-of-verifica.md`. No branch ever had
+one, so nothing was removed.
+
+---
+
+## Feature coverage, audited 26 August
+
+Not a phase — the map the phases are drawn on. Every Desk workspace ships fully
+built (Payroll carries 37 links, HR Setup 37, Expenses and Shift & Attendance 25
+each). Nothing needs *preparing*; what varies is whether data flows and whether
+the PWA has a door onto it.
+
+| Area | Data from ERP | PWA screen |
+|---|---|---|
+| Leaves | ✅ mirrored | ✅ |
+| Shift & Attendance | ✅ mirrored | ✅ |
+| Expenses | ❌ hub-owned only | ✅ |
+| Performance | ✅ Appraisal mirrored | ❌ **no screen — 3.6** |
+| Tenure | ✅ Employee mirrored | ✅ Profile |
+| Recruitment | ❌ | ❌ HR-side, Desk only |
+| **Payroll** | ⛔ **out of scope** | ⛔ separate app — see `decisions/payroll-stays-out-of-verifica.md` |
+| **Tax & Benefits** | ⛔ **out of scope** | ⛔ same ruling |
+| HR Setup | configuration | Desk only |
+
+The recurring shape: **the backend is ready and the front door is missing.**
+Appraisal syncs with nowhere to show it; the decline path has permissions and an
+endpoint but no button. That is the same defect class as Phase 0, one layer up.
+
+**An empty doctype is not a non-question.** 0 rows today is prepared capacity for
+tomorrow — rule it `Not needed on hub` and it is parked with a signature, not
+dismissed.
 
 ---
 
@@ -158,6 +194,9 @@ should stay.
 
 Learned this week, and they outrank convenience.
 
+0. **Empty today is not empty tomorrow.** A doctype with 0 rows is not a
+   non-question — it is prepared capacity. `Not needed on hub` parks it with a
+   signature; it does not dismiss it.
 1. **Nothing is deleted, only parked.** Every doctype and function on
    ERP/Verifica either works or is explicitly parked, because it may be needed
    later. `Not needed on hub` is the mechanism, and it is a signed record with
