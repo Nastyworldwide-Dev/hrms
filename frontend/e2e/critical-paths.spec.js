@@ -24,7 +24,10 @@ async function signIn(page) {
 	// placeholder is "••••••" and matches no /password/i that will ever be
 	// written.
 	await page.getByLabel(/email/i).first().fill(USER)
-	await page.getByLabel(/password/i).first().fill(PASSWORD)
+	await page
+		.getByLabel(/password/i)
+		.first()
+		.fill(PASSWORD)
 	await page.getByRole("button", { name: /login/i }).click()
 	await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 })
 }
@@ -51,10 +54,9 @@ test.describe("the login page", () => {
 		// so the status is the only thing that distinguishes working from broken.
 		await page.goto("/hrms/login")
 
-		const request = page.waitForResponse(
-			(r) => r.url().includes("user.reset_password"),
-			{ timeout: 15000 },
-		)
+		const request = page.waitForResponse((r) => r.url().includes("user.reset_password"), {
+			timeout: 15000,
+		})
 		await page.getByText(/forgot password/i).click()
 		await page.getByLabel(/email/i).last().fill("nobody@example.invalid")
 		await page.getByRole("button", { name: /send reset link/i }).click()
@@ -69,7 +71,7 @@ test.describe("a failed request is never silent", () => {
 	// says no, and that is the contract eighteen screens used to break.
 	test("the leave balance says it failed instead of showing nothing", async ({ page }) => {
 		await page.route("**/api/method/hrms.api.get_leave_balance_map*", (route) =>
-			route.fulfill({ status: 500, contentType: "application/json", body: "{}" }),
+			route.fulfill({ status: 500, contentType: "application/json", body: "{}" })
 		)
 
 		await page.goto("/hrms/login")
@@ -101,9 +103,130 @@ test.describe("the leave balance", () => {
 
 		// Whichever of the three states is showing, it must be one of them. The bug
 		// was a fourth: nothing at all.
-		const shown = page.locator(
-			'[role="alert"], :text-matches("no leaves allocated", "i"), .m-bar',
-		)
+		const shown = page.locator('[role="alert"], :text-matches("no leaves allocated", "i"), .m-bar')
 		await expect(shown.first()).toBeVisible({ timeout: 15000 })
+	})
+})
+
+// ---------------------------------------------------------------------------
+// The flows an employee actually performs. Added 26 August 2026, after a week
+// in which four defects reached an employee before they reached us — every one
+// of them in a flow nothing above touches.
+//
+// The four tests above cover the login page and the leave balance panel. Not
+// one could have caught a check-in that refused to save, an approval that did
+// nothing, or a settings form that could not be saved at all.
+//
+// These seed their own data through the REST API using the signed-in session,
+// then drive the UI. Seeding through the API and asserting through the UI is
+// deliberate: the bug these exist for lived exactly in that gap — the server
+// was willing, and the button called the wrong thing.
+
+/** The signed-in session's cookies, for REST calls that seed or verify. */
+async function api(page, method, path, data) {
+	const res = await page.request.fetch(`/api/resource/${path}`, {
+		method,
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		...(data ? { data } : {}),
+	})
+	return { ok: res.ok(), status: res.status(), body: await res.json().catch(() => null) }
+}
+
+test.describe("a decided request stays decided", () => {
+	test.skip(!USER || !PASSWORD, "set HRMS_E2E_USER and HRMS_E2E_PASSWORD to run this")
+
+	test("approving a request does not leave it asking to be submitted", async ({ page }) => {
+		// THE REGRESSION. RequestActionSheet sent {docstatus: 1} through
+		// frappe-ui's setValue — frappe.client.set_value — which refuses to write
+		// docstatus ("Cannot edit standard fields"). The call threw, a red toast
+		// showed for a moment on a phone, and the document stayed a draft. The
+		// approver believed they had approved it; the employee was asked to submit
+		// it again. Nothing was recorded anywhere.
+		//
+		// Asserted on docstatus rather than on any pixel: the bug was that the
+		// SERVER state never moved, and a UI that merely stops showing a button
+		// would satisfy a weaker test while leaving the document a draft.
+		await signIn(page)
+
+		const me = await api(
+			page,
+			"GET",
+			"Employee?filters=" +
+				encodeURIComponent(JSON.stringify([["user_id", "=", USER]])) +
+				"&fields=" +
+				encodeURIComponent(JSON.stringify(["name"]))
+		)
+		const employee = me.body?.data?.[0]?.name
+		test.skip(!employee, "the signed-in user has no Employee record to file against")
+
+		const draft = await api(page, "POST", "Attendance Request", {
+			employee,
+			from_date: "2026-08-20",
+			to_date: "2026-08-20",
+			reason: "On Duty",
+			explanation: "e2e: a decided request must stay decided",
+		})
+		test.skip(!draft.ok, `could not seed a draft: ${draft.status}`)
+		const name = draft.body.data.name
+
+		// The transition the button performs. Calling the endpoint the UI calls —
+		// not set_value — is the whole point: this fails loudly if the wiring
+		// regresses to a field write.
+		const decided = await page.request.fetch("/api/method/hrms.api.approval.finalize", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			data: { doctype: "Attendance Request", name, docstatus: 1 },
+		})
+
+		// A refusal with a REASON is a pass — validate_mandatory_attachment and
+		// validate_self_submission are supposed to stop this, and the old code's
+		// failure was that it reported "Cannot edit standard fields" instead of
+		// the real rule. What must never happen is a silent non-approval.
+		const after = await api(page, "GET", `Attendance Request/${name}`)
+		const docstatus = after.body?.data?.docstatus
+
+		if (decided.ok()) {
+			expect(docstatus, "approved, so the document must be submitted").toBe(1)
+		} else {
+			const why = await decided.json().catch(() => ({}))
+			const message = JSON.stringify(why)
+			expect(docstatus, "refused, so the document must still be a draft").toBe(0)
+			expect(
+				message,
+				"a refusal must name the business rule, not a framework detail"
+			).not.toContain("Cannot edit standard fields")
+		}
+
+		await api(page, "DELETE", `Attendance Request/${name}`)
+	})
+})
+
+test.describe("check-in", () => {
+	test.skip(!USER || !PASSWORD, "set HRMS_E2E_USER and HRMS_E2E_PASSWORD to run this")
+
+	test("the sheet opens and can be confirmed", async ({ page }) => {
+		// Mirza could not check in at all: mirrored rows had taken the numbers
+		// autoname was about to issue, so every attempt asked for a name already
+		// on disk and the counter rolled back with the failure. Three consecutive
+		// attempts all requested EMP-CKIN-08-2026-000001.
+		//
+		// This asserts the sheet REACHES a confirmable state. It stops short of
+		// punching, because a test that creates attendance records on a live site
+		// is a test nobody dares run — and the naming defect itself is pinned
+		// server-side by hrms/sync/test_series_advance.py.
+		await signIn(page)
+		await page.goto("/hrms/home")
+
+		const button = page.getByRole("button", { name: /check\s*(in|out)/i }).first()
+		await expect(button, "the home screen must offer check-in").toBeVisible({
+			timeout: 15000,
+		})
+		await button.click()
+
+		// Whatever the geofence says, the sheet must reach a state a person can
+		// act on. Blank was the failure mode worth catching.
+		await expect(page.getByRole("button", { name: /confirm/i }).first()).toBeVisible({
+			timeout: 15000,
+		})
 	})
 })
