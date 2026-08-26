@@ -357,10 +357,21 @@ def get_attendance_requests(
 
 @frappe.whitelist()
 def get_ot_requests(
-	employee: str,
+	employee: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	# Optional for the same reason as get_attendance_calendar_events above: the
+	# PWA is session-scoped and fires this with `auto: true`, so `employee` is
+	# whatever `employeeResource` has resolved to — and on a cold load that is
+	# undefined. Required, the call raised TypeError before a line of the body
+	# ran, and the panel rendered NOTHING: an errored resource has no `.data`
+	# and the template is written `v-if="x.data"`.
+	#
+	# Silent by construction, which is why test_pwa_session_scope pins the SHAPE
+	# rather than these two cases. Passing an employee explicitly still works and
+	# is still permission-checked — that is how a team lead reads their reports.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("OT Request", employee, None, for_approval)
 	logger.info("[api] ot requests employee=%s for_approval=%s", employee, for_approval)
@@ -386,10 +397,21 @@ def get_ot_requests(
 
 @frappe.whitelist()
 def get_replacement_leave_claims(
-	employee: str,
+	employee: str | None = None,
 	for_approval: bool = False,
 	limit: int | None = None,
 ) -> list[dict]:
+	# Optional for the same reason as get_attendance_calendar_events above: the
+	# PWA is session-scoped and fires this with `auto: true`, so `employee` is
+	# whatever `employeeResource` has resolved to — and on a cold load that is
+	# undefined. Required, the call raised TypeError before a line of the body
+	# ran, and the panel rendered NOTHING: an errored resource has no `.data`
+	# and the template is written `v-if="x.data"`.
+	#
+	# Silent by construction, which is why test_pwa_session_scope pins the SHAPE
+	# rather than these two cases. Passing an employee explicitly still works and
+	# is still permission-checked — that is how a team lead reads their reports.
+	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	filters = get_filters("Replacement Leave Claim", employee, None, for_approval)
 	logger.info("[api] rl claims employee=%s for_approval=%s", employee, for_approval)
