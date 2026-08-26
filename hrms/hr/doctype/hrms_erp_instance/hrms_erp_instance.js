@@ -12,6 +12,9 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
 		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
+		// Destructive, so it lives under a group rather than beside the four
+		// read/pull actions, and it opens on the DRY RUN.
+		frm.add_custom_button(__("Purge Mirrored Data"), () => purge_mirror(frm), __("Danger"));
 		show_sync_headline(frm);
 	},
 });
@@ -548,4 +551,78 @@ function result_html(result) {
 	if (!parts.length) parts.push(`<p>${__("Nothing was created.")}</p>`);
 
 	return parts.join("");
+}
+
+
+//: Remove everything this hub mirrored from one instance.
+//
+// Deleting mirrored rows from the list view does not work and the error does not
+// say why: the write-block ALLOWS it under System Manager break-glass, and then
+// Frappe's link validation refuses because Employee is the last thing the sync
+// writes and the first thing every other mirrored row points at. What the
+// operator sees is "Bulk Operation Failed: 107 documents".
+//
+// This deletes in reverse sync order instead, and shows the dry run first —
+// nothing is destroyed until the instance name is typed back.
+function purge_mirror(frm) {
+	frappe.call({
+		method: "hrms.sync.purge.purge_instance",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Counting mirrored rows…"),
+		callback: ({ message }) => {
+			if (!message || !message.total) {
+				frappe.msgprint({
+					title: __("Nothing to purge"),
+					indicator: "green",
+					message: __("No rows on this hub carry {0}'s provenance stamp.", [frm.doc.name]),
+				});
+				return;
+			}
+			const lines = Object.entries(message.counts)
+				.map(([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`)
+				.join("");
+			const d = new frappe.ui.Dialog({
+				title: __("Purge mirrored data"),
+				fields: [
+					{
+						fieldtype: "HTML",
+						options: `<p>${__("This deletes <b>{0}</b> rows mirrored from <b>{1}</b>, in reverse sync order.", [message.total, frappe.utils.escape_html(frm.doc.name)])}</p>
+							<ul>${lines}</ul>
+							<p>${__("Rows a local document still links to are reported, never force-deleted. Masters and hub-owned rows are not touched.")}</p>`,
+					},
+					{
+						fieldtype: "Data",
+						fieldname: "confirm",
+						reqd: 1,
+						label: __("Type the instance name to confirm"),
+						description: frm.doc.name,
+					},
+				],
+				primary_action_label: __("Purge"),
+				primary_action: ({ confirm }) => {
+					d.hide();
+					frappe.call({
+						method: "hrms.sync.purge.purge_instance",
+						args: { instance_name: frm.doc.name, confirm },
+						freeze: true,
+						freeze_message: __("Purging…"),
+						callback: (r) => {
+							const res = r.message || {};
+							const blocked = (res.blocked || []).length;
+							frappe.msgprint({
+								title: __("Purge complete"),
+								indicator: blocked ? "orange" : "green",
+								message: blocked
+									? __("Deleted {0} of {1}. {2} row(s) were left because a local document links to them — see the Error Log for which.", [res.deleted, res.total, blocked])
+									: __("Deleted {0} row(s).", [res.deleted]),
+							});
+							frm.reload_doc();
+						},
+					});
+				},
+			});
+			d.show();
+		},
+	});
 }
