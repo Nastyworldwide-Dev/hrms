@@ -11,9 +11,7 @@
 			</div>
 		</template>
 		<template #right>
-			<GBadge
-				:variant="props.doc.log_type === 'IN' ? 'accent' : 'open'"
-			>
+			<GBadge :variant="props.doc.log_type === 'IN' ? 'accent' : 'open'">
 				{{ __(props.doc.log_type, null, "Employee Checkin") }}
 			</GBadge>
 		</template>

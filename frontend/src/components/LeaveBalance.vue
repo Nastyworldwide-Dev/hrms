@@ -51,7 +51,11 @@
 		     allocated" about a question that had never been answered. Whatever else
 		     is wrong, telling someone their entitlement is zero when we could not
 		     read it is the worst available answer. -->
-		<ResourceError v-else-if="leaveBalance.error" :resource="leaveBalance" what="your leave balance" />
+		<ResourceError
+			v-else-if="leaveBalance.error"
+			:resource="leaveBalance"
+			what="your leave balance"
+		/>
 		<GBalanceGrid v-else empty>
 			<template #empty>
 				<GEmptyState
@@ -75,7 +79,5 @@ const __ = inject("$translate")
 
 // an empty map {} is truthy — without this check the section renders as a
 // bare rule instead of the "no leaves allocated" empty state
-const hasBalances = computed(
-	() => leaveBalance.data && Object.keys(leaveBalance.data).length > 0
-)
+const hasBalances = computed(() => leaveBalance.data && Object.keys(leaveBalance.data).length > 0)
 </script>

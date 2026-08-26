@@ -16,9 +16,7 @@
 		</ion-header>
 
 		<ion-content class="ion-no-padding g-page__content">
-			<div
-				class="flex flex-col min-h-full w-full max-w-md mx-auto lg:max-w-none lg:mx-0"
-			>
+			<div class="flex flex-col min-h-full w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
 				<slot name="body"></slot>
 			</div>
 		</ion-content>
@@ -41,9 +39,7 @@ const $dayjs = inject("$dayjs")
 const __ = inject("$translate")
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() =>
-	$dayjs().format("dddd, D MMMM YYYY").toUpperCase()
-)
+const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
 
 const props = defineProps({
 	pageTitle: {

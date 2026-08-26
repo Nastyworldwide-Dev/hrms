@@ -11,39 +11,24 @@
 			@scroll="onScroll"
 		>
 			<!-- pages are appended here as canvases by pdf.js -->
-			<div
-				v-if="loading"
-				class="g-pdf__skeleton"
-			>
+			<div v-if="loading" class="g-pdf__skeleton">
 				<div class="g-pdf__skeleton-line g-pdf__skeleton-line--head"></div>
 				<div v-for="line in 8" :key="line" class="g-pdf__skeleton-line"></div>
 			</div>
-			<div
-				v-if="error"
-				class="g-pdf__error"
-			>
+			<div v-if="error" class="g-pdf__error">
 				<span class="text-card-title text-ink-700">
 					{{ __("This PDF could not be displayed here.") }}
 				</span>
 				<span v-if="errorDetail" class="text-caption text-ink-500 break-all">
 					{{ errorDetail }}
 				</span>
-				<a
-					:href="props.fileUrl"
-					target="_blank"
-					rel="noopener"
-					class="g-pdf__retry"
-				>
+				<a :href="props.fileUrl" target="_blank" rel="noopener" class="g-pdf__retry">
 					{{ __("Download") }}
 				</a>
 			</div>
 		</div>
 
-		<div
-			v-if="pageCount"
-			class="g-pdf__pagecount"
-			style="background: rgba(15, 40, 40, 0.85)"
-		>
+		<div v-if="pageCount" class="g-pdf__pagecount" style="background: rgba(15, 40, 40, 0.85)">
 			{{ currentPage }} / {{ pageCount }}
 		</div>
 	</div>
@@ -102,8 +87,7 @@ let pdfDoc = null
 
 const clearPages = () => {
 	if (!scroller.value) return
-	for (const canvas of [...scroller.value.querySelectorAll("canvas")])
-		canvas.remove()
+	for (const canvas of [...scroller.value.querySelectorAll("canvas")]) canvas.remove()
 }
 
 const render = async () => {
@@ -128,10 +112,7 @@ const render = async () => {
 
 		// fit-to-screen: CSS width == container width, backing store multiplied
 		// by the device pixel ratio (capped at 2) so text stays crisp
-		const containerWidth = Math.max(
-			(scroller.value?.clientWidth || 320) - 20,
-			240
-		)
+		const containerWidth = Math.max((scroller.value?.clientWidth || 320) - 20, 240)
 		const ratio = Math.min(window.devicePixelRatio || 1, 2)
 
 		for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber++) {

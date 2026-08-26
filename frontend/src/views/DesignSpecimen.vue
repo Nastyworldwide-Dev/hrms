@@ -86,7 +86,9 @@
 					<h2 class="spec__label">GBANNER (§10.1 #10 · §11.3)</h2>
 					<GBanner variant="info">Your shift window opens at 8:30 am.</GBanner>
 					<GBanner variant="warning">You are offline. Your last check-in was saved.</GBanner>
-					<GBanner variant="error">Check-in did not save. Tap to try again — do not punch twice.</GBanner>
+					<GBanner variant="error"
+						>Check-in did not save. Tap to try again — do not punch twice.</GBanner
+					>
 				</section>
 
 				<section class="spec__section">
@@ -126,16 +128,29 @@
 				<section class="spec__section">
 					<h2 class="spec__label">GINPUT / GTEXTAREA (§10.1 #4, #5)</h2>
 					<GInput v-model="form.date" label="Date worked" placeholder="20 August 2026" />
-					<GInput v-model="form.hours" label="Hours" error="You have 2.5 days available and applied for 3." />
+					<GInput
+						v-model="form.hours"
+						label="Hours"
+						error="You have 2.5 days available and applied for 3."
+					/>
 					<GInput v-model="form.locked" label="Approver" disabled />
-					<GTextarea v-model="form.reason" label="Explanation" placeholder="What did you work on?" />
+					<GTextarea
+						v-model="form.reason"
+						label="Explanation"
+						placeholder="What did you work on?"
+					/>
 				</section>
 
 				<section class="spec__section">
 					<h2 class="spec__label">GBALANCEGRID + GBALANCECARD (§15.2) — 2-up, 4-up at lg:</h2>
 					<GBalanceGrid>
 						<GBalanceCard label="Annual leave" :remaining="7.5" :allocated="8" />
-						<GBalanceCard label="Medical" :remaining="12" :allocated="14" :prorated-percentage="22" />
+						<GBalanceCard
+							label="Medical"
+							:remaining="12"
+							:allocated="14"
+							:prorated-percentage="22"
+						/>
 						<GBalanceCard label="Replacement" :remaining="1" :allocated="4" />
 						<GBalanceCard label="Unpaid" :remaining="0" :allocated="0" />
 					</GBalanceGrid>
@@ -197,7 +212,12 @@
 
 				<section class="spec__section">
 					<h2 class="spec__label">GCALENDAR (§10.2 #18) — legend labels every state</h2>
-					<GCalendar title="August 2026" :days="calendarDays" :leading-blanks="4" @select="log('day')" />
+					<GCalendar
+						title="August 2026"
+						:days="calendarDays"
+						:leading-blanks="4"
+						@select="log('day')"
+					/>
 				</section>
 
 				<section class="spec__section">
@@ -214,7 +234,12 @@
 
 				<section class="spec__section">
 					<h2 class="spec__label">GGOALSPANEL (§10.2 #17)</h2>
-					<GGoalsPanel :count="4" label="Goals in progress" sublabel="2 due this month" @click="log('GGoalsPanel')" />
+					<GGoalsPanel
+						:count="4"
+						label="Goals in progress"
+						sublabel="2 due this month"
+						@click="log('GGoalsPanel')"
+					/>
 				</section>
 
 				<section class="spec__section">
@@ -265,7 +290,9 @@
 				<h2 class="spec__title">Tier D</h2>
 
 				<section class="spec__section">
-					<h2 class="spec__label">GMODAL / GACTIONSHEET (§10.3 #25, #26) — focus-trap workaround preserved</h2>
+					<h2 class="spec__label">
+						GMODAL / GACTIONSHEET (§10.3 #25, #26) — focus-trap workaround preserved
+					</h2>
 					<GButton label="OPEN ACTION SHEET" @click="sheetOpen = true" />
 					<GActionSheet
 						:is-open="sheetOpen"
@@ -280,8 +307,26 @@
 				<section class="spec__section">
 					<h2 class="spec__label">GTOAST (§10.3 #27) — wraps frappe-ui toast</h2>
 					<div class="spec__row">
-						<GGhostButton label="SUCCESS" @click="gToast({ title: 'Leave applied', text: 'Your manager has been notified.', variant: 'success' })" />
-						<GGhostButton label="ERROR" @click="gToast({ title: 'Check-in did not save', text: 'Tap to try again — do not punch twice.', variant: 'error' })" />
+						<GGhostButton
+							label="SUCCESS"
+							@click="
+								gToast({
+									title: 'Leave applied',
+									text: 'Your manager has been notified.',
+									variant: 'success',
+								})
+							"
+						/>
+						<GGhostButton
+							label="ERROR"
+							@click="
+								gToast({
+									title: 'Check-in did not save',
+									text: 'Tap to try again — do not punch twice.',
+									variant: 'error',
+								})
+							"
+						/>
 					</div>
 				</section>
 
@@ -303,7 +348,11 @@
 
 				<section class="spec__section">
 					<h2 class="spec__label">GDATATABLE (§10.3 · §6.3) — solid, never glass</h2>
-					<GDataTable :columns="payslipColumns" :rows="payslipRows" caption="August 2026 payslip" />
+					<GDataTable
+						:columns="payslipColumns"
+						:rows="payslipRows"
+						caption="August 2026 payslip"
+					/>
 					<GDataTable :columns="payslipColumns" loading />
 					<GDataTable :columns="payslipColumns" :rows="[]">
 						<template #empty>
@@ -323,7 +372,12 @@
 
 				<section class="spec__section">
 					<h2 class="spec__label">GLINKPICKER / GDATEPICKER (§10.3) — frappe-ui 0.1.105</h2>
-					<GLinkPicker v-model="link" :options="linkOptions" label="Approver" placeholder="Search employees" />
+					<GLinkPicker
+						v-model="link"
+						:options="linkOptions"
+						label="Approver"
+						placeholder="Search employees"
+					/>
 					<GDatePicker v-model="date" label="Date worked" placeholder="Select a date" />
 				</section>
 
@@ -332,18 +386,20 @@
 					<GButton label="OPEN MODAL" @click="modalOpen = true" />
 					<GModal :is-open="modalOpen" title="Delete attachment" @did-dismiss="modalOpen = false">
 						<p class="spec__note">
-							Ionic's focus trap is worked around here exactly as CustomIonModal does it —
-							an autocomplete inside this sheet stays usable.
+							Ionic's focus trap is worked around here exactly as CustomIonModal does it — an
+							autocomplete inside this sheet stays usable.
 						</p>
 						<GLinkPicker v-model="link" :options="linkOptions" label="Reassign to" />
 					</GModal>
 				</section>
 
 				<section class="spec__section">
-					<h2 class="spec__label">GPULLREFRESH (§10.3) — mounted on this page; pull down to see it</h2>
+					<h2 class="spec__label">
+						GPULLREFRESH (§10.3) — mounted on this page; pull down to see it
+					</h2>
 					<p class="spec__note">
-						The live refresher sits at the top of this ion-content. Its Ionic spinner is switched off
-						(§11.2); the indicator below is the same markup it renders.
+						The live refresher sits at the top of this ion-content. Its Ionic spinner is switched
+						off (§11.2); the indicator below is the same markup it renders.
 					</p>
 					<div class="g-refresh">
 						<span class="g-refresh__bar" aria-hidden="true"><span class="g-refresh__fill" /></span>
@@ -399,8 +455,18 @@ import GLightField from "@/components/glass/GLightField.vue"
 import { gToast } from "@/components/glass/toast"
 
 const statuses = [
-	"Draft", "Open", "Pending", "Unpaid", "Submitted", "Approved & Unpaid",
-	"Approved", "Paid", "Rejected", "Cancelled", "Present", "Absent",
+	"Draft",
+	"Open",
+	"Pending",
+	"Unpaid",
+	"Submitted",
+	"Approved & Unpaid",
+	"Approved",
+	"Paid",
+	"Rejected",
+	"Cancelled",
+	"Present",
+	"Absent",
 	"Something Unmapped",
 ]
 const form = reactive({ date: "", hours: "3", locked: "Siti Rahman", reason: "" })
@@ -483,8 +549,11 @@ function log(name) {
 .spec__field {
 	position: absolute;
 	inset: 0;
-	background:
-		radial-gradient(280px 280px at 85% 8%, rgba(var(--g-brand-rgb) / 0.5), transparent 70%),
+	background: radial-gradient(
+			280px 280px at 85% 8%,
+			rgba(var(--g-brand-rgb) / 0.5),
+			transparent 70%
+		),
 		radial-gradient(300px 300px at 8% 40%, rgba(var(--g-leave-rgb) / 0.35), transparent 70%);
 	opacity: var(--g-blob-opacity);
 	pointer-events: none;

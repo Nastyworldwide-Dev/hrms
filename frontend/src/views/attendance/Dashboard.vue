@@ -4,9 +4,7 @@
 			<!-- §20.3: one 720px column (7.3 ruling). Was
 			     lg:grid-cols-[1.1fr_1fr], which left ~320px of dead space in the
 			     left column while the right overflowed the fold. -->
-			<div
-				class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg lg:p-7"
-			>
+			<div class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg lg:p-7">
 				<div class="contents">
 					<div class="order-1"><AttendanceCalendar /></div>
 					<ResourceError :resource="shifts" what="your shifts" />
@@ -21,16 +19,24 @@
 					     (§15.2 keeps that one surface). -->
 					<div class="order-2">
 						<GListPanel>
-						<GListRow :label="__('Request Attendance')" @click="router.push({ name: 'AttendanceRequestFormView' })" />
-						<GListRow :label="__('Request Overtime')" @click="router.push({ name: 'OTRequestFormView' })" />
-						<GListRow :label="__('Replacement Leave')" @click="router.push({ name: 'ReplacementLeaveView' })" />
-						<GListRow :label="__('Request a Shift')" @click="router.push({ name: 'ShiftRequestFormView' })" />
+							<GListRow
+								:label="__('Request Attendance')"
+								@click="router.push({ name: 'AttendanceRequestFormView' })"
+							/>
+							<GListRow
+								:label="__('Request Overtime')"
+								@click="router.push({ name: 'OTRequestFormView' })"
+							/>
+							<GListRow
+								:label="__('Replacement Leave')"
+								@click="router.push({ name: 'ReplacementLeaveView' })"
+							/>
+							<GListRow
+								:label="__('Request a Shift')"
+								@click="router.push({ name: 'ShiftRequestFormView' })"
+							/>
 						</GListPanel>
 					</div>
-
-					
-
-					
 
 					<div class="order-3">
 						<div class="flex items-baseline justify-between mb-2.5">

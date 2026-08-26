@@ -31,20 +31,20 @@
 		</template>
 
 		<template v-else>
-		<div v-for="row in rows" :key="row.label" class="g-kra__row">
-			<div class="g-kra__top">
-				<span class="g-kra__label">{{ row.label }}</span>
-				<span class="g-kra__weight">{{ row.weight }}</span>
-				<span class="g-kra__score">{{ row.score }}</span>
+			<div v-for="row in rows" :key="row.label" class="g-kra__row">
+				<div class="g-kra__top">
+					<span class="g-kra__label">{{ row.label }}</span>
+					<span class="g-kra__weight">{{ row.weight }}</span>
+					<span class="g-kra__score">{{ row.score }}</span>
+				</div>
+				<div
+					class="g-kra__bar"
+					role="img"
+					:aria-label="`${row.label}, ${row.score} out of ${row.max ?? 5}`"
+				>
+					<div class="g-kra__fill" :style="{ width: `${fill(row)}%` }" />
+				</div>
 			</div>
-			<div
-				class="g-kra__bar"
-				role="img"
-				:aria-label="`${row.label}, ${row.score} out of ${row.max ?? 5}`"
-			>
-				<div class="g-kra__fill" :style="{ width: `${fill(row)}%` }" />
-			</div>
-		</div>
 		</template>
 	</div>
 </template>

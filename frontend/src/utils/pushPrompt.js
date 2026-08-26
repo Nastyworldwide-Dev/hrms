@@ -4,8 +4,7 @@
 
 export const DECLINE_KEY = "hrms:push_prompt_declined"
 
-export const hasDeclined = (storage = window.localStorage) =>
-	storage.getItem(DECLINE_KEY) !== null
+export const hasDeclined = (storage = window.localStorage) => storage.getItem(DECLINE_KEY) !== null
 
 export const recordDecline = (storage = window.localStorage) => {
 	console.info("[PushPrompt] User declined push notifications on this device")

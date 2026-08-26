@@ -6,13 +6,9 @@
 		@didDismiss="close"
 		@willPresent="prefill"
 	>
-		<div
-			class="bg-ground w-full flex flex-col max-h-[calc(100vh-5rem)]"
-		>
+		<div class="bg-ground w-full flex flex-col max-h-[calc(100vh-5rem)]">
 			<!-- header -->
-			<div
-				class="flex items-center justify-between p-4 border-b border-divider flex-none"
-			>
+			<div class="flex items-center justify-between p-4 border-b border-divider flex-none">
 				<h3 class="text-button-label font-extrabold text-inkbase">
 					{{ props.sopName ? __("Edit SOP") : __("New SOP") }}
 				</h3>
@@ -57,7 +53,10 @@
 									: 'bg-surface text-ink-700 border-divider'
 							"
 							:aria-pressed="form.scope === scope"
-							style="transition: background-color var(--motion-glide), color var(--motion-glide), border-color var(--motion-glide)"
+							style="
+								transition: background-color var(--motion-glide), color var(--motion-glide),
+									border-color var(--motion-glide);
+							"
 							@click="setScope(scope)"
 						>
 							{{ __(scope) }}
@@ -83,10 +82,7 @@
 							{{ department.name }}
 						</option>
 					</select>
-					<span
-						v-if="errors.department"
-						class="text-kra-label font-bold text-red-600"
-					>
+					<span v-if="errors.department" class="text-kra-label font-bold text-red-600">
 						{{ __("Pick a department for a department-scoped SOP.") }}
 					</span>
 				</div>
@@ -307,10 +303,7 @@ const clearAttachment = () => {
 // A textarea holds plain text but `content` is a Text Editor field rendered
 // with v-html — keep paragraph breaks instead of collapsing to one run-on line.
 const escapeHtml = (text) =>
-	text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
+	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 const toHtml = (text) => {
 	const value = (text || "").trim()
@@ -384,9 +377,7 @@ const save = async () => {
 				fieldname: values,
 			})
 		} else {
-			const doc = await sopDocs.insert.submit(
-				deferPublish ? { ...values, published: 0 } : values
-			)
+			const doc = await sopDocs.insert.submit(deferPublish ? { ...values, published: 0 } : values)
 			docname = doc?.name || sopDocs.insert.data?.name
 		}
 
@@ -401,9 +392,7 @@ const save = async () => {
 				console.warn("[SOP] Attachment upload failed after create:", error)
 				toast({
 					title: __("Attachment failed"),
-					text: __(
-						"Saved as an unpublished draft without the attachment — open it to retry."
-					),
+					text: __("Saved as an unpublished draft without the attachment — open it to retry."),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
@@ -415,9 +404,7 @@ const save = async () => {
 			await updateSop.fetch({
 				doctype: "SOP Document",
 				name: docname,
-				fieldname: deferPublish
-					? { attachment: fileUrl, published: 1 }
-					: { attachment: fileUrl },
+				fieldname: deferPublish ? { attachment: fileUrl, published: 1 } : { attachment: fileUrl },
 			})
 		}
 

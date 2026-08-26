@@ -1,9 +1,7 @@
 <template>
 	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
 		<div class="bg-bg w-full flex flex-col pb-8 max-h-sheet">
-			<div
-				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4"
-			>
+			<div class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4">
 				<div class="g-eyebrow">{{ __("Late check-out") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ __("Forgot to check out?") }}
@@ -47,13 +45,9 @@
 					rows="3"
 					maxlength="500"
 					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
-					:placeholder="
-						__('e.g. left in a rush, low battery, network issue, etc.')
-					"
+					:placeholder="__('e.g. left in a rush, low battery, network issue, etc.')"
 				/>
-				<div class="text-caption text-ink-500 text-right">
-					{{ reason.length }}/500
-				</div>
+				<div class="text-caption text-ink-500 text-right">{{ reason.length }}/500</div>
 			</div>
 
 			<div class="flex flex-row gap-2.5 px-4 pt-3">
@@ -102,7 +96,9 @@ const toInputValue = (date) => {
 	// Convert Date or ISO string to "YYYY-MM-DDTHH:mm" for datetime-local input
 	const d = typeof date === "string" ? new Date(date.replace(" ", "T")) : date
 	const pad = (n) => String(n).padStart(2, "0")
-	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+		d.getHours()
+	)}:${pad(d.getMinutes())}`
 }
 
 const minCheckoutTime = computed(() => {
@@ -127,10 +123,7 @@ const checkoutError = computed(() => {
 })
 
 const canSubmit = computed(
-	() =>
-		!!checkoutTime.value &&
-		!!reason.value.trim() &&
-		!checkoutError.value
+	() => !!checkoutTime.value && !!reason.value.trim() && !checkoutError.value
 )
 
 watch(

@@ -3,7 +3,7 @@
 		:isTeamRequest="props.isTeamRequest"
 		:employee="props.doc.employee"
 		:employeeName="props.doc.employee_name"
-		>
+	>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
 				<div class="text-button-label font-semibold text-inkbase">
@@ -45,5 +45,4 @@ const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
 	return props.doc.docstatus ? "Submitted" : "Draft"
 })
-
 </script>

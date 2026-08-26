@@ -25,9 +25,7 @@ export class FileAttachment {
 				onError: (error) => {
 					toast({
 						title: "Error",
-						text: `File upload failed for ${this.fileName}. ${
-							error.messages?.[0] || ""
-						}`,
+						text: `File upload failed for ${this.fileName}. ${error.messages?.[0] || ""}`,
 						icon: "alert-circle",
 						position: "bottom-center",
 						iconClasses: "text-red-500",
@@ -91,16 +89,9 @@ export async function guessStatusColor(doctype, status) {
 	let color = "gray"
 	status = status.toLowerCase()
 
-	if (
-		hasWords(
-			["open", "pending", "unpaid", "review", "medium", "not approved"],
-			status
-		)
-	) {
+	if (hasWords(["open", "pending", "unpaid", "review", "medium", "not approved"], status)) {
 		color = "orange"
-	} else if (
-		hasWords(["urgent", "high", "failed", "rejected", "error"], status)
-	) {
+	} else if (hasWords(["urgent", "high", "failed", "rejected", "error"], status)) {
 		color = "red"
 	} else if (
 		hasWords(

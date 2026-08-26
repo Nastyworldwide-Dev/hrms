@@ -49,8 +49,20 @@ const HIDDEN_ON_CREATE = [
 	"hr_notes",
 ]
 const HR_ONLY_FIELDS = ["hr_section", "hr_notes"]
-const LEAVE_FIELDS = ["leave_section", "leave_type", "balance_shown", "balance_expected", "column_break_leave"]
-const ATTENDANCE_FIELDS = ["attendance_section", "affected_date", "punch_affected", "column_break_att", "what_happened"]
+const LEAVE_FIELDS = [
+	"leave_section",
+	"leave_type",
+	"balance_shown",
+	"balance_expected",
+	"column_break_leave",
+]
+const ATTENDANCE_FIELDS = [
+	"attendance_section",
+	"affected_date",
+	"punch_affected",
+	"column_break_att",
+	"what_happened",
+]
 
 const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",

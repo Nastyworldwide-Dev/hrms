@@ -77,6 +77,7 @@ const fillPercentage = computed(() => {
 })
 
 const announcement = computed(
-	() => `${props.label}, ${props.remaining} ${props.unit} remaining of ${props.allocated} allocated`
+	() =>
+		`${props.label}, ${props.remaining} ${props.unit} remaining of ${props.allocated} allocated`
 )
 </script>

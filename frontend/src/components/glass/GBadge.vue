@@ -20,7 +20,12 @@ import { computed } from "vue"
 
 // accent/neutral reuse the GStatusChip variant treatments rather than
 // duplicating them — same measured pairs, one definition
-const VARIANTS = { open: "g-badge--open", resolved: "g-badge--resolved", accent: "g-chip--progress", neutral: "g-chip--neutral" }
+const VARIANTS = {
+	open: "g-badge--open",
+	resolved: "g-badge--resolved",
+	accent: "g-chip--progress",
+	neutral: "g-chip--neutral",
+}
 
 const props = defineProps({
 	variant: {

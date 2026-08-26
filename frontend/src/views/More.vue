@@ -1,7 +1,9 @@
 <template>
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
-			<div class="flex flex-col gap-[13px] w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7">
+			<div
+				class="flex flex-col gap-[13px] w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7"
+			>
 				<span class="g-eyebrow">{{ __("More") }}</span>
 
 				<!-- one glass surface for the whole list (§15.1): the panel and its
@@ -45,7 +47,11 @@ const moreItems = computed(() => {
 		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
 		// §13.1 lists Remote Approvals behind More; it had no entry in any nav
 		// surface before, reachable only by typing the URL
-		items.push({ icon: markRaw(TeamIcon), title: __("Remote Approvals"), route: "/remote-approvals" })
+		items.push({
+			icon: markRaw(TeamIcon),
+			title: __("Remote Approvals"),
+			route: "/remote-approvals",
+		})
 	}
 	return items
 })

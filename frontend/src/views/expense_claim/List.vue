@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Expense Claim"
-			:pageTitle="('Claim History')"
+			:pageTitle="'Claim History'"
 			:tabButtons="TAB_BUTTONS"
 			:fields="EXPENSE_CLAIM_FIELDS"
 			groupBy="`tabExpense Claim`.name"
@@ -14,7 +14,6 @@
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
 import ListView from "@/components/ListView.vue"
-
 
 const TAB_BUTTONS = ["My Claims", "Team Claims"] // __("My Claims"), __("Team Claims")
 const EXPENSE_CLAIM_FIELDS = [
@@ -29,7 +28,7 @@ const EXPENSE_CLAIM_FIELDS = [
 	"`tabExpense Claim`.posting_date",
 	"`tabExpense Claim`.company",
 	"`tabExpense Claim Detail`.expense_type",
-	{"COUNT": "`tabExpense Claim Detail`.expense_type", "as":"total_expenses"}
+	{ COUNT: "`tabExpense Claim Detail`.expense_type", as: "total_expenses" },
 ]
 
 const FILTER_CONFIG = [

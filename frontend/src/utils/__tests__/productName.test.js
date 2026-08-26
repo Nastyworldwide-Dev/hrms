@@ -11,7 +11,12 @@ import { applyProductName } from "../productName.js"
 
 /** Minimal document stand-in — the meta tag is optional on purpose. */
 function fakeDoc({ title = "Nadi", withMeta = true } = {}) {
-	const meta = { content: null, setAttribute(_, v) { this.content = v } }
+	const meta = {
+		content: null,
+		setAttribute(_, v) {
+			this.content = v
+		},
+	}
 	return {
 		title,
 		_meta: meta,

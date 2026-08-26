@@ -13,7 +13,9 @@
 					<span>{{ props.doc.shift_dates || getDates(props.doc) }}</span>
 					<span v-if="props.doc.to_date">
 						<span class="whitespace-pre"> &middot; </span>
-						<span class="whitespace-nowrap">{{ __("{0}d", [props.doc.total_shift_days || getTotalDays(props.doc)]) }}</span>
+						<span class="whitespace-nowrap">{{
+							__("{0}d", [props.doc.total_shift_days || getTotalDays(props.doc)])
+						}}</span>
 					</span>
 				</div>
 			</div>
@@ -49,5 +51,4 @@ const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
 	return props.doc.docstatus ? props.doc.status : "Open"
 })
-
 </script>

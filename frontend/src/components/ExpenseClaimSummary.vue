@@ -5,9 +5,7 @@
 			<div class="g-eyebrow text-accent-200">
 				{{ __("Total Claimed") }}
 			</div>
-			<div
-				class="font-sans font-extrabold text-clock tabular-nums text-ground mt-1.5"
-			>
+			<div class="font-sans font-extrabold text-clock tabular-nums text-ground mt-1.5">
 				{{ formatCurrency(total_claimed_amount, company_currency) }}
 			</div>
 		</div>
@@ -53,7 +51,6 @@
 	<div v-else-if="summary.error" class="text-p-sm text-ink-500 py-6 text-center">
 		{{ __("Could not load the expense summary. Refresh to try again.") }}
 	</div>
-
 </template>
 
 <script setup>

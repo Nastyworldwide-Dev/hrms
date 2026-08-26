@@ -16,7 +16,13 @@
 -->
 <template>
 	<div class="g-search">
-		<svg class="g-icon g-search__icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+		<svg
+			class="g-icon g-search__icon"
+			width="16"
+			height="16"
+			viewBox="0 0 16 16"
+			aria-hidden="true"
+		>
 			<circle cx="7" cy="7" r="4.5" />
 			<path d="M10.5 10.5 14 14" />
 		</svg>

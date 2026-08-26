@@ -6,7 +6,12 @@
 	     §12 calls for a banner here "if unresolved punch"; this is that slot.
 	     GBanner is the §10.1 #10 primitive — info variant, since the state is
 	     actionable rather than wrong. -->
-	<GBanner v-if="count > 0" variant="info" class="g-approvals" @click="router.push({ name: 'RemoteApprovals' })">
+	<GBanner
+		v-if="count > 0"
+		variant="info"
+		class="g-approvals"
+		@click="router.push({ name: 'RemoteApprovals' })"
+	>
 		<span class="g-approvals__title">
 			{{ __("{0} remote check-in(s) awaiting your approval", [count]) }}
 		</span>

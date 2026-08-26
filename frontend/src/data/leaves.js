@@ -12,12 +12,8 @@ const transformLeaveData = (data) => {
 }
 
 export const getLeaveDates = (leave) => {
-	if (leave.from_date == leave.to_date)
-		return dayjs(leave.from_date).format("D MMM")
-	else
-		return `${dayjs(leave.from_date).format("D MMM")} - ${dayjs(
-			leave.to_date
-		).format("D MMM")}`
+	if (leave.from_date == leave.to_date) return dayjs(leave.from_date).format("D MMM")
+	else return `${dayjs(leave.from_date).format("D MMM")} - ${dayjs(leave.to_date).format("D MMM")}`
 }
 
 export const myLeaves = createResource({
@@ -27,8 +23,8 @@ export const myLeaves = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -48,10 +44,10 @@ export const teamLeaves = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		for_approval: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			for_approval: 1,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -69,10 +65,10 @@ export const historyLeaves = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		history: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			history: 1,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -91,8 +87,7 @@ export const leaveBalance = createResource({
 		// allocated, the || below only covers older cached payloads
 		return Object.fromEntries(
 			Object.entries(data).map(([leave_type, allocation]) => {
-				const entitlement =
-					allocation.annual_entitlement || allocation.allocated_leaves
+				const entitlement = allocation.annual_entitlement || allocation.allocated_leaves
 				allocation.annual_entitlement = entitlement
 				allocation.balance_percentage = entitlement
 					? Math.min((allocation.balance_leaves / entitlement) * 100, 100)

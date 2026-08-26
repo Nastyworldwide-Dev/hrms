@@ -21,10 +21,7 @@
 			<div class="text-button-label font-sans font-semibold text-inkbase truncate">
 				{{ contact.employee_name || __("Unnamed Employee") }}
 			</div>
-			<div
-				v-if="contact.designation"
-				class="g-eyebrow truncate mt-0.5"
-			>
+			<div v-if="contact.designation" class="g-eyebrow truncate mt-0.5">
 				{{ contact.designation }}
 			</div>
 
@@ -45,10 +42,7 @@
 					<FeatherIcon name="phone" class="h-3 w-3 shrink-0" />
 					<span>{{ contact.phone }}</span>
 				</a>
-				<div
-					v-if="!contact.email && !contact.phone"
-					class="text-kra-label text-ink-500 italic"
-				>
+				<div v-if="!contact.email && !contact.phone" class="text-kra-label text-ink-500 italic">
 					{{ __("No contact details on file") }}
 				</div>
 			</div>

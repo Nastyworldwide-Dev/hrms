@@ -78,7 +78,8 @@
 										</span>
 										<GBadge
 											v-if="!sop.published"
-											variant="neutral" class="!text-ink-700 flex-none"
+											variant="neutral"
+											class="!text-ink-700 flex-none"
 										>
 											{{ __("Draft") }}
 										</GBadge>

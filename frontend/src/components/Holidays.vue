@@ -48,10 +48,7 @@
 						</div>
 					</div>
 					<div
-						:class="[
-							'text-base font-bold',
-							holiday.is_upcoming ? 'text-inkbase' : 'text-ink-500',
-						]"
+						:class="['text-base font-bold', holiday.is_upcoming ? 'text-inkbase' : 'text-ink-500']"
 					>
 						{{ holiday.formatted_holiday_date }}
 					</div>
@@ -94,9 +91,7 @@ const compactHolidayDate = (holiday) =>
 	dayjs(holiday.holiday_date).format("ddd D MMM").toUpperCase()
 
 const upcomingHolidays = computed(() => {
-	const filteredHolidays = holidays.data?.filter(
-		(holiday) => holiday.is_upcoming
-	)
+	const filteredHolidays = holidays.data?.filter((holiday) => holiday.is_upcoming)
 
 	// show only 5 upcoming holidays
 	return filteredHolidays?.slice(0, 5)

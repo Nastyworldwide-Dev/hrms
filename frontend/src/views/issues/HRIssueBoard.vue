@@ -151,12 +151,7 @@
 							class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent-ink"
 							:placeholder="__('Notes for the HR team…')"
 						/>
-						<Button
-							variant="solid"
-							class="w-full mt-3 py-5"
-							:loading="saving"
-							@click="saveNotes"
-						>
+						<Button variant="solid" class="w-full mt-3 py-5" :loading="saving" @click="saveNotes">
 							{{ __("Save") }}
 						</Button>
 					</div>
@@ -183,11 +178,7 @@ import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
-const ISSUE_TYPES = [
-	"Leave Balance Discrepancy",
-	"Check-in / Check-out Problem",
-	"Other HR Issue",
-]
+const ISSUE_TYPES = ["Leave Balance Discrepancy", "Check-in / Check-out Problem", "Other HR Issue"]
 // i18n source strings: __("Leave balance"), __("Check-in/out"), __("Other HR")
 const TYPE_SHORT = {
 	"Leave Balance Discrepancy": "Leave balance",
@@ -228,7 +219,10 @@ const issues = createListResource({
 // GSegmented takes {key,label}; the count rides in the label so the selected
 // state is never signalled by colour alone (§14.1)
 const statusButtons = computed(() =>
-	ISSUE_STATUSES.map((status) => ({ key: status, label: `${__(status)} (${counts.value?.[status] ?? 0})` }))
+	ISSUE_STATUSES.map((status) => ({
+		key: status,
+		label: `${__(status)} (${counts.value?.[status] ?? 0})`,
+	}))
 )
 
 const counts = computed(() => countByStatus(issues.data))
@@ -276,11 +270,17 @@ const detailRows = computed(() => {
 	]
 	if (doc.issue_type === "Leave Balance Discrepancy") {
 		if (doc.leave_type) rows.push({ label: __("Leave type"), value: doc.leave_type })
-		rows.push({ label: __("Shown / expected"), value: `${doc.balance_shown ?? "—"} / ${doc.balance_expected ?? "—"}` })
+		rows.push({
+			label: __("Shown / expected"),
+			value: `${doc.balance_shown ?? "—"} / ${doc.balance_expected ?? "—"}`,
+		})
 	}
 	if (doc.issue_type === "Check-in / Check-out Problem") {
 		if (doc.affected_date)
-			rows.push({ label: __("Affected date"), value: dayjs(doc.affected_date).format("D MMM YYYY") })
+			rows.push({
+				label: __("Affected date"),
+				value: dayjs(doc.affected_date).format("D MMM YYYY"),
+			})
 		if (doc.punch_affected) rows.push({ label: __("Punch"), value: __(doc.punch_affected) })
 		if (doc.what_happened) rows.push({ label: __("What happened"), value: __(doc.what_happened) })
 	}

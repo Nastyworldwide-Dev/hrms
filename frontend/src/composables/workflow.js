@@ -17,15 +17,11 @@ export default function useWorkflow(doctype) {
 
 	const getWorkflowStateField = () => {
 		// NOTE: checkbox labelled 'Don't Override Status' is named override_status hence the inverted logic
-		return !workflowDoc.data?.override_status
-			? workflowDoc.data?.workflow_state_field
-			: ""
+		return !workflowDoc.data?.override_status ? workflowDoc.data?.workflow_state_field : ""
 	}
 
 	const getDefaultState = (docstatus) => {
-		return workflowDoc.data?.states.find(
-			(state) => state.doc_status == docstatus
-		)
+		return workflowDoc.data?.states.find((state) => state.doc_status == docstatus)
 	}
 
 	const getTransitions = async (doc) => {
@@ -36,9 +32,7 @@ export default function useWorkflow(doctype) {
 				const isSelfApproval = userResource?.data?.name == doc.owner
 
 				return data
-					.filter(
-						(transition) => transition.allow_self_approval || !isSelfApproval
-					)
+					.filter((transition) => transition.allow_self_approval || !isSelfApproval)
 					.map((transition) => transition.action)
 			},
 		})
@@ -47,9 +41,7 @@ export default function useWorkflow(doctype) {
 	}
 
 	const getDocumentStateRoles = (state) => {
-		return workflowDoc.data?.states
-			.filter((s) => s.state == state)
-			.map((s) => s.allow_edit)
+		return workflowDoc.data?.states.filter((s) => s.state == state).map((s) => s.allow_edit)
 	}
 
 	const isReadOnly = (doc) => {

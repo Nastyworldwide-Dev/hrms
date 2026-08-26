@@ -5,7 +5,12 @@
 				<GModal
 					:is-open="showDialog"
 					:title="__('Login failed')"
-					@did-dismiss="() => { session.logout.submit(); showDialog = false }"
+					@did-dismiss="
+						() => {
+							session.logout.submit()
+							showDialog = false
+						}
+					"
 				>
 					<p class="g-confirm__body">{{ reason }}</p>
 					<GButton :label="__('Go to Login')" @click="() => session.logout.submit()" />

@@ -3,7 +3,6 @@ import { employeeResource } from "./employee"
 
 import dayjs from "@/utils/dayjs"
 
-
 export const getDates = (shift) => {
 	const fromDate = dayjs(shift.from_date).format("D MMM")
 	const toDate = shift.to_date ? dayjs(shift.to_date).format("D MMM") : "Ongoing"
@@ -53,23 +52,23 @@ export const myAttendanceRequests = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			limit: 10,
 		}
 	},
 	auto: true,
 	cache: "hrms:my_attendance_requests",
 	transform(data) {
 		return transformAttendanceRequests(data)
-	}
+	},
 })
 const transformAttendanceRequests = (data) => {
-		return data.map((request) => {
-			request.doctype = "Attendance Request"
-			request.attendance_dates = getDates(request)
-			request.total_attendance_days = getTotalDays(request)
-			return request
-		})
+	return data.map((request) => {
+		request.doctype = "Attendance Request"
+		request.attendance_dates = getDates(request)
+		request.total_attendance_days = getTotalDays(request)
+		return request
+	})
 }
 export const myShiftRequests = createResource({
 	url: "hrms.api.get_shift_requests",
@@ -78,8 +77,8 @@ export const myShiftRequests = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -96,10 +95,10 @@ export const teamShiftRequests = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		for_approval: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			for_approval: 1,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -116,10 +115,10 @@ export const historyShiftRequests = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		history: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			history: 1,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -136,9 +135,9 @@ export const teamAttendanceRequests = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		for_approval: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			for_approval: 1,
+			limit: 10,
 		}
 	},
 	auto: true,

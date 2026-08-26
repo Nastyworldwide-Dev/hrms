@@ -19,10 +19,7 @@
 			 v?.value unwrapping and Link.vue's remote-search binding exactly
 			 as they were. GLinkPicker gets the same class, so adopting it
 			 later is a drop-in rather than a re-style. -->
-		<div
-			v-if="props.fieldtype === 'Select' || props.documentList"
-			class="g-linkfield"
-		>
+		<div v-if="props.fieldtype === 'Select' || props.documentList" class="g-linkfield">
 			<Autocomplete
 				:class="isReadOnly ? 'pointer-events-none' : ''"
 				:placeholder="__('Select {0}', [props.label])"
@@ -62,7 +59,12 @@
 			:placeholder="__('Enter {0}', [props.label])"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Check. g-checkfield expands the 16x16 box to a §14.1 target without
@@ -87,7 +89,12 @@
 			:model-value="modelValue"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Read only currency field -->
@@ -97,7 +104,12 @@
 			:model-value="modelValue"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Float/Int field -->
@@ -107,7 +119,12 @@
 			:model-value="modelValue"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Section Break -->
@@ -135,7 +152,12 @@
 			:min-date="props.minDate"
 			:max-date="props.maxDate"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Time: a native input, not a hand-rolled picker — the browser's own
@@ -150,7 +172,12 @@
 			:model-value="modelValue"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<!-- Datetime -->
@@ -160,7 +187,12 @@
 			:placeholder="__('Select {0}', [props.label])"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
-			@update:model-value="(v) => { emit('update:modelValue', v); emit('change', v) }"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
 
 		<ErrorMessage :message="props.errorMessage" />

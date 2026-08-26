@@ -22,11 +22,7 @@
 					<div class="flex flex-col p-4 gap-4">
 						<!-- Loading state -->
 						<div v-if="hrContacts.loading && !hrContacts.data" class="flex flex-col gap-3">
-							<div
-								v-for="i in 3"
-								:key="i"
-								class="h-20 bg-ink-200 animate-pulse"
-							/>
+							<div v-for="i in 3" :key="i" class="h-20 bg-ink-200 animate-pulse" />
 						</div>
 
 						<!-- Empty state -->
@@ -34,9 +30,7 @@
 							v-else-if="!hrContacts.data || hrContacts.data.length === 0"
 							class="flex flex-col items-center justify-center py-16 px-6 text-center"
 						>
-							<div
-								class="h-16 w-16 bg-ink-200 flex items-center justify-center mb-3"
-							>
+							<div class="h-16 w-16 bg-ink-200 flex items-center justify-center mb-3">
 								<FeatherIcon name="users" class="h-7 w-7 text-ink-500" />
 							</div>
 							<div class="text-sm font-sans font-extrabold text-inkbase">
@@ -52,10 +46,7 @@
 						</div>
 
 						<!-- Cards -->
-						<div
-							v-else
-							class="border-t-2 border-divider lg:grid lg:grid-cols-2 lg:gap-x-6"
-						>
+						<div v-else class="border-t-2 border-divider lg:grid lg:grid-cols-2 lg:gap-x-6">
 							<ContactCard
 								v-for="contact in hrContacts.data"
 								:key="contact.name"

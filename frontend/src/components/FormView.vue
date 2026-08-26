@@ -1,14 +1,15 @@
-				<!-- §11.4: the server has been asked and has not answered, so this
+<!-- §11.4: the server has been asked and has not answered, so this
 				     is PENDING, not disabled — disabled means "you cannot do this"
 				     and measures 2.68:1. GButton keeps the brand fill and shows a
 				     transform-animated bar; §11.2's no-spinner rule applies here too. -->
-				<GButton
-					:label="__(formButton)"
-					:pending-label="__('Saving…')"
-					:pending="docList.insert.loading || documentResource?.setValue?.loading"
-					:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
-					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
-				/><template>
+<GButton
+	:label="__(formButton)"
+	:pending-label="__('Saving…')"
+	:pending="docList.insert.loading || documentResource?.setValue?.loading"
+	:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
+	@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
+/>
+<template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
 		<!-- No bg-ground here (8.4): this container is full-bleed over the page,
 	     and an opaque page-colour fill painted straight over the light field,
@@ -19,28 +20,16 @@
 			<header
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
-				<GIconButton
-					:label="__('Back')"
-					flush
-					class="lg:hidden"
-					@click="goBackOrHome(router)"
-				>
+				<GIconButton :label="__('Back')" flush class="lg:hidden" @click="goBackOrHome(router)">
 					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 				</GIconButton>
-				<div
-					v-if="id"
-					class="flex flex-row items-center gap-2 overflow-hidden grow"
-				>
+				<div v-if="id" class="flex flex-row items-center gap-2 overflow-hidden grow">
 					<h2
 						class="text-xl font-extrabold text-inkbase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
 					>
 						{{ __(props.doctype) }}
 					</h2>
-					<Badge
-						:label="id"
-						class="whitespace-nowrap text-caption"
-						variant="outline"
-					/>
+					<Badge :label="id" class="whitespace-nowrap text-caption" variant="outline" />
 					<!-- GStatusChip, not frappe-ui Badge (8.9). The same value rendered
 					     as a FILLED amber "Open" pill here and an OUTLINED uppercase
 					     "OPEN" on the list — two chip designs for one status, because
@@ -66,7 +55,7 @@
 							{
 								label: __('Download PDF'),
 								condition: () => props.showDownloadPDFButton,
-								onClick: () => (handleDownload()),
+								onClick: () => handleDownload(),
 							},
 						]"
 						:button="{
@@ -80,12 +69,9 @@
 					v-else
 					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-screen-title"
 				>
-					{{ __('New {0}', [__(doctype)], props.doctype) }}
+					{{ __("New {0}", [__(doctype)], props.doctype) }}
 				</h2>
-				<span
-					v-if="!id"
-					class="g-eyebrow hidden lg:inline ml-auto"
-				>
+				<span v-if="!id" class="g-eyebrow hidden lg:inline ml-auto">
 					{{ dateKicker }}
 				</span>
 			</header>
@@ -93,123 +79,120 @@
 			<!-- Form -->
 			<div class="grow overflow-y-auto">
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
-				<button
-					type="button"
-					class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
-					@click="goBackOrHome(router)"
-				>
-					<FeatherIcon name="arrow-left" class="h-4 w-4" />
-					{{ __("Back") }}
-				</button>
-				<!-- Tabs -->
-				<template v-if="tabbedView">
-					<div
-						class="px-4 sticky top-0 z-overlay bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
+					<button
+						type="button"
+						class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
+						@click="goBackOrHome(router)"
 					>
-						<ul class="flex -mb-px overflow-auto hide-scrollbar">
-							<li class="mr-2 whitespace-nowrap" v-for="tab in tabs" :key="tab.name">
-								<button
-									@click="activeTab = tab.name"
-									class="inline-block py-4 px-2 border-b-2 border-transparent"
-									:class="[
-										activeTab === tab.name
-											? '!text-accent-ink !border-accent-ink !font-extrabold'
-											: 'hover:text-inkbase hover:border-divider',
-									]"
-								>
-									{{ __(tab.name, null, props.doctype) }}
-								</button>
-							</li>
-						</ul>
-					</div>
-
-					<template v-for="(fieldList, tabName, index) in tabFields" :key="tabName">
+						<FeatherIcon name="arrow-left" class="h-4 w-4" />
+						{{ __("Back") }}
+					</button>
+					<!-- Tabs -->
+					<template v-if="tabbedView">
 						<div
-							v-show="tabName === activeTab"
-							class="flex flex-col space-y-4 p-4"
+							class="px-4 sticky top-0 z-overlay bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 						>
-							<template v-for="field in fieldList" :key="field.fieldname">
-								<slot
-									v-if="field.fieldtype == 'Table'"
-									:name="field.fieldname"
-									:isFormReadOnly="isFormReadOnly"
-								></slot>
-
-								<FormField
-									v-else
-									:fieldtype="field.fieldtype"
-									:fieldname="field.fieldname"
-									v-model="formModel[field.fieldname]"
-									:default="field.default"
-									:label="__(field.label, null, props.doctype)"
-									:options="field.options"
-									:linkFilters="field.linkFilters"
-									:documentList="field.documentList"
-									:readOnly="isFieldReadOnly(field)"
-									:reqd="Boolean(field.reqd)"
-									:hidden="Boolean(field.hidden)"
-									:errorMessage="field.error_message"
-									:minDate="field.minDate"
-									:maxDate="field.maxDate"
-									:addSectionPadding="fieldList[0].name !== field.name"
-								/>
-							</template>
-
-							<!-- Attachment upload -->
-							<div
-								class="flex flex-row gap-2 items-center justify-center p-5"
-								v-if="isFileUploading"
-							>
-								<LoadingIndicator class="w-3 h-3 text-accent-ink" />
-								<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
-							</div>
-
-							<FileUploaderView
-								v-else-if="showAttachmentView && index === 0"
-								v-model="fileAttachments"
-								@handleFileSelect="handleFileSelect"
-								@handleFileDelete="handleFileDelete"
-							/>
+							<ul class="flex -mb-px overflow-auto hide-scrollbar">
+								<li class="mr-2 whitespace-nowrap" v-for="tab in tabs" :key="tab.name">
+									<button
+										@click="activeTab = tab.name"
+										class="inline-block py-4 px-2 border-b-2 border-transparent"
+										:class="[
+											activeTab === tab.name
+												? '!text-accent-ink !border-accent-ink !font-extrabold'
+												: 'hover:text-inkbase hover:border-divider',
+										]"
+									>
+										{{ __(tab.name, null, props.doctype) }}
+									</button>
+								</li>
+							</ul>
 						</div>
+
+						<template v-for="(fieldList, tabName, index) in tabFields" :key="tabName">
+							<div v-show="tabName === activeTab" class="flex flex-col space-y-4 p-4">
+								<template v-for="field in fieldList" :key="field.fieldname">
+									<slot
+										v-if="field.fieldtype == 'Table'"
+										:name="field.fieldname"
+										:isFormReadOnly="isFormReadOnly"
+									></slot>
+
+									<FormField
+										v-else
+										:fieldtype="field.fieldtype"
+										:fieldname="field.fieldname"
+										v-model="formModel[field.fieldname]"
+										:default="field.default"
+										:label="__(field.label, null, props.doctype)"
+										:options="field.options"
+										:linkFilters="field.linkFilters"
+										:documentList="field.documentList"
+										:readOnly="isFieldReadOnly(field)"
+										:reqd="Boolean(field.reqd)"
+										:hidden="Boolean(field.hidden)"
+										:errorMessage="field.error_message"
+										:minDate="field.minDate"
+										:maxDate="field.maxDate"
+										:addSectionPadding="fieldList[0].name !== field.name"
+									/>
+								</template>
+
+								<!-- Attachment upload -->
+								<div
+									class="flex flex-row gap-2 items-center justify-center p-5"
+									v-if="isFileUploading"
+								>
+									<LoadingIndicator class="w-3 h-3 text-accent-ink" />
+									<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
+								</div>
+
+								<FileUploaderView
+									v-else-if="showAttachmentView && index === 0"
+									v-model="fileAttachments"
+									@handleFileSelect="handleFileSelect"
+									@handleFileDelete="handleFileDelete"
+								/>
+							</div>
+						</template>
 					</template>
-				</template>
 
-				<div class="flex flex-col space-y-4 p-4" v-else>
-					<FormField
-						v-for="field in props.fields"
-						:key="field.name"
-						:fieldtype="field.fieldtype"
-						:fieldname="field.fieldname"
-						v-model="formModel[field.fieldname]"
-						:default="field.default"
-						:label="__(field.label, null, props.doctype)"
-						:options="field.options"
-						:linkFilters="field.linkFilters"
-						:documentList="field.documentList"
-						:readOnly="isFieldReadOnly(field)"
-						:reqd="Boolean(field.reqd)"
-						:hidden="Boolean(field.hidden)"
-						:errorMessage="field.error_message"
-						:minDate="field.minDate"
-						:maxDate="field.maxDate"
-					/>
+					<div class="flex flex-col space-y-4 p-4" v-else>
+						<FormField
+							v-for="field in props.fields"
+							:key="field.name"
+							:fieldtype="field.fieldtype"
+							:fieldname="field.fieldname"
+							v-model="formModel[field.fieldname]"
+							:default="field.default"
+							:label="__(field.label, null, props.doctype)"
+							:options="field.options"
+							:linkFilters="field.linkFilters"
+							:documentList="field.documentList"
+							:readOnly="isFieldReadOnly(field)"
+							:reqd="Boolean(field.reqd)"
+							:hidden="Boolean(field.hidden)"
+							:errorMessage="field.error_message"
+							:minDate="field.minDate"
+							:maxDate="field.maxDate"
+						/>
 
-					<!-- Attachment upload -->
-					<div
-						class="flex flex-row gap-2 items-center justify-center p-5"
-						v-if="isFileUploading"
-					>
-						<LoadingIndicator class="w-3 h-3 text-accent-ink" />
-						<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
+						<!-- Attachment upload -->
+						<div
+							class="flex flex-row gap-2 items-center justify-center p-5"
+							v-if="isFileUploading"
+						>
+							<LoadingIndicator class="w-3 h-3 text-accent-ink" />
+							<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
+						</div>
+
+						<FileUploaderView
+							v-else-if="showAttachmentView"
+							v-model="fileAttachments"
+							@handleFileSelect="handleFileSelect"
+							@handleFileDelete="handleFileDelete"
+						/>
 					</div>
-
-					<FileUploaderView
-						v-else-if="showAttachmentView"
-						v-model="fileAttachments"
-						@handleFileSelect="handleFileSelect"
-						@handleFileDelete="handleFileDelete"
-					/>
-				</div>
 				</div>
 			</div>
 
@@ -238,28 +221,26 @@
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
-				<ErrorMessage
-					class="mb-2"
-					:message="
-						formErrorMessage ||
-						docList?.insert?.error ||
-						documentResource?.setValue?.error
-					"
-				/>
+					<ErrorMessage
+						class="mb-2"
+						:message="
+							formErrorMessage || docList?.insert?.error || documentResource?.setValue?.error
+						"
+					/>
 
-				<!-- GButton, not a frappe-ui Button painted with utilities (8.17).
+					<!-- GButton, not a frappe-ui Button painted with utilities (8.17).
 				     This was the ONLY primary action in the product that bypassed
 				     the primary component, which is precisely why it was the only
 				     one that drifted: it wrote `!bg-accent` expecting the brand and
 				     got --accent-ink, dark olive on light. GButton resolves
 				     --g-brand directly, so it cannot. -->
-				<GButton
-					:label="__(formButton)"
-					:pending-label="__('Saving…')"
-					:pending="docList.insert.loading || documentResource?.setValue?.loading"
-					:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
-					@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
-				/>
+					<GButton
+						:label="__(formButton)"
+						:pending-label="__('Saving…')"
+						:pending="docList.insert.loading || documentResource?.setValue?.loading"
+						:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
+						@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
+					/>
 				</div>
 			</div>
 		</div>
@@ -295,7 +276,7 @@
 
 	<Dialog v-model="showCancelDialog">
 		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Confirm") }} </h2>
+			<h2 class="text-xl font-bold">{{ __("Confirm") }}</h2>
 		</template>
 		<template #body-content>
 			<p>
@@ -306,18 +287,10 @@
 		</template>
 		<template #actions>
 			<div class="flex flex-row gap-4">
-				<Button
-					variant="outline"
-					class="py-5 w-full"
-					@click="showCancelDialog = false"
-				>
+				<Button variant="outline" class="py-5 w-full" @click="showCancelDialog = false">
 					{{ __("No") }}
 				</Button>
-				<Button
-					variant="solid"
-					@click="handleDocUpdate('cancel')"
-					class="py-5 w-full"
-				>
+				<Button variant="solid" @click="handleDocUpdate('cancel')" class="py-5 w-full">
 					{{ __("Yes") }}
 				</Button>
 			</div>
@@ -417,9 +390,7 @@ const $dayjs = inject("$dayjs")
 const employee = inject("$employee")
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() =>
-	$dayjs().format("dddd, D MMMM YYYY").toUpperCase()
-)
+const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
@@ -483,9 +454,7 @@ const tabFields = computed(() => {
 	let lastFieldIndex = 0
 
 	props.tabs?.forEach((tab) => {
-		lastFieldIndex = props.fields.findIndex(
-			(field) => field.fieldname === tab.lastField
-		)
+		lastFieldIndex = props.fields.findIndex((field) => field.fieldname === tab.lastField)
 		fieldList = props.fields.slice(firstFieldIndex, lastFieldIndex + 1)
 		fieldsByTab[tab.name] = fieldList
 		firstFieldIndex = lastFieldIndex + 1
@@ -522,9 +491,7 @@ const handleFileDelete = async (fileObj) => {
 		await fileAttachment.delete()
 		await attachedFiles.reload()
 	} else {
-		fileAttachments.value = fileAttachments.value.filter(
-			(file) => file.name !== fileObj.name
-		)
+		fileAttachments.value = fileAttachments.value.filter((file) => file.name !== fileObj.name)
 	}
 }
 
@@ -533,14 +500,12 @@ async function uploadAllAttachments(documentType, documentName, attachments) {
 
 	const uploadPromises = attachments.map((attachment) => {
 		const fileAttachment = new FileAttachment(attachment)
-		return fileAttachment
-			.upload(documentType, documentName, "")
-			.then((fileDoc) => {
-				fileDoc.uploaded = true
-				if (props.id) {
-					fileAttachments.value.push(fileDoc)
-				}
-			})
+		return fileAttachment.upload(documentType, documentName, "").then((fileDoc) => {
+			fileDoc.uploaded = true
+			if (props.id) {
+				fileAttachments.value.push(fileDoc)
+			}
+		})
 	})
 
 	await Promise.allSettled(uploadPromises)
@@ -653,8 +618,7 @@ const formButton = computed(() => {
 			(requiredStatuses && !requiredStatuses.includes(formModel.value.status)) ||
 			// Attendance Request: submitting IS the approval — the server rejects
 			// self-submission, so never offer Submit on your own request
-			(props.doctype === "Attendance Request" &&
-				formModel.value.employee === employee.data?.name)
+			(props.doctype === "Attendance Request" && formModel.value.employee === employee.data?.name)
 
 		if (formModel.value.docstatus === 0 && hasPermission("submit") && !submitBlocked) {
 			return "Submit"
@@ -679,9 +643,9 @@ function hasPermission(action) {
 
 function isFieldReadOnly(field) {
 	return (
-		Boolean(field.read_only)
-		|| isFormReadOnly.value
-		|| (props.id && !permittedWriteFields.data?.includes(field.fieldname))
+		Boolean(field.read_only) ||
+		isFormReadOnly.value ||
+		(props.id && !permittedWriteFields.data?.includes(field.fieldname))
 	)
 }
 
@@ -696,10 +660,7 @@ function handleDocInsert() {
 
 function validateMandatoryFields() {
 	const errorFields = props.fields
-		.filter(
-			(field) =>
-				field.reqd && !field.hidden && !formModel.value[field.fieldname]
-		)
+		.filter((field) => field.reqd && !field.hidden && !formModel.value[field.fieldname])
 		.map((field) => field.label)
 
 	if (errorFields.length) {

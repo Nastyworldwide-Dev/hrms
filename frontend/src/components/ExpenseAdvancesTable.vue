@@ -11,10 +11,7 @@
 			v-for="advance in expenseClaim.advances"
 			:key="advance.name"
 			class="g-lineitems__row flex flex-col py-3 px-3"
-			:class="[
-				advance.selected ? 'bg-surface' : '',
-				isReadOnly ? '' : 'cursor-pointer',
-			]"
+			:class="[advance.selected ? 'bg-surface' : '', isReadOnly ? '' : 'cursor-pointer']"
 			@click="toggleAdvanceSelection(advance)"
 		>
 			<div class="flex flex-row justify-between items-center px-1">
@@ -32,10 +29,12 @@
 						</div>
 						<div class="flex flex-row items-center gap-3 justify-between">
 							<div class="text-xs font-normal text-ink-600">
-								{{ __("{0}: {1}", [
-									__("Unclaimed Amount"),
-									formatCurrency(advance.unclaimed_amount, expenseClaim.currency),
-								]) }}
+								{{
+									__("{0}: {1}", [
+										__("Unclaimed Amount"),
+										formatCurrency(advance.unclaimed_amount, expenseClaim.currency),
+									])
+								}}
 							</div>
 						</div>
 					</div>
@@ -60,7 +59,11 @@
 		</div>
 	</div>
 
-	<GEmptyState v-else :title="__('No advances found')" :body="__('Advances you have been paid appear here')" />
+	<GEmptyState
+		v-else
+		:title="__('No advances found')"
+		:body="__('Advances you have been paid appear here')"
+	/>
 </template>
 
 <script setup>

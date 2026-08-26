@@ -12,7 +12,12 @@
   Slot: default — an inline SVG mark, replacing the letterform
 -->
 <template>
-	<div class="g-glass g-logo" :role="label ? 'img' : undefined" :aria-label="label || undefined" :aria-hidden="label ? undefined : 'true'">
+	<div
+		class="g-glass g-logo"
+		:role="label ? 'img' : undefined"
+		:aria-label="label || undefined"
+		:aria-hidden="label ? undefined : 'true'"
+	>
 		<slot>{{ mark }}</slot>
 	</div>
 </template>

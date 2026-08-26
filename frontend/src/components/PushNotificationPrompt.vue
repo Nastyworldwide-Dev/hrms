@@ -13,10 +13,10 @@
 						step === 1
 							? __(
 									"Turn on push notifications so you know the moment something needs you — no need to keep checking the app."
-								)
+							  )
 							: __(
 									"Without notifications you won't know when your leave is approved or when you forget to check out. You can turn them on anytime in Settings → Notifications — we won't ask again."
-								)
+							  )
 					}}
 				</span>
 			</div>
@@ -58,10 +58,7 @@ import GModal from "@/components/glass/GModal.vue"
 import { inject, onMounted, onUnmounted, ref } from "vue"
 import { toast } from "frappe-ui"
 
-import {
-	arePushNotificationsEnabled,
-	enablePushNotifications,
-} from "@/data/notifications"
+import { arePushNotificationsEnabled, enablePushNotifications } from "@/data/notifications"
 import {
 	escalatesOnDismiss,
 	hasDeclined,
@@ -113,12 +110,9 @@ onMounted(async () => {
 	const context = {
 		relayConfigured: Boolean(window.frappe?.boot?.push_relay_server_url),
 		siteEnabled: Boolean(arePushNotificationsEnabled.data),
-		alreadyEnabled: Boolean(
-			window.frappePushNotification?.isNotificationEnabled()
-		),
+		alreadyEnabled: Boolean(window.frappePushNotification?.isNotificationEnabled()),
 		notificationSupported: "Notification" in window,
-		browserPermission:
-			"Notification" in window ? Notification.permission : "unsupported",
+		browserPermission: "Notification" in window ? Notification.permission : "unsupported",
 		declined: hasDeclined(),
 		sdkInitialized,
 	}

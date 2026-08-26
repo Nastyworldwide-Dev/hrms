@@ -5,13 +5,22 @@
 				<ResourceError :resource="myIssues" what="your issues" />
 				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
 					<GButton :label="__('Report an Issue')" @click="navigate">
-							<template #trailing>
-								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<line x1="5" y1="12" x2="19" y2="12"></line>
-									<polyline points="12 5 19 12 12 19"></polyline>
-								</svg>
-							</template>
-						</GButton>
+						<template #trailing>
+							<svg
+								width="17"
+								height="17"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+								<polyline points="12 5 19 12 12 19"></polyline>
+							</svg>
+						</template>
+					</GButton>
 				</router-link>
 
 				<span class="g-eyebrow mt-2">{{ __("Reported by you") }}</span>
@@ -65,7 +74,6 @@ const router = useRouter()
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 const employee = inject("$employee")
-
 
 // row scope already limits staff to their own rows; the explicit filter keeps
 // an HR user's "My Issues" personal instead of listing the whole site

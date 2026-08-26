@@ -8,33 +8,33 @@
 		]"
 	>
 		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">
-		<Button
-			v-if="props.view === 'form' || actions.length > 2"
-			@click="showTransitions()"
-			class="w-full py-5 text-base !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
-			variant="solid"
-		>
-			<template #prefix>
-				<FeatherIcon name="chevron-up" class="w-4" />
-			</template>
-			{{ __("Actions") }}
-		</Button>
-
-		<template v-else>
 			<Button
-				v-for="action in actions"
-				:key="action.text"
-				class="w-full py-5"
-				:variant="action.variant"
-				:theme="action.theme"
-				@click="applyWorkflow({ workflowAction: action.text })"
+				v-if="props.view === 'form' || actions.length > 2"
+				@click="showTransitions()"
+				class="w-full py-5 text-base !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
+				variant="solid"
 			>
-				<template #prefix v-if="action.featherIcon">
-					<FeatherIcon :name="action.featherIcon" class="w-4" />
+				<template #prefix>
+					<FeatherIcon name="chevron-up" class="w-4" />
 				</template>
-				{{ __(action.text, null, props.doc?.doctype) }}
+				{{ __("Actions") }}
 			</Button>
-		</template>
+
+			<template v-else>
+				<Button
+					v-for="action in actions"
+					:key="action.text"
+					class="w-full py-5"
+					:variant="action.variant"
+					:theme="action.theme"
+					@click="applyWorkflow({ workflowAction: action.text })"
+				>
+					<template #prefix v-if="action.featherIcon">
+						<FeatherIcon :name="action.featherIcon" class="w-4" />
+					</template>
+					{{ __(action.text, null, props.doc?.doctype) }}
+				</Button>
+			</template>
 		</div>
 	</div>
 

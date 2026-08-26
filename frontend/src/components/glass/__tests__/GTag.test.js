@@ -76,5 +76,9 @@ test("THE TRAP: a dynamic :is string still resolves to the registered component"
 		"button",
 		"resolveDynamicComponent('button') returning the string would mean the hazard is gone"
 	)
-	assert.equal(resolved, RegisteredButton, "it resolves to the registered Button, not the HTML tag")
+	assert.equal(
+		resolved,
+		RegisteredButton,
+		"it resolves to the registered Button, not the HTML tag"
+	)
 })

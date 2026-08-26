@@ -52,7 +52,9 @@
 										{{ __(req.status) }} · {{ req.log_type }}
 									</span>
 								</div>
-								<div class="flex flex-row items-center justify-between text-kra-label text-ink-600">
+								<div
+									class="flex flex-row items-center justify-between text-kra-label text-ink-600"
+								>
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
@@ -97,7 +99,9 @@
 										{{ req.log_type }}
 									</span>
 								</div>
-								<div class="flex flex-row items-center justify-between text-kra-label text-ink-600">
+								<div
+									class="flex flex-row items-center justify-between text-kra-label text-ink-600"
+								>
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
@@ -136,9 +140,7 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<div
-					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)]"
-				>
+				<div class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)]">
 					<div class="flex flex-col gap-1.5 px-4 pt-6 pb-5">
 						<span class="g-eyebrow">{{ __("Remote check-in") }}</span>
 						<span class="font-sans font-extrabold text-stat-number text-inkbase">

@@ -53,5 +53,4 @@ const status = computed(() => {
 	if (props.doc.docstatus === 2) return __("Cancelled")
 	return __("Pending")
 })
-
 </script>

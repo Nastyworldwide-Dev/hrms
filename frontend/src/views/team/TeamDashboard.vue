@@ -85,7 +85,11 @@
 										{{ member.designation }}
 									</span>
 								</div>
-								<GStatusChip class="flex-none" :status="member.status" :label="__(member.status)" />
+								<GStatusChip
+									class="flex-none"
+									:status="member.status"
+									:label="__(member.status)"
+								/>
 							</div>
 							<span class="text-kra-label text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
 
@@ -135,7 +139,7 @@
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
-import { Autocomplete, FeatherIcon} from "frappe-ui"
+import { Autocomplete, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -196,7 +200,6 @@ const summaryTiles = computed(() => {
 		{ label: __("Absent"), count: summary["Absent"] || 0 },
 	]
 })
-
 
 function formatPunch(value) {
 	return value ? dayjs(value).format("HH:mm") : "—"

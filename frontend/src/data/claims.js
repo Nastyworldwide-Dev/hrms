@@ -22,8 +22,8 @@ export const myClaims = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -43,10 +43,10 @@ export const teamClaims = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		for_approval: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			for_approval: 1,
+			limit: 10,
 		}
 	},
 	auto: true,
@@ -64,10 +64,10 @@ export const historyClaims = createResource({
 	// captured `undefined` employee silently blanks the panel.
 	makeParams() {
 		return {
-		employee: employeeResource.data?.name,
-		approver_id: employeeResource.data?.user_id,
-		history: 1,
-		limit: 10,
+			employee: employeeResource.data?.name,
+			approver_id: employeeResource.data?.user_id,
+			history: 1,
+			limit: 10,
 		}
 	},
 	auto: true,

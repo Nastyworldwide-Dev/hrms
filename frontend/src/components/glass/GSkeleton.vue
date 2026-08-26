@@ -9,11 +9,7 @@
     radius  CSS length, default var(--g-radius-pill) (spec: block r6)
 -->
 <template>
-	<div
-		class="g-skeleton"
-		:style="{ width, height, borderRadius: radius }"
-		aria-hidden="true"
-	/>
+	<div class="g-skeleton" :style="{ width, height, borderRadius: radius }" aria-hidden="true" />
 </template>
 
 <script setup>

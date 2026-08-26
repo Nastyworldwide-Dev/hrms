@@ -48,7 +48,6 @@ const props = defineProps({
 	},
 })
 
-
 const status = computed(() => {
 	if (props.workflowStateField) {
 		return props.doc[props.workflowStateField]

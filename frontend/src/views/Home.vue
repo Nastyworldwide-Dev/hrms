@@ -8,9 +8,7 @@
 			     desktop, and the divergence was invisible below lg:, which is how
 			     three build batches passed over it. Same correction on Leave and
 			     Attendance. -->
-			<div
-				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg lg:p-7"
-			>
+			<div class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg lg:p-7">
 				<PendingApprovalsBanner />
 				<CheckInPanel />
 				<QuickLinks :items="quickLinks" :title="__('Quick Links')" />

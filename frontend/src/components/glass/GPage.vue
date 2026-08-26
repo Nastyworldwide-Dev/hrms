@@ -40,5 +40,8 @@ defineProps({})
 // is a tab root, so it decides once and every header consumes the answer.
 const route = useRoute()
 const isTabRoot = computed(() => TAB_ITEMS.some((t) => t.route === route.path))
-provide("gShowBack", computed(() => !isTabRoot.value))
+provide(
+	"gShowBack",
+	computed(() => !isTabRoot.value)
+)
 </script>

@@ -22,7 +22,9 @@
 					<div class="grow overflow-y-auto">
 						<form class="flex flex-col space-y-4 p-4" @submit.prevent="sendPasswordReset">
 							<p class="text-card-title text-ink-600">
-								{{ __("Enter your email address and we'll send you a link to reset your password.") }}
+								{{
+									__("Enter your email address and we'll send you a link to reset your password.")
+								}}
 							</p>
 							<GInput
 								:label="__('Email') + ' *'"
@@ -66,7 +68,9 @@ const __ = inject("$translate")
 const route = useRoute()
 const router = useRouter()
 
-const email = ref(Array.isArray(route.query.email) ? route.query.email[0] : route.query.email || "")
+const email = ref(
+	Array.isArray(route.query.email) ? route.query.email[0] : route.query.email || ""
+)
 const errorMessage = ref("")
 
 const forgotPasswordResource = createResource({

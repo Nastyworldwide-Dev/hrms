@@ -90,7 +90,6 @@ defineProps({
 	avatarLabel: { type: String, default: "" },
 })
 defineEmits(["notifications", "profile", "back"])
-
 </script>
 
 <!-- No scoped style for theme-owned classes (8.16). A scoped rule carries a

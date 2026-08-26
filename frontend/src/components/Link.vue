@@ -65,7 +65,7 @@ const options = createResource({
 	transform: (data) => {
 		const mapped = data.map((doc) => {
 			let title = null
-			if (doc.label && doc.label !== doc.value){
+			if (doc.label && doc.label !== doc.value) {
 				title = doc.label
 			} else if (doc.description) {
 				title = doc.description.split(",")[0]
@@ -112,7 +112,7 @@ watch(
 
 watch(
 	() => props.filters,
-	() => reloadOptions(''),
+	() => reloadOptions("")
 )
 
 watch(

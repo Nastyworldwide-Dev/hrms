@@ -25,7 +25,14 @@
 			<span class="g-goals__label">{{ label }}</span>
 			<span v-if="sublabel" class="g-goals__sub">{{ sublabel }}</span>
 		</span>
-		<svg v-if="tappable" class="g-row__chevron" width="7" height="12" viewBox="0 0 7 12" aria-hidden="true">
+		<svg
+			v-if="tappable"
+			class="g-row__chevron"
+			width="7"
+			height="12"
+			viewBox="0 0 7 12"
+			aria-hidden="true"
+		>
 			<path
 				d="M1 1l5 5-5 5"
 				fill="none"

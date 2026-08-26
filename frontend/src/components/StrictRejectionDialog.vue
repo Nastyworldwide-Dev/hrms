@@ -4,9 +4,7 @@
 			<div
 				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-hair sticky top-0 z-overlay bg-bg"
 			>
-				<div
-					class="h-12 w-12 bg-danger/15 flex items-center justify-center"
-				>
+				<div class="h-12 w-12 bg-danger/15 flex items-center justify-center">
 					<FeatherIcon name="slash" class="h-6 w-6 text-danger-ink" />
 				</div>
 				<div class="g-eyebrow">{{ __("Check-in") }}</div>
@@ -80,10 +78,7 @@
 				<template v-else>
 					<div class="bg-danger/10 border border-danger-ink px-3 py-3">
 						<div class="flex items-start gap-2">
-							<FeatherIcon
-								name="alert-triangle"
-								class="h-4 w-4 text-danger-ink mt-0.5 shrink-0"
-							/>
+							<FeatherIcon name="alert-triangle" class="h-4 w-4 text-danger-ink mt-0.5 shrink-0" />
 							<div class="text-xs text-danger-ink leading-relaxed">
 								{{ adminMisconfigMessage }}
 							</div>
@@ -93,13 +88,14 @@
 			</div>
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
-				<Button class="w-full py-5 !bg-brand hover:!bg-brand !text-on-brand !border-none" variant="solid" @click="close">
+				<Button
+					class="w-full py-5 !bg-brand hover:!bg-brand !text-on-brand !border-none"
+					variant="solid"
+					@click="close"
+				>
 					{{ __("OK") }}
 				</Button>
-				<button
-					class="w-full text-xs text-ink-600 underline py-2"
-					@click="contactHR"
-				>
+				<button class="w-full text-xs text-ink-600 underline py-2" @click="contactHR">
 					{{ __("Contact HR") }}
 				</button>
 			</div>

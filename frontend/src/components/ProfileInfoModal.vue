@@ -1,11 +1,7 @@
 <template>
-	<div
-		class="bg-ground w-full flex flex-col pb-6 max-h-sheet overflow-y-auto"
-	>
+	<div class="bg-ground w-full flex flex-col pb-6 max-h-sheet overflow-y-auto">
 		<!-- Header -->
-		<div
-			class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-overlay bg-ground"
-		>
+		<div class="w-full flex flex-col gap-1 px-4 pt-6 pb-4 sticky top-0 z-overlay bg-ground">
 			<span class="g-eyebrow">{{ __("Employee") }}</span>
 			<span class="font-sans font-extrabold text-stat-number text-inkbase">
 				{{ title }}

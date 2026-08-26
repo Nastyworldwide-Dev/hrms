@@ -1,9 +1,7 @@
 <template>
 	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
 		<div class="bg-bg w-full flex flex-col pb-8 max-h-sheet">
-			<div
-				class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4"
-			>
+			<div class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4">
 				<div class="g-eyebrow">{{ __("Remote check-in") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
 					{{ headline }}
@@ -39,13 +37,9 @@
 					rows="4"
 					maxlength="500"
 					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
-					:placeholder="
-						__('e.g. Client meeting at office X, traffic to KLCC, etc.')
-					"
+					:placeholder="__('e.g. Client meeting at office X, traffic to KLCC, etc.')"
 				/>
-				<div class="text-caption text-ink-500 text-right">
-					{{ remarks.length }}/500
-				</div>
+				<div class="text-caption text-ink-500 text-right">{{ remarks.length }}/500</div>
 			</div>
 
 			<div class="flex flex-row gap-2.5 px-4 pt-2">

@@ -20,11 +20,7 @@
 						<!-- Identity block -->
 						<div class="flex flex-row items-center gap-4 pb-5 border-b-2 border-divider">
 							<div class="shrink-0">
-								<GAvatar
-									:image="user.data.user_image"
-									:label="user.data.first_name"
-									:size="72"
-								/>
+								<GAvatar :image="user.data.user_image" :label="user.data.first_name" :size="72" />
 							</div>
 							<div class="flex flex-col gap-1 min-w-0">
 								<span
@@ -32,11 +28,9 @@
 									class="font-sans font-extrabold text-screen-title tracking-tight text-inkbase truncate"
 									>{{ employee?.data?.employee_name }}</span
 								>
-								<span
-									v-if="employee"
-									class="g-eyebrow truncate"
-									>{{ employee?.data?.designation }}</span
-								>
+								<span v-if="employee" class="g-eyebrow truncate">{{
+									employee?.data?.designation
+								}}</span>
 							</div>
 						</div>
 

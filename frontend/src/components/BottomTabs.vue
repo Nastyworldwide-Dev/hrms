@@ -39,9 +39,7 @@ const tabItems = TAB_ITEMS.map((item) => ({
 
 // More claims its child routes (`routes`) so the indicator stays lit on them
 const isActive = (item) =>
-	item.routes
-		? item.routes.some((path) => route.path.startsWith(path))
-		: route.path === item.route
+	item.routes ? item.routes.some((path) => route.path.startsWith(path)) : route.path === item.route
 </script>
 
 <style scoped>

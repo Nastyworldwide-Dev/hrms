@@ -18,7 +18,9 @@
 					font-weight="800"
 					font-size="18"
 					fill="var(--g-on-brand)"
-				>n</text>
+				>
+					n
+				</text>
 			</svg>
 			<span
 				v-show="!collapsed"
@@ -118,9 +120,7 @@
 				<span class="font-extrabold text-card-title whitespace-nowrap truncate text-inkbase">
 					{{ employeeName }}
 				</span>
-				<span
-					class="g-eyebrow whitespace-nowrap truncate"
-				>
+				<span class="g-eyebrow whitespace-nowrap truncate">
 					{{ employeeDesignation }}
 				</span>
 			</div>

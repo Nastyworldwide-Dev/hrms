@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col gap-3 py-4">
 		<label class="file-select">
-			<h2 class="g-eyebrow pb-4">{{ __("Attachments") }} </h2>
+			<h2 class="g-eyebrow pb-4">{{ __("Attachments") }}</h2>
 			<div class="select-button cursor-pointer">
 				<div
 					class="flex flex-col w-full bg-surface border border-divider rounded-input items-center p-4 gap-2"
@@ -29,9 +29,7 @@
 					v-for="file in modelValue"
 					:key="file.file_name || file.name"
 				>
-					<div
-						class="flex flex-row items-center justify-between text-inkbase text-sm"
-					>
+					<div class="flex flex-row items-center justify-between text-inkbase text-sm">
 						<span class="grow" @click="showFilePreview(file)">
 							{{ file.file_name || file.name }}
 						</span>
@@ -58,11 +56,7 @@
 			</GConfirm>
 
 			<!-- File Preview Modal -->
-			<ion-modal
-				ref="modal"
-				:is-open="showPreviewModal"
-				@didDismiss="showPreviewModal = false"
-			>
+			<ion-modal ref="modal" :is-open="showPreviewModal" @didDismiss="showPreviewModal = false">
 				<FilePreviewModal :file="selectedFile" />
 			</ion-modal>
 		</div>

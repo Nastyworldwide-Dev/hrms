@@ -20,8 +20,7 @@ export const buildSopSections = (data, query) => {
 	const sections = []
 
 	const general = filterSops(data?.general, query)
-	if (general.length)
-		sections.push({ key: "general", department: null, sops: general })
+	if (general.length) sections.push({ key: "general", department: null, sops: general })
 
 	for (const group of data?.departments || []) {
 		const sops = filterSops(group?.sops, query)

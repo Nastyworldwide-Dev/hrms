@@ -1,7 +1,7 @@
 <template>
 	<!-- Header -->
 	<div class="flex flex-row justify-between items-center mt-2 pb-2 border-b-2 border-divider">
-		<h2 class="g-eyebrow">{{ __("Expenses") }} </h2>
+		<h2 class="g-eyebrow">{{ __("Expenses") }}</h2>
 		<div class="flex flex-row gap-3 items-center">
 			<span class="text-base font-extrabold text-inkbase">
 				{{ formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency) }}
@@ -61,14 +61,16 @@
 			</div>
 		</div>
 	</div>
-	<GEmptyState v-else :title="__('No expenses added')" :body="__('Add each item you paid for with the + above')" />
+	<GEmptyState
+		v-else
+		:title="__('No expenses added')"
+		:body="__('Add each item you paid for with the + above')"
+	/>
 
 	<CustomIonModal :isOpen="isModalOpen" @didDismiss="resetSelectedItem()">
 		<template #actionSheet>
 			<!-- Add Expense Action Sheet -->
-			<div
-				class="bg-ground w-full flex flex-col pb-5"
-			>
+			<div class="bg-ground w-full flex flex-col pb-5">
 				<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
 					<div class="g-eyebrow">{{ __("Expense") }}</div>
 					<span class="text-inkbase font-extrabold text-stat-number leading-tight">
@@ -93,10 +95,7 @@
 						/>
 					</div>
 
-					<div
-						v-if="!isReadOnly"
-						class="flex w-full flex-row items-center justify-between gap-3"
-					>
+					<div v-if="!isReadOnly" class="flex w-full flex-row items-center justify-between gap-3">
 						<Button
 							v-if="editingIdx !== null"
 							class="!border !border-red-600 !text-red-600 !bg-transparent py-5 text-sm"
@@ -116,10 +115,7 @@
 							:disabled="addButtonDisabled"
 						>
 							<template #prefix>
-								<FeatherIcon
-									:name="editingIdx === null ? 'plus' : 'check'"
-									class="w-4"
-								/>
+								<FeatherIcon :name="editingIdx === null ? 'plus' : 'check'" class="w-4" />
 							</template>
 							{{ editingIdx === null ? __("Add Expense") : __("Update Expense") }}
 						</Button>
@@ -153,11 +149,7 @@ const props = defineProps({
 		default: false,
 	},
 })
-const emit = defineEmits([
-	"add-expense-item",
-	"update-expense-item",
-	"delete-expense-item",
-])
+const emit = defineEmits(["add-expense-item", "update-expense-item", "delete-expense-item"])
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
 const expenseItem = ref({})
@@ -207,11 +199,7 @@ const expensesTableFields = createResource({
 expensesTableFields.reload()
 
 const expenseClaimRef = computed(() => props.expenseClaim)
-useCurrencyConversion(
-	expensesTableFields,
-	expenseClaimRef,
-	["amount", "sanctioned_amount"]
-)
+useCurrencyConversion(expensesTableFields, expenseClaimRef, ["amount", "sanctioned_amount"])
 
 const modalTitle = computed(() => {
 	if (props.isReadOnly) return __("Expense Item")

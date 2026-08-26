@@ -1,5 +1,4 @@
-export const isChrome = () =>
-	navigator.userAgent.toLowerCase().includes("chrome")
+export const isChrome = () => navigator.userAgent.toLowerCase().includes("chrome")
 
 export const showNotification = (payload) => {
 	const registration = window.frappePushNotification.serviceWorkerRegistration

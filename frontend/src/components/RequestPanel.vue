@@ -1,8 +1,6 @@
 <template>
 	<div class="w-full">
-		<div
-			class="g-eyebrow mb-4"
-		>
+		<div class="g-eyebrow mb-4">
 			{{ __("Requests") }}
 		</div>
 		<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />

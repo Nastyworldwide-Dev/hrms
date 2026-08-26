@@ -8,10 +8,7 @@
 				     is why it also had a hand-rolled back control and a duplicate
 				     "New Claim" in its empty state. -->
 				<div class="flex items-center justify-end">
-					<router-link
-						:to="{ name: 'ReplacementLeaveClaimFormView' }"
-						v-slot="{ navigate }"
-					>
+					<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
 						<GButton :label="__('New Claim')" class="g-btn--compact" @click="navigate" />
 					</router-link>
 				</div>
@@ -71,7 +68,10 @@
 							</span>
 							<span class="text-xs text-ink-600">{{ claimRow.name }}</span>
 						</div>
-						<GStatusChip :status="claimRow.docstatus === 1 ? 'Approved' : 'Draft'" :label="claimRow.docstatus === 1 ? __('Approved') : __('Draft')">
+						<GStatusChip
+							:status="claimRow.docstatus === 1 ? 'Approved' : 'Draft'"
+							:label="claimRow.docstatus === 1 ? __('Approved') : __('Draft')"
+						>
 							{{ claimRow.docstatus === 1 ? __("Approved") : __("Pending") }}
 						</GStatusChip>
 					</router-link>
@@ -88,7 +88,6 @@ import GButton from "@/components/glass/GButton.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
-
 
 const employee = inject("$employee")
 const __ = inject("$translate")

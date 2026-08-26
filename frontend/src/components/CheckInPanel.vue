@@ -4,9 +4,7 @@
 		<div class="g-eyebrow" data-visual-mask>
 			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
 		</div>
-		<h1
-			class="text-display-number lg:text-clock text-inkbase mt-2 mb-1.5"
-		>
+		<h1 class="text-display-number lg:text-clock text-inkbase mt-2 mb-1.5">
 			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
 		</h1>
 
@@ -21,10 +19,14 @@
 				<!-- data-visual-mask: formatTimestamp() returns "… yesterday" for one
 				     day and "… on 20 Aug" the next, so the string changes with no
 				     code change. Masked on the span only, not the row. -->
-				<span data-visual-mask>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
+				<span data-visual-mask>{{
+					__("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)])
+				}}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
-					<span @click="navigate" class="g-seclink underline underline-offset-link text-ink-800">{{ __("View List") }}</span>
+					<span @click="navigate" class="g-seclink underline underline-offset-link text-ink-800">{{
+						__("View List")
+					}}</span>
 				</router-link>
 			</div>
 
@@ -42,19 +44,24 @@
 				@click="lateCheckoutOpen = true"
 			>
 				<div class="flex flex-row items-center gap-3">
-					<FeatherIcon
-						:name="isAbandoned ? 'alert-triangle' : 'clock'"
-						class="h-4 w-4 shrink-0"
-					/>
+					<FeatherIcon :name="isAbandoned ? 'alert-triangle' : 'clock'" class="h-4 w-4 shrink-0" />
 					<div class="flex flex-col flex-1 min-w-0">
 						<!-- data-visual-mask: both branches embed formatTimestamp(), whose
 						     wording changes as the check-in ages. -->
 						<span class="g-banner__title" data-visual-mask>
 							<template v-if="isAbandoned">
-								{{ __("HR flagged your {0} check-in as abandoned", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
+								{{
+									__("HR flagged your {0} check-in as abandoned", [
+										formatTimestamp(unresolvedStaleIn.data?.time),
+									])
+								}}
 							</template>
 							<template v-else>
-								{{ __("Forgot to check out from {0}?", [formatTimestamp(unresolvedStaleIn.data?.time)]) }}
+								{{
+									__("Forgot to check out from {0}?", [
+										formatTimestamp(unresolvedStaleIn.data?.time),
+									])
+								}}
 							</template>
 						</span>
 						<span class="g-banner__hint">
@@ -150,7 +157,7 @@
 			<canvas ref="canvasEl" class="hidden"></canvas>
 
 			<GButton
-				:label="__(&quot;Confirm {0}&quot;, [nextAction.label])"
+				:label="__('Confirm {0}', [nextAction.label])"
 				:disabled="cameraStatus === 'starting'"
 				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
@@ -364,13 +371,7 @@ const fetchRemoteRequest = createResource({
 		return {
 			doctype: "Remote Checkin Request",
 			filters: { checkin: values.checkin },
-			fields: [
-				"name",
-				"log_type",
-				"distance_m",
-				"approver",
-				"status",
-			],
+			fields: ["name", "log_type", "distance_m", "approver", "status"],
 			limit_page_length: 1,
 		}
 	},
@@ -384,16 +385,13 @@ const lastLog = computed(() => {
 	// console row is the first thing to look at: did the IN reach the SPA?
 	// Cheap, runs once per checkins reload.
 	if (row) {
-		console.info(
-			"[CheckInPanel] lastLog resolved:",
-			{
-				name: row.name,
-				log_type: row.log_type,
-				time: row.time,
-				requires_remote_approval: row.requires_remote_approval,
-				is_abandoned: row.is_abandoned,
-			}
-		)
+		console.info("[CheckInPanel] lastLog resolved:", {
+			name: row.name,
+			log_type: row.log_type,
+			time: row.time,
+			requires_remote_approval: row.requires_remote_approval,
+			is_abandoned: row.is_abandoned,
+		})
 	}
 	return row
 })
@@ -471,7 +469,9 @@ function locationErrorMessage(code) {
 				"Location permission is off for this site. Turn it back on in your browser or device settings, then try again."
 			)
 		case GEO_TIMEOUT:
-			return __("Still looking for your location. Move near a window or wait a moment, then try again.")
+			return __(
+				"Still looking for your location. Move near a window or wait a moment, then try again."
+			)
 		case GEO_INSECURE:
 			return __(
 				"This page is not on a secure (https) connection, so your browser will not share your location. Open the app from its https address."
@@ -531,11 +531,11 @@ const fetchLocation = () => {
 	// fix is fine for a check-in radius measured in tens of metres — and it
 	// carries its own accuracy, so a stale-ish reading cannot pass itself off
 	// as a sharp one.
-	geoWatchId = navigator.geolocation.watchPosition(
-		handleLocationSuccess,
-		handleLocationError,
-		{ enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }
-	)
+	geoWatchId = navigator.geolocation.watchPosition(handleLocationSuccess, handleLocationError, {
+		enableHighAccuracy: true,
+		maximumAge: 60000,
+		timeout: 15000,
+	})
 }
 
 function stopWatchingLocation() {
@@ -583,8 +583,8 @@ async function initMap() {
 	const center = loc
 		? [loc.latitude, loc.longitude]
 		: latitude.value && longitude.value
-			? [latitude.value, longitude.value]
-			: [3.139, 101.6869] // KL fallback so the tile layer renders something
+		? [latitude.value, longitude.value]
+		: [3.139, 101.6869] // KL fallback so the tile layer renders something
 	const zoom = loc ? 16 : 13
 
 	leafletMap = L.map(mapEl.value, {
@@ -746,7 +746,10 @@ const submitLog = async (logType) => {
 		console.info("[CheckInPanel] punch already in flight, ignoring tap")
 		return
 	}
-	if (lastSubmit.value.action === logType && Date.now() - lastSubmit.value.at < DUPLICATE_WINDOW_MS) {
+	if (
+		lastSubmit.value.action === logType &&
+		Date.now() - lastSubmit.value.at < DUPLICATE_WINDOW_MS
+	) {
 		console.warn("[CheckInPanel] duplicate {0} within 60s, rejected".replace("{0}", logType))
 		return
 	}
@@ -894,9 +897,7 @@ const runSubmitLog = async (logType) => {
 					if (req && req.status === "Rejected") {
 						toast({
 							title: __("{0} blocked", [actionLabel]),
-							text: __(
-								"A prior remote check-in request today was rejected — please contact HR."
-							),
+							text: __("A prior remote check-in request today was rejected — please contact HR."),
 							icon: "alert-circle",
 							position: "bottom-center",
 							iconClasses: "text-red-500",
@@ -1097,7 +1098,11 @@ onBeforeUnmount(() => {
 }
 
 /* Live "you are here" pin — solid blue dot with a pulsing outer ring. */
-.user-pin { position: relative; width: 22px; height: 22px; }
+.user-pin {
+	position: relative;
+	width: 22px;
+	height: 22px;
+}
 .user-pin-dot {
 	position: absolute;
 	top: 50%;
@@ -1122,8 +1127,14 @@ onBeforeUnmount(() => {
 	animation: user-pin-pulse 2s ease-out infinite;
 }
 @keyframes user-pin-pulse {
-	0%   { transform: scale(0.8); opacity: 0.9; }
-	100% { transform: scale(2.2); opacity: 0; }
+	0% {
+		transform: scale(0.8);
+		opacity: 0.9;
+	}
+	100% {
+		transform: scale(2.2);
+		opacity: 0;
+	}
 }
 
 /* Shift-location label sitting above its pin. */
@@ -1137,7 +1148,9 @@ onBeforeUnmount(() => {
 	border-radius: 4px !important;
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
 }
-.shift-loc-tooltip:before { display: none !important; }
+.shift-loc-tooltip:before {
+	display: none !important;
+}
 
 /* On tablet/desktop the check-in sheet presents as a centered dialog.
    Centering comes from the global modal-sheet rule in modernist.css —

@@ -13,7 +13,6 @@ export function useDownloadPDF() {
 	console.info("[commonUtils] useDownloadPDF initialised")
 
 	async function downloadPDF({ doctype, docname, filename = null }) {
-
 		const headers = {
 			"X-Frappe-Site-Name": window.location.hostname,
 		}
@@ -26,7 +25,8 @@ export function useDownloadPDF() {
 			headers,
 			body: new URLSearchParams({ doctype: doctype, docname: docname }),
 			responseType: "blob",
-		}).then((response) => {
+		})
+			.then((response) => {
 				if (response.ok) {
 					return response.blob()
 				} else {

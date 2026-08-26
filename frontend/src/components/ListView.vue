@@ -34,7 +34,11 @@
 						v-slot="{ navigate }"
 						class="mr-2 shrink-0"
 					>
-						<GButton :label="__('New', null, props.doctype)" class="g-btn--compact" @click="navigate" />
+						<GButton
+							:label="__('New', null, props.doctype)"
+							class="g-btn--compact"
+							@click="navigate"
+						/>
 					</router-link>
 				</div>
 			</div>
@@ -75,11 +79,7 @@
 					:loading="documents.loading"
 					:rows="4"
 				>
-					<div
-						class="g-listview__row"
-						v-for="link in documents.data"
-						:key="link.name"
-					>
+					<div class="g-listview__row" v-for="link in documents.data" :key="link.name">
 						<component
 							v-if="props.doctype === 'Employee Checkin'"
 							:is="listItemComponent[doctype]"
@@ -123,12 +123,7 @@
 				     create action is now a GButton too, so an action here made
 				     "New" appear twice on the same screen. The copy references it
 				     instead. -->
-				<GEmptyState
-					v-else
-					class="mt-5"
-					:title="emptyCopy.title"
-					:body="emptyCopy.body"
-				/>
+				<GEmptyState v-else class="mt-5" :title="emptyCopy.title" :body="emptyCopy.body" />
 			</div>
 		</div>
 
@@ -164,11 +159,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import { useRouter } from "vue-router"
 import { inject, ref, markRaw, watch, computed, reactive, onMounted } from "vue"
-import {
-	modalController,
-	IonHeader,
-	IonContent,
-} from "@ionic/vue"
+import { modalController, IonHeader, IonContent } from "@ionic/vue"
 
 import { FeatherIcon, createResource, debounce } from "frappe-ui"
 
@@ -264,7 +255,6 @@ const emptyCopy = computed(
 			body: __("New records will appear here once they are created"),
 		}
 )
-
 
 const getButtonKey = (tab) => tab?.key ?? tab
 

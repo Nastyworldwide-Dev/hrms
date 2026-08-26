@@ -23,7 +23,12 @@
 <template>
 	<GSkeleton v-if="loading" height="150px" radius="var(--g-radius-action)" />
 
-	<div v-else class="g-map" :role="$slots.default ? undefined : 'img'" :aria-label="$slots.default ? undefined : label">
+	<div
+		v-else
+		class="g-map"
+		:role="$slots.default ? undefined : 'img'"
+		:aria-label="$slots.default ? undefined : label"
+	>
 		<!-- The gradient, grid and pin are the PLACEHOLDER. A real map goes in
 		     the slot and keeps the panel's 150px frame, radius and caption chip. -->
 		<slot>

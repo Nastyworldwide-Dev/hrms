@@ -10,7 +10,9 @@
 							<GIconButton :label="__('Back')" flush @click="router.back()">
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</GIconButton>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">{{ __("Settings") }}</h2>
+							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
+								{{ __("Settings") }}
+							</h2>
 						</div>
 					</header>
 
@@ -60,13 +62,14 @@
 							/>
 						</div>
 
-						<div
-							v-if="isLoading"
-							class="flex -mt-1 items-center gap-2"
-						>
+						<div v-if="isLoading" class="flex -mt-1 items-center gap-2">
 							<GSkeleton height="14px" width="42%" />
 							<span class="text-inkbase text-sm">
-								{{ pushNotificationState ? __("Disabling Push Notifications...") : __("Enabling Push Notifications...") }}
+								{{
+									pushNotificationState
+										? __("Disabling Push Notifications...")
+										: __("Enabling Push Notifications...")
+								}}
 							</span>
 						</div>
 
@@ -116,25 +119,18 @@ const themeLabels = { light: "Light", dark: "Dark", system: "System" }
 const currentThemeLabel = computed(() =>
 	theme.mode === "system" ? __("System default") : __(themeLabels[theme.mode])
 )
-const pushNotificationState = ref(
-	window.frappePushNotification?.isNotificationEnabled()
-)
+const pushNotificationState = ref(window.frappePushNotification?.isNotificationEnabled())
 const isLoading = ref(false)
 
 const disablePushSetting = computed(() => {
 	return (
-		!(
-			window.frappe?.boot.push_relay_server_url &&
-			arePushNotificationsEnabled.data
-		) || isLoading.value
+		!(window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data) ||
+		isLoading.value
 	)
 })
 
 const description = computed(() => {
-	return !(
-		window.frappe?.boot.push_relay_server_url &&
-		arePushNotificationsEnabled.data
-	)
+	return !(window.frappe?.boot.push_relay_server_url && arePushNotificationsEnabled.data)
 		? __("Push notifications have been disabled on your site")
 		: ""
 })
@@ -202,5 +198,4 @@ const enablePushNotifications = () => {
 			isLoading.value = false
 		})
 }
-
 </script>

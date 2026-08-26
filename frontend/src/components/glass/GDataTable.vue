@@ -23,7 +23,11 @@
 <template>
 	<div class="g-table__scroll">
 		<table class="g-table">
-			<caption v-if="caption" class="g-sr">{{ caption }}</caption>
+			<caption v-if="caption" class="g-sr">
+				{{
+					caption
+				}}
+			</caption>
 			<thead>
 				<tr>
 					<th
@@ -52,19 +56,11 @@
 				</tr>
 
 				<template v-else>
-				<tr
-					v-for="(row, i) in rows"
-					:key="i"
-					:class="{ 'g-table__total': row.total }"
-				>
-					<td
-						v-for="col in columns"
-						:key="col.key"
-						:class="{ 'g-table__num': col.numeric }"
-					>
-						{{ row[col.key] }}
-					</td>
-				</tr>
+					<tr v-for="(row, i) in rows" :key="i" :class="{ 'g-table__total': row.total }">
+						<td v-for="col in columns" :key="col.key" :class="{ 'g-table__num': col.numeric }">
+							{{ row[col.key] }}
+						</td>
+					</tr>
 				</template>
 			</tbody>
 		</table>

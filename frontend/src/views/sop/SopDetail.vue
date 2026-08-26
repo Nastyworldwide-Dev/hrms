@@ -11,9 +11,7 @@
 			>
 				<FeatherIcon name="chevron-left" class="h-5 w-5" />
 			</button>
-			<h2
-				class="text-base font-extrabold tracking-tight text-inkbase truncate"
-			>
+			<h2 class="text-base font-extrabold tracking-tight text-inkbase truncate">
 				{{ sop.data?.title || __("SOP") }}
 			</h2>
 			<button
@@ -35,15 +33,10 @@
 			>
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
-					<GBadge
-						:variant="isGeneral ? 'open' : 'accent'"
-					>
+					<GBadge :variant="isGeneral ? 'open' : 'accent'">
 						{{ isGeneral ? __("General") : sop.data.department }}
 					</GBadge>
-					<GBadge
-						v-if="!sop.data.published"
-						variant="neutral" class="!text-ink-700"
-					>
+					<GBadge v-if="!sop.data.published" variant="neutral" class="!text-ink-700">
 						{{ __("Draft") }}
 					</GBadge>
 					<span class="text-kra-label text-ink-700">
@@ -58,13 +51,8 @@
 				<div v-if="attachment" class="flex flex-col gap-2">
 					<span class="g-eyebrow">{{ __("Attachment") }}</span>
 					<div class="border border-divider rounded-panel overflow-hidden">
-						<div
-							class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5"
-						>
-							<FeatherIcon
-								name="file-text"
-								class="h-[18px] w-[18px] flex-none text-accent-700"
-							/>
+						<div class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5">
+							<FeatherIcon name="file-text" class="h-[18px] w-[18px] flex-none text-accent-700" />
 							<span class="flex-1 text-card-title font-bold text-inkbase truncate">
 								{{ attachment.file_name }}
 							</span>
@@ -95,10 +83,10 @@
 			</div>
 
 			<GEmptyState
-					v-else-if="!sop.loading"
-					:title="__('Nothing to show yet')"
-					:body="__('This procedure has no content published')"
-				/>
+				v-else-if="!sop.loading"
+				:title="__('Nothing to show yet')"
+				:body="__('This procedure has no content published')"
+			/>
 		</div>
 
 		<SopFormSheet

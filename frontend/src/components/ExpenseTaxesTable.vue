@@ -1,7 +1,7 @@
 <template>
 	<template v-if="expenseClaim.expenses">
 		<div class="flex flex-row justify-between items-center pt-4 pb-2 border-b-2 border-divider">
-			<h2 class="g-eyebrow">{{ __("Taxes & Charges") }} </h2>
+			<h2 class="g-eyebrow">{{ __("Taxes & Charges") }}</h2>
 			<div class="flex flex-row gap-3 items-center">
 				<span class="text-base font-extrabold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
@@ -17,10 +17,7 @@
 			</div>
 		</div>
 
-		<div
-			v-if="expenseClaim.taxes?.length"
-			class="g-lineitems flex flex-col overflow-auto"
-		>
+		<div v-if="expenseClaim.taxes?.length" class="g-lineitems flex flex-col overflow-auto">
 			<div
 				class="g-lineitems__row flex flex-row py-3 px-3 items-center justify-between cursor-pointer"
 				v-for="(item, idx) in expenseClaim.taxes"
@@ -53,23 +50,23 @@
 				</div>
 			</div>
 		</div>
-		<GEmptyState v-else :title="__('No taxes added')" :body="__('Add one with the + above if this claim carries tax')" />
+		<GEmptyState
+			v-else
+			:title="__('No taxes added')"
+			:body="__('Add one with the + above if this claim carries tax')"
+		/>
 
 		<CustomIonModal :isOpen="isModalOpen" @didDismiss="resetSelectedItem()">
 			<template #actionSheet>
 				<!-- Add Expense Tax Action Sheet -->
-				<div
-					class="bg-ground w-full flex flex-col pb-5"
-				>
+				<div class="bg-ground w-full flex flex-col pb-5">
 					<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
 						<div class="g-eyebrow">{{ __("Tax") }}</div>
 						<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 							{{ modalTitle }}
 						</span>
 					</div>
-					<div
-						class="w-full flex flex-col items-center justify-center gap-5 p-4"
-					>
+					<div class="w-full flex flex-col items-center justify-center gap-5 p-4">
 						<div class="flex flex-col w-full space-y-4 expense-fields">
 							<FormField
 								v-for="field in taxesTableFields.data"
@@ -111,10 +108,7 @@
 								:disabled="addButtonDisabled"
 							>
 								<template #prefix>
-									<FeatherIcon
-										:name="editingIdx === null ? 'plus' : 'check'"
-										class="w-4"
-									/>
+									<FeatherIcon :name="editingIdx === null ? 'plus' : 'check'" class="w-4" />
 								</template>
 								{{ editingIdx === null ? __("Add Tax") : __("Update Tax") }}
 							</Button>
@@ -147,11 +141,7 @@ const props = defineProps({
 		default: false,
 	},
 })
-const emit = defineEmits([
-	"add-expense-tax",
-	"update-expense-tax",
-	"delete-expense-tax",
-])
+const emit = defineEmits(["add-expense-tax", "update-expense-tax", "delete-expense-tax"])
 const __ = inject("$translate")
 const expenseTax = ref({})
 const editingIdx = ref(null)
@@ -197,12 +187,7 @@ const taxesTableFields = createResource({
 						company: props.expenseClaim.company,
 						account_type: [
 							"in",
-							[
-								"Tax",
-								"Chargeable",
-								"Income Account",
-								"Expenses Included In Valuation",
-							],
+							["Tax", "Chargeable", "Income Account", "Expenses Included In Valuation"],
 						],
 					}
 				}
@@ -214,11 +199,7 @@ const taxesTableFields = createResource({
 taxesTableFields.reload()
 
 const expenseClaimRef = computed(() => props.expenseClaim)
-useCurrencyConversion(
-	taxesTableFields,
-	expenseClaimRef,
-	["tax_amount", "total"]
-)
+useCurrencyConversion(taxesTableFields, expenseClaimRef, ["tax_amount", "total"])
 
 const modalTitle = computed(() => {
 	if (props.isReadOnly) return __("Expense Tax")
@@ -249,8 +230,7 @@ watch(
 		if (editingIdx.value && newVal && !oldVal) return
 
 		expenseTax.value.tax_amount =
-			parseFloat(props.expenseClaim.total_sanctioned_amount) *
-			(parseFloat(newVal) / 100)
+			parseFloat(props.expenseClaim.total_sanctioned_amount) * (parseFloat(newVal) / 100)
 		calculateTotalTax()
 	}
 )

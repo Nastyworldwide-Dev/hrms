@@ -39,9 +39,7 @@ const filename = computed(() => {
 })
 
 const src = computed(() => {
-	return props.file.file_url
-		? props.file.file_url
-		: URL.createObjectURL(props.file)
+	return props.file.file_url ? props.file.file_url : URL.createObjectURL(props.file)
 })
 
 const isImageFile = computed(() => {

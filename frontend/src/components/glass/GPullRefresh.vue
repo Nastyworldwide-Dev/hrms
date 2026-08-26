@@ -21,7 +21,12 @@
   Emits: refresh(event) — pass the event to complete(): event.target.complete()
 -->
 <template>
-	<ion-refresher slot="fixed" pulling-icon="none" :refreshing-spinner="null" @ionRefresh="onRefresh">
+	<ion-refresher
+		slot="fixed"
+		pulling-icon="none"
+		:refreshing-spinner="null"
+		@ionRefresh="onRefresh"
+	>
 		<ion-refresher-content>
 			<div class="g-refresh" role="status">
 				<span class="g-refresh__bar" aria-hidden="true">

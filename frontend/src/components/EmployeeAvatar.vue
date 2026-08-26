@@ -24,12 +24,7 @@
 		</div>
 	</div>
 
-	<GAvatar
-		v-else
-		:label="employee?.employee_name"
-		:image="employee?.image"
-		:size="px"
-	/>
+	<GAvatar v-else :label="employee?.employee_name" :image="employee?.image" :size="px" />
 </template>
 
 <script setup>

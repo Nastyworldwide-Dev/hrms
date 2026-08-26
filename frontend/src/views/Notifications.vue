@@ -35,7 +35,11 @@
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
 							<div class="flex ml-auto gap-1 shrink-0">
-								<Button variant="outline" class="g-touch whitespace-nowrap" @click="router.push({ name: 'Settings' })">
+								<Button
+									variant="outline"
+									class="g-touch whitespace-nowrap"
+									@click="router.push({ name: 'Settings' })"
+								>
 									<template #prefix>
 										<FeatherIcon name="settings" class="w-4" />
 									</template>
@@ -99,10 +103,10 @@
 							</Button>
 						</div>
 						<GEmptyState
-					v-else-if="!notifications.data"
-					:title="__('You are all caught up')"
-					:body="__('New notifications will appear here')"
-				/>
+							v-else-if="!notifications.data"
+							:title="__('You are all caught up')"
+							:body="__('New notifications will appear here')"
+						/>
 					</div>
 				</div>
 			</div>
@@ -113,7 +117,7 @@
 <script setup>
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GPage from "@/components/glass/GPage.vue"
-import { IonContent} from "@ionic/vue"
+import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import GIconButton from "@/components/glass/GIconButton.vue"
 

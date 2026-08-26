@@ -67,7 +67,7 @@
 										</span>
 									</div>
 								</div>
-<!-- §10.1 #9 geometry (88×88, r38, circumference 238.8) and, per §6.3,
+								<!-- §10.1 #9 geometry (88×88, r38, circumference 238.8) and, per §6.3,
 								     a SOLID track: a performance score argued about in a
 								     review must not be read through a moving tint. The
 								     hand-rolled ring this replaces was 84×84 with an
@@ -82,9 +82,7 @@
 
 						<!-- Score trend -->
 						<div v-if="trend.length > 1">
-							<div
-								class="g-eyebrow mb-2.5"
-							>
+							<div class="g-eyebrow mb-2.5">
 								{{ __("Score trend") }}
 							</div>
 							<div class="border-t-2 border-divider pt-3">
@@ -146,9 +144,7 @@
 					<div class="contents">
 						<!-- KRA list -->
 						<div>
-							<div
-								class="g-eyebrow mb-2.5"
-							>
+							<div class="g-eyebrow mb-2.5">
 								{{ __("My KRAs") }}
 							</div>
 							<div class="border-t-2 border-divider">
