@@ -38,7 +38,11 @@ The bottom line is the verdict. In short:
   DEV REGISTERED   the risk is live; re-sync from live BEFORE purging anything
 """
 
+import logging
+
 import frappe
+
+logger = logging.getLogger(__name__)
 
 #: Doctypes carrying the provenance stamp. Kept as a literal rather than
 #: imported from `sync.runner` so this stays paste-into-console runnable on a
@@ -57,6 +61,52 @@ STAMPED = (
 	"Shift Request",
 	"Appraisal",
 )
+
+
+@frappe.whitelist()
+def source_census() -> dict:
+	"""`main`, for the Desk button — same numbers, no terminal.
+
+	`main` prints, and printing is unreachable from a browser: Frappe's own
+	System Console runs Python through `safe_exec`, whose output comes from
+	`log()` rather than stdout, so the formatted report never appears. Asking an
+	operator to open a shell to find out whether their data is safe is asking
+	most operators not to find out.
+
+	GET-only and whitelisted for read: it counts and returns. `main` still
+	exists for a terminal, and both share `assess` so the two cannot disagree
+	about the verdict.
+	"""
+	frappe.only_for(("System Manager", "HR Manager"))
+	instances = _instances()
+	rows = []
+	totals: dict[str, int] = {}
+	for doctype in STAMPED:
+		if not frappe.db.table_exists(doctype):
+			continue
+		counts = _counts_by_stamp(doctype)
+		if not sum(counts.values()):
+			continue
+		for stamp, n in counts.items():
+			if stamp:
+				totals[stamp] = totals.get(stamp, 0) + n
+		rows.append(
+			{
+				"doctype": doctype,
+				"total": sum(counts.values()),
+				"hub_owned": counts.get(None, 0) + counts.get("", 0),
+				# Filtered BEFORE sorting, not after: the unstamped bucket's key is
+				# None, and sorting str against None is a TypeError. Caught on a
+				# bench — every hub has that bucket, so this would have thrown on
+				# the first real click.
+				"by_source": dict(sorted((k, v) for k, v in counts.items() if k)),
+			}
+		)
+
+	out = {"rows": rows, "by_instance": totals, "instances": instances}
+	out.update(assess(instances, totals))
+	logger.info("[diagnose] census: %s across %d doctype(s)", out["verdict"], len(rows))
+	return out
 
 
 def assess(instances: list[dict], totals: dict) -> dict:

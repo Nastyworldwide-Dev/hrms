@@ -163,5 +163,52 @@ class TestItIsReadOnly(unittest.TestCase):
 						self.assertNotIn(word, text, f"{word} in a diagnostic query")
 
 
+class TestTheDeskButtonReachesIt(unittest.TestCase):
+	"""The form calls this by NAME, in a string. Nothing checks that string.
+
+	A whitelisted endpoint and the button that calls it are edited in different
+	files, in different languages, and the only thing binding them is a dotted
+	path typed into JS. Rename or move the function and the button keeps
+	rendering, keeps freezing the screen, and fails at the network — visible only
+	to whoever opens the browser console.
+
+	That matters more than usual here: this button exists to be pressed BEFORE
+	Purge, by an operator deciding whether their data is safe. A button that
+	silently does nothing sends them to Purge instead.
+	"""
+
+	FORM_JS = (
+		pathlib.Path(__file__).resolve().parents[1]
+		/ "hr/doctype/hrms_erp_instance/hrms_erp_instance.js"
+	)
+
+	def test_the_method_the_button_calls_exists_and_is_whitelisted(self):
+		import re
+
+		js = self.FORM_JS.read_text()
+		called = set(re.findall(r"method:\s*[\"']([\w.]*diagnose\.[\w.]+)[\"']", js))
+		self.assertTrue(called, "the form no longer calls diagnose — delete this test or fix the wiring")
+
+		tree = ast.parse(SOURCE.read_text())
+		whitelisted = {
+			n.name
+			for n in tree.body
+			if isinstance(n, ast.FunctionDef)
+			and any(
+				"whitelist" in ast.dump(d) for d in n.decorator_list
+			)
+		}
+		for path in called:
+			self.assertTrue(
+				path.startswith("hrms.sync.diagnose."),
+				f"{path} does not point at this module",
+			)
+			self.assertIn(
+				path.rsplit(".", 1)[1],
+				whitelisted,
+				f"{path} is not a @frappe.whitelist function — the button would fail at the network",
+			)
+
+
 if __name__ == "__main__":
 	unittest.main()
