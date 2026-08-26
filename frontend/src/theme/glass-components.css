@@ -1051,6 +1051,52 @@ html[data-theme="dark"] .g-badge--open {
 		0 0 0 5px var(--g-brand);
 }
 
+/* The dropdown PANEL of frappe-ui's Autocomplete/Link (Track B). The trigger
+   above has worn the glass skin since phase 5; the panel it opens never did —
+   an operator screenshotted the leave-type picker as a raw white sheet
+   (bg-surface-modal, shadow-2xl, stock search box) floating over the form.
+   Skinned here through .g-linkfield rather than by replacing the component:
+   the wrapper is the declared adoption path (see FormField.vue), and the
+   remote-search binding stays untouched.
+
+   Shadow ink is --g-on-brand-rgb — the one near-black triplet the token set
+   carries. A shadow should stay dark in BOTH themes, which is exactly what
+   that constant does; rgba(var()) is the lint-sanctioned colour form. */
+.g-linkfield .rounded-lg.bg-surface-modal {
+	background: var(--g-bg);
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-card);
+	box-shadow: 0 18px 44px rgba(var(--g-on-brand-rgb) / 0.16);
+	color: var(--g-ink);
+}
+/* the sticky search strip inside the panel shares bg-surface-modal — it gets
+   the surface colour only, never the rim/radius/shadow of its parent */
+.g-linkfield .sticky.bg-surface-modal {
+	background: var(--g-bg);
+}
+.g-linkfield .bg-surface-modal input.form-input {
+	background: var(--g-icon-bg);
+	border: 1px solid var(--g-hair);
+	border-radius: var(--g-radius-input);
+	color: var(--g-ink);
+}
+.g-linkfield .bg-surface-modal input.form-input:focus {
+	background: var(--g-icon-bg);
+	border-color: var(--g-glass-rim);
+	/* the app's two-ring focus, same as the trigger button below — the lint
+	   gate rightly refused a bare outline:none here */
+	box-shadow:
+		0 0 0 2px var(--g-ink),
+		0 0 0 5px var(--g-brand);
+}
+/* option rows: hover/keyboard-active state in the app's own well colour */
+.g-linkfield .bg-surface-modal li {
+	color: var(--g-ink);
+}
+.g-linkfield .bg-surface-modal li.bg-surface-gray-3 {
+	background: var(--g-icon-bg);
+}
+
 .g-field__error {
 	margin-top: 5px;
 	font-family: var(--g-type-caption-family);
