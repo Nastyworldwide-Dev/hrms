@@ -28,3 +28,5 @@ b68457552bb3540565267f23fbfcee35c9f86e1c
 
 # js, scss prettier formatting
 1ab1d6238171a5cee3263812402a8b82e7131cb1
+# 2026-08-26 formatting-only: eslint --fix across frontend/src (9.2a)
+bc0435fd6bf7bc6881585e1797e8fa0ccbf8e365
