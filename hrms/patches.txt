@@ -79,3 +79,4 @@ hrms.patches.v15_112_0.lock_employee_advance_readonly #2026-08-14
 hrms.patches.v16_0.sync_custom_fields_with_code #2026-08-19 Appraisal joins the mirror — provenance stamp
 hrms.patches.v16_0.drop_e3_performance_band_values
 hrms.patches.v16_0.rename_frappe_hr_desktop_icon #2026-08-24 Nadi rebrand
+hrms.patches.v16_0.repair_nadi_desktop_icon_children #2026-08-26 the launcher lost its children
