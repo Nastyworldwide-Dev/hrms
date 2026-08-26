@@ -754,11 +754,45 @@ def _replace_children(doctype: str, name: str, children: dict) -> None:
 		_log().debug("[sync] replaced %d %s row(s) under %s %s", len(rows), fieldname, doctype, name)
 
 
+def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool, str]:
+	"""May `instance_name` write a row already stamped by someone else? Pure.
+
+	First writer keeps the row. This exists because the mirror keys rows on the
+	SOURCE's document name, which is only unique while each registered instance
+	owns distinct records — and a dev instance cloned from live holds the very
+	same employees under the very same names.
+
+	Measured on a real database before this guard existed:
+
+	    after a pull from Nasty-Live   -> stamp is 'Nasty-Live'
+	    after a pull from Nasty-Dev    -> stamp is 'Nasty-Dev'
+	    rows in the hub for this employee: 1
+	    counted as Nasty-Live: 0
+
+	One row, and the stamp flips to whoever synced last. `purge_instance` then
+	deletes live rows because the stamp is all it can go on (one real record was
+	lost that way), parity reports live rows as missing while they sit right
+	there, and the row's CONTENT reverts to whatever the clone held.
+
+	Refusing is not merging and not last-write-wins. A document name is an
+	identity claim; when two sources make the same claim the mirror cannot know
+	which is right, and picking silently is how all three failures above
+	happened. A refusal costs one unregistered instance and loses nothing.
+	"""
+	if not existing_stamp or existing_stamp == instance_name:
+		return True, ""
+	return False, (
+		f"already mirrored from {existing_stamp}; {instance_name} claims the same name. "
+		f"Two registered instances holding the same records — unregister one."
+	)
+
+
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	"""Upsert one row keyed by the remote name.
 
-	Returns "inserted", "updated", or "skipped" (create-only doctype that already
-	exists locally).
+	Returns "inserted", "updated", "skipped" (create-only doctype that already
+	exists locally), or "contested" (another instance already owns this name —
+	see `plan_cross_instance_write`).
 
 	Updates go through `db.set_value` rather than `save()` on purpose: mirrored
 	Attendance rows arrive submitted, and a mirror must not re-run the source
@@ -780,6 +814,19 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 		return "skipped"
 
 	if frappe.db.exists(doctype, remote_name):
+		# Checked only for STAMPED doctypes: the create-only masters returned
+		# above never reach here, and everything that does carries a stamp by
+		# definition. An unstamped row at this point was written on the hub, and
+		# `plan_cross_instance_write` lets the first writer take it.
+		if doctype in STAMPED_DOCTYPES:
+			allowed, why = plan_cross_instance_write(
+				frappe.db.get_value(doctype, remote_name, PROVENANCE_FIELD),
+				payload.get(PROVENANCE_FIELD),
+			)
+			if not allowed:
+				_log().error("[sync] %s %s refused: %s", doctype, remote_name, why)
+				return "contested"
+
 		# Children may not ride db.set_value: it builds a SET clause from
 		# whatever it is handed, and a python list is SQL error 1064 —
 		# SYNC-00074 failed all 20 Appraisal updates exactly that way. The
@@ -983,10 +1030,13 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	if since:
 		remote_filters["modified"] = (">", since)
 
-	pulled = written = inserted = updated = skipped = errored = orphaned = 0
+	pulled = written = inserted = updated = skipped = errored = orphaned = contested = 0
 	_write_row.dropped_fields = {}
 	unmet_parents: set[str] = set()
 	row_errors: list[str] = []
+	# Names another instance already owns. Capped like row_errors — the count
+	# is the alarm, the names are just enough to go and look.
+	contested_names: list[str] = []
 	seen = set()
 
 	for chunk in _split_filters(remote_filters):
@@ -1063,6 +1113,14 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				elif outcome == "updated":
 					written += 1
 					updated += 1
+				elif outcome == "contested":
+					# Deliberately NOT folded into `skipped`. A create-only master
+					# already present is skipped and is fine; a contested row means
+					# two registered instances hold the same records, and reporting
+					# them as the same thing tells the operator nothing.
+					contested += 1
+					if len(contested_names) < MAX_ROW_ERRORS_REPORTED:
+						contested_names.append(remote_name)
 				else:  # create-only doctype, already present locally
 					skipped += 1
 
@@ -1080,7 +1138,7 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 			skipped += _count_local_orphans(doctype, client.instance_name, seen)
 
 	_log().info(
-		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s errored=%s (since=%s)",
+		"[sync] %s from %s: pulled=%s inserted=%s updated=%s skipped=%s errored=%s contested=%s (since=%s)",
 		doctype,
 		client.instance_name,
 		pulled,
@@ -1088,16 +1146,36 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		updated,
 		skipped,
 		errored,
+		contested,
 		since or "beginning",
 	)
+	if contested:
+		_log().error(
+			"[sync] %s: %s row(s) belong to another instance and were NOT written — %s. "
+			"Two registered instances are holding the same records; unregister one.",
+			doctype,
+			contested,
+			", ".join(contested_names),
+		)
 
 	# A doctype that pulled rows and wrote NONE has not succeeded, whatever the
 	# mix of errors and skips. SYNC-00003 slipped through the old
 	# `errored == pulled` check because one of ten rows was skipped rather than
 	# errored, so Company reported success having written nothing and Employee
 	# ran on that basis.
-	if pulled and not written and (errored or orphaned):
-		detail = "; ".join(row_errors) or f"{orphaned} row(s) missing parents: {sorted(unmet_parents)}"
+	# `contested` belongs in this condition for the same reason `orphaned` does,
+	# and leaving it out would have been the sharper version of the same bug: a
+	# dev instance pulling into a hub already holding live's rows contests EVERY
+	# row, so errored and orphaned are both 0, the doctype writes nothing and
+	# reports success — and `sync.health` counts a Completed run as proof the
+	# mirror is moving. The run that proves the two instances collide would have
+	# been the one that looked healthiest.
+	if pulled and not written and (errored or orphaned or contested):
+		detail = (
+			"; ".join(row_errors)
+			or (contested and f"{contested} row(s) owned by another instance: {contested_names}")
+			or f"{orphaned} row(s) missing parents: {sorted(unmet_parents)}"
+		)
 		raise RuntimeError(f"no rows written out of {pulled}: {detail}")
 
 	return {
@@ -1109,6 +1187,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 		"skipped": skipped,
 		"errored": errored,
 		"orphaned": orphaned,
+		"contested": contested,
+		"contested_names": contested_names,
 		"missing_parents": sorted(unmet_parents),
 		"row_errors": row_errors,
 		"dropped_fields": [
