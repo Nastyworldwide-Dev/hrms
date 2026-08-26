@@ -17,11 +17,26 @@
    rendered at the page's top-left corner and could not be clicked at all. The
    login form was unusable. Two components must never share a class name. */
 .g-lightfield {
-	/* FIXED, not absolute (8.18). It hangs off ion-app now rather than each
-	   page, so it must be anchored to the viewport — and as a side effect the
-	   notifications list no longer scrolls its blobs away, which it did when
-	   the field was absolute inside a scrolling page. */
-	position: fixed;
+	/* ABSOLUTE against ion-page (Track B). This has now been wrong in BOTH
+	   directions, and the missing invariant explains both:
+
+	     pre-8.18   field per page, pages transparent -> three fields painted
+	                through each other during a push;
+	     8.18       ONE fixed field on ion-app, pages transparent -> during any
+	                push the incoming page bled the outgoing page through
+	                itself. An operator screenshotted Home and Profile
+	                composited as a double exposure.
+
+	   The invariant is that a ROUTED PAGE MUST BE OPAQUE — Ionic stacks live
+	   pages during transitions, and any transparency in the page surface turns
+	   every push into a cross-fade of unrelated screens. So .g-page owns an
+	   opaque ground below, the field lives inside each page again, and the top
+	   page occludes everything under it: exactly one field visible, ever.
+
+	   Anchored to ion-page, which does not scroll (ion-content scrolls
+	   internally) — so 8.18's side-benefit survives: the blobs stay put while
+	   the notifications list scrolls. */
+	position: absolute;
 	inset: 0;
 	z-index: 0;
 	overflow: hidden;
@@ -56,9 +71,13 @@
 	background: radial-gradient(circle, var(--g-field-blob-c-color), transparent 70%);
 }
 
-/* Page carrying a field: ion-content must not paint its own background over it
-   (§16.3 — Ionic is themed through published custom properties only). Scoped
-   to .g-page so pages without a field keep their opaque background. */
+/* The page ground. Opaque, always — see the invariant on .g-lightfield above.
+   ion-content stays transparent so the page's own field shows through it
+   (§16.3 — Ionic is themed through published custom properties only), and the
+   opacity lives one level up on the page frame itself. */
+.ion-page.g-page {
+	background: var(--g-ground);
+}
 .g-page ion-content {
 	--background: transparent;
 }
@@ -95,8 +114,9 @@ ion-tabs .g-page ion-content {
 	z-index: 1;
 }
 
-/* §20.4 — at lg: the field is fixed to the viewport, not the content column,
-   and the blobs scale with it. Centres stay outside the column (§3.3). */
+/* §20.4 — at lg: the field spans the page frame (viewport-sized), not the
+   content column, and the blobs scale with it. Centres stay outside the
+   column (§3.3). */
 @media (min-width: 1024px) {
 	/* Size AND origin scale together. Scaling only the size — which is how 4.1
 	   first wrote this — grows the blob while its origin stays put, so the

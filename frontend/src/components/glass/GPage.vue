@@ -19,8 +19,11 @@
 -->
 <template>
 	<ion-page class="g-page">
-		<!-- No field here (8.18) — App.vue owns the single instance. See the
-		     note there for why §3.2's in-page requirement no longer binds. -->
+		<!-- The field is back inside the page (Track B), paired with the opaque
+		     .g-page ground — see the invariant note on .g-lightfield. One field
+		     per LIVE page exists again, but only the top page's is visible:
+		     the ground occludes the rest, which is the whole point. -->
+		<GLightField />
 		<slot />
 	</ion-page>
 </template>
@@ -29,6 +32,7 @@
 import { computed, provide } from "vue"
 import { useRoute } from "vue-router"
 import { IonPage } from "@ionic/vue"
+import GLightField from "@/components/glass/GLightField.vue"
 
 import { TAB_ITEMS } from "@/data/navItems"
 
