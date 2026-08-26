@@ -557,6 +557,10 @@ scheduler_events = {
 		# to whoever pressed the button, so a pull that simply STOPS is
 		# audible to nobody. Detective only - it never starts a sync.
 		"hrms.sync.health.report_stale_instances",
+		# Scheduled even though the scheduler is one of its own subjects. When it
+		# runs, this is what surfaces the other silent failures; when it does not,
+		# `readiness.system_readiness` is whitelisted so it can still be ASKED.
+		"hrms.utils.readiness.report_readiness",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
