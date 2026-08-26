@@ -130,7 +130,7 @@ Found, understood, not yet fixed.
 | 3.4 | Classify the 16 visual diffs, then re-baseline. Cause known; "known" is not "checked" |
 | 3.5 | **An approver cannot DECLINE.** The Approve/Reject pair renders only when `doc.status` is `Open`/`Draft`, and OT Request, Attendance Request and Replacement Leave Claim have no `status` field — so the approver gets Submit and nothing else. Fix is a `status` field so they join the Leave Application family. **Schema change on a money path: needs a ruling first** |
 | 3.6 | **Appraisal has no screen.** The data is mirrored and the Performance workspace exists in Desk; the PWA has no route. Cheapest item here — a front door onto data already present |
-| 3.7 | **`employee_advance`** exists in upstream `version-16` and not in this fork. Port it, unless it falls under the same sensitivity rule as payroll |
+| ~~3.7~~ | ~~`employee_advance`~~ — **withdrawn.** Not a gap: removed on purpose. `patches/v15_112_0/lock_employee_advance_readonly.py` states the policy — "staff may not request an advance and the company does not issue them" — and revokes create/write/submit/cancel/amend/delete for every role, because pulling the PWA screens alone left the create API and Desk reachable. `read` is kept so historical records stay visible to reporting and to expense claims referencing them. Raised only because upstream `version-16` carries the screens; that is a fact about upstream, not a gap here |
 
 **Dropped, not deferred:** a payslip screen. Salary is out of Verifica by HR
 ruling — see `decisions/payroll-stays-out-of-verifica.md`. No branch ever had

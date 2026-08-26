@@ -52,7 +52,14 @@ rediscovered as a surprise at cutover.
 
 ## Not covered by this ruling
 
-**Expense Claim, Employee Advance and Travel Request** are reimbursement rather
-than salary, and the PWA already carries expense claims end to end. Assumed to
-stay in Nadi. If HR means them to fall under the same sensitivity rule, that is
-a separate decision and this file should be amended.
+**Expense Claim and Travel Request** are reimbursement rather than salary, and
+the PWA already carries expense claims end to end. Assumed to stay in Nadi. If
+HR means them under the same sensitivity rule, that is a separate decision and
+this file should be amended.
+
+**Employee Advance is already settled and is NOT covered by this file.** It was
+removed from the PWA deliberately in v15.112.0 under a different policy — staff
+may not request an advance and the company does not issue them — and
+`patches/v15_112_0/lock_employee_advance_readonly.py` enforces it by revoking
+create/write/submit/cancel/amend/delete for every role. Nothing to decide and
+nothing to restore.
