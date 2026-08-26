@@ -123,12 +123,30 @@ class TestPlanCompanyShells(unittest.TestCase):
 		plan = shells.plan_company_shells(rows, existing_names={"NHSB"}, registered_names={"NHSB"})
 		self.assertEqual(plan["unregistered"], [])
 
-	def test_an_unmapped_instance_reports_nothing_unregistered(self):
-		"""An empty Companies Served table means "serve everything"
-		(runner.instance_companies), so nothing is missing from it."""
+	def test_an_empty_table_still_names_the_candidates(self):
+		"""Observed on Nasty-Live: ten companies on the hub, Companies Served
+		EMPTY, and the button said "Nothing to create" — leaving the operator
+		exactly as stuck as before this feature existed.
+
+		The first version suppressed this case, reasoning that an empty table
+		means "serve everything" (runner.instance_companies) so no employee is
+		excluded. That is true about the SYNC and useless to the person looking
+		at the screen: the table also drives the company fence, the staff ERP
+		redirect and the parity scope, and there was no path to fill it.
+
+		So the candidates are always named. `unmapped` carries the difference —
+		registering NARROWS an unmapped instance rather than widening it — and
+		the caller says so instead of the plan deciding for them."""
 		rows = [dict(REMOTE_ROW, name="NHSB", company_name="NHSB", abbr="NHSB")]
 		plan = shells.plan_company_shells(rows, existing_names={"NHSB"}, registered_names=set())
+		self.assertEqual(plan["unregistered"], ["NHSB"])
+		self.assertTrue(plan["unmapped"])
+
+	def test_a_mapped_instance_is_not_flagged_unmapped(self):
+		rows = [dict(REMOTE_ROW, name="NHSB", company_name="NHSB", abbr="NHSB")]
+		plan = shells.plan_company_shells(rows, existing_names={"NHSB"}, registered_names={"NHSB"})
 		self.assertEqual(plan["unregistered"], [])
+		self.assertFalse(plan["unmapped"])
 
 	def test_a_company_to_be_created_is_not_also_reported_unregistered(self):
 		"""It will be registered by create_company_shells; naming it twice would

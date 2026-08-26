@@ -118,12 +118,22 @@ def plan_company_shells(remote_rows, existing_names, registered_names=None) -> d
 	#
 	# That table is not cosmetic. `runner.scope_filter` reads it to decide whose
 	# employees to pull, so a company missing from it has EVERY one of its
-	# employees silently excluded from every sync. Naming them is the whole fix:
-	# the decision stays human, it just stops being invisible.
+	# employees silently excluded from every sync. It also drives the company
+	# fence, the staff ERP redirect and the parity scope.
 	#
-	# An EMPTY table means "serve everything" (runner.instance_companies), so
-	# there is nothing missing from it and nothing to report.
-	unregistered = sorted(set(existing) - registered_names) if registered_names else []
+	# An EMPTY table is reported too, and the first version of this got that
+	# wrong. It suppressed the empty case, reasoning that an unmapped instance
+	# serves everything (`runner.instance_companies`) so no employee is
+	# excluded. True about the sync, useless to the person looking at the
+	# screen: observed on Nasty-Live as ten companies on the hub, Companies
+	# Served empty, and "Nothing to create" - exactly as stuck as before.
+	#
+	# `unmapped` carries the difference rather than hiding it, because the
+	# consequence of registering is OPPOSITE in the two cases: it widens a
+	# mapped instance's scope and NARROWS an unmapped one's. The caller says so;
+	# the plan does not decide for them.
+	unmapped = not registered_names
+	unregistered = sorted(set(existing) - registered_names)
 
 	return {
 		"to_create": to_create,
@@ -131,6 +141,7 @@ def plan_company_shells(remote_rows, existing_names, registered_names=None) -> d
 		"incomplete": incomplete,
 		"skipped": skipped,
 		"unregistered": unregistered,
+		"unmapped": unmapped,
 	}
 
 
@@ -157,10 +168,12 @@ def _plan_for_instance(instance_name: str) -> dict:
 	)
 	if plan["unregistered"]:
 		logger.warning(
-			"[company_shells] %s serves %s but they are NOT in its companies table — "
-			"their employees are excluded from every sync",
+			"[company_shells] %s serves %s but they are NOT in its companies table%s",
 			instance_name,
 			", ".join(plan["unregistered"]),
+			" (table is EMPTY — the instance currently serves every company)"
+			if plan["unmapped"]
+			else " — their employees are excluded from every sync",
 		)
 	return plan
 
