@@ -33,6 +33,20 @@ repos:
                 hrms/hr/doctype/employee_transfer/employee_transfer.js|
             )$
 
+  - repo: local
+    hooks:
+      - id: fixture-timestamps
+        name: "Synced fixtures must advance `modified`"
+        description: >
+          Frappe skips a standard-doc import when the row in the database is not
+          older than the file, so a fixture edit without a timestamp bump is a
+          silent no-op on every existing site. See the script's docstring for the
+          three outages this caught after the fact.
+        entry: python3 scripts/check_fixture_timestamps.py
+        language: system
+        files: '\.json$'
+        pass_filenames: true
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.3.7
     hooks:

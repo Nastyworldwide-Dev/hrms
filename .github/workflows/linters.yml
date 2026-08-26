@@ -39,6 +39,15 @@ jobs:
       - name: Install and Run Pre-commit
         uses: pre-commit/action@v3.0.0
 
+      # Belt and braces on top of the pre-commit hook: pre-commit sees one
+      # commit's staged files, this sees the whole PR. A fixture edited in an
+      # early commit and rebased forward would slip past the former.
+      - name: Synced fixtures must advance `modified`
+        run: python3 scripts/check_fixture_timestamps.py --since ${{ github.event.pull_request.base.sha }}
+
+      - name: Fixture guard's own tests
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 
