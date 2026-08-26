@@ -76,6 +76,8 @@ HEALTHY = {
 	"push_relay_enabled": True,
 	"push_credentials_set": True,
 	"ess_users_without_permission": [],
+	"active_employees": 40,
+	"employees_without_leave_allocation": 0,
 }
 
 
@@ -205,6 +207,44 @@ class TestSalarySlipScoping(unittest.TestCase):
 
 	def test_correctly_configured_ess_users_are_silent(self):
 		self.assertNotIn("ess_user_permission", ids(self.evaluate(facts())))
+
+
+class TestLeaveAllocation(unittest.TestCase):
+	"""An employee with no allocation can apply for nothing but unpaid leave.
+
+	Reported as "leave type only that?" — a dropdown offering exactly two
+	options, both unpaid. Not a UI fault: `api.get_leave_types` returns the
+	types an employee is ALLOCATED plus the LWP ones, so with no allocation only
+	the unpaid ones remain and the form looks like it is working.
+
+	Confirmed on a bench: 2 LWP types, 3 of 6 active employees with no
+	allocation, and the job that creates them —
+	hrms.hr.leave_rules.auto_assign_leave_policies — sitting behind an inactive
+	scheduler."""
+
+	def setUp(self):
+		self.evaluate = _evaluate()
+
+	def test_employees_without_an_allocation_fail(self):
+		found = self.evaluate(facts(employees_without_leave_allocation=3, active_employees=6))
+		self.assertEqual(by_id(found, "leave_allocation")["status"], "fail")
+
+	def test_the_count_and_the_total_are_both_reported(self):
+		"""3 of 6 is a different conversation from 3 of 400."""
+		detail = by_id(
+			self.evaluate(facts(employees_without_leave_allocation=3, active_employees=6)),
+			"leave_allocation",
+		)["detail"]
+		self.assertIn("3 of 6", detail)
+
+	def test_the_fix_names_the_scheduler_first(self):
+		"""Assigning policies by hand while the scheduler is off fixes today and
+		not tomorrow."""
+		fix = by_id(self.evaluate(facts(employees_without_leave_allocation=1)), "leave_allocation")["fix"]
+		self.assertIn("scheduler", fix.lower())
+
+	def test_a_fully_allocated_site_is_silent(self):
+		self.assertNotIn("leave_allocation", ids(self.evaluate(facts())))
 
 
 class TestGeofenceConfiguration(unittest.TestCase):

@@ -154,6 +154,23 @@ def evaluate(facts: dict) -> list[dict]:
 			)
 		)
 
+	no_alloc = facts.get("employees_without_leave_allocation", 0)
+	total_emp = facts.get("active_employees", 0)
+	if no_alloc:
+		out.append(
+			_finding(
+				"leave_allocation",
+				FAIL,
+				f"{no_alloc} of {total_emp} active employee(s) have no Leave Allocation. The leave "
+				"type dropdown only offers types they are ALLOCATED plus unpaid ones, so those "
+				"people can apply for nothing but unpaid leave — and the form looks like it is "
+				"working.",
+				"Usually a symptom of the scheduler: hrms.hr.leave_rules.auto_assign_leave_policies "
+				"creates these. Fix the scheduler first, then assign a Leave Policy to anyone still "
+				"missing one.",
+			)
+		)
+
 	unscoped = facts.get("ess_users_without_permission") or []
 	if unscoped:
 		out.append(
@@ -276,6 +293,14 @@ def collect_facts() -> dict:
 			except Exception as e:
 				logger.warning("[readiness] could not read series %s: %s", prefix, e)
 
+	# The leave dropdown showing only "Unpaid Leave" is this, not a UI fault:
+	# api.get_leave_types returns allocated types plus LWP types, so an employee
+	# with no allocation can apply for nothing else.
+	active = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
+	without_allocation = sum(
+		1 for e in active if not frappe.db.count("Leave Allocation", {"employee": e, "docstatus": 1})
+	)
+
 	# Measured, not assumed: an ESS user WITH the permission sees 1 of 2 salary
 	# slips; the same user WITHOUT it sees 2 of 2. The role is granted by User
 	# Type (setup.get_user_types_data), which creates the permission — but adding
@@ -307,6 +332,8 @@ def collect_facts() -> dict:
 		"push_relay_enabled": bool(push.enable_push_notification_relay) if push else True,
 		"push_credentials_set": bool(push and push.api_key and push.api_secret),
 		"ess_users_without_permission": unscoped_ess,
+		"active_employees": len(active),
+		"employees_without_leave_allocation": without_allocation,
 		"checkin_enabled": bool(settings.get("allow_employee_checkin_from_mobile_app")),
 		"geo_enabled": bool(settings.get("allow_geolocation_tracking")),
 		"auto_attendance_shifts": sum(1 for s in shifts if s.enable_auto_attendance),
