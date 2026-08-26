@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   diagnose the Nadi desktop-icon regression; fold it into the phase 9 plan
 status:   done (planning only - no code changed)
-commit:   <this commit> on nz-glass
+commit:   9c7efcb16 on nz-glass
 files:    docs/glass/plan/HR_Glass_Phase_9_Work_Order.md (new §0.5 Phase 0, order, matrix)
           docs/glass/HANDOFF.md
 verify:   bench --site verifica-live execute frappe.client.get_list --kwargs
