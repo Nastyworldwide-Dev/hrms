@@ -88,11 +88,19 @@ website_route_rules = [
 # ----------
 
 # add methods and filters to jinja environment
-jinja = {
-	"methods": [
-		"hrms.utils.get_country",
-	],
-}
+#
+# `hrms.utils.get_country` was registered here and is not called by any template
+# in this app. Registering it was the only thing keeping it reachable, and it is
+# a poor thing to keep reachable: `@frappe.whitelist(allow_guest=True)`, an
+# outbound request to pro.ip-api.com with NO timeout, and a module-global dict
+# keyed by request IP that is never bounded. Unauthenticated callers could grow
+# a worker's memory without limit, and one hung upstream pins that worker
+# indefinitely. `hrms/sync/client.py` is the same shape done correctly, with an
+# explicit timeout and bounded retries.
+#
+# The function is left in place for upstream-merge parity; only the reachability
+# is removed.
+jinja = {}
 
 # Installation
 # ------------
