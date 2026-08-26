@@ -20,13 +20,29 @@ import { defineConfig, devices } from "@playwright/test"
 // First run needs the browser binary: `npx playwright install chromium`.
 export default defineConfig({
 	testDir: ".",
-	// Visual-regression baselines ARE the committed audit screens in
-	// docs/glass/audit/screens/ — one set of images, serving as both the
-	// evidence a finding cites and the baseline a regression fails against.
-	// A second parallel set would drift from the first the day someone
-	// re-shot only one of them.
+	// Visual-regression baselines live in design/baselines/ and are owned by
+	// this gate alone.
+	//
+	// They used to BE the committed audit screens in docs/glass/audit/screens/,
+	// deliberately: one set of images serving as both the evidence a finding
+	// cites and the baseline a regression fails against, on the reasoning that a
+	// second parallel set would drift the day someone re-shot only one of them.
+	//
+	// That reasoning held until this gate started masking. `visual.spec.js`
+	// injects `[data-visual-mask]{visibility:hidden}` so relative timestamps stop
+	// rotting the baselines — correct for a comparison, and it renders every
+	// dynamic string INVISIBLE in the images the audit documents cite. On
+	// `home-390-dark.png` the check-out banner's title and the date eyebrow are
+	// both present in the DOM and both blank in the picture; two readers have now
+	// filed them as defects.
+	//
+	// Two correct decisions, made months apart, combined into an artifact set
+	// that silently misleads its reader. So the sets are split by role: this one
+	// is masked and compared, docs/glass/audit/screens/ is unmasked and read.
+	// capture.mjs owns the latter and does not mask.
+	//
 	// relative to this config's directory (frontend/e2e), so two levels up
-	snapshotPathTemplate: "../../docs/glass/audit/screens/{arg}{ext}",
+	snapshotPathTemplate: "../../design/baselines/{arg}{ext}",
 	expect: {
 		toHaveScreenshot: {
 			// An ABSOLUTE pixel count, not a ratio. The ratio was the fourth

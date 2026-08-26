@@ -1,10 +1,23 @@
-import pkg from "/home/nabil/nz-version-16/frontend/node_modules/playwright/index.js"
 import fs from "node:fs"
+import path from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { BASE, login, screens, settle } from "../../../frontend/e2e/screens.mjs"
-const { chromium } = pkg
 
+// Resolved from this file, not hardcoded: both of these were absolute paths
+// into one developer's home directory, so the capture could only ever be run
+// from that checkout.
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(HERE, "../../..")
+// `.default` because playwright's entry is CJS — the original static form was
+// `import pkg from …`, which is the same binding.
+const { chromium } = (
+	await import(pathToFileURL(path.join(ROOT, "frontend/node_modules/playwright/index.js")).href)
+).default
 
-const OUT = "/home/nabil/nz-version-16/docs/glass/audit/screens"
+// THE UNMASKED SET. This is the evidence a finding cites, so it is shot exactly
+// as a user sees it — no [data-visual-mask] hiding, which is what separates it
+// from the gate's baselines in design/baselines/. See playwright.config.js.
+const OUT = path.join(ROOT, "docs/glass/audit/screens")
 fs.mkdirSync(OUT, { recursive: true })
 
 const VIEWPORTS = [

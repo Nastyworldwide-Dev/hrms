@@ -10,9 +10,11 @@ import { BASE, login, screens, settle } from "./screens.mjs"
 // stacked on separate lines, and content permanently hidden behind the tab bar —
 // all five gates green throughout.
 //
-// Baselines are the committed screenshots in docs/glass/audit/screens/ (see
-// snapshotPathTemplate in playwright.config.js), so the images a finding cites
-// and the images a regression is measured against are the same files.
+// Baselines are the committed screenshots in design/baselines/ (see
+// snapshotPathTemplate in playwright.config.js). They are MASKED — this spec
+// hides every [data-visual-mask] element below — and are therefore not a
+// faithful record of what a user sees. The unmasked set a finding should cite
+// lives in docs/glass/audit/screens/ and is written by capture.mjs.
 //
 // Re-baseline after an intended visual change:
 //   npx playwright test --config=e2e/playwright.config.js e2e/visual.spec.js --update-snapshots

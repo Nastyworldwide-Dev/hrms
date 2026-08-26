@@ -3,6 +3,16 @@
 The findings in `../frontend-audit.md` come from these images. To re-shoot them
 after a fix, run the same two scripts.
 
+> **These are the UNMASKED set — the one to cite.** `capture.mjs` shoots the app
+> exactly as a user sees it. The visual gate's baselines live separately in
+> `design/baselines/` and hide every `data-visual-mask` element, so dynamic
+> strings are blank in those. The two were one directory until 26 August 2026;
+> see `design/baselines/README.md` for why they were split.
+>
+> Until `capture.mjs` is next run against a served site, the 114 files here named
+> `*-390-dark`, `*-390-light` and `*-1440-dark` are still the masked copies the
+> gate left behind. The other 228 are correct.
+
 ## 1. Serve the app
 
 ```bash

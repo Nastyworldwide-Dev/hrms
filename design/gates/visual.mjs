@@ -7,7 +7,12 @@
 // row — which is exactly what shipped, with all gates green.
 //
 // Renders every screen in frontend/e2e/screens.mjs and compares against the
-// committed baselines in docs/glass/audit/screens/.
+// committed baselines in design/baselines/.
+//
+// Those baselines are MASKED — visual.spec.js hides every [data-visual-mask]
+// element so relative timestamps stop rotting them — so they are not a
+// faithful record of what a user sees. The unmasked set to cite in a finding
+// is docs/glass/audit/screens/, written by docs/glass/audit/capture.mjs.
 //
 // Usage:
 //   node visual.mjs                    enforce against committed baselines
@@ -65,7 +70,7 @@ if (/ECONNREFUSED|net::ERR_CONNECTION_REFUSED/i.test(out) && !/\[visual\]/.test(
 	skip(`no site at ${process.env.HRMS_E2E_URL || "http://localhost:8080"}`);
 
 if (UPDATE) {
-	console.log("[visual] baselines re-shot into docs/glass/audit/screens/");
+	console.log("[visual] baselines re-shot into design/baselines/");
 	console.log(`GATE_RESULT ${JSON.stringify({ gate: "visual", status: "ok", baselined: true })}`);
 	process.exit(0);
 }
