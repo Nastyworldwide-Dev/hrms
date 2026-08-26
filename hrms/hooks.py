@@ -552,6 +552,11 @@ scheduler_events = {
 		# Re-reconcile fence-role users against the instance registry and
 		# report HR users the fail-open fence default leaves unfenced.
 		"hrms.utils.company_fence.nightly_fence_hygiene",
+		# The mirror does not decay loudly: it holds the last good rows and
+		# looks fine. run_sync is operator-initiated and its notification goes
+		# to whoever pressed the button, so a pull that simply STOPS is
+		# audible to nobody. Detective only - it never starts a sync.
+		"hrms.sync.health.report_stale_instances",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
