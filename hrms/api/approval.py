@@ -55,6 +55,54 @@ logger = logging.getLogger(__name__)
 #: The undecided value differs per doctype and is taken from each field's own
 #: `default`, not guessed: Leave Application starts "Open", the other two
 #: start "Draft".
+#: Doctype -> the field naming its approver. The named person IS the routing,
+#: whatever roles they hold — mirrors pwa_notifications.APPROVER_FIELD.
+APPROVER_FIELD = {
+	"Leave Application": "leave_approver",
+	"Expense Claim": "expense_approver",
+	"Shift Request": "approver",
+}
+
+
+def _is_routed_approver(doc) -> bool:
+	"""Is the session user the person this request ROUTES to?
+
+	FOUND BY RUNNING AS A REAL USER: a team lead holding only the Employee role
+	— exactly who reports_to routes OT, Attendance Request and Replacement
+	Leave Claim to — got PermissionError from decide(). is_approver() computed
+	them an approver, the notification was addressed to them, the Team tab
+	rendered their queue, and doc.submit() refused the role. Every surface
+	delivered the work; the last line denied it.
+
+	The precedent is remote_checkin._ensure_approver: authorisation is ROUTING
+	(are you the person this is addressed to, or HR?), and the transition then
+	runs elevated. Three routing shapes, matching is_approver():
+
+	  * HR — sees and decides everything;
+	  * the doc's own approver field names the caller;
+	  * the doc's employee reports_to the caller's employee.
+
+	Deliberately NOT "anyone who can read": a worker can read their own request
+	and must not be able to decide it (validate_self_submission double-guards
+	that, but routing refuses it first, with a message about routing).
+	"""
+	user = frappe.session.user
+	if {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
+		return True
+	field = APPROVER_FIELD.get(doc.doctype)
+	if field and doc.get(field) == user:
+		return True
+	employee = doc.get("employee")
+	if not employee:
+		return False
+	my_employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
+	if not my_employee:
+		return False
+	routed = frappe.db.get_value("Employee", employee, "reports_to") == my_employee
+	logger.debug("[approval] routing %s %s -> %s via reports_to: %s", doc.doctype, doc.name, user, routed)
+	return routed
+
+
 DECIDE_THEN_SUBMIT = {
 	"Leave Application": ("status", "Open"),
 	"Shift Request": ("status", "Draft"),
@@ -158,8 +206,22 @@ def decide(doctype: str, name: str, status: str) -> dict:
 	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
 
 	doc = frappe.get_doc(doctype, name)
-	doc.check_permission("read")
-	_require_writable_decision_field(doctype, fieldname)
+	# Routing is established FIRST, before any role-based gate — the same order
+	# as remote_checkin._ensure_approver. Running check_permission("read") first
+	# was the bug's second layer: a reports_to manager holding only Employee
+	# failed doc-level read (if_owner) before the routing block was ever
+	# reached, so the fix looked applied and the lead still got PermissionError.
+	if frappe.has_permission(doctype, "submit", doc=doc):
+		doc.check_permission("read")
+		_require_writable_decision_field(doctype, fieldname)
+	elif _is_routed_approver(doc):
+		# The person this request is addressed to. The role gates are replaced
+		# by the routing gate; the transition below runs elevated. Validators
+		# all still run — validate_self_submission reads session.user and still
+		# refuses self-approval.
+		doc.flags.ignore_permissions = True
+	else:
+		frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
 
 	current = doc.get(fieldname)
 
@@ -278,7 +340,15 @@ def finalize(doctype: str, name: str, docstatus: int) -> dict:
 	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
 
 	doc = frappe.get_doc(doctype, name)
-	doc.check_permission("read")
+	# Same routing-first order as decide, same reason: the person this request
+	# is addressed to may fail every role-based gate, including doc-level read.
+	_action = "submit" if docstatus == SUBMIT else "cancel"
+	if frappe.has_permission(doctype, _action, doc=doc):
+		doc.check_permission("read")
+	elif _is_routed_approver(doc):
+		doc.flags.ignore_permissions = True
+	else:
+		frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
 
 	# Two taps are one intention. Report the first outcome rather than throwing
 	# at somebody who did nothing wrong.

@@ -132,6 +132,74 @@ class TestStateHandlesDoctypesWithNoDecisionField(unittest.TestCase):
 		self.assertIn("DECIDE_THEN_SUBMIT.get(", src)
 
 
+class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
+	"""A team lead with only the Employee role could not approve anything.
+
+	FOUND BY RUNNING AS A REAL USER, after the operator stopped trusting green
+	suites — and they were right. The earlier verification of decide/finalize ran
+	as Administrator, which proves nothing about the person the work actually
+	routes to. As the lead:
+
+	    worker=nurul.aisyah@...  lead=test2@example.com  lead roles=['Employee']
+	    Attendance Request   APPROVE FAILED: PermissionError
+
+	The whole approver model routes by DATA — reports_to, the approver fields,
+	Department Approver rows. is_approver() computes it, notifications deliver
+	to it, the Team tab renders for it. But decide() ended in doc.submit(),
+	which checks ROLE permission — and a reporting manager holding only
+	Employee has no submit on OT Request, Attendance Request or Replacement
+	Leave Claim. Every surface delivered the work; the last line refused it.
+
+	The precedent is already in this repo: remote_checkin._decide authorises by
+	_ensure_approver (are you the routed approver, or HR?) and then transitions
+	with ignore_permissions. Roles are not the gate there; routing is. decide
+	and finalize now follow it: verify the caller is the routed approver, then
+	elevate ONLY the transition. Validators still run — validate_self_submission
+	reads session.user and still refuses self-approval.
+	"""
+
+	def setUp(self):
+		self.tree = ast.parse(API.read_text())
+
+	def _fn(self, name):
+		fn = next(
+			(n for n in ast.walk(self.tree) if isinstance(n, ast.FunctionDef) and n.name == name),
+			None,
+		)
+		assert fn is not None, f"approval.{name} is missing"
+		return fn
+
+	def test_there_is_a_routed_approver_check(self):
+		fn = self._fn("_is_routed_approver")
+		src = ast.unparse(fn)
+		# The three routing shapes: named approver field, reports_to, HR.
+		self.assertIn("reports_to", src)
+		self.assertIn("APPROVER_FIELD", src)
+
+	def test_both_endpoints_consult_it(self):
+		for name in ("decide", "finalize"):
+			called = {
+				n.func.id
+				for n in ast.walk(self._fn(name))
+				if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+			}
+			self.assertIn("_is_routed_approver", called, f"{name} does not consult routing")
+
+	def test_elevation_is_conditional_on_routing(self):
+		"""ignore_permissions must never be set unconditionally — that would let
+		anyone who can READ a row transition it. It is set only when the role
+		check would fail AND the caller is the routed approver."""
+		for name in ("decide", "finalize"):
+			src = ast.unparse(self._fn(name))
+			self.assertIn("ignore_permissions", src, f"{name} never elevates")
+			before, _, _ = src.partition("ignore_permissions")
+			self.assertIn(
+				"_is_routed_approver",
+				before,
+				f"{name} elevates before checking who the caller is",
+			)
+
+
 class TestTheSheetUsesIt(unittest.TestCase):
 	"""The endpoint is worthless if the button still calls setValue."""
 
