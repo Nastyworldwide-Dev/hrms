@@ -90,6 +90,32 @@ def create_remote_request_if_needed(doc, method=None):
 			doc.name,
 			request.approver,
 		)
+		if not request.approver:
+			# resolve_approver falls through five tiers and can still return None.
+			# The request is created regardless — the employee punched in good
+			# faith and their log must be kept — but from here it is INVISIBLE:
+			# `list_pending_for_approver` filters on `approver == user`, and
+			# `notify_approver` returns early on a blank one. Nobody is told,
+			# nobody can find it, and the employee waits on an approval that is
+			# in no queue.
+			#
+			# Loud at creation, not only in the daily readiness sweep, because a
+			# day is a long time to be silently unattendanced.
+			logger.error(
+				"[doc_events.employee_checkin] %s has NO APPROVER — invisible to everyone",
+				request.name,
+			)
+			frappe.log_error(
+				title="Remote check-in request has no approver",
+				message=(
+					f"{request.name} was created for {doc.employee} and no approver could be "
+					f"resolved, so it appears in nobody's pending list and no notification "
+					f"was sent. The employee is waiting on an approval no one can see.\n\n"
+					f"Set an approver on that request now. To stop it recurring, give the "
+					f"employee a Shift Request Approver, or a Reports To whose Employee record "
+					f"has a User ID, or make sure at least one user holds the HR Manager role."
+				),
+			)
 		notify_approver(request)
 
 

@@ -120,24 +120,22 @@
 				<div class="text-caption text-ink-2">{{ dayjs().format("D MMM, YYYY") }}</div>
 			</div>
 
-			<template v-if="settings.data?.allow_geolocation_tracking">
-				<div class="w-full flex flex-row items-center justify-between text-caption">
-					<span class="text-ink-2">{{ locationStatus }}</span>
-					<span
-						v-if="shiftLocation.data && distanceToShift !== null"
-						class="font-mono tabular-nums"
-						:class="isInsideRadius ? 'text-accent-ink' : 'text-ink'"
-					>
-						{{ formattedDistanceToShift }}
-					</span>
+			<!-- A written verdict, not a map.
+			     HR asked for the map to go, and it was the wrong instrument
+			     anyway. It answered "where am I?", which the employee already
+			     knows, and never answered the two things they cannot work out:
+			     am I close enough, and what happens if I am not. The old caption
+			     read "120 m from office" — a bare fact, with the radius unstated
+			     and the consequence unmentioned.
+			     It also fetched tiles from tile.openstreetmap.org, so on a
+			     filtered network or a weak signal the one piece of UI meant to
+			     reassure people rendered blank. -->
+			<div v-if="settings.data?.allow_geolocation_tracking" class="checkin-sheet__where">
+				<div class="checkin-sheet__where-title" :class="`is-${locationVerdict.tone}`">
+					{{ locationVerdict.title }}
 				</div>
-
-				<!-- The real Leaflet map goes in GMapPanel's slot; the panel's
-				     decorative gradient is only its placeholder state. -->
-				<GMapPanel>
-					<div ref="mapEl" class="checkin-sheet__map"></div>
-				</GMapPanel>
-			</template>
+				<div class="checkin-sheet__where-detail">{{ locationVerdict.detail }}</div>
+			</div>
 
 			<!-- Live selfie preview — camera auto-starts when the modal opens;
 			     Confirm tap captures the frame, uploads, and submits the log
@@ -214,21 +212,14 @@
 
 <script setup>
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
-import GMapPanel from "@/components/glass/GMapPanel.vue"
 import GClock from "@/components/glass/GClock.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue"
+import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount } from "vue"
 import { modalController } from "@ionic/vue"
-
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
-import markerIcon from "leaflet/dist/images/marker-icon.png"
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
-import markerShadow from "leaflet/dist/images/marker-shadow.png"
 
 import { formatTimestamp } from "@/utils/formatters"
 import {
@@ -244,14 +235,6 @@ import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
 
-// Bundled Leaflet cannot derive its default marker icon paths (it guesses them
-// from where leaflet.css was served), so hand it the URLs Vite emits.
-L.Icon.Default.mergeOptions({
-	iconRetinaUrl: markerIcon2x,
-	iconUrl: markerIcon,
-	shadowUrl: markerShadow,
-})
-
 const DOCTYPE = "Employee Checkin"
 
 const socket = inject("$socket")
@@ -262,13 +245,12 @@ const checkinTimestamp = ref(null)
 const latitude = ref(0)
 const longitude = ref(0)
 const locationStatus = ref("")
+// Separate from locationStatus because the two answer different questions.
+// locationStatus carried BOTH "Latitude: 3.13901, Longitude: 101.68690" and
+// "Location permission denied", so nothing downstream could tell a reading from
+// a failure. The verdict below has to.
+const locationError = ref("")
 
-// Live check-in map state — initialised when the modal presents,
-// torn down on dismiss. See onModalPresent / onModalDismiss.
-const mapEl = ref(null)
-let leafletMap = null
-let userMarker = null
-let shiftMarker = null
 let geoWatchId = null
 // Per-modal-session geolocation state. latitude/longitude refs persist across
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
@@ -455,14 +437,9 @@ function handleLocationSuccess(position) {
 	const accuracy = formatAccuracy(accuracyM.value)
 	if (accuracy) parts.push(__("Accuracy: {0}", [accuracy]))
 	locationStatus.value = parts.join(", ")
+	locationError.value = ""
 
-	const firstFixThisSession = !hasSessionFix
 	hasSessionFix = true
-	updateUserMarker()
-	// On reopen the marker already exists at last session's stale coords, so
-	// the creation-time recenter doesn't fire — re-fit on this session's
-	// first real fix instead.
-	if (firstFixThisSession) fitMapBounds()
 }
 
 // What to tell someone whose device would not say where it is. The raw
@@ -492,6 +469,7 @@ function locationErrorMessage(code) {
 function handleLocationError(error) {
 	const code = describeGeolocationError(error)
 	locationStatus.value = locationErrorMessage(code)
+	locationError.value = locationStatus.value
 	console.warn("[CheckInPanel] geolocation error:", code, error)
 
 	// The high-accuracy watch gave up before any fix. This is not one
@@ -519,10 +497,12 @@ const fetchLocation = () => {
 	const blocked = geolocationBlockedReason()
 	if (blocked) {
 		locationStatus.value = locationErrorMessage(blocked)
+		locationError.value = locationStatus.value
 		console.warn("[CheckInPanel] geolocation unavailable on this page:", blocked)
 		return
 	}
 	locationStatus.value = __("Locating...")
+	locationError.value = ""
 	hasSessionFix = false
 	coarseFallbackRequested = false
 	accuracyM.value = null
@@ -553,15 +533,31 @@ function stopWatchingLocation() {
 
 // ---------------------------------------------------------------------------
 // Leaflet map — shift location pin + radius circle + live user pin
-// ---------------------------------------------------------------------------
+// Distance to the shift location, and the written verdict built from it.
+
+// Metres between two coordinates. Was L.latLng().distanceTo(), which is the
+// only reason Leaflet was a dependency of this app at all — 150 KB of mapping
+// library for one number, plus a runtime fetch to tile.openstreetmap.org that
+// silently rendered nothing on a filtered network.
+//
+// Haversine on a spherical earth. Good to ~0.3% against WGS84, which over a
+// check-in radius measured in tens of metres is centimetres — far below the
+// device's own error, and that error is already carried explicitly as accuracyM.
+function metresBetween(lat1, lon1, lat2, lon2) {
+	const R = 6371008.8 // IUGG mean earth radius
+	const toRad = (deg) => (deg * Math.PI) / 180
+	const dLat = toRad(lat2 - lat1)
+	const dLon = toRad(lon2 - lon1)
+	const a =
+		Math.sin(dLat / 2) ** 2 +
+		Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+	return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)))
+}
 
 const distanceToShift = computed(() => {
 	const loc = shiftLocation.data
 	if (!loc || !latitude.value || !longitude.value) return null
-	if (!L) return null
-	return L.latLng(loc.latitude, loc.longitude).distanceTo(
-		L.latLng(latitude.value, longitude.value)
-	)
+	return metresBetween(loc.latitude, loc.longitude, latitude.value, longitude.value)
 })
 
 const isInsideRadius = computed(() => {
@@ -571,168 +567,104 @@ const isInsideRadius = computed(() => {
 	return loc.checkin_radius > 0 && d <= loc.checkin_radius
 })
 
-const formattedDistanceToShift = computed(() => {
-	const d = distanceToShift.value
-	if (d === null) return ""
-	const label = isInsideRadius.value ? __("inside") : __("from office")
-	return d >= 1000 ? `${(d / 1000).toFixed(2)} km ${label}` : `${Math.round(d)} m ${label}`
-})
-
-async function initMap() {
-	// Leaflet is bundled, so it is present the moment this module is. The 5s
-	// poll that used to sit here waited on a deferred CDN <script> that could
-	// simply never arrive on a slow or filtered network — the map was blank or
-	// silently skipped, and check-in evidence went with it.
-	if (!mapEl.value || leafletMap) return
+// What the employee needs, in the order they need it: the VERDICT, then the
+// number, then what happens next. The old caption gave only the number —
+// "120 m from office" — which is unreadable without the radius and says nothing
+// about the consequence. Staff had no way to know that an out-of-range punch is
+// accepted and routed for approval rather than lost.
+//
+// Check-OUT is deliberately never warned about. People legitimately leave from a
+// client site or on the way home, and policing the exit is what makes staff
+// resent the whole feature. Location is still recorded; it is simply not judged.
+const locationVerdict = computed(() => {
+	if (locationError.value) {
+		return {
+			tone: "muted",
+			title: __("Location unavailable"),
+			detail: shiftLocation.data?.strict
+				? __("Turn on location for this app — you cannot check in here without it.")
+				: __("Your check-in will still be recorded, without a location."),
+		}
+	}
 
 	const loc = shiftLocation.data
-	const center = loc
-		? [loc.latitude, loc.longitude]
-		: latitude.value && longitude.value
-		? [latitude.value, longitude.value]
-		: [3.139, 101.6869] // KL fallback so the tile layer renders something
-	const zoom = loc ? 16 : 13
-
-	leafletMap = L.map(mapEl.value, {
-		zoomControl: false,
-		attributionControl: false,
-		dragging: true,
-		tap: true,
-		// Android Chrome/WebView intermittently fails to composite the SVG
-		// overlay pane inside the transformed modal container, leaving the
-		// radius circle invisible; the canvas renderer is immune.
-		preferCanvas: true,
-	}).setView(center, zoom)
-
-	L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-		maxZoom: 19,
-	}).addTo(leafletMap)
-
-	if (loc) {
-		const shiftLatLng = L.latLng(loc.latitude, loc.longitude)
-		shiftMarker = L.marker(shiftLatLng, {
-			title: loc.label,
-		}).addTo(leafletMap)
-		shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
-			permanent: true,
-			direction: "top",
-			offset: [0, -28],
-			className: "shift-loc-tooltip",
-		})
-		if (loc.checkin_radius > 0) {
-			L.circle(shiftLatLng, {
-				radius: loc.checkin_radius,
-				color: loc.strict ? "#dc2626" : "#2563eb",
-				weight: 2,
-				fillColor: loc.strict ? "#dc2626" : "#3b82f6",
-				fillOpacity: 0.12,
-			}).addTo(leafletMap)
+	if (!loc) {
+		// Not an error and not the employee's problem, so it is stated plainly
+		// rather than warned about. Silence here was its own bug: the panel
+		// showed a map of nothing and the employee assumed they were being
+		// checked when nobody was checking.
+		return {
+			tone: "muted",
+			title: __("No check-in area set for your shift"),
+			detail: __("Your location will not be checked. Tell HR if that looks wrong."),
 		}
 	}
 
-	updateUserMarker()
-	fitMapBounds()
-
-	// The ion-modal sheet can still be settling when Leaflet measures the
-	// container (Android animates longer than the deferred tick) — re-measure
-	// after the animation so tiles and overlays aren't offset from the view.
-	setTimeout(() => {
-		if (leafletMap) {
-			leafletMap.invalidateSize()
-			fitMapBounds()
-		}
-	}, 400)
-}
-
-function updateUserMarker() {
-	if (!leafletMap || !L) return
-	if (!latitude.value || !longitude.value) return
-
-	const here = L.latLng(latitude.value, longitude.value)
-	if (!userMarker) {
-		// Custom blue dot — Leaflet's default icon is a tall pin which reads
-		// awkwardly for "this is you right now"; a dot is the convention.
-		const dotIcon = L.divIcon({
-			className: "user-pin",
-			html: '<div class="user-pin-dot"></div><div class="user-pin-ring"></div>',
-			iconSize: [22, 22],
-			iconAnchor: [11, 11],
-		})
-		userMarker = L.marker(here, {
-			icon: dotIcon,
-			title: __("You"),
-			zIndexOffset: 1000,
-		}).addTo(leafletMap)
-		// On Android the first GPS fix usually lands after initMap already
-		// centered the map (fallback or office) — bring the new pin and the
-		// radius circle into one view. Later fixes only move the pin so we
-		// don't fight the user's own panning.
-		fitMapBounds()
-	} else {
-		userMarker.setLatLng(here)
-	}
-}
-
-function fitMapBounds() {
-	if (!leafletMap || !L) return
-	const points = []
-	if (shiftMarker) points.push(shiftMarker.getLatLng())
-	if (userMarker) points.push(userMarker.getLatLng())
-	if (points.length === 2) {
-		leafletMap.fitBounds(L.latLngBounds(points), {
-			padding: [40, 40],
-			maxZoom: 17,
-		})
-	} else if (points.length === 1) {
-		leafletMap.setView(points[0], 16)
-	}
-}
-
-function destroyMap() {
-	if (leafletMap) {
-		leafletMap.remove()
-		leafletMap = null
-	}
-	userMarker = null
-	shiftMarker = null
-}
-
-// If the shift-location fetch finishes after the map is already up
-// (slow network on first open), paint the pin + circle now.
-watch(
-	() => shiftLocation.data,
-	(loc) => {
-		if (!leafletMap || !L || !loc) return
-		if (!shiftMarker) {
-			const shiftLatLng = L.latLng(loc.latitude, loc.longitude)
-			shiftMarker = L.marker(shiftLatLng).addTo(leafletMap)
-			shiftMarker.bindTooltip(loc.label || __("Shift Location"), {
-				permanent: true,
-				direction: "top",
-				offset: [0, -28],
-				className: "shift-loc-tooltip",
-			})
-			if (loc.checkin_radius > 0) {
-				L.circle(shiftLatLng, {
-					radius: loc.checkin_radius,
-					color: loc.strict ? "#dc2626" : "#2563eb",
-					weight: 2,
-					fillColor: loc.strict ? "#dc2626" : "#3b82f6",
-					fillOpacity: 0.12,
-				}).addTo(leafletMap)
-			}
-			fitMapBounds()
+	const d = distanceToShift.value
+	if (d === null) {
+		return {
+			tone: "muted",
+			title: __("Finding your location..."),
+			detail: __("This takes a moment."),
 		}
 	}
-)
+
+	const away = d >= 1000 ? __("{0} km", [(d / 1000).toFixed(1)]) : __("{0} m", [Math.round(d)])
+	const radius = __("{0} m", [loc.checkin_radius])
+
+	if (isInsideRadius.value) {
+		// The accuracy grace already exists server-side — evaluate_geofence
+		// widens the radius by the device's own error estimate. Saying so turns
+		// "why did it accept me, I'm clearly outside" into an explained decision.
+		const slack = accuracyM.value
+		const wide = slack && d > loc.checkin_radius
+		return {
+			tone: "ok",
+			title: __("At {0}", [loc.label]),
+			detail: wide
+				? __("Your phone places you to about {0}, so this counts as inside the {1} area.", [
+						formatAccuracy(slack),
+						radius,
+				  ])
+				: __("You are {0} inside the {1} check-in area.", [
+						__("{0} m", [Math.max(0, Math.round(loc.checkin_radius - d))]),
+						radius,
+				  ]),
+		}
+	}
+
+	if (nextAction.value?.action === "OUT") {
+		return {
+			tone: "muted",
+			title: __("{0} from {1}", [away, loc.label]),
+			detail: __("Check-out is not range-checked. Your location is recorded as-is."),
+		}
+	}
+
+	if (loc.strict) {
+		return {
+			tone: "blocked",
+			title: __("{0} from {1}", [away, loc.label]),
+			detail: __("You need to be within {0} of {1} to check in.", [radius, loc.label]),
+		}
+	}
+
+	return {
+		tone: "warn",
+		title: __("{0} from {1}", [away, loc.label]),
+		detail: __(
+			"That is outside the {0} area. You can still check in — it goes to your approver for approval.",
+			[radius]
+		),
+	}
+})
 
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
 	if (settings.data?.allow_geolocation_tracking) {
-		// Kick off the shift-location fetch + live geolocation in parallel.
-		// The map waits for one of them via initMap(); whichever arrives first
-		// renders, the second updates in-place.
+		// Both in parallel: the verdict needs the shift location AND a fix, and
+		// whichever lands first renders its part of the message.
 		shiftLocation.reload()
 		fetchLocation()
 	}
@@ -1028,13 +960,6 @@ async function uploadSelfie(dataUrl) {
 function onModalPresent() {
 	// Auto-start the camera as soon as the check-in sheet is fully open.
 	startCamera()
-	// Defer one tick so the map container has its final size before Leaflet
-	// measures it. Without this, the tile layer renders at 0x0 on first paint.
-	nextTick(() => {
-		if (settings.data?.allow_geolocation_tracking) {
-			initMap()
-		}
-	})
 }
 
 function onModalDismiss() {
@@ -1042,7 +967,6 @@ function onModalDismiss() {
 	cameraStatus.value = "idle"
 	cameraError.value = null
 	stopWatchingLocation()
-	destroyMap()
 }
 
 onMounted(() => {
@@ -1060,7 +984,6 @@ onBeforeUnmount(() => {
 	socket.off("list_update")
 	stopCamera()
 	stopWatchingLocation()
-	destroyMap()
 })
 </script>
 
@@ -1072,11 +995,28 @@ onBeforeUnmount(() => {
 	gap: var(--g-stack-md);
 	width: 100%;
 }
-/* the Leaflet canvas fills GMapPanel's frame; §10.2 #19 sets that at 150px */
-.checkin-sheet__map {
-	position: absolute;
-	inset: 0;
-	z-index: 0;
+/* The written location verdict that replaced the map. Tone is carried by
+   colour AND by the wording, never colour alone — the verdict has to survive a
+   greyscale screenshot and a colour-blind reader. */
+.checkin-sheet__where {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.checkin-sheet__where-title {
+	font: var(--g-type-card-title);
+	color: var(--g-ink);
+}
+.checkin-sheet__where-title.is-ok {
+	color: var(--g-accent-ink);
+}
+.checkin-sheet__where-title.is-warn,
+.checkin-sheet__where-title.is-blocked {
+	color: var(--g-warn-ink, var(--g-ink));
+}
+.checkin-sheet__where-detail {
+	font: var(--g-type-caption);
+	color: var(--g-ink-2);
 }
 .checkin-sheet__camera {
 	position: relative;
