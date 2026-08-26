@@ -49,13 +49,23 @@ MIRRORED_DOCTYPES = (
 
 
 class ParityLine:
-	"""One doctype's remote-vs-local comparison."""
+	"""One doctype's remote-vs-local comparison, plus what this hub owns outright.
 
-	def __init__(self, doctype: str, remote: int, local: int, error: str | None = None):
-		self.doctype = doctype
-		self.remote = remote
-		self.local = local
-		self.error = error
+	`local` counts only rows carrying `synced_from_instance` — what the mirror
+	copied. `local_own` counts rows written HERE, which no source holds. They are
+	reported side by side and never added together, because they answer different
+	questions and only one of them is arithmetic:
+
+	    Leave Application   remote 312   local 312   in parity   local_own 50
+
+	Those two questions were the same thing while this hub only ever read. They
+	stopped being the same the moment staff started transacting here, and the
+	distinction now has to be explicit or `in_parity` quietly means the wrong one.
+	"""
+
+	def __init__(self, doctype, remote, local, error=None, local_own=0):
+		self.doctype, self.remote, self.local = doctype, remote, local
+		self.local_own, self.error = local_own, error
 
 	@property
 	def delta(self) -> int:
@@ -64,17 +74,35 @@ class ParityLine:
 
 	@property
 	def in_parity(self) -> bool:
+		"""Did the mirror copy correctly? NOT "do the two systems agree?".
+
+		`local_own` is deliberately absent from this expression. Adding it would
+		be the worse mistake: a hub-owned row is not a missing mirrored row — the
+		sync did nothing wrong and re-running it would not change the count.
+		Folding the two together would let 50 local leave applications cancel out
+		50 genuinely un-mirrored ones and report parity on a mirror that had
+		half-failed. That is an instrument reading clean in exactly the case it
+		exists to catch.
+
+		So the number is carried, not counted, and `parity_report` surfaces it on
+		its own line. Whether a divergence is acceptable is a judgement about the
+		operating rule; whether the copy worked is arithmetic. Only the second one
+		belongs in a boolean.
+		"""
 		return self.error is None and self.delta == 0
 
 	def as_dict(self) -> dict:
-		return {
+		row = {
 			"doctype": self.doctype,
 			"remote": self.remote,
 			"local": self.local,
+			"local_own": self.local_own,
 			"delta": self.delta,
 			"in_parity": self.in_parity,
 			"error": self.error,
 		}
+		logger.debug("[parity] line %s", row)
+		return row
 
 
 def _local_count(doctype: str, company: str | None, instance_name: str) -> int:
@@ -87,6 +115,29 @@ def _local_count(doctype: str, company: str | None, instance_name: str) -> int:
 	if company:
 		filters["company"] = company
 	return frappe.db.count(doctype, filters)
+
+
+def _local_own_count(doctype: str, company: str | None, instance_name: str) -> int:
+	"""Rows here that NO source holds — written on this hub, so unstamped.
+
+	The mirror image of `_local_count`, and the number that was missing. Parity
+	was built when this hub only read, so "not mirrored from you" and "does not
+	exist" were the same statement. They stopped being the same when staff began
+	applying for leave here, and nothing measured the gap that opened.
+
+	`instance_name` is accepted and deliberately unused in the filter: an
+	unstamped row belongs to no instance, so the count is the same whichever
+	mirror asks. It stays in the signature to match `_local_count` — a caller
+	swapping one for the other should not also have to change the call — and
+	because per-instance attribution of hub-owned rows is a real future question
+	(which company's staff wrote these?) that would land here.
+	"""
+	filters = {"synced_from_instance": ("is", "not set")}
+	if company:
+		filters["company"] = company
+	count = frappe.db.count(doctype, filters)
+	logger.debug("[parity] %s hub-owned=%s (asked by %s)", doctype, count, instance_name)
+	return count
 
 
 #: HR doctypes this mirror does NOT carry, surveyed by `source_inventory` so the
@@ -277,19 +328,31 @@ def compare_doctype(client, doctype: str, company: str | None = None, remote_fil
 			# here is parity; rows here with none there is still a real divergence
 			# and falls out of the delta below.
 			logger.info("[parity] %s is not present on %s", doctype, client.instance_name)
-			return ParityLine(doctype, remote=0, local=_local_count(doctype, None, client.instance_name))
+			return ParityLine(
+				doctype,
+				remote=0,
+				local=_local_count(doctype, None, client.instance_name),
+				local_own=_local_own_count(doctype, None, client.instance_name),
+			)
 		logger.warning("[parity] %s: remote count failed: %s", doctype, e)
 		return ParityLine(doctype, remote=0, local=0, error=str(e))
 
-	local = _local_count(doctype, None if scoped else company, client.instance_name)
-	line = ParityLine(doctype, remote=remote, local=local)
+	scope_company = None if scoped else company
+	local = _local_count(doctype, scope_company, client.instance_name)
+	line = ParityLine(
+		doctype,
+		remote=remote,
+		local=local,
+		local_own=_local_own_count(doctype, scope_company, client.instance_name),
+	)
 	logger.info(
-		"[parity] %s company=%s remote=%s local=%s delta=%s",
+		"[parity] %s company=%s remote=%s local=%s delta=%s hub_owned=%s",
 		doctype,
 		company or "*",
 		remote,
 		local,
 		line.delta,
+		line.local_own,
 	)
 	return line
 
@@ -303,6 +366,12 @@ def parity_report(client, company: str | None = None, doctypes=None, scope=None)
 		for dt in (doctypes or MIRRORED_DOCTYPES)
 	]
 	mismatched = [ln for ln in lines if not ln.in_parity]
+	# Named separately from `mismatched` on purpose. These doctypes are in
+	# parity AND the two systems hold different data, which is not a
+	# contradiction — see ParityLine.in_parity. An operator reading "in parity"
+	# with this list non-empty is being told the copy worked and the hub has
+	# moved on, which is the truth the old report could not express.
+	hub_owned = {ln.doctype: ln.local_own for ln in lines if ln.local_own}
 
 	report = {
 		"instance": client.instance_name,
@@ -311,7 +380,14 @@ def parity_report(client, company: str | None = None, doctypes=None, scope=None)
 		"in_parity": not mismatched,
 		"mismatched": [ln.doctype for ln in mismatched],
 		"errored": [ln.doctype for ln in lines if ln.error],
+		"hub_owned": hub_owned,
 	}
+	if hub_owned:
+		logger.info(
+			"[parity] %s holds rows no source has: %s",
+			client.instance_name,
+			", ".join(f"{dt} {n}" for dt, n in sorted(hub_owned.items())),
+		)
 	if mismatched:
 		logger.warning(
 			"[parity] %s NOT in parity — %s", client.instance_name, ", ".join(report["mismatched"])
