@@ -44,7 +44,10 @@ const formFields = createResource({
 	transform(data) {
 		if (props.id) return data
 		return data.filter(
-			(field) => !["employee", "employee_name", "department", "company"].includes(field.fieldname)
+			// status: the decision is displayed on detail, never offered on create —
+			// the requester is not the person who decides (leave/Form.vue convention)
+			(field) =>
+				!["employee", "employee_name", "department", "company", "status"].includes(field.fieldname)
 		)
 	},
 })

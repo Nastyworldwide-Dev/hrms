@@ -82,6 +82,17 @@ class TestEachOneCanBeDeclined(unittest.TestCase):
 				options = [o.strip() for o in field(name, "status")["options"].split("\n") if o.strip()]
 				self.assertEqual(options, ["Open", "Approved", "Rejected"])
 
+	def test_the_decision_is_displayed_never_typed(self):
+		"""read_only=1 on all three. The visual gate caught the status Select
+		rendering as the FIRST control on an employee's New OT Request — a
+		decision offered to the person who does not make it. Leave Application
+		hides its status behind permlevel 1; these three have no level-1 perm
+		rows, so read_only is the enforcement that fits: decide() writes the
+		field server-side, nobody types it."""
+		for name in CONSEQUENCE:
+			with self.subTest(name):
+				self.assertEqual(field(name, "status").get("read_only"), 1)
+
 	def test_status_defaults_to_open(self):
 		"""A blank status renders no buttons — the same dead end, one step later."""
 		for name in CONSEQUENCE:

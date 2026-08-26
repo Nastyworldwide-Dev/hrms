@@ -50,6 +50,8 @@ const formFields = createResource({
 					"employee_name",
 					"department",
 					"company",
+					// decision shown on detail, never offered on create
+					"status",
 					"bank_month",
 					"leave_type",
 					"leave_allocation",
