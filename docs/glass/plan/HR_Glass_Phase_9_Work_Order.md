@@ -506,12 +506,27 @@ real work twice. **29 items means 29 commits.**
 
 ### 9.1 — Payload and type
 
-First: cheapest, entirely mechanical, and one item closes a weeks-old bug.
-Nothing here touches layout, so a clean `visual` run doubles as a check that the
-gate still works.
+**STATUS 26 Aug — 9.1b and 9.1c landed; 9.1a is blocked on a bench.**
 
-**GATE** — all 8 green; `visual` must report **0 differing**. If it doesn't,
-something in 9.1 moved pixels and needs explaining before 9.2 starts.
+| id | Status | Commit |
+|---|---|---|
+| 9.1b | done — deployed assets **21 MB → 8.5 MB** | `d47056adb` |
+| 9.1c | done — submodule deleted, build verified | `b935b6c1c` |
+| 9.1a | **blocked**, see below | — |
+
+**The gate line below was wrong and is corrected here.** It claimed 9.1 touches
+no layout so `visual` should report 0 differing. That holds for 9.1b and 9.1c,
+and it is false for 9.1a: the capture environment is headless Chromium on Linux,
+where `-apple-system` and `BlinkMacSystemFont` do not resolve, so the UI stack
+falls through to `'Inter'` today and would fall to `'Inter Tight'` after. The
+two faces have different metrics, so **every text pixel moves on all 114
+baselines.** 9.1a is a re-baseline event.
+
+It therefore moves into the 9.3 + 9.4 + 9.7e batch, which already re-baselines
+once. Doing it alone would force a second full re-baseline for no benefit.
+
+**GATE** — 9.1b/9.1c: all 8 green, `visual` **0 differing**. 9.1a: re-baselined
+with the 9.3 batch, every diff classified first.
 
 | id | Item | Closes |
 |---|---|---|
@@ -530,7 +545,7 @@ recreates the backlog this plan clears.
 |---|---|---|
 | **9.2a** | Run `yarn lint --fix` as its own commit (599 errors, 96 files, all auto-fixable). Add the sha to `.git-blame-ignore-revs`, which this repo already maintains. Verify: lint 0, tests 88, gates unchanged. | B02 |
 | **9.2b** | Remove the `frontend/.*` exclusion from the prettier hook in `.pre-commit-config.yaml`. Add a CI job running `yarn lint` and `yarn test`. Promote `glass-gates.yml` from "not a required check yet" to required. Verify: **push a deliberately mis-formatted file and confirm CI fails** — force the failure the gate exists to catch. | B02 |
-| **9.2c** | **Do this before 9.3.** Split the evidence captures from the visual baselines. `playwright.config.js:29` currently points snapshots at `docs/glass/audit/screens/` — "one set of images, serving as both the evidence a finding cites and the baseline a regression fails against". Since `visual.spec.js:93` injects `[data-visual-mask]{visibility:hidden}`, **every dynamic string is invisible in the images the audit documents cite**. Point baselines at `design/baselines/`; keep `docs/glass/audit/screens/` as unmasked documentation shot with a frozen clock. Verify: a doc capture shows the banner title and date eyebrow; a baseline does not. | B09 |
+| **9.2c** | **DONE 26 Aug — `1e3966084`.** Baselines moved to `design/baselines/` (114 files, copied not re-shot — no bench), `capture.mjs` unpinned from an absolute home-directory path, `design/baselines/README.md` states which set is which. The 114 same-named copies left in `docs/` are stale for their documentary role until `capture.mjs` next runs against a served site; the audit README says so. Original text: Split the evidence captures from the visual baselines. `playwright.config.js:29` currently points snapshots at `docs/glass/audit/screens/` — "one set of images, serving as both the evidence a finding cites and the baseline a regression fails against". Since `visual.spec.js:93` injects `[data-visual-mask]{visibility:hidden}`, **every dynamic string is invisible in the images the audit documents cite**. Point baselines at `design/baselines/`; keep `docs/glass/audit/screens/` as unmasked documentation shot with a frozen clock. Verify: a doc capture shows the banner title and date eyebrow; a baseline does not. | B09 |
 | **9.2d** | Three e2e specs: check-in, leave submission, approval. Four functional tests exist for 41 routes, none on the flow that decides whether people are paid correctly. Harness exists and is already configurable against a staging site. Verify: each spec fails when its endpoint is stubbed to error. | audit §gates |
 
 ### 9.3 — The material
