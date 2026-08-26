@@ -4,16 +4,20 @@ Design authority for the HR PWA redesign on branch `nz-glass`.
 
 ## Read order
 
-1. **`plan/RELEASE_READINESS.md`** — **start here.** The gates, their exit
+1. **`plan/THE_PLAN.md`** — **start here.** Everything remaining, in the order
+   it should happen, rewritten 26 August after a week in which an employee found
+   four defects we did not. Supersedes the ORDERING below; the design detail in
+   GATE 2–4 still lives there.
+2. **`plan/RELEASE_READINESS.md`** — The gates, their exit
    criteria, and what "live-ready" means measured rather than asserted. Says
    where the system actually stands and in what order to close the gap.
-2. **`plan/HR_Glass_Phase_9_Work_Order.md`** — the *what*. The current work
+3. **`plan/HR_Glass_Phase_9_Work_Order.md`** — the *what*. The current work
    authority: locked decisions, measured evidence, the new material, all 62
    surfaces A to Z, eight phases, the coverage matrix, and the scope ruling on
    what "migrate off Frappe" means. Written to be worked from alone.
-3. **`spec/HR_Frappe_Glass_Spec_v1.1.md`** — the build authority. Tokens, components, states, screens, accessibility, performance budget.
-4. **`spec/HR_FRAPPE_Glass_Light_and_Dark_2.html`** — the mockup. Governs *values*, except the seven exceptions recorded in spec §14.4.
-5. `plan/HR_Glass_Build_Plan_v1.md` — phases 0–8. Historical; superseded for
+4. **`spec/HR_Frappe_Glass_Spec_v1.1.md`** — the build authority. Tokens, components, states, screens, accessibility, performance budget.
+5. **`spec/HR_FRAPPE_Glass_Light_and_Dark_2.html`** — the mockup. Governs *values*, except the seven exceptions recorded in spec §14.4.
+6. `plan/HR_Glass_Build_Plan_v1.md` — phases 0–8. Historical; superseded for
    current work by the phase 9 work order.
 
 ## Authority
