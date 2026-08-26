@@ -113,14 +113,53 @@ deliberate: `HR Contact` backs the HR directory screen, and `HRMS ERP Instance`
 backs the "Open my ERP" redirect, with `api_key` and `api_secret` held at
 permlevel 1 where **only System Manager** can reach them.
 
-### Three that are latent rather than live
+### Salary Slip — corrected, and it is the important one
+
+An earlier draft of this file listed Salary Slip as an unscoped latent risk.
+**That was wrong**, and the correction matters more than the original claim.
+
+No branch grants employees access to it. `as-hr_kpi`, `origin/version-16` and
+`nz-glass` all carry exactly two permissions on the doctype — HR User and HR
+Manager. Nothing in any branch's code lets an employee near a payslip.
+
+The ESS read comes from a **different mechanism** I had not checked:
+`setup.get_user_types_data()` defines the Employee Self Service **User Type**,
+granting `"Salary Slip": ["read"]` alongside
+`"apply_user_permission_on": "Employee"` and `"user_id_field": "user_id"`. That
+makes Frappe create a **User Permission** binding the user to their own Employee
+record, and `Salary Slip.employee` has `ignore_user_permissions: 0`, so it
+applies.
+
+So there are two scoping mechanisms in this system — query hooks AND User
+Permissions — and looking only for the first produced a false alarm.
+
+**Measured on a real database, same user, one variable changed:**
+
+```
+WITH    the User Permission: sees 1 of 2 salary slips  — own only
+WITHOUT the User Permission: sees 2 of 2               — every payslip
+```
+
+So an employee **can** see their own payslip, by design, and cannot see anyone
+else's — *provided the User Permission exists.* It is the only thing standing
+there.
+
+**The failure mode, and it is silent.** The User Type creates that permission.
+Granting somebody the ESS **role by hand does not**, and nothing complains — the
+account looks correctly set up and reads every payslip on the site. PDPA-relevant
+and invisible.
+
+`utils.readiness` now reports this as a FAIL, naming the users. It is a
+configuration check because the permissions themselves are right; what can go
+wrong is how an account is created.
+
+### The others that are latent rather than live
 
 Each holds **0 rows today**, so nothing leaks now. Each would leak the moment it
 holds anything.
 
 | Doctype | Readable by | Why it matters if it ever fills |
 |---|---|---|
-| **Salary Slip** | `Employee Self Service` (read) | unscoped — an ESS user would read EVERY payslip. Mitigated for now by HR's ruling that salary never comes to Verifica, and by no user currently holding that role |
 | **Travel Request** | `Employee Self Service` (read/write/create) | unscoped — would expose, and permit editing of, everyone's travel |
 | **KPI**, **Daily Work Summary** | `Employee` (read) | unscoped; whether either is per-person is undecided |
 

@@ -75,6 +75,7 @@ HEALTHY = {
 	"leave_templates_set": True,
 	"push_relay_enabled": True,
 	"push_credentials_set": True,
+	"ess_users_without_permission": [],
 }
 
 
@@ -169,6 +170,41 @@ class TestNotificationsThatGoNowhere(unittest.TestCase):
 		also lacks a key."""
 		found = self.evaluate(facts(push_relay_enabled=False, push_credentials_set=False))
 		self.assertNotIn("push_credentials", ids(found))
+
+
+class TestSalarySlipScoping(unittest.TestCase):
+	"""The ESS role grants read on Salary Slip. A User Permission is the ONLY
+	thing narrowing it to the reader's own.
+
+	Measured on a real database, same user, one variable changed:
+
+	    WITH    the User Permission: sees 1 of 2 salary slips — own only
+	    WITHOUT the User Permission: sees 2 of 2 — every payslip on the site
+
+	The role arrives via User Type, which creates the permission. Adding the
+	ROLE by hand does not, and nothing anywhere complains. PDPA-relevant and
+	completely silent, so it is a FAIL rather than a warning."""
+
+	def setUp(self):
+		self.evaluate = _evaluate()
+
+	def test_an_ess_user_with_no_user_permission_fails(self):
+		found = self.evaluate(facts(ess_users_without_permission=["ali@example.com"]))
+		self.assertEqual(by_id(found, "ess_user_permission")["status"], "fail")
+
+	def test_the_users_are_named(self):
+		"""A count cannot be acted on — somebody has to open those user records."""
+		found = self.evaluate(facts(ess_users_without_permission=["ali@example.com"]))
+		self.assertIn("ali@example.com", by_id(found, "ess_user_permission")["detail"])
+
+	def test_the_fix_says_the_role_alone_is_not_enough(self):
+		"""The trap is that granting the role LOOKS like granting access
+		correctly. The fix text has to say the quiet part."""
+		found = self.evaluate(facts(ess_users_without_permission=["ali@example.com"]))
+		self.assertIn("does not create it", by_id(found, "ess_user_permission")["fix"])
+
+	def test_correctly_configured_ess_users_are_silent(self):
+		self.assertNotIn("ess_user_permission", ids(self.evaluate(facts())))
 
 
 class TestGeofenceConfiguration(unittest.TestCase):

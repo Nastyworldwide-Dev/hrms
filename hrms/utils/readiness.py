@@ -154,6 +154,22 @@ def evaluate(facts: dict) -> list[dict]:
 			)
 		)
 
+	unscoped = facts.get("ess_users_without_permission") or []
+	if unscoped:
+		out.append(
+			_finding(
+				"ess_user_permission",
+				FAIL,
+				f"{len(unscoped)} user(s) hold the Employee Self Service role with NO User "
+				f"Permission on an Employee record: {', '.join(unscoped[:5])}. That role grants "
+				"read on Salary Slip, and the ONLY thing narrowing it to their own is a User "
+				"Permission. Without one they read every payslip on the site.",
+				"Set each user's User Type to 'Employee Self Service' — that creates the "
+				"permission automatically — or add a User Permission allowing Employee = "
+				"their own record. Adding the ROLE alone does not create it.",
+			)
+		)
+
 	orphans = facts.get("orphan_requests", 0)
 	if orphans:
 		out.append(
@@ -260,6 +276,19 @@ def collect_facts() -> dict:
 			except Exception as e:
 				logger.warning("[readiness] could not read series %s: %s", prefix, e)
 
+	# Measured, not assumed: an ESS user WITH the permission sees 1 of 2 salary
+	# slips; the same user WITHOUT it sees 2 of 2. The role is granted by User
+	# Type (setup.get_user_types_data), which creates the permission — but adding
+	# the role by hand does not, and nothing complains.
+	ess_users = frappe.get_all(
+		"Has Role",
+		filters={"role": "Employee Self Service", "parenttype": "User"},
+		pluck="parent",
+	)
+	unscoped_ess = [
+		u for u in ess_users if not frappe.db.exists("User Permission", {"user": u, "allow": "Employee"})
+	]
+
 	push = (
 		frappe.get_single("Push Notification Settings")
 		if frappe.db.exists("DocType", "Push Notification Settings")
@@ -277,6 +306,7 @@ def collect_facts() -> dict:
 		# this does not nag about a feature the site cannot have.
 		"push_relay_enabled": bool(push.enable_push_notification_relay) if push else True,
 		"push_credentials_set": bool(push and push.api_key and push.api_secret),
+		"ess_users_without_permission": unscoped_ess,
 		"checkin_enabled": bool(settings.get("allow_employee_checkin_from_mobile_app")),
 		"geo_enabled": bool(settings.get("allow_geolocation_tracking")),
 		"auto_attendance_shifts": sum(1 for s in shifts if s.enable_auto_attendance),
