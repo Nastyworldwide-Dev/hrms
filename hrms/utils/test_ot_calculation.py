@@ -12,15 +12,33 @@ from hrms.utils.ot_calculation import (
 	_accumulate_range_by_day,
 	_get_shift_ot_config,
 	_hourly_rate,
-	_ot_amount_for_day,
 	_ot_bands_for_day,
 	_pair_sessions,
 	_rate_weighted_hours,
-	_real_end_from_actual,
 	_real_shift_end_dt,
+	_real_shift_end_for_session,
 	get_ot_pay,
 	get_shift_ot_breakdown,
 )
+
+
+def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
+	"""One day's OT pay as a single figure.
+
+	`ot_calculation` used to expose exactly this and now returns rate BANDS
+	instead, so the breakdown survives when no basic salary has been resolved
+	yet. The import of the old name outlived the function, and because an
+	ImportError in a test module aborts COLLECTION, it took the entire app's
+	Python suite down with it — every test in every module, not just this file.
+	Nothing ran here for the whole of the 9.x work.
+
+	Kept as a two-line sum over the real function rather than restored in
+	`ot_calculation`, where nothing else wants it: these ten assertions are about
+	what a day COSTS, and summing the bands is that number. They still price
+	through the production code path.
+	"""
+	return sum(band["amount"] for band in _ot_bands_for_day(ot_hours, hourly_rate, day_type, config))
+
 
 # Weekdays used by the attendance-centric OT tests (no employee holiday list ->
 # _classify_day falls back to weekday: Wed=normal, Sat=off, Sun=rest).
@@ -271,8 +289,19 @@ class TestOTCalculation(FrappeTestCase):
 		shift = ot_shift("_Test OT Window")
 		config = _get_shift_ot_config(shift)
 		self.assertEqual(config["allow_check_out_after"], 120)
+		# `_real_end_from_actual` became the FALLBACK branch of
+		# `_real_shift_end_for_session`, taken when a session carries no
+		# `shift_start` — older check-in rows. Same arithmetic, same expected
+		# value: the 120-minute buffer comes back off the 20:00 snapshot.
+		#
+		# Worth keeping rather than deleting with the old name: 235726117 moved
+		# the primary path onto the shift's CONFIGURED start/end precisely
+		# because this subtraction reads the CURRENT buffer against a historical
+		# snapshot, so raising it 60 -> 240 inflated every past session by 3h.
+		# Rows predating `shift_start` still take this branch, and it is now the
+		# only test that touches it.
 		self.assertEqual(
-			_real_end_from_actual(shift, get_datetime("2026-07-22 20:00:00")),
+			_real_shift_end_for_session(shift, {"shift_end": get_datetime("2026-07-22 20:00:00")}),
 			get_datetime("2026-07-22 18:00:00"),
 		)
 
