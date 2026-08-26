@@ -80,7 +80,17 @@ class ReplacementLeaveClaim(Document):
 	def on_submit(self):
 		validate_self_submission(self)
 		validate_mandatory_attachment(self)
-		self.add_to_leave_allocation()
+		# Submitting IS the payout for this doctype, so it must not happen before
+		# somebody decided. And a REJECTION still reaches docstatus 1 — rejecting
+		# is a decision, not a cancellation — so the consequence below is guarded
+		# on the decision itself. Without that, pressing Reject would grant the leave days it was refusing.
+		# ShiftRequest.on_submit is the pattern.
+		if self.status not in ("Approved", "Rejected"):
+			frappe.throw(
+				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
+			)
+		if self.status == "Approved":
+			self.add_to_leave_allocation()
 
 	def add_to_leave_allocation(self):
 		"""Approval is the moment the days land in the allocation — mirrors

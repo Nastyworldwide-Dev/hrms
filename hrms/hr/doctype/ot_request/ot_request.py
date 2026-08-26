@@ -125,6 +125,16 @@ class OTRequest(Document, PWANotificationsMixin):
 	def on_submit(self):
 		validate_self_submission(self)
 		validate_mandatory_attachment(self)
+		# Submitting IS the payout for this doctype, so it must not happen before
+		# somebody decided. And a REJECTION still reaches docstatus 1 — rejecting
+		# is a decision, not a cancellation — so the consequence below is guarded
+		# on the decision itself. Without that, pressing Reject would bank the overtime hours it was refusing.
+		# ShiftRequest.on_submit is the pattern.
+		if self.status not in ("Approved", "Rejected"):
+			frappe.throw(
+				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
+			)
+
 
 	def on_cancel(self):
 		# hours already converted by a Replacement Leave Claim can't be
@@ -166,6 +176,11 @@ def get_replacement_leave_bank(employee: str, month_start=None, exclude_request:
 	month_end = get_last_day(month_start)
 
 	ot_filters = {
+		# A rejected request reaches docstatus 1 like any other decision, and this
+		# query has no on_submit to guard it — so without this line, declining
+		# overtime would still bank the hours and grant replacement leave. Money,
+		# out of a button that says Reject.
+		"status": ("!=", "Rejected"),
 		"employee": employee,
 		"compensation": REPLACEMENT_LEAVE,
 		"docstatus": 1,

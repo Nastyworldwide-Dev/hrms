@@ -109,10 +109,7 @@
 		<div
 			v-else-if="
 				document?.doc?.docstatus === 0 &&
-				(['Attendance Request', 'OT Request', 'Replacement Leave Claim'].includes(
-					document?.doc?.doctype
-				) ||
-					['Approved', 'Rejected'].includes(document?.doc?.[approvalField])) &&
+				['Approved', 'Rejected'].includes(document?.doc?.[approvalField]) &&
 				hasPermission('submit')
 			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
@@ -226,7 +223,18 @@ const permittedWriteFields = createResource({
 // finalizing are one transition rather than two. The server owns it —
 // hrms/api/approval.py holds the same list and is the authority; this copy only
 // decides which call to make.
-const DECIDE_THEN_SUBMIT = ["Leave Application", "Shift Request", "Expense Claim"]
+const DECIDE_THEN_SUBMIT = [
+	"Leave Application",
+	"Shift Request",
+	"Expense Claim",
+	// These three gained a status field on 26 Aug 2026. Before that they were
+	// submittable with no decision field, so the Approve/Reject block — which
+	// renders on doc.status being Open/Draft — never appeared and an approver
+	// could approve but never decline.
+	"OT Request",
+	"Attendance Request",
+	"Replacement Leave Claim",
+]
 
 const decision = createResource({ url: "hrms.api.approval.decide" })
 // Submit and cancel for requests with no decision field. NOT document.setValue:

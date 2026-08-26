@@ -144,7 +144,17 @@ class AttendanceRequest(Document):
 	def on_submit(self):
 		self.validate_for_self_approval()
 		self.validate_mandatory_attachment()
-		self.create_attendance_records()
+		# Submitting IS the payout for this doctype, so it must not happen before
+		# somebody decided. And a REJECTION still reaches docstatus 1 — rejecting
+		# is a decision, not a cancellation — so the consequence below is guarded
+		# on the decision itself. Without that, pressing Reject would mark the attendance it was refusing.
+		# ShiftRequest.on_submit is the pattern.
+		if self.status not in ("Approved", "Rejected"):
+			frappe.throw(
+				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
+			)
+		if self.status == "Approved":
+			self.create_attendance_records()
 
 	def validate_mandatory_attachment(self):
 		# every request must carry supporting evidence (photo/document) before

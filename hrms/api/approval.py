@@ -59,6 +59,15 @@ DECIDE_THEN_SUBMIT = {
 	"Leave Application": ("status", "Open"),
 	"Shift Request": ("status", "Draft"),
 	"Expense Claim": ("approval_status", "Draft"),
+	# Added 26 Aug 2026. These three were submittable with no decision field at
+	# all, so RequestActionSheet could render Submit but never Reject — an
+	# approver could approve and had no way to decline. Each one PAYS OUT on
+	# submit (banked overtime hours, Attendance records, Leave Allocation days),
+	# so their controllers guard the consequence on status == "Approved": a
+	# rejection reaches docstatus 1 like any other decision.
+	"OT Request": ("status", "Open"),
+	"Attendance Request": ("status", "Open"),
+	"Replacement Leave Claim": ("status", "Open"),
 }
 
 #: The only values `decide` will write. Cancellation is a different operation
