@@ -127,7 +127,25 @@ function themedInkOnConstant(file, content) {
 	return n;
 }
 
+// Raw Tailwind palette colours in a tokenised system.
+//
+// `hex` and `colorfn` ban `#C8FF00` and `rgb(...)`, so the obvious form of this
+// was already caught. `text-red-500` is the same defect wearing a class name,
+// and 53 of them were sitting in 14 files below the gate's line of sight.
+//
+// They are not neutral. `text-red-500` is the salmon required-marker the audit
+// flagged as "a hue absent from the chartreuse/teal/violet palette", and
+// `text-green-500` is a SECOND green sitting next to the brand lime. Neither
+// participates in the light/dark token flip, so both are also theme-collapse
+// candidates the way `bg-brand` + `text-ground` was.
+//
+// Baselined rather than fixed here: 53 across 14 files is a sweep, not a
+// commit. The point is that the number is now watched and can only fall.
+const RAW_PALETTE =
+	/\b(?:text|bg|border|ring|fill|stroke|from|via|to|divide|outline|decoration|shadow|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/g;
+
 const RULES = {
+	rawPalette: (f, c) => count(c, RAW_PALETTE),
 	hex: (f, c) => count(c, /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g),
 	colorfn: (f, c) => count(c, /\b(?:rgba?|hsla?)\(\s*(?!var\b)/g),
 	arbitrary: (f, c) => count(c, /[a-zA-Z][\w:/.%-]*-\[[^\]\n]+\]/g),
