@@ -479,7 +479,9 @@ function pull_companies(frm) {
 				// invisible — and its employees out of every sync.
 				if (unregistered.length) {
 					frappe.confirm(
-						__("Add {0} company(ies) to Companies Served?", [unregistered.length]) +
+						(plan.unmapped
+							? __("List {0} company(ies) under Companies Served? This NARROWS what this instance syncs.", [unregistered.length])
+							: __("Add {0} company(ies) to Companies Served?", [unregistered.length])) +
 							summary_html(plan, []),
 						() => register_existing(frm, unregistered)
 					);
@@ -530,11 +532,17 @@ function summary_html(plan, missing) {
 		parts.push(`<p>${__("Already exist")}: ${plan.existing.map(esc).join(", ")}</p>`);
 	if ((plan.unregistered || []).length)
 		parts.push(
-			`<p><b>${__("On the source and present here, but NOT served by this instance")}</b>: ${plan.unregistered
+			`<p><b>${__("On the source and present here, but NOT listed under Companies Served")}</b>: ${plan.unregistered
 				.map(esc)
-				.join(", ")}<br><span class="text-muted">${__(
-				"Their employees are excluded from every sync until they are listed under Companies Served."
-			)}</span></p>`
+				.join(", ")}<br><span class="text-muted">${
+				plan.unmapped
+					? __(
+							"Companies Served is empty, so this instance currently syncs EVERY company. Listing them narrows it to these — and sets the company fence, the staff ERP redirect and the parity scope."
+					  )
+					: __(
+							"Their employees are excluded from every sync until they are listed under Companies Served."
+					  )
+			}</span></p>`
 		);
 	for (const row of plan.incomplete || [])
 		parts.push(
