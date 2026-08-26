@@ -89,6 +89,51 @@ approve the second-validator gate that a score above 90% requires.
 That is a well-built model and it was checked rather than assumed — the ladder
 existing is not the same as the ladder being enforced.
 
+## The whole system, not a sample
+
+The tables above are the doctypes people touch daily. The sweep below is all of
+them — **122 non-child doctypes in the HR and Payroll modules** — checked
+against Frappe's own hook registry (`frappe.get_hooks`), not a regex over
+`hooks.py`. The regex version under-counted and produced false alarms; the
+registry is the authority.
+
+```
+ 63  HR-only — no Employee or ESS read at all
+ 41  employee-readable AND row-scoped
+ 18  employee-readable, no row scope
+---
+122
+```
+
+**No live leak.** Of the 18 unscoped, thirteen are reference data an employee
+must read to fill in a form — Leave Type (15 rows), Expense Claim Type (5),
+Shift Type (2), Shift Location, Shift Schedule, Payroll Period, Grievance Type,
+Competency, Appraisal Cycle, Appraisal Template, Training Program. Two more are
+deliberate: `HR Contact` backs the HR directory screen, and `HRMS ERP Instance`
+backs the "Open my ERP" redirect, with `api_key` and `api_secret` held at
+permlevel 1 where **only System Manager** can reach them.
+
+### Three that are latent rather than live
+
+Each holds **0 rows today**, so nothing leaks now. Each would leak the moment it
+holds anything.
+
+| Doctype | Readable by | Why it matters if it ever fills |
+|---|---|---|
+| **Salary Slip** | `Employee Self Service` (read) | unscoped — an ESS user would read EVERY payslip. Mitigated for now by HR's ruling that salary never comes to Verifica, and by no user currently holding that role |
+| **Travel Request** | `Employee Self Service` (read/write/create) | unscoped — would expose, and permit editing of, everyone's travel |
+| **KPI**, **Daily Work Summary** | `Employee` (read) | unscoped; whether either is per-person is undecided |
+
+`Employee Self Service` is a **User Type**, not a role somebody is given by
+hand, so it arrives automatically with ESS-licensed users. **No user holds it on
+the audited site.** That is the only thing standing between the Salary Slip row
+above and a real finding, and it is a configuration accident rather than a
+control.
+
+**Recommended, not urgent:** add row scope to Salary Slip and Travel Request
+before either can hold data. Both are cheap now and neither can be tested once
+they matter.
+
 ## Open questions for HR
 
 Not defects. Places where the code has made a choice nobody has ruled on.
