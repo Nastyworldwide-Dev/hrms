@@ -57,14 +57,31 @@ class PWANotificationsMixin:
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
 
-	def _get_doc_approver(self) -> str:
+	def _get_doc_approver(self) -> str | None:
+		"""Who should be told. The field when there is one, otherwise resolved.
+
+		This used to index APPROVER_FIELD directly, so a doctype without an
+		approver field raised KeyError the moment it tried to notify — which is
+		why OT Request notified nobody at all and a draft sat in a list until an
+		HR user happened to scroll past it.
+
+		The fallback is not invented. OT visibility already runs on `reports_to`
+		(`overrides/ot_row_scope`: own + direct reports + HR), so the approver is
+		resolved by the same chain remote check-in uses rather than a second one
+		that could disagree about who approves for the same person.
+		"""
 		APPROVER_FIELD = {
 			"Leave Application": "leave_approver",
 			"Expense Claim": "expense_approver",
 			"Shift Request": "approver",
 		}
-		approver_field = APPROVER_FIELD[self.doctype]
-		return self.get(approver_field)
+		field = APPROVER_FIELD.get(self.doctype)
+		if field:
+			return self.get(field)
+
+		from hrms.overrides.remote_checkin_request_hooks import resolve_approver
+
+		return resolve_approver(self.employee)
 
 	def _get_employee_user(self) -> str:
 		return frappe.db.get_value("Employee", self.employee, "user_id", cache=True)

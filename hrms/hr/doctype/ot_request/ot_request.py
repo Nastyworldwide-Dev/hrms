@@ -14,6 +14,7 @@ from hrms.hr.utils import (
 	validate_mandatory_attachment,
 	validate_self_submission,
 )
+from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils.filing_window import earliest_filable_date, is_within_ot_filing_window
 from hrms.utils.ot_calculation import get_day_ot_breakdown
 
@@ -26,7 +27,19 @@ REPLACEMENT_LEAVE = "Replacement Leave"
 HOURS_PER_HALF_DAY = 4
 
 
-class OTRequest(Document):
+class OTRequest(Document, PWANotificationsMixin):
+	def after_insert(self):
+		# Once, when the request is filed. NOT in validate: that runs on every
+		# save, so the approver would be messaged again on each edit — the
+		# fastest way to teach somebody to ignore notifications. Shift Request
+		# notifies from after_insert for the same reason.
+		#
+		# Before this, OT Request notified nobody. Its three sibling request
+		# types all raise a PWA Notification; OT had no approver field, so the
+		# mixin raised KeyError on it and was never wired up. A draft sat in a
+		# list until an HR user happened to scroll past.
+		self.notify_approver()
+
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_filing_for_self(self)
