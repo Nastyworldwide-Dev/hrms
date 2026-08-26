@@ -471,7 +471,20 @@ function pull_companies(frm) {
 			const plan = r.message || {};
 			const missing = (plan.to_create || []).map((p) => p.company_name);
 
+			const unregistered = plan.unregistered || [];
+
 			if (!missing.length) {
+				// "Nothing to create" was green and final, which is how a company
+				// that exists here but is not served by this instance stayed
+				// invisible — and its employees out of every sync.
+				if (unregistered.length) {
+					frappe.confirm(
+						__("Add {0} company(ies) to Companies Served?", [unregistered.length]) +
+							summary_html(plan, []),
+						() => register_existing(frm, unregistered)
+					);
+					return;
+				}
 				frappe.msgprint({
 					title: __("Nothing to create"),
 					indicator: "green",
@@ -515,6 +528,14 @@ function summary_html(plan, missing) {
 		parts.push(`<p>${__("Missing locally")}: <b>${missing.map(esc).join(", ")}</b></p>`);
 	if ((plan.existing || []).length)
 		parts.push(`<p>${__("Already exist")}: ${plan.existing.map(esc).join(", ")}</p>`);
+	if ((plan.unregistered || []).length)
+		parts.push(
+			`<p><b>${__("On the source and present here, but NOT served by this instance")}</b>: ${plan.unregistered
+				.map(esc)
+				.join(", ")}<br><span class="text-muted">${__(
+				"Their employees are excluded from every sync until they are listed under Companies Served."
+			)}</span></p>`
+		);
 	for (const row of plan.incomplete || [])
 		parts.push(
 			`<p>${__("Cannot create {0} — source is missing {1}", [
@@ -623,6 +644,37 @@ function purge_mirror(frm) {
 				},
 			});
 			d.show();
+		},
+	});
+}
+
+
+//: List companies that already exist here against this instance.
+//
+// create_company_shells registers only what it CREATED, deliberately — claiming
+// a company for an instance is a human decision. This is that decision made
+// explicitly. The candidates come from the source's own list, so an arbitrary
+// company cannot be claimed here.
+function register_existing(frm, companies) {
+	frappe.call({
+		method: "hrms.sync.company_shells.register_existing_companies",
+		args: { instance_name: frm.doc.name, companies: JSON.stringify(companies) },
+		freeze: true,
+		freeze_message: __("Registering…"),
+		callback: (r) => {
+			const res = r.message || {};
+			const errors = res.errors || [];
+			frappe.msgprint({
+				title: __("Companies Served updated"),
+				indicator: errors.length ? "orange" : "green",
+				message: errors.length
+					? __("Registered {0}. {1} could not be added — another instance may already claim them.", [
+							(res.registered || []).join(", "),
+							errors.length,
+					  ])
+					: __("Registered: {0}", [(res.registered || []).join(", ")]),
+			});
+			frm.reload_doc();
 		},
 	});
 }
