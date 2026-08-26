@@ -1713,8 +1713,14 @@ html[data-theme="dark"] .g-cal__day--present {
 	align-items: center;
 	gap: 14px;
 	padding: 13px var(--g-screen-gutter);
-	background: var(--g-bg);
-	border-bottom: 1px solid var(--g-hair);
+	/* TRANSPARENT, not --g-bg (Track B). The solid band was old-shell residue —
+	   an operator filed it as exactly that — and the mockup, which wins on
+	   values, has no header band at all: the top of every screen floats over
+	   the light field. The border stays as a transparent box so nothing shifts
+	   by 1px. Safe because BaseLayout's ion-content is not fullscreen: content
+	   never scrolls under this header, so there is nothing to occlude. */
+	background: transparent;
+	border-bottom: 1px solid transparent;
 }
 /* the back control, when GPage says this is a pushed screen */
 .g-header__back {
