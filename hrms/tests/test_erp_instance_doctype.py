@@ -34,15 +34,38 @@ class TestERPInstanceDoctype(unittest.TestCase):
 		# A Table target without istable=1 installs but can never hold rows.
 		self.assertEqual(self.child.get("istable"), 1)
 
-	def test_table_field_points_at_the_child_doctype(self):
+	def test_every_table_field_points_at_a_real_child_doctype(self):
+		"""Each Table field must resolve to a doctype that exists and is istable.
+
+		This used to assert that EVERY Table field pointed at
+		`HRMS ERP Instance Company`, which held while that was the only child.
+		A second was added later — `schema_gap_rulings` -> HRMS Schema Gap
+		Ruling — and the test went red on correct code, because it was pinning
+		"there is one child" rather than the invariant it exists for: a Table
+		field pointing at a doctype that does not exist aborts `bench migrate`.
+		"""
 		table_fields = [f for f in self.parent["fields"] if f["fieldtype"] == "Table"]
-		self.assertTrue(table_fields, "parent must carry the companies table")
+		self.assertTrue(table_fields, "parent must carry at least the companies table")
 		for field in table_fields:
-			self.assertEqual(
-				field.get("options"),
-				self.child["name"],
-				f"{field['fieldname']} points at a doctype that is not the child table",
+			target = field.get("options")
+			self.assertTrue(target, f"{field['fieldname']} names no child doctype")
+			folder = target.lower().replace(" ", "_")
+			path = HRMS_ROOT / f"hr/doctype/{folder}/{folder}.json"
+			self.assertTrue(
+				path.exists(),
+				f"{field['fieldname']} points at {target}, which has no doctype JSON",
 			)
+			self.assertEqual(
+				_load(path).get("istable"),
+				1,
+				f"{target} is a Table target but is not marked istable",
+			)
+
+	def test_the_companies_table_still_points_at_its_child(self):
+		"""The specific link the redirect depends on, kept as its own check now
+		that the rule above is general."""
+		companies = next(f for f in self.parent["fields"] if f["fieldname"] == "companies")
+		self.assertEqual(companies.get("options"), self.child["name"])
 
 	def test_autoname_field_exists(self):
 		autoname = self.parent.get("autoname", "")
