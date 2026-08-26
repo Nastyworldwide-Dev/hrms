@@ -67,6 +67,21 @@ class _FakeFrappe(types.ModuleType):
 	def utils_now(self):
 		return NOW
 
+	class _DB:
+		"""`report_stale_instances` also runs the leave-collision check now.
+
+		Empty here on purpose: these tests are about staleness, and a collision
+		row would put a second Error Log in `self.errors` and break every
+		assertion that counts them. `test_leave_collision` owns that half.
+		"""
+
+		def sql(self, query, values=None, as_dict=False):
+			return []
+
+	@property
+	def db(self):
+		return _FakeFrappe._DB()
+
 
 def load(instances, runs):
 	fake = _FakeFrappe(instances, runs)

@@ -53,6 +53,54 @@ STALE_AFTER_HOURS = 36
 HEARTBEAT_STATUS = "Completed"
 
 
+#: Live leave, in the source system's own words. Identical to the predicate in
+#: `LeaveApplication.validate_leave_overlap` — this check exists precisely
+#: because that guard cannot run on a mirrored row, so a different definition of
+#: "overlapping" here would mean the two disagree about what they are guarding.
+_LEAVE_COLLISION_SQL = """
+	SELECT
+		mirrored.employee                AS employee,
+		mirrored.employee_name           AS employee_name,
+		mirrored.name                    AS mirrored,
+		mirrored.synced_from_instance    AS instance,
+		local.name                       AS local,
+		GREATEST(mirrored.from_date, local.from_date) AS from_date,
+		LEAST(mirrored.to_date, local.to_date)        AS to_date
+	FROM `tabLeave Application` mirrored
+	JOIN `tabLeave Application` local
+		ON mirrored.employee = local.employee
+		AND mirrored.name != local.name
+		AND mirrored.to_date >= local.from_date
+		AND mirrored.from_date <= local.to_date
+	WHERE mirrored.synced_from_instance IS NOT NULL
+		AND local.synced_from_instance IS NULL
+		AND mirrored.docstatus < 2
+		AND local.docstatus < 2
+		AND mirrored.status IN ('Open', 'Approved')
+		AND local.status IN ('Open', 'Approved')
+	ORDER BY mirrored.employee, mirrored.from_date
+"""
+
+
+def colliding_leave() -> list[dict]:
+	"""Leave the source approved that overlaps leave this hub approved.
+
+	The join is deliberately asymmetric — one side stamped, one side not. The
+	two symmetric cases are somebody else's:
+
+	    both mirrored   the SOURCE has a duplicate; not this hub's to rule on
+	    both local      `validate_leave_overlap` already refused it on submit
+
+	Only the mixed pair falls through every existing guard, because the mirrored
+	half arrived with `ignore_validate` set.
+
+	Pure query, no writes — the same contract as `stale_instances` above.
+	"""
+	rows = frappe.db.sql(_LEAVE_COLLISION_SQL, as_dict=True)
+	logger.info("[sync.health] %d mirrored/local leave collision(s)", len(rows))
+	return rows
+
+
 def _last_clean_run(instance_name: str):
 	rows = frappe.get_all(
 		"HRMS Sync Run",
@@ -81,8 +129,49 @@ def stale_instances() -> list[dict]:
 	return stale
 
 
+def _report_leave_collisions() -> list[dict]:
+	"""One Error Log naming every mirrored/local leave overlap. See `colliding_leave`."""
+	rows = colliding_leave()
+	if not rows:
+		return []
+
+	lines = [
+		f"{r['employee_name'] or r['employee']} ({r['employee']}): "
+		f"{r['mirrored']} from {r['instance']} overlaps {r['local']} written here, "
+		f"{r['from_date']} to {r['to_date']}"
+		for r in rows
+	]
+	logger.warning("[sync.health] %d leave collision(s): %s", len(rows), lines)
+	frappe.log_error(
+		title=f"{len(rows)} leave application(s) exist on both the source and this hub",
+		message=(
+			"Each pair below is one employee with overlapping leave in two systems: one "
+			"row mirrored from a source instance, one written here. Their balance on "
+			"this hub counts BOTH.\n\n"
+			+ "\n".join(lines)
+			+ "\n\nThe usual cause is somebody applying or approving on the source ERP "
+			"for a company whose staff transact here. Cancel whichever row is not the "
+			"real one — cancelling the mirrored row is safe, the next sync will not "
+			"resurrect it as live.\n\n"
+			"This is detected after the fact, not prevented. A mirrored row is written "
+			"with validation off on purpose (a mirror that refuses rows lies about what "
+			"the source holds), so the overlap check that runs on submit here cannot "
+			"see it coming. Cutover removes the condition entirely."
+		),
+	)
+	return rows
+
+
 def report_stale_instances() -> list[dict]:
-	"""Name every instance whose mirror has stopped moving. Daily scheduler entry."""
+	"""Name every instance whose mirror has stopped moving. Daily scheduler entry.
+
+	Also reports leave that exists in both systems. Two checks under one entry
+	deliberately: both ask "is the mirror still telling the truth?", both are
+	read by the same person on the same morning, and a second scheduler entry
+	would be a second thing to notice has stopped running.
+	"""
+	_report_leave_collisions()
+
 	stale = stale_instances()
 	if not stale:
 		logger.info("[sync.health] every enabled instance has a clean run inside %sh", STALE_AFTER_HOURS)
