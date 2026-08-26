@@ -163,7 +163,7 @@ by writing code first.**
 |---|---|
 | 3 schema rulings | Outstanding on Nasty-Dev. `Review Schema Gaps` on the instance form is the whole workflow — one screen, no typing |
 | **R1** | The company fence **fails open**: an HR user with no Company User Permission sees every company. Flip to fail-closed after cutover, or make fence roles mandatory in onboarding? |
-| **R2** | Hub-side leave approvals write **unstamped** ledger entries beside mirrored ones, and parity counts only stamped rows. Is the operating rule "mirrored-company staff transact only on the source"? If it is policy-only, block hub-side writes for stamped employees |
+| **R2** | **Decided: staff transact HERE.** The two blind spots that decision exposed are closed — parity now reports `local_own` beside the mirrored count (`e9d735d27`), and mirrored leave overlapping hub leave is detected daily (`7a8c48227`). One item is still open and is **not** engineering: **should `run_sync` be scheduled?** It is operator-initiated today, so the mirror only moves when somebody presses a button. Unattended writes to a mirror is the question `write_block.py` exists for — see below |
 | **R6** | `user_data_fields` is commented out at `hooks.py:638`. No DSAR or retention path while PII is duplicated across the hub and every source |
 
 **Exit criteria**
@@ -171,6 +171,31 @@ by writing code first.**
 - [ ] `cutover_readiness` reports **READY** — 4 consecutive clean parity checks
       and zero outstanding rulings
 - [ ] R1, R2, R6 each have a recorded decision, in `docs/glass/decisions/`
+
+#### The one R2 question left: schedule the pull, or not
+
+Stated here rather than decided in code, because it is the same class of
+decision as R1 and R6 and it is not mine.
+
+**Why it matters.** Every guard on this hub reads local rows. A leave applied
+for here is checked against what the mirror currently holds — so a mirror that
+last moved on Friday means Monday's approvals are checked against Friday's
+truth. `7a8c48227` catches the resulting collision the next morning; nothing
+prevents it.
+
+**Why it is not obviously "yes".** `hrms/sync/write_block.py` exists because
+writing to a mirror with no human present was taken seriously once already. A
+scheduled pull is exactly that, every night, unattended. A run that goes Partial
+holds its watermark and re-reads the same window — safe, and silent unless
+somebody reads the heartbeat.
+
+**The middle option, if the full one is unwelcome:** schedule it, keep it
+hourly-or-slower, and treat the existing `report_stale_instances` entry as the
+thing that proves it is still running. That is one line in
+`hooks.py: scheduler_events`, and it is reversible.
+
+**Not a reason to wait:** this changes nothing about cutover. After cutover
+there is one writer, no mirror to pull, and the question disappears.
 
 ---
 

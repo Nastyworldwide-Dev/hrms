@@ -1,17 +1,19 @@
 # HANDOFF
-prompt:   end-to-end readiness check; plan to reach live-ready
-status:   done - plan written. 33 commits this session, all pushed, NOT deployed.
-commit:   7c00fb434 on nz-glass
-files:    docs/glass/plan/RELEASE_READINESS.md (new - gates + exit criteria)
-          docs/glass/README.md (read order), docs/glass/HANDOFF.md
-verify:   read RELEASE_READINESS.md, then GATE 0: bench migrate + bench build
-flags:    THE SYSTEM IS LIVE BUT NOT CUTOVER-READY AND THE RELEASE IS BLOCKED.
-          GATE 0 is deploy - 33 commits sit in git and nothing is on the site.
-          critical-paths.spec.js had NEVER passed: playwright.config defaulted
-          baseURL to :8000 while everything else uses :8080, so it ran against a
-          different server. Fixed; 2 of 4 pass, 2 still red (leave-balance
-          resource cache likely masks the induced 500 - traced, not confirmed).
-          visual gate 16 differing, unclassified. a11y 26 critical baselined.
-          Offline handling does not exist anywhere - the only P0.
-          Cutover blocked by 3 schema rulings + R1/R2/R6 decisions.
-next:     GATE 0 (deploy), then GATE 1 (trust the instruments), then GATE 2.
+prompt:   R2 - close the split-brain blind spots before cutover
+status:   done for 3 of 4. The 4th is a decision, written up, not coded.
+commit:   7a8c48227 on nz-glass (also e9d735d27)
+files:    hrms/sync/parity.py            local_own reported beside the mirror count
+          hrms/sync/health.py            colliding_leave() + daily Error Log
+          hrms/sync/test_hub_owned_parity.py   6 tests
+          hrms/sync/test_leave_collision.py    9 tests
+          hrms/sync/test_health.py      stub gained db.sql
+          docs/glass/plan/RELEASE_READINESS.md  R2 row rewritten
+verify:   python3 hrms/sync/test_leave_collision.py && python3 hrms/sync/test_hub_owned_parity.py
+          bench --site <site> execute hrms.sync.health.report_stale_instances
+flags:    Both fixes verified against MariaDB, not stubs. Forced a mixed
+          overlapping pair -> 1 collision; stamped both sides -> 0; rolled back.
+          hub_owned+stamped==total on 3 doctypes. STILL 35 COMMITS UNDEPLOYED.
+          Collision detection is DETECTIVE - the balance is wrong until the
+          next morning's report. Cutover is the fix.
+next:     scheduling run_sync is a product call - RELEASE_READINESS GATE 5.
+          Then GATE 0: bench migrate + bench build.
