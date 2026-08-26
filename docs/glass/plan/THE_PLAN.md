@@ -36,6 +36,29 @@ Two consequences shape everything below:
 
 ---
 
+## Two tracks, split deliberately
+
+Ruled 26 August: **make it functional first, polish separately.** They have
+different blockers and there is no reason to hold one for the other.
+
+| | **Track A — Functional** | **Track B — Polish** |
+|---|---|---|
+| Question | does it work? | does it look like one product? |
+| Verified by | tests, a bench, a real database | visual / a11y / coherence gates |
+| Blocked by | nothing | **a served site with `AUDIT_PW`** |
+| Contains | Phases 0–4 | Phase 5 |
+
+Track A can proceed today and every claim in it is checkable. **Track B cannot
+start**, because three of eight gates render no screen without a served site —
+so "the styling is consistent now" would be an assertion, not a measurement.
+That is precisely the mistake that produced Phase 0.
+
+The dividing line that is easy to get wrong: a new SCREEN is Track A even though
+it is frontend, because a missing feature is functional. Restyling an existing
+one is Track B.
+
+---
+
 ## Phase 0 — Deploy · IN FLIGHT
 
 ```sh
@@ -185,6 +208,34 @@ HRMS_E2E_URL=http://localhost:8080 node design/gates/run.mjs
 
 When that prints no `SKIP`, design work becomes checkable and this phase can
 start. Until then it cannot.
+
+### What "old residue" actually is, measured 26 August
+
+Not an impression. The reported symptom is that the new style is not applied
+across pages, dropdowns and fields:
+
+```
+FIELDS    15 GInput (Glass)  vs  14 across EIGHT other components
+          FormField 5 · Autocomplete 5 · Input 4 · TextEditor 1 ·
+          Switch 1 · FormControl 1 · DateTimePicker 1 · DatePicker 1
+
+MODALS    16 GModal (Glass)  vs  11 non-Glass
+          ion-modal 9 · Popover 1 · Dropdown 1
+
+APP-WIDE  231 lint violations across 37 files
+          60 frappe-ui UI import sites across 14 components
+          37 files rendering <ion-*>
+```
+
+**Roughly half the fields and dropdowns are not Glass.** One job, nine
+components — that is the inconsistency, and it is why a form looks assembled
+rather than designed.
+
+**Ionic is the part tokens cannot reach.** It owns page transitions, modal
+motion, the tab bar and pull-to-refresh, so screens *move* like old Frappe HR
+however they are coloured. `RELEASE_READINESS` marks it out of scope; on this
+evidence that ruling is wrong, and revisiting it is the largest visual decision
+left.
 
 ### A correction to `RELEASE_READINESS` GATE 4
 
