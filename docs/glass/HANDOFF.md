@@ -1,16 +1,17 @@
 # HANDOFF
-prompt:   full-system audit; replan phase 9 A-to-Z against the reference glass technique
+prompt:   diagnose the Nadi desktop-icon regression; fold it into the phase 9 plan
 status:   done (planning only - no code changed)
-commit:   fcaf1dff1 on nz-glass
-files:    docs/glass/plan/HR_Glass_Phase_9_Work_Order.md (new, the work authority)
-          docs/glass/README.md (read order now points at it)
+commit:   <this commit> on nz-glass
+files:    docs/glass/plan/HR_Glass_Phase_9_Work_Order.md (new §0.5 Phase 0, order, matrix)
           docs/glass/HANDOFF.md
-verify:   read the work order; then set -a; . ./.env; set +a; node design/gates/run.mjs
-flags:    D1 Inter Tight only, D2 refraction CUT (p95 19.6ms, iOS ignores url()
-          in backdrop-filter), D3 remove Frappe design language / keep frappe-ui
-          data layer - all three locked by the user, do not re-litigate.
-          NEW P0: no offline handling exists anywhere (banner is drawn only in
-          DesignSpecimen.vue:88) - work order 9.7b.
-          RC19 root cause closed: Inter's `tt` pair + positive letter-spacing.
-          Killed a 3-day-old stale `bench serve` on :8080 during the audit.
-next:     9.2c (split baselines) before anything changes pixels, then 9.1.
+verify:   bench --site verifica-live execute frappe.client.get_list --kwargs
+          '{"doctype":"Desktop Icon","filters":{"parent_icon":"Frappe HR"},"fields":["name"]}'
+flags:    PHASE 0 OUTRANKS ALL OF PHASE 9 - it is live breakage on verifica-live.
+          Root cause: standard-doc import is timestamp-gated (import_file.py:141).
+          The rebrand changed parent_icon in 9 desktop_icon fixtures WITHOUT
+          bumping `modified`, so it never landed; then the rename patch deleted
+          "Frappe HR" with force=True, orphaning them. 11 files carry this defect
+          - 2 are workspace fixes from 17 Aug that also never reached production.
+          CI cannot catch it: patch.yml restores v14, which has no Desktop Icons.
+          The uncommitted desktop_launcher.js CANNOT fix it - same failing guard.
+next:     0.3 guard, then 0.2 timestamps, 0.1 repair patch, 0.5 test. Then 9.2c.

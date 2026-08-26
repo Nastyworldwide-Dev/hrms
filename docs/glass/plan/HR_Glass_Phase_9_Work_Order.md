@@ -28,6 +28,129 @@ device.
 
 ---
 
+## 0.5 Phase 0 — production repair. Do this before any of phase 9.
+
+Added 26 August. Phase 9 is quality work on a product that mostly works.
+**This is live breakage on `verifica-live`, and it outranks all of it.**
+
+### The reported symptom
+
+Pressing the **Nadi** app icon on `/desk` navigates straight into a workspace.
+It should open the permission-filtered workspace modal — nine HR workspaces —
+the way **Accounting** does. Accounting is ERPNext's and untouched, which is why
+it still works.
+
+### Root cause — traced through the framework, not guessed
+
+Frappe decides modal-vs-navigate on one condition
+(`frappe/desk/page/desktop/desktop.js:1123`):
+
+```js
+if (this.child_icons?.length && (icon_type == "App" || icon_type == "Folder")) {
+    create_desktop_modal(...)      // Accounting takes this
+} else {
+    navigate to icon_route         // Nadi takes this
+}
+```
+
+The click handler was never broken. **Nadi has zero children**, and here is the
+chain that emptied it:
+
+| # | Evidence | What happened |
+|---|---|---|
+| 1 | `git show 5854aec26 -- hrms/desktop_icon/*.json` | The rebrand changed `parent_icon` `"Frappe HR"` → `"Nadi"` in nine files **and changed nothing else** — the `modified` timestamps still read `2026-01-01` |
+| 2 | `frappe/modules/import_file.py:141` | `if is_db_timestamp_latest and doc["doctype"] != "DocType": continue` — standard-doc import is **timestamp-gated**. On a site whose rows are newer than the file, the new `parent_icon` **never lands** |
+| 3 | `frappe/model/sync.py:120` | `desktop_icon/` is an app-level synced folder, imported during `sync_all()`. `nadi.json` is a **new** name, so it is created — no existing row, no gate |
+| 4 | `hrms/patches.txt:81`, under `[post_model_sync]` | Patches run **after** `sync_all()`, so `exists("Desktop Icon", "Nadi")` is already True → the patch takes its **delete** branch: `delete_doc("Desktop Icon", "Frappe HR", force=True)` |
+| 5 | `desktop.js:204` | `icon_map["Frappe HR"]` is gone, so the nine children are never pushed into `Nadi.child_icons` |
+
+The patch deleted the parent that nine live records still pointed at, and
+`force=True` skipped the link check that would have refused.
+
+**Confirm on the site before fixing:**
+
+```sh
+bench --site verifica-live execute frappe.client.get_list \
+  --kwargs '{"doctype":"Desktop Icon","filters":{"parent_icon":"Frappe HR"},"fields":["name"]}'
+```
+
+Nine rows back confirms it.
+
+### It is a defect class, not an instance — two more casualties
+
+Auditing every app-level synced JSON for "content changed, `modified` did not"
+found **11 files**, not nine. The other two are Workspace definitions, and both
+were shipped as *fixes* that silently did nothing on every existing site:
+
+| File | Commit | What never reached production |
+|---|---|---|
+| `hrms/hr/workspace/hr_setup/hr_setup.json` | `de65b6379` *"make a sync that cannot start say so, and be findable at all"* | The **Data Migration** card and its **ERP Instance** links. The commit's whole purpose was to make the sync registry findable in Desk. It is still not there. |
+| `hrms/hr/workspace/shift_&_attendance/shift_&_attendance.json` | `7b8102af9` *"restore Shift Assignment Tool to the sidebar"* | `link_count: 6 → 7`. The tool is still missing from the sidebar. |
+
+Three shipped fixes that never reached production, and nobody noticed, because
+**the failure mode is silent** — no error, no log line, a green migrate.
+
+### Why every gate and every CI job was blind to it
+
+`patch.yml` restores a **v14** backup and migrates forward. v14 predates the
+Desktop Icon doctype, so those rows do not exist on that run — no existing row
+means no timestamp gate, so the fixtures import cleanly and CI goes green.
+
+> The timestamp gate only fires on a site that already has the rows — that is,
+> every production site and no CI run. The migration gate and the defect can
+> never intersect. This is not a gap in what CI checks; it is a gap in what CI
+> can ever check, so the guard has to live somewhere else.
+
+The eight design gates are equally blind: all of them render the PWA, and none
+of this is in the PWA.
+
+### The work
+
+| id | Item |
+|---|---|
+| **0.1** | **New patch** `v16_0/repair_nadi_desktop_icon_children.py`. Repoint every `Desktop Icon` with `parent_icon = "Frappe HR"` to `"Nadi"`, then remove the orphan if it still exists. Idempotent, and safe on a site that was never broken. **A new file, not a re-dated line** — the existing patch has already run on `verifica-live`, and its delete branch is the bug, so it should not be re-run. Leave it in place; it is history. |
+| **0.2** | **Bump `modified` on all 11 files** to the current time so the import gate passes everywhere. Nine `desktop_icon/*.json` (excluding `nadi.json`, which was bumped), plus the two workspace JSONs above. This is what actually delivers the 17 August fixes to production. |
+| **0.3** | **The guard.** A check that fails when a file under a synced path changes content without its `modified` advancing. Scope it to the diff — `git diff --name-only <base>..HEAD` filtered to `hrms/{desktop_icon,workspace_sidebar}/**` and `hrms/*/{workspace,notification,dashboard_chart}/**` — because a whole-tree heuristic false-positives on old files whose `modified` legitimately predates their last commit. Wire into `.pre-commit-config.yaml` **and** `linters.yml`. Verify by forcing the failure: edit a fixture, leave the timestamp, confirm red. |
+| **0.4** | **Drop the launcher workaround.** See below. |
+| **0.5** | **Regression test.** Assert `Desktop Icon "Nadi"` has nine children with `parent_icon = "Nadi"`, and that no `Desktop Icon` has a dangling `parent_icon`. A dangling-link assertion generalises past this one icon. |
+
+### 0.4 — why the in-flight launcher is dropped
+
+Uncommitted on the branch as of 26 August: `hrms/public/js/desktop_launcher.js`
+(new), `frontend/e2e/hr-hub-launcher.spec.js` (new), plus edits to `hooks.py`
+(`app_home` → `/desk/desktop/hrms`, a new `app_include_js`) and
+`desktop_icon/nadi.json` (`link` → `/desk/hr-setup`).
+
+It cannot work, because its own guard is the condition that is already failing:
+
+```js
+const permittedChildren = icons.filter(i => i.parent_icon === app?.label);
+if (!app || !permittedChildren.length || …) return;   // ← returns, does nothing
+```
+
+With the children orphaned, `permittedChildren` is empty and the custom
+launcher returns without opening anything — the same outcome as the native
+handler it was written to replace. It also changes `app_home` for every user as
+a side effect of a fix that never fires, and adds a permanent `app_include_js`
+payload to Desk to re-implement behaviour the framework already has.
+
+**Once 0.1 and 0.2 land, the modal works natively with no custom JS at all.**
+Discard the two new files and revert the two edits. Keep nothing.
+
+*(If the e2e spec is worth keeping, rewrite it against the native behaviour and
+drop its hardcoded default user — it currently bakes in a real person's email
+address.)*
+
+### Order
+
+`0.3` first — land the guard before the fix, so the fix cannot be written
+without it and the guard gets exercised immediately. Then `0.2`, then `0.1`,
+then `0.5`. `0.4` is a discard and can happen any time.
+
+Then, and only then, phase 9 as ordered in §6.
+
+---
+
 ## 1. Measurements this plan rests on
 
 Every number below was produced on 24 August with Playwright + Chromium against
@@ -520,6 +643,11 @@ Every audit finding and carried-over risk, assigned. Nothing unassigned.
 | R2 | Dual-writer leave state for mirrored companies | P1 | 9.6d — decision |
 | R6 | No DSAR / retention path | P1 | 9.6d — decision |
 | R5 R7 | Sync credentials; geofence ownership | closed | verified 24 Aug |
+| P0-a | Nadi app icon navigates instead of opening its workspace modal | **live** | 0.1 0.2 |
+| P0-b | HR Setup's Data Migration card never reached production (`de65b6379`) | **live** | 0.2 |
+| P0-c | Shift Assignment Tool never returned to the sidebar (`7b8102af9`) | **live** | 0.2 |
+| P0-d | Fixture edits silently no-op on existing sites; no guard, and CI cannot catch it | **class** | 0.3 |
+| P0-e | In-flight launcher workaround cannot fix P0-a and changes `app_home` | — | 0.4 |
 
 **Surface accounting:** 44 routes + 18 sheets = **62 PWA surfaces**, all
 assigned, × 6 states. Plus 2 roster routes bridged (9.7f). Frappe Desk
@@ -529,6 +657,8 @@ explicitly excluded — see §8.
 
 ## 6. Order
 
+0. **Phase 0 first (§0.5).** Live breakage outranks quality work. `0.3` guard →
+   `0.2` timestamps → `0.1` repair patch → `0.5` test. `0.4` is a discard.
 1. **9.2c first.** Split the baselines before anything changes pixels, or you
    re-baseline the wrong set.
 2. **9.1** — free wins, and a clean `visual` run proves the gate still works.

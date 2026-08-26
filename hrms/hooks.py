@@ -7,14 +7,14 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/frappe/hrms"
 app_logo_url = "/assets/hrms/images/nadi-logo.png"
-app_home = "/desk/people"
+app_home = "/desk/desktop/hrms"
 
 add_to_apps_screen = [
 	{
 		"name": "hrms",
 		"logo": "/assets/hrms/images/nadi-logo.png",
 		"title": "Nadi",
-		"route": "/desk/people",
+		"route": app_home,
 		"has_permission": "hrms.hr.utils.check_app_permission",
 	}
 ]
@@ -26,6 +26,7 @@ add_to_apps_screen = [
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
+	"/assets/hrms/js/desktop_launcher.js",
 ]
 app_include_css = "hrms.bundle.css"
 
