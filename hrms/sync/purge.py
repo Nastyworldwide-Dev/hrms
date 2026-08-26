@@ -151,3 +151,70 @@ def purge_instance(instance_name: str, confirm: str | None = None) -> dict:
 		"deleted": deleted,
 		"blocked": blocked,
 	}
+
+
+@frappe.whitelist(methods=["POST"])
+def release_instance_stamp(instance_name: str, confirm: str | None = None) -> dict:
+	"""Clear the provenance stamp on rows mirrored from `instance_name`.
+
+	DELETES NOTHING. It only forgets which instance a row came from, turning a
+	mirrored row into a hub-owned one.
+
+	This is the recovery `purge_instance` cannot be, and the guard in
+	`runner.plan_cross_instance_write` needs it to exist. That guard stops a
+	second instance overwriting a first one's rows — and on a hub that already
+	ran two colliding instances it stands in the way of the repair: rows stamped
+	by a cloned dev instance that are really LIVE employees get refused when the
+	live instance next syncs, because dev got there first.
+
+	Purge cannot repair that. It deletes by the stamp, and the stamp is the thing
+	that is wrong; that is precisely how a real record was lost on this system.
+
+	Clearing the stamp instead works because `plan_cross_instance_write` already
+	lets the first writer take an UNSTAMPED row. So the sequence is: release the
+	clone's stamp, run a full sync from the real source, and it reclaims
+	everything that source genuinely holds and rewrites the content. Whatever is
+	still unstamped afterwards is the answer nobody had — the rows that only ever
+	existed on the clone.
+
+	Dry run unless `confirm` equals `instance_name`, the same contract as
+	`purge_instance`. Less destructive is not undoable: once the stamp is gone,
+	which instance a row came from is no longer recorded anywhere.
+	"""
+	frappe.only_for("System Manager")
+	require_unfenced(_("release a mirrored instance's provenance"))
+
+	dry_run = confirm is None
+	if not dry_run and confirm != instance_name:
+		frappe.throw(
+			_("Type the instance name exactly to confirm: expected {0}").format(instance_name),
+			frappe.ValidationError,
+		)
+
+	counts: dict[str, int] = {}
+	for doctype in purge_order():
+		names = _stamped(doctype, instance_name)
+		if not names:
+			continue
+		counts[doctype] = len(names)
+		if dry_run:
+			continue
+		for name in names:
+			# update_modified=False deliberately: `modified` drives the
+			# incremental watermark, so bumping tens of thousands of rows would
+			# make the next sync re-read a window it has already covered, and
+			# would read as the source having changed everything at once.
+			frappe.db.set_value(doctype, name, PROVENANCE_FIELD, None, update_modified=False)
+
+	total = sum(counts.values())
+	if dry_run:
+		logger.info("[release] DRY RUN %s: %d stamped row(s) would be released", instance_name, total)
+		return {"instance": instance_name, "dry_run": True, "counts": counts, "total": total}
+
+	frappe.db.commit()
+	logger.warning(
+		"[release] %s: released %d row(s) — they are now hub-owned and can be reclaimed by a full sync",
+		instance_name,
+		total,
+	)
+	return {"instance": instance_name, "dry_run": False, "counts": counts, "total": total}
