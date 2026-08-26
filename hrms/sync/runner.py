@@ -837,33 +837,55 @@ def advance_series_past(doctype: str, names) -> dict:
 	mirrored 000003 stays at 500. Winding back would free 000004..000500 for
 	reissue and recreate the collision in the other direction — that time
 	overwriting rows rather than failing loudly.
+
+	NEVER FAILS A RUN. This is a repair that rides along at the end of a pull,
+	not the pull's purpose, and the whole function is wrapped for that reason: a
+	run that successfully wrote five thousand rows must not be reported Failed
+	because a counter could not be bumped. The first version put the
+	`frappe.model.naming` import outside the guard, so an ImportError propagated
+	straight out of `sync_doctype` and turned completed runs into failures —
+	caught by the existing runner suite, which stubs `frappe` as a plain module.
+
+	The cost of swallowing is understood and accepted: the counter stays behind,
+	the next local create collides, and `utils.readiness` names it the same day.
+	A loud sync failure that discards a good pull is worse than a quiet repair
+	failure that a standing check already watches for.
 	"""
-	from frappe.model.naming import NamingSeries
+	try:
+		from frappe.model.naming import NamingSeries
 
-	matchers = series_matchers(doctype)
-	if not matchers:
+		matchers = series_matchers(doctype)
+		if not matchers:
+			return {}
+
+		highest: dict[str, int] = {}
+		for name in names:
+			split = split_series_name(name, matchers)
+			if split:
+				prefix, number = split
+				highest[prefix] = max(highest.get(prefix, 0), number)
+
+		moved = {}
+		for prefix, number in highest.items():
+			try:
+				series = NamingSeries(prefix)
+				if number > series.get_current_value():
+					series.update_counter(number)
+					moved[prefix] = number
+			except Exception as e:  # one bad prefix must not strand the others
+				_log().warning("[sync] could not advance series %s to %s: %s", prefix, number, e)
+
+		if moved:
+			_log().info("[sync] %s: advanced %d naming counter(s): %s", doctype, len(moved), moved)
+		return moved
+	except Exception as e:
+		_log().error(
+			"[sync] %s: naming counters were NOT advanced (%s). The next local create may "
+			"collide — utils.readiness reports this.",
+			doctype,
+			e,
+		)
 		return {}
-
-	highest: dict[str, int] = {}
-	for name in names:
-		split = split_series_name(name, matchers)
-		if split:
-			prefix, number = split
-			highest[prefix] = max(highest.get(prefix, 0), number)
-
-	moved = {}
-	for prefix, number in highest.items():
-		try:
-			series = NamingSeries(prefix)
-			if number > series.get_current_value():
-				series.update_counter(number)
-				moved[prefix] = number
-		except Exception as e:  # one bad prefix must not fail the whole sync
-			_log().warning("[sync] could not advance series %s to %s: %s", prefix, number, e)
-
-	if moved:
-		_log().info("[sync] %s: advanced %d naming counter(s): %s", doctype, len(moved), moved)
-	return moved
 
 
 def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool, str]:

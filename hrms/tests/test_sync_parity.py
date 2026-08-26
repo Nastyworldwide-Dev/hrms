@@ -111,8 +111,13 @@ class TestCompareDoctype(unittest.TestCase):
 		db = _FakeDB({"Employee": 5})
 		mod = _load(db)
 		mod.compare_doctype(_FakeClient({"Employee": 5}), "Employee")
-		_, filters = db.calls[-1]
-		self.assertEqual(filters.get("synced_from_instance"), "nasty-live")
+		# By INTENT, not by position. compare_doctype now makes two counts — the
+		# mirrored one and the hub-owned one it reports beside it — so `calls[-1]`
+		# silently became the wrong call rather than a wrong value. Indexing a
+		# recorded call list by position asserts the order of an implementation
+		# detail; naming the filter asserts the rule.
+		mirrored = [f for _, f in db.calls if f.get("synced_from_instance") == "nasty-live"]
+		self.assertTrue(mirrored, f"nothing counted rows stamped nasty-live; saw {db.calls}")
 
 	def test_company_filter_reaches_both_sides(self):
 		db = _FakeDB({"Employee": 3})
@@ -188,8 +193,14 @@ class TestTheGateComparesLikeForLike(unittest.TestCase):
 			_FakeClient({"Employee": 116}), "Employee", remote_filters={"company": ("in", ["Acme"])}
 		)
 
-		_, filters = db.calls[-1]
-		self.assertEqual(filters, {"synced_from_instance": "nasty-live"})
+		# The mirrored count specifically — see the note in
+		# test_local_count_only_counts_mirrored_rows on why not calls[-1].
+		mirrored = [f for _, f in db.calls if f.get("synced_from_instance") == "nasty-live"]
+		self.assertEqual(
+			mirrored,
+			[{"synced_from_instance": "nasty-live"}],
+			"the mirrored side must key on provenance ALONE, with no company filter",
+		)
 
 	def test_a_scoped_comparison_can_reach_parity(self):
 		"""The whole point: same scope on both sides, so zero is attainable."""

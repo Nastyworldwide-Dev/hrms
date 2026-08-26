@@ -41,6 +41,9 @@ The bottom line is the verdict. In short:
 import logging
 
 import frappe
+from frappe import _
+
+from hrms.overrides.company_scope import require_unfenced
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +81,14 @@ def source_census() -> dict:
 	about the verdict.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
+	# Role checks answer "is this person HR?" and nothing more. This census
+	# counts rows across EVERY company on the site and names every registered
+	# source instance, so an HR (Company) user — HR Manager plus a Company
+	# fence — would read a hub-wide picture their fence exists to withhold.
+	#
+	# Caught by test_sync_endpoints_are_fenced, which asserts exactly this for
+	# every endpoint in this package. It was right and I had missed it.
+	require_unfenced(_("read the source census"))
 	instances = _instances()
 	rows = []
 	totals: dict[str, int] = {}
