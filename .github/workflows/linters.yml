@@ -48,6 +48,33 @@ jobs:
       - name: Fixture guard's own tests
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
+  frontend:
+    name: 'Frontend lint & unit tests'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      # Neither of these ran anywhere until now. `yarn lint` was red on HEAD
+      # with 599 errors and pre-commit excludes frontend/ from prettier, so the
+      # app's only linter was absent from both gates it could have run in.
+      - name: ESLint
+        run: yarn lint
+
+      - name: Unit tests
+        run: yarn test
+
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 

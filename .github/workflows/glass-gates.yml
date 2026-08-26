@@ -1,11 +1,18 @@
-# Glass design gates (spec §16.5) — report-mode on every push to nz-glass.
-# Fails only on NEW lint debt above design/lint-baseline.json or a contrast
-# regression in design/tokens.json. Not a required check yet (phase 4 flips it).
+# Glass design gates (spec §16.5).
+#
+# Fails on NEW lint debt above design/lint-baseline.json, a contrast regression
+# in design/tokens.json, a surface over budget, or a new token collapse. The
+# three render-time gates (a11y, visual, coherence) SKIP without a served site,
+# so what runs here is the five static ones.
+#
+# Now runs on pull_request as well as push, so it can be set as a required
+# check in branch protection — it could not be while it only ran on push.
 name: Glass gates
 
 on:
   push:
     branches: [nz-glass]
+  pull_request:
 
 jobs:
   gates:

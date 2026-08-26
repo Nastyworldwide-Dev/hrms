@@ -35,6 +35,19 @@ repos:
 
   - repo: local
     hooks:
+      # frontend/ stays excluded from mirrors-prettier above ON PURPOSE. That
+      # hook is prettier v3; the frontend runs prettier 2.8.8 through
+      # eslint-plugin-prettier with its own .prettierrc.json, and v3 changed
+      # enough defaults that the two would reformat each other forever. This
+      # runs the frontend's OWN eslint, so the hook and `yarn lint` cannot
+      # disagree by construction.
+      - id: frontend-eslint
+        name: "ESLint (frontend)"
+        entry: frontend/node_modules/.bin/eslint --resolve-plugins-relative-to frontend --no-eslintrc -c frontend/.eslintrc.cjs --max-warnings=0 --fix
+        language: system
+        files: '^frontend/src/.*\.(vue|js)$'
+        pass_filenames: true
+
       - id: fixture-timestamps
         name: "Synced fixtures must advance `modified`"
         description: >
