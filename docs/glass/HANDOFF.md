@@ -1,15 +1,18 @@
 # HANDOFF
-prompt:   HR — attendance allowances, offboarding proration, Left automation
-status:   done
-commit:   3756864d7 on nz-glass (5 commits dd4aa5b4b..3756864d7)
-files:    hrms/hr/doctype/attendance_allowance_type/* (new doctype + job)
-          hrms/hr/offboarding.py (proration hook + Left sweep)
-          hrms/hr/doctype/leave_allocation/leave_allocation.json (+pre_offboarding_leaves)
-          hrms/hr/doctype/hr_settings/hr_settings.json (+working-days knob)
-          hrms/hooks.py (2 doc_events, daily + monthly scheduler)
-          hrms/tests/test_offboarding{,_integration}.py, test_attendance_allowance.py
-verify:   python3 hrms/tests/test_offboarding.py && python3 hrms/tests/test_attendance_allowance.py
-flags:    proration rounds to whole days (policy convention); earned-leave
-          allocations skipped (scheduler-owned, accrual stops at Left, not at
-          relieving); allowance amounts book monthly, not per checkin
-next:     deploy (migrate applies the 2 field adds + new doctype, no patch)
+prompt:   Full product sweep & live-readiness audit
+status:   partial (12 fixes shipped; 1 known blocker documented, not fixed)
+commit:   0013dc02a on nz-glass (a8f657ff2..0013dc02a, 12 commits)
+files:    hrms/utils/ot_calculation.py (rejected OT not paid)
+          hrms/hr/{leave_rules,utils,offboarding}.py + 4 doctypes (mirror + relieving guards)
+          hrms/api/__init__.py, approval.py (fail-closed employee + fence-bounded approval)
+          hrms/utils/{__init__,company_fence}.py (get_country, reconcile savepoint)
+          frontend FormView/RemoteApprovals.vue, roster MonthViewTable.vue, www/roster.py
+verify:   ruff check hrms; python3 hrms/tests/test_offboarding.py (+ 48 more bench-free)
+flags:    6 audit tracks + live bench E2E; all fixes bench- or source-verified;
+          2 security fixes routed through adversarial verifier (1 caught a regression, fixed)
+blocker:  D1 auto-attendance marks a worked day Absent when punches arrive after
+          last_sync and won't self-repair (shift_type.py mark_absent_*). Payroll-
+          affecting, silent, manual HR override only. NOT fixed — needs attendance-
+          flow redesign + regression, too risky to rush.
+next:     fix D1; then the recorded MEDIUMs (offboarding vs encashment/RL top-ups,
+          error-as-empty PWA states, geofence-log rollback, OT double-pay engines)
