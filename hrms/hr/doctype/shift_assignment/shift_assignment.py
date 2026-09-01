@@ -188,6 +188,10 @@ def mark_expired_shift_assignments_as_inactive():
 			& (shift_assignment.status == "Active")
 			& (shift_assignment.end_date.isnotnull())
 			& (shift_assignment.end_date < yesterday)
+			# Mirrored assignments are owned by their source instance
+			# (single-writer, hrms/sync/write_block.py). db.set_value below
+			# bypasses doc events, so exclude them here at the query.
+			& (shift_assignment.synced_from_instance.isnull())
 		)
 	).run(pluck=True)
 

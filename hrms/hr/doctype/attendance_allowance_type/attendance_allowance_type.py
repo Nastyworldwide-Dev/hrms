@@ -107,6 +107,10 @@ def process_attendance_allowances(start_date=None, end_date=None) -> dict:
 			"docstatus": 1,
 			"attendance_date": ["between", [start_date, end_date]],
 			"status": ["in", eligible_statuses(rule)],
+			# Mirrored attendance is owned by its source instance
+			# (single-writer, hrms/sync/write_block.py); booking off it would
+			# double-pay a mirrored employee the source also compensates.
+			"synced_from_instance": ["is", "not set"],
 		}
 		if rule.get("company"):
 			filters["company"] = rule["company"]

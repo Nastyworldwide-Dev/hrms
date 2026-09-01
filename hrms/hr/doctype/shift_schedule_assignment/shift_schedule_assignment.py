@@ -121,7 +121,15 @@ class ShiftScheduleAssignment(Document):
 def process_auto_shift_creation():
 	shift_schedule_assignments = frappe.get_all(
 		"Shift Schedule Assignment",
-		filters={"enabled": 1, "create_shifts_after": ["<=", nowdate()]},
+		filters={
+			"enabled": 1,
+			"create_shifts_after": ["<=", nowdate()],
+			# Mirrored assignments are owned by their source instance
+			# (single-writer, hrms/sync/write_block.py). Creating shifts from
+			# one duplicates the source's and advances the mirrored cursor
+			# hook-free — exclude them here.
+			"synced_from_instance": ["is", "not set"],
+		},
 		pluck="name",
 	)
 	for d in shift_schedule_assignments:

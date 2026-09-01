@@ -329,6 +329,11 @@ class ShiftType(Document):
 				"shift_actual_end": ("<", self.last_sync_of_checkin),
 				"shift": self.name,
 				"offshift": 0,
+				# Mirrored punches are owned by their source instance
+				# (single-writer, hrms/sync/write_block.py). Processing them
+				# would create a duplicate local Attendance and stamp the
+				# mirrored rows hook-free, so exclude them at the query.
+				"synced_from_instance": ("is", "not set"),
 			},
 			order_by="employee,time",
 		)

@@ -36,7 +36,15 @@ def auto_assign_leave_policies():
 
 	employees = frappe.get_all(
 		"Employee",
-		filters={"status": "Active", "grade": ["in", list(grade_policies)]},
+		filters={
+			"status": "Active",
+			"grade": ["in", list(grade_policies)],
+			# Mirrored employees are owned by their source instance
+			# (single-writer, hrms/sync/write_block.py). A hub-created,
+			# unstamped Leave Policy Assignment for one would grant leave the
+			# source also grants — exclude them here.
+			"synced_from_instance": ["is", "not set"],
+		},
 		fields=["name", "company", "grade"],
 	)
 

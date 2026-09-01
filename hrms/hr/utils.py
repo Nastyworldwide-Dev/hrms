@@ -633,6 +633,11 @@ def get_leave_allocations(date, leave_type):
 			& (leave_allocation.leave_policy_assignment.isnotnull())
 			& (leave_allocation.leave_policy.isnotnull())
 			& (employee.status != "Left")
+			# Mirrored allocations are owned by their source instance
+			# (single-writer, hrms/sync/write_block.py). Accrual writes the
+			# ledger hook-free, so it must be excluded here at the query or the
+			# balance double-counts against the source's own accrual.
+			& (leave_allocation.synced_from_instance.isnull())
 		)
 		.groupby(leave_allocation.name)
 	)
