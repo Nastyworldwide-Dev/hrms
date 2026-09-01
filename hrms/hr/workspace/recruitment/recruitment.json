@@ -190,7 +190,26 @@
    "quick_list_filter": "{\"scheduled_on\":[\"Timespan\",\"this week\"],\"docstatus\":[\"!=\",\"2\"]}"
   }
  ],
- "roles": [],
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR User"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 3.0,
  "shortcuts": [],
  "title": "Recruitment",

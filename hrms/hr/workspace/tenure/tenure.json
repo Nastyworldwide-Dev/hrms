@@ -239,7 +239,26 @@
    "quick_list_filter": "{\"relieving_date\":[\"Timespan\",\"this month\"]}"
   }
  ],
- "roles": [],
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR User"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 2.0,
  "shortcuts": [],
  "title": "Tenure",

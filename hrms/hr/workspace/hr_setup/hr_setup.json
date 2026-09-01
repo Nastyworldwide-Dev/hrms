@@ -424,7 +424,26 @@
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR User"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 1.0,
  "shortcuts": [],
  "title": "HR Setup",

@@ -145,7 +145,26 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR User"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "HR Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Workspace",
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 10.0,
  "shortcuts": [],
  "title": "Tax & Benefits",

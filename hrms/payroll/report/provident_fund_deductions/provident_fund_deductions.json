@@ -16,5 +16,24 @@
  "ref_doctype": "Salary Slip",
  "report_name": "Provident Fund Deductions",
  "report_type": "Script Report",
- "roles": []
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Report",
+   "role": "HR User"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Report",
+   "role": "HR Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Report",
+   "role": "System Manager"
+  }
+ ]
 }
