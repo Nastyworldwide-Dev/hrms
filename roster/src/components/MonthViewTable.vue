@@ -112,13 +112,15 @@
 							v-if="events.data?.[employee.name]?.[day.date]?.holiday"
 							class="blocked-cell"
 						>
-							<div
-								v-html="
-									events.data[employee.name][day.date].weekly_off
-										? '<strong>WO</strong>'
-										: events.data[employee.name][day.date].description
-								"
-							></div>
+							<!-- Holiday description is HR-authored rich text; render
+							     it as text, never v-html, so a Holiday List note
+							     cannot inject script into every roster viewer. -->
+							<strong v-if="events.data[employee.name][day.date].weekly_off"
+								>WO</strong
+							>
+							<div v-else>
+								{{ events.data[employee.name][day.date].description }}
+							</div>
 						</div>
 
 						<!-- Leave -->
@@ -501,7 +503,9 @@ const handleShifts = (
 			status: event.status,
 			start_time: dayjs(event.start_time, "hh:mm:ss").format("HH:mm"),
 			end_time: dayjs(event.end_time, "hh:mm:ss").format("HH:mm"),
-			color: event.color.toLowerCase() as Color,
+			// Shift Type rows predating the color field arrive via a left join
+			// with a null color; without this fallback the whole table blanks.
+			color: (event.color || "blue").toLowerCase() as Color,
 		});
 	}
 };
