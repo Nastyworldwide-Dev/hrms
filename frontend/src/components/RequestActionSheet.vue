@@ -84,6 +84,8 @@
 		>
 			<Button
 				@click="updateDocumentStatus({ status: 'Rejected' })"
+				:loading="submitting"
+				:disabled="submitting"
 				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
 				variant="subtle"
 				theme="red"
@@ -96,6 +98,8 @@
 
 			<Button
 				@click="updateDocumentStatus({ status: 'Approved' })"
+				:loading="submitting"
+				:disabled="submitting"
 				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
 			>
@@ -116,6 +120,8 @@
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 1 })"
+				:loading="submitting"
+				:disabled="submitting"
 				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 				variant="solid"
 			>
@@ -129,6 +135,8 @@
 		>
 			<Button
 				@click="updateDocumentStatus({ docstatus: 2 })"
+				:loading="submitting"
+				:disabled="submitting"
 				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
 				variant="subtle"
 				theme="red"
@@ -244,6 +252,14 @@ const decision = createResource({ url: "hrms.api.approval.decide" })
 // flashed on a phone, and the document stayed a draft while the approver
 // believed they had approved it.
 const finalize = createResource({ url: "hrms.api.approval.finalize" })
+
+// True while any decision/transition is in flight. Bound to the action
+// buttons so a consequential, irreversible tap shows a loading state and
+// cannot be double-fired — the backend is idempotent and row-locked, but the
+// UI should still say "working" and refuse a second tap.
+const submitting = computed(
+	() => decision.loading || finalize.loading || document.setValue?.loading
+)
 
 const sessionEmployee = inject("$employee")
 
