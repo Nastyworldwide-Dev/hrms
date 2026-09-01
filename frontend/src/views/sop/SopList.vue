@@ -18,7 +18,10 @@
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
 							class="relative flex flex-col gap-[18px] bg-accent-ink text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
 							style="
-								transition: transform var(--motion-press), background-color var(--motion-press);
+								transition: transform var(--g-motion-button-press-duration)
+										var(--g-motion-button-press-easing),
+									background-color var(--g-motion-button-press-duration)
+										var(--g-motion-button-press-easing);
 							"
 						>
 							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
@@ -53,7 +56,7 @@
 						v-model="query"
 						:placeholder="__('Search SOPs…')"
 						:aria-label="__('Search SOPs')"
-						class="w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500 focus:outline-none focus:border-accent-ink focus:shadow-[0_0_0_2px_rgba(11,49,58,0.12)]"
+						class="g-focusable w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500"
 					/>
 				</div>
 
@@ -68,7 +71,10 @@
 								:to="{ name: 'SopDetailView', params: { id: sop.name } }"
 								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline active:scale-[0.985] active:bg-ink-200"
 								style="
-									transition: transform var(--motion-press), background-color var(--motion-press);
+									transition: transform var(--g-motion-button-press-duration)
+											var(--g-motion-button-press-easing),
+										background-color var(--g-motion-button-press-duration)
+											var(--g-motion-button-press-easing);
 								"
 							>
 								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
@@ -127,7 +133,10 @@
 				v-if="isHR"
 				type="button"
 				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent-ink text-ground shadow-md active:scale-90 lg:bottom-8"
-				style="transition: transform var(--motion-press)"
+				style="
+					transition: transform var(--g-motion-button-press-duration)
+						var(--g-motion-button-press-easing);
+				"
 				:aria-label="__('New SOP')"
 				@click="openCreate"
 			>

@@ -213,8 +213,9 @@
 									</span>
 								</div>
 							</div>
-							<span class="block text-kra-label text-ink-600 mt-3">
-								🔒 {{ __("You can only see your own scores") }}
+							<span class="flex items-center gap-1.5 text-kra-label text-ink-600 mt-3">
+								<FeatherIcon name="lock" class="h-3 w-3 flex-none" />
+								{{ __("You can only see your own scores") }}
 							</span>
 						</div>
 					</div>
@@ -234,7 +235,7 @@
 import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, ref } from "vue"
-import { createResource } from "frappe-ui"
+import { createResource, FeatherIcon } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

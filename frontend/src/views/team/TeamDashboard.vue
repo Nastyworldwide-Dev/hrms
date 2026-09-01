@@ -20,11 +20,13 @@
 				<!-- day navigation -->
 				<div class="flex flex-row items-center justify-between">
 					<button
-						class="flex items-center justify-center w-[34px] h-[34px] border border-divider bg-transparent text-inkbase"
+						class="flex min-h-11 min-w-11 items-center justify-center bg-transparent text-inkbase"
 						@click="changeDay(-1)"
 						:aria-label="__('Previous day')"
 					>
-						<FeatherIcon name="chevron-left" class="h-4 w-4" />
+						<span class="flex h-[34px] w-[34px] items-center justify-center border border-divider">
+							<FeatherIcon name="chevron-left" class="h-4 w-4" />
+						</span>
 					</button>
 					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
 					     becomes "TODAY · SUN 23 AUG" overnight. -->
@@ -32,11 +34,13 @@
 						{{ dayLabel }}
 					</span>
 					<button
-						class="flex items-center justify-center w-[34px] h-[34px] border border-divider bg-transparent text-inkbase"
+						class="flex min-h-11 min-w-11 items-center justify-center bg-transparent text-inkbase"
 						@click="changeDay(1)"
 						:aria-label="__('Next day')"
 					>
-						<FeatherIcon name="chevron-right" class="h-4 w-4" />
+						<span class="flex h-[34px] w-[34px] items-center justify-center border border-divider">
+							<FeatherIcon name="chevron-right" class="h-4 w-4" />
+						</span>
 					</button>
 				</div>
 
