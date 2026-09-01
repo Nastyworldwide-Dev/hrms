@@ -52,6 +52,8 @@
 						<RequestList
 							:component="markRaw(AttendanceRequestItem)"
 							:items="myAttendanceRequests?.data?.slice(0, 5)"
+							:resource="myAttendanceRequests"
+							:what="__('your attendance requests')"
 						/>
 					</div>
 
@@ -87,6 +89,8 @@
 						<RequestList
 							:component="markRaw(ShiftRequestItem)"
 							:items="myShiftRequests?.data?.slice(0, 5)"
+							:resource="myShiftRequests"
+							:what="__('your shift requests')"
 						/>
 					</div>
 
@@ -107,6 +111,8 @@
 						<RequestList
 							:component="markRaw(OTRequestItem)"
 							:items="myOTRequests?.data?.slice(0, 5)"
+							:resource="myOTRequests"
+							:what="__('your OT requests')"
 							:emptyStateMessage="__('You have no OT requests')"
 						/>
 					</div>

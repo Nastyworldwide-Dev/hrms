@@ -1,5 +1,6 @@
 <template>
-	<div class="flex flex-col overflow-auto" v-if="props.items?.length">
+	<ResourceError v-if="props.resource?.error" :resource="props.resource" :what="props.what" />
+	<div class="flex flex-col overflow-auto" v-else-if="props.items?.length">
 		<div
 			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
 			v-for="link in props.items"
@@ -88,6 +89,18 @@ const props = defineProps({
 		default: "",
 	},
 	emptyStateMessage: {
+		type: String,
+		default: "",
+	},
+	// Optional owning resource. When passed and it errored, the list shows the
+	// "could not load" state instead of the empty state — so a failed fetch is
+	// never mistaken for "nothing here". Callers that don't pass it are
+	// unchanged.
+	resource: {
+		type: Object,
+		default: null,
+	},
+	what: {
 		type: String,
 		default: "",
 	},

@@ -26,7 +26,12 @@
 							</router-link>
 						</div>
 						<hr class="h-px border-0 bg-hair" />
-						<RequestList :component="markRaw(ExpenseClaimItem)" :items="myClaims.data" />
+						<RequestList
+							:component="markRaw(ExpenseClaimItem)"
+							:items="myClaims.data"
+							:resource="myClaims"
+							:what="__('your expense claims')"
+						/>
 					</div>
 
 					<!-- Claim an expense -->
