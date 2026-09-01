@@ -52,6 +52,12 @@ STALE_AFTER_HOURS = 36
 #: why Partial is not on this list.
 HEARTBEAT_STATUS = "Completed"
 
+#: Who is told, in-app, that the mirror stopped. The Error Log is a Desk record
+#: an operator has to go looking for; a stale mirror is only safe if someone is
+#: TOLD before they trust the data, so the same people who run Sync Now get an
+#: alert. HR Manager, matching checkin_sweeper's abandoned-IN alert.
+HR_MANAGER_ROLE = "HR Manager"
+
 
 #: Live leave, in the source system's own words. Identical to the predicate in
 #: `LeaveApplication.validate_leave_overlap` — this check exists precisely
@@ -197,4 +203,45 @@ def report_stale_instances() -> list[dict]:
 			"because a held watermark means the mirror did not move."
 		),
 	)
+	_notify_hr_stale(stale, lines)
 	return stale
+
+
+def _notify_hr_stale(stale: list[dict], lines: list[str]) -> None:
+	"""One in-app alert per HR Manager when the mirror has stopped moving.
+
+	The Error Log above is the audit record; this is the part that reaches a
+	human before they act on stale data. Never fatal: a detective job must not
+	fail because a notification could not be written.
+	"""
+	hr_users = frappe.get_all(
+		"Has Role",
+		filters={"role": HR_MANAGER_ROLE, "parenttype": "User"},
+		pluck="parent",
+	)
+	if not hr_users:
+		logger.warning("[sync.health] no HR Manager to alert about %d stale instance(s)", len(stale))
+		return
+
+	subject = f"{len(stale)} ERP instance(s) have stopped syncing"
+	body = (
+		f"Mirrored HR data from the following source instance(s) is stale — no "
+		f"completed sync in over {STALE_AFTER_HOURS}h, so employee, attendance, "
+		f"check-in and leave rows are as old as shown. Run HR Setup -> Data "
+		f"Migration -> ERP Instance -> Sync Now before relying on them.\n\n" + "\n".join(lines)
+	)
+	for user in set(hr_users):
+		try:
+			frappe.get_doc(
+				{
+					"doctype": "Notification Log",
+					"for_user": user,
+					"type": "Alert",
+					"document_type": "HRMS ERP Instance",
+					"subject": subject,
+					"email_content": body,
+				}
+			).insert(ignore_permissions=True)
+			logger.info("[sync.health] alerted HR user=%s about %d stale instance(s)", user, len(stale))
+		except Exception as exc:
+			logger.warning("[sync.health] could not alert %s: %s", user, exc)

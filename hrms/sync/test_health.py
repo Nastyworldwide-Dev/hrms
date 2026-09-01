@@ -38,11 +38,13 @@ def hours_ago(n):
 
 
 class _FakeFrappe(types.ModuleType):
-	def __init__(self, instances, runs):
+	def __init__(self, instances, runs, hr_managers=None):
 		super().__init__("frappe")
 		self.instances = instances  # [{name, enabled}]
 		self.runs = runs  # [{source_instance, status, finished_at}]
+		self.hr_managers = hr_managers if hr_managers is not None else ["hr@example.com"]
 		self.errors = []
+		self.notifications = []  # Notification Log rows inserted
 		self.session = types.SimpleNamespace(user="Administrator")
 
 	def get_all(self, doctype, filters=None, fields=None, pluck=None, order_by=None, limit=None, **kw):
@@ -59,7 +61,14 @@ class _FakeFrappe(types.ModuleType):
 			# without one is the stub lying, not the code failing. Caught exactly
 			# that on first run.
 			return [{"name": f"SYNC-{i:05d}", **r} for i, r in enumerate(rows)]
+		if doctype == "Has Role":
+			return list(self.hr_managers) if pluck else [{"parent": u} for u in self.hr_managers]
 		return []
+
+	def get_doc(self, doc):
+		if doc.get("doctype") == "Notification Log":
+			self.notifications.append(doc)
+		return types.SimpleNamespace(insert=lambda **kw: None)
 
 	def log_error(self, title=None, message=None, **kw):
 		self.errors.append({"title": title, "message": message})
@@ -83,8 +92,8 @@ class _FakeFrappe(types.ModuleType):
 		return _FakeFrappe._DB()
 
 
-def load(instances, runs):
-	fake = _FakeFrappe(instances, runs)
+def load(instances, runs, hr_managers=None):
+	fake = _FakeFrappe(instances, runs, hr_managers=hr_managers)
 	sys.modules["frappe"] = fake
 	utils = types.ModuleType("frappe.utils")
 	utils.now_datetime = lambda: NOW
@@ -179,6 +188,46 @@ class TestStaleness(unittest.TestCase):
 		for forbidden in ("run_sync", "queue_sync", "enqueue", "sync_instance"):
 			self.assertFalse(any(forbidden in c for c in called), f"{forbidden} is called: {called}")
 			self.assertNotIn(forbidden, imported)
+
+
+class TestStaleAlertsReachHR(unittest.TestCase):
+	"""The Error Log is an audit record; a stale mirror is only safe if a human
+	is TOLD before trusting it. Every HR Manager gets an in-app alert."""
+
+	def test_stale_instance_alerts_every_hr_manager(self):
+		module, fake = load(
+			ONE,
+			[{"source_instance": "nasty-live", "status": "Completed", "finished_at": hours_ago(400)}],
+			hr_managers=["hr1@example.com", "hr2@example.com"],
+		)
+		module.report_stale_instances()
+		recipients = {n["for_user"] for n in fake.notifications}
+		self.assertEqual(recipients, {"hr1@example.com", "hr2@example.com"})
+		self.assertTrue(all(n["document_type"] == "HRMS ERP Instance" for n in fake.notifications))
+		self.assertTrue(all("nasty-live" in n["email_content"] for n in fake.notifications))
+
+	def test_never_run_instance_also_alerts(self):
+		module, fake = load(ONE, [], hr_managers=["hr@example.com"])
+		module.report_stale_instances()
+		self.assertEqual(len(fake.notifications), 1)
+
+	def test_healthy_mirror_alerts_nobody(self):
+		module, fake = load(
+			ONE, [{"source_instance": "nasty-live", "status": "Completed", "finished_at": hours_ago(2)}]
+		)
+		module.report_stale_instances()
+		self.assertEqual(fake.notifications, [])
+
+	def test_no_hr_manager_is_not_fatal(self):
+		module, fake = load(
+			ONE,
+			[{"source_instance": "nasty-live", "status": "Completed", "finished_at": hours_ago(400)}],
+			hr_managers=[],
+		)
+		# still reports (Error Log) and returns the stale list; just no alert
+		stale = module.report_stale_instances()
+		self.assertEqual([s["instance"] for s in stale], ["nasty-live"])
+		self.assertEqual(fake.notifications, [])
 
 
 if __name__ == "__main__":
