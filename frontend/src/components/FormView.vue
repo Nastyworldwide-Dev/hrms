@@ -668,10 +668,21 @@ function validateMandatoryFields() {
 			errorFields.length > 1 ? "fields are mandatory" : "field is mandatory"
 		}`
 		return false
-	} else {
-		formErrorMessage.value = ""
-		return true
 	}
+
+	// A field showing an inline validation error (To Date before From Date,
+	// claimed hours over the punch-verified cap, half-day steps) must block the
+	// save. Without this the form submitted with the error visible, and the user
+	// got a second, server-worded failure instead of the inline message stopping
+	// them. error_message is the inline channel — set on invalid, "" on valid.
+	const invalidField = props.fields.find((field) => !field.hidden && field.error_message)
+	if (invalidField) {
+		formErrorMessage.value = invalidField.error_message
+		return false
+	}
+
+	formErrorMessage.value = ""
+	return true
 }
 
 async function handleDocUpdate(action) {
