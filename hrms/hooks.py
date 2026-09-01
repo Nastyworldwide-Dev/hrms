@@ -574,7 +574,12 @@ scheduler_events = {
 		"hrms.hr.utils.allocate_earned_leaves",
 	],
 	"weekly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_weekly"],
-	"monthly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_monthly"],
+	"monthly": [
+		"hrms.controllers.employee_reminders.send_reminders_in_advance_monthly",
+		# Book attendance allowances for the previous month as Additional
+		# Salary (idempotent — keyed on ref_docname + payroll_date).
+		"hrms.hr.doctype.attendance_allowance_type.attendance_allowance_type.process_attendance_allowances",
+	],
 }
 
 advance_payment_payable_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]

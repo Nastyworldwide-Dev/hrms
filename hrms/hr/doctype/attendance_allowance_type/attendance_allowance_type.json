@@ -1,0 +1,147 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "Prompt",
+ "creation": "2026-09-01 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "disabled",
+  "column_break_head",
+  "company",
+  "payout_section",
+  "salary_component",
+  "column_break_payout",
+  "allowance_amount",
+  "eligibility_section",
+  "include_half_day",
+  "include_work_from_home",
+  "column_break_eligibility",
+  "exclude_late_entry",
+  "exclude_early_exit",
+  "minimum_working_hours"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "If set, only attendance of this company is considered. Leave empty to apply to all companies.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "payout_section",
+   "fieldtype": "Section Break",
+   "label": "Payout"
+  },
+  {
+   "description": "Earnings component the allowance is booked against via Additional Salary",
+   "fieldname": "salary_component",
+   "fieldtype": "Link",
+   "label": "Salary Component",
+   "options": "Salary Component",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_payout",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Amount paid per eligible attendance day",
+   "fieldname": "allowance_amount",
+   "fieldtype": "Currency",
+   "label": "Allowance Amount Per Day",
+   "reqd": 1
+  },
+  {
+   "description": "A submitted Attendance with status Present always qualifies, subject to the checks below. Attendance is derived from Employee Checkins by the existing auto-attendance flow — this configuration reads it, it never creates a parallel clock source.",
+   "fieldname": "eligibility_section",
+   "fieldtype": "Section Break",
+   "label": "Eligibility"
+  },
+  {
+   "default": "0",
+   "description": "Half Day attendance earns half the daily amount",
+   "fieldname": "include_half_day",
+   "fieldtype": "Check",
+   "label": "Include Half Day"
+  },
+  {
+   "default": "0",
+   "fieldname": "include_work_from_home",
+   "fieldtype": "Check",
+   "label": "Include Work From Home"
+  },
+  {
+   "fieldname": "column_break_eligibility",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "A day flagged Late Entry earns no allowance",
+   "fieldname": "exclude_late_entry",
+   "fieldtype": "Check",
+   "label": "Exclude Late Entry"
+  },
+  {
+   "default": "0",
+   "description": "A day flagged Early Exit earns no allowance",
+   "fieldname": "exclude_early_exit",
+   "fieldtype": "Check",
+   "label": "Exclude Early Exit"
+  },
+  {
+   "description": "Days with fewer working hours than this earn no allowance. 0 disables the check.",
+   "fieldname": "minimum_working_hours",
+   "fieldtype": "Float",
+   "label": "Minimum Working Hours"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-01 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Attendance Allowance Type",
+ "naming_rule": "Set by user",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "role": "HR User",
+   "select": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
