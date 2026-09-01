@@ -32,7 +32,12 @@ except ImportError:  # pragma: no cover — pure unit tests outside bench
 country_info = {}
 
 
-@frappe.whitelist(allow_guest=True)
+# NOT whitelisted: this was a guest-reachable endpoint whose body makes an
+# un-timed outbound request to pro.ip-api.com (a hung upstream pins the worker)
+# and grows a module-global dict keyed by unauthenticated request IP without
+# bound. hooks.py already removed its jinja reachability; the whitelist was the
+# last live entry point and nothing in this app calls the function. Body kept
+# for upstream-merge parity only — hrms/sync/client.py is this shape done right.
 def get_country(fields: list | None = None) -> dict:
 	global country_info
 	ip = frappe.local.request_ip
