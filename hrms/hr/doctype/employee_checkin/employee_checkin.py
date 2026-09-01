@@ -2,12 +2,15 @@
 # For license information, please see license.txt
 
 
+import logging
 from datetime import date, datetime, timedelta
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, get_datetime
+
+logger = logging.getLogger(__name__)
 
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
 from hrms.hr.utils import (
@@ -283,7 +286,8 @@ def create_or_update_attendance(
 	out_time=None,
 	overtime_type=None,
 ):
-	"""Creates a new attendance or updates an existing half-day attendance."""
+	"""Creates a new attendance, repairs a provisional auto-Absent, or updates
+	an existing half-day attendance."""
 	if attendance := get_existing_half_day_attendance(employee, attendance_date):
 		frappe.db.set_value(
 			"Attendance",
@@ -300,13 +304,25 @@ def create_or_update_attendance(
 			},
 		)
 		return frappe.get_doc("Attendance", attendance.name)
-	else:
-		attendance = frappe.new_doc("Attendance")
-		attendance.update(
+
+	if attendance := get_repairable_auto_absence(employee, attendance_date):
+		# Auto-attendance marked this day Absent because no check-ins had
+		# arrived; the authoritative punches are here now. Repair the
+		# provisional record in place (it stays automation-owned) rather than
+		# colliding with it as a duplicate and skipping the punches forever.
+		overtime_update = {}
+		if overtime_type and attendance_status == "Present":
+			overtime_data = get_overtime_data(shift, working_hours)
+			if overtime_data:
+				overtime_update = {
+					"overtime_type": overtime_type,
+					"standard_working_hours": overtime_data.get("standard_working_hours"),
+					"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
+				}
+		frappe.db.set_value(
+			"Attendance",
+			attendance.name,
 			{
-				"doctype": "Attendance",
-				"employee": employee,
-				"attendance_date": attendance_date,
 				"status": attendance_status,
 				"working_hours": working_hours,
 				"shift": shift,
@@ -314,24 +330,81 @@ def create_or_update_attendance(
 				"early_exit": early_exit,
 				"in_time": in_time,
 				"out_time": out_time,
-			}
+				**overtime_update,
+			},
 		)
+		repaired = frappe.get_doc("Attendance", attendance.name)
+		repaired.add_comment(
+			"Comment",
+			_("Auto-marked Absent repaired to {0} when check-ins arrived late.").format(_(attendance_status)),
+		)
+		logger.info(
+			"[checkin] repaired auto-Absent %s -> %s for %s on %s",
+			attendance.name,
+			attendance_status,
+			employee,
+			attendance_date,
+		)
+		return repaired
 
-		# Set overtime data if applicable
-		if overtime_type and attendance_status == "Present":
-			overtime_data = get_overtime_data(shift, working_hours)
-			if overtime_data:
-				attendance.update(
-					{
-						"overtime_type": overtime_type,
-						"standard_working_hours": overtime_data.get("standard_working_hours"),
-						"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
-					}
-				)
-		attendance.save()
-		attendance.submit()
+	attendance = frappe.new_doc("Attendance")
+	attendance.update(
+		{
+			"doctype": "Attendance",
+			"employee": employee,
+			"attendance_date": attendance_date,
+			"status": attendance_status,
+			"working_hours": working_hours,
+			"shift": shift,
+			"late_entry": late_entry,
+			"early_exit": early_exit,
+			"in_time": in_time,
+			"out_time": out_time,
+			# Automation-owned, so a later provisional Absent can be told apart
+			# from a person's manual Attendance.
+			"auto_attendance": 1,
+		}
+	)
+
+	# Set overtime data if applicable
+	if overtime_type and attendance_status == "Present":
+		overtime_data = get_overtime_data(shift, working_hours)
+		if overtime_data:
+			attendance.update(
+				{
+					"overtime_type": overtime_type,
+					"standard_working_hours": overtime_data.get("standard_working_hours"),
+					"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
+				}
+			)
+	attendance.save()
+	attendance.submit()
 
 	return attendance
+
+
+def get_repairable_auto_absence(employee, attendance_date) -> Document | None:
+	"""An auto-attendance Absent that no check-in ever backed — the provisional
+	absence mark_absent_for_dates_with_no_attendance leaves when punches are
+	missing. Manual Absents (auto_attendance=0) and punch-derived Absents
+	(which have linked check-ins) are deliberately excluded, so a real HR
+	decision is never overwritten."""
+	name = frappe.db.exists(
+		"Attendance",
+		{
+			"employee": employee,
+			"attendance_date": attendance_date,
+			"status": "Absent",
+			"auto_attendance": 1,
+			"docstatus": 1,
+		},
+	)
+	if not name:
+		return None
+	if frappe.db.exists("Employee Checkin", {"attendance": name}):
+		return None
+	logger.info("[checkin] found provisional auto-Absent %s for %s", name, employee)
+	return frappe.get_doc("Attendance", name)
 
 
 def get_overtime_data(shift_name, working_hours):

@@ -197,6 +197,87 @@ class TestShiftType(HRMSTestSuite):
 		)
 		self.assertEqual(attendance, "Present")
 
+	def test_late_punches_repair_auto_marked_absent(self):
+		"""D1: auto-attendance marks a day Absent before delayed punches arrive;
+		when the authoritative check-ins land, a rerun must repair the
+		provisional Absent to Present rather than leave it and skip the punches
+		forever."""
+		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
+
+		employee = make_employee("d1_repair@example.com", company="_Test Company")
+		shift_type = setup_shift_type(shift_type="D1 Repair Shift")
+		date = getdate()
+		make_shift_assignment(shift_type.name, employee, date)
+
+		# Phase 1: no punches yet -> provisional Absent
+		shift_type.process_auto_attendance()
+		self.assertEqual(
+			frappe.db.get_value(
+				"Attendance",
+				{"employee": employee, "attendance_date": date, "docstatus": ["<", 2]},
+				"status",
+			),
+			"Absent",
+		)
+
+		# Phase 2: authoritative punches arrive late
+		make_checkin(employee, datetime.combine(date, get_time("08:00:00")))
+		make_checkin(employee, datetime.combine(date, get_time("12:00:00")))
+
+		# Phase 3: rerun repairs the provisional Absent, no duplicate
+		shift_type.process_auto_attendance()
+		records = frappe.get_all(
+			"Attendance",
+			filters={"employee": employee, "attendance_date": date, "docstatus": ["<", 2]},
+			fields=["name", "status"],
+		)
+		self.assertEqual(len(records), 1, "must not create a duplicate Attendance")
+		self.assertEqual(records[0].status, "Present")
+
+		# idempotent: a second rerun changes nothing and creates nothing
+		shift_type.process_auto_attendance()
+		again = frappe.get_all(
+			"Attendance",
+			filters={"employee": employee, "attendance_date": date, "docstatus": ["<", 2]},
+			fields=["name", "status"],
+		)
+		self.assertEqual(len(again), 1)
+		self.assertEqual(again[0].status, "Present")
+
+	def test_manual_attendance_is_never_overwritten_by_late_punches(self):
+		"""A human-created Attendance is not automation-owned; late punches must
+		not silently flip an HR decision."""
+		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
+
+		employee = make_employee("d1_manual@example.com", company="_Test Company")
+		shift_type = setup_shift_type(shift_type="D1 Manual Shift")
+		date = getdate()
+		make_shift_assignment(shift_type.name, employee, date)
+
+		manual = frappe.get_doc(
+			{
+				"doctype": "Attendance",
+				"employee": employee,
+				"attendance_date": date,
+				"status": "Absent",
+				"shift": shift_type.name,
+			}
+		)
+		manual.insert()
+		manual.submit()
+
+		make_checkin(employee, datetime.combine(date, get_time("08:00:00")))
+		make_checkin(employee, datetime.combine(date, get_time("12:00:00")))
+		shift_type.process_auto_attendance()
+
+		records = frappe.get_all(
+			"Attendance",
+			filters={"employee": employee, "attendance_date": date, "docstatus": ["<", 2]},
+			fields=["name", "status"],
+		)
+		self.assertEqual(len(records), 1)
+		self.assertEqual(records[0].status, "Absent", "manual HR decision preserved")
+
 	def test_mark_attendance_with_different_shift_start_time(self):
 		"""Tests whether attendance is marked correctly if shift configuration is changed midway"""
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin

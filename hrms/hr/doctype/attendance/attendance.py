@@ -359,6 +359,7 @@ def mark_attendance(
 	late_entry=False,
 	early_exit=False,
 	half_day_status=None,
+	auto_attendance=False,
 ):
 	savepoint = "attendance_creation"
 
@@ -376,10 +377,21 @@ def mark_attendance(
 				"late_entry": late_entry,
 				"early_exit": early_exit,
 				"half_day_status": half_day_status,
+				# Marks automation ownership: a provisional Absent stamped here
+				# is repairable in place when late check-ins arrive; a person's
+				# manual Attendance never carries it, so it is never overwritten.
+				"auto_attendance": 1 if auto_attendance else 0,
 			}
 		)
 		attendance.insert()
 		attendance.submit()
+		logger.info(
+			"[attendance] marked %s for %s on %s (auto=%s)",
+			status,
+			employee,
+			attendance_date,
+			bool(auto_attendance),
+		)
 	except (DuplicateAttendanceError, OverlappingShiftAttendanceError):
 		frappe.db.rollback(save_point=savepoint)
 		return

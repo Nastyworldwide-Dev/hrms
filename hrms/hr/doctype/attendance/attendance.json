@@ -34,6 +34,7 @@
   "early_exit",
   "amended_from",
   "modify_half_day_status",
+  "auto_attendance",
   "overtime_section",
   "overtime_type",
   "actual_overtime_duration",
@@ -103,7 +104,7 @@
    "read_only": 1
   },
   {
-   "description": "Σ(band hours × multiplier) — the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
+   "description": "\u03a3(band hours \u00d7 multiplier) \u2014 the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
    "fieldname": "ot_rate_weighted_hours",
    "fieldtype": "Float",
    "label": "OT Rate-Weighted Hours",
@@ -259,6 +260,16 @@
    "label": "modify_half_day_status"
   },
   {
+   "default": "0",
+   "description": "Set when this Attendance was created by auto-attendance (not by a person). A provisional Absent carrying this flag is repaired in place when authoritative check-ins arrive late.",
+   "fieldname": "auto_attendance",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Auto Attendance",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "depends_on": "overtime_type",
    "fieldname": "overtime_section",
    "fieldtype": "Section Break",
@@ -292,7 +303,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-16 17:44:13.859387",
+ "modified": "2026-09-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance",

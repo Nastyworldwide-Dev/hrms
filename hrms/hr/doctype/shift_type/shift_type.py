@@ -418,7 +418,7 @@ class ShiftType(Document):
 			shift_details = get_employee_shift(employee, timestamp, True)
 
 			if shift_details and shift_details.shift_type.name == self.name:
-				attendance = mark_attendance(employee, date, "Absent", self.name)
+				attendance = mark_attendance(employee, date, "Absent", self.name, auto_attendance=True)
 
 				if not attendance:
 					continue
