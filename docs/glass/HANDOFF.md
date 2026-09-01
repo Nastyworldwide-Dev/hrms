@@ -1,17 +1,15 @@
 # HANDOFF
-prompt:   Track B — glass transformation gaps, closed with instruments
-status:   done - 9 commits, all 8 gates MEASURED on one build, 7 straight green,
-          visual green on rerun (one recorded flake)
-commit:   8e8e629e6 on nz-glass
-files:    glass-components.css (opacity invariant, header, dropdown skin)
-          GPage/App (field per page), router (focus release)
-          Notifications.vue (3 states), 3 doctype json + 2 forms (status display)
-          patches/frappe-ui (Popover guard), design/baselines (64 re-shot)
-verify:   set -a; . .env; set +a; node design/gates/run.mjs   -> no SKIP
-flags:    the AUDIT_PW route works from this repo — the gates were never
-          actually blocked, only uncredentialed. shift-requests-new-1440-dark
-          flaked once; if again, re-measure noise floor, do not raise the cap.
-          Field/modal consolidation (14 non-Glass inputs, 9 ion-modal) is the
-          measured remainder; Ionic motion is the out-of-scope-ruling to revisit.
-next:     deploy (build only — no migrate needed beyond the earlier batch),
-          then the user re-tests the five screenshot findings on a phone.
+prompt:   HR — attendance allowances, offboarding proration, Left automation
+status:   done
+commit:   3756864d7 on nz-glass (5 commits dd4aa5b4b..3756864d7)
+files:    hrms/hr/doctype/attendance_allowance_type/* (new doctype + job)
+          hrms/hr/offboarding.py (proration hook + Left sweep)
+          hrms/hr/doctype/leave_allocation/leave_allocation.json (+pre_offboarding_leaves)
+          hrms/hr/doctype/hr_settings/hr_settings.json (+working-days knob)
+          hrms/hooks.py (2 doc_events, daily + monthly scheduler)
+          hrms/tests/test_offboarding{,_integration}.py, test_attendance_allowance.py
+verify:   python3 hrms/tests/test_offboarding.py && python3 hrms/tests/test_attendance_allowance.py
+flags:    proration rounds to whole days (policy convention); earned-leave
+          allocations skipped (scheduler-owned, accrual stops at Left, not at
+          relieving); allowance amounts book monthly, not per checkin
+next:     deploy (migrate applies the 2 field adds + new doctype, no patch)
