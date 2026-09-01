@@ -14,6 +14,17 @@ export const formatCurrency = (value, currency) => {
 	// hack: if value contains a space, it is already formatted
 	if (value?.toString().trim().includes(" ")) return value
 
+	// A Currency amount is numeric and defaults to 0; an undefined/null/NaN here
+	// (an uninitialised total, a sum taken before rows have loaded) must never
+	// reach Intl.NumberFormat, which renders it as "NaN" — the "RMNaN" seen in
+	// the expenses UI. Coerce to a finite number; 0 is the correct money zero.
+	const num = Number(value)
+	const amount = Number.isFinite(num) ? num : 0
+	// Signal only a genuine anomaly — a non-empty value that is not a number —
+	// so a malformed total is findable, without logging the ordinary empty case.
+	if (value != null && value !== "" && !Number.isFinite(num))
+		console.warn("[formatters] non-numeric currency value coerced to 0:", value)
+
 	const locale = settings.doc?.country == "India" ? "en-IN" : settings.doc?.language
 
 	const formatter = Intl.NumberFormat(locale, {
@@ -24,7 +35,7 @@ export const formatCurrency = (value, currency) => {
 	})
 	return (
 		formatter
-			.format(value)
+			.format(amount)
 			// add space between the digits and symbol
 			.replace(/^(\D+)/, "$1 ")
 			// remove extra spaces if any (added by some browsers)
