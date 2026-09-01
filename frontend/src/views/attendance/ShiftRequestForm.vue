@@ -52,19 +52,31 @@ const formFields = createResource({
 	},
 })
 
+// The approver list and the form fields load in parallel; whichever lands
+// first must not assume the other is ready. Stash the approvers and apply them
+// when both are present — the old code dereferenced formFields.data before it
+// existed, throwing, so the approver dropdown stayed empty and submit failed.
+const approverOptions = ref(null)
+function applyApproverOptions() {
+	const data = approverOptions.value
+	const approver = formFields.data?.find((field) => field.fieldname === "approver")
+	if (!data || !approver) return
+	approver.documentList = data.map((a) => ({
+		label: a.full_name ? `${a.name} : ${a.full_name}` : a.name,
+		value: a.name,
+	}))
+	if (!shiftRequest.value.approver) shiftRequest.value.approver = data[0]?.name
+}
 createResource({
 	url: "hrms.api.get_shift_request_approvers",
 	params: { employee: employee.data.name },
 	auto: !props.id,
 	onSuccess(data) {
-		const approver = formFields.data?.find((field) => field.fieldname === "approver")
-		approver.documentList = data?.map((approver) => ({
-			label: approver.full_name ? `${approver.name} : ${approver.full_name}` : approver.name,
-			value: approver.name,
-		}))
-		shiftRequest.value.approver = data[0]?.name
+		approverOptions.value = data
+		applyApproverOptions()
 	},
 })
+watch(() => formFields.data, applyApproverOptions)
 
 // form scripts
 watch(
