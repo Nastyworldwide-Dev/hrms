@@ -315,6 +315,11 @@ def _approved_ot_pay_hours(employee, start_date, end_date):
 		filters={
 			"employee": employee,
 			"docstatus": 1,
+			# A rejected request reaches docstatus 1 like any other decision
+			# (rejecting is a decision, not a cancellation), so without this the
+			# salary formula would price the hours a Reject was refusing. Same
+			# guard the replacement-leave bank carries in ot_request.py.
+			"status": ("!=", "Rejected"),
 			"compensation": "Overtime Pay",
 			"ot_date": ["between", [start_date, end_date]],
 		},

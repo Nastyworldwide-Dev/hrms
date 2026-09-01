@@ -142,5 +142,24 @@ class TestMonthlyCapResets(unittest.TestCase):
 		self.assertEqual([d["ot_hours"] for d in priced], [3.0, 1.0, 3.0])
 
 
+class TestApprovedOtPayExcludesRejected(unittest.TestCase):
+	"""A rejected OT-Pay request reaches docstatus 1 (rejecting is a decision,
+	not a cancellation); it must never be priced into payroll."""
+
+	def test_query_filters_out_rejected(self):
+		captured = {}
+
+		def fake_get_all(doctype, filters=None, fields=None):
+			captured["filters"] = filters
+			return []
+
+		with patch.object(ot.frappe, "get_all", side_effect=fake_get_all):
+			ot._approved_ot_pay_hours("EMP-1", date(2026, 8, 1), date(2026, 8, 31))
+
+		self.assertEqual(captured["filters"].get("status"), ("!=", "Rejected"))
+		self.assertEqual(captured["filters"].get("compensation"), "Overtime Pay")
+		self.assertEqual(captured["filters"].get("docstatus"), 1)
+
+
 if __name__ == "__main__":
 	unittest.main()
