@@ -84,6 +84,15 @@ class TestEmployeeDataGuard(FrappeTestCase):
 		frappe.set_user("guard.stranger@bench.test")
 		self.assertTrue(_may_read_employee(self.stranger))
 
+	def test_self_passes_with_case_drifted_user_id(self):
+		# A mirror-written user_id can be case-unnormalized; the caller must
+		# still resolve to their own Employee (canonical get_employee), not be
+		# locked out by a raw compare.
+		frappe.db.set_value("Employee", self.stranger, "user_id", "Guard.Stranger@Bench.Test")
+		frappe.set_user("guard.stranger@bench.test")
+		self.assertTrue(_may_read_employee(self.stranger))
+		frappe.db.set_value("Employee", self.stranger, "user_id", "guard.stranger@bench.test")
+
 	def test_plain_employee_cannot_read_another(self):
 		# The core regression: a UP-less Employee-role user must fail closed.
 		frappe.set_user("guard.nosy@bench.test")

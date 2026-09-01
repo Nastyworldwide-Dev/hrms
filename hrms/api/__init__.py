@@ -223,11 +223,16 @@ def _ensure_own_employee_or_permitted(employee: str) -> None:
 def _may_read_employee(employee: str) -> bool:
 	from hrms.overrides.company_scope import company_visible
 
-	if frappe.db.get_value("Employee", employee, "user_id") == frappe.session.user:
+	# Self and the direct-manager check both resolve the caller through the
+	# canonical get_employee(), which normalizes the login (strip+lower). A raw
+	# `user_id == session.user` compare would drift on a mirror-provisioned
+	# Employee whose user_id was written case-unnormalized via db.set_value,
+	# locking that user out of their own data — see hrms/utils/identity.py.
+	caller_employee = get_employee()
+	if caller_employee and employee == caller_employee:
 		return True
 	# A direct manager may read a report (read-only, resolved by the caller's
 	# own Employee, never a caller-supplied id).
-	caller_employee = get_employee()
 	if caller_employee and frappe.db.get_value("Employee", employee, "reports_to") == caller_employee:
 		return True
 	# HR operators (HR User / HR Manager, and Administrator), bounded by the
