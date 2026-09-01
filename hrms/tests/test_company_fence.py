@@ -472,6 +472,26 @@ class TestFenceRolesAreWiredForFreshInstallAndMigrate(unittest.TestCase):
 			self.assertEqual(create_company_fence_roles(), [])
 		get_doc.assert_not_called()
 
+	def test_nightly_reconcile_isolates_each_user_in_a_savepoint(self):
+		"""sync_company_user_permission deletes stale Company UPs before it
+		inserts the new ones, so a failure mid-user must roll back to a
+		savepoint — committing the partial (fewer/zero-fence, fail-open) state
+		would silently widen that HR user's company sight."""
+		import ast
+		import pathlib
+
+		hrms_root = pathlib.Path(__file__).resolve().parents[1]
+		source = (hrms_root / "utils/company_fence.py").read_text(encoding="utf-8")
+		tree = ast.parse(source)
+		func = next(
+			node
+			for node in ast.walk(tree)
+			if isinstance(node, ast.FunctionDef) and node.name == "reconcile_company_fences"
+		)
+		body = ast.get_source_segment(source, func)
+		self.assertIn('frappe.db.savepoint("fence_reconcile_user")', body)
+		self.assertIn('frappe.db.rollback(save_point="fence_reconcile_user")', body)
+
 	def test_fence_roles_carry_no_docperm_rows(self):
 		"""They are fences, not permission carriers — nothing to validate, so
 		they cannot reintroduce the cancel-without-submit fresh-install abort."""

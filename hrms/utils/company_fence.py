@@ -227,7 +227,12 @@ def reconcile_company_fences() -> list[str]:
 	reconciled = []
 	for user in sorted(holders & enabled):
 		# One bad user must not abort the night for everyone after them, nor
-		# suppress the hygiene report that runs next.
+		# suppress the hygiene report that runs next. The savepoint is load
+		# bearing: sync_company_user_permission deletes the stale Company User
+		# Permissions before inserting the new ones, so a failure mid-insert
+		# would otherwise COMMIT a user with fewer (or zero) fences — and zero
+		# fences is fail-open, widening their sight to every company.
+		frappe.db.savepoint("fence_reconcile_user")
 		try:
 			employees = frappe.get_all(
 				"Employee",
@@ -253,6 +258,7 @@ def reconcile_company_fences() -> list[str]:
 			)
 			reconciled.append(user)
 		except Exception:
+			frappe.db.rollback(save_point="fence_reconcile_user")
 			logger.error("[company_fence] reconcile failed for %s — continuing", user, exc_info=True)
 
 	logger.info("[company_fence] nightly reconcile: %d fence-role user(s)", len(reconciled))
