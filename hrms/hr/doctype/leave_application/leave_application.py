@@ -1000,19 +1000,26 @@ def get_number_of_leave_days(
 
 def _ensure_leave_details_permitted(employee: str) -> None:
 	"""get_leave_details is whitelisted with an arbitrary employee id — without
-	a guard any logged-in user can pull any employee's allocation map. Allow
-	the employee's own user, real Employee read permission (HR, managers), and
-	the employee's resolved leave approver (Desk leave form dashboard)."""
-	user = frappe.session.user
-	if user == "Administrator":
+	a guard any logged-in user can pull any employee's allocation map. Allow the
+	employee's own user, a direct manager or fenced HR (the canonical
+	_may_read_employee), and the employee's resolved leave approver.
+
+	NOT frappe.has_permission("Employee") directly: an HR user who is also an
+	employee carries the auto-created allow=Employee self User Permission, which
+	makes has_permission fail CLOSED for everyone else's record — so HR opening
+	an employee's leave application got a 403 and a blank leave-types dropdown.
+	_may_read_employee resolves HR by role + company fence, not by that UP."""
+	from hrms.api import _may_read_employee
+
+	if frappe.session.user == "Administrator":
 		return
-	if frappe.db.get_value("Employee", employee, "user_id") == user:
+	if _may_read_employee(employee):
 		return
-	if frappe.has_permission("Employee", doc=employee):
+	if frappe.session.user == get_leave_approver(employee):
 		return
-	if user == get_leave_approver(employee):
-		return
-	frappe.logger("hrms").warning("[leave] %s denied leave details for employee %s", user, employee)
+	frappe.logger("hrms").warning(
+		"[leave] %s denied leave details for employee %s", frappe.session.user, employee
+	)
 	frappe.throw(_("Not permitted to view leave details for this employee."), frappe.PermissionError)
 
 
