@@ -257,7 +257,12 @@ async function submit(_e) {
 			}
 		}
 	} catch (error) {
-		errorMessage.value = error.messages.join("\n")
+		// A network failure or any non-Frappe error has no `.messages`; joining it
+		// blindly threw inside the catch, so a failed sign-in showed nothing at all.
+		errorMessage.value =
+			error?.messages?.join("\n") ||
+			error?.message ||
+			__("Could not sign in. Please check your connection and try again.")
 	}
 }
 
