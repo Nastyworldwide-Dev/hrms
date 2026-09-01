@@ -29,7 +29,7 @@
 					     "create a new X" role rendered as a chartreuse GButton on the
 					     dashboards — one role, two components, two colours. -->
 					<router-link
-						v-if="createPermission?.data?.has_permission && props.doctype != 'Employee Checkin'"
+						v-if="canCreate"
 						:to="{ name: formViewRoute }"
 						v-slot="{ navigate }"
 						class="mr-2 shrink-0"
@@ -298,6 +298,17 @@ const isTeamRequest = computed(() => {
 const formViewRoute = computed(() => {
 	return `${props.doctype.replace(/\s+/g, "")}FormView`
 })
+
+// Show "New" only when the create route actually exists. Some doctypes
+// (Shift Assignment, Employee Checkin) are read-only in the app on purpose and
+// have no FormView route; without this guard the button rendered from the
+// backend create permission and its tap resolved no route — a dead control.
+const canCreate = computed(
+	() =>
+		createPermission?.data?.has_permission &&
+		props.doctype !== "Employee Checkin" &&
+		router.hasRoute(formViewRoute.value)
+)
 
 const detailViewRoute = computed(() => {
 	return `${props.doctype.replace(/\s+/g, "")}DetailView`
