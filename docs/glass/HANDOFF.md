@@ -1,20 +1,21 @@
 # HANDOFF
-prompt:   Nadi/Verifica full access & live-readiness audit
-status:   done (critical finding = cosmetic, remediated; backend authoritative)
-commit:   1051ad655 on nz-glass (865bfa3cc..1051ad655)
-files:    9 hrms/**/workspace/*.json (+HR roles), 2 payroll report json (+roles)
-          hrms/patches/v16_0/gate_hr_workspaces_to_hr_roles.py (+patches.txt)
-          hrms/tests/test_workspace_access_gating.py
-verify:   bench --site test.local execute \
-          hrms.patches.v16_0.gate_hr_workspaces_to_hr_roles.execute
-finding:  employee reaching Desk saw 9 HR/Payroll workspace cards — verified on
-          bench to be COSMETIC: every doctype/report/page behind them 403s an
-          employee; get_doc of another's Salary Slip/Employee/Attendance denied;
-          get_list self-scoped. Gated the 9 workspaces + 2 open payroll reports
-          to HR roles. Employee now sees 0 HR workspaces; HR sees all 9.
-residual: ESS User Type user can get_list Salary Structure NAMES (no data) — a
-          Frappe framework quirk (doctype perms are HR-only); ESS type is not
-          the live provisioning model (employees are System Users, unaffected).
-          LOW; documented, not masked with a speculative hook.
-next:     decide whether to move employees to ESS User Type / Website User (the
-          cleaner no-Desk model readiness.py already recommends)
+prompt:   Hub sync & data-freshness readiness
+status:   done (safety fix shipped; trigger/cutover policy left to business)
+commit:   a71020889 on nz-glass
+files:    hrms/sync/health.py (stale mirror -> HR in-app alert)
+          hrms/sync/test_health.py (4 alert regression tests)
+verify:   python3 hrms/sync/test_health.py; bench console report_stale_instances
+          -> 3 Notification Log alerts, one per HR Manager (verified on bench)
+model:    hub sync is a MIGRATION-phase mirror: operator-initiated Sync Now
+          (deliberately NOT scheduled — write_block guards unattended mirror
+          writes), incremental watermark advanced only on Completed, single-
+          writer, never-delete. Integrity covered: test_sync_runner (158),
+          test_sync_parity (34), test_write_block (20), test_series_advance,
+          test_contested_rows — all green.
+fix:      staleness was Error-Log-only; now every HR Manager gets an in-app
+          alert before trusting stale mirrored data. Detective-only preserved
+          (never starts a sync).
+policy:   still a business decision — (a) manual vs scheduled sync trigger and
+          the cutover date; (b) whether individual Nadi users need a per-user
+          "data as of X" banner (UI work, out of this pass's scope).
+next:     decide the sync trigger/cutover policy; optional Nadi freshness banner
