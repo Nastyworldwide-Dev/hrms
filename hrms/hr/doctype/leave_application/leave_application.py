@@ -29,6 +29,7 @@ import hrms
 from hrms.api import get_current_employee_info
 from hrms.hr.doctype.leave_block_list.leave_block_list import get_applicable_block_dates
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import create_leave_ledger_entry
+from hrms.hr.offboarding import block_transaction_after_relieving
 from hrms.hr.utils import (
 	get_holiday_dates_for_employee,
 	get_leave_period,
@@ -84,6 +85,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def validate(self):
 		validate_active_employee(self.employee)
+		block_transaction_after_relieving(self.employee, self.to_date, "Leave")
 		set_employee_name(self)
 		self.validate_dates()
 		self.validate_balance_leaves()

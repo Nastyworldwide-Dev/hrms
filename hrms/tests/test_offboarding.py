@@ -67,6 +67,7 @@ def _load_module():
 		"getdate": _getdate,
 		"cint": lambda v: int(v or 0),
 		"add_days": lambda d, days: _getdate(d) + datetime.timedelta(days=days),
+		"formatdate": lambda d=None: str(d),
 	}.items():
 		if not getattr(frappe_utils, name, None):
 			setattr(frappe_utils, name, fn)
@@ -112,6 +113,30 @@ class TestProrateToRelieving(unittest.TestCase):
 
 	def test_zero_entitlement_stays_zero(self):
 		self.assertEqual(offboarding.prorate_to_relieving(0.0, YEAR_START, YEAR_END, D(2026, 6, 30)), 0.0)
+
+
+class TestIsAfterRelieving(unittest.TestCase):
+	def test_no_relieving_date_never_blocks(self):
+		self.assertFalse(offboarding.is_after_relieving(D(2026, 9, 14), None))
+
+	def test_relieving_day_itself_is_allowed(self):
+		# the relieving date is the last working day
+		self.assertFalse(offboarding.is_after_relieving(D(2026, 8, 1), D(2026, 8, 1)))
+
+	def test_before_relieving_is_allowed(self):
+		self.assertFalse(offboarding.is_after_relieving(D(2026, 7, 31), D(2026, 8, 1)))
+
+	def test_after_relieving_is_blocked(self):
+		# the E2E defect: leave dated 44 days after the relieving date
+		self.assertTrue(offboarding.is_after_relieving(D(2026, 9, 14), D(2026, 8, 1)))
+
+
+class TestPostRelievingGuardIsWired(unittest.TestCase):
+	def test_leave_and_attendance_validate_call_the_guard(self):
+		leave = (HRMS_ROOT / "hr" / "doctype" / "leave_application" / "leave_application.py").read_text()
+		attendance = (HRMS_ROOT / "hr" / "doctype" / "attendance" / "attendance.py").read_text()
+		self.assertIn("block_transaction_after_relieving(self.employee, self.to_date", leave)
+		self.assertIn("block_transaction_after_relieving(self.employee, self.attendance_date", attendance)
 
 
 class TestPlanAllocationTargets(unittest.TestCase):

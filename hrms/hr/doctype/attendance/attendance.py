@@ -25,6 +25,7 @@ from frappe.utils.background_jobs import get_job
 
 import hrms
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
+from hrms.hr.offboarding import block_transaction_after_relieving
 from hrms.hr.utils import (
 	get_holidays_for_employee,
 	validate_active_employee,
@@ -106,6 +107,8 @@ class Attendance(Document):
 					frappe.bold(format_date(date_of_joining)),
 				)
 			)
+
+		block_transaction_after_relieving(self.employee, self.attendance_date, "Attendance")
 
 	def validate_duplicate_record(self):
 		duplicate = self.get_duplicate_attendance_record()
@@ -525,7 +528,7 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 	only reports what WOULD change; pass dry_run=0 to write (submit-safe via db_set).
 	Run: bench --site <site> execute
 	hrms.hr.doctype.attendance.attendance.recompute_ot_backfill
-	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\" """
+	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\""""
 	dry_run = cint(dry_run)
 	logger.info("[attendance] OT backfill %s..%s dry_run=%s", from_date, to_date, dry_run)
 	names = frappe.get_all(

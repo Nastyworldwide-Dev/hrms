@@ -23,7 +23,7 @@ import logging
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, cint, flt, getdate
+from frappe.utils import add_days, cint, flt, formatdate, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,37 @@ def prorate_to_relieving(full_leaves: float, from_date, to_date, relieving_date)
 	eligible_days = (relieving_date - from_date).days + 1
 	period_days = (to_date - from_date).days + 1
 	return float(round(full_leaves * eligible_days / period_days))
+
+
+def is_after_relieving(check_date, relieving_date) -> bool:
+	"""True when a transaction date falls past the employee's last day.
+
+	The relieving date itself is the last working day, so it is allowed.
+	"""
+	if not relieving_date:
+		return False
+	return getdate(check_date) > getdate(relieving_date)
+
+
+def block_transaction_after_relieving(employee: str, check_date, label: str) -> None:
+	"""Refuse a leave/attendance transaction dated after the employee left.
+
+	Marking an employee relieved must actually stop new work landing on
+	them; without this a Left employee's leave and attendance were accepted
+	weeks past their relieving date and consumed ledger balance / fed the
+	allowance job. Joining-date is already guarded symmetrically in each
+	doctype; this is the other end of employment.
+	"""
+	if not (employee and check_date):
+		return
+	relieving_date = frappe.db.get_value("Employee", employee, "relieving_date")
+	if is_after_relieving(check_date, relieving_date):
+		frappe.throw(
+			_("{0} date {1} is after the employee's relieving date {2}.").format(
+				_(label), frappe.bold(formatdate(check_date)), frappe.bold(formatdate(relieving_date))
+			),
+			title=_("Employee Has Left"),
+		)
 
 
 def working_day_offset(start_date, working_days: int, holiday_dates: set) -> datetime.date:
