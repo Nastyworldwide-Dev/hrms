@@ -201,19 +201,41 @@ def are_push_notifications_enabled() -> bool:
 
 # Attendance
 def _ensure_own_employee_or_permitted(employee: str) -> None:
-	"""Staff lockdown: staff may only query their own employee; HR and users
-	with real read permission on the Employee doc (approvers etc.) pass.
-	Unknown ids are rejected explicitly — has_permission short-circuits for
-	Administrator before resolving the doc, so it can't be relied on for 404s."""
+	"""Staff lockdown: staff may only query their own employee; a direct
+	manager may read a report, and HR (subject to the company fence) may read
+	inside their fence. Unknown ids are rejected explicitly.
+
+	NOT `frappe.has_permission("Employee")`: the shipped Employee doctype
+	grants the Employee role read at permlevel 0, and the company-fence hook
+	fails open for a caller with no Company User Permission — which is the
+	hub's normal SSO/mirror-provisioned account. So has_permission returned
+	True for any employee id, and every per-employee endpoint below it leaked
+	a colleague's data one enumerable id at a time. This resolves ownership by
+	user_id and checks role/manager/fence explicitly, so it fails closed."""
 	if not frappe.db.exists("Employee", employee):
 		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
-	employee_user = frappe.db.get_value("Employee", employee, "user_id")
-	if employee_user == frappe.session.user:
-		return
-	if frappe.has_permission("Employee", doc=employee):
+	if _may_read_employee(employee):
 		return
 	frappe.logger("hrms").warning("[api] %s denied access to employee %s data", frappe.session.user, employee)
 	frappe.throw(_("Not permitted to view this employee's data."), frappe.PermissionError)
+
+
+def _may_read_employee(employee: str) -> bool:
+	from hrms.overrides.company_scope import company_visible
+
+	if frappe.db.get_value("Employee", employee, "user_id") == frappe.session.user:
+		return True
+	# A direct manager may read a report (read-only, resolved by the caller's
+	# own Employee, never a caller-supplied id).
+	caller_employee = get_employee()
+	if caller_employee and frappe.db.get_value("Employee", employee, "reports_to") == caller_employee:
+		return True
+	# HR operators (HR User / HR Manager, and Administrator), bounded by the
+	# company fence: an unfenced operator sees all, a fenced one only inside
+	# their companies. is_hr_operator deliberately excludes System Manager.
+	if is_hr_operator() and company_visible(frappe.db.get_value("Employee", employee, "company")):
+		return True
+	return False
 
 
 @frappe.whitelist()
