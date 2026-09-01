@@ -26,6 +26,11 @@ alone.
 
 import frappe
 
+# The canonical operator role set (HR User / HR Manager / System Manager),
+# imported rather than re-listed so it cannot drift — see
+# hrms/tests/test_is_hr_single_source.py.
+from hrms.hr.utils import HR_ROLES
+
 HR_WORKSPACES = (
 	"HR Setup",
 	"Payroll",
@@ -37,7 +42,6 @@ HR_WORKSPACES = (
 	"Performance",
 	"Tenure",
 )
-HR_ROLES = ("HR User", "HR Manager", "System Manager")
 
 
 def execute():
