@@ -88,7 +88,18 @@ def _is_routed_approver(doc) -> bool:
 	"""
 	user = frappe.session.user
 	if {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
-		return True
+		# HR operators may decide — but a company-fenced one only inside their
+		# fence. company_visible is True for an unfenced operator (no Company
+		# User Permission) and for the request's own companies, so this changes
+		# nothing for admin/unfenced HR and stops a fenced HR deciding another
+		# company's request. A fenced-out operator falls through: they may still
+		# be the named approver or the reports_to manager below.
+		from hrms.overrides.company_scope import company_visible
+
+		subject = doc.get("employee")
+		company = frappe.db.get_value("Employee", subject, "company") if subject else doc.get("company")
+		if company_visible(company):
+			return True
 	field = APPROVER_FIELD.get(doc.doctype)
 	if field and doc.get(field) == user:
 		return True

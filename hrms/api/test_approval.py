@@ -176,6 +176,14 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 		self.assertIn("reports_to", src)
 		self.assertIn("APPROVER_FIELD", src)
 
+	def test_hr_approval_is_bounded_by_the_company_fence(self):
+		"""An HR operator decides only inside their company fence — otherwise a
+		fenced HR (Company A) could decide a Company B request whose row the
+		fence hides from every list. company_visible is True for unfenced HR, so
+		admin/unfenced behaviour is unchanged."""
+		src = ast.unparse(self._fn("_is_routed_approver"))
+		self.assertIn("company_visible", src)
+
 	def test_both_endpoints_consult_it(self):
 		for name in ("decide", "finalize"):
 			called = {
