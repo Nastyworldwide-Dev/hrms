@@ -18,6 +18,7 @@
   "to_date",
   "section_break_6",
   "new_leaves_allocated",
+  "pre_offboarding_leaves",
   "carry_forward",
   "unused_leaves",
   "total_leaves_allocated",
@@ -118,6 +119,17 @@
    "fieldname": "new_leaves_allocated",
    "fieldtype": "Float",
    "label": "New Leaves Allocated"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Full-period entitlement captured before offboarding proration. Restored (and cleared) if the relieving date is removed or moved past the period end.",
+   "fieldname": "pre_offboarding_leaves",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Leaves Before Offboarding Proration",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
   },
   {
    "default": "0",
@@ -258,7 +270,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-12 12:54:03.589896",
+ "modified": "2026-09-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Allocation",

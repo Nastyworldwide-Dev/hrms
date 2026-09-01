@@ -345,6 +345,7 @@ doc_events = {
 			"hrms.overrides.employee_master.validate_onboarding_process",
 			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
 			"hrms.overrides.employee_master.set_years_of_service",
+			"hrms.hr.offboarding.validate_offboarding_dates",
 		],
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
@@ -352,6 +353,10 @@ doc_events = {
 			# Reconcile the rule-managed Shift Assignment when shift_location /
 			# department changes (no-op otherwise; never blocks the save).
 			"hrms.hr.shift_rules.reconcile_on_employee_update",
+			# Prorate leave allocations when the relieving date changes
+			# (no-op otherwise; idempotent — recomputed from the parked
+			# full-period baseline every time).
+			"hrms.hr.offboarding.prorate_leave_allocations",
 			# Runs LAST on purpose: ERPNext's Employee.on_update controller method
 			# fires before this hook and may delete any `allow=Employee` User
 			# Permissions when `create_user_permission` is unticked. Running our
