@@ -281,18 +281,23 @@ const employeeDocType = createResource({
 })
 
 const getFieldInfo = (fieldname) => {
-	const field = employeeDocType.data.find((field) => field.fieldname === fieldname)
+	// Both resources load async; opening the detail sheet before they resolve
+	// used to run .find on null (and deref a null doc below), rendering an
+	// error instead of a sheet. Default to safe values until they arrive.
+	const field = (employeeDocType.data || []).find((field) => field.fieldname === fieldname)
 	return [__(field?.label, null, "Employee"), field?.fieldtype]
 }
 
 const getFieldValue = (fieldname) => {
-	if (fieldname === "employee_number" && !employeeDoc.doc[fieldname]) {
-		return employeeDoc.doc["name"]
+	const doc = employeeDoc.doc
+	if (!doc) return ""
+	if (fieldname === "employee_number" && !doc[fieldname]) {
+		return doc["name"]
 	}
 	if (fieldname === "reports_to") {
-		return reportsToName.data || employeeDoc.doc[fieldname]
+		return reportsToName.data || doc[fieldname]
 	}
-	return employeeDoc.doc[fieldname]
+	return doc[fieldname]
 }
 
 const logout = async () => {
