@@ -1,19 +1,20 @@
 # HANDOFF
-prompt:   D1 — auto-attendance self-repair on late check-ins
-status:   done
-commit:   aaa56fe04 on nz-glass
-files:    hrms/hr/doctype/employee_checkin/employee_checkin.py (repair path + marker)
-          hrms/hr/doctype/attendance/attendance.{py,json} (auto_attendance field)
-          hrms/hr/doctype/shift_type/shift_type.py (stamp provisional absent)
-          hrms/hr/doctype/shift_type/test_shift_type.py (2 regression tests)
-verify:   bench --site test.local run-tests --app hrms --module \
-          hrms.hr.doctype.shift_type.test_shift_type --test \
-          test_late_punches_repair_auto_marked_absent
-flags:    schema add (auto_attendance) applied by migrate, no patch. Bench
-          test.local has pre-existing pollution (mid-test commits leave _Test
-          Shift / employees) — clean before module-wide runs; 3 unrelated
-          checkin tests fail identically on the pre-D1 baseline.
-remain:   punches skipped BEFORE this fix stay skipped (historical); a one-off
-          backfill clearing skip_auto_attendance on days with a provisional
-          Absent would remediate them. Not payroll-blocking going forward.
-next:     optional backfill patch for pre-fix skipped punches
+prompt:   Nadi/Verifica full access & live-readiness audit
+status:   done (critical finding = cosmetic, remediated; backend authoritative)
+commit:   1051ad655 on nz-glass (865bfa3cc..1051ad655)
+files:    9 hrms/**/workspace/*.json (+HR roles), 2 payroll report json (+roles)
+          hrms/patches/v16_0/gate_hr_workspaces_to_hr_roles.py (+patches.txt)
+          hrms/tests/test_workspace_access_gating.py
+verify:   bench --site test.local execute \
+          hrms.patches.v16_0.gate_hr_workspaces_to_hr_roles.execute
+finding:  employee reaching Desk saw 9 HR/Payroll workspace cards — verified on
+          bench to be COSMETIC: every doctype/report/page behind them 403s an
+          employee; get_doc of another's Salary Slip/Employee/Attendance denied;
+          get_list self-scoped. Gated the 9 workspaces + 2 open payroll reports
+          to HR roles. Employee now sees 0 HR workspaces; HR sees all 9.
+residual: ESS User Type user can get_list Salary Structure NAMES (no data) — a
+          Frappe framework quirk (doctype perms are HR-only); ESS type is not
+          the live provisioning model (employees are System Users, unaffected).
+          LOW; documented, not masked with a speculative hook.
+next:     decide whether to move employees to ESS User Type / Website User (the
+          cleaner no-Desk model readiness.py already recommends)
