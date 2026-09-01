@@ -179,8 +179,10 @@
 							@click="submitDecision"
 							:disabled="submitting"
 						>
-							<GSkeleton height="14px" width="42%" />
-							{{ decision === "approve" ? __("Confirm Approve") : __("Confirm Reject") }}
+							<GSkeleton v-if="submitting" height="14px" width="42%" />
+							<template v-else>
+								{{ decision === "approve" ? __("Confirm Approve") : __("Confirm Reject") }}
+							</template>
 						</button>
 					</div>
 				</div>
