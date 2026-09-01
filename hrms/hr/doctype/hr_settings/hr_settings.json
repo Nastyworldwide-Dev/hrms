@@ -50,6 +50,7 @@
   "employee_exit_settings_section",
   "exit_questionnaire_web_form",
   "exit_questionnaire_notification_template",
+  "exit_status_change_after_working_days",
   "recruitment_tab",
   "hiring_settings_section",
   "check_vacancies",
@@ -241,6 +242,13 @@
    "options": "Email Template"
   },
   {
+   "default": "3",
+   "description": "Working days after the Relieving Date (counted against the employee's Holiday List) before the daily scheduler moves an Active employee to Left.",
+   "fieldname": "exit_status_change_after_working_days",
+   "fieldtype": "Int",
+   "label": "Mark Employee as Left After (Working Days)"
+  },
+  {
    "fieldname": "sender",
    "fieldtype": "Link",
    "label": "Sender",
@@ -408,7 +416,7 @@
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-09-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",

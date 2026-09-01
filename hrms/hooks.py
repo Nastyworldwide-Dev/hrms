@@ -566,6 +566,10 @@ scheduler_events = {
 		# runs, this is what surfaces the other silent failures; when it does not,
 		# `readiness.system_readiness` is whitelisted so it can still be ASKED.
 		"hrms.utils.readiness.report_readiness",
+		# Active -> Left once the configured working days (HR Settings,
+		# default 3) have passed after the relieving date, per the
+		# employee's Holiday List. Rerun-safe; skips mirrored employees.
+		"hrms.hr.offboarding.update_relieved_employee_status",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).

@@ -18,11 +18,12 @@ no parallel offboarding record:
   date, counted against the employee's own Holiday List.
 """
 
+import datetime
 import logging
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate
+from frappe.utils import add_days, cint, flt, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,20 @@ def prorate_to_relieving(full_leaves: float, from_date, to_date, relieving_date)
 	eligible_days = (relieving_date - from_date).days + 1
 	period_days = (to_date - from_date).days + 1
 	return float(round(full_leaves * eligible_days / period_days))
+
+
+def working_day_offset(start_date, working_days: int, holiday_dates: set) -> datetime.date:
+	"""Date of the Nth working day strictly after start_date.
+
+	A day is a working day when it is not in ``holiday_dates`` (the
+	employee's Holiday List rows — weekly offs included).
+	"""
+	day, remaining = start_date, working_days
+	while remaining > 0:
+		day = day + datetime.timedelta(days=1)
+		if day not in holiday_dates:
+			remaining -= 1
+	return day
 
 
 def plan_allocation_targets(allocations, relieving_date) -> list[dict]:
@@ -194,3 +209,102 @@ def prorate_leave_allocations(doc, method=None):
 				title=f"Offboarding leave proration failed for {doc.name} ({plan['name']})",
 				message=frappe.get_traceback(),
 			)
+
+
+# ---------------------------------------------------------------------------
+# daily scheduler
+# ---------------------------------------------------------------------------
+
+
+def get_holidays_after(employee: str, relieving_date, working_days: int) -> set:
+	"""Holiday dates (weekly offs included) just after the relieving date,
+	from the employee's own Holiday List (company fallback built in)."""
+	from hrms.utils.holiday_list import get_holiday_dates_between, get_holiday_list_for_employee
+
+	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False, as_on=relieving_date)
+	if not holiday_list:
+		# No holiday list anywhere -> every day counts as a working day.
+		return set()
+	# ponytail: fixed lookahead window; a holiday list ending inside it makes
+	# later days count as working. Widen the window if that ever matters.
+	window_end = add_days(relieving_date, working_days * 7 + 31)
+	return {
+		getdate(day)
+		for day in get_holiday_dates_between(holiday_list, add_days(relieving_date, 1), window_end)
+	}
+
+
+def update_relieved_employee_status() -> dict:
+	"""Daily scheduler — Active -> Left after the configured working days.
+
+	The threshold (HR Settings, default 3) is counted in WORKING days after
+	the relieving date against the employee's Holiday List. Safe to rerun:
+	the query only sees Active employees, and each candidate is re-checked
+	on its live document before the flip, so an employee whose status or
+	relieving date changed since the query is never forced.
+	"""
+	working_days = (
+		cint(frappe.db.get_single_value("HR Settings", "exit_status_change_after_working_days")) or 3
+	)
+	today = getdate()
+	candidates = frappe.get_all(
+		"Employee",
+		filters=[
+			["status", "=", "Active"],
+			["relieving_date", "is", "set"],
+			["relieving_date", "<=", today],
+			# Mirrored employees are owned by their source instance
+			# (single-writer, hrms/sync/write_block.py).
+			["synced_from_instance", "is", "not set"],
+		],
+		fields=["name", "relieving_date"],
+	)
+	logger.info(
+		"[offboarding] status sweep: %d candidate(s), threshold %d working day(s)",
+		len(candidates),
+		working_days,
+	)
+
+	counters = {"marked_left": 0, "waiting": 0, "error": 0}
+	for row in candidates:
+		# savepoint per employee: one bad record must not poison the rest
+		frappe.db.savepoint("offboarding_status")
+		try:
+			relieving_date = getdate(row["relieving_date"])
+			threshold = working_day_offset(
+				relieving_date, working_days, get_holidays_after(row["name"], relieving_date, working_days)
+			)
+			if today < threshold:
+				counters["waiting"] += 1
+				continue
+			employee = frappe.get_doc("Employee", row["name"])
+			if (
+				employee.status != "Active"
+				or not employee.relieving_date
+				or getdate(employee.relieving_date) != relieving_date
+			):
+				# criteria changed between the query and now — never force
+				counters["waiting"] += 1
+				continue
+			employee.status = "Left"
+			employee.flags.ignore_permissions = True
+			employee.save()
+			employee.add_comment(
+				"Comment",
+				_("Status set to Left automatically: {0} working day(s) after relieving date {1}").format(
+					working_days, relieving_date
+				),
+			)
+			counters["marked_left"] += 1
+			logger.info("[offboarding] %s marked Left (relieved %s)", row["name"], relieving_date)
+		except Exception:
+			frappe.db.rollback(save_point="offboarding_status")
+			counters["error"] += 1
+			logger.exception("[offboarding] status transition failed for %s", row["name"])
+			frappe.log_error(
+				title=f"Offboarding status transition failed for {row['name']}",
+				message=frappe.get_traceback(),
+			)
+
+	logger.info("[offboarding] status sweep done: %s", counters)
+	return counters
