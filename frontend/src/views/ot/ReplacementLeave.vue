@@ -51,8 +51,9 @@
 				<!-- claims -->
 				<div class="flex flex-col gap-1.5">
 					<span class="g-eyebrow">{{ __("My Claims") }}</span>
+					<ResourceError v-if="claims.error" :resource="claims" :what="__('your claims')" />
 					<GEmptyState
-						v-if="!claims.data?.length"
+						v-else-if="!claims.data?.length"
 						:title="__('No replacement leave claimed')"
 						:body="__('Worked a rest day? Use New Claim above to claim the time back')"
 					/>

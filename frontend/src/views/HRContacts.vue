@@ -7,7 +7,7 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<GIconButton :label="__('Back')" flush @click="router.back()">
+							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
@@ -24,6 +24,13 @@
 						<div v-if="hrContacts.loading && !hrContacts.data" class="flex flex-col gap-3">
 							<div v-for="i in 3" :key="i" class="h-20 bg-ink-200 animate-pulse" />
 						</div>
+
+						<!-- Error state: a failed fetch must not read as "no contacts" -->
+						<ResourceError
+							v-else-if="hrContacts.error"
+							:resource="hrContacts"
+							:what="__('HR contacts')"
+						/>
 
 						<!-- Empty state -->
 						<div
@@ -70,6 +77,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 
 import ContactCard from "@/components/ContactCard.vue"
 import { hrContactsResource } from "@/data/hrContacts"
+import { goBackOrHome } from "@/utils/navigation"
 
 const __ = inject("$translate")
 const router = useRouter()

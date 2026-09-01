@@ -77,8 +77,9 @@
 							</div>
 						</div>
 
+						<ResourceError v-if="issues.error" :resource="issues" :what="__('the issue board')" />
 						<GEmptyState
-							v-if="!issues.loading && !visibleIssues.length"
+							v-else-if="!issues.loading && !visibleIssues.length"
 							:title="__('Nothing in {0}', [__(activeStatus).toLowerCase()])"
 							:body="__('Issues move here as they are triaged')"
 						/>

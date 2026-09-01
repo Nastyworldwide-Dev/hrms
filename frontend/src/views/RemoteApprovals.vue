@@ -7,7 +7,7 @@
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
 						<div class="flex flex-row items-center gap-2.5">
-							<GIconButton :label="__('Back')" flush @click="router.back()">
+							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
@@ -26,6 +26,11 @@
 							<div v-if="decided.loading && !decided.data" class="flex flex-col gap-3">
 								<div v-for="i in 3" :key="i" class="h-20 bg-ink-200 animate-pulse" />
 							</div>
+							<ResourceError
+								v-else-if="decided.error"
+								:resource="decided"
+								:what="__('your decisions')"
+							/>
 							<GEmptyState
 								v-else-if="!decided.data || decided.data.length === 0"
 								:title="__('No decisions yet')"
@@ -72,6 +77,11 @@
 								<div v-for="i in 3" :key="i" class="h-28 bg-ink-200 animate-pulse" />
 							</div>
 
+							<ResourceError
+								v-else-if="pending.error"
+								:resource="pending"
+								:what="__('pending approvals')"
+							/>
 							<GEmptyState
 								v-else-if="!pending.data || pending.data.length === 0"
 								:title="__('Nothing to approve right now')"
@@ -195,6 +205,7 @@
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
+import { goBackOrHome } from "@/utils/navigation"
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
