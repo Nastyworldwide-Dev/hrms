@@ -470,7 +470,7 @@ const attachedFiles = createResource({
 		dn: props.id,
 	},
 	transform(data) {
-		return data.map((file) => (file.uploaded = true))
+		return data.map((file) => ({ ...file, uploaded: true }))
 	},
 	onSuccess(data) {
 		fileAttachments.value = data
