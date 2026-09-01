@@ -1,21 +1,19 @@
 # HANDOFF
-prompt:   Hub sync & data-freshness readiness
-status:   done (safety fix shipped; trigger/cutover policy left to business)
-commit:   a71020889 on nz-glass
-files:    hrms/sync/health.py (stale mirror -> HR in-app alert)
-          hrms/sync/test_health.py (4 alert regression tests)
-verify:   python3 hrms/sync/test_health.py; bench console report_stale_instances
-          -> 3 Notification Log alerts, one per HR Manager (verified on bench)
-model:    hub sync is a MIGRATION-phase mirror: operator-initiated Sync Now
-          (deliberately NOT scheduled — write_block guards unattended mirror
-          writes), incremental watermark advanced only on Completed, single-
-          writer, never-delete. Integrity covered: test_sync_runner (158),
-          test_sync_parity (34), test_write_block (20), test_series_advance,
-          test_contested_rows — all green.
-fix:      staleness was Error-Log-only; now every HR Manager gets an in-app
-          alert before trusting stale mirrored data. Detective-only preserved
-          (never starts a sync).
-policy:   still a business decision — (a) manual vs scheduled sync trigger and
-          the cutover date; (b) whether individual Nadi users need a per-user
-          "data as of X" banner (UI work, out of this pass's scope).
-next:     decide the sync trigger/cutover policy; optional Nadi freshness banner
+prompt:   Nadi everyday-use completeness & reliability
+status:   done (9 functional PWA fixes; no visual redesign)
+commit:   ccd0a1fb2 on nz-glass (21a1307c3..ccd0a1fb2)
+files:    RemoteApprovals/HRContacts/ReplacementLeave/HRIssueBoard (error-vs-empty)
+          Profile/AppSettings/ChangePassword + above (goBackOrHome)
+          ListView (dead New button), Login (error feedback),
+          ShiftRequestForm (approver race), FormView (inline error blocks submit),
+          Profile (detail-sheet load race)
+verify:   cd frontend && yarn build; node --test tests/*.test.mjs (61/63;
+          the 2 fails are the pre-existing frappe-ui call-error-handling patch test)
+fixed:    approvers no longer see a failed load as an empty queue; Back never
+          strands on a cold push deep link; no dead New on read-only lists; a
+          failed sign-in shows a message; shift-request approver survives the
+          fetch race; an inline validation error blocks submit everywhere;
+          profile detail sheet survives an early tap
+recorded: one-tap approve/reject in RequestActionSheet has no confirm (RemoteApprovals
+          DOES confirm) — a UX-policy call, left as a recommendation not a change
+next:     product decision on approval confirmation; then the visual pass
