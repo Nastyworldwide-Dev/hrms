@@ -35,13 +35,6 @@
 						@deleteExpenseTax="deleteExpenseTax"
 					/>
 				</template>
-
-				<template #advances="{ isFormReadOnly }">
-					<ExpenseAdvancesTable
-						v-model:expenseClaim="expenseClaim"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-					/>
-				</template>
 			</FormView>
 			<ResourceError :resource="formFields" what="the expense claim form" />
 		</ion-content>
@@ -57,9 +50,7 @@ import { computed, ref, watch, inject } from "vue"
 import FormView from "@/components/FormView.vue"
 import ExpensesTable from "@/components/ExpensesTable.vue"
 import ExpenseTaxesTable from "@/components/ExpenseTaxesTable.vue"
-import ExpenseAdvancesTable from "@/components/ExpenseAdvancesTable.vue"
 import { getCompanyCurrency } from "@/data/currencies"
-import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
 
 const dayjs = inject("$dayjs")
 
@@ -77,17 +68,20 @@ const props = defineProps({
 	},
 })
 
-const tabs = [
-	{ name: "Expenses", lastField: "taxes" },
-	{ name: "Advances", lastField: "advances" },
-	{ name: "Totals", lastField: "cost_center" },
-]
+// Employee flow only: approver, expense items, taxes, attachments. The Advances
+// and Totals tabs and the Currency/Exchange Rate section are ERP concerns not
+// appropriate here — the claim is filed in the company currency at rate 1, and
+// the required backend fields (currency, exchange_rate, cost_center,
+// payable_account) are populated from company defaults below.
+const tabs = [{ name: "Expenses", lastField: "taxes" }]
 
 // object to store form data
 const expenseClaim = ref({
 	employee: currEmployee,
 	company: employeeCompany,
 	doctype: "Expense Claim",
+	// reqd on the doctype; defaulted so a hidden field never blocks submit.
+	exchange_rate: 1,
 })
 
 const companyCurrency = computed(() => getCompanyCurrency(expenseClaim.value.company))
@@ -114,56 +108,9 @@ const formFields = createResource({
 })
 formFields.reload()
 
-useCurrencyConversion(formFields, expenseClaim, [
-	"total_sanctioned_amount",
-	"total_taxes_and_charges",
-	"total_advance_amount",
-	"grand_total",
-	"total_claimed_amount",
-])
-
 // resources & helper functions
-const advances = createResource({
-	url: "hrms.hr.doctype.expense_claim.expense_claim.get_advances",
-	makeParams() {
-		return { expense_claim: expenseClaim.value }
-	},
-	onSuccess(data) {
-		selectAllocatedAdvances()
-		addUnallocatedAdvances(data)
-	},
-})
-
-function selectAllocatedAdvances() {
-	if (props.id) {
-		expenseClaim.value?.advances?.map((advance) => (advance.selected = true))
-	} else {
-		expenseClaim.value.advances = []
-	}
-}
-
-function addUnallocatedAdvances(data) {
-	// only show advances for selection in a draft claim
-	const isDraft = expenseClaim.value?.docstatus == 0 || !expenseClaim.value?.docstatus
-	if (!isDraft) return
-
-	const allocatedAdvances = new Set(
-		expenseClaim.value?.advances?.map((advance) => advance.employee_advance)
-	)
-
-	return data.forEach((advance) => {
-		if (props.id && allocatedAdvances.has(advance.employee_advance)) return
-
-		expenseClaim.value?.advances?.push({
-			...advance,
-			selected: false,
-			allocated_amount: 0,
-		})
-	})
-}
-
 function onFormReloaded() {
-	advances.reload()
+	// Advances are not managed in the employee flow; nothing to reload here.
 }
 
 const expenseApproverDetails = createResource({
@@ -183,9 +130,10 @@ const employeeCurrency = createResource({
 		return { employee: currEmployee.value }
 	},
 	onSuccess(data) {
-		if (data) {
-			expenseClaim.value.currency = data
-		}
+		// The claim is filed in a single currency at rate 1; fall back to the
+		// company currency when the employee has no salary currency, so the
+		// reqd currency field is always populated for the backend.
+		expenseClaim.value.currency = data || companyCurrency.value
 	},
 })
 
@@ -195,13 +143,6 @@ const companyDetails = createResource({
 	onSuccess(data) {
 		expenseClaim.value.cost_center = data?.cost_center
 		expenseClaim.value.payable_account = data?.default_expense_claim_payable_account
-	},
-})
-
-const exchangeRate = createResource({
-	url: "erpnext.setup.utils.get_exchange_rate",
-	onSuccess(data) {
-		expenseClaim.value.exchange_rate = data
 	},
 })
 
@@ -228,27 +169,6 @@ watch(
 )
 
 watch(
-	() => expenseClaim.value.currency,
-	() => setExchangeRate()
-)
-
-watch(
-	() => expenseClaim.value.name,
-	() => {
-		advances.reload()
-	},
-	{ immediate: true }
-)
-
-watch(
-	() => expenseClaim.value.advances,
-	(_value) => {
-		calculateTotalAdvance()
-	},
-	{ deep: true }
-)
-
-watch(
 	() => expenseClaim.value.cost_center,
 	() => {
 		expenseClaim?.value?.expenses?.forEach((expense) => {
@@ -261,7 +181,19 @@ watch(
 function getFilteredFields(fields) {
 	// reduce noise from the form view by excluding unnecessary fields
 	// eg: employee and other details can be fetched from the session user
-	const excludeFields = ["naming_series", "task", "taxes_and_charges_sb", "advance_payments_sb"]
+	// Currency section + Exchange Rate are ERP concerns removed from the
+	// employee flow; they sit before the expense table so they must be excluded
+	// explicitly (their values are set to the company currency at rate 1 above).
+	const excludeFields = [
+		"naming_series",
+		"task",
+		"taxes_and_charges_sb",
+		"advance_payments_sb",
+		"currency_section",
+		"currency",
+		"column_break_imlz",
+		"exchange_rate",
+	]
 	const extraFields = [
 		"employee",
 		"employee_name",
@@ -324,40 +256,34 @@ function addExpenseItem(item) {
 	expenseClaim.value.expenses.push(item)
 	calculateTotals()
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function updateExpenseItem(item, idx) {
 	expenseClaim.value.expenses[idx] = item
 	calculateTotals()
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function deleteExpenseItem(idx) {
 	expenseClaim.value.expenses.splice(idx, 1)
 	calculateTotals()
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function addExpenseTax(item) {
 	if (!expenseClaim.value.taxes) expenseClaim.value.taxes = []
 	expenseClaim.value.taxes.push(item)
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function updateExpenseTax(item, idx) {
 	expenseClaim.value.taxes[idx] = item
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function deleteExpenseTax(idx) {
 	expenseClaim.value.taxes.splice(idx, 1)
 	calculateTaxes()
-	allocateAdvanceAmount()
 }
 
 function calculateTotals() {
@@ -365,8 +291,8 @@ function calculateTotals() {
 	let total_sanctioned_amount = 0
 
 	expenseClaim.value?.expenses?.forEach((item) => {
-		total_claimed_amount += parseFloat(item.amount)
-		total_sanctioned_amount += parseFloat(item.sanctioned_amount)
+		total_claimed_amount += parseFloat(item.amount) || 0
+		total_sanctioned_amount += parseFloat(item.sanctioned_amount) || 0
 	})
 
 	expenseClaim.value.total_claimed_amount = total_claimed_amount
@@ -380,12 +306,14 @@ function calculateTaxes() {
 	expenseClaim.value?.taxes?.forEach((item) => {
 		if (item.rate) {
 			item.tax_amount =
-				parseFloat(expenseClaim.value.total_sanctioned_amount) * parseFloat(item.rate / 100)
+				(parseFloat(expenseClaim.value.total_sanctioned_amount) || 0) *
+				(parseFloat(item.rate / 100) || 0)
 		}
 
 		item.total =
-			parseFloat(item.tax_amount) + parseFloat(expenseClaim.value.total_sanctioned_amount)
-		total_taxes_and_charges += parseFloat(item.tax_amount)
+			(parseFloat(item.tax_amount) || 0) +
+			(parseFloat(expenseClaim.value.total_sanctioned_amount) || 0)
+		total_taxes_and_charges += parseFloat(item.tax_amount) || 0
 	})
 	expenseClaim.value.total_taxes_and_charges = total_taxes_and_charges
 	calculateGrandTotal()
@@ -398,44 +326,6 @@ function calculateGrandTotal() {
 		parseFloat(expenseClaim.value.total_advance_amount || 0)
 }
 
-function allocateAdvanceAmount() {
-	// allocate reqd advance amount
-	let amount_to_be_allocated =
-		parseFloat(expenseClaim.value.total_sanctioned_amount) +
-		parseFloat(expenseClaim.value.total_taxes_and_charges)
-
-	if (!amount_to_be_allocated) return
-	let total_advance_amount = 0
-
-	expenseClaim?.value?.advances?.forEach((advance) => {
-		if (amount_to_be_allocated >= parseFloat(advance.unclaimed_amount)) {
-			advance.allocated_amount = parseFloat(advance.unclaimed_amount)
-			amount_to_be_allocated -= parseFloat(advance.allocated_amount)
-		} else {
-			advance.allocated_amount = amount_to_be_allocated
-			amount_to_be_allocated = 0
-		}
-
-		advance.selected = advance.allocated_amount > 0 ? true : false
-		total_advance_amount += parseFloat(advance.allocated_amount)
-	})
-	expenseClaim.value.total_advance_amount = total_advance_amount
-	calculateGrandTotal()
-}
-
-function calculateTotalAdvance() {
-	// update total advance amount as per user selection & edited values
-	let total_advance_amount = 0
-
-	expenseClaim?.value?.advances?.forEach((advance) => {
-		if (advance.selected || parseFloat(advance.allocated_amount) > 0) {
-			total_advance_amount += parseFloat(advance.allocated_amount || 0)
-		}
-	})
-	expenseClaim.value.total_advance_amount = total_advance_amount
-	calculateGrandTotal()
-}
-
 function setFormReadOnly() {
 	if (props.id && expenseClaim.value.expense_approver !== currEmployee.value) return
 	formFields.data.map((field) => (field.read_only = true))
@@ -443,25 +333,9 @@ function setFormReadOnly() {
 }
 
 function validateForm() {
-	// set selected advances
-	if (!expenseClaim?.value?.advances) return
-
-	expenseClaim.value.advances = expenseClaim?.value?.advances?.filter(
-		(advance) => advance.selected
-	)
+	// stamp the cost center (from company defaults) onto each expense row
 	expenseClaim?.value?.expenses?.forEach((expense) => {
 		expense.cost_center = expenseClaim.value.cost_center
 	})
-}
-
-function setExchangeRate() {
-	if (!expenseClaim.value.currency || !formFields.data) return
-	const exchange_rate_field = formFields.data?.find((field) => field.fieldname === "exchange_rate")
-
-	exchangeRate.fetch({
-		from_currency: expenseClaim.value.currency,
-		to_currency: companyCurrency.value,
-	})
-	if (exchange_rate_field) exchange_rate_field.hidden = 0
 }
 </script>
