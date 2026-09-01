@@ -78,6 +78,9 @@ def plan_allocation_targets(allocations, relieving_date) -> list[dict]:
 	for allocation in allocations:
 		if allocation.get("is_scheduler_managed"):
 			continue
+		# Falsy-or is deliberate: the Float column defaults to 0, so "never
+		# parked" reads as 0.0 — safe only because a 0 baseline reprorates
+		# to 0 either way. Keep that invariant if you extend this line.
 		baseline = flt(allocation.get("pre_offboarding_leaves")) or flt(allocation["new_leaves_allocated"])
 		if relieving_date is None or relieving_date >= allocation["to_date"]:
 			target, marker = baseline, 0.0
@@ -234,29 +237,33 @@ def get_holidays_after(employee: str, relieving_date, working_days: int) -> set:
 	}
 
 
-def update_relieved_employee_status() -> dict:
+def update_relieved_employee_status(employee: str | None = None) -> dict:
 	"""Daily scheduler — Active -> Left after the configured working days.
 
 	The threshold (HR Settings, default 3) is counted in WORKING days after
 	the relieving date against the employee's Holiday List. Safe to rerun:
 	the query only sees Active employees, and each candidate is re-checked
 	on its live document before the flip, so an employee whose status or
-	relieving date changed since the query is never forced.
+	relieving date changed since the query is never forced. ``employee``
+	narrows the sweep to one record (tests, manual runs).
 	"""
 	working_days = (
 		cint(frappe.db.get_single_value("HR Settings", "exit_status_change_after_working_days")) or 3
 	)
 	today = getdate()
+	filters = [
+		["status", "=", "Active"],
+		["relieving_date", "is", "set"],
+		["relieving_date", "<=", today],
+		# Mirrored employees are owned by their source instance
+		# (single-writer, hrms/sync/write_block.py).
+		["synced_from_instance", "is", "not set"],
+	]
+	if employee:
+		filters.append(["name", "=", employee])
 	candidates = frappe.get_all(
 		"Employee",
-		filters=[
-			["status", "=", "Active"],
-			["relieving_date", "is", "set"],
-			["relieving_date", "<=", today],
-			# Mirrored employees are owned by their source instance
-			# (single-writer, hrms/sync/write_block.py).
-			["synced_from_instance", "is", "not set"],
-		],
+		filters=filters,
 		fields=["name", "relieving_date"],
 	)
 	logger.info(
@@ -265,7 +272,7 @@ def update_relieved_employee_status() -> dict:
 		working_days,
 	)
 
-	counters = {"marked_left": 0, "waiting": 0, "error": 0}
+	counters = {"marked_left": 0, "waiting": 0, "blocked": 0, "error": 0}
 	for row in candidates:
 		# savepoint per employee: one bad record must not poison the rest
 		frappe.db.savepoint("offboarding_status")
@@ -277,6 +284,21 @@ def update_relieved_employee_status() -> dict:
 			if today < threshold:
 				counters["waiting"] += 1
 				continue
+			if frappe.get_all(
+				"Employee",
+				filters={"reports_to": row["name"], "status": "Active"},
+				limit=1,
+			):
+				# ERPNext's Employee.validate_status refuses Left while Active
+				# employees still report to the leaver; re-pointing them is an
+				# HR decision. Hold with a warning instead of throwing into the
+				# Error Log on every sweep.
+				counters["blocked"] += 1
+				logger.warning(
+					"[offboarding] %s not marked Left: active employees still report to them",
+					row["name"],
+				)
+				continue
 			employee = frappe.get_doc("Employee", row["name"])
 			if (
 				employee.status != "Active"
@@ -286,6 +308,8 @@ def update_relieved_employee_status() -> dict:
 				# criteria changed between the query and now — never force
 				counters["waiting"] += 1
 				continue
+			# Employee.save with status Left also disables the linked User
+			# (erpnext update_user_status) — intended: offboarding revokes login.
 			employee.status = "Left"
 			employee.flags.ignore_permissions = True
 			employee.save()

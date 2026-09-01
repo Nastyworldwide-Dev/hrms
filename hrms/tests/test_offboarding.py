@@ -240,11 +240,15 @@ class _FakeDb:
 
 
 class TestStatusSweep(unittest.TestCase):
-	def _run(self, relieving_date, employee=None, setting=None, holidays=frozenset()):
+	def _run(self, relieving_date, employee=None, setting=None, holidays=frozenset(), has_reports=False):
 		frappe = sys.modules["frappe"]
 		employee = employee or _FakeEmployee(relieving_date=relieving_date)
 		frappe.db = _FakeDb(setting=setting)
-		frappe.get_all = lambda *a, **kw: [{"name": "HR-EMP-1", "relieving_date": relieving_date}]
+		frappe.get_all = lambda doctype, filters=None, **kw: (
+			([{"name": "HR-EMP-9"}] if has_reports else [])
+			if isinstance(filters, dict) and "reports_to" in filters
+			else [{"name": "HR-EMP-1", "relieving_date": relieving_date}]
+		)
 		frappe.get_doc = lambda doctype, name: employee
 		frappe.log_error = lambda **kw: None
 		frappe.get_traceback = lambda: ""
@@ -267,7 +271,7 @@ class TestStatusSweep(unittest.TestCase):
 	def test_waits_until_the_threshold(self):
 		# relieved Mon Aug 31 -> 3rd working day is Sep 3, after TODAY (Sep 1)
 		counters, employee = self._run(D(2026, 8, 31))
-		self.assertEqual(counters, {"marked_left": 0, "waiting": 1, "error": 0})
+		self.assertEqual(counters, {"marked_left": 0, "waiting": 1, "blocked": 0, "error": 0})
 		self.assertFalse(employee.saved)
 
 	def test_live_recheck_never_forces_a_changed_employee(self):
@@ -281,6 +285,16 @@ class TestStatusSweep(unittest.TestCase):
 		employee = _FakeEmployee(status="Active", relieving_date=D(2026, 12, 31))
 		counters, employee = self._run(D(2026, 8, 25), employee=employee)
 		self.assertEqual(counters["marked_left"], 0)
+		self.assertFalse(employee.saved)
+
+	def test_a_leaver_with_active_reports_is_held_not_errored(self):
+		# ERPNext refuses Left while Active employees report to the leaver;
+		# the sweep must hold with a warning, not throw into the Error Log.
+		counters, employee = self._run(
+			D(2026, 8, 25), holidays={D(2026, 8, 29), D(2026, 8, 30)}, has_reports=True
+		)
+		self.assertEqual(counters["blocked"], 1)
+		self.assertEqual(counters["error"], 0)
 		self.assertFalse(employee.saved)
 
 	def test_threshold_is_configurable_via_hr_settings(self):
