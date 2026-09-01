@@ -1,26 +1,25 @@
 # HANDOFF
-prompt:   Nadi full UI/UX consistency & production polish
-status:   done (surgical glass-consistency fixes; no redesign)
-commit:   7b10c9172 on nz-glass (9a06aca2c..7b10c9172)
-files:    SopList (token focus ring + live press motion), TeamDashboard (44px
-          targets), kpi/Dashboard (FeatherIcon over emoji), RequestList
-          (+resource->ResourceError) + expense/leave/attendance Dashboards,
-          RequestActionSheet (loading + double-submit guard)
-verify:   node design/gates/{lint,usage,tokens}.mjs -> 0 new debt each;
-          cd frontend && yarn build; node --test tests/*.test.mjs (61/63; the 2
-          fails are the pre-existing frappe-ui call-error-handling patch test)
-method:   design-reviewer (DSN codes) + consistency scout + static gate board.
-          The app is already coherent by its own gates (7/8 green historically);
-          fixes were surgical, not a broad rewrite.
-fixed:    stale hardcoded focus ring -> g-focusable; dead --motion-press var ->
-          real tokens; sub-44px day-nav; emoji -> icon; request lists no longer
-          show a failed load as empty; approval buttons show loading + block
-          double-tap
-recorded: token-alias split (ink/bg/hair vs inkbase/ground/divider) is real but
-          a broad, visually-invisible codemod — deferred. RequestActionSheet
-          confirmation: evidence did NOT establish one-tap is wrong (RemoteApprovals'
-          modal is remarks-driven), so no friction added.
-flags:    render-time gates (a11y/visual/coherence) need the browser harness,
-          which hung on the served site this run — static gates + build + tests
-          used instead. Re-shoot visual baselines after the touch-target change.
-next:     optional token-alias codemod; product call on approval confirmation
+prompt:   Nadi final live acceptance & production gate
+status:   done (ran the real app as all 3 roles; 1 runtime defect found + fixed)
+commit:   190a70560 on nz-glass
+files:    hrms/hr/doctype/leave_application/leave_application.py (leave-details guard)
+          hrms/tests/test_leave_details_guard.py
+verify:   drove the live PWA (localhost:8080) via Playwright as Employee / Manager
+          / HR; bench console + regression test confirm the fix
+runtime:  Employee 36/36 screens clean; Manager/Approver 33/33 clean;
+          HR 32/33 — the one issue is the defect below, now fixed
+defect:   HR opening an employee's leave application got 403 on get_leave_types
+          (blank leave-types dropdown). _ensure_leave_details_permitted used
+          frappe.has_permission("Employee"), which fails CLOSED for an HR user
+          carrying the auto-created allow=Employee self UP. Repointed at the
+          canonical _may_read_employee (role-based) + the leave-approver case.
+          Bench-verified: HR / reports-to manager / self allowed, stranger denied.
+realtime: socket.io (:9000) not running in the preview env — the app degrades
+          gracefully (every screen clean without it). Needs the socketio process
+          in the deployed environment for live updates.
+caveat:   the HR fix is code+bench+test verified; the :8000 web workers hold old
+          code in memory (no hot-reload), so the browser reflects it only after
+          a normal worker reload/deploy.
+regress:  ruff clean; 50/50 bench-free suites; both builds green; frontend tests
+          61/63 (2 pre-existing frappe-ui call-error-handling patch failures)
+next:     deploy (reloads workers) then re-shoot the one HR screen
