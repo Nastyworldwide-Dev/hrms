@@ -145,7 +145,7 @@
 							const [label, fieldtype] = getFieldInfo(field)
 							return {
 								fieldname: field,
-								value: employeeDoc.doc[field],
+								value: getFieldValue(field),
 								label: label,
 								fieldtype: fieldtype,
 							}
