@@ -74,9 +74,17 @@
 /* The page ground. Opaque, always — see the invariant on .g-lightfield above.
    ion-content stays transparent so the page's own field shows through it
    (§16.3 — Ionic is themed through published custom properties only), and the
-   opacity lives one level up on the page frame itself. */
+   opacity lives one level up on the page frame itself.
+
+   This referenced --g-ground, which is defined NOWHERE, so `background:
+   var(--g-ground)` with no fallback computed to transparent — every routed
+   page was see-through. Settled screens looked fine (one transparent page over
+   the app background), but Ionic stacks live pages during a transition, so two
+   transparent pages composited as the double-exposure / old+new overlap seen
+   mid-navigation. The real page-ground token is --g-bg; a literal fallback
+   guards against a future rename silently reopening the same hole. */
 .ion-page.g-page {
-	background: var(--g-ground);
+	background: var(--g-bg, #edeff3);
 }
 .g-page ion-content {
 	--background: transparent;
