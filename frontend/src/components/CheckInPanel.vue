@@ -700,8 +700,21 @@ const submitLog = async (logType) => {
 	}
 	submitting.value = true
 	try {
-		await runSubmitLog(logType)
-		lastSubmit.value = { action: logType, at: Date.now() }
+		// Arm the duplicate guard ONLY on a successful punch. The old code armed
+		// it right after a fire-and-forget submit, so a punch that later FAILED
+		// still locked the user out of retrying the same action for 60s.
+		const ok = await runSubmitLog(logType)
+		if (ok) lastSubmit.value = { action: logType, at: Date.now() }
+	} catch (err) {
+		// A rejected punch is already surfaced to the user by onError (toast +
+		// camera reset); swallow here so it is not an unhandled rejection, and
+		// leave lastSubmit un-armed so retry is allowed. Belt-and-suspenders
+		// camera reset in case onError did not run.
+		console.error("[CheckInPanel] submit failed:", err)
+		if (cameraStatus.value === "submitting") {
+			cameraStatus.value = "idle"
+			startCamera()
+		}
 	} finally {
 		// released on every path — an early return from the geofence preflight
 		// must not leave the button stuck pending
@@ -747,7 +760,9 @@ const runSubmitLog = async (logType) => {
 					accuracyM: Number(result.accuracy_m) || 0,
 				}
 				strictDialogOpen.value = true
-				return
+				// not a success — leave the duplicate guard un-armed so the user
+				// can retry the moment they move inside the radius.
+				return false
 			}
 		} catch (err) {
 			// Preflight is advisory — if it fails, fall through and let the
@@ -796,8 +811,10 @@ const runSubmitLog = async (logType) => {
 		payload.selfie_image = selfieUrl
 	}
 
-	punchCheckin.submit(payload, {
+	let punchOk = false
+	await punchCheckin.submit(payload, {
 		async onSuccess(doc) {
+			punchOk = true
 			modalController.dismiss()
 
 			// Refresh the log list so lastLog (and the stale "Forgot to check out"
@@ -863,12 +880,22 @@ const runSubmitLog = async (logType) => {
 			})
 		},
 		onError(error) {
-			let messages = error.messages || []
-
+			// A failed punch used to leave cameraStatus stuck at "submitting" —
+			// the Confirm button a permanent, un-tappable spinner over a dead
+			// black camera — and, when the error carried no message, showed
+			// nothing at all. Free the button, bring the camera back so the user
+			// can retry with a fresh selfie, and always say something.
+			if (cameraStatus.value === "submitting") {
+				cameraStatus.value = "idle"
+				startCamera()
+			}
+			const messages = error?.messages?.length
+				? error.messages
+				: [__("{0} failed. Check your connection and try again.", [actionLabel])]
 			for (const message of messages) {
 				toast({
 					title: __("Error"),
-					text: message || __("{0} failed!", [actionLabel]),
+					text: message,
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
@@ -876,6 +903,7 @@ const runSubmitLog = async (logType) => {
 			}
 		},
 	})
+	return punchOk
 }
 
 async function startCamera() {
