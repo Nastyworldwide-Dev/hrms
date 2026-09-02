@@ -98,3 +98,33 @@ try:
 except Exception as e:
 	frappe.set_user("Administrator")
 	print("resolver call error (are you on the latest build?):", str(e)[:200])
+
+
+def audit_all_shift_locations():
+    """Run this to see EVERY branch's Shift Location and whether it has
+    coordinates — the one per-location thing the geofence needs. Any location
+    with lat/long blank will show "no area set" for everyone assigned to it.
+
+        bench --site <live> console
+        >>> exec(open("apps/hrms/docs/glass/diagnose_checkin_area.py").read(), {})
+        >>> audit_all_shift_locations()
+    """
+    import frappe
+    rows = frappe.get_all(
+        "Shift Location",
+        fields=["name", "location_name", "latitude", "longitude", "checkin_radius"],
+    )
+    print("\n==== SHIFT LOCATIONS (branch clock-in areas) ====")
+    for r in rows:
+        # Treat a blank/zeroed pin as MISS too: an unset Float defaults to 0.0,
+        # and nobody's office is at latitude 0 / longitude 0.
+        ok = bool(r.latitude) and bool(r.longitude) and (r.checkin_radius or 0) > 0
+        linked = frappe.db.count("Employee", {"shift_location": r.name, "status": "Active"})
+        print(
+            ("OK  " if ok else "MISS"),
+            r.location_name or r.name,
+            "| lat/long:", r.latitude, r.longitude,
+            "| radius:", r.checkin_radius,
+            "| active employees linked:", linked,
+        )
+    print("\nMISS = coordinates/radius not filled -> those employees see 'no area set'.")
