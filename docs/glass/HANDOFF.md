@@ -1,30 +1,32 @@
 # HANDOFF
-prompt:   Pass 5 — runtime reliability, PWA & performance closure
-status:   primitives verified healthy; no defect/pathology found
-commit:   73fd8095f on nz-glass (measurement/verification pass — no new code)
-pwa/sw:   sw.js has cleanupOutdatedCaches + skipWaiting + clientsClaim (prompt
-          update + old-cache purge); pre-paint theme = no FOUC on cold start;
-          router.onError reloads once on a stale chunk after deploy (unit-tested,
-          latched against loops). Safe, understandable update recovery.
-network:  loudRequest surfaces failures as toasts and RETHROWS (onError/try-catch
-          still run) — errors are never swallowed as empty states; ResourceError
-          for resource failures.
-realtime: socket.io reconnectionAttempts=5 (bounded, no storm); the only handler
-          is hrms:refetch_resource which reloads an already-cached resource — a
-          FRESHNESS optimization, NOT a correctness dependency. Absent socket =>
-          data still loads on navigation. Degrades gracefully.
-errors:   console CLEAN across home/attend/leaves/more (0 Nadi errors); 0 failed
-          API (>=400). startTime/reportAllChanges = browser extension (prior).
-idempotency: approval decide() uses a for_update row-lock + docstatus==1 no-op
-          (runtime-proven prior); duplicate same-timestamp checkin blocked (prior).
-performance(measured): Home = 35 API calls, 21KB total. The apparent duplicates
-          are DISTINCT my/team/history queries (different approver_id/filters), all
-          auto:true — eager tab pre-load, not redundant. Only genuinely-repeated
-          calls are tiny (get_hr_settings x2). No large payload, no N+1, no slow
-          load => no clear pathology; per guidance, no fix warranted.
-concurrency: approval row-lock + checkin duplicate guard are race-safe (proven).
-unverified/env-limited: full concurrent stress load, installed-PWA lifecycle on a
-          real device, and live-instance realtime delivery (no live access).
-verdict:  RUNTIME RELIABILITY CLOSED — SW update+recovery, graceful realtime,
-          error surfacing, idempotency/duplicate guards, clean console/0-failures,
-          and a measured-healthy perf profile; no reliability defect or pathology.
+prompt:   Pass 6 — unknown-gap hunt & final product closure
+status:   no open CODE defect; non-code blockers remain (config/live/deploy)
+commit:   8a3f11824 on nz-glass (final review — no new code)
+hunt:     no TODO/FIXME/workaround near critical workflows; no new hidden-required
+          field beyond the known config ones; manual-vs-auto divergence handled
+          (geofence Employee fallback + documented shift_rules "manual wins");
+          security fencing CONSISTENT — every sensitive employee-scoped read
+          (salary_currency, holidays, shifts, leave_types, expense summary,
+          reporting_manager) calls _ensure_own_employee_or_permitted. No new leak.
+ledger(VERIFIED RESOLVED, code+runtime/rendered): geofence Employee.shift_location
+          fallback (f3860e3f3); approval one-action decide->submit (proven);
+          attendance IN/OUT state machine + duplicate block (proven); D1 self-repair
+          (2/2); transition opaque pages --g-ground->--g-bg (7f7556631); bottom nav
+          container-free selection (4f9226897); notifications duplicate Settings
+          removed (119613e12); adaptive balance grid (b27be1e15); desktop centering
+          (a88760e21); install-prompt lifecycle (9f2470512/ae099e447); theme
+          pre-paint FOUC (3af0fd42a); chunk recovery (18a17953f); reject-log audit
+          durability (2af308f30); RMNaN (faf7ac258); expense ERP-field simplify
+          (5902b2e33); data-backed controls (search_link) correct; runtime
+          reliability healthy; startTime = browser extension.
+ledger(CONFIGURATION REQUIRED, Verifica): Shift Location coords + Employee.shift_
+          location linkage; Expense Claim Types; Company payable-account default;
+          designated approvers.
+ledger(LIVE TEST REQUIRED, no access): confirm f3860e3f3 deployed to live +
+          reproduce the live employee's geofence case; installed-PWA on device;
+          live realtime delivery.
+ledger(BUSINESS): D1 historical attendance review (no auto-rewrite of closed pay).
+ledger(DEFERRED): payroll outside Nadi; hidden-field UX hardening (recommended).
+OPEN DEFECT: none.
+verdict:  NADI PWA PRODUCTION NOT CLOSED — zero open CODE blockers; remaining
+          blockers are CONFIGURATION + LIVE TEST + DEPLOYMENT + BUSINESS.
