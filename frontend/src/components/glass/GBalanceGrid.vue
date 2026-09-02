@@ -15,27 +15,27 @@
     empty    — shown when `empty`; use GEmptyState
 -->
 <template>
-	<div v-if="empty" class="g-glass g-list">
-		<div class="g-cellgrid__empty">
+	<!-- ONE .g-glass element for every state (§15.2): the empty, loading and
+	     filled variants are mutually-exclusive content INSIDE the single
+	     surface, not three sibling surfaces. Keeping them as separate top-level
+	     .g-glass blocks read as multiple surfaces to a static counter even
+	     though only one ever renders. -->
+	<div
+		class="g-glass"
+		:class="empty ? 'g-list' : ['g-cellgrid', 'g-cellgrid--balance', { 'g-cellgrid--odd': !loading && isOdd }]"
+		:style="!empty && !loading ? { '--bcols': lgCols } : null"
+	>
+		<div v-if="empty" class="g-cellgrid__empty">
 			<slot name="empty" />
 		</div>
-	</div>
-
-	<div v-else-if="loading" class="g-glass g-cellgrid g-cellgrid--balance">
-		<div v-for="n in cells" :key="n" class="g-cell" aria-hidden="true">
-			<GSkeleton width="52%" height="27px" />
-			<GSkeleton height="3px" />
-			<GSkeleton width="74%" height="9px" />
-		</div>
-	</div>
-
-	<div
-		v-else
-		class="g-glass g-cellgrid g-cellgrid--balance"
-		:class="{ 'g-cellgrid--odd': isOdd }"
-		:style="{ '--bcols': lgCols }"
-	>
-		<slot />
+		<template v-else-if="loading">
+			<div v-for="n in cells" :key="n" class="g-cell" aria-hidden="true">
+				<GSkeleton width="52%" height="27px" />
+				<GSkeleton height="3px" />
+				<GSkeleton width="74%" height="9px" />
+			</div>
+		</template>
+		<slot v-else />
 	</div>
 </template>
 
