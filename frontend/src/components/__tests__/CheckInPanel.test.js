@@ -21,6 +21,12 @@ test("the duplicate guard arms only on a successful punch", () => {
 	assert.match(src, /return punchOk/, "runSubmitLog must report success/failure")
 })
 
+test("session staleness parses Frappe datetimes iOS-safely (space -> T)", () => {
+	// new Date("YYYY-MM-DD HH:mm:ss") is Invalid Date on Safari, which made
+	// every open IN look stale and spawned duplicate sessions on check-out.
+	assert.match(src, /String\(checkinTime\)\.replace\(" ", "T"\)/, "must normalise the space to T before new Date")
+})
+
 test("a failed punch frees the frozen button by resetting the camera", () => {
 	// scope to the PUNCH submit block (there is an earlier geolocation onError).
 	const punchIdx = src.indexOf("await punchCheckin.submit(")

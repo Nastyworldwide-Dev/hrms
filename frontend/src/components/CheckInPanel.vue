@@ -408,7 +408,12 @@ const MAX_OPEN_SHIFT_HOURS = 16
 
 function isSessionStale(checkinTime) {
 	if (!checkinTime) return true
-	const t = new Date(checkinTime)
+	// Frappe datetimes are "YYYY-MM-DD HH:mm:ss" (space, no T). Safari — iOS
+	// especially — parses that as Invalid Date, which made every open IN look
+	// stale: the button flipped to "Check In" and check-out created a SECOND
+	// open session. Normalise the space to a T so every browser parses it as
+	// local time (unchanged behaviour where new Date already worked).
+	const t = new Date(String(checkinTime).replace(" ", "T"))
 	if (Number.isNaN(t.getTime())) return true
 	// the server has ruled on this session; the client does not second-guess it
 	if (unresolvedStaleIn.data?.is_abandoned) return true
