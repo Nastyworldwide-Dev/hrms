@@ -89,11 +89,6 @@ const routes = [
 		component: () => import("@/views/Login.vue"),
 	},
 	{
-		path: "/forgot-password",
-		name: "ForgotPassword",
-		component: () => import("@/views/ForgotPassword.vue"),
-	},
-	{
 		path: "/profile",
 		name: "Profile",
 		component: () => import("@/views/Profile.vue"),
