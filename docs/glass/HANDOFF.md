@@ -1,31 +1,31 @@
 # HANDOFF
-prompt:   Frontend recalibration & visual-functional integrity
-status:   partial — 2 defects fixed w/ rendered proof; findings remain
-commit:   3d72ae3ed on nz-glass
-method:   RENDERED QA in a real browser (agent-browser, built assets on :8080,
-          not source — :8080 serves hashed build, so edits need `yarn build`).
-          Employee role (nurul.aisyah) across login/home/leaves/NotFound,
-          light+dark, mobile 390 + desktop 1440.
-fixed:    (1) Install prompt (bottom sheet) had NO dismissal memory — covered
-          the tab bar on every load/cold start. Now records dismissal+install,
-          30-day cooldown; predicate extracted + unit-tested; browser-verified
-          fresh-shows / dismissed-suppresses. (9f2470512)
-          (2) Active tab well = brand fill + `0 0 10px accent-glow` neon halo —
-          a 2nd fluorescent focal point beside the CTA. Dropped the outer glow,
-          kept the accessible brand chip + inner sheen; computed-style verified
-          live. (3d72ae3ed, item 4)
-validated: no FOUC / no old-design flash on dark cold start (prior pre-paint
-          fix holds). NotFound state renders correctly (catch-all).
-findings-open:
-          - Leave balance grid: 2-col with dynamic tile count (2-5) orphans the
-            odd cell (3 types -> lone tile + empty bordered cell). Root cause:
-            .g-cellgrid--balance hardcoded 2-col + nth-child divider logic.
-            Needs adaptive columns; shared component, deferred (not a blind fix).
-          - Desktop (1440): content column left-aligned after sidebar leaves a
-            large empty right canvas (item 13). Mobile-first column; design call.
-          - Install prompt also appears pre-login (login screen).
-not-done: rendered QA for Approver/HR roles; per-state matrix (hover/focus/
-          error/offline); typography/component full audit.
-verdict:  FRONTEND NOT READY — coherent and the real nav-blocking defect is
-          fixed, but concrete composition findings remain and role QA is
-          incomplete. Enumerated above; none are old-design residue.
+prompt:   Frontend closure pass
+status:   3 gaps closed w/ rendered proof; 1 verification blocked by env
+commit:   ae099e447 on nz-glass
+closed:   (1) Adaptive balance grid — count-driven: odd last tile spans full
+          width on mobile, desktop uses exactly `count` cols (cap 5). 1-5+ clean,
+          no orphan. Verified: 3 types -> full-width-3rd mobile / 3-across
+          desktop. (b27be1e15)
+          (2) Desktop centering — 7 content views left-pinned the column
+          (2 already centered = the pattern); added mx-auto so all center in the
+          post-sidebar space. Verified: Home/Leaves balanced ~250px/side.
+          (a88760e21)
+          (3) Install-prompt lifecycle — gated surfacing on a signed-in session;
+          no longer shows over the login form. Verified: login renders clean.
+          (ae099e447)
+role-qa:  Employee-side role-gating verified clean — Team shows a proper
+          "Nothing waiting on you" empty state, More drops role-gated rows to a
+          shorter list; NO holes/malformed layouts. PRIVILEGED HR/Approver render
+          BLOCKED: fresh.local has only Administrator with HR roles + no manager
+          employees, and provisioning a role user was denied by the permission
+          classifier. Could not certify what I could not render.
+a11y:     tab targets 44px; icon buttons labeled ("Notifications, 30 unread");
+          keyboard focus visible (box-shadow ring); prefers-reduced-motion and
+          reduced-transparency both wired. Representative, not exhaustive.
+states:   empty (Team/NotFound) + loading skeleton (GBalanceGrid) + error
+          (ResourceError) + focus/selected verified; full matrix not exhaustive.
+verify:   yarn build OK; eslint clean; installPromptMemory tests pass.
+verdict:  FRONTEND NOT READY — the three concrete defects are fixed and proven,
+          but the mandated privileged HR/Approver rendered QA could not be
+          completed (no role user; provisioning denied). Unblock: provision an
+          HR + an Approver test user (each with an Employee) and this closes.
