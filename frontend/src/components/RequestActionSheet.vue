@@ -83,7 +83,16 @@
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
-				@click="updateDocumentStatus({ status: 'Rejected' })"
+				@click="
+					confirmDecision(
+						{ status: 'Rejected' },
+						{
+							title: __('Reject this request?'),
+							body: __('This cannot be undone — the employee is notified of the rejection.'),
+							confirmLabel: __('Reject'),
+						}
+					)
+				"
 				:loading="submitting"
 				:disabled="submitting"
 				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
@@ -134,7 +143,16 @@
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
-				@click="updateDocumentStatus({ docstatus: 2 })"
+				@click="
+					confirmDecision(
+						{ docstatus: 2 },
+						{
+							title: __('Cancel this request?'),
+							body: __('This cancels the submitted request and cannot be undone.'),
+							confirmLabel: __('Cancel request'),
+						}
+					)
+				"
 				:loading="submitting"
 				:disabled="submitting"
 				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
@@ -152,6 +170,19 @@
 		<ion-modal ref="modal" :is-open="showPreviewModal" @didDismiss="showPreviewModal = false">
 			<FilePreviewModal :file="selectedFile" />
 		</ion-modal>
+
+		<!-- Irreversible-action confirm (Reject / Cancel). -->
+		<GConfirm
+			:is-open="!!pendingDecision"
+			:title="pendingDecision?.title"
+			:confirm-label="pendingDecision?.confirmLabel"
+			:cancel-label="__('Keep')"
+			destructive
+			@confirm="runPendingDecision"
+			@cancel="pendingDecision = null"
+		>
+			{{ pendingDecision?.body }}
+		</GConfirm>
 	</div>
 </template>
 
@@ -164,6 +195,7 @@ import { toast, createDocumentResource, createResource, FeatherIcon } from "frap
 import FormattedField from "@/components/FormattedField.vue"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
+import GConfirm from "@/components/glass/GConfirm.vue"
 
 import { getCompanyCurrency } from "@/data/currencies"
 import { settings } from "@/data/settings"
@@ -196,6 +228,21 @@ let workflow = ref(null)
 function showFilePreview(fileObj) {
 	selectedFile.value = fileObj
 	showPreviewModal.value = true
+}
+
+// Irreversible decisions (Reject, Cancel) route through a confirm step: a
+// mis-tap here permanently rejects or cancels an employee's request and the
+// server transition cannot be undone from this sheet. Approve/Submit stay
+// one-tap so approvers are not slowed on the common path. (RemoteApprovals
+// already confirms this same class of action — this brings the sheet in line.)
+const pendingDecision = ref(null)
+function confirmDecision(action, copy) {
+	pendingDecision.value = { action, ...copy }
+}
+function runPendingDecision() {
+	const decision = pendingDecision.value
+	pendingDecision.value = null
+	if (decision) updateDocumentStatus(decision.action)
 }
 
 const document = createDocumentResource({
