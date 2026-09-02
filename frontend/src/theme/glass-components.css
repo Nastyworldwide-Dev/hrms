@@ -200,7 +200,13 @@ ion-tab-button.g-tabbar__btn {
 .g-tabbar__well--active {
 	background: var(--g-brand);
 	color: var(--g-on-brand);
-	box-shadow: 0 0 10px var(--g-accent-glow);
+	/* Recalibration item 4: the `0 0 10px accent-glow` neon halo made the active
+	   tab a second fluorescent focal point beside the Check In CTA, which reads
+	   as loud rather than calm-glass. Drop the outer glow and keep the brand
+	   fill — an unmistakable, on-brand-ink "you are here" that still passes
+	   contrast — with only a contained inner sheen so the chip reads as a raised
+	   glass surface, not a glowing slab. */
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 .g-tabbar__label {
 	margin-top: 5px;
