@@ -75,8 +75,9 @@ class OTRequest(Document, PWANotificationsMixin):
 
 	def set_punch_verified_cap(self):
 		breakdown = get_day_ot_breakdown(self.employee, self.ot_date)
-		# whole hours only — minutes are not counted
-		self.punch_ot_hours = int(flt(breakdown["ot_hours"]))
+		# the real fractional hours — int() here floored minutes away and capped
+		# every claim below what was actually worked (7.75h -> claimable 7)
+		self.punch_ot_hours = flt(breakdown["ot_hours"])
 		if not self.shift:
 			self.shift = frappe.db.get_value(
 				"Attendance",
@@ -92,9 +93,9 @@ class OTRequest(Document, PWANotificationsMixin):
 		)
 
 	def validate_claimed_hours(self):
-		if cint(self.claimed_hours) <= 0:
-			frappe.throw(_("Claimed Hours must be at least 1"))
-		if cint(self.claimed_hours) > cint(self.punch_ot_hours):
+		if flt(self.claimed_hours) <= 0:
+			frappe.throw(_("Claimed Hours must be greater than 0"))
+		if flt(self.claimed_hours) > flt(self.punch_ot_hours):
 			frappe.throw(
 				_(
 					"Cannot claim {0} hours — your check-outs prove at most {1} hours of overtime for {2}."
@@ -134,7 +135,6 @@ class OTRequest(Document, PWANotificationsMixin):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
-
 
 	def on_cancel(self):
 		# hours already converted by a Replacement Leave Claim can't be

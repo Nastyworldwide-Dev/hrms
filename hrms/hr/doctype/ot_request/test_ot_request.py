@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_months, get_datetime, getdate, today
+from frappe.utils import add_months, flt, get_datetime, getdate, today
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
@@ -93,11 +93,19 @@ class TestOTRequest(FrappeTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 
-	def test_punch_cap_floors_to_whole_hours(self):
-		# out 21:12 vs real end 18:00 = 3.2h punched -> cap 3
+	def test_punch_cap_keeps_fractional_hours(self):
+		# out 21:12 vs real end 18:00 = 3.2h punched -> cap 3.2, NOT floored to 3.
+		# int() here underpaid every fractional claim (up to 59 min lost each).
 		make_ot_checkins(self.employee, today())
 		request = make_ot_request(self.employee, claimed_hours=3, submit=False)
-		self.assertEqual(request.punch_ot_hours, 3)
+		self.assertEqual(request.punch_ot_hours, 3.2)
+
+	def test_can_claim_the_fractional_cap(self):
+		# claiming the exact fractional cap must be allowed — the old cint()
+		# comparison could not express "up to 3.2".
+		make_ot_checkins(self.employee, today())
+		request = make_ot_request(self.employee, claimed_hours=3.2, submit=False)
+		self.assertEqual(flt(request.claimed_hours), 3.2)
 
 	def test_claim_above_punch_cap_rejected(self):
 		make_ot_checkins(self.employee, today())

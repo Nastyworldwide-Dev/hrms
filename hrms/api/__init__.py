@@ -477,8 +477,7 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 	)
 	return {
 		"shift": shift,
-		"punch_ot_hours": int(flt(breakdown["ot_hours"])),
-		"raw_ot_hours": flt(breakdown["ot_hours"]),
+		"punch_ot_hours": flt(breakdown["ot_hours"]),
 		"eligible_for_overtime_pay": eligible,
 		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
 	}
