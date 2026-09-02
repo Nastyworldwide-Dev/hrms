@@ -1,7 +1,9 @@
 <template>
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
-			<div class="flex flex-col gap-5 w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7">
+			<div
+				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+			>
 				<!-- HR-only team selector: grouped by department, searchable,
 				     "My team" pinned first, team size beside each manager
 				     (HR request 2026-08-19; options built by utils/team.js,

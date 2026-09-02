@@ -1,7 +1,9 @@
 <template>
 	<BaseLayout :pageTitle="__('My Issues')">
 		<template #body>
-			<div class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg">
+			<div
+				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto"
+			>
 				<ResourceError :resource="myIssues" what="your issues" />
 				<router-link :to="{ name: 'EmployeeIssueFormView' }" v-slot="{ navigate }">
 					<GButton :label="__('Report an Issue')" @click="navigate">

@@ -4,7 +4,9 @@
 			<!-- §20.3: one 720px column (7.3 ruling). Was
 			     lg:grid-cols-[1.1fr_1fr], which left ~320px of dead space in the
 			     left column while the right overflowed the fold. -->
-			<div class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg lg:p-7">
+			<div
+				class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+			>
 				<div class="contents">
 					<div class="order-1"><AttendanceCalendar /></div>
 					<ResourceError :resource="shifts" what="your shifts" />

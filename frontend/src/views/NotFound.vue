@@ -18,7 +18,7 @@
 					:title="__('That page isn\'t here')"
 					:body="__('The link may be out of date, or the page may have moved.')"
 				/>
-				<div class="mt-6 w-full max-w-content-column-lg">
+				<div class="mt-6 w-full max-w-content-column-lg mx-auto">
 					<GButton :label="__('Go to Home')" @click="router.replace({ name: 'Home' })" />
 				</div>
 			</div>

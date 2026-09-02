@@ -6,7 +6,7 @@
 			     the lists, which stranded the primary action in an empty right column
 			     and produced three different content widths on one screen. -->
 			<div
-				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg lg:p-7 lg:gap-10"
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7 lg:gap-10"
 			>
 				<!-- Top band: balance stat cells + primary action -->
 				<div class="flex flex-col gap-8">

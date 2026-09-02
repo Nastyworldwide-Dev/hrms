@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
 			<div
-				class="flex flex-col gap-[13px] w-full max-w-content-column-lg px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-[13px] w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
 			>
 				<span class="g-eyebrow">{{ __("More") }}</span>
 
