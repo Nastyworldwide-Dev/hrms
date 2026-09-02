@@ -193,7 +193,18 @@ const expensesTableFields = createResource({
 	params: { doctype: "Expense Claim Detail" },
 	transform(data) {
 		const excludeFields = ["description_sb", "amounts_sb", "base_amount", "base_sanctioned_amount"]
-		return data.filter((field) => !excludeFields.includes(field.fieldname))
+		return data
+			.filter((field) => !excludeFields.includes(field.fieldname))
+			.map((field) => {
+				// An expense line description is a short plain note, not a document.
+				// Expense Claim Detail.description ships as a Text Editor (bold, image
+				// and video embeds), which is the wrong field for a one-line reason —
+				// render it as a plain, character-capped textarea instead.
+				if (field.fieldname === "description") {
+					return { ...field, fieldtype: "Small Text", maxlength: 500 }
+				}
+				return field
+			})
 	},
 })
 expensesTableFields.reload()
