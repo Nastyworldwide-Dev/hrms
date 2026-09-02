@@ -167,20 +167,13 @@ module.exports = {
 	},
 	transitionDuration: {
 		"button-press": "var(--g-motion-button-press-duration)",
-		"check-in-success": "var(--g-motion-check-in-success-duration)",
 		"row-tap": "var(--g-motion-row-tap-duration)",
-		"screen-push": "var(--g-motion-screen-push-duration)",
-		"sheet-present": "var(--g-motion-sheet-present-duration)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-duration)",
-		"theme-change": "var(--g-motion-theme-change-duration)",
 	},
 	transitionTimingFunction: {
 		"button-press": "var(--g-motion-button-press-easing)",
 		"row-tap": "var(--g-motion-row-tap-easing)",
-		"screen-push": "var(--g-motion-screen-push-easing)",
-		"sheet-present": "var(--g-motion-sheet-present-easing)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-easing)",
-		"theme-change": "var(--g-motion-theme-change-easing)",
 	},
 	zIndex: {
 		overlay: "var(--g-layer-overlay)",

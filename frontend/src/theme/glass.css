@@ -205,18 +205,11 @@
 	/* motion */
 	--g-motion-button-press-duration: 120ms;
 	--g-motion-button-press-easing: cubic-bezier(.2,.8,.3,1);
-	--g-motion-check-in-success-duration: 420ms;
 	--g-motion-row-tap-duration: 90ms;
 	--g-motion-row-tap-easing: ease-out;
-	--g-motion-screen-push-duration: 280ms;
-	--g-motion-screen-push-easing: cubic-bezier(.32,.72,0,1);
-	--g-motion-sheet-present-duration: 340ms;
-	--g-motion-sheet-present-easing: cubic-bezier(.32,.72,0,1);
 	--g-motion-skeleton-shimmer-duration: 1400ms;
 	--g-motion-skeleton-shimmer-easing: linear;
 	--g-motion-skeleton-shimmer-iteration: infinite;
-	--g-motion-theme-change-duration: 400ms;
-	--g-motion-theme-change-easing: ease;
 }
 
 html[data-theme="dark"] {
