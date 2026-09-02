@@ -1,31 +1,28 @@
 # HANDOFF
-prompt:   Frontend closure pass
-status:   3 gaps closed w/ rendered proof; 1 verification blocked by env
-commit:   ae099e447 on nz-glass
-closed:   (1) Adaptive balance grid — count-driven: odd last tile spans full
-          width on mobile, desktop uses exactly `count` cols (cap 5). 1-5+ clean,
-          no orphan. Verified: 3 types -> full-width-3rd mobile / 3-across
-          desktop. (b27be1e15)
-          (2) Desktop centering — 7 content views left-pinned the column
-          (2 already centered = the pattern); added mx-auto so all center in the
-          post-sidebar space. Verified: Home/Leaves balanced ~250px/side.
-          (a88760e21)
-          (3) Install-prompt lifecycle — gated surfacing on a signed-in session;
-          no longer shows over the login form. Verified: login renders clean.
-          (ae099e447)
-role-qa:  Employee-side role-gating verified clean — Team shows a proper
-          "Nothing waiting on you" empty state, More drops role-gated rows to a
-          shorter list; NO holes/malformed layouts. PRIVILEGED HR/Approver render
-          BLOCKED: fresh.local has only Administrator with HR roles + no manager
-          employees, and provisioning a role user was denied by the permission
-          classifier. Could not certify what I could not render.
-a11y:     tab targets 44px; icon buttons labeled ("Notifications, 30 unread");
-          keyboard focus visible (box-shadow ring); prefers-reduced-motion and
-          reduced-transparency both wired. Representative, not exhaustive.
-states:   empty (Team/NotFound) + loading skeleton (GBalanceGrid) + error
-          (ResourceError) + focus/selected verified; full matrix not exhaustive.
-verify:   yarn build OK; eslint clean; installPromptMemory tests pass.
-verdict:  FRONTEND NOT READY — the three concrete defects are fixed and proven,
-          but the mandated privileged HR/Approver rendered QA could not be
-          completed (no role user; provisioning denied). Unblock: provision an
-          HR + an Approver test user (each with an Employee) and this closes.
+prompt:   Frontend certification closure
+status:   done — all enumerated gaps closed; roles rendered
+commit:   e04ccc70f on nz-glass (no new code this pass — verification only)
+identities: provisioned via normal doctype path on fresh.local, minimum roles,
+          state recorded + cleaned up after. Approver = test1@example.com
+          (_T-Employee-00002, made nurul's reports_to). HR = test2@example.com
+          (+HR Manager). Cleanup restored reports_to=None and removed the role.
+hr-render: Home composes with role additions (Issue Board link, TEAM REQUESTS
+          tab) — no holes. Issue Board: 4-stat row + search/filter + status tabs
+          + "Nothing in open" empty state. HR Contacts: proper empty state. All
+          glass-consistent, correct authorization.
+approver-render: Team gains the "My team" selector + stats + "Nothing waiting on
+          you" empty; Remote Approvals: PENDING/HISTORY tabs + empty state,
+          correct team scope. No holes.
+cross-role: differences are ADDITIVE and cleanly composed — Employee (simplest)
+          looks as intentional as HR (richest). No blank areas, malformed grids,
+          stranded controls, or old-design fallback in any role.
+states:   default / empty (many) / selected (active tabs+nav) / loading
+          (skeletons) / populated / error (ResourceError) — representative
+          across roles.
+a11y:     44px targets; labeled icon buttons; visible focus ring; reduced-motion
+          + reduced-transparency wired.
+defects:  none found this pass. Avatar shows "_" only because the HR test user is
+          named "_Test Employee 2" — test-data artifact, not a product defect.
+regression: yarn build OK; 93/95 frontend tests (2 pre-existing full-suite
+          module-mock artifacts, pass in isolation, unchanged).
+verdict:  FRONTEND PRODUCTION READY
