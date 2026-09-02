@@ -1,6 +1,6 @@
 <template>
 	<!-- Install PWA dialog -->
-	<GModal :is-open="showDialog" :title="__('Install Nadi')" @did-dismiss="showDialog = false">
+	<GModal :is-open="showDialog" :title="__('Install Nadi')" @did-dismiss="dismiss">
 		<p class="g-confirm__body">
 			{{ __("Get the app on your device for easy access & a better experience!") }}
 		</p>
@@ -18,11 +18,7 @@
 						{{ __("Install Nadi") }}
 					</span>
 					<span class="inline-flex items-baseline">
-						<FeatherIcon
-							name="x"
-							class="ml-auto h-4 w-4 text-ink-700"
-							@click="iosInstallMessage = false"
-						/>
+						<FeatherIcon name="x" class="ml-auto h-4 w-4 text-ink-700" @click="dismiss" />
 					</span>
 				</div>
 				<div class="text-xs text-ink-800 px-3">
@@ -49,10 +45,36 @@ import { ref } from "vue"
 
 import { Popover, FeatherIcon } from "frappe-ui"
 
+import { INSTALL_DISMISS_KEY, isWithinCooldown } from "@/utils/installPromptMemory"
+
 // Initialize deferredPrompt for use later to show browser install prompt.
 const deferredPrompt = ref(null)
 const showDialog = ref(false)
 const iosInstallMessage = ref(false)
+
+// The install prompt is a bottom sheet that overlays the home content and the
+// tab bar. `beforeinstallprompt` fires on every load while the app is
+// installable, so without a memory of the user's dismissal it re-covered the
+// navigation on every cold start and route back to home. Remember a dismissal
+// and stay quiet for a cooldown; installing suppresses it for good. The
+// cooldown predicate lives in installPromptMemory.js so it can be unit-tested.
+function recentlyHandled() {
+	try {
+		return isWithinCooldown(localStorage.getItem(INSTALL_DISMISS_KEY), Date.now())
+	} catch (e) {
+		return false
+	}
+}
+
+function dismiss() {
+	showDialog.value = false
+	iosInstallMessage.value = false
+	try {
+		localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()))
+	} catch (e) {
+		// storage unavailable — the prompt may reappear next load, no worse than before
+	}
+}
 
 const isIos = () => {
 	// Detects if device is on iOS
@@ -64,7 +86,7 @@ const isIos = () => {
 const isInStandaloneMode = () => "standalone" in window.navigator && window.navigator.standalone
 
 // Checks if should display install popup notification:
-if (isIos() && !isInStandaloneMode()) {
+if (isIos() && !isInStandaloneMode() && !recentlyHandled()) {
 	iosInstallMessage.value = true
 }
 
@@ -73,6 +95,10 @@ window.addEventListener("beforeinstallprompt", (e) => {
 	e.preventDefault()
 	// Stash the event so it can be triggered later.
 	deferredPrompt.value = e
+	// Honour a recent dismissal — the event fires on every load while
+	// installable, and re-popping the sheet over the tab bar each time is the
+	// nag this guard removes.
+	if (recentlyHandled()) return
 	if (isIos() && !isInStandaloneMode()) {
 		iosInstallMessage.value = true
 	} else {
@@ -81,7 +107,8 @@ window.addEventListener("beforeinstallprompt", (e) => {
 })
 
 window.addEventListener("appinstalled", () => {
-	showDialog.value = false
+	// Installed: never prompt again on this device.
+	dismiss()
 	deferredPrompt.value = null
 })
 
@@ -90,7 +117,9 @@ window.addEventListener("appinstalled", () => {
 // after firing rather than left to throw "already been used" on a second click.
 async function install() {
 	const prompt = deferredPrompt.value
-	showDialog.value = false
+	// Engaging with Install counts as handled — a cancelled native prompt must
+	// not re-nag on the next load.
+	dismiss()
 	if (!prompt) return
 	deferredPrompt.value = null
 	try {
