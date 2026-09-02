@@ -217,17 +217,19 @@ ion-tab-button.g-tabbar__btn {
 	flex: none;
 }
 .g-tabbar__well--active {
-	/* The selected tab uses the app's OWN established non-green selected idiom —
-	   the same ink-on-ground fill as .g-seg__option--selected — instead of the
-	   brand green, which read as a second primary CTA beside the Check In button.
-	   Theme-adaptive (a dark chip on the light nav, a light chip on the dark nav)
-	   with a hairline top sheen for glass depth. The icon takes --g-bg via
-	   `color`; the label below is already emphasised through --color-selected.
-	   Selection is also announced natively by ion-tab-button, so colour is not
-	   the only carrier. */
-	background: var(--g-ink);
-	color: var(--g-bg);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	/* Selection as a change in the glass MATERIAL, not a painted badge and not a
+	   solid cut-out (both prior treatments — brand-green fill, then ink/white
+	   fill — were rejected). A denser translucent fill than the bar, ringed by a
+	   hairline rim with an inner top highlight and bottom shadow, so the well
+	   reads as pressed-in glass. The icon carries the emphasis at full ink
+	   contrast (via --color-selected on the button + this color), standing out
+	   from the muted inactive icons; ion-tab-button also announces selection
+	   natively, so colour is never the sole carrier. Theme-adaptive through the
+	   rim/ink tokens. */
+	background: rgba(var(--g-ink-rgb) / 0.1);
+	color: var(--g-ink);
+	box-shadow: inset 0 0 0 1px var(--g-glass-rim), inset 0 1px 1px var(--g-rim-hi),
+		inset 0 -1px 2px var(--g-rim-lo);
 }
 .g-tabbar__label {
 	margin-top: 5px;
