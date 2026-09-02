@@ -1,14 +1,3 @@
-<!-- §11.4: the server has been asked and has not answered, so this
-				     is PENDING, not disabled — disabled means "you cannot do this"
-				     and measures 2.68:1. GButton keeps the brand fill and shows a
-				     transform-animated bar; §11.2's no-spinner rule applies here too. -->
-<GButton
-	:label="__(formButton)"
-	:pending-label="__('Saving…')"
-	:pending="docList.insert.loading || documentResource?.setValue?.loading"
-	:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
-	@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
-/>
 <template>
 	<div class="flex flex-col h-full w-full form-view-root" v-if="isFormReady">
 		<!-- No bg-ground here (8.4): this container is full-bleed over the page,
@@ -246,6 +235,46 @@
 		</div>
 	</div>
 
+	<!-- v-else: the whole form UI above — including the header and its Back
+	     button — renders only once the document has loaded. Without this branch
+	     a slow or failed fetch (404, no permission, dropped network) left a
+	     blank screen with no spinner, no error and no way back. Loading shows an
+	     inline indicator; a failed load shows the reason with Back + Try again,
+	     so the user is never stranded on a detail/edit screen. Only reached for
+	     an existing id (new forms are ready immediately, isFormReady). -->
+	<div v-else class="flex flex-col h-full w-full form-view-root">
+		<header
+			class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
+		>
+			<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
+				<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+			</GIconButton>
+			<h2 class="text-xl font-extrabold text-inkbase tracking-tight ml-1 truncate">
+				{{ __(props.doctype) }}
+			</h2>
+		</header>
+		<div class="grow overflow-y-auto flex items-center justify-center p-6">
+			<div
+				v-if="documentResource.get.loading"
+				class="flex flex-col items-center gap-3 text-ink-600"
+			>
+				<LoadingIndicator class="h-6 w-6 text-accent-ink" />
+				<span class="text-caption">{{ __("Loading…") }}</span>
+			</div>
+			<GEmptyState
+				v-else
+				:title="__('Could not open this {0}', [__(props.doctype)])"
+				:body="
+					__('It may have been removed, or you may not have access. Check your connection and try again.')
+				"
+			>
+				<template #action>
+					<GButton :label="__('Try again')" @click="reloadDoc()" />
+				</template>
+			</GEmptyState>
+		</div>
+	</div>
+
 	<!-- Confirmation dialogs — GConfirm carries GModal's focus-trap workaround
 	     (§16.3), which frappe-ui's Dialog does not. Same state variables, same
 	     handlers: this is a presentation swap only. -->
@@ -305,6 +334,7 @@ import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
 import {
