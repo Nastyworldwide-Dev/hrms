@@ -1,12 +1,13 @@
 # HANDOFF
-prompt:   shift-rostering Phase 0 (Norain wrong-shift complaint)
+prompt:   Nadi rostering + WCAG sweep (both remaining items)
 status:   done
-commit:   3396ca94c on nz-glass
-files:    hrms/hr/shift_rules.py
-          hrms/hr/test_shift_rules.py
-verify:   bench --site <site> run-tests --module hrms.hr.test_shift_rules
-          (runner env broken here; proven red->green via console matrix)
-flags:    bench run-tests bootstrap broken on verify-bench (MagicMock/orjson
-          on installed_apps) — logic verified in console, all rolled back
-next:     Phase 1 rostering feature: declared variable-shift flag replaces the
-          31d lookback heuristic; bulk group roster; GL parked pending senior
+commit:   ea200bb73 on nz-glass
+files:    hrms/api/roster.py + patches/v16_0/add_shift_supervisor_role.py
+          hrms/api/team.py (get_team_roster)
+          frontend/src/views/team/TeamRoster.vue + data/team.js + router
+          design/tokens.json (surface token) -> glass.css (regenerated)
+          + guard tests: test_roster.py test_team.py contrast.test.js team.test.js
+verify:   yarn tokens && yarn build (frontend); node --test src/theme/__tests__/contrast.test.js
+          bench migrate on live creates the Shift Supervisor role (IT assigns it)
+flags:    bench run-tests bootstrap broken here (MagicMock/orjson) — logic verified via console, rolled back
+next:     roster bulk/repeat/PH layer; broader WCAG touch/focus audit beyond contrast
