@@ -14,6 +14,53 @@ from hrms.utils.company_scope import (
 	scope_employee_filters,
 )
 
+#: IT-assigned role that lets a branch leader roster their own team from Nadi
+#: (or Desk). The role alone is not authority — every write is additionally
+#: fenced to the caller's direct reports and permitted companies below.
+ROSTER_SUPERVISOR_ROLE = "Shift Supervisor"
+
+
+def _ensure_can_roster(employee: str) -> None:
+	"""Write fence for every roster action. Mirrors the read fence
+	(_may_read_employee) but for WRITES, and fails CLOSED:
+
+	  · HR operators (company-fenced) may roster anyone in their companies.
+	  · A Shift Supervisor may roster their OWN direct reports, in a company
+	    they are permitted to see — never another leader's team, never another
+	    company's staff.
+	  · Everyone else is denied.
+
+	This is the security boundary that keeps a multi-company hub from letting
+	one branch leader touch another company's roster. Unwired, an endpoint that
+	only checks the doctype create permission would let any Shift Supervisor
+	roster every employee they can read — the exact "serves everyone, not just
+	HR" trap. Pinned by test_roster_fence.
+	"""
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.overrides.company_scope import company_visible
+	from hrms.utils.identity import get_employee
+
+	if not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
+
+	company = frappe.db.get_value("Employee", employee, "company")
+	if sees_all_employee_data(frappe.session.user) and company_visible(company):
+		return
+
+	caller = get_employee()
+	if (
+		caller
+		and ROSTER_SUPERVISOR_ROLE in frappe.get_roles(frappe.session.user)
+		and frappe.db.get_value("Employee", employee, "reports_to") == caller
+		and company_visible(company)
+	):
+		return
+
+	frappe.logger("hrms").warning(
+		"[roster] %s denied roster write on employee %s", frappe.session.user, employee
+	)
+	frappe.throw(_("You are not permitted to roster this employee."), frappe.PermissionError)
+
 ALLOWED_EMPLOYEE_FILTERS = {
 	"status",
 	"company",
@@ -144,6 +191,7 @@ def create_shift_schedule_assignment(
 	shift_location: str | None = None,
 ) -> None:
 	frappe.has_permission("Employee", "read", employee, throw=True)
+	_ensure_can_roster(employee)
 	frappe.has_permission("Shift Schedule Assignment", "create", throw=True)
 	shift_schedule = get_or_insert_shift_schedule(shift_type, frequency, repeat_on_days)
 	shift_schedule_assignment = frappe.get_doc(
@@ -186,6 +234,7 @@ def delete_shift_schedule_assignment(shift_schedule_assignment: str) -> None:
 	):
 		shift_assignment_doc = frappe.get_doc("Shift Assignment", shift_assignment_name)
 		frappe.has_permission("Employee", "read", shift_assignment_doc.employee, throw=True)
+		_ensure_can_roster(shift_assignment_doc.employee)
 		shift_assignment_doc.check_permission("cancel" if shift_assignment_doc.docstatus == 1 else "delete")
 		if shift_assignment_doc.docstatus == 1:
 			shift_assignment_doc.cancel()
@@ -202,9 +251,11 @@ def swap_shift(
 
 	src_shift_doc = frappe.get_doc("Shift Assignment", src_shift)
 	frappe.has_permission("Employee", "read", src_shift_doc.employee, throw=True)
+	_ensure_can_roster(src_shift_doc.employee)
 	src_shift_doc.check_permission("write")
 
 	frappe.has_permission("Employee", "read", tgt_employee, throw=True)
+	_ensure_can_roster(tgt_employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
 
 	if tgt_shift:
@@ -248,6 +299,7 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 		assignment = frappe.get_doc("Shift Assignment", assignment)
 
 	frappe.has_permission("Employee", "read", assignment.employee, throw=True)
+	_ensure_can_roster(assignment.employee)
 	assignment.check_permission("write")
 
 	if assignment.end_date and date_diff(assignment.end_date, date) < 0:
@@ -286,6 +338,7 @@ def insert_shift(
 	shift_location: str | None = None,
 ) -> None:
 	frappe.has_permission("Employee", "read", employee, throw=True)
+	_ensure_can_roster(employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
 	filters = {
 		"doctype": "Shift Assignment",
