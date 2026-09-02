@@ -6,6 +6,8 @@ Run with:
 """
 
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from hrms.utils.geofence import (
 	ACCURACY_ALLOWANCE_CAP_M,
@@ -195,6 +197,45 @@ class TestAccuracyAllowance(unittest.TestCase):
 				self.assertEqual(action, "require_remote")
 				self.assertEqual(ctx["reason"], REASON_OUTSIDE_RADIUS)
 				self.assertEqual(ctx["accuracy_m"], 0.0)
+
+
+class TestEffectiveShiftLocation(unittest.TestCase):
+	"""The fence resolves off the active assignment's shift_location, but only
+	rule-created assignments carry one — a manual/schedule assignment does not,
+	so a configured Employee.shift_location (Damansara, reproduced live) resolved
+	to "no area set". effective_shift_location must fall back to the Employee.
+	"""
+
+	def test_no_assignment_returns_none(self):
+		from hrms.utils.geofence import effective_shift_location
+
+		# No active shift today -> no fence, and no read off the Employee.
+		self.assertIsNone(effective_shift_location("EMP-1", None))
+
+	def test_assignment_with_location_wins_without_touching_employee(self):
+		from hrms.utils.geofence import effective_shift_location
+
+		assignment = SimpleNamespace(shift_location="Damansara")
+		with patch("frappe.db.get_value") as gv:
+			result = effective_shift_location("EMP-1", assignment)
+			gv.assert_not_called()
+		self.assertEqual(result, "Damansara")
+
+	def test_assignment_without_location_falls_back_to_employee(self):
+		from hrms.utils.geofence import effective_shift_location
+
+		assignment = SimpleNamespace(shift_location=None)
+		with patch("frappe.db.get_value", return_value="Damansara") as gv:
+			result = effective_shift_location("EMP-1", assignment)
+			gv.assert_called_once_with("Employee", "EMP-1", "shift_location")
+		self.assertEqual(result, "Damansara")
+
+	def test_no_location_anywhere_returns_none(self):
+		from hrms.utils.geofence import effective_shift_location
+
+		assignment = SimpleNamespace(shift_location=None)
+		with patch("frappe.db.get_value", return_value=None):
+			self.assertIsNone(effective_shift_location("EMP-1", assignment))
 
 
 if __name__ == "__main__":

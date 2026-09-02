@@ -242,3 +242,28 @@ def resolve_location(shift_location: str | None):
 		["checkin_radius", "latitude", "longitude"],
 		as_dict=True,
 	)
+
+
+def effective_shift_location(employee: str, assignment) -> str | None:
+	"""The Shift Location name governing this employee's fence, or None.
+
+	It is the active Shift Assignment's `shift_location` when set — but the
+	shift-rule sync only stamps `shift_location` onto assignments IT creates
+	(created_by_shift_rule=1, see hrms/hr/shift_rules.py). A manually-created
+	assignment, or one from the Shift Schedule flow, carries none. Without a
+	fallback the fence then resolves to "no area set" even though the site HAS a
+	Shift Location and `Employee.shift_location` points at it — the exact live
+	Damansara symptom (reproduced: Shift Location present, Employee linked,
+	assignment.shift_location null -> resolver None).
+
+	So fall back to `Employee.shift_location`, which the v15_91_0 field documents
+	as "where this employee physically clocks in". Requires an active assignment:
+	no shift today means no shift to fence, not a fence read off the employee.
+	"""
+	if not assignment:
+		return None
+	if assignment.shift_location:
+		return assignment.shift_location
+	import frappe
+
+	return frappe.db.get_value("Employee", employee, "shift_location")

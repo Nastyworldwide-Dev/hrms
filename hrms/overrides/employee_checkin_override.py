@@ -29,6 +29,7 @@ from hrms.utils.geofence import (
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
 	REASON_OUTSIDE_RADIUS,
+	effective_shift_location,
 	evaluate_geofence,
 	resolve_assignment,
 	resolve_location,
@@ -170,7 +171,10 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# nothing and silently degrade to lenient — the one combination that most
 		# needs to throw.
 		assignment = resolve_assignment(self.employee, self.time, shift_type=self.shift)
-		shift_loc_name = assignment.shift_location if assignment else None
+		# Assignment's shift_location, or the Employee's own when the assignment
+		# carries none (manual/schedule) — the same fallback the preflight uses,
+		# so the screen that warns and the code that enforces stay in step.
+		shift_loc_name = effective_shift_location(self.employee, assignment)
 		# Strict flag lives on Shift Assignment (was on Shift Type up to v15.77.3).
 		# No active assignment at all still means lenient, so untagged check-ins
 		# keep falling through to the silent-allow / remote-approval paths.

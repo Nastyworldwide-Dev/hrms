@@ -36,7 +36,12 @@ from frappe.utils import get_datetime
 from hrms.api import _ensure_own_employee_or_permitted
 from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_setting_enabled_for_employee
-from hrms.utils.geofence import evaluate_geofence, resolve_assignment, resolve_location
+from hrms.utils.geofence import (
+	effective_shift_location,
+	evaluate_geofence,
+	resolve_assignment,
+	resolve_location,
+)
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -145,7 +150,9 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 		# RemoteCheckinDialog flow — no preflight needed.
 		return _ok()
 
-	shift_loc_name = row.shift_location
+	# Fall back to Employee.shift_location when the assignment carries none — a
+	# manual/schedule assignment does, and the fence must still resolve.
+	shift_loc_name = effective_shift_location(employee, row)
 
 	loc = resolve_location(shift_loc_name)
 
@@ -201,11 +208,15 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	# but it is the filter that hid the strict flag on the enforcing path, so it
 	# does not get to survive in a second place. The None check below covers it.
 	r = resolve_assignment(employee, at.date())
-	if not r or not r.shift_location:
+	# Assignment's shift_location, or the Employee's own when the assignment
+	# carries none (manual/schedule). Without this the map pin — and the whole
+	# geofence — reads as "no area set" for a genuinely configured workplace.
+	shift_loc_name = effective_shift_location(employee, r)
+	if not shift_loc_name:
 		return None
 	loc = frappe.db.get_value(
 		"Shift Location",
-		r.shift_location,
+		shift_loc_name,
 		["name", "location_name", "latitude", "longitude", "checkin_radius"],
 		as_dict=True,
 	)
