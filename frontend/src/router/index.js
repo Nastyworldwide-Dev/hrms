@@ -2,11 +2,12 @@ import { createRouter, createWebHistory } from "@ionic/vue-router"
 
 import TabbedView from "@/views/TabbedView.vue"
 import attendanceRoutes from "./attendance"
-import otRoutes from "./ot"
-import leaveRoutes from "./leaves"
 import claimRoutes from "./claims"
 import issueRoutes from "./issues"
+import leaveRoutes from "./leaves"
+import otRoutes from "./ot"
 import sopRoutes from "./sop"
+import { isStaleChunkError } from "./stale-chunk"
 
 const routes = [
 	{
@@ -171,6 +172,35 @@ const router = createRouter({
 // One blur here covers every route, instead of per-page lifecycle handlers.
 router.beforeEach(() => {
 	document.activeElement?.blur?.()
+})
+
+// After a deploy a still-open tab can lazy-load a chunk hash the service worker
+// has already purged; the dynamic import rejects mid-navigation. Recover by
+// doing a full reload once, which boots index.html into the current build. The
+// sessionStorage latch stops a genuinely-broken chunk (gone for a reason other
+// than a deploy) from reload-looping. See stale-chunk.js for the predicate.
+router.onError((err) => {
+	if (!isStaleChunkError(err?.message)) return
+	const KEY = "hrms:chunk-reloaded"
+	if (sessionStorage.getItem(KEY)) return
+	console.warn("[Router] stale chunk after deploy — reloading into current build:", err?.message)
+	try {
+		sessionStorage.setItem(KEY, "1")
+	} catch (e) {
+		// private mode / storage disabled: reload anyway, worst case is a loop
+		// the user breaks by closing the tab — still better than a dead route
+	}
+	window.location.reload()
+})
+
+// A clean navigation means the current build loaded — clear the latch so a
+// future deploy can recover again.
+router.afterEach(() => {
+	try {
+		sessionStorage.removeItem("hrms:chunk-reloaded")
+	} catch (e) {
+		// storage unavailable — nothing to clear
+	}
 })
 
 export default router
