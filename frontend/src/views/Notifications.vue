@@ -27,24 +27,26 @@
 						     fixed-height pill, so "Mark all as read" broke to two lines and
 						     spilled through the pill's top and bottom rim. The row wraps
 						     now; the pills never do. -->
-						<div class="flex flex-row flex-wrap justify-between items-center gap-y-2">
+						<!-- Gated on unread: with the duplicate Settings pill removed, both
+						     remaining pieces (the count and Mark all as read) are unread-only,
+						     so when caught up the row disappears instead of leaving an empty
+						     band above the list. -->
+						<div
+							class="flex flex-row flex-wrap justify-between items-center gap-y-2"
+							v-if="unreadNotificationsCount.data"
+						>
 							<div
 								class="font-sans font-extrabold text-stat-number text-inkbase whitespace-nowrap"
-								v-if="unreadNotificationsCount.data"
 							>
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
+							<!-- The "Settings" pill here pushed to the generic app Settings
+							     route — the same destination as Profile -> Settings, and not
+							     notification-specific (notification preferences live in
+							     Settings -> Notifications). It was a duplicate entry point
+							     stranded on this page, so it is removed; "Mark all as read"
+							     is the notification-owned action that belongs here. -->
 							<div class="flex ml-auto gap-1 shrink-0">
-								<Button
-									variant="outline"
-									class="g-touch whitespace-nowrap"
-									@click="router.push({ name: 'Settings' })"
-								>
-									<template #prefix>
-										<FeatherIcon name="settings" class="w-4" />
-									</template>
-									{{ __("Settings") }}
-								</Button>
 								<Button
 									v-if="unreadNotificationsCount.data"
 									variant="outline"
