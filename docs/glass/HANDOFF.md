@@ -1,33 +1,31 @@
 # HANDOFF
-prompt:   Clock-in, location & geofence recovery
-status:   done — geofence WORKS; audit-durability defect found + fixed
-commit:   2af308f30 on nz-glass
-model:    Employee.shift_location + department -> Shift Location.shift_rules
-          (dept->shift_type) -> daily sync materializes a Shift Assignment ->
-          geofence reads Shift Assignment.shift_location + enable_strict_geofence
-          -> Shift Location.{latitude,longitude,checkin_radius}. Coordinates are
-          owned by Shift Location (unchanged since the old branch).
-why-msg:  "No check-in area set" is genuine CONFIG ABSENCE, proven from site data:
-          0 Shift Locations on fresh.local AND test.local, 0 employees with
-          shift_location, 0 geolocated check-ins ever. Schema intact, patches ran,
-          resolver returns null because the data isn't there — NOT a defect, field
-          rename, migration loss, or branch regression. Old build had the same
-          coord fields + map picker; the "it worked before" impression is UI, not
-          stored data (none ever existed).
-proof:    test.local, HR-EMP-00014 assigned to a geofenced HQ (3.1390,101.6869
-          r=100): get_active_shift_location returns coords; STRICT inside -> ok;
-          STRICT outside -> block (6937m>100m) + throw, 0 check-ins created;
-          LENIENT outside -> remote request spawned; approver resolves.
-DEFECT:   Geofence Reject Log was rolled back by the strict throw (same txn) —
-          0 audit rows in prod despite every rejection. FIXED: commit the audit
-          (guarded `not in_test`); bench-verified it now survives, still no
-          check-in for the rejected attempt. 2 unit tests added.
-approver: 5-tier resolve (shift_request_approver->dept->reports_to->HR Mgr
-          in-company->site HR Mgr); request never dropped; OUT inherits IN's
-          approval (no double submit); HR acts via admin bypass.
-verify:   override tests 6/6; geofence resolver 3/3; ruff clean.
-accept:   the message disappears only when HR configures a Shift Location with
-          coords+radius and sets Employee.shift_location (or a shift_rules row)
-          and enables allow_geolocation_tracking — a CONFIG action, not code.
-verdict:  geofence implementation CORRECT on current architecture; 1 audit
-          defect fixed. Message is truthful pending HQ configuration.
+prompt:   Frontend recalibration & visual-functional integrity
+status:   partial — 2 defects fixed w/ rendered proof; findings remain
+commit:   3d72ae3ed on nz-glass
+method:   RENDERED QA in a real browser (agent-browser, built assets on :8080,
+          not source — :8080 serves hashed build, so edits need `yarn build`).
+          Employee role (nurul.aisyah) across login/home/leaves/NotFound,
+          light+dark, mobile 390 + desktop 1440.
+fixed:    (1) Install prompt (bottom sheet) had NO dismissal memory — covered
+          the tab bar on every load/cold start. Now records dismissal+install,
+          30-day cooldown; predicate extracted + unit-tested; browser-verified
+          fresh-shows / dismissed-suppresses. (9f2470512)
+          (2) Active tab well = brand fill + `0 0 10px accent-glow` neon halo —
+          a 2nd fluorescent focal point beside the CTA. Dropped the outer glow,
+          kept the accessible brand chip + inner sheen; computed-style verified
+          live. (3d72ae3ed, item 4)
+validated: no FOUC / no old-design flash on dark cold start (prior pre-paint
+          fix holds). NotFound state renders correctly (catch-all).
+findings-open:
+          - Leave balance grid: 2-col with dynamic tile count (2-5) orphans the
+            odd cell (3 types -> lone tile + empty bordered cell). Root cause:
+            .g-cellgrid--balance hardcoded 2-col + nth-child divider logic.
+            Needs adaptive columns; shared component, deferred (not a blind fix).
+          - Desktop (1440): content column left-aligned after sidebar leaves a
+            large empty right canvas (item 13). Mobile-first column; design call.
+          - Install prompt also appears pre-login (login screen).
+not-done: rendered QA for Approver/HR roles; per-state matrix (hover/focus/
+          error/offline); typography/component full audit.
+verdict:  FRONTEND NOT READY — coherent and the real nav-blocking defect is
+          fixed, but concrete composition findings remain and role QA is
+          incomplete. Enumerated above; none are old-design residue.
