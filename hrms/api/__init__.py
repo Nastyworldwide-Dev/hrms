@@ -506,16 +506,20 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 		bank["balance_days"],
 		bank["hours_available"],
 	)
-	bank["requests"] = frappe.get_all(
-		"OT Request",
-		filters={
-			"employee": employee,
-			"compensation": "Replacement Leave",
-			"docstatus": 1,
-			"ot_date": ("between", [bank["window_start"], bank["window_end"]]),
-		},
-		fields=["name", "ot_date", "claimed_hours"],
-		order_by="ot_date asc",
+	bank["requests"] = (
+		frappe.get_all(
+			"OT Request",
+			filters={
+				"employee": employee,
+				"compensation": "Replacement Leave",
+				"docstatus": 1,
+				"ot_date": ("between", [bank["period_start"], bank["period_end"]]),
+			},
+			fields=["name", "ot_date", "claimed_hours"],
+			order_by="ot_date asc",
+		)
+		if bank["period_start"]
+		else []
 	)
 	return bank
 

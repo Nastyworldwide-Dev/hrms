@@ -74,13 +74,15 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 		self.assertRaises(frappe.ValidationError, make_claim, self.employee, 0.3, False)
 		self.assertRaises(frappe.ValidationError, make_claim, self.employee, 0, False)
 
-	def test_backdated_ot_within_window_is_claimable(self):
-		# OT worked LAST cycle, filed/approved this month, is still claimable —
-		# the calendar-month bank (reversed) used to strand it. The claiming
-		# window is the same 2-cycle backdate window OT is filable in.
-		last_cycle = add_months(today(), -1)
-		make_ot_checkins(self.employee, last_cycle, shift=SHIFT, out_time="18:00:00", actual_end="12:00:00")
-		make_ot_request(self.employee, ot_date=last_cycle, claimed_hours=8)
+	def test_ot_earlier_in_the_leave_period_is_claimable(self):
+		# OT worked earlier in the SAME leave period (crossing a calendar-month
+		# boundary) stays claimable. The old month bank stranded it — it expired
+		# banked hours FASTER than the days they convert to; the bank now shares
+		# the leave period's lifetime. (add_months(-1) sits in the current annual
+		# leave period except when the suite runs in that period's first month.)
+		earlier = add_months(today(), -1)
+		make_ot_checkins(self.employee, earlier, shift=SHIFT, out_time="18:00:00", actual_end="12:00:00")
+		make_ot_request(self.employee, ot_date=earlier, claimed_hours=8)
 		bank = get_replacement_leave_bank(self.employee, getdate())
 		self.assertEqual(bank["hours_total"], 8)
 		claim = make_claim(self.employee, 1.0, submit=False)

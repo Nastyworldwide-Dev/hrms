@@ -34,7 +34,7 @@
 					<span class="text-xs text-ink-600">
 						{{
 							__(
-								"0.5 day costs 4 h, 1 day costs 8 h. Overtime stays claimable for two payroll cycles (the 16th-to-15th backdate window), then expires; approved days join your Replacement Leave balance until the leave period ends."
+								"0.5 day costs 4 h, 1 day costs 8 h. Overtime stays claimable for the whole leave period, then expires — the same period the approved days live in once claimed."
 							)
 						}}
 					</span>
