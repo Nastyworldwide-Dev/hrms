@@ -209,15 +209,17 @@ ion-tab-button.g-tabbar__btn {
 	flex: none;
 }
 .g-tabbar__well--active {
-	background: var(--g-brand);
-	color: var(--g-on-brand);
-	/* Recalibration item 4: the `0 0 10px accent-glow` neon halo made the active
-	   tab a second fluorescent focal point beside the Check In CTA, which reads
-	   as loud rather than calm-glass. Drop the outer glow and keep the brand
-	   fill — an unmistakable, on-brand-ink "you are here" that still passes
-	   contrast — with only a contained inner sheen so the chip reads as a raised
-	   glass surface, not a glowing slab. */
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+	/* The selected tab uses the app's OWN established non-green selected idiom —
+	   the same ink-on-ground fill as .g-seg__option--selected — instead of the
+	   brand green, which read as a second primary CTA beside the Check In button.
+	   Theme-adaptive (a dark chip on the light nav, a light chip on the dark nav)
+	   with a hairline top sheen for glass depth. The icon takes --g-bg via
+	   `color`; the label below is already emphasised through --color-selected.
+	   Selection is also announced natively by ion-tab-button, so colour is not
+	   the only carrier. */
+	background: var(--g-ink);
+	color: var(--g-bg);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .g-tabbar__label {
 	margin-top: 5px;
@@ -284,8 +286,13 @@ html[data-transparency="reduce"] .g-sidenav {
 	background: var(--g-icon-bg);
 }
 .g-sidenav__item--active {
-	border-left-color: var(--g-brand);
+	/* Same-class as the bottom tab: the selected item drops the brand-green
+	   accent for the app's non-green selected idiom — an ink accent bar, full
+	   ink text, and a persistent subtle surface (material difference) so "you
+	   are here" reads without a second CTA colour on the rail. */
+	border-left-color: var(--g-ink);
 	color: var(--g-ink);
+	background: var(--g-icon-bg);
 }
 
 /* ---------- the recipe (§6) ---------- */
