@@ -186,6 +186,27 @@
 			media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
 		/>
 
+		<!-- Pre-paint theme: data/theme.js only runs after main.js (a module,
+		     deferred), so a dark-mode user painted the light :root default first
+		     and flashed light before dark applied. Resolve the same stored
+		     preference synchronously here, before first paint. Storage key and
+		     bg literals mirror data/theme.js / glass.css — keep them in step. -->
+		<script>
+			try {
+				var m = localStorage.getItem("hrms:theme")
+				if (["light", "dark", "system"].indexOf(m) === -1) m = "system"
+				var dark =
+					m === "dark" ||
+					(m === "system" && matchMedia("(prefers-color-scheme: dark)").matches)
+				var el = document.documentElement
+				el.classList.toggle("dark", dark)
+				el.setAttribute("data-theme", dark ? "dark" : "light")
+				var meta = document.querySelector('meta[name="theme-color"]')
+				if (meta) meta.setAttribute("content", dark ? "#07070A" : "#EDEFF3")
+			} catch (e) {
+				/* storage/matchMedia unavailable — fall through to CSS default */
+			}
+		</script>
 	</head>
 	<body class="antialiased">
 		<div id="app"></div>
