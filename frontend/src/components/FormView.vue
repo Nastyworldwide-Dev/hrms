@@ -692,7 +692,13 @@ function handleDocInsert() {
 
 function validateMandatoryFields() {
 	const errorFields = props.fields
-		.filter((field) => field.reqd && !field.hidden && !formModel.value[field.fieldname])
+		.filter((field) => {
+			if (!field.reqd || field.hidden) return false
+			const value = formModel.value[field.fieldname]
+			// an empty child table ([]) is truthy — !value missed it, so a
+			// required table (e.g. Expense Claim's expenses) submitted empty.
+			return Array.isArray(value) ? value.length === 0 : !value
+		})
 		.map((field) => field.label)
 
 	if (errorFields.length) {
@@ -718,6 +724,12 @@ function validateMandatoryFields() {
 }
 
 async function handleDocUpdate(action) {
+	// Close the confirm dialog UP FRONT: the submit awaits the server, and the
+	// GConfirm/Dialog "Yes" button has no pending state, so a second tap during
+	// that window used to fire a duplicate submit/cancel.
+	if (action === "submit") showSubmitDialog.value = false
+	else if (action === "cancel") showCancelDialog.value = false
+
 	if (documentResource.doc) {
 		let params = { ...formModel.value }
 
@@ -733,9 +745,6 @@ async function handleDocUpdate(action) {
 		await documentResource.get.promise
 		resetForm()
 	}
-
-	if (action === "submit") showSubmitDialog.value = false
-	else if (action === "cancel") showCancelDialog.value = false
 }
 
 function saveForm() {
