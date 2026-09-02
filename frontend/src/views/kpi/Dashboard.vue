@@ -226,6 +226,13 @@
 					:title="__('No appraisals yet')"
 					:body="__('Your KPI appears here once a review cycle opens for you')"
 				/>
+
+				<!-- loading: the missing fourth state — without it the page was a
+				     blank shell during the initial fetch. -->
+				<div v-else class="flex items-center justify-center gap-3 py-12 text-ink-600">
+					<LoadingIndicator class="h-5 w-5 text-accent-ink" />
+					<span class="text-caption">{{ __("Loading your KPIs…") }}</span>
+				</div>
 			</div>
 		</template>
 	</BaseLayout>
@@ -235,7 +242,7 @@
 import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, ref } from "vue"
-import { createResource, FeatherIcon } from "frappe-ui"
+import { createResource, FeatherIcon, LoadingIndicator } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

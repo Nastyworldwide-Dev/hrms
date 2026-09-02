@@ -55,10 +55,15 @@
 	<GBanner v-else-if="calendarEvents.error" variant="error">
 		{{ __("Could not load the attendance calendar. Refresh to try again.") }}
 	</GBanner>
+
+	<!-- loading: the missing fourth state — the calendar auto-fetches, and
+	     without this the component painted nothing until the first response. -->
+	<GSkeleton v-else height="320px" />
 </template>
 
 <script setup>
 import GBanner from "@/components/glass/GBanner.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
