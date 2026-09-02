@@ -1,30 +1,30 @@
 # HANDOFF
-prompt:   Pass 4 — Liquid Glass, frontend architecture & UX integrity
-status:   blocking items rendered-verified resolved; no new anomaly
-commit:   f823c5d93 on nz-glass (rendered-verification pass — no new code)
-system:   one glass material (glass.css/glass.variables.css) + tokens
-          (design/tokens.json) + 40+ G* primitives; one Link.vue, one FormView,
-          shared GPage/BaseLayout shells. No page-local glass recipe or duplicate
-          primitive surfaced.
-bottom-nav(#3): RENDERED-VERIFIED container-free on ALL FIVE tabs in BOTH themes —
-          active well computes background transparent + box-shadow none, label
-          weight 700, icon full ink/white. No green, no cut-out, no well/capsule/
-          container. Selection carried by the item (bold label + full-contrast
-          icon). Same-class: segmented = ink selection; desktop rail = ink text +
-          weight + edge accent (no fill).
-transitions(#7): during a tab nav the live .ion-page.g-page is opaque
-          (all_opaque=true, 1 live page) — no two-page overlap, no transparent
-          page. The undefined --g-ground -> --g-bg fix holds.
-residue:  dark cold-start + More/Home/Leaves render clean — no old design, no
-          green active, no wrong background.
-a11y:     tab targets 44px; icon buttons labeled; focus ring + reduced-motion +
-          reduced-transparency wired (prior passes).
-prior-fixes-still-holding: theme pre-paint (no FOUC), chunk-recovery, notifications
-          duplicate-Settings removed + row gated, adaptive balance grid, desktop
-          content-column centering, install-prompt lifecycle.
-coverage: this pass freshly rendered the recurring BLOCKING items (nav x5 tabs
-          light+dark, transition opacity, dark residue, a11y). Composition, full
-          state matrix and role layouts rest on prior passes' rendered evidence.
-verdict:  LIQUID GLASS / FRONTEND CLOSED — no banned active-nav treatment, no
-          transition corruption, no old-design residue, no reproducible visual
-          anomaly found.
+prompt:   Pass 5 — runtime reliability, PWA & performance closure
+status:   primitives verified healthy; no defect/pathology found
+commit:   73fd8095f on nz-glass (measurement/verification pass — no new code)
+pwa/sw:   sw.js has cleanupOutdatedCaches + skipWaiting + clientsClaim (prompt
+          update + old-cache purge); pre-paint theme = no FOUC on cold start;
+          router.onError reloads once on a stale chunk after deploy (unit-tested,
+          latched against loops). Safe, understandable update recovery.
+network:  loudRequest surfaces failures as toasts and RETHROWS (onError/try-catch
+          still run) — errors are never swallowed as empty states; ResourceError
+          for resource failures.
+realtime: socket.io reconnectionAttempts=5 (bounded, no storm); the only handler
+          is hrms:refetch_resource which reloads an already-cached resource — a
+          FRESHNESS optimization, NOT a correctness dependency. Absent socket =>
+          data still loads on navigation. Degrades gracefully.
+errors:   console CLEAN across home/attend/leaves/more (0 Nadi errors); 0 failed
+          API (>=400). startTime/reportAllChanges = browser extension (prior).
+idempotency: approval decide() uses a for_update row-lock + docstatus==1 no-op
+          (runtime-proven prior); duplicate same-timestamp checkin blocked (prior).
+performance(measured): Home = 35 API calls, 21KB total. The apparent duplicates
+          are DISTINCT my/team/history queries (different approver_id/filters), all
+          auto:true — eager tab pre-load, not redundant. Only genuinely-repeated
+          calls are tiny (get_hr_settings x2). No large payload, no N+1, no slow
+          load => no clear pathology; per guidance, no fix warranted.
+concurrency: approval row-lock + checkin duplicate guard are race-safe (proven).
+unverified/env-limited: full concurrent stress load, installed-PWA lifecycle on a
+          real device, and live-instance realtime delivery (no live access).
+verdict:  RUNTIME RELIABILITY CLOSED — SW update+recovery, graceful realtime,
+          error surfacing, idempotency/duplicate guards, clean console/0-failures,
+          and a measured-healthy perf profile; no reliability defect or pathology.
