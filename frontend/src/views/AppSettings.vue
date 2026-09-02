@@ -50,11 +50,19 @@
 						     a class to it, and its row is not clickable — so that button was
 						     the whole target. The wrapper lets the theme expand its hit area
 						     to §14.1 without changing the toggle's visual. -->
-						<div class="flex flex-col border-t-2 border-divider pt-4 g-switch-row">
+						<!-- Icon-led like the Appearance (moon) and Account (lock) rows.
+						     Without it the switch sat iconless under its eyebrow, its
+						     label starting at a different x than every sibling row — the
+						     "stranded" control. g-switch-row stays on the ancestor so the
+						     toggle's expanded hit area (.g-switch-row button::before) is
+						     unaffected; the Switch is flex-1 so its justify-between still
+						     pushes the toggle to the right edge. -->
+						<div class="flex items-center gap-3 border-t-2 border-divider pt-4 g-switch-row">
+							<FeatherIcon name="bell" class="h-[18px] w-[18px] text-accent-ink shrink-0" />
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
-								:class="description ? 'p-2' : ''"
+								:class="['flex-1', description ? 'p-2' : '']"
 								:model-value="pushNotificationState"
 								:disabled="disablePushSetting"
 								:description="description"
