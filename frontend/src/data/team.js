@@ -28,3 +28,16 @@ export const teamManagers = createResource({
 	auto: true,
 	cache: "hrms:team_managers",
 })
+
+// The Nadi Team Roster grid: direct reports + their shifts across a week.
+// params (start_date, end_date, manager?) set by the view before fetch.
+export const teamRoster = createResource({
+	url: "hrms.api.team.get_team_roster",
+})
+
+// Assign a shift to a team member. The server fences every write to the
+// caller's own reports + company (hrms.api.roster._ensure_can_roster), so the
+// UI never has to be the security boundary.
+export const assignShift = createResource({
+	url: "hrms.api.roster.insert_shift",
+})

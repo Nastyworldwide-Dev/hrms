@@ -69,6 +69,13 @@ const routes = [
 				component: () => import("@/views/team/TeamDashboard.vue"),
 			},
 			{
+				// leader roster grid; server fences to the caller's own reports,
+				// so a user without a team sees an empty roster
+				path: "/team/roster",
+				name: "TeamRosterView",
+				component: () => import("@/views/team/TeamRoster.vue"),
+			},
+			{
 				// overflow hub for the phone tab bar (Issues, SOPs, Team)
 				path: "/more",
 				name: "MoreView",

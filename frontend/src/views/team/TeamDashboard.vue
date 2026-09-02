@@ -36,6 +36,14 @@
 					</GIconButton>
 				</div>
 
+				<router-link
+					v-if="teamStatus.data?.members?.length"
+					:to="{ name: 'TeamRosterView' }"
+					class="g-seclink text-kra-label text-accent-ink underline underline-offset-link self-end"
+				>
+					{{ __("Open team roster") }}
+				</router-link>
+
 				<ResourceError :resource="teamStatus" what="your team's status" />
 				<!-- summary tiles -->
 				<div class="grid grid-cols-4 border-t-2 border-divider" v-if="teamStatus.data">

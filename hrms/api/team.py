@@ -302,7 +302,7 @@ def get_team_roster(start_date: str, end_date: str, manager: str | None = None) 
 	members = frappe.get_all(
 		"Employee",
 		filters=member_filters,
-		fields=["name", "employee_name", "designation", "department", "branch"],
+		fields=["name", "employee_name", "designation", "department", "branch", "company"],
 		order_by="employee_name asc",
 		ignore_permissions=True,
 	)
