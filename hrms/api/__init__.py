@@ -938,7 +938,20 @@ def get_leave_types(employee: str, date: str) -> list:
 	leave_details = get_leave_details(employee, date)
 	leave_types = list(leave_details["leave_allocation"].keys()) + leave_details["lwps"]
 
-	return leave_types
+	# Drop types the employee is not eligible for yet. Leave Type.applicable_after
+	# is enforced on save (validate_applicable_after); offering such a type in the
+	# dropdown only to reject it after the applicant fills the whole form — the
+	# "Prolonged Illness applicable after 183 days" trap — is offer-then-reject.
+	# Mirror the save-time check exactly: eligible when days-since-joining meets
+	# applicable_after (a from_date before joining is not checked there either).
+	doj = frappe.db.get_value("Employee", employee, "date_of_joining")
+	served = date_diff(getdate(date), doj) if doj else None
+
+	def _applicable(leave_type: str) -> bool:
+		after = cint(frappe.db.get_value("Leave Type", leave_type, "applicable_after"))
+		return served is None or served < 0 or after <= 0 or served >= after
+
+	return [lt for lt in leave_types if _applicable(lt)]
 
 
 # Expense Claims

@@ -16,7 +16,7 @@ HR-fence access open and everyone else shut.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from hrms.api import _may_read_employee, get_shifts
+from hrms.api import _may_read_employee, get_leave_types, get_shifts
 
 COMPANY = "_Test Company"
 
@@ -158,3 +158,26 @@ class TestGetShiftsReturnsLocation(FrappeTestCase):
 
 		row = next(r for r in rows if r["name"] == sa.name)
 		self.assertEqual(row["shift_location"], loc)
+
+
+class TestLeaveTypeEligibility(FrappeTestCase):
+	"""Offer-then-reject guard: a leave type the employee is not eligible for yet
+	(Leave Type.applicable_after) must not be offered in the dropdown only to be
+	thrown on save. get_leave_types filters by the same rule the save enforces."""
+
+	def test_type_not_yet_applicable_is_not_offered(self):
+		from frappe.utils import add_days, nowdate
+
+		lt = "_Test Applicable After LWP"
+		if not frappe.db.exists("Leave Type", lt):
+			frappe.get_doc(
+				{"doctype": "Leave Type", "leave_type_name": lt, "is_lwp": 1, "applicable_after": 200}
+			).insert(ignore_permissions=True)
+		emp = _make_employee("leave.elig@bench.test", [])
+		frappe.db.set_value("Employee", emp, "date_of_joining", add_days(nowdate(), -30))
+		frappe.clear_document_cache("Employee", emp)
+		self.assertNotIn(lt, get_leave_types(emp, nowdate()))
+
+		frappe.db.set_value("Employee", emp, "date_of_joining", add_days(nowdate(), -400))
+		frappe.clear_document_cache("Employee", emp)
+		self.assertIn(lt, get_leave_types(emp, nowdate()))
