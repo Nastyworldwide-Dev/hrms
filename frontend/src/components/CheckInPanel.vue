@@ -582,8 +582,12 @@ const locationVerdict = computed(() => {
 			tone: "muted",
 			title: __("Location unavailable"),
 			detail: shiftLocation.data?.strict
-				? __("Turn on location for this app — you cannot check in here without it.")
-				: __("Your check-in will still be recorded, without a location."),
+				? __(
+						"Location is needed to check in here. Turn it on in your browser or phone settings, then try again."
+				  )
+				: __(
+						"We couldn't get your location. You can still check in — it just won't record where you are."
+				  ),
 		}
 	}
 
@@ -605,7 +609,7 @@ const locationVerdict = computed(() => {
 		return {
 			tone: "muted",
 			title: __("Finding your location..."),
-			detail: __("This takes a moment."),
+			detail: __("Just a moment."),
 		}
 	}
 
@@ -620,16 +624,15 @@ const locationVerdict = computed(() => {
 		const wide = slack && d > loc.checkin_radius
 		return {
 			tone: "ok",
-			title: __("At {0}", [loc.label]),
+			title: __("You're at {0}", [loc.label]),
+			// Plain confirmation instead of "996 m inside the 1000 m area", which
+			// quoted distance-from-the-edge — a number nobody reasons in and that
+			// read like "996 m away". Inside is a yes/no; say yes.
 			detail: wide
-				? __("Your phone places you to about {0}, so this counts as inside the {1} area.", [
-						formatAccuracy(slack),
-						radius,
-				  ])
-				: __("You are {0} inside the {1} check-in area.", [
-						__("{0} m", [Math.max(0, Math.round(loc.checkin_radius - d))]),
-						radius,
-				  ]),
+				? __(
+						"Your GPS reading is a little rough, but you're close enough — go ahead and check in."
+				  )
+				: __("You're inside the check-in area. Go ahead and check in."),
 		}
 	}
 
@@ -644,8 +647,11 @@ const locationVerdict = computed(() => {
 	if (loc.strict) {
 		return {
 			tone: "blocked",
-			title: __("{0} from {1}", [away, loc.label]),
-			detail: __("You need to be within {0} of {1} to check in.", [radius, loc.label]),
+			title: __("Too far from {0}", [loc.label]),
+			detail: __("You need to be within {0} of {1} to check in. Move closer and try again.", [
+				radius,
+				loc.label,
+			]),
 		}
 	}
 
@@ -653,7 +659,7 @@ const locationVerdict = computed(() => {
 		tone: "warn",
 		title: __("{0} from {1}", [away, loc.label]),
 		detail: __(
-			"That is outside the {0} area. You can still check in — it goes to your approver for approval.",
+			"You're outside the {0} check-in area. You can still check in — it'll be sent to your approver to approve.",
 			[radius]
 		),
 	}
