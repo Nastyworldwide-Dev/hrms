@@ -626,6 +626,7 @@ def get_shifts(employee: str | None = None) -> list[dict[str, str]]:
 		.select(
 			ShiftAssignment.name,
 			ShiftAssignment.shift_type,
+			ShiftAssignment.shift_location,
 			ShiftAssignment.start_date,
 			ShiftAssignment.end_date,
 			ShiftType.start_time,

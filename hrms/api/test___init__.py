@@ -16,7 +16,7 @@ HR-fence access open and everyone else shut.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from hrms.api import _may_read_employee
+from hrms.api import _may_read_employee, get_shifts
 
 COMPANY = "_Test Company"
 
@@ -109,3 +109,52 @@ class TestEmployeeDataGuard(FrappeTestCase):
 	def test_hr_user_reads_within_company(self):
 		frappe.set_user("guard.manager@bench.test")  # HR User, unfenced
 		self.assertTrue(_may_read_employee(self.stranger))
+
+
+class TestGetShiftsReturnsLocation(FrappeTestCase):
+	"""The PWA roster shows a rostered employee which shift AND where. get_shifts
+	must return shift_location so the shift row can name the branch/clock-in area."""
+
+	def test_get_shifts_includes_shift_location(self):
+		emp = _make_employee("shifts.loc@bench.test", [])
+		if not frappe.db.exists("Shift Type", "_Test Loc Shift"):
+			frappe.get_doc(
+				{
+					"doctype": "Shift Type",
+					"name": "_Test Loc Shift",
+					"start_time": "09:00:00",
+					"end_time": "18:00:00",
+				}
+			).insert(ignore_permissions=True)
+		if frappe.db.exists("Shift Location", "_Test Shift Loc"):
+			frappe.delete_doc("Shift Location", "_Test Shift Loc", force=True)
+		loc = (
+			frappe.get_doc(
+				{"doctype": "Shift Location", "location_name": "_Test Shift Loc", "checkin_radius": 0}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+		sa = frappe.get_doc(
+			{
+				"doctype": "Shift Assignment",
+				"employee": emp,
+				"company": COMPANY,
+				"shift_type": "_Test Loc Shift",
+				"shift_location": loc,
+				"start_date": "2026-01-01",
+				"status": "Active",
+			}
+		)
+		sa.flags.ignore_permissions = True
+		sa.insert()
+		sa.submit()
+
+		frappe.set_user(frappe.db.get_value("Employee", emp, "user_id"))
+		try:
+			rows = get_shifts(emp)
+		finally:
+			frappe.set_user("Administrator")
+
+		row = next(r for r in rows if r["name"] == sa.name)
+		self.assertEqual(row["shift_location"], loc)

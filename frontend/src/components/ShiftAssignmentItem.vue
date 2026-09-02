@@ -12,6 +12,12 @@
 						__("{0}d", [props.doc.total_shift_days || getTotalShiftDays(props.doc)])
 					}}</span>
 				</div>
+				<div
+					v-if="props.doc.shift_location"
+					class="text-xs text-ink-600 whitespace-nowrap"
+				>
+					&#128205; {{ props.doc.shift_location }}
+				</div>
 			</div>
 		</template>
 		<template #right>
