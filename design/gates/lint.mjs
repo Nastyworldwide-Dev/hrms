@@ -146,7 +146,9 @@ const RAW_PALETTE =
 
 const RULES = {
 	rawPalette: (f, c) => count(c, RAW_PALETTE),
-	hex: (f, c) => count(c, /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g),
+	// (?<!&) so an HTML numeric entity like &#128205; (a 📍 emoji) is not read
+	// as the colour #128205 — a hex literal never follows an ampersand.
+	hex: (f, c) => count(c, /(?<!&)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g),
 	colorfn: (f, c) => count(c, /\b(?:rgba?|hsla?)\(\s*(?!var\b)/g),
 	arbitrary: (f, c) => count(c, /[a-zA-Z][\w:/.%-]*-\[[^\]\n]+\]/g),
 	outline: outlineViolations,

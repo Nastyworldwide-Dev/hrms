@@ -47,7 +47,7 @@
 							<div
 								v-for="day in weekDays"
 								:key="day.iso"
-								class="flex flex-col items-center justify-center flex-none w-[44px] py-1.5 rounded-well border border-divider"
+								class="flex flex-col items-center justify-center flex-none w-11 py-1.5 rounded-well border border-divider"
 								:class="shiftOn(member, day) ? 'bg-surface' : ''"
 							>
 								<span class="text-caption text-ink-600 uppercase">{{ day.dow }}</span>

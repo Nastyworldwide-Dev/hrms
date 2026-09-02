@@ -1,6 +1,7 @@
 [
 	"brand|accent-ink|dark",
 	"danger|danger-ink|dark",
+	"glass-fill-fallback|surface|dark",
 	"glass-fill|hair|dark",
 	"success|success-ink|dark",
 	"warn|warn-ink|dark"

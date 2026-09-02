@@ -59,6 +59,12 @@
 	"composables/workflow.js": {
 		"rawPalette": 2
 	},
+	"theme/__tests__/contrast.test.js": {
+		"hex": 5
+	},
+	"theme/glass-components.css": {
+		"hex": 1
+	},
 	"theme/variables.css": {
 		"hex": 47
 	},
@@ -70,7 +76,7 @@
 	},
 	"views/AppSettings.vue": {
 		"rawPalette": 4,
-		"arbitrary": 7
+		"arbitrary": 9
 	},
 	"views/ChangePassword.vue": {
 		"rawPalette": 1
@@ -115,9 +121,12 @@
 		"arbitrary": 10
 	},
 	"views/sop/SopList.vue": {
-		"arbitrary": 23
+		"arbitrary": 22
 	},
 	"views/team/TeamDashboard.vue": {
-		"arbitrary": 5
+		"arbitrary": 1
+	},
+	"views/team/TeamRoster.vue": {
+		"arbitrary": 1
 	}
 }
