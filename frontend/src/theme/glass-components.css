@@ -838,7 +838,19 @@ html[data-theme="dark"] .g-badge--open {
 .g-banner--tappable,
 .g-approvals {
 	display: block;
+	width: 100%;
+	text-align: left;
+	border: 0;
+	appearance: none;
+	-webkit-appearance: none;
 	cursor: pointer;
+}
+/* WCAG 2.4.7: like list rows, the banner clips overflow — inset ring so a
+   focused tappable banner shows its keyboard focus fully. */
+.g-banner--tappable:focus-visible,
+.g-approvals:focus-visible {
+	outline: none;
+	box-shadow: var(--g-shadow-focus-ring-inset);
 }
 .g-banner__title,
 .g-approvals__title {

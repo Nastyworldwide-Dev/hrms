@@ -40,6 +40,7 @@
 			<GBanner
 				v-if="hasStaleOpenIn"
 				variant="warning"
+				interactive
 				class="g-banner--tappable mt-3.5"
 				@click="lateCheckoutOpen = true"
 			>

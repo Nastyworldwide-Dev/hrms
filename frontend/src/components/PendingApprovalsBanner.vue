@@ -9,6 +9,7 @@
 	<GBanner
 		v-if="count > 0"
 		variant="info"
+		interactive
 		class="g-approvals"
 		@click="router.push({ name: 'RemoteApprovals' })"
 	>
