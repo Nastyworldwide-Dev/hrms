@@ -19,31 +19,21 @@
 					/>
 				</div>
 
-				<!-- day navigation -->
+				<!-- day navigation. Uses the kit's borderless GIconButton — the old
+				     hand-rolled `border border-divider` square read as a "black box"
+				     around the chevron in dark mode (HR complaint). -->
 				<div class="flex flex-row items-center justify-between">
-					<button
-						class="flex min-h-11 min-w-11 items-center justify-center bg-transparent text-inkbase"
-						@click="changeDay(-1)"
-						:aria-label="__('Previous day')"
-					>
-						<span class="flex h-[34px] w-[34px] items-center justify-center border border-divider">
-							<FeatherIcon name="chevron-left" class="h-4 w-4" />
-						</span>
-					</button>
+					<GIconButton :label="__('Previous day')" @click="changeDay(-1)">
+						<FeatherIcon name="chevron-left" class="h-4 w-4" />
+					</GIconButton>
 					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
 					     becomes "TODAY · SUN 23 AUG" overnight. -->
 					<span class="g-datenav__label" data-visual-mask>
 						{{ dayLabel }}
 					</span>
-					<button
-						class="flex min-h-11 min-w-11 items-center justify-center bg-transparent text-inkbase"
-						@click="changeDay(1)"
-						:aria-label="__('Next day')"
-					>
-						<span class="flex h-[34px] w-[34px] items-center justify-center border border-divider">
-							<FeatherIcon name="chevron-right" class="h-4 w-4" />
-						</span>
-					</button>
+					<GIconButton :label="__('Next day')" @click="changeDay(1)">
+						<FeatherIcon name="chevron-right" class="h-4 w-4" />
+					</GIconButton>
 				</div>
 
 				<ResourceError :resource="teamStatus" what="your team's status" />
@@ -146,6 +136,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { Autocomplete, FeatherIcon } from "frappe-ui"
+import GIconButton from "@/components/glass/GIconButton.vue"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
