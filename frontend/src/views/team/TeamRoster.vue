@@ -2,6 +2,19 @@
 	<BaseLayout :pageTitle="__('Team Roster')">
 		<template #body>
 			<div class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7">
+				<!-- HR-only team selector: HR has no direct reports, so without this
+				     the roster is empty. Same pattern as TeamDashboard. -->
+				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
+					<span class="g-eyebrow flex-none">{{ __("Team of") }}</span>
+					<Autocomplete
+						class="flex-1 min-w-0"
+						:options="managerOptions"
+						:modelValue="selectedOption"
+						:placeholder="__('Select a team')"
+						@update:modelValue="onManagerPicked"
+					/>
+				</div>
+
 				<!-- week navigation -->
 				<div class="flex flex-row items-center justify-between">
 					<GIconButton :label="__('Previous week')" @click="changeWeek(-1)">
@@ -89,7 +102,7 @@
 
 <script setup>
 import { computed, inject, reactive, ref, onMounted } from "vue"
-import { FeatherIcon, LoadingIndicator, toast } from "frappe-ui"
+import { Autocomplete, FeatherIcon, LoadingIndicator, toast } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -97,10 +110,22 @@ import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
 import Link from "@/components/Link.vue"
 import ResourceError from "@/components/ResourceError.vue"
-import { teamRoster, assignShift } from "@/data/team"
+import { teamRoster, assignShift, teamManagers } from "@/data/team"
+import { buildManagerOptions } from "@/utils/team"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
+
+// HR-only "Team of" selector — HR has no direct reports, so they must pick a
+// manager to see/roster that team. Non-HR receive [] and the selector hides.
+const selectedManager = ref("")
+const selectedOption = ref(null)
+const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("Select a team")))
+function onManagerPicked(option) {
+	selectedOption.value = option
+	selectedManager.value = option?.value || ""
+	load()
+}
 
 // Monday-anchored week the grid is showing
 const weekStart = ref(dayjs().startOf("week").add(1, "day"))
@@ -119,6 +144,7 @@ function load() {
 	teamRoster.submit({
 		start_date: weekStart.value.format("YYYY-MM-DD"),
 		end_date: weekStart.value.add(6, "day").format("YYYY-MM-DD"),
+		manager: selectedManager.value || undefined,
 	})
 }
 function changeWeek(n) {
