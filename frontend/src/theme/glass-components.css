@@ -3,6 +3,15 @@
    .g-glass is THE surface class: the §15 surface counter keys off it.
    Never nest one .g-glass inside another (§15). */
 
+/* Kill double-tap-to-zoom and the legacy 300ms tap delay app-wide for a native
+   feel. `manipulation` still permits panning AND pinch-zoom, so accessibility
+   zoom (§14) is untouched — it only drops the non-standard double-tap gesture.
+   Specificity 0,0,0, so Ionic's own gesture elements (swipe-back, scroll) keep
+   whatever touch-action they set. Desktop ignores touch-action entirely. */
+* {
+	touch-action: manipulation;
+}
+
 /* ---------- GLightField (§3) ---------- */
 
 /* Sits inside the page (§3.2), behind everything, and never takes a pointer.
@@ -2148,6 +2157,18 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-search__input:focus-visible {
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring);
+}
+
+/* iOS Safari zooms the viewport whenever a focused <input>/<textarea> has a
+   font under 16px and does not cleanly zoom back — the fields ship at 12.5px,
+   so every field tap zoomed the whole app. Pin the text-entry controls to 16px
+   so focus never triggers it; pinch-zoom stays on (§14). 16px is the iOS
+   threshold, a platform constant — a literal, not a type-scale token. Placed
+   after every input rule above so it wins on equal specificity. */
+.g-input,
+.g-datefield input,
+.g-search__input {
+	font-size: 16px;
 }
 .g-search__icon {
 	position: absolute;
