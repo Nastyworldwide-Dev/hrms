@@ -1,32 +1,36 @@
 # HANDOFF
-prompt:   Pass 2 — request, approval & workflow closure
-status:   approval finalization PROVEN fixed at runtime; lifecycle correct
-commit:   98f43b337 on nz-glass (verification pass — no new code)
-types:    6 approvable via hrms.api.approval.decide — Leave Application, Shift
-          Request, Expense Claim, OT Request, Attendance Request, Replacement
-          Leave Claim — plus Remote Check-In (remote_checkin.approve/reject).
-approval-core: decide(doctype,name,status) sets the decision field then
-          doc.submit() in ONE cycle for BOTH approve and reject — "no path that
-          writes the decision and stops". Row-lock (for_update), idempotent
-          (docstatus==1 no-op), refuses reversal of a settled decision, and an
-          HR recovery endpoint (report_half_transitioned) lists any legacy
-          decided-but-draft rows without auto-repairing (leave-balance safety).
-PROVEN(runtime, fresh.local): Attendance Request docstatus 0 -> decide("Approved")
-          -> docstatus 1, status Approved (FINALIZED_IN_ONE_ACTION=true, no second
-          Submit); retry idempotent (stays 1); reverse-after-final refused; and
-          the validation-failure path (missing attachment) rolled back atomically
-          with the decision NOT half-written. The "Approved -> still Draft" defect
-          is fixed both ways.
-master-data: leave types 15, leave allocations 3, expense types 5, shift types 2
-          all present and render. Leave/expense approver OPTIONS are empty only
-          where no approver is DESIGNATED for the employee (config) — same class
-          as the Expense Type gap; options are built from the exact set the
-          save-time fence accepts, so no offer-then-reject.
-failure/recovery: idempotent double-tap, atomic rollback on validation failure,
-          settled-decision reversal refused, HR report_half_transitioned recovery.
-unverified: live-instance rendering of the full UI flow + confirmation the fixes
-          are deployed to live Verifica (no access); per-instance approver
-          provisioning is a config concern, not a code defect.
-verdict:  REQUEST WORKFLOWS CLOSED — approval finalizes in one action (proven),
-          lifecycle correct across all types, no reproducible redundant-Submit
-          defect; remaining items are config/live-deploy, not code.
+prompt:   Pass 3 — master data & data-backed controls closure
+status:   controls PROVEN correct (queries/perms/render); empties genuine
+commit:   69362af37 on nz-glass (verification/diagnosis pass — no new code)
+mechanism: every Nadi Link field renders via ONE shared component (Link.vue) that
+          queries frappe.desk.search.search_link (permission-enforcing) with the
+          field's doctype + filters. Select fields come from get_doctype_fields.
+empty-vs-broken (search_link AS the employee, exact frontend path, fresh.local):
+          Expense Claim Type 5, Leave Type 10, Cost Center 10, Account 10, Shift
+          Type 2, Department 10 — ALL load. Shift Location 0 = GENUINE empty (no
+          records, matches geofence config-absence), not a broken query. No
+          permission fence hides valid data; no wrong doctype/filter.
+expense-type: authoritative source = Expense Claim Type doctype. Employee reads it
+          (has_permission True) and the dropdown renders every record. Live "No
+          results" = missing master data on that instance, provisioned in Verifica
+          Desktop -> Expense Claim Type. NOT a code defect.
+hidden-fields: cost_center resolves (Main - _TC); currency falls back to company
+          currency (salary_currency null -> INR); exchange_rate defaulted 1.
+          payable_account = NULL because _Test Company has no
+          default_expense_claim_payable_account. It is mandatory_depends_on
+          !is_paid, so on a company missing that default the HIDDEN field blocks
+          submit with no employee-visible cause (item 5). CONFIG gap (set the
+          company default in Verifica Desktop) + a UX-hardening opportunity
+          (surface unresolved hidden requirements). Same class as expense-type.
+persistence: options render; expense insert+submit was bench-verified in the prior
+          expense pass; approver options match the save-time fence (no offer-then-
+          reject).
+same-class: one pattern — a control depends on backend config; the query path is
+          shared+correct and empties are genuine (Expense Type live, Shift
+          Location, company payable account). No broken-query defect anywhere.
+unverified/provisioning: live provisioning of Expense Claim Types, Shift Locations
+          (coords), and the company payable account; live-instance confirmation
+          (no access to Verifica).
+verdict:  DATA-BACKED CONTROLS CLOSED — the controls query/permission/render
+          correctly and empties are genuine config gaps (operationally explicit),
+          not code defects. Provisioning + hidden-field UX hardening noted.
