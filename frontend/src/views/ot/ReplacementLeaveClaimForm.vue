@@ -73,32 +73,36 @@ const bank = createResource({
 				"{0} banked hours available this month — 0.5 day costs 4 h, 1 day costs 8 h",
 				[data.hours_available]
 			)
+		// re-check now that the cap is known — the days watcher does not fire when
+		// the bank loads, so a claim typed before it arrived stayed unvalidated.
+		validateClaimedDays()
 	},
 	onError() {
 		console.warn("[ReplacementLeaveClaimForm] Failed to fetch bank summary")
 	},
 })
 
-watch(
-	() => claim.value.claimed_days,
-	(days) => {
-		const daysField = formFields.data?.find((f) => f.fieldname === "claimed_days")
-		if (!daysField) return
-		const numeric = Number(days || 0)
-		const cost = numeric * 8
-		claim.value.hours_cost = cost
-		if (numeric && (numeric * 2) % 1 !== 0) {
-			daysField.error_message = __("Days must be in half-day steps (0.5, 1.0, 1.5 ...)")
-		} else if (cost && claim.value.available_hours && cost > claim.value.available_hours) {
-			daysField.error_message = __("Costs {0} h — only {1} h banked this month", [
-				cost,
-				claim.value.available_hours,
-			])
-		} else {
-			daysField.error_message = ""
-		}
+function validateClaimedDays() {
+	const daysField = formFields.data?.find((f) => f.fieldname === "claimed_days")
+	if (!daysField) return
+	const numeric = Number(claim.value.claimed_days || 0)
+	const cost = numeric * 8
+	claim.value.hours_cost = cost
+	// available_hours is set only once the bank summary loads. Guard on != null,
+	// NOT truthiness: a real 0-hours bank (nothing banked — the MOST invalid
+	// case) is falsy, so `&& available_hours &&` silently skipped the block and
+	// let the claim through to a server rejection + a stack of error toasts.
+	const available = claim.value.available_hours
+	if (numeric && (numeric * 2) % 1 !== 0) {
+		daysField.error_message = __("Days must be in half-day steps (0.5, 1.0, 1.5 ...)")
+	} else if (cost && available != null && cost > available) {
+		daysField.error_message = __("Costs {0} h — only {1} h banked this month", [cost, available])
+	} else {
+		daysField.error_message = ""
 	}
-)
+}
+
+watch(() => claim.value.claimed_days, validateClaimedDays)
 
 watch(
 	() => claim.value.employee,
