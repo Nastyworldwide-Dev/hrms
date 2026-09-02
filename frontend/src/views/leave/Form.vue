@@ -141,7 +141,10 @@ watch(
 
 watch(
 	() => leaveApplication.value.half_day && leaveApplication.value.half_day_date,
-	() => setTotalLeaveDays()
+	() => {
+		setTotalLeaveDays()
+		validateHalfDayDate()
+	}
 )
 
 watch(
@@ -164,6 +167,7 @@ watch(
 	([from_date, to_date]) => {
 		validateDates(from_date, to_date)
 		setHalfDayDateRange()
+		validateHalfDayDate()
 		setTotalLeaveDays()
 	}
 )
@@ -210,6 +214,22 @@ function validateDates(from_date, to_date) {
 
 	const from_date_field = formFields.data.find((field) => field.fieldname === "from_date")
 	from_date_field.error_message = error_message
+}
+
+function validateHalfDayDate() {
+	// frappe-ui's DatePicker can't constrain its own min/max, so the half-day
+	// date could be picked outside the leave range and only the server caught
+	// it. Enforce it through the error_message channel the form blocks submit on.
+	const field = formFields.data.find((f) => f.fieldname === "half_day_date")
+	if (!field) return
+	const { half_day, half_day_date, from_date, to_date } = leaveApplication.value
+	const outOfRange =
+		half_day &&
+		half_day_date &&
+		from_date &&
+		to_date &&
+		(half_day_date < from_date || half_day_date > to_date)
+	field.error_message = outOfRange ? __("Half day date must fall within the leave dates") : ""
 }
 
 function setTotalLeaveDays() {
