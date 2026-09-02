@@ -21,6 +21,7 @@ module.exports = {
 	},
 	boxShadow: {
 		action: "var(--g-shadow-action)",
+		"focus-ring": "var(--g-shadow-focus-ring)",
 		lift: "var(--g-lift)",
 	},
 	colors: {

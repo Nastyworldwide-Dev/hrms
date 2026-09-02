@@ -380,7 +380,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
 .g-ghost-btn:focus-visible,
 .g-focusable:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 
 /* §14.1 opt-in for controls the Glass layer does not own — frappe-ui Buttons
@@ -1005,7 +1005,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-input:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 .g-input--error {
 	border-color: var(--g-danger-ink);
@@ -1051,7 +1051,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-datefield input:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 
 /* Select / Link fields, same descendant problem as .g-datefield above.
@@ -1083,7 +1083,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-linkfield button.h-7.w-full:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 
 /* The dropdown PANEL of frappe-ui's Autocomplete/Link (Track B). The trigger
@@ -1120,7 +1120,7 @@ html[data-theme="dark"] .g-badge--open {
 	border-color: var(--g-glass-rim);
 	/* the app's two-ring focus, same as the trigger button below — the lint
 	   gate rightly refused a bare outline:none here */
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 /* option rows: hover/keyboard-active state in the app's own well colour */
 .g-linkfield .bg-surface-modal li {
@@ -2104,7 +2104,7 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-search__input:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
+	box-shadow: var(--g-shadow-focus-ring);
 }
 .g-search__icon {
 	position: absolute;

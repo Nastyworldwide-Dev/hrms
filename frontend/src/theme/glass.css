@@ -84,6 +84,7 @@
 	--g-blur-panel: 20px;
 	/* shadow */
 	--g-shadow-action: 0 10px 30px rgba(var(--g-brand-rgb) / 0.34), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.14);
+	--g-shadow-focus-ring: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 	/* layer */
 	--g-layer-overlay: 100;
 	--g-layer-scrim: 10000;
