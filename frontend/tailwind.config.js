@@ -57,7 +57,12 @@ export default {
 			// explicit `-accent-ink` name before this flipped, so no appearance
 			// changed with it.
 			backgroundColor: {
-				surface: { DEFAULT: "rgb(var(--g-track-solid-rgb) / <alpha-value>)" },
+				// bg-surface is the CARD/control surface, decoupled from the solid
+				// bar-track token: in dark mode the shared #313133 track read as a
+				// heavy grey slab on cards AND dropped muted text below WCAG AA
+				// (3.41:1). --g-surface is the coherent glass tone; bars keep
+				// --g-track-solid.
+				surface: { DEFAULT: "rgb(var(--g-surface-rgb) / <alpha-value>)" },
 			},
 			colors: {
 				...glassOtherColors,
@@ -86,7 +91,7 @@ export default {
 					900: "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
 				},
 				ground: "rgb(var(--g-bg-rgb) / <alpha-value>)",
-				surface: "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
+				surface: "rgb(var(--g-surface-rgb) / <alpha-value>)",
 				// ^ colors.surface alone never reaches bg-surface: the frappe-ui plugin
 				// extends backgroundColor.surface with its own shade map and no DEFAULT,
 				// which shadows this for bg-* utilities. The backgroundColor extend

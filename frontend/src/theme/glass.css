@@ -48,6 +48,8 @@
 	--g-sheen: rgba(255,255,255,.55);
 	--g-track-solid: #ECEDEF;
 	--g-track-solid-rgb: 236 237 239;
+	/* card/control surface — light keeps the track tone; see dark block */
+	--g-surface-rgb: 236 237 239;
 	/* color-semantic (light) */
 	--g-danger-ink: #DC2626;
 	--g-danger-ink-rgb: 220 38 38;
@@ -234,8 +236,12 @@ html[data-theme="dark"] {
 	--g-ink-muted-rgb: 125 131 143;
 	--g-ink2: #A8AEB8;
 	--g-ink2-rgb: 168 174 184;
-	--g-ink3: #6B7280;
-	--g-ink3-rgb: 107 114 128;
+	/* faint tier lifted onto the muted value: #6B7280 failed WCAG AA on every
+	   dark surface (2.7–3.5:1). The AA-passing band above the glass tone is
+	   narrower than the gap to --g-ink-muted, so the faintest tier collapses
+	   onto it (4.56:1 on glass) rather than fake a distinction that can't pass. */
+	--g-ink3: #7D838F;
+	--g-ink3-rgb: 125 131 143;
 	--g-lift: 0 8px 26px rgba(0,0,0,.34);
 	--g-rim-hi: rgba(255,255,255,.28);
 	--g-rim-lo: rgba(0,0,0,.28);
@@ -243,6 +249,10 @@ html[data-theme="dark"] {
 	--g-sheen: rgba(255,255,255,.13);
 	--g-track-solid: #313133;
 	--g-track-solid-rgb: 49 49 51;
+	/* card/control surface = the glass tone (#15171D), NOT the #313133 bar
+	   track. The track on cards read as a heavy grey slab and dropped muted
+	   text to 3.41:1; on this surface muted text is 4.71:1 (WCAG AA). */
+	--g-surface-rgb: 21 23 29;
 	/* color-semantic (dark) */
 	--g-danger-ink: #F87171;
 	--g-danger-ink-rgb: 248 113 113;
