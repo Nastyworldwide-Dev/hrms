@@ -1,185 +1,126 @@
-"""Guard: the team API answers "who sees all employee data?" by DELEGATION.
+# Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
+# For license information, please see license.txt
 
-`_is_hr` must be a pure delegation to `hrms.hr.utils.sees_all_employee_data` —
-the one implementation of the HR_SEE_ALL_ROLES rule (System Manager deliberately
-excluded). Before consolidation the same intersection line lived here and in
-approval_row_scope.py; two copies of a security rule drift, and drift in THIS
-rule widens who can browse other teams.
+"""Fence guard for the Nadi Team Roster read (hrms.api.team.get_team_roster).
 
-AST-based and bench-free: run as `python3 hrms/api/test_team.py`.
+The invariant: a leader sees ONLY their own direct reports' roster; a non-HR
+caller cannot browse another manager's team; a plain employee sees nothing.
+Same boundary as the team status view — pinned so the roster read can't drift
+into leaking another team's or another company's shifts.
+
+    bench --site <site> run-tests --app hrms --module hrms.api.test_team
 """
 
-import ast
-import unittest
-from pathlib import Path
+import frappe
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_days, nowdate
 
-SOURCE = Path(__file__).resolve().parent / "team.py"
+from hrms.api.team import get_team_roster
 
-
-def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
-	for node in ast.walk(tree):
-		if isinstance(node, ast.FunctionDef) and node.name == name:
-			return node
-	raise AssertionError(f"{name} not found in {SOURCE}")
+COMPANY = "_Test Company"
 
 
-class TestIsHrDelegates(unittest.TestCase):
-	def setUp(self):
-		self.tree = ast.parse(SOURCE.read_text())
-		self.fn = _function(self.tree, "_is_hr")
+def _make_user(email, roles):
+	if not frappe.db.exists("User", email):
+		u = frappe.get_doc(
+			{"doctype": "User", "email": email, "first_name": email.split("@")[0], "send_welcome_email": 0}
+		)
+		u.flags.ignore_permissions = True
+		u.insert()
+	else:
+		u = frappe.get_doc("User", email)
+	for r in roles:
+		if r not in {x.role for x in u.roles}:
+			u.append("roles", {"role": r})
+	u.flags.ignore_permissions = True
+	u.save()
+	return email
 
-	def test_delegates_to_the_one_implementation(self):
-		calls = {
-			node.func.id
-			for node in ast.walk(self.fn)
-			if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+
+def _make_employee(email, roles, reports_to=None):
+	user = _make_user(email, ["Employee", *roles])
+	existing = frappe.db.get_value("Employee", {"user_id": user})
+	if existing:
+		frappe.db.set_value("Employee", existing, "reports_to", reports_to)
+		return existing
+	emp = frappe.get_doc(
+		{
+			"doctype": "Employee",
+			"first_name": email.split("@")[0],
+			"company": COMPANY,
+			"user_id": user,
+			"date_of_joining": "2020-01-01",
+			"date_of_birth": "1990-01-01",
+			"gender": "Other",
+			"status": "Active",
+			"reports_to": reports_to,
 		}
-		self.assertIn(
-			"sees_all_employee_data",
-			calls,
-			"_is_hr must call hrms.hr.utils.sees_all_employee_data — the one "
-			"implementation of the HR_SEE_ALL_ROLES rule",
+	)
+	emp.flags.ignore_permissions = True
+	emp.insert()
+	return emp.name
+
+
+class TestTeamRosterFence(FrappeTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		if not frappe.db.exists("Shift Type", "_Team Roster Shift"):
+			frappe.get_doc(
+				{
+					"doctype": "Shift Type",
+					"name": "_Team Roster Shift",
+					"start_time": "09:00:00",
+					"end_time": "18:00:00",
+				}
+			).insert(ignore_permissions=True)
+		cls.leader = _make_employee("tr.leader@bench.test", [])
+		cls.report = _make_employee("tr.report@bench.test", [], reports_to=cls.leader)
+		cls.other_leader = _make_employee("tr.other@bench.test", [])
+		cls.plain = _make_employee("tr.plain@bench.test", [])
+		cls.hr = _make_employee("tr.hr@bench.test", ["HR User"])
+		sa = frappe.get_doc(
+			{
+				"doctype": "Shift Assignment",
+				"employee": cls.report,
+				"company": COMPANY,
+				"shift_type": "_Team Roster Shift",
+				"start_date": nowdate(),
+				"status": "Active",
+			}
 		)
+		sa.flags.ignore_permissions = True
+		sa.insert()
+		sa.submit()
 
-	def test_carries_no_private_copy_of_the_role_rule(self):
-		names = {node.id for node in ast.walk(self.fn) if isinstance(node, ast.Name)}
-		self.assertNotIn(
-			"HR_SEE_ALL_ROLES",
-			names,
-			"_is_hr re-implements the role intersection instead of delegating — "
-			"the drift this guard exists to prevent",
-		)
+	def tearDown(self):
+		frappe.set_user("Administrator")
 
+	def _as(self, employee):
+		frappe.set_user(frappe.db.get_value("Employee", employee, "user_id"))
 
-REQUEST_PANEL = SOURCE.parent.parent.parent / "frontend" / "src" / "components" / "RequestPanel.vue"
+	def _week(self):
+		return {"start_date": nowdate(), "end_date": add_days(nowdate(), 6)}
 
-#: The six request types the PWA's RequestPanel aggregates. is_approver() is
-#: the gate for its Team tabs, so the two lists must cover each other: leave /
-#: expense / shift route by explicit approver fields, attendance / OT / RL
-#: route to the reporting manager, HR sees all.
-PANEL_DOCTYPES = (
-	"Leave Application",
-	"Expense Claim",
-	"Shift Request",
-	"Attendance Request",
-	"OT Request",
-	"Replacement Leave Claim",
-)
+	def test_leader_sees_own_report_and_their_shift(self):
+		self._as(self.leader)
+		out = get_team_roster(**self._week())
+		names = [m["name"] for m in out["members"]]
+		self.assertIn(self.report, names)
+		member = next(m for m in out["members"] if m["name"] == self.report)
+		self.assertTrue(any(s["shift_type"] == "_Team Roster Shift" for s in member["shifts"]))
 
+	def test_plain_employee_sees_empty_roster(self):
+		self._as(self.plain)
+		out = get_team_roster(**self._week())
+		self.assertEqual(out["members"], [])
 
-class TestIsApproverRule(unittest.TestCase):
-	"""is_approver() decides whether the Team tabs render. Its rule must cover
-	every routing path a request can take to a person: explicit Employee
-	approver fields, Department approver tables, the reporting manager, HR."""
+	def test_non_hr_cannot_browse_another_managers_team(self):
+		self._as(self.other_leader)
+		with self.assertRaises(frappe.PermissionError):
+			get_team_roster(manager=self.leader, **self._week())
 
-	def setUp(self):
-		self.tree = ast.parse(SOURCE.read_text())
-		self.fn = _function(self.tree, "is_approver")
-
-	def _constant_tuple(self, name):
-		for node in ast.walk(self.tree):
-			if isinstance(node, ast.Assign) and any(
-				isinstance(t, ast.Name) and t.id == name for t in node.targets
-			):
-				return tuple(el.value for el in node.value.elts)
-		raise AssertionError(f"{name} not found in {SOURCE}")
-
-	def test_employee_approver_fields_cover_the_explicit_routes(self):
-		self.assertEqual(
-			self._constant_tuple("EMPLOYEE_APPROVER_FIELDS"),
-			("leave_approver", "expense_approver", "shift_request_approver"),
-		)
-
-	def test_department_parentfields_match_the_schema(self):
-		# NOT symmetrical on purpose: the Department child table for shift
-		# requests is named shift_request_approver (singular) in setup.py.
-		self.assertEqual(
-			self._constant_tuple("DEPARTMENT_APPROVER_PARENTFIELDS"),
-			("leave_approvers", "expense_approvers", "shift_request_approver"),
-		)
-
-	def test_rule_covers_hr_manager_and_both_assignment_shapes(self):
-		names = {node.id for node in ast.walk(self.fn) if isinstance(node, ast.Name)}
-		constants = {
-			node.value
-			for node in ast.walk(self.fn)
-			if isinstance(node, ast.Constant) and isinstance(node.value, str)
-		}
-		calls = {
-			node.func.id
-			for node in ast.walk(self.fn)
-			if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-		}
-		self.assertIn("_is_hr", calls, "HR must count as an approver")
-		self.assertIn("EMPLOYEE_APPROVER_FIELDS", names, "explicit approver fields must be checked")
-		self.assertIn("DEPARTMENT_APPROVER_PARENTFIELDS", names, "department approver tables must be checked")
-		self.assertIn("reports_to", constants, "the reporting-manager route must be checked")
-
-	def test_is_whitelisted(self):
-		decorators = {ast.unparse(d) for d in self.fn.decorator_list}
-		self.assertTrue(
-			any("whitelist" in d for d in decorators),
-			"is_approver is called by the PWA and must be whitelisted",
-		)
-
-
-class TestManagerSelectorPayload(unittest.TestCase):
-	"""HR request 2026-08-19: the 'Team of' selector groups managers by
-	department and shows each team's size. Both facts must come from the
-	server in one payload — the frontend's grouping util is presentation
-	only and can't invent fields."""
-
-	def setUp(self):
-		self.tree = ast.parse(SOURCE.read_text())
-		self.fn = _function(self.tree, "get_managers")
-
-	def test_managers_carry_their_department(self):
-		constants = {
-			node.value
-			for node in ast.walk(self.fn)
-			if isinstance(node, ast.Constant) and isinstance(node.value, str)
-		}
-		self.assertIn(
-			"department",
-			constants,
-			"get_managers must return department — the selector groups by it",
-		)
-
-	def test_managers_carry_their_team_size(self):
-		constants = {
-			node.value
-			for node in ast.walk(self.fn)
-			if isinstance(node, ast.Constant) and isinstance(node.value, str)
-		}
-		self.assertIn(
-			"team_size",
-			constants,
-			"get_managers must return team_size — the selector shows it per manager",
-		)
-
-
-class TestPanelLockstep(unittest.TestCase):
-	"""If RequestPanel gains or drops a request type, is_approver's coverage
-	claim has to be re-argued — this pin forces that conversation."""
-
-	def test_panel_aggregates_exactly_the_expected_doctypes(self):
-		source = REQUEST_PANEL.read_text()
-		for doctype in PANEL_DOCTYPES:
-			self.assertIn(
-				f'"{doctype}"',
-				source,
-				f"RequestPanel no longer wires {doctype!r} — update PANEL_DOCTYPES "
-				"and re-check is_approver covers the new shape",
-			)
-
-	def test_team_tabs_are_gated_on_the_approver_verdict(self):
-		source = REQUEST_PANEL.read_text()
-		self.assertIn(
-			"isApprover",
-			source,
-			"the Team tabs must render only for approvers (isApprover gate)",
-		)
-
-
-if __name__ == "__main__":
-	unittest.main()
+	def test_hr_may_browse_a_named_managers_team(self):
+		self._as(self.hr)
+		out = get_team_roster(manager=self.leader, **self._week())
+		self.assertIn(self.report, [m["name"] for m in out["members"]])

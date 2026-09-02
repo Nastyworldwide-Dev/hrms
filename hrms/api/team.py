@@ -271,3 +271,79 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		)
 	logger.info("[team] %s viewed team of %s on %s: %d members", frappe.session.user, team_of, day, len(out))
 	return {"date": str(day), "manager": team_of, "members": out, "summary": summary}
+
+
+@frappe.whitelist()
+def get_team_roster(start_date: str, end_date: str, manager: str | None = None) -> dict:
+	"""The Nadi Team Roster grid: each direct report and their shifts across the
+	[start_date, end_date] window. Same fence as get_team_status — a leader sees
+	only their own reports; HR may browse a named manager's team inside the
+	company fence; everyone else gets an empty payload, never another team's or
+	another company's roster.
+	"""
+	from frappe.utils import getdate
+
+	start, end = getdate(start_date), getdate(end_date)
+	employee = _my_employee()
+	if manager and manager != employee and not _is_hr():
+		logger.warning("[team] %s denied roster override %s", frappe.session.user, manager)
+		frappe.throw(_("Only HR can view another manager's roster."), frappe.PermissionError)
+	team_of = manager or employee
+	empty = {"start_date": str(start), "end_date": str(end), "manager": team_of, "members": []}
+	if not team_of:
+		return empty
+
+	# ignore_permissions below — restate the company fence, exactly as
+	# get_team_status does. Own team is never fenced.
+	fence = allowed_companies() if team_of != employee else []
+	member_filters = {"reports_to": team_of, "status": "Active"}
+	if fence:
+		member_filters["company"] = ("in", fence)
+	members = frappe.get_all(
+		"Employee",
+		filters=member_filters,
+		fields=["name", "employee_name", "designation", "department", "branch"],
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)
+	if not members:
+		return empty
+	ids = [m.name for m in members]
+
+	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
+	ShiftType = frappe.qb.DocType("Shift Type")
+	rows = (
+		frappe.qb.from_(ShiftAssignment)
+		.left_join(ShiftType)
+		.on(ShiftAssignment.shift_type == ShiftType.name)
+		.select(
+			ShiftAssignment.employee,
+			ShiftAssignment.name,
+			ShiftAssignment.shift_type,
+			ShiftAssignment.shift_location,
+			ShiftAssignment.start_date,
+			ShiftAssignment.end_date,
+			ShiftType.start_time,
+			ShiftType.end_time,
+			ShiftType.color,
+		)
+		.where(
+			(ShiftAssignment.employee.isin(ids))
+			& (ShiftAssignment.docstatus == 1)
+			& (ShiftAssignment.status == "Active")
+			& (ShiftAssignment.start_date <= end)
+			& ((ShiftAssignment.end_date >= start) | (ShiftAssignment.end_date.isnull()))
+		)
+		.orderby(ShiftAssignment.start_date)
+	).run(as_dict=True)
+
+	by_employee = {}
+	for r in rows:
+		by_employee.setdefault(r.employee, []).append({k: v for k, v in r.items() if k != "employee"})
+
+	return {
+		"start_date": str(start),
+		"end_date": str(end),
+		"manager": team_of,
+		"members": [{**m, "shifts": by_employee.get(m.name, [])} for m in members],
+	}
