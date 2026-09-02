@@ -175,6 +175,7 @@
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
+import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
 import { IonContent } from "@ionic/vue"
@@ -314,20 +315,20 @@ const onRemoteCheckinEvent = () => {
 	pendingCountResource.reload()
 }
 
+// Realtime: reload this employee's own doc on its updates. Via useListUpdate so
+// the handler detaches by reference — the old socket.off("list_update") with no
+// handler ref tore down every OTHER component's list_update listener too — and
+// rejoins on reconnect.
+useListUpdate(socket, DOCTYPE, (name) => {
+	if (name === employee.data.name) employeeDoc.reload()
+})
+
 onMounted(() => {
-	socket.emit("doctype_subscribe", DOCTYPE)
-	socket.on("list_update", (data) => {
-		if (data.doctype === DOCTYPE && data.name === employee.data.name) {
-			employeeDoc.reload()
-		}
-	})
 	socket.on("hrms:remote_checkin_request", onRemoteCheckinEvent)
 	pendingCountResource.fetch()
 })
 
 onBeforeUnmount(() => {
-	socket.emit("doctype_unsubscribe", DOCTYPE)
-	socket.off("list_update")
 	socket.off("hrms:remote_checkin_request", onRemoteCheckinEvent)
 })
 </script>

@@ -219,7 +219,8 @@ import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, nextTick, ref, onMounted, onBeforeUnmount } from "vue"
+import { computed, inject, nextTick, ref, onBeforeUnmount } from "vue"
+import { useListUpdate } from "@/composables/realtime"
 import { modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -1009,19 +1010,16 @@ function onModalDismiss() {
 	stopWatchingLocation()
 }
 
-onMounted(() => {
-	socket.emit("doctype_subscribe", DOCTYPE)
-	socket.on("list_update", (data) => {
-		if (data.doctype == DOCTYPE) {
-			checkins.reload()
-			unresolvedStaleIn.reload()
-		}
-	})
+// Realtime: reload on Employee Checkin changes. Via useListUpdate so the
+// handler is detached BY REFERENCE on unmount — a bare socket.off("list_update")
+// tore down every OTHER component's list_update listener too — and is rejoined
+// on reconnect.
+useListUpdate(socket, DOCTYPE, () => {
+	checkins.reload()
+	unresolvedStaleIn.reload()
 })
 
 onBeforeUnmount(() => {
-	socket.emit("doctype_unsubscribe", DOCTYPE)
-	socket.off("list_update")
 	stopCamera()
 	stopWatchingLocation()
 })
