@@ -20,6 +20,17 @@ from frappe.utils import add_days, getdate, nowdate
 
 logger = logging.getLogger(__name__)
 
+# A hand-rostered (variable-shift) employee's roster segments have definite end
+# dates and gaps between them. The rule layer must stand down for them, but the
+# "manual wins" check only sees assignments covering today or the future, so a
+# segment that ended yesterday read as "unmanaged" and the layer imposed an
+# open-ended site-default shift into the gap — the "system changed a rostered
+# employee to the night shift mid-month, until end of month" defect. A non-rule assignment that
+# ended within one roster cycle still marks the employee roster-managed.
+# ponytail: 31-day lookback ~= one roster cycle; replace with a declared
+# "variable shift" employee flag when the rostering feature (Phase 1) lands.
+MANUAL_ROSTER_LOOKBACK_DAYS = 31
+
 
 def resolve_shift_for_employee(employee: str):
 	"""Returns frappe._dict(shift_type=..., shift_location=...) or None."""
@@ -98,7 +109,7 @@ def reconcile_employee_shift(employee: str) -> str:
 		)
 		return "skipped-schedule"
 
-	if any(not row.created_by_shift_rule for row in current):
+	if any(not row.created_by_shift_rule for row in current) or _recent_manual_roster(employee, today):
 		logger.info("[shift_rules] %s: manual assignment exists — skipped (manual wins)", employee)
 		return "skipped-manual"
 	matching = next(
@@ -191,6 +202,23 @@ def reconcile_on_employee_update(doc, method=None):
 			title=f"Shift rule reconcile failed for {doc.name}",
 			message=frappe.get_traceback(),
 		)
+
+
+def _recent_manual_roster(employee: str, today: str) -> bool:
+	"""True if the employee has a non-rule Shift Assignment that ended within the
+	recent roster window — evidence they are hand-rostered even though no segment
+	covers today. Guards a lapsed roster gap from rule takeover (Norain)."""
+	return bool(
+		frappe.db.exists(
+			"Shift Assignment",
+			{
+				"employee": employee,
+				"docstatus": 1,
+				"created_by_shift_rule": 0,
+				"end_date": ["between", [add_days(getdate(today), -MANUAL_ROSTER_LOOKBACK_DAYS), today]],
+			},
+		)
+	)
 
 
 def _close_assignment(row, today):
