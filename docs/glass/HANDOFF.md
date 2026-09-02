@@ -1,14 +1,19 @@
 # HANDOFF
-prompt:   polish sweep — liquid-glass audit + frontend/backend contract
+prompt:   real-world reliability + UX sweep (untested/unknown failure paths)
 status:   partial
-commit:   01a7cc71d on nz-glass (7 commits from 233366bf6)
-files:    frontend/src/theme/glass-components.css + design/tokens.json (glass.css)
-          frontend/src/components/glass/{GBanner,GBalanceGrid,GProviderButton}.vue + GBanner.test.js
-          frontend/src/components/{CheckInPanel,PendingApprovalsBanner}.vue
-          frontend/src/views/team/TeamRoster.vue
-          design/gates/lint.mjs + lint-baseline.json + token-collapse-baseline.json
-verify:   cd frontend && yarn tokens && yarn build && node --test "src/**/*.test.js" && node ../design/gates/run.mjs
-flags:    a11y/visual/coherence gates unrun (need served worktree + AUDIT_PW; bench serves main, /hrms 404s).
-          backend batch dropped: attachment_content is LIVE (sop.py:180 builds its URL — agent was wrong);
-          report_half_transitioned + get_company_currencies-guard = low value / real risk, left for a decision.
-next:     serve this worktree to run the 3 rendered gates; decide check-in success pulse (spec'd, unbuilt).
+commit:   764515cf6 on nz-glass (16 fixes this session)
+files:    CheckInPanel.vue RequestActionSheet.vue FormView.vue ListView.vue
+          Profile.vue composables/realtime.js composables/useCurrencyConversion.js
+          views/kpi/Dashboard.vue AttendanceCalendar.vue router+main (orphan route)
+          hrms/api/__init__.py + ot_request.py (+ tests) — OT fractional pay
+verify:   cd frontend && yarn build && node --test "src/**/*.test.js"  (48 pass)
+          ruff check hrms/  (clean); OT python tests NOT run here (bench bootstrap
+          broken — MagicMock/orjson), verified by logic+ruff, will run in CI
+flags:    OT fractional-pay confirmed by product owner. DEFERRED: GDatePicker
+          min/max (frappe-ui 0.1.105 has no support; server-guarded), FormField
+          validation field-flag (error text shows; border/aria needs 6-control
+          rework + preview). Pre-commit hook bundles co-modified files into one
+          commit (2 fixes landed co-located but correct).
+next:     remaining P2/minor: dirty-guard on back-nav, double-submit dialog
+          disable, empty required child-table, OTP new-tab, push taps non-Chrome,
+          timezone plugin (needs site-TZ decision). None are crashes/dead-ends.
