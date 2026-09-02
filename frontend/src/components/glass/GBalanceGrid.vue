@@ -29,19 +29,39 @@
 		</div>
 	</div>
 
-	<div v-else class="g-glass g-cellgrid g-cellgrid--balance">
+	<div
+		v-else
+		class="g-glass g-cellgrid g-cellgrid--balance"
+		:class="{ 'g-cellgrid--odd': isOdd }"
+		:style="{ '--bcols': lgCols }"
+	>
 		<slot />
 	</div>
 </template>
 
 <script setup>
+import { computed } from "vue"
+
 import GSkeleton from "./GSkeleton.vue"
 
-defineProps({
+const props = defineProps({
 	loading: { type: Boolean, default: false },
 	cells: { type: Number, default: 4 },
 	empty: { type: Boolean, default: false },
+	// Number of tiles rendered into the default slot. Drives the odd-count
+	// layout so an odd tile count never orphans a cell (see glass-components.css:
+	// .g-cellgrid--balance). 0 keeps the legacy fixed layout for callers that
+	// pass exactly four and never set it.
+	count: { type: Number, default: 0 },
 })
+
+// Odd tile count -> the last tile spans the full width on mobile instead of
+// leaving an empty bordered cell beside it.
+const isOdd = computed(() => props.count % 2 === 1)
+// Desktop lays the tiles out in one row of exactly `count` columns (capped) so
+// three types fill a row of three, not four-with-a-hole. Capped at 5 so a rare
+// many-type employee wraps rather than shrinking tiles to nothing.
+const lgCols = computed(() => Math.min(Math.max(props.count, 1), 5))
 </script>
 
 <style scoped>

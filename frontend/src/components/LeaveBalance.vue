@@ -19,7 +19,7 @@
 		<!-- §15.2: ONE glass panel with internal --hair dividers, not one card
 		     per leave type. The count is dynamic — an employee may have two
 		     types or five — and the surface cost is 1 either way. -->
-		<GBalanceGrid v-if="hasBalances">
+		<GBalanceGrid v-if="hasBalances" :count="balanceCount">
 			<GBalanceCard
 				v-for="(allocation, leave_type) in leaveBalance.data"
 				:key="leave_type"
@@ -80,4 +80,9 @@ const __ = inject("$translate")
 // an empty map {} is truthy — without this check the section renders as a
 // bare rule instead of the "no leaves allocated" empty state
 const hasBalances = computed(() => leaveBalance.data && Object.keys(leaveBalance.data).length > 0)
+// Tile count drives the grid's odd-count layout so 3 (or 5) leave types never
+// orphan a cell.
+const balanceCount = computed(() =>
+	leaveBalance.data ? Object.keys(leaveBalance.data).length : 0
+)
 </script>

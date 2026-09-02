@@ -123,9 +123,21 @@ ion-tabs .g-page ion-content {
 	   centre marches into the content column and §3.3 fails from 1280px up
 	   (measured: dark ink-muted 1.08 at 1440). The origin:size ratio is held
 	   at the value solved for mobile, so the clearance scales with the blob. */
-	.g-lightfield__blob--a { width: 32vw; height: 32vw; left: -25.04vw; }
-	.g-lightfield__blob--b { width: 29vw; height: 29vw; right: -22.51vw; }
-	.g-lightfield__blob--c { width: 25vw; height: 25vw; left: -19.03vw; }
+	.g-lightfield__blob--a {
+		width: 32vw;
+		height: 32vw;
+		left: -25.04vw;
+	}
+	.g-lightfield__blob--b {
+		width: 29vw;
+		height: 29vw;
+		right: -22.51vw;
+	}
+	.g-lightfield__blob--c {
+		width: 25vw;
+		height: 25vw;
+		left: -19.03vw;
+	}
 }
 
 /* §3.1 is not negotiable, and reduced motion must not be the only thing
@@ -158,14 +170,13 @@ ion-tab-bar.g-tabbar {
 	background: var(--g-glass-fill);
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
-	box-shadow:
-		inset 0 1px 0 var(--g-rim-hi),
-		inset 0 -1px 0 var(--g-rim-lo),
-		var(--g-lift);
+	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo), var(--g-lift);
 }
 /* §6.1 / §6.2 apply to the bar as to any other surface */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	ion-tab-bar.g-tabbar { background: var(--g-glass-fill-fallback); }
+	ion-tab-bar.g-tabbar {
+		background: var(--g-glass-fill-fallback);
+	}
 }
 @media (prefers-reduced-transparency: reduce) {
 	ion-tab-bar.g-tabbar {
@@ -233,7 +244,9 @@ ion-tab-button.g-tabbar__btn {
 	border-right: 1px solid var(--g-glass-rim);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	.g-sidenav { background: var(--g-glass-fill-fallback); }
+	.g-sidenav {
+		background: var(--g-glass-fill-fallback);
+	}
 }
 html[data-transparency="reduce"] .g-sidenav {
 	background: var(--g-glass-fill-fallback);
@@ -285,10 +298,7 @@ html[data-transparency="reduce"] .g-sidenav {
 	backdrop-filter: blur(var(--_g-blur, var(--g-blur-panel))) saturate(180%);
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-panel);
-	box-shadow:
-		inset 0 1px 0 var(--g-rim-hi),
-		inset 0 -1px 0 var(--g-rim-lo),
-		var(--g-lift);
+	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo), var(--g-lift);
 }
 
 /* diagonal gloss (§6) */
@@ -352,9 +362,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
 .g-ghost-btn:focus-visible,
 .g-focusable:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 
 /* §14.1 opt-in for controls the Glass layer does not own — frappe-ui Buttons
@@ -452,8 +460,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	box-shadow: var(--g-shadow-action);
 	cursor: pointer;
 	overflow: hidden;
-	transition:
-		transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
+	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
 		box-shadow var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
 }
 .g-btn:active:not(.g-btn--disabled):not(.g-btn--pending) {
@@ -487,8 +494,12 @@ html[data-transparency="reduce"] .g-glass-ghost {
 		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
 }
 @keyframes g-indeterminate {
-	from { transform: translateX(-100%); }
-	to { transform: translateX(350%); }
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(350%);
+	}
 }
 
 /* ---------- GGhostButton (§10.1 #2) ---------- */
@@ -769,7 +780,9 @@ html[data-theme="dark"] .g-badge--open {
 		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
 }
 @keyframes g-shimmer {
-	to { transform: translateX(100%); }
+	to {
+		transform: translateX(100%);
+	}
 }
 
 /* ---------- GBanner (§10.1 #10) ---------- */
@@ -793,8 +806,12 @@ html[data-theme="dark"] .g-badge--open {
 	width: 3px;
 	background: var(--g-brand);
 }
-.g-banner--warning::before { background: var(--g-warn); }
-.g-banner--error::before { background: var(--g-danger); }
+.g-banner--warning::before {
+	background: var(--g-warn);
+}
+.g-banner--error::before {
+	background: var(--g-danger);
+}
 
 /* a GBanner whose whole surface is the affordance, so it takes a pointer and
    the two-line copy stacks. Used by Home's pending-approvals banner and the
@@ -970,9 +987,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-input:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 .g-input--error {
 	border-color: var(--g-danger-ink);
@@ -1018,9 +1033,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-datefield input:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 
 /* Select / Link fields, same descendant problem as .g-datefield above.
@@ -1052,9 +1065,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-linkfield button.h-7.w-full:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 
 /* The dropdown PANEL of frappe-ui's Autocomplete/Link (Track B). The trigger
@@ -1091,9 +1102,7 @@ html[data-theme="dark"] .g-badge--open {
 	border-color: var(--g-glass-rim);
 	/* the app's two-ring focus, same as the trigger button below — the lint
 	   gate rightly refused a bare outline:none here */
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 /* option rows: hover/keyboard-active state in the app's own well colour */
 .g-linkfield .bg-surface-modal li {
@@ -1143,6 +1152,13 @@ html[data-theme="dark"] .g-badge--open {
 .g-cellgrid--balance > .g-cell:nth-child(n + 3) {
 	border-top: 1px solid var(--g-hair);
 }
+/* Odd tile count: the last tile spans both columns rather than sitting alone
+   with an empty, half-bordered cell beside it. The span cell is nth-child(odd),
+   so it takes no left border (correct — it is full width) and keeps its top
+   divider from the rule above. Covers 1, 3, 5, ... uniformly. */
+.g-cellgrid--balance.g-cellgrid--odd > .g-cell:last-child {
+	grid-column: 1 / -1;
+}
 .g-cellgrid--stat-3 > .g-cell + .g-cell,
 .g-cellgrid--stat-4 > .g-cell + .g-cell {
 	border-left: 1px solid var(--g-hair);
@@ -1150,14 +1166,21 @@ html[data-theme="dark"] .g-badge--open {
 /* §20.5: balance grid 2-up mobile → 4-up at lg:, one row, no top dividers.
    Stat tiles stay 3-up at both breakpoints. */
 @media (min-width: 1024px) {
+	/* One row of exactly `count` columns (set by GBalanceGrid, capped at 5), so
+	   three types fill a row of three and five fill five — never four-with-a-hole.
+	   Falls back to four when a caller does not pass a count. */
 	.g-cellgrid--balance {
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(var(--bcols, 4), 1fr);
 	}
 	.g-cellgrid--balance > .g-cell:nth-child(n + 3) {
 		border-top: 0;
 	}
 	.g-cellgrid--balance > .g-cell + .g-cell {
 		border-left: 1px solid var(--g-hair);
+	}
+	/* One row on desktop, so the mobile full-width span is not wanted here. */
+	.g-cellgrid--balance.g-cellgrid--odd > .g-cell:last-child {
+		grid-column: auto;
 	}
 }
 
@@ -1455,7 +1478,9 @@ html[data-theme="dark"] .g-cal__day--present {
 	color: var(--g-accent-ink);
 	border-color: var(--g-accent-ink);
 }
-.g-cal__swatch--half { background: rgba(var(--g-brand-rgb) / 0.26); }
+.g-cal__swatch--half {
+	background: rgba(var(--g-brand-rgb) / 0.26);
+}
 .g-cal__day--leave {
 	background: rgba(var(--g-leave-rgb) / 0.26);
 	color: var(--g-leave-ink);
@@ -1491,10 +1516,18 @@ html[data-theme="dark"] .g-cal__day--present {
 	border-radius: 2.5px;
 	flex: none;
 }
-.g-cal__swatch--present { background: var(--g-brand); }
-.g-cal__swatch--leave { background: var(--g-leave); }
-.g-cal__swatch--rest { background: var(--g-ink3); }
-.g-cal__swatch--absent { background: var(--g-danger); }
+.g-cal__swatch--present {
+	background: var(--g-brand);
+}
+.g-cal__swatch--leave {
+	background: var(--g-leave);
+}
+.g-cal__swatch--rest {
+	background: var(--g-ink3);
+}
+.g-cal__swatch--absent {
+	background: var(--g-danger);
+}
 
 /* ---------- GScorePanel (§10.2 #15) ---------- */
 
@@ -1640,8 +1673,7 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-map__grid {
 	position: absolute;
 	inset: 0;
-	background-image:
-		repeating-linear-gradient(90deg, var(--g-hair) 0 1px, transparent 1px 34px),
+	background-image: repeating-linear-gradient(90deg, var(--g-hair) 0 1px, transparent 1px 34px),
 		repeating-linear-gradient(0deg, var(--g-hair) 0 1px, transparent 1px 34px);
 	transform: perspective(180px) rotateX(52deg) scale(1.9);
 	transform-origin: 50% 100%;
@@ -1670,8 +1702,14 @@ html[data-theme="dark"] .g-cal__day--present {
 	animation-delay: 800ms;
 }
 @keyframes g-pin-ring {
-	from { transform: scale(1); opacity: 0.7; }
-	to { transform: scale(3.4); opacity: 0; }
+	from {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+	to {
+		transform: scale(3.4);
+		opacity: 0;
+	}
 }
 .g-map__caption {
 	position: absolute;
@@ -2048,9 +2086,7 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-search__input:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 2px var(--g-ink),
-		0 0 0 5px var(--g-brand);
+	box-shadow: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 }
 .g-search__icon {
 	position: absolute;
