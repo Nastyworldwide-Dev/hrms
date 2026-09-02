@@ -130,5 +130,45 @@ class TestImpreciseReadingEndToEnd(unittest.TestCase):
 		self.assertIsNone(doc.remote_approval_status)
 
 
+class TestGeofenceRejectLogDurability(unittest.TestCase):
+	"""A strict rejection throws, and the throw rolls back the request
+	transaction — the same one that wrote the Geofence Reject Log. Bench-verified
+	that without an explicit commit the row is gone after the rollback, which is
+	why production carried zero reject logs despite every rejection writing one.
+	_record_geofence_reject must commit the audit row so it survives the throw.
+	"""
+
+	def _ctx(self):
+		return {
+			"reason": mod.REASON_OUTSIDE_RADIUS,
+			"distance_m": 6937.0,
+			"radius_m": 100,
+			"overshoot_m": 6837.0,
+			"accuracy_m": 10.0,
+		}
+
+	def test_reject_log_is_committed_so_it_survives_the_rollback(self):
+		doc = _FakeCheckin()
+		saved = mod.frappe.flags.in_test
+		with patch(f"{MODULE}.frappe.new_doc"), patch(f"{MODULE}.frappe.db.commit") as commit:
+			# The production path is `not in_test`; the runner sets in_test True,
+			# which is exactly the branch that skips the commit for test isolation.
+			mod.frappe.flags.in_test = False
+			try:
+				mod._record_geofence_reject(doc, self._ctx(), "KL Office")
+			finally:
+				mod.frappe.flags.in_test = saved
+		commit.assert_called_once()
+
+	def test_reject_log_does_not_commit_under_the_test_runner(self):
+		# The isolation guard: inside the runner the commit must be skipped, or it
+		# would persist other tests' fixtures past their rolled-back transaction.
+		doc = _FakeCheckin()
+		with patch(f"{MODULE}.frappe.new_doc"), patch(f"{MODULE}.frappe.db.commit") as commit:
+			mod.frappe.flags.in_test = True
+			mod._record_geofence_reject(doc, self._ctx(), "KL Office")
+		commit.assert_not_called()
+
+
 if __name__ == "__main__":
 	unittest.main()

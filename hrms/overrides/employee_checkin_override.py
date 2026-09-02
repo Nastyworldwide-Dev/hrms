@@ -337,8 +337,20 @@ def _record_geofence_reject(doc, ctx, shift_loc_name):
 		)
 		log.flags.ignore_permissions = True
 		log.insert()
+		# The strict throw that follows this call rolls back the request
+		# transaction — the very one that just wrote this row — so without an
+		# explicit commit the audit trace is discarded with it. Bench-verified:
+		# the row existed before the rollback and was gone after, which is why
+		# production carried zero Geofence Reject Logs despite every rejection
+		# writing one. Commit it now. Safe: validate_distance_from_shift_location
+		# runs pre-insert, so no Employee Checkin row is pending — this cannot
+		# persist a check-in for the rejected attempt — and the punch/Desk write
+		# paths have no other uncommitted change to carry along. Skipped under the
+		# test runner, which depends on one rolled-back transaction for isolation.
+		if not frappe.flags.in_test:
+			frappe.db.commit()  # nosemgrep: durable audit must survive the strict throw
 		logger.info(
-			"[employee_checkin] Wrote Geofence Reject Log %s employee=%s reason=%s",
+			"[employee_checkin] Wrote Geofence Reject Log %s employee=%s reason=%s (committed)",
 			log.name,
 			doc.employee,
 			ctx.get("reason"),
