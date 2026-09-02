@@ -9,7 +9,7 @@
 			<header
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
-				<GIconButton :label="__('Back')" flush class="lg:hidden" @click="goBackOrHome(router)">
+				<GIconButton :label="__('Back')" flush class="lg:hidden" @click="confirmBack">
 					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
 				</GIconButton>
 				<div v-if="id" class="flex flex-row items-center gap-2 overflow-hidden grow">
@@ -71,7 +71,7 @@
 					<button
 						type="button"
 						class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
-						@click="goBackOrHome(router)"
+						@click="confirmBack"
 					>
 						<FeatherIcon name="arrow-left" class="h-4 w-4" />
 						{{ __("Back") }}
@@ -305,6 +305,18 @@
 		{{ formModel.name }}?
 	</GConfirm>
 
+	<GConfirm
+		:is-open="showDiscardDialog"
+		:title="__('Discard changes?')"
+		:confirm-label="__('Discard')"
+		:cancel-label="__('Keep editing')"
+		destructive
+		@confirm="discardAndLeave"
+		@cancel="showDiscardDialog = false"
+	>
+		{{ __("You have unsaved changes. Leave without saving?") }}
+	</GConfirm>
+
 	<Dialog v-model="showCancelDialog">
 		<template #body-title>
 			<h2 class="text-xl font-bold">{{ __("Confirm") }}</h2>
@@ -429,6 +441,22 @@ let fileAttachments = ref([])
 let statusColor = ref("")
 let formErrorMessage = ref("")
 let isFormDirty = ref(false)
+
+// Guard against losing typed work: when the form is dirty, Back opens a discard
+// confirm instead of navigating away silently. (The error-recovery Back is not
+// wired here — there is no form to lose there.)
+const showDiscardDialog = ref(false)
+function confirmBack() {
+	if (isFormDirty.value) {
+		showDiscardDialog.value = true
+	} else {
+		goBackOrHome(router)
+	}
+}
+function discardAndLeave() {
+	showDiscardDialog.value = false
+	goBackOrHome(router)
+}
 let isFormUpdated = ref(false)
 let showDeleteDialog = ref(false)
 let showSubmitDialog = ref(false)
