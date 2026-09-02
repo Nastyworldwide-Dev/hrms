@@ -1,23 +1,33 @@
 # HANDOFF
-prompt:   Source recovery, deployed truth & final product closure
-status:   done — GO-LIVE READY WITH EXPLICIT ACCEPTANCE REQUIRED
-commit:   152922994 on nz-glass
-source:   Hafiz's only absent work = 1 docs commit (KPI plan), cherry-picked
-          c6385cbae (authorship kept). Safety tag safety/nz-glass-preintegration
-          -20260902 at pre-integration HEAD. 242 commits intact on origin.
-deployed: build is gitignored -> deploy rebuilds from source; SW has skipWaiting
-          + clientsClaim + cleanupOutdatedCaches (updates promptly). "Old design"
-          = a deploy not yet rebuilt, NOT a source defect. Push != deployed.
-startErr: reportAllChanges/startTime = BROWSER-EXTENSION. web-vitals is absent
-          from source, deps, and all 124 bundle JS files; SPA loads no external
-          script. Not Nadi — no app change.
-fixes:    (1) pre-paint theme in index.html — dark users no longer flash light
-          before theme applies; (2) router.onError reloads once on stale-chunk
-          after deploy (was a broken/half-old route); (3) Notifications toggle
-          composed icon-first like its sibling rows (was stranded).
-verify:   yarn build OK (both); frontend 90/92 (2 pre-existing full-suite
-          module-mock artifacts, pass in isolation); eslint clean; 4 new tests.
-accept:   deploy must REBUILD assets after this push; prior acceptance items
-          stand (Shift Location coords for geofencing; D1 historical review).
-verdict:  GO-LIVE READY WITH EXPLICIT ACCEPTANCE REQUIRED
-next:     redeploy (rebuild frontend), confirm browser serves current build.
+prompt:   Clock-in, location & geofence recovery
+status:   done — geofence WORKS; audit-durability defect found + fixed
+commit:   2af308f30 on nz-glass
+model:    Employee.shift_location + department -> Shift Location.shift_rules
+          (dept->shift_type) -> daily sync materializes a Shift Assignment ->
+          geofence reads Shift Assignment.shift_location + enable_strict_geofence
+          -> Shift Location.{latitude,longitude,checkin_radius}. Coordinates are
+          owned by Shift Location (unchanged since the old branch).
+why-msg:  "No check-in area set" is genuine CONFIG ABSENCE, proven from site data:
+          0 Shift Locations on fresh.local AND test.local, 0 employees with
+          shift_location, 0 geolocated check-ins ever. Schema intact, patches ran,
+          resolver returns null because the data isn't there — NOT a defect, field
+          rename, migration loss, or branch regression. Old build had the same
+          coord fields + map picker; the "it worked before" impression is UI, not
+          stored data (none ever existed).
+proof:    test.local, HR-EMP-00014 assigned to a geofenced HQ (3.1390,101.6869
+          r=100): get_active_shift_location returns coords; STRICT inside -> ok;
+          STRICT outside -> block (6937m>100m) + throw, 0 check-ins created;
+          LENIENT outside -> remote request spawned; approver resolves.
+DEFECT:   Geofence Reject Log was rolled back by the strict throw (same txn) —
+          0 audit rows in prod despite every rejection. FIXED: commit the audit
+          (guarded `not in_test`); bench-verified it now survives, still no
+          check-in for the rejected attempt. 2 unit tests added.
+approver: 5-tier resolve (shift_request_approver->dept->reports_to->HR Mgr
+          in-company->site HR Mgr); request never dropped; OUT inherits IN's
+          approval (no double submit); HR acts via admin bypass.
+verify:   override tests 6/6; geofence resolver 3/3; ruff clean.
+accept:   the message disappears only when HR configures a Shift Location with
+          coords+radius and sets Employee.shift_location (or a shift_rules row)
+          and enables allow_geolocation_tracking — a CONFIG action, not code.
+verdict:  geofence implementation CORRECT on current architecture; 1 audit
+          defect fixed. Message is truthful pending HQ configuration.
