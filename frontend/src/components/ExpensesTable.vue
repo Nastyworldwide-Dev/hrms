@@ -242,7 +242,9 @@ watch(
 	() => expenseItem.value.amount,
 	(value) => {
 		if (!isFirstRender.value) {
-			expenseItem.value.sanctioned_amount = parseFloat(value)
+			// parseFloat("") is NaN, which persisted as a wrong null on submit
+			// when the amount was cleared; fall back to 0.
+			expenseItem.value.sanctioned_amount = parseFloat(value) || 0
 		} else {
 			isFirstRender.value = false
 		}
