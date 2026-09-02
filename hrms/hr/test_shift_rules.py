@@ -80,3 +80,26 @@ class TestShiftRulesRosterPrecedence(FrappeTestCase):
 		self._make_manual(-50, -40)
 		self.assertEqual(reconcile_employee_shift(self.employee), "created")
 		self.assertEqual(len(self._autos()), 1)
+
+	def test_roster_managed_employee_is_skipped_and_auto_closed(self):
+		"""The durable declaration: an employee flagged roster_managed (variable
+		shift, e.g. Handa) is owned by the roster. The rule layer must never
+		impose a standing shift on them, and must close any auto assignment it
+		created before the flag was set."""
+		reconcile_employee_shift(self.employee)  # rule creates an auto row first
+		self.assertEqual(len(self._autos()), 1)
+
+		self._set_employee(roster_managed=1)
+		action = reconcile_employee_shift(self.employee)
+		self.assertEqual(action, "skipped-roster")
+		open_autos = frappe.get_all(
+			"Shift Assignment",
+			filters={
+				"employee": self.employee,
+				"docstatus": 1,
+				"status": "Active",
+				"created_by_shift_rule": 1,
+				"end_date": ["is", "not set"],
+			},
+		)
+		self.assertEqual(open_autos, [])

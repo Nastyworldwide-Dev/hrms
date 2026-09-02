@@ -95,6 +95,16 @@ def reconcile_employee_shift(employee: str) -> str:
 	)
 	auto_rows = [row for row in current if row.created_by_shift_rule]
 
+	# Explicit declaration wins over every heuristic below: a roster_managed
+	# (variable-shift) employee is owned by the roster, so the rule layer hands
+	# off and closes anything it created before the flag was set. This is the
+	# durable replacement for the lapsed-roster lookback further down.
+	if frappe.db.get_value("Employee", employee, "roster_managed"):
+		for row in auto_rows:
+			_close_assignment(row, today)
+		logger.info("[shift_rules] %s: roster_managed — skipped (roster owns shifts)", employee)
+		return "skipped-roster"
+
 	# Mutual exclusion with the Shift Schedule machinery: an enabled Shift
 	# Schedule Assignment means process_auto_shift_creation owns this
 	# employee's shifts. An open-ended auto row would make every dated

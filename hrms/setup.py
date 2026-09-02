@@ -421,6 +421,17 @@ def get_custom_fields():
 				),
 			},
 			{
+				"fieldname": "roster_managed",
+				"fieldtype": "Check",
+				"label": _("Roster Managed (Variable Shift)"),
+				"insert_after": "shift_location",
+				"description": _(
+					"Shifts are set by the roster, not the automatic Shift Location rules. "
+					"Enable for variable-shift staff (e.g. Handa) so the rule layer never "
+					"imposes a standing shift."
+				),
+			},
+			{
 				"fieldname": "default_shift",
 				"fieldtype": "Link",
 				"label": _("Default Shift"),

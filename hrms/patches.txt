@@ -85,3 +85,4 @@ hrms.patches.v16_0.restore_hr_settings_defaults #2026-08-26 HR Settings was unsa
 hrms.patches.v16_0.backfill_request_decision_status #2026-08-26 status field added so requests can be declined
 hrms.patches.v16_0.grant_employee_currency_read #2026-08-27 employees could not pick a currency, so could not file an expense
 hrms.patches.v16_0.gate_hr_workspaces_to_hr_roles #2026-09-01 employees saw every HR workspace card on Desk
+hrms.patches.v16_0.add_employee_roster_managed_field #2026-09-02 variable-shift staff must be hand-rostered, not rule-imposed
