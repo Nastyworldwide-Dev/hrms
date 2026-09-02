@@ -29,32 +29,35 @@ try {
 		if (payload.data.notification_icon) {
 			notificationOptions["icon"] = payload.data.notification_icon
 		}
-		if (isChrome()) {
-			notificationOptions["data"] = {
-				url: payload.data.click_action,
-			}
-		} else {
-			if (payload.data.click_action) {
-				notificationOptions["actions"] = [
-					{
-						action: payload.data.click_action,
-						title: "View Details",
-					},
-				]
-			}
+		// Carry the URL on data for EVERY browser so the notificationclick
+		// handler below can find it on a body tap. Non-Chrome additionally gets
+		// an explicit action button.
+		notificationOptions["data"] = {
+			url: payload.data.click_action,
+		}
+		if (!isChrome() && payload.data.click_action) {
+			notificationOptions["actions"] = [
+				{
+					action: payload.data.click_action,
+					title: "View Details",
+				},
+			]
 		}
 		self.registration.showNotification(notificationTitle, notificationOptions)
 	})
 
-	if (isChrome()) {
-		self.addEventListener("notificationclick", (event) => {
-			event.stopImmediatePropagation()
-			event.notification.close()
-			if (event.notification.data && event.notification.data.url) {
-				clients.openWindow(event.notification.data.url)
-			}
-		})
-	}
+	// Register for ALL browsers — this used to be Chrome-only, so on Firefox,
+	// Safari and Samsung Internet tapping the notification did nothing at all. A
+	// body tap carries no action and finds the URL on data; an action-button tap
+	// carries the URL as event.action.
+	self.addEventListener("notificationclick", (event) => {
+		event.stopImmediatePropagation()
+		event.notification.close()
+		const url = (event.notification.data && event.notification.data.url) || event.action
+		if (url) {
+			clients.openWindow(url)
+		}
+	})
 } catch (error) {
 	console.log("Failed to initialize Firebase", error)
 }
