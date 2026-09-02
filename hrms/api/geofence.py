@@ -229,6 +229,9 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 		"latitude": float(loc.latitude),
 		"longitude": float(loc.longitude),
 		"checkin_radius": int(loc.checkin_radius or 0),
-		"shift_type": r.shift_type,
-		"strict": bool(r.enable_strict_geofence),
+		# r can be None now: the location resolved from Employee.shift_location
+		# with no active assignment. The map still draws the pin; there is no
+		# shift to name and no strict flag to honour, so lenient defaults apply.
+		"shift_type": r.shift_type if r else None,
+		"strict": bool(r.enable_strict_geofence) if r else False,
 	}

@@ -206,11 +206,22 @@ class TestEffectiveShiftLocation(unittest.TestCase):
 	to "no area set". effective_shift_location must fall back to the Employee.
 	"""
 
-	def test_no_assignment_returns_none(self):
+	def test_no_assignment_falls_back_to_employee(self):
 		from hrms.utils.geofence import effective_shift_location
 
-		# No active shift today -> no fence, and no read off the Employee.
-		self.assertIsNone(effective_shift_location("EMP-1", None))
+		# No active shift today, but Employee.shift_location is set: the employee
+		# field is the authoritative "where they clock in", so the area still
+		# resolves. Live evidence (Employee linked to Damansara, no active
+		# assignment) showed "no area set" was wrong here.
+		with patch("frappe.db.get_value", return_value="Damansara") as gv:
+			self.assertEqual(effective_shift_location("EMP-1", None), "Damansara")
+			gv.assert_called_once_with("Employee", "EMP-1", "shift_location")
+
+	def test_no_assignment_and_no_employee_location_returns_none(self):
+		from hrms.utils.geofence import effective_shift_location
+
+		with patch("frappe.db.get_value", return_value=None):
+			self.assertIsNone(effective_shift_location("EMP-1", None))
 
 	def test_assignment_with_location_wins_without_touching_employee(self):
 		from hrms.utils.geofence import effective_shift_location

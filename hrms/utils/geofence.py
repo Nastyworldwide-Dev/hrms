@@ -257,12 +257,19 @@ def effective_shift_location(employee: str, assignment) -> str | None:
 	assignment.shift_location null -> resolver None).
 
 	So fall back to `Employee.shift_location`, which the v15_91_0 field documents
-	as "where this employee physically clocks in". Requires an active assignment:
-	no shift today means no shift to fence, not a fence read off the employee.
+	as "where this employee physically clocks in".
+
+	The fallback does NOT require an active assignment. It first did, on the
+	reasoning "no shift today, no fence" — but live evidence disproved that: an
+	employee with Employee.shift_location = Damansara set on their Employee record
+	still saw "No check-in area set" whenever no active Shift Assignment resolved
+	for the day (the rule sync had not materialised one, or the assignment lapsed).
+	The Employee field is the authoritative "where they clock in", so it answers
+	the map/fence question on its own; the enforcing insert stays shift-gated
+	separately (it silent-allows without a resolved shift), so honouring the
+	Employee location here only ever ADDS the map pin, never tightens a check-in.
 	"""
-	if not assignment:
-		return None
-	if assignment.shift_location:
+	if assignment and assignment.shift_location:
 		return assignment.shift_location
 	import frappe
 
