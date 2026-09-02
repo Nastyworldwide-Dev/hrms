@@ -51,6 +51,7 @@ module.exports = {
 		sheen: "var(--g-sheen)",
 		success: "rgb(var(--g-success-rgb) / <alpha-value>)",
 		"success-ink": "rgb(var(--g-success-ink-rgb) / <alpha-value>)",
+		surface: "rgb(var(--g-surface-rgb) / <alpha-value>)",
 		"track-solid": "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
 		warn: "rgb(var(--g-warn-rgb) / <alpha-value>)",
 		"warn-ink": "rgb(var(--g-warn-ink-rgb) / <alpha-value>)",
