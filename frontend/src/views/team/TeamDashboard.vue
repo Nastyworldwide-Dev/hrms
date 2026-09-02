@@ -39,7 +39,7 @@
 				<router-link
 					v-if="teamStatus.data?.members?.length"
 					:to="{ name: 'TeamRosterView' }"
-					class="g-seclink text-kra-label text-accent-ink underline underline-offset-link self-end"
+					class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link self-end"
 				>
 					{{ __("Open team roster") }}
 				</router-link>

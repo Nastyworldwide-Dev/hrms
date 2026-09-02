@@ -25,7 +25,7 @@
 									{{ member.branch || member.department }}
 								</span>
 							</div>
-							<button class="g-seclink text-kra-label text-accent-ink underline underline-offset-link flex-none" @click="openAssign(member)">
+							<button class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link flex-none" @click="openAssign(member)">
 								{{ __("Assign") }}
 							</button>
 						</div>
