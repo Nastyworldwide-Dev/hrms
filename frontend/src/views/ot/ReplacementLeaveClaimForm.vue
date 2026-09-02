@@ -70,7 +70,7 @@ const bank = createResource({
 		const daysField = formFields.data.find((f) => f.fieldname === "claimed_days")
 		if (daysField)
 			daysField.description = __(
-				"{0} banked hours available this month — 0.5 day costs 4 h, 1 day costs 8 h",
+				"{0} banked hours available to claim — 0.5 day costs 4 h, 1 day costs 8 h",
 				[data.hours_available]
 			)
 		// re-check now that the cap is known — the days watcher does not fire when
@@ -96,7 +96,10 @@ function validateClaimedDays() {
 	if (numeric && (numeric * 2) % 1 !== 0) {
 		daysField.error_message = __("Days must be in half-day steps (0.5, 1.0, 1.5 ...)")
 	} else if (cost && available != null && cost > available) {
-		daysField.error_message = __("Costs {0} h — only {1} h banked this month", [cost, available])
+		daysField.error_message = __("Costs {0} h — only {1} h banked and claimable", [
+			cost,
+			available,
+		])
 	} else {
 		daysField.error_message = ""
 	}

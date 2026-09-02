@@ -496,6 +496,9 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 
 	_ensure_own_employee_or_permitted(employee)
 	bank = get_replacement_leave_bank(employee)
+	# Floor for display: the raw total can read negative once a spent credit ages
+	# out of the window (the cancel guard needs that signal, the UI does not).
+	bank["hours_available"] = max(0, cint(bank["hours_available"]))
 	bank["balance_days"] = flt(get_leave_balance_on(employee, REPLACEMENT_LEAVE_TYPE, getdate()) or 0)
 	logger.info(
 		"[api] rl_bank_summary %s: balance %s days, bank %sh",
@@ -509,7 +512,7 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 			"employee": employee,
 			"compensation": "Replacement Leave",
 			"docstatus": 1,
-			"ot_date": ("between", [bank["month_start"], get_last_day(bank["month_start"])]),
+			"ot_date": ("between", [bank["window_start"], bank["window_end"]]),
 		},
 		fields=["name", "ot_date", "claimed_hours"],
 		order_by="ot_date asc",

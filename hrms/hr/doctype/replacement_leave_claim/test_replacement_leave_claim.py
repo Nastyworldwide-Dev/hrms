@@ -3,11 +3,12 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_months, get_year_ending, get_year_start, getdate, today
+from frappe.utils import add_months, flt, get_year_ending, get_year_start, getdate, today
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.leave_period.test_leave_period import create_leave_period
+from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
 from hrms.hr.doctype.ot_request.test_ot_request import (
 	attach_supporting_file,
 	make_ot_checkins,
@@ -72,6 +73,18 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 		self.bank_hours()
 		self.assertRaises(frappe.ValidationError, make_claim, self.employee, 0.3, False)
 		self.assertRaises(frappe.ValidationError, make_claim, self.employee, 0, False)
+
+	def test_backdated_ot_within_window_is_claimable(self):
+		# OT worked LAST cycle, filed/approved this month, is still claimable —
+		# the calendar-month bank (reversed) used to strand it. The claiming
+		# window is the same 2-cycle backdate window OT is filable in.
+		last_cycle = add_months(today(), -1)
+		make_ot_checkins(self.employee, last_cycle, shift=SHIFT, out_time="18:00:00", actual_end="12:00:00")
+		make_ot_request(self.employee, ot_date=last_cycle, claimed_hours=8)
+		bank = get_replacement_leave_bank(self.employee, getdate())
+		self.assertEqual(bank["hours_total"], 8)
+		claim = make_claim(self.employee, 1.0, submit=False)
+		self.assertEqual(flt(claim.claimed_days), 1.0)
 
 	def test_claim_above_bank_rejected(self):
 		self.bank_hours()

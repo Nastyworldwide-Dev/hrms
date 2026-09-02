@@ -21,7 +21,7 @@
 				<ResourceError :resource="bank" what="your replacement leave bank" />
 				<!-- month bank -->
 				<div class="border border-divider rounded-panel p-4 flex flex-col gap-2" v-if="bank.data">
-					<span class="g-eyebrow">{{ monthLabel }} {{ __("bank") }}</span>
+					<span class="g-eyebrow">{{ __("Overtime bank") }}</span>
 					<div class="flex items-baseline gap-1.5">
 						<span class="text-3xl font-extrabold text-inkbase">
 							{{ bank.data.hours_available }}
@@ -34,7 +34,7 @@
 					<span class="text-xs text-ink-600">
 						{{
 							__(
-								"0.5 day costs 4 h, 1 day costs 8 h. Hours not claimed by month end expire; approved days join your Replacement Leave balance until the leave period ends."
+								"0.5 day costs 4 h, 1 day costs 8 h. Overtime stays claimable for two payroll cycles (the 16th-to-15th backdate window), then expires; approved days join your Replacement Leave balance until the leave period ends."
 							)
 						}}
 					</span>
@@ -42,7 +42,7 @@
 
 				<!-- approved OT feeding the bank -->
 				<div v-if="bank.data?.requests?.length" class="flex flex-col gap-1.5">
-					<span class="g-eyebrow">{{ __("Approved OT this month") }}</span>
+					<span class="g-eyebrow">{{ __("Approved OT — claimable now") }}</span>
 					<div
 						v-for="request in bank.data.requests"
 						:key="request.name"
@@ -101,7 +101,6 @@ import { computed, inject } from "vue"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
-const dayjs = inject("$dayjs")
 
 const bank = createResource({
 	url: "hrms.api.get_replacement_leave_bank_summary",
@@ -114,10 +113,6 @@ const claims = createResource({
 	params: { employee: employee.data.name, limit: 20 },
 	auto: true,
 })
-
-const monthLabel = computed(() =>
-	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMMM YYYY") : ""
-)
 
 // Nothing to convert -> no claim to make. Gate "New Claim" so the user is not
 // sent into a form that can only fail (the bank card below explains the 0).

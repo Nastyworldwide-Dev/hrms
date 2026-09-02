@@ -32,14 +32,16 @@ class ReplacementLeaveClaim(Document):
 
 	def set_claim_basis(self):
 		logger.info("[rl_claim] claim basis for %s (%s)", self.name, self.employee)
-		# claims convert the bank of the month they were FILED in — derived
-		# from the server-controlled creation timestamp on every validate, so
-		# a tampered draft can't point at another month's bank, while approval
-		# landing next month still converts the right one
+		# A claim converts the bank AS OF THE DATE IT WAS FILED — derived from the
+		# server-controlled creation timestamp on every validate, so a tampered
+		# draft can't shift its window, while approval landing later still
+		# converts the window the claim was filed against. bank_month is kept only
+		# as an informational stamp of the filing month; the pool is the 2-cycle
+		# claiming window (get_replacement_leave_bank), not a calendar month.
 		filed_on = getdate(self.creation) if not self.is_new() else getdate()
 		self.bank_month = get_first_day(filed_on)
 		self.leave_type = REPLACEMENT_LEAVE_TYPE
-		bank = get_replacement_leave_bank(self.employee, self.bank_month)
+		bank = get_replacement_leave_bank(self.employee, filed_on)
 		# exclude this claim's own draft cost when revalidating an existing row
 		own_cost = 0
 		if not self.is_new():
@@ -64,16 +66,11 @@ class ReplacementLeaveClaim(Document):
 		if self.hours_cost > cint(self.available_hours):
 			frappe.throw(
 				_(
-					"Cannot claim {0} day(s) ({1} hours) — only {2} banked overtime hours are available for {3}."
+					"Cannot claim {0} day(s) ({1} hours) — only {2} banked overtime hours are available to claim."
 				).format(
 					frappe.bold(days),
 					frappe.bold(self.hours_cost),
-					frappe.bold(self.available_hours),
-					frappe.bold(
-						self.bank_month.strftime("%B %Y")
-						if hasattr(self.bank_month, "strftime")
-						else str(self.bank_month)
-					),
+					frappe.bold(max(0, cint(self.available_hours))),
 				)
 			)
 

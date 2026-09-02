@@ -141,11 +141,13 @@ class OTRequest(Document, PWANotificationsMixin):
 		# cancelled out from under it
 		if self.compensation != REPLACEMENT_LEAVE:
 			return
-		month_start = get_first_day(self.ot_date)
 		# exclude self explicitly: by the time on_cancel runs, docstatus=2 is
 		# already persisted so the sum would exclude it anyway — but the guard
-		# must not depend on that ordering
-		bank = get_replacement_leave_bank(self.employee, month_start, exclude_request=self.name)
+		# must not depend on that ordering. Today's claiming window: an OT still
+		# in it whose hours a claim reserved drives remaining negative; one that
+		# has aged out of every claim's window is free to cancel (its leave, if
+		# any, was already granted through the claim).
+		bank = get_replacement_leave_bank(self.employee, getdate(), exclude_request=self.name)
 		remaining_after_cancel = bank["hours_total"] - bank["hours_claimed"]
 		logger.info(
 			"[ot_request] cancel %s: bank %s, claimed %s, after-cancel %s",
@@ -163,17 +165,31 @@ class OTRequest(Document, PWANotificationsMixin):
 			)
 
 
-def get_replacement_leave_bank(employee: str, month_start=None, exclude_request: str | None = None) -> dict:
-	"""The month's convertible hours: approved replacement-leave OT hours minus
-	hours consumed by claims filed against that month (drafts included, so a
-	pending claim can't be double-funded)."""
-	logger.info("[ot_request] bank query %s month=%s exclude=%s", employee, month_start, exclude_request)
-	# CALENDAR month by decision (2026-08-19): only the FILING window follows
-	# the 16th-to-15th payroll cycle (utils/filing_window.py). The bank month
-	# and the OT cap keep the 1st-to-31st counting the older branches always
-	# had — the cutoff was the only thing staff ever reported.
-	month_start = get_first_day(month_start or getdate())
-	month_end = get_last_day(month_start)
+def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str | None = None) -> dict:
+	"""Convertible replacement-leave hours in the current CLAIMING WINDOW —
+	approved replacement-leave OT worked within the window, minus hours reserved
+	by claims filed within it (drafts included, so a pending claim can't be
+	double-funded).
+
+	WINDOW = the same 2-cycle backdate window an OT request is filable in
+	(utils/filing_window, HR's 16th-to-15th cutoff). Replacement-leave OT is
+	claimable for exactly as long as it is file-able, so a backdated OT approved
+	after its calendar month is no longer stranded. This REVERSES the 2026-08-19
+	calendar-month bank by decision (given 2026-XX): that shape silently stranded
+	backdated replacement-leave OT — hours banked in a month you could no longer
+	file a claim against. HR policy is one window for both filing and claiming.
+
+	Ledger safety: any claim that consumed in-window OT has creation >= ot_date
+	>= window_start, so it is itself inside the window — debits fully cover the
+	credits they spent. hours_available can still read negative once a credit
+	ages out while its debit has not (see on_cancel, which needs that signal);
+	callers that DISPLAY it floor at 0.
+	"""
+	as_of = getdate(as_of or getdate())
+	window_start = earliest_filable_date(as_of)
+	logger.info(
+		"[ot_request] bank query %s window=%s..%s exclude=%s", employee, window_start, as_of, exclude_request
+	)
 
 	ot_filters = {
 		# A rejected request reaches docstatus 1 like any other decision, and this
@@ -184,16 +200,19 @@ def get_replacement_leave_bank(employee: str, month_start=None, exclude_request:
 		"employee": employee,
 		"compensation": REPLACEMENT_LEAVE,
 		"docstatus": 1,
-		"ot_date": ("between", [month_start, month_end]),
+		"ot_date": ("between", [window_start, as_of]),
 	}
 	if exclude_request:
 		ot_filters["name"] = ("!=", exclude_request)
 	# Frappe v16 refuses SQL functions passed as SELECT strings
 	# ("sum(claimed_hours)"), so the totals are summed from the rows. One
-	# employee-month is at most a handful of rows, so this stays cheap.
+	# employee-window is at most a handful of rows, so this stays cheap.
 	hours_total = sum(
 		flt(row.claimed_hours) for row in frappe.get_all("OT Request", ot_filters, ["claimed_hours"])
 	)
+	# Debits: active claims FILED within the window. A claim filed before the
+	# window can't have consumed in-window OT (its creation would precede the OT
+	# date), so `creation >= window_start` captures every relevant consumer.
 	hours_claimed = sum(
 		flt(row.hours_cost)
 		for row in frappe.get_all(
@@ -201,16 +220,17 @@ def get_replacement_leave_bank(employee: str, month_start=None, exclude_request:
 			{
 				"employee": employee,
 				"docstatus": ("<", 2),
-				"bank_month": month_start,
+				"creation": (">=", window_start),
 			},
 			["hours_cost"],
 		)
 	)
 	bank = {
-		"month_start": month_start,
+		"window_start": window_start,
+		"window_end": as_of,
 		"hours_total": cint(hours_total),
 		"hours_claimed": cint(hours_claimed),
 		"hours_available": cint(hours_total) - cint(hours_claimed),
 	}
-	logger.info("[ot_request] bank %s %s: %s", employee, month_start, bank)
+	logger.info("[ot_request] bank %s %s..%s: %s", employee, window_start, as_of, bank)
 	return bank
