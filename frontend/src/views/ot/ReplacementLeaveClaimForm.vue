@@ -9,7 +9,7 @@
 				:fields="formFields.data"
 				:id="props.id"
 				:showAttachmentView="true"
-				:requireAttachment="true"
+				:requireAttachment="false"
 				@validateForm="validateForm"
 			/>
 			<ResourceError :resource="formFields" what="the replacement leave claim form" />

@@ -12,11 +12,14 @@
 
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
-import { inject } from "vue"
+import { inject, computed } from "vue"
 import ListView from "@/components/ListView.vue"
+import { isApprover } from "@/data/team"
 
 const __ = inject("$translate")
-const TAB_BUTTONS = ["My Requests", "Team Requests"]
+// Team tab is manager/approver-only — a plain employee saw a permanently
+// empty "Team Requests" tab. Mirrors the RequestPanel isApprover gate.
+const TAB_BUTTONS = computed(() => (isApprover.data ? ["My Requests", "Team Requests"] : ["My Requests"]))
 const SHIFT_REQUEST_FIELDS = [
 	"name",
 	"employee",

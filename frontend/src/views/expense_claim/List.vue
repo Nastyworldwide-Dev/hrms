@@ -14,8 +14,12 @@
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
 import ListView from "@/components/ListView.vue"
+import { computed } from "vue"
+import { isApprover } from "@/data/team"
 
-const TAB_BUTTONS = ["My Claims", "Team Claims"] // __("My Claims"), __("Team Claims")
+// Team tab is manager/approver-only — a plain employee saw a permanently
+// empty "Team Claims" tab. Mirrors the RequestPanel isApprover gate.
+const TAB_BUTTONS = computed(() => (isApprover.data ? ["My Claims", "Team Claims"] : ["My Claims"]))
 const EXPENSE_CLAIM_FIELDS = [
 	"`tabExpense Claim`.name",
 	"`tabExpense Claim`.employee",
