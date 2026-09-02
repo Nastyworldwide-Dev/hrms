@@ -16,7 +16,13 @@ export function useCurrencyConversion(formFields, docRef, fieldsToConvert = []) 
 				field._original_label = field.label.replace(/\([^)]*\)/g, "").trim()
 			}
 			if (currencyFields.has(field.fieldname)) {
-				field.label = `${field._original_label} (${docRef.value.currency})`
+				// Guard docRef.value (the immediate:true watcher fires before a
+				// company/currency is picked) and only append a currency that
+				// actually exists — otherwise labels read "Amount (undefined)".
+				const currency = docRef.value?.currency
+				field.label = currency
+					? `${field._original_label} (${currency})`
+					: field._original_label
 			}
 		})
 	}
