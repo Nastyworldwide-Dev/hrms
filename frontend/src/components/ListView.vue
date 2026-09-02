@@ -374,13 +374,23 @@ const createPermission = createResource({
 })
 
 // helper functions
+
+// A check-in captured with tracking off (or an older row) has null / 0 /
+// missing coordinates: Number(undefined).toFixed(5) rendered a literal "NaN°"
+// and Number(null) a misleading "0.00000°". Show an em dash for anything that
+// isn't a real reading.
+const formatCoord = (v) => {
+	const n = Number(v)
+	return Number.isFinite(n) && n !== 0 ? `${n.toFixed(5)}°` : "—"
+}
+
 const openRequestModal = async (request) => {
 	selectedRequest.value = request
 	selectedRequest.value.doctype = "Employee Checkin"
 	selectedRequest.value.date = request.time
 	selectedRequest.value.formatted_time = dayjs(request.time).format("HH:mm a")
-	selectedRequest.value.formatted_latitude = `${Number(request.latitude).toFixed(5)}°`
-	selectedRequest.value.formatted_longitude = `${Number(request.longitude).toFixed(5)}°`
+	selectedRequest.value.formatted_latitude = formatCoord(request.latitude)
+	selectedRequest.value.formatted_longitude = formatCoord(request.longitude)
 	isRequestModalOpen.value = true
 }
 

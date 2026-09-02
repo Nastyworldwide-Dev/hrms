@@ -623,6 +623,17 @@ const locationVerdict = computed(() => {
 	const away = d >= 1000 ? __("{0} km", [(d / 1000).toFixed(1)]) : __("{0} m", [Math.round(d)])
 	const radius = __("{0} m", [loc.checkin_radius])
 
+	// Check-out is never range-checked, so decide it BEFORE the inside/outside
+	// branches — otherwise a check-out from inside the office read "You're inside
+	// the check-in area. Go ahead and check in." (wrong verb on a checkout).
+	if (nextAction.value?.action === "OUT") {
+		return {
+			tone: "muted",
+			title: __("{0} from {1}", [away, loc.label]),
+			detail: __("Check-out is not range-checked. Your location is recorded as-is."),
+		}
+	}
+
 	if (isInsideRadius.value) {
 		// The accuracy grace already exists server-side — evaluate_geofence
 		// widens the radius by the device's own error estimate. Saying so turns
@@ -640,14 +651,6 @@ const locationVerdict = computed(() => {
 						"Your GPS reading is a little rough, but you're close enough — go ahead and check in."
 				  )
 				: __("You're inside the check-in area. Go ahead and check in."),
-		}
-	}
-
-	if (nextAction.value?.action === "OUT") {
-		return {
-			tone: "muted",
-			title: __("{0} from {1}", [away, loc.label]),
-			detail: __("Check-out is not range-checked. Your location is recorded as-is."),
 		}
 	}
 
