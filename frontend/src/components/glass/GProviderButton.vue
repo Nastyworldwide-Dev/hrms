@@ -29,7 +29,7 @@
     label    string — full label override; defaults to "Sign in with {name}"
 -->
 <template>
-	<a class="g-glass-ghost g-provider" :href="href">
+	<a class="g-glass-ghost g-provider g-focusable" :href="href">
 		<img v-if="icon" class="g-provider__mark" :src="icon" alt="" aria-hidden="true" />
 		<span>{{ label || `Sign in with ${name}` }}</span>
 	</a>

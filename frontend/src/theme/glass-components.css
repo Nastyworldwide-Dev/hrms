@@ -883,6 +883,12 @@ html[data-theme="dark"] .g-badge--open {
 .g-row--tappable:active {
 	background: var(--g-icon-bg);
 }
+/* WCAG 2.4.7: the list panel clips overflow, so the outer focus ring can't
+   show on a row — use the inset variant so keyboard focus is fully visible. */
+.g-row--tappable:focus-visible {
+	outline: none;
+	box-shadow: var(--g-shadow-focus-ring-inset);
+}
 /* divider 1px --hair, inset 15px each side; first row exempt (§10.1 #3) */
 .g-row + .g-row::before {
 	content: "";
