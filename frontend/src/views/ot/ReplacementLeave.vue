@@ -9,7 +9,12 @@
 				     "New Claim" in its empty state. -->
 				<div class="flex items-center justify-end">
 					<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
-						<GButton :label="__('New Claim')" class="g-btn--compact" @click="navigate" />
+						<GButton
+							:label="__('New Claim')"
+							class="g-btn--compact"
+							:disabled="!canClaim"
+							@click="navigate"
+						/>
 					</router-link>
 				</div>
 
@@ -55,7 +60,11 @@
 					<GEmptyState
 						v-else-if="!claims.data?.length"
 						:title="__('No replacement leave claimed')"
-						:body="__('Worked a rest day? Use New Claim above to claim the time back')"
+						:body="
+							canClaim
+								? __('Worked a rest day? Use New Claim above to claim the time back')
+								: __('No banked overtime to claim this month.')
+						"
 					/>
 					<router-link
 						v-for="claimRow in claims.data"
@@ -109,4 +118,8 @@ const claims = createResource({
 const monthLabel = computed(() =>
 	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMMM YYYY") : ""
 )
+
+// Nothing to convert -> no claim to make. Gate "New Claim" so the user is not
+// sent into a form that can only fail (the bank card below explains the 0).
+const canClaim = computed(() => (bank.data?.hours_available ?? 0) > 0)
 </script>
