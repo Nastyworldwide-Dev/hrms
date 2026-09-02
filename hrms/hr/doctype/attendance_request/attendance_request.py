@@ -89,6 +89,7 @@ class AttendanceRequest(Document):
 		)
 
 		return list(set(shifts))
+
 	def validate_in_out_times(self):
 		if not (self.in_time or self.out_time):
 			return
@@ -157,8 +158,12 @@ class AttendanceRequest(Document):
 			self.create_attendance_records()
 
 	def validate_mandatory_attachment(self):
-		# every request must carry supporting evidence (photo/document) before
-		# an approver can turn it into attendance
+		# a request may be required to carry supporting evidence before an approver
+		# can turn it into attendance — gated by the HR Setting
+		# `require_supporting_attachment`, off by default (HR confirmed optional).
+		if not frappe.utils.cint(frappe.db.get_single_value("HR Settings", "require_supporting_attachment")):
+			logger.debug("[attendance_request] attachment not required by HR Settings: %s", self.name)
+			return
 		if not frappe.db.exists(
 			"File",
 			{

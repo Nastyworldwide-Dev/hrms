@@ -904,8 +904,12 @@ def validate_filing_for_self(doc):
 
 
 def validate_mandatory_attachment(doc):
-	"""Requests must carry supporting evidence (a stored file, not just a File
-	row) before an approver can submit them."""
+	"""Requests may be required to carry supporting evidence (a stored file, not
+	just a File row) before an approver can submit them — gated by the HR Setting
+	`require_supporting_attachment`, off by default (HR confirmed these requests
+	do not always need evidence)."""
+	if not frappe.utils.cint(frappe.db.get_single_value("HR Settings", "require_supporting_attachment")):
+		return
 	if not frappe.db.exists(
 		"File",
 		{

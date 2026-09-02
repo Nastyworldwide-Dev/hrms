@@ -598,6 +598,18 @@ def get_custom_fields():
 				"insert_after": "buying",
 			},
 		],
+		"HR Settings": [
+			{
+				# HR confirmed Attendance/OT/Replacement requests do not always need
+				# evidence. Off by default so they can be approved without an
+				# attachment; turn on to require one again — configurable, not a
+				# hardcoded mandatory.
+				"default": "0",
+				"fieldname": "require_supporting_attachment",
+				"fieldtype": "Check",
+				"label": _("Require a supporting attachment on Attendance / OT / Replacement requests"),
+			},
+		],
 	}
 
 	# provenance stamp for cross-instance mirroring — created by the install
