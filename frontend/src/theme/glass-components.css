@@ -383,6 +383,30 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	box-shadow: var(--g-shadow-focus-ring);
 }
 
+/* Desktop hover (§20 lg:). Only 2 hover rules shipped, so every button, row,
+   segment and sheet action was inert under a mouse. Gate on a fine pointer
+   that can hover — a bare :hover leaves the tint stuck after a tap on touch.
+   Same language as the existing hovers (sidenav, linkfield): a faint --icon-bg
+   wash on transparent tappables; a gentle brightness lift on filled/glass
+   surfaces, where a wash would erase the fill. Selected/disabled/pending and
+   toggled-on states opt out. */
+@media (hover: hover) and (pointer: fine) {
+	.g-row--tappable:hover,
+	.g-ghost-btn:hover:not(.g-btn--disabled),
+	.g-seg__option:hover:not(.g-seg__option--selected),
+	.g-sheet__action:hover:not([aria-disabled="true"]) {
+		background: var(--g-icon-bg);
+	}
+	.g-iconbtn:hover:not(.g-iconbtn--on) {
+		background: var(--g-icon-bg);
+		border-radius: var(--g-radius-input);
+	}
+	.g-btn:hover:not(.g-btn--disabled):not(.g-btn--pending),
+	.g-glass-ghost:hover {
+		filter: brightness(1.04);
+	}
+}
+
 /* §14.1 opt-in for controls the Glass layer does not own — frappe-ui Buttons
    render at h-7 (28px), and the theme picker is bespoke. Applying the token
    rather than a hardcoded height keeps them tied to the same minimum. */
@@ -479,7 +503,8 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	cursor: pointer;
 	overflow: hidden;
 	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
-		box-shadow var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
+		box-shadow var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
+		filter var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
 }
 .g-btn:active:not(.g-btn--disabled):not(.g-btn--pending) {
 	transform: scale(0.98);
