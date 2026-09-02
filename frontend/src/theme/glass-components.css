@@ -217,19 +217,14 @@ ion-tab-button.g-tabbar__btn {
 	flex: none;
 }
 .g-tabbar__well--active {
-	/* Selection as a change in the glass MATERIAL, not a painted badge and not a
-	   solid cut-out (both prior treatments — brand-green fill, then ink/white
-	   fill — were rejected). A denser translucent fill than the bar, ringed by a
-	   hairline rim with an inner top highlight and bottom shadow, so the well
-	   reads as pressed-in glass. The icon carries the emphasis at full ink
-	   contrast (via --color-selected on the button + this color), standing out
-	   from the muted inactive icons; ion-tab-button also announces selection
-	   natively, so colour is never the sole carrier. Theme-adaptive through the
-	   rim/ink tokens. */
-	background: rgba(var(--g-ink-rgb) / 0.1);
+	/* NO container, well, capsule or background behind the active item — the bar
+	   is one continuous glass material, and every prior treatment (brand-green
+	   fill, ink/white cut-out, and the nested translucent well) was rejected.
+	   Selection lives in the item ITSELF: the icon moves to full ink emphasis
+	   here while inactive icons stay muted (--g-ink3, from the button's
+	   --color), the label goes heavier + full-opacity below, and ion-tab-button
+	   announces selection natively. No second surface inside the navigation. */
 	color: var(--g-ink);
-	box-shadow: inset 0 0 0 1px var(--g-glass-rim), inset 0 1px 1px var(--g-rim-hi),
-		inset 0 -1px 2px var(--g-rim-lo);
 }
 .g-tabbar__label {
 	margin-top: 5px;
@@ -243,6 +238,12 @@ ion-tab-button.g-tabbar__btn {
 	letter-spacing: var(--g-type-tab-label-tracking);
 	line-height: var(--g-type-tab-label-line-height);
 	text-transform: uppercase;
+}
+/* Selection carried by the item itself (no container): the active label is
+   bolder and full-opacity while its colour lifts to --g-ink via the button's
+   --color-selected, against the muted inactive labels. */
+.g-tabbar__label--active {
+	font-weight: 700;
 }
 
 /* ---------- side nav (§20.2) ---------- */
@@ -296,13 +297,13 @@ html[data-transparency="reduce"] .g-sidenav {
 	background: var(--g-icon-bg);
 }
 .g-sidenav__item--active {
-	/* Same-class as the bottom tab: the selected item drops the brand-green
-	   accent for the app's non-green selected idiom — an ink accent bar, full
-	   ink text, and a persistent subtle surface (material difference) so "you
-	   are here" reads without a second CTA colour on the rail. */
+	/* Same reasoning as the tab bar (#14): no fill/container behind the row. The
+	   item itself carries selection — full ink text at a heavier weight — with a
+	   thin ink edge accent as the "you are here" indicator (an edge marker, not a
+	   container). Hover still supplies its own transient surface. */
 	border-left-color: var(--g-ink);
 	color: var(--g-ink);
-	background: var(--g-icon-bg);
+	font-weight: 700;
 }
 
 /* ---------- the recipe (§6) ---------- */

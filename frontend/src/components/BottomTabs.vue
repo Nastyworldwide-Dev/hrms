@@ -10,11 +10,15 @@
 			:href="item.route"
 			class="g-tabbar__btn"
 		>
-			<!-- §10.1 #8: 19×19 well, r7; active well takes --brand plus the glow -->
+			<!-- 19×19 icon slot. No container behind the active item (#14): the
+			     selected tab is carried by the icon (full ink) + bold label, not a
+			     well/capsule — the bar is one continuous glass material. -->
 			<span class="g-tabbar__well" :class="{ 'g-tabbar__well--active': isActive(item) }">
 				<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
 			</span>
-			<span class="g-tabbar__label">{{ item.shortTitle }}</span>
+			<span class="g-tabbar__label" :class="{ 'g-tabbar__label--active': isActive(item) }">{{
+				item.shortTitle
+			}}</span>
 		</ion-tab-button>
 	</ion-tab-bar>
 </template>
