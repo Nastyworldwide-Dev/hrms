@@ -46,6 +46,13 @@ import { ref } from "vue"
 import { Popover, FeatherIcon } from "frappe-ui"
 
 import { INSTALL_DISMISS_KEY, isWithinCooldown } from "@/utils/installPromptMemory"
+import { sessionUser } from "@/data/session"
+
+// The prompt is for people using the app, not for the login screen — a sheet
+// over the sign-in form is the wrong moment and obstructs "Forgot Password".
+// Logging in triggers a full reload (see data/session.js), so gating on the
+// session here is enough: the authed reload is where the prompt may appear.
+const isAuthed = () => !!sessionUser()
 
 // Initialize deferredPrompt for use later to show browser install prompt.
 const deferredPrompt = ref(null)
@@ -86,7 +93,7 @@ const isIos = () => {
 const isInStandaloneMode = () => "standalone" in window.navigator && window.navigator.standalone
 
 // Checks if should display install popup notification:
-if (isIos() && !isInStandaloneMode() && !recentlyHandled()) {
+if (isIos() && !isInStandaloneMode() && !recentlyHandled() && isAuthed()) {
 	iosInstallMessage.value = true
 }
 
@@ -97,8 +104,8 @@ window.addEventListener("beforeinstallprompt", (e) => {
 	deferredPrompt.value = e
 	// Honour a recent dismissal — the event fires on every load while
 	// installable, and re-popping the sheet over the tab bar each time is the
-	// nag this guard removes.
-	if (recentlyHandled()) return
+	// nag this guard removes. Never surface it to a logged-out visitor.
+	if (recentlyHandled() || !isAuthed()) return
 	if (isIos() && !isInStandaloneMode()) {
 		iosInstallMessage.value = true
 	} else {
