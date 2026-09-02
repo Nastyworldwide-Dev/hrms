@@ -284,7 +284,11 @@ const scrollContainer = ref(null)
 const hasNextPage = ref(true)
 const listOptions = ref({
 	doctype: props.doctype,
-	fields: props.fields,
+	// copy, don't alias: fetchDocumentList pushes the workflow-state field into
+	// this array, and sharing the prop's reference mutated the parent AND grew
+	// the query by a duplicate column on every fetch (mount, filter, paginate,
+	// pull-refresh, realtime).
+	fields: [...props.fields],
 	group_by: props.groupBy,
 	order_by: `\`tab${props.doctype}\`.modified desc`,
 	page_length: 50,
@@ -438,7 +442,7 @@ function fetchDocumentList(start = 0) {
 
 	if (appliedFilters.value) filters.push(...appliedFilters.value)
 
-	if (workflowStateField.value) {
+	if (workflowStateField.value && !listOptions.value.fields.includes(workflowStateField.value)) {
 		listOptions.value.fields.push(workflowStateField.value)
 	}
 

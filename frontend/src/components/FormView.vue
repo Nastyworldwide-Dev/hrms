@@ -265,7 +265,9 @@
 				v-else
 				:title="__('Could not open this {0}', [__(props.doctype)])"
 				:body="
-					__('It may have been removed, or you may not have access. Check your connection and try again.')
+					__(
+						'It may have been removed, or you may not have access. Check your connection and try again.'
+					)
 				"
 			>
 				<template #action>
@@ -849,7 +851,11 @@ onMounted(async () => {
 	background-color: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-hair);
 	border-radius: 0;
-	font-size: 14px;
+	/* 16px, not 14px: iOS Safari zooms the viewport on focus of any field under
+	   16px and does not cleanly zoom back. These form inputs use a different
+	   selector path from .g-input, so the app-wide 16px fix missed them and
+	   every leave/expense/OT form still zoomed on tap. */
+	font-size: 16px;
 	color: var(--g-ink);
 }
 .form-view-root :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
