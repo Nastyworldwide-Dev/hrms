@@ -1,18 +1,17 @@
 # HANDOFF
-prompt:   PWA↔backend flow audit — eliminate employee identity/permission anomalies
+prompt:   Migration Safety — auto-run fixes for import/create failures (no manual commands)
 status:   done
-commit:   e73d68d0b on nz-glass (4: 53327bd feat, 470ca32 fix, 60d6451 fix, e73d68d refactor)
-files:    hrms/utils/identity.py (+ hrms/tests/test_identity.py)
-          hrms/overrides/{employee_owned,approval,ot,employee_issue,sop_document}_row_scope.py
-          hrms/api/approval.py, hrms/hr/utils.py (own-employee resolvers)
-          hrms/overrides/test_row_scope_identity_parity.py
-          frontend/src/utils/identity.js (+ __tests__), frontend/src/main.js guard
-verify:   bench --site test.local run-tests --module hrms.overrides.test_row_scope_identity_parity
-          (run-tests env-broken here: installed_apps orjson/py3.14 — verified via console)
-          yarn --cwd frontend test  (identity.test.js 3 pass)
-flags:    A1 fence fail-open on ambiguous + A2 inactive self-read + A3 frontend case-drift
-          stranding — all fixed by one seam: identity.own_employees. Fence now agrees a
-          login = at most one Active Employee (multi-company-per-user branch removed,
-          was already unreachable via PWA). A4 (attendance queue) was a MISDIAGNOSIS —
-          Attendance Request is team-reviewed, managers do see/action reports. Not deployed.
-next:     deploy to a staging site and re-run the parity module where run-tests works
+commit:   6da223046 on nz-glass (2: aa888d82 naming self-heal, 6da22304 seed masters)
+files:    hrms/utils/naming_series_repair.py (+ test) — shared repair over advance_series_past
+          hrms/patches/v16_0/resync_naming_series_after_import.py — re-heal on deploy
+          hrms/patches/v16_0/repair_mirrored_naming_series.py — delegates now (dup loop removed)
+          hrms/hooks.py — Data Import on_update -> after_data_import (self-heals future imports)
+          hrms/patches/v16_0/seed_required_hr_masters.py (+ test) — Employment Type/Gender/Salutation
+          hrms/patches.txt — both patches registered
+verify:   bench --site <site> run-tests --module hrms.utils.test_naming_series_repair
+          (run-tests env-broken here: orjson/py3.14 — verified via bench console instead)
+flags:    Both fixes self-run on deploy (patches + doc-event hook); NO manual command needed
+          — Nabil's pipeline is code->commit->push->deploy. "HR-EMP-00318 already exists" on
+          manual New Employee = stale counter after import; masters gap = empty dropdown lists.
+next:     Cluster 1 (OT/RL engine): un-hardcode HOURS_PER_HALF_DAY (8h/day, Desk-config),
+          consolidate OT Pay + RL into one button, reuse _is_routed_approver.
