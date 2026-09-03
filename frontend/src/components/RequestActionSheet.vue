@@ -69,8 +69,40 @@
 		</div>
 
 		<!-- Actions -->
+		<!-- YOUR OWN draft: edit it or withdraw it. You can't approve your own
+		     request and have no delete permission on it, so without this a saved
+		     draft — already sitting in your approver's queue — was a one-way trip. -->
+		<div
+			v-if="isOwnDraft"
+			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+		>
+			<Button
+				@click="askWithdraw"
+				:loading="withdraw.loading"
+				:disabled="withdraw.loading"
+				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
+				variant="subtle"
+				theme="red"
+			>
+				<template #prefix>
+					<FeatherIcon name="trash-2" class="w-4" />
+				</template>
+				{{ __("Withdraw") }}
+			</Button>
+			<Button
+				@click="openFormView"
+				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
+				variant="solid"
+			>
+				<template #prefix>
+					<FeatherIcon name="edit-2" class="w-4" />
+				</template>
+				{{ __("Edit") }}
+			</Button>
+		</div>
+
 		<WorkflowActionSheet
-			v-if="workflow?.hasWorkflow"
+			v-else-if="workflow?.hasWorkflow"
 			:doc="document.doc"
 			:workflow="workflow"
 			view="actionSheet"
@@ -182,6 +214,21 @@
 			@cancel="pendingDecision = null"
 		>
 			{{ pendingDecision?.body }}
+		</GConfirm>
+
+		<!-- Withdraw own draft. -->
+		<GConfirm
+			:is-open="showWithdrawDialog"
+			:title="__('Withdraw this request?')"
+			:confirm-label="__('Withdraw')"
+			:cancel-label="__('Keep')"
+			destructive
+			@confirm="withdrawDraft"
+			@cancel="showWithdrawDialog = false"
+		>
+			{{
+				__("This removes your draft — your approver will no longer see it. This cannot be undone.")
+			}}
 		</GConfirm>
 	</div>
 </template>
@@ -309,6 +356,59 @@ const submitting = computed(
 )
 
 const sessionEmployee = inject("$employee")
+
+// Withdraw / edit your OWN draft. Employees have no delete permission on these
+// doctypes, so a fenced API (owner + docstatus 0) does the removal. Employee
+// Checkin is excluded on purpose — it is docstatus 0 and yours, but not a
+// withdrawable request.
+const WITHDRAWABLE_DOCTYPES = [
+	"Attendance Request",
+	"Leave Application",
+	"Expense Claim",
+	"Shift Request",
+	"OT Request",
+	"Replacement Leave Claim",
+]
+const isOwnDraft = computed(
+	() =>
+		WITHDRAWABLE_DOCTYPES.includes(props.modelValue.doctype) &&
+		document?.doc?.docstatus === 0 &&
+		document?.doc?.employee === sessionEmployee?.data?.name
+)
+
+const withdraw = createResource({ url: "hrms.api.withdraw_request" })
+const showWithdrawDialog = ref(false)
+function askWithdraw() {
+	showWithdrawDialog.value = true
+}
+function withdrawDraft() {
+	withdraw.submit(
+		{ doctype: props.modelValue.doctype, name: props.modelValue.name },
+		{
+			onSuccess() {
+				showWithdrawDialog.value = false
+				modalController.dismiss()
+				toast({
+					title: __("Withdrawn"),
+					text: __("Request withdrawn."),
+					icon: "check-circle",
+					position: "bottom-center",
+					iconClasses: "text-green-500",
+				})
+			},
+			onError(err) {
+				showWithdrawDialog.value = false
+				toast({
+					title: __("Error"),
+					text: err?.messages?.[0] || __("Could not withdraw the request."),
+					icon: "alert-circle",
+					position: "bottom-center",
+					iconClasses: "text-red-500",
+				})
+			},
+		}
+	)
+}
 
 function hasPermission(action) {
 	if (action === "approval" && props.modelValue.doctype === "Leave Application") {

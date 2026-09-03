@@ -83,6 +83,48 @@ def get_employee_identity_status() -> dict:
 	}
 
 
+#: Request doctypes an employee may withdraw their OWN still-draft record.
+#: Whitelisting keeps withdraw_request from becoming a delete-any-document hole
+#: (Employee Checkin is deliberately absent — a punch is not a withdrawable
+#: request even though it is docstatus 0).
+WITHDRAWABLE_REQUEST_DOCTYPES = frozenset(
+	{
+		"Attendance Request",
+		"Leave Application",
+		"Expense Claim",
+		"Shift Request",
+		"OT Request",
+		"Replacement Leave Claim",
+	}
+)
+
+
+@frappe.whitelist()
+def withdraw_request(doctype: str, name: str) -> None:
+	"""Delete the caller's OWN, still-DRAFT request.
+
+	Employees have no `delete` permission on these doctypes by design, so a saved
+	draft — already sitting in the approver's queue (for_approval selects
+	docstatus 0) — could never be recalled by the person who filed it. A draft
+	was never approved, so pulling it back leaves no audit gap. This method IS
+	the authorization: the fence is explicit — a whitelisted request doctype,
+	owned by the caller, still docstatus 0 — and only then is the delete run with
+	ignore_permissions.
+	"""
+	if doctype not in WITHDRAWABLE_REQUEST_DOCTYPES:
+		frappe.throw(_("{0} cannot be withdrawn.").format(_(doctype)))
+	doc = frappe.get_doc(doctype, name)
+	if doc.owner != frappe.session.user:
+		logger.warning(
+			"[api] withdraw denied: %s is not the owner of %s %s", frappe.session.user, doctype, name
+		)
+		frappe.throw(_("You can only withdraw a request you filed."), frappe.PermissionError)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("This request was already acted on and can no longer be withdrawn."))
+	logger.info("[api] withdraw %s %s by %s", doctype, name, frappe.session.user)
+	frappe.delete_doc(doctype, name, ignore_permissions=True)
+
+
 # staff lockdown: non-HR callers get a minimal PDPA-safe directory
 STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", "image"]
 

@@ -16,7 +16,7 @@ HR-fence access open and everyone else shut.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from hrms.api import _may_read_employee, get_leave_types, get_shifts
+from hrms.api import _may_read_employee, get_leave_types, get_shifts, withdraw_request
 
 COMPANY = "_Test Company"
 
@@ -181,3 +181,17 @@ class TestLeaveTypeEligibility(FrappeTestCase):
 		frappe.db.set_value("Employee", emp, "date_of_joining", add_days(nowdate(), -400))
 		frappe.clear_document_cache("Employee", emp)
 		self.assertIn(lt, get_leave_types(emp, nowdate()))
+
+
+class TestWithdrawRequest(FrappeTestCase):
+	"""withdraw_request lets an employee delete their OWN, still-draft request.
+	The whitelist is the load-bearing fence — it must never become a
+	delete-any-document hole. Owner + docstatus guards run after get_doc and are
+	covered by full integration runs; pinned here is the doctype gate, which
+	refuses before any fetch or delete."""
+
+	def test_rejects_non_whitelisted_doctype(self):
+		# generic doctypes, and Employee Checkin (docstatus 0 and yours, but NOT a
+		# withdrawable request), are all refused up front.
+		for dt in ("ToDo", "User", "Employee Checkin"):
+			self.assertRaises(frappe.ValidationError, withdraw_request, dt, "whatever")
