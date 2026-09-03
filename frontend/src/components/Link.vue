@@ -43,6 +43,9 @@ const emit = defineEmits(["update:modelValue"])
 const autocompleteRef = ref(null)
 const searchText = ref("")
 
+// initial rows shown before the user types; search_link's own default is 10
+const PAGE_LENGTH = 20
+
 const value = computed({
 	get: () => props.modelValue,
 	set: (val) => {
@@ -60,6 +63,10 @@ const options = createResource({
 		doctype: props.doctype,
 		txt: searchText.value,
 		filters: props.filters,
+		// search_link defaults to 10 — too few for masters like Department (300+)
+		// or Cost Center, which then look "partially displayed". Show a fuller
+		// first page; typing still narrows via txt for anything past it.
+		page_length: PAGE_LENGTH,
 	},
 	method: "POST",
 	transform: (data) => {
@@ -89,6 +96,7 @@ const reloadOptions = (searchTextVal) => {
 			txt: searchTextVal,
 			doctype: props.doctype,
 			filters: props.filters,
+			page_length: PAGE_LENGTH,
 		},
 	})
 	options.reload()
