@@ -34,7 +34,8 @@
 					<span class="text-xs text-ink-600">
 						{{
 							__(
-								"0.5 day costs 4 h, 1 day costs 8 h. Overtime stays claimable for the whole leave period, then expires — the same period the approved days live in once claimed."
+								"0.5 day costs {0} h, 1 day costs {1} h. Overtime stays claimable for the whole leave period, then expires — the same period the approved days live in once claimed.",
+								[rlHoursPerDay / 2, rlHoursPerDay]
 							)
 						}}
 					</span>
@@ -99,8 +100,13 @@ import BaseLayout from "@/components/BaseLayout.vue"
 import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
+import { settings } from "@/data/settings"
+
 const employee = inject("$employee")
 const __ = inject("$translate")
+
+// HR's configurable ratio: banked overtime hours per day of leave (default 8)
+const rlHoursPerDay = computed(() => settings.data?.replacement_leave_hours_per_day ?? 8)
 
 const bank = createResource({
 	url: "hrms.api.get_replacement_leave_bank_summary",

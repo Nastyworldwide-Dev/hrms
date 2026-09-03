@@ -23,9 +23,10 @@
 				</div>
 				<div class="text-kra-label text-ink-600 leading-tight">
 					{{
-						__("{0} bank: {1} h unclaimed · 0.5 day = 4 h", [
+						__("{0} bank: {1} h unclaimed · 0.5 day = {2} h", [
 							monthLabel,
 							bank.data?.hours_available ?? 0,
+							halfDayHours,
 						])
 					}}
 				</div>
@@ -50,10 +51,14 @@ import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
 import { formatLeaveDays } from "@/utils/formatters"
+import { settings } from "@/data/settings"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
+
+// half a leave day in banked-overtime hours, from HR's configurable ratio (default 8/day)
+const halfDayHours = computed(() => (settings.data?.replacement_leave_hours_per_day ?? 8) / 2)
 
 const bank = createResource({
 	url: "hrms.api.get_replacement_leave_bank_summary",

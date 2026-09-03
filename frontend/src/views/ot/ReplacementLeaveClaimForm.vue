@@ -23,6 +23,8 @@ import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 
+import { settings } from "@/data/settings"
+
 import FormView from "@/components/FormView.vue"
 
 const employee = inject("$employee")
@@ -68,11 +70,13 @@ const bank = createResource({
 	onSuccess(data) {
 		claim.value.available_hours = data.hours_available
 		const daysField = formFields.data.find((f) => f.fieldname === "claimed_days")
-		if (daysField)
+		if (daysField) {
+			const rlHrs = settings.data?.replacement_leave_hours_per_day ?? 8
 			daysField.description = __(
-				"{0} banked hours available to claim — 0.5 day costs 4 h, 1 day costs 8 h",
-				[data.hours_available]
+				"{0} banked hours available to claim — 0.5 day costs {1} h, 1 day costs {2} h",
+				[data.hours_available, rlHrs / 2, rlHrs]
 			)
+		}
 		// re-check now that the cap is known — the days watcher does not fire when
 		// the bank loads, so a claim typed before it arrived stayed unvalidated.
 		validateClaimedDays()
