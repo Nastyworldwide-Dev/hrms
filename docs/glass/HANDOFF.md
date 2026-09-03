@@ -1,19 +1,15 @@
 # HANDOFF
-prompt:   real-world reliability + UX sweep (untested/unknown failure paths)
-status:   partial
-commit:   764515cf6 on nz-glass (16 fixes this session)
-files:    CheckInPanel.vue RequestActionSheet.vue FormView.vue ListView.vue
-          Profile.vue composables/realtime.js composables/useCurrencyConversion.js
-          views/kpi/Dashboard.vue AttendanceCalendar.vue router+main (orphan route)
-          hrms/api/__init__.py + ot_request.py (+ tests) — OT fractional pay
-verify:   cd frontend && yarn build && node --test "src/**/*.test.js"  (48 pass)
-          ruff check hrms/  (clean); OT python tests NOT run here (bench bootstrap
-          broken — MagicMock/orjson), verified by logic+ruff, will run in CI
-flags:    OT fractional-pay confirmed by product owner. DEFERRED: GDatePicker
-          min/max (frappe-ui 0.1.105 has no support; server-guarded), FormField
-          validation field-flag (error text shows; border/aria needs 6-control
-          rework + preview). Pre-commit hook bundles co-modified files into one
-          commit (2 fixes landed co-located but correct).
-next:     remaining P2/minor: dirty-guard on back-nav, double-submit dialog
-          disable, empty required child-table, OTP new-tab, push taps non-Chrome,
-          timezone plugin (needs site-TZ decision). None are crashes/dead-ends.
+prompt:   P0 — notification opens a doc the user can't read, stuck till reload
+status:   done
+commit:   b9162febe on nz-glass (3 commits: 7c831a70e fix, 5b9126615 docs, b9162febe fix)
+files:    frontend/src/components/ResourceError.vue (+ back on 8 detail forms)
+          frontend/src/utils/loudRequest.js (+ __tests__/loudRequest.test.js)
+          frontend/src/components/Link.vue
+          docs/glass/runbook/{diagnose-empty-dropdowns,who-can-see-the-issue-board}.py
+verify:   cd frontend && node --experimental-test-module-mocks --test "src/**/*.test.js"
+          116 pass; 3 PRE-EXISTING fails (realtime-teardown, call-error-handling)
+flags:    root cause was a superior tapping a notif for a doc not routed to him
+          (both documentResource.get + get_attachments 403). NOT built/deployed —
+          user deploys. FormView doc-load Back already existed; this adds the
+          field-meta Back + silences the redundant get_attachments toast.
+next:     chain-of-command (reports_to) as first-class in notif/permission scope
