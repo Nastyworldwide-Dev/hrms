@@ -60,3 +60,16 @@ export function formatAccuracy(accuracyM) {
 	if (m >= 1000) return `±${(m / 1000).toFixed(1)} km`
 	return `±${Math.round(m)} m`
 }
+
+// Whether an incoming GPS reading should replace the one we are holding.
+// watchPosition streams readings as the fix refines AND drifts, so we keep the
+// SHARPEST (lowest accuracy in metres), not merely the latest — otherwise a
+// later, worse reading places a stationary user "outside" their own office (the
+// 102 m-from-Damansara report). Correct for the short, stationary check-in/out
+// window. Unknown incoming accuracy never displaces a real fix; the first
+// reading is always taken so the map can center.
+export function shouldReplaceFix(currentAccuracyM, incomingAccuracyM, hasFix) {
+	if (!hasFix) return true
+	if (incomingAccuracyM == null) return false
+	return currentAccuracyM == null || incomingAccuracyM <= currentAccuracyM
+}

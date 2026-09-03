@@ -12,6 +12,7 @@ const {
 	describeGeolocationError,
 	formatAccuracy,
 	geolocationBlockedReason,
+	shouldReplaceFix,
 } = await import("../geolocation.js")
 
 const fakeWindow = ({ geolocation = {}, isSecureContext = true } = {}) => ({
@@ -61,4 +62,29 @@ test("a reading with no usable estimate formats as nothing at all", () => {
 	for (const value of [null, undefined, 0, -1, "abc", Number.NaN, Number.POSITIVE_INFINITY]) {
 		assert.equal(formatAccuracy(value), null, `expected null for ${String(value)}`)
 	}
+})
+
+test("first fix is always taken so the map can center", () => {
+	assert.equal(shouldReplaceFix(null, 999, false), true)
+	assert.equal(shouldReplaceFix(50, 999, false), true)
+})
+
+test("a sharper reading replaces a blurrier one", () => {
+	assert.equal(shouldReplaceFix(50, 10, true), true)
+})
+
+test("a blurrier reading never displaces a sharp fix (the 102m drift)", () => {
+	assert.equal(shouldReplaceFix(15, 120, true), false)
+})
+
+test("equal accuracy takes the fresher reading", () => {
+	assert.equal(shouldReplaceFix(20, 20, true), true)
+})
+
+test("unknown incoming accuracy never displaces a real fix", () => {
+	assert.equal(shouldReplaceFix(20, null, true), false)
+})
+
+test("a real fix replaces one with unknown accuracy", () => {
+	assert.equal(shouldReplaceFix(null, 30, true), true)
 })
