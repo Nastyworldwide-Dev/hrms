@@ -8,7 +8,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_first_day, get_link_to_form, getdate
 
-from hrms.hr.doctype.ot_request.ot_request import HOURS_PER_HALF_DAY, get_replacement_leave_bank
+from hrms.hr.doctype.ot_request.ot_request import (
+	get_replacement_leave_bank,
+	replacement_leave_hours_per_day,
+)
 from hrms.hr.utils import (
 	create_additional_leave_ledger_entry,
 	get_leave_period,
@@ -62,7 +65,7 @@ class ReplacementLeaveClaim(Document):
 			frappe.throw(_("Days Claimed must be at least 0.5"))
 		if (days * 2) % 1 != 0:
 			frappe.throw(_("Days Claimed must be in half-day steps (0.5, 1.0, 1.5 ...)"))
-		self.hours_cost = cint(days * 2 * HOURS_PER_HALF_DAY)
+		self.hours_cost = cint(days * replacement_leave_hours_per_day())
 		if self.hours_cost > cint(self.available_hours):
 			frappe.throw(
 				_(

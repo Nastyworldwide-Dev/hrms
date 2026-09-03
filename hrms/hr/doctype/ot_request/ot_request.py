@@ -23,8 +23,26 @@ logger = logging.getLogger(__name__)
 OT_PAY = "Overtime Pay"
 REPLACEMENT_LEAVE = "Replacement Leave"
 
-# a replacement-leave claim buys leave in 4-hour half-day steps
-HOURS_PER_HALF_DAY = 4
+
+def replacement_leave_hours_per_day() -> float:
+	"""Banked overtime hours that convert to ONE day of replacement leave.
+
+	HR-configurable via HR Settings; defaults to 8 (a standard working day) so a
+	site that has not set it behaves exactly as the old hardcoded ratio (8h = 1
+	day, 4h = half a day). Un-hardcoded because the 8 was baked into the backend
+	AND copied into the PWA text — two places to drift, neither editable by HR.
+
+	Fails open to 8: get_single_value RAISES on a site where the custom field is
+	not present yet (before this release's patch runs, or a half-migrated site), and
+	a replacement-leave claim must not crash on that. Same fail-open-to-default shape
+	as _company_weekend in ot_calculation.
+	"""
+	try:
+		value = frappe.db.get_single_value("HR Settings", "replacement_leave_hours_per_day")
+	except Exception:
+		logger.warning("[ot_request] replacement_leave_hours_per_day field missing — defaulting to 8")
+		value = None
+	return flt(value) or 8.0
 
 
 class OTRequest(Document, PWANotificationsMixin):

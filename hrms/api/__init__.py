@@ -220,6 +220,9 @@ def get_hr_settings() -> dict:
 			get_employee(), "allow_geolocation_tracking"
 		),
 		prevent_self_leave_approval=settings.prevent_self_leave_approval,
+		# hours of banked overtime that buy one replacement-leave day; the PWA shows
+		# "0.5 day = Xh" from this so its label cannot drift from the backend math.
+		replacement_leave_hours_per_day=flt(settings.get("replacement_leave_hours_per_day")) or 8.0,
 	)
 
 

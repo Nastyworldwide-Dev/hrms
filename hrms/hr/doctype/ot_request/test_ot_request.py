@@ -9,7 +9,10 @@ from frappe.utils import add_months, flt, get_datetime, getdate, today
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.hr.doctype.ot_request.ot_request import get_replacement_leave_bank
+from hrms.hr.doctype.ot_request.ot_request import (
+	get_replacement_leave_bank,
+	replacement_leave_hours_per_day,
+)
 from hrms.utils.ot_calculation import get_ot_pay
 from hrms.utils.test_ot_calculation import create_shift_type
 
@@ -215,3 +218,20 @@ class TestOTRequest(FrappeTestCase):
 		self.assertEqual(bank["hours_total"], 3)
 		self.assertEqual(bank["hours_claimed"], 0)
 		self.assertEqual(bank["hours_available"], 3)
+
+
+class TestReplacementLeaveHoursPerDay(FrappeTestCase):
+	"""The banked-hours-per-leave-day ratio must come from HR Settings (default 8),
+	not a hardcoded constant — so HR can configure it and the PWA label can't drift."""
+
+	def setUp(self):
+		frappe.db.savepoint("rl_ratio")
+		self.addCleanup(frappe.db.rollback, save_point="rl_ratio")
+
+	def test_defaults_to_eight_when_unset(self):
+		frappe.db.set_single_value("HR Settings", "replacement_leave_hours_per_day", 0)
+		self.assertEqual(replacement_leave_hours_per_day(), 8.0)
+
+	def test_reads_the_configured_value(self):
+		frappe.db.set_single_value("HR Settings", "replacement_leave_hours_per_day", 6)
+		self.assertEqual(replacement_leave_hours_per_day(), 6.0)
