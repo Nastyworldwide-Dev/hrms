@@ -12,7 +12,7 @@
 				:requireAttachment="false"
 				@validateForm="validateForm"
 			/>
-			<ResourceError :resource="formFields" what="the replacement leave claim form" />
+			<ResourceError :resource="formFields" back what="the replacement leave claim form" />
 		</ion-content>
 	</GPage>
 </template>

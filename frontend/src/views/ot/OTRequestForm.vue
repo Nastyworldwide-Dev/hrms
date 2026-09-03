@@ -12,7 +12,7 @@
 				:requireAttachment="false"
 				@validateForm="validateForm"
 			/>
-			<ResourceError :resource="formFields" what="the overtime request form" />
+			<ResourceError :resource="formFields" back what="the overtime request form" />
 		</ion-content>
 	</GPage>
 </template>

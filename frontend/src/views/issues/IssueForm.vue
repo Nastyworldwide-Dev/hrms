@@ -11,7 +11,7 @@
 				:showAttachmentView="true"
 				@validateForm="validateForm"
 			/>
-			<ResourceError :resource="formFields" what="the issue form" />
+			<ResourceError :resource="formFields" back what="the issue form" />
 		</ion-content>
 	</GPage>
 </template>

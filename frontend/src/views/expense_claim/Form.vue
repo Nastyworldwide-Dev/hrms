@@ -36,7 +36,7 @@
 					/>
 				</template>
 			</FormView>
-			<ResourceError :resource="formFields" what="the expense claim form" />
+			<ResourceError :resource="formFields" back what="the expense claim form" />
 		</ion-content>
 	</GPage>
 </template>

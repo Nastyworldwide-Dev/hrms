@@ -12,7 +12,7 @@
 				:requireAttachment="false"
 				@validateForm="validateForm"
 			/>
-			<ResourceError :resource="formFields" what="the attendance request form" />
+			<ResourceError :resource="formFields" back what="the attendance request form" />
 		</ion-content>
 	</GPage>
 </template>

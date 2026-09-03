@@ -39,6 +39,15 @@ test("a link-picker search failure is logged but never toasted", async () => {
 	assert.deepEqual(toasts, [], "search_link must not raise a user-facing toast")
 })
 
+test("a detail-form attachment fetch failure is logged but never toasted", async () => {
+	// A boss opening a notification for a request not routed to him 403s on both
+	// the document AND get_attachments; the form's own "could not open" screen is
+	// the feedback, so the parallel attachment failure must stay silent.
+	const { loud, toasts } = harness()
+	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_attachments" }))
+	assert.deepEqual(toasts, [], "get_attachments must not raise a user-facing toast")
+})
+
 test("the same failure on any other endpoint still toasts", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))

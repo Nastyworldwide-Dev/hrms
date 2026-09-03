@@ -10,7 +10,7 @@
 				:id="props.id"
 				@validateForm="validateForm"
 			/>
-			<ResourceError :resource="formFields" what="the shift assignment form" />
+			<ResourceError :resource="formFields" back what="the shift assignment form" />
 		</ion-content>
 	</GPage>
 </template>

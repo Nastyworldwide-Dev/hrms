@@ -34,7 +34,17 @@ const SILENT_EXCEPTIONS = new Set(["AuthenticationError", "SessionExpired", "Ses
 // The control's own empty state is the right feedback for a lookup that
 // returned nothing. Still logged to the console — silent to the user, never to
 // a developer.
-const SILENT_ENDPOINTS = new Set(["frappe.desk.search.search_link"])
+//
+// get_attachments is the same shape one layer up: a detail form fires it in
+// PARALLEL with loading the document, so when the caller cannot READ that
+// document (a boss taps a notification for a request that is not routed to him)
+// BOTH 403 at once. The document failure already draws FormView's "Could not
+// open this — you may not have access" screen WITH a Back button; the parallel
+// get_attachments failure only piled a second toast of raw backend vocabulary
+// ("...does not have permission... Leave Application") on top of it. That toast
+// was the visible half of the "stuck on a permission error" report. Silence it:
+// the form's own error state is the single, escapable feedback.
+const SILENT_ENDPOINTS = new Set(["frappe.desk.search.search_link", "hrms.api.get_attachments"])
 
 function endpointOf(options) {
 	const url = options?.url || "unknown endpoint"
