@@ -29,6 +29,7 @@ from hrms.utils.identity import (
 	denial_message,
 	get_employee,
 	normalize_login,
+	own_employees,
 	require_employee,
 	resolve_employee_identity,
 )
@@ -330,3 +331,46 @@ class TestNormalization(FrappeTestCase):
 		self.assertEqual(normalize_login(""), "")
 		self.assertEqual(normalize_login(None), "")
 		self.assertEqual(normalize_login(123), "")
+
+
+class TestOwnEmployees(FrappeTestCase):
+	"""`own_employees` is what the permission hooks resolve identity with, so it
+	must answer with the SAME rule the app's `resolve_employee_identity` uses:
+	exactly one Active Employee, case-insensitively, else empty. These pin the
+	three divergences the hand-rolled `{"user_id": user}` copies carried."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.staff = make_employee("own_staff@example.com", company=COMPANY)
+
+	def setUp(self):
+		frappe.db.savepoint("own_emp_test")
+		self.addCleanup(frappe.db.rollback, save_point="own_emp_test")
+
+	def test_active_employee_resolves_to_a_single_name(self):
+		self.assertEqual(own_employees("own_staff@example.com"), [self.staff])
+
+	def test_case_drifted_user_id_still_resolves(self):
+		# The mirror wrote user_id unnormalized; the app resolves it and so must
+		# the fence, or the person's own rows vanish from every list view.
+		frappe.db.set_value("Employee", self.staff, "user_id", "Own_Staff@Example.com", update_modified=False)
+		self.assertEqual(own_employees("  own_staff@EXAMPLE.com "), [self.staff])
+
+	def test_inactive_employee_gets_no_scope(self):
+		# The login denies an inactive employee; the fence must too, or an
+		# offboarded person keeps row-level read of their own HR data.
+		frappe.db.set_value("Employee", self.staff, "status", "Left", update_modified=False)
+		self.assertEqual(own_employees("own_staff@example.com"), [])
+
+	def test_ambiguous_mapping_fails_closed_not_open(self):
+		# Two Active rows share the login. The app denies (AMBIGUOUS); the fence
+		# must not hand this session BOTH people's data — the exact fail-open the
+		# `pluck`-everything copies produced.
+		twin = make_employee("own_twin@example.com", company=COMPANY)
+		frappe.db.set_value("Employee", twin, "user_id", "own_staff@example.com", update_modified=False)
+		self.assertEqual(own_employees("own_staff@example.com"), [])
+
+	def test_guest_and_unknown_get_no_scope(self):
+		self.assertEqual(own_employees("Guest"), [])
+		self.assertEqual(own_employees("nobody_here@example.com"), [])

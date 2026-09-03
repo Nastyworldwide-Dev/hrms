@@ -254,6 +254,44 @@ def get_employee(user: str | None = None) -> str | None:
 	return resolve_employee_identity(user).employee
 
 
+def own_employees(user: str | None = None) -> list[str]:
+	"""The caller's own Active Employee as a 0-or-1 element list — the read-only,
+	write-free sibling of `get_employee`, for the permission-hook layer.
+
+	A `permission_query_conditions` hook runs *inside* a read and on every list
+	query, so it must (a) never write — which rules out `get_employee`, whose
+	resolver provisions the Employee role and links SSO accounts — and (b) answer
+	"who is this?" the SAME way the app does, or the fence and the app disagree
+	about someone's identity. Before this, six hooks hand-rolled
+	`get_all("Employee", {"user_id": user})`, and that copy carried three bugs the
+	canonical resolver had already fixed everywhere else:
+
+	  * raw compare — missed the case-drifted `user_id` a mirror writes through
+	    `db.set_value`, so a user the app resolves fine had an empty fence;
+	  * inconsistent status — four of the six omitted `status = "Active"`, so an
+	    offboarded employee kept row-level read the login already denied;
+	  * every match returned — two Active rows (which the app denies as
+	    `AMBIGUOUS`) became "see both people's data" one layer down.
+
+	Returns `[name]` for exactly one Active claimant; `[]` for none, inactive-only,
+	or ambiguous — the fence's fail-closed, mirroring the rule that a login maps to
+	at most one Active Employee. List-typed because every caller it replaces builds
+	an `employee in (...)` clause from a `pluck`.
+	"""
+	user = user if user is not None else frappe.session.user
+	normalized = normalize_login(user)
+	if not normalized or user in _NON_EMPLOYEE_USERS:
+		return []
+	# Fast path: session logins are already normalized (User.autoname lowercases),
+	# so an exact match is index-sargable and catches everyone but the case-drifted
+	# mirror rows — for which the normalizing scan (the same query the canonical
+	# resolver uses) is the fallback, paid only on a miss.
+	active = frappe.get_all("Employee", filters={"user_id": normalized, "status": "Active"}, pluck="name")
+	if not active:
+		active = [row.name for row in _employees_claiming(normalized) if row.status == "Active"]
+	return active if len(active) == 1 else []
+
+
 def get_employee_info(user: str | None = None, fields: tuple[str, ...] | None = None) -> dict | None:
 	"""The caller's Employee as a dict of `fields`, or None when denied."""
 	employee = get_employee(user)
