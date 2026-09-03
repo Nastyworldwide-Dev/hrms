@@ -232,6 +232,7 @@ import {
 	describeGeolocationError,
 	formatAccuracy,
 	geolocationBlockedReason,
+	shouldReplaceFix,
 } from "@/utils/geolocation"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
@@ -430,9 +431,16 @@ const nextAction = computed(() => {
 })
 
 function handleLocationSuccess(position) {
+	const acc = position.coords.accuracy ?? null
+	// Keep the SHARPEST fix over the modal's short, stationary window, not merely
+	// the latest: watchPosition streams readings as GPS refines AND drifts, and a
+	// later, worse reading must not overwrite a good one and place a present user
+	// outside their own office (the 102 m-from-Damansara report).
+	if (!shouldReplaceFix(accuracyM.value, acc, hasSessionFix)) return
+	console.info("[CheckInPanel] location fix updated, accuracy(m):", acc)
 	latitude.value = position.coords.latitude
 	longitude.value = position.coords.longitude
-	accuracyM.value = position.coords.accuracy ?? null
+	accuracyM.value = acc
 
 	const parts = [
 		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
@@ -580,9 +588,10 @@ const isInsideRadius = computed(() => {
 // about the consequence. Staff had no way to know that an out-of-range punch is
 // accepted and routed for approval rather than lost.
 //
-// Check-OUT is deliberately never warned about. People legitimately leave from a
-// client site or on the way home, and policing the exit is what makes staff
-// resent the whole feature. Location is still recorded; it is simply not judged.
+// Check-OUT is judged the same as check-in: HR requires clock-in and clock-out to
+// be in the same assigned area. The server already enforced this on the insert;
+// the screen used to say the opposite ("recorded as-is"), which is the mismatch
+// this removes. How strict that enforcement is stays the shift's own setting.
 const locationVerdict = computed(() => {
 	if (locationError.value) {
 		return {
@@ -623,16 +632,12 @@ const locationVerdict = computed(() => {
 	const away = d >= 1000 ? __("{0} km", [(d / 1000).toFixed(1)]) : __("{0} m", [Math.round(d)])
 	const radius = __("{0} m", [loc.checkin_radius])
 
-	// Check-out is never range-checked, so decide it BEFORE the inside/outside
-	// branches — otherwise a check-out from inside the office read "You're inside
-	// the check-in area. Go ahead and check in." (wrong verb on a checkout).
-	if (nextAction.value?.action === "OUT") {
-		return {
-			tone: "muted",
-			title: __("{0} from {1}", [away, loc.label]),
-			detail: __("Check-out is not range-checked. Your location is recorded as-is."),
-		}
-	}
+	// Check-out is range-checked exactly like check-in now — HR requires clock-in
+	// and clock-out to be in the same assigned area — so the verdict below speaks
+	// for both. `verb` keeps each sentence correct for whichever action is next;
+	// the degree of enforcement (block vs record-and-flag) is the shift's own
+	// strict/lenient setting, identical for both directions.
+	const verb = nextAction.value?.action === "OUT" ? __("check out") : __("check in")
 
 	if (isInsideRadius.value) {
 		// The accuracy grace already exists server-side — evaluate_geofence
@@ -643,14 +648,11 @@ const locationVerdict = computed(() => {
 		return {
 			tone: "ok",
 			title: __("You're at {0}", [loc.label]),
-			// Plain confirmation instead of "996 m inside the 1000 m area", which
-			// quoted distance-from-the-edge — a number nobody reasons in and that
-			// read like "996 m away". Inside is a yes/no; say yes.
 			detail: wide
-				? __(
-						"Your GPS reading is a little rough, but you're close enough — go ahead and check in."
-				  )
-				: __("You're inside the check-in area. Go ahead and check in."),
+				? __("Your GPS reading is a little rough, but you're close enough — go ahead and {0}.", [
+						verb,
+				  ])
+				: __("You're inside the check-in area. Go ahead and {0}.", [verb]),
 		}
 	}
 
@@ -658,9 +660,10 @@ const locationVerdict = computed(() => {
 		return {
 			tone: "blocked",
 			title: __("Too far from {0}", [loc.label]),
-			detail: __("You need to be within {0} of {1} to check in. Move closer and try again.", [
+			detail: __("You need to be within {0} of {1} to {2}. Move closer and try again.", [
 				radius,
 				loc.label,
+				verb,
 			]),
 		}
 	}
@@ -669,8 +672,8 @@ const locationVerdict = computed(() => {
 		tone: "warn",
 		title: __("{0} from {1}", [away, loc.label]),
 		detail: __(
-			"You're outside the {0} check-in area. You can still check in — it'll be sent to your approver to approve.",
-			[radius]
+			"You're outside the {0} check-in area. You can still {1} — it'll be sent to your approver to approve.",
+			[radius, verb]
 		),
 	}
 })
