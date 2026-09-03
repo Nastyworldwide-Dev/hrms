@@ -43,6 +43,8 @@ const props = defineProps({
 
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
-	return props.doc.docstatus ? "Submitted" : "Draft"
+	// Once submitted, show the real Open/Approved/Rejected decision (matches the
+	// detail view and ShiftRequestItem) — not a flat "Submitted" that hid it.
+	return props.doc.docstatus ? props.doc.status : "Draft"
 })
 </script>

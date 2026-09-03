@@ -413,6 +413,10 @@ def get_attendance_requests(
 		"to_date",
 		"include_holidays",
 		"shift",
+		# the Open/Approved/Rejected decision — without it the list could only
+		# fall back to docstatus and showed every submitted request as "Submitted",
+		# even an approved one.
+		"status",
 		"docstatus",
 		"creation",
 	]
