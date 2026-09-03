@@ -79,7 +79,9 @@ class Attendance(Document):
 			self.ot_rate_weighted_hours = 0
 			self.set("ot_rate_bands", [])
 			return
-		breakdown = get_shift_ot_breakdown(self.employee, self.shift, self.attendance_date, self.out_time)
+		breakdown = get_shift_ot_breakdown(
+			self.employee, self.shift, self.attendance_date, self.out_time, in_time=self.in_time
+		)
 		self.ot_hours = breakdown["ot_hours"]
 		self.ot_rate_weighted_hours = breakdown["rate_weighted_hours"]
 		self.set("ot_rate_bands", [])

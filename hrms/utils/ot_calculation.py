@@ -115,6 +115,36 @@ def _real_shift_end_dt(start_time, end_time, work_date):
 	return end_dt
 
 
+def _real_shift_start_dt(start_time, work_date) -> datetime:
+	"""Real shift-start datetime for a work date — the configured start, with no
+	early-arrival grace. Overtime is measured from here, never from an early punch."""
+	return datetime.combine(work_date, get_time(start_time))
+
+
+def _ot_window_begin(real_start, real_end, in_dt) -> datetime:
+	"""When overtime begins: the shift end, pushed later by however late the
+	employee clocked in. A late arrival owes that time back before OT counts; an
+	early arrival is never credited (lateness floored at 0).
+
+	This is the rule HR stated — OT = total hours worked - shift length — expressed
+	as a start time, so both OT paths (the day-level check-in scan and the
+	per-attendance one) price identically. The old code measured raw time past the
+	shift end, which handed every late-in employee overtime they had not yet earned:
+	a 9-6 shift clocked 9:30-6:30 is a completed 9h day, not 30 minutes of OT."""
+	late_seconds = 0.0
+	if real_start and in_dt and in_dt > real_start:
+		late_seconds = (in_dt - real_start).total_seconds()
+	return real_end + timedelta(seconds=late_seconds)
+
+
+def _ot_hours(real_start, real_end, in_dt, out_dt) -> float:
+	"""Overtime hours for one worked window, through the shared lateness-adjusted
+	rule. Zero when there is no clock-out or it does not pass the OT start."""
+	if not out_dt:
+		return 0.0
+	return max(0.0, (out_dt - _ot_window_begin(real_start, real_end, in_dt)).total_seconds() / 3600.0)
+
+
 def _real_shift_end_for_session(shift_name, session) -> datetime | None:
 	"""The real shift end a session's OT is measured against.
 
@@ -302,8 +332,19 @@ def _per_day_ot_hours(employee, start_date, end_date):
 		# shift_actual_end = end + allow_check_out_after buffer would silently drop OT).
 		# Pre-shift (early check-in) time is never counted as overtime.
 		real_end = _real_shift_end_for_session(s["shift"], s)
-		if real_end and s["last_out"] > real_end:
-			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], real_end, s["last_out"])
+		if not real_end:
+			continue
+		# OT begins at the shift end, pushed back by however late they clocked in —
+		# late arrival is made up first, early arrival never credited. Without this
+		# a 9-6 shift clocked 9:30-6:30 (a completed 9h day) was mis-billed 30m OT.
+		config = _get_shift_ot_config(s["shift"])
+		anchor = s.get("shift_start")
+		real_start = (
+			_real_shift_start_dt(config["start_time"], anchor.date()) if (config and anchor) else None
+		)
+		ot_begins = _ot_window_begin(real_start, real_end, s.get("first_in"))
+		if s["last_out"] > ot_begins:
+			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], ot_begins, s["last_out"])
 	return per_day_hours, per_day_shift
 
 
@@ -462,13 +503,15 @@ def _empty_breakdown():
 	return {"ot_hours": 0.0, "day_type": None, "bands": [], "rate_weighted_hours": 0.0, "ot_amount": 0.0}
 
 
-def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, basic=0):
+def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=None, basic=0):
 	"""Per-attendance OT priced from the attendance's OWN shift + last check-out.
 
-	Post-shift-end only: OT = max(0, out_time - real shift end), where the real end
-	ignores the allow_check_out_after grace buffer. Unlike the day-level checkin scan
-	(get_day_ot_breakdown), this reads the attendance's own shift and out_time, so it
-	is robust when the day has duplicate/reassigned attendances. Returns the same
+	OT = total hours worked - shift length: the shift end pushed later by however
+	late they clocked in (early arrival never credited), then out_time beyond that.
+	Pass in_time so the lateness is applied; without it this degrades to raw
+	post-shift-end. Unlike the day-level checkin scan (get_day_ot_breakdown), this
+	reads the attendance's own shift and in/out, so it is robust when the day has
+	duplicate/reassigned attendances. Returns the same
 	shape: {ot_hours, day_type, bands, rate_weighted_hours, ot_amount}. Salary lives
 	on the payroll platform, so basic defaults to 0 and amounts stay 0."""
 	attendance_date = getdate(attendance_date)
@@ -488,8 +531,12 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, basic=0):
 		return _empty_breakdown()
 
 	out_dt = get_datetime(out_time)
+	real_start = _real_shift_start_dt(config["start_time"], attendance_date)
 	real_end = _real_shift_end_dt(config["start_time"], config["end_time"], attendance_date)
-	ot_hours = max(0.0, (out_dt - real_end).total_seconds() / 3600.0)
+	in_dt = get_datetime(in_time) if in_time else None
+	# Same lateness-adjusted rule as the check-in scan, so the two OT paths agree:
+	# a late clock-in pushes OT later; an early one is ignored.
+	ot_hours = _ot_hours(real_start, real_end, in_dt, out_dt)
 
 	if ot_hours * 60.0 < config["min_minutes"]:
 		logger.info(

@@ -13,10 +13,12 @@ from hrms.utils.ot_calculation import (
 	_get_shift_ot_config,
 	_hourly_rate,
 	_ot_bands_for_day,
+	_ot_hours,
 	_pair_sessions,
 	_rate_weighted_hours,
 	_real_shift_end_dt,
 	_real_shift_end_for_session,
+	_real_shift_start_dt,
 	get_ot_pay,
 	get_shift_ot_breakdown,
 )
@@ -431,3 +433,44 @@ def create_shift_type(name, **args):
 	)
 	shift.insert()
 	return shift.name
+
+
+class TestOvertimeIsTotalHoursNotShiftEnd(FrappeTestCase):
+	"""HR's rule: overtime = total hours worked - shift length, NOT raw time past
+	the shift end. Late arrival is owed back before OT counts; early arrival is
+	never credited. Pure math, no DB — the exact table HR confirmed for a 9-6 shift.
+	"""
+
+	def _ot(self, in_hm, out_hm):
+		d = date(2026, 7, 22)
+		real_start = _real_shift_start_dt("09:00:00", d)
+		real_end = _real_shift_end_dt("09:00:00", "18:00:00", d)
+		in_dt = get_datetime(f"2026-07-22 {in_hm}:00") if in_hm else None
+		out_dt = get_datetime(f"2026-07-22 {out_hm}:00") if out_hm else None
+		return _ot_hours(real_start, real_end, in_dt, out_dt)
+
+	def test_on_time_full_day_is_no_overtime(self):
+		self.assertEqual(self._ot("09:00", "18:00"), 0.0)
+
+	def test_late_in_and_late_out_that_only_completes_the_day_is_no_overtime(self):
+		# 9:30 -> 6:30 is a completed 9h day, not 30 minutes of OT.
+		self.assertEqual(self._ot("09:30", "18:30"), 0.0)
+
+	def test_genuine_overtime_past_the_completed_day_counts(self):
+		# 9:30 -> 7:30 = 10h worked = 1h over the 9h shift.
+		self.assertEqual(self._ot("09:30", "19:30"), 1.0)
+
+	def test_early_arrival_is_never_credited(self):
+		# 8:30 -> 6:30: the early half hour is ignored, OT counts from 6:00.
+		self.assertEqual(self._ot("08:30", "18:30"), 0.5)
+
+	def test_late_in_without_making_it_up_is_not_overtime(self):
+		# 9:30 -> 6:00 leaves the day short; nothing past the (lateness-shifted) end.
+		self.assertEqual(self._ot("09:30", "18:00"), 0.0)
+
+	def test_missing_clock_out_is_zero(self):
+		self.assertEqual(self._ot("09:00", None), 0.0)
+
+	def test_missing_clock_in_falls_back_to_past_shift_end(self):
+		# No IN punch -> no lateness known -> raw time past shift end.
+		self.assertEqual(self._ot(None, "19:00"), 1.0)
