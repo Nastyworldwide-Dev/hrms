@@ -312,6 +312,14 @@ doc_events = {
 		"on_update": "hrms.utils.holiday_list.invalidate_cache",
 		"on_trash": "hrms.utils.holiday_list.invalidate_cache",
 	},
+	"Data Import": {
+		# After an HR import lands rows with explicit names, advance that doctype's
+		# naming counter so the next Desk create cannot collide with an imported
+		# name (the "Employee HR-EMP-00318 already exists" trap HR hit creating a
+		# new employee). Self-heals every future import — the part a one-off patch
+		# structurally cannot reach, since imports happen after deploy.
+		"on_update": "hrms.utils.naming_series_repair.after_data_import",
+	},
 	"Timesheet": {"validate": "hrms.hr.utils.validate_active_employee"},
 	"Payment Entry": {
 		"on_submit": "hrms.hr.doctype.expense_claim.expense_claim.update_payment_for_expense_claim",

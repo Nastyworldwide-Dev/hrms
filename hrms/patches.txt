@@ -88,3 +88,4 @@ hrms.patches.v16_0.gate_hr_workspaces_to_hr_roles #2026-09-01 employees saw ever
 hrms.patches.v16_0.add_employee_roster_managed_field #2026-09-02 variable-shift staff must be hand-rostered, not rule-imposed
 hrms.patches.v16_0.add_shift_supervisor_role #2026-09-02 branch leaders roster their own team, fenced to reports+company
 hrms.patches.v16_0.add_require_supporting_attachment_setting #2026-09-02 attachment optional by default on attendance/ot/replacement
+hrms.patches.v16_0.resync_naming_series_after_import #2026-09-03 manual new-employee hit HR-EMP-00318 duplicate; import re-opened the counter hole
