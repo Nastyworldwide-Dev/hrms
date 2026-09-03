@@ -1,15 +1,15 @@
 # HANDOFF
-prompt:   Live red flag — check-out shows "not range-checked / 102 m" while user is in office
+prompt:   OT/Replacement-Leave engine — PWA consolidation (Cluster 1, final piece)
 status:   done
-commit:   027683bed on nz-glass (2: 6af59e58 sharpest GPS fix, 027683be check-out verdict honest)
-files:    frontend/src/utils/geolocation.js (+ __tests__) — shouldReplaceFix (keep sharpest)
-          frontend/src/components/CheckInPanel.vue — handleLocationSuccess uses it; check-out
-          verdict now honest (in/out, action-aware) instead of "recorded as-is"
-verify:   yarn --cwd frontend test  (geolocation.test.js 14 pass)
-flags:    ROOT CAUSE was a frontend↔backend MISMATCH — the server always range-checked
-          check-out; the screen said it didn't. Now check-out = check-in (HR: same area),
-          degree of enforcement stays the shift's strict/lenient setting (HR's choice, "C").
-          102 m = capture kept the LATEST GPS reading, not the SHARPEST; fixed. Server-side
-          accuracy grace (radius widened by device error) still covers real indoor drift.
-next:     back to OT engine Cluster 1 — PWA consolidation (one "Claim Overtime or Leave"
-          button, remove the 2 Attendance rows + redundant "1 day available" on Leaves).
+commit:   3de9295e1 on nz-glass
+files:    frontend/src/views/attendance/Dashboard.vue — 2 rows -> 1 "Claim Overtime or Leave"
+          frontend/src/components/ReplacementLeaveCard.vue — dropped duplicate days-available
+verify:   yarn --cwd frontend test (geolocation 14 pass); visual: Attendance shows 3 rows,
+          Leaves RL card shows bank + Claim only (no duplicate number)
+flags:    Cluster 1 DONE. OT calc correct + HR-configurable RL ratio (earlier commits);
+          entitlement = existing single tick (Pay OR Leave); approver = existing _is_routed_approver.
+          "Claim Overtime or Leave" -> OT request form (compensation read-only per entitlement);
+          both entitlements claim through it. RL bank convert stays on Leaves screen. "Request a
+          Leave" button unchanged (separate feature, per HR). Display-only change, no backend.
+next:     Cluster 1 complete. Remaining backlog: notification bug (confirm fixed vs new),
+          replacement-leave PH symptom, expense GL by company, announcement popup. Await direction.
