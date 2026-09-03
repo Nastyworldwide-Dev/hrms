@@ -14,13 +14,11 @@
 		<ResourceError :resource="bank" what="your replacement leave bank" />
 
 		<div class="flex flex-row items-center justify-between border-t-2 border-divider px-3 py-3.5">
+			<!-- The days-available number lived here too, duplicating the Replacement
+			     Leave cell in LeaveBalance directly above. Dropped; this card now
+			     carries only what LeaveBalance does not — the unclaimed OT bank you
+			     can still convert, and the button to convert it. -->
 			<div class="flex flex-col gap-1.5">
-				<div class="font-sans font-extrabold text-ring-centre leading-none text-inkbase">
-					{{ formatLeaveDays(bank.data?.balance_days ?? 0) }}
-				</div>
-				<div class="g-eyebrow">
-					{{ __("days available") }}
-				</div>
 				<div class="text-kra-label text-ink-600 leading-tight">
 					{{
 						__("{0} bank: {1} h unclaimed · 0.5 day = {2} h", [
@@ -50,7 +48,6 @@
 import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
-import { formatLeaveDays } from "@/utils/formatters"
 import { settings } from "@/data/settings"
 
 const employee = inject("$employee")

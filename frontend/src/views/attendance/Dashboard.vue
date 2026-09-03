@@ -13,12 +13,13 @@
 				</div>
 
 				<div class="contents">
-					<!-- FOUR PEERS, NO PRIMARY (§18 ranking rule, v1.11). "Request
-					     Attendance" was a chartreuse GButton while Overtime, Replacement
-					     Leave and Shift were list rows — four actions of equal weight with
-					     one arbitrarily promoted. A primary belongs on a screen with one
-					     obvious task; this is a menu, so all four are rows in one panel
-					     (§15.2 keeps that one surface). -->
+					<!-- PEERS, NO PRIMARY (§18 ranking rule, v1.11): equal-weight menu rows
+					     in one panel (§15.2). Overtime and Replacement Leave used to be two
+					     separate rows, but both are the SAME claim — you file the overtime
+					     you worked, and whether it pays out or banks as replacement leave is
+					     the employee's entitlement (HR-set), shown read-only on the form. One
+					     row, "Claim Overtime or Leave". Managing/converting the replacement-
+					     leave bank lives on the Leaves screen, where leave belongs. -->
 					<div class="order-2">
 						<GListPanel>
 							<GListRow
@@ -26,12 +27,8 @@
 								@click="router.push({ name: 'AttendanceRequestFormView' })"
 							/>
 							<GListRow
-								:label="__('Request Overtime')"
+								:label="__('Claim Overtime or Leave')"
 								@click="router.push({ name: 'OTRequestFormView' })"
-							/>
-							<GListRow
-								:label="__('Replacement Leave')"
-								@click="router.push({ name: 'ReplacementLeaveView' })"
 							/>
 							<GListRow
 								:label="__('Request a Shift')"
