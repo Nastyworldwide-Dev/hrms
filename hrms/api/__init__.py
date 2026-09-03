@@ -114,6 +114,17 @@ def withdraw_request(doctype: str, name: str) -> None:
 	if doctype not in WITHDRAWABLE_REQUEST_DOCTYPES:
 		frappe.throw(_("{0} cannot be withdrawn.").format(_(doctype)))
 	doc = frappe.get_doc(doctype, name)
+	# A row mirrored from the source ERP is read-only on this hub during the
+	# parallel run — the write-block on on_trash would refuse the delete anyway
+	# (and the sync owns the row, so the owner check below would too). Refuse
+	# here with a message that names the real fix instead of a generic denial.
+	stamp = doc.get("synced_from_instance")
+	if stamp:
+		frappe.throw(
+			_("This request is mirrored from {0} and can only be withdrawn on the source instance.").format(
+				stamp
+			)
+		)
 	if doc.owner != frappe.session.user:
 		logger.warning(
 			"[api] withdraw denied: %s is not the owner of %s %s", frappe.session.user, doctype, name

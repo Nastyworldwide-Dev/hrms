@@ -373,7 +373,12 @@ const isOwnDraft = computed(
 	() =>
 		WITHDRAWABLE_DOCTYPES.includes(props.modelValue.doctype) &&
 		document?.doc?.docstatus === 0 &&
-		document?.doc?.employee === sessionEmployee?.data?.name
+		document?.doc?.employee === sessionEmployee?.data?.name &&
+		// A row mirrored from the source ERP (synced_from_instance) is read-only
+		// on this hub during the parallel run — the write-block would refuse the
+		// edit/delete. Don't offer actions that can only fail; it is managed on
+		// the source instance.
+		!document?.doc?.synced_from_instance
 )
 
 const withdraw = createResource({ url: "hrms.api.withdraw_request" })
