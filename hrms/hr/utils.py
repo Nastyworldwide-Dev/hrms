@@ -937,8 +937,12 @@ def get_direct_report_employees(user: str) -> list[str]:
 	no Company UP is unfenced, matching hrms.overrides.company_scope.
 	"""
 	from hrms.overrides.company_scope import allowed_companies
+	from hrms.utils.identity import own_employees
 
-	own = frappe.get_all("Employee", filters={"user_id": user, "status": "Active"}, pluck="name")
+	# Canonical identity for the manager's own record too: a case-drifted mirror
+	# user_id no longer hides a manager's whole team, and two Active rows fail
+	# closed instead of unioning two people's reporting lines.
+	own = own_employees(user)
 	if not own:
 		return []
 

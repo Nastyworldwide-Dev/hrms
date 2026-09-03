@@ -106,10 +106,15 @@ def _is_routed_approver(doc) -> bool:
 	employee = doc.get("employee")
 	if not employee:
 		return False
-	my_employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
-	if not my_employee:
+	# Canonical identity, not a raw user_id read: a reports_to manager whose
+	# mirror user_id drifted in case would otherwise be refused approval of their
+	# own report's request; ambiguous logins fail closed here too.
+	from hrms.utils.identity import own_employees
+
+	mine = own_employees(user)
+	if not mine:
 		return False
-	routed = frappe.db.get_value("Employee", employee, "reports_to") == my_employee
+	routed = frappe.db.get_value("Employee", employee, "reports_to") == mine[0]
 	logger.debug("[approval] routing %s %s -> %s via reports_to: %s", doc.doctype, doc.name, user, routed)
 	return routed
 

@@ -14,6 +14,7 @@ import frappe
 from frappe.share import get_shared
 
 from hrms.hr.utils import sees_all_employee_data
+from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,9 @@ def _unrestricted(user: str) -> bool:
 
 
 def _own_employees(user: str) -> list[str]:
-	return frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
+	# Canonical identity, not a raw user_id read: normalized, Active-only, and
+	# fail-closed on ambiguity — the same single employee the app resolves.
+	return own_employees(user)
 
 
 def _reporting_employees(user: str) -> list[str]:

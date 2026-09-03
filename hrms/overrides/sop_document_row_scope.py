@@ -16,6 +16,7 @@ import frappe
 
 from hrms.hr.utils import is_hr_operator
 from hrms.overrides.company_scope import company_condition, company_visible
+from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +29,16 @@ def _unrestricted(user: str) -> bool:
 
 
 def _active_employee(user: str):
-	"""Active Employee row for the session user, or None (fail-closed input)."""
-	if not user or user == "Guest":
+	"""Active Employee row for the session user, or None (fail-closed input).
+
+	Resolved through the canonical identity primitive so the SOP fence keys off
+	the same single Active employee the app does — never a raw, case-sensitive,
+	arbitrary `get_value` pick that could hand one of two ambiguous rows or miss
+	a case-drifted mirror `user_id`."""
+	names = own_employees(user)
+	if not names:
 		return None
-	return frappe.db.get_value(
-		"Employee",
-		{"user_id": user, "status": "Active"},
-		["name", "department", "company"],
-		as_dict=True,
-	)
+	return frappe.db.get_value("Employee", names[0], ["name", "department", "company"], as_dict=True)
 
 
 def company_matches(company, employee_company) -> bool:

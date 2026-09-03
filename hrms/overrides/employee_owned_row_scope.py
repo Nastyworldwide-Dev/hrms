@@ -57,6 +57,7 @@ from frappe.share import get_shared
 
 from hrms.hr.utils import get_direct_report_employees, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies, company_visible
+from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -147,21 +148,17 @@ def _is_hr(user: str) -> bool:
 
 
 def _own_employees(user: str) -> list[str]:
-	"""The reader's own Employee records.
+	"""The reader's own Active Employee, via the canonical identity primitive.
 
-	Resolved with `ignore_permissions` on purpose: this is the user's own
-	identity lookup, not a data read. Routing it through permissions would make
-	the fence depend on the reader's ability to read the Employee doctype — the
-	exact fragile coupling that loses people access to their own records — and
-	would re-enter Employee's own query conditions from inside a query-condition
-	hook.
+	`own_employees` is already the user's own identity lookup, not a data read:
+	it never touches Employee's permission query conditions (no re-entrancy from
+	inside a query-condition hook) and never writes. It also fixes what the old
+	`ignore_permissions` read did not — it normalizes the login (a case-drifted
+	mirror `user_id` no longer empties the fence), it is Active-only (an
+	offboarded employee no longer keeps row-level read the login denies), and it
+	fails closed on ambiguity (two Active rows no longer expose both people).
 	"""
-	return frappe.get_all(
-		"Employee",
-		filters={"user_id": user},
-		pluck="name",
-		ignore_permissions=True,
-	)
+	return own_employees(user)
 
 
 def _company_condition(doctype: str, user: str) -> str:

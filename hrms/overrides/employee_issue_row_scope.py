@@ -16,6 +16,7 @@ from frappe.share import get_shared
 
 from hrms.hr.utils import is_hr_operator
 from hrms.overrides.company_scope import allowed_companies, company_condition, company_visible
+from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +26,18 @@ def _unrestricted(user: str) -> bool:
 
 
 def _own_employees(user: str) -> list[str]:
-	"""The user's Employee records, fenced to the companies they may reach.
+	"""The user's own Active Employee, fenced to the companies they may reach.
 
-	A user can hold an Employee record in more than one company on the group
-	hub; a company-fenced session must only surface the ones inside the fence.
-	Unfenced users (no allow=Company User Permission) get every record, exactly
-	as before."""
-	filters = {"user_id": user}
+	Resolved through the canonical identity primitive — normalized, Active-only,
+	and refusing ambiguity — the same single employee the app resolves (a login
+	maps to at most one Active Employee; two is denied at login, so the old
+	multi-company-per-user branch here was already unreachable via the PWA). A
+	company-fenced session still only surfaces a record inside its fence;
+	unfenced users (no allow=Company User Permission) keep it."""
+	own = own_employees(user)
 	companies = allowed_companies(user)
-	if companies:
-		filters["company"] = ("in", companies)
-	own = frappe.get_all("Employee", filters=filters, pluck="name")
+	if own and companies:
+		own = [e for e in own if frappe.db.get_value("Employee", e, "company") in companies]
 	logger.debug("[employee_issue_row_scope] own employees for %s: %s (companies=%s)", user, own, companies)
 	return own
 
