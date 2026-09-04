@@ -1,124 +1,84 @@
-# Nadi Go-Live — Master Plan
+# Nadi — Consolidated Plan (one source of truth)
 
-**One truth:** we are stuck mid-parallel-run. The cutover hasn't happened.
-Every "bug" is a link in ONE chain. Finish the cutover in order → the chain breaks.
+**One truth:** we're mid-parallel-run. Most "bugs" are one chain from an unfinished
+cutover. The code bugs are fixed. What's left = a few tweaks + tooling + the cutover.
 
----
-
-## The chain (root → symptoms)
-
-```
-CUTOVER NOT DONE  (Nasty-Live still live, mirror read-only)
-│
-├─ mirrored rows are READ-ONLY (write-block)
-│   ├─ HR can't fill missing fields  → shift_location empty → geofence fails (other branches)
-│   │                                → user_id empty       → some check-ins fail
-│   └─ approvers can't approve
-│
-├─ source has NO Nadi-native fields (shift_location, user_id)  → arrive empty
-├─ source ≠ Nadi schema  → 11 schema gaps (un-ruled)
-├─ files/photos NOT synced  → storage still only in ERP
-└─ employees still use ERP  → check-ins land in ERP, dashboard/count looks wrong
-```
-
-**Nothing here is lost data.** It's incomplete + locked. Cutover completes + unlocks it.
+**The rules that keep everything safe:**
+- Fill empty · skip populated · never overwrite · **freeze before unlock**.
+- Anchor on the **shift**, not the calendar day.
 
 ---
 
-## The guarantee against UNKNOWN bugs
+## TRACK 1 — Code fixes
 
-We do NOT hunt bugs one by one. The senior already built the gate:
+### ✅ Done + pushed (nz-glass)
+- Notification stranding
+- Permission fence (identity)
+- **Overtime = total worked − shift length** (late-in no longer wrongly counted)
+- Naming numbers self-heal (couldn't create employee)
+- Replacement-leave ratio → HR-configurable
+- Overtime + Replacement Leave → one "Claim Overtime or Leave" button
+- Check-out geofence honest + sharpest-GPS fix
+- OT form v1 (shows claim type + hours)
 
-- **Schema Gaps** — finds every field/doctype/value the source has that Nadi doesn't.
-- **Parity Check** — counts rows on both sides; flags any mismatch.
-- **4 clean checks in a row** = cutover authorised.
+### 🛠️ To build
+1. **Overnight / next-day checkout** *(removes HR's "check out before 11:59pm" workaround)*
+   - Rule: a clock-OUT closes the employee's OPEN clock-in's shift — **even next calendar day.**
+   - Anchor = shift + clock-in. Early clock-in = "early", shift decides the window.
+   - Standard ERPNext has the same gap → we **enhance**, not borrow.
 
-**That gate IS "no unknown data bug."** The plan = make the gate green.
+2. **OT form v2** *(refine what we shipped)*
+   - **Claimed hours = auto-populated, read-only** (from punch-verified OT). No manual typing.
+   - **Reason = REQUIRED** type-in field. *(reversal: re-add it, make it mandatory.)*
+   - **Remove attachments.**
+   - Employee eligibility (Pay/Leave) shown **read-only** (from HR setting). *(mostly done.)*
 
----
-
-## Phase 1 — Readiness (surface everything, change nothing risky)
-
-**Goal:** gate green — 0 un-ruled gaps, 4 clean parity checks.
-
-1. **HR rules the 11 schema gaps** (guidance already given — 8 are "Not needed", E3 = Not needed, Advance/Interco = Fix-at-source or Not needed).
-2. **Claude** builds a materializer: any gap ruled *"Add before cutover"* is added by code (exact source value — no guessing).
-3. **Run parity** until 4 clean checks.
-
-**Verify:** the instance banner reads "cutover ready", 0 outstanding rulings.
-
----
-
-## Phase 2 — Complete the Nadi-native data
-
-**Goal:** every employee has what the source could never provide.
-
-- **shift_location** — per employee / per branch (drives geofence + shift rules).
-- **user_id** — linked, FILL-EMPTY ONLY (never overwrite anyone who already reset).
-- **storage** — photos/files migrated (the sync never carried these).
-
-**Claude builds by code:** the fill-empty user_id guard; the storage puller.
-**HR provides:** the shift_location values per branch (a sheet, or in-place after unlock).
-
-**Verify:** no employee with empty shift_location; photos present; login works.
+3. **Dashboard employee count = 0** — cosmetic count fix (data IS there).
 
 ---
 
-## Phase 3 — Cutover (break the chain at the root)
+## TRACK 2 — Migration tooling (by code, safe, waits for cutover)
 
-**Order is everything. Do NOT unlock before freezing.**
+- **Schema-gap materializer** — any gap ruled "Add" is created by code, exact source value.
+- **Auto-sync + non-destructive top-up** — scheduled; fill-empty, skip-populated, never overwrite.
+- **user_id fill-empty guard** — link logins without ever overwriting anyone who reset.
+- **Storage / photo puller** — the sync never carried files; bring them by code.
 
-1. **Freeze Nasty-Live** — nobody writes there anymore. (Senior.)
-2. **Final full sync** — capture the last state.
-3. **Flip "Unlock Mirrored Writes."** — Nadi becomes the writer.
-4. Everyone uses **Nadi Desk + PWA only.**
-
-**This one step fixes:** approvals, check-in-to-Verifica, in-place editing — all at once.
-
-**Verify:** approve a leave (works); check in on PWA (lands in Verifica); edit a mirrored employee (saves).
+*None of these touch live data. They wait for your rulings + the cutover.*
 
 ---
 
-## Phase 4 — Safety net (your idea)
+## TRACK 3 — Cutover (HR / senior + me)
 
-**Goal:** if data ever escapes to ERP again, rescue it — safely.
+| Phase | Do | Who |
+|---|---|---|
+| 1. Readiness | Rule the 11 schema gaps (8 = "Not needed", E3 = Not needed); run parity → 4 clean checks | HR |
+| 2. Complete data | Fill shift_location per branch; user_id (fill-empty); migrate photos | HR + me |
+| 3. Cutover | **Freeze Nasty-Live → final sync → flip Unlock** | Senior + HR |
+| 4. Safety net | Turn on auto-sync + non-destructive top-up | me |
+| 5. Smoke test | One employee per branch: check in/out, claim OT, approve, dashboard | HR |
 
-- **Auto-sync** (scheduled) — no HR button.
-- **Non-destructive top-up mode** — FILL EMPTY, SKIP POPULATED, never overwrite.
-
-**Claude builds by code.** Emergency-only after cutover; keeps Verifica current during any tail of the parallel run.
-
-**Verify:** run it against a populated row → row unchanged; against an empty field → filled.
-
----
-
-## Phase 5 — Smoke test + close
-
-Walk one employee per branch through the whole loop:
-
-- [ ] Check in / out → lands in Verifica, geofence correct
-- [ ] Claim overtime → right type + hours shown
-- [ ] Approver approves → works
-- [ ] Dashboard count → honest number
-- [ ] Photo + fields present
-
-**Then:** disable the instance (or leave it as the frozen top-up source). Done.
+**Phase 3 alone fixes the 4 Critical items** (check-in loss, approver blocked, geofence, login) — all at once.
 
 ---
 
-## Who does what
+## Order of execution (what happens when)
 
-| Claude (by code) | HR / Senior (in Desk / ops) |
+1. **Now — me, in parallel (zero live-data risk):**
+   Overnight-checkout fix · OT form v2 · dashboard count · the Track-2 tooling.
+2. **Now — you/HR:** rule the 11 gaps.
+3. **When ready — cutover:** freeze → sync → unlock → complete data → smoke test.
+4. **After:** sync becomes emergency-only (non-destructive top-up).
+
+---
+
+## The 4 Critical (all one cutover)
+
+| Critical issue | Resolves at |
 |---|---|
-| Schema-gap materializer | Rule the 11 gaps |
-| user_id fill-empty guard | Freeze Nasty-Live |
-| Storage puller | Flip Unlock (after freeze) |
-| Auto-sync + top-up mode | Fill shift_location per branch |
-| Dashboard-count fix | Run parity to 4 clean checks |
+| Check-in data loss / lands in ERP | cutover |
+| Missing Shift Location → geofence fails at branches | cutover |
+| user_id not linked → login + check-in fail | cutover |
+| Approver can't approve | cutover |
 
----
-
-## The rule that prevents data bugs, always
-
-**Fill empty. Skip populated. Never overwrite. Freeze before unlock.**
-Every step above obeys it. That is the whole safety model.
+**Not 4 problems. One cutover.**
