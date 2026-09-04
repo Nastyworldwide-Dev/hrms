@@ -232,6 +232,7 @@ import {
 	describeGeolocationError,
 	formatAccuracy,
 	geolocationBlockedReason,
+	preferFreshFix,
 	shouldReplaceFix,
 } from "@/utils/geolocation"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
@@ -260,6 +261,13 @@ let geoWatchId = null
 // both are reset in fetchLocation() each time the modal opens.
 let hasSessionFix = false
 let coarseFallbackRequested = false
+// Timestamp of the fix we're currently holding. watchPosition's first reading can
+// be a cached one up to maximumAge old (60s): if it happens to be sharp, the
+// sharpest-fix rule would keep it and reject every fresher live reading, pinning a
+// user who has since moved at their old spot. A reading this much newer wins on
+// freshness even if marginally less accurate.
+let fixTimestamp = null
+const STALE_FIX_MS = 30000
 // How sure the device was about the coordinates above, in metres. Sent with
 // both the preflight and the punch: the fence is tens of metres wide and a
 // phone indoors, an iPad on wifi and a desktop with no radio disagree about
@@ -432,15 +440,20 @@ const nextAction = computed(() => {
 
 function handleLocationSuccess(position) {
 	const acc = position.coords.accuracy ?? null
+	const readingAt = position.timestamp ?? Date.now()
 	// Keep the SHARPEST fix over the modal's short, stationary window, not merely
 	// the latest: watchPosition streams readings as GPS refines AND drifts, and a
 	// later, worse reading must not overwrite a good one and place a present user
 	// outside their own office (the 102 m-from-Damansara report).
-	if (!shouldReplaceFix(accuracyM.value, acc, hasSessionFix)) return
+	// Exception: a reading much fresher than the one we hold takes it regardless of
+	// accuracy — otherwise a stale-but-sharp cached first fix sticks (see fixTimestamp).
+	const muchFresher = hasSessionFix && preferFreshFix(fixTimestamp, readingAt, STALE_FIX_MS)
+	if (!muchFresher && !shouldReplaceFix(accuracyM.value, acc, hasSessionFix)) return
 	console.info("[CheckInPanel] location fix updated, accuracy(m):", acc)
 	latitude.value = position.coords.latitude
 	longitude.value = position.coords.longitude
 	accuracyM.value = acc
+	fixTimestamp = readingAt
 
 	const parts = [
 		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
@@ -521,6 +534,7 @@ const fetchLocation = () => {
 	hasSessionFix = false
 	coarseFallbackRequested = false
 	accuracyM.value = null
+	fixTimestamp = null
 	// watchPosition gives us live updates while the modal is open so the
 	// user pin moves in real time as the device's GPS drifts/refines.
 	if (geoWatchId !== null) {
@@ -652,7 +666,7 @@ const locationVerdict = computed(() => {
 				? __("Your GPS reading is a little rough, but you're close enough — go ahead and {0}.", [
 						verb,
 				  ])
-				: __("You're inside the check-in area. Go ahead and {0}.", [verb]),
+				: __("You're within range. Go ahead and {0}.", [verb]),
 		}
 	}
 
@@ -672,7 +686,7 @@ const locationVerdict = computed(() => {
 		tone: "warn",
 		title: __("{0} from {1}", [away, loc.label]),
 		detail: __(
-			"You're outside the {0} check-in area. You can still {1} — it'll be sent to your approver to approve.",
+			"You're outside the {0} range. You can still {1} — it'll be sent to your approver to approve.",
 			[radius, verb]
 		),
 	}

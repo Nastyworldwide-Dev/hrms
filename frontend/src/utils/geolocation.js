@@ -9,20 +9,20 @@
 // in different ways, and only one of those failures is anything the employee
 // can act on.
 
-export const GEO_UNSUPPORTED = "unsupported"
-export const GEO_INSECURE = "insecure"
-export const GEO_DENIED = "denied"
-export const GEO_UNAVAILABLE = "unavailable"
-export const GEO_TIMEOUT = "timeout"
+export const GEO_UNSUPPORTED = "unsupported";
+export const GEO_INSECURE = "insecure";
+export const GEO_DENIED = "denied";
+export const GEO_UNAVAILABLE = "unavailable";
+export const GEO_TIMEOUT = "timeout";
 
 /**
  * Why this page cannot geolocate at all, before any fix is requested.
  * Returns null when it can.
  */
 export function geolocationBlockedReason(win) {
-	const target = win || (typeof window !== "undefined" ? window : null)
+	const target = win || (typeof window !== "undefined" ? window : null);
 	if (!target || !target.navigator || !target.navigator.geolocation) {
-		return GEO_UNSUPPORTED
+		return GEO_UNSUPPORTED;
 	}
 	// Every current browser refuses geolocation outside a secure context and
 	// reports it as PERMISSION_DENIED — indistinguishable from the employee
@@ -30,9 +30,9 @@ export function geolocationBlockedReason(win) {
 	// is how a desk browser usually gets to a bench, were told to check their
 	// browser permissions, and no amount of checking could ever fix it.
 	if (target.isSecureContext === false) {
-		return GEO_INSECURE
+		return GEO_INSECURE;
 	}
-	return null
+	return null;
 }
 
 /**
@@ -41,12 +41,12 @@ export function geolocationBlockedReason(win) {
 export function describeGeolocationError(error) {
 	switch (error?.code) {
 		case 1:
-			return GEO_DENIED
+			return GEO_DENIED;
 		case 3:
-			return GEO_TIMEOUT
+			return GEO_TIMEOUT;
 		default:
 			// POSITION_UNAVAILABLE, and anything a browser invents later.
-			return GEO_UNAVAILABLE
+			return GEO_UNAVAILABLE;
 	}
 }
 
@@ -55,10 +55,10 @@ export function describeGeolocationError(error) {
  * `null` for a reading that carries no estimate.
  */
 export function formatAccuracy(accuracyM) {
-	const m = Number(accuracyM)
-	if (!Number.isFinite(m) || m <= 0) return null
-	if (m >= 1000) return `±${(m / 1000).toFixed(1)} km`
-	return `±${Math.round(m)} m`
+	const m = Number(accuracyM);
+	if (!Number.isFinite(m) || m <= 0) return null;
+	if (m >= 1000) return `±${(m / 1000).toFixed(1)} km`;
+	return `±${Math.round(m)} m`;
 }
 
 // Whether an incoming GPS reading should replace the one we are holding.
@@ -69,7 +69,17 @@ export function formatAccuracy(accuracyM) {
 // window. Unknown incoming accuracy never displaces a real fix; the first
 // reading is always taken so the map can center.
 export function shouldReplaceFix(currentAccuracyM, incomingAccuracyM, hasFix) {
-	if (!hasFix) return true
-	if (incomingAccuracyM == null) return false
-	return currentAccuracyM == null || incomingAccuracyM <= currentAccuracyM
+	if (!hasFix) return true;
+	if (incomingAccuracyM == null) return false;
+	return currentAccuracyM == null || incomingAccuracyM <= currentAccuracyM;
+}
+
+// The exception to sharpest-wins: watchPosition's first reading can be a CACHED
+// fix up to maximumAge old (60s). If that cached fix is sharp, shouldReplaceFix
+// would keep it and reject every fresher live reading, pinning a user who has
+// since moved at their old spot. A reading this much newer than the one we hold
+// wins on freshness regardless of accuracy. Pure, so it is testable without GPS.
+export function preferFreshFix(currentFixAtMs, incomingAtMs, staleMs) {
+	if (currentFixAtMs == null || incomingAtMs == null) return false;
+	return incomingAtMs - currentFixAtMs > staleMs;
 }
