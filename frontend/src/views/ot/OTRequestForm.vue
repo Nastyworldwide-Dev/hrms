@@ -69,7 +69,6 @@ import { computed, inject, ref, watch } from "vue";
 import FormView from "@/components/FormView.vue";
 import GPage from "@/components/glass/GPage.vue";
 import { settings } from "@/data/settings";
-import { formatLeaveDays } from "@/utils/formatters";
 
 const employee = inject("$employee");
 const __ = inject("$translate");
@@ -111,13 +110,16 @@ const expectation = computed(() => {
 			"This pays out as overtime — you'll be paid for the hours you claim.",
 		);
 	}
-	const days = rlHoursPerDay.value
-		? (d.punch_ot_hours || 0) / rlHoursPerDay.value
-		: 0;
-	return __("This banks as replacement leave — up to {0} h ≈ {1} day(s) off.", [
-		d.punch_ot_hours || 0,
-		formatLeaveDays(days),
-	]);
+	// Replacement Leave banks the hours and converts in half-day BLOCKS, not a raw
+	// hours/8 fraction: 1.36 h is NOT "0.2 days off", it's 1.36 h banked toward the
+	// next 4 h = ½ day. Showing a sub-minimum day count promises leave that can't be
+	// taken. Show the banking + the block rule instead; the conversion (with the 4 h
+	// minimum) happens on the Leaves screen.
+	const halfDayHours = rlHoursPerDay.value / 2;
+	return __(
+		"This banks {0} h toward replacement leave — {1} h = ½ day off, converted on the Leaves screen.",
+		[d.punch_ot_hours || 0, halfDayHours],
+	);
 });
 
 const props = defineProps({
