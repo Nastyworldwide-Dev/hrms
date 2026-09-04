@@ -1,6 +1,29 @@
 <template>
 	<GPage>
 		<ion-content :fullscreen="true">
+			<!-- The dates the employee actually has unclaimed OT on — so they tap the
+			     day instead of guessing one in the picker. Only on a new request, and
+			     only when there is something to claim. -->
+			<div
+				v-if="claimableDays.data?.days?.length && !props.id"
+				class="mx-4 mt-4 flex flex-col gap-2"
+			>
+				<span class="g-eyebrow">{{ __("Days you can claim") }}</span>
+				<button
+					v-for="d in claimableDays.data.days"
+					:key="d.date"
+					class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between cursor-pointer"
+					:class="
+						otRequest.ot_date === d.date
+							? 'border-accent-ink'
+							: 'border-divider hover:bg-icon-bg'
+					"
+					@click="otRequest.ot_date = d.date"
+				>
+					<span class="text-inkbase font-semibold">{{ formatDay(d.date) }}</span>
+					<span class="text-sm text-ink-600">{{ __("{0} h", [d.hours]) }}</span>
+				</button>
+			</div>
 			<!-- Claim summary from the engine: the employee sees their claim TYPE (pay
 			     or leave, from HR-set eligibility), how many hours are claimable, and
 			     what to expect — before they enter anything. Shown once a date is picked
@@ -46,6 +69,16 @@ import { formatLeaveDays } from "@/utils/formatters";
 
 const employee = inject("$employee");
 const __ = inject("$translate");
+const dayjs = inject("$dayjs");
+
+// The dates the employee has unclaimed OT on — offered as quick-picks so they tap
+// a day instead of guessing one in the picker (the card only gave them a total).
+const claimableDays = createResource({
+	url: "hrms.api.get_claimable_ot_summary",
+	auto: true,
+});
+
+const formatDay = (date) => dayjs(date).format("ddd, D MMM");
 
 // HR's configurable ratio: banked overtime hours per day of replacement leave.
 const rlHoursPerDay = computed(

@@ -590,13 +590,22 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 	# day); Replacement Leave sums the raw hours and converts to days downstream.
 	from hrms.utils.ot_calculation import round_ot_pay_hours
 
-	hours = sum(
-		(round_ot_pay_hours(flt(row["ot_hours"])) if eligible else flt(row["ot_hours"])) for row in unclaimed
-	)
+	def day_hours(row):
+		raw = flt(row["ot_hours"])
+		return round_ot_pay_hours(raw) if eligible else raw
+
+	# Per-day so the PWA can show WHICH dates to claim, not just a total — the
+	# employee was left guessing a date in the form. Newest first.
+	days = [
+		{"date": str(row["attendance_date"]), "hours": day_hours(row)}
+		for row in sorted(unclaimed, key=lambda r: r["attendance_date"], reverse=True)
+		if day_hours(row) > 0
+	]
 	return {
-		"claimable_hours": flt(hours),
-		"claimable_days": len(unclaimed),
+		"claimable_hours": flt(sum(d["hours"] for d in days)),
+		"claimable_days": len(days),
 		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+		"days": days,
 		"from_date": str(from_date),
 		"to_date": str(to_date),
 	}
