@@ -150,33 +150,39 @@
 </template>
 
 <script setup>
-import GButton from "@/components/glass/GButton.vue"
-import GIconButton from "@/components/glass/GIconButton.vue"
-import GModal from "@/components/glass/GModal.vue"
-import GSegmented from "@/components/glass/GSegmented.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
-import GEmptyState from "@/components/glass/GEmptyState.vue"
-import GListPanel from "@/components/glass/GListPanel.vue"
-import { useRouter } from "vue-router"
-import { inject, ref, markRaw, watch, computed, reactive, onMounted } from "vue"
-import { modalController, IonHeader, IonContent } from "@ionic/vue"
+import { IonContent, IonHeader, modalController } from "@ionic/vue";
+import { createResource, debounce, FeatherIcon } from "frappe-ui";
+import {
+	computed,
+	inject,
+	markRaw,
+	onMounted,
+	reactive,
+	ref,
+	watch,
+} from "vue";
+import { useRouter } from "vue-router";
+import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue";
+import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue";
+import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue";
+import GButton from "@/components/glass/GButton.vue";
+import GEmptyState from "@/components/glass/GEmptyState.vue";
+import GIconButton from "@/components/glass/GIconButton.vue";
+import GListPanel from "@/components/glass/GListPanel.vue";
+import GModal from "@/components/glass/GModal.vue";
+import GPullRefresh from "@/components/glass/GPullRefresh.vue";
+import GSegmented from "@/components/glass/GSegmented.vue";
+import LeaveRequestItem from "@/components/LeaveRequestItem.vue";
+import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue";
+import RequestActionSheet from "@/components/RequestActionSheet.vue";
+import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue";
+import ShiftRequestItem from "@/components/ShiftRequestItem.vue";
+import { useListUpdate } from "@/composables/realtime";
 
-import { FeatherIcon, createResource, debounce } from "frappe-ui"
+import useWorkflow from "@/composables/workflow";
+import { EMPLOYEE_CHECKIN_FIELDS } from "@/data/config/requestSummaryFields";
 
-import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
-import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
-import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
-import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
-import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
-import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
-import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
-import RequestActionSheet from "@/components/RequestActionSheet.vue"
-import { EMPLOYEE_CHECKIN_FIELDS } from "@/data/config/requestSummaryFields"
-
-import useWorkflow from "@/composables/workflow"
-import { useListUpdate } from "@/composables/realtime"
-
-const __ = inject("$translate")
+const __ = inject("$translate");
 const props = defineProps({
 	doctype: {
 		type: String,
@@ -202,7 +208,15 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-})
+	// Field + direction to sort by, e.g. "time desc". Defaults to modified desc.
+	// Employee Checkin history must sort by the PUNCH time, not modified — a synced
+	// or edited checkin bumps modified and jumps out of chronological order.
+	orderBy: {
+		type: String,
+		required: false,
+		default: "modified desc",
+	},
+});
 
 // §11.1 — an empty screen is an invitation to act: say what to do, never
 // "no records found", never a generic doctype string. Three of these are the
@@ -246,17 +260,17 @@ const EMPTY_COPY = {
 		title: __("No replacement leave claimed"),
 		body: __("Worked a rest day? Use New above to claim the time back"),
 	},
-}
+};
 
 const emptyCopy = computed(
 	() =>
 		EMPTY_COPY[props.doctype] ?? {
 			title: __("Nothing here yet"),
 			body: __("New records will appear here once they are created"),
-		}
-)
+		},
+);
 
-const getButtonKey = (tab) => tab?.key ?? tab
+const getButtonKey = (tab) => tab?.key ?? tab;
 
 const listItemComponent = {
 	"Employee Checkin": markRaw(EmployeeCheckinItem),
@@ -265,23 +279,25 @@ const listItemComponent = {
 	"Shift Assignment": markRaw(ShiftAssignmentItem),
 	"Leave Application": markRaw(LeaveRequestItem),
 	"Expense Claim": markRaw(ExpenseClaimItem),
-}
+};
 
-const router = useRouter()
-const dayjs = inject("$dayjs")
-const socket = inject("$socket")
-const employee = inject("$employee")
-const filterMap = reactive({})
-const activeTab = ref(props.tabButtons ? getButtonKey(props.tabButtons[0]) : undefined)
-const areFiltersApplied = ref(false)
-const appliedFilters = ref([])
-const workflowStateField = ref(null)
-const isRequestModalOpen = ref(false)
-const selectedRequest = ref(null)
+const router = useRouter();
+const dayjs = inject("$dayjs");
+const socket = inject("$socket");
+const employee = inject("$employee");
+const filterMap = reactive({});
+const activeTab = ref(
+	props.tabButtons ? getButtonKey(props.tabButtons[0]) : undefined,
+);
+const areFiltersApplied = ref(false);
+const appliedFilters = ref([]);
+const workflowStateField = ref(null);
+const isRequestModalOpen = ref(false);
+const selectedRequest = ref(null);
 
 // infinite scroll
-const scrollContainer = ref(null)
-const hasNextPage = ref(true)
+const scrollContainer = ref(null);
+const hasNextPage = ref(true);
 const listOptions = ref({
 	doctype: props.doctype,
 	// copy, don't alias: fetchDocumentList pushes the workflow-state field into
@@ -290,18 +306,20 @@ const listOptions = ref({
 	// pull-refresh, realtime).
 	fields: [...props.fields],
 	group_by: props.groupBy,
-	order_by: `\`tab${props.doctype}\`.modified desc`,
+	order_by: `\`tab${props.doctype}\`.${props.orderBy}`,
 	page_length: 50,
-})
+});
 
 // computed properties
 const isTeamRequest = computed(() => {
-	return props.tabButtons && activeTab.value === getButtonKey(props.tabButtons[1])
-})
+	return (
+		props.tabButtons && activeTab.value === getButtonKey(props.tabButtons[1])
+	);
+});
 
 const formViewRoute = computed(() => {
-	return `${props.doctype.replace(/\s+/g, "")}FormView`
-})
+	return `${props.doctype.replace(/\s+/g, "")}FormView`;
+});
 
 // Show "New" only when the create route actually exists. Some doctypes
 // (Shift Assignment, Employee Checkin) are read-only in the app on purpose and
@@ -311,59 +329,59 @@ const canCreate = computed(
 	() =>
 		createPermission?.data?.has_permission &&
 		props.doctype !== "Employee Checkin" &&
-		router.hasRoute(formViewRoute.value)
-)
+		router.hasRoute(formViewRoute.value),
+);
 
 const detailViewRoute = computed(() => {
-	return `${props.doctype.replace(/\s+/g, "")}DetailView`
-})
+	return `${props.doctype.replace(/\s+/g, "")}DetailView`;
+});
 
 const defaultFilters = computed(() => {
-	const filters = []
+	const filters = [];
 
 	if (isTeamRequest.value) {
-		filters.push([props.doctype, "employee", "!=", employee.data.name])
+		filters.push([props.doctype, "employee", "!=", employee.data.name]);
 	} else {
-		filters.push([props.doctype, "employee", "=", employee.data.name])
+		filters.push([props.doctype, "employee", "=", employee.data.name]);
 	}
 
-	return filters
-})
+	return filters;
+});
 
 // resources
 const documents = createResource({
 	url: "frappe.desk.reportview.get",
 	onSuccess: (data) => {
 		if (data.values?.length < listOptions.value.page_length) {
-			hasNextPage.value = false
+			hasNextPage.value = false;
 		}
 	},
 	transform(data) {
 		if (data.length === 0) {
-			return []
+			return [];
 		}
 
 		// convert keys and values arrays to docs object
-		const fields = data["keys"]
-		const values = data["values"]
+		const fields = data["keys"];
+		const values = data["values"];
 		const docs = values.map((value) => {
-			const doc = {}
+			const doc = {};
 			fields.forEach((field, index) => {
-				doc[field] = value[index]
-			})
-			return doc
-		})
+				doc[field] = value[index];
+			});
+			return doc;
+		});
 
-		let pagedData
+		let pagedData;
 		if (!documents.params.start || documents.params.start === 0) {
-			pagedData = docs
+			pagedData = docs;
 		} else {
-			pagedData = documents.data.concat(docs)
+			pagedData = documents.data.concat(docs);
 		}
 
-		return pagedData
+		return pagedData;
 	},
-})
+});
 
 const createPermission = createResource({
 	url: "frappe.client.has_permission",
@@ -371,7 +389,7 @@ const createPermission = createResource({
 	// empty string for the "do I have create perm at all" probe.
 	params: { doctype: props.doctype, docname: "", perm_type: "create" },
 	auto: true,
-})
+});
 
 // helper functions
 
@@ -380,127 +398,131 @@ const createPermission = createResource({
 // and Number(null) a misleading "0.00000°". Show an em dash for anything that
 // isn't a real reading.
 const formatCoord = (v) => {
-	const n = Number(v)
-	return Number.isFinite(n) && n !== 0 ? `${n.toFixed(5)}°` : "—"
-}
+	const n = Number(v);
+	return Number.isFinite(n) && n !== 0 ? `${n.toFixed(5)}°` : "—";
+};
 
 const openRequestModal = async (request) => {
-	selectedRequest.value = request
-	selectedRequest.value.doctype = "Employee Checkin"
-	selectedRequest.value.date = request.time
-	selectedRequest.value.formatted_time = dayjs(request.time).format("HH:mm a")
-	selectedRequest.value.formatted_latitude = formatCoord(request.latitude)
-	selectedRequest.value.formatted_longitude = formatCoord(request.longitude)
-	isRequestModalOpen.value = true
-}
+	selectedRequest.value = request;
+	selectedRequest.value.doctype = "Employee Checkin";
+	selectedRequest.value.date = request.time;
+	selectedRequest.value.formatted_time = dayjs(request.time).format("HH:mm a");
+	selectedRequest.value.formatted_latitude = formatCoord(request.latitude);
+	selectedRequest.value.formatted_longitude = formatCoord(request.longitude);
+	isRequestModalOpen.value = true;
+};
 
 const closeRequestModal = async () => {
-	isRequestModalOpen.value = false
-	selectedRequest.value = null
-}
+	isRequestModalOpen.value = false;
+	selectedRequest.value = null;
+};
 
 function initializeFilters() {
 	props.filterConfig.forEach((filter) => {
 		filterMap[filter.fieldname] = {
 			condition: "=",
 			value: null,
-		}
-	})
+		};
+	});
 
-	appliedFilters.value = []
+	appliedFilters.value = [];
 }
-initializeFilters()
+initializeFilters();
 
 function prepareFilters() {
-	let condition = ""
-	let value = ""
-	appliedFilters.value = []
+	let condition = "";
+	let value = "";
+	appliedFilters.value = [];
 
 	for (const fieldname in filterMap) {
-		condition = filterMap[fieldname].condition
+		condition = filterMap[fieldname].condition;
 		// accessing .value because autocomplete returns an object instead of value
 		if (typeof condition === "object" && condition !== null) {
-			condition = condition.value
+			condition = condition.value;
 		}
 
-		value = filterMap[fieldname].value
-		if (condition && value) appliedFilters.value.push([props.doctype, fieldname, condition, value])
+		value = filterMap[fieldname].value;
+		if (condition && value)
+			appliedFilters.value.push([props.doctype, fieldname, condition, value]);
 	}
 }
 
 function applyFilters() {
-	prepareFilters()
-	fetchDocumentList()
-	modalController.dismiss()
-	areFiltersApplied.value = appliedFilters.value.length ? true : false
+	prepareFilters();
+	fetchDocumentList();
+	modalController.dismiss();
+	areFiltersApplied.value = appliedFilters.value.length ? true : false;
 }
 
 function clearFilters() {
-	initializeFilters()
-	fetchDocumentList()
-	modalController.dismiss()
-	areFiltersApplied.value = false
+	initializeFilters();
+	fetchDocumentList();
+	modalController.dismiss();
+	areFiltersApplied.value = false;
 }
 
 function fetchDocumentList(start = 0) {
 	if (start === 0) {
-		hasNextPage.value = true
+		hasNextPage.value = true;
 	}
 
-	const filters = [[props.doctype, "docstatus", "!=", "2"]]
-	filters.push(...defaultFilters.value)
+	const filters = [[props.doctype, "docstatus", "!=", "2"]];
+	filters.push(...defaultFilters.value);
 
-	if (appliedFilters.value) filters.push(...appliedFilters.value)
+	if (appliedFilters.value) filters.push(...appliedFilters.value);
 
-	if (workflowStateField.value && !listOptions.value.fields.includes(workflowStateField.value)) {
-		listOptions.value.fields.push(workflowStateField.value)
+	if (
+		workflowStateField.value &&
+		!listOptions.value.fields.includes(workflowStateField.value)
+	) {
+		listOptions.value.fields.push(workflowStateField.value);
 	}
 
 	documents.submit({
 		...listOptions.value,
 		start: start || 0,
 		filters: filters,
-	})
+	});
 }
 
 const handleScroll = debounce(() => {
-	if (!hasNextPage.value) return
+	if (!hasNextPage.value) return;
 
-	const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value
-	const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100
+	const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value;
+	const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
 
 	if (scrollPercentage >= 90) {
-		const start = documents.params.start + listOptions.value.page_length
-		fetchDocumentList(start)
+		const start = documents.params.start + listOptions.value.page_length;
+		fetchDocumentList(start);
 	}
-}, 500)
+}, 500);
 
 const handleRefresh = (event) => {
 	setTimeout(() => {
-		fetchDocumentList()
-		event.target.complete()
-	}, 500)
-}
+		fetchDocumentList();
+		event.target.complete();
+	}, 500);
+};
 
 watch(
 	() => activeTab.value,
 	(_value) => {
-		fetchDocumentList()
-	}
-)
+		fetchDocumentList();
+	},
+);
 
 onMounted(async () => {
 	// BEFORE the await: Vue unsets the component instance at an async hook's
 	// first await, so a useListUpdate call after it would find
 	// getCurrentInstance() null and its onBeforeUnmount teardown would never
 	// register — this exact line leaked one permanent handler per mount.
-	useListUpdate(socket, props.doctype, () => fetchDocumentList())
+	useListUpdate(socket, props.doctype, () => fetchDocumentList());
 
-	const workflow = useWorkflow(props.doctype)
-	await workflow.workflowDoc.promise
-	workflowStateField.value = workflow.getWorkflowStateField()
-	fetchDocumentList()
-})
+	const workflow = useWorkflow(props.doctype);
+	await workflow.workflowDoc.promise;
+	workflowStateField.value = workflow.getWorkflowStateField();
+	fetchDocumentList();
+});
 </script>
 
 <style scoped>
