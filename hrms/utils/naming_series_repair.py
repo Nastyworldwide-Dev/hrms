@@ -65,6 +65,9 @@ def repair_naming_series(doctypes=None) -> dict:
 	for doctype in doctypes:
 		if not frappe.db.table_exists(doctype):
 			continue
+		# ponytail: full name scan per doctype per import; fine at current row counts.
+		# If mirrored tables (Attendance/Checkin) reach millions, scope to the batch's
+		# reference_doctype rows via Data Import Log instead of re-deriving the max.
 		result = advance_series_past(doctype, frappe.get_all(doctype, pluck="name"))
 		if result:
 			moved[doctype] = result

@@ -874,6 +874,13 @@ def advance_series_past(doctype: str, names) -> dict:
 					moved[prefix] = number
 			except Exception as e:  # one bad prefix must not strand the others
 				_log().warning("[sync] could not advance series %s to %s: %s", prefix, number, e)
+				# Also raise a visible Error Log doc: this path is shared by the deploy
+				# patch and the after-import hook, where a silent miss re-opens the
+				# "already exists" collision with nothing in the Desk to catch it.
+				frappe.log_error(
+					title=f"Naming counter not advanced: {prefix}",
+					message=f"{doctype}: could not advance {prefix} to {number}: {e}",
+				)
 
 		if moved:
 			_log().info("[sync] %s: advanced %d naming counter(s): %s", doctype, len(moved), moved)
