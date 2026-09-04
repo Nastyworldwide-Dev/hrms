@@ -1,6 +1,25 @@
 <template>
 	<GPage>
 		<ion-content :fullscreen="true">
+			<!-- Claim summary from the engine: the employee sees their claim TYPE (pay
+			     or leave, from HR-set eligibility), how many hours are claimable, and
+			     what to expect — before they enter anything. Shown once a date is picked
+			     on a new request. -->
+			<div
+				v-if="otSummary.data && !props.id"
+				class="mx-4 mt-4 border border-divider rounded-panel p-4 flex flex-col gap-2"
+			>
+				<span class="g-eyebrow">{{ __("Your claim") }}</span>
+				<span class="text-lg font-extrabold text-inkbase">
+					{{ __(otSummary.data.compensation) }}
+				</span>
+				<span class="text-sm text-ink-600">
+					{{
+						__("Overtime worked: {0} h — claim up to that.", [otSummary.data.punch_ot_hours || 0])
+					}}
+				</span>
+				<span class="text-sm text-ink-600">{{ expectation }}</span>
+			</div>
 			<FormView
 				v-if="formFields.data"
 				doctype="OT Request"
@@ -21,12 +40,33 @@
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
-import { ref, watch, inject } from "vue"
+import { ref, computed, watch, inject } from "vue"
 
 import FormView from "@/components/FormView.vue"
+import { settings } from "@/data/settings"
+import { formatLeaveDays } from "@/utils/formatters"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
+
+// HR's configurable ratio: banked overtime hours per day of replacement leave.
+const rlHoursPerDay = computed(() => settings.data?.replacement_leave_hours_per_day ?? 8)
+
+// What the employee should expect from this claim — told plainly, from the engine,
+// so they know before they submit whether it pays out or becomes leave, and roughly
+// how much. The approver still decides yes/no; this only sets the expectation.
+const expectation = computed(() => {
+	const d = otSummary.data
+	if (!d) return ""
+	if (d.compensation === "Overtime Pay") {
+		return __("This pays out as overtime — you'll be paid for the hours you claim.")
+	}
+	const days = rlHoursPerDay.value ? (d.punch_ot_hours || 0) / rlHoursPerDay.value : 0
+	return __("This banks as replacement leave — up to {0} h ≈ {1} day(s) off.", [
+		d.punch_ot_hours || 0,
+		formatLeaveDays(days),
+	])
+})
 
 const props = defineProps({
 	id: {
@@ -46,8 +86,21 @@ const formFields = createResource({
 		return data.filter(
 			// status: the decision is displayed on detail, never offered on create —
 			// the requester is not the person who decides (leave/Form.vue convention)
+			// compensation/punch_ot_hours/shift move into the claim summary panel below
+			// so the employee sees WHAT they are claiming, not bare read-only rows;
+			// explanation is removed outright (the approver decides, a reason adds nothing).
 			(field) =>
-				!["employee", "employee_name", "department", "company", "status"].includes(field.fieldname)
+				![
+					"employee",
+					"employee_name",
+					"department",
+					"company",
+					"status",
+					"compensation",
+					"punch_ot_hours",
+					"shift",
+					"explanation",
+				].includes(field.fieldname)
 		)
 	},
 })
