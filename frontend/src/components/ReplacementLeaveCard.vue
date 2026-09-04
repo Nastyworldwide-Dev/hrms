@@ -54,6 +54,7 @@
 import { createResource } from "frappe-ui";
 import { computed, inject } from "vue";
 
+import ResourceError from "@/components/ResourceError.vue";
 import { settings } from "@/data/settings";
 
 const employee = inject("$employee");
@@ -75,4 +76,3 @@ const monthLabel = computed(() =>
 	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : "",
 );
 </script>
-import ResourceError from "@/components/ResourceError.vue"
