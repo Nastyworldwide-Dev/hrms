@@ -8,6 +8,31 @@
 				class="flex flex-col px-4 pt-6 pb-8 gap-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
 				<div class="contents">
+					<!-- Overtime already worked, surfaced so it is not a secret you find by
+					     opening the form and guessing a date. Tappable straight into the
+					     claim; hidden when there is nothing to claim. -->
+					<div v-if="claimableOt.data?.claimable_hours" class="order-0">
+						<button
+							class="w-full text-left border border-accent-ink rounded-panel p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-icon-bg"
+							@click="router.push({ name: 'OTRequestFormView' })"
+						>
+							<div class="flex flex-col gap-1">
+								<span class="g-eyebrow text-accent-ink">{{ __("Overtime to claim") }}</span>
+								<span class="text-lg font-extrabold text-inkbase">
+									{{ __("{0} h waiting", [claimableOt.data.claimable_hours]) }}
+								</span>
+								<span class="text-sm text-ink-600">
+									{{
+										__("{0} day(s) worked · {1} · tap to claim", [
+											claimableOt.data.claimable_days,
+											__(claimableOt.data.compensation),
+										])
+									}}
+								</span>
+							</div>
+							<span class="text-accent-ink text-xl" aria-hidden="true">→</span>
+						</button>
+					</div>
 					<div class="order-1"><AttendanceCalendar /></div>
 					<ResourceError :resource="shifts" what="your shifts" />
 				</div>
@@ -122,32 +147,39 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router"
-import GListPanel from "@/components/glass/GListPanel.vue"
-import GListRow from "@/components/glass/GListRow.vue"
-import { computed, inject, markRaw } from "vue"
-import { createResource } from "frappe-ui"
+import { createResource } from "frappe-ui";
+import { computed, inject, markRaw } from "vue";
+import { useRouter } from "vue-router";
+import AttendanceCalendar from "@/components/AttendanceCalendar.vue";
+import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue";
 
-import BaseLayout from "@/components/BaseLayout.vue"
-import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
-import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
-import OTRequestItem from "@/components/OTRequestItem.vue"
-import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
-import RequestList from "@/components/RequestList.vue"
-import ResourceError from "@/components/ResourceError.vue"
-import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
+import BaseLayout from "@/components/BaseLayout.vue";
+import GListPanel from "@/components/glass/GListPanel.vue";
+import GListRow from "@/components/glass/GListRow.vue";
+import OTRequestItem from "@/components/OTRequestItem.vue";
+import RequestList from "@/components/RequestList.vue";
+import ResourceError from "@/components/ResourceError.vue";
+import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue";
+import ShiftRequestItem from "@/components/ShiftRequestItem.vue";
 
 import {
 	getShiftDates,
-	getTotalShiftDays,
 	getShiftTiming,
+	getTotalShiftDays,
 	myAttendanceRequests,
 	myShiftRequests,
-} from "@/data/attendance"
-import { myOTRequests } from "@/data/overtime"
+} from "@/data/attendance";
+import { myOTRequests } from "@/data/overtime";
 
-const router = useRouter()
-const dayjs = inject("$dayjs")
+const router = useRouter();
+const dayjs = inject("$dayjs");
+
+// Overtime the employee has worked but not yet filed — drives the "to claim" card
+// at the top of the screen so it is discoverable, not accidental. Session-scoped.
+const claimableOt = createResource({
+	url: "hrms.api.get_claimable_ot_summary",
+	auto: true,
+});
 
 const shifts = createResource({
 	url: "hrms.api.get_shifts",
@@ -155,20 +187,21 @@ const shifts = createResource({
 	cache: "hrms:shifts",
 	transform: (data) => {
 		return data.map((assignment) => {
-			assignment.doctype = "Shift Assignment"
-			assignment.is_upcoming = !assignment.end_date || dayjs(assignment.end_date).isAfter(dayjs())
-			assignment.shift_dates = getShiftDates(assignment)
-			assignment.total_shift_days = getTotalShiftDays(assignment)
-			assignment.shift_timing = getShiftTiming(assignment)
-			return assignment
-		})
+			assignment.doctype = "Shift Assignment";
+			assignment.is_upcoming =
+				!assignment.end_date || dayjs(assignment.end_date).isAfter(dayjs());
+			assignment.shift_dates = getShiftDates(assignment);
+			assignment.total_shift_days = getTotalShiftDays(assignment);
+			assignment.shift_timing = getShiftTiming(assignment);
+			return assignment;
+		});
 	},
-})
+});
 
 const upcomingShifts = computed(() => {
-	const filteredShifts = shifts.data?.filter((shift) => shift.is_upcoming)
+	const filteredShifts = shifts.data?.filter((shift) => shift.is_upcoming);
 
 	// show only 5 upcoming shifts
-	return filteredShifts?.slice(0, 5)
-})
+	return filteredShifts?.slice(0, 5);
+});
 </script>

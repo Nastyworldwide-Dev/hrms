@@ -544,6 +544,55 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 
 
 @frappe.whitelist()
+def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dict:
+	"""Unclaimed overtime the employee has already worked — so they KNOW it is there.
+
+	The OT they earned is invisible until they open the form and pick a date; people
+	were finding it by accident. This sums the punch-verified OT (Attendance.ot_hours)
+	over a recent window and subtracts the dates already filed, so the PWA can show a
+	standing 'you have X h to claim' card instead of a form nobody thinks to open.
+	Read-only, session-scoped like the other PWA readers."""
+	employee = employee or get_current_employee()
+	_ensure_own_employee_or_permitted(employee)
+	to_date = getdate()
+	from_date = add_days(to_date, -int(days))
+	logger.info("[api] claimable OT summary employee=%s window=%s..%s", employee, from_date, to_date)
+
+	worked = frappe.get_all(
+		"Attendance",
+		filters={
+			"employee": employee,
+			"attendance_date": ["between", [from_date, to_date]],
+			"docstatus": 1,
+			"ot_hours": [">", 0],
+		},
+		fields=["attendance_date", "ot_hours"],
+	)
+	# A date is "claimed" the moment a request exists for it, drafts included — filing
+	# a second for the same day is the double-claim the form's own cap already blocks.
+	claimed = set(
+		frappe.get_all(
+			"OT Request",
+			filters={
+				"employee": employee,
+				"ot_date": ["between", [from_date, to_date]],
+				"docstatus": ["<", 2],
+			},
+			pluck="ot_date",
+		)
+	)
+	unclaimed = [row for row in worked if row["attendance_date"] not in claimed]
+	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
+	return {
+		"claimable_hours": flt(sum(flt(row["ot_hours"]) for row in unclaimed)),
+		"claimable_days": len(unclaimed),
+		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+		"from_date": str(from_date),
+		"to_date": str(to_date),
+	}
+
+
+@frappe.whitelist()
 def get_replacement_leave_bank_summary(employee: str) -> dict:
 	"""The current month's convertible OT hours plus the requests feeding it,
 	and the Replacement Leave allocation balance so the dashboard can show a
