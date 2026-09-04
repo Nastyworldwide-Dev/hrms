@@ -234,23 +234,25 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, defineAsyncComponent, onMounted } from "vue"
-import { IonModal, modalController } from "@ionic/vue"
-import { useRouter } from "vue-router"
-import { toast, createDocumentResource, createResource, FeatherIcon } from "frappe-ui"
+import { IonModal, modalController } from "@ionic/vue";
+import {
+	createDocumentResource,
+	createResource,
+	FeatherIcon,
+	toast,
+} from "frappe-ui";
+import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import FilePreviewModal from "@/components/FilePreviewModal.vue";
+import FormattedField from "@/components/FormattedField.vue";
+import GConfirm from "@/components/glass/GConfirm.vue";
+import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue";
+import useWorkflow from "@/composables/workflow";
+import { getCompanyCurrency } from "@/data/currencies";
+import { settings } from "@/data/settings";
+import { formatCurrency } from "@/utils/formatters";
 
-import FormattedField from "@/components/FormattedField.vue"
-import FilePreviewModal from "@/components/FilePreviewModal.vue"
-import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
-import GConfirm from "@/components/glass/GConfirm.vue"
-
-import { getCompanyCurrency } from "@/data/currencies"
-import { settings } from "@/data/settings"
-import { formatCurrency } from "@/utils/formatters"
-
-import useWorkflow from "@/composables/workflow"
-
-const __ = inject("$translate")
+const __ = inject("$translate");
 
 const props = defineProps({
 	fields: {
@@ -265,16 +267,16 @@ const props = defineProps({
 		type: Object,
 		required: true,
 	},
-})
-const router = useRouter()
+});
+const router = useRouter();
 
-let showPreviewModal = ref(false)
-let selectedFile = ref({})
-let workflow = ref(null)
+let showPreviewModal = ref(false);
+let selectedFile = ref({});
+let workflow = ref(null);
 
 function showFilePreview(fileObj) {
-	selectedFile.value = fileObj
-	showPreviewModal.value = true
+	selectedFile.value = fileObj;
+	showPreviewModal.value = true;
 }
 
 // Irreversible decisions (Reject, Cancel) route through a confirm step: a
@@ -282,14 +284,14 @@ function showFilePreview(fileObj) {
 // server transition cannot be undone from this sheet. Approve/Submit stay
 // one-tap so approvers are not slowed on the common path. (RemoteApprovals
 // already confirms this same class of action — this brings the sheet in line.)
-const pendingDecision = ref(null)
+const pendingDecision = ref(null);
 function confirmDecision(action, copy) {
-	pendingDecision.value = { action, ...copy }
+	pendingDecision.value = { action, ...copy };
 }
 function runPendingDecision() {
-	const decision = pendingDecision.value
-	pendingDecision.value = null
-	if (decision) updateDocumentStatus(decision.action)
+	const decision = pendingDecision.value;
+	pendingDecision.value = null;
+	if (decision) updateDocumentStatus(decision.action);
 }
 
 const document = createDocumentResource({
@@ -297,9 +299,9 @@ const document = createDocumentResource({
 	name: props.modelValue.name,
 	auto: true,
 	onSuccess(_doc) {
-		attachedFiles.reload()
+		attachedFiles.reload();
 	},
-})
+});
 
 const attachedFiles = createResource({
 	url: "hrms.api.get_attachments",
@@ -307,55 +309,38 @@ const attachedFiles = createResource({
 		dt: props.modelValue.doctype,
 		dn: props.modelValue.name,
 	},
-})
+});
 
 const docPermissions = createResource({
 	url: "frappe.client.get_doc_permissions",
 	params: { doctype: props.modelValue.doctype, docname: props.modelValue.name },
 	auto: true,
-})
+});
 
 const permittedWriteFields = createResource({
 	url: "hrms.api.get_permitted_fields_for_write",
 	params: { doctype: props.modelValue.doctype },
 	auto: true,
-})
+});
 
-// Doctypes whose `on_submit` refuses an undecided document, so deciding and
-// finalizing are one transition rather than two. The server owns it —
-// hrms/api/approval.py holds the same list and is the authority; this copy only
-// decides which call to make.
-const DECIDE_THEN_SUBMIT = [
-	"Leave Application",
-	"Shift Request",
-	"Expense Claim",
-	// These three gained a status field on 26 Aug 2026. Before that they were
-	// submittable with no decision field, so the Approve/Reject block — which
-	// renders on doc.status being Open/Draft — never appeared and an approver
-	// could approve but never decline.
-	"OT Request",
-	"Attendance Request",
-	"Replacement Leave Claim",
-]
-
-const decision = createResource({ url: "hrms.api.approval.decide" })
+const decision = createResource({ url: "hrms.api.approval.decide" });
 // Submit and cancel for requests with no decision field. NOT document.setValue:
 // frappe.client.set_value refuses to write docstatus ("Cannot edit standard
 // fields"), correctly — moving docstatus is a TRANSITION, not an edit, and it
 // has to run validate/before_submit/on_submit. The old call threw, a toast
 // flashed on a phone, and the document stayed a draft while the approver
 // believed they had approved it.
-const finalize = createResource({ url: "hrms.api.approval.finalize" })
+const finalize = createResource({ url: "hrms.api.approval.finalize" });
 
 // True while any decision/transition is in flight. Bound to the action
 // buttons so a consequential, irreversible tap shows a loading state and
 // cannot be double-fired — the backend is idempotent and row-locked, but the
 // UI should still say "working" and refuse a second tap.
 const submitting = computed(
-	() => decision.loading || finalize.loading || document.setValue?.loading
-)
+	() => decision.loading || finalize.loading || document.setValue?.loading,
+);
 
-const sessionEmployee = inject("$employee")
+const sessionEmployee = inject("$employee");
 
 // Withdraw / edit your OWN draft. Employees have no delete permission on these
 // doctypes, so a fenced API (owner + docstatus 0) does the removal. Employee
@@ -368,7 +353,7 @@ const WITHDRAWABLE_DOCTYPES = [
 	"Shift Request",
 	"OT Request",
 	"Replacement Leave Claim",
-]
+];
 const isOwnDraft = computed(
 	() =>
 		WITHDRAWABLE_DOCTYPES.includes(props.modelValue.doctype) &&
@@ -378,126 +363,141 @@ const isOwnDraft = computed(
 		// on this hub during the parallel run — the write-block would refuse the
 		// edit/delete. Don't offer actions that can only fail; it is managed on
 		// the source instance.
-		!document?.doc?.synced_from_instance
-)
+		!document?.doc?.synced_from_instance,
+);
 
-const withdraw = createResource({ url: "hrms.api.withdraw_request" })
-const showWithdrawDialog = ref(false)
+const withdraw = createResource({ url: "hrms.api.withdraw_request" });
+const showWithdrawDialog = ref(false);
 function askWithdraw() {
-	showWithdrawDialog.value = true
+	showWithdrawDialog.value = true;
 }
 function withdrawDraft() {
 	withdraw.submit(
 		{ doctype: props.modelValue.doctype, name: props.modelValue.name },
 		{
 			onSuccess() {
-				showWithdrawDialog.value = false
-				modalController.dismiss()
+				showWithdrawDialog.value = false;
+				modalController.dismiss();
 				toast({
 					title: __("Withdrawn"),
 					text: __("Request withdrawn."),
 					icon: "check-circle",
 					position: "bottom-center",
 					iconClasses: "text-green-500",
-				})
+				});
 			},
 			onError(err) {
-				showWithdrawDialog.value = false
+				showWithdrawDialog.value = false;
 				toast({
 					title: __("Error"),
 					text: err?.messages?.[0] || __("Could not withdraw the request."),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
-				})
+				});
 			},
-		}
-	)
+		},
+	);
 }
 
 function hasPermission(action) {
-	if (action === "approval" && props.modelValue.doctype === "Leave Application") {
+	if (
+		action === "approval" &&
+		props.modelValue.doctype === "Leave Application"
+	) {
 		// prevent self leave approval
-		const isSelfLeave = document?.doc?.employee === sessionEmployee?.data?.name
-		if (isSelfLeave && settings.data?.prevent_self_leave_approval) return false
-		return permittedWriteFields.data?.includes(approvalField.value)
+		const isSelfLeave = document?.doc?.employee === sessionEmployee?.data?.name;
+		if (isSelfLeave && settings.data?.prevent_self_leave_approval) return false;
+		return permittedWriteFields.data?.includes(approvalField.value);
 	}
-	return docPermissions.data?.permissions[action]
+	return docPermissions.data?.permissions[action];
 }
 
 const currency = computed(() => {
-	let docCurrency = document?.doc?.currency
+	let docCurrency = document?.doc?.currency;
 
 	if (!docCurrency && document?.doc?.company) {
-		docCurrency = getCompanyCurrency(document?.doc?.company)
+		docCurrency = getCompanyCurrency(document?.doc?.company);
 	}
-	return docCurrency
-})
+	return docCurrency;
+});
 
 const fieldsWithValues = computed(() => {
 	return props.fields.filter((field) => {
 		if (field.fieldtype === "Currency") {
-			field.value = formatCurrency(document.doc?.[field.fieldname], currency.value)
+			field.value = formatCurrency(
+				document.doc?.[field.fieldname],
+				currency.value,
+			);
 		} else {
 			if (field.fieldtype === "Table") {
 				// dynamically loading child table component as per config
 				// does not work with @ alias due to vite's import analysis
-				field.component = defineAsyncComponent(() =>
-					import(`../components/${field.componentName}.vue`)
-				)
+				field.component = defineAsyncComponent(
+					() => import(`../components/${field.componentName}.vue`),
+				);
 			}
-			field.value = document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
+			field.value =
+				document?.doc?.[field.fieldname] || props.modelValue[field.fieldname];
 		}
 
-		return field.value
-	})
-})
+		return field.value;
+	});
+});
 
 const approvalField = computed(() => {
-	return props.modelValue.doctype === "Expense Claim" ? "approval_status" : "status"
-})
+	return props.modelValue.doctype === "Expense Claim"
+		? "approval_status"
+		: "status";
+});
 
 const getSuccessMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
-		return __("{0} successfully!", [__(status)])
+		return __("{0} successfully!", [__(status)]);
 	} else if (docstatus) {
-		return __("Document {0} successfully!", [docstatus === 1 ? __("submitted") : __("cancelled")])
+		return __("Document {0} successfully!", [
+			docstatus === 1 ? __("submitted") : __("cancelled"),
+		]);
 	}
-}
+};
 
 const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
-		return __("{0} failed!", [status === __("Approved") ? __("Approval") : __("Rejection")])
+		return __("{0} failed!", [
+			status === __("Approved") ? __("Approval") : __("Rejection"),
+		]);
 	} else if (docstatus) {
-		return __("Document {0} failed!", [docstatus === 1 ? __("submission") : __("cancellation")])
+		return __("Document {0} failed!", [
+			docstatus === 1 ? __("submission") : __("cancellation"),
+		]);
 	}
-}
+};
 
 const onActionSuccess = ({ status, docstatus, dismiss }) => {
-	if (dismiss) modalController.dismiss()
+	if (dismiss) modalController.dismiss();
 	toast({
 		title: __("Success"),
 		text: getSuccessMessage({ status, docstatus }),
 		icon: "check-circle",
 		position: "bottom-center",
 		iconClasses: "text-green-500",
-	})
-}
+	});
+};
 
 const onActionError =
 	({ status, docstatus }) =>
 	(error) => {
 		// the server's message says WHY (permissions, validation) —
 		// a bare "Approval failed!" is undebuggable from the field
-		console.warn("[RequestActionSheet] action failed:", error)
+		console.warn("[RequestActionSheet] action failed:", error);
 		toast({
 			title: __("Error"),
 			text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",
-		})
-	}
+		});
+	};
 
 const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	// A decision goes to the server as a decision. This used to be assembled
@@ -506,7 +506,11 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	// therefore never finalized at all, and an approval quietly degraded into a
 	// half-transitioned document whenever that read said no or had not loaded,
 	// leaving HR to press Submit on something already approved.
-	if (status && DECIDE_THEN_SUBMIT.includes(props.modelValue.doctype)) {
+	// Any decision goes to the server as a decision — hrms.api.approval.decide is
+	// the authority (its decision_field allow-list throws for a non-approvable type),
+	// so there is no client list to drift and no half-transition path. The Approve/
+	// Reject buttons only render on a doc that HAS a decision field anyway.
+	if (status) {
 		return decision.submit(
 			{
 				doctype: props.modelValue.doctype,
@@ -516,65 +520,51 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 			{
 				onSuccess(result) {
 					// render what the server did, not what we asked for
-					document.reload?.()
+					document.reload?.();
 					onActionSuccess({
 						status,
 						docstatus: result?.docstatus ?? 1,
 						dismiss: true,
-					})
+					});
 				},
 				onError: onActionError({ status, docstatus: 0 }),
-			}
-		)
+			},
+		);
 	}
 
-	// plain submit / cancel. Today nothing else reaches here: the Approve and
-	// Reject buttons only render when the document HAS a decision field, and the
-	// three doctypes that have one are all listed above. `status` is still
-	// forwarded so a fourth doctype added to the sheet degrades to the old
-	// behaviour rather than silently dropping the decision.
-	// A decision on a doctype that HAS a field, but is not in the list above,
-	// still needs that field written — keep the old path for it.
-	if (status) {
-		return document.setValue.submit(
-			{ [approvalField.value]: status },
-			{
-				onSuccess() {
-					onActionSuccess({ status, docstatus: 0, dismiss: false })
-				},
-				onError: onActionError({ status, docstatus: 0 }),
-			}
-		)
-	}
-
-	// Pure transition. The server performs it and tells us what it did.
+	// Pure transition (no decision — a plain submit/cancel). The server performs it
+	// and tells us what it did.
 	finalize.submit(
-		{ doctype: props.modelValue.doctype, name: props.modelValue.name, docstatus },
+		{
+			doctype: props.modelValue.doctype,
+			name: props.modelValue.name,
+			docstatus,
+		},
 		{
 			onSuccess(result) {
-				document.reload?.()
+				document.reload?.();
 				onActionSuccess({
 					status,
 					docstatus: result?.docstatus ?? docstatus,
 					dismiss: true,
-				})
+				});
 			},
 			onError: onActionError({ status, docstatus }),
-		}
-	)
-}
+		},
+	);
+};
 
 const openFormView = () => {
-	modalController.dismiss()
+	modalController.dismiss();
 	router.push({
 		name: `${props.modelValue.doctype.replace(/\s+/g, "")}DetailView`,
 		params: { id: props.modelValue.name },
-	})
-}
+	});
+};
 
 onMounted(() => {
-	workflow.value = useWorkflow(props.modelValue.doctype)
-})
+	workflow.value = useWorkflow(props.modelValue.doctype);
+});
 </script>
 
 <style scoped>

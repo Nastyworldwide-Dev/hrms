@@ -34,10 +34,49 @@ Bench-free: the contract is read from the AST. Run it as a FILE:
 
 import ast
 import pathlib
+import re
 import unittest
 
 API = pathlib.Path(__file__).resolve().parent / "approval.py"
 SHEET = pathlib.Path(__file__).resolve().parents[2] / "frontend/src/components/RequestActionSheet.vue"
+DESK_JS = pathlib.Path(__file__).resolve().parents[2] / "public/js/utils/request_approval.js"
+
+
+def _decide_then_submit_keys():
+	"""The keys of approval.DECIDE_THEN_SUBMIT, read from the AST so a status string
+	quoted inside a comment cannot be mistaken for a doctype."""
+	tree = ast.parse(API.read_text())
+	for node in ast.walk(tree):
+		if isinstance(node, ast.Assign) and any(
+			isinstance(t, ast.Name) and t.id == "DECIDE_THEN_SUBMIT" for t in node.targets
+		):
+			return {k.value for k in node.value.keys}
+	raise AssertionError("DECIDE_THEN_SUBMIT not found in approval.py")
+
+
+def _array_items(text, marker):
+	"""The quoted strings of the array literal that follows `marker`."""
+	block = text.split(marker, 1)[1].split("]", 1)[0]
+	return set(re.findall(r'"([^"]+)"', block))
+
+
+class TestDecideDoctypeListsAgree(unittest.TestCase):
+	"""approval.DECIDE_THEN_SUBMIT is the authority for which requests decide-then-
+	submit. The Desk client script keeps a copy — it can only wire form handlers to
+	named doctypes — and it must stay set-equal, or a doctype loses its Desk approve
+	buttons or gets them where decide would reject. The PWA keeps NO copy: it sends
+	every decision to decide and lets the server's allow-list rule, so the third copy
+	(and the setValue fallback beside it) that used to strand approvals is gone."""
+
+	def test_desk_js_matches_the_python_map(self):
+		py = _decide_then_submit_keys()
+		js = _array_items(DESK_JS.read_text(), "DECIDE_DOCTYPES = [")
+		self.assertEqual(py, js, "Desk DECIDE_DOCTYPES drifted from approval.DECIDE_THEN_SUBMIT")
+
+	def test_the_pwa_sheet_keeps_no_decide_list_or_setvalue_fallback(self):
+		src = SHEET.read_text()
+		self.assertNotIn("DECIDE_THEN_SUBMIT", src, "the PWA sheet must not reintroduce a decide list")
+		self.assertNotIn("setValue.submit", src, "a decision must go through decide, never setValue")
 
 
 def _fn(name):
