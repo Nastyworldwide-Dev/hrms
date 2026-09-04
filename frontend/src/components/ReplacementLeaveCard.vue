@@ -1,5 +1,11 @@
 <template>
-	<div class="flex flex-col w-full">
+	<!-- Only render when there is actually a bank to convert. Overtime and its
+	     Replacement-Leave payout are claimed as ONE thing on the Attendance screen
+	     now; this card is just the hours -> leave-days converter, so for everyone with
+	     an empty bank (all OT-Pay staff, and RL staff who have nothing banked) it stays
+	     out of the way and the Leaves screen is clean. It reappears the moment there
+	     are banked hours to spend, so those hours are never stranded. -->
+	<div v-if="bank.data?.hours_available > 0" class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
 			<span class="g-eyebrow">{{ __("Replacement Leave") }}</span>
 			<router-link :to="{ name: 'ReplacementLeaveView' }" v-slot="{ navigate }">
@@ -45,26 +51,28 @@
 </template>
 
 <script setup>
-import { createResource } from "frappe-ui"
-import { computed, inject } from "vue"
+import { createResource } from "frappe-ui";
+import { computed, inject } from "vue";
 
-import { settings } from "@/data/settings"
+import { settings } from "@/data/settings";
 
-const employee = inject("$employee")
-const __ = inject("$translate")
-const dayjs = inject("$dayjs")
+const employee = inject("$employee");
+const __ = inject("$translate");
+const dayjs = inject("$dayjs");
 
 // half a leave day in banked-overtime hours, from HR's configurable ratio (default 8/day)
-const halfDayHours = computed(() => (settings.data?.replacement_leave_hours_per_day ?? 8) / 2)
+const halfDayHours = computed(
+	() => (settings.data?.replacement_leave_hours_per_day ?? 8) / 2,
+);
 
 const bank = createResource({
 	url: "hrms.api.get_replacement_leave_bank_summary",
 	params: { employee: employee.data.name },
 	auto: true,
-})
+});
 
 const monthLabel = computed(() =>
-	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : ""
-)
+	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : "",
+);
 </script>
 import ResourceError from "@/components/ResourceError.vue"
