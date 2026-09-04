@@ -1,14 +1,13 @@
 # HANDOFF
-prompt:   pre-deploy regression sweep (3-reviewer) — fix all confirmed findings
-status:   done
-commit:   fe877d9b1 on nz-glass (5 commits: 21ba28d72 bfc8046d8 ca29c274d 11e46e6f4 fe877d9b1)
-files:    hrms/hooks.py — Data Import self-heal on_update→on_change (never fired; CRITICAL)
-          hrms/utils/identity.py — own_employees fail-open on case-drifted duplicate + WARN log
-          hrms/patches/v16_0/seed_required_hr_masters.py — seed→advisory (avoid split masters)
-          hrms/sync/runner.py — restore Error Log on failed counter advance
-          frontend/src/utils/geolocation.js + CheckInPanel.vue — stale GPS fix + verdict wording
-          hrms/tests/test_identity.py, frontend .../geolocation.test.js — regression tests
-verify:   yarn --cwd frontend test (132/135 pass; 3 fails pre-existing, unrelated module-mock suites)
-          bench run-tests --module hrms.tests.test_identity (needs bench; not runnable here)
-flags:    CRITICAL was in OUR code (hook wired to on_update); verify with a REAL Desk import at go-live
-next:     Track-1 build items remain: overnight/next-day checkout, OT form v2, dashboard count=0
+prompt:   ensure ALL config + data carried by sync (half-filled employees), repeatable
+status:   done (audit shipped) — awaiting a run against Verifica to produce the gap list
+commit:   2157cdc04 on nz-glass
+files:    hrms/sync/parity.py — 3 read-only checks: field_completeness, link_coverage,
+          source_customizations (source-vs-hub, HR-scoped, whitelisted HR/System Manager)
+          hrms/sync/test_parity.py — pure tests for _diff_field_fill (sync-gap vs source-gap)
+verify:   bench --site <site> execute hrms.sync.parity.field_completeness --args '["<instance>"]'
+          also link_coverage(<instance>) and source_customizations(<instance>); all read-only
+flags:    field_completeness splits blanks: empty-but-filled-on-source = SYNC bug (I fix),
+          empty-on-both = SOURCE gap (HR fills). No writes; run before cutover.
+next:     run the 3 checks on Verifica; rule the gap list; if sync-fidelity gaps appear I fix
+          the sync to carry those fields, then re-sync
