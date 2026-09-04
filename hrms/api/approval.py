@@ -275,6 +275,23 @@ def decide(doctype: str, name: str, status: str) -> dict:
 
 
 @frappe.whitelist()
+def can_decide(doctype: str, name: str) -> bool:
+	"""Whether the CURRENT user may decide THIS request — the same gate `decide`
+	enforces (submit permission, or the routed approver), exposed read-only so the
+	Desk renders Approve/Reject only when they would actually work. Never writes,
+	never a decision; the write path stays `decide` with its lock and validators."""
+	logger.debug("[approval] can_decide %s %s for %s", doctype, name, frappe.session.user)
+	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
+		return False
+	doc = frappe.get_doc(doctype, name)
+	if doc.docstatus != 0:
+		return False
+	if frappe.has_permission(doctype, "submit", doc=doc):
+		return True
+	return bool(_is_routed_approver(doc))
+
+
+@frappe.whitelist()
 def report_half_transitioned(doctype: str | None = None) -> dict:
 	"""Requests already stuck decided-but-draft, for an HR ruling.
 
