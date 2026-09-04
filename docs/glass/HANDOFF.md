@@ -1,15 +1,14 @@
 # HANDOFF
-prompt:   OT/Replacement-Leave engine — PWA consolidation (Cluster 1, final piece)
+prompt:   pre-deploy regression sweep (3-reviewer) — fix all confirmed findings
 status:   done
-commit:   3de9295e1 on nz-glass
-files:    frontend/src/views/attendance/Dashboard.vue — 2 rows -> 1 "Claim Overtime or Leave"
-          frontend/src/components/ReplacementLeaveCard.vue — dropped duplicate days-available
-verify:   yarn --cwd frontend test (geolocation 14 pass); visual: Attendance shows 3 rows,
-          Leaves RL card shows bank + Claim only (no duplicate number)
-flags:    Cluster 1 DONE. OT calc correct + HR-configurable RL ratio (earlier commits);
-          entitlement = existing single tick (Pay OR Leave); approver = existing _is_routed_approver.
-          "Claim Overtime or Leave" -> OT request form (compensation read-only per entitlement);
-          both entitlements claim through it. RL bank convert stays on Leaves screen. "Request a
-          Leave" button unchanged (separate feature, per HR). Display-only change, no backend.
-next:     Cluster 1 complete. Remaining backlog: notification bug (confirm fixed vs new),
-          replacement-leave PH symptom, expense GL by company, announcement popup. Await direction.
+commit:   fe877d9b1 on nz-glass (5 commits: 21ba28d72 bfc8046d8 ca29c274d 11e46e6f4 fe877d9b1)
+files:    hrms/hooks.py — Data Import self-heal on_update→on_change (never fired; CRITICAL)
+          hrms/utils/identity.py — own_employees fail-open on case-drifted duplicate + WARN log
+          hrms/patches/v16_0/seed_required_hr_masters.py — seed→advisory (avoid split masters)
+          hrms/sync/runner.py — restore Error Log on failed counter advance
+          frontend/src/utils/geolocation.js + CheckInPanel.vue — stale GPS fix + verdict wording
+          hrms/tests/test_identity.py, frontend .../geolocation.test.js — regression tests
+verify:   yarn --cwd frontend test (132/135 pass; 3 fails pre-existing, unrelated module-mock suites)
+          bench run-tests --module hrms.tests.test_identity (needs bench; not runnable here)
+flags:    CRITICAL was in OUR code (hook wired to on_update); verify with a REAL Desk import at go-live
+next:     Track-1 build items remain: overnight/next-day checkout, OT form v2, dashboard count=0
