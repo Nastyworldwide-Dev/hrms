@@ -281,7 +281,7 @@ function report_field_completeness(report) {
 			const c = per_field[f];
 			return `<tr><td>${esc(f)}</td>
 				<td style="text-align:right">${c.empty_here}</td>
-				<td style="text-align:right;color:#b45309"><b>${c.filled_on_source}</b></td>
+				<td style="text-align:right;color:var(--orange-600)"><b>${c.filled_on_source}</b></td>
 				<td style="text-align:right">${c.empty_both}</td></tr>`;
 		})
 		.join("");
@@ -734,6 +734,15 @@ function release_stamp(frm) {
 				],
 				primary_action_label: __("Release Stamp"),
 				primary_action: ({ confirm }) => {
+					// The server re-validates confirm==name, but check here too so a
+					// mistyped name fails instantly instead of after a round trip.
+					if (confirm !== frm.doc.name) {
+						frappe.show_alert({
+							message: __("Type the instance name exactly to confirm."),
+							indicator: "orange",
+						});
+						return;
+					}
 					d.hide();
 					frappe.call({
 						method: "hrms.sync.purge.release_instance_stamp",
