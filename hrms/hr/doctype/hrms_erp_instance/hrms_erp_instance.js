@@ -19,6 +19,13 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		// the operator's business.
 		frm.add_custom_button(__("Purge Mirrored Data"), () => purge_mirror(frm), __("Danger"));
 
+		// The SAFE recovery when a second instance (a cloned dev ERP) has stamped rows
+		// that are really live: it deletes nothing, just forgets provenance, so the real
+		// source reclaims them on the next full sync. Step 2 of the "Where did this data
+		// come from" safe order — a button, because the operator cannot run a console and
+		// Purge (right above) is the destructive thing they would reach for instead.
+		frm.add_custom_button(__("Release This Instance's Stamp"), () => release_stamp(frm), __("Danger"));
+
 		// Read-only, and OUTSIDE the `enabled` gate for the same reason Purge is:
 		// the question "which source do these rows really belong to?" matters
 		// most about an instance somebody has just disabled.
@@ -685,6 +692,74 @@ function result_html(result) {
 //
 // This deletes in reverse sync order instead, and shows the dry run first —
 // nothing is destroyed until the instance name is typed back.
+function release_stamp(frm) {
+	// Dry-run first (no confirm) — count what carries this instance's stamp, then
+	// make the operator type the name, exactly like Purge. Unlike Purge this DELETES
+	// NOTHING: it clears the provenance so a full sync from the real source can
+	// reclaim rows a cloned instance wrongly stamped first.
+	console.info("[HRMSERPInstance] release stamp dry-run for", frm.doc.name);
+	frappe.call({
+		method: "hrms.sync.purge.release_instance_stamp",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Counting stamped rows…"),
+		callback: ({ message }) => {
+			if (!message || !message.total) {
+				frappe.msgprint({
+					title: __("Nothing to release"),
+					indicator: "green",
+					message: __("No rows on this hub carry {0}'s provenance stamp.", [frm.doc.name]),
+				});
+				return;
+			}
+			const lines = Object.entries(message.counts)
+				.map(([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`)
+				.join("");
+			const d = new frappe.ui.Dialog({
+				title: __("Release provenance stamp"),
+				fields: [
+					{
+						fieldtype: "HTML",
+						options: `<p>${__("This clears the provenance stamp on <b>{0}</b> rows mirrored from <b>{1}</b>. It <b>deletes nothing</b> — the rows stay, they just stop being attributed to this instance.", [message.total, frappe.utils.escape_html(frm.doc.name)])}</p>
+							<ul>${lines}</ul>
+							<p>${__("Do this for a cloned/dev instance, then run a full sync from the REAL source: it reclaims every row that source genuinely holds. Whatever is still unstamped afterwards is clone-only data.")}</p>`,
+					},
+					{
+						fieldtype: "Data",
+						fieldname: "confirm",
+						reqd: 1,
+						label: __("Type the instance name to confirm"),
+						description: frm.doc.name,
+					},
+				],
+				primary_action_label: __("Release Stamp"),
+				primary_action: ({ confirm }) => {
+					d.hide();
+					frappe.call({
+						method: "hrms.sync.purge.release_instance_stamp",
+						args: { instance_name: frm.doc.name, confirm },
+						freeze: true,
+						freeze_message: __("Releasing…"),
+						callback: (r) => {
+							const res = r.message || {};
+							frappe.msgprint({
+								title: __("Stamp released"),
+								indicator: "green",
+								message: __(
+									"Released {0} row(s) — now hub-owned. Run a full sync from the real source to reclaim what it holds.",
+									[res.total],
+								),
+							});
+							frm.reload_doc();
+						},
+					});
+				},
+			});
+			d.show();
+		},
+	});
+}
+
 function purge_mirror(frm) {
 	frappe.call({
 		method: "hrms.sync.purge.purge_instance",
