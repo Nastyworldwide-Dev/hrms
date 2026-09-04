@@ -291,13 +291,16 @@ _NON_CONFIG_LINK_FIELDS = frozenset({"user_id", "salary_currency"})
 
 
 def _auditable_link_fields(doctype: str) -> list:
-	"""The HR-config Link / Table-MultiSelect fields on `doctype`, from LIVE meta so
-	hrms custom fields (shift_location, default_shift, overtime_type) are audited too,
-	not only ERPNext's stock ones. Framework identity and always-resolvable targets
-	are dropped — an empty user_id or company is not the gap we are hunting."""
+	"""The HR-config Link fields on `doctype`, from LIVE meta so hrms custom fields
+	(shift_location, default_shift, overtime_type) are audited too, not only ERPNext's
+	stock ones. Framework identity and always-resolvable targets are dropped — an empty
+	user_id or company is not the gap we are hunting.
+
+	Link ONLY, not Table MultiSelect: the latter is a child table, not a column, so it
+	cannot be compared as a per-row value and is not in the source's `SELECT *` either."""
 	fields = []
 	for df in frappe.get_meta(doctype).fields:
-		if df.fieldtype not in ("Link", "Table MultiSelect") or not df.options:
+		if df.fieldtype != "Link" or not df.options:
 			continue
 		if df.fieldname in _NON_CONFIG_LINK_FIELDS or df.options in _ALWAYS_RESOLVABLE_LINKS:
 			continue
@@ -366,9 +369,12 @@ def field_completeness(instance_name: str, doctype: str = "Employee") -> dict:
 			doctype, filters={"synced_from_instance": ["is", "set"]}, fields=["name", *fields]
 		)
 	}
-	remote = {
-		r["name"]: r for r in RemoteInstanceClient(instance_name).get_list(doctype, fields=["name", *fields])
-	}
+	# Pull the source with fields=["*"], the way runner._pull_doctype does — NOT the
+	# hub-derived field list. The source is an older build and may not have a hub
+	# custom field; naming it makes the remote reject the WHOLE read with 417
+	# (ValidationError). With "*" a field the source lacks simply reads as empty in the
+	# diff below — correctly a source gap, never a false sync gap.
+	remote = {r["name"]: r for r in RemoteInstanceClient(instance_name).get_list(doctype, fields=["*"])}
 	result = _diff_field_fill(fields, local, remote)
 	result["doctype"] = doctype
 	result["rows_here"] = len(local)
