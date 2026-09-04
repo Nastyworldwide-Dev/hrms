@@ -318,7 +318,12 @@ doc_events = {
 		# name (the "Employee HR-EMP-00318 already exists" trap HR hit creating a
 		# new employee). Self-heals every future import — the part a one-off patch
 		# structurally cannot reach, since imports happen after deploy.
-		"on_update": "hrms.utils.naming_series_repair.after_data_import",
+		# MUST be on_change, not on_update: the importer sets the terminal status via
+		# Document.db_set (importer.py), and db_set fires on_change only — on_update
+		# fires solely on a full save, i.e. at Pending creation, which the status
+		# guard skips. Wired to on_update this never ran at Success. Fires on every
+		# db_set; after_data_import's status guard keeps the work to the terminal one.
+		"on_change": "hrms.utils.naming_series_repair.after_data_import",
 	},
 	"Timesheet": {"validate": "hrms.hr.utils.validate_active_employee"},
 	"Payment Entry": {
