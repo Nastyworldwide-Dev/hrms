@@ -9,7 +9,7 @@ from frappe.utils import get_link_to_form
 
 import hrms
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
-from hrms.hr.utils import share_doc_with_approver, validate_active_employee
+from hrms.hr.utils import share_doc_with_approver, validate_active_employee, validate_self_submission
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 
@@ -42,6 +42,13 @@ class ShiftRequest(Document, PWANotificationsMixin):
 		self.notify_approver()
 
 	def on_submit(self):
+		# Submitting IS the approval, so the employee on the request must never be
+		# the one submitting it — the only one of the six decide-then-submit types
+		# that was missing this. validate_approver checks the approver is ALLOWED, not
+		# that they aren't the requester; a self-configured approver field would let an
+		# employee approve their own shift change without this. Runs on submit (the
+		# decision), not validate, so it never blocks the employee filing their own.
+		validate_self_submission(self)
 		if self.status not in ["Approved", "Rejected"]:
 			frappe.throw(_("Only Shift Request with status 'Approved' and 'Rejected' can be submitted"))
 		if self.status == "Approved":
