@@ -11,7 +11,7 @@
 					<!-- Overtime already worked, surfaced so it is not a secret you find by
 					     opening the form and guessing a date. Tappable straight into the
 					     claim; hidden when there is nothing to claim. -->
-					<div v-if="claimableOt.data?.claimable_hours" class="order-0">
+					<div v-if="hasClaim" class="order-0">
 						<button
 							class="w-full text-left border border-accent-ink rounded-panel p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-icon-bg"
 							@click="router.push({ name: 'OTRequestFormView' })"
@@ -19,15 +19,14 @@
 							<div class="flex flex-col gap-1">
 								<span class="g-eyebrow text-accent-ink">{{ __("Overtime to claim") }}</span>
 								<span class="text-lg font-extrabold text-inkbase">
-									{{ __("{0} h waiting", [claimableOt.data.claimable_hours]) }}
+									{{
+										isRLClaim
+											? __("{0} day(s) off waiting", [claimLeaveDays])
+											: __("{0} h waiting", [claimableOt.data.claimable_hours])
+									}}
 								</span>
 								<span class="text-sm text-ink-600">
-									{{
-										__("{0} day(s) worked · {1} · tap to claim", [
-											claimableOt.data.claimable_days,
-											__(claimableOt.data.compensation),
-										])
-									}}
+									{{ __("{0} · tap to claim", [__(claimableOt.data.compensation)]) }}
 								</span>
 							</div>
 							<span class="text-accent-ink text-xl" aria-hidden="true">→</span>
@@ -170,6 +169,7 @@ import {
 	myShiftRequests,
 } from "@/data/attendance";
 import { myOTRequests } from "@/data/overtime";
+import { settings } from "@/data/settings";
 
 const router = useRouter();
 const dayjs = inject("$dayjs");
@@ -180,6 +180,30 @@ const claimableOt = createResource({
 	url: "hrms.api.get_claimable_ot_summary",
 	auto: true,
 });
+
+const isRLClaim = computed(
+	() => claimableOt.data?.compensation === "Replacement Leave",
+);
+
+// Replacement Leave is earned in whole 4h blocks PER DAY (mirrors backend
+// replacement_leave_days); sum the block-days across the claimable days. Days under
+// 4h earn nothing, so they add 0.
+const claimLeaveDays = computed(() => {
+	const half = (settings.data?.replacement_leave_hours_per_day ?? 8) / 2;
+	if (half <= 0) return 0;
+	return (claimableOt.data?.days || []).reduce(
+		(sum, d) => sum + Math.floor((d.hours || 0) / half) * 0.5,
+		0,
+	);
+});
+
+// Show the card only when there is really something to claim: hours for Overtime
+// Pay, at least one full 4h block of leave for Replacement Leave.
+const hasClaim = computed(() =>
+	isRLClaim.value
+		? claimLeaveDays.value > 0
+		: (claimableOt.data?.claimable_hours || 0) > 0,
+);
 
 const shifts = createResource({
 	url: "hrms.api.get_shifts",

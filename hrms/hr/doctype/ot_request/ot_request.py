@@ -9,6 +9,8 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt, get_first_day, get_last_day, getdate
 
 from hrms.hr.utils import (
+	grant_replacement_leave,
+	reverse_replacement_leave,
 	validate_active_employee,
 	validate_filing_for_self,
 	validate_mandatory_attachment,
@@ -16,7 +18,11 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils.filing_window import earliest_filable_date, is_within_ot_filing_window
-from hrms.utils.ot_calculation import get_day_ot_breakdown, round_ot_pay_hours
+from hrms.utils.ot_calculation import (
+	get_day_ot_breakdown,
+	replacement_leave_days,
+	round_ot_pay_hours,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,34 +162,38 @@ class OTRequest(Document, PWANotificationsMixin):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
+		# Replacement Leave is granted PER WORKING DAY, directly, on approval — no
+		# bank, no accumulation, no separate claim. That day's OT converts to whole
+		# 4h blocks (4h=½, 8h=1, 12h=1.5; under 4h earns nothing) and lands in the
+		# employee's allocation now. A rejection reaches docstatus 1 too but grants
+		# nothing (guarded on Approved). The allocation name is kept so a cancel can
+		# reverse exactly this grant.
+		if self.status == "Approved" and self.compensation == REPLACEMENT_LEAVE:
+			days = replacement_leave_days(flt(self.claimed_hours), replacement_leave_hours_per_day())
+			if days > 0:
+				allocation = grant_replacement_leave(
+					self.employee,
+					self.employee_name,
+					self.company,
+					days,
+					getdate(),
+					description=self.explanation,
+				)
+				self.db_set("leave_allocation", allocation)
 
 	def on_cancel(self):
-		# hours already converted by a Replacement Leave Claim can't be
-		# cancelled out from under it
-		if self.compensation != REPLACEMENT_LEAVE:
-			return
-		# exclude self explicitly: by the time on_cancel runs, docstatus=2 is
-		# already persisted so the sum would exclude it anyway — but the guard
-		# must not depend on that ordering. Today's claiming window: an OT still
-		# in it whose hours a claim reserved drives remaining negative; one that
-		# has aged out of every claim's window is free to cancel (its leave, if
-		# any, was already granted through the claim).
-		bank = get_replacement_leave_bank(self.employee, getdate(), exclude_request=self.name)
-		remaining_after_cancel = bank["hours_total"] - bank["hours_claimed"]
+		# Reverse the per-day Replacement Leave grant this request made, if any. No
+		# bank to reconcile any more — the days went straight into the allocation, so
+		# cancelling takes exactly those days back out.
 		logger.info(
-			"[ot_request] cancel %s: bank %s, claimed %s, after-cancel %s",
+			"[ot_request] cancel %s (comp %s, allocation %s)",
 			self.name,
-			bank["hours_total"],
-			bank["hours_claimed"],
-			remaining_after_cancel,
+			self.compensation,
+			self.leave_allocation,
 		)
-		if remaining_after_cancel < 0:
-			frappe.throw(
-				_(
-					"Cannot cancel: {0} of this month's overtime hours were already converted to "
-					"Replacement Leave. Cancel the Replacement Leave Claim first."
-				).format(frappe.bold(bank["hours_claimed"]))
-			)
+		if self.compensation == REPLACEMENT_LEAVE and self.leave_allocation:
+			days = replacement_leave_days(flt(self.claimed_hours), replacement_leave_hours_per_day())
+			reverse_replacement_leave(self.leave_allocation, days)
 
 
 def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str | None = None) -> dict:
@@ -206,7 +216,22 @@ def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str |
 	and hours_available cannot drift negative the way a rolling window could.
 	When no active period covers `as_of` there is nothing to bank (a claim can't
 	be approved without one either — see add_to_leave_allocation).
+
+	DEPRECATED: Replacement Leave is now granted PER WORKING DAY, directly, on OT
+	approval (OTRequest.on_submit) — nothing banks or accumulates, so there is no
+	pool to convert. This returns an empty bank so the legacy Replacement Leave card
+	and Claim show "nothing to do", and the function and doctype stay (not deleted)
+	so any historical rows remain loadable. The old computation is kept below, unused.
 	"""
+	logger.info("[ot_request] replacement-leave bank deprecated — empty for %s (per-day grant now)", employee)
+	return {
+		"period_start": None,
+		"period_end": None,
+		"hours_total": 0,
+		"hours_claimed": 0,
+		"hours_available": 0,
+	}
+
 	from hrms.hr.utils import get_leave_period
 
 	as_of = getdate(as_of or getdate())

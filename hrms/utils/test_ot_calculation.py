@@ -21,6 +21,7 @@ from hrms.utils.ot_calculation import (
 	_real_shift_start_dt,
 	get_ot_pay,
 	get_shift_ot_breakdown,
+	replacement_leave_days,
 	round_ot_pay_hours,
 )
 
@@ -83,6 +84,20 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertEqual(round_ot_pay_hours(2 + 30 / 60), 2.5)  # 2h30m
 		self.assertEqual(round_ot_pay_hours(2 + 50 / 60), 3.0)  # 2h50m
 		self.assertEqual(round_ot_pay_hours(-1), 0.0)  # never negative
+
+	def test_replacement_leave_days_whole_4h_blocks(self):
+		# HR: replacement leave is per working day, in whole 4h blocks — 4h=½, 8h=1,
+		# 12h=1.5, under 4h earns nothing, and the partial block is dropped (6h=½).
+		# NOT accumulated across days. Pure, so asserted bench-free.
+		self.assertEqual(replacement_leave_days(0), 0.0)
+		self.assertEqual(replacement_leave_days(1.36), 0.0)
+		self.assertEqual(replacement_leave_days(3.99), 0.0)
+		self.assertEqual(replacement_leave_days(4), 0.5)
+		self.assertEqual(replacement_leave_days(6), 0.5)  # remainder in the block is lost
+		self.assertEqual(replacement_leave_days(7.99), 0.5)
+		self.assertEqual(replacement_leave_days(8), 1.0)
+		self.assertEqual(replacement_leave_days(12), 1.5)
+		self.assertEqual(replacement_leave_days(16), 2.0)
 
 	def test_hourly_rate(self):
 		# 2080 / (26 * 8) = 10.0

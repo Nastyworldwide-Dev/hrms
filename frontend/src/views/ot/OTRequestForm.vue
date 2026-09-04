@@ -15,7 +15,10 @@
 				</span>
 				<span class="text-sm text-ink-600">{{ claimTypeHint }}</span>
 				<template v-if="otSummary.data">
-					<span class="text-sm text-ink-600">
+					<!-- Overtime Pay claims HOURS, so it shows hours. Replacement Leave earns
+					     whole-day blocks — showing raw hours there just confuses, so the day
+					     result (from `expectation`) speaks for it. -->
+					<span v-if="!isRL" class="text-sm text-ink-600">
 						{{
 							__("Overtime worked: {0} h — claim up to that.", [
 								otSummary.data.punch_ot_hours || 0,
@@ -27,13 +30,10 @@
 			</div>
 			<!-- The dates the employee actually has unclaimed OT on — tap instead of
 			     guessing a date in the picker. Only on a new request with something to claim. -->
-			<div
-				v-if="claimableDays.data?.days?.length && !props.id"
-				class="mx-4 mt-4 flex flex-col gap-2"
-			>
+			<div v-if="displayDays.length && !props.id" class="mx-4 mt-4 flex flex-col gap-2">
 				<span class="g-eyebrow">{{ __("Days you can claim") }}</span>
 				<button
-					v-for="d in claimableDays.data.days"
+					v-for="d in displayDays"
 					:key="d.date"
 					class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between cursor-pointer"
 					:class="
@@ -44,7 +44,7 @@
 					@click="otRequest.ot_date = d.date"
 				>
 					<span class="text-inkbase font-semibold">{{ formatDay(d.date) }}</span>
-					<span class="text-sm text-ink-600">{{ __("{0} h", [d.hours]) }}</span>
+					<span class="text-sm text-ink-600">{{ d.label }}</span>
 				</button>
 			</div>
 			<FormView
@@ -83,25 +83,49 @@ const claimableDays = createResource({
 
 const formatDay = (date) => dayjs(date).format("ddd, D MMM");
 
-// One plain line telling the employee what their claim type actually means, so the
-// bare words "Overtime Pay"/"Replacement Leave" are not left to interpret.
+// HR's full-day ratio: overtime hours that make ONE day of replacement leave.
+const rlHoursPerDay = computed(
+	() => settings.data?.replacement_leave_hours_per_day ?? 8,
+);
+
+const isRL = computed(
+	() => claimableDays.data?.compensation === "Replacement Leave",
+);
+
+// Replacement leave earned by ONE day's OT, in whole 4-hour blocks — mirrors the
+// backend replacement_leave_days: floor(hours / (ratio/2)) * 0.5. Under 4h = 0.
+// Per day, never accumulated: a short day earns nothing.
+const rlDays = (hours) => {
+	const half = (rlHoursPerDay.value || 8) / 2;
+	if (!hours || half <= 0) return 0;
+	return Math.floor(hours / half) * 0.5;
+};
+
+// One plain line telling the employee what their claim type means.
 const claimTypeHint = computed(() => {
 	const c = claimableDays.data?.compensation;
 	if (c === "Overtime Pay")
 		return __("Your overtime pays out — you're paid for the hours you claim.");
 	if (c === "Replacement Leave")
-		return __("Your overtime banks as leave you can take as time off.");
+		return __("Your overtime becomes time off — earned in full 4-hour blocks.");
 	return "";
 });
 
-// HR's configurable ratio: banked overtime hours per day of replacement leave.
-const rlHoursPerDay = computed(
-	() => settings.data?.replacement_leave_hours_per_day ?? 8,
-);
+// The claimable days, shaped for display: Overtime Pay shows hours; Replacement
+// Leave shows the whole-day blocks and DROPS days under 4h (they earn nothing, per
+// HR — showing "0 days" would only confuse).
+const displayDays = computed(() => {
+	const days = claimableDays.data?.days || [];
+	if (!isRL.value) {
+		return days.map((d) => ({ ...d, label: __("{0} h", [d.hours]) }));
+	}
+	return days
+		.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
+		.filter((d) => d.leaveDays > 0)
+		.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }));
+});
 
-// What the employee should expect from this claim — told plainly, from the engine,
-// so they know before they submit whether it pays out or becomes leave, and roughly
-// how much. The approver still decides yes/no; this only sets the expectation.
+// What to expect from this claim — pay for hours, or the whole-day blocks of leave.
 const expectation = computed(() => {
 	const d = otSummary.data;
 	if (!d) return "";
@@ -110,16 +134,15 @@ const expectation = computed(() => {
 			"This pays out as overtime — you'll be paid for the hours you claim.",
 		);
 	}
-	// Replacement Leave banks the hours and converts in half-day BLOCKS, not a raw
-	// hours/8 fraction: 1.36 h is NOT "0.2 days off", it's 1.36 h banked toward the
-	// next 4 h = ½ day. Showing a sub-minimum day count promises leave that can't be
-	// taken. Show the banking + the block rule instead; the conversion (with the 4 h
-	// minimum) happens on the Leaves screen.
-	const halfDayHours = rlHoursPerDay.value / 2;
-	return __(
-		"This banks {0} h toward replacement leave — {1} h = ½ day off, converted on the Leaves screen.",
-		[d.punch_ot_hours || 0, halfDayHours],
-	);
+	const leaveDays = rlDays(d.punch_ot_hours || 0);
+	const half = (rlHoursPerDay.value || 8) / 2;
+	if (leaveDays <= 0) {
+		return __(
+			"Under {0}h in a day earns no replacement leave ({0}h = ½ day).",
+			[half],
+		);
+	}
+	return __("This gives you {0} day(s) off.", [leaveDays]);
 });
 
 const props = defineProps({

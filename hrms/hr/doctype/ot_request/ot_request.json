@@ -21,6 +21,7 @@
   "compensation",
   "reason_section",
   "explanation",
+  "leave_allocation",
   "amended_from"
  ],
  "fields": [
@@ -133,6 +134,16 @@
    "fieldname": "explanation",
    "fieldtype": "Small Text",
    "label": "Explanation"
+  },
+  {
+   "description": "For a Replacement Leave request: the leave allocation this topped up on approval, so a cancellation reverses exactly that grant.",
+   "fieldname": "leave_allocation",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Leave Allocation",
+   "no_copy": 1,
+   "options": "Leave Allocation",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",

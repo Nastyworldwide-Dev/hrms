@@ -14,6 +14,7 @@ from frappe.query_builder.functions import Count, Sum
 from frappe.utils import (
 	add_days,
 	add_months,
+	cint,
 	comma_and,
 	cstr,
 	flt,
@@ -664,6 +665,82 @@ def create_additional_leave_ledger_entry(allocation, leaves, date):
 	allocation.from_date = date
 	allocation.unused_leaves = 0
 	allocation.create_leave_ledger_entry()
+
+
+def _existing_rl_allocation(employee, leave_type, valid_from):
+	"""The employee's submitted Replacement Leave allocation covering `valid_from`, or None."""
+	logger.debug("[rl_grant] existing allocation lookup %s %s %s", employee, leave_type, valid_from)
+	rows = frappe.db.get_all(
+		"Leave Allocation",
+		filters={
+			"employee": employee,
+			"leave_type": leave_type,
+			"from_date": ("<=", valid_from),
+			"to_date": (">=", valid_from),
+			"docstatus": 1,
+		},
+		limit=1,
+	)
+	return frappe.get_doc("Leave Allocation", rows[0].name) if rows else None
+
+
+def grant_replacement_leave(employee, employee_name, company, days, valid_from, description=None):
+	"""Top up — or create — the employee's Replacement Leave allocation by `days`, with
+	the ledger entry, and return the allocation name. This is the per-working-day grant
+	the OT Request makes on approval (4h=½, 8h=1, 12h=1.5); the caller owns eligibility
+	and the day count. Mirrors CompensatoryLeaveRequest.on_submit — top-up or create."""
+	logger.info("[rl_grant] grant %s day(s) for %s valid from %s", flt(days), employee, valid_from)
+	from hrms.hr.doctype.replacement_leave_claim.replacement_leave_claim import REPLACEMENT_LEAVE_TYPE
+
+	days = flt(days)
+	leave_period = get_leave_period(valid_from, valid_from, company)
+	if not leave_period:
+		frappe.throw(
+			_("No active Leave Period covers {0} — create one before approving.").format(
+				frappe.bold(str(valid_from))
+			)
+		)
+	allocation = _existing_rl_allocation(employee, REPLACEMENT_LEAVE_TYPE, valid_from)
+	if allocation:
+		# persisting total into new mirrors CompensatoryLeaveRequest, drift-free while
+		# the leave type keeps is_carry_forward=0 (as the ensure patch creates it)
+		allocation.new_leaves_allocated += days
+		allocation.validate()
+		allocation.db_set("new_leaves_allocated", allocation.total_leaves_allocated)
+		allocation.db_set("total_leaves_allocated", allocation.total_leaves_allocated)
+		create_additional_leave_ledger_entry(allocation, days, valid_from)
+		return allocation.name
+	is_carry_forward = frappe.db.get_value("Leave Type", REPLACEMENT_LEAVE_TYPE, "is_carry_forward")
+	allocation = frappe.get_doc(
+		dict(
+			doctype="Leave Allocation",
+			employee=employee,
+			employee_name=employee_name,
+			leave_type=REPLACEMENT_LEAVE_TYPE,
+			from_date=valid_from,
+			to_date=leave_period[0].to_date,
+			carry_forward=cint(is_carry_forward),
+			new_leaves_allocated=days,
+			total_leaves_allocated=days,
+			description=description,
+		)
+	)
+	allocation.insert(ignore_permissions=True)
+	allocation.submit()
+	return allocation.name
+
+
+def reverse_replacement_leave(allocation_name, days):
+	"""Undo a grant_replacement_leave top-up when the source request is cancelled.
+	Mirrors ReplacementLeaveClaim.on_cancel."""
+	logger.info("[rl_grant] reverse %s day(s) from %s", flt(days), allocation_name)
+	days = flt(days)
+	allocation = frappe.get_doc("Leave Allocation", allocation_name)
+	allocation.new_leaves_allocated = max(0, flt(allocation.new_leaves_allocated) - days)
+	allocation.validate()
+	allocation.db_set("new_leaves_allocated", allocation.total_leaves_allocated)
+	allocation.db_set("total_leaves_allocated", allocation.total_leaves_allocated)
+	create_additional_leave_ledger_entry(allocation, days * -1, getdate())
 
 
 def get_expected_allocation_date_for_period(

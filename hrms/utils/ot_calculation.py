@@ -75,6 +75,21 @@ def round_ot_pay_hours(hours) -> float:
 	return rounded
 
 
+def replacement_leave_days(hours, hours_per_day=8) -> float:
+	"""Replacement leave earned by ONE working day's OT, in whole half-day blocks:
+	4 h = ½ day, 8 h = 1 day, 12 h = 1.5 day, under 4 h = 0. Computed and stored PER
+	DAY — NOT banked, NOT accumulated: a short day earns nothing and never carries to
+	the next. `hours_per_day` is HR's full-day ratio (default 8); half a day is half
+	of it (4 h), and the remainder inside a block is dropped (6 h still = ½ day)."""
+	half = flt(hours_per_day) / 2.0
+	if not hours or half <= 0:
+		return 0.0
+	blocks = int(flt(hours) / half)  # whole half-day blocks; the partial block is lost
+	result = blocks * 0.5
+	logger.debug("[ot_calculation] RL %.2fh (half=%.1f) -> %s day(s)", flt(hours), half, result)
+	return result
+
+
 def _hourly_rate(basic, days_per_month=WORKING_DAYS_PER_MONTH, hours_per_day=HOURS_PER_DAY):
 	if not basic or basic <= 0 or days_per_month <= 0 or hours_per_day <= 0:
 		return 0.0
