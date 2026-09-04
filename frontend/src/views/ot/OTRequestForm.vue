@@ -1,9 +1,32 @@
 <template>
 	<GPage>
 		<ion-content :fullscreen="true">
-			<!-- The dates the employee actually has unclaimed OT on — so they tap the
-			     day instead of guessing one in the picker. Only on a new request, and
-			     only when there is something to claim. -->
+			<!-- What this claims, shown UP FRONT (from HR-set eligibility) so the form is
+			     never a blank mystery: the employee sees "Overtime Pay" or "Replacement
+			     Leave" and what it means before touching anything. Once a day is picked it
+			     also shows that day's punch-verified hours. -->
+			<div
+				v-if="claimableDays.data?.compensation && !props.id"
+				class="mx-4 mt-4 border border-divider rounded-panel p-4 flex flex-col gap-2"
+			>
+				<span class="g-eyebrow text-accent-ink">{{ __("You claim") }}</span>
+				<span class="text-lg font-extrabold text-inkbase">
+					{{ __(claimableDays.data.compensation) }}
+				</span>
+				<span class="text-sm text-ink-600">{{ claimTypeHint }}</span>
+				<template v-if="otSummary.data">
+					<span class="text-sm text-ink-600">
+						{{
+							__("Overtime worked: {0} h — claim up to that.", [
+								otSummary.data.punch_ot_hours || 0,
+							])
+						}}
+					</span>
+					<span class="text-sm text-ink-600">{{ expectation }}</span>
+				</template>
+			</div>
+			<!-- The dates the employee actually has unclaimed OT on — tap instead of
+			     guessing a date in the picker. Only on a new request with something to claim. -->
 			<div
 				v-if="claimableDays.data?.days?.length && !props.id"
 				class="mx-4 mt-4 flex flex-col gap-2"
@@ -23,25 +46,6 @@
 					<span class="text-inkbase font-semibold">{{ formatDay(d.date) }}</span>
 					<span class="text-sm text-ink-600">{{ __("{0} h", [d.hours]) }}</span>
 				</button>
-			</div>
-			<!-- Claim summary from the engine: the employee sees their claim TYPE (pay
-			     or leave, from HR-set eligibility), how many hours are claimable, and
-			     what to expect — before they enter anything. Shown once a date is picked
-			     on a new request. -->
-			<div
-				v-if="otSummary.data && !props.id"
-				class="mx-4 mt-4 border border-divider rounded-panel p-4 flex flex-col gap-2"
-			>
-				<span class="g-eyebrow">{{ __("Your claim") }}</span>
-				<span class="text-lg font-extrabold text-inkbase">
-					{{ __(otSummary.data.compensation) }}
-				</span>
-				<span class="text-sm text-ink-600">
-					{{
-						__("Overtime worked: {0} h — claim up to that.", [otSummary.data.punch_ot_hours || 0])
-					}}
-				</span>
-				<span class="text-sm text-ink-600">{{ expectation }}</span>
 			</div>
 			<FormView
 				v-if="formFields.data"
@@ -79,6 +83,17 @@ const claimableDays = createResource({
 });
 
 const formatDay = (date) => dayjs(date).format("ddd, D MMM");
+
+// One plain line telling the employee what their claim type actually means, so the
+// bare words "Overtime Pay"/"Replacement Leave" are not left to interpret.
+const claimTypeHint = computed(() => {
+	const c = claimableDays.data?.compensation;
+	if (c === "Overtime Pay")
+		return __("Your overtime pays out — you're paid for the hours you claim.");
+	if (c === "Replacement Leave")
+		return __("Your overtime banks as leave you can take as time off.");
+	return "";
+});
 
 // HR's configurable ratio: banked overtime hours per day of replacement leave.
 const rlHoursPerDay = computed(
