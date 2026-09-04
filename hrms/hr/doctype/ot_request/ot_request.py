@@ -16,7 +16,7 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils.filing_window import earliest_filable_date, is_within_ot_filing_window
-from hrms.utils.ot_calculation import get_day_ot_breakdown
+from hrms.utils.ot_calculation import get_day_ot_breakdown, round_ot_pay_hours
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +93,11 @@ class OTRequest(Document, PWANotificationsMixin):
 
 	def set_punch_verified_cap(self):
 		breakdown = get_day_ot_breakdown(self.employee, self.ot_date)
-		# the real fractional hours — int() here floored minutes away and capped
-		# every claim below what was actually worked (7.75h -> claimable 7)
-		self.punch_ot_hours = flt(breakdown["ot_hours"])
+		raw = flt(breakdown["ot_hours"])
+		# OT Pay is billed in HR's 30-minute bands (round_ot_pay_hours); Replacement
+		# Leave keeps the raw fractional hours and converts them to days downstream.
+		# set_compensation runs before this in validate(), so self.compensation is set.
+		self.punch_ot_hours = round_ot_pay_hours(raw) if self.compensation == OT_PAY else raw
 		if not self.shift:
 			self.shift = frappe.db.get_value(
 				"Attendance",
@@ -103,11 +105,12 @@ class OTRequest(Document, PWANotificationsMixin):
 				"shift",
 			)
 		logger.info(
-			"[ot_request] %s %s punch cap %sh (raw %.2f)",
+			"[ot_request] %s %s punch cap %sh (raw %.2f, comp %s)",
 			self.employee,
 			self.ot_date,
 			self.punch_ot_hours,
-			flt(breakdown["ot_hours"]),
+			raw,
+			self.compensation,
 		)
 
 	def validate_claimed_hours(self):

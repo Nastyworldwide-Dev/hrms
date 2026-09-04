@@ -525,7 +525,7 @@ def get_replacement_leave_claims(
 def get_ot_claim_summary(employee: str, date: str) -> dict:
 	"""Live form helper: what the punches prove for a day, and how this
 	employee's approved OT is compensated."""
-	from hrms.utils.ot_calculation import get_day_ot_breakdown
+	from hrms.utils.ot_calculation import get_day_ot_breakdown, round_ot_pay_hours
 
 	_ensure_own_employee_or_permitted(employee)
 	breakdown = get_day_ot_breakdown(employee, date)
@@ -535,9 +535,12 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 		{"employee": employee, "attendance_date": date, "docstatus": ("<", 2)},
 		"shift",
 	)
+	# OT Pay is billed in 30-min bands; Replacement Leave keeps the raw hours. Round
+	# here too so the form's "worked / claim up to" figure matches what will be saved.
+	raw = flt(breakdown["ot_hours"])
 	return {
 		"shift": shift,
-		"punch_ot_hours": flt(breakdown["ot_hours"]),
+		"punch_ot_hours": round_ot_pay_hours(raw) if eligible else raw,
 		"eligible_for_overtime_pay": eligible,
 		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
 	}
@@ -583,8 +586,15 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 	)
 	unclaimed = [row for row in worked if row["attendance_date"] not in claimed]
 	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
+	# Round each day the OT-Pay way before summing (bands apply per claim, i.e. per
+	# day); Replacement Leave sums the raw hours and converts to days downstream.
+	from hrms.utils.ot_calculation import round_ot_pay_hours
+
+	hours = sum(
+		(round_ot_pay_hours(flt(row["ot_hours"])) if eligible else flt(row["ot_hours"])) for row in unclaimed
+	)
 	return {
-		"claimable_hours": flt(sum(flt(row["ot_hours"]) for row in unclaimed)),
+		"claimable_hours": flt(hours),
 		"claimable_days": len(unclaimed),
 		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
 		"from_date": str(from_date),

@@ -21,6 +21,7 @@ from hrms.utils.ot_calculation import (
 	_real_shift_start_dt,
 	get_ot_pay,
 	get_shift_ot_breakdown,
+	round_ot_pay_hours,
 )
 
 
@@ -67,6 +68,22 @@ DEFAULT_CONFIG = {
 
 
 class TestOTCalculation(FrappeTestCase):
+	def test_ot_pay_rounding_30min_bands(self):
+		# HR policy: 0-29 min drop to :00, 30-49 min -> :30, 50-59 min -> next hour.
+		# Pure, so it runs regardless of bench state.
+		self.assertEqual(round_ot_pay_hours(0), 0.0)
+		self.assertEqual(round_ot_pay_hours(0.25), 0.0)  # 15m
+		self.assertEqual(round_ot_pay_hours(0.5), 0.5)  # 30m exactly
+		self.assertEqual(round_ot_pay_hours(0.75), 0.5)  # 45m
+		self.assertEqual(round_ot_pay_hours(50 / 60), 1.0)  # 50m exactly -> up
+		self.assertEqual(round_ot_pay_hours(1.48), 1.0)  # 1h29m
+		self.assertEqual(round_ot_pay_hours(1.5), 1.5)  # 1h30m
+		self.assertEqual(round_ot_pay_hours(1 + 49 / 60), 1.5)  # 1h49m
+		self.assertEqual(round_ot_pay_hours(1 + 50 / 60), 2.0)  # 1h50m -> the 50m kicks in
+		self.assertEqual(round_ot_pay_hours(2 + 30 / 60), 2.5)  # 2h30m
+		self.assertEqual(round_ot_pay_hours(2 + 50 / 60), 3.0)  # 2h50m
+		self.assertEqual(round_ot_pay_hours(-1), 0.0)  # never negative
+
 	def test_hourly_rate(self):
 		# 2080 / (26 * 8) = 10.0
 		self.assertEqual(_hourly_rate(2080, 26, 8), 10.0)

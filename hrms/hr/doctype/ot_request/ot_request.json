@@ -94,18 +94,20 @@
    "label": "Claim"
   },
   {
-   "description": "Whole hours proven by check-out vs shift end — minutes are not counted.",
+   "description": "OT proven by check-out vs shift end. OT Pay is rounded to 30-min bands; Replacement Leave uses the raw hours.",
    "fieldname": "punch_ot_hours",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "Punch-verified OT (hours)",
+   "precision": "2",
    "read_only": 1
   },
   {
-   "description": "Whole hours only, up to the punch-verified maximum.",
+   "description": "Up to the punch-verified maximum.",
    "fieldname": "claimed_hours",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Claimed Hours",
+   "precision": "2",
    "reqd": 1
   },
   {

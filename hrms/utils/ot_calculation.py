@@ -56,6 +56,25 @@ DEFAULT_OT_RATE_BANDS = {
 }
 
 
+def round_ot_pay_hours(hours) -> float:
+	"""Round worked OT to HR's 30-minute pay bands. OT PAY ONLY — Replacement Leave
+	converts the RAW hours to days (4h=½, 8h=1) and never passes through here.
+
+	By the minutes past the whole hour:
+	  * 0-29 min  -> drop to :00
+	  * 30-49 min -> :30 (half hour)
+	  * 50-59 min -> round up to the next :00
+	So 1h29m pays 1.0h, 1h30m-1h49m pays 1.5h, and 1h50m pays 2.0h.
+	"""
+	total = flt(hours)
+	if total <= 0:
+		return 0.0
+	whole, minutes = divmod(round(total * 60), 60)
+	rounded = float(whole) if minutes < 30 else (whole + 0.5 if minutes < 50 else float(whole + 1))
+	logger.debug("[ot_calculation] OT-pay round %.3fh -> %.1fh (%dh%02dm)", total, rounded, whole, minutes)
+	return rounded
+
+
 def _hourly_rate(basic, days_per_month=WORKING_DAYS_PER_MONTH, hours_per_day=HOURS_PER_DAY):
 	if not basic or basic <= 0 or days_per_month <= 0 or hours_per_day <= 0:
 		return 0.0
