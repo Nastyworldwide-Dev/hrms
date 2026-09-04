@@ -22,6 +22,7 @@
   "reason_section",
   "explanation",
   "leave_allocation",
+  "leave_days_granted",
   "amended_from"
  ],
  "fields": [
@@ -143,6 +144,16 @@
    "label": "Leave Allocation",
    "no_copy": 1,
    "options": "Leave Allocation",
+   "read_only": 1
+  },
+  {
+   "description": "Days of Replacement Leave actually granted on approval — stored so a cancel reverses exactly this, even if HR later changes the hours-per-day ratio.",
+   "fieldname": "leave_days_granted",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Leave Days Granted",
+   "no_copy": 1,
+   "precision": "2",
    "read_only": 1
   },
   {

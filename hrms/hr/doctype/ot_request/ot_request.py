@@ -6,7 +6,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, get_first_day, get_last_day, getdate
+from frappe.utils import cint, flt, getdate
 
 from hrms.hr.utils import (
 	grant_replacement_leave,
@@ -180,20 +180,24 @@ class OTRequest(Document, PWANotificationsMixin):
 					description=self.explanation,
 				)
 				self.db_set("leave_allocation", allocation)
+				# Store the ACTUAL days granted so a cancel reverses exactly this — a
+				# recompute would drift if HR changes the hours-per-day ratio later.
+				self.db_set("leave_days_granted", days)
 
 	def on_cancel(self):
 		# Reverse the per-day Replacement Leave grant this request made, if any. No
 		# bank to reconcile any more — the days went straight into the allocation, so
-		# cancelling takes exactly those days back out.
+		# cancelling takes back exactly what was GRANTED (the stored day count, never a
+		# recompute, which would drift if HR changed the ratio since approval).
 		logger.info(
-			"[ot_request] cancel %s (comp %s, allocation %s)",
+			"[ot_request] cancel %s (comp %s, allocation %s, days %s)",
 			self.name,
 			self.compensation,
 			self.leave_allocation,
+			self.leave_days_granted,
 		)
-		if self.compensation == REPLACEMENT_LEAVE and self.leave_allocation:
-			days = replacement_leave_days(flt(self.claimed_hours), replacement_leave_hours_per_day())
-			reverse_replacement_leave(self.leave_allocation, days)
+		if self.compensation == REPLACEMENT_LEAVE and self.leave_allocation and self.leave_days_granted:
+			reverse_replacement_leave(self.leave_allocation, flt(self.leave_days_granted))
 
 
 def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str | None = None) -> dict:
@@ -221,7 +225,8 @@ def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str |
 	approval (OTRequest.on_submit) — nothing banks or accumulates, so there is no
 	pool to convert. This returns an empty bank so the legacy Replacement Leave card
 	and Claim show "nothing to do", and the function and doctype stay (not deleted)
-	so any historical rows remain loadable. The old computation is kept below, unused.
+	so any historical rows remain loadable. The old bank computation is removed — it
+	is in git history if ever needed.
 	"""
 	logger.info("[ot_request] replacement-leave bank deprecated — empty for %s (per-day grant now)", employee)
 	return {
@@ -231,71 +236,3 @@ def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str |
 		"hours_claimed": 0,
 		"hours_available": 0,
 	}
-
-	from hrms.hr.utils import get_leave_period
-
-	as_of = getdate(as_of or getdate())
-	company = frappe.db.get_value("Employee", employee, "company")
-	periods = get_leave_period(as_of, as_of, company) if company else None
-	if not periods:
-		logger.info("[ot_request] bank %s: no active leave period on %s", employee, as_of)
-		return {
-			"period_start": None,
-			"period_end": None,
-			"hours_total": 0,
-			"hours_claimed": 0,
-			"hours_available": 0,
-		}
-	period_start = getdate(periods[0].from_date)
-	period_end = getdate(periods[0].to_date)
-	logger.info(
-		"[ot_request] bank query %s period=%s..%s exclude=%s",
-		employee,
-		period_start,
-		period_end,
-		exclude_request,
-	)
-
-	ot_filters = {
-		# A rejected request reaches docstatus 1 like any other decision, and this
-		# query has no on_submit to guard it — so without this line, declining
-		# overtime would still bank the hours and grant replacement leave. Money,
-		# out of a button that says Reject.
-		"status": ("!=", "Rejected"),
-		"employee": employee,
-		"compensation": REPLACEMENT_LEAVE,
-		"docstatus": 1,
-		"ot_date": ("between", [period_start, period_end]),
-	}
-	if exclude_request:
-		ot_filters["name"] = ("!=", exclude_request)
-	# Frappe v16 refuses SQL functions passed as SELECT strings
-	# ("sum(claimed_hours)"), so the totals are summed from the rows. One
-	# employee-period is a modest number of rows, so this stays cheap.
-	hours_total = sum(
-		flt(row.claimed_hours) for row in frappe.get_all("OT Request", ot_filters, ["claimed_hours"])
-	)
-	# Debits: active claims filed within the period. A claim funds from the
-	# period it is filed in, so scoping by creation within the period matches how
-	# credits are scoped, and both stay bounded by the fixed period.
-	hours_claimed = sum(
-		flt(row.hours_cost)
-		for row in frappe.get_all(
-			"Replacement Leave Claim",
-			{
-				"employee": employee,
-				"docstatus": ("<", 2),
-				"creation": ("between", [period_start, f"{period_end} 23:59:59"]),
-			},
-			["hours_cost"],
-		)
-	)
-	bank = {
-		"period_start": period_start,
-		"period_end": period_end,
-		"hours_total": cint(hours_total),
-		"hours_claimed": cint(hours_claimed),
-		"hours_available": cint(hours_total) - cint(hours_claimed),
-	}
-	logger.info("[ot_request] bank %s %s..%s: %s", employee, period_start, period_end, bank)
-	return bank
