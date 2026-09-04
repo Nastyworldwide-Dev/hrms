@@ -274,6 +274,217 @@ def source_inventory(client, doctypes=None) -> dict:
 	}
 
 
+#: Link targets a mirrored row can always resolve because the framework or a base
+#: app guarantees the doctype AND its population on every site — never a mirror gap.
+#: Small and explicit on purpose: anything a mirrored doctype links to that is not
+#: here and not itself mirrored gets surfaced for a ruling, which is how Gender,
+#: Salutation and Employment Type — doctypes that ship EMPTY, so their VALUES are the
+#: gap even though the doctype exists — stop being invisible.
+_ALWAYS_RESOLVABLE_LINKS = frozenset(
+	{"User", "Role", "Company", "Currency", "Country", "Cost Center", "UOM", "File", "DocType"}
+)
+
+#: Link fields on a mirrored row that are framework identity, not HR config: user_id
+#: is filled by the identity layer (not the sync), salary_currency is a base master.
+#: An empty one is not the "half-filled row" this audit measures.
+_NON_CONFIG_LINK_FIELDS = frozenset({"user_id", "salary_currency"})
+
+
+def _auditable_link_fields(doctype: str) -> list:
+	"""The HR-config Link / Table-MultiSelect fields on `doctype`, from LIVE meta so
+	hrms custom fields (shift_location, default_shift, overtime_type) are audited too,
+	not only ERPNext's stock ones. Framework identity and always-resolvable targets
+	are dropped — an empty user_id or company is not the gap we are hunting."""
+	fields = []
+	for df in frappe.get_meta(doctype).fields:
+		if df.fieldtype not in ("Link", "Table MultiSelect") or not df.options:
+			continue
+		if df.fieldname in _NON_CONFIG_LINK_FIELDS or df.options in _ALWAYS_RESOLVABLE_LINKS:
+			continue
+		fields.append(df.fieldname)
+	logger.info("[parity] %s auditable config fields: %s", doctype, fields)
+	return fields
+
+
+def _diff_field_fill(fields, local: dict, remote: dict, sample_cap: int = 200) -> dict:
+	"""Split every empty field on the mirrored rows into the two causes that need
+	OPPOSITE fixes. Pure — takes {name: row} dicts, so it is testable without a bench.
+
+	  * empty here, FILLED on source -> sync-fidelity gap: the value exists and did
+	    not cross. Fixable by code (carry the field / re-sync).
+	  * empty here, empty on source  -> source data gap: no code can invent it; HR
+	    fills it on the source (then re-sync) or on the hub after unlock.
+	"""
+	per_field, sync_gaps, source_gaps = {}, [], {}
+	for f in fields:
+		empty_here = filled_source = empty_both = 0
+		for name, row in local.items():
+			if row.get(f):
+				continue
+			empty_here += 1
+			src = remote.get(name)
+			if src and src.get(f):
+				filled_source += 1
+				if len(sync_gaps) < sample_cap:
+					sync_gaps.append({"name": name, "field": f, "source_value": src.get(f)})
+			else:
+				empty_both += 1
+		per_field[f] = {"empty_here": empty_here, "filled_on_source": filled_source, "empty_both": empty_both}
+		if empty_both:
+			source_gaps[f] = empty_both
+	total_sync_gaps = sum(v["filled_on_source"] for v in per_field.values())
+	return {
+		"per_field": per_field,
+		"sync_fidelity_gaps": sync_gaps,  # code fix — value exists on source, missing here
+		"sync_fidelity_gap_total": total_sync_gaps,
+		"source_data_gaps": source_gaps,  # HR must fill — missing on both sides
+	}
+
+
+@frappe.whitelist()
+def field_completeness(instance_name: str, doctype: str = "Employee") -> dict:
+	"""Per-field fill audit of the mirrored rows of `doctype`, source-vs-hub.
+
+	The migration's quiet failure is not a missing master but a HALF-filled row —
+	some employees carry their branch / grade / shift_location and some do not, and
+	an empty shift_location is exactly why the geofence reads Off-Shift at a branch.
+	This measures it and, for every blank HERE, says whether the SOURCE has a value,
+	which is the only way to tell a sync bug (I fix) from a source gap (HR fills).
+
+	Read-only on both sides. Compares by document name — the mirror's key — so only
+	rows that actually landed here are judged, against the same name on the source.
+	"""
+	logger.info("[parity] field_completeness of %s against %s", doctype, instance_name)
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("survey a source instance")
+	from hrms.sync.client import RemoteInstanceClient
+
+	fields = _auditable_link_fields(doctype)
+	local = {
+		r["name"]: r
+		for r in frappe.get_all(
+			doctype, filters={"synced_from_instance": ["is", "set"]}, fields=["name", *fields]
+		)
+	}
+	remote = {
+		r["name"]: r for r in RemoteInstanceClient(instance_name).get_list(doctype, fields=["name", *fields])
+	}
+	result = _diff_field_fill(fields, local, remote)
+	result["doctype"] = doctype
+	result["rows_here"] = len(local)
+	logger.info(
+		"[parity] %s field_completeness: %d rows, %d sync-gaps, %d fields short on source",
+		doctype,
+		len(local),
+		result["sync_fidelity_gap_total"],
+		len(result["source_data_gaps"]),
+	)
+	return result
+
+
+def _mirrored_link_targets(carried: set) -> set:
+	"""Every doctype the mirrored HR set — parents AND their child tables — links to.
+	Walks child-table links too (Department's approver tables, Leave Policy's details,
+	an Appraisal's goals): a parent-column-only scan misses them, the same blind spot
+	the survey notes on Employee Interco Allocation."""
+	to_walk = set(carried)
+	for parent in carried:
+		if not frappe.db.exists("DocType", parent):
+			continue
+		for df in frappe.get_meta(parent).fields:
+			if df.fieldtype == "Table" and df.options:
+				to_walk.add(df.options)
+	targets = set()
+	for dt in to_walk:
+		if not frappe.db.exists("DocType", dt):
+			continue
+		for df in frappe.get_meta(dt).fields:
+			if df.fieldtype in ("Link", "Table MultiSelect") and df.options:
+				targets.add(df.options)
+	logger.info("[parity] walked %d doctypes -> %d distinct link targets", len(to_walk), len(targets))
+	return targets
+
+
+def unmirrored_link_targets() -> dict:
+	"""Split the mirrored set's link targets into carried / always-resolvable /
+	UNCOVERED. Derived from the schema itself, so it cannot carry source_survey's
+	hand-list blind spot (Gender/Salutation slipped straight through that). Local."""
+	from hrms.sync.runner import DEFAULT_SYNC_DOCTYPES
+
+	carried = set(DEFAULT_SYNC_DOCTYPES)
+	targets = _mirrored_link_targets(carried)
+	return {
+		"uncovered": sorted(t for t in targets if t not in carried and t not in _ALWAYS_RESOLVABLE_LINKS),
+		"carried": sorted(t for t in targets if t in carried),
+		"always_resolvable": sorted(t for t in targets if t in _ALWAYS_RESOLVABLE_LINKS),
+	}
+
+
+@frappe.whitelist()
+def link_coverage(instance_name: str) -> dict:
+	"""Master-level blind-spot closer: every master the mirrored HR data links to that
+	the sync does NOT carry, annotated with whether it is empty here and how many rows
+	the source holds — so each is ruled with the source's real values. Read-only."""
+	logger.info("[parity] link_coverage against %s", instance_name)
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("survey a source instance")
+	from hrms.sync.client import RemoteInstanceClient
+
+	uncovered = unmirrored_link_targets()["uncovered"]
+	local_empty = [dt for dt in uncovered if frappe.db.table_exists(dt) and not frappe.db.count(dt)]
+	source = source_inventory(RemoteInstanceClient(instance_name), doctypes=uncovered)
+	logger.info("[parity] link_coverage: %d uncovered, %d empty here", len(uncovered), len(local_empty))
+	return {"uncovered_targets": uncovered, "local_empty_here": local_empty, "source": source}
+
+
+def _safe_remote_list(client, doctype, filters, fields):
+	"""One remote list that reports its own failure instead of sinking the survey —
+	Custom Field / Property Setter can be unreadable to the API user, and that is a
+	permission to grant, not a reason the other two buckets go unseen."""
+	try:
+		return client.get_list(doctype, filters=filters, fields=fields)
+	except Exception as e:
+		logger.warning("[parity] source_customizations: %s unreadable: %s", doctype, e)
+		return {"error": str(e)}
+
+
+@frappe.whitelist()
+def source_customizations(instance_name: str) -> dict:
+	"""Desk-level customizations on the source for the mirrored HR doctypes — Custom
+	Fields, Property Setters, Workflows — each with the `module` that tells an
+	app-shipped one from a Desk-added one. The row sync cannot carry these; any
+	Desk-added customization must become an app fixture to reach this hub and every
+	future company. Read-only, source-side."""
+	logger.info("[parity] source_customizations against %s", instance_name)
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("survey a source instance")
+	from hrms.sync.client import RemoteInstanceClient
+	from hrms.sync.runner import DEFAULT_SYNC_DOCTYPES
+
+	client = RemoteInstanceClient(instance_name)
+	hr = list(DEFAULT_SYNC_DOCTYPES)
+	return {
+		"custom_fields": _safe_remote_list(
+			client,
+			"Custom Field",
+			[["dt", "in", hr]],
+			["name", "dt", "fieldname", "label", "fieldtype", "module"],
+		),
+		"property_setters": _safe_remote_list(
+			client,
+			"Property Setter",
+			[["doc_type", "in", hr]],
+			["name", "doc_type", "field_name", "property", "value", "module"],
+		),
+		"workflows": _safe_remote_list(
+			client,
+			"Workflow",
+			[["document_type", "in", hr]],
+			["name", "document_type", "is_active"],
+		),
+	}
+
+
 def _count_remote(client, doctype: str, filters) -> int:
 	"""Count on the source, splitting a filter too long for one request line.
 
