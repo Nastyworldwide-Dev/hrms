@@ -371,6 +371,17 @@ class TestOwnEmployees(FrappeTestCase):
 		frappe.db.set_value("Employee", twin, "user_id", "own_staff@example.com", update_modified=False)
 		self.assertEqual(own_employees("own_staff@example.com"), [])
 
+	def test_case_drifted_second_row_also_fails_closed(self):
+		# The trap the index-sargable fast path fell into: an exact-match on the
+		# normalized login sees ONLY own_staff and returns it, blind to a SECOND
+		# Active row whose user_id case-drifted (mirror wrote it via db.set_value).
+		# resolve_employee_identity scans normalized and denies as AMBIGUOUS; the
+		# fence must agree, or it grants a row the login refuses — a fail-open.
+		twin = make_employee("own_twin2@example.com", company=COMPANY)
+		frappe.db.set_value("Employee", twin, "user_id", "Own_Staff@Example.com", update_modified=False)
+		self.assertEqual(own_employees("own_staff@example.com"), [])
+		self.assertEqual(resolve_employee_identity("own_staff@example.com").reason, AMBIGUOUS_EMPLOYEE)
+
 	def test_guest_and_unknown_get_no_scope(self):
 		self.assertEqual(own_employees("Guest"), [])
 		self.assertEqual(own_employees("nobody_here@example.com"), [])

@@ -282,14 +282,27 @@ def own_employees(user: str | None = None) -> list[str]:
 	normalized = normalize_login(user)
 	if not normalized or user in _NON_EMPLOYEE_USERS:
 		return []
-	# Fast path: session logins are already normalized (User.autoname lowercases),
-	# so an exact match is index-sargable and catches everyone but the case-drifted
-	# mirror rows — for which the normalizing scan (the same query the canonical
-	# resolver uses) is the fallback, paid only on a miss.
-	active = frappe.get_all("Employee", filters={"user_id": normalized, "status": "Active"}, pluck="name")
-	if not active:
-		active = [row.name for row in _employees_claiming(normalized) if row.status == "Active"]
-	return active if len(active) == 1 else []
+	# Resolve identity the SAME way resolve_employee_identity does — the normalizing
+	# scan, not an index-sargable exact-match shortcut. That shortcut can return one
+	# row while a SECOND, case-drifted Active row (e.g. "John@X.com" a mirror wrote via
+	# db.set_value) exists unseen: the fence would then grant a row the login resolver
+	# denies as AMBIGUOUS — a fail-open disagreement. One query per list build, not per
+	# row, so matching the resolver costs nothing worth a correctness gap.
+	active = [row for row in _employees_claiming(normalized) if row.status == "Active"]
+	if len(active) == 1:
+		return [active[0].name]
+	if len(active) > 1:
+		# Fail closed — the two rows may be two different people, and guessing one hands
+		# over the other's data. Logged loudly WITH names: during migration this is
+		# usually a transient duplicate to reconcile, and the symptom (the person sees
+		# none of their own data, in Desk too) is otherwise silent and alarming.
+		logger.warning(
+			"[identity] fence: %s claimed by %d active employees (%s) — showing none; reconcile the duplicate",
+			user,
+			len(active),
+			", ".join(row.name for row in active),
+		)
+	return []
 
 
 def get_employee_info(user: str | None = None, fields: tuple[str, ...] | None = None) -> dict | None:
