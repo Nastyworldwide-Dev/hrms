@@ -1,15 +1,16 @@
 # HANDOFF
-prompt:   OT form v2 + claimable discoverability + OT Pay 30-min rounding + Dashboard-0
-status:   done (deploy-ready); overnight-checkout + dashboard-0 code fix = next
-commit:   aa5c3c264 on nz-glass (chain: f7de30760 f1c38b274 74d85bf23 8e4d6a173 back to 21ba28d72)
-files:    hrms/utils/ot_calculation.py — round_ot_pay_hours (30-min bands, OT Pay only)
-          hrms/hr/doctype/ot_request/ot_request.{json,py} — punch/claimed Int->Float, apply rounding
-          hrms/api/__init__.py — get_ot_claim_summary + get_claimable_ot_summary round for OT-Pay
-          frontend/.../OTRequestForm.vue — reason required, attachments removed, claimed read-only
-          frontend/.../attendance/Dashboard.vue — "Overtime to claim" card (get_claimable_ot_summary)
-          hrms/hr/doctype/hrms_erp_instance/hrms_erp_instance.js — Release Stamp button (contamination recovery)
-verify:   bench run-tests --module hrms.utils.test_ot_calculation (round_ot_pay_hours boundaries)
-          yarn --cwd frontend test (132/135; 3 pre-existing unrelated fails)
-flags:    Dashboard-0 = CONFIG (user has no default company; card filters by it). Not a code bug.
-          DO NOT enable Unlock Mirrored Writes until Nasty-Dev cleanup (Release Stamp -> re-sync -> parity 4-clean).
-next:     overnight/next-day checkout (checkout after midnight belongs to the shift that began prior day)
+prompt:   Replacement Leave = per working day (not banked) + Desk approval + sweep fixes
+status:   done, reviewed, pushed — SAFE
+commit:   3fcee01f4 on nz-glass (RL: 3fe56575f feat + 3fcee01f4 review-fix)
+files:    hrms/utils/ot_calculation.py — replacement_leave_days (4h blocks, unit-tested)
+          hrms/hr/utils.py — grant_replacement_leave / reverse_replacement_leave
+          hrms/hr/doctype/ot_request/ot_request.{json,py} — per-day grant on approval,
+            reverse-by-stored-days on cancel, bank neutered (non-destructive)
+          frontend OTRequestForm.vue + attendance/Dashboard.vue — RL shows day blocks, hides <4h
+          (earlier: Desk Approve/Reject via approval.decide; Shift Request self-approval guard)
+verify:   bench run-tests --module hrms.utils.test_ot_calculation (block conversion)
+          Deploy: a Leave Period must cover today, or the RL grant refuses (correctly).
+flags:    Review CRITICAL fixed (cancel recomputed days from live ratio -> now reverses the
+          stored granted days). Legacy RL card/claim inert + auto-hidden, NOT deleted.
+          Confirm no in-flight Replacement Leave Claim data before relying on the new model.
+next:     deploy; smoke-test RL: 4h OT day -> approve -> ½ day in balance; cancel -> reversed.
