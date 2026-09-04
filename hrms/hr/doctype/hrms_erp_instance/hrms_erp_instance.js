@@ -39,6 +39,7 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
+		frm.add_custom_button(__("Check Field Completeness"), () => check_field_completeness(frm));
 		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
 		show_sync_headline(frm);
 	},
@@ -242,6 +243,64 @@ function survey_source(frm) {
 		freeze_message: __("Counting what the source holds…"),
 		callback: (r) => report_survey(r.message || {}),
 		error: (e) => console.warn("[HRMSERPInstance] survey failed:", e),
+	});
+}
+
+function check_field_completeness(frm) {
+	// Per mirrored employee, per field: what the sync left blank here, and whether
+	// the SOURCE has a value. The half-filled-employee answer (missing branch /
+	// grade / shift_location) split into the two causes with opposite fixes.
+	console.info("[HRMSERPInstance] field completeness against", frm.doc.name);
+	frappe.call({
+		method: "hrms.sync.parity.field_completeness",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Comparing every mirrored field against the source…"),
+		callback: (r) => report_field_completeness(r.message || {}),
+		error: (e) => console.warn("[HRMSERPInstance] field completeness failed:", e),
+	});
+}
+
+function report_field_completeness(report) {
+	const esc = frappe.utils.escape_html;
+	const per_field = report.per_field || {};
+	const fields = Object.keys(per_field).sort();
+	const sync_total = report.sync_fidelity_gap_total || 0;
+
+	console.info("[HRMSERPInstance] field completeness:", sync_total, "sync-dropped values");
+
+	const rows = fields
+		.map((f) => {
+			const c = per_field[f];
+			return `<tr><td>${esc(f)}</td>
+				<td style="text-align:right">${c.empty_here}</td>
+				<td style="text-align:right;color:#b45309"><b>${c.filled_on_source}</b></td>
+				<td style="text-align:right">${c.empty_both}</td></tr>`;
+		})
+		.join("");
+
+	frappe.msgprint({
+		title: sync_total
+			? __("The sync dropped {0} value(s) — a code fix", [sync_total])
+			: __("Nothing was dropped by the sync"),
+		indicator: sync_total ? "red" : "green",
+		message:
+			`<p>${__("Checked {0} mirrored {1}.", [
+				report.rows_here || 0,
+				report.doctype || __("row"),
+			])}</p>
+			<table class="table table-bordered" style="margin:0">
+				<thead><tr>
+					<th>${__("Field")}</th>
+					<th style="text-align:right">${__("Blank here")}</th>
+					<th style="text-align:right">${__("Sync dropped (fix in code)")}</th>
+					<th style="text-align:right">${__("Source blank (HR fills)")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>
+			<p class="text-muted">${__(
+				"Amber = the value is on the source but did not cross — send this to the developer. Last column = blank on both sides — only HR can fill it.",
+			)}</p>`,
 	});
 }
 
