@@ -156,12 +156,20 @@ const enable = () => {
 		})
 		.catch((error) => {
 			isOpen.value = false
+			// Push is a nice-to-have. The raw failure ("Failed to subscribe to push
+			// notification", thrown when the backend token registration returns false)
+			// is unactionable AND lands as a red Error on the home screen — which is
+			// exactly what alarmed the senior. Keep the detail in the console; tell the
+			// user something calm and optional instead.
+			console.warn("[PushPrompt] enable failed:", error?.message)
 			toast({
-				title: __("Error"),
-				text: __(error.message),
-				icon: "alert-circle",
+				title: __("Notifications not turned on"),
+				text: __(
+					"We couldn't turn on notifications right now — you can try again anytime in Settings → Notifications."
+				),
+				icon: "info",
 				position: "bottom-center",
-				iconClasses: "text-red-500",
+				iconClasses: "text-ink-600",
 			})
 		})
 		.finally(() => {
