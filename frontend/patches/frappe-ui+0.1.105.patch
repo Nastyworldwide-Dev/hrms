@@ -16,3 +16,42 @@ index 0eefcd0..b2875c4 100644
      })
    },
    beforeDestroy() {
+diff --git a/node_modules/frappe-ui/src/utils/call.js b/node_modules/frappe-ui/src/utils/call.js
+index a1b84fa..a31f8bd 100644
+--- a/node_modules/frappe-ui/src/utils/call.js
++++ b/node_modules/frappe-ui/src/utils/call.js
+@@ -45,9 +45,13 @@ export default async function call(method, args, options = {}) {
+     return data.message
+   } else {
+     let response = await res.text()
+-    let error, exception
++    // nz-glass: default to {} so a non-JSON error body (a 502 gateway HTML page)
++    // leaves a safe object — reading error.exc_type off undefined threw a
++    // TypeError that masked the real status.
++    let error = {},
++      exception
+     try {
+-      error = JSON.parse(response)
++      error = JSON.parse(response) || {}
+       // eslint-disable-next-line no-empty
+     } catch (e) {}
+     let errorParts = [
+@@ -65,9 +69,15 @@ export default async function call(method, args, options = {}) {
+     e.exc_type = error.exc_type
+     e.exc = exception
+     e.status = res.status
+-    e.messages = error._server_messages
+-      ? JSON.parse(error._server_messages)
+-      : []
++    // nz-glass: guard the parse. A malformed _server_messages (e.g. the string
++    // "undefined") threw a SyntaxError that surfaced as '"undefined" is not valid
++    // JSON', burying the server's real validation message. Fall back to [] and let
++    // the _error_message / 'Internal Server Error' fallback below fill in.
++    try {
++      e.messages = error._server_messages ? JSON.parse(error._server_messages) : []
++    } catch (parseErr) {
++      e.messages = []
++    }
+     e.messages = e.messages.concat(error.message)
+     e.messages = e.messages.map((m) => {
+       try {
