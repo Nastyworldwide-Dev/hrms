@@ -95,7 +95,7 @@ const formFields = createResource({
 
 		return fields.map((field) => {
 			if (field.fieldname === "posting_date") field.default = today
-			return applyFilters(field)
+			return field
 		})
 	},
 	onSuccess(_data) {
@@ -193,6 +193,14 @@ function getFilteredFields(fields) {
 		"currency",
 		"column_break_imlz",
 		"exchange_rate",
+		// Backend plumbing, not employee choices: cost_center and payable_account are
+		// filled from the company default (companyDetails, below) and stamped onto each
+		// row — showing them as pickers an Employee can't even search (Account / Cost
+		// Center masters) was pure confusion. project isn't used on employee claims.
+		// The values are still set on the object; only the inputs are hidden.
+		"cost_center",
+		"payable_account",
+		"project",
 	]
 	const extraFields = [
 		"employee",
@@ -214,29 +222,6 @@ function getFilteredFields(fields) {
 		if (field.fieldname?.startsWith("base_")) return false
 		return true
 	})
-}
-
-function applyFilters(field) {
-	if (field.fieldname === "payable_account") {
-		field.linkFilters = {
-			report_type: "Balance Sheet",
-			account_type: "Payable",
-			company: expenseClaim.value.company,
-			is_group: 0,
-			account_currency: expenseClaim.value.currency,
-		}
-	} else if (field.fieldname === "cost_center") {
-		field.linkFilters = {
-			company: expenseClaim.value.company,
-			is_group: 0,
-		}
-	} else if (field.fieldname === "project") {
-		field.linkFilters = {
-			company: expenseClaim.value.company,
-		}
-	}
-
-	return field
 }
 
 function setExpenseApprover(data) {
