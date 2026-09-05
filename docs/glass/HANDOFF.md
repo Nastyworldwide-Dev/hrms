@@ -1,16 +1,16 @@
 # HANDOFF
-prompt:   Replacement Leave = per working day (not banked) + Desk approval + sweep fixes
-status:   done, reviewed, pushed — SAFE
-commit:   3fcee01f4 on nz-glass (RL: 3fe56575f feat + 3fcee01f4 review-fix)
-files:    hrms/utils/ot_calculation.py — replacement_leave_days (4h blocks, unit-tested)
-          hrms/hr/utils.py — grant_replacement_leave / reverse_replacement_leave
-          hrms/hr/doctype/ot_request/ot_request.{json,py} — per-day grant on approval,
-            reverse-by-stored-days on cancel, bank neutered (non-destructive)
-          frontend OTRequestForm.vue + attendance/Dashboard.vue — RL shows day blocks, hides <4h
-          (earlier: Desk Approve/Reject via approval.decide; Shift Request self-approval guard)
-verify:   bench run-tests --module hrms.utils.test_ot_calculation (block conversion)
-          Deploy: a Leave Period must cover today, or the RL grant refuses (correctly).
-flags:    Review CRITICAL fixed (cancel recomputed days from live ratio -> now reverses the
-          stored granted days). Legacy RL card/claim inert + auto-hidden, NOT deleted.
-          Confirm no in-flight Replacement Leave Claim data before relying on the new model.
-next:     deploy; smoke-test RL: 4h OT day -> approve -> ½ day in balance; cancel -> reversed.
+prompt:   RL cancel no longer freezes when a grant is reversed to zero
+status:   done, reviewed (frappe-reviewer + verifier CONFIRMED), pushed
+commit:   a988d6e1b on nz-glass
+files:    hrms/hr/utils.py — reverse_replacement_leave: no validate() on reduce,
+            clamp to untaken (_reversible_days); grant path unchanged
+          hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py —
+            on_cancel routes through shared reverse (dup bug gone)
+          hrms/hr/test_utils.py — 8 bench-free tests (clamp math + no-validate guard)
+verify:   python3 hrms/hr/test_utils.py  (8/8, no bench needed)
+          Smoke: RL 4h day -> approve -> cancel -> cancels clean (no freeze), ½ day removed.
+          Consumed case: take the leave -> cancel -> cancels with HR warning, day stays.
+flags:    First fix (c93df286f, unpushed) cited wrong throw (LessAllocationError);
+          real freeze is set_total_leaves_allocated "mandatory" throw on zero-out.
+          Squashed into a988d6e1b. RL leave type is neither earned nor compensatory.
+next:     deploy; next candidates: config-gap surfacing, or cutover (unlock mirrored writes).
