@@ -730,17 +730,60 @@ def grant_replacement_leave(employee, employee_name, company, days, valid_from, 
 	return allocation.name
 
 
+def _reversible_days(total_allocated, taken, requested):
+	"""Days of a grant that can be clawed back WITHOUT dropping the allocation
+	below leave the employee has already taken — reversing past that would leave a
+	negative available balance for days that were legitimately used.
+
+	Pure — no DB, plain floats — so it is unit-testable without a bench."""
+	return min(float(requested or 0.0), max(0.0, float(total_allocated or 0.0) - float(taken or 0.0)))
+
+
 def reverse_replacement_leave(allocation_name, days):
 	"""Undo a grant_replacement_leave top-up when the source request is cancelled.
-	Mirrors ReplacementLeaveClaim.on_cancel."""
-	logger.info("[rl_grant] reverse %s day(s) from %s", flt(days), allocation_name)
+
+	Two things make the naive reversal freeze the cancel, both handled here:
+
+	  * Clamp to what is still unused. A day already taken can't be un-taken, so
+	    reverse only the remainder (get_approved_leaves_for_period is the same
+	    "taken" the balance is measured against) and tell HR about the rest.
+	    Prevents a silent negative available balance.
+
+	  * Do NOT re-validate the allocation. A reversal only ever REDUCES the
+	    allocation, so the growth guards don't apply — and set_total_leaves_allocated
+	    throws "Total leaves allocated is mandatory" the moment a sole grant is
+	    reversed to zero (Replacement Leave is neither earned nor compensatory),
+	    which would freeze the cancel even when nothing was taken. Decrement
+	    straight through db_set. unused_leaves stays 0 (the leave type is
+	    is_carry_forward=0, per ensure_replacement_leave_type), so total == new.
+	"""
+	from hrms.hr.doctype.leave_application.leave_application import get_approved_leaves_for_period
+
 	days = flt(days)
 	allocation = frappe.get_doc("Leave Allocation", allocation_name)
-	allocation.new_leaves_allocated = max(0, flt(allocation.new_leaves_allocated) - days)
-	allocation.validate()
-	allocation.db_set("new_leaves_allocated", allocation.total_leaves_allocated)
-	allocation.db_set("total_leaves_allocated", allocation.total_leaves_allocated)
-	create_additional_leave_ledger_entry(allocation, days * -1, getdate())
+	taken = flt(
+		get_approved_leaves_for_period(
+			allocation.employee, allocation.leave_type, allocation.from_date, allocation.to_date
+		)
+	)
+	to_reverse = flt(_reversible_days(allocation.total_leaves_allocated, taken, days))
+	logger.info(
+		"[rl_grant] reverse %s of %s day(s) from %s (taken %s)", to_reverse, days, allocation_name, taken
+	)
+	if to_reverse < days:
+		frappe.msgprint(
+			_(
+				"Reversed {0} of {1} day(s) — {2} day(s) of Replacement Leave were already taken and stay allocated."
+			).format(to_reverse, days, flt(days - to_reverse))
+		)
+	if not to_reverse:
+		return
+	new_total = max(0.0, flt(allocation.new_leaves_allocated) - to_reverse)
+	allocation.db_set("new_leaves_allocated", new_total)
+	allocation.db_set("total_leaves_allocated", new_total)
+	# writes the negative ledger delta; mutates in-memory new_leaves_allocated, so it
+	# must come AFTER the db_set that persists the real remaining balance.
+	create_additional_leave_ledger_entry(allocation, to_reverse * -1, getdate())
 
 
 def get_expected_allocation_date_for_period(

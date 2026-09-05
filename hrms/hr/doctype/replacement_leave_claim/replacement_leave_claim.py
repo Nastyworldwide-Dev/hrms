@@ -128,18 +128,15 @@ class ReplacementLeaveClaim(Document):
 		)
 
 	def on_cancel(self):
+		# Route through the shared reverse so a claim whose leave was already taken
+		# cancels gracefully instead of freezing — the copy that lived here had the
+		# same un-clamped, validate()-calling bug as the OT path.
+		logger.info("[rl_claim] %s cancelled (claimed %s day(s))", self.name, flt(self.claimed_days))
 		if not self.leave_allocation:
 			return
-		days = flt(self.claimed_days)
-		allocation = frappe.get_doc("Leave Allocation", self.leave_allocation)
-		allocation.new_leaves_allocated -= days
-		if allocation.new_leaves_allocated < 0:
-			allocation.new_leaves_allocated = 0
-		allocation.validate()
-		allocation.db_set("new_leaves_allocated", allocation.total_leaves_allocated)
-		allocation.db_set("total_leaves_allocated", allocation.total_leaves_allocated)
-		create_additional_leave_ledger_entry(allocation, days * -1, getdate())
-		logger.info("[rl_claim] %s cancelled: -%s day(s) from %s", self.name, days, allocation.name)
+		from hrms.hr.utils import reverse_replacement_leave
+
+		reverse_replacement_leave(self.leave_allocation, flt(self.claimed_days))
 
 	def get_existing_allocation(self, valid_from):
 		allocation = frappe.db.get_all(
