@@ -38,10 +38,14 @@ test("the returned detach removes exactly this handler, leaving siblings", () =>
 	const b = []
 	const offA = useListUpdate(socket, "Shift Request", (n) => a.push(n))
 	useListUpdate(socket, "Attendance Request", (n) => b.push(n))
-	assert.equal(socket.handlers.length, 2)
+	// Count only list_update handlers: subscribe() also wires one "connect"
+	// handler per socket (wireReconnect, rejoins rooms after a mobile reconnect),
+	// so raw handler count is list_update + 1 and isn't what this test is about.
+	const listUpdateHandlers = () => socket.handlers.filter((h) => h.event === "list_update").length
+	assert.equal(listUpdateHandlers(), 2)
 
 	offA()
-	assert.equal(socket.handlers.length, 1)
+	assert.equal(listUpdateHandlers(), 1)
 	socket.fire("list_update", { doctype: "Shift Request", name: "SR-1" })
 	socket.fire("list_update", { doctype: "Attendance Request", name: "AR-1" })
 	assert.deepEqual(a, [])
