@@ -45,6 +45,14 @@ const transformShiftRequests = (data) =>
 		return request
 	})
 
+// Fenced Shift Type list for the shift_type / shift pickers. A bare Employee can't
+// search the Shift Type master via search_link (Link.vue needs Desk permission), so
+// the forms feed this as an explicit documentList. Mirrors claimTypesResource.
+export const shiftTypes = createResource({
+	url: "hrms.api.get_shift_types",
+	auto: true,
+})
+
 export const myAttendanceRequests = createResource({
 	url: "hrms.api.get_attendance_requests",
 	// Read per request, not once at module load: `employeeResource`

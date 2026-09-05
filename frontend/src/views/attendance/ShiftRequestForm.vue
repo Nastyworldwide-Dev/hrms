@@ -22,6 +22,7 @@ import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 
 import FormView from "@/components/FormView.vue"
+import { shiftTypes } from "@/data/attendance"
 
 const employee = inject("$employee")
 // validateDates() below reads this — was never injected, so picking a to
@@ -77,6 +78,17 @@ createResource({
 	},
 })
 watch(() => formFields.data, applyApproverOptions)
+
+// shift_type is a required Link to the Shift Type master. Rendered raw it searches
+// via search_link, which a bare Employee can't use — the picker came up empty and
+// the shift request couldn't be filed at all. Feed the fenced list as a documentList
+// (FormView forwards it to the field, exactly like approver above).
+function applyShiftTypeOptions() {
+	const field = formFields.data?.find((f) => f.fieldname === "shift_type")
+	if (!field || !shiftTypes.data) return
+	field.documentList = shiftTypes.data.map((t) => ({ label: t.name, value: t.name }))
+}
+watch([() => formFields.data, () => shiftTypes.data], applyShiftTypeOptions, { immediate: true })
 
 // form scripts
 watch(

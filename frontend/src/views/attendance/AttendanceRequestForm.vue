@@ -24,6 +24,7 @@ import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 
 import FormView from "@/components/FormView.vue"
+import { shiftTypes } from "@/data/attendance"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
@@ -50,6 +51,16 @@ const formFields = createResource({
 		)
 	},
 })
+
+// shift is an optional Link to the Shift Type master; rendered raw it searches via
+// search_link, which a bare Employee can't use, so the picker came up empty. Feed the
+// fenced list as a documentList (FormView forwards it to the field).
+function applyShiftTypeOptions() {
+	const field = formFields.data?.find((f) => f.fieldname === "shift")
+	if (!field || !shiftTypes.data) return
+	field.documentList = shiftTypes.data.map((t) => ({ label: t.name, value: t.name }))
+}
+watch([() => formFields.data, () => shiftTypes.data], applyShiftTypeOptions, { immediate: true })
 
 // form scripts
 watch(

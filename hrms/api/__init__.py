@@ -1206,6 +1206,17 @@ def get_expense_claim_types() -> list[dict]:
 
 
 @frappe.whitelist()
+def get_shift_types() -> list[dict]:
+	# Fenced list for the Shift Type pickers on Shift Request / Attendance Request.
+	# A bare Employee can't search the Shift Type master via frappe.desk.search.
+	# search_link (it needs Desk read permission), so the PWA feeds this whitelisted
+	# list as an explicit documentList — same shape as get_expense_claim_types.
+	ShiftType = frappe.qb.DocType("Shift Type")
+
+	return (frappe.qb.from_(ShiftType).select(ShiftType.name)).run(as_dict=True)
+
+
+@frappe.whitelist()
 def get_expense_approval_details(employee: str) -> dict:
 	_ensure_own_employee_or_permitted(employee)
 	expense_approver, department = frappe.get_cached_value(
