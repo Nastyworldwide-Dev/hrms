@@ -536,5 +536,38 @@ class TestTheTwoListsCannotOverlap(unittest.TestCase):
 		self.assertGreater(len(self.runner.DEFAULT_SYNC_DOCTYPES), 10)
 
 
+class TestConfigVerdict(unittest.TestCase):
+	"""config_carryover's per-doctype rule: source-vs-hub counts -> verdict. This is
+	the whole point of the audit (a config GAP must read as a number, not a surprise),
+	so it is pinned bench-free."""
+
+	def setUp(self):
+		self.verdict = _load(_FakeDB())._config_verdict
+
+	def test_source_empty_has_nothing_to_carry(self):
+		self.assertEqual(self.verdict(0, 0), "NOTHING_TO_CARRY")
+
+	def test_source_unreadable(self):
+		self.assertEqual(self.verdict(None, 5), "SOURCE_UNREADABLE")
+
+	def test_source_has_rows_hub_none_is_a_gap(self):
+		# HR set it up on the source, it never crossed — the Expense Claim Type case
+		self.assertEqual(self.verdict(7, 0), "GAP")
+		self.assertEqual(self.verdict(7, None), "GAP")
+
+	def test_hub_fewer_than_source_is_partial(self):
+		self.assertEqual(self.verdict(10, 4), "PARTIAL")
+
+	def test_hub_at_least_source_is_ok(self):
+		self.assertEqual(self.verdict(10, 10), "OK")
+		self.assertEqual(self.verdict(10, 12), "OK")
+
+	def test_expense_claim_type_is_surveyed_but_not_carried(self):
+		parity = _load(_FakeDB())
+		runner = sys.modules["hrms.sync.runner"]
+		self.assertIn("Expense Claim Type", parity.CONFIG_DOCTYPES)
+		self.assertNotIn("Expense Claim Type", runner.DEFAULT_SYNC_DOCTYPES)
+
+
 if __name__ == "__main__":
 	unittest.main()

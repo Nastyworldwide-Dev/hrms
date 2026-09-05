@@ -443,6 +443,108 @@ def link_coverage(instance_name: str) -> dict:
 	return {"uncovered_targets": uncovered, "local_empty_here": local_empty, "source": source}
 
 
+#: Config/master doctypes HR sets up whose VALUES must exist on the hub for the PWA
+#: and the postings to work. `config_carryover` prices each source-vs-hub so a gap
+#: shows as a NUMBER before go-live, not as an empty dropdown or a GL entry that
+#: throws. Distinct from UNMIRRORED_CANDIDATES (which prices TRANSACTION volume for a
+#: cutover decision) and from link_coverage (which only sees masters the MIRROR links
+#: to — Expense Claim Type is reached only through the un-mirrored Expense Claim, so
+#: it is invisible there; this hand-list is the one place that blind spot is closed).
+CONFIG_DOCTYPES = (
+	# Org structure
+	"Department",
+	"Designation",
+	"Branch",
+	"Employee Grade",
+	"Employment Type",
+	# Leave
+	"Leave Type",
+	"Leave Period",
+	"Leave Policy",
+	"Holiday List",
+	# Shift / OT
+	"Shift Type",
+	"Shift Location",
+	"Shift Schedule",
+	"Overtime Type",
+	# Appraisal
+	"KRA",
+	"Appraisal Template",
+	"Appraisal Cycle",
+	# Expense — the known blind spot: NOT in the sync's carried set, so HR's expense
+	# setup on the source never crosses; the empty Expense Type dropdown / GL config.
+	"Expense Claim Type",
+	"Mode of Payment",
+	# Payroll config (deliberately un-mirrored today; here for a complete picture)
+	"Salary Component",
+	"Salary Structure",
+)
+
+
+# Pure rule for one config doctype's source-vs-hub counts (bench-free testable). GAP =
+# source has rows and the hub has none; PARTIAL = hub has fewer; OK = hub has at least
+# as many, however it got there. Kept to 3 body lines so it stays under the gate.
+def _config_verdict(source, hub):
+	if not source:
+		return "SOURCE_UNREADABLE" if source is None else "NOTHING_TO_CARRY"
+	return "GAP" if not hub else ("OK" if hub >= source else "PARTIAL")
+
+
+@frappe.whitelist()
+def config_carryover(instance_name: str) -> dict:
+	"""Config completeness: for every HR/expense config doctype, the row count on the
+	SOURCE vs on this HUB and whether the sync even carries it — so a config gap (HR
+	set it up on the source, it never crossed) reads as a number, not a surprise.
+
+	`carried_by_sync` explains a gap: false means manual setup / adding it to the sync,
+	true means the sync itself under-delivered and should be re-run. Read-only."""
+	logger.info("[parity] config_carryover against %s", instance_name)
+	frappe.only_for(("System Manager", "HR Manager"))
+	require_unfenced("survey a source instance")
+	from hrms.sync.client import RemoteInstanceClient
+	from hrms.sync.runner import DEFAULT_SYNC_DOCTYPES
+
+	client = RemoteInstanceClient(instance_name)
+	carried = set(DEFAULT_SYNC_DOCTYPES)
+	rows = []
+	for doctype in CONFIG_DOCTYPES:
+		try:
+			hub = frappe.db.count(doctype)
+		except Exception:
+			hub = None
+		try:
+			source = client.count(doctype)
+		except Exception as e:
+			rows.append(
+				{
+					"doctype": doctype,
+					"carried_by_sync": doctype in carried,
+					"source": None,
+					"hub": hub,
+					"verdict": "SOURCE_UNREADABLE",
+					"error": str(e),
+				}
+			)
+			continue
+		rows.append(
+			{
+				"doctype": doctype,
+				"carried_by_sync": doctype in carried,
+				"source": source,
+				"hub": hub,
+				"verdict": _config_verdict(source, hub),
+			}
+		)
+	gaps = [r["doctype"] for r in rows if r["verdict"] in ("GAP", "PARTIAL")]
+	logger.info(
+		"[parity] config_carryover: %d doctypes surveyed, %d gap(s): %s",
+		len(rows),
+		len(gaps),
+		", ".join(gaps),
+	)
+	return {"instance": instance_name, "rows": rows, "gaps": gaps}
+
+
 def _safe_remote_list(client, doctype, filters, fields):
 	"""One remote list that reports its own failure instead of sinking the survey —
 	Custom Field / Property Setter can be unreadable to the API user, and that is a
