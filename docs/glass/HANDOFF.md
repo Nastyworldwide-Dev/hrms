@@ -14,6 +14,8 @@ rule:     OPERATIONAL GUARDRAIL — before any full re-pull of a LIVE doctype po
           release_instance_stamp) or the pull clobbers hub edits. plan_cross_instance_write
           overwrites a NULL-stamp row, so releasing = source can reclaim; that is the
           intended direction only when the source is authoritative, which it no longer is.
+          #2 DONE (97c940ff5): partial RL reversal now stamps the un-reversed days
+          onto the allocation timeline as a Comment (queryable for HR reconciliation).
 flags:    Reverted a speculative "create hub-native RL allocation" fix — it froze OT
           approval on the overlap guard. Top-up is correct under this workflow.
-next:     #2 RL reversal audit trail (small), or capture the guardrail in a runbook.
+next:     none pending. Optional: #3 approval-parity check, #4 fix 3 red frontend tests.
