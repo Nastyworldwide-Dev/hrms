@@ -1,16 +1,19 @@
 # HANDOFF
-prompt:   RL cancel no longer freezes when a grant is reversed to zero
-status:   done, reviewed (frappe-reviewer + verifier CONFIRMED), pushed
-commit:   a988d6e1b on nz-glass
-files:    hrms/hr/utils.py — reverse_replacement_leave: no validate() on reduce,
-            clamp to untaken (_reversible_days); grant path unchanged
-          hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py —
-            on_cancel routes through shared reverse (dup bug gone)
-          hrms/hr/test_utils.py — 8 bench-free tests (clamp math + no-validate guard)
-verify:   python3 hrms/hr/test_utils.py  (8/8, no bench needed)
-          Smoke: RL 4h day -> approve -> cancel -> cancels clean (no freeze), ½ day removed.
-          Consumed case: take the leave -> cancel -> cancels with HR warning, day stays.
-flags:    First fix (c93df286f, unpushed) cited wrong throw (LessAllocationError);
-          real freeze is set_total_leaves_allocated "mandatory" throw on zero-out.
-          Squashed into a988d6e1b. RL leave type is neither earned nor compensatory.
-next:     deploy; next candidates: config-gap surfacing, or cutover (unlock mirrored writes).
+prompt:   #1 prove live writes are clean (post-cutover, mirrored writes unlocked)
+status:   done — RL + check-in paths proven clean under the manual-sync workflow
+commit:   8963f6200 on nz-glass
+files:    hrms/hr/utils.py — ponytail note on grant_replacement_leave (why top-up,
+            re-pull caveat). No behavior change.
+verify:   python3 hrms/hr/test_utils.py  (8/8)
+finding:  Every hub write to a MIRRORED doctype (Leave Allocation via RL grant,
+          approvals on Leave Application/Shift Request/Attendance Request) survives
+          only while no FULL re-pull of that doctype runs. check-in->attendance is
+          already safe (checkin_sweeper excludes mirrored rows).
+rule:     OPERATIONAL GUARDRAIL — before any full re-pull of a LIVE doctype post-
+          cutover, release the mirrored stamps first (hrms.sync.purge.
+          release_instance_stamp) or the pull clobbers hub edits. plan_cross_instance_write
+          overwrites a NULL-stamp row, so releasing = source can reclaim; that is the
+          intended direction only when the source is authoritative, which it no longer is.
+flags:    Reverted a speculative "create hub-native RL allocation" fix — it froze OT
+          approval on the overlap guard. Top-up is correct under this workflow.
+next:     #2 RL reversal audit trail (small), or capture the guardrail in a runbook.
