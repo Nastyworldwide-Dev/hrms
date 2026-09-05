@@ -39,7 +39,10 @@ import unittest
 
 API = pathlib.Path(__file__).resolve().parent / "approval.py"
 SHEET = pathlib.Path(__file__).resolve().parents[2] / "frontend/src/components/RequestActionSheet.vue"
-DESK_JS = pathlib.Path(__file__).resolve().parents[2] / "public/js/utils/request_approval.js"
+# parents[1] is the hrms/ app root (the Desk bundle lives under hrms/public, not the
+# repo root). parents[2] pointed at a nonexistent repo-root path, so read_text raised
+# FileNotFoundError and the Desk<->Python parity guard silently never ran.
+DESK_JS = pathlib.Path(__file__).resolve().parents[1] / "public/js/utils/request_approval.js"
 
 
 def _decide_then_submit_keys():
