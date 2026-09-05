@@ -80,13 +80,14 @@
 				<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
 					<div class="flex flex-col w-full space-y-4 overflow-y-auto expense-fields">
 						<FormField
-							v-for="field in expensesTableFields.data"
+							v-for="field in expenseFields"
 							:key="field.fieldname"
 							class="w-full"
 							:label="__(field.label, null, 'Expense Claim Detail')"
 							:fieldtype="field.fieldtype"
 							:fieldname="field.fieldname"
 							:options="field.options"
+							:documentList="field.documentList"
 							:hidden="field.hidden"
 							:reqd="field.reqd"
 							:default="field.default"
@@ -134,7 +135,7 @@ import FormField from "@/components/FormField.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import CustomIonModal from "@/components/CustomIonModal.vue"
 
-import { claimTypesByID } from "@/data/claims"
+import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
@@ -208,6 +209,21 @@ const expensesTableFields = createResource({
 	},
 })
 expensesTableFields.reload()
+
+// The expense_type Link can't remote-search "Expense Claim Type": a bare Employee
+// has no Desk permission on that master, so search_link (Link.vue) returns nothing
+// and the dropdown is empty. Feed it the fenced get_expense_claim_types list as an
+// explicit documentList — the same permission-safe pattern the expense_approver
+// field uses. claimTypesResource is auto-fetched (see @/data/claims).
+const expenseTypeOptions = computed(() =>
+	(claimTypesResource.data || []).map((type) => ({ label: type.name, value: type.name })),
+)
+
+const expenseFields = computed(() =>
+	(expensesTableFields.data || []).map((field) =>
+		field.fieldname === "expense_type" ? { ...field, documentList: expenseTypeOptions.value } : field,
+	),
+)
 
 const expenseClaimRef = computed(() => props.expenseClaim)
 useCurrencyConversion(expensesTableFields, expenseClaimRef, ["amount", "sanctioned_amount"])
