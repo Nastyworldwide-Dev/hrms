@@ -47,6 +47,7 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
 		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
 		frm.add_custom_button(__("Check Field Completeness"), () => check_field_completeness(frm));
+		frm.add_custom_button(__("Check Config Carryover"), () => check_config_carryover(frm));
 		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
 		show_sync_headline(frm);
 	},
@@ -250,6 +251,59 @@ function survey_source(frm) {
 		freeze_message: __("Counting what the source holds…"),
 		callback: (r) => report_survey(r.message || {}),
 		error: (e) => console.warn("[HRMSERPInstance] survey failed:", e),
+	});
+}
+
+function check_config_carryover(frm) {
+	// Did HR's config (leave/shift/expense types, per-company GL accounts) actually
+	// reach this hub? Prices every config doctype source-vs-hub. Expense Claim Type is
+	// the known blind spot — not carried by the sync at all.
+	console.info("[HRMSERPInstance] config carryover against", frm.doc.name);
+	frappe.call({
+		method: "hrms.sync.parity.config_carryover",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Counting every config doctype on the source and here…"),
+		callback: (r) => report_config_carryover(r.message || {}),
+		error: (e) => console.warn("[HRMSERPInstance] config carryover failed:", e),
+	});
+}
+
+function report_config_carryover(data) {
+	console.info("[HRMSERPInstance] config carryover:", (data.gaps || []).length, "gap(s)");
+	const rows = data.rows || [];
+	const badge = {
+		GAP: '<span style="color:var(--red-600);font-weight:600">GAP</span>',
+		PARTIAL: '<span style="color:var(--orange-600);font-weight:600">PARTIAL</span>',
+		OK: '<span style="color:var(--green-600)">OK</span>',
+		NOTHING_TO_CARRY: '<span class="text-muted">none on source</span>',
+		SOURCE_UNREADABLE: '<span class="text-muted">unreadable</span>',
+	};
+	const body = rows
+		.map(
+			(r) =>
+				`<tr><td>${frappe.utils.escape_html(r.doctype)}</td><td style="text-align:right">${
+					r.source ?? "—"
+				}</td><td style="text-align:right">${r.hub ?? "—"}</td><td>${
+					badge[r.verdict] || r.verdict
+				}</td><td>${r.carried_by_sync ? __("sync") : __("manual")}</td></tr>`,
+		)
+		.join("");
+	const gaps = data.gaps || [];
+	const lead = gaps.length
+		? `<p><b>${gaps.length} ${__("config gap(s)")}:</b> ${gaps
+				.map((g) => frappe.utils.escape_html(g))
+				.join(", ")}. ${__("A row marked 'manual' is not carried by the sync — set it up on the hub.")}</p>`
+		: `<p>${__("No config gaps — every surveyed doctype is present on the hub.")}</p>`;
+	frappe.msgprint({
+		title: __("Config Carryover"),
+		indicator: gaps.length ? "orange" : "green",
+		message:
+			lead +
+			`<table class="table table-bordered" style="margin-top:0.5em"><thead><tr>` +
+			`<th>${__("Config doctype")}</th><th style="text-align:right">${__("Source")}</th>` +
+			`<th style="text-align:right">${__("Hub")}</th><th>${__("Verdict")}</th><th>${__("Via")}</th>` +
+			`</tr></thead><tbody>${body}</tbody></table>`,
 	});
 }
 
