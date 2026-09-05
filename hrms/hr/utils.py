@@ -783,11 +783,14 @@ def reverse_replacement_leave(allocation_name, days):
 		"[rl_grant] reverse %s of %s day(s) from %s (taken %s)", to_reverse, days, allocation_name, taken
 	)
 	if to_reverse < days:
-		frappe.msgprint(
-			_(
-				"Reversed {0} of {1} day(s) — {2} day(s) of Replacement Leave were already taken and stay allocated."
-			).format(to_reverse, days, flt(days - to_reverse))
-		)
+		msg = _(
+			"Reversed {0} of {1} day(s) — {2} day(s) of Replacement Leave were already taken and stay allocated."
+		).format(to_reverse, days, flt(days - to_reverse))
+		frappe.msgprint(msg)
+		# Queryable trail for HR reconciliation: the msgprint is transient and the
+		# logger line isn't in Desk, so stamp the un-reversed amount onto the
+		# allocation's timeline — that is where HR lands when a balance looks off.
+		allocation.add_comment("Comment", msg)
 	if not to_reverse:
 		return
 	new_total = max(0.0, flt(allocation.new_leaves_allocated) - to_reverse)

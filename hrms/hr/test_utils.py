@@ -88,5 +88,19 @@ class TestReverseDoesNotValidate(unittest.TestCase):
 		)
 
 
+class TestReverseLeavesAuditTrail(unittest.TestCase):
+	"""When a cancel can't fully reverse (leave already taken), the un-reversed
+	amount must be recorded somewhere HR can query — a msgprint is transient and
+	the logger line isn't in Desk, so the allocation timeline carries it."""
+
+	def test_partial_reverse_stamps_a_comment(self):
+		body = _function_source("reverse_replacement_leave")
+		self.assertIn(
+			'add_comment("Comment"',
+			body,
+			"a partial reversal must leave a queryable record on the allocation",
+		)
+
+
 if __name__ == "__main__":
 	unittest.main(verbosity=2)
