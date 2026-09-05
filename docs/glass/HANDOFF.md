@@ -1,27 +1,21 @@
 # HANDOFF
-prompt:   #1 prove live writes are clean (post-cutover, mirrored writes unlocked)
-status:   done — RL + check-in paths proven clean under the manual-sync workflow
-commit:   8963f6200 on nz-glass
-files:    hrms/hr/utils.py — ponytail note on grant_replacement_leave (why top-up,
-            re-pull caveat). No behavior change.
-verify:   python3 hrms/hr/test_utils.py  (8/8)
-finding:  Every hub write to a MIRRORED doctype (Leave Allocation via RL grant,
-          approvals on Leave Application/Shift Request/Attendance Request) survives
-          only while no FULL re-pull of that doctype runs. check-in->attendance is
-          already safe (checkin_sweeper excludes mirrored rows).
-rule:     OPERATIONAL GUARDRAIL — before any full re-pull of a LIVE doctype post-
-          cutover, release the mirrored stamps first (hrms.sync.purge.
-          release_instance_stamp) or the pull clobbers hub edits. plan_cross_instance_write
-          overwrites a NULL-stamp row, so releasing = source can reclaim; that is the
-          intended direction only when the source is authoritative, which it no longer is.
-          #2 DONE (97c940ff5): partial RL reversal now stamps the un-reversed days
-          onto the allocation timeline as a Comment (queryable for HR reconciliation).
-          #3 DONE (afd127942): approval Desk<->Python parity guard had a dead path
-          (never ran); fixed, lists confirmed in agreement.
-          #4 DONE (f082ad116 fix + 46593c343 test): the 3 red frontend tests were 1
-          real PWA bug (call() threw SyntaxError/TypeError on malformed/non-JSON
-          server errors -> now guarded, patched into frappe-ui) + 1 stale test
-          (raw handler count vs the deliberate reconnect handler). Suite 135/135.
-flags:    Reverted a speculative "create hub-native RL allocation" fix — it froze OT
-          approval on the overlap guard. Top-up is correct under this workflow.
-next:     none pending. Full plan (#1-#4) complete.
+prompt:   PWA polish — empty dropdowns (permission bug) sweep + expense claim cleanup
+status:   done, pushed. Frontend suite 135/135.
+commit:   8cf19e19d on nz-glass (chain: 7e0335ff5, c9cac8192, 8cf19e19d)
+files:    hrms/api/__init__.py — get_shift_types (fenced supplier)
+          frontend/src/components/ExpensesTable.vue — expense_type documentList
+          frontend/src/data/attendance.js — shiftTypes resource
+          frontend/src/views/attendance/ShiftRequestForm.vue — shift_type documentList
+          frontend/src/views/attendance/AttendanceRequestForm.vue — shift documentList
+          frontend/src/views/expense_claim/Form.vue — hide cost_center/payable_account/project
+verify:   yarn --cwd frontend test (135/135). Manual: as a NON-HR employee, open
+          Request a Shift -> shift dropdown populates; New Expense Claim -> type
+          populates, no cost-center/account/project clutter.
+finding:  Root cause = raw Link fields search via frappe.desk.search.search_link,
+          which needs Desk read perm on the target master; a bare Employee has none
+          -> empty picker. Fix = feed a fenced get_* list as documentList. Sweep
+          caught a CRITICAL the agent missed: shift_type on Shift Request (employees
+          couldn't request a shift at all). Desk side unaffected (HR has permission).
+flags:    Memory nadi-empty-dropdowns corrected: NOT all empty dropdowns are config.
+next:     Nabil's raw notes backlog (notification doctype-error bug, RL public-holiday,
+          self-claim eligibility, announcement popup, expense GL by company). Await pick.
