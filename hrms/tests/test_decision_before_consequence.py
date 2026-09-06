@@ -133,20 +133,22 @@ class TestARejectionNeverPaysOut(unittest.TestCase):
 					f"{name} performs {method} before checking the decision",
 				)
 
-	def test_the_ot_bank_excludes_rejected_hours(self):
-		"""The sharpest case, and the one with no on_submit to guard.
-
-		`get_replacement_leave_bank` selects OT Requests on `docstatus: 1` alone.
-		A rejected row reaches docstatus 1, so without this filter declining
-		overtime would still bank the hours and grant replacement leave — money,
-		out of a button that says Reject."""
+	def test_rejected_ot_never_grants_replacement_leave(self):
+		"""Replacement Leave is now granted PER WORKING DAY on OT approval, not
+		banked — so the guarantee that a REJECTED OT grants nothing lives in
+		ot_request.on_submit, which must test for Approved before granting (that
+		is `test_the_consequence_runs_only_when_approved` above). The old bank is
+		deprecated and must return an empty pool, so no stale hours can be
+		converted behind the per-day path. This pins that contract instead of the
+		retired docstatus/status query."""
 		src = ast.unparse(fn("ot_request", "get_replacement_leave_bank"))
-		self.assertIn("status", src, "the bank query does not look at status at all")
-		self.assertIn(
-			"Rejected",
+		self.assertIn("hours_available", src)
+		self.assertNotIn(
+			"docstatus",
 			src,
-			"the bank query counts rejected overtime as banked hours",
+			"the bank still queries OT rows — it should be deprecated and empty",
 		)
+		self.assertIn("0", src, "the deprecated bank must return zero convertible hours")
 
 
 class TestTheServerKnowsTheyAreDecidable(unittest.TestCase):

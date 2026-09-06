@@ -98,7 +98,9 @@ class TestTheMigrationToolsAreReachable(unittest.TestCase):
 		stopped covering something."""
 		modules = {path.parents[2].name for path in self._workspace_files()}
 		self.assertEqual(modules, {"hr", "payroll"})
-		self.assertEqual(len(self._workspace_files()), 9)
+		# 8 under hr + 2 under payroll. A tripwire: if this drops, a workspace
+		# stopped being scanned by the link checks above.
+		self.assertEqual(len(self._workspace_files()), 10)
 
 	def _all_links(self):
 		targets = set()

@@ -211,13 +211,17 @@ class TestOTRequest(FrappeTestCase):
 		make_ot_request(self.employee, claimed_hours=2)
 		self.assertEqual(get_ot_pay(self.employee, today(), today(), 4160), 60.0)
 
-	def test_replacement_leave_bank(self):
+	def test_replacement_leave_bank_is_deprecated_and_empty(self):
+		# Replacement Leave is granted PER WORKING DAY on OT approval now; nothing
+		# banks or accumulates. Even with 3 OT hours worked, the deprecated bank
+		# returns an empty pool, so the legacy card/claim show "nothing to do" and
+		# no stale hours can be converted behind the per-day grant path.
 		make_ot_checkins(self.employee, today())
 		make_ot_request(self.employee, claimed_hours=3)
 		bank = get_replacement_leave_bank(self.employee, getdate())
-		self.assertEqual(bank["hours_total"], 3)
+		self.assertEqual(bank["hours_total"], 0)
 		self.assertEqual(bank["hours_claimed"], 0)
-		self.assertEqual(bank["hours_available"], 3)
+		self.assertEqual(bank["hours_available"], 0)
 
 
 class TestReplacementLeaveHoursPerDay(FrappeTestCase):
