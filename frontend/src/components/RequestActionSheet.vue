@@ -80,7 +80,7 @@
 				@click="askWithdraw"
 				:loading="withdraw.loading"
 				:disabled="withdraw.loading"
-				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
+				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
 				variant="subtle"
 				theme="red"
 			>
@@ -127,7 +127,7 @@
 				"
 				:loading="submitting"
 				:disabled="submitting"
-				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
+				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
 				variant="subtle"
 				theme="red"
 			>
@@ -187,7 +187,7 @@
 				"
 				:loading="submitting"
 				:disabled="submitting"
-				class="w-full py-5 !bg-transparent !border !border-red-600 !text-red-600"
+				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
 				variant="subtle"
 				theme="red"
 			>
@@ -383,7 +383,7 @@ function withdrawDraft() {
 					text: __("Request withdrawn."),
 					icon: "check-circle",
 					position: "bottom-center",
-					iconClasses: "text-green-500",
+					iconClasses: "text-success-ink",
 				});
 			},
 			onError(err) {
@@ -393,7 +393,7 @@ function withdrawDraft() {
 					text: err?.messages?.[0] || __("Could not withdraw the request."),
 					icon: "alert-circle",
 					position: "bottom-center",
-					iconClasses: "text-red-500",
+					iconClasses: "text-danger-ink",
 				});
 			},
 		},
@@ -480,7 +480,7 @@ const onActionSuccess = ({ status, docstatus, dismiss }) => {
 		text: getSuccessMessage({ status, docstatus }),
 		icon: "check-circle",
 		position: "bottom-center",
-		iconClasses: "text-green-500",
+		iconClasses: "text-success-ink",
 	});
 };
 
@@ -495,7 +495,7 @@ const onActionError =
 			text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
 			icon: "alert-circle",
 			position: "bottom-center",
-			iconClasses: "text-red-500",
+			iconClasses: "text-danger-ink",
 		});
 	};
 

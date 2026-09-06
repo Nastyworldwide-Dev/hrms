@@ -42,13 +42,10 @@
 		"arbitrary": 1
 	},
 	"components/PushNotificationPrompt.vue": {
-		"rawPalette": 3
+		"rawPalette": 2
 	},
 	"components/QuickLinks.vue": {
 		"arbitrary": 2
-	},
-	"components/RequestActionSheet.vue": {
-		"rawPalette": 6
 	},
 	"components/SideNav.vue": {
 		"arbitrary": 12
@@ -79,9 +76,6 @@
 		"arbitrary": 9
 	},
 	"views/ChangePassword.vue": {
-		"rawPalette": 1
-	},
-	"views/ForgotPassword.vue": {
 		"rawPalette": 1
 	},
 	"views/More.vue": {
