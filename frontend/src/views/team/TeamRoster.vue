@@ -1,7 +1,9 @@
 <template>
 	<BaseLayout :pageTitle="__('Team Roster')">
 		<template #body>
-			<div class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7">
+			<div
+				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+			>
 				<!-- HR-only team selector: HR has no direct reports, so without this
 				     the roster is empty. Same pattern as TeamDashboard. -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
@@ -30,15 +32,27 @@
 
 				<!-- one section per member: identity + a 7-day shift strip -->
 				<template v-if="teamRoster.data?.members?.length">
-					<div v-for="member in teamRoster.data.members" :key="member.name" class="flex flex-col gap-2.5">
+					<div
+						v-for="member in teamRoster.data.members"
+						:key="member.name"
+						class="flex flex-col gap-2.5"
+					>
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex flex-col min-w-0">
-								<span class="text-panel-title text-inkbase truncate">{{ member.employee_name }}</span>
-								<span v-if="member.branch || member.department" class="text-kra-label text-ink-600 truncate">
+								<span class="text-panel-title text-inkbase truncate">{{
+									member.employee_name
+								}}</span>
+								<span
+									v-if="member.branch || member.department"
+									class="text-kra-label text-ink-600 truncate"
+								>
 									{{ member.branch || member.department }}
 								</span>
 							</div>
-							<button class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link flex-none" @click="openAssign(member)">
+							<button
+								class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link flex-none"
+								@click="openAssign(member)"
+							>
 								{{ __("Assign") }}
 							</button>
 						</div>
@@ -51,7 +65,10 @@
 								:class="shiftOn(member, day) ? 'bg-surface' : ''"
 							>
 								<span class="text-caption text-ink-600 uppercase">{{ day.dow }}</span>
-								<span class="text-button-label font-semibold" :class="shiftOn(member, day) ? 'text-inkbase' : 'text-ink-500'">
+								<span
+									class="text-button-label font-semibold"
+									:class="shiftOn(member, day) ? 'text-inkbase' : 'text-ink-500'"
+								>
 									{{ shiftCode(member, day) }}
 								</span>
 							</div>
@@ -83,11 +100,19 @@
 						<div class="flex gap-3">
 							<label class="flex flex-col gap-1.5 flex-1">
 								<span class="g-eyebrow">{{ __("From") }}</span>
-								<input type="date" v-model="form.start_date" class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase" />
+								<input
+									type="date"
+									v-model="form.start_date"
+									class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase"
+								/>
 							</label>
 							<label class="flex flex-col gap-1.5 flex-1">
 								<span class="g-eyebrow">{{ __("To") }}</span>
-								<input type="date" v-model="form.end_date" class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase" />
+								<input
+									type="date"
+									v-model="form.end_date"
+									class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase"
+								/>
 							</label>
 						</div>
 						<GButton :disabled="!canSubmit" :pending="assignShift.loading" @click="submitAssign">
@@ -120,7 +145,9 @@ const dayjs = inject("$dayjs")
 // manager to see/roster that team. Non-HR receive [] and the selector hides.
 const selectedManager = ref("")
 const selectedOption = ref(null)
-const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("Select a team")))
+const managerOptions = computed(() =>
+	buildManagerOptions(teamManagers.data || [], __("Select a team"))
+)
 function onManagerPicked(option) {
 	selectedOption.value = option
 	selectedManager.value = option?.value || ""

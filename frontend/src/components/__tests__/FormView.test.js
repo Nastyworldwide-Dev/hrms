@@ -16,7 +16,11 @@ test("a failed/slow document load has a recovery branch, not a blank screen", ()
 	// the happy UI is gated on isFormReady...
 	assert.match(src, /v-if="isFormReady"/, "form UI is gated on isFormReady")
 	// ...so there MUST be a sibling v-else that renders something.
-	assert.match(src, /<div v-else class="flex flex-col h-full w-full form-view-root">/, "must have a v-else recovery branch")
+	assert.match(
+		src,
+		/<div v-else class="flex flex-col h-full w-full form-view-root">/,
+		"must have a v-else recovery branch"
+	)
 })
 
 test("the recovery branch gives the user a way out (Back + Try again)", () => {
@@ -26,5 +30,9 @@ test("the recovery branch gives the user a way out (Back + Try again)", () => {
 	const tail = src.slice(elseIdx)
 	assert.match(tail, /goBackOrHome\(router\)/, "recovery branch must keep a Back action")
 	assert.match(tail, /reloadDoc\(\)/, "recovery branch must offer Try again / retry")
-	assert.match(tail, /documentResource\.get\.loading/, "recovery branch distinguishes loading from error")
+	assert.match(
+		tail,
+		/documentResource\.get\.loading/,
+		"recovery branch distinguishes loading from error"
+	)
 })

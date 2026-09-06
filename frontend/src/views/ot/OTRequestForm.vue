@@ -37,9 +37,7 @@
 					:key="d.date"
 					class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between cursor-pointer"
 					:class="
-						otRequest.ot_date === d.date
-							? 'border-accent-ink'
-							: 'border-divider hover:bg-icon-bg'
+						otRequest.ot_date === d.date ? 'border-accent-ink' : 'border-divider hover:bg-icon-bg'
 					"
 					@click="otRequest.ot_date = d.date"
 				>
@@ -63,103 +61,94 @@
 </template>
 
 <script setup>
-import { IonContent } from "@ionic/vue";
-import { createResource } from "frappe-ui";
-import { computed, inject, ref, watch } from "vue";
-import FormView from "@/components/FormView.vue";
-import GPage from "@/components/glass/GPage.vue";
-import { settings } from "@/data/settings";
+import { IonContent } from "@ionic/vue"
+import { createResource } from "frappe-ui"
+import { computed, inject, ref, watch } from "vue"
+import FormView from "@/components/FormView.vue"
+import GPage from "@/components/glass/GPage.vue"
+import { settings } from "@/data/settings"
 
-const employee = inject("$employee");
-const __ = inject("$translate");
-const dayjs = inject("$dayjs");
+const employee = inject("$employee")
+const __ = inject("$translate")
+const dayjs = inject("$dayjs")
 
 // The dates the employee has unclaimed OT on — offered as quick-picks so they tap
 // a day instead of guessing one in the picker (the card only gave them a total).
 const claimableDays = createResource({
 	url: "hrms.api.get_claimable_ot_summary",
 	auto: true,
-});
+})
 
-const formatDay = (date) => dayjs(date).format("ddd, D MMM");
+const formatDay = (date) => dayjs(date).format("ddd, D MMM")
 
 // HR's full-day ratio: overtime hours that make ONE day of replacement leave.
-const rlHoursPerDay = computed(
-	() => settings.data?.replacement_leave_hours_per_day ?? 8,
-);
+const rlHoursPerDay = computed(() => settings.data?.replacement_leave_hours_per_day ?? 8)
 
-const isRL = computed(
-	() => claimableDays.data?.compensation === "Replacement Leave",
-);
+const isRL = computed(() => claimableDays.data?.compensation === "Replacement Leave")
 
 // Replacement leave earned by ONE day's OT, in whole 4-hour blocks — mirrors the
 // backend replacement_leave_days: floor(hours / (ratio/2)) * 0.5. Under 4h = 0.
 // Per day, never accumulated: a short day earns nothing.
 const rlDays = (hours) => {
-	const half = (rlHoursPerDay.value || 8) / 2;
-	if (!hours || half <= 0) return 0;
-	return Math.floor(hours / half) * 0.5;
-};
+	const half = (rlHoursPerDay.value || 8) / 2
+	if (!hours || half <= 0) return 0
+	return Math.floor(hours / half) * 0.5
+}
 
 // One plain line telling the employee what their claim type means.
 const claimTypeHint = computed(() => {
-	const c = claimableDays.data?.compensation;
+	const c = claimableDays.data?.compensation
 	if (c === "Overtime Pay")
-		return __("Your overtime pays out — you're paid for the hours you claim.");
+		return __("Your overtime pays out — you're paid for the hours you claim.")
 	if (c === "Replacement Leave")
-		return __("Your overtime becomes time off — earned in full 4-hour blocks.");
-	return "";
-});
+		return __("Your overtime becomes time off — earned in full 4-hour blocks.")
+	return ""
+})
 
 // The claimable days, shaped for display: Overtime Pay shows hours; Replacement
 // Leave shows the whole-day blocks and DROPS days under 4h (they earn nothing, per
 // HR — showing "0 days" would only confuse).
 const displayDays = computed(() => {
-	const days = claimableDays.data?.days || [];
+	const days = claimableDays.data?.days || []
 	if (!isRL.value) {
-		return days.map((d) => ({ ...d, label: __("{0} h", [d.hours]) }));
+		return days.map((d) => ({ ...d, label: __("{0} h", [d.hours]) }))
 	}
 	return days
 		.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
 		.filter((d) => d.leaveDays > 0)
-		.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }));
-});
+		.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }))
+})
 
 // What to expect from this claim — pay for hours, or the whole-day blocks of leave.
 const expectation = computed(() => {
-	const d = otSummary.data;
-	if (!d) return "";
+	const d = otSummary.data
+	if (!d) return ""
 	if (d.compensation === "Overtime Pay") {
-		return __(
-			"This pays out as overtime — you'll be paid for the hours you claim.",
-		);
+		return __("This pays out as overtime — you'll be paid for the hours you claim.")
 	}
-	const leaveDays = rlDays(d.punch_ot_hours || 0);
-	const half = (rlHoursPerDay.value || 8) / 2;
+	const leaveDays = rlDays(d.punch_ot_hours || 0)
+	const half = (rlHoursPerDay.value || 8) / 2
 	if (leaveDays <= 0) {
-		return __(
-			"Under {0}h in a day earns no replacement leave ({0}h = ½ day).",
-			[half],
-		);
+		return __("Under {0}h in a day earns no replacement leave ({0}h = ½ day).", [half])
 	}
-	return __("This gives you {0} day(s) off.", [leaveDays]);
-});
+	return __("This gives you {0} day(s) off.", [leaveDays])
+})
 
 const props = defineProps({
 	id: {
 		type: String,
 		required: false,
 	},
-});
+})
 
-const otRequest = ref({});
+const otRequest = ref({})
 
 const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",
 	params: { doctype: "OT Request" },
 	auto: true,
 	transform(data) {
-		if (props.id) return data;
+		if (props.id) return data
 		return data
 			.filter(
 				// status: the decision is displayed on detail, never offered on create —
@@ -176,98 +165,86 @@ const formFields = createResource({
 						"compensation",
 						"punch_ot_hours",
 						"shift",
-					].includes(field.fieldname),
+					].includes(field.fieldname)
 			)
 			.map((field) => {
 				// claimed_hours is punch-verified and auto-filled from the summary (see
 				// otSummary.onSuccess); the employee reads it, never types it.
-				if (field.fieldname === "claimed_hours") field.read_only = 1;
+				if (field.fieldname === "claimed_hours") field.read_only = 1
 				// reason is back and MANDATORY — the approver needs the why, and HR asked
 				// for it after it was briefly removed.
-				if (field.fieldname === "explanation") field.reqd = 1;
-				return field;
-			});
+				if (field.fieldname === "explanation") field.reqd = 1
+				return field
+			})
 	},
-});
+})
 
 // live punch-verified summary for the picked day
 const otSummary = createResource({
 	url: "hrms.api.get_ot_claim_summary",
 	onSuccess(data) {
-		otRequest.value.shift = data.shift;
-		otRequest.value.punch_ot_hours = data.punch_ot_hours;
-		otRequest.value.compensation = data.compensation;
+		otRequest.value.shift = data.shift
+		otRequest.value.punch_ot_hours = data.punch_ot_hours
+		otRequest.value.compensation = data.compensation
 		// Auto-fill the (read-only) claim with the punch-verified maximum: the employee
 		// claims exactly what they worked, no typing, no over-claim to be rejected later.
-		otRequest.value.claimed_hours = data.punch_ot_hours;
+		otRequest.value.claimed_hours = data.punch_ot_hours
 
-		const claimedField = formFields.data.find(
-			(f) => f.fieldname === "claimed_hours",
-		);
+		const claimedField = formFields.data.find((f) => f.fieldname === "claimed_hours")
 		if (claimedField) {
 			claimedField.description = data.punch_ot_hours
 				? __("Punch-verified maximum: {0} h", [data.punch_ot_hours])
-				: "";
+				: ""
 		}
 		// re-validate against the freshly loaded cap — the claimed_hours watcher
 		// does not fire when the summary lands.
-		validateClaimedHours();
+		validateClaimedHours()
 	},
 	onError() {
-		console.warn(
-			"[OTRequestForm] Failed to fetch OT summary:",
-			otRequest.value.ot_date,
-		);
+		console.warn("[OTRequestForm] Failed to fetch OT summary:", otRequest.value.ot_date)
 	},
-});
+})
 
 watch(
 	() => otRequest.value.ot_date,
 	(ot_date) => {
-		if (!ot_date || props.id) return;
-		otSummary.fetch({ employee: employee.data.name, date: ot_date });
-	},
-);
+		if (!ot_date || props.id) return
+		otSummary.fetch({ employee: employee.data.name, date: ot_date })
+	}
+)
 
 function validateClaimedHours() {
-	const claimedField = formFields.data?.find(
-		(f) => f.fieldname === "claimed_hours",
-	);
-	if (!claimedField) return;
+	const claimedField = formFields.data?.find((f) => f.fieldname === "claimed_hours")
+	if (!claimedField) return
 	// punch_ot_hours is set only once the summary loads. Guard on == null (NOT
 	// truthiness): a real 0 cap (no OT punched that day) is falsy, so the old
 	// `claimed && cap &&` skipped the block AND cleared the "nothing to claim"
 	// error the summary set — letting the claim through to a server rejection.
-	const cap = otRequest.value.punch_ot_hours;
-	const claimed = Number(otRequest.value.claimed_hours || 0);
+	const cap = otRequest.value.punch_ot_hours
+	const claimed = Number(otRequest.value.claimed_hours || 0)
 	if (cap == null) {
-		claimedField.error_message = "";
+		claimedField.error_message = ""
 	} else if (cap === 0) {
-		claimedField.error_message = __(
-			"No punch-verified overtime for this date — nothing to claim",
-		);
+		claimedField.error_message = __("No punch-verified overtime for this date — nothing to claim")
 	} else if (claimed > cap) {
-		claimedField.error_message = __(
-			"Cannot claim more than the punch-verified {0} h",
-			[cap],
-		);
+		claimedField.error_message = __("Cannot claim more than the punch-verified {0} h", [cap])
 	} else {
-		claimedField.error_message = "";
+		claimedField.error_message = ""
 	}
 }
 
-watch(() => otRequest.value.claimed_hours, validateClaimedHours);
+watch(() => otRequest.value.claimed_hours, validateClaimedHours)
 
 watch(
 	() => otRequest.value.employee,
 	(employee_id) => {
 		if (props.id && employee_id && employee_id !== employee.data.name) {
-			formFields.data.map((field) => (field.read_only = true));
+			formFields.data.map((field) => (field.read_only = true))
 		}
-	},
-);
+	}
+)
 
 function validateForm() {
-	otRequest.value.employee = employee.data.name;
+	otRequest.value.employee = employee.data.name
 }
 </script>

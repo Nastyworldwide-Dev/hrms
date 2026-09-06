@@ -21,13 +21,21 @@ test("interactive routes through GTag to a native <button>, not <component :is>"
 	// the GTag trap. GBanner must delegate the dynamic tag to GTag.
 	assert.match(src, /import GTag from "\.\/GTag\.js"/, "must import GTag")
 	assert.match(src, /<GTag/, "must render via GTag, not a bare element or <component :is>")
-	assert.doesNotMatch(src, /<component\s+:is/, "must not use <component :is> for the tag (GTag trap)")
+	assert.doesNotMatch(
+		src,
+		/<component\s+:is/,
+		"must not use <component :is> for the tag (GTag trap)"
+	)
 	assert.match(src, /:as="interactive \? 'button' : 'div'"/, "interactive -> button, else div")
 	assert.match(src, /:type="interactive \? 'button' : undefined"/, "button must set type=button")
 })
 
 test("interactive emits click so keyboard activation reaches the parent", () => {
-	assert.match(src, /@click="interactive && \$emit\('click', \$event\)"/, "must emit click when interactive")
+	assert.match(
+		src,
+		/@click="interactive && \$emit\('click', \$event\)"/,
+		"must emit click when interactive"
+	)
 	assert.match(src, /defineEmits\(\["click"\]\)/, "must declare the click emit")
 })
 
@@ -36,6 +44,6 @@ test("passive banner keeps its live-region role; interactive drops it", () => {
 	assert.match(
 		src,
 		/:role="interactive \? undefined : variant === 'error' \? 'alert' : 'status'"/,
-		"passive: error=alert, else status; interactive: no role (it is a button)",
+		"passive: error=alert, else status; interactive: no role (it is a button)"
 	)
 })

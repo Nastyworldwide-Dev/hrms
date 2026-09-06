@@ -146,20 +146,20 @@
 </template>
 
 <script setup>
-import { createResource } from "frappe-ui";
-import { computed, inject, markRaw } from "vue";
-import { useRouter } from "vue-router";
-import AttendanceCalendar from "@/components/AttendanceCalendar.vue";
-import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue";
+import { createResource } from "frappe-ui"
+import { computed, inject, markRaw } from "vue"
+import { useRouter } from "vue-router"
+import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
+import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 
-import BaseLayout from "@/components/BaseLayout.vue";
-import GListPanel from "@/components/glass/GListPanel.vue";
-import GListRow from "@/components/glass/GListRow.vue";
-import OTRequestItem from "@/components/OTRequestItem.vue";
-import RequestList from "@/components/RequestList.vue";
-import ResourceError from "@/components/ResourceError.vue";
-import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue";
-import ShiftRequestItem from "@/components/ShiftRequestItem.vue";
+import BaseLayout from "@/components/BaseLayout.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
+import OTRequestItem from "@/components/OTRequestItem.vue"
+import RequestList from "@/components/RequestList.vue"
+import ResourceError from "@/components/ResourceError.vue"
+import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
+import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 
 import {
 	getShiftDates,
@@ -167,43 +167,39 @@ import {
 	getTotalShiftDays,
 	myAttendanceRequests,
 	myShiftRequests,
-} from "@/data/attendance";
-import { myOTRequests } from "@/data/overtime";
-import { settings } from "@/data/settings";
+} from "@/data/attendance"
+import { myOTRequests } from "@/data/overtime"
+import { settings } from "@/data/settings"
 
-const router = useRouter();
-const dayjs = inject("$dayjs");
+const router = useRouter()
+const dayjs = inject("$dayjs")
 
 // Overtime the employee has worked but not yet filed — drives the "to claim" card
 // at the top of the screen so it is discoverable, not accidental. Session-scoped.
 const claimableOt = createResource({
 	url: "hrms.api.get_claimable_ot_summary",
 	auto: true,
-});
+})
 
-const isRLClaim = computed(
-	() => claimableOt.data?.compensation === "Replacement Leave",
-);
+const isRLClaim = computed(() => claimableOt.data?.compensation === "Replacement Leave")
 
 // Replacement Leave is earned in whole 4h blocks PER DAY (mirrors backend
 // replacement_leave_days); sum the block-days across the claimable days. Days under
 // 4h earn nothing, so they add 0.
 const claimLeaveDays = computed(() => {
-	const half = (settings.data?.replacement_leave_hours_per_day ?? 8) / 2;
-	if (half <= 0) return 0;
+	const half = (settings.data?.replacement_leave_hours_per_day ?? 8) / 2
+	if (half <= 0) return 0
 	return (claimableOt.data?.days || []).reduce(
 		(sum, d) => sum + Math.floor((d.hours || 0) / half) * 0.5,
-		0,
-	);
-});
+		0
+	)
+})
 
 // Show the card only when there is really something to claim: hours for Overtime
 // Pay, at least one full 4h block of leave for Replacement Leave.
 const hasClaim = computed(() =>
-	isRLClaim.value
-		? claimLeaveDays.value > 0
-		: (claimableOt.data?.claimable_hours || 0) > 0,
-);
+	isRLClaim.value ? claimLeaveDays.value > 0 : (claimableOt.data?.claimable_hours || 0) > 0
+)
 
 const shifts = createResource({
 	url: "hrms.api.get_shifts",
@@ -211,21 +207,20 @@ const shifts = createResource({
 	cache: "hrms:shifts",
 	transform: (data) => {
 		return data.map((assignment) => {
-			assignment.doctype = "Shift Assignment";
-			assignment.is_upcoming =
-				!assignment.end_date || dayjs(assignment.end_date).isAfter(dayjs());
-			assignment.shift_dates = getShiftDates(assignment);
-			assignment.total_shift_days = getTotalShiftDays(assignment);
-			assignment.shift_timing = getShiftTiming(assignment);
-			return assignment;
-		});
+			assignment.doctype = "Shift Assignment"
+			assignment.is_upcoming = !assignment.end_date || dayjs(assignment.end_date).isAfter(dayjs())
+			assignment.shift_dates = getShiftDates(assignment)
+			assignment.total_shift_days = getTotalShiftDays(assignment)
+			assignment.shift_timing = getShiftTiming(assignment)
+			return assignment
+		})
 	},
-});
+})
 
 const upcomingShifts = computed(() => {
-	const filteredShifts = shifts.data?.filter((shift) => shift.is_upcoming);
+	const filteredShifts = shifts.data?.filter((shift) => shift.is_upcoming)
 
 	// show only 5 upcoming shifts
-	return filteredShifts?.slice(0, 5);
-});
+	return filteredShifts?.slice(0, 5)
+})
 </script>

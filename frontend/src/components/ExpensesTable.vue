@@ -216,13 +216,15 @@ expensesTableFields.reload()
 // explicit documentList — the same permission-safe pattern the expense_approver
 // field uses. claimTypesResource is auto-fetched (see @/data/claims).
 const expenseTypeOptions = computed(() =>
-	(claimTypesResource.data || []).map((type) => ({ label: type.name, value: type.name })),
+	(claimTypesResource.data || []).map((type) => ({ label: type.name, value: type.name }))
 )
 
 const expenseFields = computed(() =>
 	(expensesTableFields.data || []).map((field) =>
-		field.fieldname === "expense_type" ? { ...field, documentList: expenseTypeOptions.value } : field,
-	),
+		field.fieldname === "expense_type"
+			? { ...field, documentList: expenseTypeOptions.value }
+			: field
+	)
 )
 
 const expenseClaimRef = computed(() => props.expenseClaim)

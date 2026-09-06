@@ -51,28 +51,26 @@
 </template>
 
 <script setup>
-import { createResource } from "frappe-ui";
-import { computed, inject } from "vue";
+import { createResource } from "frappe-ui"
+import { computed, inject } from "vue"
 
-import ResourceError from "@/components/ResourceError.vue";
-import { settings } from "@/data/settings";
+import ResourceError from "@/components/ResourceError.vue"
+import { settings } from "@/data/settings"
 
-const employee = inject("$employee");
-const __ = inject("$translate");
-const dayjs = inject("$dayjs");
+const employee = inject("$employee")
+const __ = inject("$translate")
+const dayjs = inject("$dayjs")
 
 // half a leave day in banked-overtime hours, from HR's configurable ratio (default 8/day)
-const halfDayHours = computed(
-	() => (settings.data?.replacement_leave_hours_per_day ?? 8) / 2,
-);
+const halfDayHours = computed(() => (settings.data?.replacement_leave_hours_per_day ?? 8) / 2)
 
 const bank = createResource({
 	url: "hrms.api.get_replacement_leave_bank_summary",
 	params: { employee: employee.data.name },
 	auto: true,
-});
+})
 
 const monthLabel = computed(() =>
-	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : "",
-);
+	bank.data?.month_start ? dayjs(bank.data.month_start).format("MMM") : ""
+)
 </script>

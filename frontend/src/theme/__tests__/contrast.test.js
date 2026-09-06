@@ -22,7 +22,7 @@ import test from "node:test"
 
 const CSS = fs.readFileSync(
 	path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "glass.css"),
-	"utf8",
+	"utf8"
 )
 
 // Every "R G B" triple for a token, in source order. The light :root block is
@@ -64,10 +64,16 @@ for (const theme of ["light", "dark"]) {
 }
 
 test("dark card surface is NOT the heavy #313133 bar-track (49 49 51)", () => {
-	assert.ok(surface.dark[0] < 49, `dark surface R is ${surface.dark[0]}, expected the glass tone (<49)`)
+	assert.ok(
+		surface.dark[0] < 49,
+		`dark surface R is ${surface.dark[0]}, expected the glass tone (<49)`
+	)
 })
 
 test("light card surface is a lift ABOVE the page, not the darker #ECEDEF track", () => {
 	// #ECEDEF = 236 — the track that sat darker than the page. The glass tone lifts above it.
-	assert.ok(surface.light[0] > 236, `light surface R is ${surface.light[0]}, expected a lift (>236)`)
+	assert.ok(
+		surface.light[0] > 236,
+		`light surface R is ${surface.light[0]}, expected a lift (>236)`
+	)
 })

@@ -22,7 +22,11 @@
 	     though only one ever renders. -->
 	<div
 		class="g-glass"
-		:class="empty ? 'g-list' : ['g-cellgrid', 'g-cellgrid--balance', { 'g-cellgrid--odd': !loading && isOdd }]"
+		:class="
+			empty
+				? 'g-list'
+				: ['g-cellgrid', 'g-cellgrid--balance', { 'g-cellgrid--odd': !loading && isOdd }]
+		"
 		:style="!empty && !loading ? { '--bcols': lgCols } : null"
 	>
 		<div v-if="empty" class="g-cellgrid__empty">

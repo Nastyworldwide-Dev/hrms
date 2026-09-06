@@ -11,19 +11,13 @@
 </template>
 
 <script setup>
-import { inject } from "vue";
-import GPage from "@/components/glass/GPage.vue";
-import ListView from "@/components/ListView.vue";
+import { inject } from "vue"
+import GPage from "@/components/glass/GPage.vue"
+import ListView from "@/components/ListView.vue"
 
-const __ = inject("$translate");
+const __ = inject("$translate")
 
-const EMPLOYEE_CHECKIN_FIELDS = [
-	"name",
-	"log_type",
-	"time",
-	"latitude",
-	"longitude",
-];
+const EMPLOYEE_CHECKIN_FIELDS = ["name", "log_type", "time", "latitude", "longitude"]
 
 const FILTER_CONFIG = [
 	{
@@ -38,5 +32,5 @@ const FILTER_CONFIG = [
 		label: __("Shift"),
 		options: "Shift Type",
 	},
-];
+]
 </script>

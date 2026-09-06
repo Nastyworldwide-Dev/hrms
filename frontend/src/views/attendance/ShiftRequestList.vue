@@ -19,7 +19,9 @@ import { isApprover } from "@/data/team"
 const __ = inject("$translate")
 // Team tab is manager/approver-only — a plain employee saw a permanently
 // empty "Team Requests" tab. Mirrors the RequestPanel isApprover gate.
-const TAB_BUTTONS = computed(() => (isApprover.data ? ["My Requests", "Team Requests"] : ["My Requests"]))
+const TAB_BUTTONS = computed(() =>
+	isApprover.data ? ["My Requests", "Team Requests"] : ["My Requests"]
+)
 const SHIFT_REQUEST_FIELDS = [
 	"name",
 	"employee",

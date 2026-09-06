@@ -19,7 +19,9 @@ import { isApprover } from "@/data/team"
 
 // Team tab is manager/approver-only — a plain employee saw a permanently
 // empty "Team Claims" tab. Mirrors the RequestPanel isApprover gate.
-const TAB_BUTTONS = computed(() => (isApprover.data ? ["My Claims", "Team Claims"] : ["My Claims"]))
+const TAB_BUTTONS = computed(() =>
+	isApprover.data ? ["My Claims", "Team Claims"] : ["My Claims"]
+)
 const EXPENSE_CLAIM_FIELDS = [
 	"`tabExpense Claim`.name",
 	"`tabExpense Claim`.employee",
