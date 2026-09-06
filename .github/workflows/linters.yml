@@ -48,6 +48,21 @@ jobs:
       - name: Fixture guard's own tests
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
+      # Semgrep scans the PYTHON app (hrms/), which lives at the repo root — so it
+      # runs here, not in the frontend job whose working-directory is frontend/
+      # (there it scanned nothing and ./semgrep/test-correctness.yml did not exist).
+      - name: Download Semgrep rules
+        run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
+
+      - name: Download semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep rules
+        run: semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+
+      - name: Semgrep for Test Correctness
+        run: semgrep ci --include=**/test_*.py --config ./semgrep/test-correctness.yml
+
   frontend:
     name: 'Frontend lint & unit tests'
     runs-on: ubuntu-latest
@@ -73,16 +88,4 @@ jobs:
         run: yarn lint
 
       - name: Unit tests
-        run: yarn test
-
-      - name: Download Semgrep rules
-        run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
-
-      - name: Download semgrep
-        run: pip install semgrep
-
-      - name: Run Semgrep rules
-        run: semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
-
-      - name: Semgrep for Test Correctness
-        run: semgrep ci --include=**/test_*.py --config ./semgrep/test-correctness.yml        
+        run: yarn test        
