@@ -569,5 +569,41 @@ class TestConfigVerdict(unittest.TestCase):
 		self.assertNotIn("Expense Claim Type", runner.DEFAULT_SYNC_DOCTYPES)
 
 
+class TestConfigCarryoverCompleteness(unittest.TestCase):
+	"""#4 regression: an unreadable survey must never read as clean. A source read
+	failure yields SOURCE_UNREADABLE and (rightly) does NOT enter `gaps` — so without a
+	completeness flag an all-failed survey has `gaps: []` and paints green. `complete`
+	gates that: it is true only when every source and hub read succeeded."""
+
+	def setUp(self):
+		self.summarize = _load(_FakeDB())._summarize_config_rows
+
+	def test_all_source_unreadable_has_no_gaps_but_is_incomplete(self):
+		rows = [
+			{"doctype": "Overtime Type", "hub": 3, "verdict": "SOURCE_UNREADABLE"},
+			{"doctype": "Mode of Payment", "hub": 5, "verdict": "SOURCE_UNREADABLE"},
+		]
+		out = self.summarize(rows)
+		self.assertEqual(out["gaps"], [])
+		self.assertFalse(out["complete"])
+		self.assertEqual(out["unreadable"], ["Overtime Type", "Mode of Payment"])
+
+	def test_a_hub_read_failure_is_incomplete_too(self):
+		rows = [{"doctype": "Leave Type", "hub": None, "verdict": "OK"}]
+		out = self.summarize(rows)
+		self.assertFalse(out["complete"])
+		self.assertEqual(out["hub_unreadable"], ["Leave Type"])
+
+	def test_all_readable_with_a_real_gap_is_complete(self):
+		rows = [
+			{"doctype": "Leave Type", "hub": 16, "verdict": "OK"},
+			{"doctype": "Expense Claim Type", "hub": 0, "verdict": "GAP"},
+		]
+		out = self.summarize(rows)
+		self.assertTrue(out["complete"])
+		self.assertEqual(out["gaps"], ["Expense Claim Type"])
+		self.assertEqual(out["unreadable"], [])
+
+
 if __name__ == "__main__":
 	unittest.main()

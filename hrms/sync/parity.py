@@ -490,6 +490,22 @@ def _config_verdict(source, hub):
 	return "GAP" if not hub else ("OK" if hub >= source else "PARTIAL")
 
 
+# Pure roll-up of the surveyed rows into gaps + completeness (bench-free testable). A
+# survey the source or hub could not fully read is NOT proof of anything: an all-unreadable
+# run has an empty `gaps` list, so without `complete` the UI would paint it green. `complete`
+# is true only when every read succeeded — that is what gates the green verdict.
+def _summarize_config_rows(rows):
+	unreadable = [r["doctype"] for r in rows if r["verdict"] == "SOURCE_UNREADABLE"]
+	hub_unreadable = [r["doctype"] for r in rows if r["hub"] is None]
+	gaps = [r["doctype"] for r in rows if r["verdict"] in ("GAP", "PARTIAL")]
+	return {
+		"gaps": gaps,
+		"unreadable": unreadable,
+		"hub_unreadable": hub_unreadable,
+		"complete": not unreadable and not hub_unreadable,
+	}
+
+
 @frappe.whitelist()
 def config_carryover(instance_name: str) -> dict:
 	"""Config completeness: for every HR/expense config doctype, the row count on the
@@ -497,7 +513,13 @@ def config_carryover(instance_name: str) -> dict:
 	set it up on the source, it never crossed) reads as a number, not a surprise.
 
 	`carried_by_sync` explains a gap: false means manual setup / adding it to the sync,
-	true means the sync itself under-delivered and should be re-run. Read-only."""
+	true means the sync itself under-delivered and should be re-run. Read-only.
+
+	This is a COUNT inventory, not proof config arrived: equal parent counts say nothing
+	about per-company account rows, holiday dates, or policy child values, and rows from
+	other companies can mask a missing source config. `complete` is false when any source
+	or hub read failed — the UI must not show green then. Deeper per-record/child parity
+	is a separate job (see field_completeness for the mirrored-field version)."""
 	logger.info("[parity] config_carryover against %s", instance_name)
 	frappe.only_for(("System Manager", "HR Manager"))
 	require_unfenced("survey a source instance")
@@ -535,14 +557,16 @@ def config_carryover(instance_name: str) -> dict:
 				"verdict": _config_verdict(source, hub),
 			}
 		)
-	gaps = [r["doctype"] for r in rows if r["verdict"] in ("GAP", "PARTIAL")]
+	summary = _summarize_config_rows(rows)
 	logger.info(
-		"[parity] config_carryover: %d doctypes surveyed, %d gap(s): %s",
+		"[parity] config_carryover: %d surveyed, %d gap(s) [%s], %d unreadable [%s]",
 		len(rows),
-		len(gaps),
-		", ".join(gaps),
+		len(summary["gaps"]),
+		", ".join(summary["gaps"]),
+		len(summary["unreadable"]) + len(summary["hub_unreadable"]),
+		", ".join(summary["unreadable"] + summary["hub_unreadable"]),
 	)
-	return {"instance": instance_name, "rows": rows, "gaps": gaps}
+	return {"instance": instance_name, "rows": rows, **summary}
 
 
 def _safe_remote_list(client, doctype, filters, fields):
