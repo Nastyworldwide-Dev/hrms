@@ -18,6 +18,7 @@ import logging
 import frappe
 from frappe import _
 
+from hrms.overrides.company_scope import require_unfenced
 from hrms.sync.client import RemoteInstanceClient, RemoteInstanceError
 from hrms.sync.runner import DEFAULT_SYNC_DOCTYPES
 
@@ -36,6 +37,7 @@ def check_source_permissions(instance_name: str) -> dict:
 	because it reveals the source's permission surface.
 	"""
 	frappe.only_for(("System Manager", HR_MANAGER_ROLE))
+	require_unfenced("probe source permissions")
 
 	client = RemoteInstanceClient(instance_name)
 	readable: list[str] = []
