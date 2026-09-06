@@ -290,16 +290,34 @@ function report_config_carryover(data) {
 		)
 		.join("");
 	const gaps = data.gaps || [];
-	const lead = gaps.length
+	// An incomplete survey (some source/hub reads failed) must never read as green:
+	// zero gaps out of a survey that could not read half its doctypes proves nothing.
+	const unreadable = (data.unreadable || []).concat(data.hub_unreadable || []);
+	const complete = data.complete !== false && unreadable.length === 0;
+	console.info("[HRMSERPInstance] config carryover complete?", complete, "unreadable:", unreadable);
+	const esc = frappe.utils.escape_html;
+	const gapLead = gaps.length
 		? `<p><b>${gaps.length} ${__("config gap(s)")}:</b> ${gaps
-				.map((g) => frappe.utils.escape_html(g))
+				.map((g) => esc(g))
 				.join(", ")}. ${__("A row marked 'manual' is not carried by the sync — set it up on the hub.")}</p>`
-		: `<p>${__("No config gaps — every surveyed doctype is present on the hub.")}</p>`;
+		: "";
+	const unreadableLead = unreadable.length
+		? `<p style="color:var(--orange-600)"><b>${__("Survey incomplete:")}</b> ${__(
+				"could not read {0} doctype(s) — {1}. Grant the API user read access and re-run before trusting these counts.",
+				[unreadable.length, unreadable.map((g) => esc(g)).join(", ")],
+			)}</p>`
+		: "";
+	const cleanLead =
+		!gaps.length && complete
+			? `<p>${__("Counts match on every surveyed doctype. This compares row counts only — it does not verify per-company account rows or child values.")}</p>`
+			: "";
 	frappe.msgprint({
 		title: __("Config Carryover"),
-		indicator: gaps.length ? "orange" : "green",
+		indicator: gaps.length ? "orange" : complete ? "green" : "orange",
 		message:
-			lead +
+			gapLead +
+			unreadableLead +
+			cleanLead +
 			`<table class="table table-bordered" style="margin-top:0.5em"><thead><tr>` +
 			`<th>${__("Config doctype")}</th><th style="text-align:right">${__("Source")}</th>` +
 			`<th style="text-align:right">${__("Hub")}</th><th>${__("Verdict")}</th><th>${__("Via")}</th>` +
