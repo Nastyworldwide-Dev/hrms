@@ -100,9 +100,6 @@ const formFields = createResource({
 	},
 	onSuccess(_data) {
 		expenseApproverDetails.reload()
-		if (!expenseClaim.value.currency) {
-			employeeCurrency.reload()
-		}
 		companyDetails.reload()
 	},
 })
@@ -121,21 +118,22 @@ const expenseApproverDetails = createResource({
 	},
 })
 
-// Through the fenced endpoint, never frappe.client.get_value on Employee:
-// the raw read needs Desk permission on the doctype and a bare-Employee
-// user has none — same failure family as the Department toast.
-const employeeCurrency = createResource({
-	url: "hrms.api.get_salary_currency",
-	makeParams() {
-		return { employee: currEmployee.value }
+// The claim is filed in the COMPANY currency at rate 1 (the Currency / Exchange
+// Rate inputs are hidden). Currency must come from the company, never the
+// employee's salary currency: a USD-salaried employee filing against an MYR
+// company would otherwise store currency=USD at exchange_rate=1, and the backend
+// (set_base_fields_amount) would treat 1 USD as 1 MYR — wrong base totals. The
+// company-currencies resource may resolve after this form mounts, so set it
+// reactively. Existing claims (props.id) keep whatever currency they were saved
+// with; only new claims are stamped here.
+watch(
+	() => [companyCurrency.value, expenseClaim.value.company],
+	() => {
+		if (props.id) return
+		if (companyCurrency.value) expenseClaim.value.currency = companyCurrency.value
 	},
-	onSuccess(data) {
-		// The claim is filed in a single currency at rate 1; fall back to the
-		// company currency when the employee has no salary currency, so the
-		// reqd currency field is always populated for the backend.
-		expenseClaim.value.currency = data || companyCurrency.value
-	},
-})
+	{ immediate: true }
+)
 
 const companyDetails = createResource({
 	url: "hrms.api.get_company_cost_center_and_expense_account",
@@ -156,7 +154,6 @@ watch(
 		}
 		currEmployee.value = employee_id
 		expenseApproverDetails.fetch({ employee: currEmployee.value })
-		employeeCurrency.fetch()
 	}
 )
 
