@@ -10,6 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gatesFailed } from "./verdict.mjs";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const STRICT = process.argv.includes("--strict");
@@ -96,4 +97,4 @@ if (skipped.length) {
   );
 }
 
-process.exit(results.some((r) => r.code !== 0) ? 1 : 0);
+process.exit(gatesFailed(results, STRICT) ? 1 : 0);
