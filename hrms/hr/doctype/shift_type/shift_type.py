@@ -246,44 +246,7 @@ class ShiftType(Document):
 	def _process(self, logs):
 		group_key = lambda x: (x["employee"], x["shift_start"])  # noqa
 		for key, group in groupby(sorted(logs, key=group_key), key=group_key):
-			single_shift_logs = list(group)
-			attendance_date = key[1].date()
-			employee = key[0]
-
-			if not self.should_mark_attendance(employee, attendance_date):
-				continue
-
-			working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day)
-			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent)
-
-			if self.is_half_holiday(employee, attendance_date):
-				working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
-				working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
-
-			overtime_type = single_shift_logs[0].get("overtime_type")
-			(
-				attendance_status,
-				working_hours,
-				late_entry,
-				early_exit,
-				in_time,
-				out_time,
-			) = self.get_attendance(
-				single_shift_logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day
-			)
-
-			mark_attendance_and_link_log(
-				single_shift_logs,
-				attendance_status,
-				attendance_date,
-				working_hours,
-				late_entry,
-				early_exit,
-				in_time,
-				out_time,
-				self.name,
-				overtime_type,
-			)
+			self.mark_attendance_for_shift_logs(key[0], key[1].date(), list(group))
 
 		# commit after processing checkin logs to avoid losing progress
 		if not frappe.in_test:
@@ -299,6 +262,49 @@ class ShiftType(Document):
 
 			if not frappe.in_test:
 				frappe.db.commit()  # nosemgrep
+
+	def mark_attendance_for_shift_logs(self, employee, attendance_date, single_shift_logs):
+		"""Mark one employee's attendance for one shift day from its check-ins.
+
+		The single rule the hourly job and the late check-out approval share
+		(hrms.overrides.remote_checkin_request_hooks.reprocess_late_checkout_attendance):
+		one implementation, so a threshold change here reaches both.
+		Returns the Attendance, or None when the day is not to be marked.
+		"""
+		if not self.should_mark_attendance(employee, attendance_date):
+			return None
+
+		working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day)
+		working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent)
+
+		if self.is_half_holiday(employee, attendance_date):
+			working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
+			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
+
+		overtime_type = single_shift_logs[0].get("overtime_type")
+		(
+			attendance_status,
+			working_hours,
+			late_entry,
+			early_exit,
+			in_time,
+			out_time,
+		) = self.get_attendance(
+			single_shift_logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day
+		)
+
+		return mark_attendance_and_link_log(
+			single_shift_logs,
+			attendance_status,
+			attendance_date,
+			working_hours,
+			late_entry,
+			early_exit,
+			in_time,
+			out_time,
+			self.name,
+			overtime_type,
+		)
 
 	def is_half_holiday(self, employee, attendance_date):
 		holiday_list = self.get_holiday_list(employee, attendance_date)

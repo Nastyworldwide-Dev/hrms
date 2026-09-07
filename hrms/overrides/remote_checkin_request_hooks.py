@@ -6,7 +6,7 @@ import logging
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import cint, get_datetime, now_datetime
 
 from hrms.utils.email_flush import flush_email_queue_after_commit
 
@@ -327,6 +327,8 @@ def propagate_approval_decision(doc, method=None):
 			doc.checkin,
 			{"requires_remote_approval": 0, "remote_approval_status": "Approved"},
 		)
+		if cint(doc.get("is_late_checkout")):
+			reprocess_late_checkout_attendance(doc.checkin)
 	else:  # Rejected
 		# skip_auto_attendance as well, or the rejection is cosmetic: the OT
 		# pairing engine and the PWA banner both read remote_approval_status,
@@ -354,3 +356,106 @@ def propagate_approval_decision(doc, method=None):
 		frappe.session.user,
 	)
 	_notify_employee(doc, doc.status)
+
+
+def reprocess_late_checkout_attendance(out_checkin: str) -> str | None:
+	"""Re-mark the session's attendance now that its late OUT is approved.
+
+	The hourly auto-attendance job usually runs before the employee remembers
+	to check out: it sees a lone IN and files the day as Half Day or Absent.
+	Approving the late OUT used to change only the punch's flags — the
+	Attendance stayed wrong until HR cancelled and re-marked it by hand.
+
+	Cancels the automation-owned Attendance the session's IN is linked to (a
+	record a person marked by hand is left alone), then re-marks the day from
+	IN + OUT through the shift's own rule. Returns the Attendance name, or
+	None when nothing could be marked.
+	"""
+	out = frappe.db.get_value(
+		"Employee Checkin", out_checkin, ["name", "employee", "time", "shift"], as_dict=True
+	)
+	if not out:
+		logger.warning("[remote_checkin_request] late OUT %s not found; nothing re-marked", out_checkin)
+		return None
+
+	# The session's IN: the latest IN before this OUT, never the OUT itself.
+	in_row = frappe.db.get_value(
+		"Employee Checkin",
+		{
+			"employee": out.employee,
+			"log_type": "IN",
+			"name": ["!=", out.name],
+			"time": ["<", out.time],
+		},
+		["name", "time", "shift", "shift_start", "attendance"],
+		order_by="time desc",
+		as_dict=True,
+	)
+	if not in_row or not in_row.shift:
+		logger.warning(
+			"[remote_checkin_request] late OUT %s has no shift-bound IN to re-mark from", out_checkin
+		)
+		return None
+
+	attendance_date = get_datetime(in_row.shift_start or in_row.time).date()
+
+	if in_row.attendance:
+		attendance = frappe.get_doc("Attendance", in_row.attendance)
+		if not cint(attendance.auto_attendance):
+			logger.info(
+				"[remote_checkin_request] %s on %s was marked by hand; kept as is",
+				attendance.name,
+				attendance_date,
+			)
+			return None
+		if cint(attendance.docstatus) == 1:
+			attendance.flags.ignore_permissions = True
+			attendance.cancel()  # Attendance.on_cancel unlinks every check-in it owned
+			logger.info(
+				"[remote_checkin_request] cancelled %s (%s) to re-mark from the approved late OUT",
+				attendance.name,
+				attendance.status,
+			)
+
+	shift = frappe.get_doc("Shift Type", in_row.shift)
+	logs = frappe.get_all(
+		"Employee Checkin",
+		fields=[
+			"name",
+			"employee",
+			"log_type",
+			"time",
+			"shift",
+			"shift_start",
+			"shift_end",
+			"shift_actual_start",
+			"shift_actual_end",
+			"device_id",
+			"overtime_type",
+		],
+		filters={
+			"employee": out.employee,
+			"time": ["between", [in_row.time, out.time]],
+			"skip_auto_attendance": 0,
+			"attendance": ["is", "not set"],
+			"synced_from_instance": ["is", "not set"],
+		},
+		order_by="time asc",
+	)
+	if not logs:
+		logger.warning(
+			"[remote_checkin_request] no unmarked punches between %s and %s; nothing re-marked",
+			in_row.name,
+			out.name,
+		)
+		return None
+
+	attendance = shift.mark_attendance_for_shift_logs(out.employee, attendance_date, logs)
+	logger.info(
+		"[remote_checkin_request] re-marked %s on %s from %s -> %s",
+		out.employee,
+		attendance_date,
+		[log.name for log in logs],
+		attendance.name if attendance else None,
+	)
+	return attendance.name if attendance else None
