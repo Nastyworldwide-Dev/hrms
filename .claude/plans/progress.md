@@ -7,3 +7,4 @@
 2026-09-07T07:38Z NEXT: Nabil deploys; approver re-taps a LA notification; then audit fix plan rows 1-2
 2026-09-07T07:45Z COMMIT: 4d6aa75a9 geofence coarse-fix-inside rule; pushed
 2026-09-07T07:45Z NEXT: Nabil deploys; then audit fix plan rows 1-2
+2026-09-07T07:46Z COMMIT: dfdd813fd design-token snapshot; tree clean, pushed
