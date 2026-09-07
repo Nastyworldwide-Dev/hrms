@@ -44,7 +44,14 @@ const SILENT_EXCEPTIONS = new Set(["AuthenticationError", "SessionExpired", "Ses
 // ("...does not have permission... Leave Application") on top of it. That toast
 // was the visible half of the "stuck on a permission error" report. Silence it:
 // the form's own error state is the single, escapable feedback.
-const SILENT_ENDPOINTS = new Set(["frappe.desk.search.search_link", "hrms.api.get_attachments"])
+// submit_late_checkout: the dialog catches the rejection and shows "Could not
+// submit" with the server's reason; a second toast here — titled as if a page
+// failed to LOAD — is what HR photographed when a submission was refused.
+const SILENT_ENDPOINTS = new Set([
+	"frappe.desk.search.search_link",
+	"hrms.api.get_attachments",
+	"hrms.api.remote_checkin.submit_late_checkout",
+])
 
 function endpointOf(options) {
 	const url = options?.url || "unknown endpoint"

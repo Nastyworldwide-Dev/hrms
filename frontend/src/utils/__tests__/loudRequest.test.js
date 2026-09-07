@@ -48,6 +48,23 @@ test("a detail-form attachment fetch failure is logged but never toasted", async
 	assert.deepEqual(toasts, [], "get_attachments must not raise a user-facing toast")
 })
 
+test("a late check-out submit failure is not toasted twice", async () => {
+	// The dialog catches the rejection and shows "Could not submit" with the
+	// server's reason. The seam's own "Could not load" on top of it is what HR
+	// photographed: two red toasts for one refused submission, the first one
+	// titled as if a page had failed to load.
+	const { loud, toasts } = harness({
+		exc_type: "ValidationError",
+		messages: [
+			"Check-out time must be before your next check-in EMP-CKIN-2 at 2026-09-02 08:55:44.",
+		],
+	})
+	await assert.rejects(() =>
+		loud({ url: "/api/method/hrms.api.remote_checkin.submit_late_checkout" })
+	)
+	assert.deepEqual(toasts, [], "submit_late_checkout reports through its own dialog")
+})
+
 test("the same failure on any other endpoint still toasts", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))
