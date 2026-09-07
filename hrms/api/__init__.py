@@ -274,6 +274,15 @@ def are_push_notifications_enabled() -> bool:
 		return False
 
 
+# (Employee approver field, Department Approver parentfield) per request type.
+# Not symmetrical on purpose — the department shift table is singular.
+DESIGNATED_APPROVER_FIELDS = (
+	("leave_approver", "leave_approvers"),
+	("expense_approver", "expense_approvers"),
+	("shift_request_approver", "shift_request_approver"),
+)
+
+
 # Attendance
 def _ensure_own_employee_or_permitted(employee: str) -> None:
 	"""Staff lockdown: staff may only query their own employee; a direct
@@ -315,6 +324,16 @@ def _may_read_employee(employee: str) -> bool:
 	# their companies. is_hr_operator deliberately excludes System Manager.
 	if is_hr_operator() and company_visible(frappe.db.get_value("Employee", employee, "company")):
 		return True
+	# A designated approver may read the report whose requests route to them:
+	# the leave / expense / shift approver on the Employee record or on its
+	# own department — the same list the save-time fence and the approver
+	# selectors use. Without this a named approver who is neither the manager
+	# nor HR opened a report's leave request from its notification into a
+	# wall of "Not permitted" toasts. Read-only, like the manager rule.
+	user = frappe.session.user
+	for field, parentfield in DESIGNATED_APPROVER_FIELDS:
+		if user in get_designated_approvers(employee, field, parentfield):
+			return True
 	return False
 
 
