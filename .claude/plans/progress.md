@@ -9,3 +9,10 @@
 2026-09-07T07:45Z NEXT: Nabil deploys; then audit fix plan rows 1-2
 2026-09-07T07:46Z COMMIT: dfdd813fd design-token snapshot; tree clean, pushed
 2026-09-07T07:47Z NEXT: Nabil deploys; HR re-tests late check-out, LA notification tap, indoor punch; then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
+
+2026-09-07 UX: Audited Nadi source and stored screenshots; prepared docs/glass/plan/NADI_COMPACT_UX_PROPOSAL.md and docs/glass/spec/nadi-compact-prototype.html. No application code, database, permissions, dependencies or deployment changed.
+2026-09-07 EVIDENCE: Prototype only: node docs/glass/spec/nadi-compact-prototype.check.mjs exit 0; 136 viewport/theme checks without overflow, 34 axe scans without violations, nine interaction checks, no JS errors; git diff --check clean. Not application evidence rung 2/3.
+2026-09-07 DEAD END: Initial sandbox failed to start; user enabled unrestricted mode. Existing Employee Issue routes only to HR and has no title/team field; adding an IT label alone cannot implement Helpdesk. No employee Asset Request flow exists in the inspected app.
+2026-09-07 NEXT: Nabil reviews compact mockup and navigation (Attendance, Leave, Home, Expenses, Assets). User's working agreement requires mockup approval before UI code. After approval amend design spec, implement small tested slices; approve concrete schema/permission plans before IT routing and Assets backend. Optional existing-helpdesk question unanswered; in-Nadi support is provisional. Prior audit fixes remain separate backlog.
+2026-09-07T10:00Z COMMIT: d52d15377 HR self Employee UP dropped (hook + User hook + patch + readiness); pushed
+2026-09-07T10:00Z NEXT: Nabil deploys; Amy re-opens Employee list; review who on Verifica holds System Manager (only it can edit roles/UPs); then audit fix plan rows 1-2

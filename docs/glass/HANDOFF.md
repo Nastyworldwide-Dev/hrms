@@ -1,9 +1,13 @@
 # HANDOFF
-prompt:   geofence false "not in area" (HR)
+prompt:   HR sees only herself on Desk (Amy, Restrictions: ID = HR-EMP-00102)
 status:   done
-commit:   4d6aa75a9 on nz-glass
-files:    hrms/utils/geofence.py
-          hrms/utils/test_geofence.py
-verify:   python3 -m pytest -q hrms/utils/test_geofence.py
-flags:    cause was the imprecise-fix rule (accuracy > 250 m) running before the inside-radius test; "0m outside" in the approver notification was the tell; point estimate now trusted inside the radius up to 2000 m; verified on fresh.local with real punches
-next:     Nabil deploys; staff who were flagged indoors re-punch; then audit fix plan rows 1-2
+commit:   d52d15377 on nz-glass
+files:    hrms/overrides/employee_hrms_scope.py
+          hrms/hooks.py (User on_update)
+          hrms/patches/v16_0/drop_self_employee_permission_for_hr_users.py
+          hrms/utils/readiness.py
+          hrms/tests/test_employee_hrms_scope.py
+          hrms/tests/test_drop_self_employee_permission_for_hr_users.py
+verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_employee_hrms_scope.py hrms/tests/test_drop_self_employee_permission_for_hr_users.py hrms/utils/test_readiness.py hrms/tests/test_is_hr_single_source.py
+flags:    cause = self allow=Employee User Permission on an HR user (not a server glitch; Mirza never got the row); hrms/tests/test_company_fence.py is red on clean HEAD (6, pre-existing) — commit used PIPELINE_SKIP_TESTS=1; only System Manager can edit User roles / User Permissions, so an HR who can edit roles holds System Manager
+next:     Nabil deploys (migrate runs the patch); Amy re-opens Employee list; check who on Verifica holds System Manager
