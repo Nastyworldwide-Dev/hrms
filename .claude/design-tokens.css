@@ -1,0 +1,69 @@
+/* Design-token snapshot for mockup-building agents.
+   Source of truth remains design/tokens.json (built by design/build-tokens.mjs
+   into frontend/src/theme/glass.variables.css + glass.css). This file is a
+   READ-ONLY convenience copy for the mockup workflow — spot-check 2-3 values
+   against the live theme files before reuse; refresh if they disagree.
+   Do not import this into the app; it is not wired to anything. */
+
+/* icon-set: feather (outline, 24-grid source scaled to 20px, stroke 1.55 via
+   .g-icon, currentColor @ 0.85 opacity). Matches the app's own hand-authored
+   icon components (src/components/icons/*.vue) and its feather-icons
+   dependency — do not introduce a second icon language. */
+
+/* motion-source: kinetics (spring) — this codebase itself uses fixed
+   cubic-bezier durations (see --g-motion-* below), not spring physics, so the
+   five slots below pair each Kinetics-style class with the NEAREST existing
+   app token as its cubic-bezier/duration fallback. Spring numbers are
+   conventional approximations for the effect class (site not reachable at
+   build time) — treat stiffness/damping as directional, the cubic-bezier
+   pair is the one that actually ships in this app.
+   --motion-press   { stiffness: 500, damping: 30 } | 120ms cubic-bezier(.2,.8,.3,1)   (= --g-motion-button-press)
+   --motion-glide   { stiffness: 300, damping: 26 } | 280ms cubic-bezier(.32,.72,0,1)  (= --g-motion-screen-push)
+   --motion-enter   { stiffness: 260, damping: 22 } | 340ms cubic-bezier(.32,.72,0,1)  (= --g-motion-sheet-present)
+   --motion-drag    { stiffness: 400, damping: 40 } | 90ms  ease-out                    (= --g-motion-row-tap)
+   --motion-count   { stiffness: 220, damping: 26 } | 420ms ease-out                    (= --g-motion-check-in-success) */
+
+:root {
+	--g-brand: #C8FF00;
+	--g-brand-2: #A8DC00;
+	--g-danger: #F87171;
+	--g-leave: #7B5CFF;
+	--g-on-brand: #0A0C05;
+	--g-success: #00E5C0;
+	--g-warn: #F59E0B;
+	--g-accent-glow: rgba(63,92,0,.14);
+	--g-accent-ink: #3F5C00;
+	--g-bg: #EDEFF3;
+	--g-glass-fill: rgba(255,255,255,.56);
+	--g-glass-fill-fallback: rgba(255,255,255,.92);
+	--g-glass-rim: rgba(255,255,255,.90);
+	--g-hair: rgba(16,22,34,.08);
+	--g-icon-bg: rgba(16,22,34,.05);
+	--g-ink: #0B0C10;
+	--g-ink-muted: #6C727B;
+	--g-ink2: #545C68;
+	--g-ink3: #878F9B;
+	--g-lift: 0 10px 30px rgba(20,26,40,.10);
+	--g-rim-hi: rgba(255,255,255,.95);
+	--g-rim-lo: rgba(16,22,34,.06);
+	--g-sheen: rgba(255,255,255,.55);
+	--g-track-solid: #ECEDEF;
+	--g-danger-ink: #DC2626;
+	--g-leave-ink: #5D46C2;
+	--g-success-ink: #007764;
+	--g-warn-ink: #B45309;
+	--g-radius-action: 19px;
+	--g-radius-banner: 16px;
+	--g-radius-card: 17px;
+	--g-radius-input: 14px;
+	--g-radius-panel: 20px;
+	--g-radius-pill: 6px;
+	--g-radius-tabbar: 22px;
+	--g-radius-tile: 15px;
+	--g-radius-well: 9px;
+	--g-blur-panel: 20px;
+	--g-font-display: -apple-system, BlinkMacSystemFont, 'Inter Tight', 'Inter', 'Segoe UI', Roboto, sans-serif;
+	--g-font-ui: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--g-touch-target-min: 44px;
+	--g-screen-gutter: 15px;
+}
