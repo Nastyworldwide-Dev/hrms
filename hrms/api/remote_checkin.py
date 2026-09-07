@@ -10,6 +10,7 @@ hrms.api.remote_checkin.get_pending_count()  # for Profile badge
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -23,6 +24,11 @@ from hrms.utils.identity import get_employee
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
+
+# Two IN rows this close are one punch (a double tap, a retried request), not
+# two sessions. Employee Checkin already refuses an identical timestamp, so a
+# duplicate always lands a fraction of a second to a few seconds later.
+SAME_PUNCH_WINDOW = timedelta(seconds=60)
 
 HR_MANAGER_ROLE = "HR Manager"
 
@@ -418,19 +424,22 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	from datetime import timedelta
 
 	out_time_filter = [">=", in_doc.time]
-	# The earliest IN after this one, excluded BY NAME. Bounding the window by
-	# timestamp alone let the record being resolved come back as its own "next
-	# check-in", which turned the rule into "check-out before check-in" and
-	# refused every submission HR tried. With no later IN there is no upper
-	# bound beyond "not in the future" (checked above). Frappe v16 refuses
-	# "min(time)" as a SELECT string, so the row is taken with an ordered limit.
+	# The earliest IN after this one that starts a NEW session: another record
+	# (never this one), and past the same-punch window — a second IN seconds
+	# after the first is a double tap or a retried request, not a check-in the
+	# check-out must precede. That duplicate is what HR's phone showed: "next
+	# check-in (08:55:44)" for an IN displayed as 08:55, which turned the rule
+	# into "check-out before check-in" and refused every submission. With no
+	# later IN there is no upper bound beyond "not in the future" (checked
+	# above). Frappe v16 refuses "min(time)" as a SELECT string, so the row is
+	# taken with an ordered limit.
 	next_in = frappe.db.get_value(
 		"Employee Checkin",
 		{
 			"employee": in_doc.employee,
 			"log_type": "IN",
 			"name": ["!=", in_doc.name],
-			"time": [">", in_doc.time],
+			"time": [">", in_dt + SAME_PUNCH_WINDOW],
 		},
 		["name", "time"],
 		order_by="time asc",

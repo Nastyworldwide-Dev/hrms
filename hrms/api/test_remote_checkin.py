@@ -317,6 +317,18 @@ class TestLateCheckoutNextCheckinBound(unittest.TestCase):
 		)
 		out_doc.insert.assert_called_once()
 
+	def test_a_duplicate_punch_seconds_later_is_not_the_next_checkin(self):
+		"""What the phone actually showed: "next check-in (2026-09-01 08:55:44)"
+		for an IN displayed as 08:55 — a second IN row in the same minute, a
+		double tap or a retried request, not a new session. It must not bound
+		the window; the check-out at 18:01 is accepted."""
+		duplicate = self.in_time + datetime.timedelta(seconds=20)
+		_, out_doc = self._submit(
+			[self._row(ORIGINAL_IN, "IN", self.in_time), self._row("EMP-CKIN-DUP", "IN", duplicate)],
+			self.in_time + datetime.timedelta(hours=9, minutes=6),  # 18:01
+		)
+		out_doc.insert.assert_called_once()
+
 	def test_checkout_at_or_after_the_later_checkin_is_rejected_and_names_that_punch(self):
 		later = self.in_time + datetime.timedelta(days=1)
 		rows = [self._row(ORIGINAL_IN, "IN", self.in_time), self._row(LATER_IN, "IN", later)]
