@@ -1,0 +1,3 @@
+GOAL: late check-out validation ignores the originating IN (excluded by name), bounds only by a genuine later IN and names it; approval of a late OUT cancels the day's automation-owned Attendance and re-marks it from IN+OUT.
+DONE WHEN: hrms/tests/test_remote_checkin.py + hrms/tests/test_remote_checkin_request_hooks.py go red on HEAD then green; test_checkin_timezone / test_rejected_punch_attendance / test_sweeper_session_bound stay green.
+CHECK: PYTHONPATH=. ~/verify-bench/env/bin/python hrms/tests/test_remote_checkin.py && PYTHONPATH=. ~/verify-bench/env/bin/python hrms/tests/test_remote_checkin_request_hooks.py && PYTHONPATH=. ~/verify-bench/env/bin/python hrms/tests/test_checkin_timezone.py && PYTHONPATH=. python3 hrms/tests/test_rejected_punch_attendance.py
