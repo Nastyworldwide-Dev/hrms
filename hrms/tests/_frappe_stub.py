@@ -59,8 +59,26 @@ def install():
 	root.whitelist = lambda *args, **kwargs: lambda func: func
 	# Placeholders so tests can patch.object() them; a test that reaches one
 	# unpatched gets a loud MagicMock, not a silent pass.
-	for name in ("db", "session", "local", "new_doc", "throw", "get_doc", "get_all", "get_cached_doc"):
+	for name in ("db", "session", "local", "new_doc", "get_doc", "get_all", "get_cached_doc"):
 		setattr(root, name, MagicMock(name=f"frappe.{name}"))
+
+	# frappe.throw must RAISE, or every "rejects X" assertion passes vacuously.
+	class ValidationError(Exception):
+		pass
+
+	class PermissionError(ValidationError):
+		pass
+
+	class DoesNotExistError(ValidationError):
+		pass
+
+	def throw(msg, exc=ValidationError, *args, **kwargs):
+		raise exc(msg)
+
+	root.ValidationError = ValidationError
+	root.PermissionError = PermissionError
+	root.DoesNotExistError = DoesNotExistError
+	root.throw = throw
 	root.__getattr__ = lambda _name: MagicMock()
 	sys.modules["frappe"] = root
 	sys.modules["frappe.utils"] = _utils_module()
@@ -87,6 +105,13 @@ def _utils_module():
 				continue
 		raise ValueError(f"unparseable datetime {value!r}")
 
+	def add_to_date(value=None, years=0, months=0, weeks=0, days=0, hours=0, minutes=0, seconds=0, **kwargs):
+		if years or months:
+			raise NotImplementedError("stub add_to_date covers weeks/days/hours/minutes/seconds only")
+		return get_datetime(value) + datetime.timedelta(
+			weeks=weeks, days=days, hours=hours, minutes=minutes, seconds=seconds
+		)
+
 	def cint(value, default=0):
 		try:
 			return int(float(value))
@@ -106,6 +131,10 @@ def _utils_module():
 	module.get_datetime_str = lambda value: get_datetime(value).strftime("%Y-%m-%d %H:%M:%S.%f")
 	module.now_datetime = datetime.datetime.now
 	module.add_days = lambda value, days: get_datetime(value) + datetime.timedelta(days=days)
+	module.add_to_date = add_to_date
+	module.time_diff_in_hours = lambda later, earlier: (
+		(get_datetime(later) - get_datetime(earlier)).total_seconds() / 3600
+	)
 	module.cint = cint
 	module.flt = flt
 	module.__getattr__ = lambda _name: MagicMock()
