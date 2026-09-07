@@ -8,6 +8,7 @@ Decision rules (see Shift Assignment.enable_strict_geofence):
     Lenient mode (default):
       - No shift location on assignment   -> allow (None)
       - Radius <= 0                       -> allow (None)
+      - Coarse reading, point inside      -> allow (None)
       - Reading too imprecise to place    -> require_remote (imprecise_location)
       - Inside radius + accuracy          -> allow (None)
       - Outside radius + accuracy         -> require_remote (flag for approval)
@@ -15,6 +16,7 @@ Decision rules (see Shift Assignment.enable_strict_geofence):
     Strict mode:
       - No shift location on assignment   -> throw (no_shift_location)
       - Radius <= 0                       -> throw (no_radius)
+      - Coarse reading, point inside      -> allow (None)
       - Reading too imprecise to place    -> throw (imprecise_location)
       - Inside radius + accuracy          -> allow (None)
       - Outside radius + accuracy         -> throw (outside_radius)
@@ -68,6 +70,18 @@ REASON_IMPRECISE_LOCATION = "imprecise_location"
 #: ponytail: one constant for every company. Make it a per-company HR Setting
 #: if a site's device fleet genuinely needs a different ceiling.
 ACCURACY_ALLOWANCE_CAP_M = 250
+
+#: Past the allowance cap a reading can no longer WIDEN the fence — but up to
+#: this, its point estimate still says where the device thinks it is. A phone
+#: indoors or a tablet on wifi routinely reports several hundred metres of
+#: error with the estimate sitting squarely inside the office; refusing that
+#: as "unplaceable" sent staff who were at their desk to remote approval and
+#: told the approver they were "0m outside the office geofence" (HR, 7 Sep
+#: 2026). Beyond this the fix is IP-level: the point is the provider's
+#: centroid, not the person, and landing inside a fence by that is luck.
+#: ceiling: one constant for every company, upgrade: per-company HR Setting
+#: if a device fleet needs a different line.
+POINT_ESTIMATE_TRUST_CAP_M = 2000
 
 
 def usable_accuracy(accuracy_m) -> float:
@@ -128,13 +142,30 @@ def evaluate_geofence(
 		"accuracy_m": accuracy,
 	}
 
+	if (
+		accuracy > ACCURACY_ALLOWANCE_CAP_M
+		and distance_m <= radius_m
+		and accuracy <= POINT_ESTIMATE_TRUST_CAP_M
+	):
+		# Too coarse to widen the fence, but the device's own best estimate is
+		# inside it. That estimate is the answer to "where are you", and the
+		# wide error bar is the receiver's problem, not evidence of absence.
+		logger.info(
+			"[geofence] inside on the point estimate — accuracy %.0fm past the allowance cap, distance=%.1fm radius=%dm",
+			accuracy,
+			distance_m,
+			radius_m,
+		)
+		return None
+
 	if accuracy > ACCURACY_ALLOWANCE_CAP_M:
-		# The fix is too coarse to place anyone. Note this runs BEFORE the
-		# inside-radius test on purpose: a reading this vague cannot clear the
-		# fence any more than it can fail it, and letting it clear the fence is
-		# the direction that gets abused — an IP-geolocated desktop anywhere in
-		# the city reports coordinates near the city centre, which is "inside"
-		# for any site near it, by luck rather than by presence.
+		# The fix is too coarse to place anyone: its point is outside the fence
+		# and the allowance that would carry it inside is not evidence — or it
+		# is kilometre-scale, where the point is not evidence either. Letting
+		# such a reading clear the fence is the direction that gets abused: an
+		# IP-geolocated desktop anywhere in the city reports coordinates near
+		# the city centre, which is "inside" for any site near it, by luck
+		# rather than by presence.
 		context["reason"] = REASON_IMPRECISE_LOCATION
 		if strict:
 			logger.info(

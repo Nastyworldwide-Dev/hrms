@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from hrms.utils.geofence import (
 	ACCURACY_ALLOWANCE_CAP_M,
+	POINT_ESTIMATE_TRUST_CAP_M,
 	REASON_IMPRECISE_LOCATION,
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
@@ -158,6 +159,42 @@ class TestAccuracyAllowance(unittest.TestCase):
 		# a nearby site's fence by luck. Being unplaceable is not presence.
 		action, ctx = evaluate_geofence(
 			False, has_shift_location=True, radius_m=100, distance_m=10, accuracy_m=5000
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+
+	def test_a_coarse_reading_whose_point_is_inside_is_presence(self):
+		"""HR's report: staff inside the office were routed to remote approval,
+		and the approver got "0m outside the office geofence" — a fix coarser
+		than the allowance cap (a phone indoors, an iPad on wifi: hundreds of
+		metres) whose best estimate nonetheless sat inside the radius. The
+		device's own answer to "where are you" is the office; the fence must
+		not overrule it because the error bar is wide. Both modes."""
+		for strict in (False, True):
+			self.assertIsNone(
+				evaluate_geofence(
+					strict, has_shift_location=True, radius_m=100, distance_m=10, accuracy_m=600
+				),
+				f"strict={strict}",
+			)
+
+	def test_a_coarse_reading_whose_point_is_outside_still_cannot_clear_the_fence(self):
+		# The allowance is what would have carried it inside, and past the cap
+		# the allowance is not evidence. Unchanged.
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=150, accuracy_m=600
+		)
+		self.assertEqual(action, "require_remote")
+		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+
+	def test_a_kilometre_scale_fix_is_never_presence_even_when_its_point_is_inside(self):
+		# IP geolocation: the point is the provider's centroid, not the person.
+		action, ctx = evaluate_geofence(
+			False,
+			has_shift_location=True,
+			radius_m=100,
+			distance_m=10,
+			accuracy_m=POINT_ESTIMATE_TRUST_CAP_M + 1,
 		)
 		self.assertEqual(action, "require_remote")
 		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
