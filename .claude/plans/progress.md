@@ -3,3 +3,5 @@
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
 2026-09-07T07:25Z NEXT: Nabil deploys; HR retries 1 Sep late check-out; then audit fix plan rows 1-2
+2026-09-07T07:38Z COMMIT: 697c6199a mark-as-read 403; cdb44cee3 approver read fence; pushed
+2026-09-07T07:38Z NEXT: Nabil deploys; approver re-taps a LA notification; then audit fix plan rows 1-2

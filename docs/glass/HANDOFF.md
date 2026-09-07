@@ -1,11 +1,12 @@
 # HANDOFF
-prompt:   late-checkout follow-up (HR screenshots)
+prompt:   notifications complaint (LA rows misbehave, remote check-in OK)
 status:   done
-commit:   81f68b879 on nz-glass
-files:    hrms/api/remote_checkin.py
-          hrms/api/test_remote_checkin.py
-          frontend/src/utils/loudRequest.js
-          frontend/src/utils/__tests__/loudRequest.test.js
-verify:   python3 -m pytest -q hrms/api/test_remote_checkin.py && (cd frontend && yarn test)
-flags:    live DB likely holds a duplicate IN in the same minute (double tap); 60 s same-punch window added; hook's bun runner cannot run node:test module mocks (used yarn test)
-next:     Nabil deploys; HR retries the 1 Sep late check-out; then audit fix plan rows 1-2
+commit:   cdb44cee3 on nz-glass
+files:    hrms/api/__init__.py
+          frontend/src/views/Notifications.vue
+          hrms/tests/test_notification_mark_read.py
+          hrms/tests/test_employee_read_fence_admits_approvers.py
+          frontend/tests/notification-mark-read.test.mjs
+verify:   python3 -m pytest -q hrms/tests/test_notification_mark_read.py hrms/tests/test_employee_read_fence_admits_approvers.py && (cd frontend && yarn test)
+flags:    two causes — every tap 403'd on mark-as-read (all users); a named approver 403'd on approval details (LA rows only); both reproduced and re-verified on fresh.local via Playwright
+next:     Nabil deploys; approver re-taps a Leave Application notification; then audit fix plan rows 1-2
