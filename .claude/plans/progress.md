@@ -8,3 +8,4 @@
 2026-09-07T07:45Z COMMIT: 4d6aa75a9 geofence coarse-fix-inside rule; pushed
 2026-09-07T07:45Z NEXT: Nabil deploys; then audit fix plan rows 1-2
 2026-09-07T07:46Z COMMIT: dfdd813fd design-token snapshot; tree clean, pushed
+2026-09-07T07:47Z NEXT: Nabil deploys; HR re-tests late check-out, LA notification tap, indoor punch; then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
