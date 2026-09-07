@@ -76,6 +76,7 @@ HEALTHY = {
 	"push_relay_enabled": True,
 	"push_credentials_set": True,
 	"ess_users_without_permission": [],
+	"hr_users_scoped_to_themselves": [],
 	"active_employees": 40,
 	"employees_without_leave_allocation": 0,
 }
@@ -91,6 +92,19 @@ def ids(findings):
 
 def by_id(findings, key):
 	return next(f for f in findings if f["id"] == key)
+
+
+class TestHrScopedToThemselves(unittest.TestCase):
+	def test_an_hr_user_carrying_a_self_employee_permission_is_a_failure(self):
+		"""HR saw 1 of N employees — herself — behind a Restrictions dialog. The
+		self allow=Employee User Permission that fences self-service staff to
+		their own rows fences an HR person just the same. The hook and patch
+		remove it; this reports any that come back, by name."""
+		findings = _evaluate()(facts(hr_users_scoped_to_themselves=["amy@example.com"]))
+		self.assertIn("hr_self_scoped", ids(findings))
+		finding = by_id(findings, "hr_self_scoped")
+		self.assertEqual(finding["status"], "fail")
+		self.assertIn("amy@example.com", finding["detail"])
 
 
 class TestAHealthySiteIsQuiet(unittest.TestCase):

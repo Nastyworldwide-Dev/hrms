@@ -91,3 +91,4 @@ hrms.patches.v16_0.add_require_supporting_attachment_setting #2026-09-02 attachm
 hrms.patches.v16_0.resync_naming_series_after_import #2026-09-03 manual new-employee hit HR-EMP-00318 duplicate; import re-opened the counter hole
 hrms.patches.v16_0.seed_required_hr_masters #2026-09-03 Employee import failed: Could not find Employment Type/Gender/Salutation on a site missing the standard lists
 hrms.patches.v16_0.add_replacement_leave_hours_per_day_setting #2026-09-03 un-hardcode the 8h=1day replacement-leave ratio so HR can configure it
+hrms.patches.v16_0.drop_self_employee_permission_for_hr_users #2026-09-07 HR saw one employee (herself): the self-service User Permission fenced an HR user

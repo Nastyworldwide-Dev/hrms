@@ -38,6 +38,7 @@ import logging
 
 import frappe
 
+from hrms.hr.utils import sees_all_employee_data
 from hrms.utils.company_fence import (
 	ACTION_FENCE,
 	INSTANCE_HR_ROLE,
@@ -86,6 +87,50 @@ def sync_hrms_only_user_permission(doc, method=None):
 	# has, the Company fence included. Re-provisioning it here keeps an
 	# "HR (Company)" user fenced across saves.
 	sync_company_user_permission(doc, user_id)
+
+	# And after everything: an HR-sight user never leaves the save carrying a
+	# self allow=Employee permission, whichever branch (or ERPNext's own
+	# create_user_permission) put one there.
+	drop_self_employee_permission_for_hr(user_id)
+
+
+def drop_self_employee_permission_for_hr(user_id: str) -> list[str]:
+	"""Delete every `allow=Employee` User Permission of an HR-sight user.
+
+	ERPNext creates that permission for every employee-user
+	(`Employee.create_user_permission`, default on) so self-service staff see
+	only their own rows. On a person holding HR User or HR Manager it fences
+	the Employee doctype itself — and everything linking it — to that one
+	record: HR opened the Employee list and saw 1 of N, herself, behind a
+	"Restrictions: ID = HR-EMP-00102" dialog. Measured on the bench with one
+	variable changed: 1 of 15 with the row, 15 of 15 without.
+
+	HR's sight is `sees_all_employee_data` — the one implementation of the
+	role rule. The allow=Company fence is a separate row and is left alone.
+	Returns the names deleted so callers can log or count them.
+	"""
+	if not user_id or user_id == "Administrator" or not sees_all_employee_data(user_id):
+		return []
+	rows = frappe.get_all("User Permission", filters={"user": user_id, "allow": "Employee"}, pluck="name")
+	for name in rows:
+		frappe.delete_doc("User Permission", name, ignore_permissions=True)
+	if rows:
+		frappe.clear_cache(user=user_id)
+		logger.info(
+			"[employee_hrms_scope] dropped %d self Employee permission(s) for HR user %s: %s",
+			len(rows),
+			user_id,
+			rows,
+		)
+	return rows
+
+
+def drop_self_employee_permission_on_user_update(doc, method=None):
+	"""User.on_update: granting HR User / HR Manager on the User form touches
+	no Employee record, so the Employee hook never fires. The role cache is
+	cleared first so the predicate reads the rows this save just wrote."""
+	frappe.clear_cache(user=doc.name)
+	drop_self_employee_permission_for_hr(doc.name)
 
 
 def sync_company_user_permission(doc, user_id: str):

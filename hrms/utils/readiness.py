@@ -31,6 +31,8 @@ import logging
 
 import frappe
 
+from hrms.hr.utils import HR_SEE_ALL_ROLES
+
 logger = logging.getLogger(__name__)
 
 FAIL = "fail"
@@ -168,6 +170,19 @@ def evaluate(facts: dict) -> list[dict]:
 				"Usually a symptom of the scheduler: hrms.hr.leave_rules.auto_assign_leave_policies "
 				"creates these. Fix the scheduler first, then assign a Leave Policy to anyone still "
 				"missing one.",
+			)
+		)
+
+	scoped_hr = facts.get("hr_users_scoped_to_themselves") or []
+	if scoped_hr:
+		out.append(
+			_finding(
+				"hr_self_scoped",
+				FAIL,
+				"HR user(s) carrying a self Employee User Permission — they see one "
+				"employee, themselves, behind a Restrictions dialog: " + ", ".join(scoped_hr),
+				"Save that person's Employee record, or run the site's migrate step: the hook "
+				"removes the allow=Employee row for HR User / HR Manager holders.",
 			)
 		)
 
@@ -314,6 +329,19 @@ def collect_facts() -> dict:
 		u for u in ess_users if not frappe.db.exists("User Permission", {"user": u, "allow": "Employee"})
 	]
 
+	# The mirror image: that same permission on an HR-sight user fences the
+	# Employee list to themselves (seen live: "1 of 1", a Restrictions dialog).
+	# The hook and patch remove it; this names any that come back.
+	hr_users = frappe.get_all(
+		"Has Role",
+		filters={"parenttype": "User", "role": ["in", sorted(HR_SEE_ALL_ROLES)]},
+		pluck="parent",
+		distinct=True,
+	)
+	hr_self_scoped = sorted(
+		u for u in set(hr_users) if frappe.db.exists("User Permission", {"user": u, "allow": "Employee"})
+	)
+
 	push = (
 		frappe.get_single("Push Notification Settings")
 		if frappe.db.exists("DocType", "Push Notification Settings")
@@ -332,6 +360,7 @@ def collect_facts() -> dict:
 		"push_relay_enabled": bool(push.enable_push_notification_relay) if push else True,
 		"push_credentials_set": bool(push and push.api_key and push.api_secret),
 		"ess_users_without_permission": unscoped_ess,
+		"hr_users_scoped_to_themselves": hr_self_scoped,
 		"active_employees": len(active),
 		"employees_without_leave_allocation": without_allocation,
 		"checkin_enabled": bool(settings.get("allow_employee_checkin_from_mobile_app")),

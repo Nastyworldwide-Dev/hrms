@@ -295,6 +295,12 @@ doc_events = {
 			"erpnext.setup.doctype.employee.employee.validate_employee_role",
 			"hrms.overrides.employee_master.update_approver_user_roles",
 		],
+		# on_update, not validate: the role rows must be written first, and an
+		# HR-sight user must not keep the self allow=Employee permission that
+		# fences the Employee list to themselves.
+		"on_update": [
+			"hrms.overrides.employee_hrms_scope.drop_self_employee_permission_on_user_update",
+		],
 	},
 	"DocShare": {
 		# manual appraisal grants stay per-user and non-transferable
