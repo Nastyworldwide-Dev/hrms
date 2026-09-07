@@ -73,7 +73,7 @@
 								v-for="item in notifications.data"
 								:key="item.name"
 								:to="isItemNavigable(item) ? getItemRoute(item) : null"
-								@click="markAsRead(item.name)"
+								@click="markAsRead(item)"
 							>
 								<span class="grayscale shrink-0">
 									<EmployeeAvatar :userID="item.from_user" size="lg" />
@@ -217,11 +217,21 @@ const markAllAsRead = createResource({
 	},
 })
 
-function markAsRead(name) {
-	notifications.setValue.submit(
-		{ name, read: 1 },
+// Through the to_user-scoped endpoint, never frappe.client.set_value: staff
+// hold READ on PWA Notification and nothing else, so the direct write 403'd on
+// every tap — a "Not permitted" toast over the opened screen and an unread
+// count that only grew. Pinned by tests/notification-mark-read.test.mjs.
+const markNotificationAsRead = createResource({
+	url: "hrms.api.mark_notification_as_read",
+})
+
+function markAsRead(item) {
+	if (item.read) return
+	markNotificationAsRead.submit(
+		{ name: item.name },
 		{
 			onSuccess: () => {
+				item.read = 1
 				unreadNotificationsCount.reload()
 			},
 		}

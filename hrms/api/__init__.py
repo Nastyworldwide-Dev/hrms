@@ -236,6 +236,25 @@ def get_unread_notifications_count() -> int:
 
 
 @frappe.whitelist()
+def mark_notification_as_read(name: str | int) -> None:
+	"""Mark one PWA Notification read — the tap on a row.
+
+	The screen used frappe.client.set_value for this. Staff hold READ on PWA
+	Notification and nothing else, so every tap answered 403: a "Not
+	permitted" toast over whatever the tap had opened, an uncaught error, and
+	an unread count that only grew. Scoped the way mark_all is: the addressee
+	may mark their own row, nobody else's, and an unknown row is refused.
+	"""
+	addressee = frappe.db.get_value("PWA Notification", name, "to_user")
+	if not addressee or addressee != frappe.session.user:
+		frappe.logger("hrms").warning(
+			"[api] %s refused mark-as-read on PWA Notification %s", frappe.session.user, name
+		)
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	frappe.db.set_value("PWA Notification", name, "read", 1, update_modified=False)
+
+
+@frappe.whitelist()
 def mark_all_notifications_as_read() -> None:
 	frappe.db.set_value(
 		"PWA Notification",
