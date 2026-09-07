@@ -236,6 +236,9 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 			patch.object(frappe, "session", frappe._dict(user="staff@example.com")),
 			patch.object(frappe, "local", _fresh_local()),
 			patch.object(frappe, "get_all", return_value=rows),
+			# identity resolution needs a bound site; the session rule under
+			# test does not, so the employee is given
+			patch.object(remote_checkin, "get_employee", return_value="HR-EMP-001"),
 			patch.object(remote_checkin, "employee_now", return_value=now),
 		):
 			return remote_checkin.get_unresolved_stale_in()
@@ -297,8 +300,9 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 
 		def get_value(doctype, name, fields=None, **kw):
 			if isinstance(name, dict):
-				# the next-IN window probe finds today's IN
-				return next_in if name.get("log_type") == "IN" else None
+				# the next-IN window probe finds today's IN (name + time, so the
+				# error can name the genuine later punch)
+				return frappe._dict(name="CKIN-NEW", time=next_in) if name.get("log_type") == "IN" else None
 			return {
 				"Employee Checkin": frappe._dict(
 					name="CKIN-OLD",

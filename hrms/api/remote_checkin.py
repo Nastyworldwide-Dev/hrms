@@ -370,6 +370,8 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	Validates that:
 	  - `in_checkin` is an IN log belonging to the current user
 	  - `checkout_datetime` is after the IN's time and not in the future
+	  - if a LATER check-in exists (another record, never this one), the
+	    check-out falls strictly before it — the error names that punch
 	  - the IN isn't already followed by an OUT
 
 	Creates an Employee Checkin with log_type=OUT at the given time
@@ -416,18 +418,33 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	from datetime import timedelta
 
 	out_time_filter = [">=", in_doc.time]
-	# earliest following IN. Frappe v16 refuses "min(time)" as a SELECT string,
-	# so the same row is taken with an ordered limit instead.
-	next_in_time = frappe.db.get_value(
+	# The earliest IN after this one, excluded BY NAME. Bounding the window by
+	# timestamp alone let the record being resolved come back as its own "next
+	# check-in", which turned the rule into "check-out before check-in" and
+	# refused every submission HR tried. With no later IN there is no upper
+	# bound beyond "not in the future" (checked above). Frappe v16 refuses
+	# "min(time)" as a SELECT string, so the row is taken with an ordered limit.
+	next_in = frappe.db.get_value(
 		"Employee Checkin",
-		{"employee": in_doc.employee, "log_type": "IN", "time": [">", in_doc.time]},
-		"time",
+		{
+			"employee": in_doc.employee,
+			"log_type": "IN",
+			"name": ["!=", in_doc.name],
+			"time": [">", in_doc.time],
+		},
+		["name", "time"],
 		order_by="time asc",
+		as_dict=True,
 	)
-	if next_in_time:
-		out_time_filter = ["between", [in_doc.time, get_datetime(next_in_time) - timedelta(seconds=1)]]
-		if out_dt >= get_datetime(next_in_time):
-			frappe.throw(_("Check-out time must be before your next check-in ({0}).").format(next_in_time))
+	if next_in:
+		next_in_time = get_datetime(next_in.time)
+		out_time_filter = ["between", [in_doc.time, next_in_time - timedelta(seconds=1)]]
+		if out_dt >= next_in_time:
+			frappe.throw(
+				_("Check-out time must be before your next check-in {0} at {1}.").format(
+					next_in.name, next_in_time
+				)
+			)
 	# a rejected late-OUT must not block resubmitting a corrected time — but a
 	# bare != filter would ALSO skip legacy rows with NULL status (SQL
 	# three-valued logic), so probe non-rejected and never-set separately
