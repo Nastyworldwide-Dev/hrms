@@ -8,6 +8,7 @@ from frappe import _, bold
 from frappe.model.document import Document
 
 from hrms.hr.utils import validate_active_employee, validate_filing_for_self
+from hrms.overrides.company_scope import company_visible
 
 logger = logging.getLogger(__name__)
 
@@ -59,13 +60,15 @@ class EmployeeIssue(Document):
 			self.notify_employee_status_change()
 
 	def notify_hr_users(self):
-		"""New ticket → bell + push for every enabled HR User / HR Manager."""
+		"""New ticket → enabled HR recipients who may read this company's ticket."""
 		hr_users = self.get_hr_users()
 		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
 		notified = 0
 		for user in hr_users:
 			if user == employee_user:
 				continue  # HR person reporting their own issue
+			if not self.can_notify_user(user):
+				continue
 			notification = frappe.new_doc("PWA Notification")
 			notification.from_user = employee_user or frappe.session.user
 			notification.to_user = user
@@ -84,7 +87,7 @@ class EmployeeIssue(Document):
 		"""HR moved the status → tell the reporter."""
 		to_user = frappe.db.get_value("Employee", self.employee, "user_id")
 		logger.info("[employee_issue] %s status -> %s, notifying %s", self.name, self.status, to_user)
-		if not to_user or to_user == frappe.session.user:
+		if not to_user or to_user == frappe.session.user or not self.can_notify_user(to_user):
 			return
 		notification = frappe.new_doc("PWA Notification")
 		notification.from_user = frappe.session.user
@@ -93,6 +96,13 @@ class EmployeeIssue(Document):
 		notification.reference_document_type = self.doctype
 		notification.reference_document_name = self.name
 		notification.insert(ignore_permissions=True)
+
+	def can_notify_user(self, user: str) -> bool:
+		# Keep the explicit company fence even when native permissions fall back
+		# to DocShare. Notification summaries must not widen ticket visibility.
+		return company_visible(self.company, user) and frappe.has_permission(
+			self.doctype, ptype="read", doc=self, user=user
+		)
 
 	@staticmethod
 	def get_hr_users() -> list[str]:
