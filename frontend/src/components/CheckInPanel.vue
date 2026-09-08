@@ -234,6 +234,10 @@ import {
 	geolocationBlockedReason,
 	preferFreshFix,
 	shouldReplaceFix,
+	usablePosition,
+	validCoordinates,
+	MAX_FIX_AGE_MS,
+	previewGeofence,
 } from "@/utils/geolocation"
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
@@ -246,8 +250,8 @@ const employee = inject("$employee")
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
 const checkinTimestamp = ref(null)
-const latitude = ref(0)
-const longitude = ref(0)
+const latitude = ref(null)
+const longitude = ref(null)
 const locationStatus = ref("")
 // Separate from locationStatus because the two answer different questions.
 // locationStatus carried BOTH "Latitude: 3.13901, Longitude: 101.68690" and
@@ -256,6 +260,9 @@ const locationStatus = ref("")
 const locationError = ref("")
 
 let geoWatchId = null
+let geoGeneration = 0
+let sheetSession = 0
+let fixExpiryTimer = null
 // Per-modal-session geolocation state. latitude/longitude refs persist across
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
 // both are reset in fetchLocation() each time the modal opens.
@@ -275,6 +282,8 @@ const STALE_FIX_MS = 30000
 // tell a reading apart from a fact.
 const accuracyM = ref(null)
 
+const activeShiftLocation = ref(null)
+const shiftLocationState = ref("loading")
 const shiftLocation = createResource({
 	url: "hrms.api.geofence.get_active_shift_location",
 	makeParams() {
@@ -286,6 +295,7 @@ const shiftLocation = createResource({
 const videoEl = ref(null)
 const canvasEl = ref(null)
 let cameraStream = null
+let cameraGeneration = 0
 // idle | starting | live | submitting | error
 const cameraStatus = ref("idle")
 const cameraError = ref(null)
@@ -438,9 +448,13 @@ const nextAction = computed(() => {
 	return { action: "OUT", label: __("Check Out") }
 })
 
-function handleLocationSuccess(position) {
-	const acc = position.coords.accuracy ?? null
-	const readingAt = position.timestamp ?? Date.now()
+function handleLocationSuccess(position, generation) {
+	if (generation !== geoGeneration) return
+	const fix = usablePosition(position, Date.now())
+	if (!fix) return
+	const acc = fix.accuracy
+	const readingAt = fix.timestamp
+	if (hasSessionFix && readingAt < fixTimestamp) return
 	// Keep the SHARPEST fix over the modal's short, stationary window, not merely
 	// the latest: watchPosition streams readings as GPS refines AND drifts, and a
 	// later, worse reading must not overwrite a good one and place a present user
@@ -450,10 +464,18 @@ function handleLocationSuccess(position) {
 	const muchFresher = hasSessionFix && preferFreshFix(fixTimestamp, readingAt, STALE_FIX_MS)
 	if (!muchFresher && !shouldReplaceFix(accuracyM.value, acc, hasSessionFix)) return
 	console.info("[CheckInPanel] location fix updated, accuracy(m):", acc)
-	latitude.value = position.coords.latitude
-	longitude.value = position.coords.longitude
+	latitude.value = fix.latitude
+	longitude.value = fix.longitude
 	accuracyM.value = acc
 	fixTimestamp = readingAt
+	clearTimeout(fixExpiryTimer)
+	fixExpiryTimer = setTimeout(() => {
+		if (generation !== geoGeneration || fixTimestamp !== readingAt) return
+		clearLocationFix()
+		locationError.value = __(
+			"Your location reading expired. Wait for a fresh reading, then try again."
+		)
+	}, MAX_FIX_AGE_MS - (Date.now() - readingAt) + 1)
 
 	const parts = [
 		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
@@ -494,8 +516,10 @@ function locationErrorMessage(code) {
 	}
 }
 
-function handleLocationError(error) {
+function handleLocationError(error, generation) {
+	if (generation !== geoGeneration) return
 	const code = describeGeolocationError(error)
+	if (code === GEO_DENIED) stopWatchingLocation()
 	locationStatus.value = locationErrorMessage(code)
 	locationError.value = locationStatus.value
 	console.warn("[CheckInPanel] geolocation error:", code, error)
@@ -509,19 +533,22 @@ function handleLocationError(error) {
 	// per modal session (watch TIMEOUT recurs every ~15s), re-checked at
 	// resolution so a slower coarse result never overwrites a real fix that
 	// landed in the meantime.
-	if (!hasSessionFix && !coarseFallbackRequested && navigator.geolocation) {
+	if (code !== GEO_DENIED && !hasSessionFix && !coarseFallbackRequested && navigator.geolocation) {
 		coarseFallbackRequested = true
 		navigator.geolocation.getCurrentPosition(
 			(position) => {
-				if (!hasSessionFix) handleLocationSuccess(position)
+				if (generation === geoGeneration && !hasSessionFix)
+					handleLocationSuccess(position, generation)
 			},
 			() => {},
-			{ enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+			{ enableHighAccuracy: false, maximumAge: MAX_FIX_AGE_MS, timeout: 10000 }
 		)
 	}
 }
 
 const fetchLocation = () => {
+	stopWatchingLocation()
+	const generation = geoGeneration
 	const blocked = geolocationBlockedReason()
 	if (blocked) {
 		locationStatus.value = locationErrorMessage(blocked)
@@ -546,14 +573,33 @@ const fetchLocation = () => {
 	// fix is fine for a check-in radius measured in tens of metres — and it
 	// carries its own accuracy, so a stale-ish reading cannot pass itself off
 	// as a sharp one.
-	geoWatchId = navigator.geolocation.watchPosition(handleLocationSuccess, handleLocationError, {
-		enableHighAccuracy: true,
-		maximumAge: 60000,
-		timeout: 15000,
-	})
+	geoWatchId = navigator.geolocation.watchPosition(
+		(position) => handleLocationSuccess(position, generation),
+		(error) => handleLocationError(error, generation),
+		{
+			enableHighAccuracy: true,
+			maximumAge: MAX_FIX_AGE_MS,
+			timeout: 15000,
+		}
+	)
+}
+
+function clearLocationFix() {
+	console.info("[CheckInPanel] clearing held location")
+	clearTimeout(fixExpiryTimer)
+	fixExpiryTimer = null
+	hasSessionFix = false
+	latitude.value = longitude.value = null
+	accuracyM.value = fixTimestamp = null
+	locationStatus.value = locationError.value = ""
 }
 
 function stopWatchingLocation() {
+	geoGeneration += 1
+	coarseFallbackRequested = false
+	activeShiftLocation.value = null
+	shiftLocationState.value = "loading"
+	clearLocationFix()
 	if (geoWatchId !== null && navigator.geolocation) {
 		navigator.geolocation.clearWatch(geoWatchId)
 		geoWatchId = null
@@ -584,16 +630,25 @@ function metresBetween(lat1, lon1, lat2, lon2) {
 }
 
 const distanceToShift = computed(() => {
-	const loc = shiftLocation.data
-	if (!loc || !latitude.value || !longitude.value) return null
+	const loc = activeShiftLocation.value
+	if (
+		!loc ||
+		!validCoordinates(loc.latitude, loc.longitude) ||
+		!validCoordinates(latitude.value, longitude.value)
+	)
+		return null
 	return metresBetween(loc.latitude, loc.longitude, latitude.value, longitude.value)
 })
 
-const isInsideRadius = computed(() => {
-	const loc = shiftLocation.data
-	const d = distanceToShift.value
-	if (!loc || d === null) return false
-	return loc.checkin_radius > 0 && d <= loc.checkin_radius
+const fencePreview = computed(() => {
+	const loc = activeShiftLocation.value
+	return previewGeofence({
+		strict: loc?.strict,
+		hasLocation: !!loc && loc.has_shift_location !== false,
+		radius: loc?.checkin_radius,
+		distance: distanceToShift.value,
+		accuracy: accuracyM.value,
+	})
 })
 
 // What the employee needs, in the order they need it: the VERDICT, then the
@@ -611,26 +666,41 @@ const locationVerdict = computed(() => {
 		return {
 			tone: "muted",
 			title: __("Location unavailable"),
-			detail: shiftLocation.data?.strict
-				? __(
-						"Location is needed to check in here. Turn it on in your browser or phone settings, then try again."
-				  )
-				: __(
-						"We couldn't get your location. You can still check in — it just won't record where you are."
-				  ),
+			detail: locationError.value,
 		}
 	}
 
-	const loc = shiftLocation.data
-	if (!loc) {
+	if (shiftLocationState.value !== "ready") {
+		return {
+			tone: "muted",
+			title:
+				shiftLocationState.value === "error"
+					? __("Could not load your assigned area")
+					: __("Checking your assigned area..."),
+			detail: __("Your check-in will be checked by the server when you submit."),
+		}
+	}
+
+	const loc = activeShiftLocation.value
+	if (!loc || loc.has_shift_location === false) {
 		// Not an error and not the employee's problem, so it is stated plainly
 		// rather than warned about. Silence here was its own bug: the panel
 		// showed a map of nothing and the employee assumed they were being
 		// checked when nobody was checking.
 		return {
-			tone: "muted",
+			tone: loc?.strict ? "blocked" : "muted",
 			title: __("No check-in area set for your shift"),
-			detail: __("Your location will not be checked. Tell HR if that looks wrong."),
+			detail: loc?.strict
+				? __("Ask HR to configure the check-in area before you submit.")
+				: __("Your location will not be checked. Tell HR if that looks wrong."),
+		}
+	}
+
+	if (!(loc.checkin_radius > 0) || !validCoordinates(loc.latitude, loc.longitude)) {
+		return {
+			tone: loc.strict ? "blocked" : "muted",
+			title: __("Check-in area needs setup"),
+			detail: __("Ask HR to check the area's coordinates and radius."),
 		}
 	}
 
@@ -653,7 +723,7 @@ const locationVerdict = computed(() => {
 	// strict/lenient setting, identical for both directions.
 	const verb = nextAction.value?.action === "OUT" ? __("check out") : __("check in")
 
-	if (isInsideRadius.value) {
+	if (fencePreview.value.action === "allow") {
 		// The accuracy grace already exists server-side — evaluate_geofence
 		// widens the radius by the device's own error estimate. Saying so turns
 		// "why did it accept me, I'm clearly outside" into an explained decision.
@@ -667,6 +737,18 @@ const locationVerdict = computed(() => {
 						verb,
 				  ])
 				: __("You're within range. Go ahead and {0}.", [verb]),
+		}
+	}
+
+	if (fencePreview.value.reason === "imprecise_location") {
+		return {
+			tone: loc.strict ? "blocked" : "warn",
+			title: __("Your location is uncertain"),
+			detail: loc.strict
+				? __(
+						"Your device cannot place you accurately enough. Wait for a better reading, then try again."
+				  )
+				: __("Your device cannot place you accurately enough. Your check-in will need approval."),
 		}
 	}
 
@@ -692,14 +774,23 @@ const locationVerdict = computed(() => {
 	}
 })
 
-const handleEmployeeCheckin = () => {
+const handleEmployeeCheckin = async () => {
+	sheetSession += 1
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
-
-	if (settings.data?.allow_geolocation_tracking) {
-		// Both in parallel: the verdict needs the shift location AND a fix, and
-		// whichever lands first renders its part of the message.
-		shiftLocation.reload()
-		fetchLocation()
+	if (!settings.data?.allow_geolocation_tracking) {
+		stopWatchingLocation()
+		return
+	}
+	fetchLocation()
+	const generation = geoGeneration
+	try {
+		const location = await shiftLocation.reload()
+		if (generation !== geoGeneration) return
+		activeShiftLocation.value = location
+		shiftLocationState.value = "ready"
+	} catch (error) {
+		if (generation === geoGeneration) shiftLocationState.value = "error"
+		console.warn("[CheckInPanel] assigned area could not be loaded", error)
 	}
 }
 
@@ -725,19 +816,24 @@ const submitLog = async (logType) => {
 		return
 	}
 	submitting.value = true
+	const generation = geoGeneration
 	try {
 		// Arm the duplicate guard ONLY on a successful punch. The old code armed
 		// it right after a fire-and-forget submit, so a punch that later FAILED
 		// still locked the user out of retrying the same action for 60s.
 		const ok = await runSubmitLog(logType)
 		if (ok) lastSubmit.value = { action: logType, at: Date.now() }
+		if (!ok && generation === geoGeneration && cameraStatus.value === "submitting") {
+			cameraStatus.value = "idle"
+			startCamera()
+		}
 	} catch (err) {
 		// A rejected punch is already surfaced to the user by onError (toast +
 		// camera reset); swallow here so it is not an unhandled rejection, and
 		// leave lastSubmit un-armed so retry is allowed. Belt-and-suspenders
 		// camera reset in case onError did not run.
 		console.error("[CheckInPanel] submit failed:", err)
-		if (cameraStatus.value === "submitting") {
+		if (generation === geoGeneration && cameraStatus.value === "submitting") {
 			cameraStatus.value = "idle"
 			startCamera()
 		}
@@ -752,26 +848,66 @@ const submitLog = async (logType) => {
 // several early returns (strict geofence, remote fallback) and each one has to
 // release the guard.
 const runSubmitLog = async (logType) => {
+	const session = sheetSession
+	const generation = geoGeneration
+	const tracking = settings.data?.allow_geolocation_tracking
+	const fix = tracking
+		? usablePosition(
+				{
+					coords: {
+						latitude: latitude.value,
+						longitude: longitude.value,
+						accuracy: accuracyM.value,
+					},
+					timestamp: fixTimestamp,
+				},
+				Date.now()
+		  )
+		: null
+	const location = Object.freeze({ ...fix, generation })
+	const locationStillUsable = () =>
+		generation === geoGeneration &&
+		(!tracking ||
+			(!geolocationBlockedReason() &&
+				usablePosition({ coords: location, timestamp: location.timestamp }, Date.now())))
+	const requireLocation = () => {
+		if (locationStillUsable()) return true
+		if (generation === geoGeneration) {
+			console.warn("[CheckInPanel] punch needs a current location reading")
+			if (cameraStatus.value === "submitting") {
+				cameraStatus.value = "idle"
+				startCamera()
+			}
+			handleEmployeeCheckin()
+			toast({
+				title: __("Location needed"),
+				text: __("Wait for a fresh location reading, then try again."),
+				icon: "map-pin",
+			})
+		}
+		return false
+	}
+	if (!requireLocation()) return false
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
 
 	// Preflight strict geofence: if the assigned Shift Type has
 	// enable_strict_geofence and we're outside the radius (or the shift is
 	// misconfigured), the server-side validate will throw. Catch this here
 	// so the user sees the explanatory dialog instead of a generic toast.
-	if (settings.data?.allow_geolocation_tracking && latitude.value && longitude.value) {
+	if (tracking) {
 		try {
 			const result = await preflightGeofence.submit({
 				employee: employee.data.name,
 				log_type: logType,
-				latitude: latitude.value,
-				longitude: longitude.value,
-				time: checkinTimestamp.value,
+				latitude: location.latitude,
+				longitude: location.longitude,
 				// Sent here as well as with the punch. The preview and the
 				// insert must decide from identical inputs, or the screen
 				// blocks a punch the server would have taken — the exact
 				// drift the preflight exists to prevent.
-				accuracy: accuracyM.value,
+				accuracy: location.accuracy,
 			})
+			if (!requireLocation()) return false
 			if (result && result.ok === false && result.mode === "strict_block") {
 				console.info("[Preflight] strict block:", result)
 				stopCamera()
@@ -798,6 +934,8 @@ const runSubmitLog = async (logType) => {
 		}
 	}
 
+	if (!requireLocation()) return false
+
 	// Capture + upload the selfie first, then submit the checkin with the
 	// resulting file URL. If the camera failed to start (denied / no device)
 	// we still allow the check-in to proceed without a photo so the user is
@@ -820,18 +958,20 @@ const runSubmitLog = async (logType) => {
 				iconClasses: "text-red-500",
 			})
 		} finally {
-			// Free the camera before the network round-trip for the checkin.
-			stopCamera()
+			// Free only the camera belonging to this submission.
+			if (generation === geoGeneration) stopCamera()
 		}
 	}
+
+	if (!requireLocation()) return false
 
 	// no `time` in the payload — the punch endpoint stamps the server clock
 	const payload = {
 		employee: employee.data.name,
 		log_type: logType,
-		latitude: latitude.value,
-		longitude: longitude.value,
-		accuracy: accuracyM.value,
+		latitude: location.latitude ?? null,
+		longitude: location.longitude ?? null,
+		accuracy: location.accuracy ?? null,
 	}
 	if (selfieUrl) {
 		payload.selfie_image = selfieUrl
@@ -841,7 +981,6 @@ const runSubmitLog = async (logType) => {
 	await punchCheckin.submit(payload, {
 		async onSuccess(doc) {
 			punchOk = true
-			modalController.dismiss()
 
 			// Refresh the log list so lastLog (and the stale "Forgot to check out"
 			// banner / button state) reflect the log just inserted. The socket
@@ -849,10 +988,13 @@ const runSubmitLog = async (logType) => {
 			// (disconnected/backgrounded), so reload explicitly like the dialogs do.
 			checkins.reload()
 			unresolvedStaleIn.reload()
+			if (generation !== geoGeneration) return
+			modalController.dismiss()
 
 			if (doc?.requires_remote_approval) {
 				try {
 					const rows = await fetchRemoteRequest.submit({ checkin: doc.name })
+					if (session !== sheetSession) return
 					const req = rows?.[0]
 					// OUT logs that inherit a same-day Approved IN land here
 					// already in status=Approved (auto-inherit by
@@ -911,7 +1053,7 @@ const runSubmitLog = async (logType) => {
 			// black camera — and, when the error carried no message, showed
 			// nothing at all. Free the button, bring the camera back so the user
 			// can retry with a fresh selfie, and always say something.
-			if (cameraStatus.value === "submitting") {
+			if (generation === geoGeneration && cameraStatus.value === "submitting") {
 				cameraStatus.value = "idle"
 				startCamera()
 			}
@@ -933,6 +1075,8 @@ const runSubmitLog = async (logType) => {
 }
 
 async function startCamera() {
+	stopCamera()
+	const generation = cameraGeneration
 	cameraError.value = null
 	cameraStatus.value = "starting"
 	if (!navigator.mediaDevices?.getUserMedia) {
@@ -941,20 +1085,27 @@ async function startCamera() {
 		return
 	}
 	try {
-		cameraStream = await navigator.mediaDevices.getUserMedia({
+		const stream = await navigator.mediaDevices.getUserMedia({
 			video: {
 				facingMode: "user",
 				width: { ideal: 640 },
 				height: { ideal: 480 },
 			},
 		})
+		if (generation !== cameraGeneration) {
+			stream.getTracks().forEach((track) => track.stop())
+			return
+		}
+		cameraStream = stream
 		cameraStatus.value = "live"
 		await nextTick()
+		if (generation !== cameraGeneration) return
 		if (videoEl.value) {
 			videoEl.value.srcObject = cameraStream
 		}
 		console.info("[Selfie] Camera started")
 	} catch (err) {
+		if (generation !== cameraGeneration) return
 		console.error("[Selfie] Camera error:", err)
 		cameraError.value = __("Camera access denied. Please allow camera permission.")
 		cameraStatus.value = "error"
@@ -962,6 +1113,7 @@ async function startCamera() {
 }
 
 function stopCamera() {
+	cameraGeneration += 1
 	if (cameraStream) {
 		cameraStream.getTracks().forEach((t) => t.stop())
 		cameraStream = null
@@ -1040,6 +1192,7 @@ useListUpdate(socket, DOCTYPE, () => {
 })
 
 onBeforeUnmount(() => {
+	sheetSession += 1
 	stopCamera()
 	stopWatchingLocation()
 })

@@ -83,3 +83,54 @@ export function preferFreshFix(currentFixAtMs, incomingAtMs, staleMs) {
 	if (currentFixAtMs == null || incomingAtMs == null) return false
 	return incomingAtMs - currentFixAtMs > staleMs
 }
+
+export const MAX_FIX_AGE_MS = 60000
+
+export function validCoordinates(latitude, longitude) {
+	return (
+		Number.isFinite(latitude) &&
+		Math.abs(latitude) <= 90 &&
+		Number.isFinite(longitude) &&
+		Math.abs(longitude) <= 180
+	)
+}
+
+// Browser timestamps are evidence, not an arrival time. Never relabel a cached
+// or malformed reading as fresh merely because its callback arrived just now.
+export function usablePosition(position, now = Date.now()) {
+	const coords = position?.coords
+	const timestamp = position?.timestamp
+	if (
+		!coords ||
+		!validCoordinates(coords.latitude, coords.longitude) ||
+		!Number.isFinite(timestamp) ||
+		timestamp > now ||
+		now - timestamp > MAX_FIX_AGE_MS ||
+		(coords.accuracy != null && (!Number.isFinite(coords.accuracy) || coords.accuracy < 0))
+	) {
+		console.warn("[geolocation] discarded invalid or expired device reading")
+		return null
+	}
+	return {
+		latitude: coords.latitude,
+		longitude: coords.longitude,
+		accuracy: coords.accuracy ?? null,
+		timestamp,
+	}
+}
+
+// Mirrors hrms.utils.geofence.evaluate_geofence; executable cross-language
+// boundary tests keep the written preview aligned with authoritative enforcement.
+export function previewGeofence({ strict, hasLocation, radius, distance, accuracy }) {
+	const error = Number(accuracy) > 0 ? Number(accuracy) : 0
+	const metres = Number.isFinite(distance) ? distance : Infinity
+	let reason = null
+	if (!hasLocation) reason = "no_shift_location"
+	else if (!(radius > 0)) reason = "no_radius"
+	else if (error > 250 && !(metres <= radius && error <= 2000)) reason = "imprecise_location"
+	else if (metres > radius + error) reason = "outside_radius"
+	const unchecked = reason === "no_shift_location" || reason === "no_radius"
+	const action = !reason || (unchecked && !strict) ? "allow" : strict ? "throw" : "require_remote"
+	console.debug("[geolocation] preview decision", action, reason)
+	return { action, reason }
+}
