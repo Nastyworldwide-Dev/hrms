@@ -412,3 +412,13 @@ frontend/src/views/helpdesk/HelpdeskList.vue:7 (myTickets), frontend/src/views/i
 frontend/src/components/Holidays.vue:25, ReplacementLeaveCard.vue:20, Dashboard.vue:36, TeamDashboard.vue:87, kpi/Dashboard.vue:5, CheckInPanel.vue:15, SopDetail.vue:29, TicketDetail.vue:22 and the form views not-affected — plain createResource objects: `.list` is absent, the component falls back to the resource itself.
 frontend/src/components/CheckInPanel.vue:390 not-affected — already reads checkins.list.loading.
 Lock: frontend/tests/resource-error-list-wrapper.test.mjs (wrapper with a failed .list shows failed + loading; healthy wrapper, plain resource and missing resource behave; the feed's empty state is gated on fetched/loading/error).
+
+CLASS: FEED-ROLE-READ — a row-scoped doctype whose doctype-level read excluded a supported recipient role: PWA Notification granted read to Employee and System Manager only, and the row hook can only deny, so an HR User / HR Manager login without the Employee role had an unread badge (db.count ignores permissions) over an empty feed (N05 part 1).
+Changed: hrms/hr/doctype/pwa_notification/pwa_notification.json (HR User + HR Manager read rows, fresh modified), hrms/patches/v16_0/grant_hr_read_on_pwa_notification.py + patches.txt (same grant through add_permission/update_permission_property for sites whose Custom DocPerm rows override the JSON).
+Call sites / consumers:
+hrms/hr/doctype/pwa_notification/pwa_notification.py get_permission_query_conditions / has_permission not-affected — the to_user scope is unchanged; HR still sees only rows addressed to them.
+hrms/api/__init__.py get_unread_notifications_count / mark_notification_as_read / mark_all_notifications_as_read not-affected — count and writes were already to_user-scoped and permission-independent; the feed read now matches the badge.
+frontend/src/data/notifications.js notifications (frappe.client.get_list) same-root — the read this grant serves.
+hrms/patches/v16_0/grant_employee_currency_read.py, add_shift_supervisor_role.py not-affected — the precedent pattern; untouched.
+hrms/patches/v15_99_0/staff_perm_lockdown.py not-affected — read-only grant on a row-scoped doctype; no write/create/delete added (pinned by the test).
+Lock: hrms/tests/test_pwa_notification_feed_access.py (HR rows carry read only with an importable timestamp; staff keep read; addressee scope still guards rows; patch grants read to both HR roles and nothing else; a missing role is skipped).

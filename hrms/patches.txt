@@ -96,3 +96,4 @@ hrms.patches.v16_0.add_replacement_leave_hours_per_day_setting #2026-09-03 un-ha
 hrms.patches.v16_0.drop_self_employee_permission_for_hr_users #2026-09-07 HR saw one employee (herself): the self-service User Permission fenced an HR user
 hrms.patches.v16_0.add_ot_request_reservation_index #2026-09-08 two approvals in one instant both fitted the monthly OT cap: employee-first row locks + a locking reservation read need this index
 hrms.patches.v16_0.gate_hr_desktop_icons_and_payroll_reports #2026-09-08 every employee saw all nine HR launcher tiles; two payroll deduction reports had zero Has Role rows on live sites
+hrms.patches.v16_0.grant_hr_read_on_pwa_notification #2026-09-08 HR accounts without the Employee role saw an unread badge over an empty notification feed
