@@ -73,6 +73,11 @@ class TestApplicableHolidayList(unittest.TestCase):
 				with (
 					patch.object(ot, "_get_shift_ot_config", return_value=config),
 					patch.object(ot, "_per_day_ot_hours", return_value=({day: 3}, {day: shift})),
+					patch.object(
+						ot,
+						"_per_day_contributions",
+						return_value=ot._contributions_from_maps({day: 3}, {day: shift}),
+					),
 				):
 					result = (
 						ot.get_day_ot_breakdown("EMP-SYNTHETIC", day)

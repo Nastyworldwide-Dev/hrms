@@ -325,11 +325,19 @@ def _rate_weighted_hours(bands):
 	return round(total, 2) if all(b["day_type"] == "normal" for b in bands) else total
 
 
-def _per_day_ot_hours(employee, start_date, end_date):
-	"""Fetch checkins around [start, end], pair IN→OUT sessions, and bucket the
-	post-shift-end hours per calendar day, split at midnight. Pre-shift (early
-	check-in) time is never overtime. Returns (per_day_hours, per_day_shift)."""
-	logger.info("[ot_calculation] per-day OT hours employee=%s %s..%s", employee, start_date, end_date)
+def _per_day_contributions(employee, start_date, end_date):
+	"""Eligible worked overtime per calendar day, kept PER SHIFT in work order.
+
+	Returns {day: [{"shift": name, "hours": h}, ...]}: one entry per shift the
+	day was worked under, consecutive sessions on the same shift merged, in the
+	order they were worked. Keeping the split is the point — a day worked
+	across two shifts (a normal-day morning, a rest-day afternoon) is priced by
+	EACH shift's own calendar and bands, never by whichever shift wrote last.
+	Pre-shift (early check-in) time is never overtime; a holiday interval is
+	counted whole (see _session_ot_slices)."""
+	logger.info(
+		"[ot_calculation] per-day OT contributions employee=%s %s..%s", employee, start_date, end_date
+	)
 	fetch_start = start_date - timedelta(days=1)
 	fetch_end = end_date + timedelta(days=1)
 	checkins = frappe.get_all(
@@ -358,17 +366,43 @@ def _per_day_ot_hours(employee, start_date, end_date):
 	configs = {shift: _get_shift_ot_config(shift) for shift in {row.get("shift") for row in checkins}}
 	policies = {shift: config.get("checkin_policy") for shift, config in configs.items() if config}
 	sessions = _pair_sessions(checkins, policies)
-	per_day_hours: dict[date, float] = defaultdict(float)
-	per_day_shift: dict[date, str] = {}
+	per_day: dict[date, list[dict]] = defaultdict(list)
 	for session in sessions:
 		shift = session.get("shift")
 		config = configs.get(shift)
 		if not config:
 			continue
 		for day, hours, _ in _session_ot_slices(employee, session, config):
-			per_day_hours[day] += hours
-			per_day_shift[day] = shift
+			entries = per_day[day]
+			if entries and entries[-1]["shift"] == shift:
+				entries[-1]["hours"] += hours
+			else:
+				entries.append({"shift": shift, "hours": hours})
+	return per_day
+
+
+def _per_day_ot_hours(employee, start_date, end_date):
+	"""Day totals and each day's DOMINANT shift — the single-shift view of
+	_per_day_contributions, kept for callers that only need a shift to
+	classify a whole day by. Returns (per_day_hours, per_day_shift)."""
+	return _maps_from_contributions(_per_day_contributions(employee, start_date, end_date))
+
+
+def _maps_from_contributions(contributions):
+	per_day_hours: dict[date, float] = defaultdict(float)
+	per_day_shift: dict[date, str] = {}
+	for day, entries in contributions.items():
+		per_day_hours[day] = sum(entry["hours"] for entry in entries)
+		# ceiling: a mixed day is classified by the shift it was mostly worked
+		# under, upgrade: per-shift approved reservations if HR ever claims a
+		# day split across calendars.
+		per_day_shift[day] = max(entries, key=lambda entry: entry["hours"])["shift"]
 	return per_day_hours, per_day_shift
+
+
+def _contributions_from_maps(per_day_hours, per_day_shift):
+	"""The inverse view, for callers that only know a day total and one shift."""
+	return {day: [{"shift": per_day_shift.get(day), "hours": hours}] for day, hours in per_day_hours.items()}
 
 
 def _session_ot_slices(employee, session, config):
@@ -427,25 +461,33 @@ def _iter_day_ot(
 	*,
 	apply_monthly_cap=True,
 ):
-	"""Yield the priced OT for each qualifying day in [start, end], applying
-	min-minutes, the daily cap and the running monthly cap. Shared by get_ot_pay
-	(sums amounts) and get_ot_breakdown (records the per-day split).
+	"""Yield the priced OT for each qualifying day in [start, end].
+
+	Every contribution a day was worked under (one per shift, in work order)
+	is classified with its own shift's calendar, qualified against its own
+	minimum, capped by its own daily cap and the running monthly cap when it
+	is weekday work, and priced by its own bands. The day's row sums them and
+	says how much was weekday work (`normal_hours`) and how much holiday work
+	(`nonworking_hours`), so a claim cap can be applied to the weekday part
+	alone. Shared by get_ot_pay (sums amounts), get_ot_breakdown (records the
+	per-day split) and get_ot_claim_capacity.
 
 	With approved_hours_map (payroll pricing), a day is priced only when it has
-	an approved OT-Pay request, and at no more than its approved hours — the
-	daily/monthly caps then apply to those approved hours, not all worked OT."""
+	an approved OT-Pay request, at no more than its approved hours — spent
+	across the day's contributions in work order — and the daily/monthly caps
+	then apply to those approved hours, not all worked OT."""
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
 	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)
 	# Count from the calendar-month boundary even when the caller asks for one
 	# day or a payroll period starting mid-month. Only the output is sliced.
 	cap_start = start_date.replace(day=1) if apply_monthly_cap else start_date
-	per_day_hours, per_day_shift = _per_day_ot_hours(employee, cap_start, end_date)
+	contributions = _per_day_contributions(employee, cap_start, end_date)
 
 	monthly_ot_hours = 0.0
 	cap_month = None
-	for day, hours in sorted(per_day_hours.items()):
-		if not (cap_start <= day <= end_date) or hours <= 0:
+	for day in sorted(contributions):
+		if not (cap_start <= day <= end_date):
 			continue
 
 		# The cap is MONTHLY, so the accumulator resets on a month boundary.
@@ -459,51 +501,85 @@ def _iter_day_ot(
 			cap_month = (day.year, day.month)
 			monthly_ot_hours = 0.0
 
-		config = _get_shift_ot_config(per_day_shift.get(day))
-		if not config:
-			# shift missing or overtime disabled for this shift
-			continue
-		resolved_day_type = _classify_day(employee, day, default_day_type, shift=per_day_shift.get(day))
-		nonworking = resolved_day_type != "normal"
-		if not nonworking and hours * 60.0 < config["min_minutes"]:
-			continue
-		# The minimum qualifies WORKED overtime. A smaller approved claim or
-		# remaining monthly allowance must not be tested against it a second time.
+		approved_left = None
 		if approved_hours_map is not None:
-			hours = min(hours, max(0.0, approved_hours_map.get(day, 0)))
+			approved_left = max(0.0, approved_hours_map.get(day, 0))
+
+		priced = []
+		for entry in contributions[day]:
+			hours = entry["hours"]
 			if hours <= 0:
 				continue
-		if not nonworking and config["daily_cap"] > 0:
-			hours = min(hours, config["daily_cap"])
-		if not nonworking and apply_monthly_cap and config["monthly_cap"] > 0:
-			hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
-			if hours <= 0:
+			config = _get_shift_ot_config(entry["shift"])
+			if not config:
+				# shift missing or overtime disabled for this shift
 				continue
-		if not nonworking:
-			monthly_ot_hours += hours
-		if day < start_date:
+			day_type = _classify_day(employee, day, default_day_type, shift=entry["shift"])
+			nonworking = day_type != "normal"
+			if not nonworking and hours * 60.0 < config["min_minutes"]:
+				continue
+			# The minimum qualifies WORKED overtime. A smaller approved claim or
+			# remaining monthly allowance must not be tested against it a second time.
+			if approved_left is not None:
+				hours = min(hours, approved_left)
+				if hours <= 0:
+					continue
+				approved_left -= hours
+			if not nonworking and config["daily_cap"] > 0:
+				hours = min(hours, config["daily_cap"])
+			if not nonworking and apply_monthly_cap and config["monthly_cap"] > 0:
+				hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
+				if hours <= 0:
+					continue
+			if not nonworking:
+				monthly_ot_hours += hours
+			hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
+			bands = _ot_bands_for_day(hours, hourly_rate, day_type, config)
+			priced.append(
+				{
+					"shift": entry["shift"],
+					"day_type": day_type,
+					"hours": hours,
+					"nonworking": nonworking,
+					"monthly_cap": 0 if nonworking else config["monthly_cap"],
+					"hourly_rate": hourly_rate,
+					"bands": bands,
+					"amount": round(sum(b["amount"] for b in bands), 2),
+				}
+			)
+		if not priced or day < start_date:
 			continue
 
-		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
-		bands = _ot_bands_for_day(hours, hourly_rate, resolved_day_type, config)
-		amount = round(sum(b["amount"] for b in bands), 2)
+		normal_hours = sum(p["hours"] for p in priced if not p["nonworking"])
+		nonworking_hours = sum(p["hours"] for p in priced if p["nonworking"])
+		dominant = max(priced, key=lambda p: p["hours"])
+		amount = round(sum(p["amount"] for p in priced), 2)
 		logger.info(
-			"[ot_calculation] %s %s ot_hours=%.2f day_type=%s amount=%.2f",
+			"[ot_calculation] %s %s normal=%.2fh nonworking=%.2fh contributions=%d amount=%.2f",
 			employee,
 			day,
-			hours,
-			resolved_day_type,
+			normal_hours,
+			nonworking_hours,
+			len(priced),
 			amount,
 		)
 		yield {
 			"day": day,
-			"monthly_cap": 0 if nonworking else config["monthly_cap"],
-			"unrounded_ot_hours": hours,
-			"ot_hours": hours if nonworking else round(hours, 2),
-			"day_type": resolved_day_type,
-			"hourly_rate": hourly_rate,
-			"bands": bands,
+			"monthly_cap": max((p["monthly_cap"] for p in priced if not p["nonworking"]), default=0),
+			"unrounded_ot_hours": normal_hours + nonworking_hours,
+			# Weekday work keeps its two-decimal report figure; holiday work is exact.
+			"ot_hours": round(normal_hours, 2) + nonworking_hours,
+			"normal_hours": normal_hours,
+			"nonworking_hours": nonworking_hours,
+			# One type when the day was one kind of work; otherwise the kind it
+			# was mostly worked as, with the split carried alongside.
+			"day_type": dominant["day_type"],
+			"hourly_rate": priced[0]["hourly_rate"],
+			"bands": [band for p in priced for band in p["bands"]],
 			"amount": amount,
+			"contributions": [
+				{"shift": p["shift"], "day_type": p["day_type"], "hours": p["hours"]} for p in priced
+			],
 		}
 
 
@@ -583,16 +659,21 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 		}
 	worked = next(_iter_day_ot(employee, day, day, 0, "normal", apply_monthly_cap=False), None)
 	if not worked:
-		return {"hours": 0.0, "monthly_remaining": None}
-	if worked["day_type"] != "normal":
+		return {"hours": 0.0, "monthly_remaining": None, "uncapped_hours": 0.0}
+	# HR's holiday entitlement is uncapped and exact; only the weekday part of
+	# a day competes for the monthly allowance. A day worked across a rest-day
+	# shift and a normal-day shift therefore caps its normal hours alone.
+	uncapped = stored_ot_hours(worked["nonworking_hours"])
+	if worked["normal_hours"] <= 0:
 		return {
-			"hours": float(stored_ot_hours(worked["unrounded_ot_hours"])),
+			"hours": float(uncapped),
 			"monthly_remaining": None,
 			"day_type": worked["day_type"],
+			"uncapped_hours": float(uncapped),
 		}
 	# Round the earned amount before clipping: rounding a remaining allowance
 	# afterwards can raise a claim above the configured monthly maximum.
-	hours = round_ot_pay_hours(worked["ot_hours"])
+	hours = round_ot_pay_hours(worked["normal_hours"])
 	cap = worked["monthly_cap"]
 	month_start = day.replace(day=1)
 	month_end = day.replace(day=monthrange(day.year, day.month)[1])
@@ -631,8 +712,7 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 			approved_by_day[getdate(row.ot_date)] += max(0.0, flt(row.claimed_hours))
 		consumed = Decimal(0)
 		for priced in _iter_day_ot(employee, month_start, month_end, 0, "normal", approved_by_day):
-			if priced["day_type"] == "normal":
-				consumed += Decimal(str(priced["unrounded_ot_hours"]))
+			consumed += Decimal(str(priced["normal_hours"]))
 			if priced["day"] > day and priced["monthly_cap"] > 0:
 				headroom = max(Decimal(0), Decimal(str(priced["monthly_cap"])) - consumed)
 				remaining = headroom if remaining is None else min(remaining, headroom)
@@ -645,8 +725,10 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	# Claims and UI previews share the physical decimal representation; raw
 	# worked intervals above remain exact until their own persistence boundary.
 	return {
-		"hours": float(stored_ot_hours(hours)),
+		"hours": float(stored_ot_hours(hours) + uncapped),
 		"monthly_remaining": float(stored_ot_hours(remaining)) if remaining is not None else None,
+		"day_type": worked["day_type"],
+		"uncapped_hours": float(uncapped),
 	}
 
 

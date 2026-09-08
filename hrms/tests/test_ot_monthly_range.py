@@ -45,6 +45,11 @@ class TestMonthlyRange(unittest.TestCase):
 			return {day: value for day, value in (approved or {}).items() if start <= day <= end}
 
 		stack.enter_context(patch.object(ot, "_per_day_ot_hours", side_effect=worked))
+		stack.enter_context(
+			patch.object(
+				ot, "_per_day_contributions", side_effect=lambda *a: ot._contributions_from_maps(*worked(*a))
+			)
+		)
 		stack.enter_context(patch.object(ot, "_approved_ot_pay_hours", side_effect=claims))
 		return stack
 

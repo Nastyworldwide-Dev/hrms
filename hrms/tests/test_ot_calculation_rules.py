@@ -124,6 +124,11 @@ class TestMonthlyCapResets(unittest.TestCase):
 			patch.object(
 				ot, "_per_day_ot_hours", return_value=(per_day_hours, dict.fromkeys(per_day_hours, "S"))
 			),
+			patch.object(
+				ot,
+				"_per_day_contributions",
+				return_value=ot._contributions_from_maps(per_day_hours, dict.fromkeys(per_day_hours, "S")),
+			),
 			patch.object(ot, "_get_shift_ot_config", return_value=config),
 			patch.object(ot, "_classify_day", return_value="normal"),
 		):

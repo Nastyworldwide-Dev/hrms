@@ -651,10 +651,12 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 		for choices in monthly_choices.values():
 			selected = 0.0
 			for choice in reversed(choices):  # discovery above is newest first
-				hours = choice["hours"]
-				if choice.get("day_type", "normal") != "normal":
-					# Holiday entitlement never consumes the weekday cap pool.
-					total += hours
+				# Holiday entitlement never consumes the weekday cap pool — including
+				# the holiday part of a day also worked under a normal-day shift.
+				uncapped = flt(choice.get("uncapped_hours", 0.0))
+				total += uncapped
+				hours = max(0.0, flt(choice["hours"]) - uncapped)
+				if hours <= 0:
 					continue
 				if choice["monthly_remaining"] is not None:
 					hours = min(hours, max(0.0, choice["monthly_remaining"] - selected))

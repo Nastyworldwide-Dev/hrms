@@ -85,7 +85,16 @@ class TestOTStoragePrecision(unittest.TestCase):
 			with patch.object(
 				ot,
 				"_iter_day_ot",
-				return_value=iter([{"day_type": "rest", "unrounded_ot_hours": seconds / 3600}]),
+				return_value=iter(
+					[
+						{
+							"day_type": "rest",
+							"unrounded_ot_hours": seconds / 3600,
+							"normal_hours": 0.0,
+							"nonworking_hours": seconds / 3600,
+						}
+					]
+				),
 			):
 				self.assertEqual(
 					ot.get_ot_claim_capacity("EMP-SYNTHETIC", "2026-09-06", "Overtime Pay")["hours"], expected

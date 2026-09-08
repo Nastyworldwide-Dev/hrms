@@ -262,3 +262,21 @@ Call sites / consumers:
 - hrms.api.get_ot_claim_summary / get_claimable_ot_summary (server): not-affected — the form validates the response shape (`transform`) and both endpoints already share get_ot_claim_capacity (beae4237c).
 - OTRequest.set_punch_verified_cap / validate_claimed_hours (server): not-affected — the server cap and the mandatory explanation remain the last word; the form only stops a save it knows will fail.
 Lock: frontend/tests/ot-request-state.test.mjs (header/slot order, zero visible, stale response ignored, save gated with reason, retry, edit-mode preservation).
+
+Addendum to OT-FORM-STATE (reviewer note, d58fa94af): frontend/src/views/ot/ReplacementLeaveClaimForm.vue carries the same read-only `claimed_days` pattern and is an INTENDED beneficiary of the FormField zero-visibility rule — same-root, no separate change. FormField.setDefaultValue now respects an explicit `false` on Check fields (previously flipped to the default): no consumer relies on the old flip (grepped); recorded as a behaviour note.
+
+CLASS: OT-MULTI — one calendar day worked under two shifts was classified and priced by whichever shift wrote the per-day map last (the rest-day afternoon re-priced the normal-day morning; the weekday part escaped the weekday cap; payroll paid every hour at the later rate).
+Changed: hrms/utils/ot_calculation.py (_per_day_contributions keeps hours per (day, shift) in work order; _per_day_ot_hours is now the dominant-shift view of it; _iter_day_ot qualifies, caps and prices each contribution with its own shift's calendar and bands and reports normal_hours / nonworking_hours / contributions per day; get_ot_claim_capacity caps only the weekday part and reports uncapped_hours), hrms/api/__init__.py (discovery's weekday pool consumes only the capped part of each choice).
+Call sites / consumers:
+- get_ot_pay / Salary Slip formula: same-root — approved hours are spent across a day's contributions in work order and priced per shift.
+- get_ot_breakdown / get_day_ot_breakdown / Attendance.set_overtime (via get_shift_ot_breakdown, per-attendance shift): same-root for the day view; the per-attendance path was already per shift and is unchanged.
+- get_ot_claim_capacity ← OTRequest.set_punch_verified_cap, get_ot_claim_summary, get_claimable_ot_summary: same-root — mixed days now return hours = capped weekday part + exact holiday part, plus uncapped_hours; single-type days return exactly what they did.
+- _per_day_ot_hours ← get_ot_claim_capacity (approved-day classification by dominant shift): not-affected — ceiling noted in code: a mixed approved day is classified by the shift it was mostly worked under; upgrade to per-shift reservations if HR ever claims a split day.
+- Tests that patched _per_day_ot_hours (monthly_range, claim_monthly_capacity, holiday_classification, calculation_rules) now also feed _per_day_contributions via _contributions_from_maps; test_ot_storage_precision's iterator fixture carries the new keys.
+Lock: hrms/tests/test_ot_multishift_day.py (breakdown per shift, weekday minimum per contribution, capacity caps the weekday part only, payroll prices per shift in work order).
+Per-call-site verdicts (OT-MULTI, machine-listed):
+docs/glass/audit/2026-09-08-attendance-deep-probes.py:56 not-affected — historical audit reproducer summing row["ot_hours"]; the row keeps ot_hours with the same meaning, and the artifact is evidence, not a release gate
+docs/glass/audit/2026-09-08-attendance-deep-probes.py:57 not-affected — same reproducer, per-day call, same row key
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:56 not-affected — reads capacity["hours"], whose meaning is unchanged (capped weekday part plus exact holiday part); native lock-slice probe with a fixed single-shift entitlement
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:81 not-affected — reads capacity["hours"] for single-shift synthetic days, which return exactly the figures they did
+hrms/hr/doctype/ot_request/ot_request.py:116 same-root — punch_ot_hours now caps only the weekday part of a day worked across shifts and adds the exact holiday part; single-shift days are unchanged (test_ot_multishift_day + test_ot_claim_monthly_capacity green)

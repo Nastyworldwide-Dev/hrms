@@ -208,6 +208,9 @@ class TestClaimCapacity(unittest.TestCase):
 			),
 			patch.object(ot, "_classify_day", return_value="normal"),
 			patch.object(ot, "_per_day_ot_hours", side_effect=worked),
+			patch.object(
+				ot, "_per_day_contributions", side_effect=lambda *a: ot._contributions_from_maps(*worked(*a))
+			),
 		):
 			if consumer == "decide":
 				with (
