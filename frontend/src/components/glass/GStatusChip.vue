@@ -59,6 +59,11 @@ const STATES = {
 	absent: "danger",
 	"on leave": "progress",
 	"half day": "attention",
+	// Helpdesk (HD Ticket) statuses — Replied means "waiting on you"
+	replied: "progress",
+	paused: "neutral",
+	resolved: "success",
+	closed: "muted",
 }
 
 const props = defineProps({

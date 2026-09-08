@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "@ionic/vue-router"
 import TabbedView from "@/views/TabbedView.vue"
 import attendanceRoutes from "./attendance"
 import claimRoutes from "./claims"
+import helpdeskRoutes from "./helpdesk"
 import issueRoutes from "./issues"
 import leaveRoutes from "./leaves"
 import otRoutes from "./ot"
@@ -53,6 +54,13 @@ const routes = [
 				path: "/issues",
 				name: "EmployeeIssueListView",
 				component: () => import("@/views/issues/IssuesTab.vue"),
+			},
+			{
+				// native Helpdesk list (v16.23.0): the employee's HD Tickets, in
+				// the tab shell; hidden from nav on sites without the Helpdesk app
+				path: "/helpdesk",
+				name: "HelpdeskList",
+				component: () => import("@/views/helpdesk/HelpdeskList.vue"),
 			},
 			{
 				// SOP library tab: one list for everyone, HR additionally gets
@@ -144,6 +152,7 @@ const routes = [
 			...leaveRoutes,
 			...claimRoutes,
 			...issueRoutes,
+			...helpdeskRoutes,
 			...sopRoutes,
 		],
 	},
