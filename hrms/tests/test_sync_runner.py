@@ -1899,7 +1899,12 @@ class TestSyncRunsInTheBackground(unittest.TestCase):
 		"""Force is for a stuck QUEUE, not for killing live work mid-write."""
 		import frappe
 
-		frappe.get_all = lambda *a, **kw: [{"name": "SYNC-00009", "started_at": NOW}]
+		# started on the runner's OWN clock: this class does not pin
+		# runner.now_datetime, so a fixed August timestamp aged past
+		# STALE_RUN_AFTER_SECONDS on the real calendar and the "genuinely
+		# running" row read as a corpse — a test that passed only the week it
+		# was written (caught 8 Sep 2026)
+		frappe.get_all = lambda *a, **kw: [{"name": "SYNC-00009", "started_at": runner.now_datetime()}]
 
 		result = runner.enqueue_sync("Nasty-Dev", force=1)
 
