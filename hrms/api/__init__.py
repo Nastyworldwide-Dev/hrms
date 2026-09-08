@@ -365,9 +365,13 @@ def get_attendance_calendar_events(
 
 
 def get_attendance_for_calendar(employee: str, from_date: str, to_date: str) -> list[dict[str, str]]:
+	# Draft rows count. Desk's own Attendance calendar (attendance.get_events)
+	# lists a Saved-but-not-Submitted row next to the submitted ones; reading
+	# `docstatus = 1` here meant a row HR keyed in on Desk was visible to HR and
+	# invisible to the employee it was about. Cancelled rows stay out on both.
 	attendance = frappe.get_all(
 		"Attendance",
-		{"employee": employee, "attendance_date": ["between", [from_date, to_date]], "docstatus": 1},
+		{"employee": employee, "attendance_date": ["between", [from_date, to_date]], "docstatus": ["<", 2]},
 		["attendance_date", "status"],
 	)
 	return {d["attendance_date"]: d["status"] for d in attendance}
