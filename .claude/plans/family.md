@@ -396,3 +396,10 @@ hrms/utils/holiday_list.py get_holiday_dates_between_range not-affected — call
 hrms/sync/runner.py:1427 not-affected — comment reference only.
 hrms/hr/doctype/holiday_list_assignment/holiday_list_assignment.py validate_assignment_start_date not-affected — already refuses an assignment that starts outside its list's dates; this change is the read-side twin of that rule.
 Lock: hrms/tests/test_holiday_list.py (ended employee calendar no longer shadows the current company one; current employee calendar still wins; draft/future assignments are not calendars; nothing covering keeps the newest with a warning and can still raise; covers() edges) + hrms/tests/test_ot_holiday_classification.py (ended shift calendar yields to the dated assignment; with no assignment stays a workday).
+
+CLASS: PUSH-TAP-DESTINATION — a push notification whose destination was stored where the click handler could not find it on a body tap: the foreground helper set data.url for Chrome only and gave other browsers an action button, while the worker's click handler resolves data.url || event.action and a body tap carries no action (N07; the 2 Sep worker fix covered background messages only).
+Changed: frontend/src/utils/pushNotifications.js (data.url on every browser; non-Chrome keeps the action button).
+Call sites / consumers:
+frontend/src/App.vue:26 same-root — the only caller (foreground FCM onMessage).
+frontend/public/sw.js onBackgroundMessage / notificationclick not-affected — already stores data.url for every browser and resolves it first; pinned by frontend/src/__tests__/sw.test.js. It keeps its own copy of the option-building because the worker is bundled separately (ceiling: import one builder from src once the worker bundle is verified to resolve src imports).
+Lock: frontend/src/utils/__tests__/pushNotifications.test.js (Firefox body tap finds data.url and keeps the button; Chrome has data.url and no button; no destination -> no dead button; no registration -> no throw).
