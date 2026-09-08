@@ -150,6 +150,8 @@ class TestClaimCapacity(unittest.TestCase):
 			raise AssertionError(f"Unmodelled filter {op}")
 
 		def get_all(doctype, filters=None, fields=None, **kwargs):
+			if doctype == "User Permission":
+				return ["Company A"]
 			if doctype == "Attendance":
 				return [frappe._dict(attendance_date=day, ot_hours=99) for day in discovery_dates]
 			self.assertEqual(doctype, "OT Request")
@@ -158,6 +160,15 @@ class TestClaimCapacity(unittest.TestCase):
 			return [
 				row for row in rows if all(matches(row, key, value) for key, value in (filters or {}).items())
 			]
+
+		def get_value(doctype, name, fieldname, **kwargs):
+			# Permission reads use synthetic identity/company data; calculator
+			# eligibility remains an independent financial input.
+			if doctype == "Employee" and fieldname == "company":
+				return "Company A"
+			if doctype == "Employee" and fieldname == "user_id":
+				return "synthetic-staff@example.invalid"
+			return pay_eligible
 
 		doc = DecisionDocument(
 			dict(
@@ -183,7 +194,7 @@ class TestClaimCapacity(unittest.TestCase):
 					date(2026, 9, 30) if value is None else date.fromisoformat(str(value))
 				),
 			),
-			patch.object(frappe.db, "get_value", return_value=pay_eligible),
+			patch.object(frappe.db, "get_value", side_effect=get_value),
 			patch.object(frappe.db, "exists", side_effect=lambda doctype, value: isinstance(value, str)),
 			patch.object(frappe, "get_all", side_effect=get_all),
 			patch.object(
@@ -203,7 +214,9 @@ class TestClaimCapacity(unittest.TestCase):
 					patch.object(frappe, "get_doc", return_value=doc),
 					patch.object(frappe, "has_permission", return_value=allowed),
 					patch.object(approval, "_is_routed_approver", return_value=False),
-					patch.object(approval, "_require_writable_decision_field") as field_guard,
+					patch.object(approval, "get_permitted_fields", return_value=["status"]),
+					patch("frappe.model.workflow.get_workflow_name", return_value=None),
+					patch.object(frappe, "session", frappe._dict(user="synthetic-reviewer@example.invalid")),
 					patch.object(
 						filing.ot_request, "validate_self_submission", side_effect=submission_guard
 					) as self_guard,
@@ -211,7 +224,6 @@ class TestClaimCapacity(unittest.TestCase):
 					patch.object(filing.ot_request, "grant_replacement_leave") as grant,
 				):
 					state = approval.decide("OT Request", doc.name, decision)
-					field_guard.assert_called_once_with("OT Request", "status")
 					self_guard.assert_called_once_with(doc)
 					attachment_guard.assert_called_once_with(doc)
 					if decision == "Rejected":

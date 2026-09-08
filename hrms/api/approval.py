@@ -1,45 +1,13 @@
-"""One authorized approval action, one canonical final state.
+"""Atomic request decisions shared by PWA and Desk.
 
-Three submittable doctypes share the same contract, and each states it in its
-own `on_submit`:
+Capability checks and decisions share source-read, company, workflow, self and
+field authority. A routed reviewer may use the existing elevated submission
+path only after those checks; controller validators and transaction effects
+still run. Decisions lock the persisted request and optionally compare the
+revision reviewed by the caller. Identical retries never submit twice.
 
-    Leave Application  "Only Leave Applications with status 'Approved' and
-                        'Rejected' can be submitted"
-    Shift Request      "Only Shift Request with status 'Approved' and
-                        'Rejected' can be submitted"
-    Expense Claim      "Approval Status must be 'Approved' or 'Rejected'"
-
-So the decision and the submission are not two steps that happen to be adjacent
-— they are one transition. The schema says the same thing from the other side:
-the decision field is `reqd`, `no_copy` and **not** `allow_on_submit`, so it
-cannot be set after submission. There is no legal resting state where a request
-is decided but still a draft.
-
-The PWA nevertheless made that state routinely, because the coupling lived in
-the client:
-
-    if (status === "Approved" && hasPermission("submit")) docstatus = 1
-
-which only coupled *approvals* — so every rejection parked at `docstatus 0` —
-and only when a client-side read of `frappe.client.get_doc_permissions` had
-loaded and said yes. When it did not, the approval silently degraded into a
-half-transition with no error, no ledger entry, and a second Submit button that
-an HR Manager then had to press. That second press is what HR reported.
-
-This module is the transition, server-side and shared, so no caller has to
-reassemble it. It changes no permission rule: `doc.submit()` runs the whole
-Frappe stack — `check_permission("write")`, `check_permission("submit")`,
-permlevel enforcement on the decision field, the `approval_row_scope`
-`has_permission` hook, and `before_submit`, which is where
-`block_transactions_for_mirrored_employee` refuses to move a mirrored
-employee's balances on this hub. Nothing here uses `ignore_permissions`,
-`db_set`, or a flag to step around any of it. A failure anywhere raises, and
-the request's transaction rolls back whole rather than leaving the document
-half-decided.
-
-Not covered here, deliberately: Attendance Request, OT Request and Replacement
-Leave Claim, where submitting *is* the approval and there is no separate
-decision field to set.
+Legacy pure transitions remain in finalize; configured workflows use Frappe's
+workflow transition endpoint instead of direct decision controls.
 """
 
 import logging
@@ -153,24 +121,49 @@ def decision_field(doctype: str) -> str:
 	return entry[0]
 
 
-def _require_writable_decision_field(doctype: str, fieldname: str) -> None:
-	"""Fail early and legibly when the caller cannot write the decision field.
+def _request_read_allowed(doc) -> bool:
+	"""Native document visibility plus the explicit company boundary."""
+	from hrms.overrides.company_scope import company_visible
 
-	Without this the failure is real but baffling: the decision field sits at
-	`permlevel 1`, and `validate_higher_perm_levels` *silently reverts* a
-	permlevel field the user may not write. The submit would then proceed with
-	the status still "Open" and die inside `on_submit` complaining about the
-	status — a permissions problem wearing a validation problem's error message.
-	"""
-	if fieldname in get_permitted_fields(doctype, permission_type="write"):
-		return
+	logger.debug("[approval] checking request visibility for %s", doc.doctype)
+	if not frappe.has_permission(doc.doctype, "read", doc=doc):
+		return False
+	employee = doc.get("employee")
+	company = frappe.db.get_value("Employee", employee, "company") if employee else doc.get("company")
+	return company_visible(company) and company_visible(doc.get("company") or company)
 
-	logger.warning(
-		"[approval] %s cannot write %s.%s — decision refused", frappe.session.user, doctype, fieldname
-	)
-	frappe.throw(
-		_("You are not permitted to approve or reject {0}.").format(_(doctype)), frappe.PermissionError
-	)
+
+def _decision_access(doc, status: str = "Approved") -> str | None:
+	"""Return the authorized execution mode without changing session or rights."""
+	from frappe.model.workflow import get_workflow_name
+
+	from hrms.utils.identity import normalize_login
+
+	logger.debug("[approval] checking decision access for %s", doc.doctype)
+	entry = DECIDE_THEN_SUBMIT.get(doc.doctype)
+	employee = doc.get("employee")
+	if not entry or not employee or get_workflow_name(doc.doctype):
+		return None
+	if not _request_read_allowed(doc):
+		return None
+	employee_user = frappe.db.get_value("Employee", employee, "user_id")
+	if normalize_login(employee_user) == normalize_login(frappe.session.user):
+		setting = {
+			"Leave Application": "prevent_self_leave_approval",
+			"Expense Claim": "prevent_self_expense_approval",
+		}.get(doc.doctype)
+		if not setting:
+			return None
+		if frappe.db.get_single_value("HR Settings", setting) and (
+			doc.doctype != "Leave Application" or status == "Approved"
+		):
+			return None
+	if frappe.has_permission(doc.doctype, "submit", doc=doc):
+		if frappe.has_permission(doc.doctype, "write", doc=doc) and entry[0] in get_permitted_fields(
+			doc.doctype, permission_type="write"
+		):
+			return "native"
+	return "routed" if _is_routed_approver(doc) else None
 
 
 def _state(doc) -> dict:
@@ -198,7 +191,7 @@ def _state(doc) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def decide(doctype: str, name: str, status: str) -> dict:
+def decide(doctype: str, name: str, status: str, expected_modified: str | None = None) -> dict:
 	"""Record a decision and finalize the request, atomically.
 
 	Returns the resulting state so the caller renders what the server actually
@@ -222,22 +215,13 @@ def decide(doctype: str, name: str, status: str) -> dict:
 	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
 
 	doc = frappe.get_doc(doctype, name)
-	# Routing is established FIRST, before any role-based gate — the same order
-	# as remote_checkin._ensure_approver. Running check_permission("read") first
-	# was the bug's second layer: a reports_to manager holding only Employee
-	# failed doc-level read (if_owner) before the routing block was ever
-	# reached, so the fix looked applied and the lead still got PermissionError.
-	if frappe.has_permission(doctype, "submit", doc=doc):
-		doc.check_permission("read")
-		_require_writable_decision_field(doctype, fieldname)
-	elif _is_routed_approver(doc):
-		# The person this request is addressed to. The role gates are replaced
-		# by the routing gate; the transition below runs elevated. Validators
-		# all still run — validate_self_submission reads session.user and still
-		# refuses self-approval.
+	access = _decision_access(doc, status)
+	if not access:
+		frappe.throw(_("You are not permitted to decide this request."), frappe.PermissionError)
+	if access == "routed":
+		# Routing replaces the role gate only after source read, company and
+		# self-policy checks. Existing controller validators still run below.
 		doc.flags.ignore_permissions = True
-	else:
-		frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
 
 	current = doc.get(fieldname)
 
@@ -255,6 +239,17 @@ def decide(doctype: str, name: str, status: str) -> dict:
 
 	if doc.docstatus == 2:
 		frappe.throw(_("{0} has been cancelled.").format(_(doctype)), frappe.ValidationError)
+
+	if current != DECIDE_THEN_SUBMIT[doctype][1]:
+		frappe.throw(_("This request is no longer awaiting a decision."), frappe.ValidationError)
+	if expected_modified is not None:
+		from frappe.utils import get_datetime
+
+		if get_datetime(doc.modified) != get_datetime(expected_modified):
+			frappe.throw(
+				_("This request changed since you reviewed it. Reload and review it again."),
+				frappe.TimestampMismatchError,
+			)
 
 	doc.set(fieldname, status)
 	# ONE save cycle: validate -> before_submit (mirrored-employee guard) ->
@@ -276,19 +271,17 @@ def decide(doctype: str, name: str, status: str) -> dict:
 
 @frappe.whitelist()
 def can_decide(doctype: str, name: str) -> bool:
-	"""Whether the CURRENT user may decide THIS request — the same gate `decide`
-	enforces (submit permission, or the routed approver), exposed read-only so the
-	Desk renders Approve/Reject only when they would actually work. Never writes,
-	never a decision; the write path stays `decide` with its lock and validators."""
+	"""Whether the current user can open and approve this pending request.
+
+	Uses the same access gate as decide; active workflows retain their own
+	transition endpoint. Business validators still run at submission time.
+	"""
 	logger.debug("[approval] can_decide %s %s for %s", doctype, name, frappe.session.user)
 	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
 		return False
 	doc = frappe.get_doc(doctype, name)
-	if doc.docstatus != 0:
-		return False
-	if frappe.has_permission(doctype, "submit", doc=doc):
-		return True
-	return bool(_is_routed_approver(doc))
+	fieldname, pending = DECIDE_THEN_SUBMIT[doctype]
+	return bool(doc.docstatus == 0 and doc.get(fieldname) == pending and _decision_access(doc))
 
 
 @frappe.whitelist()
@@ -373,15 +366,25 @@ def finalize(doctype: str, name: str, docstatus: int) -> dict:
 	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
 
 	doc = frappe.get_doc(doctype, name)
-	# Same routing-first order as decide, same reason: the person this request
-	# is addressed to may fail every role-based gate, including doc-level read.
-	_action = "submit" if docstatus == SUBMIT else "cancel"
-	if frappe.has_permission(doctype, _action, doc=doc):
-		doc.check_permission("read")
-	elif _is_routed_approver(doc):
-		doc.flags.ignore_permissions = True
+	if not _request_read_allowed(doc):
+		frappe.throw(_("You are not permitted to access this request."), frappe.PermissionError)
+	if docstatus == SUBMIT and doctype in DECIDE_THEN_SUBMIT:
+		# Legacy decided drafts must not bypass the decision endpoint's gate.
+		access = _decision_access(doc, doc.get(DECIDE_THEN_SUBMIT[doctype][0]))
+		if not access:
+			frappe.throw(_("You are not permitted to decide this request."), frappe.PermissionError)
+		if access == "routed":
+			doc.flags.ignore_permissions = True
 	else:
-		frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
+		# Cancellation keeps its distinct right and existing routed authority;
+		# the self-approval restriction does not forbid withdrawing a decision.
+		action = "submit" if docstatus == SUBMIT else "cancel"
+		if frappe.has_permission(doctype, action, doc=doc):
+			doc.check_permission("read")
+		elif _is_routed_approver(doc):
+			doc.flags.ignore_permissions = True
+		else:
+			frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
 
 	# Two taps are one intention. Report the first outcome rather than throwing
 	# at somebody who did nothing wrong.

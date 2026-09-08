@@ -226,8 +226,9 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 		src = ast.unparse(self._fn("_is_routed_approver"))
 		self.assertIn("company_visible", src)
 
-	def test_both_endpoints_consult_it(self):
-		for name in ("decide", "finalize"):
+	def test_legacy_finalize_consults_routing(self):
+		# decide routing is covered through native shared-access behavior tests.
+		for name in ("finalize",):
 			called = {
 				n.func.id
 				for n in ast.walk(self._fn(name))
@@ -235,19 +236,8 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 			}
 			self.assertIn("_is_routed_approver", called, f"{name} does not consult routing")
 
-	def test_elevation_is_conditional_on_routing(self):
-		"""ignore_permissions must never be set unconditionally — that would let
-		anyone who can READ a row transition it. It is set only when the role
-		check would fail AND the caller is the routed approver."""
-		for name in ("decide", "finalize"):
-			src = ast.unparse(self._fn(name))
-			self.assertIn("ignore_permissions", src, f"{name} never elevates")
-			before, _, _ = src.partition("ignore_permissions")
-			self.assertIn(
-				"_is_routed_approver",
-				before,
-				f"{name} elevates before checking who the caller is",
-			)
+	# Public native tests exercise denial and routed elevation through both
+	# endpoints; a source-position assertion cannot follow their shared gate.
 
 
 class TestTheSheetUsesIt(unittest.TestCase):

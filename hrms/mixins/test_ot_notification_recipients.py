@@ -19,6 +19,7 @@ except ImportError:
 if not isinstance(getattr(frappe, "__file__", None), str):
 	raise unittest.SkipTest("Native Frappe required; refusing system test stub")
 
+import frappe.model.workflow as workflow
 import frappe.permissions as permissions
 import frappe.share
 from frappe.model.document import Document
@@ -103,6 +104,7 @@ class TestOTNotificationRecipients(unittest.TestCase):
 		)
 		self.stack.enter_context(patch.object(permissions, "push_perm_check_log"))
 		self.stack.enter_context(patch.object(permissions, "msgprint"))
+		self.stack.enter_context(patch.object(workflow, "get_workflow_name", return_value=None))
 		self.stack.enter_context(patch.object(permissions, "_", side_effect=lambda text, **kw: text))
 
 	def claimants(self, user):
@@ -242,7 +244,7 @@ class TestOTNotificationRecipients(unittest.TestCase):
 
 	def test_routed_manager_without_source_read_is_not_sent_private_summary(self):
 		self.users[MANAGER]["roles"] = []
-		self.assertTrue(self.can_decide(MANAGER))
+		self.assertFalse(self.can_decide(MANAGER))
 		self.assertFalse(frappe.has_permission("OT Request", "read", doc=self.doc, user=MANAGER))
 		self.assertEqual(self.recipients(), [HR_A])
 
