@@ -416,12 +416,15 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
 	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)
-	per_day_hours, per_day_shift = _per_day_ot_hours(employee, start_date, end_date)
+	# Count from the calendar-month boundary even when the caller asks for one
+	# day or a payroll period starting mid-month. Only the output is sliced.
+	cap_start = start_date.replace(day=1)
+	per_day_hours, per_day_shift = _per_day_ot_hours(employee, cap_start, end_date)
 
 	monthly_ot_hours = 0.0
 	cap_month = None
 	for day, hours in sorted(per_day_hours.items()):
-		if not (start_date <= day <= end_date) or hours <= 0:
+		if not (cap_start <= day <= end_date) or hours <= 0:
 			continue
 
 		# The cap is MONTHLY, so the accumulator resets on a month boundary.
@@ -453,6 +456,8 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 			if hours <= 0:
 				continue
 		monthly_ot_hours += hours
+		if day < start_date:
+			continue
 
 		resolved_day_type = _classify_day(employee, day, default_day_type)
 		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
@@ -487,7 +492,9 @@ def get_ot_pay(employee, start_date, end_date, basic, day_type="normal"):
 	if not employee or not basic:
 		return 0.0
 
-	approved = _approved_ot_pay_hours(employee, start_date, end_date)
+	# Earlier approved claims consume this calendar month's allowance even
+	# when their payment is outside the requested payroll interval.
+	approved = _approved_ot_pay_hours(employee, getdate(start_date).replace(day=1), getdate(end_date))
 	total_pay = sum(
 		d["amount"]
 		for d in _iter_day_ot(employee, start_date, end_date, basic, day_type, approved_hours_map=approved)
