@@ -16,7 +16,22 @@ class PWANotification(Document):
 		hrms.refetch_resource("hrms:notifications", self.to_user)
 
 	def after_insert(self):
-		self.send_push_notification()
+		# The push used to be sent here, synchronously: the relay (and the
+		# device) heard about a row that was not yet committed and could still
+		# roll back, and the originating write paid the network round trip.
+		# Now a background job, enqueued only after commit, re-reads the
+		# committed row and sends from it. One job id per notification with
+		# deduplication, so a retried insert path cannot double-send (N08).
+		try:
+			frappe.enqueue(
+				"hrms.hr.doctype.pwa_notification.pwa_notification.send_push_for",
+				name=self.name,
+				enqueue_after_commit=True,
+				job_id=f"pwa_notification_push::{self.name}",
+				deduplicate=True,
+			)
+		except Exception:
+			self.log_error(f"Could not queue push notification: {self.name}")
 		# emails queued in the same transaction (approver/status notifications)
 		# must land as fast as the push does, not on the next scheduler tick
 		flush_email_queue_after_commit()
@@ -54,6 +69,18 @@ class PWANotification(Document):
 			return f"{base_url}/issues/{self.reference_document_name}"
 
 		return base_url
+
+
+def send_push_for(name: str) -> None:
+	"""Background job: send the push for one committed PWA Notification.
+
+	Re-reads the row so the payload is what was committed; a row that never
+	committed (rolled back, or deleted before the worker ran) sends nothing.
+	"""
+	if not frappe.db.exists("PWA Notification", name):
+		logger.info("[pwa_notification] %s not committed — no push", name)
+		return
+	frappe.get_doc("PWA Notification", name).send_push_notification()
 
 
 def get_permission_query_conditions(user: str | None = None) -> str:

@@ -422,3 +422,14 @@ frontend/src/data/notifications.js notifications (frappe.client.get_list) same-r
 hrms/patches/v16_0/grant_employee_currency_read.py, add_shift_supervisor_role.py not-affected — the precedent pattern; untouched.
 hrms/patches/v15_99_0/staff_perm_lockdown.py not-affected — read-only grant on a row-scoped doctype; no write/create/delete added (pinned by the test).
 Lock: hrms/tests/test_pwa_notification_feed_access.py (HR rows carry read only with an importable timestamp; staff keep read; addressee scope still guards rows; patch grants read to both HR roles and nothing else; a missing role is skipped).
+
+CLASS: DELIVERY-BEFORE-COMMIT — a notification transport fired inside the transaction that created what it announced: the remote check-in realtime event was published without after_commit (an approver's screen could reload before the SQL was visible, or for a request that rolled back), and the native web push was sent synchronously in after_insert (the relay and device heard of a row not yet committed; the originating write paid the round trip) (N08).
+Changed: hrms/overrides/remote_checkin_request_hooks.py (_send_push publishes with after_commit=True), hrms/hr/doctype/pwa_notification/pwa_notification.py (after_insert enqueues send_push_for after commit under one deduplicated job id per notification; the worker re-reads the committed row; a queue failure is logged, never raised).
+Call sites / consumers:
+hrms/overrides/remote_checkin_request_hooks.py _notify_* -> _send_push same-root — the only publisher of hrms:remote_checkin_request.
+frontend/src/views/RemoteApprovals.vue:294, Profile.vue:327, components/PendingApprovalsBanner.vue:41 same-root — subscribers; they now reload after the row is visible.
+hrms/__init__.py refetch_resource not-affected — already after_commit=True; unchanged.
+hrms/mixins/pwa_notifications.py:27,45 same-root — every PWA Notification insert goes through after_insert; the push now leaves after commit.
+hrms/hr/doctype/pwa_notification/pwa_notification.py send_push_notification not-affected — unchanged body, now called from the worker; its own error handling (log_error) stands.
+hrms/utils/email_flush.py flush_email_queue_after_commit not-affected — the sibling after-commit pattern this follows; untouched.
+Lock: hrms/tests/test_notification_delivery_after_commit.py (event carries after_commit; after_insert enqueues one deduplicated after-commit job and sends nothing itself; the worker re-reads and sends; a never-committed row sends nothing; a queue failure never breaks the insert).

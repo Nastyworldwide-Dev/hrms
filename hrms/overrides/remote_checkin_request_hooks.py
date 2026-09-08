@@ -295,10 +295,14 @@ def _send_push(user: str, subject: str, body: str, request) -> None:
 		"body": body,
 	}
 	try:
+		# After commit: the approver's screen reloads its queues on this event,
+		# so emitting inside the transaction let it read before the row was
+		# visible — or announce a request that then rolled back (N08).
 		frappe.publish_realtime(
 			event="hrms:remote_checkin_request",
 			message=payload,
 			user=user,
+			after_commit=True,
 		)
 	except Exception as exc:
 		logger.warning("[remote_checkin_request] realtime push failed: %s", exc)
