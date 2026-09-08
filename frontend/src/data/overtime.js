@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 import { employeeResource } from "./employee"
 
@@ -36,7 +37,7 @@ export const myOTRequests = createResource({
 	url: "hrms.api.get_ot_requests",
 	makeParams: own,
 	auto: true,
-	cache: "hrms:my_ot_requests",
+	cache: personalCacheKey("hrms:my_ot_requests"),
 	transform: transformOTRequests,
 })
 
@@ -44,7 +45,7 @@ export const teamOTRequests = createResource({
 	url: "hrms.api.get_ot_requests",
 	makeParams: forApproval,
 	auto: true,
-	cache: "hrms:team_ot_requests",
+	cache: personalCacheKey("hrms:team_ot_requests"),
 	transform: transformOTRequests,
 })
 
@@ -52,7 +53,7 @@ export const myReplacementLeaveClaims = createResource({
 	url: "hrms.api.get_replacement_leave_claims",
 	makeParams: own,
 	auto: true,
-	cache: "hrms:my_replacement_leave_claims",
+	cache: personalCacheKey("hrms:my_replacement_leave_claims"),
 	transform: transformReplacementLeaveClaims,
 })
 
@@ -60,6 +61,6 @@ export const teamReplacementLeaveClaims = createResource({
 	url: "hrms.api.get_replacement_leave_claims",
 	makeParams: forApproval,
 	auto: true,
-	cache: "hrms:team_replacement_leave_claims",
+	cache: personalCacheKey("hrms:team_replacement_leave_claims"),
 	transform: transformReplacementLeaveClaims,
 })

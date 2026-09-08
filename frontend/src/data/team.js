@@ -1,10 +1,11 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 
 // nav gate: the Team entry under More renders only for users with direct reports
 export const hasTeam = createResource({
 	url: "hrms.api.team.has_team",
 	auto: true,
-	cache: "hrms:has_team",
+	cache: personalCacheKey("hrms:has_team"),
 })
 
 // gate for the RequestPanel's Team tabs: true when ANY approval work can
@@ -13,7 +14,7 @@ export const hasTeam = createResource({
 export const isApprover = createResource({
 	url: "hrms.api.team.is_approver",
 	auto: true,
-	cache: "hrms:is_approver",
+	cache: personalCacheKey("hrms:is_approver"),
 })
 
 // one day of team status; params set by the Team view before fetch
@@ -26,7 +27,7 @@ export const teamStatus = createResource({
 export const teamManagers = createResource({
 	url: "hrms.api.team.get_managers",
 	auto: true,
-	cache: "hrms:team_managers",
+	cache: personalCacheKey("hrms:team_managers"),
 })
 
 // The Nadi Team Roster grid: direct reports + their shifts across a week.

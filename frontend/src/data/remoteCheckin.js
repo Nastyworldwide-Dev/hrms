@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 
 export const submitRemarksResource = createResource({
@@ -7,7 +8,7 @@ export const submitRemarksResource = createResource({
 
 export const pendingForApproverResource = createResource({
 	url: "hrms.api.remote_checkin.list_pending_for_approver",
-	cache: "nsty:remote-checkin-pending",
+	cache: personalCacheKey("nsty:remote-checkin-pending"),
 	auto: false,
 })
 
@@ -18,7 +19,7 @@ export const decidedForApproverResource = createResource({
 
 export const pendingCountResource = createResource({
 	url: "hrms.api.remote_checkin.get_pending_count",
-	cache: "nsty:remote-checkin-pending-count",
+	cache: personalCacheKey("nsty:remote-checkin-pending-count"),
 	auto: false,
 })
 

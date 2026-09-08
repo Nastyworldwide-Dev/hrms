@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import { personalCacheKey } from "@/utils/personalCache"
 import GBanner from "@/components/glass/GBanner.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
@@ -151,7 +152,7 @@ const DAYS = [
 const calendarEvents = createResource({
 	url: "hrms.api.get_attendance_calendar_events",
 	auto: true,
-	cache: "hrms:attendance_calendar_events",
+	cache: personalCacheKey("hrms:attendance_calendar_events"),
 	makeParams() {
 		return {
 			from_date: firstOfMonth.value.format("YYYY-MM-DD"),

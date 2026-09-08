@@ -60,6 +60,7 @@
 </template>
 
 <script setup>
+import { personalCacheKey } from "@/utils/personalCache"
 import GListRow from "@/components/glass/GListRow.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
@@ -95,6 +96,6 @@ const myIssues = createListResource({
 	orderBy: "creation desc",
 	pageLength: 50,
 	auto: true,
-	cache: "hrms:my_issues",
+	cache: personalCacheKey("hrms:my_issues"),
 })
 </script>

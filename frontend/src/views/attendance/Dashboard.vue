@@ -146,6 +146,7 @@
 </template>
 
 <script setup>
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 import { computed, inject, markRaw } from "vue"
 import { useRouter } from "vue-router"
@@ -204,7 +205,7 @@ const hasClaim = computed(() =>
 const shifts = createResource({
 	url: "hrms.api.get_shifts",
 	auto: true,
-	cache: "hrms:shifts",
+	cache: personalCacheKey("hrms:shifts"),
 	transform: (data) => {
 		return data.map((assignment) => {
 			assignment.doctype = "Shift Assignment"

@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource, createListResource } from "frappe-ui"
 import { userResource } from "./user"
 
@@ -24,7 +25,7 @@ export const notifications = createListResource({
 		"reference_document_name",
 	],
 	auto: false,
-	cache: "hrms:notifications",
+	cache: personalCacheKey("hrms:notifications"),
 	orderBy: "creation desc",
 	onSuccess() {
 		unreadNotificationsCount.reload()
@@ -33,7 +34,7 @@ export const notifications = createListResource({
 
 export const arePushNotificationsEnabled = createResource({
 	url: "hrms.api.are_push_notifications_enabled",
-	cache: "hrms:push_notifications_enabled",
+	cache: personalCacheKey("hrms:push_notifications_enabled"),
 	auto: true,
 })
 

@@ -3,18 +3,13 @@ import { createResource, call } from "frappe-ui"
 import { userResource } from "./user"
 import { employeeResource } from "./employee"
 import router from "@/router"
+import { announceSessionChange, clearPersonalCaches, sessionUser } from "@/utils/personalCache"
 
-export function sessionUser() {
-	let cookies = new URLSearchParams(document.cookie.split("; ").join("&"))
-	let _sessionUser = cookies.get("user_id")
-	if (_sessionUser === "Guest") {
-		_sessionUser = null
-	}
-	return _sessionUser
-}
+export { sessionUser }
 
 function handleLogin(response) {
 	if (response.message === "Logged In") {
+		announceSessionChange()
 		session.user = sessionUser()
 		console.info("[session] logged in as", session.user, "— full reload")
 		// FULL page load, not router.replace: module-scope auto resources
@@ -39,7 +34,9 @@ export const session = reactive({
 	},
 	logout: createResource({
 		url: "logout",
-		onSuccess() {
+		async onSuccess() {
+			announceSessionChange()
+			await clearPersonalCaches(session.user)
 			userResource.reset()
 			employeeResource.reset()
 

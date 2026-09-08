@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 import { employeeResource } from "./employee"
 import { reactive } from "vue"
@@ -5,7 +6,7 @@ import { reactive } from "vue"
 export const expenseClaimSummary = createResource({
 	url: "hrms.api.get_expense_claim_summary",
 	auto: true,
-	cache: "hrms:expense_claim_summary",
+	cache: personalCacheKey("hrms:expense_claim_summary"),
 })
 
 const transformClaimData = (data) => {
@@ -27,7 +28,7 @@ export const myClaims = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:my_claims",
+	cache: personalCacheKey("hrms:my_claims"),
 	transform(data) {
 		return transformClaimData(data)
 	},
@@ -50,7 +51,7 @@ export const teamClaims = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:team_claims",
+	cache: personalCacheKey("hrms:team_claims"),
 	transform(data) {
 		return transformClaimData(data)
 	},
@@ -71,7 +72,7 @@ export const historyClaims = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:history_claims",
+	cache: personalCacheKey("hrms:history_claims"),
 	transform(data) {
 		return transformClaimData(data)
 	},

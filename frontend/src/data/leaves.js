@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 import { employeeResource } from "./employee"
 
@@ -28,7 +29,7 @@ export const myLeaves = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:my_leaves",
+	cache: personalCacheKey("hrms:my_leaves"),
 	transform(data) {
 		return transformLeaveData(data)
 	},
@@ -51,7 +52,7 @@ export const teamLeaves = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:team_leaves",
+	cache: personalCacheKey("hrms:team_leaves"),
 	transform(data) {
 		return transformLeaveData(data)
 	},
@@ -72,7 +73,7 @@ export const historyLeaves = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:history_leaves",
+	cache: personalCacheKey("hrms:history_leaves"),
 	transform(data) {
 		return transformLeaveData(data)
 	},
@@ -81,7 +82,7 @@ export const historyLeaves = createResource({
 export const leaveBalance = createResource({
 	url: "hrms.api.get_leave_balance_map",
 	auto: true,
-	cache: "hrms:leave_balance",
+	cache: personalCacheKey("hrms:leave_balance"),
 	transform: (data) => {
 		// Gauge denominator = annual entitlement; the server falls back to
 		// allocated, the || below only covers older cached payloads

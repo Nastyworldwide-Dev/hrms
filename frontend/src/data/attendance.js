@@ -1,3 +1,4 @@
+import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 import { employeeResource } from "./employee"
 
@@ -57,7 +58,7 @@ export const myAttendanceRequests = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:my_attendance_requests",
+	cache: personalCacheKey("hrms:my_attendance_requests"),
 	transform(data) {
 		return transformAttendanceRequests(data)
 	},
@@ -82,7 +83,7 @@ export const myShiftRequests = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:my_shift_requests",
+	cache: personalCacheKey("hrms:my_shift_requests"),
 	transform(data) {
 		return transformShiftRequests(data)
 	},
@@ -102,7 +103,7 @@ export const teamShiftRequests = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:team_shift_requests",
+	cache: personalCacheKey("hrms:team_shift_requests"),
 	transform(data) {
 		return transformShiftRequests(data)
 	},
@@ -122,7 +123,7 @@ export const historyShiftRequests = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:history_shift_requests",
+	cache: personalCacheKey("hrms:history_shift_requests"),
 	transform(data) {
 		return transformShiftRequests(data)
 	},
@@ -141,7 +142,7 @@ export const teamAttendanceRequests = createResource({
 		}
 	},
 	auto: true,
-	cache: "hrms:team_attendance_requests",
+	cache: personalCacheKey("hrms:team_attendance_requests"),
 	transform: (data) => {
 		return transformAttendanceRequests(data)
 	},

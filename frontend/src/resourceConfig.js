@@ -26,6 +26,7 @@
 // in seventeen templates. See utils/loudRequest.js for why that matters.
 import { setConfig, frappeRequest } from "frappe-ui"
 import { makeLoudRequest } from "@/utils/loudRequest"
+import { sessionIsCurrent } from "@/utils/personalCache"
 
 // The only resources the LOGIN PAGE itself needs — both are allow_guest on
 // the server. Everything else the app declares assumes a session.
@@ -48,14 +49,28 @@ const GUEST_URLS = new Set([
 // would pull the data modules into this file's import graph and re-create the
 // very evaluate-before-config race this module exists to close.
 function guestQuiet(fetcher) {
-	return (options) => {
+	return async (options) => {
+		const publicRequest = GUEST_URLS.has(options.url)
+		if (!publicRequest && !sessionIsCurrent()) return new Promise(() => {})
 		const cookies = new URLSearchParams(document.cookie.split("; ").join("&"))
 		const user = cookies.get("user_id")
 		if ((!user || user === "Guest") && !GUEST_URLS.has(options.url)) {
 			console.info("[resourceConfig] guest session — holding", options.url)
 			return new Promise(() => {})
 		}
-		return fetcher(options)
+		try {
+			const response = await fetcher(options)
+			// Logout changes its own cookie. Let its success callback clear the
+			// identity and reload; all other old-page responses must never reach
+			// frappe-ui's setData/saveLocal, including list resources' inner fetch.
+			if (!publicRequest && options.url !== "logout" && !sessionIsCurrent()) {
+				return new Promise(() => {})
+			}
+			return response
+		} catch (error) {
+			if (!publicRequest && !sessionIsCurrent()) return new Promise(() => {})
+			throw error
+		}
 	}
 }
 

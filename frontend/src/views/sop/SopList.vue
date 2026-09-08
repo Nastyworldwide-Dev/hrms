@@ -155,6 +155,7 @@
 </template>
 
 <script setup>
+import { personalCacheKey } from "@/utils/personalCache"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { createResource, FeatherIcon } from "frappe-ui"
@@ -178,7 +179,7 @@ const editingName = ref(null)
 // HR) — the client only groups and searches what it is given
 const sops = createResource({
 	url: "hrms.api.sop.get_sops",
-	cache: "hrms:sops",
+	cache: personalCacheKey("hrms:sops"),
 	auto: true,
 	onError(error) {
 		console.warn("[SOP] Failed to load:", error)

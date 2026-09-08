@@ -184,6 +184,7 @@
 </template>
 
 <script setup>
+import { personalCacheKey } from "@/utils/personalCache"
 import { IonModal } from "@ionic/vue"
 import { createListResource, createResource, FeatherIcon, toast } from "frappe-ui"
 import { computed, inject, reactive, ref } from "vue"
@@ -239,7 +240,7 @@ const departments = createListResource({
 	orderBy: "name asc",
 	pageLength: 500,
 	auto: true,
-	cache: "hrms:sop_departments",
+	cache: personalCacheKey("hrms:sop_departments"),
 })
 
 const detail = createResource({

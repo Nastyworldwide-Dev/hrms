@@ -2,6 +2,7 @@ import { io } from "socket.io-client"
 
 import { getCachedListResource } from "frappe-ui/src/resources/listResource"
 import { getCachedResource } from "frappe-ui/src/resources/resources"
+import { personalCacheKey } from "@/utils/personalCache"
 
 export function initSocket() {
 	let host = window.location.hostname
@@ -17,7 +18,8 @@ export function initSocket() {
 
 	socket.on("hrms:refetch_resource", (data) => {
 		if (data.cache_key) {
-			let resource = getCachedResource(data.cache_key) || getCachedListResource(data.cache_key)
+			const key = personalCacheKey(data.cache_key)
+			let resource = getCachedResource(key) || getCachedListResource(key)
 
 			if (resource) {
 				resource.reload()
