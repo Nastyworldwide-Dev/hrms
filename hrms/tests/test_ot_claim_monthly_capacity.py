@@ -5,6 +5,7 @@ import importlib
 import sys
 import unittest
 from datetime import date, timedelta
+from itertools import product
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -98,6 +99,8 @@ class TestClaimCapacity(unittest.TestCase):
 		allowed=True,
 		submission_guard=None,
 		saved_status="Open",
+		shift_caps=None,
+		payroll_day=DAY,
 	):
 
 		rows = []
@@ -131,7 +134,7 @@ class TestClaimCapacity(unittest.TestCase):
 		def worked(employee, start, end):
 			hours = worked_hours or {other_day: other_hours, DAY: target_work}
 			selected = {day: value for day, value in hours.items() if start <= day <= end}
-			return selected, dict.fromkeys(selected, "SHIFT-SYNTHETIC")
+			return selected, {day: str(day) if shift_caps else "SHIFT-SYNTHETIC" for day in selected}
 
 		def matches(row, field, condition):
 			value = row.get(field)
@@ -186,7 +189,11 @@ class TestClaimCapacity(unittest.TestCase):
 			patch.object(
 				ot,
 				"_get_shift_ot_config",
-				return_value={**CONFIG, "monthly_cap": cap, "min_minutes": min_minutes},
+				side_effect=lambda shift: {
+					**CONFIG,
+					"monthly_cap": (shift_caps or {}).get(shift, cap),
+					"min_minutes": min_minutes,
+				},
 			),
 			patch.object(ot, "_classify_day", return_value="normal"),
 			patch.object(ot, "_per_day_ot_hours", side_effect=worked),
@@ -211,7 +218,7 @@ class TestClaimCapacity(unittest.TestCase):
 						grant.assert_not_called()
 					return state
 			if consumer == "payroll":
-				return ot.get_ot_pay("EMP-SYNTHETIC", DAY, DAY, 2080)
+				return ot.get_ot_pay("EMP-SYNTHETIC", payroll_day, payroll_day, 2080)
 			if consumer == "validate":
 				doc.validate()
 				return doc.punch_ot_hours
@@ -355,6 +362,150 @@ class TestClaimCapacity(unittest.TestCase):
 			),
 			3,
 		)
+
+	def test_backdated_mixed_shift_claim_preserves_later_approved_payroll(self):
+		later = date(2026, 9, 25)
+		params = dict(
+			other_day=later, other_status="Approved", other_hours=3, shift_caps={str(DAY): 6, str(later): 4}
+		)
+		self.assertEqual(self.validate_claim(**params, consumer="payroll", payroll_day=later), 45)
+		capacity = self.validate_claim(**params, consumer="get_ot_claim_summary")["punch_ot_hours"]
+		self.assertEqual(capacity, 1)
+		self.assertEqual(self.validate_claim(**params, claim_hours=1), 1)
+		with self.assertRaises(frappe.ValidationError):
+			self.validate_claim(**params, claim_hours=3)
+		self.assertEqual(
+			self.validate_claim(
+				**params, claim_hours=capacity, existing=True, consumer="payroll", payroll_day=later
+			),
+			45,
+		)
+
+	def test_unlimited_earlier_shift_still_preserves_later_finite_cap(self):
+		later = date(2026, 9, 25)
+		self.assertEqual(
+			self.validate_claim(
+				other_day=later,
+				other_status="Approved",
+				other_hours=3,
+				claim_hours=1,
+				shift_caps={str(DAY): 0, str(later): 4},
+			),
+			1,
+		)
+
+	def test_earlier_small_shift_cap_does_not_limit_later_high_cap_work(self):
+		earlier = date(2026, 9, 3)
+		self.assertEqual(
+			self.validate_claim(
+				other_day=earlier,
+				other_status="Approved",
+				other_hours=3,
+				claim_hours=3,
+				shift_caps={str(earlier): 4, str(DAY): 6},
+			),
+			3,
+		)
+
+	def test_mixed_shift_discovery_total_has_a_feasible_claim_allocation(self):
+		earlier = date(2026, 9, 3)
+		result = self.validate_claim(
+			consumer="get_claimable_ot_summary",
+			discovery_dates=(earlier, DAY),
+			worked_hours={earlier: 5, DAY: 2},
+			shift_caps={str(earlier): 6, str(DAY): 2},
+		)
+		self.assertEqual(result["days"], [{"date": str(DAY), "hours": 2}, {"date": str(earlier), "hours": 5}])
+		self.assertEqual(result["claimable_hours"], 5)
+
+	@settings(max_examples=45, deadline=None)
+	@given(
+		earned=st.lists(st.integers(0, 4), min_size=3, max_size=3),
+		caps=st.lists(st.integers(0, 7), min_size=3, max_size=3),
+	)
+	def test_discovery_maximum_matches_exhaustive_feasible_allocations(self, earned, caps):
+		dates = [date(2026, 9, 3), date(2026, 9, 10), DAY]
+		feasible = [
+			sum(claims)
+			for claims in product(*(range(hours + 1) for hours in earned))
+			if all(
+				not hours or not caps[index] or sum(claims[: index + 1]) <= caps[index]
+				for index, hours in enumerate(claims)
+			)
+		]
+		result = self.validate_claim(
+			consumer="get_claimable_ot_summary",
+			discovery_dates=dates,
+			worked_hours=dict(zip(dates, earned, strict=True)),
+			shift_caps={str(day): cap for day, cap in zip(dates, caps, strict=True)},
+		)
+		self.assertEqual(result["claimable_hours"], max(feasible))
+
+	def test_later_cap_reservation_keeps_unrounded_fractional_consumption(self):
+		later = date(2026, 9, 25)
+		params = dict(
+			other_day=later,
+			other_status="Approved",
+			other_hours=3.733,
+			shift_caps={str(DAY): 6, str(later): 4},
+		)
+		self.assertAlmostEqual(self.validate_claim(**params, claim_hours=0.267), 0.267)
+		with self.assertRaises(frappe.ValidationError):
+			self.validate_claim(**params, claim_hours=0.27)
+
+	@settings(max_examples=45, deadline=None)
+	@given(earlier_cap=st.integers(0, 8), later_cap=st.integers(0, 8), approved=st.integers(1, 7))
+	def test_admitted_backdated_capacity_never_reduces_existing_later_pay(
+		self, earlier_cap, later_cap, approved
+	):
+		later = date(2026, 9, 25)
+		params = dict(
+			other_day=later,
+			other_status="Approved",
+			other_hours=approved,
+			shift_caps={str(DAY): earlier_cap, str(later): later_cap},
+		)
+		before = self.validate_claim(**params, consumer="payroll", payroll_day=later)
+		capacity = self.validate_claim(**params, consumer="get_ot_claim_summary")["punch_ot_hours"]
+		after = self.validate_claim(
+			**params, consumer="payroll", payroll_day=later, existing=True, claim_hours=capacity
+		)
+		self.assertEqual(after, before)
+
+	@settings(max_examples=45, deadline=None)
+	@given(
+		earned=st.lists(st.integers(0, 4), min_size=2, max_size=2),
+		caps=st.lists(st.integers(0, 7), min_size=2, max_size=2),
+		reserved=st.integers(1, 3),
+		later_headroom=st.integers(0, 3),
+	)
+	def test_discovery_with_existing_approval_matches_feasible_allocations(
+		self, earned, caps, reserved, later_headroom
+	):
+		earlier, approved_day = date(2026, 9, 3), date(2026, 9, 10)
+		feasible = [
+			sum(claims)
+			for claims in product(*(range(hours + 1) for hours in earned))
+			if claims[0] <= later_headroom
+			and all(
+				not hours or not caps[index] or reserved + sum(claims[: index + 1]) <= caps[index]
+				for index, hours in enumerate(claims)
+			)
+		]
+		result = self.validate_claim(
+			consumer="get_claimable_ot_summary",
+			discovery_dates=(earlier, DAY),
+			other_day=approved_day,
+			other_status="Approved",
+			other_hours=reserved,
+			worked_hours={earlier: earned[0], approved_day: reserved, DAY: earned[1]},
+			shift_caps={
+				str(earlier): caps[0],
+				str(approved_day): reserved + later_headroom,
+				str(DAY): caps[1],
+			},
+		)
+		self.assertEqual(result["claimable_hours"], max(feasible))
 
 	@settings(max_examples=60, deadline=None)
 	@given(approved=st.integers(min_value=0, max_value=7), remaining=st.integers(min_value=1, max_value=7))

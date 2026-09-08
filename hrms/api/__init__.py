@@ -643,13 +643,19 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 			if hours > 0:
 				days.append({"date": str(work_date), "hours": hours})
 				monthly_choices.setdefault(str(work_date)[:7], []).append(capacity)
-		# Individual choices share the remaining allowance: two possible 3h
-		# claims against one 4h pool mean 4h available in total, not 6h.
+		# Construct a feasible allocation in work-date order. A later smaller
+		# shift cap can add no hours after an earlier larger claim; it cannot
+		# lower the already feasible total. Each budget also protects existing
+		# approved dates, so these are shared constraints, not additive pools.
 		total = 0.0
 		for choices in monthly_choices.values():
-			worked_hours = sum(choice["hours"] for choice in choices)
-			budgets = [choice["monthly_remaining"] for choice in choices]
-			total += worked_hours if None in budgets else min(worked_hours, max(budgets))
+			selected = 0.0
+			for choice in reversed(choices):  # discovery above is newest first
+				hours = choice["hours"]
+				if choice["monthly_remaining"] is not None:
+					hours = min(hours, max(0.0, choice["monthly_remaining"] - selected))
+				selected += hours
+			total += selected
 	else:
 		# Preserve RL's existing Attendance-based discovery until its cap policy
 		# is reconciled separately; do not silently invent an RL allowance pool.

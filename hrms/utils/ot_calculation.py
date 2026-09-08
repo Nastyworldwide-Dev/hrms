@@ -486,6 +486,7 @@ def _iter_day_ot(
 		yield {
 			"day": day,
 			"monthly_cap": config["monthly_cap"],
+			"unrounded_ot_hours": hours,
 			"ot_hours": round(hours, 2),
 			"day_type": resolved_day_type,
 			"hourly_rate": hourly_rate,
@@ -572,20 +573,37 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	# afterwards can raise a claim above the configured monthly maximum.
 	hours = round_ot_pay_hours(worked["ot_hours"])
 	cap = worked["monthly_cap"]
+	month_start = day.replace(day=1)
+	month_end = day.replace(day=monthrange(day.year, day.month)[1])
+	filters = {
+		"employee": employee,
+		"docstatus": 1,
+		"status": ("!=", "Rejected"),
+		"compensation": "Overtime Pay",
+		"ot_date": ["between", [month_start, month_end]],
+	}
+	if exclude_request:
+		filters["name"] = ("!=", exclude_request)
+	approved = frappe.get_all("OT Request", filters=filters, fields=["ot_date", "claimed_hours"])
 	remaining = None
 	if cap > 0:
-		filters = {
-			"employee": employee,
-			"docstatus": 1,
-			"status": ("!=", "Rejected"),
-			"compensation": "Overtime Pay",
-			"ot_date": ["between", [day.replace(day=1), day.replace(day=monthrange(day.year, day.month)[1])]],
-		}
-		if exclude_request:
-			filters["name"] = ("!=", exclude_request)
-		approved = frappe.get_all("OT Request", filters=filters, fields=["claimed_hours"])
 		reserved = sum(Decimal(str(max(0.0, flt(row.claimed_hours)))) for row in approved)
-		remaining = float(max(Decimal(0), Decimal(str(cap)) - reserved))
+		remaining = max(Decimal(0), Decimal(str(cap)) - reserved)
+	# An earlier high-cap (or unlimited) shift must not displace a later
+	# approval made under a smaller cap. Replay existing payroll consumption
+	# and retain enough headroom to preserve every later paid date.
+	if any(getdate(row.ot_date) > day for row in approved):
+		approved_by_day = defaultdict(float)
+		for row in approved:
+			approved_by_day[getdate(row.ot_date)] += max(0.0, flt(row.claimed_hours))
+		consumed = Decimal(0)
+		for priced in _iter_day_ot(employee, month_start, month_end, 0, "normal", approved_by_day):
+			consumed += Decimal(str(priced["unrounded_ot_hours"]))
+			if priced["day"] > day and priced["monthly_cap"] > 0:
+				headroom = max(Decimal(0), Decimal(str(priced["monthly_cap"])) - consumed)
+				remaining = headroom if remaining is None else min(remaining, headroom)
+	if remaining is not None:
+		remaining = float(remaining)
 		hours = min(hours, remaining)
 	logger.info(
 		"[ot_calculation] claim capacity date=%s compensation=%s hours=%.3f", day, compensation, hours
