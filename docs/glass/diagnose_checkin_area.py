@@ -91,7 +91,7 @@ try:
 	print("\n==== RESOLVER RESULT (what Nadi shows) ====")
 	print(res if res else "None  -> Nadi shows 'No check-in area set'")
 	if res:
-		print("\n=> With the latest build deployed, this employee WILL see the geofence.")
+		print("\n=> Resolver response is shown above; check its coordinates, radius and strict setting.")
 	else:
 		print("\n=> Still None. If this is the OLD build, deploy the fix. If it's the")
 		print("   NEW build and you got here, the missing link is printed above.")

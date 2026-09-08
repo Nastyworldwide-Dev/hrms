@@ -44,6 +44,7 @@ Public API:
 from __future__ import annotations
 
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,20 @@ ACCURACY_ALLOWANCE_CAP_M = 250
 #: ceiling: one constant for every company, upgrade: per-company HR Setting
 #: if a device fleet needs a different line.
 POINT_ESTIMATE_TRUST_CAP_M = 2000
+
+
+def parse_coordinates(latitude, longitude):
+	"""Normalize transport numbers without treating zero as missing or NaN as a place."""
+	try:
+		if any(value in (None, "") or isinstance(value, bool) for value in (latitude, longitude)):
+			return None
+		lat, lng = float(latitude), float(longitude)
+		if math.isfinite(lat) and math.isfinite(lng) and abs(lat) <= 90 and abs(lng) <= 180:
+			return lat, lng
+	except (TypeError, ValueError, OverflowError):
+		pass
+	logger.warning("[geofence] invalid coordinate pair rejected")
+	return None
 
 
 def usable_accuracy(accuracy_m) -> float:

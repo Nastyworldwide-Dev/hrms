@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 
 import frappe
+from frappe import _
 from frappe.utils import get_datetime
 
 from hrms.api import _ensure_own_employee_or_permitted
@@ -39,6 +40,7 @@ from hrms.utils.company_settings import is_setting_enabled_for_employee
 from hrms.utils.geofence import (
 	effective_shift_location,
 	evaluate_geofence,
+	parse_coordinates,
 	resolve_assignment,
 	resolve_location,
 )
@@ -103,15 +105,7 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 	# about the signed-in user.
 	_ensure_own_employee_or_permitted(employee)
 
-	logger.info(
-		"[geofence.api] preflight employee=%s log_type=%s lat=%s lng=%s time=%s accuracy=%s",
-		employee,
-		log_type,
-		latitude,
-		longitude,
-		time,
-		accuracy,
-	)
+	logger.info("[geofence.api] preflight action=%s", log_type)
 
 	if not employee:
 		return _ok()
@@ -122,16 +116,10 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 		logger.info("[geofence.api] geolocation tracking off for %s's company — pass-through", employee)
 		return _ok()
 
-	try:
-		lat = float(latitude) if latitude not in (None, "") else None
-		lng = float(longitude) if longitude not in (None, "") else None
-	except (TypeError, ValueError):
-		lat = lng = None
-
-	if lat is None or lng is None:
-		# Without coordinates the server can't preflight; let the insert path
-		# enforce its own "coordinates required" throw.
-		return _ok()
+	coordinates = parse_coordinates(latitude, longitude)
+	if coordinates is None:
+		frappe.throw(_("Valid latitude and longitude values are required for checking in."))
+	lat, lng = coordinates
 
 	# Resolve the shift as of the employee's own wall clock — a site clock in
 	# a different timezone matches the wrong shift near boundary hours.
@@ -201,7 +189,7 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	# Resolve the shift as of the employee's own wall clock — a site clock in
 	# a different timezone matches the wrong shift near boundary hours.
 	at = get_datetime(time) if time else employee_now(employee)
-	logger.debug("[geofence.api] get_active_shift_location employee=%s at=%s", employee, at)
+	logger.debug("[geofence.api] resolving active shift location")
 
 	# Third copy of this lookup, now the same one. This variant additionally
 	# required a shift_location — harmless here (the map pin needs one anyway),
@@ -212,22 +200,34 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 	# carries none (manual/schedule). Without this the map pin — and the whole
 	# geofence — reads as "no area set" for a genuinely configured workplace.
 	shift_loc_name = effective_shift_location(employee, r)
-	if not shift_loc_name:
-		return None
-	loc = frappe.db.get_value(
-		"Shift Location",
-		shift_loc_name,
-		["name", "location_name", "latitude", "longitude", "checkin_radius"],
-		as_dict=True,
+	loc = (
+		frappe.db.get_value(
+			"Shift Location",
+			shift_loc_name,
+			["name", "location_name", "latitude", "longitude", "checkin_radius"],
+			as_dict=True,
+		)
+		if shift_loc_name
+		else None
 	)
-	if not loc or loc.latitude is None or loc.longitude is None:
-		return None
+	if not loc:
+		return (
+			{
+				"strict": bool(r.enable_strict_geofence),
+				"shift_type": r.shift_type,
+				"has_shift_location": False,
+			}
+			if r
+			else None
+		)
+	coordinates = parse_coordinates(loc.latitude, loc.longitude)
 
 	return {
 		"shift_location": loc.name,
 		"label": loc.location_name or loc.name,
-		"latitude": float(loc.latitude),
-		"longitude": float(loc.longitude),
+		"has_shift_location": True,
+		"latitude": coordinates[0] if coordinates else None,
+		"longitude": coordinates[1] if coordinates else None,
 		"checkin_radius": int(loc.checkin_radius or 0),
 		# r can be None now: the location resolved from Employee.shift_location
 		# with no active assignment. The map still draws the pin; there is no

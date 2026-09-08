@@ -31,6 +31,7 @@ from hrms.utils.geofence import (
 	REASON_OUTSIDE_RADIUS,
 	effective_shift_location,
 	evaluate_geofence,
+	parse_coordinates,
 	resolve_assignment,
 	resolve_location,
 )
@@ -143,16 +144,16 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			)
 			return
 
-		if not (self.latitude and self.longitude):
+		coordinates = parse_coordinates(self.latitude, self.longitude)
+		if coordinates is None:
 			# Thrown here rather than delegated to `super()`. Upstream re-reads the
 			# GLOBAL flag, so delegating reopened the same bypass one level down;
 			# it also guards on `or`, which let a half-supplied coordinate pair
 			# through to a distance calculation against None.
-			logger.info(
-				"[employee_checkin] geofence refused employee=%s — no usable lat/long on doc",
-				self.employee,
-			)
+			logger.info("[employee_checkin] geofence refused invalid coordinate pair")
 			frappe.throw(_("Latitude and longitude values are required for checking in."))
+
+		self.latitude, self.longitude = coordinates
 
 		if not self.shift:
 			# fetch_shift() couldn't resolve a Shift Type (no assignment, or
