@@ -477,3 +477,20 @@ hrms/payroll/report/professional_tax_deductions/professional_tax_deductions.py:1
 hrms/payroll/report/provident_fund_deductions/provident_fund_deductions.py:24 not-affected — another report's module-local get_data/get_date_condition of the same name; this report's functions are not imported anywhere else.
 hrms/payroll/report/salary_payments_based_on_payment_mode/salary_payments_based_on_payment_mode.py:21 not-affected — another report's module-local get_data/get_date_condition of the same name; this report's functions are not imported anywhere else.
 hrms/payroll/report/salary_payments_via_ecs/salary_payments_via_ecs.py:15 not-affected — another report's module-local get_data/get_date_condition of the same name; this report's functions are not imported anywhere else.
+
+CLASS: REPORT-HALF-DAY-CHART — a chart that matched a status by its bare label while the rows it read carried a qualified one: attendance records label a half day "Half Day/Other Half Present|Absent" (the grid's HD/P, HD/A) and the chart only counted "Half Day", so a worked half-day vanished from Present whenever the other half had a status.
+Changed: hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py (get_chart_data: any Half Day variant counts the worked half as present; the other half by its record — Present, Absent — or leave when unrecorded, as before).
+Call sites / consumers:
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py execute same-root — the only caller of get_chart_data.
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py get_attendance_summary_and_days:600 not-affected — SQL over Attendance.status (the unqualified column); its 0.5 present per Half Day is the rule the chart now follows.
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py get_leave_summary:688 not-affected — leave days from leave_type rows; unchanged semantics.
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py status_map / get_attendance_status_for_detailed_view not-affected — the grid already maps both variants (HD/P, HD/A); chart and grid now agree.
+Lock: hrms/tests/test_monthly_attendance_chart.py (both variants count: worked halves present, other halves by status, legacy row leave; plain statuses unchanged).
+Machine-listed name collisions for the REPORT-HALF-DAY-CHART change:
+hrms/hr/report/appraisal_overview/appraisal_overview.py:19 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/employee_analytics/employee_analytics.py:24 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/employee_exits/employee_exits.py:15 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/employee_leave_balance/employee_leave_balance.py:27 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/project_profitability/project_profitability.py:12 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/shift_attendance/shift_attendance.py:24 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+hrms/hr/report/vehicle_expenses/vehicle_expenses.py:18 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.

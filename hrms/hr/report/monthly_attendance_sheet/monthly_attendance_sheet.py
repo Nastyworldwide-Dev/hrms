@@ -812,9 +812,21 @@ def get_chart_data(attendance_map: dict, filters: Filters) -> dict:
 					total_absent_on_day += 1
 				elif attendance_on_day in ["Present", "Work From Home"]:
 					total_present_on_day += 1
-				elif attendance_on_day == "Half Day":
+				elif attendance_on_day and attendance_on_day.startswith("Half Day"):
+					# The map labels a half day by its other half ("Half Day/Other
+					# Half Present|Absent", the grid's HD/P and HD/A); only the bare
+					# "Half Day" used to be counted, so a worked half-day vanished
+					# from the chart whenever the other half had a status. The
+					# worked half is present — the summary's half-day rule — and
+					# the other half counts by its record; without one (a
+					# leave-derived or legacy row) it stays leave, as before.
 					total_present_on_day += 0.5
-					total_leaves_on_day += 0.5
+					if attendance_on_day == "Half Day/Other Half Present":
+						total_present_on_day += 0.5
+					elif attendance_on_day == "Half Day/Other Half Absent":
+						total_absent_on_day += 0.5
+					else:
+						total_leaves_on_day += 0.5
 
 		absent.append(total_absent_on_day)
 		present.append(total_present_on_day)
