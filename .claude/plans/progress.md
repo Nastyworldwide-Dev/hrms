@@ -230,3 +230,7 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-08T16:05:10Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 119 same-root ⟂b2e50b15fba8
 2026-09-08T16:16Z COMMIT: cc09090ec provisional Absent replaced (ATT-PROVISIONAL); 826b17e0d calendar per-month ownership + realtime + re-entry refresh (CAL-REFRESH). No push.
 2026-09-08T16:16Z NEXT: remaining 360 rows — notifications (push identity/semantic results/timing/destination/feed access), Desk report scope (360-report-repair.md), RL allocation sync ownership, metadata parity, harness; policy decisions still open: Q1-Q3 rounding/caps/fallback, four-month window; live diagnostics D1-D5 still not run
+- 2026-09-08T16:23:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T16:23:15Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+2026-09-08T16:23Z COMMIT: 3eebcebe7 provisional-repair failure isolation + ignore_permissions (review of cc09090ec: DEPLOY after fix); 56f8c57ce ledger. 32 commits ahead of origin, NOT pushed.
+2026-09-08T16:23Z NEXT: Nabil pushes + deploys; runs D1-D5; answers Q1-Q3 + four-month policy; then notifications / Desk reports / RL sync / metadata / harness rows
