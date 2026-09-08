@@ -503,3 +503,15 @@ hrms/hr/report/employee_analytics/employee_analytics.py get_parameters not-affec
 hrms/hr/report/employee_analytics/test_employee_analytics.py not-affected — bench suite; execute's contract unchanged.
 Lock: hrms/tests/test_employee_analytics.py (the remainder never reveals a hidden employee — db.count is refused outright; a foreign company is refused; an unrestricted caller gets the whole company) on hrms/tests/_qb_stub.py.
 hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py:100 not-affected — the attendance sheet's own get_chart_data (fixed in REPORT-HALF-DAY-CHART); only the name collides with Employee Analytics'.
+
+CLASS: MIRROR-OVERWRITES-HUB-ADJUSTMENT — a hub-side adjustment written onto a mirrored row with no ownership the sync could see: the OT -> Replacement Leave grant topped up a mirrored Leave Allocation's totals, and the next source pull wrote the source's totals over them (DS4: 3 days back to 2); the documented mitigation (release the stamp) is the opposite of protection — an unstamped row is what the first writer may claim.
+Changed: hrms/sync/runner.py (_hub_granted_days: the allocation's submitted, unexpired, non-carry-forward, UNSTAMPED Leave Ledger Entries — the hub's own grants; _keep_hub_grants: a Leave Allocation update lands as source balance + hub grants; wired into _write_row's update branch), hrms/hr/utils.py (the grant comment now states the real protection), hrms/sync/write_block.py (the OT/RL note matches per-day grants).
+Call sites / consumers:
+hrms/sync/runner.py _write_row same-root — the only update path for mirrored rows; Leave Allocation gains the merge, every other doctype is untouched.
+hrms/hr/utils.py grant (RL top-up) same-root — writes the unstamped ledger entry the merge relies on (create_additional_leave_ledger_entry -> create_leave_ledger_entry, new row keeps its unstamped payload per write_block.stamp_to_persist).
+hrms/hr/utils.py RL cancel / reversal path not-affected — reverses through the same ledger; a cancelled (docstatus 2) grant entry no longer counts, so the merge follows the reversal.
+hrms/sync/purge.py release_instance_stamp not-affected — still the clone-repair tool it documents; it is no longer described as RL protection anywhere.
+hrms/sync/write_block.py plan_mirror_write / block_transactions_for_mirrored_employee not-affected — OT Request stays outside EMPLOYEE_SCOPED_TRANSACTIONS; the comment now says why truthfully.
+hrms/tests/test_sync_runner.py TestTheMirrorNeverWalksALifecycle not-affected — inserts, not updates; the merge runs only on an existing row.
+Lock: hrms/tests/test_sync_rl_ownership.py (hub-granted day rides on top of the source total and the stamp stays; a raised source balance and the grant are both kept; mirrored ledger entries are not grants; cancelled or expired entries do not count).
+hrms/hr/doctype/ot_request/ot_request.py:228 same-root — the OT approval that calls grant_replacement_leave; its grant now survives a source pull through the ledger-based merge, no change needed at the call.

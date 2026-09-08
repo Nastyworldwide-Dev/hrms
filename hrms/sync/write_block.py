@@ -156,11 +156,13 @@ def _instance_unlocked(instance_name) -> bool:
 #:   Shift Request              -> Shift Assignment
 #:   Compensatory Leave Request -> Leave Allocation (+= days on submit)
 #:
-#: Deliberately NOT listed: OT Request and Replacement Leave Claim. They write
-#: the Replacement Leave bank, which is hub-native — the source ERP has no such
-#: concept, so there is nothing over there for a hub-side write to diverge
-#: from. If that ruling changes, they join this tuple and the hooks wiring the
-#: test pins.
+#: Deliberately NOT listed: OT Request and Replacement Leave Claim. Since the
+#: per-day grants (Sep 2026) an approved OT Request tops up the employee's
+#: Leave Allocation — a mirrored row for a sourced employee — as the hub's
+#: own ledger entry; the source ERP has no such concept, so nothing over
+#: there diverges, and the sync keeps the grant on top of the source balance
+#: (hrms.sync.runner._keep_hub_grants). If that ruling changes, they join
+#: this tuple and the hooks wiring the test pins.
 EMPLOYEE_SCOPED_TRANSACTIONS = (
 	"Leave Application",
 	"Attendance Request",

@@ -702,17 +702,16 @@ def grant_replacement_leave(employee, employee_name, company, days, valid_from, 
 		)
 	allocation = _existing_rl_allocation(employee, REPLACEMENT_LEAVE_TYPE, valid_from)
 	if allocation:
-		# ponytail: tops up whatever RL allocation covers the period, a mirrored
-		# (source-owned) one included. There is no clobber-proof alternative: a hub-
-		# native allocation would need a hub name to survive a pull, but the overlap
-		# guard (leave_allocation.validate_allocation_overlap) forbids a second
-		# allocation of the same type/period, so we cannot sit one beside a mirrored
-		# row. Safe under the current workflow — the manual weekend sync imports new
-		# companies, it does not re-pull existing employees' Leave Allocations. The
-		# one thing that WOULD lose this top-up is a full re-pull of Leave Allocation
-		# from the source; before ever doing that, release the mirrored stamp on
-		# these rows (hrms.sync.purge.release_instance_stamp) so the source can't
-		# reclaim them. See test_utils / the RL cancel path for the reverse side.
+		# Tops up whatever RL allocation covers the period, a mirrored
+		# (source-owned) one included: the overlap guard
+		# (leave_allocation.validate_allocation_overlap) forbids a second
+		# allocation of the same type/period, so a hub-native one cannot sit
+		# beside a mirrored row. The grant is recorded as the hub's OWN ledger
+		# entry (unstamped, below), and that is what makes it survive a source
+		# pull: hrms.sync.runner._keep_hub_grants lands source balance + hub
+		# grants. Releasing the mirror stamp never protected a top-up — an
+		# unstamped row is exactly what the first writer may claim (DS4).
+		# See test_utils / the RL cancel path for the reverse side.
 		#
 		# persisting total into new mirrors CompensatoryLeaveRequest, drift-free while
 		# the leave type keeps is_carry_forward=0 (as the ensure patch creates it)

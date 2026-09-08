@@ -928,6 +928,59 @@ def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool,
 	)
 
 
+def _hub_granted_days(allocation: str) -> float:
+	"""Days the hub added to a mirrored Leave Allocation.
+
+	They are its submitted, unexpired, non-carry-forward Leave Ledger Entries
+	that carry NO provenance stamp: the OT -> Replacement Leave grants written
+	by hrms.hr.utils, which the source never held. A mirrored entry is the
+	source's own allocation and is not a grant.
+	"""
+	rows = frappe.get_all(
+		"Leave Ledger Entry",
+		filters={
+			"transaction_type": "Leave Allocation",
+			"transaction_name": allocation,
+			"docstatus": 1,
+			"is_carry_forward": 0,
+			"is_expired": 0,
+			PROVENANCE_FIELD: ("is", "not set"),
+		},
+		pluck="leaves",
+	)
+	# float(), not frappe.utils.flt: the standalone harnesses build a bare
+	# frappe.utils with only now_datetime, and this module must import there
+	return sum(float(leaves or 0) for leaves in rows)
+
+
+def _keep_hub_grants(allocation: str, payload: dict) -> dict:
+	"""Ownership on a mirrored Leave Allocation: the source owns the balance it
+	allocated, the hub owns what it granted on top, and a pull keeps both.
+
+	Approving an OT Request for Replacement Leave tops up the employee's
+	allocation — a mirrored row when the employee comes from a source. This
+	update path used to write the source's totals over it, and the advice to
+	"release the stamp before a re-pull" never protected anything: an
+	unstamped row is exactly what the first writer may claim (DS4, 8 Sep 2026).
+	The grants live on the ledger as the hub's own entries, so the total that
+	lands is source balance + hub grants, and the ledger stays consistent with
+	it.
+	"""
+	granted = _hub_granted_days(allocation)
+	if not granted:
+		return payload
+	merged = dict(payload)
+	for field in ("new_leaves_allocated", "total_leaves_allocated"):
+		if merged.get(field) is not None:
+			merged[field] = float(merged[field] or 0) + granted
+	_log().info(
+		"[sync] Leave Allocation %s: %s hub-granted day(s) kept on top of the source total",
+		allocation,
+		granted,
+	)
+	return merged
+
+
 def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 	"""Upsert one row keyed by the remote name.
 
@@ -976,6 +1029,8 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 		# and Appraisal was the first ever mirrored.
 		children = {key: value for key, value in payload.items() if isinstance(value, list)}
 		flat = {key: value for key, value in payload.items() if not isinstance(value, list)}
+		if doctype == "Leave Allocation":
+			flat = _keep_hub_grants(remote_name, flat)
 		if flat:
 			frappe.db.set_value(doctype, remote_name, flat, update_modified=False)
 		if children:
