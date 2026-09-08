@@ -63,6 +63,23 @@
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
+								<!-- The check-in photo — the evidence the employee supplied with an
+								     out-of-radius punch. Public file, so the approver can open it
+								     full-size; until it was listed here it was reachable only from Desk. -->
+								<a
+									v-if="req.selfie_image"
+									:href="req.selfie_image"
+									target="_blank"
+									rel="noopener"
+									class="block border border-divider overflow-hidden"
+								>
+									<img
+										:src="req.selfie_image"
+										:alt="__('Check-in photo')"
+										class="w-full max-h-64 object-cover"
+										loading="lazy"
+									/>
+								</a>
 								<div
 									v-if="req.approver_remarks"
 									class="text-xs text-inkbase bg-surface border border-divider p-2.5"
@@ -115,6 +132,23 @@
 									<span>{{ formatTimestamp(req.checkin_time) }}</span>
 									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
 								</div>
+								<!-- The check-in photo — the evidence the employee supplied with an
+								     out-of-radius punch. Public file, so the approver can open it
+								     full-size; until it was listed here it was reachable only from Desk. -->
+								<a
+									v-if="req.selfie_image"
+									:href="req.selfie_image"
+									target="_blank"
+									rel="noopener"
+									class="block border border-divider overflow-hidden"
+								>
+									<img
+										:src="req.selfie_image"
+										:alt="__('Check-in photo')"
+										class="w-full max-h-64 object-cover"
+										loading="lazy"
+									/>
+								</a>
 								<div
 									v-if="req.employee_remarks"
 									class="text-xs text-inkbase bg-surface border border-divider p-2.5"

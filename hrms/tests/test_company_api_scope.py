@@ -378,7 +378,8 @@ class TestRemoteCheckinPending(unittest.TestCase):
 	def test_pending_list_unchanged_without_a_company_user_permission(self):
 		query = self._query([], remote_checkin.list_pending_for_approver)
 		self.assertIsNone(query.predicate("Employee.company"))
-		self.assertEqual(query.joins, [])
+		# the Employee Checkin join (selfie) is unconditional; the fence join is not
+		self.assertNotIn("Employee", query.joins)
 
 	def test_badge_count_uses_the_same_fence_as_the_list(self):
 		query = FakeQuery(rows=[[3]])

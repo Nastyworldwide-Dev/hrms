@@ -145,13 +145,28 @@ def _pending_for_approver_query(user: str, statuses: tuple[str, ...] = ("Pending
 	return query, RemoteCheckinRequest
 
 
+def _with_checkin_selfie(query, RemoteCheckinRequest):
+	"""Join the punch so the list carries its `selfie_image`.
+
+	The photo is the one piece of evidence the employee supplies with an
+	out-of-radius punch, and it lives on Employee Checkin — not on the request
+	the approver is shown. Without this join the queue reached the approver as a
+	name, a time and a distance, and the photo was reachable only from Desk.
+	List surfaces only: the badge count has no use for it.
+	"""
+	EmployeeCheckin = frappe.qb.DocType("Employee Checkin")
+	query = query.left_join(EmployeeCheckin).on(RemoteCheckinRequest.checkin == EmployeeCheckin.name)
+	return query, EmployeeCheckin.selfie_image.as_("selfie_image")
+
+
 @frappe.whitelist()
 def list_pending_for_approver() -> list[dict]:
 	"""List pending requests where the current user is the approver."""
 	user = frappe.session.user
 	query, RemoteCheckinRequest = _pending_for_approver_query(user)
+	query, selfie = _with_checkin_selfie(query, RemoteCheckinRequest)
 	rows = (
-		query.select(*[RemoteCheckinRequest[field] for field in PENDING_REQUEST_FIELDS])
+		query.select(*[RemoteCheckinRequest[field] for field in PENDING_REQUEST_FIELDS], selfie)
 		.orderby(RemoteCheckinRequest.checkin_time, order=Order.desc)
 		.limit(200)
 		.run(as_dict=True)
@@ -176,8 +191,9 @@ def list_decided_for_approver(limit: int = 50) -> list[dict]:
 	"""
 	user = frappe.session.user
 	query, RemoteCheckinRequest = _pending_for_approver_query(user, statuses=("Approved", "Rejected"))
+	query, selfie = _with_checkin_selfie(query, RemoteCheckinRequest)
 	rows = (
-		query.select(*[RemoteCheckinRequest[field] for field in DECIDED_REQUEST_FIELDS])
+		query.select(*[RemoteCheckinRequest[field] for field in DECIDED_REQUEST_FIELDS], selfie)
 		.orderby(RemoteCheckinRequest.approved_at, order=Order.desc)
 		.limit(min(int(limit or 50), 200))
 		.run(as_dict=True)
