@@ -8,6 +8,10 @@ import KPIIcon from "@/components/icons/KPIIcon.vue"
 import SupportIcon from "@/components/icons/SupportIcon.vue"
 import SopIcon from "@/components/icons/SopIcon.vue"
 import MoreIcon from "@/components/icons/MoreIcon.vue"
+import HelpdeskIcon from "@/components/icons/HelpdeskIcon.vue"
+import ApprovaIcon from "@/components/icons/ApprovaIcon.vue"
+import ProjectBoardIcon from "@/components/icons/ProjectBoardIcon.vue"
+import { APP_LINKS } from "@/data/appLinks"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
@@ -82,3 +86,13 @@ export const TAB_ITEMS = [
 // Everything not in the tab bar (§13.1): KPI, Issues, SOPs — plus Team and
 // Remote Approvals, which the More screen adds conditionally.
 export const MORE_ITEMS = NAV_ITEMS.slice(4)
+
+// Sibling apps reached by leaving the PWA (see data/appLinks.js). Rendered as
+// their own "Apps" group under More and below the SideNav divider; never in the
+// phone tab bar, whose five destinations are fixed.
+const APP_ICONS = {
+	helpdesk: markRaw(HelpdeskIcon),
+	approva: markRaw(ApprovaIcon),
+	board: markRaw(ProjectBoardIcon),
+}
+export const APP_ITEMS = APP_LINKS.map((link) => ({ ...link, icon: APP_ICONS[link.key] }))

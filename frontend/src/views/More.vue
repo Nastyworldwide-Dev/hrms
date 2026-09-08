@@ -20,6 +20,29 @@
 						</template>
 					</GListRow>
 				</GListPanel>
+
+				<!-- Sibling apps on the same site. A row here LEAVES the PWA (full
+				     navigation, not a router push — each app owns its own scope), so
+				     it trails an arrow-out glyph instead of the chevron. Second glass
+				     surface on this screen, well inside the §15 budget. -->
+				<span class="g-eyebrow mt-[5px]">{{ __("Apps") }}</span>
+				<GListPanel>
+					<GListRow
+						v-for="item in appItems"
+						:key="item.key"
+						:label="item.title"
+						:sublabel="item.sublabel"
+						:chevron="false"
+						@click="openApp(item)"
+					>
+						<template #icon>
+							<component :is="item.icon" class="h-[17px] w-[17px]" />
+						</template>
+						<template #badge>
+							<ExternalLinkIcon class="flex-none text-ink-3" aria-hidden="true" />
+						</template>
+					</GListRow>
+				</GListPanel>
 			</div>
 		</template>
 	</BaseLayout>
@@ -33,7 +56,9 @@ import BaseLayout from "@/components/BaseLayout.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
-import { MORE_ITEMS } from "@/data/navItems"
+import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
+import { MORE_ITEMS, APP_ITEMS } from "@/data/navItems"
+import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
 
 const router = useRouter()
@@ -55,4 +80,20 @@ const moreItems = computed(() => {
 	}
 	return items
 })
+
+const appItems = computed(() =>
+	APP_ITEMS.map((item) => ({ ...item, title: __(item.title), sublabel: __(item.sublabel) }))
+)
+
+// Full navigation on purpose: the target SPA is outside vue-router's /hrms
+// base. Same origin, so the session cookie carries over. From an installed
+// PWA this opens in the OS in-app browser (out of scope) — accepted.
+const openApp = (item) => {
+	if (!isSameOriginPath(item.href)) {
+		console.warn("[More] refusing non-local app link:", item.href)
+		return
+	}
+	console.info("[More] leaving PWA for sibling app:", item.key)
+	window.location.assign(item.href)
+}
 </script>

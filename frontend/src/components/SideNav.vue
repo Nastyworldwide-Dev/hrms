@@ -97,6 +97,24 @@
 					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
 				</button>
 			</router-link>
+			<!-- Sibling apps, same group as More on the phone. Plain anchors: each
+			     target is its own SPA outside vue-router's base, so a real
+			     navigation is the only thing that reaches it. New tab on desktop so
+			     the HRMS shell (and its live socket) stays where it was. -->
+			<hr class="g-sidenav__divider" />
+			<a
+				v-for="item in appItems"
+				:key="item.key"
+				:href="item.href"
+				target="_blank"
+				rel="noopener"
+				class="g-sidenav__item g-focusable"
+				:title="item.sublabel"
+			>
+				<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
+				<ExternalLinkIcon v-show="!collapsed" class="flex-none opacity-70" aria-hidden="true" />
+			</a>
 		</div>
 
 		<!-- Profile -->
@@ -134,9 +152,10 @@ import { useRoute } from "vue-router"
 
 import { markRaw } from "vue"
 
-import { TAB_ITEMS, MORE_ITEMS } from "@/data/navItems"
+import { TAB_ITEMS, MORE_ITEMS, APP_ITEMS } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
+import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -172,6 +191,10 @@ const moreItems = computed(() => [
 	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
 	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
 ])
+
+const appItems = computed(() =>
+	APP_ITEMS.map((item) => ({ ...item, title: __(item.title), sublabel: __(item.sublabel) }))
+)
 
 const isActive = (path) => route.path === path
 
