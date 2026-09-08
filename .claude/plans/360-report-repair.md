@@ -1,0 +1,17 @@
+# Desk report repair handoff — authorized 360 scope
+
+Authorization: Nabil's "go go fix them all" includes the reported company and aggregate permission defects in the 360 audit. No schema, deployment or production data changes are required for this first report slice. Property tests required for permission and aggregate invariants. Read dev-protocols and erpnext-app-dev before implementation.
+
+## Bounded sequence
+
+1. Salary Register: apply canonical company permission before Salary Slip selection and component aggregation, independent of client-supplied filters and applicable_for. Preserve unrestricted HR, selected allowed company, native additional permissions, date/status/currency semantics. Reject an explicitly forbidden company or enforce empty results consistently with the shared company helper. Do not rely on result postfiltering for private totals.
+2. Monthly Attendance Sheet: choose one authorized employee/attendance population before constructing maps, rows, summary and chart. Intersect allowed company descendants with the app's global company fence. Respect Employee/Department/native row restrictions as well; do not replace native restrictions with a company-only check. Preserve grouped output and multiple shifts. Shared report_scope helpers already exist: reuse appropriate behavior, do not add a second company-permission resolver. Its introductory claim that Frappe never filters Script Reports is factually wrong and should be corrected when touched.
+3. Employee Analytics: the category query uses native match conditions but Not Set uses an unscoped count. Derive both from the same authorized population, respecting app company fencing and native employee visibility. Preserve blank categories honestly. Inspect actual installed qb_query defaults before alleging any pagination defect; docstring default20 is not sufficient evidence.
+4. Monthly Attendance chart: interpret canonical Half Day variants; a worked half-day cannot disappear. Use actual leave/attendance semantics for Other Half Present/Absent, not arbitrary fractions. Include multiple-shift and full-day-leave behavior. Keep chart and grid aligned.
+5. Family hunt other sensitive Script Reports by real query behavior. Fix same-root callers in small source slices or explicitly ticket each pending caller. Do not label every report universally exposed: installed Frappe filters result rows, but app-global Company applicable_for semantics and separate aggregates are the proven gap.
+
+## Verification
+
+RED first at production report execute/query path, then native generated SQL or isolated synthetic database replay. Cases: no company permissions, one/multiple companies, Company permission scoped to Leave Application, requested forbidden company, descendants partly permitted, employee/department restrictions, empty visible population, all hidden rows, grouped and ungrouped output, report export and prepared report effective user. Assert hidden sentinel data cannot reach rows, maps, chart, summary, component aggregate, or externally exposed counts. Test real functions rather than matching source marker strings. Existing audit probes are historical RED artifacts, not release gates.
+
+No authenticated live report replay yet. Local site testing must use synthetic data and rollback; do not expose employee/salary values. Preserve existing staged docs, prior repairs and Hafiz's useful behavior. Fresh verifier before integration; source budget <=400 changed lines per concern.
