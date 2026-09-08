@@ -433,3 +433,15 @@ hrms/mixins/pwa_notifications.py:27,45 same-root — every PWA Notification inse
 hrms/hr/doctype/pwa_notification/pwa_notification.py send_push_notification not-affected — unchanged body, now called from the worker; its own error handling (log_error) stands.
 hrms/utils/email_flush.py flush_email_queue_after_commit not-affected — the sibling after-commit pattern this follows; untouched.
 Lock: hrms/tests/test_notification_delivery_after_commit.py (event carries after_commit; after_insert enqueues one deduplicated after-commit job and sends nothing itself; the worker re-reads and sends; a never-committed row sends nothing; a queue failure never breaks the insert).
+
+CLASS: REPORT-COMPANY-FENCE — a Script Report that applied the caller's company FILTER but no company FENCE: Frappe checks a Script Report's roles and stops, so an HR (Company) user who left the filter blank or typed another company got every company's rows and totals (360 audit, Desk reports; Salary Register first).
+Changed: hrms/utils/report_scope.py (fenced_companies: the caller's fence resolved against the requested company through company_scope.resolve_company_filter — refused outside the fence, the fence when nothing requested, the chosen company when unfenced), hrms/payroll/report/salary_register/salary_register.py (get_salary_slips applies it inside the query before component aggregation).
+Call sites / consumers:
+hrms/payroll/report/salary_register/salary_register.py get_salary_slips same-root — the only slip selection; component maps and the DOJ map are keyed by these slips.
+hrms/hr/report/employee_advance_summary/employee_advance_summary.py:273 not-affected — already fenced with scoped_companies (no company filter of its own); fenced_companies is the requested-company-aware sibling.
+hrms/hr/report/shift_attendance/shift_attendance.py:293 not-affected — same: fenced with scoped_companies, unchanged.
+hrms/payroll/report/bank_remittance/bank_remittance.py:65 not-affected — a different get_salary_slips (its own, keyed by payroll entries); the name collides, the function does not.
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py, hrms/hr/report/employee_analytics/employee_analytics.py same-root — next slices in this batch (population fence, aggregate scope).
+hrms/utils/company_scope.py resolve_company_filter not-affected — reused, not duplicated; its PermissionError subclass is translated to frappe.throw here as permitted_company_filter does for the API.
+hrms/utils/report_scope.py scoped_companies / apply_employee_scope not-affected — unchanged; fenced_companies composes scoped_companies.
+Lock: hrms/tests/test_salary_register.py (fenced HR with no filter sees only their companies and no foreign component total; a foreign company is refused; own company allowed; unfenced HR keeps the register and their chosen company; other filters still apply) on the in-memory query builder hrms/tests/_qb_stub.py.

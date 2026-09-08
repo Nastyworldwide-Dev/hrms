@@ -8,6 +8,8 @@ from frappe.utils import flt
 
 import erpnext
 
+from hrms.utils.report_scope import fenced_companies
+
 salary_slip = frappe.qb.DocType("Salary Slip")
 salary_detail = frappe.qb.DocType("Salary Detail")
 salary_component = frappe.qb.DocType("Salary Component")
@@ -293,8 +295,12 @@ def get_salary_slips(filters, company_currency):
 	if filters.get("to_date"):
 		query = query.where(salary_slip.end_date <= filters.get("to_date"))
 
-	if filters.get("company"):
-		query = query.where(salary_slip.company == filters.get("company"))
+	# The caller's company fence, resolved against the company they asked
+	# for, applied before slips are selected — component totals are summed
+	# from these rows, so a fence on the result would still leak them.
+	companies = fenced_companies(filters.get("company"))
+	if companies:
+		query = query.where(salary_slip.company.isin(companies))
 
 	if filters.get("employee"):
 		query = query.where(salary_slip.employee == filters.get("employee"))

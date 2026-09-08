@@ -69,6 +69,39 @@ def scoped_companies(user: str | None = None) -> list[str]:
 	return companies
 
 
+def fenced_companies(requested: str | None = None, user: str | None = None) -> list[str]:
+	"""The companies a report query may return rows for, given what the
+	caller asked for. **Empty means unrestricted.**
+
+	Same rule as the PWA endpoints (company_scope.resolve_company_filter): a
+	fenced HR caller who asks for a company outside their fence is refused
+	with a PermissionError rather than handed an empty page or, worse, the
+	whole organisation; one who asks for nothing gets their fence; an
+	unfenced caller gets what they asked for. Apply it INSIDE the query, not
+	on the result — a Script Report's totals are computed from the rows it
+	selects, so post-filtering would still leak private aggregates.
+	"""
+	from hrms.utils.company_scope import CompanyScopeError, resolve_company_filter
+
+	fence = scoped_companies(user)
+	try:
+		companies = resolve_company_filter(requested, fence or None)
+	except CompanyScopeError:
+		logger.warning(
+			"[report_scope] %s asked for company %s outside their fence %s",
+			user or frappe.session.user,
+			requested,
+			fence,
+		)
+		frappe.throw(
+			frappe._("Not permitted to view data for company {0}.").format(requested),
+			frappe.PermissionError,
+		)
+	if companies is None and requested:
+		return [requested]  # unfenced: the company they chose, nothing more
+	return companies or []
+
+
 def apply_employee_scope(filters: dict | None, employee_field: str = "employee") -> dict | None:
 	"""Pin a report's employee filter to the caller unless they are HR.
 
