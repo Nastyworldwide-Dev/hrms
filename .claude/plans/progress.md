@@ -202,3 +202,9 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 2026-09-08T17:56Z NOTE: per the user ("review later"), NO reviewers were spawned for the batch 2 commits after 7cf3ebcb1; the post-commit hooks asked for frappe/design/cross-app reviews on each — run them in one pass before deploy. Agents: user-run script /tmp/claude-1009/-home-nabil-nz-version-16/f5651527-5a03-4dbb-9e4b-3209c3820cd2/scratchpad/agents-sonnet-high-2026-09-08.sh pins every agent to sonnet/high (scouts haiku/low).
 2026-09-08T17:56Z NEXT: (1) reviews for batch 2 (14 fix commits from 807765415 to cd00c19a7); (2) HR answers -> rest-day rule Q1-Q3, four-month window, "punched, pending"/September repair after D4; (3) report family hunt (plan item 5) and the remaining notification rows N01-N04, N09; (4) Nabil pushes nz-glass + deploys (patches: gate_hr_desktop_icons..., grant_hr_read_on_pwa_notification).
 - 2026-09-08T17:56:05Z COMMIT: 4915632e5 chore(plans): batch 2 rows 5-9 landed; ledgers, handoff and next steps → review dispatched
+- 2026-09-08T18:03:31Z PUSH: nz-glass @ d27f028c9
+- 2026-09-08T18:03:31Z COMMIT: d27f028c9 chore(plans): progress lines from the batch 2 commit gates → review dispatched
+- 2026-09-08T18:34:01Z PUSH: nz-glass @ 550771c6f
+- 2026-09-08T18:34:02Z COMMIT: 550771c6f test: give every test module the session's frappe back after it runs → review dispatched
+2026-09-08T18:52Z PLAN: Nadi PWA UX 2.0 reviewed -> docs/glass/plan/NADI_2.0_UX_PLAN.md (UX contract U1-U12, gap ledger, 8 mapping corrections, decisions Q1-Q10, phases 0-4 ~55 slices). Prototype folder is gitignored by the user; the plan cites it by path.
+2026-09-08T18:52Z NEXT: Nabil answers Q1-Q3 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/, then phase 0.3 mockup + 0.4 gates; batch-2 reviews and the earlier NEXT items stay open in parallel.
