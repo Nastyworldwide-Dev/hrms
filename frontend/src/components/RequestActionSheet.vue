@@ -73,7 +73,12 @@
 		     request and have no delete permission on it, so without this a saved
 		     draft — already sitting in your approver's queue — was a one-way trip. -->
 		<div
-			v-if="isOwnDraft"
+			v-if="
+				isOwnDraft &&
+				!workflow?.hasWorkflow &&
+				!hasPermission('approval') &&
+				!hasPermission('submit')
+			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
@@ -115,6 +120,7 @@
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
+				v-if="hasPermission('reject')"
 				@click="
 					confirmDecision(
 						{ status: 'Rejected' },
@@ -138,6 +144,7 @@
 			</Button>
 
 			<Button
+				v-if="hasPermission('approve')"
 				@click="updateDocumentStatus({ status: 'Approved' })"
 				:loading="submitting"
 				:disabled="submitting"
@@ -243,8 +250,8 @@ import FormattedField from "@/components/FormattedField.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import useWorkflow from "@/composables/workflow"
+import useDecisionCapability from "@/composables/decisionCapability"
 import { getCompanyCurrency } from "@/data/currencies"
-import { settings } from "@/data/settings"
 import { formatCurrency } from "@/utils/formatters"
 
 const __ = inject("$translate")
@@ -281,12 +288,12 @@ function showFilePreview(fileObj) {
 // already confirms this same class of action — this brings the sheet in line.)
 const pendingDecision = ref(null)
 function confirmDecision(action, copy) {
-	pendingDecision.value = { action, ...copy }
+	pendingDecision.value = { action, review: currentRequest(), ...copy }
 }
 function runPendingDecision() {
 	const decision = pendingDecision.value
 	pendingDecision.value = null
-	if (decision) updateDocumentStatus(decision.action)
+	if (decision) updateDocumentStatus(decision.action, decision.review)
 }
 
 const document = createDocumentResource({
@@ -312,11 +319,16 @@ const docPermissions = createResource({
 	auto: true,
 })
 
-const permittedWriteFields = createResource({
-	url: "hrms.api.get_permitted_fields_for_write",
-	params: { doctype: props.modelValue.doctype },
-	auto: true,
-})
+const decisionCapability = useDecisionCapability(
+	() => document,
+	() => ({ doctype: props.modelValue.doctype, name: props.modelValue.name }),
+	() =>
+		toast({
+			title: __("Request changed"),
+			text: __("This request changed. Close and reopen it before deciding."),
+			icon: "alert-circle",
+		})
+)
 
 const decision = createResource({ url: "hrms.api.approval.decide" })
 // Submit and cancel for requests with no decision field. NOT document.setValue:
@@ -396,13 +408,13 @@ function withdrawDraft() {
 }
 
 function hasPermission(action) {
-	if (action === "approval" && props.modelValue.doctype === "Leave Application") {
-		// prevent self leave approval
-		const isSelfLeave = document?.doc?.employee === sessionEmployee?.data?.name
-		if (isSelfLeave && settings.data?.prevent_self_leave_approval) return false
-		return permittedWriteFields.data?.includes(approvalField.value)
+	if (["approval", "approve", "reject", "submit"].includes(action)) {
+		if (workflow.value?.hasWorkflow) return false
+		const actions = decisionCapability.actions.value
+		if (action === "approval") return actions.includes("Approved") || actions.includes("Rejected")
+		return actions.includes({ approve: "Approved", reject: "Rejected", submit: "Submit" }[action])
 	}
-	return docPermissions.data?.permissions[action]
+	return Boolean(docPermissions.data?.permissions?.[action])
 }
 
 const currency = computed(() => {
@@ -467,6 +479,7 @@ const onActionSuccess = ({ status, docstatus, dismiss }) => {
 const onActionError =
 	({ status, docstatus }) =>
 	(error) => {
+		document.reload?.()
 		// the server's message says WHY (permissions, validation) —
 		// a bare "Approval failed!" is undebuggable from the field
 		console.warn("[RequestActionSheet] action failed:", error)
@@ -479,7 +492,22 @@ const onActionError =
 		})
 	}
 
-const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
+const currentRequest = () => ({
+	doctype: document.doc?.doctype,
+	name: document.doc?.name,
+	expected_modified: document.doc?.modified,
+})
+
+const updateDocumentStatus = ({ status = "", docstatus = 0 }, review = currentRequest()) => {
+	if (
+		submitting.value ||
+		review.doctype !== props.modelValue.doctype ||
+		review.name !== props.modelValue.name ||
+		JSON.stringify(review) !== JSON.stringify(currentRequest()) ||
+		(status && !hasPermission(status === "Approved" ? "approve" : "reject")) ||
+		(docstatus === 1 && !hasPermission("submit"))
+	)
+		return
 	// A decision goes to the server as a decision. This used to be assembled
 	// here — status, plus docstatus=1 but only for "Approved" and only when a
 	// client-side permission read said the user could submit. Rejections
@@ -493,8 +521,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	if (status) {
 		return decision.submit(
 			{
-				doctype: props.modelValue.doctype,
-				name: props.modelValue.name,
+				...review,
 				status,
 			},
 			{
@@ -516,8 +543,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 	// and tells us what it did.
 	finalize.submit(
 		{
-			doctype: props.modelValue.doctype,
-			name: props.modelValue.name,
+			...review,
 			docstatus,
 		},
 		{

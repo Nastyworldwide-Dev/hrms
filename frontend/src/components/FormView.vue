@@ -213,7 +213,7 @@
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<div class="w-full sm:max-w-2xl sm:mx-auto">
-					<GButton :label="__('Approve or reject')" @click="openReviewSheet" />
+					<GButton :label="__('Review request')" @click="openReviewSheet" />
 				</div>
 			</div>
 
@@ -402,6 +402,7 @@ import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 
 import { FileAttachment, guessStatusColor } from "@/composables"
 import useWorkflow from "@/composables/workflow"
+import useDecisionCapability from "@/composables/decisionCapability"
 import { getCompanyCurrency } from "@/data/currencies"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
@@ -464,7 +465,6 @@ const { downloadPDF } = useDownloadPDF()
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
-const employee = inject("$employee")
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
 const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
@@ -695,25 +695,17 @@ const permittedWriteFields = createResource({
 	params: { doctype: props.doctype },
 })
 
-// doctypes whose server controller rejects submit until the approver has
-// set one of these statuses — offering Submit earlier can only ever error
-const SUBMIT_REQUIRES_STATUS = {
-	"Leave Application": ["Approved", "Rejected"],
-	"Shift Request": ["Approved", "Rejected"],
-}
-
 const formButton = computed(() => {
 	if (!props.showFormButton) return null
 
 	if (props.id && props.isSubmittable && !isFormDirty.value) {
-		const requiredStatuses = SUBMIT_REQUIRES_STATUS[props.doctype]
-		const submitBlocked =
-			(requiredStatuses && !requiredStatuses.includes(formModel.value.status)) ||
-			// Attendance Request: submitting IS the approval — the server rejects
-			// self-submission, so never offer Submit on your own request
-			(props.doctype === "Attendance Request" && formModel.value.employee === employee.data?.name)
-
-		if (formModel.value.docstatus === 0 && hasPermission("submit") && !submitBlocked) {
+		// Decision-bearing requests use the capability-backed review sheet,
+		// including already-decided drafts. Native Submit alone is insufficient.
+		if (
+			formModel.value.docstatus === 0 &&
+			hasPermission("submit") &&
+			!REQUEST_SUMMARY_FIELDS[props.doctype]
+		) {
 			return "Submit"
 		} else if (formModel.value.docstatus === 1 && hasPermission("cancel")) {
 			return "Cancel"
@@ -726,25 +718,28 @@ const formButton = computed(() => {
 	return null
 })
 
-// Someone else's open request that this user may decide on. Same rule the
-// sheet applies (write access to the decision field; Expense Claim decides on
-// approval_status), minus the workflow case, which has its own action sheet.
-const REVIEW_DECISION_FIELD = { "Expense Claim": "approval_status" }
+// Use the same document capability as the sheet and Desk. Field grants alone
+// do not describe the server's routed-manager authority.
+const decisionCapability = useDecisionCapability(
+	() => documentResource,
+	() => ({ doctype: props.doctype, name: props.id }),
+	() =>
+		toast({
+			title: __("Request changed"),
+			text: __("This request changed. Reload it before deciding."),
+			icon: "alert-circle",
+		})
+)
 const canReview = computed(() => {
 	if (!props.id || isFormDirty.value || workflow.value?.hasWorkflow) return false
-	if (!REQUEST_SUMMARY_FIELDS[props.doctype]) return false
-	const decisionField = REVIEW_DECISION_FIELD[props.doctype] || "status"
-	const doc = formModel.value
 	return (
-		doc.docstatus === 0 &&
-		["Open", "Draft"].includes(doc[decisionField]) &&
-		doc.employee !== employee.data?.name &&
-		Boolean(permittedWriteFields.data?.includes(decisionField))
+		Boolean(REQUEST_SUMMARY_FIELDS[props.doctype]) && decisionCapability.actions.value.length > 0
 	)
 })
 const showReviewSheet = ref(false)
 const reviewRequest = ref(null)
 function openReviewSheet() {
+	if (!canReview.value) return
 	reviewRequest.value = { doctype: props.doctype, name: props.id }
 	showReviewSheet.value = true
 }

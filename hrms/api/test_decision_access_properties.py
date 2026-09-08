@@ -29,20 +29,21 @@ namespace = {"frappe": frappe, "logger": logging.getLogger(__name__)}
 nodes = []
 for node in ast.parse(SOURCE.read_text()).body:
 	if isinstance(node, ast.Assign) and any(
-		getattr(t, "id", "") == "DECIDE_THEN_SUBMIT" for t in node.targets
+		getattr(t, "id", "") in {"DECIDE_THEN_SUBMIT", "DECISIONS"} for t in node.targets
 	):
 		nodes.append(node)
 	if isinstance(node, ast.FunctionDef) and node.name in {
 		"can_decide",
 		"_decision_access",
 		"_request_read_allowed",
+		"get_decision_actions",
 	}:
 		node.decorator_list = []
 		nodes.append(node)
 exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), namespace)
 
 
-@settings(max_examples=150, deadline=None)
+@settings(max_examples=250, deadline=None)
 @given(
 	doctype=st.sampled_from(TYPES),
 	read=st.booleans(),
@@ -54,7 +55,7 @@ exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), name
 	prevent_self=st.booleans(),
 	company=st.booleans(),
 	workflow=st.booleans(),
-	pending=st.booleans(),
+	state=st.sampled_from(["pending", "Approved", "Rejected", "Invalid"]),
 	docstatus=st.sampled_from([0, 1, 2]),
 )
 def test_capability_is_exactly_the_shared_decision_access(
@@ -68,15 +69,20 @@ def test_capability_is_exactly_the_shared_decision_access(
 	prevent_self,
 	company,
 	workflow,
-	pending,
+	state,
 	docstatus,
 ):
 	user = "synthetic-reviewer@example.invalid"
 	decision_field, initial = namespace["DECIDE_THEN_SUBMIT"][doctype]
 	doc = SimpleNamespace(
-		doctype=doctype, name="SYNTHETIC", employee="STAFF", company="A", docstatus=docstatus
+		doctype=doctype,
+		name="SYNTHETIC",
+		employee="STAFF",
+		company="A",
+		docstatus=docstatus,
+		modified="2026-09-08 12:00:00",
 	)
-	setattr(doc, decision_field, initial if pending else "Approved")
+	setattr(doc, decision_field, initial if state == "pending" else state)
 	doc.get = lambda key: getattr(doc, key, None)
 	namespace["_is_routed_approver"] = lambda doc: routed
 	namespace["get_permitted_fields"] = lambda *args, **kwargs: [decision_field] if field else []
@@ -115,10 +121,21 @@ def test_capability_is_exactly_the_shared_decision_access(
 		),
 	):
 		actual = namespace["can_decide"](doctype, doc.name)
-	self_allowed = not self_employee or (
-		doctype in {"Leave Application", "Expense Claim"} and not prevent_self
-	)
+		capability = namespace["get_decision_actions"](doctype, doc.name)
+
+	def self_allowed(action):
+		return not self_employee or (
+			doctype in {"Leave Application", "Expense Claim"}
+			and (not prevent_self or (doctype == "Leave Application" and action == "Rejected"))
+		)
+
 	authority = (submit and write and field) or routed
-	assert actual == (
-		docstatus == 0 and pending and not workflow and company and read and self_allowed and authority
-	)
+	baseline = docstatus == 0 and not workflow and company and read and authority
+	expected = []
+	if baseline:
+		if state == "pending":
+			expected = [action for action in ["Approved", "Rejected"] if self_allowed(action)]
+		elif state in {"Approved", "Rejected"} and self_allowed(state):
+			expected = ["Submit"]
+	assert actual == ("Approved" in expected)
+	assert capability == {"actions": expected, "modified": doc.modified if expected else None}

@@ -313,3 +313,32 @@ class TestDecisionAccess(unittest.TestCase):
 			self.assertFalse(self.can_decide())
 			with self.assertRaises(frappe.PermissionError):
 				self.decide()
+
+	def test_action_capability_preserves_legacy_submit_and_self_leave_reject(self):
+		frappe.session.user = STAFF
+		self.users[STAFF]["roles"] = ["Employee", "HR Manager"]
+		self.set_doctype("Leave Application")
+		capability = approval.get_decision_actions(self.doc.doctype, self.doc.name)
+		self.assertEqual(capability["actions"], ["Rejected"])
+		self.assertFalse(self.can_decide())
+		frappe.session.user = HR_A
+		for doctype, status in product(approval.DECIDE_THEN_SUBMIT, ["Approved", "Rejected"]):
+			with self.subTest(doctype=doctype, status=status):
+				self.set_doctype(doctype)
+				setattr(self.doc, approval.DECIDE_THEN_SUBMIT[doctype][0], status)
+				capability = approval.get_decision_actions(doctype, self.doc.name)
+				self.assertEqual(capability, {"actions": ["Submit"], "modified": self.doc.modified})
+				self.assertFalse(self.can_decide())
+
+	def test_legacy_submit_checks_reviewed_revision_and_preserves_retry(self):
+		frappe.session.user = HR_A
+		self.doc.status = "Approved"
+		with self.assertRaises(frappe.TimestampMismatchError):
+			approval.finalize(self.doc.doctype, self.doc.name, 1, expected_modified="2026-09-08 11:59:00")
+		self.assertEqual(self.submissions, 0)
+		for _ in range(2):
+			result = approval.finalize(
+				self.doc.doctype, self.doc.name, 1, expected_modified="2026-09-08 12:00:00"
+			)
+			self.assertEqual(result["docstatus"], 1)
+		self.assertEqual(self.submissions, 1)

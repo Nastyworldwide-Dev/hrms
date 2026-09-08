@@ -242,14 +242,7 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 
 	if current != DECIDE_THEN_SUBMIT[doctype][1]:
 		frappe.throw(_("This request is no longer awaiting a decision."), frappe.ValidationError)
-	if expected_modified is not None:
-		from frappe.utils import get_datetime
-
-		if get_datetime(doc.modified) != get_datetime(expected_modified):
-			frappe.throw(
-				_("This request changed since you reviewed it. Reload and review it again."),
-				frappe.TimestampMismatchError,
-			)
+	_check_review_revision(doc, expected_modified)
 
 	doc.set(fieldname, status)
 	# ONE save cycle: validate -> before_submit (mirrored-employee guard) ->
@@ -269,6 +262,35 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 	return _state(doc)
 
 
+def _check_review_revision(doc, expected_modified: str | None) -> None:
+	"""A fresh action must target the persisted values actually reviewed."""
+	from frappe.utils import get_datetime
+
+	if expected_modified is not None and get_datetime(doc.modified) != get_datetime(expected_modified):
+		logger.info("[approval] stale reviewed revision refused for %s", doc.doctype)
+		frappe.throw(
+			_("This request changed since you reviewed it. Reload and review it again."),
+			frappe.TimestampMismatchError,
+		)
+
+
+@frappe.whitelist()
+def get_decision_actions(doctype: str, name: str) -> dict:
+	"""Action-specific authority bound to the persisted revision being reviewed."""
+	logger.debug("[approval] checking available actions for %s", doctype)
+	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
+		return {"actions": [], "modified": None}
+	doc = frappe.get_doc(doctype, name)
+	field, pending = DECIDE_THEN_SUBMIT[doctype]
+	actions = []
+	if doc.docstatus == 0:
+		if doc.get(field) == pending:
+			actions = [status for status in DECISIONS if _decision_access(doc, status)]
+		elif doc.get(field) in DECISIONS and _decision_access(doc, doc.get(field)):
+			actions = ["Submit"]
+	return {"actions": actions, "modified": doc.get("modified") if actions else None}
+
+
 @frappe.whitelist()
 def can_decide(doctype: str, name: str) -> bool:
 	"""Whether the current user can open and approve this pending request.
@@ -276,12 +298,7 @@ def can_decide(doctype: str, name: str) -> bool:
 	Uses the same access gate as decide; active workflows retain their own
 	transition endpoint. Business validators still run at submission time.
 	"""
-	logger.debug("[approval] can_decide %s %s for %s", doctype, name, frappe.session.user)
-	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
-		return False
-	doc = frappe.get_doc(doctype, name)
-	fieldname, pending = DECIDE_THEN_SUBMIT[doctype]
-	return bool(doc.docstatus == 0 and doc.get(fieldname) == pending and _decision_access(doc))
+	return "Approved" in get_decision_actions(doctype, name)["actions"]
 
 
 @frappe.whitelist()
@@ -322,7 +339,7 @@ SUBMIT, CANCEL = 1, 2
 
 
 @frappe.whitelist(methods=["POST"])
-def finalize(doctype: str, name: str, docstatus: int) -> dict:
+def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | None = None) -> dict:
 	"""Submit or cancel a request that carries no decision field.
 
 	THE BUG THIS REPLACES, reported from the field and reproduced in one line:
@@ -394,6 +411,7 @@ def finalize(doctype: str, name: str, docstatus: int) -> dict:
 
 	if doc.docstatus == 2:
 		frappe.throw(_("{0} has been cancelled.").format(_(doctype)), frappe.ValidationError)
+	_check_review_revision(doc, expected_modified)
 	# The real transition: validate -> before_submit -> on_submit (or the cancel
 	# chain). Any failure raises and the whole request rolls back; there is no
 	# path that half-moves the document.

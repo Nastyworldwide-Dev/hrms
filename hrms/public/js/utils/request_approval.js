@@ -13,7 +13,7 @@ frappe.provide("hrms.approval");
 
 // Must match hrms/api/approval.py DECIDE_THEN_SUBMIT exactly. If the two ever
 // drift, a doctype either loses its Desk buttons or shows them where decide would
-// reject — so the server (can_decide) is the real gate; this list only decides
+// reject — so the server (get_decision_actions) is the real gate; this list only decides
 // which forms to wire the refresh handler onto.
 hrms.approval.DECIDE_DOCTYPES = [
 	"Leave Application",
@@ -24,44 +24,106 @@ hrms.approval.DECIDE_DOCTYPES = [
 	"Replacement Leave Claim",
 ];
 
-hrms.approval.decide = function (frm, status) {
-	frappe.confirm(__("{0} this {1}?", [__(status), __(frm.doctype)]), () => {
+hrms.approval.is_current = function (frm, review) {
+	const valid =
+		review &&
+		frm._hrms_review === review &&
+		!frm.is_new() &&
+		!frm.is_dirty() &&
+		frm.doc.docstatus === 0 &&
+		!frappe.model.has_workflow(frm.doctype) &&
+		frm.doctype === review.doctype &&
+		frm.doc.name === review.name &&
+		frm.doc.modified === review.expected_modified;
+	if (!valid) console.debug("[approval] stale or edited review ignored");
+	return Boolean(valid);
+};
+
+hrms.approval.decide = function (frm, status, review = frm._hrms_review) {
+	if (
+		!hrms.approval.is_current(frm, review) ||
+		!review.actions?.includes(status) ||
+		frm._hrms_deciding
+	)
+		return;
+	frappe.confirm(__("{0} this {1}?", [__(status), __(review.doctype)]), () => {
+		if (
+			!hrms.approval.is_current(frm, review) ||
+			!review.actions?.includes(status) ||
+			frm._hrms_deciding
+		)
+			return;
+		frm._hrms_deciding = true;
+		console.debug("[approval] recording reviewed decision", review.doctype);
 		frappe.call({
-			method: "hrms.api.approval.decide",
-			args: { doctype: frm.doctype, name: frm.doc.name, status: status },
+			method:
+				status === "Submit" ? "hrms.api.approval.finalize" : "hrms.api.approval.decide",
+			args: {
+				doctype: review.doctype,
+				name: review.name,
+				expected_modified: review.expected_modified,
+				...(status === "Submit" ? { docstatus: 1 } : { status }),
+			},
 			freeze: true,
 			freeze_message: __("Recording decision…"),
 			callback: () => {
+				if (!hrms.approval.is_current(frm, review)) return;
 				frappe.show_alert({
-					message: __(status),
-					indicator: status === "Approved" ? "green" : "orange",
+					message: __(status === "Submit" ? "Submitted" : status),
+					indicator: status === "Rejected" ? "orange" : "green",
 				});
 				frm.reload_doc();
+			},
+			always: () => {
+				frm._hrms_deciding = false;
 			},
 		});
 	});
 };
 
 hrms.approval.add_buttons = function (frm) {
-	// Only a saved draft awaiting a decision.
-	if (frm.is_new() || frm.doc.docstatus !== 0) return;
-	// Raw Submit never works on these (the decide-first guard), so remove it once
-	// the draft is saved. Editing keeps Save; the decision is Approve/Reject below.
-	if (!frm.is_dirty()) frm.page.clear_primary_action();
-	// The server decides visibility — submit permission OR the routed approver, the
-	// exact gate decide enforces — so a shown button never just errors, and a
-	// routed manager without a blanket submit role still gets it.
+	const review = {
+		doctype: frm.doctype,
+		name: frm.doc.name,
+		expected_modified: frm.doc.modified,
+	};
+	frm._hrms_review = review;
+	console.debug("[approval] refreshing decision controls", frm.doctype);
+	// Workflow owns its controls. Editing owns Save, even while a response waits.
+	if (frappe.model.has_workflow(frm.doctype)) return;
+	frm.remove_custom_button(__("Reject"));
+	if (!hrms.approval.is_current(frm, review)) return;
+	frm.page.clear_primary_action();
+	if (!review.expected_modified) return;
 	frappe.call({
-		method: "hrms.api.approval.can_decide",
-		args: { doctype: frm.doctype, name: frm.doc.name },
+		method: "hrms.api.approval.get_decision_actions",
+		args: { doctype: review.doctype, name: review.name },
 		callback: (r) => {
-			if (!r.message || frm.doc.docstatus !== 0) return;
-			frm.page.set_primary_action(__("Approve"), () =>
-				hrms.approval.decide(frm, "Approved"),
+			if (!hrms.approval.is_current(frm, review)) return;
+			const capability = r.message;
+			if (!Array.isArray(capability?.actions) || !capability.actions.length) return;
+			if (capability.modified !== review.expected_modified) {
+				frappe.show_alert({
+					message: __("This request changed. Reload it before deciding."),
+					indicator: "orange",
+				});
+				return;
+			}
+			review.actions = capability.actions.filter((action) =>
+				["Approved", "Rejected", "Submit"].includes(action)
 			);
-			frm.add_custom_button(__("Reject"), () =>
-				hrms.approval.decide(frm, "Rejected"),
-			);
+			if (review.actions.includes("Approved"))
+				frm.page.set_primary_action(__("Approve"), () =>
+					hrms.approval.decide(frm, "Approved", review)
+				);
+			if (review.actions.includes("Rejected"))
+				frm.add_custom_button(__("Reject"), () =>
+					hrms.approval.decide(frm, "Rejected", review)
+				);
+			if (review.actions.includes("Submit"))
+				frm.page.set_primary_action(__("Submit"), () =>
+					hrms.approval.decide(frm, "Submit", review)
+				);
 		},
 	});
 };
