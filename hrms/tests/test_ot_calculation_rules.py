@@ -66,18 +66,24 @@ class TestCompanyWeekend(unittest.TestCase):
 		with patch.object(ot.frappe.db, "get_value", side_effect=Exception("Unknown column")):
 			self.assertEqual(ot._company_weekend("WWSB"), (6, 5))
 
-	def test_classify_uses_the_company_weekend(self):
-		# 2026-08-21 is a Friday. No holiday list resolves; company says Friday=rest.
+	def test_classify_uses_company_weekend_only_for_listed_weekly_offs(self):
+		# Friday is listed weekly off and classified Rest by the company setting.
+		# Sunday is not listed, so remains a normal workday.
 		def get_value(doctype, name, fields, *a, **k):
 			if doctype == "Employee":
-				return (None, "EAST-COAST")
-			if doctype == "Company" and fields == ["hr_weekly_rest_day", "hr_weekly_off_day"]:
+				return "EAST-COAST"
+			if doctype == "Company":
 				return ("Friday", "Saturday")
+			if doctype == "Holiday" and name["holiday_date"] == date(2026, 8, 21):
+				return types.SimpleNamespace(weekly_off=1)
 			return None
 
-		with patch.object(ot.frappe.db, "get_value", side_effect=get_value):
+		employee_module = types.SimpleNamespace(get_holiday_list_for_employee=lambda *a, **k: "ASSIGNED")
+		with (
+			patch.object(ot.frappe.db, "get_value", side_effect=get_value),
+			patch.dict(sys.modules, {"erpnext.setup.doctype.employee.employee": employee_module}),
+		):
 			self.assertEqual(ot._classify_day("EMP-1", date(2026, 8, 21), "normal"), "rest")
-			# and Sunday is now a plain working day for that company
 			self.assertEqual(ot._classify_day("EMP-1", date(2026, 8, 23), "normal"), "normal")
 
 

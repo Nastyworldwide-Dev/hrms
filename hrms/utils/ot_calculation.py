@@ -250,42 +250,32 @@ def _company_weekend(company) -> tuple[int, int]:
 	)
 
 
-def _classify_day(employee, day, default_day_type):
-	"""Resolve day_type per work date using the employee's Holiday List and
-	their company's configured weekend."""
-	logger.info("[ot_calculation] classify day=%s employee=%s default=%s", day, employee, default_day_type)
-	holiday_list = None
-	company = None
-	try:
-		holiday_list, company = frappe.db.get_value("Employee", employee, ["holiday_list", "company"]) or (
-			None,
-			None,
-		)
-		if not holiday_list and company:
-			holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
-	except Exception as exc:
-		logger.warning("[ot_calculation] Could not resolve holiday list for %s: %s", employee, exc)
+def _classify_day(employee, day, default_day_type, shift=None):
+	"""Resolve the work date from the same applicable calendar as Shift Type.
 
-	rest_weekday, off_weekday = _company_weekend(company)
+	Company weekend settings distinguish listed weekly-off rows; they never
+	create a holiday absent from the applicable calendar.
+	"""
+	from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
-	if holiday_list:
-		row = frappe.db.get_value(
-			"Holiday",
-			{"parent": holiday_list, "holiday_date": day},
-			["weekly_off"],
-			as_dict=True,
-		)
-		if row:
-			if not row.weekly_off:
-				return "public_holiday"
-			return "rest" if day.weekday() == rest_weekday else "off"
-
-	weekday = day.weekday()
-	if weekday == rest_weekday:
-		return "rest"
-	if weekday == off_weekday:
-		return "off"
-	return default_day_type or "normal"
+	day = getdate(day)
+	logger.info("[ot_calculation] classify day=%s employee=%s shift=%s", day, employee, shift)
+	holiday_list = frappe.db.get_value("Shift Type", shift, "holiday_list") if shift else None
+	if not holiday_list:
+		holiday_list = get_holiday_list_for_employee(employee, False, as_on=day)
+	if not holiday_list:
+		logger.warning("[ot_calculation] no applicable holiday list for work date %s", day)
+		return "normal"
+	row = frappe.db.get_value(
+		"Holiday", {"parent": holiday_list, "holiday_date": day}, ["weekly_off"], as_dict=True
+	)
+	if not row:
+		return "normal"
+	if not cint(row.weekly_off):
+		return "public_holiday"
+	company = frappe.db.get_value("Employee", employee, "company")
+	rest_weekday, _ = _company_weekend(company)
+	return "rest" if day.weekday() == rest_weekday else "off"
 
 
 def _ot_bands_for_day(ot_hours, hourly_rate, day_type, config):
@@ -471,7 +461,7 @@ def _iter_day_ot(
 		if day < start_date:
 			continue
 
-		resolved_day_type = _classify_day(employee, day, default_day_type)
+		resolved_day_type = _classify_day(employee, day, default_day_type, shift=per_day_shift.get(day))
 		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
 		bands = _ot_bands_for_day(hours, hourly_rate, resolved_day_type, config)
 		amount = round(sum(b["amount"] for b in bands), 2)
@@ -658,7 +648,7 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 	if config["daily_cap"] > 0:
 		ot_hours = min(ot_hours, config["daily_cap"])
 
-	day_type = _classify_day(employee, attendance_date, "normal")
+	day_type = _classify_day(employee, attendance_date, "normal", shift=shift)
 	hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
 	bands = _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)
 	logger.info(
