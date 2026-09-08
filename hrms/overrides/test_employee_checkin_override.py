@@ -18,9 +18,10 @@ repo root with a frappe-importable interpreter, as well as under
 
 from __future__ import annotations
 
+import sys
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import hrms.overrides.employee_checkin_override as mod
 
@@ -138,43 +139,52 @@ class TestImpreciseReadingEndToEnd(unittest.TestCase):
 
 
 class TestGeofenceRejectLogDurability(unittest.TestCase):
-	"""A strict rejection throws, and the throw rolls back the request
-	transaction — the same one that wrote the Geofence Reject Log. Bench-verified
-	that without an explicit commit the row is gone after the rollback, which is
-	why production carried zero reject logs despite every rejection writing one.
-	_record_geofence_reject must commit the audit row so it survives the throw.
-	"""
+	"""The native DB suite proves durability; here exercise all cleanup failures."""
 
-	def _ctx(self):
-		return {
-			"reason": mod.REASON_OUTSIDE_RADIUS,
-			"distance_m": 6937.0,
-			"radius_m": 100,
-			"overshoot_m": 6837.0,
-			"accuracy_m": 10.0,
-		}
+	def test_only_isolated_connection_commits_and_all_context_is_restored(self):
+		for failure in (None, "connect", "insert", "commit", "rollback", "close"):
+			with self.subTest(failure=failure):
+				caller, isolated, log = MagicMock(), MagicMock(), MagicMock()
+				flags = mod.frappe._dict(in_test=True, currently_saving=[("caller", "document")])
+				realtime, messages = ["caller event"], ["caller message"]
+				local = SimpleNamespace(db=caller, flags=flags, _realtime_log=realtime, message_log=messages)
+				factory = MagicMock(return_value=isolated)
+				if failure == "connect":
+					factory.side_effect = RuntimeError("synthetic connect failure")
+				if failure in ("insert", "rollback"):
+					log.insert.side_effect = ValueError("synthetic insertion failure")
+				if failure in ("commit", "rollback", "close"):
+					getattr(isolated, failure).side_effect = RuntimeError("synthetic cleanup failure")
 
-	def test_reject_log_is_committed_so_it_survives_the_rollback(self):
-		doc = _FakeCheckin()
-		with (
-			patch(f"{MODULE}.frappe.new_doc"),
-			patch(f"{MODULE}.frappe.db.commit") as commit,
-			patch(f"{MODULE}.frappe.flags", SimpleNamespace(in_test=False)),
-		):
-			mod._record_geofence_reject(doc, self._ctx(), "KL Office")
-		commit.assert_called_once()
+				def insert_context():
+					self.assertIs(local.db, isolated)
+					self.assertIsNot(local.flags, flags)
+					local.flags.currently_saving.append(("audit", "document"))
+					local._realtime_log = ["audit event"]
+					local.message_log.append("audit message")
+					return log
 
-	def test_reject_log_does_not_commit_under_the_test_runner(self):
-		# The isolation guard: inside the runner the commit must be skipped, or it
-		# would persist other tests' fixtures past their rolled-back transaction.
-		doc = _FakeCheckin()
-		with (
-			patch(f"{MODULE}.frappe.new_doc"),
-			patch(f"{MODULE}.frappe.db.commit") as commit,
-			patch(f"{MODULE}.frappe.flags", SimpleNamespace(in_test=True)),
-		):
-			mod._record_geofence_reject(doc, self._ctx(), "KL Office")
-		commit.assert_not_called()
+				with (
+					patch.dict(sys.modules, {"frappe.database": SimpleNamespace(get_db=factory)}),
+					patch.object(mod.frappe, "local", local),
+					patch.object(mod.frappe, "new_doc", side_effect=lambda *_: insert_context()),
+				):
+					mod._record_geofence_reject(_FakeCheckin(), {"reason": mod.REASON_OUTSIDE_RADIUS}, None)
+				self.assertIs(local.db, caller)
+				self.assertIs(local.flags, flags)
+				self.assertEqual(flags.currently_saving, [("caller", "document")])
+				self.assertIs(local._realtime_log, realtime)
+				self.assertIs(local.message_log, messages)
+				caller.commit.assert_not_called()
+				caller.rollback.assert_not_called()
+				caller.close.assert_not_called()
+				if failure != "connect":
+					isolated.close.assert_called_once()
+				if failure is None:
+					isolated.commit.assert_called_once()
+					isolated.rollback.assert_not_called()
+				elif failure in ("insert", "commit", "rollback"):
+					isolated.rollback.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -271,9 +271,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 	def _throw_strict_geofence(self, ctx, shift_loc_name):
 		reason = ctx.get("reason")
 		logger.info(
-			"[employee_checkin] Strict geofence reject employee=%s shift=%s reason=%s",
-			self.employee,
-			self.shift,
+			"[employee_checkin] Strict geofence reject reason=%s",
 			reason,
 		)
 		_record_geofence_reject(self, ctx, shift_loc_name)
@@ -321,52 +319,65 @@ def _record_geofence_reject(doc, ctx, shift_loc_name):
 	Failure to write must not block the user-facing throw — the log is for
 	auditing, not flow control. Any error here is downgraded to a warning.
 	"""
+	# The caller may already hold unrelated writes. A refused punch must never
+	# commit them, including when invoked by a worker or the test runner.
+	from frappe.database import get_db
+
+	caller = frappe.local.db
+	missing = object()
+	context = {key: getattr(frappe.local, key, missing) for key in ("flags", "_realtime_log", "message_log")}
 	try:
-		log = frappe.new_doc("Geofence Reject Log")
-		log.update(
-			{
-				"employee": doc.employee,
-				"log_type": doc.log_type or "IN",
-				"rejected_at": doc.time or frappe.utils.now_datetime(),
-				"shift_type": doc.shift,
-				"shift_location": shift_loc_name,
-				"reason": ctx.get("reason"),
-				"distance_m": ctx.get("distance_m"),
-				"radius_m": ctx.get("radius_m"),
-				"overshoot_m": ctx.get("overshoot_m"),
-				"accuracy_m": ctx.get("accuracy_m"),
-				"latitude": doc.latitude,
-				"longitude": doc.longitude,
-				"device_id": getattr(doc, "device_id", None),
-			}
+		audit_db = get_db(
+			socket=caller.socket,
+			host=caller.host,
+			port=caller.port,
+			user=caller.user,
+			password=caller.password,
+			cur_db_name=caller.cur_db_name,
 		)
-		log.flags.ignore_permissions = True
-		log.insert()
-		# The strict throw that follows this call rolls back the request
-		# transaction — the very one that just wrote this row — so without an
-		# explicit commit the audit trace is discarded with it. Bench-verified:
-		# the row existed before the rollback and was gone after, which is why
-		# production carried zero Geofence Reject Logs despite every rejection
-		# writing one. Commit it now. Safe: validate_distance_from_shift_location
-		# runs pre-insert, so no Employee Checkin row is pending — this cannot
-		# persist a check-in for the rejected attempt — and the punch/Desk write
-		# paths have no other uncommitted change to carry along. Skipped under the
-		# test runner, which depends on one rolled-back transaction for isolation.
-		if not frappe.flags.in_test:
-			frappe.db.commit()  # nosemgrep: durable audit must survive the strict throw
-		logger.info(
-			"[employee_checkin] Wrote Geofence Reject Log %s employee=%s reason=%s (committed)",
-			log.name,
-			doc.employee,
-			ctx.get("reason"),
-		)
+		try:
+			frappe.local.db = audit_db
+			frappe.local.flags = frappe._dict(frappe.local.flags)
+			frappe.local.flags.currently_saving = list(frappe.local.flags.currently_saving or [])
+			frappe.local.message_log = []
+			if hasattr(frappe.local, "_realtime_log"):
+				del frappe.local._realtime_log
+			log = frappe.new_doc("Geofence Reject Log")
+			log.update(
+				{
+					"employee": doc.employee,
+					"log_type": doc.log_type or "IN",
+					"rejected_at": doc.time or frappe.utils.now_datetime(),
+					"shift_type": doc.shift,
+					"shift_location": shift_loc_name,
+					"reason": ctx.get("reason"),
+					"distance_m": ctx.get("distance_m"),
+					"radius_m": ctx.get("radius_m"),
+					"overshoot_m": ctx.get("overshoot_m"),
+					"accuracy_m": ctx.get("accuracy_m"),
+					"latitude": doc.latitude,
+					"longitude": doc.longitude,
+					"device_id": getattr(doc, "device_id", None),
+				}
+			)
+			log.flags.ignore_permissions = True
+			log.insert()
+			audit_db.commit()
+			logger.info("[employee_checkin] Isolated geofence refusal audit persisted")
+		except Exception:
+			audit_db.rollback()
+			raise
+		finally:
+			frappe.local.db = caller
+			for key, value in context.items():
+				if value is missing:
+					if hasattr(frappe.local, key):
+						delattr(frappe.local, key)
+				else:
+					setattr(frappe.local, key, value)
+			audit_db.close()
 	except Exception as exc:
-		logger.warning(
-			"[employee_checkin] Failed to write Geofence Reject Log employee=%s reason=%s: %s",
-			doc.employee,
-			ctx.get("reason"),
-			exc,
-		)
+		logger.warning("[employee_checkin] Isolated geofence refusal audit failed (%s)", type(exc).__name__)
 
 
 def _supports_for_shift() -> bool:
