@@ -204,6 +204,19 @@
 				@workflowApplied="reloadDoc()"
 			/>
 
+			<!-- approver: the decision lives in RequestActionSheet (Home > Team
+			     Requests). A request opened from a notification landed here, on the
+			     applicant's edit form, with no Approve or Reject anywhere — the
+			     approver could only edit fields. Open the same sheet from here. -->
+			<div
+				v-else-if="canReview"
+				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
+			>
+				<div class="w-full sm:max-w-2xl sm:mx-auto">
+					<GButton :label="__('Approve or reject')" @click="openReviewSheet" />
+				</div>
+			</div>
+
 			<!-- save/submit/cancel -->
 			<div
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
@@ -280,6 +293,23 @@
 	<!-- Confirmation dialogs — GConfirm carries GModal's focus-trap workaround
 	     (§16.3), which frappe-ui's Dialog does not. Same state variables, same
 	     handlers: this is a presentation swap only. -->
+	<!-- Approver's decision sheet — the same component the Team Requests list
+	     opens, so approve/reject/submit stay one code path. Reload on close so
+	     the form shows what the server did. -->
+	<ion-modal
+		:is-open="showReviewSheet"
+		@didDismiss="closeReviewSheet"
+		:initial-breakpoint="1"
+		:breakpoints="[0, 1]"
+	>
+		<RequestActionSheet
+			v-if="showReviewSheet && reviewRequest"
+			:fields="REQUEST_SUMMARY_FIELDS[props.doctype]"
+			:showOpenForm="false"
+			v-model="reviewRequest"
+		/>
+	</ion-modal>
+
 	<GConfirm
 		:is-open="showDeleteDialog"
 		:title="__('Delete {0}', [__(props.doctype)])"
@@ -366,6 +396,9 @@ import {
 import FormField from "@/components/FormField.vue"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
+import RequestActionSheet from "@/components/RequestActionSheet.vue"
+import { IonModal } from "@ionic/vue"
+import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 
 import { FileAttachment, guessStatusColor } from "@/composables"
 import useWorkflow from "@/composables/workflow"
@@ -692,6 +725,34 @@ const formButton = computed(() => {
 	}
 	return null
 })
+
+// Someone else's open request that this user may decide on. Same rule the
+// sheet applies (write access to the decision field; Expense Claim decides on
+// approval_status), minus the workflow case, which has its own action sheet.
+const REVIEW_DECISION_FIELD = { "Expense Claim": "approval_status" }
+const canReview = computed(() => {
+	if (!props.id || isFormDirty.value || workflow.value?.hasWorkflow) return false
+	if (!REQUEST_SUMMARY_FIELDS[props.doctype]) return false
+	const decisionField = REVIEW_DECISION_FIELD[props.doctype] || "status"
+	const doc = formModel.value
+	return (
+		doc.docstatus === 0 &&
+		["Open", "Draft"].includes(doc[decisionField]) &&
+		doc.employee !== employee.data?.name &&
+		Boolean(permittedWriteFields.data?.includes(decisionField))
+	)
+})
+const showReviewSheet = ref(false)
+const reviewRequest = ref(null)
+function openReviewSheet() {
+	reviewRequest.value = { doctype: props.doctype, name: props.id }
+	showReviewSheet.value = true
+}
+function closeReviewSheet() {
+	showReviewSheet.value = false
+	console.info("[FormView] review sheet closed, reloading", props.doctype, props.id)
+	reloadDoc()
+}
 
 function showDeleteButton() {
 	return props.id && formModel.value.docstatus !== 1 && hasPermission("delete")

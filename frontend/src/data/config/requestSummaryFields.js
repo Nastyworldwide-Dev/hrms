@@ -325,3 +325,15 @@ export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 		fieldtype: "Float",
 	},
 ]
+
+// Summary fields by doctype — what RequestActionSheet renders above its
+// Approve / Reject bar. Shared so a form can open the same sheet the Team
+// Requests list opens, instead of growing a second approval path.
+export const REQUEST_SUMMARY_FIELDS = {
+	"Leave Application": LEAVE_FIELDS,
+	"Expense Claim": EXPENSE_CLAIM_FIELDS,
+	"Attendance Request": ATTENDANCE_REQUEST_FIELDS,
+	"Shift Request": SHIFT_REQUEST_FIELDS,
+	"OT Request": OT_REQUEST_FIELDS,
+	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
+}
