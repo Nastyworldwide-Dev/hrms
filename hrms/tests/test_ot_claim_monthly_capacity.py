@@ -164,6 +164,8 @@ class TestClaimCapacity(unittest.TestCase):
 		def get_value(doctype, name, fieldname, **kwargs):
 			# Permission reads use synthetic identity/company data; calculator
 			# eligibility remains an independent financial input.
+			if doctype == "OT Request" and fieldname == "employee":
+				return "EMP-SYNTHETIC"  # lock-order reads (decide / check_if_latest)
 			if doctype == "Employee" and fieldname == "company":
 				return "Company A"
 			if doctype == "Employee" and fieldname == "user_id":
@@ -196,6 +198,15 @@ class TestClaimCapacity(unittest.TestCase):
 			),
 			patch.object(frappe.db, "get_value", side_effect=get_value),
 			patch.object(frappe.db, "exists", side_effect=lambda doctype, value: isinstance(value, str)),
+			# Locking reads (approval reservations, duplicate check) answer from the
+			# same synthetic rows as the snapshot reads above.
+			patch.object(
+				frappe.db,
+				"get_values",
+				side_effect=lambda doctype, filters=None, fields=None, **kwargs: (
+					[] if fields == "name" else get_all(doctype, filters=filters, fields=fields)
+				),
+			),
 			patch.object(frappe, "get_all", side_effect=get_all),
 			patch.object(
 				ot,

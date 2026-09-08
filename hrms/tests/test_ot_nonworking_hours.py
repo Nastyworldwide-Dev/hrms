@@ -175,6 +175,16 @@ class TestNonworkingHours(unittest.TestCase):
 		stack.enter_context(patch.object(frappe, "get_all", side_effect=get_all))
 		stack.enter_context(patch.object(frappe.db, "get_value", side_effect=get_value))
 		stack.enter_context(patch.object(frappe.db, "exists", return_value=False))
+		# Locking reads answer from the same synthetic rows as the snapshot reads.
+		stack.enter_context(
+			patch.object(
+				frappe.db,
+				"get_values",
+				side_effect=lambda doctype, filters=None, fields=None, **kwargs: (
+					[] if fields == "name" else get_all(doctype, filters=filters, fields=fields)
+				),
+			)
+		)
 		stack.enter_context(patch.object(frappe, "get_cached_doc", return_value=shift))
 		stack.enter_context(
 			patch.dict(

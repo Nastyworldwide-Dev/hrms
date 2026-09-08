@@ -291,3 +291,33 @@ hrms/utils/filing_window.py earliest_filable_date not-affected — read-only reu
 Lock: hrms/tests/test_ot_discovery_window.py (every filable day offered; a day before the window not offered; a caller can narrow, never widen).
 
 Addendum OT-MULTI (review of db22e3dc3, FIX_CRITICAL): (1) approved hours were deducted before a shift's daily/monthly cap trimmed the contribution, so the trimmed part's approval was lost instead of rolling to the day's next shift — now spent on what was actually priced; (2) the day row reported the LOOSEST weekday cap, which the capacity replay used as future headroom — now the tightest positive cap; (3) a shift left and resumed the same day formed two contributions and each passed its daily cap alone — contributions are merged per shift per day in both the producer and the iterator. Same call sites as OT-MULTI; verdicts unchanged. Lock: TestMixedDayCapsAndApprovals in hrms/tests/test_ot_multishift_day.py.
+
+CLASS: OT-RESERVATION-RACE — nothing serialized two approvals for one employee, and the reservation read was a snapshot read, so two approvals in one instant each saw no reservations and both fitted the monthly OT-Pay cap (6 h against 4 h; Astra's native probe).
+Changed: hrms/hr/doctype/ot_request/ot_request.py (check_if_latest locks the employee row(s) before Frappe locks the request; approval reads reservations with a locking read; the per-day duplicate check is a current read), hrms/utils/ot_calculation.py (_approved_reservations with a lock flag; get_ot_claim_capacity gains lock_reservations), hrms/api/approval.py (decide takes the employee lock before the request lock for OT Request and refuses a reassigned request), hrms/patches/v16_0/add_ot_request_reservation_index.py + patches.txt (composite (employee, docstatus, ot_date) index, idempotent).
+Call sites / consumers:
+hrms/hr/doctype/ot_request/ot_request.py:116 same-root — set_punch_verified_cap passes lock_reservations at submission (docstatus 1) and not for draft previews.
+hrms/api/__init__.py get_ot_claim_summary same-root-by-contract — a preview; it keeps the snapshot read (lock flag defaults False) and reports the same figure approval will re-check under the lock.
+hrms/api/__init__.py get_claimable_ot_summary same-root-by-contract — discovery; snapshot read, never reserves.
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:56 not-affected — the historical RED reproducer that motivated the slice; it patches frappe.get_all for its raw reads and is evidence, not a gate.
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:81 not-affected — single-transaction native fixture; capacity["hours"] unchanged for it.
+hrms/public/js/utils/request_approval.js and frontend RequestActionSheet (decide callers) not-affected — the endpoint's contract is unchanged; a reassigned request now returns a ValidationError asking to reload instead of locking out of order.
+Every other Document write on OT Request (Desk save, cancel, amend) same-root — check_if_latest runs for all of them, so the employee lock precedes the request lock everywhere; cancel releases capacity only when its transaction commits.
+Lock: hrms/tests/test_ot_reservation_locks.py (order, reads, duplicate, decide, patch) and the opt-in native hrms/tests/test_ot_reservation_concurrency.py (thread 2 waits on the employee row, is refused after the winner commits, index used: fresh.local 2 passed).
+Per-call-site verdicts (OT-RESERVATION-RACE, machine-listed):
+docs/glass/audit/2026-09-08-attendance-deep-probes.py:50 not-affected — audit reproducer reading a day breakdown; the breakdown path did not change in this slice
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:32 not-affected — pymysql cursor.execute in the historical RED reproducer, not the patch's execute
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:34 not-affected — same reproducer, raw SQL cursor
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:45 not-affected — same reproducer, raw SQL cursor
+docs/glass/audit/2026-09-08-ot-concurrency-probe.py:59 not-affected — same reproducer, raw SQL cursor
+docs/glass/audit/2026-09-08-ot-multishift-probe.py:31 not-affected — audit reproducer for OT-MULTI reading a day breakdown; unchanged path
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:37 not-affected — calls the precision pre-model patch's execute, a different patch
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:46 not-affected — same, precision preflight execute
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:56 not-affected — precision verifier execute, a different patch
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:60 not-affected — precision verifier execute
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:61 not-affected — precision preflight execute
+docs/glass/audit/2026-09-08-ot-precision-native-test.py:78 not-affected — single-transaction native fixture reading a day breakdown; unchanged path
+docs/glass/audit/2026-09-08-probes.py:79 not-affected — Codex's audit reproducer reading a day breakdown; unchanged path
+hrms/api/__init__.py:651 same-root-by-contract not-affected — discovery keeps the snapshot read (lock flag default False) and never reserves; approval re-checks under the lock
+hrms/public/js/utils/request_approval.js:117 not-affected — Desk caller of decide; contract unchanged, a reassigned request now gets a reload message instead of an out-of-order lock
+hrms/public/js/utils/request_approval.js:121 not-affected — same Desk caller
+hrms/public/js/utils/request_approval.js:125 not-affected — same Desk caller

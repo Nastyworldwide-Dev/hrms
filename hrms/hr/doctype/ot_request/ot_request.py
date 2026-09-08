@@ -52,6 +52,34 @@ def replacement_leave_hours_per_day() -> float:
 
 
 class OTRequest(Document, PWANotificationsMixin):
+	def check_if_latest(self):
+		"""Lock order for every write — insert, save, submit, cancel: the
+		employee's row FIRST, then (inside Frappe's own load_doc_before_save)
+		this request's row. Two approvals for one employee therefore serialize
+		on the employee, and the later one recomputes its capacity — validate
+		runs after this, under the lock — from a current read that includes the
+		earlier one's committed reservation. hrms.api.approval.decide takes the
+		same order for the same reason. Never commit inside this method."""
+		self._lock_employee_rows()
+		super().check_if_latest()
+
+	def _lock_employee_rows(self):
+		saved = None if self.is_new() else frappe.db.get_value("OT Request", self.name, "employee")
+		employees = sorted({employee for employee in (saved, self.employee) if employee})
+		for employee in employees:
+			frappe.db.get_value("Employee", employee, "name", for_update=True)
+		if saved:
+			# Now that the row is locked, make sure nobody moved the request to an
+			# employee whose lock we never took; refuse rather than lock out of order.
+			current = frappe.db.get_value("OT Request", self.name, "employee", for_update=True)
+			if current not in employees:
+				logger.warning("[ot_request] %s reassigned during save (%s -> %s)", self.name, saved, current)
+				frappe.throw(
+					_("This request was reassigned while you were saving it. Reload and try again."),
+					frappe.TimestampMismatchError,
+				)
+		logger.info("[ot_request] %s holds employee lock(s) %s", self.name or "new", employees)
+
 	def after_insert(self):
 		# Once, when the request is filed. NOT in validate: that runs on every
 		# save, so the approver would be messaged again on each edit — the
@@ -113,11 +141,15 @@ class OTRequest(Document, PWANotificationsMixin):
 		self.compensation = OT_PAY if cint(eligible) else REPLACEMENT_LEAVE
 
 	def set_punch_verified_cap(self):
+		# Approval (docstatus 1 during this validate) RESERVES capacity, so it
+		# reads reservations with a locking read under the employee lock taken
+		# in check_if_latest; a draft only previews and reads the snapshot.
 		self.punch_ot_hours = get_ot_claim_capacity(
 			self.employee,
 			self.ot_date,
 			self.compensation,
 			exclude_request=self.name if not self.is_new() else None,
+			lock_reservations=cint(getattr(self, "docstatus", 0)) == 1,
 		)["hours"]
 		if not self.shift:
 			self.shift = frappe.db.get_value(
@@ -149,7 +181,10 @@ class OTRequest(Document, PWANotificationsMixin):
 			)
 
 	def validate_duplicate_request(self):
-		duplicate = frappe.db.exists(
+		# A current (locking) read under the employee lock: two drafts filed at
+		# once for the same day cannot both pass on a snapshot that predates
+		# the other's insert.
+		rows = frappe.db.get_values(
 			"OT Request",
 			{
 				"employee": self.employee,
@@ -157,7 +192,11 @@ class OTRequest(Document, PWANotificationsMixin):
 				"docstatus": ("<", 2),
 				"name": ("!=", self.name or "New OT Request"),
 			},
+			"name",
+			for_update=True,
+			limit=1,
 		)
+		duplicate = rows[0][0] if rows else None
 		if duplicate:
 			frappe.throw(
 				_("An OT Request for {0} already exists: {1}").format(

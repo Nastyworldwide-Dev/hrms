@@ -670,7 +670,7 @@ def get_day_ot_breakdown(employee, day, basic=0):
 	return get_ot_breakdown(employee, day, day, basic).get(day) or _empty_breakdown()
 
 
-def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
+def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None, lock_reservations=False):
 	"""Claim capacity, distinct from a raw-work report's chronological monthly cap.
 
 	Only approved OT-Pay claims reserve the pay allowance. Include the whole
@@ -678,6 +678,12 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	may exclude only its own persisted document during controller revalidation;
 	whitelisted summary endpoints never accept an exclusion from the client.
 	Replacement Leave retains its existing raw-work behavior pending HR policy.
+
+	`lock_reservations` makes the reservation read a LOCKING (current) read:
+	under REPEATABLE-READ a plain SELECT answers from the transaction's
+	snapshot, so an approval that waited on the employee's row lock would
+	still not see the reservation the winner just committed. Approval passes
+	True; draft previews never reserve and read the snapshot.
 	"""
 	day = getdate(day)
 	if compensation != "Overtime Pay":
@@ -705,16 +711,7 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	cap = worked["monthly_cap"]
 	month_start = day.replace(day=1)
 	month_end = day.replace(day=monthrange(day.year, day.month)[1])
-	filters = {
-		"employee": employee,
-		"docstatus": 1,
-		"status": ("!=", "Rejected"),
-		"compensation": "Overtime Pay",
-		"ot_date": ["between", [month_start, month_end]],
-	}
-	if exclude_request:
-		filters["name"] = ("!=", exclude_request)
-	approved = frappe.get_all("OT Request", filters=filters, fields=["ot_date", "claimed_hours"])
+	approved = _approved_reservations(employee, month_start, month_end, exclude_request, lock_reservations)
 	if approved:
 		_, approved_shifts = _per_day_ot_hours(employee, month_start, month_end)
 		# HR's uncapped holiday entitlement is separate from the weekday cap:
@@ -758,6 +755,35 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 		"day_type": worked["day_type"],
 		"uncapped_hours": float(uncapped),
 	}
+
+
+def _approved_reservations(employee, month_start, month_end, exclude_request=None, lock=False):
+	"""Approved OT-Pay claims reserving the month's allowance.
+
+	The locking form is what approval uses after taking the employee's row
+	lock (OTRequest.check_if_latest): a current read that sees every committed
+	reservation, on the (employee, docstatus, ot_date) index the v16_0 patch
+	adds. The plain form is the snapshot read previews and reports use."""
+	filters = {
+		"employee": employee,
+		"docstatus": 1,
+		"status": ("!=", "Rejected"),
+		"compensation": "Overtime Pay",
+		"ot_date": ["between", [month_start, month_end]],
+	}
+	if exclude_request:
+		filters["name"] = ("!=", exclude_request)
+	if lock:
+		logger.info(
+			"[ot_calculation] locking reservation read employee=%s %s..%s", employee, month_start, month_end
+		)
+		return (
+			frappe.db.get_values(
+				"OT Request", filters, ["ot_date", "claimed_hours"], as_dict=True, for_update=True
+			)
+			or []
+		)
+	return frappe.get_all("OT Request", filters=filters, fields=["ot_date", "claimed_hours"])
 
 
 def _empty_breakdown():

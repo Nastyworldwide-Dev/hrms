@@ -212,9 +212,21 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 	# docstatus 0, both proceed, and both write a ledger entry. With it the
 	# loser blocks here, then finds the document already decided and returns
 	# the winner's outcome instead of duplicating it.
+	employee = None
+	if doctype == "OT Request":
+		# Employee BEFORE request — the order OTRequest.check_if_latest takes on
+		# every save — so a Desk save and a PWA decision cannot deadlock, and
+		# two approvals for one employee serialize on that row.
+		employee = frappe.db.get_value(doctype, name, "employee")
+		if employee:
+			frappe.db.get_value("Employee", employee, "name", for_update=True)
 	frappe.db.get_value(doctype, name, "docstatus", for_update=True)
 
 	doc = frappe.get_doc(doctype, name)
+	if doctype == "OT Request" and doc.employee != employee:
+		# Reassigned between our read and our lock: refuse rather than take a
+		# second employee lock while holding the request.
+		frappe.throw(_("This request was reassigned. Reload and try again."), frappe.ValidationError)
 	access = _decision_access(doc, status)
 	if not access:
 		frappe.throw(_("You are not permitted to decide this request."), frappe.PermissionError)
