@@ -325,6 +325,71 @@ class TestInheritedCheckoutInsert(unittest.TestCase):
 				request.insert()
 				request.db_insert.assert_called_once()
 
+	def saved_request(self, old_status, status):
+		request = self.new_request()
+		request.update(
+			dict(
+				employee="EMP-1",
+				checkin="OUT-1",
+				log_type="OUT",
+				status=status,
+				approver="approver@example.invalid",
+				approved_at=datetime(2026, 9, 3, 21),
+			)
+		)
+		request.flags.ignore_permissions = True
+		request._non_computed_table_fieldnames = {}
+		request._original_modified = "2026-09-03 21:00:00"
+		previous = frappe._dict(
+			status=old_status, docstatus=DocStatus(0), modified=request._original_modified
+		)
+		self.stack.enter_context(patch.object(frappe, "get_doc", return_value=previous))
+		for name in (
+			"check_if_locked",
+			"_restore_masked_fields_from_db",
+			"set_name_in_children",
+			"update_children",
+		):
+			setattr(request, name, MagicMock())
+		request.db_update = MagicMock()
+		return request
+
+	def test_settled_decisions_cannot_be_reset_or_reversed_by_desk_save(self):
+		for old_status in ("Approved", "Rejected"):
+			for status in ("Pending", "Approved", "Rejected"):
+				if status == old_status:
+					continue
+				with (
+					self.subTest(old_status=old_status, status=status),
+					patch.object(frappe, "get_roles", return_value=["HR Manager"]),
+				):
+					request = self.saved_request(old_status, status)
+					with self.assertRaisesRegex(frappe.ValidationError, "already been decided"):
+						request.save()
+					request.db_update.assert_not_called()
+
+	def test_pending_decisions_remain_authorized_through_real_save(self):
+		for actor in ("employee@example.invalid", "approver@example.invalid"):
+			for status in ("Approved", "Rejected"):
+				with self.subTest(actor=actor, status=status):
+					frappe.local.session.user = actor
+					request = self.saved_request("Pending", status)
+					if actor == "employee@example.invalid":
+						with self.assertRaises(frappe.ValidationError):
+							request.save()
+						request.db_update.assert_not_called()
+					else:
+						request.save()
+						request.db_update.assert_called_once()
+
+	def test_settled_status_unchanged_still_allows_ordinary_save(self):
+		for status in ("Approved", "Rejected"):
+			with self.subTest(status=status):
+				request = self.saved_request(status, status)
+				request.approver_remarks = "Clarified explanation"
+				request.save()
+				request.db_update.assert_called_once()
+
 
 if __name__ == "__main__":
 	unittest.main()

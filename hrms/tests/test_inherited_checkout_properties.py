@@ -35,6 +35,9 @@ class DocumentSeam:
 	def has_value_changed(self, field):
 		return True
 
+	def get_doc_before_save(self):
+		return self.get("previous")
+
 
 frappe.model.document.Document = DocumentSeam
 from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import (
@@ -220,6 +223,32 @@ class TestInheritedCheckoutProperties(unittest.TestCase):
 			patch.object(frappe, "get_all", side_effect=get_all),
 		):
 			if all(status == "Rejected" for _, status in intervening):
+				request.before_save()
+			else:
+				with self.assertRaises(frappe.ValidationError):
+					request.before_save()
+
+	@settings(max_examples=60, deadline=None, derandomize=True)
+	@given(
+		previous=st.sampled_from(["Pending", "Approved", "Rejected"]),
+		status=st.sampled_from(["Pending", "Approved", "Rejected"]),
+		actor=st.sampled_from(["employee", "approver", "hr"]),
+	)
+	def test_existing_decisions_follow_one_terminal_state_contract(self, previous, status, actor):
+		request = RemoteCheckinRequest(
+			name="GENERATED",
+			status=status,
+			approver="approver@example.invalid",
+			previous=frappe._dict(status=previous),
+		)
+		request.has_value_changed = lambda field: previous != status
+		roles = ["HR Manager"] if actor == "hr" else ["Employee"]
+		with (
+			patch.object(frappe.session, "user", f"{actor}@example.invalid"),
+			patch.object(frappe, "get_roles", return_value=roles),
+		):
+			allowed = previous == status or (previous == "Pending" and actor in ("approver", "hr"))
+			if allowed:
 				request.before_save()
 			else:
 				with self.assertRaises(frappe.ValidationError):

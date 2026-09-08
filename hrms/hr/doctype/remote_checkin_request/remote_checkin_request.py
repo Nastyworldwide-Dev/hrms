@@ -30,6 +30,14 @@ class RemoteCheckinRequest(Document):
 		# can transition the status away from Pending.
 		if not self.has_value_changed("status"):
 			return
+		previous = self.get_doc_before_save()
+		if previous and previous.status in ("Approved", "Rejected"):
+			logger.info("[remote_checkin_request] blocked settled decision change request=%s", self.name)
+			frappe.throw(
+				_(
+					"This request has already been decided. Use an attendance correction instead of changing its decision."
+				)
+			)
 		if self.status == "Pending":
 			return
 
