@@ -44,25 +44,49 @@ SOURCE = HRMS_ROOT / "utils" / "report_scope.py"
 REPORTS = HRMS_ROOT / "hr" / "report"
 
 
-def load_module(*, is_hr, employee, companies):
-	"""report_scope with its three collaborators stubbed."""
+STUBBED = ("frappe", "hrms.hr.utils", "hrms.utils.identity", "hrms.overrides.company_scope")
+
+
+def load_module(*, is_hr, employee, companies, cleanup):
+	"""report_scope with its three collaborators stubbed for ONE test.
+
+	`cleanup` is the test's addCleanup: the stubs stay in sys.modules while
+	the test runs (scoped_companies imports its collaborator lazily) and are
+	put back afterwards. Leaving a bare `frappe` (no db, no get_doc) behind
+	broke every later test in the same pytest session that does
+	`import frappe` in setUp — the sync runner harness among them (8 Sep 2026).
+	"""
 	frappe = types.ModuleType("frappe")
 	frappe._dict = dict
 	frappe.session = types.SimpleNamespace(user="someone@example.com")
-	sys.modules["frappe"] = frappe
 
 	hr_utils = types.ModuleType("hrms.hr.utils")
 	hr_utils.sees_all_employee_data = lambda user=None: is_hr
-	sys.modules["hrms.hr.utils"] = hr_utils
 
 	identity = types.ModuleType("hrms.utils.identity")
 	identity.get_employee = lambda: employee
-	sys.modules["hrms.utils.identity"] = identity
 
 	company_scope = types.ModuleType("hrms.overrides.company_scope")
 	company_scope.allowed_companies = lambda user=None: list(companies)
-	sys.modules["hrms.overrides.company_scope"] = company_scope
 
+	previous = {name: sys.modules.get(name) for name in STUBBED}
+	sys.modules.update(
+		{
+			"frappe": frappe,
+			"hrms.hr.utils": hr_utils,
+			"hrms.utils.identity": identity,
+			"hrms.overrides.company_scope": company_scope,
+		}
+	)
+
+	def restore():
+		for name, saved in previous.items():
+			if saved is None:
+				sys.modules.pop(name, None)
+			else:
+				sys.modules[name] = saved
+
+	cleanup(restore)
 	spec = importlib.util.spec_from_file_location("report_scope_under_test", SOURCE)
 	module = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(module)
@@ -78,7 +102,9 @@ class TestFiltersStayScalar(unittest.TestCase):
 	equality operand may be a sequence."""
 
 	def test_fenced_hr_gets_no_sequence_in_the_filters(self):
-		module = load_module(is_hr=True, employee=None, companies=["Company A", "Company B"])
+		module = load_module(
+			cleanup=self.addCleanup, is_hr=True, employee=None, companies=["Company A", "Company B"]
+		)
 		filters = module.apply_employee_scope({"from_date": "2026-08-01"})
 		self.assertTrue(
 			all(is_scalar(v) for v in filters.values()),
@@ -86,38 +112,40 @@ class TestFiltersStayScalar(unittest.TestCase):
 		)
 
 	def test_the_fence_is_still_available_separately(self):
-		module = load_module(is_hr=True, employee=None, companies=["Company A", "Company B"])
+		module = load_module(
+			cleanup=self.addCleanup, is_hr=True, employee=None, companies=["Company A", "Company B"]
+		)
 		self.assertEqual(module.scoped_companies(), ["Company A", "Company B"])
 
 	def test_unfenced_hr_is_unrestricted(self):
-		module = load_module(is_hr=True, employee=None, companies=[])
+		module = load_module(cleanup=self.addCleanup, is_hr=True, employee=None, companies=[])
 		self.assertEqual(module.scoped_companies(), [])
 
 	def test_hr_keeps_a_company_it_chose(self):
-		module = load_module(is_hr=True, employee=None, companies=["Company A"])
+		module = load_module(cleanup=self.addCleanup, is_hr=True, employee=None, companies=["Company A"])
 		filters = module.apply_employee_scope({"company": "Company A"})
 		self.assertEqual(filters["company"], "Company A")
 
 
 class TestStaffScoping(unittest.TestCase):
 	def test_staff_are_pinned_to_their_own_employee(self):
-		module = load_module(is_hr=False, employee="HR-EMP-00001", companies=[])
+		module = load_module(cleanup=self.addCleanup, is_hr=False, employee="HR-EMP-00001", companies=[])
 		filters = module.apply_employee_scope({})
 		self.assertEqual(filters["employee"], "HR-EMP-00001")
 
 	def test_a_staff_request_for_someone_else_is_overridden(self):
-		module = load_module(is_hr=False, employee="HR-EMP-00001", companies=[])
+		module = load_module(cleanup=self.addCleanup, is_hr=False, employee="HR-EMP-00001", companies=[])
 		filters = module.apply_employee_scope({"employee": "HR-EMP-00002"})
 		self.assertEqual(filters["employee"], "HR-EMP-00001")
 
 	def test_no_employee_record_returns_none_not_everything(self):
 		"""None means the report renders zero rows. An unscoped filter set is
 		exactly the hole this helper closes."""
-		module = load_module(is_hr=False, employee=None, companies=[])
+		module = load_module(cleanup=self.addCleanup, is_hr=False, employee=None, companies=[])
 		self.assertIsNone(module.apply_employee_scope({}))
 
 	def test_a_custom_employee_field_is_honoured(self):
-		module = load_module(is_hr=False, employee="HR-EMP-00001", companies=[])
+		module = load_module(cleanup=self.addCleanup, is_hr=False, employee="HR-EMP-00001", companies=[])
 		filters = module.apply_employee_scope({}, employee_field="emp")
 		self.assertEqual(filters["emp"], "HR-EMP-00001")
 
