@@ -82,7 +82,7 @@ gate; rules marked **R** are checked in review with a fixture screenshot.
 | U9 | Balances, totals and hours come from the server ledger. The app never computes a balance. Client-side checks only warn; the server decides. | mapping §2 Leave; `decisions/leave-insufficient-balance.md`; OT readers disagreeing (360 §4). | **G**: no arithmetic on balance fields in `frontend/src` (lint rule on `leave_balance`, `total_leave_days`). |
 | U10 | Plain language. Every number has a unit and, where it is not ours, a source ("from HR records", "from the IT asset register"). | Prototype footers; work order 9.7c. | R. |
 | U11 | Read/write follows ownership. The app reads assets, certifications, KPI figures and roster; it writes requests only. | mapping §5.3 two sources of truth; Verifica cutover rules. | **G**: API allowlist test: no `insert`/`set_value` on Asset, Employee, Appraisal from PWA endpoints. |
-| U12 | Multi-company fence on every new endpoint. | mapping §5.6; `fenced_companies` helper; R1 decision. | **G**: AST test that every new whitelisted function calls the fence helper (pattern already used for sync endpoints). |
+| U12 | Multi-company fence on every new endpoint. | mapping §5.6; `allowed_companies()` in `hrms/overrides/company_scope.py` for API reads, `fenced_companies()` in `hrms/utils/report_scope.py` for reports; R1 decision. | **G**: AST test that every new whitelisted function calls the fence helper (pattern already used for sync endpoints). |
 
 These rules become spec addendum §17 and the coherence gate's rule list.
 A slice that breaks a **G** rule cannot commit; a slice that breaks an **R** rule

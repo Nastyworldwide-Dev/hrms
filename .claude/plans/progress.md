@@ -210,3 +210,4 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 2026-09-08T18:52Z NEXT: Nabil answers Q1-Q3 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/, then phase 0.3 mockup + 0.4 gates; batch-2 reviews and the earlier NEXT items stay open in parallel.
 - 2026-09-08T18:53:01Z COMMIT: 602502d24 docs(plan): Nadi PWA UX 2.0 review, contract, gap ledger and slice plan → review dispatched
 2026-09-08T18:54Z NEXT: Nabil answers Q1-Q3 from docs/glass/plan/NADI_2.0_UX_PLAN.md section 5 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/; then phase 0.3 mockup + 0.4 gates. Frappe-reviewer on 602502d24 was dispatched (docs commit); batch-2 reviews still owed.
+- 2026-09-08T18:54:33Z COMMIT: d2e496ff1 chore(plans): NEXT line after the UX 2.0 plan commit → review dispatched
