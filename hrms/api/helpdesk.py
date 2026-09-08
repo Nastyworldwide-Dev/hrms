@@ -120,6 +120,11 @@ def reply(name: str, message: str) -> dict:
 	if not message:
 		frappe.throw(_("Write a reply first."))
 	_require_helpdesk()
+	# "read", not "write": Helpdesk's own portal lets a customer reply on any
+	# ticket they can read (create_communication_via_contact saves with
+	# ignore_permissions). Read is what the customer permission_query scopes,
+	# so this is the same fence the portal applies — tightening it to "write"
+	# would refuse every employee reply.
 	frappe.has_permission("HD Ticket", "read", name, throw=True)
 	ticket = frappe.get_doc("HD Ticket", name)
 	ticket.create_communication_via_contact(message)

@@ -58,6 +58,20 @@ class TestAvailability(unittest.TestCase):
 			self.assertTrue(helpdesk.is_available())
 
 
+class TestMissingApp(unittest.TestCase):
+	def test_every_entry_point_refuses_cleanly_without_helpdesk(self):
+		with patch.object(frappe, "get_installed_apps", return_value=["frappe", "hrms"]):
+			for call in (
+				lambda: helpdesk.list_tickets(),
+				lambda: helpdesk.get_ticket("HD-1"),
+				lambda: helpdesk.new_ticket(subject="x", description="y"),
+				lambda: helpdesk.reply("HD-1", "hi"),
+				lambda: helpdesk.get_options(),
+			):
+				with self.assertRaises(frappe.DoesNotExistError):
+					call()
+
+
 class TestNewTicketGuard(unittest.TestCase):
 	def test_blank_subject_or_description_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):

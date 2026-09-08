@@ -9,20 +9,7 @@
 				<router-link :to="{ name: 'HelpdeskTicketNew' }" v-slot="{ navigate }">
 					<GButton :label="__('Raise a ticket')" @click="navigate">
 						<template #trailing>
-							<svg
-								width="17"
-								height="17"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								aria-hidden="true"
-							>
-								<line x1="5" y1="12" x2="19" y2="12"></line>
-								<polyline points="12 5 19 12 12 19"></polyline>
-							</svg>
+							<FeatherIcon name="arrow-right" class="h-[17px] w-[17px]" aria-hidden="true" />
 						</template>
 					</GButton>
 				</router-link>
@@ -37,7 +24,7 @@
 						v-for="chip in CHIPS"
 						:key="chip.key"
 						type="button"
-						class="g-focusable flex-none rounded-full border px-3 py-1.5 text-kra-label font-semibold"
+						class="g-focusable flex-none min-h-11 rounded-full border px-3.5 text-kra-label font-semibold"
 						:class="
 							activeChip === chip.key
 								? 'bg-inkbase text-[var(--g-bg)] border-inkbase'
@@ -101,6 +88,7 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GButton from "@/components/glass/GButton.vue"
+import { FeatherIcon } from "frappe-ui"
 import { useRouter } from "vue-router"
 import { computed, inject, onMounted, ref } from "vue"
 

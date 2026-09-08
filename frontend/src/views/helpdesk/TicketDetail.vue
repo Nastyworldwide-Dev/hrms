@@ -73,14 +73,15 @@
 							:label="__('Reply')"
 							:placeholder="__('Write a reply…')"
 						/>
-						<GButton
+						<!-- icon-only send, as the mockup draws it (44px target via GIconButton) -->
+						<GIconButton
 							type="submit"
-							class="flex-none !w-auto"
-							:label="__('Send')"
-							:pendingLabel="__('Sending…')"
-							:pending="replyToTicket.loading"
+							class="flex-none mb-1"
+							:label="replyToTicket.loading ? __('Sending…') : __('Send')"
 							:disabled="replyToTicket.loading || !reply.trim()"
-						/>
+						>
+							<FeatherIcon name="arrow-up" class="h-4 w-4" />
+						</GIconButton>
 					</form>
 				</template>
 			</div>
@@ -90,7 +91,6 @@
 
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
-import GButton from "@/components/glass/GButton.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
