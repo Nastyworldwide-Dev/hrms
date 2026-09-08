@@ -124,9 +124,21 @@ const routes = [
 		component: () => import("@/views/InvalidEmployee.vue"),
 	},
 	{
-		path: "/",
+		// NOT "/" like the tab shell above. Ionic's nested <ion-router-outlet>
+		// decides whether a navigation is its own by comparing the parent route's
+		// PATH STRING (setupViewItem: `firstMatchedRoute.path !== parentOutletPath`).
+		// With both shells at "/", the tab shell's outlet — still mounted behind a
+		// full-screen page — also rendered every form route into the Home tab's
+		// stack: a leave application opened from Notifications reappeared on Back
+		// and again on the Home tab, on top of Home. The children are absolute
+		// paths, so their URLs do not change.
+		path: "/form",
 		component: () => import("@/views/FormShell.vue"),
 		children: [
+			{
+				path: "",
+				redirect: "/home",
+			},
 			...attendanceRoutes,
 			...otRoutes,
 			...leaveRoutes,
