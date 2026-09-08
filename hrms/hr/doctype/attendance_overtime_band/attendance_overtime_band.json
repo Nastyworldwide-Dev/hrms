@@ -33,7 +33,7 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "OT Hours",
-   "precision": "2",
+   "precision": "9",
    "read_only": 1
   }
  ],

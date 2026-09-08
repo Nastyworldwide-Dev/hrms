@@ -34,6 +34,8 @@ from decimal import Decimal
 import frappe
 from frappe.utils import cint, flt, get_datetime, get_time, getdate
 
+from hrms.utils.ot_precision import stored_ot_hours
+
 logger = logging.getLogger(__name__)
 
 WORKING_DAYS_PER_MONTH = 26
@@ -575,13 +577,16 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	"""
 	day = getdate(day)
 	if compensation != "Overtime Pay":
-		return {"hours": flt(get_day_ot_breakdown(employee, day)["ot_hours"]), "monthly_remaining": None}
+		return {
+			"hours": float(stored_ot_hours(get_day_ot_breakdown(employee, day)["ot_hours"])),
+			"monthly_remaining": None,
+		}
 	worked = next(_iter_day_ot(employee, day, day, 0, "normal", apply_monthly_cap=False), None)
 	if not worked:
 		return {"hours": 0.0, "monthly_remaining": None}
 	if worked["day_type"] != "normal":
 		return {
-			"hours": worked["unrounded_ot_hours"],
+			"hours": float(stored_ot_hours(worked["unrounded_ot_hours"])),
 			"monthly_remaining": None,
 			"day_type": worked["day_type"],
 		}
@@ -637,7 +642,12 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	logger.info(
 		"[ot_calculation] claim capacity date=%s compensation=%s hours=%.3f", day, compensation, hours
 	)
-	return {"hours": hours, "monthly_remaining": remaining}
+	# Claims and UI previews share the physical decimal representation; raw
+	# worked intervals above remain exact until their own persistence boundary.
+	return {
+		"hours": float(stored_ot_hours(hours)),
+		"monthly_remaining": float(stored_ot_hours(remaining)) if remaining is not None else None,
+	}
 
 
 def _empty_breakdown():

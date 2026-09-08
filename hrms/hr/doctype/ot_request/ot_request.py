@@ -22,6 +22,7 @@ from hrms.utils.ot_calculation import (
 	get_ot_claim_capacity,
 	replacement_leave_days,
 )
+from hrms.utils.ot_precision import stored_ot_hours
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +134,10 @@ class OTRequest(Document, PWANotificationsMixin):
 		)
 
 	def validate_claimed_hours(self):
-		if flt(self.claimed_hours) <= 0:
+		claimed = stored_ot_hours(self.claimed_hours)
+		if not claimed.is_finite() or claimed <= 0:
 			frappe.throw(_("Claimed Hours must be greater than 0"))
-		if flt(self.claimed_hours) > flt(self.punch_ot_hours):
+		if claimed > stored_ot_hours(self.punch_ot_hours):
 			frappe.throw(
 				_(
 					"Cannot claim {0} hours — your check-outs prove at most {1} hours of overtime for {2}."

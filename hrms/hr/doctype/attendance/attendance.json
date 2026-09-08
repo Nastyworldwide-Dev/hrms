@@ -86,7 +86,7 @@
    "fieldname": "working_hours",
    "fieldtype": "Float",
    "label": "Working Hours",
-   "precision": "2",
+   "precision": "9",
    "read_only": 1
   },
   {
@@ -100,7 +100,7 @@
    "fieldname": "ot_hours",
    "fieldtype": "Float",
    "label": "Overtime Hours",
-   "precision": "2",
+   "precision": "9",
    "read_only": 1
   },
   {
@@ -108,7 +108,7 @@
    "fieldname": "ot_rate_weighted_hours",
    "fieldtype": "Float",
    "label": "OT Rate-Weighted Hours",
-   "precision": "2",
+   "precision": "9",
    "read_only": 1
   },
   {
