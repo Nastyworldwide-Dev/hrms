@@ -141,3 +141,83 @@ class TestMixedDayPayroll(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+def _priced_day(contributions, configs, classify):
+	"""Run the real day iterator over explicit per-shift contributions."""
+	with (
+		patch.object(ot, "_per_day_contributions", return_value={DAY: contributions}),
+		patch.object(ot, "_get_shift_ot_config", side_effect=configs.get),
+		patch.object(ot, "_classify_day", side_effect=classify),
+	):
+		return list(ot._iter_day_ot(EMPLOYEE, DAY, DAY, 2080, "normal"))
+
+
+def _config(**overrides):
+	base = {
+		"min_minutes": 0,
+		"days_per_month": 26,
+		"hours_per_day": 8,
+		"bands": {"normal": [(0, 24, 1.5)], "rest": [(0, 24, 2)]},
+		"daily_cap": 0.0,
+		"monthly_cap": 0.0,
+		"start_time": time(9),
+		"end_time": time(18),
+		"allow_check_out_after": 0,
+	}
+	base.update(overrides)
+	return base
+
+
+class TestMixedDayCapsAndApprovals(unittest.TestCase):
+	"""Review of db22e3dc3: allowances and caps must survive a day's second shift."""
+
+	def test_approved_hours_trimmed_by_one_shifts_cap_roll_over_to_the_next(self):
+		# A raw 2 h under a 1 h daily cap, B raw 3 h under a 5 h cap, 3 h approved:
+		# 1 h from A and 2 h from B, not 2 h total with 1 h of approval lost on A.
+		rows = _priced_day(
+			[{"shift": "A", "hours": 2.0}, {"shift": "B", "hours": 3.0}],
+			{"A": _config(daily_cap=1.0), "B": _config(daily_cap=5.0)},
+			lambda *a, **k: "normal",
+		)
+		with (
+			patch.object(
+				ot,
+				"_per_day_contributions",
+				return_value={DAY: [{"shift": "A", "hours": 2.0}, {"shift": "B", "hours": 3.0}]},
+			),
+			patch.object(
+				ot,
+				"_get_shift_ot_config",
+				side_effect={"A": _config(daily_cap=1.0), "B": _config(daily_cap=5.0)}.get,
+			),
+			patch.object(ot, "_classify_day", return_value="normal"),
+		):
+			approved = list(ot._iter_day_ot(EMPLOYEE, DAY, DAY, 2080, "normal", {DAY: 3.0}))
+		self.assertEqual(rows[0]["normal_hours"], 4.0)  # 1 h (capped) + 3 h, no approval
+		self.assertEqual(approved[0]["normal_hours"], 3.0)
+		self.assertEqual(approved[0]["amount"], 45.0)  # 3 h x 10/h x 1.5
+
+	def test_the_day_reports_its_tightest_weekday_cap(self):
+		# The capacity replay bounds future headroom by this figure: a loose
+		# shift on the same day must not hide the tight one.
+		rows = _priced_day(
+			[{"shift": "TIGHT", "hours": 2.0}, {"shift": "LOOSE", "hours": 1.0}],
+			{"TIGHT": _config(monthly_cap=3.0), "LOOSE": _config(monthly_cap=100.0)},
+			lambda *a, **k: "normal",
+		)
+		self.assertEqual(rows[0]["monthly_cap"], 3.0)
+
+	def test_a_shift_resumed_after_another_still_meets_its_own_daily_cap(self):
+		# A 1.5 h -> B 0.5 h -> A 1.5 h with A capped at 2 h a day: A is one 3 h
+		# contribution capped to 2 h, not two 1.5 h pieces that each pass.
+		rows = _priced_day(
+			[{"shift": "A", "hours": 1.5}, {"shift": "B", "hours": 0.5}, {"shift": "A", "hours": 1.5}],
+			{"A": _config(daily_cap=2.0), "B": _config()},
+			lambda *a, **k: "normal",
+		)
+		by_shift = {}
+		for entry in rows[0]["contributions"]:
+			by_shift[entry["shift"]] = by_shift.get(entry["shift"], 0) + entry["hours"]
+		self.assertEqual(by_shift["A"], 2.0)
+		self.assertEqual(by_shift["B"], 0.5)

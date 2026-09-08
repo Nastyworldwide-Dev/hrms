@@ -374,8 +374,13 @@ def _per_day_contributions(employee, start_date, end_date):
 			continue
 		for day, hours, _ in _session_ot_slices(employee, session, config):
 			entries = per_day[day]
-			if entries and entries[-1]["shift"] == shift:
-				entries[-1]["hours"] += hours
+			# One entry per shift per day, in first-worked order: a shift left
+			# and resumed later the same day is still one contribution, so its
+			# daily cap applies to the whole of it.
+			for entry in entries:
+				if entry["shift"] == shift:
+					entry["hours"] += hours
+					break
 			else:
 				entries.append({"shift": shift, "hours": hours})
 	return per_day
@@ -505,8 +510,19 @@ def _iter_day_ot(
 		if approved_hours_map is not None:
 			approved_left = max(0.0, approved_hours_map.get(day, 0))
 
-		priced = []
+		# One contribution per shift, whatever the producer handed over: a
+		# shift's daily cap must see the whole of what it was worked that day.
+		merged: list[dict] = []
 		for entry in contributions[day]:
+			for known in merged:
+				if known["shift"] == entry["shift"]:
+					known["hours"] += entry["hours"]
+					break
+			else:
+				merged.append({"shift": entry["shift"], "hours": entry["hours"]})
+
+		priced = []
+		for entry in merged:
 			hours = entry["hours"]
 			if hours <= 0:
 				continue
@@ -524,13 +540,16 @@ def _iter_day_ot(
 				hours = min(hours, approved_left)
 				if hours <= 0:
 					continue
-				approved_left -= hours
 			if not nonworking and config["daily_cap"] > 0:
 				hours = min(hours, config["daily_cap"])
 			if not nonworking and apply_monthly_cap and config["monthly_cap"] > 0:
 				hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
 				if hours <= 0:
 					continue
+			# Approved hours are spent on what was actually PRICED: the part a
+			# shift's own cap trimmed stays available to the day's next shift.
+			if approved_left is not None:
+				approved_left -= hours
 			if not nonworking:
 				monthly_ot_hours += hours
 			hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
@@ -565,7 +584,16 @@ def _iter_day_ot(
 		)
 		yield {
 			"day": day,
-			"monthly_cap": max((p["monthly_cap"] for p in priced if not p["nonworking"]), default=0),
+			# The TIGHTEST weekday cap on the day: the capacity replay bounds
+			# future headroom by this figure, and a looser shift on the same day
+			# must not hide a tighter one. 0 means no cap.
+			# ceiling: one monthly accumulator shared by every shift, upgrade:
+			# per-shift accumulators if HR ever caps two shifts differently
+			# for one person in one month.
+			"monthly_cap": min(
+				(p["monthly_cap"] for p in priced if not p["nonworking"] and p["monthly_cap"] > 0),
+				default=0,
+			),
 			"unrounded_ot_hours": normal_hours + nonworking_hours,
 			# Weekday work keeps its two-decimal report figure; holiday work is exact.
 			"ot_hours": round(normal_hours, 2) + nonworking_hours,
