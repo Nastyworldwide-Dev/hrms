@@ -589,7 +589,7 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 
 
 @frappe.whitelist()
-def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dict:
+def get_claimable_ot_summary(employee: str | None = None, days: int | None = None) -> dict:
 	"""Unclaimed overtime the employee has already worked — so they KNOW it is there.
 
 	The OT they earned is invisible until they open the form and pick a date; people
@@ -597,11 +597,21 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 	dates; their ceilings use the same capacity calculation as the form and
 	validation. Dates already filed are excluded, so the PWA can show a
 	standing 'you have X h to claim' card instead of a form nobody thinks to open.
-	Read-only, session-scoped like the other PWA readers."""
+	Read-only, session-scoped like the other PWA readers.
+
+	The window is the FILING window (hrms/utils/filing_window.py): every day the
+	validation would still accept is offered here, so the list never hides a day
+	the picker would take. A fixed 45-day lookback did exactly that — a day
+	worked 72 days ago was claimable and unlisted. `days` lets a caller show a
+	shorter recent view; it can never reach further back than filing allows."""
+	from hrms.utils.filing_window import earliest_filable_date
+
 	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
 	to_date = getdate()
-	from_date = add_days(to_date, -int(days))
+	from_date = earliest_filable_date(to_date)
+	if days is not None:
+		from_date = max(from_date, add_days(to_date, -max(0, cint(days))))
 	logger.info("[api] claimable OT summary employee=%s window=%s..%s", employee, from_date, to_date)
 
 	worked = frappe.get_all(

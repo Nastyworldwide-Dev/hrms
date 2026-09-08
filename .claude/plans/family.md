@@ -280,3 +280,12 @@ docs/glass/audit/2026-09-08-attendance-deep-probes.py:57 not-affected — same r
 docs/glass/audit/2026-09-08-ot-concurrency-probe.py:56 not-affected — reads capacity["hours"], whose meaning is unchanged (capped weekday part plus exact holiday part); native lock-slice probe with a fixed single-shift entitlement
 docs/glass/audit/2026-09-08-ot-precision-native-test.py:81 not-affected — reads capacity["hours"] for single-shift synthetic days, which return exactly the figures they did
 hrms/hr/doctype/ot_request/ot_request.py:116 same-root — punch_ot_hours now caps only the weekday part of a day worked across shifts and adds the exact holiday part; single-shift days are unchanged (test_ot_multishift_day + test_ot_claim_monthly_capacity green)
+
+CLASS: OT-DISCOVERY-WINDOW — the "days you can claim" list looked back a fixed 45 days while the filing validation accepts an OT date back to the start of the cycle two cycles ago, so a claimable day older than 45 days was hidden from the quick-picks and the dashboard card even though the date picker would accept it.
+Changed: hrms/api/__init__.py get_claimable_ot_summary (window = earliest_filable_date(today); `days` may narrow, never widen; default None).
+Call sites / consumers:
+frontend/src/views/ot/OTRequestForm.vue:100 same-root — quick-picks now list every filable day (no `days` passed).
+frontend/src/views/attendance/Dashboard.vue:181 same-root — the "you have X h to claim" card now totals the same window the form will accept (no `days` passed).
+hrms/tests/test_ot_claim_monthly_capacity.py same-root — harness executes the real body; its Attendance stub ignores date filters, so its expectations are unchanged.
+hrms/utils/filing_window.py earliest_filable_date not-affected — read-only reuse of the existing rule; the two-cycle policy itself is untouched (S7 stays a separate, undecided policy change).
+Lock: hrms/tests/test_ot_discovery_window.py (every filable day offered; a day before the window not offered; a caller can narrow, never widen).
