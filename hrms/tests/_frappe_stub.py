@@ -105,6 +105,16 @@ def _utils_module():
 				continue
 		raise ValueError(f"unparseable datetime {value!r}")
 
+	def get_time(value):
+		if isinstance(value, datetime.datetime):
+			return value.time()
+		if isinstance(value, datetime.time):
+			return value
+		if isinstance(value, datetime.timedelta):
+			return (datetime.datetime.min + value).time()
+		# ceiling: ISO strings only; upgrade when a test needs Frappe's dateutil fallback.
+		return datetime.time.fromisoformat(value)
+
 	def add_to_date(value=None, years=0, months=0, weeks=0, days=0, hours=0, minutes=0, seconds=0, **kwargs):
 		if years or months:
 			raise NotImplementedError("stub add_to_date covers weeks/days/hours/minutes/seconds only")
@@ -126,6 +136,7 @@ def _utils_module():
 
 	module = types.ModuleType("frappe.utils")
 	module.__path__ = []
+	module.get_time = get_time
 	module.get_datetime = get_datetime
 	module.getdate = lambda value=None: get_datetime(value).date()
 	module.get_datetime_str = lambda value: get_datetime(value).strftime("%Y-%m-%d %H:%M:%S.%f")

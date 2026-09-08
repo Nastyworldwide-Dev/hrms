@@ -570,24 +570,21 @@ def get_replacement_leave_claims(
 def get_ot_claim_summary(employee: str, date: str) -> dict:
 	"""Live form helper: what the punches prove for a day, and how this
 	employee's approved OT is compensated."""
-	from hrms.utils.ot_calculation import get_day_ot_breakdown, round_ot_pay_hours
+	from hrms.utils.ot_calculation import get_ot_claim_capacity
 
 	_ensure_own_employee_or_permitted(employee)
-	breakdown = get_day_ot_breakdown(employee, date)
 	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
 	shift = frappe.db.get_value(
 		"Attendance",
 		{"employee": employee, "attendance_date": date, "docstatus": ("<", 2)},
 		"shift",
 	)
-	# OT Pay is billed in 30-min bands; Replacement Leave keeps the raw hours. Round
-	# here too so the form's "worked / claim up to" figure matches what will be saved.
-	raw = flt(breakdown["ot_hours"])
+	compensation = "Overtime Pay" if eligible else "Replacement Leave"
 	return {
 		"shift": shift,
-		"punch_ot_hours": round_ot_pay_hours(raw) if eligible else raw,
+		"punch_ot_hours": get_ot_claim_capacity(employee, date, compensation)["hours"],
 		"eligible_for_overtime_pay": eligible,
-		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+		"compensation": compensation,
 	}
 
 
@@ -596,8 +593,9 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 	"""Unclaimed overtime the employee has already worked — so they KNOW it is there.
 
 	The OT they earned is invisible until they open the form and pick a date; people
-	were finding it by accident. This sums the punch-verified OT (Attendance.ot_hours)
-	over a recent window and subtracts the dates already filed, so the PWA can show a
+	were finding it by accident. Submitted Attendance discovers OT-Pay candidate
+	dates; their ceilings use the same capacity calculation as the form and
+	validation. Dates already filed are excluded, so the PWA can show a
 	standing 'you have X h to claim' card instead of a form nobody thinks to open.
 	Read-only, session-scoped like the other PWA readers."""
 	employee = employee or get_current_employee()
@@ -612,7 +610,6 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 			"employee": employee,
 			"attendance_date": ["between", [from_date, to_date]],
 			"docstatus": 1,
-			"ot_hours": [">", 0],
 		},
 		fields=["attendance_date", "ot_hours"],
 	)
@@ -631,25 +628,41 @@ def get_claimable_ot_summary(employee: str | None = None, days: int = 45) -> dic
 	)
 	unclaimed = [row for row in worked if row["attendance_date"] not in claimed]
 	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
-	# Round each day the OT-Pay way before summing (bands apply per claim, i.e. per
-	# day); Replacement Leave sums the raw hours and converts to days downstream.
-	from hrms.utils.ot_calculation import round_ot_pay_hours
+	from hrms.utils.ot_calculation import get_ot_claim_capacity
 
-	def day_hours(row):
-		raw = flt(row["ot_hours"])
-		return round_ot_pay_hours(raw) if eligible else raw
+	compensation = "Overtime Pay" if eligible else "Replacement Leave"
 
 	# Per-day so the PWA can show WHICH dates to claim, not just a total — the
 	# employee was left guessing a date in the form. Newest first.
-	days = [
-		{"date": str(row["attendance_date"]), "hours": day_hours(row)}
-		for row in sorted(unclaimed, key=lambda r: r["attendance_date"], reverse=True)
-		if day_hours(row) > 0
-	]
+	days = []
+	monthly_choices = {}
+	if eligible:
+		for work_date in sorted({row["attendance_date"] for row in unclaimed}, reverse=True):
+			capacity = get_ot_claim_capacity(employee, work_date, compensation)
+			hours = capacity["hours"]
+			if hours > 0:
+				days.append({"date": str(work_date), "hours": hours})
+				monthly_choices.setdefault(str(work_date)[:7], []).append(capacity)
+		# Individual choices share the remaining allowance: two possible 3h
+		# claims against one 4h pool mean 4h available in total, not 6h.
+		total = 0.0
+		for choices in monthly_choices.values():
+			worked_hours = sum(choice["hours"] for choice in choices)
+			budgets = [choice["monthly_remaining"] for choice in choices]
+			total += worked_hours if None in budgets else min(worked_hours, max(budgets))
+	else:
+		# Preserve RL's existing Attendance-based discovery until its cap policy
+		# is reconciled separately; do not silently invent an RL allowance pool.
+		days = [
+			{"date": str(row["attendance_date"]), "hours": flt(row["ot_hours"])}
+			for row in sorted(unclaimed, key=lambda row: row["attendance_date"], reverse=True)
+			if flt(row["ot_hours"]) > 0
+		]
+		total = sum(day["hours"] for day in days)
 	return {
-		"claimable_hours": flt(sum(d["hours"] for d in days)),
+		"claimable_hours": flt(total),
 		"claimable_days": len(days),
-		"compensation": "Overtime Pay" if eligible else "Replacement Leave",
+		"compensation": compensation,
 		"days": days,
 		"from_date": str(from_date),
 		"to_date": str(to_date),

@@ -19,9 +19,8 @@ from hrms.hr.utils import (
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils.filing_window import earliest_filable_date, is_within_ot_filing_window
 from hrms.utils.ot_calculation import (
-	get_day_ot_breakdown,
+	get_ot_claim_capacity,
 	replacement_leave_days,
-	round_ot_pay_hours,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,8 +68,14 @@ class OTRequest(Document, PWANotificationsMixin):
 		validate_filing_for_self(self)
 		self.validate_filing_window()
 		self.set_compensation()
-		self.set_punch_verified_cap()
-		self.validate_claimed_hours()
+		# A refusal creates no entitlement. HR must still be able to reject a
+		# filed claim when its punch evidence or monthly capacity has changed.
+		# New filings and approvals always prove their financial capacity.
+		if self.is_new() or getattr(self, "status", None) != "Rejected":
+			self.set_punch_verified_cap()
+			self.validate_claimed_hours()
+		else:
+			logger.debug("[ot_request] retaining filed punch cap for rejected request")
 		self.validate_duplicate_request()
 
 	def validate_filing_window(self):
@@ -107,12 +112,12 @@ class OTRequest(Document, PWANotificationsMixin):
 		self.compensation = OT_PAY if cint(eligible) else REPLACEMENT_LEAVE
 
 	def set_punch_verified_cap(self):
-		breakdown = get_day_ot_breakdown(self.employee, self.ot_date)
-		raw = flt(breakdown["ot_hours"])
-		# OT Pay is billed in HR's 30-minute bands (round_ot_pay_hours); Replacement
-		# Leave keeps the raw fractional hours and converts them to days downstream.
-		# set_compensation runs before this in validate(), so self.compensation is set.
-		self.punch_ot_hours = round_ot_pay_hours(raw) if self.compensation == OT_PAY else raw
+		self.punch_ot_hours = get_ot_claim_capacity(
+			self.employee,
+			self.ot_date,
+			self.compensation,
+			exclude_request=self.name if not self.is_new() else None,
+		)["hours"]
 		if not self.shift:
 			self.shift = frappe.db.get_value(
 				"Attendance",
@@ -120,11 +125,10 @@ class OTRequest(Document, PWANotificationsMixin):
 				"shift",
 			)
 		logger.info(
-			"[ot_request] %s %s punch cap %sh (raw %.2f, comp %s)",
+			"[ot_request] %s %s punch cap %sh (comp %s)",
 			self.employee,
 			self.ot_date,
 			self.punch_ot_hours,
-			raw,
 			self.compensation,
 		)
 

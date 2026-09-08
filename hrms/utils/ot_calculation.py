@@ -26,8 +26,10 @@ day's rate (Calendar-Day Split / "Option B").
 from __future__ import annotations
 
 import logging
+from calendar import monthrange
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
 import frappe
 from frappe.utils import cint, flt, get_datetime, get_time, getdate
@@ -405,7 +407,16 @@ def _approved_ot_pay_hours(employee, start_date, end_date):
 	return approved
 
 
-def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approved_hours_map=None):
+def _iter_day_ot(
+	employee,
+	start_date,
+	end_date,
+	basic,
+	default_day_type,
+	approved_hours_map=None,
+	*,
+	apply_monthly_cap=True,
+):
 	"""Yield the priced OT for each qualifying day in [start, end], applying
 	min-minutes, the daily cap and the running monthly cap. Shared by get_ot_pay
 	(sums amounts) and get_ot_breakdown (records the per-day split).
@@ -418,7 +429,7 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 	logger.info("[ot_calculation] iterating OT days employee=%s %s..%s", employee, start_date, end_date)
 	# Count from the calendar-month boundary even when the caller asks for one
 	# day or a payroll period starting mid-month. Only the output is sliced.
-	cap_start = start_date.replace(day=1)
+	cap_start = start_date.replace(day=1) if apply_monthly_cap else start_date
 	per_day_hours, per_day_shift = _per_day_ot_hours(employee, cap_start, end_date)
 
 	monthly_ot_hours = 0.0
@@ -438,20 +449,21 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 			cap_month = (day.year, day.month)
 			monthly_ot_hours = 0.0
 
-		if approved_hours_map is not None:
-			if day not in approved_hours_map:
-				continue
-			hours = min(hours, approved_hours_map[day])
-
 		config = _get_shift_ot_config(per_day_shift.get(day))
 		if not config:
 			# shift missing or overtime disabled for this shift
 			continue
 		if hours * 60.0 < config["min_minutes"]:
 			continue
+		# The minimum qualifies WORKED overtime. A smaller approved claim or
+		# remaining monthly allowance must not be tested against it a second time.
+		if approved_hours_map is not None:
+			hours = min(hours, max(0.0, approved_hours_map.get(day, 0)))
+			if hours <= 0:
+				continue
 		if config["daily_cap"] > 0:
 			hours = min(hours, config["daily_cap"])
-		if config["monthly_cap"] > 0:
+		if apply_monthly_cap and config["monthly_cap"] > 0:
 			hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
 			if hours <= 0:
 				continue
@@ -473,6 +485,7 @@ def _iter_day_ot(employee, start_date, end_date, basic, default_day_type, approv
 		)
 		yield {
 			"day": day,
+			"monthly_cap": config["monthly_cap"],
 			"ot_hours": round(hours, 2),
 			"day_type": resolved_day_type,
 			"hourly_rate": hourly_rate,
@@ -538,6 +551,46 @@ def get_day_ot_breakdown(employee, day, basic=0):
 	day = getdate(day)
 	logger.info("[ot_calculation] get_day_ot_breakdown employee=%s day=%s", employee, day)
 	return get_ot_breakdown(employee, day, day, basic).get(day) or _empty_breakdown()
+
+
+def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
+	"""Claim capacity, distinct from a raw-work report's chronological monthly cap.
+
+	Only approved OT-Pay claims reserve the pay allowance. Include the whole
+	month so backdated filing cannot displace a later approved claim. The caller
+	may exclude only its own persisted document during controller revalidation;
+	whitelisted summary endpoints never accept an exclusion from the client.
+	Replacement Leave retains its existing raw-work behavior pending HR policy.
+	"""
+	day = getdate(day)
+	if compensation != "Overtime Pay":
+		return {"hours": flt(get_day_ot_breakdown(employee, day)["ot_hours"]), "monthly_remaining": None}
+	worked = next(_iter_day_ot(employee, day, day, 0, "normal", apply_monthly_cap=False), None)
+	if not worked:
+		return {"hours": 0.0, "monthly_remaining": None}
+	# Round the earned amount before clipping: rounding a remaining allowance
+	# afterwards can raise a claim above the configured monthly maximum.
+	hours = round_ot_pay_hours(worked["ot_hours"])
+	cap = worked["monthly_cap"]
+	remaining = None
+	if cap > 0:
+		filters = {
+			"employee": employee,
+			"docstatus": 1,
+			"status": ("!=", "Rejected"),
+			"compensation": "Overtime Pay",
+			"ot_date": ["between", [day.replace(day=1), day.replace(day=monthrange(day.year, day.month)[1])]],
+		}
+		if exclude_request:
+			filters["name"] = ("!=", exclude_request)
+		approved = frappe.get_all("OT Request", filters=filters, fields=["claimed_hours"])
+		reserved = sum(Decimal(str(max(0.0, flt(row.claimed_hours)))) for row in approved)
+		remaining = float(max(Decimal(0), Decimal(str(cap)) - reserved))
+		hours = min(hours, remaining)
+	logger.info(
+		"[ot_calculation] claim capacity date=%s compensation=%s hours=%.3f", day, compensation, hours
+	)
+	return {"hours": hours, "monthly_remaining": remaining}
 
 
 def _empty_breakdown():

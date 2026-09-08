@@ -18,6 +18,11 @@ import _frappe_stub
 _frappe_stub.install()
 import frappe
 
+# Keep the controller's calculator dependency outside the temporary module
+# overrides below. Otherwise patch.dict removes its first import on exit,
+# and later tests patch a different module from the one the controller holds.
+importlib.import_module("hrms.utils.ot_calculation")
+
 
 class StoredDocument:
 	def __init__(self, values):
