@@ -27,25 +27,18 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.getcwd())
 
-for name in ("frappe", "frappe.utils"):
-	if name not in sys.modules:
-		mod = types.ModuleType(name)
-		mod.__getattr__ = lambda attr: MagicMock()
-		sys.modules[name] = mod
+# The shared bench-free stub, installed the way every other OT suite does it.
+# This file used to hand-build `frappe` / `frappe.utils` and overwrite the
+# shared module's coercers at import (get_datetime became identity): any OT
+# suite imported AFTER it in the same pytest run — the commit gate sorts files,
+# so most of them — then saw strings pass through get_datetime and failed
+# inside their own fixtures. The stub's real coercers are a superset of what
+# these tests needed; frappe.db is a stable MagicMock there already.
+sys.path.insert(0, os.path.join(os.getcwd(), "hrms", "tests"))
+import _frappe_stub
 
-# the real coercers, so the stub doesn't swallow arithmetic
+_frappe_stub.install()
 import frappe
-
-# STABLE db object: the module-level __getattr__ mints a fresh MagicMock per
-# access, so patch.object(frappe.db, ...) would patch a throwaway while the
-# code under test reads a different one.
-frappe.db = MagicMock()
-frappe.utils = sys.modules["frappe.utils"]
-sys.modules["frappe.utils"].cint = lambda v: int(v or 0)
-sys.modules["frappe.utils"].flt = lambda v, *a: float(v or 0)
-sys.modules["frappe.utils"].get_time = lambda v: v if isinstance(v, time) else time.fromisoformat(str(v))
-sys.modules["frappe.utils"].get_datetime = lambda v: v
-sys.modules["frappe.utils"].getdate = lambda v=None: v if isinstance(v, date) else date.fromisoformat(str(v))
 
 from hrms.utils import ot_calculation as ot
 
