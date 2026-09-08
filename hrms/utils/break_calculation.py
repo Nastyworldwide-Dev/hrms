@@ -24,10 +24,17 @@ Public API:
         are handled — each calendar day is evaluated independently with
         that day's day-of-week rules.
 
-    get_shift_break_minutes(shift_type_name, work_start, work_end,
-                            company=None) -> int
+    get_break_minutes_for_intervals(intervals, break_rows,
+                                    ramadan_start=None, ramadan_end=None) -> int
+        Pure helper for a session worked as several (start, end) intervals:
+        fixed windows are deducted only where they overlap time actually
+        worked; a flexible break is deducted once per session, less time the
+        employee already spent logged out inside it.
+
+    get_shift_break_minutes_for_intervals(shift_type_name, intervals,
+                                          company=None) -> int
         Convenience wrapper that loads the rows from a Shift Type and the
-        Ramadan window for `company`, then calls get_break_minutes.
+        Ramadan window for `company`, then calls get_break_minutes_for_intervals.
 """
 
 from __future__ import annotations
@@ -184,17 +191,63 @@ def get_break_minutes(
 	return total
 
 
-def get_shift_break_minutes(
-	shift_type_name: str, work_start: datetime, work_end: datetime, company: str | None = None
-) -> int:
+def _break_type(row) -> str:
+	row_type = row.get("break_type") if isinstance(row, dict) else getattr(row, "break_type", None)
+	return row_type or "Fixed"
+
+
+def _minutes(delta: timedelta) -> int:
+	return int(delta.total_seconds() // 60)
+
+
+def get_break_minutes_for_intervals(intervals, break_rows, ramadan_start=None, ramadan_end=None) -> int:
+	"""Minutes to deduct from one session worked as disjoint (start, end) intervals.
+
+	A fixed window is deducted exactly where it overlaps time actually worked:
+	a real lunch logout is never deducted twice, and an unrelated logout
+	elsewhere in the day never hides the lunch (the old span-minus-worked gap
+	arithmetic did — AD-06). A flexible break has no window, so it is deducted
+	once per session, keyed to the day the session started, less any minutes
+	the employee was already logged out between the first IN and the last OUT,
+	and never more than the time worked.
+	"""
+	intervals = sorted((start, end) for start, end in intervals if end > start)
+	if not intervals or not break_rows:
+		return 0
+	fixed = [row for row in break_rows if _break_type(row) != "Flexible"]
+	flexible = [row for row in break_rows if _break_type(row) == "Flexible"]
+	total = sum(
+		get_break_minutes(start, end, fixed, ramadan_start=ramadan_start, ramadan_end=ramadan_end)
+		for start, end in intervals
+	)
+	if flexible:
+		span_start, span_end = intervals[0][0], intervals[-1][1]
+		worked = sum(_minutes(end - start) for start, end in intervals)
+		already_out = _minutes(span_end - span_start) - worked
+		configured = get_break_minutes(
+			span_start, span_end, flexible, ramadan_start=ramadan_start, ramadan_end=ramadan_end
+		)
+		total += max(0, min(configured - already_out, worked))
+	logger.info(
+		"[break_calculation] %d interval(s) %s-%s: %dm deducted",
+		len(intervals),
+		intervals[0][0],
+		intervals[-1][1],
+		total,
+	)
+	return total
+
+
+def get_shift_break_minutes_for_intervals(shift_type_name: str, intervals, company: str | None = None) -> int:
 	"""Frappe-bound wrapper: fetch the Shift Type's break rows and the
-	Ramadan window, then compute overlap minutes.
+	Ramadan window, then compute the minutes to deduct from a session worked
+	as (start, end) intervals — see get_break_minutes_for_intervals.
 
 	The Ramadan window is resolved per company (UAE entities observe it,
 	Malaysian and Chinese ones must not inherit it); with no company override
 	configured it is the global HR Settings window, as before.
 	"""
-	if not shift_type_name or work_end <= work_start:
+	if not shift_type_name or not intervals:
 		return 0
 
 	import frappe
@@ -222,10 +275,6 @@ def get_shift_break_minutes(
 	if isinstance(ramadan_end, datetime):
 		ramadan_end = ramadan_end.date()
 
-	return get_break_minutes(
-		work_start,
-		work_end,
-		rows,
-		ramadan_start=ramadan_start,
-		ramadan_end=ramadan_end,
+	return get_break_minutes_for_intervals(
+		intervals, rows, ramadan_start=ramadan_start, ramadan_end=ramadan_end
 	)

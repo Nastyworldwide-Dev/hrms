@@ -68,7 +68,8 @@ calcs = [
 	node
 	for node in checkin_tree.body
 	if isinstance(node, ast.FunctionDef)
-	and node.name in {"calculate_working_hours", "time_diff_in_hours", "find_index_in_dict"}
+	and node.name
+	in {"calculate_working_hours", "worked_intervals", "time_diff_in_hours", "find_index_in_dict"}
 ]
 SHIFT = {
 	"frappe": frappe,

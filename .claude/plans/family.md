@@ -369,3 +369,15 @@ frappe.push_notification.subscribe/unsubscribe (server) not-affected — respons
 Lock: frontend/src/utils/__tests__/frappe-push-notification.test.js (success:false, malformed body, non-200 -> nothing stored and the retry re-subscribes; confirmed subscribe stores; refused unsubscribe keeps the token; confirmed unsubscribe clears it).
 
 Addendum PWA-RECOVERY-TICKET (design review of 6a2d4e4a4, FIX_WARNINGS): the alert now says "Press Retry uploads to send them again" because a screen reader on the focused button does not hear its relabel; list keys de-duplicated per index. The mockup contract the reviewer was handed covers the OT/checkout screens, not this flow; recorded here — this slice shipped without a separate Helpdesk mockup under the 8 Sep working agreement.
+
+CLASS: BREAK-WHERE-WORKED — the unpaid-break deduction knew only a day's TOTAL logged-out time (first-IN/last-OUT span minus worked hours) and subtracted it from the configured break, so an unrelated logout elsewhere in the day "paid for" the fixed lunch (AD-06: 09-10 + 11-19 with a 12-13 lunch counted 9 h, not 8).
+Changed: hrms/hr/doctype/employee_checkin/employee_checkin.py (worked_intervals: the pairs calculate_working_hours counts, per pairing and policy), hrms/utils/break_calculation.py (get_break_minutes_for_intervals: fixed windows only where they overlap worked time; flexible once per session less time already out, capped at worked; get_shift_break_minutes_for_intervals wrapper replaces the caller-less span wrapper), hrms/hr/doctype/shift_type/shift_type.py (get_attendance hands the worked intervals to _deduct_unpaid_breaks).
+Call sites / consumers:
+hrms/hr/doctype/shift_type/shift_type.py get_attendance same-root — the only caller of _deduct_unpaid_breaks; intervals come from the same segments the hours came from.
+hrms/hr/doctype/shift_type/shift_type.py get_attendance holiday branch not-affected — eligible holiday work is Present without weekday deductions by design.
+hrms/overrides/remote_checkin_request_hooks.py:537 calculate_working_hours not-affected — takes first_in/last_out for the whole-day repair; the hours are recomputed by get_attendance when the Attendance is re-marked.
+hrms/hr/doctype/employee_checkin/employee_checkin.py calculate_working_hours not-affected — unchanged; the invariant test pins worked_intervals to it for both pairings and both policies.
+hrms/tests/test_ot_nonworking_hours.py:224 patch of _deduct_unpaid_breaks not-affected — return_value mock, signature-agnostic; the harness now extracts worked_intervals too.
+hrms/tests/test_attendance_repair_lifecycle.py calculate_working_hours not-affected — reads the unchanged triple.
+hrms/utils/test_break_calculation.py not-affected — get_break_minutes (single span) is unchanged and still the primitive the interval rule sums.
+Lock: hrms/tests/test_break_deduction_worked_intervals.py (split day 8 h not 9; real lunch logout not deducted twice; partial logout deducts the worked half; First/Last keeps the span; flexible once per session less time already out; pure rule; hypothesis invariant interval-sum == calculated hours).

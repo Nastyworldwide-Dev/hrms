@@ -29,6 +29,7 @@ from hrms.hr.doctype.attendance.attendance import mark_attendance
 from hrms.hr.doctype.employee_checkin.employee_checkin import (
 	calculate_working_hours,
 	mark_attendance_and_link_log,
+	worked_intervals,
 )
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift, get_shift_details
 from hrms.utils import get_date_range
@@ -386,18 +387,22 @@ class ShiftType(Document):
 		# Preserve the configured native calculation within each contiguous
 		# eligible segment. An invalid boundary never joins the surrounding
 		# first-IN/last-OUT span, even with the First/Last working-hours policy.
-		parts = [
-			calculate_working_hours(
-				list(group), self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
-			)
-			for eligible, group in groupby(logs, key=_is_eligible_checkin)
-			if eligible
-		]
+		pairing = self.determine_check_in_and_check_out
+		policy = self.working_hours_calculation_based_on
+		segments = [list(group) for eligible, group in groupby(logs, key=_is_eligible_checkin) if eligible]
+		parts = [calculate_working_hours(segment, pairing, policy) for segment in segments]
 		total_working_hours = sum(part[0] for part in parts)
 		in_time = next((part[1] for part in parts if part[1]), None)
 		out_time = next((part[2] for part in reversed(parts) if part[2]), None)
+		# Breaks are deducted where the time was worked, not against the
+		# first-IN/last-OUT span: the pairs here are the pairs the hours came from.
+		intervals = [
+			(get_datetime(start), get_datetime(end))
+			for segment in segments
+			for start, end in worked_intervals(segment, pairing, policy)
+		]
 		total_working_hours = self._deduct_unpaid_breaks(
-			total_working_hours, in_time, out_time, company=_company_of_logs(logs)
+			total_working_hours, intervals, company=_company_of_logs(logs)
 		)
 		if (
 			cint(self.enable_late_entry_marking)
@@ -424,34 +429,24 @@ class ShiftType(Document):
 
 		return "Present", total_working_hours, late_entry, early_exit, in_time, out_time
 
-	def _deduct_unpaid_breaks(self, total_working_hours, in_time, out_time, company=None):
+	def _deduct_unpaid_breaks(self, total_working_hours, intervals, company=None):
 		"""Subtract configured unpaid breaks from working hours.
 
-		Gap-aware: only deducts the portion of the break window NOT already
-		excluded by a real check-out/check-in gap, so workers who actually
-		log out for lunch aren't double-penalised.
-
-		`company` selects whose Ramadan window applies — see
-		hrms.utils.company_settings.
+		`intervals` are the (start, end) pairs the hours were counted from. A
+		fixed window is deducted only where it overlaps them, so a worker who
+		logs out for lunch is not deducted twice and an unrelated logout
+		elsewhere in the day cannot hide the lunch. `company` selects whose
+		Ramadan window applies — see hrms.utils.company_settings.
 		"""
-		if not (in_time and out_time) or not getattr(self, "breaks", None):
+		if not intervals or not getattr(self, "breaks", None):
 			return total_working_hours
 
-		from hrms.utils.break_calculation import get_shift_break_minutes
+		from hrms.utils.break_calculation import get_shift_break_minutes_for_intervals
 
-		in_dt = get_datetime(in_time)
-		out_dt = get_datetime(out_time)
-		break_min = get_shift_break_minutes(self.name, in_dt, out_dt, company=company)
+		break_min = get_shift_break_minutes_for_intervals(self.name, intervals, company=company)
 		if break_min <= 0:
 			return total_working_hours
-
-		span_min = (out_dt - in_dt).total_seconds() / 60.0
-		worked_min = float(total_working_hours) * 60.0
-		gap_min = max(0.0, span_min - worked_min)
-		extra_deduct_min = max(0.0, break_min - gap_min)
-		if extra_deduct_min <= 0:
-			return total_working_hours
-		return max(0.0, total_working_hours - extra_deduct_min / 60.0)
+		return max(0.0, total_working_hours - break_min / 60.0)
 
 	def mark_absent_for_dates_with_no_attendance(self, employee: str):
 		"""Marks Absents for the given employee on working days in this shift that have no attendance marked.

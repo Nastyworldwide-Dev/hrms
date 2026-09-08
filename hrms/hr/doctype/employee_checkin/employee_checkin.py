@@ -614,6 +614,38 @@ def calculate_working_hours(logs, check_in_out_type, working_hours_calc_type):
 	return total_hours, in_time, out_time
 
 
+def worked_intervals(logs, check_in_out_type, working_hours_calc_type):
+	"""The (start, end) pairs calculate_working_hours counts as worked, in order.
+
+	Under "First Check-in and Last Check-out" the whole first-IN..last-OUT span
+	is one interval (gaps inside it are paid); under "Every Valid Check-in and
+	Check-out" each IN/OUT pair is one. Break deduction needs WHERE the time was
+	worked, not just how much: an unrelated logout must not hide a fixed lunch.
+	hrms/tests/test_break_deduction_worked_intervals.py pins the sum of these
+	intervals to calculate_working_hours for every policy.
+	"""
+	if check_in_out_type == "Alternating entries as IN and OUT during the same shift":
+		if working_hours_calc_type == "First Check-in and Last Check-out":
+			return [(logs[0].time, logs[-1].time)] if len(logs) >= 2 else []
+		return [(a.time, b.time) for a, b in zip(logs[0::2], logs[1::2], strict=False)]
+	if check_in_out_type != "Strictly based on Log Type in Employee Checkin":
+		return []
+	if working_hours_calc_type == "First Check-in and Last Check-out":
+		ins = [log.time for log in logs if log.log_type == "IN"]
+		outs = [log.time for log in logs if log.log_type == "OUT"]
+		return [(ins[0], outs[-1])] if ins and outs else []
+	pairs = []
+	in_log = None
+	for log in logs:
+		if in_log is None:
+			in_log = log if log.log_type == "IN" else None
+		elif log.log_type == "OUT":  # a second IN keeps the first, as the native loop does
+			pairs.append((in_log.time, log.time))
+			in_log = None
+	logger.debug("[employee_checkin] %d worked interval(s) from %d punch(es)", len(pairs), len(logs))
+	return pairs
+
+
 def time_diff_in_hours(start, end):
 	return round(float((end - start).total_seconds()) / 3600, 2)
 

@@ -234,3 +234,27 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-08T16:23:15Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
 2026-09-08T16:23Z COMMIT: 3eebcebe7 provisional-repair failure isolation + ignore_permissions (review of cc09090ec: DEPLOY after fix); 56f8c57ce ledger. 32 commits ahead of origin, NOT pushed.
 2026-09-08T16:23Z NEXT: Nabil pushes + deploys; runs D1-D5; answers Q1-Q3 + four-month policy; then notifications / Desk reports / RL sync / metadata / harness rows
+- 2026-09-08T16:29:04Z COMMIT: 505ff9e7b chore(plans): progress after the review fix → review dispatched
+2026-09-08T16:40Z NEXT: Nabil pushes + deploys nz-glass (33 ahead), runs D1-D5, answers Q1-Q3 + four-month policy; then 360 rows: notifications, Desk reports, RL sync ownership, metadata parity, PWA recovery, punched-pending calendar state, harness
+- 2026-09-08T16:44:19Z COMMIT: 505ff9e7b chore(plans): progress after the review fix → review dispatched
+- 2026-09-08T16:52:54Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 121 same-root ⟂dd7bc553362e
+- 2026-09-08T16:52:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 16 file(s) ⟂60151e67ca77
+- 2026-09-08T16:53:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 16 file(s) ⟂60151e67ca77
+- 2026-09-08T16:53:11Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 121 same-root ⟂dd7bc553362e
+- 2026-09-08T16:53:13Z COMMIT: 325b846de fix(desk): deliver HR-only roles to the launcher tiles and payroll reports → review dispatched
+- 2026-09-08T16:55:25Z COMMIT: 9d09c184c test(scope): the pending-request status predicate is a list, not a scalar → review dispatched
+- 2026-09-08T16:58:15Z COMMIT: 6a2d4e4a4 fix(helpdesk): keep a raised ticket and retry only the uploads that failed → review+design dispatched
+2026-09-08T16:59Z NOTE: review of 9d09c184c (DEPLOY) refuted the commit body's causal claim — the stale assertion could not poison later tests; the 3 issubclass failures had another, unreproduced cause. Recorded here since the commit is local and unpushed.
+2026-09-08T16:59Z NEXT: batch 2 row 4 (push registration honesty), then rows 5-9; recover reviews for 325b846de and 6a2d4e4a4
+- 2026-09-08T17:03:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-08T17:03:42Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-08T17:05:57Z COMMIT: 807765415 refactor(push): move the push helper out of public/ into src/utils → review dispatched
+- 2026-09-08T17:06:07Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-08T17:06:07Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-08T17:06:09Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 125 same-root ⟂c909b3400724
+- 2026-09-08T17:06:11Z COMMIT: 0b6144574 fix(push): believe a subscription only when the server confirms it → review dispatched
+- 2026-09-08T17:06:27Z COMMIT: 7cf3ebcb1 fix(helpdesk): say in the alert that Submit has become Retry uploads → review+design dispatched
+- 2026-09-08T17:07:04Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-08T17:14:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-08T17:14:48Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
+- 2026-09-08T17:14:49Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 126 same-root ⟂44a6b147b6a8
