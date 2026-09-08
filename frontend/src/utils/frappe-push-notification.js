@@ -94,9 +94,7 @@ class FrappePushNotification {
 			this.webConfig = response_json.config
 			return this.webConfig
 		} catch (e) {
-			throw new Error(
-				"Push Notification Relay is not configured properly on your site."
-			)
+			throw new Error("Push Notification Relay is not configured properly on your site.")
 		}
 	}
 
@@ -116,9 +114,7 @@ class FrappePushNotification {
 			this.vapidPublicKey = response_json.vapid_public_key
 			return this.vapidPublicKey
 		} catch (e) {
-			throw new Error(
-				"Push Notification Relay is not configured properly on your site."
-			)
+			throw new Error("Push Notification Relay is not configured properly on your site.")
 		}
 	}
 
@@ -225,15 +221,55 @@ class FrappePushNotification {
 			console.error("Failed to delete token from firebase")
 			console.error(e)
 		}
+		let unsubscribed = false
 		try {
-			await this.unregisterTokenHandler(this.token)
-		} catch {
+			unsubscribed = await this.unregisterTokenHandler(this.token)
+		} catch (e) {
 			console.error("Failed to unsubscribe from push notification")
 			console.error(e)
+		}
+		// The server still holds this token: keep it on the device too, so the
+		// screen keeps saying "enabled" and the next attempt retries the same
+		// token instead of pretending it is gone.
+		if (!unsubscribed) {
+			throw new Error("Could not unsubscribe from push notifications. Try again.")
 		}
 		// remove token
 		localStorage.removeItem(`firebase_token_${this.projectName}`)
 		this.token = null
+	}
+
+	/**
+	 * Did the subscribe/unsubscribe call actually succeed?
+	 *
+	 * Frappe answers HTTP 200 with a body of {message: {success, message}}, and
+	 * `success` is an independent boolean — the relay being down or the token
+	 * being refused comes back as 200 + success:false. Only the body's own
+	 * verdict counts; a status check alone stored a failed subscription as
+	 * enabled and then skipped every later attempt with the same token.
+	 *
+	 * @param {Response} response
+	 * @param {string} action - "subscribe" | "unsubscribe", for the log line
+	 * @returns {Promise<boolean>}
+	 */
+	async subscriptionConfirmed(response, action) {
+		if (response.status !== 200) {
+			console.warn(`[push] ${action} failed: HTTP ${response.status}`)
+			return false
+		}
+		let body
+		try {
+			body = await response.json()
+		} catch (e) {
+			console.warn(`[push] ${action} returned no JSON body`, e)
+			return false
+		}
+		const result = body?.message
+		if (result?.success !== true) {
+			console.warn(`[push] ${action} refused by the server:`, result?.message || "no success flag")
+			return false
+		}
+		return true
 	}
 
 	/**
@@ -256,7 +292,7 @@ class FrappePushNotification {
 					},
 				}
 			)
-			return response.status === 200
+			return await this.subscriptionConfirmed(response, "subscribe")
 		} catch (e) {
 			console.error(e)
 			return false
@@ -283,7 +319,7 @@ class FrappePushNotification {
 					},
 				}
 			)
-			return response.status === 200
+			return await this.subscriptionConfirmed(response, "unsubscribe")
 		} catch (e) {
 			console.error(e)
 			return false
