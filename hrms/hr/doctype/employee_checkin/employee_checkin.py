@@ -323,47 +323,22 @@ def create_or_update_attendance(
 		)
 		return frappe.get_doc("Attendance", attendance.name)
 
-	if repair_attendance is None and (attendance := get_repairable_auto_absence(employee, attendance_date)):
+	if repair_attendance is None and (absence := get_repairable_auto_absence(employee, attendance_date)):
 		# Auto-attendance marked this day Absent because no check-ins had
-		# arrived; the authoritative punches are here now. Repair the
-		# provisional record in place (it stays automation-owned) rather than
-		# colliding with it as a duplicate and skipping the punches forever.
-		overtime_update = {}
-		if overtime_type and attendance_status == "Present":
-			overtime_data = get_overtime_data(shift, working_hours)
-			if overtime_data:
-				overtime_update = {
-					"overtime_type": overtime_type,
-					"standard_working_hours": overtime_data.get("standard_working_hours"),
-					"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
-				}
-		frappe.db.set_value(
-			"Attendance",
-			attendance.name,
-			{
-				"status": attendance_status,
-				"working_hours": working_hours,
-				"shift": shift,
-				"late_entry": late_entry,
-				"early_exit": early_exit,
-				"in_time": in_time,
-				"out_time": out_time,
-				**overtime_update,
-			},
+		# arrived; the authoritative punches are here now.
+		return _replace_provisional_absence(
+			absence,
+			employee=employee,
+			attendance_date=attendance_date,
+			attendance_status=attendance_status,
+			working_hours=working_hours,
+			shift=shift,
+			late_entry=late_entry,
+			early_exit=early_exit,
+			in_time=in_time,
+			out_time=out_time,
+			overtime_type=overtime_type,
 		)
-		repaired = frappe.get_doc("Attendance", attendance.name)
-		repaired.add_comment(
-			"Comment",
-			_("Auto-marked Absent repaired to {0} when check-ins arrived late.").format(_(attendance_status)),
-		)
-		logger.info(
-			"[checkin] repaired auto-Absent %s -> %s for %s on %s",
-			attendance.name,
-			attendance_status,
-			employee,
-			attendance_date,
-		)
-		return repaired
 
 	attendance = repair_attendance if repair_attendance is not None else frappe.new_doc("Attendance")
 	was_new = attendance.is_new()
@@ -407,6 +382,94 @@ def create_or_update_attendance(
 		attendance.submit()
 
 	return attendance
+
+
+def _replace_provisional_absence(absence, **fields):
+	"""Replace a submitted provisional auto-Absent with the day the punches prove.
+
+	The provisional row is SUBMITTED, so its status, hours and overtime cannot
+	change through validation. Writing them with db.set_value skipped
+	Attendance.validate: set_overtime never ran, and the day read Present with
+	0 h overtime and no rate bands (Astra's 360 audit, ATT-PROVISIONAL). Do it
+	the way the late-checkout repair does — cancel the automation-owned row
+	and re-mark the day through insert -> validate -> submit under a
+	savepoint — and refuse when payroll or an approved claim already depends
+	on the day, so a paid Absent is never silently turned into a Present."""
+	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+	employee = fields["employee"]
+	attendance_date = fields["attendance_date"]
+	status = fields["attendance_status"]
+	if _repair_financial_dependency(employee, attendance_date, absence.name):
+		logger.warning(
+			"[checkin] provisional Absent %s for %s on %s has a financial dependency — left for HR",
+			absence.name,
+			employee,
+			attendance_date,
+		)
+		frappe.throw(
+			_(
+				"Approved overtime, replacement leave or submitted payroll already depends on {0}; "
+				"the auto-marked Absent {1} needs a manual correction."
+			).format(attendance_date, absence.name)
+		)
+
+	frappe.db.savepoint("provisional_absence_repair")
+	try:
+		absence.flags.ignore_permissions = True
+		absence.cancel()
+		replacement = frappe.new_doc("Attendance")
+		replacement.update(
+			{
+				"employee": employee,
+				"attendance_date": attendance_date,
+				"status": status,
+				"working_hours": fields["working_hours"],
+				"shift": fields["shift"],
+				"late_entry": fields["late_entry"],
+				"early_exit": fields["early_exit"],
+				"in_time": fields["in_time"],
+				"out_time": fields["out_time"],
+				"auto_attendance": 1,
+				"amended_from": absence.name,
+			}
+		)
+		if fields.get("overtime_type") and status == "Present":
+			overtime_data = get_overtime_data(fields["shift"], fields["working_hours"])
+			if overtime_data:
+				replacement.update(
+					{
+						"overtime_type": fields["overtime_type"],
+						"standard_working_hours": overtime_data.get("standard_working_hours"),
+						"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
+					}
+				)
+		replacement.insert()
+		replacement.submit()
+		replacement.add_comment(
+			"Comment",
+			_("Auto-marked Absent {0} replaced with {1} when check-ins arrived late.").format(
+				absence.name, _(status)
+			),
+		)
+	except Exception:
+		frappe.db.rollback(save_point="provisional_absence_repair")
+		logger.exception(
+			"[checkin] provisional Absent %s replacement rolled back for %s on %s",
+			absence.name,
+			employee,
+			attendance_date,
+		)
+		raise
+	logger.info(
+		"[checkin] provisional Absent %s replaced by %s (%s) for %s on %s",
+		absence.name,
+		replacement.name,
+		status,
+		employee,
+		attendance_date,
+	)
+	return replacement
 
 
 def get_repairable_auto_absence(employee, attendance_date) -> Document | None:

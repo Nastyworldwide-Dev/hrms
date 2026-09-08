@@ -321,3 +321,12 @@ hrms/api/__init__.py:651 same-root-by-contract not-affected — discovery keeps 
 hrms/public/js/utils/request_approval.js:117 not-affected — Desk caller of decide; contract unchanged, a reassigned request now gets a reload message instead of an out-of-order lock
 hrms/public/js/utils/request_approval.js:121 not-affected — same Desk caller
 hrms/public/js/utils/request_approval.js:125 not-affected — same Desk caller
+
+CLASS: ATT-PROVISIONAL — a submitted provisional auto-Absent was patched in place with db.set_value when late punches arrived, which skipped Attendance.validate, so the day became Present with 0 h overtime and no rate bands.
+Changed: hrms/hr/doctype/employee_checkin/employee_checkin.py (create_or_update_attendance's provisional branch now calls _replace_provisional_absence: financial-dependency guard, savepoint, cancel the automation-owned row, re-mark through insert -> validate -> submit with amended_from, rollback on failure).
+Call sites / consumers:
+hrms/hr/doctype/employee_checkin/employee_checkin.py mark_attendance_and_link_log same-root — the hourly job's path; a refusal (financial dependency) is a ValidationError it already turns into skipped punches plus a comment.
+hrms/overrides/remote_checkin_request_hooks.py reprocess_late_checkout_attendance not-affected — passes repair_attendance, which bypasses the provisional branch; it already uses the same guard and cancel pattern.
+hrms/overrides/remote_checkin_request_hooks.py _repair_financial_dependency not-affected — reused read-only.
+Leave half-day update path (get_existing_half_day_attendance) not-affected — upstream behaviour kept: a leave-derived Half Day is not a provisional Absent; ceiling noted for a later slice.
+Lock: hrms/tests/test_provisional_absence_repair.py (cancel then insert/submit, no raw write; dependency refuses without cancelling; failed re-mark rolls back).
