@@ -20,6 +20,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Callable
+from datetime import date
 from unittest.mock import MagicMock
 
 _TABLES: dict[str, list[dict]] = {}
@@ -59,6 +60,11 @@ class Column:
 		def test(row):
 			left = row.get(self.name)
 			right = other.value(row) if hasattr(other, "value") else other
+			# the database coerces a date literal against a date column; so do we
+			if isinstance(left, date) and isinstance(right, str):
+				right = date.fromisoformat(right[:10])
+			elif isinstance(right, date) and isinstance(left, str):
+				left = date.fromisoformat(left[:10])
 			if op in ("lt", "le", "gt", "ge") and (left is None or right is None):
 				return False
 			if op == "eq":

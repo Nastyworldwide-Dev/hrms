@@ -2,6 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 
+import logging
 from calendar import monthrange
 from datetime import date
 from itertools import groupby
@@ -16,11 +17,16 @@ from frappe.query_builder.functions import Count, Extract, Sum
 from frappe.utils import add_days, cint, cstr, formatdate, getdate
 from frappe.utils.nestedset import get_descendants_of
 
+from erpnext.accounts.utils import build_qb_match_conditions
+
 from hrms.utils import date_diff, get_date_range
 from hrms.utils.holiday_list import (
 	fill_employee_holiday_list_date_gaps_with_company_holiday_list,
 	get_assigned_holiday_lists_to_employee_and_company,
 )
+from hrms.utils.report_scope import fenced_companies, scoped_companies
+
+logger = logging.getLogger(__name__)
 
 Filters = frappe._dict
 
@@ -58,18 +64,33 @@ def execute(filters: Filters | None = None) -> tuple:
 	if not filters.company:
 		frappe.throw(_("Please select company."))
 
-	if filters.company:
-		filters.companies = [filters.company]
-		if filters.include_company_descendants:
-			filters.companies.extend(get_descendants_of("Company", filters.company))
+	requested = [filters.company]
+	if filters.include_company_descendants:
+		requested.extend(get_descendants_of("Company", filters.company))
+	# A Script Report gets no row scope from the framework. The caller's
+	# company fence is applied here: a company outside it is refused, and a
+	# descendant outside it never joins the population.
+	fenced_companies(filters.company)
+	fence = scoped_companies()
+	filters.companies = [c for c in requested if c in fence] if fence else requested
 
-	attendance_map = get_attendance_map(filters)
+	# ONE authorized population, resolved before any attendance is read, so
+	# the rows, the summary and the chart cannot disagree about who is in it.
+	employee_details, group_by_param_values = get_employee_related_details(filters)
+	filters.employees = _employee_names(employee_details, filters)
+	logger.info(
+		"[monthly_attendance_sheet] %s: %d employee(s) in %s",
+		frappe.session.user,
+		len(filters.employees),
+		filters.companies,
+	)
+	attendance_map = get_attendance_map(filters) if filters.employees else {}
 	if not attendance_map:
 		frappe.msgprint(_("No attendance records found."), alert=True, indicator="orange")
 		return [], [], None, None
 
 	columns = get_columns(filters)
-	data = get_data(filters, attendance_map)
+	data = get_data(filters, attendance_map, employee_details, group_by_param_values)
 
 	if not data:
 		frappe.msgprint(_("No attendance records found for this criteria."), alert=True, indicator="orange")
@@ -237,9 +258,15 @@ def get_date_condition(docfield: Field, filters: Filters) -> Criterion:
 		return (docfield >= filters.start_date) & (docfield <= filters.end_date)
 
 
-def get_data(filters: Filters, attendance_map: dict) -> list[dict]:
-	employee_details, group_by_param_values = get_employee_related_details(filters)
+def _employee_names(employee_details: dict, filters: Filters) -> list[str]:
+	if filters.group_by:
+		return [name for group in employee_details.values() for name in group]
+	return list(employee_details)
 
+
+def get_data(
+	filters: Filters, attendance_map: dict, employee_details: dict, group_by_param_values: list
+) -> list[dict]:
 	# flatten grouped structure so get_employee_holiday_map always gets {emp: details}
 	if filters.group_by:
 		ungrouped_employee_details = {}
@@ -349,6 +376,10 @@ def get_attendance_records(filters: Filters) -> list[dict]:
 
 	if filters.employee:
 		query = query.where(Attendance.employee == filters.employee)
+	if filters.employees is not None:
+		# only the authorized population's attendance — the chart is built from
+		# these rows before any employee row is drawn
+		query = query.where(Attendance.employee.isin(filters.employees))
 
 	if filters.department or filters.branch:
 		query = query.join(Employee).on(Attendance.employee == Employee.name)
@@ -392,6 +423,9 @@ def get_employee_related_details(filters: Filters) -> tuple[dict, list]:
 			.as_("joined_in_current_period"),
 		)
 		.where(Employee.company.isin(filters.companies))
+		# the native row restrictions (Employee / Department / ... User
+		# Permissions), which a Script Report otherwise never applies
+		.where(Criterion.all(build_qb_match_conditions("Employee")))
 	)
 
 	if filters.employee:
