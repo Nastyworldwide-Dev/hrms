@@ -340,3 +340,12 @@ hrms.api.get_attendance_calendar_events not-affected — same endpoint, same par
 Lock: frontend/tests/attendance-calendar-refresh.test.mjs (late old-month response never shows under the current month; a fetched month shows at once without refetch; Attendance change reloads; refresh clears the error and reloads).
 
 Addendum ATT-PROVISIONAL (review of cc09090ec, two Important): (1) a non-validation failure inside the replacement (lock wait, permission refusal) was re-raised past the caller's `except ValidationError`, so one employee's failed repair would have aborted every employee and shift after it in the hourly run — now rolled back and converted to a ValidationError naming the row and the cause, which the caller turns into skipped punches plus a comment; (2) the replacement row now carries ignore_permissions like the row it replaces, so the manual "process attendance" button works for a non-administrator. Same call sites; verdicts unchanged. The calendar month-map concern was checked and is moot: sessionIsCurrent() hard-reloads the page on an account change.
+
+CLASS: HR-LAUNCHER-DELIVERY — role gating that lived on the workspace PAGE only, while v16 filters the launcher's child icons by the icon's own (empty) roles table; and two report fixtures whose roles never imported because their `modified` predates the rows on every existing site.
+Changed: hrms/desktop_icon/{expenses,hr_setup,leaves,payroll,performance,recruitment,shift_&_attendance,tax_&_benefits,tenure}.json (HR roles + fresh modified), hrms/payroll/report/{professional_tax_deductions,provident_fund_deductions}/*.json (fresh modified), hrms/patches/v16_0/gate_hr_desktop_icons_and_payroll_reports.py + patches.txt (adds missing HR roles to the live rows, idempotent).
+Call sites / consumers:
+hrms/patches/v16_0/gate_hr_workspaces_to_hr_roles.py not-affected — sibling patch for the workspace pages; same role set, untouched.
+hrms/patches/v16_0/repair_nadi_desktop_icon_children.py not-affected — repairs parent_icon only; roles are orthogonal.
+scripts/check_fixture_timestamps.py not-affected — the checker this change satisfies (modified bumped on every edited fixture).
+frappe boot / desktop launcher (Desktop Icon.roles, Report.roles) same-root — consumers of the rows this change delivers.
+Lock: hrms/tests/test_hr_launcher_delivery.py (every child icon HR-only with an importable timestamp, app tile stays open, both reports HR-only with an importable timestamp, patch adds once / idempotent / skips absent rows).

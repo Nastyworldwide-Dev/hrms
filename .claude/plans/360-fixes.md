@@ -32,3 +32,12 @@ The proposal in docs/glass/audit/2026-09-08-ot-lock-proposal.md names the compos
 ## Approved OT precision proposal
 
 After the concrete six-field precision proposal and implementation/local-testing question, Nabil replied "proceed". This authorizes docs/glass/audit/2026-09-08-ot-precision-proposal.md: the six precision2->9 fields, pre-model capacity guard, post-model verifier and documented storage-boundary Decimal comparison, with local migration tests. It does not authorize production deployment or historical recalculation.
+
+## Batch 2 authorization (8 Sep, evening)
+Nabil: "okay lets do all properly and defer the blocked. will be confirm with hr tomorrow".
+Order by safety: (1) desktop icon roles + payroll report roles, (2) test harness, (3) PWA recovery
+(new-form discard, Helpdesk attachment retry), (4) push registration honesty, (5) OT follow-ups
+(weekday break overlap, expired calendar assignment), (6) notification destinations + feed rights,
+(7) realtime after commit, (8) Desk report fences, (9) RL sync ownership.
+DEFERRED until HR answers: rest-day rule (Q1-Q3), four-month window, "punched, pending" + any
+September repair (needs D4). Same rules as batch 1: red first, one cause per commit, no push.
