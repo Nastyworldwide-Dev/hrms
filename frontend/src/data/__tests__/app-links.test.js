@@ -8,7 +8,7 @@ import assert from "node:assert/strict"
 import { APP_LINKS, isSameOriginPath } from "../appLinks.js"
 
 test("every app link is an absolute same-origin path with a label", () => {
-	assert.equal(APP_LINKS.length, 3)
+	assert.equal(APP_LINKS.length, 2) // helpdesk went native in v16.23.0
 	for (const link of APP_LINKS) {
 		assert.ok(isSameOriginPath(link.href), `${link.key}: ${link.href}`)
 		assert.ok(link.title && link.sublabel, `${link.key} needs title + sublabel`)

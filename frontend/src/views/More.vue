@@ -57,9 +57,10 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
-import { MORE_ITEMS, APP_ITEMS } from "@/data/navItems"
+import { MORE_ITEMS, APP_ITEMS, HELPDESK_ITEM } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
+import { helpdeskAvailable } from "@/data/helpdesk"
 
 const router = useRouter()
 const __ = inject("$translate")
@@ -68,6 +69,8 @@ const __ = inject("$translate")
 // (or the caller is HR, who browse teams via the selector)
 const moreItems = computed(() => {
 	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
+	// native Helpdesk, only where the app is installed on this site
+	if (helpdeskAvailable.data) items.push({ ...HELPDESK_ITEM, title: __(HELPDESK_ITEM.title) })
 	if (hasTeam.data) {
 		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
 		// §13.1 lists Remote Approvals behind More; it had no entry in any nav

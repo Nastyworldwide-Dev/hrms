@@ -58,6 +58,16 @@ export const NAV_ITEMS = [
 	},
 ]
 
+// Native Helpdesk (v16.23.0): a router destination, not an Apps link-out.
+// More and SideNav append it only once data/helpdesk.js confirms the app is
+// installed on this site — same gate pattern as Team.
+export const HELPDESK_ITEM = {
+	icon: markRaw(HelpdeskIcon),
+	title: "Helpdesk",
+	shortTitle: "Helpdesk",
+	route: "/helpdesk",
+}
+
 // Phone tab bar — FIVE fixed destinations (spec §13.1, §10.1 #8). A bar whose
 // destinations change under the user breaks Ionic's per-tab navigation stacks,
 // which is why the count is fixed rather than "whatever fits".
@@ -79,7 +89,15 @@ export const TAB_ITEMS = [
 		title: "More",
 		shortTitle: "More",
 		route: "/more",
-		routes: ["/more", "/dashboard/kpi", "/issues", "/sop", "/team", "/remote-approvals"],
+		routes: [
+			"/more",
+			"/dashboard/kpi",
+			"/issues",
+			"/sop",
+			"/team",
+			"/remote-approvals",
+			"/helpdesk",
+		],
 	},
 ]
 
@@ -91,7 +109,6 @@ export const MORE_ITEMS = NAV_ITEMS.slice(4)
 // their own "Apps" group under More and below the SideNav divider; never in the
 // phone tab bar, whose five destinations are fixed.
 const APP_ICONS = {
-	helpdesk: markRaw(HelpdeskIcon),
 	approva: markRaw(ApprovaIcon),
 	board: markRaw(ProjectBoardIcon),
 }
