@@ -419,6 +419,9 @@ def _replace_provisional_absence(absence, **fields):
 		absence.flags.ignore_permissions = True
 		absence.cancel()
 		replacement = frappe.new_doc("Attendance")
+		# Automation-owned, like the row it replaces: the manual "process
+		# attendance" button runs this under whoever pressed it.
+		replacement.flags.ignore_permissions = True
 		replacement.update(
 			{
 				"employee": employee,
@@ -452,7 +455,7 @@ def _replace_provisional_absence(absence, **fields):
 				absence.name, _(status)
 			),
 		)
-	except Exception:
+	except Exception as exc:
 		frappe.db.rollback(save_point="provisional_absence_repair")
 		logger.exception(
 			"[checkin] provisional Absent %s replacement rolled back for %s on %s",
@@ -460,7 +463,17 @@ def _replace_provisional_absence(absence, **fields):
 			employee,
 			attendance_date,
 		)
-		raise
+		if isinstance(exc, frappe.ValidationError):
+			raise
+		# A lock wait, a permission refusal or any other non-validation failure
+		# must cost this employee's day, not every employee and shift after it
+		# in the hourly run: the caller only catches ValidationError, and turns
+		# it into skipped punches with a comment HR can act on.
+		frappe.throw(
+			_(
+				"Replacing the auto-marked Absent {0} failed ({1}); the punches for {2} need a manual review."
+			).format(absence.name, type(exc).__name__, attendance_date)
+		)
 	logger.info(
 		"[checkin] provisional Absent %s replaced by %s (%s) for %s on %s",
 		absence.name,

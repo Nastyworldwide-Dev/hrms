@@ -53,9 +53,11 @@ class _Absence:
 class _Replacement:
 	name = "HR-ATT-PROVISIONAL-1"
 
-	def __init__(self, fail_on=None):
+	def __init__(self, fail_on=None, error=None):
 		self.fields = {}
 		self.fail_on = fail_on
+		self.error = error or frappe.ValidationError("synthetic insert failure")
+		self.flags = frappe._dict()
 
 	def update(self, values):
 		self.fields.update(values)
@@ -63,7 +65,7 @@ class _Replacement:
 	def insert(self):
 		CALLS.append("insert")
 		if self.fail_on == "insert":
-			raise frappe.ValidationError("synthetic insert failure")
+			raise self.error
 
 	def submit(self):
 		CALLS.append("submit")
@@ -72,10 +74,10 @@ class _Replacement:
 		CALLS.append(("comment", text))
 
 
-def _repair(fail_on=None, dependency=None):
+def _repair(fail_on=None, dependency=None, error=None):
 	CALLS.clear()
 	absence = _Absence()
-	replacement = _Replacement(fail_on=fail_on)
+	replacement = _Replacement(fail_on=fail_on, error=error)
 	with (
 		patch.object(checkin, "get_existing_half_day_attendance", return_value=None),
 		patch.object(checkin, "get_repairable_auto_absence", return_value=absence),
@@ -125,6 +127,21 @@ class TestProvisionalAbsenceIsReplaced(unittest.TestCase):
 		self.assertEqual(absence.docstatus, 1)
 		raw_write.assert_not_called()
 		savepoint.assert_not_called()
+
+	def test_the_replacement_is_automation_owned_like_the_row_it_replaces(self):
+		_absence, replacement, *_ = _repair()
+		self.assertTrue(replacement.flags.ignore_permissions)
+
+	def test_a_non_validation_failure_costs_only_this_day(self):
+		# A lock wait or permission refusal must reach the caller as the one
+		# exception it catches, so the rest of the hourly batch still runs.
+		_absence, _replacement, result, _raw_write, _savepoint, rollback = _repair(
+			fail_on="insert", error=RuntimeError("synthetic lock wait timeout")
+		)
+		self.assertIsInstance(result, frappe.ValidationError)
+		self.assertIn("HR-ATT-PROVISIONAL", str(result))
+		self.assertIn("RuntimeError", str(result))
+		rollback.assert_called_once_with(save_point="provisional_absence_repair")
 
 	def test_a_failed_re_mark_rolls_the_cancel_back(self):
 		_absence, _replacement, result, _raw_write, _savepoint, rollback = _repair(fail_on="insert")
