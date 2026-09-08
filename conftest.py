@@ -62,6 +62,32 @@ def pytest_pycollect_makemodule(module_path, parent):
 	return None
 
 
+# The bench-free harness files each build the `frappe` they need. Some swap a
+# bare module into sys.modules while a test RUNS and never put it back, so a
+# later module's `import frappe` (in a setUp, say) got a stub with no db and no
+# get_doc — a failure far from its cause that cost three commit attempts on
+# 8 Sep 2026. Each module now gets the session's module table back the way it
+# found it. Import-time swaps happen at collection, before this runs, and
+# stay the file's own responsibility: create a stub only when none exists.
+_GUARDED_PREFIXES = ("frappe", "erpnext", "hrms")
+
+
+def _guarded_modules():
+	return {name: module for name, module in sys.modules.items() if name.split(".")[0] in _GUARDED_PREFIXES}
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _restore_stub_modules():
+	before = _guarded_modules()
+	yield
+	if HAS_FRAPPE:
+		return
+	for name in list(sys.modules):
+		if name.split(".")[0] in _GUARDED_PREFIXES and name not in before:
+			sys.modules.pop(name, None)
+	sys.modules.update(before)
+
+
 def pytest_sessionfinish(session, exitstatus):
 	# Every selected file needed a site: nothing collected is not a failure.
 	if not HAS_FRAPPE and exitstatus == 5:
