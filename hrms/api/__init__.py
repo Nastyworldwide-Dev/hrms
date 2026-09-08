@@ -369,10 +369,13 @@ def get_attendance_for_calendar(employee: str, from_date: str, to_date: str) -> 
 	# lists a Saved-but-not-Submitted row next to the submitted ones; reading
 	# `docstatus = 1` here meant a row HR keyed in on Desk was visible to HR and
 	# invisible to the employee it was about. Cancelled rows stay out on both.
+	# Ordered so a submitted row is folded in LAST and wins the date over a
+	# draft, should both ever exist for one day.
 	attendance = frappe.get_all(
 		"Attendance",
 		{"employee": employee, "attendance_date": ["between", [from_date, to_date]], "docstatus": ["<", 2]},
 		["attendance_date", "status"],
+		order_by="docstatus asc",
 	)
 	return {d["attendance_date"]: d["status"] for d in attendance}
 

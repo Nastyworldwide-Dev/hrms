@@ -53,6 +53,26 @@ class TestCalendarReadsDrafts(unittest.TestCase):
 	def test_cancelled_rows_stay_out(self):
 		self.assertFalse(_admits(self._docstatus_filter(), 2))
 
+	def test_a_submitted_row_wins_the_date_over_a_draft(self):
+		import datetime
+
+		day = datetime.date(2026, 9, 7)
+		rows = [
+			{"attendance_date": day, "status": "Absent", "docstatus": 0},
+			{"attendance_date": day, "status": "Present", "docstatus": 1},
+		]
+		captured = {}
+
+		def get_all(_doctype, _filters=None, _fields=None, order_by=None, **_kwargs):
+			captured["order_by"] = order_by
+			# rows arrive in the requested order: drafts first, submitted last
+			return sorted(rows, key=lambda r: r["docstatus"])
+
+		with patch.object(frappe, "get_all", get_all):
+			events = get_attendance_for_calendar("HR-EMP-001", "2026-09-01", "2026-09-30")
+		self.assertEqual(captured["order_by"], "docstatus asc")
+		self.assertEqual(events[day], "Present")
+
 
 if __name__ == "__main__":
 	unittest.main()
