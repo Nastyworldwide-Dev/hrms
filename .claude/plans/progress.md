@@ -208,3 +208,5 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-08T18:34:02Z COMMIT: 550771c6f test: give every test module the session's frappe back after it runs → review dispatched
 2026-09-08T18:52Z PLAN: Nadi PWA UX 2.0 reviewed -> docs/glass/plan/NADI_2.0_UX_PLAN.md (UX contract U1-U12, gap ledger, 8 mapping corrections, decisions Q1-Q10, phases 0-4 ~55 slices). Prototype folder is gitignored by the user; the plan cites it by path.
 2026-09-08T18:52Z NEXT: Nabil answers Q1-Q3 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/, then phase 0.3 mockup + 0.4 gates; batch-2 reviews and the earlier NEXT items stay open in parallel.
+- 2026-09-08T18:53:01Z COMMIT: 602502d24 docs(plan): Nadi PWA UX 2.0 review, contract, gap ledger and slice plan → review dispatched
+2026-09-08T18:54Z NEXT: Nabil answers Q1-Q3 from docs/glass/plan/NADI_2.0_UX_PLAN.md section 5 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/; then phase 0.3 mockup + 0.4 gates. Frappe-reviewer on 602502d24 was dispatched (docs commit); batch-2 reviews still owed.
