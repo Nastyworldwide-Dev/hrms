@@ -100,7 +100,10 @@
 			<!-- Sibling apps, same group as More on the phone. Plain anchors: each
 			     target is its own SPA outside vue-router's base, so a real
 			     navigation is the only thing that reaches it. New tab on desktop so
-			     the HRMS shell (and its live socket) stays where it was. -->
+			     the HRMS shell (and its live socket) stays where it was.
+			     aria-label is not redundant: collapsed hides the label span, and
+			     the accessible-name fallback would then read the `title`
+			     (the sublabel), announcing "Purchase requests…" for Approva. -->
 			<hr class="g-sidenav__divider" />
 			<a
 				v-for="item in appItems"
@@ -109,11 +112,12 @@
 				target="_blank"
 				rel="noopener"
 				class="g-sidenav__item g-focusable"
+				:aria-label="item.title"
 				:title="item.sublabel"
 			>
 				<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
-				<ExternalLinkIcon v-show="!collapsed" class="flex-none opacity-70" aria-hidden="true" />
+				<ExternalLinkIcon v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
 			</a>
 		</div>
 
