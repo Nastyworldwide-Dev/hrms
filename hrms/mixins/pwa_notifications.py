@@ -1,7 +1,11 @@
 # Copyright (c) 2023, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
+import logging
+
 import frappe
 from frappe import bold
+
+logger = logging.getLogger(__name__)
 
 
 class PWANotificationsMixin:
@@ -65,10 +69,8 @@ class PWANotificationsMixin:
 		why OT Request notified nobody at all and a draft sat in a list until an
 		HR user happened to scroll past it.
 
-		The fallback is not invented. OT visibility already runs on `reports_to`
-		(`overrides/ot_row_scope`: own + direct reports + HR), so the approver is
-		resolved by the same chain remote check-in uses rather than a second one
-		that could disagree about who approves for the same person.
+		OT follows reporting-manager authority. Shift assignment belongs to the
+		remote check-in flow and does not grant OT visibility or decision rights.
 		"""
 		APPROVER_FIELD = {
 			"Leave Application": "leave_approver",
@@ -78,10 +80,66 @@ class PWANotificationsMixin:
 		field = APPROVER_FIELD.get(self.doctype)
 		if field:
 			return self.get(field)
+		if self.doctype == "OT Request":
+			return self._get_ot_approver()
 
 		from hrms.overrides.remote_checkin_request_hooks import resolve_approver
 
 		return resolve_approver(self.employee)
+
+	def _get_ot_approver(self) -> str | None:
+		"""Prefer the reporting manager, then an eligible HR Manager."""
+		from hrms.utils.identity import normalize_login
+
+		logger.debug("[pwa_notifications] resolving OT recipient")
+		if self.get("docstatus") != 0:
+			return None
+		company = frappe.db.get_value("Employee", self.employee, "company")
+		manager = frappe.db.get_value("Employee", self.employee, "reports_to")
+		if manager:
+			user = normalize_login(frappe.db.get_value("Employee", manager, "user_id"))
+			if self._ot_approver_can_receive(user, company):
+				return user
+
+		hr_users = frappe.get_all(
+			"Has Role", filters={"role": "HR Manager", "parenttype": "User"}, pluck="parent"
+		)
+		if not hr_users:
+			return None
+		candidates = frappe.get_all(
+			"User",
+			filters={"name": ("in", hr_users), "enabled": 1},
+			pluck="name",
+			order_by="creation asc, name asc",
+		)
+		# Preserve the existing preference for HR attached to this company.
+		local_hr = {
+			normalize_login(user)
+			for user in frappe.get_all(
+				"Employee", filters={"company": company, "status": "Active"}, pluck="user_id"
+			)
+		}
+		for user in sorted(candidates, key=lambda candidate: candidate not in local_hr):
+			if self._ot_approver_can_receive(user, company):
+				return user
+		return None
+
+	def _ot_approver_can_receive(self, user: str, company: str | None) -> bool:
+		"""A summary must neither widen source visibility nor invent authority."""
+		from hrms.api.approval import _is_routed_approver
+		from hrms.overrides.company_scope import company_visible
+		from hrms.utils.identity import normalize_login
+
+		allowed = bool(
+			user
+			and user != normalize_login(self._get_employee_user())
+			and frappe.db.get_value("User", user, "enabled")
+			and company_visible(company, user)
+			and frappe.has_permission(self.doctype, "read", doc=self, user=user)
+			and _is_routed_approver(self, user)
+		)
+		logger.debug("[pwa_notifications] OT recipient eligibility=%s", allowed)
+		return allowed
 
 	def _get_employee_user(self) -> str:
 		return frappe.db.get_value("Employee", self.employee, "user_id", cache=True)

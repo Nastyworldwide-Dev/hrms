@@ -21,8 +21,8 @@ absent wiring, silent.
 THE FIX is not a new field. OT visibility already runs on `reports_to`
 (`overrides/ot_row_scope`: own + direct reports + HR), so the approver is
 resolved the same way rather than invented: the team lead, falling back to HR.
-Reusing `remote_checkin_request_hooks.resolve_approver` keeps one resolution
-chain in the codebase instead of two that can disagree.
+Behavioral recipient tests now check reporting-manager authority, source read
+permission and company scope. Remote check-in shift routing is a separate rule.
 
 Bench-free: read from the AST. Run it as a FILE:
 
@@ -58,13 +58,6 @@ class TestTheMixinToleratesNoApproverField(unittest.TestCase):
 			src,
 			"a doctype with no approver field must not KeyError",
 		)
-
-	def test_it_falls_back_to_a_resolved_approver(self):
-		"""Not invented — `reports_to` then HR, the same chain remote check-in
-		already uses. Two resolution chains would eventually disagree about who
-		approves for the same person."""
-		src = ast.unparse(_fn(MIXIN, "_get_doc_approver"))
-		self.assertIn("resolve_approver", src)
 
 
 class TestOTRequestNotifies(unittest.TestCase):

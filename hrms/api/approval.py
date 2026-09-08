@@ -64,8 +64,8 @@ APPROVER_FIELD = {
 }
 
 
-def _is_routed_approver(doc) -> bool:
-	"""Is the session user the person this request ROUTES to?
+def _is_routed_approver(doc, user: str | None = None) -> bool:
+	"""Is the supplied user (by default the session) this request's approver?
 
 	FOUND BY RUNNING AS A REAL USER: a team lead holding only the Employee role
 	— exactly who reports_to routes OT, Attendance Request and Replacement
@@ -86,7 +86,7 @@ def _is_routed_approver(doc) -> bool:
 	and must not be able to decide it (validate_self_submission double-guards
 	that, but routing refuses it first, with a message about routing).
 	"""
-	user = frappe.session.user
+	user = frappe.session.user if user is None else user
 	if {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
 		# HR operators may decide — but a company-fenced one only inside their
 		# fence. company_visible is True for an unfenced operator (no Company
@@ -98,7 +98,7 @@ def _is_routed_approver(doc) -> bool:
 
 		subject = doc.get("employee")
 		company = frappe.db.get_value("Employee", subject, "company") if subject else doc.get("company")
-		if company_visible(company):
+		if company_visible(company, user):
 			return True
 	field = APPROVER_FIELD.get(doc.doctype)
 	if field and doc.get(field) == user:
