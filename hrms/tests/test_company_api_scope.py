@@ -373,7 +373,9 @@ class TestRemoteCheckinPending(unittest.TestCase):
 	def test_being_named_approver_still_requires_the_approver_predicate(self):
 		query = self._query([ALPHA], remote_checkin.list_pending_for_approver)
 		self.assertEqual(query.predicate("Remote Checkin Request.approver").value, USER)
-		self.assertEqual(query.predicate("Remote Checkin Request.status").value, "Pending")
+		# status is filtered with IN — one query serves the pending list and the
+		# decided history (statuses=(...)) — so the predicate value is a list
+		self.assertEqual(list(query.predicate("Remote Checkin Request.status").value), ["Pending"])
 
 	def test_pending_list_unchanged_without_a_company_user_permission(self):
 		query = self._query([], remote_checkin.list_pending_for_approver)
