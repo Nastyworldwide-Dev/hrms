@@ -12,6 +12,20 @@
 				</div>
 
 				<GBanner v-if="errorMessage" variant="error">{{ errorMessage }}</GBanner>
+				<!-- The ticket exists but some files did not attach: keep the id, show
+				     exactly which files failed, and let Submit become Retry — never a
+				     second ticket for the same problem. -->
+				<GBanner v-if="ticketName && failedFiles.length" variant="error">
+					{{
+						__("Ticket {0} is raised, but {1} file(s) did not upload:", [
+							ticketName,
+							failedFiles.length,
+						])
+					}}
+					<ul class="mt-1 list-disc pl-5">
+						<li v-for="f in failedFiles" :key="f.name">{{ f.name }} — {{ f.reason }}</li>
+					</ul>
+				</GBanner>
 
 				<form class="flex flex-col gap-4" novalidate @submit.prevent="submit">
 					<GInput
@@ -53,7 +67,7 @@
 
 					<GButton
 						type="submit"
-						:label="__('Submit ticket')"
+						:label="ticketName ? __('Retry uploads') : __('Submit ticket')"
 						:pendingLabel="__('Submitting…')"
 						:pending="newTicket.loading || uploading"
 						:disabled="newTicket.loading || uploading"
@@ -65,6 +79,17 @@
 				</form>
 			</div>
 		</ion-content>
+		<GConfirm
+			:is-open="showDiscardDialog"
+			:title="__('Discard this ticket?')"
+			:confirm-label="__('Discard')"
+			:cancel-label="__('Keep editing')"
+			destructive
+			@confirm="discardAndLeave"
+			@cancel="showDiscardDialog = false"
+		>
+			{{ __("What you typed will be lost.") }}
+		</GConfirm>
 	</GPage>
 </template>
 
@@ -76,9 +101,10 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"
+import GConfirm from "@/components/glass/GConfirm.vue"
 import { IonContent } from "@ionic/vue"
 import { FeatherIcon } from "frappe-ui"
-import { inject, reactive, ref } from "vue"
+import { computed, inject, reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import { FileAttachment } from "@/composables"
@@ -93,10 +119,35 @@ const errors = reactive({ subject: "", description: "" })
 const files = ref([])
 const uploading = ref(false)
 const errorMessage = ref("")
+// Set once the ticket exists. From then on Submit only retries uploads.
+const ticketName = ref(null)
+const failedFiles = ref([])
+const showDiscardDialog = ref(false)
 
 ticketOptions.fetch()
 
+const isDirty = computed(
+	() =>
+		Boolean(form.subject.trim() || form.description.trim() || files.value.length) &&
+		!ticketName.value
+)
+
 function goBack() {
+	if (isDirty.value) {
+		showDiscardDialog.value = true
+		return
+	}
+	// A raised ticket whose files failed is still a raised ticket: leaving
+	// lands on it, not on Home, so the employee can attach from there later.
+	if (ticketName.value) {
+		router.replace({ name: "HelpdeskTicketDetail", params: { id: ticketName.value } })
+		return
+	}
+	goBackOrHome(router)
+}
+
+function discardAndLeave() {
+	showDiscardDialog.value = false
 	goBackOrHome(router)
 }
 
@@ -106,26 +157,49 @@ function validate() {
 	return !errors.subject && !errors.description
 }
 
+async function uploadPending(name) {
+	const pending = files.value.slice()
+	if (!pending.length) return true
+	uploading.value = true
+	const results = await Promise.allSettled(
+		pending.map((f) => new FileAttachment(f).upload("HD Ticket", name, ""))
+	)
+	uploading.value = false
+	const failed = []
+	results.forEach((result, index) => {
+		if (result.status === "rejected") {
+			const file = pending[index]
+			failed.push({
+				name: file.name,
+				file,
+				reason: result.reason?.messages?.[0] || result.reason?.message || __("upload failed"),
+			})
+		}
+	})
+	// Only the failures stay selectable, so a retry re-sends exactly those.
+	files.value = failed.map((f) => f.file)
+	failedFiles.value = failed
+	console.info("[TicketNew] uploads for", name, "failed:", failed.length, "of", pending.length)
+	return failed.length === 0
+}
+
 async function submit() {
 	errorMessage.value = ""
-	if (!validate()) return
 	try {
-		const { name } = await newTicket.submit({
-			subject: form.subject.trim(),
-			description: form.description.trim(),
-			ticket_type: form.ticket_type || undefined,
-			priority: form.priority || undefined,
-		})
-		console.info("[TicketNew] raised", name, "with", files.value.length, "file(s)")
-		if (files.value.length) {
-			uploading.value = true
-			await Promise.allSettled(
-				files.value.map((f) => new FileAttachment(f).upload("HD Ticket", name, ""))
-			)
-			uploading.value = false
+		if (!ticketName.value) {
+			if (!validate()) return
+			const { name } = await newTicket.submit({
+				subject: form.subject.trim(),
+				description: form.description.trim(),
+				ticket_type: form.ticket_type || undefined,
+				priority: form.priority || undefined,
+			})
+			ticketName.value = name
+			console.info("[TicketNew] raised", name, "with", files.value.length, "file(s)")
 		}
+		if (!(await uploadPending(ticketName.value))) return
 		myTickets.reload?.()
-		router.replace({ name: "HelpdeskTicketDetail", params: { id: name } })
+		router.replace({ name: "HelpdeskTicketDetail", params: { id: ticketName.value } })
 	} catch (error) {
 		uploading.value = false
 		errorMessage.value = error?.messages?.[0] || __("Could not raise the ticket. Try again.")

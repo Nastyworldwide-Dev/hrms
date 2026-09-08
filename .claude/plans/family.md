@@ -349,3 +349,12 @@ hrms/patches/v16_0/repair_nadi_desktop_icon_children.py not-affected — repairs
 scripts/check_fixture_timestamps.py not-affected — the checker this change satisfies (modified bumped on every edited fixture).
 frappe boot / desktop launcher (Desktop Icon.roles, Report.roles) same-root — consumers of the rows this change delivers.
 Lock: hrms/tests/test_hr_launcher_delivery.py (every child icon HR-only with an importable timestamp, app tile stays open, both reports HR-only with an importable timestamp, patch adds once / idempotent / skips absent rows).
+
+CLASS: PWA-RECOVERY-TICKET — the Helpdesk create screen navigated away after Promise.allSettled regardless of failed uploads (losing the retry path; a second Submit would have raised a second ticket) and asked nothing before discarding a half-typed new ticket.
+Changed: frontend/src/views/helpdesk/TicketNew.vue (ticket id kept once raised; failed files listed with their reason; Submit becomes Retry uploads and re-sends only the failures; Back asks before discarding a dirty new ticket and lands on the raised ticket when one exists).
+Call sites / consumers:
+frontend/src/router/helpdesk.js HelpdeskTicketNew route same-root — the only mount.
+frontend/src/composables/index.js FileAttachment.upload not-affected — still the uploader; its own toast on failure remains, the screen adds the durable list.
+frontend/src/views/helpdesk/TicketDetail.vue not-affected — receives the same route params; it still has no upload control, which is why the create screen keeps the retry.
+hrms/api/helpdesk.py new_ticket not-affected — called at most once per screen instance by construction (ticketName guard).
+Lock: frontend/tests/ticket-new-recovery.test.mjs (failed upload keeps the id and retries only the failure; never a second ticket; clean submit lands on the ticket; dirty Back asks; Back after raise lands on the ticket).
