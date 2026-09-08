@@ -84,9 +84,18 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 	def _run(self, attendance_auto=1, existing_attendance="HR-ATT-HALF"):
 		from hrms.overrides import remote_checkin_request_hooks as hooks
 
-		out_row = frappe._dict(name=OUT_NAME, employee=EMPLOYEE, time=OUT_TIME, shift="9AM - 6PM")
+		out_row = frappe._dict(
+			name=OUT_NAME,
+			employee=EMPLOYEE,
+			time=OUT_TIME,
+			shift="9AM - 6PM",
+			shift_start=SHIFT_START,
+			log_type="OUT",
+			remote_approval_status="Approved",
+		)
 		in_row = frappe._dict(
 			name=IN_NAME,
+			log_type="IN",
 			employee=EMPLOYEE,
 			time=IN_TIME,
 			shift="9AM - 6PM",
@@ -97,8 +106,7 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		def get_value(doctype, name=None, fieldname=None, as_dict=False, order_by=None, **kw):
 			if doctype == "Employee Checkin" and name == OUT_NAME:
 				return out_row
-			if doctype == "Employee Checkin" and isinstance(name, dict):
-				self.in_lookup = dict(name)
+			if doctype == "Employee Checkin" and name == IN_NAME:
 				return in_row
 			return None
 
@@ -109,26 +117,32 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		attendance.name = existing_attendance
 		attendance.auto_attendance = attendance_auto
 		attendance.docstatus = 1
+		attendance.employee = EMPLOYEE
+		attendance.shift = "9AM - 6PM"
+		attendance.attendance_date = SHIFT_START.date()
+		attendance.get.return_value = None
 		marked = MagicMock()
 		marked.name = "HR-ATT-NEW"
 		shift = MagicMock()
+		shift.determine_check_in_and_check_out = "Strictly based on Log Type in Employee Checkin"
+		shift.working_hours_calculation_based_on = "Every Valid Check-in and Check-out"
 		shift.mark_attendance_for_shift_logs.return_value = marked
 
-		def get_doc(doctype, name=None):
+		def get_doc(doctype, name=None, **kwargs):
 			return {"Attendance": attendance, "Shift Type": shift}[doctype]
 
-		logs = [
-			frappe._dict(
-				name=IN_NAME, employee=EMPLOYEE, log_type="IN", time=IN_TIME, shift_start=SHIFT_START
-			),
-			frappe._dict(
-				name=OUT_NAME, employee=EMPLOYEE, log_type="OUT", time=OUT_TIME, shift_start=SHIFT_START
-			),
-		]
-		self.cancelled_before_reread = False
+		logs = [in_row, out_row]
+		self.read_before_cancel = []
 
 		def get_all(doctype, **kw):
-			self.cancelled_before_reread = attendance.cancel.called
+			if doctype == "Attendance":
+				return (
+					[frappe._dict(name=existing_attendance, shift="9AM - 6PM")] if existing_attendance else []
+				)
+			self.read_before_cancel.append(not attendance.cancel.called)
+			if kw.get("limit_page_length") == 1:
+				self.in_lookup = kw["filters"]
+				return [in_row]
 			return logs
 
 		with (
@@ -142,8 +156,8 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 	def test_cancels_the_auto_attendance_and_remarks_from_in_and_out(self):
 		result, attendance, shift, _ = self._run()
 
-		self.assertEqual(self.in_lookup.get("log_type"), "IN")
-		self.assertEqual(self.in_lookup.get("name"), ["!=", OUT_NAME])
+		self.assertEqual(self.in_lookup.get("employee"), EMPLOYEE)
+		self.assertEqual(self.in_lookup.get("time"), ["<", OUT_TIME])
 		attendance.cancel.assert_called_once()
 
 		shift.mark_attendance_for_shift_logs.assert_called_once()
@@ -154,9 +168,8 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		self.assertEqual(result, "HR-ATT-NEW")
 
 		self.assertTrue(
-			self.cancelled_before_reread,
-			"the cancel must land before the logs are re-read, or the IN still carries "
-			"the old attendance link and is filtered out of the session",
+			all(self.read_before_cancel),
+			"all contributing evidence must be gathered before cancellation unlinks prior sessions",
 		)
 
 	def test_manual_attendance_is_never_cancelled(self):

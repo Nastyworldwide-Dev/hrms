@@ -6,7 +6,7 @@ import logging
 
 import frappe
 from frappe import _
-from frappe.utils import cint, get_datetime, now_datetime
+from frappe.utils import cint, get_datetime, getdate, now_datetime
 
 from hrms.utils.email_flush import flush_email_queue_after_commit
 
@@ -358,104 +358,246 @@ def propagate_approval_decision(doc, method=None):
 	_notify_employee(doc, doc.status)
 
 
+_REPAIR_CHECKIN_FIELDS = [
+	"name",
+	"employee",
+	"log_type",
+	"time",
+	"shift",
+	"shift_start",
+	"shift_end",
+	"shift_actual_start",
+	"shift_actual_end",
+	"device_id",
+	"overtime_type",
+	"attendance",
+	"skip_auto_attendance",
+	"offshift",
+	"synced_from_instance",
+	"remote_approval_status",
+	"requires_remote_approval",
+]
+
+
+def _repair_notice(checkin, reason):
+	"""Keep an actionable correction trail when approval cannot safely change attendance."""
+	message = _("Check-out approved, but attendance needs correction: {0}").format(reason)
+	logger.warning(
+		"[remote_checkin_request] attendance repair deferred checkin=%s reason=%s", checkin, reason
+	)
+	frappe.msgprint(message, title=_("Attendance correction required"), indicator="orange")
+	request = frappe.db.get_value("Remote Checkin Request", {"checkin": checkin}, "name")
+	if request:
+		frappe.get_doc("Remote Checkin Request", request).add_comment("Comment", message)
+
+
+def _repair_financial_dependency(employee, attendance_date, attendance_name):
+	"""Claims accepted by existing payout rules and submitted payroll require explicit correction."""
+	logger.debug("[remote_checkin_request] checking attendance repair dependencies")
+	return (
+		frappe.db.get_value(
+			"OT Request",
+			{"employee": employee, "ot_date": attendance_date, "status": ["!=", "Rejected"], "docstatus": 1},
+			"name",
+			for_update=True,
+		)
+		or frappe.db.get_value(
+			"Salary Slip",
+			{
+				"employee": employee,
+				"start_date": ["<=", attendance_date],
+				"end_date": [">=", attendance_date],
+				"docstatus": 1,
+			},
+			"name",
+			for_update=True,
+		)
+		or (
+			attendance_name
+			and frappe.db.get_value(
+				"Overtime Details",
+				{"reference_document": attendance_name, "docstatus": 1},
+				"name",
+				for_update=True,
+			)
+		)
+	)
+
+
 def reprocess_late_checkout_attendance(out_checkin: str) -> str | None:
-	"""Re-mark the session's attendance now that its late OUT is approved.
+	"""Repair the complete original shift, preserving the old record if rebuilding fails."""
+	from hrms.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
+	from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import get_previous_session_checkin
 
-	The hourly auto-attendance job usually runs before the employee remembers
-	to check out: it sees a lone IN and files the day as Half Day or Absent.
-	Approving the late OUT used to change only the punch's flags — the
-	Attendance stayed wrong until HR cancelled and re-marked it by hand.
-
-	Cancels the automation-owned Attendance the session's IN is linked to (a
-	record a person marked by hand is left alone), then re-marks the day from
-	IN + OUT through the shift's own rule. Returns the Attendance name, or
-	None when nothing could be marked.
-	"""
+	logger.info("[remote_checkin_request] repairing whole shift for late OUT=%s", out_checkin)
 	out = frappe.db.get_value(
-		"Employee Checkin", out_checkin, ["name", "employee", "time", "shift"], as_dict=True
+		"Employee Checkin", out_checkin, _REPAIR_CHECKIN_FIELDS, as_dict=True, for_update=True
 	)
 	if not out:
-		logger.warning("[remote_checkin_request] late OUT %s not found; nothing re-marked", out_checkin)
+		logger.warning("[remote_checkin_request] late OUT not found: %s", out_checkin)
+		return None
+	previous = get_previous_session_checkin(out.employee, out.time)
+	in_row = (
+		frappe.db.get_value("Employee Checkin", previous.name, _REPAIR_CHECKIN_FIELDS, as_dict=True)
+		if previous
+		else None
+	)
+	if not in_row or not in_row.shift or not in_row.shift_start:
+		_repair_notice(out_checkin, _("The original open shift could not be identified."))
+		return None
+	anchor = get_datetime(in_row.shift_start)
+	attendance_date = anchor.date()
+	if (
+		out.log_type != "OUT"
+		or out.remote_approval_status != "Approved"
+		or out.synced_from_instance
+		or cint(out.skip_auto_attendance)
+	):
+		_repair_notice(out_checkin, _("The check-out is not eligible local approved evidence."))
 		return None
 
-	# The session's IN: the latest IN before this OUT, never the OUT itself.
-	in_row = frappe.db.get_value(
-		"Employee Checkin",
-		{
-			"employee": out.employee,
-			"log_type": "IN",
-			"name": ["!=", out.name],
-			"time": ["<", out.time],
-		},
-		["name", "time", "shift", "shift_start", "attendance"],
-		order_by="time desc",
-		as_dict=True,
+	# Resolve the whole shift's Attendance, including an unlinked provisional draft.
+	existing = frappe.get_all(
+		"Attendance",
+		filters={"employee": out.employee, "attendance_date": attendance_date, "docstatus": ["<", 2]},
+		fields=["name", "shift"],
 	)
-	if not in_row or not in_row.shift:
-		logger.warning(
-			"[remote_checkin_request] late OUT %s has no shift-bound IN to re-mark from", out_checkin
+	existing = [row for row in existing if not row.shift or row.shift == in_row.shift]
+	if len(existing) > 1:
+		_repair_notice(out_checkin, _("More than one Attendance record covers this shift."))
+		return None
+	attendance = frappe.get_doc("Attendance", existing[0].name, for_update=True) if existing else None
+	if attendance and (not cint(attendance.auto_attendance) or attendance.get("synced_from_instance")):
+		_repair_notice(
+			out_checkin, _("The Attendance record is manually maintained or owned by another instance.")
 		)
 		return None
+	if attendance and (
+		attendance.employee != out.employee
+		or attendance.shift != in_row.shift
+		or getdate(attendance.attendance_date) != attendance_date
+	):
+		_repair_notice(out_checkin, _("The Attendance record does not match the original shift."))
+		return None
 
-	attendance_date = get_datetime(in_row.shift_start or in_row.time).date()
-
-	if in_row.attendance:
-		attendance = frappe.get_doc("Attendance", in_row.attendance)
-		if not cint(attendance.auto_attendance):
-			logger.info(
-				"[remote_checkin_request] %s on %s was marked by hand; kept as is",
-				attendance.name,
-				attendance_date,
-			)
-			return None
-		if cint(attendance.docstatus) == 1:
-			attendance.flags.ignore_permissions = True
-			attendance.cancel()  # Attendance.on_cancel unlinks every check-in it owned
-			logger.info(
-				"[remote_checkin_request] cancelled %s (%s) to re-mark from the approved late OUT",
-				attendance.name,
-				attendance.status,
-			)
-
-	shift = frappe.get_doc("Shift Type", in_row.shift)
+	# Gather before cancellation: the old record may own earlier sessions.
 	logs = frappe.get_all(
 		"Employee Checkin",
-		fields=[
-			"name",
-			"employee",
-			"log_type",
-			"time",
-			"shift",
-			"shift_start",
-			"shift_end",
-			"shift_actual_start",
-			"shift_actual_end",
-			"device_id",
-			"overtime_type",
-		],
-		filters={
-			"employee": out.employee,
-			"time": ["between", [in_row.time, out.time]],
-			"skip_auto_attendance": 0,
-			"attendance": ["is", "not set"],
-			"synced_from_instance": ["is", "not set"],
-		},
+		filters={"employee": out.employee, "shift": in_row.shift, "shift_start": anchor},
+		fields=_REPAIR_CHECKIN_FIELDS,
 		order_by="time asc",
 	)
-	if not logs:
-		logger.warning(
-			"[remote_checkin_request] no unmarked punches between %s and %s; nothing re-marked",
-			in_row.name,
-			out.name,
+	linked = (
+		frappe.get_all(
+			"Employee Checkin",
+			filters={"attendance": attendance.name},
+			fields=_REPAIR_CHECKIN_FIELDS,
+			order_by="time asc",
+		)
+		if attendance
+		else []
+	)
+	if any(
+		row.employee != out.employee
+		or row.synced_from_instance
+		or (
+			row.name != out_checkin
+			and (row.shift != in_row.shift or not row.shift_start or get_datetime(row.shift_start) != anchor)
+		)
+		for row in linked
+	):
+		_repair_notice(out_checkin, _("Linked punches cross shift or instance ownership boundaries."))
+		return None
+	candidates = {row.name: row for row in [*logs, *linked, out]}
+	local = [
+		row
+		for row in candidates.values()
+		if not row.synced_from_instance and not cint(row.skip_auto_attendance)
+	]
+	if any(row.remote_approval_status == "Pending" or cint(row.requires_remote_approval) for row in local):
+		_repair_notice(out_checkin, _("Other punches in this shift are still awaiting approval."))
+		return None
+	logs = sorted(
+		(
+			row
+			for row in local
+			if row.remote_approval_status in (None, "", "Approved")
+			and (not cint(row.offshift) or row.name == out_checkin)
+		),
+		key=lambda row: (get_datetime(row.time), row.name),
+	)
+	if any(row.attendance and (not attendance or row.attendance != attendance.name) for row in logs):
+		_repair_notice(out_checkin, _("A contributing punch belongs to another Attendance record."))
+		return None
+	shift = frappe.get_doc("Shift Type", in_row.shift)
+	pairing = shift.determine_check_in_and_check_out
+	# Use the configured canonical pairing: duplicate INs are valid in strict
+	# mode, while alternating mode intentionally ignores labels.
+	_hours, first_in, last_out = (
+		calculate_working_hours(logs, pairing, shift.working_hours_calculation_based_on)
+		if logs
+		else (0, None, None)
+	)
+	if (
+		first_in is None
+		or last_out is None
+		or last_out <= first_in
+		or first_in != get_datetime(logs[0].time)
+		or last_out != get_datetime(logs[-1].time)
+		or not any(row.name == out_checkin for row in logs)
+		or (pairing == "Alternating entries as IN and OUT during the same shift" and len(logs) % 2)
+	):
+		_repair_notice(out_checkin, _("The shift does not yet have complete IN/OUT pairs."))
+		return None
+	if _repair_financial_dependency(out.employee, attendance_date, attendance.name if attendance else None):
+		_repair_notice(
+			out_checkin,
+			_("Approved overtime, replacement leave or submitted payroll already depends on this day."),
 		)
 		return None
+	if not shift.should_mark_attendance(out.employee, attendance_date):
+		_repair_notice(out_checkin, _("The shift's attendance rules do not allow this day to be marked."))
+		return None
 
-	attendance = shift.mark_attendance_for_shift_logs(out.employee, attendance_date, logs)
-	logger.info(
-		"[remote_checkin_request] re-marked %s on %s from %s -> %s",
-		out.employee,
-		attendance_date,
-		[log.name for log in logs],
-		attendance.name if attendance else None,
-	)
-	return attendance.name if attendance else None
+	frappe.db.savepoint("late_checkout_repair")
+	try:
+		# An approved retroactive OUT can be beyond today's shift lookup buffer.
+		# Bind it to its original IN only inside the rollback-protected repair.
+		if out.shift != in_row.shift or out.shift_start != in_row.shift_start or cint(out.offshift):
+			bounds = {
+				field: in_row.get(field)
+				for field in ("shift", "shift_start", "shift_end", "shift_actual_start", "shift_actual_end")
+			}
+			bounds["offshift"] = 0
+			frappe.db.set_value("Employee Checkin", out.name, bounds)
+			out.update(bounds)
+		if attendance and cint(attendance.docstatus) == 1:
+			attendance.flags.ignore_permissions = True
+			attendance.cancel()
+			repair = None
+		else:
+			repair = attendance
+		if repair is None:
+			repair = frappe.new_doc("Attendance")
+			repair.update(
+				{
+					"employee": out.employee,
+					"attendance_date": attendance_date,
+					"shift": in_row.shift,
+					"auto_attendance": 1,
+				}
+			)
+		marked = shift.mark_attendance_for_shift_logs(
+			out.employee, attendance_date, logs, repair_attendance=repair
+		)
+		if not marked:
+			raise frappe.ValidationError("Shift attendance rebuild returned no record")
+	except Exception:
+		frappe.db.rollback(save_point="late_checkout_repair")
+		logger.exception("[remote_checkin_request] shift repair rolled back for OUT=%s", out_checkin)
+		_repair_notice(
+			out_checkin, _("Rebuilding attendance failed; the previous record and punch links were kept.")
+		)
+		return None
+	logger.info("[remote_checkin_request] repaired Attendance=%s from %s punches", marked.name, len(logs))
+	return marked.name

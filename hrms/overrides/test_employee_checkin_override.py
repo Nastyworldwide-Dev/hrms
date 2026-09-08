@@ -61,6 +61,13 @@ def _patched(distance_m=120.0, radius=100, strict=False):
 	]
 
 
+class TestOverrideImportBoundary(unittest.TestCase):
+	def test_override_and_employee_controller_are_real_python_classes(self):
+		self.assertIsInstance(mod.EmployeeCheckin, type)
+		self.assertIsInstance(mod.CustomEmployeeCheckin, type)
+		self.assertTrue(issubclass(mod.CustomEmployeeCheckin, mod.EmployeeCheckin))
+
+
 class TestAccuracyReachesTheDecision(unittest.TestCase):
 	def _run(self, doc, **kw):
 		"""Validate `doc` with collaborators stubbed; return the spy on the decision."""
@@ -149,23 +156,23 @@ class TestGeofenceRejectLogDurability(unittest.TestCase):
 
 	def test_reject_log_is_committed_so_it_survives_the_rollback(self):
 		doc = _FakeCheckin()
-		saved = mod.frappe.flags.in_test
-		with patch(f"{MODULE}.frappe.new_doc"), patch(f"{MODULE}.frappe.db.commit") as commit:
-			# The production path is `not in_test`; the runner sets in_test True,
-			# which is exactly the branch that skips the commit for test isolation.
-			mod.frappe.flags.in_test = False
-			try:
-				mod._record_geofence_reject(doc, self._ctx(), "KL Office")
-			finally:
-				mod.frappe.flags.in_test = saved
+		with (
+			patch(f"{MODULE}.frappe.new_doc"),
+			patch(f"{MODULE}.frappe.db.commit") as commit,
+			patch(f"{MODULE}.frappe.flags", SimpleNamespace(in_test=False)),
+		):
+			mod._record_geofence_reject(doc, self._ctx(), "KL Office")
 		commit.assert_called_once()
 
 	def test_reject_log_does_not_commit_under_the_test_runner(self):
 		# The isolation guard: inside the runner the commit must be skipped, or it
 		# would persist other tests' fixtures past their rolled-back transaction.
 		doc = _FakeCheckin()
-		with patch(f"{MODULE}.frappe.new_doc"), patch(f"{MODULE}.frappe.db.commit") as commit:
-			mod.frappe.flags.in_test = True
+		with (
+			patch(f"{MODULE}.frappe.new_doc"),
+			patch(f"{MODULE}.frappe.db.commit") as commit,
+			patch(f"{MODULE}.frappe.flags", SimpleNamespace(in_test=True)),
+		):
 			mod._record_geofence_reject(doc, self._ctx(), "KL Office")
 		commit.assert_not_called()
 

@@ -263,7 +263,9 @@ class ShiftType(Document):
 			if not frappe.in_test:
 				frappe.db.commit()  # nosemgrep
 
-	def mark_attendance_for_shift_logs(self, employee, attendance_date, single_shift_logs):
+	def mark_attendance_for_shift_logs(
+		self, employee, attendance_date, single_shift_logs, repair_attendance=None
+	):
 		"""Mark one employee's attendance for one shift day from its check-ins.
 
 		The single rule the hourly job and the late check-out approval share
@@ -304,6 +306,7 @@ class ShiftType(Document):
 			out_time,
 			self.name,
 			overtime_type,
+			repair_attendance=repair_attendance,
 		)
 
 	def is_half_holiday(self, employee, attendance_date):

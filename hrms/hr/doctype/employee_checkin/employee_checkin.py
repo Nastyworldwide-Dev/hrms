@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime
+from frappe.utils import cint, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +226,7 @@ def mark_attendance_and_link_log(
 	out_time: datetime | None = None,
 	shift: str | None = None,
 	overtime_type: str | None = None,
+	repair_attendance: Document | None = None,
 ) -> Document | None:
 	"""Creates an attendance and links the attendance to the Employee Checkin.
 	Note: If attendance is already present for the given date, the logs are marked as skipped and no exception is thrown.
@@ -259,6 +260,7 @@ def mark_attendance_and_link_log(
 			in_time=in_time,
 			out_time=out_time,
 			overtime_type=overtime_type,
+			repair_attendance=repair_attendance,
 		)
 
 		if attendance_status == "Absent":
@@ -285,10 +287,26 @@ def create_or_update_attendance(
 	in_time=None,
 	out_time=None,
 	overtime_type=None,
+	repair_attendance=None,
 ):
 	"""Creates a new attendance, repairs a provisional auto-Absent, or updates
 	an existing half-day attendance."""
-	if attendance := get_existing_half_day_attendance(employee, attendance_date):
+	if repair_attendance is not None:
+		if (
+			not isinstance(repair_attendance, Document)
+			or repair_attendance.doctype != "Attendance"
+			or not cint(repair_attendance.auto_attendance)
+			or repair_attendance.get("synced_from_instance")
+			or cint(repair_attendance.docstatus) != 0
+			or repair_attendance.employee != employee
+			or repair_attendance.shift != shift
+			or getdate(repair_attendance.attendance_date) != getdate(attendance_date)
+		):
+			frappe.throw(_("Attendance repair requires the matching automation-owned draft."))
+		logger.info("[checkin] saving trusted attendance repair through document validation")
+	if repair_attendance is None and (
+		attendance := get_existing_half_day_attendance(employee, attendance_date)
+	):
 		frappe.db.set_value(
 			"Attendance",
 			attendance.name,
@@ -305,7 +323,7 @@ def create_or_update_attendance(
 		)
 		return frappe.get_doc("Attendance", attendance.name)
 
-	if attendance := get_repairable_auto_absence(employee, attendance_date):
+	if repair_attendance is None and (attendance := get_repairable_auto_absence(employee, attendance_date)):
 		# Auto-attendance marked this day Absent because no check-ins had
 		# arrived; the authoritative punches are here now. Repair the
 		# provisional record in place (it stays automation-owned) rather than
@@ -347,7 +365,8 @@ def create_or_update_attendance(
 		)
 		return repaired
 
-	attendance = frappe.new_doc("Attendance")
+	attendance = repair_attendance if repair_attendance is not None else frappe.new_doc("Attendance")
+	was_new = attendance.is_new()
 	attendance.update(
 		{
 			"doctype": "Attendance",
@@ -366,6 +385,9 @@ def create_or_update_attendance(
 		}
 	)
 
+	if repair_attendance is not None:
+		attendance.update({"overtime_type": None, "standard_working_hours": 0, "actual_overtime_duration": 0})
+
 	# Set overtime data if applicable
 	if overtime_type and attendance_status == "Present":
 		overtime_data = get_overtime_data(shift, working_hours)
@@ -377,8 +399,12 @@ def create_or_update_attendance(
 					"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
 				}
 			)
-	attendance.save()
-	attendance.submit()
+	if repair_attendance is not None:
+		attendance.save(ignore_permissions=True)
+	else:
+		attendance.save()
+	if repair_attendance is None or was_new:
+		attendance.submit()
 
 	return attendance
 

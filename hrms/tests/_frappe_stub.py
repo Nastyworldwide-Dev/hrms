@@ -28,6 +28,15 @@ class _Dict(dict):
 		self[key] = value
 
 
+class _Document:
+	"""Class-only base for importing controllers; deliberately supplies no fake lifecycle.
+
+	MagicMock cannot stand in for a Python base class: its metaclass turns
+	controller subclasses into mocks and prevents their real methods executing.
+	Tests must provide their own document state or use real Frappe for lifecycle checks.
+	"""
+
+
 def install():
 	try:
 		import frappe
@@ -41,6 +50,8 @@ def install():
 			module = types.ModuleType(spec.name)
 			module.__getattr__ = lambda _name: MagicMock()
 			module.__path__ = []
+			if spec.name == "frappe.model.document":
+				module.Document = _Document
 			return module
 
 		def exec_module(self, module):
