@@ -21,7 +21,7 @@ Source repairs are local only. No production deployment, historical data repair,
 | PWA and Desk approval capability / stale actions | 6384996d6 integrates reviewed action-specific PWA/Desk controls, dirty/revision guards, self-Leave Reject and legacy Submit. Fresh re-review PASS;195 frontend tests,29 focused Bun tests; integration combined212 frontend pass. |
 | OT layout / zero claim / summary races | d58fa94af integrated (header first, one hint, visible 0, per employee/date summary ownership, Save gated with reason); review DEPLOY; frontend 225 pass. |
 | New-form dirty state / attachment retry / partial resource failures | Pending PWA recovery slices. |
-| Attendance calendar refresh / pending feedback | Pending; historical September rows need read-only diagnosis and a reviewable repair set. |
+| Attendance calendar refresh / pending feedback | 826b17e0d: per-month request ownership, realtime Attendance reload, view re-entry refresh, Try again (frontend 228 pass). cc09090ec: provisional auto-Absent replaced through cancel + canonical re-mark under a financial guard (ATT-PROVISIONAL). Still open: a "punched, pending" feedback state; the September blanks need the read-only live diagnosis (D4) before any historical repair. |
 | Push identity / semantic results / timing / destination / feed access | Remaining notification slices. |
 | Desk report scope / aggregate scope / Half Day chart | Remaining report slices. |
 | RL allocation mirror ownership / balance conservation | Remaining sync and grant slices. |

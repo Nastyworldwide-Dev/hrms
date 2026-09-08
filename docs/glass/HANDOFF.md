@@ -1,12 +1,11 @@
 # HANDOFF
-prompt:   helpdesk-native (Helpdesk front end inside the PWA, shows who raised each ticket)
-status:   done
-commit:   see `git log -1 --format=%h v16.23.0` (v16.23.0) on nz-glass
-files:    hrms/api/helpdesk.py + hrms/tests/test_helpdesk_api.py
-          frontend/src/views/helpdesk/{HelpdeskList,TicketNew,TicketDetail}.vue
-          frontend/src/{data,utils,router}/helpdesk.js
-          frontend/src/data/{navItems,appLinks}.js, views/More.vue, components/SideNav.vue
-          frontend/src/components/glass/GStatusChip.vue
-verify:   PYTHONPATH=. python3 hrms/tests/test_helpdesk_api.py && cd frontend && node --experimental-test-module-mocks --test tests/helpdesk-utils.test.mjs src/data/__tests__/helpdesk-nav.test.js && yarn build
-flags:    verified against a mocked API only (no local bench); assumes employees are Helpdesk customers on verifica-live; Team calendar (v16.22.0) also awaits deploy; HR-EMP-00102 attendance gap still needs an HR-level read of her check-ins
-next:     FC deploy of v16.23.0 on verifica-live (no migrate needed), then open /hrms/helpdesk as staff and raise one ticket end-to-end
+prompt:   360-repair continuation (check-in/out, attendance, OT; after Astra)
+status:   partial — 11 slices landed locally, remaining rows in .claude/plans/360-status.md
+commit:   826b17e0d on nz-glass (30 local commits since e5acad89c; NOT pushed)
+files:    hrms/hr/doctype/ot_request/ot_request.py, hrms/utils/ot_calculation.py
+          hrms/api/approval.py, hrms/api/__init__.py, hrms/patches/v16_0/add_ot_request_reservation_index.py
+          hrms/hr/doctype/employee_checkin/employee_checkin.py, hrms/overrides/employee_checkin_override.py
+          frontend/src/views/ot/OTRequestForm.vue, frontend/src/components/AttendanceCalendar.vue
+verify:   PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider hrms/tests/ && cd frontend && npm test && npm run lint
+flags:    native suites opt-in (NADI_OT_TEST_SITE / NADI_GEOFENCE_TEST_SITE from verify-bench/sites); Q1-Q3 and the four-month policy undecided; D1-D5 live diagnostics not run; 4 pre-existing company-scope test failures
+next:     Nabil pushes nz-glass + deploys (migrate adds the OT index); then D1-D5; then notifications/report/RL-sync/metadata rows

@@ -197,3 +197,36 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-08T15:22:00Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 9 extra test file(s) ⟂0a28f2bd7748
 - 2026-09-08T15:22:00Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 3 call site(s) given verdicts, 100 same-root ⟂70125084ae92
 - 2026-09-08T15:28:37Z PLAN: approved 1d8716a93e2a — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-08T15:30:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T15:43:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-08T15:43:35Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-08T15:44:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-08T15:44:12Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-08T15:44:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-08T15:44:30Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-08T15:45:03Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 5 call site(s) given verdicts, 110 same-root ⟂fb0c330c03cf
+- 2026-09-08T15:45:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-08T15:45:18Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-08T15:45:19Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 5 call site(s) given verdicts, 110 same-root ⟂fb0c330c03cf
+2026-09-08T15:45Z COMMIT: 7d5edc51c docs (audit trail); 039d134f8 fix isolated refusal audit (native test.local 2 passed; review DEPLOY); d58fa94af fix OT form (review DEPLOY); 9ff25d231 test harness stub; db22e3dc3 fix multi-shift OT pricing (OT-MULTI). No push.
+2026-09-08T15:45Z NEXT: discovery window aligned to the filing window (bounded caller input); then OT index/lock (authorized), CAL-REFRESH, ATT-PROVISIONAL, notification/report/RL-sync slices per 360-status.md
+- 2026-09-08T15:47:22Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T15:55:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T15:55:04Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-08T15:55:06Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 113 same-root ⟂5adabbd0423a
+- 2026-09-08T16:00:47Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 21 call site(s) given verdicts, 118 same-root ⟂818e8d19e53e
+- 2026-09-08T16:00:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-08T16:00:53Z EVIDENCE: 3 works — blast radius green: 12 dependent(s), 8 extra test file(s) ⟂fb3375a108b6
+- 2026-09-08T16:01:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-08T16:01:07Z EVIDENCE: 3 works — blast radius green: 12 dependent(s), 8 extra test file(s) ⟂fb3375a108b6
+- 2026-09-08T16:01:08Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 21 call site(s) given verdicts, 118 same-root ⟂818e8d19e53e
+2026-09-08T16:01Z COMMIT: f7cab99bc multi-shift corrections (review FIX_CRITICAL resolved); b14f0eb31 stub TimestampMismatchError; 6be841a6e OT reservation locks + index (native fresh.local proof). No push.
+2026-09-08T16:01Z NEXT: ATT-PROVISIONAL (provisional auto-Absent via db.set_value skips validate/set_overtime) then CAL-REFRESH per .claude/plans/360-calendar-repair.md; then notifications/reports/RL-sync/metadata/harness rows in 360-status.md
+- 2026-09-08T16:04:52Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 119 same-root ⟂b2e50b15fba8
+- 2026-09-08T16:04:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T16:04:56Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-08T16:05:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-08T16:05:09Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-08T16:05:10Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 119 same-root ⟂b2e50b15fba8
+2026-09-08T16:16Z COMMIT: cc09090ec provisional Absent replaced (ATT-PROVISIONAL); 826b17e0d calendar per-month ownership + realtime + re-entry refresh (CAL-REFRESH). No push.
+2026-09-08T16:16Z NEXT: remaining 360 rows — notifications (push identity/semantic results/timing/destination/feed access), Desk report scope (360-report-repair.md), RL allocation sync ownership, metadata parity, harness; policy decisions still open: Q1-Q3 rounding/caps/fallback, four-month window; live diagnostics D1-D5 still not run
