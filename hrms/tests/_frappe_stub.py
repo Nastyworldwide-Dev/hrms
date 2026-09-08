@@ -83,12 +83,16 @@ def install():
 	class DoesNotExistError(ValidationError):
 		pass
 
+	class TimestampMismatchError(ValidationError):
+		pass
+
 	def throw(msg, exc=ValidationError, *args, **kwargs):
 		raise exc(msg)
 
 	root.ValidationError = ValidationError
 	root.PermissionError = PermissionError
 	root.DoesNotExistError = DoesNotExistError
+	root.TimestampMismatchError = TimestampMismatchError
 	root.throw = throw
 	root.__getattr__ = lambda _name: MagicMock()
 	sys.modules["frappe"] = root
