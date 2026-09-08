@@ -330,3 +330,11 @@ hrms/overrides/remote_checkin_request_hooks.py reprocess_late_checkout_attendanc
 hrms/overrides/remote_checkin_request_hooks.py _repair_financial_dependency not-affected — reused read-only.
 Leave half-day update path (get_existing_half_day_attendance) not-affected — upstream behaviour kept: a leave-derived Half Day is not a provisional Absent; ceiling noted for a later slice.
 Lock: hrms/tests/test_provisional_absence_repair.py (cancel then insert/submit, no raw write; dependency refuses without cancelling; failed re-mark rolls back).
+
+CLASS: CAL-REFRESH — the attendance calendar re-fetched one resource with new params per month step (a slow old month painted under the new title), never reloaded when the hourly job created an Attendance or when the tab was re-entered, and its error state had no retry.
+Changed: frontend/src/components/AttendanceCalendar.vue (one resource per month, owned by that month; realtime Attendance subscription reloads the shown month; refresh() exposed; Try again in the error banner; rejections owned), frontend/src/views/attendance/Dashboard.vue (onIonViewWillEnter refreshes the calendar).
+Call sites / consumers:
+frontend/src/views/attendance/Dashboard.vue:35 same-root — the only mount of AttendanceCalendar; gains the ref and the re-entry refresh.
+frontend/src/composables/realtime.js useListUpdate not-affected — reused; detaches on unmount as it already does for the request lists.
+hrms.api.get_attendance_calendar_events not-affected — same endpoint, same params, one call per month instead of one shared resource.
+Lock: frontend/tests/attendance-calendar-refresh.test.mjs (late old-month response never shows under the current month; a fetched month shows at once without refetch; Attendance change reloads; refresh clears the error and reloads).

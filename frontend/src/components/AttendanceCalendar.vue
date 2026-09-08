@@ -53,7 +53,10 @@
 	     no calendar, no message, nothing to search for. Four features were
 	     reported "missing" that were in fact erroring. -->
 	<GBanner v-else-if="calendarEvents.error" variant="error">
-		{{ __("Could not load the attendance calendar. Refresh to try again.") }}
+		{{ __("Could not load the attendance calendar.") }}
+		<button type="button" class="ml-2 underline g-focusable" @click="refresh">
+			{{ __("Try again") }}
+		</button>
 	</GBanner>
 
 	<!-- loading: the missing fourth state — the calendar auto-fetches, and
@@ -68,11 +71,13 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
-import { computed, inject, ref, watch } from "vue"
+import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
+import { useListUpdate } from "@/composables/realtime"
 
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
+const socket = inject("$socket", null)
 const firstOfMonth = ref(dayjs().date(1).startOf("D"))
 
 // The API's attendance statuses → GCalendar's states. Work From Home folds
@@ -113,7 +118,7 @@ const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]
 const summary = computed(() => {
 	const summary = {}
 
-	for (const status of Object.values(calendarEvents.data)) {
+	for (const status of Object.values(calendarEvents.value.data || {})) {
 		let updatedStatus = status === "Work From Home" ? "Present" : status
 		if (updatedStatus in summary) {
 			summary[updatedStatus] += 1
@@ -125,15 +130,8 @@ const summary = computed(() => {
 	return summary
 })
 
-watch(
-	() => firstOfMonth.value,
-	() => {
-		calendarEvents.fetch()
-	}
-)
-
 const getEventOnDate = (date) => {
-	return calendarEvents.data[firstOfMonth.value.date(date).format("YYYY-MM-DD")]
+	return (calendarEvents.value.data || {})[firstOfMonth.value.date(date).format("YYYY-MM-DD")]
 }
 
 const getDayAbbr = (s) => s.trim().slice(0, 3).toUpperCase() // Unicode-safe enough for labels
@@ -148,16 +146,43 @@ const DAYS = [
 	getDayAbbr(__("Saturday")),
 ]
 
-//resources
-const calendarEvents = createResource({
-	url: "hrms.api.get_attendance_calendar_events",
-	auto: true,
-	cache: personalCacheKey("hrms:attendance_calendar_events"),
-	makeParams() {
-		return {
-			from_date: firstOfMonth.value.format("YYYY-MM-DD"),
-			to_date: firstOfMonth.value.endOf("M").format("YYYY-MM-DD"),
-		}
-	},
-})
+// One resource PER MONTH, owned by that month. The old single resource took
+// whichever response finished last: step from September to October while
+// September was still loading and September's rows were painted under
+// October's title. Each month now answers only for itself, and a month that
+// was already fetched shows at once when stepped back to.
+const months = new Map()
+function monthResource(firstDay) {
+	const key = firstDay.format("YYYY-MM")
+	if (!months.has(key)) {
+		const resource = createResource({
+			url: "hrms.api.get_attendance_calendar_events",
+			params: {
+				from_date: firstDay.format("YYYY-MM-DD"),
+				to_date: firstDay.endOf("M").format("YYYY-MM-DD"),
+			},
+			cache: personalCacheKey(`hrms:attendance_calendar_events:${key}`),
+		})
+		months.set(key, resource)
+		// The banner renders resource.error; the rejection itself is owned here
+		// so a failed month never surfaces as an unhandled promise.
+		resource.fetch().catch(() => console.warn("[AttendanceCalendar] month unavailable", key))
+	}
+	return months.get(key)
+}
+const calendarEvents = computed(() => monthResource(firstOfMonth.value))
+
+// A processed day never reached a calendar that was already open: the hourly
+// job's Attendance appeared only after a full reload. Reload the month on
+// show whenever an Attendance row changes, and on demand (view re-entry, the
+// error banner's Try again).
+function refresh() {
+	const key = firstOfMonth.value.format("YYYY-MM")
+	console.info("[AttendanceCalendar] refreshing", key)
+	calendarEvents.value
+		.reload()
+		.catch(() => console.warn("[AttendanceCalendar] refresh failed", key))
+}
+useListUpdate(socket, "Attendance", refresh)
+defineExpose({ refresh })
 </script>

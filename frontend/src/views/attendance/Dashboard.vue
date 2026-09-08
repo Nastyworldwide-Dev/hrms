@@ -32,7 +32,7 @@
 							<span class="text-accent-ink text-xl" aria-hidden="true">→</span>
 						</button>
 					</div>
-					<div class="order-1"><AttendanceCalendar /></div>
+					<div class="order-1"><AttendanceCalendar ref="calendar" /></div>
 					<ResourceError :resource="shifts" what="your shifts" />
 				</div>
 
@@ -148,8 +148,9 @@
 <script setup>
 import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
-import { computed, inject, markRaw } from "vue"
+import { computed, inject, markRaw, ref } from "vue"
 import { useRouter } from "vue-router"
+import { onIonViewWillEnter } from "@ionic/vue"
 import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 
@@ -173,6 +174,12 @@ import { myOTRequests } from "@/data/overtime"
 import { settings } from "@/data/settings"
 
 const router = useRouter()
+
+// The calendar stays mounted while the tab is in the Ionic stack, so a day
+// the hourly job processed while the employee was on another tab never
+// showed until a full reload. Re-entering the view refreshes the month.
+const calendar = ref(null)
+onIonViewWillEnter(() => calendar.value?.refresh?.())
 const dayjs = inject("$dayjs")
 
 // Overtime the employee has worked but not yet filed — drives the "to claim" card
