@@ -51,6 +51,8 @@ const SILENT_ENDPOINTS = new Set([
 	"frappe.desk.search.search_link",
 	"hrms.api.get_attachments",
 	"hrms.api.remote_checkin.submit_late_checkout",
+	// CheckInPanel presents the failed punch and restores its retry controls.
+	"hrms.api.remote_checkin.punch",
 ])
 
 function endpointOf(options) {

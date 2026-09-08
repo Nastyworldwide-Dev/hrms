@@ -8,13 +8,18 @@
 // (docs/glass/frontend-audit.md, expense-claims-new__390-dark.png).
 //
 // loudRequest imports `toast` from frappe-ui, whose barrel cannot resolve under
-// plain node, so frappe-ui is module-mocked. Run with:
-//   node --experimental-test-module-mocks --test "frontend/**/*.test.js"
-import { test, mock } from "node:test"
+// plain Node or Bun. Replace only that UI import; execute the real request logic.
+import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 
-mock.module("frappe-ui", { namedExports: { toast: () => {} } })
-const { makeLoudRequest } = await import("../loudRequest.js")
+const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8").replace(
+	'import { toast } from "frappe-ui"',
+	"const toast = () => {}"
+)
+const makeLoudRequest = new Function(
+	`${source.replace("export function", "function")}\nreturn makeLoudRequest`
+)()
 
 const PERMISSION_ERROR = {
 	exc_type: "PermissionError",
@@ -70,6 +75,24 @@ test("the same failure on any other endpoint still toasts", async () => {
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))
 	assert.equal(toasts.length, 1, "unrelated endpoints keep their loud failure")
 	assert.equal(toasts[0].title, "Could not load")
+})
+
+test("ordinary checkout leaves its error to the sheet without a duplicate load toast", async () => {
+	const error = {
+		exc_type: "ValidationError",
+		messages: ["Only the assigned approver or an HR Manager can approve/reject this request."],
+	}
+	const { loud, toasts } = harness(error)
+	for (const url of [
+		"hrms.api.remote_checkin.punch",
+		"/api/method/hrms.api.remote_checkin.punch",
+	]) {
+		await assert.rejects(
+			() => loud({ url }),
+			(received) => received === error
+		)
+	}
+	assert.deepEqual(toasts, [], "CheckInPanel must remain the sole presenter of the punch error")
 })
 
 test("silencing the toast does not swallow the rejection", async () => {
