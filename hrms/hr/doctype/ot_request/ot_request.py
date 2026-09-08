@@ -74,16 +74,25 @@ class OTRequest(Document, PWANotificationsMixin):
 		self.validate_duplicate_request()
 
 	def validate_filing_window(self):
-		# HR's cutoff rule (2026-08-19): cycles run the 16th through the 15th,
-		# backdating reaches two cycles, and filing after a cycle's cutoff is
-		# NOT refused — it just pays in the next payroll. Amendments re-file a
-		# copy of an in-window original, so the window doesn't apply to them.
-		if not self.is_new() or self.amended_from:
-			return
+		# A previously filed employee/date may be processed after its window
+		# closes. Editing that identity is a new filing, including amendments.
 		today = getdate()
 		ot_date = getdate(self.ot_date)
 		if ot_date > today:
 			frappe.throw(_("OT Date cannot be in the future"))
+		previous = self.get_doc_before_save() if not self.is_new() else None
+		if self.is_new() and self.amended_from:
+			original = frappe.db.get_value(
+				"OT Request",
+				self.amended_from,
+				["employee", "ot_date", "docstatus"],
+				as_dict=True,
+			)
+			if original and original.docstatus == 2:
+				previous = original
+		if previous and previous.employee == self.employee and getdate(previous.ot_date) == ot_date:
+			logger.debug("[ot_request] preserving filed work date %s on %s", ot_date, self.name)
+			return
 		if not is_within_ot_filing_window(ot_date, today):
 			logger.info("[ot_request] out-of-window filing rejected: %s for %s", self.employee, ot_date)
 			frappe.throw(
