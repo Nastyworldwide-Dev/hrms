@@ -273,6 +273,15 @@ class ShiftType(Document):
 		one implementation, so a threshold change here reaches both.
 		Returns the Attendance, or None when the day is not to be marked.
 		"""
+		from hrms.utils.ot_calculation import _classify_day, _is_eligible_checkin, _pair_sessions
+
+		if _classify_day(employee, attendance_date, "normal", shift=self.name) != "normal":
+			if not _pair_sessions(single_shift_logs, {self.name: self.determine_check_in_and_check_out}):
+				logger.info("[shift_type] no eligible holiday pair; attendance not created")
+				return None
+		eligible_logs = [row for row in single_shift_logs if _is_eligible_checkin(row)]
+		if not eligible_logs:
+			return None
 		if not self.should_mark_attendance(employee, attendance_date):
 			return None
 
@@ -283,7 +292,7 @@ class ShiftType(Document):
 			working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
 			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
 
-		overtime_type = single_shift_logs[0].get("overtime_type")
+		overtime_type = eligible_logs[0].get("overtime_type")
 		(
 			attendance_status,
 			working_hours,
@@ -296,7 +305,7 @@ class ShiftType(Document):
 		)
 
 		return mark_attendance_and_link_log(
-			single_shift_logs,
+			eligible_logs,
 			attendance_status,
 			attendance_date,
 			working_hours,
@@ -330,14 +339,18 @@ class ShiftType(Document):
 				"shift_actual_end",
 				"device_id",
 				"overtime_type",
+				"skip_auto_attendance",
+				"remote_approval_status",
+				"requires_remote_approval",
+				"offshift",
 			],
 			filters={
-				"skip_auto_attendance": 0,
 				"attendance": ("is", "not set"),
 				"time": (">=", self.process_attendance_after),
 				"shift_actual_end": ("<", self.last_sync_of_checkin),
 				"shift": self.name,
-				"offshift": 0,
+				# Retain ineligible punches as interval boundaries. Only eligible
+				# evidence is linked after calculation; filtering here bridges gaps.
 				# Mirrored punches are owned by their source instance
 				# (single-writer, hrms/sync/write_block.py). Processing them
 				# would create a duplicate local Attendance and stamp the
@@ -351,13 +364,38 @@ class ShiftType(Document):
 		"""Return attendance_status, working_hours, late_entry, early_exit, in_time, out_time
 		for a set of logs belonging to a single shift.
 		Assumptions:
-		1. These logs belongs to a single shift, single employee and it's not in a holiday date.
+		1. These logs belong to a single shift and employee; holidays use eligible pairs.
 		2. Logs are in chronological order
 		"""
+		from hrms.utils.ot_calculation import _classify_day, _is_eligible_checkin, _pair_sessions
+
+		if (
+			logs
+			and _classify_day(
+				logs[0].employee, getdate(logs[0].shift_start or logs[0].time), "normal", shift=self.name
+			)
+			!= "normal"
+		):
+			intervals = _pair_sessions(logs, {self.name: self.determine_check_in_and_check_out})
+			if intervals:
+				hours = sum((row["last_out"] - row["first_in"]).total_seconds() for row in intervals) / 3600
+				logger.debug("[shift_type] eligible holiday work is Present without weekday deductions")
+				return "Present", hours, False, False, intervals[0]["first_in"], intervals[-1]["last_out"]
+			return "Absent", 0.0, False, False, None, None
 		late_entry = early_exit = False
-		total_working_hours, in_time, out_time = calculate_working_hours(
-			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
-		)
+		# Preserve the configured native calculation within each contiguous
+		# eligible segment. An invalid boundary never joins the surrounding
+		# first-IN/last-OUT span, even with the First/Last working-hours policy.
+		parts = [
+			calculate_working_hours(
+				list(group), self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
+			)
+			for eligible, group in groupby(logs, key=_is_eligible_checkin)
+			if eligible
+		]
+		total_working_hours = sum(part[0] for part in parts)
+		in_time = next((part[1] for part in parts if part[1]), None)
+		out_time = next((part[2] for part in reversed(parts) if part[2]), None)
 		total_working_hours = self._deduct_unpaid_breaks(
 			total_working_hours, in_time, out_time, company=_company_of_logs(logs)
 		)
@@ -535,6 +573,13 @@ class ShiftType(Document):
 
 	def should_mark_attendance(self, employee: str, attendance_date: str) -> bool:
 		"""Determines whether attendance should be marked on holidays or not"""
+		from hrms.utils.ot_calculation import _classify_day
+
+		# HR requires actual nonworking-day work to be recorded regardless of
+		# this scheduling checkbox. The marking path requires an eligible pair;
+		# incomplete holiday evidence never creates an automatic absence.
+		if _classify_day(employee, attendance_date, "normal", shift=self.name) != "normal":
+			return True
 		if self.mark_auto_attendance_on_holidays:
 			# no need to check if date is a holiday or not
 			# since attendance should be marked on all days

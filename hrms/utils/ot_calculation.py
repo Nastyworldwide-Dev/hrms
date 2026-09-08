@@ -136,6 +136,7 @@ def _get_shift_ot_config(shift_name):
 		"start_time": shift.start_time,
 		"end_time": shift.end_time,
 		"allow_check_out_after": cint(shift.allow_check_out_after_shift_end_time),
+		"checkin_policy": shift.determine_check_in_and_check_out,
 	}
 
 
@@ -307,7 +308,7 @@ def _ot_bands_for_day(ot_hours, hourly_rate, day_type, config):
 				{
 					"day_type": day_type,
 					"rate": rate,
-					"hours": round(slice_hours, 2),
+					"hours": round(slice_hours, 2) if day_type == "normal" else slice_hours,
 					"amount": round(slice_hours * hourly_rate * rate, 2),
 				}
 			)
@@ -318,7 +319,8 @@ def _rate_weighted_hours(bands):
 	"""Rate-weighted OT hours = sum(band hours x multiplier). The salary-free figure
 	a payroll platform (e.g. Employment Hero) multiplies by its own hourly rate —
 	the ERP stops here and never needs the salary."""
-	return round(sum(b["hours"] * b["rate"] for b in bands), 2)
+	total = sum(b["hours"] * b["rate"] for b in bands)
+	return round(total, 2) if all(b["day_type"] == "normal" for b in bands) else total
 
 
 def _per_day_ot_hours(employee, start_date, end_date):
@@ -339,39 +341,55 @@ def _per_day_ot_hours(employee, start_date, end_date):
 			"time",
 			"log_type",
 			"shift",
+			"shift_start",
+			"shift_end",
 			"shift_actual_start",
 			"shift_actual_end",
 			"remote_approval_status",
+			"requires_remote_approval",
+			"skip_auto_attendance",
+			"offshift",
 		],
 		order_by="time asc",
 	)
 
-	sessions = _pair_sessions(checkins)
-
+	configs = {shift: _get_shift_ot_config(shift) for shift in {row.get("shift") for row in checkins}}
+	policies = {shift: config.get("checkin_policy") for shift, config in configs.items() if config}
+	sessions = _pair_sessions(checkins, policies)
 	per_day_hours: dict[date, float] = defaultdict(float)
 	per_day_shift: dict[date, str] = {}
-	for s in sessions:
-		if not s.get("shift") or not s.get("shift_end"):
-			logger.info("[ot_calculation] Skipping session in=%s — no shift bounds", s.get("first_in"))
+	for session in sessions:
+		shift = session.get("shift")
+		config = configs.get(shift)
+		if not config:
 			continue
-		# OT is post-shift-end only, measured against the REAL shift end (the padded
-		# shift_actual_end = end + allow_check_out_after buffer would silently drop OT).
-		# Pre-shift (early check-in) time is never counted as overtime.
-		real_end = _real_shift_end_for_session(s["shift"], s)
-		if not real_end:
-			continue
-		# OT begins at the shift end, pushed back by however late they clocked in —
-		# late arrival is made up first, early arrival never credited. Without this
-		# a 9-6 shift clocked 9:30-6:30 (a completed 9h day) was mis-billed 30m OT.
-		config = _get_shift_ot_config(s["shift"])
-		anchor = s.get("shift_start")
-		real_start = (
-			_real_shift_start_dt(config["start_time"], anchor.date()) if (config and anchor) else None
-		)
-		ot_begins = _ot_window_begin(real_start, real_end, s.get("first_in"))
-		if s["last_out"] > ot_begins:
-			_accumulate_range_by_day(per_day_hours, per_day_shift, s["shift"], ot_begins, s["last_out"])
+		for day, hours, _ in _session_ot_slices(employee, session, config):
+			per_day_hours[day] += hours
+			per_day_shift[day] = shift
 	return per_day_hours, per_day_shift
+
+
+def _session_ot_slices(employee, session, config):
+	"""Calendar-day OT slices shared by raw scans and Attendance breakdowns."""
+	shift = session["shift"]
+	anchor = session.get("shift_start")
+	real_end = _real_shift_end_for_session(shift, session) if session.get("shift_end") else None
+	real_start = _real_shift_start_dt(config["start_time"], anchor.date()) if anchor else None
+	ot_begins = (
+		_ot_window_begin(real_start, real_end, session.get("shift_first_in", session["first_in"]))
+		if real_end
+		else None
+	)
+	cursor = session["first_in"]
+	logger.debug("[ot_calculation] slicing eligible worked interval by calendar day")
+	while cursor < session["last_out"]:
+		slice_end = min(session["last_out"], datetime.combine(cursor.date() + timedelta(days=1), time.min))
+		day_type = _classify_day(employee, cursor.date(), "normal", shift=shift)
+		# Scheduled weekday breaks and the shift end never erase holiday work.
+		start = cursor if day_type != "normal" else max(cursor, ot_begins or slice_end)
+		if start < slice_end:
+			yield cursor.date(), (slice_end - start).total_seconds() / 3600, day_type
+		cursor = slice_end
 
 
 def _approved_ot_pay_hours(employee, start_date, end_date):
@@ -443,7 +461,9 @@ def _iter_day_ot(
 		if not config:
 			# shift missing or overtime disabled for this shift
 			continue
-		if hours * 60.0 < config["min_minutes"]:
+		resolved_day_type = _classify_day(employee, day, default_day_type, shift=per_day_shift.get(day))
+		nonworking = resolved_day_type != "normal"
+		if not nonworking and hours * 60.0 < config["min_minutes"]:
 			continue
 		# The minimum qualifies WORKED overtime. A smaller approved claim or
 		# remaining monthly allowance must not be tested against it a second time.
@@ -451,17 +471,17 @@ def _iter_day_ot(
 			hours = min(hours, max(0.0, approved_hours_map.get(day, 0)))
 			if hours <= 0:
 				continue
-		if config["daily_cap"] > 0:
+		if not nonworking and config["daily_cap"] > 0:
 			hours = min(hours, config["daily_cap"])
-		if apply_monthly_cap and config["monthly_cap"] > 0:
+		if not nonworking and apply_monthly_cap and config["monthly_cap"] > 0:
 			hours = min(hours, max(0.0, config["monthly_cap"] - monthly_ot_hours))
 			if hours <= 0:
 				continue
-		monthly_ot_hours += hours
+		if not nonworking:
+			monthly_ot_hours += hours
 		if day < start_date:
 			continue
 
-		resolved_day_type = _classify_day(employee, day, default_day_type, shift=per_day_shift.get(day))
 		hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
 		bands = _ot_bands_for_day(hours, hourly_rate, resolved_day_type, config)
 		amount = round(sum(b["amount"] for b in bands), 2)
@@ -475,9 +495,9 @@ def _iter_day_ot(
 		)
 		yield {
 			"day": day,
-			"monthly_cap": config["monthly_cap"],
+			"monthly_cap": 0 if nonworking else config["monthly_cap"],
 			"unrounded_ot_hours": hours,
-			"ot_hours": round(hours, 2),
+			"ot_hours": hours if nonworking else round(hours, 2),
 			"day_type": resolved_day_type,
 			"hourly_rate": hourly_rate,
 			"bands": bands,
@@ -559,6 +579,12 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	worked = next(_iter_day_ot(employee, day, day, 0, "normal", apply_monthly_cap=False), None)
 	if not worked:
 		return {"hours": 0.0, "monthly_remaining": None}
+	if worked["day_type"] != "normal":
+		return {
+			"hours": worked["unrounded_ot_hours"],
+			"monthly_remaining": None,
+			"day_type": worked["day_type"],
+		}
 	# Round the earned amount before clipping: rounding a remaining allowance
 	# afterwards can raise a claim above the configured monthly maximum.
 	hours = round_ot_pay_hours(worked["ot_hours"])
@@ -575,6 +601,18 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 	if exclude_request:
 		filters["name"] = ("!=", exclude_request)
 	approved = frappe.get_all("OT Request", filters=filters, fields=["ot_date", "claimed_hours"])
+	if approved:
+		_, approved_shifts = _per_day_ot_hours(employee, month_start, month_end)
+		# HR's uncapped holiday entitlement is separate from the weekday cap:
+		# neither a holiday reservation nor its payout consumes weekday hours.
+		approved = [
+			row
+			for row in approved
+			if _classify_day(
+				employee, getdate(row.ot_date), "normal", shift=approved_shifts.get(getdate(row.ot_date))
+			)
+			== "normal"
+		]
 	remaining = None
 	if cap > 0:
 		reserved = sum(Decimal(str(max(0.0, flt(row.claimed_hours)))) for row in approved)
@@ -588,7 +626,8 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None):
 			approved_by_day[getdate(row.ot_date)] += max(0.0, flt(row.claimed_hours))
 		consumed = Decimal(0)
 		for priced in _iter_day_ot(employee, month_start, month_end, 0, "normal", approved_by_day):
-			consumed += Decimal(str(priced["unrounded_ot_hours"]))
+			if priced["day_type"] == "normal":
+				consumed += Decimal(str(priced["unrounded_ot_hours"]))
 			if priced["day"] > day and priced["monthly_cap"] > 0:
 				headroom = max(Decimal(0), Decimal(str(priced["monthly_cap"])) - consumed)
 				remaining = headroom if remaining is None else min(remaining, headroom)
@@ -636,30 +675,59 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 	real_start = _real_shift_start_dt(config["start_time"], attendance_date)
 	real_end = _real_shift_end_dt(config["start_time"], config["end_time"], attendance_date)
 	in_dt = get_datetime(in_time) if in_time else None
-	# Same lateness-adjusted rule as the check-in scan, so the two OT paths agree:
-	# a late clock-in pushes OT later; an early one is ignored.
-	ot_hours = _ot_hours(real_start, real_end, in_dt, out_dt)
-
-	if ot_hours * 60.0 < config["min_minutes"]:
-		logger.info(
-			"[ot_calculation] %s %s below min-OT (%.2fh) — no OT", employee, attendance_date, ot_hours
-		)
-		return _empty_breakdown()
-	if config["daily_cap"] > 0:
-		ot_hours = min(ot_hours, config["daily_cap"])
-
 	day_type = _classify_day(employee, attendance_date, "normal", shift=shift)
-	hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
-	bands = _ot_bands_for_day(ot_hours, hourly_rate, day_type, config)
-	logger.info(
-		"[ot_calculation] %s %s ot_hours=%.2f day_type=%s (attendance-centric)",
-		employee,
-		attendance_date,
-		ot_hours,
-		day_type,
+	if day_type != "normal" and not in_dt:
+		return _empty_breakdown()
+	rows = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "shift": shift, "time": ["between", [in_dt or real_start, out_dt]]},
+		fields=[
+			"time",
+			"log_type",
+			"shift",
+			"shift_start",
+			"shift_actual_start",
+			"shift_actual_end",
+			"remote_approval_status",
+			"requires_remote_approval",
+			"skip_auto_attendance",
+			"offshift",
+		],
+		order_by="time asc",
 	)
+	if rows:
+		sessions = _pair_sessions(rows, {shift: config.get("checkin_policy")})
+	else:
+		# Retain manually entered Attendance's trusted timestamps when it has
+		# no source checkins. Existing but ineligible punches never use fallback.
+		sessions = [
+			{
+				"first_in": in_dt or real_start,
+				"last_out": out_dt,
+				"shift": shift,
+				"shift_start": real_start,
+				"shift_end": real_end,
+			}
+		]
+	buckets = defaultdict(float)
+	types = {}
+	for session in sessions:
+		for day, hours, resolved_type in _session_ot_slices(employee, session, config):
+			buckets[day] += hours
+			types[day] = resolved_type
+	hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
+	bands = []
+	ot_hours = 0.0
+	for day, hours in sorted(buckets.items()):
+		if types[day] == "normal":
+			if hours * 60 < config["min_minutes"]:
+				continue
+			if config["daily_cap"] > 0:
+				hours = min(hours, config["daily_cap"])
+		ot_hours += hours
+		bands.extend(_ot_bands_for_day(hours, hourly_rate, types[day], config))
 	return {
-		"ot_hours": round(ot_hours, 2),
+		"ot_hours": round(ot_hours, 2) if all(t == "normal" for t in types.values()) else ot_hours,
 		"day_type": day_type,
 		"bands": bands,
 		"rate_weighted_hours": _rate_weighted_hours(bands),
@@ -690,42 +758,63 @@ def _accumulate_range_by_day(buckets, shift_buckets, shift_name, start_dt, end_d
 		cursor = slice_end
 
 
-def _pair_sessions(checkins):
-	"""Pair check-in rows into IN -> OUT sessions in chronological order."""
+def _is_eligible_checkin(row):
+	"""A refused or pending punch remains a boundary, never worked evidence."""
+	logger.debug("[ot_calculation] checking punch eligibility")
+	return (
+		row.get("remote_approval_status") in (None, "", "Approved")
+		and not cint(row.get("requires_remote_approval"))
+		and not cint(row.get("skip_auto_attendance"))
+		and not cint(row.get("offshift"))
+	)
+
+
+def _pair_sessions(checkins, policies=None):
+	"""Eligible, positive IN/OUT intervals using each shift's log interpretation.
+
+	Strict policy keeps the first IN until an OUT, matching native attendance.
+	Alternating policy ignores log_type. Ineligible evidence breaks an open pair
+	so removing a refused/pending punch cannot fabricate a longer interval.
+	"""
 	logger.info("[ot_calculation] pairing %d checkin(s)", len(checkins))
 	sessions = []
 	current = None
 	for row in checkins:
-		if row.get("remote_approval_status") == "Rejected":
+		if not _is_eligible_checkin(row):
+			current = None
 			continue
 		log_time = get_datetime(row["time"])
+		shift = row.get("shift") or (current or {}).get("shift")
+		anchor = row.get("shift_start") or row.get("shift_actual_start")
+		anchor = get_datetime(anchor) if anchor else None
+		if current and (
+			(current.get("shift") and shift and current["shift"] != shift)
+			or (anchor and current.get("shift_start") and anchor != current["shift_start"])
+		):
+			current = None
+		policy = (policies or {}).get(shift)
 		log_type = row.get("log_type")
-
-		if log_type == "IN":
-			if current is not None:
-				logger.warning(
-					"[ot_calculation] Unpaired IN at %s replaces earlier IN at %s",
-					log_time,
-					current["first_in"],
-				)
+		if policy == "Alternating entries as IN and OUT during the same shift":
+			log_type = "OUT" if current else "IN"
+		if log_type == "IN" and current is None:
 			current = {
 				"first_in": log_time,
-				"shift": row.get("shift"),
-				"shift_start": get_datetime(row["shift_actual_start"])
-				if row.get("shift_actual_start")
-				else None,
+				"shift": shift,
+				"shift_start": anchor,
 				"shift_end": get_datetime(row["shift_actual_end"]) if row.get("shift_actual_end") else None,
 			}
 		elif log_type == "OUT" and current is not None:
 			current["last_out"] = log_time
-			if not current.get("shift") and row.get("shift"):
-				current["shift"] = row.get("shift")
-			if not current["shift_start"] and row.get("shift_actual_start"):
-				current["shift_start"] = get_datetime(row["shift_actual_start"])
+			current["shift"] = current.get("shift") or shift
+			current["shift_start"] = current.get("shift_start") or anchor
 			if not current["shift_end"] and row.get("shift_actual_end"):
 				current["shift_end"] = get_datetime(row["shift_actual_end"])
-			sessions.append(current)
+			if log_time > current["first_in"]:
+				sessions.append(current)
 			current = None
-
+	first_ins = {}
+	for session in sessions:
+		key = (session["shift"], session["shift_start"] or session["first_in"].date())
+		session["shift_first_in"] = first_ins.setdefault(key, session["first_in"])
 	logger.info("[ot_calculation] paired %d session(s)", len(sessions))
 	return sessions

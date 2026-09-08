@@ -1,21 +1,13 @@
-"""A rejected remote check-in must be excluded from auto-attendance.
+"""Rejected punches remain boundaries but never contribute worked attendance.
 
-Attendance marking (`ShiftType.get_employee_checkins`) selects punches by
-`skip_auto_attendance = 0` and knows nothing about `remote_approval_status`.
-The rejection handler used to flip only the status fields, so a punch HR
-explicitly rejected still marked the employee Present with working hours —
-the approval feature was cosmetic for attendance purposes.
-
-Both halves of the contract are pinned, because either side can silently
-undo it:
-
-  * the REJECTION must set `skip_auto_attendance` on the linked check-in;
-  * the ATTENDANCE FETCH must keep filtering on `skip_auto_attendance`.
-
-AST only — no bench required.
+The rejection write still sets skip_auto_attendance. The scheduler now retains
+these rows so removal cannot bridge an invalid interval; pairing and linking
+use the shared eligibility predicate. Full query/mark/link scenarios are in
+test_ot_nonworking_hours and the native rollback probe.
 """
 
 import ast
+import logging
 import pathlib
 import unittest
 
@@ -53,25 +45,22 @@ class TestRejectedPunchAttendance(unittest.TestCase):
 			"punch HR explicitly refused.",
 		)
 
-	def test_attendance_fetch_still_filters_on_skip_auto_attendance(self):
-		"""The other half: the fetch this fix relies on must keep its filter."""
-		func = _function(
-			HRMS.parent / "hrms" / "hr" / "doctype" / "shift_type" / "shift_type.py",
-			"get_employee_checkins",
-		)
-		filter_keys = {
-			k.value
-			for node in ast.walk(func)
-			if isinstance(node, ast.Dict)
-			for k in node.keys
-			if isinstance(k, ast.Constant)
-		}
-		self.assertIn(
-			"skip_auto_attendance",
-			filter_keys,
-			"ShiftType.get_employee_checkins dropped its skip_auto_attendance filter — "
-			"the rejected-punch exclusion depends on it.",
-		)
+	def test_rejected_or_skipped_boundary_is_not_eligible_work(self):
+		func = _function(HRMS / "utils" / "ot_calculation.py", "_is_eligible_checkin")
+		scope = {"logger": logging.getLogger(__name__), "cint": lambda value: int(value or 0)}
+		exec(compile(ast.Module(body=[func], type_ignores=[]), "eligibility", "exec"), scope)
+		eligible = scope["_is_eligible_checkin"]
+		for status in (None, "", "Approved"):
+			self.assertTrue(eligible({"remote_approval_status": status}))
+		for refused in (
+			{"remote_approval_status": "Rejected"},
+			{"remote_approval_status": "Pending"},
+			{"remote_approval_status": "Approved", "skip_auto_attendance": 1},
+			{"requires_remote_approval": 1},
+			{"offshift": 1},
+		):
+			with self.subTest(refused=refused):
+				self.assertFalse(eligible(refused))
 
 
 if __name__ == "__main__":

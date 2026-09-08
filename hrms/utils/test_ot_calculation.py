@@ -44,12 +44,12 @@ def _ot_amount_for_day(ot_hours, hourly_rate, day_type, config):
 	return sum(band["amount"] for band in _ot_bands_for_day(ot_hours, hourly_rate, day_type, config))
 
 
-# Weekdays used by the attendance-centric OT tests (no employee holiday list ->
-# _classify_day falls back to weekday: Wed=normal, Sat=off, Sun=rest).
+# Dates used by the attendance-centric tests. Nonworking tests explicitly
+# attach a holiday calendar; a weekday number alone never proves a holiday.
 NORMAL_WED = "2026-07-22"
 OFF_SAT = "2026-07-25"
 REST_SUN = "2026-07-26"
-OT_EMP = "_T-OT-EMP-DUMMY"  # non-existent employee -> weekday classification
+OT_EMP = "_T-OT-EMP-DUMMY"  # calendar comes from the test shift, never this dummy employee
 
 # Employment Act 1955 defaults, as a plain config dict for the pure-function tests.
 # bands are keyed by resolved day type: list of (from_hours, to_hours, rate).
@@ -390,15 +390,19 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertEqual(b["ot_hours"], 4.0)
 
 	def test_ot_rest_day_rate(self):
-		shift = ot_shift("_Test OT Rest")
-		b = get_shift_ot_breakdown(OT_EMP, shift, REST_SUN, "2026-07-26 19:13:05")
+		shift = ot_shift("_Test OT Rest", holiday_list=ot_holiday_calendar())
+		b = get_shift_ot_breakdown(
+			OT_EMP, shift, REST_SUN, "2026-07-26 19:13:05", in_time="2026-07-26 18:00:00"
+		)
 		self.assertEqual(b["day_type"], "rest")
 		self.assertEqual(b["bands"][0]["rate"], 2.0)
 
 	def test_ot_off_day_tiered_bands(self):
 		# 5h on a Saturday off day -> 4h @ 1.5 + 1h @ 2.0; rate-weighted 8.0
-		shift = ot_shift("_Test OT Off")
-		b = get_shift_ot_breakdown(OT_EMP, shift, OFF_SAT, "2026-07-25 23:00:00")
+		shift = ot_shift("_Test OT Off", holiday_list=ot_holiday_calendar())
+		b = get_shift_ot_breakdown(
+			OT_EMP, shift, OFF_SAT, "2026-07-25 23:00:00", in_time="2026-07-25 18:00:00"
+		)
 		self.assertEqual(b["day_type"], "off")
 		self.assertEqual([(x["rate"], x["hours"]) for x in b["bands"]], [(1.5, 4.0), (2.0, 1.0)])
 		self.assertEqual(b["rate_weighted_hours"], 8.0)
@@ -440,6 +444,26 @@ def _checkin(time, log_type, **args):
 		"shift_actual_end": "2025-01-07 18:00:00",
 		"remote_approval_status": args.get("remote_approval_status"),
 	}
+
+
+def ot_holiday_calendar():
+	"""Explicit listed weekly offs for the nonworking rate fixtures."""
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Holiday List",
+				"holiday_list_name": "_Test OT Calendar " + frappe.generate_hash(length=10),
+				"from_date": "2026-07-01",
+				"to_date": "2026-07-31",
+				"holidays": [
+					{"holiday_date": day, "description": "Synthetic weekly off", "weekly_off": 1}
+					for day in (OFF_SAT, REST_SUN)
+				],
+			}
+		)
+		.insert()
+		.name
+	)
 
 
 def ot_shift(name, **args):
