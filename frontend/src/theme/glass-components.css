@@ -1565,6 +1565,26 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__day--rest {
 	background: var(--g-icon-bg);
 }
+/* Picker states (Team page): the grid there is a day PICKER, not a status
+   record, so the selected day is an ink outline + ink numeral and today is a
+   quiet hair outline. Neither is a tint, so neither can be mistaken for a
+   present/leave/absent day. */
+.g-cal__day--selected {
+	border-color: var(--g-ink);
+	color: var(--g-ink);
+	font-weight: 800;
+}
+.g-cal__day--today {
+	border-color: var(--g-ink3);
+}
+.g-cal__swatch--selected {
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px var(--g-ink);
+}
+.g-cal__swatch--today {
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px var(--g-ink3);
+}
 .g-cal__legend {
 	display: flex;
 	flex-wrap: wrap;

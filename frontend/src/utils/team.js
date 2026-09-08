@@ -45,3 +45,22 @@ export const groupByDepartment = (members) => {
 		)
 		.map(([department, rows]) => ({ department, members: rows }))
 }
+
+// Day cells for the Team page's month picker (GCalendar). Dates are
+// "YYYY-MM-DD" strings so this stays dayjs-free and node-testable. A team has
+// no single per-day status, so the grid only marks the selected day (and
+// today, when it is not the selected day) — never a present/leave tint.
+export const buildTeamCalendarDays = (firstOfMonth, selectedDate, today) => {
+	const month = firstOfMonth.slice(0, 7)
+	const year = Number(month.slice(0, 4))
+	const monthIndex = Number(month.slice(5, 7)) - 1
+	const length = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+	const days = Array.from({ length }, (_, i) => {
+		const day = i + 1
+		const iso = `${month}-${String(day).padStart(2, "0")}`
+		const state = iso === selectedDate ? "selected" : iso === today ? "today" : "none"
+		return { day, state }
+	})
+	console.info("[team] calendar days:", month, length, "selected", selectedDate)
+	return days
+}

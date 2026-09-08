@@ -19,49 +19,72 @@
 					/>
 				</div>
 
-				<!-- day navigation. Uses the kit's borderless GIconButton — the old
-				     hand-rolled `border border-divider` square read as a "black box"
-				     around the chevron in dark mode (HR complaint). -->
-				<div class="flex flex-row items-center justify-between">
-					<GIconButton :label="__('Previous day')" @click="changeDay(-1)">
-						<FeatherIcon name="chevron-left" class="h-4 w-4" />
-					</GIconButton>
+				<!-- Month picker: the Attendance calendar card, reused. The old
+				     prev/next day arrows meant browsing a week took seven taps; a
+				     month grid is one. A team has no single per-day status, so the
+				     grid only marks the selected day and today (utils/team.js,
+				     pinned by tests/team-calendar-days.test.mjs). -->
+				<GCalendar
+					:title="`${firstOfMonth.format('MMMM')} ${firstOfMonth.format('YYYY')}`"
+					:days="calendarDays"
+					:leading-blanks="firstOfMonth.get('d')"
+					:weekdays="DAYS"
+					:legend="LEGEND"
+					@select="pickDay"
+				>
+					<template #action>
+						<span class="flex gap-3">
+							<button
+								type="button"
+								class="g-cal__nav g-focusable"
+								:aria-label="__('Previous month')"
+								@click="firstOfMonth = firstOfMonth.subtract(1, 'M')"
+							>
+								<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+									<polyline points="10 3 5 8 10 13" />
+								</svg>
+							</button>
+							<button
+								type="button"
+								class="g-cal__nav g-focusable"
+								:aria-label="__('Next month')"
+								@click="firstOfMonth = firstOfMonth.add(1, 'M')"
+							>
+								<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+									<polyline points="6 3 11 8 6 13" />
+								</svg>
+							</button>
+						</span>
+					</template>
+				</GCalendar>
+
+				<!-- The day's summary: the Attendance stat strip (one glass panel,
+				     4 cells), replacing the flat bordered tiles. -->
+				<GStatPanel :columns="4" :cells="4" :loading="teamStatus.loading && !teamStatus.data">
+					<GStatTile
+						v-for="tile in summaryTiles"
+						:key="tile.label"
+						:value="tile.count"
+						:label="tile.label"
+					/>
+				</GStatPanel>
+
+				<div class="flex flex-row items-center justify-between gap-2">
 					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
 					     becomes "TODAY · SUN 23 AUG" overnight. -->
 					<span class="g-datenav__label" data-visual-mask>
 						{{ dayLabel }}
 					</span>
-					<GIconButton :label="__('Next day')" @click="changeDay(1)">
-						<FeatherIcon name="chevron-right" class="h-4 w-4" />
-					</GIconButton>
+					<router-link
+						v-if="teamStatus.data?.members?.length"
+						:to="{ name: 'TeamRosterView' }"
+						class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link"
+					>
+						{{ __("Open team roster") }}
+					</router-link>
 				</div>
-
-				<router-link
-					v-if="teamStatus.data?.members?.length"
-					:to="{ name: 'TeamRosterView' }"
-					class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link self-end"
-				>
-					{{ __("Open team roster") }}
-				</router-link>
 
 				<ResourceError :resource="teamStatus" what="your team's status" />
-				<!-- summary tiles -->
-				<div class="grid grid-cols-4 border-t-2 border-divider" v-if="teamStatus.data">
-					<div
-						v-for="(tile, index) in summaryTiles"
-						:key="tile.label"
-						class="flex flex-col gap-1 px-2.5 py-3"
-						:class="index !== 0 ? 'border-l border-divider' : ''"
-					>
-						<span class="font-sans font-extrabold text-stat-number leading-none text-inkbase">
-							{{ tile.count }}
-						</span>
-						<span class="g-eyebrow">
-							{{ tile.label }}
-						</span>
-					</div>
-				</div>
-
 				<!-- member rows, sectioned by department. Presentation only: the
 				     member SET is exactly the reports_to team the server returned —
 				     frontend/tests/team-grouping.test.mjs pins that grouping can
@@ -132,7 +155,7 @@
 				</div>
 
 				<span class="text-caption text-ink-600" v-if="teamStatus.data?.members?.length">
-					{{ __("You see your direct reports. Pull the day arrows to browse other dates.") }}
+					{{ __("You see your direct reports. Tap a day on the calendar to browse other dates.") }}
 				</span>
 			</div>
 		</template>
@@ -143,18 +166,46 @@
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
-import { Autocomplete, FeatherIcon } from "frappe-ui"
-import GIconButton from "@/components/glass/GIconButton.vue"
+import GCalendar from "@/components/glass/GCalendar.vue"
+import GStatPanel from "@/components/glass/GStatPanel.vue"
+import GStatTile from "@/components/glass/GStatTile.vue"
+import { Autocomplete } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import { teamManagers, teamStatus } from "@/data/team"
-import { buildManagerOptions, groupByDepartment } from "@/utils/team"
+import { buildManagerOptions, buildTeamCalendarDays, groupByDepartment } from "@/utils/team"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
 const selectedDate = ref(dayjs().format("YYYY-MM-DD"))
+const firstOfMonth = ref(dayjs().date(1).startOf("D"))
+
+const calendarDays = computed(() =>
+	buildTeamCalendarDays(
+		firstOfMonth.value.format("YYYY-MM-DD"),
+		selectedDate.value,
+		dayjs().format("YYYY-MM-DD")
+	)
+)
+
+const getDayAbbr = (s) => s.trim().slice(0, 3).toUpperCase()
+const DAYS = [
+	getDayAbbr(__("Sunday")),
+	getDayAbbr(__("Monday")),
+	getDayAbbr(__("Tuesday")),
+	getDayAbbr(__("Wednesday")),
+	getDayAbbr(__("Thursday")),
+	getDayAbbr(__("Friday")),
+	getDayAbbr(__("Saturday")),
+]
+// the legend names the states the grid can show, and is the source of each
+// day cell's spoken state (GCalendar)
+const LEGEND = [
+	{ state: "selected", label: __("Selected day") },
+	{ state: "today", label: __("Today") },
+]
 const selectedManager = ref("")
 const selectedOption = ref(null) // null renders the placeholder: "My team"
 const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("My team")))
@@ -179,9 +230,9 @@ function fetchDay() {
 }
 fetchDay()
 
-function changeDay(delta) {
-	selectedDate.value = dayjs(selectedDate.value).add(delta, "day").format("YYYY-MM-DD")
-	expandedRow.value = null
+function pickDay(day) {
+	selectedDate.value = firstOfMonth.value.date(day).format("YYYY-MM-DD")
+	console.info("[TeamDashboard] day picked:", selectedDate.value)
 	fetchDay()
 }
 
