@@ -9,6 +9,8 @@ from frappe.query_builder.functions import Count
 
 from erpnext.accounts.utils import build_qb_match_conditions
 
+from hrms.utils.report_scope import fenced_companies
+
 
 def execute(filters=None):
 	if not filters:
@@ -16,6 +18,9 @@ def execute(filters=None):
 
 	if not filters["company"]:
 		frappe.throw(_("{0} is mandatory").format(_("Company")))
+	# A Script Report gets no row scope from the framework: a company outside
+	# the caller's fence is refused here, before any employee is counted.
+	fenced_companies(filters["company"])
 
 	columns = get_columns()
 	employees = get_employees(filters)
@@ -91,7 +96,17 @@ def get_chart_data(parameters, filters):
 
 	values = [value for value in datasets if value != 0]
 
-	total_employee = frappe.db.count("Employee", {"status": "Active", "company": filters.get("company")})
+	# "Not Set" is the remainder of the SAME population the bars were counted
+	# from. It used to be frappe.db.count over the whole company — no user
+	# permissions — so a caller allowed ten employees was told the company's
+	# real headcount, and the donut's remainder disclosed the hidden ones.
+	total_employee = (
+		frappe.qb.from_(employee)
+		.select(Count(employee.name).as_("count"))
+		.where(employee.company == filters.get("company"))
+		.where(employee.status == "Active")
+		.where(Criterion.all(build_qb_match_conditions("Employee")))
+	).run()[0][0]
 	others = total_employee - sum(values)
 
 	label.append("Not Set")

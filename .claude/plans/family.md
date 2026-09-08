@@ -494,3 +494,12 @@ hrms/hr/report/employee_leave_balance/employee_leave_balance.py:27 not-affected 
 hrms/hr/report/project_profitability/project_profitability.py:12 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
 hrms/hr/report/shift_attendance/shift_attendance.py:24 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
 hrms/hr/report/vehicle_expenses/vehicle_expenses.py:18 not-affected — another report's module-local get_chart_data of the same name; the attendance sheet's is not imported anywhere else.
+
+CLASS: REPORT-AGGREGATE-POPULATION — a report whose remainder/total was counted from a wider population than its bars: Employee Analytics counted each parameter's bar with the native Employee match conditions but "Not Set" with frappe.db.count over the whole company, so a caller allowed ten employees was told the real headcount and the donut's remainder disclosed the hidden ones; the requested company was never checked against the caller's fence.
+Changed: hrms/hr/report/employee_analytics/employee_analytics.py (execute refuses a company outside the fence via fenced_companies; get_chart_data counts the total from the same fenced, match-conditioned Employee query as the bars).
+Call sites / consumers:
+hrms/hr/report/employee_analytics/employee_analytics.py get_employees not-affected — frappe.get_list already applies the native user permissions; the company argument is the one execute just fenced.
+hrms/hr/report/employee_analytics/employee_analytics.py get_parameters not-affected — the parameter master's names (branches, grades), no employee data.
+hrms/hr/report/employee_analytics/test_employee_analytics.py not-affected — bench suite; execute's contract unchanged.
+Lock: hrms/tests/test_employee_analytics.py (the remainder never reveals a hidden employee — db.count is refused outright; a foreign company is refused; an unrestricted caller gets the whole company) on hrms/tests/_qb_stub.py.
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py:100 not-affected — the attendance sheet's own get_chart_data (fixed in REPORT-HALF-DAY-CHART); only the name collides with Employee Analytics'.
