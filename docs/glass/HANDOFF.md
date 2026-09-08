@@ -1,13 +1,11 @@
 # HANDOFF
-prompt:   apps-links (Helpdesk / Approva / Project Board from More + SideNav)
+prompt:   team-calendar (Team tab: month picker + stat strip replace day arrows)
 status:   done
-commit:   01469e8a4 (v16.21.1) on nz-glass
-files:    frontend/src/data/appLinks.js
-          frontend/src/data/navItems.js
-          frontend/src/views/More.vue
-          frontend/src/components/SideNav.vue
-          frontend/src/components/icons/{Helpdesk,Approva,ProjectBoard,ExternalLink}Icon.vue
-          frontend/src/data/__tests__/{app-links,sidenav-app-links-a11y}.test.js
-verify:   cd frontend && node --experimental-test-module-mocks --test src/data/__tests__/app-links.test.js src/data/__tests__/sidenav-app-links-a11y.test.js && yarn build
-flags:    Helpdesk targets /helpdesk/my-tickets (portal, not agent desk); Issues tab kept alongside; from an installed PWA the rows open in the OS in-app browser (own scope) — accepted
-next:     FC deploy of v16.21.1 on verifica-live; then open /hrms/more as staff and tap each Apps row to confirm it lands signed in
+commit:   see `git log -1 --format=%h v16.22.0` (v16.22.0) on nz-glass
+files:    frontend/src/views/team/TeamDashboard.vue
+          frontend/src/utils/team.js
+          frontend/src/theme/glass-components.css
+          frontend/tests/team-calendar-days.test.mjs
+verify:   cd frontend && node --experimental-test-module-mocks --test tests/team-calendar-days.test.mjs && yarn build
+flags:    grid marks selected day + today only (no per-day team status tint); "10AM - 7PM" attendance gap for HR-EMP-00102 on 07-09 diagnosed, not fixed (needs HR-level read of her check-ins)
+next:     FC deploy of v16.22.0 on verifica-live; Helpdesk native front end awaits plan approval (.claude/plans/current-plan.md)
