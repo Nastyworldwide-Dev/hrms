@@ -33,7 +33,7 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import (
 )
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift, get_shift_details
 from hrms.utils import get_date_range
-from hrms.utils.holiday_list import get_holiday_dates_between
+from hrms.utils.holiday_list import get_holiday_dates_between, holiday_list_covers
 
 logger = logging.getLogger(__name__)
 
@@ -563,8 +563,12 @@ class ShiftType(Document):
 		return list(set(assigned_employees) - set(inactive_employees))
 
 	def get_holiday_list(self, employee: str, date=None) -> str:
-		holiday_list_name = self.holiday_list or get_holiday_list_for_employee(employee, False, as_on=date)
-		return holiday_list_name
+		"""The calendar for `employee` on `date`: the shift's own while it
+		covers the date, else the dated assignment. Without a date (the
+		absent-marking range) the shift's own calendar is taken as before."""
+		if self.holiday_list and (date is None or holiday_list_covers(self.holiday_list, date)):
+			return self.holiday_list
+		return get_holiday_list_for_employee(employee, False, as_on=date) or self.holiday_list
 
 	def should_mark_attendance(self, employee: str, attendance_date: str) -> bool:
 		"""Determines whether attendance should be marked on holidays or not"""

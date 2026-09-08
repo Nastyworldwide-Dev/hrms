@@ -75,6 +75,14 @@ def _load_module():
 	spec = importlib.util.spec_from_file_location("_hrms_offboarding_under_test", MODULE_PATH)
 	module = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(module)
+	# The clock must be THIS file's, whatever frappe.utils was installed
+	# first. Under the pytest conftest the shared stub is already loaded, its
+	# getdate() answers the real date, and the "after TODAY" cases above
+	# started flipping on 2 Sep 2026 — a test that passes only in the week it
+	# was written. Pin the module's own names after loading.
+	module.getdate = _getdate
+	module.add_days = lambda d, days: _getdate(d) + datetime.timedelta(days=days)
+	module.flt = _flt
 	return module
 
 

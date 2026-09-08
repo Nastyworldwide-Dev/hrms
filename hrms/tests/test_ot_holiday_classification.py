@@ -29,6 +29,7 @@ class TestApplicableHolidayList(unittest.TestCase):
 		holiday_rows=None,
 		shift=None,
 		consumer=None,
+		shift_list_span=(date(2025, 1, 1), date(2027, 12, 31)),
 	):
 		resolver = Mock(return_value=assigned)
 		rows = holiday_rows or {}
@@ -42,6 +43,8 @@ class TestApplicableHolidayList(unittest.TestCase):
 				)
 			if doctype == "Shift Type":
 				return shift_list
+			if doctype == "Holiday List":
+				return shift_list_span if name == shift_list else (date(2025, 1, 1), date(2027, 12, 31))
 			if doctype == "Company":
 				return ("Sunday", "Saturday") if isinstance(field, list) else "LEGACY-COMPANY-HOLIDAYS"
 			if doctype == "Holiday":
@@ -135,6 +138,30 @@ class TestApplicableHolidayList(unittest.TestCase):
 		)
 		self.assertEqual(result, "rest")
 		resolver.assert_called_once_with("EMP-SYNTHETIC", False, as_on=day)
+
+	def test_an_ended_shift_calendar_yields_to_the_dated_assignment(self):
+		# the shift still points at last year's list: it holds no rows for this
+		# Sunday, so it must not turn the rest day into a weekday
+		day = date(2026, 9, 6)
+		result, resolver = self.classify(
+			day,
+			shift="SHIFT-SYNTHETIC",
+			shift_list="SHIFT-HOLIDAYS-2025",
+			shift_list_span=(date(2025, 1, 1), date(2025, 12, 31)),
+			holiday_rows={("ASSIGNED-HOLIDAYS", day): frappe._dict(weekly_off=1)},
+		)
+		self.assertEqual(result, "rest")
+		resolver.assert_called_once_with("EMP-SYNTHETIC", False, as_on=day)
+
+	def test_an_ended_shift_calendar_with_no_assignment_stays_a_workday(self):
+		result, _ = self.classify(
+			date(2026, 9, 6),
+			shift="SHIFT-SYNTHETIC",
+			shift_list="SHIFT-HOLIDAYS-2025",
+			shift_list_span=(date(2025, 1, 1), date(2025, 12, 31)),
+			assigned=None,
+		)
+		self.assertEqual(result, "normal")
 
 	def test_both_public_breakdowns_use_the_contributing_shift_calendar(self):
 		day = date(2026, 9, 7)

@@ -83,6 +83,7 @@ SHIFT = {
 	"_company_of_logs": lambda logs: "COMPANY-SYNTHETIC",
 	"get_holiday_list_for_employee": lambda *args, **kwargs: "HOLIDAYS-SYNTHETIC",
 	"is_holiday": lambda *args: True,
+	"holiday_list_covers": lambda *args: True,
 	"is_half_holiday": lambda *args: False,
 	"mark_attendance_and_link_log": Mock(),
 }
@@ -170,6 +171,8 @@ class TestNonworkingHours(unittest.TestCase):
 			if doctype == "Holiday":
 				weekly_off = holidays.get(name["holiday_date"])
 				return None if weekly_off is None else frappe._dict(weekly_off=weekly_off)
+			if doctype == "Holiday List":  # the synthetic calendar covers every test date
+				return (date(2025, 1, 1), date(2027, 12, 31))
 			raise AssertionError(doctype)
 
 		stack = ExitStack()

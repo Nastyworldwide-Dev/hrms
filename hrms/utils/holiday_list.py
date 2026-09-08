@@ -1,8 +1,11 @@
+import logging
 from datetime import date
 
 import frappe
 from frappe import _
 from frappe.utils import add_days, formatdate, get_link_to_form, getdate
+
+logger = logging.getLogger(__name__)
 
 
 def get_holiday_dates_between(
@@ -96,11 +99,25 @@ def get_holiday_dates_between_range(
 def get_holiday_list_for_employee(
 	employee: str, raise_exception: bool = True, as_on: date | str | None = None, as_dict: bool = False
 ) -> str:
-	as_on = frappe.utils.getdate(as_on)
+	"""The calendar that applies to `employee` on `as_on`.
+
+	The employee's own dated assignment wins when its calendar covers the
+	date, then the company's. An assignment whose calendar has ENDED (last
+	year's list, never replaced) must not shadow a current company calendar:
+	it holds no rows for this year, so every rest day and public holiday
+	would read as a workday — OT priced at the weekday rate, auto-Absent on
+	Sundays. Only when nothing covers the date is the newest assignment
+	returned as before, with a warning, so readers that never handled "no
+	calendar" keep their old answer.
+	"""
+	as_on = getdate(as_on)
 	holiday_list = get_assigned_holiday_list(employee, as_on, as_dict)
+	company = None
 	if not holiday_list:
 		company = frappe.db.get_value("Employee", employee, "company")
 		holiday_list = get_assigned_holiday_list(company, as_on, as_dict)
+	if not holiday_list:
+		holiday_list = _ended_calendar(employee, company, as_on, as_dict)
 
 	if not holiday_list and raise_exception:
 		frappe.throw(
@@ -116,27 +133,60 @@ def get_holiday_list_for_employee(
 	return holiday_list
 
 
-def get_assigned_holiday_list(assigned_to: str, as_on=None, as_dict: bool = False) -> str:
-	as_on = frappe.utils.getdate(as_on)
+def holiday_list_covers(holiday_list: str | None, day) -> bool:
+	"""Whether `day` lies inside the calendar's own from/to dates. A calendar
+	holds rows only for its own span; outside it, it says nothing."""
+	if not holiday_list:
+		return False
+	span = frappe.db.get_value("Holiday List", holiday_list, ["from_date", "to_date"])
+	if not span or not all(span):
+		return False
+	start, end = span
+	return getdate(start) <= getdate(day) <= getdate(end)
+
+
+def _assignments(assigned_to: str, as_on) -> list:
+	"""Submitted assignments for `assigned_to` that started on or before
+	`as_on`, newest first, as dicts of holiday_list and from_date."""
+	if not assigned_to:
+		return []
 	HLA = frappe.qb.DocType("Holiday List Assignment")
-	query = (
+	return (
 		frappe.qb.from_(HLA)
-		.select(HLA.holiday_list)
+		.select(HLA.holiday_list, HLA.from_date)
 		.where(HLA.assigned_to == assigned_to)
 		.where(HLA.from_date <= as_on)
 		.where(HLA.docstatus == 1)
 		.orderby(HLA.from_date, order=frappe.qb.desc)
-		.limit(1)
-	)
-	if as_dict:
-		query = query.select(HLA.from_date)
-		holiday_list = query.run(as_dict=True)
-		return holiday_list[0] if holiday_list else None
+	).run(as_dict=True)
 
-	result = query.run()
-	holiday_list = result[0][0] if result else None
 
-	return holiday_list
+def get_assigned_holiday_list(assigned_to: str, as_on=None, as_dict: bool = False) -> str:
+	"""The newest assignment for `assigned_to` whose calendar covers `as_on`;
+	None when none does (see get_holiday_list_for_employee for the fallback)."""
+	as_on = getdate(as_on)
+	for row in _assignments(assigned_to, as_on):
+		if holiday_list_covers(row.holiday_list, as_on):
+			return row if as_dict else row.holiday_list
+	return None
+
+
+def _ended_calendar(employee: str, company: str | None, as_on, as_dict: bool):
+	# ceiling: an assignment whose calendar has ended is still served when
+	# nothing covers the date, upgrade: return None once every reader (leave,
+	# payroll, boarding) is checked for the no-calendar path.
+	for assigned_to in (employee, company):
+		rows = _assignments(assigned_to, as_on)
+		if rows:
+			logger.warning(
+				"[holiday_list] no calendar assigned to %s or %s covers %s; using %s, which has ended",
+				employee,
+				company,
+				as_on,
+				rows[0].holiday_list,
+			)
+			return rows[0] if as_dict else rows[0].holiday_list
+	return None
 
 
 def get_assigned_holiday_lists_to_employee_and_company(

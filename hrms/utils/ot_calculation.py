@@ -263,9 +263,19 @@ def _classify_day(employee, day, default_day_type, shift=None):
 
 	day = getdate(day)
 	logger.info("[ot_calculation] classify day=%s employee=%s shift=%s", day, employee, shift)
-	holiday_list = frappe.db.get_value("Shift Type", shift, "holiday_list") if shift else None
+	from hrms.utils.holiday_list import holiday_list_covers
+
+	shift_list = frappe.db.get_value("Shift Type", shift, "holiday_list") if shift else None
+	# The shift's own calendar applies only inside its own dates: last year's
+	# list left on the shift holds no rows for this year and would make every
+	# rest day and public holiday a weekday.
+	holiday_list = shift_list if holiday_list_covers(shift_list, day) else None
 	if not holiday_list:
-		holiday_list = get_holiday_list_for_employee(employee, False, as_on=day)
+		holiday_list = get_holiday_list_for_employee(employee, False, as_on=day) or shift_list
+		if shift_list and holiday_list == shift_list:
+			logger.warning(
+				"[ot_calculation] shift calendar %s has ended and nothing else covers %s", shift_list, day
+			)
 	if not holiday_list:
 		logger.warning("[ot_calculation] no applicable holiday list for work date %s", day)
 		return "normal"
