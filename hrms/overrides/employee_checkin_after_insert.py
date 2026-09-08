@@ -7,6 +7,10 @@ import logging
 import frappe
 from frappe.utils import get_datetime, now_datetime
 
+from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import (
+	_INHERITED_CHECKOUT,
+	get_previous_session_checkin,
+)
 from hrms.overrides.remote_checkin_request_hooks import (
 	notify_approver,
 	resolve_approver,
@@ -22,8 +26,8 @@ def create_remote_request_if_needed(doc, method=None):
 	hrms.overrides.employee_checkin_override sets `requires_remote_approval=1` and
 	stashes the distance + nearest_location on the doc.
 
-	For an OUT log, if the same employee has an Approved Remote Checkin
-	Request earlier the same day, the new OUT request inherits its
+	For an OUT log, if its open session has an Approved IN request,
+	the new OUT request inherits its
 	approval (auto-Approved + parent_request linked).
 	"""
 	if not getattr(doc, "requires_remote_approval", 0):
@@ -67,6 +71,8 @@ def create_remote_request_if_needed(doc, method=None):
 		}
 	)
 	request.flags.ignore_permissions = True
+	if inherited:
+		request.flags.inherited_checkout = _INHERITED_CHECKOUT
 	request.insert()
 
 	if inherited:
@@ -123,7 +129,7 @@ def _find_approved_in_request_for_session(employee: str, log_dt) -> dict | None:
 	"""The Approved IN request belonging to THIS session, if any.
 
 	Keyed to the session, not the calendar day. The OUT inherits its IN's
-	approval only when the latest IN check-in before this OUT carries an
+	approval only when the preceding non-rejected punch is an IN carrying an
 	Approved Remote Checkin Request:
 
 	  * an overnight shift's next-morning OUT now inherits — the old
@@ -133,33 +139,21 @@ def _find_approved_in_request_for_session(employee: str, log_dt) -> dict | None:
 	    window, an approved 08:00 IN blessed an 18:00 OUT even when an
 	    unapproved second IN sat between them.
 	"""
-	last_in = frappe.get_all(
-		"Employee Checkin",
-		filters=[
-			["employee", "=", employee],
-			["log_type", "=", "IN"],
-			["time", "<=", log_dt],
-		],
-		fields=["name"],
-		order_by="time desc",
-		limit_page_length=1,
-	)
-	if not last_in:
-		logger.info(
-			"[doc_events.employee_checkin] inherit-lookup employee=%s: no IN before %s", employee, log_dt
-		)
+	last_in = get_previous_session_checkin(employee, log_dt)
+	if not last_in or last_in.log_type != "IN" or last_in.remote_approval_status != "Approved":
+		logger.info("[doc_events.employee_checkin] no approved open IN session for checkout")
 		return None
 
 	row = frappe.db.get_value(
 		"Remote Checkin Request",
-		{"checkin": last_in[0]["name"], "log_type": "IN", "status": "Approved"},
+		{"employee": employee, "checkin": last_in.name, "log_type": "IN", "status": "Approved"},
 		["name", "approver"],
 		as_dict=True,
 	)
 	logger.info(
 		"[doc_events.employee_checkin] inherit-lookup employee=%s in=%s found=%s",
 		employee,
-		last_in[0]["name"],
+		last_in.name,
 		row["name"] if row else None,
 	)
-	return row
+	return row if row and row.approver else None
