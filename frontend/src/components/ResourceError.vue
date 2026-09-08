@@ -3,13 +3,13 @@
 	     to drop in beside any existing `v-if="resource.data"` block without
 	     restructuring a single template. -->
 	<div
-		v-if="resource?.error"
+		v-if="failed"
 		role="alert"
 		class="flex flex-col items-center gap-2 p-5 text-card-title text-ink-600"
 	>
 		<span class="text-center">{{ message }}</span>
 		<div class="flex flex-row items-center gap-2">
-			<Button v-if="resource.reload" :loading="resource.loading" @click="retry">
+			<Button v-if="resource.reload" :loading="loading" @click="retry">
 				{{ __("Try again") }}
 			</Button>
 			<!-- Back is opt-in: this component also renders inline inside lists,
@@ -61,6 +61,16 @@ const props = defineProps({
 	// failed), so the user is never stranded. Off for inline list/card errors.
 	back: { type: Boolean, default: false },
 })
+
+// A list resource (createListResource) is a WRAPPER: the request — and so
+// its error and loading — lives on `.list`, while reload() and data sit on the
+// wrapper. Screens pass the wrapper, so `resource.error` was always undefined
+// for a list: a failed notifications/tickets/issues fetch drew no error and
+// no retry, and an empty cached page read as "all caught up" (N05, 8 Sep
+// 2026). Read the request that actually ran, whichever object arrives.
+const request = computed(() => props.resource?.list ?? props.resource)
+const failed = computed(() => Boolean(request.value?.error))
+const loading = computed(() => Boolean(request.value?.loading))
 
 const message = computed(() =>
 	props.what

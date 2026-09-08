@@ -114,7 +114,7 @@
 						     its meaning. -->
 						<ResourceError :resource="notifications" what="your notifications" />
 						<GEmptyState
-							v-if="notifications.data && !notifications.data.length"
+							v-if="feedIsEmpty"
 							:title="__('You are all caught up')"
 							:body="__('New notifications will appear here')"
 						/>
@@ -137,7 +137,7 @@ import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
 import { createResource, FeatherIcon, Button } from "frappe-ui"
 
-import { inject, onMounted, ref, watch } from "vue"
+import { computed, inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 
 import { unreadNotificationsCount, notifications } from "@/data/notifications"
@@ -147,6 +147,16 @@ const router = useRouter()
 const __ = inject("$translate")
 const currentStart = ref(0)
 const pageLength = 10
+// "All caught up" only when the feed's request has actually answered empty:
+// the list wrapper restores a cached (possibly empty) page before its request
+// runs, and the request's own loading/error live on `.list`, not the wrapper.
+const feedIsEmpty = computed(
+	() =>
+		notifications.list.fetched &&
+		!notifications.list.loading &&
+		!notifications.list.error &&
+		!notifications.data?.length
+)
 
 // Status of each Remote Checkin Request referenced by a visible notification,
 // keyed by request docname. Decides where the tap lands (pending -> the
