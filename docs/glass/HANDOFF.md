@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   attend-calendar / remote-approval selfie / notification->leave nav+approve
+prompt:   apps-links (Helpdesk / Approva / Project Board from More + SideNav)
 status:   done
-commit:   cab04f09d (v16.20.0) on nz-glass
-files:    hrms/api/__init__.py
-          hrms/api/remote_checkin.py
-          frontend/src/views/RemoteApprovals.vue
-          frontend/src/router/index.js
-          frontend/src/components/FormView.vue
-          frontend/src/data/config/requestSummaryFields.js
-          hrms/tests/test_attendance_calendar_reads_drafts.py
-          frontend/tests/router-shells-distinct-paths.test.mjs
-verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_attendance_calendar_reads_drafts.py hrms/tests/test_remote_approvals_carry_the_selfie.py && (cd frontend && node --test tests/router-shells-distinct-paths.test.mjs tests/formview-approver-review.test.mjs)
-flags:    calendar cause inferred (Desk row saved, not submitted) — live employee not identifiable via MCP; routing fix from Ionic source, not browser-verified (no fresh.local login)
-next:     FC deploy of v16.20.0 is pending on Frappe Cloud; then approver re-tests notification -> Back and Approve or reject on a live request
+commit:   0ef94cf48 (v16.21.0) on nz-glass
+files:    frontend/src/data/appLinks.js
+          frontend/src/data/navItems.js
+          frontend/src/views/More.vue
+          frontend/src/components/SideNav.vue
+          frontend/src/components/icons/{Helpdesk,Approva,ProjectBoard,ExternalLink}Icon.vue
+          frontend/src/data/__tests__/app-links.test.js
+verify:   cd frontend && node --experimental-test-module-mocks --test src/data/__tests__/app-links.test.js && yarn build
+flags:    Helpdesk targets /helpdesk/my-tickets (portal, not agent desk); Issues tab kept alongside; from an installed PWA the rows open in the OS in-app browser (own scope) — accepted
+next:     FC deploy of v16.21.0 on verifica-live; then open /hrms/more as staff and tap each Apps row to confirm it lands signed in
