@@ -23,8 +23,13 @@
 						])
 					}}
 					<ul class="mt-1 list-disc pl-5">
-						<li v-for="f in failedFiles" :key="f.name">{{ f.name }} — {{ f.reason }}</li>
+						<li v-for="(f, i) in failedFiles" :key="`${f.name}-${i}`">
+							{{ f.name }} — {{ f.reason }}
+						</li>
 					</ul>
+					<!-- Said inside the alert: a screen reader on the focused button does not
+					     hear its label change from Submit to Retry. -->
+					<p class="mt-1">{{ __("Press Retry uploads to send them again.") }}</p>
 				</GBanner>
 
 				<form class="flex flex-col gap-4" novalidate @submit.prevent="submit">
