@@ -1,0 +1,12 @@
+{
+  "screenCount": 17,
+  "layoutCases": 136,
+  "errors": [],
+  "overflows": [],
+  "homeSopBottom": 699.109375,
+  "bottomNavTop": 779,
+  "sopAboveNav": true,
+  "interactionChecks": 9,
+  "a11yCases": 34,
+  "a11y": []
+}

@@ -1,3 +1,3 @@
-GOAL: an HR-sight user (HR User / HR Manager) never carries the self allow=Employee User Permission that fences the Employee list to themselves; live rows cleaned on migrate; readiness names any that return.
-DONE WHEN: hrms/tests/test_employee_hrms_scope.py + test_drop_self_employee_permission_for_hr_users.py + the new test_readiness case go red on HEAD then green; test_is_hr_single_source stays green; fresh.local savepoint shows 1 of 15 -> 15 of 15.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_employee_hrms_scope.py hrms/tests/test_drop_self_employee_permission_for_hr_users.py hrms/utils/test_readiness.py hrms/tests/test_is_hr_single_source.py
+GOAL: Audit Nadi's employee UI and prepare a compact navigation, Home, unified issue/helpdesk, and Assets proposal with an interactive review mockup; no application changes in this design slice.
+DONE WHEN: Source-backed findings, route/action coverage, backend boundaries, implementation slices, and a browser-checked light/dark mockup are ready for Nabil's approval.
+CHECK: Render the standalone mockup with installed Playwright at phone and desktop widths; check navigation, form demonstration, overflow, and accessibility; inspect screenshots. Future application work needs the approved mockup and a risky plan for schema/permission changes.

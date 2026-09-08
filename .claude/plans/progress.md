@@ -16,3 +16,5 @@
 2026-09-07 NEXT: Nabil reviews compact mockup and navigation (Attendance, Leave, Home, Expenses, Assets). User's working agreement requires mockup approval before UI code. After approval amend design spec, implement small tested slices; approve concrete schema/permission plans before IT routing and Assets backend. Optional existing-helpdesk question unanswered; in-Nadi support is provisional. Prior audit fixes remain separate backlog.
 2026-09-07T10:00Z COMMIT: d52d15377 HR self Employee UP dropped (hook + User hook + patch + readiness); pushed
 2026-09-07T10:00Z NEXT: Nabil deploys; Amy re-opens Employee list; review who on Verifica holds System Manager (only it can edit roles/UPs); then audit fix plan rows 1-2
+2026-09-08T08:08Z PULL: nz-glass fast-forwarded e5acad89c..d050fa74b (22 commits from Hafiz, v16.20.0-v16.23.0); helpdesk verify cmd green locally (5 py + 6 node)
+2026-09-08T08:08Z NEXT: Nabil deploys v16.23.0 on verifica-live (no migrate); staff raises one ticket at /hrms/helpdesk; then decide compact-UX proposal (uncommitted) vs Hafiz's native Helpdesk; then audit rows 1-2
