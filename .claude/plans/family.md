@@ -358,3 +358,14 @@ frontend/src/composables/index.js FileAttachment.upload not-affected — still t
 frontend/src/views/helpdesk/TicketDetail.vue not-affected — receives the same route params; it still has no upload control, which is why the create screen keeps the retry.
 hrms/api/helpdesk.py new_ticket not-affected — called at most once per screen instance by construction (ticketName guard).
 Lock: frontend/tests/ticket-new-recovery.test.mjs (failed upload keeps the id and retries only the failure; never a second ticket; clean submit lands on the ticket; dirty Back asks; Back after raise lands on the ticket).
+
+CLASS: PUSH-SUBSCRIPTION-HONESTY — the push helper believed HTTP 200 alone; Frappe's subscribe/unsubscribe answer 200 with an independent `success` flag, so a refused subscription was stored as enabled and every later attempt with the same token skipped registration; a refused unsubscribe still dropped the token; the disable path's catch referenced an undefined variable.
+Changed: frontend/src/utils/frappe-push-notification.js (subscriptionConfirmed: status + parsed message.success; registerTokenHandler/unregisterTokenHandler use it; disableNotification keeps the token and throws when the server refused; catch (e) fixed).
+Call sites / consumers:
+frontend/src/main.js:85 same-root — constructs the helper; no API change.
+frontend/src/views/AppSettings.vue:152 same-root — its .catch already toasts the error and leaves the toggle on; now reached when the server refuses.
+frontend/src/components/PushNotificationPrompt.vue:96/113 same-root — reads isNotificationEnabled(), which now reflects only confirmed subscriptions.
+frappe.push_notification.subscribe/unsubscribe (server) not-affected — response shape unchanged; now read fully.
+Lock: frontend/src/utils/__tests__/frappe-push-notification.test.js (success:false, malformed body, non-200 -> nothing stored and the retry re-subscribes; confirmed subscribe stores; refused unsubscribe keeps the token; confirmed unsubscribe clears it).
+
+Addendum PWA-RECOVERY-TICKET (design review of 6a2d4e4a4, FIX_WARNINGS): the alert now says "Press Retry uploads to send them again" because a screen reader on the focused button does not hear its relabel; list keys de-duplicated per index. The mockup contract the reviewer was handed covers the OT/checkout screens, not this flow; recorded here — this slice shipped without a separate Helpdesk mockup under the 8 Sep working agreement.

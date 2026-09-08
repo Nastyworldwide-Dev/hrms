@@ -22,7 +22,7 @@ import dayjs from "@/utils/dayjs"
 import getIonicConfig from "@/utils/ionicConfig"
 import { normalizeLogin } from "@/utils/identity"
 
-import FrappePushNotification from "../public/frappe-push-notification"
+import FrappePushNotification from "@/utils/frappe-push-notification"
 
 /* Core CSS required for Ionic components to work properly */
 import "@ionic/vue/css/core.css"
