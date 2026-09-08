@@ -253,3 +253,12 @@ employee_checkin_after_insert.py -> override reference: not-affected — documen
 Geofence Reject Log controller/report -> audit rows: same-root; native naming, link/mandatory validation, stored fields and report schema unchanged; records now survive caller rollback in request, worker and test contexts.
 frappe.local transaction context -> native audit Document insertion: same-root; isolated db callback managers plus flags/currently_saving, realtime queue and messages are scoped and restored. Native tests verify unrelated realtime never flushes and link-validation errors do not add a second visible error.
 
+
+CLASS: OT-FORM-STATE — the claim form read a different OT figure than the list, hid a zero read-only claim, and reported a mandatory error for a field the employee could not see; the page header rendered below the claim panel.
+Changed: frontend/src/views/ot/OTRequestForm.vue (intro moved into FormView's header-first slot; one compensation hint; per employee/date summary ownership so a stale response cannot change the form; saveError computed from the checked day's capacity), frontend/src/components/FormView.vue (opt-in `beforeFields` slot; `saveError` prop disables Save and surfaces the reason), frontend/src/components/FormField.vue (a read-only field stays visible for numeric 0; only null/"" hides it).
+Call sites / consumers:
+- Every FormView consumer (leave, expense, shift, attendance request, issues, helpdesk, remote approvals detail): not-affected — the slot is unused and `saveError` defaults to "" so Save behaviour is unchanged; formview-approver-review, desk-approval-state and decision-capability tests stay green.
+- Every FormField read-only render: same-root by design — a genuine 0 in a read-only numeric field was the defect class (hidden as if empty) and is now shown; null/"" still hide.
+- hrms.api.get_ot_claim_summary / get_claimable_ot_summary (server): not-affected — the form validates the response shape (`transform`) and both endpoints already share get_ot_claim_capacity (beae4237c).
+- OTRequest.set_punch_verified_cap / validate_claimed_hours (server): not-affected — the server cap and the mandatory explanation remain the last word; the form only stops a save it knows will fail.
+Lock: frontend/tests/ot-request-state.test.mjs (header/slot order, zero visible, stale response ignored, save gated with reason, retry, edit-mode preservation).

@@ -239,7 +239,12 @@ const emit = defineEmits(["change", "update:modelValue"])
 const dayjs = inject("$dayjs")
 
 const showField = computed(() => {
-	if (props.readOnly && !isLayoutField.value && !props.modelValue) return false
+	if (
+		props.readOnly &&
+		!isLayoutField.value &&
+		(props.modelValue == null || props.modelValue === "")
+	)
+		return false
 
 	return props.fieldtype !== "Table" && !props.hidden
 })
@@ -272,7 +277,7 @@ const selectionList = computed(() => {
 
 function setDefaultValue() {
 	// set default values
-	if (props.modelValue) return
+	if (props.modelValue != null && props.modelValue !== "") return
 
 	if (props.default) {
 		if (props.fieldtype === "Check") {

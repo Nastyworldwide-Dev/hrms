@@ -76,6 +76,7 @@
 						<FeatherIcon name="arrow-left" class="h-4 w-4" />
 						{{ __("Back") }}
 					</button>
+					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">
 						<div
@@ -240,6 +241,7 @@
 						:label="__(formButton)"
 						:pending-label="__('Saving…')"
 						:pending="docList.insert.loading || documentResource?.setValue?.loading"
+						:disabled="formButton === 'Save' && Boolean(saveError)"
 						:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
 						@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 					/>
@@ -408,6 +410,7 @@ import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
 
 const props = defineProps({
+	saveError: { type: String, default: "" },
 	doctype: {
 		type: String,
 		required: true,
@@ -833,6 +836,10 @@ async function handleDocUpdate(action) {
 
 function saveForm() {
 	emit("validateForm")
+	if (props.saveError) {
+		formErrorMessage.value = props.saveError
+		return
+	}
 
 	if (props.id) {
 		handleDocUpdate()
