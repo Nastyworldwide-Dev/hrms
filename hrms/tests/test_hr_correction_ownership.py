@@ -174,7 +174,7 @@ class TestManualDeskEntry(unittest.TestCase):
 
 	def test_hr_keying_a_punch_for_someone_else_is_a_manual_entry(self):
 		rule = self._rule()
-		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None)
+		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None, flags=SimpleNamespace())
 		with (
 			patch.object(frappe, "session", frappe._dict(user="hr@nasty.test")),
 			patch.object(frappe.db, "get_value", return_value="siti@nasty.test"),
@@ -183,16 +183,27 @@ class TestManualDeskEntry(unittest.TestCase):
 
 	def test_the_employees_own_bare_punch_is_not(self):
 		rule = self._rule()
-		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None)
+		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None, flags=SimpleNamespace())
 		with (
 			patch.object(frappe, "session", frappe._dict(user="siti@nasty.test")),
 			patch.object(frappe.db, "get_value", return_value="siti@nasty.test"),
 		):
 			self.assertFalse(rule(doc))
 
+	def test_an_integration_row_without_a_device_id_is_never_manual(self):
+		rule = self._rule()
+		doc = SimpleNamespace(
+			employee="HR-EMP-00014", device_id=None, flags=SimpleNamespace(integration_entry=True)
+		)
+		with patch.object(frappe, "session", frappe._dict(user="integration@nasty.test")):
+			self.assertFalse(rule(doc))
+		src = (HRMS / "hr/doctype/employee_checkin/employee_checkin.py").read_text()
+		body = src[src.index("def add_log_based_on_employee_field") :]
+		self.assertLess(body.index("doc.flags.integration_entry = True"), body.index("doc.insert()"))
+
 	def test_a_device_punch_is_never_manual(self):
 		rule = self._rule()
-		doc = SimpleNamespace(employee="HR-EMP-00014", device_id="BIO-01")
+		doc = SimpleNamespace(employee="HR-EMP-00014", device_id="BIO-01", flags=SimpleNamespace())
 		with patch.object(frappe, "session", frappe._dict(user="hr@nasty.test")):
 			self.assertFalse(rule(doc))
 

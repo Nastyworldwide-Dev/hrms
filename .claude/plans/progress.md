@@ -234,3 +234,4 @@
 - 2026-09-09T09:06:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-09-09T09:06:36Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 6 extra test file(s) ⟂014423447a0e
 - 2026-09-09T09:07Z REPAIR: HR corrections undone by the job (Amend copies auto_attendance=1; after-submit edit kept it) + no publish + Desk manual check-in refused + punches beside HR row re-read hourly → cf4c4692a (14 tests). Reviewer running.
+- 2026-09-09T09:13Z EVIDENCE: 6 behaves — reviewer on cf4c4692a DEPLOY (no Critical/Important); minor: integration rows without device_id must not read as Manual Entry → flags.integration_entry.

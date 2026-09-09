@@ -115,7 +115,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		"""A punch a person keys in for SOMEONE ELSE. The employee's own punch
 		always carries coordinates from the PWA; a bare one from them is refused."""
 		user = frappe.session.user
-		if not user or user == "Guest" or self.device_id:
+		if not user or user == "Guest" or self.device_id or getattr(self.flags, "integration_entry", False):
 			return False
 		return user != frappe.db.get_value("Employee", self.employee, "user_id")
 

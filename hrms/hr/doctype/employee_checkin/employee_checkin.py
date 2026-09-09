@@ -194,6 +194,9 @@ def add_log_based_on_employee_field(
 		)
 
 	doc = frappe.new_doc("Employee Checkin")
+	# An integration's row is a device's word, never HR's: it takes the
+	# coordinate path even with device_id left blank (employee_checkin_override).
+	doc.flags.integration_entry = True
 	doc.employee = employee.name
 	doc.employee_name = employee.employee_name
 	doc.time = timestamp
@@ -742,10 +745,11 @@ def find_index_in_dict(dict_list, key, value):
 
 
 def _link_to_hr_row(employee, attendance_date, logs) -> None:
-	"""A day HR marked by hand keeps HR's row; the punches become its evidence
-	of record instead of being re-read and refused every hour. The row itself
-	is not touched — HR's status and times stand. Mirrored rows are skipped
-	(their punches are somebody else's business)."""
+	"""A day a person marked by hand — HR's row, a leave, an attendance request —
+	keeps that row; the punches become its evidence of record instead of being
+	re-read and refused every hour. The row itself is not touched — its status
+	and times stand. Mirrored rows are skipped (their punches are somebody
+	else's business)."""
 	row = frappe.db.get_value(
 		"Attendance",
 		{
