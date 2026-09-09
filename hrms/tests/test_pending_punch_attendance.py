@@ -312,21 +312,35 @@ class TestAbsentMarkerLeavesPunchedDaysAlone(unittest.TestCase):
 			dates, [date(2026, 9, 3)], "1 Sep is marked, 2 Sep was punched, only 3 Sep is truly empty"
 		)
 
-	def test_the_punch_lookup_spans_all_shifts_and_ignores_rejected(self):
+	def test_the_punch_lookup_keys_on_the_shift_day_and_ignores_separate_shifts(self):
 		calls = []
 
-		def get_all(doctype, filters=None, pluck=None, **kw):
-			calls.append((doctype, filters, pluck))
-			return [datetime(2026, 9, 2, 9, 0), datetime(2026, 9, 2, 18, 0)]
+		def get_all(doctype, filters=None, fields=None, **kw):
+			calls.append((doctype, filters, fields))
+			return [
+				# night shift: OUT after midnight still belongs to 2 Sep (its shift day)
+				frappe._dict(
+					time=datetime(2026, 9, 3, 1, 0), shift_start=datetime(2026, 9, 2, 22, 0), shift=SHIFT
+				),
+				# a punch under no shift protects its day
+				frappe._dict(time=datetime(2026, 9, 4, 9, 0), shift_start=None, shift=None),
+				# a genuinely separate shift does not
+				frappe._dict(
+					time=datetime(2026, 9, 5, 9, 0), shift_start=datetime(2026, 9, 5, 9, 0), shift="Morning"
+				),
+			]
 
-		with patch.object(st.frappe, "get_all", side_effect=get_all):
+		with (
+			patch.object(st.frappe, "get_all", side_effect=get_all),
+			patch.object(st, "has_overlapping_timings", return_value=False),
+		):
 			dates = st.ShiftType.get_dates_with_checkins(
-				shift(), "EMP-SYNTHETIC", date(2026, 9, 1), date(2026, 9, 3)
+				shift(), "EMP-SYNTHETIC", date(2026, 9, 1), date(2026, 9, 6)
 			)
-		self.assertEqual(dates, [date(2026, 9, 2)])
-		doctype, filters, pluck = calls[0]
+		self.assertEqual(dates, [date(2026, 9, 2), date(2026, 9, 4)])
+		doctype, filters, _fields = calls[0]
 		self.assertEqual(doctype, "Employee Checkin")
-		self.assertNotIn("shift", filters, "any shift counts")
+		self.assertNotIn("shift", filters, "every shift is read; the overlap rule decides")
 		self.assertEqual(filters.get("remote_approval_status"), ("!=", "Rejected"))
 
 

@@ -283,7 +283,10 @@ def mark_attendance_and_link_log(
 		# once the blocking row is released nothing would ever re-read them. Leave
 		# them unlinked; the next run re-evaluates the day for free.
 		frappe.db.rollback(save_point="attendance_creation")
-		logger.warning(
+		# ceiling: retried every hourly run until the blocking row goes (a leave or
+		# manual row under an overlapping shift, or a mirrored row), upgrade: count
+		# blocked days per run and surface them in readiness instead of the log
+		logger.info(
 			"[checkin] %s on %s blocked by an existing row (%s) — punches left unlinked for the next run",
 			employee,
 			attendance_date,
@@ -327,7 +330,7 @@ def create_or_update_attendance(
 	stamped skip_auto_attendance for good.
 	"""
 	if repair_attendance is None and existing_attendance is not None:
-		if _same_day_result(existing_attendance, attendance_status, working_hours, in_time, out_time):
+		if _same_day_result(existing_attendance, attendance_status, working_hours, in_time, out_time, shift):
 			logger.info(
 				"[checkin] %s for %s on %s unchanged (%s, %sh) — linking the re-read punches to it",
 				existing_attendance.name,
@@ -443,7 +446,7 @@ def create_or_update_attendance(
 	return attendance
 
 
-def _same_day_result(existing, status, working_hours, in_time, out_time) -> bool:
+def _same_day_result(existing, status, working_hours, in_time, out_time, shift=None) -> bool:
 	"""Whether re-marking would produce the row that already exists."""
 	same_times = all(
 		(a is None and b is None) or (a is not None and b is not None and get_datetime(a) == get_datetime(b))
@@ -451,6 +454,7 @@ def _same_day_result(existing, status, working_hours, in_time, out_time) -> bool
 	)
 	return (
 		existing.status == status
+		and (not getattr(existing, "shift", None) or not shift or existing.shift == shift)
 		and abs(flt(existing.working_hours) - flt(working_hours)) < 0.01
 		and same_times
 	)
