@@ -27,9 +27,10 @@ from frappe.utils import add_days, cint, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
-# ceiling: judge_day is one long if/elif over verdicts and repair_attendance_days
-# one loop over actions; upgrade: split each verdict into its own rule object when
-# a seventh verdict or a fourth repair action is added.
+# ceiling: judge_day is a 183-line if/elif returning 19 distinct verdicts, and
+# repair_attendance_days one loop over 3 actions; upgrade: split each verdict
+# into its own rule object BEFORE the next verdict or repair action is added —
+# the count is already past what one function should carry.
 
 #: Skip comments the OLD failure handler left that the repair may clear: the day
 #: was blocked by another row, not by anything wrong with the punch.
@@ -306,7 +307,16 @@ def collect(from_date, to_date, employee=None) -> dict:
 	assignments = (
 		frappe.get_all(
 			"Shift Assignment",
-			filters={"employee": ("in", sorted(employees)), "docstatus": 1, "status": "Active"},
+			filters={
+				"employee": ("in", sorted(employees)),
+				"docstatus": 1,
+				"status": "Active",
+				# Bounded to the window: without this the report pulls every
+				# assignment an employee ever held, on a Desk report HR runs
+				# over a month.
+				"start_date": ("<=", end),
+			},
+			or_filters=[["end_date", ">=", start], ["end_date", "is", "not set"]],
 			fields=["employee", "shift_type", "start_date", "end_date"],
 			limit_page_length=0,
 		)

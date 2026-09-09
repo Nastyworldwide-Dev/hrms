@@ -259,9 +259,31 @@ class TestJobReadability(unittest.TestCase):
 		self.assertIn("if not (shift.process_attendance_after and shift.last_sync_of_checkin):", body)
 
 	def test_the_dry_run_takes_no_write_locks(self):
+		"""_repair_financial_dependency reads Salary Slip FOR UPDATE. A preview
+		holding those locks would block payroll while somebody reads a screen.
+		Recorded through the real call, not by matching the source."""
+		import sys
+		import types
+		from unittest.mock import patch
+
+		recorded = []
+
+		def _record(employee, attendance_date, attendance_name, for_update=True):
+			recorded.append(for_update)
+			return None
+
+		hooks = types.ModuleType("hrms.overrides.remote_checkin_request_hooks")
+		hooks._repair_financial_dependency = _record
+		days = [{"employee": "E1", "date": "2026-09-07", "repair": "refetch-shift", "attendance": "A1"}]
+		with patch.dict(sys.modules, {"hrms.overrides.remote_checkin_request_hooks": hooks}):
+			attendance_day_audit._financially_locked(days, for_update=False)
+			attendance_day_audit._financially_locked(days, for_update=True)
+		self.assertEqual(recorded, [False, True])
+
+	def test_the_endpoint_locks_only_when_it_is_about_to_write(self):
 		src = pathlib.Path(attendance_day_audit.__file__).read_text()
-		self.assertIn("for_update=not cint(dry_run)", src)
-		self.assertIn("for_update=for_update", src)
+		body = src[src.index("def repair_attendance_days") :]
+		self.assertIn("for_update=not cint(dry_run)", body)
 
 
 class TestRepairOrder(unittest.TestCase):
