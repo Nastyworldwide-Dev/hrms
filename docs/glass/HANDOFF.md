@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   2.0-plan + stabilisation (9 Sep)
-status:   done
-commit:   adbae859c on nz-glass (pushed); docs commit follows
-files:    docs/glass/plan/NADI_2.0_UX_PLAN.md
-          docs/glass/plan/NADI_2.0_SURFACE_MAP.md
-          frontend/e2e/prototype-measure.mjs
-          frontend/e2e/app-measure.mjs
-          docs/glass/audit/2026-09-09-prototype-measure.json
-          docs/glass/audit/2026-09-09-app-measure.json
-          hrms/utils/push_relay.py (fix, 1feffe5a7)
-          hrms/hr/doctype/shift_location/shift_location.json (feat, 527680d56)
-verify:   cd frontend && set -a && . ../.env && set +a && node e2e/app-measure.mjs
-flags:    Q0-Q3 in NADI_2.0_UX_PLAN.md §5 need Nabil; deploy needs migrate (new Check column)
-next:     Nabil deploys, opens the PWA once (relay re-registers), answers Q0-Q3; then phase 0
+prompt:   live incident 9 Sep — attendance Absent/Half Day
+status:   done (fix pushed; deploy pending)
+commit:   ffce088ec on nz-glass
+files:    hrms/hr/doctype/shift_type/shift_type.py
+          hrms/tests/test_pending_punch_attendance.py
+          hrms/tests/test_ot_nonworking_hours.py
+          hrms/hr/doctype/employee_checkin/employee_checkin.json (3e01a73ab)
+          hrms/hr/doctype/remote_checkin_request/remote_checkin_request.json (3e01a73ab)
+          hrms/overrides/employee_checkin_override.py (3e01a73ab)
+verify:   PYTHONPATH=. python3 hrms/tests/test_pending_punch_attendance.py
+flags:    provisional Absents self-heal on the next hourly run; Half Day rows via the half-day updater — check one employee after deploy
+next:     deploy; approvers clear pending remote requests; then S2 drawer permission state
