@@ -72,22 +72,25 @@ def classify_punch(row: dict, run_windows, employee_of_user: dict, operator_user
 
 	owner = row.get("owner")
 	owners_employee = employee_of_user.get(owner)
-	if owners_employee and owners_employee != row.get("employee"):
+	if not owners_employee:
+		return {"kind": MIRRORED, "reason": "", "true_employee": None}
+
+	# A mirrored insert is owned by whoever pressed Sync, and that person may
+	# well have an Employee record of their own. For an operator only the run
+	# window decides; for anyone else a row showing another employee is theirs.
+	if owner not in operator_users and owners_employee != row.get("employee"):
 		return {
 			"kind": OVERWRITTEN,
 			"reason": "created by another employee's user",
 			"true_employee": owners_employee,
 		}
-
-	if owners_employee and owner not in operator_users:
-		created = get_datetime(row.get("creation"))
-		if not any(_inside(created, start, end) for start, end in run_windows):
-			return {
-				"kind": OVERWRITTEN,
-				"reason": "created outside every sync run",
-				"true_employee": owners_employee,
-			}
-
+	created = get_datetime(row.get("creation"))
+	if not any(_inside(created, start, end) for start, end in run_windows):
+		return {
+			"kind": OVERWRITTEN,
+			"reason": "created outside every sync run",
+			"true_employee": owners_employee,
+		}
 	return {"kind": MIRRORED, "reason": "", "true_employee": None}
 
 
@@ -211,10 +214,11 @@ def collect(from_date, to_date, employee: str | None = None) -> dict:
 	from hrms.utils.timezone import get_attendance_timezone
 
 	window_end = get_datetime(add_days(getdate(to_date), 1))
-	filters = [["Employee Checkin", "employee", "=", employee]] if employee else []
+	# No SQL filter on `employee`: an overwritten punch shows somebody else in
+	# that column. The employee filter is applied after classification, on the
+	# true employee, below.
 	rows = frappe.get_all(
 		"Employee Checkin",
-		filters=filters,
 		or_filters=[
 			["time", ">=", getdate(from_date)],
 			["creation", ">=", getdate(from_date)],
@@ -248,9 +252,9 @@ def collect(from_date, to_date, employee: str | None = None) -> dict:
 	for row in rows:
 		verdict = classify_punch(row, run_windows, employee_of_user, operator_users)
 		classified.append({**row, **verdict})
-	overwritten = [r for r in classified if r["kind"] == OVERWRITTEN]
 	if employee:
-		overwritten = [r for r in overwritten if r["true_employee"] == employee]
+		classified = [r for r in classified if (r["true_employee"] or r["employee"]) == employee]
+	overwritten = [r for r in classified if r["kind"] == OVERWRITTEN]
 
 	names = [r["name"] for r in overwritten]
 	requests_by_checkin = {

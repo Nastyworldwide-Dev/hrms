@@ -13,6 +13,8 @@ import _frappe_stub
 
 _frappe_stub.install()
 
+import frappe
+
 from hrms.sync.checkin_recovery import (
 	LOCAL,
 	MIRRORED,
@@ -23,7 +25,11 @@ from hrms.sync.checkin_recovery import (
 	true_punch_time,
 )
 
-EMPLOYEE_OF_USER = {"nabil@nasty.test": "HR-EMP-00012", "mirza@nasty.test": "HR-EMP-00301"}
+EMPLOYEE_OF_USER = {
+	"nabil@nasty.test": "HR-EMP-00012",
+	"mirza@nasty.test": "HR-EMP-00301",
+	"hr@nasty.test": "HR-EMP-00002",
+}
 OPERATORS = {"Administrator", "hr@nasty.test"}
 RUNS = [(datetime(2026, 9, 8, 14, 0, 0), datetime(2026, 9, 8, 14, 20, 0))]
 
@@ -54,6 +60,28 @@ class TestClassifyPunch(unittest.TestCase):
 			OPERATORS,
 		)
 		self.assertEqual(verdict["kind"], MIRRORED)
+
+	def test_the_operators_own_employee_link_never_makes_a_mirrored_insert_overwritten(self):
+		"""HR pressed Sync and HR has an Employee record: every row her run inserted
+		is owned by her user and shows someone else. That is a mirrored insert,
+		decided by the run window, never a lost punch of hers."""
+		verdict = classify_punch(
+			_row(owner="hr@nasty.test", employee="HR-EMP-00301", creation=datetime(2026, 9, 8, 14, 5)),
+			RUNS,
+			EMPLOYEE_OF_USER,
+			OPERATORS,
+		)
+		self.assertEqual(verdict["kind"], MIRRORED)
+
+	def test_the_operators_own_punch_outside_every_run_is_still_recovered(self):
+		verdict = classify_punch(
+			_row(owner="hr@nasty.test", employee="HR-EMP-00301", creation=datetime(2026, 9, 4, 9, 0)),
+			RUNS,
+			EMPLOYEE_OF_USER,
+			OPERATORS,
+		)
+		self.assertEqual(verdict["kind"], OVERWRITTEN)
+		self.assertEqual(verdict["true_employee"], "HR-EMP-00002")
 
 	def test_a_row_created_by_another_employees_user_was_overwritten(self):
 		"""Nabil's user created it; it now shows Mirza's punch. Nabil's punch is gone."""
@@ -177,6 +205,65 @@ class TestPlanRecovery(unittest.TestCase):
 		plan = self._plan(rows)
 		self.assertEqual([e["source_name"] for e in plan], ["A", "B"])
 		self.assertEqual([e["log_type"] for e in plan], ["IN", "OUT"])
+
+
+class TestCollectEmployeeFilter(unittest.TestCase):
+	"""The Employee filter must find rows by the TRUE employee: an overwritten
+	punch shows somebody else in its employee column."""
+
+	def _get_all(self, doctype, **kwargs):
+		if doctype == "Employee Checkin":
+			if kwargs.get("pluck") == "device_id":
+				return []
+			for condition in kwargs.get("filters") or []:
+				# a SQL filter on the SHOWN employee hides the overwritten row
+				if list(condition)[-3:-1] == ["employee", "="] and condition[-1] != "HR-EMP-00301":
+					return []
+			return [
+				frappe._dict(
+					name="EMP-CKIN-09-2026-000007",
+					employee="HR-EMP-00301",
+					employee_name="Mirza",
+					log_type="IN",
+					time=datetime(2026, 9, 4, 8, 41, 5),
+					owner="nabil@nasty.test",
+					creation=datetime(2026, 9, 4, 9, 2, 11),
+					synced_from_instance="Nasty-Live",
+					device_id=None,
+					attendance=None,
+					shift=None,
+				)
+			]
+		if doctype == "Employee":
+			return [frappe._dict(name="HR-EMP-00012", user_id="nabil@nasty.test")]
+		return []
+
+	def test_filtering_by_the_true_employee_finds_the_overwritten_row(self):
+		from unittest.mock import patch
+
+		from hrms.sync import checkin_recovery
+		from hrms.utils import timezone
+
+		with (
+			patch.object(frappe, "get_all", side_effect=self._get_all),
+			patch.object(timezone, "get_attendance_timezone", return_value="Asia/Kuala_Lumpur"),
+			patch.object(
+				sys.modules["frappe.utils"],
+				"get_system_timezone",
+				create=True,
+				return_value="Asia/Kuala_Lumpur",
+			),
+			patch.object(
+				sys.modules["frappe.utils"],
+				"add_days",
+				lambda d, n: d + __import__("datetime").timedelta(days=n),
+			),
+		):
+			mine = checkin_recovery.collect("2026-09-01", "2026-09-09", "HR-EMP-00012")
+			theirs = checkin_recovery.collect("2026-09-01", "2026-09-09", "HR-EMP-00301")
+		self.assertEqual([e["source_name"] for e in mine["plan"]], ["EMP-CKIN-09-2026-000007"])
+		self.assertEqual(mine["plan"][0]["employee"], "HR-EMP-00012")
+		self.assertEqual(theirs["plan"], [])
 
 
 if __name__ == "__main__":
