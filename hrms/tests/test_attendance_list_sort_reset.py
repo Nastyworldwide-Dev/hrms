@@ -27,6 +27,11 @@ class TestPatch(unittest.TestCase):
 		for kept in ("filters", "fields", "group_by"):
 			self.assertNotIn(f'"{kept}"', src.split("def execute")[1])
 
+	def test_it_drops_the_redis_copy_too(self):
+		"""get_user_settings reads the `_user_settings` cache before the table."""
+		src = PATCH.read_text()
+		self.assertIn('frappe.cache.delete_key("_user_settings")', src)
+
 	def test_it_is_registered(self):
 		self.assertIn(
 			"hrms.patches.v16_0.reset_attendance_list_sort_preferences", (HRMS / "patches.txt").read_text()

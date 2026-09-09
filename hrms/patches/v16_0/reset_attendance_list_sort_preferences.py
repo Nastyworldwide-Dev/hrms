@@ -48,4 +48,8 @@ def execute():
 		cleared += 1
 
 	frappe.db.commit()
+	# `get_user_settings` reads Redis first (`_user_settings` hash, keyed
+	# doctype::user), so a DB-only clear would leave everyone on the stale sort
+	# until their cache entry died. Dropping the hash costs one re-read per user.
+	frappe.cache.delete_key("_user_settings")
 	print(f"[reset_attendance_list_sort_preferences] cleared a saved sort for {cleared} user/list pair(s)")
