@@ -211,3 +211,11 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-08T18:53:01Z COMMIT: 602502d24 docs(plan): Nadi PWA UX 2.0 review, contract, gap ledger and slice plan → review dispatched
 2026-09-08T18:54Z NEXT: Nabil answers Q1-Q3 from docs/glass/plan/NADI_2.0_UX_PLAN.md section 5 (tab bar, approve-all, one issue system) -> record in docs/glass/decisions/; then phase 0.3 mockup + 0.4 gates. Frappe-reviewer on 602502d24 was dispatched (docs commit); batch-2 reviews still owed.
 - 2026-09-08T18:54:33Z COMMIT: d2e496ff1 chore(plans): NEXT line after the UX 2.0 plan commit → review dispatched
+- 2026-09-08T18:56:59Z COMMIT: 1bb783490 docs(plan): name both company-fence helpers in the U12 gate row → review dispatched
+- 2026-09-09T02:40:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-09T02:40:29Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 2 extra test file(s) ⟂f40f7b7fcc28
+- 2026-09-09T02:40:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-09T02:40:58Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 2 extra test file(s) ⟂f40f7b7fcc28
+- 2026-09-09T02:41:53Z PLAN: approved 4cc8131a5e9b — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-09T02:42:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-09T02:42:00Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 2 extra test file(s) ⟂f40f7b7fcc28

@@ -196,3 +196,30 @@ requirements (this file, HR rule, Q1-Q3) -> planning agents done (scope,
 security notes; arch-reviewer on S2/S3 before code) -> mockup (S2/S4) ->
 TDD per slice (probes -> tests) -> auto-commit -> hook review
 (frappe-reviewer + security-reviewer on S1/S2) -> Nabil deploys -> smoke.
+
+## Stabilisation addendum — 9 September 2026 (requested by Nabil in chat)
+Two items before the 2.0 launch, each its own slice and commit:
+1. `fix(push)`: verifica-live carries nasty-live's relay credentials; every
+   subscribe and push send is refused. Self-heal in `hrms/utils/push_relay.py`
+   (clear + re-register + one retry), wrappers in `hrms/api/push.py` routed by
+   `override_whitelisted_methods`, send path wrapped. EXPECTED OUTPUT: first
+   subscribe on the live site re-registers `verifica-live.s.frappe.cloud`;
+   later subscribes and sends succeed; error log stops showing
+   `nasty-live.frappe.cloud@notification.frappe`.
+2. `feat(attendance)`: `Shift Location.is_free_location` tick box with a
+   description for HR; free locations record IN/OUT anywhere with no remote
+   approval; PWA says so instead of "No check-in area set". FLOW: HR ticks the
+   box on the Shift Location → geofence decision returns allow before any
+   radius maths, in both the preflight and the insert → no Remote Checkin
+   Request → PWA verdict "Free location".
+MOCKUP: NOT NEEDED (one native Frappe checkbox with a description on the
+   Shift Location form; the PWA change is one more verdict line in the
+   existing check-in panel, same "ok" tone and layout as "You're at X").
+EXPECTED OUTPUT: HR ticks "Free location" on a Shift Location; staff linked to
+   it check in and out anywhere, the punch is recorded at once, no Remote
+   Checkin Request and no approver notification; the PWA says "Free location"
+   instead of "No check-in area set". Ships as a DocType JSON field (synced on
+   migrate), server logic in the shared geofence decision, one Vue line.
+Approval: Nabil, 9 Sep 2026 chat — "we gonna fix existing bug, and add new
+   simple feat ... implement a proper tick box for HR to enable disable Free
+   Location".

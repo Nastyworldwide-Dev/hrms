@@ -660,9 +660,15 @@ global_search_doctypes = {
 	],
 }
 
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "hrms.event.get_events"
-# }
+# The framework's push subscribe/unsubscribe reuse whatever relay credentials
+# are stored. A site cloned from another site inherits the source's key and
+# every relay call is refused (see hrms/utils/push_relay.py). The PWA calls
+# these endpoints by name, so they are routed through wrappers that
+# re-register once on that refusal.
+override_whitelisted_methods = {
+	"frappe.push_notification.subscribe": "hrms.api.push.subscribe",
+	"frappe.push_notification.unsubscribe": "hrms.api.push.unsubscribe",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

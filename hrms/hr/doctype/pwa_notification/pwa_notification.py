@@ -40,9 +40,15 @@ class PWANotification(Document):
 		try:
 			from frappe.push_notification import PushNotification
 
+			from hrms.utils.push_relay import relay_call
+
 			push_notification = PushNotification("hrms")
 			if push_notification.is_enabled():
-				push_notification.send_notification_to_user(
+				# relay_call: a site cloned from another carries the source's
+				# relay credentials; the relay refuses them, and the send is
+				# retried once after re-registering this site
+				relay_call(
+					push_notification.send_notification_to_user,
 					self.to_user,
 					self.reference_document_type,
 					self.message,
