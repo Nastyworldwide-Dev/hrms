@@ -28,3 +28,12 @@ Call sites / importers of what changed, with verdicts:
   affected: hrms never calls them.
 - nasty-live (the source site) — not-affected: its stored credentials ARE its
   own; the relay accepts them; relay_call never fires there.
+- hrms/subscription_utils.py — not-affected: its identity comes from
+  frappe.conf.sk_hrms (site_config, which a DB clone does not carry) and its
+  only caller is gated on a *.frappehr.com hostname we never have.
+- docs/glass/audit/2026-09-08-notification-probes.py — not-affected: an audit
+  script that patches _send_post_request wholesale; excluded from the scan.
+- OPEN ASSUMPTION (reviewer): what the relay's auth.get_credential does for an
+  endpoint that is already registered is unverified (relay source not
+  readable). Only reachable through a relay-side fault on a healthy site, and
+  a refused re-registration rolls back, leaving the old pair intact.

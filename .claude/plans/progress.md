@@ -222,3 +222,6 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T02:42:03Z COMMIT: 1feffe5a7 fix(push): re-register with the relay when the stored credentials are another site's → review+cross-app dispatched
 - 2026-09-09T02:46:40Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
 - 2026-09-09T02:46:40Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
+- 2026-09-09T02:46:43Z COMMIT: 527680d56 feat(attendance): a Shift Location can be marked free so punches anywhere record without approval → review+design dispatched
+- 2026-09-09T02:47:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T02:47:38Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640

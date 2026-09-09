@@ -32,7 +32,14 @@ _RELAY_USER = re.compile(r"([\w.\-]+)@notification\.frappe")
 
 
 def is_relay_permission_error(exc: BaseException) -> bool:
-	"""The relay refused our credentials for a row it expects us to own."""
+	"""The relay refused our credentials for a row it expects us to own.
+
+	Matches on the relay's traceback text, which FrappeClient only carries
+	when the relay allows error tracebacks for our API user (it does today).
+	If the relay ever stops sending them the message is just "None": this
+	returns False and no heal is attempted — the same failure as before this
+	module existed, never a reset on a guess.
+	"""
 	text = str(exc)
 	return "PermissionError" in text and "Notification User" in text
 
