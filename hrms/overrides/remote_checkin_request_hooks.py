@@ -395,15 +395,21 @@ def _repair_notice(checkin, reason):
 		frappe.get_doc("Remote Checkin Request", request).add_comment("Comment", message)
 
 
-def _repair_financial_dependency(employee, attendance_date, attendance_name):
-	"""Claims accepted by existing payout rules and submitted payroll require explicit correction."""
+def _repair_financial_dependency(employee, attendance_date, attendance_name, for_update: bool = True):
+	"""Claims accepted by existing payout rules and submitted payroll require explicit correction.
+
+	`for_update` holds row locks so a repair decides against a payout that
+	cannot then be submitted underneath it. A read-only caller — a preview or a
+	dry run — must pass False: locking Salary Slip rows from a report would
+	block payroll while somebody reads a screen.
+	"""
 	logger.debug("[remote_checkin_request] checking attendance repair dependencies")
 	return (
 		frappe.db.get_value(
 			"OT Request",
 			{"employee": employee, "ot_date": attendance_date, "status": ["!=", "Rejected"], "docstatus": 1},
 			"name",
-			for_update=True,
+			for_update=for_update,
 		)
 		or frappe.db.get_value(
 			"Salary Slip",
@@ -414,7 +420,7 @@ def _repair_financial_dependency(employee, attendance_date, attendance_name):
 				"docstatus": 1,
 			},
 			"name",
-			for_update=True,
+			for_update=for_update,
 		)
 		or (
 			attendance_name
@@ -422,7 +428,7 @@ def _repair_financial_dependency(employee, attendance_date, attendance_name):
 				"Overtime Details",
 				{"reference_document": attendance_name, "docstatus": 1},
 				"name",
-				for_update=True,
+				for_update=for_update,
 			)
 		)
 	)

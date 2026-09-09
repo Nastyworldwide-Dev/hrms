@@ -156,6 +156,21 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["repair_punches"], ["A", "B"])
 		self.assertIn("7PM-3:30AM", verdict["detail"])
 
+	def test_two_still_active_assignments_are_named_instead_of_repaired(self):
+		"""Re-resolving would send each punch back to a different shift and the
+		report would offer the same repair forever. HR must end the old one."""
+		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
+		verdict = judge_day(punches, [_absent(status="Half Day")], SHIFT, active_assignments=2)
+		self.assertEqual(verdict["verdict"], "two-active-shift-assignments")
+		self.assertEqual(verdict["repair"], "")
+		self.assertIn("end the superseded assignment", verdict["detail"])
+
+	def test_one_assignment_left_means_the_split_is_repairable(self):
+		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
+		verdict = judge_day(punches, [_absent(status="Half Day")], SHIFT, active_assignments=1)
+		self.assertEqual(verdict["verdict"], "punches-split-across-shifts")
+		self.assertEqual(verdict["repair"], "refetch-shift")
+
 	def test_a_day_that_already_reads_right_is_not_a_split_to_repair(self):
 		"""An employee legitimately working two shifts in one day is not a defect.
 		Flagging it would re-resolve each punch back where it was, so the verdict
@@ -231,6 +246,22 @@ class TestJudgeDay(unittest.TestCase):
 
 	def test_nothing_at_all(self):
 		self.assertEqual(judge_day([], [], SHIFT)["verdict"], "no-punches")
+
+
+class TestJobReadability(unittest.TestCase):
+	"""has_incorrect_shift_config bails when either window field is unset, so a
+	punch re-resolved onto such a shift would be unlinked and never processed."""
+
+	def test_a_shift_with_no_processing_window_is_not_trusted(self):
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index("def _job_can_read") :]
+		body = body[: body.index("\ndef ", 1)]
+		self.assertIn("if not (shift.process_attendance_after and shift.last_sync_of_checkin):", body)
+
+	def test_the_dry_run_takes_no_write_locks(self):
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		self.assertIn("for_update=not cint(dry_run)", src)
+		self.assertIn("for_update=for_update", src)
 
 
 class TestRepairOrder(unittest.TestCase):

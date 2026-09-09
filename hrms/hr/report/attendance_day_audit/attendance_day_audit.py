@@ -26,6 +26,7 @@ VERDICT_LABELS = {
 	"punches-skip-stamped": "Punches skip-stamped (old failure)",
 	"punches-linked-to-cancelled-row": "Punches linked to a cancelled row",
 	"punches-split-across-shifts": "One day's punches under two shifts",
+	"two-active-shift-assignments": "Two shift assignments still active - HR must end the old one",
 	"punches-mirrored": "Punches are mirrored rows",
 	"punches-rejected": "Punches rejected",
 	"punch-without-shift": "Punch resolved to no shift",

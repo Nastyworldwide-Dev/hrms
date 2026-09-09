@@ -27,6 +27,10 @@ from frappe.utils import add_days, cint, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
+# ceiling: judge_day is one long if/elif over verdicts and repair_attendance_days
+# one loop over actions; upgrade: split each verdict into its own rule object when
+# a seventh verdict or a fourth repair action is added.
+
 #: Skip comments the OLD failure handler left that the repair may clear: the day
 #: was blocked by another row, not by anything wrong with the punch.
 REPAIRABLE_SKIP_REASONS = ("Duplicate", "Overlapping", "already exists")
@@ -41,7 +45,7 @@ def _live(rows):
 	return [r for r in rows if cint(r.get("docstatus")) < 2]
 
 
-def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict:
+def judge_day(punches, attendance_rows, shift_config, skip_reasons=None, active_assignments=1) -> dict:
 	"""One employee-day → {verdict, detail, repair}. Pure.
 
 	`punches`: dicts with name, time, log_type, shift, attendance,
@@ -52,6 +56,9 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 	`shift_config`: {name: {process_attendance_after, last_sync_of_checkin,
 	enable_auto_attendance}} for the shifts the punches name.
 	`skip_reasons`: {punch name: comment text}.
+	`active_assignments`: how many Shift Assignments still cover this date for
+	this employee. More than one is the cause of a split day, and no repair
+	here can settle it — HR has to end the superseded assignment.
 	`repair` ∈ {"", "unskip", "unlink"}: what the repair would do to the punches.
 	"""
 	skip_reasons = skip_reasons or {}
@@ -128,6 +135,16 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 	has_pair = {p.get("log_type") for p in countable} >= {"IN", "OUT"}
 	looks_wrong = row is None or row.get("status") in ("Absent", "Half Day")
 	if len(shifts_used) > 1 and has_pair and looks_wrong:
+		if active_assignments > 1:
+			# Re-resolving would send each punch back to a different shift, the
+			# day would break again, and the report would offer the same repair
+			# forever. The fix is HR's: end the assignment that was superseded.
+			return _verdict(
+				"two-active-shift-assignments",
+				f"{active_assignments} shift assignments still cover this date, so the day's punches "
+				"land under " + " and ".join(sorted(shifts_used)) + "; end the superseded assignment first",
+				"",
+			)
 		return _verdict(
 			"punches-split-across-shifts",
 			"the day's punches sit under "
@@ -285,6 +302,18 @@ def collect(from_date, to_date, employee=None) -> dict:
 		if shift_names
 		else {}
 	)
+	employees = {p.employee for p in punches} | {r.employee for r in rows}
+	assignments = (
+		frappe.get_all(
+			"Shift Assignment",
+			filters={"employee": ("in", sorted(employees)), "docstatus": 1, "status": "Active"},
+			fields=["employee", "shift_type", "start_date", "end_date"],
+			limit_page_length=0,
+		)
+		if employees
+		else []
+	)
+
 	skipped_names = [p.name for p in punches if cint(p.skip_auto_attendance)]
 	skip_reasons = {}
 	if skipped_names:
@@ -320,7 +349,16 @@ def collect(from_date, to_date, employee=None) -> dict:
 		# rows fetched and would read as "linked to a missing row".
 		if not (start <= day <= end):
 			continue
-		verdict = judge_day(bucket["punches"], bucket["rows"], shift_config, skip_reasons)
+		covering = sum(
+			1
+			for a in assignments
+			if a.employee == emp
+			and getdate(a.start_date) <= day
+			and (not a.end_date or getdate(a.end_date) >= day)
+		)
+		verdict = judge_day(
+			bucket["punches"], bucket["rows"], shift_config, skip_reasons, active_assignments=covering or 1
+		)
 		live = _live(bucket["rows"])
 		row = next((r for r in live if cint(r.docstatus) == 1), live[0] if live else None)
 		judged.append(
@@ -393,6 +431,10 @@ def _job_can_read(punch) -> bool:
 	)
 	if not shift or not cint(shift.enable_auto_attendance):
 		return False
+	# ShiftType.has_incorrect_shift_config bails on either of these being unset,
+	# so the job would never process that shift at all.
+	if not (shift.process_attendance_after and shift.last_sync_of_checkin):
+		return False
 	if shift.process_attendance_after and getdate(punch.time) < getdate(shift.process_attendance_after):
 		return False
 	if (
@@ -404,16 +446,22 @@ def _job_can_read(punch) -> bool:
 	return True
 
 
-def _financially_locked(days) -> set:
+def _financially_locked(days, for_update: bool = True) -> set:
 	"""(employee, date) where approved overtime, replacement leave or submitted
-	payroll already depends on the day the shift repair would rebuild."""
+	payroll already depends on the day the shift repair would rebuild.
+
+	`for_update` is False for the dry run: a preview must not hold Salary Slip
+	locks and block payroll while somebody reads the screen.
+	"""
 	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
 
 	locked = set()
 	for day in days:
 		if day.get("repair") != "refetch-shift":
 			continue
-		if _repair_financial_dependency(day["employee"], day["date"], day.get("attendance")):
+		if _repair_financial_dependency(
+			day["employee"], day["date"], day.get("attendance"), for_update=for_update
+		):
 			locked.add((day["employee"], str(day["date"])))
 			logger.info(
 				"[attendance_day_audit] %s on %s left alone: a payout depends on it",
@@ -429,7 +477,7 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 	those days. System Manager only; dry run by default; writes nothing else."""
 	frappe.only_for("System Manager")
 	days = collect(from_date, to_date)["days"]
-	locked = _financially_locked(days)
+	locked = _financially_locked(days, for_update=not cint(dry_run))
 	plan = plan_repairs(days, locked)
 	if cint(dry_run):
 		logger.info(
