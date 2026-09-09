@@ -758,16 +758,22 @@ function create_account_shells(frm) {
 		freeze_message: __("Queuing GL account creation…"),
 		callback: (r) => {
 			const result = r.message || {};
-			const count = (result.to_create || []).length;
+			const count = result.to_create_count || 0;
+			let message;
+			if (!count) message = __("Nothing was created.");
+			else if (result.queued)
+				message = __(
+					"Creating {0} account(s) in the background. You will get a notification (bell icon) with the counts when it finishes — a few minutes for a full group chart. Pressing again later only creates what is still missing.",
+					[count]
+				);
+			else
+				message = __(
+					"A run for this instance is already in progress; you will get the notification when it finishes."
+				);
 			frappe.msgprint({
 				title: __("GL accounts"),
-				indicator: result.queued ? "blue" : "green",
-				message: result.queued
-					? __(
-							"Creating {0} account(s) in the background. You will get a notification (bell icon) with the counts when it finishes — a few minutes for a full group chart. Pressing again later only creates what is still missing.",
-							[count]
-					  )
-					: __("Nothing was created."),
+				indicator: result.queued ? "blue" : count ? "orange" : "green",
+				message,
 			});
 		},
 	});

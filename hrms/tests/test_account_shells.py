@@ -162,14 +162,33 @@ class TestEndpointHardening(unittest.TestCase):
 		never in a web request that a worker kills after two minutes."""
 		self.assertIn("enqueue", self._names_in("create_account_shells"))
 		self.assertNotIn("insert", self._names_in("create_account_shells"))
-		self.assertIn("insert", self._names_in("run_account_shells_job"))
+		self.assertIn("insert", self._names_in("_create_one"))
 		self.assertIn("_notify_operator", self._names_in("run_account_shells_job"))
 
 	def test_the_job_skips_what_an_earlier_killed_run_already_made(self):
 		body = ast.get_source_segment(
-			MODULE_PATH.read_text(encoding="utf-8"), self.functions["run_account_shells_job"]
+			MODULE_PATH.read_text(encoding="utf-8"), self.functions["_create_one"]
 		)
 		self.assertIn('frappe.db.exists("Account", entry["name"])', body)
+
+	def test_a_running_job_is_reported_not_claimed_queued(self):
+		"""enqueue(deduplicate=True) returns None while a same-id job runs; the
+		endpoint must not tell the operator it queued one."""
+		body = ast.get_source_segment(
+			MODULE_PATH.read_text(encoding="utf-8"), self.functions["create_account_shells"]
+		)
+		self.assertIn("job = frappe.enqueue(", body)
+		self.assertIn('"queued": bool(job)', body)
+
+	def test_a_timeout_still_notifies_and_propagates(self):
+		"""RQ's JobTimeoutException is an Exception: it must escape the per-row
+		handler, reach the operator with the counts so far, and re-raise."""
+		src = MODULE_PATH.read_text(encoding="utf-8")
+		row = ast.get_source_segment(src, self.functions["_create_one"])
+		self.assertLess(row.index("except _TIMEOUT:"), row.index("except Exception"))
+		job = ast.get_source_segment(src, self.functions["run_account_shells_job"])
+		self.assertIn("timed_out=True", job)
+		self.assertIn("raise", job)
 
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))

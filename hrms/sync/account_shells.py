@@ -218,9 +218,12 @@ def create_account_shells(instance_name: str) -> dict:
 			).format(len(plan["to_create"]), MAX_ACCOUNTS_PER_RUN)
 		)
 	if not plan["to_create"]:
-		return {**plan, "queued": False}
+		return {"to_create_count": 0, "queued": False}
 
-	frappe.enqueue(
+	# None when a job with this id is already queued or running (deduplicate):
+	# a worker killed mid-run can leave one STARTED for up to the timeout, and
+	# telling the operator "queued" then would be a lie nobody could see through.
+	job = frappe.enqueue(
 		"hrms.sync.account_shells.run_account_shells_job",
 		queue="long",
 		timeout=3600,
@@ -231,67 +234,91 @@ def create_account_shells(instance_name: str) -> dict:
 		entries=plan["to_create"],
 	)
 	logger.info(
-		"[account_shells] %s: queued %d account(s) for %s",
+		"[account_shells] %s: %s %d account(s) for %s",
 		instance_name,
+		"queued" if job else "already running — not queued",
 		len(plan["to_create"]),
 		frappe.session.user,
 	)
-	return {**plan, "queued": True}
+	return {"to_create_count": len(plan["to_create"]), "queued": bool(job)}
+
+
+def _rq_timeout():
+	"""RQ's timeout exception subclasses Exception; it must pass through the
+	per-row handler or the horse is killed with no notification sent."""
+	try:
+		from rq.timeouts import JobTimeoutException
+	except ImportError:  # no worker library at import time (bench-free tests)
+		return ()
+	return (JobTimeoutException,)
+
+
+_TIMEOUT = _rq_timeout()
 
 
 def run_account_shells_job(instance_name: str, operator: str, entries: list) -> dict:
 	"""The background half: create the planned accounts, parents first, one at
-	a time, each committed on its own; then tell the operator."""
-	created, renamed, fallback, failed = [], [], [], []
-	for entry in entries:
-		payload = {k: v for k, v in entry.items() if k not in ("name", "parent_missing")}
-		try:
-			if frappe.db.exists("Account", entry["name"]):
-				continue  # a killed earlier run already made it
-			parent = entry["parent_account"]
-			if not frappe.db.exists("Account", parent):
-				parent = _fallback_parent(entry["company"], entry.get("root_type") or "Expense")
-				if not parent:
-					raise frappe.ValidationError(
-						_("no root {0} account for {1}").format(entry.get("root_type"), entry["company"])
-					)
-				fallback.append({"name": entry["name"], "parent": parent})
-			payload["parent_account"] = parent
-			doc = frappe.get_doc({"doctype": "Account", **payload})
-			# Full validation on purpose — see module docstring. Only the
-			# permission check is skipped; the endpoint above is the gate.
-			doc.insert(ignore_permissions=True)
-			frappe.db.commit()
-			created.append(doc.name)
-			if doc.name != entry["name"]:
-				renamed.append({"source": entry["name"], "here": doc.name})
-		except Exception as e:
-			frappe.db.rollback()
-			failed.append({"account": entry["name"], "error": str(e)})
-			logger.error(
-				"[account_shells] Account %s could not be created: %s", entry["name"], e, exc_info=True
-			)
-
-	result = {"created": created, "renamed": renamed, "fallback": fallback, "failed": failed}
+	a time, each committed on its own; then tell the operator — also when RQ
+	times the job out, with the counts so far, before the timeout propagates."""
+	result = {"created": [], "renamed": [], "fallback": [], "failed": [], "by_company": {}}
+	try:
+		for entry in entries:
+			_create_one(entry, result)
+	except _TIMEOUT:
+		logger.error(
+			"[account_shells] %s: job timed out after %d created", instance_name, len(result["created"])
+		)
+		_notify_operator(instance_name, operator, result, timed_out=True)
+		raise
 	logger.info(
 		"[account_shells] %s: created=%d renamed=%d fallback=%d failed=%d",
 		instance_name,
-		len(created),
-		len(renamed),
-		len(fallback),
-		len(failed),
+		len(result["created"]),
+		len(result["renamed"]),
+		len(result["fallback"]),
+		len(result["failed"]),
 	)
 	_notify_operator(instance_name, operator, result)
 	return result
 
 
-def _notify_operator(instance_name: str, operator: str, result: dict) -> None:
+def _create_one(entry: dict, result: dict) -> None:
+	payload = {k: v for k, v in entry.items() if k not in ("name", "parent_missing")}
+	try:
+		if frappe.db.exists("Account", entry["name"]):
+			return  # a killed earlier run already made it
+		parent = entry["parent_account"]
+		fell_back = None
+		if not frappe.db.exists("Account", parent):
+			parent = _fallback_parent(entry["company"], entry.get("root_type") or "Expense")
+			if not parent:
+				raise frappe.ValidationError(
+					_("no root {0} account for {1}").format(entry.get("root_type"), entry["company"])
+				)
+			fell_back = {"name": entry["name"], "parent": parent}
+		payload["parent_account"] = parent
+		doc = frappe.get_doc({"doctype": "Account", **payload})
+		# Full validation on purpose — see module docstring. Only the
+		# permission check is skipped; the endpoint is the gate.
+		doc.insert(ignore_permissions=True)
+		frappe.db.commit()
+		result["created"].append(doc.name)
+		result["by_company"][entry["company"]] = result["by_company"].get(entry["company"], 0) + 1
+		if fell_back:
+			result["fallback"].append(fell_back)
+		if doc.name != entry["name"]:
+			result["renamed"].append({"source": entry["name"], "here": doc.name})
+	except _TIMEOUT:
+		raise
+	except Exception as e:
+		frappe.db.rollback()
+		result["failed"].append({"account": entry["name"], "error": str(e)})
+		logger.error("[account_shells] Account %s could not be created: %s", entry["name"], e, exc_info=True)
+
+
+def _notify_operator(instance_name: str, operator: str, result: dict, timed_out: bool = False) -> None:
 	"""One Desk notification with the counts; failures listed in an Error Log."""
-	by_company = {}
-	for name in result["created"]:
-		company = frappe.db.get_value("Account", name, "company")
-		by_company[company] = by_company.get(company, 0) + 1
-	lines = [f"{company}: {count}" for company, count in sorted(by_company.items())]
+	lines = [f"{company}: {count}" for company, count in sorted(result["by_company"].items())]
 	summary = _(
 		"GL accounts pulled from {0}: created {1}, under a root group {2}, renamed {3}, failed {4}."
 	).format(
@@ -301,6 +328,10 @@ def _notify_operator(instance_name: str, operator: str, result: dict) -> None:
 		len(result["renamed"]),
 		len(result["failed"]),
 	)
+	if timed_out:
+		summary = _(
+			"{0} The run timed out before finishing — press Pull → GL Accounts again to continue."
+		).format(summary)
 	if result["failed"]:
 		frappe.log_error(
 			title=f"GL account pull from {instance_name}: {len(result['failed'])} failed",
