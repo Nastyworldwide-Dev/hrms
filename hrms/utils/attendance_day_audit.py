@@ -78,26 +78,33 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 			return _verdict("row-manual", f"{row['name']}: half-day status set by hand", "")
 
 	linked = [p for p in punches if row is not None and p.get("attendance") == row["name"]]
+	local = [p for p in punches if not p.get("synced_from_instance")]
 	# what the job cannot or will not read
-	skipped = [p for p in punches if cint(p.get("skip_auto_attendance"))]
-	if skipped and len(skipped) == len([p for p in punches if not p.get("synced_from_instance")]):
-		reasons = {skip_reasons.get(p["name"], "") for p in skipped}
-		if any(any(key in reason for key in FINANCIAL_SKIP_MARKERS) for reason in reasons):
-			return _verdict(
-				"row-financially-locked",
-				"payroll, approved overtime or replacement leave already depends on this day; HR corrects it by hand",
-				"",
-			)
-		repairable = any(any(key in reason for key in REPAIRABLE_SKIP_REASONS) for reason in reasons)
+	skipped = [p for p in local if cint(p.get("skip_auto_attendance"))]
+	reasons = {p["name"]: skip_reasons.get(p["name"], "") for p in skipped}
+	if any(any(key in reason for key in FINANCIAL_SKIP_MARKERS) for reason in reasons.values()):
+		return _verdict(
+			"row-financially-locked",
+			"payroll, approved overtime or replacement leave already depends on this day; HR corrects it by hand",
+			"",
+		)
+	# Only a stamp the OLD failure handler wrote is debris. A rejection also
+	# sets the flag and must stay: overtime eligibility reads it.
+	repairable_skipped = [
+		p
+		for p in skipped
+		if p.get("remote_approval_status") != "Rejected"
+		and any(key in reasons[p["name"]] for key in REPAIRABLE_SKIP_REASONS)
+	]
+	if skipped and (repairable_skipped or len(skipped) == len(local)):
 		return _verdict(
 			"punches-skip-stamped",
-			"every punch is skip-stamped: "
-			+ ("; ".join(sorted(r for r in reasons if r)) or "no reason recorded"),
-			"unskip" if repairable else "",
+			f"{len(skipped)} of {len(local)} punch(es) skip-stamped: "
+			+ ("; ".join(sorted({r for r in reasons.values() if r})) or "no reason recorded"),
+			"unskip" if repairable_skipped else "",
+			[p["name"] for p in repairable_skipped],
 		)
-	dead_link = [
-		p for p in punches if p.get("attendance") and (row is None or p["attendance"] != row["name"])
-	]
+	dead_link = [p for p in local if p.get("attendance") and (row is None or p["attendance"] != row["name"])]
 	dead_link = [
 		p
 		for p in dead_link
@@ -108,6 +115,7 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 			"punches-linked-to-cancelled-row",
 			f"{len(dead_link)} punch(es) still point at a cancelled or missing attendance",
 			"unlink",
+			[p["name"] for p in dead_link],
 		)
 	mirrored = [p for p in punches if p.get("synced_from_instance")]
 	if mirrored and len(mirrored) == len(punches):
@@ -174,8 +182,8 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 	)
 
 
-def _verdict(code, detail, repair):
-	return {"verdict": code, "detail": detail, "repair": repair}
+def _verdict(code, detail, repair, repair_punches=None):
+	return {"verdict": code, "detail": detail, "repair": repair, "repair_punches": list(repair_punches or [])}
 
 
 # --- frappe -------------------------------------------------------------------
@@ -275,6 +283,11 @@ def collect(from_date, to_date, employee=None) -> dict:
 
 	judged = []
 	for (emp, day), bucket in sorted(days.items()):
+		# The punch window runs one day past `end` to catch a post-midnight OUT
+		# of the last day; a bucket dated outside the window has no attendance
+		# rows fetched and would read as "linked to a missing row".
+		if not (start <= day <= end):
+			continue
 		verdict = judge_day(bucket["punches"], bucket["rows"], shift_config, skip_reasons)
 		live = _live(bucket["rows"])
 		row = next((r for r in live if cint(r.docstatus) == 1), live[0] if live else None)
@@ -291,7 +304,6 @@ def collect(from_date, to_date, employee=None) -> dict:
 				"status": row.status if row else "",
 				"working_hours": row.working_hours if row else None,
 				"shift": row.shift if row else next((p.shift for p in bucket["punches"] if p.shift), None),
-				"punch_names": [p.name for p in bucket["punches"]],
 				**verdict,
 			}
 		)
@@ -310,13 +322,13 @@ def plan_repairs(judged_days) -> list:
 	"""Which punches the repair would touch, and how. Pure."""
 	plan = []
 	for day in judged_days:
-		if day.get("repair") in ("unskip", "unlink"):
+		if day.get("repair") in ("unskip", "unlink") and day.get("repair_punches"):
 			plan.append(
 				{
 					"employee": day["employee"],
 					"date": str(day["date"]),
 					"action": day["repair"],
-					"punches": list(day["punch_names"]),
+					"punches": list(day.get("repair_punches") or []),
 				}
 			)
 	return plan

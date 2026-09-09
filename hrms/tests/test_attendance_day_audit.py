@@ -13,6 +13,9 @@ import _frappe_stub
 
 _frappe_stub.install()
 
+import frappe
+
+from hrms.utils import attendance_day_audit
 from hrms.utils.attendance_day_audit import judge_day, plan_repairs
 
 SHIFT = {
@@ -103,6 +106,45 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["verdict"], "punches-linked-to-cancelled-row")
 		self.assertEqual(verdict["repair"], "unlink")
 
+	def test_only_the_stamped_punch_is_repaired_when_the_other_one_counted(self):
+		"""IN linked to a Half Day row, the late OUT skip-stamped "Duplicate" when
+		it was processed alone: the OUT is the debris, the IN must stay linked."""
+		punches = [
+			_punch("A", 10, "IN", attendance="HR-ATT-2026-00070"),
+			_punch("B", 19, "OUT", skip_auto_attendance=1),
+		]
+		verdict = judge_day(
+			punches,
+			[_absent(status="Half Day")],
+			SHIFT,
+			{"B": "Reason for skipping auto attendance: Duplicate Attendance"},
+		)
+		self.assertEqual(verdict["verdict"], "punches-skip-stamped")
+		self.assertEqual(verdict["repair"], "unskip")
+		self.assertEqual(verdict["repair_punches"], ["B"])
+
+	def test_a_rejected_punch_keeps_its_stamp_even_beside_a_duplicate_one(self):
+		punches = [
+			_punch("A", 10, "IN", skip_auto_attendance=1, remote_approval_status="Rejected"),
+			_punch("B", 19, "OUT", skip_auto_attendance=1),
+		]
+		reasons = {
+			"A": "Reason for skipping auto attendance: Duplicate Attendance",
+			"B": "Reason for skipping auto attendance: Duplicate Attendance",
+		}
+		verdict = judge_day(punches, [_absent()], SHIFT, reasons)
+		self.assertEqual(verdict["repair_punches"], ["B"])
+
+	def test_unlink_carries_only_the_dead_links(self):
+		cancelled = _absent(name="HR-ATT-2026-00060", docstatus=2)
+		punches = [
+			_punch("A", 10, "IN", attendance="HR-ATT-2026-00070"),
+			_punch("B", 19, "OUT", attendance="HR-ATT-2026-00060"),
+		]
+		verdict = judge_day(punches, [cancelled, _absent()], SHIFT)
+		self.assertEqual(verdict["repair"], "unlink")
+		self.assertEqual(verdict["repair_punches"], ["B"])
+
 	def test_a_day_marked_from_all_its_punches_is_fine(self):
 		punches = [
 			_punch("A", 10, "IN", attendance="HR-ATT-2026-00070"),
@@ -153,14 +195,53 @@ class TestJudgeDay(unittest.TestCase):
 
 
 class TestPlan(unittest.TestCase):
-	def test_only_repairable_days_are_planned(self):
+	def test_only_repairable_days_are_planned_with_their_own_punches(self):
 		days = [
-			{"employee": "E1", "date": "2026-09-07", "repair": "unskip", "punch_names": ["A", "B"]},
-			{"employee": "E2", "date": "2026-09-07", "repair": "", "punch_names": ["C"]},
-			{"employee": "E3", "date": "2026-09-08", "repair": "unlink", "punch_names": ["D"]},
+			{"employee": "E1", "date": "2026-09-07", "repair": "unskip", "repair_punches": ["B"]},
+			{"employee": "E2", "date": "2026-09-07", "repair": "", "repair_punches": []},
+			{"employee": "E3", "date": "2026-09-08", "repair": "unlink", "repair_punches": ["D"]},
 		]
 		plan = plan_repairs(days)
-		self.assertEqual([(p["employee"], p["action"]) for p in plan], [("E1", "unskip"), ("E3", "unlink")])
+		self.assertEqual(
+			[(p["employee"], p["action"], p["punches"]) for p in plan],
+			[("E1", "unskip", ["B"]), ("E3", "unlink", ["D"])],
+		)
+
+
+class TestCollectWindow(unittest.TestCase):
+	"""The punch window runs one day past To Date (a post-midnight OUT); a day
+	outside the window has no attendance rows fetched and must never be judged
+	— or every next-day punch would read as "linked to a missing row" and the
+	repair would clear links to live rows."""
+
+	def _get_all(self, doctype, **kwargs):
+		if doctype == "Employee Checkin":
+			return [
+				frappe._dict(
+					name="X",
+					employee="HR-EMP-00012",
+					employee_name="Nabil",
+					time=datetime(2026, 9, 8, 9, 0),
+					log_type="IN",
+					shift="10AM-7PM",
+					shift_start=datetime(2026, 9, 8, 10, 0),
+					shift_actual_end=datetime(2026, 9, 8, 20, 0),
+					attendance="HR-ATT-2026-00099",
+					skip_auto_attendance=0,
+					offshift=0,
+					remote_approval_status=None,
+					synced_from_instance=None,
+				)
+			]
+		return []
+
+	def test_a_punch_the_day_after_to_date_is_not_judged(self):
+		from unittest.mock import patch
+
+		with patch.object(frappe, "get_all", side_effect=self._get_all):
+			days = attendance_day_audit.collect("2026-09-01", "2026-09-07")["days"]
+		self.assertEqual(days, [])
+		self.assertEqual(plan_repairs(days), [])
 
 
 if __name__ == "__main__":

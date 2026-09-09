@@ -46,6 +46,7 @@ frappe.query_reports["Attendance Day Audit"] = {
 
 	onload(report) {
 		// Server side is System Manager only; dry run first, then an explicit confirm.
+		if (!frappe.user.has_role("System Manager")) return;
 		report.page.add_inner_button(__("Repair Skip Stamps and Dead Links"), () =>
 			repair(report)
 		);
