@@ -128,3 +128,42 @@ Call sites / importers of what changed, with verdicts:
   here — part of the historical repair that needs Nabil's word.
 - Mirrored rows (synced_from_instance) — not-affected by the third lookup
   (excluded by `base`); they still block until released by the repair.
+
+# family.md — a sync pull overwrote punches staff made on this site (9 Sep, live)
+
+CLASS: ONE NAME, TWO RECORDS. The mirror keys rows on the SOURCE's document
+name and Employee Checkin numbers itself identically on both sites
+(`EMP-CKIN-.MM.-.YYYY.-.######`, independent counters). `plan_cross_instance_write`
+let a source take any UNSTAMPED existing row ("first writer") — but an
+unstamped Employee Checkin on this site IS the first writer: a staff punch.
+`_write_row` then `db.set_value`d employee/time/log_type over it (owner and
+creation untouched: `_UNMIRRORED_FIELDS`) and stamped it, and the hourly job
+excludes stamped punches, so the real employee's day went Absent / Half Day and
+the punch "vanished" from their history. Contiguous low numbers go first, which
+is why the earliest September days (4 Sep) are the ones missing.
+
+Changed: hrms/sync/runner.py — `IDENTITY_FIELDS` (Employee Checkin: employee,
+time, log_type; Attendance: employee, attendance_date), `_identity_of`,
+`plan_cross_instance_write(existing_stamp, instance, existing_identity,
+incoming_identity)`: unstamped + different identity => refused ("contested").
+
+Call sites / importers, with verdicts:
+- runner._write_row — same-root, fixed here (reads the identities for an
+  unstamped existing row of an IDENTITY_FIELDS doctype; outcome "contested").
+- runner.sync_doctype "contested" accounting (l.1318/1396) — not-affected: the
+  outcome already exists and is counted; the reason now names both records.
+- hrms/sync/purge.py release_instance — not-affected — a released row is the
+  SAME record under the same name, identities match, the source reclaims it
+  (test_a_released_row_is_reclaimed_when_it_is_the_same_record pins this).
+- hrms/sync/diagnose.py, hrms/sync/preflight.py, hrms/sync/parity.py,
+  hrms/utils/readiness.py, hrms/utils/naming_series_repair.py, hrms/setup.py,
+  patches add_sync_provenance_fields / repair_mirrored_naming_series — not-affected:
+  they import constants or advance_series_past; none calls the decision.
+- hrms/sync/cutover.py hold-back (ade4e3903) — same-root by effect: after
+  cutover the two doctypes are not pulled at all; this fix covers the pull that
+  happens BEFORE cutover and any doctype added to IDENTITY_FIELDS later.
+- ShiftType hourly job / sweeper (`synced_from_instance is not set`) — not-affected:
+  they read the stamp; with no overwrite there is nothing stamped to exclude.
+Recovery of rows already overwritten: hrms/sync/checkin_recovery.py (separate slice).
+Regression: hrms/sync/test_contested_rows.py (collision refused; same record reclaimed;
+own-row correction still allowed; _write_row wired to IDENTITY_FIELDS).

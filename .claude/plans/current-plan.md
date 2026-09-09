@@ -251,3 +251,29 @@ MOCKUP: NOT NEEDED (one status line above the existing verdict block in the
 Approval: Nabil, 9 Sep 2026 chat ("we need to re ensure user are well informed
    to enable their location ... the wording must display actual permission ...
    no tiny gaps people can abuse").
+
+## Addendum 9 Sep 2026 (afternoon) — missing check-ins: cause, guard, recovery
+Tier: risky. Nabil, chat: "WE MUST RECOVER ALL MISSING EMPLOYEE CHECK IN AND FIX
+THIS MESS AT ONCE ... CRITICAL RECOVERY PLAN ... TOTAL DEEP AUDIT".
+1. `fix(sync)` a pull never overwrites a row this site wrote under a colliding
+   name: IDENTITY_FIELDS + identity-aware plan_cross_instance_write; outcome
+   "contested", both records named in the Error Log.
+   EXPECTED OUTPUT: a source punch numbered like a local punch is refused and
+   counted; the local punch, its owner and its attendance stay exactly as they were.
+2. `feat(sync)` hrms/sync/checkin_recovery.py: classify every Employee Checkin
+   (local / mirrored / overwritten) from owner, creation and the sync-run windows;
+   plan recovered punches (true employee from owner→Employee.user_id, true time
+   from creation in the attendance timezone, log type from the linked Remote
+   Checkin Request or IN/OUT alternation); `recover_overwritten_checkins`
+   (System Manager, dry_run=1 by default) inserts NEW unstamped punches with
+   device_id "recovered:<name>"; never edits or deletes an existing row.
+3. `feat(reports)` "Checkin Provenance Audit" script report (HR Manager, System
+   Manager): the classification per row with the planned recovery and the day's
+   attendance; button "Recover Overwritten Check-ins" = dry run table, then an
+   explicit confirm before anything is written. Nabil's click is the word for
+   the data change; nothing runs on deploy.
+FLOW: deploy → open report (Overwritten) → read the plan → Recover → hourly job
+   re-marks the days from the recovered punches (fcb604535 / 2b01825d2 rebuild
+   Absent / Half Day automation rows; mirrored Attendance rows still need the
+   release patch, separate word).
+MOCKUP: NOT NEEDED (standard script report + one inner button).

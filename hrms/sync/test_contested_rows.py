@@ -64,6 +64,16 @@ def _pure_decision():
 	return namespace["plan_cross_instance_write"]
 
 
+def _identity_fields(tree) -> set:
+	"""Keys of the module-level IDENTITY_FIELDS dict, read from the AST."""
+	for node in tree.body:
+		if isinstance(node, ast.Assign) and any(
+			isinstance(t, ast.Name) and t.id == "IDENTITY_FIELDS" for t in node.targets
+		):
+			return {k.value for k in node.value.keys if isinstance(k, ast.Constant)}
+	return set()
+
+
 class TestTheDecision(unittest.TestCase):
 	def setUp(self):
 		self.plan = _pure_decision()
@@ -83,16 +93,54 @@ class TestTheDecision(unittest.TestCase):
 		self.assertIn("Nasty-Live", reason)
 		self.assertIn("Nasty-Dev", reason)
 
-	def test_a_hub_owned_row_is_not_claimed_by_a_source(self):
-		"""An unstamped row was written HERE. A source overwriting it would take
-		a record that no source has, which is the same silent loss in reverse.
+	def test_a_released_row_is_reclaimed_when_it_is_the_same_record(self):
+		"""`release_instance` clears a stamp so the real source can take the row
+		back on its next pull. The row is the same record under the same name, so
+		the identities match and the first writer takes it.
 
 		Empty string as well as None: `_narrow_to_local_schema` can hand back a
 		blank for a column that exists but was never populated, and a blank stamp
 		is not a claim."""
+		same = {"employee": "HR-EMP-00012", "time": "2026-09-04 09:02:11", "log_type": "IN"}
 		for blank in (None, ""):
-			allowed, _ = self.plan(existing_stamp=blank, instance_name="Nasty-Dev")
-			self.assertTrue(allowed, f"a {blank!r} stamp should not block the first writer")
+			allowed, _ = self.plan(
+				existing_stamp=blank,
+				instance_name="Nasty-Live",
+				existing_identity=dict(same),
+				incoming_identity=dict(same),
+			)
+			self.assertTrue(allowed, f"a {blank!r} stamp on the same record should not block the source")
+
+	def test_a_row_this_site_wrote_is_never_overwritten_by_a_name_collision(self):
+		"""4 September 2026, verifica-live: staff punched here, the source issued
+		its own EMP-CKIN-09-2026-0000NN numbers for other people's punches, and a
+		pull found the hub's row "already existing" under that name. The old rule
+		let the source take any unstamped row, so employee/time/log_type were
+		replaced and the real punch vanished from attendance. Same name, different
+		record: refuse, name both, lose nothing."""
+		hub_row = {"employee": "HR-EMP-00012", "time": "2026-09-04 09:02:11", "log_type": "IN"}
+		source_row = {"employee": "HR-EMP-00301", "time": "2026-09-04 08:41:05", "log_type": "IN"}
+		allowed, reason = self.plan(
+			existing_stamp=None,
+			instance_name="Nasty-Live",
+			existing_identity=hub_row,
+			incoming_identity=source_row,
+		)
+		self.assertFalse(allowed)
+		self.assertIn("HR-EMP-00012", reason)
+		self.assertIn("HR-EMP-00301", reason)
+		self.assertIn("Nasty-Live", reason)
+
+	def test_a_source_may_still_correct_its_own_row(self):
+		"""Identity only guards UNSTAMPED rows. A source re-sending a row it owns
+		with a corrected time is the ordinary incremental update."""
+		allowed, _ = self.plan(
+			existing_stamp="Nasty-Live",
+			instance_name="Nasty-Live",
+			existing_identity={"employee": "HR-EMP-00012", "time": "2026-09-04 09:02:11", "log_type": "IN"},
+			incoming_identity={"employee": "HR-EMP-00012", "time": "2026-09-04 09:05:00", "log_type": "IN"},
+		)
+		self.assertTrue(allowed)
 
 
 class TestItIsWired(unittest.TestCase):
@@ -121,6 +169,15 @@ class TestItIsWired(unittest.TestCase):
 
 	def test_the_row_writer_consults_it(self):
 		self.assertIn("plan_cross_instance_write", self._calls_within("_write_row"))
+
+	def test_the_row_writer_compares_identities(self):
+		"""A decision that is never handed the identities can never refuse a
+		collision. `_write_row` must read IDENTITY_FIELDS for the existing row."""
+		fn = next(n for n in ast.walk(self.tree) if isinstance(n, ast.FunctionDef) and n.name == "_write_row")
+		names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+		self.assertIn("IDENTITY_FIELDS", names)
+		self.assertIn("Employee Checkin", _identity_fields(self.tree))
+		self.assertIn("Attendance", _identity_fields(self.tree))
 
 	def test_the_refusal_is_a_distinct_outcome(self):
 		"""Folding it into "skipped" would hide it. A create-only master that

@@ -297,3 +297,6 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:58:21Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
 - 2026-09-09T05:07:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-09T05:07:15Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-09T05:11:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+2026-09-09T05:11Z REPAIR: 781096bb3 swallowed get_start_and_end_dates + get_marked_attendance_dates_between (would have broken every hourly run); reviewer caught it before deploy; restored in 19d602aea. NEVER DEPLOY 781096bb3 alone. Deploy set = nz-glass HEAD.
+- 2026-09-09T07:06Z REPAIR: cause of vanished punches found in code — runner._write_row let a source overwrite an UNSTAMPED local Employee Checkin sharing its autoname (owner/creation kept, content replaced, stamped; job then ignores it). Guard: IDENTITY_FIELDS + identity-aware plan_cross_instance_write (test_contested_rows red→green). Recovery module + report next.

@@ -895,7 +895,29 @@ def advance_series_past(doctype: str, names) -> dict:
 		return {}
 
 
-def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool, str]:
+#: What makes a row THIS record, for the doctypes this site also creates under
+#: the same numbering the source uses. Employee Checkin autonames
+#: `EMP-CKIN-.MM.-.YYYY.-.######` on both sides from independent counters, so a
+#: source punch and a hub punch can share a name while being two different
+#: events. Same for the hourly job's Attendance. Everything else is either a
+#: master (create-only, never overwritten) or numbered only on the source.
+IDENTITY_FIELDS = {
+	"Employee Checkin": ("employee", "time", "log_type"),
+	"Attendance": ("employee", "attendance_date"),
+}
+
+
+def _identity_of(values: dict | None) -> dict | None:
+	"""Second-precision strings, so a DB datetime and the JSON the source sent
+	compare as the same value. None stays None (no identity to compare)."""
+	if values is None:
+		return None
+	return {key: re.sub(r"\.\d+$", "", str(value or "")) for key, value in values.items()}
+
+
+def plan_cross_instance_write(
+	existing_stamp, instance_name: str, existing_identity=None, incoming_identity=None
+) -> tuple[bool, str]:
 	"""May `instance_name` write a row already stamped by someone else? Pure.
 
 	First writer keeps the row. This exists because the mirror keys rows on the
@@ -920,7 +942,19 @@ def plan_cross_instance_write(existing_stamp, instance_name: str) -> tuple[bool,
 	which is right, and picking silently is how all three failures above
 	happened. A refusal costs one unregistered instance and loses nothing.
 	"""
-	if not existing_stamp or existing_stamp == instance_name:
+	if not existing_stamp:
+		# Unstamped means written HERE — a punch, the hourly job, HR — or a row
+		# whose stamp `release_instance` cleared so the source can take it back.
+		# The identities tell the two apart: the same record may be reclaimed,
+		# a different record under the same name is a numbering collision and
+		# overwriting it is how every 4 September 2026 punch on this site vanished.
+		if existing_identity and incoming_identity and existing_identity != incoming_identity:
+			return False, (
+				f"name collision: this site holds a different record under this name "
+				f"({existing_identity}); {instance_name} sends {incoming_identity}. Left untouched."
+			)
+		return True, ""
+	if existing_stamp == instance_name:
 		return True, ""
 	return False, (
 		f"already mirrored from {existing_stamp}; {instance_name} claims the same name. "
@@ -1009,13 +1043,21 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 
 	if frappe.db.exists(doctype, remote_name):
 		# Checked only for STAMPED doctypes: the create-only masters returned
-		# above never reach here, and everything that does carries a stamp by
-		# definition. An unstamped row at this point was written on the hub, and
-		# `plan_cross_instance_write` lets the first writer take it.
+		# above never reach here. An unstamped row at this point was written on
+		# the hub (or released back to it); for the doctypes this site numbers
+		# itself the identities decide whether it is the same record or a
+		# collision — see IDENTITY_FIELDS and plan_cross_instance_write.
 		if doctype in STAMPED_DOCTYPES:
+			existing_stamp = frappe.db.get_value(doctype, remote_name, PROVENANCE_FIELD)
+			existing_identity = incoming_identity = None
+			identity = IDENTITY_FIELDS.get(doctype)
+			if identity and not existing_stamp:
+				existing_identity = _identity_of(
+					frappe.db.get_value(doctype, remote_name, identity, as_dict=True) or {}
+				)
+				incoming_identity = _identity_of({field: payload.get(field) for field in identity})
 			allowed, why = plan_cross_instance_write(
-				frappe.db.get_value(doctype, remote_name, PROVENANCE_FIELD),
-				payload.get(PROVENANCE_FIELD),
+				existing_stamp, payload.get(PROVENANCE_FIELD), existing_identity, incoming_identity
 			)
 			if not allowed:
 				_log().error("[sync] %s %s refused: %s", doctype, remote_name, why)
