@@ -1278,11 +1278,38 @@ def get_expense_claim_summary(employee: str | None = None) -> dict:
 	return summary
 
 
+def configured_expense_claim_types(types: list, account_rows: list, company: str | None) -> list:
+	"""Only the types an employee of `company` can actually save a claim with.
+
+	`ExpenseClaim.set_expense_account` throws "Set the default account for the
+	Expense Claim Type" when the type has no `Expense Claim Account` row for
+	the claim's company — after the employee has filled the whole form. A type
+	HR has not configured for this company is therefore not offered at all.
+	With no company known (no Employee record) every type is offered, so HR
+	testing from Desk still sees the list. Pure.
+	"""
+	if not company:
+		return list(types)
+	configured = {row.get("parent") for row in account_rows if row.get("company") == company}
+	offered = [t for t in types if t.get("name") in configured]
+	left_out = [t.get("name") for t in types if t.get("name") not in configured]
+	if left_out:
+		logger.warning(
+			"[expense] %d Expense Claim Type(s) have no default account for %s and are not offered: %s",
+			len(left_out),
+			company,
+			", ".join(left_out),
+		)
+	return offered
+
+
 @frappe.whitelist()
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
-
-	return (frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description)).run(as_dict=True)
+	types = (frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description)).run(as_dict=True)
+	own = get_employee_info(fields=("company",))
+	accounts = frappe.get_all("Expense Claim Account", fields=["parent", "company"], limit_page_length=0)
+	return configured_expense_claim_types(types, accounts, own.get("company") if own else None)
 
 
 @frappe.whitelist()

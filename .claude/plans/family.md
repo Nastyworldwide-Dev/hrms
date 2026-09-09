@@ -167,3 +167,23 @@ Call sites / importers, with verdicts:
 Recovery of rows already overwritten: hrms/sync/checkin_recovery.py (separate slice).
 Regression: hrms/sync/test_contested_rows.py (collision refused; same record reclaimed;
 own-row correction still allowed; _write_row wired to IDENTITY_FIELDS).
+
+# family.md — an Expense Claim Type with no account for the company is a trap (9 Sep, live)
+
+CLASS: A PICKER OFFERS WHAT SAVE WILL REFUSE. `get_expense_claim_types` returned
+every type; `ExpenseClaim.set_expense_account` refuses a type with no Expense
+Claim Account row for the claim's company, after the employee has filled the
+whole form. The list must be the set save accepts.
+
+Changed: hrms/api/__init__.py — `configured_expense_claim_types` (pure) +
+`get_expense_claim_types` filters by the caller's own company; no company
+(HR from Desk) => every type.
+
+Call sites / importers, with verdicts:
+- frontend/src/data/claims.js claimTypesResource → ExpensesTable.vue expense_type
+  documentList — same-root, fixed here (the only consumer).
+- hrms/hr/doctype/expense_claim/expense_claim.py get_expense_claim_account —
+  not-affected: the save-time rule this list now mirrors.
+- Desk Expense Claim Type form — not-affected: Desk shows every type by design;
+  the GL pull (bb07bd2b1) is how HR configures the missing rows.
+Regression: hrms/tests/test_expense_claim_types_offered.py.
