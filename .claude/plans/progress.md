@@ -219,3 +219,6 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T02:41:53Z PLAN: approved 4cc8131a5e9b — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
 - 2026-09-09T02:42:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-09-09T02:42:00Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 2 extra test file(s) ⟂f40f7b7fcc28
+- 2026-09-09T02:42:03Z COMMIT: 1feffe5a7 fix(push): re-register with the relay when the stored credentials are another site's → review+cross-app dispatched
+- 2026-09-09T02:46:40Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
+- 2026-09-09T02:46:40Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c

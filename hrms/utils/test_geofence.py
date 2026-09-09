@@ -286,5 +286,46 @@ class TestEffectiveShiftLocation(unittest.TestCase):
 			self.assertIsNone(effective_shift_location("EMP-1", assignment))
 
 
+class TestFreeLocation(unittest.TestCase):
+	"""A Shift Location marked free has no fence to measure against.
+
+	Sales staff and anyone without a fixed workplace are linked to such a
+	location. Their punches record wherever they are and never go to an
+	approver — in strict mode too, because strictness describes a fence and
+	a free location has none.
+	"""
+
+	def test_free_location_allows_far_outside_even_when_strict(self):
+		self.assertIsNone(
+			evaluate_geofence(
+				True, has_shift_location=True, radius_m=100, distance_m=250_000, free_location=True
+			)
+		)
+
+	def test_free_location_allows_with_no_coordinates_even_when_strict(self):
+		# HR need not enter coordinates or a radius for a free location.
+		self.assertIsNone(
+			evaluate_geofence(True, has_shift_location=True, radius_m=0, distance_m=None, free_location=True)
+		)
+
+	def test_free_location_allows_an_unplaceable_reading(self):
+		self.assertIsNone(
+			evaluate_geofence(
+				False,
+				has_shift_location=True,
+				radius_m=100,
+				distance_m=10,
+				accuracy_m=5000,
+				free_location=True,
+			)
+		)
+
+	def test_flag_defaults_off_and_changes_nothing(self):
+		strict_outside = evaluate_geofence(True, has_shift_location=True, radius_m=100, distance_m=500)
+		self.assertEqual(strict_outside[0], "throw")
+		lenient_outside = evaluate_geofence(False, has_shift_location=True, radius_m=100, distance_m=500)
+		self.assertEqual(lenient_outside[0], "require_remote")
+
+
 if __name__ == "__main__":
 	unittest.main()

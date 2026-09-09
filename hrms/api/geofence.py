@@ -155,6 +155,7 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 		radius_m=radius_m,
 		distance_m=distance_m,
 		accuracy_m=accuracy,
+		free_location=bool(loc and getattr(loc, "is_free_location", 0)),
 	)
 	if decision is None:
 		return _ok()
@@ -204,7 +205,7 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 		frappe.db.get_value(
 			"Shift Location",
 			shift_loc_name,
-			["name", "location_name", "latitude", "longitude", "checkin_radius"],
+			["name", "location_name", "latitude", "longitude", "checkin_radius", "is_free_location"],
 			as_dict=True,
 		)
 		if shift_loc_name
@@ -229,6 +230,9 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 		"latitude": coordinates[0] if coordinates else None,
 		"longitude": coordinates[1] if coordinates else None,
 		"checkin_radius": int(loc.checkin_radius or 0),
+		# A free location (sales staff, no fixed workplace) has no fence: the
+		# PWA says so instead of "No check-in area set" or drawing a circle.
+		"free_location": bool(loc.is_free_location),
 		# r can be None now: the location resolved from Employee.shift_location
 		# with no active assignment. The map still draws the pin; there is no
 		# shift to name and no strict flag to honour, so lenient defaults apply.

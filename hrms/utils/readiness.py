@@ -281,7 +281,12 @@ def collect_facts() -> dict:
 
 	settings = frappe.get_single("HR Settings")
 	shifts = frappe.get_all("Shift Type", fields=["name", "enable_auto_attendance"])
-	locations = frappe.get_all("Shift Location", fields=["name", "latitude", "longitude", "checkin_radius"])
+	locations = frappe.get_all(
+		"Shift Location", fields=["name", "latitude", "longitude", "checkin_radius", "is_free_location"]
+	)
+	# A free location (sales staff, no fixed workplace) has no fence by design;
+	# missing coordinates or radius there is not a finding.
+	fenced = [loc for loc in locations if not loc.is_free_location]
 
 	# The check-in blocker as a STANDING check, not a one-off patch. A restore
 	# from backup or a hand-run import reopens it exactly the same way.
@@ -368,8 +373,8 @@ def collect_facts() -> dict:
 		"auto_attendance_shifts": sum(1 for s in shifts if s.enable_auto_attendance),
 		"total_shifts": len(shifts),
 		"shift_locations": len(locations),
-		"locations_without_coords": [loc.name for loc in locations if not (loc.latitude and loc.longitude)],
-		"locations_without_radius": [loc.name for loc in locations if not loc.checkin_radius],
+		"locations_without_coords": [loc.name for loc in fenced if not (loc.latitude and loc.longitude)],
+		"locations_without_radius": [loc.name for loc in fenced if not loc.checkin_radius],
 		"orphan_requests": frappe.db.count(
 			"Remote Checkin Request", {"status": "Pending", "approver": ("is", "not set")}
 		)

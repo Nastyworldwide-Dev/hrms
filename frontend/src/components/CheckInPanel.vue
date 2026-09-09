@@ -648,6 +648,7 @@ const fencePreview = computed(() => {
 		radius: loc?.checkin_radius,
 		distance: distanceToShift.value,
 		accuracy: accuracyM.value,
+		freeLocation: !!loc?.free_location,
 	})
 })
 
@@ -682,6 +683,18 @@ const locationVerdict = computed(() => {
 	}
 
 	const loc = activeShiftLocation.value
+	if (loc?.free_location) {
+		// Sales staff and anyone without a fixed workplace. HR marked the Shift
+		// Location free, so there is no fence: the punch is recorded wherever
+		// they are and never goes to an approver. Said before any distance maths
+		// so a blank coordinate set is never reported as "needs setup".
+		return {
+			tone: "ok",
+			title: __("Free location"),
+			detail: __("You're not tied to one workplace. Your check-in is recorded wherever you are, with no approval needed."),
+		}
+	}
+
 	if (!loc || loc.has_shift_location === false) {
 		// Not an error and not the employee's problem, so it is stated plainly
 		// rather than warned about. Silence here was its own bug: the panel

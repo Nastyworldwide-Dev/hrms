@@ -118,19 +118,27 @@ def evaluate_geofence(
 	radius_m: int,
 	distance_m: float | None,
 	accuracy_m: float | None = None,
+	free_location: bool = False,
 ) -> GeofenceDecision:
 	"""Decide how to handle a check-in given its geofence inputs."""
 	# Returns None to allow, or a (action, context) tuple where action is
 	# "throw" (raise CheckinRadiusExceededError) or "require_remote" (flag
 	# the doc so the after_insert hook spawns a Remote Checkin Request).
 	logger.info(
-		"[geofence] evaluate strict=%s has_loc=%s radius=%r distance=%r accuracy=%r",
+		"[geofence] evaluate strict=%s has_loc=%s radius=%r distance=%r accuracy=%r free=%s",
 		strict,
 		has_shift_location,
 		radius_m,
 		distance_m,
 		accuracy_m,
+		free_location,
 	)
+	if free_location:
+		# Sales staff and anyone without a fixed workplace: the Shift Location
+		# is marked free, so there is no fence to measure against. Strict or
+		# lenient describes a fence; a free location has none. Recorded as-is.
+		logger.info("[geofence] free location — recorded wherever the employee is, no approval")
+		return None
 	if not has_shift_location:
 		if strict:
 			logger.info("[geofence] strict throw — no shift location on assignment")
@@ -285,7 +293,7 @@ def resolve_location(shift_location: str | None):
 	return frappe.db.get_value(
 		"Shift Location",
 		shift_location,
-		["checkin_radius", "latitude", "longitude"],
+		["checkin_radius", "latitude", "longitude", "is_free_location"],
 		as_dict=True,
 	)
 

@@ -187,5 +187,41 @@ class TestGeofenceRejectLogDurability(unittest.TestCase):
 					isolated.rollback.assert_called_once()
 
 
+class TestFreeLocationOnInsert(unittest.TestCase):
+	"""A punch against a free Shift Location is recorded as-is, even strict."""
+
+	def _run(self, doc, **kw):
+		assignment = SimpleNamespace(shift_location="Field Sales", enable_strict_geofence=1)
+		location = SimpleNamespace(
+			is_free_location=1, checkin_radius=kw.get("radius", 0), latitude=None, longitude=None
+		)
+		patches = [
+			patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True),
+			patch(f"{MODULE}.resolve_assignment", return_value=assignment),
+			patch(f"{MODULE}.resolve_location", return_value=location),
+			patch(f"{MODULE}.get_distance_between_coordinates", return_value=250_000.0),
+			patch(f"{MODULE}._record_geofence_reject"),
+		]
+		for p in patches:
+			p.start()
+		try:
+			mod.CustomEmployeeCheckin.validate_distance_from_shift_location(doc)
+		finally:
+			for p in patches:
+				p.stop()
+
+	def test_strict_free_location_far_away_records_without_approval(self):
+		doc = _FakeCheckin(flags=SimpleNamespace(location_accuracy_m=30))
+		self._run(doc)
+		self.assertEqual(doc.requires_remote_approval, 0)
+		self.assertIsNone(doc.remote_approval_status)
+
+	def test_the_flag_reaches_the_decision(self):
+		doc = _FakeCheckin()
+		with patch(f"{MODULE}.evaluate_geofence", return_value=None) as spy:
+			self._run(doc)
+		self.assertTrue(spy.call_args.kwargs.get("free_location"))
+
+
 if __name__ == "__main__":
 	unittest.main()

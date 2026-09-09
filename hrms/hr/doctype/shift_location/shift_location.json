@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "location_name",
+  "is_free_location",
   "checkin_radius",
   "timezone",
   "column_break_dlgd",
@@ -26,6 +27,14 @@
    "label": "Location Name",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "description": "For sales staff and anyone without a fixed workplace. Check-ins and check-outs from anywhere are recorded straight away and never sent to the approver. Coordinates and radius are ignored.",
+   "fieldname": "is_free_location",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Free Location (no fixed workplace)"
   },
   {
    "description": "Radius within which check-in is allowed (in meters)",
@@ -86,7 +95,7 @@
    "link_fieldname": "shift_location"
   }
  ],
- "modified": "2026-08-03 09:14:37.482915",
+ "modified": "2026-09-09 03:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Location",

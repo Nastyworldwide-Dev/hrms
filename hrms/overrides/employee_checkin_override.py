@@ -196,17 +196,26 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# behind it to supply one. Absent means unknown, which buys nothing.
 		accuracy_m = getattr(self.flags, "location_accuracy_m", None)
 
+		free_location = bool(row and getattr(row, "is_free_location", 0))
 		decision = evaluate_geofence(
 			strict=strict,
 			has_shift_location=bool(shift_loc_name and row),
 			radius_m=radius_m,
 			distance_m=distance,
 			accuracy_m=accuracy_m,
+			free_location=free_location,
 		)
 		if decision is None:
 			# Lenient silent-allow paths land here. Spell out which one fired
 			# so the FC logs can pin down "why didn't the remote dialog appear?".
-			if not shift_loc_name:
+			if free_location:
+				logger.info(
+					"[employee_checkin] free location employee=%s shift=%s location=%s — recorded, no approval",
+					self.employee,
+					self.shift,
+					shift_loc_name,
+				)
+			elif not shift_loc_name:
 				logger.info(
 					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — no shift_location on active Shift Assignment",
 					self.employee,

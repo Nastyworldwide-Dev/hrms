@@ -14,6 +14,7 @@ const {
 	formatAccuracy,
 	geolocationBlockedReason,
 	preferFreshFix,
+	previewGeofence,
 	shouldReplaceFix,
 } = await import("../geolocation.js")
 
@@ -104,4 +105,25 @@ test("a reading only slightly newer does not override sharpest-wins", () => {
 test("no freshness override before a first fix exists", () => {
 	assert.equal(preferFreshFix(null, 45000, 30000), false)
 	assert.equal(preferFreshFix(0, null, 30000), false)
+})
+
+test("a free location allows anywhere, strict or not, with or without coordinates", () => {
+	for (const strict of [true, false]) {
+		const far = previewGeofence({
+			strict,
+			hasLocation: true,
+			radius: 100,
+			distance: 250000,
+			accuracy: 30,
+			freeLocation: true,
+		})
+		assert.deepEqual(far, { action: "allow", reason: "free_location" })
+		const bare = previewGeofence({ strict, hasLocation: true, radius: 0, freeLocation: true })
+		assert.deepEqual(bare, { action: "allow", reason: "free_location" })
+	}
+})
+
+test("without the free flag a strict far punch still throws", () => {
+	const r = previewGeofence({ strict: true, hasLocation: true, radius: 100, distance: 5000, accuracy: 30 })
+	assert.equal(r.action, "throw")
 })
