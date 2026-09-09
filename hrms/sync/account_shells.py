@@ -72,9 +72,11 @@ SHELL_FIELDS = (
 	"account_currency",
 )
 
-#: Hard ceiling on one run's creations (SEC-02): a chart is a few hundred rows;
-#: thousands means a misconfigured or compromised remote.
-MAX_ACCOUNTS_PER_RUN = 500
+#: Hard ceiling on one run's creations (SEC-02). Measured on Nasty-Live on
+#: 9 Sep 2026: 4,629 Expense + Asset accounts over 15 companies, ~300 each —
+#: a real group chart, refused by the first ceiling of 500. Tens of thousands
+#: would mean a misconfigured or compromised remote.
+MAX_ACCOUNTS_PER_RUN = 10_000
 
 
 def _ensure_unfenced_operator():

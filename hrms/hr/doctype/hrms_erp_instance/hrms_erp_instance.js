@@ -789,9 +789,18 @@ function create_account_shells(frm) {
 function accounts_summary_html(plan) {
 	const esc = frappe.utils.escape_html;
 	const parts = [];
-	const missing = (plan.to_create || []).map((e) => e.name);
-	if (missing.length)
-		parts.push(`<p>${__("Missing here")}: <b>${missing.map(esc).join(", ")}</b></p>`);
+	const missing = plan.to_create || [];
+	if (missing.length) {
+		// A group chart is thousands of rows: a per-company count reads, a
+		// comma list does not.
+		const perCompany = {};
+		for (const e of missing) perCompany[e.company] = (perCompany[e.company] || 0) + 1;
+		parts.push(
+			`<p>${__("Missing here")}: <b>${missing.length}</b></p><ul>${Object.entries(perCompany)
+				.map(([company, n]) => `<li>${esc(company)}: ${n}</li>`)
+				.join("")}</ul>`
+		);
+	}
 	if ((plan.parent_fallback || []).length)
 		parts.push(
 			`<p>${__(

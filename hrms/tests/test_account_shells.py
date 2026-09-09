@@ -153,6 +153,10 @@ class TestEndpointHardening(unittest.TestCase):
 		as a duplicate every time."""
 		self.assertIn("get_autoname_with_number", self._names_in("_plan_for_instance"))
 
+	def test_the_cap_admits_a_fifteen_company_group_chart(self):
+		"""4,629 accounts on the real source; a cap of 500 refused HR's first run."""
+		self.assertGreaterEqual(shells.MAX_ACCOUNTS_PER_RUN, 5000)
+
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))
 
