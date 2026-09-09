@@ -98,3 +98,4 @@ hrms.patches.v16_0.add_ot_request_reservation_index #2026-09-08 two approvals in
 hrms.patches.v16_0.gate_hr_desktop_icons_and_payroll_reports #2026-09-08 every employee saw all nine HR launcher tiles; two payroll deduction reports had zero Has Role rows on live sites
 hrms.patches.v16_0.grant_hr_read_on_pwa_notification #2026-09-08 HR accounts without the Employee role saw an unread badge over an empty notification feed
 hrms.patches.v16_0.seed_expense_claim_types_from_hr_mapping #2026-09-09 HR's eleven claim types with their GL account per company, so nobody keys 165 rows and no type is a trap in the PWA
+hrms.patches.v16_0.reset_attendance_list_sort_preferences #2026-09-10 a saved per-user sort outranks the doctype default, so HR would keep the creation-ascending check-in list forever
