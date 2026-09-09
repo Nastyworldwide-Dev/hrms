@@ -187,3 +187,26 @@ Call sites / importers, with verdicts:
 - Desk Expense Claim Type form — not-affected: Desk shows every type by design;
   the GL pull (bb07bd2b1) is how HR configures the missing rows.
 Regression: hrms/tests/test_expense_claim_types_offered.py.
+
+# family.md — expense claim dies at approval with "Account is required" (9 Sep, live)
+
+CLASS: A DEFAULT THE DESK FORM FILLS THAT THE SERVER NEVER DID. The Desk form
+copies Company.default_expense_claim_payable_account into payable_account; the
+PWA relied on the same company default, and a company shell has none (ERPNext
+only sets default_payable_account). The draft saved, the approver's submit
+posted GL and threw "Account is required".
+
+Changed: hrms/hr/doctype/expense_claim/expense_claim.py — pure
+`expense_claim_payable_account(defaults)` (expense-claim payable, else
+ordinary payable) and `ExpenseClaim.set_payable_account()` first in validate;
+hrms/api/__init__.py get_company_cost_center_and_expense_account returns the
+same resolution for the PWA prefill.
+
+Call sites / importers, with verdicts:
+- PWA Form.vue companyDetails → payable_account — same-root, fixed here (prefill).
+- ExpenseClaim.validate (Desk + PWA + approval decide→submit) — same-root, fixed here.
+- get_expense_claim (from Employee Advance, expense_claim.py ~684) — not-affected:
+  it sets payable_account explicitly from the same company field; validate now
+  fills the gap when that is empty too.
+- make_gl_entries / get_gl_entries — not-affected: consumer of the field.
+Regression: hrms/tests/test_expense_claim_payable_default.py.

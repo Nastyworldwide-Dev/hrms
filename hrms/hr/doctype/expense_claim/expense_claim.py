@@ -57,6 +57,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def validate(self):
 		validate_active_employee(self.employee)
 		set_employee_name(self)
+		self.set_payable_account()
 		self.validate_staff_approver()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
@@ -104,6 +105,30 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			self.notify_update()
 		else:
 			self.status = status
+
+	def set_payable_account(self):
+		"""Default the payable account the way the Desk form does, server-side.
+
+		The PWA form leaves it to company defaults, and a company shell
+		(hrms/sync/company_shells.py) has no `default_expense_claim_payable_account`
+		— ERPNext only ever sets `default_payable_account`. Without this the claim
+		saves as a draft and dies at approval with "Account is required" (GL
+		posting), which is what HR saw on 9 September 2026.
+		"""
+		if self.payable_account or self.is_paid or not self.company:
+			return
+		self.payable_account = expense_claim_payable_account(
+			frappe.get_cached_value(
+				"Company",
+				self.company,
+				["default_expense_claim_payable_account", "default_payable_account"],
+				as_dict=True,
+			)
+		)
+		if self.payable_account:
+			frappe.logger("hrms").info(
+				"[expense_claim] %s: payable account defaulted to %s", self.name, self.payable_account
+			)
 
 	def validate_company_and_department(self):
 		if self.department:
@@ -605,6 +630,13 @@ def get_outstanding_amount_for_claim(claim):
 	)
 
 	return flt(outstanding_amt, precision)
+
+
+def expense_claim_payable_account(company_defaults) -> str | None:
+	"""The account an expense claim owes the employee through: the company's
+	expense-claim payable if set, else its ordinary payable (Creditors). Pure."""
+	defaults = company_defaults or {}
+	return defaults.get("default_expense_claim_payable_account") or defaults.get("default_payable_account")
 
 
 @frappe.whitelist()

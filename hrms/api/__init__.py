@@ -1391,9 +1391,20 @@ def get_company_cost_center_and_expense_account(company: str) -> dict:
 	own = get_employee_info(fields=("company",))
 	if not (own and own.get("company") == company):
 		frappe.has_permission("Company", "read", company, throw=True)
-	return frappe.db.get_value(
-		"Company", company, ["cost_center", "default_expense_claim_payable_account"], as_dict=True
+	defaults = frappe.db.get_value(
+		"Company",
+		company,
+		["cost_center", "default_expense_claim_payable_account", "default_payable_account"],
+		as_dict=True,
 	)
+	# A company shell has no expense-claim payable; the claim's own validate
+	# falls back to the ordinary payable the same way (expense_claim.py).
+	from hrms.hr.doctype.expense_claim.expense_claim import expense_claim_payable_account
+
+	return {
+		"cost_center": defaults.get("cost_center") if defaults else None,
+		"default_expense_claim_payable_account": expense_claim_payable_account(defaults),
+	}
 
 
 @frappe.whitelist()
