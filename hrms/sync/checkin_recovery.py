@@ -108,19 +108,35 @@ def true_punch_time(creation, system_tz: str, attendance_tz: str) -> datetime:
 	return moment.replace(tzinfo=ZoneInfo(system_tz)).astimezone(ZoneInfo(attendance_tz)).replace(tzinfo=None)
 
 
-def infer_log_types(punches: list) -> list:
-	"""Fill missing log types by alternation for ONE employee's ONE day.
+#: A recovered punch this close to a KNOWN punch of the day is the same event —
+#: HR keyed a replacement at a round time, or the employee tapped twice — and
+#: takes that punch's type rather than flipping the alternation.
+NEIGHBOUR_TOLERANCE = timedelta(minutes=90)
 
-	Each punch is {time, log_type|None, source}. Known types anchor the walk: the
-	punch after an IN is expected to be an OUT. A known type from a Remote Checkin
-	Request is "request", any other known one "known", a filled one "inferred".
+
+def infer_log_types(punches: list) -> list:
+	"""Fill missing log types for ONE employee's ONE day.
+
+	Each punch is {time, log_type|None, source}. A missing type is taken from a
+	known punch within NEIGHBOUR_TOLERANCE first ("neighbour": the same event,
+	re-punched or patched by HR), otherwise by alternation anchored on the known
+	types ("inferred"): the punch after an IN is expected to be an OUT. A known
+	type from a Remote Checkin Request is "request", any other known one "known".
 	"""
 	ordered = sorted(punches, key=lambda p: get_datetime(p["time"]))
-	expected = "IN"
+	known = [p for p in ordered if p.get("log_type")]
 	for punch in ordered:
 		if punch.get("log_type"):
 			punch["confidence"] = "request" if punch.get("source") == "request" else "known"
-		else:
+			continue
+		moment = get_datetime(punch["time"])
+		near = [k for k in known if abs(get_datetime(k["time"]) - moment) <= NEIGHBOUR_TOLERANCE]
+		if near:
+			nearest = min(near, key=lambda k: abs(get_datetime(k["time"]) - moment))
+			punch["log_type"], punch["confidence"] = nearest["log_type"], "neighbour"
+	expected = "IN"
+	for punch in ordered:
+		if not punch.get("log_type"):
 			punch["log_type"] = expected
 			punch["confidence"] = "inferred"
 		expected = "OUT" if punch["log_type"] == "IN" else "IN"

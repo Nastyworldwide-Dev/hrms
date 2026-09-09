@@ -138,6 +138,19 @@ class TestInferLogTypes(unittest.TestCase):
 		self.assertEqual(out[1]["log_type"], "OUT")
 		self.assertEqual(out[0]["confidence"], "known")
 
+	def test_a_punch_next_to_hrs_manual_one_takes_its_type(self):
+		"""HR keyed an OUT at 18:00 sharp to patch the day; the real OUT at 18:07
+		comes back. Alternation alone would have called it an IN."""
+		out = infer_log_types(
+			[
+				{"time": datetime(2026, 9, 4, 8, 41), "log_type": None, "source": "recovered"},
+				{"time": datetime(2026, 9, 4, 18, 0), "log_type": "OUT", "source": "local"},
+				{"time": datetime(2026, 9, 4, 18, 7), "log_type": None, "source": "recovered"},
+			]
+		)
+		self.assertEqual([p["log_type"] for p in out], ["IN", "OUT", "OUT"])
+		self.assertEqual(out[2]["confidence"], "neighbour")
+
 	def test_a_request_type_wins_and_is_labelled(self):
 		out = infer_log_types([{"time": datetime(2026, 9, 4, 9, 0), "log_type": "OUT", "source": "request"}])
 		self.assertEqual(out[0]["log_type"], "OUT")
