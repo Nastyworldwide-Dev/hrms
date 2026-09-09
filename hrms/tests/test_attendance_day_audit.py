@@ -258,6 +258,62 @@ class TestJobReadability(unittest.TestCase):
 		body = body[: body.index("\ndef ", 1)]
 		self.assertIn("if not (shift.process_attendance_after and shift.last_sync_of_checkin):", body)
 
+	def test_the_endpoint_locks_only_when_it_is_about_to_write(self):
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index("def repair_attendance_days") :]
+		self.assertIn("for_update=not cint(dry_run)", body)
+
+
+class TestWindowGuard(unittest.TestCase):
+	"""The assignment query is bounded to the report window, so the per-day
+	count is only trustworthy for days inside it. Drop the guard and a day
+	outside the window reads as one assignment - falsely repairable."""
+
+	def _get_all(self, doctype, **kwargs):
+		if doctype == "Employee Checkin":
+			if kwargs.get("pluck") == "device_id":
+				return []
+			return [
+				frappe._dict(
+					name="A",
+					employee="HR-EMP-00014",
+					employee_name="Siti",
+					time=datetime(2026, 9, 8, 9, 0),
+					log_type="IN",
+					shift="9AM-6PM",
+					shift_start=datetime(2026, 9, 8, 9, 0),
+					shift_actual_end=datetime(2026, 9, 8, 19, 0),
+					attendance=None,
+					skip_auto_attendance=0,
+					offshift=0,
+					remote_approval_status=None,
+					synced_from_instance=None,
+				)
+			]
+		if doctype == "Shift Assignment":
+			self.assignment_filters = kwargs.get("filters")
+			return []
+		return []
+
+	def test_the_assignment_query_is_bounded_to_the_window(self):
+		from unittest.mock import patch
+
+		self.assignment_filters = None
+		with patch.object(frappe, "get_all", side_effect=self._get_all):
+			attendance_day_audit.collect("2026-09-01", "2026-09-07")
+		self.assertIn("start_date", self.assignment_filters or {})
+
+	def test_a_day_outside_the_window_is_never_judged(self):
+		from unittest.mock import patch
+
+		with patch.object(frappe, "get_all", side_effect=self._get_all):
+			days = attendance_day_audit.collect("2026-09-01", "2026-09-07")["days"]
+		self.assertEqual(days, [])
+
+
+class TestDryRunLocks(unittest.TestCase):
+	"""Behaviour, not source text: what the guard actually receives."""
+
 	def test_the_dry_run_takes_no_write_locks(self):
 		"""_repair_financial_dependency reads Salary Slip FOR UPDATE. A preview
 		holding those locks would block payroll while somebody reads a screen.
@@ -279,11 +335,6 @@ class TestJobReadability(unittest.TestCase):
 			attendance_day_audit._financially_locked(days, for_update=False)
 			attendance_day_audit._financially_locked(days, for_update=True)
 		self.assertEqual(recorded, [False, True])
-
-	def test_the_endpoint_locks_only_when_it_is_about_to_write(self):
-		src = pathlib.Path(attendance_day_audit.__file__).read_text()
-		body = src[src.index("def repair_attendance_days") :]
-		self.assertIn("for_update=not cint(dry_run)", body)
 
 
 class TestRepairOrder(unittest.TestCase):

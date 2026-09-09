@@ -60,7 +60,8 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None, active_
 	`active_assignments`: how many Shift Assignments still cover this date for
 	this employee. More than one is the cause of a split day, and no repair
 	here can settle it — HR has to end the superseded assignment.
-	`repair` ∈ {"", "unskip", "unlink"}: what the repair would do to the punches.
+	`repair` ∈ {"", "unskip", "unlink", "refetch-shift"}: what the repair would
+	do to the punches.
 	"""
 	skip_reasons = skip_reasons or {}
 	live = _live(attendance_rows)
@@ -359,6 +360,10 @@ def collect(from_date, to_date, employee=None) -> dict:
 		# rows fetched and would read as "linked to a missing row".
 		if not (start <= day <= end):
 			continue
+		# Load-bearing with the window guard above: the assignment query is
+		# bounded to [start, end], so a day outside that window would be counted
+		# against an incomplete set and could read as one assignment when it has
+		# two — i.e. falsely repairable.
 		covering = sum(
 			1
 			for a in assignments
