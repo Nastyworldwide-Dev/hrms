@@ -245,3 +245,11 @@
 - 2026-09-09T10:07:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-09T10:07:53Z COMMIT: 1b5beb6a5 refactor(sync): the GL pull creates its accounts in the background and notifies the operator → review dispatched
 - 2026-09-09T10:08Z REPAIR: GL pull refused live (4,629 accounts > cap 500) → cap 10,000 (9938fc1a5); reviewer: NestedSet inserts would time out a web request → creation moved to a long-queue job with Desk notification (1b5beb6a5). Ticket: refactor hrms_erp_instance.js dialog builders into one module (hotspot, 8 fixes/90d).
+- 2026-09-09T10:08:27Z COMMIT: b86de91dc chore(plans): GL pull ceiling and background job → review dispatched
+- 2026-09-09T10:15:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T10:15:42Z COMMIT: 44d3a08ef refactor(sync): the GL pull job reports honestly — a running job, a timeout, counts from the loop → review dispatched
+- 2026-09-09T10:18:31Z PLAN: approved 1e2c00f64ede — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-09T10:18:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-09T10:18:42Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T10:18:47Z COMMIT: 8fa1c097e feat(expense): HR's eleven claim types wired to their GL account in every company → review dispatched
+- 2026-09-09T10:19Z REPAIR: HR's claim-type→GL sheet carried into hrms/utils/expense_claim_type_mapping.py (11 types, applied on deploy + after every GL pull); GL job reporting fixed (running job, timeout, per-company counts) 44d3a08ef; mapping 8fa1c097e. Slash in a type name verified OK on fresh.local.
