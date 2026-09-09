@@ -82,9 +82,10 @@ Call sites / importers of what changed, with verdicts:
   receives the planned list, so the run record shows what was really pulled.
 - hrms/sync/runner.py _write_row — not-affected: still updates mirrored rows for
   the doctypes the source owns (Employee, leave chain); that is its job.
-- hrms/sync/parity.py / diagnose.py — not-affected: read-only counts; Attendance
-  and Employee Checkin parity will now read as "hub-owned" after cutover, which
-  test_hub_owned_parity already models.
+- hrms/sync/parity.py _scoped_parity_report — same-root, fixed in the follow-up:
+  it graded every MIRRORED_DOCTYPE, so the two held-back doctypes would have read
+  as a widening mismatch forever; it now plans its doctypes through the same
+  rule and reports `held_back`. diagnose.py — not-affected: read-only counts.
 - hrms/sync/write_block.py _instance_unlocked — not-affected: read, not changed.
 - Historical rows already overwritten (August) — NOT repaired here: needs Nabil's
   word (release the mirrored rows for dates after cutover where local punches

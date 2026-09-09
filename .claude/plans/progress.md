@@ -278,3 +278,6 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:20:58Z PUSH: nz-glass @ ed8e16d09
 - 2026-09-09T04:23:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-09T04:23:06Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640
+- 2026-09-09T04:23:08Z COMMIT: 57efe03c4 feat(attendance): a Shift Location pinned from a Chinese map is stored where phones report it → review dispatched
+- 2026-09-09T04:23:33Z PUSH: nz-glass @ 57efe03c4
+- 2026-09-09T04:24:01Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

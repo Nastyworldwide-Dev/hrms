@@ -50,5 +50,24 @@ class TestTheRunnerAsksBeforePulling(unittest.TestCase):
 		self.assertIn("_instance_unlocked", calls, "the rule must read the real cutover switch")
 
 
+class TestParityGradesOnlyWhatIsStillPulled(unittest.TestCase):
+	def test_scoped_parity_report_plans_its_doctypes_through_the_rule(self):
+		src = (HRMS / "sync/parity.py").read_text()
+		tree = ast.parse(src)
+		fn = next(
+			n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_scoped_parity_report"
+		)
+		calls = {
+			getattr(n.func, "id", None) or getattr(n.func, "attr", None)
+			for n in ast.walk(fn)
+			if isinstance(n, ast.Call)
+		}
+		self.assertIn("plan_pull_doctypes", calls, "parity must not grade doctypes the pull holds back")
+		self.assertIn("_instance_unlocked", calls)
+		self.assertIn(
+			'report["held_back"]', ast.get_source_segment(src, fn), "the report says what was held back"
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()
