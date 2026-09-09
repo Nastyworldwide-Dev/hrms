@@ -27,10 +27,10 @@ MAPPING = {
 	"Gym & Wellness Subsidy (GYM&WS)": "Employee Benefits",
 	"Lodging / Hotel (LODGING/HOTEL)": "Travel Expenses",
 	"Meals & Entertainment (M&E)": "Employee Meals & Entertainment",
-	"Mileage (CAR) (MILEAGE CAR)": "Fuel/Mileage expenses",
-	"Mileage (Motorcycle) (MILEAGE MOTORCYCLE)": "Fuel/Mileage expenses",
+	"Mileage (CAR) (MILEAGE CAR)": "Fuel/Mileage Expenses",
+	"Mileage (Motorcycle) (MILEAGE MOTORCYCLE)": "Fuel/Mileage Expenses",
 	"Parking & Toll (PARKING&TOLL)": "Parking & Toll",
-	"Petrol (PETROL)": "Fuel/Mileage expenses",
+	"Petrol (PETROL)": "Fuel/Mileage Expenses",
 	"Subsidy Parking Claim (S-PARKING CLAIM)": "Subsidiary Parking",
 }
 
@@ -42,11 +42,14 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 	`existing_rows` is a set of (type, company) already configured.
 	"""
 	rows, missing = {}, []
+	# Case-insensitive: HR's sheet says "Fuel/Mileage expenses", the ERP's chart
+	# "Fuel/Mileage Expenses"; a capital must not leave a type without its account.
+	folded = {(name.casefold(), company): account for (name, company), account in account_lookup.items()}
 	for claim_type, gl_name in mapping.items():
 		for company in companies:
 			if (claim_type, company) in existing_rows:
 				continue
-			account = account_lookup.get((gl_name, company))
+			account = folded.get((gl_name.casefold(), company))
 			if account:
 				rows.setdefault(claim_type, []).append((company, account))
 			else:
@@ -57,6 +60,14 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 		len(missing),
 	)
 	return {"rows": rows, "missing": missing}
+
+
+def _spellings(mapping: dict) -> list:
+	"""Every capitalisation the chart might use for the mapped names."""
+	names = set()
+	for gl_name in mapping.values():
+		names.update({gl_name, gl_name.lower(), gl_name.upper(), gl_name.title()})
+	return sorted(names)
 
 
 def _served_companies() -> list:
@@ -74,7 +85,7 @@ def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
 		for a in frappe.get_all(
 			"Account",
 			filters={
-				"account_name": ("in", sorted(set(mapping.values()))),
+				"account_name": ("in", _spellings(mapping)),
 				"company": ("in", companies),
 				"is_group": 0,
 			},

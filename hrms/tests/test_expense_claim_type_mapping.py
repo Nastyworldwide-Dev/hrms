@@ -21,13 +21,14 @@ HRMS = pathlib.Path(__file__).resolve().parent.parent
 class TestMapping(unittest.TestCase):
 	def test_hrs_sheet_is_carried_verbatim(self):
 		self.assertEqual(len(MAPPING), 11)
-		self.assertEqual(MAPPING["Petrol (PETROL)"], "Fuel/Mileage expenses")
+		self.assertEqual(MAPPING["Petrol (PETROL)"], "Fuel/Mileage Expenses")
 		self.assertEqual(MAPPING["Subsidy Parking Claim (S-PARKING CLAIM)"], "Subsidiary Parking")
 
 	def test_rows_are_added_only_where_the_account_exists_and_no_row_does(self):
 		mapping = {"Petrol (PETROL)": "Fuel/Mileage expenses", "Car Rental (CAR RENTAL)": "Travel Expenses"}
+		# the chart spells it with a capital E; the match is case-insensitive
 		lookup = {
-			("Fuel/Mileage expenses", "Nasty Worldwide"): "5100 - Fuel/Mileage expenses - NW",
+			("Fuel/Mileage Expenses", "Nasty Worldwide"): "5100 - Fuel/Mileage expenses - NW",
 			("Travel Expenses", "Nasty Worldwide"): "Travel Expenses - NW",
 			("Travel Expenses", "DS Distribution"): "Travel Expenses - DS",
 		}
@@ -40,6 +41,12 @@ class TestMapping(unittest.TestCase):
 			plan["rows"]["Car Rental (CAR RENTAL)"], [("DS Distribution", "Travel Expenses - DS")]
 		)
 		self.assertEqual(plan["missing"], [("Petrol (PETROL)", "DS Distribution", "Fuel/Mileage expenses")])
+
+	def test_a_ledger_parent_on_the_hub_falls_back_to_the_root_group(self):
+		"""Live: "Parent account Travel Expenses - DSDS can not be a ledger" — the
+		shell's Standard chart has a ledger by the group's name."""
+		src = (HRMS / "sync" / "account_shells.py").read_text()
+		self.assertIn('if not frappe.db.get_value("Account", parent, "is_group"):', src)
 
 	def test_the_gl_pull_job_wires_the_types_when_it_ends(self):
 		tree = ast.parse((HRMS / "sync" / "account_shells.py").read_text())

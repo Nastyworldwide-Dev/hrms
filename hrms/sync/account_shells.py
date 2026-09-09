@@ -148,9 +148,9 @@ def wanted_account_names() -> list:
 	"""The GL account names the expense claim types are mapped to. The pull
 	brings these and nothing else; a parent group the hub lacks is replaced by
 	the company's root group, which is all an expense posting needs."""
-	from hrms.utils.expense_claim_type_mapping import MAPPING
+	from hrms.utils.expense_claim_type_mapping import MAPPING, _spellings
 
-	return sorted(set(MAPPING.values()))
+	return _spellings(MAPPING)
 
 
 def _plan_for_instance(instance_name: str) -> dict:
@@ -317,7 +317,10 @@ def _create_one(entry: dict, result: dict) -> None:
 			return  # a killed earlier run already made it
 		parent = entry["parent_account"]
 		fell_back = None
-		if not frappe.db.exists("Account", parent):
+		# Missing here, OR here as a LEDGER under the same name (the shell's
+		# Standard chart has a ledger "Travel Expenses"; the ERP has a group):
+		# ERPNext refuses a ledger parent, so the root group stands in.
+		if not frappe.db.get_value("Account", parent, "is_group"):
 			parent = _fallback_parent(entry["company"], entry.get("root_type") or "Expense")
 			if not parent:
 				raise frappe.ValidationError(
