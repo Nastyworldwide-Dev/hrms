@@ -58,6 +58,26 @@ def _company_of_logs(logs) -> str | None:
 		return None
 
 
+def counts_for_attendance(row) -> bool:
+	"""A punch that is evidence for attendance STATUS and hours.
+
+	Wider than overtime's `_is_eligible_checkin` on purpose. A punch still
+	waiting for its approver is provisional presence, not absence: the day
+	reads Present now and is corrected if the approver rejects. Applying the
+	overtime rule here (8 Sep, ae0028f30) auto-marked every employee whose
+	check-in was out of radius as Absent and split First/Last spans into Half
+	Days while the request sat in the approver's queue. A REJECTED punch
+	(rejection sets skip_auto_attendance), an off-shift punch and a skipped
+	one are not evidence. Overtime keeps the strict rule: unverified minutes
+	are never paid.
+	"""
+	return (
+		not cint(row.get("skip_auto_attendance") or 0)
+		and not cint(row.get("offshift") or 0)
+		and row.get("remote_approval_status") != "Rejected"
+	)
+
+
 class ShiftType(Document):
 	def validate(self):
 		start = get_time(self.start_time)
@@ -280,7 +300,8 @@ class ShiftType(Document):
 			if not _pair_sessions(single_shift_logs, {self.name: self.determine_check_in_and_check_out}):
 				logger.info("[shift_type] no eligible holiday pair; attendance not created")
 				return None
-		eligible_logs = [row for row in single_shift_logs if _is_eligible_checkin(row)]
+		# Attendance evidence, not overtime evidence: a pending punch counts.
+		eligible_logs = [row for row in single_shift_logs if counts_for_attendance(row)]
 		if not eligible_logs:
 			return None
 		if not self.should_mark_attendance(employee, attendance_date):
@@ -389,7 +410,7 @@ class ShiftType(Document):
 		# first-IN/last-OUT span, even with the First/Last working-hours policy.
 		pairing = self.determine_check_in_and_check_out
 		policy = self.working_hours_calculation_based_on
-		segments = [list(group) for eligible, group in groupby(logs, key=_is_eligible_checkin) if eligible]
+		segments = [list(group) for eligible, group in groupby(logs, key=counts_for_attendance) if eligible]
 		parts = [calculate_working_hours(segment, pairing, policy) for segment in segments]
 		total_working_hours = sum(part[0] for part in parts)
 		in_time = next((part[1] for part in parts if part[1]), None)

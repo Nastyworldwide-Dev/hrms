@@ -63,6 +63,14 @@ shift_class.body = [
 		"mark_attendance_for_shift_logs",
 	}
 ]
+# Module-level helpers the class body calls by name. `counts_for_attendance` is
+# the attendance evidence rule (a pending punch counts; rejected/off-shift/skipped
+# do not) — wider than overtime's `_is_eligible_checkin` on purpose.
+shift_helpers = [
+	node
+	for node in shift_tree.body
+	if isinstance(node, ast.FunctionDef) and node.name in {"counts_for_attendance"}
+]
 checkin_tree = ast.parse((BASE / "hr/doctype/employee_checkin/employee_checkin.py").read_text())
 calcs = [
 	node
@@ -89,7 +97,7 @@ SHIFT = {
 }
 exec(
 	compile(
-		ast.Module(body=[*calcs, shift_class], type_ignores=[]),
+		ast.Module(body=[*calcs, *shift_helpers, shift_class], type_ignores=[]),
 		str(BASE / "hr/doctype/shift_type/shift_type.py"),
 		"exec",
 	),
@@ -255,11 +263,13 @@ class TestNonworkingHours(unittest.TestCase):
 		marker.assert_not_called()
 
 	def test_scheduler_retains_invalid_boundary_and_links_only_eligible_logs(self):
+		# A PENDING punch is deliberately absent from this list since 9 Sep: it is
+		# provisional presence for attendance (see test_pending_punch_attendance)
+		# while staying out of overtime pairing. Treating it as invalid here
+		# auto-marked every out-of-radius employee Absent on the live site.
 		for invalid in (
 			{"skip_auto_attendance": 1},
-			{"remote_approval_status": "Pending"},
 			{"remote_approval_status": "Rejected"},
-			{"requires_remote_approval": 1},
 			{"offshift": 1},
 		):
 			with self.subTest(invalid=invalid):

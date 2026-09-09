@@ -245,3 +245,5 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T03:16:08Z COMMIT: 34e8555d9 chore(plan): say the prototype file is untracked; declare its page globals for lint → review dispatched
 - 2026-09-09T03:37:59Z PLAN: approved 884bd9128883 — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
 - 2026-09-09T03:40:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 12 file(s) ⟂59cca907033f
+- 2026-09-09T03:40:59Z COMMIT: 3e01a73ab feat(attendance): every punch keeps the location evidence the fence decided on → review dispatched
+- 2026-09-09T03:50:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
