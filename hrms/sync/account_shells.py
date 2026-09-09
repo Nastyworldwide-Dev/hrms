@@ -18,8 +18,9 @@ HOW, AND WHY THIS WAY
 Same idiom as the company shells, for the same reasons:
 
 * the source's Account list is READ through `RemoteInstanceClient`, read-only
-  by construction — only the Expense and Asset root types, the two the
-  Expense Claim Type picker offers;
+  by construction — only the accounts HR's expense claim types are mapped to
+  (hrms/utils/expense_claim_type_mapping.py), in the Expense and Asset root
+  types, never the whole group chart;
 * every missing account is created through the NORMAL full-validation
   insert, no `ignore_validate` / `ignore_mandatory` / `ignore_links`
   (`test_account_shells` asserts the flags never come back);
@@ -143,6 +144,15 @@ def plan_account_shells(remote_rows, existing_names, registered_companies) -> di
 	return plan
 
 
+def wanted_account_names() -> list:
+	"""The GL account names the expense claim types are mapped to. The pull
+	brings these and nothing else; a parent group the hub lacks is replaced by
+	the company's root group, which is all an expense posting needs."""
+	from hrms.utils.expense_claim_type_mapping import MAPPING
+
+	return sorted(set(MAPPING.values()))
+
+
 def _plan_for_instance(instance_name: str) -> dict:
 	from hrms.sync.client import RemoteInstanceClient
 
@@ -154,7 +164,14 @@ def _plan_for_instance(instance_name: str) -> dict:
 	client = RemoteInstanceClient(instance_name)
 	rows = client.get_list(
 		"Account",
-		filters={"company": ("in", companies), "root_type": ("in", list(ROOT_TYPES))},
+		filters={
+			"company": ("in", companies),
+			"root_type": ("in", list(ROOT_TYPES)),
+			# Only the accounts HR's claim types point at — ~7 names per company,
+			# not the whole 4,600-row group chart. Widen wanted_account_names()
+			# when a claim type needs another account.
+			"account_name": ("in", wanted_account_names()),
+		},
 		fields=list(REMOTE_ACCOUNT_FIELDS),
 		order_by="lft asc",
 	)

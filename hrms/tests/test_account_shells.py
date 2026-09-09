@@ -166,9 +166,7 @@ class TestEndpointHardening(unittest.TestCase):
 		self.assertIn("_notify_operator", self._names_in("run_account_shells_job"))
 
 	def test_the_job_skips_what_an_earlier_killed_run_already_made(self):
-		body = ast.get_source_segment(
-			MODULE_PATH.read_text(encoding="utf-8"), self.functions["_create_one"]
-		)
+		body = ast.get_source_segment(MODULE_PATH.read_text(encoding="utf-8"), self.functions["_create_one"])
 		self.assertIn('frappe.db.exists("Account", entry["name"])', body)
 
 	def test_a_running_job_is_reported_not_claimed_queued(self):
@@ -189,6 +187,15 @@ class TestEndpointHardening(unittest.TestCase):
 		job = ast.get_source_segment(src, self.functions["run_account_shells_job"])
 		self.assertIn("timed_out=True", job)
 		self.assertIn("raise", job)
+
+	def test_the_pull_asks_only_for_the_mapped_account_names(self):
+		"""Nabil, 9 Sep: "this won't pull 4k plus in GL right? only the list I gave".
+		The remote filter carries the mapped names; the whole chart never comes."""
+		self.assertIn("wanted_account_names", self._names_in("_plan_for_instance"))
+		body = ast.get_source_segment(
+			MODULE_PATH.read_text(encoding="utf-8"), self.functions["_plan_for_instance"]
+		)
+		self.assertIn('"account_name": ("in", wanted_account_names())', body)
 
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))

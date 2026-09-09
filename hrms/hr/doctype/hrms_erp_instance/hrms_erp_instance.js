@@ -763,7 +763,7 @@ function create_account_shells(frm) {
 			if (!count) message = __("Nothing was created.");
 			else if (result.queued)
 				message = __(
-					"Creating {0} account(s) in the background. You will get a notification (bell icon) with the counts when it finishes — a few minutes for a full group chart. Pressing again later only creates what is still missing.",
+					"Creating {0} account(s) in the background. You will get a notification (bell icon) with the counts when it finishes — usually under a minute. Pressing again later only creates what is still missing.",
 					[count]
 				);
 			else
