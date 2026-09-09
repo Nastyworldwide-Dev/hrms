@@ -214,3 +214,8 @@
 - 2026-09-09T07:59Z REPAIR: claims — root cause of 'cannot pull GL from ERP': hub companies are shells with the Standard chart, Account never crosses; Expense Claim Type needs an account per company or every PWA claim save throws. Built account_shells (Pull → GL Accounts), regrouped instance buttons into Pull/Checks/Danger, PWA offers only configured types.
 - 2026-09-09T07:59:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-09T07:59:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T08:06:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-09T08:06:04Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T08:08:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T08:13:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-09T08:13:25Z EVIDENCE: 3 works — blast radius green: 10 dependent(s), 9 extra test file(s) ⟂f62d0a5f62e7
