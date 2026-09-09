@@ -10,6 +10,7 @@ defer to the upstream `fetch_shift` implementation.
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -62,32 +63,25 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		if len(active_assignments) <= 1:
 			return super().fetch_shift()
 
-		best = None
-		best_delta = None
+		from hrms.utils.shift_resolution import choose_shift
+
+		# Windows anchored on the punch date AND the day before: a night shift's
+		# OUT at 03:30 belongs to the shift that started yesterday.
+		candidates = []
 		for assignment in active_assignments:
-			timings = (
-				get_actual_start_end_datetime_of_shift(
-					self.employee, log_time, True, for_shift=assignment["shift_type"]
-				)
-				if _supports_for_shift()
-				else _resolve_timings_fallback(self.employee, log_time, assignment)
-			)
-
-			if not timings or not timings.get("start_datetime"):
-				continue
-
-			shift_start = get_datetime(timings["start_datetime"])
-			delta = abs((shift_start - log_time).total_seconds())
-			if best_delta is None or delta < best_delta:
-				best = timings
-				best_delta = delta
+			for anchor in (log_time, log_time - timedelta(days=1)):
+				timings = _resolve_timings_fallback(self.employee, anchor, assignment)
+				if timings and timings.get("actual_start") and timings.get("actual_end"):
+					candidates.append(timings)
+		best = choose_shift(log_time, self.log_type, candidates, self._open_in())
 
 		if not best:
 			logger.info(
-				"[employee_checkin] No resolvable shift among %d assignments for %s @ %s",
+				"[employee_checkin] %s @ %s falls in none of %d assigned shift windows for %s: off-shift",
+				self.log_type,
+				log_time,
 				len(active_assignments),
 				self.employee,
-				log_time,
 			)
 			self.shift = None
 			self.offshift = 1
@@ -104,12 +98,34 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			self.shift_end = best.get("end_datetime")
 
 		logger.info(
-			"[employee_checkin] Picked closest shift=%s for %s @ %s (delta=%.0fs)",
+			"[employee_checkin] shift=%s for %s %s @ %s (%d assignments)",
 			shift_type_name,
 			self.employee,
+			self.log_type,
 			log_time,
-			best_delta or 0,
+			len(active_assignments),
 		)
+
+	def _open_in(self) -> dict | None:
+		"""The employee's latest IN with no OUT after it — the session an OUT
+		closes. Its shift is the OUT's shift, whatever window the clock says."""
+		from hrms.utils.shift_resolution import SESSION_WINDOW
+
+		log_time = get_datetime(self.time)
+		rows = frappe.get_all(
+			"Employee Checkin",
+			filters={
+				"employee": self.employee,
+				"time": ("between", [log_time - SESSION_WINDOW, log_time]),
+				"name": ("!=", self.name),
+			},
+			fields=["shift", "time", "log_type"],
+			order_by="time desc",
+			limit_page_length=1,
+		)
+		if not rows or rows[0].log_type != "IN":
+			return None
+		return {"shift": rows[0].shift, "time": get_datetime(rows[0].time)}
 
 	def _is_manual_entry(self) -> bool:
 		"""A punch a person keys in for SOMEONE ELSE. The employee's own punch

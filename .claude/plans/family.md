@@ -321,3 +321,29 @@ Call sites / importers, with verdicts:
 - Attendance Day Audit judge_day — not-affected: reads auto_attendance; an HR row now
   reads "row-manual" with its punches linked.
 Regression: hrms/tests/test_hr_correction_ownership.py (14).
+
+# family.md — one day's IN and OUT under two shifts (10 Sep, live, HR-found)
+
+CLASS: A PUNCH ASSIGNED BY PROXIMITY, NOT MEMBERSHIP. With two Active assignments
+the override picked the shift whose START was nearest the punch; a shift change
+never ended the old open-ended assignment, so every OUT near the old shift's start
+went to the old shift. Consequences: Half Day from one punch, Absent under the old
+shift, Off-Shift/No Shift when neither window fitted, no overtime.
+
+Changed: hrms/utils/shift_resolution.py (choose_shift, superseded_assignments);
+hrms/overrides/employee_checkin_override.py fetch_shift (+_open_in);
+hrms/overrides/shift_assignment_hooks.py + hooks.py on_submit.
+
+Call sites / importers, with verdicts:
+- CustomEmployeeCheckin.fetch_shift (PWA punch, Desk add, bulk_fetch_shift,
+  recovery) — same-root, fixed here.
+- upstream fetch_shift for ≤1 assignment — not-affected: containment already.
+- ShiftRequest.on_submit → Shift Assignment.insert/submit — same-root by effect:
+  the on_submit hook ends the superseded assignment.
+- hrms/hr/shift_rules.py _create_assignment — same-root by effect (same hook);
+  its own _close_assignment stays.
+- ShiftType.get_assigned_employees (absent-marker population) — same-root by
+  effect: an ended assignment drops out of the old shift's population.
+- Attendance Day Audit shift-mismatch verdict — not-affected; a split-day verdict
+  is the next slice.
+Regression: hrms/tests/test_shift_resolution.py (11).

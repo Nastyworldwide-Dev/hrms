@@ -335,3 +335,21 @@ EXPECTED OUTPUT: after the GL pull, each of the 11 types has an account row for 
 company whose chart holds that GL; the PWA offers them; the notification says how many
 rows were wired and how many companies still lack the account.
 ASSUMPTION: type names are HR's labels verbatim, e.g. "Petrol (PETROL)".
+
+## Addendum 10 Sep 2026 — shift flip, GL ledger parent, Desk lists
+Tier: risky. Nabil, chat: "clock in follows correctly, but checkout? that glitch
+changes the shift… once HR assigned… it should follow that… off shift status…
+geofence outcome shows no shift… sorting issue".
+1. `fix(attendance)` hrms/utils/shift_resolution.py: an OUT closes the shift of its open
+   IN; otherwise the shift whose window contains the punch (IN nearest start, OUT
+   nearest end); otherwise off-shift, never the nearest start. Override uses it with
+   windows anchored on the punch date and the day before. New Shift Assignment on
+   submit ends the earlier open-ended assignments it supersedes (end_date, comment).
+2. `fix(sync)` GL pull: a parent present as a ledger falls back to the root group; the
+   claim-type mapping matches account names case-insensitively and uses the ERP's
+   spelling; the pull asks for every capitalisation.
+3. `chore(desk)` Employee Checkin sorts by Time desc and lists shift + attendance;
+   Attendance sorts by date desc and lists status, shift, in, out, hours.
+EXPECTED OUTPUT: after deploy + Fetch Shifts (or Day Audit repair) + one hourly run,
+Nabil's 3/4/7 Sep read Present; no new Off-Shift punches for employees on one shift
+change; GL pull creates the three failing accounts; HR lists read in day order.

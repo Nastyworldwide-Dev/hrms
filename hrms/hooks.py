@@ -443,6 +443,9 @@ doc_events = {
 	# rather than by editing a mirrored one — which is what keeps parity honest.
 	"Shift Assignment": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		# A new open-ended assignment ends the ones it supersedes, so one day's
+		# punches never split across an old shift and a new one.
+		"on_submit": "hrms.overrides.shift_assignment_hooks.close_superseded_assignments",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
