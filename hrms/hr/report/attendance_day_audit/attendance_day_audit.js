@@ -51,7 +51,7 @@ frappe.query_reports["Attendance Day Audit"] = {
 		// Server side is System Manager only; dry run first, then an explicit confirm.
 		if (!frappe.user.has_role("System Manager")) return;
 		report.page.add_inner_button(__("Repair Skip Stamps and Dead Links"), () =>
-			repair(report)
+			repair(report),
 		);
 	},
 };
@@ -76,23 +76,23 @@ function repair(report) {
 				.map(
 					(p) =>
 						`<tr><td>${esc(p.employee)}</td><td>${esc(p.date)}</td><td>${esc(
-							p.action
-						)}</td><td>${p.punches.length}</td></tr>`
+							p.action,
+						)}</td><td>${p.punches.length}</td></tr>`,
 				)
 				.join("");
 			frappe.msgprint({
 				title: __("Dry run: {0} employee-day(s)", [plan.length]),
 				message: `<table class="table table-bordered table-sm"><thead><tr><th>${__(
-					"Employee"
+					"Employee",
 				)}</th><th>${__("Date")}</th><th>${__("Action")}</th><th>${__(
-					"Punches"
+					"Punches",
 				)}</th></tr></thead><tbody>${rows}</tbody></table>`,
 				wide: true,
 			});
 			frappe.confirm(
 				__(
 					"Clear the old skip stamps / dead links on {0} day(s) and queue the hourly job now? Attendance rows themselves are not changed.",
-					[plan.length]
+					[plan.length],
 				),
 				() =>
 					frappe.call({
@@ -109,7 +109,7 @@ function repair(report) {
 							});
 							report.refresh();
 						},
-					})
+					}),
 			);
 		},
 	});

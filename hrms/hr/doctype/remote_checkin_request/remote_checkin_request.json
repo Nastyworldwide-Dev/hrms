@@ -64,7 +64,8 @@
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Checkin Time",
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "log_type",
@@ -195,7 +196,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-09 11:44:47.823961",
+ "modified": "2026-09-09 11:56:48.362320",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Remote Checkin Request",

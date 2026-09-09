@@ -5,12 +5,16 @@ frappe.listview_settings["Attendance"] = {
 	add_fields: ["status", "attendance_date", "shift", "auto_attendance", "working_hours"],
 
 	get_indicator: function (doc) {
+		// A row a person entered or corrected is theirs: the hourly job never
+		// touches it again (Attendance.claim_hr_ownership_on_amend). HR asked to
+		// see which days those are without opening each one.
+		const owner = doc.auto_attendance ? "" : " " + __("(HR)");
 		if (["Present", "Work From Home"].includes(doc.status)) {
-			return [__(doc.status), "green", "status,=," + doc.status];
+			return [__(doc.status) + owner, "green", "status,=," + doc.status];
 		} else if (["Absent", "On Leave"].includes(doc.status)) {
-			return [__(doc.status), "red", "status,=," + doc.status];
+			return [__(doc.status) + owner, "red", "status,=," + doc.status];
 		} else if (doc.status == "Half Day") {
-			return [__(doc.status), "orange", "status,=," + doc.status];
+			return [__(doc.status) + owner, "orange", "status,=," + doc.status];
 		}
 	},
 	onload: function (list_view) {
@@ -103,8 +107,8 @@ frappe.listview_settings["Attendance"] = {
 							frappe.msgprint(
 								__(
 									"Attendance from {0} to {1} has already been marked for the Employee {2}",
-									[data.from_date, data.to_date, data.employee]
-								)
+									[data.from_date, data.to_date, data.employee],
+								),
 							);
 						} else {
 							frappe.confirm(
@@ -119,7 +123,7 @@ frappe.listview_settings["Attendance"] = {
 											data: data,
 										},
 									});
-								}
+								},
 							);
 						}
 						dialog.hide();
@@ -183,7 +187,7 @@ frappe.listview_settings["Attendance"] = {
 					dialog.set_df_property(
 						"unmarked_days",
 						"options",
-						options.length > 0 ? options : []
+						options.length > 0 ? options : [],
 					);
 					dialog.no_unmarked_days_left = options.length === 0;
 				});

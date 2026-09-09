@@ -46,6 +46,22 @@ class TestFiltersAndSearch(unittest.TestCase):
 		self.assertIn("shift", d["search_fields"])
 
 
+class TestSortColumnsAreIndexed(unittest.TestCase):
+	"""Every list page filesorts on the sort column; an unindexed one scans."""
+
+	def test_the_three_sort_columns_carry_an_index(self):
+		for rel, field in (
+			("hr/doctype/employee_checkin/employee_checkin.json", "time"),
+			("hr/doctype/attendance/attendance.json", "attendance_date"),
+			("hr/doctype/remote_checkin_request/remote_checkin_request.json", "checkin_time"),
+		):
+			d = _doctype(rel)
+			with self.subTest(doctype=rel):
+				self.assertEqual(d["sort_field"], field)
+				column = next(f for f in d["fields"] if f["fieldname"] == field)
+				self.assertEqual(column.get("search_index"), 1)
+
+
 class TestIndicators(unittest.TestCase):
 	def test_a_checkin_says_whether_it_counted(self):
 		js = (HRMS / "hr/doctype/employee_checkin/employee_checkin_list.js").read_text()
