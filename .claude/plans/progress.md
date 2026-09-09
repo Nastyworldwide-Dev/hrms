@@ -253,3 +253,25 @@
 - 2026-09-09T10:18:42Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
 - 2026-09-09T10:18:47Z COMMIT: 8fa1c097e feat(expense): HR's eleven claim types wired to their GL account in every company → review dispatched
 - 2026-09-09T10:19Z REPAIR: HR's claim-type→GL sheet carried into hrms/utils/expense_claim_type_mapping.py (11 types, applied on deploy + after every GL pull); GL job reporting fixed (running job, timeout, per-company counts) 44d3a08ef; mapping 8fa1c097e. Slash in a type name verified OK on fresh.local.
+- 2026-09-09T10:19:26Z COMMIT: dd994af84 docs: handoff for the claim-type mapping and queued GL pull → review dispatched
+- 2026-09-09T10:21:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T10:21:41Z COMMIT: cfc137441 refactor(sync): the GL pull brings only the accounts HR's claim types point at → review dispatched
+- 2026-09-09T11:16:36Z COMMIT: c5ce6f99a docs(audit): shift flip, Half Day everywhere, GL pull failures, Desk sorting — causes and plan → review dispatched
+- 2026-09-09T11:40:38Z PLAN: approved 290b5479d0d3 — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-09T11:43:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-09T11:43:21Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-09T11:43:25Z COMMIT: 4727b4b63 fix(attendance): a punch belongs to the shift it was worked in, and a shift change ends the old one → review+cross-app dispatched
+- 2026-09-09T11:45:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-09-09T11:45:32Z COMMIT: 497e619e7 fix(desk): HR's attendance lists read in the order the day happened → review dispatched
+- 2026-09-09T11:47:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T11:47:17Z COMMIT: 5ff14adbb fix(desk): clear the saved sort so HR actually gets the new list order → review dispatched
+- 2026-09-09T11:48:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T11:48:20Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T11:48:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T11:48:37Z COMMIT: 7e66adaa5 fix(desk): drop the cached copy of the saved sort as well → review dispatched
+- 2026-09-09T11:51:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-09T11:51:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-09T11:51:22Z COMMIT: 7291940bf fix(attendance): the Day Audit finds the days whose punches were split across two shifts → review dispatched
+- 2026-09-09T11:52Z REPAIR: shift flip root cause (closest-START pick + superseded assignment never ended) → hrms/utils/shift_resolution.py + on_submit supersede hook (4727b4b63); Desk lists sorted by Time/Attendance Date with shift columns, filters and counted/not-counted indicators (497e619e7) + saved-sort reset patch incl. Redis (5ff14adbb, 7e66adaa5); Day Audit names split-shift days and re-resolves them (7291940bf). GL ledger-parent + spelling fix pending commit.
+- 2026-09-09T11:52:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T11:52:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

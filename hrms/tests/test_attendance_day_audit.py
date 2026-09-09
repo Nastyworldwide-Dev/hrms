@@ -145,6 +145,21 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["repair"], "unlink")
 		self.assertEqual(verdict["repair_punches"], ["B"])
 
+	def test_one_days_punches_under_two_shifts_are_named_and_refetched(self):
+		"""HR, 10 Sep: the IN stayed on the day shift, the OUT jumped to the
+		superseded night shift. Each shift's job saw one punch, so a full day
+		read Half Day."""
+		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
+		verdict = judge_day(punches, [_absent(status="Half Day")], SHIFT)
+		self.assertEqual(verdict["verdict"], "punches-split-across-shifts")
+		self.assertEqual(verdict["repair"], "refetch-shift")
+		self.assertEqual(verdict["repair_punches"], ["A", "B"])
+		self.assertIn("7PM-3:30AM", verdict["detail"])
+
+	def test_a_single_punch_under_one_shift_is_not_a_split(self):
+		verdict = judge_day([_punch("A", 10, "IN")], [_absent()], SHIFT)
+		self.assertNotEqual(verdict["verdict"], "punches-split-across-shifts")
+
 	def test_a_day_marked_from_all_its_punches_is_fine(self):
 		punches = [
 			_punch("A", 10, "IN", attendance="HR-ATT-2026-00070"),

@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   7 Sep attendance audit + HR corrections stay HR's (Desk, job, PWA aligned)
 status:   done (reviewed); pushed; deploy pending
-commit:   8fa1c097e on nz-glass (GL pull queued job + HR claim-type mapping; review running)
+commit:   7291940bf on nz-glass (shift flip, Desk lists, split-shift repair; reviews running)
 files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped instance buttons)
           hrms/api/__init__.py (types offered, payable prefill, status on OT lists, RL discovery)
           hrms/hr/doctype/expense_claim/expense_claim.py (payable default)

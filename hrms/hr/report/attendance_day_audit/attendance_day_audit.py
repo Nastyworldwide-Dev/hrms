@@ -25,6 +25,7 @@ VERDICT_LABELS = {
 	"unread-punches": "Unread punches — waiting for the hourly job",
 	"punches-skip-stamped": "Punches skip-stamped (old failure)",
 	"punches-linked-to-cancelled-row": "Punches linked to a cancelled row",
+	"punches-split-across-shifts": "One day's punches under two shifts",
 	"punches-mirrored": "Punches are mirrored rows",
 	"punches-rejected": "Punches rejected",
 	"punch-without-shift": "Punch resolved to no shift",

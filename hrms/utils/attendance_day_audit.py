@@ -104,6 +104,21 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 			"unskip" if repairable_skipped else "",
 			[p["name"] for p in repairable_skipped],
 		)
+	# One day's punches under two shifts: the shift flip HR found on 10 Sep
+	# (an OUT that jumped back to a superseded night shift). Each shift's job
+	# then sees a single punch, so the day reads Half Day or Absent although
+	# the row has a full IN and OUT. Re-resolving the shift and letting the
+	# job rebuild the day is the repair.
+	shifts_used = {p.get("shift") for p in local if p.get("shift")}
+	if len(shifts_used) > 1 and len(local) > 1:
+		return _verdict(
+			"punches-split-across-shifts",
+			"the day's punches sit under "
+			+ " and ".join(sorted(shifts_used))
+			+ "; each shift saw only part of the day",
+			"refetch-shift",
+			[p["name"] for p in local],
+		)
 	dead_link = [p for p in local if p.get("attendance") and (row is None or p["attendance"] != row["name"])]
 	dead_link = [
 		p
@@ -322,7 +337,7 @@ def plan_repairs(judged_days) -> list:
 	"""Which punches the repair would touch, and how. Pure."""
 	plan = []
 	for day in judged_days:
-		if day.get("repair") in ("unskip", "unlink") and day.get("repair_punches"):
+		if day.get("repair") in ("unskip", "unlink", "refetch-shift") and day.get("repair_punches"):
 			plan.append(
 				{
 					"employee": day["employee"],
@@ -347,7 +362,16 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 	touched = 0
 	for entry in plan:
 		for name in entry["punches"]:
-			if entry["action"] == "unskip":
+			if entry["action"] == "refetch-shift":
+				# Through the document, on purpose: fetch_shift IS the rule
+				# (hrms/utils/shift_resolution.py). The attendance link goes with
+				# it so the job re-reads the punch under its corrected shift.
+				punch = frappe.get_doc("Employee Checkin", name)
+				punch.attendance = None
+				punch.fetch_shift()
+				punch.flags.ignore_validate = True
+				punch.save()
+			elif entry["action"] == "unskip":
 				if not cint(frappe.db.get_value("Employee Checkin", name, "skip_auto_attendance")):
 					continue
 				frappe.db.set_value(
@@ -361,6 +385,8 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 					frappe.session.user,
 					_("skip stamp cleared")
 					if entry["action"] == "unskip"
+					else _("shift re-resolved")
+					if entry["action"] == "refetch-shift"
 					else _("link to a cancelled attendance cleared"),
 				),
 			)
