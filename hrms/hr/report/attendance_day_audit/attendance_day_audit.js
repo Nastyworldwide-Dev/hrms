@@ -31,6 +31,7 @@ frappe.query_reports["Attendance Day Audit"] = {
 				"shift-mismatch",
 				"before-process-attendance-after",
 				"after-last-sync",
+				"row-financially-locked",
 				"row-manual",
 				"row-mirrored",
 				"row-leave",

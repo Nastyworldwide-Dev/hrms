@@ -32,6 +32,7 @@ VERDICT_LABELS = {
 	"shift-auto-attendance-off": "Shift has auto attendance off",
 	"before-process-attendance-after": "Before Process Attendance After",
 	"after-last-sync": "Job has not reached this shift yet",
+	"row-financially-locked": "Payroll / claim depends on this day — HR corrects by hand",
 	"row-manual": "Manual attendance row",
 	"row-mirrored": "Mirrored attendance row",
 	"row-leave": "Leave record",

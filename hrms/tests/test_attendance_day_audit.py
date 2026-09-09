@@ -81,6 +81,18 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["verdict"], "punches-skip-stamped")
 		self.assertEqual(verdict["repair"], "")
 
+	def test_a_financially_locked_day_is_never_repaired(self):
+		"""The job stamps punches when payroll or an approved claim depends on the
+		day. Clearing that stamp would only make the next run write it back."""
+		punches = [
+			_punch("A", 10, "IN", skip_auto_attendance=1),
+			_punch("B", 19, "OUT", skip_auto_attendance=1),
+		]
+		reason = "Reason for skipping auto attendance: Approved overtime, replacement leave or submitted payroll already depends on 2026-09-07; the auto-marked Absent needs a manual correction."
+		verdict = judge_day(punches, [_absent()], SHIFT, {"A": reason, "B": reason})
+		self.assertEqual(verdict["verdict"], "row-financially-locked")
+		self.assertEqual(verdict["repair"], "")
+
 	def test_punches_pointing_at_a_cancelled_row_are_unlinked(self):
 		cancelled = _absent(name="HR-ATT-2026-00060", docstatus=2)
 		punches = [

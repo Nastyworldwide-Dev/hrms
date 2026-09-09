@@ -30,6 +30,10 @@ logger = logging.getLogger(__name__)
 #: Skip comments the OLD failure handler left that the repair may clear: the day
 #: was blocked by another row, not by anything wrong with the punch.
 REPAIRABLE_SKIP_REASONS = ("Duplicate", "Overlapping", "already exists")
+#: A skip the job writes when payroll, approved overtime or replacement leave
+#: already depends on the day (_repair_financial_dependency). Clearing it would
+#: only make the next run write it back; HR corrects such a day by hand.
+FINANCIAL_SKIP_MARKERS = ("depends on", "manual correction")
 SKIP_PREFIX = "Reason for skipping auto attendance"
 
 
@@ -78,6 +82,12 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 	skipped = [p for p in punches if cint(p.get("skip_auto_attendance"))]
 	if skipped and len(skipped) == len([p for p in punches if not p.get("synced_from_instance")]):
 		reasons = {skip_reasons.get(p["name"], "") for p in skipped}
+		if any(any(key in reason for key in FINANCIAL_SKIP_MARKERS) for reason in reasons):
+			return _verdict(
+				"row-financially-locked",
+				"payroll, approved overtime or replacement leave already depends on this day; HR corrects it by hand",
+				"",
+			)
 		repairable = any(any(key in reason for key in REPAIRABLE_SKIP_REASONS) for reason in reasons)
 		return _verdict(
 			"punches-skip-stamped",
