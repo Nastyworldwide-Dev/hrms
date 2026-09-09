@@ -264,3 +264,27 @@ Call sites / importers, with verdicts:
 Regression: frontend/tests/{listview-ot-items,request-status-chip,
 rl-claim-cost-setting,formview-cancel-finalize,request-summary-explanation,
 formview-new-doc-dirty}.test.mjs.
+
+# family.md — 7 Sep: punched, still Absent; the job never re-read the punches (9 Sep, night)
+
+CLASS: LIFECYCLE DEBRIS THE JOB CANNOT CLEAR ITSELF. The hourly job re-reads a
+punch only when it is unlinked, not skip-stamped, under its own shift, after
+Process Attendance After, before Last Sync, and unstamped by the mirror; and it
+replaces a row only when automation-owned. The old failure handler (before
+f8ca37e53) skip-stamped punches on Duplicate/Overlapping, leaving days that can
+never heal.
+
+Changed: hrms/utils/attendance_day_audit.py (judge_day, collect, plan_repairs,
+repair_attendance_days), report hrms/hr/report/attendance_day_audit/.
+
+Call sites / importers, with verdicts:
+- ShiftType.get_employee_checkins / counts_for_attendance — not-affected: the
+  audit reads the same filters; nothing changed there.
+- mark_attendance_and_link_log financial-guard branch (re-stamps newly read
+  punches) — same-root by effect: judge_day recognises that comment and never
+  plans a repair for it (row-financially-locked).
+- Attendance.on_cancel unlink — not-affected: the "dead link" verdict covers the
+  DB-level cases it does not reach.
+- Checkin Provenance Audit (mirrored punches) — not-affected: the day audit
+  points at it for punches-mirrored.
+Regression: hrms/tests/test_attendance_day_audit.py (17), report test (2).

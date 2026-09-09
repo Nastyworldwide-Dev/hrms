@@ -223,3 +223,11 @@
 - 2026-09-09T08:22:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-09T08:22:28Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 6 extra test file(s) ⟂51e98e473e5f
 - 2026-09-09T08:22Z EVIDENCE: 6 behaves — reviewer: d2cc3dd10 FIX (is_paid guard skipped the payable default on paid claims) → 9b6e21803; 686e4aa0d DEPLOY; bc76cf89b DEPLOY. Pushed.
+- 2026-09-09T08:44:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T08:44:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T08:45:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-09T08:45:51Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T08:50:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-09T08:50:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T08:51Z REPAIR: 7 Sep 'punched, still Absent' = lifecycle debris (skip stamps from the old Duplicate handler, dead links); attendance_day_audit module + Attendance Day Audit report with Repair button (ecf4134b3, 1d9f8d8ab, 759e70ef6 + reviewer fixes). Reviewer: Critical window bug fixed; repair carries only offending punches.
+- 2026-09-09T08:51Z NEXT: push; Nabil deploys, opens Attendance Day Audit for 7–9 Sep, reads verdicts, presses Repair, waits one hourly run; reports his 7 Sep row. Then R5 (mirrored Attendance release) on his word; claims rulings Q1–Q6.
