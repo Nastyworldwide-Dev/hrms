@@ -240,3 +240,8 @@
 - 2026-09-09T09:51:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-09T09:51:34Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
 - 2026-09-09T09:51Z LIVE: Checkin Provenance Audit on Verifica: Overwritten 199 · Mirrored 3821 · Local 368 · plan insert 195 skip 4; source Nasty-Live; 3–4 Sep attendance rows are mirrored (R5 needed); neighbour-type rule added before Recover.
+- 2026-09-09T10:02:09Z PLAN: approved bb53bcd6444e — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-09T10:02:19Z COMMIT: 9938fc1a5 chore(sync): the GL pull's ceiling admits a real group chart; per-company preview → review dispatched
+- 2026-09-09T10:07:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T10:07:53Z COMMIT: 1b5beb6a5 refactor(sync): the GL pull creates its accounts in the background and notifies the operator → review dispatched
+- 2026-09-09T10:08Z REPAIR: GL pull refused live (4,629 accounts > cap 500) → cap 10,000 (9938fc1a5); reviewer: NestedSet inserts would time out a web request → creation moved to a long-queue job with Desk notification (1b5beb6a5). Ticket: refactor hrms_erp_instance.js dialog builders into one module (hotspot, 8 fixes/90d).
