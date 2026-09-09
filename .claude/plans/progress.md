@@ -220,3 +220,6 @@
 - 2026-09-09T08:13:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-09-09T08:13:25Z EVIDENCE: 3 works — blast radius green: 10 dependent(s), 9 extra test file(s) ⟂f62d0a5f62e7
 - 2026-09-09T08:15Z NEXT: reviewer verdict on d2cc3dd10/686e4aa0d/bc76cf89b → fix Criticals → push nz-glass; Nabil deploys, runs Pull → GL Accounts, configures Expense Claim Types + expense approvers, tests one claim of each kind; then rulings Q1–Q6 in docs/glass/audit/2026-09-09-claims-audit.md.
+- 2026-09-09T08:22:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T08:22:28Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 6 extra test file(s) ⟂51e98e473e5f
+- 2026-09-09T08:22Z EVIDENCE: 6 behaves — reviewer: d2cc3dd10 FIX (is_paid guard skipped the payable default on paid claims) → 9b6e21803; 686e4aa0d DEPLOY; bc76cf89b DEPLOY. Pushed.

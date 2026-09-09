@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   claims in the PWA (expense / OT / replacement leave) + GL accounts from the ERP
-status:   done locally (review running on d2cc3dd10, 686e4aa0d, bc76cf89b); push after verdict; deploy pending
-commit:   0dbcba13e on nz-glass
+status:   done (reviewed, Important fixed in 9b6e21803); pushed; deploy pending
+commit:   9b6e21803 on nz-glass
 files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped instance buttons)
           hrms/api/__init__.py (types offered, payable prefill, status on OT lists, RL discovery)
           hrms/hr/doctype/expense_claim/expense_claim.py (payable default)
