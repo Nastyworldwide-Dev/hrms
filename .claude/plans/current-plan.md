@@ -277,3 +277,22 @@ FLOW: deploy → open report (Overwritten) → read the plan → Recover → hou
    Absent / Half Day automation rows; mirrored Attendance rows still need the
    release patch, separate word).
 MOCKUP: NOT NEEDED (standard script report + one inner button).
+
+## Addendum 9 Sep 2026 (evening) — every claim type in the PWA; GL accounts from the ERP
+Tier: risky. Nabil, chat: "Cant pull new GL type for expense claim (desk) from ERP,
+HR need to modify for PWA Claim expense type ... NOT ONLY OT CLAIM, EVERY TYPE OF
+CLAIM ... each button you add in instance ... overcrowded ... introduce proper way".
+1. `feat(sync)` hrms/sync/account_shells.py: "Pull → GL Accounts from Source" on the
+   HRMS ERP Instance form reads the source's Expense/Asset accounts for the served
+   companies and creates the missing ones here through the normal insert, parents
+   first, a missing parent replaced by the hub's root group and reported. Same idiom
+   and guards as company_shells (only_for, unfenced operator, POST, per-run cap, no
+   bypass flags). The form's eleven buttons become three groups: Pull / Checks / Danger.
+   EXPECTED OUTPUT: HR opens an Expense Claim Type, picks the ERP's own account per
+   company; the PWA claim saves.
+2. `fix(api)` get_expense_claim_types offers only types that have an account row for
+   the employee's company (a type without one fails at save with "Set the default
+   account…" after the form is filled).
+3. Then: the OT / Replacement Leave / Expense claim traces (agents running) → fixes
+   per defect, one slice each; PWA verification on fresh.local as employee + approver.
+MOCKUP: NOT NEEDED (Desk button groups; existing dialogs).

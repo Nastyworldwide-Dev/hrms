@@ -24,7 +24,11 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		// source reclaims them on the next full sync. Step 2 of the "Where did this data
 		// come from" safe order — a button, because the operator cannot run a console and
 		// Purge (right above) is the destructive thing they would reach for instead.
-		frm.add_custom_button(__("Release This Instance's Stamp"), () => release_stamp(frm), __("Danger"));
+		frm.add_custom_button(
+			__("Release This Instance's Stamp"),
+			() => release_stamp(frm),
+			__("Danger")
+		);
 
 		// Read-only, and OUTSIDE the `enabled` gate for the same reason Purge is:
 		// the question "which source do these rows really belong to?" matters
@@ -34,21 +38,48 @@ frappe.ui.form.on("HRMS ERP Instance", {
 		// answer decides whether it is safe to press Purge, and an operator who
 		// has to open a shell to find that out will press Purge instead. That is
 		// not hypothetical here — it already cost a live record.
-		frm.add_custom_button(__("Where Did This Data Come From?"), () => check_sources());
+		frm.add_custom_button(
+			__("Where Did This Data Come From?"),
+			() => check_sources(),
+			__("Checks")
+		);
 
 		show_company_scope(frm);
 
 		if (!frm.doc.enabled) return;
 
-		// Ordered as the operator must run them: companies first, because an
-		// Employee whose company is absent here is skipped, not written.
-		frm.add_custom_button(__("Pull Companies from Source"), () => pull_companies(frm));
-		frm.add_custom_button(__("Sync Employee Data"), () => sync_now(frm));
-		frm.add_custom_button(__("Check Data Parity"), () => check_parity(frm));
-		frm.add_custom_button(__("What Else Is On The Source"), () => survey_source(frm));
-		frm.add_custom_button(__("Check Field Completeness"), () => check_field_completeness(frm));
-		frm.add_custom_button(__("Check Config Carryover"), () => check_config_carryover(frm));
-		frm.add_custom_button(__("Review Schema Gaps"), () => review_schema_gaps(frm));
+		// Three groups, not eleven loose buttons: the top bar was unreadable.
+		// "Pull" is ordered as the operator must run it — companies first (an
+		// Employee whose company is absent here is skipped, not written), then the
+		// ERP's GL accounts (an Expense Claim Type needs one per company; the
+		// shells only carry the generic chart), then the employee data itself.
+		// "Checks" are read-only diagnostics. "Danger" stays where it was.
+		frm.add_custom_button(__("Companies from Source"), () => pull_companies(frm), __("Pull"));
+		frm.add_custom_button(
+			__("GL Accounts from Source"),
+			() => pull_gl_accounts(frm),
+			__("Pull")
+		);
+		frm.add_custom_button(__("Employee Data"), () => sync_now(frm), __("Pull"));
+		frm.add_custom_button(__("Data Parity"), () => check_parity(frm), __("Checks"));
+		frm.add_custom_button(
+			__("Field Completeness"),
+			() => check_field_completeness(frm),
+			__("Checks")
+		);
+		frm.add_custom_button(
+			__("Config Carryover"),
+			() => check_config_carryover(frm),
+			__("Checks")
+		);
+		frm.add_custom_button(__("Schema Gaps"), () => review_schema_gaps(frm), __("Checks"));
+		frm.add_custom_button(
+			__("What Else Is On The Source"),
+			() => survey_source(frm),
+			__("Checks")
+		);
+		// The one thing an operator presses routinely is the primary action.
+		frm.page.set_inner_btn_group_as_primary(__("Pull"));
 		show_sync_headline(frm);
 	},
 
@@ -94,7 +125,7 @@ function review_schema_gaps(frm) {
 					title: __("Nothing outstanding"),
 					indicator: "green",
 					message: __(
-						"Every reported schema gap carries a ruling, and none are pending work.",
+						"Every reported schema gap carries a ruling, and none are pending work."
 					),
 				});
 				return;
@@ -106,11 +137,11 @@ function review_schema_gaps(frm) {
 					fieldtype: "HTML",
 					options:
 						`<p class="text-muted" style="margin-bottom:0.5em">${__(
-							"Ruled, still outstanding — these clear on their own when the gap stops appearing:",
+							"Ruled, still outstanding — these clear on their own when the gap stops appearing:"
 						)}</p>` +
 						`<ul style="margin:0 0 0.5em 1em">${unmet
 							.map(
-								(key) => `<li>${frappe.utils.escape_html(describe_gap(key))}</li>`,
+								(key) => `<li>${frappe.utils.escape_html(describe_gap(key))}</li>`
 							)
 							.join("")}</ul>`,
 				});
@@ -156,7 +187,7 @@ function review_schema_gaps(frm) {
 						console.info(
 							"[HRMSERPInstance] recorded",
 							recorded,
-							"schema gap ruling(s)",
+							"schema gap ruling(s)"
 						);
 						show_sync_headline(frm); // the READY math may have just changed
 					});
@@ -185,16 +216,16 @@ function show_sync_headline(frm) {
 				frm.dashboard.set_headline(
 					__("Sync in progress: {0} — the run record updates as it finishes.", [
 						`<a href="/app/hrms-sync-run/${encodeURIComponent(
-							status.run,
+							status.run
 						)}">${frappe.utils.escape_html(status.run)}</a>`,
-					]),
+					])
 				);
 			} else if (status.workers === 0) {
 				frm.dashboard.set_headline(
 					__(
 						"No background worker is consuming the {0} queue — a queued sync would never start.",
-						[frappe.utils.escape_html(status.queue || "long")],
-					),
+						[frappe.utils.escape_html(status.queue || "long")]
+					)
 				);
 			} else {
 				show_cutover_readiness(frm);
@@ -220,20 +251,20 @@ function show_cutover_readiness(frm) {
 				? __("READY — {0} consecutive clean parity checks (need {1}).", [
 						v.consecutive_clean_runs,
 						v.required,
-					])
+				  ])
 				: blockers
-					? __(
-							"Cutover: {0} of {1} clean checks; {2} schema ruling(s) outstanding — see Schema Gap Rulings below.",
-							[v.consecutive_clean_runs, v.required, blockers],
-						)
-					: __("Cutover: {0} of {1} consecutive clean parity checks.", [
-							v.consecutive_clean_runs,
-							v.required,
-						]);
+				? __(
+						"Cutover: {0} of {1} clean checks; {2} schema ruling(s) outstanding — see Schema Gap Rulings below.",
+						[v.consecutive_clean_runs, v.required, blockers]
+				  )
+				: __("Cutover: {0} of {1} consecutive clean parity checks.", [
+						v.consecutive_clean_runs,
+						v.required,
+				  ]);
 			frm.dashboard.set_headline(
 				`${label} <a href="/app/hrms-parity-check?source_instance=${encodeURIComponent(
-					frm.doc.name,
-				)}">${__("History")}</a>`,
+					frm.doc.name
+				)}">${__("History")}</a>`
 			);
 		})
 		.catch(() => {});
@@ -286,7 +317,7 @@ function report_config_carryover(data) {
 					r.source ?? "—"
 				}</td><td style="text-align:right">${r.hub ?? "—"}</td><td>${
 					badge[r.verdict] || r.verdict
-				}</td><td>${r.carried_by_sync ? __("sync") : __("manual")}</td></tr>`,
+				}</td><td>${r.carried_by_sync ? __("sync") : __("manual")}</td></tr>`
 		)
 		.join("");
 	const gaps = data.gaps || [];
@@ -294,22 +325,31 @@ function report_config_carryover(data) {
 	// zero gaps out of a survey that could not read half its doctypes proves nothing.
 	const unreadable = (data.unreadable || []).concat(data.hub_unreadable || []);
 	const complete = data.complete !== false && unreadable.length === 0;
-	console.info("[HRMSERPInstance] config carryover complete?", complete, "unreadable:", unreadable);
+	console.info(
+		"[HRMSERPInstance] config carryover complete?",
+		complete,
+		"unreadable:",
+		unreadable
+	);
 	const esc = frappe.utils.escape_html;
 	const gapLead = gaps.length
 		? `<p><b>${gaps.length} ${__("config gap(s)")}:</b> ${gaps
 				.map((g) => esc(g))
-				.join(", ")}. ${__("A row marked 'manual' is not carried by the sync — set it up on the hub.")}</p>`
+				.join(", ")}. ${__(
+				"A row marked 'manual' is not carried by the sync — set it up on the hub."
+		  )}</p>`
 		: "";
 	const unreadableLead = unreadable.length
 		? `<p style="color:var(--orange-600)"><b>${__("Survey incomplete:")}</b> ${__(
 				"could not read {0} doctype(s) — {1}. Grant the API user read access and re-run before trusting these counts.",
-				[unreadable.length, unreadable.map((g) => esc(g)).join(", ")],
-			)}</p>`
+				[unreadable.length, unreadable.map((g) => esc(g)).join(", ")]
+		  )}</p>`
 		: "";
 	const cleanLead =
 		!gaps.length && complete
-			? `<p>${__("Counts match on every surveyed doctype. This compares row counts only — it does not verify per-company account rows or child values.")}</p>`
+			? `<p>${__(
+					"Counts match on every surveyed doctype. This compares row counts only — it does not verify per-company account rows or child values."
+			  )}</p>`
 			: "";
 	frappe.msgprint({
 		title: __("Config Carryover"),
@@ -320,7 +360,9 @@ function report_config_carryover(data) {
 			cleanLead +
 			`<table class="table table-bordered" style="margin-top:0.5em"><thead><tr>` +
 			`<th>${__("Config doctype")}</th><th style="text-align:right">${__("Source")}</th>` +
-			`<th style="text-align:right">${__("Hub")}</th><th>${__("Verdict")}</th><th>${__("Via")}</th>` +
+			`<th style="text-align:right">${__("Hub")}</th><th>${__("Verdict")}</th><th>${__(
+				"Via"
+			)}</th>` +
 			`</tr></thead><tbody>${body}</tbody></table>`,
 	});
 }
@@ -363,11 +405,10 @@ function report_field_completeness(report) {
 			? __("The sync dropped {0} value(s) — a code fix", [sync_total])
 			: __("Nothing was dropped by the sync"),
 		indicator: sync_total ? "red" : "green",
-		message:
-			`<p>${__("Checked {0} mirrored {1}.", [
-				report.rows_here || 0,
-				report.doctype || __("row"),
-			])}</p>
+		message: `<p>${__("Checked {0} mirrored {1}.", [
+			report.rows_here || 0,
+			report.doctype || __("row"),
+		])}</p>
 			<table class="table table-bordered" style="margin:0">
 				<thead><tr>
 					<th>${__("Field")}</th>
@@ -378,7 +419,7 @@ function report_field_completeness(report) {
 				<tbody>${rows}</tbody>
 			</table>
 			<p class="text-muted">${__(
-				"Amber = the value is on the source but did not cross — send this to the developer. Last column = blank on both sides — only HR can fill it.",
+				"Amber = the value is on the source but did not cross — send this to the developer. Last column = blank on both sides — only HR can fill it."
 			)}</p>`,
 	});
 }
@@ -394,7 +435,7 @@ function report_survey(report) {
 			(line) =>
 				`<tr><td>${esc(line.doctype)}</td><td style="text-align:right">${
 					line.rows
-				}</td></tr>`,
+				}</td></tr>`
 		)
 		.join("");
 
@@ -412,12 +453,12 @@ function report_survey(report) {
 			(gaps.length
 				? `<table class="table table-bordered" style="margin:0">
 						<thead><tr><th>${__("Doctype")}</th><th style="text-align:right">${__(
-							"Rows on source",
-						)}</th></tr></thead>
+						"Rows on source"
+				  )}</th></tr></thead>
 						<tbody>${rows}</tbody>
 					</table>
 					<p>${__(
-						"These exist on the source and are not brought across. Largest first — that is the order worth arguing about.",
+						"These exist on the source and are not brought across. Largest first — that is the order worth arguing about."
 					)}</p>`
 				: `<p>${__("Every unmirrored doctype checked is empty on the source.")}</p>`) +
 			aside(__("Empty over there"), report.empty) +
@@ -442,8 +483,8 @@ function unreadable_html(list) {
 		.map(
 			(row) =>
 				`<li><b>${esc(row.doctype || row)}</b> — ${esc(
-					row.error || __("no reason given"),
-				)}</li>`,
+					row.error || __("no reason given")
+				)}</li>`
 		)
 		.join("");
 	return `<p class="text-muted">${__("Could not read — the source answered:")}</p>
@@ -484,10 +525,10 @@ function report_parity(report) {
 			const state = line.error
 				? `<span style="color:var(--red-500)">${esc(line.error)}</span>`
 				: line.delta === 0
-					? `<span style="color:var(--green-600)">${__("in parity")}</span>`
-					: `<span style="color:var(--orange-500)">${__("{0} missing here", [
-							line.delta,
-						])}</span>`;
+				? `<span style="color:var(--green-600)">${__("in parity")}</span>`
+				: `<span style="color:var(--orange-500)">${__("{0} missing here", [
+						line.delta,
+				  ])}</span>`;
 			return `<tr>
 				<td>${esc(line.doctype)}</td>
 				<td style="text-align:right">${line.remote ?? "—"}</td>
@@ -513,13 +554,13 @@ function report_parity(report) {
 			((report.not_on_source || []).length
 				? `<p class="text-muted">${__("Not on this source, so not compared: {0}", [
 						report.not_on_source.map(esc).join(", "),
-					])}</p>`
+				  ])}</p>`
 				: "") +
 			(clean
 				? `<p>${__("Every mirrored doctype matches the source.")}</p>`
 				: `<p>${__(
-						"A positive difference means rows have not landed here yet. Run a full sync; anything still missing afterwards is named in the run's error log.",
-					)}</p>`),
+						"A positive difference means rows have not landed here yet. Run a full sync; anything still missing afterwards is named in the run's error log."
+				  )}</p>`),
 	});
 }
 
@@ -527,9 +568,9 @@ function sync_now(frm) {
 	frappe.confirm(
 		__("Pull HR data from {0} into this hub?", [frappe.utils.escape_html(frm.doc.name)]) +
 			`<p class="text-muted">${__(
-				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported.",
+				"Reads only. Local rows are never deleted, and rows whose company or employee is missing here are skipped and reported."
 			)}</p>`,
-		() => start_sync(frm, 0),
+		() => start_sync(frm, 0)
 	);
 }
 
@@ -554,7 +595,7 @@ function report_queued(res, frm) {
 	// No polling: the run record is written before the first remote read, and the
 	// Desk list view refreshes itself as the run finishes.
 	const runs = `<a href="/app/hrms-sync-run?source_instance=${encodeURIComponent(
-		res.instance || "",
+		res.instance || ""
 	)}">${__("Open HRMS Sync Run")}</a>`;
 
 	if (res.queued) {
@@ -563,7 +604,7 @@ function report_queued(res, frm) {
 			title: __("Sync queued"),
 			indicator: "blue",
 			message: `<p>${__(
-				"Running in the background — this takes minutes, and you can leave this page.",
+				"Running in the background — this takes minutes, and you can leave this page."
 			)}</p><p>${runs}</p>`,
 		});
 		return;
@@ -580,10 +621,10 @@ function report_queued(res, frm) {
 			message:
 				`<p>${__(
 					"Nothing is consuming the {0} queue on this site, so a queued sync would never start. No job was created.",
-					[`<b>${frappe.utils.escape_html(res.queue || "long")}</b>`],
+					[`<b>${frappe.utils.escape_html(res.queue || "long")}</b>`]
 				)}</p>` +
 				`<p>${__(
-					"Ask whoever runs this site to start a background worker for that queue.",
+					"Ask whoever runs this site to start a background worker for that queue."
 				)}</p>`,
 		});
 		return;
@@ -598,7 +639,7 @@ function report_queued(res, frm) {
 					frappe.utils.escape_html(res.instance || ""),
 				])}</p>` +
 				`<p>${__(
-					"If it has been waiting a long time it is stuck, and you can clear it and start again.",
+					"If it has been waiting a long time it is stuck, and you can clear it and start again."
 				)}</p>`,
 			primary_action: {
 				label: __("Clear it and start again"),
@@ -620,8 +661,8 @@ function report_queued(res, frm) {
 			])}</p>` +
 			(res.run
 				? `<p><a href="/app/hrms-sync-run/${encodeURIComponent(res.run)}">${__(
-						"Open the run in progress",
-					)}</a></p>`
+						"Open the run in progress"
+				  )}</a></p>`
 				: `<p>${runs}</p>`),
 	});
 }
@@ -650,12 +691,12 @@ function pull_companies(frm) {
 						(plan.unmapped
 							? __(
 									"List {0} company(ies) under Companies Served? This NARROWS what this instance syncs.",
-									[unregistered.length],
-								)
+									[unregistered.length]
+							  )
 							: __("Add {0} company(ies) to Companies Served?", [
 									unregistered.length,
-								])) + summary_html(plan, []),
-						() => register_existing(frm, unregistered),
+							  ])) + summary_html(plan, []),
+						() => register_existing(frm, unregistered)
 					);
 					return;
 				}
@@ -670,10 +711,102 @@ function pull_companies(frm) {
 			frappe.confirm(
 				__("Create {0} missing company record(s) as HR shells?", [missing.length]) +
 					summary_html(plan, missing),
-				() => create_shells(frm),
+				() => create_shells(frm)
 			);
 		},
 	});
+}
+
+function pull_gl_accounts(frm) {
+	// Preview first: HR sees exactly which accounts would be created.
+	frappe.call({
+		method: "hrms.sync.account_shells.preview_account_shells",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Reading the chart of accounts from {0}…", [
+			frappe.utils.escape_html(frm.doc.name),
+		]),
+		callback: (r) => {
+			const plan = r.message || {};
+			const missing = plan.to_create || [];
+			if (!missing.length) {
+				frappe.msgprint({
+					title: __("Nothing to create"),
+					indicator: "green",
+					message: accounts_summary_html(plan),
+				});
+				return;
+			}
+			frappe.confirm(
+				__("Create {0} missing GL account(s) here, for the Expense Claim Types?", [
+					missing.length,
+				]) + accounts_summary_html(plan),
+				() => create_account_shells(frm)
+			);
+		},
+	});
+}
+
+function create_account_shells(frm) {
+	frappe.call({
+		method: "hrms.sync.account_shells.create_account_shells",
+		args: { instance_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("Creating GL accounts…"),
+		callback: (r) => {
+			const result = r.message || {};
+			const esc = frappe.utils.escape_html;
+			const parts = [];
+			if ((result.created || []).length)
+				parts.push(
+					`<p>${__("Created")}: <b>${result.created.map(esc).join(", ")}</b></p>`
+				);
+			for (const row of result.fallback || [])
+				parts.push(
+					`<p>${__("Placed under {0} because its own parent group does not exist here", [
+						esc(row.parent),
+					])}: ${esc(row.name)}</p>`
+				);
+			for (const row of result.renamed || [])
+				parts.push(
+					`<p>${__("Named differently here")}: ${esc(row.source)} → <b>${esc(
+						row.here
+					)}</b></p>`
+				);
+			for (const row of result.failed || [])
+				parts.push(
+					`<p>${__("Failed")}: <b>${esc(row.account)}</b> — ${esc(row.error)}</p>`
+				);
+			frappe.msgprint({
+				title: __("GL accounts"),
+				indicator: (result.failed || []).length ? "orange" : "green",
+				message: parts.join("") || __("Nothing was created."),
+			});
+		},
+	});
+}
+
+function accounts_summary_html(plan) {
+	const esc = frappe.utils.escape_html;
+	const parts = [];
+	const missing = (plan.to_create || []).map((e) => e.name);
+	if (missing.length)
+		parts.push(`<p>${__("Missing here")}: <b>${missing.map(esc).join(", ")}</b></p>`);
+	if ((plan.parent_fallback || []).length)
+		parts.push(
+			`<p>${__(
+				"Will sit under the root group because their parent group does not exist here"
+			)}: ${plan.parent_fallback.map(esc).join(", ")}</p>`
+		);
+	if ((plan.existing || []).length)
+		parts.push(`<p>${__("Already here")}: ${plan.existing.length}</p>`);
+	if ((plan.skipped || []).length)
+		parts.push(
+			`<p class="text-muted">${__("Skipped (roots, disabled, other companies)")}: ${
+				plan.skipped.length
+			}</p>`
+		);
+	return parts.join("");
 }
 
 function create_shells(frm) {
@@ -704,24 +837,24 @@ function summary_html(plan, missing) {
 		parts.push(`<p>${__("Already exist")}: ${plan.existing.map(esc).join(", ")}</p>`);
 	if ((plan.unregistered || []).length)
 		parts.push(
-			`<p><b>${__("On the source and present here, but NOT listed under Companies Served")}</b>: ${plan.unregistered
-				.map(esc)
-				.join(", ")}<br><span class="text-muted">${
+			`<p><b>${__(
+				"On the source and present here, but NOT listed under Companies Served"
+			)}</b>: ${plan.unregistered.map(esc).join(", ")}<br><span class="text-muted">${
 				plan.unmapped
 					? __(
-							"Companies Served is empty, so this instance currently syncs EVERY company. Listing them narrows it to these — and sets the company fence, the staff ERP redirect and the parity scope.",
-						)
+							"Companies Served is empty, so this instance currently syncs EVERY company. Listing them narrows it to these — and sets the company fence, the staff ERP redirect and the parity scope."
+					  )
 					: __(
-							"Their employees are excluded from every sync until they are listed under Companies Served.",
-						)
-			}</span></p>`,
+							"Their employees are excluded from every sync until they are listed under Companies Served."
+					  )
+			}</span></p>`
 		);
 	for (const row of plan.incomplete || [])
 		parts.push(
 			`<p>${__("Cannot create {0} — source is missing {1}", [
 				`<b>${esc(row.name)}</b>`,
 				esc(row.missing.join(", ")),
-			])}</p>`,
+			])}</p>`
 		);
 
 	return parts.length
@@ -739,15 +872,15 @@ function result_html(result) {
 		parts.push(
 			`<p>${__("Added to this instance's company list")}: ${result.registered
 				.map(esc)
-				.join(", ")}</p>`,
+				.join(", ")}</p>`
 		);
 	for (const row of result.failed || [])
 		parts.push(`<p>${__("Failed")}: <b>${esc(row.company)}</b> — ${esc(row.error)}</p>`);
 	for (const row of result.registration_errors || [])
 		parts.push(
 			`<p>${__("Created but not added to the company list")}: <b>${esc(
-				row.company,
-			)}</b> — ${esc(row.error)}</p>`,
+				row.company
+			)}</b> — ${esc(row.error)}</p>`
 		);
 	if (!parts.length) parts.push(`<p>${__("Nothing was created.")}</p>`);
 
@@ -780,21 +913,30 @@ function release_stamp(frm) {
 				frappe.msgprint({
 					title: __("Nothing to release"),
 					indicator: "green",
-					message: __("No rows on this hub carry {0}'s provenance stamp.", [frm.doc.name]),
+					message: __("No rows on this hub carry {0}'s provenance stamp.", [
+						frm.doc.name,
+					]),
 				});
 				return;
 			}
 			const lines = Object.entries(message.counts)
-				.map(([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`)
+				.map(
+					([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`
+				)
 				.join("");
 			const d = new frappe.ui.Dialog({
 				title: __("Release provenance stamp"),
 				fields: [
 					{
 						fieldtype: "HTML",
-						options: `<p>${__("This clears the provenance stamp on <b>{0}</b> rows mirrored from <b>{1}</b>. It <b>deletes nothing</b> — the rows stay, they just stop being attributed to this instance.", [message.total, frappe.utils.escape_html(frm.doc.name)])}</p>
+						options: `<p>${__(
+							"This clears the provenance stamp on <b>{0}</b> rows mirrored from <b>{1}</b>. It <b>deletes nothing</b> — the rows stay, they just stop being attributed to this instance.",
+							[message.total, frappe.utils.escape_html(frm.doc.name)]
+						)}</p>
 							<ul>${lines}</ul>
-							<p>${__("Do this for a cloned/dev instance, then run a full sync from the REAL source: it reclaims every row that source genuinely holds. Whatever is still unstamped afterwards is clone-only data.")}</p>`,
+							<p>${__(
+								"Do this for a cloned/dev instance, then run a full sync from the REAL source: it reclaims every row that source genuinely holds. Whatever is still unstamped afterwards is clone-only data."
+							)}</p>`,
 					},
 					{
 						fieldtype: "Data",
@@ -828,7 +970,7 @@ function release_stamp(frm) {
 								indicator: "green",
 								message: __(
 									"Released {0} row(s) — now hub-owned. Run a full sync from the real source to reclaim what it holds.",
-									[res.total],
+									[res.total]
 								),
 							});
 							frm.reload_doc();
@@ -860,7 +1002,7 @@ function purge_mirror(frm) {
 			}
 			const lines = Object.entries(message.counts)
 				.map(
-					([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`,
+					([doctype, n]) => `<li>${frappe.utils.escape_html(doctype)}: <b>${n}</b></li>`
 				)
 				.join("");
 			const d = new frappe.ui.Dialog({
@@ -868,9 +1010,14 @@ function purge_mirror(frm) {
 				fields: [
 					{
 						fieldtype: "HTML",
-						options: `<p>${__("This deletes <b>{0}</b> rows mirrored from <b>{1}</b>, in reverse sync order.", [message.total, frappe.utils.escape_html(frm.doc.name)])}</p>
+						options: `<p>${__(
+							"This deletes <b>{0}</b> rows mirrored from <b>{1}</b>, in reverse sync order.",
+							[message.total, frappe.utils.escape_html(frm.doc.name)]
+						)}</p>
 							<ul>${lines}</ul>
-							<p>${__("Rows a local document still links to are reported, never force-deleted. Masters and hub-owned rows are not touched.")}</p>`,
+							<p>${__(
+								"Rows a local document still links to are reported, never force-deleted. Masters and hub-owned rows are not touched."
+							)}</p>`,
 					},
 					{
 						fieldtype: "Data",
@@ -897,8 +1044,8 @@ function purge_mirror(frm) {
 								message: blocked
 									? __(
 											"Deleted {0} of {1}. {2} row(s) were left because a local document links to them — see the Error Log for which.",
-											[res.deleted, res.total, blocked],
-										)
+											[res.deleted, res.total, blocked]
+									  )
 									: __("Deleted {0} row(s).", [res.deleted]),
 							});
 							frm.reload_doc();
@@ -932,8 +1079,8 @@ function register_existing(frm, companies) {
 				message: errors.length
 					? __(
 							"Registered {0}. {1} could not be added — another instance may already claim them.",
-							[(res.registered || []).join(", "), errors.length],
-						)
+							[(res.registered || []).join(", "), errors.length]
+					  )
 					: __("Registered: {0}", [(res.registered || []).join(", ")]),
 			});
 			frm.reload_doc();
@@ -958,11 +1105,11 @@ function show_company_scope(frm) {
 	field.df.description = rows
 		? __(
 				"Serving {0} company(ies). Employees of any OTHER company on the source are NOT synced, and HR (Instance) users are fenced to these.",
-				[rows],
-			)
+				[rows]
+		  )
 		: __(
-				"EMPTY = every company. This instance currently syncs employees from ALL companies on the source — empty is the permissive setting, not a missing one. Add rows only to narrow it.",
-			);
+				"EMPTY = every company. This instance currently syncs employees from ALL companies on the source — empty is the permissive setting, not a missing one. Add rows only to narrow it."
+		  );
 	field.refresh();
 }
 
@@ -1014,11 +1161,15 @@ function report_sources(census) {
 	const orphans = (census.orphan_stamps || []).length
 		? `<p><b>${__("Stamped with an instance that is not registered")}:</b><br>
 			${census.orphan_stamps.map(esc).join(", ")}<br>
-			<span class="text-muted">${__("These rows cannot be re-synced and Purge cannot reach them.")}</span></p>`
+			<span class="text-muted">${__(
+				"These rows cannot be re-synced and Purge cannot reach them."
+			)}</span></p>`
 		: "";
 
 	const unlocked = (census.unlocked || []).length
-		? `<p style="color:var(--red-600)"><b>${__("Writes are UNLOCKED on")} ${census.unlocked.map(esc).join(", ")}.</b><br>
+		? `<p style="color:var(--red-600)"><b>${__("Writes are UNLOCKED on")} ${census.unlocked
+				.map(esc)
+				.join(", ")}.</b><br>
 			${__("Local edits to those rows will be overwritten by the next pull.")}</p>`
 		: "";
 
@@ -1027,8 +1178,12 @@ function report_sources(census) {
 			${__("The provenance column means what it says.")}</p>`
 		: `<p style="color:var(--red-600)"><b>${__("More than one source is in play")}:
 			${(census.claiming || []).map(esc).join(", ") || __("none synced yet")}.</b></p>
-			<p>${__("If one of these is a COPY of another (a dev ERP cloned from live), the column above is unreliable — it records which instance synced LAST, not where a row originated.")}</p>
-			<p><b>${__("Do not Purge.")}</b> ${__("Purge deletes by that column, so it would take live rows. Safe order:")}</p>
+			<p>${__(
+				"If one of these is a COPY of another (a dev ERP cloned from live), the column above is unreliable — it records which instance synced LAST, not where a row originated."
+			)}</p>
+			<p><b>${__("Do not Purge.")}</b> ${__(
+				"Purge deletes by that column, so it would take live rows. Safe order:"
+		  )}</p>
 			<ol>
 				<li>${__("Disable every instance except the real live one")}</li>
 				<li>${__("Release the clone's stamp — this deletes nothing")}</li>

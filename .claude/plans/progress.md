@@ -211,3 +211,4 @@
 - 2026-09-09T07:20:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-09T07:20:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
 - 2026-09-09T07:20Z NEXT: Nabil deploys nz-glass HEAD; runs Checkin Provenance Audit (Overwritten, from 1 Aug) then Recover; one hourly run; reports back his 4 Sep / 3 Sep rows and the HRMS Sync Run source. Then R5 patch (release mirrored Attendance rows after cutover where local punches exist + un-skip Duplicate/Overlap-stamped punches) on his explicit word.
+- 2026-09-09T07:59Z REPAIR: claims — root cause of 'cannot pull GL from ERP': hub companies are shells with the Standard chart, Account never crosses; Expense Claim Type needs an account per company or every PWA claim save throws. Built account_shells (Pull → GL Accounts), regrouped instance buttons into Pull/Checks/Danger, PWA offers only configured types.
