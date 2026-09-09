@@ -296,18 +296,27 @@ class TestAbsentMarkerLeavesPunchedDaysAlone(unittest.TestCase):
 	as an overlap (9 Sep, "Overlapping Shift Attendance" wall)."""
 
 	def test_dates_with_any_punch_are_not_marked(self):
-		s = shift()
-		s.get_start_and_end_dates = lambda employee: (date(2026, 9, 1), date(2026, 9, 3))
-		s.get_holiday_list = lambda employee: "HL"
-		s.get_marked_attendance_dates_between = lambda employee, a, b: [date(2026, 9, 1)]
-		s.get_dates_with_checkins = lambda employee, a, b: [date(2026, 9, 2)]
+		# patch.object on the CLASS: it refuses to patch a method that no longer
+		# exists, so an edit that swallows a neighbouring method fails here loudly
+		# (9 Sep: two methods vanished and instance-assigned stubs hid it).
 		with (
+			patch.object(
+				st.ShiftType, "get_start_and_end_dates", lambda self, e: (date(2026, 9, 1), date(2026, 9, 3))
+			),
+			patch.object(st.ShiftType, "get_holiday_list", lambda self, e: "HL"),
+			patch.object(
+				st.ShiftType, "get_marked_attendance_dates_between", lambda self, e, a, b: [date(2026, 9, 1)]
+			),
+			patch.object(st.ShiftType, "get_dates_with_checkins", lambda self, e, a, b: [date(2026, 9, 2)]),
 			patch.object(
 				st, "get_date_range", return_value=[date(2026, 9, 1), date(2026, 9, 2), date(2026, 9, 3)]
 			),
 			patch.object(st, "get_holiday_dates_between", return_value=[]),
 		):
-			dates = st.ShiftType.get_dates_for_attendance(s, "EMP-SYNTHETIC")
+			# a bare class instance, not a namespace: the class patches above apply to it
+			real = st.ShiftType.__new__(st.ShiftType)
+			real.name = SHIFT
+			dates = st.ShiftType.get_dates_for_attendance(real, "EMP-SYNTHETIC")
 		self.assertEqual(
 			dates, [date(2026, 9, 3)], "1 Sep is marked, 2 Sep was punched, only 3 Sep is truly empty"
 		)

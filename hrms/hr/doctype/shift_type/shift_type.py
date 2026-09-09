@@ -638,6 +638,53 @@ class ShiftType(Document):
 			days.add(getdate(row.get("shift_start") or row.get("time")))
 		return sorted(days)
 
+	def get_start_and_end_dates(self, employee):
+		"""Returns start and end dates for checking attendance and marking absent
+		return: start date = max of `process_attendance_after` and DOJ
+		return: end date = min of shift before `last_sync_of_checkin` and Relieving Date
+		"""
+		date_of_joining, relieving_date, employee_creation = frappe.get_cached_value(
+			"Employee", employee, ["date_of_joining", "relieving_date", "creation"]
+		)
+
+		if not date_of_joining:
+			date_of_joining = employee_creation.date()
+
+		start_date = max(getdate(self.process_attendance_after), date_of_joining)
+		end_date = None
+
+		shift_details = get_shift_details(self.name, get_datetime(self.last_sync_of_checkin))
+		last_shift_time = (
+			shift_details.actual_end if shift_details else get_datetime(self.last_sync_of_checkin)
+		)
+
+		# check if shift is found for 1 day before the last sync of checkin
+		# absentees are auto-marked 1 day after the shift to wait for any manual attendance records
+		prev_shift = get_employee_shift(employee, last_shift_time - timedelta(days=1), True, "reverse")
+		if prev_shift and prev_shift.shift_type.name == self.name:
+			end_date = (
+				min(prev_shift.start_datetime.date(), relieving_date)
+				if relieving_date
+				else prev_shift.start_datetime.date()
+			)
+		else:
+			# no shift found
+			return None, None
+		return start_date, end_date
+
+	def get_marked_attendance_dates_between(self, employee: str, start_date: str, end_date: str) -> list[str]:
+		Attendance = frappe.qb.DocType("Attendance")
+		return (
+			frappe.qb.from_(Attendance)
+			.select(Attendance.attendance_date)
+			.where(
+				(Attendance.employee == employee)
+				& (Attendance.docstatus < 2)
+				& (Attendance.attendance_date.between(start_date, end_date))
+				& ((Attendance.shift.isnull()) | (Attendance.shift == self.name))
+			)
+		).run(pluck=True)
+
 	def get_assigned_employees(self, from_date: datetime.date, consider_default_shift=False) -> list[str]:
 		"""Get all such employees who either have this shift assigned that hasn't ended or have this shift as default shift.
 		This may fetch some redundant employees who have another shift assigned that may have started or ended before or after the
