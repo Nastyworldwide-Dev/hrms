@@ -237,3 +237,5 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T02:57:13Z PUSH: nz-glass @ adbae859c
 2026-09-09T03:11Z PLAN: NADI_2.0_SURFACE_MAP.md written from measurements (prototype 36 screens + 5 sheets; shipped 36 routes on fresh.local, bundle rebuilt 03:02): grid 4/8, component snap table, scroll budget (Home 1382 vs 723, Calendar 1362 vs 791, Requests 1301 vs 637, Notifications 1366 vs 508), surface verdicts for all routes/sheets, redundancy census (265 spacing classes, 39 arbitrary, 9 row components, 13 inline status labels), gates U13-U15. Plan gains Q0 (prototype material becomes the spec), 0.6 token re-tune, 0.7 kit.
 2026-09-09T03:11Z NEXT: Nabil answers Q0 (look), Q1-Q3; deploy + PWA open for the relay; then phase 0.2 spec addendum §17/§18 and 0.4 gates (U13 app-measure, U14 census, U15 row/pill grep) — both scripts already in frontend/e2e.
+- 2026-09-09T03:12:00Z COMMIT: 077077027 docs(plan): 2.0 surface map — grid, scroll budget and redundancy census from measurements → review dispatched
+- 2026-09-09T03:12:24Z PUSH: nz-glass @ 077077027
