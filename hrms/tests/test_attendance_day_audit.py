@@ -233,6 +233,26 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(judge_day([], [], SHIFT)["verdict"], "no-punches")
 
 
+class TestRepairOrder(unittest.TestCase):
+	"""fetch_shift assigns the shift fields only `if not self.attendance`
+	(employee_checkin_override.py:92, employee_checkin.py:94), so a repair that
+	re-resolves a still-linked punch computes the right shift and throws it
+	away."""
+
+	def test_the_link_is_cleared_before_the_shift_is_re_resolved(self):
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index('if entry["action"] == "refetch-shift"') :]
+		body = body[: body.index("elif entry")]
+		self.assertLess(body.index("punch.attendance = None"), body.index("punch.fetch_shift()"))
+
+	def test_a_punch_the_job_cannot_read_is_never_saved(self):
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index('if entry["action"] == "refetch-shift"') :]
+		body = body[: body.index("elif entry")]
+		self.assertLess(body.index("if not _job_can_read(punch):"), body.index("punch.save()"))
+		self.assertIn("continue", body[: body.index("punch.save()")])
+
+
 class TestFinancialHoldBack(unittest.TestCase):
 	"""A day a payout depends on must never reach the shift repair: the rebuild
 	is refused by the financial guard, and the job's failure handler then

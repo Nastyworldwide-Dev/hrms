@@ -448,19 +448,23 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 				# (hrms/utils/shift_resolution.py).
 				punch = frappe.get_doc("Employee Checkin", name)
 				was_linked = punch.attendance
+				# The link must go FIRST: both fetch_shift implementations
+				# assign the shift fields only `if not self.attendance`, so
+				# re-resolving a still-linked punch computes and discards.
+				punch.attendance = None
 				punch.fetch_shift()
 				if not _job_can_read(punch):
-					# The corrected shift cannot re-read this punch (auto
+					# The corrected shift could never re-read this punch (auto
 					# attendance off, or outside its processing window), so
 					# unlinking it would strand the day with no evidence and no
-					# rebuild. Leave the row exactly as it was.
+					# rebuild. Nothing has been saved, so the row on disk still
+					# holds its old shift and its link.
 					logger.warning(
 						"[attendance_day_audit] %s left alone: shift %s would never re-read it",
 						name,
 						punch.shift,
 					)
 					continue
-				punch.attendance = None
 				punch.flags.ignore_validate = True
 				punch.save()
 				logger.info(
