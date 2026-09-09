@@ -71,8 +71,12 @@ class Attendance(Document):
 		before midnight of the attendance date. Only times a person typed on a new
 		row, or changed on a draft, are validated and turned into hours.
 		"""
+		if cint(self.auto_attendance):
+			# Owned by the job, whether inserted now or a draft the late-checkout
+			# repair resaves: its times are punches, not typing, and are not checked.
+			return
 		before = self.get_doc_before_save()
-		typed_new = before is None and not cint(self.auto_attendance)
+		typed_new = before is None
 		changed = before is not None and _times_differ(before, self)
 		if not (typed_new or changed):
 			return
