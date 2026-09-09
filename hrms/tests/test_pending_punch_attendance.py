@@ -146,5 +146,91 @@ class TestOvertimeStillExcludesPending(unittest.TestCase):
 		self.assertEqual(sessions, [], "unverified minutes are never overtime")
 
 
+class TestADayAlreadyMarkedFromHalfTheEvidenceIsRebuilt(unittest.TestCase):
+	"""Between 8 Sep and this fix, days were marked from the approved punches
+	only, and the pending punch was left unlinked. When it is read again it must
+	rebuild that day — not collide with it as a duplicate and be skipped forever."""
+
+	def _run(self, unlinked, linked, existing):
+		s = shift()
+		with (
+			patch.object(ot, "_classify_day", return_value="normal"),
+			patch.object(st, "_company_of_logs", return_value="CO", create=True),
+			patch.object(st, "get_automation_attendance", return_value=existing),
+			patch.object(st, "linked_checkins", return_value=linked),
+			patch.object(st, "mark_attendance_and_link_log") as link,
+		):
+			st.ShiftType.mark_attendance_for_shift_logs(s, "EMP-SYNTHETIC", DAY, unlinked)
+		return link
+
+	def test_the_pending_half_joins_the_linked_half_and_the_row_is_handed_down(self):
+		existing = SimpleNamespace(name="HR-ATT-WRONG", status="Absent", working_hours=0.0)
+		out = punch("18:00", "OUT")
+		link = self._run([punch("09:00", "IN", pending=True)], [out], existing)
+		link.assert_called_once()
+		args, kwargs = link.call_args
+		self.assertEqual(args[1], "Present")
+		self.assertEqual(round(args[3], 2), 9.0)
+		self.assertEqual(
+			[p.name for p in args[0]], ["CKIN-09:00-IN", "CKIN-18:00-OUT"], "both punches, in time order"
+		)
+		self.assertIs(kwargs.get("existing_attendance"), existing)
+
+	def test_without_an_existing_row_nothing_is_handed_down(self):
+		link = self._run([punch("09:00", "IN"), punch("18:00", "OUT")], [], None)
+		self.assertIsNone(link.call_args.kwargs.get("existing_attendance"))
+
+
+class TestExistingRowIsKeptOrReplacedOnItsResult(unittest.TestCase):
+	def _row(self, status, hours, in_time=None, out_time=None):
+		return SimpleNamespace(
+			name="HR-ATT-EXISTING",
+			status=status,
+			working_hours=hours,
+			in_time=in_time,
+			out_time=out_time,
+			auto_attendance=1,
+			docstatus=1,
+		)
+
+	def _create(self, existing, status, hours, in_time=None, out_time=None):
+		from hrms.hr.doctype.employee_checkin import employee_checkin as ck
+
+		with (
+			patch.object(ck, "get_existing_half_day_attendance", return_value=None),
+			patch.object(ck, "get_repairable_auto_absence", return_value=None),
+			patch.object(ck, "_replace_automation_attendance", return_value="REPLACED") as replace,
+		):
+			result = ck.create_or_update_attendance(
+				"EMP-SYNTHETIC",
+				DAY,
+				status,
+				hours,
+				SHIFT,
+				False,
+				False,
+				in_time,
+				out_time,
+				None,
+				existing_attendance=existing,
+			)
+		return result, replace
+
+	def test_same_result_keeps_the_row(self):
+		t_in, t_out = datetime.combine(DAY, time(9)), datetime.combine(DAY, time(18))
+		existing = self._row("Present", 9.0, t_in, t_out)
+		result, replace = self._create(existing, "Present", 9.0, t_in, t_out)
+		self.assertIs(result, existing)
+		replace.assert_not_called()
+
+	def test_a_different_result_replaces_the_row(self):
+		existing = self._row("Half Day", 4.0)
+		result, replace = self._create(existing, "Present", 9.0)
+		self.assertEqual(result, "REPLACED")
+		replace.assert_called_once()
+		self.assertIs(replace.call_args.args[0], existing)
+		self.assertEqual(replace.call_args.kwargs["attendance_status"], "Present")
+
+
 if __name__ == "__main__":
 	unittest.main()

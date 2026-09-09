@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime, getdate
+from frappe.utils import cint, flt, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +227,7 @@ def mark_attendance_and_link_log(
 	shift: str | None = None,
 	overtime_type: str | None = None,
 	repair_attendance: Document | None = None,
+	existing_attendance: Document | None = None,
 ) -> Document | None:
 	"""Creates an attendance and links the attendance to the Employee Checkin.
 	Note: If attendance is already present for the given date, the logs are marked as skipped and no exception is thrown.
@@ -261,6 +262,7 @@ def mark_attendance_and_link_log(
 			out_time=out_time,
 			overtime_type=overtime_type,
 			repair_attendance=repair_attendance,
+			existing_attendance=existing_attendance,
 		)
 
 		if attendance_status == "Absent":
@@ -288,9 +290,45 @@ def create_or_update_attendance(
 	out_time=None,
 	overtime_type=None,
 	repair_attendance=None,
+	existing_attendance=None,
 ):
-	"""Creates a new attendance, repairs a provisional auto-Absent, or updates
-	an existing half-day attendance."""
+	"""Creates a new attendance, rebuilds an automation-owned one whose result
+	changed, repairs a provisional auto-Absent, or updates an existing half-day
+	attendance.
+
+	`existing_attendance` is the submitted automation-owned row for this day
+	(hrms.hr.doctype.shift_type.shift_type.get_automation_attendance) when the
+	caller re-read punches for a day that was already marked. Same result: the
+	row is kept and the punches link to it. Different result: the row is
+	cancelled and re-marked from ALL of the day's punches. Without this, the
+	newly readable punch (a pending one whose rule changed, or one approved
+	after the day was marked) collided with the row as a duplicate and was
+	stamped skip_auto_attendance for good.
+	"""
+	if repair_attendance is None and existing_attendance is not None:
+		if _same_day_result(existing_attendance, attendance_status, working_hours, in_time, out_time):
+			logger.info(
+				"[checkin] %s for %s on %s unchanged (%s, %sh) — linking the re-read punches to it",
+				existing_attendance.name,
+				employee,
+				attendance_date,
+				attendance_status,
+				working_hours,
+			)
+			return existing_attendance
+		return _replace_automation_attendance(
+			existing_attendance,
+			employee=employee,
+			attendance_date=attendance_date,
+			attendance_status=attendance_status,
+			working_hours=working_hours,
+			shift=shift,
+			late_entry=late_entry,
+			early_exit=early_exit,
+			in_time=in_time,
+			out_time=out_time,
+			overtime_type=overtime_type,
+		)
 	if repair_attendance is not None:
 		if (
 			not isinstance(repair_attendance, Document)
@@ -326,7 +364,7 @@ def create_or_update_attendance(
 	if repair_attendance is None and (absence := get_repairable_auto_absence(employee, attendance_date)):
 		# Auto-attendance marked this day Absent because no check-ins had
 		# arrived; the authoritative punches are here now.
-		return _replace_provisional_absence(
+		return _replace_automation_attendance(
 			absence,
 			employee=employee,
 			attendance_date=attendance_date,
@@ -384,8 +422,24 @@ def create_or_update_attendance(
 	return attendance
 
 
-def _replace_provisional_absence(absence, **fields):
-	"""Replace a submitted provisional auto-Absent with the day the punches prove.
+def _same_day_result(existing, status, working_hours, in_time, out_time) -> bool:
+	"""Whether re-marking would produce the row that already exists."""
+	same_times = all(
+		(a is None and b is None) or (a is not None and b is not None and get_datetime(a) == get_datetime(b))
+		for a, b in ((existing.in_time, in_time), (existing.out_time, out_time))
+	)
+	return (
+		existing.status == status
+		and abs(flt(existing.working_hours) - flt(working_hours)) < 0.01
+		and same_times
+	)
+
+
+def _replace_automation_attendance(absence, **fields):
+	"""Replace a submitted automation-owned Attendance with the day the punches prove.
+
+	Born as the provisional-Absent repair; a day whose result changed because a
+	punch became readable later (approved, or a rule change) goes the same way.
 
 	The provisional row is SUBMITTED, so its status, hours and overtime cannot
 	change through validation. Writing them with db.set_value skipped
@@ -451,7 +505,7 @@ def _replace_provisional_absence(absence, **fields):
 		replacement.submit()
 		replacement.add_comment(
 			"Comment",
-			_("Auto-marked Absent {0} replaced with {1} when check-ins arrived late.").format(
+			_("Automation-marked {0} replaced with {1} from the day's check-ins.").format(
 				absence.name, _(status)
 			),
 		)
@@ -483,6 +537,9 @@ def _replace_provisional_absence(absence, **fields):
 		attendance_date,
 	)
 	return replacement
+
+
+_replace_provisional_absence = _replace_automation_attendance
 
 
 def get_repairable_auto_absence(employee, attendance_date) -> Document | None:

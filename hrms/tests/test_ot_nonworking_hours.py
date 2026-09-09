@@ -69,7 +69,11 @@ shift_class.body = [
 shift_helpers = [
 	node
 	for node in shift_tree.body
-	if isinstance(node, ast.FunctionDef) and node.name in {"counts_for_attendance"}
+	if (isinstance(node, ast.FunctionDef) and node.name in {"counts_for_attendance"})
+	or (
+		isinstance(node, ast.Assign)
+		and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in node.targets)
+	)
 ]
 checkin_tree = ast.parse((BASE / "hr/doctype/employee_checkin/employee_checkin.py").read_text())
 calcs = [
@@ -94,6 +98,10 @@ SHIFT = {
 	"holiday_list_covers": lambda *args: True,
 	"is_half_holiday": lambda *args: False,
 	"mark_attendance_and_link_log": Mock(),
+	# A day already marked is rebuilt from all its punches (9 Sep). These
+	# scenarios start from an unmarked day, so the lookup finds nothing.
+	"get_automation_attendance": lambda *args, **kwargs: None,
+	"linked_checkins": lambda *args, **kwargs: [],
 }
 exec(
 	compile(

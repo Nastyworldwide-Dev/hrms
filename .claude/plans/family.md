@@ -37,3 +37,26 @@ Call sites / importers of what changed, with verdicts:
   ticket: rebuild the day on rejection under the financial guard.
 - hrms/tests/test_ot_nonworking_hours.py harness — same-root: compiles the
   class body with its own namespace; now includes the helper.
+
+## Addendum (reviewer of ffce088ec, Critical): the day already marked from half its evidence
+- hrms/hr/doctype/employee_checkin/employee_checkin.py create_or_update_attendance
+  — same-root: a day marked between 8 Sep and the rule fix linked its approved
+  punches and left the pending one unlinked (Absent with the OUT linked, or Half
+  Day with both halves of a split span linked). Re-reading that punch inserted a
+  duplicate, DuplicateAttendanceError fired, handle_attendance_exception stamped
+  skip_auto_attendance on the punch and the wrong row stayed forever. Now:
+  `existing_attendance` (get_automation_attendance: submitted, auto_attendance=1,
+  not mirrored, this shift) is handed down; same result → keep and link;
+  different result → _replace_automation_attendance (cancel + re-mark under the
+  savepoint and the financial guard). The provisional-Absent path is the same
+  function under its old name.
+- hrms/hr/doctype/shift_type/shift_type.py mark_attendance_for_shift_logs —
+  same-root: merges linked_checkins(existing) with the re-read punches before
+  computing, so the rebuild sees the whole day.
+- get_existing_half_day_attendance (leave-driven half day, modify_half_day_status=1,
+  auto_attendance=0) — not-affected: get_automation_attendance never returns it,
+  the legacy update path still runs.
+- Manual Attendance (auto_attendance=0) and mirrored rows — not-affected: never
+  returned, so the duplicate error still skips the punch, as upstream intends.
+- Rejected punch left unlinked on a correct day — not-affected: eligible set equals
+  the linked set, result unchanged, the row is kept; no hourly churn.

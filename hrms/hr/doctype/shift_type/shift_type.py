@@ -58,6 +58,58 @@ def _company_of_logs(logs) -> str | None:
 		return None
 
 
+#: What the hourly job reads off a punch; linked_checkins reads the same so a
+#: rebuilt day is computed from rows shaped exactly like fresh ones.
+CHECKIN_FIELDS = (
+	"name",
+	"employee",
+	"log_type",
+	"time",
+	"shift",
+	"shift_start",
+	"shift_end",
+	"shift_actual_start",
+	"shift_actual_end",
+	"device_id",
+	"overtime_type",
+	"skip_auto_attendance",
+	"remote_approval_status",
+	"requires_remote_approval",
+	"offshift",
+)
+
+
+def get_automation_attendance(employee, attendance_date, shift):
+	"""The submitted automation-owned Attendance for this shift day, or None.
+
+	Manual rows and mirrored rows are not returned: a day HR marked by hand, or
+	one owned by the source instance, is never rebuilt from punches.
+	"""
+	name = frappe.db.get_value(
+		"Attendance",
+		{
+			"employee": employee,
+			"attendance_date": attendance_date,
+			"shift": shift,
+			"docstatus": 1,
+			"auto_attendance": 1,
+			"synced_from_instance": ("is", "not set"),
+		},
+		"name",
+	)
+	return frappe.get_doc("Attendance", name) if name else None
+
+
+def linked_checkins(attendance_name) -> list:
+	"""The punches already linked to an Attendance, shaped like the job's rows."""
+	return frappe.get_all(
+		"Employee Checkin",
+		filters={"attendance": attendance_name},
+		fields=list(CHECKIN_FIELDS),
+		order_by="time",
+	)
+
+
 def counts_for_attendance(row) -> bool:
 	"""A punch that is evidence for attendance STATUS and hours.
 
@@ -300,6 +352,27 @@ class ShiftType(Document):
 			if not _pair_sessions(single_shift_logs, {self.name: self.determine_check_in_and_check_out}):
 				logger.info("[shift_type] no eligible holiday pair; attendance not created")
 				return None
+		# A day marked earlier from part of its evidence (a pending punch was left
+		# unlinked between 8 Sep and the rule fix, or a punch was approved after
+		# the marking) is rebuilt from ALL its punches, not collided with.
+		existing = get_automation_attendance(employee, attendance_date, self.name)
+		if existing is not None:
+			seen = {row.name for row in single_shift_logs}
+			single_shift_logs = sorted(
+				[
+					*single_shift_logs,
+					*[row for row in linked_checkins(existing.name) if row.name not in seen],
+				],
+				key=lambda row: get_datetime(row.time),
+			)
+			logger.info(
+				"[shift_type] %s already marks %s on %s — recomputing from %d punch(es)",
+				existing.name,
+				employee,
+				attendance_date,
+				len(single_shift_logs),
+			)
+
 		# Attendance evidence, not overtime evidence: a pending punch counts.
 		eligible_logs = [row for row in single_shift_logs if counts_for_attendance(row)]
 		if not eligible_logs:
@@ -338,6 +411,7 @@ class ShiftType(Document):
 			self.name,
 			overtime_type,
 			repair_attendance=repair_attendance,
+			existing_attendance=existing,
 		)
 
 	def is_half_holiday(self, employee, attendance_date):
@@ -349,23 +423,7 @@ class ShiftType(Document):
 	def get_employee_checkins(self) -> list[dict]:
 		return frappe.get_all(
 			"Employee Checkin",
-			fields=[
-				"name",
-				"employee",
-				"log_type",
-				"time",
-				"shift",
-				"shift_start",
-				"shift_end",
-				"shift_actual_start",
-				"shift_actual_end",
-				"device_id",
-				"overtime_type",
-				"skip_auto_attendance",
-				"remote_approval_status",
-				"requires_remote_approval",
-				"offshift",
-			],
+			fields=list(CHECKIN_FIELDS),
 			filters={
 				"attendance": ("is", "not set"),
 				"time": (">=", self.process_attendance_after),
