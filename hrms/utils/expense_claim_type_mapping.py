@@ -1,0 +1,115 @@
+"""HR's expense claim types, each wired to its GL account in every company.
+
+HR handed over the mapping on 9 September 2026 (claim item → "GL in ERP").
+Eleven types times fifteen companies is 165 account rows nobody should key by
+hand, and a type without a row for the claimant's company is refused at save.
+So the mapping lives here, `apply_expense_claim_type_mapping` is idempotent —
+creates a missing type, adds a missing account row wherever the named GL
+account exists for that company, touches nothing that is already there — and
+it runs on deploy (patch) and again at the end of every "Pull → GL Accounts"
+run, when the accounts it needs have just arrived.
+
+The account is found by its account NAME within the company (the ERP may
+number its accounts, so the document name is not composed here).
+"""
+
+import logging
+
+import frappe
+
+logger = logging.getLogger(__name__)
+
+#: Claim type (exactly as HR wrote it) -> account name in the ERP's chart.
+MAPPING = {
+	"Car Rental (CAR RENTAL)": "Travel Expenses",
+	"Flight / Public Transport (FLIGHT/PT)": "Travel Expenses",
+	"General & Administrative (G&A)": "General & Administrative",
+	"Gym & Wellness Subsidy (GYM&WS)": "Employee Benefits",
+	"Lodging / Hotel (LODGING/HOTEL)": "Travel Expenses",
+	"Meals & Entertainment (M&E)": "Employee Meals & Entertainment",
+	"Mileage (CAR) (MILEAGE CAR)": "Fuel/Mileage expenses",
+	"Mileage (Motorcycle) (MILEAGE MOTORCYCLE)": "Fuel/Mileage expenses",
+	"Parking & Toll (PARKING&TOLL)": "Parking & Toll",
+	"Petrol (PETROL)": "Fuel/Mileage expenses",
+	"Subsidy Parking Claim (S-PARKING CLAIM)": "Subsidiary Parking",
+}
+
+
+def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_rows) -> dict:
+	"""What to add: {type: [(company, account)]} and what is missing. Pure.
+
+	`account_lookup` maps (account_name, company) -> Account document name;
+	`existing_rows` is a set of (type, company) already configured.
+	"""
+	rows, missing = {}, []
+	for claim_type, gl_name in mapping.items():
+		for company in companies:
+			if (claim_type, company) in existing_rows:
+				continue
+			account = account_lookup.get((gl_name, company))
+			if account:
+				rows.setdefault(claim_type, []).append((company, account))
+			else:
+				missing.append((claim_type, company, gl_name))
+	logger.info(
+		"[expense_claim_type_mapping] plan: %d row(s) to add, %d (type, company) without the GL account yet",
+		sum(len(v) for v in rows.values()),
+		len(missing),
+	)
+	return {"rows": rows, "missing": missing}
+
+
+def _served_companies() -> list:
+	served = frappe.get_all("HRMS ERP Instance Company", pluck="company", distinct=True)
+	return served or frappe.get_all("Company", pluck="name")
+
+
+def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
+	"""Create the types that are missing and add the account rows that can be
+	added now. Never edits an existing row. Safe to run any number of times."""
+	mapping = mapping or MAPPING
+	companies = _served_companies()
+	account_lookup = {
+		(a.account_name, a.company): a.name
+		for a in frappe.get_all(
+			"Account",
+			filters={
+				"account_name": ("in", sorted(set(mapping.values()))),
+				"company": ("in", companies),
+				"is_group": 0,
+			},
+			fields=["name", "account_name", "company"],
+		)
+	}
+	existing_rows = {
+		(r.parent, r.company)
+		for r in frappe.get_all(
+			"Expense Claim Account", filters={"parent": ("in", list(mapping))}, fields=["parent", "company"]
+		)
+	}
+	plan = plan_type_accounts(mapping, companies, account_lookup, existing_rows)
+
+	created_types = []
+	for claim_type, gl_name in mapping.items():
+		if frappe.db.exists("Expense Claim Type", claim_type):
+			continue
+		frappe.get_doc(
+			{"doctype": "Expense Claim Type", "expense_type": claim_type, "description": f"GL: {gl_name}"}
+		).insert(ignore_permissions=True)
+		created_types.append(claim_type)
+
+	added = 0
+	for claim_type, pairs in plan["rows"].items():
+		doc = frappe.get_doc("Expense Claim Type", claim_type)
+		for company, account in pairs:
+			doc.append("accounts", {"company": company, "default_account": account})
+			added += 1
+		doc.flags.ignore_permissions = True
+		doc.save()
+	logger.info(
+		"[expense_claim_type_mapping] applied: %d type(s) created, %d account row(s) added, %d still without a GL account",
+		len(created_types),
+		added,
+		len(plan["missing"]),
+	)
+	return {"created_types": created_types, "rows_added": added, "missing": plan["missing"]}

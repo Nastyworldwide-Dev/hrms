@@ -278,6 +278,17 @@ def run_account_shells_job(instance_name: str, operator: str, entries: list) -> 
 		len(result["fallback"]),
 		len(result["failed"]),
 	)
+	# The accounts HR's claim types point at have just arrived: wire them now,
+	# so the PWA offers the types without anyone keying 165 rows.
+	from hrms.utils.expense_claim_type_mapping import apply_expense_claim_type_mapping
+
+	try:
+		result["claim_types"] = apply_expense_claim_type_mapping()
+		frappe.db.commit()
+	except Exception as e:
+		frappe.db.rollback()
+		logger.error("[account_shells] claim type mapping after the pull failed: %s", e, exc_info=True)
+		result["claim_types"] = {"error": str(e)}
 	_notify_operator(instance_name, operator, result)
 	return result
 
@@ -328,6 +339,11 @@ def _notify_operator(instance_name: str, operator: str, result: dict, timed_out:
 		len(result["renamed"]),
 		len(result["failed"]),
 	)
+	claim = result.get("claim_types") or {}
+	if claim.get("rows_added") or claim.get("missing"):
+		summary += " " + _(
+			"Expense claim types: {0} account row(s) wired, {1} still without a GL account."
+		).format(claim.get("rows_added", 0), len(claim.get("missing") or []))
 	if timed_out:
 		summary = _(
 			"{0} The run timed out before finishing — press Pull → GL Accounts again to continue."

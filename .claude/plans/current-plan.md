@@ -325,3 +325,13 @@ EXPECTED OUTPUT: HR amends Siti's 7 Sep to Present 09:00–18:47; an hour later 
 still Present in Desk and in her PWA calendar; her punches show that row as their
 attendance.
 MOCKUP: NOT NEEDED.
+
+## Addendum 9 Sep 2026 (night, 2) — HR's expense claim type mapping
+Nabil, chat: a sheet of 11 claim items → "GL in ERP". `feat(expense)`
+hrms/utils/expense_claim_type_mapping.py: the mapping verbatim; idempotent apply
+(create missing types, add account rows where the named GL account exists per served
+company); runs on deploy (patch) and at the end of every Pull → GL Accounts run.
+EXPECTED OUTPUT: after the GL pull, each of the 11 types has an account row for every
+company whose chart holds that GL; the PWA offers them; the notification says how many
+rows were wired and how many companies still lack the account.
+ASSUMPTION: type names are HR's labels verbatim, e.g. "Petrol (PETROL)".
