@@ -235,3 +235,8 @@
 - 2026-09-09T09:06:36Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 6 extra test file(s) ⟂014423447a0e
 - 2026-09-09T09:07Z REPAIR: HR corrections undone by the job (Amend copies auto_attendance=1; after-submit edit kept it) + no publish + Desk manual check-in refused + punches beside HR row re-read hourly → cf4c4692a (14 tests). Reviewer running.
 - 2026-09-09T09:13Z EVIDENCE: 6 behaves — reviewer on cf4c4692a DEPLOY (no Critical/Important); minor: integration rows without device_id must not read as Manual Entry → flags.integration_entry.
+- 2026-09-09T09:13:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-09T09:13:24Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-09T09:51:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T09:51:34Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T09:51Z LIVE: Checkin Provenance Audit on Verifica: Overwritten 199 · Mirrored 3821 · Local 368 · plan insert 195 skip 4; source Nasty-Live; 3–4 Sep attendance rows are mirrored (R5 needed); neighbour-type rule added before Recover.
