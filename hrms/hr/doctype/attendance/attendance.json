@@ -12,7 +12,7 @@
   "employee",
   "employee_name",
   "working_hours",
-  "overtime_section",
+  "overtime_summary_section",
   "ot_hours",
   "ot_rate_weighted_hours",
   "ot_rate_bands",
@@ -92,7 +92,7 @@
   },
   {
    "collapsible": 1,
-   "fieldname": "overtime_section",
+   "fieldname": "overtime_summary_section",
    "fieldtype": "Section Break",
    "label": "Overtime"
   },
@@ -309,7 +309,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-09 06:30:00.000000",
+ "modified": "2026-09-09 06:45:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance",
