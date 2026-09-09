@@ -3,6 +3,8 @@
 // bar and the sticky header), and the height of each top-level block, so the
 // plan's scroll budget rests on numbers rather than on eyeballing.
 //   cd frontend && node e2e/prototype-measure.mjs > ../docs/glass/audit/2026-09-09-prototype-measure.json
+/* global ROLE, toggleRole, curTab, show, closeSheets, home, dayTap, openSheet */
+// The globals above are the prototype page's own inline script, used inside page.evaluate().
 import { chromium } from "playwright"
 import { pathToFileURL } from "node:url"
 import path from "node:path"

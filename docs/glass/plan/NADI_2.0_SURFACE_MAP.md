@@ -5,7 +5,7 @@ Companion to [NADI_2.0_UX_PLAN.md](NADI_2.0_UX_PLAN.md). 9 September 2026, branc
 
 | Source | How | Rerun |
 |---|---|---|
-| Prototype, 36 screens + 5 sheets | Playwright, 390×844, every screen shown in the approver view | `cd frontend && node e2e/prototype-measure.mjs > ../docs/glass/audit/2026-09-09-prototype-measure.json` |
+| Prototype, 36 screens + 5 sheets | Playwright, 390×844, every screen shown in the approver view. The prototype HTML is a design deliverable kept untracked at `<repo>/Nadi PWA UI UX 2.0/`; the measured JSON is committed, so the numbers here do not depend on rerunning it | `cd frontend && node e2e/prototype-measure.mjs > ../docs/glass/audit/2026-09-09-prototype-measure.json` |
 | Shipped app, 36 routes | Playwright against `fresh.local:8080` (bundle rebuilt 9 Sep 03:02), signed in as the seeded audit employee, 390×844, light | `cd frontend && set -a && . ../.env && set +a && node e2e/app-measure.mjs > ../docs/glass/audit/2026-09-09-app-measure.json` |
 | Block attribution | Same session, height of each child of the content column | inline script, see section 3 |
 | Spacing census | Regex over 151 `.vue` files for Tailwind spacing, size, radius and text classes | inline script, see section 5 |
