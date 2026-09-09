@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   live incident 9 Sep — vanished check-ins (D6) + recovery
-status:   done locally (review running; push after verdict); deploy pending
-commit:   edbfc2427 on nz-glass (with ccb224c38, a5313c6f1; never 781096bb3 alone)
+status:   done (reviewed; pushed); deploy pending
+commit:   f5e4ff963 on nz-glass (with ccb224c38, a5313c6f1, edbfc2427; never 781096bb3 alone)
 files:    hrms/sync/runner.py
           hrms/sync/test_contested_rows.py
           hrms/sync/checkin_recovery.py
