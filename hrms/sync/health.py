@@ -199,7 +199,7 @@ def report_stale_instances() -> list[dict]:
 			"Employee Checkin and Leave rows are as old as the date shown.\n\n"
 			+ "\n".join(lines)
 			+ "\n\nThe pull is operator-initiated: HR Setup -> Data Migration -> ERP "
-			"Instance -> Sync Now. A Partial or Failed run does not count here, "
+			"Instance -> Pull -> Employee Data. A Partial or Failed run does not count here, "
 			"because a held watermark means the mirror did not move."
 		),
 	)
@@ -228,7 +228,7 @@ def _notify_hr_stale(stale: list[dict], lines: list[str]) -> None:
 		f"Mirrored HR data from the following source instance(s) is stale — no "
 		f"completed sync in over {STALE_AFTER_HOURS}h, so employee, attendance, "
 		f"check-in and leave rows are as old as shown. Run HR Setup -> Data "
-		f"Migration -> ERP Instance -> Sync Now before relying on them.\n\n" + "\n".join(lines)
+		f"Migration -> ERP Instance -> Pull -> Employee Data before relying on them.\n\n" + "\n".join(lines)
 	)
 	for user in set(hr_users):
 		try:

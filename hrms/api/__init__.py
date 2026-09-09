@@ -1294,7 +1294,7 @@ def configured_expense_claim_types(types: list, account_rows: list, company: str
 	offered = [t for t in types if t.get("name") in configured]
 	left_out = [t.get("name") for t in types if t.get("name") not in configured]
 	if left_out:
-		logger.warning(
+		logger.info(
 			"[expense] %d Expense Claim Type(s) have no default account for %s and are not offered: %s",
 			len(left_out),
 			company,

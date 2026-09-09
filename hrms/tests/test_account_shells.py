@@ -146,6 +146,13 @@ class TestEndpointHardening(unittest.TestCase):
 		for endpoint in ("preview_account_shells", "create_account_shells"):
 			self.assertIn("_ensure_unfenced_operator", self._names_in(endpoint))
 
+	def test_an_account_already_here_under_its_local_name_is_existing(self):
+		"""HR changed a company's abbreviation here: the pulled account landed
+		under a different name than the source's. A second run must recognise
+		it by the name ERPNext gives it locally, not plan it again and fail it
+		as a duplicate every time."""
+		self.assertIn("get_autoname_with_number", self._names_in("_plan_for_instance"))
+
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))
 

@@ -161,7 +161,7 @@ by writing code first.**
 
 | | Question |
 |---|---|
-| 3 schema rulings | Outstanding on Nasty-Dev. `Review Schema Gaps` on the instance form is the whole workflow — one screen, no typing |
+| 3 schema rulings | Outstanding on Nasty-Dev. `Checks → Schema Gaps` on the instance form is the whole workflow — one screen, no typing |
 | **R1** | **DECIDED 26 Aug — no change.** One HR function covers every entity, so company-wide visibility is the requirement, not a hole. `require_unfenced` still gates hub-wide ACTIONS. See `decisions/R1-company-fence-fails-open.md` |
 | **R2** | **Decided: staff transact HERE.** The two blind spots that decision exposed are closed — parity now reports `local_own` beside the mirrored count (`e9d735d27`), and mirrored leave overlapping hub leave is detected daily (`7a8c48227`). One item is still open and is **not** engineering: **should `run_sync` be scheduled?** It is operator-initiated today, so the mirror only moves when somebody presses a button. Unattended writes to a mirror is the question `write_block.py` exists for — see below |
 | **R6** | `user_data_fields` is commented out at `hooks.py:638`. No DSAR or retention path while PII is duplicated across the hub and every source |

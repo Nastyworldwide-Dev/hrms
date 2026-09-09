@@ -156,7 +156,20 @@ def _plan_for_instance(instance_name: str) -> dict:
 		fields=list(REMOTE_ACCOUNT_FIELDS),
 		order_by="lft asc",
 	)
-	existing = {row["name"] for row in rows if row.get("name") and frappe.db.exists("Account", row["name"])}
+	from erpnext.accounts.utils import get_autoname_with_number
+
+	# Existing under the source's name OR under the name ERPNext would give it
+	# here (an abbr HR changed): a second run must never plan the same account
+	# again and fail it as a duplicate every time.
+	existing = set()
+	for row in rows:
+		if not row.get("name"):
+			continue
+		local_name = get_autoname_with_number(
+			row.get("account_number"), row.get("account_name"), row.get("company")
+		)
+		if frappe.db.exists("Account", row["name"]) or frappe.db.exists("Account", local_name):
+			existing.add(row["name"])
 	plan = plan_account_shells(rows, existing, companies)
 	plan["companies"] = companies
 	logger.info("[account_shells] %s: %d remote rows for %s", instance_name, len(rows), ", ".join(companies))
