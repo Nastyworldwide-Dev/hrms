@@ -63,3 +63,30 @@ Call sites / importers of what changed, with verdicts:
   returned, so the duplicate error still skips the punch, as upstream intends.
 - Rejected punch left unlinked on a correct day — not-affected: eligible set equals
   the linked set, result unchanged, the row is kept; no hourly churn.
+
+# family.md — sync pull rewrote attendance after cutover (9 Sep, August rows)
+
+CLASS: OWNERSHIP CHANGED, THE PULL DID NOT. During the parallel run the hub
+mirrored Attendance and Employee Checkin from the source; after cutover this
+site writes them, but `sync_instance` still pulled both and `_write_row`
+updates existing mirrored rows in place, so the source's punch-less,
+all-Absent view landed on this site's rows.
+
+Changed: hrms/sync/cutover.py (new, pure rule), hrms/sync/runner.py
+sync_instance (plans doctypes through the rule; notes the held-back ones).
+
+Call sites / importers of what changed, with verdicts:
+- hrms/sync/runner.py run_sync_with_client → sync_instance (Desk button
+  "Sync Employee Data" via enqueue_sync, bench run_sync) — same-root, fixed here.
+- hrms/sync/runner.py _start_run(instance_name, doctypes) — same-root by data:
+  receives the planned list, so the run record shows what was really pulled.
+- hrms/sync/runner.py _write_row — not-affected: still updates mirrored rows for
+  the doctypes the source owns (Employee, leave chain); that is its job.
+- hrms/sync/parity.py / diagnose.py — not-affected: read-only counts; Attendance
+  and Employee Checkin parity will now read as "hub-owned" after cutover, which
+  test_hub_owned_parity already models.
+- hrms/sync/write_block.py _instance_unlocked — not-affected: read, not changed.
+- Historical rows already overwritten (August) — NOT repaired here: needs Nabil's
+  word (release the mirrored rows for dates after cutover where local punches
+  exist, unskip the punches the duplicate check stamped, let the hourly job
+  re-mark).

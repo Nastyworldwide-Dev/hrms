@@ -1646,8 +1646,15 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	other failure marks the run Failed and re-raises, because that is a bug,
 	not a data condition.
 	"""
-	doctypes = list(doctypes or DEFAULT_SYNC_DOCTYPES)
 	instance_name = client.instance_name
+	# After cutover this site writes Attendance and Employee Checkin itself; a
+	# pull must not copy the source's (punch-less, all-Absent) view over them.
+	from hrms.sync.cutover import plan_pull_doctypes
+	from hrms.sync.write_block import _instance_unlocked
+
+	doctypes, held_back = plan_pull_doctypes(
+		doctypes or DEFAULT_SYNC_DOCTYPES, _instance_unlocked(instance_name)
+	)
 
 	companies = instance_companies(instance_name)
 	if companies:
@@ -1667,7 +1674,9 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	results, errors, failed, absent = [], [], [], []
 	rulings = _gap_rulings(instance_name)
 	run_gaps: list[str] = []
-	schema_notes: list[str] = []
+	schema_notes: list[str] = [
+		f"{doctype}: not pulled — this site writes it since cutover" for doctype in held_back
+	]
 	status = "Failed"
 
 	blocked = []

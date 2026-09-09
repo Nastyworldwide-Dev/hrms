@@ -266,3 +266,7 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 2026-09-09T04:07Z REPAIR: 2b01825d2 (reviewer Critical on fcb604535): the rebuild lookup matched leave rows converted in place from an auto-Absent (they keep auto_attendance=1) and would have cancelled HR's leave; now excludes leave_type set / modify_half_day_status=1 / On Leave; finds shift-NULL rows on a second look; a refused rebuild skip-stamps only newly read punches. Pushed. DEPLOY SET: ffce088ec + fcb604535 + 2b01825d2 together (plus 3e01a73ab evidence fields).
 2026-09-09T04:07Z EVIDENCE: 3 works — 232 attendance tests green; test_pending_punch_attendance 13/13.
 2026-09-09T04:07Z NEXT: (1) reviewer verdict on 2b01825d2; (2) Nabil deploys the set and checks one employee's September after the first hourly run (an Absent-with-OUT-linked day and a Half Day day); (3) S2 drawer permission state; (4) rebuild-on-rejection ticket; (5) China site question (GCJ-02).
+- 2026-09-09T04:07:09Z PUSH: nz-glass @ 35e1cf543
+- 2026-09-09T04:07:09Z COMMIT: 35e1cf543 chore(plans): deploy set for the attendance incident; handoff → review dispatched
+- 2026-09-09T04:16:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T04:16:09Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 6 extra test file(s) ⟂3652c40d4b9b
