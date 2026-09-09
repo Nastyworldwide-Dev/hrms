@@ -312,3 +312,16 @@ relationship, or lifecycle". 4 Sep = go-live day, ignored on his word.
 EXPECTED OUTPUT: Nabil opens the report for 7–9 Sep, reads his own row's verdict,
 presses Repair, the next run marks the day Present with in/out and hours.
 MOCKUP: NOT NEEDED.
+
+## Addendum 9 Sep 2026 (late) — HR corrections must stand; Desk, job and PWA aligned
+Tier: risky. Nabil, chat: "PWA, DESK must be align and in sync despite the changes
+(amend) … HR can amend that … the pages dont lie anymore".
+`fix(attendance)`: an amendment or after-submit time correction by a person makes the
+row HR-owned (the job never replaces it); the after-submit save publishes to the PWA;
+punches beside an HR row are linked to it as evidence instead of being re-read and
+refused hourly; a check-in HR keys in Desk for someone else records as "Manual Entry"
+(no fence, no approver) — one new Select option on Employee Checkin.geofence_outcome.
+EXPECTED OUTPUT: HR amends Siti's 7 Sep to Present 09:00–18:47; an hour later it is
+still Present in Desk and in her PWA calendar; her punches show that row as their
+attendance.
+MOCKUP: NOT NEEDED.

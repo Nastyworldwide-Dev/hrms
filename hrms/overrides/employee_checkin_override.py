@@ -111,6 +111,14 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			best_delta or 0,
 		)
 
+	def _is_manual_entry(self) -> bool:
+		"""A punch a person keys in for SOMEONE ELSE. The employee's own punch
+		always carries coordinates from the PWA; a bare one from them is refused."""
+		user = frappe.session.user
+		if not user or user == "Guest" or self.device_id:
+			return False
+		return user != frappe.db.get_value("Employee", self.employee, "user_id")
+
 	def validate_distance_from_shift_location(self):
 		"""Geofence validation with two modes.
 
@@ -156,6 +164,17 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			return
 
 		coordinates = parse_coordinates(self.latitude, self.longitude)
+		if coordinates is None and self._is_manual_entry():
+			# HR keying a check-in for someone else in Desk (the employee came in,
+			# the phone did not record it). There is nothing to fence and no
+			# approver to ask: it is recorded as HR's word, named as such.
+			self.geofence_outcome = "Manual Entry"
+			logger.info(
+				"[employee_checkin] manual entry for %s by %s — no coordinates, no fence",
+				self.employee,
+				frappe.session.user,
+			)
+			return
 		if coordinates is None:
 			# Thrown here rather than delegated to `super()`. Upstream re-reads the
 			# GLOBAL flag, so delegating reopened the same bypass one level down;

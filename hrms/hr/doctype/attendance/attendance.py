@@ -59,8 +59,31 @@ class Attendance(Document):
 		self.validate_overlapping_shift_attendance()
 		self.validate_employee_status()
 		self.check_leave_record()
+		self.claim_hr_ownership_on_amend()
 		self.apply_manual_times()
 		self.set_overtime()
+
+	def claim_hr_ownership_on_amend(self):
+		"""An amendment a person makes is that person's row from then on.
+
+		Frappe's Amend copies `auto_attendance = 1` from the cancelled row, so
+		HR's corrected day stayed automation-owned and the next hourly run
+		cancelled it and re-marked the day from the punches — the two pages
+		disagreeing again an hour after HR fixed them (9 Sep 2026). The job's
+		own rebuild says so with `flags.automation_rebuild`; nobody else does.
+		"""
+		if (
+			self.is_new()
+			and self.amended_from
+			and cint(self.auto_attendance)
+			and not getattr(self.flags, "automation_rebuild", False)
+		):
+			self.auto_attendance = 0
+			logger.info(
+				"[attendance] amendment of %s by %s is HR-owned from now on",
+				self.amended_from,
+				frappe.session.user,
+			)
 
 	def apply_manual_times(self):
 		"""A person's in/out derive the hours; the hourly job's own rows keep theirs.
@@ -96,6 +119,7 @@ class Attendance(Document):
 		if before is None or not _times_differ(before, self):
 			return
 		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
+		self.flags.hr_corrected_times = True
 		old_hours = self.working_hours
 		self.working_hours = (
 			working_hours_between(self.in_time, self.out_time) if self.in_time and self.out_time else 0
@@ -348,6 +372,23 @@ class Attendance(Document):
 			)
 
 	def on_update(self):
+		self.publish_update()
+
+	def on_update_after_submit(self):
+		"""HR corrected a submitted row: it is HR's from now on, and the PWA hears it.
+
+		`auto_attendance` is not editable after submit through the form, so the
+		hand-over is written straight to the row; without it the next hourly
+		run treated the corrected row as its own and re-marked the day from the
+		punches. `on_update` does not run on an after-submit save, so the
+		calendar refetch is published here too.
+		"""
+		if getattr(self.flags, "hr_corrected_times", False) and cint(self.auto_attendance):
+			frappe.db.set_value(self.doctype, self.name, "auto_attendance", 0, update_modified=False)
+			self.auto_attendance = 0
+			logger.info(
+				"[attendance] %s corrected by %s is HR-owned from now on", self.name, frappe.session.user
+			)
 		self.publish_update()
 
 	def after_delete(self):

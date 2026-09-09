@@ -292,6 +292,8 @@ def mark_attendance_and_link_log(
 			attendance_date,
 			e.__class__.__name__,
 		)
+		if isinstance(e, DuplicateAttendanceError):
+			_link_to_hr_row(employee, attendance_date, logs)
 		return None
 	except frappe.ValidationError as e:
 		# Only the punches that were not already attended are skipped: a rebuild
@@ -501,6 +503,9 @@ def _replace_automation_attendance(absence, **fields):
 		# Automation-owned, like the row it replaces: the manual "process
 		# attendance" button runs this under whoever pressed it.
 		replacement.flags.ignore_permissions = True
+		# The job's own amendment stays automation-owned; a person's does not
+		# (Attendance.claim_hr_ownership_on_amend).
+		replacement.flags.automation_rebuild = True
 		replacement.update(
 			{
 				"employee": employee,
@@ -734,6 +739,35 @@ def time_diff_in_hours(start, end):
 
 def find_index_in_dict(dict_list, key, value):
 	return next((index for (index, d) in enumerate(dict_list) if d[key] == value), None)
+
+
+def _link_to_hr_row(employee, attendance_date, logs) -> None:
+	"""A day HR marked by hand keeps HR's row; the punches become its evidence
+	of record instead of being re-read and refused every hour. The row itself
+	is not touched — HR's status and times stand. Mirrored rows are skipped
+	(their punches are somebody else's business)."""
+	row = frappe.db.get_value(
+		"Attendance",
+		{
+			"employee": employee,
+			"attendance_date": attendance_date,
+			"docstatus": 1,
+			"auto_attendance": 0,
+			"synced_from_instance": ("is", "not set"),
+		},
+		"name",
+	)
+	unlinked = [x.name for x in logs if not x.get("attendance")]
+	if not row or not unlinked:
+		return
+	update_attendance_in_checkins(unlinked, row)
+	logger.info(
+		"[checkin] %s on %s: %d punch(es) linked to HR's row %s as evidence",
+		employee,
+		attendance_date,
+		len(unlinked),
+		row,
+	)
 
 
 def handle_attendance_exception(log_names: list, error_message: str):

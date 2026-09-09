@@ -288,3 +288,36 @@ Call sites / importers, with verdicts:
 - Checkin Provenance Audit (mirrored punches) — not-affected: the day audit
   points at it for punches-mirrored.
 Regression: hrms/tests/test_attendance_day_audit.py (17), report test (2).
+
+# family.md — HR corrections undone or refused; Desk, job and PWA disagree (9 Sep, night)
+
+CLASS: WHO OWNS THE ROW AFTER A PERSON TOUCHES IT. Frappe's Amend copies
+auto_attendance=1, and an after-submit time edit left it at 1, so the hourly job
+treated HR's corrected day as its own and re-marked it from the punches; the
+after-submit save never published to the PWA; a Desk-entered punch for someone
+else was refused for lacking coordinates; punches beside an HR row were re-read
+and refused every hour.
+
+Changed: attendance.py claim_hr_ownership_on_amend (validate), flags.hr_corrected_times
+(before_update_after_submit), on_update_after_submit (db.set_value auto_attendance 0 +
+publish); employee_checkin.py replacement.flags.automation_rebuild, _link_to_hr_row on
+DuplicateAttendanceError; employee_checkin_override.py _is_manual_entry → outcome
+"Manual Entry" (option added to employee_checkin.json).
+
+Call sites / importers, with verdicts:
+- _replace_automation_attendance (job rebuild) — same-root, fixed here: sets the flag
+  so its own amendment stays automation-owned.
+- reprocess_late_checkout_attendance (repair row, no amended_from) — not-affected:
+  it sets auto_attendance explicitly and does not amend.
+- get_automation_attendance (auto_attendance=1 filter) — same-root by effect: an HR
+  row is now invisible to it, as intended.
+- mark_attendance (Desk bulk tool / Employee Attendance Tool) — not-affected: new rows,
+  auto_attendance passed explicitly.
+- Attendance.publish_update / PWA calendar refetch — same-root, fixed here for the
+  after-submit path.
+- hrms/api/remote_checkin.py punch — not-affected: always carries coordinates and the
+  caller is the employee, so _is_manual_entry is False.
+- Biometric device rows (device_id set) — not-affected: excluded by device_id.
+- Attendance Day Audit judge_day — not-affected: reads auto_attendance; an HR row now
+  reads "row-manual" with its punches linked.
+Regression: hrms/tests/test_hr_correction_ownership.py (14).

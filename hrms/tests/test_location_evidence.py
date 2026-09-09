@@ -33,6 +33,7 @@ OUTCOMES = {
 	"No Radius",
 	"Tracking Off",
 	"Late Checkout",
+	"Manual Entry",
 }
 
 
