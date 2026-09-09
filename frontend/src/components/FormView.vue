@@ -100,7 +100,12 @@
 						</div>
 
 						<template v-for="(fieldList, tabName, index) in tabFields" :key="tabName">
-							<div v-show="tabName === activeTab" class="flex flex-col space-y-4 p-4">
+							<div
+								v-show="tabName === activeTab"
+								class="flex flex-col space-y-4 p-4"
+								@focusin="touchForm"
+								@click.capture="touchForm"
+							>
 								<template v-for="field in fieldList" :key="field.fieldname">
 									<slot
 										v-if="field.fieldtype == 'Table'"
@@ -147,7 +152,12 @@
 						</template>
 					</template>
 
-					<div class="flex flex-col space-y-4 p-4" v-else>
+					<div
+						class="flex flex-col space-y-4 p-4"
+						v-else
+						@focusin="touchForm"
+						@click.capture="touchForm"
+					>
 						<FormField
 							v-for="field in props.fields"
 							:key="field.name"
@@ -227,7 +237,10 @@
 					<ErrorMessage
 						class="mb-2"
 						:message="
-							formErrorMessage || docList?.insert?.error || documentResource?.setValue?.error
+							formErrorMessage ||
+							docList?.insert?.error ||
+							documentResource?.setValue?.error ||
+							finalize.error
 						"
 					/>
 
@@ -240,7 +253,9 @@
 					<GButton
 						:label="__(formButton)"
 						:pending-label="__('Saving…')"
-						:pending="docList.insert.loading || documentResource?.setValue?.loading"
+						:pending="
+							docList.insert.loading || documentResource?.setValue?.loading || finalize.loading
+						"
 						:disabled="formButton === 'Save' && Boolean(saveError)"
 						:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
 						@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
@@ -520,10 +535,41 @@ const status = computed(() => {
 	return formModel.value.status || formModel.value.approval_status
 })
 
+// A new form has no server copy to diff against, so `dirty` was never armed
+// and Back threw typed items away without asking. Dirty for a new form means:
+// it differs from what it held when the employee FIRST touched it. The
+// baseline is taken at that touch (capture phase, before any child handler
+// mutates the model), so FormField's mount defaults and the seeds a parent
+// applies after mount — approver, currency, an empty items table — are
+// absorbed rather than mistaken for the employee's work.
+let newDocBaseline = null
+const formTouched = ref(false)
+function touchForm() {
+	if (formTouched.value) return
+	formTouched.value = true
+	if (!props.id) newDocBaseline = editableSnapshot()
+}
+// FormField seeds "" / false on mount and parents seed [] for tables: every
+// flavour of "nothing here" compares equal.
+const isEmptyValue = (value) =>
+	value == null || value === "" || value === false || (Array.isArray(value) && value.length === 0)
+function editableSnapshot() {
+	const snapshot = {}
+	for (const field of props.fields) {
+		if (field.hidden || field.read_only) continue
+		const value = formModel.value[field.fieldname]
+		snapshot[field.fieldname] = isEmptyValue(value) ? null : value
+	}
+	return JSON.stringify(snapshot)
+}
+
 watch(
 	() => formModel.value,
 	() => {
-		if (!props.id) return
+		if (!props.id) {
+			if (newDocBaseline !== null) isFormDirty.value = editableSnapshot() !== newDocBaseline
+			return
+		}
 
 		if (isFormReady.value && !isFormUpdated.value) {
 			isFormDirty.value = true
@@ -688,6 +734,33 @@ const documentResource = createDocumentResource({
 	},
 })
 
+// docstatus is a TRANSITION, not a field: frappe.client.set_value refuses it
+// ("Cannot edit standard fields"), so Submit and Cancel sent through setValue
+// failed silently. The server performs the transition — the same endpoint
+// RequestActionSheet uses — and runs validate/on_submit/on_cancel with it.
+const finalize = createResource({
+	url: "hrms.api.approval.finalize",
+	onSuccess() {
+		toast({
+			title: __("Success"),
+			text: __("{0} updated successfully!", [__(props.doctype)]),
+			icon: "check-circle",
+			position: "bottom-center",
+			iconClasses: "text-green-500",
+		})
+	},
+	onError(error) {
+		console.warn(`[FormView] ${props.doctype} transition failed:`, error)
+		toast({
+			title: __("Error"),
+			text: error?.messages?.[0] || __("Error updating {0}", [__(props.doctype)]),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
+	},
+})
+
 const docPermissions = createResource({
 	url: "frappe.client.get_doc_permissions",
 	params: { doctype: props.doctype, docname: props.id },
@@ -817,21 +890,28 @@ async function handleDocUpdate(action) {
 	if (action === "submit") showSubmitDialog.value = false
 	else if (action === "cancel") showCancelDialog.value = false
 
-	if (documentResource.doc) {
-		let params = { ...formModel.value }
+	if (!documentResource.doc) return
+	if (!validateMandatoryFields()) return
 
-		if (!validateMandatoryFields()) return
-
-		if (action == "submit") {
-			params.docstatus = 1
-		} else if (action == "cancel") {
-			params.docstatus = 2
+	if (action === "submit" || action === "cancel") {
+		try {
+			await finalize.submit({
+				doctype: props.doctype,
+				name: props.id,
+				docstatus: action === "submit" ? 1 : 2,
+				expected_modified: documentResource.doc?.modified,
+			})
+		} catch {
+			// finalize.onError already toasted the server's reason
 		}
-
-		await documentResource.setValue.submit(params)
-		await documentResource.get.promise
-		resetForm()
+		// render what the server did, whether or not it agreed
+		await reloadDoc()
+		return
 	}
+
+	await documentResource.setValue.submit({ ...formModel.value })
+	await documentResource.get.promise
+	resetForm()
 }
 
 function saveForm() {

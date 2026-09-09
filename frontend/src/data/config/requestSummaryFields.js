@@ -291,6 +291,16 @@ export const OT_REQUEST_FIELDS = [
 		label: "Compensation",
 		fieldtype: "Select",
 	},
+	{
+		fieldname: "status",
+		label: "Status",
+		fieldtype: "Select",
+	},
+	{
+		fieldname: "explanation",
+		label: "Explanation",
+		fieldtype: "Small Text",
+	},
 ]
 
 export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
@@ -323,6 +333,16 @@ export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 		fieldname: "available_hours",
 		label: "Hours Available",
 		fieldtype: "Float",
+	},
+	{
+		fieldname: "status",
+		label: "Status",
+		fieldtype: "Select",
+	},
+	{
+		fieldname: "explanation",
+		label: "Explanation",
+		fieldtype: "Small Text",
 	},
 ]
 

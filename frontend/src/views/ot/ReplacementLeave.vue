@@ -80,11 +80,9 @@
 							<span class="text-xs text-ink-600">{{ claimRow.name }}</span>
 						</div>
 						<GStatusChip
-							:status="claimRow.docstatus === 1 ? 'Approved' : 'Draft'"
-							:label="claimRow.docstatus === 1 ? __('Approved') : __('Draft')"
-						>
-							{{ claimRow.docstatus === 1 ? __("Approved") : __("Pending") }}
-						</GStatusChip>
+							:status="requestStatusChip(claimRow)"
+							:label="__(requestStatusChip(claimRow))"
+						/>
 					</router-link>
 				</div>
 			</div>
@@ -101,6 +99,7 @@ import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
 import { settings } from "@/data/settings"
+import { requestStatusChip } from "@/utils/requestStatus"
 
 const employee = inject("$employee")
 const __ = inject("$translate")

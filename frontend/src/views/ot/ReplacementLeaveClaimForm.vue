@@ -90,7 +90,9 @@ function validateClaimedDays() {
 	const daysField = formFields.data?.find((f) => f.fieldname === "claimed_days")
 	if (!daysField) return
 	const numeric = Number(claim.value.claimed_days || 0)
-	const cost = numeric * 8
+	// the same HR ratio the description quotes — a literal 8 refused claims on a
+	// site configured for a different day length
+	const cost = numeric * (settings.data?.replacement_leave_hours_per_day ?? 8)
 	claim.value.hours_cost = cost
 	// available_hours is set only once the bank summary loads. Guard on != null,
 	// NOT truthiness: a real 0-hours bank (nothing banked — the MOST invalid

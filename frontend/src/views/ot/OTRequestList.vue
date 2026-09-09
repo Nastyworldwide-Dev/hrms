@@ -16,7 +16,14 @@ import { inject } from "vue"
 
 const __ = inject("$translate")
 
-const OT_REQUEST_FIELDS = ["name", "ot_date", "claimed_hours", "compensation", "docstatus"]
+const OT_REQUEST_FIELDS = [
+	"name",
+	"ot_date",
+	"claimed_hours",
+	"compensation",
+	"docstatus",
+	"status",
+]
 const FILTER_CONFIG = [
 	{ fieldname: "ot_date", fieldtype: "Date", label: __("OT Date") },
 	{

@@ -29,6 +29,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
+import { requestStatusChip } from "@/utils/requestStatus"
 
 const __ = inject("$translate")
 
@@ -46,11 +47,9 @@ const props = defineProps({
 	},
 })
 
-// Same docstatus-driven model as OT Request — approval is the submit.
+// The decision is in `status`; docstatus alone cannot tell Rejected from Approved.
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
-	if (props.doc.docstatus === 1) return __("Approved")
-	if (props.doc.docstatus === 2) return __("Cancelled")
-	return __("Pending")
+	return __(requestStatusChip(props.doc))
 })
 </script>

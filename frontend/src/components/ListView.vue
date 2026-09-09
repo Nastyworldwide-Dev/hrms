@@ -166,6 +166,8 @@ import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
+import OTRequestItem from "@/components/OTRequestItem.vue"
+import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
@@ -271,6 +273,10 @@ const listItemComponent = {
 	"Shift Assignment": markRaw(ShiftAssignmentItem),
 	"Leave Application": markRaw(LeaveRequestItem),
 	"Expense Claim": markRaw(ExpenseClaimItem),
+	// Both were missing: the rows were fetched and `<component :is="undefined">`
+	// rendered every one of them blank.
+	"OT Request": markRaw(OTRequestItem),
+	"Replacement Leave Claim": markRaw(ReplacementLeaveClaimItem),
 }
 
 const router = useRouter()

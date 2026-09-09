@@ -239,3 +239,28 @@ Call sites / importers, with verdicts:
   discovery; rewritten to pin "discovery == form".
 Regression: test_request_outcome_visible.py, test_rl_discovery_uses_capacity.py,
 test_request_company_from_employee.py.
+
+# family.md — PWA claim surfaces: blank rows, wrong chips, dead Cancel, silent discard (9 Sep)
+
+CLASS: A SHARED COMPONENT TRUSTED TO KNOW A DOCTYPE IT WAS NEVER TOLD ABOUT.
+ListView had no row component for the two OT doctypes; three chips read
+docstatus alone; FormView sent a docstatus transition through set_value; the
+dirty watcher ignored every new form.
+
+Changed: frontend ListView.vue (row map), utils/requestStatus.js (one chip rule)
+used by OTRequestItem / ReplacementLeaveClaimItem / ReplacementLeave.vue,
+OTRequestList.vue (+status), ReplacementLeaveClaimForm.vue (ratio from HR
+Settings), FormView.vue (finalize for submit/cancel; first-touch baseline for
+new forms), requestSummaryFields.js (+status, +explanation).
+
+Call sites / importers, with verdicts:
+- Every other doctype in ListView's map — not-affected: entries unchanged.
+- RequestActionSheet.vue finalize call — same-root by design: FormView now
+  sends the same shape.
+- Leave / Expense / Shift forms (FormView consumers) — same-root, fixed here:
+  the new-form dirty rule applies to all of them; loaded-doc rule untouched
+  (ot-request-state.test.mjs green).
+- Desk request_approval.js — not-affected: Desk path already on finalize.
+Regression: frontend/tests/{listview-ot-items,request-status-chip,
+rl-claim-cost-setting,formview-cancel-finalize,request-summary-explanation,
+formview-new-doc-dirty}.test.mjs.
