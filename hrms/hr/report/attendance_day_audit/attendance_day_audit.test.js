@@ -26,3 +26,11 @@ test("the repair button confirms before writing", () => {
 	assert.ok(JS.includes("frappe.confirm"));
 	assert.ok(JS.includes("dry_run: 1"));
 });
+
+test("the confirmation does not promise attendance rows are untouched", () => {
+	// The shift repair unlinks punches, so the hourly job cancels and re-creates
+	// the day's Attendance. A consent line that says otherwise is a false promise.
+	assert.ok(!JS.includes("Attendance rows themselves are not changed"));
+	assert.match(JS, /rebuild|re-create|cancel/i);
+	assert.match(JS, /payout already depends/i);
+});

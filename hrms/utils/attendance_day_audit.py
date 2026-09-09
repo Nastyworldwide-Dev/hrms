@@ -109,15 +109,32 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None) -> dict
 	# then sees a single punch, so the day reads Half Day or Absent although
 	# the row has a full IN and OUT. Re-resolving the shift and letting the
 	# job rebuild the day is the repair.
-	shifts_used = {p.get("shift") for p in local if p.get("shift")}
-	if len(shifts_used) > 1 and len(local) > 1:
+	# Only punches the job would actually read can be repaired: a rejected or
+	# skip-stamped punch is excluded from attendance by rule, and re-resolving
+	# its shift buys nothing while muddying its audit trail.
+	countable = [
+		p
+		for p in local
+		if not cint(p.get("skip_auto_attendance"))
+		and not cint(p.get("offshift"))
+		and p.get("remote_approval_status") != "Rejected"
+	]
+	shifts_used = {p.get("shift") for p in countable if p.get("shift")}
+	# Evidence of breakage, not merely two shifts: an employee legitimately
+	# working two shifts in one day is not a defect, and "repairing" it would
+	# re-resolve each punch back where it was, so the verdict would fire again
+	# on every run. A day is broken when it has both an IN and an OUT and the
+	# row still says Absent or Half Day (or there is no row at all).
+	has_pair = {p.get("log_type") for p in countable} >= {"IN", "OUT"}
+	looks_wrong = row is None or row.get("status") in ("Absent", "Half Day")
+	if len(shifts_used) > 1 and has_pair and looks_wrong:
 		return _verdict(
 			"punches-split-across-shifts",
 			"the day's punches sit under "
 			+ " and ".join(sorted(shifts_used))
 			+ "; each shift saw only part of the day",
 			"refetch-shift",
-			[p["name"] for p in local],
+			[p["name"] for p in countable],
 		)
 	dead_link = [p for p in local if p.get("attendance") and (row is None or p["attendance"] != row["name"])]
 	dead_link = [
@@ -333,10 +350,19 @@ def collect(from_date, to_date, employee=None) -> dict:
 	return {"days": judged}
 
 
-def plan_repairs(judged_days) -> list:
-	"""Which punches the repair would touch, and how. Pure."""
+def plan_repairs(judged_days, locked_days=None) -> list:
+	"""Which punches the repair would touch, and how. Pure.
+
+	`locked_days` is the set of (employee, date) a payout already depends on.
+	Re-shifting those is worse than leaving them: the rebuild is refused by the
+	financial guard, and the job's own failure handler then skip-stamps every
+	punch it just read — permanently, including the ones that were fine.
+	"""
+	locked = locked_days or set()
 	plan = []
 	for day in judged_days:
+		if day.get("repair") == "refetch-shift" and (day["employee"], str(day["date"])) in locked:
+			continue
 		if day.get("repair") in ("unskip", "unlink", "refetch-shift") and day.get("repair_punches"):
 			plan.append(
 				{
@@ -349,28 +375,100 @@ def plan_repairs(judged_days) -> list:
 	return plan
 
 
+def _job_can_read(punch) -> bool:
+	"""Would the hourly job pick this punch up under the shift it now names?
+
+	`ShiftType._process` skips a shift whose auto attendance is off, and its
+	query takes punches with `time >= process_attendance_after` and
+	`shift_actual_end < last_sync_of_checkin`. A punch outside that window is
+	never read again, so unlinking it strands the day.
+	"""
+	if not punch.shift:
+		return False
+	shift = frappe.db.get_value(
+		"Shift Type",
+		punch.shift,
+		["enable_auto_attendance", "process_attendance_after", "last_sync_of_checkin"],
+		as_dict=True,
+	)
+	if not shift or not cint(shift.enable_auto_attendance):
+		return False
+	if shift.process_attendance_after and getdate(punch.time) < getdate(shift.process_attendance_after):
+		return False
+	if (
+		shift.last_sync_of_checkin
+		and punch.shift_actual_end
+		and get_datetime(punch.shift_actual_end) >= get_datetime(shift.last_sync_of_checkin)
+	):
+		return False
+	return True
+
+
+def _financially_locked(days) -> set:
+	"""(employee, date) where approved overtime, replacement leave or submitted
+	payroll already depends on the day the shift repair would rebuild."""
+	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+	locked = set()
+	for day in days:
+		if day.get("repair") != "refetch-shift":
+			continue
+		if _repair_financial_dependency(day["employee"], day["date"], day.get("attendance")):
+			locked.add((day["employee"], str(day["date"])))
+			logger.info(
+				"[attendance_day_audit] %s on %s left alone: a payout depends on it",
+				day["employee"],
+				day["date"],
+			)
+	return locked
+
+
 @frappe.whitelist()
 def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 	"""Clear old skip stamps and dead attendance links so the hourly job re-marks
 	those days. System Manager only; dry run by default; writes nothing else."""
 	frappe.only_for("System Manager")
-	plan = plan_repairs(collect(from_date, to_date)["days"])
+	days = collect(from_date, to_date)["days"]
+	locked = _financially_locked(days)
+	plan = plan_repairs(days, locked)
 	if cint(dry_run):
-		logger.info("[attendance_day_audit] dry run by %s: %d day(s)", frappe.session.user, len(plan))
-		return {"dry_run": True, "plan": plan}
+		logger.info(
+			"[attendance_day_audit] dry run by %s: %d day(s), %d held back for a payout",
+			frappe.session.user,
+			len(plan),
+			len(locked),
+		)
+		return {"dry_run": True, "plan": plan, "held_back": sorted(locked)}
 
 	touched = 0
 	for entry in plan:
 		for name in entry["punches"]:
 			if entry["action"] == "refetch-shift":
 				# Through the document, on purpose: fetch_shift IS the rule
-				# (hrms/utils/shift_resolution.py). The attendance link goes with
-				# it so the job re-reads the punch under its corrected shift.
+				# (hrms/utils/shift_resolution.py).
 				punch = frappe.get_doc("Employee Checkin", name)
-				punch.attendance = None
+				was_linked = punch.attendance
 				punch.fetch_shift()
+				if not _job_can_read(punch):
+					# The corrected shift cannot re-read this punch (auto
+					# attendance off, or outside its processing window), so
+					# unlinking it would strand the day with no evidence and no
+					# rebuild. Leave the row exactly as it was.
+					logger.warning(
+						"[attendance_day_audit] %s left alone: shift %s would never re-read it",
+						name,
+						punch.shift,
+					)
+					continue
+				punch.attendance = None
 				punch.flags.ignore_validate = True
 				punch.save()
+				logger.info(
+					"[attendance_day_audit] %s re-resolved to %s (was linked to %s)",
+					name,
+					punch.shift,
+					was_linked,
+				)
 			elif entry["action"] == "unskip":
 				if not cint(frappe.db.get_value("Employee Checkin", name, "skip_auto_attendance")):
 					continue

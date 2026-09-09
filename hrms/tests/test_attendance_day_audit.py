@@ -156,6 +156,30 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["repair_punches"], ["A", "B"])
 		self.assertIn("7PM-3:30AM", verdict["detail"])
 
+	def test_a_day_that_already_reads_right_is_not_a_split_to_repair(self):
+		"""An employee legitimately working two shifts in one day is not a defect.
+		Flagging it would re-resolve each punch back where it was, so the verdict
+		would fire again on every run and HR could repair forever."""
+		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
+		verdict = judge_day(punches, [_absent(status="Present")], SHIFT)
+		self.assertNotEqual(verdict["verdict"], "punches-split-across-shifts")
+
+	def test_a_split_day_with_no_out_yet_is_not_repaired(self):
+		"""Mid-shift: the OUT has not happened. Nothing to reconcile."""
+		punches = [_punch("A", 10, "IN"), _punch("B", 11, "IN", shift="7PM-3:30AM")]
+		verdict = judge_day(punches, [_absent()], SHIFT)
+		self.assertNotEqual(verdict["verdict"], "punches-split-across-shifts")
+
+	def test_a_rejected_punch_is_not_dragged_into_the_shift_repair(self):
+		punches = [
+			_punch("A", 10, "IN"),
+			_punch("B", 19, "OUT", shift="7PM-3:30AM"),
+			_punch("C", 20, "OUT", shift="7PM-3:30AM", remote_approval_status="Rejected"),
+		]
+		verdict = judge_day(punches, [_absent(status="Half Day")], SHIFT)
+		self.assertEqual(verdict["verdict"], "punches-split-across-shifts")
+		self.assertEqual(verdict["repair_punches"], ["A", "B"])
+
 	def test_a_single_punch_under_one_shift_is_not_a_split(self):
 		verdict = judge_day([_punch("A", 10, "IN")], [_absent()], SHIFT)
 		self.assertNotEqual(verdict["verdict"], "punches-split-across-shifts")
@@ -207,6 +231,39 @@ class TestJudgeDay(unittest.TestCase):
 
 	def test_nothing_at_all(self):
 		self.assertEqual(judge_day([], [], SHIFT)["verdict"], "no-punches")
+
+
+class TestFinancialHoldBack(unittest.TestCase):
+	"""A day a payout depends on must never reach the shift repair: the rebuild
+	is refused by the financial guard, and the job's failure handler then
+	skip-stamps every punch it just read, permanently."""
+
+	def _days(self):
+		return [
+			{
+				"employee": "E1",
+				"date": "2026-09-07",
+				"repair": "refetch-shift",
+				"repair_punches": ["A", "B"],
+			},
+			{
+				"employee": "E2",
+				"date": "2026-09-07",
+				"repair": "refetch-shift",
+				"repair_punches": ["C", "D"],
+			},
+		]
+
+	def test_a_locked_day_is_dropped_from_the_plan(self):
+		plan = plan_repairs(self._days(), locked_days={("E1", "2026-09-07")})
+		self.assertEqual([p["employee"] for p in plan], ["E2"])
+
+	def test_nothing_locked_means_every_day_is_planned(self):
+		self.assertEqual(len(plan_repairs(self._days())), 2)
+
+	def test_the_lock_only_holds_back_the_shift_repair(self):
+		days = [{"employee": "E1", "date": "2026-09-07", "repair": "unskip", "repair_punches": ["A"]}]
+		self.assertEqual(len(plan_repairs(days, locked_days={("E1", "2026-09-07")})), 1)
 
 
 class TestPlan(unittest.TestCase):

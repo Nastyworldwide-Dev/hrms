@@ -50,9 +50,7 @@ frappe.query_reports["Attendance Day Audit"] = {
 	onload(report) {
 		// Server side is System Manager only; dry run first, then an explicit confirm.
 		if (!frappe.user.has_role("System Manager")) return;
-		report.page.add_inner_button(__("Repair Skip Stamps and Dead Links"), () =>
-			repair(report),
-		);
+		report.page.add_inner_button(__("Repair Punch Links and Shifts"), () => repair(report));
 	},
 };
 
@@ -91,7 +89,7 @@ function repair(report) {
 			});
 			frappe.confirm(
 				__(
-					"Clear the old skip stamps / dead links on {0} day(s) and queue the hourly job now? Attendance rows themselves are not changed.",
+					"Repair {0} day(s)? Skip stamps and dead links are cleared, and punches under the wrong shift are re-resolved. The hourly job then rebuilds those days, which can cancel and re-create their Attendance rows. Days a payout already depends on are left alone.",
 					[plan.length],
 				),
 				() =>
