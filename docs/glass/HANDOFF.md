@@ -1,12 +1,15 @@
 # HANDOFF
-prompt:   360-repair batch 2 (rows 1-9 after Astra)
-status:   partial — 9/9 rows landed locally, reviews deferred, HR questions open
-commit:   cd00c19a7 on nz-glass (53 local commits since origin; NOT pushed)
-files:    hrms/utils/break_calculation.py, hrms/utils/holiday_list.py, hrms/utils/ot_calculation.py
-          hrms/hr/doctype/shift_type/shift_type.py, hrms/hr/doctype/employee_checkin/employee_checkin.py
-          hrms/hr/doctype/pwa_notification/pwa_notification.{py,json}, hrms/patches/v16_0/grant_hr_read_on_pwa_notification.py
-          hrms/utils/report_scope.py, hrms/payroll/report/salary_register/, hrms/hr/report/{monthly_attendance_sheet,employee_analytics}/
-          hrms/sync/runner.py, frontend/src/{components/ResourceError.vue,views/Notifications.vue,utils/pushNotifications.js}
-verify:   PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider hrms/tests hrms/utils hrms/api hrms/sync && cd frontend && node --test tests/*.test.mjs && bun test src
-flags:    reviews not run for batch 2 (user: review later); test_attendance_allowance.py collection error pre-existing; rest-day rule, four-month window, September repair wait for HR
-next:     run reviews in one pass, then Nabil pushes + deploys (two new patches); then HR answers; then report family hunt + N01-N04/N09
+prompt:   2.0-plan + stabilisation (9 Sep)
+status:   done
+commit:   adbae859c on nz-glass (pushed); docs commit follows
+files:    docs/glass/plan/NADI_2.0_UX_PLAN.md
+          docs/glass/plan/NADI_2.0_SURFACE_MAP.md
+          frontend/e2e/prototype-measure.mjs
+          frontend/e2e/app-measure.mjs
+          docs/glass/audit/2026-09-09-prototype-measure.json
+          docs/glass/audit/2026-09-09-app-measure.json
+          hrms/utils/push_relay.py (fix, 1feffe5a7)
+          hrms/hr/doctype/shift_location/shift_location.json (feat, 527680d56)
+verify:   cd frontend && set -a && . ../.env && set +a && node e2e/app-measure.mjs
+flags:    Q0-Q3 in NADI_2.0_UX_PLAN.md §5 need Nabil; deploy needs migrate (new Check column)
+next:     Nabil deploys, opens the PWA once (relay re-registers), answers Q0-Q3; then phase 0

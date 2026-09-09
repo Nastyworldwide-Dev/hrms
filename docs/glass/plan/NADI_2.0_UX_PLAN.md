@@ -9,7 +9,9 @@ phase 9 work order (44 routes, 18 sheets, six states) and the Glass spec v1.1.
 The ask: make the UX justified at every part, close every gap and hole, and
 have the UI ride the correct flow. This document turns that into a checkable
 contract, a gap ledger against what is already shipped, the decisions that
-block the build, and an ordered slice plan.
+block the build, and an ordered slice plan. Its companion,
+[NADI_2.0_SURFACE_MAP.md](NADI_2.0_SURFACE_MAP.md) (9 Sep), carries the measured
+numbers: every route and sheet, the grid, the scroll budget, the redundancy census.
 
 ---
 
@@ -83,6 +85,9 @@ gate; rules marked **R** are checked in review with a fixture screenshot.
 | U10 | Plain language. Every number has a unit and, where it is not ours, a source ("from HR records", "from the IT asset register"). | Prototype footers; work order 9.7c. | R. |
 | U11 | Read/write follows ownership. The app reads assets, certifications, KPI figures and roster; it writes requests only. | mapping §5.3 two sources of truth; Verifica cutover rules. | **G**: API allowlist test: no `insert`/`set_value` on Asset, Employee, Appraisal from PWA endpoints. |
 | U12 | Multi-company fence on every new endpoint. | mapping §5.6; `allowed_companies()` in `hrms/overrides/company_scope.py` for API reads, `fenced_companies()` in `hrms/utils/report_scope.py` for reports; R1 decision. | **G**: AST test that every new whitelisted function calls the fence helper (pattern already used for sync endpoints). |
+| U13 | Scroll budget: a tab-root screen fits the fold (≤ 752 px at 390×844) in its resting state; sheets ≤ 720; a form's first field is above the fold and its primary action is sticky. | Surface map §2: Home 1382, Calendar 1362, Requests 1301, Notifications 1366 today. | **G**: `frontend/e2e/app-measure.mjs` against the seeded site. |
+| U14 | One spacing scale (4, 8, 12, 16, 24, 32) and twelve type roles; no arbitrary bracket values. | Surface map §5: 265 distinct classes, 39 arbitrary. | **G**: the spacing census script. |
+| U15 | One row, one pill: every list row is `RequestRow`, every status string comes from `StatusPill`. | Nine `*Item.vue` components and 13 inline status labels today. | **G**: grep gate. |
 
 These rules become spec addendum §17 and the coherence gate's rule list.
 A slice that breaks a **G** rule cannot commit; a slice that breaks an **R** rule
@@ -196,6 +201,7 @@ Each one changes what gets built. Recommendation first, so a "yes" is one word.
 
 | # | Decision | Recommendation | Who |
 |---|---|---|---|
+| Q0 | Look target | **The prototype's flat, still material becomes the spec.** Token names stay, values re-tune to the grid in the surface map §1; the Glass light field, bevel and blur retire. This reverses phase 9 decisions D2/D3 on purpose; recorded as spec addendum §18. | Nabil + P&C |
 | Q1 | Tab bar | **Home · Calendar · Requests · Score · More** as prototyped. Approvals as a header icon plus "Needs you", never a tab (it would vary by role and break the fixed-five rule). Doubt on record: Score is a quarterly screen in a daily bar; revisit with four weeks of usage. | Nabil + P&C |
 | Q2 | Approve all leave | **No at launch.** Ship behind an HR Settings toggle, default off, only after HR rules on it. Bulk approval without per-request cover context contradicts U8. | HR |
 | Q3 | One issue system | **Native Helpdesk** as the employee-facing surface where installed (reply thread, categories Payroll or OT / App bug / Other route to HR or IT). Employee Issue stays for HR-confidential types only if HR insists; otherwise migrate. Open since 7 Sep. | HR + IT |
@@ -229,9 +235,11 @@ under 400 source lines with its tests, the review hook, no push without word.
 |---|---|---|
 | 0.1 | Record Q1–Q3 in `docs/glass/decisions/` | Three decision files with a signature line. |
 | 0.2 | Spec addendum §17: the UX contract (section 2) and the tab bar ruling | Addendum committed; spec §13.1 amended. |
-| 0.3 | Glass mockup of the prototype: `mockup-builder` renders Home, Calendar + day sheet, Requests hub + New sheet, Leave form, Request detail, Approvals + detail using `design/tokens.json` (the prototype's own lime and radii, but Glass material, Inter Tight) | Sign-off per screen family. This is the design contract the build must match. |
+| 0.3 | Mockup: the prototype IS the visual contract (Q0). `mockup-builder` re-renders Home, Calendar + day sheet, Requests hub + New sheet, Leave form, Request detail, Approvals + detail on the grid values of surface map §1, so sign-off is on snapped numbers, not on the prototype's odd ones | Sign-off per screen family. |
 | 0.4 | Gates for the **G** rules: copy lint (U4), balance arithmetic lint (U9), API ownership allowlist (U11), fence AST test (U12), resource-states gate at all three containers (U2) | Each gate red on a deliberate breach, green on HEAD. |
 | 0.5 | E2E journeys J2 check-in, J3 request, J4 approve run in CI against a served site (THE_PLAN phase 2 items still open) | `critical-paths.spec.js` covers punch, submit, approve-and-stays-approved. |
+| 0.6 | Token re-tune to the grid (surface map §1.1–1.4): spacing scale, radii, type roles, tab bar 56, header 56; generated CSS regenerated; both themes re-measured with `app-measure.mjs` | Every token value equals the table; `design/gates` baselines refreshed on purpose. |
+| 0.7 | The 22-primitive kit (surface map §1.3): build or retune each once, with its measured height pinned in a node test; the nine `*Item.vue` rows and the filter sheet retire behind `RequestRow`, `StatusPill`, `Chip` | Kit tests green; census gate U14/U15 green on the kit files. |
 
 ### Phase 1 — Friction on what exists (no policy needed)
 
@@ -286,7 +294,7 @@ reduced motion; visual baseline refresh; coherence gate carrying the U rules.
 
 | Phase | Slices | Notes |
 |---|---|---|
-| 0 | 5 | Mostly gates and a mockup; no product code. |
+| 0 | 7 | Gates, the spec addendum, the token re-tune and the kit. 0.6 and 0.7 are product code that every later slice rides on. |
 | 1 | 11 | All on existing screens. |
 | 2 | 9 | Two of them (2.2, 2.7) carry new aggregation endpoints. |
 | 3 | 24 across 8 domains | Each domain is its own mini-plan with a schema slice. |

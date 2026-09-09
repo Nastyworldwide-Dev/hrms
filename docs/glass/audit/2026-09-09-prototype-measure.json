@@ -1,0 +1,2035 @@
+{
+ "viewport": {
+  "W": 390,
+  "H": 844
+ },
+ "screens": [
+  {
+   "id": "s-home",
+   "content": 723,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 52,
+     "text": "Nadi 3 4 N"
+    },
+    {
+     "block": "pad",
+     "top": 52,
+     "height": 53,
+     "text": "Monday, 7 September Hey, Nik"
+    },
+    {
+     "block": "pad",
+     "top": 117,
+     "height": 140,
+     "text": "Checked in at 08:20 Shift 09:00–18:00 · "
+    },
+    {
+     "block": "sect#h-needs-lbl",
+     "top": 257,
+     "height": 44,
+     "text": "Needs you8"
+    },
+    {
+     "block": "group#h-needs",
+     "top": 301,
+     "height": 253,
+     "text": "EAnnual leaveElfira · Fri 25 Sep · 1 day"
+    },
+    {
+     "block": "sect#ev-lbl",
+     "top": 553,
+     "height": 39,
+     "text": "Coming up at workSee all"
+    },
+    {
+     "block": "hscroll#ev-row",
+     "top": 593,
+     "height": 112,
+     "text": "FRI 11 SEP · 3:00 PMGroup town hall: Q3 "
+    },
+    {
+     "block": "DIV",
+     "top": 705,
+     "height": 18,
+     "text": ""
+    }
+   ],
+   "title": "Nadi"
+  },
+  {
+   "id": "s-attend",
+   "content": 791,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 2.5,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "Calendar ＋ Request"
+    },
+    {
+     "block": "cal",
+     "top": 54,
+     "height": 737,
+     "text": "September 2026 Change SUNMONTUEWEDTHUFRI"
+    }
+   ],
+   "title": "Calendar"
+  },
+  {
+   "id": "s-requests",
+   "content": 637,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "Requests All · 7"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 102,
+     "text": "19 of 22 annual days left › Medical 18Ho"
+    },
+    {
+     "block": "pad",
+     "top": 170,
+     "height": 84,
+     "text": "RM 606 claims in progress › RM 120 await"
+    },
+    {
+     "block": "pad",
+     "top": 269,
+     "height": 84,
+     "text": "3 company assets with you › Laptop, phon"
+    },
+    {
+     "block": "pad",
+     "top": 367,
+     "height": 84,
+     "text": "1 issue you raised › 1 pending with HR p"
+    },
+    {
+     "block": "pad",
+     "top": 465,
+     "height": 84,
+     "text": "2 trips and training booked › Dubai · pe"
+    },
+    {
+     "block": "stickybar",
+     "top": 569,
+     "height": 67,
+     "text": "＋ New request"
+    }
+   ],
+   "title": "Requests"
+  },
+  {
+   "id": "s-approvals",
+   "content": 761,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Approvals"
+    },
+    {
+     "block": "chips",
+     "top": 54,
+     "height": 35,
+     "text": "Waiting on you Decided by you"
+    },
+    {
+     "block": "pad#ap-bulk",
+     "top": 101,
+     "height": 18,
+     "text": "4 waiting · oldest 3 days Approve all le"
+    },
+    {
+     "block": "group#ap-geo",
+     "top": 119,
+     "height": 0,
+     "text": ""
+    },
+    {
+     "block": "mt12#ap-list",
+     "top": 131,
+     "height": 605,
+     "text": "EAnnual leaveElfira Rosellini · Legal · "
+    },
+    {
+     "block": "DIV",
+     "top": 745,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Approvals"
+  },
+  {
+   "id": "s-more",
+   "content": 707,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 46,
+     "text": "More"
+    },
+    {
+     "block": "group",
+     "top": 46,
+     "height": 72,
+     "text": "N Nik Hasheme KamilScorecard, certificat"
+    },
+    {
+     "block": "sect",
+     "top": 118,
+     "height": 39,
+     "text": "Reference"
+    },
+    {
+     "block": "group",
+     "top": 158,
+     "height": 105,
+     "text": "Request history› Holiday calendar›"
+    },
+    {
+     "block": "sect",
+     "top": 263,
+     "height": 39,
+     "text": "Company"
+    },
+    {
+     "block": "group",
+     "top": 302,
+     "height": 105,
+     "text": "SOPs› Team roster›"
+    },
+    {
+     "block": "sect",
+     "top": 407,
+     "height": 39,
+     "text": "App"
+    },
+    {
+     "block": "group",
+     "top": 446,
+     "height": 179,
+     "text": "Settings› Viewing asApprover · 4 people "
+    },
+    {
+     "block": "pad",
+     "top": 641,
+     "height": 50,
+     "text": "Log out"
+    },
+    {
+     "block": "DIV",
+     "top": 691,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "More"
+  },
+  {
+   "id": "s-balances",
+   "content": 780,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Leave balances"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 102,
+     "text": "19annual days available › 3 taken2 pendi"
+    },
+    {
+     "block": "pad",
+     "top": 168,
+     "height": 53,
+     "text": "＋ Apply for annual leave"
+    },
+    {
+     "block": "sect",
+     "top": 221,
+     "height": 39,
+     "text": "How annual adds up"
+    },
+    {
+     "block": "group",
+     "top": 261,
+     "height": 250,
+     "text": "Entitlement 202620 Carried from 20254 La"
+    },
+    {
+     "block": "sect",
+     "top": 511,
+     "height": 39,
+     "text": "Apply for another type"
+    },
+    {
+     "block": "tiles",
+     "top": 550,
+     "height": 154,
+     "text": "Medical18 days› Hospitalisation60 days› "
+    },
+    {
+     "block": "pad",
+     "top": 716,
+     "height": 48,
+     "text": "Worked a rest day or holiday?Claim day"
+    },
+    {
+     "block": "DIV",
+     "top": 764,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Leave balances"
+  },
+  {
+   "id": "s-notifs",
+   "content": 508,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Notifications Mark all read"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 46,
+     "text": "What happened. Anything needing a decisi"
+    },
+    {
+     "block": "group#nt-log",
+     "top": 101,
+     "height": 333,
+     "text": "Your medical leave was approved4 Sep · b"
+    },
+    {
+     "block": "pad",
+     "top": 446,
+     "height": 46,
+     "text": "13 check-ins within 500 m, or covered by"
+    },
+    {
+     "block": "DIV",
+     "top": 492,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Notifications"
+  },
+  {
+   "id": "s-geo",
+   "content": 537,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Check-ins to review"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 46,
+     "text": "Anything within 500 m, or covered by app"
+    },
+    {
+     "block": "mt12#geo-list",
+     "top": 112,
+     "height": 399,
+     "text": "Muhammad Faeiz2,536 km from the office ·"
+    },
+    {
+     "block": "DIV",
+     "top": 521,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Check-ins to review"
+  },
+  {
+   "id": "s-allreq",
+   "content": 615,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹All your requests ＋ New"
+    },
+    {
+     "block": "chips#req-types",
+     "top": 54,
+     "height": 35,
+     "text": "All types Leave Money Trips and training"
+    },
+    {
+     "block": "chips#req-chips",
+     "top": 97,
+     "height": 35,
+     "text": "Any status Pending Approved Rejected"
+    },
+    {
+     "block": "group#req-list",
+     "top": 132,
+     "height": 467,
+     "text": "Travel requestDubai · 21–24 Sep · 4 days"
+    },
+    {
+     "block": "DIV",
+     "top": 599,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "All your requests"
+  },
+  {
+   "id": "s-roster",
+   "content": 913,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 124.5,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Handa Bangsar roster"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 23,
+     "text": "Week of Mon 7 Sep · outlet open 10:00 to"
+    },
+    {
+     "block": "DIV#ro-wrap",
+     "top": 77,
+     "height": 203,
+     "text": "StaffMON7TUE8WED9THU10FRI11SAT12SUN13Nur"
+    },
+    {
+     "block": "legend#ro-legend",
+     "top": 280,
+     "height": 52,
+     "text": "A Opening · 10:00 to 19:00B Mid · 12:00 "
+    },
+    {
+     "block": "sect",
+     "top": 332,
+     "height": 39,
+     "text": "Cover by day"
+    },
+    {
+     "block": "group#ro-cover",
+     "top": 371,
+     "height": 467,
+     "text": "Mon 7 Sep3 on shift · 1 opening · 1 clos"
+    },
+    {
+     "block": "pad",
+     "top": 850,
+     "height": 46,
+     "text": "Opening needs at least one person on the"
+    },
+    {
+     "block": "DIV",
+     "top": 897,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Handa Bangsar roster"
+  },
+  {
+   "id": "s-punches",
+   "content": 603,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Clock-in history September"
+    },
+    {
+     "block": "stats#pu-stats",
+     "top": 56,
+     "height": 73,
+     "text": "5DAYS24hLOGGED1MISSING1OPEN FIX"
+    },
+    {
+     "block": "group#pu-list",
+     "top": 129,
+     "height": 400,
+     "text": "Mon 7 SeptemberIN 08:20 · OUT — · in pro"
+    },
+    {
+     "block": "pad",
+     "top": 541,
+     "height": 46,
+     "text": "Tap a day to see it in context or raise "
+    },
+    {
+     "block": "DIV",
+     "top": 587,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Clock-in history"
+  },
+  {
+   "id": "s-claims",
+   "content": 780,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your claims"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 173,
+     "text": "RM 606owed to you Approved, awaiting pay"
+    },
+    {
+     "block": "pad",
+     "top": 239,
+     "height": 23,
+     "text": "Approved claims are paid with the 25 Sep"
+    },
+    {
+     "block": "sect",
+     "top": 262,
+     "height": 39,
+     "text": "Trip money to settle"
+    },
+    {
+     "block": "group#cs-trips",
+     "top": 301,
+     "height": 66,
+     "text": "Dubai · TNME office21–24 Sep · budget RM"
+    },
+    {
+     "block": "pad",
+     "top": 379,
+     "height": 46,
+     "text": "An advance is company money you are hold"
+    },
+    {
+     "block": "sect",
+     "top": 425,
+     "height": 39,
+     "text": "Every claim"
+    },
+    {
+     "block": "chips#cl-chips",
+     "top": 464,
+     "height": 35,
+     "text": "All Pending Awaiting payroll Paid"
+    },
+    {
+     "block": "group#cl-list",
+     "top": 499,
+     "height": 200,
+     "text": "RM 486 · Client entertainment3 Sep · din"
+    },
+    {
+     "block": "stickybar",
+     "top": 699,
+     "height": 67,
+     "text": "＋ Claim an expense"
+    }
+   ],
+   "title": "Your claims"
+  },
+  {
+   "id": "s-assets",
+   "content": 435,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your assets ＋ Request"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 23,
+     "text": "Assigned to you and your responsibility "
+    },
+    {
+     "block": "mt12#as-list",
+     "top": 89,
+     "height": 216,
+     "text": "MacBook Pro 14 inchIssued 12 Jan 2026 · "
+    },
+    {
+     "block": "sect",
+     "top": 314,
+     "height": 39,
+     "text": "Requests"
+    },
+    {
+     "block": "group#as-req",
+     "top": 353,
+     "height": 66,
+     "text": "Monitor, 27 inchNeeded by 20 SepPending"
+    },
+    {
+     "block": "DIV",
+     "top": 419,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Your assets"
+  },
+  {
+   "id": "s-assetdetail",
+   "content": 433,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Asset"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 176,
+     "text": "Asset— Assigned— Condition on handoverGo"
+    },
+    {
+     "block": "pad",
+     "top": 246,
+     "height": 109,
+     "text": "Report an issue with this Request handov"
+    },
+    {
+     "block": "pad",
+     "top": 371,
+     "height": 46,
+     "text": "Serial and warranty details come from th"
+    },
+    {
+     "block": "DIV",
+     "top": 417,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Asset"
+  },
+  {
+   "id": "s-assetform",
+   "content": 587,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Request an asset"
+    },
+    {
+     "block": "field",
+     "top": 58,
+     "height": 72,
+     "text": "What you need Laptop Phone Vehicle Other"
+    },
+    {
+     "block": "field",
+     "top": 144,
+     "height": 74,
+     "text": "Needed by Pick a date you need it by."
+    },
+    {
+     "block": "field",
+     "top": 232,
+     "height": 72,
+     "text": "Replacing something you hold? No, additi"
+    },
+    {
+     "block": "field",
+     "top": 318,
+     "height": 100,
+     "text": "Why you need it IT needs the reason to s"
+    },
+    {
+     "block": "summary",
+     "top": 434,
+     "height": 70,
+     "text": "Approved byMuhammad Pakdin Issued byIT"
+    },
+    {
+     "block": "stickybar",
+     "top": 503,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Request an asset"
+  },
+  {
+   "id": "s-travelform",
+   "content": 915,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 71,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Travel request"
+    },
+    {
+     "block": "pad",
+     "top": 56,
+     "height": 46,
+     "text": "Travel is working time. It shows on your"
+    },
+    {
+     "block": "field",
+     "top": 116,
+     "height": 74,
+     "text": "Where Enter the destination."
+    },
+    {
+     "block": "field",
+     "top": 205,
+     "height": 68,
+     "text": "Depart Return Return must be on or after"
+    },
+    {
+     "block": "field",
+     "top": 287,
+     "height": 100,
+     "text": "Purpose Say why the trip is needed."
+    },
+    {
+     "block": "field",
+     "top": 401,
+     "height": 72,
+     "text": "Company pays for Flights and hotel Groun"
+    },
+    {
+     "block": "field",
+     "top": 486,
+     "height": 74,
+     "text": "Estimated cost the company pays RM"
+    },
+    {
+     "block": "field",
+     "top": 575,
+     "height": 72,
+     "text": "Cash advance needed? NoYes"
+    },
+    {
+     "block": "summary",
+     "top": 662,
+     "height": 115,
+     "text": "Days away— Shows asTravelling, not leave"
+    },
+    {
+     "block": "pad",
+     "top": 786,
+     "height": 46,
+     "text": "Company travel only. Approving this rele"
+    },
+    {
+     "block": "stickybar",
+     "top": 761,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Travel request"
+  },
+  {
+   "id": "s-training",
+   "content": 662,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Training ＋ Request"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 84,
+     "text": "2certifications on file 1 expires within"
+    },
+    {
+     "block": "sect",
+     "top": 138,
+     "height": 39,
+     "text": "Certifications"
+    },
+    {
+     "block": "group#tc-list",
+     "top": 178,
+     "height": 133,
+     "text": "Food safety internal audit · ISO 22000Ex"
+    },
+    {
+     "block": "pad",
+     "top": 322,
+     "height": 46,
+     "text": "Expiry dates come from HR records. If a "
+    },
+    {
+     "block": "sect",
+     "top": 369,
+     "height": 39,
+     "text": "Completed training"
+    },
+    {
+     "block": "group#tc-done",
+     "top": 408,
+     "height": 133,
+     "text": "Advanced Power BI · DAXJun 2026 · compan"
+    },
+    {
+     "block": "sect",
+     "top": 541,
+     "height": 39,
+     "text": "Requests"
+    },
+    {
+     "block": "group#tc-req",
+     "top": 580,
+     "height": 66,
+     "text": "ISO 22000 refresher · NIOSH29–30 Sep · a"
+    },
+    {
+     "block": "DIV",
+     "top": 646,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Training"
+  },
+  {
+   "id": "s-trainform",
+   "content": 912,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 68,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Request training"
+    },
+    {
+     "block": "field",
+     "top": 58,
+     "height": 74,
+     "text": "Course or certification Name the course "
+    },
+    {
+     "block": "field",
+     "top": 146,
+     "height": 72,
+     "text": "Why you need it Renewal Compliance New s"
+    },
+    {
+     "block": "field",
+     "top": 232,
+     "height": 68,
+     "text": "Starts Ends End date must be on or after"
+    },
+    {
+     "block": "field",
+     "top": 314,
+     "height": 74,
+     "text": "Provider optional"
+    },
+    {
+     "block": "field",
+     "top": 402,
+     "height": 74,
+     "text": "Estimated cost the company pays RM"
+    },
+    {
+     "block": "field",
+     "top": 490,
+     "height": 116,
+     "text": "Part of your development plan? No Yes, i"
+    },
+    {
+     "block": "field",
+     "top": 620,
+     "height": 100,
+     "text": "What it is for Your approver needs the r"
+    },
+    {
+     "block": "summary",
+     "top": 736,
+     "height": 93,
+     "text": "Days away— Shows asTraining, not leave A"
+    },
+    {
+     "block": "stickybar",
+     "top": 761,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Request training"
+  },
+  {
+   "id": "s-kpi",
+   "content": 942,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 153.5,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your scorecard"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 23,
+     "text": "Q3 2026 · Jul to Sep · period still open"
+    },
+    {
+     "block": "pad",
+     "top": 89,
+     "height": 94,
+     "text": "Last published gradeB Q2 2026, published"
+    },
+    {
+     "block": "sect",
+     "top": 183,
+     "height": 39,
+     "text": "What you are measured on"
+    },
+    {
+     "block": "group",
+     "top": 222,
+     "height": 219,
+     "text": "KRA and KPI70% of your scoreOn track Com"
+    },
+    {
+     "block": "sect",
+     "top": 441,
+     "height": 39,
+     "text": "Your KRAs this period"
+    },
+    {
+     "block": "group#kp-list",
+     "top": 481,
+     "height": 267,
+     "text": "Month-end close by day 5Aug closed day 4"
+    },
+    {
+     "block": "pad",
+     "top": 759,
+     "height": 46,
+     "text": "Figures come from the group dashboards. "
+    },
+    {
+     "block": "pad",
+     "top": 817,
+     "height": 109,
+     "text": "Open the full dashboard Report an issue "
+    },
+    {
+     "block": "DIV",
+     "top": 926,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Your scorecard"
+  },
+  {
+   "id": "s-sops",
+   "content": 502,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹SOPs"
+    },
+    {
+     "block": "field",
+     "top": 56,
+     "height": 50,
+     "text": ""
+    },
+    {
+     "block": "chips#sp-chips",
+     "top": 118,
+     "height": 35,
+     "text": "All Needs reading Finance Supply chain C"
+    },
+    {
+     "block": "group#sp-list",
+     "top": 153,
+     "height": 333,
+     "text": "Customer service claim handlingv3.1 · Up"
+    },
+    {
+     "block": "DIV",
+     "top": 486,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "SOPs"
+  },
+  {
+   "id": "s-sopdetail",
+   "content": 346,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹SOP"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 148,
+     "text": "SOP— Owner— Your status—"
+    },
+    {
+     "block": "pad",
+     "top": 214,
+     "height": 0,
+     "text": ""
+    },
+    {
+     "block": "pad",
+     "top": 218,
+     "height": 112,
+     "text": "Read the document Mark as read"
+    },
+    {
+     "block": "DIV",
+     "top": 330,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "SOP"
+  },
+  {
+   "id": "s-issues",
+   "content": 171,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your issues ＋ Report"
+    },
+    {
+     "block": "chips#is-chips",
+     "top": 54,
+     "height": 35,
+     "text": "Pending All Payroll and HR App and IT"
+    },
+    {
+     "block": "group#is-list",
+     "top": 89,
+     "height": 66,
+     "text": "OT hours for 5 Sep recorded as 4, worked"
+    },
+    {
+     "block": "DIV",
+     "top": 155,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Your issues"
+  },
+  {
+   "id": "s-issuedetail",
+   "content": 475,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Issue Open"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 148,
+     "text": "—— With— About—"
+    },
+    {
+     "block": "sect",
+     "top": 202,
+     "height": 39,
+     "text": "Updates"
+    },
+    {
+     "block": "tl#id-tl",
+     "top": 241,
+     "height": 8,
+     "text": ""
+    },
+    {
+     "block": "pad",
+     "top": 265,
+     "height": 194,
+     "text": "Send reply Mark as resolved"
+    },
+    {
+     "block": "DIV",
+     "top": 459,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Issue"
+  },
+  {
+   "id": "s-leaveform",
+   "content": 606,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Apply for leave"
+    },
+    {
+     "block": "field",
+     "top": 58,
+     "height": 74,
+     "text": "Leave type Annual leave 19 left⌄"
+    },
+    {
+     "block": "warn#lf-warn",
+     "top": 0,
+     "height": 0,
+     "text": ""
+    },
+    {
+     "block": "field#lf-dates",
+     "top": 146,
+     "height": 68,
+     "text": "From To End date must be on or after the"
+    },
+    {
+     "block": "field#lf-fixed",
+     "top": 0,
+     "height": 0,
+     "text": "Date Wed 14 OctFrom your birthday"
+    },
+    {
+     "block": "field",
+     "top": 228,
+     "height": 72,
+     "text": "Duration Full day Half day"
+    },
+    {
+     "block": "field#lf-docwrap",
+     "top": 0,
+     "height": 0,
+     "text": "Medical certificate Take photo or upload"
+    },
+    {
+     "block": "field",
+     "top": 314,
+     "height": 100,
+     "text": "Reason optional"
+    },
+    {
+     "block": "summary",
+     "top": 430,
+     "height": 93,
+     "text": "Days applied1 day Balance after19 → 18 d"
+    },
+    {
+     "block": "stickybar",
+     "top": 523,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Apply for leave"
+  },
+  {
+   "id": "s-expenseform",
+   "content": 814,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Claim an expense"
+    },
+    {
+     "block": "field",
+     "top": 58,
+     "height": 74,
+     "text": "Amount RM Enter the amount claimed."
+    },
+    {
+     "block": "field",
+     "top": 146,
+     "height": 74,
+     "text": "Category Select category⌄ Pick a categor"
+    },
+    {
+     "block": "field#ef-tripwrap",
+     "top": 234,
+     "height": 98,
+     "text": "Part of a trip? No Dubai 21–24 Sep A sta"
+    },
+    {
+     "block": "field",
+     "top": 346,
+     "height": 74,
+     "text": "Date paid"
+    },
+    {
+     "block": "field",
+     "top": 434,
+     "height": 97,
+     "text": "Receipt Take photo or upload JPG or PDF "
+    },
+    {
+     "block": "field",
+     "top": 545,
+     "height": 100,
+     "text": "What it was for"
+    },
+    {
+     "block": "summary",
+     "top": 661,
+     "height": 70,
+     "text": "Reimbursed withSeptember payroll Approve"
+    },
+    {
+     "block": "stickybar",
+     "top": 731,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Claim an expense"
+  },
+  {
+   "id": "s-genform",
+   "content": 484,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Request"
+    },
+    {
+     "block": "pad",
+     "top": 56,
+     "height": 0,
+     "text": ""
+    },
+    {
+     "block": "field#gf-catwrap",
+     "top": 0,
+     "height": 0,
+     "text": "Who should see this Payroll or OT App bu"
+    },
+    {
+     "block": "field",
+     "top": 68,
+     "height": 74,
+     "text": "Date Pick a date."
+    },
+    {
+     "block": "field#gf-timewrap",
+     "top": 156,
+     "height": 68,
+     "text": "From To"
+    },
+    {
+     "block": "field",
+     "top": 238,
+     "height": 100,
+     "text": "Reason Tell your approver why."
+    },
+    {
+     "block": "summary",
+     "top": 354,
+     "height": 47,
+     "text": "Goes toMuhammad Pakdin"
+    },
+    {
+     "block": "stickybar",
+     "top": 401,
+     "height": 83,
+     "text": "Submit request"
+    }
+   ],
+   "title": "Request"
+  },
+  {
+   "id": "s-claim",
+   "content": 645,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Claim replacement day"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 46,
+     "text": "Your manager confirms you worked, then H"
+    },
+    {
+     "block": "field",
+     "top": 114,
+     "height": 74,
+     "text": "Day you worked Pick the day you worked."
+    },
+    {
+     "block": "field",
+     "top": 203,
+     "height": 72,
+     "text": "Why it was a non-working day Rest dayPub"
+    },
+    {
+     "block": "field",
+     "top": 288,
+     "height": 74,
+     "text": "Hours worked"
+    },
+    {
+     "block": "field",
+     "top": 376,
+     "height": 100,
+     "text": "What you worked on"
+    },
+    {
+     "block": "summary",
+     "top": 492,
+     "height": 70,
+     "text": "Confirmed byMuhammad Pakdin Granted byHR"
+    },
+    {
+     "block": "stickybar",
+     "top": 562,
+     "height": 83,
+     "text": "Send claim"
+    }
+   ],
+   "title": "Claim replacement day"
+  },
+  {
+   "id": "s-done",
+   "content": 337,
+   "tabH": 0,
+   "fold": 844,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "done-wrap",
+     "top": 0,
+     "height": 199,
+     "text": "Request submitted Pakdin has been notifi"
+    },
+    {
+     "block": "pad",
+     "top": 225,
+     "height": 112,
+     "text": "View request Done"
+    }
+   ],
+   "title": ""
+  },
+  {
+   "id": "s-reqdetail",
+   "content": 653,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your request Pending"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 148,
+     "text": "Annual leaveFri 12 – Sat 13 Sep · 2 days"
+    },
+    {
+     "block": "sect",
+     "top": 202,
+     "height": 39,
+     "text": "Progress"
+    },
+    {
+     "block": "tl",
+     "top": 241,
+     "height": 213,
+     "text": "✓SubmittedMon 7 Sep, 5:22 pm Waiting on "
+    },
+    {
+     "block": "pad",
+     "top": 470,
+     "height": 167,
+     "text": "Nudge approver Report an issue with this"
+    },
+    {
+     "block": "DIV",
+     "top": 637,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Your request"
+  },
+  {
+   "id": "s-appdetail",
+   "content": 435,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Approve request"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 198,
+     "text": "E Elfira RoselliniLegal RequestAnnual le"
+    },
+    {
+     "block": "sect#ad-coverlbl",
+     "top": 252,
+     "height": 39,
+     "text": "Cover that day"
+    },
+    {
+     "block": "group#ad-cover",
+     "top": 291,
+     "height": 0,
+     "text": ""
+    },
+    {
+     "block": "pad",
+     "top": 307,
+     "height": 112,
+     "text": "Approve Reject with reason"
+    },
+    {
+     "block": "DIV",
+     "top": 419,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Approve request"
+  },
+  {
+   "id": "s-team",
+   "content": 1144,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 355.5,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹ Team · today Today Roster"
+    },
+    {
+     "block": "stats#tm-stats",
+     "top": 56,
+     "height": 73,
+     "text": "6ON SHIFT3AWAY1OFF1NOT IN"
+    },
+    {
+     "block": "DIV#tm-list",
+     "top": 129,
+     "height": 964,
+     "text": "FinanceMohd Zubir Bin Mohd MuhiliAnnual "
+    },
+    {
+     "block": "pad",
+     "top": 1105,
+     "height": 23,
+     "text": "Rostered shift with actual punch times."
+    },
+    {
+     "block": "DIV",
+     "top": 1128,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Team · today"
+  },
+  {
+   "id": "s-history",
+   "content": 560,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Request history"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 23,
+     "text": "Your own requests only. Your team's are "
+    },
+    {
+     "block": "group#hist-list",
+     "top": 77,
+     "height": 467,
+     "text": "Travel requestDubai · 21–24 Sep · 4 days"
+    },
+    {
+     "block": "DIV",
+     "top": 544,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Request history"
+  },
+  {
+   "id": "s-holidays",
+   "content": 386,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Holidays 2026"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 23,
+     "text": "Selangor calendar · 5 remaining"
+    },
+    {
+     "block": "group",
+     "top": 77,
+     "height": 293,
+     "text": "DeepavaliMon 9 Nov · in 9 weeksLong week"
+    },
+    {
+     "block": "DIV",
+     "top": 370,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Holidays 2026"
+  },
+  {
+   "id": "s-profile",
+   "content": 671,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Your record"
+    },
+    {
+     "block": "pad",
+     "top": 54,
+     "height": 74,
+     "text": "N Nik Hasheme KamilOperations Director ·"
+    },
+    {
+     "block": "sect",
+     "top": 128,
+     "height": 39,
+     "text": "You"
+    },
+    {
+     "block": "group",
+     "top": 167,
+     "height": 158,
+     "text": "Employee details› Contact information› P"
+    },
+    {
+     "block": "sect",
+     "top": 325,
+     "height": 39,
+     "text": "Performance and development"
+    },
+    {
+     "block": "group",
+     "top": 365,
+     "height": 146,
+     "text": "Your scorecardQ3 2026 open · last grade "
+    },
+    {
+     "block": "sect",
+     "top": 510,
+     "height": 39,
+     "text": "Company"
+    },
+    {
+     "block": "group",
+     "top": 549,
+     "height": 105,
+     "text": "Company information› HR contacts›"
+    },
+    {
+     "block": "DIV",
+     "top": 655,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Your record"
+  },
+  {
+   "id": "s-flow",
+   "content": 1003,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 214.5,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Flow map"
+    },
+    {
+     "block": "map",
+     "top": 72,
+     "height": 915,
+     "text": "Home Check in / out flips state in place"
+    },
+    {
+     "block": "DIV",
+     "top": 987,
+     "height": 16,
+     "text": ""
+    }
+   ],
+   "title": "Flow map"
+  },
+  {
+   "id": "s-stub",
+   "content": 189,
+   "tabH": 55.5,
+   "fold": 788.5,
+   "overflow": 0,
+   "blocks": [
+    {
+     "block": "hdr",
+     "top": 0,
+     "height": 54,
+     "text": "‹Screen"
+    },
+    {
+     "block": "empty",
+     "top": 54,
+     "height": 135,
+     "text": "Outside this prototype.Only the restruct"
+    }
+   ],
+   "title": "Screen"
+  }
+ ],
+ "sheets": [
+  {
+   "id": "sheet-new",
+   "height": 693,
+   "overFold": 0
+  },
+  {
+   "id": "sheet-day",
+   "height": 322,
+   "overFold": 0
+  },
+  {
+   "id": "sheet-cat",
+   "height": 320,
+   "overFold": 0
+  },
+  {
+   "id": "sheet-rej",
+   "height": 295,
+   "overFold": 0
+  },
+  {
+   "id": "sheet-wd",
+   "height": 234,
+   "overFold": 0
+  }
+ ],
+ "styles": {
+  "hdrH1": {
+   "font": "21px",
+   "weight": "700",
+   "lh": "30.45px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "hdr": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "12px 18px 8px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "card": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "14px 16px",
+   "radius": "16px",
+   "minH": "0px",
+   "h": 0
+  },
+  "lrow": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "13px 16px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "cta": {
+   "font": "16px",
+   "weight": "700",
+   "lh": "23.2px",
+   "pad": "15px",
+   "radius": "14px",
+   "minH": "0px",
+   "h": 0
+  },
+  "ghost": {
+   "font": "15px",
+   "weight": "600",
+   "lh": "21.75px",
+   "pad": "13px",
+   "radius": "14px",
+   "minH": "0px",
+   "h": 0
+  },
+  "mini": {
+   "font": "12.5px",
+   "weight": "700",
+   "lh": "18.125px",
+   "pad": "7px 13px",
+   "radius": "20px",
+   "minH": "auto",
+   "h": 34
+  },
+  "chip": {
+   "font": "13px",
+   "weight": "600",
+   "lh": "18.85px",
+   "pad": "7px 13px",
+   "radius": "20px",
+   "minH": "0px",
+   "h": 0
+  },
+  "tile": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "11px 13px",
+   "radius": "14px",
+   "minH": "56px",
+   "h": 0
+  },
+  "control": {
+   "font": "15px",
+   "weight": "400",
+   "lh": "normal",
+   "pad": "13px",
+   "radius": "13px",
+   "minH": "50px",
+   "h": 0
+  },
+  "big": {
+   "font": "30px",
+   "weight": "700",
+   "lh": "30px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "ttl": {
+   "font": "15px",
+   "weight": "600",
+   "lh": "21.75px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "sub": {
+   "font": "12.5px",
+   "weight": "600",
+   "lh": "18.125px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "lbl": {
+   "font": "12.5px",
+   "weight": "400",
+   "lh": "18.125px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "sect": {
+   "font": "12.5px",
+   "weight": "500",
+   "lh": "18.125px",
+   "pad": "15px 18px 6px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "pill": {
+   "font": "11.5px",
+   "weight": "700",
+   "lh": "16.675px",
+   "pad": "3px 9px",
+   "radius": "20px",
+   "minH": "0px",
+   "h": 0
+  },
+  "tabs": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "8px 0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 56
+  },
+  "tabBtn": {
+   "font": "10px",
+   "weight": "700",
+   "lh": "14.5px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "auto",
+   "h": 39
+  },
+  "calDay": {
+   "font": "13px",
+   "weight": "400",
+   "lh": "18.85px",
+   "pad": "0px",
+   "radius": "9px",
+   "minH": "auto",
+   "h": 45
+  },
+  "stats": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "11px 4px",
+   "radius": "0px",
+   "minH": "auto",
+   "h": 73
+  },
+  "field": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "0px 18px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 0
+  },
+  "summary": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "12px 14px",
+   "radius": "14px",
+   "minH": "0px",
+   "h": 0
+  },
+  "tgridBtn": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "10px 12px",
+   "radius": "13px",
+   "minH": "56px",
+   "h": 60
+  },
+  "sheetH2": {
+   "font": "16.5px",
+   "weight": "700",
+   "lh": "23.925px",
+   "pad": "0px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 24
+  },
+  "srow": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "14px 20px",
+   "radius": "0px",
+   "minH": "0px",
+   "h": 50
+  },
+  "ecard": {
+   "font": "16px",
+   "weight": "400",
+   "lh": "23.2px",
+   "pad": "13px 15px",
+   "radius": "16px",
+   "minH": "104px",
+   "h": 0
+  }
+ }
+}
