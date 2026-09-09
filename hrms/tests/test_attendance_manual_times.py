@@ -138,6 +138,15 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 		att.Attendance.apply_manual_times(doc)
 		self.assertEqual(doc.working_hours, 9.0)
 
+	def test_the_jobs_night_shift_row_is_not_refused(self):
+		# The job anchors the day on the shift start; an early first punch at 23:50
+		# the evening before is the employee being on time, not a bad entry.
+		doc = _Doc(
+			in_time=dt(23, 50, day=date(2026, 9, 7)), out_time=dt(8), working_hours=8.0, auto_attendance=1
+		)
+		att.Attendance.apply_manual_times(doc)  # must not throw
+		self.assertEqual(doc.working_hours, 8.0)
+
 	def test_the_hourly_jobs_own_row_keeps_its_computed_hours(self):
 		# breaks already deducted by the job; a raw span would overwrite 8.0 with 9.0
 		doc = _Doc(in_time=dt(9), out_time=dt(18), working_hours=8.0, auto_attendance=1)

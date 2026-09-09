@@ -66,16 +66,18 @@ class Attendance(Document):
 		"""A person's in/out derive the hours; the hourly job's own rows keep theirs.
 
 		The job computes working_hours with breaks deducted and hands the row its
-		times and hours together — a raw span must never overwrite that. HR
-		entering a new row (no hours yet) or changing the times on a draft gets
-		hours from the times they typed.
+		times and hours together — a raw span must never overwrite that, and its
+		times are not checked here: a night shift's first punch legitimately falls
+		before midnight of the attendance date. Only times a person typed on a new
+		row, or changed on a draft, are validated and turned into hours.
 		"""
-		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
-		if not (self.in_time and self.out_time):
-			return
 		before = self.get_doc_before_save()
-		typed_new = not cint(self.auto_attendance) and not self.working_hours
-		if typed_new or (before is not None and _times_differ(before, self)):
+		typed_new = before is None and not cint(self.auto_attendance)
+		changed = before is not None and _times_differ(before, self)
+		if not (typed_new or changed):
+			return
+		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
+		if self.in_time and self.out_time:
 			self.working_hours = working_hours_between(self.in_time, self.out_time)
 			logger.info(
 				"[attendance] hours derived from entered times for %s on %s: %s",
