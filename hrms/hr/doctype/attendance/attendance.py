@@ -3,7 +3,7 @@
 
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 import frappe
 from frappe import _
@@ -59,7 +59,60 @@ class Attendance(Document):
 		self.validate_overlapping_shift_attendance()
 		self.validate_employee_status()
 		self.check_leave_record()
+		self.apply_manual_times()
 		self.set_overtime()
+
+	def apply_manual_times(self):
+		"""A person's in/out derive the hours; the hourly job's own rows keep theirs.
+
+		The job computes working_hours with breaks deducted and hands the row its
+		times and hours together — a raw span must never overwrite that. HR
+		entering a new row (no hours yet) or changing the times on a draft gets
+		hours from the times they typed.
+		"""
+		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
+		if not (self.in_time and self.out_time):
+			return
+		before = self.get_doc_before_save()
+		typed_new = not cint(self.auto_attendance) and not self.working_hours
+		if typed_new or (before is not None and _times_differ(before, self)):
+			self.working_hours = working_hours_between(self.in_time, self.out_time)
+			logger.info(
+				"[attendance] hours derived from entered times for %s on %s: %s",
+				self.employee,
+				self.attendance_date,
+				self.working_hours,
+			)
+
+	def before_update_after_submit(self):
+		"""HR corrected the times on a submitted row: recompute, and say so."""
+		before = self.get_doc_before_save()
+		if before is None or not _times_differ(before, self):
+			return
+		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
+		old_hours = self.working_hours
+		self.working_hours = (
+			working_hours_between(self.in_time, self.out_time) if self.in_time and self.out_time else 0
+		)
+		self.set_overtime()
+		self.add_comment(
+			"Edit",
+			_("In/out corrected by {0}: in {1} → {2}, out {3} → {4}; hours {5} → {6}").format(
+				frappe.session.user,
+				_clock(before.in_time),
+				_clock(self.in_time),
+				_clock(before.out_time),
+				_clock(self.out_time),
+				old_hours,
+				self.working_hours,
+			),
+		)
+		logger.info(
+			"[attendance] %s times corrected on submitted row %s by %s",
+			self.employee,
+			self.name,
+			frappe.session.user,
+		)
 
 	def set_overtime(self):
 		"""Populate OT hours + rate-band split for this attendance: time worked past
@@ -297,6 +350,38 @@ class Attendance(Document):
 	def publish_update(self):
 		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 		hrms.refetch_resource("hrms:attendance_calendar_events", employee_user)
+
+
+def working_hours_between(in_time, out_time) -> float:
+	"""Hours between two entered times, two decimals, no break deduction."""
+	return round((get_datetime(out_time) - get_datetime(in_time)).total_seconds() / 3600, 2)
+
+
+def validate_attendance_times(in_time, out_time, attendance_date) -> None:
+	"""What a person may type: both times or neither; out after in; within a day;
+	in on the attendance date (a night shift ends the next morning)."""
+	if not in_time and not out_time:
+		return
+	if not (in_time and out_time):
+		frappe.throw(_("Enter both the in time and the out time, or neither."))
+	start, end = get_datetime(in_time), get_datetime(out_time)
+	if end <= start:
+		frappe.throw(_("The out time must be after the in time."))
+	if end - start > timedelta(hours=24):
+		frappe.throw(_("In and out must be within 24 hours of each other."))
+	if start.date() != getdate(attendance_date):
+		frappe.throw(_("The in time must fall on the attendance date."))
+
+
+def _times_differ(before, doc) -> bool:
+	def _dt(value):
+		return get_datetime(value) if value else None
+
+	return _dt(before.in_time) != _dt(doc.in_time) or _dt(before.out_time) != _dt(doc.out_time)
+
+
+def _clock(value) -> str:
+	return get_datetime(value).strftime("%H:%M") if value else "—"
 
 
 @frappe.whitelist()

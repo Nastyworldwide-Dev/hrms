@@ -87,7 +87,8 @@
    "fieldtype": "Float",
    "label": "Working Hours",
    "precision": "9",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "collapsible": 1,
@@ -101,22 +102,25 @@
    "fieldtype": "Float",
    "label": "Overtime Hours",
    "precision": "9",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
-   "description": "\u03a3(band hours \u00d7 multiplier) \u2014 the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
+   "description": "Σ(band hours × multiplier) — the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
    "fieldname": "ot_rate_weighted_hours",
    "fieldtype": "Float",
    "label": "OT Rate-Weighted Hours",
    "precision": "9",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "ot_rate_bands",
    "fieldtype": "Table",
    "label": "Overtime by Rate",
    "options": "Attendance Overtime Band",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "default": "Present",
@@ -213,13 +217,15 @@
    "default": "0",
    "fieldname": "late_entry",
    "fieldtype": "Check",
-   "label": "Late Entry"
+   "label": "Late Entry",
+   "allow_on_submit": 1
   },
   {
    "default": "0",
    "fieldname": "early_exit",
    "fieldtype": "Check",
-   "label": "Early Exit"
+   "label": "Early Exit",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "details_section",
@@ -227,18 +233,18 @@
    "label": "Details"
   },
   {
-   "depends_on": "shift",
    "fieldname": "in_time",
    "fieldtype": "Datetime",
    "label": "In Time",
-   "read_only": 1
+   "allow_on_submit": 1,
+   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed."
   },
   {
-   "depends_on": "shift",
    "fieldname": "out_time",
    "fieldtype": "Datetime",
    "label": "Out Time",
-   "read_only": 1
+   "allow_on_submit": 1,
+   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed."
   },
   {
    "fieldname": "column_break_18",
@@ -303,7 +309,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-01 12:00:00.000000",
+ "modified": "2026-09-09 06:30:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance",

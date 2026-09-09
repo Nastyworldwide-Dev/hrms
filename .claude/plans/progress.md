@@ -270,3 +270,7 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:07:09Z COMMIT: 35e1cf543 chore(plans): deploy set for the attendance incident; handoff → review dispatched
 - 2026-09-09T04:16:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-09T04:16:09Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 6 extra test file(s) ⟂3652c40d4b9b
+- 2026-09-09T04:16:12Z COMMIT: ade4e3903 fix(sync): after cutover a pull never touches Attendance or Employee Checkin → review dispatched
+- 2026-09-09T04:16:53Z PUSH: nz-glass @ ade4e3903
+- 2026-09-09T04:19:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-09T04:19:47Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640
