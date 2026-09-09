@@ -12,6 +12,10 @@ from frappe.utils import cint, flt, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
+from hrms.hr.doctype.attendance.attendance import (
+	DuplicateAttendanceError,
+	OverlappingShiftAttendanceError,
+)
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
 from hrms.hr.utils import (
 	get_distance_between_coordinates,
@@ -273,6 +277,19 @@ def mark_attendance_and_link_log(
 		update_attendance_in_checkins(log_names, attendance.name)
 		return attendance
 
+	except (DuplicateAttendanceError, OverlappingShiftAttendanceError) as e:
+		# Another row holds this day (a mirrored one, or one under another shift
+		# with real punches). Stamping these punches skip made that permanent:
+		# once the blocking row is released nothing would ever re-read them. Leave
+		# them unlinked; the next run re-evaluates the day for free.
+		frappe.db.rollback(save_point="attendance_creation")
+		logger.warning(
+			"[checkin] %s on %s blocked by an existing row (%s) — punches left unlinked for the next run",
+			employee,
+			attendance_date,
+			e.__class__.__name__,
+		)
+		return None
 	except frappe.ValidationError as e:
 		# Only the punches that were not already attended are skipped: a rebuild
 		# refused by the financial guard must not take the overtime eligibility

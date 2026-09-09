@@ -291,3 +291,5 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:25:58Z PUSH: nz-glass @ 9cb5c86e7
 - 2026-09-09T04:27:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-09T04:27:21Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T04:29:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T04:29:48Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640

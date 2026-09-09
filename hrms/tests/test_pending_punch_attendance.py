@@ -289,5 +289,91 @@ class TestAFailedRebuildDoesNotSilenceAlreadyLinkedPunches(unittest.TestCase):
 		)
 
 
+class TestAbsentMarkerLeavesPunchedDaysAlone(unittest.TestCase):
+	"""'Absent for missing check-ins' must mean no check-ins at all. With two
+	overlapping shift assignments the other shift's marker wrote Absent for a
+	day this employee punched under this one, and the real marking then failed
+	as an overlap (9 Sep, "Overlapping Shift Attendance" wall)."""
+
+	def test_dates_with_any_punch_are_not_marked(self):
+		s = shift()
+		s.get_start_and_end_dates = lambda employee: (date(2026, 9, 1), date(2026, 9, 3))
+		s.get_holiday_list = lambda employee: "HL"
+		s.get_marked_attendance_dates_between = lambda employee, a, b: [date(2026, 9, 1)]
+		s.get_dates_with_checkins = lambda employee, a, b: [date(2026, 9, 2)]
+		with (
+			patch.object(
+				st, "get_date_range", return_value=[date(2026, 9, 1), date(2026, 9, 2), date(2026, 9, 3)]
+			),
+			patch.object(st, "get_holiday_dates_between", return_value=[]),
+		):
+			dates = st.ShiftType.get_dates_for_attendance(s, "EMP-SYNTHETIC")
+		self.assertEqual(
+			dates, [date(2026, 9, 3)], "1 Sep is marked, 2 Sep was punched, only 3 Sep is truly empty"
+		)
+
+	def test_the_punch_lookup_spans_all_shifts_and_ignores_rejected(self):
+		calls = []
+
+		def get_all(doctype, filters=None, pluck=None, **kw):
+			calls.append((doctype, filters, pluck))
+			return [datetime(2026, 9, 2, 9, 0), datetime(2026, 9, 2, 18, 0)]
+
+		with patch.object(st.frappe, "get_all", side_effect=get_all):
+			dates = st.ShiftType.get_dates_with_checkins(
+				shift(), "EMP-SYNTHETIC", date(2026, 9, 1), date(2026, 9, 3)
+			)
+		self.assertEqual(dates, [date(2026, 9, 2)])
+		doctype, filters, pluck = calls[0]
+		self.assertEqual(doctype, "Employee Checkin")
+		self.assertNotIn("shift", filters, "any shift counts")
+		self.assertEqual(filters.get("remote_approval_status"), ("!=", "Rejected"))
+
+
+class TestAProvisionalAbsentUnderAnotherShiftIsRebuilt(unittest.TestCase):
+	def _lookup(self, other_rows, linked, overlapping=True):
+		with (
+			patch.object(st.frappe.db, "get_value", return_value=None),
+			patch.object(st.frappe, "get_all", return_value=[frappe._dict(r) for r in other_rows]),
+			patch.object(st.frappe.db, "exists", return_value=linked),
+			patch.object(st, "has_overlapping_timings", return_value=overlapping),
+			patch.object(st.frappe, "get_doc", side_effect=lambda dt, name: f"DOC:{name}"),
+		):
+			return st.get_automation_attendance("EMP-SYNTHETIC", DAY, SHIFT)
+
+	def test_an_unlinked_absent_under_an_overlapping_shift_is_found(self):
+		self.assertEqual(
+			self._lookup([{"name": "HR-ATT-FLEX", "shift": "Flexible"}], linked=None), "DOC:HR-ATT-FLEX"
+		)
+
+	def test_a_row_with_linked_punches_under_the_other_shift_is_a_real_day_and_left_alone(self):
+		self.assertIsNone(self._lookup([{"name": "HR-ATT-FLEX", "shift": "Flexible"}], linked="CKIN-1"))
+
+	def test_a_non_overlapping_shift_is_a_genuine_second_shift(self):
+		self.assertIsNone(
+			self._lookup([{"name": "HR-ATT-NIGHT", "shift": "Night"}], linked=None, overlapping=False)
+		)
+
+
+class TestABlockedDayLeavesItsPunchesForTheNextRun(unittest.TestCase):
+	def test_duplicate_or_overlap_does_not_skip_stamp(self):
+		from hrms.hr.doctype.attendance.attendance import OverlappingShiftAttendanceError
+		from hrms.hr.doctype.employee_checkin import employee_checkin as ck
+
+		logs = [punch("09:00", "IN"), punch("18:00", "OUT")]
+		with (
+			patch.object(ck.frappe.db, "savepoint"),
+			patch.object(ck.frappe.db, "rollback") as rollback,
+			patch.object(
+				ck, "create_or_update_attendance", side_effect=OverlappingShiftAttendanceError("blocked")
+			),
+			patch.object(ck, "handle_attendance_exception") as handle,
+		):
+			out = ck.mark_attendance_and_link_log(logs, "Present", DAY, 9.0, shift=SHIFT)
+		self.assertIsNone(out)
+		handle.assert_not_called()
+		rollback.assert_called_once()
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -91,3 +91,40 @@ Call sites / importers of what changed, with verdicts:
   word (release the mirrored rows for dates after cutover where local punches
   exist, unskip the punches the duplicate check stamped, let the hourly job
   re-mark).
+
+# family.md — "Overlapping Shift Attendance" wall on Mark Attendance (9 Sep, live)
+
+CLASS: TWO SHIFTS, ONE DAY, TWO OPINIONS. An employee with two overlapping
+shift assignments (a Flexible / 9AM–6PM default plus the outlet shift) is
+processed by both shifts' jobs. The one whose punches are NOT there marks
+the day Absent "for missing check-ins" (its date filter only excluded rows
+of its own shift); the one that holds the punches then fails on the overlap
+check, and the failure handler stamped the punches skip for good. Mirrored
+rows under the source's shift names block the same way.
+
+Changed: hrms/hr/doctype/shift_type/shift_type.py get_dates_for_attendance
+(+ get_dates_with_checkins), get_automation_attendance (third lookup: a
+provisional row under an overlapping shift); hrms/hr/doctype/employee_checkin/
+employee_checkin.py mark_attendance_and_link_log (Duplicate/Overlap: rollback,
+leave punches unlinked, no skip stamp).
+
+Call sites / importers of what changed, with verdicts:
+- ShiftType._process → mark_absent_for_dates_with_no_attendance →
+  get_dates_for_attendance — same-root, fixed here (punched days, any shift,
+  are never "missing check-ins").
+- ShiftType.mark_absent_for_half_day_dates — not-affected: works on existing
+  Half Day rows, does not create Absents.
+- ShiftType.mark_attendance_for_shift_logs → get_automation_attendance —
+  same-root, fixed here (a provisional row under an overlapping shift is
+  replaced under the punches' shift; a row with linked punches is a real day).
+- reprocess_late_checkout_attendance → mark_attendance_and_link_log — same-root
+  by effect: an overlap during a repair now leaves punches unlinked instead of
+  stamping them; the repair's own savepoint/notice path is unchanged.
+- hrms/hr/doctype/attendance/attendance.py mark_attendance (absent-marker,
+  bulk) — not-affected: it already swallows Duplicate/Overlap itself.
+- handle_attendance_exception / skip_attendance_in_checkins — not-affected in
+  code; no longer reached for Duplicate/Overlap. Punches ALREADY stamped by
+  earlier runs (including today's manual Mark Attendance) are NOT unstamped
+  here — part of the historical repair that needs Nabil's word.
+- Mirrored rows (synced_from_instance) — not-affected by the third lookup
+  (excluded by `base`); they still block until released by the repair.

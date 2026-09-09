@@ -31,7 +31,11 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import (
 	mark_attendance_and_link_log,
 	worked_intervals,
 )
-from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift, get_shift_details
+from hrms.hr.doctype.shift_assignment.shift_assignment import (
+	get_employee_shift,
+	get_shift_details,
+	has_overlapping_timings,
+)
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between, holiday_list_covers
 
@@ -107,6 +111,26 @@ def get_automation_attendance(employee, attendance_date, shift):
 	name = frappe.db.get_value("Attendance", {**base, "shift": shift}, "name") or frappe.db.get_value(
 		"Attendance", {**base, "shift": ("is", "not set")}, "name"
 	)
+	if not name:
+		# A provisional Absent another, overlapping shift's marker wrote for the
+		# same day (no punch ever linked to it) is not evidence of a second shift
+		# worked; the punches under this shift replace it. A row with linked
+		# punches under the other shift is a real day and stays.
+		for row in frappe.get_all(
+			"Attendance", filters={**base, "shift": ("!=", shift)}, fields=["name", "shift"]
+		):
+			if not has_overlapping_timings(shift, row.shift):
+				continue
+			if frappe.db.exists("Employee Checkin", {"attendance": row.name}):
+				continue
+			logger.info(
+				"[shift_type] provisional %s under overlapping shift %s will be rebuilt under %s",
+				row.name,
+				row.shift,
+				shift,
+			)
+			name = row.name
+			break
 	return frappe.get_doc("Attendance", name) if name else None
 
 
@@ -578,8 +602,28 @@ class ShiftType(Document):
 		holiday_dates = get_holiday_dates_between(holiday_list, start_date, end_date)
 		# skip dates with attendance
 		marked_attendance_dates = self.get_marked_attendance_dates_between(employee, start_date, end_date)
+		# "Absent for missing check-ins" means no check-ins AT ALL. With two
+		# overlapping assignments, this shift's marker used to write Absent for a
+		# day the employee punched under the other one; the real marking then
+		# failed as an overlap and the punches were stamped skip.
+		punched_dates = self.get_dates_with_checkins(employee, start_date, end_date)
 
-		return sorted(set(date_range) - set(holiday_dates) - set(marked_attendance_dates))
+		return sorted(
+			set(date_range) - set(holiday_dates) - set(marked_attendance_dates) - set(punched_dates)
+		)
+
+	def get_dates_with_checkins(self, employee: str, start_date, end_date) -> list:
+		"""Days this employee punched on, under any shift, rejections excluded."""
+		times = frappe.get_all(
+			"Employee Checkin",
+			filters={
+				"employee": employee,
+				"time": ("between", [f"{start_date} 00:00:00", f"{end_date} 23:59:59"]),
+				"remote_approval_status": ("!=", "Rejected"),
+			},
+			pluck="time",
+		)
+		return sorted({getdate(t) for t in times})
 
 	def get_start_and_end_dates(self, employee):
 		"""Returns start and end dates for checking attendance and marking absent
