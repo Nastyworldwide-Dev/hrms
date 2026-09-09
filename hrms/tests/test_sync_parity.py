@@ -605,5 +605,58 @@ class TestConfigCarryoverCompleteness(unittest.TestCase):
 		self.assertEqual(out["unreadable"], [])
 
 
+class TestScopedReportHoldsBackAfterCutover(unittest.TestCase):
+	"""Executes _scoped_parity_report end to end (stubbed client), so a swapped
+	tuple unpack — grading the held-back doctypes and reporting the others as
+	held — cannot pass the AST-only check in test_sync_cutover_pull."""
+
+	def _run(self, unlocked):
+		fake_db = _FakeDB({"Employee": 3, "Attendance": 1, "Employee Checkin": 1})
+		mod = _load(fake_db)
+		spec = importlib.util.spec_from_file_location(
+			"_cutover_under_test", HRMS_ROOT / "sync" / "cutover.py"
+		)
+		cutover = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(cutover)
+		write_block = types.ModuleType("hrms.sync.write_block")
+		write_block._instance_unlocked = lambda name: unlocked
+		client_mod = types.ModuleType("hrms.sync.client")
+		client_mod.RemoteInstanceClient = lambda name: _FakeClient(
+			{"Employee": 3, "Attendance": 40, "Employee Checkin": 80}
+		)
+		saved = {
+			k: sys.modules.get(k) for k in ("hrms.sync.cutover", "hrms.sync.write_block", "hrms.sync.client")
+		}
+		sys.modules.update(
+			{
+				"hrms.sync.cutover": cutover,
+				"hrms.sync.write_block": write_block,
+				"hrms.sync.client": client_mod,
+			}
+		)
+		try:
+			return mod._scoped_parity_report("nasty-live")
+		finally:
+			for k, v in saved.items():
+				if v is None:
+					sys.modules.pop(k, None)
+				else:
+					sys.modules[k] = v
+
+	def test_unlocked_instance_holds_the_two_back_and_grades_the_rest(self):
+		report = self._run(unlocked=True)
+		self.assertEqual(report["held_back"], ["Attendance", "Employee Checkin"])
+		graded = {line["doctype"] for line in report["lines"]}
+		self.assertNotIn("Attendance", graded)
+		self.assertNotIn("Employee Checkin", graded)
+		self.assertIn("Employee", graded)
+		self.assertNotIn("Attendance", report["mismatched"])
+
+	def test_locked_instance_still_grades_everything(self):
+		report = self._run(unlocked=False)
+		self.assertEqual(report["held_back"], [])
+		self.assertIn("Attendance", {line["doctype"] for line in report["lines"]})
+
+
 if __name__ == "__main__":
 	unittest.main()
