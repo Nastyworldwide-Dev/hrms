@@ -121,7 +121,14 @@ export function usablePosition(position, now = Date.now()) {
 
 // Mirrors hrms.utils.geofence.evaluate_geofence; executable cross-language
 // boundary tests keep the written preview aligned with authoritative enforcement.
-export function previewGeofence({ strict, hasLocation, radius, distance, accuracy, freeLocation }) {
+export function previewGeofence({
+	strict,
+	hasLocation,
+	radius,
+	distance,
+	accuracy,
+	freeLocation,
+}) {
 	if (freeLocation) {
 		// Mirrors the server: a free Shift Location has no fence, strict or not.
 		console.debug("[geolocation] preview decision", "allow", "free_location")

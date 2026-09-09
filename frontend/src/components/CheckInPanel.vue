@@ -691,7 +691,9 @@ const locationVerdict = computed(() => {
 		return {
 			tone: "ok",
 			title: __("Free location"),
-			detail: __("You're not tied to one workplace. Your check-in is recorded wherever you are, with no approval needed."),
+			detail: __(
+				"You're not tied to one workplace. Your check-in is recorded wherever you are, with no approval needed."
+			),
 		}
 	}
 

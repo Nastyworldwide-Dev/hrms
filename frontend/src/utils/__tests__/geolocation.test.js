@@ -124,6 +124,12 @@ test("a free location allows anywhere, strict or not, with or without coordinate
 })
 
 test("without the free flag a strict far punch still throws", () => {
-	const r = previewGeofence({ strict: true, hasLocation: true, radius: 100, distance: 5000, accuracy: 30 })
+	const r = previewGeofence({
+		strict: true,
+		hasLocation: true,
+		radius: 100,
+		distance: 5000,
+		accuracy: 30,
+	})
 	assert.equal(r.action, "throw")
 })

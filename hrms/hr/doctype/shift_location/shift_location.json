@@ -30,7 +30,7 @@
   },
   {
    "default": "0",
-   "description": "For sales staff and anyone without a fixed workplace. Check-ins and check-outs from anywhere are recorded straight away and never sent to the approver. Coordinates and radius are ignored.",
+   "description": "For sales staff and anyone without a fixed workplace. Check-ins and check-outs from anywhere are recorded straight away and never sent to the approver. This location's coordinates and radius are ignored; the employee's phone still records where they were.",
    "fieldname": "is_free_location",
    "fieldtype": "Check",
    "in_list_view": 1,
@@ -95,7 +95,7 @@
    "link_fieldname": "shift_location"
   }
  ],
- "modified": "2026-09-09 03:00:00.000000",
+ "modified": "2026-09-09 03:45:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Location",
