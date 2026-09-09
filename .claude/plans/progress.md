@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-08T15:44:30Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-08T15:45:03Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 5 call site(s) given verdicts, 110 same-root ⟂fb0c330c03cf
-- 2026-09-08T15:45:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-08T15:45:18Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-08T15:45:19Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 5 call site(s) given verdicts, 110 same-root ⟂fb0c330c03cf
-2026-09-08T15:45Z COMMIT: 7d5edc51c docs (audit trail); 039d134f8 fix isolated refusal audit (native test.local 2 passed; review DEPLOY); d58fa94af fix OT form (review DEPLOY); 9ff25d231 test harness stub; db22e3dc3 fix multi-shift OT pricing (OT-MULTI). No push.
-2026-09-08T15:45Z NEXT: discovery window aligned to the filing window (bounded caller input); then OT index/lock (authorized), CAL-REFRESH, ATT-PROVISIONAL, notification/report/RL-sync slices per 360-status.md
-- 2026-09-08T15:47:22Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T15:55:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T15:55:04Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-08T15:55:06Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 113 same-root ⟂5adabbd0423a
-- 2026-09-08T16:00:47Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 21 call site(s) given verdicts, 118 same-root ⟂818e8d19e53e
-- 2026-09-08T16:00:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-08T16:00:53Z EVIDENCE: 3 works — blast radius green: 12 dependent(s), 8 extra test file(s) ⟂fb3375a108b6
-- 2026-09-08T16:01:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-08T16:01:07Z EVIDENCE: 3 works — blast radius green: 12 dependent(s), 8 extra test file(s) ⟂fb3375a108b6
-- 2026-09-08T16:01:08Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 21 call site(s) given verdicts, 118 same-root ⟂818e8d19e53e
-2026-09-08T16:01Z COMMIT: f7cab99bc multi-shift corrections (review FIX_CRITICAL resolved); b14f0eb31 stub TimestampMismatchError; 6be841a6e OT reservation locks + index (native fresh.local proof). No push.
-2026-09-08T16:01Z NEXT: ATT-PROVISIONAL (provisional auto-Absent via db.set_value skips validate/set_overtime) then CAL-REFRESH per .claude/plans/360-calendar-repair.md; then notifications/reports/RL-sync/metadata/harness rows in 360-status.md
-- 2026-09-08T16:04:52Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 119 same-root ⟂b2e50b15fba8
-- 2026-09-08T16:04:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T16:04:56Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-08T16:05:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T16:05:09Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-08T16:05:10Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 2 call site(s) given verdicts, 119 same-root ⟂b2e50b15fba8
-2026-09-08T16:16Z COMMIT: cc09090ec provisional Absent replaced (ATT-PROVISIONAL); 826b17e0d calendar per-month ownership + realtime + re-entry refresh (CAL-REFRESH). No push.
-2026-09-08T16:16Z NEXT: remaining 360 rows — notifications (push identity/semantic results/timing/destination/feed access), Desk report scope (360-report-repair.md), RL allocation sync ownership, metadata parity, harness; policy decisions still open: Q1-Q3 rounding/caps/fallback, four-month window; live diagnostics D1-D5 still not run
-- 2026-09-08T16:23:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T16:23:15Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-2026-09-08T16:23Z COMMIT: 3eebcebe7 provisional-repair failure isolation + ignore_permissions (review of cc09090ec: DEPLOY after fix); 56f8c57ce ledger. 32 commits ahead of origin, NOT pushed.
-2026-09-08T16:23Z NEXT: Nabil pushes + deploys; runs D1-D5; answers Q1-Q3 + four-month policy; then notifications / Desk reports / RL sync / metadata / harness rows
-- 2026-09-08T16:29:04Z COMMIT: 505ff9e7b chore(plans): progress after the review fix → review dispatched
-2026-09-08T16:40Z NEXT: Nabil pushes + deploys nz-glass (33 ahead), runs D1-D5, answers Q1-Q3 + four-month policy; then 360 rows: notifications, Desk reports, RL sync ownership, metadata parity, PWA recovery, punched-pending calendar state, harness
-- 2026-09-08T16:44:19Z COMMIT: 505ff9e7b chore(plans): progress after the review fix → review dispatched
-- 2026-09-08T16:52:54Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 121 same-root ⟂dd7bc553362e
-- 2026-09-08T16:52:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 16 file(s) ⟂60151e67ca77
-- 2026-09-08T16:53:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 16 file(s) ⟂60151e67ca77
-- 2026-09-08T16:53:11Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 121 same-root ⟂dd7bc553362e
-- 2026-09-08T16:53:13Z COMMIT: 325b846de fix(desk): deliver HR-only roles to the launcher tiles and payroll reports → review dispatched
-- 2026-09-08T16:55:25Z COMMIT: 9d09c184c test(scope): the pending-request status predicate is a list, not a scalar → review dispatched
-- 2026-09-08T16:58:15Z COMMIT: 6a2d4e4a4 fix(helpdesk): keep a raised ticket and retry only the uploads that failed → review+design dispatched
-2026-09-08T16:59Z NOTE: review of 9d09c184c (DEPLOY) refuted the commit body's causal claim — the stale assertion could not poison later tests; the 3 issubclass failures had another, unreproduced cause. Recorded here since the commit is local and unpushed.
-2026-09-08T16:59Z NEXT: batch 2 row 4 (push registration honesty), then rows 5-9; recover reviews for 325b846de and 6a2d4e4a4
-- 2026-09-08T17:03:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-08T17:03:42Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-08T17:05:57Z COMMIT: 807765415 refactor(push): move the push helper out of public/ into src/utils → review dispatched
-- 2026-09-08T17:06:07Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-08T17:06:07Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-08T17:06:09Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 125 same-root ⟂c909b3400724
-- 2026-09-08T17:06:11Z COMMIT: 0b6144574 fix(push): believe a subscription only when the server confirms it → review dispatched
-- 2026-09-08T17:06:27Z COMMIT: 7cf3ebcb1 fix(helpdesk): say in the alert that Submit has become Retry uploads → review+design dispatched
-- 2026-09-08T17:07:04Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-08T17:14:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
-- 2026-09-08T17:14:48Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
-- 2026-09-08T17:14:49Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 126 same-root ⟂44a6b147b6a8
-- 2026-09-08T17:14:51Z COMMIT: 3aaeffb30 fix(attendance): deduct a fixed break where the time was worked, not by total gap → review dispatched
-- 2026-09-08T17:23:16Z COMMIT: 365871fb2 fix(attendance): apply a holiday calendar only inside its own dates → review dispatched
-- 2026-09-08T17:26:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-08T17:26:05Z COMMIT: 7d7ef6999 fix(push): give a foreground notification its destination on every browser → review dispatched
-- 2026-09-08T17:28:47Z COMMIT: 4d879d469 fix(notifications): show a failed list fetch, and "all caught up" only when confirmed → review+design dispatched
-- 2026-09-08T17:29:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-08T17:29:53Z COMMIT: c5f71429b fix(notifications): let HR accounts without the Employee role read their feed → review dispatched
-- 2026-09-08T17:31:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T17:31:50Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-08T17:31:53Z COMMIT: 4e88ad357 fix(notifications): deliver realtime and push only after the row is committed → review+cross-app dispatched
-- 2026-09-08T17:38:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-08T17:38:13Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-08T17:38:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-08T17:38:53Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-08T17:40:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-08T17:40:29Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-08T17:40:30Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 3 call site(s) given verdicts, 138 same-root ⟂a4d5f1135eae
-- 2026-09-08T17:40:32Z COMMIT: 2d7d635d1 fix(reports): fence the Salary Register to the caller's companies inside the query → review dispatched
-- 2026-09-08T17:42:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-08T17:42:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-08T17:43:15Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 20 call site(s) given verdicts, 141 same-root ⟂63be3dbb6460
-- 2026-09-08T17:43:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-08T17:43:28Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 20 call site(s) given verdicts, 141 same-root ⟂63be3dbb6460
-- 2026-09-08T17:43:30Z COMMIT: a5d456bc6 fix(reports): draw the attendance sheet's rows, summary and chart from one authorized population → review dispatched
-- 2026-09-08T17:44:22Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T17:45:08Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 7 call site(s) given verdicts, 142 same-root ⟂0f7c28aeccfa
-- 2026-09-08T17:45:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T17:45:24Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 7 call site(s) given verdicts, 142 same-root ⟂0f7c28aeccfa
-- 2026-09-08T17:45:26Z COMMIT: a6083375d fix(reports): keep worked half-days on the attendance chart → review dispatched
-- 2026-09-08T17:47:18Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 8 call site(s) given verdicts, 142 same-root ⟂8f3064a80189
-- 2026-09-08T17:47:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-08T17:47:33Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 8 call site(s) given verdicts, 142 same-root ⟂8f3064a80189
-- 2026-09-08T17:47:35Z COMMIT: 2d175a0ef fix(reports): count Employee Analytics' remainder from the authorized population → review dispatched
-- 2026-09-08T17:49:56Z COMMIT: f90abba39 test(sync): start the "genuinely running" row on the runner's own clock → review dispatched
-- 2026-09-08T17:50:17Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 145 same-root ⟂8bbfdd15a933
-- 2026-09-08T17:53:09Z COMMIT: e3c62f094 test(reports): put the report-scope test's stub modules back after each test → review dispatched
-- 2026-09-08T17:54:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-08T17:54:42Z EVIDENCE: 3 works — blast radius green: 33 dependent(s), 16 extra test file(s) ⟂bad2f900eac1
-- 2026-09-08T17:54:43Z EVIDENCE: 6 behaves — family hunt: class=a permission gate written for status TRANSITIONS (session user must be; 1 call site(s) given verdicts, 145 same-root ⟂8bbfdd15a933
-- 2026-09-08T17:54:45Z COMMIT: cd00c19a7 fix(sync): keep hub-granted replacement leave on a source pull → review dispatched
-2026-09-08T17:56Z REPAIR: batch 2 rows 5-9 landed locally (no push): 3aaeffb30 break-where-worked, 365871fb2 calendar-covers-date, 7d7ef6999 foreground tap destination, 4d879d469 list error state, c5f71429b HR feed read, 4e88ad357 delivery after commit, 2d7d635d1 Salary Register fence, a5d456bc6 attendance sheet population, a6083375d half-day chart, 2d175a0ef analytics remainder, cd00c19a7 RL ownership on pull. Test-only: 5353b5e9f, f90abba39, e3c62f094 (three time-bomb / order-contamination test fixes that blocked the gate).
-2026-09-08T17:56Z EVIDENCE: 3 works — bench-free python suite (hrms/tests hrms/utils hrms/api hrms/sync): all green except the pre-existing collection error in hrms/tests/test_attendance_allowance.py (fails identically on HEAD before this batch); frontend node tests 138 pass, bun src tests 103 pass (bun over tests/ also collects Playwright e2e files, pre-existing noise).
 2026-09-08T17:56Z DEAD END: standalone bench-free harness files (test_write_block, test_report_scope_filters, test_offboarding, ...) replace sys.modules["frappe"] at import or run time; in the gate's shared pytest session that broke later setUps. Fixed at the source for the two that blocked commits; new tests on the sync harness pin runner.frappe. Class: TEST-MODULE-CONTAMINATION — a conftest-level guard (restore sys.modules after each module) is the gate to propose.
 2026-09-08T17:56Z NOTE: per the user ("review later"), NO reviewers were spawned for the batch 2 commits after 7cf3ebcb1; the post-commit hooks asked for frappe/design/cross-app reviews on each — run them in one pass before deploy. Agents: user-run script /tmp/claude-1009/-home-nabil-nz-version-16/f5651527-5a03-4dbb-9e4b-3209c3820cd2/scratchpad/agents-sonnet-high-2026-09-08.sh pins every agent to sonnet/high (scouts haiku/low).
 2026-09-08T17:56Z NEXT: (1) reviews for batch 2 (14 fix commits from 807765415 to cd00c19a7); (2) HR answers -> rest-day rule Q1-Q3, four-month window, "punched, pending"/September repair after D4; (3) report family hunt (plan item 5) and the remaining notification rows N01-N04, N09; (4) Nabil pushes nz-glass + deploys (patches: gate_hr_desktop_icons..., grant_hr_read_on_pwa_notification).
@@ -298,3 +201,8 @@
 - 2026-09-09T12:09:10Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
 - 2026-09-09T12:09:16Z COMMIT: 6016009c4 fix(attendance): name the real cause of a split day instead of repairing it forever → review+cross-app dispatched
 - 2026-09-09T12:10Z EVIDENCE: 6 behaves — reviews on the Desk/shift batch: Critical (Redis hash flush) and Critical (fetch_shift no-op) both fixed and re-verified; 3 warnings closed in 6016009c4. Suites: 31 day-audit, 11 list, 10 sort-reset, all green on fresh.local too.
+- 2026-09-09T12:10:21Z COMMIT: 465a5ae98 docs(audit): what shipped for the shift flip, the lists and the GL pull → review dispatched
+- 2026-09-09T12:15:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T12:15:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T12:15:20Z COMMIT: d1ea992d4 fix(attendance): bound the assignment query, and tell the truth about the ceiling → review dispatched
+- 2026-09-09T12:16Z NEXT: Nabil deploys d1ea992d4; Pull GL Accounts; Attendance Day Audit 1-10 Sep (HR ends duplicate assignments first, then Repair); one hourly run; report his 3/4/7 Sep rows. Then: August decision, source-site shutdown confirmation, claim rulings Q1-Q6.

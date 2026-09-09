@@ -1,13 +1,16 @@
 # HANDOFF
-prompt:   7 Sep attendance audit + HR corrections stay HR's (Desk, job, PWA aligned)
-status:   done (reviewed); pushed; deploy pending
-commit:   7291940bf on nz-glass (shift flip, Desk lists, split-shift repair; reviews running)
-files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped instance buttons)
-          hrms/api/__init__.py (types offered, payable prefill, status on OT lists, RL discovery)
-          hrms/hr/doctype/expense_claim/expense_claim.py (payable default)
-          hrms/hr/doctype/ot_request/ot_request.py, replacement_leave_claim.py, hrms/mixins/pwa_notifications.py
-          frontend/src/components/{FormView,ListView,OTRequestItem,ReplacementLeaveClaimItem}.vue, utils/requestStatus.js
-          docs/glass/audit/2026-09-09-claims-audit.md
-verify:   PYTHONPATH=. python3 hrms/tests/test_request_outcome_visible.py; cd frontend && node --experimental-test-module-mocks --test tests/*.test.mjs
-flags:    six policy rulings in the audit §3 (RL Claim retire, rejected date release, RL cap, Overtime Slip, backdating, rejection reason)
-next:     deploy 8fa1c097e+; Nabil deploys → Provenance Audit Recover → Day Audit Repair → one hourly run → HR amends any leftover day (it now stays); then claims setup + rulings Q1–Q6
+prompt:   shift flip, Half Day, Desk sorting, GL pull failures (10 Sep)
+status:   done; pushed; reviewed; deploy pending
+commit:   d1ea992d4 on nz-glass
+files:    hrms/utils/shift_resolution.py + overrides/employee_checkin_override.py (punch -> shift)
+          hrms/overrides/shift_assignment_hooks.py + hooks.py (new assignment ends the old)
+          hrms/utils/attendance_day_audit.py + report (split-day verdict, guarded repair)
+          hrms/hr/doctype/{employee_checkin,attendance,remote_checkin_request}.json + list js (sorting)
+          hrms/patches/v16_0/reset_attendance_list_sort_preferences.py (saved sort + columns)
+          hrms/sync/account_shells.py + utils/expense_claim_type_mapping.py (ledger parent, spelling)
+verify:   cd ~/verify-bench && bench --site fresh.local run-tests --module hrms.tests.test_attendance_day_audit
+flags:    August left as the old site computed it - Nabil's call; duplicate assignments already on
+          the site are named by the audit but must be ended by HR; old source site still sending
+          punches, so no Sync Employee Data
+next:     Nabil deploys d1ea992d4 -> Pull GL Accounts -> Attendance Day Audit 1-10 Sep (end any
+          "two shift assignments" days first, then Repair) -> one hourly run -> check calendars
