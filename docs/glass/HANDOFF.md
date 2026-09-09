@@ -1,13 +1,13 @@
 # HANDOFF
-prompt:   live incident 9 Sep — vanished check-ins (D6) + recovery
-status:   done (reviewed; pushed); deploy pending
-commit:   f5e4ff963 on nz-glass (with ccb224c38, a5313c6f1, edbfc2427; never 781096bb3 alone)
-files:    hrms/sync/runner.py
-          hrms/sync/test_contested_rows.py
-          hrms/sync/checkin_recovery.py
-          hrms/tests/test_checkin_recovery.py
-          hrms/hr/report/checkin_provenance_audit/ (py, js, json, test)
-          docs/glass/audit/2026-09-09-checkin-loss-audit.md
-verify:   PYTHONPATH=. python3 hrms/tests/test_checkin_recovery.py; python3 hrms/sync/test_contested_rows.py
-flags:    recovery is dry-run + confirm in Desk (System Manager); mirrored Attendance release (R5) still needs Nabil's word; source instance identity live: unknown
-next:     deploy → Checkin Provenance Audit (Overwritten) → Recover → one hourly run → check 4 Sep / 3 Sep rows; then R5 patch on the word
+prompt:   claims in the PWA (expense / OT / replacement leave) + GL accounts from the ERP
+status:   done locally (review running on d2cc3dd10, 686e4aa0d, bc76cf89b); push after verdict; deploy pending
+commit:   0dbcba13e on nz-glass
+files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped instance buttons)
+          hrms/api/__init__.py (types offered, payable prefill, status on OT lists, RL discovery)
+          hrms/hr/doctype/expense_claim/expense_claim.py (payable default)
+          hrms/hr/doctype/ot_request/ot_request.py, replacement_leave_claim.py, hrms/mixins/pwa_notifications.py
+          frontend/src/components/{FormView,ListView,OTRequestItem,ReplacementLeaveClaimItem}.vue, utils/requestStatus.js
+          docs/glass/audit/2026-09-09-claims-audit.md
+verify:   PYTHONPATH=. python3 hrms/tests/test_request_outcome_visible.py; cd frontend && node --experimental-test-module-mocks --test tests/*.test.mjs
+flags:    six policy rulings in the audit §3 (RL Claim retire, rejected date release, RL cap, Overtime Slip, backdating, rejection reason)
+next:     read review; push; Nabil deploys → Pull → GL Accounts → configure Expense Claim Types → staff test one claim of each kind

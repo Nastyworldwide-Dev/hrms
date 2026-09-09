@@ -30,13 +30,13 @@ unknown** (only Verifica can answer).
 | `bb07bd2b1` | **Pull → GL Accounts from Source** on the HRMS ERP Instance form: reads the source's Expense and Asset accounts for the served companies, creates the missing ones here through the normal insert, parents first; a parent the hub lacks is replaced by the hub's root group and reported. HR then picks the ERP's own account on the Expense Claim Type. The form's eleven buttons became three groups (Pull / Checks / Danger). |
 | `e33e70fad` | The PWA offers only the types that have an account for the employee's company. **live**: audit employee now sees `Medical` only. |
 | `d2cc3dd10` | `payable_account` defaults server-side to the company's expense-claim payable, else its ordinary payable (Creditors). **live**: the same claim now submits (`Unpaid`, payable `Creditors - _TC`). |
-| `<minors>` | Second pull run recognises accounts under their local name; log level; labels. |
+| `d35b3b7c4` | Second pull run recognises accounts under their local name; log level; labels. |
 
 ### 1.3 Still open on expense
 
 | # | Finding | Evidence | Action |
 |---|---|---|---|
-| E-PWA3 | A **new** form never arms the "unsaved changes" confirm; Back discards silently. | trace: `FormView.vue` watcher returns on `!props.id` | fix in flight (frontend worker) |
+| E-PWA3 | A **new** form never arms the "unsaved changes" confirm; Back discards silently. | trace: `FormView.vue` watcher returns on `!props.id` | fixed `bc76cf89b` (dirty once it differs from first touch) |
 | E-approver | The audit employee has no expense approver and `is_mandatory=1`: the form cannot be submitted until HR sets Employee.expense_approver or a Department approver. | **live** on the dev site; **live: unknown** on Verifica | HR config; readiness should name it |
 | E-taxes | Taxes tab shows `account_head` (required Link to Account). On the dev site the employee can search accounts; on Verifica **live: unknown** (Employee has no Account read in the shipped JSON). | **live** (dev) | verify once on Verifica as a staff user |
 | E-dead | `ExpenseAdvancesTable.vue`, `get_salary_currency`, the `from_date/to_date` branch in `ExpenseClaimItem.vue` are dead code. | trace | delete in a chore |
@@ -53,14 +53,14 @@ Employee: Attendance dashboard card "Overtime to claim" → OT Request form (dat
 
 | # | Defect | Effect on staff | Status |
 |---|---|---|---|
-| D1 | OT Request History list has no row component registered → blank rows | "my OT list is empty" | fix in flight |
-| D2 | A rejected request shows **Approved** (chip reads docstatus only; API omits `status`) | wrong outcome shown to employee and manager | fix in flight (both halves) |
-| D3 | No outcome notification for OT Request; none at all for RL Claim; the Reject dialog promises one | silence after filing = "back and forth" | fix in flight |
-| D6 | RL discovery reads `Attendance.ot_hours`; the form and the save use the check-in scan → "nothing to claim" after tapping an offered day | the exact ping-pong reported | fix in flight |
-| D7 | RL claim form hardcodes 8 h per day | wrong refusals when HR sets 6 h | fix in flight |
-| D9 | Cancel from the detail form uses `set_value` → silently fails on a submitted request | "cancel does nothing" | fix in flight |
-| D10 | Approver's review sheet omits the mandatory Explanation | approver decides blind | fix in flight |
-| D13 | `company` never set from the Employee (user default instead) | multi-company fence trips | fix in flight |
+| D1 | OT Request History list has no row component registered → blank rows | "my OT list is empty" | fixed `bc76cf89b` |
+| D2 | A rejected request shows **Approved** (chip reads docstatus only; API omits `status`) | wrong outcome shown to employee and manager | fixed `686e4aa0d` + `bc76cf89b` |
+| D3 | No outcome notification for OT Request; none at all for RL Claim; the Reject dialog promises one | silence after filing = "back and forth" | fixed `686e4aa0d` |
+| D6 | RL discovery reads `Attendance.ot_hours`; the form and the save use the check-in scan → "nothing to claim" after tapping an offered day | the exact ping-pong reported | fixed `686e4aa0d` |
+| D7 | RL claim form hardcodes 8 h per day | wrong refusals when HR sets 6 h | fixed `bc76cf89b` |
+| D9 | Cancel from the detail form uses `set_value` → silently fails on a submitted request | "cancel does nothing" | fixed `bc76cf89b` |
+| D10 | Approver's review sheet omits the mandatory Explanation | approver decides blind | fixed `bc76cf89b` |
+| D13 | `company` never set from the Employee (user default instead) | multi-company fence trips | fixed `686e4aa0d` |
 | D4/D5/D8 | Replacement Leave Claim is a dead end (bank always 0); its own test suite contradicts the OT one; card reads a key the API does not return | screens that can only refuse | **ruling needed** (§3 Q1) |
 | D11 | No rejection reason anywhere | employee re-files blind | small schema change — **word needed** |
 | D12 | After a decision the employee has no action; a rejected date stays reserved | "I can't claim that day again" | **ruling needed** (§3 Q2) |

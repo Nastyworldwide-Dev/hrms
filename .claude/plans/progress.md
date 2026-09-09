@@ -219,3 +219,4 @@
 - 2026-09-09T08:08:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-09T08:13:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-09-09T08:13:25Z EVIDENCE: 3 works — blast radius green: 10 dependent(s), 9 extra test file(s) ⟂f62d0a5f62e7
+- 2026-09-09T08:15Z NEXT: reviewer verdict on d2cc3dd10/686e4aa0d/bc76cf89b → fix Criticals → push nz-glass; Nabil deploys, runs Pull → GL Accounts, configures Expense Claim Types + expense approvers, tests one claim of each kind; then rulings Q1–Q6 in docs/glass/audit/2026-09-09-claims-audit.md.
