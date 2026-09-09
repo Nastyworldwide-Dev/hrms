@@ -65,12 +65,15 @@
    "fieldname": "log_type",
    "fieldtype": "Select",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Log Type",
    "options": "\nIN\nOUT"
   },
   {
    "fieldname": "shift",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Shift",
    "options": "Shift Type",
    "read_only": 1,
@@ -99,11 +102,13 @@
    "default": "0",
    "fieldname": "skip_auto_attendance",
    "fieldtype": "Check",
+   "in_standard_filter": 1,
    "label": "Skip Auto Attendance"
   },
   {
    "fieldname": "attendance",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Attendance Marked",
    "options": "Attendance",
    "read_only": 1
@@ -144,26 +149,26 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
+   "description": "What the device and the fence said at the moment of the punch. Written by the app, never typed in.",
    "fieldname": "location_evidence_section",
    "fieldtype": "Section Break",
-   "label": "Location Evidence",
-   "collapsible": 1,
-   "description": "What the device and the fence said at the moment of the punch. Written by the app, never typed in."
+   "label": "Location Evidence"
   },
   {
+   "description": "The phone's own error estimate for the coordinates. Blank means the device gave none.",
    "fieldname": "location_accuracy_m",
    "fieldtype": "Float",
    "label": "Device Accuracy (m)",
    "precision": "1",
-   "read_only": 1,
-   "description": "The phone's own error estimate for the coordinates. Blank means the device gave none."
+   "read_only": 1
   },
   {
+   "description": "How old the reading was when the punch was sent.",
    "fieldname": "location_fix_age_s",
    "fieldtype": "Int",
    "label": "Fix Age (s)",
-   "read_only": 1,
-   "description": "How old the reading was when the punch was sent."
+   "read_only": 1
   },
   {
    "fieldname": "location_source",
@@ -190,14 +195,14 @@
    "read_only": 1
   },
   {
+   "description": "Which branch of the fence decided this punch. Outside and Imprecise went to the approver.",
    "fieldname": "geofence_outcome",
    "fieldtype": "Select",
-   "label": "Geofence Outcome",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "read_only": 1,
+   "label": "Geofence Outcome",
    "options": "\nInside\nOutside\nImprecise\nFree Location\nNo Shift\nNo Location\nNo Radius\nTracking Off\nLate Checkout\nManual Entry",
-   "description": "Which branch of the fence decided this punch. Outside and Imprecise went to the approver."
+   "read_only": 1
   },
   {
    "fieldname": "shift_timings_section",
@@ -241,6 +246,7 @@
    "fieldname": "offshift",
    "fieldtype": "Check",
    "hidden": 1,
+   "in_standard_filter": 1,
    "label": "Off-shift",
    "read_only": 1
   },
@@ -272,7 +278,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-09 09:04:46.728380",
+ "modified": "2026-09-09 11:44:07.998199",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Checkin",
@@ -365,8 +371,9 @@
   }
  ],
  "row_format": "Dynamic",
- "sort_field": "creation",
- "sort_order": "ASC",
+ "search_fields": "employee,employee_name,time,log_type,shift",
+ "sort_field": "time",
+ "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",
  "track_changes": 1

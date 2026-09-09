@@ -1,5 +1,8 @@
 frappe.listview_settings["Attendance"] = {
-	add_fields: ["status", "attendance_date"],
+	// `shift` and `auto_attendance` ride along so HR can see, without opening a
+	// row, which shift a day was marked under and whether a person or the
+	// hourly job owns it.
+	add_fields: ["status", "attendance_date", "shift", "auto_attendance", "working_hours"],
 
 	get_indicator: function (doc) {
 		if (["Present", "Work From Home"].includes(doc.status)) {
@@ -100,8 +103,8 @@ frappe.listview_settings["Attendance"] = {
 							frappe.msgprint(
 								__(
 									"Attendance from {0} to {1} has already been marked for the Employee {2}",
-									[data.from_date, data.to_date, data.employee],
-								),
+									[data.from_date, data.to_date, data.employee]
+								)
 							);
 						} else {
 							frappe.confirm(
@@ -116,7 +119,7 @@ frappe.listview_settings["Attendance"] = {
 											data: data,
 										},
 									});
-								},
+								}
 							);
 						}
 						dialog.hide();
@@ -180,7 +183,7 @@ frappe.listview_settings["Attendance"] = {
 					dialog.set_df_property(
 						"unmarked_days",
 						"options",
-						options.length > 0 ? options : [],
+						options.length > 0 ? options : []
 					);
 					dialog.no_unmarked_days_left = options.length === 0;
 				});

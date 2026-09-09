@@ -76,19 +76,21 @@
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "in_global_search": 1,
+   "in_list_view": 1,
    "label": "Employee Name",
    "oldfieldname": "employee_name",
    "oldfieldtype": "Data",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "working_hours",
    "fieldname": "working_hours",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Working Hours",
    "precision": "9",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -97,35 +99,36 @@
    "label": "Overtime"
   },
   {
+   "allow_on_submit": 1,
    "description": "Beyond-shift hours after minimum-OT and the daily cap. The monthly cap is applied at payroll.",
    "fieldname": "ot_hours",
    "fieldtype": "Float",
    "label": "Overtime Hours",
    "precision": "9",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "description": "Σ(band hours × multiplier) — the rate-weighted hours the payroll platform multiplies by the hourly rate. The ERP stops at hours; no salary is stored here.",
    "fieldname": "ot_rate_weighted_hours",
    "fieldtype": "Float",
    "label": "OT Rate-Weighted Hours",
    "precision": "9",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "ot_rate_bands",
    "fieldtype": "Table",
    "label": "Overtime by Rate",
    "options": "Attendance Overtime Band",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
    "default": "Present",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
@@ -174,6 +177,7 @@
    "fetch_from": "employee.company",
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Company",
    "oldfieldname": "company",
    "oldfieldtype": "Link",
@@ -186,6 +190,7 @@
    "fetch_from": "employee.department",
    "fieldname": "department",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Department",
    "options": "Department",
    "read_only": 1
@@ -193,6 +198,8 @@
   {
    "fieldname": "shift",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Shift",
    "options": "Shift Type"
   },
@@ -214,18 +221,18 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "late_entry",
    "fieldtype": "Check",
-   "label": "Late Entry",
-   "allow_on_submit": 1
+   "label": "Late Entry"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "early_exit",
    "fieldtype": "Check",
-   "label": "Early Exit",
-   "allow_on_submit": 1
+   "label": "Early Exit"
   },
   {
    "fieldname": "details_section",
@@ -233,18 +240,20 @@
    "label": "Details"
   },
   {
+   "allow_on_submit": 1,
+   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed.",
    "fieldname": "in_time",
    "fieldtype": "Datetime",
-   "label": "In Time",
-   "allow_on_submit": 1,
-   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed."
+   "in_list_view": 1,
+   "label": "In Time"
   },
   {
+   "allow_on_submit": 1,
+   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed.",
    "fieldname": "out_time",
    "fieldtype": "Datetime",
-   "label": "Out Time",
-   "allow_on_submit": 1,
-   "description": "The employee's local clock. Filled from check-ins by the hourly job; HR may enter or correct it, before or after submit. Enter both times or neither; hours and overtime are recomputed."
+   "in_list_view": 1,
+   "label": "Out Time"
   },
   {
    "fieldname": "column_break_18",
@@ -309,7 +318,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-09 06:45:00.000000",
+ "modified": "2026-09-09 11:44:07.998914",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance",
@@ -369,8 +378,8 @@
   }
  ],
  "row_format": "Dynamic",
- "search_fields": "employee,employee_name,attendance_date,status",
- "sort_field": "creation",
+ "search_fields": "employee,employee_name,attendance_date,status,shift",
+ "sort_field": "attendance_date",
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",

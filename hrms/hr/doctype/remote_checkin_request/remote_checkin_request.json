@@ -38,8 +38,8 @@
    "in_standard_filter": 1,
    "label": "Employee",
    "options": "Employee",
-   "reqd": 1,
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fetch_from": "employee.employee_name",
@@ -55,8 +55,8 @@
    "in_list_view": 1,
    "label": "Employee Checkin",
    "options": "Employee Checkin",
-   "reqd": 1,
    "read_only": 1,
+   "reqd": 1,
    "unique": 1
   },
   {
@@ -156,12 +156,12 @@
    "read_only": 1
   },
   {
+   "description": "The phone's error estimate. A 40 m overshoot from a ±300 m reading is not the same as from a ±5 m one.",
    "fieldname": "accuracy_m",
    "fieldtype": "Float",
    "label": "Device Accuracy (m)",
    "precision": "1",
-   "read_only": 1,
-   "description": "The phone's error estimate. A 40 m overshoot from a ±300 m reading is not the same as from a ±5 m one."
+   "read_only": 1
   },
   {
    "fieldname": "radius_m",
@@ -172,10 +172,10 @@
   {
    "fieldname": "reason",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Why Approval Is Needed",
    "options": "\nOutside Radius\nImprecise Location",
-   "read_only": 1,
-   "in_list_view": 1
+   "read_only": 1
   },
   {
    "fieldname": "section_remarks",
@@ -195,7 +195,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-09 05:00:00.000000",
+ "modified": "2026-09-09 11:44:47.823961",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Remote Checkin Request",
@@ -227,16 +227,17 @@
   },
   {
    "read": 1,
-   "write": 1,
-   "role": "HR User"
+   "role": "HR User",
+   "write": 1
   },
   {
-   "read": 1,
    "create": 1,
+   "read": 1,
    "role": "Employee"
   }
  ],
- "sort_field": "modified",
+ "search_fields": "employee,employee_name,checkin_time,status",
+ "sort_field": "checkin_time",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1
