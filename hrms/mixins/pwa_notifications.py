@@ -58,6 +58,8 @@ class PWANotificationsMixin:
 			"Leave Application": "status",
 			"Expense Claim": "approval_status",
 			"Shift Request": "status",
+			"OT Request": "status",
+			"Replacement Leave Claim": "status",
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
 
@@ -80,7 +82,8 @@ class PWANotificationsMixin:
 		field = APPROVER_FIELD.get(self.doctype)
 		if field:
 			return self.get(field)
-		if self.doctype == "OT Request":
+		if self.doctype in ("OT Request", "Replacement Leave Claim"):
+			# Same routing as approval.decide accepts for both: reports_to, then HR.
 			return self._get_ot_approver()
 
 		from hrms.overrides.remote_checkin_request_hooks import resolve_approver

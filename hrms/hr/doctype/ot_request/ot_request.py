@@ -95,6 +95,7 @@ class OTRequest(Document, PWANotificationsMixin):
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_filing_for_self(self)
+		self.set_company()
 		self.validate_filing_window()
 		self.set_compensation()
 		# A refusal creates no entitlement. HR must still be able to reject a
@@ -134,6 +135,13 @@ class OTRequest(Document, PWANotificationsMixin):
 					"OT for {0} can no longer be claimed — backdating reaches two payroll cycles; the earliest claimable date today is {1}."
 				).format(frappe.bold(str(ot_date)), frappe.bold(str(earliest_filable_date(today))))
 			)
+
+	def set_company(self):
+		# Always the Employee's company, like set_compensation: the PWA create
+		# form sends no company, so this used to be the user's default Company —
+		# right by luck for a single-company user, blank or wrong otherwise.
+		if self.employee:
+			self.company = frappe.db.get_value("Employee", self.employee, "company")
 
 	def set_compensation(self):
 		# fixed by the employee's HR-managed flag; never a form choice
@@ -216,6 +224,9 @@ class OTRequest(Document, PWANotificationsMixin):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
+		# The employee hears the decision here, like Leave Application and Shift
+		# Request do — before this, a request was approved or refused in silence.
+		self.notify_approval_status()
 		# Replacement Leave is granted PER WORKING DAY, directly, on approval — no
 		# bank, no accumulation, no separate claim. That day's OT converts to whole
 		# 4h blocks (4h=½, 8h=1, 12h=1.5; under 4h earns nothing) and lands in the
@@ -255,32 +266,11 @@ class OTRequest(Document, PWANotificationsMixin):
 
 
 def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str | None = None) -> dict:
-	"""Convertible replacement-leave hours in the LEAVE PERIOD covering `as_of` —
-	approved replacement-leave OT worked in the period, minus hours reserved by
-	claims filed in it (drafts included, so a pending claim can't be double-
-	funded).
-
-	The boundary is the LEAVE PERIOD, the same one add_to_leave_allocation scopes
-	the granted days to — replacement leave is leave, and leave lives for its
-	period. This is the coherent lifetime for the hours-bank too: they expire
-	exactly when the leave they would become expires, not sooner. It replaces
-	both the 2026-08-19 calendar-month bank (which expired hours FASTER than the
-	days they convert to — the source of the backdated-OT stranding) and the
-	interim 2-cycle window (that tied banked-leave lifetime to the OT-PAY payroll
-	cutoff, a different concern). The 16th-to-15th filing window still governs
-	which payroll pays OT; it does not govern how long banked leave lives.
-
-	A leave period is a fixed range, so credits and debits are both bounded by it
-	and hours_available cannot drift negative the way a rolling window could.
-	When no active period covers `as_of` there is nothing to bank (a claim can't
-	be approved without one either — see add_to_leave_allocation).
-
-	DEPRECATED: Replacement Leave is now granted PER WORKING DAY, directly, on OT
-	approval (OTRequest.on_submit) — nothing banks or accumulates, so there is no
-	pool to convert. This returns an empty bank so the legacy Replacement Leave card
-	and Claim show "nothing to do", and the function and doctype stay (not deleted)
-	so any historical rows remain loadable. The old bank computation is removed — it
-	is in git history if ever needed.
+	"""DEPRECATED — always an empty bank. Replacement Leave is granted PER WORKING
+	DAY, directly, on OT approval (OTRequest.on_submit); nothing banks or
+	accumulates, so there is no pool to convert. This stays so the legacy Replacement
+	Leave card and Claim show "nothing to do" and historical rows remain loadable;
+	the old leave-period bank computation is in git history if ever needed.
 	"""
 	logger.info("[ot_request] replacement-leave bank deprecated — empty for %s (per-day grant now)", employee)
 	return {

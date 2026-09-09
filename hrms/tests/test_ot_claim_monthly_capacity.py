@@ -77,6 +77,10 @@ class DecisionDocument(filing.ot_request.OTRequest):
 		self.on_submit()
 		self.docstatus = 1
 
+	def notify_approval_status(self):
+		"""The PWA Notification insert is a write; it stops at this boundary like
+		every other one here. test_request_outcome_visible pins that on_submit calls it."""
+
 
 class TestClaimCapacity(unittest.TestCase):
 	def validate_claim(
@@ -372,9 +376,14 @@ class TestClaimCapacity(unittest.TestCase):
 				claim_hours=2,
 			)
 
-	def test_replacement_leave_discovery_keeps_its_existing_attendance_source(self):
+	def test_replacement_leave_discovery_matches_the_form_not_the_attendance_column(self):
+		"""One capacity engine for the card, the form and the save. Attendance says
+		99 h here; offering that sent people to a form that then said "nothing to
+		claim". test_rl_discovery_uses_capacity pins the per-day filtering."""
+		form = self.validate_claim(consumer="get_ot_claim_summary", pay_eligible=0)["punch_ot_hours"]
 		result = self.validate_claim(consumer="get_claimable_ot_summary", pay_eligible=0)
-		self.assertEqual(result["claimable_hours"], 99)
+		self.assertNotEqual(result["claimable_hours"], 99)
+		self.assertEqual(result["claimable_hours"], form)
 
 	def test_payroll_prices_an_approved_partial_budget_after_work_qualifies(self):
 		self.assertEqual(

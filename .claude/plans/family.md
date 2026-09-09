@@ -210,3 +210,32 @@ Call sites / importers, with verdicts:
   fills the gap when that is empty too.
 - make_gl_entries / get_gl_entries — not-affected: consumer of the field.
 Regression: hrms/tests/test_expense_claim_payable_default.py.
+
+# family.md — OT / Replacement Leave decisions invisible or inconsistent in the PWA (9 Sep)
+
+CLASS: A DECISION THAT REACHES docstatus 1 EITHER WAY, READ AS "APPROVED". Approve
+and Reject both submit (DECIDE_THEN_SUBMIT); every reader that looked at docstatus
+alone (list APIs without `status`, chips) called a refusal "Approved", and neither
+controller told the employee anything. Plus two readers of one number: RL
+discovery read Attendance.ot_hours while the form and the save used
+get_ot_claim_capacity.
+
+Changed: hrms/api/__init__.py get_ot_requests / get_replacement_leave_claims
+(+status), get_claimable_ot_summary RL branch (capacity engine);
+hrms/mixins/pwa_notifications.py APPROVAL_STATUS_FIELD + RL approver routing;
+ot_request.py set_company + notify_approval_status on submit;
+replacement_leave_claim.py mixin, after_insert notify_approver, set_company,
+notify_approval_status.
+
+Call sites / importers, with verdicts:
+- frontend OTRequestItem / ReplacementLeaveClaimItem / ReplacementLeave.vue chips —
+  same-root, fixed in the frontend slice (requestStatus.js).
+- hrms/api/approval.py decide/finalize — not-affected: they set status and submit;
+  the notification rides the submit via has_value_changed.
+- Leave Application / Shift Request notify paths — not-affected: unchanged keys.
+- get_ot_claim_summary, OTRequest.set_punch_verified_cap — same-root by design:
+  already on get_ot_claim_capacity; discovery now matches them.
+- hrms/tests/test_ot_claim_monthly_capacity.py — pinned the old raw-hours
+  discovery; rewritten to pin "discovery == form".
+Regression: test_request_outcome_visible.py, test_rl_discovery_uses_capacity.py,
+test_request_company_from_employee.py.

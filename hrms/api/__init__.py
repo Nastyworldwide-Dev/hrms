@@ -519,6 +519,9 @@ def get_ot_requests(
 			"claimed_hours",
 			"compensation",
 			"docstatus",
+			# The decision. Approved and Rejected both reach docstatus 1, so
+			# without this the list showed a refusal as "submitted".
+			"status",
 			"creation",
 		],
 		filters=filters,
@@ -558,6 +561,7 @@ def get_replacement_leave_claims(
 			"hours_cost",
 			"available_hours",
 			"docstatus",
+			"status",  # same reason as get_ot_requests: docstatus 1 is not "approved"
 			"creation",
 		],
 		filters=filters,
@@ -593,9 +597,10 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 	"""Unclaimed overtime the employee has already worked — so they KNOW it is there.
 
 	The OT they earned is invisible until they open the form and pick a date; people
-	were finding it by accident. Submitted Attendance discovers OT-Pay candidate
-	dates; their ceilings use the same capacity calculation as the form and
-	validation. Dates already filed are excluded, so the PWA can show a
+	were finding it by accident. Submitted Attendance discovers candidate dates;
+	their ceilings — Overtime Pay and Replacement Leave alike — use the same
+	capacity calculation as the form and validation, so a day offered here is a
+	day the form accepts. Dates already filed are excluded, so the PWA can show a
 	standing 'you have X h to claim' card instead of a form nobody thinks to open.
 	Read-only, session-scoped like the other PWA readers.
 
@@ -673,12 +678,17 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 				selected += hours
 			total += selected
 	else:
-		# Preserve RL's existing Attendance-based discovery until its cap policy
-		# is reconciled separately; do not silently invent an RL allowance pool.
+		# Sized by the SAME engine the form (get_ot_claim_summary) and the save
+		# (OTRequest.set_punch_verified_cap) use. This branch used to read raw
+		# Attendance.ot_hours, so the card offered a day the form then refused
+		# ("nothing to claim"). No policy is decided here: RL capacity is the raw
+		# punch hours today, and if that ever changes, all three surfaces move together.
 		days = [
-			{"date": str(row["attendance_date"]), "hours": flt(row["ot_hours"])}
-			for row in sorted(unclaimed, key=lambda row: row["attendance_date"], reverse=True)
-			if flt(row["ot_hours"]) > 0
+			{"date": str(work_date), "hours": hours}
+			for work_date in sorted(
+				{row["attendance_date"] for row in unclaimed if flt(row["ot_hours"]) > 0}, reverse=True
+			)
+			if (hours := get_ot_claim_capacity(employee, work_date, compensation)["hours"]) > 0
 		]
 		total = sum(day["hours"] for day in days)
 	return {

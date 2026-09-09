@@ -20,18 +20,31 @@ from hrms.hr.utils import (
 	validate_mandatory_attachment,
 	validate_self_submission,
 )
+from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 logger = logging.getLogger(__name__)
 
 REPLACEMENT_LEAVE_TYPE = "Replacement Leave"
 
 
-class ReplacementLeaveClaim(Document):
+class ReplacementLeaveClaim(Document, PWANotificationsMixin):
+	def after_insert(self):
+		# Once, when filed — not in validate, which runs on every save (see
+		# OTRequest.after_insert). Before this nobody was told a claim existed.
+		self.notify_approver()
+
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_filing_for_self(self)
+		self.set_company()
 		self.set_claim_basis()
 		self.validate_claimed_days()
+
+	def set_company(self):
+		# Always the Employee's company (see OTRequest.set_company): the leave
+		# period lookup on approval reads it, and the PWA create form sends none.
+		if self.employee:
+			self.company = frappe.db.get_value("Employee", self.employee, "company")
 
 	def set_claim_basis(self):
 		logger.info("[rl_claim] claim basis for %s (%s)", self.name, self.employee)
@@ -89,6 +102,8 @@ class ReplacementLeaveClaim(Document):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
+		# Tell the employee the decision, approved or refused (see OTRequest.on_submit).
+		self.notify_approval_status()
 		if self.status == "Approved":
 			self.add_to_leave_allocation()
 
