@@ -296,3 +296,19 @@ CLAIM ... each button you add in instance ... overcrowded ... introduce proper w
 3. Then: the OT / Replacement Leave / Expense claim traces (agents running) → fixes
    per defect, one slice each; PWA verification on fresh.local as employee + approver.
 MOCKUP: NOT NEEDED (Desk button groups; existing dialogs).
+
+## Addendum 9 Sep 2026 (night) — 7 Sep: punched, still Absent; name the cause per day, repair the debris
+Tier: risky. Nabil, chat: "7 sept … some has clock in, some didnt … mine in 7th is
+absent despite I did clock in and out. The issue? whether the logic, or
+relationship, or lifecycle". 4 Sep = go-live day, ignored on his word.
+1. `feat(attendance)` hrms/utils/attendance_day_audit.py: judge_day (pure) names the
+   ONE mechanism per employee-day (skip-stamped by the old failure handler, linked to a
+   cancelled row, mirrored, rejected, shift mismatch, before Process Attendance After,
+   past Last Sync, manual/mirrored/leave row, unread punches waiting for the job);
+   repair_attendance_days (System Manager, dry run) clears old skip stamps whose
+   comment names Duplicate/Overlapping and links to cancelled rows, optionally queues
+   the hourly job. Attendance rows are never written.
+2. `feat(reports)` "Attendance Day Audit" script report with the Repair button.
+EXPECTED OUTPUT: Nabil opens the report for 7–9 Sep, reads his own row's verdict,
+presses Repair, the next run marks the day Present with in/out and hours.
+MOCKUP: NOT NEEDED.
