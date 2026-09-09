@@ -157,6 +157,20 @@ class TestEndpointHardening(unittest.TestCase):
 		"""4,629 accounts on the real source; a cap of 500 refused HR's first run."""
 		self.assertGreaterEqual(shells.MAX_ACCOUNTS_PER_RUN, 5000)
 
+	def test_the_endpoint_queues_and_the_job_does_the_inserting(self):
+		"""Account is a NestedSet: thousands of inserts belong in the long queue,
+		never in a web request that a worker kills after two minutes."""
+		self.assertIn("enqueue", self._names_in("create_account_shells"))
+		self.assertNotIn("insert", self._names_in("create_account_shells"))
+		self.assertIn("insert", self._names_in("run_account_shells_job"))
+		self.assertIn("_notify_operator", self._names_in("run_account_shells_job"))
+
+	def test_the_job_skips_what_an_earlier_killed_run_already_made(self):
+		body = ast.get_source_segment(
+			MODULE_PATH.read_text(encoding="utf-8"), self.functions["run_account_shells_job"]
+		)
+		self.assertIn('frappe.db.exists("Account", entry["name"])', body)
+
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))
 

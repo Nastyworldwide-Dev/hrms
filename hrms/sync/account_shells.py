@@ -197,11 +197,15 @@ def preview_account_shells(instance_name: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def create_account_shells(instance_name: str) -> dict:
-	"""Create every missing Expense/Asset account, parents first, one at a time.
+	"""Queue the creation of every missing Expense/Asset account and return the
+	plan counts at once.
 
-	Per-account containment like the company shells: one failure is reported
-	and must not lose the others; each success is committed immediately.
-	POST-only: it mutates state (SEC-03).
+	Account is a NestedSet: every insert rewrites lft/rgt over the whole table,
+	so a group chart (4,629 rows on Nasty-Live) takes minutes — far past a web
+	worker's timeout. The work runs in the long queue; the operator gets a Desk
+	notification with the counts when it ends. POST-only: it mutates state
+	(SEC-03). Per-account commit keeps a killed run resumable: the next press
+	plans only what is still missing.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	_ensure_unfenced_operator()
@@ -213,11 +217,37 @@ def create_account_shells(instance_name: str) -> dict:
 				"Refusing to create {0} accounts in one run (limit {1}) — verify the source instance before retrying."
 			).format(len(plan["to_create"]), MAX_ACCOUNTS_PER_RUN)
 		)
+	if not plan["to_create"]:
+		return {**plan, "queued": False}
 
+	frappe.enqueue(
+		"hrms.sync.account_shells.run_account_shells_job",
+		queue="long",
+		timeout=3600,
+		job_id=f"account_shells::{instance_name}",
+		deduplicate=True,
+		instance_name=instance_name,
+		operator=frappe.session.user,
+		entries=plan["to_create"],
+	)
+	logger.info(
+		"[account_shells] %s: queued %d account(s) for %s",
+		instance_name,
+		len(plan["to_create"]),
+		frappe.session.user,
+	)
+	return {**plan, "queued": True}
+
+
+def run_account_shells_job(instance_name: str, operator: str, entries: list) -> dict:
+	"""The background half: create the planned accounts, parents first, one at
+	a time, each committed on its own; then tell the operator."""
 	created, renamed, fallback, failed = [], [], [], []
-	for entry in plan["to_create"]:
+	for entry in entries:
 		payload = {k: v for k, v in entry.items() if k not in ("name", "parent_missing")}
 		try:
+			if frappe.db.exists("Account", entry["name"]):
+				continue  # a killed earlier run already made it
 			parent = entry["parent_account"]
 			if not frappe.db.exists("Account", parent):
 				parent = _fallback_parent(entry["company"], entry.get("root_type") or "Expense")
@@ -229,15 +259,12 @@ def create_account_shells(instance_name: str) -> dict:
 			payload["parent_account"] = parent
 			doc = frappe.get_doc({"doctype": "Account", **payload})
 			# Full validation on purpose — see module docstring. Only the
-			# permission check is skipped; frappe.only_for above is the gate.
+			# permission check is skipped; the endpoint above is the gate.
 			doc.insert(ignore_permissions=True)
 			frappe.db.commit()
 			created.append(doc.name)
 			if doc.name != entry["name"]:
 				renamed.append({"source": entry["name"], "here": doc.name})
-			logger.info(
-				"[account_shells] created Account %s under %s from %s", doc.name, parent, instance_name
-			)
 		except Exception as e:
 			frappe.db.rollback()
 			failed.append({"account": entry["name"], "error": str(e)})
@@ -245,6 +272,7 @@ def create_account_shells(instance_name: str) -> dict:
 				"[account_shells] Account %s could not be created: %s", entry["name"], e, exc_info=True
 			)
 
+	result = {"created": created, "renamed": renamed, "fallback": fallback, "failed": failed}
 	logger.info(
 		"[account_shells] %s: created=%d renamed=%d fallback=%d failed=%d",
 		instance_name,
@@ -253,4 +281,40 @@ def create_account_shells(instance_name: str) -> dict:
 		len(fallback),
 		len(failed),
 	)
-	return {**plan, "created": created, "renamed": renamed, "fallback": fallback, "failed": failed}
+	_notify_operator(instance_name, operator, result)
+	return result
+
+
+def _notify_operator(instance_name: str, operator: str, result: dict) -> None:
+	"""One Desk notification with the counts; failures listed in an Error Log."""
+	by_company = {}
+	for name in result["created"]:
+		company = frappe.db.get_value("Account", name, "company")
+		by_company[company] = by_company.get(company, 0) + 1
+	lines = [f"{company}: {count}" for company, count in sorted(by_company.items())]
+	summary = _(
+		"GL accounts pulled from {0}: created {1}, under a root group {2}, renamed {3}, failed {4}."
+	).format(
+		instance_name,
+		len(result["created"]),
+		len(result["fallback"]),
+		len(result["renamed"]),
+		len(result["failed"]),
+	)
+	if result["failed"]:
+		frappe.log_error(
+			title=f"GL account pull from {instance_name}: {len(result['failed'])} failed",
+			message="\n".join(f"{row['account']}: {row['error']}" for row in result["failed"]),
+		)
+	frappe.get_doc(
+		{
+			"doctype": "Notification Log",
+			"for_user": operator,
+			"type": "Alert",
+			"subject": summary,
+			"email_content": "<br>".join(lines) if lines else None,
+			"document_type": "HRMS ERP Instance",
+			"document_name": instance_name,
+		}
+	).insert(ignore_permissions=True)
+	frappe.db.commit()

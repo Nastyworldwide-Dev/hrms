@@ -748,39 +748,26 @@ function pull_gl_accounts(frm) {
 }
 
 function create_account_shells(frm) {
+	// The creation runs in the background: a group chart is thousands of
+	// NestedSet inserts, minutes of work, past any web request. The reply is
+	// the plan; the counts arrive as a Desk notification when the job ends.
 	frappe.call({
 		method: "hrms.sync.account_shells.create_account_shells",
 		args: { instance_name: frm.doc.name },
 		freeze: true,
-		freeze_message: __("Creating GL accounts…"),
+		freeze_message: __("Queuing GL account creation…"),
 		callback: (r) => {
 			const result = r.message || {};
-			const esc = frappe.utils.escape_html;
-			const parts = [];
-			if ((result.created || []).length)
-				parts.push(
-					`<p>${__("Created")}: <b>${result.created.map(esc).join(", ")}</b></p>`
-				);
-			for (const row of result.fallback || [])
-				parts.push(
-					`<p>${__("Placed under {0} because its own parent group does not exist here", [
-						esc(row.parent),
-					])}: ${esc(row.name)}</p>`
-				);
-			for (const row of result.renamed || [])
-				parts.push(
-					`<p>${__("Named differently here")}: ${esc(row.source)} → <b>${esc(
-						row.here
-					)}</b></p>`
-				);
-			for (const row of result.failed || [])
-				parts.push(
-					`<p>${__("Failed")}: <b>${esc(row.account)}</b> — ${esc(row.error)}</p>`
-				);
+			const count = (result.to_create || []).length;
 			frappe.msgprint({
 				title: __("GL accounts"),
-				indicator: (result.failed || []).length ? "orange" : "green",
-				message: parts.join("") || __("Nothing was created."),
+				indicator: result.queued ? "blue" : "green",
+				message: result.queued
+					? __(
+							"Creating {0} account(s) in the background. You will get a notification (bell icon) with the counts when it finishes — a few minutes for a full group chart. Pressing again later only creates what is still missing.",
+							[count]
+					  )
+					: __("Nothing was created."),
 			});
 		},
 	});
