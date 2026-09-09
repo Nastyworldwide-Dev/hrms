@@ -231,3 +231,6 @@
 - 2026-09-09T08:50:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
 - 2026-09-09T08:51Z REPAIR: 7 Sep 'punched, still Absent' = lifecycle debris (skip stamps from the old Duplicate handler, dead links); attendance_day_audit module + Attendance Day Audit report with Repair button (ecf4134b3, 1d9f8d8ab, 759e70ef6 + reviewer fixes). Reviewer: Critical window bug fixed; repair carries only offending punches.
 - 2026-09-09T08:51Z NEXT: push; Nabil deploys, opens Attendance Day Audit for 7–9 Sep, reads verdicts, presses Repair, waits one hourly run; reports his 7 Sep row. Then R5 (mirrored Attendance release) on his word; claims rulings Q1–Q6.
+- 2026-09-09T09:06:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-09T09:06:36Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 6 extra test file(s) ⟂014423447a0e
+- 2026-09-09T09:07Z REPAIR: HR corrections undone by the job (Amend copies auto_attendance=1; after-submit edit kept it) + no publish + Desk manual check-in refused + punches beside HR row re-read hourly → cf4c4692a (14 tests). Reviewer running.

@@ -1,7 +1,7 @@
 # HANDOFF
-prompt:   claims in the PWA + 7 Sep attendance day audit and repair
+prompt:   7 Sep attendance audit + HR corrections stay HR's (Desk, job, PWA aligned)
 status:   done (reviewed); pushed; deploy pending
-commit:   HEAD on nz-glass (attendance_day_audit slices ecf4134b3..)
+commit:   cf4c4692a on nz-glass (review running)
 files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped instance buttons)
           hrms/api/__init__.py (types offered, payable prefill, status on OT lists, RL discovery)
           hrms/hr/doctype/expense_claim/expense_claim.py (payable default)
@@ -10,4 +10,4 @@ files:    hrms/sync/account_shells.py (+ Pull → GL Accounts button, grouped in
           docs/glass/audit/2026-09-09-claims-audit.md
 verify:   PYTHONPATH=. python3 hrms/tests/test_request_outcome_visible.py; cd frontend && node --experimental-test-module-mocks --test tests/*.test.mjs
 flags:    six policy rulings in the audit §3 (RL Claim retire, rejected date release, RL cap, Overtime Slip, backdating, rejection reason)
-next:     Nabil deploys → Attendance Day Audit 7–9 Sep → Repair → one hourly run; then GL pull + claim types + claim tests; rulings Q1–Q6
+next:     review verdict → push; Nabil deploys → Provenance Audit Recover → Day Audit Repair → one hourly run → HR amends any leftover day (it now stays); then claims setup + rulings Q1–Q6
