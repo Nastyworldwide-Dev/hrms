@@ -9,6 +9,7 @@
   "location_name",
   "is_free_location",
   "checkin_radius",
+  "coordinate_system",
   "timezone",
   "column_break_dlgd",
   "latitude",
@@ -41,6 +42,15 @@
    "fieldname": "checkin_radius",
    "fieldtype": "Int",
    "label": "Checkin Radius"
+  },
+  {
+   "default": "WGS-84",
+   "depends_on": "eval:!doc.is_free_location",
+   "description": "Which map the latitude and longitude were read from. Maps inside mainland China (Google China, Amap, Tencent = GCJ-02; Baidu = BD-09) shift positions by 100 to 700 m from where phones report. Pick the map you copied from and the pin is converted on save; \"Fetch Geolocation\" from a phone standing on site is always WGS-84.",
+   "fieldname": "coordinate_system",
+   "fieldtype": "Select",
+   "label": "Coordinates Read From",
+   "options": "WGS-84\nGCJ-02\nBD-09"
   },
   {
    "fieldname": "timezone",
@@ -95,7 +105,7 @@
    "link_fieldname": "shift_location"
   }
  ],
- "modified": "2026-09-09 03:45:00.000000",
+ "modified": "2026-09-09 07:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Location",

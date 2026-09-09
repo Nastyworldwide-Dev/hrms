@@ -274,3 +274,7 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:16:53Z PUSH: nz-glass @ ade4e3903
 - 2026-09-09T04:19:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-09T04:19:47Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640
+- 2026-09-09T04:20:22Z COMMIT: ed8e16d09 fix(attendance): give the two Overtime section breaks distinct names → review dispatched
+- 2026-09-09T04:20:58Z PUSH: nz-glass @ ed8e16d09
+- 2026-09-09T04:23:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T04:23:06Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640
