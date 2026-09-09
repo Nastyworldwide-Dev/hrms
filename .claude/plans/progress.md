@@ -239,3 +239,9 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 2026-09-09T03:11Z NEXT: Nabil answers Q0 (look), Q1-Q3; deploy + PWA open for the relay; then phase 0.2 spec addendum §17/§18 and 0.4 gates (U13 app-measure, U14 census, U15 row/pill grep) — both scripts already in frontend/e2e.
 - 2026-09-09T03:12:00Z COMMIT: 077077027 docs(plan): 2.0 surface map — grid, scroll budget and redundancy census from measurements → review dispatched
 - 2026-09-09T03:12:24Z PUSH: nz-glass @ 077077027
+- 2026-09-09T03:12:40Z PUSH: nz-glass @ c1a1c92dc
+- 2026-09-09T03:12:40Z COMMIT: c1a1c92dc chore(plans): progress line from the surface-map commit gate → review dispatched
+- 2026-09-09T03:16:08Z PUSH: nz-glass @ 34e8555d9
+- 2026-09-09T03:16:08Z COMMIT: 34e8555d9 chore(plan): say the prototype file is untracked; declare its page globals for lint → review dispatched
+- 2026-09-09T03:37:59Z PLAN: approved 884bd9128883 — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
+- 2026-09-09T03:40:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 12 file(s) ⟂59cca907033f

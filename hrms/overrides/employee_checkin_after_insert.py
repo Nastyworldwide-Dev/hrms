@@ -18,6 +18,9 @@ from hrms.overrides.remote_checkin_request_hooks import (
 
 logger = logging.getLogger(__name__)
 
+#: geofence reason code -> the Select value on Remote Checkin Request
+_REASON_LABELS = {"outside_radius": "Outside Radius", "imprecise_location": "Imprecise Location"}
+
 
 def create_remote_request_if_needed(doc, method=None):
 	"""Auto-create a Remote Checkin Request when the checkin is flagged.
@@ -62,6 +65,9 @@ def create_remote_request_if_needed(doc, method=None):
 			"longitude": str(doc.longitude) if doc.longitude is not None else None,
 			"nearest_shift_location": nearest,
 			"distance_m": distance,
+			"accuracy_m": getattr(doc.flags, "location_accuracy_m", None),
+			"radius_m": getattr(doc, "_remote_radius_m", None),
+			"reason": _REASON_LABELS.get(getattr(doc, "_remote_reason", None)),
 			"status": "Approved" if inherited else "Pending",
 			"approver": parent_req["approver"] if inherited else resolve_approver(doc.employee),
 			"parent_request": parent_req["name"] if inherited else None,

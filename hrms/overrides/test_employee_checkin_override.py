@@ -223,5 +223,82 @@ class TestFreeLocationOnInsert(unittest.TestCase):
 		self.assertTrue(spy.call_args.kwargs.get("free_location"))
 
 
+class TestLocationEvidenceIsStored(unittest.TestCase):
+	"""Every punch keeps the numbers the fence decided on.
+
+	Until now a punch stored latitude and longitude only; the device's accuracy,
+	the distance to the pin, the radius and which branch fired lived in a log
+	line nobody reads. HR asked why staff inside a building read as outside and
+	nothing in the database could answer. These fields are that answer.
+	"""
+
+	def _run(self, doc, distance_m=120.0, radius=100, strict=False, free=0):
+		assignment = SimpleNamespace(shift_location="KL Office", enable_strict_geofence=int(strict))
+		location = SimpleNamespace(
+			checkin_radius=radius, latitude=3.0, longitude=101.5, is_free_location=free
+		)
+		patches = [
+			patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True),
+			patch(f"{MODULE}.resolve_assignment", return_value=assignment),
+			patch(f"{MODULE}.resolve_location", return_value=location),
+			patch(f"{MODULE}.get_distance_between_coordinates", return_value=distance_m),
+			patch(f"{MODULE}._record_geofence_reject"),
+		]
+		for p in patches:
+			p.start()
+		try:
+			mod.CustomEmployeeCheckin.validate_distance_from_shift_location(doc)
+		finally:
+			for p in patches:
+				p.stop()
+
+	def test_an_inside_punch_stores_distance_radius_accuracy_and_outcome(self):
+		doc = _FakeCheckin(
+			flags=SimpleNamespace(location_accuracy_m=40.0, location_fix_age_s=3, location_source="GPS")
+		)
+		self._run(doc, distance_m=120.0, radius=100)
+		self.assertEqual(doc.geofence_outcome, "Inside")
+		self.assertEqual(doc.geofence_distance_m, 120.0)
+		self.assertEqual(doc.geofence_radius_m, 100)
+		self.assertEqual(doc.location_accuracy_m, 40.0)
+		self.assertEqual(doc.location_fix_age_s, 3)
+		self.assertEqual(doc.location_source, "GPS")
+
+	def test_an_outside_punch_routed_to_approval_says_outside_and_keeps_the_radius_for_the_request(self):
+		doc = _FakeCheckin(flags=SimpleNamespace(location_accuracy_m=10.0))
+		self._run(doc, distance_m=400.0, radius=100)
+		self.assertEqual(doc.geofence_outcome, "Outside")
+		self.assertEqual(doc.geofence_distance_m, 400.0)
+		self.assertEqual(doc._remote_radius_m, 100)
+
+	def test_an_unplaceable_reading_says_imprecise(self):
+		doc = _FakeCheckin(flags=SimpleNamespace(location_accuracy_m=5000))
+		self._run(doc, distance_m=10.0)
+		self.assertEqual(doc.geofence_outcome, "Imprecise")
+
+	def test_a_free_location_says_so(self):
+		doc = _FakeCheckin()
+		self._run(doc, distance_m=250_000.0, radius=0, strict=True, free=1)
+		self.assertEqual(doc.geofence_outcome, "Free Location")
+
+	def test_a_punch_with_no_shift_is_no_longer_invisible(self):
+		# The silent-allow path. It stays an allow (HR's call), but the row now
+		# says why nothing was checked, so the report can count them.
+		doc = _FakeCheckin(shift=None)
+		with patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True):
+			mod.CustomEmployeeCheckin.validate_distance_from_shift_location(doc)
+		self.assertEqual(doc.geofence_outcome, "No Shift")
+		self.assertEqual(doc.requires_remote_approval, 0)
+
+	def test_tracking_off_and_late_checkout_are_named_too(self):
+		doc = _FakeCheckin()
+		with patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=False):
+			mod.CustomEmployeeCheckin.validate_distance_from_shift_location(doc)
+		self.assertEqual(doc.geofence_outcome, "Tracking Off")
+		late = _FakeCheckin(flags=SimpleNamespace(is_late_checkout=True))
+		mod.CustomEmployeeCheckin.validate_distance_from_shift_location(late)
+		self.assertEqual(late.geofence_outcome, "Late Checkout")
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -20,6 +20,9 @@ from frappe.utils import now_datetime
 
 from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.geofence import usable_accuracy
+
+#: The PWA names the provider it got the fix from; the row stores a word HR can read.
+LOCATION_SOURCES = {"high": "GPS", "gps": "GPS", "coarse": "Network", "network": "Network"}
 from hrms.utils.identity import get_employee
 from hrms.utils.timezone import employee_now
 
@@ -255,6 +258,8 @@ def punch(
 	selfie_image: str | None = None,
 	time: str | None = None,
 	accuracy=None,
+	fix_age_s=None,
+	source=None,
 ) -> dict:
 	"""PWA check-in/out — the only write path staff have into Employee Checkin."""
 	# Staff desk permissions on Employee Checkin are read-only, so this endpoint
@@ -301,6 +306,15 @@ def punch(
 	accuracy_m = usable_accuracy(accuracy) or None
 	if accuracy_m:
 		doc.flags.location_accuracy_m = accuracy_m
+	# How old the fix was and which provider gave it. Evidence for the row, not
+	# inputs to the decision; junk is dropped rather than stored as a number.
+	try:
+		age = int(float(fix_age_s))
+		if age >= 0:
+			doc.flags.location_fix_age_s = age
+	except (TypeError, ValueError):
+		pass
+	doc.flags.location_source = LOCATION_SOURCES.get(str(source or "").strip().lower(), "Unknown")
 
 	if selfie_image:
 		# only accept a file this user actually uploaded — a stale or borrowed

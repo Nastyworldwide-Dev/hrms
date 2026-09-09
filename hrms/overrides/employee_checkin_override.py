@@ -125,11 +125,21 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		in both modes — they are retroactive submissions and have no current
 		location to validate against.
 		"""
+		# Evidence first: what the device said travels onto the row whatever the
+		# fence decides, so HR can later ask "why did this read as outside?" and
+		# find the accuracy, the fix age and the provider next to the answer.
+		self.location_accuracy_m = getattr(self.flags, "location_accuracy_m", None)
+		self.location_fix_age_s = getattr(self.flags, "location_fix_age_s", None)
+		self.location_source = getattr(self.flags, "location_source", None)
+		self.geofence_distance_m = None
+		self.geofence_radius_m = None
+
 		if getattr(self.flags, "is_late_checkout", False):
 			logger.info(
 				"[employee_checkin] Skipping geofence validation for late checkout %s",
 				self.name or "(new)",
 			)
+			self.geofence_outcome = "Late Checkout"
 			return
 
 		# Per COMPANY, not the global singleton. Geolocated check-in is a
@@ -142,6 +152,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				"[employee_checkin] geofence skipped employee=%s — geolocation tracking off for their company",
 				self.employee,
 			)
+			self.geofence_outcome = "Tracking Off"
 			return
 
 		coordinates = parse_coordinates(self.latitude, self.longitude)
@@ -164,6 +175,9 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				"[employee_checkin] geofence silent-allow employee=%s — no shift resolved (self.shift is None)",
 				self.employee,
 			)
+			# Still an allow — HR's call whether it should be — but no longer
+			# invisible: the row says nothing was checked, and the report counts it.
+			self.geofence_outcome = "No Shift"
 			return
 
 		# One resolver, shared with the preflight. It deliberately does NOT filter
@@ -195,6 +209,8 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# property of the punch, and a Desk or biometric row has no browser
 		# behind it to supply one. Absent means unknown, which buys nothing.
 		accuracy_m = getattr(self.flags, "location_accuracy_m", None)
+		self.geofence_distance_m = round(distance, 1) if distance is not None else None
+		self.geofence_radius_m = radius_m or None
 
 		free_location = bool(row and getattr(row, "is_free_location", 0))
 		decision = evaluate_geofence(
@@ -209,6 +225,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			# Lenient silent-allow paths land here. Spell out which one fired
 			# so the FC logs can pin down "why didn't the remote dialog appear?".
 			if free_location:
+				self.geofence_outcome = "Free Location"
 				logger.info(
 					"[employee_checkin] free location employee=%s shift=%s location=%s — recorded, no approval",
 					self.employee,
@@ -216,6 +233,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 					shift_loc_name,
 				)
 			elif not shift_loc_name:
+				self.geofence_outcome = "No Location"
 				logger.info(
 					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — no shift_location on active Shift Assignment",
 					self.employee,
@@ -223,6 +241,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 					strict,
 				)
 			elif not row:
+				self.geofence_outcome = "No Location"
 				logger.info(
 					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — Shift Location %s row missing",
 					self.employee,
@@ -231,6 +250,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 					shift_loc_name,
 				)
 			elif radius_m <= 0:
+				self.geofence_outcome = "No Radius"
 				logger.info(
 					"[employee_checkin] geofence silent-allow employee=%s shift=%s strict=%s — Shift Location %s has no check-in radius",
 					self.employee,
@@ -239,6 +259,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 					shift_loc_name,
 				)
 			else:
+				self.geofence_outcome = "Inside"
 				logger.info(
 					"[employee_checkin] geofence inside radius employee=%s shift=%s distance=%.1fm radius=%dm accuracy=%sm location=%s",
 					self.employee,
@@ -251,6 +272,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			return
 
 		action, ctx = decision
+		self.geofence_outcome = "Imprecise" if ctx.get("reason") == REASON_IMPRECISE_LOCATION else "Outside"
 		if action == "throw":
 			self._throw_strict_geofence(ctx, shift_loc_name)
 			return
@@ -261,6 +283,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# Stash for after_insert hook (these are doc attrs, not DB columns).
 		self._remote_distance_m = ctx["overshoot_m"]
 		self._remote_nearest_location = shift_loc_name
+		self._remote_radius_m = ctx.get("radius_m")
 		# Why this punch needs approving. Returned to the PWA by the punch
 		# endpoint so the dialog can say "we could not place you" instead of
 		# "you are 0 m outside the geofence", which is what an unplaceable

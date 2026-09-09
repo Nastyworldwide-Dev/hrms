@@ -97,5 +97,20 @@ class TestTheApproverlessCaseIsReported(unittest.TestCase):
 			self.assertIn(hint, text, f"the fix does not mention {hint}")
 
 
+class TestTheRequestCarriesTheEvidence(unittest.TestCase):
+	"""The approver decides on distance alone today. Accuracy and the reason the
+	fence fired are what tell them a 40 m overshoot from a ±300 m reading is
+	not the same as one from a ±5 m reading."""
+
+	def test_request_update_includes_accuracy_radius_and_reason(self):
+		fn = _creator()
+		keys = set()
+		for n in ast.walk(fn):
+			if isinstance(n, ast.Dict):
+				keys |= {k.value for k in n.keys if isinstance(k, ast.Constant)}
+		for key in ("accuracy_m", "radius_m", "reason"):
+			self.assertIn(key, keys, f"the Remote Checkin Request must be created with {key}")
+
+
 if __name__ == "__main__":
 	unittest.main()

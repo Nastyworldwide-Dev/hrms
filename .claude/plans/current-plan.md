@@ -223,3 +223,31 @@ EXPECTED OUTPUT: HR ticks "Free location" on a Shift Location; staff linked to
 Approval: Nabil, 9 Sep 2026 chat — "we gonna fix existing bug, and add new
    simple feat ... implement a proper tick box for HR to enable disable Free
    Location".
+
+## Stabilisation addendum 2 — 9 September 2026 (Nabil: "we must do something with current version")
+3. `feat(attendance)` location evidence on every punch: Employee Checkin gains
+   location_accuracy_m, location_fix_age_s, location_source, geofence_distance_m,
+   geofence_radius_m, geofence_outcome (written by the enforcing insert); Remote
+   Checkin Request gains accuracy_m, radius_m, reason; the punch endpoint accepts
+   fix_age_s and source; Out of Radius Activity shows accuracy and reason.
+   FLOW: phone fix → punch(lat, lng, accuracy, fix_age_s, source) → validate
+   computes distance/decision → the six fields are stored on the row → HR reads
+   them per location in the report.
+   EXPECTED OUTPUT: after one week HR can say, per location, whether "outside"
+   punches are a wrong pin (all offsets in one direction), poor indoor fixes
+   (accuracy > 250) or genuinely away; punches with no shift are visible as
+   "No Shift" instead of vanishing into silent allow.
+4. `feat(pwa)` the check-in sheet shows the real location permission
+   (Permissions API: allowed / will ask / blocked, with the device's own
+   settings path) and the fix quality ("GPS ±12 m, 3 s ago" / "network ±800 m");
+   Confirm is disabled while blocked or without a usable fix, instead of a toast
+   after the tap.
+   EXPECTED OUTPUT: an employee who blocked location sees "Location blocked"
+   and how to turn it on before they take a selfie; nobody can submit without
+   a fix the server can evaluate.
+MOCKUP: NOT NEEDED (one status line above the existing verdict block in the
+   check-in sheet, same tones; Desk fields are read-only evidence on existing
+   forms and two report columns).
+Approval: Nabil, 9 Sep 2026 chat ("we need to re ensure user are well informed
+   to enable their location ... the wording must display actual permission ...
+   no tiny gaps people can abuse").

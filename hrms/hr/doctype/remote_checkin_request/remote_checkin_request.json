@@ -23,6 +23,9 @@
   "column_break_2",
   "nearest_shift_location",
   "distance_m",
+  "accuracy_m",
+  "radius_m",
+  "reason",
   "section_remarks",
   "employee_remarks",
   "approver_remarks"
@@ -153,6 +156,28 @@
    "read_only": 1
   },
   {
+   "fieldname": "accuracy_m",
+   "fieldtype": "Float",
+   "label": "Device Accuracy (m)",
+   "precision": "1",
+   "read_only": 1,
+   "description": "The phone's error estimate. A 40 m overshoot from a ±300 m reading is not the same as from a ±5 m one."
+  },
+  {
+   "fieldname": "radius_m",
+   "fieldtype": "Int",
+   "label": "Check-in Radius (m)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Why Approval Is Needed",
+   "options": "\nOutside Radius\nImprecise Location",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
    "fieldname": "section_remarks",
    "fieldtype": "Section Break",
    "label": "Remarks"
@@ -170,7 +195,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-05-22 00:00:00",
+ "modified": "2026-09-09 05:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Remote Checkin Request",

@@ -100,6 +100,13 @@ def _columns():
 			"width": 100,
 		},
 		{
+			"fieldname": "accuracy_m",
+			"label": _("Accuracy (m)"),
+			"fieldtype": "Float",
+			"precision": 1,
+			"width": 100,
+		},
+		{
 			"fieldname": "radius_m",
 			"label": _("Radius (m)"),
 			"fieldtype": "Int",
@@ -158,7 +165,8 @@ def _fetch_remote_requests(filters):
 		f"""
 		SELECT
 		    rcr.name, rcr.employee, rcr.checkin_time, rcr.log_type,
-		    rcr.distance_m, rcr.status, rcr.nearest_shift_location,
+		    rcr.distance_m, rcr.accuracy_m, rcr.radius_m, rcr.reason AS fence_reason,
+		    rcr.status, rcr.nearest_shift_location,
 		    rcr.employee_remarks, ec.shift AS shift_type
 		FROM `tabRemote Checkin Request` rcr
 		LEFT JOIN `tabEmployee Checkin` ec ON ec.name = rcr.checkin
@@ -182,10 +190,19 @@ def _fetch_remote_requests(filters):
 				"shift_type": r.shift_type,
 				"shift_location": r.nearest_shift_location,
 				"distance_m": r.distance_m,
-				"radius_m": None,
+				"accuracy_m": r.accuracy_m,
+				"radius_m": r.radius_m,
 				"overshoot_m": r.distance_m,
 				"status": r.status or "Pending",
-				"reason": (r.employee_remarks or "").strip()[:200] or _("Remote check-in"),
+				"reason": " · ".join(
+					x
+					for x in (
+						_(r.fence_reason) if r.fence_reason else "",
+						(r.employee_remarks or "").strip()[:200],
+					)
+					if x
+				)
+				or _("Remote check-in"),
 				"reference_doctype": "Remote Checkin Request",
 				"reference": r.name,
 			}

@@ -345,5 +345,30 @@ class TestLateCheckoutNextCheckinBound(unittest.TestCase):
 			)
 
 
+class TestPunchCarriesFixQuality(unittest.TestCase):
+	"""How old the fix was and which provider gave it travel with the punch."""
+
+	def test_fix_age_and_a_gps_source_land_on_the_flags(self):
+		with _PunchHarness() as h:
+			remote_checkin.punch(
+				EMPLOYEE, "IN", latitude=3.1, longitude=101.6, accuracy=12, fix_age_s="4", source="high"
+			)
+		self.assertEqual(h.doc.flags.location_fix_age_s, 4)
+		self.assertEqual(h.doc.flags.location_source, "GPS")
+
+	def test_a_coarse_fallback_is_named_network(self):
+		with _PunchHarness() as h:
+			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6, source="coarse")
+		self.assertEqual(h.doc.flags.location_source, "Network")
+
+	def test_junk_is_dropped_not_carried(self):
+		with _PunchHarness() as h:
+			remote_checkin.punch(
+				EMPLOYEE, "IN", latitude=3.1, longitude=101.6, fix_age_s="soon", source="magic"
+			)
+		self.assertIsNone(getattr(h.doc.flags, "location_fix_age_s", None))
+		self.assertEqual(getattr(h.doc.flags, "location_source", None), "Unknown")
+
+
 if __name__ == "__main__":
 	unittest.main()
