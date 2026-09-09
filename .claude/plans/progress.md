@@ -275,3 +275,26 @@
 - 2026-09-09T11:52Z REPAIR: shift flip root cause (closest-START pick + superseded assignment never ended) → hrms/utils/shift_resolution.py + on_submit supersede hook (4727b4b63); Desk lists sorted by Time/Attendance Date with shift columns, filters and counted/not-counted indicators (497e619e7) + saved-sort reset patch incl. Redis (5ff14adbb, 7e66adaa5); Day Audit names split-shift days and re-resolves them (7291940bf). GL ledger-parent + spelling fix pending commit.
 - 2026-09-09T11:52:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-09T11:52:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T11:52:55Z COMMIT: db39bac2a fix(attendance): the split-shift verdict and its repair, the half 7291940bf left behind → review dispatched
+- 2026-09-09T11:53:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T11:53:19Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T11:53:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T11:53:30Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T11:53:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T11:53:47Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T11:54:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-09T11:54:11Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-09T11:54:14Z COMMIT: 60167be47 fix(sync): a GL parent that is a ledger here falls back to the root group → review dispatched
+- 2026-09-09T11:58:06Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-09T11:58:39Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-09T11:58:43Z COMMIT: d6c5873de fix(desk): the list reset keeps every other preference, and clears the saved columns too → review dispatched
+- 2026-09-09T12:01:01Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 4 file(s) ⟂bdfcc00ed624
+- 2026-09-09T12:01:01Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T12:01:07Z COMMIT: 5095377f4 fix(attendance): the shift repair cannot strand a day, and it says what it does → review dispatched
+- 2026-09-09T12:02:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-09T12:02:44Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-09T12:02:49Z COMMIT: de269bd8d fix(attendance): clear the link before re-resolving, or the shift repair does nothing → review dispatched
+- 2026-09-09T12:09:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
+- 2026-09-09T12:09:10Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-09T12:09:16Z COMMIT: 6016009c4 fix(attendance): name the real cause of a split day instead of repairing it forever → review+cross-app dispatched
+- 2026-09-09T12:10Z EVIDENCE: 6 behaves — reviews on the Desk/shift batch: Critical (Redis hash flush) and Critical (fetch_shift no-op) both fixed and re-verified; 3 warnings closed in 6016009c4. Suites: 31 day-audit, 11 list, 10 sort-reset, all green on fresh.local too.

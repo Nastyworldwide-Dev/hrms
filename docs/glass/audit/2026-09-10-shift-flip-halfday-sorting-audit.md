@@ -93,3 +93,42 @@ Not in this plan: August (§6), claim rulings Q1–Q6.
    system auto-ends the older one when a new assignment starts? Recommend HR
    ends them by hand this time; auto-ending is a policy change.
 3. Type names: keep HR's labels verbatim, or the short form?
+
+
+---
+
+## 7. What shipped (10 September, evening)
+
+| Slice | Commit | What it does |
+|---|---|---|
+| S1 shift resolution | `4727b4b63` | An OUT closes the shift of its own IN; otherwise the shift whose window contains the punch; otherwise off-shift. A new open-ended assignment ends the one it supersedes. |
+| S4 Desk lists | `497e619e7`, `d6c5873de` | Check-ins sorted by Time, attendance by Date, both with Shift columns, filters and a badge saying whether a punch counted. Saved sorts and saved column sets cleared so the change reaches HR. |
+| S3 GL pull | `60167be47` | A parent that exists here as a ledger falls back to the root group; account names match case-insensitively. |
+| S2 audit | `7291940bf`, `db39bac2a`, `5095377f4`, `de269bd8d`, `6016009c4` | The Day Audit finds split days, refuses to touch days a payout depends on or days the job could never re-read, and names a still-duplicated assignment instead of looping. |
+
+### What the reviews caught, and why it matters
+
+Three defects in this batch were invisible to their own passing tests:
+
+1. The list-sort patch dropped the whole `_user_settings` Redis hash. That hash is
+   a write-back cache flushed hourly, so it would have discarded every
+   preference every user changed in the last hour, on every doctype.
+2. `List View Settings.fields` is site-wide: one person's use of the column
+   picker overrides `in_list_view` for everybody, so the new columns would
+   never have appeared.
+3. The shift repair called `fetch_shift` while the punch was still linked.
+   Both implementations assign the shift only `if not self.attendance`, so the
+   corrected shift was computed and discarded — 25 tests green, repair a no-op.
+
+The lesson recorded for the next repair: when correctness depends on a
+framework guard clause, assert the ORDER of the statements, not just the
+result.
+
+### Still open
+
+- **August**: unchanged, on purpose. Those rows and punches came from the old
+  site; recomputing would replace numbers payroll may have used. Nabil's call.
+- **Duplicate assignments already on the site**: the audit now lists them
+  ("Two shift assignments still active"). HR ends the superseded one; the
+  supersede hook only covers assignments made from now on.
+- Q1-Q6 claim rulings (`2026-09-09-claims-audit.md`).
