@@ -232,5 +232,62 @@ class TestExistingRowIsKeptOrReplacedOnItsResult(unittest.TestCase):
 		self.assertEqual(replace.call_args.kwargs["attendance_status"], "Present")
 
 
+class TestOnlyPunchOwnedRowsAreRebuilt(unittest.TestCase):
+	"""A leave record converted in place from an auto-Absent keeps auto_attendance=1.
+	It is HR's decision, not the job's, and must never be found by the rebuild."""
+
+	def _lookups(self, found_on=None):
+		calls = []
+
+		def get_value(doctype, filters, field):
+			calls.append(dict(filters))
+			return "HR-ATT-X" if found_on is not None and len(calls) == found_on else None
+
+		with (
+			patch.object(st.frappe.db, "get_value", side_effect=get_value),
+			patch.object(st.frappe, "get_doc", return_value="DOC"),
+		):
+			result = st.get_automation_attendance("EMP-SYNTHETIC", DAY, SHIFT)
+		return result, calls
+
+	def test_leave_owned_rows_are_excluded_by_the_query(self):
+		_, calls = self._lookups()
+		for filters in calls:
+			self.assertEqual(filters.get("leave_type"), ("is", "not set"))
+			self.assertEqual(filters.get("modify_half_day_status"), 0)
+			self.assertEqual(filters.get("status"), ("!=", "On Leave"))
+			self.assertEqual(filters.get("auto_attendance"), 1)
+			self.assertEqual(filters.get("synced_from_instance"), ("is", "not set"))
+
+	def test_a_row_marked_without_a_shift_is_still_found(self):
+		result, calls = self._lookups(found_on=2)
+		self.assertEqual(result, "DOC")
+		self.assertEqual(calls[0].get("shift"), SHIFT)
+		self.assertEqual(calls[1].get("shift"), ("is", "not set"))
+
+
+class TestAFailedRebuildDoesNotSilenceAlreadyLinkedPunches(unittest.TestCase):
+	def test_only_the_newly_read_punches_are_skip_stamped(self):
+		from hrms.hr.doctype.employee_checkin import employee_checkin as ck
+
+		linked = punch("18:00", "OUT")
+		linked.attendance = "HR-ATT-EXISTING"
+		fresh = punch("09:00", "IN")
+		with (
+			patch.object(ck.frappe.db, "savepoint"),
+			patch.object(
+				ck,
+				"create_or_update_attendance",
+				side_effect=ck.frappe.ValidationError("payroll depends on it"),
+			),
+			patch.object(ck, "handle_attendance_exception") as handle,
+		):
+			out = ck.mark_attendance_and_link_log([fresh, linked], "Present", DAY, 9.0, shift=SHIFT)
+		self.assertIsNone(out)
+		self.assertEqual(
+			handle.call_args.args[0], ["CKIN-09:00-IN"], "the linked OUT keeps its overtime eligibility"
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -53,9 +53,12 @@ Call sites / importers of what changed, with verdicts:
 - hrms/hr/doctype/shift_type/shift_type.py mark_attendance_for_shift_logs —
   same-root: merges linked_checkins(existing) with the re-read punches before
   computing, so the rebuild sees the whole day.
-- get_existing_half_day_attendance (leave-driven half day, modify_half_day_status=1,
-  auto_attendance=0) — not-affected: get_automation_attendance never returns it,
-  the legacy update path still runs.
+- Leave rows (Half Day / On Leave converted in place from an auto-Absent, which
+  KEEP auto_attendance=1) — same-root, fixed in the follow-up: the lookup now
+  excludes leave_type set, modify_half_day_status=1 and status On Leave, so a
+  leave record is never cancelled by the rebuild; the legacy half-day update
+  path still runs for them. Rows marked with shift NULL are found on a second
+  look. A refused rebuild skip-stamps only the newly read punches.
 - Manual Attendance (auto_attendance=0) and mirrored rows — not-affected: never
   returned, so the duplicate error still skips the punch, as upstream intends.
 - Rejected punch left unlinked on a correct day — not-affected: eligible set equals

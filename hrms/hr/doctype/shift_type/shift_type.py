@@ -76,26 +76,36 @@ CHECKIN_FIELDS = (
 	"remote_approval_status",
 	"requires_remote_approval",
 	"offshift",
+	# which row a punch already belongs to: a failed rebuild must not silence
+	# punches that were linked and fine before it ran
+	"attendance",
 )
 
 
 def get_automation_attendance(employee, attendance_date, shift):
-	"""The submitted automation-owned Attendance for this shift day, or None.
+	"""The submitted punch-owned Attendance for this shift day, or None.
 
-	Manual rows and mirrored rows are not returned: a day HR marked by hand, or
-	one owned by the source instance, is never rebuilt from punches.
+	Never returned, so never rebuilt from punches: a row HR marked by hand
+	(auto_attendance=0), one owned by the source instance, and a LEAVE row.
+	A leave applied against an auto-marked Absent is converted in place and
+	keeps auto_attendance=1, so the flag alone does not say who owns the row;
+	leave_type, modify_half_day_status and the On Leave status do.
+
+	A row marked before `shift` was reliably stamped is found on a second
+	look with the shift unset, the tolerance the late-checkout repair has.
 	"""
-	name = frappe.db.get_value(
-		"Attendance",
-		{
-			"employee": employee,
-			"attendance_date": attendance_date,
-			"shift": shift,
-			"docstatus": 1,
-			"auto_attendance": 1,
-			"synced_from_instance": ("is", "not set"),
-		},
-		"name",
+	base = {
+		"employee": employee,
+		"attendance_date": attendance_date,
+		"docstatus": 1,
+		"auto_attendance": 1,
+		"synced_from_instance": ("is", "not set"),
+		"leave_type": ("is", "not set"),
+		"modify_half_day_status": 0,
+		"status": ("!=", "On Leave"),
+	}
+	name = frappe.db.get_value("Attendance", {**base, "shift": shift}, "name") or frappe.db.get_value(
+		"Attendance", {**base, "shift": ("is", "not set")}, "name"
 	)
 	return frappe.get_doc("Attendance", name) if name else None
 

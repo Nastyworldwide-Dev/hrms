@@ -274,7 +274,11 @@ def mark_attendance_and_link_log(
 		return attendance
 
 	except frappe.ValidationError as e:
-		handle_attendance_exception(log_names, e)
+		# Only the punches that were not already attended are skipped: a rebuild
+		# refused by the financial guard must not take the overtime eligibility
+		# of punches that were linked and fine before this run.
+		newly_read = [x.name for x in logs if not x.get("attendance")]
+		handle_attendance_exception(newly_read or log_names, e)
 		return None
 
 

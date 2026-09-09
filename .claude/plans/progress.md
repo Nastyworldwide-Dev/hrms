@@ -256,3 +256,9 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T03:51:17Z COMMIT: 7abd2066f chore(plans): incident record, next steps and handoff for the attendance fix → review dispatched
 - 2026-09-09T03:59:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-09T03:59:48Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-09T03:59:51Z COMMIT: fcb604535 fix(attendance): rebuild a day already marked from half its punches instead of colliding → review dispatched
+2026-09-09T04:00Z REPAIR: fcb604535 rebuild-a-marked-day (reviewer Critical on ffce088ec): a day marked from its approved punches only would collide with the re-read pending punch and skip it forever; now merged from linked + re-read punches, kept if unchanged, cancelled + re-marked if different (automation-owned, unmirrored rows only). Pushed. DEPLOY ffce088ec AND fcb604535 TOGETHER — ffce088ec alone poisons the leftover punches on the first hourly run.
+2026-09-09T04:00Z EVIDENCE: 3 works — 229 attendance tests green; test_pending_punch_attendance 10/10 (4 new: merge + hand-down, keep-or-replace).
+- 2026-09-09T04:00:26Z PUSH: nz-glass @ fcb604535
+- 2026-09-09T04:06:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-09T04:06:25Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
