@@ -287,3 +287,5 @@ LEARNING(fact): Native database reload and scheduler query projection exposed de
 - 2026-09-09T04:24:28Z PUSH: nz-glass @ 50626a942
 - 2026-09-09T04:25:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-09T04:25:30Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 2 extra test file(s) ⟂ce54683ec640
+- 2026-09-09T04:25:32Z COMMIT: 9cb5c86e7 fix(attendance): check typed times only, never the hourly job's own rows → review dispatched
+- 2026-09-09T04:25:58Z PUSH: nz-glass @ 9cb5c86e7

@@ -30,7 +30,10 @@ class ShiftLocation(Document):
 		if system == WGS84 or self.latitude is None or self.longitude is None:
 			return
 		before = (self.latitude, self.longitude)
-		self.latitude, self.longitude = to_wgs84(self.latitude, self.longitude, system)
+		try:
+			self.latitude, self.longitude = to_wgs84(self.latitude, self.longitude, system)
+		except ValueError as e:
+			frappe.throw(_("Coordinates Read From: {0}").format(e))
 		self.coordinate_system = WGS84
 		logger.info(
 			"[shift_location] %s pin converted from %s to WGS-84: %s -> %s",

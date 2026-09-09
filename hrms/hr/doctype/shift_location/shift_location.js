@@ -20,6 +20,9 @@ frappe.ui.form.on("Shift Location", {
 	},
 
 	fetch_geolocation: (frm) => {
+		// A fix from the browser is WGS-84 whatever map the previous pin came
+		// from; leaving GCJ-02 selected would "convert" a true fix 500 m away.
+		frm.set_value("coordinate_system", "WGS-84");
 		hrms.fetch_geolocation(frm);
 	},
 

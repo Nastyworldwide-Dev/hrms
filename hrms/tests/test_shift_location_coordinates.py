@@ -81,6 +81,24 @@ class TestShiftLocationConverts(unittest.TestCase):
 		self.assertEqual((doc.latitude, doc.longitude), (3.1390, 101.6869))
 
 
+class TestShiftLocationRefusesAnUnknownMap(unittest.TestCase):
+	def test_an_unknown_system_is_a_validation_error_not_a_traceback(self):
+		from types import SimpleNamespace
+
+		import frappe
+
+		from hrms.hr.doctype.shift_location import shift_location as mod
+
+		doc = SimpleNamespace(latitude=39.9, longitude=116.4, coordinate_system="Mars", name="X")
+		with self.assertRaises(frappe.ValidationError):
+			mod.ShiftLocation.convert_coordinates(doc)
+
+	def test_the_form_resets_the_map_choice_when_fetching_a_live_fix(self):
+		js = (HRMS / "hr/doctype/shift_location/shift_location.js").read_text()
+		fetch = js[js.index("fetch_geolocation: (frm)") :]
+		self.assertIn('frm.set_value("coordinate_system", "WGS-84")', fetch.split("},")[0])
+
+
 class TestShiftLocationSchema(unittest.TestCase):
 	def test_the_form_asks_which_map_the_pin_came_from(self):
 		fields = {f["fieldname"]: f for f in json.loads(JSON.read_text())["fields"]}
