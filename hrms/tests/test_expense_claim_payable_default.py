@@ -67,6 +67,14 @@ class TestPayableDefault(unittest.TestCase):
 		self.assertIn("set_payable_account", calls)
 		self.assertLess(calls.index("set_payable_account"), calls.index("set_expense_account"))
 
+	def test_a_paid_claim_is_defaulted_too(self):
+		"""Both GL paths post to payable_account; is_paid must not skip the default."""
+		tree = ast.parse(SOURCE.read_text())
+		cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ExpenseClaim")
+		fn = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "set_payable_account")
+		attrs = {n.attr for n in ast.walk(fn) if isinstance(n, ast.Attribute)}
+		self.assertNotIn("is_paid", attrs)
+
 	def test_the_pwa_prefill_uses_the_same_rule(self):
 		tree = ast.parse(API.read_text())
 		fn = next(

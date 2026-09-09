@@ -115,7 +115,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		saves as a draft and dies at approval with "Account is required" (GL
 		posting), which is what HR saw on 9 September 2026.
 		"""
-		if self.payable_account or self.is_paid or not self.company:
+		# Paid or not: both GL paths post to payable_account (the JSON's
+		# mandatory_depends_on says otherwise and is wrong about the ledger).
+		if self.payable_account or not self.company:
 			return
 		self.payable_account = expense_claim_payable_account(
 			frappe.get_cached_value(
