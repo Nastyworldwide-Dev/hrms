@@ -16,7 +16,7 @@ import frappe
 
 DAY = datetime.date(2026, 9, 10)
 SHIFT = "T2E 9-6"
-EVENING_SHIFT = "T2E 7-3"
+EVENING_SHIFT = "T2E 7-11"
 
 
 def at(day_offset, hour, minute=0):
@@ -202,14 +202,21 @@ class TestADayEndToEnd(unittest.TestCase):
 		# 09:30 is inside the day shift's window, so the multi-assignment
 		# resolver picks a candidate and stamps it from the fallback timings —
 		# the one line only this shape can reach
+		punch = self.punch("IN", at(0, 9, 30))
+		# pinned first: the day shift is the only candidate whose None would
+		# mean what this test says it means — the evening one resolves None too
+		self.assertEqual(punch.shift, SHIFT, "the resolver picked the wrong candidate")
 		self.assertIsNone(
-			self.punch("IN", at(0, 9, 30)).overtime_type,
+			punch.overtime_type,
 			"a second assignment brought the Shift Type fallback back — overtime "
 			"is a function of arrival time again for anyone on two shifts",
 		)
 
 	def _an_evening_assignment(self, ot_type: str) -> None:
-		"""A second active assignment, far enough from 09:00-18:00 not to overlap.
+		"""A second active assignment whose core window clears 09:00-18:00.
+
+		Only the core windows are disjoint: both graces default to an hour, so
+		the actual windows are 08:00-19:00 and 18:00-00:00 and touch for one.
 
 		Two assignments on one date is exactly the shape the multi-assignment
 		branch exists for, and HR Settings gates it — the setting is flipped
