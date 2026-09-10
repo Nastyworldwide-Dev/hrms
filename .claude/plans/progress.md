@@ -289,3 +289,8 @@ PLAN: Nadi PWA UX 2.0 — amendment A written (docs/glass/plan/NADI_2.0_AMENDMEN
   (design/gates/a11y.mjs is advisory today with 20 accepted violations baselined).
   Splits slice 0.6 into 0.6a readability/grid (Q0-independent) and 0.6b material (Q0-blocked).
 NEXT: Nabil answers the five questions in amendment §A6. No code until then.
+- 2026-09-10T07:59:27Z COMMIT: 8c902d849 docs(nadi): reverse the decision that would have retired Liquid Glass → review dispatched
+NEXT: Nabil answers the five yes/no questions in docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md
+  section A6 (Q0a retire blob field+content blur; Q0b KEEP Liquid Glass on the six chrome surfaces;
+  U17 reachability; a11y promoted to a required gate now; mockup of the amended look before code).
+  No Nadi 2.0 code until then. Q1-Q10 in the original plan remain open and were not re-asked.
