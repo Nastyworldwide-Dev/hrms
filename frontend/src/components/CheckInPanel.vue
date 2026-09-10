@@ -495,7 +495,6 @@ function handleLocationSuccess(position, generation) {
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = null
 	locationStalled.value = false
-	sawGeolocationCallback.value = false
 	clearTimeout(fixExpiryTimer)
 	fixExpiryTimer = setTimeout(() => {
 		if (generation !== geoGeneration || fixTimestamp !== readingAt) return
@@ -643,6 +642,7 @@ function stopWatchingLocation() {
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = null
 	locationStalled.value = false
+	sawGeolocationCallback.value = false
 	activeShiftLocation.value = null
 	shiftLocationState.value = "loading"
 	clearLocationFix()
@@ -735,9 +735,12 @@ const locationVerdict = computed(() => {
 		// Severity follows the coordinates, not the error object. With tracking
 		// on, no coordinates means the server will refuse the punch — so a
 		// browser that answers PERMISSION_DENIED after a silent stall must not
-		// make this banner RELAX at the moment the punch became impossible. A
-		// fix clears locationError, so "an error while holding a fix" only
-		// happens as the fix expires, and that clears the coordinates too.
+		// make this banner RELAX at the moment the punch became impossible.
+		//
+		// The muted arm is the ordinary indoor case, not an edge: a live watch
+		// re-issues TIMEOUT every ~15s while a perfectly good fix is still
+		// held, and that punch will be accepted. Fix EXPIRY is the other way
+		// round — it clears the coordinates first, so it reads blocked.
 		return {
 			tone: validCoordinates(latitude.value, longitude.value) ? "muted" : "blocked",
 			title: __("Location unavailable"),

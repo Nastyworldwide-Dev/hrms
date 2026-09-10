@@ -667,3 +667,18 @@ test("an error with no fix in hand is blocked, not muted", () => {
 	h.watches[0].error({ code: 2 }) // POSITION_UNAVAILABLE, well before any deadline
 	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
 })
+
+// The other side of the severity rule, and the ordinary indoor case: a live
+// watch re-issues TIMEOUT roughly every 15s while a perfectly good fix is still
+// held. Coordinates in hand means the server will take the punch, so the banner
+// must stay quiet. Without this, collapsing the ternary to a constant "blocked"
+// keeps the whole suite green while telling a locatable employee they are stuck.
+test("an error while a usable fix is still held stays muted", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.advance(15_000)
+	h.watches[0].error({ code: 3 }) // TIMEOUT, fix still fresh
+
+	assert.equal(h.vm.locationVerdict.value.tone, "muted")
+})
