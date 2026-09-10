@@ -156,14 +156,16 @@ class TestJudgeDay(unittest.TestCase):
 		self.assertEqual(verdict["repair_punches"], ["A", "B"])
 		self.assertIn("7PM-3:30AM", verdict["detail"])
 
-	def test_two_still_active_assignments_are_named_instead_of_repaired(self):
-		"""Re-resolving would send each punch back to a different shift and the
-		report would offer the same repair forever. HR must end the old one."""
+	def test_a_split_day_is_repairable_even_while_both_assignments_are_active(self):
+		"""Proven on a real site: an OUT now closes the shift its own IN opened,
+		so re-resolving the day's punches in time order converges on one shift.
+		Refusing the repair here would strand exactly the employees who have the
+		duplicate assignment — the ones whose days are broken."""
 		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
 		verdict = judge_day(punches, [_absent(status="Half Day")], SHIFT, active_assignments=2)
-		self.assertEqual(verdict["verdict"], "two-active-shift-assignments")
-		self.assertEqual(verdict["repair"], "")
-		self.assertIn("end the superseded assignment", verdict["detail"])
+		self.assertEqual(verdict["verdict"], "punches-split-across-shifts")
+		self.assertEqual(verdict["repair"], "refetch-shift")
+		self.assertIn("HR should end the superseded one", verdict["detail"])
 
 	def test_one_assignment_left_means_the_split_is_repairable(self):
 		punches = [_punch("A", 10, "IN"), _punch("B", 19, "OUT", shift="7PM-3:30AM")]
@@ -342,6 +344,15 @@ class TestRepairOrder(unittest.TestCase):
 	(employee_checkin_override.py:92, employee_checkin.py:94), so a repair that
 	re-resolves a still-linked punch computes the right shift and throws it
 	away."""
+
+	def test_a_punch_whose_shift_does_not_change_is_never_written(self):
+		"""Otherwise a day split for some other reason is unlinked, rebuilt and
+		offered again on every run — churn with no progress."""
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index('if entry["action"] == "refetch-shift"') :]
+		body = body[: body.index("elif entry")]
+		self.assertIn("if punch.shift == was_shift:", body)
+		self.assertLess(body.index("if punch.shift == was_shift:"), body.index("punch.save()"))
 
 	def test_the_link_is_cleared_before_the_shift_is_re_resolved(self):
 		src = pathlib.Path(attendance_day_audit.__file__).read_text()

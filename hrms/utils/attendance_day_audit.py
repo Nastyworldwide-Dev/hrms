@@ -137,21 +137,22 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None, active_
 	has_pair = {p.get("log_type") for p in countable} >= {"IN", "OUT"}
 	looks_wrong = row is None or row.get("status") in ("Absent", "Half Day")
 	if len(shifts_used) > 1 and has_pair and looks_wrong:
-		if active_assignments > 1:
-			# Re-resolving would send each punch back to a different shift, the
-			# day would break again, and the report would offer the same repair
-			# forever. The fix is HR's: end the assignment that was superseded.
-			return _verdict(
-				"two-active-shift-assignments",
-				f"{active_assignments} shift assignments still cover this date, so the day's punches "
-				"land under " + " and ".join(sorted(shifts_used)) + "; end the superseded assignment first",
-				"",
-			)
+		# Repairable even while both assignments are still active: an OUT now
+		# closes the shift its own IN opened (hrms/utils/shift_resolution.py),
+		# so re-resolving the day's punches in time order converges on one
+		# shift. Proven on a real site before this guard was relaxed. The
+		# duplicate assignment is still named, because HR should end it.
+		note = (
+			f" ({active_assignments} shift assignments still cover this date — HR should end the superseded one)"
+			if active_assignments > 1
+			else ""
+		)
 		return _verdict(
 			"punches-split-across-shifts",
 			"the day's punches sit under "
 			+ " and ".join(sorted(shifts_used))
-			+ "; each shift saw only part of the day",
+			+ "; each shift saw only part of the day"
+			+ note,
 			"refetch-shift",
 			[p["name"] for p in countable],
 		)
@@ -514,8 +515,16 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 				# The link must go FIRST: both fetch_shift implementations
 				# assign the shift fields only `if not self.attendance`, so
 				# re-resolving a still-linked punch computes and discards.
+				was_shift = punch.shift
 				punch.attendance = None
 				punch.fetch_shift()
+				if punch.shift == was_shift:
+					# Re-resolution agrees with what is already stored, so there
+					# is nothing to correct. Saving would unlink the punch and
+					# force a pointless rebuild — and, on a day that is split for
+					# some other reason, would offer the same repair on every run.
+					logger.info("[attendance_day_audit] %s already on %s, left as it is", name, was_shift)
+					continue
 				if not _job_can_read(punch):
 					# The corrected shift could never re-read this punch (auto
 					# attendance off, or outside its processing window), so
