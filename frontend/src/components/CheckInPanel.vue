@@ -263,6 +263,15 @@ let geoWatchId = null
 let geoGeneration = 0
 let sheetSession = 0
 let fixExpiryTimer = null
+// A browser that accepts the location request and then never calls back —
+// neither success nor error. Reported from mainland China on 10 Sep 2026: a new
+// phone, a browser whose location bridge never answered, and a panel that said
+// "Finding your location..." until the employee gave up. The watch timeout and
+// the coarse retry are the BROWSER's promises to us, so neither fires when the
+// browser is the thing that is broken. This is our own deadline.
+let locationDeadlineTimer = null
+const locationStalled = ref(false)
+const LOCATION_DEADLINE_MS = 30000
 // Per-modal-session geolocation state. latitude/longitude refs persist across
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
 // both are reset in fetchLocation() each time the modal opens.
@@ -476,6 +485,9 @@ function handleLocationSuccess(position, generation) {
 	longitude.value = fix.longitude
 	accuracyM.value = acc
 	fixTimestamp = readingAt
+	clearTimeout(locationDeadlineTimer)
+	locationDeadlineTimer = null
+	locationStalled.value = false
 	clearTimeout(fixExpiryTimer)
 	fixExpiryTimer = setTimeout(() => {
 		if (generation !== geoGeneration || fixTimestamp !== readingAt) return
@@ -566,6 +578,15 @@ const fetchLocation = () => {
 	}
 	locationStatus.value = __("Locating...")
 	locationError.value = ""
+	locationStalled.value = false
+	clearTimeout(locationDeadlineTimer)
+	locationDeadlineTimer = setTimeout(() => {
+		// A real error already explains itself, and a fix makes the question
+		// moot — this speaks only into the silence.
+		if (generation !== geoGeneration || hasSessionFix || locationError.value) return
+		locationStalled.value = true
+		console.warn("[CheckInPanel] no geolocation callback in %d ms", LOCATION_DEADLINE_MS)
+	}, LOCATION_DEADLINE_MS)
 	hasSessionFix = false
 	coarseFallbackRequested = false
 	accuracyM.value = null
@@ -605,6 +626,9 @@ function clearLocationFix() {
 function stopWatchingLocation() {
 	geoGeneration += 1
 	coarseFallbackRequested = false
+	clearTimeout(locationDeadlineTimer)
+	locationDeadlineTimer = null
+	locationStalled.value = false
 	activeShiftLocation.value = null
 	shiftLocationState.value = "loading"
 	clearLocationFix()
@@ -671,6 +695,20 @@ const fencePreview = computed(() => {
 // the screen used to say the opposite ("recorded as-is"), which is the mismatch
 // this removes. How strict that enforcement is stays the shift's own setting.
 const locationVerdict = computed(() => {
+	if (locationStalled.value) {
+		// Blocked, not muted: with geolocation tracking on, the server refuses a
+		// punch that carries no coordinates, so this employee genuinely cannot
+		// clock in until the reading arrives. Name the browser — it is the one
+		// thing standing here that they can actually change.
+		return {
+			tone: "blocked",
+			title: __("Your browser is not sharing a location"),
+			detail: __(
+				"It has not answered for {0} seconds. Try a different browser, or step outside and reopen this screen.",
+				[Math.round(LOCATION_DEADLINE_MS / 1000)]
+			),
+		}
+	}
 	if (locationError.value) {
 		return {
 			tone: "muted",

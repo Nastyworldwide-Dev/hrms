@@ -529,3 +529,68 @@ test("a camera permission result from a closed sheet is stopped instead of attac
 	h.unmount()
 	assert.deepEqual(stops, [1, 1])
 })
+
+// Mainland China, 10 September: a new phone on a browser that accepted the
+// location request and then never called back — not success, not error. The
+// panel said "Finding your location... Just a moment." and kept saying it.
+// The employee could not clock in, and nothing on screen suggested what to do.
+//
+// The 15-second watch timeout and the coarse retry are the browser's promises
+// to us, and this browser did not keep either. So the panel needs a deadline
+// of its own: after it, say plainly that the browser is not answering and what
+// to try. A spinner is not an answer.
+test("a browser that never calls back stops pretending it is still looking", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	const waiting = h.vm.locationVerdict.value
+	assert.notEqual(waiting.tone, "blocked", "the sheet should open in a waiting state")
+
+	h.advance(31_000) // no success, no error — the browser simply never answered
+
+	assert.notEqual(
+		h.vm.locationVerdict.value.title,
+		"Finding your location...",
+		"the panel is still claiming to look for a location a browser will never send"
+	)
+	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
+	assert.match(
+		h.vm.locationVerdict.value.detail,
+		/browser/i,
+		"the message must point at the browser — that is the thing the employee can change"
+	)
+})
+
+test("a fix that arrives before the deadline cancels it", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.advance(31_000)
+	assert.notEqual(
+		h.vm.locationVerdict.value.tone,
+		"blocked",
+		"the deadline fired over a location the browser had already given us"
+	)
+})
+
+test("the deadline of a closed sheet cannot fire into the next one", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.vm.onModalDismiss()
+	h.vm.handleEmployeeCheckin()
+	h.watches[1].success(h.fix())
+	h.advance(31_000)
+	assert.notEqual(h.vm.locationVerdict.value.tone, "blocked")
+})
+
+test("a browser that answers with a real error is left to say so itself", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].error({ code: 1 }) // permission denied — a definite answer
+	const denied = h.vm.locationVerdict.value.title
+	h.advance(31_000)
+	assert.equal(
+		h.vm.locationVerdict.value.title,
+		denied,
+		"the deadline overwrote a real browser error with a vaguer one"
+	)
+})
