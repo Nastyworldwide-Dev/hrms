@@ -1,28 +1,39 @@
-CLASS: a wait state with no deadline of its own — the UI trusts a browser API
-to answer, and says nothing when it never does.
+CLASS: a list column that answers a different question from the one it appears
+to answer — the DOCUMENT state (Draft/Submitted/Cancelled) standing in for the
+field the code actually branches on.
 
-Instance: CheckInPanel's "Finding your location..." Reported from the mainland
-China office, 10 Sep 2026: a new phone whose browser accepted the geolocation
-request and never called back, success or error. The watch's 15s timeout and
-the 10s coarse retry are the BROWSER's promises, so neither fires when the
-browser itself is the broken part. The employee could not clock in and the
-screen never said why.
+Instance: Nabil, 10 Sep, on the Shift Assignment list — "the status shown
+submitted. but for how long? ... if they are approve then approved?". It cost a
+real diagnosis: while tracing the Tampin night-shift bug we could not tell from
+the list whether an employee's assignment was Active, because Active/Inactive
+was not a column.
 
-Call sites of the geolocation boundary (machine-listed):
+Every submittable doctype with a `status` field (machine-listed):
 
-- frontend/src/components/CheckInPanel.vue:fetchLocation — same-root, fixed: a
-  30s deadline of our own, disarmed by a fix, by a real error, and by closing
-  the sheet.
-- frontend/src/components/CheckInPanel.vue:handleLocationError — not-affected:
-  it only ever runs when the browser DID answer.
-- frontend/src/utils/geolocation.js (previewGeofence, geolocationBlockedReason)
-  — not-affected: pure functions over values already in hand, no waiting.
-- hrms/api/geofence.py:check_geofence — not-affected: a server call with its
-  own transport timeout; it cannot hang on a device radio.
+- Shift Assignment (Active/Inactive) — same-root, fixed. This is the one the
+  shift resolver reads (shift_assignment.py:406 filters status == "Active").
+- Shift Request (Draft/Approved/Rejected) — same-root, fixed.
+- Leave Application (Open/Approved/Rejected/Cancelled) — same-root, fixed.
+- Attendance Request (Open/Approved/Rejected) — not-affected, already a column.
+- OT Request (Open/Approved/Rejected) — not-affected, already a column.
+- Remote Checkin Request (Pending/Approved/Rejected) — not-affected, already a
+  column, and not submittable, so it has no document state to confuse it with.
+- Attendance (Present/Absent/...) — not-affected: its status IS the outcome and
+  is already a column.
+- Employee Checkin — not-affected, no status field at all.
+
+Also fixed here, same class of blindness: Shift Assignment's
+`created_by_shift_rule` was `hidden: 1`, so nobody could tell a rule-made
+assignment from a hand-made one — which is precisely what the shift-rule layer
+branches on (shift_rules.py:123). It is now a visible read-only column.
 
 Class locked by:
-- regression: "a browser that never calls back stops pretending it is still
-  looking" (red on HEAD: the panel keeps its waiting title after 31s).
-- invariants: a fix cancels the deadline; a closed sheet's deadline cannot fire
-  into the next one; a real browser error is never overwritten by the vaguer
-  deadline message.
+- invariant: hrms/tests/test_status_is_visible.py walks the doctype JSON and
+  fails if any deciding status is missing from its list view or is hidden, so a
+  doctype added to the map cannot ship blind.
+- regression: hrms/tests/test_show_deciding_status_patch.py pins the patch that
+  carries the change past a saved column set.
+
+Ceiling: `in_list_view` is only the DEFAULT. A saved List View Settings row
+replaces the doctype's columns site-wide, so the patch appends rather than
+clears — HR's chosen columns survive.

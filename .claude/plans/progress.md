@@ -223,3 +223,53 @@
 - 2026-09-10T03:13:15Z COMMIT: d26582aec fix(attendance): check the whole day before rewriting any of it, and drop a dead filter → review+security+design dispatched
 - 2026-09-10T03:13Z EVIDENCE: 6 behaves — reviews on the three fixes: all DEPLOY, no Critical. Five warnings closed in d26582aec, incl. a half-applied shift repair that could unify a day onto the superseded shift (whole-day readability check now) and a dead Verdict filter option that would have read as 'nobody has duplicate assignments'.
 - 2026-09-10T03:13Z NEXT: Nabil deploys d26582aec, then (a) Attendance Day Audit 1-10 Sep -> Repair -> one hourly run -> confirm 3/4/7 Sep read Present; (b) PWA button after a fresh check-in; (c) Pull -> GL Accounts, read the bell for the two named types; (d) HR ends the superseded shift assignments. Open: August decision, source-site shutdown, claim rulings Q1-Q6.
+- 2026-09-10T03:13:52Z COMMIT: 7173539cd chore(plans): progress and next step for the 10 Sep defect batch → review dispatched
+- 2026-09-10T03:24:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-10T03:24:40Z COMMIT: f6528e423 fix(attendance): a check-out closes its own session on every path, not only for two-shift staff → review dispatched
+- 2026-09-10T03:25:52Z COMMIT: 93cf975ae docs(audit): the complete check-in edge-case set, measured not reasoned → review dispatched
+- 2026-09-10T03:35:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-10T03:35:03Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-10T03:35:09Z COMMIT: 6e2d4ab3e feat(attendance): an early arrival is presence, and the paid hours start at the shift → review dispatched
+- 2026-09-10T03:36:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-10T03:36:57Z COMMIT: 0cc503069 fix(attendance): trim the early arrival once, so a break cannot be taken off it twice → review dispatched
+- 2026-09-10T03:45:45Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-10T03:52:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-10T03:52:16Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-10T03:52:19Z COMMIT: 894e758d0 fix(attendance): a punch keeps its shift's overtime type, so early arrivals still earn OT → review+cross-app dispatched
+- 2026-09-10T03:53:55Z COMMIT: d08702051 docs(audit): what the check-in pipeline is actually connected to → review dispatched
+- 2026-09-10T04:09:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-09-10T04:09:09Z COMMIT: a2f4ee3b8 test(attendance): cover the resolver line only a two-shift employee can reach → review dispatched
+- 2026-09-10T04:15:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-09-10T04:15:11Z COMMIT: 50bec0dd7 test(attendance): pin the candidate the two-shift case is actually asserting on → review dispatched
+- 2026-09-10T04:15:18Z PUSH: nz-glass @ 50bec0dd7
+- 2026-09-10T04:15:31Z PUSH: nz-glass @ 6ca713aff
+- 2026-09-10T04:15:31Z COMMIT: 6ca713aff docs: handoff for the overtime-type batch → review dispatched
+- 2026-09-10T04:39:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-09-10T04:39:49Z PUSH: nz-glass @ 80860da47
+- 2026-09-10T04:39:49Z COMMIT: 80860da47 docs(test): name the forgotten-check-out case for what it asserts → review dispatched
+- 2026-09-10T06:55:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-10T06:56:31Z PLAN: approved 66d76f8e7dbe — # PLAN — the attendance causes still uncovered (10 Sep 2026)
+- 2026-09-10T06:56:35Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-10T06:56:39Z COMMIT: 94afecfa9 fix(pwa): stop waiting forever on a browser that will never send a location → review+design dispatched
+- 2026-09-10T07:01:01Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-10T07:01:06Z PUSH: nz-glass @ dcfbf669f
+- 2026-09-10T07:01:07Z COMMIT: dcfbf669f fix(pwa): tell the truth about which way the location failed → review+design dispatched
+- 2026-09-10T07:05:40Z PLAN: approved d2aa5705cc5c — # PLAN — the attendance causes still uncovered (10 Sep 2026)
+- 2026-09-10T07:06:33Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-10T07:06:39Z PUSH: nz-glass @ 1b6fd02dc
+- 2026-09-10T07:06:39Z COMMIT: 1b6fd02dc fix(pwa): the location banner's severity follows the coordinates, not the error → review+design dispatched
+- 2026-09-10T07:14:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-10T07:14:48Z COMMIT: e42e0bf7c fix(pwa): put the reset where the commit said it was, and pin the muted banner → review+design dispatched
+- 2026-09-10T07:14:54Z PUSH: nz-glass @ e42e0bf7c
+- 2026-09-10T07:19:20Z PUSH: nz-glass @ 231392219
+- 2026-09-10T07:19:21Z COMMIT: 231392219 test(pwa): name the banner, not just its tone, in the muted-arm test → review dispatched
+- 2026-09-10T07:19:44Z PUSH: nz-glass @ 2d3a7b3c6
+- 2026-09-10T07:19:44Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
+- 2026-09-10T07:25:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-10T07:25:57Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
+- 2026-09-10T07:27:54Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
+- 2026-09-10T07:28:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-10T07:28:07Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
+- 2026-09-10T07:28:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-10T07:28:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-10T07:29:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
