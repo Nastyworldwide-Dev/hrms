@@ -11,8 +11,15 @@ which that commit deleted — so this module raised ImportError on collection
 and took the whole suite down with it. What is pinned now is the behaviour
 that replaced them: the check names what is empty, and writes nothing.
 
-Bench-backed. Run with:
-    bench --site <site> run-tests --module hrms.patches.v16_0.test_seed_required_hr_masters
+Bench-backed. `run-tests --module hrms.patches.v16_0.<mod>` does NOT work here:
+discovery imports hrms/tests/test_attendance_repair_lifecycle.py, which raises
+SkipTest at import time and takes the runner down with it. Load it directly:
+
+    bench --site <site> console <<'EOF'
+    import unittest
+    unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromName(
+        "hrms.patches.v16_0.test_seed_required_hr_masters"))
+    EOF
 """
 
 import frappe
@@ -34,17 +41,18 @@ class TestSeedRequiredHrMasters(FrappeTestCase):
 		return {dt: frappe.db.count(dt) for dt in _REQUIRED_MASTERS if frappe.db.table_exists(dt)}
 
 	def test_an_empty_master_is_reported(self):
-		doctype = _REQUIRED_MASTERS[0]
-		frappe.db.delete(doctype)
-		self.assertIn(doctype, empty_required_masters())
+		# Named, not indexed: reordering _REQUIRED_MASTERS must not silently pair
+		# this doctype with another one's mandatory field.
+		self.assertIn("Employment Type", _REQUIRED_MASTERS)
+		frappe.db.delete("Employment Type")
+		self.assertIn("Employment Type", empty_required_masters())
 
 	def test_a_populated_master_is_not_reported(self):
-		doctype = _REQUIRED_MASTERS[0]
-		if not frappe.db.count(doctype):
-			frappe.get_doc({"doctype": doctype, "employee_type_name": "_Test Type"}).insert(
+		if not frappe.db.count("Employment Type"):
+			frappe.get_doc({"doctype": "Employment Type", "employee_type_name": "_Test Type"}).insert(
 				ignore_permissions=True
 			)
-		self.assertNotIn(doctype, empty_required_masters())
+		self.assertNotIn("Employment Type", empty_required_masters())
 
 	def test_the_patch_creates_nothing_when_masters_are_empty(self):
 		# The whole point of ca29c274d: empty is "not yet populated from source",
@@ -61,7 +69,11 @@ class TestSeedRequiredHrMasters(FrappeTestCase):
 		execute()
 		self.assertEqual(before, self._counts())
 
-	def test_reporting_is_idempotent(self):
+	def test_running_the_check_does_not_change_what_it_reports(self):
+		# The old assertion compared a pure read to itself and could not fail.
+		# What matters is that execute() is inert: the report before it and the
+		# report after it agree, whatever state the site is in.
+		frappe.db.delete("Employment Type")
+		before = empty_required_masters()
 		execute()
-		execute()
-		self.assertEqual(empty_required_masters(), empty_required_masters())
+		self.assertEqual(before, empty_required_masters())
