@@ -71,7 +71,16 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		)
 
 		if len(active_assignments) <= 1:
-			return super().fetch_shift()
+			super().fetch_shift()
+			# Arriving before the shift's own early grace left the punch
+			# off-shift, so the day was computed from the check-out alone and
+			# came out at zero hours — the same loss as a late check-out, at the
+			# other end. An early arrival is presence: it belongs to the shift it
+			# precedes. The hours still start at the shift
+			# (ShiftType.unpaid_hours_before_shift), so nothing is paid for it.
+			if not self.shift and self.log_type == "IN" and active_assignments:
+				self._attach_early_arrival(active_assignments[0], log_time)
+			return
 
 		from hrms.utils.shift_resolution import choose_shift
 
@@ -116,6 +125,34 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			len(active_assignments),
 		)
 
+	def _attach_early_arrival(self, assignment, log_time) -> None:
+		"""An IN that lands before the day's shift window belongs to that shift.
+
+		Only earlier, never later: a punch AFTER the window closed is not an
+		early arrival, and leaving it off-shift is right. Bounded to the shift's
+		own day, so this can never reach into another day's shift.
+		"""
+		timings = _resolve_timings_fallback(self.employee, log_time, assignment)
+		if not timings or not timings.get("actual_start"):
+			return
+		if log_time >= get_datetime(timings["actual_start"]):
+			return
+		if get_datetime(timings["start_datetime"]).date() != log_time.date():
+			return
+		self.offshift = 0
+		self.shift = assignment["shift_type"]
+		self.shift_start = timings.get("start_datetime")
+		self.shift_end = timings.get("end_datetime")
+		self.shift_actual_start = timings.get("actual_start")
+		self.shift_actual_end = timings.get("actual_end")
+		logger.info(
+			"[employee_checkin] %s arrived at %s, before %s opens at %s — counted from the shift start",
+			self.employee,
+			log_time,
+			self.shift,
+			timings.get("start_datetime"),
+		)
+
 	def _close_open_session(self) -> bool:
 		"""An OUT inherits the whole shift stamp of the IN it closes. True when
 		it did, so the caller stops. Never fires for an IN, for a punch already
@@ -123,11 +160,16 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		if self.log_type != "OUT" or self.attendance:
 			return False
 		# A late check-out is a forgotten one, so the gap is unbounded by
-		# definition: submit_late_checkout already names the IN's shift, and
-		# without this fetch_shift would overwrite it with whatever window the
-		# clock happens to fall in — filing yesterday's missing check-out
-		# against today and breaking both days.
-		open_in = self._open_in(bounded=not getattr(self.flags, "is_late_checkout", False))
+		# definition, and fetch_shift would otherwise overwrite its shift with
+		# whatever window the clock falls in — filing yesterday's missing
+		# check-out against today and breaking both days. The caller names the
+		# IN it is closing; re-deriving it would let the search adopt a stale
+		# unclosed IN from an earlier day, whatever the gap.
+		named = getattr(self.flags, "late_checkout_in", None)
+		if named:
+			open_in = {"name": named, "shift": frappe.db.get_value("Employee Checkin", named, "shift")}
+		else:
+			open_in = self._open_in(bounded=not getattr(self.flags, "is_late_checkout", False))
 		if not open_in or not open_in.get("shift"):
 			return False
 		row = frappe.db.get_value(
@@ -164,6 +206,8 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		from hrms.utils.shift_resolution import SESSION_WINDOW
 
 		log_time = get_datetime(self.time)
+		# ceiling: an unnamed late check-out searches back 14 days; upgrade: every
+		# caller should set flags.late_checkout_in, and then this bound can go.
 		earliest = log_time - SESSION_WINDOW if bounded else log_time - timedelta(days=14)
 		rows = frappe.get_all(
 			"Employee Checkin",

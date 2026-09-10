@@ -512,6 +512,10 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 		}
 	)
 	out_doc.flags.is_late_checkout = True
+	# Name the IN being closed. Without it fetch_shift re-derives "the latest
+	# unclosed IN", which can be a stale one from an earlier day, and the
+	# forgotten check-out lands on the wrong session.
+	out_doc.flags.late_checkout_in = in_doc.name
 	out_doc._late_checkout_reason = reason.strip()
 	out_doc.flags.ignore_permissions = True
 	out_doc.insert()

@@ -18,7 +18,7 @@ shift accepts punches between **08:00 and 19:00**. Night cases use
 | 1 | IN 09:30, OUT 18:05 | both on shift | unchanged | fine |
 | 2 | IN 09:30, **OUT 00:32** | OUT **off-shift** | OUT on shift | **fixed** |
 | 3 | IN 09:30, OUT 18:55 (inside grace) | both on shift | unchanged | fine |
-| 4 | **IN 07:30**, OUT 18:05 | IN **off-shift** | IN still off-shift | **open, §3** |
+| 4 | **IN 07:30**, OUT 18:05 | IN **off-shift**, day 0 h | on shift; 07:30 kept, paid from 09:00 | **fixed** |
 | 5 | IN 09:30, no OUT | IN on shift | unchanged | fine, sweeper flags it |
 | 6 | IN 09:30, OUT next morning 08:00 (ordinary punch) | OUT filed on the **next day** | unchanged | see §2 |
 | 7 | Late check-out submitted for the next morning | OUT filed on the **next day** | filed on the right day | **fixed** |
@@ -60,36 +60,38 @@ hourly job will not undo.
 
 ---
 
-## 3. The one open question: an early arrival
+## 3. The early arrival, as HR ruled it
 
 Case 4. Somebody on a 09:00 shift taps Check In at **07:30**. The shift
 accepts punches from 08:00, so that punch is filed off-shift, excluded from
 attendance, and the day is then computed from the check-out alone — **zero
 hours**, exactly the same loss as case 2.
 
-Discarding it is clearly wrong: the person was there. But how it should count
-is a business decision, not mine:
+Discarding it was clearly wrong: the person was there. Nabil's ruling, 10
+September: *"the clock in time still track as is and display as is. but early
+clock in didnt counted as paid. they are just safer, when their shift start
+that is the real clocked working hours."*
 
-| Option | Effect | Cost |
-|---|---|---|
-| **A. Count from the shift start** | Day is Present; hours measured 09:00 → out | Early time is unpaid, which is the common rule |
-| **B. Count from the arrival** | Day is Present; hours measured 07:30 → out | Early time is paid as ordinary hours |
-| **C. Leave as today** | Day reads zero hours | Wrong; the loss you are already seeing |
+Built exactly so:
 
-Overtime is unaffected either way: it is only ever counted past the shift end,
-never for early arrival, so neither option inflates pay for overtime.
+- the punch keeps **07:30** and is attached to the shift, not thrown away;
+- **In Time on the day is still 07:30**, so HR sees when the person actually
+  arrived;
+- the **paid hours start at 09:00** — the example day pays 9.08 hours, not
+  10.58 and not zero;
+- overtime is untouched, because overtime was already only ever counted past
+  the shift end.
 
-My recommendation is **A**: mark the day from the shift start, and record the
-real arrival on the punch so HR can see it. It records presence honestly
-without paying for time nobody asked for. Say which you want and I will build
-it — it is a small change once the rule is chosen.
+Measured end to end on a real site by
+`hrms/tests/test_checkin_day_end_to_end.py`, which reads back the row the
+hourly job wrote rather than trusting the parts.
 
 ---
 
 ## 4. What HR should watch after this deploy
 
-- The **Attendance Day Audit** verdict "Punch resolved to no shift" is the
-  early-arrival case. Until §3 is decided, those days need HR's in/out.
+- A punch still reported as "resolved to no shift" is now genuinely outside
+  any assigned shift — an early arrival no longer lands there.
 - A day that still reads Half Day with a full in and out means the punches sit
   under two shifts; the audit names it and its Repair fixes it.
 - `Allow Check Out After Shift End Time` no longer decides whether a day

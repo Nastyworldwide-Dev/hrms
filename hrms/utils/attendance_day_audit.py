@@ -474,11 +474,21 @@ def _day_is_rewritable(punch_names) -> bool:
 	follows that old shift through the session rule — unifying the day onto the
 	superseded shift instead of the right one.
 	"""
+	# In time order, carrying each resolved shift forward: a check-out inherits
+	# the shift of the check-in it closes, so re-reading every punch from disk
+	# would test the OUT against the IN's OLD shift and pass a day the repair
+	# then half-applies.
+	last_resolved = None
 	for name in punch_names:
 		punch = frappe.get_doc("Employee Checkin", name)
+		stored = punch.shift
 		punch.attendance = None
-		punch.fetch_shift()
-		if punch.shift != frappe.db.get_value("Employee Checkin", name, "shift") and not _job_can_read(punch):
+		if punch.log_type == "OUT" and last_resolved:
+			punch.shift = last_resolved
+		else:
+			punch.fetch_shift()
+			last_resolved = punch.shift
+		if punch.shift != stored and not _job_can_read(punch):
 			logger.info(
 				"[attendance_day_audit] %s would land on %s, which the job never reads", name, punch.shift
 			)

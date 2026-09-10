@@ -144,6 +144,27 @@ def linked_checkins(attendance_name) -> list:
 	)
 
 
+def unpaid_hours_before_shift(intervals, shift_start) -> float:
+	"""Hours inside `intervals` that fall before the shift began. Pure.
+
+	Only the part before the start is removed, never the whole interval: an
+	employee who arrives at 07:30 and works to 18:05 is paid from 09:00 to
+	18:05, not nothing. Breaks are deducted separately and are unaffected,
+	because a break cannot sit inside time that was never counted.
+	"""
+	if not shift_start:
+		return 0.0
+	shift_start = get_datetime(shift_start)
+	early = 0.0
+	for start, end in intervals:
+		start, end = get_datetime(start), get_datetime(end)
+		if end <= shift_start:
+			early += (end - start).total_seconds() / 3600
+		elif start < shift_start:
+			early += (shift_start - start).total_seconds() / 3600
+	return round(early, 6)
+
+
 def counts_for_attendance(row) -> bool:
 	"""A punch that is evidence for attendance STATUS and hours.
 
@@ -514,6 +535,13 @@ class ShiftType(Document):
 			for segment in segments
 			for start, end in worked_intervals(segment, pairing, policy)
 		]
+		# Arriving early is presence, not paid work: the day's hours start when
+		# the shift starts. The check-in keeps its real time on the punch and in
+		# In Time, so HR still sees 07:30; only the hours begin at 09:00. HR's
+		# ruling, 10 Sep 2026: "early clock in didnt counted as paid. they are
+		# just safer, when their shift start that is the real clocked working
+		# hours." Overtime already ignores early arrival (_ot_window_begin).
+		total_working_hours -= unpaid_hours_before_shift(intervals, logs[0].shift_start)
 		total_working_hours = self._deduct_unpaid_breaks(
 			total_working_hours, intervals, company=_company_of_logs(logs)
 		)
