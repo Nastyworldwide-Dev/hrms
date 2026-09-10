@@ -202,3 +202,29 @@ change what a screen looks like and need a mockup before code:
 The rest of phase 4 (a stalled-location deadline message, the missing fields in
 the check-in history list) swaps text into states that already exist and adds
 no layout, so those ship without one.
+
+---
+
+## AMENDMENT — 10 Sep 2026: what the location banner's severity means
+
+Raised by review of dcfbf669f. The banner had two ways of saying "no location"
+and they disagreed about how serious it is: the 30-second stall says "blocked",
+while a real browser error says "muted". So a silent browser that finally
+answers PERMISSION_DENIED makes the banner RELAX at the exact moment the punch
+became permanently impossible.
+
+RULE: with geolocation tracking on, the banner's severity follows whether the
+panel holds usable coordinates — never whether an error object happened to
+arrive.
+
+  * no usable coordinates -> blocked. The server refuses a coordinate-less
+    punch (employee_checkin_override.py) before it looks at free_location or
+    the shift location, so this is true for every shift configuration.
+  * usable coordinates -> the ordinary distance verdict. A successful fix
+    already clears locationError, so an error and a fix cannot both stand.
+
+The MESSAGE is chosen separately, best explanation first: a real browser error
+outranks the deadline's guess, and the deadline's guess outranks silence.
+
+This is a severity rule, not new UI: same banner, same place, same words.
+MOCKUP: NOT NEEDED (tone token only; no layout, no new control).

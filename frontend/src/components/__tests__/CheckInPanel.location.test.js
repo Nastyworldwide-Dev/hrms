@@ -641,3 +641,29 @@ test("a junk reading arriving after the deadline still corrects the wording", ()
 		"the flag is not reactive, so the verdict never recomputed"
 	)
 })
+
+// Severity follows whether we hold coordinates, never whether an error object
+// arrived. A silent browser that finally answers PERMISSION_DENIED must not
+// make the banner relax at the moment the punch became impossible.
+test("a late denial keeps the banner blocked, and says what the browser said", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.advance(31_000)
+	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
+
+	h.watches[0].error({ code: 1 }) // PERMISSION_DENIED at 45s: no fix can ever arrive now
+
+	assert.equal(
+		h.vm.locationVerdict.value.tone,
+		"blocked",
+		"the banner softened exactly when the punch became permanently impossible"
+	)
+	assert.match(h.vm.locationVerdict.value.detail, /permission/i)
+})
+
+test("an error with no fix in hand is blocked, not muted", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].error({ code: 2 }) // POSITION_UNAVAILABLE, well before any deadline
+	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
+})

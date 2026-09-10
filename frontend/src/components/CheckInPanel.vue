@@ -495,6 +495,7 @@ function handleLocationSuccess(position, generation) {
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = null
 	locationStalled.value = false
+	sawGeolocationCallback.value = false
 	clearTimeout(fixExpiryTimer)
 	fixExpiryTimer = setTimeout(() => {
 		if (generation !== geoGeneration || fixTimestamp !== readingAt) return
@@ -731,8 +732,14 @@ const locationVerdict = computed(() => {
 			  }
 	}
 	if (locationError.value) {
+		// Severity follows the coordinates, not the error object. With tracking
+		// on, no coordinates means the server will refuse the punch — so a
+		// browser that answers PERMISSION_DENIED after a silent stall must not
+		// make this banner RELAX at the moment the punch became impossible. A
+		// fix clears locationError, so "an error while holding a fix" only
+		// happens as the fix expires, and that clears the coordinates too.
 		return {
-			tone: "muted",
+			tone: validCoordinates(latitude.value, longitude.value) ? "muted" : "blocked",
 			title: __("Location unavailable"),
 			detail: locationError.value,
 		}
