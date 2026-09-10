@@ -13,6 +13,14 @@ block the build, and an ordered slice plan. Its companion,
 [NADI_2.0_SURFACE_MAP.md](NADI_2.0_SURFACE_MAP.md) (9 Sep), carries the measured
 numbers: every route and sheet, the grid, the scroll budget, the redundancy census.
 
+> **AMENDED 10 Sep 2026 — not yet approved.** Decision Q0 below (retire Liquid
+> Glass) is **reversed** by
+> [NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md](NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md),
+> which keeps Glass on chrome only, adds U16-U18 (glass placement,
+> reachability, readability floor) and moves accessibility from phase 4 to a
+> required gate in phase 0. Read the amendment before acting on §5 Q0, §6
+> slice 0.6, or surface map §1.3.
+
 ---
 
 ## 0. What the folder contains

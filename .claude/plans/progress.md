@@ -273,3 +273,19 @@
 - 2026-09-10T07:28:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-09-10T07:28:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-09-10T07:29:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-10T07:29:05Z COMMIT: be4f5639b fix(hr): show the status that decides something, not the one that decides nothing → review dispatched
+- 2026-09-10T07:29:11Z PUSH: nz-glass @ be4f5639b
+- 2026-09-10T07:30:22Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
+
+PLAN: Nadi PWA UX 2.0 — amendment A written (docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md).
+  Cause: the 8 Sep plan's decision Q0 retires Liquid Glass; Nabil's instruction is to KEEP and
+  apply it properly. Evidence that Q0 indicted placement, not material: .g-glass (the CONTENT card
+  class, 26 files) carries backdrop-filter blur(20px) at glass-components.css:320-325, over a
+  three-blob colour field (field.* in design/tokens.json, GLightField.vue:32-34); tokens.json's own
+  track-solid description already records muted text at 3.41:1 dark / 4.14:1 light on glass, below AA.
+  Amendment: Q0 splits into Q0a (retire blob field + blur on content — YES) and Q0b (retire glass —
+  REVERSED). Adds U16 glass-is-chrome-only, U17 reachability (absent from the plan entirely),
+  U18 readability floor. Moves accessibility from phase 4 to required gates + new slice 0.8
+  (design/gates/a11y.mjs is advisory today with 20 accepted violations baselined).
+  Splits slice 0.6 into 0.6a readability/grid (Q0-independent) and 0.6b material (Q0-blocked).
+NEXT: Nabil answers the five questions in amendment §A6. No code until then.

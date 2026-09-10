@@ -15,6 +15,12 @@ in every table below is the work.
 
 ---
 
+> **AMENDED 10 Sep 2026.** Q0 below is superseded by
+> [NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md](NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md)
+> §A1: the blob light field and blur-on-content retire (Q0a), Liquid Glass
+> stays on the six chrome surfaces (Q0b). The "flat white / retire blur"
+> verdicts in §1.3 apply to content surfaces only.
+
 ## 0. One decision this document needs first (Q0)
 
 **The prototype is flat, light and still. The shipped app is Glass: light field,
