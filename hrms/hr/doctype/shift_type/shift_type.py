@@ -144,25 +144,32 @@ def linked_checkins(attendance_name) -> list:
 	)
 
 
-def unpaid_hours_before_shift(intervals, shift_start) -> float:
-	"""Hours inside `intervals` that fall before the shift began. Pure.
+def paid_intervals_from(intervals, shift_start) -> tuple[list, float]:
+	"""The worked intervals trimmed to begin no earlier than the shift, and the
+	hours that trimming removed. Pure.
 
-	Only the part before the start is removed, never the whole interval: an
-	employee who arrives at 07:30 and works to 18:05 is paid from 09:00 to
-	18:05, not nothing. Breaks are deducted separately and are unaffected,
-	because a break cannot sit inside time that was never counted.
+	Only the part before the start goes, never the whole interval: an employee
+	who arrives at 07:30 and works to 18:05 is paid 09:00 to 18:05, not nothing.
+
+	Returning the trimmed intervals as well as the number is what keeps break
+	deduction honest — a break configured before the shift starts must not be
+	taken off hours that were never counted in the first place, and it would be
+	if the breaks were still measured against the untrimmed span.
 	"""
 	if not shift_start:
-		return 0.0
+		return list(intervals), 0.0
 	shift_start = get_datetime(shift_start)
-	early = 0.0
+	paid, removed = [], 0.0
 	for start, end in intervals:
 		start, end = get_datetime(start), get_datetime(end)
 		if end <= shift_start:
-			early += (end - start).total_seconds() / 3600
-		elif start < shift_start:
-			early += (shift_start - start).total_seconds() / 3600
-	return round(early, 6)
+			removed += (end - start).total_seconds() / 3600
+			continue
+		if start < shift_start:
+			removed += (shift_start - start).total_seconds() / 3600
+			start = shift_start
+		paid.append((start, end))
+	return paid, round(removed, 6)
 
 
 def counts_for_attendance(row) -> bool:
@@ -541,7 +548,8 @@ class ShiftType(Document):
 		# ruling, 10 Sep 2026: "early clock in didnt counted as paid. they are
 		# just safer, when their shift start that is the real clocked working
 		# hours." Overtime already ignores early arrival (_ot_window_begin).
-		total_working_hours -= unpaid_hours_before_shift(intervals, logs[0].shift_start)
+		intervals, unpaid_early = paid_intervals_from(intervals, logs[0].shift_start)
+		total_working_hours -= unpaid_early
 		total_working_hours = self._deduct_unpaid_breaks(
 			total_working_hours, intervals, company=_company_of_logs(logs)
 		)

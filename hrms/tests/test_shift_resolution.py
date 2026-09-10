@@ -184,7 +184,63 @@ class TestAnOutClosesItsOwnSession(unittest.TestCase):
 		self.assertIs(open_in.call_args.kwargs.get("bounded"), True)
 
 
+class TestPaidIntervals(unittest.TestCase):
+	"""Early time is trimmed once, and the break deduction sees the trimmed
+	span — otherwise a break configured before the shift starts is taken off
+	hours that were never counted."""
+
+	def _rule(self):
+		import ast
+
+		src = (HRMS / "hr" / "doctype" / "shift_type" / "shift_type.py").read_text()
+		tree = ast.parse(src)
+		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "paid_intervals_from")
+		ns = {"get_datetime": lambda v: v}
+		exec(compile(ast.Module(body=[fn], type_ignores=[]), "shift_type.py", "exec"), ns)
+		return ns["paid_intervals_from"]
+
+	def test_an_early_arrival_is_trimmed_to_the_shift_start(self):
+		paid, removed = self._rule()(
+			[(datetime(2026, 9, 10, 7, 30), datetime(2026, 9, 10, 18, 5))], datetime(2026, 9, 10, 9)
+		)
+		self.assertEqual(paid, [(datetime(2026, 9, 10, 9), datetime(2026, 9, 10, 18, 5))])
+		self.assertAlmostEqual(removed, 1.5)
+
+	def test_an_interval_entirely_before_the_shift_is_dropped(self):
+		paid, removed = self._rule()(
+			[(datetime(2026, 9, 10, 7, 0), datetime(2026, 9, 10, 8, 0))], datetime(2026, 9, 10, 9)
+		)
+		self.assertEqual(paid, [])
+		self.assertAlmostEqual(removed, 1.0)
+
+	def test_a_day_that_starts_on_time_is_untouched(self):
+		span = [(datetime(2026, 9, 10, 9), datetime(2026, 9, 10, 18))]
+		paid, removed = self._rule()(span, datetime(2026, 9, 10, 9))
+		self.assertEqual(paid, span)
+		self.assertEqual(removed, 0.0)
+
+	def test_a_night_shift_arrival_costs_its_own_quarter_hour_only(self):
+		paid, removed = self._rule()(
+			[(datetime(2026, 9, 10, 18, 45), datetime(2026, 9, 11, 3, 30))], datetime(2026, 9, 10, 19)
+		)
+		self.assertEqual(paid[0][0], datetime(2026, 9, 10, 19))
+		self.assertAlmostEqual(removed, 0.25)
+
+	def test_no_shift_start_leaves_everything_paid(self):
+		span = [(datetime(2026, 9, 10, 7, 30), datetime(2026, 9, 10, 18))]
+		paid, removed = self._rule()(span, None)
+		self.assertEqual(paid, span)
+		self.assertEqual(removed, 0.0)
+
+
 class TestWiring(unittest.TestCase):
+	def test_the_break_deduction_sees_the_trimmed_span(self):
+		"""Trim first, then deduct breaks against what is left."""
+		src = (HRMS / "hr" / "doctype" / "shift_type" / "shift_type.py").read_text()
+		body = src[src.index("		intervals, unpaid_early = paid_intervals_from(") :]
+		body = body[: body.index("		if (")]
+		self.assertLess(body.index("paid_intervals_from"), body.index("_deduct_unpaid_breaks"))
+
 	def test_the_session_rule_runs_before_any_assignment_counting(self):
 		"""It must apply to the single-assignment path too — that is where the
 		fifteen-hour day was being thrown away."""

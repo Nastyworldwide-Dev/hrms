@@ -66,14 +66,11 @@ shift_class.body = [
 # Module-level helpers the class body calls by name. `counts_for_attendance` is
 # the attendance evidence rule (a pending punch counts; rejected/off-shift/skipped
 # do not) — wider than overtime's `_is_eligible_checkin` on purpose.
-# `unpaid_hours_before_shift` removes an early arrival from the paid hours.
+# `paid_intervals_from` trims an early arrival off the paid hours.
 shift_helpers = [
 	node
 	for node in shift_tree.body
-	if (
-		isinstance(node, ast.FunctionDef)
-		and node.name in {"counts_for_attendance", "unpaid_hours_before_shift"}
-	)
+	if (isinstance(node, ast.FunctionDef) and node.name in {"counts_for_attendance", "paid_intervals_from"})
 	or (
 		isinstance(node, ast.Assign)
 		and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in node.targets)
