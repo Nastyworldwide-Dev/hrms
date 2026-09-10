@@ -16,6 +16,7 @@ import frappe
 
 DAY = datetime.date(2026, 9, 10)
 SHIFT = "T2E 9-6"
+EVENING_SHIFT = "T2E 7-3"
 
 
 def at(day_offset, hour, minute=0):
@@ -184,6 +185,61 @@ class TestADayEndToEnd(unittest.TestCase):
 			"an early arrival resolved a different overtime type than an on-time one — "
 			"overtime became a function of what time you walked in",
 		)
+
+	def test_two_assignments_resolve_the_overtime_type_the_same_way_as_one(self):
+		"""The multi-assignment branch is a separate resolver with its own copy
+		of the rule. It is the only consumer of the fallback timings' overtime
+		type, so a fallback restored there would go unnoticed by every
+		single-assignment test while giving anyone on two shifts arrival-time
+		overtime again."""
+		ot_type = self._an_overtime_type()
+		frappe.db.set_value("Shift Type", SHIFT, "overtime_type", ot_type)
+		frappe.db.set_value(
+			"Shift Assignment", {"employee": self.employee, "docstatus": 1}, "overtime_type", None
+		)
+		self._an_evening_assignment(ot_type)
+
+		# 09:30 is inside the day shift's window, so the multi-assignment
+		# resolver picks a candidate and stamps it from the fallback timings —
+		# the one line only this shape can reach
+		self.assertIsNone(
+			self.punch("IN", at(0, 9, 30)).overtime_type,
+			"a second assignment brought the Shift Type fallback back — overtime "
+			"is a function of arrival time again for anyone on two shifts",
+		)
+
+	def _an_evening_assignment(self, ot_type: str) -> None:
+		"""A second active assignment, far enough from 09:00-18:00 not to overlap.
+
+		Two assignments on one date is exactly the shape the multi-assignment
+		branch exists for, and HR Settings gates it — the setting is flipped
+		inside this test's savepoint and rolled back with everything else."""
+		frappe.db.set_single_value("HR Settings", "allow_multiple_shift_assignments", 1)
+		if not frappe.db.exists("Shift Type", EVENING_SHIFT):
+			frappe.get_doc(
+				{
+					"doctype": "Shift Type",
+					"name": EVENING_SHIFT,
+					"start_time": "19:00:00",
+					"end_time": "23:00:00",
+					"overtime_type": ot_type,
+				}
+			).insert(ignore_permissions=True)
+		frappe.db.set_value("Shift Type", EVENING_SHIFT, "overtime_type", ot_type)
+		evening = frappe.get_doc(
+			{
+				"doctype": "Shift Assignment",
+				"employee": self.employee,
+				"shift_type": EVENING_SHIFT,
+				"start_date": "2026-09-01",
+				"status": "Active",
+				"company": self.company,
+			}
+		)
+		evening.flags.ignore_permissions = True
+		evening.insert()
+		evening.submit()
+		frappe.db.set_value("Shift Assignment", evening.name, "overtime_type", None)
 
 	def test_a_forgotten_check_out_is_not_a_half_day(self):
 		self.punch("IN", at(0, 9, 30))
