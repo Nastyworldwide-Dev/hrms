@@ -294,3 +294,28 @@ NEXT: Nabil answers the five yes/no questions in docs/glass/plan/NADI_2.0_AMENDM
   section A6 (Q0a retire blob field+content blur; Q0b KEEP Liquid Glass on the six chrome surfaces;
   U17 reachability; a11y promoted to a required gate now; mockup of the amended look before code).
   No Nadi 2.0 code until then. Q1-Q10 in the original plan remain open and were not re-asked.
+- 2026-09-10T08:00:36Z COMMIT: f352558d6 docs: record the next step for the Nadi 2.0 amendment → review dispatched
+REPAIR: amendment A corrected after frappe-reviewer on 8c902d849 (2 Critical + 3 Warning, all class:spec).
+  CORRECTION to my earlier progress line and to commit 8c902d849's message: the a11y baseline is
+  30 nodes (16 route:theme entries / 8 routes; label 16, aria-allowed-attr 8, button-name 2,
+  aria-dialog-name 2, target-size 2) — NOT 20. Verified by tallying design/a11y-baseline.json.
+  CORRECTION: design/gates/{a11y,contrast}.mjs are NOT advisory — both exit 1 on failure and
+  glass-gates.yml runs them on push+PR. The real holes: (a) a11y is render-time and exits 0 with
+  status:skip when CI has no served site + AUDIT_PW, so it has never been measured in CI;
+  (b) no branch protection on nz-glass (gh api -> 404), so a red job blocks no merge;
+  (c) a11y.mjs --update-baseline makes "frozen baseline" unenforceable.
+  CORRECTION (mine AND the reviewer's): ion-tab-bar.g-tabbar (glass-components.css:172-190) DOES
+  carry the full glass material incl. both fallbacks. There are exactly 4 backdrop-filter sites in
+  frontend/src: tabbar + .g-sidenav (chrome, correct) and .g-glass + .g-glass-ghost (content, wrong).
+  So "flat chrome, frosted content" was wrong; the tab bar is U16's reference implementation.
+  U16 widened to seven surfaces (.g-sidenav added, §20.2/§15.3 net-zero). A6 gains Q6: Nabil enables
+  branch protection, the only thing that makes any gate blocking.
+EVIDENCE: 2 (verified) — python tally of design/a11y-baseline.json = 30 nodes; contrast.mjs:251
+  process.exit(failures?1:0) green 54/0; a11y.mjs:111 exit 1; grep of backdrop-filter across frontend/src = 4 sites.
+LEARNING(fact): in this repo "advisory gate" is always wrong — the gates enforce by exit code. The two
+  real escape hatches are the render-time SKIP without a served site (only --strict makes it fatal) and
+  the absent branch protection on nz-glass.
+LEARNING(how): design/a11y-baseline.json is keyed route:theme, so every violation is stored twice;
+  any count must sum node values across both themes or it understates the work by half.
+NEXT: Nabil answers the SIX questions in docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md §A6.
+  No Nadi 2.0 code until then.
