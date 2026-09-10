@@ -426,7 +426,8 @@ const lastLogType = computed(() => {
 // forgot-to-check-out banner above.
 const MAX_OPEN_SHIFT_HOURS = 16
 
-function isSessionStale(checkinTime) {
+function isSessionStale(log) {
+	const checkinTime = log?.time
 	if (!checkinTime) return true
 	// Frappe datetimes are "YYYY-MM-DD HH:mm:ss" (space, no T). Safari — iOS
 	// especially — parses that as Invalid Date, which made every open IN look
@@ -435,14 +436,20 @@ function isSessionStale(checkinTime) {
 	// local time (unchanged behaviour where new Date already worked).
 	const t = new Date(String(checkinTime).replace(" ", "T"))
 	if (Number.isNaN(t.getTime())) return true
-	// the server has ruled on this session; the client does not second-guess it
-	if (unresolvedStaleIn.data?.is_abandoned) return true
+	// The server has ruled on THIS session; the client does not second-guess it.
+	// Matched by name on purpose: the banner points at the OLDEST unresolved IN,
+	// which is usually an earlier day. Applying its abandoned flag to whatever
+	// happens to be the newest log left anyone with one forgotten check-out
+	// stuck on "Check In" forever, however recently they had just checked in.
+	if (unresolvedStaleIn.data?.is_abandoned && unresolvedStaleIn.data?.name === log?.name) {
+		return true
+	}
 	return Date.now() - t.getTime() >= MAX_OPEN_SHIFT_HOURS * 60 * 60 * 1000
 }
 
 const nextAction = computed(() => {
 	const last = lastLog?.value
-	if (!last || last.log_type !== "IN" || isSessionStale(last.time)) {
+	if (!last || last.log_type !== "IN" || isSessionStale(last)) {
 		return { action: "IN", label: __("Check In") }
 	}
 	return { action: "OUT", label: __("Check Out") }
