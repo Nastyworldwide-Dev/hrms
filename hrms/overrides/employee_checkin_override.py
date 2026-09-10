@@ -45,6 +45,16 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 	def fetch_shift(self):
 		log_time = get_datetime(self.time)
 
+		# A check-out closes the shift its own check-in opened, whatever the
+		# clock says. Before this, the shift's check-out grace window decided
+		# alone, so a 9-6 employee who worked until 00:32 had that punch filed
+		# off-shift, the day computed from the check-in alone, and fifteen hours
+		# recorded as none (probed 10 Sep 2026). Worse, a check-out the next
+		# morning landed inside the NEXT day's window and broke two days at once.
+		# Anchored to a real open IN, so it cannot adopt a stray punch.
+		if self._close_open_session():
+			return
+
 		active_assignments = frappe.get_all(
 			"Shift Assignment",
 			filters={
@@ -106,26 +116,69 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			len(active_assignments),
 		)
 
-	def _open_in(self) -> dict | None:
+	def _close_open_session(self) -> bool:
+		"""An OUT inherits the whole shift stamp of the IN it closes. True when
+		it did, so the caller stops. Never fires for an IN, for a punch already
+		attached to attendance, or when the open IN carries no shift."""
+		if self.log_type != "OUT" or self.attendance:
+			return False
+		# A late check-out is a forgotten one, so the gap is unbounded by
+		# definition: submit_late_checkout already names the IN's shift, and
+		# without this fetch_shift would overwrite it with whatever window the
+		# clock happens to fall in — filing yesterday's missing check-out
+		# against today and breaking both days.
+		open_in = self._open_in(bounded=not getattr(self.flags, "is_late_checkout", False))
+		if not open_in or not open_in.get("shift"):
+			return False
+		row = frappe.db.get_value(
+			"Employee Checkin",
+			open_in["name"],
+			["shift", "shift_start", "shift_end", "shift_actual_start", "shift_actual_end"],
+			as_dict=True,
+		)
+		if not row or not row.shift:
+			return False
+		self.offshift = 0
+		self.shift = row.shift
+		self.shift_start = row.shift_start
+		self.shift_end = row.shift_end
+		self.shift_actual_start = row.shift_actual_start
+		self.shift_actual_end = row.shift_actual_end
+		logger.info(
+			"[employee_checkin] OUT %s closes the session opened by %s on %s",
+			self.time,
+			open_in["name"],
+			row.shift,
+		)
+		return True
+
+	def _open_in(self, bounded: bool = True) -> dict | None:
 		"""The employee's latest IN with no OUT after it — the session an OUT
-		closes. Its shift is the OUT's shift, whatever window the clock says."""
+		closes. Its shift is the OUT's shift, whatever window the clock says.
+
+		`bounded` keeps an ordinary check-out inside the session window, so it
+		can never adopt a punch from days ago. A late check-out, which the
+		employee submits precisely because the gap is long, searches back
+		without that bound.
+		"""
 		from hrms.utils.shift_resolution import SESSION_WINDOW
 
 		log_time = get_datetime(self.time)
+		earliest = log_time - SESSION_WINDOW if bounded else log_time - timedelta(days=14)
 		rows = frappe.get_all(
 			"Employee Checkin",
 			filters={
 				"employee": self.employee,
-				"time": ("between", [log_time - SESSION_WINDOW, log_time]),
+				"time": ("between", [earliest, log_time]),
 				"name": ("!=", self.name),
 			},
-			fields=["shift", "time", "log_type"],
+			fields=["name", "shift", "time", "log_type"],
 			order_by="time desc",
 			limit_page_length=1,
 		)
 		if not rows or rows[0].log_type != "IN":
 			return None
-		return {"shift": rows[0].shift, "time": get_datetime(rows[0].time)}
+		return {"name": rows[0].name, "shift": rows[0].shift, "time": get_datetime(rows[0].time)}
 
 	def _is_manual_entry(self) -> bool:
 		"""A punch a person keys in for SOMEONE ELSE. The employee's own punch
