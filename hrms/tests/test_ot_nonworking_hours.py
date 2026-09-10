@@ -484,8 +484,17 @@ class TestNonworkingHours(unittest.TestCase):
 			with self.subTest(status=status), self.context(rows=rows):
 				self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", DAY)["ot_hours"], 0)
 
-	def test_weekday_post_shift_minimum_remains(self):
-		for end, hours in (("18:59", 0), ("19:00", 1)):
+	def test_weekday_post_shift_minimum_is_judged_after_rounding(self):
+		"""HR, 10 Sep 2026: "at 50 minutes and above auto rounded to 60m so i am
+		eligible for OT Pay." The 60-minute minimum stays; what changed is that
+		the 30-minute ladder runs FIRST, so the real boundary sits at 50 minutes.
+
+		Was ("18:59", 0), ("19:00", 1) — 59 minutes was measured raw, failed the
+		minimum and was discarded before rounding could carry it to the hour.
+		The stored hours stay RAW (0.98); the ladder is applied again when the
+		day is claimed, which is what turns it into the payable 1.0.
+		"""
+		for end, hours in (("18:49", 0), ("18:50", 0.83), ("18:59", 0.98), ("19:00", 1)):
 			with (
 				self.subTest(end=end),
 				self.context(rows=[punch(DAY, "09:00", "IN"), punch(DAY, end, "OUT")], holidays={}, cap=0),

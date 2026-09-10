@@ -1,39 +1,49 @@
-CLASS: a list column that answers a different question from the one it appears
-to answer — the DOCUMENT state (Draft/Submitted/Cancelled) standing in for the
-field the code actually branches on.
+# FAMILY LEDGER — OT minimum judged before rounding
 
-Instance: Nabil, 10 Sep, on the Shift Assignment list — "the status shown
-submitted. but for how long? ... if they are approve then approved?". It cost a
-real diagnosis: while tracing the Tampin night-shift bug we could not tell from
-the list whether an employee's assignment was Active, because Active/Inactive
-was not a column.
+CLASS: order-of-operations on a policy ladder. A qualifying threshold was
+tested against the RAW measurement, discarding the value before the rounding
+rule that would have carried it over the threshold could run. Any place that
+rounds and also gates on a minimum is in this class.
 
-Every submittable doctype with a `status` field (machine-listed):
+DEFECT: `hours * 60 < config["min_minutes"]` compared raw minutes. HR's rule
+is that the 30-minute ladder applies FIRST ("at 50 minutes and above auto
+rounded to 60m so i am eligible"). Every weekday landing in the 50-59 minute
+band paid nothing. Instance: HR-ATT-2026-16073, 9 Sep 2026, 56m59s past the
+late-adjusted window, paid 0.
 
-- Shift Assignment (Active/Inactive) — same-root, fixed. This is the one the
-  shift resolver reads (shift_assignment.py:406 filters status == "Active").
-- Shift Request (Draft/Approved/Rejected) — same-root, fixed.
-- Leave Application (Open/Approved/Rejected/Cancelled) — same-root, fixed.
-- Attendance Request (Open/Approved/Rejected) — not-affected, already a column.
-- OT Request (Open/Approved/Rejected) — not-affected, already a column.
-- Remote Checkin Request (Pending/Approved/Rejected) — not-affected, already a
-  column, and not submittable, so it has no document state to confuse it with.
-- Attendance (Present/Absent/...) — not-affected: its status IS the outcome and
-  is already a column.
-- Employee Checkin — not-affected, no status field at all.
+FIX: one rule, `ot_minutes_qualify(hours, min_minutes)`, rounds then compares.
+Both OT paths call it, so the Attendance record and the claim form cannot
+disagree about whether a day counts.
 
-Also fixed here, same class of blindness: Shift Assignment's
-`created_by_shift_rule` was `hidden: 1`, so nobody could tell a rule-made
-assignment from a hand-made one — which is precisely what the shift-rule layer
-branches on (shift_rules.py:123). It is now a visible read-only column.
+## Call sites the machine listed
 
-Class locked by:
-- invariant: hrms/tests/test_status_is_visible.py walks the doctype JSON and
-  fails if any deciding status is missing from its list view or is hidden, so a
-  doctype added to the map cannot ship blind.
-- regression: hrms/tests/test_show_deciding_status_patch.py pins the patch that
-  carries the change past a saved column set.
+| file:line | verdict |
+|---|---|
+| hrms/utils/ot_calculation.py:545 (`_iter_day_ot`) | same-root — fixed here (claim/discovery path) |
+| hrms/utils/ot_calculation.py:879 (`get_shift_ot_breakdown`) | same-root — fixed here (Attendance record path) |
+| hrms/utils/ot_calculation.py:661 (`get_ot_pay`) | not-affected — reads `_iter_day_ot`, inherits the corrected gate |
+| hrms/utils/ot_calculation.py:681 (`get_ot_breakdown`) | not-affected — same, reporting only |
+| hrms/utils/ot_calculation.py:725 (`get_ot_claim_capacity`) | not-affected — already rounded AFTER this gate; now the gate agrees with it |
+| hrms/utils/ot_calculation.py:770 (`_approved_reservations` path) | not-affected — sums approved claims, no minimum test |
+| hrms/hr/doctype/attendance/attendance.py:165 (`set_overtime`) | not-affected — stores whatever the breakdown returns; stored hours stay RAW by design |
+| hrms/utils/ot_calculation.py:130 (`min_minutes` config read) | not-affected — reads the shift setting, does not compare |
 
-Ceiling: `in_list_view` is only the DEFAULT. A saved List View Settings row
-replaces the doctype's columns site-wide, so the patch appends rather than
-clears — HR's chosen columns survive.
+Replacement Leave: not-affected. `replacement_leave_days` uses whole 4h blocks
+and never consults `min_minutes`; the nonworking path skips the gate entirely
+(`if not nonworking`), so holidays and rest days are untouched.
+
+## Locking the class
+
+- regression test (instance): `hrms/utils/test_ot_minimum_rounding.py` —
+  56m59s qualifies, 49m does not. Pure, runs on the system interpreter.
+- invariant test (class): the same file pins the boundary at 50 minutes for a
+  60-minute minimum AND at 30 minutes for a 30-minute minimum, so the rule is
+  "round then compare" rather than a hard-coded 50.
+- boundary test updated on the bench:
+  `test_weekday_post_shift_minimum_is_judged_after_rounding` (was
+  `..._minimum_remains`, which pinned the defect).
+
+EVIDENCE: 2 — red proved by ImportError on `ot_minutes_qualify` before the fix;
+6/6 green after. 3 — bench `hrms.tests.test_ot_nonworking_hours` 17/17 OK.
+Bench-free suite: 174 failing before, same set after (the only delta is the
+renamed test's own subtests, in a module already red under the frappe stub).

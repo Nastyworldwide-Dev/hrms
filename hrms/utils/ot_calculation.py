@@ -79,6 +79,27 @@ def round_ot_pay_hours(hours) -> float:
 	return rounded
 
 
+def ot_minutes_qualify(hours, min_minutes) -> bool:
+	"""Does a day's raw overtime reach the shift's minimum?
+
+	The rounding is applied FIRST. HR, 10 Sep 2026: "at 50 minutes and above
+	auto rounded to 60m so i am eligible for OT Pay." So 56m59s becomes the
+	full hour and qualifies, while 49 minutes becomes the half hour and does
+	not — the ladder decides, then the minimum judges what the ladder produced.
+
+	Testing the RAW minutes first (what this replaces) discarded the day before
+	rounding could run, so every 50-59 minute day paid nothing: 9 Sep 2026,
+	in 10:12:02, out 20:09:01 on a 9-6 shift, 56m59s past the late-adjusted
+	window, paid 0.
+
+	Both OT paths call this so the Attendance record and the claim form can
+	never disagree about whether a day counts.
+	"""
+	if flt(hours) <= 0:
+		return False
+	return round_ot_pay_hours(hours) * 60.0 >= flt(min_minutes)
+
+
 def replacement_leave_days(hours, hours_per_day=8) -> float:
 	"""Replacement leave earned by ONE working day's OT, in whole half-day blocks:
 	4 h = ½ day, 8 h = 1 day, 12 h = 1.5 day, under 4 h = 0. Computed and stored PER
@@ -542,7 +563,7 @@ def _iter_day_ot(
 				continue
 			day_type = _classify_day(employee, day, default_day_type, shift=entry["shift"])
 			nonworking = day_type != "normal"
-			if not nonworking and hours * 60.0 < config["min_minutes"]:
+			if not nonworking and not ot_minutes_qualify(hours, config["min_minutes"]):
 				continue
 			# The minimum qualifies WORKED overtime. A smaller approved claim or
 			# remaining monthly allowance must not be tested against it a second time.
@@ -876,7 +897,7 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 	ot_hours = 0.0
 	for day, hours in sorted(buckets.items()):
 		if types[day] == "normal":
-			if hours * 60 < config["min_minutes"]:
+			if not ot_minutes_qualify(hours, config["min_minutes"]):
 				continue
 			if config["daily_cap"] > 0:
 				hours = min(hours, config["daily_cap"])
