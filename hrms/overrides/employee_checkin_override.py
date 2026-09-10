@@ -102,8 +102,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				len(active_assignments),
 				self.employee,
 			)
-			self.shift = None
-			self.offshift = 1
+			self._clear_shift()
 			return
 
 		shift_type = best.get("shift_type")
@@ -125,6 +124,14 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			log_time,
 			len(active_assignments),
 		)
+
+	def _clear_shift(self) -> None:
+		"""Off-shift: no shift, and therefore no overtime type either. Leaving a
+		stale type on a punch that no longer belongs to a shift is the same
+		half-written stamp, one field at a time."""
+		self.shift = None
+		self.offshift = 1
+		self.overtime_type = None
 
 	def _stamp_shift(
 		self, *, shift, start_datetime, end_datetime, actual_start, actual_end, overtime_type
@@ -178,7 +185,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			end_datetime=timings.get("end_datetime"),
 			actual_start=timings.get("actual_start"),
 			actual_end=timings.get("actual_end"),
-			overtime_type=assignment.get("overtime_type") or timings.get("overtime_type"),
+			overtime_type=assignment.get("overtime_type") or None,
 		)
 		logger.info(
 			"[employee_checkin] %s arrived at %s, before %s opens at %s — counted from the shift start",
@@ -631,7 +638,11 @@ def _resolve_timings_fallback(employee, log_time, assignment):
 		"end_datetime": end_dt,
 		"actual_start": start_dt - before_grace,
 		"actual_end": end_dt + after_grace,
-		# The assignment overrides the Shift Type, exactly as upstream's
-		# get_actual_start_end_datetime_of_shift resolves it.
-		"overtime_type": assignment.get("overtime_type") or shift_type_doc.get("overtime_type") or None,
+		# The assignment IS the answer, not a preference over the Shift Type's:
+		# upstream's get_shift_for_time overwrites the shift type's value with
+		# `assignment.overtime_type or None` unconditionally
+		# (hr/doctype/shift_assignment/shift_assignment.py:288). Falling back to
+		# the Shift Type here would make an early punch resolve a type an
+		# on-time punch does not — overtime as a function of arrival time.
+		"overtime_type": assignment.get("overtime_type") or None,
 	}

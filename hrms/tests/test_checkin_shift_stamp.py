@@ -24,6 +24,7 @@ import unittest
 HRMS = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = HRMS / "overrides" / "employee_checkin_override.py"
 HOOKS = HRMS / "overrides" / "remote_checkin_request_hooks.py"
+BASE = HRMS / "hr" / "doctype" / "employee_checkin" / "employee_checkin.py"
 
 # The stamp is a set: a punch that carries shift_start without the shift's
 # overtime type is a punch the hourly job will price wrongly.
@@ -92,6 +93,18 @@ class TestOneStampForEveryPath(unittest.TestCase):
 			guarded,
 			"_stamp_shift must return early when self.attendance is set — a linked "
 			"punch is never re-derived (bulk_fetch_shift calls fetch_shift on them)",
+		)
+
+	def test_the_base_class_stamp_carries_the_overtime_type_too(self):
+		"""The fifth writer. EmployeeCheckin.fetch_shift is the path an on-time
+		punch takes, and it is the reference the four custom paths must match —
+		if a field is ever dropped here the custom paths inherit the loss."""
+		base = _method(ast.parse(BASE.read_text()), "EmployeeCheckin", "fetch_shift")
+		self.assertIn(
+			"overtime_type",
+			_self_attrs_assigned(base),
+			"the base fetch_shift no longer stamps the overtime type — every "
+			"punch resolved by the ordinary window now loses the day's overtime",
 		)
 
 	def test_no_resolution_path_stamps_a_shift_by_hand(self):

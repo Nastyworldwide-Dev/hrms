@@ -38,6 +38,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 				offshift=0,
 				remote_approval_status="Approved",
 				requires_remote_approval=0,
+				overtime_type="OT-DAY",
 				synced_from_instance=None,
 			)
 			for name, kind, hour in [
@@ -167,6 +168,25 @@ class TestWholeShiftRepair(unittest.TestCase):
 		self.assertEqual([r.name for r in logs], ["MORNING-IN", "LUNCH-OUT", "AFTERNOON-IN", "LATE-OUT"])
 		self.assertTrue(all(self.read_before_cancel))
 		self.attendance.cancel.assert_called_once()
+
+	def test_the_rebound_out_inherits_the_ins_overtime_type(self):
+		"""The repair binds a retroactive OUT back to its IN's shift by raw
+		query. If that copy leaves out the overtime type, the OUT keeps None —
+		and when the OUT is the first eligible punch the whole day loses its
+		overtime, which is the defect this field set exists to prevent."""
+		late_out = self.rows[-1]
+		late_out.shift = "NIGHT"
+		late_out.overtime_type = None
+
+		self.run_repair()
+
+		bounds = next(
+			call.args[2]
+			for call in self.db.set_value.call_args_list
+			if call.args[0] == "Employee Checkin" and call.args[1] == "LATE-OUT"
+		)
+		self.assertEqual(bounds.get("overtime_type"), "OT-DAY")
+		self.assertEqual(late_out.overtime_type, "OT-DAY", "the in-memory row was not updated either")
 
 	def test_failed_rebuild_restores_original_attendance_and_links(self):
 		for failure in (None, frappe.ValidationError("synthetic rejection")):

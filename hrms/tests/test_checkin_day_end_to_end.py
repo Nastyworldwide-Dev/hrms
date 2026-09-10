@@ -121,11 +121,7 @@ class TestADayEndToEnd(unittest.TestCase):
 		self.assertEqual(row.in_time, at(0, 7, 30), "the real arrival is kept")
 		self.assertAlmostEqual(row.working_hours, 9.08, places=2, msg="paid from 09:00, not 07:30")
 
-	def test_the_overtime_type_survives_an_early_arrival(self):
-		"""The hourly job reads the day's overtime type off the FIRST eligible
-		punch. An early arrival is first by definition, so a punch stamped by
-		the early-arrival path without an overtime type silently makes the
-		whole day ineligible for overtime."""
+	def _an_overtime_type(self) -> str:
 		ot_type = frappe.db.get_value("Overtime Type", {}, "name")
 		if not ot_type:
 			component = frappe.db.get_value("Salary Component", {"type": "Earning"}, "name")
@@ -144,6 +140,14 @@ class TestADayEndToEnd(unittest.TestCase):
 				.insert(ignore_permissions=True)
 				.name
 			)
+		return ot_type
+
+	def test_the_overtime_type_survives_an_early_arrival(self):
+		"""The hourly job reads the day's overtime type off the FIRST eligible
+		punch. An early arrival is first by definition, so a punch stamped by
+		the early-arrival path without an overtime type silently makes the
+		whole day ineligible for overtime."""
+		ot_type = self._an_overtime_type()
 		frappe.db.set_value("Shift Type", SHIFT, "overtime_type", ot_type)
 		frappe.db.set_value(
 			"Shift Assignment",
@@ -156,6 +160,30 @@ class TestADayEndToEnd(unittest.TestCase):
 		out = self.punch("OUT", at(0, 20, 5))
 		self.assertEqual(early_in.overtime_type, ot_type, "the early IN lost the shift's overtime type")
 		self.assertEqual(out.overtime_type, ot_type, "the OUT closing the session lost it too")
+
+	def test_arrival_time_never_decides_the_overtime_type(self):
+		"""The assignment decides, and nothing else. Upstream's get_shift_for_time
+		overwrites the shift type's overtime type with `assignment.overtime_type
+		or None`, so a resolver that falls back to the Shift Type makes an early
+		punch OT-eligible on an assignment that says it is not — and the whole
+		day follows the first punch. Pay must not be a function of arrival time."""
+		ot_type = self._an_overtime_type()
+		# the shift carries a type; the submitted assignment deliberately does not
+		frappe.db.set_value("Shift Type", SHIFT, "overtime_type", ot_type)
+		frappe.db.set_value(
+			"Shift Assignment", {"employee": self.employee, "docstatus": 1}, "overtime_type", None
+		)
+
+		on_time = self.punch("IN", at(0, 9, 30)).overtime_type
+		frappe.db.delete("Employee Checkin", {"employee": self.employee})
+		early = self.punch("IN", at(0, 7, 30)).overtime_type
+
+		self.assertEqual(
+			on_time,
+			early,
+			"an early arrival resolved a different overtime type than an on-time one — "
+			"overtime became a function of what time you walked in",
+		)
 
 	def test_a_forgotten_check_out_is_not_a_half_day(self):
 		self.punch("IN", at(0, 9, 30))

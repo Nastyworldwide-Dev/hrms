@@ -33,3 +33,25 @@ Class locked by:
 - invariant: hrms/tests/test_checkin_shift_stamp.py — no resolution path may
   assign a stamp field by hand, and the stamp set is asserted whole, so the
   next field added to it cannot be missed on three paths again.
+
+---
+
+FOLLOW-UP (review of 894e758d0), same CLASS, opposite direction: the fallback
+I added resolved `assignment.overtime_type or shift_type.overtime_type`, but
+upstream's get_shift_for_time (shift_assignment.py:288) overwrites the shift
+type's value with `assignment.overtime_type or None` unconditionally — the
+assignment is authoritative, not preferred. So an early punch resolved a type
+an on-time punch did not, and pay became a function of arrival time.
+
+- employee_checkin_override.py:636 (_resolve_timings_fallback) — same-root, fixed
+- employee_checkin_override.py:181 (_attach_early_arrival second fallback) — same-root, fixed
+- employee_checkin_override.py:106 (off-shift branch) — same-root: cleared the
+  stamp whole via _clear_shift instead of leaving a stale overtime type
+- hr/doctype/employee_checkin/employee_checkin.py:94 (base fetch_shift, the
+  fifth writer) — not-affected, it is the reference; now pinned by an AST test
+  so a field dropped there is caught
+
+Locked by: test_arrival_time_never_decides_the_overtime_type (red on
+894e758d0: "None != 'T2E Probe OT Type'") and
+test_the_rebound_out_inherits_the_ins_overtime_type (red on 0cc503069:
+"None != 'OT-DAY'") — the first behavioural test of the late-checkout rebind.
