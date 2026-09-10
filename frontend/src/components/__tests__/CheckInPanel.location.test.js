@@ -594,3 +594,50 @@ test("a browser that answers with a real error is left to say so itself", () => 
 		"the deadline overwrote a real browser error with a vaguer one"
 	)
 })
+
+// Review of the deadline commit: two ways the message can be false.
+test("a real error arriving after the deadline replaces the deadline's guess", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.advance(31_000)
+	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
+
+	h.watches[0].error({ code: 2 }) // POSITION_UNAVAILABLE, 40s in
+
+	assert.match(
+		h.vm.locationVerdict.value.detail,
+		/could not determine your location/i,
+		"the browser finally explained itself and the panel kept guessing over it"
+	)
+})
+
+test("a browser sending unusable readings is not accused of silence", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	// answering, but every reading is junk: usablePosition discards each one
+	h.watches[0].success({ coords: { latitude: NaN, longitude: 101.5, accuracy: 20 }, timestamp: 0 })
+	h.advance(31_000)
+
+	assert.equal(h.vm.locationVerdict.value.tone, "blocked")
+	assert.doesNotMatch(
+		h.vm.locationVerdict.value.detail,
+		/has not answered/i,
+		"it did answer — it answered with readings we cannot use, which is different advice"
+	)
+})
+
+test("a junk reading arriving after the deadline still corrects the wording", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.advance(31_000)
+	assert.match(h.vm.locationVerdict.value.detail, /has not answered/i)
+
+	// the browser was not silent after all, just useless
+	h.watches[0].success({ coords: { latitude: NaN, longitude: 101.5, accuracy: 20 }, timestamp: 0 })
+
+	assert.doesNotMatch(
+		h.vm.locationVerdict.value.detail,
+		/has not answered/i,
+		"the flag is not reactive, so the verdict never recomputed"
+	)
+})

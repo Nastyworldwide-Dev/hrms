@@ -271,6 +271,12 @@ let fixExpiryTimer = null
 // browser is the thing that is broken. This is our own deadline.
 let locationDeadlineTimer = null
 const locationStalled = ref(false)
+// Answering with readings we discard is not the same fault as never answering,
+// and it is not the same advice: a different browser helps the silent one, only
+// open sky helps the one whose fixes are unusable.
+// A ref, not a plain flag: the verdict is a computed, and a reading that
+// arrives AFTER the deadline has already fired must still correct the wording.
+const sawGeolocationCallback = ref(false)
 const LOCATION_DEADLINE_MS = 30000
 // Per-modal-session geolocation state. latitude/longitude refs persist across
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
@@ -467,6 +473,7 @@ const nextAction = computed(() => {
 
 function handleLocationSuccess(position, generation) {
 	if (generation !== geoGeneration) return
+	sawGeolocationCallback.value = true
 	const fix = usablePosition(position, Date.now())
 	if (!fix) return
 	const acc = fix.accuracy
@@ -538,6 +545,11 @@ function locationErrorMessage(code) {
 
 function handleLocationError(error, generation) {
 	if (generation !== geoGeneration) return
+	sawGeolocationCallback.value = true
+	// The browser has explained itself, which beats the deadline's guess even
+	// when the deadline fired first — a slow POSITION_UNAVAILABLE is still the
+	// better answer.
+	locationStalled.value = false
 	const code = describeGeolocationError(error)
 	if (code === GEO_DENIED) stopWatchingLocation()
 	locationStatus.value = locationErrorMessage(code)
@@ -579,6 +591,7 @@ const fetchLocation = () => {
 	locationStatus.value = __("Locating...")
 	locationError.value = ""
 	locationStalled.value = false
+	sawGeolocationCallback.value = false
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = setTimeout(() => {
 		// A real error already explains itself, and a fix makes the question
@@ -700,14 +713,22 @@ const locationVerdict = computed(() => {
 		// punch that carries no coordinates, so this employee genuinely cannot
 		// clock in until the reading arrives. Name the browser — it is the one
 		// thing standing here that they can actually change.
-		return {
-			tone: "blocked",
-			title: __("Your browser is not sharing a location"),
-			detail: __(
-				"It has not answered for {0} seconds. Try a different browser, or step outside and reopen this screen.",
-				[Math.round(LOCATION_DEADLINE_MS / 1000)]
-			),
-		}
+		return sawGeolocationCallback.value
+			? {
+					tone: "blocked",
+					title: __("Your device cannot fix your location"),
+					detail: __(
+						"It is answering, but none of the readings are usable. Step outside or next to a window, then reopen this screen."
+					),
+			  }
+			: {
+					tone: "blocked",
+					title: __("Your browser is not sharing a location"),
+					detail: __(
+						"It has not answered for {0} seconds. Try a different browser, or step outside and reopen this screen.",
+						[Math.round(LOCATION_DEADLINE_MS / 1000)]
+					),
+			  }
 	}
 	if (locationError.value) {
 		return {
