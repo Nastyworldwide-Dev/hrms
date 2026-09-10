@@ -27,7 +27,7 @@ from frappe.utils import add_days, cint, get_datetime, getdate
 
 logger = logging.getLogger(__name__)
 
-# ceiling: judge_day is a 183-line if/elif returning 19 distinct verdicts, and
+# ceiling: judge_day is a 185-line if/elif returning 18 distinct verdicts, and
 # repair_attendance_days one loop over 3 actions; upgrade: split each verdict
 # into its own rule object BEFORE the next verdict or repair action is added —
 # the count is already past what one function should carry.
@@ -58,8 +58,11 @@ def judge_day(punches, attendance_rows, shift_config, skip_reasons=None, active_
 	enable_auto_attendance}} for the shifts the punches name.
 	`skip_reasons`: {punch name: comment text}.
 	`active_assignments`: how many Shift Assignments still cover this date for
-	this employee. More than one is the cause of a split day, and no repair
-	here can settle it — HR has to end the superseded assignment.
+	this employee. More than one is the usual cause of a split day; it is named
+	in the detail so HR ends the superseded one, but the repair still runs,
+	because re-resolving the day's punches in time order converges
+	(hrms/utils/shift_resolution.py). Refusing it here once stranded exactly
+	the employees whose days were broken.
 	`repair` ∈ {"", "unskip", "unlink", "refetch-shift"}: what the repair would
 	do to the punches.
 	"""
@@ -462,6 +465,27 @@ def _job_can_read(punch) -> bool:
 	return True
 
 
+def _day_is_rewritable(punch_names) -> bool:
+	"""Would EVERY punch of this day land on a shift the hourly job reads?
+
+	Checked for the whole day before a single row is written. Half-applying a
+	shift repair is worse than skipping it: if the IN's corrected shift is one
+	the job never processes, the IN keeps its old shift, and the OUT then
+	follows that old shift through the session rule — unifying the day onto the
+	superseded shift instead of the right one.
+	"""
+	for name in punch_names:
+		punch = frappe.get_doc("Employee Checkin", name)
+		punch.attendance = None
+		punch.fetch_shift()
+		if punch.shift != frappe.db.get_value("Employee Checkin", name, "shift") and not _job_can_read(punch):
+			logger.info(
+				"[attendance_day_audit] %s would land on %s, which the job never reads", name, punch.shift
+			)
+			return False
+	return True
+
+
 def _financially_locked(days, for_update: bool = True) -> set:
 	"""(employee, date) where approved overtime, replacement leave or submitted
 	payroll already depends on the day the shift repair would rebuild.
@@ -505,7 +529,19 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 		return {"dry_run": True, "plan": plan, "held_back": sorted(locked)}
 
 	touched = 0
+	unchanged = 0
 	for entry in plan:
+		if entry["action"] == "refetch-shift" and not _day_is_rewritable(entry["punches"]):
+			# Half-applying it is worse than not applying it: if the IN's
+			# corrected shift is one the job can never read, the IN keeps its old
+			# shift and the OUT then follows it, unifying the day onto the
+			# superseded shift instead of the right one.
+			logger.warning(
+				"[attendance_day_audit] %s on %s left alone: a punch would land on a shift the job never reads",
+				entry["employee"],
+				entry["date"],
+			)
+			continue
 		for name in entry["punches"]:
 			if entry["action"] == "refetch-shift":
 				# Through the document, on purpose: fetch_shift IS the rule
@@ -519,6 +555,7 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 				punch.attendance = None
 				punch.fetch_shift()
 				if punch.shift == was_shift:
+					unchanged += 1
 					# Re-resolution agrees with what is already stored, so there
 					# is nothing to correct. Saving would unlink the punch and
 					# force a pointless rebuild — and, on a day that is split for
@@ -526,11 +563,9 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 					logger.info("[attendance_day_audit] %s already on %s, left as it is", name, was_shift)
 					continue
 				if not _job_can_read(punch):
-					# The corrected shift could never re-read this punch (auto
-					# attendance off, or outside its processing window), so
-					# unlinking it would strand the day with no evidence and no
-					# rebuild. Nothing has been saved, so the row on disk still
-					# holds its old shift and its link.
+					# Belt and braces: the whole day was checked above, so this
+					# should not fire. If it ever does, nothing has been saved,
+					# so the row on disk still holds its old shift and its link.
 					logger.warning(
 						"[attendance_day_audit] %s left alone: shift %s would never re-read it",
 						name,
@@ -578,9 +613,11 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 		len(plan),
 		remark_now,
 	)
+	logger.info("[attendance_day_audit] %d punch(es) rewritten, %d already correct", touched, unchanged)
 	return {
 		"dry_run": False,
 		"touched": touched,
+		"unchanged": unchanged,
 		"days": len(plan),
 		"plan": plan,
 		"remark_queued": bool(cint(remark_now) and touched),

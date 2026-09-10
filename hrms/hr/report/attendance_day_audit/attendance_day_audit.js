@@ -27,7 +27,6 @@ frappe.query_reports["Attendance Day Audit"] = {
 				"punches-skip-stamped",
 				"punches-linked-to-cancelled-row",
 				"punches-split-across-shifts",
-				"two-active-shift-assignments",
 				"unread-punches",
 				"half-day-one-punch",
 				"shift-mismatch",

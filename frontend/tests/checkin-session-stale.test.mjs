@@ -21,7 +21,12 @@ function buildRule(staleData) {
 		SOURCE.indexOf("function isSessionStale(log) {"),
 		SOURCE.indexOf("const nextAction = computed")
 	)
-	const MAX_OPEN_SHIFT_HOURS = 16
+	// Parsed, never hardcoded: injecting a literal let the ceiling test pass
+	// unchanged when the component's ceiling was set to 4.
+	const MAX_OPEN_SHIFT_HOURS = Number(
+		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
+	)
+	assert.ok(MAX_OPEN_SHIFT_HOURS, "ceiling constant not found in the component")
 	const unresolvedStaleIn = { data: staleData }
 	return new Function(
 		"MAX_OPEN_SHIFT_HOURS",
@@ -58,14 +63,27 @@ test("the abandoned session itself is still stale", () => {
 	assert.strictEqual(isSessionStale(old), true)
 })
 
-test("an open session past the 16-hour ceiling is stale on its own", () => {
+test("the ceiling is 16 hours - a shift plus overtime, not a working day", () => {
+	// The behavioural tests follow whatever the constant says, so the value
+	// itself needs pinning or a typo changes how long a session stays open.
+	const ceiling = Number(
+		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
+	)
+	assert.strictEqual(ceiling, 16)
+})
+
+test("an open session past the component's own ceiling is stale", () => {
+	const ceiling = Number(
+		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
+	)
+	assert.ok(ceiling, "ceiling constant not found in the component")
 	const isSessionStale = buildRule(null)
 	assert.strictEqual(
-		isSessionStale({ name: "X", time: minutesAgo(17 * 60) }),
+		isSessionStale({ name: "X", time: minutesAgo((ceiling + 1) * 60) }),
 		true
 	)
 	assert.strictEqual(
-		isSessionStale({ name: "X", time: minutesAgo(2 * 60) }),
+		isSessionStale({ name: "X", time: minutesAgo((ceiling - 1) * 60) }),
 		false
 	)
 })

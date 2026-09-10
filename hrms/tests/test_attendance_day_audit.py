@@ -345,6 +345,16 @@ class TestRepairOrder(unittest.TestCase):
 	re-resolves a still-linked punch computes the right shift and throws it
 	away."""
 
+	def test_the_whole_day_is_checked_before_any_punch_is_written(self):
+		"""Half-applying is worse than skipping: if the IN's corrected shift is
+		one the job never reads, the IN keeps its old shift and the OUT follows
+		it, unifying the day onto the superseded shift."""
+		src = pathlib.Path(attendance_day_audit.__file__).read_text()
+		body = src[src.index("	for entry in plan:") :]
+		body = body[: body.index('\t\t"dry_run": False,')]
+		self.assertIn('_day_is_rewritable(entry["punches"])', body)
+		self.assertLess(body.index("_day_is_rewritable"), body.index("punch.save()"))
+
 	def test_a_punch_whose_shift_does_not_change_is_never_written(self):
 		"""Otherwise a day split for some other reason is unlinked, rebuilt and
 		offered again on every run — churn with no progress."""

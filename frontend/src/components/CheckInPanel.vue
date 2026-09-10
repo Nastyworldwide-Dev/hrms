@@ -437,10 +437,11 @@ function isSessionStale(log) {
 	const t = new Date(String(checkinTime).replace(" ", "T"))
 	if (Number.isNaN(t.getTime())) return true
 	// The server has ruled on THIS session; the client does not second-guess it.
-	// Matched by name on purpose: the banner points at the OLDEST unresolved IN,
-	// which is usually an earlier day. Applying its abandoned flag to whatever
-	// happens to be the newest log left anyone with one forgotten check-out
-	// stuck on "Check In" forever, however recently they had just checked in.
+	// Matched by name on purpose: the banner points at the newest IN already
+	// past its 06:00 cutoff — never today's fresh check-in. Applying that row's
+	// abandoned flag to whatever happened to be the newest log left anyone with
+	// one forgotten check-out stuck on "Check In" forever, however recently
+	// they had just checked in.
 	if (unresolvedStaleIn.data?.is_abandoned && unresolvedStaleIn.data?.name === log?.name) {
 		return true
 	}

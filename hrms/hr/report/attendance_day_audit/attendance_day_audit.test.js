@@ -17,6 +17,16 @@ test("every verdict the report labels is selectable in the filter", () => {
 	}
 });
 
+test("the filter offers no verdict the judge cannot produce", () => {
+	// A dead option reads as "nobody is in this state", which is the opposite
+	// of the truth. Labels ⊆ options is not enough; options ⊆ labels too.
+	const labelled = new Set([...PY.matchAll(/^\t"([a-z-]+)":/gm)].map((m) => m[1]));
+	const optionBlock = JS.slice(JS.indexOf("options: ["), JS.indexOf('default: "All"'));
+	for (const [, option] of optionBlock.matchAll(/"([a-z-]+)"/g)) {
+		assert.ok(labelled.has(option), `filter offers a verdict nothing produces: ${option}`);
+	}
+});
+
 test("the split-shift day is offered", () => {
 	assert.ok(JS.includes('"punches-split-across-shifts"'));
 	assert.ok(PY.includes("One day's punches under two shifts"));
