@@ -80,6 +80,33 @@ class TestTimeRules(unittest.TestCase):
 		self.assertEqual(att.working_hours_between(dt(9), dt(18)), 9.0)
 		self.assertEqual(att.working_hours_between(dt(9, 30), dt(13)), 3.5)
 
+	def test_a_corrected_day_loses_its_unpaid_break_like_an_automatic_one(self):
+		"""The bug Nabil found on his own record, 10 Sep 2026.
+
+		HR-ATT-2026-16073: out time edited by five minutes, working hours went
+		from 8.95 to 10.03 — the 1-hour unpaid break stopped being deducted.
+		The hourly job deducts it (shift_type._deduct_unpaid_breaks); the typed
+		path did not, so every manual correction silently credited the break as
+		worked time: +1h Mon-Thu, +1h45m on a Friday, straight into paid hours.
+
+		The raw span stays available (some callers want it); what a correction
+		writes must match what the job would have written for the same times.
+		"""
+		# 9-6 with a one-hour lunch: nine hours in the building, eight paid.
+		self.assertEqual(att.working_hours_between(dt(9), dt(18), 60), 8.0)
+		# Friday carries the prayer break as well: 1h45m off the same span.
+		self.assertEqual(att.working_hours_between(dt(9), dt(18), 105), 7.25)
+		# Nabil's day, with his real times.
+		self.assertEqual(att.working_hours_between(dt(10, 12), dt(20, 14), 60), 9.03)
+
+	def test_the_raw_span_is_still_what_it_says_with_no_break(self):
+		# Unchanged behaviour: no break configured, nothing deducted.
+		self.assertEqual(att.working_hours_between(dt(9), dt(18), 0), 9.0)
+		self.assertEqual(att.working_hours_between(dt(9), dt(18)), 9.0)
+
+	def test_a_break_longer_than_the_day_cannot_go_negative(self):
+		self.assertEqual(att.working_hours_between(dt(9), dt(10), 600), 0.0)
+
 	def test_both_or_neither(self):
 		with self.assertRaises(frappe.ValidationError):
 			att.validate_attendance_times(dt(9), None, DAY)
@@ -105,6 +132,7 @@ class _Doc(SimpleNamespace):
 			attendance_date=DAY,
 			status="Present",
 			shift="DAY",
+			company="_Test Co",
 			in_time=None,
 			out_time=None,
 			working_hours=None,
@@ -135,8 +163,32 @@ class _Doc(SimpleNamespace):
 class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 	def test_new_manual_row_gets_hours_from_its_times(self):
 		doc = _Doc(in_time=dt(9), out_time=dt(18))
-		att.Attendance.apply_manual_times(doc)
+		with patch.object(att, "entered_break_minutes", return_value=0):
+			att.Attendance.apply_manual_times(doc)
 		self.assertEqual(doc.working_hours, 9.0)
+
+	def test_a_new_manual_row_deducts_the_shifts_break(self):
+		"""Pins the WIRING, not the arithmetic: reverting either call site to the
+		break-free helper leaves working_hours at the raw span and turns this red.
+		The maths itself is covered in TestTimeRules."""
+		doc = _Doc(in_time=dt(9), out_time=dt(18))
+		with patch.object(att, "entered_break_minutes", return_value=60) as breaks:
+			att.Attendance.apply_manual_times(doc)
+		self.assertEqual(doc.working_hours, 8.0, "the typed path must take the break off")
+		breaks.assert_called_once()
+		self.assertEqual(breaks.call_args.args[0], "DAY", "ask the row's own shift")
+
+	def test_a_correction_after_submit_deducts_the_shifts_break(self):
+		before = SimpleNamespace(in_time=dt(9), out_time=dt(17), working_hours=7.0)
+		doc = _Doc(
+			in_time=dt(9), out_time=dt(18), working_hours=7.0, auto_attendance=1, docstatus=1, _before=before
+		)
+		with (
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+			patch.object(att, "entered_break_minutes", return_value=105),  # a Friday
+		):
+			att.Attendance.before_update_after_submit(doc)
+		self.assertEqual(doc.working_hours, 7.25, "a Friday correction takes 1h45m")
 
 	def test_the_jobs_night_shift_row_is_not_refused(self):
 		# The job anchors the day on the shift start; an early first punch at 23:50
@@ -172,7 +224,10 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 		doc = _Doc(
 			in_time=dt(9), out_time=dt(18), working_hours=8.0, auto_attendance=1, docstatus=1, _before=before
 		)
-		with patch.object(frappe, "session", frappe._dict(user="hr@example.com")):
+		with (
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+			patch.object(att, "entered_break_minutes", return_value=0),
+		):
 			att.Attendance.before_update_after_submit(doc)
 		self.assertEqual(doc.working_hours, 9.0)
 		self.assertTrue(getattr(doc, "overtime_recomputed", False))

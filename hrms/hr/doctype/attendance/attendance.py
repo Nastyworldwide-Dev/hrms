@@ -105,7 +105,11 @@ class Attendance(Document):
 			return
 		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
 		if self.in_time and self.out_time:
-			self.working_hours = working_hours_between(self.in_time, self.out_time)
+			self.working_hours = working_hours_between(
+				self.in_time,
+				self.out_time,
+				entered_break_minutes(self.shift, self.in_time, self.out_time, self.company),
+			)
 			logger.info(
 				"[attendance] hours derived from entered times for %s on %s: %s",
 				self.employee,
@@ -122,7 +126,13 @@ class Attendance(Document):
 		self.flags.hr_corrected_times = True
 		old_hours = self.working_hours
 		self.working_hours = (
-			working_hours_between(self.in_time, self.out_time) if self.in_time and self.out_time else 0
+			working_hours_between(
+				self.in_time,
+				self.out_time,
+				entered_break_minutes(self.shift, self.in_time, self.out_time, self.company),
+			)
+			if self.in_time and self.out_time
+			else 0
 		)
 		self.set_overtime()
 		self.add_comment(
@@ -399,9 +409,39 @@ class Attendance(Document):
 		hrms.refetch_resource("hrms:attendance_calendar_events", employee_user)
 
 
-def working_hours_between(in_time, out_time) -> float:
-	"""Hours between two entered times, two decimals, no break deduction."""
-	return round((get_datetime(out_time) - get_datetime(in_time)).total_seconds() / 3600, 2)
+def working_hours_between(in_time, out_time, break_minutes=0) -> float:
+	"""Paid hours between two entered times, two decimals, less the unpaid break.
+
+	`break_minutes` defaults to 0 so the raw span is still one call away, but a
+	caller writing `working_hours` must pass the day's real break. It used to
+	take no break at all, which meant a typed correction credited the break as
+	worked time while the hourly job deducted it — the same day read 8.95 from
+	the job and 10.03 after a five-minute edit (HR-ATT-2026-16073, 10 Sep 2026).
+
+	Floored at zero: a break longer than the span is a misconfiguration, not
+	negative work.
+	"""
+	span = (get_datetime(out_time) - get_datetime(in_time)).total_seconds() / 3600
+	return round(max(0.0, span - flt(break_minutes) / 60.0), 2)
+
+
+def entered_break_minutes(shift, in_time, out_time, company=None) -> int:
+	"""The unpaid break for a typed in/out pair, read from the SAME Shift Break
+	rows the hourly job applies, so a corrected day and an automatic one agree.
+
+	Weekday-aware by construction: the rows carry a day of week, so a Friday
+	correction takes the prayer break too. No shift, no times, or no rows means
+	nothing to deduct.
+	"""
+	if not (shift and in_time and out_time):
+		return 0
+	from hrms.utils.break_calculation import get_shift_break_minutes_for_intervals
+
+	minutes = get_shift_break_minutes_for_intervals(
+		shift, [(get_datetime(in_time), get_datetime(out_time))], company=company
+	)
+	logger.debug("[attendance] entered times on shift %s carry %s break minute(s)", shift, minutes)
+	return minutes
 
 
 def validate_attendance_times(in_time, out_time, attendance_date) -> None:

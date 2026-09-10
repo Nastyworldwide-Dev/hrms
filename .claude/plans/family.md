@@ -1,49 +1,54 @@
-# FAMILY LEDGER — OT minimum judged before rounding
+# FAMILY LEDGER — a typed correction dropped the unpaid break
 
-CLASS: order-of-operations on a policy ladder. A qualifying threshold was
-tested against the RAW measurement, discarding the value before the rounding
-rule that would have carried it over the threshold could run. Any place that
-rounds and also gates on a minimum is in this class.
+CLASS: one quantity, two producers, one rule. `working_hours` was computed by
+two independent paths — the hourly job and the typed-times path — and only one
+of them applied the unpaid break. Any figure with a second write path that does
+not share the first one's rules is in this class.
 
-DEFECT: `hours * 60 < config["min_minutes"]` compared raw minutes. HR's rule
-is that the 30-minute ladder applies FIRST ("at 50 minutes and above auto
-rounded to 60m so i am eligible"). Every weekday landing in the 50-59 minute
-band paid nothing. Instance: HR-ATT-2026-16073, 9 Sep 2026, 56m59s past the
-late-adjusted window, paid 0.
+DEFECT: `working_hours_between()` was documented as "no break deduction" and
+both manual call sites used it to write `working_hours`. A five-minute edit to
+HR-ATT-2026-16073 (9 Sep 2026) moved the row from 8.95 h to 10.03 h — the
+1-hour break stopped being deducted. Every manual correction credited the break
+as worked time: +1 h Mon-Thu, +1 h 45 m on a Friday (the prayer break), into
+paid hours, silently.
 
-FIX: one rule, `ot_minutes_qualify(hours, min_minutes)`, rounds then compares.
-Both OT paths call it, so the Attendance record and the claim form cannot
-disagree about whether a day counts.
+FIX: `working_hours_between(in_time, out_time, break_minutes=0)` subtracts the
+break and floors at zero; `entered_break_minutes()` reads the SAME Shift Break
+rows the hourly job applies, so a corrected day and an automatic one agree, and
+Friday keeps its longer break.
 
 ## Call sites the machine listed
 
 | file:line | verdict |
 |---|---|
-| hrms/utils/ot_calculation.py:545 (`_iter_day_ot`) | same-root — fixed here (claim/discovery path) |
-| hrms/utils/ot_calculation.py:879 (`get_shift_ot_breakdown`) | same-root — fixed here (Attendance record path) |
-| hrms/utils/ot_calculation.py:661 (`get_ot_pay`) | not-affected — reads `_iter_day_ot`, inherits the corrected gate |
-| hrms/utils/ot_calculation.py:681 (`get_ot_breakdown`) | not-affected — same, reporting only |
-| hrms/utils/ot_calculation.py:725 (`get_ot_claim_capacity`) | not-affected — already rounded AFTER this gate; now the gate agrees with it |
-| hrms/utils/ot_calculation.py:770 (`_approved_reservations` path) | not-affected — sums approved claims, no minimum test |
-| hrms/hr/doctype/attendance/attendance.py:165 (`set_overtime`) | not-affected — stores whatever the breakdown returns; stored hours stay RAW by design |
-| hrms/utils/ot_calculation.py:130 (`min_minutes` config read) | not-affected — reads the shift setting, does not compare |
+| hrms/hr/doctype/attendance/attendance.py:108 (`apply_manual_times`, draft/new) | same-root — fixed here |
+| hrms/hr/doctype/attendance/attendance.py:129 (`before_update_after_submit`) | same-root — fixed here |
+| hrms/hr/doctype/shift_type/shift_type.py:553 (`_deduct_unpaid_breaks`) | not-affected — this is the CORRECT producer; the fix makes the typed path match it |
+| hrms/hr/doctype/attendance/attendance.py:165 (`set_overtime`) | not-affected — OT is measured from raw punch times against the shift-end window; breaks sit inside the normal day, not the OT window |
+| hrms/utils/break_calculation.py (`get_shift_break_minutes_for_intervals`) | not-affected — reused unchanged, single supplier for both paths |
 
-Replacement Leave: not-affected. `replacement_leave_days` uses whole 4h blocks
-and never consults `min_minutes`; the nonworking path skips the gate entirely
-(`if not nonworking`), so holidays and rest days are untouched.
+No other caller: `working_hours_between` is referenced only by those two sites
+and its tests.
+
+## Known remaining member of this class — ticketed, not fixed here
+
+OT hours are computed with NO break awareness at all (`grep break
+hrms/utils/ot_calculation.py` -> zero matches). Harmless today because every
+configured break window falls inside the normal shift, but a break configured to
+overlap the OT window would be paid as overtime. Out of scope for this commit:
+it changes money on a path Nabil has not ruled on, and today's figures do not
+move. TICKET: break-aware OT window.
 
 ## Locking the class
 
-- regression test (instance): `hrms/utils/test_ot_minimum_rounding.py` —
-  56m59s qualifies, 49m does not. Pure, runs on the system interpreter.
-- invariant test (class): the same file pins the boundary at 50 minutes for a
-  60-minute minimum AND at 30 minutes for a 30-minute minimum, so the rule is
-  "round then compare" rather than a hard-coded 50.
-- boundary test updated on the bench:
-  `test_weekday_post_shift_minimum_is_judged_after_rounding` (was
-  `..._minimum_remains`, which pinned the defect).
+- regression test (instance): `test_a_corrected_day_loses_its_unpaid_break_like_an_automatic_one`
+  — Nabil's own times, 10:12-20:14 with a 60-minute break, must read 9.03.
+- invariant test (class): `test_a_new_manual_row_deducts_the_shifts_break` and
+  `test_a_correction_after_submit_deducts_the_shifts_break` pin the WIRING, not
+  the arithmetic — they assert the caller asks the row's own shift for its
+  break. Proved by mutation: reverting either call site to the break-free helper
+  turns them red (verified, 1 failed / 17 passed).
 
-EVIDENCE: 2 — red proved by ImportError on `ot_minutes_qualify` before the fix;
-6/6 green after. 3 — bench `hrms.tests.test_ot_nonworking_hours` 17/17 OK.
-Bench-free suite: 174 failing before, same set after (the only delta is the
-renamed test's own subtests, in a module already red under the frappe stub).
+EVIDENCE: 2 — red proved by TypeError on the third argument before the fix;
+24/24 green after. 3 — bench-free suite diffed against the 174-failure baseline:
+no new failures. ruff clean, ruff format applied.
