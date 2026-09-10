@@ -248,7 +248,14 @@ class TestADayEndToEnd(unittest.TestCase):
 		evening.submit()
 		frappe.db.set_value("Shift Assignment", evening.name, "overtime_type", None)
 
-	def test_a_forgotten_check_out_is_not_a_half_day(self):
+	def test_a_forgotten_check_out_is_a_half_day_with_no_hours(self):
+		"""The one Half Day that is CORRECT, and the reason the others were not.
+
+		There is no record of when this person left, so the day cannot be
+		valued and no fix should invent an out time — the late check-out
+		request is how a real one gets filed. Named for what it asserts: the
+		old name said "is not a half day" while asserting that it is, which
+		reads as a bug report against behaviour that is right."""
 		self.punch("IN", at(0, 9, 30))
 		row = self.day()
 		self.assertEqual(row.status, "Half Day")
