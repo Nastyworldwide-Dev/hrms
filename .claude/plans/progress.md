@@ -206,3 +206,20 @@
 - 2026-09-09T12:15:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
 - 2026-09-09T12:15:20Z COMMIT: d1ea992d4 fix(attendance): bound the assignment query, and tell the truth about the ceiling → review dispatched
 - 2026-09-09T12:16Z NEXT: Nabil deploys d1ea992d4; Pull GL Accounts; Attendance Day Audit 1-10 Sep (HR ends duplicate assignments first, then Repair); one hourly run; report his 3/4/7 Sep rows. Then: August decision, source-site shutdown confirmation, claim rulings Q1-Q6.
+- 2026-09-09T12:16:18Z COMMIT: 80c785744 docs: handoff for the shift and Desk batch → review dispatched
+- 2026-09-09T12:19:28Z COMMIT: ac40ef311 chore(attendance): the day audit's docstring, guard and test class say what is true → review dispatched
+- 2026-09-10T03:03:55Z COMMIT: 16fa438af fix(attendance): repair the split day even while both assignments are still active → review dispatched
+- 2026-09-10T03:06:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-10T03:06:16Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-10T03:06:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-10T03:06:28Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-10T03:06:31Z COMMIT: ea3e66a41 fix(expense): say why a claim type has no account instead of counting it → review dispatched
+- 2026-09-10T03:08:10Z COMMIT: d3421c288 fix(pwa): one forgotten check-out no longer asks you to check in forever → review+security+design dispatched
+- 2026-09-10T03:09:15Z COMMIT: df061a33b docs(audit): the check-in pipeline and what each step feeds → review dispatched
+- 2026-09-10T03:09Z REPAIR: three live defects traced and fixed after the deploy — (1) PWA stuck on "Check In": the abandoned flag of the OLDEST unresolved session was applied to the NEWEST log (d3421c288, proven red on shipped code); (2) some employees still Half Day because my own two-active-assignments guard refused the repair for exactly the broken population — removed, convergence proven on fresh.local, loop now impossible via the no-change guard (16fa438af); (3) two claim types unconfigured because the mapped GL name exists as a GROUP heading, not a ledger — the reason is now named per type and company (ea3e66a41). Pipeline map: docs/glass/audit/2026-09-10-checkin-pipeline-map.md.
+- 2026-09-10T03:09Z NEXT: Nabil deploys df061a33b, then (a) Attendance Day Audit 1-10 Sep -> Repair -> one hourly run -> confirm his 3/4/7 Sep read Present; (b) check the PWA button after a fresh check-in; (c) Pull -> GL Accounts and read the bell for the two named types (pick a ledger under the group); (d) HR ends the superseded shift assignments. Then: August decision, source-site shutdown confirmation, claim rulings Q1-Q6.
+- 2026-09-10T03:13:09Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 7 file(s) ⟂85be7f79c548
+- 2026-09-10T03:13:09Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-10T03:13:15Z COMMIT: d26582aec fix(attendance): check the whole day before rewriting any of it, and drop a dead filter → review+security+design dispatched
+- 2026-09-10T03:13Z EVIDENCE: 6 behaves — reviews on the three fixes: all DEPLOY, no Critical. Five warnings closed in d26582aec, incl. a half-applied shift repair that could unify a day onto the superseded shift (whole-day readability check now) and a dead Verdict filter option that would have read as 'nobody has duplicate assignments'.
+- 2026-09-10T03:13Z NEXT: Nabil deploys d26582aec, then (a) Attendance Day Audit 1-10 Sep -> Repair -> one hourly run -> confirm 3/4/7 Sep read Present; (b) PWA button after a fresh check-in; (c) Pull -> GL Accounts, read the bell for the two named types; (d) HR ends the superseded shift assignments. Open: August decision, source-site shutdown, claim rulings Q1-Q6.
