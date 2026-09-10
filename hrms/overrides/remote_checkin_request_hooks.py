@@ -576,7 +576,17 @@ def reprocess_late_checkout_attendance(out_checkin: str) -> str | None:
 		if out.shift != in_row.shift or out.shift_start != in_row.shift_start or cint(out.offshift):
 			bounds = {
 				field: in_row.get(field)
-				for field in ("shift", "shift_start", "shift_end", "shift_actual_start", "shift_actual_end")
+				for field in (
+					"shift",
+					"shift_start",
+					"shift_end",
+					"shift_actual_start",
+					"shift_actual_end",
+					# same set as CustomEmployeeCheckin._stamp_shift: an OUT bound to
+					# its IN's shift without the IN's overtime type makes the whole
+					# day's overtime vanish when the OUT is the first eligible punch
+					"overtime_type",
+				)
 			}
 			bounds["offshift"] = 0
 			frappe.db.set_value("Employee Checkin", out.name, bounds)

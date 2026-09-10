@@ -67,7 +67,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				["end_date", ">=", log_time.date()],
 				["end_date", "is", "not set"],
 			],
-			fields=["name", "shift_type", "start_date", "end_date"],
+			fields=["name", "shift_type", "start_date", "end_date", "overtime_type"],
 		)
 
 		if len(active_assignments) <= 1:
@@ -108,13 +108,14 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 
 		shift_type = best.get("shift_type")
 		shift_type_name = shift_type.name if hasattr(shift_type, "name") else shift_type
-		if not self.attendance:
-			self.offshift = 0
-			self.shift = shift_type_name
-			self.shift_actual_start = best.get("actual_start")
-			self.shift_actual_end = best.get("actual_end")
-			self.shift_start = best.get("start_datetime")
-			self.shift_end = best.get("end_datetime")
+		self._stamp_shift(
+			shift=shift_type_name,
+			start_datetime=best.get("start_datetime"),
+			end_datetime=best.get("end_datetime"),
+			actual_start=best.get("actual_start"),
+			actual_end=best.get("actual_end"),
+			overtime_type=best.get("overtime_type"),
+		)
 
 		logger.info(
 			"[employee_checkin] shift=%s for %s %s @ %s (%d assignments)",
@@ -123,6 +124,38 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			self.log_type,
 			log_time,
 			len(active_assignments),
+		)
+
+	def _stamp_shift(
+		self, *, shift, start_datetime, end_datetime, actual_start, actual_end, overtime_type
+	) -> None:
+		"""Give this punch a shift — the whole stamp, never a part of it.
+
+		overtime_type is the part that was missed three times over, and its loss
+		is silent: the hourly job takes the day's overtime type from the FIRST
+		eligible punch (ShiftType.get_attendance), so one punch stamped None
+		makes the whole day ineligible and the overtime never reaches the slip.
+
+		A punch already linked to an Attendance row is never re-derived —
+		bulk_fetch_shift re-runs fetch_shift over linked punches, and upstream
+		relies on the same guard.
+		"""
+		if self.attendance:
+			return
+		self.offshift = 0
+		self.shift = shift
+		self.shift_start = start_datetime
+		self.shift_end = end_datetime
+		self.shift_actual_start = actual_start
+		self.shift_actual_end = actual_end
+		self.overtime_type = overtime_type or None
+		logger.info(
+			"[employee_checkin] %s %s @ %s stamped shift=%s overtime_type=%s",
+			self.employee,
+			self.log_type,
+			self.time,
+			shift,
+			self.overtime_type,
 		)
 
 	def _attach_early_arrival(self, assignment, log_time) -> None:
@@ -139,12 +172,14 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			return
 		if get_datetime(timings["start_datetime"]).date() != log_time.date():
 			return
-		self.offshift = 0
-		self.shift = assignment["shift_type"]
-		self.shift_start = timings.get("start_datetime")
-		self.shift_end = timings.get("end_datetime")
-		self.shift_actual_start = timings.get("actual_start")
-		self.shift_actual_end = timings.get("actual_end")
+		self._stamp_shift(
+			shift=assignment["shift_type"],
+			start_datetime=timings.get("start_datetime"),
+			end_datetime=timings.get("end_datetime"),
+			actual_start=timings.get("actual_start"),
+			actual_end=timings.get("actual_end"),
+			overtime_type=assignment.get("overtime_type") or timings.get("overtime_type"),
+		)
 		logger.info(
 			"[employee_checkin] %s arrived at %s, before %s opens at %s — counted from the shift start",
 			self.employee,
@@ -175,17 +210,26 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		row = frappe.db.get_value(
 			"Employee Checkin",
 			open_in["name"],
-			["shift", "shift_start", "shift_end", "shift_actual_start", "shift_actual_end"],
+			[
+				"shift",
+				"shift_start",
+				"shift_end",
+				"shift_actual_start",
+				"shift_actual_end",
+				"overtime_type",
+			],
 			as_dict=True,
 		)
 		if not row or not row.shift:
 			return False
-		self.offshift = 0
-		self.shift = row.shift
-		self.shift_start = row.shift_start
-		self.shift_end = row.shift_end
-		self.shift_actual_start = row.shift_actual_start
-		self.shift_actual_end = row.shift_actual_end
+		self._stamp_shift(
+			shift=row.shift,
+			start_datetime=row.shift_start,
+			end_datetime=row.shift_end,
+			actual_start=row.shift_actual_start,
+			actual_end=row.shift_actual_end,
+			overtime_type=row.overtime_type,
+		)
 		logger.info(
 			"[employee_checkin] OUT %s closes the session opened by %s on %s",
 			self.time,
@@ -587,4 +631,7 @@ def _resolve_timings_fallback(employee, log_time, assignment):
 		"end_datetime": end_dt,
 		"actual_start": start_dt - before_grace,
 		"actual_end": end_dt + after_grace,
+		# The assignment overrides the Shift Type, exactly as upstream's
+		# get_actual_start_end_datetime_of_shift resolves it.
+		"overtime_type": assignment.get("overtime_type") or shift_type_doc.get("overtime_type") or None,
 	}
