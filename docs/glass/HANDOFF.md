@@ -1,16 +1,14 @@
 # HANDOFF
-prompt:   shift flip, Half Day, Desk sorting, GL pull failures (10 Sep)
-status:   done; pushed; reviewed; deploy pending
-commit:   d1ea992d4 on nz-glass
-files:    hrms/utils/shift_resolution.py + overrides/employee_checkin_override.py (punch -> shift)
-          hrms/overrides/shift_assignment_hooks.py + hooks.py (new assignment ends the old)
-          hrms/utils/attendance_day_audit.py + report (split-day verdict, guarded repair)
-          hrms/hr/doctype/{employee_checkin,attendance,remote_checkin_request}.json + list js (sorting)
-          hrms/patches/v16_0/reset_attendance_list_sort_preferences.py (saved sort + columns)
-          hrms/sync/account_shells.py + utils/expense_claim_type_mapping.py (ledger parent, spelling)
-verify:   cd ~/verify-bench && bench --site fresh.local run-tests --module hrms.tests.test_attendance_day_audit
-flags:    August left as the old site computed it - Nabil's call; duplicate assignments already on
-          the site are named by the audit but must be ended by HR; old source site still sending
-          punches, so no Sync Employee Data
-next:     Nabil deploys d1ea992d4 -> Pull GL Accounts -> Attendance Day Audit 1-10 Sep (end any
-          "two shift assignments" days first, then Repair) -> one hourly run -> check calendars
+prompt:   overtime type lost by the early-arrival resolver
+status:   done
+commit:   50bec0dd7 on nz-glass
+files:    hrms/overrides/employee_checkin_override.py
+          hrms/overrides/remote_checkin_request_hooks.py
+          hrms/tests/test_checkin_shift_stamp.py
+          hrms/tests/test_checkin_day_end_to_end.py
+          hrms/tests/test_late_checkout_whole_shift.py
+          docs/glass/audit/2026-09-10-checkin-pipeline-connections.md
+verify:   cd ~/verify-bench && bench --site fresh.local run-tests --module hrms.tests.test_checkin_day_end_to_end
+flags:    days already marked keep overtime_type NULL - restamping is a
+          historical-data repair and is NOT done, awaiting Nabil's word
+next:     Nabil deploys 50bec0dd7; then decide on restamping September
