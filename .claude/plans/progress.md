@@ -227,3 +227,21 @@ DECISION NEEDED: the rounding fix changes what Attendance.ot_hours SHOULD hold f
   The record still reads 0 while get_claimable_ot_summary recomputes from punches and offers the day as 1.0 h — record and claim card disagree
   on the employee's screen. The only remedy is recompute_ot_backfill, which rewrites SUBMITTED rows in a range with no financial-dependency
   guard (current-plan.md risk 5c). NOT run and NOT patched in: mass-rewriting submitted pay rows needs Nabil's explicit word for that exact range.
+- 2026-09-10T11:29:57Z COMMIT: 7020a4f87 test(patches): make the masters test runnable and give it something to fail on → review dispatched
+2026-09-10T09:35Z REPAIR: review of cf4cb2fe4 (frappe-reviewer, NEXT_ACTION DEPLOY, no Critical) found a SECOND live member of the same
+  class, larger than the one fixed. The hourly job applies three rules to produce working_hours — unpaid break, unpaid early arrival
+  (paid_intervals_from, shift_type.py:551), and hours-from-worked-intervals-not-span. cf4cb2fe4 unified the break only.
+  Verified: shift 09:00-18:00, punch in 07:30 out 18:00 -> job writes 8.00h. HR corrects the out time by five minutes -> typed path
+  recomputes 07:30-18:05 = 10.58h less 60m = 9.58h against the job's 8.08h. +1.50h to payroll per correction, permanent because
+  on_update_after_submit (attendance.py:396-398) sets auto_attendance = 0 so the job never revisits the row.
+  Recorded in .claude/plans/family.md as the second live member; NOT patched (class: spec -> ruling first).
+  EVIDENCE: 6 behaves — reviewer killed both wiring mutants independently (each call site turned a different test red), and probed the two
+  likeliest wrong answers: a fixed break the employee punched out for is NOT double-deducted (job 8.00h vs typed 8.00h), and an overnight
+  Thu 22:00 -> Fri 06:00 correctly takes 0 break minutes while Fri 08:00 -> Sat 02:00 takes the 105-minute Friday prayer break.
+TICKET: one paid-hours rule shared by both writers — extract "paid hours for these times on this shift" so shift_type._process and the typed
+  correction path cannot diverge again. Closes the early-arrival divergence above AND the attendance.py hotspot obligation (10 fixes/90d) in
+  one move. Blocked on the decision below.
+DECISION NEEDED: does an HR correction re-apply the early-arrival rule (hours start at shift start), or is the span HR typed authoritative?
+  HR ruled on the job's behaviour only, 10 Sep 2026: "early clock in didnt counted as paid".
+NEXT: Nabil rules on (a) the OT backfill range and (b) early arrival on typed corrections. Meanwhile: doors and permissions —
+  OT Request menu link, Employee permlevel-1 rows, HR User on Overtime Type, HR Manager on Overtime Slip.

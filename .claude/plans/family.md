@@ -30,6 +30,36 @@ Friday keeps its longer break.
 No other caller: `working_hours_between` is referenced only by those two sites
 and its tests.
 
+## SECOND LIVE MEMBER — found by review of cf4cb2fe4, NOT fixed, needs a ruling
+
+The ledger below said "No other caller", which is true of
+`working_hours_between` and false of the CLASS. The job applies THREE rules to
+turn times into paid hours; this commit unified one of them.
+
+| Rule | hourly job | typed correction |
+|---|---|---|
+| unpaid break | yes (`_deduct_unpaid_breaks`) | yes — as of cf4cb2fe4 |
+| early arrival is unpaid | yes (`paid_intervals_from`, shift_type.py:551) | **NO** |
+| hours come from worked intervals, not the span | yes | **NO** — raw first-in/last-out |
+
+Worked example, verified against `paid_intervals_from`: shift 09:00-18:00,
+employee punches in 07:30, out 18:00. The job writes 8.00 h (09:00-18:00 less
+the 60-minute break). HR then corrects the out time by five minutes; the typed
+path recomputes 07:30->18:05 = 10.58 h less 60 m = **9.58 h**, where the job's
+own answer for those times is 8.08 h. **+1.50 h to payroll, per correction.**
+Same shape for a mid-day logout: job 7.00 h, typed 8.08 h.
+
+It does not self-heal. `on_update_after_submit` (attendance.py:396-398) sets
+`auto_attendance = 0` on a corrected row, so the job never revisits it.
+
+Bigger than the break defect this commit fixed (+1.00 h Mon-Thu). NOT patched
+here: it changes paid hours on a rule HR ruled on for the job only ("early
+clock in didnt counted as paid", 10 Sep 2026) and nobody has said whether a
+typed correction re-applies it or whether a typed span is authoritative.
+
+DECISION NEEDED (Nabil): does an HR correction re-apply the early-arrival rule,
+or is the span HR typed final?
+
 ## Known remaining member of this class — ticketed, not fixed here
 
 OT hours are computed with NO break awareness at all (`grep break
