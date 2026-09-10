@@ -25,24 +25,26 @@
 				     navigation, not a router push — each app owns its own scope), so
 				     it trails an arrow-out glyph instead of the chevron. Second glass
 				     surface on this screen, well inside the §15 budget. -->
-				<span class="g-eyebrow mt-[5px]">{{ __("Apps") }}</span>
-				<GListPanel>
-					<GListRow
-						v-for="item in appItems"
-						:key="item.key"
-						:label="item.title"
-						:sublabel="item.sublabel"
-						:chevron="false"
-						@click="openApp(item)"
-					>
-						<template #icon>
-							<component :is="item.icon" class="h-[17px] w-[17px]" />
-						</template>
-						<template #badge>
-							<ExternalLinkIcon class="flex-none text-ink-3" aria-hidden="true" />
-						</template>
-					</GListRow>
-				</GListPanel>
+				<template v-if="appItems.length">
+					<span class="g-eyebrow mt-[5px]">{{ __("Apps") }}</span>
+					<GListPanel>
+						<GListRow
+							v-for="item in appItems"
+							:key="item.key"
+							:label="item.title"
+							:sublabel="item.sublabel"
+							:chevron="false"
+							@click="openApp(item)"
+						>
+							<template #icon>
+								<component :is="item.icon" class="h-[17px] w-[17px]" />
+							</template>
+							<template #badge>
+								<ExternalLinkIcon class="flex-none text-ink-3" aria-hidden="true" />
+							</template>
+						</GListRow>
+					</GListPanel>
+				</template>
 			</div>
 		</template>
 	</BaseLayout>
@@ -57,9 +59,10 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
-import { MORE_ITEMS, APP_ITEMS, HELPDESK_ITEM } from "@/data/navItems"
+import { MORE_ITEMS, visibleAppItems, HELPDESK_ITEM } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
+import { userResource } from "@/data/user"
 import { helpdeskAvailable } from "@/data/helpdesk"
 
 const router = useRouter()
@@ -84,8 +87,15 @@ const moreItems = computed(() => {
 	return items
 })
 
+// Role-gated (data/appLinks.js). An employee with neither the finance nor the
+// projects roles gets no Apps group at all — the heading goes with the rows,
+// because a labelled empty panel reads as a fault rather than as "not for you".
 const appItems = computed(() =>
-	APP_ITEMS.map((item) => ({ ...item, title: __(item.title), sublabel: __(item.sublabel) }))
+	visibleAppItems(userResource.data?.roles).map((item) => ({
+		...item,
+		title: __(item.title),
+		sublabel: __(item.sublabel),
+	}))
 )
 
 // Full navigation on purpose: the target SPA is outside vue-router's /hrms

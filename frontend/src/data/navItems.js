@@ -11,7 +11,7 @@ import MoreIcon from "@/components/icons/MoreIcon.vue"
 import HelpdeskIcon from "@/components/icons/HelpdeskIcon.vue"
 import ApprovaIcon from "@/components/icons/ApprovaIcon.vue"
 import ProjectBoardIcon from "@/components/icons/ProjectBoardIcon.vue"
-import { APP_LINKS } from "@/data/appLinks"
+import { APP_LINKS, visibleAppLinks } from "@/data/appLinks"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
@@ -113,3 +113,10 @@ const APP_ICONS = {
 	board: markRaw(ProjectBoardIcon),
 }
 export const APP_ITEMS = APP_LINKS.map((link) => ({ ...link, icon: APP_ICONS[link.key] }))
+
+// The rows this user may be offered, icons attached. Both shells (More on the
+// phone, SideNav on lg+) render the same list, so the allowlist is applied
+// once here rather than twice in the views — the two cannot drift apart.
+// Pass `get_current_user_info().roles`; an absent payload yields [].
+export const visibleAppItems = (userRoles) =>
+	visibleAppLinks(userRoles).map((link) => ({ ...link, icon: APP_ICONS[link.key] }))

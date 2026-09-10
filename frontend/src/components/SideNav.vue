@@ -104,7 +104,7 @@
 			     aria-label is not redundant: collapsed hides the label span, and
 			     the accessible-name fallback would then read the `title`
 			     (the sublabel), announcing "Purchase requests…" for Approva. -->
-			<hr class="g-sidenav__divider" />
+			<hr v-if="appItems.length" class="g-sidenav__divider" />
 			<a
 				v-for="item in appItems"
 				:key="item.key"
@@ -156,7 +156,7 @@ import { useRoute } from "vue-router"
 
 import { markRaw } from "vue"
 
-import { TAB_ITEMS, MORE_ITEMS, APP_ITEMS, HELPDESK_ITEM } from "@/data/navItems"
+import { TAB_ITEMS, MORE_ITEMS, visibleAppItems, HELPDESK_ITEM } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
 import { helpdeskAvailable } from "@/data/helpdesk"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
@@ -198,8 +198,13 @@ const moreItems = computed(() => [
 	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
 ])
 
+// Role-gated (data/appLinks.js); same list the More screen renders.
 const appItems = computed(() =>
-	APP_ITEMS.map((item) => ({ ...item, title: __(item.title), sublabel: __(item.sublabel) }))
+	visibleAppItems(user?.data?.roles).map((item) => ({
+		...item,
+		title: __(item.title),
+		sublabel: __(item.sublabel),
+	}))
 )
 
 const isActive = (path) => route.path === path
