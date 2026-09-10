@@ -35,16 +35,23 @@ MAPPING = {
 }
 
 
-def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_rows) -> dict:
-	"""What to add: {type: [(company, account)]} and what is missing. Pure.
+def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_rows, groups=None) -> dict:
+	"""What to add: {type: [(company, account)]} and what is missing, with a
+	reason for each miss. Pure.
 
-	`account_lookup` maps (account_name, company) -> Account document name;
+	`account_lookup` maps (account_name, company) -> Account name for LEDGER
+	accounts, the only kind a claim can post to. `groups` is the same for
+	accounts that exist as group headings — the usual reason a type is left
+	unconfigured, and something HR can act on only if we name it.
 	`existing_rows` is a set of (type, company) already configured.
 	"""
 	rows, missing = {}, []
 	# Case-insensitive: HR's sheet says "Fuel/Mileage expenses", the ERP's chart
 	# "Fuel/Mileage Expenses"; a capital must not leave a type without its account.
 	folded = {(name.casefold(), company): account for (name, company), account in account_lookup.items()}
+	folded_groups = {
+		(name.casefold(), company): account for (name, company), account in (groups or {}).items()
+	}
 	for claim_type, gl_name in mapping.items():
 		for company in companies:
 			if (claim_type, company) in existing_rows:
@@ -52,8 +59,14 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 			account = folded.get((gl_name.casefold(), company))
 			if account:
 				rows.setdefault(claim_type, []).append((company, account))
-			else:
-				missing.append((claim_type, company, gl_name))
+				continue
+			group = folded_groups.get((gl_name.casefold(), company))
+			reason = (
+				f"{group} is a group, not a ledger — pick a ledger under it"
+				if group
+				else f"no account named {gl_name} in this company"
+			)
+			missing.append((claim_type, company, gl_name, reason))
 	logger.info(
 		"[expense_claim_type_mapping] plan: %d row(s) to add, %d (type, company) without the GL account yet",
 		sum(len(v) for v in rows.values()),
@@ -80,25 +93,22 @@ def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
 	added now. Never edits an existing row. Safe to run any number of times."""
 	mapping = mapping or MAPPING
 	companies = _served_companies()
-	account_lookup = {
-		(a.account_name, a.company): a.name
-		for a in frappe.get_all(
-			"Account",
-			filters={
-				"account_name": ("in", _spellings(mapping)),
-				"company": ("in", companies),
-				"is_group": 0,
-			},
-			fields=["name", "account_name", "company"],
-		)
-	}
+	found = frappe.get_all(
+		"Account",
+		filters={"account_name": ("in", _spellings(mapping)), "company": ("in", companies)},
+		fields=["name", "account_name", "company", "is_group", "disabled"],
+	)
+	# Only a ledger can be a claim type's default account; a group heading is
+	# reported as one so HR knows what to do about it.
+	account_lookup = {(a.account_name, a.company): a.name for a in found if not a.is_group and not a.disabled}
+	groups = {(a.account_name, a.company): a.name for a in found if a.is_group}
 	existing_rows = {
 		(r.parent, r.company)
 		for r in frappe.get_all(
 			"Expense Claim Account", filters={"parent": ("in", list(mapping))}, fields=["parent", "company"]
 		)
 	}
-	plan = plan_type_accounts(mapping, companies, account_lookup, existing_rows)
+	plan = plan_type_accounts(mapping, companies, account_lookup, existing_rows, groups)
 
 	created_types = []
 	for claim_type, gl_name in mapping.items():

@@ -364,6 +364,15 @@ def _notify_operator(instance_name: str, operator: str, result: dict, timed_out:
 		summary += " " + _(
 			"Expense claim types: {0} account row(s) wired, {1} still without a GL account."
 		).format(claim.get("rows_added", 0), len(claim.get("missing") or []))
+		# The reason per type, not just a count: on 10 September two types were
+		# left unconfigured and the notification said only "2", which is not
+		# something HR can act on.
+		unresolved = {}
+		for entry in claim.get("missing") or []:
+			claim_type, company, _gl, reason = ([*entry, ""])[:4]
+			unresolved.setdefault(f"{claim_type} — {reason}", []).append(company)
+		for reason, companies in sorted(unresolved.items()):
+			lines.append(f"{reason} — {len(set(companies))} company(ies)")
 	if timed_out:
 		summary = _(
 			"{0} The run timed out before finishing — press Pull → GL Accounts again to continue."

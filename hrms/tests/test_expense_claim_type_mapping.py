@@ -40,7 +40,30 @@ class TestMapping(unittest.TestCase):
 		self.assertEqual(
 			plan["rows"]["Car Rental (CAR RENTAL)"], [("DS Distribution", "Travel Expenses - DS")]
 		)
-		self.assertEqual(plan["missing"], [("Petrol (PETROL)", "DS Distribution", "Fuel/Mileage expenses")])
+		self.assertEqual(
+			plan["missing"],
+			[
+				(
+					"Petrol (PETROL)",
+					"DS Distribution",
+					"Fuel/Mileage expenses",
+					"no account named Fuel/Mileage expenses in this company",
+				)
+			],
+		)
+
+	def test_a_group_heading_is_named_as_the_reason_not_left_silent(self):
+		"""Live, 10 Sep: General & Administrative and Subsidy Parking Claim were
+		the two types left unconfigured. A group cannot be a claim's default
+		account, and HR can only act on that if the report says so."""
+		mapping = {"General & Administrative (G&A)": "General & Administrative"}
+		groups = {("General & Administrative", "Nasty Worldwide"): "General & Administrative - NW"}
+		plan = plan_type_accounts(mapping, ["Nasty Worldwide"], {}, set(), groups)
+		self.assertEqual(plan["rows"], {})
+		claim_type, company, _gl_name, reason = plan["missing"][0]
+		self.assertEqual((claim_type, company), ("General & Administrative (G&A)", "Nasty Worldwide"))
+		self.assertIn("is a group, not a ledger", reason)
+		self.assertIn("General & Administrative - NW", reason)
 
 	def test_a_ledger_parent_on_the_hub_falls_back_to_the_root_group(self):
 		"""Live: "Parent account Travel Expenses - DSDS can not be a ledger" — the
