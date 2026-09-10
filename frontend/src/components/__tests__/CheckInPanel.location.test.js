@@ -680,5 +680,9 @@ test("an error while a usable fix is still held stays muted", () => {
 	h.advance(15_000)
 	h.watches[0].error({ code: 3 }) // TIMEOUT, fix still fresh
 
+	// The title as well as the tone: "muted" is also what the "Checking your
+	// assigned area..." fallback returns, so tone alone would keep this test
+	// green while the arm it defends went dead again.
 	assert.equal(h.vm.locationVerdict.value.tone, "muted")
+	assert.equal(h.vm.locationVerdict.value.title, "Location unavailable")
 })
