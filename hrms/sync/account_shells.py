@@ -165,13 +165,14 @@ def account_name_patterns() -> list:
 
 	One query per name — about seven — never the whole chart.
 	"""
-	from hrms.utils.expense_claim_type_mapping import MAPPING, normalise_account_name
+	from hrms.utils.expense_claim_type_mapping import MAPPING, gl_names_for, normalise_account_name
 
 	patterns = set()
-	for gl_name in MAPPING.values():
-		words = normalise_account_name(gl_name).split()
-		if words:
-			patterns.add("%" + "%".join(words) + "%")
+	for value in MAPPING.values():
+		for gl_name in gl_names_for(value):
+			words = normalise_account_name(gl_name).split()
+			if words:
+				patterns.add("%" + "%".join(words) + "%")
 	return sorted(patterns)
 
 
@@ -191,9 +192,9 @@ def accounts_the_mapping_wants(rows) -> list:
 	companies, and the names are matched here — normalised for case, "&" against
 	"and", punctuation and spacing. Nothing broader is guessed.
 	"""
-	from hrms.utils.expense_claim_type_mapping import MAPPING, normalise_account_name
+	from hrms.utils.expense_claim_type_mapping import MAPPING, gl_names_for, normalise_account_name
 
-	wanted = {normalise_account_name(name) for name in MAPPING.values()}
+	wanted = {normalise_account_name(name) for value in MAPPING.values() for name in gl_names_for(value)}
 	kept = [row for row in rows if normalise_account_name(row.get("account_name")) in wanted]
 	logger.info("[account_shells] %d ledger(s) fetched, %d match a mapped GL name", len(rows), len(kept))
 	return kept

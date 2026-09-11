@@ -207,16 +207,15 @@ class TestEndpointHardening(unittest.TestCase):
 		self.assertIn("account_name_patterns()", body, "the fetch must stay bounded to mapped names")
 		self.assertIn('"account_name": ("like", pattern)', body)
 		self.assertIn('"is_group": 0', body, "ledgers only — a claim cannot post to a heading")
-		self.assertNotIn(
-			'("in", wanted_account_names())', body, "an exact name filter is what made it blind"
-		)
+		self.assertNotIn('("in", wanted_account_names())', body, "an exact name filter is what made it blind")
 
 	def test_a_pattern_is_built_per_mapped_name_and_nothing_wider(self):
 		from hrms.sync.account_shells import account_name_patterns
-		from hrms.utils.expense_claim_type_mapping import MAPPING
+		from hrms.utils.expense_claim_type_mapping import MAPPING, gl_names_for
 
+		every_name = {name for value in MAPPING.values() for name in gl_names_for(value)}
 		patterns = account_name_patterns()
-		self.assertLessEqual(len(patterns), len(set(MAPPING.values())))
+		self.assertLessEqual(len(patterns), len(every_name), "one pattern per named account, no more")
 		for pattern in patterns:
 			self.assertTrue(pattern.startswith("%") and pattern.endswith("%"))
 			self.assertNotEqual(pattern, "%", "a bare wildcard would pull the whole chart")

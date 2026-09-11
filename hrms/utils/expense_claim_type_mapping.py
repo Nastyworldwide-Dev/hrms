@@ -24,7 +24,10 @@ logger = logging.getLogger(__name__)
 MAPPING = {
 	"Car Rental (CAR RENTAL)": "Travel Expenses",
 	"Flight / Public Transport (FLIGHT/PT)": "Travel Expenses",
-	"General & Administrative (G&A)": "General & Administrative",
+	# HR's sheet spells this "General & Administrartive" and the source chart uses
+	# "General And Administrative". Any of them resolves; the first is what the
+	# claim type's description shows.
+	"General & Administrative (G&A)": ("General & Administrative", "General & Administrartive"),
 	"Gym & Wellness Subsidy (GYM&WS)": "Employee Benefits",
 	"Lodging / Hotel (LODGING/HOTEL)": "Travel Expenses",
 	"Meals & Entertainment (M&E)": "Employee Meals & Entertainment",
@@ -32,8 +35,25 @@ MAPPING = {
 	"Mileage (Motorcycle) (MILEAGE MOTORCYCLE)": "Fuel/Mileage Expenses",
 	"Parking & Toll (PARKING&TOLL)": "Parking & Toll",
 	"Petrol (PETROL)": "Fuel/Mileage Expenses",
-	"Subsidy Parking Claim (S-PARKING CLAIM)": "Subsidiary Parking",
+	# HR's sheet spells this "Subsidary Parking" — one "i" short. Normalising
+	# cannot bridge two different words, and guessing across words is how a claim
+	# gets wired to the wrong account, so both spellings are named instead.
+	"Subsidy Parking Claim (S-PARKING CLAIM)": ("Subsidiary Parking", "Subsidary Parking"),
 }
+
+
+def gl_names_for(value) -> list:
+	"""The GL account names a claim type accepts, canonical first.
+
+	A mapping value is either one name or a tuple of spellings. HR's sheet and
+	the ERP's chart disagree on two rows by a single letter, and normalising
+	cannot bridge two different words — "subsidary" and "subsidiary" are not the
+	same word, and treating them as one is how a claim reaches the wrong GL
+	account. Naming both is honest; guessing is not.
+	"""
+	if isinstance(value, str):
+		return [value]
+	return list(value)
 
 
 def normalise_account_name(name: str) -> str:
@@ -88,25 +108,27 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 	# Matching is normalised, not merely case-folded: HR's sheet and the ERP's
 	# chart differ by capitals, by "&" against "and", by punctuation and by
 	# spacing, and an exact comparison here left a type without its account.
-	for claim_type, gl_name in mapping.items():
+	for claim_type, value in mapping.items():
+		names = gl_names_for(value)
 		for company in companies:
 			if (claim_type, company) in existing_rows:
 				continue
-			account = match_account_name(
-				gl_name, {name: acct for (name, comp), acct in account_lookup.items() if comp == company}
-			)
+			ledgers = {name: acct for (name, comp), acct in account_lookup.items() if comp == company}
+			headings = {name: acct for (name, comp), acct in (groups or {}).items() if comp == company}
+			# Any spelling the claim type names may resolve it — HR's sheet and the
+			# ERP's chart differ by a letter on two rows.
+			account = next((hit for n in names if (hit := match_account_name(n, ledgers))), None)
 			if account:
 				rows.setdefault(claim_type, []).append((company, account))
 				continue
-			group = match_account_name(
-				gl_name, {name: acct for (name, comp), acct in (groups or {}).items() if comp == company}
-			)
+			group = next((hit for n in names if (hit := match_account_name(n, headings))), None)
+			shown = " / ".join(names)
 			reason = (
 				f"{group} is a group, not a ledger — pick a ledger under it"
 				if group
-				else f"no account named {gl_name} in this company"
+				else f"no account named {shown} in this company"
 			)
-			missing.append((claim_type, company, gl_name, reason))
+			missing.append((claim_type, company, shown, reason))
 	logger.info(
 		"[expense_claim_type_mapping] plan: %d row(s) to add, %d (type, company) without the GL account yet",
 		sum(len(v) for v in rows.values()),
@@ -118,8 +140,9 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 def _spellings(mapping: dict) -> list:
 	"""Every capitalisation the chart might use for the mapped names."""
 	names = set()
-	for gl_name in mapping.values():
-		names.update({gl_name, gl_name.lower(), gl_name.upper(), gl_name.title()})
+	for value in mapping.values():
+		for gl_name in gl_names_for(value):
+			names.update({gl_name, gl_name.lower(), gl_name.upper(), gl_name.title()})
 	return sorted(names)
 
 
@@ -172,7 +195,8 @@ def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
 	plan = preview_expense_claim_type_mapping(mapping)
 
 	created_types = []
-	for claim_type, gl_name in mapping.items():
+	for claim_type, value in mapping.items():
+		gl_name = gl_names_for(value)[0]
 		if frappe.db.exists("Expense Claim Type", claim_type):
 			continue
 		frappe.get_doc(

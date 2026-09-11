@@ -20,9 +20,21 @@ HRMS = pathlib.Path(__file__).resolve().parent.parent
 
 class TestMapping(unittest.TestCase):
 	def test_hrs_sheet_is_carried_verbatim(self):
+		"""Eleven rows, and the canonical GL name of each is HR's.
+
+		Two rows now carry ALTERNATE spellings as well: HR's sheet and the ERP's
+		chart differ by one letter on "Subsidary/Subsidiary Parking" and on
+		"General & Administrartive/Administrative", and normalising cannot bridge
+		two different words. The FIRST name stays the canonical one — it is what
+		the claim type's description shows.
+		"""
+		from hrms.utils.expense_claim_type_mapping import gl_names_for
+
 		self.assertEqual(len(MAPPING), 11)
 		self.assertEqual(MAPPING["Petrol (PETROL)"], "Fuel/Mileage Expenses")
-		self.assertEqual(MAPPING["Subsidy Parking Claim (S-PARKING CLAIM)"], "Subsidiary Parking")
+		parking = gl_names_for(MAPPING["Subsidy Parking Claim (S-PARKING CLAIM)"])
+		self.assertEqual(parking[0], "Subsidiary Parking")
+		self.assertIn("Subsidary Parking", parking)
 
 	def test_rows_are_added_only_where_the_account_exists_and_no_row_does(self):
 		mapping = {"Petrol (PETROL)": "Fuel/Mileage expenses", "Car Rental (CAR RENTAL)": "Travel Expenses"}
