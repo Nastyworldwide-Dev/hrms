@@ -9,7 +9,7 @@ from frappe.tests.utils import FrappeTestCase
 from erpnext.setup.doctype.designation.test_designation import create_designation
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.api.kpi import get_my_kpi_dashboard
+from hrms.api.kpi import CEO_DESIGNATION, can_view_team_kpi, get_my_kpi_dashboard, get_team_kpi
 from hrms.hr.doctype.appraisal_cycle.test_appraisal_cycle import create_appraisal_cycle
 from hrms.hr.doctype.appraisal_template.test_appraisal_template import create_appraisal_template
 from hrms.tests.test_utils import create_company
@@ -189,3 +189,90 @@ class TestMyKPIDashboard(FrappeTestCase):
 		self.assertIsNone(data["current"])
 		self.assertEqual(data["history"], [])
 		self.assertEqual(data["feedback"]["count"], 0)
+
+
+class TestTeamKPI(FrappeTestCase):
+	"""Team KPI is gated on DESIGNATION, not on any role or permission.
+
+	The CEO asked for a read-only view of everyone's appraisal scores by
+	department. Designation is the whole of the rule: an HR Manager, a System
+	Manager and a department head are all refused unless their own Employee
+	record carries "Chief Executive Officer".
+	"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+
+		self.company = create_company("_Test Team KPI").name
+		self.template = create_appraisal_template()
+
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+		create_designation(designation_name=CEO_DESIGNATION)
+
+		self.sales = self._department("Sales TK")
+		self.ops = self._department("Ops TK")
+
+		self.ceo_user = "team_kpi_ceo@example.com"
+		self.staff_user = "team_kpi_staff@example.com"
+		self.ops_user = "team_kpi_ops@example.com"
+
+		self.ceo = make_employee(self.ceo_user, company=self.company, designation=CEO_DESIGNATION)
+		self.staff = make_employee(self.staff_user, company=self.company, designation="Engineer")
+		self.ops_emp = make_employee(self.ops_user, company=self.company, designation="Engineer")
+		frappe.db.set_value("Employee", self.staff, "department", self.sales)
+		frappe.db.set_value("Employee", self.ops_emp, "department", self.ops)
+
+		self.cycle = create_appraisal_cycle(designation="Engineer")
+		self.cycle.create_appraisals()
+		self.sales_appraisal = frappe.db.get_value(
+			"Appraisal", {"appraisal_cycle": self.cycle.name, "employee": self.staff}
+		)
+		self.ops_appraisal = frappe.db.get_value(
+			"Appraisal", {"appraisal_cycle": self.cycle.name, "employee": self.ops_emp}
+		)
+		frappe.db.set_value("Appraisal", self.sales_appraisal, "pms_total_score", 90.0)
+		frappe.db.set_value("Appraisal", self.ops_appraisal, "pms_total_score", 40.0)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _department(self, name: str) -> str:
+		doc = frappe.get_doc(
+			{"doctype": "Department", "department_name": name, "company": self.company}
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
+		return doc.name
+
+	def test_non_ceo_is_refused_even_with_hr_roles(self):
+		user = frappe.get_doc("User", self.staff_user)
+		user.add_roles("HR Manager", "System Manager")
+		frappe.set_user(self.staff_user)
+
+		self.assertFalse(can_view_team_kpi())
+		self.assertRaises(frappe.PermissionError, get_team_kpi)
+
+	def test_ceo_designation_alone_grants_the_view(self):
+		frappe.set_user(self.ceo_user)
+		self.assertTrue(can_view_team_kpi())
+
+		data = get_team_kpi()
+		scores = {row["employee"]: row["total_score"] for row in data["rows"]}
+		self.assertEqual(scores[self.staff], 90.0)
+		self.assertEqual(scores[self.ops_emp], 40.0)
+		self.assertEqual(sorted(data["departments"]), sorted([self.ops, self.sales]))
+
+	def test_department_filter_narrows_the_rows_and_the_average(self):
+		frappe.set_user(self.ceo_user)
+		data = get_team_kpi(department=self.sales)
+
+		self.assertEqual([row["employee"] for row in data["rows"]], [self.staff])
+		self.assertEqual(data["selected_department"], self.sales)
+		self.assertAlmostEqual(data["summary"]["average_score"], 90.0)
+		self.assertEqual(data["summary"]["headcount"], 1)
+
+	def test_view_is_read_only(self):
+		# No argument may name something to write, and the module exposes no
+		# team-side mutation at all.
+		self.assertEqual(list(inspect.signature(get_team_kpi).parameters), ["year", "cycle", "department"])

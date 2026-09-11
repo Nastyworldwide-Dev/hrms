@@ -273,3 +273,176 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 		"selected_year": selected_year,
 		"selected_cycle": selected_cycle,
 	}
+
+
+#: The one designation that may read the Team KPI view. This is deliberately a
+#: designation and NOT a role: the request was "the CEO sees this", and roles on
+#: this hub are bundled into role profiles (an approver profile also carries HR
+#: roles), so a role gate would have handed the view to every HR user. The
+#: Employee master is the register of who holds the office; nothing else is.
+CEO_DESIGNATION = "Chief Executive Officer"
+
+
+def _ceo_employee() -> dict | None:
+	"""The session's Employee row when — and only when — it carries the CEO
+	designation. Returns None for everyone else, including Administrator: the
+	framework identity is not a person and holds no office."""
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": frappe.session.user, "status": "Active"},
+		["name", "employee_name", "designation", "company"],
+		as_dict=True,
+	)
+	if not employee or employee.designation != CEO_DESIGNATION:
+		return None
+	return employee
+
+
+def _require_ceo() -> dict:
+	employee = _ceo_employee()
+	if not employee:
+		logger.warning(
+			"[kpi] team view refused for user=%s (designation gate: %s)",
+			frappe.session.user,
+			CEO_DESIGNATION,
+		)
+		frappe.throw(
+			_("The Team KPI view is available to the Chief Executive Officer."), frappe.PermissionError
+		)
+	return employee
+
+
+@frappe.whitelist()
+def can_view_team_kpi() -> bool:
+	"""Nav/tab gate for the PWA. Cheap, cached per user, and says nothing about
+	the data itself — every read re-checks through _require_ceo."""
+	allowed = _ceo_employee() is not None
+	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, allowed)
+	return allowed
+
+
+@frappe.whitelist()
+def get_team_kpi(
+	year: str | int | None = None, cycle: str | None = None, department: str | None = None
+) -> dict:
+	"""Read-only appraisal scores across the CEO's company, grouped by department.
+
+	Scope is the CEO's own Employee.company — on a multi-company hub the office
+	is held per company, so a hub-wide read would leak sideways. Rows carry one
+	score per employee: the selected cycle's, or the mean of the year's cycles
+	when `cycle` is ALL_CYCLES (the default, matching My KPI's year view).
+
+	There is no write counterpart and no employee argument that selects someone
+	to act on — this endpoint only reports.
+	"""
+	ceo = _require_ceo()
+
+	appraisals = frappe.get_all(
+		"Appraisal",
+		filters={"company": ceo.company, "docstatus": ("<", 2)},
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"appraisal_cycle",
+			"start_date",
+			"end_date",
+			"pms_total_score",
+			"overall_grade",
+			"creation",
+		],
+	)
+
+	cycle_dates = _get_cycle_dates({a.appraisal_cycle for a in appraisals if a.appraisal_cycle})
+	for a in appraisals:
+		a.effective_date = _effective_appraisal_date(a, cycle_dates)
+
+	years = sorted({a.effective_date.year for a in appraisals}, reverse=True)
+	selected_year = cint(year) if year else (years[0] if years else None)
+	in_year = [a for a in appraisals if a.effective_date.year == selected_year]
+	in_year.sort(key=lambda a: a.effective_date, reverse=True)
+	cycles = list(dict.fromkeys(a.appraisal_cycle for a in in_year))
+
+	# One lookup for every employee in play, so the row list costs two queries
+	# regardless of headcount.
+	employee_names = {a.employee for a in in_year}
+	employees = {
+		row.name: row
+		for row in frappe.get_all(
+			"Employee",
+			filters={"name": ("in", list(employee_names))} if employee_names else {"name": ("in", [""])},
+			fields=["name", "employee_name", "designation", "department", "image"],
+		)
+	}
+
+	# Departments offered are those that actually have an appraisal this year —
+	# a selector listing empty departments reads as broken data.
+	departments = sorted(
+		{employees[e].department for e in employee_names if employees.get(e) and employees[e].department}
+	)
+
+	selected_cycle = cycle or ALL_CYCLES
+	if selected_cycle != ALL_CYCLES:
+		in_year = [a for a in in_year if a.appraisal_cycle == selected_cycle]
+
+	grouped: dict[str, dict] = {}
+	for a in in_year:
+		emp = employees.get(a.employee)
+		if not emp:
+			continue
+		if department and emp.department != department:
+			continue
+		group = grouped.setdefault(
+			a.employee,
+			{
+				"employee": a.employee,
+				"employee_name": a.employee_name or emp.employee_name,
+				"designation": emp.designation,
+				"department": emp.department,
+				"image": emp.image,
+				"appraisal": a.name,
+				"cycle": a.appraisal_cycle,
+				"grade": a.overall_grade,
+				"_scores": [],
+			},
+		)
+		group["_scores"].append(flt(a.pms_total_score))
+
+	rows = []
+	for group in grouped.values():
+		scores = group.pop("_scores")
+		group["total_score"] = sum(scores) / len(scores) if scores else 0.0
+		group["cycles_count"] = len(scores)
+		if len(scores) > 1:
+			# an average is not any one cycle's grade
+			group["grade"] = None
+			group["appraisal"] = None
+		rows.append(group)
+	rows.sort(key=lambda r: r["total_score"], reverse=True)
+
+	average = sum(r["total_score"] for r in rows) / len(rows) if rows else 0.0
+	logger.info(
+		"[kpi] team view ceo=%s company=%s year=%s cycle=%s department=%s rows=%d",
+		ceo.name,
+		ceo.company,
+		selected_year,
+		selected_cycle,
+		department,
+		len(rows),
+	)
+
+	return {
+		"company": ceo.company,
+		"departments": departments,
+		"selected_department": department or None,
+		"years": years,
+		"cycles": cycles,
+		"selected_year": selected_year,
+		"selected_cycle": selected_cycle,
+		"summary": {
+			"headcount": len(rows),
+			"average_score": average,
+			"top_score": rows[0]["total_score"] if rows else 0.0,
+		},
+		"rows": rows,
+	}

@@ -40,8 +40,8 @@ export const NAV_ITEMS = [
 	},
 	{
 		icon: markRaw(KPIIcon),
-		title: "My KPI",
-		shortTitle: "My KPI",
+		title: "KPI",
+		shortTitle: "KPI",
 		route: "/dashboard/kpi",
 	},
 	{

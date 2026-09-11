@@ -243,3 +243,18 @@ NEXT: ground the remaining PII scenario (throwaway user WITH the Employee role a
 NEXT: Nabil deploys 1ce408778, then: (a) Employee > Overview shows "Eligible for Overtime Pay" under Years of Service and a tick
   STICKS; (b) Pull -> GL Accounts reports the claim-type reasons and names the skipped account; (c) a new OT Request lists claimable
   days or says why there are none; (d) the two repairs report in the deploy log. Then sweep-4 #20, the geofence bypass.
+- 2026-09-11T06:55:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-11T06:55:08Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-11T06:55:15Z PUSH: nz-glass @ 54327f689
+- 2026-09-11T06:55:15Z COMMIT: 54327f689 fix(sync): a claim type may name more than one spelling of its GL account → review dispatched
+- 2026-09-11 EVIDENCE: 2 correct — Team KPI probe on fresh.local (savepoint, rolled back): 10/10 PASS —
+  non-CEO refused (can_view_team_kpi False + PermissionError), CEO sees both employees, department filter
+  narrows rows AND the average, departments carry the company suffix as expected.
+- 2026-09-11 EVIDENCE: 1 builds — `yarn build` green (75 modules), ruff + eslint clean on the touched files.
+NEXT: Nabil deploys, then on the CEO's login: More -> "KPI" -> the [My KPI | Team KPI] strip appears,
+  Team KPI lists scores and the Department selector filters them. On any other login the KPI page must look
+  exactly as before (no strip). Open question flagged to Nabil: Team KPI is scoped to the CEO's own company.
+- 2026-09-11T09:12:18Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-11T09:12:49Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-11T09:16:34Z PLAN: approved 6c01a1064102 — # PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
+- 2026-09-11T09:16:42Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb

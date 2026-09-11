@@ -1,3 +1,6 @@
-GOAL: Audit Nadi's employee UI and prepare a compact navigation, Home, unified issue/helpdesk, and Assets proposal with an interactive review mockup; no application changes in this design slice.
-DONE WHEN: Source-backed findings, route/action coverage, backend boundaries, implementation slices, and a browser-checked light/dark mockup are ready for Nabil's approval.
-CHECK: Render the standalone mockup with installed Playwright at phone and desktop widths; check navigation, form demonstration, overflow, and accessibility; inspect screenshots. Future application work needs the approved mockup and a risky plan for schema/permission changes.
+GOAL: PWA "My KPI" becomes "KPI", with a CEO-designation-only, read-only Team KPI
+      tab carrying a department selector.
+DONE WHEN: non-CEO sees today's page unchanged; CEO sees the tab; get_team_kpi
+      raises PermissionError for anyone whose Employee.designation is not CEO.
+CHECK: verify-bench probe (sites/probe_team_kpi.py) — 10/10 PASS, rolled back;
+      `yarn build` green; ruff + eslint clean.
