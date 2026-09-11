@@ -463,13 +463,26 @@ function isSessionStale(log) {
 	return Date.now() - t.getTime() >= MAX_OPEN_SHIFT_HOURS * 60 * 60 * 1000
 }
 
-const nextAction = computed(() => {
+const liveAction = computed(() => {
 	const last = lastLog?.value
 	if (!last || last.log_type !== "IN" || isSessionStale(last)) {
 		return { action: "IN", label: __("Check In") }
 	}
 	return { action: "OUT", label: __("Check Out") }
 })
+
+// The action the open sheet committed to. Taken ONCE when the sheet presents
+// and held until it dismisses, because liveAction recomputes whenever the log
+// reloads — a socket list_update, a pull-to-refresh, the post-punch reload —
+// and lastLog is `{}` while that reload is in flight, which resolves to "IN".
+// So the sheet could say "Check Out", the list could refresh underneath it, and
+// Confirm would submit an IN. That is how a day ends up with two INs and no
+// OUT: zero working hours, a Half Day, and on anyone who also holds a night
+// shift the evening punch lands on the 7PM shift and splits the day in two.
+// The server refuses to take the type on trust either (resolve_punch_type);
+// this removes the trigger, that removes the consequence.
+const committedAction = ref(null)
+const nextAction = computed(() => committedAction.value || liveAction.value)
 
 function handleLocationSuccess(position, generation) {
 	if (generation !== geoGeneration) return
@@ -1263,11 +1276,16 @@ async function uploadSelfie(dataUrl) {
 }
 
 function onModalPresent() {
+	// Commit to one action for the life of this sheet. What the user reads on
+	// the way in is what Confirm submits, whatever the log does underneath.
+	committedAction.value = liveAction.value
+	console.info("[CheckInPanel] sheet committed to:", committedAction.value.action)
 	// Auto-start the camera as soon as the check-in sheet is fully open.
 	startCamera()
 }
 
 function onModalDismiss() {
+	committedAction.value = null
 	stopCamera()
 	cameraStatus.value = "idle"
 	cameraError.value = null

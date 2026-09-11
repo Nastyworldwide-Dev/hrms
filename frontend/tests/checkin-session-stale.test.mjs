@@ -17,10 +17,17 @@ const SOURCE = readFileSync(
 // The rule, lifted verbatim from the component so the test drives the real
 // logic rather than a copy that can drift.
 function buildRule(staleData) {
-	const body = SOURCE.slice(
-		SOURCE.indexOf("function isSessionStale(log) {"),
-		SOURCE.indexOf("const nextAction = computed")
-	)
+	// Both anchors are ASSERTED, not assumed. Slicing on indexOf("...") returns
+	// -1 for a missing anchor, which silently takes the slice to the end of the
+	// file (or the start) and breaks four tests with an unrelated-looking error.
+	// That is exactly what happened when `nextAction` was renamed `liveAction`.
+	const START = "function isSessionStale(log) {"
+	const END = "const liveAction = computed"
+	const from = SOURCE.indexOf(START)
+	const to = SOURCE.indexOf(END)
+	assert.ok(from !== -1, `anchor not found in the component: ${START}`)
+	assert.ok(to > from, `anchor not found after the rule: ${END}`)
+	const body = SOURCE.slice(from, to)
 	// Parsed, never hardcoded: injecting a literal let the ceiling test pass
 	// unchanged when the component's ceiling was set to 4.
 	const MAX_OPEN_SHIFT_HOURS = Number(

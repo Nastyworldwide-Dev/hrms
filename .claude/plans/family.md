@@ -18,9 +18,15 @@ hrms/hr/doctype/ot_request/ot_request.py:97 — same-root (fixed here)
 hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py:38 — same-root (fixed here)
   Identical shape: Open/Approved/Rejected, no approver field, submittable.
   Its approvers hit the identical refusal; nobody had reported it yet.
-hrms/hr/doctype/employee_issue/employee_issue.py:21 — same-root (fixed here)
-  Status Open/In Progress/Completed. Whoever moved an issue that was not
-  their own was refused the same way.
+hrms/hr/doctype/employee_issue/employee_issue.py:21 — same-root by construction
+  (same function), NO REACHABLE INSTANCE. Corrected after review: the earlier
+  wording claimed approvers were refused here, which is not reproducible.
+  employee_issue_row_scope.has_permission denies every non-read ptype to
+  non-HR users (READ_PTYPES, employee_issue_row_scope.py:78), and HR is exempt
+  from the filing guard — so the guard's non-filing branch was dead code on
+  this doctype. Probed with the guard instrumented: neither the reporting
+  manager nor the subject employee ever reaches it (reached=[]); both get a
+  PermissionError from the row scope first.
 hrms/hr/utils.py:1060 — same-root (the fix itself)
   The new `_is_filing` gate, called once at the top of the guard.
 
@@ -50,3 +56,64 @@ hrms/hr/doctype/shift_request/shift_request.py:51 — not-affected — same rule
 - The invariant pinned: authority over an EXISTING row is the row scope's
   question (ot_row_scope / employee_issue_row_scope). This guard may only ask
   who chose the subject, and only while the subject is being chosen.
+
+---
+
+# FAMILY — a punch's IN/OUT type taken on trust from the client
+
+CLASS: `log_type` was decided by the browser and stored unverified, so a UI
+race or a stale cache could write an IN where the person meant an OUT. Nothing
+downstream ever re-checked that punches alternate, so one wrong type became
+zero working hours, a Half Day, a day split across two shifts, and a late
+check-out that could never be filed.
+
+ROOT CAUSE: `hrms/api/remote_checkin.py::punch` accepted `log_type` after
+checking only that it was one of ("IN","OUT"). Fixed by `resolve_punch_type`,
+which the server applies before the row is built.
+TRIGGER (removed too): `frontend/src/components/CheckInPanel.vue` recomputed
+the action while the confirm sheet was open, and resolved to "IN" whenever the
+log was mid-reload.
+
+## same-root — fixed in this commit
+hrms/api/remote_checkin.py:punch — resolves the type server-side.
+frontend/src/components/CheckInPanel.vue:onModalPresent — the sheet commits to
+  one action and holds it until dismissal.
+
+## the machine's list — every one is a COMMENT or a LOG STRING, not a caller
+The scan matches the words "punch"/"reject" in prose. None of these reference
+`punch`, `resolve_punch_type` or `_session_is_live`; all verified by opening
+the line.
+
+frontend/src/composables/index.js:18 — not-affected — a comment about promise rejection.
+frontend/src/composables/index.js:33 — not-affected — `reject(error)` of a JS Promise.
+hrms/hr/doctype/vehicle_log/vehicle_log.js:44 — not-affected — Promise reject, unrelated doctype.
+hrms/hr/doctype/vehicle_log/vehicle_log.js:50 — not-affected — same.
+hrms/hr/doctype/employee_checkin/employee_checkin.py:333 — not-affected — docstring prose.
+hrms/hr/doctype/employee_checkin/employee_checkin.py:735 — not-affected — a logger format string.
+hrms/hr/doctype/employee_checkin/employee_checkin.py:769 — not-affected — a logger format string.
+hrms/hr/doctype/shift_type/shift_type.py:431 — not-affected — a logger format string.
+hrms/overrides/employee_checkin_override.py:143 — not-affected — docstring prose.
+hrms/hr/report/attendance_day_audit/attendance_day_audit.js:102 — not-affected — a toast string.
+hrms/utils/attendance_day_audit.py:114 — not-affected — a verdict message.
+hrms/utils/attendance_day_audit.py:171 — not-affected — a verdict message.
+hrms/utils/attendance_day_audit.py:195 — not-affected — a verdict message.
+hrms/utils/attendance_day_audit.py:230 — not-affected — a verdict message.
+hrms/utils/attendance_day_audit.py:620 — not-affected — a logger format string.
+hrms/utils/attendance_day_audit.py:626 — not-affected — a logger format string.
+
+hrms/utils/attendance_day_audit.py:192 — not-affected AS A CALLER, and the most
+  useful line the scan surfaced: it already names this corruption
+  ("Half Day from a single punch"). The Attendance Day Audit report is the
+  existing DETECTOR for every day this defect produced. It is how the damage
+  gets enumerated before anything is repaired — see
+  .claude/plans/checkin-root-cause.md step 5, which stays blocked on Nabil's
+  explicit word because it touches historical data.
+
+## LOCK THE CLASS
+- 12 new cases in hrms/api/test_remote_checkin.py: 10 on the pure rule, 2 driving
+  it through punch() so the wiring is proven and not just the rule.
+- The live/stale boundary reuses the same 06:00 cutoff as
+  `unresolved_stale_in`, so the forgot-to-check-out banner and the punch can
+  never disagree about whether somebody is still on shift.
+- frontend/tests/checkin-session-stale.test.mjs now asserts both of its source
+  anchors instead of silently slicing to the end of the file.

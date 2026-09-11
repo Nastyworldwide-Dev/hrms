@@ -15,7 +15,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Order
 from frappe.query_builder.functions import Count
-from frappe.utils import now_datetime
+from frappe.utils import add_days, cint, get_datetime, now_datetime
 
 from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.geofence import usable_accuracy
@@ -250,6 +250,77 @@ def reject(request: str, approver_remarks: str = "") -> dict:
 	return _decide(request, "Rejected", approver_remarks)
 
 
+def _session_is_live(in_time, now) -> bool:
+	"""A session stays open until 06:00 the morning after its check-in — the same
+	cutoff `unresolved_stale_in` uses to decide when to raise the forgot-to-
+	check-out banner. One rule, so the banner and the punch can never disagree
+	about whether somebody is still on shift."""
+	from datetime import timedelta
+
+	cutoff = (in_time + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
+	return now < cutoff
+
+
+def resolve_punch_type(recent_rows, requested: str, now):
+	"""The type a punch MUST carry, given the employee's recent log.
+
+	`log_type` used to be whatever the browser said. CheckInPanel's nextAction
+	falls back to "IN" whenever it cannot see a prior punch — an empty cache, a
+	failed reload, a backgrounded PWA, a second device — and it recomputes while
+	the confirm sheet is open, so somebody who read "Check Out" could submit an
+	IN. Production carries the proof: one employee's log has IN 08:51 and IN
+	18:31 on the same day with no OUT between, and IN 09:08 followed by IN 09:18
+	on another.
+
+	What that costs: an IN with no OUT is zero working hours and a Half Day; on
+	an employee who also holds a night-shift assignment the 18:3x IN resolves to
+	the 7PM shift and splits the day into two attendance rows; and the duplicate
+	IN then blocks the late check-out that would have repaired it.
+
+	A second IN inside a LIVE session is not a thing that can physically happen
+	— nobody arrives twice without leaving — so it is read as the departure it
+	must be. That is a reading, not a guess. It is deliberately NOT applied when
+	the open session has gone stale or been swept as abandoned: there a fresh IN
+	is exactly right, and turning this morning's arrival into a check-out would
+	be the same mistake pointing the other way.
+
+	Returns (log_type, closing_row | None). Pure, so the rule is testable
+	without a bench; `punch` supplies the rows.
+	"""
+	if requested != "IN":
+		return requested, None
+
+	# A REJECTED late-OUT never closed its session — the same rule the banner
+	# and the OT pairing engine already apply.
+	rows = sorted(
+		(
+			r
+			for r in recent_rows
+			if not (r.log_type == "OUT" and r.get("remote_approval_status") == "Rejected")
+		),
+		key=lambda r: r.time,
+	)
+
+	open_in = None
+	for i, row in enumerate(rows):
+		if row.log_type != "IN":
+			continue
+		nxt = rows[i + 1] if i + 1 < len(rows) else None
+		if nxt and nxt.log_type == "OUT":
+			continue  # session closed
+		open_in = row
+	if not open_in or cint(open_in.get("is_abandoned")):
+		return "IN", None
+	if not _session_is_live(get_datetime(open_in.time), now):
+		return "IN", None
+
+	logger.warning(
+		"[remote_checkin] IN requested while %s is still open — recording a check-out instead",
+		open_in.name,
+	)
+	return "OUT", open_in
+
+
 @frappe.whitelist()
 def punch(
 	employee: str,
@@ -291,12 +362,34 @@ def punch(
 	if log_type not in ("IN", "OUT"):
 		frappe.throw(_("Invalid log type."))
 
+	# The phone proposes; the server decides. Nothing existing is touched — this
+	# only chooses the type of the row about to be created, so there is no
+	# overwrite to get wrong and no punch is ever dropped.
+	punch_time = employee_now(employee)
+	recent = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
+		fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
+		order_by="time asc",
+		limit=100,
+	)
+	resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
+	if resolved_type != log_type:
+		logger.warning(
+			"[remote_checkin] %s asked for %s, recorded %s (session %s still open)",
+			employee,
+			log_type,
+			resolved_type,
+			closing.name if closing else "?",
+		)
+		log_type = resolved_type
+
 	doc = frappe.new_doc("Employee Checkin")
 	doc.update(
 		{
 			"employee": employee,
 			"log_type": log_type,
-			"time": employee_now(employee),
+			"time": punch_time,
 			"latitude": latitude,
 			"longitude": longitude,
 		}

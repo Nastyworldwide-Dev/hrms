@@ -69,17 +69,31 @@ class _FakeDoc(SimpleNamespace):
 class _PunchHarness:
 	"""Runs punch() against mocks and hands back the document it built.
 
+	`recent` is the employee's recent Employee Checkin log, which punch() now
+	reads to decide whether an "IN" actually opens a session.
+
 	The whole `frappe` name is swapped inside the module rather than patching
 	`frappe.db` — outside a request that is an unbound thread-local proxy and
 	cannot be patched at all.
 	"""
 
+	def __init__(self, recent=None):
+		self._recent = recent
+
 	def __enter__(self):
 		self.doc = _FakeDoc()
+		recent = self._recent
+		# `recent` defaults to an empty log: these cases are about the flags a
+		# punch carries, so the employee has no open session and resolve_punch_type
+		# passes the requested type through untouched. Cases that DO exercise the
+		# alternation rule set it (see TestPunchTypeIsNotTakenOnTrust, and
+		# test_an_in_while_a_session_is_open_is_recorded_as_the_check_out below).
+		self.recent = list(recent or [])
 		stub = SimpleNamespace(
 			db=SimpleNamespace(get_value=lambda *args, **kwargs: USER),
 			session=SimpleNamespace(user=USER),
 			new_doc=lambda doctype: self.doc,
+			get_all=lambda *args, **kwargs: self.recent,
 			PermissionError=frappe.PermissionError,
 			_dict=frappe._dict,
 		)
@@ -400,6 +414,119 @@ class TestPunchCarriesFixQuality(unittest.TestCase):
 			)
 		self.assertIsNone(getattr(h.doc.flags, "location_fix_age_s", None))
 		self.assertEqual(getattr(h.doc.flags, "location_source", None), "Unknown")
+
+
+class TestPunchHonoursTheResolvedType(unittest.TestCase):
+	"""The rule is wired into punch(), not merely available beside it."""
+
+	def test_an_in_while_a_session_is_open_is_recorded_as_the_check_out(self):
+		open_in = frappe._dict(
+			{
+				"name": "EMP-CKIN-OPEN",
+				"log_type": "IN",
+				"time": datetime.datetime(2026, 8, 24, 8, 51),
+				"is_abandoned": 0,
+				"remote_approval_status": None,
+			}
+		)
+		with _PunchHarness(recent=[open_in]) as h:
+			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6)
+		self.assertEqual(
+			h.doc.log_type,
+			"OUT",
+			"a second IN inside a live session must be stored as the check-out it is",
+		)
+		self.assertTrue(h.doc.inserted, "the punch is still recorded — never dropped")
+
+	def test_a_first_in_is_stored_as_an_in(self):
+		with _PunchHarness() as h:
+			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6)
+		self.assertEqual(h.doc.log_type, "IN")
+
+
+class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
+	"""The server, not the phone, decides whether a punch opens or closes a session.
+
+	`log_type` was chosen entirely by the browser and accepted unverified.
+	CheckInPanel's nextAction defaults to "IN" whenever it cannot see a prior
+	punch, and it recomputes while the confirm sheet is open — so a user who
+	read "Check Out" could submit an IN. Production shows exactly that: Ahmad
+	Fazwan's log carries IN 08:51 and IN 18:31 on one day with no OUT between,
+	and on 7 Sep an IN at 09:08 and another at 09:18.
+
+	The consequences are not cosmetic. An IN with no OUT is 0 working hours and
+	a Half Day. On an employee who also holds a night-shift assignment the
+	18:3x IN resolves to the 7PM shift instead, splitting the day into two
+	attendance rows. And a duplicate IN blocks the late-check-out that would
+	have fixed it.
+
+	A second IN inside a LIVE session is not a thing that can happen: you
+	cannot arrive twice without leaving. So it is read as the departure it
+	must be — never guessed, never applied to a session that has already gone
+	stale or been swept as abandoned, where a genuine new IN is correct.
+	"""
+
+	def setUp(self):
+		from hrms.api import remote_checkin
+
+		self.mod = remote_checkin
+		self.day = datetime.datetime(2026, 9, 9)
+
+	def at(self, hour, minute=0):
+		return self.day.replace(hour=hour, minute=minute)
+
+	def row(self, log_type, when, **extra):
+		return frappe._dict(
+			{"name": f"CK-{log_type}-{when:%H%M}", "log_type": log_type, "time": when, **extra}
+		)
+
+	def test_a_second_in_inside_a_live_session_is_the_check_out(self):
+		rows = [self.row("IN", self.at(8, 51))]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
+		self.assertEqual(closing.name, "CK-IN-0851")
+
+	def test_a_duplicate_in_minutes_later_is_the_check_out_too(self):
+		"""7 Sep: IN 09:08 then IN 09:18. The second one must not open a session."""
+		rows = [self.row("IN", self.at(9, 8))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(9, 18))
+		self.assertEqual(resolved, "OUT")
+
+	def test_the_first_in_of_the_day_opens_a_session(self):
+		resolved, closing = self.mod.resolve_punch_type([], "IN", self.at(8, 51))
+		self.assertEqual(resolved, "IN")
+		self.assertIsNone(closing)
+
+	def test_an_in_after_a_closed_session_opens_a_new_one(self):
+		rows = [self.row("IN", self.at(8, 51)), self.row("OUT", self.at(12, 0))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(13, 0))
+		self.assertEqual(resolved, "IN")
+
+	def test_an_in_after_a_stale_session_opens_a_new_one(self):
+		"""Yesterday's forgotten check-out must not turn this morning's arrival
+		into a check-out — that is the mirror mistake, and it would silently
+		close a session the employee never worked."""
+		rows = [self.row("IN", self.at(8, 51) - datetime.timedelta(days=1))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(8, 51))
+		self.assertEqual(resolved, "IN")
+
+	def test_an_abandoned_session_never_swallows_a_new_check_in(self):
+		rows = [self.row("IN", self.at(8, 51), is_abandoned=1)]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "IN")
+
+	def test_a_rejected_late_checkout_does_not_close_the_session(self):
+		rows = [
+			self.row("IN", self.at(8, 51)),
+			self.row("OUT", self.at(12, 0), remote_approval_status="Rejected"),
+		]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT", "a rejected OUT leaves the session open")
+
+	def test_an_explicit_check_out_is_never_rewritten(self):
+		rows = [self.row("IN", self.at(8, 51))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "OUT", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
 
 
 if __name__ == "__main__":
