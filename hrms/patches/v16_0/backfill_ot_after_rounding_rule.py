@@ -32,17 +32,53 @@ from frappe.utils import getdate
 logger = logging.getLogger(__name__)
 
 
+#: What an operator can actually do about a day the guard refused. The OT and
+#: hours fields are read_only on Attendance and there is no whitelisted recompute
+#: action, so "correct it by hand" is not a path the UI offers. Re-saving the row
+#: with a changed out_time is — it re-triggers before_update_after_submit, which
+#: recomputes hours and overtime under the current rules.
+_HOW_TO_FIX_BY_HAND = (
+	"To correct one of these: open the Attendance, change Out Time (even by a "
+	"second) and save. That re-runs the hours and overtime calculation under the "
+	"current rules. The fields themselves are read-only and cannot be typed into."
+)
+
+
 def execute():
-	from hrms.hr.doctype.attendance.attendance import recompute_ot_backfill
+	from hrms.hr.doctype.attendance.attendance import (
+		recompute_ot_backfill,
+		repair_typed_working_hours,
+	)
 	from hrms.utils.filing_window import earliest_filable_date
 
 	today = getdate()
 	from_date = earliest_filable_date(today)
 	logger.info("[ot_backfill] repairing the filing window %s..%s", from_date, today)
 
-	result = recompute_ot_backfill(from_date, today, dry_run=0)
+	_run(
+		"overtime",
+		recompute_ot_backfill(from_date, today, dry_run=0),
+		from_date,
+		today,
+		"old_ot_hours",
+		"new_ot_hours",
+	)
+	# The early-arrival rule (19c939278) also only applied going forward, and a
+	# corrected row is never revisited — auto_attendance is 0 on it. Same window,
+	# same guard.
+	_run(
+		"working hours",
+		repair_typed_working_hours(from_date, today, dry_run=0),
+		from_date,
+		today,
+		"old_working_hours",
+		"new_working_hours",
+	)
+
+
+def _run(what, result, from_date, to_date, old_key, new_key):
 	msg = (
-		f"OT backfill {from_date}..{today}: scanned {result['scanned']}, "
+		f"{what} repair {from_date}..{to_date}: scanned {result['scanned']}, "
 		f"changed {result['changed']}, written {result['written']}, "
 		f"left alone because a payout depends on them {result['locked']}"
 	)
@@ -51,14 +87,14 @@ def execute():
 	if result["locked"]:
 		detail = "\n".join(
 			f"{row['attendance']} — {row['employee']} on {row['date']}: "
-			f"{row['old_ot_hours']} h stored, {row['new_ot_hours']} h correct"
+			f"{row[old_key]} stored, {row[new_key]} correct"
 			for row in result["skipped"]
 		)
 		frappe.log_error(
-			title="OT backfill: days a payout depends on",
+			title=f"{what.title()} repair: days a payout depends on",
 			message=(
-				"These days hold the old OT figure and were NOT rewritten, because an "
-				"approved OT request, replacement leave or a submitted payslip already "
-				"depends on them. HR corrects these by hand.\n\n" + detail
+				f"These days hold the old {what} figure and were NOT rewritten, because "
+				"an approved OT request, replacement leave or a submitted payslip "
+				f"already depends on them.\n\n{_HOW_TO_FIX_BY_HAND}\n\n" + detail
 			),
 		)

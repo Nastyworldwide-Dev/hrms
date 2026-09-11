@@ -299,8 +299,10 @@ class TestATypedCorrectionUsesTheSameThreeRules(unittest.TestCase):
 		# A row with no shift resolved has nothing to trim against.
 		self.assertEqual(att.entered_paid_hours(dt(7, 30), dt(18), shift_start=None, break_minutes=60), 9.5)
 
-	def test_a_whole_shift_worked_early_is_not_erased(self):
-		# paid_intervals_from trims the early part, never the whole interval.
+	def test_work_entirely_before_the_shift_is_not_paid(self):
+		# An interval that ENDS before the shift starts is dropped whole — there is
+		# no part of it inside the paid day. (An interval that STRADDLES the start
+		# keeps its later half; that is the case above.)
 		self.assertEqual(att.entered_paid_hours(dt(7), dt(8), shift_start=dt(9), break_minutes=0), 0.0)
 
 	def test_a_night_shift_starting_late_in_the_day_trims_correctly(self):

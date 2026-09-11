@@ -1,3 +1,71 @@
+# FAMILY LEDGER — a rule fixed forward only, and a repair that could erase a day
+
+CLASS (continued from the paid-hours ledger below): a rule changed going forward
+leaves the rows written under the old rule behind, and nothing revisits them.
+
+DEFECT 1: 19c939278 made typed corrections apply the early-arrival trim, but a
+corrected row sets `auto_attendance` to 0, so the hourly job never returns to it.
+The same session shipped a repair for `ot_hours` and none for `working_hours` —
+so an HR-corrected day in the filing window with an early punch keeps the
+inflated figure and is PAID on it. That is the exact case 19c939278's own commit
+message cites as costing money, left sitting in the data. Raised by review.
+
+FIX 1: `repair_typed_working_hours`, same window and same financial guard as the
+OT backfill, scoped to rows the job does not own (`auto_attendance` 0) with both
+times set. The patch runs both.
+
+DEFECT 2, found by forcing the write path on the bench: the row the probe picked
+was a NIGHT shift starting 19:00. Times lying before that trim to nothing, and
+the repair wrote **0.0 over a stored 10.5**. The arithmetic was right; the
+behaviour was not. Any row whose whole span precedes its shift start — a
+mis-stamped shift, a row dated by a path using another convention — would have
+had its day silently erased by a migrate.
+
+FIX 2: a repair may lower a day's hours; it may not delete one. `correct <= 0 <
+stored` is reported and left alone. Proven on the same row: refused, stored
+stayed 10.5. Counter-proven with honest times (in 18:00 for a 19:00 shift, out
+23:00): 5.0 -> 4.0, written, and a re-run changed nothing.
+
+DEFECT 3 (review, lock contention): `_repair_financial_dependency(for_update=True)`
+takes `SELECT ... FOR UPDATE` on OT Request, Salary Slip and Overtime Details,
+and under REPEATABLE READ a range matching nothing still takes gap locks. Both
+repairs held every row's locks until one commit at the end, so a payroll submit
+during the same migrate would block, or the migrate would hit lock-wait timeout
+and abort. Both now classify, write and commit in batches of 200, releasing as
+they go.
+
+DEFECT 4 (review, operability): the Error Log said "HR corrects these by hand",
+which is not a path the UI offers — `ot_hours`, `ot_rate_weighted_hours` and
+`working_hours` are `read_only` on Attendance and no whitelisted recompute
+exists. It now states the one action that works: change Out Time and save, which
+re-triggers `before_update_after_submit` and recomputes under the current rules.
+
+## Call sites the machine listed
+
+| file:line | verdict |
+|---|---|
+| attendance.py `repair_typed_working_hours` | same-root — new, guarded, batched |
+| attendance.py `recompute_ot_backfill` | same-root — batched; guard unchanged |
+| attendance.py `typed_hours_drift` | same-root — carries the never-zero rail |
+| attendance.py `paid_hours_for_row` | not-affected — the repair asks it what the rules give; it decides nothing about writing |
+| remote_checkin_request_hooks.py `_repair_financial_dependency` | not-affected — reused unchanged by both repairs |
+| patches/v16_0/backfill_ot_after_rounding_rule.py | same-root — runs both repairs, one window, actionable message |
+
+## Locking the class
+
+`hrms/tests/test_typed_hours_drift.py`: drift in either direction is reported; a
+rounding tail below the stored precision is not drift; and the rail — zero over a
+positive value is refused, zero over zero is not drift, a genuine 9.58 -> 8.08
+still lands, and a row that was always zero can still gain hours.
+
+EVIDENCE: 2 — red first (ImportError on `typed_hours_drift`); 38/38 green.
+3 — both bench paths forced, not inferred: the write path (5.0 -> 4.0, idempotent
+on re-run) and the refusal path (0.0 refused, 10.5 preserved), each inside a
+savepoint and rolled back. The patch runs both repairs twice with identical
+output.
+
+---
+
 # FAMILY LEDGER — a repair tool with no financial guard
 
 CLASS: two tools that rebuild the same submitted rows, only one of which asks

@@ -759,6 +759,141 @@ def get_employee_shift(employee: str, for_date: str | date | None = None) -> str
 	return None
 
 
+#: Rows per lock-and-write batch. `_repair_financial_dependency` takes
+#: SELECT ... FOR UPDATE on OT Request, Salary Slip and Overtime Details; under
+#: REPEATABLE READ even a range that matches nothing takes gap locks. Holding
+#: every row's locks until one commit at the end would block a payroll submit
+#: running during the same migrate, or time out and abort the migrate itself.
+REPAIR_BATCH = 200
+
+
+def _batched(rows, size=REPAIR_BATCH):
+	for i in range(0, len(rows), size):
+		yield rows[i : i + size]
+
+
+def typed_hours_drift(rows) -> list:
+	"""Rows whose stored working_hours differ from what the rules now give. Pure.
+
+	`rows` carry `stored` and `correct`. A difference below the stored precision
+	(two decimals) is rounding noise, and rewriting a submitted row over noise is
+	all of the risk and none of the benefit.
+	"""
+	drift = []
+	for row in rows:
+		stored, correct = flt(row["stored"]), flt(row["correct"])
+		if round(abs(stored - correct), 2) < 0.01:
+			continue
+		# A repair may lower a day's hours. It may not delete one. A span lying
+		# entirely before its shift start computes to zero — a mis-stamped shift,
+		# or a row dated by a path that used another convention — and writing that
+		# over a positive figure erases the day. Found on the bench against a
+		# 19:00 night shift, where it wrote 0.0 over 10.5.
+		if correct <= 0 < stored:
+			logger.warning(
+				"[attendance] %s computes to zero against a stored %s h — left alone; "
+				"its times lie outside the shift and a repair must not erase a day",
+				row.get("attendance"),
+				stored,
+			)
+			continue
+		out = {k: v for k, v in row.items() if k not in ("stored", "correct")}
+		out["old_working_hours"] = stored
+		out["new_working_hours"] = correct
+		drift.append(out)
+	return drift
+
+
+def repair_typed_working_hours(from_date, to_date, dry_run=1) -> dict:
+	"""Repair days HR corrected BEFORE typed times applied the early-arrival rule.
+
+	19c939278 made a typed correction trim the unpaid early arrival, like the
+	hourly job always did — but only for corrections made after it. A row
+	corrected before still holds hours counted from the early punch, and nothing
+	will revisit it: `on_update_after_submit` sets `auto_attendance` to 0, so the
+	job leaves it alone for ever.
+
+	Only rows the job does NOT own (`auto_attendance` 0) with both times set are
+	considered; an automatic row was already priced correctly. Same financial
+	guard as the OT backfill: a day a payout depends on is reported, never
+	rewritten.
+	"""
+	dry_run = cint(dry_run)
+	logger.info("[attendance] typed-hours repair %s..%s dry_run=%s", from_date, to_date, dry_run)
+	names = frappe.get_all(
+		"Attendance",
+		filters={
+			"docstatus": 1,
+			"auto_attendance": 0,
+			"in_time": ["is", "set"],
+			"out_time": ["is", "set"],
+			"attendance_date": ["between", [from_date, to_date]],
+		},
+		pluck="name",
+	)
+	candidates, docs = [], {}
+	for name in names:
+		doc = frappe.get_doc("Attendance", name)
+		docs[name] = doc
+		candidates.append(
+			{
+				"attendance": name,
+				"employee": doc.employee,
+				"date": str(doc.attendance_date),
+				"stored": flt(doc.working_hours),
+				"correct": paid_hours_for_row(doc),
+			}
+		)
+	drift = typed_hours_drift(candidates)
+
+	write, skipped = (drift, []) if dry_run else ([], [])
+	if not dry_run:
+		from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+		for batch in _batched(drift):
+			locked = {
+				(row["employee"], str(row["date"]))
+				for row in batch
+				if _repair_financial_dependency(
+					row["employee"], row["date"], row["attendance"], for_update=True
+				)
+			}
+			batch_write, batch_skipped = backfill_rows_to_write(batch, locked)
+			for row in batch_write:
+				docs[row["attendance"]].db_set(
+					"working_hours", row["new_working_hours"], update_modified=False
+				)
+			frappe.db.commit()  # release this batch's locks before taking the next
+			write.extend(batch_write)
+			skipped.extend(batch_skipped)
+	for row in skipped:
+		logger.warning(
+			"[attendance] typed-hours repair left %s (%s on %s) alone: a payout depends on it; "
+			"%s h would have become %s h",
+			row["attendance"],
+			row["employee"],
+			row["date"],
+			row["old_working_hours"],
+			row["new_working_hours"],
+		)
+	logger.info(
+		"[attendance] typed-hours repair done scanned=%d drifted=%d written=%d locked=%d",
+		len(names),
+		len(drift),
+		0 if dry_run else len(write),
+		len(skipped),
+	)
+	return {
+		"dry_run": bool(dry_run),
+		"scanned": len(names),
+		"changed": len(drift),
+		"written": 0 if dry_run else len(write),
+		"locked": len(skipped),
+		"records": drift,
+		"skipped": skipped,
+	}
+
+
 def backfill_rows_to_write(rows, locked) -> tuple[list, list]:
 	"""Split recomputed rows into (write, skipped). Pure.
 
@@ -812,24 +947,29 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 	# A day a payout already depends on is HR's to correct by hand. The repair
 	# tool beside this one has refused such days since it shipped; this one
 	# rewrote them, which is why it was bench-only and never ran on deploy.
-	locked = set()
+	write, skipped = (changed, []) if dry_run else ([], [])
 	if not dry_run:
 		from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
 
-		for row in changed:
-			if _repair_financial_dependency(row["employee"], row["date"], row["attendance"], for_update=True):
-				locked.add((row["employee"], str(row["date"])))
-	write, skipped = backfill_rows_to_write(changed, locked)
-
-	if not dry_run:
-		for row in write:
-			doc = recomputed[row["attendance"]]
-			doc.db_set("ot_hours", row["new_ot_hours"], update_modified=False)
-			doc.db_set("ot_rate_weighted_hours", row["new_rate_weighted"], update_modified=False)
-			for band in doc.ot_rate_bands:
-				band.docstatus = doc.docstatus
-			doc.update_child_table("ot_rate_bands")
-		frappe.db.commit()
+		for batch in _batched(changed):
+			locked = {
+				(row["employee"], str(row["date"]))
+				for row in batch
+				if _repair_financial_dependency(
+					row["employee"], row["date"], row["attendance"], for_update=True
+				)
+			}
+			batch_write, batch_skipped = backfill_rows_to_write(batch, locked)
+			for row in batch_write:
+				doc = recomputed[row["attendance"]]
+				doc.db_set("ot_hours", row["new_ot_hours"], update_modified=False)
+				doc.db_set("ot_rate_weighted_hours", row["new_rate_weighted"], update_modified=False)
+				for band in doc.ot_rate_bands:
+					band.docstatus = doc.docstatus
+				doc.update_child_table("ot_rate_bands")
+			frappe.db.commit()  # release this batch's locks before taking the next
+			write.extend(batch_write)
+			skipped.extend(batch_skipped)
 	for row in skipped:
 		logger.warning(
 			"[attendance] OT backfill left %s (%s on %s) alone: a payout depends on it; "
