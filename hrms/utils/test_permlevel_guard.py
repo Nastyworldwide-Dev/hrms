@@ -179,9 +179,7 @@ class TestARowThatExistsButCannotWrite(unittest.TestCase):
 	def test_a_row_that_already_writes_is_left_alone(self):
 		from hrms.utils.permlevel_guard import rows_needing_write
 
-		self.assertEqual(
-			rows_needing_write(needed={("Employee", 1)}, rows_without_write=set(), roles=HR), []
-		)
+		self.assertEqual(rows_needing_write(needed={("Employee", 1)}, rows_without_write=set(), roles=HR), [])
 
 	def test_only_the_levels_we_care_about_are_touched(self):
 		from hrms.utils.permlevel_guard import rows_needing_write
@@ -205,3 +203,50 @@ class TestARowThatExistsButCannotWrite(unittest.TestCase):
 			),
 			[],
 		)
+
+
+class TestTheGuardStaysInsideItsOwnDoctypes(unittest.TestCase):
+	"""The guard may only restore what the lockdown patch created.
+
+	Raised by re-review of 861d9be54. `_needed_permlevels` queried Custom Field
+	with no doctype filter, and `rows_needing_write` has no level-0-holder gate
+	— so its effect is to grant WRITE on a row somebody deliberately left
+	read-only, on any doctype at all.
+
+	Measured on the bench: add one permlevel-1 Custom Field to Appraisal — an
+	ordinary HR customisation — and the next migrate would grant HR Manager and
+	HR User write at Appraisal level 1. Appraisal's level-1 fields are
+	`appraisee_comments`, `appraisee_agreement` and `appraisee_sign_date`: the
+	employee's own sign-off, read-only for HR BY DESIGN so HR cannot sign on the
+	employee's behalf.
+
+	Not live today, because no such Custom Field exists. Closed anyway: the
+	precondition is one form edit away, and nothing would have reported it.
+
+	The right boundary already exists — `staff_perm_lockdown.L1_HR_DOCTYPES`,
+	the list the patch maintains. The guard restores that set and nothing else.
+	"""
+
+	def test_the_boundary_is_the_lockdown_patchs_own_list(self):
+		from hrms.patches.v15_99_0.staff_perm_lockdown import L1_HR_DOCTYPES
+		from hrms.utils.permlevel_guard import GUARDED_DOCTYPES
+
+		self.assertEqual(
+			set(GUARDED_DOCTYPES),
+			set(L1_HR_DOCTYPES),
+			"the guard must restore exactly what the lockdown creates — no more, no less",
+		)
+
+	def test_a_doctype_outside_the_set_is_dropped(self):
+		from hrms.utils.permlevel_guard import guarded_only
+
+		self.assertEqual(
+			guarded_only({("Employee", 1), ("Appraisal", 1), ("Sales Invoice", 2)}),
+			{("Employee", 1)},
+		)
+
+	def test_every_guarded_doctype_survives_the_filter(self):
+		from hrms.utils.permlevel_guard import GUARDED_DOCTYPES, guarded_only
+
+		needed = {(doctype, 1) for doctype in GUARDED_DOCTYPES}
+		self.assertEqual(guarded_only(needed), needed)

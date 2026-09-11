@@ -39,6 +39,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+#: The only doctypes this guard may touch — the same set the lockdown patch
+#: creates rows for (`staff_perm_lockdown.L1_HR_DOCTYPES`). Imported lazily in
+#: `guarded_only` so the pure half stays frappe-free; restated here so a reader
+#: sees the boundary without chasing a patch, and pinned equal by test.
+#:
+#: Why a boundary at all: `rows_needing_write` grants WRITE on a row that
+#: exists, and an unfiltered scan would apply that to any doctype with a
+#: restricted field — including Appraisal L1, where `appraisee_comments` and
+#: `appraisee_sign_date` are read-only for HR BY DESIGN so HR cannot sign on
+#: the employee's behalf.
+GUARDED_DOCTYPES = ("Employee", "Employee Checkin", "Leave Type", "Shift Type")
+
+
+def guarded_only(needed) -> set:
+	"""Drop anything outside GUARDED_DOCTYPES. Pure."""
+	return {(doctype, level) for doctype, level in needed if doctype in GUARDED_DOCTYPES}
+
+
 def missing_permlevel_rows(needed, level_zero_roles, existing_rows, roles) -> list:
 	"""Which (doctype, role, permlevel) rows have to be created. Pure.
 
@@ -114,11 +132,22 @@ def _needed_permlevels(frappe) -> set:
 			continue
 		if level > 0:
 			needed.add((row.doc_type, level))
-	return needed
+	# Third source: the doctype's own JSON. Without it only Employee was covered
+	# (its restricted field is a Custom Field); Leave Type, Shift Type and
+	# Employee Checkin declare theirs in their own fields and were invisible.
+	for doctype in GUARDED_DOCTYPES:
+		if not frappe.db.exists("DocType", doctype):
+			continue
+		for field in frappe.get_meta(doctype).fields:
+			level = int(field.permlevel or 0)
+			if level > 0:
+				needed.add((doctype, level))
+	return guarded_only(needed)
 
 
 def _permission_source(frappe, doctype: str) -> tuple:
-	"""(level_zero_roles, existing_rows) from whichever table actually governs.
+	"""(level_zero_roles, existing_rows, rows_without_write, table) from whichever
+	table actually governs.
 
 	A doctype with any Custom DocPerm row runs entirely on custom perms — the
 	JSON's rows are inert — so the two must never be mixed.
@@ -170,9 +199,16 @@ def ensure_permlevel_rows() -> list:
 			# replaces did the same thing (staff_perm_lockdown.py:166).
 			update_permission_property(dt, role, lvl, "write", 1, validate=False)
 			created.append((dt, role, lvl))
+			logger.warning(
+				"[permlevel_guard] restored %s level-%s access on %s — a restricted field there "
+				"was invisible to every user, Administrator included",
+				role,
+				lvl,
+				dt,
+			)
 		for dt, role, lvl in writeless:
 			if (dt, role, lvl) in gaps:
-				continue  # just created above, already granted
+				continue  # disjoint by construction — belt and braces
 			update_permission_property(dt, role, lvl, "write", 1, validate=False)
 			created.append((dt, role, lvl))
 			logger.warning(

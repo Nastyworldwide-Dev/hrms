@@ -50,6 +50,52 @@ the real failure rather than a constructed one.
 
 ---
 
+
+## AMENDMENT — re-review of 861d9be54
+
+Verdict DEPLOY: the Critical is fixed and was proven the right way — red on the
+real broken state (rows forced to write=0, a real HR Manager save read back 0),
+green after (read back 1), silent on the run after that.
+
+Two further defects closed here.
+
+**Latent privilege escalation.** `_needed_permlevels` queried Custom Field with
+no doctype filter, and `rows_needing_write` has no level-0-holder gate — so its
+effect is to grant WRITE on a row somebody deliberately left read-only, on any
+doctype. One permlevel-1 Custom Field on Appraisal — an ordinary HR
+customisation — and the next migrate would have granted HR write at Appraisal
+level 1, where `appraisee_comments`, `appraisee_agreement` and
+`appraisee_sign_date` are read-only for HR BY DESIGN so HR cannot sign on the
+employee's behalf. Not live (no such field exists), closed anyway: the
+precondition is one form edit away and nothing would have reported it.
+The boundary is now `GUARDED_DOCTYPES`, pinned equal to the lockdown patch's own
+`L1_HR_DOCTYPES` by test.
+
+**Coverage gap closed in the same move.** Discovery read Custom Field and
+Property Setter only, so of the patch's four doctypes just Employee was seen —
+the other three declare their restricted fields in their own JSON. A third
+source reads `frappe.get_meta(doctype).fields`, scoped to GUARDED_DOCTYPES.
+Measured on the bench: needed went from `{("Employee", 1)}` to all four, and the
+run stayed a no-op because the other three are already healthy.
+
+**Log defect.** The per-row "restored ... invisible to every user" warning had
+been absorbed into the write-grant loop, where it was false — the row existed
+and the field rendered. Moved back to the create loop; the write path keeps its
+own accurate line.
+
+Still open, recorded for the user's decision, NOT fixed here:
+the inverse leak — `lock_employee_sensitive_fields` is patch-only and
+`install_app` stamps patches done without running them, so `bank_ac_no`, `iban`,
+`passport_number` and `salary_mode` sit at permlevel 0 on a fresh site, readable
+by anyone who can open that Employee. Confirmed live on the verify bench.
+Locking them REMOVES access from staff and needs the user's explicit word.
+
+EVIDENCE: 2 — three defects each proved red first (ImportError on
+GUARDED_DOCTYPES, then the two filter assertions); 16/16 green. 3 — bench:
+discovery `{Employee}` -> all four guarded doctypes, run still a no-op.
+
+---
+
 # FAMILY LEDGER — a select value the field does not declare
 
 CLASS: a string literal compared against a Select field, where the literal is
