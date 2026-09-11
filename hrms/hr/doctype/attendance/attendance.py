@@ -759,6 +759,21 @@ def get_employee_shift(employee: str, for_date: str | date | None = None) -> str
 	return None
 
 
+def backfill_rows_to_write(rows, locked) -> tuple[list, list]:
+	"""Split recomputed rows into (write, skipped). Pure.
+
+	`locked` is {(employee, date-string)} where an approved OT request,
+	replacement leave or a submitted payslip already depends on the day. Those
+	are reported with their figures intact — HR needs to see what was left alone
+	and what it would have become — and never written.
+	"""
+	write, skipped = [], []
+	for row in rows:
+		key = (row.get("employee"), str(row.get("date")))
+		(skipped if key in locked else write).append(row)
+	return write, skipped
+
+
 def recompute_ot_backfill(from_date, to_date, dry_run=1):
 	"""Recompute OT (ot_hours / ot_rate_weighted_hours / ot_rate_bands) for submitted
 	Attendance in [from_date, to_date] using the corrected engine. dry_run=1 (default)
@@ -773,7 +788,7 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 		filters={"docstatus": 1, "attendance_date": ["between", [from_date, to_date]]},
 		pluck="name",
 	)
-	changed = []
+	changed, recomputed = [], {}
 	for name in names:
 		doc = frappe.get_doc("Attendance", name)
 		old_hours, old_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
@@ -792,13 +807,52 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 				"new_rate_weighted": new_weighted,
 			}
 		)
-		if not dry_run:
-			doc.db_set("ot_hours", new_hours, update_modified=False)
-			doc.db_set("ot_rate_weighted_hours", new_weighted, update_modified=False)
+		recomputed[name] = doc
+
+	# A day a payout already depends on is HR's to correct by hand. The repair
+	# tool beside this one has refused such days since it shipped; this one
+	# rewrote them, which is why it was bench-only and never ran on deploy.
+	locked = set()
+	if not dry_run:
+		from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+		for row in changed:
+			if _repair_financial_dependency(row["employee"], row["date"], row["attendance"], for_update=True):
+				locked.add((row["employee"], str(row["date"])))
+	write, skipped = backfill_rows_to_write(changed, locked)
+
+	if not dry_run:
+		for row in write:
+			doc = recomputed[row["attendance"]]
+			doc.db_set("ot_hours", row["new_ot_hours"], update_modified=False)
+			doc.db_set("ot_rate_weighted_hours", row["new_rate_weighted"], update_modified=False)
 			for band in doc.ot_rate_bands:
 				band.docstatus = doc.docstatus
 			doc.update_child_table("ot_rate_bands")
-	if not dry_run:
 		frappe.db.commit()
-	logger.info("[attendance] OT backfill done scanned=%d changed=%d", len(names), len(changed))
-	return {"dry_run": bool(dry_run), "scanned": len(names), "changed": len(changed), "records": changed}
+	for row in skipped:
+		logger.warning(
+			"[attendance] OT backfill left %s (%s on %s) alone: a payout depends on it; "
+			"%s h would have become %s h",
+			row["attendance"],
+			row["employee"],
+			row["date"],
+			row["old_ot_hours"],
+			row["new_ot_hours"],
+		)
+	logger.info(
+		"[attendance] OT backfill done scanned=%d changed=%d written=%d locked=%d",
+		len(names),
+		len(changed),
+		0 if dry_run else len(write),
+		len(skipped),
+	)
+	return {
+		"dry_run": bool(dry_run),
+		"scanned": len(names),
+		"changed": len(changed),
+		"written": 0 if dry_run else len(write),
+		"locked": len(skipped),
+		"records": changed,
+		"skipped": skipped,
+	}

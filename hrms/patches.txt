@@ -101,3 +101,4 @@ hrms.patches.v16_0.seed_expense_claim_types_from_hr_mapping #2026-09-09 HR's ele
 hrms.patches.v16_0.reset_attendance_list_sort_preferences #2026-09-10 a saved per-user sort outranks the doctype default, so HR would keep the creation-ascending check-in list forever
 hrms.patches.v16_0.show_deciding_status_in_list_views #2026-09-10 the list showed Submitted while hiding Active/Inactive and Approved/Rejected; a saved column set would have swallowed the new column
 hrms.patches.v16_0.default_sensitive_employee_field_lock
+hrms.patches.v16_0.backfill_ot_after_rounding_rule #2026-09-11 repair the 50-59 minute band inside the filing window

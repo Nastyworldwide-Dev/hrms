@@ -1,3 +1,51 @@
+# FAMILY LEDGER — a repair tool with no financial guard
+
+CLASS: two tools that rebuild the same submitted rows, only one of which asks
+whether money already depends on them.
+
+DEFECT: `recompute_ot_backfill` rewrote EVERY submitted Attendance in a range
+and committed, with no check for an approved OT request, replacement leave or a
+submitted payslip. The attendance repair tool beside it has refused such days
+since it shipped (`attendance_day_audit._financially_locked` ->
+`remote_checkin_request_hooks._repair_financial_dependency`). That asymmetry is
+why the backfill was bench-only and why wiring it to a deploy as-is would have
+rewritten already-paid days.
+
+FIX: the backfill consults the same guard. A locked day is REPORTED with its
+figures — what is stored and what would have been correct — and left exactly as
+it is, in the log and in an Error Log entry HR can read. Everything else is
+written. Still idempotent: a row whose recomputed figures match what is stored
+was already skipped before the guard runs.
+
+SCOPE: `hrms/patches/v16_0/backfill_ot_after_rounding_rule.py` runs it over the
+OT FILING WINDOW only — Nabil, 11 Sep 2026: "repair last 2 months". Anything
+older cannot be claimed (`filing_window.earliest_filable_date`), so repairing it
+would rewrite submitted rows nobody can act on: all of the risk, none of the
+benefit.
+
+## Call sites the machine listed
+
+| file:line | verdict |
+|---|---|
+| attendance.py `recompute_ot_backfill` | same-root — fixed here |
+| attendance_day_audit.py `_financially_locked` | not-affected — the correct precedent; the backfill now uses the same underlying helper rather than a second copy |
+| remote_checkin_request_hooks.py `_repair_financial_dependency` | not-affected — reused unchanged, one supplier for both tools |
+| attendance.py `set_overtime` | not-affected — the backfill calls it to recompute, then decides separately whether to persist |
+
+## Locking the class
+
+`hrms/tests/test_ot_backfill_guard.py` pins the partition purely: a locked day
+is never written; the lock is per (employee, date) and must not catch the same
+employee on another day or another employee on the same day; a skipped row keeps
+its figures so HR can see what was held back.
+
+EVIDENCE: 2 — red proved by ImportError on `backfill_rows_to_write`; 29/29 green
+across this and the manual-times suite. 3 — on the verify bench the patch runs
+end to end over the computed window 2026-06-16..2026-09-11 (exactly two cycles),
+scanning 42 rows, and a second run reports identically: idempotent.
+
+---
+
 # FAMILY LEDGER — one quantity, two producers, three rules
 
 CLASS: `Attendance.working_hours` is written by two paths, and they applied
