@@ -319,20 +319,18 @@
 					     out of the page the instant a filter changed — moving the tap
 					     target under the user's finger — and took the scope eyebrow with
 					     it, which is the only line saying what they just chose. -->
-					<div v-if="teamKpi.data">
+					<!-- teamYears gates the filter bar too (there is nothing to filter on
+					     an empty hub), and a line reading back a selection made with
+					     controls that are not on screen is noise. Same rule as the
+					     one-option selector above. -->
+					<div v-if="teamKpi.data && teamYears.length">
 						<!-- The scope line is NOT gated on headcount. A select truncates a
 						     long company name ("Astra Holdings International (Labuan) Ltd
 						     - A…"), so on an empty result it would otherwise be the only
 						     record of what was chosen — and two companies sharing a prefix
 						     would read identically. The one moment you most need to know
 						     what you filtered to is the moment it returned nothing. -->
-						<div class="g-eyebrow">
-							<template v-if="teamCompanies.length > 1">
-								{{ teamCompany || __("All companies") }} ·
-							</template>
-							{{ teamDepartment || __("All departments") }} ·
-							{{ teamCycle === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle }}
-						</div>
+						<div class="g-eyebrow">{{ scopeLabel }}</div>
 						<div
 							v-if="teamSummary && teamSummary.headcount"
 							class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4"
@@ -347,7 +345,11 @@
 									{{ score1(teamSummary.average_score)
 									}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 								</div>
-								<div class="flex items-center gap-2.5">
+								<!-- These go with the score: rendering last fetch's headcount
+								     and top solid, under an eyebrow already naming the NEW
+								     filter, states the previous answer as the current one. -->
+								<GSkeleton v-if="teamKpi.loading" width="180px" height="20px" />
+								<div v-else class="flex items-center gap-2.5">
 									<GBadge variant="accent">
 										{{ __("{0} appraised", [teamSummary.headcount]) }}
 									</GBadge>
@@ -384,11 +386,12 @@
 							teamKpi.error
 								? ""
 								: teamSummary && teamSummary.headcount
-								? __("{0} appraised, average {1}", [
+								? __("{0}: {1} appraised, average {2}", [
+										scopeLabel,
 										teamSummary.headcount,
 										score1(teamSummary.average_score),
 								  ])
-								: __("No appraisals here")
+								: __("{0}: no appraisals", [scopeLabel])
 						}}
 					</span>
 
@@ -586,6 +589,22 @@ const teamCycles = computed(() => teamKpi.data?.cycles || [])
 const teamDepartments = computed(() => teamKpi.data?.departments || [])
 const teamCompanies = computed(() => teamKpi.data?.companies || [])
 const teamSummary = computed(() => teamKpi.data?.summary)
+
+// What the filters currently select, as one string, read by BOTH the visible
+// eyebrow and the screen-reader status line — one source, so they cannot drift.
+// The status line needs it because without it every empty result announced the
+// identical "No appraisals here": changing a filter and landing on another
+// empty set changed nothing and announced nothing, so a listener could not tell
+// the fetch had happened at all.
+const scopeLabel = computed(() =>
+	[
+		teamCompanies.value.length > 1 ? teamCompany.value || __("All companies") : null,
+		teamDepartment.value || __("All departments"),
+		teamCycle.value === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle.value,
+	]
+		.filter(Boolean)
+		.join(" · ")
+)
 
 const TEAM_COLUMNS = computed(() => [
 	{ key: "employee_name", label: __("Employee") },

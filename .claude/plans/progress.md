@@ -245,3 +245,18 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
   employee — the KPI page looks exactly as it did, no strip.
   BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
   CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
+- 2026-09-11T10:07:20Z COMMIT: 320054e6a test(api): the Employee-fence guard was red, so it was not a guard → review dispatched
+- 2026-09-11T10:13:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-11T10:13:54Z COMMIT: 320054e6a test(api): the Employee-fence guard was red, so it was not a guard → review dispatched
+- 2026-09-11 EVIDENCE: 6 behaves — design-reviewer VERDICT DESIGN_APPROVED on 8bcb764ea; frappe-reviewer
+  NEXT_ACTION: DEPLOY on 320054e6a. Between them they found one real hole I had opened: the fence guard's
+  exemption set was keyed by BARE function name while offenders are reported as file.py:func, so exempting
+  three readers pre-approved those names in every other file. Closed in 77a54c495, with the collision now
+  a test rather than a hand-run mutant.
+- 2026-09-11 REPAIR: design suggestions taken — the scope line is suppressed on an empty hub (no filter bar
+  to read back), the "{n} appraised"/"Top" pair skeletons with the score instead of stating last fetch's
+  answer under the new filter, and the screen-reader status line now names the scope, so two empty results
+  in a row are distinguishable instead of both announcing "No appraisals here".
+- 2026-09-11 EVIDENCE: 5 looks right — the mockup contract now records the empty, loading and error states
+  it never depicted (state switcher in mockup-team-kpi.html), which is where those three rules had been
+  living only in code.
