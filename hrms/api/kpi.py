@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate
 
+from hrms.hr.utils import is_hr_operator
+from hrms.overrides.company_scope import allowed_companies
 from hrms.utils.identity import require_employee
 
 logger = logging.getLogger(__name__)
@@ -275,75 +277,133 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	}
 
 
-#: The one designation that may read the Team KPI view. This is deliberately a
-#: designation and NOT a role: the request was "the CEO sees this", and roles on
-#: this hub are bundled into role profiles (an approver profile also carries HR
-#: roles), so a role gate would have handed the view to every HR user. The
-#: Employee master is the register of who holds the office; nothing else is.
+#: The designation that carries the first of Team KPI's two allowlists. This is
+#: deliberately a designation and NOT a role: roles on this hub are bundled into
+#: role profiles (the approver profile also carries the HR roles), so "the CEO"
+#: is not expressible as a role at all. The Employee master is the register of
+#: who holds the office; nothing else is.
 CEO_DESIGNATION = "Chief Executive Officer"
 
+#: The two ways in, reported back to the PWA for logging and support.
+VIEWER_CEO = "ceo"
+VIEWER_HR = "hr"
 
-def _ceo_employee() -> dict | None:
-	"""The session's Employee row when — and only when — it carries the CEO
-	designation. Returns None for everyone else, including Administrator: the
-	framework identity is not a person and holds no office."""
-	employee = frappe.db.get_value(
+
+def _holds_the_office(user: str) -> bool:
+	"""True when an Active Employee claiming this user carries the CEO
+	designation. Compared case- and whitespace-insensitively: `designation` is a
+	Link to a master people retype by hand, and an office is not lost to a
+	trailing space."""
+	designations = frappe.get_all(
 		"Employee",
-		{"user_id": frappe.session.user, "status": "Active"},
-		["name", "employee_name", "designation", "company"],
-		as_dict=True,
+		filters={"user_id": user, "status": "Active"},
+		pluck="designation",
 	)
-	if not employee or employee.designation != CEO_DESIGNATION:
+	target = CEO_DESIGNATION.strip().casefold()
+	return any((d or "").strip().casefold() == target for d in designations)
+
+
+def _team_kpi_viewer() -> dict | None:
+	"""Who may read Team KPI, under which allowlist, and bounded to which
+	companies. Returns None for everyone else.
+
+	TWO allowlists, different in kind and deliberately so:
+
+	  ceo — by DESIGNATION (see CEO_DESIGNATION).
+	  hr  — by ROLE, through `is_hr_operator`: the SAME predicate that already
+	        governs every other HR-only surface here (the issue board, SOPs, the
+	        full directory, the PWA's `is_hr` flag). Reusing it means Team KPI
+	        can never drift from the rest of HR's sight, and a future policy
+	        ruling moves both at once. It is HR User / HR Manager only —
+	        System Manager is a technical role and confers nothing.
+
+	Both are then bounded by the hub's ONE company fence,
+	`hrms.overrides.company_scope.allowed_companies`: an empty list means the
+	user carries no `allow=Company` User Permission and therefore sees every
+	company, which is the normal case. Applying it to the CEO as well is not a
+	restriction on the office — it is refusing to invent a second, weaker
+	company rule for one endpoint.
+	"""
+	user = frappe.session.user
+	mode = None
+	if _holds_the_office(user):
+		mode = VIEWER_CEO
+	elif is_hr_operator(user):
+		mode = VIEWER_HR
+	if not mode:
 		return None
-	return employee
+	return {"mode": mode, "companies": allowed_companies(user)}
 
 
-def _require_ceo() -> dict:
-	employee = _ceo_employee()
-	if not employee:
-		logger.warning(
-			"[kpi] team view refused for user=%s (designation gate: %s)",
-			frappe.session.user,
-			CEO_DESIGNATION,
-		)
+def _require_team_kpi_viewer() -> dict:
+	viewer = _team_kpi_viewer()
+	if not viewer:
+		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
 		frappe.throw(
-			_("The Team KPI view is available to the Chief Executive Officer."), frappe.PermissionError
+			_("The Team KPI view is available to the Chief Executive Officer and to HR."),
+			frappe.PermissionError,
 		)
-	return employee
+	return viewer
 
 
 @frappe.whitelist()
 def can_view_team_kpi() -> bool:
 	"""Nav/tab gate for the PWA. Cheap, cached per user, and says nothing about
-	the data itself — every read re-checks through _require_ceo."""
-	allowed = _ceo_employee() is not None
-	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, allowed)
-	return allowed
+	the data itself — every read re-checks through _require_team_kpi_viewer."""
+	viewer = _team_kpi_viewer()
+	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, viewer and viewer["mode"])
+	return viewer is not None
 
 
 @frappe.whitelist()
 def get_team_kpi(
-	year: str | int | None = None, cycle: str | None = None, department: str | None = None
+	year: str | int | None = None,
+	cycle: str | None = None,
+	department: str | None = None,
+	company: str | None = None,
 ) -> dict:
-	"""Read-only appraisal scores across the CEO's company, grouped by department.
+	"""Read-only appraisal scores across every company the viewer may see.
 
-	Scope is the CEO's own Employee.company — on a multi-company hub the office
-	is held per company, so a hub-wide read would leak sideways. Rows carry one
-	score per employee: the selected cycle's, or the mean of the year's cycles
-	when `cycle` is ALL_CYCLES (the default, matching My KPI's year view).
+	Rows carry one score per employee: the selected cycle's, or the mean of the
+	year's cycles when `cycle` is ALL_CYCLES (the default, matching My KPI's
+	year view). `department` and `company` only narrow what is already visible;
+	asking for a company outside the fence is refused rather than quietly
+	emptied, because a silently empty table reads as "nobody was appraised".
 
 	There is no write counterpart and no employee argument that selects someone
 	to act on — this endpoint only reports.
 	"""
-	ceo = _require_ceo()
+	viewer = _require_team_kpi_viewer()
+	fence = viewer["companies"]
 
+	if company and fence and company not in fence:
+		logger.warning(
+			"[kpi] user=%s asked for company=%s outside its fence %s", frappe.session.user, company, fence
+		)
+		frappe.throw(_("You are not permitted to see {0}.").format(company), frappe.PermissionError)
+
+	# The company fence is applied to the EMPLOYEE, never to the appraisal.
+	# `Appraisal.company` is a plain Link copied from the Appraisal Cycle
+	# (appraisal_cycle.create_appraisals_for_cycle); it has no fetch_from and
+	# validate() never reconciles it with Employee.company. Fencing on the
+	# appraisal therefore both leaks (an appraisal stamped company A re-admits
+	# an employee of company B) and hides (an employee of A whose appraisal was
+	# stamped B disappears). The row is about a person, so the person's company
+	# is what governs it.
+	#
+	# ceiling: reads every live appraisal before the employee join, so a fenced
+	# viewer still pays for the whole table
+	# upgrade: resolve the fenced employee set first and filter
+	# `employee in (...)` here, once any single company's appraisal count makes
+	# this query slow
 	appraisals = frappe.get_all(
 		"Appraisal",
-		filters={"company": ceo.company, "docstatus": ("<", 2)},
+		filters={"docstatus": ("<", 2)},
 		fields=[
 			"name",
 			"employee",
 			"employee_name",
+			"company",
 			"appraisal_cycle",
 			"start_date",
 			"end_date",
@@ -364,21 +424,33 @@ def get_team_kpi(
 	cycles = list(dict.fromkeys(a.appraisal_cycle for a in in_year))
 
 	# One lookup for every employee in play, so the row list costs two queries
-	# regardless of headcount.
-	employee_names = {a.employee for a in in_year}
+	# regardless of headcount — and THIS is where the company fence lands. An
+	# employee outside it simply never enters the map, and the `if not emp:
+	# continue` below then drops their appraisals without a second branch.
+	employee_filters = {"name": ("in", list({a.employee for a in in_year}) or [""])}
+	if company:
+		employee_filters["company"] = company
+	elif fence:
+		employee_filters["company"] = ("in", fence)
+
 	employees = {
 		row.name: row
 		for row in frappe.get_all(
 			"Employee",
-			filters={"name": ("in", list(employee_names))} if employee_names else {"name": ("in", [""])},
-			fields=["name", "employee_name", "designation", "department", "image"],
+			filters=employee_filters,
+			fields=["name", "employee_name", "designation", "department", "company", "image"],
 		)
 	}
+	in_year = [a for a in in_year if a.employee in employees]
 
-	# Departments offered are those that actually have an appraisal this year —
-	# a selector listing empty departments reads as broken data.
+	# The selectors offer only what can actually match: companies and
+	# departments that HAVE a visible appraisal this year, and — once a company
+	# is chosen — only that company's departments. A selector listing an option
+	# that always returns nothing reads as broken data. Both are read off the
+	# EMPLOYEE, for the same reason the fence is.
+	companies = sorted({employees[a.employee].company for a in in_year if employees[a.employee].company})
 	departments = sorted(
-		{employees[e].department for e in employee_names if employees.get(e) and employees[e].department}
+		{employees[a.employee].department for a in in_year if employees[a.employee].department}
 	)
 
 	selected_cycle = cycle or ALL_CYCLES
@@ -399,6 +471,7 @@ def get_team_kpi(
 				"employee_name": a.employee_name or emp.employee_name,
 				"designation": emp.designation,
 				"department": emp.department,
+				"company": emp.company,
 				"image": emp.image,
 				"appraisal": a.name,
 				"cycle": a.appraisal_cycle,
@@ -411,28 +484,39 @@ def get_team_kpi(
 	rows = []
 	for group in grouped.values():
 		scores = group.pop("_scores")
-		group["total_score"] = sum(scores) / len(scores) if scores else 0.0
+		# ONE rounded source for the ring, the hero and the table. An unrounded
+		# mean (72.42857142857143) reached GProgressRing's centre label, which
+		# prints its score verbatim into an 88px ring with no overflow clamp —
+		# and read out the full float to a screen reader.
+		group["total_score"] = flt(sum(scores) / len(scores), 1) if scores else 0.0
 		group["cycles_count"] = len(scores)
 		if len(scores) > 1:
-			# an average is not any one cycle's grade
+			# An average belongs to no single cycle, so every field that names
+			# one is cleared — `cycle` included. Leaving it set named whichever
+			# cycle happened to be first and quietly misattributed the mean.
 			group["grade"] = None
 			group["appraisal"] = None
+			group["cycle"] = None
 		rows.append(group)
 	rows.sort(key=lambda r: r["total_score"], reverse=True)
 
-	average = sum(r["total_score"] for r in rows) / len(rows) if rows else 0.0
+	average = flt(sum(r["total_score"] for r in rows) / len(rows), 1) if rows else 0.0
 	logger.info(
-		"[kpi] team view ceo=%s company=%s year=%s cycle=%s department=%s rows=%d",
-		ceo.name,
-		ceo.company,
+		"[kpi] team view user=%s mode=%s fence=%d year=%s cycle=%s company=%s department=%s rows=%d",
+		frappe.session.user,
+		viewer["mode"],
+		len(fence),
 		selected_year,
 		selected_cycle,
+		company,
 		department,
 		len(rows),
 	)
 
 	return {
-		"company": ceo.company,
+		"viewer_mode": viewer["mode"],
+		"companies": companies,
+		"selected_company": company or None,
 		"departments": departments,
 		"selected_department": department or None,
 		"years": years,

@@ -262,3 +262,19 @@ NEXT: Nabil deploys, then on the CEO's login: More -> "KPI" -> the [My KPI | Tea
 NEXT: Wait for the frappe-reviewer + design-reviewer verdicts on 4df6b0f18; fix anything Critical and
   re-commit (review re-triggers). Nothing pushed, nothing deployed. Open question for Nabil: Team KPI is
   scoped to the CEO's own Employee.company — drop the company filter if he must see every company on the hub.
+- 2026-09-11T09:17:54Z COMMIT: 3e98896c3 docs(plans): record the Team KPI evidence and what the reviewers still owe → review dispatched
+- 2026-09-11T09:28:23Z PLAN: approved 34adf6ee8615 — # PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
+- 2026-09-11 EVIDENCE: 2 correct — Team KPI probe on fresh.local (savepoint, rolled back): 35/35 PASS —
+  both allowlists (CEO by designation, HR by role), System Manager still refused, both see across
+  departments AND companies, company/department filters narrow, Company User Permission fences BOTH.
+- 2026-09-11 EVIDENCE: 7 stays right — the cross-company leak the frappe-reviewer found is now an
+  invariant test: the fence keys on Employee.company, proven RED by re-introducing the Appraisal.company
+  fence (foreign employee re-admitted) and GREEN after.
+- 2026-09-11 REPAIR: design review FIX_CRITICAL — GProgressRing prints its score verbatim into an 88px
+  ring with no overflow clamp, so the raw sum/len mean (72.42857142857143) overflowed it and was read out
+  in full to screen readers. Rounded at the API so ring, hero and table share one source.
+NEXT: Nabil deploys, then check on the CEO's login AND an HR login: More -> "KPI" -> the
+  [My KPI | Team KPI] strip appears, Team KPI lists every company, and Company/Department narrow it.
+  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
+  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
+- 2026-09-11T09:28:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

@@ -21,7 +21,11 @@
   Slot: empty — §11.1 empty state, shown when rows is empty and not loading
 -->
 <template>
-	<div class="g-table__scroll">
+	<!-- The scroll container is focusable and named: with two wide text columns
+	     (Team KPI's employee + department) the table overflows a 375px viewport,
+	     and an unfocusable overflow region leaves the right-hand columns
+	     unreachable by keyboard (WCAG 2.1.1). -->
+	<div class="g-table__scroll" tabindex="0" role="region" :aria-label="caption">
 		<table class="g-table">
 			<caption v-if="caption" class="g-sr">
 				{{

@@ -1,9 +1,19 @@
 # PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
 
 GOAL: Rename the "My KPI" nav entry to "KPI". Inside the KPI page add a
-My KPI / Team KPI segmented selector. Team KPI is visible ONLY to the
-employee whose Designation is "Chief Executive Officer" (designation, not
-role), is read-only, and carries a department selector.
+My KPI / Team KPI segmented selector. Team KPI is read-only and carries
+Company + Department selectors.
+
+TWO ALLOWLISTS, different in kind and deliberately so:
+  ceo — by DESIGNATION ("Chief Executive Officer"). Roles here are bundled
+        into role profiles, so "the CEO" is not expressible as a role.
+  hr  — by ROLE, through hrms.hr.utils.is_hr_operator: the SAME predicate
+        that already governs every other HR-only surface (issue board, SOPs,
+        the directory, the PWA `is_hr` flag). HR User / HR Manager only;
+        System Manager is technical and confers nothing.
+Both see across departments AND companies, bounded only by the hub's one
+company fence (allowed_companies): no Company User Permission = every
+company, which is the normal case.
 
 ## FLOW
 1. PWA boots -> data/kpi.js `canViewTeamKpi` (auto, personal-cached) calls
@@ -14,15 +24,19 @@ role), is read-only, and carries a department selector.
 3. Team KPI tab -> `hrms.api.kpi.get_team_kpi(year, cycle, department)`.
    Server re-checks the designation and raises PermissionError otherwise;
    the UI is never the security boundary.
-4. Scope: the CEO's own Employee.company. Departments offered are those that
-   actually have an appraisal in the selected year.
+4. Scope: every company the viewer is permitted. The fence keys on
+   EMPLOYEE.company, never Appraisal.company — the latter is copied from the
+   Appraisal Cycle, has no fetch_from and is never reconciled, so fencing on it
+   both leaks (a foreign employee re-admitted by their appraisal's stamp) and
+   hides. Company/Department selectors offer only what has a visible appraisal
+   in the selected year; choosing a company narrows the departments.
 5. Read-only: no write endpoint, no form, no submit.
 
 ## MOCKUP
 /home/nabil/mockups/mockup-team-kpi.html
 (in-place, existing tokens — the strip, filter bar and table below describe it)
   [ My KPI | Team KPI ]            <- GSegmented, g-seg
-  Year [2026 v]  Cycle [All v]  Department [All departments v]   <- .kpi-filter
+  Year [2026 v] Cycle [All v] Company [All v] Department [All v] <- .kpi-filter
   ------------------------------------------------------------  border-b-2
   DEPARTMENT AVERAGE        72.4 / 100      ( GProgressRing 88 )
   ------------------------------------------------------------
@@ -42,5 +56,8 @@ filter bar gap-x-6 gap-y-3 pb-5, rows py-3.
 Permission-adjacent. Fence is designation-based and server-side; the endpoint
 reads only, and is company-scoped so a multi-company hub cannot leak sideways.
 
-ASSUMPTION (flagged): Team KPI is scoped to the CEO's own company. If the CEO
-must see every company on the hub, say so and the company filter is dropped.
+PRE-DEPLOY CHECK (flagged): the designation gate matches the Designation master
+named exactly "Chief Executive Officer" (compared case- and whitespace-
+insensitively). If the live site spells the office differently ("CEO", "Chief
+Executive Officer (Group)"), the CEO gets no tab and no error — only a server
+warning. Confirm the live master before deploy.

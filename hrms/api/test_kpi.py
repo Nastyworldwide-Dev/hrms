@@ -192,19 +192,29 @@ class TestMyKPIDashboard(FrappeTestCase):
 
 
 class TestTeamKPI(FrappeTestCase):
-	"""Team KPI is gated on DESIGNATION, not on any role or permission.
+	"""Team KPI has TWO allowlists, and they are different in kind.
 
-	The CEO asked for a read-only view of everyone's appraisal scores by
-	department. Designation is the whole of the rule: an HR Manager, a System
-	Manager and a department head are all refused unless their own Employee
-	record carries "Chief Executive Officer".
+	  CEO  — by DESIGNATION on the Employee record. The office, not a role.
+	  HR   — by ROLE (HR User / HR Manager), the same predicate that already
+	         governs every other HR-only surface in this app.
+
+	A designation gate was chosen for the CEO precisely because roles on this
+	hub are bundled into role profiles, so "the CEO" is not expressible as a
+	role. HR is the opposite case: it IS a role, and reusing is_hr_operator
+	means Team KPI can never drift from the rest of the HR surfaces.
+
+	Both see every company they are permitted, which for an unfenced user is
+	all of them; a Company User Permission narrows either of them identically.
+	Everyone else — System Manager included — is refused.
 	"""
 
 	def setUp(self):
 		frappe.db.delete("Goal")
 		frappe.db.delete("Appraisal")
+		frappe.db.delete("User Permission", {"allow": "Company"})
 
 		self.company = create_company("_Test Team KPI").name
+		self.other_company = create_company("_Test Team KPI Two").name
 		self.template = create_appraisal_template()
 
 		engineer = create_designation(designation_name="Engineer")
@@ -212,67 +222,237 @@ class TestTeamKPI(FrappeTestCase):
 		engineer.save()
 		create_designation(designation_name=CEO_DESIGNATION)
 
-		self.sales = self._department("Sales TK")
-		self.ops = self._department("Ops TK")
+		self.sales = self._department("Sales TK", self.company)
+		self.ops = self._department("Ops TK", self.company)
+		self.far = self._department("Far TK", self.other_company)
 
 		self.ceo_user = "team_kpi_ceo@example.com"
 		self.staff_user = "team_kpi_staff@example.com"
 		self.ops_user = "team_kpi_ops@example.com"
+		self.hr_user = "team_kpi_hr@example.com"
+		self.far_user = "team_kpi_far@example.com"
 
-		self.ceo = make_employee(self.ceo_user, company=self.company, designation=CEO_DESIGNATION)
-		self.staff = make_employee(self.staff_user, company=self.company, designation="Engineer")
-		self.ops_emp = make_employee(self.ops_user, company=self.company, designation="Engineer")
-		frappe.db.set_value("Employee", self.staff, "department", self.sales)
-		frappe.db.set_value("Employee", self.ops_emp, "department", self.ops)
+		self.ceo = self._employee(self.ceo_user, CEO_DESIGNATION, self.sales, self.company)
+		self.staff = self._employee(self.staff_user, "Engineer", self.sales, self.company)
+		self.ops_emp = self._employee(self.ops_user, "Engineer", self.ops, self.company)
+		self.far_emp = self._employee(self.far_user, "Engineer", self.far, self.other_company)
+		self.hr = self._employee(self.hr_user, "Engineer", self.ops, self.company)
+		frappe.get_doc("User", self.hr_user).add_roles("HR Manager")
 
-		self.cycle = create_appraisal_cycle(designation="Engineer")
-		self.cycle.create_appraisals()
-		self.sales_appraisal = frappe.db.get_value(
-			"Appraisal", {"appraisal_cycle": self.cycle.name, "employee": self.staff}
-		)
-		self.ops_appraisal = frappe.db.get_value(
-			"Appraisal", {"appraisal_cycle": self.cycle.name, "employee": self.ops_emp}
-		)
-		frappe.db.set_value("Appraisal", self.sales_appraisal, "pms_total_score", 90.0)
-		frappe.db.set_value("Appraisal", self.ops_appraisal, "pms_total_score", 40.0)
+		self.scores = {self.staff: 90.0, self.ops_emp: 40.0, self.far_emp: 70.0}
+		self.appraisals = {
+			employee: self._appraisal(employee, score) for employee, score in self.scores.items()
+		}
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
+		frappe.db.delete("User Permission", {"allow": "Company"})
 
-	def _department(self, name: str) -> str:
+	def _department(self, name: str, company: str) -> str:
+		return (
+			frappe.get_doc({"doctype": "Department", "department_name": name, "company": company})
+			.insert(ignore_permissions=True, ignore_if_duplicate=True)
+			.name
+		)
+
+	def _employee(self, user: str, designation: str, department: str, company: str) -> str:
+		employee = make_employee(user, company=company, designation=designation)
+		frappe.db.set_value("Employee", employee, "department", department)
+		return employee
+
+	def _appraisal(
+		self,
+		employee: str,
+		score: float,
+		start_date: str = "2026-01-01",
+		end_date: str = "2026-03-31",
+	) -> str:
+		# Appraisal.validate_duplicate refuses a second appraisal for the same
+		# employee over an OVERLAPPING period, so a second cycle needs its own
+		# dates rather than just its own name.
+		company = frappe.db.get_value("Employee", employee, "company")
 		doc = frappe.get_doc(
-			{"doctype": "Department", "department_name": name, "company": self.company}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True)
+			{
+				"doctype": "Appraisal",
+				"employee": employee,
+				"company": company,
+				"start_date": start_date,
+				"end_date": end_date,
+				"overall_grade": "A",
+			}
+		).insert(ignore_permissions=True)
+		# Appraisal.validate recomputes pms_total_score from the KRA rows, so the
+		# fixture score has to be written after the insert, never through it.
+		frappe.db.set_value("Appraisal", doc.name, "pms_total_score", score)
 		return doc.name
 
-	def test_non_ceo_is_refused_even_with_hr_roles(self):
-		user = frappe.get_doc("User", self.staff_user)
-		user.add_roles("HR Manager", "System Manager")
-		frappe.set_user(self.staff_user)
+	def _fence_to(self, user: str, company: str) -> None:
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": user, "allow": "Company", "for_value": company}
+		).insert(ignore_permissions=True)
 
+	# --- who is refused ---------------------------------------------------
+
+	def test_plain_employee_is_refused(self):
+		frappe.set_user(self.staff_user)
 		self.assertFalse(can_view_team_kpi())
 		self.assertRaises(frappe.PermissionError, get_team_kpi)
+
+	def test_system_manager_alone_is_refused(self):
+		# System Manager is a TECHNICAL role for Desk administration. Holding it
+		# must not confer sight of other people's appraisals — the same ruling
+		# that keeps it out of HR_SEE_ALL_ROLES everywhere else in this app.
+		frappe.get_doc("User", self.staff_user).add_roles("System Manager")
+		frappe.set_user(self.staff_user)
+		self.assertFalse(can_view_team_kpi())
+		self.assertRaises(frappe.PermissionError, get_team_kpi)
+
+	# --- allowlist 1: the CEO, by designation -----------------------------
 
 	def test_ceo_designation_alone_grants_the_view(self):
 		frappe.set_user(self.ceo_user)
 		self.assertTrue(can_view_team_kpi())
 
-		data = get_team_kpi()
-		scores = {row["employee"]: row["total_score"] for row in data["rows"]}
-		self.assertEqual(scores[self.staff], 90.0)
-		self.assertEqual(scores[self.ops_emp], 40.0)
-		self.assertEqual(sorted(data["departments"]), sorted([self.ops, self.sales]))
+		data = get_team_kpi(year=2026)
+		self.assertEqual(data["viewer_mode"], "ceo")
+		returned = {row["employee"]: row["total_score"] for row in data["rows"]}
+		for employee, score in self.scores.items():
+			self.assertEqual(returned.get(employee), score, f"{employee} missing or wrong")
+
+	def test_ceo_holds_the_office_without_any_hr_role(self):
+		self.assertFalse(
+			set(frappe.get_roles(self.ceo_user)) & {"HR User", "HR Manager", "System Manager"},
+			"the CEO fixture must prove DESIGNATION alone is enough",
+		)
+		frappe.set_user(self.ceo_user)
+		self.assertTrue(can_view_team_kpi())
+
+	# --- allowlist 2: HR, by role -----------------------------------------
+
+	def test_hr_role_grants_the_view_without_the_designation(self):
+		self.assertNotEqual(frappe.db.get_value("Employee", self.hr, "designation"), CEO_DESIGNATION)
+		frappe.set_user(self.hr_user)
+		self.assertTrue(can_view_team_kpi())
+
+		data = get_team_kpi(year=2026)
+		self.assertEqual(data["viewer_mode"], "hr")
+		returned = {row["employee"] for row in data["rows"]}
+		self.assertEqual(returned, set(self.scores))
+
+	# --- both see across departments AND companies ------------------------
+
+	def test_both_allowlists_see_every_company(self):
+		for user in (self.ceo_user, self.hr_user):
+			frappe.set_user(user)
+			data = get_team_kpi(year=2026)
+			self.assertEqual(
+				{self.company, self.other_company},
+				set(data["companies"]),
+				f"{user} must see both companies",
+			)
+			self.assertIn(self.far_emp, {row["employee"] for row in data["rows"]})
+			self.assertIn(self.far, data["departments"])
 
 	def test_department_filter_narrows_the_rows_and_the_average(self):
 		frappe.set_user(self.ceo_user)
-		data = get_team_kpi(department=self.sales)
+		data = get_team_kpi(year=2026, department=self.sales)
 
 		self.assertEqual([row["employee"] for row in data["rows"]], [self.staff])
 		self.assertEqual(data["selected_department"], self.sales)
 		self.assertAlmostEqual(data["summary"]["average_score"], 90.0)
 		self.assertEqual(data["summary"]["headcount"], 1)
 
+	def test_company_filter_narrows_the_rows(self):
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi(year=2026, company=self.other_company)
+
+		self.assertEqual([row["employee"] for row in data["rows"]], [self.far_emp])
+		self.assertEqual(data["selected_company"], self.other_company)
+		# the department selector must follow the company, or it offers
+		# departments that can never match
+		self.assertEqual(data["departments"], [self.far])
+
+	# --- the company fence still binds both --------------------------------
+
+	def test_a_company_user_permission_fences_hr(self):
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+
+		data = get_team_kpi(year=2026)
+		self.assertEqual(data["companies"], [self.company])
+		self.assertNotIn(self.far_emp, {row["employee"] for row in data["rows"]})
+
+	def test_a_company_user_permission_fences_the_ceo_too(self):
+		# One fence, one behaviour: whoever carries a Company User Permission is
+		# bounded by it, office or no office.
+		self._fence_to(self.ceo_user, self.company)
+		frappe.set_user(self.ceo_user)
+
+		data = get_team_kpi(year=2026)
+		self.assertEqual(data["companies"], [self.company])
+		self.assertNotIn(self.far_emp, {row["employee"] for row in data["rows"]})
+
+	def test_an_appraisal_stamped_with_the_wrong_company_does_not_re_admit_its_owner(self):
+		"""Appraisal.company is copied from the Appraisal Cycle and is never
+		reconciled with Employee.company — it has no fetch_from and validate()
+		does not check it. Fencing on the appraisal therefore leaks: stamp a
+		company-B employee's appraisal with company A and a viewer fenced to A
+		gets to read them. The fence must key on the EMPLOYEE."""
+		frappe.db.set_value("Appraisal", self.appraisals[self.far_emp], "company", self.company)
+		self.assertEqual(frappe.db.get_value("Employee", self.far_emp, "company"), self.other_company)
+
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi(year=2026)
+
+		self.assertNotIn(
+			self.far_emp,
+			{row["employee"] for row in data["rows"]},
+			"an employee outside the fence was re-admitted by their appraisal's company",
+		)
+		self.assertEqual(data["companies"], [self.company])
+
+	def test_an_appraisal_stamped_with_the_wrong_company_still_shows_its_owner(self):
+		"""The mirror of the leak: fencing on the appraisal also HIDES. A
+		company-A employee whose appraisal carries company B must still appear
+		for a viewer fenced to A — they are an A employee."""
+		frappe.db.set_value("Appraisal", self.appraisals[self.staff], "company", self.other_company)
+
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi(year=2026)
+
+		row = next(r for r in data["rows"] if r["employee"] == self.staff)
+		self.assertEqual(row["company"], self.company, "the row's company must be the employee's")
+
+	def test_a_fenced_viewer_cannot_ask_for_a_company_outside_the_fence(self):
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+		self.assertRaises(frappe.PermissionError, get_team_kpi, company=self.other_company)
+
+	def test_scores_are_rounded_for_display(self):
+		# The ring's centre label prints its score verbatim into an 88px circle
+		# with no overflow clamp, and reads it out to a screen reader, so a raw
+		# sum/len mean (72.42857142857143) must never leave this endpoint.
+		# a second, non-overlapping cycle -> staff averages (90 + 85) / 2 = 87.5
+		self._appraisal(self.staff, 85.0, start_date="2026-04-01", end_date="2026-06-30")
+		frappe.set_user(self.ceo_user)
+		data = get_team_kpi(year=2026)
+
+		staff_row = next(row for row in data["rows"] if row["employee"] == self.staff)
+		self.assertEqual(staff_row["total_score"], 87.5)
+
+		for value in [data["summary"]["average_score"], data["summary"]["top_score"]] + [
+			row["total_score"] for row in data["rows"]
+		]:
+			self.assertEqual(round(value, 1), value, f"{value} carries more than one decimal place")
+
+	# --- read-only ---------------------------------------------------------
+
 	def test_view_is_read_only(self):
 		# No argument may name something to write, and the module exposes no
 		# team-side mutation at all.
-		self.assertEqual(list(inspect.signature(get_team_kpi).parameters), ["year", "cycle", "department"])
+		self.assertEqual(
+			list(inspect.signature(get_team_kpi).parameters),
+			["year", "cycle", "department", "company"],
+		)

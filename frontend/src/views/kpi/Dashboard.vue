@@ -25,7 +25,7 @@
 								id="kpi-year-filter"
 								v-model="selectedYear"
 								@change="onYearChange"
-								class="kpi-filter"
+								class="kpi-filter g-focusable"
 							>
 								<option v-for="y in years" :key="y" :value="y">{{ y }}</option>
 							</select>
@@ -38,7 +38,7 @@
 								id="kpi-cycle-filter"
 								v-model="selectedCycle"
 								@change="refetch"
-								class="kpi-filter"
+								class="kpi-filter g-focusable"
 							>
 								<option :value="ALL_CYCLES">{{ __("All Appraisal Cycles") }}</option>
 								<option v-for="c in cycles" :key="c" :value="c">{{ c }}</option>
@@ -263,7 +263,7 @@
 								id="team-year-filter"
 								v-model="teamYear"
 								@change="onTeamYearChange"
-								class="kpi-filter"
+								class="kpi-filter g-focusable"
 							>
 								<option v-for="y in teamYears" :key="y" :value="y">{{ y }}</option>
 							</select>
@@ -276,10 +276,26 @@
 								id="team-cycle-filter"
 								v-model="teamCycle"
 								@change="fetchTeam"
-								class="kpi-filter"
+								class="kpi-filter g-focusable"
 							>
 								<option :value="ALL_CYCLES">{{ __("All Appraisal Cycles") }}</option>
 								<option v-for="c in teamCycles" :key="c" :value="c">{{ c }}</option>
+							</select>
+						</div>
+						<!-- Only drawn when there IS more than one company to choose
+						     between: a one-option selector is not a control. -->
+						<div v-if="teamCompanies.length > 1" class="flex flex-col gap-1.5">
+							<label class="g-eyebrow" for="team-company-filter">
+								{{ __("Company") }}
+							</label>
+							<select
+								id="team-company-filter"
+								v-model="teamCompany"
+								@change="onTeamCompanyChange"
+								class="kpi-filter g-focusable"
+							>
+								<option value="">{{ __("All companies") }}</option>
+								<option v-for="c in teamCompanies" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
 						<div class="flex flex-col gap-1.5">
@@ -290,7 +306,7 @@
 								id="team-department-filter"
 								v-model="teamDepartment"
 								@change="fetchTeam"
-								class="kpi-filter"
+								class="kpi-filter g-focusable"
 							>
 								<option value="">{{ __("All departments") }}</option>
 								<option v-for="d in teamDepartments" :key="d" :value="d">{{ d }}</option>
@@ -299,8 +315,9 @@
 					</div>
 
 					<!-- Hero: the average of whatever the filters currently select -->
-					<div v-if="teamSummary && teamSummary.headcount">
+					<div v-if="teamSummary && teamSummary.headcount && !teamKpi.loading">
 						<div class="g-eyebrow">
+							{{ teamCompany || __("All companies") }} ·
 							{{ teamDepartment || __("All departments") }} ·
 							{{ teamCycle === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle }}
 						</div>
@@ -315,7 +332,7 @@
 										{{ __("{0} appraised", [teamSummary.headcount]) }}
 									</GBadge>
 									<span class="text-xs font-sans font-extrabold text-ink-700">
-										{{ __("Top") }} {{ formatScore(teamSummary.top_score) }}
+										{{ __("Top") }} {{ score1(teamSummary.top_score) }}
 									</span>
 								</div>
 							</div>
@@ -328,14 +345,18 @@
 					</div>
 
 					<!-- §6.3: a score someone may dispute is read on a SOLID surface,
-					     never through a moving tint — GDataTable, not a glass panel. -->
-					<div>
+					     never through a moving tint — GDataTable, not a glass panel.
+					     Hidden on error: GDataTable shows its #empty slot whenever
+					     rows is empty and loading is false, so a failed fetch put
+					     "Nobody has an appraisal" directly under the error banner —
+					     two contradictory answers to the same question. -->
+					<div v-if="!teamKpi.error" aria-live="polite">
 						<div class="g-eyebrow mb-2.5">{{ __("Scores") }}</div>
 						<GDataTable
 							:columns="TEAM_COLUMNS"
 							:rows="teamRows"
 							:caption="__('Team KPI scores')"
-							:loading="teamKpi.loading && !teamKpi.data"
+							:loading="teamKpi.loading"
 						>
 							<template #empty>
 								<GEmptyState
@@ -463,25 +484,37 @@ const trendPoints = computed(() =>
 const teamYear = ref(null)
 const teamCycle = ref(ALL_CYCLES)
 const teamDepartment = ref("")
+const teamCompany = ref("")
 
 function fetchTeam() {
 	console.info("[TeamKPI] loading", {
 		year: teamYear.value,
 		cycle: teamCycle.value,
+		company: teamCompany.value || null,
 		department: teamDepartment.value || null,
 	})
 	teamKpi.submit({
 		year: teamYear.value,
 		cycle: teamCycle.value,
+		company: teamCompany.value || null,
 		department: teamDepartment.value || null,
 	})
 }
 
 // Switching year starts from that year's average across cycles, and clears the
-// department — a department that exists in 2026 may have nobody appraised in
-// 2025, and a filter silently pointing at an empty set reads as broken data.
+// narrowing filters — a department that exists in 2026 may have nobody
+// appraised in 2025, and a filter silently pointing at an empty set reads as
+// broken data rather than as a filter.
 function onTeamYearChange() {
 	teamCycle.value = ALL_CYCLES
+	teamCompany.value = ""
+	teamDepartment.value = ""
+	fetchTeam()
+}
+
+// Departments carry their company's suffix ("Sales - WWSB"), so a department
+// held over from another company can never match. Clear it with the company.
+function onTeamCompanyChange() {
 	teamDepartment.value = ""
 	fetchTeam()
 }
@@ -497,12 +530,16 @@ watch(
 		if (!data) return
 		teamYear.value = data.selected_year
 		teamCycle.value = data.selected_cycle
+		if (!data.selected_company) teamCompanies.value = data.companies || []
 	}
 )
 
 const teamYears = computed(() => teamKpi.data?.years || [])
 const teamCycles = computed(() => teamKpi.data?.cycles || [])
 const teamDepartments = computed(() => teamKpi.data?.departments || [])
+// Held across fetches: narrowing to one company drops the others from the
+// response, which would otherwise empty the selector that did the narrowing.
+const teamCompanies = ref([])
 const teamSummary = computed(() => teamKpi.data?.summary)
 
 const TEAM_COLUMNS = computed(() => [
@@ -514,11 +551,18 @@ const TEAM_COLUMNS = computed(() => [
 
 // GDataTable renders raw cell values, so formatting happens here rather than in
 // the table — it stays a dumb, solid surface (§6.3).
+//
+// ONE fixed decimal, not formatScore: that helper drops a trailing ".0" for the
+// hero's prose context, which in a right-aligned tabular-nums column ships
+// "91", "74.2", "48" — ragged, defeating the whole point of tabular figures in
+// a column of numbers people argue about.
+const score1 = (value) => (Number(value) || 0).toFixed(1)
+
 const teamRows = computed(() =>
 	(teamKpi.data?.rows || []).map((row) => ({
 		employee_name: row.employee_name,
 		department: row.department || __("No department"),
-		score: formatScore(row.total_score),
+		score: score1(row.total_score),
 		grade: row.grade || "—",
 	}))
 )
@@ -535,10 +579,17 @@ const teamRows = computed(() =>
 	font-weight: 600;
 	padding: 8px 32px 8px 12px;
 	min-width: 150px;
+	/* §14.1. Three of these now sit side by side on a phone; at 13px type and
+	   8px padding the real target was 34px. */
+	min-height: var(--g-touch-target-min);
 }
-.kpi-filter:focus {
+/* The focus ring is NOT redeclared here. This block used to end
+   `outline: none; box-shadow: none`, which — being scoped — outranked
+   `.g-focusable:focus-visible` by data-v specificity and silently deleted the
+   §14.3 two-tone ring from every filter on this page. Same specificity trap
+   GSegmented.vue records for its deleted min-height. The border tint stays as
+   a second, redundant cue. */
+.kpi-filter:focus-visible {
 	border-color: var(--g-accent-ink);
-	outline: none;
-	box-shadow: none;
 }
 </style>
