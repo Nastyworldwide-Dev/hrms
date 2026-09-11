@@ -216,3 +216,18 @@ OPEN QUESTION (do not close HR-OTR-26-09-00009 without it): the approver saw TWO
   `order_by="time asc"` with a row limit keeps the OLDEST rows, so a busy log would truncate away the
   very open IN the rule depends on and silently stop coercing, for exactly the people punching most
   often. Fixed at both sites (punch + get_unresolved_stale_in); proven RED by reverting the order.
+- 2026-09-11T10:58:42Z COMMIT: 474539b65 fix(checkin): a busy log must not truncate away the open session → review dispatched
+TICKET: split hrms/api/remote_checkin.py (10 fixes/90d, ~700 lines) — it now owns four distinct
+  jobs: the punch write path, the geofence/approval routing, the late-checkout resolution, and the
+  session-state reads the PWA banner depends on. Extract the SESSION-STATE rules
+  (_session_is_live, resolve_punch_type, the open-session walk in get_unresolved_stale_in, and the
+  late-checkout boundary) into hrms/utils/punch_session.py. ONE module answers "is this employee on
+  shift, and what does this punch mean". The recurring defect class in this file is two places
+  computing the same session question and drifting — the 06:00 cutoff was inline in two functions,
+  and the newest-row truncation was duplicated in both log reads. A single owner closes the class.
+NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin-root-cause.md to
+  confirm the build is not simply stale), then checks: (a) an approver can approve an OT Request;
+  (b) a late check-out submits for someone carrying a duplicate IN; (c) a check-out at 18:3x is
+  recorded as OUT and does not open a second attendance row on the 7PM shift.
+  STILL BLOCKED ON NABIL'S WORD: repairing the attendance days already split, and closing the stale
+  night-shift assignments. Enumerate first with the Attendance Day Audit report for 03-09..10-09.
