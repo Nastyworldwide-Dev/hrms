@@ -25,17 +25,19 @@
 	     (Team KPI's employee + department) the table overflows a 375px viewport,
 	     and an unfocusable overflow region leaves the right-hand columns
 	     unreachable by keyboard (WCAG 2.1.1).
-	     Gated on `caption`, because Vue renders :aria-label="''" as an EMPTY
-	     attribute rather than dropping it — a caption-less caller would ship a
-	     nameless role="region" (not exposed as a landmark at all) plus a tab
-	     stop with no announced purpose. Only `null` removes the attribute.
+	     Only the ROLE is gated on `caption`: Vue renders :aria-label="''" as an
+	     EMPTY attribute rather than dropping it (only `null` removes it), so a
+	     caption-less caller would ship a nameless role="region", which ARIA does
+	     not expose as a landmark at all. The tab stop stays unconditional — an
+	     unnamed focusable scroller is fine, and gating it would hand the 2.1.1
+	     defect straight back to the first caption-less caller with wide columns.
 	     `g-focusable` keeps the §14.3 ring, so the one focusable surface this
 	     component owns does not look like a different application. -->
 	<div
 		class="g-table__scroll g-focusable"
+		tabindex="0"
 		:role="caption ? 'region' : null"
 		:aria-label="caption || null"
-		:tabindex="caption ? 0 : null"
 	>
 		<table class="g-table">
 			<caption v-if="caption" class="g-sr">

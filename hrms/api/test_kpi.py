@@ -372,101 +372,115 @@ class TestTeamKPI(FrappeTestCase):
 		# departments that can never match
 		self.assertEqual(data["departments"], [self.far])
 
-	# --- the company fence still binds both --------------------------------
+	# --- the company fence deliberately does NOT bind here -------------------
 
-	def test_a_company_user_permission_fences_hr(self):
+	def test_a_company_user_permission_does_not_narrow_team_kpi(self):
+		"""THE RULING, pinned. Team KPI is group-level sight by definition: HR
+		sees every company, the CEO sees every company, and nobody else sees the
+		page at all. This is the ONE place on the hub where an allow=Company
+		User Permission — the fence behind the "HR (Company)" and
+		"HR (Instance)" roles — does not narrow an HR user. Everywhere else
+		(Employee rows, reports, the sync endpoints) it still does.
+
+		If that ruling is ever reversed, it is reversed here first."""
+		for user in (self.hr_user, self.ceo_user):
+			self._fence_to(user, self.company)
+			frappe.set_user(user)
+
+			data = get_team_kpi(year=2026)
+			self.assertEqual(
+				{self.company, self.other_company},
+				set(data["companies"]),
+				f"{user} was narrowed by a Company User Permission",
+			)
+			self.assertIn(self.far_emp, {row["employee"] for row in data["rows"]})
+
+			frappe.set_user("Administrator")
+			frappe.db.delete("User Permission", {"user": user, "allow": "Company"})
+
+	def test_a_user_permission_does_not_block_choosing_another_company(self):
 		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
 
-		data = get_team_kpi(year=2026)
-		self.assertEqual(data["companies"], [self.company])
-		self.assertNotIn(self.far_emp, {row["employee"] for row in data["rows"]})
+		data = get_team_kpi(year=2026, company=self.other_company)
+		self.assertEqual([row["employee"] for row in data["rows"]], [self.far_emp])
 
-	def test_a_company_user_permission_fences_the_ceo_too(self):
-		# One fence, one behaviour: whoever carries a Company User Permission is
-		# bounded by it, office or no office.
-		self._fence_to(self.ceo_user, self.company)
-		frappe.set_user(self.ceo_user)
+	# --- the Company filter follows the EMPLOYEE, not the appraisal ----------
 
-		data = get_team_kpi(year=2026)
-		self.assertEqual(data["companies"], [self.company])
-		self.assertNotIn(self.far_emp, {row["employee"] for row in data["rows"]})
-
-	def test_an_appraisal_stamped_with_the_wrong_company_does_not_re_admit_its_owner(self):
+	def test_an_appraisal_stamped_with_the_wrong_company_does_not_move_its_owner(self):
 		"""Appraisal.company is copied from the Appraisal Cycle and is never
-		reconciled with Employee.company — it has no fetch_from and validate()
-		does not check it. Fencing on the appraisal therefore leaks: stamp a
-		company-B employee's appraisal with company A and a viewer fenced to A
-		gets to read them. The fence must key on the EMPLOYEE."""
+		reconciled with Employee.company — no fetch_from, and validate() does not
+		check it. So it is not a usable answer to "which company is this row".
+		Stamp a company-B employee's appraisal with company A and they must
+		still not appear under A."""
 		frappe.db.set_value("Appraisal", self.appraisals[self.far_emp], "company", self.company)
 		self.assertEqual(frappe.db.get_value("Employee", self.far_emp, "company"), self.other_company)
 
-		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
-		data = get_team_kpi(year=2026)
+		data = get_team_kpi(year=2026, company=self.company)
 
 		self.assertNotIn(
 			self.far_emp,
 			{row["employee"] for row in data["rows"]},
-			"an employee outside the fence was re-admitted by their appraisal's company",
+			"the Company filter followed the appraisal's stamp, not the employee's",
 		)
-		self.assertEqual(data["companies"], [self.company])
 
 	def test_an_appraisal_stamped_with_the_wrong_company_still_shows_its_owner(self):
-		"""The mirror of the leak: fencing on the appraisal also HIDES. A
-		company-A employee whose appraisal carries company B must still appear
-		for a viewer fenced to A — they are an A employee."""
+		"""The mirror: a company-A employee whose appraisal carries company B
+		must still appear under A, and their row must read A."""
 		frappe.db.set_value("Appraisal", self.appraisals[self.staff], "company", self.other_company)
 
-		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
-		data = get_team_kpi(year=2026)
+		data = get_team_kpi(year=2026, company=self.company)
 
 		row = next(r for r in data["rows"] if r["employee"] == self.staff)
 		self.assertEqual(row["company"], self.company, "the row's company must be the employee's")
 
-	def test_the_year_and_cycle_selectors_are_fenced_too(self):
-		"""The row fence can be perfect while the dropdowns built before it leak.
+	# --- the selectors and the rows come from one set ------------------------
 
-		`years` and `cycles` used to come from an unfenced read of the whole
-		Appraisal table, so a company-fenced viewer was handed other companies'
-		Appraisal Cycle NAMES — which carry company identity, and which Frappe's
-		own Company User Permission hides from that same user in Desk.
-		"""
+	def test_every_cycle_the_selector_offers_returns_the_rows_it_names(self):
+		"""Selectors and rows are derived from the SAME list, so they can neither
+		leak (offer what the rows exclude) nor hide (omit what the rows contain).
+		With no fence on this page that means every company's cycles are on
+		offer — and each one actually resolves."""
 		far_cycle = frappe.get_doc(
 			{
 				"doctype": "Appraisal Cycle",
-				"cycle_name": "Secret Far Cycle",
+				"cycle_name": "Far Company Cycle",
 				"company": self.other_company,
-				"start_date": "2019-01-01",
-				"end_date": "2019-03-31",
+				"start_date": "2026-07-01",
+				"end_date": "2026-09-30",
 			}
 		).insert(ignore_permissions=True)
-		frappe.db.set_value("Appraisal", self.appraisals[self.far_emp], {"appraisal_cycle": far_cycle.name})
+		frappe.db.set_value(
+			"Appraisal",
+			self.appraisals[self.far_emp],
+			{"appraisal_cycle": far_cycle.name, "start_date": "2026-07-01", "end_date": "2026-09-30"},
+		)
 
-		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
 		data = get_team_kpi(year=2026)
 
-		self.assertNotIn(far_cycle.name, data["cycles"], "a foreign cycle name leaked via the selector")
-		self.assertNotIn(2019, data["years"], "a foreign year leaked via the selector")
+		self.assertIn(far_cycle.name, data["cycles"])
+		self.assertEqual(
+			[row["employee"] for row in get_team_kpi(year=2026, cycle=far_cycle.name)["rows"]],
+			[self.far_emp],
+		)
 
-	def test_the_default_year_is_one_the_viewer_can_actually_see(self):
-		"""`selected_year = years[0]` off an unfenced list lands a fenced viewer
-		on a year whose only appraisals belong to another company: an empty
-		table, first load, no explanation."""
+	def test_the_default_year_opens_on_a_year_that_has_rows(self):
+		"""`selected_year = years[0]` must come from the same list the rows do,
+		or first load is an empty table with no explanation."""
 		frappe.db.set_value(
 			"Appraisal",
 			self.appraisals[self.far_emp],
 			{"start_date": "2099-01-01", "end_date": "2099-03-31"},
 		)
 
-		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
 		data = get_team_kpi()
 
-		self.assertNotEqual(data["selected_year"], 2099)
-		self.assertTrue(data["rows"], "the default year must not open on an empty table")
+		self.assertEqual(data["selected_year"], 2099, "the default year is the newest with data")
+		self.assertEqual([row["employee"] for row in data["rows"]], [self.far_emp])
 
 	def test_choosing_a_company_does_not_empty_the_company_selector(self):
 		frappe.set_user(self.hr_user)
@@ -478,15 +492,10 @@ class TestTeamKPI(FrappeTestCase):
 		)
 
 	def test_a_company_that_does_not_exist_says_so(self):
-		# Same doctrine as the fence refusal: an empty table reads as "nobody
-		# was appraised", never as "you asked for something that is not there".
+		# An empty table reads as "nobody was appraised", never as "you asked
+		# for something that is not there".
 		frappe.set_user(self.hr_user)
 		self.assertRaises(frappe.ValidationError, get_team_kpi, company="No Such Company Ltd")
-
-	def test_a_fenced_viewer_cannot_ask_for_a_company_outside_the_fence(self):
-		self._fence_to(self.hr_user, self.company)
-		frappe.set_user(self.hr_user)
-		self.assertRaises(frappe.PermissionError, get_team_kpi, company=self.other_company)
 
 	def test_scores_are_rounded_for_display(self):
 		# The ring's centre label prints its score verbatim into an 88px circle

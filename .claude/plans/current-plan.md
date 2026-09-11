@@ -11,9 +11,11 @@ TWO ALLOWLISTS, different in kind and deliberately so:
         that already governs every other HR-only surface (issue board, SOPs,
         the directory, the PWA `is_hr` flag). HR User / HR Manager only;
         System Manager is technical and confers nothing.
-Both see across departments AND companies, bounded only by the hub's one
-company fence (allowed_companies): no Company User Permission = every
-company, which is the normal case.
+NEITHER IS COMPANY-FENCED. Team KPI is group-level sight by definition: HR
+sees every company, the CEO sees every company, nobody else sees the page.
+This is the ONE place on the hub where an allow=Company User Permission — the
+fence behind the "HR (Company)" / "HR (Instance)" roles — does not narrow an
+HR user. Everywhere else it still does. Nabil's ruling, 11 Sep 2026.
 
 ## FLOW
 1. PWA boots -> data/kpi.js `canViewTeamKpi` (auto, personal-cached) calls
@@ -24,12 +26,13 @@ company, which is the normal case.
 3. Team KPI tab -> `hrms.api.kpi.get_team_kpi(year, cycle, department)`.
    Server re-checks the designation and raises PermissionError otherwise;
    the UI is never the security boundary.
-4. Scope: every company the viewer is permitted. The fence keys on
-   EMPLOYEE.company, never Appraisal.company — the latter is copied from the
-   Appraisal Cycle, has no fetch_from and is never reconciled, so fencing on it
-   both leaks (a foreign employee re-admitted by their appraisal's stamp) and
-   hides. Company/Department selectors offer only what has a visible appraisal
-   in the selected year; choosing a company narrows the departments.
+4. Scope: every company on the hub. Company/Department are presentation
+   filters only, and both key on EMPLOYEE.company — never Appraisal.company,
+   which is copied from the Appraisal Cycle, has no fetch_from and is never
+   reconciled, so it names the wrong company often enough that the filter, the
+   selector and the Company column would disagree with the Employee master.
+   Selectors and rows derive from ONE set, so they can neither offer what the
+   rows exclude nor omit what the rows contain.
 5. Read-only: no write endpoint, no form, no submit.
 
 ## MOCKUP

@@ -19,7 +19,7 @@
 						v-if="years.length"
 						class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 					>
-						<div class="flex flex-col gap-1.5">
+						<div class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="kpi-year-filter">{{ __("Year") }}</label>
 							<select
 								id="kpi-year-filter"
@@ -30,7 +30,7 @@
 								<option v-for="y in years" :key="y" :value="y">{{ y }}</option>
 							</select>
 						</div>
-						<div class="flex flex-col gap-1.5">
+						<div class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="kpi-cycle-filter">
 								{{ __("Appraisal cycle") }}
 							</label>
@@ -257,7 +257,7 @@
 						v-if="teamYears.length"
 						class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 					>
-						<div class="flex flex-col gap-1.5">
+						<div class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-year-filter">{{ __("Year") }}</label>
 							<select
 								id="team-year-filter"
@@ -268,7 +268,7 @@
 								<option v-for="y in teamYears" :key="y" :value="y">{{ y }}</option>
 							</select>
 						</div>
-						<div class="flex flex-col gap-1.5">
+						<div class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-cycle-filter">
 								{{ __("Appraisal cycle") }}
 							</label>
@@ -284,7 +284,7 @@
 						</div>
 						<!-- Only drawn when there IS more than one company to choose
 						     between: a one-option selector is not a control. -->
-						<div v-if="teamCompanies.length > 1" class="flex flex-col gap-1.5">
+						<div v-if="teamCompanies.length > 1" class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-company-filter">
 								{{ __("Company") }}
 							</label>
@@ -298,7 +298,7 @@
 								<option v-for="c in teamCompanies" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
-						<div class="flex flex-col gap-1.5">
+						<div class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-department-filter">
 								{{ __("Department") }}
 							</label>
@@ -329,7 +329,11 @@
 						</div>
 						<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
 							<div class="flex flex-col gap-2">
-								<GSkeleton v-if="teamKpi.loading" width="150px" height="36px" />
+								<GSkeleton
+									v-if="teamKpi.loading"
+									width="150px"
+									height="var(--g-type-clock-size)"
+								/>
 								<div v-else class="font-sans font-extrabold text-clock leading-none tabular-nums">
 									{{ score1(teamSummary.average_score)
 									}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
@@ -368,7 +372,9 @@
 					     error then recovered — was the one assistive tech skipped. -->
 					<span class="g-sr" role="status" aria-live="polite">
 						{{
-							teamSummary && teamSummary.headcount
+							teamKpi.error
+								? ""
+								: teamSummary && teamSummary.headcount
 								? __("{0} appraised, average {1}", [
 										teamSummary.headcount,
 										score1(teamSummary.average_score),
@@ -541,8 +547,13 @@ function onTeamYearChange() {
 }
 
 // Departments carry their company's suffix ("Sales - WWSB"), so a department
-// held over from another company can never match. Clear it with the company.
+// held over from another company can never match. The cycle is cleared for the
+// same reason in spirit: `cycles` is deliberately NOT narrowed by company (that
+// would strand the year), so a cycle belonging to the company you just left
+// stays selectable and returns nothing, with both selectors still reading as if
+// they were valid.
 function onTeamCompanyChange() {
+	teamCycle.value = ALL_CYCLES
 	teamDepartment.value = ""
 	fetchTeam()
 }
@@ -606,8 +617,15 @@ const teamRows = computed(() =>
 	min-width: 150px;
 	/* A select sizes to its widest option, and these are user-named masters — a
 	   company name or a suffixed department ("Human Resources - VRFC") can
-	   exceed a 375px content box. flex-wrap moves the item to its own line but
-	   does not shrink it, so without this the page scrolls sideways. */
+	   exceed a 375px content box and push the whole page sideways.
+	   max-width ALONE is a no-op here: the percentage resolves against the
+	   field wrapper, and that wrapper is a flex item whose automatic minimum
+	   size IS the select's min-content width. The wrapper is sized by the
+	   select and the select is capped by the wrapper — circular. `min-w-0` on
+	   every wrapper breaks that cycle; the two go together.
+	   The ellipsis is progressive enhancement only: Chromium draws it on a
+	   native select, Gecko and WebKit hard-clip with no glyph, so it must never
+	   be the only thing signalling truncation. */
 	max-width: 100%;
 	text-overflow: ellipsis;
 	/* §14.1. Three of these now sit side by side on a phone; at 13px type and

@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-10T03:24:40Z COMMIT: f6528e423 fix(attendance): a check-out closes its own session on every path, not only for two-shift staff → review dispatched
-- 2026-09-10T03:25:52Z COMMIT: 93cf975ae docs(audit): the complete check-in edge-case set, measured not reasoned → review dispatched
-- 2026-09-10T03:35:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
-- 2026-09-10T03:35:03Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-10T03:35:09Z COMMIT: 6e2d4ab3e feat(attendance): an early arrival is presence, and the paid hours start at the shift → review dispatched
-- 2026-09-10T03:36:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-10T03:36:57Z COMMIT: 0cc503069 fix(attendance): trim the early arrival once, so a break cannot be taken off it twice → review dispatched
-- 2026-09-10T03:45:45Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-10T03:52:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-10T03:52:16Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
-- 2026-09-10T03:52:19Z COMMIT: 894e758d0 fix(attendance): a punch keeps its shift's overtime type, so early arrivals still earn OT → review+cross-app dispatched
-- 2026-09-10T03:53:55Z COMMIT: d08702051 docs(audit): what the check-in pipeline is actually connected to → review dispatched
-- 2026-09-10T04:09:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
-- 2026-09-10T04:09:09Z COMMIT: a2f4ee3b8 test(attendance): cover the resolver line only a two-shift employee can reach → review dispatched
-- 2026-09-10T04:15:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
-- 2026-09-10T04:15:11Z COMMIT: 50bec0dd7 test(attendance): pin the candidate the two-shift case is actually asserting on → review dispatched
-- 2026-09-10T04:15:18Z PUSH: nz-glass @ 50bec0dd7
-- 2026-09-10T04:15:31Z PUSH: nz-glass @ 6ca713aff
-- 2026-09-10T04:15:31Z COMMIT: 6ca713aff docs: handoff for the overtime-type batch → review dispatched
-- 2026-09-10T04:39:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
-- 2026-09-10T04:39:49Z PUSH: nz-glass @ 80860da47
-- 2026-09-10T04:39:49Z COMMIT: 80860da47 docs(test): name the forgotten-check-out case for what it asserts → review dispatched
-- 2026-09-10T06:55:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-10T06:56:31Z PLAN: approved 66d76f8e7dbe — # PLAN — the attendance causes still uncovered (10 Sep 2026)
-- 2026-09-10T06:56:35Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-09-10T06:56:39Z COMMIT: 94afecfa9 fix(pwa): stop waiting forever on a browser that will never send a location → review+design dispatched
-- 2026-09-10T07:01:01Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-10T07:01:06Z PUSH: nz-glass @ dcfbf669f
-- 2026-09-10T07:01:07Z COMMIT: dcfbf669f fix(pwa): tell the truth about which way the location failed → review+design dispatched
-- 2026-09-10T07:05:40Z PLAN: approved d2aa5705cc5c — # PLAN — the attendance causes still uncovered (10 Sep 2026)
-- 2026-09-10T07:06:33Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-10T07:06:39Z PUSH: nz-glass @ 1b6fd02dc
-- 2026-09-10T07:06:39Z COMMIT: 1b6fd02dc fix(pwa): the location banner's severity follows the coordinates, not the error → review+design dispatched
-- 2026-09-10T07:14:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-10T07:14:48Z COMMIT: e42e0bf7c fix(pwa): put the reset where the commit said it was, and pin the muted banner → review+design dispatched
-- 2026-09-10T07:14:54Z PUSH: nz-glass @ e42e0bf7c
-- 2026-09-10T07:19:20Z PUSH: nz-glass @ 231392219
-- 2026-09-10T07:19:21Z COMMIT: 231392219 test(pwa): name the banner, not just its tone, in the muted-arm test → review dispatched
-- 2026-09-10T07:19:44Z PUSH: nz-glass @ 2d3a7b3c6
-- 2026-09-10T07:19:44Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
-- 2026-09-10T07:25:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-09-10T07:25:57Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
-- 2026-09-10T07:27:54Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
-- 2026-09-10T07:28:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-10T07:28:07Z COMMIT: 2d3a7b3c6 docs: handoff for the location-stall batch → review dispatched
-- 2026-09-10T07:28:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-10T07:28:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-10T07:29:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-10T07:29:05Z COMMIT: be4f5639b fix(hr): show the status that decides something, not the one that decides nothing → review dispatched
-- 2026-09-10T07:29:11Z PUSH: nz-glass @ be4f5639b
-- 2026-09-10T07:30:22Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
-
-PLAN: Nadi PWA UX 2.0 — amendment A written (docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md).
-  Cause: the 8 Sep plan's decision Q0 retires Liquid Glass; Nabil's instruction is to KEEP and
-  apply it properly. Evidence that Q0 indicted placement, not material: .g-glass (the CONTENT card
-  class, 26 files) carries backdrop-filter blur(20px) at glass-components.css:320-325, over a
-  three-blob colour field (field.* in design/tokens.json, GLightField.vue:32-34); tokens.json's own
-  track-solid description already records muted text at 3.41:1 dark / 4.14:1 light on glass, below AA.
-  Amendment: Q0 splits into Q0a (retire blob field + blur on content — YES) and Q0b (retire glass —
-  REVERSED). Adds U16 glass-is-chrome-only, U17 reachability (absent from the plan entirely),
-  U18 readability floor. Moves accessibility from phase 4 to required gates + new slice 0.8
-  (design/gates/a11y.mjs is advisory today with 20 accepted violations baselined).
-  Splits slice 0.6 into 0.6a readability/grid (Q0-independent) and 0.6b material (Q0-blocked).
-NEXT: Nabil answers the five questions in amendment §A6. No code until then.
-- 2026-09-10T07:59:27Z COMMIT: 8c902d849 docs(nadi): reverse the decision that would have retired Liquid Glass → review dispatched
-NEXT: Nabil answers the five yes/no questions in docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md
-  section A6 (Q0a retire blob field+content blur; Q0b KEEP Liquid Glass on the six chrome surfaces;
-  U17 reachability; a11y promoted to a required gate now; mockup of the amended look before code).
-  No Nadi 2.0 code until then. Q1-Q10 in the original plan remain open and were not re-asked.
-- 2026-09-10T08:00:36Z COMMIT: f352558d6 docs: record the next step for the Nadi 2.0 amendment → review dispatched
-REPAIR: amendment A corrected after frappe-reviewer on 8c902d849 (2 Critical + 3 Warning, all class:spec).
-  CORRECTION to my earlier progress line and to commit 8c902d849's message: the a11y baseline is
-  30 nodes (16 route:theme entries / 8 routes; label 16, aria-allowed-attr 8, button-name 2,
-  aria-dialog-name 2, target-size 2) — NOT 20. Verified by tallying design/a11y-baseline.json.
-  CORRECTION: design/gates/{a11y,contrast}.mjs are NOT advisory — both exit 1 on failure and
-  glass-gates.yml runs them on push+PR. The real holes: (a) a11y is render-time and exits 0 with
-  status:skip when CI has no served site + AUDIT_PW, so it has never been measured in CI;
-  (b) no branch protection on nz-glass (gh api -> 404), so a red job blocks no merge;
-  (c) a11y.mjs --update-baseline makes "frozen baseline" unenforceable.
-  CORRECTION (mine AND the reviewer's): ion-tab-bar.g-tabbar (glass-components.css:172-190) DOES
-  carry the full glass material incl. both fallbacks. There are exactly 4 backdrop-filter sites in
-  frontend/src: tabbar + .g-sidenav (chrome, correct) and .g-glass + .g-glass-ghost (content, wrong).
-  So "flat chrome, frosted content" was wrong; the tab bar is U16's reference implementation.
-  U16 widened to seven surfaces (.g-sidenav added, §20.2/§15.3 net-zero). A6 gains Q6: Nabil enables
-  branch protection, the only thing that makes any gate blocking.
-EVIDENCE: 2 (verified) — python tally of design/a11y-baseline.json = 30 nodes; contrast.mjs:251
-  process.exit(failures?1:0) green 54/0; a11y.mjs:111 exit 1; grep of backdrop-filter across frontend/src = 4 sites.
-LEARNING(fact): in this repo "advisory gate" is always wrong — the gates enforce by exit code. The two
-  real escape hatches are the render-time SKIP without a served site (only --strict makes it fatal) and
-  the absent branch protection on nz-glass.
-LEARNING(how): design/a11y-baseline.json is keyed route:theme, so every violation is stored twice;
-  any count must sum node values across both themes or it understates the work by half.
-NEXT: Nabil answers the SIX questions in docs/glass/plan/NADI_2.0_AMENDMENT_A_LIQUID_GLASS.md §A6.
-  No Nadi 2.0 code until then.
-- 2026-09-10T11:25:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-10T11:25:32Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
-- 2026-09-10T11:25:35Z COMMIT: cf4cb2fe4 fix(attendance): a typed correction takes the unpaid break off, like the job does → review dispatched
 2026-09-10T09:20Z COMMIT: 2fc1db148 fix(ot) round before the minimum; cf4cb2fe4 fix(attendance) typed correction deducts the break.
   EVIDENCE: 2 correct — red proved for both (ImportError on ot_minutes_qualify; TypeError on the third arg), then 6/6 and 24/24 green.
   EVIDENCE: 3 works — bench hrms.tests.test_ot_nonworking_hours 17/17; bench-free suite diffed against a 174-failure baseline, no new failures;
@@ -298,3 +201,22 @@ NEXT: Nabil deploys, then check on the CEO's login AND an HR login: More -> "KPI
   BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
   CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
 - 2026-09-11T09:41:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-11T09:41:39Z COMMIT: 984a8ace9 fix(kpi): the year and cycle selectors leaked other companies' cycle names → review+design dispatched
+- 2026-09-11T09:53:33Z PLAN: approved b786d8ddf8b5 — # PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
+- 2026-09-11 RULING (Nabil): Team KPI is NOT company-fenced. Any HR sees every company; so does the CEO;
+  non-HR sees nothing. This is the ONE place on the hub where an allow=Company User Permission (the fence
+  behind the "HR (Company)"/"HR (Instance)" roles) does not narrow an HR user — everywhere else it still
+  does. Pinned by test_a_company_user_permission_does_not_narrow_team_kpi; reverse it there first.
+  WHY the CEO still needs the designation gate: in Desk/Verifica he holds no HR roles, so no role gate
+  would ever reach him.
+- 2026-09-11 EVIDENCE: 2 correct — probe on fresh.local (savepoint, rolled back) 38/38 PASS, including
+  both allowlists unnarrowed by a Company User Permission and System Manager still refused.
+- 2026-09-11 EVIDENCE: 5 looks right — design review's last open finding measured and fixed: `max-width:
+  100%` on a filter select was a NO-OP (the flex wrapper is sized BY the select's min-content, so the
+  percentage is circular). Chromium at 375px: scrollWidth 426 -> 375 with min-w-0 on the wrappers.
+NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
+  strip; (b) any HR User/HR Manager — same strip, and the Company selector lists every company; (c) an
+  ordinary employee — the KPI page looks exactly as it did, no strip.
+  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
+  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
+- 2026-09-11T09:54:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

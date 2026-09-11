@@ -8,7 +8,6 @@ from frappe import _
 from frappe.utils import cint, flt, getdate
 
 from hrms.hr.utils import is_hr_operator
-from hrms.overrides.company_scope import allowed_companies
 from hrms.utils.identity import require_employee
 
 logger = logging.getLogger(__name__)
@@ -305,9 +304,8 @@ def _holds_the_office(user: str) -> bool:
 	return any((d or "").strip().casefold() == target for d in designations)
 
 
-def _team_kpi_viewer() -> dict | None:
-	"""Who may read Team KPI, under which allowlist, and bounded to which
-	companies. Returns None for everyone else.
+def _team_kpi_viewer() -> str | None:
+	"""Which of Team KPI's two allowlists lets this session read it, if either.
 
 	TWO allowlists, different in kind and deliberately so:
 
@@ -322,25 +320,27 @@ def _team_kpi_viewer() -> dict | None:
 	        already reads every Appraisal) but it does mean a support log line
 	        saying "hr" may be the framework identity, not a person.
 
-	Both are then bounded by the hub's ONE company fence,
-	`hrms.overrides.company_scope.allowed_companies`: an empty list means the
-	user carries no `allow=Company` User Permission and therefore sees every
-	company, which is the normal case. Applying it to the CEO as well is not a
-	restriction on the office — it is refusing to invent a second, weaker
-	company rule for one endpoint.
+	NEITHER IS COMPANY-FENCED, and that is a deliberate ruling, not an omission.
+	Team KPI is group-level sight by definition: HR sees every company, the CEO
+	sees every company, and nobody else sees the page at all.
+
+	This is the ONE place on the hub where an `allow=Company` User Permission —
+	the fence behind the "HR (Company)" and "HR (Instance)" roles — does not
+	narrow an HR user. Everywhere else (Employee rows, reports, the sync
+	endpoints) it still does. Pinned by
+	test_a_company_user_permission_does_not_narrow_team_kpi so the exception
+	cannot be reintroduced or removed by accident; if the ruling changes, that
+	test is the place it changes.
 	"""
 	user = frappe.session.user
-	mode = None
 	if _holds_the_office(user):
-		mode = VIEWER_CEO
-	elif is_hr_operator(user):
-		mode = VIEWER_HR
-	if not mode:
-		return None
-	return {"mode": mode, "companies": allowed_companies(user)}
+		return VIEWER_CEO
+	if is_hr_operator(user):
+		return VIEWER_HR
+	return None
 
 
-def _require_team_kpi_viewer() -> dict:
+def _require_team_kpi_viewer() -> str:
 	viewer = _team_kpi_viewer()
 	if not viewer:
 		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
@@ -356,7 +356,7 @@ def can_view_team_kpi() -> bool:
 	"""Nav/tab gate for the PWA. Cheap, cached per user, and says nothing about
 	the data itself — every read re-checks through _require_team_kpi_viewer."""
 	viewer = _team_kpi_viewer()
-	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, viewer and viewer["mode"])
+	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, viewer)
 	return viewer is not None
 
 
@@ -367,69 +367,47 @@ def get_team_kpi(
 	department: str | None = None,
 	company: str | None = None,
 ) -> dict:
-	"""Read-only appraisal scores across every company the viewer may see.
+	"""Read-only appraisal scores across EVERY company on the hub.
 
 	Rows carry one score per employee: the selected cycle's, or the mean of the
 	year's cycles when `cycle` is ALL_CYCLES (the default, matching My KPI's
-	year view). `department` and `company` only narrow what is already visible;
-	asking for a company outside the fence is refused rather than quietly
-	emptied, because a silently empty table reads as "nobody was appraised".
+	year view). `company` and `department` are presentation filters only — the
+	audience for this page is group-level by definition (see
+	_team_kpi_viewer), so there is nothing here for them to narrow past. A
+	company that does not exist is refused rather than quietly emptied, because
+	a silently empty table reads as "nobody was appraised".
 
 	There is no write counterpart and no employee argument that selects someone
 	to act on — this endpoint only reports.
 	"""
 	viewer = _require_team_kpi_viewer()
-	fence = viewer["companies"]
 
-	if company:
-		if fence and company not in fence:
-			logger.warning(
-				"[kpi] user=%s asked for company=%s outside its fence %s",
-				frappe.session.user,
-				company,
-				fence,
-			)
-			frappe.throw(_("You are not permitted to see {0}.").format(company), frappe.PermissionError)
-		if not frappe.db.exists("Company", company):
-			# Same doctrine as the refusal above: an empty table reads as
-			# "nobody was appraised", so a company that does not exist has to
-			# say so rather than look like an answer.
-			frappe.throw(_("No such company: {0}.").format(company))
+	if company and not frappe.db.exists("Company", company):
+		# An empty table reads as "nobody was appraised", so a company that does
+		# not exist has to say so rather than look like an answer.
+		frappe.throw(_("No such company: {0}.").format(company))
 
-	# THE FENCE, and it is resolved BEFORE anything at all is read off the
-	# appraisal table — because everything downstream is derived from that read,
-	# the year and cycle selectors included. Fencing after the fact left those
-	# two lists carrying other companies' Appraisal Cycle NAMES, which carry
-	# company identity, to a viewer Frappe's own Company User Permission hides
-	# those very cycles from in Desk.
+	# Every employee on the hub. The audience for this page is group-level, so
+	# there is no company predicate here — see _team_kpi_viewer for the ruling.
 	#
-	# The fence keys on EMPLOYEE.company, never Appraisal.company: the latter is
-	# a plain Link copied from the Appraisal Cycle
-	# (appraisal_cycle.create_appraisals_for_cycle), has no fetch_from, and
-	# validate() never reconciles the two. Fencing on it both leaks (an
-	# appraisal stamped company A re-admits an employee of company B) and hides
-	# (an employee of A whose appraisal was stamped B disappears). The row is
+	# What IS load-bearing: the row's company comes from the EMPLOYEE, never
+	# from Appraisal.company. The latter is a plain Link copied from the
+	# Appraisal Cycle (appraisal_cycle.create_appraisals_for_cycle), has no
+	# fetch_from, and validate() never reconciles the two — so it names the
+	# wrong company often enough that the Company filter, the selector and the
+	# Company column would all disagree with the Employee master. The row is
 	# about a person, so the person's company governs it.
-	#
-	# An employee with a BLANK company is deliberately outside every fence: they
-	# appear only for an unfenced viewer, and under no value of the company
-	# selector. Fail-closed is the right side to err on for an unassigned row.
 	employees = {
 		row.name: row
 		for row in frappe.get_all(
 			"Employee",
-			filters={"company": ("in", fence)} if fence else {},
 			fields=["name", "employee_name", "designation", "department", "company", "image"],
 		)
 	}
 
-	appraisal_filters = {"docstatus": ("<", 2)}
-	if fence:
-		appraisal_filters["employee"] = ("in", list(employees) or [""])
-
 	appraisals = frappe.get_all(
 		"Appraisal",
-		filters=appraisal_filters,
+		filters={"docstatus": ("<", 2)},
 		fields=[
 			"name",
 			"employee",
@@ -444,10 +422,8 @@ def get_team_kpi(
 		],
 	)
 
-	# Unfenced callers skip the `employee in (...)` filter above, so drop any
-	# appraisal whose employee no longer resolves here too. From this line on,
-	# EVERY derived list — years, cycles, companies, departments, rows — comes
-	# from an already-fenced set.
+	# An appraisal whose Employee row is gone resolves to nothing downstream,
+	# so drop it here rather than guard every use of the map.
 	appraisals = [a for a in appraisals if a.employee in employees]
 
 	cycle_dates = _get_cycle_dates({a.appraisal_cycle for a in appraisals if a.appraisal_cycle})
@@ -460,9 +436,9 @@ def get_team_kpi(
 	in_year.sort(key=lambda a: a.effective_date, reverse=True)
 	cycles = list(dict.fromkeys(a.appraisal_cycle for a in in_year))
 
-	# The company selector lists every company the viewer may see that HAS an
-	# appraisal this year — it is NOT narrowed by `company`, or choosing one
-	# would empty the control that did the choosing.
+	# The company selector lists every company that HAS an appraisal this year —
+	# it is NOT narrowed by `company`, or choosing one would empty the control
+	# that did the choosing.
 	companies = sorted({employees[a.employee].company for a in in_year if employees[a.employee].company})
 
 	# `company` is presentation narrowing only, applied AFTER years/cycles/
@@ -525,10 +501,9 @@ def get_team_kpi(
 
 	average = flt(sum(r["total_score"] for r in rows) / len(rows), 1) if rows else 0.0
 	logger.info(
-		"[kpi] team view user=%s mode=%s fence=%d year=%s cycle=%s company=%s department=%s rows=%d",
+		"[kpi] team view user=%s mode=%s year=%s cycle=%s company=%s department=%s rows=%d",
 		frappe.session.user,
-		viewer["mode"],
-		len(fence),
+		viewer,
 		selected_year,
 		selected_cycle,
 		company,
@@ -537,7 +512,7 @@ def get_team_kpi(
 	)
 
 	return {
-		"viewer_mode": viewer["mode"],
+		"viewer_mode": viewer,
 		"companies": companies,
 		"selected_company": company or None,
 		"departments": departments,
