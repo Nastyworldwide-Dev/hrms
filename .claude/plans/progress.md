@@ -216,3 +216,30 @@ NEXT: NOT more work on permlevel_guard.py. Next is sweep-4 finding #20 (Shift Re
 NEXT: ground the remaining PII scenario (throwaway user WITH the Employee role and a linked Employee record, read a colleague via
   frappe.client.get) before the lock is deployed. Then sweep-4 #20, the geofence bypass via Shift Request. Nabil still owes the OT
   backfill range and the early-arrival ruling.
+- 2026-09-11T03:52:42Z COMMIT: 8dfc21d28 docs(plans): what the PII probe proved, and the one thing it did not → review dispatched
+- 2026-09-11T04:00:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-11T04:00:41Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
+- 2026-09-11T04:00:44Z COMMIT: 19c939278 fix(attendance): a typed correction stops paying for an early clock-in → review dispatched
+- 2026-09-11T04:03:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-11T04:03:10Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-11T04:03:14Z COMMIT: 2a62b77af fix(ot): repair the discarded overtime, inside the filing window and behind a guard → review dispatched
+- 2026-09-11T04:14:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-11T04:14:41Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-11T04:14:45Z COMMIT: 59d6d3e07 fix(attendance): repair the hours the early-arrival fix only fixed forward → review dispatched
+- 2026-09-11T04:22:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T04:22:38Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-11T04:22:42Z COMMIT: 8bac74c72 fix(sync): the GL pull now says why a claim type has no account → review dispatched
+- 2026-09-11T04:27:24Z COMMIT: f83c201dd fix(attendance): the hours and overtime repairs recur, so HR never edits a record → review+cross-app dispatched
+- 2026-09-11T04:33:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T04:33:30Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-09-11T04:33:34Z COMMIT: 275c0f6f5 fix(sync): the GL pull finds an account whose name is spelled differently → review dispatched
+- 2026-09-11T06:26:57Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 4 file(s) ⟂bdfcc00ed624
+- 2026-09-11T06:27:03Z COMMIT: 1ce408778 feat(pwa): an empty claim list says why, instead of a blank date picker → review+design dispatched
+- 2026-09-11T06:30:19Z PUSH: nz-glass @ 1ce408778
+2026-09-11T06:35Z PUSH: nz-glass be4f5639b..1ce408778 (24 commits) on Nabil's explicit word ("sure go on push all").
+  Context that matters: Nabil had deployed be4f563 believing it was the latest — it was the session's STARTING commit, so every
+  "still same" result today (the GL pull dialog, the missing tick box, nothing-to-claim in the PWA) was the UNFIXED build. I had
+  said "nothing pushed" each time without making clear that pushing was the blocking step. Say it plainly next time.
+NEXT: Nabil deploys 1ce408778, then: (a) Employee > Overview shows "Eligible for Overtime Pay" under Years of Service and a tick
+  STICKS; (b) Pull -> GL Accounts reports the claim-type reasons and names the skipped account; (c) a new OT Request lists claimable
+  days or says why there are none; (d) the two repairs report in the deploy log. Then sweep-4 #20, the geofence bypass.
