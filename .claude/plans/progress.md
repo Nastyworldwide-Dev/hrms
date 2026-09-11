@@ -245,3 +245,48 @@ DECISION NEEDED: does an HR correction re-apply the early-arrival rule (hours st
   HR ruled on the job's behaviour only, 10 Sep 2026: "early clock in didnt counted as paid".
 NEXT: Nabil rules on (a) the OT backfill range and (b) early arrival on typed corrections. Meanwhile: doors and permissions —
   OT Request menu link, Employee permlevel-1 rows, HR User on Overtime Type, HR Manager on Overtime Slip.
+- 2026-09-10T11:34:22Z COMMIT: 143fc391c docs(plans): the paid-hours class has a second live member, larger than the first → review dispatched
+- 2026-09-11T03:14:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:14:42Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-11T03:14:46Z COMMIT: 33d286691 fix(perms): restore restricted-field permission rows on every migrate, not once → review+cross-app dispatched
+- 2026-09-11T03:21:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:21:44Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-11T03:21:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:21:57Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-11T03:22:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:22:17Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-11T03:22:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:22:23Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-11T03:22:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T03:22:50Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-11T03:22:54Z COMMIT: 6032d0749 fix(hr): two select comparisons matched values their fields never declared → review dispatched
+- 2026-09-11T03:25:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-11T03:25:12Z COMMIT: 861d9be54 fix(perms): a restored permlevel row has to write, not only read → review dispatched
+- 2026-09-11T03:34:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-11T03:34:14Z COMMIT: 4c181eeb3 fix(perms): keep the guard inside the doctypes the lockdown owns → review dispatched
+- 2026-09-11T03:39:43Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-11T03:39:47Z COMMIT: 239ad87b5 feat(hr): restrict bank, IBAN and passport on Employee, reversibly → review dispatched
+2026-09-11T03:40Z COMMIT: 33d286691 -> 4c181eeb3 permlevel guard (3 iterations, 2 of them fixing defects review found in my own work);
+  6032d0749 two dead select branches + a class gate; 239ad87b5 reversible sensitive-field lock.
+  EVIDENCE: 3 works — every permission claim grounded on the verify bench, not by reading rows: the write defect was proved with a real
+  HR Manager doc.save() reading back 0 (red) then 1 (green); the sensitive lock was proved BOTH directions, 0->1 on migrate with the box
+  ticked and 1->0 on the migrate after unticking it.
+REPAIR: my first permlevel guard granted read without write, so the checkbox rendered and every tick was silently reverted — WORSE than the
+  missing row, because HR would believe the grant landed. Caught by review. Second defect found while fixing it: the guard keyed on row
+  EXISTENCE, so a read-only row stayed read-only for ever. Third: unfiltered doctype scan + rows_needing_write had no level-0 gate, so one
+  permlevel-1 Custom Field on Appraisal would have granted HR write on appraisee_comments / appraisee_agreement / appraisee_sign_date —
+  the employee's own sign-off, read-only for HR by design. Not live; closed anyway. Scope is now GUARDED_DOCTYPES, pinned equal to the
+  lockdown patch's L1_HR_DOCTYPES by test.
+LEARNING(fact): frappe.permissions.add_permission grants READ only. Without update_permission_property(..., "write", 1) the field renders and
+  Document.reset_values_if_no_permlevel_access reverts every edit with no error. Proving the ROWS are right is not proving a SAVE persists.
+LEARNING(fact): Frappe does not apply a new field's `default` to an EXISTING Single — HR Settings read 0 straight after the migrate that
+  introduced the field, indistinguishable from a deliberate untick. A defaulted setting needs a one-time patch, written only when the field
+  has never been stored so an existing choice survives.
+LEARNING(how): the shared git stash is unsafe in this worktree — `git stash push -- <paths>` then `apply` silently reverted an already-committed
+  file and truncated progress.md by 110 lines. Measure a baseline against the parent COMMIT, never by stashing.
+TICKET: refactor hrms/utils/ot_calculation.py (18 fixes/90d) — split the policy ladder from pricing and capacity replay.
+TICKET: one shared paid-hours rule for both writers (attendance hotspot, 10 fixes/90d) — closes the early-arrival divergence too.
+NEXT: (1) sweep 4 finding #20 — Shift Request approval builds a Shift Assignment with NO shift_location, and employee_checkin.py returns early
+  when no assignment has one, so anyone approved that way checks in from anywhere with the geofence silently off. Verify, then fix.
+  (2) Nabil rules on the OT backfill range and on early arrival for typed corrections. (3) OT Request Desk menu link + the 4 select-only
+  permission rows + HR Manager on Overtime Slip.
