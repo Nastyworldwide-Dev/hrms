@@ -106,7 +106,15 @@ jinja = {}
 
 # before_install = "hrms.install.before_install"
 after_install = "hrms.install.after_install"
-after_migrate = "hrms.setup.update_select_perm_after_install"
+after_migrate = [
+	"hrms.setup.update_select_perm_after_install",
+	# A restricted (permlevel > 0) field is invisible to EVERY user, Administrator
+	# included, unless a permission row exists at that level. Those rows are created
+	# by a patch, and a patch runs once — so a clone that carries the Patch Log but
+	# not the rows loses the field for good. Re-asserted on every migrate; writes
+	# nothing when the rows are already there. See hrms/utils/permlevel_guard.py.
+	"hrms.utils.permlevel_guard.after_migrate",
+]
 
 setup_wizard_complete = "hrms.subscription_utils.update_erpnext_access"
 

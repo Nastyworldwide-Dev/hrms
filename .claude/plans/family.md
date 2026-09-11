@@ -1,84 +1,65 @@
-# FAMILY LEDGER — a typed correction dropped the unpaid break
+# FAMILY LEDGER — a restricted field with no permission row is invisible to everyone
 
-CLASS: one quantity, two producers, one rule. `working_hours` was computed by
-two independent paths — the hourly job and the typed-times path — and only one
-of them applied the unpaid break. Any figure with a second write path that does
-not share the first one's rules is in this class.
+CLASS: a capability established ONCE by a patch, which nothing re-asserts. The
+patch is stamped "done" in the Patch Log, so if its effect is later lost — a
+clone, a restore, a permissions reset — no code path will ever restore it, and
+the loss is silent.
 
-DEFECT: `working_hours_between()` was documented as "no break deduction" and
-both manual call sites used it to write `working_hours`. A five-minute edit to
-HR-ATT-2026-16073 (9 Sep 2026) moved the row from 8.95 h to 10.03 h — the
-1-hour break stopped being deducted. Every manual correction credited the break
-as worked time: +1 h Mon-Thu, +1 h 45 m on a Friday (the prayer break), into
-paid hours, silently.
+DEFECT: `eligible_for_overtime_pay` is a custom field on Employee at
+permlevel 1 — the switch deciding whether approved overtime is PAID or converted
+to Replacement Leave. ERPNext's Employee ships permission rows at level 0 only,
+and `frappe.model.meta.get_permlevel_access` (frappe/model/meta.py:728) collects
+only levels that HAVE a row, with no Administrator bypass. One missing row hides
+the field from every human on the site while `frappe.db.get_value` still reads
+it, so the PWA shows "You'll be paid for approved overtime hours" on a screen
+whose controlling checkbox HR cannot see. HR could neither grant nor revoke
+eligibility; a new employee defaults to unticked and had no route out.
 
-FIX: `working_hours_between(in_time, out_time, break_minutes=0)` subtracts the
-break and floors at zero; `entered_break_minutes()` reads the SAME Shift Break
-rows the hourly job applies, so a corrected day and an automatic one agree, and
-Friday keeps its longer break.
+The rows come from `v15_99_0.staff_perm_lockdown.ensure_hr_permlevel_rows`.
+Verifica is a clone: it carries the Patch Log saying that patch ran, without the
+rows. Confirmed independently — the verify bench had the same gap, and the guard
+restored two rows there on its first run.
+
+FIX: `hrms/utils/permlevel_guard.py`, wired into `hooks.after_migrate`, so the
+rows are re-asserted on EVERY deploy instead of once. Idempotent.
 
 ## Call sites the machine listed
 
 | file:line | verdict |
 |---|---|
-| hrms/hr/doctype/attendance/attendance.py:108 (`apply_manual_times`, draft/new) | same-root — fixed here |
-| hrms/hr/doctype/attendance/attendance.py:129 (`before_update_after_submit`) | same-root — fixed here |
-| hrms/hr/doctype/shift_type/shift_type.py:553 (`_deduct_unpaid_breaks`) | not-affected — this is the CORRECT producer; the fix makes the typed path match it |
-| hrms/hr/doctype/attendance/attendance.py:165 (`set_overtime`) | not-affected — OT is measured from raw punch times against the shift-end window; breaks sit inside the normal day, not the OT window |
-| hrms/utils/break_calculation.py (`get_shift_break_minutes_for_intervals`) | not-affected — reused unchanged, single supplier for both paths |
+| hrms/hooks.py:109 (`after_migrate`) | same-root — fixed here; was a single string, now a list, both entries run |
+| hrms/patches/v15_99_0/staff_perm_lockdown.py:155 (`ensure_hr_permlevel_rows`) | not-affected — left exactly as is. It still does the right thing on a site that has never run it; the guard is what makes it survive. Deleting it would change first-install behaviour. |
+| hrms/setup.py:378 (`eligible_for_overtime_pay` definition, permlevel 1) | not-affected — the field is correct; it was the permission row that was missing |
+| hrms/patches/v15_103_0/add_employee_ot_pay_eligibility_field.py | not-affected — creates the field, never the row |
+| hrms/setup.py:1014 (`update_select_perm_after_install`) | not-affected — still the first `after_migrate` entry, unchanged |
 
-No other caller: `working_hours_between` is referenced only by those two sites
-and its tests.
+## Scope — what the guard covers
 
-## SECOND LIVE MEMBER — found by review of cf4cb2fe4, NOT fixed, needs a ruling
+`_needed_permlevels` reads all three routes a field reaches a permlevel by:
+the doctype's own JSON, a Custom Field (the OT eligibility case), and a
+Property Setter (how the Employee pay fields were locked down). On the verify
+bench that set is exactly `{("Employee", 1)}`.
 
-The ledger below said "No other caller", which is true of
-`working_hours_between` and false of the CLASS. The job applies THREE rules to
-turn times into paid hours; this commit unified one of them.
-
-| Rule | hourly job | typed correction |
-|---|---|---|
-| unpaid break | yes (`_deduct_unpaid_breaks`) | yes — as of cf4cb2fe4 |
-| early arrival is unpaid | yes (`paid_intervals_from`, shift_type.py:551) | **NO** |
-| hours come from worked intervals, not the span | yes | **NO** — raw first-in/last-out |
-
-Worked example, verified against `paid_intervals_from`: shift 09:00-18:00,
-employee punches in 07:30, out 18:00. The job writes 8.00 h (09:00-18:00 less
-the 60-minute break). HR then corrects the out time by five minutes; the typed
-path recomputes 07:30->18:05 = 10.58 h less 60 m = **9.58 h**, where the job's
-own answer for those times is 8.08 h. **+1.50 h to payroll, per correction.**
-Same shape for a mid-day logout: job 7.00 h, typed 8.08 h.
-
-It does not self-heal. `on_update_after_submit` (attendance.py:396-398) sets
-`auto_attendance = 0` on a corrected row, so the job never revisits it.
-
-Bigger than the break defect this commit fixed (+1.00 h Mon-Thu). NOT patched
-here: it changes paid hours on a rule HR ruled on for the job only ("early
-clock in didnt counted as paid", 10 Sep 2026) and nobody has said whether a
-typed correction re-applies it or whether a typed span is authoritative.
-
-DECISION NEEDED (Nabil): does an HR correction re-apply the early-arrival rule,
-or is the span HR typed final?
-
-## Known remaining member of this class — ticketed, not fixed here
-
-OT hours are computed with NO break awareness at all (`grep break
-hrms/utils/ot_calculation.py` -> zero matches). Harmless today because every
-configured break window falls inside the normal shift, but a break configured to
-overlap the OT window would be paid as overtime. Out of scope for this commit:
-it changes money on a path Nabil has not ruled on, and today's figures do not
-move. TICKET: break-aware OT window.
+Deliberate limits:
+* it never creates a permlevel-0 row — level 0 is who may open the doctype at
+  all, a different decision that this guard has no business making;
+* it skips a role with no level-0 read on that doctype, matching the existing
+  patch rule: Frappe refuses the row, and the grant would be meaningless;
+* a failure is logged to Error Log and swallowed, because a permission guard
+  must never break a deploy — but it is logged loudly, since silence is what
+  caused this.
 
 ## Locking the class
 
-- regression test (instance): `test_a_corrected_day_loses_its_unpaid_break_like_an_automatic_one`
-  — Nabil's own times, 10:12-20:14 with a 60-minute break, must read 9.03.
-- invariant test (class): `test_a_new_manual_row_deducts_the_shifts_break` and
-  `test_a_correction_after_submit_deducts_the_shifts_break` pin the WIRING, not
-  the arithmetic — they assert the caller asks the row's own shift for its
-  break. Proved by mutation: reverting either call site to the break-free helper
-  turns them red (verified, 1 failed / 17 passed).
+- regression test (instance): `test_a_level_one_field_with_no_level_one_row_is_reported`.
+- invariant test (class): `test_rows_that_already_exist_are_not_recreated` (idempotent),
+  `test_a_role_without_a_level_zero_row_is_skipped`, and
+  `test_level_zero_is_never_created_by_this_guard` — the rule is "restore access to
+  restricted FIELDS", not "widen access to documents".
+- Pure, so the commit gate runs all seven on the system interpreter.
 
-EVIDENCE: 2 — red proved by TypeError on the third argument before the fix;
-24/24 green after. 3 — bench-free suite diffed against the 174-failure baseline:
-no new failures. ruff clean, ruff format applied.
+EVIDENCE: 2 — red proved by ModuleNotFoundError before the fix; 7/7 green after.
+3 — on the verify bench `bench execute ...ensure_permlevel_rows` restored
+`Employee/HR Manager L1` and `Employee/HR User L1` on the first run and printed
+nothing at all on the second. The bench had the same defect as the hub, which is
+the independent confirmation that this is structural and not one site's quirk.
