@@ -57,6 +57,38 @@ def guarded_only(needed) -> set:
 	return {(doctype, level) for doctype, level in needed if doctype in GUARDED_DOCTYPES}
 
 
+#: Employee fields that must not be readable by everyone who can open the
+#: record. Restated from `staff_perm_lockdown.EMPLOYEE_SENSITIVE_FIELDS` and
+#: pinned equal by test — two lists would drift and a field would quietly stay
+#: readable.
+SENSITIVE_EMPLOYEE_FIELDS = (
+	"salary_mode",
+	"salary_currency",
+	"bank_name",
+	"bank_ac_no",
+	"iban",
+	"passport_number",
+	"valid_upto",
+	"place_of_issue",
+)
+
+#: The HR Settings checkbox that governs the lock. On by default; unticking it
+#: UNLOCKS on the next migrate, so the decision is reversible from Desk without
+#: a code change.
+SENSITIVE_LOCK_SETTING = "lock_sensitive_employee_fields"
+
+
+def sensitive_field_changes(current: dict, locked: bool) -> dict:
+	"""fieldname -> the permlevel it should have, for fields not already there.
+
+	Pure, and deliberately two-way. A one-way lock would make the checkbox a
+	switch wearing a two-way label: ticking it would restrict the fields and
+	unticking it would do nothing at all.
+	"""
+	target = 1 if locked else 0
+	return {field: target for field, level in current.items() if int(level or 0) != target}
+
+
 def missing_permlevel_rows(needed, level_zero_roles, existing_rows, roles) -> list:
 	"""Which (doctype, role, permlevel) rows have to be created. Pure.
 
@@ -238,12 +270,57 @@ def ensure_permlevel_rows() -> list:
 	return created
 
 
+def apply_sensitive_field_lock() -> dict:
+	"""Bring the sensitive Employee fields into line with the HR Setting.
+
+	The lock already existed in `v15_99_0.staff_perm_lockdown`, but
+	`install_app` stamps every patch complete without running it, so a fresh
+	site never locked them and nothing ever would. Confirmed on the verify
+	bench: bank_ac_no, iban, passport_number and salary_mode all at permlevel 0.
+
+	Idempotent, and reversible from Desk: untick the setting and the next
+	migrate puts every field back to permlevel 0.
+	"""
+	import frappe
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+	locked = frappe.db.get_single_value("HR Settings", SENSITIVE_LOCK_SETTING)
+	# A site that predates the field reads None. Default to LOCKED: the safe
+	# reading of "not configured" for a field holding bank and passport data.
+	locked = True if locked is None else bool(locked)
+
+	meta = frappe.get_meta("Employee")
+	current = {}
+	for field in SENSITIVE_EMPLOYEE_FIELDS:
+		df = meta.get_field(field)
+		if df:
+			current[field] = int(df.permlevel or 0)
+
+	changes = sensitive_field_changes(current, locked)
+	for field, level in changes.items():
+		make_property_setter("Employee", field, "permlevel", level, "Int", validate_fields_for_doctype=False)
+		logger.warning(
+			"[permlevel_guard] Employee.%s -> permlevel %s (%s)",
+			field,
+			level,
+			"restricted" if level else "readable at level 0, per HR Settings",
+		)
+	if changes:
+		frappe.clear_cache(doctype="Employee")
+		verb = "Restricted" if locked else "Unrestricted"
+		msg = f"{verb} Employee fields: {', '.join(sorted(changes))}"
+		frappe.log_error(title="Sensitive employee fields", message=msg)
+		print(f"[permlevel_guard] {msg}")
+	return changes
+
+
 def after_migrate():
 	"""Never let a permission guard break a deploy — but never fail silently either."""
 	import frappe
 
 	try:
 		ensure_permlevel_rows()
+		apply_sensitive_field_lock()
 	except Exception:
 		logger.error("[permlevel_guard] could not restore permlevel rows", exc_info=True)
 		frappe.log_error(title="Permlevel guard failed", message=frappe.get_traceback())

@@ -63,6 +63,7 @@
   "hiring_sender",
   "hiring_sender_email",
   "hrms_user_permission_scope_section",
+  "lock_sensitive_employee_fields",
   "scoped_hrms_doctypes"
  ],
  "fields": [
@@ -334,6 +335,13 @@
    "label": "HRMS-Only User Permission Scope"
   },
   {
+   "default": "1",
+   "description": "Restricts bank account, IBAN, passport and salary-mode fields on Employee so they are readable only by HR (permlevel 1), not by everyone who can open the record. Untick to make them readable again — the change is applied on the next deploy, and is reversible the same way.",
+   "fieldname": "lock_sensitive_employee_fields",
+   "fieldtype": "Check",
+   "label": "Restrict sensitive employee fields"
+  },
+  {
    "description": "DocTypes the scoped User Permission applies to when an Employee has 'Restrict to HRMS doctypes only' ticked. If left empty, a built-in default list of 14 HR-related doctypes is used (Leave Application, Attendance, Salary Slip, Expense Claim, etc.).",
    "fieldname": "scoped_hrms_doctypes",
    "fieldtype": "Table",
@@ -416,7 +424,7 @@
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-01 12:00:00.000000",
+ "modified": "2026-09-11 04:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",

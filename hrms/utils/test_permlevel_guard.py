@@ -250,3 +250,69 @@ class TestTheGuardStaysInsideItsOwnDoctypes(unittest.TestCase):
 
 		needed = {(doctype, 1) for doctype in GUARDED_DOCTYPES}
 		self.assertEqual(guarded_only(needed), needed)
+
+
+class TestSensitiveFieldLock(unittest.TestCase):
+	"""Bank account, IBAN and passport must be restricted — reversibly.
+
+	Confirmed live on the verify bench: `bank_ac_no`, `iban`, `passport_number`
+	and `salary_mode` all sit at permlevel 0, readable by anyone who can open
+	that Employee record. The lock exists — `staff_perm_lockdown
+	.lock_employee_sensitive_fields` — but `install_app` stamps every patch
+	"done" without running it, so a fresh site never locks them and nothing ever
+	will.
+
+	Nabil, 11 Sep 2026: "do what you must. but make it accessible or revert
+	easily and properly in case the future needs it."
+
+	So the lock is not a one-way patch. It follows an HR Settings checkbox that
+	is on by default: tick it and the fields are restricted, untick it and the
+	next migrate puts them back to permlevel 0. A wrong decision costs one
+	checkbox and one deploy, not a code change.
+	"""
+
+	def test_an_unlocked_field_is_raised_when_the_setting_is_on(self):
+		from hrms.utils.permlevel_guard import sensitive_field_changes
+
+		self.assertEqual(
+			sensitive_field_changes({"bank_ac_no": 0, "iban": 0}, locked=True),
+			{"bank_ac_no": 1, "iban": 1},
+		)
+
+	def test_a_field_already_locked_is_left_alone(self):
+		from hrms.utils.permlevel_guard import sensitive_field_changes
+
+		self.assertEqual(sensitive_field_changes({"bank_ac_no": 1, "iban": 1}, locked=True), {})
+
+	def test_unticking_the_setting_puts_the_fields_back(self):
+		# This is the "revert easily" half. Without it the checkbox would be a
+		# one-way switch wearing a two-way label.
+		from hrms.utils.permlevel_guard import sensitive_field_changes
+
+		self.assertEqual(
+			sensitive_field_changes({"bank_ac_no": 1, "iban": 1}, locked=False),
+			{"bank_ac_no": 0, "iban": 0},
+		)
+
+	def test_already_unlocked_with_the_setting_off_is_a_no_op(self):
+		from hrms.utils.permlevel_guard import sensitive_field_changes
+
+		self.assertEqual(sensitive_field_changes({"bank_ac_no": 0}, locked=False), {})
+
+	def test_a_mixed_state_is_brought_into_line_either_way(self):
+		from hrms.utils.permlevel_guard import sensitive_field_changes
+
+		self.assertEqual(sensitive_field_changes({"bank_ac_no": 1, "iban": 0}, locked=True), {"iban": 1})
+		self.assertEqual(
+			sensitive_field_changes({"bank_ac_no": 1, "iban": 0}, locked=False), {"bank_ac_no": 0}
+		)
+
+	def test_the_field_list_is_the_lockdown_patchs_own(self):
+		from hrms.patches.v15_99_0.staff_perm_lockdown import EMPLOYEE_SENSITIVE_FIELDS
+		from hrms.utils.permlevel_guard import SENSITIVE_EMPLOYEE_FIELDS
+
+		self.assertEqual(
+			set(SENSITIVE_EMPLOYEE_FIELDS),
+			set(EMPLOYEE_SENSITIVE_FIELDS),
+			"one list, or the two drift and a field silently stays readable",
+		)
