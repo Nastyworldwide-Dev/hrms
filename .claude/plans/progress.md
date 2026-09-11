@@ -220,3 +220,8 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
   BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
   CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
 - 2026-09-11T09:54:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-11T09:54:06Z COMMIT: 72ea9eb06 feat(kpi): Team KPI is group-level sight - any HR sees every company → review+design dispatched
+- 2026-09-11 EVIDENCE: 5 looks right — design-reviewer VERDICT: DESIGN_APPROVED on 72ea9eb06, measured on
+  real markup (committed template + real theme CSS + project Tailwind config in Chromium): 375px
+  scrollWidth 427 -> 375 with min-w-0, skeleton resolves to exactly 36px in both themes, GDataTable emits
+  no nameless landmark while keeping every caller's tab stop. Its one taken suggestion is this commit.

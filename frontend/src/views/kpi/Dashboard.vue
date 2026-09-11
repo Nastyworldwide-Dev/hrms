@@ -319,7 +319,13 @@
 					     out of the page the instant a filter changed — moving the tap
 					     target under the user's finger — and took the scope eyebrow with
 					     it, which is the only line saying what they just chose. -->
-					<div v-if="teamSummary && teamSummary.headcount">
+					<div v-if="teamKpi.data">
+						<!-- The scope line is NOT gated on headcount. A select truncates a
+						     long company name ("Astra Holdings International (Labuan) Ltd
+						     - A…"), so on an empty result it would otherwise be the only
+						     record of what was chosen — and two companies sharing a prefix
+						     would read identically. The one moment you most need to know
+						     what you filtered to is the moment it returned nothing. -->
 						<div class="g-eyebrow">
 							<template v-if="teamCompanies.length > 1">
 								{{ teamCompany || __("All companies") }} ·
@@ -327,7 +333,10 @@
 							{{ teamDepartment || __("All departments") }} ·
 							{{ teamCycle === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle }}
 						</div>
-						<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
+						<div
+							v-if="teamSummary && teamSummary.headcount"
+							class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4"
+						>
 							<div class="flex flex-col gap-2">
 								<GSkeleton
 									v-if="teamKpi.loading"
