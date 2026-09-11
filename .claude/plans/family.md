@@ -101,13 +101,20 @@ hrms/utils/attendance_day_audit.py:230 — not-affected — a verdict message.
 hrms/utils/attendance_day_audit.py:620 — not-affected — a logger format string.
 hrms/utils/attendance_day_audit.py:626 — not-affected — a logger format string.
 
-hrms/utils/attendance_day_audit.py:192 — not-affected AS A CALLER, and the most
-  useful line the scan surfaced: it already names this corruption
-  ("Half Day from a single punch"). The Attendance Day Audit report is the
-  existing DETECTOR for every day this defect produced. It is how the damage
-  gets enumerated before anything is repaired — see
-  .claude/plans/checkin-root-cause.md step 5, which stays blocked on Nabil's
-  explicit word because it touches historical data.
+hrms/utils/attendance_day_audit.py:192 — not-affected AS A CALLER. CORRECTED
+  after review: I claimed this report was the existing DETECTOR for every day
+  this defect produced. It is not, and the repair plan was leaning on that.
+  `half-day-one-punch` sits behind `len(linked) == 1` nested inside a block
+  already gated on `len(linked) == len(punches)`, so it fires only on a day
+  with EXACTLY ONE punch in total. The shapes actually reported — IN 08:51 +
+  IN 18:31, and IN 09:08 + IN 09:18 — are TWO punches and fall through to
+  `_verdict("marked", ...)`, which reads as healthy. The night-shift split
+  variant is missed too: `punches-split-across-shifts` needs
+  `has_pair >= {"IN","OUT"}`, which two INs never satisfy.
+  So the report detects the single-punch variant ONLY. Enumerating the damage
+  needs its own query first — a day whose countable punches are all IN — and
+  that must run BEFORE .claude/plans/checkin-root-cause.md step 5, which stays
+  blocked on Nabil's explicit word because it touches historical data.
 
 ## LOCK THE CLASS
 - 12 new cases in hrms/api/test_remote_checkin.py: 10 on the pure rule, 2 driving

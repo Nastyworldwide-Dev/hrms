@@ -993,6 +993,8 @@ const runSubmitLog = async (logType) => {
 		return false
 	}
 	if (!requireLocation()) return false
+	// What was REQUESTED. Used for the pre-flight copy, where nothing has been
+	// stored yet. The success toast must not use it — see storedLabel below.
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
 
 	// Preflight strict geofence: if the assigned Shift Type has
@@ -1146,7 +1148,11 @@ const runSubmitLog = async (logType) => {
 
 			toast({
 				title: __("Success"),
-				text: __("{0} successful!", [actionLabel]),
+				// The STORED type, not the requested one. The server records an
+				// OUT when an IN arrives on a session that is still open, so
+				// telling the user "Check-in successful!" after storing a
+				// check-out is the same lie this whole fix exists to end.
+				text: __("{0} successful!", [doc?.log_type === "OUT" ? __("Check-out") : __("Check-in")]),
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",

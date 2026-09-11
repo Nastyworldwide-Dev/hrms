@@ -54,6 +54,7 @@ class _FakeDoc(SimpleNamespace):
 			longitude=None,
 			requires_remote_approval=0,
 			remote_approval_status=None,
+			comments=[],
 			flags=SimpleNamespace(),
 			inserted=False,
 		)
@@ -64,6 +65,9 @@ class _FakeDoc(SimpleNamespace):
 
 	def insert(self):
 		self.inserted = True
+
+	def add_comment(self, comment_type, text):
+		self.comments.append((comment_type, text))
 
 
 class _PunchHarness:
@@ -446,6 +450,18 @@ class TestPunchHonoursTheResolvedType(unittest.TestCase):
 			"a second IN inside a live session must be stored as the check-out it is",
 		)
 		self.assertTrue(h.doc.inserted, "the punch is still recorded — never dropped")
+		# The correction must not be silent. HR reading Employee Checkin has to
+		# be able to tell a server-corrected OUT from a hand-tapped one, and a
+		# disputed hour cannot rest on an application log that rotates.
+		self.assertTrue(h.doc.comments, "a coerced punch must carry a durable trace")
+		kind, text = h.doc.comments[0]
+		self.assertEqual(kind, "Info")
+		self.assertIn("EMP-CKIN-OPEN", text, "the trace must name the session that was open")
+
+	def test_an_uncoerced_punch_carries_no_comment(self):
+		with _PunchHarness() as h:
+			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6)
+		self.assertEqual(h.doc.comments, [], "an ordinary punch is not annotated")
 
 	def test_a_busy_log_does_not_truncate_away_the_open_session(self):
 		"""The lookup is capped at 100 rows. Ordered ASCENDING that cap keeps the
@@ -566,6 +582,63 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		]
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
 		self.assertEqual(resolved, "OUT", "a rejected OUT leaves the session open")
+
+	def test_an_untyped_row_stops_the_coercion(self):
+		"""log_type is an OPTIONAL Select with a blank first option, and untyped
+		rows are real here — hrms/sync/checkin_recovery.py exists to infer them.
+		With one untyped punch between an IN and its OUT, the pairing walk reads
+		a CLOSED session as open, so a genuine second-session arrival would be
+		written as its check-out: the evening block never opens and those hours
+		are lost, behind a row that looks perfectly ordinary.
+
+		Incomplete evidence is not a licence to guess. When the window contains
+		anything that is not IN or OUT, the requested type stands."""
+		rows = [
+			self.row("IN", self.at(8, 0)),
+			self.row("", self.at(9, 0)),
+			self.row("OUT", self.at(17, 0)),
+		]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
+		self.assertEqual(resolved, "IN", "an untyped row makes the session unreadable — do not coerce")
+
+	def test_a_null_typed_row_stops_the_coercion_too(self):
+		rows = [self.row("IN", self.at(8, 0)), self.row(None, self.at(9, 0))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
+		self.assertEqual(resolved, "IN")
+
+	def test_a_punch_before_06_00_is_never_coerced(self):
+		"""The 06:00 cutoff was written for a READ — should the banner offer to
+		resolve? A false "live" there costs a banner. Reused for a WRITE it
+		destroys a real arrival: someone on an early shift who forgot yesterday's
+		check-out has their 05:30 arrival silently recorded as yesterday's
+		departure, and every detector then reads the day as healthy. A punch in
+		that band is ambiguous, so the row the user asked for stands."""
+		rows = [self.row("IN", self.at(21, 0) - datetime.timedelta(days=1))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(5, 30))
+		self.assertEqual(resolved, "IN")
+
+	def test_a_mirrored_open_session_does_not_coerce(self):
+		"""A session pulled from the source instance can never be tagged
+		abandoned here — the sweeper deliberately skips mirrored rows, single
+		writer — so it would coerce local punches for up to 30h with nothing
+		able to clear it. Scoped the same way the sweeper scopes itself."""
+		rows = [self.row("IN", self.at(8, 51), synced_from_instance="NASTY")]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "IN")
+
+	def test_an_in_and_an_out_at_the_same_second_resolve_deterministically(self):
+		"""before_validate truncates to whole seconds and validate_duplicate_log
+		filters ON log_type, so an IN and an OUT at the identical second both
+		insert. Sorting by time alone left the winner to whatever order MariaDB
+		returned."""
+		same = self.at(12, 0)
+		forward = [self.row("IN", self.at(8, 0)), self.row("IN", same), self.row("OUT", same)]
+		backward = [self.row("IN", self.at(8, 0)), self.row("OUT", same), self.row("IN", same)]
+		self.assertEqual(
+			self.mod.resolve_punch_type(forward, "IN", self.at(18, 0))[0],
+			self.mod.resolve_punch_type(backward, "IN", self.at(18, 0))[0],
+			"row order from the database must not decide the answer",
+		)
 
 	def test_an_explicit_check_out_is_never_rewritten(self):
 		rows = [self.row("IN", self.at(8, 51))]

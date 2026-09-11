@@ -290,15 +290,44 @@ def resolve_punch_type(recent_rows, requested: str, now):
 	if requested != "IN":
 		return requested, None
 
+	# A punch between midnight and 06:00 is NEVER coerced. The 06:00 cutoff was
+	# written for a READ — should the banner offer to resolve? — where a false
+	# "live" costs a banner. Reused for a WRITE it destroys a real arrival:
+	# someone on an early shift who forgot yesterday's check-out would have
+	# their 05:30 arrival recorded as yesterday's departure, and because the
+	# session then looks properly closed, the banner, the sweeper and the audit
+	# report would all read that day as healthy. Ambiguous evidence, so the row
+	# the user asked for stands.
+	if now.hour < 6:
+		return requested, None
+
+	# INCOMPLETE EVIDENCE IS NOT A LICENCE TO GUESS. log_type is an OPTIONAL
+	# Select with a blank first option, and untyped rows are real here —
+	# hrms/sync/checkin_recovery.py exists to infer them. With one untyped punch
+	# between an IN and its OUT the walk below reads a CLOSED session as open,
+	# and a genuine second-session arrival becomes its check-out: the evening
+	# block never opens and those hours vanish behind an ordinary-looking row.
+	if any(r.log_type not in ("IN", "OUT") for r in recent_rows):
+		logger.info("[remote_checkin] untyped punch in the window — leaving %s as asked", requested)
+		return requested, None
+
 	# A REJECTED late-OUT never closed its session — the same rule the banner
-	# and the OT pairing engine already apply.
+	# and the OT pairing engine already apply. Mirrored rows are excluded for
+	# the reason the sweeper excludes them (checkin_sweeper, single writer): a
+	# session pulled from the source instance can never be tagged abandoned
+	# here, so it would coerce local punches with nothing able to clear it.
 	rows = sorted(
 		(
 			r
 			for r in recent_rows
 			if not (r.log_type == "OUT" and r.get("remote_approval_status") == "Rejected")
+			and not r.get("synced_from_instance")
 		),
-		key=lambda r: r.time,
+		# Ties are reachable: before_validate truncates to whole seconds and
+		# validate_duplicate_log filters ON log_type, so an IN and an OUT at the
+		# same second both insert. Without the tie-break the answer came from
+		# whatever order the database happened to return.
+		key=lambda r: (get_datetime(r.time), 0 if r.log_type == "IN" else 1),
 	)
 
 	open_in = None
@@ -375,12 +404,20 @@ def punch(
 			frappe.get_all(
 				"Employee Checkin",
 				filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
-				fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
+				fields=[
+					"name",
+					"time",
+					"log_type",
+					"is_abandoned",
+					"remote_approval_status",
+					"synced_from_instance",
+				],
 				order_by="time desc",
 				limit=100,
 			)
 		)
 	)
+	requested_type = log_type
 	resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
 	if resolved_type != log_type:
 		logger.warning(
@@ -433,6 +470,18 @@ def punch(
 		doc.selfie_image = selfie_image
 	doc.flags.ignore_permissions = True
 	doc.insert()
+
+	if resolved_type != requested_type:
+		# A DURABLE trace, not just a log line. HR reading Employee Checkin must
+		# be able to tell a server-corrected OUT from a hand-tapped one — and
+		# when somebody disputes their hours, the evidence cannot live only in an
+		# application log that rotates.
+		doc.add_comment(
+			"Info",
+			_("Recorded as {0}: {1} was requested while {2} was still open.").format(
+				resolved_type, requested_type, closing.name if closing else "an earlier session"
+			),
+		)
 
 	# minimal contract — don't expose the full doc as the endpoint's API
 	return frappe._dict(
@@ -490,9 +539,7 @@ def get_unresolved_stale_in() -> dict:
 		next_row = rows[i + 1] if i + 1 < len(rows) else None
 		if next_row and next_row.log_type == "OUT":
 			continue  # session closed (a pending late-OUT also closes it)
-		in_time = get_datetime(row.time)
-		cutoff = (in_time + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
-		if now < cutoff:
+		if _session_is_live(get_datetime(row.time), now):
 			continue  # still a live session (button shows Check Out)
 		unresolved = {
 			"name": row.name,

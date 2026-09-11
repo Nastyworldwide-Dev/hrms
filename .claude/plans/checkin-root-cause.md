@@ -62,3 +62,48 @@ whole day's testing ran against the starting commit. Run on production:
     4727b4b63 (09 Sep) and the deploy is the answer.
 Also: SELECT allow_multiple_shift_assignments FROM tabSingles
       WHERE doctype='HR Settings';
+
+## ENUMERATION — correction, 11 Sep
+The Attendance Day Audit report is NOT a full detector for this damage. Its
+`half-day-one-punch` verdict fires only on a day with exactly ONE punch; the
+reported shape is TWO punches (IN + IN) and reads as healthy. Enumerate with
+this instead, which finds any day whose countable punches are all IN:
+
+  SELECT employee, DATE(time) AS d, COUNT(*) AS punches,
+         SUM(log_type = 'IN') AS ins, SUM(log_type = 'OUT') AS outs
+  FROM `tabEmployee Checkin`
+  WHERE time >= '2026-09-01' AND time < '2026-09-11'
+  GROUP BY employee, DATE(time)
+  HAVING outs = 0 AND ins >= 2;
+
+And, for the split-day variant, days holding two Attendance rows:
+
+  SELECT employee, attendance_date, COUNT(*) c, GROUP_CONCAT(shift)
+  FROM `tabAttendance` WHERE docstatus < 2
+    AND attendance_date BETWEEN '2026-09-01' AND '2026-09-10'
+  GROUP BY employee, attendance_date HAVING c > 1;
+
+BEFORE DEPLOY, one more (from the review): does any shift start before 06:00?
+  SELECT name, start_time FROM `tabShift Type` WHERE start_time < '06:00:00';
+The punch coercion now refuses to act between 00:00 and 06:00 precisely
+because an arrival there is ambiguous, so a YES makes that guard load-bearing
+rather than theoretical.
+
+## OT CLAIMABLE BUT REFUSED — a DIFFERENT family (11 Sep)
+Reported: IN 3 Sep 08:48, OUT 4 Sep 01:04, ~16h worked, OT cannot be claimed.
+The punches are correctly PAIRED, so this is not the log_type defect.
+Measured on the bench:
+  * with a shift stamped and overtime enabled -> 5.0 h of claim capacity.
+    The overnight crossing itself works; _per_day_contributions fetches +/-1 day.
+  * with the punches carrying NO shift            -> 0.0 h
+  * with the shift's `enable_overtime` off        -> 0.0 h
+Both zeroes are SILENT. hrms/utils/ot_calculation.py::_get_shift_ot_config
+returns None for a missing or OT-disabled shift and the session is skipped
+with `continue`, so the employee is told only "your check-outs prove at most
+0.0 hours" — which reads as "you did not work overtime" when the truth is
+"your punches are not attached to a shift that pays it".
+FAMILY: the SHIFT-ATTRIBUTION family, same root as the split attendance day —
+the punch's `shift` field is what the shift-resolution defect corrupts or
+leaves empty; OT then evaluates it to zero without saying why.
+NOT YET FIXED. Two parts: (a) make the refusal legible, naming the missing or
+OT-disabled shift; (b) the shift attribution itself, which is step 4 above.
