@@ -84,7 +84,7 @@
 								     hand-rolled ring this replaces was 84×84 with an
 								     --ink3 track. -->
 									<GProgressRing
-										:score="Number(current.total_score) || 0"
+										:score="Math.round(Number(current.total_score) || 0)"
 										:max="100"
 										:label="__('Overall score')"
 									/>
@@ -315,16 +315,23 @@
 					</div>
 
 					<!-- Hero: the average of whatever the filters currently select -->
-					<div v-if="teamSummary && teamSummary.headcount && !teamKpi.loading">
+					<!-- Stays mounted while refetching. Unmounting it collapsed ~140px
+					     out of the page the instant a filter changed — moving the tap
+					     target under the user's finger — and took the scope eyebrow with
+					     it, which is the only line saying what they just chose. -->
+					<div v-if="teamSummary && teamSummary.headcount">
 						<div class="g-eyebrow">
-							{{ teamCompany || __("All companies") }} ·
+							<template v-if="teamCompanies.length > 1">
+								{{ teamCompany || __("All companies") }} ·
+							</template>
 							{{ teamDepartment || __("All departments") }} ·
 							{{ teamCycle === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle }}
 						</div>
 						<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
 							<div class="flex flex-col gap-2">
-								<div class="font-sans font-extrabold text-clock leading-none tabular-nums">
-									{{ formatScore(teamSummary.average_score)
+								<GSkeleton v-if="teamKpi.loading" width="150px" height="36px" />
+								<div v-else class="font-sans font-extrabold text-clock leading-none tabular-nums">
+									{{ score1(teamSummary.average_score)
 									}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 								</div>
 								<div class="flex items-center gap-2.5">
@@ -336,10 +343,14 @@
 									</span>
 								</div>
 							</div>
+							<!-- Integer in the ring, one decimal in the hero beside it: a
+							     25px/800 numeral inside a 69px circle buys nothing from the
+							     extra glyph, and the exact figure is already alongside it. -->
 							<GProgressRing
-								:score="Number(teamSummary.average_score) || 0"
+								:score="Math.round(Number(teamSummary.average_score) || 0)"
 								:max="100"
 								:label="__('Average score')"
+								:loading="teamKpi.loading"
 							/>
 						</div>
 					</div>
@@ -350,7 +361,23 @@
 					     rows is empty and loading is false, so a failed fetch put
 					     "Nobody has an appraisal" directly under the error banner —
 					     two contradictory answers to the same question. -->
-					<div v-if="!teamKpi.error" aria-live="polite">
+					<!-- The live region is a SUMMARY and it is mounted unconditionally.
+					     It used to be the Scores wrapper: every filter change queued the
+					     whole table for announcement, and its own v-if unmounted the
+					     region, so the one transition that most needs announcing —
+					     error then recovered — was the one assistive tech skipped. -->
+					<span class="g-sr" role="status" aria-live="polite">
+						{{
+							teamSummary && teamSummary.headcount
+								? __("{0} appraised, average {1}", [
+										teamSummary.headcount,
+										score1(teamSummary.average_score),
+								  ])
+								: __("No appraisals here")
+						}}
+					</span>
+
+					<div v-if="!teamKpi.error">
 						<div class="g-eyebrow mb-2.5">{{ __("Scores") }}</div>
 						<GDataTable
 							:columns="TEAM_COLUMNS"
@@ -384,6 +411,7 @@ import { createResource, FeatherIcon, LoadingIndicator } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
 import ResourceError from "@/components/ResourceError.vue"
@@ -478,7 +506,7 @@ const trendPoints = computed(() =>
 	trend.value.map((p, i) => `${trendX(i)},${trendY(p.total_score)}`).join(" ")
 )
 
-// ————— TEAM KPI (CEO designation only, read-only) —————
+// ————— TEAM KPI (CEO by designation, or HR by role; read-only) —————
 // The tab is only drawn when canViewTeamKpi says so, and the endpoint refuses
 // anyone else, so no employee list is ever fetched for an ordinary user.
 const teamYear = ref(null)
@@ -530,16 +558,13 @@ watch(
 		if (!data) return
 		teamYear.value = data.selected_year
 		teamCycle.value = data.selected_cycle
-		if (!data.selected_company) teamCompanies.value = data.companies || []
 	}
 )
 
 const teamYears = computed(() => teamKpi.data?.years || [])
 const teamCycles = computed(() => teamKpi.data?.cycles || [])
 const teamDepartments = computed(() => teamKpi.data?.departments || [])
-// Held across fetches: narrowing to one company drops the others from the
-// response, which would otherwise empty the selector that did the narrowing.
-const teamCompanies = ref([])
+const teamCompanies = computed(() => teamKpi.data?.companies || [])
 const teamSummary = computed(() => teamKpi.data?.summary)
 
 const TEAM_COLUMNS = computed(() => [
@@ -579,6 +604,12 @@ const teamRows = computed(() =>
 	font-weight: 600;
 	padding: 8px 32px 8px 12px;
 	min-width: 150px;
+	/* A select sizes to its widest option, and these are user-named masters — a
+	   company name or a suffixed department ("Human Resources - VRFC") can
+	   exceed a 375px content box. flex-wrap moves the item to its own line but
+	   does not shrink it, so without this the page scrolls sideways. */
+	max-width: 100%;
+	text-overflow: ellipsis;
 	/* §14.1. Three of these now sit side by side on a phone; at 13px type and
 	   8px padding the real target was 34px. */
 	min-height: var(--g-touch-target-min);

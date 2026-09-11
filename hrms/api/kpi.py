@@ -129,7 +129,9 @@ def _year_average(year_appraisals, year: int) -> dict:
 		"cycle": str(year),
 		"is_average": True,
 		"cycles_count": len(docs),
-		"total_score": avg([flt(doc.pms_total_score) for doc in docs]),
+		# rounded for the same reason the team view rounds: GProgressRing prints
+		# its score verbatim into an 88px circle and reads it out in full
+		"total_score": flt(avg([flt(doc.pms_total_score) for doc in docs]), 1),
 		"grade": None,
 		"docstatus": None,
 		"kras": kras,
@@ -315,7 +317,10 @@ def _team_kpi_viewer() -> dict | None:
 	        full directory, the PWA's `is_hr` flag). Reusing it means Team KPI
 	        can never drift from the rest of HR's sight, and a future policy
 	        ruling moves both at once. It is HR User / HR Manager only —
-	        System Manager is a technical role and confers nothing.
+	        System Manager is a technical role and confers nothing. Administrator
+	        also satisfies it and is reported as `hr`; that is no escalation (it
+	        already reads every Appraisal) but it does mean a support log line
+	        saying "hr" may be the framework identity, not a person.
 
 	Both are then bounded by the hub's ONE company fence,
 	`hrms.overrides.company_scope.allowed_companies`: an empty list means the
@@ -376,29 +381,55 @@ def get_team_kpi(
 	viewer = _require_team_kpi_viewer()
 	fence = viewer["companies"]
 
-	if company and fence and company not in fence:
-		logger.warning(
-			"[kpi] user=%s asked for company=%s outside its fence %s", frappe.session.user, company, fence
-		)
-		frappe.throw(_("You are not permitted to see {0}.").format(company), frappe.PermissionError)
+	if company:
+		if fence and company not in fence:
+			logger.warning(
+				"[kpi] user=%s asked for company=%s outside its fence %s",
+				frappe.session.user,
+				company,
+				fence,
+			)
+			frappe.throw(_("You are not permitted to see {0}.").format(company), frappe.PermissionError)
+		if not frappe.db.exists("Company", company):
+			# Same doctrine as the refusal above: an empty table reads as
+			# "nobody was appraised", so a company that does not exist has to
+			# say so rather than look like an answer.
+			frappe.throw(_("No such company: {0}.").format(company))
 
-	# The company fence is applied to the EMPLOYEE, never to the appraisal.
-	# `Appraisal.company` is a plain Link copied from the Appraisal Cycle
-	# (appraisal_cycle.create_appraisals_for_cycle); it has no fetch_from and
-	# validate() never reconciles it with Employee.company. Fencing on the
-	# appraisal therefore both leaks (an appraisal stamped company A re-admits
-	# an employee of company B) and hides (an employee of A whose appraisal was
-	# stamped B disappears). The row is about a person, so the person's company
-	# is what governs it.
+	# THE FENCE, and it is resolved BEFORE anything at all is read off the
+	# appraisal table — because everything downstream is derived from that read,
+	# the year and cycle selectors included. Fencing after the fact left those
+	# two lists carrying other companies' Appraisal Cycle NAMES, which carry
+	# company identity, to a viewer Frappe's own Company User Permission hides
+	# those very cycles from in Desk.
 	#
-	# ceiling: reads every live appraisal before the employee join, so a fenced
-	# viewer still pays for the whole table
-	# upgrade: resolve the fenced employee set first and filter
-	# `employee in (...)` here, once any single company's appraisal count makes
-	# this query slow
+	# The fence keys on EMPLOYEE.company, never Appraisal.company: the latter is
+	# a plain Link copied from the Appraisal Cycle
+	# (appraisal_cycle.create_appraisals_for_cycle), has no fetch_from, and
+	# validate() never reconciles the two. Fencing on it both leaks (an
+	# appraisal stamped company A re-admits an employee of company B) and hides
+	# (an employee of A whose appraisal was stamped B disappears). The row is
+	# about a person, so the person's company governs it.
+	#
+	# An employee with a BLANK company is deliberately outside every fence: they
+	# appear only for an unfenced viewer, and under no value of the company
+	# selector. Fail-closed is the right side to err on for an unassigned row.
+	employees = {
+		row.name: row
+		for row in frappe.get_all(
+			"Employee",
+			filters={"company": ("in", fence)} if fence else {},
+			fields=["name", "employee_name", "designation", "department", "company", "image"],
+		)
+	}
+
+	appraisal_filters = {"docstatus": ("<", 2)}
+	if fence:
+		appraisal_filters["employee"] = ("in", list(employees) or [""])
+
 	appraisals = frappe.get_all(
 		"Appraisal",
-		filters={"docstatus": ("<", 2)},
+		filters=appraisal_filters,
 		fields=[
 			"name",
 			"employee",
@@ -413,6 +444,12 @@ def get_team_kpi(
 		],
 	)
 
+	# Unfenced callers skip the `employee in (...)` filter above, so drop any
+	# appraisal whose employee no longer resolves here too. From this line on,
+	# EVERY derived list — years, cycles, companies, departments, rows — comes
+	# from an already-fenced set.
+	appraisals = [a for a in appraisals if a.employee in employees]
+
 	cycle_dates = _get_cycle_dates({a.appraisal_cycle for a in appraisals if a.appraisal_cycle})
 	for a in appraisals:
 		a.effective_date = _effective_appraisal_date(a, cycle_dates)
@@ -423,32 +460,18 @@ def get_team_kpi(
 	in_year.sort(key=lambda a: a.effective_date, reverse=True)
 	cycles = list(dict.fromkeys(a.appraisal_cycle for a in in_year))
 
-	# One lookup for every employee in play, so the row list costs two queries
-	# regardless of headcount — and THIS is where the company fence lands. An
-	# employee outside it simply never enters the map, and the `if not emp:
-	# continue` below then drops their appraisals without a second branch.
-	employee_filters = {"name": ("in", list({a.employee for a in in_year}) or [""])}
-	if company:
-		employee_filters["company"] = company
-	elif fence:
-		employee_filters["company"] = ("in", fence)
-
-	employees = {
-		row.name: row
-		for row in frappe.get_all(
-			"Employee",
-			filters=employee_filters,
-			fields=["name", "employee_name", "designation", "department", "company", "image"],
-		)
-	}
-	in_year = [a for a in in_year if a.employee in employees]
-
-	# The selectors offer only what can actually match: companies and
-	# departments that HAVE a visible appraisal this year, and — once a company
-	# is chosen — only that company's departments. A selector listing an option
-	# that always returns nothing reads as broken data. Both are read off the
-	# EMPLOYEE, for the same reason the fence is.
+	# The company selector lists every company the viewer may see that HAS an
+	# appraisal this year — it is NOT narrowed by `company`, or choosing one
+	# would empty the control that did the choosing.
 	companies = sorted({employees[a.employee].company for a in in_year if employees[a.employee].company})
+
+	# `company` is presentation narrowing only, applied AFTER years/cycles/
+	# companies are fixed: narrowing those too would strand the year the viewer
+	# is already on. Departments do follow it, since a department carries its
+	# company's suffix and could never match across one.
+	if company:
+		in_year = [a for a in in_year if employees[a.employee].company == company]
+
 	departments = sorted(
 		{employees[a.employee].department for a in in_year if employees[a.employee].department}
 	)

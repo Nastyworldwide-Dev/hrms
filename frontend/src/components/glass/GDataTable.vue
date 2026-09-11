@@ -24,8 +24,19 @@
 	<!-- The scroll container is focusable and named: with two wide text columns
 	     (Team KPI's employee + department) the table overflows a 375px viewport,
 	     and an unfocusable overflow region leaves the right-hand columns
-	     unreachable by keyboard (WCAG 2.1.1). -->
-	<div class="g-table__scroll" tabindex="0" role="region" :aria-label="caption">
+	     unreachable by keyboard (WCAG 2.1.1).
+	     Gated on `caption`, because Vue renders :aria-label="''" as an EMPTY
+	     attribute rather than dropping it — a caption-less caller would ship a
+	     nameless role="region" (not exposed as a landmark at all) plus a tab
+	     stop with no announced purpose. Only `null` removes the attribute.
+	     `g-focusable` keeps the §14.3 ring, so the one focusable surface this
+	     component owns does not look like a different application. -->
+	<div
+		class="g-table__scroll g-focusable"
+		:role="caption ? 'region' : null"
+		:aria-label="caption || null"
+		:tabindex="caption ? 0 : null"
+	>
 		<table class="g-table">
 			<caption v-if="caption" class="g-sr">
 				{{

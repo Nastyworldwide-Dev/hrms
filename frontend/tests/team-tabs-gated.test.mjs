@@ -14,7 +14,11 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { test } from "node:test"
 
-const VIEWS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src")
+const VIEWS = path.join(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"..",
+	"src"
+)
 
 function walk(dir) {
 	const out = []
@@ -26,19 +30,29 @@ function walk(dir) {
 	return out
 }
 
-test("every view with a Team tab gates it on isApprover", () => {
+// The guard names the GATES, not one predicate. It began as `isApprover` alone,
+// which failed kpi/Dashboard.vue the day that view shipped a Team tab behind
+// `canViewTeamKpi` — a STRICTER gate. A class guard that is red for a correct
+// file gets ignored, and an ignored guard is how the next genuinely ungated
+// Team tab gets in. Add a gate here when you add one; never widen this to a
+// bare "has any v-if".
+const TEAM_TAB_GATES = ["isApprover", "canViewTeamKpi", "hasTeam"]
+
+test("every view with a Team tab gates it on a known gate", () => {
 	const offenders = []
 	for (const file of walk(VIEWS)) {
 		const src = readFileSync(file, "utf8")
 		// a TAB_BUTTONS (or tabButtons) declaration that names a "Team …" tab
 		const declaresTeamTab = /TAB_BUTTONS[\s\S]{0,200}?["']Team /.test(src)
-		if (declaresTeamTab && !src.includes("isApprover")) {
+		if (declaresTeamTab && !TEAM_TAB_GATES.some((gate) => src.includes(gate))) {
 			offenders.push(path.relative(VIEWS, file))
 		}
 	}
 	assert.deepEqual(
 		offenders,
 		[],
-		`these views show a Team tab without an isApprover gate: ${offenders.join(", ")}`
+		`these views show a Team tab with none of ${TEAM_TAB_GATES.join(
+			" / "
+		)}: ${offenders.join(", ")}`
 	)
 })

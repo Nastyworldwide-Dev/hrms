@@ -278,3 +278,23 @@ NEXT: Nabil deploys, then check on the CEO's login AND an HR login: More -> "KPI
   BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
   CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
 - 2026-09-11T09:28:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-11T09:28:59Z COMMIT: eb24a7c19 feat(pwa): HR reads Team KPI too, and both allowlists see every company → review+design dispatched
+- 2026-09-11 EVIDENCE: 7 stays right — frappe-reviewer CRITICAL: `years`/`cycles` were derived from the
+  UNFENCED appraisal read, so a company-fenced HR user was offered other companies' Appraisal Cycle NAMES
+  (which carry company identity, and which Frappe's own Company UP hides from them in Desk). The fence now
+  resolves the employee population BEFORE the appraisal read. Proven RED on HEAD, GREEN after; probe 41/41.
+- 2026-09-11 EVIDENCE: 5 looks right — design-reviewer FIX_WARNINGS all closed: aria-live is now a mounted
+  summary (was announcing the whole table, and unmounted itself on error), the hero holds its height across
+  refetches, GDataTable's landmark is gated on a caption (an empty aria-label ships a nameless region),
+  filters cannot widen the page, one decimal convention per hero, integer in the ring.
+- 2026-09-11 REPAIR: frontend/tests/team-tabs-gated.test.mjs named ONE predicate (isApprover) and so was red
+  for a view using a STRICTER gate. Widened to a named gate list. Frontend suite 160/1 -> 161/0.
+BACKLOG (not this commit): hrms/hr/doctype/appraisal/appraisal.py `_hr_company_condition` and
+  `has_permission` still fence on Appraisal.company, the field this work proves is never reconciled with
+  Employee.company. The leak is closed on the PWA and OPEN on Desk: an HR user fenced to company A can read
+  a company-B employee's appraisal through frappe.get_list. Re-key both to Employee.company via tabEmployee.
+NEXT: Nabil deploys, then check on the CEO's login AND an HR login: More -> "KPI" -> the
+  [My KPI | Team KPI] strip appears, Team KPI lists every company, Company/Department narrow it.
+  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
+  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
+- 2026-09-11T09:41:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

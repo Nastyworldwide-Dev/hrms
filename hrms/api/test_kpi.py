@@ -425,6 +425,64 @@ class TestTeamKPI(FrappeTestCase):
 		row = next(r for r in data["rows"] if r["employee"] == self.staff)
 		self.assertEqual(row["company"], self.company, "the row's company must be the employee's")
 
+	def test_the_year_and_cycle_selectors_are_fenced_too(self):
+		"""The row fence can be perfect while the dropdowns built before it leak.
+
+		`years` and `cycles` used to come from an unfenced read of the whole
+		Appraisal table, so a company-fenced viewer was handed other companies'
+		Appraisal Cycle NAMES — which carry company identity, and which Frappe's
+		own Company User Permission hides from that same user in Desk.
+		"""
+		far_cycle = frappe.get_doc(
+			{
+				"doctype": "Appraisal Cycle",
+				"cycle_name": "Secret Far Cycle",
+				"company": self.other_company,
+				"start_date": "2019-01-01",
+				"end_date": "2019-03-31",
+			}
+		).insert(ignore_permissions=True)
+		frappe.db.set_value("Appraisal", self.appraisals[self.far_emp], {"appraisal_cycle": far_cycle.name})
+
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi(year=2026)
+
+		self.assertNotIn(far_cycle.name, data["cycles"], "a foreign cycle name leaked via the selector")
+		self.assertNotIn(2019, data["years"], "a foreign year leaked via the selector")
+
+	def test_the_default_year_is_one_the_viewer_can_actually_see(self):
+		"""`selected_year = years[0]` off an unfenced list lands a fenced viewer
+		on a year whose only appraisals belong to another company: an empty
+		table, first load, no explanation."""
+		frappe.db.set_value(
+			"Appraisal",
+			self.appraisals[self.far_emp],
+			{"start_date": "2099-01-01", "end_date": "2099-03-31"},
+		)
+
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi()
+
+		self.assertNotEqual(data["selected_year"], 2099)
+		self.assertTrue(data["rows"], "the default year must not open on an empty table")
+
+	def test_choosing_a_company_does_not_empty_the_company_selector(self):
+		frappe.set_user(self.hr_user)
+		data = get_team_kpi(year=2026, company=self.other_company)
+		self.assertEqual(
+			sorted(data["companies"]),
+			sorted([self.company, self.other_company]),
+			"the control that did the narrowing must still offer the way back",
+		)
+
+	def test_a_company_that_does_not_exist_says_so(self):
+		# Same doctrine as the fence refusal: an empty table reads as "nobody
+		# was appraised", never as "you asked for something that is not there".
+		frappe.set_user(self.hr_user)
+		self.assertRaises(frappe.ValidationError, get_team_kpi, company="No Such Company Ltd")
+
 	def test_a_fenced_viewer_cannot_ask_for_a_company_outside_the_fence(self):
 		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)
