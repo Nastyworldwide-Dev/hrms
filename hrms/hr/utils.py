@@ -1020,11 +1020,47 @@ def validate_self_submission(doc):
 		frappe.throw(_("Self-approval for {0} is not allowed").format(_(doc.doctype)))
 
 
+def _is_filing(doc) -> bool:
+	"""Is this save the act of CHOOSING whose request this is?
+
+	Yes on insert, and yes on any edit that moves `employee` — those are the
+	only saves that decide the subject. Everything else is an update to a row
+	whose subject was already settled, and whose authority is the row scope's
+	question, not this one.
+
+	Fails CLOSED: an existing doc with no before-save snapshot cannot show the
+	subject unchanged, so it is treated as a filing.
+	"""
+	if doc.is_new():
+		return True
+	previous = doc.get_doc_before_save()
+	return previous is None or previous.get("employee") != doc.employee
+
+
 def validate_filing_for_self(doc):
 	"""Doctypes without an approver field carry no routing to catch a request
-	forged in a colleague's name — so non-HR users may only file for their own
+	forged in a colleague's name — so non-HR users may only FILE for their own
 	Employee record. HR roles and users with real Employee write access are
-	exempt (they file on staff's behalf legitimately)."""
+	exempt (they file on staff's behalf legitimately).
+
+	Only the filing act is fenced here, and that is the whole point of the
+	name. On these doctypes approval IS a save — they carry no approver field,
+	so an approver edits `status` on the existing row (see
+	hrms/overrides/ot_row_scope, whose own docstring calls the reporting
+	manager "the natural approver"). Running this on every validate therefore
+	refused every approver who was not also HR, with a FILING message on an
+	APPROVAL action: "You can only file requests for yourself."
+
+	Authority to touch an existing row already has an answer —
+	`ot_row_scope.has_permission` / `employee_issue_row_scope.has_permission`,
+	which admit HR, the employee, and their reporting manager. This function
+	must not re-derive it from a narrower list that has never heard of
+	approvers; that is how the two fences disagreed.
+	"""
+	if not _is_filing(doc):
+		logger.debug("[self_submission] not a filing, no fence: %s %s", doc.doctype, doc.name)
+		return
+
 	logger.info("[self_submission] filing fence: %s %s", doc.doctype, doc.name)
 	user = frappe.session.user
 	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):

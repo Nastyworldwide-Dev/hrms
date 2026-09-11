@@ -277,3 +277,14 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
   employee — the KPI page looks exactly as it did, no strip.
   BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
   CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
+- 2026-09-11T10:23:24Z COMMIT: 76d82d7e5 fix(pwa): a failed refetch left the old answer beside the error → review+design dispatched
+- 2026-09-11T10:34:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T10:34:54Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-11T10:35:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T10:35:36Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-11T10:35:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T10:35:57Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-11T10:36:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T10:36:21Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-11T10:37:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T10:37:17Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
