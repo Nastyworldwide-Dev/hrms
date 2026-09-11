@@ -316,3 +316,69 @@ class TestSensitiveFieldLock(unittest.TestCase):
 			set(EMPLOYEE_SENSITIVE_FIELDS),
 			"one list, or the two drift and a field silently stays readable",
 		)
+
+
+class TestTheReadOnlyRowStaysReadOnly(unittest.TestCase):
+	"""Employee Checkin grants the Employee role level-1 READ by design.
+
+	`staff_perm_lockdown.py:168-175` adds that row deliberately: staff may see
+	their own check-in selfie and coordinates, and may not edit them. Nothing
+	pinned that the guard leaves it alone — it held only because "Employee" is
+	not in HR_ROLES, which is a coincidence of one constant, not a rule.
+	"""
+
+	def test_a_role_outside_the_operator_set_is_never_granted_write(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		self.assertEqual(
+			rows_needing_write(
+				needed={("Employee Checkin", 1)},
+				rows_without_write={("Employee Checkin", "Employee", 1)},
+				roles=HR,
+			),
+			[],
+			"the Employee role's level-1 row on Employee Checkin is read-only by design",
+		)
+
+	def test_the_hr_rows_beside_it_are_still_repaired(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		self.assertEqual(
+			rows_needing_write(
+				needed={("Employee Checkin", 1)},
+				rows_without_write={
+					("Employee Checkin", "Employee", 1),
+					("Employee Checkin", "HR User", 1),
+				},
+				roles=HR,
+			),
+			[("Employee Checkin", "HR User", 1)],
+		)
+
+
+class TestDiscoveryReadsMetaOnly(unittest.TestCase):
+	"""Meta is the only source that sees a permlevel being LOWERED.
+
+	`Meta.process()` merges Custom Fields and then applies Property Setters, so
+	`get_meta(dt).fields` reflects a raise AND a lower. Reading Custom Field or
+	Property Setter rows directly sees only raises, so a field put back to
+	permlevel 0 left the guard asking for a row the site no longer needs.
+
+	Source contract, because the defect is in which table is queried.
+	"""
+
+	def setUp(self):
+		import pathlib
+
+		self.source = (pathlib.Path(__file__).resolve().parent / "permlevel_guard.py").read_text()
+
+	def test_discovery_goes_through_get_meta(self):
+		self.assertRegex(self.source, r"frappe\.get_meta\(doctype\)\.fields")
+
+	def test_discovery_does_not_read_custom_field_or_property_setter_rows(self):
+		for table in ('"Custom Field"', '"Property Setter"'):
+			self.assertNotIn(
+				table,
+				self.source,
+				f"{table} is a strict subset of meta and blind to a lowered permlevel",
+			)

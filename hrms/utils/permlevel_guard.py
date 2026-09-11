@@ -143,30 +143,20 @@ def _hr_roles() -> tuple:
 
 
 def _needed_permlevels(frappe) -> set:
-	"""Every (doctype, permlevel) this site has a restricted field at.
+	"""Every (doctype, permlevel) a guarded doctype has a restricted field at.
 
-	Three sources, because a field reaches permlevel three ways: shipped in a
-	doctype's own JSON, added as a Custom Field (the OT eligibility case), or
-	moved there later by a Property Setter (how the Employee pay fields were
-	locked down).
+	ONE source: `frappe.get_meta`. `Meta.process()` merges Custom Fields and
+	THEN applies Property Setters, so meta already reflects a field shipped in
+	the JSON, one added as a Custom Field (the OT eligibility case), and one
+	moved by a Property Setter (how the Employee pay fields are locked).
+
+	It also reflects a Property Setter that LOWERS a permlevel back to 0, which
+	reading Custom Field or Property Setter rows directly does not — those two
+	sources kept asking for a row the site no longer needs. They were dropped
+	for that reason, not for tidiness; two unfiltered full-table scans per
+	migrate went with them.
 	"""
 	needed = set()
-	for row in frappe.get_all("Custom Field", filters={"permlevel": (">", 0)}, fields=["dt", "permlevel"]):
-		needed.add((row.dt, int(row.permlevel or 0)))
-	for row in frappe.get_all(
-		"Property Setter",
-		filters={"property": "permlevel", "doctype_or_field": "DocField"},
-		fields=["doc_type", "value"],
-	):
-		try:
-			level = int(row.value or 0)
-		except (TypeError, ValueError):
-			continue
-		if level > 0:
-			needed.add((row.doc_type, level))
-	# Third source: the doctype's own JSON. Without it only Employee was covered
-	# (its restricted field is a Custom Field); Leave Type, Shift Type and
-	# Employee Checkin declare theirs in their own fields and were invisible.
 	for doctype in GUARDED_DOCTYPES:
 		if not frappe.db.exists("DocType", doctype):
 			continue
@@ -220,7 +210,23 @@ def ensure_permlevel_rows() -> list:
 		# Only now does the doctype have to move onto custom perms: the rows we
 		# are about to add cannot live beside an inert JSON set.
 		if table == "DocPerm":
-			logger.info("[permlevel_guard] materialising custom perms for %s", doctype)
+			# Permanent and one-way: copy_perms freezes the shipped JSON, after
+			# which no app update to this doctype's permissions ever lands here.
+			# The lockdown patch skips such doctypes; the guard cannot, because
+			# Employee is exactly this case and is the live defect. So it is
+			# loud instead of silent — the only irreversible write in this file.
+			logger.warning(
+				"[permlevel_guard] moving %s onto Custom DocPerm to restore a permlevel row — "
+				"its shipped JSON permissions become inert on this site from now on",
+				doctype,
+			)
+			frappe.log_error(
+				title="Doctype moved to custom permissions",
+				message=(
+					f"{doctype} had no Custom DocPerm rows and a permlevel row had to be "
+					"restored on it. Its JSON permissions are now inert on this site."
+				),
+			)
 			setup_custom_perms(doctype)
 		for dt, role, lvl in gaps:
 			add_permission(dt, role, permlevel=lvl)
@@ -248,14 +254,6 @@ def ensure_permlevel_rows() -> list:
 				"every edit to it was being silently reverted",
 				role,
 				lvl,
-				dt,
-			)
-			logger.warning(
-				"[permlevel_guard] restored %s level-%s read for %s — a restricted field on %s was "
-				"invisible to every user, Administrator included",
-				role,
-				lvl,
-				dt,
 				dt,
 			)
 	if created:

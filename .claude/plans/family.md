@@ -51,6 +51,47 @@ the real failure rather than a constructed one.
 ---
 
 
+
+## AMENDMENT 2 — re-review of 4c181eeb3
+
+Verdict DEPLOY. Three corrections, one of them to a claim I made in a commit
+message.
+
+**I said "moved", and I had copied.** The false "invisible to every user"
+warning was added to the `gaps` loop without being removed from the `writeless`
+loop, so a repaired write flag logged it twice — once accurately, once saying a
+field had been invisible when it had rendered fine all along. The reviewer
+proved it by parsing the committed file with `ast` and counting `logger` calls
+per enclosing `for` node; reading the diff cannot show that the old call site
+survived. Verified the same way after the fix: one warning per loop.
+
+**The one silent write in the file was the irreversible one.**
+`setup_custom_perms` moves a doctype off its shipped JSON permissions
+permanently — after it, no app update to that doctype's permissions ever lands
+on the site again. It was logged at `logger.info` while every reversible write
+was at `warning` + `log_error`. Now the loudest. The conversion is NOT gated
+off: the lockdown patch skips such doctypes, but Employee is exactly that case
+and is the live defect, so the guard has to do it — loudly.
+
+**Three discovery sources collapsed to one, for correctness not tidiness.**
+`Meta.process()` merges Custom Fields and THEN applies Property Setters, so
+`get_meta(dt).fields` already covers both — and it is the only source that sees
+a permlevel being LOWERED back to 0. Reading `Custom Field` / `Property Setter`
+rows directly sees raises only, so those two sources kept asking for a row the
+site no longer needed. Deleting them also removed two unfiltered full-table
+scans per migrate.
+
+Also pinned: the Employee role's level-1 row on Employee Checkin is READ-ONLY by
+design (staff_perm_lockdown.py:168-175) and must never be granted write. That
+held only because "Employee" is absent from HR_ROLES — a coincidence of one
+constant, not a rule. Now a rule.
+
+EVIDENCE: 2 — 26/26 green. 3 — bench: discovery still reports all four guarded
+doctypes after the source collapse, `ensure_permlevel_rows()` still a no-op, and
+an AST count confirms one warning per loop.
+
+---
+
 ## AMENDMENT — re-review of 861d9be54
 
 Verdict DEPLOY: the Critical is fixed and was proven the right way — red on the
