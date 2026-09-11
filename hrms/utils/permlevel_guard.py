@@ -64,6 +64,26 @@ def missing_permlevel_rows(needed, level_zero_roles, existing_rows, roles) -> li
 	return sorted(out)
 
 
+def rows_needing_write(needed, rows_without_write, roles) -> list:
+	"""Existing rows at a needed level that carry no write flag. Pure.
+
+	Creating the row is only half the job: `add_permission` grants READ, and a
+	restricted field the user cannot write is silently reverted on save. A row
+	left read-only therefore stays read-only for ever, because the create path
+	sees it and calls the doctype healthy.
+
+	Level 0 is excluded — a read-only level-0 row is a deliberate grant and
+	nothing to do with restricted fields.
+	"""
+	levels = {(doctype, level) for doctype, level in needed if level > 0}
+	out = [
+		(doctype, role, level)
+		for doctype, role, level in rows_without_write
+		if (doctype, level) in levels and role in roles
+	]
+	return sorted(out)
+
+
 #: The operator set granted access to restricted fields. Mirrors
 #: hrms.hr.utils.HR_ROLES, imported lazily so the pure half stays frappe-free.
 def _hr_roles() -> tuple:
@@ -104,10 +124,11 @@ def _permission_source(frappe, doctype: str) -> tuple:
 	JSON's rows are inert — so the two must never be mixed.
 	"""
 	table = "Custom DocPerm" if frappe.db.exists("Custom DocPerm", {"parent": doctype}) else "DocPerm"
-	rows = frappe.get_all(table, filters={"parent": doctype}, fields=["role", "permlevel", "read"])
+	rows = frappe.get_all(table, filters={"parent": doctype}, fields=["role", "permlevel", "read", "write"])
 	zero = {r.role for r in rows if not int(r.permlevel or 0) and r.read}
 	existing = {(doctype, r.role, int(r.permlevel or 0)) for r in rows}
-	return zero, existing, table
+	no_write = {(doctype, r.role, int(r.permlevel or 0)) for r in rows if not r.write}
+	return zero, existing, no_write, table
 
 
 def ensure_permlevel_rows() -> list:
@@ -117,7 +138,7 @@ def ensure_permlevel_rows() -> list:
 	deploy log says so; a healthy site returns [].
 	"""
 	import frappe
-	from frappe.permissions import add_permission, setup_custom_perms
+	from frappe.permissions import add_permission, setup_custom_perms, update_permission_property
 
 	roles = _hr_roles()
 	needed = _needed_permlevels(frappe)
@@ -128,9 +149,12 @@ def ensure_permlevel_rows() -> list:
 	for doctype, level in sorted(needed):
 		if not frappe.db.exists("DocType", doctype):
 			continue
-		zero, existing, table = _permission_source(frappe, doctype)
+		zero, existing, no_write, table = _permission_source(frappe, doctype)
 		gaps = missing_permlevel_rows({(doctype, level)}, {doctype: zero}, existing, roles)
-		if not gaps:
+		# A row that exists but cannot write is the same failure wearing a
+		# different face: the field renders and the edit is reverted.
+		writeless = rows_needing_write({(doctype, level)}, no_write, roles)
+		if not gaps and not writeless:
 			continue
 		# Only now does the doctype have to move onto custom perms: the rows we
 		# are about to add cannot live beside an inert JSON set.
@@ -139,7 +163,25 @@ def ensure_permlevel_rows() -> list:
 			setup_custom_perms(doctype)
 		for dt, role, lvl in gaps:
 			add_permission(dt, role, permlevel=lvl)
+			# add_permission grants READ only. Without this the field renders and
+			# every edit to it is silently reverted by Frappe's
+			# reset_values_if_no_permlevel_access — worse than the missing row,
+			# because HR then believes the change landed. The patch this guard
+			# replaces did the same thing (staff_perm_lockdown.py:166).
+			update_permission_property(dt, role, lvl, "write", 1, validate=False)
 			created.append((dt, role, lvl))
+		for dt, role, lvl in writeless:
+			if (dt, role, lvl) in gaps:
+				continue  # just created above, already granted
+			update_permission_property(dt, role, lvl, "write", 1, validate=False)
+			created.append((dt, role, lvl))
+			logger.warning(
+				"[permlevel_guard] granted %s write at level %s on %s — the field rendered but "
+				"every edit to it was being silently reverted",
+				role,
+				lvl,
+				dt,
+			)
 			logger.warning(
 				"[permlevel_guard] restored %s level-%s read for %s — a restricted field on %s was "
 				"invisible to every user, Administrator included",

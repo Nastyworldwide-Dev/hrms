@@ -1,3 +1,55 @@
+# FAMILY LEDGER — a restored permission row that cannot write
+
+CLASS: a capability restored in halves. `frappe.permissions.add_permission(dt,
+role, permlevel=N)` grants READ only. A restricted field whose row carries no
+write flag RENDERS, accepts the edit in the form, and is silently reverted on
+save by `Document.reset_values_if_no_permlevel_access`. No error, no message.
+
+DEFECT (mine, in 33d286691): the guard called `add_permission` and stopped. The
+patch it replaces did not — `staff_perm_lockdown.py:166` follows every
+`add_permission` with `update_permission_property(..., "write", 1)`. Dropping
+that line made the situation WORSE than the bug being fixed: before, the
+checkbox was absent and HR knew something was wrong; after, it rendered, HR
+ticked it, HR believed eligibility was granted, and the employee stayed on
+Replacement Leave.
+
+SECOND DEFECT, found while fixing the first: the guard keyed only on whether a
+row EXISTS. A row created read-only therefore stayed read-only for ever — the
+create path saw it and called the doctype healthy. That is the state the guard's
+own first run left the verify bench in, measured: `write: 0` on both rows.
+
+FIX: two jobs, not one. Create the row that is missing, and grant write on the
+row that has none. Both go through `update_permission_property`.
+
+## Call sites the machine listed
+
+| file:line | verdict |
+|---|---|
+| hrms/utils/permlevel_guard.py:~141 (`add_permission`) | same-root — fixed here, write granted immediately after |
+| hrms/utils/permlevel_guard.py (`_permission_source`) | same-root — now reads the `write` flag too and reports write-less rows |
+| hrms/patches/v15_99_0/staff_perm_lockdown.py:166 | not-affected — it already did this correctly; it is the reference the fix copies |
+| hrms/hooks.py:109 (`after_migrate`) | not-affected — same entry, corrected behaviour |
+
+## Locking the class
+
+- source contract: `TestTheRestoredRowCanWrite` — `add_permission` must be
+  followed by a `write` grant on the same (dt, role, lvl), in that order. The
+  pure set-difference tests cannot see which flags a created row carries, which
+  is exactly why the defect got through.
+- pure invariant: `TestARowThatExistsButCannotWrite` — an existing row without
+  write is reported; a level-0 read-only row is not (that is a deliberate
+  grant); a role outside the operator set is never granted write.
+
+EVIDENCE: 2 — both defects proved red first (ValueError on the missing
+`update_permission_property`, then ImportError on `rows_needing_write`); 13/13
+green after. 3 — measured on the verify bench: rows read
+`{HR Manager write:0, HR User write:0}` before and `{write:1, write:1}` after,
+and a third run printed nothing at all. The bench was in the broken state the
+first version of this guard created, which is how the fix was verified against
+the real failure rather than a constructed one.
+
+---
+
 # FAMILY LEDGER — a select value the field does not declare
 
 CLASS: a string literal compared against a Select field, where the literal is

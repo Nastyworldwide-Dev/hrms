@@ -102,3 +102,106 @@ class TestMissingPermlevelRows(unittest.TestCase):
 			roles=HR,
 		)
 		self.assertEqual(missing, [("Employee", "HR User", 1), ("Shift Type", "HR User", 1)])
+
+
+class TestTheRestoredRowCanWrite(unittest.TestCase):
+	"""A permlevel row created by `add_permission` alone grants READ ONLY.
+
+	Found by review of 33d286691, on the bench, with a real user doing a real
+	save: the guard restored Employee/HR Manager L1 and HR ticked
+	`eligible_for_overtime_pay` — and the value came back 0. Frappe's
+	`Document.reset_values_if_no_permlevel_access` reverts a field the user
+	cannot WRITE at that level, silently, with no error.
+
+	That is worse than the bug it replaced. Before, the checkbox was absent and
+	HR knew something was wrong. After, it renders, HR ticks it, HR believes
+	eligibility is granted, and the employee stays on Replacement Leave.
+
+	The patch this guard replaces got it right — `add_permission` there is
+	followed by `update_permission_property(..., "write", 1)`
+	(staff_perm_lockdown.py:166). The guard dropped that line.
+
+	Source contract, because the defect is in the WIRING: the pure set-difference
+	tests above cannot see which flags the created row carries.
+	"""
+
+	def setUp(self):
+		import pathlib
+
+		self.source = (pathlib.Path(__file__).resolve().parent / "permlevel_guard.py").read_text()
+
+	def test_a_restored_row_is_granted_write_as_well_as_read(self):
+		self.assertIn("add_permission", self.source)
+		self.assertIn(
+			"update_permission_property",
+			self.source,
+			"add_permission grants read only — the row must also be granted write",
+		)
+		self.assertRegex(
+			self.source,
+			r'update_permission_property\(\s*\n?\s*dt,\s*role,\s*lvl,\s*"write",\s*1',
+			"the write grant must target the row just created (dt, role, lvl)",
+		)
+
+	def test_the_write_grant_follows_the_row_it_grants_on(self):
+		# Frappe refuses a property update for a row that does not exist yet.
+		self.assertLess(
+			self.source.index("add_permission(dt, role, permlevel=lvl)"),
+			self.source.index("update_permission_property("),
+			"create the row, then grant write on it",
+		)
+
+
+class TestARowThatExistsButCannotWrite(unittest.TestCase):
+	"""Existence is not enough — the row has to carry write.
+
+	The first version of this guard keyed only on "does a row exist at this
+	level". A row created read-only therefore stayed read-only for ever: the
+	guard saw it, called it healthy, and the field kept silently reverting. That
+	is exactly the state the guard's own first run left the verify bench in.
+
+	So the guard has two jobs, not one: create the row that is missing, and
+	grant write on the row that has none.
+	"""
+
+	def test_an_existing_row_without_write_is_reported(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		self.assertEqual(
+			rows_needing_write(
+				needed={("Employee", 1)},
+				rows_without_write={("Employee", "HR Manager", 1), ("Employee", "HR User", 1)},
+				roles=HR,
+			),
+			[("Employee", "HR Manager", 1), ("Employee", "HR User", 1)],
+		)
+
+	def test_a_row_that_already_writes_is_left_alone(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		self.assertEqual(
+			rows_needing_write(needed={("Employee", 1)}, rows_without_write=set(), roles=HR), []
+		)
+
+	def test_only_the_levels_we_care_about_are_touched(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		# A level-0 row without write is a deliberate read-only grant, not ours.
+		self.assertEqual(
+			rows_needing_write(
+				needed={("Employee", 1)},
+				rows_without_write={("Employee", "HR User", 0), ("Employee", "HR User", 1)},
+				roles=HR,
+			),
+			[("Employee", "HR User", 1)],
+		)
+
+	def test_a_role_outside_the_operator_set_is_not_granted_write(self):
+		from hrms.utils.permlevel_guard import rows_needing_write
+
+		self.assertEqual(
+			rows_needing_write(
+				needed={("Employee", 1)}, rows_without_write={("Employee", "Employee", 1)}, roles=HR
+			),
+			[],
+		)
