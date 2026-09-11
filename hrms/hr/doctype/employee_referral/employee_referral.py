@@ -51,7 +51,11 @@ def create_job_applicant(source_name: str, target_doc: str | Document | None = N
 	emp_ref = frappe.get_doc("Employee Referral", source_name)
 	# just for Api call if some set status apart from default Status
 	status = emp_ref.status
-	if emp_ref.status in ["Pending", "In process"]:
+	# "In process" with a lower-case p matches nothing — the field declares
+	# "In Process" — so a referral in progress kept its own status instead of
+	# becoming an Open applicant, and copied a value Job Applicant does not
+	# declare into its own status field.
+	if emp_ref.status in ["Pending", "In Process"]:
 		status = "Open"
 
 	job_applicant = frappe.new_doc("Job Applicant")

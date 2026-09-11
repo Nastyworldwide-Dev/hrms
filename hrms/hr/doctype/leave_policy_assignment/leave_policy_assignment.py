@@ -161,7 +161,12 @@ class LeavePolicyAssignment(Document):
 			from_date=self.effective_from,
 			to_date=self.effective_to,
 			new_leaves_allocated=new_leaves_allocated,
-			leave_period=self.leave_period if self.assignment_based_on == "Leave Policy" else "",
+			# "Leave Policy" is not one of this field's options ("", "Leave Period",
+			# "Joining Date"), so this test was always false and every allocation a
+			# policy created was written with a blank leave_period — including the
+			# ones that ARE period-based. leave_encashment.py then carried the blank
+			# forward. test_select_literals_are_declared.py now catches the class.
+			leave_period=self.leave_period if self.assignment_based_on == "Leave Period" else "",
 			leave_policy_assignment=self.name,
 			leave_policy=self.leave_policy,
 			carry_forward=carry_forward,
