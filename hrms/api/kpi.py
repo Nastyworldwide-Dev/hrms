@@ -389,6 +389,13 @@ def get_team_kpi(
 
 	# Every employee on the hub. The audience for this page is group-level, so
 	# there is no company predicate here — see _team_kpi_viewer for the ruling.
+	# Exempted from the class guard with that reason in
+	# hrms/tests/test_api_employee_reads_are_fenced.py::EXEMPT_REASONS.
+	#
+	# ceiling: whole-tabEmployee read, measured ~100 ms / ~15 MB at 25 000
+	# employees (3 ms / 0.3 MB at 500)
+	# upgrade: push the company and department predicates into SQL past ~25 000
+	# employees, once the dict itself is the cost rather than the query
 	#
 	# What IS load-bearing: the row's company comes from the EMPLOYEE, never
 	# from Appraisal.company. The latter is a plain Link copied from the

@@ -15,7 +15,14 @@ scoped to the "Employee" doctype constant and the get_all reader:
 `frappe.get_list` and `frappe.qb.get_query(..., ignore_permissions=False)`
 respect the hooks and stay out of scope.
 
-An exemption must be argued for in a diff; the set starts empty.
+An exemption must be argued for in a diff, and every exemption below carries
+its argument. A stale one fails loudly: test_every_exemption_is_still_a_reader
+asserts each name is still a function that actually reads Employee, so an
+exemption cannot outlive the code it was written for.
+
+The set is not a place to park a red result. It was empty and the test was red
+for three readers, which is worse than having no test — a permanently-failing
+guard is one nobody reads, and offender #4 arrives unnoticed.
 
 AST only — no bench required.
 """
@@ -26,7 +33,28 @@ import unittest
 
 API = pathlib.Path(__file__).resolve().parent.parent / "api"
 
-EXEMPT: set[str] = set()
+#: name -> why this reader does not need to restate the company fence.
+EXEMPT_REASONS = {
+	# THE RULING (Nabil, 11 Sep 2026): Team KPI is group-level sight by
+	# definition — any HR sees every company, the CEO (by designation, because
+	# in Desk he holds no HR role at all) sees every company, and nobody else
+	# reaches the page. This is the ONE endpoint on the hub where an
+	# allow=Company User Permission does not narrow an HR user. Pinned from the
+	# other side by test_a_company_user_permission_does_not_narrow_team_kpi in
+	# hrms/api/test_kpi.py; if the ruling is reversed, both change together.
+	"get_team_kpi": "group-level by ruling — see hrms/api/kpi.py::_team_kpi_viewer",
+	# Identity, not a directory read: it asks which Employee rows claim the
+	# SESSION user, to answer "does this session hold the office?". A company
+	# predicate here would be asking whether you are allowed to be yourself.
+	"_holds_the_office": "reads only the session user's own Employee rows",
+	# Name decoration over rows the caller was ALREADY permitted to read:
+	# list_tickets fetches HD Ticket through frappe.get_list, which honours the
+	# row-scope hooks, and this only maps each row's existing `raised_by` email
+	# to a display name. It cannot surface an employee whose email the caller
+	# does not already hold.
+	"_attach_raiser_names": "decorates rows already fenced by frappe.get_list",
+}
+EXEMPT: set[str] = set(EXEMPT_REASONS)
 
 
 def _employee_get_all_calls(func) -> list[int]:
@@ -75,6 +103,23 @@ class TestApiEmployeeReadsAreFenced(unittest.TestCase):
 		self.assertIn("get_all_employees", readers)
 		self.assertIn("get_team_status", readers)
 		self.assertIn("get_managers", readers)
+
+	def test_every_exemption_is_still_a_reader(self):
+		"""An exemption that outlives its code is rot: it silently pre-approves
+		whatever later takes that function name. Every EXEMPT entry must still
+		name a function that actually reads Employee via get_all."""
+		readers = set()
+		for path in sorted(API.rglob("*.py")):
+			if path.name.startswith("test_"):
+				continue
+			for func in ast.walk(ast.parse(path.read_text())):
+				if isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef) and _employee_get_all_calls(func):
+					readers.add(func.name)
+		self.assertEqual(
+			sorted(EXEMPT - readers),
+			[],
+			"these exemptions no longer name an Employee reader — delete them",
+		)
 
 	def test_every_employee_get_all_reader_restates_the_fence(self):
 		offenders = list(self._offenders())

@@ -225,3 +225,23 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
   real markup (committed template + real theme CSS + project Tailwind config in Chromium): 375px
   scrollWidth 427 -> 375 with min-w-0, skeleton resolves to exactly 36px in both themes, GDataTable emits
   no nameless landmark while keeping every caller's tab stop. Its one taken suggestion is this commit.
+- 2026-09-11T10:05:20Z COMMIT: 8bcb764ea fix(pwa): an empty Team KPI still says what you filtered to → review+design dispatched
+- 2026-09-11 EVIDENCE: 2 correct — frappe-reviewer VERDICT on 72ea9eb06: NEXT_ACTION: DEPLOY, no Critical.
+  It proved read-only by instrumentation (DML spy on frappe.db.sql + transaction_writes flat across 6
+  argument shapes), proved `company` is a strict subset of the unfiltered call for every value, and
+  measured the whole-tabEmployee read (500 rows 3ms/0.3MB -> 25k rows ~100ms/15MB).
+- 2026-09-11 REPAIR: its one actionable WARNING — test_api_employee_reads_are_fenced.py had been RED since
+  before this work (3 offenders) with an EXEMPT set the docstring said must be argued into. A permanently
+  red guard is not a guard. All three exempted WITH their arguments, plus a new
+  test_every_exemption_is_still_a_reader so a stale exemption cannot silently pre-approve whatever later
+  takes that name. Mutation-tested BOTH directions: an unfenced reader -> RED, a stale exemption -> RED.
+BACKLOG (not this commit, both pre-existing and confirmed red on HEAD~1):
+  - hrms/sync/checkin_recovery.py::recover_overwritten_checkins is hub-wide and role-checked only, with no
+    require_unfenced — an "HR (Company)" user can recover punches outside their fence.
+  - frontend/src/utils/__tests__/pushNotifications.test.js: 4 failures since 7d7ef6999 (8 Sep), a Node
+    "cannot set navigator" environment issue, masking any real push regression.
+NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
+  strip; (b) any HR User/HR Manager — same strip, Company selector lists every company; (c) an ordinary
+  employee — the KPI page looks exactly as it did, no strip.
+  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
+  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
