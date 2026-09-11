@@ -1,14 +1,19 @@
 # HANDOFF
-prompt:   PWA location stall (mainland China) + attendance follow-ups
-status:   done
-commit:   231392219 on nz-glass
-files:    frontend/src/components/CheckInPanel.vue
-          frontend/src/components/__tests__/CheckInPanel.location.test.js
-          .claude/plans/current-plan.md
-verify:   cd frontend && node --experimental-test-module-mocks --test "src/components/__tests__/*.test.js" "tests/*.test.mjs"
-flags:    Tampin root cause FOUND (Shift Location > Shift Rules had a 7PM-3.30AM
-          row; the daily sync creates assignments from it). HR removed the row.
-          The rule-vs-manual bug in hrms/hr/shift_rules.py:123 is NOT fixed:
-          "manual wins" returns before closing rule-created rows, so both stay
-          active. That is next.
-next:     Nabil deploys 231392219; then fix shift_rules manual-vs-rule overlap
+prompt:   Team KPI (CEO + HR) and the clock-in/OT/approver defects
+status:   partial
+commit:   fcd650ffc on nz-glass (pushed)
+files:    hrms/api/kpi.py
+          hrms/api/remote_checkin.py
+          hrms/hr/utils.py
+          frontend/src/views/kpi/Dashboard.vue
+          frontend/src/components/CheckInPanel.vue
+          frontend/src/data/kpi.js
+          docs/glass/DEPLOY-CONTINUITY.md
+verify:   read docs/glass/DEPLOY-CONTINUITY.md — deploy order, the two
+          decision queries, and the off switch for the one risky change
+flags:    punch-type correction writes different data; kill switch is
+          "disable_punch_type_correction": 1 in site_config.json.
+          Shift attribution, stale assignments and historical repair are NOT
+          fixed. Historical repair needs Nabil's explicit word.
+next:     deploy, run the two queries, then fix shift attribution (1a legibility
+          first, it is small and touches no data)
