@@ -290,3 +290,19 @@ NEXT: (1) sweep 4 finding #20 — Shift Request approval builds a Shift Assignme
   when no assignment has one, so anyone approved that way checks in from anywhere with the geofence silently off. Verify, then fix.
   (2) Nabil rules on the OT backfill range and on early arrival for typed corrections. (3) OT Request Desk menu link + the 4 select-only
   permission rows + HR Manager on Overtime Slip.
+- 2026-09-11T03:40:19Z COMMIT: 7d7326508 docs(plans): evidence, three self-inflicted repairs, and the stash dead end → review dispatched
+- 2026-09-11T03:43:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-11T03:43:09Z COMMIT: 5e61fc7ff fix(perms): one discovery source, one warning per loop, and a loud conversion → review dispatched
+2026-09-11T03:45Z CIRCUIT: hrms/utils/permlevel_guard.py has taken FOUR fix: commits in a row with no push
+  (33d286691 -> 4c181eeb3 -> 861d9be54 -> 5e61fc7ff). Per CLAUDE.md that opens the circuit: no more reviewers on this file,
+  park it, ask a human. Parked. Each fix was found by the review of the one before it, and each was real — read without write,
+  row-existence not row-capability, an unscoped scan that could have granted HR write on an employee's own appraisal sign-off,
+  and a log line I said I had moved when I had copied it. The file is converging (three different LAYERS, not the same line
+  three times) but four rounds on one file is the signal the rule exists for.
+TICKET: hrms/utils/permlevel_guard.py now holds two responsibilities — granting permission ROWS (ensure_permlevel_rows) and
+  setting field PERMLEVELS (apply_sensitive_field_lock). Split when a fifth change lands. Also: the source-contract tests assert
+  on literal source text and file ordering (.index()); they are the right tool for a wiring defect and the most brittle thing in
+  the file — any rename breaks them with a confusing message.
+NEXT: NOT more work on permlevel_guard.py. Next is sweep-4 finding #20 (Shift Request approval creates a Shift Assignment with no
+  shift_location, and employee_checkin returns early when no assignment has one -> geofence silently off for anyone approved that
+  way). Verify first, then fix. Nabil still owes a ruling on the OT backfill range and on early arrival for typed corrections.
