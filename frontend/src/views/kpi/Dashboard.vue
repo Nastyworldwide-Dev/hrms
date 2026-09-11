@@ -322,8 +322,14 @@
 					<!-- teamYears gates the filter bar too (there is nothing to filter on
 					     an empty hub), and a line reading back a selection made with
 					     controls that are not on screen is noise. Same rule as the
-					     one-option selector above. -->
-					<div v-if="teamKpi.data && teamYears.length">
+					     one-option selector above.
+					     !error matters more than it looks: frappe-ui's handleError does
+					     `out.data = out.previousData`, so after any successful load
+					     `.data` SURVIVES a failed refetch — the hero kept rendering the
+					     previous score, headcount, top and ring, solid, under an eyebrow
+					     naming the new filter, right beside the error alert. The answer
+					     goes when it is no longer an answer; the controls stay. -->
+					<div v-if="teamKpi.data && teamYears.length && !teamKpi.error">
 						<!-- The scope line is NOT gated on headcount. A select truncates a
 						     long company name ("Astra Holdings International (Labuan) Ltd
 						     - A…"), so on an empty result it would otherwise be the only
@@ -383,8 +389,10 @@
 					     error then recovered — was the one assistive tech skipped. -->
 					<span class="g-sr" role="status" aria-live="polite">
 						{{
-							teamKpi.error
+							teamKpi.error || teamKpi.loading
 								? ""
+								: !teamYears.length
+								? __("No appraisals yet")
 								: teamSummary && teamSummary.headcount
 								? __("{0}: {1} appraised, average {2}", [
 										scopeLabel,
@@ -596,8 +604,17 @@ const teamSummary = computed(() => teamKpi.data?.summary)
 // identical "No appraisals here": changing a filter and landing on another
 // empty set changed nothing and announced nothing, so a listener could not tell
 // the fetch had happened at all.
+//
+// The status line is silenced while loading. scopeLabel tracks the filter refs,
+// which move the instant the select changes, so an ungated region announced the
+// NEW scope beside the OLD numbers and then announced again when data landed —
+// the same defect the badge-row skeleton fixes visually, moved into the audio.
 const scopeLabel = computed(() =>
 	[
+		// Year first, matching My KPI's eyebrow. It was missing, and it is the
+		// filter always on screen: two empty years in a row from the default
+		// scope produced a byte-identical string, so the fetch announced nothing.
+		teamYear.value,
 		teamCompanies.value.length > 1 ? teamCompany.value || __("All companies") : null,
 		teamDepartment.value || __("All departments"),
 		teamCycle.value === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle.value,

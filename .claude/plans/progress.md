@@ -260,3 +260,20 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
 - 2026-09-11 EVIDENCE: 5 looks right — the mockup contract now records the empty, loading and error states
   it never depicted (state switcher in mockup-team-kpi.html), which is where those three rules had been
   living only in code.
+- 2026-09-11T10:15:27Z COMMIT: 73229b4d2 fix(pwa): a filter change that finds nothing must still be legible → review+design dispatched
+- 2026-09-11 REPAIR: design review FIX_WARNINGS on 73229b4d2, five findings, all real and three of them mine:
+  (a) a FAILED REFETCH left the previous answer on screen beside the error alert — frappe-ui's handleError
+  does `out.data = out.previousData`, so `v-if="resource.data"` stays TRUE after any successful first load;
+  (b) the aria-live line was not gated on loading, so it announced the NEW scope beside the OLD numbers —
+  the same defect the badge skeleton fixes visually, moved into the audio by my own scopeLabel change;
+  (c) scopeLabel omitted the YEAR, the one filter always on screen, so two empty years announced identically.
+- 2026-09-11 REPAIR: my mockup amendment was wrong in all three new states and the CODE was right each time:
+  loading used visibility:hidden + insert (doubling the hero height, demonstrating the reflow the rule
+  forbids), error kept the Scores eyebrow and note, empty replaced the whole table instead of keeping thead
+  and filling one colspan cell. Fixed; the error rule is now stated as what is true — the ANSWER goes, the
+  CONTROLS stay.
+NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
+  strip; (b) any HR User/HR Manager — same strip, Company selector lists every company; (c) an ordinary
+  employee — the KPI page looks exactly as it did, no strip.
+  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
+  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
