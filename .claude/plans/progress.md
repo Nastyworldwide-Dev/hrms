@@ -203,3 +203,16 @@ OPEN QUESTION (do not close HR-OTR-26-09-00009 without it): the approver saw TWO
   deploy and say whether the toast is gone; if it persists it is a SEPARATE ticket.
 - 2026-09-11T10:51:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-11T10:53:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-11T10:53:07Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 17 call site(s) given verdicts, 5 same-root ⟂d473b2b196be
+- 2026-09-11T10:53:09Z COMMIT: 9ecc15b15 fix(checkin): the server decides IN or OUT, the phone only proposes → review+security+design dispatched
+- 2026-09-11T10:58:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-11T10:58:40Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 13 call site(s) given verdicts, 5 same-root ⟂6e4c3857e480
+- 2026-09-11 EVIDENCE: 6 behaves — security-reviewer on 9ecc15b15: VERDICT SECURE, BLOCKING no. It
+  answered all five attack questions with evidence: the owner check runs BEFORE the new read (no
+  enumeration), the coercion is one-directional and can only REDUCE the coercer's own hours (no pay
+  manufacture), neither is_abandoned nor remote_approval_status is employee-writable, a stuck session
+  stops coercing at the 06:00 cutoff (no lasting DoS), and the frozen sheet action cannot be replayed.
+- 2026-09-11 REPAIR: its one WARNING was a real correctness bug in code I had just shipped —
+  `order_by="time asc"` with a row limit keeps the OLDEST rows, so a busy log would truncate away the
+  very open IN the rule depends on and silently stop coercing, for exactly the people punching most
+  often. Fixed at both sites (punch + get_unresolved_stale_in); proven RED by reverting the order.

@@ -80,6 +80,14 @@ class _PunchHarness:
 	def __init__(self, recent=None):
 		self._recent = recent
 
+	def _get_all(self, doctype, filters=None, fields=None, order_by=None, limit=None, **kw):
+		"""Honours order_by and limit, because the defect this models is a
+		TRUNCATION: `time asc` with a limit keeps the oldest rows and drops the
+		newest, which are the ones that say whether a session is open."""
+		self.get_all_calls.append({"order_by": order_by, "limit": limit})
+		rows = sorted(self.recent, key=lambda r: r["time"], reverse=(order_by or "").endswith("desc"))
+		return rows[:limit] if limit else rows
+
 	def __enter__(self):
 		self.doc = _FakeDoc()
 		recent = self._recent
@@ -89,11 +97,12 @@ class _PunchHarness:
 		# alternation rule set it (see TestPunchTypeIsNotTakenOnTrust, and
 		# test_an_in_while_a_session_is_open_is_recorded_as_the_check_out below).
 		self.recent = list(recent or [])
+		self.get_all_calls = []
 		stub = SimpleNamespace(
 			db=SimpleNamespace(get_value=lambda *args, **kwargs: USER),
 			session=SimpleNamespace(user=USER),
 			new_doc=lambda doctype: self.doc,
-			get_all=lambda *args, **kwargs: self.recent,
+			get_all=self._get_all,
 			PermissionError=frappe.PermissionError,
 			_dict=frappe._dict,
 		)
@@ -437,6 +446,41 @@ class TestPunchHonoursTheResolvedType(unittest.TestCase):
 			"a second IN inside a live session must be stored as the check-out it is",
 		)
 		self.assertTrue(h.doc.inserted, "the punch is still recorded — never dropped")
+
+	def test_a_busy_log_does_not_truncate_away_the_open_session(self):
+		"""The lookup is capped at 100 rows. Ordered ASCENDING that cap keeps the
+		OLDEST punches and throws away the newest — so on a busy log the open IN
+		would vanish from the rule's view and every duplicate would sail through,
+		silently, exactly for the people punching most often."""
+		base = datetime.datetime(2026, 8, 22, 6, 0)
+		filler = [
+			frappe._dict(
+				{
+					"name": f"CK-OLD-{i}",
+					"log_type": "IN" if i % 2 == 0 else "OUT",
+					"time": base + datetime.timedelta(minutes=i),
+					"is_abandoned": 0,
+					"remote_approval_status": None,
+				}
+			)
+			for i in range(200)
+		]
+		open_in = frappe._dict(
+			{
+				"name": "EMP-CKIN-OPEN",
+				"log_type": "IN",
+				"time": datetime.datetime(2026, 8, 24, 8, 51),
+				"is_abandoned": 0,
+				"remote_approval_status": None,
+			}
+		)
+		with _PunchHarness(recent=[*filler, open_in]) as h:
+			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6)
+		self.assertTrue(
+			h.get_all_calls and h.get_all_calls[0]["order_by"].endswith("desc"),
+			"the recent-log lookup must take the NEWEST rows, not the oldest",
+		)
+		self.assertEqual(h.doc.log_type, "OUT")
 
 	def test_a_first_in_is_stored_as_an_in(self):
 		with _PunchHarness() as h:

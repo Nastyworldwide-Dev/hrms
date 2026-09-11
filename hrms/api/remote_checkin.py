@@ -366,12 +366,20 @@ def punch(
 	# only chooses the type of the row about to be created, so there is no
 	# overwrite to get wrong and no punch is ever dropped.
 	punch_time = employee_now(employee)
-	recent = frappe.get_all(
-		"Employee Checkin",
-		filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
-		fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
-		order_by="time asc",
-		limit=100,
+	# NEWEST first, then reversed for the walk. `time asc` with a limit keeps the
+	# OLDEST rows, so a busy log would truncate away the very punch this rule
+	# depends on — the open IN — and silently stop coercing. The walk below still
+	# wants ascending order, so the reversal happens here rather than in the rule.
+	recent = list(
+		reversed(
+			frappe.get_all(
+				"Employee Checkin",
+				filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
+				fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
+				order_by="time desc",
+				limit=100,
+			)
+		)
 	)
 	resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
 	if resolved_type != log_type:
@@ -457,12 +465,19 @@ def get_unresolved_stale_in() -> dict:
 		return {}
 
 	now = employee_now(employee)
-	rows = frappe.get_all(
-		"Employee Checkin",
-		filters={"employee": employee, "time": [">=", add_days(now, -10)]},
-		fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
-		order_by="time asc",
-		limit=200,
+	# NEWEST first, then reversed: `time asc` with a limit truncates the newest
+	# rows, which on a busy log are exactly the ones that say whether the session
+	# is still open. Same shape as the punch lookup, for the same reason.
+	rows = list(
+		reversed(
+			frappe.get_all(
+				"Employee Checkin",
+				filters={"employee": employee, "time": [">=", add_days(now, -10)]},
+				fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
+				order_by="time desc",
+				limit=200,
+			)
+		)
 	)
 	# a REJECTED late-OUT doesn't close its session (mirrors the OT pairing
 	# engine) — the employee must be able to resubmit a corrected time
