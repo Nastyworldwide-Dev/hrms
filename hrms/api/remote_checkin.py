@@ -10,7 +10,6 @@ hrms.api.remote_checkin.get_pending_count()  # for Profile badge
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -28,10 +27,12 @@ from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
 
-# Two IN rows this close are one punch (a double tap, a retried request), not
-# two sessions. Employee Checkin already refuses an identical timestamp, so a
-# duplicate always lands a fraction of a second to a few seconds later.
-SAME_PUNCH_WINDOW = timedelta(seconds=60)
+# What makes a later IN the start of a NEW session is not how long after this
+# one it lands — it is whether an OUT closed this session first. This used to be
+# a 60-second SAME_PUNCH_WINDOW, which caught a double tap and missed the real
+# thing: production carried a duplicate IN 10m53s later with no OUT between, and
+# that employee could never file a late check-out at all. No constant is right
+# here, so there is no longer a constant.
 
 HR_MANAGER_ROLE = "HR Manager"
 
@@ -451,25 +452,45 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# only OUTs inside THIS session window count: an OUT that belongs to a
 	# newer session (after the employee's next IN) must not block resolving a
 	# buried forgotten checkout
-	from datetime import timedelta
+	from datetime import datetime, time, timedelta
 
 	out_time_filter = [">=", in_doc.time]
-	# The earliest IN after this one that starts a NEW session: another record
-	# (never this one), and past the same-punch window — a second IN seconds
-	# after the first is a double tap or a retried request, not a check-in the
-	# check-out must precede. That duplicate is what HR's phone showed: "next
-	# check-in (08:55:44)" for an IN displayed as 08:55, which turned the rule
-	# into "check-out before check-in" and refused every submission. With no
-	# later IN there is no upper bound beyond "not in the future" (checked
-	# above). Frappe v16 refuses "min(time)" as a SELECT string, so the row is
-	# taken with an ordered limit.
+	# The earliest IN that starts a NEW session, where "new session" means the
+	# open one ENDED first. Two things end it:
+	#   * an OUT — the session is closed, so the very next IN is a new one;
+	#   * the day turning over — a forgotten check-out followed by the next
+	#     morning's arrival is a new session even with no OUT between.
+	# An IN before that boundary is the SAME open session, whether it landed a
+	# second later (a double tap, a retried request) or eleven minutes later:
+	# production carried a spurious 09:18:53 against a real 09:08 IN, and the
+	# old 60-second window let it bound the check-out at the check-in itself,
+	# refusing every submission that employee could ever make.
+	#
+	# ceiling: the day-turnover half of the boundary is calendar-date based, so
+	# for a shift crossing midnight a duplicate punch after 00:00 is read as a
+	# new session and bounds the window
+	# upgrade: take the boundary from the IN's own shift window once
+	# hrms.utils.shift_resolution is the single source for that
+	session_close = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": in_doc.employee, "log_type": "OUT", "time": [">", in_dt]},
+		["name", "time"],
+		order_by="time asc",
+		as_dict=True,
+	)
+	next_day = datetime.combine(in_dt.date() + timedelta(days=1), time.min)
+	boundary = min(get_datetime(session_close.time), next_day) if session_close else next_day
+
+	# Frappe v16 refuses "min(time)" as a SELECT string, so the row is taken
+	# with an ordered limit. `name !=` stays: the record being resolved must
+	# never come back as its own "next check-in".
 	next_in = frappe.db.get_value(
 		"Employee Checkin",
 		{
 			"employee": in_doc.employee,
 			"log_type": "IN",
 			"name": ["!=", in_doc.name],
-			"time": [">", in_dt + SAME_PUNCH_WINDOW],
+			"time": [">=", boundary],
 		},
 		["name", "time"],
 		order_by="time asc",

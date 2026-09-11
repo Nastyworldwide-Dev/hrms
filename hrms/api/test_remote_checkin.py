@@ -329,6 +329,38 @@ class TestLateCheckoutNextCheckinBound(unittest.TestCase):
 		)
 		out_doc.insert.assert_called_once()
 
+	def test_a_duplicate_punch_MINUTES_later_is_not_the_next_checkin(self):
+		"""Production, 7 Sep: a real IN at 09:08 and a second IN at 09:18:53 with
+		NO OUT between them. The employee could never file a late check-out —
+		"Check-out time must be before your next check-in EMP-CKIN-09-2026-000640
+		at 2026-09-07 09:18:53."
+
+		The old rule was a 60-SECOND window, so a duplicate 10m53s later sailed
+		past it. No constant can be right here: what makes a later IN the start
+		of a NEW session is not how long after it lands, it is whether an OUT
+		separates it from this one. With no intervening OUT it is the same open
+		session however late it arrives."""
+		duplicate = self.in_time + datetime.timedelta(minutes=10, seconds=53)
+		_, out_doc = self._submit(
+			[self._row(ORIGINAL_IN, "IN", self.in_time), self._row("EMP-CKIN-DUP", "IN", duplicate)],
+			self.in_time + datetime.timedelta(hours=9, minutes=6),  # 18:01
+		)
+		out_doc.insert.assert_called_once()
+
+	def test_an_in_after_an_intervening_out_IS_the_next_checkin(self):
+		"""The other side of the same rule: once an OUT closes the session, the
+		next IN genuinely starts a new one and must bound the window."""
+		out_at = self.in_time + datetime.timedelta(hours=4)
+		second_in = self.in_time + datetime.timedelta(hours=5)
+		rows = [
+			self._row(ORIGINAL_IN, "IN", self.in_time),
+			self._row("EMP-CKIN-MIDOUT", "OUT", out_at),
+			self._row(LATER_IN, "IN", second_in),
+		]
+		with self.assertRaises(Exception) as caught:
+			self._submit(rows, self.in_time + datetime.timedelta(hours=9))
+		self.assertIn(LATER_IN, str(caught.exception))
+
 	def test_checkout_at_or_after_the_later_checkin_is_rejected_and_names_that_punch(self):
 		later = self.in_time + datetime.timedelta(days=1)
 		rows = [self._row(ORIGINAL_IN, "IN", self.in_time), self._row(LATER_IN, "IN", later)]

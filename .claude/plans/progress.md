@@ -288,3 +288,6 @@ NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows
 - 2026-09-11T10:36:21Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
 - 2026-09-11T10:37:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-11T10:37:17Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-11T10:37:18Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 6 call site(s) given verdicts, 4 same-root ⟂4180c4e5fcb6
+- 2026-09-11T10:37:20Z COMMIT: 6c1f71efb fix(hr): approving a request is not filing it, so stop fencing it as one → review dispatched
+- 2026-09-11T10:40:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
