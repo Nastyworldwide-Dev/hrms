@@ -94,6 +94,10 @@ def install():
 	root.DoesNotExistError = DoesNotExistError
 	root.TimestampMismatchError = TimestampMismatchError
 	root.throw = throw
+	# A REAL dict, not a MagicMock: `frappe.conf.get("flag")` on a MagicMock
+	# returns a MagicMock, which is truthy — so every site-config kill switch
+	# reads as ENABLED and the code under test takes its disabled path silently.
+	root.conf = {}
 	root.__getattr__ = lambda _name: MagicMock()
 	sys.modules["frappe"] = root
 	sys.modules["frappe.utils"] = _utils_module()

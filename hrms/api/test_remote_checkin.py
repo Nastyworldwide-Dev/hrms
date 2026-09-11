@@ -107,6 +107,7 @@ class _PunchHarness:
 			session=SimpleNamespace(user=USER),
 			new_doc=lambda doctype: self.doc,
 			get_all=self._get_all,
+			conf={},
 			PermissionError=frappe.PermissionError,
 			_dict=frappe._dict,
 		)
@@ -639,6 +640,24 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 			self.mod.resolve_punch_type(backward, "IN", self.at(18, 0))[0],
 			"row order from the database must not decide the answer",
 		)
+
+	def test_the_site_config_kill_switch_restores_the_old_behaviour(self):
+		"""One flag, no migration, no redeploy: site_config
+		`disable_punch_type_correction` turns this rule off entirely. This is the
+		only change in its batch that WRITES different data than before, so the
+		remedy for a misread has to be cheaper than rolling back a stack of
+		commits while people are trying to clock in."""
+		rows = [self.row("IN", self.at(8, 51))]
+		with patch.object(frappe, "conf", {"disable_punch_type_correction": 1}):
+			resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "IN")
+		self.assertIsNone(closing)
+
+	def test_the_rule_is_on_by_default(self):
+		rows = [self.row("IN", self.at(8, 51))]
+		with patch.object(frappe, "conf", {}):
+			resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
 
 	def test_an_explicit_check_out_is_never_rewritten(self):
 		rows = [self.row("IN", self.at(8, 51))]

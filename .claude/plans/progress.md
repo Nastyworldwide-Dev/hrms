@@ -231,3 +231,8 @@ NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin
   recorded as OUT and does not open a second attendance row on the 7PM shift.
   STILL BLOCKED ON NABIL'S WORD: repairing the attendance days already split, and closing the stale
   night-shift assignments. Enumerate first with the Attendance Day Audit report for 03-09..10-09.
+- 2026-09-11T11:06:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-11T11:06:07Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 13 call site(s) given verdicts, 5 same-root ⟂6e4c3857e480
+- 2026-09-11T11:06:09Z CIRCUIT: open after 4 fix cycles on nz-glass — parked for a human
+- 2026-09-11T11:19:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-11T11:19:23Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 0 extra test file(s) ⟂f14a25999045

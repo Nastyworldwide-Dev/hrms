@@ -290,6 +290,17 @@ def resolve_punch_type(recent_rows, requested: str, now):
 	if requested != "IN":
 		return requested, None
 
+	# KILL SWITCH, no migration and no restart of the decision anywhere else:
+	# set `"disable_punch_type_correction": 1` in site_config.json and every
+	# punch is stored exactly as the client asked, i.e. the behaviour before
+	# this rule existed. It is here because this is the one change in the batch
+	# that WRITES different data than before; if it ever misreads a real shift
+	# pattern, the remedy should be one flag, not rolling back a stack of
+	# commits while people are trying to clock in.
+	if cint(frappe.conf.get("disable_punch_type_correction")):
+		logger.warning("[remote_checkin] punch-type correction disabled by site config")
+		return requested, None
+
 	# A punch between midnight and 06:00 is NEVER coerced. The 06:00 cutoff was
 	# written for a READ — should the banner offer to resolve? — where a false
 	# "live" costs a banner. Reused for a WRITE it destroys a real arrival:
