@@ -190,12 +190,36 @@ class TestEndpointHardening(unittest.TestCase):
 
 	def test_the_pull_asks_only_for_the_mapped_account_names(self):
 		"""Nabil, 9 Sep: "this won't pull 4k plus in GL right? only the list I gave".
-		The remote filter carries the mapped names; the whole chart never comes."""
-		self.assertIn("wanted_account_names", self._names_in("_plan_for_instance"))
+		The remote filter still carries only the mapped names; the whole chart
+		never comes.
+
+		What changed on 11 Sep is HOW it names them. An exact
+		`account_name in (spellings)` filter meant the pull could only find a name
+		it had already guessed character for character, so "General and
+		Administrative" or a trailing "Expenses" was invisible and the dialog said
+		"Nothing to create" truthfully, having never looked. It now asks with one
+		LIKE pattern per mapped name — about seven bounded queries, still only
+		HR's accounts, and ledgers only.
+		"""
 		body = ast.get_source_segment(
 			MODULE_PATH.read_text(encoding="utf-8"), self.functions["_plan_for_instance"]
 		)
-		self.assertIn('"account_name": ("in", wanted_account_names())', body)
+		self.assertIn("account_name_patterns()", body, "the fetch must stay bounded to mapped names")
+		self.assertIn('"account_name": ("like", pattern)', body)
+		self.assertIn('"is_group": 0', body, "ledgers only — a claim cannot post to a heading")
+		self.assertNotIn(
+			'("in", wanted_account_names())', body, "an exact name filter is what made it blind"
+		)
+
+	def test_a_pattern_is_built_per_mapped_name_and_nothing_wider(self):
+		from hrms.sync.account_shells import account_name_patterns
+		from hrms.utils.expense_claim_type_mapping import MAPPING
+
+		patterns = account_name_patterns()
+		self.assertLessEqual(len(patterns), len(set(MAPPING.values())))
+		for pattern in patterns:
+			self.assertTrue(pattern.startswith("%") and pattern.endswith("%"))
+			self.assertNotEqual(pattern, "%", "a bare wildcard would pull the whole chart")
 
 	def test_create_endpoint_enforces_the_per_run_cap(self):
 		self.assertIn("MAX_ACCOUNTS_PER_RUN", self._names_in("create_account_shells"))

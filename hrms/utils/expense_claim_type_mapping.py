@@ -14,6 +14,7 @@ number its accounts, so the document name is not composed here).
 """
 
 import logging
+import re
 
 import frappe
 
@@ -35,6 +36,44 @@ MAPPING = {
 }
 
 
+def normalise_account_name(name: str) -> str:
+	"""A GL account name reduced to what actually identifies it.
+
+	Case, "&" against the word "and", punctuation and repeated spaces all vary
+	between two charts that mean the same account, and the pull used to require
+	an exact hit. One character out and the account was invisible to it.
+
+	Deliberately conservative: it collapses spelling, never meaning. "Subsidy"
+	and "Subsidiary" stay different words, because wiring a claim to the wrong
+	GL account is worse than leaving it unwired.
+	"""
+	text = (name or "").casefold().replace("&", " and ")
+	text = re.sub(r"[^a-z0-9]+", " ", text)
+	return " ".join(text.split())
+
+
+def match_account_name(wanted: str, candidates: dict):
+	"""The candidate account for `wanted`, or None. `candidates` is {name: value}.
+
+	Exact first, then normalised. A normalised key matching MORE than one
+	candidate is refused rather than guessed — an ambiguous chart is reported to
+	the operator with the candidates named, not resolved by luck.
+	"""
+	if wanted in candidates:
+		return candidates[wanted]
+	key = normalise_account_name(wanted)
+	hits = [value for name, value in candidates.items() if normalise_account_name(name) == key]
+	if len(hits) == 1:
+		return hits[0]
+	if len(hits) > 1:
+		logger.warning(
+			"[expense_claim_type_mapping] %r matches %d accounts after normalising — refusing to guess",
+			wanted,
+			len(hits),
+		)
+	return None
+
+
 def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_rows, groups=None) -> dict:
 	"""What to add: {type: [(company, account)]} and what is missing, with a
 	reason for each miss. Pure.
@@ -46,21 +85,22 @@ def plan_type_accounts(mapping: dict, companies, account_lookup: dict, existing_
 	`existing_rows` is a set of (type, company) already configured.
 	"""
 	rows, missing = {}, []
-	# Case-insensitive: HR's sheet says "Fuel/Mileage expenses", the ERP's chart
-	# "Fuel/Mileage Expenses"; a capital must not leave a type without its account.
-	folded = {(name.casefold(), company): account for (name, company), account in account_lookup.items()}
-	folded_groups = {
-		(name.casefold(), company): account for (name, company), account in (groups or {}).items()
-	}
+	# Matching is normalised, not merely case-folded: HR's sheet and the ERP's
+	# chart differ by capitals, by "&" against "and", by punctuation and by
+	# spacing, and an exact comparison here left a type without its account.
 	for claim_type, gl_name in mapping.items():
 		for company in companies:
 			if (claim_type, company) in existing_rows:
 				continue
-			account = folded.get((gl_name.casefold(), company))
+			account = match_account_name(
+				gl_name, {name: acct for (name, comp), acct in account_lookup.items() if comp == company}
+			)
 			if account:
 				rows.setdefault(claim_type, []).append((company, account))
 				continue
-			group = folded_groups.get((gl_name.casefold(), company))
+			group = match_account_name(
+				gl_name, {name: acct for (name, comp), acct in (groups or {}).items() if comp == company}
+			)
 			reason = (
 				f"{group} is a group, not a ledger — pick a ledger under it"
 				if group

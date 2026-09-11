@@ -153,6 +153,52 @@ def wanted_account_names() -> list:
 	return _spellings(MAPPING)
 
 
+def account_name_patterns() -> list:
+	"""One LIKE pattern per mapped GL name. Still only the names HR gave.
+
+	Nabil, 9 Sep: "this won't pull 4k plus in GL right? only the list I gave" —
+	so the fetch stays bounded to the mapped accounts. What changed is that it
+	no longer demands the name character for character. "Subsidiary Parking"
+	becomes %Subsidiary%Parking%, which finds "Subsidiary Parking Expenses" and
+	a double space; "General & Administrative" becomes %General%Administrative%,
+	which finds "General and Administrative".
+
+	One query per name — about seven — never the whole chart.
+	"""
+	from hrms.utils.expense_claim_type_mapping import MAPPING, normalise_account_name
+
+	patterns = set()
+	for gl_name in MAPPING.values():
+		words = normalise_account_name(gl_name).split()
+		if words:
+			patterns.add("%" + "%".join(words) + "%")
+	return sorted(patterns)
+
+
+def accounts_the_mapping_wants(rows) -> list:
+	"""Keep the fetched ledgers whose name matches a mapped GL name. Pure.
+
+	The source used to be queried with `account_name in (exact list)`, so the
+	pull could only find a name it had already guessed character for character.
+	"General and Administrative" for "General & Administrative", a trailing
+	"Expenses", a double space — invisible, and the dialog then said "Nothing to
+	create" perfectly truthfully because it never looked. That is how Subsidy
+	Parking and G&A stayed unwired through three attempts, and why they were
+	absent from Nadi: no account, no Expense Claim Account row, and
+	`configured_expense_claim_types` drops a type that has none.
+
+	The query now asks for the LEDGERS under Expense and Asset for the served
+	companies, and the names are matched here — normalised for case, "&" against
+	"and", punctuation and spacing. Nothing broader is guessed.
+	"""
+	from hrms.utils.expense_claim_type_mapping import MAPPING, normalise_account_name
+
+	wanted = {normalise_account_name(name) for name in MAPPING.values()}
+	kept = [row for row in rows if normalise_account_name(row.get("account_name")) in wanted]
+	logger.info("[account_shells] %d ledger(s) fetched, %d match a mapped GL name", len(rows), len(kept))
+	return kept
+
+
 def _plan_for_instance(instance_name: str) -> dict:
 	from hrms.sync.client import RemoteInstanceClient
 
@@ -162,19 +208,27 @@ def _plan_for_instance(instance_name: str) -> dict:
 	if not companies:
 		frappe.throw(_("List the companies this instance serves first (Pull → Companies from Source)."))
 	client = RemoteInstanceClient(instance_name)
-	rows = client.get_list(
-		"Account",
-		filters={
-			"company": ("in", companies),
-			"root_type": ("in", list(ROOT_TYPES)),
-			# Only the accounts HR's claim types point at — ~7 names per company,
-			# not the whole 4,600-row group chart. Widen wanted_account_names()
-			# when a claim type needs another account.
-			"account_name": ("in", wanted_account_names()),
-		},
-		fields=list(REMOTE_ACCOUNT_FIELDS),
-		order_by="lft asc",
-	)
+	# One bounded query per mapped GL name. An exact `account_name in (...)`
+	# filter is what made the pull blind to a name spelled differently — and
+	# then report "Nothing to create" perfectly truthfully, because it never
+	# looked. Patterns find the variant; the names are still only HR's.
+	seen, rows = set(), []
+	for pattern in account_name_patterns():
+		for row in client.get_list(
+			"Account",
+			filters={
+				"company": ("in", companies),
+				"root_type": ("in", list(ROOT_TYPES)),
+				"is_group": 0,
+				"account_name": ("like", pattern),
+			},
+			fields=list(REMOTE_ACCOUNT_FIELDS),
+			order_by="lft asc",
+		):
+			if row.get("name") not in seen:
+				seen.add(row.get("name"))
+				rows.append(row)
+	rows = accounts_the_mapping_wants(rows)
 	from erpnext.accounts.utils import get_autoname_with_number
 
 	# Existing under the source's name OR under the name ERPNext would give it
