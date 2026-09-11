@@ -698,6 +698,11 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 		"days": days,
 		"from_date": str(from_date),
 		"to_date": str(to_date),
+		# Why the list is empty, when it is. Without these the form shows a blank
+		# date picker and the employee is left guessing which day they can claim —
+		# "already claimed" and "you worked no overtime" look identical on screen.
+		"days_already_claimed": len(claimed),
+		"days_with_overtime": len({row["attendance_date"] for row in worked if flt(row["ot_hours"]) > 0}),
 	}
 
 

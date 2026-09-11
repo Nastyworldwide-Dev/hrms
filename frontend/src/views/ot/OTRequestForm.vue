@@ -56,6 +56,16 @@
 						</button>
 					</div>
 
+					<!-- An empty list used to leave a blank date picker and no answer.
+			     Say which of the four situations this is. -->
+					<p
+						v-else-if="emptyReason && !props.id"
+						class="mx-4 mt-4 text-sm text-ink-600"
+						role="status"
+					>
+						{{ emptyReason }}
+					</p>
+
 					<p v-if="saveError" class="mx-4 mt-3 text-sm text-ink-600" role="status">
 						{{ saveError }}
 					</p>
@@ -81,6 +91,7 @@ import { computed, inject, ref, shallowRef, watch } from "vue"
 import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
+import { emptyClaimReason } from "./claimEmptyReason.js"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
@@ -146,6 +157,17 @@ const displayDays = computed(() => {
 		.filter((d) => d.leaveDays > 0)
 		.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }))
 })
+
+// Why the list above is empty, when it is. "Already claimed", "no overtime" and
+// "every day is under the replacement-leave threshold" are very different
+// answers that all rendered as an empty screen and a date picker.
+const emptyReason = computed(() =>
+	emptyClaimReason(claimableDays.value.data, {
+		isRL: isRL.value,
+		rlHoursPerDay: rlHoursPerDay.value,
+		translate: __,
+	})
+)
 
 // What to expect from this claim — pay for hours, or the whole-day blocks of leave.
 const expectation = computed(() => {
