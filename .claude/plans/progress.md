@@ -258,3 +258,7 @@ NEXT: Nabil deploys, then on the CEO's login: More -> "KPI" -> the [My KPI | Tea
 - 2026-09-11T09:12:49Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
 - 2026-09-11T09:16:34Z PLAN: approved 6c01a1064102 — # PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
 - 2026-09-11T09:16:42Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-11T09:16:47Z COMMIT: 4df6b0f18 feat(pwa): the CEO can read the company's KPI scores by department → review+design dispatched
+NEXT: Wait for the frappe-reviewer + design-reviewer verdicts on 4df6b0f18; fix anything Critical and
+  re-commit (review re-triggers). Nothing pushed, nothing deployed. Open question for Nabil: Team KPI is
+  scoped to the CEO's own Employee.company — drop the company filter if he must see every company on the hub.
