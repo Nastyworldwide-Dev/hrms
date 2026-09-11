@@ -3,7 +3,7 @@
 
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import frappe
 from frappe import _
@@ -18,6 +18,7 @@ from frappe.utils import (
 	format_date,
 	get_datetime,
 	get_link_to_form,
+	get_time,
 	getdate,
 	nowdate,
 )
@@ -105,11 +106,7 @@ class Attendance(Document):
 			return
 		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
 		if self.in_time and self.out_time:
-			self.working_hours = working_hours_between(
-				self.in_time,
-				self.out_time,
-				entered_break_minutes(self.shift, self.in_time, self.out_time, self.company),
-			)
+			self.working_hours = paid_hours_for_row(self)
 			logger.info(
 				"[attendance] hours derived from entered times for %s on %s: %s",
 				self.employee,
@@ -125,15 +122,7 @@ class Attendance(Document):
 		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
 		self.flags.hr_corrected_times = True
 		old_hours = self.working_hours
-		self.working_hours = (
-			working_hours_between(
-				self.in_time,
-				self.out_time,
-				entered_break_minutes(self.shift, self.in_time, self.out_time, self.company),
-			)
-			if self.in_time and self.out_time
-			else 0
-		)
+		self.working_hours = paid_hours_for_row(self) if self.in_time and self.out_time else 0
 		self.set_overtime()
 		self.add_comment(
 			"Edit",
@@ -423,6 +412,68 @@ def working_hours_between(in_time, out_time, break_minutes=0) -> float:
 	"""
 	span = (get_datetime(out_time) - get_datetime(in_time)).total_seconds() / 3600
 	return round(max(0.0, span - flt(break_minutes) / 60.0), 2)
+
+
+def paid_hours_for_row(doc) -> float:
+	"""This row's typed times, priced the way the hourly job would price them.
+
+	A plain function rather than a method: the bench-free harness drives the
+	controller unbound (`Attendance.apply_manual_times(doc)`) against a stub, so
+	a method here would be unreachable from the tests that pin this wiring.
+	"""
+	shift_start = entered_shift_start(doc.shift, doc.attendance_date)
+	breaks = entered_break_minutes(doc.shift, doc.in_time, doc.out_time, doc.company)
+	hours = entered_paid_hours(doc.in_time, doc.out_time, shift_start, breaks)
+	logger.debug(
+		"[attendance] entered times %s-%s on %s: shift start %s, %s break min -> %s h",
+		doc.in_time,
+		doc.out_time,
+		doc.shift,
+		shift_start,
+		breaks,
+		hours,
+	)
+	return hours
+
+
+def entered_paid_hours(in_time, out_time, shift_start=None, break_minutes=0) -> float:
+	"""Paid hours for typed times, by the SAME three rules the hourly job uses.
+
+	The job applies all three (shift_type.py:551-555): the unpaid early arrival,
+	the unpaid break, and hours counted from worked intervals. The typed path
+	applied only the break, so a correction to a day with an early punch
+	recomputed from that punch: shift 09:00-18:00, in 07:30, out 18:05 gave 9.58
+	against the job's own 8.08 for the same times. It never self-healed, because
+	correcting a row sets auto_attendance to 0 and the job stops revisiting it.
+
+	Order is part of the rule. The break is measured on the TRIMMED interval —
+	`paid_intervals_from` says why in its own docstring: a break configured
+	before the shift starts must not be taken off hours that were never counted.
+
+	`shift_start` of None means nothing to trim against (a row whose shift is
+	not resolved), and the span stands.
+	"""
+	from hrms.hr.doctype.shift_type.shift_type import paid_intervals_from
+
+	intervals = [(get_datetime(in_time), get_datetime(out_time))]
+	paid, _unpaid_early = paid_intervals_from(intervals, shift_start)
+	hours = sum((end - start).total_seconds() for start, end in paid) / 3600
+	return round(max(0.0, hours - flt(break_minutes) / 60.0), 2)
+
+
+def entered_shift_start(shift, attendance_date):
+	"""The real shift start for this row's date — the configured time, no grace.
+
+	Mirrors `_real_shift_start_dt` in ot_calculation, which is what overtime
+	measures from, so a corrected day trims at exactly the boundary overtime
+	already respects.
+	"""
+	if not (shift and attendance_date):
+		return None
+	start_time = frappe.db.get_value("Shift Type", shift, "start_time")
+	if start_time is None:
+		return None
+	return datetime.combine(getdate(attendance_date), get_time(start_time))
 
 
 def entered_break_minutes(shift, in_time, out_time, company=None) -> int:

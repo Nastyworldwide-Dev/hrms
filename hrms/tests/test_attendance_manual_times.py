@@ -163,7 +163,10 @@ class _Doc(SimpleNamespace):
 class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 	def test_new_manual_row_gets_hours_from_its_times(self):
 		doc = _Doc(in_time=dt(9), out_time=dt(18))
-		with patch.object(att, "entered_break_minutes", return_value=0):
+		with (
+			patch.object(att, "entered_break_minutes", return_value=0),
+			patch.object(att, "entered_shift_start", return_value=None),
+		):
 			att.Attendance.apply_manual_times(doc)
 		self.assertEqual(doc.working_hours, 9.0)
 
@@ -172,8 +175,13 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 		break-free helper leaves working_hours at the raw span and turns this red.
 		The maths itself is covered in TestTimeRules."""
 		doc = _Doc(in_time=dt(9), out_time=dt(18))
-		with patch.object(att, "entered_break_minutes", return_value=60) as breaks:
+		with (
+			patch.object(att, "entered_break_minutes", return_value=60) as breaks,
+			patch.object(att, "entered_shift_start", return_value=dt(9)) as start,
+		):
 			att.Attendance.apply_manual_times(doc)
+		start.assert_called_once()
+		self.assertEqual(start.call_args.args[0], "DAY", "trim against the row's own shift")
 		self.assertEqual(doc.working_hours, 8.0, "the typed path must take the break off")
 		breaks.assert_called_once()
 		self.assertEqual(breaks.call_args.args[0], "DAY", "ask the row's own shift")
@@ -186,6 +194,7 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 		with (
 			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
 			patch.object(att, "entered_break_minutes", return_value=105),  # a Friday
+			patch.object(att, "entered_shift_start", return_value=None),
 		):
 			att.Attendance.before_update_after_submit(doc)
 		self.assertEqual(doc.working_hours, 7.25, "a Friday correction takes 1h45m")
@@ -227,6 +236,7 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 		with (
 			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
 			patch.object(att, "entered_break_minutes", return_value=0),
+			patch.object(att, "entered_shift_start", return_value=None),
 		):
 			att.Attendance.before_update_after_submit(doc)
 		self.assertEqual(doc.working_hours, 9.0)
@@ -245,3 +255,59 @@ class TestAPersonsTimesDeriveTheHours(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestATypedCorrectionUsesTheSameThreeRules(unittest.TestCase):
+	"""A corrected day and an automatic day must agree about the same times.
+
+	The hourly job applies THREE rules to turn times into paid hours: the unpaid
+	break, the unpaid early arrival (`paid_intervals_from`, HR's ruling of
+	10 Sep 2026 — "early clock in didnt counted as paid"), and hours counted
+	from worked intervals rather than the raw span. cf4cb2fe4 unified the break
+	only, and review found the gap this closes.
+
+	The case it costs money on: shift 09:00-18:00, employee punches in 07:30 and
+	out at 18:00. The job writes 8.00. HR then corrects the out time by five
+	minutes, the row recomputes from 07:30, and it becomes 9.58 against the
+	job's own 8.08 for those times — +1.50 h, from a five-minute edit. It never
+	self-heals either: correcting a row sets auto_attendance to 0, so the job
+	never revisits it.
+
+	Nabil, 11 Sep 2026, on re-applying the rule: "i agree.. it need to be
+	corrected, i saw it."
+
+	Order matters as much as the rules. The break is measured on the TRIMMED
+	interval, not the raw span — `paid_intervals_from` says so in its own
+	docstring: a break configured before the shift starts must not be taken off
+	hours that were never counted.
+	"""
+
+	def test_an_early_arrival_is_not_paid_on_a_typed_correction(self):
+		# 07:30 in, 18:05 out, 9-6 shift, one hour of break: 09:00-18:05 less 60m.
+		self.assertEqual(
+			att.entered_paid_hours(dt(7, 30), dt(18, 5), shift_start=dt(9), break_minutes=60), 8.08
+		)
+
+	def test_the_reviewers_case_lands_on_the_jobs_own_answer(self):
+		self.assertEqual(att.entered_paid_hours(dt(7, 30), dt(18), shift_start=dt(9), break_minutes=60), 8.0)
+
+	def test_a_late_arrival_is_not_credited_anything(self):
+		# Trimming only ever removes; it never extends a day backwards.
+		self.assertEqual(att.entered_paid_hours(dt(9, 30), dt(18), shift_start=dt(9), break_minutes=60), 7.5)
+
+	def test_without_a_shift_start_the_span_stands(self):
+		# A row with no shift resolved has nothing to trim against.
+		self.assertEqual(att.entered_paid_hours(dt(7, 30), dt(18), shift_start=None, break_minutes=60), 9.5)
+
+	def test_a_whole_shift_worked_early_is_not_erased(self):
+		# paid_intervals_from trims the early part, never the whole interval.
+		self.assertEqual(att.entered_paid_hours(dt(7), dt(8), shift_start=dt(9), break_minutes=0), 0.0)
+
+	def test_a_night_shift_starting_late_in_the_day_trims_correctly(self):
+		# 22:00 shift, punched in 21:50, out 06:00 next morning, no break.
+		self.assertEqual(
+			att.entered_paid_hours(
+				dt(21, 50), dt(6, day=date(2026, 9, 9)), shift_start=dt(22), break_minutes=0
+			),
+			8.0,
+		)
