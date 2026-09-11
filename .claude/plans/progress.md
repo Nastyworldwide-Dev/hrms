@@ -2,111 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-09T08:13:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-09T08:13:25Z EVIDENCE: 3 works — blast radius green: 10 dependent(s), 9 extra test file(s) ⟂f62d0a5f62e7
-- 2026-09-09T08:15Z NEXT: reviewer verdict on d2cc3dd10/686e4aa0d/bc76cf89b → fix Criticals → push nz-glass; Nabil deploys, runs Pull → GL Accounts, configures Expense Claim Types + expense approvers, tests one claim of each kind; then rulings Q1–Q6 in docs/glass/audit/2026-09-09-claims-audit.md.
-- 2026-09-09T08:22:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T08:22:28Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 6 extra test file(s) ⟂51e98e473e5f
-- 2026-09-09T08:22Z EVIDENCE: 6 behaves — reviewer: d2cc3dd10 FIX (is_paid guard skipped the payable default on paid claims) → 9b6e21803; 686e4aa0d DEPLOY; bc76cf89b DEPLOY. Pushed.
-- 2026-09-09T08:44:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T08:44:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-09T08:45:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-09T08:45:51Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T08:50:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-09T08:50:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T08:51Z REPAIR: 7 Sep 'punched, still Absent' = lifecycle debris (skip stamps from the old Duplicate handler, dead links); attendance_day_audit module + Attendance Day Audit report with Repair button (ecf4134b3, 1d9f8d8ab, 759e70ef6 + reviewer fixes). Reviewer: Critical window bug fixed; repair carries only offending punches.
-- 2026-09-09T08:51Z NEXT: push; Nabil deploys, opens Attendance Day Audit for 7–9 Sep, reads verdicts, presses Repair, waits one hourly run; reports his 7 Sep row. Then R5 (mirrored Attendance release) on his word; claims rulings Q1–Q6.
-- 2026-09-09T09:06:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-09-09T09:06:36Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 6 extra test file(s) ⟂014423447a0e
-- 2026-09-09T09:07Z REPAIR: HR corrections undone by the job (Amend copies auto_attendance=1; after-submit edit kept it) + no publish + Desk manual check-in refused + punches beside HR row re-read hourly → cf4c4692a (14 tests). Reviewer running.
-- 2026-09-09T09:13Z EVIDENCE: 6 behaves — reviewer on cf4c4692a DEPLOY (no Critical/Important); minor: integration rows without device_id must not read as Manual Entry → flags.integration_entry.
-- 2026-09-09T09:13:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-09T09:13:24Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
-- 2026-09-09T09:51:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T09:51:34Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T09:51Z LIVE: Checkin Provenance Audit on Verifica: Overwritten 199 · Mirrored 3821 · Local 368 · plan insert 195 skip 4; source Nasty-Live; 3–4 Sep attendance rows are mirrored (R5 needed); neighbour-type rule added before Recover.
-- 2026-09-09T10:02:09Z PLAN: approved bb53bcd6444e — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
-- 2026-09-09T10:02:19Z COMMIT: 9938fc1a5 chore(sync): the GL pull's ceiling admits a real group chart; per-company preview → review dispatched
-- 2026-09-09T10:07:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T10:07:53Z COMMIT: 1b5beb6a5 refactor(sync): the GL pull creates its accounts in the background and notifies the operator → review dispatched
-- 2026-09-09T10:08Z REPAIR: GL pull refused live (4,629 accounts > cap 500) → cap 10,000 (9938fc1a5); reviewer: NestedSet inserts would time out a web request → creation moved to a long-queue job with Desk notification (1b5beb6a5). Ticket: refactor hrms_erp_instance.js dialog builders into one module (hotspot, 8 fixes/90d).
-- 2026-09-09T10:08:27Z COMMIT: b86de91dc chore(plans): GL pull ceiling and background job → review dispatched
-- 2026-09-09T10:15:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T10:15:42Z COMMIT: 44d3a08ef refactor(sync): the GL pull job reports honestly — a running job, a timeout, counts from the loop → review dispatched
-- 2026-09-09T10:18:31Z PLAN: approved 1e2c00f64ede — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
-- 2026-09-09T10:18:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-09T10:18:42Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-09T10:18:47Z COMMIT: 8fa1c097e feat(expense): HR's eleven claim types wired to their GL account in every company → review dispatched
-- 2026-09-09T10:19Z REPAIR: HR's claim-type→GL sheet carried into hrms/utils/expense_claim_type_mapping.py (11 types, applied on deploy + after every GL pull); GL job reporting fixed (running job, timeout, per-company counts) 44d3a08ef; mapping 8fa1c097e. Slash in a type name verified OK on fresh.local.
-- 2026-09-09T10:19:26Z COMMIT: dd994af84 docs: handoff for the claim-type mapping and queued GL pull → review dispatched
-- 2026-09-09T10:21:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T10:21:41Z COMMIT: cfc137441 refactor(sync): the GL pull brings only the accounts HR's claim types point at → review dispatched
-- 2026-09-09T11:16:36Z COMMIT: c5ce6f99a docs(audit): shift flip, Half Day everywhere, GL pull failures, Desk sorting — causes and plan → review dispatched
-- 2026-09-09T11:40:38Z PLAN: approved 290b5479d0d3 — # Proper fixes v2 — reconciled with Codex's 8 Sep audit
-- 2026-09-09T11:43:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-09-09T11:43:21Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
-- 2026-09-09T11:43:25Z COMMIT: 4727b4b63 fix(attendance): a punch belongs to the shift it was worked in, and a shift change ends the old one → review+cross-app dispatched
-- 2026-09-09T11:45:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
-- 2026-09-09T11:45:32Z COMMIT: 497e619e7 fix(desk): HR's attendance lists read in the order the day happened → review dispatched
-- 2026-09-09T11:47:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T11:47:17Z COMMIT: 5ff14adbb fix(desk): clear the saved sort so HR actually gets the new list order → review dispatched
-- 2026-09-09T11:48:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T11:48:20Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T11:48:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T11:48:37Z COMMIT: 7e66adaa5 fix(desk): drop the cached copy of the saved sort as well → review dispatched
-- 2026-09-09T11:51:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-09T11:51:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-09T11:51:22Z COMMIT: 7291940bf fix(attendance): the Day Audit finds the days whose punches were split across two shifts → review dispatched
-- 2026-09-09T11:52Z REPAIR: shift flip root cause (closest-START pick + superseded assignment never ended) → hrms/utils/shift_resolution.py + on_submit supersede hook (4727b4b63); Desk lists sorted by Time/Attendance Date with shift columns, filters and counted/not-counted indicators (497e619e7) + saved-sort reset patch incl. Redis (5ff14adbb, 7e66adaa5); Day Audit names split-shift days and re-resolves them (7291940bf). GL ledger-parent + spelling fix pending commit.
-- 2026-09-09T11:52:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-09T11:52:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T11:52:55Z COMMIT: db39bac2a fix(attendance): the split-shift verdict and its repair, the half 7291940bf left behind → review dispatched
-- 2026-09-09T11:53:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T11:53:19Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-09T11:53:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T11:53:30Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-09T11:53:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T11:53:47Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-09T11:54:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-09T11:54:11Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-09T11:54:14Z COMMIT: 60167be47 fix(sync): a GL parent that is a ledger here falls back to the root group → review dispatched
-- 2026-09-09T11:58:06Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
-- 2026-09-09T11:58:39Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
-- 2026-09-09T11:58:43Z COMMIT: d6c5873de fix(desk): the list reset keeps every other preference, and clears the saved columns too → review dispatched
-- 2026-09-09T12:01:01Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 4 file(s) ⟂bdfcc00ed624
-- 2026-09-09T12:01:01Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T12:01:07Z COMMIT: 5095377f4 fix(attendance): the shift repair cannot strand a day, and it says what it does → review dispatched
-- 2026-09-09T12:02:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T12:02:44Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T12:02:49Z COMMIT: de269bd8d fix(attendance): clear the link before re-resolving, or the shift repair does nothing → review dispatched
-- 2026-09-09T12:09:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
-- 2026-09-09T12:09:10Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
-- 2026-09-09T12:09:16Z COMMIT: 6016009c4 fix(attendance): name the real cause of a split day instead of repairing it forever → review+cross-app dispatched
-- 2026-09-09T12:10Z EVIDENCE: 6 behaves — reviews on the Desk/shift batch: Critical (Redis hash flush) and Critical (fetch_shift no-op) both fixed and re-verified; 3 warnings closed in 6016009c4. Suites: 31 day-audit, 11 list, 10 sort-reset, all green on fresh.local too.
-- 2026-09-09T12:10:21Z COMMIT: 465a5ae98 docs(audit): what shipped for the shift flip, the lists and the GL pull → review dispatched
-- 2026-09-09T12:15:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-09T12:15:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-09T12:15:20Z COMMIT: d1ea992d4 fix(attendance): bound the assignment query, and tell the truth about the ceiling → review dispatched
-- 2026-09-09T12:16Z NEXT: Nabil deploys d1ea992d4; Pull GL Accounts; Attendance Day Audit 1-10 Sep (HR ends duplicate assignments first, then Repair); one hourly run; report his 3/4/7 Sep rows. Then: August decision, source-site shutdown confirmation, claim rulings Q1-Q6.
-- 2026-09-09T12:16:18Z COMMIT: 80c785744 docs: handoff for the shift and Desk batch → review dispatched
-- 2026-09-09T12:19:28Z COMMIT: ac40ef311 chore(attendance): the day audit's docstring, guard and test class say what is true → review dispatched
-- 2026-09-10T03:03:55Z COMMIT: 16fa438af fix(attendance): repair the split day even while both assignments are still active → review dispatched
-- 2026-09-10T03:06:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-10T03:06:16Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-10T03:06:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-10T03:06:28Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-09-10T03:06:31Z COMMIT: ea3e66a41 fix(expense): say why a claim type has no account instead of counting it → review dispatched
-- 2026-09-10T03:08:10Z COMMIT: d3421c288 fix(pwa): one forgotten check-out no longer asks you to check in forever → review+security+design dispatched
-- 2026-09-10T03:09:15Z COMMIT: df061a33b docs(audit): the check-in pipeline and what each step feeds → review dispatched
-- 2026-09-10T03:09Z REPAIR: three live defects traced and fixed after the deploy — (1) PWA stuck on "Check In": the abandoned flag of the OLDEST unresolved session was applied to the NEWEST log (d3421c288, proven red on shipped code); (2) some employees still Half Day because my own two-active-assignments guard refused the repair for exactly the broken population — removed, convergence proven on fresh.local, loop now impossible via the no-change guard (16fa438af); (3) two claim types unconfigured because the mapped GL name exists as a GROUP heading, not a ledger — the reason is now named per type and company (ea3e66a41). Pipeline map: docs/glass/audit/2026-09-10-checkin-pipeline-map.md.
-- 2026-09-10T03:09Z NEXT: Nabil deploys df061a33b, then (a) Attendance Day Audit 1-10 Sep -> Repair -> one hourly run -> confirm his 3/4/7 Sep read Present; (b) check the PWA button after a fresh check-in; (c) Pull -> GL Accounts and read the bell for the two named types (pick a ledger under the group); (d) HR ends the superseded shift assignments. Then: August decision, source-site shutdown confirmation, claim rulings Q1-Q6.
-- 2026-09-10T03:13:09Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 7 file(s) ⟂85be7f79c548
-- 2026-09-10T03:13:09Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-10T03:13:15Z COMMIT: d26582aec fix(attendance): check the whole day before rewriting any of it, and drop a dead filter → review+security+design dispatched
-- 2026-09-10T03:13Z EVIDENCE: 6 behaves — reviews on the three fixes: all DEPLOY, no Critical. Five warnings closed in d26582aec, incl. a half-applied shift repair that could unify a day onto the superseded shift (whole-day readability check now) and a dead Verdict filter option that would have read as 'nobody has duplicate assignments'.
-- 2026-09-10T03:13Z NEXT: Nabil deploys d26582aec, then (a) Attendance Day Audit 1-10 Sep -> Repair -> one hourly run -> confirm 3/4/7 Sep read Present; (b) PWA button after a fresh check-in; (c) Pull -> GL Accounts, read the bell for the two named types; (d) HR ends the superseded shift assignments. Open: August decision, source-site shutdown, claim rulings Q1-Q6.
-- 2026-09-10T03:13:52Z COMMIT: 7173539cd chore(plans): progress and next step for the 10 Sep defect batch → review dispatched
-- 2026-09-10T03:24:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-10T03:24:40Z COMMIT: f6528e423 fix(attendance): a check-out closes its own session on every path, not only for two-shift staff → review dispatched
 - 2026-09-10T03:25:52Z COMMIT: 93cf975ae docs(audit): the complete check-in edge-case set, measured not reasoned → review dispatched
 - 2026-09-10T03:35:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
@@ -306,3 +201,18 @@ TICKET: hrms/utils/permlevel_guard.py now holds two responsibilities — grantin
 NEXT: NOT more work on permlevel_guard.py. Next is sweep-4 finding #20 (Shift Request approval creates a Shift Assignment with no
   shift_location, and employee_checkin returns early when no assignment has one -> geofence silently off for anyone approved that
   way). Verify first, then fix. Nabil still owes a ruling on the OT backfill range and on early arrival for typed corrections.
+- 2026-09-11T03:43:37Z COMMIT: 15793c95e docs(plans): circuit open on permlevel_guard.py after four fixes, parked → review dispatched
+2026-09-11T03:55Z EVIDENCE: 3 works (partial) — sensitive-field lock, bench probe with savepoint + rollback.
+  PROVEN: apply_sensitive_field_lock moves all eight fields 0 -> 1 and 1 -> 0 with the HR Settings box; the client-facing read
+  paths enforce permissions (frappe.client.get and frappe.get_list both raise PermissionError for a user without Employee read);
+  raw frappe.get_doc does NOT mask permlevel fields, which is correct Frappe design — masking lives at frappe/client.py:115 and
+  frappe/handler.py:318, i.e. every path a Desk form, the REST API or the PWA actually uses. A server-internal get_doc is not a leak.
+  NOT PROVEN: that a user holding the Employee role sees a COLLEAGUE's bank/IBAN/passport masked rather than refused. The probe
+  could not attach the Employee role to a throwaway user (frappe.get_roles kept returning ['All','Desk User','Guest'] after
+  add_roles), so the one scenario that distinguishes "masked" from "refused outright" is still untested. hrms also fences Employee
+  reads by row (identity.own_employees), so the likely answer is "refused before masking matters" — likely is not proven.
+  The security-reviewer spawned for exactly this question hit its turn limit after 113k tokens without reporting; per CLAUDE.md a
+  silent reviewer counts as FIX_CRITICAL, so: NO DEPLOY of the PII lock until this one scenario is grounded.
+NEXT: ground the remaining PII scenario (throwaway user WITH the Employee role and a linked Employee record, read a colleague via
+  frappe.client.get) before the lock is deployed. Then sweep-4 #20, the geofence bypass via Shift Request. Nabil still owes the OT
+  backfill range and the early-arrival ruling.
