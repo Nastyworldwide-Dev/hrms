@@ -33,7 +33,13 @@ import unittest
 
 API = pathlib.Path(__file__).resolve().parent.parent / "api"
 
-#: name -> why this reader does not need to restate the company fence.
+#: "file.py:function" -> why this reader does not need to restate the fence.
+#:
+#: KEYED BY FILE AND NAME, not by name alone. A bare-name key pre-approves any
+#: function of that name in ANY scanned file, so adding `hrms/api/directory_v2.py`
+#: with its own `_attach_raiser_names` doing an unfenced whole-directory read
+#: would pass silently — and a staleness check that also matches on the bare name
+#: cannot see it either. The exemption must be as specific as the offence.
 EXEMPT_REASONS = {
 	# THE RULING (Nabil, 11 Sep 2026): Team KPI is group-level sight by
 	# definition — any HR sees every company, the CEO (by designation, because
@@ -42,19 +48,27 @@ EXEMPT_REASONS = {
 	# allow=Company User Permission does not narrow an HR user. Pinned from the
 	# other side by test_a_company_user_permission_does_not_narrow_team_kpi in
 	# hrms/api/test_kpi.py; if the ruling is reversed, both change together.
-	"get_team_kpi": "group-level by ruling — see hrms/api/kpi.py::_team_kpi_viewer",
+	"kpi.py:get_team_kpi": "group-level by ruling — see hrms/api/kpi.py::_team_kpi_viewer",
 	# Identity, not a directory read: it asks which Employee rows claim the
 	# SESSION user, to answer "does this session hold the office?". A company
 	# predicate here would be asking whether you are allowed to be yourself.
-	"_holds_the_office": "reads only the session user's own Employee rows",
-	# Name decoration over rows the caller was ALREADY permitted to read:
-	# list_tickets fetches HD Ticket through frappe.get_list, which honours the
-	# row-scope hooks, and this only maps each row's existing `raised_by` email
-	# to a display name. It cannot surface an employee whose email the caller
-	# does not already hold.
-	"_attach_raiser_names": "decorates rows already fenced by frappe.get_list",
+	"kpi.py:_holds_the_office": "reads only the session user's own Employee rows",
+	# Name decoration over rows the caller was ALREADY permitted to read. Two
+	# callers, and the argument has to cover both: list_tickets fetches HD Ticket
+	# through frappe.get_list (row-scope hooks honoured), and get_ticket goes
+	# through Helpdesk's own get_one, which runs its per-ticket read check. The
+	# reason neither needs a company predicate is stronger than either caller
+	# though: the filter is `user_id in [emails already present on those rows]`,
+	# so the read cannot ENUMERATE anyone. It is not whitelisted, and it takes no
+	# caller-supplied row list, so there is no path to putting a chosen email in.
+	"helpdesk.py:_attach_raiser_names": "cannot enumerate — reads only emails already on the rows",
 }
 EXEMPT: set[str] = set(EXEMPT_REASONS)
+
+
+def _label(path, func) -> str:
+	"""The one identity used by the scan, the exemptions and the report."""
+	return f"{path.name}:{func.name}"
 
 
 def _employee_get_all_calls(func) -> list[int]:
@@ -77,6 +91,17 @@ def _references_fence(func) -> bool:
 
 
 class TestApiEmployeeReadsAreFenced(unittest.TestCase):
+	def _readers(self) -> set[str]:
+		"""Every `file.py:function` in hrms/api that reads Employee via get_all."""
+		readers = set()
+		for path in sorted(API.rglob("*.py")):
+			if path.name.startswith("test_"):
+				continue
+			for func in ast.walk(ast.parse(path.read_text())):
+				if isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef) and _employee_get_all_calls(func):
+					readers.add(_label(path, func))
+		return readers
+
 	def _offenders(self):
 		for path in sorted(API.rglob("*.py")):
 			if path.name.startswith("test_"):
@@ -84,22 +109,16 @@ class TestApiEmployeeReadsAreFenced(unittest.TestCase):
 			for func in ast.walk(ast.parse(path.read_text())):
 				if not isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef):
 					continue
-				if func.name in EXEMPT:
+				if _label(path, func) in EXEMPT:
 					continue
 				lines = _employee_get_all_calls(func)
 				if lines and not _references_fence(func):
-					yield f"{path.name}:{func.name}", lines
+					yield _label(path, func), lines
 
 	def test_scan_still_sees_the_known_readers(self):
 		"""Guards the test: if the reads move or the reader changes shape, this
 		must fail loudly instead of the main assertion passing on an empty scan."""
-		readers = set()
-		for path in sorted(API.rglob("*.py")):
-			if path.name.startswith("test_"):
-				continue
-			for func in ast.walk(ast.parse(path.read_text())):
-				if isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef) and _employee_get_all_calls(func):
-					readers.add(func.name)
+		readers = {label.split(":", 1)[1] for label in self._readers()}
 		self.assertIn("get_all_employees", readers)
 		self.assertIn("get_team_status", readers)
 		self.assertIn("get_managers", readers)
@@ -108,17 +127,40 @@ class TestApiEmployeeReadsAreFenced(unittest.TestCase):
 		"""An exemption that outlives its code is rot: it silently pre-approves
 		whatever later takes that function name. Every EXEMPT entry must still
 		name a function that actually reads Employee via get_all."""
-		readers = set()
-		for path in sorted(API.rglob("*.py")):
-			if path.name.startswith("test_"):
-				continue
-			for func in ast.walk(ast.parse(path.read_text())):
-				if isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef) and _employee_get_all_calls(func):
-					readers.add(func.name)
+		readers = self._readers()
 		self.assertEqual(
 			sorted(EXEMPT - readers),
 			[],
 			"these exemptions no longer name an Employee reader — delete them",
+		)
+
+	def test_an_exempt_name_in_another_file_is_still_an_offender(self):
+		"""An exemption must be as specific as the offence.
+
+		Keyed by bare function name, exempting helpdesk.py's
+		_attach_raiser_names also exempted a function of that name in EVERY
+		scanned file — so a new hrms/api module reusing the name could read the
+		whole directory unfenced and every test here stayed green. Keyed by
+		"file.py:function", the same label the scan reports, it cannot.
+		"""
+		intruder = API / "zz_exempt_name_collision_probe.py"
+		self.assertFalse(intruder.exists(), "probe module already present — clean it up")
+		borrowed = sorted(EXEMPT)[0].split(":", 1)[1]
+		intruder.write_text(
+			"import frappe\n\n\n"
+			f"def {borrowed}():\n"
+			'\treturn frappe.get_all("Employee", fields=["name", "user_id"])\n'
+		)
+		try:
+			offenders = dict(self._offenders())
+		finally:
+			intruder.unlink()
+
+		self.assertIn(
+			f"{intruder.name}:{borrowed}",
+			offenders,
+			f"an unfenced Employee read named {borrowed!r} in another file was pre-approved "
+			f"by the exemption written for a different file",
 		)
 
 	def test_every_employee_get_all_reader_restates_the_fence(self):

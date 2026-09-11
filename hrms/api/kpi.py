@@ -392,10 +392,12 @@ def get_team_kpi(
 	# Exempted from the class guard with that reason in
 	# hrms/tests/test_api_employee_reads_are_fenced.py::EXEMPT_REASONS.
 	#
-	# ceiling: whole-tabEmployee read, measured ~100 ms / ~15 MB at 25 000
-	# employees (3 ms / 0.3 MB at 500)
-	# upgrade: push the company and department predicates into SQL past ~25 000
-	# employees, once the dict itself is the cost rather than the query
+	# ceiling: whole-table Employee read, measured ~100 ms / ~15 MB at 25 000
+	# employees (3 ms / 0.3 MB at 500); the Appraisal read below is unbounded
+	# too and is the larger table at that size — not yet measured
+	# upgrade: push the CALLER'S optional company/department filter arguments
+	# into SQL (not the fence — there is none here by ruling) and bound the
+	# Appraisal read by the resulting employee set, past ~25 000 employees
 	#
 	# What IS load-bearing: the row's company comes from the EMPLOYEE, never
 	# from Appraisal.company. The latter is a plain Link copied from the
