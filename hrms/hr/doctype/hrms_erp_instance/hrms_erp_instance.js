@@ -802,12 +802,26 @@ function accounts_summary_html(plan) {
 		);
 	if ((plan.existing || []).length)
 		parts.push(`<p>${__("Already here")}: ${plan.existing.length}</p>`);
-	if ((plan.skipped || []).length)
+	if ((plan.skipped || []).length) {
+		// The count alone was the other blind spot: "Skipped: 1" never said WHICH
+		// account, and a single skipped account is exactly how a claim type ends
+		// up with nothing to point at. Group by reason, name the accounts.
+		const byWhy = {};
+		for (const row of plan.skipped) (byWhy[row.why] = byWhy[row.why] || []).push(row.name);
 		parts.push(
-			`<p class="text-muted">${__("Skipped (roots, disabled, other companies)")}: ${
-				plan.skipped.length
-			}</p>`
+			`<p class="text-muted">${__("Skipped")}: ${plan.skipped.length}</p><ul class="text-muted">` +
+				Object.entries(byWhy)
+					.map(
+						([why, names]) =>
+							`<li>${esc(why)}: ${names
+								.slice(0, 12)
+								.map(esc)
+								.join(", ")}${names.length > 12 ? ` … +${names.length - 12}` : ""}</li>`
+					)
+					.join("") +
+				"</ul>"
 		);
+	}
 	parts.push(claim_types_summary_html(plan.claim_types));
 	return parts.join("");
 }

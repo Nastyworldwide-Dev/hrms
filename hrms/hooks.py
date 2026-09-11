@@ -114,6 +114,12 @@ after_migrate = [
 	# not the rows loses the field for good. Re-asserted on every migrate; writes
 	# nothing when the rows are already there. See hrms/utils/permlevel_guard.py.
 	"hrms.utils.permlevel_guard.after_migrate",
+	# Attendance and overtime repairs. A one-shot patch would leave every row it
+	# could not touch that day wrong for ever, and the only remedy on offer was
+	# asking HR to hand-edit records — which is the burden this exists to remove.
+	# Both repairs are idempotent and refuse any day a payout depends on, so a
+	# deploy where nothing needs fixing writes nothing at all.
+	"hrms.patches.v16_0.backfill_ot_after_rounding_rule.after_migrate",
 ]
 
 setup_wizard_complete = "hrms.subscription_utils.update_erpnext_access"

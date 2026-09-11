@@ -32,19 +32,27 @@ from frappe.utils import getdate
 logger = logging.getLogger(__name__)
 
 
-#: What an operator can actually do about a day the guard refused. The OT and
-#: hours fields are read_only on Attendance and there is no whitelisted recompute
-#: action, so "correct it by hand" is not a path the UI offers. Re-saving the row
-#: with a changed out_time is — it re-triggers before_update_after_submit, which
-#: recomputes hours and overtime under the current rules.
-_HOW_TO_FIX_BY_HAND = (
-	"To correct one of these: open the Attendance, change Out Time (even by a "
-	"second) and save. That re-runs the hours and overtime calculation under the "
-	"current rules. The fields themselves are read-only and cannot be typed into."
+#: What actually happens to a day the guard refused. It used to tell HR to nudge
+#: Out Time and re-save — a manual instruction on exactly the records Nabil asked
+#: not to put manual work on. Now the repair recurs on every deploy, so the only
+#: days that stay listed are the ones where money has already moved.
+_WHAT_HAPPENS_NEXT = (
+	"Nothing to do by hand. This repair now runs on every deploy, so any day here "
+	"is retried automatically once whatever depends on it is settled — a pending OT "
+	"request decided, a draft payslip submitted or cancelled. A day still listed "
+	"after that is one where payroll has already PAID the old figure: correcting it "
+	"is a payroll decision, not a record edit."
 )
 
 
 def execute():
+	"""Patch entry point. Kept registered so a site that has never run the repair
+	gets it at its next migrate even if the hook is ever removed; the real home
+	is `after_migrate`, so the repair recurs instead of happening once."""
+	run_repairs()
+
+
+def run_repairs():
 	from hrms.hr.doctype.attendance.attendance import (
 		recompute_ot_backfill,
 		repair_typed_working_hours,
@@ -95,6 +103,26 @@ def _run(what, result, from_date, to_date, old_key, new_key):
 			message=(
 				f"These days hold the old {what} figure and were NOT rewritten, because "
 				"an approved OT request, replacement leave or a submitted payslip "
-				f"already depends on them.\n\n{_HOW_TO_FIX_BY_HAND}\n\n" + detail
+				f"already depends on them.\n\n{_WHAT_HAPPENS_NEXT}\n\n" + detail
 			),
 		)
+
+
+def after_migrate():
+	"""Run the repairs on EVERY deploy, never breaking one.
+
+	A patch runs once. A day this could not repair on the day it first ran —
+	because an OT request was pending a decision, say — would otherwise hold the
+	wrong figure for ever, and the only remedy on offer was asking HR to edit
+	records by hand. Recurring, it repairs itself the next time the obstacle is
+	gone, and nobody touches anything.
+
+	Idempotent by construction: a row whose recomputed figures already match is
+	skipped before any guard runs, so a healthy deploy writes nothing.
+	"""
+	try:
+		run_repairs()
+	except Exception:
+		logger.error("[ot_backfill] repair run failed", exc_info=True)
+		frappe.log_error(title="Attendance repair failed", message=frappe.get_traceback())
+		print("[ot_backfill] repair run FAILED — see Error Log; the deploy itself is unaffected")
