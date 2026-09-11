@@ -88,9 +88,21 @@ def _served_companies() -> list:
 	return served or frappe.get_all("Company", pluck="name")
 
 
-def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
-	"""Create the types that are missing and add the account rows that can be
-	added now. Never edits an existing row. Safe to run any number of times."""
+def preview_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
+	"""What the mapping WOULD wire, and why the rest is still unwired. Reads only.
+
+	Split out of `apply_expense_claim_type_mapping` on 11 Sep 2026, after a third
+	attempt at "Pull -> GL Accounts" left Subsidy Parking Claim and General &
+	Administrative with an empty Accounts table and the dialog saying only
+	"Nothing to create. Already here: 49."
+
+	The reason was computed on every run and then thrown away: the pull PREVIEW
+	never looked at claim types at all, and the create path put its answer in
+	`result["claim_types"]`, which the dialog does not render. So the one thing
+	that says WHY a type has no account — "no account named X in this company",
+	or "X is a group, not a ledger" — has never once reached the person pressing
+	the button.
+	"""
 	mapping = mapping or MAPPING
 	companies = _served_companies()
 	found = frappe.get_all(
@@ -109,6 +121,15 @@ def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
 		)
 	}
 	plan = plan_type_accounts(mapping, companies, account_lookup, existing_rows, groups)
+	plan["companies"] = len(companies)
+	return plan
+
+
+def apply_expense_claim_type_mapping(mapping: dict | None = None) -> dict:
+	"""Create the types that are missing and add the account rows that can be
+	added now. Never edits an existing row. Safe to run any number of times."""
+	mapping = mapping or MAPPING
+	plan = preview_expense_claim_type_mapping(mapping)
 
 	created_types = []
 	for claim_type, gl_name in mapping.items():

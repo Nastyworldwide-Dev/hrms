@@ -209,7 +209,17 @@ def preview_account_shells(instance_name: str) -> dict:
 	"""What "Pull GL Accounts from Source" would create. Writes nothing."""
 	frappe.only_for(("System Manager", "HR Manager"))
 	_ensure_unfenced_operator()
-	return _plan_for_instance(instance_name)
+	plan = _plan_for_instance(instance_name)
+	# The accounts half of this dialog has always been able to say "nothing to
+	# create" while a claim type sits with an empty Accounts table, because the
+	# two halves were never shown together. The mapping's own reason per unwired
+	# (type, company) — "no account named X here", or "X is a group, not a
+	# ledger" — is computed on every run and was thrown away. Now it is part of
+	# the preview, so the operator sees WHY before pressing anything.
+	from hrms.utils.expense_claim_type_mapping import preview_expense_claim_type_mapping
+
+	plan["claim_types"] = preview_expense_claim_type_mapping()
+	return plan
 
 
 @frappe.whitelist(methods=["POST"])

@@ -808,6 +808,55 @@ function accounts_summary_html(plan) {
 				plan.skipped.length
 			}</p>`
 		);
+	parts.push(claim_types_summary_html(plan.claim_types));
+	return parts.join("");
+}
+
+// The accounts half can read "nothing to create" while an Expense Claim Type
+// still has an empty Accounts table — the two were never shown together, so
+// three pulls in a row reported success and changed nothing visible. This is
+// the mapping's own reason, per type, in the same dialog.
+function claim_types_summary_html(claim_types) {
+	if (!claim_types) return "";
+	const esc = frappe.utils.escape_html;
+	const rows = claim_types.rows || {};
+	const missing = claim_types.missing || [];
+	const to_wire = Object.values(rows).reduce((n, pairs) => n + pairs.length, 0);
+	const parts = [`<hr><p><b>${__("Expense claim types")}</b></p>`];
+
+	if (to_wire)
+		parts.push(
+			`<p>${__("Account rows this will add")}: <b>${to_wire}</b> ${__("across")} ${
+				Object.keys(rows).length
+			} ${__("type(s)")}</p>`
+		);
+
+	if (!missing.length) {
+		parts.push(`<p>${__("Every claim type has its account in every company.")}</p>`);
+		return parts.join("");
+	}
+
+	// Group by type: one line per type, with the reason and how many companies
+	// it affects — a flat list of 11 types x 15 companies is unreadable.
+	const byType = {};
+	for (const [claim_type, , gl_name, reason] of missing) {
+		const key = `${claim_type}||${gl_name}||${reason}`;
+		byType[key] = (byType[key] || 0) + 1;
+	}
+	parts.push(
+		`<p>${__("Still without an account")}: <b>${missing.length}</b> (${__(
+			"type x company"
+		)})</p><ul>` +
+			Object.entries(byType)
+				.map(([key, n]) => {
+					const [claim_type, gl_name, reason] = key.split("||");
+					return `<li><b>${esc(claim_type)}</b> &rarr; ${__("looking for GL account")} "${esc(
+						gl_name
+					)}" &mdash; ${esc(reason)} (${n} ${__("company/companies")})</li>`;
+				})
+				.join("") +
+			"</ul>"
+	);
 	return parts.join("");
 }
 
