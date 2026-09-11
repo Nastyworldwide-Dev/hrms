@@ -236,3 +236,5 @@ NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin
 - 2026-09-11T11:06:09Z CIRCUIT: open after 4 fix cycles on nz-glass — parked for a human
 - 2026-09-11T11:19:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-11T11:19:23Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 0 extra test file(s) ⟂f14a25999045
+- 2026-09-11T11:19:26Z COMMIT: a741f3e46 feat(checkin): one flag turns the punch-type correction off → review dispatched
+- 2026-09-11T11:19:41Z PUSH: nz-glass @ a741f3e46
