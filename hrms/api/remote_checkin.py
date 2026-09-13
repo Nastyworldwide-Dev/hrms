@@ -645,6 +645,41 @@ def session_boundary(in_dt, shift_actual_end, session_close_time):
 	return day_turnover
 
 
+def leaves_consecutive_outs(sequence, out_dt) -> bool:
+	"""Would adding an OUT at `out_dt` leave two check-outs in a row?
+
+	`sequence` is the employee's punches from the session's IN onward, ascending,
+	as dicts with `time` and `log_type`. Rejected late check-outs are dropped:
+	one never closed anything, which is what lets an employee resubmit a
+	corrected time after a refusal.
+
+	This is the test that separates a legitimate buried repair from a duplicate
+	check-out, and no comparison of times can do it — both shapes read IN, IN,
+	OUT in time order. Filing an OUT into the gap of a session that was later
+	closed normally puts two departures next to each other with no arrival
+	between them, which is impossible; filing one before a genuinely new session
+	does not.
+
+	The mirror of `resolve_punch_type`'s rule at the other end of the session:
+	nobody leaves twice without arriving.
+
+	Pure, so the rule is testable without a bench.
+	"""
+	from itertools import pairwise
+
+	entries = [
+		("OUT" if row.get("log_type") == "OUT" else "IN", get_datetime(row.get("time")))
+		for row in sequence
+		if row.get("log_type") in ("IN", "OUT")
+		and not (row.get("log_type") == "OUT" and row.get("remote_approval_status") == "Rejected")
+	]
+	entries.append(("OUT", get_datetime(out_dt)))
+	# An IN and an OUT at the same instant order IN first — the arrival cannot
+	# follow its own departure — matching resolve_punch_type's tie-break.
+	entries.sort(key=lambda e: (e[1], 0 if e[0] == "IN" else 1))
+	return any(a[0] == "OUT" and b[0] == "OUT" for a, b in pairwise(entries))
+
+
 @frappe.whitelist()
 def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
 	"""Retroactively submit a forgotten check-out.
@@ -699,7 +734,6 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# buried forgotten checkout
 	from datetime import datetime, time, timedelta
 
-	out_time_filter = [">=", in_doc.time]
 	# The earliest IN that starts a NEW session, where "new session" means the
 	# open one ENDED first. Two things end it:
 	#   * an OUT — the session is closed, so the very next IN is a new one;
@@ -753,49 +787,33 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# THE REFUSAL AND THE SEARCH ANSWER DIFFERENT QUESTIONS, SO THEY TAKE
 	# DIFFERENT EDGES.
 	#
-	# The refusal above asks "is the time you typed still inside this session",
-	# and its edge is the NEXT SESSION's arrival — which is what the shift-aware
-	# boundary deliberately pushed past midnight so a night worker is not bounded
-	# by a punch inside their own shift.
+	# NO TIME EDGE SEPARATES THE TWO SHAPES, WHICH IS WHY TWO ATTEMPTS TRADED
+	# PLACES. In time order they are identical — an IN, another IN, an OUT — and
+	# a boundary drawn anywhere either blocks the legitimate repair or admits the
+	# corrupting one:
 	#
-	# The search below asks a narrower question: "does an OUT already exist for
-	# THIS session". Its edge must be the FIRST later arrival of any kind, inside
-	# the boundary or not. Widening the boundary without splitting the two broke
-	# the invariant stated at the top of this block: an employee who forgot a
-	# check-out, then worked a complete later session, had that session's OUT
-	# fall inside the search window and was told a check-out already existed —
-	# so the buried session could never be repaired, on exactly the night-shift
-	# population the wider boundary exists to unblock.
-	first_later_in = frappe.db.get_value(
+	#   REPAIR   IN 19:00 forgotten · IN 01:00 new session · OUT 02:00 closes it
+	#            filing an OUT at 00:30 is correct and must be ALLOWED
+	#   CORRUPT  IN 09:08 · stray IN 09:18 (a double tap) · OUT 18:00 closes it
+	#            filing an OUT at 12:08 puts TWO check-outs on one session
+	#
+	# What tells them apart is not when the OUT lands but what the sequence looks
+	# like afterwards. In the repair the new OUT closes the first IN and the
+	# second IN still has its own OUT. In the corruption two OUTs end up adjacent
+	# with no arrival between them — the exact mirror of the rule
+	# `resolve_punch_type` already enforces at the other end: nobody leaves twice
+	# without arriving, just as nobody arrives twice without leaving.
+	#
+	# Rejected late check-outs are excluded because a rejected one never closed
+	# anything, which is what lets an employee resubmit a corrected time.
+	sequence = frappe.get_all(
 		"Employee Checkin",
-		{
-			"employee": in_doc.employee,
-			"log_type": "IN",
-			"name": ["!=", in_doc.name],
-			"time": [">", in_dt],
-		},
-		["name", "time"],
+		filters={"employee": in_doc.employee, "time": [">=", in_doc.time]},
+		fields=["name", "time", "log_type", "remote_approval_status"],
 		order_by="time asc",
-		as_dict=True,
+		limit=200,
 	)
-	if first_later_in:
-		out_time_filter = [
-			"between",
-			[in_doc.time, get_datetime(first_later_in.time) - timedelta(seconds=1)],
-		]
-	# a rejected late-OUT must not block resubmitting a corrected time — but a
-	# bare != filter would ALSO skip legacy rows with NULL status (SQL
-	# three-valued logic), so probe non-rejected and never-set separately
-	base_out_filters = {
-		"employee": in_doc.employee,
-		"log_type": "OUT",
-		"time": out_time_filter,
-	}
-	later_out = frappe.db.exists(
-		"Employee Checkin", {**base_out_filters, "remote_approval_status": ["!=", "Rejected"]}
-	) or frappe.db.exists(
-		"Employee Checkin", {**base_out_filters, "remote_approval_status": ["is", "not set"]}
-	)
+	later_out = leaves_consecutive_outs(sequence, out_dt)
 	if later_out:
 		frappe.throw(_("A check-out for this session already exists."))
 

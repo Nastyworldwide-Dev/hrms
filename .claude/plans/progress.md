@@ -224,3 +224,32 @@ NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the do
   B4 the missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the
   hub-wide recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
 - 2026-09-13T16:44:43Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T16:44:47Z COMMIT: 98c64cb99 fix(attendance): the denominator was not the complement of what it counted → review dispatched
+- 2026-09-13 REPAIR: the `first_later_in` edge introduced DATA CORRUPTION and review caught it.
+  first_later_in is always <= next_in by construction, so the OUT-existence window could only SHRINK —
+  and the genuine OUT closing the session fell outside it. A SECOND check-out became creatable on a
+  session that already had one, on a plain DAY shift as well as at night, and get_unresolved_stale_in's
+  banner OFFERS that session so an ordinary user is walked into it. Two OUT rows on one session,
+  measured.
+- 2026-09-13 LEARNING(fact): a buried-session repair and a duplicate-check-out corruption are
+  INDISTINGUISHABLE by any time boundary — both read IN, IN, OUT in time order. That is why two
+  successive fixes each got one of them wrong. The invariant that separates them is "never leave two
+  consecutive OUTs", the mirror of resolve_punch_type's "nobody arrives twice without leaving".
+  Replaced the edge with hrms/api/remote_checkin.py::leaves_consecutive_outs, pure and bench-free.
+  All four shapes measured on fresh.local: buried repair ACCEPTED, day duplicate REFUSED, night
+  duplicate REFUSED, plain forgotten check-out ACCEPTED.
+- 2026-09-13 LEARNING(gate): the bench-free suite was 50/50 GREEN with that corruption live, because
+  nothing exercised the OUT-existence search against a duplicate IN inside a CLOSED session -> eight
+  cases added covering all four shapes plus the rejected-OUT exemption and both same-instant tie-breaks.
+- 2026-09-13 TICKET: hrms/tests/test_checkin_timezone.py has two tests permanently RED under the bench
+  interpreter (test_punch_stamps_employee_timezone_not_site_timezone errors, leaving frappe.get_all
+  unpatched; test_closed_sessions_are_not_flagged fails on row ordering that does not survive the
+  list(reversed(...)) in get_unresolved_stale_in). They are the ONLY bench-level coverage of punch()
+  and of the banner that hands users into the path above. Repair or delete — a permanently red test
+  protects nothing and masks the next regression.
+NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the document layer so every
+  write path alternates, not just the PWA. Changes what a BIOMETRIC DEVICE records. Then the OT wave
+  (B1 the +/-1 day fetch window, B2 the unguarded Shift Type end_time, B3 the silent zeros, B4 the
+  missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the hub-wide
+  recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
+- 2026-09-13T16:57:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

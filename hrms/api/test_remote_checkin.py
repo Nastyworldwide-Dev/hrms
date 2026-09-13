@@ -570,6 +570,94 @@ class TestLateCheckoutSessionBoundary(unittest.TestCase):
 		self.assertEqual(self.boundary(self.at(0, 19), "2026-09-08 05:00:00", None), self.at(1, 5))
 
 
+class TestALateCheckOutNeverLeavesTwoDepartures(unittest.TestCase):
+	"""What separates a buried repair from a duplicate check-out.
+
+	The two shapes are IDENTICAL in time order — an IN, another IN, an OUT — so
+	no boundary drawn anywhere can tell them apart, and two attempts to do it
+	with one traded places: the first blocked the legitimate repair, the second
+	admitted the corrupting one and let a worker put two check-outs on a single
+	session. The app's own "Forgot to check out?" banner offers that session, so
+	an ordinary user was walked straight into it.
+
+	What does separate them is the sequence AFTERWARDS. Filing an OUT into a
+	session that was already closed leaves two departures adjacent with no
+	arrival between — impossible, and the mirror of the rule the punch-type
+	correction already enforces at the other end.
+	"""
+
+	def setUp(self):
+		from hrms.api import remote_checkin
+
+		self.check = remote_checkin.leaves_consecutive_outs
+		self.day = datetime.datetime(2026, 9, 7)
+
+	def at(self, hour, minute=0, day_offset=0):
+		return self.day + datetime.timedelta(days=day_offset, hours=hour, minutes=minute)
+
+	def row(self, log_type, when, **extra):
+		return {"name": f"CK-{log_type}-{when:%d%H%M}", "log_type": log_type, "time": when, **extra}
+
+	def test_a_plain_forgotten_check_out_is_allowed(self):
+		seq = [self.row("IN", self.at(9))]
+		self.assertFalse(self.check(seq, self.at(18)))
+
+	def test_a_buried_repair_before_a_genuinely_new_session_is_allowed(self):
+		"""IN 19:00 forgotten; a real new session 01:00-02:00 after it. An OUT at
+		00:30 closes the first and leaves the second intact."""
+		seq = [
+			self.row("IN", self.at(19)),
+			self.row("IN", self.at(1, day_offset=1)),
+			self.row("OUT", self.at(2, day_offset=1)),
+		]
+		self.assertFalse(self.check(seq, self.at(0, 30, day_offset=1)))
+
+	def test_a_second_check_out_on_a_closed_session_is_refused(self):
+		"""The production shape: IN 09:08 with a stray 09:18 double tap, closed
+		normally at 18:00. An OUT at 12:08 would be the session's SECOND."""
+		seq = [
+			self.row("IN", self.at(9, 8)),
+			self.row("IN", self.at(9, 18)),
+			self.row("OUT", self.at(18)),
+		]
+		self.assertTrue(self.check(seq, self.at(12, 8)))
+
+	def test_the_same_refusal_holds_on_a_night_shift(self):
+		"""Not a day-shift quirk: IN 19:00, stray IN 00:05, closed 03:30."""
+		seq = [
+			self.row("IN", self.at(19)),
+			self.row("IN", self.at(0, 5, day_offset=1)),
+			self.row("OUT", self.at(3, 30, day_offset=1)),
+		]
+		self.assertTrue(self.check(seq, self.at(2, day_offset=1)))
+
+	def test_a_rejected_late_check_out_never_closed_anything(self):
+		"""Which is what lets somebody resubmit a corrected time after a refusal."""
+		seq = [
+			self.row("IN", self.at(9)),
+			self.row("OUT", self.at(17), remote_approval_status="Rejected"),
+		]
+		self.assertFalse(self.check(seq, self.at(18)))
+
+	def test_an_untyped_row_in_the_sequence_is_ignored_not_guessed(self):
+		seq = [self.row("IN", self.at(9)), self.row("", self.at(10))]
+		self.assertFalse(self.check(seq, self.at(18)))
+
+	def test_an_in_at_the_same_instant_orders_before_the_proposed_out(self):
+		"""An arrival cannot follow its own departure — the same tie-break the
+		punch-type rule uses, so the two cannot disagree about one second. A
+		second arrival at exactly the filed time still leaves IN, IN, OUT."""
+		seq = [self.row("IN", self.at(9)), self.row("IN", self.at(17))]
+		self.assertFalse(self.check(seq, self.at(17)))
+
+	def test_an_out_at_the_same_instant_as_an_existing_one_is_still_a_duplicate(self):
+		"""before_validate truncates to whole seconds, so a retried submission
+		can land on the same second as the OUT it is retrying. That is a second
+		departure however close it is."""
+		seq = [self.row("IN", self.at(9)), self.row("OUT", self.at(17))]
+		self.assertTrue(self.check(seq, self.at(17)))
+
+
 class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 	"""The server, not the phone, decides whether a punch opens or closes a session.
 

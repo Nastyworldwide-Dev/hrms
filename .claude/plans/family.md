@@ -603,3 +603,46 @@ An evening shift ending 23:30 with the default hour of
 that half hour — measured. That is the rule applied honestly, and it is now
 pinned by its own case so nobody "restores" the day-shift behaviour by flooring
 everything at midnight.
+
+## AMENDED TWICE — no time edge separates the two shapes, so stop using one
+
+The `first_later_in` edge fixed the buried repair and opened a DATA-CORRUPTION
+hole in the other direction: `first_later_in` is always <= the old `next_in`, so
+the OUT-existence window could only SHRINK, and the genuine OUT closing a session
+fell outside it. A second check-out became creatable on a session that already
+had one — on a plain DAY shift as well as at night, and
+`get_unresolved_stale_in`'s "Forgot to check out?" banner OFFERS that session, so
+an ordinary user was walked into it. Proven on fresh.local: two OUT rows on one
+session, 12:08 Pending beside the real 18:00.
+
+The two shapes are identical in time order — IN, IN, OUT — which is why two
+attempts at a boundary traded places:
+
+  REPAIR   IN 19:00 forgotten · IN 01:00 new session · OUT 02:00 closes it
+           an OUT at 00:30 is correct and must be ALLOWED
+  CORRUPT  IN 09:08 · stray IN 09:18 (a double tap) · OUT 18:00 closes it
+           an OUT at 12:08 is the session's SECOND and must be REFUSED
+
+What separates them is the sequence AFTERWARDS, not when the OUT lands. The
+corrupting one leaves two departures adjacent with no arrival between — the exact
+mirror of the rule `resolve_punch_type` already enforces at the other end of the
+session. So the time edge is gone, replaced by `leaves_consecutive_outs`, pure and
+bench-free.
+
+hrms/api/remote_checkin.py::leaves_consecutive_outs — NEW, pure, not whitelisted.
+hrms/api/remote_checkin.py::submit_late_checkout — same-root (fixed here). The
+  `next_in` refusal is untouched; only the existence SEARCH changed.
+
+MEASURED ON fresh.local, all four shapes, savepointed:
+  buried night repair          ACCEPTED   (probe_buried_repair.py)
+  day-shift duplicate          REFUSED    (probe_dayshift_double_out.py)
+  night-shift duplicate        REFUSED    (probe_double_out.py)
+  plain forgotten check-out    ACCEPTED   (probe_late_checkout_night.py)
+
+## LOCK THE CLASS, third pass
+- Eight bench-free cases in hrms/api/test_remote_checkin.py covering all four
+  shapes plus the rejected-OUT exemption, an untyped row, and both same-instant
+  tie-breaks. The suite was 50/50 GREEN with the corruption live, which is how it
+  shipped — that is what these close.
+- The invariant, stated once: a late check-out may never leave two departures in
+  a row. Nobody leaves twice without arriving.
