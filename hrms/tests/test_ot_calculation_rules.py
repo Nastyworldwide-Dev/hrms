@@ -152,6 +152,44 @@ class TestRealShiftEnd(unittest.TestCase):
 			)
 
 
+class TestEveryPricingPathReadsTheSnapshot(unittest.TestCase):
+	"""Read off the committed source, because the defect is a MISSING COLUMN in a
+	caller's field list — not a rule error, so a test of the rule stays green.
+
+	Overtime is priced in two places that read punches. Fixing one and not the
+	other is worse than fixing neither: the two then disagree silently, and the
+	losing direction does not misprice visibly, it HIDES the day — the claimable
+	card gates on ot_hours > 0, and a patch re-runs the attendance path on every
+	migrate. Measured with the column absent: moving a shift's end 18:00 -> 15:00
+	re-priced a settled day 4.0 -> 7.0 there while the claim form held 4.0, and
+	18:00 -> 22:00 collapsed it to 0.0.
+	"""
+
+	def _field_lists(self):
+		import re
+		from pathlib import Path as _Path
+
+		source = (_Path(__file__).resolve().parents[1] / "utils" / "ot_calculation.py").read_text()
+		lists = {}
+		for fn in ("_per_day_contributions", "get_shift_ot_breakdown"):
+			body = source[source.index(f"def {fn}(") :]
+			body = body[: body.index("\norder_by") if "\norder_by" in body else len(body)]
+			block = body[body.index("fields=[") : body.index("]", body.index("fields=["))]
+			lists[fn] = {m for m in re.findall(r'"(\w+)"', block)}
+		return lists
+
+	def test_both_punch_reading_paths_fetch_the_stamped_shift_end(self):
+		for fn, fields in self._field_lists().items():
+			with self.subTest(path=fn):
+				self.assertIn(
+					"shift_end",
+					fields,
+					f"{fn} does not fetch the shift end the punch recorded, so every session it "
+					f"builds falls back to the Shift Type as it stands TODAY and a settled day "
+					f"moves when HR edits the shift.",
+				)
+
+
 class TestMonthlyCapResets(unittest.TestCase):
 	def _run(self, per_day_hours, monthly_cap):
 		config = {

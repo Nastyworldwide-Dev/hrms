@@ -967,6 +967,16 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 			"log_type",
 			"shift",
 			"shift_start",
+			# The shift's own end as stamped on the punch. Without it every
+			# session built here carries no `configured_end` and falls through to
+			# the LIVE Shift Type — which is the path Attendance.set_overtime
+			# uses to WRITE the stored ot_hours, and which a patch re-runs on
+			# every migrate. Measured before this line existed: moving a shift's
+			# end 18:00 -> 15:00 re-priced a settled day from 4.0 to 7.0 here
+			# while the claim form correctly held 4.0, and moving it the other
+			# way, 18:00 -> 22:00, collapsed it to 0.0 — which hides the day from
+			# the claimable card entirely, because that card gates on ot_hours > 0.
+			"shift_end",
 			"shift_actual_start",
 			"shift_actual_end",
 			"remote_approval_status",
@@ -981,13 +991,21 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 	else:
 		# Retain manually entered Attendance's trusted timestamps when it has
 		# no source checkins. Existing but ineligible punches never use fallback.
+		#
+		# `configured_end` and `shift_end` are DIFFERENT fields and are set as
+		# such: the first is the shift's own end, the second the grace-extended
+		# one. Putting the configured end in both — as this did — happened to
+		# yield the right number only because the configured key was absent, and
+		# it would understate overtime by the whole grace window the moment
+		# anything read `shift_end` as the grace value it is named for.
 		sessions = [
 			{
 				"first_in": in_dt or real_start,
 				"last_out": out_dt,
 				"shift": shift,
 				"shift_start": real_start,
-				"shift_end": real_end,
+				"configured_end": real_end,
+				"shift_end": real_end + timedelta(minutes=cint(config.get("allow_check_out_after"))),
 			}
 		]
 	buckets = defaultdict(float)

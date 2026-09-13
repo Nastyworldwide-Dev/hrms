@@ -261,3 +261,26 @@ NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_
 - 2026-09-13T17:33:51Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993
 - 2026-09-13T17:33:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-09-13T17:33:58Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993
+- 2026-09-13T17:34:03Z COMMIT: 616d6b119 fix(overtime): a closed month must not be re-priced by an edit made today → review+design dispatched
+- 2026-09-13T17:34:31Z COMMIT: 63a473ef9 fix(overtime): a zero that names no cause is not an answer → review+design dispatched
+- 2026-09-13 REPAIR: B2 fixed ONE of the two pricing paths, and one fixed is worse than none — review
+  caught it. get_shift_ot_breakdown's own field list did not fetch `shift_end`, so every session IT
+  built fell back to the live Shift Type. That is the path Attendance.set_overtime uses to WRITE the
+  stored ot_hours, and hrms/patches/v16_0/backfill_ot_after_rounding_rule.after_migrate re-runs it
+  across historical Attendance on EVERY DEPLOY — armed on a timer, no HR or user action needed. And the
+  losing direction does not misprice visibly, it HIDES the day: api/__init__.py gates the claimable
+  card on ot_hours > 0. Measured with the column absent: end 18:00->15:00 gave claim 4.0 / attendance
+  7.0; end 18:00->22:00 gave claim 4.0 / attendance 0.0. Both directions hold at 4.0 now on both paths.
+- 2026-09-13 REPAIR: the no-punch fallback session set `shift_end` to the CONFIGURED end, contradicting
+  the invariant recorded hours earlier. Right number by accident only, and anything reading that key as
+  the grace value it is named for would understate OT by the whole grace window. Both keys now hold
+  what their names say.
+- 2026-09-13 LEARNING(gate): a missing COLUMN in a caller's field list is invisible to any test of the
+  rule -> hrms/tests/test_ot_calculation_rules.py now asserts both punch-reading paths fetch
+  `shift_end`, read off the committed source. Proven red by removing it.
+- 2026-09-13 LEARNING(fact): a commit message written with `cat > $GD/MSG` inside a command that the
+  PreToolUse gate BLOCKS never runs, so the next `git commit -F` silently reuses the PREVIOUS message.
+  616d6b119 landed with B2's message on B3's content and had to be amended. Write the message file in
+  its own command, then commit in the next.
+- 2026-09-13T17:36:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T17:36:38Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2

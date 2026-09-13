@@ -723,6 +723,45 @@ hrms/hr/doctype/shift_type/shift_type.py:414 — not-affected — calls _pair_se
 hrms/hr/doctype/shift_type/shift_type.py:521 — not-affected — same call, builds
   worked intervals for attendance marking, never for pricing.
 
+## AMENDED AFTER REVIEW — ONE PATH FIXED IS WORSE THAN NONE
+
+`get_shift_ot_breakdown` is the SECOND path that prices from punches, and the
+first pass missed it: its own field list did not fetch `shift_end`, so every
+session it built carried no `configured_end` and fell straight back to the live
+Shift Type. That is the path `Attendance.set_overtime` uses to WRITE the stored
+ot_hours, and `hrms/patches/v16_0/backfill_ot_after_rounding_rule.after_migrate`
+re-runs it across historical Attendance on EVERY DEPLOY — so the defect was not
+latent, it was armed on a timer, with no HR action and no user action needed.
+
+Worse than mispricing: the losing direction HIDES the day. api/__init__.py gates
+the claimable card on `ot_hours > 0`, so a day priced to zero here disappears
+from the card while the claim form still says four hours — the exact "the card
+offered a day the form then refused" regression, re-opened from the other side.
+
+MEASURED on fresh.local with the column absent
+(verify-bench/sites/probe_attendance_path_reprice.py, savepointed), both ways:
+  end_time 18:00 -> 15:00   claim 4.0 (held)   attendance 7.0  RED
+  end_time 18:00 -> 22:00   claim 4.0 (held)   attendance 0.0  RED
+and with it present, both directions hold at 4.0 on both paths.
+
+hrms/utils/ot_calculation.py::get_shift_ot_breakdown — same-root (fixed here).
+hrms/hr/doctype/attendance/attendance.py:164 — same-root by construction: it is
+  the caller that writes the stored number through that path.
+hrms/patches/v16_0/backfill_ot_after_rounding_rule.py — same-root, no edit
+  needed: once the path prices from the snapshot the recurring repair is
+  idempotent again.
+
+ALSO CORRECTED: the no-punch fallback session set `shift_end` to the CONFIGURED
+end, contradicting the invariant this ledger had just written down. It yielded
+the right number only because `configured_end` was absent; anything reading
+`shift_end` as the grace value it is named for would have understated overtime by
+the whole grace window. Both keys are now set to what their names say.
+
+## LOCK THE CLASS, second pass
+- hrms/tests/test_ot_calculation_rules.py asserts BOTH punch-reading paths fetch
+  `shift_end`, read off the committed source — because the defect was a missing
+  COLUMN in a caller, which no test of the rule can see. Proven red by removing it.
+
 ## LOCK THE CLASS
 - Two cases in hrms/tests/test_ot_calculation_rules.py: the punch's own end beats
   an edit made today (proven RED by removing the snapshot read), and the
