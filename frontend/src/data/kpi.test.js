@@ -38,6 +38,9 @@ const READ_ONLY_ENDPOINTS = [
 	// so the only one whose safety is by CHECK rather than by construction:
 	// _require_kpi_read runs before a row is read.
 	"hrms.api.kpi.get_employee_kpi",
+	// one level of the department tree, CEO and HR only. Rolls up from the same
+	// scored rows the list uses, so the two cannot disagree.
+	"hrms.api.kpi.get_department_kpi",
 ]
 
 test("declares both Team KPI endpoints", () => {

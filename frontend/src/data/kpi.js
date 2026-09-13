@@ -30,6 +30,16 @@ export const employeeKpi = createResource({
 	},
 })
 
+// ONE LEVEL of the department tree — the node's roll-up, the departments
+// directly inside it, and the people standing in it. CEO and HR only; a
+// manager's scope is people, not org structure, and the server refuses them.
+export const departmentKpi = createResource({
+	url: "hrms.api.kpi.get_department_kpi",
+	onError(error) {
+		console.warn("[kpi] department tree failed:", error?.messages?.[0] || error)
+	},
+})
+
 // Read-only company scores by department; params (year, cycle, department)
 // are set by the view before fetch.
 export const teamKpi = createResource({

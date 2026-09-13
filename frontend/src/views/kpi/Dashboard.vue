@@ -107,7 +107,7 @@
 				     not the fence: hrms.api.kpi.get_team_kpi re-checks the caller's
 				     tier and refuses everyone else. -->
 				<template v-else>
-					<ResourceError :resource="teamKpi" what="the team KPI view" />
+					<ResourceError :resource="teamResource" what="the team KPI view" />
 
 					<!-- same filter bar geometry as My KPI, one control wider -->
 					<div
@@ -234,9 +234,45 @@
 								:score="Math.round(Number(teamSummary.average_score) || 0)"
 								:max="100"
 								:label="__('Average score')"
-								:loading="teamKpi.loading"
+								:loading="teamResource.loading"
 							/>
 						</div>
+					</div>
+
+					<!-- WHERE YOU ARE. A breadcrumb, not a back button: this walk has
+					     real depth (All Departments › Sales › Sales East) and the
+					     user needs to jump back more than one level. -->
+					<nav
+						v-if="!isManagerTier && treeCrumbs.length > 1"
+						class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-kra-label text-ink-600"
+						:aria-label="__('Department path')"
+					>
+						<template v-for="(crumb, i) in treeCrumbs" :key="crumb.name">
+							<button
+								v-if="i < treeCrumbs.length - 1"
+								type="button"
+								class="g-seclink g-focusable underline text-ink-800"
+								@click="openDepartment(crumb.name)"
+							>
+								{{ crumb.label }}
+							</button>
+							<span v-else class="font-sans font-semibold text-ink-800">{{ crumb.label }}</span>
+							<span v-if="i < treeCrumbs.length - 1" aria-hidden="true">›</span>
+						</template>
+					</nav>
+
+					<!-- The departments directly inside this node. Each row carries its
+					     own roll-up — the average over every PERSON beneath it, which is
+					     headcount-weighted by construction. -->
+					<div v-if="!isManagerTier && treeDepartments.length">
+						<div class="g-eyebrow mb-2.5">{{ __("Departments") }}</div>
+						<GDataTable
+							:columns="DEPARTMENT_COLUMNS"
+							:rows="treeDepartmentRows"
+							:caption="__('Departments and their average score')"
+							:loading="departmentKpi.loading"
+							@row-action="openDepartmentRow"
+						/>
 					</div>
 
 					<!-- §6.3: a score someone may dispute is read on a SOLID surface,
@@ -252,7 +288,7 @@
 					     error then recovered — was the one assistive tech skipped. -->
 					<span class="g-sr" role="status" aria-live="polite">
 						{{
-							teamKpi.error || teamKpi.loading
+							teamResource.error || teamResource.loading
 								? ""
 								: !teamYears.length
 								? __("No appraisals yet")
@@ -266,15 +302,15 @@
 						}}
 					</span>
 
-					<div v-if="!teamKpi.error">
+					<div v-if="!teamResource.error">
 						<div ref="scoresHeadingEl" tabindex="-1" class="g-eyebrow mb-2.5 kpi-scores-heading">
-							{{ __("Scores") }}
+							{{ isManagerTier ? __("Scores") : __("People here") }}
 						</div>
 						<GDataTable
 							:columns="TEAM_COLUMNS"
 							:rows="teamRows"
 							:caption="__('Team KPI scores')"
-							:loading="teamKpi.loading"
+							:loading="teamResource.loading"
 							@row-action="openEmployee"
 						>
 							<template #empty>
@@ -312,7 +348,7 @@ import GSegmented from "@/components/glass/GSegmented.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import KpiDetail from "@/views/kpi/KpiDetail.vue"
-import { canViewTeamKpi, employeeKpi, teamKpi } from "@/data/kpi"
+import { canViewTeamKpi, departmentKpi, employeeKpi, teamKpi } from "@/data/kpi"
 
 const __ = inject("$translate")
 
@@ -412,6 +448,50 @@ async function closeEmployee({ restoreFocus = false } = {}) {
 
 const scoresHeadingEl = ref(null)
 
+// CEO and HR walk the department TREE; a manager gets the flat list of their
+// reports, because their scope is people rather than org structure. Two
+// fetchers, one page — the tier decides which one is in play.
+const treeNode = ref(null)
+
+function fetchTree() {
+	console.info("[TeamKPI] department node", treeNode.value || "root")
+	departmentKpi.submit({
+		parent: treeNode.value,
+		year: teamYear.value,
+		cycle: teamCycle.value,
+		company: teamCompany.value || null,
+	})
+}
+
+function openDepartment(name) {
+	closeEmployee()
+	treeNode.value = name
+	fetchTree()
+}
+
+function openDepartmentRow(row) {
+	openDepartment(row.name)
+}
+
+const treeCrumbs = computed(() => departmentKpi.data?.breadcrumb || [])
+const treeDepartments = computed(() => departmentKpi.data?.departments || [])
+
+const DEPARTMENT_COLUMNS = computed(() => [
+	{ key: "label", label: __("Department"), action: true },
+	{ key: "headcount", label: __("People"), numeric: true },
+	{ key: "score", label: __("Average"), numeric: true },
+])
+
+const treeDepartmentRows = computed(() =>
+	treeDepartments.value.map((d) => ({
+		// carried so a row can open the node; no column renders it
+		name: d.name,
+		label: d.label,
+		headcount: d.headcount,
+		score: score1(d.average_score),
+	}))
+)
+
 function fetchTeam() {
 	console.info("[TeamKPI] loading", {
 		year: teamYear.value,
@@ -419,6 +499,7 @@ function fetchTeam() {
 		company: teamCompany.value || null,
 		department: teamDepartment.value || null,
 	})
+	if (!isManagerTier.value) return fetchTree()
 	teamKpi.submit({
 		year: teamYear.value,
 		cycle: teamCycle.value,
@@ -460,7 +541,7 @@ function onTeamCompanyChange() {
 // the two tiers the feature was built for.
 watch(activeTab, (tab) => {
 	closeEmployee()
-	if (tab !== MINE && !teamKpi.data && !teamKpi.loading) fetchTeam()
+	if (tab !== MINE && !teamData.value && !teamResource.value.loading) fetchTeam()
 })
 
 // A stale active tab must not survive a tier change. TAB_BUTTONS is a computed
@@ -473,7 +554,7 @@ watch(TAB_BUTTONS, (tabs) => {
 })
 
 watch(
-	() => teamKpi.data,
+	() => teamData.value,
 	(data) => {
 		if (!data) return
 		teamYear.value = data.selected_year
@@ -481,11 +562,19 @@ watch(
 	}
 )
 
-const teamYears = computed(() => teamKpi.data?.years || [])
-const teamCycles = computed(() => teamKpi.data?.cycles || [])
-const teamDepartments = computed(() => teamKpi.data?.departments || [])
-const teamCompanies = computed(() => teamKpi.data?.companies || [])
-const teamSummary = computed(() => teamKpi.data?.summary)
+const teamYears = computed(() => teamData.value?.years || [])
+const teamCycles = computed(() => teamData.value?.cycles || [])
+// only the manager tier still uses a department SELECTOR; the tree walks instead
+const teamDepartments = computed(
+	() => (isManagerTier.value ? teamKpi.data?.departments : []) || []
+)
+// Whichever fetcher the tier put in play answers for the shared chrome — the
+// filter bar, the hero and the people list all read ONE payload, so they cannot
+// end up describing different scopes on the same screen.
+const teamData = computed(() => (isManagerTier.value ? teamKpi.data : departmentKpi.data))
+const teamResource = computed(() => (isManagerTier.value ? teamKpi : departmentKpi))
+const teamCompanies = computed(() => teamData.value?.companies || [])
+const teamSummary = computed(() => teamData.value?.summary)
 
 // What the filters currently select, as one string, read by BOTH the visible
 // eyebrow and the screen-reader status line — one source, so they cannot drift.
@@ -534,14 +623,16 @@ const TEAM_COLUMNS = computed(() => [
 const score1 = (value) => (Number(value) || 0).toFixed(1)
 
 const teamRows = computed(() =>
-	(teamKpi.data?.rows || []).map((row) => ({
-		// carried so a row can open the person; never rendered — no column names it
-		employee: row.employee,
-		employee_name: row.employee_name,
-		department: row.department || __("No department"),
-		score: score1(row.total_score),
-		grade: row.grade || "—",
-	}))
+	(isManagerTier.value ? teamKpi.data?.rows || [] : departmentKpi.data?.people || []).map(
+		(row) => ({
+			// carried so a row can open the person; never rendered — no column names it
+			employee: row.employee,
+			employee_name: row.employee_name,
+			department: row.department || __("No department"),
+			score: score1(row.total_score),
+			grade: row.grade || "—",
+		})
+	)
 )
 </script>
 

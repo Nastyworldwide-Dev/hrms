@@ -272,3 +272,5 @@ TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Co
 - 2026-09-13T15:01:34Z PUSH: nz-glass @ 84b057733
 - 2026-09-13T15:13:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
 - 2026-09-13T15:13:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-13T15:13:55Z COMMIT: c57410e6b feat(kpi): one level of the department tree, with its roll-up → review dispatched
+- 2026-09-13T15:14:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c

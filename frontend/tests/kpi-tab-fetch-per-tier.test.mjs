@@ -54,7 +54,8 @@ function buildTrigger({ MINE }) {
 	const fn = new Function(
 		"tab",
 		"MINE",
-		"teamKpi",
+		"teamData",
+		"teamResource",
 		"fetchTeam",
 		"closeEmployee",
 		`${body}; return null`
@@ -64,7 +65,8 @@ function buildTrigger({ MINE }) {
 		fn(
 			tab,
 			MINE,
-			{ data: null, loading: false },
+			{ value: null },
+			{ value: { loading: false } },
 			() => {
 				fetched = true
 			},
