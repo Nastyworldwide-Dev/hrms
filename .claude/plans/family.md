@@ -683,3 +683,51 @@ MEASURED, seven shapes, savepointed, all correct:
 
 Both mutants killed by the bench-free suite: inverting the same-instant tie-break
 and restoring the global scan each turn exactly one test red.
+
+---
+
+# FAMILY — a closed month priced from the shift as it stands today
+
+CLASS: overtime measured a PAST day against the LIVE Shift Type instead of the
+shift the punch itself recorded. Anything that re-reads current configuration to
+price work already done inherits this: an edit made today silently moves a number
+settled weeks ago, including on claims already approved.
+
+ROOT CAUSE: hrms/utils/ot_calculation.py::_real_shift_end_for_session derived the
+end from `_get_shift_ot_config(shift_name)`. Its own docstring justified that with
+a claim false twice over — "ShiftType.validate refuses a start_time change while
+unprocessed check-ins exist": that guard (shift_type.py:275) names only
+`start_time`, never `end_time`, and fires only while check-ins are UNLINKED, which
+historical days never are.
+
+MEASURED on fresh.local through the real document API
+(verify-bench/sites/probe_shift_edit_reprice.py, savepointed): a day worked to
+4.0h of overtime, HR moves the shift end 18:00 -> 15:00 (ALLOWED), and the same
+closed day re-prices to 7.0.
+
+## same-root — fixed in this commit
+hrms/utils/ot_calculation.py::_real_shift_end_for_session — reads the session's
+  `configured_end` (the punch's own stamped shift end) before any live config.
+hrms/utils/ot_calculation.py::_pair_sessions — carries `configured_end` through
+  from each punch's `shift_end` column, which was already fetched and dropped.
+
+## A TRAP INSIDE THE FIX, recorded because it nearly shipped
+The session dict's `shift_end` key does NOT hold the shift's end — it holds
+`shift_actual_end`, the GRACE-EXTENDED end; the name predates the distinction.
+Reaching for it turned 4.0h into 3.0h, quietly handing back an hour of everyone's
+overtime. Caught by re-running the four-path probe. Both fields now pinned.
+
+## the machine's list — verdicts
+hrms/hr/doctype/shift_type/shift_type.py:414 — not-affected — calls _pair_sessions
+  to ask whether a day has a complete interval; reads first_in/last_out only.
+hrms/hr/doctype/shift_type/shift_type.py:521 — not-affected — same call, builds
+  worked intervals for attendance marking, never for pricing.
+
+## LOCK THE CLASS
+- Two cases in hrms/tests/test_ot_calculation_rules.py: the punch's own end beats
+  an edit made today (proven RED by removing the snapshot read), and the
+  grace-extended end is never the measure.
+- probe_shift_edit_reprice.py RED 4.0 -> 7.0 before, GREEN 4.0 -> 4.0 after;
+  probe_ot_window.py still shows all four OT paths agreeing at 4.0.
+- The invariant: work already done is priced from what was recorded when it was
+  done, never from the configuration as it stands now.

@@ -208,18 +208,39 @@ def _ot_hours(real_start, real_end, in_dt, out_dt) -> float:
 def _real_shift_end_for_session(shift_name, session) -> datetime | None:
 	"""The real shift end a session's OT is measured against.
 
-	From the shift's CONFIGURED start/end anchored on the session's own shift
-	start — the same derivation get_shift_ot_breakdown uses, so the two OT
-	paths cannot disagree. The old derivation subtracted the CURRENT
-	allow_check_out_after buffer from the punch-time shift_actual_end
-	snapshot, so raising that buffer 60 -> 240 silently inflated every
-	HISTORICAL session's OT by 3h. Shift start/end changes carry no such
-	risk: ShiftType.validate refuses a start_time change while unprocessed
-	check-ins exist.
+	THE SNAPSHOT THE PUNCH CARRIES, not the Shift Type as it stands today.
+	Each check-in carries `shift_end` — the shift's own end, anchored on the day,
+	written when the punch was stamped. That is the shift as it was when the
+	person actually worked, and it is the only honest thing to price a past day
+	against. It reaches here as the session's `configured_end`; the session's
+	`shift_end` is a different and older field holding the GRACE-EXTENDED end,
+	and measuring overtime from that would quietly hand back an hour of everyone's
+	pay — measured, four hours became three.
 
-	Falls back to snapshot-minus-buffer when the session has no shift_start
-	(older rows), and to None when the shift itself is gone.
+	This used to read the LIVE configuration, resting on a claim written in this
+	docstring: that "shift start/end changes carry no such risk, because
+	ShiftType.validate refuses a start_time change while unprocessed check-ins
+	exist". Both halves of that are false. The guard (shift_type.py:275) covers
+	only `start_time` — `end_time` is not mentioned — and it fires only while
+	check-ins are UNLINKED, which historical days never are. Measured: a day
+	worked to four hours of overtime, HR moves the shift's end from 18:00 to
+	15:00, and that same closed day is re-priced to seven. An already approved
+	claim's `punch_ot_hours` moves with it.
+
+	The buffer is deliberately absent. An earlier derivation took the punch's
+	`shift_actual_end` snapshot and subtracted the CURRENT
+	allow_check_out_after buffer — a hybrid of two moments in time, so raising
+	that buffer from 60 to 240 inflated every historical session by three hours.
+	`shift_end` needs no arithmetic: it is already the configured end anchored on
+	the day, frozen when it was true.
+
+	Falls back to the live derivation only for rows stamped before that field
+	existed, and to None when the shift itself is gone.
 	"""
+	snapshot = session.get("configured_end")
+	if snapshot:
+		return snapshot
+
 	config = _get_shift_ot_config(shift_name)
 	anchor = session.get("shift_start")
 	if config and anchor:
@@ -978,7 +999,14 @@ def _pair_sessions(checkins, policies=None):
 				"first_in": log_time,
 				"shift": shift,
 				"shift_start": anchor,
+				# NOTE the two ends, and that they are not the same thing.
+				# `shift_end` here is the GRACE-EXTENDED end (shift_actual_end) —
+				# the name is older than the distinction. `configured_end` is the
+				# shift's own end as it stood when this punch was stamped, which
+				# is what overtime must be measured from; taking it off the live
+				# Shift Type instead lets an edit re-price a closed month.
 				"shift_end": get_datetime(row["shift_actual_end"]) if row.get("shift_actual_end") else None,
+				"configured_end": get_datetime(row["shift_end"]) if row.get("shift_end") else None,
 			}
 		elif log_type == "OUT" and current is not None:
 			current["last_out"] = log_time
@@ -986,6 +1014,8 @@ def _pair_sessions(checkins, policies=None):
 			current["shift_start"] = current.get("shift_start") or anchor
 			if not current["shift_end"] and row.get("shift_actual_end"):
 				current["shift_end"] = get_datetime(row["shift_actual_end"])
+			if not current.get("configured_end") and row.get("shift_end"):
+				current["configured_end"] = get_datetime(row["shift_end"])
 			if log_time > current["first_in"]:
 				sessions.append(current)
 			current = None

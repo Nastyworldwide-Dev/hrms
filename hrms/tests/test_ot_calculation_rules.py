@@ -99,6 +99,48 @@ class TestRealShiftEnd(unittest.TestCase):
 		with patch.object(ot, "_get_shift_ot_config", return_value=config):
 			self.assertEqual(ot._real_shift_end_for_session("Night", session), datetime(2026, 8, 18, 6, 0))
 
+	def test_the_punch_s_own_shift_end_beats_the_shift_as_it_stands_today(self):
+		"""A closed month must not be re-priced by an edit made afterwards.
+
+		Each check-in carries the shift's end as it was when the punch was
+		stamped. Overtime used to be measured against the LIVE Shift Type
+		instead, on the written claim that "shift start/end changes carry no
+		such risk, because ShiftType.validate refuses a start_time change while
+		unprocessed check-ins exist". Both halves are false: that guard names
+		only `start_time`, and it fires only while check-ins are UNLINKED, which
+		historical days never are. Measured on a real site — a day worked to
+		four hours of overtime, HR moves the shift's end from 18:00 to 15:00,
+		and the same closed day re-prices to seven, taking an already approved
+		claim's punch_ot_hours with it."""
+		session = {
+			"shift_start": datetime(2026, 8, 17, 10, 0),
+			"shift_end": datetime(2026, 8, 17, 19, 0),  # grace-extended, NOT the rule
+			"configured_end": datetime(2026, 8, 17, 18, 0),  # what was true that day
+		}
+		moved = {"start_time": time(10, 0), "end_time": time(15, 0)}  # today's edit
+		with patch.object(ot, "_get_shift_ot_config", return_value=moved):
+			self.assertEqual(
+				ot._real_shift_end_for_session("Day Shift", session),
+				datetime(2026, 8, 17, 18, 0),
+				"the day was worked against an 18:00 end and must stay priced against it",
+			)
+
+	def test_the_grace_extended_end_is_never_the_measure(self):
+		"""The session's `shift_end` is the GRACE-extended end, and its name is
+		older than that distinction. Measuring overtime from it hands back an
+		hour of everyone's pay — four hours became three when I first reached
+		for it. Pinned so the two fields cannot be confused again."""
+		session = {
+			"shift_start": datetime(2026, 8, 17, 10, 0),
+			"shift_end": datetime(2026, 8, 17, 19, 0),
+			"configured_end": datetime(2026, 8, 17, 18, 0),
+		}
+		with patch.object(ot, "_get_shift_ot_config", return_value=None):
+			self.assertNotEqual(
+				ot._real_shift_end_for_session("Day Shift", session),
+				datetime(2026, 8, 17, 19, 0),
+			)
+
 	def test_falls_back_to_snapshot_minus_buffer_without_a_start(self):
 		session = {"shift_start": None, "shift_end": datetime(2026, 8, 17, 19, 0)}
 		with (

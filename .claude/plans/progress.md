@@ -224,3 +224,8 @@ NEXT: OT wave re-ordered on evidence. B1 is struck. Take B2 first (hrms/hr/docty
   3.0 -> 6.0 -> 4.0 through the real document API), then B3 (make the silent zeros legible: 15 sites,
   one message, no cause ever named), then B4 (a missing holiday list prices a public holiday as a
   normal day, silent underpay).
+- 2026-09-13T17:23:07Z COMMIT: 0280a495a docs(plans): the headline overtime finding does not reproduce → review dispatched
+- 2026-09-13T17:26:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T17:26:59Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-13T17:27:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T17:27:37Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
