@@ -259,3 +259,11 @@ TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Co
   Make the two doors agree, and add a probe case so the pair cannot drift. Do NOT fix it by fencing the
   list on Appraisal.company: that field is copied from the Appraisal Cycle and never reconciled, which is
   the bug test_an_appraisal_stamped_with_the_wrong_company_does_not_move_its_owner already pins.
+- 2026-09-13 RULING (Nabil, restated): HR MANAGES THE ENTIRE GROUP AND IS NOT LIMITED TO A COMPANY.
+  That covers the personnel file, not only the list — an allow=Company User Permission, including the
+  one the "HR (Company)" role auto-provisions, does not narrow HR anywhere on the KPI page. This is the
+  ONE place on the hub with that exemption; everywhere else the fence still binds. Verified on a real
+  site: a company-fenced HR user still lists every company AND still opens another company's KRA detail.
+  Recorded in hrms/api/kpi.py::_scope and pinned by two tests, so a future reader meets the decision
+  rather than re-deriving it — and knows exactly where to reverse it if the policy ever changes.
+  This closes the last open question before the push.

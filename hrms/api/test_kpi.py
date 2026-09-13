@@ -520,6 +520,24 @@ class TestTeamKPI(FrappeTestCase):
 			frappe.set_user("Administrator")
 			frappe.db.delete("User Permission", {"user": user, "allow": "Company"})
 
+	def test_a_company_fenced_hr_still_opens_another_company_s_detail(self):
+		"""THE RULING, at the door it matters most. HR manages the entire group
+		and is not limited to a company — not for the list, and not for the
+		personnel file behind it: targets, actuals, manager ratings, self
+		score. An allow=Company User Permission, including the one the
+		"HR (Company)" role auto-provisions, does not narrow HR here.
+
+		This is the ONE place on the hub with that exemption. If it is ever
+		reversed, it is reversed here."""
+		self._fence_to(self.hr_user, self.company)
+		frappe.set_user(self.hr_user)
+
+		self.assertEqual(
+			get_employee_kpi(self.far_emp)["employee"]["name"],
+			self.far_emp,
+			"a company-fenced HR user must still reach another company's KPI detail",
+		)
+
 	def test_a_user_permission_does_not_block_choosing_another_company(self):
 		self._fence_to(self.hr_user, self.company)
 		frappe.set_user(self.hr_user)

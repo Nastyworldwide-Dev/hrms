@@ -356,11 +356,20 @@ def _scope(user: str | None = None) -> tuple[str | None, list[str] | None]:
 	            Desk; this surfaces it, it does not grant it.
 	The wider tier wins when somebody holds more than one.
 
-	Neither ceo nor hr is company-fenced. That is a ruling (Nabil, 11 Sep 2026),
-	not an omission: Team KPI is group-level sight, and this is the ONE place on
-	the hub where an allow=Company User Permission does not narrow an HR user.
-	Pinned from the other side by
-	test_a_company_user_permission_does_not_narrow_team_kpi.
+	NEITHER CEO NOR HR IS COMPANY-FENCED, ANYWHERE ON THIS PAGE. Ruling (Nabil,
+	11 Sep, restated 13 Sep 2026): HR manages the ENTIRE group and is not
+	limited to a company — not for the list, and not for the personnel file
+	behind it. So an `allow=Company` User Permission, including the one the
+	"HR (Company)" role auto-provisions, does not narrow either tier here,
+	and `get_employee_kpi` runs without the framework's appraisal check for
+	them precisely because that check would re-impose the fence this ruling
+	removes.
+
+	This is the ONE place on the hub with that exemption; everywhere else the
+	fence still binds. Pinned from the other side by
+	test_a_company_user_permission_does_not_narrow_team_kpi and
+	test_a_company_fenced_hr_still_opens_another_company_s_detail — if the
+	ruling is ever reversed, those two are where it is reversed.
 	"""
 	user = user or frappe.session.user
 
