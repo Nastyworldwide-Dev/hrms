@@ -597,8 +597,24 @@ function onTeamCompanyChange() {
 }
 
 // First visit to the tab loads; afterwards the filters drive the fetches.
+// Compared against the tab's IDENTITY, never its label. The label is now
+// per-tier ("Team KPI" for a manager, "All KPI" for the CEO and HR), and
+// testing `tab === TEAM` silently stopped firing for the CEO and HR the moment
+// the second label existed — their tab fetched nothing, ever, and there is no
+// other trigger: fetchTeam is otherwise reachable only from the filter bar,
+// which itself only renders once a fetch has returned. Permanently empty, for
+// the two tiers the feature was built for.
 watch(activeTab, (tab) => {
-	if (tab === TEAM && !teamKpi.data && !teamKpi.loading) fetchTeam()
+	if (tab !== MINE && !teamKpi.data && !teamKpi.loading) fetchTeam()
+})
+
+// A stale active tab must not survive a tier change. TAB_BUTTONS is a computed
+// now, so a cached tier that hydrates as one value and refetches as another can
+// leave activeTab holding a label the segmented control no longer offers —
+// nothing selected, no way back. RequestPanel carries the same clamp for the
+// same reason, pinned by tests/request-panel-tabs.test.mjs.
+watch(TAB_BUTTONS, (tabs) => {
+	if (!tabs.includes(activeTab.value)) activeTab.value = MINE
 })
 
 watch(

@@ -251,3 +251,20 @@ NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin
 NEXT: step 2 of the KPI tree work — the per-person drill-down endpoint and its fence (KRA detail is a
   personnel file, not a league-table row, so it needs its own check, not the list's). Then step 3, the
   department-tree navigation for CEO/HR, rolled up as the average over PEOPLE in the subtree.
+- 2026-09-13T14:05:36Z COMMIT: c9a8034c0 feat(kpi): a manager sees their own team, by the rule that already governs it → review+design dispatched
+- 2026-09-13 REPAIR: frappe-reviewer FIX_CRITICAL on c9a8034c0, TWO Criticals, both mine.
+  (a) I renamed the second tab per tier and the first-fetch watch still compared against the LABEL
+  `TEAM` — so for the CEO and HR it never fired. Their tab would have been permanently empty, with no
+  other trigger (fetchTeam is otherwise reachable only from the filter bar, which renders only after a
+  fetch returns). The feature would have shipped broken for the two tiers it exists to serve.
+  (b) The tier check mixed TWO definitions of "my own Employee row": get_allowed_appraisal_employees
+  seeds from a raw user_id match (every claimant), identity.own_employees is Active-only and fails
+  closed to [] on duplicates. Subtracting one from the other turned that disagreement into "people who
+  report to me", and a duplicate-identity login was handed the OTHER claimant's score — which the
+  framework's own has_permission refuses them everywhere else. Now: no resolvable identity, no tier.
+- 2026-09-13 EVIDENCE: 2 correct — probe 14/14 on fresh.local (savepoint, rolled back), now covering the
+  duplicate-identity login and the offboarded leaver. Frontend 164/0 with a new per-tier fetch test,
+  proven RED (3/3) against the label comparison.
+- 2026-09-13 LEARNING(gate): a tab-label refactor breaks the first-fetch watch silently ->
+  frontend/tests/kpi-tab-fetch-per-tier.test.mjs executes the committed watch body for every tier and
+  refuses a trigger that compares against a label constant.

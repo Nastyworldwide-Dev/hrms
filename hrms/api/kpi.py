@@ -353,11 +353,26 @@ def _team_kpi_viewer() -> str | None:
 		return VIEWER_CEO
 	if is_hr_operator(user):
 		return VIEWER_HR
-	# Managing NOBODY is not a tier — the page keeps exactly one tab. The chain
-	# rule always returns the caller's own record, so "is a manager" is whether
-	# it reaches past that.
+	# IDENTITY FIRST, and fail closed. Two definitions of "my own Employee row"
+	# meet here and they do not agree: get_allowed_appraisal_employees seeds
+	# from a raw user_id match (status-agnostic, EVERY claimant), while
+	# identity.own_employees is normalised, Active-only, and returns [] when a
+	# login is claimed by more than one Employee. Subtracting the second from
+	# the first turned that disagreement into "people who report to me" — a
+	# duplicate-identity login was handed the OTHER claimant's score, which the
+	# framework's own has_permission refuses them on every other surface.
+	# No resolvable identity, no tier. It also retires the offboarded case: a
+	# leaver whose User is still enabled was shown a team of exactly themselves.
+	own = own_employees(user)
+	if not own:
+		logger.info("[kpi] no single Active Employee for %s — no team tier", user)
+		return None
+
+	# Managing NOBODY is not a tier either — the page keeps exactly one tab.
+	# The chain rule always returns the caller's own record, so "is a manager"
+	# is whether it reaches past that.
 	allowed = get_allowed_appraisal_employees(user)
-	if allowed and set(allowed) - set(own_employees(user)):
+	if allowed and set(allowed) - set(own):
 		return VIEWER_MANAGER
 	return None
 
@@ -367,7 +382,9 @@ def _require_team_kpi_viewer() -> str:
 	if not viewer:
 		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
 		frappe.throw(
-			_("The Team KPI view is available to the Chief Executive Officer and to HR."),
+			_(
+				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
+			),
 			frappe.PermissionError,
 		)
 	return viewer
@@ -394,7 +411,8 @@ def get_team_kpi(
 	department: str | None = None,
 	company: str | None = None,
 ) -> dict:
-	"""Read-only appraisal scores across EVERY company on the hub.
+	"""Read-only appraisal scores for whatever the caller's tier admits: their
+	own reporting chain (manager), or every company on the hub (CEO, HR).
 
 	Rows carry one score per employee: the selected cycle's, or the mean of the
 	year's cycles when `cycle` is ALL_CYCLES (the default, matching My KPI's
@@ -434,9 +452,11 @@ def get_team_kpi(
 	# Company column would all disagree with the Employee master. The row is
 	# about a person, so the person's company governs it.
 	employee_filters = {}
+	reports = None
 	if viewer == VIEWER_MANAGER:
 		# Their chain, and nothing else. The same list that already governs
-		# whether they may read those appraisals at all.
+		# whether they may read those appraisals at all, and the same identity
+		# helper the tier check used — never a second definition of "mine".
 		chain = get_allowed_appraisal_employees(frappe.session.user) or []
 		own = set(own_employees(frappe.session.user))
 		reports = [e for e in chain if e not in own]
@@ -451,9 +471,15 @@ def get_team_kpi(
 		)
 	}
 
+	appraisal_filters = {"docstatus": ("<", 2)}
+	if reports is not None:
+		# Bound the read to the chain rather than filtering a whole-table result
+		# in Python against a handful of employees.
+		appraisal_filters["employee"] = ("in", reports or [""])
+
 	appraisals = frappe.get_all(
 		"Appraisal",
-		filters={"docstatus": ("<", 2)},
+		filters=appraisal_filters,
 		fields=[
 			"name",
 			"employee",

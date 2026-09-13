@@ -8,7 +8,12 @@ import { createResource } from "frappe-ui"
 export const canViewTeamKpi = createResource({
 	url: "hrms.api.kpi.can_view_team_kpi",
 	auto: true,
-	cache: personalCacheKey("hrms:can_view_team_kpi"),
+	// v2: this used to answer a BOOLEAN. It answers the TIER now
+	// ("manager" | "ceo" | "hr"), and the cache is idb-backed and survives a
+	// reload — so without a new key a returning manager hydrates `true`, which
+	// is truthy but is not "manager", and their tab mislabels itself for one
+	// paint. Bump the key whenever the SHAPE of the answer changes.
+	cache: personalCacheKey("hrms:can_view_team_kpi:v2"),
 	onError(error) {
 		console.warn("[kpi] team-view gate probe failed:", error?.messages?.[0] || error)
 	},
