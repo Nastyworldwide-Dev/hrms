@@ -26,9 +26,19 @@ const source = readFileSync(fileURLToPath(new URL("./kpi.js", import.meta.url)),
 /** Every `url: "..."` declared in the module, in source order. */
 const declaredUrls = [...source.matchAll(/url:\s*"([^"]+)"/g)].map((m) => m[1])
 
-// The only endpoints this view is allowed to reach. Both are reads; both
-// re-check the CEO designation server-side.
-const READ_ONLY_ENDPOINTS = ["hrms.api.kpi.can_view_team_kpi", "hrms.api.kpi.get_team_kpi"]
+// The only endpoints this view is allowed to reach. Every one is a READ, and
+// every one re-checks the caller's tier server-side. Adding a line here is a
+// deliberate act: say what the endpoint reads and what fences it.
+const READ_ONLY_ENDPOINTS = [
+	// the tier gate — returns "manager" | "ceo" | "hr" | nothing
+	"hrms.api.kpi.can_view_team_kpi",
+	// the list — rows the caller's tier admits
+	"hrms.api.kpi.get_team_kpi",
+	// one person's KRA detail. The only KPI endpoint that takes an employee,
+	// so the only one whose safety is by CHECK rather than by construction:
+	// _require_kpi_read runs before a row is read.
+	"hrms.api.kpi.get_employee_kpi",
+]
 
 test("declares both Team KPI endpoints", () => {
 	for (const endpoint of READ_ONLY_ENDPOINTS) {

@@ -75,7 +75,20 @@
 				<template v-else>
 					<tr v-for="(row, i) in rows" :key="i" :class="{ 'g-table__total': row.total }">
 						<td v-for="col in columns" :key="col.key" :class="{ 'g-table__num': col.numeric }">
-							{{ row[col.key] }}
+							<!-- A REAL BUTTON, never a click handler on the <tr>. A row
+							     with an onclick is not keyboard-reachable and is
+							     announced as plain text, so the only way into a detail
+							     view would be a mouse. The cell that names the thing is
+							     the one that opens it. -->
+							<button
+								v-if="col.action"
+								type="button"
+								class="g-table__action g-focusable"
+								@click="$emit('row-action', row)"
+							>
+								{{ row[col.key] }}
+							</button>
+							<template v-else>{{ row[col.key] }}</template>
 						</td>
 					</tr>
 				</template>
@@ -87,7 +100,11 @@
 <script setup>
 import GSkeleton from "./GSkeleton.vue"
 
+defineEmits(["row-action"])
+
 defineProps({
+	// columns: [{ key, label, numeric, action }] — `action` renders the cell as
+	// a button that emits row-action with the whole row.
 	columns: { type: Array, required: true },
 	rows: { type: Array, default: () => [] },
 	caption: { type: String, default: "" },
@@ -97,6 +114,21 @@ defineProps({
 </script>
 
 <style scoped>
+/* An action cell must not look like a link dropped into a data table: it keeps
+   the row's own type and colour and earns its affordance from the underline
+   and the focus ring, the same way .g-seclink does elsewhere. */
+.g-table__action {
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	text-align: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+
 /* numeric cells right-align inside the shared .g-table padding */
 .g-table__num :deep(.g-skeleton) {
 	margin-left: auto;

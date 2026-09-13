@@ -48,18 +48,28 @@ function buildTrigger({ MINE }) {
 	assert.ok(from !== -1, "the first-fetch watch was renamed or removed")
 	const body = SOURCE.slice(from + START.length, SOURCE.indexOf("})", from))
 	let fetched = false
+	// Every name the watch body reaches for is injected. A new dependency in
+	// that body fails HERE rather than silently — which is the point of running
+	// the committed source instead of a copy of it.
 	const fn = new Function(
 		"tab",
 		"MINE",
 		"teamKpi",
 		"fetchTeam",
+		"closeEmployee",
 		`${body}; return null`
 	)
 	return (tab) => {
 		fetched = false
-		fn(tab, MINE, { data: null, loading: false }, () => {
-			fetched = true
-		})
+		fn(
+			tab,
+			MINE,
+			{ data: null, loading: false },
+			() => {
+				fetched = true
+			},
+			() => {}
+		)
 		return fetched
 	}
 }

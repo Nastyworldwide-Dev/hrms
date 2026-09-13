@@ -64,7 +64,7 @@ def _bar_percent(row) -> float:
 	return flt(row.achievement) or flt(row.goal_completion) or flt(row.manager_rating) / 5 * 100
 
 
-def _year_average(year_appraisals, year: int) -> dict:
+def _year_average(year_appraisals, year: int, verify_appraisal_permission: bool = True) -> dict:
 	"""Synthetic "current" block averaging every appraisal cycle of the year.
 
 	KRA rows are grouped by (KRA, KPI) so each distinct KPI stays its own row and
@@ -75,9 +75,10 @@ def _year_average(year_appraisals, year: int) -> dict:
 	docs = []
 	for a in year_appraisals:
 		doc = frappe.get_doc("Appraisal", a.name)
-		# Defense in depth: the own-employee rule in Appraisal.has_permission
-		# must allow this read; fail loudly if the visibility scope ever changes.
-		frappe.has_permission("Appraisal", doc=doc, throw=True)
+		if verify_appraisal_permission:
+			# Defense in depth on the SELF path — see _kpi_dashboard for why the
+			# team path cannot use it.
+			frappe.has_permission("Appraisal", doc=doc, throw=True)
 		docs.append(doc)
 
 	grouped = {}
@@ -143,15 +144,37 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	"""Personal KRA/KPI dashboard for the logged-in employee (PWA "My KPI").
 
 	Deliberately takes no employee argument: the appraisal visibility hooks in
-	appraisal.py do not cover whitelisted endpoints, so this endpoint is
-	scoped to the session user's own Employee by construction.
+	appraisal.py do not cover whitelisted endpoints, so this endpoint is scoped
+	to the session user's own Employee BY CONSTRUCTION. `get_employee_kpi` is
+	the door that does take one, and it carries its own lock.
 
 	year: calendar year of the appraisal's effective date (its end/start date, or
 	its cycle's, or its creation date); defaults to the latest.
 	cycle: an Appraisal Cycle name within that year, or ALL_CYCLES ("_all")
 	to average across every cycle of the year; defaults to the latest cycle.
 	"""
-	employee = _get_session_employee()
+	return _kpi_dashboard(_get_session_employee(), year, cycle, verify_appraisal_permission=True)
+
+
+def _kpi_dashboard(
+	employee: str,
+	year: str | int | None,
+	cycle: str | None,
+	*,
+	verify_appraisal_permission: bool,
+) -> dict:
+	"""The renderer. ONE payload shape, because the drill-down IS the My KPI
+	layout pointed at somebody else — two shapes would half-render it.
+
+	`verify_appraisal_permission` runs frappe.has_permission on each Appraisal
+	as defense in depth. True on the SELF path, where it catches a drift in the
+	own-employee rule. False on the team path, and deliberately: the CEO tier is
+	granted by DESIGNATION, which appraisal.py's hook has never heard of — it
+	admits Administrator, HR roles and the reporting chain only. Running it
+	there would refuse the CEO their own feature, and silencing it per-caller
+	would be worse than not calling it. On that path the tier fence in
+	`_require_kpi_read` is the authority, and it is checked before a row is read.
+	"""
 	emp = frappe.db.get_value(
 		"Employee", employee, ["name", "employee_name", "designation", "image"], as_dict=True
 	)
@@ -220,7 +243,7 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	]
 
 	if cycle == ALL_CYCLES:
-		current = _year_average(year_appraisals, selected_year)
+		current = _year_average(year_appraisals, selected_year, verify_appraisal_permission)
 		selected_cycle = ALL_CYCLES
 		previous_score = None
 		feedback_count = frappe.db.count(
@@ -230,9 +253,11 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	else:
 		selected = next((a for a in year_appraisals if a.appraisal_cycle == cycle), year_appraisals[0])
 		doc = frappe.get_doc("Appraisal", selected.name)
-		# Defense in depth: the own-employee rule in Appraisal.has_permission
-		# must allow this read; fail loudly if the visibility scope ever changes.
-		frappe.has_permission("Appraisal", doc=doc, throw=True)
+		if verify_appraisal_permission:
+			# Defense in depth on the SELF path: the own-employee rule in
+			# Appraisal.has_permission must allow this read; fail loudly if the
+			# visibility scope ever changes.
+			frappe.has_permission("Appraisal", doc=doc, throw=True)
 
 		kras = [{field: row.get(field) for field in KRA_ROW_FIELDS} for row in doc.appraisal_kra]
 
@@ -402,6 +427,46 @@ def can_view_team_kpi() -> str | None:
 	viewer = _team_kpi_viewer()
 	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, viewer)
 	return viewer
+
+
+def _require_kpi_read(employee: str) -> str:
+	"""May the caller open THIS person's KRA detail? Returns the tier that let
+	them, or throws.
+
+	The list view answers a different question — "whose rows may I see" — and a
+	row there is a name and a number. This is the personnel file behind it: the
+	manager's rating, the written feedback, every target and actual. So it gets
+	its own check, and the check is the SAME tier the list already uses, never a
+	second derivation. Two implementations of "may I see this person" is how the
+	filing guard and the row scope came to disagree (.claude/plans/family.md).
+
+	Checked BEFORE anything is read.
+	"""
+	user = frappe.session.user
+	if employee in own_employees(user):
+		return "self"
+
+	viewer = _team_kpi_viewer()
+	if viewer in (VIEWER_CEO, VIEWER_HR):
+		return viewer
+	if viewer == VIEWER_MANAGER and employee in (get_allowed_appraisal_employees(user) or []):
+		return viewer
+
+	logger.warning("[kpi] %s refused the KPI detail of %s (tier %s)", user, employee, viewer)
+	frappe.throw(_("You are not permitted to view this employee's KPI."), frappe.PermissionError)
+
+
+@frappe.whitelist()
+def get_employee_kpi(employee: str, year: str | int | None = None, cycle: str | None = None) -> dict:
+	"""One person's KRA detail — the My KPI layout, pointed at somebody else.
+
+	The only endpoint here that takes an employee, so it is the only one whose
+	safety is by CHECK rather than by construction. `_require_kpi_read` runs
+	first and throws before a single row is read.
+	"""
+	tier = _require_kpi_read(employee)
+	logger.info("[kpi] %s opened the KPI detail of %s as %s", frappe.session.user, employee, tier)
+	return _kpi_dashboard(employee, year, cycle, verify_appraisal_permission=(tier == "self"))
 
 
 @frappe.whitelist()

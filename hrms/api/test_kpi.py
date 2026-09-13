@@ -9,7 +9,13 @@ from frappe.tests.utils import FrappeTestCase
 from erpnext.setup.doctype.designation.test_designation import create_designation
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.api.kpi import CEO_DESIGNATION, can_view_team_kpi, get_my_kpi_dashboard, get_team_kpi
+from hrms.api.kpi import (
+	CEO_DESIGNATION,
+	can_view_team_kpi,
+	get_employee_kpi,
+	get_my_kpi_dashboard,
+	get_team_kpi,
+)
 from hrms.hr.doctype.appraisal_cycle.test_appraisal_cycle import create_appraisal_cycle
 from hrms.hr.doctype.appraisal_template.test_appraisal_template import create_appraisal_template
 from hrms.tests.test_utils import create_company
@@ -570,6 +576,52 @@ class TestTeamKPI(FrappeTestCase):
 			row["total_score"] for row in data["rows"]
 		]:
 			self.assertEqual(round(value, 1), value, f"{value} carries more than one decimal place")
+
+	# --- the drill-down: one person's KRA detail -----------------------------
+
+	def test_a_colleague_cannot_open_your_kpi(self):
+		"""The list is a league table; this is a personnel file. It carries the
+		manager's rating and the written feedback, so it gets its own check —
+		not the list's, and not none."""
+		frappe.set_user(self.ops_user)
+		self.assertRaises(frappe.PermissionError, get_employee_kpi, self.staff)
+
+	def test_you_can_always_open_your_own(self):
+		frappe.set_user(self.staff_user)
+		data = get_employee_kpi(self.staff)
+		self.assertEqual(data["employee"]["name"], self.staff)
+
+	def test_a_manager_can_open_a_report(self):
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.mgr)
+		frappe.set_user(self.mgr_user)
+		data = get_employee_kpi(self.staff)
+		self.assertEqual(data["employee"]["name"], self.staff)
+
+	def test_a_manager_cannot_open_somebody_else_s_report(self):
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.mgr)
+		frappe.set_user(self.mgr_user)
+		self.assertRaises(frappe.PermissionError, get_employee_kpi, self.ops_emp)
+
+	def test_the_ceo_can_open_anyone(self):
+		frappe.set_user(self.ceo_user)
+		self.assertEqual(get_employee_kpi(self.far_emp)["employee"]["name"], self.far_emp)
+
+	def test_hr_can_open_anyone(self):
+		frappe.set_user(self.hr_user)
+		self.assertEqual(get_employee_kpi(self.far_emp)["employee"]["name"], self.far_emp)
+
+	def test_the_drill_down_returns_the_same_shape_as_my_kpi(self):
+		"""One renderer, two doors. The detail view is the My KPI layout pointed
+		at somebody else, so a drifting payload would silently half-render it."""
+		frappe.set_user(self.staff_user)
+		mine = get_my_kpi_dashboard()
+		theirs = get_employee_kpi(self.staff)
+		self.assertEqual(sorted(mine), sorted(theirs))
+
+	def test_the_drill_down_takes_no_shortcut_around_the_tier(self):
+		# The fence is the FIRST thing the endpoint does; nothing is read for a
+		# caller who is not entitled to the row.
+		self.assertEqual(list(inspect.signature(get_employee_kpi).parameters), ["employee", "year", "cycle"])
 
 	# --- read-only ---------------------------------------------------------
 

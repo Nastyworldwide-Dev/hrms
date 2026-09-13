@@ -268,3 +268,21 @@ NEXT: step 2 of the KPI tree work — the per-person drill-down endpoint and its
 - 2026-09-13 LEARNING(gate): a tab-label refactor breaks the first-fetch watch silently ->
   frontend/tests/kpi-tab-fetch-per-tier.test.mjs executes the committed watch body for every tier and
   refuses a trigger that compares against a label constant.
+- 2026-09-13 EVIDENCE: 2 correct — drill-down probe on fresh.local (savepoint, rolled back) 23/23,
+  now covering the fence from every side: you can open your own; a manager can open a report AND the
+  report's report; a manager CANNOT open an outsider; a colleague CANNOT open a colleague; the CEO can
+  open anyone; a duplicate-identity login can open nobody. Plus the payload equality check — the
+  drill-down returns byte-identical keys to get_my_kpi_dashboard, so the shared layout cannot
+  half-render.
+- 2026-09-13 EVIDENCE: 7 stays right — ONE renderer, two doors. _kpi_dashboard is shared;
+  get_my_kpi_dashboard is safe BY CONSTRUCTION (takes no employee), get_employee_kpi is safe BY CHECK
+  (_require_kpi_read runs first). The frontend mirrors it: KpiDetail.vue renders both "my KPI" and
+  "their KPI", so the two cannot drift into disagreeing about somebody's review.
+  Recorded: the framework's appraisal has_permission CANNOT be used on the team path — the CEO tier is
+  granted by DESIGNATION, which appraisal.py has never heard of, so it would refuse the CEO their own
+  feature. The tier fence is the authority there, checked before a row is read.
+NEXT: step 3 — the department-tree navigation for CEO/HR (Department is a real Frappe tree:
+  parent_department + is_group), rolled up as the average over PEOPLE in the subtree. Then the final
+  review of everything before the push.
+- 2026-09-13T14:24:42Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-13T14:25:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21

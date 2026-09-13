@@ -19,6 +19,17 @@ export const canViewTeamKpi = createResource({
 	},
 })
 
+// One person's KRA detail — the My KPI layout pointed at somebody else. The
+// only KPI endpoint that takes an employee, so it is the only one whose safety
+// is by CHECK rather than by construction: hrms.api.kpi._require_kpi_read runs
+// before a single row is read, and throws for anyone outside the caller's tier.
+export const employeeKpi = createResource({
+	url: "hrms.api.kpi.get_employee_kpi",
+	onError(error) {
+		console.warn("[kpi] employee detail failed:", error?.messages?.[0] || error)
+	},
+})
+
 // Read-only company scores by department; params (year, cycle, department)
 // are set by the view before fetch.
 export const teamKpi = createResource({
