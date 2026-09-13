@@ -280,3 +280,16 @@ NEXT: RULING 2 — the filing window widens to FOUR MONTHS from the present day 
   moves the fence and the test keeps asking its own question.
 - 2026-09-13T18:13:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T18:13:48Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
+- 2026-09-13T18:13:51Z COMMIT: fa8565990 fix(approval): being the approver is not permission to undo an approval → review dispatched
+- 2026-09-13T18:14:32Z COMMIT: f2e8dd05f feat(overtime): backdated filing reaches four months instead of two → review dispatched
+- 2026-09-13 DEAD END (twice now, same trap): a commit message written with `cat > $GD/MSG` inside a
+  command that a PreToolUse gate BLOCKS never runs, so the following `git commit -F` silently reuses
+  the PREVIOUS message. 616d6b119 and fa8565990 both landed with the wrong subject and had to be
+  amended. ALWAYS write the message file in its own command, then commit in the next.
+NEXT: every defect on the ranked plan is CLOSED. What remains is the report project (26 Script Reports
+  with no company fence + 4 that read past one), the tickets filed today (C-routing, C-mayread,
+  C-roster, C-appraisal, C-ctc, C-1on1, C-fence, the session_state refactor, the two permanently-red
+  timezone tests, the spurious-extra-session invariant, KPI route state DSN-16, the provenance Recover
+  button), and Nabil's three production questions (is a biometric device in use; is HR Settings
+  allow_multiple_shift_assignments on; did the OT precision patches ever run on Verifica). Historical
+  data repair still needs his explicit word for that exact change. NOTHING IS PUSHED.
