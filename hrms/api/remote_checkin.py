@@ -312,16 +312,6 @@ def resolve_punch_type(recent_rows, requested: str, now):
 	if now.hour < 6:
 		return requested, None
 
-	# INCOMPLETE EVIDENCE IS NOT A LICENCE TO GUESS. log_type is an OPTIONAL
-	# Select with a blank first option, and untyped rows are real here —
-	# hrms/sync/checkin_recovery.py exists to infer them. With one untyped punch
-	# between an IN and its OUT the walk below reads a CLOSED session as open,
-	# and a genuine second-session arrival becomes its check-out: the evening
-	# block never opens and those hours vanish behind an ordinary-looking row.
-	if any(r.log_type not in ("IN", "OUT") for r in recent_rows):
-		logger.info("[remote_checkin] untyped punch in the window — leaving %s as asked", requested)
-		return requested, None
-
 	# A REJECTED late-OUT never closed its session — the same rule the banner
 	# and the OT pairing engine already apply. Mirrored rows are excluded for
 	# the reason the sweeper excludes them (checkin_sweeper, single writer): a
@@ -340,6 +330,24 @@ def resolve_punch_type(recent_rows, requested: str, now):
 		# whatever order the database happened to return.
 		key=lambda r: (get_datetime(r.time), 0 if r.log_type == "IN" else 1),
 	)
+
+	# INCOMPLETE EVIDENCE IS NOT A LICENCE TO GUESS. log_type is an OPTIONAL
+	# Select with a blank first option, and untyped rows are real here —
+	# hrms/sync/checkin_recovery.py exists to infer them. With one untyped punch
+	# between an IN and its OUT the walk below reads a CLOSED session as open,
+	# and a genuine second-session arrival becomes its check-out: the evening
+	# block never opens and those hours vanish behind an ordinary-looking row.
+	#
+	# ASKED OF `rows`, NOT `recent_rows`, AND THE ORDER IS THE WHOLE POINT. The
+	# filter above has already dropped the rows the walk will never read — a
+	# mirrored punch, a rejected late-OUT. Asking the question before the filter
+	# let one of those, if it also happened to be untyped, switch the correction
+	# off for that employee's entire window, with nothing to tell an operator
+	# that protection had stopped. The guard must judge the evidence the walk
+	# actually reads.
+	if any(r.log_type not in ("IN", "OUT") for r in rows):
+		logger.info("[remote_checkin] untyped punch in the window — leaving %s as asked", requested)
+		return requested, None
 
 	open_in = None
 	for i, row in enumerate(rows):

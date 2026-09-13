@@ -627,6 +627,58 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
 		self.assertEqual(resolved, "IN")
 
+	def test_a_mirrored_untyped_row_does_not_stop_the_coercion(self):
+		"""The untyped guard and the mirrored filter answer the same question in
+		the wrong order.
+
+		A mirrored row is ALREADY excluded from the pairing walk — deliberately,
+		because a session pulled from the source instance can never be tagged
+		abandoned here. So a mirrored row that also happens to be untyped tells
+		the walk nothing it was going to read anyway. But the untyped guard runs
+		over the raw window BEFORE the mirrored filter is applied, so one such
+		row silently disables the correction for that employee for the whole
+		three-day window, and the duplicate INs come back with no signal to any
+		operator that protection is off.
+
+		The guard must ask its question about the rows the walk will actually
+		read."""
+		rows = [
+			self.row("IN", self.at(8, 51)),
+			self.row("", self.at(10, 0), synced_from_instance="NASTY"),
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(
+			resolved,
+			"OUT",
+			"the untyped row is mirrored, so the walk already ignores it — it must not "
+			"also switch the whole rule off",
+		)
+		self.assertIsNotNone(closing, "the 08:51 session is the one being closed")
+
+	def test_a_local_untyped_row_still_stops_the_coercion(self):
+		"""The other side of the same boundary: a LOCAL untyped row is one the
+		walk would have read, so it genuinely makes the session unreadable and
+		the requested type must stand. Pinned beside its sibling so a future
+		reordering cannot quietly widen the exemption."""
+		rows = [
+			self.row("IN", self.at(8, 51)),
+			self.row("", self.at(10, 0)),
+		]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "IN")
+
+	def test_a_rejected_untyped_out_does_not_stop_the_coercion(self):
+		"""Same ordering, the other excluded shape: a rejected late-OUT never
+		closed its session and the walk drops it, so an untyped one must not
+		disable the rule either."""
+		rows = [
+			self.row("IN", self.at(8, 51)),
+			self.row("OUT", self.at(10, 0), remote_approval_status="Rejected"),
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
+		self.assertIsNotNone(closing)
+
 	def test_an_in_and_an_out_at_the_same_second_resolve_deterministically(self):
 		"""before_validate truncates to whole seconds and validate_duplicate_log
 		filters ON log_type, so an IN and an OUT at the identical second both

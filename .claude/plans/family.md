@@ -241,3 +241,40 @@ hrms/patches/v16_0/add_employee_roster_managed_field.py:5 — not-affected — a
 - The invariant pinned: a branch that hands an employee to another owner must
   close every assignment the rule layer created. There is no branch where
   standing down and leaving a live row is correct.
+
+---
+
+# FAMILY — a guard that judges evidence the walk will never read
+
+CLASS: `resolve_punch_type` asks two questions about the same window — "is any
+row untyped?" and "which rows does the pairing walk read?" — and asked them in
+the wrong order. The untyped guard ran over the RAW window, the filter that
+drops mirrored and rejected rows ran after it. So a row the walk had already
+decided to ignore could still switch the whole correction off, silently, for
+that employee's entire three-day window.
+
+ROOT CAUSE: hrms/api/remote_checkin.py::resolve_punch_type — the guard read
+`recent_rows`; it now reads `rows`, after the filter.
+
+## same-root — fixed in this commit
+hrms/api/remote_checkin.py::resolve_punch_type — the guard moved below the
+  filter and now tests `rows`. No other behaviour changed: the filter, the
+  tie-break and the walk are untouched.
+
+## the other users of the same window — verdicts
+hrms/api/remote_checkin.py::punch — not-affected as a caller (it supplies the
+  rows and reads the returned type), but it is the ONLY caller, so this fix
+  reaches every path that runs the correction at all. Which is the narrower
+  problem recorded separately: the correction runs on the PWA path only.
+hrms/utils/checkin_sweeper.py — not-affected — it excludes mirrored rows for the
+  same single-writer reason, independently, and never consults this guard.
+hrms/api/remote_checkin.py::_session_is_live — not-affected — the 06:00 cutoff is
+  a different question (is the banner allowed to offer a repair) and is
+  deliberately shared with `unresolved_stale_in`.
+
+## LOCK THE CLASS
+- hrms/api/test_remote_checkin.py gains three cases pinning BOTH sides of the
+  boundary, so a future reordering cannot quietly widen the exemption:
+  a mirrored untyped row must NOT stop the coercion; a LOCAL untyped row must;
+  a rejected untyped OUT must not. Proven RED on HEAD ('IN' != 'OUT').
+- The invariant: a guard may only judge the evidence the walk actually reads.
