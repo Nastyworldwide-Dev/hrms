@@ -757,10 +757,54 @@ the right number only because `configured_end` was absent; anything reading
 `shift_end` as the grace value it is named for would have understated overtime by
 the whole grace window. Both keys are now set to what their names say.
 
-## LOCK THE CLASS, second pass
+## AMENDED A THIRD TIME — the class was NOT locked, and saying so was the danger
+
+Two more holes of the identical shape, both measured, both found by review after
+this ledger had already written "LOCK THE CLASS":
+
+(a) THE START, not just the end. `_session_ot_slices` took only the DATE off the
+    punch's `shift_start` and re-derived the time of day from the live Shift
+    Type. Moving a shift's start 10:00 -> 07:00 dropped a settled day from 4.0h
+    to 1.0h. Cross-path agreement cannot catch this one — BOTH pricing paths
+    agree, on the wrong number. Carried now as `configured_start`, taken from
+    `shift_start` ONLY and never from the `shift_actual_start` the anchor falls
+    back to, because that one is extended by the early-arrival grace and pricing
+    from it would pay people for arriving early.
+
+(b) THE PUNCHLESS DAY. A manually entered Attendance has no punches, so it has
+    no record of the shift it was worked under, and recomputing it necessarily
+    falls back to the live configuration. `recompute_ot_backfill` runs on EVERY
+    deploy (hooks.py after_migrate), so it silently rewrote every such settled
+    day whenever anybody edited a shift — and the losing direction writes a ZERO,
+    which removes the day from the claimable card rather than showing a wrong
+    number. There is nothing to price it from, so the repair now leaves it alone.
+
+hrms/utils/ot_calculation.py::_session_ot_slices — same-root (fixed here).
+hrms/utils/ot_calculation.py::_pair_sessions — same-root, carries configured_start.
+hrms/hr/doctype/attendance/attendance.py::recompute_ot_backfill — same-root:
+  excludes Attendance with no linked check-ins.
+hrms/patches/v16_0/backfill_ot_after_rounding_rule.py — not-affected, no edit:
+  it calls recompute_ot_backfill, which is now idempotent under a shift edit.
+
+## LOCK THE CLASS, third pass
 - hrms/tests/test_ot_calculation_rules.py asserts BOTH punch-reading paths fetch
-  `shift_end`, read off the committed source — because the defect was a missing
-  COLUMN in a caller, which no test of the rule can see. Proven red by removing it.
+  BOTH `shift_start` and `shift_end` — the defect is a missing COLUMN in a
+  caller, which no test of the rule can see.
+- That guard is parsed with `ast`, not by slicing source text. The first version
+  took the span between "fields=[" and the next "]" and regexed quoted words out
+  of it, which counts words inside COMMENTS — and this very commit's sibling had
+  planted a ten-line comment inside that span, so deleting the column and leaving
+  `# TODO: fetch "shift_end" here one day` made the test pass with the defect
+  live. Mutation-checked: that now fails.
+- Measured on fresh.local with punches LINKED to an Attendance row, which is the
+  only state in which the start_time guard stands down and therefore the only
+  state where the defect is reachable at all: end 18:00->15:00, end 18:00->22:00,
+  start 10:00->07:00 and start 10:00->11:00 all hold at 4.0 on both paths.
+- STILL NOT CLOSED, and recorded as such rather than claimed: the cross-path
+  agreement invariant is asserted only by a bench probe outside the repo. A
+  bench-free driver is sketched in the review (a fake frappe.get_all that
+  PROJECTS to the requested `fields` — without that projection the missing-column
+  defect is invisible).
 
 ## LOCK THE CLASS
 - Two cases in hrms/tests/test_ot_calculation_rules.py: the punch's own end beats

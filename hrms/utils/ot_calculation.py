@@ -468,7 +468,16 @@ def _session_ot_slices(employee, session, config):
 	shift = session["shift"]
 	anchor = session.get("shift_start")
 	real_end = _real_shift_end_for_session(shift, session) if session.get("shift_end") else None
-	real_start = _real_shift_start_dt(config["start_time"], anchor.date()) if anchor else None
+	# THE SAME RULE AS THE END, FOR THE SAME REASON. The start was taking only
+	# the DATE off the punch and re-deriving the time of day from the Shift Type
+	# as it stands now, so moving a shift's start 09:00 -> 07:00 re-prices a
+	# settled day from 4.0h to 2.0h — and the guard that supposedly prevents a
+	# start_time change (shift_type.py:274) fires only while check-ins are
+	# UNLINKED, which a historical day never is. Cross-path agreement cannot see
+	# this one: both pricing paths agree, on the wrong number.
+	real_start = session.get("configured_start")
+	if not real_start and anchor:
+		real_start = _real_shift_start_dt(config["start_time"], anchor.date())
 	ot_begins = (
 		_ot_window_begin(real_start, real_end, session.get("shift_first_in", session["first_in"]))
 		if real_end
@@ -1004,6 +1013,7 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 				"last_out": out_dt,
 				"shift": shift,
 				"shift_start": real_start,
+				"configured_start": real_start,
 				"configured_end": real_end,
 				"shift_end": real_end + timedelta(minutes=cint(config.get("allow_check_out_after"))),
 			}
@@ -1108,6 +1118,11 @@ def _pair_sessions(checkins, policies=None):
 				# Shift Type instead lets an edit re-price a closed month.
 				"shift_end": get_datetime(row["shift_actual_end"]) if row.get("shift_actual_end") else None,
 				"configured_end": get_datetime(row["shift_end"]) if row.get("shift_end") else None,
+				# From `shift_start` ONLY, never the `shift_actual_start` the
+				# anchor above falls back to — that one is extended by the
+				# early-arrival grace, and pricing from it would pay for arriving
+				# early.
+				"configured_start": get_datetime(row["shift_start"]) if row.get("shift_start") else None,
 			}
 		elif log_type == "OUT" and current is not None:
 			current["last_out"] = log_time
@@ -1117,6 +1132,8 @@ def _pair_sessions(checkins, policies=None):
 				current["shift_end"] = get_datetime(row["shift_actual_end"])
 			if not current.get("configured_end") and row.get("shift_end"):
 				current["configured_end"] = get_datetime(row["shift_end"])
+			if not current.get("configured_start") and row.get("shift_start"):
+				current["configured_start"] = get_datetime(row["shift_start"])
 			if log_time > current["first_in"]:
 				sessions.append(current)
 			current = None

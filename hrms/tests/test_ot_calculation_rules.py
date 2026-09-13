@@ -166,28 +166,54 @@ class TestEveryPricingPathReadsTheSnapshot(unittest.TestCase):
 	"""
 
 	def _field_lists(self):
-		import re
+		"""Parsed with ast, NOT by slicing the source text.
+
+		The first version of this took the span between "fields=[" and the next
+		"]" and regexed quoted words out of it — which counts words inside
+		COMMENTS. This commit's sibling planted a ten-line comment inside exactly
+		that span, so deleting the column and leaving "# TODO: fetch shift_end
+		here one day" in its place made the test pass while the defect was back.
+		It also cried wolf on a perfectly good `fields=[*_BASE, "time"]`.
+		"""
+		import ast
 		from pathlib import Path as _Path
 
 		source = (_Path(__file__).resolve().parents[1] / "utils" / "ot_calculation.py").read_text()
+		tree = ast.parse(source)
+		wanted = {"_per_day_contributions", "get_shift_ot_breakdown"}
 		lists = {}
-		for fn in ("_per_day_contributions", "get_shift_ot_breakdown"):
-			body = source[source.index(f"def {fn}(") :]
-			body = body[: body.index("\norder_by") if "\norder_by" in body else len(body)]
-			block = body[body.index("fields=[") : body.index("]", body.index("fields=["))]
-			lists[fn] = {m for m in re.findall(r'"(\w+)"', block)}
+		for node in ast.walk(tree):
+			if not (isinstance(node, ast.FunctionDef) and node.name in wanted):
+				continue
+			for call in ast.walk(node):
+				if not (
+					isinstance(call, ast.Call)
+					and isinstance(call.func, ast.Attribute)
+					and call.func.attr == "get_all"
+				):
+					continue
+				for kw in call.keywords:
+					if kw.arg == "fields" and isinstance(kw.value, ast.List):
+						lists[node.name] = {el.value for el in kw.value.elts if isinstance(el, ast.Constant)}
+		missing = wanted - set(lists)
+		self.assertFalse(missing, f"could not find a get_all(fields=[...]) in {sorted(missing)}")
 		return lists
 
-	def test_both_punch_reading_paths_fetch_the_stamped_shift_end(self):
+	def test_both_punch_reading_paths_fetch_the_stamped_shift_window(self):
+		"""Both ENDS of it. The start is the same defect as the end and neither
+		pricing path can see it by agreeing with the other — measured, moving a
+		shift's start 10:00 -> 07:00 dropped a settled day from 4.0 to 1.0 on
+		BOTH paths at once."""
 		for fn, fields in self._field_lists().items():
-			with self.subTest(path=fn):
-				self.assertIn(
-					"shift_end",
-					fields,
-					f"{fn} does not fetch the shift end the punch recorded, so every session it "
-					f"builds falls back to the Shift Type as it stands TODAY and a settled day "
-					f"moves when HR edits the shift.",
-				)
+			for column in ("shift_start", "shift_end"):
+				with self.subTest(path=fn, column=column):
+					self.assertIn(
+						column,
+						fields,
+						f"{fn} does not fetch the {column} the punch recorded, so every session "
+						f"it builds falls back to the Shift Type as it stands TODAY and a settled "
+						f"day moves when HR edits the shift.",
+					)
 
 
 class TestMonthlyCapResets(unittest.TestCase):

@@ -923,6 +923,34 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 		filters={"docstatus": 1, "attendance_date": ["between", [from_date, to_date]]},
 		pluck="name",
 	)
+	# A DAY WITH NO PUNCHES HAS NO SNAPSHOT TO RECOMPUTE FROM, SO IT IS LEFT
+	# ALONE. Overtime is priced from the shift each punch recorded, which is what
+	# makes this repair safe to run again and again — an edit to a Shift Type
+	# cannot move a settled day. A manually entered Attendance has no punches and
+	# therefore no record of the shift it was worked under, so recomputing it
+	# falls back to the Shift Type AS IT STANDS NOW. This function runs on EVERY
+	# deploy (hooks.py after_migrate), so without this it silently rewrites every
+	# punchless settled day whenever anybody edits a shift — and the direction
+	# that loses writes a zero, which removes the day from the claimable card
+	# entirely rather than showing a wrong number.
+	linked = {
+		row.attendance
+		for row in frappe.get_all(
+			"Employee Checkin",
+			filters={"attendance": ["in", names]},
+			fields=["attendance"],
+			limit_page_length=0,
+		)
+		if row.attendance
+	}
+	punchless = [name for name in names if name not in linked]
+	if punchless:
+		logger.info(
+			"[attendance] OT backfill leaving %d punchless day(s) untouched — no snapshot to price from",
+			len(punchless),
+		)
+	names = [name for name in names if name in linked]
+
 	changed, recomputed = [], {}
 	for name in names:
 		doc = frappe.get_doc("Attendance", name)

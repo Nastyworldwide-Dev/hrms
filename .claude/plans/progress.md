@@ -2,117 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  shift_start/shift_end itself on insert, and fetch_shift overwrote them with the employee's REAL
-  assignment (a 10:15-18:00 day shift), so shift_actual_end never crossed midnight and the fix looked
-  inert. A late-check-out fix cannot be verified without giving the probe employee a real night Shift
-  Assignment first. This also means the fix DEPENDS on shift_actual_end being stamped correctly — if
-  shift attribution is wrong for a punch, its late check-out boundary is wrong too. The two are linked.
-NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type (hrms/api/remote_checkin.py:312-313)
-  leaves night shifts unprotected for the back half of their shift, so a double tap after midnight
-  still writes the two-IN shape. The band exists to protect an EARLY-SHIFT arrival at 05:30 from being
-  read as yesterday's departure, so the fix must distinguish the two — likely by asking whether the
-  open IN's own shift is still running, which session_boundary now makes expressible.
-- 2026-09-13T16:29:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:29:55Z COMMIT: 8d105985e fix(checkin): a night shift's session does not end at midnight → review dispatched
-- 2026-09-13 REPAIR: the enumerator's S4 fix was itself wrong, in the quietest possible way. Moving
-  from DATE() to the `attendance` link is precise, but that link is written by ONE path
-  (update_attendance_in_checkins); HR's bulk Employee Attendance Tool, mark_attendance() and Attendance
-  Request never write it, and mark_attendance_and_link_log DELIBERATELY leaves punches unlinked on
-  DuplicateAttendanceError / OverlappingShiftAttendanceError — which is exactly the contested day S4
-  exists to find. Measured on fresh.local: S4 = 0 while 22 Half-Day/0h rows carry no linked punch at
-  all. Added S8 as the "cannot tell" denominator, printed under S4 with a line saying S4 is incomplete
-  while S8 is non-zero; S9 for the offshift=1 bucket S5 now excludes (a punch gets that flag either by
-  design OR because no assignment matched, which is damage); and a start_date guard on S6, without
-  which an employee correctly scheduled onto a different shift next month counted as a conflict.
-- 2026-09-13 EVIDENCE(3): all NINE shapes execute on fresh.local. S6 died the first time it ran
-  ("Unknown column 'assignments_covering' in 'ORDER BY'") — a renamed SELECT alias, with every test
-  green, because these shapes only execute on a bench.
-- 2026-09-13 LEARNING(gate): a renamed SQL alias is invisible to a repo that cannot run SQL ->
-  hrms/tests/test_checkin_damage_enumeration.py now requires every bare identifier in ORDER BY or
-  HAVING to be defined in that shape's SELECT. Proven red by reintroducing the mismatch.
-- 2026-09-13 LEARNING(gate): the day-scoping guard required a table alias, and three shapes are
-  single-table and unaliased, so plain DATE(time) passed — 8 of 10 mutants missed. It now carries six
-  spellings and catches 8 of 8, while the shipped link form and an ordinary time window still pass.
-- 2026-09-13 LEARNING(fact): Employee Checkin.attendance is written only by
-  update_attendance_in_checkins. Any query correlating punches through that link UNDER-reports on
-  exactly the contested days, because the marking code leaves them unlinked on purpose.
-NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type leaves night shifts unprotected for the
-  back half of their shift. The band protects an EARLY-SHIFT 05:30 arrival from being read as
-  yesterday's departure, so the fix must distinguish the two: ask whether the open IN's own shift is
-  still running at `now`, which needs shift_actual_end on the rows punch() reads.
-- 2026-09-13T16:34:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:34:11Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 4 call site(s) given verdicts, 11 same-root ⟂e41a025b743e
-- 2026-09-13T16:34:13Z COMMIT: 73604c8a7 fix(attendance): a zero this report cannot justify must not look like good news → review dispatched
-- 2026-09-13 EVIDENCE(3): Wave A3b done. resolve_punch_type exempted every punch between 00:00 and
-  06:00 outright, which handed the two-IN shape back to night workers through the back half of their
-  own shift. The band now sits BELOW the walk and asks whether the open IN's own shift is still running
-  — the only question that separates a night worker's 02:00 double tap from an early-shift 05:30
-  arrival after yesterday's forgotten check-out. With no shift stamped the old behaviour stands.
-  RED then GREEN bench-free (4 cases), and both halves measured on fresh.local through real saves
-  (verify-bench/sites/probe_night_band.py): 19:00 shift closing 05:00 -> 02:00 tap becomes OUT;
-  day shift closed 13:00 -> 05:30 arrival stays IN.
-NEXT: A4 came back from review with TWO REGRESSIONS IT INTRODUCED, both proven on fresh.local, both
-  in hrms/api/remote_checkin.py::submit_late_checkout. (W1) the widened boundary lets an OUT belonging
-  to a LATER COMPLETED session fall inside out_time_filter and trip `later_out`, so a buried repair is
-  now REFUSED that HEAD~1 ACCEPTED — a strict regression on the very population A4 exists to unblock.
-  (W2) a late check-out can be written on top of a genuinely new, still-open session opened between
-  midnight and shift_actual_end. Fix for both is the same: compute `first_later_in` (time > in_dt,
-  name != in_doc.name) separately from `next_in`, and use min(next_in, first_later_in) as the upper
-  edge of the `later_out` existence window ONLY — the "must be before your next check-in" refusal stays
-  keyed on next_in, which is what A4 widened on purpose. A3b shrinks W2's exposure (a 00:05 duplicate
-  is now an OUT, so there is no stray IN to step over) but does not close it.
-  Also (W3) the claim "a day shift keeps exactly the boundary it had" is FALSE for an evening shift
-  whose grace window crosses midnight — measured, session_boundary(Mon 14:00, Tue 00:30) -> Tue 00:30.
-  Reword, and pin the crossing-grace shape with its own case.
-- 2026-09-13T16:38:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:38:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:39:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:39:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:39:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:39:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:39:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:40:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:40:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:40:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:41:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:41:09Z COMMIT: 36b4ddad8 fix(checkin): the small hours belong to whoever is still on shift → review dispatched
-- 2026-09-13 REPAIR: A4 introduced a STRICT REGRESSION and review caught it. submit_late_checkout uses
-  the session boundary for two different questions, and only one wanted widening: the refusal ("is the
-  time you typed still inside this session") is keyed on the NEXT SESSION's arrival and was meant to
-  move past midnight; the search ("does an OUT already exist for this session") must be bounded by the
-  FIRST later arrival of any kind. Widening both let an OUT belonging to a later COMPLETED session fall
-  inside the search window. PROVEN on fresh.local (verify-bench/sites/probe_buried_repair.py): night IN
-  Mon 19:00 forgotten, a complete session Tue 01:00-02:00 after it, repair filed for Tue 00:30 — RED
-  after 8d105985e ("A check-out for this session already exists"), ACCEPTED before it. GREEN now, and
-  the original night-shift repair is still GREEN.
-- 2026-09-13 DEAD END: "a day shift keeps exactly the boundary it had" was FALSE, and the test that
-  asserted it picked the one shape that cannot exercise the claim. An evening shift ending 23:30 with
-  the default hour of allow_check_out_after_shift_end_time closes at 00:30, so its boundary moves by
-  that half hour — measured, session_boundary(Mon 14:00, Tue 00:30) -> Tue 00:30. Reworded and pinned
-  with its own case.
-- 2026-09-13 TICKET (hotspot, remote_checkin.py, 15 fixes/90d): extract
-  hrms/utils/session_state.py::open_session(employee, at) returning ONE object — the open IN row, its
-  session start, its turnover boundary, and whether it is live — from a single ordered query. 27 of ~37
-  hunks in 90 days landed in four functions that all answer that one question with three different
-  rules (_session_is_live's 06:00 cutoff, SESSION_WINDOW's 20 hours, session_boundary's shift end).
-  Every fix in this file has been one of those three disagreeing with the other two.
-NEXT: the enumerator came back with two more. (1) S8 is NOT the logical complement of S4 — S4 needs
-  EXISTS(IN) AND EXISTS(OUT), S8 needs NOT EXISTS(any punch), so a row with ONE linked punch is in
-  neither bucket and the "unearned zero" caveat never fires. attendance_day_audit.py:600 unlinks
-  punches ONE AT A TIME, so that partial state is reachable. Make S8 `NOT (EXISTS(IN) AND EXISTS(OUT))`.
-  (2) the caveat only prints when both shapes ran, so `report(shapes="S4")` shows a bare zero — the
-  exact read the commit forbids. Auto-append the denominator, or say it was not run.
-- 2026-09-13T16:43:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:43:28Z COMMIT: 96228853f fix(checkin): widening the session boundary buried the repair it was meant to free → review dispatched
-- 2026-09-13 REPAIR: the enumerator's denominator was not a denominator. S4 needs EXISTS(IN) AND
-  EXISTS(OUT); S8 asked for NOT EXISTS(any punch) — which is not the negation of that, so a row with
-  exactly ONE linked punch fell out of both buckets and the "unearned zero" caveat never fired for it.
-  That state is reachable: attendance_day_audit.py:600 unlinks punches ONE NAME AT A TIME, and this
-  repo's own audit already has a verdict for a Half Day with a single linked punch. S8 is now
-  NOT (EXISTS(IN) AND EXISTS(OUT)) — the exact complement. Measured on fresh.local for 1-14 Sep:
-  total Half-Day/0h = 22, S4 = 0, S8 = 22, S4+S8 = 22, partition holds.
-- 2026-09-13 REPAIR: the caveat only printed when both shapes happened to run, so `report(shapes="S4")`
-  showed a bare zero — the exact reading the pairing exists to forbid, reachable through the documented
   subset form. `report` now drags a denominator in whenever its shape is asked for. Verified: asking
   for S4 alone prints S4, S8 and the caveat.
 - 2026-09-13 REPAIR: three more day-scoping spellings the guard missed, named by review and now covered
@@ -284,3 +173,33 @@ NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_
   its own command, then commit in the next.
 - 2026-09-13T17:36:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-13T17:36:38Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-13T17:36:41Z COMMIT: 45656e87d fix(overtime): fixing one pricing path and not the other was worse than neither → review dispatched
+- 2026-09-13 REPAIR: two more holes of the same shape, both found by review AFTER the ledger had
+  written "LOCK THE CLASS" — which is exactly why that phrase is dangerous. (a) the START was taking
+  only the DATE off the punch and re-deriving the time of day from the live Shift Type, so moving a
+  shift's start 10:00 -> 07:00 dropped a settled day from 4.0h to 1.0h — and CROSS-PATH AGREEMENT
+  CANNOT SEE IT, because both pricing paths agree on the wrong number. Carried now as
+  `configured_start`, from `shift_start` only and never the early-arrival-extended
+  `shift_actual_start`. (b) a PUNCHLESS day has no snapshot at all, so recomputing it necessarily uses
+  live config — and recompute_ot_backfill runs on EVERY deploy, so it rewrote every manually entered
+  settled day whenever anybody edited a shift, writing a ZERO in the losing direction which removes the
+  day from the claimable card. It now leaves punchless days alone.
+- 2026-09-13 EVIDENCE(3): measured on fresh.local with the punches LINKED to an Attendance row — the
+  only state in which shift_type's start_time guard stands down, and therefore the only state where the
+  defect is reachable. All four edits hold at 4.0 on both paths; without configured_start the
+  start 10:00->07:00 case is RED at 1.0 on both.
+- 2026-09-13 LEARNING(gate): a source-text guard built from str.index + regex counts quoted words
+  inside COMMENTS, and this work had planted a ten-line comment inside the very span it matched — so
+  deleting the column and leaving `# TODO: fetch "shift_end" here one day` made it pass with the defect
+  live. Parsed with `ast` now (FunctionDef -> get_all -> fields keyword -> Constant elements).
+  Mutation-checked both ways.
+- 2026-09-13 LEARNING(fact): shift_type.py's start_time guard fires only while check-ins are UNLINKED,
+  so a probe whose punches are not linked to an Attendance row CANNOT reach the defect — it gets
+  "Mark attendance for existing check-in/out logs" instead. Link the punches first.
+NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_calculation.py:300-302
+  returns "normal" with a logger.warning only): silent UNDERPAY, 1.5x instead of 3.0x. Then C1
+  employee_issue_row_scope.py:106 fails OPEN, C2 the hub-wide recovery endpoint, C3 ot_row_scope,
+  C4 the leave-allocation pointer. Then the two rulings: stop managers cancelling a settled decision,
+  and the four-month filing window.
+- 2026-09-13T17:46:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T17:46:59Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 9 extra test file(s) ⟂8fecdc10bd87
