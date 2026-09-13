@@ -161,7 +161,11 @@
 								<option v-for="c in teamCompanies" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
-						<div v-if="!isManagerTier" class="flex min-w-0 flex-col gap-1.5">
+						<!-- The Department SELECT belongs to the manager tier only. CEO and
+						     HR walk the tree instead, and for them this carried exactly one
+						     option that changed a value fetchTree never sends — a control
+						     that cannot be changed and would do nothing if it could. -->
+						<div v-if="isManagerTier" class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-department-filter">
 								{{ __("Department") }}
 							</label>
@@ -192,7 +196,12 @@
 					     previous score, headcount, top and ring, solid, under an eyebrow
 					     naming the new filter, right beside the error alert. The answer
 					     goes when it is no longer an answer; the controls stay. -->
-					<div v-if="teamKpi.data && teamYears.length && !teamKpi.error">
+					<!-- Bound to the SHARED payload, like everything else on this tab.
+					     Gating it on teamKpi made the whole answer block — score, badge,
+					     ring — vanish for the CEO and HR, because fetchTeam early-returns
+					     to fetchTree and never submits teamKpi. The screen read as
+					     controls, then tables, and no number. -->
+					<div v-if="teamData && teamYears.length && !teamResource.error">
 						<!-- The scope line is NOT gated on headcount. A select truncates a
 						     long company name ("Astra Holdings International (Labuan) Ltd
 						     - A…"), so on an empty result it would otherwise be the only
@@ -206,7 +215,7 @@
 						>
 							<div class="flex flex-col gap-2">
 								<GSkeleton
-									v-if="teamKpi.loading"
+									v-if="teamResource.loading"
 									width="150px"
 									height="var(--g-type-clock-size)"
 								/>
@@ -217,7 +226,7 @@
 								<!-- These go with the score: rendering last fetch's headcount
 								     and top solid, under an eyebrow already naming the NEW
 								     filter, states the previous answer as the current one. -->
-								<GSkeleton v-if="teamKpi.loading" width="180px" height="20px" />
+								<GSkeleton v-if="teamResource.loading" width="180px" height="20px" />
 								<div v-else class="flex items-center gap-2.5">
 									<GBadge variant="accent">
 										{{ __("{0} appraised", [teamSummary.headcount]) }}
@@ -242,35 +251,60 @@
 					<!-- WHERE YOU ARE. A breadcrumb, not a back button: this walk has
 					     real depth (All Departments › Sales › Sales East) and the
 					     user needs to jump back more than one level. -->
+					<!-- Rendered at EVERY depth, including the root, for two reasons: it
+					     is the only element that survives a drill, so it is the one thing
+					     focus can land on afterwards; and a walk with no visible position
+					     is a walk you cannot get out of. An ordered list because a
+					     breadcrumb IS a sequence — without it a screen reader hears one
+					     undifferentiated run with no item count and no "you are here". -->
 					<nav
-						v-if="!isManagerTier && treeCrumbs.length > 1"
-						class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-kra-label text-ink-600"
+						v-if="!isManagerTier && treeCrumbs.length"
+						class="text-caption text-ink-600"
 						:aria-label="__('Department path')"
 					>
-						<template v-for="(crumb, i) in treeCrumbs" :key="crumb.name">
-							<button
-								v-if="i < treeCrumbs.length - 1"
-								type="button"
-								class="g-seclink g-focusable underline text-ink-800"
-								@click="openDepartment(crumb.name)"
+						<ol class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+							<li
+								v-for="(crumb, i) in treeCrumbs"
+								:key="crumb.name"
+								class="flex items-center gap-x-2.5"
 							>
-								{{ crumb.label }}
-							</button>
-							<span v-else class="font-sans font-semibold text-ink-800">{{ crumb.label }}</span>
-							<span v-if="i < treeCrumbs.length - 1" aria-hidden="true">›</span>
-						</template>
+								<button
+									v-if="i < treeCrumbs.length - 1"
+									type="button"
+									class="g-seclink g-focusable underline text-ink-800"
+									@click="openDepartment(crumb.name)"
+								>
+									{{ crumb.label }}
+								</button>
+								<span
+									v-else
+									ref="nodeEl"
+									tabindex="-1"
+									aria-current="page"
+									class="font-sans font-semibold text-ink-800 kpi-node-heading"
+								>
+									{{ crumb.label }}
+								</span>
+								<FeatherIcon
+									v-if="i < treeCrumbs.length - 1"
+									name="chevron-right"
+									class="h-3 w-3 flex-none text-ink-500"
+									aria-hidden="true"
+								/>
+							</li>
+						</ol>
 					</nav>
 
 					<!-- The departments directly inside this node. Each row carries its
 					     own roll-up — the average over every PERSON beneath it, which is
 					     headcount-weighted by construction. -->
 					<div v-if="!isManagerTier && treeDepartments.length">
-						<div class="g-eyebrow mb-2.5">{{ __("Departments") }}</div>
+						<h2 class="g-eyebrow mb-2.5">{{ __("Departments") }}</h2>
 						<GDataTable
 							:columns="DEPARTMENT_COLUMNS"
 							:rows="treeDepartmentRows"
-							:caption="__('Departments and their average score')"
-							:loading="departmentKpi.loading"
+							:caption="__('Departments inside {0}', [treeNodeLabel])"
+							:loading="teamResource.loading"
 							@row-action="openDepartmentRow"
 						/>
 					</div>
@@ -302,14 +336,20 @@
 						}}
 					</span>
 
-					<div v-if="!teamResource.error">
-						<div ref="scoresHeadingEl" tabindex="-1" class="g-eyebrow mb-2.5 kpi-scores-heading">
+					<!-- Suppressed at the ROOT when empty: "People here" there means
+					     everyone filed against the root department itself, which is
+					     nobody, and an empty table directly under a hero counting the
+					     whole company reads as a contradiction rather than a fact. -->
+					<div v-if="!teamResource.error && !(atTreeRoot && !teamRows.length)">
+						<h2 ref="scoresHeadingEl" tabindex="-1" class="g-eyebrow mb-2.5 kpi-scores-heading">
 							{{ isManagerTier ? __("Scores") : __("People here") }}
-						</div>
+						</h2>
 						<GDataTable
 							:columns="TEAM_COLUMNS"
 							:rows="teamRows"
-							:caption="__('Team KPI scores')"
+							:caption="
+								isManagerTier ? __('Team KPI scores') : __('People in {0}', [treeNodeLabel])
+							"
 							:loading="teamResource.loading"
 							@row-action="openEmployee"
 						>
@@ -319,7 +359,9 @@
 									:body="
 										isManagerTier
 											? __('Nobody reporting to you has an appraisal for the selected period')
-											: __('Nobody in this department has an appraisal for the selected period')
+											: __('Nobody stands directly in {0} — look inside the departments above', [
+													treeNodeLabel,
+											  ])
 									"
 								/>
 							</template>
@@ -463,10 +505,18 @@ function fetchTree() {
 	})
 }
 
-function openDepartment(name) {
+const nodeEl = ref(null)
+
+async function openDepartment(name) {
 	closeEmployee()
 	treeNode.value = name
 	fetchTree()
+	// The button that was activated unmounts with its block — a leaf has no
+	// Departments table, and the root crumb is not a button. Without this,
+	// focus falls to <body> on every drill and a screen-reader user is told
+	// nothing. The current crumb always exists, so it is the anchor.
+	await nextTick()
+	nodeEl.value?.[0]?.focus?.() ?? nodeEl.value?.focus?.()
 }
 
 function openDepartmentRow(row) {
@@ -474,6 +524,8 @@ function openDepartmentRow(row) {
 }
 
 const treeCrumbs = computed(() => departmentKpi.data?.breadcrumb || [])
+const treeNodeLabel = computed(() => departmentKpi.data?.node?.label || "")
+const atTreeRoot = computed(() => Boolean(departmentKpi.data?.node?.is_root))
 const treeDepartments = computed(() => departmentKpi.data?.departments || [])
 
 const DEPARTMENT_COLUMNS = computed(() => [
@@ -599,7 +651,14 @@ const scopeLabel = computed(() =>
 		!isManagerTier.value && teamCompanies.value.length > 1
 			? teamCompany.value || __("All companies")
 			: null,
-		isManagerTier.value ? null : teamDepartment.value || __("All departments"),
+		// The NODE, for the tree tier. This read `teamDepartment`, which the tree
+		// never writes — so at every depth the page announced "All departments"
+		// while the user stood inside Sales East. Not merely unannounced: the
+		// only announcement it made was false, and it asserted a scope the
+		// tables underneath it did not show.
+		isManagerTier.value
+			? teamDepartment.value || __("All departments")
+			: departmentKpi.data?.node?.label || __("All departments"),
 		teamCycle.value === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle.value,
 	]
 		.filter(Boolean)

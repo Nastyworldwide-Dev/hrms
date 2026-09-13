@@ -274,3 +274,27 @@ TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Co
 - 2026-09-13T15:13:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-13T15:13:55Z COMMIT: c57410e6b feat(kpi): one level of the department tree, with its roll-up → review dispatched
 - 2026-09-13T15:14:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-13T15:14:11Z COMMIT: 8058cd68b feat(pwa): the department tree, walked → review+design dispatched
+- 2026-09-13 REPAIR: design review FIX_CRITICAL on the tree, THREE Criticals, all mine.
+  (a) THE HERO WAS INVISIBLE FOR CEO/HR. It was still gated on teamKpi, which fetchTeam never submits
+  for the tree tier — so the score, badge and ring vanished for exactly the tier this was built for, and
+  the screen read as controls, then tables, no number. Same class as the tab-fetch regression: a binding
+  left pointing at the wrong source after a split.
+  (b) The live region announced a FALSE scope. scopeLabel read teamDepartment, which the tree never
+  writes, so at every depth it said "All departments" while the user stood in Sales East — asserting a
+  scope the tables underneath did not show, under a comment of mine claiming that drift was impossible.
+  (c) Focus was destroyed on every drill: the activated button unmounts with its block (a leaf has no
+  Departments table; the root crumb is not a button). Same class as the list->detail swap I had already
+  fixed and did not extend to the walk.
+- 2026-09-13 LEARNING(gate): two resources behind one set of chrome drift silently ->
+  frontend/tests/kpi-shared-payload.test.mjs refuses ANY direct teamKpi/departmentKpi binding in the
+  template. Proven RED 2/3 by re-binding the hero.
+- 2026-09-13 REPAIR: its warnings too — the breadcrumb is an ordered list with aria-current and renders
+  at every depth (it is also the only element that survives a drill, so it is what focus lands on); the
+  Department SELECT is gone for the tier that walks instead; the root no longer shows an empty "People
+  here" under a hero counting the whole company; both tables name their node; the eyebrows are headings.
+TICKET (DSN-16): the walk has no route state. Browser Back and the Android back gesture exit KPI
+  entirely instead of going up a level, and "look at Sales East" cannot be sent to anyone. Drive
+  treeNode from a query param with router.push and a route watcher — Back, deep links and a
+  route-change announcement all come for free. Tolerable for the one-level drill-down that shipped
+  earlier; a tree of arbitrary depth is a different proposition.
