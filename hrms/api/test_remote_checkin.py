@@ -688,6 +688,11 @@ class TestALateCheckOutNeverLeavesTwoDepartures(unittest.TestCase):
 		body = source[source.index("def submit_late_checkout(") :]
 		fetch = body[body.index("	sequence = frappe.get_all(") :]
 		fetch = fetch[: fetch.index("\n	)")]
+		# COMMENTS STRIPPED FIRST. Measured: the earlier version of this check
+		# passed green with the filter pointing BACKWARD, because a comment
+		# inside the span restating the rule satisfied every assertion. A test
+		# that reads source has to read the code, not the prose around it.
+		fetch = "\n".join(line for line in fetch.splitlines() if not line.strip().startswith("#"))
 		self.assertIn('"time": [">=", in_doc.time]', fetch, "the window must stay open forward")
 		self.assertIn("limit_page_length=0", fetch, "and must carry no row limit")
 		self.assertIsNone(

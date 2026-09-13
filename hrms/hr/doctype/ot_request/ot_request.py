@@ -178,6 +178,15 @@ class OTRequest(Document, PWANotificationsMixin):
 		if not claimed.is_finite() or claimed <= 0:
 			frappe.throw(_("Claimed Hours must be greater than 0"))
 		if claimed > stored_ot_hours(self.punch_ot_hours):
+			# When the proven figure is ZERO, "your check-outs prove at most 0
+			# hours" is a conclusion dressed as evidence: fifteen situations end
+			# there and only one of them is the person's own doing. Name the
+			# cause so they know whether to fix it themselves or ask HR.
+			reason = ""
+			if stored_ot_hours(self.punch_ot_hours) <= 0:
+				from hrms.utils.ot_calculation import _explain_no_overtime
+
+				reason = _explain_no_overtime(self.employee, self.ot_date)
 			frappe.throw(
 				_(
 					"Cannot claim {0} hours — your check-outs prove at most {1} hours of overtime for {2}."
@@ -186,6 +195,7 @@ class OTRequest(Document, PWANotificationsMixin):
 					frappe.bold(self.punch_ot_hours),
 					frappe.bold(str(self.ot_date)),
 				)
+				+ (f"<br><br>{reason}" if reason else "")
 			)
 
 	def validate_duplicate_request(self):

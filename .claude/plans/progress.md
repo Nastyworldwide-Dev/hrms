@@ -198,9 +198,14 @@ NEXT: Nabil asked whether we even have a biometric device — the honest answer 
 - 2026-09-13 TICKET: an invariant limited to "never two consecutive OUTs" does not notice a spurious
   extra SESSION manufactured between two stray INs — IN 09:00, IN 09:18, IN 10:00, OUT 18:00 with a
   filing at 09:30 is accepted, and attendance then pairs 09:00->09:30 and 10:00->18:00 instead of one
-  session. NOT introduced by any of today's commits (the old global scan accepted it too). Decide on
-  the session_state hotspot ticket whether the rule should also refuse to orphan a later departure's
-  arrival.
+  session. CORRECTED after measurement: this WAS introduced by today's stack, at 9c6f41fa7, and is
+  unpushed. Measured through the real function at five revisions — origin/nz-glass (DEPLOYED) REFUSES
+  it, 96228853f REFUSES it, and 9c6f41fa7 / cbb1295ff / HEAD all ACCEPT it. The earlier note here said
+  "not introduced by any of today's commits" because the old GLOBAL scan also found no adjacent OUT
+  pair; that is true and irrelevant — the deployed code refuses the shape for a different reason.
+  It is the deliberate price of freeing the buried repair: the same change also, on purpose, allows a
+  far-out buried repair and a far-out rejected OUT that the deployed code refuses. THIS IS A TRADE TO
+  PUT TO NABIL BEFORE THE PUSH, not an inherited limitation to shrug at.
 - 2026-09-13T17:18:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-13T17:18:59Z COMMIT: 4015d50d1 fix(checkin): the forward window was the same failure on a different axis → review dispatched
 - 2026-09-13 DEAD END: **B1 IS NOT REPRODUCIBLE AS STATED — do not build it.** The OT audit's headline
@@ -229,3 +234,30 @@ NEXT: OT wave re-ordered on evidence. B1 is struck. Take B2 first (hrms/hr/docty
 - 2026-09-13T17:26:59Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
 - 2026-09-13T17:27:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-13T17:27:37Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-13T17:27:38Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 16 same-root ⟂9cfe6fa24e18
+- 2026-09-13T17:27:40Z COMMIT: 79511b581 fix(overtime): a closed month must not be re-priced by an edit made today → review dispatched
+- 2026-09-13 EVIDENCE(3): B3 done. Fifteen situations ended in "no overtime" and all fifteen said the
+  same sentence, which states a conclusion and hides the cause — and only one of the fifteen is the
+  employee's own to answer. `_explain_no_overtime` now asks the punches why and says so: no check-ins ·
+  punches attached to no shift (ask HR) · overtime not enabled on the shift, named · off-shift ·
+  skip-attendance · awaiting approval · no check-out · no check-in. It returns "" when the punches look
+  fine and the hours really are zero, because inventing a cause there is worse than silence. Surfaced
+  in the PWA hint and appended to the save-time refusal. Seven bench-free cases.
+- 2026-09-13 LEARNING(fact): hrms/api/__init__.py's OT summary functions are AST-EXTRACTED by
+  test_ot_claim_monthly_capacity.py and test_ot_nonworking_hours.py — only the named FunctionDefs are
+  exec'd, so a new module-level helper is invisible to them and raises NameError. Nest the helper, or
+  add it to the extraction list.
+- 2026-09-13 LEARNING(fact): frappe.bold is a MagicMock under the bench-free stub, so any assertion on
+  a message built with it cannot see the content. These sentences are shown in the PWA as TEXT anyway,
+  where markup would appear literally — plain strings are both more testable and more correct.
+NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_calculation.py:300-302
+  returns "normal" with a logger.warning only), so 4 Sep 2026 was measured at 1.5x instead of 3.0x.
+  Silent UNDERPAY, config-dependent. Then the leak wave: C1 employee_issue_row_scope.py:106 fails OPEN
+  (three characters of intent — the canonical _own_employees() is 80 lines above it), C2 the hub-wide
+  recovery endpoint whose own test is already red, C3 ot_row_scope's status-and-company-free reports,
+  C4 the leave-allocation pointer with no existence guard. Then the two ruling items: stop managers
+  cancelling a settled decision (approval.py:413-414), and the four-month filing window.
+- 2026-09-13T17:33:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-13T17:33:51Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993
+- 2026-09-13T17:33:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-13T17:33:58Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993

@@ -32,6 +32,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 import frappe
+from frappe import _
 from frappe.utils import cint, flt, get_datetime, get_time, getdate
 
 from hrms.utils.ot_precision import stored_ot_hours
@@ -329,7 +330,7 @@ def _classify_day(employee, day, default_day_type, shift=None):
 	if not cint(row.weekly_off):
 		return "public_holiday"
 	company = frappe.db.get_value("Employee", employee, "company")
-	rest_weekday, _ = _company_weekend(company)
+	rest_weekday, _off_weekday = _company_weekend(company)
 	return "rest" if day.weekday() == rest_weekday else "off"
 
 
@@ -424,7 +425,7 @@ def _per_day_contributions(employee, start_date, end_date):
 		config = configs.get(shift)
 		if not config:
 			continue
-		for day, hours, _ in _session_ot_slices(employee, session, config):
+		for day, hours, _slice_kind in _session_ot_slices(employee, session, config):
 			entries = per_day[day]
 			# One entry per shift per day, in first-worked order: a shift left
 			# and resumed later the same day is still one contribution, so its
@@ -722,7 +723,82 @@ def get_day_ot_breakdown(employee, day, basic=0):
 	return get_ot_breakdown(employee, day, day, basic).get(day) or _empty_breakdown()
 
 
-def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None, lock_reservations=False):
+def _explain_no_overtime(employee, day) -> str:
+	"""Why this date yielded no overtime, in words the person can act on.
+
+	Fifteen different situations end in nought hours, and every one of them used
+	to be reported with the same sentence — "No punch-verified overtime for this
+	date" — which states a CONCLUSION and hides the CAUSE. Someone told they have
+	no overtime cannot tell whether they genuinely worked none, whether their
+	punches never attached to a shift, whether overtime is switched off on that
+	shift, or whether a check-out is simply missing. Only the first of those is
+	their own answer; the rest need HR, and nobody could see that they did.
+
+	Runs ONLY on the refusal path, so it costs nothing on the ordinary case.
+	Returns "" when the punches look fine and the hours really are zero — there
+	is no honest cause to name then.
+	"""
+	rows = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "time": ["between", [f"{day} 00:00:00", f"{day} 23:59:59"]]},
+		fields=[
+			"log_type",
+			"shift",
+			"offshift",
+			"skip_auto_attendance",
+			"requires_remote_approval",
+			"remote_approval_status",
+		],
+	)
+	if not rows:
+		return _("No check-ins were recorded for this date.")
+
+	shifts = {row.shift for row in rows if row.shift}
+	if not shifts:
+		return _(
+			"Your check-ins for this date are not attached to any shift, so overtime cannot be "
+			"measured. Ask HR to check your shift assignment for that day."
+		)
+
+	without_ot = [name for name in shifts if not _get_shift_ot_config(name)]
+	if len(without_ot) == len(shifts):
+		# Plain text, no markup: this sentence is shown in the PWA hint as well as
+		# thrown in Desk, and the PWA renders it as text — a <b> would appear
+		# literally to the person reading it.
+		return _("Overtime is not enabled on the shift you worked ({0}).").format(
+			", ".join(sorted(without_ot))
+		)
+
+	if any(cint(row.offshift) for row in rows):
+		return _(
+			"Some of your check-ins for this date are marked off-shift, so they are not counted "
+			"towards overtime."
+		)
+	if any(cint(row.skip_auto_attendance) for row in rows):
+		return _("Your check-ins for this date are marked to skip attendance, so no overtime is measured.")
+	pending = [
+		row
+		for row in rows
+		if cint(row.requires_remote_approval) and (row.remote_approval_status or "") != "Approved"
+	]
+	if pending:
+		status = (pending[0].remote_approval_status or "Pending").lower()
+		return _(
+			"Your check-ins for this date are {0} approval, so they do not count towards overtime yet."
+		).format(status)
+
+	types = [row.log_type for row in rows if row.log_type in ("IN", "OUT")]
+	if "OUT" not in types:
+		return _("This date has no check-out, so there is nothing to measure overtime against.")
+	if "IN" not in types:
+		return _("This date has no check-in, so there is nothing to measure overtime against.")
+
+	return ""
+
+
+def get_ot_claim_capacity(
+	employee, day, compensation, *, exclude_request=None, lock_reservations=False, explain=False
+):
 	"""Claim capacity, distinct from a raw-work report's chronological monthly cap.
 
 	Only approved OT-Pay claims reserve the pay allowance. Include the whole
@@ -730,6 +806,10 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None, 
 	may exclude only its own persisted document during controller revalidation;
 	whitelisted summary endpoints never accept an exclusion from the client.
 	Replacement Leave retains its existing raw-work behavior pending HR policy.
+
+	`explain` asks for a `reason` on the zero path — one extra read, taken only
+	when a caller is going to SHOW the refusal to somebody. Arithmetic callers
+	leave it off and pay nothing.
 
 	`lock_reservations` makes the reservation read a LOCKING (current) read:
 	under REPEATABLE-READ a plain SELECT answers from the transaction's
@@ -745,7 +825,10 @@ def get_ot_claim_capacity(employee, day, compensation, *, exclude_request=None, 
 		}
 	worked = next(_iter_day_ot(employee, day, day, 0, "normal", apply_monthly_cap=False), None)
 	if not worked:
-		return {"hours": 0.0, "monthly_remaining": None, "uncapped_hours": 0.0}
+		# A zero is an answer; it is not an explanation. See _explain_no_overtime.
+		reason = _explain_no_overtime(employee, day) if explain else ""
+		logger.info("[ot_calculation] no OT for %s on %s: %s", employee, day, reason or "genuinely none")
+		return {"hours": 0.0, "monthly_remaining": None, "uncapped_hours": 0.0, "reason": reason}
 	# HR's holiday entitlement is uncapped and exact; only the weekday part of
 	# a day competes for the monthly allowance. A day worked across a rest-day
 	# shift and a normal-day shift therefore caps its normal hours alone.

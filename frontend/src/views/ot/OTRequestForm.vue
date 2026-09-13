@@ -314,7 +314,17 @@ const saveError = computed(() => {
 	const cap = otRequest.value.punch_ot_hours
 	if (typeof cap !== "number" || !Number.isFinite(cap))
 		return __("Could not check overtime. Try again before saving.")
-	if (cap <= 0) return __("No punch-verified overtime for this date — nothing to claim")
+	// A zero is an answer, not an explanation. Fifteen different situations end
+	// here and they all used to read the same, so somebody told they had no
+	// overtime could not tell whether they genuinely worked none, whether their
+	// punches never attached to a shift, whether overtime is switched off on
+	// that shift, or whether a check-out is simply missing. Only the first of
+	// those is theirs to answer; the rest need HR, and nothing said so.
+	if (cap <= 0)
+		return (
+			otSummary.value.data?.no_overtime_reason ||
+			__("No punch-verified overtime for this date — nothing to claim")
+		)
 	const claimed = Number(otRequest.value.claimed_hours)
 	if (!Number.isFinite(claimed) || claimed <= 0) return __("Enter the hours to claim.")
 	return claimed > cap ? __("Cannot claim more than the punch-verified {0} h", [cap]) : ""

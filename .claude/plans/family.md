@@ -731,3 +731,52 @@ hrms/hr/doctype/shift_type/shift_type.py:521 — not-affected — same call, bui
   probe_ot_window.py still shows all four OT paths agreeing at 4.0.
 - The invariant: work already done is priced from what was recorded when it was
   done, never from the configuration as it stands now.
+
+---
+
+# FAMILY — a zero reported as a conclusion instead of a cause
+
+CLASS: fifteen distinct situations end in no overtime for a date, and every one
+of them was reported with the same sentence. "No punch-verified overtime for this
+date" and "your check-outs prove at most 0.0 hours" both state a CONCLUSION and
+hide the CAUSE — and only ONE of the fifteen causes is the employee's own to
+answer. The rest need HR, and nothing on any screen said so.
+
+ROOT CAUSE: the refusal was derived from the ARITHMETIC RESULT, which is a single
+number, rather than from the evidence that produced it. `get_ot_claim_capacity`
+returned `{"hours": 0.0}` and both surfaces rendered their own sentence from that.
+
+## same-root — fixed in this commit
+hrms/utils/ot_calculation.py::_explain_no_overtime — NEW. Asks the punches why,
+  in words the person can act on: no check-ins at all · punches attached to no
+  shift (ask HR about the assignment) · overtime not enabled on the shift, named ·
+  off-shift · skip-attendance · awaiting approval · no check-out · no check-in.
+  Returns "" when the punches look fine and the hours really are zero — inventing
+  a cause there would be worse than silence.
+hrms/utils/ot_calculation.py::get_ot_claim_capacity — gained `explain=False`. The
+  extra read happens ONLY when a caller is going to show the refusal to somebody;
+  arithmetic callers pay nothing.
+hrms/api/__init__.py::get_ot_claim_summary — returns `no_overtime_reason`
+  alongside the hours. The helper is NESTED deliberately: this function is
+  AST-extracted by its own test suite, so a module-level one is invisible there.
+hrms/hr/doctype/ot_request/ot_request.py — the save-time refusal appends the
+  cause when the proven figure is zero.
+frontend/src/views/ot/OTRequestForm.vue — the hint renders the server's reason
+  when there is one, and falls back to the old sentence when there is not.
+
+## the other silent-zero sites — verdicts
+hrms/api/__init__.py get_claimable_ot_summary — not-affected DELIBERATELY. It
+  lists claimable dates and shows no reason, so it must not pay for one; it keeps
+  `explain=False`. The related complaint (a date with disputed hours VANISHES from
+  the card, S14) is a different defect and stays ticketed.
+hrms/utils/ot_calculation.py daily/monthly cap paths — not-affected — they already
+  report `monthly_remaining`, which names its own cause.
+hrms/utils/ot_calculation.py::_ot_bands_for_day — not-affected by this change —
+  it produces hours with a ZERO AMOUNT (unpriced bands), which is a different
+  symptom from zero hours and needs its own surfacing. Ticketed.
+
+## LOCK THE CLASS
+- hrms/tests/test_ot_zero_names_its_cause.py, seven cases, bench-free: each cause
+  names itself, and a genuinely empty day invents nothing.
+- The invariant: a refusal that a person is expected to act on must name what to
+  act on. A number alone is not a reason.

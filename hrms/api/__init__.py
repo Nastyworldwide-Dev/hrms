@@ -584,9 +584,28 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 		"shift",
 	)
 	compensation = "Overtime Pay" if eligible else "Replacement Leave"
+
+	def _proven_hours_and_why(capacity: dict) -> dict:
+		"""The hours the punches prove, and — when they prove none — WHY.
+
+		Fifteen situations end in zero overtime and the form said the same
+		sentence for all of them, which states a conclusion and hides the cause.
+		Somebody told they have no overtime cannot tell whether they genuinely
+		worked none, whether their punches never attached to a shift, whether
+		overtime is switched off on that shift, or whether a check-out is
+		missing — and only the first of those is theirs to answer.
+
+		Nested deliberately: this function is AST-extracted by its own test
+		suite, so a module-level helper would be invisible there.
+		"""
+		payload = {"punch_ot_hours": capacity["hours"]}
+		if capacity.get("reason"):
+			payload["no_overtime_reason"] = capacity["reason"]
+		return payload
+
 	return {
 		"shift": shift,
-		"punch_ot_hours": get_ot_claim_capacity(employee, date, compensation)["hours"],
+		**_proven_hours_and_why(get_ot_claim_capacity(employee, date, compensation, explain=True)),
 		"eligible_for_overtime_pay": eligible,
 		"compensation": compensation,
 	}

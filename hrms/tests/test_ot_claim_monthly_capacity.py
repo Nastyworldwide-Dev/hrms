@@ -158,6 +158,13 @@ class TestClaimCapacity(unittest.TestCase):
 				return ["Company A"]
 			if doctype == "Attendance":
 				return [frappe._dict(attendance_date=day, ot_hours=99) for day in discovery_dates]
+			if doctype == "Employee Checkin":
+				# Read only when the capacity is ZERO, to name the cause instead of
+				# saying "your check-outs prove at most 0.0 hours" and leaving the
+				# person to guess which of fifteen situations they are in. This
+				# suite models no punches, so an empty log is the honest answer —
+				# _explain_no_overtime then says "No check-ins were recorded".
+				return []
 			self.assertEqual(doctype, "OT Request")
 			if kwargs.get("pluck"):
 				return []
