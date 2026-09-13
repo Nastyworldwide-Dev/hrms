@@ -253,3 +253,31 @@ NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the do
   missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the hub-wide
   recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
 - 2026-09-13T16:57:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:57:20Z COMMIT: 9c6f41fa7 fix(checkin): a late check-out may never leave two departures in a row → review dispatched
+- 2026-09-13 REPAIR: the consecutive-OUT invariant was right; its SCOPE and its REACH were not, and
+  review measured both on fresh.local. (a) the sequence was fetched `time asc` with limit=200, and an
+  ascending fetch with a row limit truncates the NEWEST rows — so past 200 punches the genuine closing
+  OUT was invisible and the guard failed open silently (IN 09:00, 204 stray INs, real OUT 18:00 -> a
+  second check-out at 13:00 ACCEPTED). Bounded by TIME now, no row limit. get_unresolved_stale_in
+  already avoided this by fetching `time desc` and reversing. (b) `any(pair over the whole sequence)`
+  is not "this row must not create an adjacency" — a log ALREADY carrying two adjacent OUTs anywhere in
+  the window (the damage the previous version of this same function could produce, and what the hub
+  leaves behind when one punch is pulled twice) refused the repair of an unrelated EARLIER session.
+  Scoped to the inserted row's two neighbours.
+- 2026-09-13 EVIDENCE(3): seven shapes measured, all correct — 204 stray INs REFUSED, stale OUT/OUT
+  pair a day later ACCEPTED, mirrored duplicate pair ACCEPTED, day duplicate REFUSED, night duplicate
+  REFUSED, buried repair ACCEPTED, plain forgotten check-out ACCEPTED. Both mutants killed bench-free:
+  inverting the same-instant tie-break and restoring the global scan each turn exactly one test red.
+- 2026-09-13 DEAD END: instrumenting a test with an inline `print(self.check(...))` made it report the
+  WRONG verdict and cost a long detour chasing a phantom. Instrument the FUNCTION and write to a file,
+  never the test body.
+- 2026-09-13 LEARNING(fact): in this repo an ascending `frappe.get_all` with a row `limit` on a
+  session-scoped question silently drops the NEWEST rows — the wrong axis entirely. Bound such fetches
+  by time, or fetch `time desc` and reverse as get_unresolved_stale_in does.
+NEXT: Nabil asked whether we even have a biometric device — the honest answer is that the code exposes
+  the stock ERPNext ingestion endpoint (employee_checkin.py:143 add_log_based_on_employee_field, and it
+  IS @frappe.whitelist()), nothing in this app calls it, and the bench proves nothing (12 rows, all
+  Administrator). The production query is in the reply. If no device is in use, A2 shrinks to HR's Desk
+  manual entry and drops below the OT wave. Start B1: the +/-1 day punch fetch window
+  (ot_calculation.py:372-373) that makes four OT entry points disagree by 33 hours on one date.
+- 2026-09-13T17:11:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73

@@ -645,10 +645,34 @@ class TestALateCheckOutNeverLeavesTwoDepartures(unittest.TestCase):
 
 	def test_an_in_at_the_same_instant_orders_before_the_proposed_out(self):
 		"""An arrival cannot follow its own departure — the same tie-break the
-		punch-type rule uses, so the two cannot disagree about one second. A
-		second arrival at exactly the filed time still leaves IN, IN, OUT."""
-		seq = [self.row("IN", self.at(9)), self.row("IN", self.at(17))]
-		self.assertFalse(self.check(seq, self.at(17)))
+		punch-type rule uses, so the two cannot disagree about one second.
+
+		The shape matters: with an OUT and an IN at the SAME instant before the
+		filed time, the tie-break decides which of them ends up next to it.
+		Sorting the arrival first leaves the 12:00 departure adjacent to the
+		13:00 one, so the filing is a second check-out and is refused. Invert the
+		key and the arrival slides in between, and it is wrongly allowed. The
+		simpler [IN, IN] version of this test was vacuous — it passed either way,
+		which a mutation of the sort key proved."""
+		seq = [self.row("IN", self.at(9)), self.row("OUT", self.at(12)), self.row("IN", self.at(12))]
+		self.assertTrue(self.check(seq, self.at(13)))
+
+	def test_a_pre_existing_pair_elsewhere_does_not_block_an_earlier_repair(self):
+		"""This row must not answer for damage it did not cause.
+
+		A log that ALREADY carries two adjacent check-outs — the damage an
+		earlier version of this very rule could produce, and what the hub leaves
+		behind when one punch is pulled twice — would, under a whole-sequence
+		scan, block the repair of an unrelated EARLIER session, with a message
+		about a check-out that has nothing to do with it. Only the neighbours of
+		the row being inserted are its business."""
+		seq = [
+			self.row("IN", self.at(9)),
+			self.row("IN", self.at(9, day_offset=1)),
+			self.row("OUT", self.at(12, day_offset=1)),
+			self.row("OUT", self.at(18, day_offset=1)),
+		]
+		self.assertFalse(self.check(seq, self.at(12)))
 
 	def test_an_out_at_the_same_instant_as_an_existing_one_is_still_a_duplicate(self):
 		"""before_validate truncates to whole seconds, so a retried submission

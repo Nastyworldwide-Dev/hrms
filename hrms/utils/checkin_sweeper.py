@@ -87,8 +87,14 @@ def sweep_stale_ins() -> int:
 def _has_matching_close(in_row: dict) -> bool:
 	"""True if THIS IN's session has a closing OUT or a late-checkout request.
 
-	Session-bounded, matching submit_late_checkout's rule: an OUT (or request)
-	only closes this IN when it falls before the employee's NEXT IN. The old
+	Session-bounded: an OUT (or request) only closes this IN when it falls
+	before the employee's NEXT IN. This USED to say "matching
+	submit_late_checkout's rule", and that is no longer true — that endpoint
+	stopped bounding by a time edge at all, because no edge can separate a
+	buried repair from a duplicate check-out (see leaves_consecutive_outs).
+	The behaviour here is unchanged and still correct for the question this
+	function asks, which is about a row that already exists rather than about
+	one being inserted; it is simply not the same rule any more. The old
 	any-later-OUT check meant a buried forgotten checkout — IN Mon, IN Tue,
 	OUT Tue — was never tagged: Tuesday's OUT "closed" Monday's session, so
 	HR's abandoned-IN alert stayed silent about the very row the PWA banner

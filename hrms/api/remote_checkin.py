@@ -665,19 +665,30 @@ def leaves_consecutive_outs(sequence, out_dt) -> bool:
 
 	Pure, so the rule is testable without a bench.
 	"""
-	from itertools import pairwise
-
 	entries = [
-		("OUT" if row.get("log_type") == "OUT" else "IN", get_datetime(row.get("time")))
+		("OUT" if row.get("log_type") == "OUT" else "IN", get_datetime(row.get("time")), False)
 		for row in sequence
 		if row.get("log_type") in ("IN", "OUT")
 		and not (row.get("log_type") == "OUT" and row.get("remote_approval_status") == "Rejected")
 	]
-	entries.append(("OUT", get_datetime(out_dt)))
+	entries.append(("OUT", get_datetime(out_dt), True))
 	# An IN and an OUT at the same instant order IN first — the arrival cannot
 	# follow its own departure — matching resolve_punch_type's tie-break.
 	entries.sort(key=lambda e: (e[1], 0 if e[0] == "IN" else 1))
-	return any(a[0] == "OUT" and b[0] == "OUT" for a, b in pairwise(entries))
+
+	# ONLY THE NEIGHBOURS OF THE ROW BEING INSERTED. Asking "does the whole
+	# sequence contain an adjacent pair" is a different, stricter question, and
+	# it refuses honest work: a log that ALREADY carries two adjacent OUTs
+	# somewhere — which is exactly the damage an earlier version of this very
+	# function could produce, and also what the hub leaves behind when the same
+	# punch is pulled twice — would block the repair of an unrelated EARLIER
+	# session, under a message about a check-out that has nothing to do with it.
+	# This row may not create an adjacency. It is not responsible for the ones
+	# it finds.
+	i = next(k for k, entry in enumerate(entries) if entry[2])
+	before = entries[i - 1][0] if i else None
+	after = entries[i + 1][0] if i + 1 < len(entries) else None
+	return before == "OUT" or after == "OUT"
 
 
 @frappe.whitelist()
@@ -728,11 +739,6 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# from their device, and stored check-in times are in that same basis.
 	if out_dt > employee_now(in_doc.employee):
 		frappe.throw(_("Check-out time cannot be in the future."))
-
-	# only OUTs inside THIS session window count: an OUT that belongs to a
-	# newer session (after the employee's next IN) must not block resolving a
-	# buried forgotten checkout
-	from datetime import datetime, time, timedelta
 
 	# The earliest IN that starts a NEW session, where "new session" means the
 	# open one ENDED first. Two things end it:
@@ -806,12 +812,27 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	#
 	# Rejected late check-outs are excluded because a rejected one never closed
 	# anything, which is what lets an employee resubmit a corrected time.
+	# BOUNDED BY TIME, NOT BY ROW COUNT. An ascending fetch with a row limit
+	# truncates the NEWEST rows, so on a log with many punches after this IN the
+	# genuine closing OUT fell outside the window and the guard failed open with
+	# nothing in the log to say so — measured: 204 stray INs between the arrival
+	# and its 18:00 departure, and a second check-out was accepted. The sibling
+	# read in get_unresolved_stale_in already avoids this by fetching `time desc`
+	# and reversing; here the answer is to bound the window by time instead.
+	#
+	# ceiling: the window closes two days after the proposed check-out, so a
+	# departure sitting further out than that is not seen as adjacent
+	# upgrade: take the upper bound from the session's own shift window once
+	# hrms.utils.session_state supplies it (see the hotspot ticket)
 	sequence = frappe.get_all(
 		"Employee Checkin",
-		filters={"employee": in_doc.employee, "time": [">=", in_doc.time]},
+		filters={
+			"employee": in_doc.employee,
+			"time": ["between", [in_doc.time, add_days(out_dt, 2)]],
+		},
 		fields=["name", "time", "log_type", "remote_approval_status"],
 		order_by="time asc",
-		limit=200,
+		limit_page_length=0,
 	)
 	later_out = leaves_consecutive_outs(sequence, out_dt)
 	if later_out:

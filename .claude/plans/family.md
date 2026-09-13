@@ -646,3 +646,40 @@ MEASURED ON fresh.local, all four shapes, savepointed:
   shipped — that is what these close.
 - The invariant, stated once: a late check-out may never leave two departures in
   a row. Nobody leaves twice without arriving.
+
+## AMENDED A THIRD TIME — the invariant was right, its scope and its reach were not
+
+Two defects in the first statement of it, both measured on fresh.local:
+
+(a) THE GUARD WENT BLIND PAST ROW 200. The sequence was fetched `time asc` with
+    `limit=200`, and an ascending fetch with a row limit truncates the NEWEST
+    rows — so the genuine closing OUT fell outside the window and the guard
+    failed open with nothing in the log to say so. Measured: IN 09:00, 204 stray
+    INs, real OUT 18:00; a second check-out at 13:00 was ACCEPTED. The sibling
+    read in get_unresolved_stale_in already avoids this by fetching `time desc`
+    and reversing. Now bounded by TIME, with no row limit.
+
+(b) IT ASKED A GLOBAL QUESTION. `any(pair over the whole sequence)` is not "this
+    row must not create an adjacency" — it refuses when the log ALREADY carries
+    two adjacent OUTs anywhere in the window, which is exactly the damage the
+    previous version of this function could produce, and also what the hub
+    leaves behind when one punch is pulled twice. A legitimate repair of an
+    EARLIER session was refused with a message about a check-out that had
+    nothing to do with it. Now scoped to the inserted row's two neighbours.
+
+hrms/api/remote_checkin.py::leaves_consecutive_outs — same-root (fixed here).
+hrms/utils/checkin_sweeper.py:86 _has_matching_close — not-affected in BEHAVIOUR,
+  but its docstring claimed to match submit_late_checkout's rule and no longer
+  does. Corrected in place rather than left to be trusted again.
+
+MEASURED, seven shapes, savepointed, all correct:
+  204 stray INs then the real OUT      REFUSED   (probe_attack_consecutive.py A)
+  stale OUT/OUT pair a day later       ACCEPTED  (B — the repair is unrelated)
+  mirrored duplicate OUT pair          ACCEPTED  (C — same punch pulled twice)
+  day-shift duplicate                  REFUSED
+  night-shift duplicate                REFUSED
+  buried night repair                  ACCEPTED
+  plain forgotten check-out            ACCEPTED
+
+Both mutants killed by the bench-free suite: inverting the same-instant tie-break
+and restoring the global scan each turn exactly one test red.
