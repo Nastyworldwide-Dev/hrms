@@ -301,17 +301,6 @@ def resolve_punch_type(recent_rows, requested: str, now):
 		logger.warning("[remote_checkin] punch-type correction disabled by site config")
 		return requested, None
 
-	# A punch between midnight and 06:00 is NEVER coerced. The 06:00 cutoff was
-	# written for a READ — should the banner offer to resolve? — where a false
-	# "live" costs a banner. Reused for a WRITE it destroys a real arrival:
-	# someone on an early shift who forgot yesterday's check-out would have
-	# their 05:30 arrival recorded as yesterday's departure, and because the
-	# session then looks properly closed, the banner, the sweeper and the audit
-	# report would all read that day as healthy. Ambiguous evidence, so the row
-	# the user asked for stands.
-	if now.hour < 6:
-		return requested, None
-
 	# A REJECTED late-OUT never closed its session — the same rule the banner
 	# and the OT pairing engine already apply. Mirrored rows are excluded for
 	# the reason the sweeper excludes them (checkin_sweeper, single writer): a
@@ -365,6 +354,40 @@ def resolve_punch_type(recent_rows, requested: str, now):
 	open_in = rows[-1] if rows and rows[-1].log_type == "IN" else None
 	if not open_in or cint(open_in.get("is_abandoned")):
 		return "IN", None
+
+	# THE SMALL HOURS, DECIDED ON EVIDENCE RATHER THAN ON THE CLOCK.
+	#
+	# A punch between midnight and 06:00 used to be exempt outright. The 06:00
+	# cutoff was written for a READ — should the banner offer to resolve? —
+	# where a false "live" costs a banner. Reused for a WRITE it destroys a real
+	# arrival: someone on an early shift who forgot yesterday's check-out would
+	# have their 05:30 arrival recorded as yesterday's DEPARTURE, and because
+	# the session then looks properly closed, the banner, the sweeper and the
+	# audit report would all read that day as healthy.
+	#
+	# But a blanket exemption also left NIGHT SHIFTS unguarded through the back
+	# half of their own shift. A 19:00-03:30 worker who double-taps at 02:00 is
+	# inside their session, and that second tap is the same impossible event
+	# this rule exists to catch — nobody arrives twice without leaving. So the
+	# shape being corrected all day came straight back after midnight, on
+	# precisely the people whose working hours live there.
+	#
+	# The open row's OWN shift window separates the two cases: at 02:00 a shift
+	# running to 05:00 is still going; at 05:30 yesterday's shift ended ten
+	# hours ago. With no shift stamped there is no evidence either way, and the
+	# row the user asked for stands — which is the old behaviour, kept for
+	# exactly the situation it was right about.
+	if now.hour < 6:
+		shift_close = (
+			get_datetime(open_in.get("shift_actual_end")) if open_in.get("shift_actual_end") else None
+		)
+		if not shift_close or now >= shift_close:
+			logger.info(
+				"[remote_checkin] %s in the 00:00-06:00 band with no live shift (close %s) — leaving as asked",
+				requested,
+				shift_close,
+			)
+			return requested, None
 	if not _session_is_live(get_datetime(open_in.time), now):
 		return "IN", None
 
@@ -436,6 +459,7 @@ def punch(
 					"is_abandoned",
 					"remote_approval_status",
 					"synced_from_instance",
+					"shift_actual_end",
 				],
 				order_by="time desc",
 				limit=100,

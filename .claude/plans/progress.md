@@ -254,3 +254,37 @@ NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type leaves night shift
   yesterday's departure, so the fix must distinguish the two: ask whether the open IN's own shift is
   still running at `now`, which needs shift_actual_end on the rows punch() reads.
 - 2026-09-13T16:34:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:34:11Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 4 call site(s) given verdicts, 11 same-root ⟂e41a025b743e
+- 2026-09-13T16:34:13Z COMMIT: 73604c8a7 fix(attendance): a zero this report cannot justify must not look like good news → review dispatched
+- 2026-09-13 EVIDENCE(3): Wave A3b done. resolve_punch_type exempted every punch between 00:00 and
+  06:00 outright, which handed the two-IN shape back to night workers through the back half of their
+  own shift. The band now sits BELOW the walk and asks whether the open IN's own shift is still running
+  — the only question that separates a night worker's 02:00 double tap from an early-shift 05:30
+  arrival after yesterday's forgotten check-out. With no shift stamped the old behaviour stands.
+  RED then GREEN bench-free (4 cases), and both halves measured on fresh.local through real saves
+  (verify-bench/sites/probe_night_band.py): 19:00 shift closing 05:00 -> 02:00 tap becomes OUT;
+  day shift closed 13:00 -> 05:30 arrival stays IN.
+NEXT: A4 came back from review with TWO REGRESSIONS IT INTRODUCED, both proven on fresh.local, both
+  in hrms/api/remote_checkin.py::submit_late_checkout. (W1) the widened boundary lets an OUT belonging
+  to a LATER COMPLETED session fall inside out_time_filter and trip `later_out`, so a buried repair is
+  now REFUSED that HEAD~1 ACCEPTED — a strict regression on the very population A4 exists to unblock.
+  (W2) a late check-out can be written on top of a genuinely new, still-open session opened between
+  midnight and shift_actual_end. Fix for both is the same: compute `first_later_in` (time > in_dt,
+  name != in_doc.name) separately from `next_in`, and use min(next_in, first_later_in) as the upper
+  edge of the `later_out` existence window ONLY — the "must be before your next check-in" refusal stays
+  keyed on next_in, which is what A4 widened on purpose. A3b shrinks W2's exposure (a 00:05 duplicate
+  is now an OUT, so there is no stray IN to step over) but does not close it.
+  Also (W3) the claim "a day shift keeps exactly the boundary it had" is FALSE for an evening shift
+  whose grace window crosses midnight — measured, session_boundary(Mon 14:00, Tue 00:30) -> Tue 00:30.
+  Reword, and pin the crossing-grace shape with its own case.
+- 2026-09-13T16:38:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:38:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:39:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:39:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:39:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:39:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:39:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:40:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:40:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:40:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:41:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

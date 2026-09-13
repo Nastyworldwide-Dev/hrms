@@ -660,16 +660,61 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
 		self.assertEqual(resolved, "IN")
 
-	def test_a_punch_before_06_00_is_never_coerced(self):
+	def test_a_punch_before_06_00_with_no_shift_evidence_is_not_coerced(self):
 		"""The 06:00 cutoff was written for a READ — should the banner offer to
 		resolve? A false "live" there costs a banner. Reused for a WRITE it
 		destroys a real arrival: someone on an early shift who forgot yesterday's
 		check-out has their 05:30 arrival silently recorded as yesterday's
-		departure, and every detector then reads the day as healthy. A punch in
-		that band is ambiguous, so the row the user asked for stands."""
+		departure, and every detector then reads the day as healthy. With no
+		shift window on the open row there is nothing to distinguish the two, so
+		the row the user asked for stands."""
 		rows = [self.row("IN", self.at(21, 0) - datetime.timedelta(days=1))]
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(5, 30))
 		self.assertEqual(resolved, "IN")
+
+	def test_a_night_shift_is_protected_through_its_own_small_hours(self):
+		"""The band left night shifts unguarded for the BACK HALF of their shift.
+
+		A 19:00-03:30 worker who double-taps at 02:00 is inside their own shift,
+		and the second tap is the same impossible event the rule exists to catch
+		— nobody arrives twice without leaving. The blanket cutoff let it through
+		anyway, so the very shape being corrected during the day came straight
+		back after midnight, on the people whose shift lives there.
+
+		The open row's OWN shift window is what separates this from the early
+		arrival above: here the session is still running, there it ended hours
+		ago."""
+		rows = [
+			self.row(
+				"IN",
+				self.at(19, 0) - datetime.timedelta(days=1),
+				shift_actual_end=self.at(5, 0),
+			)
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(2, 0))
+		self.assertEqual(resolved, "OUT", "02:00 is inside a shift that runs to 05:00")
+		self.assertIsNotNone(closing)
+
+	def test_an_early_arrival_is_still_safe_when_the_old_shift_has_ended(self):
+		"""The case the band was written for, now decided on evidence instead of
+		on the clock: yesterday's day shift closed at 19:00, so a 05:30 arrival
+		cannot belong to it and must be recorded as the arrival it is."""
+		rows = [
+			self.row(
+				"IN",
+				self.at(9, 0) - datetime.timedelta(days=1),
+				shift_actual_end=self.at(19, 0) - datetime.timedelta(days=1),
+			)
+		]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(5, 30))
+		self.assertEqual(resolved, "IN", "that shift ended 10 hours ago — this is a new day")
+
+	def test_a_punch_after_06_00_does_not_need_shift_evidence(self):
+		"""Outside the band nothing changed: the ordinary daytime duplicate is
+		still coerced with no shift window on the row at all."""
+		rows = [self.row("IN", self.at(8, 51))]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
 
 	def test_a_mirrored_open_session_does_not_coerce(self):
 		"""A session pulled from the source instance can never be tagged

@@ -503,3 +503,52 @@ hrms/overrides/employee_checkin_override.py::_open_in — not-affected — bound
   as a string, because that is how it arrives from the database.
 - The invariant: a session's end is read from the shift it belongs to, and the
   calendar is only the fallback when there is no shift to read.
+
+---
+
+# FAMILY — a session boundary taken from the clock instead of the shift, again
+
+CLASS: the same defect as the late check-out boundary, in the other direction.
+`resolve_punch_type` exempted every punch between midnight and 06:00 outright, on
+the reasoning that such a punch is ambiguous. It is ambiguous only when the open
+session's shift has ENDED. For a shift still running through those hours the
+punch is not ambiguous at all — it is the departure the rule exists to catch —
+and the blanket exemption handed the two-IN shape straight back to the people
+whose working hours live there.
+
+ROOT CAUSE: hrms/api/remote_checkin.py::resolve_punch_type — `if now.hour < 6:
+return requested, None` ran BEFORE the open session was known, so it could not
+ask the only question that separates the two cases.
+
+## same-root — fixed in this commit
+hrms/api/remote_checkin.py::resolve_punch_type — the band moved BELOW the walk
+  and now asks whether the open IN's own shift is still running at `now`. With no
+  shift stamped the old behaviour stands, which is exactly the situation the band
+  was right about.
+hrms/api/remote_checkin.py::punch — `shift_actual_end` added to the recent-log
+  fields, because the rule now needs it. Read-only widening of a SELECT.
+
+## the machine's list — verdicts
+hrms/api/remote_checkin.py::_session_is_live — not-affected — it also carries a
+  06:00 cutoff, for a different question (may the BANNER offer a repair). A false
+  "live" there costs a banner, not a row. It is deliberately shared with
+  `unresolved_stale_in` so the banner and the punch cannot disagree about who is
+  still on shift, and that is unchanged.
+hrms/api/remote_checkin.py::session_boundary — not-affected — same family, fixed
+  in 8d105985e. The two now answer the same question the same way: a session ends
+  when its shift does.
+hrms/overrides/employee_checkin_override.py::_open_in — not-affected — bounds by
+  SESSION_WINDOW, never by an hour of the clock.
+hrms/utils/checkin_sweeper.py — not-affected — sweeps by age.
+
+## LOCK THE CLASS
+- Four bench-free cases in hrms/api/test_remote_checkin.py: a night shift IS
+  protected through its own small hours (RED on HEAD, 'IN' != 'OUT'); an early
+  arrival after a shift that ENDED is still safe; no shift stamp keeps the old
+  behaviour; and a daytime duplicate still needs no shift evidence at all.
+- Real-save evidence: verify-bench/sites/probe_night_band.py (in the verify-bench
+  tree, NOT in this repo), savepointed. Both halves measured on a real site: a
+  19:00 shift closing 05:00 coerces the 02:00 double tap to OUT, and a day shift
+  that closed at 13:00 leaves a 05:30 arrival as an arrival.
+- The invariant: the small hours are decided on the open session's own shift
+  window, never on the hour of the clock.
