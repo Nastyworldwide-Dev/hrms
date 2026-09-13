@@ -289,3 +289,29 @@ NEXT: Wave A of the plan — stop the bleeding, in this order, one commit each w
   A3 the three holes in resolve_punch_type, A4 remote_checkin.py:635-639 (take the session boundary
   from the IN's own shift window, not calendar midnight). Do NOT repair historical data, push or
   deploy without Nabil's explicit word.
+- 2026-09-13T15:59:48Z COMMIT: cf3a923cf docs(plans): the live build already carries every fix, so the deploy is not the answer → review dispatched
+- 2026-09-13 RULING (Nabil, in session, second round): (1) **AN APPROVED REQUEST IS NEVER CANCELLED.**
+  So approval.py finalize:413-414, which elevates CANCEL on routing alone (`elif _is_routed_approver(doc):
+  doc.flags.ignore_permissions = True`, with only _request_read_allowed ahead of it), is now a DEFECT to
+  close, not an open question. A reports_to manager must not be able to cancel a settled decision.
+  (2) Backdating: the CYCLE SHAPE STAYS 16th-15th; what changes is the DEPTH — four months back from the
+  present day, and it applies to OT Request AND related requests such as expense claims. So filing_window
+  keeps its cycle boundaries and widens from two cycles to four months' worth.
+- 2026-09-13 REPAIR: acted on the doc reviewer's FIX_CRITICAL. The Critical was mine: the audit claimed
+  the replaced-approver DocShare was dead code because "approval_row_scope grants the named approver
+  submit". **A has_permission hook cannot GRANT a ptype in Frappe — the DocPerm is evaluated first and
+  the hook can only subtract.** Verified from the doctype JSON: the Employee role carries submit=0 on
+  Leave Application, Expense Claim and Shift Request, and hr/utils.py:986 shares exactly when
+  has_permission(submit) is False — so for an Employee-role-only team lead the DocShare IS created, by
+  live callers. Had that paragraph been believed, a later cleanup would have deleted the share and every
+  Employee-role-only named approver would have lost sight of their queue. Also corrected seven anchor and
+  count errors (26 of 32 Script Reports, not 27 of 33; 29 employee-owned doctypes, not 24; four off-by-a-
+  few line references) and re-graded the REFUTED note: the "my team" table was measuring the CALLER's
+  status where the defect is on the SUBORDINATE, so approval.py:85 reads caller=Active-yes / report=NO.
+- 2026-09-13 LEARNING(fact): in Frappe a `has_permission` hook can only SUBTRACT a ptype, never grant
+  one. Any claim of the form "the row scope grants role X permission Y" is false whenever the DocPerm
+  for X lacks Y — check the doctype JSON before calling a share or a fallback dead.
+NEXT: Wave A1 — hrms/hr/shift_rules.py:122-124 returns "skipped-manual" WITHOUT closing its own
+  auto-created rows, while the sibling branch at :114-120 does close them. That is what keeps creating
+  duplicate Active open-ended Shift Assignments of different shift types, which is the precondition for
+  the split-day damage (shape S6). Red test first, then the fix, then the family ledger.
