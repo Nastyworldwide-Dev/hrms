@@ -812,24 +812,28 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	#
 	# Rejected late check-outs are excluded because a rejected one never closed
 	# anything, which is what lets an employee resubmit a corrected time.
-	# BOUNDED BY TIME, NOT BY ROW COUNT. An ascending fetch with a row limit
-	# truncates the NEWEST rows, so on a log with many punches after this IN the
-	# genuine closing OUT fell outside the window and the guard failed open with
-	# nothing in the log to say so — measured: 204 stray INs between the arrival
-	# and its 18:00 departure, and a second check-out was accepted. The sibling
-	# read in get_unresolved_stale_in already avoids this by fetching `time desc`
-	# and reversing; here the answer is to bound the window by time instead.
+	# NO ROW LIMIT, AND NO FORWARD BOUND EITHER.
 	#
-	# ceiling: the window closes two days after the proposed check-out, so a
-	# departure sitting further out than that is not seen as adjacent
-	# upgrade: take the upper bound from the session's own shift window once
-	# hrms.utils.session_state supplies it (see the hotspot ticket)
+	# The row limit came first and was the wrong axis: an ascending fetch with a
+	# limit truncates the NEWEST rows, so past it the genuine closing OUT was
+	# invisible and the guard failed open silently — measured, 204 stray INs
+	# between an arrival and its 18:00 departure, and a second check-out was
+	# accepted.
+	#
+	# Replacing it with a two-day forward window was the SAME defect on a new
+	# axis, which is why it is gone too. `next_in` cannot justify such a bound:
+	# it searches for ARRIVALS, and the row this guard must see is a DEPARTURE —
+	# nothing requires an arrival to sit between the two. A Friday-to-Monday
+	# weekend reaches it, and so does the production double-tap whose close
+	# arrives days later; the banner offers exactly those rows. The feature's own
+	# horizons disagree anyway (the pairing engine looks back fourteen days, the
+	# stale-IN banner ten), so any number chosen here would have been arbitrary.
+	#
+	# Scoped to ONE employee from ONE arrival forward, this is single digits of
+	# rows in practice.
 	sequence = frappe.get_all(
 		"Employee Checkin",
-		filters={
-			"employee": in_doc.employee,
-			"time": ["between", [in_doc.time, add_days(out_dt, 2)]],
-		},
+		filters={"employee": in_doc.employee, "time": [">=", in_doc.time]},
 		fields=["name", "time", "log_type", "remote_approval_status"],
 		order_by="time asc",
 		limit_page_length=0,

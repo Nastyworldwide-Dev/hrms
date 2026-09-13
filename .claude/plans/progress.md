@@ -2,105 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-13T16:07:58Z COMMIT: 1bb0a0414 fix(shift): standing down means closing your own rows, in every branch → review dispatched
-- 2026-09-13T16:10:04Z COMMIT: cb16e68ba docs(plans): a sweep fixed seven anchors and broke an eighth → review dispatched
-- 2026-09-13 DEAD END: **Wave A2 as planned is WRONG and must not be built.** The audit said the fix
-  was to make `choose_shift` apply the open-session rule to IN as well as OUT
-  (hrms/utils/shift_resolution.py:36). Measured the real function on fresh.local
-  (verify-bench/sites/probe_shift_in_inherit.py, pure, no writes), two assignments, day 09-18 and
-  night 19-03:30:
-      IN  18:31, day session open since 08:51   -> Night 19-0330   <- the reported split, CONFIRMED
-      OUT 18:31, same open session              -> Day 09-18       <- already correct
-      IN  08:51, nothing open                   -> Day 09-18       <- correct
-      IN  19:00, day session STILL OPEN         -> Night 19-0330   <- correct, and the trap
-      IN  19:00, nothing open                   -> Night 19-0330   <- correct
-  The fourth row is why the planned fix is wrong: an unconditional "an IN inherits the open session's
-  shift" would move a GENUINE 19:00 night arrival onto the day shift whenever the person forgot to
-  check out that morning. It would trade the reported split for a silent misattribution of a whole
-  night shift, which is worse — the split is at least visible as two rows.
-  The 18:31 punch is only mis-attributed because it is mis-TYPED. Typed correctly it already resolves
-  to the day shift. So the defect is not in shift attribution at all; it is that the type is still
-  taken on trust everywhere except the PWA.
-- 2026-09-13 REPAIR(plan): A2 re-scoped. The real gap is that `resolve_punch_type` is applied in
-  `hrms/api/remote_checkin.py::punch` — ONE write path. `EmployeeCheckin.validate`
-  (employee_checkin.py:35-41) enforces no alternation at all, so the biometric/device path
-  (employee_checkin.py:143-211, log_type straight from the caller) and HR Desk manual entry still
-  write an IN that contradicts a live session. The fix belongs in the document layer, not in
-  shift_resolution. NOTE this changes what a BIOMETRIC DEVICE records, which is a different blast
-  radius from a PWA button — flag it to Nabil before building, do not swap it in silently.
-NEXT: A2 (re-scoped) — carry the server-side type resolution into the document layer so every write
-  path alternates, not just the PWA. Needs Nabil's nod first because it changes biometric-recorded
-  punches. If he defers, go to A3 (the three holes in resolve_punch_type) and A4 (the night-shift
-  late-checkout boundary), which are self-contained and need nobody's permission.
-- 2026-09-13T16:11:43Z COMMIT: c71a43907 docs(plans): the planned shift-attribution fix would have cost a whole night shift → review dispatched
-- 2026-09-13T16:14:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-13T16:14:06Z COMMIT: d2b4191bf fix(checkin): the untyped guard judged rows the pairing walk never reads → review dispatched
-- 2026-09-13T16:15:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T16:15:30Z COMMIT: f44b588c8 fix(checkin): a dead orphan was being read as the open session → review dispatched
-- 2026-09-13T16:17:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13 REPAIR: A1 amended after review — it was half a fix and it cost something else. Measured
-  both on fresh.local against commit 1bb0a0414 (verify-bench/sites/probe_shift_handoff_day.py,
-  savepointed): (a) the HAND-OFF DAY survived, because _close_assignment floors end_date at the row's
-  own start date and every Shift Assignment date read here is inclusive of end_date — a rule row
-  starting today closed to today and went on governing it ("shift types covering today =
-  ['Half Day Test', 'NP Night 19-4']"); such rows are now retired as Inactive instead. (b) the fix
-  STRIPPED THE LAPSED-ROSTER CASE BARE — the branch's second disjunct is a manual segment that ended
-  and was never replaced, so closing there left the employee with NO shift at all ("covering today =
-  []"), which is shape S5 traded for shape S6. The closing loop now runs only when a real manual row
-  actually covers the person. Both GREEN after.
-- 2026-09-13 LEARNING(fact): in hrms, end-dating cannot close a Shift Assignment that STARTS TODAY —
-  the floor is its own start date and every date-range read is inclusive of end_date. Use
-  `status = "Inactive"`, which validate_overlapping_shifts short-circuits on.
-- 2026-09-13 LEARNING(gate): an assertion about "open-ended rows" cannot see a row that ends today ->
-  hrms/hr/test_shift_rules.py now asserts that exactly ONE shift type governs today. The old assertion
-  was green with the defect live inside its own fixture.
-- 2026-09-13T16:17:37Z COMMIT: b2ab6ce0f fix(shift): closing a row that starts today does not close it → review dispatched
-- 2026-09-13T16:20:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13 REPAIR: the damage enumerator carried six SQL defects, every one of which would have
-  produced a WRONG number on production — which is the exact failure the module was written to correct.
-  Found by review, fixed and smoke-tested (all seven shapes now execute on fresh.local; S1 correctly
-  surfaces the Midnight Shift IN 00:30 -> IN 10:00 pair that a day-grouped query splits):
-  (1) S1/S2's next-IN boundary subqueries had no Rejected filter, so a rejected remote check-in acted
-      as a session boundary and put HEALTHY days into the repair-candidate list;
-  (2) S4 correlated punches by DATE(i.time) = a.attendance_date — re-introducing the night-shift
-      blindness the module exists to remove, in BOTH directions (a broken night row unreported, a
-      healthy one reported by coincidence). It now correlates through Employee Checkin.attendance, the
-      link the marking code itself writes, with no date arithmetic at all;
-  (3) S6 compared a DATE column against "<date> 23:59:59", which MariaDB coerces to midnight, so an
-      assignment ending on the last day of the window read as closed — the PRECONDITION under-reported;
-  (4) S5 counted every shift-less punch, but shift IS NULL and offshift = 1 are set together and OT
-      ignores off-shift punches by design, so the count was dominated by punches behaving correctly;
-  (5) S2's derived table had no date predicate and self-joined the whole history, quadratic per
-      employee — on production it might never have returned;
-  (6) counts were rows, not people. Every decision taken off this report is about people, so it now
-      prints rows/employees, and trims the returned sample so the counts are not buried.
-- 2026-09-13 LEARNING(gate): the first invariant test pinned ONE SPELLING of day-scoping
-  (GROUP BY ... DATE(time)) and was green with the other spelling shipped inside S4
-  (WHERE DATE(i.time) = a.attendance_date) -> hrms/tests/test_checkin_damage_enumeration.py now also
-  refuses DATE(<alias>.time) in any punch-walking shape. Mutation-checked: catches the old S4 form,
-  passes the shipped one.
-- 2026-09-13 LEARNING(fact): in this app a check-in with shift IS NULL always also has offshift = 1
-  (employee_checkin.py:79-80), and OT deliberately ignores off-shift punches — so "no shift stamp"
-  alone is not evidence of damage.
-NEXT: Wave A4 — the night-shift late-checkout boundary (hrms/api/remote_checkin.py:640, its own
-  `# ceiling:` at :635-639). Take the session boundary from the IN's own shift window instead of
-  calendar midnight. Red first: the probe that reproduced the production refusal verbatim
-  (IN Mon 19:00, duplicate IN Tue 00:05, submit_late_checkout for Tue 03:30).
-- 2026-09-13T16:20:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T16:21:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T16:22:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:23:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:23:24Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 4 call site(s) given verdicts, 10 same-root ⟂0dedd975f583
-- 2026-09-13T16:23:26Z COMMIT: 53c25a30e fix(attendance): the damage query would have reported the wrong number → review dispatched
-- 2026-09-13 EVIDENCE(3): Wave A4 done — the night-shift late check-out. The day-turnover half of the
-  session boundary was calendar midnight, which on a 19:00-03:30 shift falls in the MIDDLE of the
-  session, so a duplicate punch at 00:05 was read as the next session's arrival and bounded the window
-  at itself. Reproduced on fresh.local with the production message verbatim
-  (verify-bench/sites/probe_late_checkout_night.py, savepointed): RED on 53c25a30e, GREEN after, same
-  fixture both runs. The turnover now comes from the IN's own shift_actual_end, floored at midnight so
-  no shift living inside one date changes behaviour. Extracted as the pure `session_boundary` with six
-  bench-free cases, because the rule was previously only reachable through a whitelisted endpoint.
-- 2026-09-13 DEAD END: the first two probe runs were FALSE GREENS waiting to happen — the probe set
   shift_start/shift_end itself on insert, and fetch_shift overwrote them with the employee's REAL
   assignment (a 10:15-18:00 day shift), so shift_actual_end never crossed midnight and the fix looked
   inert. A late-check-out fix cannot be verified without giving the probe employee a real night Shift
@@ -281,3 +182,23 @@ NEXT: Nabil asked whether we even have a biometric device — the honest answer 
   manual entry and drops below the OT wave. Start B1: the +/-1 day punch fetch window
   (ot_calculation.py:372-373) that makes four OT entry points disagree by 33 hours on one date.
 - 2026-09-13T17:11:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T17:11:07Z COMMIT: cbb1295ff fix(checkin): the duplicate guard went blind past two hundred punches → review dispatched
+- 2026-09-13 REPAIR: the two-day forward window I put in place of the row limit was the SAME defect on
+  a new axis, and review proved it reachable. `next_in` cannot justify a forward bound because it
+  searches for ARRIVALS while the row this guard must see is a DEPARTURE — nothing requires an arrival
+  between them. A Friday-to-Monday weekend reaches it; so does the production double-tap whose close
+  lands days later, and the banner OFFERS exactly those rows. The feature's own horizons disagree
+  anyway (pairing looks back 14 days at employee_checkin_override.py:262, the stale-IN banner 10 at
+  remote_checkin.py:573), so any number here was arbitrary. The bound is gone; `limit_page_length=0`
+  stays. The `# ceiling:` marker went with it — removing a shortcut beats justifying it.
+- 2026-09-13 LEARNING(gate): a test of the PURE rule stays green through BOTH versions of a
+  fetch-window defect, because the rule was never wrong — what it got to SEE was. Two narrowings
+  shipped that way. hrms/api/test_remote_checkin.py now reads the committed fetch out of the source and
+  refuses any forward bound or row limit on it. Proven red by reintroducing the two-day window.
+- 2026-09-13 TICKET: an invariant limited to "never two consecutive OUTs" does not notice a spurious
+  extra SESSION manufactured between two stray INs — IN 09:00, IN 09:18, IN 10:00, OUT 18:00 with a
+  filing at 09:30 is accepted, and attendance then pairs 09:00->09:30 and 10:00->18:00 instead of one
+  session. NOT introduced by any of today's commits (the old global scan accepted it too). Decide on
+  the session_state hotspot ticket whether the rule should also refuse to orphan a later departure's
+  arrival.
+- 2026-09-13T17:18:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36

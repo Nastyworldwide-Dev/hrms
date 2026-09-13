@@ -657,6 +657,44 @@ class TestALateCheckOutNeverLeavesTwoDepartures(unittest.TestCase):
 		seq = [self.row("IN", self.at(9)), self.row("OUT", self.at(12)), self.row("IN", self.at(12))]
 		self.assertTrue(self.check(seq, self.at(13)))
 
+	def test_a_departure_days_later_is_still_this_session_s_second(self):
+		"""The rule has no forward horizon, and the window feeding it must not
+		invent one.
+
+		Nothing requires an arrival to sit between the filed check-out and the
+		real one: a Friday-to-Monday weekend does it, and so does the production
+		double-tap whose close lands days later. Two attempts to bound this
+		search — first by row count, then by two days — each failed open on that
+		shape, so the rule is pinned here at four days out."""
+		seq = [
+			self.row("IN", self.at(9)),
+			self.row("IN", self.at(9, 18)),
+			self.row("OUT", self.at(9, day_offset=4)),
+		]
+		self.assertTrue(self.check(seq, self.at(18)))
+
+	def test_the_fetch_that_feeds_the_rule_carries_no_forward_bound(self):
+		"""Read off the committed source, because the defect was never in the
+		rule — it was in what the rule got to see, and a test of the pure
+		function stays green through both versions of that mistake.
+
+		Twice now the sequence fetch has been narrowed (a row limit, then a
+		two-day window) and twice the closing departure fell outside it while
+		every test passed. The filter must stay open-ended forward."""
+		import re
+		from pathlib import Path as _Path
+
+		source = (_Path(__file__).resolve().parent / "remote_checkin.py").read_text()
+		body = source[source.index("def submit_late_checkout(") :]
+		fetch = body[body.index("	sequence = frappe.get_all(") :]
+		fetch = fetch[: fetch.index("\n	)")]
+		self.assertIn('"time": [">=", in_doc.time]', fetch, "the window must stay open forward")
+		self.assertIn("limit_page_length=0", fetch, "and must carry no row limit")
+		self.assertIsNone(
+			re.search(r"add_days\(|between", fetch),
+			"a forward bound on this fetch has failed open twice; it must not come back",
+		)
+
 	def test_a_pre_existing_pair_elsewhere_does_not_block_an_earlier_repair(self):
 		"""This row must not answer for damage it did not cause.
 
