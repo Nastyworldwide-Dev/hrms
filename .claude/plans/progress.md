@@ -261,3 +261,20 @@ NEXT: review the revised 2.0 proposal's five decision rows, then B0 (route,
 - 2026-09-13T18:42:12Z PUSH: nz-glass @ 5ef3877d7
 - 2026-09-13T18:42:47Z PUSH: nz-glass @ 6218a01bf
 - 2026-09-13T18:42:47Z COMMIT: 6218a01bf docs(glass): handoff for the pushed branch → review dispatched
+- 2026-09-13 PLAN: Nabil requested a paced, regression-controlled breakdown
+  focused on Nadi PWA and frontend/backend connections. Added
+  docs/glass/plan/NADI_2.0_EXECUTION_WAVES.md (W0–W8, 28–39 engineer-days plus
+  contingency, half-to-two-day packets) and NADI_2.0_API_CONNECTIONS.md (102 RPC
+  names; 82 local HRMS definitions resolved; every runtime verdict Pending).
+  Generic document operations, uploads, workflows, push overrides, sessions,
+  cache/realtime and retained PWA families are explicitly part of coverage.
+- 2026-09-13 CHECK: eight relative document links resolve; 102 inventory rows
+  verified, 82 Python handler names/line numbers verified; nine wave ranges sum
+  to 28–39 days; git diff --check clean. No application or site changes.
+- 2026-09-13 LEARNING(fact): FormView writes through generated Frappe resource
+  operations; an inventory restricted to named hrms.api calls misses those contracts.
+NEXT: W0.1 expand source references by caller/doctype/operation; W0.2–W0.4
+  establish isolated-site contract/journey evidence and the usable regression gate.
+  Source resolution is not runtime verification. Preserve open 2.0 decisions,
+  deferred Script Report work and exact approval boundaries for infrastructure,
+  permissions, schema, deployment and historical repair.

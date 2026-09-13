@@ -1,8 +1,8 @@
-GOAL: Review the existing Nadi 2.0 proposals against current code and prepare
-      a revised delivery plan; documentation only, no implementation or deployment.
-DONE WHEN: docs/glass/plan/NADI_2.0_DELIVERY_PLAN_2026-09-13.md records current
-      evidence, corrected assumptions, launch scope, dependencies, decisions,
-      acceptance checks and the existing deferred-work/release boundaries.
-CHECK: 166 frontend tests passed; selected Python checks: 19 passed, 1 skipped,
-      3 subtests passed; contrast: 54 pairs passed; surface gate passed.
-      Validate document links and git diff --check. No rendered/site readiness claim.
+GOAL: Break Nadi PWA 2.0 into paced delivery waves with frontend/backend
+      integration contracts and regression gates; normal, documentation only.
+DONE WHEN: A wave plan specifies effort ranges, small work packets, dependencies,
+      integration evidence and stop/revert rules; an endpoint inventory maps
+      current PWA call references and implicit operations without claiming live proof.
+CHECK: Reconcile inventory against frontend sources and local Python definitions;
+      validate links and git diff --check; fresh-context documentation review.
+      No application changes, migrations or live writes.

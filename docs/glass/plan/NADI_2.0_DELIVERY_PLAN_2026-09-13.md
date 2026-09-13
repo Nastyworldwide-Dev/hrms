@@ -126,6 +126,12 @@ rules must not slip into otherwise presentation-only launch slices.
 
 ## 4. Ordered delivery slices
 
+Execution detail: [delivery waves and regression controls](NADI_2.0_EXECUTION_WAVES.md)
+break these slices into W0–W8, with effort ranges and packet gates. The
+[API connection inventory](NADI_2.0_API_CONNECTIONS.md) seeds the frontend/backend
+contract ledger. These companions refine delivery; unresolved decisions above
+remain unresolved.
+
 Each row is a reviewable result, split further if it crosses the 400-source-line
 budget. Dependencies are explicit; a fixed “55 commits” is not an estimate of
 effort. Estimate after B0 and the first vertical slice establish actual cost.
