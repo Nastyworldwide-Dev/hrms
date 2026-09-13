@@ -411,6 +411,65 @@ class TestTeamKPI(FrappeTestCase):
 		seen = {row["employee"] for row in get_team_kpi(year=2026)["rows"]}
 		self.assertEqual({self.staff, self.ops_emp}, seen & {self.staff, self.ops_emp})
 
+	def test_a_leftover_inactive_row_does_not_make_you_a_manager(self):
+		"""THE PHANTOM CHAIN, and the only guard for it that lives in this repo.
+
+		`appraisal.get_allowed_appraisal_employees` seeds its walk from a RAW,
+		status-agnostic user_id match returning every claimant. Subtracting
+		`identity.own_employees` from the RESULT closes Active-vs-Active only.
+		One login holding an Active row PLUS a leftover inactive row that still
+		has subordinates passes the fail-closed gate — own_employees returns
+		exactly one name — and the walk then hands back the dead row's whole
+		subtree. An individual contributor becomes a manager of people they
+		manage nobody in, and can open their full KRA detail, while the
+		framework's own has_permission refuses them that very document.
+
+		The fix is the `seed=` argument. If somebody later simplifies that call
+		back to `get_allowed_appraisal_employees(user)`, this is what says so.
+		"""
+		ghost_user = "team_kpi_ghost@example.com"
+		live = self._employee(ghost_user, "Engineer", self.sales, self.company)
+		dead = make_employee("team_kpi_ghost_old@example.com", company=self.company)
+		victim = self._employee("team_kpi_victim@example.com", "Engineer", self.sales, self.company)
+		frappe.db.set_value("Employee", victim, "reports_to", dead)
+		# db.set_value on purpose: a normal save refuses a duplicate user_id, and
+		# the mirror / identity._link path writes it exactly this way.
+		frappe.db.set_value("Employee", dead, {"status": "Left", "user_id": ghost_user})
+		self.assertEqual(frappe.db.get_value("Employee", live, "status"), "Active")
+
+		frappe.set_user(ghost_user)
+		self.assertIsNone(can_view_team_kpi(), "a dead row must not confer a tier")
+		self.assertRaises(frappe.PermissionError, get_team_kpi)
+		self.assertRaises(frappe.PermissionError, get_employee_kpi, victim)
+
+	def test_an_ambiguous_login_is_not_handed_the_office(self):
+		"""The office used to be decided ahead of the identity gate, with its own
+		user_id query — so the one case this hub documents as fail-closed was
+		handed the WIDEST tier."""
+		twin = "team_kpi_twin@example.com"
+		self._employee(twin, "Engineer", self.sales, self.company)
+		second = make_employee("team_kpi_twin_two@example.com", company=self.company)
+		frappe.db.set_value("Employee", second, {"designation": CEO_DESIGNATION, "user_id": twin})
+
+		frappe.set_user(twin)
+		self.assertIsNone(can_view_team_kpi(), "two Active claimants must resolve to no tier")
+
+	def test_hr_keeps_the_view_without_an_employee_record(self):
+		"""HR is decided by ROLE and only by role. Identity buys nothing there —
+		a role cannot be forged with a duplicate Employee row — but requiring it
+		would delete the tab from a new HR hire not yet mirrored, a shared HR
+		login, or Administrator during support."""
+		email = "team_kpi_hr_no_employee@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc(
+				{"doctype": "User", "email": email, "first_name": "HR NoEmp", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		frappe.get_doc("User", email).add_roles("HR Manager")
+		self.assertFalse(frappe.db.exists("Employee", {"user_id": email, "status": "Active"}))
+
+		frappe.set_user(email)
+		self.assertEqual(can_view_team_kpi(), "hr")
+
 	def test_an_employee_with_no_reports_is_still_refused(self):
 		"""Managing nobody is not a tier. The KPI page keeps exactly one tab."""
 		frappe.set_user(self.staff_user)
@@ -617,6 +676,20 @@ class TestTeamKPI(FrappeTestCase):
 		mine = get_my_kpi_dashboard()
 		theirs = get_employee_kpi(self.staff)
 		self.assertEqual(sorted(mine), sorted(theirs))
+
+	def test_a_non_string_employee_is_refused_at_the_boundary(self):
+		"""A whitelisted argument arrives as whatever the caller sent, and a dict
+		reaches frappe.db.get_value as FILTERS rather than as a name. Only the
+		unrestricted tiers could get that far — they already read everyone, so it
+		was never an escalation — but an untyped argument at a permission
+		boundary is a shape to refuse, not a risk to rank."""
+		frappe.set_user(self.ceo_user)
+		for value in ({"name": ("like", "%")}, [self.staff], "", "   ", None):
+			with self.assertRaises(
+				(frappe.PermissionError, frappe.ValidationError, TypeError, AttributeError),
+				msg=f"{value!r} reached the reader",
+			):
+				get_employee_kpi(value)
 
 	def test_the_drill_down_takes_no_shortcut_around_the_tier(self):
 		# The fence is the FIRST thing the endpoint does; nothing is read for a

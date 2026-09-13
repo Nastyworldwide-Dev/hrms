@@ -24,6 +24,18 @@ The set is not a place to park a red result. It was empty and the test was red
 for three readers, which is worse than having no test — a permanently-failing
 guard is one nobody reads, and offender #4 arrives unnoticed.
 
+KNOWN BLIND SPOT, stated so nobody mistakes this guard's silence for safety:
+it matches `frappe.get_all("Employee", ...)` and NOTHING ELSE. A primary-key
+read — `frappe.db.get_value("Employee", <caller-supplied name>, ...)` — is
+invisible to it, and that is exactly the shape a security review used to reach
+a KPI payload the scanner had already passed. There are 24 such call sites in
+hrms/api today; most read a name the caller already proved access to, or the
+session user's own row, so simply widening the match would light all 24 and
+turn this guard red again — which is how the last two dead guards in this repo
+died. Deciding which of the 24 take a CALLER-SUPPLIED name needs dataflow, not
+a name match. TICKETED in .claude/plans/progress.md; until then, treat a green
+run here as "no unfenced get_all", never as "no unfenced Employee read".
+
 AST only — no bench required.
 """
 

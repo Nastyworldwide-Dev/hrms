@@ -236,3 +236,26 @@ TICKET: hrms/api/kpi.py is 667 lines carrying three tiers, two doors and a share
 - 2026-09-13T14:43:48Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 6 same-root ⟂6c69f0b459ca
 - 2026-09-13T14:44:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T14:44:07Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
+- 2026-09-13T14:44:08Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 6 same-root ⟂6c69f0b459ca
+- 2026-09-13T14:44:11Z COMMIT: 191b70965 fix(kpi): a dead employee row must not make you somebody's manager → review dispatched
+- 2026-09-13 EVIDENCE: 6 behaves — re-verification NEXT_ACTION: DEPLOY, no Critical. It confirmed the
+  phantom chain closed on BOTH doors, reproduced my revert exactly, and tried four further ways to defeat
+  it (dead row Inactive / Suspended / Left, and a second Active row whose user_id differs by case and
+  whitespace) — all failed closed. It also proved the `seed` default is byte-identical for every existing
+  caller, and that a legitimate manager still opens a report who has LEFT, a cross-company report and a
+  SUBMITTED appraisal.
+- 2026-09-13 REPAIR: its W1. Identity-first had started gating the HR tier too, so an HR account with no
+  Employee row — a new HR hire not yet mirrored, a shared HR login, Administrator during support — lost
+  Team KPI entirely. HR is decided by ROLE and only by role: identity buys nothing there (a role cannot be
+  forged with a duplicate Employee row) and cost the feature. HR is answered before the gate now; the two
+  tiers that READ Employee rows to decide themselves keep it, fail-closed.
+- 2026-09-13 REPAIR: its W3. The phantom chain had NO repo-runnable guard — the only red was an
+  out-of-repo probe on a personal bench, so someone could simplify `seed=` away and nothing versioned
+  would notice. TestTeamKPI now carries the phantom chain, the ambiguous login and the HR-without-an-
+  Employee case, so they travel with the code.
+TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Company User Permission,
+  the LIST shows a cross-company report and the DETAIL refuses it — the framework check fences on
+  Appraisal.company, the list does not. Clicking a row the page just showed you says "not permitted".
+  Make the two doors agree, and add a probe case so the pair cannot drift. Do NOT fix it by fencing the
+  list on Appraisal.company: that field is copied from the Appraisal Cycle and never reconciled, which is
+  the bug test_an_appraisal_stamped_with_the_wrong_company_does_not_move_its_owner already pins.

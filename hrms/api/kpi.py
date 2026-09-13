@@ -363,6 +363,20 @@ def _scope(user: str | None = None) -> tuple[str | None, list[str] | None]:
 	test_a_company_user_permission_does_not_narrow_team_kpi.
 	"""
 	user = user or frappe.session.user
+
+	# HR IS DECIDED BY ROLE, AND ONLY BY ROLE, so it is answered before the
+	# identity gate. Identity buys nothing here — a role cannot be forged with a
+	# duplicate Employee row, and HR sees everyone regardless of any chain — but
+	# requiring it would silently delete the tab from an HR account with no
+	# Employee record: a new HR hire not yet mirrored, a shared HR login, or
+	# Administrator during support. Losing the feature is the cost; there is no
+	# matching security gain.
+	if is_hr_operator(user):
+		return VIEWER_HR, None
+
+	# The other two tiers BOTH read Employee rows to decide themselves — the
+	# office from a designation, the manager from a reporting chain — so for
+	# them identity is the thing being decided and it goes first, fail-closed.
 	own = own_employees(user)
 	if not own:
 		logger.info("[kpi] no single Active Employee for %s — no tier", user)
@@ -372,8 +386,6 @@ def _scope(user: str | None = None) -> tuple[str | None, list[str] | None]:
 	target = CEO_DESIGNATION.strip().casefold()
 	if any((d or "").strip().casefold() == target for d in designations):
 		return VIEWER_CEO, None
-	if is_hr_operator(user):
-		return VIEWER_HR, None
 
 	chain = get_allowed_appraisal_employees(user, seed=own) or []
 	reports = [e for e in chain if e not in own]
@@ -389,8 +401,8 @@ def _team_kpi_viewer() -> str | None:
 
 @frappe.whitelist()
 def can_view_team_kpi() -> str | None:
-	"""Nav/tab gate for the PWA: the tier, or None. Cheap, cached per user, and
-	it says nothing about the data itself — every read re-checks through
+	"""Nav/tab gate for the PWA: the tier, or None. It says nothing about the
+	data itself — every read re-checks through
 	`_scope`.
 
 	Returns the MODE rather than a bool so the tab can be labelled honestly:
@@ -414,6 +426,16 @@ def _require_kpi_read(employee: str) -> str:
 
 	Checked BEFORE anything is read.
 	"""
+	# A whitelisted argument arrives as whatever the caller sent. A dict reaches
+	# frappe.db.get_value as FILTERS rather than a name, so the argument is
+	# narrowed to a string at the boundary before anything reads it. Only the
+	# unrestricted tiers could reach that today — they already read everyone, so
+	# it was not an escalation — but an untyped argument at a permission
+	# boundary is a shape worth refusing, not a risk worth ranking.
+	if not isinstance(employee, str) or not employee.strip():
+		frappe.throw(_("An employee must be named."), frappe.PermissionError)
+	employee = employee.strip()
+
 	user = frappe.session.user
 	if employee in own_employees(user):
 		return VIEWER_SELF
@@ -427,7 +449,9 @@ def _require_kpi_read(employee: str) -> str:
 	if viewer == VIEWER_MANAGER and employee in (admitted or []):
 		return viewer
 
-	logger.warning("[kpi] %s refused the KPI detail of %s (tier %s)", user, employee, viewer)
+	# The employee name is caller-supplied, so it is flattened before it reaches
+	# the log: a newline in it forges log lines.
+	logger.warning("[kpi] %s refused the KPI detail of %r (tier %s)", user, employee[:140], viewer)
 	frappe.throw(_("You are not permitted to view this employee's KPI."), frappe.PermissionError)
 
 
