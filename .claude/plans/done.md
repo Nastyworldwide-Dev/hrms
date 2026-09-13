@@ -1,6 +1,8 @@
-GOAL: PWA "My KPI" becomes "KPI", with a CEO-designation-only, read-only Team KPI
-      tab carrying a department selector.
-DONE WHEN: non-CEO sees today's page unchanged; CEO sees the tab; get_team_kpi
-      raises PermissionError for anyone whose Employee.designation is not CEO.
-CHECK: verify-bench probe (sites/probe_team_kpi.py) — 10/10 PASS, rolled back;
-      `yarn build` green; ruff + eslint clean.
+GOAL: Review the existing Nadi 2.0 proposals against current code and prepare
+      a revised delivery plan; documentation only, no implementation or deployment.
+DONE WHEN: docs/glass/plan/NADI_2.0_DELIVERY_PLAN_2026-09-13.md records current
+      evidence, corrected assumptions, launch scope, dependencies, decisions,
+      acceptance checks and the existing deferred-work/release boundaries.
+CHECK: 166 frontend tests passed; selected Python checks: 19 passed, 1 skipped,
+      3 subtests passed; contrast: 54 pairs passed; surface gate passed.
+      Validate document links and git diff --check. No rendered/site readiness claim.

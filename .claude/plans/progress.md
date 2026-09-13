@@ -243,3 +243,21 @@ NEXT: nothing is queued. Every defect on the ranked plan is closed and committed
 - 2026-09-13T18:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T18:26:53Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
 - 2026-09-13T18:26:57Z COMMIT: 10802dfe4 fix(overtime): the wider filing window quietly widened a deploy-time repair too → review dispatched
+- 2026-09-13 PLAN: inspected the existing 2.0 UX proposal, surface map, Glass
+  amendment and current frontend/API/gates. Revised proposal:
+  docs/glass/plan/NADI_2.0_DELIVERY_PLAN_2026-09-13.md. Documentation-only scope.
+  Baseline: 166 frontend tests passed; selected Python checks 19 passed, 1 skipped,
+  3 subtests passed; contrast 54 pairs passed; surface gate passed. No live audit.
+- 2026-09-13 LEARNING(fact): scripts/ci-local.sh is absent; scripts/smoke.sh runs
+  bench migrate, which invokes the widened OT repair. It is not read-only verification.
+- 2026-09-13 REVIEW: fresh-context documentation review found no Critical,
+  Important or Minor corrections. Links and git diff --check passed.
+  NEXT_ACTION: DEPLOY is a documentation-review verdict, not release permission.
+NEXT: review the revised 2.0 proposal's five decision rows, then B0 (route,
+  lifecycle, persona and fixture baseline). The proposal is not implementation
+  approval. Script Reports remain deferred; no push, deploy or historical repair
+  without Nabil's explicit instruction. Existing open policy decisions still apply.
+- 2026-09-13T18:42:04Z COMMIT: 5ef3877d7 docs(plans): green light for the push → review dispatched
+- 2026-09-13T18:42:12Z PUSH: nz-glass @ 5ef3877d7
+- 2026-09-13T18:42:47Z PUSH: nz-glass @ 6218a01bf
+- 2026-09-13T18:42:47Z COMMIT: 6218a01bf docs(glass): handoff for the pushed branch → review dispatched
