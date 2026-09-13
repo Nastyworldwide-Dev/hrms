@@ -90,6 +90,12 @@ SHAPES = {
 	# S1 narrowed to sessions whose next IN arrives soon enough that the second
 	# IN is almost certainly a mislabelled OUT. THESE are the repair candidates;
 	# S1 minus S2 is for a human to read, not for a script to rewrite.
+	#
+	# It narrows on three axes, not just the 20 hours: mirrored rows are dropped
+	# because sync/write_block refuses writes to them, so a candidate that cannot
+	# be repaired here is not a candidate; and already-swept rows are dropped for
+	# the same reason. Still a strict subset of S1 — verified empirically, S2
+	# minus S1 is the empty set.
 	# The literal 20 below is REPAIR_WINDOW_HOURS. It is spelled out rather than
 	# interpolated so the SQL stays a plain string constant that a bench-free
 	# test can read straight out of the source; the test pins the two together.
@@ -199,19 +205,20 @@ SHAPES = {
 	# is deployed. It is still the number to read first: while these pairs
 	# exist, a repaired day can re-corrupt.
 	"S6": (
-		"employees with 2+ Active open-ended assignments of DIFFERENT shift types",
+		"employees with 2+ Active assignments of DIFFERENT shift types covering the window",
 		"""
-		SELECT employee, employee_name, COUNT(*) AS open_assignments,
+		SELECT employee, employee_name, COUNT(*) AS assignments_covering,
 		       COUNT(DISTINCT shift_type) AS distinct_shifts,
 		       GROUP_CONCAT(DISTINCT shift_type) AS shifts,
 		       GROUP_CONCAT(name) AS assignment_rows
 		  FROM `tabShift Assignment`
 		 WHERE docstatus = 1
 		   AND status = 'Active'
+		   AND start_date <= DATE(%(to_date)s)
 		   AND (end_date IS NULL OR end_date >= DATE(%(to_date)s))
 		 GROUP BY employee
 		HAVING distinct_shifts > 1
-		 ORDER BY open_assignments DESC, employee
+		 ORDER BY assignments_covering DESC, employee
 		""",
 	),
 	# ---------------------------------------------------------------- S7
@@ -229,10 +236,61 @@ SHAPES = {
 		 ORDER BY employee, time
 		""",
 	),
+	# ---------------------------------------------------------------- S8
+	# THE DENOMINATOR FOR S4, AND IT IS NOT OPTIONAL.
+	#
+	# S4 asks about an attendance row's OWN linked punches, which is precise.
+	# But the link is written by exactly one path (update_attendance_in_checkins),
+	# and the paths that do NOT write it include HR's bulk Employee Attendance
+	# Tool, mark_attendance(), Attendance Request — and, worst of all,
+	# mark_attendance_and_link_log DELIBERATELY leaves punches unlinked when it
+	# hits DuplicateAttendanceError or OverlappingShiftAttendanceError, which is
+	# precisely the contested, damaged day S4 exists to find.
+	#
+	# So a small S4 is meaningless on its own: it may mean the damage is small,
+	# or it may mean the link could not answer. This counts the rows the link
+	# cannot answer for, and the report prints the two together so a clean-looking
+	# zero can never be read as "this shape is fine".
+	"S8": (
+		"Half Day or 0h attendance with NO linked punch (rows S4 cannot answer for)",
+		"""
+		SELECT a.name, a.employee, a.employee_name, a.attendance_date, a.status,
+		       a.working_hours, a.shift, a.docstatus
+		  FROM `tabAttendance` a
+		 WHERE a.docstatus < 2
+		   AND a.attendance_date BETWEEN %(from_date)s AND %(to_date)s
+		   AND (a.status = 'Half Day' OR COALESCE(a.working_hours, 0) = 0)
+		   AND NOT EXISTS (SELECT 1 FROM `tabEmployee Checkin` c
+		                    WHERE c.attendance = a.name)
+		 ORDER BY a.employee, a.attendance_date
+		""",
+	),
+	# ---------------------------------------------------------------- S9
+	# The bucket S5 excludes, counted rather than dropped.
+	#
+	# A punch gets offshift = 1 for two very different reasons: it genuinely fell
+	# outside every shift window (by design, and OT ignores it by design), OR no
+	# assignment matched at all — a lapsed or duplicated assignment, which is
+	# damage and is exactly the S6 condition. Both still evaluate to 0.0h of
+	# overtime. S5 keeps the anomalous population clean; this keeps the other one
+	# visible instead of silently gone.
+	"S9": (
+		"punches stamped off-shift (by design, OR no assignment matched — both yield 0.0h OT)",
+		"""
+		SELECT name, employee, employee_name, time, log_type, shift, device_id
+		  FROM `tabEmployee Checkin`
+		 WHERE time BETWEEN %(from_date)s AND %(to_date)s
+		   AND COALESCE(offshift, 0) = 1
+		 ORDER BY employee, time
+		""",
+	),
 }
 
-#: The order to read them in. S6 first: it bounds every other number.
-READING_ORDER = ("S6", "S2", "S1", "S3", "S4", "S5", "S7")
+
+#: The order to read them in. S6 first: it bounds every other number. S8 sits
+#: directly under S4 and S9 under S5, because each is the other's denominator —
+#: read alone, either of those two can show a reassuring zero it has not earned.
+READING_ORDER = ("S6", "S2", "S1", "S3", "S4", "S8", "S5", "S9", "S7")
 
 
 def run_shape(key: str, from_date: str, to_date: str) -> list[dict]:
@@ -289,6 +347,12 @@ def report(from_date: str, to_date: str, shapes: str | None = None, sample: int 
 	truncated = [k for k in keys if out[k].get("truncated")]
 	if truncated:
 		print(f"\n  rows trimmed to {sample} for {', '.join(truncated)} — counts above are complete")
+	if out.get("S8", {}).get("count") and "S4" in out:
+		print(
+			f"\n  S4 is answerable for only part of this population: {out['S8']['count']} Half-Day/0h\n"
+			"  row(s) carry NO linked punch, so the link cannot say whether they are damaged.\n"
+			"  Do not read S4 as complete while S8 is non-zero."
+		)
 	if out.get("S6", {}).get("count"):
 		print(
 			"\n  S6 is NON-ZERO: duplicate Active shift assignments still exist, so repaired days\n"

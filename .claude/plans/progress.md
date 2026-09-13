@@ -226,3 +226,31 @@ NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type (hrms/api/remote_c
   read as yesterday's departure, so the fix must distinguish the two — likely by asking whether the
   open IN's own shift is still running, which session_boundary now makes expressible.
 - 2026-09-13T16:29:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:29:55Z COMMIT: 8d105985e fix(checkin): a night shift's session does not end at midnight → review dispatched
+- 2026-09-13 REPAIR: the enumerator's S4 fix was itself wrong, in the quietest possible way. Moving
+  from DATE() to the `attendance` link is precise, but that link is written by ONE path
+  (update_attendance_in_checkins); HR's bulk Employee Attendance Tool, mark_attendance() and Attendance
+  Request never write it, and mark_attendance_and_link_log DELIBERATELY leaves punches unlinked on
+  DuplicateAttendanceError / OverlappingShiftAttendanceError — which is exactly the contested day S4
+  exists to find. Measured on fresh.local: S4 = 0 while 22 Half-Day/0h rows carry no linked punch at
+  all. Added S8 as the "cannot tell" denominator, printed under S4 with a line saying S4 is incomplete
+  while S8 is non-zero; S9 for the offshift=1 bucket S5 now excludes (a punch gets that flag either by
+  design OR because no assignment matched, which is damage); and a start_date guard on S6, without
+  which an employee correctly scheduled onto a different shift next month counted as a conflict.
+- 2026-09-13 EVIDENCE(3): all NINE shapes execute on fresh.local. S6 died the first time it ran
+  ("Unknown column 'assignments_covering' in 'ORDER BY'") — a renamed SELECT alias, with every test
+  green, because these shapes only execute on a bench.
+- 2026-09-13 LEARNING(gate): a renamed SQL alias is invisible to a repo that cannot run SQL ->
+  hrms/tests/test_checkin_damage_enumeration.py now requires every bare identifier in ORDER BY or
+  HAVING to be defined in that shape's SELECT. Proven red by reintroducing the mismatch.
+- 2026-09-13 LEARNING(gate): the day-scoping guard required a table alias, and three shapes are
+  single-table and unaliased, so plain DATE(time) passed — 8 of 10 mutants missed. It now carries six
+  spellings and catches 8 of 8, while the shipped link form and an ordinary time window still pass.
+- 2026-09-13 LEARNING(fact): Employee Checkin.attendance is written only by
+  update_attendance_in_checkins. Any query correlating punches through that link UNDER-reports on
+  exactly the contested days, because the marking code leaves them unlinked on purpose.
+NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type leaves night shifts unprotected for the
+  back half of their shift. The band protects an EARLY-SHIFT 05:30 arrival from being read as
+  yesterday's departure, so the fix must distinguish the two: ask whether the open IN's own shift is
+  still running at `now`, which needs shift_actual_end on the rows punch() reads.
+- 2026-09-13T16:34:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

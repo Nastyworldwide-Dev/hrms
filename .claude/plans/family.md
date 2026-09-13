@@ -401,6 +401,47 @@ hrms/sync/checkin_recovery.py — not-affected — infers types and writes; this
 - Smoke-tested on fresh.local: all seven shapes execute, and S1 surfaces the
   Midnight Shift IN 00:30 -> IN 10:00 pair that a day-grouped query splits in two.
 
+## AMENDED AFTER REVIEW — the link fix traded a loud wrong number for a quiet one
+
+S4's move from DATE() to the `attendance` link is precise, and precision was not
+the whole problem. `Employee Checkin.attendance` is written by ONE path
+(update_attendance_in_checkins, two callers). HR's bulk Employee Attendance Tool,
+mark_attendance() and Attendance Request never write it — and
+mark_attendance_and_link_log DELIBERATELY leaves punches unlinked when it hits
+DuplicateAttendanceError or OverlappingShiftAttendanceError, which IS the
+contested, damaged day S4 exists to find. So S4 can return a clean-looking zero
+while the damage sits in rows the link cannot speak for. Measured on fresh.local:
+S4 = 0, and 22 Half-Day/0h rows carry no linked punch at all.
+
+That is worse than the day-scoped version it replaced, which at least
+over-reported. The answer is not to go back — it is to stop the report being able
+to show a trustworthy zero:
+
+S8 (new) — Half Day/0h rows with NO linked punch: the "cannot tell" denominator,
+  printed directly under S4, with a line saying S4 is incomplete while S8 is
+  non-zero.
+S9 (new) — punches stamped offshift = 1. S5's new `offshift = 0` filter is right
+  for keeping the anomalous population clean, but a punch gets that flag for two
+  very different reasons — genuinely outside every window (by design), or NO
+  ASSIGNMENT MATCHED (a lapsed or duplicated assignment, which is damage and is
+  the S6 condition). Both yield 0.0h of overtime. Counted rather than dropped.
+S6 — gained `start_date <= DATE(to_date)`. Without it an employee correctly
+  scheduled onto a different shift NEXT MONTH counted as a duplicate-shift
+  conflict, and S6 is the gate that tells the operator to stop.
+
+## LOCK THE CLASS, second pass
+- The day-scoping guard required a table alias (`DATE(i.time)`), and S5, S7 and S9
+  are single-table and UNALIASED — so plain `DATE(time)`, the most natural way to
+  break exactly those three, sailed through. Measured: 8 of 10 mutants missed.
+  The guard now carries six spellings (DATE, DATEDIFF, CAST AS DATE, DATE_FORMAT,
+  LEFT, and a bare range against a DATE column) and catches 8 of 8, while the
+  shipped link form and an ordinary time window still pass.
+- A renamed SELECT alias killed S6 at runtime the first time it executed
+  ("Unknown column 'assignments_covering' in 'ORDER BY'") and every test stayed
+  green, because these shapes only run on a bench. A new test now requires every
+  bare identifier in ORDER BY or HAVING to be defined in that shape's SELECT.
+  Proven red by reintroducing the mismatch.
+
 ## the machine's list — all four are the WORD "report" in prose, not a caller
 
 The scan matches the symbol name `report`. None of these reference

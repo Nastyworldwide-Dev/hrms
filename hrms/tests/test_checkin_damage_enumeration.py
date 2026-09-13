@@ -31,6 +31,21 @@ DAY_GROUPED_BY_DESIGN = {"S3", "S6"}
 #: link the marking code writes and carries no date arithmetic at all.
 
 
+#: Every way this codebase could plausibly reduce a punch time to a calendar
+#: day. The first version of this guard required a table alias — `DATE(i.time)` —
+#: and S5, S7 and S9 are single-table and written UNALIASED, so the most natural
+#: way to break exactly those three sailed through. Measured against ten mutants
+#: at the time: eight were missed. Each pattern below corresponds to one of them.
+DAY_SCOPING_SPELLINGS = (
+	r"DATE\s*\(\s*(?:\w+\.)?`?time`?\s*\)",  # DATE(time) / DATE(i.time)
+	r"DATEDIFF\s*\(",  # DATEDIFF(i.time, o.time) = 0
+	r"CAST\s*\(\s*(?:\w+\.)?`?time`?\s+AS\s+DATE",  # CAST(i.time AS DATE)
+	r"DATE_FORMAT\s*\(\s*(?:\w+\.)?`?time`?",  # DATE_FORMAT(i.time, '%Y-%m-%d')
+	r"LEFT\s*\(\s*(?:\w+\.)?`?time`?",  # LEFT(i.time, 10)
+	r"(?:\w+\.)?`?time`?\s*>=\s*\w*\.?attendance_date",  # bare range against a DATE column
+)
+
+
 def _module():
 	return ast.parse(SOURCE.read_text())
 
@@ -49,6 +64,15 @@ def _shape_pairs() -> dict[str, tuple[str, str]]:
 				for key, value in zip(node.value.keys, node.value.values, strict=True)
 			}
 	raise AssertionError("SHAPES not found in checkin_damage_enumeration.py")
+
+
+def _reading_order() -> list[str]:
+	for node in ast.walk(_module()):
+		if isinstance(node, ast.Assign) and any(
+			isinstance(t, ast.Name) and t.id == "READING_ORDER" for t in node.targets
+		):
+			return list(ast.literal_eval(node.value))
+	raise AssertionError("READING_ORDER not found")
 
 
 def _shapes() -> dict[str, str]:
@@ -87,13 +111,15 @@ class TestCheckinDamageEnumeration(unittest.TestCase):
 			if key in DAY_GROUPED_BY_DESIGN:
 				continue
 			with self.subTest(shape=key):
-				self.assertNotRegex(
-					sql,
-					r"DATE\s*\(\s*\w+\.time\s*\)",
-					f"{key} matches punches by calendar date. A night shift's IN and OUT sit on "
-					f"different dates, so this cannot see the shape it exists to find. Correlate "
-					f"through Employee Checkin.attendance, or by the session, as S1 and S4 do.",
-				)
+				for pattern in DAY_SCOPING_SPELLINGS:
+					self.assertNotRegex(
+						sql,
+						pattern,
+						f"{key} reduces a punch time to a calendar day. A night shift's IN and OUT "
+						f"sit on different dates, so this cannot see the shape it exists to find. "
+						f"Correlate through Employee Checkin.attendance, or by the session, as S1 "
+						f"and S4 do.",
+					)
 
 	def test_the_open_session_detector_looks_forward_to_the_next_IN(self):
 		"""S1's unit is a session, so its bound is the next IN — not midnight."""
@@ -108,6 +134,76 @@ class TestCheckinDamageEnumeration(unittest.TestCase):
 		for key in ("S1", "S2"):
 			with self.subTest(shape=key):
 				self.assertIn("'Rejected'", _shapes()[key])
+
+	def test_a_shape_that_can_only_answer_for_part_of_its_population_has_a_denominator(self):
+		"""A shape whose evidence is sometimes absent must be read WITH the count
+		of what it could not see.
+
+		S4 asks about an attendance row's own linked punches. That link is
+		written by one code path, and the marking code deliberately leaves
+		punches unlinked on a duplicate or overlapping shift — the contested day
+		S4 exists to find. So S4 alone can report nothing and be believed. S8
+		counts the rows S4 cannot answer for, and the two must be adjacent in the
+		reading order so a zero is never read without its denominator.
+
+		Same for S5 and S9: `offshift = 1` means either "outside every window by
+		design" or "no assignment matched", and only the second is damage.
+		"""
+		shapes = _shapes()
+		for shape, denominator in (("S4", "S8"), ("S5", "S9")):
+			with self.subTest(shape=shape):
+				self.assertIn(
+					denominator,
+					shapes,
+					f"{shape} narrows its population on evidence that is sometimes missing, so "
+					f"{denominator} must exist to count what it could not answer for.",
+				)
+		order = _reading_order()
+		self.assertEqual(order.index("S8"), order.index("S4") + 1, "S8 must be read directly after S4")
+		self.assertEqual(order.index("S9"), order.index("S5") + 1, "S9 must be read directly after S5")
+
+	def test_every_alias_named_in_order_by_or_having_is_defined_in_select(self):
+		"""A renamed alias is a runtime error, and these shapes only run on a
+		bench — so nothing in this repo would have caught it.
+
+		This happened: S6's SELECT alias was renamed and its ORDER BY was not,
+		and the shape died with "Unknown column ... in 'ORDER BY'" the first time
+		it was executed. Everything else was green.
+		"""
+		known_sql_words = {
+			"asc",
+			"desc",
+			"and",
+			"or",
+			"not",
+			"null",
+			"is",
+			"by",
+			"count",
+			"distinct",
+			"case",
+			"when",
+			"then",
+			"else",
+			"end",
+			"coalesce",
+			"date",
+		}
+		for key, sql in _shapes().items():
+			aliases = set(re.findall(r"\bAS\s+(\w+)", sql))
+			tail = re.split(r"\bORDER\s+BY\b|\bHAVING\b", sql)[1:]
+			for clause in tail:
+				# bare identifiers only — a qualified `t.col` is a real column
+				for name in re.findall(r"(?<![\w.])([a-z_][a-z0-9_]*)(?!\s*\()", clause, re.I):
+					if name.lower() in known_sql_words:
+						continue
+					with self.subTest(shape=key, name=name):
+						self.assertTrue(
+							name in aliases or re.search(rf"\b{re.escape(name)}\b", sql.split("FROM")[0]),
+							f"{key} orders or filters on {name!r}, which its SELECT never defines. "
+							f"These shapes execute only on a bench, so this is a runtime error "
+							f"nothing else here would catch.",
+						)
 
 	def test_every_shape_is_a_read(self):
 		"""Nothing in this module may write. It runs against production."""
