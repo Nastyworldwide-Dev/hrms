@@ -49,10 +49,14 @@ EXEMPT_REASONS = {
 	# other side by test_a_company_user_permission_does_not_narrow_team_kpi in
 	# hrms/api/test_kpi.py; if the ruling is reversed, both change together.
 	"kpi.py:get_team_kpi": "group-level by ruling — see hrms/api/kpi.py::_team_kpi_viewer",
-	# Identity, not a directory read: it asks which Employee rows claim the
-	# SESSION user, to answer "does this session hold the office?". A company
-	# predicate here would be asking whether you are allowed to be yourself.
-	"kpi.py:_holds_the_office": "reads only the session user's own Employee rows",
+	# Identity, not a directory read: it asks which Employee rows belong to the
+	# SESSION user, to answer "who is this caller and which tier admits them?".
+	# A company predicate here would be asking whether you are allowed to be
+	# yourself. The read is `name in (own_employees(user))` — already the
+	# caller's own resolved rows, so it cannot reach anyone else by
+	# construction. (Replaces kpi.py:_holds_the_office, which _scope absorbed
+	# along with the two other places that were re-deriving the same answer.)
+	"kpi.py:_scope": "reads only the session user's own resolved Employee rows",
 	# Name decoration over rows the caller was ALREADY permitted to read. Two
 	# callers, and the argument has to cover both: list_tickets fetches HD Ticket
 	# through frappe.get_list (row-scope hooks honoured), and get_ticket goes

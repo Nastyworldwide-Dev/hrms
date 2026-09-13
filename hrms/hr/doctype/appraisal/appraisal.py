@@ -912,15 +912,28 @@ def validate_appraisal_doc_share(doc, method=None):
 		frappe.throw(_("Appraisal shares cannot carry the 'Can Share' right."))
 
 
-def get_allowed_appraisal_employees(user: str | None = None) -> list[str] | None:
+def get_allowed_appraisal_employees(
+	user: str | None = None, seed: list[str] | None = None
+) -> list[str] | None:
 	"""None = unrestricted access; otherwise the Employee names whose appraisals
 	`user` may read — their own records plus the whole reporting chain below
-	them (Employee.reports_to, followed transitively)."""
+	them (Employee.reports_to, followed transitively).
+
+	`seed` overrides where the walk STARTS. The default is `_get_own_employees`,
+	a raw `user_id` match that is status-agnostic and returns every claimant —
+	right for the Desk hook, which must keep answering for whatever rows exist.
+	It is wrong as an authority elsewhere: one login carrying an Active row AND
+	a leftover inactive row with subordinates yields a chain full of people the
+	caller manages nobody in, and the framework's own has_permission refuses
+	them. Callers that need identity, not claims, pass
+	`hrms.utils.identity.own_employees` — normalised, Active-only, and empty
+	when a login is claimed twice.
+	"""
 	user = user or frappe.session.user
 	if _has_unrestricted_appraisal_access(user):
 		employees = None
 	else:
-		employees = _get_own_employees(user)
+		employees = list(seed) if seed is not None else _get_own_employees(user)
 		frontier = employees
 		while frontier:
 			frontier = frappe.get_all("Employee", filters={"reports_to": ("in", frontier)}, pluck="name")

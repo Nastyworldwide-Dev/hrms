@@ -124,3 +124,59 @@ hrms/utils/attendance_day_audit.py:192 — not-affected AS A CALLER. CORRECTED
   never disagree about whether somebody is still on shift.
 - frontend/tests/checkin-session-stale.test.mjs now asserts both of its source
   anchors instead of silently slicing to the end of the file.
+
+---
+
+# FAMILY — one question, answered in several places, with drifting arithmetic
+
+CLASS: "who is this caller, and whose rows may they see" was derived more than
+once. Each derivation was plausible; the DIFFERENCES between them were the
+defect. Concretely here: `appraisal.get_allowed_appraisal_employees` seeds its
+chain walk from a RAW, status-agnostic `user_id` match (every claimant), while
+`identity.own_employees` is normalised, Active-only and empty on a duplicate.
+Subtracting the second from the first closed Active-vs-Active and left
+Active-vs-INACTIVE open — a leftover dead row with subordinates produced a
+phantom "manager" chain.
+
+ROOT CAUSE: hrms/api/kpi.py answered it in three places. Replaced by `_scope`,
+which resolves identity FIRST, for every tier, and seeds the walk from it.
+
+## same-root — fixed in this commit
+hrms/api/kpi.py::_scope — the single resolver. Absorbs the tier check, the
+  office test (which used to run its own user_id query AHEAD of the gate, so an
+  ambiguous login got the WIDEST tier) and the manager chain.
+hrms/api/kpi.py::_require_kpi_read — reads `_scope`, no second derivation.
+hrms/api/kpi.py::get_team_kpi — same.
+hrms/hr/doctype/appraisal/appraisal.py::get_allowed_appraisal_employees — gained
+  an optional `seed`. Default is unchanged, so every existing caller keeps its
+  behaviour exactly; callers that need IDENTITY rather than CLAIMS pass
+  `own_employees`.
+
+## the other callers — not-affected by THIS change, and why
+
+hrms/hr/doctype/appraisal_cycle/appraisal_cycle.py:332 — not-affected — calls it with no seed, so behaviour is byte-identical; and it only tests `is not None` ("is this caller unrestricted?") without ever reading the list, so a wider or narrower chain cannot change its answer.
+
+hrms/hr/report/appraisal_overview/appraisal_overview.py:78 — not-affected by
+  this change, same reason: no seed, identical behaviour. It DOES read the list,
+  so it shares the underlying class — a phantom chain would widen this report
+  the same way. It is not fixed here deliberately: it is a Desk surface backed
+  by Frappe's own User Permission layer (`has_permission` refuses the phantom
+  rows there, measured during review), and changing the seed would alter Desk
+  visibility for every existing user. That is a separate change with its own
+  blast radius. TICKETED below rather than bundled.
+
+TICKET: seed appraisal_overview (and audit every other reader of
+  get_allowed_appraisal_employees) from `identity.own_employees`, after
+  confirming on a real site that no legitimate manager loses rows. The Desk
+  hook `get_permission_query_conditions` must be reviewed in the same pass —
+  it is the one place where keeping the raw claimant seed may genuinely be
+  right, because it answers for whatever rows exist rather than for a person.
+
+## LOCK THE CLASS
+- probe_kpi_manager_tier.py 27/27, carrying the phantom chain and the ambiguous
+  login. Proven RED by reverting ONLY the seed.
+- verify_appraisal_permission is ON again for the manager tier: the framework
+  agrees there, and it independently held the DETAIL door while the seed was
+  reverted and the LIST door leaked. Two layers, and they disagreed usefully.
+- test_api_employee_reads_are_fenced pins that `_scope` reads only the caller's
+  own resolved rows.

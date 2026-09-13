@@ -316,110 +316,82 @@ CEO_DESIGNATION = "Chief Executive Officer"
 VIEWER_CEO = "ceo"
 VIEWER_HR = "hr"
 VIEWER_MANAGER = "manager"
+#: Not a tier — the answer when you are reading your OWN record. A bare literal
+#: compared in two places is the same fragility that broke the tab trigger.
+VIEWER_SELF = "self"
 
 
-def _holds_the_office(user: str) -> bool:
-	"""True when an Active Employee claiming this user carries the CEO
-	designation. Compared case- and whitespace-insensitively: `designation` is a
-	Link to a master people retype by hand, and an office is not lost to a
-	trailing space."""
-	designations = frappe.get_all(
-		"Employee",
-		filters={"user_id": user, "status": "Active"},
-		pluck="designation",
-	)
+def _scope(user: str | None = None) -> tuple[str | None, list[str] | None]:
+	"""(tier, the employees it admits). `None` admitted means unrestricted.
+
+	THE ONE PLACE that answers "who is this caller, and whose rows may they
+	see". It used to be three — the tier check, the detail fence and the list
+	each recombined identity with the chain walk, with slightly different
+	arithmetic. The difference cashed in as a real leak.
+
+	IDENTITY FIRST, FOR EVERY TIER, and the chain walk SEEDED from it.
+	`own_employees` is normalised, Active-only, and empty when a login is
+	claimed twice. `appraisal._get_own_employees` — which the walk seeds from by
+	default — is a raw, status-agnostic `user_id` match returning EVERY
+	claimant. Subtracting the first from the second only closed the
+	Active-vs-Active case: an Active row PLUS a leftover inactive row with
+	subordinates still produced a phantom "manager" chain, and that caller could
+	read the full KRA detail of people they manage nobody in — measured, while
+	the framework's own has_permission refused them the very same document.
+
+	The office is tested on the RESOLVED rows too. It used to run its own
+	`user_id` query ahead of the gate, so the exact ambiguity this hub documents
+	as fail-closed was handed the WIDEST tier.
+
+	THE TIERS
+	  ceo     — by DESIGNATION. Roles here are bundled into role profiles, so
+	            "the CEO" is not expressible as a role at all; in Desk he holds
+	            no HR role, which is the whole reason this tier exists.
+	  hr      — by ROLE, through `is_hr_operator`: the SAME predicate that
+	            governs every other HR-only surface here, so Team KPI can never
+	            drift from the rest of HR's sight.
+	  manager — by their reporting chain, borrowed from
+	            `appraisal.get_allowed_appraisal_employees` rather than
+	            re-derived. A manager could already read those appraisals in
+	            Desk; this surfaces it, it does not grant it.
+	The wider tier wins when somebody holds more than one.
+
+	Neither ceo nor hr is company-fenced. That is a ruling (Nabil, 11 Sep 2026),
+	not an omission: Team KPI is group-level sight, and this is the ONE place on
+	the hub where an allow=Company User Permission does not narrow an HR user.
+	Pinned from the other side by
+	test_a_company_user_permission_does_not_narrow_team_kpi.
+	"""
+	user = user or frappe.session.user
+	own = own_employees(user)
+	if not own:
+		logger.info("[kpi] no single Active Employee for %s — no tier", user)
+		return None, []
+
+	designations = frappe.get_all("Employee", filters={"name": ("in", own)}, pluck="designation")
 	target = CEO_DESIGNATION.strip().casefold()
-	return any((d or "").strip().casefold() == target for d in designations)
+	if any((d or "").strip().casefold() == target for d in designations):
+		return VIEWER_CEO, None
+	if is_hr_operator(user):
+		return VIEWER_HR, None
+
+	chain = get_allowed_appraisal_employees(user, seed=own) or []
+	reports = [e for e in chain if e not in own]
+	if reports:
+		return VIEWER_MANAGER, reports
+	return None, []
 
 
 def _team_kpi_viewer() -> str | None:
-	"""Which of Team KPI's two allowlists lets this session read it, if either.
-
-	TWO allowlists, different in kind and deliberately so:
-
-	  ceo — by DESIGNATION (see CEO_DESIGNATION).
-	  hr  — by ROLE, through `is_hr_operator`: the SAME predicate that already
-	        governs every other HR-only surface here (the issue board, SOPs, the
-	        full directory, the PWA's `is_hr` flag). Reusing it means Team KPI
-	        can never drift from the rest of HR's sight, and a future policy
-	        ruling moves both at once. It is HR User / HR Manager only —
-	        System Manager is a technical role and confers nothing. Administrator
-	        also satisfies it and is reported as `hr`; that is no escalation (it
-	        already reads every Appraisal) but it does mean a support log line
-	        saying "hr" may be the framework identity, not a person.
-
-	  manager — by their REPORTING CHAIN, and it borrows the rule rather than
-	        re-deriving it: `appraisal.get_allowed_appraisal_employees` already
-	        decides whose appraisals a user may read (their own record plus the
-	        whole chain below them, followed transitively). A manager could
-	        already open those appraisals in Desk; this tier only surfaces what
-	        they were always allowed to see. A SECOND implementation of "whose
-	        appraisals may I see" is precisely how the filing guard and the row
-	        scope came to disagree — see .claude/plans/family.md.
-
-	The wider tier wins when somebody holds more than one: a CEO who happens to
-	manage two people must not lose the company view.
-
-	The CEO and HR tiers are NOT COMPANY-FENCED, and that is a deliberate
-	ruling, not an omission.
-	Team KPI is group-level sight by definition: HR sees every company, the CEO
-	sees every company, and nobody else sees the page at all.
-
-	This is the ONE place on the hub where an `allow=Company` User Permission —
-	the fence behind the "HR (Company)" and "HR (Instance)" roles — does not
-	narrow an HR user. Everywhere else (Employee rows, reports, the sync
-	endpoints) it still does. Pinned by
-	test_a_company_user_permission_does_not_narrow_team_kpi so the exception
-	cannot be reintroduced or removed by accident; if the ruling changes, that
-	test is the place it changes.
-	"""
-	user = frappe.session.user
-	if _holds_the_office(user):
-		return VIEWER_CEO
-	if is_hr_operator(user):
-		return VIEWER_HR
-	# IDENTITY FIRST, and fail closed. Two definitions of "my own Employee row"
-	# meet here and they do not agree: get_allowed_appraisal_employees seeds
-	# from a raw user_id match (status-agnostic, EVERY claimant), while
-	# identity.own_employees is normalised, Active-only, and returns [] when a
-	# login is claimed by more than one Employee. Subtracting the second from
-	# the first turned that disagreement into "people who report to me" — a
-	# duplicate-identity login was handed the OTHER claimant's score, which the
-	# framework's own has_permission refuses them on every other surface.
-	# No resolvable identity, no tier. It also retires the offboarded case: a
-	# leaver whose User is still enabled was shown a team of exactly themselves.
-	own = own_employees(user)
-	if not own:
-		logger.info("[kpi] no single Active Employee for %s — no team tier", user)
-		return None
-
-	# Managing NOBODY is not a tier either — the page keeps exactly one tab.
-	# The chain rule always returns the caller's own record, so "is a manager"
-	# is whether it reaches past that.
-	allowed = get_allowed_appraisal_employees(user)
-	if allowed and set(allowed) - set(own):
-		return VIEWER_MANAGER
-	return None
-
-
-def _require_team_kpi_viewer() -> str:
-	viewer = _team_kpi_viewer()
-	if not viewer:
-		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
-		frappe.throw(
-			_(
-				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
-			),
-			frappe.PermissionError,
-		)
-	return viewer
+	"""Which tier admits this session to the team view, if any. See `_scope`."""
+	return _scope()[0]
 
 
 @frappe.whitelist()
 def can_view_team_kpi() -> str | None:
 	"""Nav/tab gate for the PWA: the tier, or None. Cheap, cached per user, and
 	it says nothing about the data itself — every read re-checks through
-	_require_team_kpi_viewer.
+	`_scope`.
 
 	Returns the MODE rather than a bool so the tab can be labelled honestly:
 	a manager's tab reads "My Team" and carries no company selector, because
@@ -444,12 +416,15 @@ def _require_kpi_read(employee: str) -> str:
 	"""
 	user = frappe.session.user
 	if employee in own_employees(user):
-		return "self"
+		return VIEWER_SELF
 
-	viewer = _team_kpi_viewer()
+	# ONE resolution, not a second derivation. `admitted` is None for the
+	# unrestricted tiers and the manager's own chain otherwise — seeded from
+	# identity, which is what closes the phantom-chain case.
+	viewer, admitted = _scope(user)
 	if viewer in (VIEWER_CEO, VIEWER_HR):
 		return viewer
-	if viewer == VIEWER_MANAGER and employee in (get_allowed_appraisal_employees(user) or []):
+	if viewer == VIEWER_MANAGER and employee in (admitted or []):
 		return viewer
 
 	logger.warning("[kpi] %s refused the KPI detail of %s (tier %s)", user, employee, viewer)
@@ -466,7 +441,18 @@ def get_employee_kpi(employee: str, year: str | int | None = None, cycle: str | 
 	"""
 	tier = _require_kpi_read(employee)
 	logger.info("[kpi] %s opened the KPI detail of %s as %s", frappe.session.user, employee, tier)
-	return _kpi_dashboard(employee, year, cycle, verify_appraisal_permission=(tier == "self"))
+	# The framework's appraisal check is kept wherever it can actually answer.
+	# It says YES for a legitimate manager reading a report (measured), so
+	# switching it off there bought nothing and cost a layer — it would have
+	# caught the phantom-chain leak on this very door. It says NO for the CEO,
+	# whose tier is by DESIGNATION, a thing appraisal.py has never heard of; and
+	# for HR it re-imposes the company fence the ruling deliberately removes.
+	return _kpi_dashboard(
+		employee,
+		year,
+		cycle,
+		verify_appraisal_permission=tier in (VIEWER_SELF, VIEWER_MANAGER),
+	)
 
 
 @frappe.whitelist()
@@ -490,7 +476,15 @@ def get_team_kpi(
 	There is no write counterpart and no employee argument that selects someone
 	to act on — this endpoint only reports.
 	"""
-	viewer = _require_team_kpi_viewer()
+	viewer, reports = _scope()
+	if not viewer:
+		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
+		frappe.throw(
+			_(
+				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
+			),
+			frappe.PermissionError,
+		)
 
 	if company and not frappe.db.exists("Company", company):
 		# An empty table reads as "nobody was appraised", so a company that does
@@ -516,15 +510,11 @@ def get_team_kpi(
 	# wrong company often enough that the Company filter, the selector and the
 	# Company column would all disagree with the Employee master. The row is
 	# about a person, so the person's company governs it.
+	# `reports` is the manager's chain as _scope already resolved it — not
+	# recombined here. That recombination, done three times with slightly
+	# different arithmetic, is what leaked.
 	employee_filters = {}
-	reports = None
-	if viewer == VIEWER_MANAGER:
-		# Their chain, and nothing else. The same list that already governs
-		# whether they may read those appraisals at all, and the same identity
-		# helper the tier check used — never a second definition of "mine".
-		chain = get_allowed_appraisal_employees(frappe.session.user) or []
-		own = set(own_employees(frappe.session.user))
-		reports = [e for e in chain if e not in own]
+	if reports is not None:
 		employee_filters = {"name": ("in", reports or [""])}
 
 	employees = {
