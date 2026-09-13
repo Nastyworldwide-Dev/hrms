@@ -224,3 +224,32 @@ NEXT: Wave A2 — hrms/utils/shift_resolution.py:36 `choose_shift` applies the o
   OUT, so a check-IN never inherits the shift of the session it belongs to. Red test first (pure, no
   bench: choose_shift(punch, "IN", [day, night], open_in={shift: day}) must return the DAY shift).
 - 2026-09-13T16:07:58Z COMMIT: 1bb0a0414 fix(shift): standing down means closing your own rows, in every branch → review dispatched
+- 2026-09-13T16:10:04Z COMMIT: cb16e68ba docs(plans): a sweep fixed seven anchors and broke an eighth → review dispatched
+- 2026-09-13 DEAD END: **Wave A2 as planned is WRONG and must not be built.** The audit said the fix
+  was to make `choose_shift` apply the open-session rule to IN as well as OUT
+  (hrms/utils/shift_resolution.py:36). Measured the real function on fresh.local
+  (verify-bench/sites/probe_shift_in_inherit.py, pure, no writes), two assignments, day 09-18 and
+  night 19-03:30:
+      IN  18:31, day session open since 08:51   -> Night 19-0330   <- the reported split, CONFIRMED
+      OUT 18:31, same open session              -> Day 09-18       <- already correct
+      IN  08:51, nothing open                   -> Day 09-18       <- correct
+      IN  19:00, day session STILL OPEN         -> Night 19-0330   <- correct, and the trap
+      IN  19:00, nothing open                   -> Night 19-0330   <- correct
+  The fourth row is why the planned fix is wrong: an unconditional "an IN inherits the open session's
+  shift" would move a GENUINE 19:00 night arrival onto the day shift whenever the person forgot to
+  check out that morning. It would trade the reported split for a silent misattribution of a whole
+  night shift, which is worse — the split is at least visible as two rows.
+  The 18:31 punch is only mis-attributed because it is mis-TYPED. Typed correctly it already resolves
+  to the day shift. So the defect is not in shift attribution at all; it is that the type is still
+  taken on trust everywhere except the PWA.
+- 2026-09-13 REPAIR(plan): A2 re-scoped. The real gap is that `resolve_punch_type` is applied in
+  `hrms/api/remote_checkin.py::punch` — ONE write path. `EmployeeCheckin.validate`
+  (employee_checkin.py:35-41) enforces no alternation at all, so the biometric/device path
+  (employee_checkin.py:143-211, log_type straight from the caller) and HR Desk manual entry still
+  write an IN that contradicts a live session. The fix belongs in the document layer, not in
+  shift_resolution. NOTE this changes what a BIOMETRIC DEVICE records, which is a different blast
+  radius from a PWA button — flag it to Nabil before building, do not swap it in silently.
+NEXT: A2 (re-scoped) — carry the server-side type resolution into the document layer so every write
+  path alternates, not just the PWA. Needs Nabil's nod first because it changes biometric-recorded
+  punches. If he defers, go to A3 (the three holes in resolve_punch_type) and A4 (the night-shift
+  late-checkout boundary), which are self-contained and need nobody's permission.
