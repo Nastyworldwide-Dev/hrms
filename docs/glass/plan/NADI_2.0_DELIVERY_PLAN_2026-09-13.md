@@ -106,6 +106,10 @@ daily Home, calendar actions, consolidated request discovery, request lifecycle,
 unified pending approvals, navigation compatibility and accessible Glass styling.
 Existing KPI, roster, SOP, Helpdesk and confidential HR issue features stay reachable.
 
+Added by Nabil: [Home Announcements](NADI_2.0_ANNOUNCEMENTS.md), authored by HR
+and targeted to permitted companies/optional departments. This is launch scope,
+distinct from the deferred events feature; ANN.0–ANN.3 define its delivery gates.
+
 **Later, separately scoped:** travel; asset requests; certifications; SOP read
 tracking; events; reminders; bulk approvals; offline punch queue; roster cover
 policy; Helpdesk/Employee Issue migration. No speculative settings or hidden

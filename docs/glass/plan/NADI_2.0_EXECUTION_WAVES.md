@@ -8,6 +8,11 @@ document authorises no migrations, deployment, historical repair or new policies
 
 ## 1. Delivery pace
 
+**Superseded timing guidance:** Nabil subsequently directed agent execution by
+verified milestones. All human-day ranges below are historical planning notes,
+not current delivery promises or mandatory waits. The dependency order and
+regression gates remain active; proceed when each packet is proved complete.
+
 Use **one active implementation packet at a time in the integration branch**.
 A packet changes one observable behaviour, normally half to two focused working
 days including its tests and review. If it grows beyond two days, split at a
@@ -145,6 +150,13 @@ implementation waves do not claim completion on skipped journey tests.
    type-specific HR settings. Test capability changes while the page is open.
 
 ### W6 — compose the PWA, then switch navigation (B6)
+
+Home now includes [Announcements](NADI_2.0_ANNOUNCEMENTS.md), requested by Nabil.
+Prepare ANN.0 during W0; complete ANN.1–ANN.2 before connecting the Home card in
+ANN.3/W6. HR publication and audience-scoped reading are required W6/W8 journeys.
+This addition is separate from deferred company events. The earlier human-day
+estimates are historical and superseded by Nabil's instruction to execute through
+verified milestones; they are not a schedule or a reason to wait between packets.
 
 1. **W6.1:** Requests hub uses verified balances, summaries and lists. New request
    sheet opens the correct existing form with valid prefill and a working back path.

@@ -278,3 +278,15 @@ NEXT: W0.1 expand source references by caller/doctype/operation; W0.2–W0.4
   Source resolution is not runtime verification. Preserve open 2.0 decisions,
   deferred Script Report work and exact approval boundaries for infrastructure,
   permissions, schema, deployment and historical repair.
+- 2026-09-13 PLAN: Nabil added Announcements to Home. Contract at
+  docs/glass/plan/NADI_2.0_ANNOUNCEMENTS.md: HR User/HR Manager authoring within
+  company scope; company/optional department audiences; compact Home card;
+  draft/publish/update/expiry/archive; no push, comments or read receipts at launch.
+  ANN.0 checks reusable storage; any new schema proposal precedes implementation.
+  Added ANN.0–ANN.3 to W0/W6/W8; company events remain deferred. Nine doc links
+  resolve and git diff --check passes. Application unchanged.
+NEXT: ANN.0 alongside W0: confirm installed content model and prepare the exact
+  storage/permissions contract; then test backend publication/audience enforcement,
+  HR editor, recipient detail/list and Home integration. Execute verified milestones;
+  prior human-day estimates are superseded by Nabil's instruction. Preserve all
+  other active 2.0 work and deferred Script Report/production-repair boundaries.
