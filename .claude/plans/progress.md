@@ -267,3 +267,4 @@ TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Co
   Recorded in hrms/api/kpi.py::_scope and pinned by two tests, so a future reader meets the decision
   rather than re-deriving it — and knows exactly where to reverse it if the policy ever changes.
   This closes the last open question before the push.
+- 2026-09-13T15:00:19Z COMMIT: 683d53017 docs(kpi): HR manages the entire group, and the code now says so → review dispatched
