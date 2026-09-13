@@ -32,10 +32,24 @@ def _own_employees(user: str) -> list[str]:
 
 
 def _reporting_employees(user: str) -> list[str]:
-	own = _own_employees(user)
-	if not own:
-		return []
-	return frappe.get_all("Employee", filters={"reports_to": ("in", own)}, pluck="name")
+	"""This user's team, by the ONE definition of it.
+
+	This asked its own question and got its own answer: `reports_to in (mine)`,
+	with no status filter and no company predicate — the word "company" did not
+	appear in this file at all. So a manager saw the overtime and
+	replacement-leave rows of people who had LEFT, and of people in a company
+	they cannot otherwise reach, purely because the reporting line crosses the
+	boundary. Both are rows about pay.
+
+	`get_direct_report_employees` is the definition every other row scope uses,
+	and its docstring says why duplicating it is a mistake: the fences drift.
+	It filters both sides by status — an offboarded manager whose login is still
+	enabled keeps nothing — and narrows to the manager's permitted companies
+	when they carry one, which is a no-op for an unfenced manager.
+	"""
+	from hrms.hr.utils import get_direct_report_employees
+
+	return get_direct_report_employees(user)
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:

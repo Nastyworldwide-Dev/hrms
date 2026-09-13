@@ -203,3 +203,25 @@ NEXT: C3 — hrms/overrides/ot_row_scope.py:38 `_reporting_employees` queries re
   canonical answer and is Active-only and company-fenced. Then C4 hr/utils.py:774. Then the two rulings.
 - 2026-09-13T18:04:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-13T18:04:47Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-13T18:04:51Z COMMIT: 2e5df9c9b fix(sync): closing the write door left the read door beside it open → review dispatched
+- 2026-09-13 EVIDENCE(2): C3 done. ot_row_scope._reporting_employees was the SEVENTH derivation of "who
+  reports to me", and it proved the canonical helper's own docstring right — "duplicating it would let
+  the fences drift apart". It asked `reports_to in (mine)` with no status filter and no company
+  predicate (the word "company" did not appear in the file), so a manager saw the OT and
+  replacement-leave rows of people who had LEFT and of people in a company they cannot otherwise reach.
+  Delegates to get_direct_report_employees now. Two AST cases, proven red by restoring the local query.
+- 2026-09-13 TICKETS from the same family, each its own slice because each changes what a different
+  group can do: C-routing (approval.py:85 resolves the caller canonically but reads the SUBORDINATE
+  with no status or company filter, so an inactive employee's request still routes for elevated
+  submit — it governs who may ACT, not who may see); C-mayread (api/__init__.py:320, same raw shape);
+  C-roster (roster.py:54 has no status filter but IS company fenced, while team.py:158 deliberately
+  does NOT fence a manager's own team — two OPPOSITE company rules, each in a comment claiming to be
+  right, so the ticket is to DECIDE which); C-appraisal (appraisal.py:939, transitive and unfenced).
+NEXT: C4 — hrms/hr/utils.py:774 reverse_replacement_leave does a bare
+  frappe.get_doc("Leave Allocation", allocation_name) with no existence and no docstatus guard, so a
+  cancel after the allocation was itself cancelled or re-pulled by sync either throws
+  DoesNotExistError mid-transaction or writes a negative ledger entry onto a cancelled document.
+  Then the two rulings: approval.py:413-414 must stop elevating CANCEL on routing alone (an approved
+  request is never cancelled), and the filing window widens to four months keeping its 16th-to-15th
+  cycle shape.
+- 2026-09-13T18:07:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

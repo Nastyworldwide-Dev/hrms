@@ -1016,3 +1016,44 @@ the button when the caller is fenced — cosmetic, and the refusal is correct.
   with it, for a caller restricted to one company.
 - The invariant: fence the COLLECTOR, not each surface that calls it. A read door
   and a write door onto the same data are one fence, or they are none.
+
+---
+
+# FAMILY — "my team" re-derived, and the fences drifted exactly as predicted
+
+CLASS: the seventh derivation of "who reports to me". `hr/utils.py` carries the
+canonical one and its docstring says plainly why a copy is a mistake —
+"duplicating it would let the fences drift apart". This copy proved the point: it
+asked `reports_to in (mine)` with NO status filter and NO company predicate. The
+word "company" did not appear in the file at all.
+
+ROOT CAUSE: hrms/overrides/ot_row_scope.py::_reporting_employees ran its own
+query. So a manager saw the OT and replacement-leave rows of people who had LEFT,
+and of people in a company they cannot otherwise reach, purely because a
+reporting line crosses the boundary. Both are rows about pay.
+
+## same-root — fixed in this commit
+hrms/overrides/ot_row_scope.py::_reporting_employees — delegates to
+  `get_direct_report_employees`, which filters BOTH sides by status and narrows
+  to the manager's permitted companies (a no-op for an unfenced manager).
+
+## the other derivations — verdicts
+hrms/hr/utils.py:1095 get_direct_report_employees — not-affected — it IS the
+  canonical one.
+hrms/api/approval.py:85 _is_routed_approver — ticket C-routing — resolves the
+  CALLER canonically but reads the subordinate with no status and no company
+  filter, so an INACTIVE employee's pending request still routes to the manager
+  for elevated submit. Its own slice: it governs who may ACT, not who may see.
+hrms/api/__init__.py:320 _may_read_employee — ticket C-mayread — same raw shape.
+hrms/utils/roster.py:54 — ticket C-roster — no status filter, but it IS company
+  fenced; and team.py:158 deliberately does NOT fence for a manager's own team.
+  Those two assert OPPOSITE company rules, each in a comment claiming to be
+  right, so the ticket is to decide which — not to sweep one into the other.
+hrms/hr/doctype/appraisal/appraisal.py:939 — ticket C-appraisal — transitive and
+  unfenced; already ticketed under the identity family.
+
+## LOCK THE CLASS
+- hrms/tests/test_ot_row_scope.py gains two AST cases: it must CALL the canonical
+  helper, and it must run no query of its own. Proven red by restoring the local
+  query. The file already pinned its OTHER question (who sees all) the same way.
+- The invariant: a row scope answers "my team" by asking, never by querying.
