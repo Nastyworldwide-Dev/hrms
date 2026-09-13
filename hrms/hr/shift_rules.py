@@ -119,21 +119,36 @@ def reconcile_employee_shift(employee: str) -> str:
 		)
 		return "skipped-schedule"
 
-	if any(not row.created_by_shift_rule for row in current) or _recent_manual_roster(employee, today):
+	manual_covering = any(not row.created_by_shift_rule for row in current)
+	if manual_covering or _recent_manual_roster(employee, today):
 		# Standing down means closing your own rows, exactly as the roster and
-		# schedule branches above do. Leaving an open-ended rule row Active
-		# beside the manual one gives this employee two Active open-ended
-		# assignments of different shift types, and the framework permits that
-		# pair whenever HR Settings allows multiple same-date assignments and
-		# the two shifts' timings do not overlap — a day shift and a night shift
-		# being the exact case a two-shift company has to enable. A day then
-		# resolves against whichever of the two each punch lands nearest, so the
-		# morning punch is attributed to one shift and the evening punch to the
-		# other, the day splits across two Attendance rows, and the hours land
-		# in the wrong places.
-		for row in auto_rows:
-			_close_assignment(row, today)
-		logger.info("[shift_rules] %s: manual assignment exists — skipped (manual wins)", employee)
+		# schedule branches above do. Leaving a rule row Active beside the manual
+		# one gives this employee two Active assignments of different shift types
+		# covering one day, and the framework permits that pair whenever HR
+		# Settings allows multiple same-date assignments and the two shifts'
+		# timings do not overlap — a day shift and a night shift being the exact
+		# case a two-shift company has to enable. A day then resolves against
+		# whichever of the two each punch lands nearest, so the morning punch is
+		# attributed to one shift and the evening punch to the other, the day
+		# splits across two Attendance rows, and the hours land in the wrong
+		# places.
+		#
+		# ONLY ON THE FIRST DISJUNCT. The second is a LAPSED roster — a manual
+		# segment that ended recently and has not been replaced — so there is no
+		# manual row covering today to take over. Closing here would leave the
+		# employee with no shift at all: every punch stamped offshift, no
+		# attendance auto-marked, no overtime, which is a different kind of
+		# damage (shape S5 in checkin_damage_enumeration) traded for the one
+		# being removed. Through a roster gap the rule's existing row is the only
+		# coverage the person has, and it keeps it.
+		if manual_covering:
+			for row in auto_rows:
+				_close_assignment(row, today)
+		logger.info(
+			"[shift_rules] %s: %s — skipped (manual wins)",
+			employee,
+			"manual assignment covers today" if manual_covering else "manual roster lapsed recently",
+		)
 		return "skipped-manual"
 	matching = next(
 		(
@@ -245,11 +260,31 @@ def _recent_manual_roster(employee: str, today: str) -> bool:
 
 
 def _close_assignment(row, today):
-	"""End-dates a rule-managed assignment; never before its start date.
-	Returns the end date used."""
-	end_date = max(getdate(row.start_date), add_days(getdate(today), -1))
+	"""Ends a rule-managed assignment; never before its start date.
+	Returns the last date it still covers.
+
+	End-dating cannot close a row that STARTS today: the floor is its own start
+	date, so `end_date` lands on today and every Shift Assignment date read in
+	this app is inclusive of it — the row goes on governing the very day it was
+	meant to stop governing. That is one day of the collision this closing exists
+	to remove, and the daily job plus an Employee edit reach it routinely. Such a
+	row is retired by STATUS instead: `validate_overlapping_shifts` returns early
+	on Inactive, so it stops being a candidate immediately and stops colliding.
+	"""
+	start = getdate(row.start_date)
 	assignment = frappe.get_doc("Shift Assignment", row.name)
 	assignment.flags.ignore_permissions = True
+	if start >= getdate(today):
+		assignment.status = "Inactive"
+		assignment.save()
+		logger.info(
+			"[shift_rules] retired %s (%s) as Inactive — it starts %s, so end-dating cannot close it",
+			row.name,
+			row.shift_type,
+			start,
+		)
+		return add_days(start, -1)
+	end_date = add_days(getdate(today), -1)
 	assignment.end_date = end_date
 	assignment.save()
 	logger.info("[shift_rules] closed %s (%s) at %s", row.name, row.shift_type, end_date)

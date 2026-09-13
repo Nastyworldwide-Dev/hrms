@@ -230,7 +230,37 @@ hrms/hr/shift_rules.py:220 — not-affected — the Employee hook; same.
 hrms/patches/v16_0/add_employee_roster_managed_field.py:5 — not-affected — a
   docstring mention, not a call.
 
+## AMENDED AFTER REVIEW — the first fix was half a fix, and cost something else
+
+Two defects in it, both measured on fresh.local and both now closed:
+
+(a) THE HAND-OFF DAY SURVIVED. `_close_assignment` floors `end_date` at the row's
+    own start date, so a rule row that STARTS TODAY closes to end_date == today —
+    and every Shift Assignment date read in this app is inclusive of end_date, so
+    it went on governing the very day it was meant to stop governing. Measured on
+    1bb0a0414: shift types covering today = ['Half Day Test', 'NP Night 19-4'].
+    The daily job creates the row at start=today and an Employee edit re-runs the
+    reconcile the same day, so this was routine, not a corner. Such a row is now
+    retired by STATUS instead — `validate_overlapping_shifts` returns early on
+    Inactive, so it stops being a candidate at once.
+
+(b) IT STRIPPED THE LAPSED-ROSTER CASE BARE. The branch fires on two disjuncts,
+    and the second is a manual segment that ended recently and has NOT been
+    replaced — so no manual row covers today to take over. Closing there left the
+    employee with NO shift at all. Measured on 1bb0a0414: shift types covering
+    today = []. Every punch that day is stamped off-shift, no attendance is
+    auto-marked and no overtime is computed — shape S5 in this repo's own damage
+    enumeration. The fix removed one kind of damage and created another. The
+    closing loop now runs only on the FIRST disjunct, where a real manual row is
+    actually covering the person; through a roster gap the rule's own row is the
+    only coverage they have and it keeps it.
+
 ## LOCK THE CLASS
+- The test asserted a PROXY, not the invariant, and was green with (a) live in
+  its own fixture: `_open_autos()` filters on "no end date", so a row ending
+  today is invisible to it. It now asserts that exactly ONE shift type governs
+  today, which is what the docstring always claimed. Plus a second case for the
+  roster gap.
 - Regression test for the instance: hrms/hr/test_shift_rules.py::
   test_manual_takeover_closes_the_rules_own_open_rows — creates a rule row, then
   a manual one, and asserts no OPEN auto row survives the hand-off.

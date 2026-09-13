@@ -81,10 +81,32 @@ class TestShiftRulesRosterPrecedence(FrappeTestCase):
 		self.assertEqual(reconcile_employee_shift(self.employee), "created")
 		self.assertEqual(len(self._autos()), 1)
 
+	def _shift_types_covering_today(self):
+		"""Every distinct shift type an Active assignment puts on today.
+
+		This, not "is there an open-ended row", is the thing that matters. A row
+		that ENDS today still governs today — every Shift Assignment date read in
+		this app is inclusive of `end_date` — so an assertion about open-ended
+		rows cannot see the hand-off day at all, and stays green while two shift
+		types are both claiming it."""
+		today = nowdate()
+		rows = frappe.get_all(
+			"Shift Assignment",
+			filters={
+				"employee": self.employee,
+				"docstatus": 1,
+				"status": "Active",
+				"start_date": ["<=", today],
+			},
+			or_filters=[["end_date", "is", "not set"], ["end_date", ">=", today]],
+			fields=["name", "shift_type", "created_by_shift_rule"],
+		)
+		return sorted({row.shift_type for row in rows}), rows
+
 	def _open_autos(self):
-		"""Rule-created assignments that are still OPEN — no end date. These are
-		the ones that collide: two open-ended Active rows of different shift
-		types is what lets a single day resolve against two shifts."""
+		"""Rule-created assignments with no end date. A weaker check than
+		`_shift_types_covering_today`, kept as a second assertion because an
+		open-ended rule row left behind is the durable form of the collision."""
 		return frappe.get_all(
 			"Shift Assignment",
 			filters={
@@ -119,13 +141,37 @@ class TestShiftRulesRosterPrecedence(FrappeTestCase):
 		self._make_manual(0, 30)
 
 		self.assertEqual(reconcile_employee_shift(self.employee), "skipped-manual")
+
+		shift_types, rows = self._shift_types_covering_today()
+		self.assertEqual(
+			len(shift_types),
+			1,
+			f"two shift types govern today ({shift_types}) — that is the split-day "
+			f"precondition, whether the leftover row is open-ended or merely ends today: "
+			f"{[(r.name, r.shift_type, r.created_by_shift_rule) for r in rows]}",
+		)
 		self.assertEqual(
 			self._open_autos(),
 			[],
-			"the rule layer stood down but left its own open-ended row Active beside the "
-			"manual one — two Active open-ended assignments of different shift types is "
-			"exactly what splits a day across two shifts",
+			"the rule layer stood down but left its own open-ended row Active beside the manual one",
 		)
+
+	def test_a_lapsed_roster_keeps_the_rules_shift_rather_than_none(self):
+		"""Standing down for a LAPSED roster must not strip the person bare.
+
+		The second half of the manual-wins condition fires when a manual segment
+		ended recently and has NOT been replaced — so there is no manual row
+		covering today to take over. Closing the rule's row there would leave the
+		employee with no shift at all: every punch stamped off-shift, no
+		attendance auto-marked and no overtime, which is simply a different kind
+		of damage in place of the one being removed. Through a roster gap the
+		rule's own row is the only coverage they have."""
+		self.assertEqual(reconcile_employee_shift(self.employee), "created")
+		self._make_manual(-7, -1)  # a segment that ended yesterday, nothing after it
+
+		self.assertEqual(reconcile_employee_shift(self.employee), "skipped-manual")
+		shift_types, _rows = self._shift_types_covering_today()
+		self.assertEqual(len(shift_types), 1, "a roster gap must leave exactly the rule's own shift standing")
 
 	def test_roster_managed_employee_is_skipped_and_auto_closed(self):
 		"""The durable declaration: an employee flagged roster_managed (variable

@@ -257,3 +257,21 @@ NEXT: A2 (re-scoped) — carry the server-side type resolution into the document
 - 2026-09-13T16:14:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-13T16:14:06Z COMMIT: d2b4191bf fix(checkin): the untyped guard judged rows the pairing walk never reads → review dispatched
 - 2026-09-13T16:15:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T16:15:30Z COMMIT: f44b588c8 fix(checkin): a dead orphan was being read as the open session → review dispatched
+- 2026-09-13T16:17:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13 REPAIR: A1 amended after review — it was half a fix and it cost something else. Measured
+  both on fresh.local against commit 1bb0a0414 (verify-bench/sites/probe_shift_handoff_day.py,
+  savepointed): (a) the HAND-OFF DAY survived, because _close_assignment floors end_date at the row's
+  own start date and every Shift Assignment date read here is inclusive of end_date — a rule row
+  starting today closed to today and went on governing it ("shift types covering today =
+  ['Half Day Test', 'NP Night 19-4']"); such rows are now retired as Inactive instead. (b) the fix
+  STRIPPED THE LAPSED-ROSTER CASE BARE — the branch's second disjunct is a manual segment that ended
+  and was never replaced, so closing there left the employee with NO shift at all ("covering today =
+  []"), which is shape S5 traded for shape S6. The closing loop now runs only when a real manual row
+  actually covers the person. Both GREEN after.
+- 2026-09-13 LEARNING(fact): in hrms, end-dating cannot close a Shift Assignment that STARTS TODAY —
+  the floor is its own start date and every date-range read is inclusive of end_date. Use
+  `status = "Inactive"`, which validate_overlapping_shifts short-circuits on.
+- 2026-09-13 LEARNING(gate): an assertion about "open-ended rows" cannot see a row that ends today ->
+  hrms/hr/test_shift_rules.py now asserts that exactly ONE shift type governs today. The old assertion
+  was green with the defect live inside its own fixture.
