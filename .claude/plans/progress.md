@@ -255,3 +255,37 @@ NEXT: all three audits are in and committed. Lay ONE ranked plan for Nabil in th
   the three audit docs, ordered by impact on pay, separating (i) what we may fix on our own authority,
   (ii) what needs a production query first, (iii) what is HIS ruling and not a code change. Do not
   repair historical data, change a schema or a policy, push or deploy without his explicit word.
+- 2026-09-13T15:52:45Z COMMIT: aa29a8aec docs(plans): the approver audit — sight and action are decided by different code → review dispatched
+- 2026-09-13T15:59:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-13T15:59:14Z COMMIT: 2af3351e3 feat(attendance): count the check-in damage with a query that can see it → review dispatched
+- 2026-09-13 EVIDENCE(4): **THE PRODUCTION BUILD IS NOT STALE.** Nabil states the live build is
+  a741f3e. It is an ancestor of HEAD, 17 commits behind, and every one of those 17 is KPI work or
+  docs — NOT ONE attendance, OT or approver fix. Verified by merge-base against sixteen named fix
+  commits: 6c1f71efb (the approver filing guard), ce5ff48dd, e6eb09a35, 090091e06 (late checkout),
+  a741f3e itself (the punch-type correction), 09e29ae5d, 7548588c0, 6be841a6e, d479e4c05, 981c1cbe7,
+  ffce088ec, 3aaeffb30, 5353b5e9f, f83c201dd, 54327f689, 275c0f6f5 — ALL IN PRODUCTION. So the
+  standing question "two rows at 18:30:25 -> the fixes are the answer; one row typed OUT on the night
+  shift -> the deploy is the answer" is ANSWERED: the deploy is not the answer. The symptoms that
+  persist are the defects the three audits found, running on code that already carries every fix.
+- 2026-09-13 RULING (Nabil, in session): (1) the holiday-absorbs-shift-hours rate rule stays AS IS —
+  ot_calculation.py:459-463 is confirmed intentional, close O4 as a decision, not a defect.
+  (2) THE APPROVER IS ALWAYS THE reports_to MANAGER, transitively up the chain (his example: Nabil ->
+  Hafiz -> Hafiz's superior); HR maintains the link on Employee. So approval.py::_is_routed_approver
+  is CORRECT and approval_row_scope.py:15-18's "direct manager, READ ONLY" docstring is what is wrong.
+  Re-scope (c)B from "unreviewed authority" to "the row scope contradicts the ruling". Still
+  unaddressed by the ruling: whether a manager may CANCEL (finalize:410-416) — ask before touching.
+  (3) Backdating window is FOUR MONTHS BEFORE THE CURRENT DATE — not the two 16th-15th cycles
+  filing_window.py implements. That is a real policy change with its own blast radius.
+- 2026-09-13 REPAIR: acted on the doc reviewer's four warnings. Corrected two load-bearing anchors in
+  the clock audit (the `# ceiling:` block is :635-639 not :628-632; the untyped guard is :315-323 and
+  its filter :330-342, not :325-328/:334-344) plus three minor ones; amended the WRONG ROW OF
+  360-status.md IN PLACE (the precision row now reads REFUTED with a pointer) and headed that file
+  with the three 13 Sep audits, so the index stops being quotable as false evidence; and committed the
+  S1-S7 enumerator as hrms/utils/checkin_damage_enumeration.py (2af3351e3) so the sole evidence for
+  "historical damage unrepaired" is no longer a script in /tmp.
+NEXT: Wave A of the plan — stop the bleeding, in this order, one commit each with its own red test
+  first: A1 shift_rules.py:122-124 (close the auto rows before returning "skipped-manual"),
+  A2 shift_resolution.py:36 (a check-IN must inherit the open session's shift too),
+  A3 the three holes in resolve_punch_type, A4 remote_checkin.py:635-639 (take the session boundary
+  from the IN's own shift window, not calendar midnight). Do NOT repair historical data, push or
+  deploy without Nabil's explicit word.

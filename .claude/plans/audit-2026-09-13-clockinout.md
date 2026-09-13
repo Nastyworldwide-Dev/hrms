@@ -26,9 +26,9 @@ A. **Compounds existing damage.** `[IN 08:00, IN 09:00, OUT 12:00]` + tap IN 14:
    08:00 orphan. The walk at :345-352 picks the last IN not followed by an OUT; on already-damaged logs
    that is the stale orphan, not the live session. Phantom block appears, real hours never open.
 B. **Night shifts unprotected after midnight.** `[IN Mon 19:00]` + tap IN Tue 02:00 -> IN, because of the
-   00:00-06:00 band at :313-314. Exactly the two-IN shape the rule exists to prevent.
-C. **One untyped row disables the rule for 3 days.** The untyped guard at :325-328 runs over recent_rows
-   BEFORE the mirrored/rejected filter at :334-344, so a mirrored untyped row the rule already ignores
+   00:00-06:00 band at :312-313. Exactly the two-IN shape the rule exists to prevent.
+C. **One untyped row disables the rule for 3 days.** The untyped guard at :315-323 runs over recent_rows
+   BEFORE the mirrored/rejected filter at :330-342, so a mirrored untyped row the rule already ignores
    still kills the correction. Ordering bug, one line.
 
 What it gets right: the headline case (IN 08:51 open, tap IN 18:31 -> OUT), and it refuses to coerce
