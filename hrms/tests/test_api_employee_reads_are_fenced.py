@@ -60,7 +60,12 @@ EXEMPT_REASONS = {
 	# allow=Company User Permission does not narrow an HR user. Pinned from the
 	# other side by test_a_company_user_permission_does_not_narrow_team_kpi in
 	# hrms/api/test_kpi.py; if the ruling is reversed, both change together.
-	"kpi.py:get_team_kpi": "group-level by ruling — see hrms/api/kpi.py::_team_kpi_viewer",
+	# Renamed with the code: the unfenced whole-table Employee read moved out of
+	# get_team_kpi into the shared pipeline when the tree and the list stopped
+	# duplicating it. An extraction moves a function's IDENTITY here too — this
+	# ledger keys on file.py:function — so it silently turns one exemption into
+	# two failures, an unexempted reader plus a rotted exemption.
+	"kpi.py:_scored_rows": "group-level by ruling — see hrms/api/kpi.py::_scope",
 	# Identity, not a directory read: it asks which Employee rows belong to the
 	# SESSION user, to answer "who is this caller and which tier admits them?".
 	# A company predicate here would be asking whether you are allowed to be

@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  non-HR sees nothing. This is the ONE place on the hub where an allow=Company User Permission (the fence
-  behind the "HR (Company)"/"HR (Instance)" roles) does not narrow an HR user — everywhere else it still
-  does. Pinned by test_a_company_user_permission_does_not_narrow_team_kpi; reverse it there first.
-  WHY the CEO still needs the designation gate: in Desk/Verifica he holds no HR roles, so no role gate
-  would ever reach him.
-- 2026-09-11 EVIDENCE: 2 correct — probe on fresh.local (savepoint, rolled back) 38/38 PASS, including
-  both allowlists unnarrowed by a Company User Permission and System Manager still refused.
-- 2026-09-11 EVIDENCE: 5 looks right — design review's last open finding measured and fixed: `max-width:
-  100%` on a filter select was a NO-OP (the flex wrapper is sized BY the select's min-content, so the
-  percentage is circular). Chromium at 375px: scrollWidth 426 -> 375 with min-w-0 on the wrappers.
-NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
-  strip; (b) any HR User/HR Manager — same strip, and the Company selector lists every company; (c) an
-  ordinary employee — the KPI page looks exactly as it did, no strip.
-  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
-  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
-- 2026-09-11T09:54:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-11T09:54:06Z COMMIT: 72ea9eb06 feat(kpi): Team KPI is group-level sight - any HR sees every company → review+design dispatched
-- 2026-09-11 EVIDENCE: 5 looks right — design-reviewer VERDICT: DESIGN_APPROVED on 72ea9eb06, measured on
-  real markup (committed template + real theme CSS + project Tailwind config in Chromium): 375px
-  scrollWidth 427 -> 375 with min-w-0, skeleton resolves to exactly 36px in both themes, GDataTable emits
-  no nameless landmark while keeping every caller's tab stop. Its one taken suggestion is this commit.
-- 2026-09-11T10:05:20Z COMMIT: 8bcb764ea fix(pwa): an empty Team KPI still says what you filtered to → review+design dispatched
-- 2026-09-11 EVIDENCE: 2 correct — frappe-reviewer VERDICT on 72ea9eb06: NEXT_ACTION: DEPLOY, no Critical.
-  It proved read-only by instrumentation (DML spy on frappe.db.sql + transaction_writes flat across 6
-  argument shapes), proved `company` is a strict subset of the unfiltered call for every value, and
-  measured the whole-tabEmployee read (500 rows 3ms/0.3MB -> 25k rows ~100ms/15MB).
-- 2026-09-11 REPAIR: its one actionable WARNING — test_api_employee_reads_are_fenced.py had been RED since
-  before this work (3 offenders) with an EXEMPT set the docstring said must be argued into. A permanently
-  red guard is not a guard. All three exempted WITH their arguments, plus a new
-  test_every_exemption_is_still_a_reader so a stale exemption cannot silently pre-approve whatever later
-  takes that name. Mutation-tested BOTH directions: an unfenced reader -> RED, a stale exemption -> RED.
-BACKLOG (not this commit, both pre-existing and confirmed red on HEAD~1):
-  - hrms/sync/checkin_recovery.py::recover_overwritten_checkins is hub-wide and role-checked only, with no
-    require_unfenced — an "HR (Company)" user can recover punches outside their fence.
-  - frontend/src/utils/__tests__/pushNotifications.test.js: 4 failures since 7d7ef6999 (8 Sep), a Node
-    "cannot set navigator" environment issue, masking any real push regression.
-NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
-  strip; (b) any HR User/HR Manager — same strip, Company selector lists every company; (c) an ordinary
-  employee — the KPI page looks exactly as it did, no strip.
-  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
-  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
-- 2026-09-11T10:07:20Z COMMIT: 320054e6a test(api): the Employee-fence guard was red, so it was not a guard → review dispatched
-- 2026-09-11T10:13:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-11T10:13:54Z COMMIT: 320054e6a test(api): the Employee-fence guard was red, so it was not a guard → review dispatched
-- 2026-09-11 EVIDENCE: 6 behaves — design-reviewer VERDICT DESIGN_APPROVED on 8bcb764ea; frappe-reviewer
-  NEXT_ACTION: DEPLOY on 320054e6a. Between them they found one real hole I had opened: the fence guard's
-  exemption set was keyed by BARE function name while offenders are reported as file.py:func, so exempting
-  three readers pre-approved those names in every other file. Closed in 77a54c495, with the collision now
-  a test rather than a hand-run mutant.
-- 2026-09-11 REPAIR: design suggestions taken — the scope line is suppressed on an empty hub (no filter bar
-  to read back), the "{n} appraised"/"Top" pair skeletons with the score instead of stating last fetch's
-  answer under the new filter, and the screen-reader status line now names the scope, so two empty results
-  in a row are distinguishable instead of both announcing "No appraisals here".
-- 2026-09-11 EVIDENCE: 5 looks right — the mockup contract now records the empty, loading and error states
-  it never depicted (state switcher in mockup-team-kpi.html), which is where those three rules had been
-  living only in code.
-- 2026-09-11T10:15:27Z COMMIT: 73229b4d2 fix(pwa): a filter change that finds nothing must still be legible → review+design dispatched
-- 2026-09-11 REPAIR: design review FIX_WARNINGS on 73229b4d2, five findings, all real and three of them mine:
-  (a) a FAILED REFETCH left the previous answer on screen beside the error alert — frappe-ui's handleError
-  does `out.data = out.previousData`, so `v-if="resource.data"` stays TRUE after any successful first load;
-  (b) the aria-live line was not gated on loading, so it announced the NEW scope beside the OLD numbers —
-  the same defect the badge skeleton fixes visually, moved into the audio by my own scopeLabel change;
-  (c) scopeLabel omitted the YEAR, the one filter always on screen, so two empty years announced identically.
-- 2026-09-11 REPAIR: my mockup amendment was wrong in all three new states and the CODE was right each time:
-  loading used visibility:hidden + insert (doubling the hero height, demonstrating the reflow the rule
-  forbids), error kept the Scores eyebrow and note, empty replaced the whole table instead of keeping thead
-  and filling one colspan cell. Fixed; the error rule is now stated as what is true — the ANSWER goes, the
-  CONTROLS stay.
-NEXT: Nabil deploys, then check THREE logins: (a) the CEO — More > "KPI" shows the [My KPI | Team KPI]
-  strip; (b) any HR User/HR Manager — same strip, Company selector lists every company; (c) an ordinary
-  employee — the KPI page looks exactly as it did, no strip.
-  BEFORE DEPLOY confirm the live Designation master is spelled exactly "Chief Executive Officer" and the
-  CEO's Employee row carries it with status=Active — otherwise the tab silently never appears for him.
-- 2026-09-11T10:23:24Z COMMIT: 76d82d7e5 fix(pwa): a failed refetch left the old answer beside the error → review+design dispatched
-- 2026-09-11T10:34:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:34:54Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-11T10:35:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:35:36Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-11T10:35:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:35:57Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-11T10:36:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:36:21Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-11T10:37:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:37:17Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-11T10:37:18Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 6 call site(s) given verdicts, 4 same-root ⟂4180c4e5fcb6
-- 2026-09-11T10:37:20Z COMMIT: 6c1f71efb fix(hr): approving a request is not filing it, so stop fencing it as one → review dispatched
-- 2026-09-11T10:40:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T10:40:52Z COMMIT: 2ce8aa9c5 fix(checkin): a later check-in bounds a late check-out only if the session ended → review dispatched
-TICKET: split hrms/hr/utils.py authorisation helpers (12 fixes/90d, 1548 lines) into
-  hrms/hr/authorisation.py — validate_filing_for_self/_is_filing, validate_self_submission,
-  validate_mandatory_attachment and the staff-lockdown approver guard (utils.py:1225-1250),
-  re-exported from utils for compatibility. ONE module owns "who may act", and it DEFERS to the
-  row scope for authority over an existing row; the module docstring states that invariant.
-  Closes the two-fences-disagreeing class, not just this instance.
-OPEN QUESTION (do not close HR-OTR-26-09-00009 without it): the approver saw TWO messages,
-  "Could not load" AND the Approve refusal. Only the Approve half is proven fixed — reads never run
-  validate. On a clean site the approver's open path is fine, so the toast is either a knock-on from
   the failed decide or a second live-site-only defect. Have the approver open one OT Request after
   deploy and say whether the toast is gone; if it persists it is a SEPARATE ticket.
 - 2026-09-11T10:51:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
@@ -298,3 +201,4 @@ TICKET (DSN-16): the walk has no route state. Browser Back and the Android back 
   treeNode from a query param with router.push and a route watcher — Back, deep links and a
   route-change announcement all come for free. Tolerable for the one-level drill-down that shipped
   earlier; a tree of arbitrary depth is a different proposition.
+- 2026-09-13T15:23:18Z COMMIT: 49996b767 fix(kpi): the CEO's own score was missing from the CEO's own page → review+design dispatched

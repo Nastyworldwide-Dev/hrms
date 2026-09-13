@@ -507,7 +507,8 @@ def _scored_rows(
 	# Every employee on the hub. The audience for this page is group-level, so
 	# there is no company predicate here — see _team_kpi_viewer for the ruling.
 	# Exempted from the class guard with that reason in
-	# hrms/tests/test_api_employee_reads_are_fenced.py::EXEMPT_REASONS.
+	# hrms/tests/test_api_employee_reads_are_fenced.py::EXEMPT_REASONS,
+	# keyed on _scored_rows since the pipeline was extracted.
 	#
 	# ceiling: whole-table Employee read, measured ~100 ms / ~15 MB at 25 000
 	# employees (3 ms / 0.3 MB at 500); the Appraisal read below is unbounded
@@ -737,6 +738,11 @@ def get_department_kpi(
 	if parent and parent != NO_DEPARTMENT and parent not in index:
 		frappe.throw(_("No such department: {0}.").format(parent))
 
+	# ceiling: people_under is O(children x rows) — measured on a 302-department
+	# site: the index costs 1 ms, the root's tree maths 23 ms at 500 rows,
+	# 132 ms at 3 000, 431 ms at 10 000
+	# upgrade: index the rows by department once and sum over the lft ranges,
+	# when a single year's appraisal count passes ~3 000
 	def people_under(name):
 		"""Everyone whose department sits inside this subtree."""
 		if name == NO_DEPARTMENT:
@@ -816,12 +822,25 @@ def get_department_kpi(
 		else [r for r in rows if r["department"] == here]
 	)
 
-	trail = []
+	# The sentinel node is not IN the tree, so the walk below cannot reach it and
+	# cannot produce a crumb for it. Without seeding, "No department" rendered a
+	# one-item breadcrumb — no clickable ancestor, and no other way back: the
+	# filters refetch the same node and switching tabs does not refetch at all.
+	# A page reload was the only exit.
+	trail = [{"name": NO_DEPARTMENT, "label": _("No department")}] if parent == NO_DEPARTMENT else []
 	walk = None if at_root else parent
-	while walk and walk in index:
+	seen = set()
+	while walk and walk in index and walk not in seen:
+		# `seen` bounds the walk. A parent_department cycle is refused by the
+		# ORM (NestedSetRecursionError) but reachable through db.set_value, and
+		# an unbounded walk there does not terminate.
+		seen.add(walk)
 		trail.append({"name": walk, "label": walk})
 		walk = index[walk].parent_department
-	if root_name:
+	# Only if the walk did not already arrive there: it stops when a node's
+	# parent is empty, which IS the root, so appending unconditionally rendered
+	# "All Departments > All Departments > Sales" and handed Vue duplicate keys.
+	if root_name and (not trail or trail[-1]["name"] != root_name):
 		trail.append({"name": root_name, "label": root_name})
 	trail.reverse()
 
@@ -835,7 +854,11 @@ def get_department_kpi(
 
 	return {
 		"viewer_mode": viewer,
-		"node": {"name": here, "label": here or _("All Departments"), "is_root": at_root},
+		"node": {
+			"name": here,
+			"label": _("No department") if here == NO_DEPARTMENT else (here or _("All Departments")),
+			"is_root": at_root,
+		},
 		"breadcrumb": trail,
 		"summary": roll_up(people_here),
 		"departments": departments,
@@ -870,21 +893,6 @@ def get_team_kpi(
 	There is no write counterpart and no employee argument that selects someone
 	to act on — this endpoint only reports.
 	"""
-	viewer, reports = _scope()
-	if not viewer:
-		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
-		frappe.throw(
-			_(
-				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
-			),
-			frappe.PermissionError,
-		)
-
-	if company and not frappe.db.exists("Company", company):
-		# An empty table reads as "nobody was appraised", so a company that does
-		# not exist has to say so rather than look like an answer.
-		frappe.throw(_("No such company: {0}.").format(company))
-
 	viewer, reports = _scope()
 	if not viewer:
 		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
