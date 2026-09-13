@@ -202,3 +202,34 @@ TICKET (DSN-16): the walk has no route state. Browser Back and the Android back 
   route-change announcement all come for free. Tolerable for the one-level drill-down that shipped
   earlier; a tree of arbitrary depth is a different proposition.
 - 2026-09-13T15:23:18Z COMMIT: 49996b767 fix(kpi): the CEO's own score was missing from the CEO's own page → review+design dispatched
+- 2026-09-13T15:43:24Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-13 EVIDENCE(2): clock in/out audit complete — .claude/plans/audit-2026-09-13-clockinout.md.
+  Independently re-verified three load-bearing claims: (a) `python3 -m unittest
+  test_sync_endpoints_are_fenced` is RED on HEAD at checkin_recovery.py:recover_overwritten_checkins
+  ("hub-wide but only role-checked"); (b) remote_checkin.py:635 carries a `# ceiling:` comment that
+  admits the late-checkout boundary is calendar-date based and therefore wrong for any shift crossing
+  midnight — the fix the ledger records as DONE is done for DAY SHIFTS ONLY; (c) shift_resolution.py:36
+  still reads `if log_type == "OUT"`, so an IN never inherits the open session's shift, and
+  shift_rules.py:123 returns "skipped-manual" WITHOUT closing its own auto rows (contrast :114-120,
+  which closes them) — duplicate Active assignments are still being created today.
+- 2026-09-13 DEAD END: the enumeration query in .claude/plans/checkin-root-cause.md is unsound.
+  `HAVING outs = 0 AND ins >= 2` is day-grouped, so it misses the `IN, IN, OUT` day (outs=1) and every
+  night shift, whose two INs straddle midnight into different DATE(time) groups. Attendance Day Audit is
+  blind to both as well. Any damage count taken from it so far is an undercount. The session-scoped
+  replacement (S1-S7) is specified in the audit doc; the script itself lived under /tmp and is gone.
+NEXT: two audits still running (approver acafee3f79ead71e2, OT a3991044134607724) plus the Script Report
+  family hunt (a47a18fba0b9015aa). When all three report, reconcile their verdicts with the clock audit
+  above and lay ONE ranked plan for Nabil in the 6-lens format. Do not repair historical data, change a
+  schema or a policy, push or deploy without his explicit word for that exact change.
+- 2026-09-13 EVIDENCE(2): OT audit complete — .claude/plans/audit-2026-09-13-ot.md. Re-verified four
+  anchors by reading source: ot_calculation.py:372-373 (the +/-1 day fetch window, O1),
+  shift_type.py:275 (guards start_time only, end_time not at all, O2), ot_calculation.py:300-302
+  (missing holiday list returns "normal" with a warning only, O5), hr/utils.py:774 (bare get_doc on
+  Leave Allocation with no existence or docstatus guard, O7).
+- 2026-09-13 DEAD END: the ledger's "OT hour persistence precision" row is FALSE. The columns are
+  decimal(21,9), not (21,2); 9dp works end to end and one minute does NOT become 0.02. The surviving
+  symptom — a one-minute claim refused — comes from round_ot_pay_hours (ot_calculation.py:63-79)
+  applying HR's 30-minute pay band, reported to the employee as an EVIDENCE failure ("your check-outs
+  prove at most 0.0 hours"). Rewrite the row as a wrong-message defect. Still unconfirmed on
+  PRODUCTION: patches check_ot_hour_precision_capacity and verify_ot_hour_precision (patches.txt:2,8)
+  may never have run on Verifica.
