@@ -1,5 +1,49 @@
-# DEPLOY + CONTINUITY — 11 Sep 2026
-Branch `nz-glass`, pushed to `a741f3e46`. 17 commits.
+# DEPLOY + CONTINUITY
+Branch `nz-glass`. Updated 13 Sep 2026, pushed to `6c6ce6b2d`.
+
+## ROUND 2 (13 Sep) — KPI tiers and the drill-down
+Eight more commits, all read-only, all reviewed to a clean verdict:
+frappe NEXT_ACTION DEPLOY, security BLOCKING no, design DESIGN_APPROVED.
+
+WHAT IT ADDS
+  * A third tier. The KPI page now has: My KPI (everyone), Team KPI (any
+    manager, their reporting chain), All KPI (CEO by designation, HR by role).
+  * A DRILL-DOWN. Tap a name in either list and that person's KPI opens in the
+    SAME layout you see for your own — hero score and ring, cycle trend, KRA
+    bars with targets and actuals, feedback count. Back returns to the list.
+
+THE RULING, restated 13 Sep and now written into the code:
+  HR MANAGES THE ENTIRE GROUP AND IS NOT LIMITED TO A COMPANY — for the list
+  AND for the personnel file behind it. An allow=Company User Permission,
+  including the one the "HR (Company)" role auto-provisions, does not narrow HR
+  anywhere on this page. This is the ONE place on the hub with that exemption.
+  Pinned by two tests; reverse it there if the policy ever changes.
+
+WHAT THE REVIEWS CAUGHT (all fixed before this push)
+  * The CEO/HR tab fetched nothing at all — a per-tier label left the
+    first-fetch trigger comparing against the old one. It would have shipped
+    permanently empty for the two tiers it was built for.
+  * The drill-down rendered ONE PERSON'S REVIEW UNDER ANOTHER'S NAME on the
+    second open: the data layer keeps the previous payload, and the gate asked
+    "is there data" instead of "is it this person's". Now gated on identity.
+  * A phantom manager chain: a login holding an Active row PLUS a leftover
+    inactive row with subordinates was handed that dead row's whole subtree —
+    the full KRA detail of people they manage nobody in, which the framework
+    refuses them everywhere else. Root cause was one question answered in three
+    places with drifting arithmetic; it is one resolver now.
+  * An ambiguous login took the WIDEST tier, because the office was decided
+    ahead of the identity gate.
+
+VERIFICATION: 36/36 on a real site inside a rolled-back savepoint, 168/0
+frontend, every class guard green, build clean. Each fix proven RED first.
+
+STILL NOT BUILT: the department TREE (CEO drilling Sales -> Sales East -> a
+person) and the roll-up that gives a department its own number. Agreed shape:
+average over PEOPLE in the subtree, which is also headcount-weighted.
+
+---
+
+# ROUND 1 — 11 Sep 2026 (already deployed)
 
 ## IS IT SAFE? Yes — but the batch is three risk tiers, not one.
 
