@@ -253,3 +253,7 @@ NEXT: A2 (re-scoped) — carry the server-side type resolution into the document
   path alternates, not just the PWA. Needs Nabil's nod first because it changes biometric-recorded
   punches. If he defers, go to A3 (the three holes in resolve_punch_type) and A4 (the night-shift
   late-checkout boundary), which are self-contained and need nobody's permission.
+- 2026-09-13T16:11:43Z COMMIT: c71a43907 docs(plans): the planned shift-attribution fix would have cost a whole night shift → review dispatched
+- 2026-09-13T16:14:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-13T16:14:06Z COMMIT: d2b4191bf fix(checkin): the untyped guard judged rows the pairing walk never reads → review dispatched
+- 2026-09-13T16:15:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36

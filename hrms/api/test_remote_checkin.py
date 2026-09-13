@@ -627,6 +627,55 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
 		self.assertEqual(resolved, "IN")
 
+	def test_a_closed_session_is_not_reopened_by_an_earlier_orphan(self):
+		"""The rule must not make an already-damaged log worse.
+
+		This is the log of somebody the defect has ALREADY hit: a stray IN at
+		08:00, the real arrival at 09:00, and a genuine OUT at 12:00 that closed
+		it. The session is closed — the last thing that happened was a
+		departure. A second-session arrival at 14:00 is exactly what it says.
+
+		The walk used to scan for "an IN whose next row is not an OUT", which on
+		this log is the 08:00 ORPHAN, two rows back and long dead. It would have
+		written the 14:00 arrival as a check-out of that orphan: a phantom
+		six-hour block that nobody worked appears, and the real afternoon never
+		opens. The rule would have been manufacturing hours on precisely the
+		employees it exists to protect."""
+		rows = [
+			self.row("IN", self.at(8, 0)),
+			self.row("IN", self.at(9, 0)),
+			self.row("OUT", self.at(12, 0)),
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(14, 0))
+		self.assertEqual(resolved, "IN", "the 12:00 OUT closed the session; 14:00 opens a new one")
+		self.assertIsNone(closing)
+
+	def test_a_trailing_out_closes_the_session_however_many_ins_precede_it(self):
+		"""Same boundary, stated as the invariant rather than the incident: what
+		decides whether a session is open is the LAST thing in the window, not
+		the shape of the rows before it."""
+		rows = [
+			self.row("IN", self.at(7, 0)),
+			self.row("IN", self.at(8, 0)),
+			self.row("IN", self.at(9, 0)),
+			self.row("OUT", self.at(17, 0)),
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
+		self.assertEqual(resolved, "IN")
+		self.assertIsNone(closing)
+
+	def test_a_trailing_in_is_still_the_open_session(self):
+		"""And the other side: a damaged log whose last row IS an IN is open,
+		and the newest of those INs is the one a check-out closes."""
+		rows = [
+			self.row("IN", self.at(8, 0)),
+			self.row("OUT", self.at(12, 0)),
+			self.row("IN", self.at(13, 0)),
+		]
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
+		self.assertEqual(resolved, "OUT")
+		self.assertEqual(closing.name, "CK-IN-1300")
+
 	def test_a_mirrored_untyped_row_does_not_stop_the_coercion(self):
 		"""The untyped guard and the mirrored filter answer the same question in
 		the wrong order.

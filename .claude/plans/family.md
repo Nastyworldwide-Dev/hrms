@@ -278,3 +278,44 @@ hrms/api/remote_checkin.py::_session_is_live — not-affected — the 06:00 cuto
   a mirrored untyped row must NOT stop the coercion; a LOCAL untyped row must;
   a rejected untyped OUT must not. Proven RED on HEAD ('IN' != 'OUT').
 - The invariant: a guard may only judge the evidence the walk actually reads.
+
+---
+
+# FAMILY — "is the session open?" answered by the wrong question
+
+CLASS: `resolve_punch_type` decided whether a session was open by scanning for
+"an IN whose next row is not an OUT" and keeping the last such row. That is a
+different question from "is the employee currently in", and it gives a different
+answer on any log that already carries a duplicate IN — i.e. on exactly the
+population the rule exists to protect. It returned a long-dead orphan as the
+open session, so the next arrival was written as that orphan's check-out:
+a block nobody worked, and the real session never opened.
+
+ROOT CAUSE: hrms/api/remote_checkin.py::resolve_punch_type, the pairing walk.
+The window is sorted; the newest row answers the question on its own. An OUT
+last means the employee has left, whatever precedes it.
+
+## same-root — fixed in this commit
+hrms/api/remote_checkin.py::resolve_punch_type — the walk is replaced by
+  `rows[-1] if rows[-1].log_type == "IN" else None`. The abandoned check and the
+  staleness check that follow are untouched, and both still apply.
+
+## the other readers of session state — verdicts
+hrms/api/remote_checkin.py::_session_is_live — not-affected — it answers "has
+  this open IN gone stale", taking the open IN as given. It is the SECOND gate
+  and still runs; this change only corrects which row is handed to it.
+hrms/overrides/employee_checkin_override.py::_open_in — not-affected AS A CALLER,
+  but it is the same question asked a second time, for shift attribution. It
+  already does it correctly: `order_by="time desc"`, limit 1, and it returns None
+  unless that newest row is an IN — which is precisely the rule adopted here. The
+  two now agree. TICKET: they should share one implementation; two answers to
+  "is this employee currently in" is the defect class this repo keeps repeating.
+hrms/utils/checkin_sweeper.py — not-affected — sweeps by age, not by pairing.
+
+## LOCK THE CLASS
+- hrms/api/test_remote_checkin.py gains three cases: the damaged log
+  [IN 08:00, IN 09:00, OUT 12:00] must not reopen on a 14:00 arrival; three INs
+  and a trailing OUT is closed; a trailing IN is open and names the NEWEST IN as
+  the row being closed. Proven RED on HEAD ('OUT' != 'IN', twice).
+- The invariant: session state is read from the newest row, never reconstructed
+  by pairing a damaged log.

@@ -349,14 +349,20 @@ def resolve_punch_type(recent_rows, requested: str, now):
 		logger.info("[remote_checkin] untyped punch in the window — leaving %s as asked", requested)
 		return requested, None
 
-	open_in = None
-	for i, row in enumerate(rows):
-		if row.log_type != "IN":
-			continue
-		nxt = rows[i + 1] if i + 1 < len(rows) else None
-		if nxt and nxt.log_type == "OUT":
-			continue  # session closed
-		open_in = row
+	# WHAT DECIDES WHETHER A SESSION IS OPEN IS THE LAST THING THAT HAPPENED.
+	# The window is sorted, so the newest row answers it: an OUT means the
+	# employee has left, whatever the shape of the rows before it.
+	#
+	# This used to scan for "an IN whose next row is not an OUT" and keep the
+	# last such row, which is a different question and gives a different answer
+	# on exactly the logs this rule exists to protect. On [IN 08:00, IN 09:00,
+	# OUT 12:00] — a log the defect has ALREADY damaged, a stray arrival, the
+	# real one, and a genuine departure — that scan returns the 08:00 ORPHAN,
+	# two rows back and long dead. A 14:00 arrival was then written as its
+	# check-out: a six-hour block nobody worked appears, and the real afternoon
+	# session never opens. The rule was manufacturing hours on the very people
+	# it was added for.
+	open_in = rows[-1] if rows and rows[-1].log_type == "IN" else None
 	if not open_in or cint(open_in.get("is_abandoned")):
 		return "IN", None
 	if not _session_is_live(get_datetime(open_in.time), now):
