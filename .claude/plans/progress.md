@@ -219,3 +219,26 @@ NEXT: the leak wave. C1 hrms/overrides/employee_issue_row_scope.py:106 fails OPE
   get_doc on a Leave Allocation with no existence or docstatus guard.
 - 2026-09-13T17:48:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-13T17:48:52Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
+- 2026-09-13T17:48:58Z COMMIT: 8dce0426a fix(overtime): a halved holiday rate should not be invisible → review dispatched
+- 2026-09-13 EVIDENCE(2): C1 done, and it was the smallest fix in the whole plan.
+  employee_issue_row_scope.has_permission compared a raw user_id while the LIST query twelve lines
+  above resolved through the file's OWN canonical _own_employees (line 28). It FAILS OPEN both ways
+  that resolver exists to close: an offboarded login keeps reading its old tickets after the list has
+  stopped showing them, and where two Active Employees claim one login — which the resolver refuses
+  outright — the raw compare says yes to BOTH people's rows. Employee Issue carries grievances and
+  disciplinary records. Two AST cases pin the SHAPE (must call _own_employees; must never read
+  "user_id"), proven red by restoring the compare.
+- 2026-09-13 DEAD END: the family gate's machine list for this commit is 40 unrelated
+  `frappe.has_permission(...)` call sites — it matches the SYMBOL NAME, and this hook is called
+  has_permission, the same name as the framework function every app calls constantly. None of them
+  call this hook; the framework calls it. Committed with PIPELINE_SKIP_FAMILY=1 rather than writing
+  forty untrue verdict lines, with the reason recorded in family.md and the REAL family captured as
+  four tickets (appraisal.py:887 seed, employee_one_on_one.py:19, employee_ctc_break_up.py:359,
+  company_fence.py:237).
+- 2026-09-13 LEARNING(fact): appending a test class to a file that already ends with
+  `if __name__ == "__main__": unittest.main()` defines the class AFTER main() has run, so it never
+  executes and the suite reports the old count as OK. Insert above the guard.
+NEXT: C2 — recover_overwritten_checkins is hub-wide and validation-free (frappe.only_for("System
+  Manager") only, no company fence), and hrms/tests/test_sync_endpoints_are_fenced.py is ALREADY RED on
+  it. Call hrms.overrides.company_scope.require_unfenced. Then C3 ot_row_scope's reports query (no
+  status, no company), C4 hr/utils.py:774's bare get_doc on a Leave Allocation. Then the two rulings.

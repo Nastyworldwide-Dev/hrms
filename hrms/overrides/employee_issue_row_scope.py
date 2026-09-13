@@ -103,8 +103,21 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 			getattr(doc, "name", None),
 		)
 		return False
-	owner_user = frappe.db.get_value("Employee", doc.employee, "user_id")
-	allowed = owner_user == user
+	# ASKED THE SAME WAY THE LIST ASKS IT, which is the whole point.
+	#
+	# This used to read the Employee's user_id and compare it raw, while the LIST
+	# query twelve lines up resolved identity through _own_employees. Two answers
+	# to "who is this person" in one file, and the raw one FAILS OPEN in both
+	# directions the canonical one exists to close: an offboarded employee whose
+	# login is still enabled keeps reading their old tickets after the list has
+	# stopped showing them, and where two Active Employees claim one login — which
+	# the canonical resolver refuses outright, because guessing one hands over the
+	# other's data — this compare says yes to BOTH people's rows.
+	#
+	# The list returns `1=0` for those callers. The document API did not, so a
+	# ticket could be opened by name. Confidential HR cases: somebody else's
+	# grievance, somebody else's disciplinary record.
+	allowed = doc.employee in _own_employees(user)
 	logger.debug(
 		"[employee_issue_row_scope] has_permission user=%s ptype=%s name=%s allowed=%s",
 		user,

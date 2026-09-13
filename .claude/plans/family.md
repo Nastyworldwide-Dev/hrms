@@ -863,3 +863,61 @@ hrms/utils/ot_calculation.py::_ot_bands_for_day — not-affected by this change 
   names itself, and a genuinely empty day invents nothing.
 - The invariant: a refusal that a person is expected to act on must name what to
   act on. A number alone is not a reason.
+
+---
+
+# FAMILY — identity compared instead of resolved, on the document door
+
+CLASS: the same question — "who is this person" — answered twice in one file,
+once canonically for the LIST and once with a raw `user_id` compare for the
+DOCUMENT. The two disagree exactly where the canonical resolver was written to be
+careful, so the narrow door is the one that opens.
+
+ROOT CAUSE: hrms/overrides/employee_issue_row_scope.py::has_permission read
+`frappe.db.get_value("Employee", doc.employee, "user_id")` and compared it to the
+session user, while `get_permission_query_conditions` twelve lines above resolved
+through `_own_employees` — the file's OWN canonical helper, defined at line 28.
+
+IT FAILS OPEN, both ways the canonical resolver exists to close:
+  * an OFFBOARDED employee whose login is still enabled keeps reading their old
+    tickets after the list has stopped showing them (the list returns `1=0`);
+  * where TWO Active Employees claim one login — which the resolver refuses
+    outright, because guessing one hands over the other's data — the raw compare
+    says yes to BOTH people's rows.
+Employee Issue carries grievances and disciplinary records. Opening one by name
+through the document API was enough.
+
+## same-root — fixed in this commit
+hrms/overrides/employee_issue_row_scope.py::has_permission — `doc.employee in
+  _own_employees(user)`. Three characters of intent; the helper was already there.
+
+## the rest of the class — TICKETED, not fixed here, and each is its own slice
+hrms/hr/doctype/appraisal/appraisal.py:887 _get_own_employees — ticket C-appraisal
+  — raw, status-agnostic, every claimant. Its own docstring admits it and tells
+  callers needing identity to pass `own_employees` as the seed; kpi.py does, the
+  Desk permission hook does not. Fixing it changes Desk visibility for every
+  existing user, so it is a separate change with its own blast radius.
+hrms/hr/doctype/employee_one_on_one/employee_one_on_one.py:19 — ticket C-1on1 —
+  same raw pattern, but it fails CLOSED (blocks a legitimate manager). Wrong in
+  the safe direction, so it waits its turn.
+hrms/payroll/report/employee_ctc_break_up/employee_ctc_break_up.py:359 —
+  ticket C-ctc — raw compare AND System Manager in the allow-list AND no company
+  fence: anyone's full CTC, any company. Belongs with the report wave.
+hrms/overrides/company_fence.py:237 — ticket C-fence — a raw
+  `{"user_id", "status": "Active"}` read while deciding a user's own company
+  fence. Narrower blast radius; same class.
+
+## the machine's list — why it is skipped, on the record
+`cs_callers` matches the SYMBOL NAME, and this hook is called `has_permission`,
+which is also the name of the framework function every app calls dozens of times.
+The list is ~40 `frappe.has_permission(...)` call sites in unrelated modules, none
+of which call this hook — the framework calls it, they do not. Committed with
+PIPELINE_SKIP_FAMILY=1 rather than writing forty untrue verdict lines; the real
+family is the four tickets above.
+
+## LOCK THE CLASS
+- hrms/tests/test_employee_issue_row_scope.py gains two AST cases: the check must
+  CALL `_own_employees`, and it must never read `"user_id"` itself. Pinning the
+  shape rather than one phrasing. Proven red by restoring the raw compare.
+- The invariant: a document door and its list door answer identity the same way,
+  through the one resolver, or the narrow one is decorative.
