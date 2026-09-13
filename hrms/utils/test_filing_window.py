@@ -45,19 +45,20 @@ class TestCycleStart(unittest.TestCase):
 
 
 class TestEarliestFilableDate(unittest.TestCase):
-	def test_two_cycles_back_from_the_current_cycle_start(self):
-		# today 19 Aug -> cycle start 16 Aug -> earliest 16 June
-		self.assertEqual(earliest_filable_date(date(2026, 8, 19)), date(2026, 6, 16))
+	def test_four_cycles_back_from_the_current_cycle_start(self):
+		# today 19 Aug -> cycle start 16 Aug -> earliest 16 April
+		# (four cycles: Nabil, 13 Sep 2026, widening the two given on 19 Aug)
+		self.assertEqual(earliest_filable_date(date(2026, 8, 19)), date(2026, 4, 16))
 
 	def test_before_the_16th_the_anchor_is_last_months_cycle(self):
-		# today 10 Aug -> cycle start 16 Jul -> earliest 16 May
-		self.assertEqual(earliest_filable_date(date(2026, 8, 10)), date(2026, 5, 16))
+		# today 10 Aug -> cycle start 16 Jul -> earliest 16 March
+		self.assertEqual(earliest_filable_date(date(2026, 8, 10)), date(2026, 3, 16))
 
 	def test_year_rollover(self):
-		# today 10 Jan -> cycle start 16 Dec -> earliest 16 Oct
-		self.assertEqual(earliest_filable_date(date(2026, 1, 10)), date(2025, 10, 16))
-		# today 20 Jan -> cycle start 16 Jan -> earliest 16 Nov
-		self.assertEqual(earliest_filable_date(date(2026, 1, 20)), date(2025, 11, 16))
+		# today 10 Jan -> cycle start 16 Dec -> earliest 16 Aug
+		self.assertEqual(earliest_filable_date(date(2026, 1, 10)), date(2025, 8, 16))
+		# today 20 Jan -> cycle start 16 Jan -> earliest 16 Sep
+		self.assertEqual(earliest_filable_date(date(2026, 1, 20)), date(2025, 9, 16))
 
 
 class TestTheWindow(unittest.TestCase):
@@ -66,13 +67,13 @@ class TestTheWindow(unittest.TestCase):
 	def test_mirzas_case_the_july_half_of_the_open_cycle_files(self):
 		"""The complaint that exposed the wrong shape: 15 July - 16 Aug OT.
 		Under the calendar rule the July days were dead after 7 Aug; under
-		the cycle rule they are two cycles inside the fence."""
+		the cycle rule they are well inside the fence."""
 		self.assertTrue(is_within_ot_filing_window(date(2026, 7, 15), self.TODAY))
 		self.assertTrue(is_within_ot_filing_window(date(2026, 7, 31), self.TODAY))
 
-	def test_the_fence_sits_exactly_on_the_16th_two_cycles_back(self):
-		self.assertTrue(is_within_ot_filing_window(date(2026, 6, 16), self.TODAY))
-		self.assertFalse(is_within_ot_filing_window(date(2026, 6, 15), self.TODAY))
+	def test_the_fence_sits_exactly_on_the_16th_four_cycles_back(self):
+		self.assertTrue(is_within_ot_filing_window(date(2026, 4, 16), self.TODAY))
+		self.assertFalse(is_within_ot_filing_window(date(2026, 4, 15), self.TODAY))
 
 	def test_current_cycle_days_always_file(self):
 		self.assertTrue(is_within_ot_filing_window(date(2026, 8, 16), self.TODAY))
@@ -87,9 +88,9 @@ class TestTheWindow(unittest.TestCase):
 		"""Anchored to cycle starts: every day of the 16 Aug - 15 Sep cycle
 		shares the same earliest date."""
 		for day in (16, 19, 25, 31):
-			self.assertEqual(earliest_filable_date(date(2026, 8, day)), date(2026, 6, 16))
+			self.assertEqual(earliest_filable_date(date(2026, 8, day)), date(2026, 4, 16))
 		for day in (1, 10, 15):
-			self.assertEqual(earliest_filable_date(date(2026, 9, day)), date(2026, 6, 16))
+			self.assertEqual(earliest_filable_date(date(2026, 9, day)), date(2026, 4, 16))
 
 
 if __name__ == "__main__":

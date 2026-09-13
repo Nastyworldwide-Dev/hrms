@@ -10,14 +10,20 @@ correctly reported as "cannot backdate"):
     filed after a cycle's 15th simply lands in the NEXT month's payroll.
     Payment timing is payroll's concern — filing is never refused for
     missing a cutoff.
-  * Backdated OT is allowed for two months: filing is refused only when the
-    OT date lies before the cycle start two cycles back. The fence is
-    anchored to a cycle boundary (always a 16th), not rolled daily from
-    "today", so it sits still for the whole cycle.
+  * Backdated OT is allowed for FOUR months (Nabil, 13 September 2026,
+    widening the two months given on 2026-08-19; the cycle shape itself was
+    confirmed unchanged in the same breath — "still 16th to 15th"). Filing is
+    refused only when the OT date lies before the cycle start four cycles
+    back. The fence is anchored to a cycle boundary (always a 16th), not
+    rolled daily from "today", so it sits still for the whole cycle.
 
-Example — today 2026-08-19: the current cycle began 16 Aug, so the earliest
-filable OT date is 16 June. On 2026-01-10 the current cycle began
-16 Dec 2025 and the earliest date is 16 Oct 2025.
+Example — today 2026-09-13: the current cycle began 16 Aug, so the earliest
+filable OT date is 16 April. On 2026-01-10 the current cycle began
+16 Dec 2025 and the earliest date is 16 Aug 2025.
+
+Note on scope: the ruling names "OT request and related requests like
+expenses". Expense Claim enforces no filing window at all — there is nothing
+to widen there, and nothing here should invent one.
 """
 
 import logging
@@ -29,9 +35,13 @@ logger = logging.getLogger(__name__)
 #: (current month)".
 CYCLE_START_DAY = 16
 
-#: HR: "allow backdated OT for 2 months" — measured in cycles, anchored to
-#: their 16th boundaries.
-BACKDATE_CYCLES = 2
+#: "Four months before the current date" (Nabil, 13 September 2026), measured
+#: in cycles and anchored to their 16th boundaries — which is what keeps the
+#: fence still for a whole cycle instead of moving under people daily. Four
+#: cycles back from the CURRENT cycle's start reaches a little beyond four
+#: calendar months for most of a cycle; that is the anchoring, not a rounding
+#: error, and it errs towards letting somebody file rather than refusing them.
+BACKDATE_CYCLES = 4
 
 
 def cycle_start(day: date) -> date:

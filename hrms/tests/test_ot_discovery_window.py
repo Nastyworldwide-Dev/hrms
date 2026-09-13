@@ -31,9 +31,12 @@ harness = importlib.import_module("test_ot_claim_monthly_capacity")
 ot = importlib.import_module("hrms.utils.ot_calculation")
 
 EMPLOYEE = "EMP-SYNTHETIC"
-TODAY = date(2026, 9, 30)  # the harness clock; cycle began 16 Sep, so 16 Jul is the earliest filable date
+# The harness clock. The cycle began 16 Sep, and backdating reaches FOUR
+# cycles (Nabil, 13 Sep 2026 — widened from two), so 16 May is the earliest
+# filable date. 10 July, which used to sit outside the window, is inside it now.
+TODAY = date(2026, 9, 30)
 INSIDE_WINDOW_BUT_OLD = date(2026, 7, 20)  # 72 days back: filable, hidden by a 45-day lookback
-BEFORE_WINDOW = date(2026, 7, 10)
+BEFORE_WINDOW = date(2026, 5, 10)  # one cycle before the four-cycle fence
 RECENT = date(2026, 9, 25)
 
 
@@ -68,15 +71,15 @@ class TestDiscoveryWindow(unittest.TestCase):
 	def test_every_filable_day_is_offered(self):
 		result = _discover()
 		self.assertEqual([day["date"] for day in result["days"]], ["2026-09-25", "2026-07-20"])
-		self.assertEqual(result["from_date"], "2026-07-16")
+		self.assertEqual(result["from_date"], "2026-05-16")
 		self.assertEqual(result["to_date"], str(TODAY))
 
 	def test_a_day_before_the_filing_window_is_not_offered(self):
-		self.assertNotIn("2026-07-10", [day["date"] for day in _discover()["days"]])
+		self.assertNotIn("2026-05-10", [day["date"] for day in _discover()["days"]])
 
 	def test_a_caller_may_narrow_the_window_but_never_widen_it(self):
 		self.assertEqual([day["date"] for day in _discover(days=10)["days"]], ["2026-09-25"])
-		self.assertEqual(_discover(days=400)["from_date"], "2026-07-16")
+		self.assertEqual(_discover(days=400)["from_date"], "2026-05-16")
 
 
 if __name__ == "__main__":

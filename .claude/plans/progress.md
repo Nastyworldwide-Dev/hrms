@@ -259,3 +259,24 @@ NEXT: RULING 2 — the filing window widens to FOUR MONTHS from the present day 
   caller: filing, discovery and validation all consult it and must move together.
 - 2026-09-13T18:10:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T18:10:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-13T18:10:52Z COMMIT: 9fbd5085f fix(approval): being the approver is not permission to undo an approval → review dispatched
+- 2026-09-13 EVIDENCE(2): RULING 2 implemented. Backdated OT filing widens from two cycles to FOUR
+  (Nabil, this session: "4 month before the current date", and separately "still 16th to 15th" — so the
+  cycle shape is untouched and only the depth changes). hrms/utils/filing_window.py BACKDATE_CYCLES
+  2 -> 4. Anchoring to the 16th means four cycles back from the CURRENT cycle's start reaches a little
+  beyond four calendar months for most of a cycle; that is the anchoring the module was built around,
+  not a rounding error, and it errs towards letting somebody file.
+- 2026-09-13 EVIDENCE(3): every consumer moves together because they all read the same function —
+  filing (ot_request.validate_filing_window), discovery (api/__init__.py:636) and the deploy-time
+  backfill (backfill_ot_after_rounding_rule:63) all call earliest_filable_date. Verified by grep; no
+  second copy of the rule exists.
+- 2026-09-13 SCOPE NOTE on ruling 2: it names "OT request and related requests like expenses". Expense
+  Claim enforces NO filing window at all — there is nothing to widen there, and nothing was invented.
+  Recorded so the next reader does not go looking for the expense half of this change.
+- 2026-09-13 LEARNING(gate): test_ot_filing_edits.py hardcoded CUTOFF as a literal date, so a policy
+  change broke a test that was only ever meant to say "an edit gets the same window as a new filing" —
+  true whatever the window is. It DERIVES the cutoff from the module now (loaded by path, because
+  importing through the package pulls hrms/__init__.py and needs a bench), so the next policy change
+  moves the fence and the test keeps asking its own question.
+- 2026-09-13T18:13:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T18:13:48Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452

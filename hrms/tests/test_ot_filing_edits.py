@@ -55,7 +55,18 @@ with patch.dict(sys.modules, {"frappe.model.document": model, "hrms.hr.utils": h
 	spec.loader.exec_module(ot_request)
 
 TODAY = date(2026, 9, 8)
-CUTOFF = date(2026, 6, 16)
+# DERIVED, not written down. This was a literal, so widening the backdating rule
+# broke a test that was only ever meant to say "an edit gets the same window as a
+# new filing" — which is true whatever the window is. Taking it from the module
+# means a policy change moves the fence and this test keeps asking its question.
+# Loaded by PATH: the module is pure date logic, but importing it through the
+# package would pull hrms/__init__.py, which needs a bench.
+_fw_spec = importlib.util.spec_from_file_location(
+	"_filing_window", Path(__file__).resolve().parents[1] / "utils" / "filing_window.py"
+)
+_filing_window = importlib.util.module_from_spec(_fw_spec)
+_fw_spec.loader.exec_module(_filing_window)
+CUTOFF = _filing_window.earliest_filable_date(TODAY)
 
 
 class TestFilingEdits(unittest.TestCase):
