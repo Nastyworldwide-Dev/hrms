@@ -233,3 +233,25 @@ NEXT: two audits still running (approver acafee3f79ead71e2, OT a3991044134607724
   prove at most 0.0 hours"). Rewrite the row as a wrong-message defect. Still unconfirmed on
   PRODUCTION: patches check_ot_hour_precision_capacity and verify_ot_hour_precision (patches.txt:2,8)
   may never have run on Verifica.
+- 2026-09-13T15:48:27Z COMMIT: 87434be6e docs(plans): the 8 Sep ledger was not settled — two audits say where → review dispatched
+- 2026-09-13 EVIDENCE(2): approver audit complete — .claude/plans/audit-2026-09-13-approver.md.
+  Re-verified five anchors by reading source: employee_issue_row_scope.py:106 uses a raw
+  get_value("user_id") == user while the file's OWN canonical _own_employees() sits at line 28 — it
+  FAILS OPEN for an offboarded or duplicate-claimed login; `grep -c -i company hrms/overrides/ot_row_scope.py`
+  returns 0; ot_row_scope._reporting_employees resolves identity canonically but queries the reports
+  with no status and no company filter; salary_payments_via_ecs.py:76 makes `company` OPTIONAL, so an
+  empty filter returns every company; employee_leave_balance.py:146-165 is a raw frappe.qb Employee
+  query with optional unvalidated filters and no Active default.
+- 2026-09-13 REPAIR(ledger): four rows on 360-status.md are wrong in the SAFE direction and two in the
+  DANGEROUS one. Safe: N02 and N03 are recorded OPEN and are CLOSED in code (d479e4c05 / 686e4aa0d /
+  981c1cbe7, one landing AFTER the row was written). Dangerous: Employee Leave Balance is recorded as a
+  FENCED report and was never touched; and "PWA/Desk approval capability settled" is true of STATE and
+  false of AUTHORITY.
+- 2026-09-13 DEAD END: the approver audit's own (c)A table row #3 is wrong. It claims
+  approval.py:85 _is_routed_approver has no Active filter. It calls hrms.utils.identity.own_employees —
+  the canonical, normalized, Active-only, fail-closed primitive. Its real gap is only the missing
+  company fence on the REPORT. Corrected in the audit doc under REFUTED; do not quote that column.
+NEXT: all three audits are in and committed. Lay ONE ranked plan for Nabil in the 6-lens format from
+  the three audit docs, ordered by impact on pay, separating (i) what we may fix on our own authority,
+  (ii) what needs a production query first, (iii) what is HIS ruling and not a code change. Do not
+  repair historical data, change a schema or a policy, push or deploy without his explicit word.
