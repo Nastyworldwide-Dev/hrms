@@ -242,3 +242,4 @@ NEXT: nothing is queued. Every defect on the ranked plan is closed and committed
   those three must read the patch and that hook as well as the JSON.
 - 2026-09-13T18:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T18:26:53Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-13T18:26:57Z COMMIT: 10802dfe4 fix(overtime): the wider filing window quietly widened a deploy-time repair too → review dispatched
