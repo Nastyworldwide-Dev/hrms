@@ -83,7 +83,7 @@
 							<button
 								v-if="col.action"
 								type="button"
-								class="g-table__action g-focusable"
+								class="g-table__action g-touch-area g-focusable"
 								@click="$emit('row-action', row)"
 							>
 								{{ row[col.key] }}
@@ -114,21 +114,6 @@ defineProps({
 </script>
 
 <style scoped>
-/* An action cell must not look like a link dropped into a data table: it keeps
-   the row's own type and colour and earns its affordance from the underline
-   and the focus ring, the same way .g-seclink does elsewhere. */
-.g-table__action {
-	background: none;
-	border: 0;
-	padding: 0;
-	font: inherit;
-	color: inherit;
-	text-align: inherit;
-	text-decoration: underline;
-	text-underline-offset: 3px;
-	cursor: pointer;
-}
-
 /* numeric cells right-align inside the shared .g-table padding */
 .g-table__num :deep(.g-skeleton) {
 	margin-left: auto;

@@ -73,15 +73,25 @@
 				<template v-else-if="openedName">
 					<button
 						type="button"
-						class="g-seclink self-start underline underline-offset-link text-ink-800"
-						@click="closeEmployee"
+						class="g-seclink g-focusable self-start underline underline-offset-link text-ink-800"
+						@click="closeEmployee({ restoreFocus: true })"
 					>
 						← {{ __("Back to {0}", [teamTabLabel]) }}
 					</button>
 					<ResourceError :resource="employeeKpi" what="this employee's KPI" />
+					<!-- Gated on WHO THE PAYLOAD IS ABOUT, never on whether one
+					     exists. frappe-ui does not clear `.data` when a new submit
+					     starts, and employeeKpi is a module singleton — so on
+					     "open A, back, open B" the truthiness test was still true
+					     and still holding A's payload. B's name rendered above A's
+					     score, A's grade, A's ring, A's KRA targets and A's
+					     feedback: somebody else's performance review under the
+					     wrong name, solid, with no spinner, because the loading
+					     branch below became unreachable after the first open. -->
 					<KpiDetail
-						v-if="employeeKpi.data && !employeeKpi.error"
-						:data="employeeKpi.data"
+						v-if="openedDetail && !employeeKpi.error"
+						ref="detailRef"
+						:data="openedDetail"
 						:heading="openedName"
 					/>
 					<div
@@ -257,7 +267,9 @@
 					</span>
 
 					<div v-if="!teamKpi.error">
-						<div class="g-eyebrow mb-2.5">{{ __("Scores") }}</div>
+						<div ref="scoresHeadingEl" tabindex="-1" class="g-eyebrow mb-2.5 kpi-scores-heading">
+							{{ __("Scores") }}
+						</div>
 						<GDataTable
 							:columns="TEAM_COLUMNS"
 							:rows="teamRows"
@@ -290,7 +302,7 @@
 <script setup>
 import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
-import { computed, inject, ref, watch } from "vue"
+import { computed, inject, nextTick, ref, watch } from "vue"
 import { createResource, FeatherIcon, LoadingIndicator } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -365,16 +377,40 @@ const teamCompany = ref("")
 // Whose detail is open, if anyone. Cleared when the tab changes, so a name from
 // one scope never survives into another.
 const openedName = ref(null)
+const openedEmployee = ref(null)
+const detailRef = ref(null)
 
-function openEmployee(row) {
+// The payload names its own subject, so identity is the honest test. Truthiness
+// is not: the resource is a singleton and keeps the previous subject's data
+// through the next fetch.
+const openedDetail = computed(() =>
+	employeeKpi.data?.employee?.name === openedEmployee.value ? employeeKpi.data : null
+)
+
+async function openEmployee(row) {
 	openedName.value = row.employee_name
+	openedEmployee.value = row.employee
 	console.info("[TeamKPI] opening detail for", row.employee)
 	employeeKpi.submit({ employee: row.employee, year: teamYear.value, cycle: teamCycle.value })
+	// The button that was activated unmounts with the table. Without this,
+	// focus falls to <body>: a keyboard user re-tabs from the top of the
+	// document and a screen-reader user is told nothing, still "inside" a
+	// table that no longer exists.
+	await nextTick()
+	detailRef.value?.focus()
 }
 
-function closeEmployee() {
+async function closeEmployee({ restoreFocus = false } = {}) {
 	openedName.value = null
+	openedEmployee.value = null
+	if (!restoreFocus) return
+	// Returning from the detail has the mirror problem: the back button
+	// unmounts too. Land on the Scores heading, which is where the list starts.
+	await nextTick()
+	scoresHeadingEl.value?.focus()
 }
+
+const scoresHeadingEl = ref(null)
 
 function fetchTeam() {
 	console.info("[TeamKPI] loading", {
@@ -511,6 +547,12 @@ const teamRows = computed(() =>
 
 <style scoped>
 /* Modernist filter selects: surface fill, hairline border, square. */
+/* Programmatic focus target when the detail closes — no ring, same reasoning
+   as KpiDetail's heading. */
+.kpi-scores-heading:focus {
+	outline: none;
+}
+
 .kpi-filter {
 	background-color: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-hair);

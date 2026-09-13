@@ -400,6 +400,11 @@ html[data-transparency="reduce"] .g-glass-ghost {
    surfaces, where a wash would erase the fill. Selected/disabled/pending and
    toggled-on states opt out. */
 @media (hover: hover) and (pointer: fine) {
+	/* text-only control, so the feedback is the underline, not a wash */
+	.g-table__action:hover {
+		text-decoration-thickness: 2px;
+	}
+
 	.g-row--tappable:hover,
 	.g-ghost-btn:hover:not(.g-btn--disabled),
 	.g-seg__option:hover:not(.g-seg__option--selected),
@@ -2269,6 +2274,25 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-table tbody tr + tr td {
 	border-top: 1px solid var(--g-hair);
 }
+/* A cell that OPENS something. It keeps the row's own type and ink — an action
+   in a data table must not read as a link dropped into it — and earns its
+   affordance from the underline, which is a non-colour cue, plus the §14.3
+   ring. `position: relative` anchors .g-touch-area's ::before to the button
+   rather than to the cell: without it the real target is the 17.5px text box,
+   under both §14.1's 44px and WCAG 2.2 AA's 24px floor. */
+.g-table__action {
+	position: relative;
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	text-align: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+
 .g-table__num {
 	text-align: right;
 	font-variant-numeric: tabular-nums;

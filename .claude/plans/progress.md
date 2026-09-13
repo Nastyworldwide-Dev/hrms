@@ -286,3 +286,18 @@ NEXT: step 3 — the department-tree navigation for CEO/HR (Department is a real
   review of everything before the push.
 - 2026-09-13T14:24:42Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
 - 2026-09-13T14:25:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-13T14:25:45Z COMMIT: e4b16bc16 feat(kpi): open a person and see their KPI in the layout you see your own → review+design dispatched
+- 2026-09-13 REPAIR: final design review FIX_CRITICAL on the unpushed range. DSN-01 is the worst defect
+  of the session: employeeKpi is a MODULE SINGLETON and frappe-ui does not clear `.data` when a new
+  submit starts, so "open A -> Back -> open B" rendered B's NAME above A's ENTIRE performance review —
+  A's score, grade, ring, KRA targets and feedback — solid, with no spinner, because the loading branch
+  sits after the gate and was unreachable once any payload existed. Now gated on WHO THE PAYLOAD IS
+  ABOUT (data.employee.name === the person opened), taken from the payload itself.
+  DSN-02: the list<->detail swap moved no focus and announced nothing (no route change), so a keyboard
+  user landed on <body> and a screen-reader user was told nothing while still "inside" a table that had
+  unmounted. Focus now lands on the person's name opening, and on the Scores heading closing.
+  DSN-06: "My KRAs" and "You can only see your own scores" rendered over somebody else's record. The
+  second is FALSE on the screen it appeared on, and it is the one line there that states an access rule.
+- 2026-09-13 LEARNING(gate): a singleton resource reused for a second subject renders the FIRST
+  subject's payload during the second fetch -> frontend/tests/kpi-detail-identity.test.mjs executes the
+  committed computed and refuses a truthiness gate. Proven RED 3/4 against it.

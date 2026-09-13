@@ -16,7 +16,19 @@
 -->
 <template>
 	<div class="flex flex-col gap-8">
-		<h2 v-if="heading" class="font-sans font-extrabold text-screen-title">{{ heading }}</h2>
+		<!-- tabindex -1 so the page can move focus here when this view replaces
+		     the list. There is no route change, so without it a keyboard user
+		     lands on <body> and a screen-reader user is told nothing at all —
+		     still "inside" a table that no longer exists. Programmatic focus
+		     paints no ring; see the scoped rule below. -->
+		<h2
+			v-if="heading"
+			ref="headingEl"
+			tabindex="-1"
+			class="font-sans font-extrabold text-screen-title kpi-detail__heading"
+		>
+			{{ heading }}
+		</h2>
 
 		<template v-if="current">
 			<div class="contents">
@@ -125,7 +137,7 @@
 				<!-- KRA list -->
 				<div>
 					<div class="g-eyebrow mb-2.5">
-						{{ __("My KRAs") }}
+						{{ heading ? __("KRAs") : __("My KRAs") }}
 					</div>
 					<div class="border-t-2 border-divider">
 						<div
@@ -187,9 +199,19 @@
 							</span>
 						</div>
 					</div>
+					<!-- The ONE line here that states an access rule, so it must not
+					     be false on the screen it appears on. "You can only see your
+					     own scores" was written when this markup only ever rendered
+					     your own; over a subordinate's record the page itself
+					     disproves it. On the drill-down it says what IS true, in the
+					     same words the team list already uses. -->
 					<span class="flex items-center gap-1.5 text-kra-label text-ink-600 mt-3">
 						<FeatherIcon name="lock" class="h-3 w-3 flex-none" />
-						{{ __("You can only see your own scores") }}
+						{{
+							heading
+								? __("Read-only. Scores cannot be changed from here.")
+								: __("You can only see your own scores")
+						}}
 					</span>
 				</div>
 			</div>
@@ -204,7 +226,7 @@
 </template>
 
 <script setup>
-import { computed, inject } from "vue"
+import { computed, inject, ref } from "vue"
 import { FeatherIcon } from "frappe-ui"
 
 import GBadge from "@/components/glass/GBadge.vue"
@@ -217,6 +239,11 @@ const props = defineProps({
 })
 
 const __ = inject("$translate")
+
+// Exposed so the page can put focus here after the view swaps in — see the
+// comment on the heading.
+const headingEl = ref(null)
+defineExpose({ focus: () => headingEl.value?.focus() })
 
 const current = computed(() => props.data?.current)
 const trend = computed(() => props.data?.history || [])
@@ -263,3 +290,13 @@ const trendPoints = computed(() =>
 	trend.value.map((p, i) => `${trendX(i)},${trendY(p.total_score)}`).join(" ")
 )
 </script>
+
+<style scoped>
+/* The heading is focused PROGRAMMATICALLY when the detail replaces the list, to
+   carry a keyboard user and a screen reader across a swap that has no route
+   change. A ring there would look like a control the user had tabbed to. Real
+   keyboard focus still paints — :focus-visible is untouched. */
+.kpi-detail__heading:focus {
+	outline: none;
+}
+</style>
