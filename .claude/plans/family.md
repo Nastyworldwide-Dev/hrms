@@ -349,3 +349,64 @@ hrms/utils/checkin_sweeper.py — not-affected — sweeps by age, not by pairing
   the row being closed. Proven RED on HEAD ('OUT' != 'IN', twice).
 - The invariant: session state is read from the newest row, never reconstructed
   by pairing a damaged log.
+
+---
+
+# FAMILY — a detector blind to the thing it detects
+
+CLASS: a query written to FIND day-scoped damage, itself written day-scoped. The
+unit of this damage is a SESSION — an IN and whatever closed it — and a session
+is allowed to cross midnight. Every place the enumerator reached for a calendar
+date instead, it lost the same population it exists to find, and it lost it
+silently: the query still returns a number, and the number looks like an answer.
+
+ROOT CAUSE: hrms/utils/checkin_damage_enumeration.py — S4 correlated a punch to
+an attendance row with `DATE(i.time) = a.attendance_date`, and S6 compared a DATE
+column against an end-of-day timestamp. Five smaller defects around them, all in
+the same direction: a confident wrong count.
+
+## same-root — fixed in this commit
+S4 — correlates through `Employee Checkin.attendance`, the link the marking code
+  itself writes. No date arithmetic at all, so a shift crossing midnight is one
+  row and cannot be split or matched by coincidence.
+S6 — `end_date >= DATE(%(to_date)s)`. MariaDB coerces a DATE to midnight, so the
+  old form read an assignment ending on the last day of the window as closed.
+
+## the other five, same commit, different mechanism
+S1, S2 — the next-IN boundary subqueries had no Rejected filter, so a rejected
+  remote check-in acted as a session boundary and put HEALTHY days into the
+  repair-candidate list.
+S2 — the derived table had no date predicate and self-joined the whole history
+  per employee; on production it might never have returned. Adding the window is
+  subset-preserving: rows outside it were never joined to the outer query.
+S2 — now excludes mirrored and abandoned rows, because sync/write_block refuses
+  writes to mirrored rows: a candidate that cannot be repaired is not a candidate.
+S5 — `offshift = 0` added. shift IS NULL and offshift = 1 are written together,
+  and OT ignores off-shift punches BY DESIGN, so without it the count was
+  dominated by punches behaving correctly.
+report() — counts rows AND people. Every decision taken off this is about people.
+
+## not-affected — the other readers of the same damage
+hrms/utils/attendance_day_audit.py — not-affected — a separate report with its own
+  (documented, narrower) verdicts. It is blind to these shapes too, which is WHY
+  this module exists; it is not being changed here.
+hrms/sync/checkin_recovery.py — not-affected — infers types and writes; this
+  module only reads. Its own fence defect is tracked separately.
+
+## LOCK THE CLASS
+- The first invariant test pinned ONE SPELLING (`GROUP BY ... DATE(time)`) and was
+  GREEN with the other spelling shipped inside S4. It now also refuses
+  `DATE(<alias>.time)` in any punch-walking shape. Mutation-checked without a
+  bench: the assertion catches the old S4 form and passes the shipped one.
+- Smoke-tested on fresh.local: all seven shapes execute, and S1 surfaces the
+  Midnight Shift IN 00:30 -> IN 10:00 pair that a day-grouped query splits in two.
+
+## the machine's list — all four are the WORD "report" in prose, not a caller
+
+The scan matches the symbol name `report`. None of these reference
+`checkin_damage_enumeration.report` or `run_shape`; all verified by opening the line.
+
+frontend/src/data/appLinks.js:26 — not-affected — a comment naming a payroll report file.
+hrms/api/__init__.py:318 — not-affected — a comment about a manager reading a direct report (the person).
+hrms/api/kpi.py:478 — not-affected — same, a comment about a manager reading a report (the person).
+hrms/hr/utils.py:1126 — not-affected — a logger format string counting direct reports (people).

@@ -2,113 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  arithmetic (the tier check, the detail fence, the list). Replaced by `_scope(user) -> (tier, admitted)`,
-  the single resolver; get_allowed_appraisal_employees gained an optional `seed` so the Desk hook is
-  unchanged while callers that need IDENTITY rather than CLAIMS pass own_employees.
-  Also: verify_appraisal_permission is back ON for the manager tier — the framework agrees there
-  (measured), and it independently held the detail door when the seed was reverted.
-- 2026-09-13 EVIDENCE: 2 correct — probe 27/27 on fresh.local, now covering the phantom chain and the
-  ambiguous login. Proven RED by reverting ONLY the seed: tier became "manager" and get_team_kpi returned
-  a stranger's row.
-- 2026-09-13 LEARNING(gate): one question answered in three places drifts -> hrms/api/kpi.py::_scope is
-  the single resolver, and test_api_employee_reads_are_fenced pins that it reads only the caller's own
-  resolved rows.
-TICKET: hrms/api/kpi.py is 667 lines carrying three tiers, two doors and a shared renderer. _scope closed
-  the recombination that leaked; the remaining split is presentational (the list, the detail, the
-  renderer) and is worth doing before the department-tree work lands on top of it.
-- 2026-09-13T14:41:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T14:41:40Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
-- 2026-09-13T14:42:43Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T14:42:43Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
-- 2026-09-13T14:43:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T14:43:21Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
-- 2026-09-13T14:43:48Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 6 same-root ⟂6c69f0b459ca
-- 2026-09-13T14:44:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T14:44:07Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 5 extra test file(s) ⟂b91eb133f40c
-- 2026-09-13T14:44:08Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 6 same-root ⟂6c69f0b459ca
-- 2026-09-13T14:44:11Z COMMIT: 191b70965 fix(kpi): a dead employee row must not make you somebody's manager → review dispatched
-- 2026-09-13 EVIDENCE: 6 behaves — re-verification NEXT_ACTION: DEPLOY, no Critical. It confirmed the
-  phantom chain closed on BOTH doors, reproduced my revert exactly, and tried four further ways to defeat
-  it (dead row Inactive / Suspended / Left, and a second Active row whose user_id differs by case and
-  whitespace) — all failed closed. It also proved the `seed` default is byte-identical for every existing
-  caller, and that a legitimate manager still opens a report who has LEFT, a cross-company report and a
-  SUBMITTED appraisal.
-- 2026-09-13 REPAIR: its W1. Identity-first had started gating the HR tier too, so an HR account with no
-  Employee row — a new HR hire not yet mirrored, a shared HR login, Administrator during support — lost
-  Team KPI entirely. HR is decided by ROLE and only by role: identity buys nothing there (a role cannot be
-  forged with a duplicate Employee row) and cost the feature. HR is answered before the gate now; the two
-  tiers that READ Employee rows to decide themselves keep it, fail-closed.
-- 2026-09-13 REPAIR: its W3. The phantom chain had NO repo-runnable guard — the only red was an
-  out-of-repo probe on a personal bench, so someone could simplify `seed=` away and nothing versioned
-  would notice. TestTeamKPI now carries the phantom chain, the ambiguous login and the HR-without-an-
-  Employee case, so they travel with the code.
-TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Company User Permission,
-  the LIST shows a cross-company report and the DETAIL refuses it — the framework check fences on
-  Appraisal.company, the list does not. Clicking a row the page just showed you says "not permitted".
-  Make the two doors agree, and add a probe case so the pair cannot drift. Do NOT fix it by fencing the
-  list on Appraisal.company: that field is copied from the Appraisal Cycle and never reconciled, which is
-  the bug test_an_appraisal_stamped_with_the_wrong_company_does_not_move_its_owner already pins.
-- 2026-09-13 RULING (Nabil, restated): HR MANAGES THE ENTIRE GROUP AND IS NOT LIMITED TO A COMPANY.
-  That covers the personnel file, not only the list — an allow=Company User Permission, including the
-  one the "HR (Company)" role auto-provisions, does not narrow HR anywhere on the KPI page. This is the
-  ONE place on the hub with that exemption; everywhere else the fence still binds. Verified on a real
-  site: a company-fenced HR user still lists every company AND still opens another company's KRA detail.
-  Recorded in hrms/api/kpi.py::_scope and pinned by two tests, so a future reader meets the decision
-  rather than re-deriving it — and knows exactly where to reverse it if the policy ever changes.
-  This closes the last open question before the push.
-- 2026-09-13T15:00:19Z COMMIT: 683d53017 docs(kpi): HR manages the entire group, and the code now says so → review dispatched
-- 2026-09-13T15:01:07Z PUSH: nz-glass @ 6c6ce6b2d
-- 2026-09-13T15:01:34Z PUSH: nz-glass @ 84b057733
-- 2026-09-13T15:13:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
-- 2026-09-13T15:13:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-13T15:13:55Z COMMIT: c57410e6b feat(kpi): one level of the department tree, with its roll-up → review dispatched
-- 2026-09-13T15:14:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-09-13T15:14:11Z COMMIT: 8058cd68b feat(pwa): the department tree, walked → review+design dispatched
-- 2026-09-13 REPAIR: design review FIX_CRITICAL on the tree, THREE Criticals, all mine.
-  (a) THE HERO WAS INVISIBLE FOR CEO/HR. It was still gated on teamKpi, which fetchTeam never submits
-  for the tree tier — so the score, badge and ring vanished for exactly the tier this was built for, and
-  the screen read as controls, then tables, no number. Same class as the tab-fetch regression: a binding
-  left pointing at the wrong source after a split.
-  (b) The live region announced a FALSE scope. scopeLabel read teamDepartment, which the tree never
-  writes, so at every depth it said "All departments" while the user stood in Sales East — asserting a
-  scope the tables underneath did not show, under a comment of mine claiming that drift was impossible.
-  (c) Focus was destroyed on every drill: the activated button unmounts with its block (a leaf has no
-  Departments table; the root crumb is not a button). Same class as the list->detail swap I had already
-  fixed and did not extend to the walk.
-- 2026-09-13 LEARNING(gate): two resources behind one set of chrome drift silently ->
-  frontend/tests/kpi-shared-payload.test.mjs refuses ANY direct teamKpi/departmentKpi binding in the
-  template. Proven RED 2/3 by re-binding the hero.
-- 2026-09-13 REPAIR: its warnings too — the breadcrumb is an ordered list with aria-current and renders
-  at every depth (it is also the only element that survives a drill, so it is what focus lands on); the
-  Department SELECT is gone for the tier that walks instead; the root no longer shows an empty "People
-  here" under a hero counting the whole company; both tables name their node; the eyebrows are headings.
-TICKET (DSN-16): the walk has no route state. Browser Back and the Android back gesture exit KPI
-  entirely instead of going up a level, and "look at Sales East" cannot be sent to anyone. Drive
-  treeNode from a query param with router.push and a route watcher — Back, deep links and a
-  route-change announcement all come for free. Tolerable for the one-level drill-down that shipped
-  earlier; a tree of arbitrary depth is a different proposition.
-- 2026-09-13T15:23:18Z COMMIT: 49996b767 fix(kpi): the CEO's own score was missing from the CEO's own page → review+design dispatched
-- 2026-09-13T15:43:24Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-13 EVIDENCE(2): clock in/out audit complete — .claude/plans/audit-2026-09-13-clockinout.md.
-  Independently re-verified three load-bearing claims: (a) `python3 -m unittest
-  test_sync_endpoints_are_fenced` is RED on HEAD at checkin_recovery.py:recover_overwritten_checkins
-  ("hub-wide but only role-checked"); (b) remote_checkin.py:635 carries a `# ceiling:` comment that
-  admits the late-checkout boundary is calendar-date based and therefore wrong for any shift crossing
-  midnight — the fix the ledger records as DONE is done for DAY SHIFTS ONLY; (c) shift_resolution.py:36
-  still reads `if log_type == "OUT"`, so an IN never inherits the open session's shift, and
-  shift_rules.py:123 returns "skipped-manual" WITHOUT closing its own auto rows (contrast :114-120,
-  which closes them) — duplicate Active assignments are still being created today.
-- 2026-09-13 DEAD END: the enumeration query in .claude/plans/checkin-root-cause.md is unsound.
-  `HAVING outs = 0 AND ins >= 2` is day-grouped, so it misses the `IN, IN, OUT` day (outs=1) and every
-  night shift, whose two INs straddle midnight into different DATE(time) groups. Attendance Day Audit is
-  blind to both as well. Any damage count taken from it so far is an undercount. The session-scoped
-  replacement (S1-S7) is specified in the audit doc; the script itself lived under /tmp and is gone.
-NEXT: two audits still running (approver acafee3f79ead71e2, OT a3991044134607724) plus the Script Report
-  family hunt (a47a18fba0b9015aa). When all three report, reconcile their verdicts with the clock audit
-  above and lay ONE ranked plan for Nabil in the 6-lens format. Do not repair historical data, change a
-  schema or a policy, push or deploy without his explicit word for that exact change.
-- 2026-09-13 EVIDENCE(2): OT audit complete — .claude/plans/audit-2026-09-13-ot.md. Re-verified four
-  anchors by reading source: ot_calculation.py:372-373 (the +/-1 day fetch window, O1),
   shift_type.py:275 (guards start_time only, end_time not at all, O2), ot_calculation.py:300-302
   (missing holiday list returns "normal" with a warning only, O5), hr/utils.py:774 (bare get_doc on
   Leave Allocation with no existence or docstatus guard, O7).
@@ -275,3 +168,39 @@ NEXT: A2 (re-scoped) — carry the server-side type resolution into the document
 - 2026-09-13 LEARNING(gate): an assertion about "open-ended rows" cannot see a row that ends today ->
   hrms/hr/test_shift_rules.py now asserts that exactly ONE shift type governs today. The old assertion
   was green with the defect live inside its own fixture.
+- 2026-09-13T16:17:37Z COMMIT: b2ab6ce0f fix(shift): closing a row that starts today does not close it → review dispatched
+- 2026-09-13T16:20:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13 REPAIR: the damage enumerator carried six SQL defects, every one of which would have
+  produced a WRONG number on production — which is the exact failure the module was written to correct.
+  Found by review, fixed and smoke-tested (all seven shapes now execute on fresh.local; S1 correctly
+  surfaces the Midnight Shift IN 00:30 -> IN 10:00 pair that a day-grouped query splits):
+  (1) S1/S2's next-IN boundary subqueries had no Rejected filter, so a rejected remote check-in acted
+      as a session boundary and put HEALTHY days into the repair-candidate list;
+  (2) S4 correlated punches by DATE(i.time) = a.attendance_date — re-introducing the night-shift
+      blindness the module exists to remove, in BOTH directions (a broken night row unreported, a
+      healthy one reported by coincidence). It now correlates through Employee Checkin.attendance, the
+      link the marking code itself writes, with no date arithmetic at all;
+  (3) S6 compared a DATE column against "<date> 23:59:59", which MariaDB coerces to midnight, so an
+      assignment ending on the last day of the window read as closed — the PRECONDITION under-reported;
+  (4) S5 counted every shift-less punch, but shift IS NULL and offshift = 1 are set together and OT
+      ignores off-shift punches by design, so the count was dominated by punches behaving correctly;
+  (5) S2's derived table had no date predicate and self-joined the whole history, quadratic per
+      employee — on production it might never have returned;
+  (6) counts were rows, not people. Every decision taken off this report is about people, so it now
+      prints rows/employees, and trims the returned sample so the counts are not buried.
+- 2026-09-13 LEARNING(gate): the first invariant test pinned ONE SPELLING of day-scoping
+  (GROUP BY ... DATE(time)) and was green with the other spelling shipped inside S4
+  (WHERE DATE(i.time) = a.attendance_date) -> hrms/tests/test_checkin_damage_enumeration.py now also
+  refuses DATE(<alias>.time) in any punch-walking shape. Mutation-checked: catches the old S4 form,
+  passes the shipped one.
+- 2026-09-13 LEARNING(fact): in this app a check-in with shift IS NULL always also has offshift = 1
+  (employee_checkin.py:79-80), and OT deliberately ignores off-shift punches — so "no shift stamp"
+  alone is not evidence of damage.
+NEXT: Wave A4 — the night-shift late-checkout boundary (hrms/api/remote_checkin.py:640, its own
+  `# ceiling:` at :635-639). Take the session boundary from the IN's own shift window instead of
+  calendar midnight. Red first: the probe that reproduced the production refusal verbatim
+  (IN Mon 19:00, duplicate IN Tue 00:05, submit_late_checkout for Tue 03:30).
+- 2026-09-13T16:20:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T16:21:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T16:22:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:23:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

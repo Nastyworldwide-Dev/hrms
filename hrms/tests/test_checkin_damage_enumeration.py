@@ -22,6 +22,14 @@ SOURCE = Path(__file__).resolve().parents[1] / "utils" / "checkin_damage_enumera
 #: with no date component at all. Every OTHER shape walks punches and must not.
 DAY_GROUPED_BY_DESIGN = {"S3", "S6"}
 
+#: S3 groups Attendance rows by their own attendance_date, and S6 groups Shift
+#: Assignments by employee with no date component. Neither walks punches, so
+#: neither can be blind to a midnight crossing. Every other shape must answer
+#: about a SESSION, and the two ways to get that wrong are grouping punches by
+#: DATE() and matching two punches by DATE() in a WHERE clause. Both are refused
+#: below; S4 correlates through Employee Checkin.attendance instead, which is the
+#: link the marking code writes and carries no date arithmetic at all.
+
 
 def _module():
 	return ast.parse(SOURCE.read_text())
@@ -64,6 +72,27 @@ class TestCheckinDamageEnumeration(unittest.TestCase):
 					f"{key} groups punches by calendar day. A night shift's two INs straddle "
 					f"midnight into different groups, so this cannot see the shape it exists "
 					f"to find. Compare the session forward-look in S1.",
+				)
+
+	def test_no_punch_walking_shape_matches_two_punches_by_calendar_date(self):
+		"""The second spelling of the same defect, and the one the first
+		assertion could not see.
+
+		`GROUP BY ... DATE(time)` is the form the replaced query used, but
+		`WHERE DATE(a.time) = DATE(b.time)` is day-scoped in exactly the same
+		way and reads as innocuous. A night shift's IN and its OUT land on
+		different calendar dates, so any correlation written that way silently
+		drops every night shift — the population this module exists to find."""
+		for key, sql in _shapes().items():
+			if key in DAY_GROUPED_BY_DESIGN:
+				continue
+			with self.subTest(shape=key):
+				self.assertNotRegex(
+					sql,
+					r"DATE\s*\(\s*\w+\.time\s*\)",
+					f"{key} matches punches by calendar date. A night shift's IN and OUT sit on "
+					f"different dates, so this cannot see the shape it exists to find. Correlate "
+					f"through Employee Checkin.attendance, or by the session, as S1 and S4 do.",
 				)
 
 	def test_the_open_session_detector_looks_forward_to_the_next_IN(self):

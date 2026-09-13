@@ -35,9 +35,11 @@ duplicate Active assignments of different shift types still exist, repaired days
 re-corrupt, so a repair planned off S2 alone buys nothing.
 """
 
+import logging
+
 import frappe
 
-logger = frappe.logger("checkin_damage_enumeration", allow_site=True, file_count=10)
+logger = logging.getLogger(__name__)
 
 
 #: An OUT this far after its IN is still plausibly that IN's close (night shift
@@ -58,8 +60,11 @@ SHAPES = {
 		"INs with no OUT before the same employee's next IN (open sessions)",
 		"""
 		SELECT c.name, c.employee, c.employee_name, c.time, c.shift, c.device_id,
+		       c.offshift, c.skip_auto_attendance, c.remote_approval_status,
+		       c.synced_from_instance, c.is_abandoned,
 		       (SELECT MIN(n.time) FROM `tabEmployee Checkin` n
 		         WHERE n.employee = c.employee AND n.log_type = 'IN' AND n.time > c.time
+		           AND COALESCE(n.remote_approval_status, '') <> 'Rejected'
 		       ) AS next_in
 		  FROM `tabEmployee Checkin` c
 		 WHERE c.log_type = 'IN'
@@ -74,7 +79,9 @@ SHAPES = {
 		          AND o.time < COALESCE((SELECT MIN(n.time) FROM `tabEmployee Checkin` n
 		                                  WHERE n.employee = c.employee
 		                                    AND n.log_type = 'IN'
-		                                    AND n.time > c.time), '2999-12-31')
+		                                    AND n.time > c.time
+		                                    AND COALESCE(n.remote_approval_status, '') <> 'Rejected'
+		                                ), '2999-12-31')
 		   )
 		 ORDER BY c.employee, c.time
 		""",
@@ -96,11 +103,15 @@ SHAPES = {
 		          FROM `tabEmployee Checkin` c2
 		          JOIN `tabEmployee Checkin` nx
 		            ON nx.employee = c2.employee AND nx.log_type = 'IN' AND nx.time > c2.time
+		           AND COALESCE(nx.remote_approval_status, '') <> 'Rejected'
 		         WHERE c2.log_type = 'IN'
+		           AND c2.time BETWEEN %(from_date)s AND %(to_date)s
 		         GROUP BY c2.name) n ON n.cname = c.name
 		 WHERE c.log_type = 'IN'
 		   AND c.time BETWEEN %(from_date)s AND %(to_date)s
 		   AND COALESCE(c.remote_approval_status, '') <> 'Rejected'
+		   AND COALESCE(c.synced_from_instance, '') = ''
+		   AND COALESCE(c.is_abandoned, 0) = 0
 		   AND n.next_in <= c.time + INTERVAL 20 HOUR
 		   AND NOT EXISTS (
 		       SELECT 1 FROM `tabEmployee Checkin` o
@@ -117,7 +128,9 @@ SHAPES = {
 		"""
 		SELECT employee, employee_name, attendance_date, COUNT(*) AS rows_on_day,
 		       GROUP_CONCAT(name) AS attendance_rows,
-		       GROUP_CONCAT(DISTINCT shift) AS shifts
+		       GROUP_CONCAT(DISTINCT shift) AS shifts,
+		       GROUP_CONCAT(DISTINCT docstatus) AS docstatuses,
+		       GROUP_CONCAT(DISTINCT status) AS statuses
 		  FROM `tabAttendance`
 		 WHERE docstatus < 2
 		   AND attendance_date BETWEEN %(from_date)s AND %(to_date)s
@@ -129,21 +142,28 @@ SHAPES = {
 	# ---------------------------------------------------------------- S4
 	# The shape attendance_day_audit calls healthy: both an IN and an OUT exist,
 	# so it is not "one punch", yet the day still paid nothing.
+	#
+	# Correlated through `Employee Checkin.attendance` — the link the marking
+	# code itself writes — NOT through DATE(punch) = attendance_date. The date
+	# form re-introduces exactly the blindness this module exists to remove: a
+	# shift starting Monday 22:00 has its OUT at 06:00 on TUESDAY, so "is there
+	# an OUT on Monday" is false and a genuinely broken night-shift row goes
+	# unreported; and a continuous night worker's 06:00 OUT closing SUNDAY's
+	# shift makes the same test pass by coincidence on a healthy Monday row.
+	# The link answers about this row's own punches and nothing else.
 	"S4": (
-		"Half Day or 0h attendance on a day holding BOTH an IN and an OUT",
+		"Half Day or 0h attendance whose OWN linked punches hold both an IN and an OUT",
 		"""
 		SELECT a.name, a.employee, a.employee_name, a.attendance_date, a.status,
-		       a.working_hours, a.shift
+		       a.working_hours, a.shift, a.docstatus, a.in_time, a.out_time
 		  FROM `tabAttendance` a
 		 WHERE a.docstatus < 2
 		   AND a.attendance_date BETWEEN %(from_date)s AND %(to_date)s
 		   AND (a.status = 'Half Day' OR COALESCE(a.working_hours, 0) = 0)
 		   AND EXISTS (SELECT 1 FROM `tabEmployee Checkin` i
-		                WHERE i.employee = a.employee AND i.log_type = 'IN'
-		                  AND DATE(i.time) = a.attendance_date)
+		                WHERE i.attendance = a.name AND i.log_type = 'IN')
 		   AND EXISTS (SELECT 1 FROM `tabEmployee Checkin` o
-		                WHERE o.employee = a.employee AND o.log_type = 'OUT'
-		                  AND DATE(o.time) = a.attendance_date)
+		                WHERE o.attendance = a.name AND o.log_type = 'OUT')
 		 ORDER BY a.employee, a.attendance_date
 		""",
 	),
@@ -151,21 +171,33 @@ SHAPES = {
 	# A punch with no shift makes _get_shift_ot_config return None, and
 	# ot_calculation then `continue`s the slice — the employee is told they have
 	# no overtime, with no reason given. Silent-zero source S1 in the OT audit.
+	#
+	# `offshift = 0` is not optional here. employee_checkin sets shift = None and
+	# offshift = 1 together when no window matches, and OT ignores off-shift
+	# punches BY DESIGN — so without this the count is dominated by punches that
+	# are behaving correctly, burying the population that is actually damaged:
+	# a punch that should have a shift and does not.
 	"S5": (
 		"punches with no shift stamp (these make OT silently evaluate to 0.0h)",
 		"""
-		SELECT name, employee, employee_name, time, log_type, device_id
+		SELECT name, employee, employee_name, time, log_type, device_id, offshift
 		  FROM `tabEmployee Checkin`
 		 WHERE time BETWEEN %(from_date)s AND %(to_date)s
 		   AND (shift IS NULL OR shift = '')
+		   AND COALESCE(offshift, 0) = 0
 		 ORDER BY employee, time
 		""",
 	),
 	# ---------------------------------------------------------------- S6
-	# THE PRECONDITION. Two Active open-ended assignments of different shift
-	# types is what lets one day resolve against two shifts. shift_rules returns
-	# "skipped-manual" before closing its own auto rows, so these are still
-	# being created. Read this BEFORE planning any repair.
+	# THE PRECONDITION. Two Active assignments of different shift types covering
+	# one day is what lets that day resolve against two shifts.
+	#
+	# The source in shift_rules is CLOSED as of b2ab6ce0f — the manual-wins
+	# branch now closes its own rows, and a row starting today is retired as
+	# Inactive because end-dating cannot close it. So a non-zero count here is
+	# now HISTORICAL rather than growing, and it should stop rising once that
+	# is deployed. It is still the number to read first: while these pairs
+	# exist, a repaired day can re-corrupt.
 	"S6": (
 		"employees with 2+ Active open-ended assignments of DIFFERENT shift types",
 		"""
@@ -176,7 +208,7 @@ SHAPES = {
 		  FROM `tabShift Assignment`
 		 WHERE docstatus = 1
 		   AND status = 'Active'
-		   AND (end_date IS NULL OR end_date >= %(to_date)s)
+		   AND (end_date IS NULL OR end_date >= DATE(%(to_date)s))
 		 GROUP BY employee
 		HAVING distinct_shifts > 1
 		 ORDER BY open_assignments DESC, employee
@@ -217,24 +249,46 @@ def run_shape(key: str, from_date: str, to_date: str) -> list[dict]:
 	return rows
 
 
-def report(from_date: str, to_date: str, shapes: str | None = None) -> dict:
+#: How many matched rows `report` hands back per shape by default. `bench
+#: execute` prints whatever it is returned, and on production a shape can match
+#: tens of thousands of rows — enough to bury the counts that are the point of
+#: running it. Pass `sample=0` for everything.
+DEFAULT_SAMPLE = 25
+
+
+def report(from_date: str, to_date: str, shapes: str | None = None, sample: int = DEFAULT_SAMPLE) -> dict:
 	"""Run every shape (or a comma-separated subset) and return counts + rows.
 
 	Read-only by construction: each shape is a SELECT and nothing here writes.
 	`shapes` accepts e.g. "S6,S2" to run the precondition and the repair
-	candidates alone.
+	candidates alone. `sample` caps the rows returned per shape — the COUNTS are
+	always complete and always computed from every matching row; only the
+	returned sample is trimmed. `sample=0` returns everything.
 	"""
 	keys = [k.strip().upper() for k in shapes.split(",")] if shapes else list(READING_ORDER)
-	logger.info("[checkin_damage] report %s..%s shapes=%s", from_date, to_date, ",".join(keys))
+	logger.info(
+		"[checkin_damage] report %s..%s shapes=%s sample=%s", from_date, to_date, ",".join(keys), sample
+	)
 	out = {}
 	for key in keys:
 		rows = run_shape(key, from_date, to_date)
 		out[key] = {"question": SHAPES[key][0], "count": len(rows), "rows": rows}
-	summary = ", ".join(f"{k}={out[k]['count']}" for k in keys)
-	logger.info("[checkin_damage] report complete %s..%s: %s", from_date, to_date, summary)
-	print(f"\ncheck-in damage {from_date}..{to_date}")
+	# Rows, then PEOPLE. One employee with five orphan INs is five rows and one
+	# person, and every decision taken off this report is about people.
 	for key in keys:
-		print(f"  {key}  {out[key]['count']:>6}  {out[key]['question']}")
+		rows = out[key]["rows"]
+		out[key]["employees"] = len({r.get("employee") for r in rows if r.get("employee")})
+		if sample and len(rows) > sample:
+			out[key]["rows"] = rows[:sample]
+			out[key]["truncated"] = True
+	summary = ", ".join(f"{k}={out[k]['count']}r/{out[k]['employees']}p" for k in keys)
+	logger.info("[checkin_damage] report complete %s..%s: %s", from_date, to_date, summary)
+	print(f"\ncheck-in damage {from_date}..{to_date}    (rows / distinct employees)")
+	for key in keys:
+		print(f"  {key}  {out[key]['count']:>7} / {out[key]['employees']:>5}  {out[key]['question']}")
+	truncated = [k for k in keys if out[k].get("truncated")]
+	if truncated:
+		print(f"\n  rows trimmed to {sample} for {', '.join(truncated)} — counts above are complete")
 	if out.get("S6", {}).get("count"):
 		print(
 			"\n  S6 is NON-ZERO: duplicate Active shift assignments still exist, so repaired days\n"
