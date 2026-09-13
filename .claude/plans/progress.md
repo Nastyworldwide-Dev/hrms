@@ -202,3 +202,25 @@ NEXT: Nabil asked whether we even have a biometric device — the honest answer 
   the session_state hotspot ticket whether the rule should also refuse to orphan a later departure's
   arrival.
 - 2026-09-13T17:18:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T17:18:59Z COMMIT: 4015d50d1 fix(checkin): the forward window was the same failure on a different axis → review dispatched
+- 2026-09-13 DEAD END: **B1 IS NOT REPRODUCIBLE AS STATED — do not build it.** The OT audit's headline
+  finding was that the +/-1 day punch fetch makes four entry points disagree by 33 hours on one date.
+  Measured on fresh.local through the real functions (verify-bench/sites/probe_ot_window.py,
+  savepointed): on an ORDINARY overtime day (IN 10:00, OUT 22:00, four hours past an 18:00 shift end)
+  get_ot_claim_capacity, get_day_ot_breakdown, get_ot_breakdown(month) and get_shift_ot_breakdown ALL
+  RETURN 4.0. They agree. And on the long session the finding rests on (IN 3 Sep 09:00, OUT 5 Sep
+  03:00) every path returns 0.0 or no entry — but NOT because of the window: the closing punch is
+  stamped shift=None, offshift=1, because an OUT two days later falls inside no shift window, so the
+  session never PAIRS anywhere. There is nothing to disagree about.
+- 2026-09-13 REPAIR(audit): corrected O1 in .claude/plans/audit-2026-09-13-ot.md in place, with the
+  measurement, rather than leaving a refuted number on the board to be quoted. The original text is
+  struck through beneath it so nobody re-derives it.
+- 2026-09-13 EVIDENCE(2): what IS real on that shape is the SILENT ZERO — 33 worked hours reported as
+  0.0 on every surface with no cause named, exactly O3/S8. That is the OT defect worth fixing, and the
+  probe above is its red.
+NEXT: OT wave re-ordered on evidence. B1 is struck. Take B2 first (hrms/hr/doctype/shift_type/
+  shift_type.py:275 guards only start_time and only while punches are UNLINKED, so editing a shift's
+  end_time re-prices closed months and moves an already-APPROVED claim's punch_ot_hours — measured
+  3.0 -> 6.0 -> 4.0 through the real document API), then B3 (make the silent zeros legible: 15 sites,
+  one message, no cause ever named), then B4 (a missing holiday list prices a public holiday as a
+  normal day, silent underpay).
