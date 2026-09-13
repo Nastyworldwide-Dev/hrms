@@ -488,42 +488,22 @@ def get_employee_kpi(employee: str, year: str | int | None = None, cycle: str | 
 	)
 
 
-@frappe.whitelist()
-def get_team_kpi(
-	year: str | int | None = None,
-	cycle: str | None = None,
-	department: str | None = None,
-	company: str | None = None,
+def _scored_rows(
+	viewer: str,
+	reports: list[str] | None,
+	year: str | int | None,
+	cycle: str | None,
+	company: str | None,
+	department: str | None,
 ) -> dict:
-	"""Read-only appraisal scores for whatever the caller's tier admits: their
-	own reporting chain (manager), or every company on the hub (CEO, HR).
+	"""The scoring pipeline, shared by the flat list and the department tree.
 
-	Rows carry one score per employee: the selected cycle's, or the mean of the
-	year's cycles when `cycle` is ALL_CYCLES (the default, matching My KPI's
-	year view). `company` and `department` are presentation filters only — the
-	audience for this page is group-level by definition (see
-	_team_kpi_viewer), so there is nothing here for them to narrow past. A
-	company that does not exist is refused rather than quietly emptied, because
-	a silently empty table reads as "nobody was appraised".
-
-	There is no write counterpart and no employee argument that selects someone
-	to act on — this endpoint only reports.
+	ONE implementation on purpose. Two would drift, and the drift would show as
+	a department's roll-up disagreeing with the very people listed underneath it
+	— which is the shape of defect this module has already paid for twice today
+	(the filing guard against the row scope, and the tier check against the
+	detail fence). Whatever the tree shows, the list shows.
 	"""
-	viewer, reports = _scope()
-	if not viewer:
-		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
-		frappe.throw(
-			_(
-				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
-			),
-			frappe.PermissionError,
-		)
-
-	if company and not frappe.db.exists("Company", company):
-		# An empty table reads as "nobody was appraised", so a company that does
-		# not exist has to say so rather than look like an answer.
-		frappe.throw(_("No such company: {0}.").format(company))
-
 	# Every employee on the hub. The audience for this page is group-level, so
 	# there is no company predicate here — see _team_kpi_viewer for the ruling.
 	# Exempted from the class guard with that reason in
@@ -688,3 +668,236 @@ def get_team_kpi(
 		},
 		"rows": rows,
 	}
+
+
+#: Employees with no department at all. They exist (Employee.department is not
+#: mandatory), and without a home in the tree they would vanish from it while
+#: still counting in the flat list — the two would disagree about the same
+#: people, which is the whole failure this module keeps paying for.
+NO_DEPARTMENT = "__none__"
+
+
+def _department_index() -> dict:
+	"""Every department by name, with its nested-set bounds. Frappe keeps
+	Department as a real tree (`parent_department`, `is_group`, `lft`/`rgt`), so
+	"is this inside that subtree" is a range test, not a recursive walk."""
+	return {
+		row.name: row
+		for row in frappe.get_all(
+			"Department",
+			fields=["name", "parent_department", "is_group", "lft", "rgt", "company"],
+		)
+	}
+
+
+@frappe.whitelist()
+def get_department_kpi(
+	parent: str | None = None,
+	year: str | int | None = None,
+	cycle: str | None = None,
+	company: str | None = None,
+) -> dict:
+	"""ONE LEVEL of the department tree, with each child's roll-up.
+
+	The CEO and HR navigate STRUCTURE: All Departments -> Sales -> Sales East ->
+	a person. Every level answers "how is this part of the company doing, and
+	what is directly inside it". A manager gets no door here — their scope is
+	PEOPLE, not org structure, and the flat list already serves it.
+
+	THE ROLL-UP IS AN AVERAGE OVER PEOPLE IN THE SUBTREE, which is what makes it
+	headcount-weighted without any weighting arithmetic: a department of fifty
+	pulls twenty-five times as hard as one of two. Averaging the
+	sub-departments' averages instead would give a two-person team the same vote
+	as a fifty-person one. Decision on record (Nabil, 13 Sep 2026).
+
+	The ERP stores NO department score — Appraisal carries per-person scores and
+	there is no department-level doctype anywhere. This number is computed for
+	display, never fetched and never stored, so there is nothing to keep in sync.
+
+	Rows come from `_scored_rows`, the same pipeline the flat list uses, so a
+	department's roll-up cannot disagree with the people listed underneath it.
+	"""
+	viewer, reports = _scope()
+	if viewer not in (VIEWER_CEO, VIEWER_HR):
+		logger.warning("[kpi] department tree refused for user=%s (tier %s)", frappe.session.user, viewer)
+		frappe.throw(
+			_("The department view is available to the Chief Executive Officer and to HR."),
+			frappe.PermissionError,
+		)
+
+	if company and not frappe.db.exists("Company", company):
+		frappe.throw(_("No such company: {0}.").format(company))
+	if parent is not None and not isinstance(parent, str):
+		frappe.throw(_("A department must be named."), frappe.PermissionError)
+
+	data = _scored_rows(viewer, reports, year, cycle, company, None)
+	rows = data["rows"]
+	index = _department_index()
+
+	if parent and parent != NO_DEPARTMENT and parent not in index:
+		frappe.throw(_("No such department: {0}.").format(parent))
+
+	def people_under(name):
+		"""Everyone whose department sits inside this subtree."""
+		if name == NO_DEPARTMENT:
+			return [r for r in rows if not r["department"]]
+		node = index.get(name)
+		if not node:
+			return []
+		out = []
+		for r in rows:
+			child = index.get(r["department"]) if r["department"] else None
+			if child and node.lft <= child.lft and child.rgt <= node.rgt:
+				out.append(r)
+		return out
+
+	def roll_up(people):
+		if not people:
+			return {"headcount": 0, "average_score": 0.0, "top_score": 0.0}
+		scores = [r["total_score"] for r in people]
+		return {
+			"headcount": len(people),
+			"average_score": flt(sum(scores) / len(scores), 1),
+			"top_score": max(scores),
+		}
+
+	roots = [d for d in index.values() if not d.parent_department]
+	root_name = roots[0].name if roots else None
+	at_root = not parent or parent == root_name
+
+	here = root_name if at_root else parent
+	people_here = rows if at_root else people_under(parent)
+	children = [d for d in index.values() if d.parent_department == (root_name if at_root else parent)]
+
+	# A department with NOBODY APPRAISED under it is not offered. A stock
+	# ERPNext site seeds a full department set per company, so the root of a
+	# multi-company hub lists hundreds of them and all but a handful are empty:
+	# the two that matter are buried, and every empty one is a dead end that
+	# opens on nothing. Same rule this module already applies to the company and
+	# department selectors — an option that can only ever return nothing reads
+	# as broken data, not as a choice.
+	#
+	# The headcount is on every row that IS offered, so "Sales has nobody
+	# appraised this cycle" is still answerable: Sales simply is not in the list
+	# for that cycle, and the node's own summary says how many people it counts.
+	departments = sorted(
+		(
+			node
+			for child in children
+			if (
+				node := {
+					"name": child.name,
+					"label": child.name,
+					"is_group": bool(child.is_group),
+					**roll_up(people_under(child.name)),
+				}
+			)["headcount"]
+		),
+		key=lambda d: (-d["headcount"], d["label"]),
+	)
+	# Only at the root, and only when they exist: somebody with no department
+	# belongs nowhere else, and an empty bucket reads as broken data.
+	if at_root:
+		orphans = [r for r in rows if not r["department"]]
+		if orphans:
+			departments.append(
+				{
+					"name": NO_DEPARTMENT,
+					"label": _("No department"),
+					"is_group": False,
+					**roll_up(orphans),
+				}
+			)
+
+	# The people standing at THIS node — directly in it, not inside a child.
+	people = (
+		[r for r in rows if not r["department"]]
+		if here == NO_DEPARTMENT
+		else [r for r in rows if r["department"] == here]
+	)
+
+	trail = []
+	walk = None if at_root else parent
+	while walk and walk in index:
+		trail.append({"name": walk, "label": walk})
+		walk = index[walk].parent_department
+	if root_name:
+		trail.append({"name": root_name, "label": root_name})
+	trail.reverse()
+
+	logger.info(
+		"[kpi] department tree user=%s node=%s children=%d people=%d",
+		frappe.session.user,
+		here or "root",
+		len(departments),
+		len(people),
+	)
+
+	return {
+		"viewer_mode": viewer,
+		"node": {"name": here, "label": here or _("All Departments"), "is_root": at_root},
+		"breadcrumb": trail,
+		"summary": roll_up(people_here),
+		"departments": departments,
+		"people": sorted(people, key=lambda r: -r["total_score"]),
+		"companies": data["companies"],
+		"selected_company": data["selected_company"],
+		"years": data["years"],
+		"cycles": data["cycles"],
+		"selected_year": data["selected_year"],
+		"selected_cycle": data["selected_cycle"],
+	}
+
+
+@frappe.whitelist()
+def get_team_kpi(
+	year: str | int | None = None,
+	cycle: str | None = None,
+	department: str | None = None,
+	company: str | None = None,
+) -> dict:
+	"""Read-only appraisal scores for whatever the caller's tier admits: their
+	own reporting chain (manager), or every company on the hub (CEO, HR).
+
+	Rows carry one score per employee: the selected cycle's, or the mean of the
+	year's cycles when `cycle` is ALL_CYCLES (the default, matching My KPI's
+	year view). `company` and `department` are presentation filters only — the
+	audience for this page is group-level by definition (see
+	_team_kpi_viewer), so there is nothing here for them to narrow past. A
+	company that does not exist is refused rather than quietly emptied, because
+	a silently empty table reads as "nobody was appraised".
+
+	There is no write counterpart and no employee argument that selects someone
+	to act on — this endpoint only reports.
+	"""
+	viewer, reports = _scope()
+	if not viewer:
+		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
+		frappe.throw(
+			_(
+				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
+			),
+			frappe.PermissionError,
+		)
+
+	if company and not frappe.db.exists("Company", company):
+		# An empty table reads as "nobody was appraised", so a company that does
+		# not exist has to say so rather than look like an answer.
+		frappe.throw(_("No such company: {0}.").format(company))
+
+	viewer, reports = _scope()
+	if not viewer:
+		logger.warning("[kpi] team view refused for user=%s", frappe.session.user)
+		frappe.throw(
+			_(
+				"The Team KPI view is available to the Chief Executive Officer, to HR, and to managers for their own team."
+			),
+			frappe.PermissionError,
+		)
+
+	if company and not frappe.db.exists("Company", company):
+		# An empty table reads as "nobody was appraised", so a company that does
+		# not exist has to say so rather than look like an answer.
+		frappe.throw(_("No such company: {0}.").format(company))
+
+	return _scored_rows(viewer, reports, year, cycle, company, department)

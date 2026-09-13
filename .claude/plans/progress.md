@@ -269,3 +269,6 @@ TICKET (W2, fails CLOSED so not blocking): for a manager who carries an allow=Co
   This closes the last open question before the push.
 - 2026-09-13T15:00:19Z COMMIT: 683d53017 docs(kpi): HR manages the entire group, and the code now says so → review dispatched
 - 2026-09-13T15:01:07Z PUSH: nz-glass @ 6c6ce6b2d
+- 2026-09-13T15:01:34Z PUSH: nz-glass @ 84b057733
+- 2026-09-13T15:13:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-13T15:13:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
