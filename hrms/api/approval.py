@@ -405,15 +405,30 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		if access == "routed":
 			doc.flags.ignore_permissions = True
 	else:
-		# Cancellation keeps its distinct right and existing routed authority;
-		# the self-approval restriction does not forbid withdrawing a decision.
+		# AN APPROVED REQUEST IS NEVER CANCELLED — Nabil, 13 September 2026.
+		#
+		# Because the branch above catches every submit of a DECIDE_THEN_SUBMIT
+		# doctype, and all of the request doctypes are in that set, this else is
+		# reachable only on a CANCEL. It used to elevate on routing alone: being
+		# the person a request was addressed to was enough to withdraw a decision
+		# that had already been made and acted on — a settled approval reopened
+		# with the framework's own cancel right bypassed.
+		#
+		# Routing answers "may you DECIDE this", which is not the same question as
+		# "may you UNDO a decision". So the elevation is gone and cancelling now
+		# needs the right itself: HR, or whoever the doctype's permissions say.
+		# The manager who approved it keeps every power the ruling gives them —
+		# approving is untouched — and loses only the one the ruling takes away.
 		action = "submit" if docstatus == SUBMIT else "cancel"
 		if frappe.has_permission(doctype, action, doc=doc):
 			doc.check_permission("read")
-		elif _is_routed_approver(doc):
-			doc.flags.ignore_permissions = True
 		else:
-			frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to cancel this request.")
+				if action == "cancel"
+				else _("This request is not routed to you for approval."),
+				frappe.PermissionError,
+			)
 
 	# Two taps are one intention. Report the first outcome rather than throwing
 	# at somebody who did nothing wrong.

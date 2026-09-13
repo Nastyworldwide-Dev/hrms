@@ -1094,3 +1094,47 @@ hrms/hr/utils.py::grant_replacement_leave — not-affected — it CREATES or top
   imported without a bench (pypika). Proven red by restoring the bare get_doc.
 - The invariant: a cleanup that runs inside somebody else's cancel never raises
   at them, and never writes to a document that is not in force.
+
+---
+
+# FAMILY — routing mistaken for a cancel right
+
+CLASS: "may you DECIDE this" and "may you UNDO a decision" are different
+questions, and one answer was being used for both. Being the person a request was
+ADDRESSED to is authority to act on it; it is not authority to withdraw an
+outcome that has already been acted on.
+
+RULING (Nabil, 13 September 2026): an approved request is never cancelled.
+
+ROOT CAUSE: hrms/api/approval.py::finalize — its first branch catches every
+SUBMIT of a DECIDE_THEN_SUBMIT doctype, and every request doctype is in that set,
+so the `else` is reachable ONLY on a cancel. That else elevated on routing alone
+(`elif _is_routed_approver(doc): doc.flags.ignore_permissions = True`), with only
+`_request_read_allowed` ahead of it — so a settled approval could be reopened
+with the framework's own cancel right bypassed.
+
+## same-root — fixed in this commit
+hrms/api/approval.py::finalize — the routed elevation is gone from the cancel
+  branch. Cancelling needs the cancel right itself: HR, or whoever the doctype's
+  permissions name. The refusal also says "not permitted to cancel" instead of
+  "not routed to you for approval", which was sending the reader to look for the
+  wrong thing.
+
+## the approval path — explicitly NOT touched
+hrms/api/approval.py::decide — not-affected, and deliberately so. This is where a
+  routed approver elevates to APPROVE, which is exactly what the ruling grants
+  them: the reports_to manager IS the approver, transitively up the chain. The
+  manager keeps every power the ruling gives and loses only the one it takes.
+hrms/api/approval.py::finalize, the SUBMIT branch — not-affected — it routes
+  through `_decision_access` and elevates on "routed", which is the same
+  approval authority, not a cancellation.
+hrms/api/approval.py::_is_routed_approver — not-affected — the routing rule
+  itself is correct and confirmed by the ruling. What changed is which questions
+  are allowed to ask it.
+
+## LOCK THE CLASS
+- hrms/tests/test_cancel_is_not_a_routing_right.py, three AST cases: finalize
+  elevates on routing NOWHERE; the refusal names cancellation; and `decide` still
+  elevates, so a future "fix" cannot quietly take approval away while narrowing
+  cancellation. Proven red by restoring the elevation.
+- The invariant: routing grants the decision, never its withdrawal.

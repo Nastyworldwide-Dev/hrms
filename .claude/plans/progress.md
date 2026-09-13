@@ -243,3 +243,19 @@ NEXT: the two rulings, both from Nabil in this session. (1) "an approved request
   cycles.
 - 2026-09-13T18:08:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-13T18:08:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
+- 2026-09-13T18:08:53Z COMMIT: d2f9602b3 fix(hr): withdrawing a request must not freeze on an allocation that moved on → review dispatched
+- 2026-09-13 EVIDENCE(2): RULING 1 implemented. "An approved request is never cancelled" — Nabil, this
+  session. approval.py::finalize's else branch is reachable ONLY on a cancel (the first branch catches
+  every submit of a decide-then-submit doctype, and every request doctype is in that set), and it
+  elevated on ROUTING alone with only _request_read_allowed ahead of it — so a settled approval could
+  be withdrawn with the framework's own cancel right bypassed. The elevation is gone; cancelling needs
+  the cancel right. The refusal also names cancellation instead of saying "not routed to you for
+  approval", which sent the reader looking for the wrong thing. Three AST cases, including one pinning
+  that `decide` STILL elevates — so a future narrowing of cancellation cannot quietly take approval
+  away. Proven red by restoring the elevation.
+NEXT: RULING 2 — the filing window widens to FOUR MONTHS from the present day while KEEPING its
+  16th-to-15th cycle shape, covering OT Request and expense-shaped requests alongside it.
+  hrms/utils/filing_window.py currently implements two cycles. Read it, widen it, and check every
+  caller: filing, discovery and validation all consult it and must move together.
+- 2026-09-13T18:10:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T18:10:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

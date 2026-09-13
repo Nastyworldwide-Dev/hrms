@@ -226,15 +226,35 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 		src = ast.unparse(self._fn("_is_routed_approver"))
 		self.assertIn("company_visible", src)
 
-	def test_legacy_finalize_consults_routing(self):
-		# decide routing is covered through native shared-access behavior tests.
-		for name in ("finalize",):
-			called = {
-				n.func.id
-				for n in ast.walk(self._fn(name))
-				if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
-			}
-			self.assertIn("_is_routed_approver", called, f"{name} does not consult routing")
+	def test_legacy_finalize_still_routes_its_submit_authority(self):
+		"""AMENDED 13 Sep 2026, after the ruling that an approved request is never
+		cancelled.
+
+		This used to require a DIRECT `_is_routed_approver` call in `finalize`,
+		and that call was the CANCEL branch's elevation — the one the ruling
+		removes. Routing is still consulted, through `_decision_access`, which is
+		the submit path's gate and calls it internally. So the invariant the test
+		was written for holds; what changed is that finalize no longer asks the
+		routing question on its own account, only through the decision gate.
+
+		The narrowing itself is pinned separately, from both sides, in
+		hrms/tests/test_cancel_is_not_a_routing_right.py."""
+		called = {
+			n.func.id
+			for n in ast.walk(self._fn("finalize"))
+			if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+		}
+		self.assertIn(
+			"_decision_access",
+			called,
+			"finalize must still route its submit authority through the decision gate",
+		)
+		self.assertNotIn(
+			"_is_routed_approver",
+			called,
+			"finalize must not consult routing directly — its only remaining direct use was the "
+			"cancel elevation, and being the routed approver is not authority to undo a decision",
+		)
 
 	# Public native tests exercise denial and routed elevation through both
 	# endpoints; a source-position assertion cannot follow their shared gate.
