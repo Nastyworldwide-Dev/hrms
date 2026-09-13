@@ -7,8 +7,9 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate
 
+from hrms.hr.doctype.appraisal.appraisal import get_allowed_appraisal_employees
 from hrms.hr.utils import is_hr_operator
-from hrms.utils.identity import require_employee
+from hrms.utils.identity import own_employees, require_employee
 
 logger = logging.getLogger(__name__)
 
@@ -285,9 +286,11 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 #: who holds the office; nothing else is.
 CEO_DESIGNATION = "Chief Executive Officer"
 
-#: The two ways in, reported back to the PWA for logging and support.
+#: The three ways in, reported back to the PWA so it can label the tab and so
+#: a support log says which tier answered.
 VIEWER_CEO = "ceo"
 VIEWER_HR = "hr"
+VIEWER_MANAGER = "manager"
 
 
 def _holds_the_office(user: str) -> bool:
@@ -320,7 +323,20 @@ def _team_kpi_viewer() -> str | None:
 	        already reads every Appraisal) but it does mean a support log line
 	        saying "hr" may be the framework identity, not a person.
 
-	NEITHER IS COMPANY-FENCED, and that is a deliberate ruling, not an omission.
+	  manager — by their REPORTING CHAIN, and it borrows the rule rather than
+	        re-deriving it: `appraisal.get_allowed_appraisal_employees` already
+	        decides whose appraisals a user may read (their own record plus the
+	        whole chain below them, followed transitively). A manager could
+	        already open those appraisals in Desk; this tier only surfaces what
+	        they were always allowed to see. A SECOND implementation of "whose
+	        appraisals may I see" is precisely how the filing guard and the row
+	        scope came to disagree — see .claude/plans/family.md.
+
+	The wider tier wins when somebody holds more than one: a CEO who happens to
+	manage two people must not lose the company view.
+
+	The CEO and HR tiers are NOT COMPANY-FENCED, and that is a deliberate
+	ruling, not an omission.
 	Team KPI is group-level sight by definition: HR sees every company, the CEO
 	sees every company, and nobody else sees the page at all.
 
@@ -337,6 +353,12 @@ def _team_kpi_viewer() -> str | None:
 		return VIEWER_CEO
 	if is_hr_operator(user):
 		return VIEWER_HR
+	# Managing NOBODY is not a tier — the page keeps exactly one tab. The chain
+	# rule always returns the caller's own record, so "is a manager" is whether
+	# it reaches past that.
+	allowed = get_allowed_appraisal_employees(user)
+	if allowed and set(allowed) - set(own_employees(user)):
+		return VIEWER_MANAGER
 	return None
 
 
@@ -352,12 +374,17 @@ def _require_team_kpi_viewer() -> str:
 
 
 @frappe.whitelist()
-def can_view_team_kpi() -> bool:
-	"""Nav/tab gate for the PWA. Cheap, cached per user, and says nothing about
-	the data itself — every read re-checks through _require_team_kpi_viewer."""
+def can_view_team_kpi() -> str | None:
+	"""Nav/tab gate for the PWA: the tier, or None. Cheap, cached per user, and
+	it says nothing about the data itself — every read re-checks through
+	_require_team_kpi_viewer.
+
+	Returns the MODE rather than a bool so the tab can be labelled honestly:
+	a manager's tab reads "My Team" and carries no company selector, because
+	their scope is people, not structure. A falsy value still means no tab."""
 	viewer = _team_kpi_viewer()
 	logger.info("[kpi] can_view_team_kpi user=%s -> %s", frappe.session.user, viewer)
-	return viewer is not None
+	return viewer
 
 
 @frappe.whitelist()
@@ -406,10 +433,20 @@ def get_team_kpi(
 	# wrong company often enough that the Company filter, the selector and the
 	# Company column would all disagree with the Employee master. The row is
 	# about a person, so the person's company governs it.
+	employee_filters = {}
+	if viewer == VIEWER_MANAGER:
+		# Their chain, and nothing else. The same list that already governs
+		# whether they may read those appraisals at all.
+		chain = get_allowed_appraisal_employees(frappe.session.user) or []
+		own = set(own_employees(frappe.session.user))
+		reports = [e for e in chain if e not in own]
+		employee_filters = {"name": ("in", reports or [""])}
+
 	employees = {
 		row.name: row
 		for row in frappe.get_all(
 			"Employee",
+			filters=employee_filters,
 			fields=["name", "employee_name", "designation", "department", "company", "image"],
 		)
 	}

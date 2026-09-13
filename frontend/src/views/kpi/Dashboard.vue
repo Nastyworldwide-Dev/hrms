@@ -283,8 +283,14 @@
 							</select>
 						</div>
 						<!-- Only drawn when there IS more than one company to choose
-						     between: a one-option selector is not a control. -->
-						<div v-if="teamCompanies.length > 1" class="flex min-w-0 flex-col gap-1.5">
+						     between: a one-option selector is not a control. Never for
+						     a manager — their scope is the people who report to them,
+						     not a slice of the org chart, so a company or department
+						     filter over it is a control with nothing to control. -->
+						<div
+							v-if="!isManagerTier && teamCompanies.length > 1"
+							class="flex min-w-0 flex-col gap-1.5"
+						>
 							<label class="g-eyebrow" for="team-company-filter">
 								{{ __("Company") }}
 							</label>
@@ -298,7 +304,7 @@
 								<option v-for="c in teamCompanies" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
-						<div class="flex min-w-0 flex-col gap-1.5">
+						<div v-if="!isManagerTier" class="flex min-w-0 flex-col gap-1.5">
 							<label class="g-eyebrow" for="team-department-filter">
 								{{ __("Department") }}
 							</label>
@@ -414,7 +420,11 @@
 							<template #empty>
 								<GEmptyState
 									:title="__('No appraisals here')"
-									:body="__('Nobody in this department has an appraisal for the selected period')"
+									:body="
+										isManagerTier
+											? __('Nobody reporting to you has an appraisal for the selected period')
+											: __('Nobody in this department has an appraisal for the selected period')
+									"
 								/>
 							</template>
 						</GDataTable>
@@ -450,8 +460,16 @@ const ALL_CYCLES = "_all"
 
 // Segmented control keys double as labels; GSegmented translates bare strings.
 const MINE = "My KPI"
+// The second tab is NAMED FOR THE SCOPE IT SHOWS. A manager's scope is the
+// people who report to them, so "Team KPI" is honest there; the CEO's and HR's
+// is the whole organisation, and calling that "Team" understates it badly
+// enough that somebody would go looking for a wider view that already exists.
+// canViewTeamKpi returns the tier ("manager" | "ceo" | "hr") or nothing.
 const TEAM = "Team KPI"
-const TAB_BUTTONS = [MINE, TEAM] // __("My KPI"), __("Team KPI")
+const ALL = "All KPI"
+const isManagerTier = computed(() => canViewTeamKpi.data === "manager")
+const teamTabLabel = computed(() => (isManagerTier.value ? TEAM : ALL))
+const TAB_BUTTONS = computed(() => [MINE, teamTabLabel.value]) // __("My KPI"), __("Team KPI"), __("All KPI")
 const activeTab = ref(MINE)
 
 const selectedYear = ref(null)
@@ -615,8 +633,13 @@ const scopeLabel = computed(() =>
 		// filter always on screen: two empty years in a row from the default
 		// scope produced a byte-identical string, so the fetch announced nothing.
 		teamYear.value,
-		teamCompanies.value.length > 1 ? teamCompany.value || __("All companies") : null,
-		teamDepartment.value || __("All departments"),
+		// A manager has no company or department control, so naming either would
+		// read back a choice they were never offered.
+		isManagerTier.value ? __("My team") : null,
+		!isManagerTier.value && teamCompanies.value.length > 1
+			? teamCompany.value || __("All companies")
+			: null,
+		isManagerTier.value ? null : teamDepartment.value || __("All departments"),
 		teamCycle.value === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle.value,
 	]
 		.filter(Boolean)

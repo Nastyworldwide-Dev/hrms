@@ -238,3 +238,16 @@ NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin
 - 2026-09-11T11:19:23Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 0 extra test file(s) ⟂f14a25999045
 - 2026-09-11T11:19:26Z COMMIT: a741f3e46 feat(checkin): one flag turns the punch-type correction off → review dispatched
 - 2026-09-11T11:19:41Z PUSH: nz-glass @ a741f3e46
+- 2026-09-11T11:20:41Z PUSH: nz-glass @ 3fccd9d64
+- 2026-09-13T14:05:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13 EVIDENCE: 2 correct — My Team tier probe on fresh.local (savepoint, rolled back) 11/11 PASS:
+  a manager with no HR role and no office gets mode "manager", sees their direct report AND the report's
+  report (the chain is transitive), sees neither an outsider nor themselves, an employee managing nobody
+  gets NO tier and is refused, and a CEO who also manages people keeps the company view.
+- 2026-09-13 EVIDENCE: 7 stays right — the manager tier BORROWS
+  appraisal.get_allowed_appraisal_employees rather than re-deriving who reports to whom. A manager could
+  already read those appraisals in Desk; this only surfaces it. A second implementation of "whose
+  appraisals may I see" is exactly how the filing guard and the row scope came to disagree (family.md).
+NEXT: step 2 of the KPI tree work — the per-person drill-down endpoint and its fence (KRA detail is a
+  personnel file, not a league-table row, so it needs its own check, not the list's). Then step 3, the
+  department-tree navigation for CEO/HR, rolled up as the average over PEOPLE in the subtree.

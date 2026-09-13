@@ -232,7 +232,9 @@ class TestTeamKPI(FrappeTestCase):
 		self.hr_user = "team_kpi_hr@example.com"
 		self.far_user = "team_kpi_far@example.com"
 
+		self.mgr_user = "team_kpi_mgr@example.com"
 		self.ceo = self._employee(self.ceo_user, CEO_DESIGNATION, self.sales, self.company)
+		self.mgr = self._employee(self.mgr_user, "Engineer", self.sales, self.company)
 		self.staff = self._employee(self.staff_user, "Engineer", self.sales, self.company)
 		self.ops_emp = self._employee(self.ops_user, "Engineer", self.ops, self.company)
 		self.far_emp = self._employee(self.far_user, "Engineer", self.far, self.other_company)
@@ -371,6 +373,61 @@ class TestTeamKPI(FrappeTestCase):
 		# the department selector must follow the company, or it offers
 		# departments that can never match
 		self.assertEqual(data["departments"], [self.far])
+
+	# --- allowlist 3: a manager, by their reporting chain --------------------
+
+	def test_a_manager_sees_their_reports_and_nobody_else(self):
+		"""THE THIRD TIER. A manager holds no HR role and no office, but the
+		app already lets them READ their chain's appraisals —
+		appraisal.get_allowed_appraisal_employees is the one rule for that, and
+		this view reuses it rather than re-deriving who reports to whom. A
+		second implementation of "whose appraisals may I see" is exactly how the
+		filing guard and the row scope came to disagree."""
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.mgr)
+		frappe.set_user(self.mgr_user)
+
+		self.assertEqual(can_view_team_kpi(), "manager")
+		data = get_team_kpi(year=2026)
+		self.assertEqual(data["viewer_mode"], "manager")
+
+		seen = {row["employee"] for row in data["rows"]}
+		self.assertIn(self.staff, seen, "a direct report must appear")
+		self.assertNotIn(self.ops_emp, seen, "somebody else's report must not")
+		self.assertNotIn(self.far_emp, seen, "another company's employee must not")
+
+	def test_a_manager_sees_the_whole_chain_below_them(self):
+		"""reports_to is followed transitively — a report's report is still
+		inside the manager's scope, which is what the read rule already says."""
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.mgr)
+		frappe.db.set_value("Employee", self.ops_emp, "reports_to", self.staff)
+		frappe.set_user(self.mgr_user)
+
+		seen = {row["employee"] for row in get_team_kpi(year=2026)["rows"]}
+		self.assertEqual({self.staff, self.ops_emp}, seen & {self.staff, self.ops_emp})
+
+	def test_an_employee_with_no_reports_is_still_refused(self):
+		"""Managing nobody is not a tier. The KPI page keeps exactly one tab."""
+		frappe.set_user(self.staff_user)
+		self.assertIsNone(can_view_team_kpi())
+		self.assertRaises(frappe.PermissionError, get_team_kpi)
+
+	def test_a_manager_is_not_handed_the_company_wide_view(self):
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.mgr)
+		frappe.set_user(self.mgr_user)
+		data = get_team_kpi(year=2026)
+		self.assertNotIn(
+			self.far_emp,
+			{row["employee"] for row in data["rows"]},
+			"a manager must never reach another company through this view",
+		)
+
+	def test_the_office_and_hr_still_outrank_a_reporting_chain(self):
+		"""Somebody can be both. The wider tier wins, or a CEO who happens to
+		manage two people would lose the company view."""
+		frappe.db.set_value("Employee", self.ceo, "reports_to", None)
+		frappe.db.set_value("Employee", self.staff, "reports_to", self.ceo)
+		frappe.set_user(self.ceo_user)
+		self.assertEqual(can_view_team_kpi(), "ceo")
 
 	# --- the company fence deliberately does NOT bind here -------------------
 
