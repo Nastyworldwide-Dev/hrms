@@ -42,7 +42,9 @@ DAY_SCOPING_SPELLINGS = (
 	r"CAST\s*\(\s*(?:\w+\.)?`?time`?\s+AS\s+DATE",  # CAST(i.time AS DATE)
 	r"DATE_FORMAT\s*\(\s*(?:\w+\.)?`?time`?",  # DATE_FORMAT(i.time, '%Y-%m-%d')
 	r"LEFT\s*\(\s*(?:\w+\.)?`?time`?",  # LEFT(i.time, 10)
-	r"(?:\w+\.)?`?time`?\s*>=\s*\w*\.?attendance_date",  # bare range against a DATE column
+	r"(?:\w+\.)?`?time`?\s*(?:>=|>|BETWEEN)\s*\w*\.?attendance_date",  # bare range on a DATE column
+	r"(?:SUBSTRING|SUBSTR|CONVERT)\s*\(\s*(?:\w+\.)?`?time`?",  # SUBSTR(time,1,10) / CONVERT(t, DATE)
+	r"TIMESTAMPDIFF\s*\(\s*DAY",  # TIMESTAMPDIFF(DAY, ...) — MINUTE is legitimate, S2 uses it
 )
 
 

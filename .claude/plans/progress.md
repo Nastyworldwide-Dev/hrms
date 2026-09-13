@@ -202,3 +202,25 @@ NEXT: the enumerator came back with two more. (1) S8 is NOT the logical compleme
   (2) the caveat only prints when both shapes ran, so `report(shapes="S4")` shows a bare zero — the
   exact read the commit forbids. Auto-append the denominator, or say it was not run.
 - 2026-09-13T16:43:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:43:28Z COMMIT: 96228853f fix(checkin): widening the session boundary buried the repair it was meant to free → review dispatched
+- 2026-09-13 REPAIR: the enumerator's denominator was not a denominator. S4 needs EXISTS(IN) AND
+  EXISTS(OUT); S8 asked for NOT EXISTS(any punch) — which is not the negation of that, so a row with
+  exactly ONE linked punch fell out of both buckets and the "unearned zero" caveat never fired for it.
+  That state is reachable: attendance_day_audit.py:600 unlinks punches ONE NAME AT A TIME, and this
+  repo's own audit already has a verdict for a Half Day with a single linked punch. S8 is now
+  NOT (EXISTS(IN) AND EXISTS(OUT)) — the exact complement. Measured on fresh.local for 1-14 Sep:
+  total Half-Day/0h = 22, S4 = 0, S8 = 22, S4+S8 = 22, partition holds.
+- 2026-09-13 REPAIR: the caveat only printed when both shapes happened to run, so `report(shapes="S4")`
+  showed a bare zero — the exact reading the pairing exists to forbid, reachable through the documented
+  subset form. `report` now drags a denominator in whenever its shape is asked for. Verified: asking
+  for S4 alone prints S4, S8 and the caveat.
+- 2026-09-13 REPAIR: three more day-scoping spellings the guard missed, named by review and now covered
+  — SUBSTRING/SUBSTR/CONVERT over a time column, TIMESTAMPDIFF(DAY, ...) (MINUTE stays legal, S2 uses
+  it), and BETWEEN against a DATE column alongside the >= that was already there.
+NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the document layer so every
+  write path alternates, not just the PWA. This changes what a BIOMETRIC DEVICE records, so it is the
+  one remaining item with a blast radius beyond the phone app. After that: the OT wave (B1 the +/-1 day
+  fetch window disagreement, B2 the unguarded Shift Type end_time, B3 the silent-zero messages,
+  B4 the missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the
+  hub-wide recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
+- 2026-09-13T16:44:43Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36

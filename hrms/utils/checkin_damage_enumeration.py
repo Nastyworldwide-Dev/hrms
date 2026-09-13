@@ -251,8 +251,16 @@ SHAPES = {
 	# or it may mean the link could not answer. This counts the rows the link
 	# cannot answer for, and the report prints the two together so a clean-looking
 	# zero can never be read as "this shape is fine".
+	#
+	# IT IS THE EXACT COMPLEMENT OF S4, DELIBERATELY. The first version asked for
+	# rows with NO linked punch at all, which is NOT the negation of "has a linked
+	# IN and a linked OUT": a row with ONE linked punch satisfied neither, so it
+	# fell out of both buckets and the caveat never fired for it. That state is
+	# reachable — attendance_day_audit unlinks punches one name at a time, and
+	# this repo's own audit already has a verdict for a Half Day with a single
+	# linked punch. S4 and S8 now partition the Half-Day/0h population exactly.
 	"S8": (
-		"Half Day or 0h attendance with NO linked punch (rows S4 cannot answer for)",
+		"Half Day or 0h attendance S4 could NOT confirm (no linked IN/OUT pair)",
 		"""
 		SELECT a.name, a.employee, a.employee_name, a.attendance_date, a.status,
 		       a.working_hours, a.shift, a.docstatus
@@ -260,8 +268,10 @@ SHAPES = {
 		 WHERE a.docstatus < 2
 		   AND a.attendance_date BETWEEN %(from_date)s AND %(to_date)s
 		   AND (a.status = 'Half Day' OR COALESCE(a.working_hours, 0) = 0)
-		   AND NOT EXISTS (SELECT 1 FROM `tabEmployee Checkin` c
-		                    WHERE c.attendance = a.name)
+		   AND NOT (EXISTS (SELECT 1 FROM `tabEmployee Checkin` i
+		                     WHERE i.attendance = a.name AND i.log_type = 'IN')
+		            AND EXISTS (SELECT 1 FROM `tabEmployee Checkin` o
+		                         WHERE o.attendance = a.name AND o.log_type = 'OUT'))
 		 ORDER BY a.employee, a.attendance_date
 		""",
 	),
@@ -286,6 +296,11 @@ SHAPES = {
 	),
 }
 
+
+#: A shape that can only answer for PART of its population, and the shape that
+#: counts the rest. Neither number means anything alone, so `report` refuses to
+#: run one without the other.
+DENOMINATORS = {"S4": "S8", "S5": "S9"}
 
 #: The order to read them in. S6 first: it bounds every other number. S8 sits
 #: directly under S4 and S9 under S5, because each is the other's denominator —
@@ -324,6 +339,13 @@ def report(from_date: str, to_date: str, shapes: str | None = None, sample: int 
 	returned sample is trimmed. `sample=0` returns everything.
 	"""
 	keys = [k.strip().upper() for k in shapes.split(",")] if shapes else list(READING_ORDER)
+	# A shape whose evidence is sometimes missing cannot be read alone, so asking
+	# for one drags its denominator along. Without this, `shapes="S4"` printed a
+	# bare zero with no caveat — the exact reading this pairing exists to forbid.
+	for shape, denominator in DENOMINATORS.items():
+		if shape in keys and denominator not in keys:
+			keys.insert(keys.index(shape) + 1, denominator)
+			logger.info("[checkin_damage] %s cannot be read alone — adding %s", shape, denominator)
 	logger.info(
 		"[checkin_damage] report %s..%s shapes=%s sample=%s", from_date, to_date, ",".join(keys), sample
 	)
@@ -347,12 +369,13 @@ def report(from_date: str, to_date: str, shapes: str | None = None, sample: int 
 	truncated = [k for k in keys if out[k].get("truncated")]
 	if truncated:
 		print(f"\n  rows trimmed to {sample} for {', '.join(truncated)} — counts above are complete")
-	if out.get("S8", {}).get("count") and "S4" in out:
-		print(
-			f"\n  S4 is answerable for only part of this population: {out['S8']['count']} Half-Day/0h\n"
-			"  row(s) carry NO linked punch, so the link cannot say whether they are damaged.\n"
-			"  Do not read S4 as complete while S8 is non-zero."
-		)
+	for shape, denominator in DENOMINATORS.items():
+		if out.get(denominator, {}).get("count") and shape in out:
+			print(
+				f"\n  {shape} could not answer for {out[denominator]['count']} row(s) of its own\n"
+				f"  population — see {denominator}. Do not read {shape} as complete while\n"
+				f"  {denominator} is non-zero."
+			)
 	if out.get("S6", {}).get("count"):
 		print(
 			"\n  S6 is NON-ZERO: duplicate Active shift assignments still exist, so repaired days\n"
