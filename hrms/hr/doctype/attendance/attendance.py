@@ -160,10 +160,15 @@ class Attendance(Document):
 			self.ot_hours = 0
 			self.ot_rate_weighted_hours = 0
 			self.set("ot_rate_bands", [])
+			self.flags.ot_priced_from_punches = False
 			return
 		breakdown = get_shift_ot_breakdown(
 			self.employee, self.shift, self.attendance_date, self.out_time, in_time=self.in_time
 		)
+		# Whether this number came from punches or from the manual timestamps.
+		# Only punches carry a snapshot of the shift as it was worked, so only
+		# they can be safely recomputed later — see recompute_ot_backfill.
+		self.flags.ot_priced_from_punches = bool(breakdown.get("priced_from_punches"))
 		self.ot_hours = breakdown["ot_hours"]
 		self.ot_rate_weighted_hours = breakdown["rate_weighted_hours"]
 		self.set("ot_rate_bands", [])
@@ -923,39 +928,40 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 		filters={"docstatus": 1, "attendance_date": ["between", [from_date, to_date]]},
 		pluck="name",
 	)
-	# A DAY WITH NO PUNCHES HAS NO SNAPSHOT TO RECOMPUTE FROM, SO IT IS LEFT
-	# ALONE. Overtime is priced from the shift each punch recorded, which is what
-	# makes this repair safe to run again and again — an edit to a Shift Type
-	# cannot move a settled day. A manually entered Attendance has no punches and
-	# therefore no record of the shift it was worked under, so recomputing it
-	# falls back to the Shift Type AS IT STANDS NOW. This function runs on EVERY
-	# deploy (hooks.py after_migrate), so without this it silently rewrites every
-	# punchless settled day whenever anybody edits a shift — and the direction
-	# that loses writes a zero, which removes the day from the claimable card
-	# entirely rather than showing a wrong number.
-	linked = {
-		row.attendance
-		for row in frappe.get_all(
-			"Employee Checkin",
-			filters={"attendance": ["in", names]},
-			fields=["attendance"],
-			limit_page_length=0,
-		)
-		if row.attendance
-	}
-	punchless = [name for name in names if name not in linked]
-	if punchless:
-		logger.info(
-			"[attendance] OT backfill leaving %d punchless day(s) untouched — no snapshot to price from",
-			len(punchless),
-		)
-	names = [name for name in names if name in linked]
+	if not names:
+		# Frappe rewrites `["in", []]` into `IN ("")` rather than raising, so an
+		# empty list below would match every row with a NULL or blank column and,
+		# with no page limit, pull the whole table. This runs on every deploy.
+		logger.info("[attendance] OT backfill: nothing submitted in %s..%s", from_date, to_date)
+		return {"dry_run": bool(dry_run), "scanned": 0, "changed": [], "skipped": []}
 
-	changed, recomputed = [], {}
+	changed, recomputed, punchless = [], {}, 0
 	for name in names:
 		doc = frappe.get_doc("Attendance", name)
 		old_hours, old_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
 		doc.set_overtime()
+		# A DAY PRICED WITHOUT PUNCHES HAS NO SNAPSHOT, SO IT IS LEFT ALONE.
+		#
+		# Overtime is priced from the shift each PUNCH recorded, which is what
+		# makes this repair safe to run again and again — an edit to a Shift Type
+		# cannot move a settled day. A manually entered Attendance has no punches
+		# and therefore no record of the shift it was worked under, so recomputing
+		# it falls back to the Shift Type AS IT STANDS NOW. This runs on EVERY
+		# deploy (hooks.py after_migrate), so without this it silently rewrites
+		# every punchless settled day whenever anybody edits a shift — and the
+		# direction that loses writes a zero, which removes the day from the
+		# claimable card entirely rather than showing a wrong number.
+		#
+		# THE PRICER IS ASKED, not the attendance link. An earlier version of this
+		# guard tested `Employee Checkin.attendance`, which is a DIFFERENT question:
+		# the pricer finds punches by employee + shift + time window and never by
+		# that link, and a day can hold punches with no link at all — the marking
+		# code leaves them unlinked on purpose when shifts overlap, and the bulk
+		# tool never writes one. Those days have a full snapshot, and skipping them
+		# STRANDED their overtime at zero, which hides them from the claimable card.
+		if not doc.flags.get("ot_priced_from_punches"):
+			punchless += 1
+			continue
 		new_hours, new_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
 		if new_hours == old_hours and new_weighted == old_weighted:
 			continue
@@ -971,6 +977,12 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 			}
 		)
 		recomputed[name] = doc
+
+	if punchless:
+		logger.info(
+			"[attendance] OT backfill left %d day(s) untouched — priced without punches, no snapshot",
+			punchless,
+		)
 
 	# A day a payout already depends on is HR's to correct by hand. The repair
 	# tool beside this one has refused such days since it shipped; this one

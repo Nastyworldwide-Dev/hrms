@@ -259,3 +259,23 @@ NEXT: C3 — hrms/overrides/ot_row_scope.py:38 `_reporting_employees` queries re
   filing window widens to four months while keeping its 16th-to-15th cycle shape.
 - 2026-09-13T17:52:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-13T17:52:29Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-13T17:52:32Z COMMIT: 958152380 fix(sync): a role is not a fence, and the test said so already → review dispatched
+- 2026-09-13 REPAIR: the punchless-day guard asked the WRONG QUESTION and review caught it. I tested
+  the `Employee Checkin.attendance` link; the pricer finds punches by employee + shift + time window
+  and never by that link. A day can hold punches with no link at all — mark_attendance_and_link_log
+  leaves them unlinked ON PURPOSE on an overlapping-shift error, and the bulk tool never writes one.
+  Those days have a full snapshot, so skipping them STRANDED their overtime at zero, which hides them
+  from the claimable card entirely. Silent underpay, and the version before mine repaired them.
+  `get_shift_ot_breakdown` now reports `priced_from_punches` and the repair asks that — one source of
+  truth. Measured on fresh.local: punches present but UNLINKED -> scanned 2, changed 1 (repaired);
+  no punches at all -> changed 0 (left alone).
+- 2026-09-13 REPAIR: `if not names: return` before the link probe. Frappe rewrites `["in", []]` into
+  `IN ("")` rather than raising, so an empty list matched every row with a NULL or blank column and,
+  with no page limit, pulled the whole table — on every deploy.
+- 2026-09-13 LEARNING(gate): an ast source guard storing ONE field set per function is last-write-wins
+  — adding any later get_all that happens to name the columns masks the punch query having lost one,
+  exactly as a comment defeated the regex version. It now matches on the DOCTYPE argument, keeps EVERY
+  matching call, and expands a starred module constant so a legitimate `fields=[*_COLUMNS, "time"]`
+  refactor is not reported as the bug. Both mutations measured.
+- 2026-09-13T17:58:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T17:58:58Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 9 extra test file(s) ⟂8fecdc10bd87

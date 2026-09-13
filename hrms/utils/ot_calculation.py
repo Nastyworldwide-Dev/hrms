@@ -954,7 +954,14 @@ def _approved_reservations(employee, month_start, month_end, exclude_request=Non
 
 
 def _empty_breakdown():
-	return {"ot_hours": 0.0, "day_type": None, "bands": [], "rate_weighted_hours": 0.0, "ot_amount": 0.0}
+	return {
+		"ot_hours": 0.0,
+		"day_type": None,
+		"bands": [],
+		"rate_weighted_hours": 0.0,
+		"ot_amount": 0.0,
+		"priced_from_punches": False,
+	}
 
 
 def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=None, basic=0):
@@ -1064,6 +1071,15 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 		"bands": bands,
 		"rate_weighted_hours": _rate_weighted_hours(bands),
 		"ot_amount": round(sum(b["amount"] for b in bands), 2),
+		# Did this number come from punches, or from the manual timestamps?
+		# Only the first carries a snapshot of the shift as it was worked, so
+		# only the first can be safely recomputed later. The repair that runs on
+		# every deploy asks THIS rather than guessing from the attendance link,
+		# because the link is not the question the pricer asks: punches are found
+		# by employee + shift + time window, and a day can hold punches with no
+		# link at all (mark_attendance_and_link_log leaves them unlinked on
+		# purpose when shifts overlap, and the bulk tool never writes one).
+		"priced_from_punches": bool(rows),
 	}
 
 

@@ -781,8 +781,18 @@ this ledger had already written "LOCK THE CLASS":
 
 hrms/utils/ot_calculation.py::_session_ot_slices — same-root (fixed here).
 hrms/utils/ot_calculation.py::_pair_sessions — same-root, carries configured_start.
-hrms/hr/doctype/attendance/attendance.py::recompute_ot_backfill — same-root:
-  excludes Attendance with no linked check-ins.
+hrms/hr/doctype/attendance/attendance.py::recompute_ot_backfill — same-root, and
+  CORRECTED once: the first version asked whether the day had a linked check-in,
+  which is a DIFFERENT question from the one the pricer asks. `set_overtime` ->
+  `get_shift_ot_breakdown` finds punches by employee + shift + time window and
+  never by `Employee Checkin.attendance` — and a day can hold punches with no
+  link at all, because the marking code leaves them unlinked ON PURPOSE when
+  shifts overlap and the bulk tool never writes one. Those days have a full
+  snapshot, and skipping them STRANDED their overtime at zero, which hides them
+  from the claimable card (api/__init__.py gates it on ot_hours > 0). Silent
+  underpay, and the version before this repaired them. The pricer is asked
+  directly now, through `priced_from_punches` on the breakdown — one source of
+  truth, no second predicate to drift.
 hrms/patches/v16_0/backfill_ot_after_rounding_rule.py — not-affected, no edit:
   it calls recompute_ot_backfill, which is now idempotent under a shift edit.
 

@@ -165,23 +165,47 @@ class TestEveryPricingPathReadsTheSnapshot(unittest.TestCase):
 	18:00 -> 22:00 collapsed it to 0.0.
 	"""
 
-	def _field_lists(self):
-		"""Parsed with ast, NOT by slicing the source text.
+	def _punch_field_lists(self):
+		"""Every `get_all("Employee Checkin", fields=[...])` in each pricing path.
 
-		The first version of this took the span between "fields=[" and the next
-		"]" and regexed quoted words out of it — which counts words inside
-		COMMENTS. This commit's sibling planted a ten-line comment inside exactly
-		that span, so deleting the column and leaving "# TODO: fetch shift_end
-		here one day" in its place made the test pass while the defect was back.
-		It also cried wolf on a perfectly good `fields=[*_BASE, "time"]`.
+		Three things this has to get right, each learned the hard way:
+
+		* parsed with ast, NOT by slicing source text. The first version took the
+		  span between "fields=[" and the next "]" and regexed quoted words out of
+		  it — which counts words inside COMMENTS, and a ten-line comment had been
+		  planted inside exactly that span, so deleting the column and leaving a
+		  note saying it ought to be fetched made the test pass.
+		* matched on the DOCTYPE, and EVERY matching call kept. Storing one set
+		  per function is last-write-wins: adding any later `get_all` that happens
+		  to name these columns — a shift lookup, a holiday list — would mask the
+		  punch query having lost one.
+		* a starred module constant expanded. `fields=[*_COLUMNS, "time"]` is a
+		  perfectly good refactor and must not be reported as the pricing bug.
 		"""
 		import ast
 		from pathlib import Path as _Path
 
 		source = (_Path(__file__).resolve().parents[1] / "utils" / "ot_calculation.py").read_text()
 		tree = ast.parse(source)
+		constants = {
+			target.id: {el.value for el in node.value.elts if isinstance(el, ast.Constant)}
+			for node in tree.body
+			if isinstance(node, ast.Assign) and isinstance(node.value, ast.List)
+			for target in node.targets
+			if isinstance(target, ast.Name)
+		}
+
+		def _fields(node):
+			names = set()
+			for el in node.elts:
+				if isinstance(el, ast.Constant):
+					names.add(el.value)
+				elif isinstance(el, ast.Starred) and isinstance(el.value, ast.Name):
+					names |= constants.get(el.value.id, set())
+			return names
+
 		wanted = {"_per_day_contributions", "get_shift_ot_breakdown"}
-		lists = {}
+		found = {name: [] for name in wanted}
 		for node in ast.walk(tree):
 			if not (isinstance(node, ast.FunctionDef) and node.name in wanted):
 				continue
@@ -190,30 +214,39 @@ class TestEveryPricingPathReadsTheSnapshot(unittest.TestCase):
 					isinstance(call, ast.Call)
 					and isinstance(call.func, ast.Attribute)
 					and call.func.attr == "get_all"
+					and call.args
+					and isinstance(call.args[0], ast.Constant)
+					and call.args[0].value == "Employee Checkin"
 				):
 					continue
 				for kw in call.keywords:
 					if kw.arg == "fields" and isinstance(kw.value, ast.List):
-						lists[node.name] = {el.value for el in kw.value.elts if isinstance(el, ast.Constant)}
-		missing = wanted - set(lists)
-		self.assertFalse(missing, f"could not find a get_all(fields=[...]) in {sorted(missing)}")
-		return lists
+						found[node.name].append(_fields(kw.value))
+		for name, lists in found.items():
+			self.assertTrue(
+				lists,
+				f'no get_all("Employee Checkin", fields=[...]) found in {name}. If the call was '
+				f"aliased (`from frappe import get_all`) or the fields passed as a variable, this "
+				f"guard cannot see it — keep the literal form or teach it the new one.",
+			)
+		return found
 
 	def test_both_punch_reading_paths_fetch_the_stamped_shift_window(self):
 		"""Both ENDS of it. The start is the same defect as the end and neither
 		pricing path can see it by agreeing with the other — measured, moving a
 		shift's start 10:00 -> 07:00 dropped a settled day from 4.0 to 1.0 on
 		BOTH paths at once."""
-		for fn, fields in self._field_lists().items():
-			for column in ("shift_start", "shift_end"):
-				with self.subTest(path=fn, column=column):
-					self.assertIn(
-						column,
-						fields,
-						f"{fn} does not fetch the {column} the punch recorded, so every session "
-						f"it builds falls back to the Shift Type as it stands TODAY and a settled "
-						f"day moves when HR edits the shift.",
-					)
+		for fn, field_lists in self._punch_field_lists().items():
+			for index, fields in enumerate(field_lists):
+				for column in ("shift_start", "shift_end"):
+					with self.subTest(path=fn, call=index, column=column):
+						self.assertIn(
+							column,
+							fields,
+							f"{fn} has a punch query that does not fetch the {column} the punch "
+							f"recorded, so every session it builds falls back to the Shift Type "
+							f"as it stands TODAY and a settled day moves when HR edits the shift.",
+						)
 
 
 class TestMonthlyCapResets(unittest.TestCase):
