@@ -320,7 +320,30 @@ def _classify_day(employee, day, default_day_type, shift=None):
 				"[ot_calculation] shift calendar %s has ended and nothing else covers %s", shift_list, day
 			)
 	if not holiday_list:
-		logger.warning("[ot_calculation] no applicable holiday list for work date %s", day)
+		# NO CALENDAR MEANS WE DO NOT KNOW, AND "normal" IS A GUESS THAT UNDERPAYS.
+		#
+		# With no applicable holiday list this date cannot be told from an
+		# ordinary weekday, so it is priced as one — at 1.5x where a public
+		# holiday pays 3.0x. Nobody is overpaid by that, which is why it was a
+		# reasonable default; the trouble is that it is SILENT. The only trace
+		# was a logger line, and a logger line is not read by the person whose
+		# holiday pay just halved, nor by the HR user who could fix the config
+		# in a minute if they knew.
+		#
+		# Raised to the Error Log, which is a screen someone actually opens, and
+		# named as the configuration gap it is rather than a property of the day.
+		# Deliberately NOT a throw: refusing to price the day would take the
+		# employee's ordinary pay away as well, which is worse than paying them
+		# the floor while the gap is visible and fixable.
+		frappe.log_error(
+			title=_("Overtime priced without a holiday calendar"),
+			message=_(
+				"No holiday list applies to {0} for employee {1} (shift {2}), so the date was priced "
+				"as an ordinary weekday. If it is a public holiday or a rest day, the overtime rate "
+				"is too low — attach a holiday list that covers this date to the employee, their "
+				"holiday-list default, or the shift, and re-run the overtime backfill for the period."
+			).format(day, employee, shift or "-"),
+		)
 		return "normal"
 	row = frappe.db.get_value(
 		"Holiday", {"parent": holiday_list, "holiday_date": day}, ["weekly_off"], as_dict=True

@@ -115,6 +115,26 @@ class TestApplicableHolidayList(unittest.TestCase):
 		result, _ = self.classify(date(2026, 9, 6), assigned=None)
 		self.assertEqual(result, "normal")
 
+	def test_a_missing_calendar_is_recorded_where_somebody_will_see_it(self):
+		"""Pricing the day as an ordinary weekday is the right default — nobody
+		is overpaid by it and refusing to price the day would cost the employee
+		their ordinary pay too. What was wrong is that it was SILENT.
+
+		With no applicable holiday list a public holiday is paid at 1.5x instead
+		of 3.0x, and the only trace was a logger line — not read by the person
+		whose holiday pay just halved, nor by the HR user who could fix the
+		configuration in a minute if they knew. It goes to the Error Log now,
+		which is a screen someone actually opens."""
+		from unittest.mock import patch as _patch
+
+		with _patch.object(ot.frappe, "log_error") as logged:
+			result, _ = self.classify(date(2026, 9, 6), assigned=None)
+		self.assertEqual(result, "normal", "the day must still be priced, at the weekday floor")
+		self.assertTrue(logged.called, "a halved holiday rate must not be invisible")
+		said = str(logged.call_args)
+		self.assertIn("holiday list", said)
+		self.assertIn("2026-09-06", said, "the date HR has to fix must be in the message")
+
 	def test_shift_calendar_takes_precedence_over_employee_assignment(self):
 		day = date(2026, 9, 7)
 		result, resolver = self.classify(

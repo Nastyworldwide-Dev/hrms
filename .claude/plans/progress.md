@@ -203,3 +203,19 @@ NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_
   and the four-month filing window.
 - 2026-09-13T17:46:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T17:46:59Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 9 extra test file(s) ⟂8fecdc10bd87
+- 2026-09-13T17:47:08Z COMMIT: f3e647b9c fix(overtime): the shift's start moves a settled day too, and both paths agree wrongly → review dispatched
+- 2026-09-13 EVIDENCE(2): B4 done. With no applicable holiday list a date cannot be told from an
+  ordinary weekday, so it is priced as one — 1.5x where a public holiday pays 3.0x. That default is
+  right (nobody is overpaid, and refusing to price the day would cost the employee their ordinary pay
+  too); what was wrong is that it was SILENT. The only trace was a logger line, which is read neither
+  by the person whose holiday pay just halved nor by the HR user who could fix the config in a minute.
+  It goes to the Error Log now, naming the date, the employee, the shift and the three places a
+  covering list can be attached. Proven RED by restoring the logger-only line.
+NEXT: the leak wave. C1 hrms/overrides/employee_issue_row_scope.py:106 fails OPEN — has_permission does
+  a raw get_value("user_id") == user while the file's OWN canonical _own_employees() sits at line 28, so
+  an offboarded login or either of two duplicate claimants reads HR tickets, including another person's.
+  Smallest fix in the whole plan. Then C2 the hub-wide recover_overwritten_checkins (its guard test is
+  ALREADY RED), C3 ot_row_scope's status-and-company-free reports query, C4 hr/utils.py:774's bare
+  get_doc on a Leave Allocation with no existence or docstatus guard.
+- 2026-09-13T17:48:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T17:48:52Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
