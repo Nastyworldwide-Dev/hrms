@@ -41,6 +41,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, get_datetime, getdate
 
+from hrms.overrides.company_scope import require_unfenced
+
 logger = logging.getLogger(__name__)
 
 RECOVERED_PREFIX = "recovered:"
@@ -354,11 +356,23 @@ def _attendance_by_day(plan: list) -> dict:
 def recover_overwritten_checkins(from_date, to_date, dry_run=1) -> dict:
 	"""Insert one new unstamped punch per overwritten row. Dry run by default.
 
-	System Manager only: this writes attendance evidence for other people. The
-	existing rows are never edited or deleted; re-running is safe because a
-	recovered punch is recognised by its device_id.
+	System Manager only, AND unfenced: this writes attendance evidence for other
+	people, across every company on the hub. The existing rows are never edited
+	or deleted; re-running is safe because a recovered punch is recognised by its
+	device_id.
+
+	The role check alone was not enough, and this app's own guard test has been
+	failing on that for some time. `frappe.only_for` answers "is this person a
+	System Manager" and nothing else; `collect()` below deliberately applies no
+	company filter, so the plan it builds spans the whole site. A caller holding
+	an `allow=Company` fence would have written punches for companies they cannot
+	otherwise see — and those punches carry `ignore_permissions` and
+	`ignore_validate`, so no geofence, no duplicate-time check and no approval
+	routing stands between the insert and payroll. `require_unfenced` is a no-op
+	for an unfenced operator, which is who is supposed to be running this.
 	"""
 	frappe.only_for("System Manager")
+	require_unfenced("recover overwritten check-ins")
 	plan = collect(from_date, to_date)["plan"]
 	inserts = [e for e in plan if e["action"] == "insert"]
 	if cint(dry_run):

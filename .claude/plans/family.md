@@ -921,3 +921,40 @@ family is the four tickets above.
   shape rather than one phrasing. Proven red by restoring the raw compare.
 - The invariant: a document door and its list door answer identity the same way,
   through the one resolver, or the narrow one is decorative.
+
+---
+
+# FAMILY — a role check standing in for a fence
+
+CLASS: `frappe.only_for(role)` answers "does this person hold this role" and
+nothing else. On a multi-company hub that is not the whole question: a user
+holding HR Manager PLUS an `allow=Company` restriction is HR for ONE company, and
+a role check waves them into an action whose blast radius is every company on the
+site. This app already has `require_unfenced` for precisely that, and it was
+simply not called here.
+
+ROOT CAUSE: hrms/sync/checkin_recovery.py::recover_overwritten_checkins was role-
+checked only, while `collect()` deliberately applies no company filter, so the
+plan it builds spans the whole hub. Its inserts carry `ignore_permissions` AND
+`ignore_validate` — no geofence, no duplicate-time check, no approval routing —
+and those rows become attendance, and attendance becomes pay.
+
+This repo's OWN guard test has been failing on it: test_sync_endpoints_are_fenced
+named the endpoint and the remedy, in the assertion message, and it was red on
+HEAD at the start of this session.
+
+## same-root — fixed in this commit
+hrms/sync/checkin_recovery.py::recover_overwritten_checkins — calls
+  `require_unfenced`, which is a no-op for the unfenced operator who is supposed
+  to be running it.
+
+## the machine's list — no external call sites
+`cs_callers` finds none outside this file: it is a whitelisted endpoint invoked
+from Desk or `bench execute`, which is exactly why only a role check stood
+between a fenced caller and every company's punches.
+
+## LOCK THE CLASS
+- hrms/tests/test_sync_endpoints_are_fenced.py already encodes the invariant for
+  every hub-wide sync endpoint and was RED on this one. Now green. No new test
+  was needed, which is the point — the gate existed and was being ignored.
+- The invariant: a hub-wide action asks `require_unfenced`, not only `only_for`.

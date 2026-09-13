@@ -242,3 +242,20 @@ NEXT: C2 — recover_overwritten_checkins is hub-wide and validation-free (frapp
   Manager") only, no company fence), and hrms/tests/test_sync_endpoints_are_fenced.py is ALREADY RED on
   it. Call hrms.overrides.company_scope.require_unfenced. Then C3 ot_row_scope's reports query (no
   status, no company), C4 hr/utils.py:774's bare get_doc on a Leave Allocation. Then the two rulings.
+- 2026-09-13 EVIDENCE(2): C2 done. recover_overwritten_checkins was role-checked only while collect()
+  deliberately applies no company filter, so a company-fenced HR user could have written punches for
+  every company on the hub — with ignore_permissions AND ignore_validate, so no geofence, no
+  duplicate-time check and no approval routing between the insert and payroll. It calls
+  require_unfenced now. NO NEW TEST WAS NEEDED: hrms/tests/test_sync_endpoints_are_fenced.py already
+  encoded the invariant, already named this endpoint and the remedy in its assertion message, and was
+  RED on HEAD at the start of this session. The gate existed and was being ignored.
+NEXT: C3 — hrms/overrides/ot_row_scope.py:38 `_reporting_employees` queries reports with no status and
+  no company filter (the file contains the word "company" zero times), so a manager sees the OT and
+  replacement-leave rows of INACTIVE and CROSS-COMPANY reports. hr/utils.py:1108 get_direct_report_employees
+  is the canonical answer and is Active-only and fenced. Then C4 hr/utils.py:774's bare
+  get_doc("Leave Allocation") with no existence or docstatus guard — a cancel after the allocation was
+  cancelled or re-pulled by sync either throws DoesNotExistError or writes onto a cancelled document.
+  Then the two rulings: approval.py:413-414 must stop elevating CANCEL on routing alone, and the
+  filing window widens to four months while keeping its 16th-to-15th cycle shape.
+- 2026-09-13T17:52:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T17:52:29Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
