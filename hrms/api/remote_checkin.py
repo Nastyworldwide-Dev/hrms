@@ -580,6 +580,43 @@ def get_unresolved_stale_in() -> dict:
 	return unresolved
 
 
+def session_boundary(in_dt, shift_actual_end, session_close_time):
+	"""When the session opened at `in_dt` is over, for deciding which later IN
+	starts a NEW one.
+
+	Two things end a session: an OUT, and the day turning over — a forgotten
+	check-out followed by the next morning's arrival is a new session even with
+	no OUT between. The first is exact. The second was calendar midnight, which
+	is the right turnover for a shift living inside one date and the wrong one
+	for every shift that crosses it.
+
+	On a 19:00-03:30 shift midnight falls in the MIDDLE of the session, so a
+	duplicate punch at 00:05 — the very shape the punch-type correction exists
+	to prevent — was read as the next session's arrival and bounded the window
+	at itself. The employee was then told their check-out "must be before your
+	next check-in at 00:05", and no time they could enter would be accepted:
+	every night-shift worker who forgot to clock out was locked out of the one
+	repair available to them.
+
+	So the turnover comes from the session's own shift window when the IN
+	carries one, and is never earlier than midnight — a shift inside one date
+	keeps exactly the boundary it had, and a shift running past midnight gets
+	one that sits after it ends rather than inside it. A punch with no shift
+	stamp (off shift, or an assignment that no longer resolves) falls back to
+	the calendar, which is all the evidence there is.
+
+	Pure, so the rule is testable without a bench.
+	"""
+	from datetime import datetime, time, timedelta
+
+	next_day = datetime.combine(in_dt.date() + timedelta(days=1), time.min)
+	shift_close = get_datetime(shift_actual_end) if shift_actual_end else None
+	day_turnover = max(next_day, shift_close) if shift_close else next_day
+	if session_close_time:
+		return min(get_datetime(session_close_time), day_turnover)
+	return day_turnover
+
+
 @frappe.whitelist()
 def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
 	"""Retroactively submit a forgotten check-out.
@@ -603,7 +640,7 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	in_doc = frappe.db.get_value(
 		"Employee Checkin",
 		in_checkin,
-		["name", "employee", "time", "log_type", "shift"],
+		["name", "employee", "time", "log_type", "shift", "shift_actual_end"],
 		as_dict=True,
 	)
 	if not in_doc:
@@ -646,11 +683,8 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# old 60-second window let it bound the check-out at the check-in itself,
 	# refusing every submission that employee could ever make.
 	#
-	# ceiling: the day-turnover half of the boundary is calendar-date based, so
-	# for a shift crossing midnight a duplicate punch after 00:00 is read as a
-	# new session and bounds the window
-	# upgrade: take the boundary from the IN's own shift window once
-	# hrms.utils.shift_resolution is the single source for that
+	# What ends this session, and therefore which later IN starts a new one —
+	# see session_boundary, which carries the rule and the reason.
 	session_close = frappe.db.get_value(
 		"Employee Checkin",
 		{"employee": in_doc.employee, "log_type": "OUT", "time": [">", in_dt]},
@@ -658,8 +692,13 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 		order_by="time asc",
 		as_dict=True,
 	)
-	next_day = datetime.combine(in_dt.date() + timedelta(days=1), time.min)
-	boundary = min(get_datetime(session_close.time), next_day) if session_close else next_day
+	boundary = session_boundary(in_dt, in_doc.shift_actual_end, session_close.time if session_close else None)
+	logger.info(
+		"[remote_checkin] late check-out session boundary for %s: %s (shift close %s)",
+		in_doc.name,
+		boundary,
+		in_doc.shift_actual_end,
+	)
 
 	# Frappe v16 refuses "min(time)" as a SELECT string, so the row is taken
 	# with an ordered limit. `name !=` stays: the record being resolved must

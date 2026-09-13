@@ -204,3 +204,25 @@ NEXT: Wave A4 — the night-shift late-checkout boundary (hrms/api/remote_checki
 - 2026-09-13T16:21:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-09-13T16:22:35Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-13T16:23:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T16:23:24Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 4 call site(s) given verdicts, 10 same-root ⟂0dedd975f583
+- 2026-09-13T16:23:26Z COMMIT: 53c25a30e fix(attendance): the damage query would have reported the wrong number → review dispatched
+- 2026-09-13 EVIDENCE(3): Wave A4 done — the night-shift late check-out. The day-turnover half of the
+  session boundary was calendar midnight, which on a 19:00-03:30 shift falls in the MIDDLE of the
+  session, so a duplicate punch at 00:05 was read as the next session's arrival and bounded the window
+  at itself. Reproduced on fresh.local with the production message verbatim
+  (verify-bench/sites/probe_late_checkout_night.py, savepointed): RED on 53c25a30e, GREEN after, same
+  fixture both runs. The turnover now comes from the IN's own shift_actual_end, floored at midnight so
+  no shift living inside one date changes behaviour. Extracted as the pure `session_boundary` with six
+  bench-free cases, because the rule was previously only reachable through a whitelisted endpoint.
+- 2026-09-13 DEAD END: the first two probe runs were FALSE GREENS waiting to happen — the probe set
+  shift_start/shift_end itself on insert, and fetch_shift overwrote them with the employee's REAL
+  assignment (a 10:15-18:00 day shift), so shift_actual_end never crossed midnight and the fix looked
+  inert. A late-check-out fix cannot be verified without giving the probe employee a real night Shift
+  Assignment first. This also means the fix DEPENDS on shift_actual_end being stamped correctly — if
+  shift attribution is wrong for a punch, its late check-out boundary is wrong too. The two are linked.
+NEXT: Wave A3b — the 00:00-06:00 band in resolve_punch_type (hrms/api/remote_checkin.py:312-313)
+  leaves night shifts unprotected for the back half of their shift, so a double tap after midnight
+  still writes the two-IN shape. The band exists to protect an EARLY-SHIFT arrival at 05:30 from being
+  read as yesterday's departure, so the fix must distinguish the two — likely by asking whether the
+  open IN's own shift is still running, which session_boundary now makes expressible.
+- 2026-09-13T16:29:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

@@ -410,3 +410,55 @@ frontend/src/data/appLinks.js:26 — not-affected — a comment naming a payroll
 hrms/api/__init__.py:318 — not-affected — a comment about a manager reading a direct report (the person).
 hrms/api/kpi.py:478 — not-affected — same, a comment about a manager reading a report (the person).
 hrms/hr/utils.py:1126 — not-affected — a logger format string counting direct reports (people).
+
+---
+
+# FAMILY — a session boundary taken from the calendar instead of the shift
+
+CLASS: "when is this work session over" was answered with calendar midnight.
+That is correct for a shift living inside one date and wrong for every shift
+that crosses one, where midnight falls in the MIDDLE of the session. Everything
+downstream that asks "which later punch belongs to the NEXT session" then
+mis-answers for exactly the people whose shift crosses midnight.
+
+ROOT CAUSE: hrms/api/remote_checkin.py::submit_late_checkout computed
+`next_day = midnight after the IN's date` and used it as the day-turnover
+boundary. Its own `# ceiling:` comment named the defect and the upgrade; this is
+that upgrade. The turnover now comes from the IN's own `shift_actual_end` when
+it has one, floored at midnight so no shift inside one date changes behaviour.
+
+## same-root — fixed in this commit
+hrms/api/remote_checkin.py::submit_late_checkout — takes the boundary from
+  `session_boundary` instead of computing it inline.
+hrms/api/remote_checkin.py::session_boundary — NEW, pure, carries the rule and
+  the reason. Not whitelisted: it is a helper, not an endpoint.
+
+## the machine's list — no external call sites
+`cs_callers` returns nothing outside this commit's own files for
+`session_boundary`, `submit_late_checkout` or `get_unresolved_stale_in`. The
+boundary was inline and is still reached only through `submit_late_checkout`.
+
+## the other places that answer a NEIGHBOURING question — verdicts
+hrms/api/remote_checkin.py::_session_is_live — not-affected — a different
+  question (has an open IN gone stale, so may the banner offer a repair) with its
+  own deliberately shared 06:00 cutoff. It does not bound a search.
+hrms/api/remote_checkin.py::resolve_punch_type — not-affected — reads session
+  state from the newest row; it never computes a day turnover.
+hrms/utils/shift_resolution.py::SESSION_WINDOW — not-affected — a 20-hour
+  DURATION used to decide whether an OUT still closes an IN. Different shape of
+  answer (a length, not an instant) to a different question.
+hrms/overrides/employee_checkin_override.py::_open_in — not-affected — bounds its
+  lookback by SESSION_WINDOW, not by a calendar date, so it never had this bug.
+
+## LOCK THE CLASS
+- Real-save evidence: verify-bench/sites/probe_late_checkout_night.py, savepointed
+  and rolled back. RED on 53c25a30e with the production message verbatim
+  ("Check-out time must be before your next check-in ... at 2026-09-13 00:05:00"),
+  GREEN after, same fixture and same night Shift Assignment in both runs.
+- Six bench-free cases in hrms/api/test_remote_checkin.py pin the rule: a night
+  shift turns over after it ends; a day shift keeps exactly the boundary it had;
+  no shift stamp falls back to the calendar; a real OUT still wins; a stray later
+  OUT does not widen the session (min, not max); and the shift close is accepted
+  as a string, because that is how it arrives from the database.
+- The invariant: a session's end is read from the shift it belongs to, and the
+  calendar is only the fallback when there is no shift to read.

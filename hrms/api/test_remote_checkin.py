@@ -505,6 +505,59 @@ class TestPunchHonoursTheResolvedType(unittest.TestCase):
 		self.assertEqual(h.doc.log_type, "IN")
 
 
+class TestLateCheckoutSessionBoundary(unittest.TestCase):
+	"""Which later check-in counts as the NEXT session's, and therefore bounds a
+	late check-out.
+
+	The boundary used to be calendar midnight, which is correct for a shift that
+	lives inside one date and wrong for every shift that crosses one. On a
+	19:00-03:30 shift midnight lands in the middle of the session, so a spurious
+	punch just after it was read as the next arrival and bounded the window at
+	itself — and the employee was told their check-out "must be before your next
+	check-in at 00:05", with no time they could enter that would be accepted.
+	"""
+
+	def setUp(self):
+		from hrms.api import remote_checkin
+
+		self.boundary = remote_checkin.session_boundary
+		self.mon = datetime.datetime(2026, 9, 7)
+
+	def at(self, day_offset, hour, minute=0):
+		return self.mon + datetime.timedelta(days=day_offset, hours=hour, minutes=minute)
+
+	def test_a_night_shift_turns_over_after_it_ends_not_at_midnight(self):
+		"""The reported defect. IN 19:00, the shift runs to 03:30 with grace to
+		05:00, so a punch at 00:05 is inside this session and must not bound it."""
+		got = self.boundary(self.at(0, 19), self.at(1, 5), None)
+		self.assertEqual(got, self.at(1, 5))
+		self.assertGreater(got, self.at(1, 0, 5), "00:05 must fall INSIDE the session")
+
+	def test_a_day_shift_keeps_exactly_the_boundary_it_had(self):
+		"""No regression for the shift that was always handled correctly: its
+		own window closes before midnight, so midnight still wins."""
+		self.assertEqual(self.boundary(self.at(0, 9), self.at(0, 19), None), self.at(1, 0))
+
+	def test_a_punch_with_no_shift_falls_back_to_the_calendar(self):
+		"""Off-shift, or an assignment that no longer resolves: the calendar is
+		all the evidence there is."""
+		self.assertEqual(self.boundary(self.at(0, 9), None, None), self.at(1, 0))
+
+	def test_a_real_check_out_closes_the_session_before_its_shift_would(self):
+		"""An OUT is exact evidence and beats the shift window."""
+		self.assertEqual(self.boundary(self.at(0, 19), self.at(1, 5), self.at(1, 3, 30)), self.at(1, 3, 30))
+
+	def test_a_check_out_after_the_shift_window_does_not_extend_the_session(self):
+		"""min(), not max(): a stray OUT belonging to a later session must not
+		widen this one."""
+		self.assertEqual(self.boundary(self.at(0, 19), self.at(1, 5), self.at(1, 9)), self.at(1, 5))
+
+	def test_the_shift_close_is_accepted_as_a_string(self):
+		"""It arrives straight off the database row, which hands back strings on
+		some paths and datetimes on others."""
+		self.assertEqual(self.boundary(self.at(0, 19), "2026-09-08 05:00:00", None), self.at(1, 5))
+
+
 class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 	"""The server, not the phone, decides whether a punch opens or closes a session.
 
