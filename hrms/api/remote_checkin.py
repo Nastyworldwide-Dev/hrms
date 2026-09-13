@@ -623,9 +623,13 @@ def session_boundary(in_dt, shift_actual_end, session_close_time):
 	repair available to them.
 
 	So the turnover comes from the session's own shift window when the IN
-	carries one, and is never earlier than midnight — a shift inside one date
-	keeps exactly the boundary it had, and a shift running past midnight gets
-	one that sits after it ends rather than inside it. A punch with no shift
+	carries one, and is never earlier than midnight — a shift whose GRACE WINDOW
+	closes before midnight keeps exactly the boundary it had, and one that runs
+	past midnight gets a boundary sitting after it ends rather than inside it.
+	Note the grace window, not the shift: an evening shift ending 23:30 with the
+	default hour of `allow_check_out_after_shift_end_time` closes at 00:30, so
+	its boundary moves by that half hour too. That is the same rule, applied
+	honestly — the session really does run past midnight. A punch with no shift
 	stamp (off shift, or an assignment that no longer resolves) falls back to
 	the calendar, which is all the evidence there is.
 
@@ -739,15 +743,46 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 		order_by="time asc",
 		as_dict=True,
 	)
-	if next_in:
-		next_in_time = get_datetime(next_in.time)
-		out_time_filter = ["between", [in_doc.time, next_in_time - timedelta(seconds=1)]]
-		if out_dt >= next_in_time:
-			frappe.throw(
-				_("Check-out time must be before your next check-in {0} at {1}.").format(
-					next_in.name, next_in_time
-				)
+	if next_in and out_dt >= get_datetime(next_in.time):
+		frappe.throw(
+			_("Check-out time must be before your next check-in {0} at {1}.").format(
+				next_in.name, get_datetime(next_in.time)
 			)
+		)
+
+	# THE REFUSAL AND THE SEARCH ANSWER DIFFERENT QUESTIONS, SO THEY TAKE
+	# DIFFERENT EDGES.
+	#
+	# The refusal above asks "is the time you typed still inside this session",
+	# and its edge is the NEXT SESSION's arrival — which is what the shift-aware
+	# boundary deliberately pushed past midnight so a night worker is not bounded
+	# by a punch inside their own shift.
+	#
+	# The search below asks a narrower question: "does an OUT already exist for
+	# THIS session". Its edge must be the FIRST later arrival of any kind, inside
+	# the boundary or not. Widening the boundary without splitting the two broke
+	# the invariant stated at the top of this block: an employee who forgot a
+	# check-out, then worked a complete later session, had that session's OUT
+	# fall inside the search window and was told a check-out already existed —
+	# so the buried session could never be repaired, on exactly the night-shift
+	# population the wider boundary exists to unblock.
+	first_later_in = frappe.db.get_value(
+		"Employee Checkin",
+		{
+			"employee": in_doc.employee,
+			"log_type": "IN",
+			"name": ["!=", in_doc.name],
+			"time": [">", in_dt],
+		},
+		["name", "time"],
+		order_by="time asc",
+		as_dict=True,
+	)
+	if first_later_in:
+		out_time_filter = [
+			"between",
+			[in_doc.time, get_datetime(first_later_in.time) - timedelta(seconds=1)],
+		]
 	# a rejected late-OUT must not block resubmitting a corrected time — but a
 	# bare != filter would ALSO skip legacy rows with NULL status (SQL
 	# three-valued logic), so probe non-rejected and never-set separately

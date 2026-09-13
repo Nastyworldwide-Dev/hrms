@@ -533,10 +533,22 @@ class TestLateCheckoutSessionBoundary(unittest.TestCase):
 		self.assertEqual(got, self.at(1, 5))
 		self.assertGreater(got, self.at(1, 0, 5), "00:05 must fall INSIDE the session")
 
-	def test_a_day_shift_keeps_exactly_the_boundary_it_had(self):
+	def test_a_shift_whose_grace_closes_before_midnight_keeps_its_old_boundary(self):
 		"""No regression for the shift that was always handled correctly: its
 		own window closes before midnight, so midnight still wins."""
 		self.assertEqual(self.boundary(self.at(0, 9), self.at(0, 19), None), self.at(1, 0))
+
+	def test_an_evening_shift_whose_GRACE_crosses_midnight_moves_too(self):
+		"""Stated because the first version of this claimed "a day shift keeps
+		exactly the boundary it had", and that is not true.
+
+		An evening shift ending 23:30, with the default hour of
+		allow_check_out_after_shift_end_time, closes at 00:30 — so its boundary
+		moves by that half hour. It is the same rule applied honestly: that
+		session really does run past midnight, and the old boundary cut it off
+		thirty minutes early. Pinned so nobody "restores" the day-shift case by
+		flooring everything at midnight."""
+		self.assertEqual(self.boundary(self.at(0, 14), self.at(1, 0, 30), None), self.at(1, 0, 30))
 
 	def test_a_punch_with_no_shift_falls_back_to_the_calendar(self):
 		"""Off-shift, or an assignment that no longer resolves: the calendar is

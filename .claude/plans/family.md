@@ -552,3 +552,54 @@ hrms/utils/checkin_sweeper.py — not-affected — sweeps by age.
   that closed at 13:00 leaves a 05:30 arrival as an arrival.
 - The invariant: the small hours are decided on the open session's own shift
   window, never on the hour of the clock.
+
+## AMENDED AFTER REVIEW — the widened boundary broke the invariant above it
+
+The shift-aware boundary was right and it was applied in one place too many.
+`submit_late_checkout` uses that boundary for TWO different questions, and only
+one of them wanted it widened:
+
+  * "is the time you typed still inside this session?" — its edge is the NEXT
+    SESSION's arrival, and pushing that past midnight is the whole point.
+  * "does an OUT already exist for this session?" — its edge must be the FIRST
+    later arrival OF ANY KIND. Widening it let an OUT belonging to a later,
+    COMPLETED session fall inside the search window.
+
+PROVEN on fresh.local (verify-bench/sites/probe_buried_repair.py, savepointed):
+night IN Mon 19:00 forgotten, a complete session IN Tue 01:00 / OUT Tue 02:00
+after it, then a repair filed for Tue 00:30 — legal, before the new session
+began. RED after 8d105985e ("A check-out for this session already exists."),
+and ACCEPTED before it. A strict regression against HEAD~1, on exactly the
+night-shift population the commit exists to unblock, leaving their hours
+unrecorded. GREEN now, and the original night-shift repair is still GREEN.
+
+`first_later_in` is computed separately and bounds the OUT-existence window only.
+
+hrms/api/remote_checkin.py::submit_late_checkout — same-root (fixed here).
+
+TICKET (W2, widened not introduced): a late check-out can still be written on top
+of a genuinely new, still-open session opened between midnight and
+`shift_actual_end`. The old code had the identical hole inside one calendar day
+(IN 09:00 / IN 14:00 / OUT 16:00 was accepted), so this is a wider window on a
+pre-existing class, not a new one — and A3b shrinks it further, because a
+duplicate punch inside a live night shift is now recorded as an OUT rather than
+an IN, so there is no stray IN left to step over. A true DOUBLE check-out is
+still impossible (`later_out` blocks any second OUT) and the row lands Pending,
+so a human sees it. Closing it properly wants the session-state supplier below.
+
+TICKET (hotspot, 15 fixes in 90 days): extract
+`hrms/utils/session_state.py::open_session(employee, at)` returning ONE object —
+the open IN row, its session start, its turnover boundary, and whether it is live
+— built from a single ordered recent-rows query. 27 of ~37 hunks in 90 days
+landed in four functions (`submit_late_checkout` 9, `punch` 9,
+`resolve_punch_type` 5, `get_unresolved_stale_in` 4) that all answer that one
+question with three different rules: `_session_is_live`'s 06:00 cutoff,
+`shift_resolution.SESSION_WINDOW`'s 20 hours, and `session_boundary`'s shift end.
+Every fix in this file has been one of those three disagreeing with the other two.
+
+CORRECTED: the claim "a day shift keeps exactly the boundary it had" is FALSE.
+An evening shift ending 23:30 with the default hour of
+`allow_check_out_after_shift_end_time` closes at 00:30, so its boundary moves by
+that half hour — measured. That is the rule applied honestly, and it is now
+pinned by its own case so nobody "restores" the day-shift behaviour by flooring
+everything at midnight.
