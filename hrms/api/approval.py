@@ -407,18 +407,34 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 	else:
 		# AN APPROVED REQUEST IS NEVER CANCELLED — Nabil, 13 September 2026.
 		#
-		# Because the branch above catches every submit of a DECIDE_THEN_SUBMIT
-		# doctype, and all of the request doctypes are in that set, this else is
-		# reachable only on a CANCEL. It used to elevate on routing alone: being
+		# The branch above catches every submit of a DECIDE_THEN_SUBMIT doctype,
+		# which is every request doctype — so in PRACTICE this else is the cancel
+		# path. Not only: `finalize` is whitelisted with no doctype allow-list, so
+		# a submit of any other submittable doctype lands here too, which is why
+		# the "not routed to you" refusal below is still live and must not be
+		# deleted as dead. It used to elevate on routing alone: being
 		# the person a request was addressed to was enough to withdraw a decision
 		# that had already been made and acted on — a settled approval reopened
 		# with the framework's own cancel right bypassed.
 		#
 		# Routing answers "may you DECIDE this", which is not the same question as
-		# "may you UNDO a decision". So the elevation is gone and cancelling now
-		# needs the right itself: HR, or whoever the doctype's permissions say.
-		# The manager who approved it keeps every power the ruling gives them —
-		# approving is untouched — and loses only the one the ruling takes away.
+		# "may you UNDO a decision". So the elevation is gone and cancelling needs
+		# the right itself, from whatever the doctype's permissions say. The
+		# manager who approved it keeps every power the ruling gives them —
+		# approving is untouched — and loses only the one it takes away.
+		#
+		# TWO THINGS THIS DOES NOT DO, both measured and both Nabil's to settle:
+		#   * On Leave Application, Expense Claim and Shift Request it changes
+		#     NOTHING. A patch grants Employee/ESS the cancel flag on those three,
+		#     and employee_master auto-grants the Leave/Expense Approver roles,
+		#     which carry cancel — so the routed approver passes the check above
+		#     anyway. The ruling bites only on OT Request, Attendance Request and
+		#     Replacement Leave Claim.
+		#   * HR User has no `cancel` on Shift Request (it holds it on the other
+		#     five). The removed elevation was their only door there, so an HR
+		#     User can no longer cancel one through this endpoint — though the PWA
+		#     button already gated on framework permissions, so none of them ever
+		#     saw a working one.
 		action = "submit" if docstatus == SUBMIT else "cancel"
 		if frappe.has_permission(doctype, action, doc=doc):
 			doc.check_permission("read")

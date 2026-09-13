@@ -933,7 +933,17 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 		# empty list below would match every row with a NULL or blank column and,
 		# with no page limit, pull the whole table. This runs on every deploy.
 		logger.info("[attendance] OT backfill: nothing submitted in %s..%s", from_date, to_date)
-		return {"dry_run": bool(dry_run), "scanned": 0, "changed": [], "skipped": []}
+		# Same keys the full path returns: the patch that calls this reads
+		# `written`, and a short dict would KeyError inside after_migrate.
+		return {
+			"dry_run": bool(dry_run),
+			"scanned": 0,
+			"changed": 0,
+			"written": 0,
+			"locked": 0,
+			"records": 0,
+			"skipped": 0,
+		}
 
 	changed, recomputed, punchless = [], {}, 0
 	for name in names:

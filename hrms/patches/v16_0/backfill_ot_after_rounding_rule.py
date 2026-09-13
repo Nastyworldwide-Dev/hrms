@@ -22,6 +22,24 @@ the attendance repair tool uses. A day an approved OT request, replacement leave
 or a submitted payslip depends on is REPORTED and left exactly as it is; HR
 corrects those by hand. It is also idempotent — a row whose recomputed figures
 match what is stored is skipped, so a re-run writes nothing.
+
+RANGE NOTE (13 Sep 2026): this takes its window from
+`filing_window.earliest_filable_date`, which widened from two cycles to four on
+Nabil's ruling that backdated filing reaches four months. So the quoted "repair
+last 2 months" above is the instruction this patch was BORN with, not the range
+it now scans — that is at most 153 days rather than 92, and it runs on every
+deploy. `_repair_financial_dependency` still refuses any day a payout already
+depends on, and it is per-day rather than per-range, so it is no weaker across
+the wider window; but a day settled on the SOURCE instance may have no Salary
+Slip here to protect it. Dry-run the newly reachable slice before the first
+deploy that carries this:
+
+    bench --site <site> execute \
+      hrms.hr.doctype.attendance.attendance.recompute_ot_backfill \
+      --kwargs "{'from_date':'2026-04-16','to_date':'2026-06-15','dry_run':1}"
+
+Read `changed` against `locked`. If `changed` exceeds `locked`, stop and settle
+it with Nabil before deploying.
 """
 
 import logging

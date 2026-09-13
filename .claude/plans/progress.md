@@ -2,116 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  savepointed): on an ORDINARY overtime day (IN 10:00, OUT 22:00, four hours past an 18:00 shift end)
-  get_ot_claim_capacity, get_day_ot_breakdown, get_ot_breakdown(month) and get_shift_ot_breakdown ALL
-  RETURN 4.0. They agree. And on the long session the finding rests on (IN 3 Sep 09:00, OUT 5 Sep
-  03:00) every path returns 0.0 or no entry — but NOT because of the window: the closing punch is
-  stamped shift=None, offshift=1, because an OUT two days later falls inside no shift window, so the
-  session never PAIRS anywhere. There is nothing to disagree about.
-- 2026-09-13 REPAIR(audit): corrected O1 in .claude/plans/audit-2026-09-13-ot.md in place, with the
-  measurement, rather than leaving a refuted number on the board to be quoted. The original text is
-  struck through beneath it so nobody re-derives it.
-- 2026-09-13 EVIDENCE(2): what IS real on that shape is the SILENT ZERO — 33 worked hours reported as
-  0.0 on every surface with no cause named, exactly O3/S8. That is the OT defect worth fixing, and the
-  probe above is its red.
-NEXT: OT wave re-ordered on evidence. B1 is struck. Take B2 first (hrms/hr/doctype/shift_type/
-  shift_type.py:275 guards only start_time and only while punches are UNLINKED, so editing a shift's
-  end_time re-prices closed months and moves an already-APPROVED claim's punch_ot_hours — measured
-  3.0 -> 6.0 -> 4.0 through the real document API), then B3 (make the silent zeros legible: 15 sites,
-  one message, no cause ever named), then B4 (a missing holiday list prices a public holiday as a
-  normal day, silent underpay).
-- 2026-09-13T17:23:07Z COMMIT: 0280a495a docs(plans): the headline overtime finding does not reproduce → review dispatched
-- 2026-09-13T17:26:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T17:26:59Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-13T17:27:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T17:27:37Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-13T17:27:38Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 2 call site(s) given verdicts, 16 same-root ⟂9cfe6fa24e18
-- 2026-09-13T17:27:40Z COMMIT: 79511b581 fix(overtime): a closed month must not be re-priced by an edit made today → review dispatched
-- 2026-09-13 EVIDENCE(3): B3 done. Fifteen situations ended in "no overtime" and all fifteen said the
-  same sentence, which states a conclusion and hides the cause — and only one of the fifteen is the
-  employee's own to answer. `_explain_no_overtime` now asks the punches why and says so: no check-ins ·
-  punches attached to no shift (ask HR) · overtime not enabled on the shift, named · off-shift ·
-  skip-attendance · awaiting approval · no check-out · no check-in. It returns "" when the punches look
-  fine and the hours really are zero, because inventing a cause there is worse than silence. Surfaced
-  in the PWA hint and appended to the save-time refusal. Seven bench-free cases.
-- 2026-09-13 LEARNING(fact): hrms/api/__init__.py's OT summary functions are AST-EXTRACTED by
-  test_ot_claim_monthly_capacity.py and test_ot_nonworking_hours.py — only the named FunctionDefs are
-  exec'd, so a new module-level helper is invisible to them and raises NameError. Nest the helper, or
-  add it to the extraction list.
-- 2026-09-13 LEARNING(fact): frappe.bold is a MagicMock under the bench-free stub, so any assertion on
-  a message built with it cannot see the content. These sentences are shown in the PWA as TEXT anyway,
-  where markup would appear literally — plain strings are both more testable and more correct.
-NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_calculation.py:300-302
-  returns "normal" with a logger.warning only), so 4 Sep 2026 was measured at 1.5x instead of 3.0x.
-  Silent UNDERPAY, config-dependent. Then the leak wave: C1 employee_issue_row_scope.py:106 fails OPEN
-  (three characters of intent — the canonical _own_employees() is 80 lines above it), C2 the hub-wide
-  recovery endpoint whose own test is already red, C3 ot_row_scope's status-and-company-free reports,
-  C4 the leave-allocation pointer with no existence guard. Then the two ruling items: stop managers
-  cancelling a settled decision (approval.py:413-414), and the four-month filing window.
-- 2026-09-13T17:33:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-13T17:33:51Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993
-- 2026-09-13T17:33:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-13T17:33:58Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 7 extra test file(s) ⟂f36332fee993
-- 2026-09-13T17:34:03Z COMMIT: 616d6b119 fix(overtime): a closed month must not be re-priced by an edit made today → review+design dispatched
-- 2026-09-13T17:34:31Z COMMIT: 63a473ef9 fix(overtime): a zero that names no cause is not an answer → review+design dispatched
-- 2026-09-13 REPAIR: B2 fixed ONE of the two pricing paths, and one fixed is worse than none — review
-  caught it. get_shift_ot_breakdown's own field list did not fetch `shift_end`, so every session IT
-  built fell back to the live Shift Type. That is the path Attendance.set_overtime uses to WRITE the
-  stored ot_hours, and hrms/patches/v16_0/backfill_ot_after_rounding_rule.after_migrate re-runs it
-  across historical Attendance on EVERY DEPLOY — armed on a timer, no HR or user action needed. And the
-  losing direction does not misprice visibly, it HIDES the day: api/__init__.py gates the claimable
-  card on ot_hours > 0. Measured with the column absent: end 18:00->15:00 gave claim 4.0 / attendance
-  7.0; end 18:00->22:00 gave claim 4.0 / attendance 0.0. Both directions hold at 4.0 now on both paths.
-- 2026-09-13 REPAIR: the no-punch fallback session set `shift_end` to the CONFIGURED end, contradicting
-  the invariant recorded hours earlier. Right number by accident only, and anything reading that key as
-  the grace value it is named for would understate OT by the whole grace window. Both keys now hold
-  what their names say.
-- 2026-09-13 LEARNING(gate): a missing COLUMN in a caller's field list is invisible to any test of the
-  rule -> hrms/tests/test_ot_calculation_rules.py now asserts both punch-reading paths fetch
-  `shift_end`, read off the committed source. Proven red by removing it.
-- 2026-09-13 LEARNING(fact): a commit message written with `cat > $GD/MSG` inside a command that the
-  PreToolUse gate BLOCKS never runs, so the next `git commit -F` silently reuses the PREVIOUS message.
-  616d6b119 landed with B2's message on B3's content and had to be amended. Write the message file in
-  its own command, then commit in the next.
-- 2026-09-13T17:36:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T17:36:38Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 5 extra test file(s) ⟂7ec4f73e96a2
-- 2026-09-13T17:36:41Z COMMIT: 45656e87d fix(overtime): fixing one pricing path and not the other was worse than neither → review dispatched
-- 2026-09-13 REPAIR: two more holes of the same shape, both found by review AFTER the ledger had
-  written "LOCK THE CLASS" — which is exactly why that phrase is dangerous. (a) the START was taking
-  only the DATE off the punch and re-deriving the time of day from the live Shift Type, so moving a
-  shift's start 10:00 -> 07:00 dropped a settled day from 4.0h to 1.0h — and CROSS-PATH AGREEMENT
-  CANNOT SEE IT, because both pricing paths agree on the wrong number. Carried now as
-  `configured_start`, from `shift_start` only and never the early-arrival-extended
-  `shift_actual_start`. (b) a PUNCHLESS day has no snapshot at all, so recomputing it necessarily uses
-  live config — and recompute_ot_backfill runs on EVERY deploy, so it rewrote every manually entered
-  settled day whenever anybody edited a shift, writing a ZERO in the losing direction which removes the
-  day from the claimable card. It now leaves punchless days alone.
-- 2026-09-13 EVIDENCE(3): measured on fresh.local with the punches LINKED to an Attendance row — the
-  only state in which shift_type's start_time guard stands down, and therefore the only state where the
-  defect is reachable. All four edits hold at 4.0 on both paths; without configured_start the
-  start 10:00->07:00 case is RED at 1.0 on both.
-- 2026-09-13 LEARNING(gate): a source-text guard built from str.index + regex counts quoted words
-  inside COMMENTS, and this work had planted a ten-line comment inside the very span it matched — so
-  deleting the column and leaving `# TODO: fetch "shift_end" here one day` made it pass with the defect
-  live. Parsed with `ast` now (FunctionDef -> get_all -> fields keyword -> Constant elements).
-  Mutation-checked both ways.
-- 2026-09-13 LEARNING(fact): shift_type.py's start_time guard fires only while check-ins are UNLINKED,
-  so a probe whose punches are not linked to an Attendance row CANNOT reach the defect — it gets
-  "Mark attendance for existing check-in/out logs" instead. Link the punches first.
-NEXT: B4 — a missing holiday list prices a public holiday as a normal day (ot_calculation.py:300-302
-  returns "normal" with a logger.warning only): silent UNDERPAY, 1.5x instead of 3.0x. Then C1
-  employee_issue_row_scope.py:106 fails OPEN, C2 the hub-wide recovery endpoint, C3 ot_row_scope,
-  C4 the leave-allocation pointer. Then the two rulings: stop managers cancelling a settled decision,
-  and the four-month filing window.
-- 2026-09-13T17:46:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T17:46:59Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 9 extra test file(s) ⟂8fecdc10bd87
-- 2026-09-13T17:47:08Z COMMIT: f3e647b9c fix(overtime): the shift's start moves a settled day too, and both paths agree wrongly → review dispatched
-- 2026-09-13 EVIDENCE(2): B4 done. With no applicable holiday list a date cannot be told from an
-  ordinary weekday, so it is priced as one — 1.5x where a public holiday pays 3.0x. That default is
-  right (nobody is overpaid, and refusing to price the day would cost the employee their ordinary pay
-  too); what was wrong is that it was SILENT. The only trace was a logger line, which is read neither
-  by the person whose holiday pay just halved nor by the HR user who could fix the config in a minute.
-  It goes to the Error Log now, naming the date, the employee, the shift and the three places a
   covering list can be attached. Proven RED by restoring the logger-only line.
 NEXT: the leak wave. C1 hrms/overrides/employee_issue_row_scope.py:106 fails OPEN — has_permission does
   a raw get_value("user_id") == user while the file's OWN canonical _own_employees() sits at line 28, so
@@ -311,3 +201,44 @@ NEXT: nothing is queued. Every defect on the ranked plan is closed and committed
   is DEFERRED by ruling; historical data repair still needs Nabil's explicit word for that exact
   change. 50 commits sit unpushed on nz-glass ahead of the live build a741f3e. Do not push, deploy or
   repair anything without him saying so.
+- 2026-09-13T18:21:43Z COMMIT: ffcfcc52b docs(plans): the reports project is deferred, by decision not by oversight → review dispatched
+- 2026-09-13 REPAIR: acted on the ruling review's four spec warnings. (a) test_ot_discovery_window still
+  hardcoded the fence — the exact rot its sibling had just been fixed for — so it DERIVES it now; that
+  file's question ("discovery offers exactly what filing accepts, never wider") is policy-independent
+  and must not need editing when the policy moves. (b) the comment in approval.py claimed the else is
+  "reachable only on a CANCEL": finalize is whitelisted with no doctype allow-list, so a submit of any
+  other submittable doctype lands there too, which is why the "not routed to you" refusal is still live
+  and must not be deleted as dead. (c) the backfill patch's docstring still quoted "repair last 2
+  months" while its code now follows the four-cycle filing window. (d) the empty-range early return
+  omitted keys the calling patch reads and would have raised KeyError inside after_migrate.
+- 2026-09-13 **DEPLOY RISK, READ BEFORE PUSHING**: widening the filing window silently re-scoped the
+  deploy-time OT repair from at most 92 days to at most 153, and it runs on EVERY deploy via
+  hooks.py after_migrate. _repair_financial_dependency is per-day rather than per-range so it is no
+  weaker across the wider window — but under the parallel-run setup a month settled on the SOURCE
+  instance may have no Salary Slip HERE to protect it. Dry-run the newly reachable slice first:
+    bench --site <site> execute hrms.hr.doctype.attendance.attendance.recompute_ot_backfill \
+      --kwargs "{'from_date':'2026-04-16','to_date':'2026-06-15','dry_run':1}"
+  Read `changed` against `locked`. If changed > locked, settle it with Nabil BEFORE deploying.
+  Recorded in the patch docstring too, where whoever deploys will meet it.
+- 2026-09-13 OPEN DECISION for Nabil (the cancel ruling is narrower than it reads): it is a NO-OP on
+  Leave Application, Expense Claim and Shift Request. patches/v15_106_3/allow_staff_cancel_own_requests
+  grants Employee/ESS the cancel flag on those three, and employee_master auto-grants the Leave/Expense
+  Approver roles which carry cancel — so the routed approver passes the framework check anyway. The
+  ruling bites only on OT Request, Attendance Request and Replacement Leave Claim. Either "an approved
+  request is never cancelled" means those roles lose cancel on approved rows (a DocPerm + patch change),
+  or it means "routing is not a cancel right", which is what shipped. HIS CALL.
+- 2026-09-13 OPEN DECISION for Nabil (a consequence of the four-month window): ot_request's
+  validate_duplicate_request checks only for another OT REQUEST on the same employee+date — nothing
+  consults Overtime Details, Overtime Slip or a submitted Salary Slip. At two cycles the reachable
+  window stayed near the open payroll cycle; at four it reaches five calendar months, into closed and
+  PAID periods. So an employee can file for an April day whose overtime was already paid without an OT
+  Request on record, and the only thing between that and a second payout is an approver recognising a
+  five-month-old date. Either accept it explicitly (every OT Request is human-approved) or add an
+  already-paid check. HIS CALL.
+- 2026-09-13 LEARNING(fact): the live cancel matrix is NOT what the doctype JSON says.
+  patches/v15_106_3/allow_staff_cancel_own_requests grants cancel to Employee/ESS on Leave Application,
+  Expense Claim and Shift Request via update_permission_property, and employee_master's
+  update_approver_user_roles auto-grants the Leave/Expense Approver roles. Any permission analysis on
+  those three must read the patch and that hook as well as the JSON.
+- 2026-09-13T18:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-13T18:26:53Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075

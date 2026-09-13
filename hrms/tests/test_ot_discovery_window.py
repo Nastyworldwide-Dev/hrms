@@ -15,9 +15,10 @@ Attendance and OT Request reads honour the date filters the endpoint sends.
 """
 
 import importlib
+import importlib.util
 import sys
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -31,12 +32,20 @@ harness = importlib.import_module("test_ot_claim_monthly_capacity")
 ot = importlib.import_module("hrms.utils.ot_calculation")
 
 EMPLOYEE = "EMP-SYNTHETIC"
-# The harness clock. The cycle began 16 Sep, and backdating reaches FOUR
-# cycles (Nabil, 13 Sep 2026 — widened from two), so 16 May is the earliest
-# filable date. 10 July, which used to sit outside the window, is inside it now.
+# The harness clock. The fence itself is DERIVED, not written down: this file's
+# question — "discovery offers exactly what filing accepts, never wider" — is
+# policy-independent, so it must not need editing when the policy moves. It did
+# need editing once, which is how this comment came to be here.
 TODAY = date(2026, 9, 30)
+
+_fw_spec = importlib.util.spec_from_file_location(
+	"_filing_window", Path(__file__).resolve().parents[1] / "utils" / "filing_window.py"
+)
+_filing_window = importlib.util.module_from_spec(_fw_spec)
+_fw_spec.loader.exec_module(_filing_window)
+FENCE = _filing_window.earliest_filable_date(TODAY)
 INSIDE_WINDOW_BUT_OLD = date(2026, 7, 20)  # 72 days back: filable, hidden by a 45-day lookback
-BEFORE_WINDOW = date(2026, 5, 10)  # one cycle before the four-cycle fence
+BEFORE_WINDOW = FENCE - timedelta(days=1)  # the day before the fence, wherever it sits
 RECENT = date(2026, 9, 25)
 
 
@@ -71,15 +80,15 @@ class TestDiscoveryWindow(unittest.TestCase):
 	def test_every_filable_day_is_offered(self):
 		result = _discover()
 		self.assertEqual([day["date"] for day in result["days"]], ["2026-09-25", "2026-07-20"])
-		self.assertEqual(result["from_date"], "2026-05-16")
+		self.assertEqual(result["from_date"], str(FENCE))
 		self.assertEqual(result["to_date"], str(TODAY))
 
 	def test_a_day_before_the_filing_window_is_not_offered(self):
-		self.assertNotIn("2026-05-10", [day["date"] for day in _discover()["days"]])
+		self.assertNotIn(str(BEFORE_WINDOW), [day["date"] for day in _discover()["days"]])
 
 	def test_a_caller_may_narrow_the_window_but_never_widen_it(self):
 		self.assertEqual([day["date"] for day in _discover(days=10)["days"]], ["2026-09-25"])
-		self.assertEqual(_discover(days=400)["from_date"], "2026-05-16")
+		self.assertEqual(_discover(days=400)["from_date"], str(FENCE))
 
 
 if __name__ == "__main__":
