@@ -225,3 +225,21 @@ NEXT: C4 — hrms/hr/utils.py:774 reverse_replacement_leave does a bare
   request is never cancelled), and the filing window widens to four months keeping its 16th-to-15th
   cycle shape.
 - 2026-09-13T18:07:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T18:07:05Z COMMIT: bdcb02fcb fix(hr): a manager's team was re-derived here, and the fences drifted → review dispatched
+- 2026-09-13 EVIDENCE(2): C4 done. reverse_replacement_leave fetched the Leave Allocation with a bare
+  get_doc while running INSIDE A CANCEL, so an allocation that HR had cancelled or that the sync had
+  re-pulled under a new name froze the employee's own withdrawal with DoesNotExistError. And a
+  CANCELLED allocation is worse than a missing one — decrementing it writes a negative ledger entry
+  onto a document no longer in force. Existence and docstatus are both checked now; it returns cleanly
+  and records the skip in the Error Log rather than throwing, because the person's cancellation
+  succeeded and the allocation's fate is not theirs to fix. Four AST cases (the module cannot be
+  imported without a bench — pypika), proven red by restoring the bare get_doc.
+NEXT: the two rulings, both from Nabil in this session. (1) "an approved request is never cancelled" —
+  hrms/api/approval.py:413-414 elevates CANCEL on routing alone (`elif _is_routed_approver(doc):
+  doc.flags.ignore_permissions = True`), with only _request_read_allowed ahead of it, and the guard at
+  :400 means the else branch is reachable ONLY on cancel. Close it. (2) the filing window widens to
+  four months from the present day while KEEPING its 16th-to-15th cycle shape, and covers OT Request
+  and expense-shaped requests alongside it — hrms/utils/filing_window.py currently implements two
+  cycles.
+- 2026-09-13T18:08:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-13T18:08:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426

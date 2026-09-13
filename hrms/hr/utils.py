@@ -771,7 +771,42 @@ def reverse_replacement_leave(allocation_name, days):
 	from hrms.hr.doctype.leave_application.leave_application import get_approved_leaves_for_period
 
 	days = flt(days)
-	allocation = frappe.get_doc("Leave Allocation", allocation_name)
+
+	# THE ALLOCATION MAY NOT BE THERE ANY MORE, AND THE CANCEL MUST STILL WORK.
+	#
+	# A bare get_doc here throws DoesNotExistError, and this runs inside a cancel:
+	# the person is trying to withdraw a request, and instead the whole
+	# transaction freezes on a row that is nobody's fault. The allocation can be
+	# gone for ordinary reasons — HR cancelled it, or the sync re-pulled the
+	# mirrored doctype and the name moved. And a CANCELLED allocation is worse
+	# than a missing one: decrementing it writes a negative ledger entry onto a
+	# document that is no longer in force, which nothing downstream expects.
+	#
+	# Neither case is an error the employee can act on, so neither is raised at
+	# them. Both are recorded where HR reconciles balances.
+	allocation = (
+		frappe.get_doc("Leave Allocation", allocation_name)
+		if frappe.db.exists("Leave Allocation", allocation_name)
+		else None
+	)
+	if allocation is None or cint(allocation.docstatus) != 1:
+		state = "missing" if allocation is None else f"docstatus={cint(allocation.docstatus)}"
+		logger.warning(
+			"[rl_grant] cannot reverse %s day(s): allocation %s is %s — leaving the balance alone",
+			days,
+			allocation_name,
+			state,
+		)
+		frappe.log_error(
+			title=_("Replacement Leave reversal skipped"),
+			message=_(
+				"A cancelled request asked to take back {0} day(s) of Replacement Leave from "
+				"allocation {1}, but that allocation is {2}. The cancellation went through and no "
+				"balance was changed — if the employee's Replacement Leave balance looks too high, "
+				"this is the day to reconcile."
+			).format(days, allocation_name, state),
+		)
+		return
 	taken = flt(
 		get_approved_leaves_for_period(
 			allocation.employee, allocation.leave_type, allocation.from_date, allocation.to_date

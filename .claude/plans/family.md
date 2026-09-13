@@ -1057,3 +1057,40 @@ hrms/hr/doctype/appraisal/appraisal.py:939 — ticket C-appraisal — transitive
   helper, and it must run no query of its own. Proven red by restoring the local
   query. The file already pinned its OTHER question (who sees all) the same way.
 - The invariant: a row scope answers "my team" by asking, never by querying.
+
+---
+
+# FAMILY — a pointer trusted inside somebody else's cancel
+
+CLASS: a document fetched by name with no existence and no docstatus guard, on a
+path that runs while ANOTHER document is being cancelled. The failure is not the
+missing row — it is that the person's own withdrawal freezes on it.
+
+ROOT CAUSE: hrms/hr/utils.py::reverse_replacement_leave did
+`frappe.get_doc("Leave Allocation", allocation_name)` bare. The allocation can be
+gone for ordinary reasons (HR cancelled it, or the sync re-pulled the mirrored
+doctype and the name moved), and a CANCELLED one is worse than a missing one:
+decrementing it writes a negative ledger entry onto a document no longer in force.
+
+## same-root — fixed in this commit
+hrms/hr/utils.py::reverse_replacement_leave — checks existence, then docstatus,
+  and returns cleanly with an Error Log entry when either fails. It does NOT
+  throw: the employee's cancellation succeeded and the allocation's fate is not
+  theirs to fix. Silently leaving the balance too high would be its own defect,
+  so the skip is recorded where HR reconciles balances.
+
+## the callers — verdicts
+hrms/hr/doctype/ot_request/ot_request.py:264 — not-affected — it calls this on
+  cancel and reads no return value; the change only makes that call safe.
+hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py — not-affected
+  — same shape, same call, same benefit.
+hrms/hr/utils.py::grant_replacement_leave — not-affected — it CREATES or tops up
+  an allocation it has just resolved, and already handles the absent case.
+
+## LOCK THE CLASS
+- hrms/tests/test_rl_reversal_survives_a_missing_allocation.py, four AST cases:
+  existence checked, docstatus checked, the skip recorded, and NOTHING thrown at
+  the caller. AST rather than behavioural because hrms.hr.utils cannot be
+  imported without a bench (pypika). Proven red by restoring the bare get_doc.
+- The invariant: a cleanup that runs inside somebody else's cancel never raises
+  at them, and never writes to a document that is not in force.
