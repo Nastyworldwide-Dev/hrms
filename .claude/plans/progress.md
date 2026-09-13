@@ -293,3 +293,21 @@ NEXT: every defect on the ranked plan is CLOSED. What remains is the report proj
   button), and Nabil's three production questions (is a biometric device in use; is HR Settings
   allow_multiple_shift_assignments on; did the OT precision patches ever run on Verifica). Historical
   data repair still needs his explicit word for that exact change. NOTHING IS PUSHED.
+- 2026-09-13T18:15:25Z COMMIT: 7472b03ef docs(plans): every defect on the ranked plan is closed → review dispatched
+- 2026-09-13 RULING (Nabil): **THE SCRIPT REPORT PROJECT IS DEFERRED. DO NOT OPEN IT.** That covers all
+  three steps proposed today — the role patch stripping Accounts User / Projects User / Manufacturing
+  User / Expense Approver / Leave Approver / System Manager off the pay reports, the company guard on
+  frappe.desk.query_report.run, and the per-report self-scoping. No commits, no patches, no probes
+  against it until he says otherwise, in those words.
+  The exposure is recorded and understood: those roles can read gross pay, employer contributions,
+  whole-company leave balances and full CTC today, and 26 of 32 Script Reports accept any company typed
+  into the filter. It is written down in .claude/plans/audit-2026-09-13-approver.md. Leaving it open is
+  HIS CALL, made with the facts in front of him — not an oversight for a later session to "helpfully"
+  correct.
+  The two policy questions that would gate the work if it resumes: should Accounts see gross pay (they
+  may have a legitimate cost-allocation reason), and should a Leave Approver see whole-company balances
+  or only their team.
+NEXT: nothing is queued. Every defect on the ranked plan is closed and committed; the reports project
+  is DEFERRED by ruling; historical data repair still needs Nabil's explicit word for that exact
+  change. 50 commits sit unpushed on nz-glass ahead of the live build a741f3e. Do not push, deploy or
+  repair anything without him saying so.
