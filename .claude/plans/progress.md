@@ -2,104 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  subset form. `report` now drags a denominator in whenever its shape is asked for. Verified: asking
-  for S4 alone prints S4, S8 and the caveat.
-- 2026-09-13 REPAIR: three more day-scoping spellings the guard missed, named by review and now covered
-  — SUBSTRING/SUBSTR/CONVERT over a time column, TIMESTAMPDIFF(DAY, ...) (MINUTE stays legal, S2 uses
-  it), and BETWEEN against a DATE column alongside the >= that was already there.
-NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the document layer so every
-  write path alternates, not just the PWA. This changes what a BIOMETRIC DEVICE records, so it is the
-  one remaining item with a blast radius beyond the phone app. After that: the OT wave (B1 the +/-1 day
-  fetch window disagreement, B2 the unguarded Shift Type end_time, B3 the silent-zero messages,
-  B4 the missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the
-  hub-wide recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
-- 2026-09-13T16:44:43Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T16:44:47Z COMMIT: 98c64cb99 fix(attendance): the denominator was not the complement of what it counted → review dispatched
-- 2026-09-13 REPAIR: the `first_later_in` edge introduced DATA CORRUPTION and review caught it.
-  first_later_in is always <= next_in by construction, so the OUT-existence window could only SHRINK —
-  and the genuine OUT closing the session fell outside it. A SECOND check-out became creatable on a
-  session that already had one, on a plain DAY shift as well as at night, and get_unresolved_stale_in's
-  banner OFFERS that session so an ordinary user is walked into it. Two OUT rows on one session,
-  measured.
-- 2026-09-13 LEARNING(fact): a buried-session repair and a duplicate-check-out corruption are
-  INDISTINGUISHABLE by any time boundary — both read IN, IN, OUT in time order. That is why two
-  successive fixes each got one of them wrong. The invariant that separates them is "never leave two
-  consecutive OUTs", the mirror of resolve_punch_type's "nobody arrives twice without leaving".
-  Replaced the edge with hrms/api/remote_checkin.py::leaves_consecutive_outs, pure and bench-free.
-  All four shapes measured on fresh.local: buried repair ACCEPTED, day duplicate REFUSED, night
-  duplicate REFUSED, plain forgotten check-out ACCEPTED.
-- 2026-09-13 LEARNING(gate): the bench-free suite was 50/50 GREEN with that corruption live, because
-  nothing exercised the OUT-existence search against a duplicate IN inside a CLOSED session -> eight
-  cases added covering all four shapes plus the rejected-OUT exemption and both same-instant tie-breaks.
-- 2026-09-13 TICKET: hrms/tests/test_checkin_timezone.py has two tests permanently RED under the bench
-  interpreter (test_punch_stamps_employee_timezone_not_site_timezone errors, leaving frappe.get_all
-  unpatched; test_closed_sessions_are_not_flagged fails on row ordering that does not survive the
-  list(reversed(...)) in get_unresolved_stale_in). They are the ONLY bench-level coverage of punch()
-  and of the banner that hands users into the path above. Repair or delete — a permanently red test
-  protects nothing and masks the next regression.
-NEXT: A2 (re-scoped) — carry the server-side punch-type resolution into the document layer so every
-  write path alternates, not just the PWA. Changes what a BIOMETRIC DEVICE records. Then the OT wave
-  (B1 the +/-1 day fetch window, B2 the unguarded Shift Type end_time, B3 the silent zeros, B4 the
-  missing holiday list), then the leak wave (C1 employee_issue_row_scope fails open, C2 the hub-wide
-  recovery endpoint, C3 ot_row_scope, C4 the leave-allocation pointer).
-- 2026-09-13T16:57:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T16:57:20Z COMMIT: 9c6f41fa7 fix(checkin): a late check-out may never leave two departures in a row → review dispatched
-- 2026-09-13 REPAIR: the consecutive-OUT invariant was right; its SCOPE and its REACH were not, and
-  review measured both on fresh.local. (a) the sequence was fetched `time asc` with limit=200, and an
-  ascending fetch with a row limit truncates the NEWEST rows — so past 200 punches the genuine closing
-  OUT was invisible and the guard failed open silently (IN 09:00, 204 stray INs, real OUT 18:00 -> a
-  second check-out at 13:00 ACCEPTED). Bounded by TIME now, no row limit. get_unresolved_stale_in
-  already avoided this by fetching `time desc` and reversing. (b) `any(pair over the whole sequence)`
-  is not "this row must not create an adjacency" — a log ALREADY carrying two adjacent OUTs anywhere in
-  the window (the damage the previous version of this same function could produce, and what the hub
-  leaves behind when one punch is pulled twice) refused the repair of an unrelated EARLIER session.
-  Scoped to the inserted row's two neighbours.
-- 2026-09-13 EVIDENCE(3): seven shapes measured, all correct — 204 stray INs REFUSED, stale OUT/OUT
-  pair a day later ACCEPTED, mirrored duplicate pair ACCEPTED, day duplicate REFUSED, night duplicate
-  REFUSED, buried repair ACCEPTED, plain forgotten check-out ACCEPTED. Both mutants killed bench-free:
-  inverting the same-instant tie-break and restoring the global scan each turn exactly one test red.
-- 2026-09-13 DEAD END: instrumenting a test with an inline `print(self.check(...))` made it report the
-  WRONG verdict and cost a long detour chasing a phantom. Instrument the FUNCTION and write to a file,
-  never the test body.
-- 2026-09-13 LEARNING(fact): in this repo an ascending `frappe.get_all` with a row `limit` on a
-  session-scoped question silently drops the NEWEST rows — the wrong axis entirely. Bound such fetches
-  by time, or fetch `time desc` and reverse as get_unresolved_stale_in does.
-NEXT: Nabil asked whether we even have a biometric device — the honest answer is that the code exposes
-  the stock ERPNext ingestion endpoint (employee_checkin.py:143 add_log_based_on_employee_field, and it
-  IS @frappe.whitelist()), nothing in this app calls it, and the bench proves nothing (12 rows, all
-  Administrator). The production query is in the reply. If no device is in use, A2 shrinks to HR's Desk
-  manual entry and drops below the OT wave. Start B1: the +/-1 day punch fetch window
-  (ot_calculation.py:372-373) that makes four OT entry points disagree by 33 hours on one date.
-- 2026-09-13T17:11:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T17:11:07Z COMMIT: cbb1295ff fix(checkin): the duplicate guard went blind past two hundred punches → review dispatched
-- 2026-09-13 REPAIR: the two-day forward window I put in place of the row limit was the SAME defect on
-  a new axis, and review proved it reachable. `next_in` cannot justify a forward bound because it
-  searches for ARRIVALS while the row this guard must see is a DEPARTURE — nothing requires an arrival
-  between them. A Friday-to-Monday weekend reaches it; so does the production double-tap whose close
-  lands days later, and the banner OFFERS exactly those rows. The feature's own horizons disagree
-  anyway (pairing looks back 14 days at employee_checkin_override.py:262, the stale-IN banner 10 at
-  remote_checkin.py:573), so any number here was arbitrary. The bound is gone; `limit_page_length=0`
-  stays. The `# ceiling:` marker went with it — removing a shortcut beats justifying it.
-- 2026-09-13 LEARNING(gate): a test of the PURE rule stays green through BOTH versions of a
-  fetch-window defect, because the rule was never wrong — what it got to SEE was. Two narrowings
-  shipped that way. hrms/api/test_remote_checkin.py now reads the committed fetch out of the source and
-  refuses any forward bound or row limit on it. Proven red by reintroducing the two-day window.
-- 2026-09-13 TICKET: an invariant limited to "never two consecutive OUTs" does not notice a spurious
-  extra SESSION manufactured between two stray INs — IN 09:00, IN 09:18, IN 10:00, OUT 18:00 with a
-  filing at 09:30 is accepted, and attendance then pairs 09:00->09:30 and 10:00->18:00 instead of one
-  session. CORRECTED after measurement: this WAS introduced by today's stack, at 9c6f41fa7, and is
-  unpushed. Measured through the real function at five revisions — origin/nz-glass (DEPLOYED) REFUSES
-  it, 96228853f REFUSES it, and 9c6f41fa7 / cbb1295ff / HEAD all ACCEPT it. The earlier note here said
-  "not introduced by any of today's commits" because the old GLOBAL scan also found no adjacent OUT
-  pair; that is true and irrelevant — the deployed code refuses the shape for a different reason.
-  It is the deliberate price of freeing the buried repair: the same change also, on purpose, allows a
-  far-out buried repair and a far-out rejected OUT that the deployed code refuses. THIS IS A TRADE TO
-  PUT TO NABIL BEFORE THE PUSH, not an inherited limitation to shrug at.
-- 2026-09-13T17:18:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-13T17:18:59Z COMMIT: 4015d50d1 fix(checkin): the forward window was the same failure on a different axis → review dispatched
-- 2026-09-13 DEAD END: **B1 IS NOT REPRODUCIBLE AS STATED — do not build it.** The OT audit's headline
-  finding was that the +/-1 day punch fetch makes four entry points disagree by 33 hours on one date.
-  Measured on fresh.local through the real functions (verify-bench/sites/probe_ot_window.py,
   savepointed): on an ORDINARY overtime day (IN 10:00, OUT 22:00, four hours past an 18:00 shift end)
   get_ot_claim_capacity, get_day_ot_breakdown, get_ot_breakdown(month) and get_shift_ot_breakdown ALL
   RETURN 4.0. They agree. And on the long session the finding rests on (IN 3 Sep 09:00, OUT 5 Sep
@@ -279,3 +181,25 @@ NEXT: C3 — hrms/overrides/ot_row_scope.py:38 `_reporting_employees` queries re
   refactor is not reported as the bug. Both mutations measured.
 - 2026-09-13T17:58:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-13T17:58:58Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 9 extra test file(s) ⟂8fecdc10bd87
+- 2026-09-13T17:59:02Z COMMIT: aa747dae3 fix(overtime): ask the pricer whether it used punches, not the attendance link → review dispatched
+- 2026-09-13 EVIDENCE(3): C-provenance done. Review found — and proved live — that fencing the recovery
+  ENDPOINT left the READ door beside it wide open: the Checkin Provenance Audit report reaches the same
+  hub-wide `collect()` with no fence of its own, and its role list includes HR Manager. frappe.get_all
+  bypasses User Permissions as well as DocPerms, so a correct-looking role list on a report is not a row
+  fence. Measured on fresh.local: a user restricted to one company saw 12 of 12 punches before the fix
+  and 10 of 12 after (an earlier richer fixture showed 14 rows across THREE companies). Fenced at the
+  COLLECTOR so both surfaces close in one place, applied on the TRUE employee after classification —
+  an overwritten punch carries somebody else's name in the column, so an SQL filter would hide the very
+  rows the function exists to surface.
+- 2026-09-13 LEARNING(fact): `frappe.get_all` bypasses User Permissions AND DocPerms, so any Script
+  Report calling a hub-wide collector through it leaks cross-company rows even when the Report's own
+  `roles` list looks correctly scoped.
+- 2026-09-13 TICKET: checkin_provenance_audit.js still renders the "Recover" button for a company-fenced
+  user, who now sees the right rows but meets a PermissionError on pressing it. Cosmetic; the refusal
+  is correct.
+NEXT: C3 — hrms/overrides/ot_row_scope.py:38 `_reporting_employees` queries reports with no status and
+  no company filter (the file contains "company" zero times), so a manager sees OT and replacement-leave
+  rows of INACTIVE and CROSS-COMPANY reports. hr/utils.py:1095 get_direct_report_employees is the
+  canonical answer and is Active-only and company-fenced. Then C4 hr/utils.py:774. Then the two rulings.
+- 2026-09-13T18:04:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13T18:04:47Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

@@ -41,7 +41,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, get_datetime, getdate
 
-from hrms.overrides.company_scope import require_unfenced
+from hrms.overrides.company_scope import allowed_companies, require_unfenced
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +232,26 @@ def collect(from_date, to_date, employee: str | None = None) -> dict:
 	from hrms.utils.timezone import get_attendance_timezone
 
 	window_end = get_datetime(add_days(getdate(to_date), 1))
+
+	# FENCED TO THE CALLER'S COMPANIES, because this is a READ DOOR as well as
+	# the input to a write one.
+	#
+	# `frappe.get_all` bypasses User Permissions as well as DocPerms, so a role
+	# gate on the caller is not a row fence — they are different questions. The
+	# Checkin Provenance Audit report reaches this function with no fence of its
+	# own, and its role list includes HR Manager: measured on a real site, a user
+	# restricted to one company was handed 14 rows spanning THREE, with every
+	# company's punches, employee names, creators and attendance status.
+	#
+	# `allowed_companies()` is empty for an unfenced operator, so the recovery
+	# endpoint beside this — which now refuses a fenced caller outright — still
+	# sees the whole hub, which is what it is for.
+	fence = allowed_companies()
+	fenced_employees = None
+	if fence:
+		fenced_employees = set(frappe.get_all("Employee", filters={"company": ("in", fence)}, pluck="name"))
+		logger.info("[checkin_recovery] collect fenced to %s (%d employees)", fence, len(fenced_employees))
+
 	# No SQL filter on `employee`: an overwritten punch shows somebody else in
 	# that column. The employee filter is applied after classification, on the
 	# true employee, below.
@@ -270,6 +290,15 @@ def collect(from_date, to_date, employee: str | None = None) -> dict:
 	for row in rows:
 		verdict = classify_punch(row, run_windows, employee_of_user, operator_users)
 		classified.append({**row, **verdict})
+	if fenced_employees is not None:
+		# Applied on the TRUE employee, after classification, for the same reason
+		# the caller's own `employee` filter is: an overwritten punch carries
+		# somebody else's name in the column, so filtering in SQL would hide the
+		# very rows this function exists to surface — and would also let a fenced
+		# caller see a row whose true owner is outside their fence.
+		before = len(classified)
+		classified = [r for r in classified if (r["true_employee"] or r["employee"]) in fenced_employees]
+		logger.info("[checkin_recovery] company fence kept %d of %d rows", len(classified), before)
 	if employee:
 		classified = [r for r in classified if (r["true_employee"] or r["employee"]) == employee]
 	overwritten = [r for r in classified if r["kind"] == OVERWRITTEN]

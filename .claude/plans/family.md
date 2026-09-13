@@ -968,3 +968,51 @@ between a fenced caller and every company's punches.
   every hub-wide sync endpoint and was RED on this one. Now green. No new test
   was needed, which is the point — the gate existed and was being ignored.
 - The invariant: a hub-wide action asks `require_unfenced`, not only `only_for`.
+
+---
+
+# FAMILY — the write door shut while the read door beside it stayed open
+
+CLASS: a hub-wide collector reached through TWO surfaces. Fencing the caller of
+one leaves the other exactly as it was — and `frappe.get_all` bypasses User
+Permissions as well as DocPerms, so a correct-looking role list on a report is
+not a row fence. The role gate and the row fence are different questions.
+
+ROOT CAUSE: hrms/sync/checkin_recovery.py::collect applied no company predicate
+at all. `recover_overwritten_checkins` (the write door) was fenced in 958152380;
+the Checkin Provenance Audit report reaches the same collector through
+`execute()` with no fence of its own, and its role list includes HR Manager.
+
+MEASURED on fresh.local (verify-bench/sites/probe_provenance_fence.py,
+savepointed): a user restricted to one company saw 12 of 12 punches before, and
+10 of 12 after — the two belonging to other companies are gone. An earlier
+measurement on a richer fixture put it at 14 rows spanning THREE companies, with
+every company's punches, employee names, creators and attendance status.
+
+## same-root — fixed in this commit
+hrms/sync/checkin_recovery.py::collect — fenced by `allowed_companies()`, applied
+  on the TRUE employee after classification, for the same reason the caller's own
+  `employee` filter is: an overwritten punch carries somebody else's name in the
+  column, so an SQL filter would hide the very rows this function exists to
+  surface AND would let a fenced caller see a row whose true owner is outside
+  their fence. Empty fence means unfenced, so the recovery endpoint beside it
+  still sees the whole hub, which is what it is for.
+
+## the two surfaces — verdicts
+hrms/hr/report/checkin_provenance_audit/checkin_provenance_audit.py:39 — same-root,
+  fixed HERE rather than at its own door: fencing the collector closes both
+  surfaces in one place, and a second predicate at the report would be a second
+  thing to drift.
+hrms/sync/checkin_recovery.py::recover_overwritten_checkins — not-affected — it
+  refuses a fenced caller outright (958152380), so it only ever reaches `collect`
+  unfenced, where the new filter is a no-op.
+
+TICKET: the report still renders its "Recover" button for a company-fenced user,
+who now sees the right rows but would meet a PermissionError on pressing it. Hide
+the button when the caller is fenced — cosmetic, and the refusal is correct.
+
+## LOCK THE CLASS
+- Measured both ways on a real site, savepointed: 12 rows without the fence, 10
+  with it, for a caller restricted to one company.
+- The invariant: fence the COLLECTOR, not each surface that calls it. A read door
+  and a write door onto the same data are one fence, or they are none.
