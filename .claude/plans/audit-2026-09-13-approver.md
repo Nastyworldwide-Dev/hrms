@@ -31,7 +31,7 @@ Sight and action are decided by different code that does not agree.
 | Attendance Request | own + DocShare + HR (fenced) + direct reports read-only | HR; reports_to manager | employee_owned_row_scope.py:132 TEAM_REVIEWED_DOCTYPES |
 | Employee Issue | HR operator (fenced); the employee only — NO manager | HR only (READ_PTYPES:78 blocks every staff mutation) | employee_issue_row_scope.py:45-115 |
 | 29 employee-owned doctypes (pay, benefits, PIP, attendance, checkins) | own + DocShare + HR (fenced). No manager visibility | HR | employee_owned_row_scope.py — **the one built correctly**: canonical identity, company fence, both hooks, integrity test |
-| Appraisal | own + the TRANSITIVE reports_to chain + HR (fenced) + DocShare | same | appraisal.py:920-941 |
+| Appraisal | own + the TRANSITIVE reports_to chain + HR (fenced) + DocShare | same | appraisal.py:915-944 (the walk itself is :932-942) |
 | Script Reports (26 of 32) | whoever holds the report role, FOR ANY COMPANY THEY TYPE INTO THE FILTER | n/a | no fence at all |
 
 ## (c) Where two mechanisms disagree
@@ -94,8 +94,9 @@ CORRECTED AFTER REVIEW — the replaced-approver DocShare case is NOT dead code.
 claimed approval_row_scope "grants the named approver submit", so the share is never created. **A
 has_permission hook cannot GRANT a ptype in Frappe — the role DocPerm is evaluated first and the hook
 can only SUBTRACT.** Verified from the doctype JSON: the Employee role carries submit=0 on Leave
-Application, Expense Claim and Shift Request (only Leave Approver / Expense Approver / HR Manager /
-HR User carry submit=1). hr/utils.py:986 shares exactly when has_permission(submit) is False. So for
+Application, Expense Claim and Shift Request (the roles carrying submit=1 are Leave Approver on Leave Application, Expense Approver on Expense
+Claim, and HR Manager / HR User throughout — note Shift Request has NO approver role with submit at
+all, so there the share fires for every non-HR named approver). hr/utils.py:986 shares exactly when has_permission(submit) is False. So for
 the very persona approval.py:39-51 was written for — "a team lead holding only the Employee role" —
 **the DocShare IS created**, by live callers at leave_application.py:116, expense_claim.py:160 and
 shift_request.py:29. The share is a no-op only for approvers whose ROLE already carries submit.
@@ -115,8 +116,9 @@ are not strictly NARROWER than the row scope — the true invariant is
 ### Tier 1 — reaches salary, banking or tax data
 1. **26 of 32 Script Reports unfenced.** Payroll reports take a caller-supplied `company` with NO
    validation; salary_payments_via_ecs.py:77 makes it OPTIONAL (verified), so omitting it returns every
-   company. income_tax_deductions.py:72 pulls every PAN site-wide. The helper report_scope.py:108
-   fenced_companies exists and is unused by 27 of them.
+   company. income_tax_deductions.py:72 pulls every PAN site-wide. The helper report_scope.py:72
+   fenced_companies exists and is unused by 29 of the 32 — it has exactly three report callers
+   (salary_register.py:301, monthly_attendance_sheet.py:73, employee_analytics.py:23).
 2. **Four reports bypass a fence that already exists** — worse than one never written, because the
    boundary was designed, wired into hooks.py and tested, and the report reads past it via
    get_all/frappe.qb (neither applies permission_query_conditions):
@@ -183,8 +185,9 @@ PROPOSED, not yet run:
 2. "PWA and Desk approval capability" is not settled. The endpoint is correct about STATE; it is wrong
    about AUTHORITY, because it reports what _decision_access allows and that is wider than the row
    scope claims — (c)B.
-3. N02 and N03 are listed as OPEN and are CLOSED in code, both by commits made the same day, one of
-   them AFTER the ledger row was written. Pure bookkeeping rot.
+3. N02 and N03 are listed as OPEN and are CLOSED in code. Exact dates (the table row above is
+   authoritative): d479e4c05 8 Sep 14:01, ledger commit 4915632e5 8 Sep 17:56, 686e4aa0d 9 Sep 08:13 —
+   so only the last landed after the row was written. Pure bookkeeping rot.
 4. "Family hunt not yet done" understates the size. It reads as a tidy-up. It is 26 unfenced reports,
    4 active fence bypasses, and 4 non-HR roles with a path to pay data.
 

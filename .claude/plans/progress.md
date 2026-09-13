@@ -223,3 +223,4 @@ NEXT: Wave A1 — hrms/hr/shift_rules.py:122-124 returns "skipped-manual" WITHOU
 NEXT: Wave A2 — hrms/utils/shift_resolution.py:36 `choose_shift` applies the open-session rule only to
   OUT, so a check-IN never inherits the shift of the session it belongs to. Red test first (pure, no
   bench: choose_shift(punch, "IN", [day, night], open_in={shift: day}) must return the DAY shift).
+- 2026-09-13T16:07:58Z COMMIT: 1bb0a0414 fix(shift): standing down means closing your own rows, in every branch → review dispatched
