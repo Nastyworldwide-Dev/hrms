@@ -180,3 +180,64 @@ TICKET: seed appraisal_overview (and audit every other reader of
   reverted and the LIST door leaked. Two layers, and they disagreed usefully.
 - test_api_employee_reads_are_fenced pins that `_scope` reads only the caller's
   own resolved rows.
+
+---
+
+# FAMILY — standing down without closing your own rows
+
+CLASS: `reconcile_employee_shift` has three branches that hand an employee over
+to another owner. Two of them close the rule layer's own assignments on the way
+out; the third returned without doing so. The rows it left behind are Active,
+open-ended, and of a DIFFERENT shift type from the manual row now governing the
+employee — which is the precondition for a day being split across two shifts.
+
+ROOT CAUSE: hrms/hr/shift_rules.py::reconcile_employee_shift, the manual-wins
+branch, returned "skipped-manual" without closing `auto_rows`.
+
+REACHABILITY (measured, and it matters): the framework does normally refuse a
+second overlapping assignment — `shift_assignment.validate_same_date_multiple_shifts`
+throws MultipleShiftError. But that throw is skipped when HR Settings
+`allow_multiple_shift_assignments` is on, and the remaining hard throw is left to
+`has_overlapping_timings`, which a day shift and a night shift do NOT trigger. So
+the pair is permitted exactly when a company runs two non-overlapping shifts —
+which is the only way to assign two shifts at all, so any such company has it on.
+On a site with the flag OFF this defect is unreachable. **Unanswered on
+production: is `allow_multiple_shift_assignments` enabled on Verifica?** If it is
+off, shape S6 must have another source and that source is still unfound.
+
+## same-root — fixed in this commit
+hrms/hr/shift_rules.py::reconcile_employee_shift (manual-wins branch) — closes
+  `auto_rows` before returning, exactly as the two branches above it do.
+
+## the other stand-down branches — not-affected, and why
+hrms/hr/shift_rules.py:104 `skipped-roster` — not-affected — already closes every
+  auto row before returning; it is one of the two branches this fix copies.
+hrms/hr/shift_rules.py:115 `skipped-schedule` — not-affected — same, and its
+  comment already states the rule ("the rule layer stands down and closes its
+  own rows"). The defect was that the third branch did not honour it.
+hrms/hr/shift_rules.py `skipped-no-rule` / `closed` — not-affected — reached only
+  AFTER the stale loop, which closes every auto row that is not `matching`; and
+  `matching` requires `desired`, which is falsy on this path. So nothing open is
+  left behind.
+hrms/hr/shift_rules.py `noop` — not-affected — `matching` is an open row of the
+  DESIRED type; keeping it is the point.
+
+## callers — not-affected
+hrms/hr/shift_rules.py:194 sync_shift_assignments — not-affected — the daily
+  scheduler; it only dispatches and counts actions. It now closes more rows than
+  before, which is the intended repair, and its action vocabulary is unchanged.
+hrms/hr/shift_rules.py:220 — not-affected — the Employee hook; same.
+hrms/patches/v16_0/add_employee_roster_managed_field.py:5 — not-affected — a
+  docstring mention, not a call.
+
+## LOCK THE CLASS
+- Regression test for the instance: hrms/hr/test_shift_rules.py::
+  test_manual_takeover_closes_the_rules_own_open_rows — creates a rule row, then
+  a manual one, and asserts no OPEN auto row survives the hand-off.
+- Real-save evidence: verify-bench/sites/probe_shift_rules_manual.py, savepointed
+  and rolled back. RED on HEAD ("left 1 open-ended auto row Active beside the
+  manual row"), GREEN after. The probe sets the HR Settings flag inside the
+  savepoint, because with it off the scenario cannot be constructed at all.
+- The invariant pinned: a branch that hands an employee to another owner must
+  close every assignment the rule layer created. There is no branch where
+  standing down and leaving a live row is correct.

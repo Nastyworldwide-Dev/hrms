@@ -2,120 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  the failed decide or a second live-site-only defect. Have the approver open one OT Request after
-  deploy and say whether the toast is gone; if it persists it is a SEPARATE ticket.
-- 2026-09-11T10:51:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-11T10:53:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-11T10:53:07Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 17 call site(s) given verdicts, 5 same-root ⟂d473b2b196be
-- 2026-09-11T10:53:09Z COMMIT: 9ecc15b15 fix(checkin): the server decides IN or OUT, the phone only proposes → review+security+design dispatched
-- 2026-09-11T10:58:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-11T10:58:40Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 13 call site(s) given verdicts, 5 same-root ⟂6e4c3857e480
-- 2026-09-11 EVIDENCE: 6 behaves — security-reviewer on 9ecc15b15: VERDICT SECURE, BLOCKING no. It
-  answered all five attack questions with evidence: the owner check runs BEFORE the new read (no
-  enumeration), the coercion is one-directional and can only REDUCE the coercer's own hours (no pay
-  manufacture), neither is_abandoned nor remote_approval_status is employee-writable, a stuck session
-  stops coercing at the 06:00 cutoff (no lasting DoS), and the frozen sheet action cannot be replayed.
-- 2026-09-11 REPAIR: its one WARNING was a real correctness bug in code I had just shipped —
-  `order_by="time asc"` with a row limit keeps the OLDEST rows, so a busy log would truncate away the
-  very open IN the rule depends on and silently stop coercing, for exactly the people punching most
-  often. Fixed at both sites (punch + get_unresolved_stale_in); proven RED by reverting the order.
-- 2026-09-11T10:58:42Z COMMIT: 474539b65 fix(checkin): a busy log must not truncate away the open session → review dispatched
-TICKET: split hrms/api/remote_checkin.py (10 fixes/90d, ~700 lines) — it now owns four distinct
-  jobs: the punch write path, the geofence/approval routing, the late-checkout resolution, and the
-  session-state reads the PWA banner depends on. Extract the SESSION-STATE rules
-  (_session_is_live, resolve_punch_type, the open-session walk in get_unresolved_stale_in, and the
-  late-checkout boundary) into hrms/utils/punch_session.py. ONE module answers "is this employee on
-  shift, and what does this punch mean". The recurring defect class in this file is two places
-  computing the same session question and drifting — the 06:00 cutoff was inline in two functions,
-  and the newest-row truncation was duplicated in both log reads. A single owner closes the class.
-NEXT: Nabil deploys (or first runs the production query in .claude/plans/checkin-root-cause.md to
-  confirm the build is not simply stale), then checks: (a) an approver can approve an OT Request;
-  (b) a late check-out submits for someone carrying a duplicate IN; (c) a check-out at 18:3x is
-  recorded as OUT and does not open a second attendance row on the 7PM shift.
-  STILL BLOCKED ON NABIL'S WORD: repairing the attendance days already split, and closing the stale
-  night-shift assignments. Enumerate first with the Attendance Day Audit report for 03-09..10-09.
-- 2026-09-11T11:06:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-11T11:06:07Z EVIDENCE: 6 behaves — family hunt: class=a FILING-time authorisation rule evaluated on EVERY save, so it also; 13 call site(s) given verdicts, 5 same-root ⟂6e4c3857e480
-- 2026-09-11T11:06:09Z CIRCUIT: open after 4 fix cycles on nz-glass — parked for a human
-- 2026-09-11T11:19:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-11T11:19:23Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 0 extra test file(s) ⟂f14a25999045
-- 2026-09-11T11:19:26Z COMMIT: a741f3e46 feat(checkin): one flag turns the punch-type correction off → review dispatched
-- 2026-09-11T11:19:41Z PUSH: nz-glass @ a741f3e46
-- 2026-09-11T11:20:41Z PUSH: nz-glass @ 3fccd9d64
-- 2026-09-13T14:05:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13 EVIDENCE: 2 correct — My Team tier probe on fresh.local (savepoint, rolled back) 11/11 PASS:
-  a manager with no HR role and no office gets mode "manager", sees their direct report AND the report's
-  report (the chain is transitive), sees neither an outsider nor themselves, an employee managing nobody
-  gets NO tier and is refused, and a CEO who also manages people keeps the company view.
-- 2026-09-13 EVIDENCE: 7 stays right — the manager tier BORROWS
-  appraisal.get_allowed_appraisal_employees rather than re-deriving who reports to whom. A manager could
-  already read those appraisals in Desk; this only surfaces it. A second implementation of "whose
-  appraisals may I see" is exactly how the filing guard and the row scope came to disagree (family.md).
-NEXT: step 2 of the KPI tree work — the per-person drill-down endpoint and its fence (KRA detail is a
-  personnel file, not a league-table row, so it needs its own check, not the list's). Then step 3, the
-  department-tree navigation for CEO/HR, rolled up as the average over PEOPLE in the subtree.
-- 2026-09-13T14:05:36Z COMMIT: c9a8034c0 feat(kpi): a manager sees their own team, by the rule that already governs it → review+design dispatched
-- 2026-09-13 REPAIR: frappe-reviewer FIX_CRITICAL on c9a8034c0, TWO Criticals, both mine.
-  (a) I renamed the second tab per tier and the first-fetch watch still compared against the LABEL
-  `TEAM` — so for the CEO and HR it never fired. Their tab would have been permanently empty, with no
-  other trigger (fetchTeam is otherwise reachable only from the filter bar, which renders only after a
-  fetch returns). The feature would have shipped broken for the two tiers it exists to serve.
-  (b) The tier check mixed TWO definitions of "my own Employee row": get_allowed_appraisal_employees
-  seeds from a raw user_id match (every claimant), identity.own_employees is Active-only and fails
-  closed to [] on duplicates. Subtracting one from the other turned that disagreement into "people who
-  report to me", and a duplicate-identity login was handed the OTHER claimant's score — which the
-  framework's own has_permission refuses them everywhere else. Now: no resolvable identity, no tier.
-- 2026-09-13 EVIDENCE: 2 correct — probe 14/14 on fresh.local (savepoint, rolled back), now covering the
-  duplicate-identity login and the offboarded leaver. Frontend 164/0 with a new per-tier fetch test,
-  proven RED (3/3) against the label comparison.
-- 2026-09-13 LEARNING(gate): a tab-label refactor breaks the first-fetch watch silently ->
-  frontend/tests/kpi-tab-fetch-per-tier.test.mjs executes the committed watch body for every tier and
-  refuses a trigger that compares against a label constant.
-- 2026-09-13 EVIDENCE: 2 correct — drill-down probe on fresh.local (savepoint, rolled back) 23/23,
-  now covering the fence from every side: you can open your own; a manager can open a report AND the
-  report's report; a manager CANNOT open an outsider; a colleague CANNOT open a colleague; the CEO can
-  open anyone; a duplicate-identity login can open nobody. Plus the payload equality check — the
-  drill-down returns byte-identical keys to get_my_kpi_dashboard, so the shared layout cannot
-  half-render.
-- 2026-09-13 EVIDENCE: 7 stays right — ONE renderer, two doors. _kpi_dashboard is shared;
-  get_my_kpi_dashboard is safe BY CONSTRUCTION (takes no employee), get_employee_kpi is safe BY CHECK
-  (_require_kpi_read runs first). The frontend mirrors it: KpiDetail.vue renders both "my KPI" and
-  "their KPI", so the two cannot drift into disagreeing about somebody's review.
-  Recorded: the framework's appraisal has_permission CANNOT be used on the team path — the CEO tier is
-  granted by DESIGNATION, which appraisal.py has never heard of, so it would refuse the CEO their own
-  feature. The tier fence is the authority there, checked before a row is read.
-NEXT: step 3 — the department-tree navigation for CEO/HR (Department is a real Frappe tree:
-  parent_department + is_group), rolled up as the average over PEOPLE in the subtree. Then the final
-  review of everything before the push.
-- 2026-09-13T14:24:42Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
-- 2026-09-13T14:25:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
-- 2026-09-13T14:25:45Z COMMIT: e4b16bc16 feat(kpi): open a person and see their KPI in the layout you see your own → review+design dispatched
-- 2026-09-13 REPAIR: final design review FIX_CRITICAL on the unpushed range. DSN-01 is the worst defect
-  of the session: employeeKpi is a MODULE SINGLETON and frappe-ui does not clear `.data` when a new
-  submit starts, so "open A -> Back -> open B" rendered B's NAME above A's ENTIRE performance review —
-  A's score, grade, ring, KRA targets and feedback — solid, with no spinner, because the loading branch
-  sits after the gate and was unreachable once any payload existed. Now gated on WHO THE PAYLOAD IS
-  ABOUT (data.employee.name === the person opened), taken from the payload itself.
-  DSN-02: the list<->detail swap moved no focus and announced nothing (no route change), so a keyboard
-  user landed on <body> and a screen-reader user was told nothing while still "inside" a table that had
-  unmounted. Focus now lands on the person's name opening, and on the Scores heading closing.
-  DSN-06: "My KRAs" and "You can only see your own scores" rendered over somebody else's record. The
-  second is FALSE on the screen it appeared on, and it is the one line there that states an access rule.
-- 2026-09-13 LEARNING(gate): a singleton resource reused for a second subject renders the FIRST
-  subject's payload during the second fetch -> frontend/tests/kpi-detail-identity.test.mjs executes the
-  committed computed and refuses a truthiness gate. Proven RED 3/4 against it.
-- 2026-09-13T14:35:22Z COMMIT: f7048be95 fix(kpi): the drill-down showed one person's review under another's name → review+design dispatched
-- 2026-09-13 REPAIR: final frappe review FIX_CRITICAL. My earlier duplicate-identity fix closed only HALF
-  the hole. appraisal.get_allowed_appraisal_employees SEEDS its walk from a RAW, status-agnostic user_id
-  match; subtracting identity.own_employees from the result closed Active-vs-Active but NOT
-  Active-vs-INACTIVE. One login holding an Active row PLUS a leftover inactive row that still has
-  subordinates passed the fail-closed gate and got a phantom "manager" chain — the caller could read the
-  full KRA detail of people they manage nobody in, while the framework's own has_permission refused them
-  the very same document. The security reviewer independently ran out of turns chasing the identical edge.
-- 2026-09-13 REPAIR: the office was decided BEFORE the identity gate and re-derived identity with its own
-  user_id query, so an AMBIGUOUS login — the case this hub documents as fail-closed — was handed the
-  WIDEST tier. Identity now runs first for every tier.
-- 2026-09-13 REPAIR: the root of both was ONE question answered in THREE places with slightly different
   arithmetic (the tier check, the detail fence, the list). Replaced by `_scope(user) -> (tier, admitted)`,
   the single resolver; get_allowed_appraisal_employees gained an optional `seed` so the Desk hook is
   unchanged while callers that need IDENTITY rather than CLAIMS pass own_employees.
@@ -315,3 +201,25 @@ NEXT: Wave A1 — hrms/hr/shift_rules.py:122-124 returns "skipped-manual" WITHOU
   auto-created rows, while the sibling branch at :114-120 does close them. That is what keeps creating
   duplicate Active open-ended Shift Assignments of different shift types, which is the precondition for
   the split-day damage (shape S6). Red test first, then the fix, then the family ledger.
+- 2026-09-13T16:03:56Z COMMIT: bd8bceee7 docs(plans): a permission hook cannot grant, so the approver share is not dead code → review dispatched
+- 2026-09-13T16:07:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-13 EVIDENCE(3): Wave A1 done. hrms/hr/shift_rules.py's manual-wins branch returned
+  "skipped-manual" without closing its own auto rows, while the roster and schedule branches beside it
+  both close theirs. Proven RED then GREEN on fresh.local through the real document API
+  (verify-bench/sites/probe_shift_rules_manual.py, savepointed): before the fix the rule stood down and
+  left an open-ended "NP Night 19-4" row Active beside the manual row; after it, none survive.
+- 2026-09-13 EVIDENCE(2): the first probe attempt FAILED with MultipleShiftError, which turned out to
+  be the more useful result. The framework does refuse a second overlapping assignment — unless HR
+  Settings `allow_multiple_shift_assignments` is on, in which case the same-date case only WARNS and
+  the hard throw is left to has_overlapping_timings, which a day shift and a night shift do not
+  trigger. So this defect is reachable exactly on a site that runs two non-overlapping shifts, which is
+  every site that assigns two shifts at all. On fresh.local the flag reads 0 and the probe sets it
+  inside the savepoint.
+- 2026-09-13 NEW PRODUCTION QUESTION (blocks the S6 count, ask Nabil or read the site):
+  is HR Settings `allow_multiple_shift_assignments` enabled on Verifica? If YES, A1 is the source of
+  the duplicate Active assignments and the S6 count should fall to zero once it has run. If NO, this
+  defect was never reachable there and shape S6 has ANOTHER source that is still unfound — do not close
+  the split-day investigation on the strength of A1 alone.
+NEXT: Wave A2 — hrms/utils/shift_resolution.py:36 `choose_shift` applies the open-session rule only to
+  OUT, so a check-IN never inherits the shift of the session it belongs to. Red test first (pure, no
+  bench: choose_shift(punch, "IN", [day, night], open_in={shift: day}) must return the DAY shift).

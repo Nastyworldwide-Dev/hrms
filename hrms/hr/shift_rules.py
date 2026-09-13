@@ -120,6 +120,19 @@ def reconcile_employee_shift(employee: str) -> str:
 		return "skipped-schedule"
 
 	if any(not row.created_by_shift_rule for row in current) or _recent_manual_roster(employee, today):
+		# Standing down means closing your own rows, exactly as the roster and
+		# schedule branches above do. Leaving an open-ended rule row Active
+		# beside the manual one gives this employee two Active open-ended
+		# assignments of different shift types, and the framework permits that
+		# pair whenever HR Settings allows multiple same-date assignments and
+		# the two shifts' timings do not overlap — a day shift and a night shift
+		# being the exact case a two-shift company has to enable. A day then
+		# resolves against whichever of the two each punch lands nearest, so the
+		# morning punch is attributed to one shift and the evening punch to the
+		# other, the day splits across two Attendance rows, and the hours land
+		# in the wrong places.
+		for row in auto_rows:
+			_close_assignment(row, today)
 		logger.info("[shift_rules] %s: manual assignment exists — skipped (manual wins)", employee)
 		return "skipped-manual"
 	matching = next(

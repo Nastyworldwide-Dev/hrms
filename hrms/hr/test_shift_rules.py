@@ -81,6 +81,52 @@ class TestShiftRulesRosterPrecedence(FrappeTestCase):
 		self.assertEqual(reconcile_employee_shift(self.employee), "created")
 		self.assertEqual(len(self._autos()), 1)
 
+	def _open_autos(self):
+		"""Rule-created assignments that are still OPEN — no end date. These are
+		the ones that collide: two open-ended Active rows of different shift
+		types is what lets a single day resolve against two shifts."""
+		return frappe.get_all(
+			"Shift Assignment",
+			filters={
+				"employee": self.employee,
+				"docstatus": 1,
+				"status": "Active",
+				"created_by_shift_rule": 1,
+				"end_date": ["is", "not set"],
+			},
+			pluck="name",
+		)
+
+	def test_manual_takeover_closes_the_rules_own_open_rows(self):
+		"""Standing down means closing your own rows — in EVERY branch.
+
+		The roster and schedule branches both close their auto rows before
+		handing off, because an open-ended rule row left beside a manual one is
+		two Active open-ended assignments of different shift types for one
+		employee. That is the precondition for the split-day damage: an evening
+		punch resolves against the night shift while the morning punch resolves
+		against the day shift, the day is split across two Attendance rows, and
+		the hours land in the wrong places.
+
+		The manual branch returned without closing anything, so every employee
+		who moved from rule-managed to manually rostered kept a live rule row
+		underneath the manual one.
+		"""
+		self.assertEqual(reconcile_employee_shift(self.employee), "created")
+		self.assertEqual(len(self._open_autos()), 1)
+
+		# Manual assignment covering today — "manual wins" from here on.
+		self._make_manual(0, 30)
+
+		self.assertEqual(reconcile_employee_shift(self.employee), "skipped-manual")
+		self.assertEqual(
+			self._open_autos(),
+			[],
+			"the rule layer stood down but left its own open-ended row Active beside the "
+			"manual one — two Active open-ended assignments of different shift types is "
+			"exactly what splits a day across two shifts",
+		)
+
 	def test_roster_managed_employee_is_skipped_and_auto_closed(self):
 		"""The durable declaration: an employee flagged roster_managed (variable
 		shift, e.g. Handa) is owned by the roster. The rule layer must never
