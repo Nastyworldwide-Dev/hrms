@@ -459,10 +459,11 @@ class ShiftType(Document):
 		for key, group in groupby(sorted(logs, key=group_key), key=group_key):
 			lock_employee_row(key[0])
 			self.mark_attendance_for_shift_logs(key[0], key[1].date(), list(group))
-
-		# commit after processing checkin logs to avoid losing progress
-		if not frappe.in_test:
-			frappe.db.commit()  # nosemgrep
+			# Commit per employee: releases that person's row lock at once, so
+			# the nightly recovery and HR's master edit wait for one person, not
+			# for the whole shift type's pass (E35). Progress is kept either way.
+			if not frappe.in_test:
+				frappe.db.commit()  # nosemgrep
 
 		assigned_employees = self.get_assigned_employees(self.process_attendance_after, True)
 		# mark absent in batches & commit to avoid losing progress since this tries to process remaining attendance
@@ -995,12 +996,10 @@ def lock_employee_row(employee: str) -> None:
 	`SELECT … FOR UPDATE` on the Employee row, through the master edit's own
 	seam so the three writers — hourly job, nightly recovery, HR's edit —
 	queue behind each other for one person instead of both rebuilding the
-	same day. Held until the caller commits: `_process` commits once after
-	ALL of a shift type's punch groups, so every employee marked in that
-	pass stays locked until then. The nightly recovery calls this per employee.
+	same day. Held until the caller commits: `_process` commits after each
+	employee group, so a lock lives for one person's marking only. The
+	nightly recovery calls this per employee.
 	"""
-	# ceiling: locks accumulate for a whole shift-type pass, upgrade: commit per
-	# employee group in _process if HR's master edit is seen waiting on it
 	from hrms.api.attendance_master_edit import _employee
 
 	_employee(employee, lock=True)
@@ -1025,4 +1024,14 @@ def process_auto_attendance_for_all_shifts():
 	shift_list = frappe.get_all("Shift Type", filters={"enable_auto_attendance": "1"}, pluck="name")
 	for shift in shift_list:
 		doc = frappe.get_cached_doc("Shift Type", shift)
-		doc.process_auto_attendance()
+		# One shift type failing (a lock wait behind the nightly recovery or
+		# HR's master edit, E35) must not cost every other shift type its hour.
+		try:
+			doc.process_auto_attendance()
+		except Exception:
+			frappe.db.rollback()
+			logger.exception("[shift_type] auto attendance failed for %s; other shifts continue", shift)
+			try:
+				frappe.log_error(title=f"Auto attendance failed for shift {shift}")
+			except Exception:
+				logger.exception("[shift_type] could not record the failure for %s", shift)

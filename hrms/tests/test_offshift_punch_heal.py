@@ -585,6 +585,27 @@ class TestTheJobStillMarksWhenTheHealRaises(unittest.TestCase):
 		log_error.assert_called_once_with(title="Off-shift punch heal failed")
 
 
+class TestOneShiftTypeFailingDoesNotStopTheRest(unittest.TestCase):
+	"""E35: the nightly recovery holds an employee lock; the hourly job waiting on it
+	can time out for ONE shift type. The other shift types must still be marked."""
+
+	def test_a_lock_wait_on_one_shift_is_logged_and_the_next_shift_is_processed(self):
+		bad, good = MagicMock(), MagicMock()
+		bad.process_auto_attendance.side_effect = RuntimeError("Lock wait timeout exceeded")
+		log_error = MagicMock()
+		with (
+			patch.object(heal, "heal_recent_offshift_punches"),
+			patch.object(st.frappe, "get_all", return_value=["7PM-3:30AM", "9-6"]),
+			patch.object(st.frappe, "get_cached_doc", side_effect=[bad, good]),
+			patch.object(st.frappe, "log_error", log_error, create=True),
+			patch.object(st.frappe.db, "rollback", MagicMock(), create=True),
+		):
+			st.process_auto_attendance_for_all_shifts()
+		good.process_auto_attendance.assert_called_once()
+		log_error.assert_called_once()
+		self.assertIn("7PM-3:30AM", log_error.call_args.kwargs.get("title", ""))
+
+
 class TestNoCopyOfTheSweep(unittest.TestCase):
 	def test_shift_type_carries_no_one_day_absent_predictor(self):
 		"""A per-day copy of the absent sweep drifted from it twice (roster read
