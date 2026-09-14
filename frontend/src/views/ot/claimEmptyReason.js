@@ -19,12 +19,67 @@ export function rlDaysFor(hours, hoursPerDay = 8) {
 	return Math.floor(hours / half) * 0.5
 }
 
+/**
+ * "Days you can claim", shaped for display and sorted newest first:
+ * - open days (Overtime Pay shows hours; Replacement Leave shows the whole-day
+ *   blocks and DROPS days under the threshold — they earn nothing, per HR);
+ * - days that already have a request, greyed, labelled by their decision;
+ * - days worked but unclaimable (`incomplete`), greyed, with the reason under
+ *   the date and an "HR can see this" tag. The employee still files their own
+ *   request; the system just stops hiding the day. Nothing here asks them to
+ *   fix a record.
+ * opts: { isRL, rlHoursPerDay, translate, statusLabel(doc), formatHours(h) }
+ */
+export function claimDayRows(summary, opts = {}) {
+	const { isRL = false, rlHoursPerDay = 8, statusLabel, formatHours } = opts
+	const __ = opts.translate || ((text) => text)
+	const hours = formatHours || ((h) => String(h))
+	const days = summary?.days || []
+	const claimedRows = summary?.claimed || []
+	const brokenRows = summary?.incomplete || []
+	console.info("[claimDayRows]", { days: days.length, incomplete: brokenRows.length })
+	const open = !isRL
+		? days.map((d) => ({ ...d, disabled: false, label: __("{0} h", [hours(d.hours)]) }))
+		: days
+				.map((d) => ({ ...d, leaveDays: rlDaysFor(d.hours, rlHoursPerDay) }))
+				.filter((d) => d.leaveDays > 0)
+				.map((d) => ({ ...d, disabled: false, label: __("{0} day(s) off", [d.leaveDays]) }))
+	const claimed = claimedRows.map((d) => ({
+		...d,
+		claimed: true,
+		disabled: true,
+		label: __("Claimed · {0}", [__(statusLabel ? statusLabel(d) : d.status || "")]),
+	}))
+	const hrTag = __("HR can see this")
+	const incomplete = brokenRows.map((d) => ({
+		...d,
+		incomplete: true,
+		disabled: true,
+		label: hrTag,
+	}))
+	return [...open, ...claimed, ...incomplete].sort((a, b) => b.date.localeCompare(a.date))
+}
+
+/**
+ * The inline (red) error under Claimed hours. "Choose a work date" is not a
+ * mistake the employee has made yet when the form has just opened, so it is
+ * held back until they touch the date or try to save (E9-UX). Every error
+ * that needs a date shows as soon as there is one.
+ */
+export function inlineClaimError(saveError, state = {}) {
+	const { hasDate = false, touched = false, saveAttempted = false } = state
+	if (!hasDate && !touched && !saveAttempted) return ""
+	return saveError || ""
+}
+
 export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, translate } = {}) {
 	const __ = translate || ((text) => text)
 	if (!summary) return ""
 
 	const days = summary.days || []
 	const half = (rlHoursPerDay || 8) / 2
+	const incomplete = summary.incomplete || []
+	console.info("[emptyClaimReason]", { isRL, days: days.length, incomplete: incomplete.length })
 
 	if (isRL) {
 		// Days exist but none reaches the threshold — the case worth explaining.
@@ -38,6 +93,14 @@ export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, tra
 	} else if (days.length) {
 		return ""
 	}
+
+	// Only broken days in the list: say so, and that HR sees them — not "no
+	// overtime recorded", which would read as "the system lost it".
+	if (incomplete.length && !summary.days_already_claimed)
+		return __(
+			"Nothing to claim yet — {0} day(s) in this period have incomplete attendance records. HR can see these; you don't need to do anything.",
+			[incomplete.length]
+		)
 
 	if (summary.days_already_claimed && !summary.days_with_overtime)
 		return __("Every overtime day in this period has already been claimed.")

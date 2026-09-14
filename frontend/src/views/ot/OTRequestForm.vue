@@ -41,7 +41,10 @@
 					<!-- The dates the employee actually has unclaimed OT on — tap instead of
 			     guessing a date in the picker. Days that already have a request stay in
 			     the list, greyed and not selectable, so they never look like lost overtime.
-			     Only on a new request. -->
+			     Days worked but unclaimable (a lone check-in, a tap on no shift, a punch
+			     waiting for approval…) stay too, greyed, with the reason under the date
+			     and an "HR can see this" tag — the day is not hidden and nobody is asked
+			     to fix a record. Only on a new request. -->
 					<div v-if="displayDays.length && !props.id" class="mx-4 mt-4 flex flex-col gap-2">
 						<span class="g-eyebrow">{{ __("Days you can claim") }}</span>
 						<button
@@ -49,21 +52,31 @@
 							:key="d.date"
 							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between gap-3"
 							:class="
-								d.claimed
+								d.disabled
 									? 'border-divider bg-icon-bg cursor-not-allowed'
 									: otRequest.ot_date === d.date
 									? 'border-accent-ink cursor-pointer'
 									: 'border-divider hover:bg-icon-bg cursor-pointer'
 							"
-							:disabled="d.claimed"
-							:aria-disabled="d.claimed ? 'true' : undefined"
-							:aria-pressed="d.claimed ? undefined : String(otRequest.ot_date === d.date)"
+							:disabled="d.disabled"
+							:aria-disabled="d.disabled ? 'true' : undefined"
+							:aria-pressed="d.disabled ? undefined : String(otRequest.ot_date === d.date)"
 							@click="pickDay(d)"
 						>
-							<span class="font-semibold" :class="d.claimed ? 'text-ink-700' : 'text-inkbase'">{{
-								formatDay(d.date)
-							}}</span>
-							<span class="text-sm" :class="d.claimed ? 'text-ink-700' : 'text-ink-600'">{{
+							<span class="flex flex-col gap-0.5 min-w-0">
+								<span
+									class="font-semibold"
+									:class="d.disabled ? 'text-ink-700' : 'text-inkbase'"
+									>{{ formatDay(d.date) }}</span
+								>
+								<span v-if="d.incomplete" class="text-xs text-ink-600">{{ d.reason }}</span>
+							</span>
+							<span
+								v-if="d.incomplete"
+								class="shrink-0 text-xs text-ink-700 border border-divider rounded-full px-2 py-0.5"
+								>{{ d.label }}</span
+							>
+							<span v-else class="text-sm" :class="d.disabled ? 'text-ink-700' : 'text-ink-600'">{{
 								d.label
 							}}</span>
 						</button>
@@ -102,7 +115,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
 import { formatHoursCap } from "@/utils/formatters"
 import { requestStatusChip } from "@/utils/requestStatus"
-import { emptyClaimReason } from "./claimEmptyReason.js"
+import { claimDayRows, emptyClaimReason, inlineClaimError } from "./claimEmptyReason.js"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
@@ -155,33 +168,38 @@ const claimTypeHint = computed(() => {
 	return ""
 })
 
-// The claimable days, shaped for display: Overtime Pay shows hours; Replacement
-// Leave shows the whole-day blocks and DROPS days under 4h (they earn nothing, per
-// HR — showing "0 days" would only confuse).
-// Days that already have a request are merged in, greyed and not selectable, labelled
-// by their decision. Approved is the final state — payroll is external, so there is no
-// "paid" to show.
-const displayDays = computed(() => {
-	const data = claimableDays.value.data
-	const days = data?.days || []
-	const open = !isRL.value
-		? days.map((d) => ({ ...d, label: __("{0} h", [formatHoursCap(d.hours)]) }))
-		: days
-				.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
-				.filter((d) => d.leaveDays > 0)
-				.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }))
-	const claimed = (data?.claimed || []).map((d) => ({
-		...d,
-		claimed: true,
-		label: __("Claimed · {0}", [__(requestStatusChip(d))]),
-	}))
-	return [...open, ...claimed].sort((a, b) => b.date.localeCompare(a.date))
-})
+// The claimable days, shaped for display (claimDayRows): Overtime Pay shows hours;
+// Replacement Leave shows the whole-day blocks and DROPS days under 4h (they earn
+// nothing, per HR — showing "0 days" would only confuse). Days that already have a
+// request are merged in, greyed, labelled by their decision (Approved is final —
+// payroll is external, so there is no "paid"). Days worked but unclaimable are
+// merged in greyed with their reason, so a broken day never looks like lost overtime.
+const displayDays = computed(() =>
+	claimDayRows(claimableDays.value.data, {
+		isRL: isRL.value,
+		rlHoursPerDay: rlHoursPerDay.value,
+		translate: __,
+		statusLabel: requestStatusChip,
+		formatHours: formatHoursCap,
+	})
+)
 
 function pickDay(d) {
-	if (d.claimed) return
+	if (d.disabled) return
 	otRequest.value.ot_date = d.date
 }
+
+// E9-UX: the red "Choose a work date…" under Claimed hours showed the moment the
+// form opened, before the employee had done anything. It waits until they touch
+// the date or try to save; the grey hint under the panel still shows from the start.
+const dateTouched = ref(false)
+const saveAttempted = ref(false)
+watch(
+	() => otRequest.value.ot_date,
+	(date) => {
+		if (date) dateTouched.value = true
+	}
+)
 
 // Why the list above is empty, when it is. "Already claimed", "no overtime" and
 // "every day is under the replacement-leave threshold" are very different
@@ -356,11 +374,21 @@ const saveError = computed(() => {
 		? __("Cannot claim more than the punch-verified {0} h", [formatHoursCap(cap)])
 		: ""
 })
+// What the Claimed hours field shows in red: every error, except that "choose a
+// date" waits for the employee to act first (see dateTouched). saveError itself
+// is untouched, so the Save button stays disabled and the grey hint still shows.
+const inlineError = computed(() =>
+	inlineClaimError(saveError.value, {
+		hasDate: Boolean(summaryKey.value),
+		touched: dateTouched.value,
+		saveAttempted: saveAttempted.value,
+	})
+)
 watch(
-	[saveError, () => formFields.data],
+	[inlineError, () => formFields.data],
 	() => {
 		const field = formFields.data?.find((f) => f.fieldname === "claimed_hours")
-		if (field) field.error_message = saveError.value
+		if (field) field.error_message = inlineError.value
 	},
 	{ immediate: true, flush: "sync" }
 )
@@ -375,6 +403,7 @@ watch(
 )
 
 function validateForm() {
+	saveAttempted.value = true
 	if (!props.id) otRequest.value.employee = employee.data?.name
 }
 </script>
