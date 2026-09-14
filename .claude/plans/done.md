@@ -1,5 +1,7 @@
-GOAL: Add HR-managed Home Announcements to the Nadi 2.0 plan; normal, docs only.
-DONE WHEN: Publication roles, company/department audiences, Home placement,
-      lifecycle, API enforcement, delivery packets and acceptance tests are specified.
-CHECK: Existing HR/company helpers inspected; relative links and git diff --check;
-      fresh-context documentation review. No schema or application changes.
+GOAL: Begin authorised Nadi 2.0 W0 baseline; normal evidence and test-harness packet.
+DONE WHEN: Current test/build/browser results and integration gaps are recorded;
+      existing lint and test-harness failures are repaired without weakening assertions;
+      installed announcement candidates and remaining runtime prerequisites are identified.
+CHECK: Frontend unit suites, selected Python suites, lint, isolated build output,
+      contrast/surface gates, guest login browser check and fresh-context diff review.
+      No schema, permission, CI, fixture, migration or deployment changes in this packet.

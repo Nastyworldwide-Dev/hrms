@@ -290,3 +290,23 @@ NEXT: ANN.0 alongside W0: confirm installed content model and prepare the exact
   HR editor, recipient detail/list and Home integration. Execute verified milestones;
   prior human-day estimates are superseded by Nabil's instruction. Preserve all
   other active 2.0 work and deferred Script Report/production-repair boundaries.
+
+- 2026-09-14 W0 START: Nabil authorised beginning the baseline. Reference 396817e9d.
+  Evidence/initial generic form expansion/setup proposal:
+  docs/glass/plan/NADI_2.0_W0_BASELINE.md. Read-only fresh.local metadata showed
+  no Announcement model and mute_emails=false. No fixture/site configuration writes.
+- 2026-09-14 RED/GREEN: full frontend discovery exposed 5 harness failures missed
+  by frontend/tests-only (299 pass/5 fail). Injected navigator/window instead of
+  assigning Node globals; replaced check-in's 3000-character truncation with
+  asserted callback boundaries and executed its recovery logic. No assertion weakened.
+  Final full discovery 304 passed/0 skipped; full ESLint clean after 7 formatting
+  repairs. Selected Python 19 passed/1 skipped/3 subtests; temporary Vite build,
+  contrast and surfaces passed; guest login browser check 1 passed.
+- 2026-09-14 DEAD END: scripts/smoke.sh remains unsuitable for read-only W0 since
+  it migrates. No authenticated journey claimed; local server/site/HEAD identity
+  must be established before synthetic writes. Full W0 remains open.
+NEXT: approve the concrete fresh.local synthetic-fixture and outbound-suppression
+  setup in NADI_2.0_W0_BASELINE.md; then W0.2 persona journeys, browser-test gaps,
+  complete route/operation ledger and a separately reviewed quick-gate proposal.
+  ANN.0 next prepares exact minimal schema/permissions for approval. Preserve
+  deferred Script Reports, open business policies and historical-repair boundary.

@@ -43,7 +43,11 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 	// scope to the PUNCH submit block (there is an earlier geolocation onError).
 	const punchIdx = src.indexOf("await punchCheckin.submit(")
 	assert.ok(punchIdx > 0, "punch submit exists")
-	const punchBlock = src.slice(punchIdx, punchIdx + 3000)
+	const errorIdx = src.indexOf("onError(error) {", punchIdx)
+	const endIdx = src.indexOf("\n\t\t},\n\t})", errorIdx)
+	assert.ok(errorIdx > punchIdx, "punch error callback exists")
+	assert.ok(endIdx > errorIdx, "punch error callback has a closing boundary")
+	const punchBlock = src.slice(errorIdx, endIdx)
 	// onError must un-stick cameraStatus so the Confirm button leaves pending.
 	assert.match(
 		punchBlock,
@@ -56,4 +60,31 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		/error\?\.messages\?\.length/,
 		"punch onError must fall back to a message when the error carries none"
 	)
+
+	const cameraStatus = { value: "submitting" }
+	const notices = []
+	let restarts = 0
+	const onError = new Function(
+		"generation",
+		"geoGeneration",
+		"cameraStatus",
+		"startCamera",
+		"toast",
+		"__",
+		"actionLabel",
+		`return ({ ${punchBlock} } }).onError`
+	)(
+		1,
+		1,
+		cameraStatus,
+		() => restarts++,
+		(notice) => notices.push(notice),
+		(text) => text,
+		"Check-in"
+	)
+	onError({})
+	assert.equal(cameraStatus.value, "idle")
+	assert.equal(restarts, 1)
+	assert.equal(notices.length, 1)
+	assert.match(notices[0].text, /failed.*try again/)
 })

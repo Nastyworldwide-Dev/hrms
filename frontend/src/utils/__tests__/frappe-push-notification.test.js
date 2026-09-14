@@ -89,7 +89,10 @@ test("after a failure the same token is registered again, not skipped", async ()
 })
 
 test("a refused unsubscribe keeps the token and reports the failure", async () => {
-	const s = fixture({ unsubscribe: { message: { success: false, message: "relay unavailable" } }, storedToken: "TOKEN-1" })
+	const s = fixture({
+		unsubscribe: { message: { success: false, message: "relay unavailable" } },
+		storedToken: "TOKEN-1",
+	})
 	await assert.rejects(() => s.sdk.disableNotification(), /Could not unsubscribe/)
 	assert.equal(s.store.get("firebase_token_hrms"), "TOKEN-1")
 	assert.equal(s.sdk.isNotificationEnabled(), true)
