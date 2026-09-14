@@ -835,6 +835,10 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 		rows = rows_by_day.get(day, [])
 		if any(_legit_zero_day(row) for row in rows):
 			continue
+		# An auto-marked Absent day with no tap at all: the employee did not work,
+		# so there is no overtime to be incomplete about. HR's report keeps it.
+		if not taps_of_day and all(row.get("status") == "Absent" for row in rows):
+			continue
 		code, reason = explain_no_overtime_rows(taps_of_day, has_attendance=bool(rows))
 		if not code or code == NO_OT_DISABLED:
 			continue

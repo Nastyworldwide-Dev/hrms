@@ -40,6 +40,8 @@ ON_LEAVE = date(2026, 9, 26)  # a lone tap on a leave day is not "incomplete"
 HR_MARKED = date(2026, 9, 27)  # HR keyed the row by hand: theirs, not the engine's
 GENUINE_ZERO = date(2026, 9, 28)  # both taps, attendance row, no overtime: nothing to say
 CLAIMABLE = date(2026, 9, 18)
+ABSENT_NO_TAPS = date(2026, 9, 17)  # did not work: not incomplete, HR's report keeps it
+ABSENT_WITH_TAP = date(2026, 9, 16)  # auto-Absent but a tap exists: still listed
 RUNNING_NIGHT = date(2026, 9, 29)  # IN taken, shift ends today: still running
 BEFORE_WINDOW_NIGHT = date(2026, 5, 15)  # only its after-midnight OUT is inside the window
 CLAIMED = date(2026, 9, 20)
@@ -77,6 +79,7 @@ TAPS = [
 	_tap(CLAIMABLE, "IN"),
 	_tap(CLAIMABLE, "OUT"),
 	_tap(CLAIMED, "IN"),
+	_tap(ABSENT_WITH_TAP, "IN"),
 	# a rejected tap is not a tap: the day it sits on alone must not be listed
 	_tap(date(2026, 9, 19), "IN", requires_remote_approval=1, remote_approval_status="Rejected"),
 	# today is still running: a lone IN on it is not incomplete yet
@@ -128,6 +131,8 @@ ATTENDANCE = [
 	_attendance(GENUINE_ZERO),
 	_attendance(CLAIMABLE, ot_hours=2.0),
 	_attendance(CLAIMED, ot_hours=1.0),
+	_attendance(ABSENT_NO_TAPS, status="Absent"),
+	_attendance(ABSENT_WITH_TAP, status="Absent"),
 ]
 CAPACITY = {CLAIMABLE: 2.0}
 EXPECTED_CODES = {
@@ -136,6 +141,7 @@ EXPECTED_CODES = {
 	str(SHIFTLESS): "no_shift",
 	str(SKIPPED): "skipped",
 	str(PENDING): "pending_approval",
+	str(ABSENT_WITH_TAP): "no_checkout",
 }
 
 
@@ -175,7 +181,7 @@ class TestIncompleteDaysAreListedWithTheirReason(unittest.TestCase):
 		result = _discover(eligible=True)
 		self.assertEqual(
 			[row["date"] for row in result["incomplete"]],
-			[str(PENDING), str(SKIPPED), str(SHIFTLESS), str(NO_ROW), str(LONE_IN)],
+			[str(PENDING), str(SKIPPED), str(SHIFTLESS), str(NO_ROW), str(LONE_IN), str(ABSENT_WITH_TAP)],
 		)
 		self.assertEqual(self._codes(result), EXPECTED_CODES)
 		for row in result["incomplete"]:
@@ -202,6 +208,11 @@ class TestIncompleteDaysAreListedWithTheirReason(unittest.TestCase):
 		):
 			self.assertNotIn(str(day), listed, day)
 		self.assertNotIn("2026-09-19", listed, "a rejected tap alone is not a worked day")
+
+	def test_an_absent_day_is_listed_only_when_a_tap_exists(self):
+		codes = self._codes(_discover(eligible=True))
+		self.assertNotIn(str(ABSENT_NO_TAPS), codes, "did not work: nothing incomplete")
+		self.assertEqual(codes[str(ABSENT_WITH_TAP)], "no_checkout")
 
 	def test_one_read_of_taps_and_one_of_attendance(self):
 		reads = []
