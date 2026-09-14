@@ -454,6 +454,17 @@ class TestHourlyPass(_Case):
 			[c.kwargs.get("title") for c in self.log_error.call_args_list],
 		)
 
+	def test_a_failing_skip_log_does_not_undo_the_other_heals(self):
+		self.db.add_checkin("STALE", datetime(2026, 9, 4, 0, 30), "OUT", employee="HR-EMP-OTHER")
+		self.db.add_checkin(
+			"IN-OTHER", datetime(2026, 9, 3, 16, 0), "IN", employee="HR-EMP-OTHER", shift=SHIFT
+		)
+		self.db.save_broken["STALE"] = RuntimeError("Could not find Device: gone")
+		self.log_error.side_effect = RuntimeError("Error Log insert failed")
+		with self.at(datetime(2026, 9, 4, 11, 0)):
+			self.assertEqual(heal.heal_recent_offshift_punches(), 1)
+		self.assertEqual(self.db.saved, ["OUT-0904"])
+
 	def test_a_failing_limit_log_does_not_undo_the_hour(self):
 		self.log_error.side_effect = RuntimeError("Error Log insert failed")
 		with patch.object(heal, "RECENT_LIMIT", 1), self.at(datetime(2026, 9, 4, 11, 0)):

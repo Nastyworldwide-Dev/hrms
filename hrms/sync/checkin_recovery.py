@@ -382,7 +382,7 @@ def _attendance_by_day(plan: list) -> dict:
 	return out
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def recover_overwritten_checkins(from_date, to_date, dry_run=1) -> dict:
 	"""Insert one new unstamped punch per overwritten row. Dry run by default.
 

@@ -285,11 +285,15 @@ def _heal(start, end=None, *, dry_run, for_update, not_before=None, report_expos
 			logger.exception("[offshift_punch_heal] could not write %s; skipped", punch.name)
 			# After the row rollback, so it is not undone with the row. Worker logs
 			# are unread on Frappe Cloud; a punch skipped every hour must be visible.
-			frappe.log_error(
-				title="Off-shift punch heal skipped a punch",
-				reference_doctype="Employee Checkin",
-				reference_name=punch.name,
-			)
+			try:
+				frappe.log_error(
+					title="Off-shift punch heal skipped a punch",
+					reference_doctype="Employee Checkin",
+					reference_name=punch.name,
+				)
+			except Exception:
+				# A failing log line must not escape and undo the other rows' heals.
+				logger.exception("[offshift_punch_heal] could not record skipped punch %s", punch.name)
 			entry["held_because"] = f"could not be written: {exc}"
 			not_readable.append(entry)
 			continue

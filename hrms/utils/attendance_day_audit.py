@@ -523,7 +523,7 @@ def _financially_locked(days, for_update: bool = True) -> set:
 	return locked
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 	"""Clear old skip stamps and dead attendance links so the hourly job re-marks
 	those days. System Manager only; dry run by default; writes nothing else."""
