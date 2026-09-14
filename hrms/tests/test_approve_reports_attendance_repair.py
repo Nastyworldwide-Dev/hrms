@@ -14,9 +14,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parent)]
+import _erpnext_stub
 import _frappe_stub
 
 _frappe_stub.install()
+_erpnext_stub.install()
 
 import frappe
 
