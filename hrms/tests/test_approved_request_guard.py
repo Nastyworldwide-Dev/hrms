@@ -51,7 +51,7 @@ DECISION_FIELD = {
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
 }
-# No decision field: submitting IS approving, so any cancel is refused.
+# No decision field: submitting IS approving; only HR Manager / System Manager may cancel.
 SUBMIT_IS_APPROVAL = ("Compensatory Leave Request", "Employee Advance", "Travel Request")
 
 # Every before_cancel handler that was wired BEFORE this rule, per doctype.
@@ -80,7 +80,7 @@ def _doc(doctype, in_memory_status=None):
 	return doc
 
 
-def _cancel(doc, stored=None, flags=None):
+def _cancel(doc, stored=None, flags=None, roles=("HR User",)):
 	"""Run the guard with `stored` as the DB's decision value. Returns the db mock."""
 	from hrms.utils.approved_request_guard import block_cancel_of_approved
 
@@ -88,6 +88,7 @@ def _cancel(doc, stored=None, flags=None):
 	db.get_value.return_value = stored
 	with (
 		patch.object(frappe, "db", db),
+		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
 		patch.object(frappe, "flags", frappe._dict(flags or {}), create=True),
 		patch.object(frappe, "session", frappe._dict(user="hr@example.com"), create=True),
 	):
@@ -128,12 +129,26 @@ class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 	def test_in_memory_approved_status_does_not_override_a_stored_rejection(self):
 		_cancel(_doc("OT Request", in_memory_status="Approved"), stored="Rejected")
 
-	def test_submit_is_approval_doctypes_refuse_any_cancel(self):
+	def test_submit_is_approval_doctypes_refuse_cancel_below_hr_manager(self):
 		for doctype in SUBMIT_IS_APPROVAL:
+			for roles in (("Employee",), ("HR User", "Expense Approver", "Leave Approver")):
+				with self.subTest(doctype=doctype, roles=roles):
+					with self.assertRaises(frappe.ValidationError) as caught:
+						_cancel(_doc(doctype, in_memory_status="Unpaid"), stored=None, roles=roles)
+					self.assertEqual(str(caught.exception), MESSAGE)
+
+	def test_hr_manager_or_system_manager_may_correct_a_submit_is_approval_doctype(self):
+		# Nabil, 14 Sep 2026: a wrong advance must still be reversible.
+		for doctype in SUBMIT_IS_APPROVAL:
+			for role in ("HR Manager", "System Manager"):
+				with self.subTest(doctype=doctype, role=role):
+					_cancel(_doc(doctype), stored=None, roles=("Employee", role))
+
+	def test_no_role_may_cancel_an_approved_decision_doctype(self):
+		for doctype in DECISION_FIELD:
 			with self.subTest(doctype=doctype):
-				with self.assertRaises(frappe.ValidationError) as caught:
-					_cancel(_doc(doctype, in_memory_status="Unpaid"), stored=None)
-				self.assertEqual(str(caught.exception), MESSAGE)
+				with self.assertRaises(frappe.ValidationError):
+					_cancel(_doc(doctype), stored="Approved", roles=("HR Manager", "System Manager"))
 
 	def test_sync_patch_migrate_and_install_are_exempt(self):
 		for flag in ("in_shadow_sync", "in_patch", "in_migrate", "in_install"):

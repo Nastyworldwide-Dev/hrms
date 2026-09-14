@@ -25,9 +25,12 @@ test("Expense Claim decides in approval_status", () => {
 	assert.equal(canOfferCancel({ ...doc, approval_status: "Rejected", status: "Rejected" }), true)
 })
 
-test("types without a decision field are approved by submission", () => {
+// Nabil, 14 Sep 2026: HR Manager / System Manager may still correct these, so the
+// rule leaves them to the cancel permission (and the server guard's role check).
+test("types without a decision field defer to the cancel permission", () => {
 	for (const doctype of ["Compensatory Leave Request", "Employee Advance", "Travel Request"]) {
-		assert.equal(canOfferCancel({ doctype, docstatus: 1, status: "Unpaid" }), false, doctype)
+		assert.equal(canOfferCancel({ doctype, docstatus: 1, status: "Unpaid" }), true, doctype)
+		assert.equal(canOfferCancel({ doctype, docstatus: 0 }), false, doctype)
 	}
 })
 
@@ -38,7 +41,7 @@ test("only a submitted document can be cancelled at all", () => {
 })
 
 test("doctype may be passed when the doc does not carry it", () => {
-	assert.equal(canOfferCancel({ docstatus: 1 }, "Travel Request"), false)
+	assert.equal(canOfferCancel({ docstatus: 1, status: "Approved" }, "OT Request"), false)
 	assert.equal(
 		canOfferCancel({ docstatus: 1, approval_status: "Approved" }, "Expense Claim"),
 		false

@@ -47,6 +47,7 @@ test("formatHoursCap: rounds down to two decimals, exact values survive", () => 
 	const formatHoursCap = loadFormatHours("formatHoursCap")
 	assert.equal(formatHoursCap(5.669444444), "5.66")
 	assert.equal(formatHoursCap(5.67), "5.67")
+	assert.equal(formatHoursCap(5.669999999), "5.66") // the tolerance must never round a cap up
 	assert.equal(formatHoursCap(0.29), "0.29")
 	assert.equal(formatHoursCap(3), "3")
 	assert.equal(formatHoursCap(null), "0")
