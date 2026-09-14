@@ -2055,7 +2055,7 @@ def _reprocess_late_checkout(checkin) -> dict:
 	exactly as an approval applies it: linked and unlinked taps together."""
 	from hrms.overrides.remote_checkin_request_hooks import reprocess_late_checkout_attendance
 
-	return reprocess_late_checkout_attendance(checkin)
+	return reprocess_late_checkout_attendance(checkin, from_recovery=True)
 
 
 def late_checkout_hold(code, message, out_time) -> tuple[str, bool]:

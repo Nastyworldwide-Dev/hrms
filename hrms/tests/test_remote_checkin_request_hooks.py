@@ -443,5 +443,76 @@ class TestDeletedRequestMarksItsPunch(unittest.TestCase):
 		get_doc.assert_not_called()
 
 
+class TestRecoveryRefusalsQueueNoRetryOfTheirOwn(unittest.TestCase):
+	"""I4 (integration review): the nightly recovery calls the approval's repair
+	and classifies transient refusals as "retried next run" itself. _refuse's
+	own enqueue of retry_late_checkout_repair (plus a msgprint nobody sees) on
+	top of that was a duplicate retry. From recovery it records the refusal
+	only."""
+
+	def _refuse(self, code, **kwargs):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		with (
+			patch.object(frappe, "enqueue") as enqueue,
+			patch.object(frappe, "msgprint") as notice,
+			patch.object(hooks, "_record_refusal") as record,
+			patch.object(hooks, "_tell_hr_once", return_value=True),
+		):
+			result = hooks._refuse(OUT_NAME, code, "why", **kwargs)
+		return result, enqueue, notice, record
+
+	def test_a_transient_refusal_from_recovery_is_neither_enqueued_nor_announced(self):
+		for code in ("today", "pending_punch", "locked"):
+			with self.subTest(code=code):
+				result, enqueue, notice, _record = self._refuse(code, from_recovery=True)
+				self.assertFalse(result.repaired)
+				self.assertEqual(result.reason_code, code)
+				enqueue.assert_not_called()
+				notice.assert_not_called()
+
+	def test_a_permanent_refusal_from_recovery_is_still_recorded_on_the_request(self):
+		_result, enqueue, notice, record = self._refuse("hr_marked", from_recovery=True)
+		record.assert_called_once_with(OUT_NAME, "hr_marked", "why")
+		enqueue.assert_not_called()
+		notice.assert_not_called()
+
+	def test_a_direct_approval_still_retries_and_tells_the_approver(self):
+		_result, enqueue, notice, _record = self._refuse("locked")
+		enqueue.assert_called_once()
+		notice.assert_called_once()
+
+	def test_the_repair_threads_the_flag_to_every_refusal(self):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		db = MagicMock()
+		db.get_value.side_effect = lambda doctype, name=None, *a, **k: (
+			frappe._dict(name=OUT_NAME, employee=EMPLOYEE, time=OUT_TIME, log_type="OUT")
+			if name == OUT_NAME
+			else None
+		)
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", return_value=[]),  # no IN before it -> no_open_shift
+			patch.object(hooks, "_refuse", wraps=hooks._refuse) as refuse,
+			patch.object(frappe, "enqueue") as enqueue,
+			patch.object(frappe, "msgprint"),
+			patch.object(hooks, "_record_refusal"),
+			patch.object(hooks, "_tell_hr_once", return_value=True),
+		):
+			result = hooks.reprocess_late_checkout_attendance(OUT_NAME, from_recovery=True)
+		self.assertEqual(result.reason_code, "no_open_shift")
+		self.assertTrue(refuse.call_args.kwargs.get("from_recovery"))
+		enqueue.assert_not_called()
+
+	def test_the_recovery_caller_passes_the_flag(self):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+		from hrms.utils import attendance_recovery as rec
+
+		with patch.object(hooks, "reprocess_late_checkout_attendance") as repro:
+			rec._reprocess_late_checkout(OUT_NAME)
+		repro.assert_called_once_with(OUT_NAME, from_recovery=True)
+
+
 if __name__ == "__main__":
 	unittest.main()

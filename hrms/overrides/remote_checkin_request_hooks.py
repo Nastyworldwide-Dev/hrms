@@ -3,7 +3,7 @@
 Late check-out repair, for other callers (the attendance recovery's rebuild
 step, section e):
 
-    reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> frappe._dict
+    reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0, from_recovery: bool = False) -> frappe._dict
 
 The OUT punch's name is all it needs. It rebuilds the whole shift day the OUT
 closes (linked + unlinked punches, hours and overtime through the Shift Type's
@@ -667,14 +667,21 @@ def _tell_hr_once(checkin, reason) -> bool:
 	return True
 
 
-def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
+def _refuse(checkin, reason_code, reason, attempt=0, attendance=None, from_recovery=False):
 	"""Record why the day was not rebuilt, and make sure it is not forgotten:
-	a transient blocker is retried after commit, a permanent one goes to HR."""
+	a transient blocker is retried after commit, a permanent one goes to HR.
+
+	`from_recovery` (I4, integration review): the nightly attendance recovery
+	calls the repair itself and classifies a transient refusal as "retried next
+	run" — its own retry job and the approver's msgprint would be duplicates,
+	so it only records the refusal on the request.
+	"""
 	logger.warning(
-		"[remote_checkin_request] attendance repair refused checkin=%s code=%s attempt=%s",
+		"[remote_checkin_request] attendance repair refused checkin=%s code=%s attempt=%s recovery=%s",
 		checkin,
 		reason_code,
 		attempt,
+		from_recovery,
 	)
 	if reason_code == "today":
 		# E19: not dropped. The job runs right after commit and rebuilds the day
@@ -682,7 +689,7 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 		# hourly job, which rebuilds from every punch once the shift is over.
 		# attempt > 0 is that job itself: it must not queue itself again.
 		# ceiling: no delayed jobs (Frappe disables the RQ scheduler), upgrade: enqueue at shift end if workers gain one
-		if attempt == 0:
+		if attempt == 0 and not from_recovery:
 			frappe.enqueue(
 				_RETRY_METHOD,
 				queue="short",
@@ -698,11 +705,12 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 				indicator="blue",
 			)
 		return _repair_result(False, reason_code, reason, attendance=attendance, will_retry=True)
-	frappe.msgprint(
-		_("Check-out approved, but attendance was not updated: {0}").format(reason),
-		title=_("Attendance not updated"),
-		indicator="orange",
-	)
+	if not from_recovery:
+		frappe.msgprint(
+			_("Check-out approved, but attendance was not updated: {0}").format(reason),
+			title=_("Attendance not updated"),
+			indicator="orange",
+		)
 	if reason_code not in _TRANSIENT_REFUSALS:
 		_record_refusal(checkin, reason_code, reason)
 		return _repair_result(
@@ -715,6 +723,9 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 		_record_refusal(checkin, reason_code, reason)
 		hr_notified = _tell_hr_once(checkin, reason)
 		return _repair_result(False, reason_code, reason, attendance=attendance, hr_notified=hr_notified)
+	if from_recovery:
+		# the recovery's next run is the retry (late_checkout_hold: "retried next run")
+		return _repair_result(False, reason_code, reason, attendance=attendance, will_retry=True)
 	# ceiling: retries run right after commit with no backoff, upgrade: a delayed queue if lock refusals recur
 	frappe.enqueue(
 		_RETRY_METHOD,
@@ -805,18 +816,29 @@ def _repair_financial_dependency(employee, attendance_date, attendance_name, for
 	)
 
 
-def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> frappe._dict:
+def reprocess_late_checkout_attendance(
+	out_checkin: str, attempt: int = 0, from_recovery: bool = False
+) -> frappe._dict:
 	"""Repair the complete original shift, preserving the old record if rebuilding fails.
 
 	`out_checkin` is the approved late OUT's name; `attempt` counts background
-	retries (0 = a direct approval). Returns what happened (see _repair_result
-	and the module docstring for the keys and reason codes); a refusal is
-	retried or reported. Never commits: the caller's transaction owns it.
+	retries (0 = a direct approval); `from_recovery` is the nightly attendance
+	recovery calling — it retries and reports refusals itself, so no retry job
+	or Desk message is raised here (I4). Returns what happened (see
+	_repair_result and the module docstring for the keys and reason codes); a
+	refusal is retried or reported. Never commits: the caller's transaction owns it.
 	"""
+	from functools import partial
+
 	from hrms.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
 	from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import get_previous_session_checkin
 
-	logger.info("[remote_checkin_request] repairing whole shift for late OUT=%s", out_checkin)
+	refuse = partial(_refuse, from_recovery=from_recovery)
+	logger.info(
+		"[remote_checkin_request] repairing whole shift for late OUT=%s (recovery=%s)",
+		out_checkin,
+		from_recovery,
+	)
 	out = frappe.db.get_value(
 		"Employee Checkin", out_checkin, _REPAIR_CHECKIN_FIELDS, as_dict=True, for_update=True
 	)
@@ -830,7 +852,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		else None
 	)
 	if not in_row or not in_row.shift or not in_row.shift_start:
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"no_open_shift",
 			_("The check-in this check-out closes is not on a shift."),
@@ -840,7 +862,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 	anchor = get_datetime(in_row.shift_start)
 	attendance_date = anchor.date()
 	if _shift_day_is_today(out.employee, attendance_date, in_row.shift_actual_end):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"today",
 			_("This shift is still running; the day is rebuilt after it ends."),
@@ -853,7 +875,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		or out.synced_from_instance
 		or cint(out.skip_auto_attendance)
 	):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"not_eligible",
 			_("This check-out is not an approved local punch that attendance can use."),
@@ -869,7 +891,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 	)
 	existing = [row for row in existing if not row.shift or row.shift == in_row.shift]
 	if len(existing) > 1:
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"duplicate_attendance",
 			_("More than one attendance record covers this shift."),
@@ -878,7 +900,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		)
 	attendance = frappe.get_doc("Attendance", existing[0].name, for_update=True) if existing else None
 	if attendance and (not cint(attendance.auto_attendance) or attendance.get("synced_from_instance")):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"hr_marked",
 			_("HR corrected this day by hand, or another site owns it."),
@@ -888,7 +910,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 	# C1: a day HR removed in Shift Attendance has no row left to refuse on; its
 	# marker punch is the HR decision, permanent like hr_marked (never retried).
 	if removed_by_hr(out.employee, attendance_date):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"hr_removed",
 			_("HR removed this day in Shift Attendance; it is not marked again."),
@@ -900,7 +922,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		or attendance.shift != in_row.shift
 		or getdate(attendance.attendance_date) != attendance_date
 	):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"attendance_mismatch",
 			_("The attendance record for this day belongs to a different shift."),
@@ -934,7 +956,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		)
 		for row in linked
 	):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"cross_boundary",
 			_("Some punches of this day belong to another shift or another site."),
@@ -948,7 +970,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		if not row.synced_from_instance and not cint(row.skip_auto_attendance)
 	]
 	if any(row.remote_approval_status == "Pending" or cint(row.requires_remote_approval) for row in local):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"pending_punch",
 			_("Another punch in this shift is still awaiting approval."),
@@ -965,7 +987,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		key=lambda row: (get_datetime(row.time), row.name),
 	)
 	if any(row.attendance and (not attendance or row.attendance != attendance.name) for row in logs):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"other_attendance",
 			_("A punch of this shift is already counted on another attendance record."),
@@ -990,7 +1012,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		or not any(row.name == out_checkin for row in logs)
 		or (pairing == "Alternating entries as IN and OUT during the same shift" and len(logs) % 2)
 	):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"incomplete_pairs",
 			_("The check-ins and check-outs of this shift do not pair up."),
@@ -998,7 +1020,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 			attendance.name if attendance else None,
 		)
 	if _repair_financial_dependency(out.employee, attendance_date, attendance.name if attendance else None):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"financial_lock",
 			_("Approved overtime, replacement leave or submitted payroll already uses this day."),
@@ -1006,7 +1028,7 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 			attendance.name if attendance else None,
 		)
 	if not shift.should_mark_attendance(out.employee, attendance_date):
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"not_markable",
 			_("This shift's rules do not mark attendance on this day, for example a holiday."),
@@ -1061,14 +1083,14 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		frappe.db.rollback(save_point="late_checkout_repair")
 		logger.exception("[remote_checkin_request] shift repair rolled back for OUT=%s", out_checkin)
 		if _is_lock_timeout(exc):
-			return _refuse(
+			return refuse(
 				out_checkin,
 				"locked",
 				_("Someone else was changing this day at the same moment."),
 				attempt,
 				attendance.name if attendance else None,
 			)
-		return _refuse(
+		return refuse(
 			out_checkin,
 			"rebuild_failed",
 			_("Rebuilding the day failed; the previous attendance was kept."),
