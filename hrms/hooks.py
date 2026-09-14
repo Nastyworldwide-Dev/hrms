@@ -624,6 +624,10 @@ scheduler_events = {
 		# default 3) have passed after the relieving date, per the
 		# employee's Holiday List. Rerun-safe; skips mirrored employees.
 		"hrms.hr.offboarding.update_relieved_employee_status",
+		# Reads yesterday and the trailing week through attendance_recovery's
+		# own read-only report; one Error Log when a day is broken, so HR
+		# finds out before a staff complaint does. Never touches today.
+		"hrms.utils.attendance_health.run_daily_health_check",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
