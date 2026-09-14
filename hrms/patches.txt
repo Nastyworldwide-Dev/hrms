@@ -103,3 +103,4 @@ hrms.patches.v16_0.show_deciding_status_in_list_views #2026-09-10 the list showe
 hrms.patches.v16_0.default_sensitive_employee_field_lock
 hrms.patches.v16_0.backfill_ot_after_rounding_rule #2026-09-11 repair the 50-59 minute band inside the filing window
 hrms.patches.v16_0.hr_user_can_cancel_shift_request #2026-09-14 HR User held cancel on every request doctype but Shift Request
+hrms.patches.v16_0.link_nadi_requests_in_shift_attendance #2026-09-14 HR could not reach OT Request, Replacement Leave Claim or Remote Checkin Request from Desk
