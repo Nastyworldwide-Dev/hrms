@@ -133,6 +133,13 @@ def get_columns():
 			"width": 165,
 		},
 		{
+			"label": _("Attendance ID"),
+			"fieldname": "name",
+			"fieldtype": "Link",
+			"options": "Attendance",
+			"width": 150,
+		},
+		{
 			# read by the HR edit grid in shift_attendance.js ("Hand back to system")
 			"label": _("Edited by HR"),
 			"fieldname": "hr_owned",

@@ -9,11 +9,15 @@ import frappe
 from frappe import _
 from frappe.utils import cint, get_datetime, getdate, now_datetime
 
+from hrms.overrides.company_scope import company_visible
 from hrms.utils.email_flush import flush_email_queue_after_commit
+from hrms.utils.hr_removed_day import removed_by_hr
 
 logger = logging.getLogger(__name__)
 
 HR_MANAGER_ROLE = "HR Manager"
+#: who gets a Desk alert for something HR must fix (Error Log is System Manager only)
+HR_ALERT_ROLES = ("HR Manager", "HR User")
 
 
 # ---------------------------------------------------------------------------
@@ -185,20 +189,75 @@ def _notify_employee(request, decision: str) -> None:
 
 
 def _create_notification_log(user: str, subject: str, body: str, request) -> None:
+	_insert_notification_log(user, subject, body, "Remote Checkin Request", request.name)
+
+
+def _insert_notification_log(user, subject, body, document_type=None, document_name=None) -> bool:
+	"""One Desk Alert for `user`. False (logged) when it could not be written; never raises."""
 	try:
 		frappe.get_doc(
 			{
 				"doctype": "Notification Log",
 				"for_user": user,
 				"type": "Alert",
-				"document_type": "Remote Checkin Request",
-				"document_name": request.name,
+				"document_type": document_type,
+				"document_name": document_name,
 				"subject": subject,
 				"email_content": body,
 			}
 		).insert(ignore_permissions=True)
 	except Exception as exc:
-		logger.warning("[remote_checkin_request] notification_log failed: %s", exc)
+		logger.warning("[remote_checkin_request] notification_log for %s failed: %s", user, exc)
+		return False
+	return True
+
+
+def hr_alert_recipients(company=None) -> list:
+	"""Enabled HR Manager / HR User accounts whose company fence shows `company`
+	(company_scope.company_visible): an unfenced user sees every company, a
+	fenced one only theirs. With no company — a hub-wide alert — only unfenced
+	HR qualifies, the same rule require_unfenced applies to hub-wide reads."""
+	holders = frappe.get_all(
+		"Has Role",
+		filters={"role": ["in", list(HR_ALERT_ROLES)], "parenttype": "User"},
+		pluck="parent",
+	)
+	if not holders:
+		logger.info("[remote_checkin_request] no user holds %s", HR_ALERT_ROLES)
+		return []
+	enabled = frappe.get_all(
+		"User", filters={"name": ["in", sorted(set(holders))], "enabled": 1}, pluck="name"
+	)
+	# ceiling: one fence read per HR user, upgrade: batch the User Permission read if HR accounts grow past ~50
+	users = [user for user in sorted(set(enabled)) if user != "Guest" and company_visible(company, user)]
+	logger.info("[remote_checkin_request] HR alert for company=%s reaches %d user(s)", company, len(users))
+	return users
+
+
+def notify_hr(subject, body, document_type=None, document_name=None, company=None) -> int:
+	"""A Desk Notification Log for each HR user who may see `company`, so an alert
+	kept in Error Log (System Manager only) reaches HR too. Returns how many were
+	written; never raises — an alert must not undo the work around it."""
+	try:
+		users = hr_alert_recipients(company)
+	except Exception:
+		logger.exception("[remote_checkin_request] could not resolve HR recipients for %s", subject)
+		return 0
+	sent = sum(_insert_notification_log(user, subject, body, document_type, document_name) for user in users)
+	logger.info("[remote_checkin_request] HR alert %r sent to %d of %d user(s)", subject, sent, len(users))
+	return sent
+
+
+def _company_of_checkin(checkin):
+	"""The company of the punch's employee, or None when it cannot be read."""
+	try:
+		employee = frappe.db.get_value("Employee Checkin", checkin, "employee")
+		company = frappe.db.get_value("Employee", employee, "company") if isinstance(employee, str) else None
+	except Exception:
+		logger.exception("[remote_checkin_request] company of %s could not be read", checkin)
+		return None
+	logger.debug("[remote_checkin_request] %s belongs to company %s", checkin, company)
+	return company
 
 
 def _create_pwa_notification(to_user: str, from_user: str | None, body: str, request) -> None:
@@ -436,13 +495,14 @@ def _tell_hr_once(checkin, reason) -> bool:
 	reference = {"reference_doctype": "Remote Checkin Request", "reference_name": request}
 	if frappe.db.exists("Error Log", {"method": REPAIR_NOT_APPLIED_TITLE, **reference}):
 		return True
-	frappe.log_error(
-		title=REPAIR_NOT_APPLIED_TITLE,
-		message=_("Approved late check-out {0} did not update attendance: {1}").format(checkin, reason),
-		**reference,
-	)
+	message = _("Approved late check-out {0} did not update attendance: {1}").format(checkin, reason)
+	frappe.log_error(title=REPAIR_NOT_APPLIED_TITLE, message=message, **reference)
 	frappe.get_doc("Remote Checkin Request", request).add_comment(
 		"Comment", _("Check-out approved, but attendance needs correction: {0}").format(reason)
+	)
+	# HR cannot open Error Log; the Desk alert is what reaches them (W6)
+	notify_hr(
+		_(REPAIR_NOT_APPLIED_TITLE), message, "Remote Checkin Request", request, _company_of_checkin(checkin)
 	)
 	logger.info("[remote_checkin_request] HR told: request=%s checkin=%s", request, checkin)
 	return True
@@ -640,6 +700,16 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 			_("HR corrected this day by hand, or another site owns it."),
 			attempt,
 			attendance.name if attendance else None,
+		)
+	# C1: a day HR removed in Shift Attendance has no row left to refuse on; its
+	# marker punch is the HR decision, permanent like hr_marked (never retried).
+	if removed_by_hr(out.employee, attendance_date):
+		return _refuse(
+			out_checkin,
+			"hr_removed",
+			_("HR removed this day in Shift Attendance; it is not marked again."),
+			attempt,
+			None,
 		)
 	if attendance and (
 		attendance.employee != out.employee

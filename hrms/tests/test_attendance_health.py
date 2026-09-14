@@ -157,6 +157,72 @@ class TestRunDailyHealthCheck(_Base):
 		self.assertEqual(from_dates, [str(date(2026, 9, 7)), str(YESTERDAY)])
 
 
+_BROKEN_ONE = {"a_wrong_night_assignment": _section(count=1, sample=[{"employee": "E1", "date": "x"}])}
+
+
+class TestHrSeesTheAlert(_Base):
+	"""Group 2-4 review W6: Error Log is System Manager only, so the daily alert
+	never reached HR. Each HR Manager / HR User who may see every company gets a
+	Desk Notification Log linked to the Error Log, once, like the log itself."""
+
+	def _run(self, fenced=(), fail_insert=False):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		inserted = []
+
+		def get_all(doctype, filters=None, pluck=None, **kw):
+			if doctype == "Has Role":
+				return ["hr.manager@x", "hr.user@x", "hr.user@x"]
+			if doctype == "User":
+				return ["hr.manager@x", "hr.user@x"]
+			return []
+
+		def get_doc(values, *a, **kw):
+			doc = MagicMock()
+
+			def insert(**kwargs):
+				if fail_insert:
+					raise RuntimeError("notification store is down")
+				inserted.append(values)
+
+			doc.insert.side_effect = insert
+			return doc
+
+		frappe.log_error.return_value = MagicMock()
+		frappe.log_error.return_value.name = "ERR-0001"
+		with (
+			patch.object(health.rec, "inputs_report", return_value=_report(_BROKEN_ONE)),
+			patch.object(frappe, "get_all", side_effect=get_all, create=True),
+			patch.object(frappe, "get_doc", side_effect=get_doc, create=True),
+			patch.object(hooks, "company_visible", lambda company, user: user not in fenced, create=True),
+		):
+			health.run_daily_health_check()
+		return inserted
+
+	def test_each_unfenced_hr_user_gets_one_desk_alert_linked_to_the_error_log(self):
+		inserted = self._run()
+		self.assertEqual(sorted(n["for_user"] for n in inserted), ["hr.manager@x", "hr.user@x"])
+		for note in inserted:
+			self.assertEqual(note["doctype"], "Notification Log")
+			self.assertEqual(note["type"], "Alert")
+			self.assertEqual((note["document_type"], note["document_name"]), ("Error Log", "ERR-0001"))
+			self.assertEqual(note["subject"], f"Attendance health: 1 broken day(s) on {YESTERDAY}")
+			self.assertIn("E1", note["email_content"])
+
+	def test_a_company_fenced_hr_user_does_not_get_the_hub_wide_alert(self):
+		inserted = self._run(fenced=("hr.user@x",))
+		self.assertEqual([n["for_user"] for n in inserted], ["hr.manager@x"])
+
+	def test_an_already_logged_day_sends_no_second_alert(self):
+		frappe.db.exists.return_value = True
+		self.assertEqual(self._run(), [])
+
+	def test_a_failing_notification_never_raises_and_keeps_the_error_log(self):
+		self.assertEqual(self._run(fail_insert=True), [])
+		frappe.log_error.assert_called_once()
+		self.assertTrue(frappe.log_error.call_args.kwargs["title"].startswith("Attendance health: 1"))
+
+
 # --- health_summary -------------------------------------------------------------------
 
 
@@ -193,6 +259,14 @@ class TestHealthSummary(_Base):
 		self.assertEqual(set(result["trend"]["sections"]), expected)
 		self.assertEqual(result["daily"]["from_date"], str(YESTERDAY))
 		self.assertEqual(result["trend"]["from_date"], str(date(2026, 9, 7)))
+
+	def test_days_are_clamped_to_1_through_62_instead_of_raising(self):
+		with self._context(self._patched_planners()):
+			wide = health.health_summary(days=500)
+			narrow = health.health_summary(days=-3)
+		# 62 days back from 13 Sep reaches before the repair floor, which clamps it
+		self.assertEqual(wide["trend"]["from_date"], "2026-08-01")
+		self.assertEqual(narrow["trend"]["from_date"], str(YESTERDAY))
 
 	def test_a_section_that_raises_is_reported_not_crashed(self):
 		patches = list(self._patched_planners())

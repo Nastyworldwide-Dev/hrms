@@ -9,6 +9,7 @@
 const SA_API = "hrms.api.attendance_master_edit.";
 const SA_HR_ROLES = ["HR User", "HR Manager", "System Manager"];
 const SA_MAX_ROWS = 200;
+const SA_MAX_DAYS = 500; // attendance_master_edit.MAX_DAYS
 const SA_GROUP = "Edit Attendance";
 const SA_STATUSES = ["Present", "Absent", "Half Day", "Work From Home"];
 const SA_TIME_FIELDS = ["in_time", "out_time"];
@@ -67,7 +68,47 @@ class ShiftAttendanceGrid {
 		this.report = report;
 		this.pending = new Map(); // day key -> {employee, attendance_date, changes}
 		this.states = new Map(); // day key -> {kind: "conflict"|"error", message}
-		this.revisions = new Map(); // day key -> Promise<revision|null>
+		// day key -> revision, read when the report data loaded (never at click or save:
+		// a revision read at save always matches, so a stale screen would overwrite)
+		this.revisions = new Map();
+		this.loading = Promise.resolve();
+		this.load_seq = 0;
+		this.raw_refresh = null;
+	}
+
+	// Every refresh that is not the grid's own (a filter change, the Refresh
+	// button) shows other rows, so edits staged for the old rows are dropped —
+	// after a confirm — rather than saved for days no longer on screen.
+	guard_refresh() {
+		const report = this.report;
+		if (this.raw_refresh || typeof report.refresh !== "function") return;
+		this.raw_refresh = report.refresh.bind(report);
+		report.refresh = (...args) => {
+			if (!this.pending.size) {
+				this.states.clear();
+				return this.raw_refresh(...args);
+			}
+			return new Promise((resolve) => {
+				frappe.confirm(
+					__("Discard {0} unsaved change(s)? The report is reloading.", [this.pending.size]),
+					() => {
+						console.info("[ShiftAttendance] refresh discards", this.pending.size, "pending day(s)");
+						this.pending.clear();
+						this.states.clear();
+						this.update_indicator();
+						resolve(this.raw_refresh(...args));
+					},
+					() => {
+						console.info("[ShiftAttendance] refresh declined; pending edits kept");
+						resolve();
+					}
+				);
+			});
+		};
+	}
+
+	reload() {
+		return this.raw_refresh ? this.raw_refresh() : this.report.refresh();
 	}
 
 	setup_toolbar() {
@@ -79,6 +120,7 @@ class ShiftAttendanceGrid {
 		page.add_inner_button(__("Add / change shift"), () => this.change_shift(), group);
 		page.add_inner_button(__("Hand back to system"), () => this.hand_back_selected(), group);
 		console.info("[ShiftAttendance] edit tools shown");
+		this.guard_refresh();
 		this.update_indicator();
 	}
 
@@ -118,7 +160,6 @@ class ShiftAttendanceGrid {
 		this.states.delete(key);
 		if (Object.keys(entry.changes).length) {
 			this.pending.set(key, entry);
-			this.revision_for(data.employee, data.attendance_date);
 		} else {
 			this.pending.delete(key);
 		}
@@ -170,29 +211,59 @@ class ShiftAttendanceGrid {
 		this.pending.clear();
 		this.states.clear();
 		this.update_indicator();
-		this.report.refresh();
+		this.reload();
 	}
 
 	// --- revisions ------------------------------------------------------------
 
-	revision_for(employee, attendance_date) {
-		const key = sa_key(employee, attendance_date);
-		if (this.revisions.has(key)) return this.revisions.get(key);
-		const promise = Promise.resolve(
-			frappe.call({ method: SA_API + "get_day", args: { employee, attendance_date } })
-		)
+	// One get_days call per SA_MAX_DAYS days, as the rows arrive. Only the latest
+	// load writes, so a slow answer for old filters cannot land on new rows.
+	load_revisions(rows) {
+		const seq = ++this.load_seq;
+		const days = new Map();
+		(rows || []).forEach((row) => {
+			if (!row || !row.employee || !row.attendance_date) return;
+			const key = sa_key(row.employee, row.attendance_date);
+			if (!days.has(key)) days.set(key, { employee: row.employee, attendance_date: row.attendance_date });
+		});
+		const items = Array.from(days.values());
+		const chunks = [];
+		for (let i = 0; i < items.length; i += SA_MAX_DAYS) chunks.push(items.slice(i, i + SA_MAX_DAYS));
+		console.info("[ShiftAttendance] reading revisions for", items.length, "day(s) in", chunks.length, "call(s)");
+		const reads = chunks.map((chunk) =>
+			Promise.resolve(
+				frappe.call({ method: SA_API + "get_days", args: { employee_dates: JSON.stringify(chunk) } })
+			)
+				.then((r) => (r && r.message && r.message.days) || {})
+				.catch((error) => {
+					console.warn("[ShiftAttendance] get_days failed for", chunk.length, "day(s)", error);
+					return {};
+				})
+		);
+		this.loading = Promise.all(reads).then((answers) => {
+			if (seq !== this.load_seq) return;
+			this.revisions.clear();
+			answers.forEach((answer) =>
+				Object.keys(answer).forEach((key) => {
+					if (answer[key] && answer[key].revision) this.revisions.set(key, answer[key].revision);
+				})
+			);
+		});
+		return this.loading;
+	}
+
+	// A typed-in new day is not on screen, so its revision is read when it is added.
+	read_day(employee, attendance_date) {
+		return Promise.resolve(frappe.call({ method: SA_API + "get_day", args: { employee, attendance_date } }))
 			.then((r) => (r && r.message && r.message.revision) || null)
 			.catch((error) => {
-				console.warn("[ShiftAttendance] get_day failed", key, error);
+				console.warn("[ShiftAttendance] get_day failed", sa_key(employee, attendance_date), error);
 				return null;
-			})
-			.then((revision) => {
-				// a failed read is retried on the next save rather than cached
-				if (!revision) this.revisions.delete(key);
-				return revision;
 			});
-		this.revisions.set(key, promise);
-		return promise;
+	}
+
+	loaded_revision(employee, attendance_date) {
+		return this.loading.then(() => this.revisions.get(sa_key(employee, attendance_date)) || null);
 	}
 
 	// --- save -----------------------------------------------------------------
@@ -243,7 +314,11 @@ class ShiftAttendanceGrid {
 			frappe.msgprint(__("Save at most {0} rows at a time; {1} are waiting.", [SA_MAX_ROWS, rows.length]));
 			return Promise.resolve();
 		}
-		const reads = rows.map((row) => this.revision_for(row.employee, row.attendance_date));
+		const reads = rows.map((row) =>
+			row.action === "add"
+				? this.read_day(row.employee, row.attendance_date)
+				: this.loaded_revision(row.employee, row.attendance_date)
+		);
 		return Promise.all(reads).then((revisions) => this.send(rows, revisions));
 	}
 
@@ -254,7 +329,7 @@ class ShiftAttendanceGrid {
 			if (revisions[i]) {
 				payload.push(Object.assign({}, row, { revision: revisions[i] }));
 			} else {
-				const text = __("Could not load this day; try again");
+				const text = __("Could not load this day; refresh the report and try again");
 				this.mark(row, "error", text);
 				problems.push({ row, text });
 			}
@@ -310,7 +385,8 @@ class ShiftAttendanceGrid {
 	finish(problems, saved) {
 		this.update_indicator();
 		this.show_results(problems, saved);
-		this.report.refresh();
+		// the grid's own reload: refused rows are still on screen and stay pending
+		this.reload();
 	}
 
 	show_results(problems, saved) {
@@ -397,7 +473,6 @@ class ShiftAttendanceGrid {
 			primary_action_label: __("Add"),
 			primary_action: (values) => {
 				dialog.hide();
-				this.revisions.delete(sa_key(values.employee, values.attendance_date));
 				const changes = sa_filled(values, ["status", "shift", "in_time", "out_time"]);
 				const day = { employee: values.employee, attendance_date: values.attendance_date };
 				return this.submit([Object.assign(day, { action: "add", changes })]);
@@ -443,8 +518,10 @@ class ShiftAttendanceGrid {
 
 	hand_back_day(day, problems, tally) {
 		const key = sa_key(day.employee, day.attendance_date);
-		return this.revision_for(day.employee, day.attendance_date).then((revision) => {
-			if (!revision) return problems.push({ row: day, text: __("Could not load this day; try again") });
+		return this.loaded_revision(day.employee, day.attendance_date).then((revision) => {
+			if (!revision) {
+				return problems.push({ row: day, text: __("Could not load this day; refresh the report and try again") });
+			}
 			const args = { employee: day.employee, attendance_date: day.attendance_date, revision };
 			return Promise.resolve(frappe.call({ method: SA_API + "hand_back", args, freeze: true })).then((r) => {
 				const answer = (r && r.message) || {};
@@ -590,6 +667,11 @@ frappe.query_reports["Shift Attendance"] = {
 	],
 	onload(report) {
 		if (sa_enabled()) sa_grid(report).setup_toolbar();
+	},
+	after_refresh(report) {
+		// every load, filters changed or not: the revisions belong to these rows
+		if (!sa_enabled()) return;
+		return sa_grid(report).load_revisions(report.data);
 	},
 	get_datatable_options(options) {
 		if (!sa_enabled()) return options;

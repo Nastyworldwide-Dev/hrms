@@ -256,14 +256,17 @@ def parse_employee_days(value) -> list[tuple[str, date]]:
 	return list(dict.fromkeys(days))
 
 
-def plan_remark(punches, attendance_rows) -> tuple[str, str]:
+def plan_remark(punches, attendance_rows, removed=False) -> tuple[str, str]:
 	"""What re-marking one employee-day would do, before any payout check. Pure.
 
 	`punches` are the day's unstamped punches that carry a shift; `attendance_rows`
 	its non-cancelled Attendance. A row the automation does not own — a draft,
 	HR's hand-marked row, a leave, another instance's — is never rebuilt here, the
-	same rule `shift_type.get_automation_attendance` applies.
+	same rule `shift_type.get_automation_attendance` applies. `removed`: HR
+	removed the day in Shift Attendance (hrms.utils.hr_removed_day).
 	"""
+	if removed:
+		return "hr-owned", "HR removed this day in Shift Attendance"
 	if not punches:
 		return "nothing-to-mark", "no punch on this day carries a shift"
 	for row in attendance_rows:
@@ -842,7 +845,9 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 			PROVENANCE_FIELD,
 		],
 	)
-	action, detail = plan_remark(punches, attendance)
+	from hrms.utils.hr_removed_day import removed_by_hr
+
+	action, detail = plan_remark(punches, attendance, removed=removed_by_hr(employee, day))
 	if action == "remark":
 		submitted = next((row.get("name") for row in attendance if _flag(row.get("docstatus")) == 1), None)
 		# A preview must not hold Salary Slip row locks while somebody reads it.

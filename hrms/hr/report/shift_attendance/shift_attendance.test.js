@@ -20,7 +20,7 @@ function translate(text, args) {
 	return String(text).replace(/\{(\d+)\}/g, (_, i) => (args ? args[i] : ""));
 }
 
-function load({ roles = ["HR User"], handlers = {}, checked = [] } = {}) {
+function load({ roles = ["HR User"], handlers = {}, checked = [], confirm_answer = true } = {}) {
 	const calls = [];
 	const messages = [];
 	const dialogs = [];
@@ -46,6 +46,7 @@ function load({ roles = ["HR User"], handlers = {}, checked = [] } = {}) {
 		datatable: null,
 		refreshed: 0,
 		checked,
+		data: [ROW_A, ROW_B],
 		get_checked_items() {
 			return this.checked;
 		},
@@ -85,14 +86,14 @@ function load({ roles = ["HR User"], handlers = {}, checked = [] } = {}) {
 		call({ method, args }) {
 			// copy out of the vm realm so deepStrictEqual compares values, not prototypes
 			calls.push({ method, args: JSON.parse(JSON.stringify(args)) });
-			const handler = handlers[method];
+			const handler = handlers[method] || (method === API + "get_days" ? days_handler : null);
 			return handler ? handler(args) : Promise.resolve({ message: {} });
 		},
 		msgprint: (m) => messages.push(typeof m === "string" ? m : m.message),
 		show_alert: () => {},
-		confirm: (text, yes) => {
+		confirm: (text, yes, no) => {
 			confirms.push(text);
-			return yes();
+			return confirm_answer ? yes() : no && no();
 		},
 	};
 	const quiet = { info() {}, warn() {}, debug() {}, log() {} };
@@ -121,6 +122,12 @@ const ROW_B = { employee: "EMP-2", attendance_date: "2026-09-02", status: "Absen
 function editor(settings, rowIndex, fieldname, data) {
 	const options = settings.get_datatable_options({ columns: [] });
 	return options.getEditor(1, rowIndex, data[fieldname], {}, { fieldname, id: fieldname }, [], data);
+}
+
+// What Desk does on open: onload, then the first refresh loads rows and their revisions.
+async function ready(settings, report) {
+	settings.onload(report);
+	await settings.after_refresh(report);
 }
 
 function flush() {
@@ -170,7 +177,7 @@ test("only date, shift, status, in and out are editable", () => {
 	assert.strictEqual(editor(settings, 0, "employee", ROW_A), false);
 });
 
-test("cell edits collect as pending changes with one get_day per day", async () => {
+test("cell edits collect as pending changes and read nothing from the server", async () => {
 	const { settings, report, page, calls } = load({ handlers: { [API + "get_day"]: day_handler } });
 	settings.onload(report);
 	const status = editor(settings, 0, "status", ROW_A);
@@ -180,9 +187,7 @@ test("cell edits collect as pending changes with one get_day per day", async () 
 	editor(settings, 0, "in_time", ROW_A).setValue("09:05:00");
 	await flush();
 
-	const reads = calls.filter((c) => c.method === API + "get_day");
-	assert.strictEqual(reads.length, 1);
-	assert.deepStrictEqual(reads[0].args, { employee: "EMP-1", attendance_date: "2026-09-02" });
+	assert.strictEqual(calls.length, 0, "the revision was read with the report data");
 	assert.deepStrictEqual(page.indicator, { label: "1 unsaved changes", color: "orange" });
 	assert.ok(page.buttons.has("Save") && page.buttons.has("Discard"));
 
@@ -209,7 +214,7 @@ test("Save sends every pending day in one save_rows call and refreshes", async (
 	const { settings, report, page, calls } = load({
 		handlers: { [API + "get_day"]: day_handler, [API + "save_rows"]: save_ok },
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	editor(settings, 0, "status", ROW_A).setValue("Half Day");
 	editor(settings, 0, "out_time", ROW_A).setValue("13:00");
 	editor(settings, 1, "shift", ROW_B).setValue("Night");
@@ -240,7 +245,7 @@ test("a conflict row is reloaded, turns amber and shows the current values", asy
 				}),
 		},
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	editor(settings, 0, "status", ROW_A).setValue("Half Day");
 	editor(settings, 1, "status", ROW_B).setValue("Present");
 	await page.buttons.get("Save").action();
@@ -271,7 +276,7 @@ test("Edit selected sends one row per checked day, folding in pending edits", as
 		checked,
 		handlers: { [API + "get_day"]: day_handler, [API + "save_rows"]: save_ok },
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	editor(settings, 0, "shift", ROW_A).setValue("Night");
 	page.buttons.get("Edit selected").action();
 	await dialogs[0].opts.primary_action({ status: "Half Day", in_time: "09:00:00", shift: "", out_time: "" });
@@ -286,7 +291,7 @@ test("Remove selected confirms, then sends action remove", async () => {
 		checked: [ROW_A],
 		handlers: { [API + "get_day"]: day_handler, [API + "save_rows"]: save_ok },
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	await page.buttons.get("Remove selected").action();
 	assert.strictEqual(confirms.length, 1);
 	assert.deepStrictEqual(saved_rows(calls), [
@@ -299,7 +304,7 @@ test("Add / change shift sends only the shift for checked days", async () => {
 		checked: [ROW_B],
 		handlers: { [API + "get_day"]: day_handler, [API + "save_rows"]: save_ok },
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	page.buttons.get("Add / change shift").action();
 	await dialogs[0].opts.primary_action({ shift: "Night" });
 	assert.deepStrictEqual(saved_rows(calls), [
@@ -311,7 +316,7 @@ test("Add row reads the day's revision and sends action add", async () => {
 	const { settings, report, page, calls, dialogs } = load({
 		handlers: { [API + "get_day"]: day_handler, [API + "save_rows"]: save_ok },
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	page.buttons.get("Add row").action();
 	await dialogs[0].opts.primary_action({
 		employee: "EMP-9",
@@ -330,11 +335,15 @@ test("Add row reads the day's revision and sends action add", async () => {
 test("a day whose revision cannot be read is not sent and is reported", async () => {
 	const { settings, report, page, calls, messages } = load({
 		handlers: {
-			[API + "get_day"]: (args) => (args.employee === "EMP-2" ? Promise.reject(new Error("fenced")) : day_handler(args)),
+			[API + "get_days"]: (args) =>
+				days_handler(args).then((r) => {
+					r.message.days["EMP-2|2026-09-02"] = { revision: null, code: "fenced", error: "not permitted" };
+					return r;
+				}),
 			[API + "save_rows"]: save_ok,
 		},
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	editor(settings, 0, "status", ROW_A).setValue("Absent");
 	editor(settings, 1, "status", ROW_B).setValue("Present");
 	await page.buttons.get("Save").action();
@@ -351,7 +360,7 @@ test("Hand back calls hand_back only for HR-edited rows", async () => {
 			[API + "hand_back"]: () => Promise.resolve({ message: { ok: true, cancelled: "ATT-2" } }),
 		},
 	});
-	settings.onload(report);
+	await ready(settings, report);
 	await page.buttons.get("Hand back to system").action();
 	const backs = calls.filter((c) => c.method === API + "hand_back");
 	assert.deepStrictEqual(backs.map((c) => c.args), [
@@ -380,4 +389,86 @@ test("every refusal code the backend can return has its own short message", () =
 		assert.notStrictEqual(sa_code_message(code), sa_code_message("__unknown__"));
 	}
 	assert.strictEqual(sa_code_message("conflict"), "Changed by someone else — reloaded");
+});
+
+// --- W4: revisions are read when the report data loads, not at click or save ---
+
+function days_handler(args) {
+	const days = {};
+	JSON.parse(args.employee_dates).forEach((d) => {
+		days[`${d.employee}|${d.attendance_date}`] = { revision: `rev-${d.employee}-${d.attendance_date}` };
+	});
+	return Promise.resolve({ message: { days } });
+}
+
+test("revisions load with the report data in one get_days call per 500 days", async () => {
+	const { settings, report, calls } = load({ handlers: { [API + "get_days"]: days_handler } });
+	settings.onload(report);
+	report.data = Array.from({ length: 1001 }, (_, i) => ({ employee: `EMP-${i}`, attendance_date: "2026-09-02" }));
+	report.data.push(Object.assign({}, report.data[0])); // a day listed twice is read once
+	await settings.after_refresh(report);
+	const reads = calls.filter((c) => c.method === API + "get_days");
+	assert.deepStrictEqual(reads.map((c) => JSON.parse(c.args.employee_dates).length), [500, 500, 1]);
+	editor(settings, 0, "status", ROW_A).setValue("Absent");
+	await flush();
+	assert.strictEqual(calls.filter((c) => c.method === API + "get_day").length, 0, "a click reads nothing");
+});
+
+test("a save carries the revision read when the data loaded, never a fresh one", async () => {
+	let version = "loaded";
+	const { settings, report, page, calls } = load({
+		handlers: {
+			[API + "get_days"]: days_handler,
+			[API + "get_day"]: () => Promise.resolve({ message: { revision: `rev-${version}` } }),
+			[API + "save_rows"]: save_ok,
+		},
+	});
+	settings.onload(report);
+	report.data = [ROW_A];
+	await settings.after_refresh(report);
+	version = "changed-meanwhile";
+	editor(settings, 0, "status", ROW_A).setValue("Absent");
+	await page.buttons.get("Save").action();
+	assert.deepStrictEqual(saved_rows(calls).map((r) => r.revision), ["rev-EMP-1-2026-09-02"]);
+	assert.strictEqual(calls.filter((c) => c.method === API + "get_day").length, 0);
+});
+
+test("a refresh with pending edits asks first, then drops them so off-screen edits are never saved", async () => {
+	const { settings, report, page, calls, confirms } = load({
+		handlers: { [API + "get_days"]: days_handler, [API + "save_rows"]: save_ok },
+	});
+	settings.onload(report);
+	report.data = [ROW_A];
+	await settings.after_refresh(report);
+	editor(settings, 0, "status", ROW_A).setValue("Absent");
+	await report.refresh(true); // what a filter change does
+	assert.strictEqual(confirms.length, 1);
+	assert.strictEqual(report.refreshed, 1);
+	assert.strictEqual(page.indicator, null);
+	assert.ok(!page.buttons.has("Save"));
+	assert.strictEqual(calls.filter((c) => c.method === API + "save_rows").length, 0);
+	assert.strictEqual(settings.formatter("Present", 0, { fieldname: "status" }, ROW_A, (v) => v), "Present");
+});
+
+test("declining the refresh keeps the edits and the rows they belong to", async () => {
+	const { settings, report, page, confirms } = load({
+		confirm_answer: false,
+		handlers: { [API + "get_days"]: days_handler },
+	});
+	settings.onload(report);
+	report.data = [ROW_A];
+	await settings.after_refresh(report);
+	editor(settings, 0, "status", ROW_A).setValue("Absent");
+	await report.refresh(true);
+	assert.strictEqual(confirms.length, 1);
+	assert.strictEqual(report.refreshed, 0, "the old rows stay on screen");
+	assert.deepStrictEqual(page.indicator, { label: "1 unsaved changes", color: "orange" });
+});
+
+test("a refresh with nothing pending asks nothing", async () => {
+	const { settings, report, confirms } = load({ handlers: { [API + "get_days"]: days_handler } });
+	settings.onload(report);
+	await report.refresh();
+	assert.strictEqual(confirms.length, 0);
+	assert.strictEqual(report.refreshed, 1);
 });

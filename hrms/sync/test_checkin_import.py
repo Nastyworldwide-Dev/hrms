@@ -1087,6 +1087,19 @@ class TestRemarkAttendance(_WhitelistCase):
 		remarked = next(row for row in result["days"] if row["employee"] == "EMP-1")
 		self.assertEqual(remarked["marked"], ["HR-ATT-NEW"])
 
+	def test_a_day_hr_removed_in_shift_attendance_is_never_re_marked(self):
+		# G2-G4 review C1: the removal leaves no HR-owned row, only the marker
+		with mock.patch(
+			"hrms.utils.hr_removed_day.removed_by_hr", side_effect=lambda employee, day: employee == "EMP-1"
+		):
+			result = ci.remark_attendance(self.DAYS, dry_run=0)
+
+		removed = next(row for row in result["days"] if row["employee"] == "EMP-1")
+		self.assertEqual(
+			(removed["action"], removed["detail"]), ("hr-owned", "HR removed this day in Shift Attendance")
+		)
+		self.assertEqual(self.site.shift.calls, [])
+
 	def test_employee_days_accepts_pairs_and_dicts(self):
 		self.assertEqual(
 			ci.parse_employee_days(

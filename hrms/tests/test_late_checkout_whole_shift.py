@@ -76,6 +76,8 @@ class TestWholeShiftRepair(unittest.TestCase):
 		self.error_logs = []
 		self.db.exists.side_effect = self.exists
 		self.enqueue = MagicMock()
+		self.hr_users = []
+		self.notifications = []
 
 	def matches(self, row, filters):
 		for field, expected in (filters or {}).items():
@@ -118,6 +120,8 @@ class TestWholeShiftRepair(unittest.TestCase):
 		return None
 
 	def get_all(self, doctype, filters=None, **kwargs):
+		if doctype in ("Has Role", "User"):
+			return list(self.hr_users)
 		if doctype == "Attendance":
 			return [frappe._dict(name=self.attendance.name)] if self.attendance else []
 		if doctype != "Employee Checkin":
@@ -130,10 +134,15 @@ class TestWholeShiftRepair(unittest.TestCase):
 				for r in rows
 				if any(self.matches(r, {field: [op, value]}) for field, op, value in kwargs["or_filters"])
 			]
-		rows = sorted(rows, key=lambda r: (r.time, r.name), reverse="desc" in kwargs.get("order_by", ""))
-		return rows[: kwargs.get("limit_page_length", 999)]
+		rows = sorted(rows, key=lambda r: (r.time, r.name), reverse="desc" in (kwargs.get("order_by") or ""))
+		rows = rows[: kwargs.get("limit_page_length", 999)]
+		return [r[kwargs["pluck"]] for r in rows] if kwargs.get("pluck") else rows
 
 	def get_doc(self, doctype, name=None, **kwargs):
+		if isinstance(doctype, dict) and doctype.get("doctype") == "Notification Log":
+			doc = MagicMock()
+			doc.insert.side_effect = lambda **kw: self.notifications.append(doctype)
+			return doc
 		if doctype == "Attendance":
 			return self.attendance
 		if doctype == "Shift Type":
@@ -480,6 +489,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 		cases = {
 			"pending_punch": lambda: self.rows[0].update(remote_approval_status="Pending"),
 			"hr_marked": lambda: setattr(self.attendance, "auto_attendance", 0),
+			"hr_removed": self.hr_removed_the_day,
 			"financial_lock": lambda: setattr(self, "protected", "Salary Slip"),
 			"not_eligible": lambda: self.rows[-1].update(skip_auto_attendance=1),
 			"incomplete_pairs": leading_out,
@@ -495,6 +505,52 @@ class TestWholeShiftRepair(unittest.TestCase):
 				self.assertFalse(result.repaired)
 				self.assertEqual(result.reason_code, code)
 				self.assertTrue(result.message)
+
+	def hr_removed_the_day(self):
+		from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
+
+		self.rows.append(
+			frappe._dict(
+				name="HR-MARKER",
+				employee="EMP",
+				log_type=None,
+				time=self.anchor,
+				shift=None,
+				shift_start=None,
+				attendance=None,
+				skip_auto_attendance=1,
+				device_id=HR_REMOVED_DEVICE,
+				remote_approval_status=None,
+				synced_from_instance=None,
+			)
+		)
+
+	def test_a_day_hr_removed_is_not_rebuilt_retried_or_touched(self):
+		"""Group 2-4 review C1: the removal is HR's decision, not a blocker that clears."""
+		self.hr_removed_the_day()
+		result, _ = self.run_repair()
+		self.assertEqual(result.reason_code, "hr_removed")
+		self.assertFalse(result.will_retry)
+		self.assertTrue(result.hr_notified)
+		self.attendance.cancel.assert_not_called()
+		self.shift.mark_attendance_for_shift_logs.assert_not_called()
+		self.enqueue.assert_not_called()
+
+	def test_hr_gets_a_desk_alert_for_a_stuck_late_checkout_once(self):
+		"""Group 2-4 review W6: HR cannot read Error Log. HR users who may see the
+		employee's company get a Notification Log linked to the request, once."""
+		self.hr_users = ["hr.a@x", "hr.b@x"]
+		self.attendance.auto_attendance = 0
+		with patch.object(hooks, "company_visible", lambda company, user: user == "hr.a@x", create=True):
+			self.run_repair()
+			self.run_repair()
+		self.assertEqual([n["for_user"] for n in self.notifications], ["hr.a@x"])
+		note = self.notifications[0]
+		self.assertEqual(
+			(note["type"], note["document_type"], note["document_name"]),
+			("Alert", "Remote Checkin Request", "RCR-LATE"),
+		)
+		self.assertEqual(note["subject"], "Late check-out not applied")
 
 	# ---- E3: a refused repair is not lost ----------------------------------------
 

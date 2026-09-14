@@ -144,6 +144,9 @@ class TestProtectedReason(unittest.TestCase):
 	def test_a_paid_day_is_held(self):
 		self.assertIn("OT-REQ-1", rec.protected_reason(YESTERDAY, TODAY.date(), [_row()], "OT-REQ-1"))
 
+	def test_c1_a_day_hr_removed_in_shift_attendance_is_held(self):
+		self.assertIn("removed by HR", rec.protected_reason(YESTERDAY, TODAY.date(), [], removed_by_hr=True))
+
 
 class TestNightShift(unittest.TestCase):
 	def test_night_means_starting_18_00_or_later_and_ending_before_06_00(self):
@@ -325,8 +328,9 @@ class TestRebuild(_Base):
 				rec, "_financial", lambda e, d, rows, for_update: "SAL-1" if e == "E-PAID" else None
 			),
 			patch.object(rec, "_remark_day", self.remark),
+			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: False),
 		]
-		for p in self.patches[-4:]:
+		for p in self.patches[-5:]:
 			p.start()
 
 	def test_hr_leave_paid_and_today_are_held_and_never_rebuilt(self):
@@ -339,6 +343,19 @@ class TestRebuild(_Base):
 		self.assertEqual(held, {("E-HR", "2026-09-10"), ("E-PAID", "2026-09-11"), ("E-LEAVE", "2026-09-12")})
 		self.assertEqual({h["employee"] for h in result["hr_list"]}, {"E-HR", "E-PAID", "E-LEAVE"})
 		self.assertNotIn(date(2026, 9, 14), [c.args[1] for c in self.remark.call_args_list])
+
+	def test_c1_a_day_hr_removed_in_shift_attendance_is_never_rebuilt(self):
+		"""Group 2-4 review C1: HR removed the day (row cancelled, a marker punch
+		left); a later unlinked punch made recovery's rebuild re-mark it."""
+		removed = {("E-RIA", date(2026, 9, 10))}
+		with (
+			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: (e, rec.getdate(d)) in removed),
+			patch.dict(rec._PLANNERS, _fake_planners() | {"rebuild": rec._plan_rebuild}),
+		):
+			result = rec.apply_recovery("rebuild", dry_run=0)
+		self.assertNotIn(("E-RIA", date(2026, 9, 10)), [c.args[:2] for c in self.remark.call_args_list])
+		reason = next(h["reason"] for h in result["hr_list"] if h["employee"] == "E-RIA")
+		self.assertIn("removed by HR", reason)
 
 	def test_one_failing_day_does_not_stop_the_rest(self):
 		self.punches.append(frappe._dict(employee="E-BAD", shift_start=datetime(2026, 9, 9, 9, 0)))
@@ -627,7 +644,8 @@ class TestAssignments(_Base):
 				employee="E-RIA",
 				shift_type=self.NIGHT,
 				start_date=date(2026, 8, 20),
-				end_date=None,
+				# ends today: nothing of its range lies ahead (W8)
+				end_date=date(2026, 9, 14),
 			),
 			frappe._dict(
 				name="SA-DAY-AMIN",
@@ -669,8 +687,9 @@ class TestAssignments(_Base):
 			patch.object(rec, "_local_punches", lambda employee, start, end: self.punches.get(employee, [])),
 			patch.object(rec, "_attendance_rows", lambda e, d: []),
 			patch.object(rec, "_financial", lambda e, d, rows, for_update: None),
+			patch.object(rec, "_editor_assignments", lambda names: set(), create=True),
 		]
-		for p in self.patches[-5:]:
+		for p in self.patches[-6:]:
 			p.start()
 
 	def plan(self):
@@ -722,6 +741,31 @@ class TestAssignments(_Base):
 			rec.apply_recovery("assignments", dry_run=0)
 		doc.cancel.assert_called_once()
 		doc.save.assert_not_called()
+
+	def test_w8_an_open_ended_night_assignment_is_listed_for_hr_not_ended(self):
+		"""Group 2-4 review W8: ending an open-ended (or future-dated) night
+		assignment at yesterday drops its future rotation; HR ends it."""
+		self.assignments[1].end_date = None
+		plan = self.plan()
+		self.assertNotIn("SA-NIGHT-RIA", [p["assignment"] for p in plan["planned"]])
+		reason = next(h["reason"] for h in plan["hr_list"] if h["assignment"] == "SA-NIGHT-RIA")
+		self.assertIn("future range", reason)
+
+	def test_w8_a_night_assignment_ending_after_today_is_listed_for_hr(self):
+		self.assignments[1].end_date = date(2026, 9, 30)
+		plan = self.plan()
+		self.assertEqual(plan["planned"], [])
+		self.assertIn(
+			"future range", next(h["reason"] for h in plan["hr_list"] if h["assignment"] == "SA-NIGHT-RIA")
+		)
+
+	def test_w8_an_assignment_the_shift_attendance_editor_created_is_never_ended(self):
+		self.assignments[1].end_date = self.assignments[1].start_date
+		with patch.object(rec, "_editor_assignments", lambda names: {"SA-NIGHT-RIA"} & set(names)):
+			plan = self.plan()
+		self.assertEqual(plan["planned"], [])
+		held = next(h for h in plan["held_back"] if h["assignment"] == "SA-NIGHT-RIA")
+		self.assertIn("Shift Attendance", held["reason"])
 
 	def test_a_paid_day_under_the_night_stamp_holds_the_assignment(self):
 		with patch.object(

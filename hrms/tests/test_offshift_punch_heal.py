@@ -222,6 +222,27 @@ class _Case(unittest.TestCase):
 		return self.run_heal(dry_run=1)["healed"][0]["leaves_day"]
 
 
+class TestHrRemovedDay(_Case):
+	def test_a_day_hr_removed_in_shift_attendance_is_held_back_not_restamped(self):
+		# G2-G4 review C1: the removed-day marker, stamped on the day it removed
+		self.db.add_checkin(
+			"MARK-0903",
+			datetime(2026, 9, 3, 0, 0),
+			None,
+			shift=SHIFT,
+			skip_auto_attendance=1,
+			device_id="HR master edit: removed day",
+		)
+		result = self.run_heal(dry_run=0)
+		self.assertEqual(result["healed"], [])
+		[held] = result["held_back"]
+		self.assertEqual(
+			(held["checkin"], held["held_because"]), ("OUT-0904", "HR removed this day in Shift Attendance")
+		)
+		self.assertEqual(self.db.saved, [])
+		self.enqueue.assert_not_called()
+
+
 class TestHistoricalHeal(_Case):
 	def test_danial_out_resolves_to_the_shift_of_the_in_it_closes(self):
 		result = self.run_heal(dry_run=1)

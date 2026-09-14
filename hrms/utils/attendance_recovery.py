@@ -43,6 +43,7 @@ from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
 from hrms.overrides.company_scope import require_unfenced
+from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.offshift_punch_heal import _lost_transaction
 
@@ -107,15 +108,19 @@ def recovery_window(from_date, to_date, today: date) -> Window:
 	return Window(start, end, excluded, requested_end)
 
 
-def protected_reason(day, today: date, rows, financial=None) -> str | None:
+def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False) -> str | None:
 	"""Why this employee-day must not be rebuilt, or None. Pure.
 
 	`rows` are the day's Attendance rows (any docstatus); `financial` is what
-	`_repair_financial_dependency` returned for the day.
+	`_repair_financial_dependency` returned for the day; `removed_by_hr` is
+	whether HR removed the day in Shift Attendance (hrms.utils.hr_removed_day).
 	"""
 	day = getdate(day)
 	if day >= today:
 		return "today or later: never touched"
+	if removed_by_hr:
+		# Group 2-4 review C1: the removal leaves no row, so only the marker says who owns it.
+		return "removed by HR in Shift Attendance: HR hands it back first"
 	for row in rows:
 		if cint(row.get("docstatus")) == 2:
 			continue
@@ -266,7 +271,13 @@ def _held(entry, reason, hr=True) -> dict:
 
 def _day_protection(employee, day, for_update, ignore=None) -> str | None:
 	rows = [r for r in _attendance_rows(employee, day) if r.get("name") != ignore]
-	return protected_reason(day, _today(), rows, _financial(employee, day, rows, for_update))
+	return protected_reason(
+		day,
+		_today(),
+		rows,
+		_financial(employee, day, rows, for_update),
+		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
+	)
 
 
 def _outcome(planned=None, held=None, **extra) -> dict:
@@ -333,11 +344,34 @@ def _overlap(night, day_assignments, win):
 	return min(s for s, _e in spans), max(e for _s, e in spans)
 
 
+def _editor_assignments(names) -> set:
+	"""Which of these Shift Assignments the Shift Attendance editor created
+	(attendance_master_edit._ensure_assignment comments every one)."""
+	if not names:
+		return set()
+	found = set(
+		frappe.get_all(
+			"Comment",
+			filters={
+				"reference_doctype": "Shift Assignment",
+				"reference_name": ["in", sorted(names)],
+				"content": ["like", "%via Shift Attendance%"],
+			},
+			pluck="reference_name",
+		)
+	)
+	logger.debug("[attendance_recovery] %d of %d assignment(s) made by the editor", len(found), len(names))
+	return found
+
+
 def _plan_assignments(win, for_update=False) -> dict:
-	"""Night assignments overlapping a day assignment; planned only when never used."""
+	"""Night assignments overlapping a day assignment; planned only when never
+	used, ending by today, and not HR's own one-day assignment from the editor."""
 	rows = _submitted_assignments(win.start, win.end)
 	times = _shift_times({r.shift_type for r in rows})
 	night_types = {name for name, (start, end) in times.items() if is_night_shift(start, end)}
+	editor_made = _editor_assignments({r.name for r in rows if r.shift_type in night_types})
+	today = _today()
 	by_employee = {}
 	for row in rows:
 		by_employee.setdefault(row.employee, []).append(row)
@@ -360,6 +394,19 @@ def _plan_assignments(win, for_update=False) -> dict:
 			range_start = getdate(night.start_date)
 			if range_start > win.end:
 				held.append(_held(entry, "starts today or later: it cannot be proven unused yet"))
+				continue
+			if night.name in editor_made:
+				held.append(_held(entry, "created by HR in Shift Attendance: never ended here", hr=False))
+				continue
+			if not night.end_date or getdate(night.end_date) > today:
+				# Group 2-4 review W8: ending it at yesterday would drop a future rotation.
+				# ceiling: an unused past with a future range always goes to HR, upgrade:
+				# end only the past part (split the assignment) if HR's list grows too long
+				held.append(
+					_held(
+						entry, "future range — HR to end: the assignment runs past today or has no end date"
+					)
+				)
 				continue
 			# The whole range up to now, today included: a night punch today still proves use.
 			punches = _local_punches(
@@ -1475,7 +1522,13 @@ def _late_checkouts(win) -> dict:
 		if row and row.status != "Half Day" and row.out_time:
 			continue
 		entry.update(date=str(day), attendance=row.name if row else None, status=row.status if row else None)
-		reason = protected_reason(day, _today(), rows, _financial(request.employee, day, rows, False))
+		reason = protected_reason(
+			day,
+			_today(),
+			rows,
+			_financial(request.employee, day, rows, False),
+			removed_by_hr=hr_removed_day.removed_by_hr(request.employee, day),
+		)
 		(held.append(_held(entry, reason)) if reason else planned.append(entry))
 	logger.info(
 		"[attendance_recovery] late check-outs still broken: %d fixable, %d for HR", len(planned), len(held)

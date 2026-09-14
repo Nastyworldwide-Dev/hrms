@@ -22,6 +22,7 @@ import pathlib
 import sys
 import unittest
 from contextlib import ExitStack
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 HRMS = pathlib.Path(__file__).resolve().parents[1]
@@ -36,6 +37,9 @@ import frappe
 
 from hrms.api import attendance_master_edit as ame
 from hrms.hr.doctype.shift_assignment.shift_assignment import OverlappingShiftError
+from hrms.hr.doctype.shift_type import shift_type as st
+from hrms.utils import hr_removed_day
+from hrms.utils import ot_calculation as ot
 
 EMP = "EMP-0001"
 DAY = dt.date(2026, 9, 10)
@@ -60,6 +64,7 @@ class Store:
 		self.comments, self.enqueued, self.deleted = [], [], []
 		self.locked = {}
 		self.overlap_with = None
+		self.breaks = []
 		self.settings = frappe._dict(
 			determine_check_in_and_check_out=pairing,
 			working_hours_calculation_based_on=policy,
@@ -67,9 +72,13 @@ class Store:
 			late_entry_grace_period=10,
 			enable_early_exit_marking=1,
 			early_exit_grace_period=10,
+			working_hours_threshold_for_half_day=4,
+			working_hours_threshold_for_absent=0,
 		)
 		self.seq = 0
 		self.savepoints = {}
+		self.shift_docs = {}
+		self.restamp_flags = []
 
 	# --- fixtures --------------------------------------------------------------
 	def next(self, prefix):
@@ -188,8 +197,17 @@ class Store:
 			if punch.attendance == name:
 				punch.attendance = None
 
-	def _shift_settings(self, shift):
-		return self.settings
+	def _shift_doc(self, shift):
+		"""A stand-in Shift Type the REAL ShiftType.get_attendance runs on."""
+		doc = SimpleNamespace(name=shift, breaks=self.breaks, **self.settings)
+		doc._deduct_unpaid_breaks = lambda hours, intervals, company=None: st.ShiftType._deduct_unpaid_breaks(
+			doc, hours, intervals, company
+		)
+		self.shift_docs[shift] = doc
+		return doc
+
+	def _is_half_holiday(self, shift_doc, employee, day):
+		return False
 
 	def _shift_window(self, shift, day):
 		start, end = {"Day": ("09:00", "18:00"), "Night": ("21:00", "06:00")}[shift]
@@ -251,7 +269,7 @@ class Store:
 
 	SEAMS = (
 		"_employee _day_attendance _day_punches _day_assignments _financial_dependency "
-		"_cancel_attendance _shift_settings _shift_window _update_punch _insert_punch _set_skip "
+		"_cancel_attendance _shift_doc _is_half_holiday _shift_window _update_punch _insert_punch _set_skip "
 		"_skip_marked _delete_punch _insert_attendance _link_punches _submit_assignment _comment "
 		"_enqueue_engine _today"
 	).split()
@@ -280,7 +298,7 @@ class Store:
 	def patched(self, roles=("HR User",), fenced_out=False, user="hr.user@example.invalid"):
 		stack = ExitStack()
 		for seam in self.SEAMS:
-			stack.enter_context(patch.object(ame, seam, getattr(self, seam)))
+			stack.enter_context(patch.object(ame, seam, getattr(self, seam), create=True))
 		db = MagicMock()
 		db.savepoint.side_effect = self.savepoint
 		db.rollback.side_effect = self.rollback
@@ -297,6 +315,13 @@ class Store:
 		stack.enter_context(
 			patch("hrms.overrides.company_scope.company_visible", return_value=not fenced_out)
 		)
+		# the engine's own day rule runs for real; only its database reads are stood in
+		stack.enter_context(patch.object(ot, "_classify_day", return_value="normal"))
+		stack.enter_context(patch.object(st, "_company_of_logs", return_value="Company A"))
+		stack.enter_context(
+			patch.object(frappe, "get_cached_doc", side_effect=lambda doctype, name: self.shift_docs[name])
+		)
+		stack.enter_context(patch("hrms.utils.company_settings.get_company_setting", return_value=None))
 		return stack
 
 	# --- calls -------------------------------------------------------------------
@@ -411,12 +436,14 @@ class TestEdit(unittest.TestCase):
 		self.assertFalse(hr.late_entry)
 		self.assertTrue(hr.early_exit, "17:30 is before 18:00 less the 10 min grace")
 
-		punches = sorted(store.punches, key=lambda p: p.time)
+		original = store._row(store.punches, in_punch.name)
+		self.assertEqual(original.time, at(DAY, "09:02"), "the device punch keeps its real time")
+		self.assertEqual(original.skip_auto_attendance, 1)
+		self.assertIn(in_punch.name, store._skip_marked([in_punch.name]))
+		punches = sorted((p for p in store.punches if p.device_id == ame.HR_DEVICE), key=lambda p: p.time)
 		self.assertEqual(
 			[(p.log_type, p.time) for p in punches], [("IN", at(DAY, "09:00")), ("OUT", at(DAY, "17:30"))]
 		)
-		self.assertEqual(punches[0].name, in_punch.name, "the existing IN is re-timed, not duplicated")
-		self.assertEqual(punches[1].device_id, ame.HR_DEVICE, "the missing OUT is an HR punch")
 		self.assertTrue(all(p.attendance == hr.name and p.shift == "Day" for p in punches))
 		self.assertTrue(any(c["name"] == hr.name and "Edited by" in c["text"] for c in store.comments))
 		self.assertEqual(result["revision"], store.revision())
@@ -426,8 +453,10 @@ class TestEdit(unittest.TestCase):
 		half_day_zero(store)
 		result = store.edit({"in_time": "08:00", "out_time": "18:15", "status": "Present"})
 		self.assertTrue(result["ok"], result)
-		# the real calculate_working_hours: 08:00 -> 18:15 is 10.25 h
-		self.assertEqual(store.hr_rows()[0].working_hours, 10.25)
+		# the engine's own rule (ShiftType.get_attendance): 08:00 -> 18:15 is 10.25 h
+		# on the clock, and arriving before the 09:00 start is not paid (HR ruling
+		# 10 Sep 2026), so 9.25 h — the same hours the hourly job would write
+		self.assertEqual(store.hr_rows()[0].working_hours, 9.25)
 
 	def test_extra_punches_are_superseded_not_deleted(self):
 		store = Store()
@@ -778,6 +807,207 @@ class TestHandBack(unittest.TestCase):
 		self.assertEqual(store.attendance[0].docstatus, 1)
 
 
+class TestRemovedDayStaysRemoved(unittest.TestCase):
+	"""C1 (G2-G4 review): a removed day leaves nothing HR-owned, so every
+	automation path must honour the durable removed-day marker."""
+
+	def _checkins_get_all(self, store):
+		def get_all(doctype, filters=None, fields=None, pluck=None, **kw):
+			assert doctype == "Employee Checkin", doctype
+			rows = [p for p in store.punches if _matches(p, filters or {})]
+			return [r[pluck] for r in rows] if pluck else [copy.copy(r) for r in rows]
+
+		return get_all
+
+	def _remove_rejected_only_absent(self, store):
+		store.add_assignment("Day")
+		store.add_attendance(status="Absent", in_time=None)
+		rejected = store.add_punch("09:05", "IN", remote_approval_status="Rejected", skip_auto_attendance=1)
+		result = store.edit({}, action="remove")
+		self.assertTrue(result["ok"], result)
+		return rejected
+
+	def test_a_removed_absent_whose_only_punches_were_rejected_keeps_its_marker(self):
+		store = Store()
+		self._remove_rejected_only_absent(store)
+		markers = [p for p in store.punches if p.device_id == ame.HR_REMOVED_DEVICE]
+		self.assertEqual(len(markers), 1, "every removal writes the marker, punches or not")
+		# the Absent sweep, under a shift that does not overlap the marker's
+		sweep_rows = [p for p in store.punches if p.remote_approval_status != "Rejected"]
+		with (
+			patch.object(frappe, "get_all", return_value=sweep_rows),
+			patch.object(st, "has_overlapping_timings", return_value=False),
+		):
+			days = st.ShiftType.get_dates_with_checkins(frappe._dict(name="Night"), EMP, DAY, DAY)
+		self.assertEqual(days, [DAY], "a non-overlapping shift's sweep must not mark the removed day")
+
+	def test_removing_twice_writes_one_marker(self):
+		store = Store()
+		half_day_zero(store)
+		store.edit({}, action="remove")
+		again = store.edit({}, action="remove")
+		self.assertEqual(again["code"], "nothing_to_remove")
+		self.assertEqual(len([p for p in store.punches if p.device_id == ame.HR_REMOVED_DEVICE]), 1)
+
+	def test_a_punch_arriving_after_the_removal_is_held_not_marked(self):
+		store = Store()
+		self._remove_rejected_only_absent(store)
+		late = store.add_punch("18:05", "OUT", remote_approval_status="Approved")  # an approved late OUT
+		shift = SimpleNamespace(name="Day")
+		db = MagicMock()
+		db.set_value.side_effect = lambda doctype, name, field, value: store._row(store.punches, name).update(
+			{field: value}
+		)
+		inserted = []
+		with (
+			patch.object(frappe, "get_all", self._checkins_get_all(store)),
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", side_effect=lambda d: inserted.append(d) or MagicMock()),
+			patch.object(st.ShiftType, "shift_day_result") as compute,
+			patch.object(st, "mark_attendance_and_link_log") as link,
+		):
+			self.assertIsNone(st.ShiftType.mark_attendance_for_shift_logs(shift, EMP, DAY, [late]))
+		compute.assert_not_called()
+		link.assert_not_called()
+		self.assertEqual(late.skip_auto_attendance, 1)
+		[comment] = inserted
+		self.assertIn(ame.SKIP_MARKER, comment["content"], "hand_back releases it with the rest")
+
+	def test_the_import_remark_treats_the_removed_day_as_hr_owned(self):
+		from hrms.sync.checkin_import import plan_remark
+
+		store = Store()
+		self._remove_rejected_only_absent(store)
+		late = store.add_punch("18:05", "OUT")
+		action, detail = plan_remark([late], [], removed=True)
+		self.assertEqual(action, "hr-owned")
+		self.assertIn("removed", detail)
+		with patch.object(frappe, "get_all", self._checkins_get_all(store)):
+			self.assertTrue(hr_removed_day.removed_by_hr(EMP, DAY))
+			self.assertFalse(hr_removed_day.removed_by_hr(EMP, DAY + dt.timedelta(days=1)))
+
+	def test_hand_back_deletes_the_marker_and_releases_held_punches(self):
+		store = Store()
+		rejected = self._remove_rejected_only_absent(store)
+		held = store.add_punch("18:05", "OUT", skip_auto_attendance=1)
+		store._comment("Employee Checkin", held.name, f"{ame.SKIP_MARKER} held")
+		with store.patched():
+			result = ame.hand_back(EMP, str(DAY), store.revision())
+		self.assertTrue(result["ok"], result)
+		self.assertEqual([p.device_id for p in store.punches if p.device_id], [])
+		self.assertEqual(store._row(store.punches, held.name).skip_auto_attendance, 0)
+		self.assertEqual(
+			store._row(store.punches, rejected.name).skip_auto_attendance, 1, "HR's rejection holds"
+		)
+
+
+class TestStatusAndHoursFollowTheEngine(unittest.TestCase):
+	def test_editing_only_times_on_a_half_day_derives_the_status(self):
+		# W1: Half Day 0 h, HR types 09:00-18:00 and leaves status alone
+		store = Store()
+		half_day_zero(store)
+		result = store.edit({"in_time": "09:00", "out_time": "18:00"})
+		self.assertTrue(result["ok"], result)
+		[hr] = store.hr_rows()
+		self.assertEqual((hr.status, hr.working_hours), ("Present", 9.0))
+
+	def test_short_times_without_a_status_are_half_day_by_the_threshold(self):
+		store = Store()
+		store.add_assignment("Day")
+		store.add_attendance(status="Present", in_time=at(DAY, "09:00"), out_time=at(DAY, "18:00"))
+		result = store.edit({"out_time": "11:00"})
+		self.assertTrue(result["ok"], result)
+		self.assertEqual(store.hr_rows()[0].status, "Half Day", "2 h is under the 4 h half-day threshold")
+
+	def test_a_status_hr_sent_is_kept(self):
+		store = Store()
+		half_day_zero(store)
+		store.edit({"in_time": "09:00", "out_time": "10:00", "status": "Present"})
+		self.assertEqual(store.hr_rows()[0].status, "Present")
+
+	def test_hr_hours_deduct_the_shifts_unpaid_break(self):
+		# W2: the engine deducts a fixed 13:00-14:00 lunch; HR's hours must too
+		store = Store(pairing=ALTERNATING)
+		store.breaks = [
+			frappe._dict(
+				day_of_week=DAY.strftime("%A"),
+				period="Normal only",
+				start_time="13:00:00",
+				end_time="14:00:00",
+			)
+		]
+		half_day_zero(store)
+		result = store.edit({"in_time": "09:00", "out_time": "18:00", "status": "Present"})
+		self.assertTrue(result["ok"], result)
+		self.assertEqual(store.hr_rows()[0].working_hours, 8.0)
+
+
+class TestOriginalPunchesAreNeverRetimed(unittest.TestCase):
+	def test_a_pending_out_of_area_punch_is_not_made_effective(self):
+		# W3
+		store = Store()
+		half_day_zero(store)
+		pending = store.add_punch("18:10", "OUT", remote_approval_status="Pending")
+		result = store.edit({"in_time": "09:00", "out_time": "18:00", "status": "Present"})
+		self.assertTrue(result["ok"], result)
+		kept = store._row(store.punches, pending.name)
+		self.assertEqual((kept.time, kept.remote_approval_status), (at(DAY, "18:10"), "Pending"))
+		self.assertEqual(kept.skip_auto_attendance, 1)
+		self.assertIsNone(kept.attendance)
+		hr_punches = [p for p in store.punches if p.device_id == ame.HR_DEVICE]
+		self.assertEqual(sorted(p.log_type for p in hr_punches), ["IN", "OUT"])
+
+	def test_a_second_edit_reuses_hr_punches_and_hand_back_restores_the_originals(self):
+		store = Store()
+		_row, in_punch = half_day_zero(store)
+		store.edit({"in_time": "09:00", "out_time": "18:00", "status": "Present"})
+		store.edit({"in_time": "08:30"})
+		self.assertEqual(len([p for p in store.punches if p.device_id == ame.HR_DEVICE]), 2)
+		with store.patched():
+			result = ame.hand_back(EMP, str(DAY), store.revision())
+		self.assertTrue(result["ok"], result)
+		self.assertEqual([p.name for p in store.punches], [in_punch.name], "HR punches are deleted")
+		original = store.punches[0]
+		self.assertEqual((original.time, original.skip_auto_attendance), (at(DAY, "09:02"), 0))
+
+	def test_an_editor_insert_does_not_restamp_the_next_session(self):
+		# G1-W2
+		doc = MagicMock()
+		with patch.object(frappe, "get_doc", return_value=doc):
+			ame._insert_punch({"employee": EMP, "time": at(DAY, "19:30"), "log_type": "IN"})
+		self.assertIs(doc.flags.skip_session_restamp, True)
+		doc.insert.assert_called_once()
+
+
+class TestGetDays(unittest.TestCase):
+	def test_many_days_come_back_with_their_revisions_in_one_call(self):
+		store = Store()
+		half_day_zero(store)
+		wanted = [
+			{"employee": EMP, "attendance_date": str(DAY)},
+			{"employee": EMP, "attendance_date": str(DAY + dt.timedelta(days=1))},
+			{"employee": EMP, "attendance_date": str(DAY)},
+			{"employee": "EMP-NOPE", "attendance_date": str(DAY)},
+		]
+		with store.patched():
+			days = ame.get_days(json.dumps(wanted))["days"]
+			self.assertEqual(days[f"{EMP}|{DAY}"]["revision"], ame.get_day(EMP, str(DAY))["revision"])
+		self.assertEqual(len(days), 3)
+		self.assertEqual(days[f"EMP-NOPE|{DAY}"]["code"], "not_found")
+
+	def test_a_fenced_day_returns_no_data_and_the_batch_is_bounded(self):
+		store = Store()
+		half_day_zero(store)
+		with store.patched(fenced_out=True):
+			day = ame.get_days([{"employee": EMP, "attendance_date": str(DAY)}])["days"][f"{EMP}|{DAY}"]
+		self.assertEqual((day["revision"], day["code"]), (None, "fenced"))
+		self.assertNotIn("day", day)
+		with store.patched(), self.assertRaises(frappe.ValidationError):
+			ame.get_days([{"employee": EMP, "attendance_date": str(DAY)}] * (ame.MAX_DAYS + 1))
+		with store.patched(roles=("Employee",)), self.assertRaises(frappe.PermissionError):
+			ame.get_days([])
+
+
 class TestPureRules(unittest.TestCase):
 	def test_clock_parsing(self):
 		self.assertEqual(ame.parse_moment("09:00", DAY), at(DAY, "09:00"))
@@ -811,6 +1041,8 @@ def _matches(row, filters):
 				ok = value is not None and value >= arg
 			elif op == "<":
 				ok = value is not None and value < arg
+			elif op == "between":
+				ok = value is not None and arg[0] <= value <= arg[1]
 			else:
 				raise NotImplementedError(op)
 		else:

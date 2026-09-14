@@ -57,6 +57,12 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		parent = getattr(super(), "after_insert", None)
 		if parent:
 			parent()
+		if getattr(self.flags, "skip_session_restamp", False):
+			# The Shift Attendance editor owns the day it writes: an HR-typed night
+			# IN must not pull the next morning's day IN onto the night (Group 1
+			# review W2, 14 Sep 2026).
+			logger.info("[employee_checkin] %s @ %s: session restamp skipped (HR edit)", self.name, self.time)
+			return
 		self._restamp_later_session_punches()
 
 	def _restamp_later_session_punches(self) -> None:
@@ -322,10 +328,11 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# night shift and the day came out Half Day, 0h. Consecutive punches of
 		# one session share one shift, whatever log_type says.
 		logger.info("[employee_checkin] %s @ %s: checking the session before it", self.employee, self.time)
-		from hrms.utils.shift_resolution import continues_session
+		from hrms.utils.shift_resolution import continues_session, returns_from_break
 
 		earlier = self._previous_punch()
-		if not continues_session(get_datetime(self.time), earlier):
+		log_time = get_datetime(self.time)
+		if not (continues_session(log_time, earlier) or returns_from_break(log_time, self.log_type, earlier)):
 			return False
 		self._stamp_shift(
 			shift=earlier["shift"],
@@ -377,7 +384,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 			return None
 		row = dict(rows[0])
 		row["time"] = get_datetime(row["time"])
-		for field in ("shift_actual_start", "shift_actual_end"):
+		for field in ("shift_start", "shift_end", "shift_actual_start", "shift_actual_end"):
 			row[field] = get_datetime(row[field]) if row.get(field) else None
 		row["group_count"] = 0
 		if row.get("shift"):

@@ -106,6 +106,9 @@ SHIFT = {
 	# scenarios start from an unmarked day, so the lookup finds nothing.
 	"get_automation_attendance": lambda *args, **kwargs: None,
 	"linked_checkins": lambda *args, **kwargs: [],
+	# no day in these scenarios was removed by HR in Shift Attendance
+	"removed_by_hr": lambda *args, **kwargs: False,
+	"hold_punches": Mock(),
 }
 exec(
 	compile(

@@ -50,6 +50,7 @@ from hrms.overrides.remote_checkin_request_hooks import _repair_financial_depend
 from hrms.utils.attendance_day_audit import _job_can_read
 from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.filing_window import cycle_start
+from hrms.utils.hr_removed_day import removed_by_hr
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +250,10 @@ def _heal(start, end=None, *, dry_run, for_update, not_before=None, report_expos
 		if not_before and getdate(entry["shift_date"]) < not_before:
 			# The shift day is never after the clock day, so this covers both.
 			entry["held_because"] = f"before {not_before}: that payroll cycle may be closed"
+			held_back.append(entry)
+			continue
+		if removed_by_hr(punch.employee, entry["shift_date"]):
+			entry["held_because"] = "HR removed this day in Shift Attendance"
 			held_back.append(entry)
 			continue
 		if not dry_run:

@@ -157,7 +157,7 @@ class TestApprovingTheBlockingPunchReappliesTheLateOut(unittest.TestCase):
 
 
 class TestReprocessLateCheckoutAttendance(unittest.TestCase):
-	def _run(self, attendance_auto=1, existing_attendance="HR-ATT-HALF"):
+	def _run(self, attendance_auto=1, existing_attendance="HR-ATT-HALF", removed=False):
 		from hrms.overrides import remote_checkin_request_hooks as hooks
 
 		out_row = frappe._dict(
@@ -228,6 +228,8 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 			patch.object(frappe, "log_error"),
 			patch.object(frappe, "enqueue"),
 			patch.object(hooks, "_shift_day_is_today", create=True, return_value=False),
+			patch.object(hooks, "removed_by_hr", create=True, return_value=removed) as self.removed_by_hr,
+			patch.object(hooks, "_tell_hr_once", return_value=True),
 		):
 			result = hooks.reprocess_late_checkout_attendance(OUT_NAME)
 		return result, attendance, shift, get_all
@@ -256,6 +258,16 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		attendance.cancel.assert_not_called()
 		shift.mark_attendance_for_shift_logs.assert_not_called()
 		self.assertFalse(result.repaired)
+
+	def test_a_day_hr_removed_in_shift_attendance_is_never_marked_again(self):
+		"""Group 2-4 review C1: HR removed the day; an approved late check-out on it
+		must not bring it back."""
+		result, attendance, shift, _ = self._run(existing_attendance=None, removed=True)
+		shift.mark_attendance_for_shift_logs.assert_not_called()
+		attendance.cancel.assert_not_called()
+		self.assertFalse(result.repaired)
+		self.assertEqual(result.reason_code, "hr_removed")
+		self.removed_by_hr.assert_called_once_with(EMPLOYEE, SHIFT_START.date())
 
 	def test_no_attendance_yet_still_marks_the_session(self):
 		result, attendance, shift, _ = self._run(existing_attendance=None)

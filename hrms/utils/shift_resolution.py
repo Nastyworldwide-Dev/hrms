@@ -12,7 +12,9 @@ One rule, pure, in the order a person would apply it:
 
 1. An OUT belongs to the shift of the open IN it closes (same employee, within
    the session window, no OUT after it) — the shift does not change between a
-   check-in and its check-out.
+   check-in and its check-out. A punch continuing an open session, or
+   returning from a break inside the closed session's scheduled hours
+   (returns_from_break), keeps that session's shift too.
 2. Otherwise the shift whose actual window (grace included) contains the punch;
    several → the one whose start is nearest.
 3. Otherwise no shift: the punch is off-shift, named as such, never guessed onto
@@ -31,6 +33,9 @@ logger = logging.getLogger(__name__)
 #: An OUT this long after its IN still closes that IN's shift (covers a night
 #: shift plus overtime; a next-day punch further away is a new session).
 SESSION_WINDOW = timedelta(hours=20)
+#: A punch this soon after the OUT that closed a session, inside that shift's
+#: scheduled hours, is the return from a break (Group 1 review W1).
+BREAK_RETURN_WINDOW = timedelta(hours=6)
 
 
 def choose_shift(punch_time: datetime, log_type: str | None, candidates: list, open_in=None) -> dict | None:
@@ -127,6 +132,40 @@ def continues_session(punch_time: datetime, earlier) -> bool:
 			earlier["shift"],
 		)
 	return inside
+
+
+def returns_from_break(punch_time: datetime, log_type: str | None, earlier) -> bool:
+	"""Whether a punch is the return from a break of the session `earlier`
+	closed (Group 1 review W1, 14 Sep 2026): 08:55 IN, 13:00 OUT, 14:16 IN on a
+	day worker holding a stray 19:30 night assignment. The 13:00 OUT closed the
+	session, so continues_session declines, and nearest start then filed 14:16
+	on Night (5h14 from 19:30, 5h16 from 09:00); the 18:00 OUT followed it and
+	the afternoon and its overtime were lost.
+
+	True when the punch is not an OUT, `earlier` (as in continues_session, with
+	shift_start and shift_end) closed a real session of at least two punches,
+	the punch lies inside that shift's SCHEDULED hours (no grace: a double
+	shift's 19:30 night IN after an 18:00 day OUT stays on the night) and within
+	BREAK_RETURN_WINDOW of the closing punch."""
+	if log_type == "OUT" or not earlier or not earlier.get("shift"):
+		return False
+	count = earlier.get("group_count") or 0
+	if count < 2 or session_is_open(count, earlier.get("log_type")):
+		return False
+	start, end = earlier.get("shift_start"), earlier.get("shift_end")
+	if not start or not end:
+		return False
+	back = start <= punch_time <= end and timedelta(0) <= punch_time - earlier["time"] <= BREAK_RETURN_WINDOW
+	logger.info(
+		"[shift_resolution] %s after %s closed %s (%s-%s): return from break=%s",
+		punch_time,
+		earlier["time"],
+		earlier["shift"],
+		start,
+		end,
+		back,
+	)
+	return back
 
 
 def session_restamps(anchor, later: list) -> list:

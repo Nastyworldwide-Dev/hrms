@@ -38,6 +38,7 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import (
 )
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between, holiday_list_covers
+from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, hold_punches, removed_by_hr
 
 logger = logging.getLogger(__name__)
 
@@ -407,7 +408,21 @@ class ShiftType(Document):
 		(hrms.overrides.remote_checkin_request_hooks.reprocess_late_checkout_attendance):
 		one implementation, so a threshold change here reaches both.
 		Returns the Attendance, or None when the day is not to be marked.
+
+		A day HR removed in Shift Attendance is never marked: its new punches
+		are held (skip-stamped with the editor's marker) so they are not read
+		again every hour and hand_back releases them.
 		"""
+		if removed_by_hr(employee, attendance_date):
+			held = [
+				row.name
+				for row in single_shift_logs
+				if not row.get("attendance") and counts_for_attendance(row)
+			]
+			if held:
+				hold_punches(held, attendance_date)
+			logger.info("[shift_type] %s on %s was removed by HR: not marked", employee, attendance_date)
+			return None
 		# Through the class, not `self`: callers (and test_pending_punch_attendance)
 		# run this unbound on a plain object carrying only the Shift Type's fields.
 		day = ShiftType.shift_day_result(self, employee, attendance_date, single_shift_logs)
@@ -686,6 +701,9 @@ class ShiftType(Document):
 		here. A punch under a genuinely separate shift (morning vs night) is that
 		shift's business. The day is the shift day, so a night shift's OUT after
 		midnight does not protect the next calendar day.
+
+		A day HR removed in Shift Attendance carries a marker punch; it protects
+		its day under every shift, whatever that punch's stamp.
 		"""
 		rows = frappe.get_all(
 			"Employee Checkin",
@@ -694,10 +712,13 @@ class ShiftType(Document):
 				"time": ("between", [f"{start_date} 00:00:00", f"{end_date} 23:59:59"]),
 				"remote_approval_status": ("!=", "Rejected"),
 			},
-			fields=["time", "shift_start", "shift"],
+			fields=["time", "shift_start", "shift", "device_id"],
 		)
 		days = set()
 		for row in rows:
+			if row.get("device_id") == HR_REMOVED_DEVICE:
+				days.add(getdate(row.get("time")))
+				continue
 			shift = row.get("shift")
 			if shift and shift != self.name and not has_overlapping_timings(self.name, shift):
 				continue

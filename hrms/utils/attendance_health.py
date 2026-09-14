@@ -2,7 +2,7 @@
 
 `attendance_recovery.inputs_report` already answers "what is wrong with the
 engine's inputs right now?" — this module is the daily nag on top of it: run
-that same read, and when it is not all-clear, put ONE Error Log in front of HR
+that same read, and when it is not all-clear, put ONE Error Log (plus a Desk alert for HR) in front of HR
 instead of waiting for a staff complaint to surface a broken day.
 
 Two entry points, same shape as `hrms.utils.readiness`:
@@ -43,6 +43,7 @@ from frappe import _
 from frappe.utils import cint, getdate, now_datetime
 
 from hrms.overrides.company_scope import require_unfenced
+from hrms.overrides.remote_checkin_request_hooks import notify_hr
 from hrms.utils import attendance_recovery as rec
 from hrms.utils.offshift_punch_heal import _lost_transaction
 
@@ -54,6 +55,8 @@ FAILURE_TITLE = "Attendance health check failed"
 TREND_DAYS = 7
 #: up to this many employee/date lines per section in the Error Log body
 SAMPLE = 10
+#: health_summary's rolling window is clamped to this many days (recovery's MAX_WINDOW_DAYS)
+MAX_SUMMARY_DAYS = 62
 
 #: (section name, recovery step, planner) — the same six FIX-bearing reads
 #: `inputs_report` makes. See the module docstring for why `health_summary`
@@ -151,8 +154,11 @@ def _write_log(day, daily: dict, trend: dict) -> None:
 		logger.info("[attendance_health] %s already logged, not duplicating", title)
 		return
 	message = _message(day, daily_broken, trend_broken, trend.get("from_date"), trend.get("to_date"))
-	frappe.log_error(title=title, message=message)
+	log = frappe.log_error(title=title, message=message)
 	logger.warning("[attendance_health] %s", title)
+	# Error Log is System Manager only; HR sees the alert in Desk (W6). The body
+	# spans every company, so only unfenced HR gets it (company=None).
+	notify_hr(title, message, "Error Log", getattr(log, "name", None), company=None)
 
 
 def _run_daily_health_check() -> None:
@@ -189,7 +195,7 @@ def health_summary(days=7) -> dict:
 	"""
 	frappe.only_for(("System Manager", "HR Manager", "HR User"))
 	require_unfenced(_("read attendance health across every company"))
-	days = cint(days) or TREND_DAYS
+	days = min(max(cint(days) or TREND_DAYS, 1), MAX_SUMMARY_DAYS)
 	today = _today()
 	yesterday = today - timedelta(days=1)
 	trend_start = yesterday - timedelta(days=days - 1)

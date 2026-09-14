@@ -12,15 +12,30 @@ How the edit is made to stick, using ownership rules that already exist:
   refuses it (checkin_import.plan_remark), the late-checkout repair refuses a
   "manually maintained" row, and a later punch on the day is linked to it as
   evidence (employee_checkin._link_to_hr_row).
-* The day's punches are set to exactly HR's values and linked to that row, so
-  the job's query (`attendance is not set`) never reads them. Extra punches
-  are skip-stamped with a comment carrying SKIP_MARKER — never deleted.
-* A removed day keeps its punches, skip-stamped, so the Absent sweep
-  (ShiftType.get_dates_with_checkins) still sees the day as punched and
-  does not mark it Absent. A day with no punches gets one HR_REMOVED_DEVICE
-  marker punch for the same reason.
+* HR's in and out are punches of HR's own (device_id HR_DEVICE), linked to
+  that row. An original device / PWA / import punch is never re-timed and its
+  approval state never changed: it is skip-stamped with a comment carrying
+  SKIP_MARKER, so a Pending out-of-area punch never becomes effective.
+* Hours, late/early and — when HR changed times but sent no status — the
+  status come from the hourly job's own day rule (ShiftType.get_attendance):
+  pairing, unpaid early arrival, unpaid breaks, thresholds.
+* A removed day always gets one HR_REMOVED_DEVICE marker punch
+  (hrms.utils.hr_removed_day). Every automation path honours it: the Absent
+  sweep, the hourly marking (which holds later punches), the ERP-import
+  re-mark, the off-shift heal, the late-checkout repair and recovery.
 * `hand_back` undoes the ownership: it cancels HR's row, clears only the skip
-  stamps this module wrote, deletes its marker punch, and queues the engine.
+  stamps this module wrote, deletes HR's punches and the marker, and queues
+  the engine.
+
+Known race (W7, G2-G4 review, documented not fixed): the Employee row lock
+serializes HR edits, but the hourly job does not take it. When HR moves a day
+to a shift that does not overlap the old one, a job run for the OLD shift that
+read the day's punches before HR's save can still mark a row under the old
+shift after it — Attendance's duplicate check is per overlapping shift, so both
+rows stand. The day then shows two rows and the editor refuses it as
+"multiple_rows" until HR cancels one in Desk.
+# ceiling: no lock shared with the hourly job, upgrade: take a per-employee
+# named lock in mark_attendance_for_shift_logs if two-row days are reported
 
 Clash protection: every row carries the `revision` its screen was built from
 (`get_day`). A day that changed since then is refused with the current day,
@@ -46,25 +61,22 @@ from frappe import _
 from frappe.utils import cint, flt, get_datetime, get_time, getdate, now_datetime
 
 from hrms.hr.doctype.attendance.attendance import validate_attendance_times
-from hrms.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
 from hrms.hr.doctype.shift_assignment.shift_assignment import MultipleShiftError, OverlappingShiftError
 from hrms.overrides import company_scope
+from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, SKIP_MARKER
 from hrms.utils.offshift_punch_heal import _lost_transaction
 
 logger = logging.getLogger(__name__)
 
 HR_ROLES = ("HR User", "HR Manager", "System Manager")
 MAX_ROWS = 200
+#: days one get_days call may read (the report shows at most this many rows)
+MAX_DAYS = 500
 ACTIONS = ("edit", "add", "remove")
 EDITABLE = frozenset(("status", "shift", "in_time", "out_time", "attendance_date"))
 STATUSES = ("Present", "Absent", "Half Day", "Work From Home")
 #: device_id of a punch HR typed through this editor
 HR_DEVICE = "HR master edit"
-#: device_id of the skip-stamped placeholder that keeps a removed, punchless day
-#: out of the Absent sweep; hand_back deletes it
-HR_REMOVED_DEVICE = "HR master edit: removed day"
-#: in the Comment on every punch this module skip-stamps; hand_back clears only those
-SKIP_MARKER = "[hr-master-edit:skip]"
 ROW_SAVEPOINT = "attendance_master_edit_row"
 _CLOCK = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 
@@ -141,6 +153,34 @@ def get_day(employee: str, attendance_date: str) -> dict:
 		)
 		frappe.throw(refusal.message, exc)
 	return _snapshot(emp, day)
+
+
+@frappe.whitelist(methods=["POST"])
+def get_days(employee_dates) -> dict:
+	"""Revisions for many days at once, so the grid holds them from the moment
+	the report loads. `employee_dates`: [{employee, attendance_date}], at most
+	MAX_DAYS. A day the caller may not see, or cannot parse, comes back with
+	`revision` None and an `error` — never another company's data."""
+	_require_hr()
+	employee_dates = parse_rows(employee_dates, limit=MAX_DAYS)
+	days, employees = {}, {}
+	for item in employee_dates:
+		raw = item if isinstance(item, dict) else {}
+		employee, attendance_date = raw.get("employee"), raw.get("attendance_date")
+		key = f"{employee}|{attendance_date}"
+		if key in days:
+			continue
+		try:
+			day = _parse_day(attendance_date)
+			if employee not in employees:
+				employees[employee] = _require_employee(str(employee or "").strip(), lock=False)
+			snap = _snapshot(employees[employee], day)
+			days[key] = {"revision": snap["revision"], "day": snap}
+		except RowRefused as refusal:
+			employees.pop(employee, None)
+			days[key] = {"revision": None, "error": refusal.message, "code": refusal.code}
+	logger.info("[attendance_master_edit] %s read %d day(s)", frappe.session.user, len(days))
+	return {"days": days}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -267,9 +307,18 @@ def _edit(emp, day, changes, snap, is_sm, replaces=None) -> str:
 
 	hours, late, early = 0, False, False
 	if values.in_time and values.out_time:
-		settings = _shift_settings(values.shift)
-		hours = hours_from_punches(settings, values.in_time, values.out_time)
-		late, early = late_and_early(settings, window, values.in_time, values.out_time)
+		shift_doc = _shift_doc(values.shift)
+		result = engine_day(
+			shift_doc,
+			emp.name,
+			window,
+			values.in_time,
+			values.out_time,
+			half_holiday=_is_half_holiday(shift_doc, emp.name, day),
+		)
+		hours, late, early = result.working_hours, result.late_entry, result.early_exit
+		if values.derive_status:
+			values.status = result.status
 	saved = _insert_attendance(
 		{
 			"employee": emp.name,
@@ -310,6 +359,7 @@ def _remove(emp, day, snap, is_sm) -> None:
 	"""Cancel the day and keep automation from marking it again."""
 	target = owned_target(snap["attendance"], snap["punches"])
 	live = [p for p in snap["punches"] if not cint(p.skip_auto_attendance)]
+	marked = any(p.device_id == HR_REMOVED_DEVICE for p in snap["punches"])
 	if not target and not live:
 		raise RowRefused("nothing_to_remove", _("There is no attendance on this day to remove."))
 	_refuse_if_paid(emp.name, day, target, is_sm)
@@ -324,9 +374,10 @@ def _remove(emp, day, snap, is_sm) -> None:
 			punch.name,
 			f"{SKIP_MARKER} " + _("Day removed by {0} via Shift Attendance.").format(user),
 		)
-	if not snap["punches"]:
-		# The Absent sweep skips a day that has any punch; without one it would
-		# mark the day Absent again within the hour.
+	if not marked:
+		# The durable "removed by HR" marker (hrms.utils.hr_removed_day): without
+		# it a day whose punches are all Rejected, or one a later punch reaches,
+		# is marked again within the hour (G2-G4 review C1).
 		shift = (target.shift if target else None) or fallback_shift(snap, emp)
 		window = _shift_window(shift, day) if shift else None
 		fields = {
@@ -341,7 +392,7 @@ def _remove(emp, day, snap, is_sm) -> None:
 		_comment(
 			"Employee Checkin",
 			name,
-			_("Placeholder: keeps the day {0} removed by {1} from being marked Absent.").format(day, user),
+			_("Marker: the day {0} was removed by {1}; automation does not mark it again.").format(day, user),
 		)
 	logger.info("[attendance_master_edit] %s on %s removed (row %s)", emp.name, day, target and target.name)
 
@@ -384,7 +435,7 @@ def _hand_back(employee, attendance_date, revision, is_sm) -> dict:
 		and p.remote_approval_status != "Rejected"
 	]
 	released = sorted(_skip_marked(skipped)) if skipped else []
-	markers = [p for p in snap["punches"] if p.device_id == HR_REMOVED_DEVICE]
+	markers = [p for p in snap["punches"] if p.device_id in (HR_REMOVED_DEVICE, HR_DEVICE)]
 	if not (target or released or markers):
 		raise RowRefused("nothing_to_hand_back", _("Nothing on this day was set by the attendance editor."))
 	_refuse_if_paid(emp.name, day, target, is_sm)
@@ -399,7 +450,10 @@ def _hand_back(employee, attendance_date, revision, is_sm) -> dict:
 	for marker in markers:
 		_delete_punch(marker.name)
 
-	shift = (target.shift if target else None) or next((p.shift for p in snap["punches"] if p.shift), None)
+	shift = (target.shift if target else None) or next(
+		(p.shift for p in snap["punches"] if p.shift and p.device_id not in (HR_DEVICE, HR_REMOVED_DEVICE)),
+		next((p.shift for p in snap["punches"] if p.shift), None),
+	)
 	# today is the hourly job's to mark once the shift ends
 	enqueued = bool(shift and day < _today())
 	if enqueued:
@@ -480,24 +534,28 @@ def _ensure_assignment(emp, day, shift, assignments) -> str | None:
 
 
 def _set_punches(emp, day, values, punches, window) -> list:
-	"""Make the day's punches say exactly HR's in and out. Returns the names to link."""
+	"""HR's in and out as HR punches; every original punch is left as it was
+	recorded and only skip-stamped. Returns the names to link."""
 	for marker in (p for p in punches if p.device_id == HR_REMOVED_DEVICE):
 		_delete_punch(marker.name)
-	usable = [
-		p for p in punches if p.device_id != HR_REMOVED_DEVICE and p.remote_approval_status != "Rejected"
-	]
-	in_row, out_row, superseded = plan_punches(usable, values.in_time, values.out_time)
+	own, superseded = plan_punches(punches)
 	stamp = punch_stamp(values.shift, window) if window else {}
 	linked = []
-	for moment, log_type, existing in ((values.in_time, "IN", in_row), (values.out_time, "OUT", out_row)):
+	for moment, log_type in ((values.in_time, "IN"), (values.out_time, "OUT")):
+		existing = own.pop(log_type, None)
 		if not moment:
+			if existing:
+				_delete_punch(existing.name)
 			continue
 		fields = {"time": moment, "log_type": log_type, **stamp}
 		if existing:
+			# HR's own earlier punch: re-timing it changes no recorded evidence
 			_update_punch(existing.name, fields)
 			linked.append(existing.name)
 		else:
 			linked.append(_insert_punch({"employee": emp.name, "device_id": HR_DEVICE, **fields}))
+	for extra in own.get("extra", []):
+		_delete_punch(extra.name)
 	for punch in superseded:
 		_set_skip(punch.name, 1)
 		_comment(
@@ -519,7 +577,7 @@ def _set_punches(emp, day, values, punches, window) -> list:
 # --- pure rules -------------------------------------------------------------------
 
 
-def parse_rows(rows) -> list:
+def parse_rows(rows, limit=MAX_ROWS) -> list:
 	if isinstance(rows, str):
 		try:
 			rows = json.loads(rows)
@@ -527,8 +585,8 @@ def parse_rows(rows) -> list:
 			frappe.throw(_("Rows must be a JSON list."))
 	if not isinstance(rows, list):
 		frappe.throw(_("Rows must be a list."))
-	if len(rows) > MAX_ROWS:
-		frappe.throw(_("{0} rows in one save; send at most {1}.").format(len(rows), MAX_ROWS))
+	if len(rows) > limit:
+		frappe.throw(_("{0} rows in one call; send at most {1}.").format(len(rows), limit))
 	return rows
 
 
@@ -587,8 +645,18 @@ def resolve_values(current, changes, day, fallback_shift=None):
 		out_time = parse_moment(pick("out_time"), day, after=in_time)
 	except Exception:
 		raise RowRefused("invalid", _("In and out must be times like 09:00.")) from None
-	if not status:
-		status = "Present" if in_time and out_time else None
+	# W1: changed times with no status sent take the engine's status (set in
+	# _edit from engine_day). Work From Home is a decision, not a measurement.
+	times_changed = "in_time" in changes or "out_time" in changes
+	derive = bool(
+		in_time
+		and out_time
+		and "status" not in changes
+		and (times_changed or not status)
+		and status != "Work From Home"
+	)
+	if derive:
+		status = status or "Present"
 	if status not in STATUSES:
 		raise RowRefused("invalid", _("Status must be one of {0}.").format(", ".join(STATUSES)))
 	try:
@@ -597,7 +665,9 @@ def resolve_values(current, changes, day, fallback_shift=None):
 		raise RowRefused("invalid", str(exc)) from None
 	if (in_time or out_time) and not shift:
 		raise RowRefused("no_shift", _("Choose a shift for a day with in and out times."))
-	return frappe._dict(status=status, shift=shift or None, in_time=in_time, out_time=out_time)
+	return frappe._dict(
+		status=status, shift=shift or None, in_time=in_time, out_time=out_time, derive_status=derive
+	)
 
 
 def owned_target(attendance_rows, punches):
@@ -631,7 +701,8 @@ def carry_to(target, changes, old_day, new_day) -> dict:
 	carried = dict(changes)
 	if not target:
 		return carried
-	carried.setdefault("status", target.status)
+	if not ("in_time" in changes or "out_time" in changes):
+		carried.setdefault("status", target.status)
 	carried.setdefault("shift", target.shift)
 	if "in_time" not in changes and "out_time" not in changes and target.in_time:
 		delta = new_day - old_day
@@ -647,18 +718,27 @@ def punch_belongs_to(punch, day, attendance_names) -> bool:
 	return getdate(punch.shift_start or punch.time) == day
 
 
-def plan_punches(punches, in_time, out_time) -> tuple:
-	"""Which existing punch carries HR's IN and OUT; the rest are superseded. Pure."""
+def plan_punches(punches) -> tuple:
+	"""HR's own punches by role, and the original punches to skip-stamp. Pure.
 
-	def first(rows, log_type, exclude=None):
-		return next((p for p in rows if p.log_type == log_type and p is not exclude), None)
-
-	in_row = (first(punches, "IN") or first(punches, None)) if in_time else None
-	backwards = list(reversed(punches))
-	out_row = (first(backwards, "OUT", in_row) or first(backwards, None, in_row)) if out_time else None
-	chosen = {id(in_row), id(out_row)}
-	superseded = [p for p in punches if id(p) not in chosen and not cint(p.skip_auto_attendance)]
-	return in_row, out_row, superseded
+	`own`: {"IN": first HR IN, "OUT": last HR OUT, "extra": other HR punches},
+	reusable because they are the editor's own. `superseded`: every other
+	punch still counted — device, PWA, import, Pending — never re-timed.
+	"""
+	hr = [p for p in punches if p.device_id == HR_DEVICE]
+	own = {}
+	for log_type, rows in (("IN", hr), ("OUT", list(reversed(hr)))):
+		found = next((p for p in rows if p.log_type == log_type), None)
+		if found:
+			own[log_type] = found
+	chosen = {id(p) for p in own.values()}
+	own["extra"] = [p for p in hr if id(p) not in chosen]
+	superseded = [
+		p
+		for p in punches
+		if p.device_id not in (HR_DEVICE, HR_REMOVED_DEVICE) and not cint(p.skip_auto_attendance)
+	]
+	return own, superseded
 
 
 def punch_stamp(shift, window) -> dict:
@@ -677,30 +757,45 @@ def punch_stamp(shift, window) -> dict:
 	return stamp
 
 
-def hours_from_punches(settings, in_time, out_time) -> float:
-	"""Hours from HR's two punches by the shift type's own pairing rule."""
-	logs = [frappe._dict(time=in_time, log_type="IN"), frappe._dict(time=out_time, log_type="OUT")]
-	hours, _in, _out = calculate_working_hours(
-		logs, settings.determine_check_in_and_check_out, settings.working_hours_calculation_based_on
-	)
-	return flt(hours)
+def engine_day(shift_doc, employee, window, in_time, out_time, half_holiday=False):
+	"""HR's in and out through the hourly job's own day rule
+	(ShiftType.get_attendance, with shift_day_result's thresholds): pairing,
+	unpaid early arrival, unpaid breaks, late entry / early exit and status."""
+	from hrms.hr.doctype.shift_type.shift_type import ShiftType
 
-
-def late_and_early(settings, window, in_time, out_time) -> tuple:
-	"""The job's own late-entry / early-exit test (ShiftType.get_attendance)."""
-	late = bool(
-		cint(settings.enable_late_entry_marking)
-		and in_time
-		and window
-		and in_time > window.start_datetime + timedelta(minutes=cint(settings.late_entry_grace_period))
+	stamp = {
+		"employee": employee,
+		"shift": shift_doc.name,
+		"shift_start": window.start_datetime,
+		"shift_end": window.end_datetime,
+		"shift_actual_start": window.actual_start,
+		"shift_actual_end": window.actual_end,
+		"skip_auto_attendance": 0,
+		"offshift": 0,
+		"remote_approval_status": None,
+		"overtime_type": window.get("overtime_type"),
+	}
+	logs = [
+		frappe._dict(name="hr-in", time=in_time, log_type="IN", **stamp),
+		frappe._dict(name="hr-out", time=out_time, log_type="OUT", **stamp),
+	]
+	absent = flt(shift_doc.working_hours_threshold_for_absent)
+	half = flt(shift_doc.working_hours_threshold_for_half_day)
+	if half_holiday:
+		absent, half = absent / 2, half / 2
+	status, hours, late, early, _in, _out = ShiftType.get_attendance(shift_doc, logs, absent, half)
+	logger.info(
+		"[attendance_master_edit] engine day for %s %s-%s on %s: %s %.2fh",
+		employee,
+		in_time,
+		out_time,
+		shift_doc.name,
+		status,
+		flt(hours),
 	)
-	early = bool(
-		cint(settings.enable_early_exit_marking)
-		and out_time
-		and window
-		and out_time < window.end_datetime - timedelta(minutes=cint(settings.early_exit_grace_period))
+	return frappe._dict(
+		status=status, working_hours=flt(hours, 2), late_entry=bool(late), early_exit=bool(early)
 	)
-	return late, early
 
 
 def describe_changes(before, after) -> list:
@@ -849,20 +944,12 @@ def _cancel_attendance(name):
 	doc.cancel()
 
 
-def _shift_settings(shift):
-	return frappe.db.get_value(
-		"Shift Type",
-		shift,
-		[
-			"determine_check_in_and_check_out",
-			"working_hours_calculation_based_on",
-			"enable_late_entry_marking",
-			"late_entry_grace_period",
-			"enable_early_exit_marking",
-			"early_exit_grace_period",
-		],
-		as_dict=True,
-	)
+def _shift_doc(shift):
+	return frappe.get_cached_doc("Shift Type", shift)
+
+
+def _is_half_holiday(shift_doc, employee, day):
+	return shift_doc.is_half_holiday(employee, day)
 
 
 def _shift_window(shift, day):
@@ -890,6 +977,9 @@ def _insert_punch(fields):
 	doc = frappe.get_doc({"doctype": "Employee Checkin", **fields})
 	doc.flags.ignore_validate = True
 	doc.flags.ignore_permissions = True
+	# HR's typed night IN must not pull the next morning's punches onto its
+	# shift (G1-W2): the editor states the whole day itself.
+	doc.flags.skip_session_restamp = True
 	doc.insert()
 	return doc.name
 

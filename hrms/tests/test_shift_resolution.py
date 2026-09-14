@@ -524,6 +524,32 @@ class TestStrayNightScenarios(unittest.TestCase):
 		)
 		self.assertEqual(self._punch("CKIN-1831", datetime(2026, 9, 11, 18, 31), "IN"), self.DAY11)
 
+	def _lunch(self, back):
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1300", datetime(2026, 9, 11, 13), "OUT"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-BACK", back, "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1800", datetime(2026, 9, 11, 18), "OUT"), self.DAY11)
+
+	def test_g1_w1_a_return_from_lunch_at_14_16_stays_on_the_day_shift(self):
+		"""Group 1 review W1: 13:00 OUT closed the session; the 14:16 return IN
+		went to Night by nearest start (19:30 is 5h14 away, 09:00 is 5h16), and
+		the 18:00 OUT followed it — Day 4.08h, the afternoon and OT lost."""
+		self._lunch(datetime(2026, 9, 11, 14, 16))
+
+	def test_g1_w1_a_long_lunch_returning_at_15_30_stays_on_the_day_shift(self):
+		self._lunch(datetime(2026, 9, 11, 15, 30))
+
+	def test_g1_w1_a_return_more_than_six_hours_after_the_out_is_not_a_break(self):
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-0930", datetime(2026, 9, 11, 9, 30), "OUT"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1600", datetime(2026, 9, 11, 16), "IN"), self.NIGHT11)
+
+	def test_g1_w1_a_lone_stray_out_is_not_a_session_to_return_to(self):
+		"""A: a lone OUT on the stray night closes no session; the IN after it
+		inside the night's schedule keeps its ordinary resolution."""
+		self._stored("CKIN-1831", datetime(2026, 9, 11, 18, 31), "OUT", _night1930(11))
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 12, 8, 55), "IN"), self.DAY12)
+
 
 class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 	def _doc(self, **kw):
@@ -604,6 +630,35 @@ class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 		doc, mod = self._doc(time=datetime(2026, 9, 11, 9), synced_from_instance="verifica")
 		doc.shift = "9AM-6PM"
 		with patch.object(frappe, "get_all") as get_all, patch.object(frappe.db, "set_value") as set_value:
+			mod.CustomEmployeeCheckin.after_insert(doc)
+		get_all.assert_not_called()
+		set_value.assert_not_called()
+
+	def test_g1_w2_an_hr_editor_insert_restamps_nothing(self):
+		"""Group 1 review W2: HR typed a night IN at 19:30 in Shift Attendance;
+		its after_insert restamp moved the next morning's 08:55 Day IN onto the
+		night. The editor owns its day; it sets flags.skip_session_restamp."""
+		from unittest.mock import patch
+
+		doc, mod = self._doc(
+			name="CKIN-HR", time=datetime(2026, 9, 11, 19, 30), flags={"skip_session_restamp": True}
+		)
+		night = _night1930()
+		doc.shift, doc.shift_start, doc.shift_end = (
+			night["shift_type"],
+			night["start_datetime"],
+			night["end_datetime"],
+		)
+		doc.shift_actual_start, doc.shift_actual_end, doc.offshift = (
+			night["actual_start"],
+			night["actual_end"],
+			0,
+		)
+		later = [_punch("CKIN-0855", datetime(2026, 9, 12, 8, 55), _day9(12))]
+		with (
+			patch.object(frappe, "get_all", return_value=later) as get_all,
+			patch.object(frappe.db, "set_value") as set_value,
+		):
 			mod.CustomEmployeeCheckin.after_insert(doc)
 		get_all.assert_not_called()
 		set_value.assert_not_called()
