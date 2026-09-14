@@ -1216,6 +1216,7 @@ class TestRemarkStuckDay(_WhitelistCase):
 			"shift",
 			"shift_start",
 			"attendance",
+			"remote_approval_status",
 		)
 		modules = mock.patch.dict(sys.modules, {"hrms.hr.doctype.shift_type.shift_type": shift_module})
 		modules.start()
@@ -1227,6 +1228,26 @@ class TestRemarkStuckDay(_WhitelistCase):
 			patcher = mock.patch.object(ci, name, value)
 			patcher.start()
 			self.addCleanup(patcher.stop)
+
+	def test_e16_a_pending_late_out_is_not_a_live_tap_until_it_is_approved(self):
+		"""C1 (integration review): a forgotten check-out filed late is a CLAIM
+		while Pending. Counted as a live tap it made the Half Day row "stuck" and
+		re-marked it Present; a later reject then left that Present row standing."""
+		self.site.checkins()["CK-7"]["remote_approval_status"] = "Pending"
+		self.site.tables["Remote Checkin Request"] = {
+			"RCR-7": {"name": "RCR-7", "checkin": "CK-7", "is_late_checkout": 1, "status": "Pending"}
+		}
+		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		(day,) = result["days"]
+		self.assertEqual(day["action"], "up-to-date", day)
+		self.assertEqual(self.site.shift.calls, [])
+
+		self.site.checkins()["CK-7"]["remote_approval_status"] = "Approved"
+		self.site.tables["Remote Checkin Request"]["RCR-7"]["status"] = "Approved"
+		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		(day,) = result["days"]
+		self.assertEqual(day["action"], "remark")
+		self.assertEqual(self.site.shift.calls, [("EMP-5", datetime.date(2026, 9, 3), ["CK-6", "CK-7"])])
 
 	def test_the_stuck_day_is_rebuilt_from_its_linked_taps(self):
 		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)

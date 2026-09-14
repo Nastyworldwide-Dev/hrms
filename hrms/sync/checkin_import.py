@@ -293,6 +293,42 @@ def plan_remark(punches, attendance_rows, removed=False) -> tuple[str, str]:
 	return "remark", ""
 
 
+def pending_late_outs(rows) -> set:
+	"""Names of the rows that are forgotten check-outs still waiting for their
+	approver (E16). One read of Remote Checkin Request, only for Pending rows."""
+	pending = sorted(
+		{r.get("name") for r in rows if r.get("name") and r.get("remote_approval_status") == "Pending"}
+	)
+	if not pending:
+		return set()
+	late = {
+		r.get("checkin")
+		for r in frappe.get_all(
+			"Remote Checkin Request",
+			filters={"checkin": ["in", pending], "is_late_checkout": 1, "status": "Pending"},
+			fields=["checkin"],
+			limit_page_length=0,
+		)
+	} & set(pending)
+	logger.debug("[checkin_import] %d of %d pending punch(es) are late check-outs", len(late), len(pending))
+	return late
+
+
+def without_pending_late_outs(rows) -> list:
+	"""E16 / C1 (integration review, 15 Sep 2026): a forgotten check-out filed late
+	is a CLAIM until its approver says yes — neither evidence nor a live tap. Only
+	`ShiftType.get_employee_checkins` dropped it; every recovery read that hands
+	rows to `shift_day_result` goes through here so a Pending late OUT cannot
+	make a Half Day row "stuck" and re-mark it Present. An approved one counts."""
+	late = pending_late_outs(rows)
+	if not late:
+		return list(rows)
+	logger.info(
+		"[checkin_import] %d pending late check-out(s) wait for approval: %s", len(late), sorted(late)
+	)
+	return [r for r in rows if r.get("name") not in late]
+
+
 def live_count(punches) -> int:
 	"""Taps the engine would count: not skipped, not rejected. Pure."""
 	return sum(
@@ -885,6 +921,7 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 		fields=list(CHECKIN_FIELDS),
 		order_by="time asc",
 	)
+	punches = without_pending_late_outs(punches)
 	attendance = frappe.get_all(
 		"Attendance",
 		filters={"employee": employee, "attendance_date": iso, "docstatus": ["<", 2]},

@@ -58,6 +58,7 @@ from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
 from hrms.overrides.company_scope import require_unfenced
+from hrms.sync.checkin_import import without_pending_late_outs
 from hrms.sync.write_block import PROVENANCE_FIELD
 from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
@@ -710,6 +711,7 @@ def _expected_on_rostered(employee, day, rostered, taps) -> dict:
 	day = getdate(day)
 	try:
 		stamp = punch_stamp(rostered, _shift_window(rostered, day))
+		taps = without_pending_late_outs(taps)  # E16 / C1: a pending late OUT is not evidence
 		logs = [frappe._dict({**t, **stamp}) for t in sorted(taps, key=lambda t: get_datetime(t["time"]))]
 		return _preview(frappe.get_doc("Shift Type", rostered), employee, day, logs)
 	except Exception as exc:
@@ -1627,18 +1629,20 @@ def _remark_released_day(employee, day, apply) -> dict:
 
 	day = getdate(day)
 	start = datetime.combine(day, time.min)
-	punches = frappe.get_all(
-		"Employee Checkin",
-		filters=[
-			["employee", "=", employee],
-			["shift_start", ">=", start],
-			["shift_start", "<", start + timedelta(days=1)],
-			["shift", "is", "set"],
-			[PROVENANCE_FIELD, "is", "not set"],
-		],
-		fields=list(CHECKIN_FIELDS),
-		order_by="time asc",
-		limit_page_length=0,
+	punches = without_pending_late_outs(
+		frappe.get_all(
+			"Employee Checkin",
+			filters=[
+				["employee", "=", employee],
+				["shift_start", ">=", start],
+				["shift_start", "<", start + timedelta(days=1)],
+				["shift", "is", "set"],
+				[PROVENANCE_FIELD, "is", "not set"],
+			],
+			fields=list(CHECKIN_FIELDS),
+			order_by="time asc",
+			limit_page_length=0,
+		)
 	)
 	links = sorted({p.get("attendance") for p in punches if p.get("attendance")})
 	submitted = {}
@@ -1736,9 +1740,10 @@ def _stuck_days(win) -> set:
 			["shift_start", ">=", datetime.combine(win.start, time.min)],
 			["shift_start", "<", datetime.combine(win.end + timedelta(days=1), time.min)],
 		],
-		fields=["employee", "shift", "shift_start"],
+		fields=["name", "employee", "shift", "shift_start", "remote_approval_status"],
 		limit_page_length=0,
 	)
+	taps = without_pending_late_outs(taps)  # E16 / C1: a pending late OUT is not a live tap
 	count = Counter((t.employee, getdate(t.shift_start), t.shift) for t in taps)
 	stuck = {
 		(r.employee, getdate(r.attendance_date))
@@ -1786,9 +1791,10 @@ def _plan_rebuild(win, for_update=False) -> dict:
 			["shift_start", ">=", datetime.combine(win.start, time.min)],
 			["shift_start", "<", datetime.combine(win.end + timedelta(days=1), time.min)],
 		],
-		fields=["employee", "shift_start"],
+		fields=["name", "employee", "shift_start", "remote_approval_status"],
 		limit_page_length=0,
 	)
+	rows = without_pending_late_outs(rows)  # E16 / C1: a pending late OUT plans no rebuild
 	released = _released_days(win)
 	days = sorted(
 		{(r.employee, getdate(r.shift_start)) for r in rows} | released | _stuck_days(win),

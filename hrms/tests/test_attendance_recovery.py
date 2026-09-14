@@ -1142,6 +1142,62 @@ class TestRebuildReleasedDay(_Base):
 # --- S5b: linked days and approved late check-outs are rebuilt too ------------------
 
 
+class TestStuckDayIgnoresAPendingLateOut(_Base):
+	"""C1 (integration review, 15 Sep 2026): a Half Day row with an IN and a
+	PENDING forgotten check-out is not "stuck" — the OUT is a claim until its
+	approver says yes (E16). Once approved it counts and the day is rebuilt."""
+
+	def setUp(self):
+		super().setUp()
+		self.request_status = "Pending"
+		self.win = rec.recovery_window("2026-09-01", "2026-09-13", TODAY.date())
+
+		def get_all(doctype, filters=None, fields=None, **kw):
+			if doctype == "Attendance":
+				return [
+					frappe._dict(
+						employee="E-HALF",
+						attendance_date=date(2026, 9, 5),
+						shift="Day",
+						status="Half Day",
+						working_hours=4,
+						out_time=None,
+					)
+				]
+			if doctype == "Employee Checkin":
+				return [
+					frappe._dict(
+						name="CK-IN",
+						employee="E-HALF",
+						shift="Day",
+						shift_start=datetime(2026, 9, 5, 9),
+						remote_approval_status=None,
+					),
+					frappe._dict(
+						name="CK-LATE-OUT",
+						employee="E-HALF",
+						shift="Day",
+						shift_start=datetime(2026, 9, 5, 9),
+						remote_approval_status=self.request_status,
+					),
+				]
+			if doctype == "Remote Checkin Request":
+				self.assertEqual(filters["checkin"], ["in", ["CK-LATE-OUT"]])
+				return [frappe._dict(checkin="CK-LATE-OUT")] if self.request_status == "Pending" else []
+			raise AssertionError(doctype)
+
+		patcher = patch.object(frappe, "get_all", side_effect=get_all)
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
+	def test_a_pending_late_out_does_not_make_the_half_day_row_stuck(self):
+		self.assertEqual(rec._stuck_days(self.win), set())
+
+	def test_once_approved_the_late_out_counts_and_the_day_is_stuck(self):
+		self.request_status = "Approved"
+		self.assertEqual(rec._stuck_days(self.win), {("E-HALF", date(2026, 9, 5))})
+
+
 class TestRebuildLinkedAndLateCheckout(_Base):
 	"""S5b (15 Sep 2026). A day whose taps are all linked but reads Half Day /
 	no out time / 0 h is rebuilt (E21); an approved late check-out is applied
