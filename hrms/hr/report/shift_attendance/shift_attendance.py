@@ -1,6 +1,7 @@
 # Copyright (c) 2023, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import logging
 from datetime import timedelta
 
 import frappe
@@ -11,6 +12,8 @@ from frappe.utils import cint, flt, format_datetime, format_duration
 from erpnext.accounts.utils import build_qb_match_conditions
 
 from hrms.utils.report_scope import apply_employee_scope, scoped_companies
+
+logger = logging.getLogger(__name__)
 
 
 def execute(filters=None):
@@ -130,11 +133,11 @@ def get_columns():
 			"width": 165,
 		},
 		{
-			"label": _("Attendance ID"),
-			"fieldname": "name",
-			"fieldtype": "Link",
-			"options": "Attendance",
-			"width": 150,
+			# read by the HR edit grid in shift_attendance.js ("Hand back to system")
+			"label": _("Edited by HR"),
+			"fieldname": "hr_owned",
+			"fieldtype": "Check",
+			"hidden": 1,
 		},
 	]
 
@@ -144,6 +147,31 @@ def get_data(filters):
 	data = update_data(data, filters)
 	if filters.include_attendance_without_checkins:
 		data.extend(get_attendance_without_checkins(filters))
+	logger.debug("[shift_attendance] %d row(s) for %s", len(data), filters.get("company"))
+	return mark_hr_owned(data)
+
+
+def mark_hr_owned(data):
+	"""Flag rows HR wrote by hand — the same rule as attendance_master_edit's
+	snapshot: submitted, not auto attendance, not mirrored, not a leave."""
+	names = list({d.name for d in data})
+	if not names:
+		return data
+	fields = ["name", "auto_attendance", "leave_type"]
+	mirrored = frappe.get_meta("Attendance").has_field("synced_from_instance")
+	if mirrored:
+		fields.append("synced_from_instance")
+	# rows here already passed the report's fence; this only reads flags for them
+	flags = {r.name: r for r in frappe.get_all("Attendance", filters={"name": ["in", names]}, fields=fields)}
+	for d in data:
+		row = flags.get(d.name)
+		d.hr_owned = int(
+			bool(row)
+			and not cint(row.auto_attendance)
+			and not row.leave_type
+			and not (mirrored and row.synced_from_instance)
+		)
+	logger.debug("[shift_attendance] %d of %d row(s) edited by HR", sum(d.hr_owned for d in data), len(data))
 	return data
 
 
