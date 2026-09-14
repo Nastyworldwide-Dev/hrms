@@ -24,7 +24,8 @@
    "label": "Attendance",
    "link_count": 6,
    "onboard": 0,
-   "type": "Card Break"
+   "type": "Card Break",
+   "idx": 1
   },
   {
    "hidden": 0,
@@ -34,7 +35,8 @@
    "link_to": "Attendance",
    "link_type": "DocType",
    "onboard": 1,
-   "type": "Link"
+   "type": "Link",
+   "idx": 2
   },
   {
    "hidden": 0,
@@ -44,7 +46,8 @@
    "link_to": "Attendance Request",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 3
   },
   {
    "hidden": 0,
@@ -54,7 +57,8 @@
    "link_to": "Remote Checkin Request",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 4
   },
   {
    "dependencies": "Remote Checkin Request",
@@ -66,7 +70,8 @@
    "link_type": "Report",
    "onboard": 0,
    "report_ref_doctype": "Remote Checkin Request",
-   "type": "Link"
+   "type": "Link",
+   "idx": 5
   },
   {
    "hidden": 0,
@@ -76,7 +81,8 @@
    "link_to": "Employee Checkin",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 6
   },
   {
    "hidden": 0,
@@ -86,7 +92,8 @@
    "link_to": "Employee Attendance Tool",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 7
   },
   {
    "hidden": 0,
@@ -94,7 +101,8 @@
    "label": "Time",
    "link_count": 2,
    "onboard": 0,
-   "type": "Card Break"
+   "type": "Card Break",
+   "idx": 8
   },
   {
    "hidden": 0,
@@ -104,7 +112,8 @@
    "link_to": "Timesheet",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 9
   },
   {
    "hidden": 0,
@@ -114,15 +123,17 @@
    "link_to": "Activity Type",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 10
   },
   {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
-   "type": "Card Break"
+   "type": "Card Break",
+   "idx": 11
   },
   {
    "hidden": 0,
@@ -132,7 +143,8 @@
    "link_to": "Monthly Attendance Sheet",
    "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 12
   },
   {
    "hidden": 0,
@@ -142,7 +154,21 @@
    "link_to": "Shift Attendance",
    "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 13
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Unclaimable Days",
+   "link_count": 0,
+   "link_to": "Unclaimable Days",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link",
+   "report_ref_doctype": "Attendance",
+   "dependencies": "Attendance",
+   "idx": 14
   },
   {
    "hidden": 0,
@@ -152,7 +178,8 @@
    "link_to": "Employee Hours Utilization Based On Timesheet",
    "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 15
   },
   {
    "hidden": 0,
@@ -162,7 +189,8 @@
    "link_to": "Project Profitability",
    "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 16
   },
   {
    "hidden": 0,
@@ -172,7 +200,8 @@
    "link_to": "Employees working on a holiday",
    "link_type": "Report",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 17
   },
   {
    "hidden": 0,
@@ -181,7 +210,8 @@
    "link_count": 7,
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Card Break"
+   "type": "Card Break",
+   "idx": 18
   },
   {
    "hidden": 0,
@@ -191,7 +221,8 @@
    "link_to": "Shift Type",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 19
   },
   {
    "hidden": 0,
@@ -201,7 +232,8 @@
    "link_to": "Shift Location",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 20
   },
   {
    "hidden": 0,
@@ -211,7 +243,8 @@
    "link_to": "Shift Assignment",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 21
   },
   {
    "hidden": 0,
@@ -221,7 +254,8 @@
    "link_to": "Shift Schedule",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 22
   },
   {
    "hidden": 0,
@@ -231,7 +265,8 @@
    "link_to": "Shift Schedule Assignment",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 23
   },
   {
    "hidden": 0,
@@ -241,7 +276,8 @@
    "link_to": "Shift Request",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 24
   },
   {
    "hidden": 0,
@@ -251,7 +287,8 @@
    "link_to": "Shift Assignment Tool",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 25
   },
   {
    "hidden": 0,
@@ -260,7 +297,8 @@
    "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Card Break"
+   "type": "Card Break",
+   "idx": 26
   },
   {
    "hidden": 0,
@@ -270,7 +308,8 @@
    "link_to": "Overtime Type",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 27
   },
   {
    "hidden": 0,
@@ -280,7 +319,8 @@
    "link_to": "Overtime Slip",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 28
   },
   {
    "hidden": 0,
@@ -290,7 +330,8 @@
    "link_to": "OT Request",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 29
   },
   {
    "hidden": 0,
@@ -300,10 +341,11 @@
    "link_to": "Replacement Leave Claim",
    "link_type": "DocType",
    "onboard": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 30
   }
  ],
- "modified": "2026-08-26 02:26:39.142509",
+ "modified": "2026-09-15 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift & Attendance",

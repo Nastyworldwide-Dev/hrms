@@ -16,7 +16,8 @@
    "link_to": "Shift & Attendance",
    "link_type": "Workspace",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 1
   },
   {
    "child": 0,
@@ -28,7 +29,8 @@
    "link_type": "URL",
    "show_arrow": 0,
    "type": "Link",
-   "url": "/hr/roster"
+   "url": "/hr/roster",
+   "idx": 2
   },
   {
    "child": 0,
@@ -40,7 +42,8 @@
    "link_to": "Attendance",
    "link_type": "Dashboard",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 3
   },
   {
    "child": 0,
@@ -52,7 +55,8 @@
    "link_to": "Employee Attendance Tool",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 4
   },
   {
    "child": 0,
@@ -64,7 +68,8 @@
    "link_to": "Employee Checkin",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 5
   },
   {
    "child": 0,
@@ -76,7 +81,8 @@
    "link_to": "Shift Request",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 6
   },
   {
    "child": 0,
@@ -88,7 +94,8 @@
    "link_to": "Attendance Request",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 7
   },
   {
    "child": 0,
@@ -100,7 +107,8 @@
    "link_to": "Remote Checkin Request",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 8
   },
   {
    "child": 0,
@@ -112,7 +120,8 @@
    "link_to": "Forgotten Check-outs",
    "link_type": "Report",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 9
   },
   {
    "child": 0,
@@ -123,7 +132,8 @@
    "label": "Overtime",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Section Break"
+   "type": "Section Break",
+   "idx": 10
   },
   {
    "child": 1,
@@ -135,7 +145,8 @@
    "link_to": "Overtime Type",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 11
   },
   {
    "child": 1,
@@ -147,7 +158,8 @@
    "link_to": "Overtime Slip",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 12
   },
   {
    "child": 1,
@@ -159,7 +171,8 @@
    "link_to": "OT Request",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 13
   },
   {
    "child": 1,
@@ -171,7 +184,8 @@
    "link_to": "Replacement Leave Claim",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 14
   },
   {
    "child": 0,
@@ -182,7 +196,8 @@
    "label": "Reports",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Section Break"
+   "type": "Section Break",
+   "idx": 15
   },
   {
    "child": 1,
@@ -194,7 +209,8 @@
    "link_to": "Monthly Attendance Sheet",
    "link_type": "Report",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 16
   },
   {
    "child": 1,
@@ -206,7 +222,21 @@
    "link_to": "Shift Attendance",
    "link_type": "Report",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 17
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Unclaimable Days",
+   "link_to": "Unclaimable Days",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link",
+   "idx": 18
   },
   {
    "child": 1,
@@ -218,7 +248,8 @@
    "link_to": "Employee Hours Utilization Based On Timesheet",
    "link_type": "Report",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 19
   },
   {
    "child": 1,
@@ -230,7 +261,8 @@
    "link_to": "Project Profitability",
    "link_type": "Report",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 20
   },
   {
    "child": 0,
@@ -241,7 +273,8 @@
    "label": "Setup",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Section Break"
+   "type": "Section Break",
+   "idx": 21
   },
   {
    "child": 1,
@@ -253,7 +286,8 @@
    "link_to": "Shift Type",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 22
   },
   {
    "child": 1,
@@ -265,7 +299,8 @@
    "link_to": "Shift Location",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 23
   },
   {
    "child": 1,
@@ -277,7 +312,8 @@
    "link_to": "Shift Schedule",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 24
   },
   {
    "child": 1,
@@ -289,7 +325,8 @@
    "link_to": "Activity Type",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 25
   },
   {
    "child": 1,
@@ -301,7 +338,8 @@
    "link_to": "Timesheet",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 26
   },
   {
    "child": 0,
@@ -314,10 +352,11 @@
    "link_type": "DocType",
    "navigate_to_tab": "shift_and_attendance_tab",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "idx": 27
   }
  ],
- "modified": "2026-01-08 14:16:38.373198",
+ "modified": "2026-09-15 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift & Attendance",
