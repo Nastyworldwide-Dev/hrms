@@ -628,10 +628,6 @@ scheduler_events = {
 		# own read-only report; one Error Log when a day is broken, so HR
 		# finds out before a staff complaint does. Never touches today.
 		"hrms.utils.attendance_health.run_daily_health_check",
-		# Nabil, 14 Sep 2026: the system fixes broken attendance itself — every
-		# recovery step for the last 7 days up to yesterday, never today, then one
-		# HR summary. The one-time 1 Aug run is queued by a patch at deploy.
-		"hrms.utils.attendance_auto_recovery.run_nightly",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).
@@ -640,6 +636,11 @@ scheduler_events = {
 		],
 	},
 	"daily_long": [
+		# Nabil, 14 Sep 2026: the system fixes broken attendance itself — every
+		# recovery step for the 7 days ending the day before yesterday (last night's
+		# shift may still be open), then one HR summary. The one-time 1 Aug run is
+		# queued by a patch at deploy. daily_long: the default queue stops at 300s.
+		"hrms.utils.attendance_auto_recovery.run_nightly",
 		"hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry.process_expired_allocation",
 		"hrms.hr.utils.generate_leave_encashment",
 		"hrms.hr.utils.allocate_earned_leaves",

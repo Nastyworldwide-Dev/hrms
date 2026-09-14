@@ -22,6 +22,7 @@ from datetime import date, timedelta
 
 import frappe
 from frappe.utils import getdate, nowdate
+from frappe.utils.background_jobs import is_job_enqueued
 
 from hrms.overrides.remote_checkin_request_hooks import notify_hr
 from hrms.utils import attendance_recovery as rec
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 #: Every step in recovery's order except the ERP import (network, operator-run).
 AUTO_STEPS = tuple(step for step in rec.STEPS if step != "import")
 NIGHTLY_DAYS = 7
+ONCE_JOB_ID = "attendance_recovery_once"
 CHUNK_DAYS = 31
 TITLE_PREFIX = "Attendance recovery"
 FAILURE_TITLE = "Attendance recovery run failed"
@@ -141,8 +143,16 @@ def run_once() -> dict | None:
 
 
 def run_nightly() -> dict | None:
-	"""Scheduler entry: the last NIGHTLY_DAYS days up to yesterday."""
-	yesterday = _yesterday()
-	start = max(rec.REPAIR_FLOOR, yesterday - timedelta(days=NIGHTLY_DAYS - 1))
-	logger.info("[attendance_recovery_auto] nightly run %s..%s", start, yesterday)
-	return _safe(start, yesterday)
+	"""Scheduler entry: NIGHTLY_DAYS days ending the day before yesterday.
+
+	Daily jobs fire just after midnight, while yesterday's night shift
+	(19:30-03:30) still has only its IN — so yesterday waits one more night.
+	Skips while the one-time run is still queued or running.
+	"""
+	if is_job_enqueued(ONCE_JOB_ID):
+		logger.info("[attendance_recovery_auto] one-time run still going; nightly skipped")
+		return None
+	end = _yesterday() - timedelta(days=1)
+	start = max(rec.REPAIR_FLOOR, end - timedelta(days=NIGHTLY_DAYS - 1))
+	logger.info("[attendance_recovery_auto] nightly run %s..%s", start, end)
+	return _safe(start, end)

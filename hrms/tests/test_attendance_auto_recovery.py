@@ -42,6 +42,7 @@ class _Case(unittest.TestCase):
 				return_value={"hr_list": [{"employee": "E3", "date": "2026-09-01"}]},
 			),
 			patch.object(frappe, "set_user", MagicMock(), create=True),
+			patch.object(auto, "is_job_enqueued", return_value=False),
 			patch.object(auto, "notify_hr", MagicMock()),
 			patch.object(auto, "nowdate", return_value="2026-09-15"),
 			patch.object(frappe, "log_error", MagicMock(return_value=MagicMock(name="ERR-1"))),
@@ -90,9 +91,15 @@ class TestOrder(_Case):
 		windows = sorted({(c[1], c[2]) for c in self.calls})
 		self.assertEqual(windows, [("2026-08-01", "2026-08-31"), ("2026-09-01", "2026-09-14")])
 
-	def test_nightly_window_is_the_last_seven_days_to_yesterday(self):
+	def test_nightly_window_is_seven_days_ending_the_day_before_yesterday(self):
+		# At midnight yesterday's night shift (19:30-03:30) is still open: leave it.
 		auto.run_nightly()
-		self.assertEqual({(c[1], c[2]) for c in self.calls}, {("2026-09-08", "2026-09-14")})
+		self.assertEqual({(c[1], c[2]) for c in self.calls}, {("2026-09-07", "2026-09-13")})
+
+	def test_nightly_waits_while_the_one_time_run_is_queued_or_running(self):
+		with patch.object(auto, "is_job_enqueued", return_value=True):
+			self.assertIsNone(auto.run_nightly())
+		self.assertEqual(self.calls, [])
 
 	def test_a_refusing_step_stops_the_run_and_is_reported(self):
 		self.fail_step = "heal"
@@ -147,7 +154,9 @@ class TestWiring(unittest.TestCase):
 			and any(getattr(t, "id", None) == "scheduler_events" for t in n.targets)
 		)
 		events = ast.literal_eval(node)
-		self.assertIn("hrms.utils.attendance_auto_recovery.run_nightly", events["daily"])
+		# daily_long: the default queue kills a job after 300s, silently.
+		self.assertIn("hrms.utils.attendance_auto_recovery.run_nightly", events["daily_long"])
+		self.assertNotIn("hrms.utils.attendance_auto_recovery.run_nightly", events["daily"])
 
 
 if __name__ == "__main__":
