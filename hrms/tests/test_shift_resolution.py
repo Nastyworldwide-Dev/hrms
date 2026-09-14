@@ -68,19 +68,87 @@ class TestChooseShift(unittest.TestCase):
 	def test_a_punch_in_no_window_is_off_shift_not_guessed(self):
 		self.assertIsNone(choose_shift(datetime(2026, 9, 7, 6, 0), "IN", [_day(), _night()], None))
 
-	def test_two_containing_windows_take_the_nearest_start(self):
+	def test_two_staggered_day_windows_take_the_scheduled_hours_then_the_earliest_start(self):
+		"""S2: scheduled hours before buffers, earliest start before nearest
+		start. 08:50 is in neither schedule -> the earlier shift; 09:40 is inside
+		9AM-6PM's own hours only (nearest start used to say 10AM-7PM)."""
 		nine = _cand("9AM-6PM", datetime(2026, 9, 7, 9), datetime(2026, 9, 7, 18))
 		self.assertEqual(
 			choose_shift(datetime(2026, 9, 7, 8, 50), "IN", [nine, _day()], None)["shift_type"], "9AM-6PM"
 		)
 		self.assertEqual(
-			choose_shift(datetime(2026, 9, 7, 9, 40), "IN", [nine, _day()], None)["shift_type"], "10AM-7PM"
+			choose_shift(datetime(2026, 9, 7, 9, 40), "IN", [nine, _day()], None)["shift_type"], "9AM-6PM"
 		)
 
+	def test_ria_an_evening_in_with_no_open_session_stays_on_the_rostered_day_shift(self):
+		"""S2 root cause (Ria, HR-EMP-00299): 18:33 typed IN, nothing open. It
+		lies in the day's 360-minute buffer and the night's 60-minute one; the
+		nearest START was the night's 19:30, so the tap opened an invented night
+		session that the next morning's tap then closed. The tap belongs to the
+		shift she is rostered on: the day shift. log_type plays no part."""
+		cands = _ria_cands(10, 11)
+		for log_type in ("IN", "OUT", None):
+			chosen = choose_shift(datetime(2026, 9, 11, 18, 33), log_type, cands, None)
+			self.assertEqual(chosen["shift_type"], "8AM-6PM", log_type)
+			self.assertEqual(chosen["start_datetime"], datetime(2026, 9, 11, 8))
+
+	def test_ria_a_morning_tap_with_no_open_session_is_the_days_not_last_nights(self):
+		"""07:50 is inside the previous night's buffered window (to 08:00) and the
+		day's; the calendar day's rostered shift takes it."""
+		chosen = choose_shift(datetime(2026, 9, 11, 7, 50), "IN", _ria_cands(10, 11), None)
+		self.assertEqual(
+			(chosen["shift_type"], chosen["start_datetime"]), ("8AM-6PM", datetime(2026, 9, 11, 8))
+		)
+
+	def test_a_tap_inside_one_shifts_scheduled_hours_goes_there_over_a_buffer(self):
+		"""A real double shift: 19:45 is inside the night's own hours and only in
+		the day's after-buffer -> night. A lone 03:30 tap is the night's too."""
+		cands = _ria_cands(10, 11)
+		self.assertEqual(
+			choose_shift(datetime(2026, 9, 11, 19, 45), "IN", cands, None)["shift_type"], "7PM - 3.30AM"
+		)
+		out = choose_shift(datetime(2026, 9, 11, 3, 30), "OUT", cands, None)
+		self.assertEqual(
+			(out["shift_type"], out["start_datetime"]), ("7PM - 3.30AM", datetime(2026, 9, 10, 19, 30))
+		)
+
+	def test_e3_a_night_only_worker_is_untouched(self):
+		cands = [_night0700(10), _night0700(11)]
+		night_in = choose_shift(datetime(2026, 9, 11, 19, 40), "IN", cands, None)
+		self.assertEqual(
+			(night_in["shift_type"], night_in["start_datetime"]),
+			("7PM - 3.30AM", datetime(2026, 9, 11, 19, 30)),
+		)
+		open_in = {"shift": "7PM - 3.30AM", "time": datetime(2026, 9, 11, 19, 40)}
+		out = choose_shift(datetime(2026, 9, 12, 7, 5), "OUT", cands, open_in)
+		self.assertEqual(
+			(out["shift_type"], out["start_datetime"]), ("7PM - 3.30AM", datetime(2026, 9, 11, 19, 30))
+		)
+
+	def test_e15_a_real_move_to_nights_uses_the_assignment_valid_on_the_date(self):
+		"""fetch_shift lists only the assignments active on the tap's date, so
+		the day before the move offers the day windows and the move date the
+		night's. Neither list lets the other shift in."""
+		before = [_day8(13), _day8(14)]
+		self.assertEqual(
+			choose_shift(datetime(2026, 9, 14, 18, 33), "IN", before, None)["shift_type"], "8AM-6PM"
+		)
+		after = [_night0700(14), _night0700(15)]
+		self.assertEqual(
+			choose_shift(datetime(2026, 9, 15, 19, 40), "IN", after, None)["shift_type"], "7PM - 3.30AM"
+		)
+		self.assertIsNone(choose_shift(datetime(2026, 9, 15, 8, 30), "IN", after, None))
+
+	def test_e8_a_cross_midnight_out_within_twenty_hours_closes_the_day_session(self):
+		open_in = {"shift": "8AM-6PM", "time": datetime(2026, 9, 11, 7, 50)}
+		out = choose_shift(datetime(2026, 9, 12, 0, 30), "OUT", _ria_cands(10, 11, 12), open_in)
+		self.assertEqual((out["shift_type"], out["start_datetime"]), ("8AM-6PM", datetime(2026, 9, 11, 8)))
+
 	def test_an_in_from_a_previous_session_does_not_bind_a_new_out(self):
-		"""An IN 30 hours ago is not the session this OUT closes."""
+		"""An IN 30 hours ago is not the session this OUT closes: 18:45 is inside
+		the day's scheduled hours and only the night's before-buffer."""
 		open_in = {"shift": "7PM-3:30AM", "time": datetime(2026, 9, 6, 13, 0)}
-		chosen = choose_shift(datetime(2026, 9, 7, 19, 45), "OUT", [_day(), _night()], open_in)
+		chosen = choose_shift(datetime(2026, 9, 7, 18, 45), "OUT", [_day(), _night()], open_in)
 		self.assertEqual(chosen["shift_type"], "10AM-7PM")
 
 
@@ -208,6 +276,20 @@ def _night1930(day=11):
 	return _cand(
 		"Night 1930-0330", datetime(2026, 9, day, 19, 30), datetime(2026, 9, day + 1, 3, 30), grace=360
 	)
+
+
+# Ria (HR-EMP-00299), live config 15 Sep 2026: 8AM-6PM with 360/360 grace and a
+# "7PM - 3.30AM" shift that actually runs 19:30 -> 07:00 (default 60 grace).
+def _day8(day=11):
+	return _cand("8AM-6PM", datetime(2026, 9, day, 8), datetime(2026, 9, day, 18), grace=360)
+
+
+def _night0700(day=11):
+	return _cand("7PM - 3.30AM", datetime(2026, 9, day, 19, 30), datetime(2026, 9, day + 1, 7))
+
+
+def _ria_cands(*days):
+	return [c for d in days for c in (_day8(d), _night0700(d))]
 
 
 def _punch(name, time, cand, **kw):
@@ -431,7 +513,7 @@ class TestStrayNightScenarios(unittest.TestCase):
 	def setUp(self):
 		self.store = _Store()
 
-	def _punch(self, name, time, log_type):
+	def _punch(self, name, time, log_type, cands=_CANDS):
 		from unittest.mock import patch
 
 		import hrms.overrides.employee_checkin_override as mod
@@ -448,7 +530,7 @@ class TestStrayNightScenarios(unittest.TestCase):
 			patch.object(frappe.db, "get_value", side_effect=self.store.get_value),
 		):
 			if not doc._close_open_session():
-				chosen = choose_shift(time, log_type, _CANDS, doc._open_in())
+				chosen = choose_shift(time, log_type, cands, doc._open_in())
 				doc._stamp_shift(
 					shift=chosen["shift_type"],
 					start_datetime=chosen["start_datetime"],
@@ -540,15 +622,64 @@ class TestStrayNightScenarios(unittest.TestCase):
 		self._lunch(datetime(2026, 9, 11, 15, 30))
 
 	def test_g1_w1_a_return_more_than_six_hours_after_the_out_is_not_a_break(self):
+		"""Not a break return, so the ordinary rules decide: 16:00 is inside the
+		day's scheduled hours (S2; nearest start used to say Night)."""
 		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN"), self.DAY11)
 		self.assertEqual(self._punch("CKIN-0930", datetime(2026, 9, 11, 9, 30), "OUT"), self.DAY11)
-		self.assertEqual(self._punch("CKIN-1600", datetime(2026, 9, 11, 16), "IN"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-1600", datetime(2026, 9, 11, 16), "IN"), self.DAY11)
 
 	def test_g1_w1_a_lone_stray_out_is_not_a_session_to_return_to(self):
 		"""A: a lone OUT on the stray night closes no session; the IN after it
 		inside the night's schedule keeps its ordinary resolution."""
 		self._stored("CKIN-1831", datetime(2026, 9, 11, 18, 31), "OUT", _night1930(11))
 		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 12, 8, 55), "IN"), self.DAY12)
+
+
+class TestRiaRosteredChain(TestStrayNightScenarios):
+	"""S2 end to end with Ria's live windows (8AM-6PM 360/360, night 19:30-07:00):
+	the chain that invented 10-11.6h night rows and 0h day rows, day after day."""
+
+	RIA = _ria_cands(10, 11, 12, 13)
+	DAY11 = ("8AM-6PM", datetime(2026, 9, 11, 8))
+	DAY12 = ("8AM-6PM", datetime(2026, 9, 12, 8))
+	DAY13 = ("8AM-6PM", datetime(2026, 9, 13, 8))
+	NIGHT11 = ("7PM - 3.30AM", datetime(2026, 9, 11, 19, 30))
+
+	def _punch(self, name, time, log_type, cands=None):
+		return super()._punch(name, time, log_type, cands or self.RIA)
+
+	def test_ria_the_chain_breaks_the_evening_tap_stays_on_the_day(self):
+		"""Chain in progress: yesterday's 18:33 IN sits on the night (old
+		stamp). This morning's 07:50 still closes that open session (continuity
+		wins; S4 restamps history). Tonight's 18:33 IN has nothing open: on HEAD
+		nearest start filed it on the night again and the chain repeated; it is
+		the day's. Tomorrow's 07:50 then starts a fresh day session."""
+		self._stored("CKIN-OLD", datetime(2026, 9, 10, 18, 33), "IN", _night0700(10))
+		self.assertEqual(self._punch("CKIN-0750", datetime(2026, 9, 11, 7, 50), "IN")[0], "7PM - 3.30AM")
+		self.assertEqual(self._punch("CKIN-1833", datetime(2026, 9, 11, 18, 33), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-N0750", datetime(2026, 9, 12, 7, 50), "IN"), self.DAY12)
+
+	def test_ria_a_clean_day_is_day_in_day_out_day_in(self):
+		"""E6: the second IN hours later is the OUT via continuity (alternating)."""
+		self.assertEqual(self._punch("CKIN-0750", datetime(2026, 9, 11, 7, 50), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1833", datetime(2026, 9, 11, 18, 33), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-N0750", datetime(2026, 9, 12, 7, 50), "IN"), self.DAY12)
+		self.assertEqual(self._punch("CKIN-N1833", datetime(2026, 9, 12, 18, 33), "OUT"), self.DAY12)
+		self.assertEqual(self._punch("CKIN-NN0750", datetime(2026, 9, 13, 7, 50), "IN"), self.DAY13)
+
+	def test_ria_an_evening_tap_typed_out_with_nothing_open_is_the_days_lone_punch(self):
+		self.assertEqual(self._punch("CKIN-1833", datetime(2026, 9, 11, 18, 33), "OUT"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-N0750", datetime(2026, 9, 12, 7, 50), "IN"), self.DAY12)
+
+	def test_a_real_double_shift_on_ria_windows_keeps_the_night(self):
+		"""E4 shape: after a closed day, a 19:45 IN inside the night's hours and
+		its 07:05 OUT stay on the night; the 07:05 OUT closed that session, so
+		the 07:50 after it is the new day's."""
+		self.assertEqual(self._punch("CKIN-0750", datetime(2026, 9, 11, 7, 50), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1800", datetime(2026, 9, 11, 18, 0), "OUT"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1945", datetime(2026, 9, 11, 19, 45), "IN"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-0705", datetime(2026, 9, 12, 7, 5), "OUT"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-N0750", datetime(2026, 9, 12, 7, 50), "IN"), self.DAY12)
 
 
 class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):

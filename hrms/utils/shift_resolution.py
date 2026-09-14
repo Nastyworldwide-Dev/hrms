@@ -16,7 +16,12 @@ One rule, pure, in the order a person would apply it:
    returning from a break inside the closed session's scheduled hours
    (returns_from_break), keeps that session's shift too.
 2. Otherwise the shift whose actual window (grace included) contains the punch;
-   several → the one whose start is nearest.
+   several → the shift the person is ROSTERED on (rostered_shift): the one whose
+   scheduled hours hold the punch, else the day shift over a night one, else the
+   earliest start of the day; nearest start/end only as the last tie-break. A
+   tap never jumps to another shift because a buffer window overlaps (S2,
+   15 Sep 2026: Ria's 18:33 IN sat in the day's 360-minute after-buffer and the
+   night's 60-minute before-buffer; "nearest start" opened an invented night).
 3. Otherwise no shift: the punch is off-shift, named as such, never guessed onto
    the nearest start.
 
@@ -62,18 +67,57 @@ def choose_shift(punch_time: datetime, log_type: str | None, candidates: list, o
 			"[shift_resolution] %s %s falls in no assigned shift window: off-shift", log_type, punch_time
 		)
 		return None
-	# An IN is nearest its shift's start; an OUT nearest its shift's end. An OUT
-	# at 19:45 inside both a day shift ending 19:00 and a night shift starting
-	# 19:00 is the day shift's, whatever the starts say.
-	edge = "end_datetime" if log_type == "OUT" else "start_datetime"
-	chosen = min(inside, key=lambda c: abs((c[edge] - punch_time).total_seconds()))
+	chosen = rostered_shift(punch_time, log_type, inside)
 	if len(inside) > 1:
 		logger.info(
-			"[shift_resolution] %s %s inside %d windows; nearest start %s",
+			"[shift_resolution] %s %s inside %d windows; rostered shift %s",
 			log_type,
 			punch_time,
 			len(inside),
 			_shift_name(chosen),
+		)
+	return chosen
+
+
+def crosses_midnight(candidate: dict) -> bool:
+	"""A night shift for this rule: its scheduled end falls on a later date."""
+	return candidate["end_datetime"].date() > candidate["start_datetime"].date()
+
+
+def rostered_shift(punch_time: datetime, log_type: str | None, inside: list) -> dict:
+	"""Which of the windows containing the punch (`inside`, non-empty) is the
+	shift the person is rostered on — session first, rostered shift second
+	(Nabil, 15 Sep 2026). In order, keeping the survivors of each step:
+
+	1. the windows whose SCHEDULED hours (start..end, no grace) hold the punch;
+	2. the day shifts (not crossing midnight) over the night ones, when both
+	   remain — a day worker holding a stray night assignment is rostered on the
+	   day, and a real double shift's night taps fall under step 1;
+	3. the earliest scheduled start of the day (clock time, so a night anchored
+	   on the day before does not win by starting "yesterday");
+	4. the nearest edge — start for an IN, end for an OUT — for what is left,
+	   e.g. the same shift anchored on two dates.
+
+	log_type plays no part in 1-3: under "Alternating entries" the engine pairs
+	by order, so the label must not move a tap to another shift."""
+	pool = [c for c in inside if c["start_datetime"] <= punch_time <= c["end_datetime"]] or inside
+	day_shifts = [c for c in pool if not crosses_midnight(c)]
+	if day_shifts and len(day_shifts) < len(pool):
+		pool = day_shifts
+	earliest = min(c["start_datetime"].time() for c in pool)
+	pool = [c for c in pool if c["start_datetime"].time() == earliest]
+	edge = "end_datetime" if log_type == "OUT" else "start_datetime"
+	chosen = min(pool, key=lambda c: abs((c[edge] - punch_time).total_seconds()))
+	if len(inside) > 1:
+		logger.info(
+			"[shift_resolution] %s %s: rostered on %s (scheduled=%s, day=%s, earliest=%s) of %s",
+			log_type,
+			punch_time,
+			_shift_name(chosen),
+			any(c["start_datetime"] <= punch_time <= c["end_datetime"] for c in inside),
+			bool(day_shifts),
+			earliest,
+			sorted({_shift_name(c) for c in inside}),
 		)
 	return chosen
 

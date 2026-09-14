@@ -1,10 +1,13 @@
 """Custom Employee Checkin override.
 
-When an employee has multiple active Shift Assignments on the checkin date
-(e.g. three shifts staggered by one hour), the stock HRMS logic prefers the
-earliest. We instead pick the shift whose start_datetime is closest to the
-actual checkin time. If the employee has at most one active assignment,
-defer to the upstream `fetch_shift` implementation.
+When an employee has multiple active Shift Assignments on the checkin date,
+the punch is resolved session first, rostered shift second
+(hrms.utils.shift_resolution): a punch continuing an open session inherits
+that session's shift; otherwise, among the assigned windows that contain it,
+the shift the employee is rostered on for that date wins (scheduled hours,
+then day over night, then earliest start) — never the nearest start across an
+overlapping buffer (S2, 15 Sep 2026). If the employee has at most one active
+assignment, defer to the upstream `fetch_shift` implementation.
 """
 
 from __future__ import annotations
