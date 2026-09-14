@@ -12,8 +12,10 @@ PYTHONPATH=. python3 hrms/tests/test_attendance_recovery.py
 import importlib
 import pathlib
 import sys
+import types
 import unittest
 from datetime import date, datetime, time, timedelta
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -25,6 +27,7 @@ _erpnext_stub.install()
 
 import frappe
 
+from hrms.utils import attendance_auto_recovery as auto
 from hrms.utils import attendance_recovery as rec
 
 TODAY = datetime(2026, 9, 14, 11, 0)
@@ -329,8 +332,14 @@ class TestRebuild(_Base):
 			),
 			patch.object(rec, "_remark_day", self.remark),
 			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: False),
+			# S5b: the planner also asks the F9 planner and the stuck-day read
+			patch.object(
+				rec, "_plan_late_checkout_requests", lambda *a, **k: {"planned": [], "held_back": []}
+			),
+			patch.object(rec, "_stuck_days", lambda win: set()),
+			patch.object(rec, "_lock_employee", MagicMock()),
 		]
-		for p in self.patches[-5:]:
+		for p in self.patches[-8:]:
 			p.start()
 
 	def test_hr_leave_paid_and_today_are_held_and_never_rebuilt(self):
@@ -1144,6 +1153,111 @@ class TestRebuildReleasedDay(_Base):
 			result = rec._remark_released_day("E-R", date(2026, 8, 12), True)
 		self.assertFalse(result["changed"])
 		shift.mark_attendance_for_shift_logs.assert_not_called()
+
+
+# --- S5b: linked days and approved late check-outs are rebuilt too ------------------
+
+
+class TestRebuildLinkedAndLateCheckout(_Base):
+	"""S5b (15 Sep 2026). A day whose taps are all linked but reads Half Day /
+	no out time / 0 h is rebuilt (E21); an approved late check-out is applied
+	through the approval's own repair, and its refusals reach HR in words."""
+
+	WIN = ("2026-09-01", "2026-09-13")
+
+	def setUp(self):
+		super().setUp()
+		self.late = {
+			"planned": [
+				{
+					"employee": "E-LATE",
+					"date": "2026-09-05",
+					"checkin": "CK-OUT",
+					"request": "RCR-1",
+					"reason": "approved late check-out, ATT-L is still Half Day",
+				}
+			],
+			"held_back": [],
+		}
+		self.remark = MagicMock(side_effect=lambda e, d, apply: {"action": "remark", "marked": ["ATT-NEW"]})
+		self.repro = MagicMock(return_value=frappe._dict(repaired=True, attendance="ATT-R"))
+		self.patches += [
+			patch.object(frappe, "get_all", MagicMock(return_value=[])),
+			patch.object(rec, "_stuck_days", lambda win: {("E-STUCK", date(2026, 9, 6))}),
+			patch.object(rec, "_released_days", lambda win: set()),
+			patch.object(
+				rec, "_plan_late_checkout_requests", lambda win, for_update=False, ctx=None: self.late
+			),
+			patch.object(rec, "_attendance_rows", lambda e, d: []),
+			patch.object(rec, "_financial", lambda *a: None),
+			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: False),
+			patch.object(rec, "_remark_day", self.remark),
+			patch.object(rec, "_reprocess_late_checkout", self.repro),
+			patch.object(rec, "_lock_employee", MagicMock()),
+		]
+		for p in self.patches[-10:]:
+			p.start()
+		frappe.db.get_value.return_value = datetime(2026, 9, 5, 22, 10)
+		self.win = rec.recovery_window(*self.WIN, TODAY.date())
+
+	def plan(self):
+		return rec._plan_rebuild(self.win)
+
+	def test_e21_a_stuck_day_with_every_tap_linked_is_planned_through_the_engine(self):
+		plan = self.plan()
+		self.assertIn(("E-STUCK", "2026-09-06"), {(p["employee"], p["date"]) for p in plan["planned"]})
+		self.assertIn(("E-STUCK", date(2026, 9, 6), False), [c.args for c in self.remark.call_args_list])
+
+	def test_an_approved_late_checkout_day_is_planned_for_the_approvals_own_repair(self):
+		plan = self.plan()
+		late = next(p for p in plan["planned"] if p["employee"] == "E-LATE")
+		self.assertEqual(late["late_checkout"], "CK-OUT")
+		self.assertNotIn("E-LATE", [c.args[0] for c in self.remark.call_args_list])
+
+	def test_apply_runs_the_approval_repair_under_the_employee_lock_and_counts_the_row(self):
+		outcome = rec._apply_rebuild(self.win, self.plan())
+		self.repro.assert_called_once_with("CK-OUT")
+		rec._lock_employee.assert_any_call("E-LATE")
+		done = [(d["employee"], d["date"], d["marked"]) for d in outcome["done"]]
+		self.assertIn(("E-LATE", "2026-09-05", ["ATT-R"]), done)
+
+	def test_e22_e23_e24_refusals_go_to_hr_with_the_approved_time(self):
+		for code, phrase in (
+			("financial_lock", "payroll"),
+			("hr_marked", "by hand"),
+			("hr_removed", "Shift Attendance"),
+		):
+			with self.subTest(code=code):
+				self.repro.return_value = frappe._dict(repaired=False, reason_code=code, message="x")
+				outcome = rec._apply_rebuild(self.win, self.plan())
+				held = next(h for h in outcome["held_back"] if h["employee"] == "E-LATE")
+				self.assertTrue(held["hr"])
+				self.assertTrue(auto.needs_hr(held), held["reason"])
+				self.assertIn(phrase, held["reason"])
+				self.assertIn("22:10", held["reason"])
+
+	def test_today_is_skipped_and_a_transient_refusal_waits_for_the_next_run(self):
+		for code, phrase in (("today", "today"), ("pending_punch", "next run"), ("locked", "next run")):
+			with self.subTest(code=code):
+				self.repro.return_value = frappe._dict(repaired=False, reason_code=code, message="wait")
+				outcome = rec._apply_rebuild(self.win, self.plan())
+				held = next(h for h in outcome["held_back"] if h["employee"] == "E-LATE")
+				self.assertFalse(held["hr"])
+				self.assertIn(phrase, held["reason"])
+
+	def test_any_other_refusal_is_hrs_in_the_approvals_own_words(self):
+		self.repro.return_value = frappe._dict(
+			repaired=False,
+			reason_code="incomplete_pairs",
+			message="The check-ins and check-outs do not pair up.",
+		)
+		outcome = rec._apply_rebuild(self.win, self.plan())
+		held = next(h for h in outcome["held_back"] if h["employee"] == "E-LATE")
+		self.assertTrue(held["hr"])
+		self.assertIn("do not pair up", held["reason"])
+
+	def test_the_f9_family_is_fixed_by_the_rebuild_step(self):
+		self.assertEqual(rec.LATE_CHECKOUT_FIX, "rebuild")
 
 
 if __name__ == "__main__":

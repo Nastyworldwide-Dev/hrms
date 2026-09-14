@@ -281,8 +281,43 @@ def plan_remark(punches, attendance_rows, removed=False) -> tuple[str, str]:
 		):
 			return "hr-owned", f"{row.get('name')} is marked by hand, a leave, or another instance's"
 	if not any(not p.get("attendance") and not _flag(p.get("skip_auto_attendance")) for p in punches):
+		stuck = stuck_row(attendance_rows, punches)
+		if stuck:
+			# E21 (15 Sep 2026): a Half Day row whose OUT was already linked read
+			# "up to date" forever. Two live taps and a broken row is a day to rebuild.
+			return "remark", (
+				f"{stuck.get('name')} reads {stuck.get('status')} with {live_count(punches)} live taps: "
+				"rebuilt from all of them"
+			)
 		return "up-to-date", "every punch is already linked to its attendance"
 	return "remark", ""
+
+
+def live_count(punches) -> int:
+	"""Taps the engine would count: not skipped, not rejected. Pure."""
+	return sum(
+		1
+		for p in punches
+		if not _flag(p.get("skip_auto_attendance")) and p.get("remote_approval_status") != "Rejected"
+	)
+
+
+def stuck_row(attendance_rows, punches):
+	"""The submitted row that reads Half Day / no out time / 0 h while at least two
+	live taps exist for the day, or None. Pure. One live tap is a lone IN: HR's
+	(owner ruling), never rebuilt here."""
+	if live_count(punches) < 2:
+		return None
+	for row in attendance_rows:
+		if _flag(row.get("docstatus")) != 1:
+			continue
+		if (
+			row.get("status") == "Half Day"
+			or not row.get("out_time")
+			or not float(row.get("working_hours") or 0)
+		):
+			return row
+	return None
 
 
 # --- reads ----------------------------------------------------------------------
@@ -792,9 +827,25 @@ def _financially_locked(employee, day, attendance, for_update: bool):
 	return _repair_financial_dependency(employee, day, attendance, for_update=for_update)
 
 
-def _preview(shift, employee: str, day: date, logs) -> dict:
+def _same_engine_result(result, shift_name) -> bool:
+	"""Would the engine keep the existing row (same status, hours, in and out)?"""
+	from hrms.hr.doctype.employee_checkin.employee_checkin import _same_day_result
+
+	existing = result.get("existing")
+	return bool(existing) and _same_day_result(
+		existing,
+		result.status,
+		result.working_hours,
+		result.get("in_time"),
+		result.get("out_time"),
+		shift_name,
+	)
+
+
+def _preview(shift, employee: str, day: date, logs, unchanged: bool = False) -> dict:
 	"""The day the hourly job's rule would write, computed without writing
-	(`ShiftType.shift_day_result`). OT bands are set by Attendance on insert."""
+	(`ShiftType.shift_day_result`). OT bands are set by Attendance on insert.
+	`unchanged`: also say whether the engine would keep the existing row."""
 	if shift.has_incorrect_shift_config():
 		return {"shift": shift.name, "status": None, "detail": "auto attendance is off or not configured"}
 	result = shift.shift_day_result(employee, day, logs)
@@ -812,6 +863,8 @@ def _preview(shift, employee: str, day: date, logs) -> dict:
 		"rebuilds": result.existing.name if result.existing else None,
 		"punches": [row.name for row in result.eligible_logs],
 	}
+	if unchanged:
+		preview["unchanged"] = _same_engine_result(result, shift.name)
 	logger.info("[checkin_import] preview %s on %s: %s", employee, day, preview)
 	return preview
 
@@ -842,6 +895,8 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 			"auto_attendance",
 			"leave_type",
 			"modify_half_day_status",
+			"working_hours",
+			"out_time",
 			PROVENANCE_FIELD,
 		],
 	)
@@ -871,15 +926,30 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 
 	# What the hourly job reads: unlinked, not skipped. It then merges the punches
 	# already linked to the day's automation row and rebuilds it — cancel, and
-	# amend from all of them — or keeps it when nothing changed.
+	# amend from all of them — or keeps it when nothing changed. A stuck day
+	# (E21) has nothing unlinked: its taps linked to this day's submitted rows
+	# are handed over instead, and the day is left alone when the engine would
+	# mark it the same.
+	submitted_rows = {row.get("name") for row in attendance if _flag(row.get("docstatus")) == 1}
+	unlinked = [
+		row for row in punches if not row.get("attendance") and not _flag(row.get("skip_auto_attendance"))
+	]
+	stuck = not unlinked
 	by_shift: dict[str, list] = {}
 	for row in punches:
-		if not row.get("attendance") and not _flag(row.get("skip_auto_attendance")):
+		if _flag(row.get("skip_auto_attendance")):
+			continue
+		if not row.get("attendance") or (stuck and row.get("attendance") in submitted_rows):
 			by_shift.setdefault(row.get("shift"), []).append(row)
 	shifts = {shift_name: frappe.get_doc("Shift Type", shift_name) for shift_name in by_shift}
 	entry["expected"] = [
-		_preview(shifts[shift_name], employee, day, logs) for shift_name, logs in by_shift.items()
+		_preview(shifts[shift_name], employee, day, logs, unchanged=stuck)
+		for shift_name, logs in by_shift.items()
 	]
+	if stuck and entry["expected"] and all(e.get("unchanged") for e in entry["expected"]):
+		entry.update(action="up-to-date", detail="the engine reads the same result: nothing to rebuild")
+		logger.info("[checkin_import] %s on %s: engine result unchanged, left as it is", employee, iso)
+		return entry
 	if not apply:
 		return entry
 

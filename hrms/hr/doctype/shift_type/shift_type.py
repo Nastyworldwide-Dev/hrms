@@ -206,6 +206,11 @@ def counts_for_attendance(row) -> bool:
 		not cint(row.get("skip_auto_attendance") or 0)
 		and not cint(row.get("offshift") or 0)
 		and row.get("remote_approval_status") != "Rejected"
+		# E16 (15 Sep 2026): a forgotten check-out filed late is a CLAIM until its
+		# approver says yes. Counting it while Pending marked the day Present and
+		# a later reject left it so; approval rebuilds the day through
+		# reprocess_late_checkout_attendance, so nothing is lost by waiting.
+		and not (row.get("remote_approval_status") == "Pending" and cint(row.get("is_late_checkout") or 0))
 	)
 
 
@@ -599,7 +604,7 @@ class ShiftType(Document):
 		return False
 
 	def get_employee_checkins(self) -> list[dict]:
-		return frappe.get_all(
+		rows = frappe.get_all(
 			"Employee Checkin",
 			fields=list(CHECKIN_FIELDS),
 			filters={
@@ -617,6 +622,29 @@ class ShiftType(Document):
 			},
 			order_by="employee,time",
 		)
+		# E16 (15 Sep 2026): a forgotten check-out filed late is a claim until its
+		# approver says yes — neither evidence nor a boundary while Pending. It
+		# stays unlinked; the approval rebuilds the day. Employee Checkin carries
+		# no late-checkout flag, the Remote Checkin Request filed for it does.
+		pending = [row.get("name") for row in rows if row.get("remote_approval_status") == "Pending"]
+		late = set()
+		if pending:
+			late = {
+				r.get("checkin")
+				for r in frappe.get_all(
+					"Remote Checkin Request",
+					filters={"checkin": ["in", sorted(pending)], "is_late_checkout": 1, "status": "Pending"},
+					fields=["checkin"],
+					limit_page_length=0,
+				)
+			} & set(pending)
+			if late:
+				logger.info(
+					"[shift_type] %s: %d pending late check-out(s) wait for approval", self.name, len(late)
+				)
+		for row in rows:
+			row["is_late_checkout"] = 1 if row.get("name") in late else 0
+		return [row for row in rows if not row["is_late_checkout"]]
 
 	def get_attendance(self, logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day):
 		"""Return attendance_status, working_hours, late_entry, early_exit, in_time, out_time

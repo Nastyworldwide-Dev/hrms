@@ -414,5 +414,71 @@ class TestApply(_Step):
 		self.assertIn("2026-09-08", {d["date"] for d in outcome["done"]})
 
 
+# --- E16: a pending forgotten check-out is not evidence -----------------------------------
+
+BASE = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _shift_type_namespace():
+	tree = ast.parse((BASE / "hr/doctype/shift_type/shift_type.py").read_text())
+	cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ShiftType")
+	cls.bases = []
+	cls.body = [n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "get_employee_checkins"]
+	helpers = [
+		n
+		for n in tree.body
+		if (isinstance(n, ast.FunctionDef) and n.name in {"counts_for_attendance", "pending_late_checkouts"})
+		or (
+			isinstance(n, ast.Assign)
+			and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in n.targets)
+		)
+	]
+	ns = {"frappe": frappe, "cint": int, "logger": __import__("logging").getLogger("t")}
+	exec(compile(ast.Module(body=[*helpers, cls], type_ignores=[]), "shift_type", "exec"), ns)
+	return ns
+
+
+class TestPendingLateCheckoutE16(unittest.TestCase):
+	def setUp(self):
+		self.ns = _shift_type_namespace()
+
+	def test_a_pending_late_out_does_not_count_a_plain_pending_punch_does(self):
+		counts = self.ns["counts_for_attendance"]
+		self.assertFalse(counts({"remote_approval_status": "Pending", "is_late_checkout": 1}))
+		self.assertTrue(counts({"remote_approval_status": "Pending", "is_late_checkout": 0}))
+		self.assertTrue(counts({"remote_approval_status": "Approved", "is_late_checkout": 1}))
+
+	def test_a_rejected_late_out_is_skip_stamped_and_still_dropped(self):
+		counts = self.ns["counts_for_attendance"]
+		self.assertFalse(
+			counts({"remote_approval_status": "Rejected", "skip_auto_attendance": 1, "is_late_checkout": 1})
+		)
+
+	def test_the_hourly_read_leaves_a_pending_late_out_for_its_approval(self):
+		rows = [
+			frappe._dict(name="IN", employee="E1", remote_approval_status=None),
+			frappe._dict(name="OUT-LATE", employee="E1", remote_approval_status="Pending"),
+			frappe._dict(name="OUT-FAR", employee="E2", remote_approval_status="Pending"),
+		]
+
+		def get_all(doctype, **kw):
+			if doctype == "Employee Checkin":
+				return list(rows)
+			if doctype == "Remote Checkin Request":
+				self.assertEqual(kw["filters"]["is_late_checkout"], 1)
+				self.assertEqual(kw["filters"]["status"], "Pending")
+				return [frappe._dict(checkin="OUT-LATE")]
+			raise AssertionError(doctype)
+
+		shift = self.ns["ShiftType"]()
+		shift.name = "Day"
+		shift.process_attendance_after = "2026-09-01"
+		shift.last_sync_of_checkin = "2026-09-14 00:00:00"
+		with patch.object(frappe, "get_all", get_all):
+			read = shift.get_employee_checkins()
+		self.assertEqual([r.name for r in read], ["IN", "OUT-FAR"])
+		self.assertFalse(read[1].get("is_late_checkout"))
+
+
 if __name__ == "__main__":
 	unittest.main()

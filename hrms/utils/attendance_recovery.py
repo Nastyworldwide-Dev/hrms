@@ -830,6 +830,9 @@ def _plan_rostered_shift(win, for_update=False) -> dict:
 			if not cint(row.get("auto_attendance")):
 				problem = f"{row.get('name')} was marked by HR by hand"
 				break
+			if row.get(PROVENANCE_FIELD):
+				problem = f"{row.get('name')} is the ERP's copy: release it first (step release_mirrored)"
+				break
 			paid = _financial(employee, row_day, [row], for_update)
 			if paid:
 				problem = (
@@ -1619,9 +1622,76 @@ def _remark_released_day(employee, day, apply) -> dict:
 	return {"changed": changed, "expected": expected, "marked": marked, "errors": errors}
 
 
+def _stuck_days(win) -> set:
+	"""(employee, day) whose submitted engine row reads Half Day / no out time / 0 h
+	while at least two live taps sit on that shift day (E21: every tap linked, so
+	the unlinked-tap read above never saw the day). One read each."""
+	rows = frappe.get_all(
+		"Attendance",
+		filters={
+			"attendance_date": ["between", [win.start, win.end]],
+			"docstatus": 1,
+			"auto_attendance": 1,
+			"leave_type": ["is", "not set"],
+			PROVENANCE_FIELD: ["is", "not set"],
+		},
+		fields=["employee", "attendance_date", "shift", "status", "working_hours", "out_time"],
+		limit_page_length=0,
+	)
+	broken = [r for r in rows if r.status == "Half Day" or not r.out_time or not flt(r.working_hours)]
+	if not broken:
+		return set()
+	taps = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["employee", "in", sorted({r.employee for r in broken})],
+			["shift", "is", "set"],
+			["skip_auto_attendance", "=", 0],
+			["remote_approval_status", "!=", "Rejected"],
+			["synced_from_instance", "is", "not set"],
+			["shift_start", ">=", datetime.combine(win.start, time.min)],
+			["shift_start", "<", datetime.combine(win.end + timedelta(days=1), time.min)],
+		],
+		fields=["employee", "shift", "shift_start"],
+		limit_page_length=0,
+	)
+	count = Counter((t.employee, getdate(t.shift_start), t.shift) for t in taps)
+	stuck = {
+		(r.employee, getdate(r.attendance_date))
+		for r in broken
+		if sum(
+			n
+			for (e, d, shift), n in count.items()
+			if e == r.employee and d == getdate(r.attendance_date) and (not r.shift or shift == r.shift)
+		)
+		>= 2
+	}
+	logger.info(
+		"[attendance_recovery] %d stuck day(s) with every tap linked in %s..%s",
+		len(stuck),
+		win.start,
+		win.end,
+	)
+	return stuck
+
+
 def _plan_rebuild(win, for_update=False) -> dict:
 	"""Days holding punches the engine would read (shift set, unlinked, not skipped),
-	and days `release_mirrored` released whose engine result would change."""
+	days `release_mirrored` released whose engine result would change, days whose
+	row is stuck although every tap is linked (E21), and days an approved late
+	check-out has not reached yet (F9: applied through the approval's own repair)."""
+	late = _plan_late_checkout_requests(win, for_update)
+	planned = [
+		{
+			"employee": p["employee"],
+			"date": str(p["date"]),
+			"late_checkout": p["checkin"],
+			"request": p.get("request"),
+			"reason": p.get("reason"),
+		}
+		for p in late["planned"]
+	]
+	late_days = {(p["employee"], getdate(p["date"])) for p in planned}
 	rows = frappe.get_all(
 		"Employee Checkin",
 		filters=[
@@ -1637,11 +1707,12 @@ def _plan_rebuild(win, for_update=False) -> dict:
 	)
 	released = _released_days(win)
 	days = sorted(
-		{(r.employee, getdate(r.shift_start)) for r in rows} | released, key=lambda d: (str(d[0]), d[1])
+		{(r.employee, getdate(r.shift_start)) for r in rows} | released | _stuck_days(win),
+		key=lambda d: (str(d[0]), d[1]),
 	)
-	planned, held = [], []
+	held = list(late["held_back"])
 	for employee, day in days:
-		if not (win.start <= day <= win.end):
+		if not (win.start <= day <= win.end) or (employee, day) in late_days:
 			continue
 		entry = {"employee": employee, "date": str(day)}
 		reason = _day_protection(employee, day, for_update)
@@ -1876,10 +1947,65 @@ def _apply_leftover_rows(win, plan) -> dict:
 	return {"done": done, "held_back": held}
 
 
+#: reprocess_late_checkout_attendance refusal codes that clear on their own (its own retry
+#: queue handles them too); everything else needs a person.
+LATE_CHECKOUT_RETRY = ("pending_punch", "locked")
+
+
+def _reprocess_late_checkout(checkin) -> dict:
+	"""The approval's own repair (S5a made it callable), so a late OUT is applied
+	exactly as an approval applies it: linked and unlinked taps together."""
+	from hrms.overrides.remote_checkin_request_hooks import reprocess_late_checkout_attendance
+
+	return reprocess_late_checkout_attendance(checkin)
+
+
+def late_checkout_hold(code, message, out_time) -> tuple[str, bool]:
+	"""(plain-English hold reason, needs a person) for a refused late check-out. Pure.
+
+	financial / HR-marked / HR-removed -> HR, told the approved time (E22-E24);
+	today -> skipped; a pending punch or a lock -> retried next run (E30);
+	anything else -> HR in the approval's own words.
+	"""
+	when = f"the approved check-out at {out_time}"
+	if code == "financial_lock":
+		return f"approved overtime or payroll already uses this day; {when} needs HR", True
+	if code == "hr_marked":
+		return f"HR corrected this day by hand; HR enters {when} in Shift Attendance", True
+	if code == "hr_removed":
+		return f"HR took this day out in Shift Attendance; {when} waits for HR to hand it back", True
+	if code == "today":
+		return "today or later: never touched", False
+	if code in LATE_CHECKOUT_RETRY:
+		return f"{message} — retried next run", False
+	return f"{message} ({when})", True
+
+
+def _apply_late_checkout(entry) -> dict:
+	result = _reprocess_late_checkout(entry["late_checkout"]) or {}
+	if result.get("repaired"):
+		logger.info(
+			"[attendance_recovery] late OUT %s applied: %s", entry["late_checkout"], result.get("attendance")
+		)
+		return {"marked": [result.get("attendance")]}
+	out_time = frappe.db.get_value("Employee Checkin", entry["late_checkout"], "time")
+	reason, hr = late_checkout_hold(result.get("reason_code"), result.get("message") or "", out_time)
+	logger.info(
+		"[attendance_recovery] late OUT %s not applied (%s): %s",
+		entry["late_checkout"],
+		result.get("reason_code"),
+		reason,
+	)
+	return {"held": reason, "hr": hr}
+
+
 def _rebuild_day(entry, win) -> dict:
 	day = getdate(entry["date"])
 	if day > win.end:
 		raise frappe.ValidationError(f"{day} is today or later")
+	_lock_employee(entry["employee"])
+	if entry.get("late_checkout"):
+		return _apply_late_checkout(entry)
 	remark = _remark_released_day if entry.get("released") else _remark_day
 	result = remark(entry["employee"], day, True) or {}
 	for name in result.get("marked") or []:
@@ -1899,6 +2025,8 @@ def _apply_rebuild(win, plan) -> dict:
 		)
 		if error:
 			held.append(_held(entry, f"rebuild failed: {error}", hr=False))
+		elif result.get("held"):
+			held.append(_held(entry, result["held"], hr=result.get("hr", True)))
 		elif result.get("marked"):
 			done.append({"employee": entry["employee"], "date": entry["date"], "marked": result["marked"]})
 		else:
@@ -2446,9 +2574,9 @@ DUPLICATE_TAP_MINUTES = 10
 LATE_CHECKOUT_STALE_DAYS = 3
 #: hr_list wording for a lone IN (owner ruling: never auto-closed).
 LONE_IN = "lone IN: no closing tap within 20 h — HR closes the day in Shift Attendance"
-#: Fix labels for the families whose fixer is a later slice, not a step yet.
+#: The steps that fix F1 (S4) and F9 (S5b: the rebuild step applies an approved late OUT).
 ROSTERED_SHIFT_FIX = "rostered_shift"
-LATE_CHECKOUT_FIX = "late_checkout"
+LATE_CHECKOUT_FIX = "rebuild"
 #: family -> (inputs_report section, the step that fixes a planned row or None, planner name)
 UNCLAIMABLE_FAMILIES = (
 	("F1", "k_wrong_shift_taps", ROSTERED_SHIFT_FIX, "_plan_wrong_shift_taps"),

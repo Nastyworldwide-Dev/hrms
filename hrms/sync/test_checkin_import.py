@@ -1115,5 +1115,139 @@ class TestRemarkAttendance(_WhitelistCase):
 			ci.parse_employee_days([[["like", "%"], "2026-09-03"]])
 
 
+class TestPlanRemarkStuckDayE21(unittest.TestCase):
+	"""E21 (15 Sep 2026): a Half Day row whose OUT was already linked read
+	"up to date" forever — the rebuild only looked for unlinked punches."""
+
+	def linked(self, name, log_type, **extra):
+		return {"name": name, "log_type": log_type, "shift": "Day", "attendance": "ATT-1", **extra}
+
+	def row(self, **extra):
+		return {
+			"name": "ATT-1",
+			"docstatus": 1,
+			"auto_attendance": 1,
+			"status": "Present",
+			"working_hours": 9.0,
+			"out_time": "2026-09-03 18:00:00",
+			**extra,
+		}
+
+	def test_a_half_day_row_over_two_linked_live_taps_is_rebuilt(self):
+		punches = [self.linked("IN", "IN"), self.linked("OUT", "OUT")]
+		action, detail = ci.plan_remark(punches, [self.row(status="Half Day", working_hours=4)])
+		self.assertEqual(action, "remark")
+		self.assertIn("Half Day", detail)
+
+	def test_no_out_time_and_zero_hours_are_stuck_too(self):
+		punches = [self.linked("IN", "IN"), self.linked("OUT", "OUT")]
+		self.assertEqual(ci.plan_remark(punches, [self.row(out_time=None)])[0], "remark")
+		self.assertEqual(ci.plan_remark(punches, [self.row(working_hours=0)])[0], "remark")
+
+	def test_a_whole_day_with_every_tap_linked_is_up_to_date(self):
+		punches = [self.linked("IN", "IN"), self.linked("OUT", "OUT")]
+		self.assertEqual(ci.plan_remark(punches, [self.row()])[0], "up-to-date")
+
+	def test_one_live_tap_is_a_lone_in_never_a_stuck_day(self):
+		# the skipped OUT is not evidence; a lone IN is HR's (owner ruling)
+		punches = [self.linked("IN", "IN"), self.linked("OUT", "OUT", skip_auto_attendance=1)]
+		self.assertEqual(ci.plan_remark(punches, [self.row(status="Half Day")])[0], "up-to-date")
+
+	def test_hr_owned_rows_still_win(self):
+		punches = [self.linked("IN", "IN"), self.linked("OUT", "OUT")]
+		action, _detail = ci.plan_remark(punches, [self.row(status="Half Day", auto_attendance=0)])
+		self.assertEqual(action, "hr-owned")
+
+
+class TestRemarkStuckDay(_WhitelistCase):
+	DAY = "2026-09-03"
+
+	def setUp(self):
+		def ck(name, employee, time, log_type, attendance=None):
+			return punch(
+				employee,
+				time,
+				log_type,
+				name,
+				shift="Day",
+				shift_start=D(2026, 9, 3, 9, 0),
+				attendance=attendance,
+			)
+
+		self.use(
+			FakeSite(
+				employees=["EMP-5", "EMP-6"],
+				attendance=[
+					{
+						"name": "ATT-5",
+						"employee": "EMP-5",
+						"attendance_date": self.DAY,
+						"status": "Half Day",
+						"docstatus": 1,
+						"auto_attendance": 1,
+						"working_hours": 0,
+						"out_time": None,
+					},
+					{
+						"name": "ATT-6",
+						"employee": "EMP-6",
+						"attendance_date": self.DAY,
+						"status": "Present",
+						"docstatus": 1,
+						"auto_attendance": 1,
+						"working_hours": 9.2,
+						"out_time": "2026-09-03 18:01:00",
+					},
+				],
+				checkins=[
+					ck("CK-6", "EMP-5", D(2026, 9, 3, 8, 48), "IN", attendance="ATT-5"),
+					ck("CK-7", "EMP-5", D(2026, 9, 3, 18, 1), "OUT", attendance="ATT-5"),
+					ck("CK-8", "EMP-6", D(2026, 9, 3, 8, 48), "IN", attendance="ATT-6"),
+					ck("CK-9", "EMP-6", D(2026, 9, 3, 18, 1), "OUT", attendance="ATT-6"),
+				],
+			)
+		)
+		shift_module = types.ModuleType("hrms.hr.doctype.shift_type.shift_type")
+		shift_module.CHECKIN_FIELDS = (
+			"name",
+			"employee",
+			"log_type",
+			"time",
+			"shift",
+			"shift_start",
+			"attendance",
+		)
+		modules = mock.patch.dict(sys.modules, {"hrms.hr.doctype.shift_type.shift_type": shift_module})
+		modules.start()
+		self.addCleanup(modules.stop)
+		for name, value in (
+			("_financially_locked", lambda *a, **k: None),
+			("_same_engine_result", lambda *a: False),
+		):
+			patcher = mock.patch.object(ci, name, value)
+			patcher.start()
+			self.addCleanup(patcher.stop)
+
+	def test_the_stuck_day_is_rebuilt_from_its_linked_taps(self):
+		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		(day,) = result["days"]
+		self.assertEqual(day["action"], "remark")
+		self.assertEqual(self.site.shift.calls, [("EMP-5", datetime.date(2026, 9, 3), ["CK-6", "CK-7"])])
+		self.assertEqual(day["marked"], ["HR-ATT-NEW"])
+
+	def test_a_stuck_day_the_engine_would_mark_the_same_is_left_as_it_is(self):
+		with mock.patch.object(ci, "_same_engine_result", lambda *a: True):
+			result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		(day,) = result["days"]
+		self.assertEqual(day["action"], "up-to-date")
+		self.assertIn("same", day["detail"])
+		self.assertEqual(self.site.shift.calls, [])
+
+	def test_a_whole_linked_day_is_not_touched(self):
+		result = ci.remark_attendance(json.dumps([["EMP-6", self.DAY]]), dry_run=0)
+		self.assertEqual(result["days"][0]["action"], "up-to-date")
+		self.assertEqual(self.site.shift.previews, [])
+
+
 if __name__ == "__main__":
 	unittest.main()
