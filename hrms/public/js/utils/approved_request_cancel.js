@@ -24,22 +24,9 @@ hrms.approved_request_cancel.APPROVED_CANCEL_DOCTYPES = [
 	"Travel Request",
 ];
 
-// These three already carry "Cancel (correction)" for HR Manager / System Manager
-// (hrms/public/js/utils/correction_cancel.js), which records a reason. One Cancel
-// button per person: this one stays out of the way for them (Nabil, 14 Sep 2026).
-hrms.approved_request_cancel.CORRECTION_DOCTYPES = [
-	"Compensatory Leave Request",
-	"Employee Advance",
-	"Travel Request",
-];
-
 hrms.approved_request_cancel.setup = function (frm) {
 	if (frm.doc.docstatus !== 1 || frm.perm?.[0]?.cancel) return;
-	if (
-		hrms.approved_request_cancel.CORRECTION_DOCTYPES.includes(frm.doctype) &&
-		(frappe.user.has_role("HR Manager") || frappe.user.has_role("System Manager"))
-	)
-		return;
+
 	const { name, modified } = frm.doc;
 	frappe.call({
 		method: "hrms.api.approval.can_cancel_approved",

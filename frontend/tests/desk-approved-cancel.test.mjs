@@ -141,24 +141,15 @@ test("a late answer for an older revision adds nothing", () => {
 	assert.equal(state.buttons.size, 0)
 })
 
-test("correction doctypes: HR Manager / System Manager get only Cancel (correction), no second Cancel", () => {
+test("advances, travel requests and comp leave: HR gets the one plain Cancel check (no reason prompt)", () => {
 	for (const doctype of [
 		"Employee Advance",
 		"Travel Request",
 		"Compensatory Leave Request",
 	]) {
-		for (const role of ["HR Manager", "System Manager"]) {
-			const { frm, calls, buttons, handlers } = desk({ doctype, roles: [role] })
-			handlers[doctype].refresh(frm)
-			assert.equal(calls.length, 0, `${doctype} / ${role}: no server check`)
-			assert.equal(buttons.size, 0, `${doctype} / ${role}: no extra button`)
-		}
+		const { frm, calls, handlers } = desk({ doctype, roles: ["HR Manager"] })
+		handlers[doctype].refresh(frm)
+		assert.equal(calls.length, 1, `${doctype}: asks can_cancel_approved`)
+		assert.equal(calls[0].method, "hrms.api.approval.can_cancel_approved")
 	}
-	// an approver without those roles still gets the check on a correction doctype
-	const other = desk({
-		doctype: "Employee Advance",
-		roles: ["Expense Approver"],
-	})
-	other.handlers["Employee Advance"].refresh(other.frm)
-	assert.equal(other.calls.length, 1)
 })

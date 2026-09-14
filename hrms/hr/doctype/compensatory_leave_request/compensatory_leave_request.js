@@ -3,7 +3,6 @@
 
 frappe.ui.form.on("Compensatory Leave Request", {
 	refresh: function (frm) {
-		hrms.correction_cancel.setup(frm);
 		frm.set_query("leave_type", function () {
 			return {
 				filters: {

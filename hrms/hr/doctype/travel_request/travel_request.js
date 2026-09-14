@@ -3,6 +3,5 @@
 
 frappe.ui.form.on("Travel Request", {
 	refresh: function (frm) {
-		hrms.correction_cancel.setup(frm);
 	},
 });

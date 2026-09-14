@@ -34,8 +34,6 @@ from hrms.utils import approved_request_guard
 
 CORRECTABLE = {"Employee Advance", "Travel Request", "Compensatory Leave Request"}
 USER = "hr.manager@example.invalid"
-JS_HELPER = HRMS / "public/js/utils/correction_cancel.js"
-BUNDLE = HRMS / "public/js/hrms.bundle.js"
 
 
 class _Doc:
@@ -165,28 +163,6 @@ class TestSingleSourceOfTruth(unittest.TestCase):
 	def test_doctypes_and_roles_come_from_the_guard(self):
 		self.assertEqual(set(correction_cancel.CORRECTABLE_DOCTYPES), CORRECTABLE)
 		self.assertIs(correction_cancel.CORRECTION_ROLES, approved_request_guard.CORRECTION_ROLES)
-
-
-class TestDeskButton(unittest.TestCase):
-	def test_helper_is_role_gated_and_calls_the_endpoint(self):
-		js = JS_HELPER.read_text(encoding="utf-8")
-		for role in approved_request_guard.CORRECTION_ROLES:
-			self.assertIn(f'frappe.user.has_role("{role}")', js)
-		self.assertIn("frm.doc.docstatus === 1", js)
-		self.assertIn("frappe.prompt", js)
-		self.assertIn('"hrms.api.correction_cancel.cancel_for_correction"', js)
-		self.assertIn("expected_modified: frm.doc.modified", js)
-		self.assertIn("frm.reload_doc()", js)
-
-	def test_helper_ships_in_the_desk_bundle(self):
-		self.assertIn('import "./utils/correction_cancel";', BUNDLE.read_text(encoding="utf-8"))
-
-	def test_every_correctable_form_wires_the_button_on_refresh(self):
-		for doctype in sorted(CORRECTABLE):
-			slug = doctype.lower().replace(" ", "_")
-			js = (HRMS / "hr/doctype" / slug / f"{slug}.js").read_text(encoding="utf-8")
-			with self.subTest(doctype=doctype):
-				self.assertIn("hrms.correction_cancel.setup(frm);", js)
 
 
 if __name__ == "__main__":

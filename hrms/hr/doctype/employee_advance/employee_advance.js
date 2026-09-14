@@ -28,7 +28,6 @@ frappe.ui.form.on("Employee Advance", {
 	},
 
 	refresh: function (frm) {
-		hrms.correction_cancel.setup(frm);
 
 		if (
 			frm.doc.docstatus === 1 &&
