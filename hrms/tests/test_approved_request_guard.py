@@ -17,6 +17,11 @@ Pinned here, bench-free (frappe stubbed when no bench is on the path):
   * doctypes with no decision field (submitted == approved) refuse cancel below
     HR Manager; HR Manager / System Manager may cancel them to correct a mistake
     (Nabil, 14 Sep 2026) — their cancel permission still decides who reaches it;
+  * OT Request is the one decision doctype HR may still correct after approval
+    (owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ... only
+    HR can edit overtime") — HR User, HR Manager and System Manager may cancel
+    an approved OT Request; every other role is refused like any other approved
+    request, and every other decision doctype stays refused for HR too;
   * sync / patch / migrate / install contexts are exempt;
   * hooks.py wires the guard on before_cancel for every doctype without
     dropping a single handler that was there before.
@@ -55,6 +60,10 @@ DECISION_FIELD = {
 }
 # No decision field: submitting IS approving; only HR Manager / System Manager may cancel.
 SUBMIT_IS_APPROVAL = ("Compensatory Leave Request", "Employee Advance", "Travel Request")
+# From the ruling, not the module: HR roles that may still cancel/amend an approved
+# OT Request ("leave, attendance yes ... overtime no ... only HR can edit overtime" —
+# owner ruling, 14 Sep 2026).
+OT_REQUEST_HR_ROLES = ("HR User", "HR Manager", "System Manager")
 
 # Every before_cancel handler that was wired BEFORE this rule, per doctype.
 EXISTING_BEFORE_CANCEL = {
@@ -100,7 +109,12 @@ def _cancel(doc, stored=None, flags=None, roles=("HR User",)):
 
 class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 	def test_an_approved_request_is_refused_for_every_decision_doctype(self):
+		# OT Request is the one exception (owner ruling): the default role here,
+		# HR User, is one of the roles that MAY cancel it — covered separately by
+		# test_hr_roles_may_cancel_an_approved_ot_request.
 		for doctype in DECISION_FIELD:
+			if doctype == "OT Request":
+				continue
 			with self.subTest(doctype=doctype):
 				with self.assertRaises(frappe.ValidationError) as caught:
 					_cancel(_doc(doctype), stored="Approved")
@@ -147,10 +161,34 @@ class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 					_cancel(_doc(doctype), stored=None, roles=("Employee", role))
 
 	def test_no_role_may_cancel_an_approved_decision_doctype(self):
+		# OT Request is the one exception (owner ruling): HR may still cancel it.
+		# Covered separately by test_hr_roles_may_cancel_an_approved_ot_request.
 		for doctype in DECISION_FIELD:
+			if doctype == "OT Request":
+				continue
 			with self.subTest(doctype=doctype):
 				with self.assertRaises(frappe.ValidationError):
 					_cancel(_doc(doctype), stored="Approved", roles=("HR Manager", "System Manager"))
+
+	def test_hr_roles_may_cancel_an_approved_ot_request(self):
+		# Owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ...
+		# only HR can edit overtime" — an approved OT Request is the one
+		# decision doctype HR may still cancel/amend.
+		for role in OT_REQUEST_HR_ROLES:
+			with self.subTest(role=role):
+				_cancel(_doc("OT Request"), stored="Approved", roles=("Employee", role))
+
+	def test_non_hr_roles_are_refused_for_an_approved_ot_request(self):
+		for roles in (("Employee",), ("Leave Approver",), ("Expense Approver", "Leave Approver")):
+			with self.subTest(roles=roles):
+				with self.assertRaises(frappe.ValidationError) as caught:
+					_cancel(_doc("OT Request"), stored="Approved", roles=roles)
+				self.assertEqual(str(caught.exception), MESSAGE)
+
+	def test_hr_cancel_of_an_approved_ot_request_is_logged(self):
+		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
+			_cancel(_doc("OT Request"), stored="Approved", roles=("HR User",))
+		self.assertTrue(any("OT Request" in line for line in logs.output))
 
 	def test_sync_patch_migrate_and_install_are_exempt(self):
 		for flag in ("in_shadow_sync", "in_patch", "in_migrate", "in_install"):

@@ -8,15 +8,21 @@ import { readFileSync } from "node:fs"
 import { canOfferCancel } from "../cancelRule.js"
 
 test("approved status hides Cancel; rejected keeps it", () => {
-	for (const doctype of [
-		"Leave Application",
-		"OT Request",
-		"Shift Request",
-		"Replacement Leave Claim",
-	]) {
+	for (const doctype of ["Leave Application", "Shift Request", "Replacement Leave Claim"]) {
 		assert.equal(canOfferCancel({ doctype, docstatus: 1, status: "Approved" }), false, doctype)
 		assert.equal(canOfferCancel({ doctype, docstatus: 1, status: "Rejected" }), true, doctype)
 	}
+})
+
+// Owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ... only HR can
+// edit overtime." Only HR User, HR Manager and System Manager hold `cancel` on OT
+// Request (hrms/hr/doctype/ot_request/ot_request.json) — Employee does not — so the
+// PWA defers an approved OT Request entirely to hasPermission('cancel') instead of
+// hiding the button the way every other approved decision doctype does.
+test("OT Request defers an approved decision to the cancel permission", () => {
+	assert.equal(canOfferCancel({ doctype: "OT Request", docstatus: 1, status: "Approved" }), true)
+	assert.equal(canOfferCancel({ doctype: "OT Request", docstatus: 1, status: "Rejected" }), true)
+	assert.equal(canOfferCancel({ doctype: "OT Request", docstatus: 0, status: "Open" }), false)
 })
 
 test("Expense Claim decides in approval_status", () => {
@@ -41,7 +47,7 @@ test("only a submitted document can be cancelled at all", () => {
 })
 
 test("doctype may be passed when the doc does not carry it", () => {
-	assert.equal(canOfferCancel({ docstatus: 1, status: "Approved" }, "OT Request"), false)
+	assert.equal(canOfferCancel({ docstatus: 1, status: "Approved" }, "Leave Application"), false)
 	assert.equal(
 		canOfferCancel({ docstatus: 1, approval_status: "Approved" }, "Expense Claim"),
 		false

@@ -9,6 +9,13 @@ One exception (Nabil, 14 Sep 2026): Employee Advance, Compensatory Leave Request
 and Travel Request record no decision, so submitting one IS approving it; only
 CORRECTION_ROLES may cancel those, to reverse a mistake such as a wrong advance.
 
+Second exception (owner ruling, 14 Sep 2026): "leave, attendance yes ...
+overtime no ... only HR can edit overtime." Approved Leave Application,
+Attendance Request etc. stay never-cancellable for every role including HR —
+but an approved OT Request MAY be cancelled/amended by HR User, HR Manager or
+System Manager (OT_REQUEST_HR_ROLES); every other role is refused exactly like
+any other approved request.
+
 The decision is read from the stored row, never from `doc`:
 LeaveApplication.before_cancel sets status = "Cancelled" before doc_events run.
 """
@@ -25,6 +32,10 @@ EXEMPT_FLAGS = ("in_shadow_sync", "in_patch", "in_migrate", "in_install")
 # Nabil, 14 Sep 2026: a doctype with no decision field (submitted == approved) may
 # still be cancelled by these roles, to reverse a mistake such as a wrong advance.
 CORRECTION_ROLES = {"HR Manager", "System Manager"}
+# Owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ... only HR can
+# edit overtime." An approved OT Request is the one decision doctype these roles
+# may still cancel/amend; every other decision doctype stays refused for HR too.
+OT_REQUEST_HR_ROLES = {"HR User", "HR Manager", "System Manager"}
 
 # doctype -> field recording the decision. None: the doctype has no decision
 # field, so submitting it IS approving it; only CORRECTION_ROLES may cancel it.
@@ -54,6 +65,13 @@ def block_cancel_of_approved(doc, method=None):
 		logger.info(
 			"[approved_request_guard] correction cancel of %s %s by %s",
 			doc.doctype,
+			doc.name,
+			frappe.session.user,
+		)
+		return
+	if doc.doctype == "OT Request" and OT_REQUEST_HR_ROLES & set(frappe.get_roles()):
+		logger.info(
+			"[approved_request_guard] HR cancel of approved OT Request %s by %s",
 			doc.name,
 			frappe.session.user,
 		)

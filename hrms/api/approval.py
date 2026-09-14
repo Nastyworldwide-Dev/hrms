@@ -406,6 +406,10 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 			doc.flags.ignore_permissions = True
 	else:
 		# AN APPROVED REQUEST IS NEVER CANCELLED — Nabil, 13 September 2026.
+		# One exception (owner ruling, 14 Sep 2026): "leave, attendance yes ...
+		# overtime no ... only HR can edit overtime" — an approved OT Request
+		# MAY be cancelled/amended by HR User, HR Manager or System Manager.
+		# Every other approved decision doctype stays refused for every role.
 		#
 		# The branch above catches every submit of a DECIDE_THEN_SUBMIT doctype,
 		# which is every request doctype — so in PRACTICE this else is the cancel
@@ -428,11 +432,16 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		#     "approved is never cancelled" rule itself is
 		#     hrms.utils.approved_request_guard, a before_cancel doc_event, so it
 		#     holds on every doc.cancel path (this endpoint, Desk, bulk, cancel
-		#     all linked, amend) for every request doctype and every role. A
-		#     rejected request stays cancellable by anyone holding `cancel`. The
-		#     three doctypes with no decision field (Employee Advance, Compensatory
-		#     Leave Request, Travel Request) may be cancelled by HR Manager or
-		#     System Manager only, to correct a mistake (guard CORRECTION_ROLES).
+		#     all linked, amend) for every request doctype and every role — except
+		#     the two guard exceptions below. A rejected request stays cancellable
+		#     by anyone holding `cancel`. The three doctypes with no decision field
+		#     (Employee Advance, Compensatory Leave Request, Travel Request) may be
+		#     cancelled by HR Manager or System Manager only, to correct a mistake
+		#     (guard CORRECTION_ROLES). An approved OT Request may be cancelled by
+		#     HR User, HR Manager or System Manager (guard OT_REQUEST_HR_ROLES,
+		#     owner ruling, 14 Sep 2026) — the only decision doctype HR may still
+		#     correct after approval; the permission check below still gates who
+		#     among those roles actually holds `cancel` on OT Request.
 		#   * HR User holds `cancel` on Shift Request too, like the other five
 		#     request doctypes: hrms/patches/v16_0/hr_user_can_cancel_shift_request.py
 		#     grants it on the live permission row, so through this endpoint that
