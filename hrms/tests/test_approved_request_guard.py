@@ -3,8 +3,8 @@
 The ruling holds on EVERY cancel path: Desk Cancel, bulk cancel, "cancel all
 linked", hrms/api/approval.py `finalize`, and amend (which needs a cancel
 first). All of them run `doc.cancel()`, so one `before_cancel` doc_event is the
-single place that can hold it. No role bypass — HR User, HR Manager and System
-Manager all hold `cancel` and all are refused on an approved request. A
+single place that can hold it. An approved request of a doctype that records
+a decision is refused for every role, HR Manager and System Manager included. A
 rejected request stays cancellable.
 
 Pinned here, bench-free (frappe stubbed when no bench is on the path):
@@ -14,7 +14,9 @@ Pinned here, bench-free (frappe stubbed when no bench is on the path):
   * the decision is read from the DATABASE, not the in-memory doc:
     LeaveApplication.before_cancel sets status = "Cancelled" before the
     doc_event runs, so doc.status would always read as not-approved;
-  * doctypes with no decision field (submitted == approved) refuse any cancel;
+  * doctypes with no decision field (submitted == approved) refuse cancel below
+    HR Manager; HR Manager / System Manager may cancel them to correct a mistake
+    (Nabil, 14 Sep 2026) — their cancel permission still decides who reaches it;
   * sync / patch / migrate / install contexts are exempt;
   * hooks.py wires the guard on before_cancel for every doctype without
     dropping a single handler that was there before.
