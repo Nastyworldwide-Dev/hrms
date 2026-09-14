@@ -18,6 +18,7 @@
   "shift_location",
   "enable_strict_geofence",
   "status",
+  "both_shifts_on_purpose",
   "overtime_type",
   "column_break_brkq",
   "start_date",
@@ -113,6 +114,15 @@
    "options": "Active\nInactive"
   },
   {
+   "default": "0",
+   "depends_on": "eval:doc.status == 'Active'",
+   "description": "HR only. Tick when this person really works two shifts whose hours overlap on the same dates. Without it the assignment is refused.",
+   "fieldname": "both_shifts_on_purpose",
+   "fieldtype": "Check",
+   "label": "Both shifts on purpose (HR)",
+   "permlevel": 1
+  },
+  {
    "fieldname": "employee_details_section",
    "fieldtype": "Section Break",
    "label": "Employee Details"
@@ -131,7 +141,7 @@
   {
    "default": "0",
    "depends_on": "eval:doc.shift_location",
-   "description": "When enabled, employees on this assignment can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright \u2014 no Remote Checkin Request is created. Requires HR Settings \u2192 Allow Geolocation Tracking.",
+   "description": "When enabled, employees on this assignment can only check in within the Shift Location's radius. Out-of-radius check-ins are rejected outright — no Remote Checkin Request is created. Requires HR Settings → Allow Geolocation Tracking.",
    "fieldname": "enable_strict_geofence",
    "fieldtype": "Check",
    "label": "Strict Shift Location Check-in"
@@ -157,7 +167,7 @@
   },
   {
    "default": "0",
-   "description": "Set by the daily shift-rule sync. That sync closes and replaces its own assignments, and stands off hand-made ones \u2014 so this says which rules govern this row.",
+   "description": "Set by the daily shift-rule sync. That sync closes and replaces its own assignments, and stands off hand-made ones — so this says which rules govern this row.",
    "fieldname": "created_by_shift_rule",
    "fieldtype": "Check",
    "in_list_view": 1,
@@ -168,7 +178,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-01 12:23:07.921773",
+ "modified": "2026-09-15 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Assignment",
@@ -209,6 +219,24 @@
    "role": "HR User",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
    "write": 1
   }
  ],
