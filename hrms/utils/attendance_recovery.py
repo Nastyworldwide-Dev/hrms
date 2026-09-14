@@ -46,6 +46,7 @@ rebuild step then reads.
 import logging
 from collections import Counter, namedtuple
 from datetime import date, datetime, time, timedelta
+from itertools import pairwise
 
 import frappe
 from frappe import _
@@ -1812,14 +1813,19 @@ def _ot_request_review(win) -> dict:
 	)
 
 
-def _section(fix, plan) -> dict:
+def _section(fix, plan, family=None) -> dict:
+	"""One inputs_report section. Every section carries the E34 split: count_fixable
+	(planned) + count_on_purpose (held, protected) + count_needs_hr (held, HR's) = detected."""
 	planned = plan.get("planned") or []
+	held = plan.get("held_back") or []
 	return {
 		"fix": fix,
+		**({"family": family} if family else {}),
 		"count": _planned_count(plan),
 		"days": len({(p.get("employee"), str(p.get("date"))) for p in planned}),
-		"held_back": len(plan.get("held_back") or []),
+		"held_back": len(held),
 		"hr_list": len(plan.get("hr_list") or []),
+		**_counts(_planned_count(plan), held),
 		"sample": planned[:SAMPLE],
 		"hr_sample": (plan.get("hr_list") or [])[:SAMPLE],
 		**{k: v for k, v in plan.items() if k in ("note", "skip_causes", "verdicts", "instance")},
@@ -1918,10 +1924,18 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 
 	def missing():
 		if not cint(include_source):
-			return {"fix": "import", "note": "not read: pass include_source=1 (bench execute)"}
+			return {
+				"fix": "import",
+				"note": "not read: pass include_source=1 (bench execute)",
+				**_counts(0, []),
+			}
 		instance = _source_instance()
 		if not instance:
-			return {"fix": "import", "note": "no single enabled ERP instance with credentials"}
+			return {
+				"fix": "import",
+				"note": "no single enabled ERP instance with credentials",
+				**_counts(0, []),
+			}
 		from hrms.sync.missing_checkins import report
 
 		found = report(instance=instance, from_date=str(win.start), to_date=str(win.end), sample=SAMPLE)
@@ -1933,7 +1947,7 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 
 	def excluded():
 		if not win.excluded_from:
-			return {"fix": None, "count": 0}
+			return {"fix": None, "count": 0, **_counts(0, [])}
 		count = frappe.db.count(
 			"Employee Checkin",
 			{
@@ -1952,6 +1966,7 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 			"to_date": str(win.requested_end),
 			"punches": count,
 			"note": "today and later are never touched",
+			**_counts(0, []),
 		}
 
 	run("a_wrong_night_assignment", night)
@@ -1972,6 +1987,7 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 			"fix": None,
 			"note": "pre-deploy check, read-only: HR re-dates or amends these requests",
 			"count": len(review["hr_list"]),
+			**_counts(0, review["hr_list"]),
 			"checked": review["checked"],
 			"overtime_pay": len(review["overtime_pay"]),
 			"replacement_leave": len(review["replacement_leave"]),
@@ -1991,6 +2007,21 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 		}
 
 	run("j_mirrored_broken_days", mirrored)
+
+	# S1 (15 Sep 2026): the read-only detectors, one context read shared by all seven.
+	ctx = {}
+
+	def detector(family, fix, planner):
+		def read():
+			if not ctx:
+				ctx["value"] = _context(win)
+			return _section(fix, globals()[planner](win, ctx=ctx["value"]), family)
+
+		return read
+
+	for family, key, fix, planner in UNCLAIMABLE_FAMILIES:
+		run(key, detector(family, fix, planner))
+	run(CONFIG_SECTION, _config_section)
 	logger.info(
 		"[attendance_recovery] inputs report %s..%s by %s: %s",
 		win.start,
@@ -2031,3 +2062,883 @@ def hr_list(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -> dict
 		"[attendance_recovery] hr_list %s..%s: %d row(s), errors %s", win.start, win.end, len(rows), errors
 	)
 	return {"from_date": str(win.start), "to_date": str(win.end), "rows": rows, "errors": errors}
+
+
+# --- unclaimable days: read-only detectors (S1) ---------------------------------------------------------
+#
+# Nabil's rule (15 Sep 2026): the session runs from an IN to the next tap (<= 20 h),
+# whatever that tap is labelled; it belongs to the shift the person is ROSTERED on
+# that day; shift config is HR's (reported, never edited); a legit Half Day / leave /
+# Attendance Request is not broken. Every planner below is a read: it returns the
+# same {"planned", "held_back", "hr_list"} shape as the steps, but nothing here
+# is ever applied. `planned` = a recovery step (existing or planned) could fix
+# it; `held_back` with a protected reason = left alone on purpose; any other
+# `held_back` = only HR can fix it (`attendance_auto_recovery.needs_hr`).
+
+#: A tap this many hours after an open IN still closes that IN's session.
+SESSION_HOURS = 20
+#: A pending late-checkout request older than this: the approver never acted.
+LATE_CHECKOUT_STALE_DAYS = 3
+#: hr_list wording for a lone IN (owner ruling: never auto-closed).
+LONE_IN = "lone IN: no closing tap within 20 h — HR closes the day in Shift Attendance"
+#: Fix labels for the families whose fixer is a later slice, not a step yet.
+ROSTERED_SHIFT_FIX = "rostered_shift"
+LATE_CHECKOUT_FIX = "late_checkout"
+#: family -> (inputs_report section, the step that fixes a planned row or None, planner name)
+UNCLAIMABLE_FAMILIES = (
+	("F1", "k_wrong_shift_taps", ROSTERED_SHIFT_FIX, "_plan_wrong_shift_taps"),
+	("F2", "l_lone_in", None, "_plan_lone_in"),
+	("F4", "m_out_first_or_double_out", None, "_plan_out_first"),
+	("F6", "n_no_attendance_row", "rebuild", "_plan_no_attendance_row"),
+	("F7", "o_skipped_taps", "skip_stamps", "_plan_skipped_taps"),
+	("F9", "p_late_checkout_requests", LATE_CHECKOUT_FIX, "_plan_late_checkout_requests"),
+	("F13", "q_present_without_live_taps", "rebuild", "_plan_present_without_live_taps"),
+)
+CONFIG_SECTION = "r_config_health"
+BUFFER_WARN_MINUTES = 120
+ALTERNATING = "Alternating entries as IN and OUT during the same shift"
+FIRST_LAST = "First Check-in and Last Check-out"
+STATUS_FIXABLE, STATUS_ON_PURPOSE, STATUS_NEEDS_HR = "fixable", "on purpose", "needs HR"
+
+
+def _segments(start_time, end_time) -> list:
+	"""Minute segments of a scheduled shift on one 24 h clock; two when it crosses midnight."""
+	start, end = _minutes(start_time), _minutes(end_time)
+	if start <= end:
+		return [(start, end)]
+	return [(start, 24 * 60), (0, end)]
+
+
+def shifts_overlap(a, b) -> bool:
+	"""Do two shifts' SCHEDULED hours (start, end) share a minute? Buffers left out. Pure.
+
+	This is how a "night" shift is recognised here — by overlapping the day shift,
+	not by ending before 06:00 (a 19:30-07:00 shift is night in every sense that
+	matters and `is_night_shift` never saw it).
+	"""
+	return any(s1 < e2 and s2 < e1 for s1, e1 in _segments(*a) for s2, e2 in _segments(*b))
+
+
+def session_days(taps) -> dict:
+	"""{tap name: the day its session belongs to}. Pure.
+
+	A tap within SESSION_HOURS after an open IN closes that IN, whatever its
+	label, and belongs to the IN's clock day (a 07:00 tap after a 19:30 IN is
+	the night session's OUT). Anything else starts on its own clock day; only
+	an IN opens a session.
+	"""
+	anchors, open_in = {}, None
+	for tap in sorted(taps, key=lambda t: get_datetime(t["time"])):
+		moment = get_datetime(tap["time"])
+		if open_in and moment - open_in[0] <= timedelta(hours=SESSION_HOURS):
+			anchors[tap["name"]] = open_in[1]
+			open_in = None
+			continue
+		anchors[tap["name"]] = moment.date()
+		open_in = (moment, moment.date()) if tap.get("log_type") == "IN" else None
+	return anchors
+
+
+def day_shape(taps) -> str | None:
+	"""'lone-in' | 'lone-out' | 'out-first' | 'double-out' | None for one day's taps. Pure."""
+	taps = sorted(taps, key=lambda t: get_datetime(t["time"]))
+	if not taps:
+		return None
+	if len(taps) == 1:
+		return "lone-in" if taps[0].get("log_type") == "IN" else "lone-out"
+	if taps[0].get("log_type") == "OUT":
+		return "out-first"
+	if any(a.get("log_type") == "OUT" and b.get("log_type") == "OUT" for a, b in pairwise(taps)):
+		return "double-out"
+	return None
+
+
+def only_closer(day_taps, tap) -> bool:
+	"""Is this skipped tap the only thing that could close a lone IN that day? Pure.
+
+	`day_taps`: every non-rejected tap of the session day, the skipped one included.
+	"""
+	live = [
+		t
+		for t in day_taps
+		if not cint(t.get("skip_auto_attendance")) and t.get("remote_approval_status") != "Rejected"
+	]
+	return (
+		len(live) == 1
+		and live[0].get("log_type") == "IN"
+		and get_datetime(tap["time"]) > get_datetime(live[0]["time"])
+	)
+
+
+def _needs_hr(held) -> bool:
+	# Lazy: attendance_auto_recovery imports this module at load time.
+	from hrms.utils.attendance_auto_recovery import needs_hr
+
+	return needs_hr(held)
+
+
+def row_status(row, held: bool) -> str:
+	"""fixable (a step fixes it) | on purpose (protected) | needs HR."""
+	if not held:
+		return STATUS_FIXABLE
+	return STATUS_NEEDS_HR if _needs_hr(row) else STATUS_ON_PURPOSE
+
+
+def _counts(count, held) -> dict:
+	"""E34: count_fixable + count_on_purpose + count_needs_hr = detected, for one section."""
+	needs = sum(1 for h in held if _needs_hr(h))
+	return {"count_fixable": count, "count_needs_hr": needs, "count_on_purpose": len(held) - needs}
+
+
+def family_counts(rows) -> dict:
+	"""{family: {detected, fixable, on_purpose, needs_hr}} over `unclaimable_rows` output. Pure."""
+	out = {}
+	keys = {STATUS_FIXABLE: "fixable", STATUS_ON_PURPOSE: "on_purpose"}
+	for row in rows:
+		tally = out.setdefault(
+			row.get("family"), {"detected": 0, "fixable": 0, "on_purpose": 0, "needs_hr": 0}
+		)
+		tally["detected"] += 1
+		tally[keys.get(row.get("status"), "needs_hr")] += 1
+	return out
+
+
+def _unclaimable(family, employee, day, reason, **extra) -> dict:
+	return {
+		"family": family,
+		"employee": employee,
+		"employee_name": extra.pop("employee_name", None),
+		"date": str(day),
+		"reason": reason,
+		"shift": extra.pop("shift", None),
+		"attendance": extra.pop("attendance", None),
+		"status": extra.pop("status", None),
+		"taps": extra.pop("taps", 0),
+		**extra,
+	}
+
+
+def _context(win) -> dict:
+	"""The window's taps, attendance rows and assignments, read once for every detector."""
+	taps = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["time", ">=", datetime.combine(win.start - timedelta(days=1), time.min)],
+			["time", "<", datetime.combine(win.end + timedelta(days=2), time.min)],
+		],
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"time",
+			"log_type",
+			"shift",
+			"shift_start",
+			"attendance",
+			"skip_auto_attendance",
+			"remote_approval_status",
+			PROVENANCE_FIELD,
+		],
+		order_by="employee asc, time asc",
+		limit_page_length=0,
+	)
+	rows = frappe.get_all(
+		"Attendance",
+		filters={"attendance_date": ["between", [win.start, win.end]], "docstatus": ["<", 2]},
+		fields=[*ATTENDANCE_FIELDS, "shift", "employee_name", "in_time"],
+		limit_page_length=0,
+	)
+	assignments = _submitted_assignments(win.start, win.end)
+	return _build_context(win, taps, rows, assignments)
+
+
+def _build_context(win, taps, rows, assignments) -> dict:
+	"""Group what `_context` read; separate so a test can hand in plain rows."""
+	by_employee, anchors = {}, {}
+	for tap in taps:
+		by_employee.setdefault(tap.get("employee"), []).append(tap)
+	for own in by_employee.values():
+		anchors.update(session_days([t for t in own if t.get("remote_approval_status") != "Rejected"]))
+	days = {}
+	for tap in taps:
+		if tap.get("remote_approval_status") == "Rejected":
+			continue
+		day = anchors.get(tap.get("name")) or getdate(tap.get("time"))
+		days.setdefault((tap.get("employee"), day), []).append(tap)
+	rows_by_day = {}
+	for row in rows:
+		rows_by_day.setdefault((row.get("employee"), getdate(row.get("attendance_date"))), []).append(row)
+	assigned = {}
+	for assignment in assignments:
+		assigned.setdefault(assignment.get("employee"), []).append(assignment)
+	ctx = {
+		"taps": taps,
+		"anchors": anchors,
+		"days": days,  # (employee, session day) -> that day's non-rejected taps
+		"rows": rows,
+		"rows_by_day": rows_by_day,
+		"assignments": assigned,
+		"times": _shift_times(
+			{a.get("shift_type") for a in assignments} | {r.get("shift") for r in rows if r.get("shift")}
+		),
+	}
+	logger.info(
+		"[attendance_recovery] unclaimable context %s..%s: %d tap(s), %d row(s), %d assignment(s)",
+		win.start,
+		win.end,
+		len(taps),
+		len(rows),
+		len(assignments),
+	)
+	return ctx
+
+
+def _covering(ctx, employee, day) -> list:
+	return [
+		a
+		for a in ctx["assignments"].get(employee, [])
+		if getdate(a.get("start_date")) <= day
+		and (not a.get("end_date") or getdate(a.get("end_date")) >= day)
+	]
+
+
+def _protection(ctx, employee, day, for_update) -> str | None:
+	"""Cheap check on the rows already read, then the full one (financial, HR-removed)."""
+	quick = protected_reason(day, _today(), ctx["rows_by_day"].get((employee, day), []))
+	return quick or _day_protection(employee, day, for_update)
+
+
+def _live_row(ctx, employee, day):
+	return next(
+		(r for r in ctx["rows_by_day"].get((employee, day), []) if cint(r.get("docstatus")) == 1), None
+	)
+
+
+def _in_window(win, day) -> bool:
+	return win.start <= day <= win.end
+
+
+def _sorted_days(ctx):
+	return sorted(ctx["days"].items(), key=lambda i: (str(i[0][0]), i[0][1]))
+
+
+def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
+	"""F1: a session-day whose taps carry a shift the employee is not rostered on that
+	day (fixable: re-stamp to the rostered shift), and two Active assignments whose
+	SCHEDULED hours overlap (HR ends one, or keeps both on purpose)."""
+	ctx = ctx or _context(win)
+	times, planned, held, overlapping = ctx["times"], [], [], {}
+	for employee, assignments in sorted(ctx["assignments"].items()):
+		for i, a in enumerate(assignments):
+			for b in assignments[i + 1 :]:
+				if a.shift_type == b.shift_type or a.shift_type not in times or b.shift_type not in times:
+					continue
+				span = _overlap(a, [b], win)
+				if not span or not shifts_overlap(times[a.shift_type], times[b.shift_type]):
+					continue
+				overlapping.setdefault(employee, []).append(span)
+				entry = _unclaimable(
+					"F1",
+					employee,
+					span[0],
+					None,
+					shift=f"{a.shift_type} + {b.shift_type}",
+					to_date=str(span[1]),
+					assignments=[a.name, b.name],
+				)
+				held.append(
+					_held(
+						entry,
+						f"two Active assignments overlap by scheduled hours until {span[1]} "
+						f"({a.name} {a.shift_type}, {b.name} {b.shift_type}): HR ends one or keeps both on purpose",
+					)
+				)
+	for (employee, day), taps in _sorted_days(ctx):
+		if not _in_window(win, day):
+			continue
+		rostered = sorted({a.shift_type for a in _covering(ctx, employee, day)})
+		if not rostered:
+			continue  # shiftless: section b's family
+		if any(s <= day <= e for s, e in overlapping.get(employee, [])):
+			continue  # listed above: the roster itself is ambiguous
+		stamps = sorted({t.shift for t in taps if t.shift})
+		wrong = sorted(set(stamps) - set(rostered))
+		if not wrong and len(stamps) < 2:
+			continue
+		# One session, one shift (Nabil): a session whose taps carry two stamps was
+		# split by a buffer window (Ria's 19:30 tap on a day-shift session).
+		what = (
+			f"session split across {', '.join(stamps)}"
+			if len(stamps) > 1
+			else f"tap(s) stamped to {', '.join(wrong)}"
+		)
+		row = _live_row(ctx, employee, day)
+		entry = _unclaimable(
+			"F1",
+			employee,
+			day,
+			f"{what}; rostered on {', '.join(rostered)}",
+			employee_name=taps[0].employee_name,
+			shift=", ".join(stamps),
+			rostered=rostered,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=len(taps),
+		)
+		reason = _protection(ctx, employee, day, for_update)
+		if reason:
+			held.append(_held(entry, reason))
+		elif len(rostered) > 1:
+			held.append(
+				_held(
+					entry,
+					f"{what}; two shifts rostered that day ({', '.join(rostered)}): "
+					"HR ends one assignment or keeps both on purpose",
+				)
+			)
+		else:
+			planned.append(entry)
+	logger.info(
+		"[attendance_recovery] F1 %s..%s: %d to re-stamp, %d held",
+		win.start,
+		win.end,
+		len(planned),
+		len(held),
+	)
+	return _outcome(planned, held)
+
+
+def _plan_lone_in(win, for_update=False, ctx=None) -> dict:
+	"""F2: a session-day with exactly one non-rejected tap, typed IN. Never auto-closed."""
+	ctx = ctx or _context(win)
+	held = []
+	for (employee, day), taps in _sorted_days(ctx):
+		if not _in_window(win, day) or day_shape(taps) != "lone-in":
+			continue
+		row = _live_row(ctx, employee, day)
+		entry = _unclaimable(
+			"F2",
+			employee,
+			day,
+			None,
+			employee_name=taps[0].employee_name,
+			shift=taps[0].shift,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=1,
+			checkin=taps[0].name,
+			time=str(taps[0].time),
+		)
+		held.append(_held(entry, _protection(ctx, employee, day, for_update) or LONE_IN))
+	logger.info("[attendance_recovery] F2 %s..%s: %d lone IN(s)", win.start, win.end, len(held))
+	return _outcome([], held)
+
+
+def _plan_out_first(win, for_update=False, ctx=None) -> dict:
+	"""F4: first tap typed OUT, or two OUTs in a row (the engine's alternating pairing
+	already reads them; informational), and an OUT with no IN at all (HR)."""
+	ctx = ctx or _context(win)
+	planned, held = [], []
+	for (employee, day), taps in _sorted_days(ctx):
+		shape = day_shape(taps)
+		if not _in_window(win, day) or shape not in ("lone-out", "out-first", "double-out"):
+			continue
+		row = _live_row(ctx, employee, day)
+		entry = _unclaimable(
+			"F4",
+			employee,
+			day,
+			None,
+			employee_name=taps[0].employee_name,
+			shift=taps[0].shift,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=len(taps),
+			shape=shape,
+		)
+		if shape == "lone-out":
+			reason = _protection(ctx, employee, day, for_update) or "OUT with no IN: HR keys the IN"
+			held.append(_held(entry, reason))
+		else:
+			text = "first tap typed OUT" if shape == "out-first" else "two OUTs in a row"
+			planned.append(
+				{**entry, "reason": f"{text}: alternating pairing reads it as the session's IN/OUT"}
+			)
+	logger.info(
+		"[attendance_recovery] F4 %s..%s: %d informational, %d held",
+		win.start,
+		win.end,
+		len(planned),
+		len(held),
+	)
+	return _outcome(planned, held)
+
+
+def _holiday_days(employees, win) -> set:
+	"""(employee, date) pairs that are holidays for that employee in the window."""
+	from hrms.utils.holiday_list import get_holiday_list_for_employee
+
+	lists = {}
+	for employee in sorted(employees):
+		try:
+			lists[employee] = get_holiday_list_for_employee(employee, raise_exception=False, as_on=win.end)
+		except Exception:
+			logger.exception("[attendance_recovery] holiday list of %s unreadable", employee)
+	names = sorted({v for v in lists.values() if v})
+	if not names:
+		return set()
+	holidays = frappe.get_all(
+		"Holiday",
+		filters={"parent": ["in", names], "holiday_date": ["between", [win.start, win.end]]},
+		fields=["parent", "holiday_date"],
+		limit_page_length=0,
+	)
+	dated = {(h.parent, getdate(h.holiday_date)) for h in holidays}
+	return {(e, d) for e, name in lists.items() for (n, d) in dated if n == name}
+
+
+def _plan_no_attendance_row(win, for_update=False, ctx=None) -> dict:
+	"""F6: a rostered working day with two or more live taps and no Attendance row at all."""
+	ctx = ctx or _context(win)
+	candidates = []
+	for (employee, day), taps in _sorted_days(ctx):
+		live = [t for t in taps if not cint(t.get("skip_auto_attendance"))]
+		if not _in_window(win, day) or len(live) < 2 or ctx["rows_by_day"].get((employee, day)):
+			continue
+		covering = _covering(ctx, employee, day)
+		if covering:
+			candidates.append((employee, day, live, covering))
+	holidays = _holiday_days({c[0] for c in candidates}, win)
+	planned, held = [], []
+	for employee, day, live, covering in candidates:
+		if (employee, day) in holidays:
+			continue
+		rostered = ", ".join(sorted({a.shift_type for a in covering}))
+		entry = _unclaimable(
+			"F6",
+			employee,
+			day,
+			f"{len(live)} tap(s), rostered on {rostered}, no attendance row",
+			employee_name=live[0].employee_name,
+			shift=live[0].shift,
+			taps=len(live),
+		)
+		reason = _protection(ctx, employee, day, for_update)
+		(held.append(_held(entry, reason)) if reason else planned.append(entry))
+	logger.info(
+		"[attendance_recovery] F6 %s..%s: %d to rebuild, %d held", win.start, win.end, len(planned), len(held)
+	)
+	return _outcome(planned, held)
+
+
+def _skip_reasons(names) -> dict:
+	from hrms.utils.attendance_day_audit import SKIP_PREFIX
+
+	if not names:
+		return {}
+	reasons = {}
+	for c in frappe.get_all(
+		"Comment",
+		filters={
+			"reference_doctype": "Employee Checkin",
+			"reference_name": ["in", sorted(names)],
+			"comment_type": "Comment",
+		},
+		fields=["reference_name", "content"],
+		order_by="creation desc",
+		limit_page_length=0,
+	):
+		if SKIP_PREFIX in (c.content or "") and c.reference_name not in reasons:
+			reasons[c.reference_name] = frappe.utils.strip_html(c.content)
+	return reasons
+
+
+def skipped_tap_verdict(text, rejected: bool, closer: bool) -> tuple[bool, str]:
+	"""(fixable, reason) for one skip-stamped tap from its reason comment. Pure."""
+	from hrms.utils.attendance_day_audit import REPAIRABLE_SKIP_REASONS
+
+	suffix = " — the only closer of a lone IN" if closer else ""
+	if rejected:
+		return False, f"rejected by the approver{suffix}: HR keys the OUT or hands the day back"
+	if not text:
+		return False, f"skipped with no reason comment (hand tick or API){suffix}: HR un-skips or keys it"
+	if any(phrase in text for phrase in REPAIRABLE_SKIP_REASONS):
+		return True, f"repairable skip ({text[:80]}){suffix}"
+	return False, f"{text[:120]}{suffix}"
+
+
+def _plan_skipped_taps(win, for_update=False, ctx=None) -> dict:
+	"""F7/F14: every skip-stamped tap in the window — a repairable reason is fixable
+	(skip_stamps); no reason, by hand, or rejected-but-only-closer goes to HR."""
+	ctx = ctx or _context(win)
+	skipped = [t for t in ctx["taps"] if cint(t.get("skip_auto_attendance"))]
+	reasons = _skip_reasons([t.name for t in skipped])
+	planned, held = [], []
+	for tap in skipped:
+		day = ctx["anchors"].get(tap.name) or getdate(tap.time)
+		if not _in_window(win, day):
+			continue
+		day_taps = ctx["days"].get((tap.employee, day), [])
+		closer = only_closer(day_taps if tap in day_taps else [*day_taps, tap], tap)
+		rejected = tap.get("remote_approval_status") == "Rejected"
+		if rejected and not closer:
+			continue  # a rejection that left the day whole is a decision, not damage
+		row = _live_row(ctx, tap.employee, day)
+		entry = _unclaimable(
+			"F7",
+			tap.employee,
+			day,
+			None,
+			employee_name=tap.employee_name,
+			shift=tap.shift,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=len(day_taps),
+			checkin=tap.name,
+			time=str(tap.time),
+			log_type=tap.log_type,
+			only_closer=closer,
+			skip_reason=reasons.get(tap.name),
+		)
+		protection = _protection(ctx, tap.employee, day, for_update)
+		if protection:
+			held.append(_held(entry, protection))
+			continue
+		fixable, reason = skipped_tap_verdict(reasons.get(tap.name), rejected, closer)
+		(planned.append({**entry, "reason": reason}) if fixable else held.append(_held(entry, reason)))
+	logger.info(
+		"[attendance_recovery] F7 %s..%s: %d repairable, %d held", win.start, win.end, len(planned), len(held)
+	)
+	return _outcome(planned, held)
+
+
+def late_checkout_broken(row, punch) -> str | None:
+	"""Why the day still reads wrong after a late check-out, or None. Pure."""
+	if row is None:
+		return "no submitted attendance row"
+	if row.get("status") == "Half Day":
+		return f"{row.get('name')} is still Half Day"
+	if not row.get("out_time"):
+		return f"{row.get('name')} has no out time"
+	if cint(punch.get("skip_auto_attendance")):
+		return "the check-out punch is skip-stamped"
+	if not punch.get("attendance"):
+		return "the check-out punch is not linked to the row"
+	return None
+
+
+def _plan_late_checkout_requests(win, for_update=False, ctx=None) -> dict:
+	"""F9: approved (fixable: reprocess) or stale pending (HR) late check-outs whose day
+	still reads Half Day / no out time / OUT unlinked or skipped, plus orphan late OUTs
+	whose request was deleted."""
+	ctx = ctx or _context(win)
+	requests = frappe.get_all(
+		"Remote Checkin Request",
+		filters={
+			"status": ["in", ["Approved", "Pending"]],
+			"is_late_checkout": 1,
+			"checkin_time": [
+				"between",
+				[
+					datetime.combine(win.start, time.min),
+					datetime.combine(win.end + timedelta(days=2), time.min),
+				],
+			],
+		},
+		fields=["name", "employee", "employee_name", "checkin", "checkin_time", "status", "creation"],
+		limit_page_length=0,
+	)
+	taps = {t.name: t for t in ctx["taps"]}
+	today, planned, held = _today(), [], []
+	for request in requests:
+		punch = taps.get(request.checkin)
+		day = (ctx["anchors"].get(request.checkin) if punch else None) or getdate(
+			punch.time if punch else request.checkin_time
+		)
+		if not _in_window(win, day):
+			continue
+		row = _live_row(ctx, request.employee, day)
+		entry = _unclaimable(
+			"F9",
+			request.employee,
+			day,
+			None,
+			employee_name=request.employee_name,
+			shift=punch and punch.shift,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=len(ctx["days"].get((request.employee, day), [])),
+			request=request.name,
+			request_status=request.status,
+			checkin=request.checkin,
+		)
+		if not punch:
+			held.append(_held(entry, f"the late check-out punch of {request.name} was deleted"))
+			continue
+		why = late_checkout_broken(row, punch)
+		if not why:
+			continue
+		if request.status == "Pending":
+			age = (today - getdate(request.creation)).days
+			if age >= LATE_CHECKOUT_STALE_DAYS:
+				held.append(
+					_held(entry, f"late check-out pending for {age} days ({why}): approver never acted")
+				)
+			continue
+		protection = _protection(ctx, request.employee, day, for_update)
+		if protection:
+			held.append(_held(entry, protection))
+		else:
+			planned.append({**entry, "reason": f"approved late check-out, {why}"})
+	# Orphans: an OUT that asked for approval but no request refers to it any more.
+	asked = [
+		t
+		for t in ctx["taps"]
+		if t.log_type == "OUT"
+		and t.get("remote_approval_status") in ("Pending", "Approved")
+		and _in_window(win, ctx["anchors"].get(t.name) or getdate(t.time))
+	]
+	referenced = (
+		set(
+			frappe.get_all(
+				"Remote Checkin Request",
+				filters={"checkin": ["in", sorted(t.name for t in asked)]},
+				pluck="checkin",
+				limit_page_length=0,
+			)
+		)
+		if asked
+		else set()
+	)
+	for tap in asked:
+		if tap.name in referenced:
+			continue
+		day = ctx["anchors"].get(tap.name) or getdate(tap.time)
+		row = _live_row(ctx, tap.employee, day)
+		why = late_checkout_broken(row, tap)
+		if not why:
+			continue
+		entry = _unclaimable(
+			"F9",
+			tap.employee,
+			day,
+			None,
+			employee_name=tap.employee_name,
+			shift=tap.shift,
+			attendance=row and row.name,
+			status=row and row.status,
+			taps=len(ctx["days"].get((tap.employee, day), [])),
+			checkin=tap.name,
+			request=None,
+		)
+		reason = _protection(ctx, tap.employee, day, for_update)
+		held.append(_held(entry, reason or f"orphan OUT: its approval request was deleted ({why})"))
+	logger.info(
+		"[attendance_recovery] F9 %s..%s: %d to reprocess, %d held",
+		win.start,
+		win.end,
+		len(planned),
+		len(held),
+	)
+	return _outcome(planned, held)
+
+
+def _plan_present_without_live_taps(win, for_update=False, ctx=None) -> dict:
+	"""F13: a submitted, engine-marked Present / Half Day row whose linked taps are all
+	rejected, or none at all (the row outlived its evidence)."""
+	ctx = ctx or _context(win)
+	linked = {}
+	for tap in ctx["taps"]:
+		if tap.get("attendance"):
+			linked.setdefault(tap.attendance, []).append(tap)
+	planned, held = [], []
+	for row in sorted(ctx["rows"], key=lambda r: (str(r.employee), str(r.attendance_date))):
+		if (
+			cint(row.get("docstatus")) != 1
+			or row.get("status") not in ("Present", "Half Day")
+			or not cint(row.get("auto_attendance"))
+			or row.get(PROVENANCE_FIELD)
+		):
+			continue
+		taps = linked.get(row.name, [])
+		if any(t.get("remote_approval_status") != "Rejected" for t in taps):
+			continue
+		day = getdate(row.attendance_date)
+		why = f"all {len(taps)} linked tap(s) rejected" if taps else "no tap linked"
+		entry = _unclaimable(
+			"F13",
+			row.employee,
+			day,
+			f"{row.status} row with {why}",
+			employee_name=row.employee_name,
+			shift=row.shift,
+			attendance=row.name,
+			status=row.status,
+			taps=len(ctx["days"].get((row.employee, day), [])),
+		)
+		reason = _protection(ctx, row.employee, day, for_update)
+		(held.append(_held(entry, reason)) if reason else planned.append(entry))
+	logger.info(
+		"[attendance_recovery] F13 %s..%s: %d to rebuild, %d held",
+		win.start,
+		win.end,
+		len(planned),
+		len(held),
+	)
+	return _outcome(planned, held)
+
+
+def unclaimable_rows(win, families=None, ctx=None) -> list:
+	"""One row per detected employee-day (or tap / assignment pair) with family, reason,
+	status (fixable / on purpose / needs HR) — the "Unclaimable Days" report's rows."""
+	ctx = ctx or _context(win)
+	wanted = set(families or [f for f, *_rest in UNCLAIMABLE_FAMILIES])
+	rows = []
+	for family, _name, fix, planner in UNCLAIMABLE_FAMILIES:
+		if family not in wanted:
+			continue
+		plan = globals()[planner](win, ctx=ctx)
+		rows.extend({**p, "family": family, "status": STATUS_FIXABLE, "fix": fix} for p in plan["planned"])
+		rows.extend(
+			{**h, "family": family, "status": row_status(h, True), "fix": fix} for h in plan["held_back"]
+		)
+	rows.sort(key=lambda r: (str(r.get("employee")), str(r.get("date")), r.get("family")))
+	logger.info("[attendance_recovery] unclaimable %s..%s: %s", win.start, win.end, family_counts(rows))
+	return rows
+
+
+def _shift_length_minutes(start_time, end_time) -> int:
+	return (_minutes(end_time) - _minutes(start_time)) % (24 * 60) or 24 * 60
+
+
+def shift_issues(shift, assigned: int) -> list:
+	"""Config problems of one Shift Type row, as text. Pure."""
+	length = _shift_length_minutes(shift.get("start_time"), shift.get("end_time"))
+	before = cint(shift.get("begin_check_in_before_shift_start_time"))
+	after = cint(shift.get("allow_check_out_after_shift_end_time"))
+	found = []
+	if before > length or after > length:
+		found.append(f"a check-in buffer ({before}/{after} min) is longer than the shift ({length} min)")
+	elif max(before, after) > BUFFER_WARN_MINUTES:
+		found.append(
+			f"buffers {before}/{after} min exceed {BUFFER_WARN_MINUTES}: neighbouring shift windows overlap"
+		)
+	if (
+		shift.get("determine_check_in_and_check_out") == ALTERNATING
+		and shift.get("working_hours_calculation_based_on") == FIRST_LAST
+	):
+		found.append(
+			"hours are first-in/last-out while pairing alternates: a mid-day gap is paid as hours, not OT"
+		)
+	if assigned and not cint(shift.get("enable_auto_attendance")):
+		found.append(f"auto attendance is off while {assigned} employee(s) are assigned")
+	elif assigned and (not shift.get("process_attendance_after") or not shift.get("last_sync_of_checkin")):
+		found.append("auto attendance is on but Process Attendance After / Last Sync of Checkin is empty")
+	return found
+
+
+def config_health() -> dict:
+	"""F15/F16: per Shift Type hours, buffers, mode mix, auto attendance, holiday list;
+	per employee overlapping Active assignments. REPORT ONLY — shift config is HR's."""
+	shifts = frappe.get_all(
+		"Shift Type",
+		fields=[
+			"name",
+			"start_time",
+			"end_time",
+			"begin_check_in_before_shift_start_time",
+			"allow_check_out_after_shift_end_time",
+			"determine_check_in_and_check_out",
+			"working_hours_calculation_based_on",
+			"enable_auto_attendance",
+			"process_attendance_after",
+			"last_sync_of_checkin",
+			"holiday_list",
+		],
+		limit_page_length=0,
+	)
+	today = _today()
+	assignments = _submitted_assignments(today, today)
+	assigned = {}
+	for a in assignments:
+		assigned.setdefault(a.shift_type, set()).add(a.employee)
+	issues, table = [], []
+	for s in shifts:
+		staff = assigned.get(s.name, set())
+		table.append(
+			{
+				"shift": s.name,
+				"start": str(s.start_time),
+				"end": str(s.end_time),
+				"hours": round(_shift_length_minutes(s.start_time, s.end_time) / 60, 2),
+				"buffer_before": cint(s.begin_check_in_before_shift_start_time),
+				"buffer_after": cint(s.allow_check_out_after_shift_end_time),
+				"pairing": s.determine_check_in_and_check_out,
+				"hours_mode": s.working_hours_calculation_based_on,
+				"auto_attendance": cint(s.enable_auto_attendance),
+				"holiday_list": s.holiday_list,
+				"assigned": len(staff),
+			}
+		)
+		issues.extend(
+			{"scope": "shift", "name": s.name, "issue": text} for text in shift_issues(s, len(staff))
+		)
+	times = {s.name: (s.start_time, s.end_time) for s in shifts}
+	by_employee = {}
+	for a in assignments:
+		by_employee.setdefault(a.employee, []).append(a)
+	for employee, own in sorted(by_employee.items()):
+		for i, a in enumerate(own):
+			for b in own[i + 1 :]:
+				if a.shift_type == b.shift_type or a.shift_type not in times or b.shift_type not in times:
+					continue
+				if shifts_overlap(times[a.shift_type], times[b.shift_type]):
+					issues.append(
+						{
+							"scope": "employee",
+							"name": employee,
+							"issue": f"Active assignments {a.name} ({a.shift_type}) and {b.name} ({b.shift_type}) "
+							"overlap by scheduled hours",
+						}
+					)
+	uncovered = _employees_without_holiday_list(
+		{e for s in shifts if not s.holiday_list for e in assigned.get(s.name, set())}, today
+	)
+	issues.extend(
+		{
+			"scope": "employee",
+			"name": employee,
+			"issue": "no holiday list on the shift, the employee or the company: rest days price as workdays",
+		}
+		for employee in sorted(uncovered)
+	)
+	logger.info("[attendance_recovery] config health: %d shift(s), %d issue(s)", len(shifts), len(issues))
+	return {"shifts": table, "issues": issues, "count": len(issues)}
+
+
+def _employees_without_holiday_list(employees, as_on) -> set:
+	from hrms.utils.holiday_list import get_holiday_list_for_employee
+
+	missing = set()
+	for employee in employees:
+		try:
+			if not get_holiday_list_for_employee(employee, raise_exception=False, as_on=as_on):
+				missing.add(employee)
+		except Exception:
+			logger.exception("[attendance_recovery] holiday list of %s unreadable", employee)
+	return missing
+
+
+def _config_section() -> dict:
+	health = config_health()
+	return {
+		"fix": None,
+		"family": "F16",
+		"note": "report only: shift config is HR's and is never edited here",
+		"count": health["count"],
+		"count_fixable": 0,
+		"count_needs_hr": health["count"],
+		"count_on_purpose": 0,
+		"sample": health["issues"][:SAMPLE],
+		"shifts": health["shifts"],
+	}
