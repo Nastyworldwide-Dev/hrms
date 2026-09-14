@@ -116,8 +116,8 @@ def _broken(sections: dict) -> dict:
 	as h_days_after_today is never "broken"."""
 	broken = {}
 	for name, section in (sections or {}).items():
-		if not isinstance(section, dict):
-			continue
+		if not isinstance(section, dict) or name == rec.CONFIG_SECTION:
+			continue  # config health is its own block (report only), never a broken day
 		if section.get("error"):
 			broken[name] = section
 		elif (section.get("fix") or section.get("family")) and (
@@ -152,13 +152,24 @@ def _config_lines(config: dict) -> list:
 	if config.get("error"):
 		return ["Config health: could not be read (" + str(config["error"]) + ")"]
 	issues = config.get("issues") or []
-	lines = [f"Config health (report only, shift config is HR's): {len(issues)} issue(s)"]
+	total = cint(config.get("count", len(issues)))
+	lines = [f"Config health (report only, shift config is HR's): {total} issue(s)"]
 	for issue in issues[:SAMPLE]:
 		lines.append(f"  - {issue.get('scope')} {issue.get('name')}: {issue.get('issue')}")
 	return lines
 
 
-def _config_block() -> dict:
+def _config_block(section: dict | None = None) -> dict:
+	"""The config-health block: from inputs_report's own r_config_health section when
+	the caller has one (no second Shift Type read), else read directly."""
+	if section is not None:
+		if section.get("error"):
+			return {"error": section["error"], "issues": [], "shifts": [], "count": 0}
+		return {
+			"issues": section.get("sample") or [],
+			"shifts": section.get("shifts") or [],
+			"count": cint(section.get("count")),
+		}
 	try:
 		return rec.config_health()
 	except Exception as exc:
@@ -191,7 +202,7 @@ def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to, 
 def _write_log(day, daily: dict, trend: dict, config: dict | None = None) -> None:
 	daily_broken = _broken(daily.get("sections"))
 	trend_broken = _broken(trend.get("sections"))
-	config_issues = len((config or {}).get("issues") or []) + (1 if (config or {}).get("error") else 0)
+	config_issues = cint((config or {}).get("count")) + (1 if (config or {}).get("error") else 0)
 	if not daily_broken and not trend_broken and not config_issues:
 		logger.info("[attendance_health] %s: nothing broken", day)
 		return
@@ -223,7 +234,8 @@ def _run_daily_health_check() -> None:
 	# what one inputs_report call can plan without timing out.
 	daily = rec.inputs_report(from_date=str(yesterday), to_date=str(yesterday), include_source=0)
 	trend = rec.inputs_report(from_date=str(trend_start), to_date=str(yesterday), include_source=0)
-	_write_log(yesterday, daily, trend, _config_block())
+	config = (daily.get("sections") or {}).get(rec.CONFIG_SECTION)
+	_write_log(yesterday, daily, trend, _config_block(config) if config is not None else _config_block())
 
 
 def run_daily_health_check() -> None:

@@ -90,6 +90,10 @@ class TestBrokenSections(unittest.TestCase):
 		held_only = {**_section(fix="assignments", count=0), "held_back": 3, "count_needs_hr": 3}
 		self.assertEqual(set(health._broken({"a": held_only})), {"a"})
 
+	def test_the_config_section_is_never_a_broken_day(self):
+		config = {"fix": None, "family": "F16", "count": 3, "count_needs_hr": 3, "sample": []}
+		self.assertEqual(health._broken({"r_config_health": config}), {})
+
 	def test_a_detector_section_without_a_step_is_judged_by_its_family(self):
 		lone_in = {"fix": None, "family": "F2", "count": 0, "held_back": 2, "count_needs_hr": 2}
 		self.assertEqual(set(health._broken({"l_lone_in": lone_in})), {"l_lone_in"})
@@ -173,15 +177,29 @@ class TestRunDailyHealthCheck(_Base):
 			health.run_daily_health_check()  # still must not raise
 
 	def test_config_issues_reach_the_log_even_when_no_day_is_broken(self):
+		# inputs_report already carries r_config_health (family F16, report only):
+		# it must feed the config block, never count as a broken day or print as one.
 		issue = {"scope": "shift", "name": "9AM-6PM", "issue": "buffers 360/360 min exceed 120"}
+		config_section = {
+			"fix": None,
+			"family": "F16",
+			"count": 1,
+			"count_fixable": 0,
+			"count_needs_hr": 1,
+			"count_on_purpose": 0,
+			"sample": [issue],
+			"shifts": [],
+		}
 		with (
-			patch.object(health.rec, "inputs_report", return_value=_report({})),
 			patch.object(
-				health.rec, "config_health", return_value={"shifts": [], "issues": [issue], "count": 1}
+				health.rec, "inputs_report", return_value=_report({"r_config_health": config_section})
 			),
+			patch.object(health.rec, "config_health", side_effect=AssertionError("read twice")),
 		):
 			health.run_daily_health_check()
 		frappe.log_error.assert_called_once()
+		self.assertNotIn("r_config_health", frappe.log_error.call_args.kwargs["message"])
+		self.assertNotIn("None None", frappe.log_error.call_args.kwargs["message"])
 		self.assertEqual(
 			frappe.log_error.call_args.kwargs["title"], f"Attendance health: 1 config issue(s) on {YESTERDAY}"
 		)
@@ -191,8 +209,9 @@ class TestRunDailyHealthCheck(_Base):
 
 	def test_a_crashing_config_read_is_reported_in_the_body_not_raised(self):
 		with (
-			patch.object(health.rec, "inputs_report", return_value=_report({})),
-			patch.object(health.rec, "config_health", side_effect=RuntimeError("boom")),
+			patch.object(
+				health.rec, "inputs_report", return_value=_report({"r_config_health": {"error": "boom"}})
+			),
 		):
 			health.run_daily_health_check()
 		frappe.log_error.assert_called_once()
