@@ -33,6 +33,12 @@ either way. The two sections `_sections()` leaves out are the ones that
 never bear on "is a day broken": `f_missing_erp_punches` needs
 `include_source=1` (a live remote read this health check never makes) and
 `h_days_after_today` is a "today is excluded" notice, never a fix.
+
+S1 (15 Sep 2026): the seven read-only detector sections (families F1..F13,
+`attendance_recovery.UNCLAIMABLE_FAMILIES`) are read the same way, and a
+section is listed when it has fixable rows OR held-back rows — a held row is
+never silent again (R5). A config-health block (F16, report only) closes the
+message; shift config is HR's and is never edited here.
 """
 
 import logging
@@ -58,21 +64,23 @@ SAMPLE = 10
 #: health_summary's rolling window is clamped to this many days (recovery's MAX_WINDOW_DAYS)
 MAX_SUMMARY_DAYS = 62
 
-#: (section name, recovery step, planner) — the same six FIX-bearing reads
-#: `inputs_report` makes. See the module docstring for why `health_summary`
-#: calls these directly instead of `inputs_report` itself.
+#: (section name, recovery step, planner, family) — the same six FIX-bearing
+#: reads `inputs_report` makes, plus the S1 read-only detectors (family F1..F13).
+#: See the module docstring for why `health_summary` calls these directly
+#: instead of `inputs_report` itself.
 _SECTION_STEPS = (
 	# The planner is named, not bound, and looked up on `rec` at call time
 	# (`getattr`) rather than captured here — a module-level bound reference
 	# would freeze the original function in this tuple forever, so a test (or
 	# anything else) patching `attendance_recovery._plan_heal` would silently
 	# not apply to this module.
-	("a_wrong_night_assignment", "assignments", "_plan_assignments"),
-	("b_shiftless_punches", "heal", "_plan_heal"),
-	("c_skip_stamped_punches", "skip_stamps", "_plan_skip_stamps"),
-	("d_mirrored_absent_rows", "mirrored_rows", "_plan_mirrored_rows"),
-	("e_late_checkout_still_broken", "rebuild", "_late_checkouts"),
-	("g_overwritten_punches", "overwritten", "_plan_overwritten"),
+	("a_wrong_night_assignment", "assignments", "_plan_assignments", None),
+	("b_shiftless_punches", "heal", "_plan_heal", None),
+	("c_skip_stamped_punches", "skip_stamps", "_plan_skip_stamps", None),
+	("d_mirrored_absent_rows", "mirrored_rows", "_plan_mirrored_rows", None),
+	("e_late_checkout_still_broken", "rebuild", "_late_checkouts", None),
+	("g_overwritten_punches", "overwritten", "_plan_overwritten", None),
+	*((key, fix, planner, family) for family, key, fix, planner in rec.UNCLAIMABLE_FAMILIES),
 )
 
 
@@ -87,9 +95,9 @@ def _yesterday() -> date:
 def _sections(win) -> dict:
 	"""The same six fix-bearing sections `inputs_report` reads, for one window."""
 	sections = {}
-	for name, fix, plan_attr in _SECTION_STEPS:
+	for name, fix, plan_attr, family in _SECTION_STEPS:
 		try:
-			sections[name] = rec._section(fix, getattr(rec, plan_attr)(win))
+			sections[name] = rec._section(fix, getattr(rec, plan_attr)(win), family)
 		except Exception as exc:
 			if _lost_transaction(exc):
 				raise
@@ -99,33 +107,68 @@ def _sections(win) -> dict:
 
 
 def _broken(sections: dict) -> dict:
-	"""{name: section} for every section carrying real fix work, or one that
-	could not even be read (an unread section is unknown, not clean)."""
+	"""{name: section} for every section carrying fix work OR held-back rows, or one
+	that could not even be read (an unread section is unknown, not clean).
+
+	Held rows count (R5, 15 Sep 2026): a section that was 100% held used to hide
+	from this log, so Ria's wrong night assignment was never told to anyone.
+	Only a section with a fix or a family (a detector) is judged — a notice such
+	as h_days_after_today is never "broken"."""
 	broken = {}
 	for name, section in (sections or {}).items():
 		if not isinstance(section, dict):
 			continue
 		if section.get("error"):
 			broken[name] = section
-		elif section.get("fix") and section.get("count"):
+		elif (section.get("fix") or section.get("family")) and (
+			cint(section.get("count")) or cint(section.get("held_back"))
+		):
 			broken[name] = section
 	return broken
 
 
 def _count(section: dict) -> int:
-	return 1 if section.get("error") else cint(section.get("count"))
+	"""Days that are wrong: fixable ones plus the held ones only HR can fix."""
+	return 1 if section.get("error") else cint(section.get("count")) + cint(section.get("count_needs_hr"))
 
 
 def _lines(name: str, section: dict) -> list:
 	if section.get("error"):
 		return [f"{name}: could not be read ({section['error']})"]
-	lines = [f"{name}: {section.get('count')} (recovery step: {section.get('fix')})"]
+	head = f"{name}: {section.get('count')} (recovery step: {section.get('fix')})"
+	needs, purpose = cint(section.get("count_needs_hr")), cint(section.get("count_on_purpose"))
+	if needs or purpose:
+		head += f"; held back: {needs} need HR, {purpose} left alone on purpose"
+	lines = [head]
 	for row in (section.get("sample") or [])[:SAMPLE]:
 		lines.append(f"  - {row.get('employee')} {row.get('date')}")
+	for row in (section.get("hr_sample") or [])[:SAMPLE]:
+		lines.append(f"  - {row.get('employee')} {row.get('date')}: HELD — {row.get('reason')}")
 	return lines
 
 
-def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to) -> str:
+def _config_lines(config: dict) -> list:
+	"""F16: the config-health block. Report only — shift config is HR's."""
+	if config.get("error"):
+		return ["Config health: could not be read (" + str(config["error"]) + ")"]
+	issues = config.get("issues") or []
+	lines = [f"Config health (report only, shift config is HR's): {len(issues)} issue(s)"]
+	for issue in issues[:SAMPLE]:
+		lines.append(f"  - {issue.get('scope')} {issue.get('name')}: {issue.get('issue')}")
+	return lines
+
+
+def _config_block() -> dict:
+	try:
+		return rec.config_health()
+	except Exception as exc:
+		if _lost_transaction(exc):
+			raise
+		logger.exception("[attendance_health] config health failed")
+		return {"error": str(exc), "issues": [], "shifts": [], "count": 0}
+
+
+def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to, config=None) -> str:
 	parts = [f"Yesterday ({day}):"]
 	if daily_broken:
 		for name in sorted(daily_broken):
@@ -139,21 +182,31 @@ def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to) 
 			parts += _lines(name, trend_broken[name])
 	else:
 		parts.append("  nothing broken in the trailing week")
+	if config is not None:
+		parts.append("")
+		parts += _config_lines(config)
 	return "\n".join(parts)
 
 
-def _write_log(day, daily: dict, trend: dict) -> None:
+def _write_log(day, daily: dict, trend: dict, config: dict | None = None) -> None:
 	daily_broken = _broken(daily.get("sections"))
 	trend_broken = _broken(trend.get("sections"))
-	if not daily_broken and not trend_broken:
+	config_issues = len((config or {}).get("issues") or []) + (1 if (config or {}).get("error") else 0)
+	if not daily_broken and not trend_broken and not config_issues:
 		logger.info("[attendance_health] %s: nothing broken", day)
 		return
 	total = sum(_count(s) for s in daily_broken.values()) or sum(_count(s) for s in trend_broken.values())
-	title = f"{TITLE_PREFIX}: {total} broken day(s) on {day}"
+	title = (
+		f"{TITLE_PREFIX}: {total} broken day(s) on {day}"
+		if total
+		else f"{TITLE_PREFIX}: {config_issues} config issue(s) on {day}"
+	)
 	if frappe.db.exists("Error Log", {"method": title}):
 		logger.info("[attendance_health] %s already logged, not duplicating", title)
 		return
-	message = _message(day, daily_broken, trend_broken, trend.get("from_date"), trend.get("to_date"))
+	message = _message(
+		day, daily_broken, trend_broken, trend.get("from_date"), trend.get("to_date"), config=config
+	)
 	log = frappe.log_error(title=title, message=message)
 	logger.warning("[attendance_health] %s", title)
 	# Error Log is System Manager only; HR sees the alert in Desk (W6). The body
@@ -170,7 +223,7 @@ def _run_daily_health_check() -> None:
 	# what one inputs_report call can plan without timing out.
 	daily = rec.inputs_report(from_date=str(yesterday), to_date=str(yesterday), include_source=0)
 	trend = rec.inputs_report(from_date=str(trend_start), to_date=str(yesterday), include_source=0)
-	_write_log(yesterday, daily, trend)
+	_write_log(yesterday, daily, trend, _config_block())
 
 
 def run_daily_health_check() -> None:
@@ -213,4 +266,5 @@ def health_summary(days=7) -> dict:
 			"to_date": str(trend_win.end),
 			"sections": _sections(trend_win),
 		},
+		"config": _config_block(),
 	}

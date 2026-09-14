@@ -32,6 +32,7 @@ TODAY = datetime(2026, 9, 14, 11, 0)
 YESTERDAY = date(2026, 9, 13)
 
 _EMPTY_PLAN = {"planned": [], "held_back": [], "hr_list": []}
+_CLEAN_CONFIG = {"shifts": [], "issues": [], "count": 0}
 
 
 def _report(sections, from_date="2026-09-13", to_date="2026-09-13"):
@@ -52,6 +53,8 @@ class _Base(unittest.TestCase):
 			patch.object(frappe, "only_for", MagicMock(), create=True),
 			patch.object(frappe, "get_roles", lambda *a: ["HR Manager"], create=True),
 			patch.object(health, "require_unfenced", MagicMock()),
+			# S1: the config-health block is a separate read; clean unless a test says otherwise.
+			patch.object(health.rec, "config_health", return_value=_CLEAN_CONFIG),
 		]
 		for p in self.patches:
 			p.start()
@@ -80,6 +83,33 @@ class TestBrokenSections(unittest.TestCase):
 	def test_an_unreadable_section_counts_as_broken_even_without_a_count_key(self):
 		broken = health._broken({"x": {"error": "boom"}})
 		self.assertEqual(set(broken), {"x"})
+
+	def test_a_section_that_is_100_percent_held_is_listed_not_hidden(self):
+		# R5 (15 Sep 2026): Ria's wrong night assignment was held for HR every night
+		# and never reached the log, because count was 0.
+		held_only = {**_section(fix="assignments", count=0), "held_back": 3, "count_needs_hr": 3}
+		self.assertEqual(set(health._broken({"a": held_only})), {"a"})
+
+	def test_a_detector_section_without_a_step_is_judged_by_its_family(self):
+		lone_in = {"fix": None, "family": "F2", "count": 0, "held_back": 2, "count_needs_hr": 2}
+		self.assertEqual(set(health._broken({"l_lone_in": lone_in})), {"l_lone_in"})
+		clean = {"fix": None, "family": "F2", "count": 0, "held_back": 0}
+		self.assertEqual(health._broken({"l_lone_in": clean}), {})
+
+	def test_count_adds_the_days_only_hr_can_fix(self):
+		self.assertEqual(health._count({**_section(count=2), "count_needs_hr": 3, "count_on_purpose": 9}), 5)
+
+	def test_lines_show_the_hold_split_and_each_held_reason(self):
+		section = {
+			**_section(fix="assignments", count=0),
+			"held_back": 2,
+			"count_needs_hr": 1,
+			"count_on_purpose": 1,
+			"hr_sample": [{"employee": "E9", "date": "2026-09-13", "reason": "future range — HR to end"}],
+		}
+		lines = health._lines("a_wrong_night_assignment", section)
+		self.assertIn("held back: 1 need HR, 1 left alone on purpose", lines[0])
+		self.assertIn("E9 2026-09-13: HELD — future range — HR to end", lines[1])
 
 	def test_count_treats_an_error_as_one(self):
 		self.assertEqual(health._count({"error": "boom"}), 1)
@@ -141,6 +171,32 @@ class TestRunDailyHealthCheck(_Base):
 		frappe.log_error.side_effect = RuntimeError("log store is down")
 		with patch.object(health.rec, "inputs_report", side_effect=RuntimeError("boom")):
 			health.run_daily_health_check()  # still must not raise
+
+	def test_config_issues_reach_the_log_even_when_no_day_is_broken(self):
+		issue = {"scope": "shift", "name": "9AM-6PM", "issue": "buffers 360/360 min exceed 120"}
+		with (
+			patch.object(health.rec, "inputs_report", return_value=_report({})),
+			patch.object(
+				health.rec, "config_health", return_value={"shifts": [], "issues": [issue], "count": 1}
+			),
+		):
+			health.run_daily_health_check()
+		frappe.log_error.assert_called_once()
+		self.assertEqual(
+			frappe.log_error.call_args.kwargs["title"], f"Attendance health: 1 config issue(s) on {YESTERDAY}"
+		)
+		message = frappe.log_error.call_args.kwargs["message"]
+		self.assertIn("Config health (report only, shift config is HR's): 1 issue(s)", message)
+		self.assertIn("shift 9AM-6PM: buffers 360/360 min exceed 120", message)
+
+	def test_a_crashing_config_read_is_reported_in_the_body_not_raised(self):
+		with (
+			patch.object(health.rec, "inputs_report", return_value=_report({})),
+			patch.object(health.rec, "config_health", side_effect=RuntimeError("boom")),
+		):
+			health.run_daily_health_check()
+		frappe.log_error.assert_called_once()
+		self.assertIn("Config health: could not be read (boom)", frappe.log_error.call_args.kwargs["message"])
 
 	def test_never_queries_today(self):
 		with patch.object(health.rec, "inputs_report", return_value=_report({})) as reads:
@@ -228,13 +284,10 @@ class TestHrSeesTheAlert(_Base):
 
 class TestHealthSummary(_Base):
 	def _patched_planners(self):
-		return (
-			patch.object(health.rec, "_plan_assignments", return_value=_EMPTY_PLAN),
-			patch.object(health.rec, "_plan_heal", return_value=_EMPTY_PLAN),
-			patch.object(health.rec, "_plan_skip_stamps", return_value=_EMPTY_PLAN),
-			patch.object(health.rec, "_plan_mirrored_rows", return_value=_EMPTY_PLAN),
-			patch.object(health.rec, "_late_checkouts", return_value=_EMPTY_PLAN),
-			patch.object(health.rec, "_plan_overwritten", return_value=_EMPTY_PLAN),
+		# Every planner `_sections` reads: the six fix-bearing ones and the S1 detectors.
+		return tuple(
+			patch.object(health.rec, planner, return_value=_EMPTY_PLAN)
+			for _name, _fix, planner, _family in health._SECTION_STEPS
 		)
 
 	def test_checks_the_role_tuple_and_the_company_fence(self):
@@ -243,7 +296,7 @@ class TestHealthSummary(_Base):
 		frappe.only_for.assert_called_once_with(("System Manager", "HR Manager", "HR User"))
 		health.require_unfenced.assert_called_once()
 
-	def test_returns_the_six_fix_bearing_sections_for_both_windows(self):
+	def test_returns_the_fix_bearing_and_detector_sections_for_both_windows(self):
 		with self._context(self._patched_planners()):
 			result = health.health_summary(days=7)
 		self.assertEqual(result["date"], str(YESTERDAY))
@@ -254,9 +307,20 @@ class TestHealthSummary(_Base):
 			"d_mirrored_absent_rows",
 			"e_late_checkout_still_broken",
 			"g_overwritten_punches",
+			# S1 detectors (attendance_recovery.UNCLAIMABLE_FAMILIES)
+			"k_wrong_shift_taps",
+			"l_lone_in",
+			"m_out_first_or_double_out",
+			"n_no_attendance_row",
+			"o_skipped_taps",
+			"p_late_checkout_requests",
+			"q_present_without_live_taps",
 		}
 		self.assertEqual(set(result["daily"]["sections"]), expected)
 		self.assertEqual(set(result["trend"]["sections"]), expected)
+		self.assertEqual(result["config"], _CLEAN_CONFIG)
+		for section in result["trend"]["sections"].values():
+			self.assertEqual(section["count"] + section["count_on_purpose"] + section["count_needs_hr"], 0)
 		self.assertEqual(result["daily"]["from_date"], str(YESTERDAY))
 		self.assertEqual(result["trend"]["from_date"], str(date(2026, 9, 7)))
 
