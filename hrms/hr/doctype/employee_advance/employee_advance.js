@@ -28,6 +28,8 @@ frappe.ui.form.on("Employee Advance", {
 	},
 
 	refresh: function (frm) {
+		hrms.correction_cancel.setup(frm);
+
 		if (
 			frm.doc.docstatus === 1 &&
 			flt(frm.doc.paid_amount) < flt(frm.doc.advance_amount) &&

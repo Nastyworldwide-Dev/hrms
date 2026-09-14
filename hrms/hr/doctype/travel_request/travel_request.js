@@ -2,5 +2,7 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Travel Request", {
-	refresh: function (frm) {},
+	refresh: function (frm) {
+		hrms.correction_cancel.setup(frm);
+	},
 });
