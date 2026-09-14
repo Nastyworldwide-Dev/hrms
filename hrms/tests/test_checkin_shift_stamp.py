@@ -108,7 +108,12 @@ class TestOneStampForEveryPath(unittest.TestCase):
 		)
 
 	def test_no_resolution_path_stamps_a_shift_by_hand(self):
-		for name in ("fetch_shift", "_attach_early_arrival", "_close_open_session"):
+		for name in (
+			"fetch_shift",
+			"_attach_early_arrival",
+			"_close_open_session",
+			"_continue_previous_punch",
+		):
 			method = _method(self.tree, "CustomEmployeeCheckin", name)
 			written = _self_attrs_assigned(method)
 			# clearing to off-shift is not a stamp
@@ -119,6 +124,18 @@ class TestOneStampForEveryPath(unittest.TestCase):
 				f"{name} assigns {sorted(leaked)} directly — route it through "
 				"_stamp_shift or the next field added to the stamp will be missed here",
 			)
+
+	def test_the_session_restamp_writes_the_whole_stamp(self):
+		"""The after-insert restamp writes by db.set_value, which _stamp_shift
+		cannot reach; its field list must be the stamp, overtime_type included."""
+		found = None
+		for node in ast.walk(self.tree):
+			if isinstance(node, ast.Assign) and any(
+				isinstance(t, ast.Name) and t.id == "SESSION_STAMP_FIELDS" for t in node.targets
+			):
+				found = {e.value for e in node.value.elts if isinstance(e, ast.Constant)}
+		self.assertIsNotNone(found, "SESSION_STAMP_FIELDS is gone — re-point this test")
+		self.assertEqual(STAMPED - {"offshift"}, found)
 
 
 class TestTheLateCheckoutRepairRebindsTheWholeStamp(unittest.TestCase):

@@ -73,6 +73,63 @@ def choose_shift(punch_time: datetime, log_type: str | None, candidates: list, o
 	return chosen
 
 
+def continues_session(punch_time: datetime, earlier) -> bool:
+	"""Whether a punch continues the session of `earlier` — the employee's
+	stored punch just before it, as {time, shift, shift_actual_start,
+	shift_actual_end}. True when the earlier punch has a shift, the gap is
+	inside SESSION_WINDOW, and the earlier shift's actual window (grace
+	included) contains the punch. log_type plays no part: under "Alternating
+	entries" the engine pairs first and last of the shift group, so an 18:31
+	tap recorded as IN after an 08:55 IN is the day's end, not a night start
+	(E4, 14 Sep 2026)."""
+	if not earlier or not earlier.get("shift"):
+		return False
+	start, end = earlier.get("shift_actual_start"), earlier.get("shift_actual_end")
+	if not start or not end:
+		return False
+	gap = punch_time - earlier["time"]
+	inside = timedelta(0) <= gap <= SESSION_WINDOW and start <= punch_time <= end
+	if inside:
+		logger.info(
+			"[shift_resolution] %s continues the session of %s on %s",
+			punch_time,
+			earlier["time"],
+			earlier["shift"],
+		)
+	return inside
+
+
+def session_restamps(anchor, later: list) -> list:
+	"""Names of `later` punches (time ascending, after `anchor`) that belong to
+	the anchor's session but carry another shift stamp. The walk stops where
+	the session ends, and at a punch that may not be rewritten — linked to an
+	Attendance row (the engine or HR already settled it) or mirrored from
+	another instance — since nothing after it can join the anchor's shift
+	either."""
+	key = (anchor.get("shift"), anchor.get("shift_start"))
+	previous = anchor
+	names = []
+	for row in later:
+		if not continues_session(row["time"], {**anchor, "time": previous["time"]}):
+			break
+		if (row.get("shift"), row.get("shift_start")) == key:
+			previous = row
+			continue
+		if row.get("attendance") or row.get("synced_from_instance"):
+			logger.info(
+				"[shift_resolution] %s at %s is on %s but locked (attendance=%s mirrored=%s): walk stops",
+				row.get("name"),
+				row["time"],
+				row.get("shift"),
+				row.get("attendance"),
+				bool(row.get("synced_from_instance")),
+			)
+			break
+		names.append(row["name"])
+		previous = row
+	return names
+
+
 def _shift_name(candidate: dict) -> str:
 	shift_type = candidate.get("shift_type")
 	return shift_type.name if hasattr(shift_type, "name") else shift_type

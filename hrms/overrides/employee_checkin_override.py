@@ -39,8 +39,72 @@ from hrms.utils.geofence import (
 
 logger = logging.getLogger(__name__)
 
+#: The shift stamp a session restamp copies from the anchor punch (offshift is
+#: written as 0 alongside). overtime_type belongs here for the reason
+#: _stamp_shift gives.
+SESSION_STAMP_FIELDS = (
+	"shift",
+	"shift_start",
+	"shift_end",
+	"shift_actual_start",
+	"shift_actual_end",
+	"overtime_type",
+)
+
 
 class CustomEmployeeCheckin(EmployeeCheckin):
+	def after_insert(self):
+		parent = getattr(super(), "after_insert", None)
+		if parent:
+			parent()
+		self._restamp_later_session_punches()
+
+	def _restamp_later_session_punches(self) -> None:
+		"""An earlier punch arriving after later ones (import, late request, HR
+		adding a forgotten IN) re-resolves the later punches of its session onto
+		its shift — the same rule fetch_shift applies at insert, run backwards.
+
+		Only unlinked, local rows are rewritten: a punch linked to Attendance
+		(auto or HR hand-marked) and a mirrored punch are left as they are, and
+		no Attendance row is touched — the hourly job reads the corrected stamps.
+		"""
+		from hrms.utils.shift_resolution import SESSION_WINDOW, session_restamps
+
+		if not self.shift or getattr(self, "synced_from_instance", None):
+			return
+		log_time = get_datetime(self.time)
+		later = frappe.get_all(
+			"Employee Checkin",
+			filters={
+				"employee": self.employee,
+				"time": ("between", [log_time, log_time + SESSION_WINDOW]),
+				"name": ("!=", self.name),
+			},
+			fields=["name", "time", "attendance", "synced_from_instance", *SESSION_STAMP_FIELDS],
+			order_by="time asc",
+		)
+		later = [row for row in later if get_datetime(row["time"]) >= log_time]
+		anchor = {field: getattr(self, field, None) for field in SESSION_STAMP_FIELDS}
+		for field in ("shift_actual_start", "shift_actual_end"):
+			anchor[field] = get_datetime(anchor[field]) if anchor[field] else None
+		anchor["time"] = log_time
+		values = {field: anchor[field] for field in SESSION_STAMP_FIELDS}
+		values["offshift"] = 0
+		for name in session_restamps(anchor, later):
+			frappe.db.set_value(
+				"Employee Checkin",
+				{"name": name, "attendance": ("is", "not set"), "synced_from_instance": ("is", "not set")},
+				values,
+			)
+			logger.info(
+				"[employee_checkin] %s restamped to %s (%s): earlier punch %s at %s opened its session",
+				name,
+				self.shift,
+				self.shift_start,
+				self.name,
+				log_time,
+			)
+
 	@frappe.whitelist()
 	def fetch_shift(self):
 		log_time = get_datetime(self.time)
@@ -196,11 +260,85 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		)
 
 	def _close_open_session(self) -> bool:
-		"""An OUT inherits the whole shift stamp of the IN it closes. True when
-		it did, so the caller stops. Never fires for an IN, for a punch already
-		attached to attendance, or when the open IN carries no shift."""
-		if self.log_type != "OUT" or self.attendance:
+		"""A punch inherits the whole shift stamp of the session it belongs to.
+		True when it did, so the caller stops. An OUT takes the shift of the IN
+		it closes; any other punch (a mislabelled IN, an OUT after a lunch OUT)
+		takes the shift of the punch just before it when that punch's window
+		holds it. Never fires for a punch already attached to attendance."""
+		if self.attendance:
 			return False
+		if self.log_type == "OUT" and self._inherit_open_in():
+			return True
+		# A late check-out names its own IN; falling back to whatever punch came
+		# before would re-open the stale-IN adoption the naming exists to stop.
+		if getattr(self.flags, "is_late_checkout", False) or getattr(self.flags, "late_checkout_in", None):
+			logger.info("[employee_checkin] late check-out %s keeps to its named IN", self.time)
+			return False
+		return self._continue_previous_punch()
+
+	def _continue_previous_punch(self) -> bool:
+		# E4 (14 Sep 2026): a 9-6 worker holding a stray night assignment taps IN
+		# 08:55 and IN again at 18:31; nearest start filed the second tap on the
+		# night shift and the day came out Half Day, 0h. Consecutive punches of
+		# one session share one shift, whatever log_type says.
+		logger.info("[employee_checkin] %s @ %s: checking the session before it", self.employee, self.time)
+		from hrms.utils.shift_resolution import continues_session
+
+		earlier = self._previous_punch()
+		if not continues_session(get_datetime(self.time), earlier):
+			return False
+		self._stamp_shift(
+			shift=earlier["shift"],
+			start_datetime=earlier.get("shift_start"),
+			end_datetime=earlier.get("shift_end"),
+			actual_start=earlier.get("shift_actual_start"),
+			actual_end=earlier.get("shift_actual_end"),
+			overtime_type=earlier.get("overtime_type"),
+		)
+		logger.info(
+			"[employee_checkin] %s %s @ %s continues %s's session on %s",
+			self.employee,
+			self.log_type,
+			self.time,
+			earlier.get("name"),
+			earlier["shift"],
+		)
+		return True
+
+	def _previous_punch(self) -> dict | None:
+		"""The employee's stored punch just before this one, inside the session
+		window, with its shift stamp."""
+		from hrms.utils.shift_resolution import SESSION_WINDOW
+
+		log_time = get_datetime(self.time)
+		rows = frappe.get_all(
+			"Employee Checkin",
+			filters={
+				"employee": self.employee,
+				"time": ("between", [log_time - SESSION_WINDOW, log_time]),
+				"name": ("!=", self.name),
+			},
+			fields=["name", "time", *SESSION_STAMP_FIELDS],
+			order_by="time desc",
+			limit_page_length=1,
+		)
+		logger.info(
+			"[employee_checkin] %s @ %s: %d earlier punch(es) in the window",
+			self.employee,
+			log_time,
+			len(rows),
+		)
+		if not rows:
+			return None
+		row = dict(rows[0])
+		row["time"] = get_datetime(row["time"])
+		for field in ("shift_actual_start", "shift_actual_end"):
+			row[field] = get_datetime(row[field]) if row.get(field) else None
+		return row
+
+	def _inherit_open_in(self) -> bool:
+		"""An OUT inherits the whole shift stamp of the IN it closes. False when
+		there is no open IN or it carries no shift."""
 		# A late check-out is a forgotten one, so the gap is unbounded by
 		# definition, and fetch_shift would otherwise overwrite its shift with
 		# whatever window the clock falls in — filing yesterday's missing

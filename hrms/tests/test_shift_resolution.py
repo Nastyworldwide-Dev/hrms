@@ -18,7 +18,12 @@ _erpnext_stub.install()
 
 import frappe
 
-from hrms.utils.shift_resolution import choose_shift, superseded_assignments
+from hrms.utils.shift_resolution import (
+	choose_shift,
+	continues_session,
+	session_restamps,
+	superseded_assignments,
+)
 
 HRMS = pathlib.Path(__file__).resolve().parent.parent
 D = date(2026, 9, 7)
@@ -149,19 +154,26 @@ class TestAnOutClosesItsOwnSession(unittest.TestCase):
 		self.assertEqual(doc.shift_start, datetime(2026, 9, 10, 9))
 		self.assertEqual(doc.offshift, 0)
 
-	def test_an_in_is_never_adopted_by_this_rule(self):
-		doc, mod, _patch = self._doc(log_type="IN")
-		self.assertFalse(mod.CustomEmployeeCheckin._close_open_session(doc))
+	def test_a_first_in_of_the_session_is_left_to_the_ordinary_rules(self):
+		doc, mod, patch = self._doc(log_type="IN")
+		with patch.object(mod.CustomEmployeeCheckin, "_previous_punch", return_value=None):
+			self.assertFalse(mod.CustomEmployeeCheckin._close_open_session(doc))
 
 	def test_no_open_in_means_the_ordinary_rules_decide(self):
 		doc, mod, patch = self._doc()
-		with patch.object(mod.CustomEmployeeCheckin, "_open_in", return_value=None):
+		with (
+			patch.object(mod.CustomEmployeeCheckin, "_open_in", return_value=None),
+			patch.object(mod.CustomEmployeeCheckin, "_previous_punch", return_value=None),
+		):
 			self.assertFalse(mod.CustomEmployeeCheckin._close_open_session(doc))
 
 	def test_an_open_in_with_no_shift_of_its_own_settles_nothing(self):
 		doc, mod, patch = self._doc()
-		with patch.object(
-			mod.CustomEmployeeCheckin, "_open_in", return_value={"name": "CKIN-IN", "shift": None}
+		with (
+			patch.object(
+				mod.CustomEmployeeCheckin, "_open_in", return_value={"name": "CKIN-IN", "shift": None}
+			),
+			patch.object(mod.CustomEmployeeCheckin, "_previous_punch", return_value=None),
 		):
 			self.assertFalse(mod.CustomEmployeeCheckin._close_open_session(doc))
 
@@ -179,9 +191,195 @@ class TestAnOutClosesItsOwnSession(unittest.TestCase):
 
 	def test_an_ordinary_out_stays_inside_the_session_window(self):
 		doc, mod, patch = self._doc()
-		with patch.object(mod.CustomEmployeeCheckin, "_open_in", return_value=None) as open_in:
+		with (
+			patch.object(mod.CustomEmployeeCheckin, "_open_in", return_value=None) as open_in,
+			patch.object(mod.CustomEmployeeCheckin, "_previous_punch", return_value=None),
+		):
 			mod.CustomEmployeeCheckin._close_open_session(doc)
 		self.assertIs(open_in.call_args.kwargs.get("bounded"), True)
+
+
+# Live settings (plan section 7): 360-minute grace both sides.
+def _day9(day=11):
+	return _cand("9AM-6PM", datetime(2026, 9, day, 9), datetime(2026, 9, day, 18), grace=360)
+
+
+def _night1930(day=11):
+	return _cand(
+		"Night 1930-0330", datetime(2026, 9, day, 19, 30), datetime(2026, 9, day + 1, 3, 30), grace=360
+	)
+
+
+def _punch(name, time, cand, **kw):
+	"""A stored punch row carrying `cand`'s shift stamp."""
+	row = {
+		"name": name,
+		"time": time,
+		"shift": cand["shift_type"],
+		"shift_start": cand["start_datetime"],
+		"shift_end": cand["end_datetime"],
+		"shift_actual_start": cand["actual_start"],
+		"shift_actual_end": cand["actual_end"],
+		"overtime_type": None,
+		"attendance": None,
+		"synced_from_instance": None,
+	}
+	row.update(kw)
+	return frappe._dict(row)
+
+
+class TestOneSessionOneShift(unittest.TestCase):
+	"""E4, probed on fresh.local (V8): a 9-6 worker who also holds a stray
+	19:30-03:30 night assignment taps IN at 08:55, then IN again at 18:31 when
+	she meant OUT. Nearest start put the 18:31 tap on the night shift, so the day
+	shift saw one punch (Half Day, 0h) and the night shift a fragment. Under
+	"Alternating entries" the engine ignores log_type — the shift group IS the
+	day — so consecutive punches of one session must share one shift."""
+
+	def test_ria_v8_a_mislabelled_in_continues_the_day_shift(self):
+		earlier = _punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), _day9())
+		self.assertTrue(continues_session(datetime(2026, 9, 11, 18, 31), earlier))
+
+	def test_a_punch_outside_the_earlier_shifts_window_starts_a_new_session(self):
+		"""The night worker's 03:30 OUT stamps the night window (to 09:30); the
+		next evening's 19:30 IN is outside it and is resolved afresh."""
+		out = _punch("CKIN-0330", datetime(2026, 9, 12, 3, 30), _night1930(11))
+		self.assertFalse(continues_session(datetime(2026, 9, 12, 19, 30), out))
+
+	def test_the_twenty_hour_session_bound_holds_even_inside_a_wide_window(self):
+		wide = _cand("Long", datetime(2026, 9, 11, 9), datetime(2026, 9, 12, 9), grace=360)
+		earlier = _punch("CKIN-A", datetime(2026, 9, 11, 9), wide)
+		self.assertTrue(continues_session(datetime(2026, 9, 12, 5, 0), earlier))
+		self.assertFalse(continues_session(datetime(2026, 9, 12, 5, 1), earlier))
+
+	def test_an_earlier_punch_without_a_shift_anchors_nothing(self):
+		earlier = _punch("CKIN-A", datetime(2026, 9, 11, 8, 55), _day9(), shift=None)
+		self.assertFalse(continues_session(datetime(2026, 9, 11, 18, 31), earlier))
+
+	def test_a_legit_night_worker_keeps_the_night_shift(self):
+		"""Both assignments, no earlier punch: 19:30 IN is the night shift's, and
+		the 03:30 OUT closes that IN."""
+		cands = [_day9(), _night1930(), _day9(12)]
+		chosen = choose_shift(datetime(2026, 9, 11, 19, 30), "IN", cands, None)
+		self.assertEqual(chosen["shift_type"], "Night 1930-0330")
+		open_in = {"shift": "Night 1930-0330", "time": datetime(2026, 9, 11, 19, 30)}
+		out = choose_shift(datetime(2026, 9, 12, 3, 30), "OUT", cands, open_in)
+		self.assertEqual(out["shift_type"], "Night 1930-0330")
+
+	def test_a_late_arriving_earlier_in_restamps_the_later_out(self):
+		"""The OUT at 23:00 came first and was filed on the night shift; the
+		09:00 IN imported afterwards claims it for the day shift."""
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [_punch("CKIN-OUT", datetime(2026, 9, 11, 23), _night1930())]
+		self.assertEqual(session_restamps(anchor, later), ["CKIN-OUT"])
+
+	def test_a_punch_linked_to_attendance_is_never_restamped_and_ends_the_walk(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [
+			_punch("CKIN-HR", datetime(2026, 9, 11, 18, 31), _night1930(), attendance="HR-ATT-1"),
+			_punch("CKIN-OUT", datetime(2026, 9, 11, 23), _night1930()),
+		]
+		self.assertEqual(session_restamps(anchor, later), [])
+
+	def test_a_mirrored_punch_is_never_restamped(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [_punch("CKIN-M", datetime(2026, 9, 11, 23), _night1930(), synced_from_instance="verifica")]
+		self.assertEqual(session_restamps(anchor, later), [])
+
+	def test_punches_already_on_the_shift_carry_the_walk_forward(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [
+			_punch("CKIN-L", datetime(2026, 9, 11, 13), _day9(), attendance="HR-ATT-AUTO"),
+			_punch("CKIN-OUT", datetime(2026, 9, 11, 18, 31), _night1930()),
+		]
+		self.assertEqual(session_restamps(anchor, later), ["CKIN-OUT"])
+
+	def test_the_walk_stops_where_the_session_ends(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [_punch("CKIN-NEXT", datetime(2026, 9, 12, 1, 0), _night1930())]
+		self.assertEqual(session_restamps(anchor, later), [])
+
+
+class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
+	def _doc(self, **kw):
+		import hrms.overrides.employee_checkin_override as mod
+
+		doc = mod.CustomEmployeeCheckin.__new__(mod.CustomEmployeeCheckin)
+		doc.log_type = kw.get("log_type", "IN")
+		doc.attendance = None
+		doc.employee = "HR-EMP-00009"
+		doc.time = kw.get("time", datetime(2026, 9, 11, 18, 31))
+		doc.name = kw.get("name", "CKIN-NEW")
+		doc.flags = frappe._dict(kw.get("flags") or {})
+		doc.synced_from_instance = kw.get("synced_from_instance")
+		doc.shift = doc.shift_start = doc.shift_end = doc.overtime_type = None
+		doc.shift_actual_start = doc.shift_actual_end = doc.offshift = None
+		return doc, mod
+
+	def test_ria_v8_the_18_31_in_is_stamped_with_the_day_shift(self):
+		from unittest.mock import patch
+
+		doc, mod = self._doc()
+		earlier = _punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), _day9())
+		with (
+			patch.object(mod.CustomEmployeeCheckin, "_open_in", return_value=None),
+			patch.object(mod.CustomEmployeeCheckin, "_previous_punch", return_value=earlier),
+		):
+			self.assertTrue(mod.CustomEmployeeCheckin._close_open_session(doc))
+		self.assertEqual(doc.shift, "9AM-6PM")
+		self.assertEqual(doc.shift_start, datetime(2026, 9, 11, 9))
+		self.assertEqual(doc.offshift, 0)
+
+	def test_a_late_checkout_is_not_rebound_to_whatever_came_before(self):
+		from unittest.mock import patch
+
+		doc, mod = self._doc(log_type="OUT", flags={"late_checkout_in": "CKIN-IN"})
+		with (
+			patch.object(frappe.db, "get_value", return_value=None),
+			patch.object(mod.CustomEmployeeCheckin, "_previous_punch") as previous,
+		):
+			self.assertFalse(mod.CustomEmployeeCheckin._close_open_session(doc))
+		previous.assert_not_called()
+
+	def test_an_earlier_punch_arriving_late_restamps_the_later_unlinked_punches(self):
+		from unittest.mock import patch
+
+		doc, mod = self._doc(name="CKIN-IN", time=datetime(2026, 9, 11, 9))
+		day = _day9()
+		doc.shift, doc.shift_start, doc.shift_end = (
+			day["shift_type"],
+			day["start_datetime"],
+			day["end_datetime"],
+		)
+		doc.shift_actual_start, doc.shift_actual_end, doc.offshift = day["actual_start"], day["actual_end"], 0
+		later = [_punch("CKIN-OUT", datetime(2026, 9, 11, 23), _night1930())]
+		with (
+			patch.object(frappe, "get_all", return_value=later) as get_all,
+			patch.object(frappe.db, "set_value") as set_value,
+		):
+			mod.CustomEmployeeCheckin.after_insert(doc)
+		filters = get_all.call_args.kwargs["filters"]
+		self.assertEqual(filters["employee"], "HR-EMP-00009")
+		self.assertEqual(filters["time"], ("between", [datetime(2026, 9, 11, 9), datetime(2026, 9, 12, 5)]))
+		set_value.assert_called_once()
+		target, values = set_value.call_args.args[1], set_value.call_args.args[2]
+		self.assertEqual(target["name"], "CKIN-OUT")
+		self.assertEqual(target["attendance"], ("is", "not set"))
+		self.assertEqual(target["synced_from_instance"], ("is", "not set"))
+		self.assertEqual(values["shift"], "9AM-6PM")
+		self.assertEqual(values["shift_start"], datetime(2026, 9, 11, 9))
+		self.assertEqual(values["offshift"], 0)
+		self.assertIn("overtime_type", values)
+
+	def test_a_mirrored_arrival_restamps_nothing(self):
+		from unittest.mock import patch
+
+		doc, mod = self._doc(time=datetime(2026, 9, 11, 9), synced_from_instance="verifica")
+		doc.shift = "9AM-6PM"
+		with patch.object(frappe, "get_all") as get_all, patch.object(frappe.db, "set_value") as set_value:
+			mod.CustomEmployeeCheckin.after_insert(doc)
+		get_all.assert_not_called()
+		set_value.assert_not_called()
 
 
 class TestPaidIntervals(unittest.TestCase):
