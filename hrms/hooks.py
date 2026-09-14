@@ -495,13 +495,26 @@ doc_events = {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
+			"hrms.utils.approved_request_guard.block_cancel_of_approved",
 			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
 			"hrms.sync.write_block.block_mirrored_writes",
 		],
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
-	"Expense Claim": {"on_submit": "hrms.telemetry.on_expense_claim_submit"},
+	# An approved request is never cancelled (hrms/utils/approved_request_guard.py):
+	# every request doctype carries the guard on before_cancel, merged into the one
+	# existing key where there is one.
+	"Expense Claim": {
+		"on_submit": "hrms.telemetry.on_expense_claim_submit",
+		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
+	},
+	"OT Request": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
+	"Replacement Leave Claim": {
+		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"
+	},
+	"Employee Advance": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
+	"Travel Request": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
 	# Both guards, for the same reason as Leave Application above: the ROW guard
 	# refuses edits to a mirrored request, the TRANSACTION guard refuses a NEW
 	# hub-side request whose on_submit writes mirrored data (Attendance Request
@@ -513,6 +526,7 @@ doc_events = {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
+			"hrms.utils.approved_request_guard.block_cancel_of_approved",
 			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
 			"hrms.sync.write_block.block_mirrored_writes",
 		],
@@ -525,6 +539,7 @@ doc_events = {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
+			"hrms.utils.approved_request_guard.block_cancel_of_approved",
 			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
 			"hrms.sync.write_block.block_mirrored_writes",
 		],
@@ -535,7 +550,10 @@ doc_events = {
 	# Allocation and its on_cancel takes them back — mirrored balances either way.
 	"Compensatory Leave Request": {
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
-		"before_cancel": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
+		"before_cancel": [
+			"hrms.utils.approved_request_guard.block_cancel_of_approved",
+			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
+		],
 	},
 	"Leave Allocation": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
