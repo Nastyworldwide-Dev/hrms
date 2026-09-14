@@ -65,8 +65,14 @@ class TestAttendanceRequest(HRMSTestSuite):
 		self.assertEqual(records[0].status, "Present")
 		self.assertEqual(records[0].docstatus, 1)
 
-		# cancelling attendance request cancels linked attendances
-		attendance_request.cancel()
+		# cancelling attendance request cancels linked attendances. An approved
+		# request is never cancelled in the app (hrms.utils.approved_request_guard);
+		# this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			attendance_request.cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		# cancellation alters docname
 		# fetch attendance value again to avoid stale docname
@@ -82,8 +88,14 @@ class TestAttendanceRequest(HRMSTestSuite):
 
 		self.assertEqual(records[0].status, "Work From Home")
 
-		# cancelling attendance request cancels linked attendances
-		attendance_request.cancel()
+		# cancelling attendance request cancels linked attendances. An approved
+		# request is never cancelled in the app (hrms.utils.approved_request_guard);
+		# this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			attendance_request.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		records = self.get_attendance_records(attendance_request.name)
 		self.assertEqual(records[0].docstatus, 2)
 

@@ -116,7 +116,13 @@ class TestVehicleLog(HRMSTestSuite):
 
 		expense_claim.submit()
 
-		expense_claim.cancel()
+		# Cleanup. An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			expense_claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		frappe.delete_doc("Vehicle Log", vehicle_log.name)
 
 	def test_cancel_vehicle_log_deletes_claim_with_only_vehicle_log_expenses(self):
@@ -219,7 +225,13 @@ class TestVehicleLog(HRMSTestSuite):
 		self.assertIsNone(expense_claim.vehicle_log)
 
 		expense_claim.submit()
-		expense_claim.cancel()
+		# Cleanup. An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			expense_claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		frappe.delete_doc("Vehicle Log", vehicle_log.name)
 
 	def test_cancel_vehicle_log_with_submitted_expense_claim_uses_linked_doc_cancellation(self):
@@ -254,7 +266,13 @@ class TestVehicleLog(HRMSTestSuite):
 		linked_docs = get_submitted_linked_docs("Vehicle Log", vehicle_log.name)["docs"]
 		self.assertIn({"doctype": "Expense Claim", "name": expense_claim.name, "docstatus": 1}, linked_docs)
 
-		cancel_all_linked_docs(json.dumps(linked_docs))
+		# The linked claim is approved, which the app never cancels
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			cancel_all_linked_docs(json.dumps(linked_docs))
+		finally:
+			frappe.flags.in_patch = False
 		expense_claim.reload()
 		self.assertEqual(expense_claim.docstatus, 2)
 

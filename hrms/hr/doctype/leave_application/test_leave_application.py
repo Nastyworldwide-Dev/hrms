@@ -302,7 +302,13 @@ class TestLeaveApplication(HRMSTestSuite):
 		self.assertEqual(leave_application.total_leave_days, 4)
 		self.assertEqual(frappe.db.count("Attendance", {"leave_application": leave_application.name}), 4)
 
-		leave_application.cancel()
+		# Cleanup. An approved leave is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			leave_application.cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_attendance_update_for_exclude_holidays(self):
@@ -842,8 +848,14 @@ class TestLeaveApplication(HRMSTestSuite):
 		self.assertEqual(leave_ledger_entry[0].leave_type, leave_application.leave_type)
 		self.assertEqual(leave_ledger_entry[0].leaves, leave_application.total_leave_days * -1)
 
-		# check if leave ledger entry is deleted on cancellation
-		leave_application.cancel()
+		# check if leave ledger entry is deleted on cancellation. An approved leave
+		# is never cancelled in the app (hrms.utils.approved_request_guard); this
+		# simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			leave_application.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		self.assertFalse(frappe.db.exists("Leave Ledger Entry", {"transaction_name": leave_application.name}))
 
 	def test_ledger_entry_creation_on_intermediate_allocation_expiry(self):

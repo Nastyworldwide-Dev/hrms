@@ -36,6 +36,6 @@ def execute():
 		logger.info("[hr_user_cancel] %s/%s already has cancel — nothing to do", DOCTYPE, ROLE)
 		return
 
-	update_permission_property(DOCTYPE, ROLE, 0, "cancel", 1, validate=False)
+	update_permission_property(DOCTYPE, ROLE, 0, "cancel", 1, validate=False, if_owner=0)
 	frappe.clear_cache()
 	logger.info("[hr_user_cancel] %s/%s L0 += cancel (%s)", DOCTYPE, ROLE, table)

@@ -95,7 +95,13 @@ class TestEmployeeAdvance(HRMSTestSuite):
 
 		# cancel claim; status should be Paid
 		claim.reload()
-		claim.cancel()
+		# An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		advance.reload()
 		self.assertEqual(advance.claimed_amount, 0)
 		self.assertEqual(advance.status, "Paid")

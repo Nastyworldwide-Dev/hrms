@@ -41,7 +41,13 @@ class TestShiftRequest(HRMSTestSuite):
 		self.assertEqual(shift_request.employee, shift_assignment.employee)
 		self.assertEqual(shift_assignment.docstatus, 1)
 
-		shift_request.cancel()
+		# An approved request is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			shift_request.cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		shift_assignment_docstatus = frappe.db.get_value(
 			"Shift Assignment", filters={"shift_request": shift_request.name}, fieldname="docstatus"

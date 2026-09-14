@@ -65,7 +65,13 @@ class TestExpenseClaim(HRMSTestSuite):
 		self.assertEqual(frappe.db.get_value("Task", task, "total_expense_claim"), 700)
 		self.assertEqual(frappe.db.get_value("Project", project, "total_expense_claim"), 700)
 
-		expense_claim2.cancel()
+		# An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			expense_claim2.cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		self.assertEqual(frappe.db.get_value("Task", task, "total_expense_claim"), 200)
 		self.assertEqual(frappe.db.get_value("Project", project, "total_expense_claim"), 200)
@@ -83,7 +89,13 @@ class TestExpenseClaim(HRMSTestSuite):
 
 		self.assertEqual(frappe.db.get_value("Project", project, "total_expense_claim"), 200)
 
-		expense_claim.cancel()
+		# An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			expense_claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		self.assertEqual(frappe.db.get_value("Project", project, "total_expense_claim"), 0)
 
@@ -1112,7 +1124,13 @@ class TestExpenseClaim(HRMSTestSuite):
 		self.assertEqual(advance_row.unclaimed_amount, 1000)
 		self.assertEqual(advance_row.allocated_amount, 1000)
 
-		claim.cancel()
+		# An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		claim.reload()
 		advance.reload()
 

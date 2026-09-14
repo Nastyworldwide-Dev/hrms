@@ -423,18 +423,17 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		# manager who approved it keeps every power the ruling gives them —
 		# approving is untouched — and loses only the one it takes away.
 		#
-		# TWO THINGS THIS DOES NOT DO, both measured and both Nabil's to settle:
-		#   * On Leave Application, Expense Claim and Shift Request it changes
-		#     NOTHING. A patch grants Employee/ESS the cancel flag on those three,
-		#     and employee_master auto-grants the Leave/Expense Approver roles,
-		#     which carry cancel — so the routed approver passes the check above
-		#     anyway. The ruling bites only on OT Request, Attendance Request and
-		#     Replacement Leave Claim.
-		#   * HR User has no `cancel` on Shift Request (it holds it on the other
-		#     five). The removed elevation was their only door there, so an HR
-		#     User can no longer cancel one through this endpoint — though the PWA
-		#     button already gated on framework permissions, so none of them ever
-		#     saw a working one.
+		# WHERE THE RULING IS ACTUALLY HELD:
+		#   * The permission check below only decides who may reach a cancel. The
+		#     "approved is never cancelled" rule itself is
+		#     hrms.utils.approved_request_guard, a before_cancel doc_event, so it
+		#     holds on every doc.cancel path (this endpoint, Desk, bulk, cancel
+		#     all linked, amend) for every request doctype and every role. A
+		#     rejected request stays cancellable by anyone holding `cancel`.
+		#   * HR User holds `cancel` on Shift Request too, like the other five
+		#     request doctypes: hrms/patches/v16_0/hr_user_can_cancel_shift_request.py
+		#     grants it on the live permission row, so through this endpoint that
+		#     reaches rejected Shift Requests only.
 		action = "submit" if docstatus == SUBMIT else "cancel"
 		if frappe.has_permission(doctype, action, doc=doc):
 			doc.check_permission("read")

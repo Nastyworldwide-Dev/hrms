@@ -247,7 +247,13 @@ class TestIdempotencyAndRetries(_LeaveLifecycleCase):
 		name = self.draft(11)
 		frappe.set_user(APPROVER)
 		decide("Leave Application", name, "Approved")
-		frappe.get_doc("Leave Application", name).cancel()
+		# An approved leave is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			frappe.get_doc("Leave Application", name).cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		with self.assertRaises(frappe.ValidationError):
 			decide("Leave Application", name, "Approved")
@@ -384,7 +390,19 @@ class TestTransactionality(_LeaveLifecycleCase):
 		decide("Leave Application", name, "Approved")
 		self.assertEqual(state(name)["ledger"], 1)
 
-		frappe.get_doc("Leave Application", name).cancel()
+		# The app refuses: an approved leave is never cancelled
+		# (hrms.utils.approved_request_guard), and nothing moves.
+		with self.assertRaisesRegex(frappe.ValidationError, "An approved request cannot be cancelled"):
+			frappe.get_doc("Leave Application", name).cancel()
+		self.assertEqual(state(name)["docstatus"], 1)
+		self.assertEqual(state(name)["ledger"], 1)
+
+		# The reversal itself is still reachable by an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			frappe.get_doc("Leave Application", name).cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		after = frappe.db.get_value("Leave Application", name, ["docstatus", "status"], as_dict=True)
 		self.assertEqual(after.docstatus, 2)
@@ -403,7 +421,13 @@ class TestTransactionality(_LeaveLifecycleCase):
 		name = self.draft(7)
 		frappe.set_user(APPROVER)
 		decide("Leave Application", name, "Approved")
-		frappe.get_doc("Leave Application", name).cancel()
+		# An approved leave is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			frappe.get_doc("Leave Application", name).cancel()
+		finally:
+			frappe.flags.in_patch = False
 
 		frappe.set_user(HR_MANAGER)
 		# What the Desk's Amend button does: copy respecting `no_copy`, then

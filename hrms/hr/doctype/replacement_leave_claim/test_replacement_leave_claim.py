@@ -111,7 +111,13 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 	def test_cancel_reverses_allocation(self):
 		self.bank_hours()
 		claim = make_claim(self.employee, 1.0)
-		claim.cancel()
+		# An approved claim is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			claim.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		allocation = frappe.get_doc("Leave Allocation", claim.leave_allocation)
 		self.assertEqual(allocation.total_leaves_allocated, 0)
 
@@ -127,7 +133,13 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 		ot_request = frappe.get_doc(
 			"OT Request", {"employee": self.employee, "claimed_hours": 8, "docstatus": 1}
 		)
-		ot_request.cancel()
+		# An approved request is never cancelled in the app
+		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
+		frappe.flags.in_patch = True
+		try:
+			ot_request.cancel()
+		finally:
+			frappe.flags.in_patch = False
 		self.assertEqual(ot_request.docstatus, 2)
 
 	def test_ot_cancel_blocked_when_hours_claimed(self):
@@ -136,4 +148,11 @@ class TestReplacementLeaveClaim(FrappeTestCase):
 		ot_request = frappe.get_doc(
 			"OT Request", {"employee": self.employee, "claimed_hours": 8, "docstatus": 1}
 		)
-		self.assertRaises(frappe.ValidationError, ot_request.cancel)
+		# Get past hrms.utils.approved_request_guard (simulating an admin data
+		# patch) so the refusal asserted is the claimed-hours guard's, not the
+		# approved-request guard's — both raise ValidationError.
+		frappe.flags.in_patch = True
+		try:
+			self.assertRaises(frappe.ValidationError, ot_request.cancel)
+		finally:
+			frappe.flags.in_patch = False
