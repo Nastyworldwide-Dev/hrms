@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 
+import logging
 from datetime import date, datetime, timedelta
 
 import frappe
@@ -13,6 +14,8 @@ from frappe.utils import add_days, cint, cstr, get_link_to_form, get_time, getda
 from hrms.hr.utils import validate_active_employee
 from hrms.utils import generate_date_range
 from hrms.utils.identity import get_employee_info
+
+logger = logging.getLogger(__name__)
 
 
 class OverlappingShiftError(frappe.ValidationError):
@@ -81,10 +84,9 @@ class ShiftAssignment(Document):
 		overlapping_dates = self.get_overlapping_dates()
 		if len(overlapping_dates):
 			self.validate_same_date_multiple_shifts(overlapping_dates)
-			# if dates are overlapping, check if timings are overlapping, else allow
-			for d in overlapping_dates:
-				if has_overlapping_timings(self.shift_type, d.shift_type):
-					self.throw_overlap_error(d)
+		# Same hours on the same dates is refused whatever HR Settings says;
+		# the submit hook runs the same rule so no bulk creator can skip it.
+		refuse_overlapping_assignments(self)
 
 	def validate_same_date_multiple_shifts(self, overlapping_dates):
 		if cint(frappe.db.get_single_value("HR Settings", "allow_multiple_shift_assignments")):
@@ -117,36 +119,113 @@ class ShiftAssignment(Document):
 	def get_overlapping_dates(self):
 		if not self.name:
 			self.name = "New Shift Assignment"
+		return active_assignments_on(self.employee, self.start_date, self.end_date, exclude=self.name)
 
-		shift = frappe.qb.DocType("Shift Assignment")
-		query = (
-			frappe.qb.from_(shift)
-			.select(shift.name, shift.shift_type, shift.docstatus, shift.status)
-			.where(
-				(shift.employee == self.employee)
-				& (shift.docstatus == 1)
-				& (shift.name != self.name)
-				& (shift.status == "Active")
-				& ((shift.end_date >= self.start_date) | (shift.end_date.isnull()))
-			)
+
+def active_assignments_on(employee: str, start_date, end_date=None, exclude: str | None = None) -> list:
+	"""The employee's Active, submitted assignments on any of these dates."""
+	shift = frappe.qb.DocType("Shift Assignment")
+	query = (
+		frappe.qb.from_(shift)
+		.select(shift.name, shift.shift_type, shift.docstatus, shift.status)
+		.where(
+			(shift.employee == employee)
+			& (shift.docstatus == 1)
+			& (shift.status == "Active")
+			& ((shift.end_date >= start_date) | (shift.end_date.isnull()))
+		)
+	)
+	if exclude:
+		query = query.where(shift.name != exclude)
+	if end_date:
+		query = query.where(shift.start_date <= end_date)
+	rows = query.run(as_dict=True)
+	logger.debug(
+		"[shift_assignment] %s has %d active assignment(s) on %s..%s",
+		employee,
+		len(rows),
+		start_date,
+		end_date,
+	)
+	return rows
+
+
+def refuse_overlapping_assignments(doc) -> None:
+	"""One person is never rostered on two shifts at the same hours.
+
+	15 Sep 2026 (end-it plan S3, D2): a second Active assignment whose
+	ROSTERED hours overlap the first one sent the same punches to two shifts
+	and invented Half Days. The refusal ignores HR Settings' "allow multiple
+	shift assignments" — that setting is about sequential shifts. HR can
+	still tick "Both shifts on purpose (HR)" on the new assignment. Shift
+	definitions are HR's: this refuses, it never rewrites anything.
+	"""
+	if doc.status != "Active":
+		return
+	if cint(getattr(doc, "both_shifts_on_purpose", 0)):
+		logger.info(
+			"[shift_assignment] %s on %s from %s: overlap allowed, both shifts on purpose (%s)",
+			doc.employee,
+			doc.shift_type,
+			doc.start_date,
+			frappe.session.user,
+		)
+		return
+	for other in active_assignments_on(doc.employee, doc.start_date, doc.end_date, exclude=doc.name):
+		if not has_overlapping_timings(doc.shift_type, other.shift_type):
+			continue
+		logger.warning(
+			"[shift_assignment] refused %s on %s from %s: hours overlap %s (%s)",
+			doc.employee,
+			doc.shift_type,
+			doc.start_date,
+			other.shift_type,
+			other.name,
+		)
+		frappe.throw(
+			_(
+				"{0} is already rostered on {1} ({2}) for some of these dates, and its hours "
+				"overlap {3}. One person cannot be on two shifts at the same hours. End or "
+				"shorten the other assignment first. If both shifts really are meant to run "
+				"together, tick {4} on this assignment."
+			).format(
+				frappe.bold(doc.employee),
+				frappe.bold(other.shift_type),
+				get_link_to_form("Shift Assignment", other.name),
+				frappe.bold(doc.shift_type),
+				frappe.bold(_("Both shifts on purpose (HR)")),
+			),
+			title=_("Overlapping Shifts"),
+			exc=OverlappingShiftError,
 		)
 
-		if self.end_date:
-			query = query.where(shift.start_date <= self.end_date)
 
-		return query.run(as_dict=True)
+def _clock_minutes(value) -> int:
+	if isinstance(value, timedelta):
+		return int(value.total_seconds() // 60)
+	clock = get_time(value)
+	return clock.hour * 60 + clock.minute
 
-	def throw_overlap_error(self, shift_details):
-		shift_details = frappe._dict(shift_details)
-		if shift_details.docstatus == 1 and shift_details.status == "Active":
-			msg = _(
-				"Employee {0} already has an active Shift {1}: {2} that overlaps within this period."
-			).format(
-				frappe.bold(self.employee),
-				frappe.bold(shift_details.shift_type),
-				get_link_to_form("Shift Assignment", shift_details.name),
-			)
-			frappe.throw(msg, title=_("Overlapping Shifts"), exc=OverlappingShiftError)
+
+def _interval(start, end) -> tuple[int, int]:
+	start, end = _clock_minutes(start), _clock_minutes(end)
+	if end <= start:
+		end += 1440  # runs past midnight
+	return start, end
+
+
+def scheduled_hours_overlap(start_1, end_1, start_2, end_2) -> bool:
+	"""Do two shifts' rostered hours overlap on any day both are assigned?
+
+	Each shift is an interval on a 48-hour line (ending at or before it starts
+	means it runs past midnight). A night shift's tail meets the NEXT morning's
+	shift, so each pair is also compared with one side moved by a day:
+	19:30-07:00 overlaps 06:00-14:00, not 08:00-18:00. Touching (13:00/13:00)
+	is not overlap.
+	"""
+	a = _interval(start_1, end_1)
+	b = _interval(start_2, end_2)
+	return any(a[1] > b[0] + day and a[0] < b[1] + day for day in (-1440, 0, 1440))
 
 
 def has_overlapping_timings(shift_1: str, shift_2: str) -> bool:
@@ -156,12 +235,22 @@ def has_overlapping_timings(shift_1: str, shift_2: str) -> bool:
 
 	s1 = frappe.db.get_value("Shift Type", shift_1, ["start_time", "end_time"], as_dict=True)
 	s2 = frappe.db.get_value("Shift Type", shift_2, ["start_time", "end_time"], as_dict=True)
+	return scheduled_hours_overlap(s1.start_time, s1.end_time, s2.start_time, s2.end_time)
 
-	for d in [s1, s2]:
-		if d.end_time <= d.start_time:
-			d.end_time += timedelta(days=1)
 
-	return s1.end_time > s2.start_time and s1.start_time < s2.end_time
+def overlapping_shift_types(shift_type: str) -> list[str]:
+	"""Every Shift Type whose rostered hours overlap this one (itself included)."""
+	rows = frappe.get_all("Shift Type", fields=["name", "start_time", "end_time"])
+	own = next((row for row in rows if row.name == shift_type), None)
+	if own is None:
+		return [shift_type]
+	names = [
+		row.name
+		for row in rows
+		if scheduled_hours_overlap(own.start_time, own.end_time, row.start_time, row.end_time)
+	]
+	logger.debug("[shift_assignment] shifts overlapping %s: %s", shift_type, names)
+	return names
 
 
 @frappe.whitelist()

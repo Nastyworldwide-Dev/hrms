@@ -1,17 +1,16 @@
 # Copyright (c) 2024, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from datetime import timedelta
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder import Case, Criterion, Interval
+from frappe.query_builder import Criterion
 from frappe.query_builder.terms import SubQuery
 from frappe.utils import get_link_to_form
 
 from erpnext.accounts.utils import build_qb_match_conditions
 
+from hrms.hr.doctype.shift_assignment.shift_assignment import overlapping_shift_types
 from hrms.hr.utils import validate_bulk_tool_fields
 
 
@@ -157,23 +156,10 @@ class ShiftAssignmentTool(Document):
 		return query
 
 	def get_query_checking_overlapping_shift_timings(self, query, doctype, shift_type):
-		shift_start, shift_end = frappe.db.get_value("Shift Type", shift_type, ["start_time", "end_time"])
-		# turn it into a 48 hour clock for easier conditioning while considering overnight shifts
-		if shift_end < shift_start:
-			shift_end += timedelta(hours=24)
-
-		ShiftType = frappe.qb.DocType("Shift Type")
-		end_time_case = (
-			Case()
-			.when(ShiftType.end_time < ShiftType.start_time, ShiftType.end_time + Interval(hours=24))
-			.else_(ShiftType.end_time)
-		)
-
-		return (
-			query.left_join(ShiftType)
-			.on(doctype.shift_type == ShiftType.name)
-			.where((end_time_case >= shift_start) & (ShiftType.start_time <= shift_end))
-		)
+		# The one rule Shift Assignment refuses with (scheduled hours on a
+		# 48-hour line, night shifts included): the tool offers exactly the
+		# employees the form would accept.
+		return query.where(doctype.shift_type.isin(overlapping_shift_types(shift_type)))
 
 	@frappe.whitelist()
 	def bulk_assign(self, employees: list):

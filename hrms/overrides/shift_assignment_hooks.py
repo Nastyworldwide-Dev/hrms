@@ -20,13 +20,24 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from hrms.hr.doctype.shift_assignment.shift_assignment import refuse_overlapping_assignments
 from hrms.utils.shift_resolution import superseded_assignments
 
 logger = logging.getLogger(__name__)
 
 
 def close_superseded_assignments(doc, method=None):
-	if doc.end_date or doc.status != "Active":
+	"""End what the new assignment supersedes; then refuse what still overlaps.
+
+	The refusal runs here as well as in validate so a creator that skips
+	validate (`flags.ignore_validate`, bulk tools) meets the same rule on
+	submit — after the superseded rows are ended, so a plain shift change
+	still goes through.
+	"""
+	if doc.status != "Active":
+		return
+	if doc.end_date:
+		refuse_overlapping_assignments(doc)
 		return
 	existing = frappe.get_all(
 		"Shift Assignment",
@@ -51,3 +62,4 @@ def close_superseded_assignments(doc, method=None):
 			),
 		)
 		logger.info("[shift_assignment] %s ended on %s, superseded by %s", name, end_date, doc.name)
+	refuse_overlapping_assignments(doc)

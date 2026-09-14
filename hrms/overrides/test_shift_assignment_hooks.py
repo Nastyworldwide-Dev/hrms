@@ -12,12 +12,15 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+import _erpnext_stub
 import _frappe_stub
 
 _frappe_stub.install()
+_erpnext_stub.install()
 
 import frappe
 
+from hrms.overrides import shift_assignment_hooks as hooks
 from hrms.overrides.shift_assignment_hooks import close_superseded_assignments
 
 MODULE = pathlib.Path(__file__).resolve().parent / "shift_assignment_hooks.py"
@@ -45,8 +48,14 @@ class TestClose(unittest.TestCase):
 			patch.object(frappe, "get_all", return_value=list(existing)),
 			patch.object(frappe.db, "set_value") as set_value,
 			patch.object(frappe, "get_doc", return_value=MagicMock()) as get_doc,
+			patch.object(hooks, "refuse_overlapping_assignments") as refuse,
 		):
 			close_superseded_assignments(doc)
+		# The overlap rule runs AFTER the superseded rows are ended (S3 G1).
+		if doc.status == "Active":
+			refuse.assert_called_once_with(doc)
+		else:
+			refuse.assert_not_called()
 		return set_value, get_doc
 
 	def test_the_superseded_night_shift_is_ended_the_day_before(self):
@@ -66,6 +75,7 @@ class TestClose(unittest.TestCase):
 		with (
 			patch.object(frappe, "get_all", return_value=[]) as get_all,
 			patch.object(frappe.db, "set_value"),
+			patch.object(hooks, "refuse_overlapping_assignments"),
 		):
 			close_superseded_assignments(_doc())
 		self.assertEqual(get_all.call_args.kwargs["filters"]["synced_from_instance"], ("is", "not set"))
