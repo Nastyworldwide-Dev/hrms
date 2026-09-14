@@ -748,16 +748,17 @@ def _scoped_parity_report(instance_name: str, company: str | None = None) -> dic
 	# The runner's own scope, imported rather than restated: two definitions of
 	# "which rows belong here" would drift, and a gate that drifts from the sync it
 	# grades is the exact failure this argument exists to fix.
-	from hrms.sync.cutover import plan_pull_doctypes
+	from hrms.sync.cutover import plan_parity_doctypes
 	from hrms.sync.runner import instance_companies, scope_filter
 	from hrms.sync.write_block import _instance_unlocked
 
 	companies = instance_companies(instance_name)
 	scope = (lambda dt: scope_filter(dt, companies, instance_name)) if companies else None
-	# After cutover Attendance and Employee Checkin are written here and no longer
-	# pulled, so their stamped count stops while the source's keeps growing. Grading
-	# them would report a widening "mismatch" that is the intended state.
-	doctypes, held_back = plan_pull_doctypes(MIRRORED_DOCTYPES, _instance_unlocked(instance_name))
+	# After cutover Attendance is written here and no longer pulled, and source
+	# punches arrive UNSTAMPED (hrms.sync.checkin_import), so neither stamped count
+	# moves while the source's keeps growing. Grading them would report a widening
+	# "mismatch" that is the intended state.
+	doctypes, held_back = plan_parity_doctypes(MIRRORED_DOCTYPES, _instance_unlocked(instance_name))
 	report = parity_report(
 		RemoteInstanceClient(instance_name), company=company, doctypes=doctypes, scope=scope
 	)

@@ -15,9 +15,10 @@ This report names it. It never writes, on either side:
 A punch is identified by its natural key, (employee, time to the second,
 log_type), never by name: both sites number `EMP-CKIN-.MM.-.YYYY.-.######` from
 independent counters, so the same name is routinely two different punches.
-Employees map by name, exactly as the mirror writes them (`runner._write_row`
-upserts on the source's document name), so a source employee with no local
-Employee of that name is listed as unmapped rather than dropped.
+A source employee maps to the hub Employee of the same name ONLY when that
+Employee is stamped from this instance (`local_employees`): the hub creates its
+own employees from the same `HR-EMP-*` series, so a bare name match can be a
+different person. Anything else is listed as unmapped rather than dropped.
 
     bench --site <site> execute hrms.sync.missing_checkins.report \
         --kwargs '{"from_date": "2026-09-01", "to_date": "2026-09-14"}'
@@ -226,6 +227,24 @@ def _resolve_instance(instance: str | None) -> str:
 	frappe.throw(_("Several enabled HRMS ERP Instances ({0}): pass instance=").format(", ".join(enabled)))
 
 
+def local_employees(instance: str, employee: str | None = None) -> dict:
+	"""{name: row} for the hub Employees a source punch from `instance` may map to.
+
+	Stamped from THAT instance, and nothing else — the same fence the mirror's
+	punch scope used (`runner.scope_filter`). A hub-native employee (unstamped)
+	or one mirrored from another instance can carry the same `HR-EMP-*` name as a
+	source employee and be a different person.
+	"""
+	filters = {"synced_from_instance": instance}
+	if employee:
+		filters["name"] = employee
+	rows = frappe.get_all(
+		"Employee", filters=filters, fields=["name", "employee_name", "status", "relieving_date"]
+	)
+	logger.info("[missing_checkins] %s: %s hub employee(s) stamped from it", instance, len(rows))
+	return {row.get("name"): row for row in rows}
+
+
 def _remote_scope(client, instance: str, employee: str | None) -> list[str] | None:
 	"""Which source employees to read: the one asked for, the served companies' staff, or all."""
 	if employee:
@@ -261,8 +280,7 @@ def report(instance: str | None = None, from_date=None, to_date=None, employee=N
 	instance = _resolve_instance(instance)
 	local_filters = {"employee": employee} if employee else {}
 	employee_names = {
-		row.name: row.employee_name
-		for row in frappe.get_all("Employee", filters=local_filters, fields=["name", "employee_name"])
+		name: row.get("employee_name") for name, row in local_employees(instance, employee).items()
 	}
 
 	try:

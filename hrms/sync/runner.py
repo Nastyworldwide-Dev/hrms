@@ -53,6 +53,11 @@ def _log():
 #: Custom field stamped on every mirrored row. Read by `hrms.sync.parity`.
 PROVENANCE_FIELD = "synced_from_instance"
 
+#: Employee Checkin only: "<instance>::<source name>" for a punch imported add-only
+#: after cutover (`hrms.sync.checkin_import`). UNIQUE, so no source punch lands
+#: twice whatever the importers do; unstamped, so attendance reads the punch.
+SOURCE_CHECKIN_FIELD = "source_checkin"
+
 #: Mirrored during the parallel run, in **dependency order** — the tuple order is
 #: the sync order and is load-bearing, not incidental:
 #:
@@ -516,7 +521,27 @@ def get_provenance_custom_fields() -> dict:
 	# STAMPED_DOCTYPES, not DEFAULT_SYNC_DOCTYPES: the masters are HR-owned here
 	# and must stay unstamped, or the write-block would lock HR out of their own
 	# Leave Types and `parity` would count masters as mirrored rows.
-	return {doctype: [dict(definition)] for doctype in STAMPED_DOCTYPES}
+	fields = {doctype: [dict(definition)] for doctype in STAMPED_DOCTYPES}
+	fields["Employee Checkin"].append(
+		{
+			"fieldname": SOURCE_CHECKIN_FIELD,
+			"fieldtype": "Data",
+			"label": _("Source Checkin"),
+			"description": _(
+				"Set only on a punch imported from a source ERP after cutover: "
+				"<instance>::<that punch's name there>. Unique, so a source punch can land here once."
+			),
+			"insert_after": PROVENANCE_FIELD,
+			"read_only": 1,
+			"no_copy": 1,
+			"print_hide": 1,
+			# The database, not the importer, makes a second copy impossible. Local
+			# punches leave it empty, which Frappe stores as NULL for a unique field,
+			# and MariaDB's UNIQUE admits any number of NULLs.
+			"unique": 1,
+		}
+	)
+	return fields
 
 
 def get_watermark(instance_name: str) -> str | None:
@@ -1689,14 +1714,14 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	not a data condition.
 	"""
 	instance_name = client.instance_name
-	# After cutover this site writes Attendance and Employee Checkin itself; a
-	# pull must not copy the source's (punch-less, all-Absent) view over them.
-	from hrms.sync.cutover import plan_pull_doctypes
+	# After cutover this site writes Attendance itself; a pull must not copy the
+	# source's all-Absent view over it. Source punches still come in, add-only.
+	from hrms.sync.cutover import APPEND_ONLY_AFTER_CUTOVER, plan_pull_doctypes
 	from hrms.sync.write_block import _instance_unlocked
 
-	doctypes, held_back = plan_pull_doctypes(
-		doctypes or DEFAULT_SYNC_DOCTYPES, _instance_unlocked(instance_name)
-	)
+	unlocked = _instance_unlocked(instance_name)
+	doctypes, held_back = plan_pull_doctypes(doctypes or DEFAULT_SYNC_DOCTYPES, unlocked)
+	append_only = [doctype for doctype in doctypes if unlocked and doctype in APPEND_ONLY_AFTER_CUTOVER]
 
 	companies = instance_companies(instance_name)
 	if companies:
@@ -1718,6 +1743,9 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 	run_gaps: list[str] = []
 	schema_notes: list[str] = [
 		f"{doctype}: not pulled — this site writes it since cutover" for doctype in held_back
+	] + [
+		f"{doctype}: add-only since cutover — new source punches by time, nothing here updated"
+		for doctype in append_only
 	]
 	status = "Failed"
 
@@ -1738,11 +1766,18 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 				continue
 
 			try:
-				# Evaluated here, not up front: Employee Checkin's scope is the
-				# employees the Employee pass has just written.
-				result = sync_doctype(
-					client, doctype, since=since, filters=scope_filter(doctype, companies, instance_name)
-				)
+				if doctype in append_only:
+					# Never the name-keyed mirror after cutover: both sites number
+					# punches from their own counters. A time window, not `since`.
+					from hrms.sync.checkin_import import import_source_checkins
+
+					result = import_source_checkins(client, instance_name)
+				else:
+					# Evaluated here, not up front: Employee Checkin's scope is the
+					# employees the Employee pass has just written.
+					result = sync_doctype(
+						client, doctype, since=since, filters=scope_filter(doctype, companies, instance_name)
+					)
 			except Exception as e:  # an independent doctype must not abort the run
 				frappe.db.rollback()
 				if is_absent_on_source(e):
@@ -1795,6 +1830,23 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 					errors.append(line)
 			for row_error in result["row_errors"]:
 				errors.append(f"{doctype}: {row_error}")
+			outcomes = result.get("outcomes") or {}
+			if (
+				outcomes.get("busy")
+				or outcomes.get("unmapped")
+				or outcomes.get("refused")
+				or outcomes.get("insert_errors")
+			):
+				# Recorded, never counted: the add-only import re-reads its whole
+				# time window every run, and holding the one shared watermark for a
+				# punch would re-pull every mirrored doctype over hub edits.
+				errors.append(
+					f"{doctype}: add-only import did not write unmapped={outcomes.get('unmapped', 0)} "
+					f"refused={outcomes.get('refused', 0)} insert_errors={outcomes.get('insert_errors', 0)}"
+					+ (" — skipped, a manual punch import held the lock" if outcomes.get("busy") else "")
+					+ " (run status unaffected; re-read next run)"
+					+ (f": {'; '.join(outcomes['sample'])}" if outcomes.get("sample") else "")
+				)
 			frappe.db.commit()
 
 		# Rows count, not only doctypes. `get_watermark` accepts Completed runs

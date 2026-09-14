@@ -2732,5 +2732,174 @@ class TestAnUnconstrainedSelectConstrainsNothing(unittest.TestCase):
 		self.assertIn("timezone", columns)
 
 
+class TestAppendOnlyPunchesAfterCutover(_RunnerTestCase):
+	"""Owner decision, 14 Sep 2026: staff still punch on the source ERP after
+	cutover, and those punches must reach this hub — add-only.
+
+	Before this, an unlocked instance held Employee Checkin back entirely, so no
+	source punch arrived and nothing said so. The name-keyed mirror is no answer
+	either: both sites number punches from their own counters, and upserting on
+	the source's name is how local punches were overwritten. After cutover the run
+	hands Employee Checkin to `hrms.sync.checkin_import`, which inserts only; a
+	locked instance keeps the mirror exactly as it was.
+	"""
+
+	RESULT: ClassVar[dict] = {
+		"doctype": "Employee Checkin",
+		"pulled": 0,
+		"written": 0,
+		"inserted": 0,
+		"updated": 0,
+		"skipped": 0,
+		"errored": 0,
+		"orphaned": 0,
+		"contested": 0,
+		"contested_names": [],
+		"missing_parents": [],
+		"row_errors": [],
+		"dropped_fields": [],
+		"schema_gaps": [],
+	}
+
+	def unlock(self):
+		self.store.tables.setdefault("HRMS ERP Instance", {})["nasty-live"] = {
+			"name": "nasty-live",
+			"unlock_mirrored_writes": 1,
+		}
+
+	def fake_import(self, **counts):
+		"""Stand in for the append-only import; records who asked."""
+		calls = []
+
+		def import_source_checkins(client, instance_name, today=None):
+			calls.append(instance_name)
+			return {**self.RESULT, **counts}
+
+		module = types.ModuleType("hrms.sync.checkin_import")
+		module.import_source_checkins = import_source_checkins
+		saved = sys.modules.get("hrms.sync.checkin_import")
+		sys.modules["hrms.sync.checkin_import"] = module
+		self.addCleanup(
+			lambda: (
+				sys.modules.pop("hrms.sync.checkin_import", None)
+				if saved is None
+				else sys.modules.__setitem__("hrms.sync.checkin_import", saved)
+			)
+		)
+		return calls
+
+	def punches(self):
+		return {
+			"Employee Checkin": [
+				{
+					"name": "EMP-CKIN-09-2026-000013",
+					"employee": "HR-EMP-0001",
+					"time": "2026-09-10 08:30:00",
+					"log_type": "IN",
+					"modified": "2026-09-10 08:30:01",
+				}
+			]
+		}
+
+	def test_an_unlocked_instance_pulls_punches_through_the_append_only_import(self):
+		self.unlock()
+		# A Completed run on record: the punch window must not start from it.
+		self.store.tables["HRMS Sync Run"] = {
+			"SYNC-00001": {
+				"name": "SYNC-00001",
+				"source_instance": "nasty-live",
+				"status": "Completed",
+				"started_at": "2026-09-13 00:00:00",
+			}
+		}
+		calls = self.fake_import(pulled=1, written=1, inserted=1)
+		client = self.client(self.punches())
+
+		result = runner.sync_instance(client, doctypes=["Attendance", "Employee Checkin"])
+
+		self.assertEqual(calls, ["nasty-live"], "Employee Checkin was held back — no source punch arrived")
+		self.assertEqual(
+			[c["doctype"] for c in client.calls],
+			[],
+			"neither Attendance nor the name-keyed punch mirror may read the source after cutover",
+		)
+		self.assertNotIn("EMP-CKIN-09-2026-000013", self.store.rows("Employee Checkin"))
+		self.assertEqual(result["status"], "Completed")
+		self.assertEqual(result["written"], 1)
+
+	def test_a_locked_instance_keeps_the_name_keyed_mirror(self):
+		calls = self.fake_import()
+		client = self.client(self.punches())
+
+		runner.sync_instance(client, doctypes=["Employee Checkin"])
+
+		self.assertEqual(calls, [])
+		self.assertIn("Employee Checkin", [c["doctype"] for c in client.calls])
+		self.assertIn("EMP-CKIN-09-2026-000013", self.store.rows("Employee Checkin"))
+
+	def test_what_the_import_did_not_write_is_recorded_but_never_holds_the_watermark(self):
+		"""The add-only import re-reads its whole time window every run. Holding the
+		ONE shared watermark for an unmapped or refused punch would re-pull every
+		mirrored doctype wide, over hub edits — so the run records it and completes."""
+		self.unlock()
+		self.fake_import(
+			pulled=3,
+			written=1,
+			inserted=1,
+			outcomes={
+				"unmapped": 1,
+				"refused": 1,
+				"insert_errors": 0,
+				"busy": False,
+				"sample": ["refused R-7 (type_mismatch) for HR-EMP-0001 at 2026-09-09 23:23:00"],
+			},
+		)
+
+		result = runner.sync_instance(self.client(self.punches()), doctypes=["Employee Checkin"])
+
+		self.assertEqual(result["status"], "Completed")
+		self.assertIsNotNone(runner.get_watermark("nasty-live"))
+		error_log = self.runs()[0]["error_log"]
+		self.assertIn("unmapped=1 refused=1", error_log)
+		self.assertIn("R-7", error_log)
+
+	def test_a_pass_skipped_for_a_manual_import_is_recorded_and_completes(self):
+		self.unlock()
+		self.fake_import(
+			outcomes={"unmapped": 0, "refused": 0, "insert_errors": 0, "busy": True, "sample": []}
+		)
+
+		result = runner.sync_instance(self.client(self.punches()), doctypes=["Employee Checkin"])
+
+		self.assertEqual(result["status"], "Completed")
+		self.assertIn("manual punch import held the lock", self.runs()[0]["error_log"])
+
+	def test_the_source_name_field_ships_with_the_provenance_fields(self):
+		fields = runner.get_provenance_custom_fields()
+		checkin = fields["Employee Checkin"]
+		self.assertEqual(checkin[0]["fieldname"], runner.PROVENANCE_FIELD)
+		source = next(d for d in checkin if d["fieldname"] == runner.SOURCE_CHECKIN_FIELD)
+		self.assertEqual(source["fieldtype"], "Data")
+		self.assertTrue(source["read_only"])
+		self.assertTrue(
+			source["unique"],
+			"the database must refuse a second copy of a source punch, whatever the importers do",
+		)
+		self.assertFalse(source.get("search_index"), "the unique index already serves the lookup")
+		for doctype, definitions in fields.items():
+			if doctype != "Employee Checkin":
+				self.assertEqual([d["fieldname"] for d in definitions], [runner.PROVENANCE_FIELD])
+
+	def test_existing_sites_receive_the_field_on_migrate(self):
+		"""`get_custom_fields` runs on install only; existing sites get a changed
+		definition when the date on `sync_custom_fields_with_code` is bumped."""
+		line = next(
+			line
+			for line in (HRMS_ROOT / "patches.txt").read_text().splitlines()
+			if line.startswith("hrms.patches.v16_0.sync_custom_fields_with_code")
+		)
+		self.assertIn("source_checkin", line)
+
+
 if __name__ == "__main__":
 	unittest.main(verbosity=2)

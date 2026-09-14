@@ -408,6 +408,39 @@ class ShiftType(Document):
 		one implementation, so a threshold change here reaches both.
 		Returns the Attendance, or None when the day is not to be marked.
 		"""
+		# Through the class, not `self`: callers (and test_pending_punch_attendance)
+		# run this unbound on a plain object carrying only the Shift Type's fields.
+		day = ShiftType.shift_day_result(self, employee, attendance_date, single_shift_logs)
+		if day is None:
+			return None
+		logger.debug(
+			"[shift_type] marking %s on %s under %s: %s", employee, attendance_date, self.name, day.status
+		)
+		return mark_attendance_and_link_log(
+			day.eligible_logs,
+			day.status,
+			attendance_date,
+			day.working_hours,
+			day.late_entry,
+			day.early_exit,
+			day.in_time,
+			day.out_time,
+			self.name,
+			day.overtime_type,
+			repair_attendance=repair_attendance,
+			existing_attendance=day.existing,
+		)
+
+	def shift_day_result(self, employee, attendance_date, single_shift_logs):
+		"""What marking one shift day from these check-ins would produce. Reads only.
+
+		The computing half of `mark_attendance_for_shift_logs`, split out so a
+		preview (`hrms.sync.checkin_import.remark_attendance`, dry run) reports
+		exactly what the job would write rather than a second copy of the rule.
+		None when the day is not to be marked; otherwise the automation row the
+		marking would rebuild (`existing`), the punches it would link
+		(`eligible_logs`) and the result.
+		"""
 		from hrms.utils.ot_calculation import _classify_day, _is_eligible_checkin, _pair_sessions
 
 		if _classify_day(employee, attendance_date, "normal", shift=self.name) != "normal":
@@ -461,19 +494,16 @@ class ShiftType(Document):
 			single_shift_logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day
 		)
 
-		return mark_attendance_and_link_log(
-			eligible_logs,
-			attendance_status,
-			attendance_date,
-			working_hours,
-			late_entry,
-			early_exit,
-			in_time,
-			out_time,
-			self.name,
-			overtime_type,
-			repair_attendance=repair_attendance,
-			existing_attendance=existing,
+		return frappe._dict(
+			existing=existing,
+			eligible_logs=eligible_logs,
+			status=attendance_status,
+			working_hours=working_hours,
+			late_entry=late_entry,
+			early_exit=early_exit,
+			in_time=in_time,
+			out_time=out_time,
+			overtime_type=overtime_type,
 		)
 
 	def is_half_holiday(self, employee, attendance_date):
