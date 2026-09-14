@@ -116,12 +116,34 @@ class Attendance(Document):
 			)
 
 	def before_update_after_submit(self):
-		"""HR corrected the times on a submitted row: recompute, and say so."""
+		"""HR corrected a submitted row — its times or its status: say so, and
+		claim it (S3 G4). A status-only edit used to keep auto_attendance=1, so
+		the hourly job re-marked HR's fix from the punches an hour later."""
 		before = self.get_doc_before_save()
-		if before is None or not _times_differ(before, self):
+		if before is None:
+			return
+		times_changed = _times_differ(before, self)
+		stored_status = getattr(before, "status", None)
+		status_changed = stored_status is not None and stored_status != self.status
+		if not (times_changed or status_changed):
+			return
+		self.flags.hr_corrected_times = True
+		if status_changed:
+			self.add_comment(
+				"Edit",
+				_("Status changed by {0}: {1} → {2}").format(frappe.session.user, before.status, self.status),
+			)
+			logger.info(
+				"[attendance] %s status %s -> %s on submitted row %s by %s",
+				self.employee,
+				before.status,
+				self.status,
+				self.name,
+				frappe.session.user,
+			)
+		if not times_changed:
 			return
 		validate_attendance_times(self.in_time, self.out_time, self.attendance_date)
-		self.flags.hr_corrected_times = True
 		old_hours = self.working_hours
 		self.working_hours = paid_hours_for_row(self) if self.in_time and self.out_time else 0
 		self.set_overtime()

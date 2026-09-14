@@ -44,6 +44,22 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_CHUNK_SIZE = 50
 
+#: Settings that decide which punches belong to the shift; changing any of
+#: them under unmarked punches would re-read those punches differently.
+WINDOW_FIELDS = (
+	"start_time",
+	"end_time",
+	"begin_check_in_before_shift_start_time",
+	"allow_check_out_after_shift_end_time",
+)
+
+
+def _clock_minutes(value) -> int:
+	if isinstance(value, timedelta):
+		return int(value.total_seconds() // 60)
+	clock = get_time(value)
+	return clock.hour * 60 + clock.minute
+
 
 def _company_of_logs(logs) -> str | None:
 	"""Company of the employee these check-in logs belong to.
@@ -200,9 +216,59 @@ class ShiftType(Document):
 		self.validate_same_start_and_end(start, end)
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
+		self.warn_about_buffers()
+		self.warn_about_mode_mix()
 		self.validate_overtime_rates()
 		self.seed_last_sync_of_checkin()
 		logger.debug("[shift_type] validated %s", self.name)
+
+	# Shift definitions are HR's (D5): the two checks below only WARN.
+
+	def warn_about_buffers(self):
+		"""A check-in/out buffer longer than the shift, or over two hours,
+		pulls punches from far outside the shift onto it — where they meet
+		another shift's window (F1/F16). Reported, never changed."""
+		start, end = _clock_minutes(self.start_time), _clock_minutes(self.end_time)
+		length = end - start if end > start else end + 1440 - start
+		for label, value in (
+			(_("Begin check-in before shift start time"), cint(self.begin_check_in_before_shift_start_time)),
+			(_("Allow check-out after shift end time"), cint(self.allow_check_out_after_shift_end_time)),
+		):
+			if value > length:
+				msg = _(
+					"{0} is {1} minutes, longer than the shift itself ({2} minutes). Punches that far "
+					"outside the shift are read as this shift's. Nothing was changed — please check it."
+				).format(frappe.bold(label), value, length)
+			elif value > 120:
+				msg = _(
+					"{0} is {1} minutes, more than 120. Punches up to {1} minutes outside the shift are "
+					"read as this shift's and may meet another shift. Nothing was changed — please check it."
+				).format(frappe.bold(label), value)
+			else:
+				continue
+			logger.warning("[shift_type] %s: %s = %d min (shift %d min)", self.name, label, value, length)
+			frappe.msgprint(msg, title=_("Check the buffer"), indicator="orange")
+
+	def warn_about_mode_mix(self):
+		"""Alternating IN/OUT pairing with first-in/last-out hours pays the
+		mid-day gap as hours while overtime ignores it (F15). Reported only."""
+		alternating = self.determine_check_in_and_check_out == (
+			"Alternating entries as IN and OUT during the same shift"
+		)
+		first_last = self.working_hours_calculation_based_on == "First Check-in and Last Check-out"
+		if not (alternating and first_last):
+			return
+		logger.warning("[shift_type] %s: alternating pairing with first/last hours", self.name)
+		frappe.msgprint(
+			_(
+				"Check-ins are paired as alternating IN and OUT, but hours are counted from the first "
+				"check-in to the last check-out. A mid-day gap (out and back in) is paid as working "
+				"hours while overtime leaves it out. Nothing was changed — choose {0} if the gap "
+				"should not be paid."
+			).format(frappe.bold(_("Every Valid Check-in and Check-out"))),
+			title=_("Hours and overtime read the day differently"),
+			indicator="orange",
+		)
 
 	def seed_last_sync_of_checkin(self):
 		# Auto mode needs a concrete baseline: with last_sync_of_checkin empty,
@@ -273,7 +339,11 @@ class ShiftType(Document):
 		return max(labels, key=labels.get)
 
 	def validate_unlinked_logs(self):
-		if self.is_field_modified("start_time") and self.unlinked_checkins_exist():
+		if self.is_new():
+			return
+		changed = [field for field in WINDOW_FIELDS if self.has_value_changed(field)]
+		if changed and self.unlinked_checkins_exist():
+			logger.warning("[shift_type] %s: %s changed with unmarked punches — refused", self.name, changed)
 			frappe.throw(
 				title=_("Unmarked Check-in Logs Found"),
 				msg=_("Mark attendance for existing check-in/out logs before changing shift settings"),
@@ -382,6 +452,7 @@ class ShiftType(Document):
 	def _process(self, logs):
 		group_key = lambda x: (x["employee"], x["shift_start"])  # noqa
 		for key, group in groupby(sorted(logs, key=group_key), key=group_key):
+			lock_employee_row(key[0])
 			self.mark_attendance_for_shift_logs(key[0], key[1].date(), list(group))
 
 		# commit after processing checkin logs to avoid losing progress
@@ -888,6 +959,24 @@ def get_actual_shift_end(shift, current_datetime):
 		# shift start and end are on different days
 		actual_shift_end = add_days(actual_shift_end, -1)
 	return actual_shift_end
+
+
+def lock_employee_row(employee: str) -> None:
+	"""Take the per-employee lock HR's master edit takes (S3 G6, W7).
+
+	`SELECT … FOR UPDATE` on the Employee row, through the master edit's own
+	seam so the three writers — hourly job, nightly recovery, HR's edit —
+	queue behind each other for one person instead of both rebuilding the
+	same day. Held until the caller commits: `_process` commits once after
+	ALL of a shift type's punch groups, so every employee marked in that
+	pass stays locked until then. The nightly recovery calls this per employee.
+	"""
+	# ceiling: locks accumulate for a whole shift-type pass, upgrade: commit per
+	# employee group in _process if HR's master edit is seen waiting on it
+	from hrms.api.attendance_master_edit import _employee
+
+	_employee(employee, lock=True)
+	logger.debug("[shift_type] employee row %s locked for marking", employee)
 
 
 def process_auto_attendance_for_all_shifts():

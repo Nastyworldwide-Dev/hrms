@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, get_datetime, getdate
+from frappe.utils import cint, flt, get_datetime, get_link_to_form, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,10 @@ class CheckinRadiusExceededError(frappe.ValidationError):
 	pass
 
 
+#: What a punch inside an Attendance row can no longer say differently.
+LINKED_PUNCH_FIELDS = ("time", "log_type", "shift", "skip_auto_attendance")
+
+
 class EmployeeCheckin(Document):
 	def before_validate(self):
 		self.time = get_datetime(self.time).replace(microsecond=0)
@@ -35,7 +39,8 @@ class EmployeeCheckin(Document):
 	def validate(self):
 		validate_active_employee(self.employee)
 		self.validate_duplicate_log()
-		self.validate_time_change()
+		self.validate_linked_punch_locked()
+		self.validate_skip_has_reason()
 		self.fetch_shift()
 		self.set_geolocation()
 		self.validate_distance_from_shift_location()
@@ -56,14 +61,80 @@ class EmployeeCheckin(Document):
 				_("This employee already has a log with the same timestamp.{0}").format("<Br>" + doc_link)
 			)
 
-	def validate_time_change(self):
-		if self.attendance and self.has_value_changed("time"):
-			frappe.throw(
-				title=_("Cannot Modify Time"),
-				msg=_(
-					"An attendance record is linked to this checkin. Please cancel the attendance before modifying time."
-				),
-			)
+	def validate_linked_punch_locked(self):
+		"""A punch already inside an Attendance row is read-only (S3 G3).
+
+		Only `time` was locked; flipping log_type, shift or the skip tick on a
+		linked punch changed what the row was built from without rebuilding
+		it. The day is changed in Shift Attendance (master edit) or handed
+		back to automation; the punch itself is not edited. Automation writers
+		use `frappe.db.set_value` / `flags.ignore_validate` and are not here.
+		"""
+		before = self.get_doc_before_save()
+		if before is None or not before.attendance:
+			return
+		changed = [field for field in LINKED_PUNCH_FIELDS if self.has_value_changed(field)]
+		if not changed:
+			return
+		logger.warning(
+			"[employee_checkin] %s: %s changed on punch linked to %s — refused",
+			self.name,
+			", ".join(changed),
+			before.attendance,
+		)
+		frappe.throw(
+			title=_("This punch is already part of an attendance day"),
+			msg=_(
+				"{0} cannot be changed on a punch that is already inside Attendance {1}. "
+				"Correct the day in Shift Attendance (master edit), or hand the day back to "
+				"automation, and the punches are re-read from there."
+			).format(", ".join(changed), get_link_to_form("Attendance", before.attendance)),
+		)
+
+	def validate_skip_has_reason(self):
+		"""Ticking Skip needs a reason (S3 G3, E17).
+
+		A skipped punch silently drops a day's only closer (Nabil, 2 Sep 2026).
+		HR writes a comment on the punch first, then ticks; automation states
+		its reason in `flags.skip_reason` and `on_update` writes the comment.
+		"""
+		before = self.get_doc_before_save()
+		if before is None:
+			# A new punch inserted already skipped (add_log_based_on_employee_field,
+			# device integrations) is not HR flipping the tick on an existing one.
+			return
+		if cint(before.skip_auto_attendance) or not cint(self.skip_auto_attendance):
+			return
+		if self.flags.get("skip_reason"):
+			return
+		comment_filters = {
+			"reference_doctype": "Employee Checkin",
+			"reference_name": self.name,
+			"comment_type": "Comment",
+			"creation": (">=", before.modified),
+		}
+		if frappe.db.exists("Comment", comment_filters):
+			return
+		logger.warning(
+			"[employee_checkin] %s: skip ticked with no reason by %s", self.name, frappe.session.user
+		)
+		frappe.throw(
+			title=_("Say why this punch is skipped"),
+			msg=_(
+				"A skipped punch is not read for attendance, so the day may lose its check-in "
+				"or check-out. Add a comment on this punch saying why first, then tick Skip."
+			),
+		)
+
+	def on_update(self):
+		reason = self.flags.get("skip_reason")
+		if not reason or not cint(self.skip_auto_attendance):
+			return
+		before = self.get_doc_before_save()
+		if before is not None and cint(before.skip_auto_attendance):
+			return
+		self.add_comment("Comment", _("Skipped by {0}: {1}").format(frappe.session.user, reason))
+		logger.info("[employee_checkin] %s skipped: %s", self.name, reason)
 
 	@frappe.whitelist()
 	def set_geolocation(self):
@@ -805,6 +876,22 @@ def skip_attendance_in_checkins(log_names: list):
 		.set("skip_auto_attendance", 1)
 		.where(EmployeeCheckin.name.isin(log_names))
 	).run()
+
+
+def skip_punch(name: str, reason: str) -> None:
+	"""Skip-stamp a punch AND say why, in one call (E17).
+
+	For automation that used to write `skip_auto_attendance = 1` with
+	`frappe.db.set_value` and no trace (the reject path in
+	remote_checkin_request_hooks, hold_punches): the skip tick stays a
+	database write, the reason lands as a comment on the punch so HR's list
+	can show it. Punches saved through the form use `flags.skip_reason`.
+	"""
+	frappe.db.set_value("Employee Checkin", name, "skip_auto_attendance", 1)
+	frappe.get_doc("Employee Checkin", name).add_comment(
+		"Comment", _("Skipped by {0}: {1}").format(frappe.session.user, reason)
+	)
+	logger.info("[employee_checkin] %s skipped by %s: %s", name, frappe.session.user, reason)
 
 
 def update_attendance_in_checkins(log_names: list, attendance_id: str):

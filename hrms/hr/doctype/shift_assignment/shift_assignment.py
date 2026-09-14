@@ -160,6 +160,9 @@ def refuse_overlapping_assignments(doc) -> None:
 	still tick "Both shifts on purpose (HR)" on the new assignment. Shift
 	definitions are HR's: this refuses, it never rewrites anything.
 	"""
+	# ceiling: rostered hours only, not the check-in/out buffers (owner's call:
+	# the session-first resolver keeps a punch on its rostered shift), upgrade:
+	# compare buffered windows if two-shift punches still appear on the report
 	if doc.status != "Active":
 		return
 	if cint(getattr(doc, "both_shifts_on_purpose", 0)):
