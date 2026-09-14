@@ -465,15 +465,19 @@ class TestNonworkingHours(unittest.TestCase):
 			)
 			self.assertEqual(result["ot_hours"], 3)
 
-	def test_midnight_changes_day_type_in_both_breakdown_paths(self):
+	def test_midnight_does_not_change_the_shift_day_type_in_either_breakdown_path(self):
+		# Was 1h: the rest-day hour before midnight, the Monday hour after it
+		# re-classified as weekday work and discarded. Owner ruling (14 Sep 2026):
+		# the whole session belongs to the rest day it started on.
 		rows = [punch(DAY, "23:00", "IN"), punch(DAY, "01:00", "OUT")]
 		rows[-1].time += timedelta(days=1)
 		with self.context(rows=rows):
-			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", DAY)["ot_hours"], 1)
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", DAY)["ot_hours"], 2)
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", DAY + timedelta(days=1))["ot_hours"], 0)
 			result = ot.get_shift_ot_breakdown(
 				"EMP-SYNTHETIC", "SHIFT-SYNTHETIC", DAY, rows[-1].time, in_time=rows[0].time
 			)
-			self.assertEqual(result["ot_hours"], 1)
+			self.assertEqual(result["ot_hours"], 2)
 
 	def test_alternating_shift_policy_accepts_untyped_punches(self):
 		rows = [punch(DAY, "10:08", ""), punch(DAY, "13:22", "")]
@@ -513,6 +517,133 @@ class TestNonworkingHours(unittest.TestCase):
 		with self.context(rows=rows):
 			self.assertAlmostEqual(
 				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], minutes / 60
+			)
+
+
+WEEKDAY = date(2026, 9, 8)  # a Tuesday; no holiday row unless a test adds one
+NEXT_DAY = WEEKDAY + timedelta(days=1)
+
+
+def _after_midnight(row):
+	"""The same punch, one calendar day later — it keeps the shift-day stamps."""
+	row.time += timedelta(days=1)
+	return row
+
+
+def _day_shift_out_at_0130(day=WEEKDAY):
+	"""A 9-18 shift, IN 09:00, OUT 01:30 the next morning: 7.5h past the end."""
+	return [punch(day, "09:00", "IN"), _after_midnight(punch(day, "01:30", "OUT"))]
+
+
+def _night_shift_out_at_0600(day=WEEKDAY):
+	"""A 19:30-03:30 shift, IN 19:30, OUT 06:00 the next morning: 2.5h past the end."""
+	rows = [punch(day, "19:30", "IN"), _after_midnight(punch(day, "06:00", "OUT"))]
+	for row in rows:
+		row.update(
+			shift_start=datetime.combine(day, time(19, 30)),
+			shift_end=datetime.combine(day + timedelta(days=1), time(3, 30)),
+			shift_actual_start=datetime.combine(day, time(18, 30)),
+			shift_actual_end=datetime.combine(day + timedelta(days=1), time(8, 30)),
+		)
+	return rows
+
+
+class TestOvertimeBelongsToTheShiftDay(unittest.TestCase):
+	"""Owner ruling, 14 Sep 2026: overtime belongs to the SHIFT DAY — the date the
+	session's shift started — including every minute worked after midnight.
+
+	The slicer used to cut a session at midnight and book each piece to its
+	calendar date. A claim is filed for the shift date, so it never saw the
+	after-midnight part: all of a night shift's overtime, and the tail of any day
+	shift worked past midnight. That is "I can't claim my OT". The same cut
+	re-classified the tail by the next day's calendar, so a weekday shift running
+	into a public holiday was paid the holiday rate for the last hours of a
+	weekday, and a holiday shift running into a weekday lost its holiday rate.
+	"""
+
+	def context(self, **kwargs):
+		kwargs.setdefault("holidays", {})
+		kwargs.setdefault("cap", 0)
+		return TestNonworkingHours().context(**kwargs)
+
+	def test_day_shift_worked_past_midnight_books_all_overtime_to_the_shift_date(self):
+		rows = _day_shift_out_at_0130()
+		with self.context(rows=rows):
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", WEEKDAY)["ot_hours"], 7.5)
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", NEXT_DAY)["ot_hours"], 0)
+			self.assertEqual(
+				ot.get_shift_ot_breakdown(
+					"EMP-SYNTHETIC", "SHIFT-SYNTHETIC", WEEKDAY, rows[-1].time, in_time=rows[0].time
+				)["ot_hours"],
+				7.5,
+			)
+
+	def test_night_shift_overtime_lands_on_the_shift_start_date(self):
+		rows = _night_shift_out_at_0600()
+		with self.context(rows=rows):
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", WEEKDAY)["ot_hours"], 2.5)
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", NEXT_DAY)["ot_hours"], 0)
+			self.assertEqual(
+				ot.get_shift_ot_breakdown(
+					"EMP-SYNTHETIC", "SHIFT-SYNTHETIC", WEEKDAY, rows[-1].time, in_time=rows[0].time
+				)["ot_hours"],
+				2.5,
+			)
+
+	def test_weekday_shift_running_into_a_public_holiday_keeps_the_weekday_rate(self):
+		for label, rows, hours in (
+			("day shift", _day_shift_out_at_0130(), 7.5),
+			("night shift", _night_shift_out_at_0600(), 2.5),
+		):
+			with self.subTest(label), self.context(rows=rows, holidays={NEXT_DAY: 0}):
+				result = ot.get_day_ot_breakdown("EMP-SYNTHETIC", WEEKDAY)
+				self.assertEqual(result["day_type"], "normal")
+				self.assertEqual([(b["hours"], b["rate"]) for b in result["bands"]], [(hours, 1.5)])
+				self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", NEXT_DAY)["ot_hours"], 0)
+
+	def test_public_holiday_shift_running_into_a_weekday_keeps_the_holiday_rate(self):
+		holiday = WEEKDAY
+		rows = [punch(holiday, "09:00", "IN"), _after_midnight(punch(holiday, "01:00", "OUT"))]
+		with self.context(rows=rows, holidays={holiday: 0}):
+			result = ot.get_day_ot_breakdown("EMP-SYNTHETIC", holiday)
+			self.assertEqual(result["day_type"], "public_holiday")
+			# 16 worked hours, all holiday work: the fixture's 8h at 2x then 3x bands.
+			self.assertEqual([(b["hours"], b["rate"]) for b in result["bands"]], [(8, 2), (8, 3)])
+			self.assertEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", NEXT_DAY)["ot_hours"], 0)
+			self.assertEqual(
+				ot.get_shift_ot_breakdown(
+					"EMP-SYNTHETIC", "SHIFT-SYNTHETIC", holiday, rows[-1].time, in_time=rows[0].time
+				)["ot_hours"],
+				16,
+			)
+
+	def test_claim_for_the_shift_date_includes_after_midnight_and_the_next_date_has_none(self):
+		for label, rows, hours in (
+			("day shift", _day_shift_out_at_0130(), 7.5),
+			("night shift", _night_shift_out_at_0600(), 2.5),
+		):
+			with self.subTest(label), self.context(rows=rows):
+				self.assertEqual(
+					ot.get_ot_claim_capacity("EMP-SYNTHETIC", WEEKDAY, "Overtime Pay")["hours"], hours
+				)
+				self.assertEqual(
+					ot.get_ot_claim_capacity("EMP-SYNTHETIC", NEXT_DAY, "Overtime Pay")["hours"], 0
+				)
+
+	def test_payroll_pays_the_shift_date_claim_once_and_nothing_for_the_next_date(self):
+		rows = _night_shift_out_at_0600()
+		with self.context(rows=rows, approved=[(WEEKDAY, 2.5), (NEXT_DAY, 2.5)]):
+			# 2080 / (26 * 8) = 10/h; 2.5h at 1.5x. The next date's claim prices nothing.
+			self.assertEqual(ot.get_ot_pay("EMP-SYNTHETIC", WEEKDAY, WEEKDAY, 2080), 37.5)
+			self.assertEqual(ot.get_ot_pay("EMP-SYNTHETIC", WEEKDAY, NEXT_DAY, 2080), 37.5)
+
+	def test_a_night_shift_on_the_last_day_of_the_month_counts_in_that_month(self):
+		last = date(2026, 9, 30)
+		rows = _night_shift_out_at_0600(last)
+		with self.context(rows=rows, cap=2):
+			self.assertEqual(ot.get_ot_claim_capacity("EMP-SYNTHETIC", last, "Overtime Pay")["hours"], 2)
+			self.assertEqual(
+				ot.get_ot_breakdown("EMP-SYNTHETIC", date(2026, 10, 1), date(2026, 10, 31), 0), {}
 			)
 
 

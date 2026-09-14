@@ -17,10 +17,10 @@ Each day type can define multiple tiers (e.g. first 8 hrs at 1.5x, beyond at
 Overtime is only priced for shifts with `enable_overtime` set; the day's
 rate bands, hourly-rate divisors, grace and caps are read from that shift.
 
-Sessions are paired IN -> OUT in chronological order. If a session
-crosses midnight, OT hours are SPLIT at the date boundary: pre-midnight
-hours pay at the IN day's rate, post-midnight hours pay at the next
-day's rate (Calendar-Day Split / "Option B").
+Sessions are paired IN -> OUT in chronological order. A session's OT
+belongs to its SHIFT DAY — the date its shift started — including any time
+worked after midnight, and is classified and priced by that day's calendar
+(owner ruling, 14 Sep 2026; replaces the old calendar-day split).
 """
 
 from __future__ import annotations
@@ -402,7 +402,7 @@ def _rate_weighted_hours(bands):
 
 
 def _per_day_contributions(employee, start_date, end_date):
-	"""Eligible worked overtime per calendar day, kept PER SHIFT in work order.
+	"""Eligible worked overtime per shift day, kept PER SHIFT in work order.
 
 	Returns {day: [{"shift": name, "hours": h}, ...]}: one entry per shift the
 	day was worked under, consecutive sessions on the same shift merged, in the
@@ -487,7 +487,7 @@ def _contributions_from_maps(per_day_hours, per_day_shift):
 
 
 def _session_ot_slices(employee, session, config):
-	"""Calendar-day OT slices shared by raw scans and Attendance breakdowns."""
+	"""Shift-day OT slice (one per session) shared by raw scans and Attendance breakdowns."""
 	shift = session["shift"]
 	anchor = session.get("shift_start")
 	real_end = _real_shift_end_for_session(shift, session) if session.get("shift_end") else None
@@ -506,16 +506,22 @@ def _session_ot_slices(employee, session, config):
 		if real_end
 		else None
 	)
-	cursor = session["first_in"]
-	logger.debug("[ot_calculation] slicing eligible worked interval by calendar day")
-	while cursor < session["last_out"]:
-		slice_end = min(session["last_out"], datetime.combine(cursor.date() + timedelta(days=1), time.min))
-		day_type = _classify_day(employee, cursor.date(), "normal", shift=shift)
-		# Scheduled weekday breaks and the shift end never erase holiday work.
-		start = cursor if day_type != "normal" else max(cursor, ot_begins or slice_end)
-		if start < slice_end:
-			yield cursor.date(), (slice_end - start).total_seconds() / 3600, day_type
-		cursor = slice_end
+	# THE SHIFT DAY, NOT THE CALENDAR DAY. Owner ruling, 14 Sep 2026: overtime
+	# belongs to the date the session's shift started, minutes after midnight
+	# included. Cutting the session at midnight booked the tail to the next
+	# date, which no claim for the shift date could see — all of a night
+	# shift's overtime — and priced that tail by the next day's calendar.
+	# The IN's own date stands in only when the punch carries no shift start.
+	shift_day = real_start.date() if real_start else session["first_in"].date()
+	day_type = _classify_day(employee, shift_day, "normal", shift=shift)
+	# Scheduled weekday breaks and the shift end never erase holiday work.
+	if day_type != "normal":
+		start = session["first_in"]
+	else:
+		start = max(session["first_in"], ot_begins) if ot_begins else session["last_out"]
+	logger.debug("[ot_calculation] session OT booked to shift day %s (%s)", shift_day, day_type)
+	if start < session["last_out"]:
+		yield shift_day, (session["last_out"] - start).total_seconds() / 3600, day_type
 
 
 def _approved_ot_pay_hours(employee, start_date, end_date):
