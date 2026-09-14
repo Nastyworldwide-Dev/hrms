@@ -70,6 +70,7 @@ class _Db:
 		self.saved = []
 		self.comments = []
 		self.broken = {}
+		self.save_broken = {}
 
 	def add_checkin(self, name, time, log_type, shift=None, attendance=None, **extra):
 		row = frappe._dict(
@@ -146,6 +147,8 @@ class _Db:
 
 		class _Punch(CustomEmployeeCheckin):
 			def save(self):
+				if self.name in db.save_broken:
+					raise db.save_broken[self.name]
 				db.saved.append(self.name)
 				db.checkins[self.name].update({f: getattr(self, f) for f in (*STAMP, "offshift")})
 
@@ -427,6 +430,33 @@ class TestHourlyPass(_Case):
 		with self.at(datetime(2026, 9, 4, 11, 0)):
 			self.assertEqual(heal.heal_recent_offshift_punches(), 1)
 		self.assertEqual(self.db.checkins["OUT-0904"].shift, SHIFT)
+
+	def test_a_row_that_cannot_be_saved_does_not_undo_the_other_heals(self):
+		# Review of a7185f74d: only resolution was caught per row, so one failing
+		# save rolled back every heal in the pass, every hour, for two days.
+		self.db.add_checkin("STALE", datetime(2026, 9, 4, 0, 30), "OUT", employee="HR-EMP-OTHER")
+		self.db.add_checkin(
+			"IN-OTHER", datetime(2026, 9, 3, 16, 0), "IN", employee="HR-EMP-OTHER", shift=SHIFT
+		)
+		self.db.save_broken["STALE"] = RuntimeError("Could not find Device: gone")
+		with self.at(datetime(2026, 9, 4, 11, 0)):
+			self.assertEqual(heal.heal_recent_offshift_punches(), 1)
+		self.assertEqual(self.db.saved, ["OUT-0904"])
+		self.assertIn(
+			{"save_point": "offshift_punch_heal_row"},
+			[c.kwargs for c in self.fake_db.rollback.call_args_list],
+		)
+		self.assertNotIn(
+			{"save_point": "offshift_punch_heal"}, [c.kwargs for c in self.fake_db.rollback.call_args_list]
+		)
+
+	def test_hitting_the_hourly_limit_reaches_the_error_log(self):
+		with patch.object(heal, "RECENT_LIMIT", 1), self.at(datetime(2026, 9, 4, 11, 0)):
+			heal.heal_recent_offshift_punches()
+		self.assertIn(
+			"Off-shift punch heal hit its limit",
+			[c.kwargs.get("title") for c in self.log_error.call_args_list],
+		)
 
 	def test_a_deadlock_on_a_later_row_rolls_back_and_reports_nothing_healed(self):
 		"""Newest first: OUT-0904 is saved, then the older row deadlocks. MariaDB

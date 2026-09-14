@@ -60,9 +60,10 @@ MAX_WINDOW_DAYS = 62
 #: The hourly pass only looks this far back. Older days are the owner's call.
 RECENT_DAYS = 2
 # ceiling: the hourly pass re-resolves at most RECENT_LIMIT shiftless check-outs,
-# newest first; upgrade: page by time if "[offshift_punch_heal] hourly pass hit
-# the limit" ever appears in the logs.
+# newest first; upgrade: page by time if an Error Log titled "Off-shift punch
+# heal hit its limit" ever appears.
 RECENT_LIMIT = 200
+ROW_SAVEPOINT = "offshift_punch_heal_row"
 SAVEPOINT = "offshift_punch_heal"
 FAILURE_TITLE = "Off-shift punch heal failed"
 MAY_BECOME_ABSENT = (
@@ -249,28 +250,42 @@ def _heal(start, end=None, *, dry_run, for_update, not_before=None, report_expos
 			entry["held_because"] = f"before {not_before}: that payroll cycle may be closed"
 			held_back.append(entry)
 			continue
-		on_shift = next((a.name for a in entry["attendance"] if a.shift == punch.shift), None)
-		if _repair_financial_dependency(punch.employee, entry["shift_date"], on_shift, for_update=for_update):
-			# The rebuild would be refused by the job's financial guard, which then
-			# skip-stamps the whole day. HR corrects a paid day by hand.
-			entry["held_because"] = "approved overtime or submitted payroll depends on the day"
-			held_back.append(entry)
+		if not dry_run:
+			# One row that cannot be written (a stale link, a concurrent save) must
+			# not roll back every other employee's heal in this pass.
+			frappe.db.savepoint(ROW_SAVEPOINT)
+		try:
+			on_shift = next((a.name for a in entry["attendance"] if a.shift == punch.shift), None)
+			if _repair_financial_dependency(
+				punch.employee, entry["shift_date"], on_shift, for_update=for_update
+			):
+				# The rebuild would be refused by the job's financial guard, which then
+				# skip-stamps the whole day. HR corrects a paid day by hand.
+				entry["held_because"] = "approved overtime or submitted payroll depends on the day"
+				held_back.append(entry)
+				continue
+			if not dry_run:
+				# The same write the Attendance Day Audit repair and probe B3 make:
+				# through the document, validate skipped (geofence and duplicate checks
+				# judge a live punch, not a re-stamp of a stored one).
+				punch.flags.ignore_validate = True
+				punch.flags.ignore_permissions = True
+				punch.save()
+				punch.add_comment(
+					"Comment",
+					_(
+						"Off-shift punch heal: shift {0} re-resolved for {1}; the hourly job rebuilds that day."
+					).format(punch.shift, entry["shift_date"]),
+				)
+		except Exception as exc:
+			if dry_run or _lost_transaction(exc):
+				raise
+			frappe.db.rollback(save_point=ROW_SAVEPOINT)
+			logger.exception("[offshift_punch_heal] could not write %s; skipped", punch.name)
+			entry["held_because"] = f"could not be written: {exc}"
+			not_readable.append(entry)
 			continue
 		healed.append(entry)
-		if dry_run:
-			continue
-		# The same write the Attendance Day Audit repair and probe B3 make:
-		# through the document, validate skipped (geofence and duplicate checks
-		# judge a live punch, not a re-stamp of a stored one).
-		punch.flags.ignore_validate = True
-		punch.flags.ignore_permissions = True
-		punch.save()
-		punch.add_comment(
-			"Comment",
-			_(
-				"Off-shift punch heal: shift {0} re-resolved for {1}; the hourly job rebuilds that day."
-			).format(punch.shift, entry["shift_date"]),
-		)
 	logger.info(
 		"[offshift_punch_heal] %s..%s dry_run=%s: %d candidate(s), %d healed, %d held back, %d unreadable",
 		start,
@@ -400,6 +415,10 @@ def heal_recent_offshift_punches() -> int:
 		result = _heal(start, dry_run=0, for_update=True, log_type="OUT", limit=RECENT_LIMIT, order="desc")
 		if result["candidates"] >= RECENT_LIMIT:
 			logger.warning("[offshift_punch_heal] hourly pass hit the limit of %d", RECENT_LIMIT)
+			frappe.log_error(
+				title="Off-shift punch heal hit its limit",
+				message=f"{result['candidates']} shiftless check-outs in the last 2 days; limit {RECENT_LIMIT}.",
+			)
 		if not frappe.in_test:
 			# Releases the payroll row locks taken above before the long job starts.
 			frappe.db.commit()  # nosemgrep
