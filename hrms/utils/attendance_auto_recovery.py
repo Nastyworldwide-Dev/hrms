@@ -34,8 +34,30 @@ AUTO_STEPS = tuple(step for step in rec.STEPS if step != "import")
 NIGHTLY_DAYS = 7
 ONCE_JOB_ID = "attendance_recovery_once"
 CHUNK_DAYS = 31
+
+#: Reasons a day is left alone ON PURPOSE (hrms/utils/attendance_recovery.py
+#: protected_reason, hrms/sync/checkin_import.py plan_remark, the OT recount).
+#: Nothing for HR to fix: a leave, an HR-kept or HR-removed day, a paid day.
+LEFT_ALONE_ON_PURPOSE = (
+	"is a leave record",
+	"is a half-day leave",
+	"comes from an attendance request",
+	"marked by hr by hand",
+	"is marked by hand, a leave, or another instance's",
+	"is a draft",
+	"removed by hr",
+	"hr removed this day",
+	"depends on this day",
+	"today or later",
+)
 TITLE_PREFIX = "Attendance recovery"
 FAILURE_TITLE = "Attendance recovery run failed"
+
+
+def needs_hr(held: dict) -> bool:
+	"""A held-back day HR must correct: flagged for HR and not left alone on purpose."""
+	reason = str(held.get("reason") or "").lower()
+	return bool(held.get("hr")) and not any(phrase in reason for phrase in LEFT_ALONE_ON_PURPOSE)
 
 
 def _yesterday() -> date:
@@ -58,7 +80,7 @@ def _run(from_date, to_date) -> dict:
 	ERP import (a network call) before each step; here the loop is the order.
 	"""
 	summary = {"from_date": str(from_date), "to_date": str(to_date), "steps": {}, "stopped_at": None}
-	hr_days = set()
+	hr_days, protected_days = set(), set()
 	for chunk_start, chunk_end in _chunks(getdate(from_date), getdate(to_date)):
 		win = rec.recovery_window(chunk_start, chunk_end, getdate(nowdate()))
 		for step in AUTO_STEPS:
@@ -73,11 +95,17 @@ def _run(from_date, to_date) -> dict:
 				tally["error"] = str(exc)[:300]
 				summary["stopped_at"] = step
 				summary["hr_days"] = len(hr_days)
+				summary["protected_days"] = len(protected_days - hr_days)
 				return summary
 			held = (plan.get("held_back") or []) + (outcome.get("held_back") or [])
 			tally["done"] += len(outcome.get("done") or [])
 			tally["held_back"] += len(held)
-			hr_days.update((h.get("employee"), str(h.get("date"))) for h in held if h.get("hr"))
+			for h in held:
+				key = (h.get("employee"), str(h.get("date")))
+				if needs_hr(h):
+					hr_days.add(key)
+				elif h.get("hr"):
+					protected_days.add(key)
 			logger.info("[attendance_recovery_auto] %s %s..%s: %s", step, win.start, win.end, tally)
 		try:
 			hr_days.update(
@@ -86,6 +114,7 @@ def _run(from_date, to_date) -> dict:
 		except Exception:
 			logger.exception("[attendance_recovery_auto] OT request review failed for %s", win.start)
 	summary["hr_days"] = len(hr_days)
+	summary["protected_days"] = len(protected_days - hr_days)
 	return summary
 
 
@@ -96,6 +125,7 @@ def _message(summary: dict) -> str:
 		f"Fixed: {sum(fixed.values())} change(s)"
 		+ (" — " + ", ".join(f"{k} {v}" for k, v in fixed.items()) if fixed else ""),
 		f"Days only HR can fix (open Shift Attendance): {summary.get('hr_days')}",
+		f"Left alone on purpose (leave, HR-kept, paid): {summary.get('protected_days')}",
 		"ERP punch import is not part of this run; it stays with the manual sync.",
 	]
 	if summary.get("stopped_at"):

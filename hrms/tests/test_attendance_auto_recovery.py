@@ -68,6 +68,12 @@ class _Case(unittest.TestCase):
 				[
 					{"employee": "E2", "date": "2026-09-03", "hr": True},
 					{"employee": "E1", "date": "2026-09-02", "hr": True},
+					{
+						"employee": "E4",
+						"date": "2026-09-04",
+						"hr": True,
+						"reason": "HR-ATT-9 is a leave record",
+					},
 				]
 				if step == "rebuild"
 				else []
@@ -114,7 +120,11 @@ class TestReport(_Case):
 	def test_one_summary_with_fixed_count_and_hr_days(self):
 		auto.run_once()
 		title = frappe.log_error.call_args.kwargs["title"]
+		# E1, E2, E3 need HR; E4 is a leave day, left alone on purpose.
 		self.assertEqual(title, "Attendance recovery 2026-09-15: fixed 4, 3 day(s) need HR")
+		self.assertIn(
+			"Left alone on purpose (leave, HR-kept, paid): 1", frappe.log_error.call_args.kwargs["message"]
+		)
 		auto.notify_hr.assert_called_once()
 
 	def test_no_duplicate_summary_for_the_same_title(self):
@@ -126,6 +136,34 @@ class TestReport(_Case):
 	def test_never_raises(self):
 		with patch.object(auto, "_run", side_effect=RuntimeError("boom")):
 			self.assertIsNone(auto.run_nightly())
+
+
+class TestWhatNeedsHR(unittest.TestCase):
+	"""Live, 15 Sep 2026: the first run reported "758 day(s) need HR". A leave
+	day, an HR-kept day or a paid day is left alone ON PURPOSE — nothing for HR
+	to do — so only days held for another reason count."""
+
+	def test_days_left_alone_on_purpose_do_not_need_hr(self):
+		for reason in (
+			"HR-ATT-2026-1 is a leave record",
+			"HR-ATT-2026-1 is a half-day leave",
+			"HR-ATT-2026-1 comes from an Attendance Request",
+			"HR-ATT-2026-1 was marked by HR by hand",
+			"HR-ATT-2026-1 is marked by hand, a leave, or another instance's",
+			"HR-ATT-2026-1 is a draft attendance HR is keying",
+			"HR-ATT-2026-1 is a draft",
+			"removed by HR in Shift Attendance: HR hands it back first",
+			"HR removed this day in Shift Attendance",
+			"a payout depends on this day (SAL-1)",
+			"payroll or approved overtime depends on this day (OT-1)",
+			"approved overtime or submitted payroll depends on this day (OT-1)",
+			"today or later: never touched",
+		):
+			self.assertFalse(auto.needs_hr({"reason": reason, "hr": True}), reason)
+
+	def test_a_day_the_engine_could_not_fix_needs_hr(self):
+		self.assertTrue(auto.needs_hr({"reason": "the engine would not mark this day: no shift", "hr": True}))
+		self.assertFalse(auto.needs_hr({"reason": "rebuild failed: boom", "hr": False}))
 
 
 class TestWiring(unittest.TestCase):
