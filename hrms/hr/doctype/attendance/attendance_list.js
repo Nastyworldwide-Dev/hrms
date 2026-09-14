@@ -4,6 +4,11 @@ frappe.listview_settings["Attendance"] = {
 	// hourly job owns it.
 	add_fields: ["status", "attendance_date", "shift", "auto_attendance", "working_hours"],
 
+	// Hours are stored to 9 decimals; HR reads them to 2.
+	formatters: {
+		working_hours: (value) => format_number(value, null, 2),
+	},
+
 	get_indicator: function (doc) {
 		// A row a person entered or corrected is theirs: the hourly job never
 		// touches it again (Attendance.claim_hr_ownership_on_amend). HR asked to

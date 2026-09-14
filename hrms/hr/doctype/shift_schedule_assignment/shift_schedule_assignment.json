@@ -52,7 +52,6 @@
   {
    "fieldname": "employee",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Employee",
    "options": "Employee",
@@ -107,7 +106,7 @@
    "link_fieldname": "shift_schedule_assignment"
   }
  ],
- "modified": "2025-07-10 18:48:42.170391",
+ "modified": "2026-09-15 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Schedule Assignment",

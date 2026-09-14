@@ -107,3 +107,4 @@ hrms.patches.v16_0.link_nadi_requests_in_shift_attendance #2026-09-14 HR could n
 hrms.patches.v16_0.hr_manager_can_read_advance_and_travel #2026-09-14 HR Manager could not open an advance or travel request to correct it (read only)
 hrms.patches.v16_0.add_forgotten_checkouts_link #2026-09-14 HR could not find forgotten check-outs among every Remote Checkin Request in Desk
 hrms.patches.v16_0.run_attendance_recovery_once #2026-09-14 queue the automatic attendance recovery 2026-08-01→yesterday once after deploy
+hrms.patches.v16_0.names_not_ids_in_hr_lists #2026-09-15 HR read request lists by employee ID; saved columns kept the ID after the doctypes switched to names
