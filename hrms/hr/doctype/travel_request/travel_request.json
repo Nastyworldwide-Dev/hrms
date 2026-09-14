@@ -225,7 +225,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2024-05-24 17:09:09.480838",
+ "modified": "2026-09-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Travel Request",
@@ -243,6 +243,10 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
   }
  ],
  "search_fields": "employee_name",
