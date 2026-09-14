@@ -822,6 +822,19 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))
 		self.assertEqual(resolved, "IN", "an untyped row makes the session unreadable — do not coerce")
 
+	def test_hr_removed_day_marker_does_not_switch_the_correction_off(self):
+		"""Final review of 85d7308f3: the untyped marker HR's Shift Attendance
+		editor writes on a removed day made every later second IN stay IN for 3
+		days, bringing back the double-IN damage. It is not a punch."""
+		from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
+
+		rows = [
+			self.row(None, self.at(0, 0) - datetime.timedelta(days=1), device_id=HR_REMOVED_DEVICE),
+			self.row("IN", self.at(8, 55)),
+		]
+		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 31))
+		self.assertEqual(resolved, "OUT")
+
 	def test_a_null_typed_row_stops_the_coercion_too(self):
 		rows = [self.row("IN", self.at(8, 0)), self.row(None, self.at(9, 0))]
 		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(18, 0))

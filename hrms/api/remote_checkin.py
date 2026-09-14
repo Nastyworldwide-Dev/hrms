@@ -19,6 +19,7 @@ from frappe.utils import add_days, cint, get_datetime, now_datetime
 
 from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.geofence import usable_accuracy
+from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
 
 #: The PWA names the provider it got the fix from; the row stores a word HR can read.
 LOCATION_SOURCES = {"high": "GPS", "gps": "GPS", "coarse": "Network", "network": "Network"}
@@ -320,6 +321,9 @@ def resolve_punch_type(recent_rows, requested: str, now):
 			for r in recent_rows
 			if not (r.log_type == "OUT" and r.get("remote_approval_status") == "Rejected")
 			and not r.get("synced_from_instance")
+			# The marker HR's Shift Attendance editor leaves on a removed day is not a
+			# punch; untyped, it would switch this correction off for 3 days.
+			and r.get("device_id") != HR_REMOVED_DEVICE
 		),
 		# Ties are reachable: before_validate truncates to whole seconds and
 		# validate_duplicate_log filters ON log_type, so an IN and an OUT at the
@@ -468,6 +472,7 @@ def punch(
 					"remote_approval_status",
 					"synced_from_instance",
 					"shift_actual_end",
+					"device_id",
 				],
 				order_by="time desc",
 				limit=100,

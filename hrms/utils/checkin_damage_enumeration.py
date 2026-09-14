@@ -223,8 +223,9 @@ SHAPES = {
 	),
 	# ---------------------------------------------------------------- S7
 	# Each untyped row in a 3-day window disables resolve_punch_type's
-	# correction for that employee entirely — the guard returns before the
-	# mirrored/rejected filter runs, so even a mirrored untyped row counts.
+	# correction for that employee — the guard judges the rows the walk reads, so
+	# mirrored and rejected rows no longer count. HR's removed-day marker is
+	# excluded too: resolve_punch_type skips it (hrms/utils/hr_removed_day.py).
 	"S7": (
 		"untyped punches (each disables the punch-type correction for 3 days)",
 		"""
@@ -233,6 +234,7 @@ SHAPES = {
 		  FROM `tabEmployee Checkin`
 		 WHERE time BETWEEN %(from_date)s AND %(to_date)s
 		   AND (log_type IS NULL OR log_type NOT IN ('IN', 'OUT'))
+		   AND IFNULL(device_id, '') != 'HR master edit: removed day'
 		 ORDER BY employee, time
 		""",
 	),
