@@ -237,7 +237,15 @@ def _decide(request: str, decision: str, approver_remarks: str) -> dict:
 		row.checkin,
 		frappe.session.user,
 	)
-	return {"ok": True, "name": request, "status": decision}
+	# Set by the on_update hook when this was a late check-out: the approver
+	# must see whether the day was actually rebuilt, not just "approved" (E1).
+	repair = doc.flags.get("late_checkout_repair")
+	return {
+		"ok": True,
+		"name": request,
+		"status": decision,
+		"attendance_repair": dict(repair) if repair else None,
+	}
 
 
 @frappe.whitelist()

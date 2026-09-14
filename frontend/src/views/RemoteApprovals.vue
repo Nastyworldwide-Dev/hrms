@@ -244,6 +244,7 @@ import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
 import { FeatherIcon, toast } from "frappe-ui"
+import { decisionToast } from "@/utils/approvalToast"
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -317,16 +318,19 @@ const submitDecision = async () => {
 	submitting.value = true
 	const resource = decision.value === "approve" ? approveResource : rejectResource
 	try {
-		await resource.submit({
+		const result = await resource.submit({
 			request: activeReq.value.name,
 			approver_remarks: decisionRemarks.value.trim(),
 		})
+		// A late check-out approval says whether the day was actually updated.
+		const shown = decisionToast(decision.value, result?.attendance_repair, __)
+		const warn = shown.tone === "warning"
 		toast({
-			title: decision.value === "approve" ? __("Approved") : __("Rejected"),
-			text: __("The employee has been notified."),
-			icon: "check-circle",
+			title: shown.title,
+			text: shown.text,
+			icon: warn ? "alert-triangle" : "check-circle",
 			position: "bottom-center",
-			iconClasses: "text-green-500",
+			iconClasses: warn ? "text-orange-500" : "text-green-500",
 		})
 		decisionOpen.value = false
 		// All three surfaces this decision changed. The realtime event cannot

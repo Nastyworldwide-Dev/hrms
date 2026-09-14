@@ -72,6 +72,10 @@ class TestWholeShiftRepair(unittest.TestCase):
 		self.protected = None
 		self.financial_rows = []
 		self.saved_snapshot = None
+		self.today = False
+		self.error_logs = []
+		self.db.exists.side_effect = self.exists
+		self.enqueue = MagicMock()
 
 	def matches(self, row, filters):
 		for field, expected in (filters or {}).items():
@@ -150,20 +154,36 @@ class TestWholeShiftRepair(unittest.TestCase):
 	def rollback(self, *, save_point):
 		self.attendance.docstatus, self.rows = self.saved_snapshot
 
-	def run_repair(self):
+	def exists(self, doctype, filters=None, *args, **kwargs):
+		if doctype != "Error Log":
+			return False
+		return any(
+			log["title"] == filters.get("method") and log["reference_name"] == filters.get("reference_name")
+			for log in self.error_logs
+		)
+
+	def log_error(self, title=None, message=None, reference_doctype=None, reference_name=None, **kwargs):
+		self.error_logs.append(
+			{"title": title, "reference_doctype": reference_doctype, "reference_name": reference_name}
+		)
+
+	def run_repair(self, fn=None, **kwargs):
 		with (
 			patch.object(frappe, "db", self.db),
 			patch.object(frappe, "get_all", side_effect=self.get_all),
 			patch.object(frappe, "get_doc", side_effect=self.get_doc),
 			patch.object(frappe, "new_doc", return_value=MagicMock()),
 			patch.object(frappe, "msgprint") as notice,
+			patch.object(frappe, "enqueue", self.enqueue),
+			patch.object(frappe, "log_error", side_effect=self.log_error),
+			patch.object(hooks, "_shift_day_is_today", create=True, return_value=self.today),
 		):
-			result = hooks.reprocess_late_checkout_attendance("LATE-OUT")
+			result = (fn or hooks.reprocess_late_checkout_attendance)("LATE-OUT", **kwargs)
 		return result, notice
 
 	def test_rebuild_includes_morning_and_afternoon_before_cancelling(self):
 		result, _ = self.run_repair()
-		self.assertEqual(result, "ATT-REBUILT")
+		self.assertEqual(result.attendance, "ATT-REBUILT")
 		logs = self.shift.mark_attendance_for_shift_logs.call_args.args[2]
 		self.assertEqual([r.name for r in logs], ["MORNING-IN", "LUNCH-OUT", "AFTERNOON-IN", "LATE-OUT"])
 		self.assertTrue(all(self.read_before_cancel))
@@ -194,7 +214,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 				self.shift.mark_attendance_for_shift_logs.return_value = None
 				self.shift.mark_attendance_for_shift_logs.side_effect = failure
 				result, notice = self.run_repair()
-				self.assertIsNone(result)
+				self.assertFalse(result.repaired)
 				self.assertEqual(self.attendance.docstatus, 1)
 				self.assertEqual([r.attendance for r in self.rows[:3]], ["ATT-OLD"] * 3)
 				notice.assert_called()
@@ -202,7 +222,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 	def test_pending_evidence_defers_rebuild_without_losing_prior_attendance(self):
 		self.rows[0].remote_approval_status = "Pending"
 		result, notice = self.run_repair()
-		self.assertIsNone(result)
+		self.assertFalse(result.repaired)
 		self.attendance.cancel.assert_not_called()
 		self.shift.mark_attendance_for_shift_logs.assert_not_called()
 		notice.assert_called()
@@ -213,7 +233,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 				self.attendance.auto_attendance = auto
 				self.attendance.synced_from_instance = mirror
 				result, notice = self.run_repair()
-				self.assertIsNone(result)
+				self.assertFalse(result.repaired)
 				self.attendance.cancel.assert_not_called()
 				notice.assert_called()
 
@@ -222,7 +242,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 			with self.subTest(doctype=doctype):
 				self.protected = doctype
 				result, notice = self.run_repair()
-				self.assertIsNone(result)
+				self.assertFalse(result.repaired)
 				self.attendance.cancel.assert_not_called()
 				self.shift.mark_attendance_for_shift_logs.assert_not_called()
 				notice.assert_called()
@@ -247,10 +267,10 @@ class TestWholeShiftRepair(unittest.TestCase):
 				]
 				result, _ = self.run_repair()
 				if protected:
-					self.assertIsNone(result)
+					self.assertFalse(result.repaired)
 					self.attendance.cancel.assert_not_called()
 				else:
-					self.assertEqual(result, "ATT-REBUILT")
+					self.assertEqual(result.attendance, "ATT-REBUILT")
 
 	def test_duplicate_in_uses_each_configured_working_hours_policy(self):
 		for policy in ("First Check-in and Last Check-out", "Every Valid Check-in and Check-out"):
@@ -261,7 +281,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 				duplicate.update(name="DUPLICATE-IN", time=self.anchor + timedelta(minutes=1))
 				self.rows.insert(1, duplicate)
 				result, _ = self.run_repair()
-				self.assertEqual(result, "ATT-REBUILT")
+				self.assertEqual(result.attendance, "ATT-REBUILT")
 				self.assertEqual(len(self.shift.mark_attendance_for_shift_logs.call_args.args[2]), 5)
 
 	def test_alternating_policy_accepts_unlabelled_pairs_and_refuses_trailing_unpaired_punch(self):
@@ -279,9 +299,9 @@ class TestWholeShiftRepair(unittest.TestCase):
 						self.rows.pop(1)
 					result, _ = self.run_repair()
 					if complete:
-						self.assertEqual(result, "ATT-REBUILT")
+						self.assertEqual(result.attendance, "ATT-REBUILT")
 					else:
-						self.assertIsNone(result)
+						self.assertFalse(result.repaired)
 						self.attendance.cancel.assert_not_called()
 
 	def test_approved_earlier_session_out_repairs_entire_shift(self):
@@ -300,7 +320,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 						for row in (self.rows[0], self.rows[2]):
 							row.log_type = ""
 					result, _ = self.run_repair()
-					self.assertEqual(result, "ATT-REBUILT")
+					self.assertEqual(result.attendance, "ATT-REBUILT")
 					logs = self.shift.mark_attendance_for_shift_logs.call_args.args[2]
 					self.assertEqual(
 						[row.name for row in logs], ["MORNING-IN", "LATE-OUT", "AFTERNOON-IN", "EVENING-OUT"]
@@ -322,13 +342,13 @@ class TestWholeShiftRepair(unittest.TestCase):
 				else:
 					self.rows = self.rows[-1:]
 				result, _ = self.run_repair()
-				self.assertIsNone(result)
+				self.assertFalse(result.repaired)
 				self.attendance.cancel.assert_not_called()
 
 	def test_draft_is_repaired_in_place_and_keeps_draft_status(self):
 		self.attendance.docstatus = 0
 		result, _ = self.run_repair()
-		self.assertEqual(result, "ATT-REBUILT")
+		self.assertEqual(result.attendance, "ATT-REBUILT")
 		self.attendance.cancel.assert_not_called()
 		self.assertIs(
 			self.shift.mark_attendance_for_shift_logs.call_args.kwargs["repair_attendance"], self.attendance
@@ -345,7 +365,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 			row.shift_actual_start = self.anchor - timedelta(hours=1)
 			row.shift_actual_end = self.anchor + timedelta(hours=11)
 		result, _ = self.run_repair()
-		self.assertEqual(result, "ATT-REBUILT")
+		self.assertEqual(result.attendance, "ATT-REBUILT")
 		args = self.shift.mark_attendance_for_shift_logs.call_args.args
 		self.assertEqual(args[1], self.anchor.date())
 		self.assertEqual(len(args[2]), 4)
@@ -371,7 +391,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 			noise[field] = value
 			self.rows.append(noise)
 		result, _ = self.run_repair()
-		self.assertEqual(result, "ATT-REBUILT")
+		self.assertEqual(result.attendance, "ATT-REBUILT")
 		logs = self.shift.mark_attendance_for_shift_logs.call_args.args[2]
 		self.assertEqual(len(logs), 4)
 		self.assertEqual(self.rows[-2].skip_auto_attendance, 1)
@@ -380,7 +400,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 	def test_cross_shift_linked_evidence_requires_correction(self):
 		self.rows[0].shift_start -= timedelta(days=1)
 		result, notice = self.run_repair()
-		self.assertIsNone(result)
+		self.assertFalse(result.repaired)
 		self.attendance.cancel.assert_not_called()
 		notice.assert_called()
 
@@ -426,11 +446,131 @@ class TestWholeShiftRepair(unittest.TestCase):
 		)
 		self.rows.append(noise)
 		result, _ = self.run_repair()
-		self.assertEqual(result, "ATT-REBUILT")
+		self.assertEqual(result.attendance, "ATT-REBUILT")
 		args = self.shift.mark_attendance_for_shift_logs.call_args.args
 		self.assertEqual(args[1], self.anchor.date())
 		self.assertEqual([row.name for row in args[2]], expected)
 		self.assertTrue(all(self.read_before_cancel))
+
+	# ---- E1: the approver is told what the approval did to the day --------------
+
+	def test_success_reports_the_rebuilt_day(self):
+		self.shift.mark_attendance_for_shift_logs.return_value = frappe._dict(
+			name="ATT-REBUILT", status="Present", working_hours=9.5
+		)
+		result, _ = self.run_repair()
+		self.assertTrue(result.repaired)
+		self.assertEqual(
+			(result.attendance, result.status, result.working_hours, result.reason_code),
+			("ATT-REBUILT", "Present", 9.5, None),
+		)
+		self.enqueue.assert_not_called()
+		self.assertEqual(self.error_logs, [])
+
+	def test_each_refusal_family_names_its_reason(self):
+		def leading_out():
+			self.rows[0].log_type = "OUT"
+
+		def cross_shift():
+			self.rows[0].shift_start -= timedelta(days=1)
+
+		def rebuild_raises():
+			self.shift.mark_attendance_for_shift_logs.side_effect = frappe.ValidationError("synthetic")
+
+		cases = {
+			"pending_punch": lambda: self.rows[0].update(remote_approval_status="Pending"),
+			"hr_marked": lambda: setattr(self.attendance, "auto_attendance", 0),
+			"financial_lock": lambda: setattr(self, "protected", "Salary Slip"),
+			"not_eligible": lambda: self.rows[-1].update(skip_auto_attendance=1),
+			"incomplete_pairs": leading_out,
+			"cross_boundary": cross_shift,
+			"not_markable": lambda: setattr(self.shift.should_mark_attendance, "return_value", False),
+			"rebuild_failed": rebuild_raises,
+		}
+		for code, arrange in cases.items():
+			with self.subTest(code=code):
+				self.setUp()
+				arrange()
+				result, _ = self.run_repair()
+				self.assertFalse(result.repaired)
+				self.assertEqual(result.reason_code, code)
+				self.assertTrue(result.message)
+
+	# ---- E3: a refused repair is not lost ----------------------------------------
+
+	def test_pending_punch_is_retried_after_commit_and_not_logged(self):
+		self.rows[0].remote_approval_status = "Pending"
+		result, _ = self.run_repair()
+		self.assertTrue(result.will_retry)
+		self.assertFalse(result.hr_notified)
+		self.enqueue.assert_called_once()
+		call = self.enqueue.call_args
+		self.assertEqual(
+			call.args[0], "hrms.overrides.remote_checkin_request_hooks.retry_late_checkout_repair"
+		)
+		self.assertTrue(call.kwargs["enqueue_after_commit"])
+		self.assertEqual(call.kwargs["out_checkin"], "LATE-OUT")
+		self.assertEqual(self.error_logs, [])
+
+	def test_lock_timeout_during_rebuild_is_retried_and_keeps_the_old_day(self):
+		class LockTimeout(Exception):
+			pass
+
+		self.shift.mark_attendance_for_shift_logs.side_effect = LockTimeout("lock wait timeout")
+		with patch.object(frappe, "QueryTimeoutError", LockTimeout, create=True):
+			result, _ = self.run_repair()
+		self.assertEqual(result.reason_code, "locked")
+		self.assertTrue(result.will_retry)
+		self.enqueue.assert_called_once()
+		self.assertEqual(self.attendance.docstatus, 1)
+
+	def test_retries_stop_at_the_cap(self):
+		self.rows[0].remote_approval_status = "Pending"
+		result, _ = self.run_repair(attempt=hooks.MAX_REPAIR_RETRIES)
+		self.assertFalse(result.will_retry)
+		self.enqueue.assert_not_called()
+
+	def test_permanent_blocker_writes_one_error_log_for_hr_and_is_not_retried(self):
+		self.attendance.auto_attendance = 0
+		first, _ = self.run_repair()
+		self.run_repair()
+		self.assertTrue(first.hr_notified)
+		self.assertFalse(first.will_retry)
+		self.enqueue.assert_not_called()
+		self.assertEqual(
+			self.error_logs,
+			[
+				{
+					"title": "Late check-out not applied",
+					"reference_doctype": "Remote Checkin Request",
+					"reference_name": "RCR-LATE",
+				}
+			],
+		)
+
+	def test_retry_job_leaves_an_already_applied_out_alone(self):
+		self.rows[-1].attendance = "ATT-ALREADY"
+		self.run_repair(fn=hooks.retry_late_checkout_repair, attempt=1)
+		self.attendance.cancel.assert_not_called()
+		self.shift.mark_attendance_for_shift_logs.assert_not_called()
+
+	def test_retry_job_repairs_once_the_blocker_cleared(self):
+		result, _ = self.run_repair(fn=hooks.retry_late_checkout_repair, attempt=1)
+		self.assertTrue(result.repaired)
+		self.shift.mark_attendance_for_shift_logs.assert_called_once()
+
+	# ---- Owner ruling: today's day is never auto-rewritten ------------------------
+
+	def test_todays_shift_is_left_to_the_hourly_job(self):
+		self.today = True
+		result, _ = self.run_repair()
+		self.assertFalse(result.repaired)
+		self.assertEqual(result.reason_code, "today")
+		self.attendance.cancel.assert_not_called()
+		self.shift.mark_attendance_for_shift_logs.assert_not_called()
+		self.db.set_value.assert_not_called()
+		self.enqueue.assert_not_called()
+		self.assertEqual(self.error_logs, [])
 
 
 if __name__ == "__main__":

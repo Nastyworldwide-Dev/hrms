@@ -43,7 +43,9 @@ SHIFT_START = datetime.datetime(2026, 9, 1, 9, 0, 0)
 def _request(status, is_late_checkout=1, previous="Pending"):
 	doc = types.SimpleNamespace(
 		name="RCR-1",
+		employee=EMPLOYEE,
 		status=status,
+		flags=frappe._dict(),
 		checkin=OUT_NAME,
 		approved_at=None,
 		is_late_checkout=is_late_checkout,
@@ -68,15 +70,78 @@ class TestApprovalTriggersReprocess(unittest.TestCase):
 		return reprocess
 
 	def test_approved_late_checkout_reprocesses_the_session(self):
-		reprocess = self._propagate(_request("Approved", is_late_checkout=1))
+		doc = _request("Approved", is_late_checkout=1)
+		reprocess = self._propagate(doc)
 		reprocess.assert_called_once_with(OUT_NAME)
+		self.assertIs(
+			doc.flags.late_checkout_repair,
+			reprocess.return_value,
+			"the approve endpoint reads the repair result from the saved request",
+		)
 
 	def test_rejection_does_not_reprocess(self):
 		reprocess = self._propagate(_request("Rejected", is_late_checkout=1))
 		reprocess.assert_not_called()
 
 	def test_ordinary_remote_punch_does_not_reprocess(self):
-		reprocess = self._propagate(_request("Approved", is_late_checkout=0))
+		with patch("hrms.overrides.remote_checkin_request_hooks.reapply_late_checkouts_unblocked_by"):
+			reprocess = self._propagate(_request("Approved", is_late_checkout=0))
+		reprocess.assert_not_called()
+
+
+class TestApprovingTheBlockingPunchReappliesTheLateOut(unittest.TestCase):
+	"""E3: a late OUT approved before its pending IN was refused until the hourly
+	job. Approving the IN must re-run the repair for every approved late OUT of
+	that employee that is still not applied — and leave applied ones alone."""
+
+	def _propagate(self, doc, outs):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		IN_REQUEST_CHECKIN = "EMP-CKIN-PENDING-IN"
+
+		def get_value(doctype, name=None, fieldname=None, as_dict=False, **kw):
+			if doctype == "Employee Checkin" and name == IN_REQUEST_CHECKIN:
+				return IN_TIME
+			if doctype == "Employee Checkin" and name in outs:
+				return outs[name]
+			return None
+
+		db = MagicMock()
+		db.get_value.side_effect = get_value
+		doc.checkin = IN_REQUEST_CHECKIN
+		self.queried = []
+
+		def get_all(doctype, filters=None, **kw):
+			self.queried.append((doctype, filters))
+			return list(outs) if doctype == "Remote Checkin Request" else []
+
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", side_effect=get_all),
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+			patch.object(hooks, "now_datetime", return_value=datetime.datetime(2026, 9, 2, 9, 0)),
+			patch.object(hooks, "_notify_employee"),
+			patch.object(hooks, "reprocess_late_checkout_attendance") as reprocess,
+		):
+			hooks.propagate_approval_decision(doc)
+		return reprocess
+
+	def test_approving_the_in_reapplies_only_unapplied_approved_late_outs(self):
+		outs = {
+			"OUT-UNAPPLIED": frappe._dict(attendance=None, remote_approval_status="Approved"),
+			"OUT-APPLIED": frappe._dict(attendance="HR-ATT-DONE", remote_approval_status="Approved"),
+		}
+		reprocess = self._propagate(_request("Approved", is_late_checkout=0), outs)
+		reprocess.assert_called_once_with("OUT-UNAPPLIED")
+		doctype, filters = self.queried[0]
+		self.assertEqual(doctype, "Remote Checkin Request")
+		self.assertEqual(filters["employee"], EMPLOYEE)
+		self.assertEqual(filters["is_late_checkout"], 1)
+		self.assertEqual(filters["status"], "Approved")
+
+	def test_rejecting_the_in_reapplies_nothing(self):
+		outs = {"OUT-UNAPPLIED": frappe._dict(attendance=None, remote_approval_status="Approved")}
+		reprocess = self._propagate(_request("Rejected", is_late_checkout=0), outs)
 		reprocess.assert_not_called()
 
 
@@ -149,6 +214,9 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 			patch.object(frappe, "db", db),
 			patch.object(frappe, "get_doc", side_effect=get_doc),
 			patch.object(frappe, "get_all", side_effect=get_all) as get_all,
+			patch.object(frappe, "log_error"),
+			patch.object(frappe, "enqueue"),
+			patch.object(hooks, "_shift_day_is_today", create=True, return_value=False),
 		):
 			result = hooks.reprocess_late_checkout_attendance(OUT_NAME)
 		return result, attendance, shift, get_all
@@ -165,7 +233,7 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		self.assertEqual(employee, EMPLOYEE)
 		self.assertEqual(attendance_date, SHIFT_START.date())
 		self.assertEqual([log.name for log in logs], [IN_NAME, OUT_NAME])
-		self.assertEqual(result, "HR-ATT-NEW")
+		self.assertEqual(result.attendance, "HR-ATT-NEW")
 
 		self.assertTrue(
 			all(self.read_before_cancel),
@@ -176,13 +244,13 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		result, attendance, shift, _ = self._run(attendance_auto=0)
 		attendance.cancel.assert_not_called()
 		shift.mark_attendance_for_shift_logs.assert_not_called()
-		self.assertIsNone(result)
+		self.assertFalse(result.repaired)
 
 	def test_no_attendance_yet_still_marks_the_session(self):
 		result, attendance, shift, _ = self._run(existing_attendance=None)
 		attendance.cancel.assert_not_called()
 		shift.mark_attendance_for_shift_logs.assert_called_once()
-		self.assertEqual(result, "HR-ATT-NEW")
+		self.assertEqual(result.attendance, "HR-ATT-NEW")
 
 
 if __name__ == "__main__":
