@@ -381,7 +381,8 @@ class TestSchedulerEntry(unittest.TestCase):
 				for job in base_entries:
 					self.assertIn(job, current[bucket], f"{job!r} was dropped from {bucket!r}")
 		added = _flatten(current) - _flatten(BASE_SCHEDULER_EVENTS)
-		self.assertEqual(added, {NEW_ENTRY})
+		# attendance_auto_recovery.run_nightly joined the daily list later (Nabil, 14 Sep 2026).
+		self.assertEqual(added, {NEW_ENTRY, "hrms.utils.attendance_auto_recovery.run_nightly"})
 
 	def test_the_new_entry_is_a_daily_job(self):
 		current = _scheduler_events_from_source(HOOKS_PATH.read_text(encoding="utf-8"))
