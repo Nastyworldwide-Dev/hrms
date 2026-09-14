@@ -31,25 +31,31 @@
 					     whole-day blocks — showing raw hours there just confuses, so the day
 					     result (from `expectation`) speaks for it. -->
 							<span v-if="!isRL" class="text-sm text-ink-600">
-								{{ __("Available to claim: {0} h", [otSummary.data.punch_ot_hours || 0]) }}
+								{{ __("Available to claim: {0} h", [formatHours(otSummary.data.punch_ot_hours)]) }}
 							</span>
 							<span v-if="isRL" class="text-sm text-ink-600">{{ expectation }}</span>
 						</template>
 					</div>
 					<!-- The dates the employee actually has unclaimed OT on — tap instead of
-			     guessing a date in the picker. Only on a new request with something to claim. -->
+			     guessing a date in the picker. Days that already have a request stay in
+			     the list, greyed and not selectable, so they never look like lost overtime.
+			     Only on a new request. -->
 					<div v-if="displayDays.length && !props.id" class="mx-4 mt-4 flex flex-col gap-2">
 						<span class="g-eyebrow">{{ __("Days you can claim") }}</span>
 						<button
 							v-for="d in displayDays"
 							:key="d.date"
-							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between cursor-pointer"
+							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between"
 							:class="
-								otRequest.ot_date === d.date
-									? 'border-accent-ink'
-									: 'border-divider hover:bg-icon-bg'
+								d.claimed
+									? 'border-divider opacity-60 cursor-not-allowed'
+									: otRequest.ot_date === d.date
+									? 'border-accent-ink cursor-pointer'
+									: 'border-divider hover:bg-icon-bg cursor-pointer'
 							"
-							@click="otRequest.ot_date = d.date"
+							:disabled="d.claimed"
+							:aria-disabled="d.claimed ? 'true' : undefined"
+							@click="pickDay(d)"
 						>
 							<span class="text-inkbase font-semibold">{{ formatDay(d.date) }}</span>
 							<span class="text-sm text-ink-600">{{ d.label }}</span>
@@ -58,11 +64,7 @@
 
 					<!-- An empty list used to leave a blank date picker and no answer.
 			     Say which of the four situations this is. -->
-					<p
-						v-else-if="emptyReason && !props.id"
-						class="mx-4 mt-4 text-sm text-ink-600"
-						role="status"
-					>
+					<p v-if="emptyReason && !props.id" class="mx-4 mt-4 text-sm text-ink-600" role="status">
 						{{ emptyReason }}
 					</p>
 
@@ -91,6 +93,8 @@ import { computed, inject, ref, shallowRef, watch } from "vue"
 import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
+import { formatHours } from "@/utils/formatters"
+import { requestStatusChip } from "@/utils/requestStatus"
 import { emptyClaimReason } from "./claimEmptyReason.js"
 
 const employee = inject("$employee")
@@ -147,16 +151,30 @@ const claimTypeHint = computed(() => {
 // The claimable days, shaped for display: Overtime Pay shows hours; Replacement
 // Leave shows the whole-day blocks and DROPS days under 4h (they earn nothing, per
 // HR — showing "0 days" would only confuse).
+// Days that already have a request are merged in, greyed and not selectable, labelled
+// by their decision. Approved is the final state — payroll is external, so there is no
+// "paid" to show.
 const displayDays = computed(() => {
-	const days = claimableDays.value.data?.days || []
-	if (!isRL.value) {
-		return days.map((d) => ({ ...d, label: __("{0} h", [d.hours]) }))
-	}
-	return days
-		.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
-		.filter((d) => d.leaveDays > 0)
-		.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }))
+	const data = claimableDays.value.data
+	const days = data?.days || []
+	const open = !isRL.value
+		? days.map((d) => ({ ...d, label: __("{0} h", [formatHours(d.hours)]) }))
+		: days
+				.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
+				.filter((d) => d.leaveDays > 0)
+				.map((d) => ({ ...d, label: __("{0} day(s) off", [d.leaveDays]) }))
+	const claimed = (data?.claimed || []).map((d) => ({
+		...d,
+		claimed: true,
+		label: __("Claimed · {0}", [__(requestStatusChip(d))]),
+	}))
+	return [...open, ...claimed].sort((a, b) => b.date.localeCompare(a.date))
 })
+
+function pickDay(d) {
+	if (d.claimed) return
+	otRequest.value.ot_date = d.date
+}
 
 // Why the list above is empty, when it is. "Already claimed", "no overtime" and
 // "every day is under the replacement-leave threshold" are very different
@@ -327,7 +345,9 @@ const saveError = computed(() => {
 		)
 	const claimed = Number(otRequest.value.claimed_hours)
 	if (!Number.isFinite(claimed) || claimed <= 0) return __("Enter the hours to claim.")
-	return claimed > cap ? __("Cannot claim more than the punch-verified {0} h", [cap]) : ""
+	return claimed > cap
+		? __("Cannot claim more than the punch-verified {0} h", [formatHours(cap)])
+		: ""
 })
 watch(
 	[saveError, () => formFields.data],

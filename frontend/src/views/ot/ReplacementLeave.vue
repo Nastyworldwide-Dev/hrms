@@ -24,11 +24,11 @@
 					<span class="g-eyebrow">{{ __("Overtime bank") }}</span>
 					<div class="flex items-baseline gap-1.5">
 						<span class="text-3xl font-extrabold text-inkbase">
-							{{ bank.data.hours_available }}
+							{{ formatHours(bank.data.hours_available) }}
 						</span>
 						<span class="text-sm text-ink-600">{{ __("h available") }}</span>
 						<span class="text-xs text-ink-600 ml-auto">
-							{{ bank.data.hours_claimed }} {{ __("h already claimed") }}
+							{{ formatHours(bank.data.hours_claimed) }} {{ __("h already claimed") }}
 						</span>
 					</div>
 					<span class="text-xs text-ink-600">
@@ -50,7 +50,7 @@
 						class="flex justify-between border-b border-divider py-2 text-sm"
 					>
 						<span class="text-ink-700">{{ request.ot_date }}</span>
-						<span class="font-bold text-inkbase">+{{ request.claimed_hours }} h</span>
+						<span class="font-bold text-inkbase">+{{ formatHours(request.claimed_hours) }} h</span>
 					</div>
 				</div>
 
@@ -75,7 +75,10 @@
 					>
 						<div class="flex flex-col">
 							<span class="font-bold text-inkbase">
-								{{ claimRow.claimed_days }} {{ __("day(s)") }} · −{{ claimRow.hours_cost }} h
+								{{ claimRow.claimed_days }} {{ __("day(s)") }} · −{{
+									formatHours(claimRow.hours_cost)
+								}}
+								h
 							</span>
 							<span class="text-xs text-ink-600">{{ claimRow.name }}</span>
 						</div>
@@ -99,6 +102,7 @@ import { createResource } from "frappe-ui"
 import { computed, inject } from "vue"
 
 import { settings } from "@/data/settings"
+import { formatHours } from "@/utils/formatters"
 import { requestStatusChip } from "@/utils/requestStatus"
 
 const employee = inject("$employee")

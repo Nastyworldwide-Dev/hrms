@@ -13,7 +13,9 @@
 					<span>{{ props.doc.bank_month_label || props.doc.bank_month }}</span>
 					<span v-if="props.doc.hours_cost">
 						<span class="whitespace-pre"> &middot; </span>
-						<span class="whitespace-nowrap">{{ __("−{0}h", [props.doc.hours_cost]) }}</span>
+						<span class="whitespace-nowrap">{{
+							__("−{0}h", [formatHours(props.doc.hours_cost)])
+						}}</span>
 					</span>
 				</div>
 			</div>
@@ -29,6 +31,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
+import { formatHours } from "@/utils/formatters"
 import { requestStatusChip } from "@/utils/requestStatus"
 
 const __ = inject("$translate")

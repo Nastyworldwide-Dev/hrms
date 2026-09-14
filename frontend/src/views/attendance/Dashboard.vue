@@ -22,7 +22,7 @@
 									{{
 										isRLClaim
 											? __("{0} day(s) off waiting", [claimLeaveDays])
-											: __("{0} h waiting", [claimableOt.data.claimable_hours])
+											: __("{0} h waiting", [formatHours(claimableOt.data.claimable_hours)])
 									}}
 								</span>
 								<span class="text-sm text-ink-600">
@@ -172,6 +172,7 @@ import {
 } from "@/data/attendance"
 import { myOTRequests } from "@/data/overtime"
 import { settings } from "@/data/settings"
+import { formatHours } from "@/utils/formatters"
 
 const router = useRouter()
 

@@ -178,7 +178,9 @@
 		</div>
 
 		<div
-			v-else-if="document?.doc?.docstatus === 1 && hasPermission('cancel')"
+			v-else-if="
+				canOfferCancel(document.doc, props.modelValue?.doctype) && hasPermission('cancel')
+			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
@@ -252,7 +254,8 @@ import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
 import { getCompanyCurrency } from "@/data/currencies"
-import { formatCurrency } from "@/utils/formatters"
+import { canOfferCancel } from "@/utils/cancelRule"
+import { formatCurrency, formatHours } from "@/utils/formatters"
 
 const __ = inject("$translate")
 
@@ -438,7 +441,10 @@ const fieldsWithValues = computed(() => {
 					import(`../components/${field.componentName}.vue`)
 				)
 			}
-			field.value = document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
+			const raw = document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
+			// punch-derived hours Floats (claimed_hours, hours_cost…) read 5.67, not 5.669444444
+			const isHours = field.fieldtype === "Float" && field.fieldname.includes("hours")
+			field.value = isHours && raw ? formatHours(raw) : raw
 		}
 
 		return field.value

@@ -421,6 +421,7 @@ import { FileAttachment, guessStatusColor } from "@/composables"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
 import { getCompanyCurrency } from "@/data/currencies"
+import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
 
@@ -783,7 +784,7 @@ const formButton = computed(() => {
 			!REQUEST_SUMMARY_FIELDS[props.doctype]
 		) {
 			return "Submit"
-		} else if (formModel.value.docstatus === 1 && hasPermission("cancel")) {
+		} else if (canOfferCancel(formModel.value, props.doctype) && hasPermission("cancel")) {
 			return "Cancel"
 		}
 		// submitted-and-cancel-blocked, or any other docstatus: no button.

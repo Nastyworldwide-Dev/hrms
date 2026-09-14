@@ -649,17 +649,28 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 	)
 	# A date is "claimed" the moment a request exists for it, drafts included — filing
 	# a second for the same day is the double-claim the form's own cap already blocks.
-	claimed = set(
-		frappe.get_all(
-			"OT Request",
-			filters={
-				"employee": employee,
-				"ot_date": ["between", [from_date, to_date]],
-				"docstatus": ["<", 2],
-			},
-			pluck="ot_date",
-		)
+	# The same read carries each request's hours and decision so the PWA can show the
+	# day greyed ("Claimed · Approved") instead of silently dropping it.
+	requests = frappe.get_all(
+		"OT Request",
+		filters={
+			"employee": employee,
+			"ot_date": ["between", [from_date, to_date]],
+			"docstatus": ["<", 2],
+		},
+		fields=["ot_date", "claimed_hours", "status", "docstatus"],
 	)
+	claimed = {row["ot_date"] for row in requests}
+	# One row per date: a legacy duplicate shows its most final state (submitted over draft).
+	claimed_by_date = {}
+	for row in sorted(requests, key=lambda row: cint(row.get("docstatus"))):
+		claimed_by_date[row["ot_date"]] = {
+			"date": str(row["ot_date"]),
+			"hours": flt(row.get("claimed_hours")),
+			"status": row.get("status"),
+			"docstatus": cint(row.get("docstatus")),
+		}
+	claimed_days = [claimed_by_date[day] for day in sorted(claimed_by_date, reverse=True)]
 	unclaimed = [row for row in worked if row["attendance_date"] not in claimed]
 	eligible = cint(frappe.db.get_value("Employee", employee, "eligible_for_overtime_pay"))
 	from hrms.utils.ot_calculation import get_ot_claim_capacity
@@ -715,6 +726,8 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 		"claimable_days": len(days),
 		"compensation": compensation,
 		"days": days,
+		# Days that already have a request, newest first — shown, never offered.
+		"claimed": claimed_days,
 		"from_date": str(from_date),
 		"to_date": str(to_date),
 		# Why the list is empty, when it is. Without these the form shows a blank

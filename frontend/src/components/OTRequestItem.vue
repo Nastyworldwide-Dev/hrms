@@ -7,7 +7,7 @@
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
 				<div class="text-button-label font-semibold text-inkbase">
-					{{ __("{0}h overtime", [props.doc.claimed_hours ?? 0]) }}
+					{{ __("{0}h overtime", [formatHours(props.doc.claimed_hours)]) }}
 				</div>
 				<div class="text-xs text-ink-600">
 					<span>{{ props.doc.ot_date_label || props.doc.ot_date }}</span>
@@ -29,6 +29,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
+import { formatHours } from "@/utils/formatters"
 import { requestStatusChip } from "@/utils/requestStatus"
 
 const __ = inject("$translate")

@@ -49,7 +49,7 @@ BEFORE_WINDOW = FENCE - timedelta(days=1)  # the day before the fence, wherever 
 RECENT = date(2026, 9, 25)
 
 
-def _discover(**params):
+def _discover(requests=(), reads=None, **params):
 	worked = (BEFORE_WINDOW, INSIDE_WINDOW_BUT_OLD, RECENT)
 
 	def get_all(doctype, filters=None, fields=None, **kwargs):
@@ -61,7 +61,16 @@ def _discover(**params):
 				if date.fromisoformat(str(start)) <= day <= date.fromisoformat(str(end))
 			]
 		if doctype == "OT Request":
-			return []
+			if reads is not None:
+				reads.append(dict(filters=filters, fields=fields, **kwargs))
+			start, end = filters["ot_date"][1]
+			op, limit = filters["docstatus"]
+			assert op == "<", op
+			return [
+				frappe._dict(row)
+				for row in requests
+				if start <= row["ot_date"] <= end and row["docstatus"] < limit
+			]
 		raise AssertionError(doctype)
 
 	with (
@@ -89,6 +98,44 @@ class TestDiscoveryWindow(unittest.TestCase):
 	def test_a_caller_may_narrow_the_window_but_never_widen_it(self):
 		self.assertEqual([day["date"] for day in _discover(days=10)["days"]], ["2026-09-25"])
 		self.assertEqual(_discover(days=400)["from_date"], str(FENCE))
+
+
+class TestClaimedDaysAreReturned(unittest.TestCase):
+	"""Days that already have a request are not silently dropped: the form shows them
+	greyed with their decision. Same single read, same window, cancelled excluded."""
+
+	REQUESTS = (
+		dict(ot_date=RECENT, claimed_hours=2.5, status="Approved", docstatus=1),
+		dict(ot_date=INSIDE_WINDOW_BUT_OLD, claimed_hours=1.0, status="Open", docstatus=0),
+		dict(ot_date=date(2026, 9, 20), claimed_hours=3.0, status="Rejected", docstatus=1),
+		dict(ot_date=date(2026, 9, 21), claimed_hours=4.0, status="Approved", docstatus=2),
+		dict(ot_date=BEFORE_WINDOW, claimed_hours=1.0, status="Approved", docstatus=1),
+	)
+
+	def test_claimed_days_carry_hours_and_decision_newest_first(self):
+		result = _discover(requests=self.REQUESTS)
+		self.assertEqual(
+			result["claimed"],
+			[
+				{"date": "2026-09-25", "hours": 2.5, "status": "Approved", "docstatus": 1},
+				{"date": "2026-09-20", "hours": 3.0, "status": "Rejected", "docstatus": 1},
+				{"date": "2026-07-20", "hours": 1.0, "status": "Open", "docstatus": 0},
+			],
+		)
+		# claimed days are still not offered as claimable
+		self.assertEqual(result["days"], [])
+		self.assertEqual(result["days_already_claimed"], 3)
+
+	def test_one_ot_request_read_in_the_filing_window(self):
+		reads = []
+		_discover(requests=self.REQUESTS, reads=reads)
+		self.assertEqual(len(reads), 1)
+		self.assertEqual(reads[0]["filters"]["ot_date"], ["between", [FENCE, TODAY]])
+		self.assertEqual(reads[0]["filters"]["docstatus"], ["<", 2])
+		self.assertNotIn("pluck", reads[0])
+
+	def test_no_requests_means_an_empty_claimed_list(self):
+		self.assertEqual(_discover()["claimed"], [])
 
 
 if __name__ == "__main__":

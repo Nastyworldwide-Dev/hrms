@@ -29,7 +29,7 @@
 					{{
 						__("{0} bank: {1} h unclaimed · 0.5 day = {2} h", [
 							monthLabel,
-							bank.data?.hours_available ?? 0,
+							formatHours(bank.data?.hours_available),
 							halfDayHours,
 						])
 					}}
@@ -56,6 +56,7 @@ import { computed, inject } from "vue"
 
 import ResourceError from "@/components/ResourceError.vue"
 import { settings } from "@/data/settings"
+import { formatHours } from "@/utils/formatters"
 
 const employee = inject("$employee")
 const __ = inject("$translate")

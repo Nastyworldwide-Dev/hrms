@@ -12,6 +12,7 @@ import {
 	effectScope,
 	nextTick,
 } from "vue"
+import { canOfferCancel } from "../src/utils/cancelRule.js"
 
 const require = createRequire(import.meta.url)
 const { parse } = require("acorn")
@@ -534,6 +535,7 @@ test("approvable FormView never falls back to a raw Submit while its decision ca
 				}),
 				employee: { data: { name: "REVIEWER" } },
 				hasPermission: () => true,
+				canOfferCancel,
 				REQUEST_SUMMARY_FIELDS: Object.fromEntries(types.map((dt) => [dt, []])),
 			})
 			vm.runInContext(

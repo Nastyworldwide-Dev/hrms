@@ -24,6 +24,7 @@ import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
 
 import { settings } from "@/data/settings"
+import { formatHours } from "@/utils/formatters"
 
 import FormView from "@/components/FormView.vue"
 
@@ -74,7 +75,7 @@ const bank = createResource({
 			const rlHrs = settings.data?.replacement_leave_hours_per_day ?? 8
 			daysField.description = __(
 				"{0} banked hours available to claim — 0.5 day costs {1} h, 1 day costs {2} h",
-				[data.hours_available, rlHrs / 2, rlHrs]
+				[formatHours(data.hours_available), rlHrs / 2, rlHrs]
 			)
 		}
 		// re-check now that the cap is known — the days watcher does not fire when
@@ -103,8 +104,8 @@ function validateClaimedDays() {
 		daysField.error_message = __("Days must be in half-day steps (0.5, 1.0, 1.5 ...)")
 	} else if (cost && available != null && cost > available) {
 		daysField.error_message = __("Costs {0} h — only {1} h banked and claimable", [
-			cost,
-			available,
+			formatHours(cost),
+			formatHours(available),
 		])
 	} else {
 		daysField.error_message = ""

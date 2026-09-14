@@ -12,9 +12,22 @@ import {
 	effectScope,
 	nextTick,
 } from "vue"
+import { requestStatusChip } from "../src/utils/requestStatus.js"
 const require = createRequire(import.meta.url)
 const { parse } = require("acorn")
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
+// formatters.js cannot be imported under node (frappe-ui + @/ alias); lift the
+// real formatHours declaration out of it for the sandboxed form script.
+const formatHoursSource = (() => {
+	const source = read("../src/utils/formatters.js")
+	const node = parse(source, {
+		ecmaVersion: "latest",
+		sourceType: "module",
+	}).body.find(
+		(n) => n.declaration?.declarations?.[0]?.id.name === "formatHours"
+	)
+	return node ? source.slice(node.declaration.start, node.declaration.end) : ""
+})()
 const script = (path) =>
 	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>
@@ -51,6 +64,7 @@ function fixture(id) {
 		shallowRef,
 		watch,
 		Event,
+		requestStatusChip,
 		settings: { data: {} },
 		console: { info() {}, debug() {}, warn() {} },
 		getConfig: () => undefined,
@@ -67,6 +81,7 @@ function fixture(id) {
 				? (s, args = []) => s.replace(/\{(\d+)\}/g, (_, i) => args[i])
 				: () => ({ format: () => "date" }),
 	})
+	vm.runInContext(formatHoursSource, context)
 	vm.runInContext(
 		executable(read("../node_modules/frappe-ui/src/resources/resources.js")),
 		context
@@ -336,6 +351,45 @@ test("late failure does not replace a current success; available-day lists also 
 		"Replacement Leave"
 	)
 	s.stop()
+})
+
+test("claimed days are listed beside claimable ones, disabled and labelled by status", async () => {
+	const s = fixture()
+	await tick()
+	s.calls
+		.find((c) => c.options.url.endsWith(".get_claimable_ot_summary"))
+		.resolve({
+			compensation: "Overtime Pay",
+			days: [{ date: "2026-09-04", hours: 5.669444 }],
+			claimed: [
+				{ date: "2026-09-05", hours: 2, status: "Approved", docstatus: 1 },
+				{ date: "2026-09-03", hours: 1, status: "Open", docstatus: 0 },
+				{ date: "2026-09-02", hours: 1, status: "Rejected", docstatus: 1 },
+			],
+		})
+	await tick()
+	const rows = JSON.parse(JSON.stringify(s.run("displayDays.value")))
+	assert.deepEqual(
+		rows.map((d) => [d.date, Boolean(d.claimed), d.label]),
+		[
+			["2026-09-05", true, "Claimed · Approved"],
+			["2026-09-04", false, "5.67 h"],
+			["2026-09-03", true, "Claimed · Pending"],
+			["2026-09-02", true, "Claimed · Rejected"],
+		]
+	)
+	s.run("pickDay(displayDays.value[0])")
+	assert.equal(s.run("otRequest.value.ot_date"), undefined)
+	s.run("pickDay(displayDays.value[1])")
+	assert.equal(s.run("otRequest.value.ot_date"), "2026-09-04")
+	s.stop()
+})
+
+test("claimed-day buttons carry native and accessible disabled semantics", () => {
+	const template = read(ot).split("<script setup>")[0]
+	assert.match(template, /:disabled="d\.claimed"/)
+	assert.match(template, /:aria-disabled="d\.claimed \? 'true' : undefined"/)
+	assert.match(template, /@click="pickDay\(d\)"/)
 })
 
 test("reloading a saved draft preserves its lower claim and refreshes the cap", async () => {

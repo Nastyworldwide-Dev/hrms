@@ -49,6 +49,10 @@ export const formatLeaveDays = (value) => {
 	return rounded.toString()
 }
 
+// hours are punch-derived Floats: at most two decimals, trailing zeros dropped
+// 5.669444 -> 5.67, 2.5 -> 2.5, 3 -> 3; empty reads as 0
+export const formatHours = (value) => (Math.round((Number(value) || 0) * 100) / 100).toString()
+
 export const formatTimestamp = (timestamp) => {
 	const formattedTime = dayjs(timestamp).format("hh:mm a")
 
