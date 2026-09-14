@@ -112,13 +112,31 @@ class TestOrder(_Case):
 			self.assertIsNone(auto.run_nightly())
 		self.assertEqual(self.calls, [])
 
-	def test_a_refusing_step_stops_the_run_and_is_reported(self):
+	def test_a_refusing_step_is_recorded_and_the_other_steps_and_chunks_go_on(self):
+		# Integration review (minor): one step's exception used to stop EVERY
+		# remaining chunk. Now the error is recorded for that step and chunk, the
+		# next step and the next chunk still run, and stopped_at lists the steps.
 		self.fail_step = "heal"
 		summary = auto.run_once()
-		self.assertEqual(summary["stopped_at"], "heal")
-		self.assertNotIn("skip_stamps", [c[0] for c in self.calls])
+		self.assertEqual(summary["stopped_at"], ["heal"])
+		steps = [c[0] for c in self.calls]
+		self.assertIn("skip_stamps", steps)
+		self.assertEqual(steps.count("heal"), 2)  # both windows still tried it
+		self.assertEqual(steps.count("rebuild"), 2)
+		self.assertEqual(
+			[e["from"] for e in summary["steps"]["heal"]["errors"]], ["2026-08-01", "2026-09-01"]
+		)
+		self.assertIn("boom", summary["steps"]["heal"]["error"])
 		self.db.rollback.assert_called()
 		auto.notify_hr.assert_called_once()
+		self.assertIn("Stopped at step heal", auto.notify_hr.call_args.args[1])
+
+	def test_never_raises_when_every_step_fails(self):
+		with patch.object(
+			auto.rec, "_PLANNERS", {s: MagicMock(side_effect=RuntimeError("x")) for s in auto.rec.STEPS}
+		):
+			summary = auto.run_once()
+		self.assertEqual(summary["stopped_at"], list(auto.AUTO_STEPS))
 
 
 class TestReport(_Case):

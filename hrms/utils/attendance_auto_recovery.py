@@ -112,13 +112,16 @@ def switched_off(name: str) -> bool:
 
 
 def _run(from_date, to_date) -> dict:
-	"""Plan and apply every automatic step in order, per window; stop at the first failure.
+	"""Plan and apply every automatic step in order, per window. A step that raises
+	is rolled back and recorded for that step and chunk (`errors`, `stopped_at`);
+	the next step and the next chunk still run — one bad window never starves
+	the rest of the year (integration review, 15 Sep 2026).
 
 	Calls recovery's planners and appliers directly — they carry every day
 	protection. `apply_recovery`'s "earlier steps first" check would re-plan the
 	ERP import (a network call) before each step; here the loop is the order.
 	"""
-	summary = {"from_date": str(from_date), "to_date": str(to_date), "steps": {}, "stopped_at": None}
+	summary = {"from_date": str(from_date), "to_date": str(to_date), "steps": {}, "stopped_at": []}
 	hr_days, protected_days = set(), set()
 	paused = {step for step in AUTO_STEPS if switched_off(step)}
 	for chunk_start, chunk_end in _chunks(getdate(from_date), getdate(to_date)):
@@ -137,12 +140,12 @@ def _run(from_date, to_date) -> dict:
 				frappe.db.commit()
 			except Exception as exc:
 				frappe.db.rollback()
-				logger.exception("[attendance_recovery_auto] %s stopped the run at %s", step, win.start)
+				logger.exception("[attendance_recovery_auto] %s failed for %s; moving on", step, win.start)
 				tally["error"] = str(exc)[:300]
-				summary["stopped_at"] = step
-				summary["hr_days"] = len(hr_days)
-				summary["protected_days"] = len(protected_days - hr_days)
-				return summary
+				tally.setdefault("errors", []).append({"from": str(win.start), "error": tally["error"]})
+				if step not in summary["stopped_at"]:
+					summary["stopped_at"].append(step)
+				continue
 			held = (plan.get("held_back") or []) + (outcome.get("held_back") or [])
 			tally["done"] += len(outcome.get("done") or [])
 			tally["held_back"] += len(held)
@@ -171,7 +174,7 @@ def _run(from_date, to_date) -> dict:
 
 
 def _merge(into: dict, part: dict) -> dict:
-	"""One summary over several windows: counts add up, the first stop wins."""
+	"""One summary over several windows: counts and errors add up."""
 	for step, tally in part["steps"].items():
 		mine = into["steps"].setdefault(step, {"done": 0, "held_back": 0, "needs_hr": 0, "on_purpose": 0})
 		for key in ("done", "held_back", "needs_hr", "on_purpose"):
@@ -180,9 +183,11 @@ def _merge(into: dict, part: dict) -> dict:
 			mine["skipped"] = tally["skipped"]
 		if tally.get("error"):
 			mine["error"] = tally["error"]
+			mine["errors"] = (mine.get("errors") or []) + (tally.get("errors") or [])
 	into["hr_days"] = into.get("hr_days", 0) + part.get("hr_days", 0)
 	into["protected_days"] = into.get("protected_days", 0) + part.get("protected_days", 0)
-	into["stopped_at"] = into.get("stopped_at") or part.get("stopped_at")
+	stopped = list(into.get("stopped_at") or [])
+	into["stopped_at"] = stopped + [s for s in part.get("stopped_at") or [] if s not in stopped]
 	return into
 
 
@@ -218,9 +223,11 @@ def _message(summary: dict) -> str:
 		*(f"  {line}" for line in _family_lines(summary)),
 		"ERP punch import is not part of this run; it stays with the manual sync.",
 	]
-	if summary.get("stopped_at"):
+	for step in summary.get("stopped_at") or []:
+		errors = summary["steps"].get(step, {}).get("errors") or []
+		where = ", ".join(e["from"] for e in errors) or "?"
 		lines.append(
-			f"Stopped at step {summary['stopped_at']}: {summary['steps'][summary['stopped_at']].get('error')}"
+			f"Stopped at step {step} for the window(s) from {where}: {summary['steps'].get(step, {}).get('error')}"
 		)
 	return "\n".join(lines)
 
