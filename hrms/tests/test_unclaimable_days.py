@@ -297,6 +297,7 @@ class _Planners(unittest.TestCase):
 			patch.object(rec, "_day_protection", return_value=None),
 			patch.object(rec, "_skip_reasons", return_value={}),
 			patch.object(rec, "_holiday_days", return_value=set()),
+			patch.object(rec, "_both_on_purpose", return_value=set()),
 			patch.object(frappe, "db", MagicMock()),
 			patch.object(frappe, "get_all", MagicMock(return_value=[]), create=True),
 		]
@@ -334,19 +335,59 @@ class TestLoneIn(_Planners):
 		self.assertEqual(rec._plan_lone_in(self.win, ctx=self.ctx(taps))["held_back"], [])
 
 
+class TestRosteredShift(unittest.TestCase):
+	def test_night_is_a_late_start_or_a_midnight_crossing(self):
+		self.assertTrue(rec.is_night(*TIMES[NIGHT]))
+		self.assertTrue(rec.is_night("18:00:00", "23:00:00"))
+		self.assertFalse(rec.is_night(*TIMES[DAY]))
+
+	def test_the_single_assignment_then_the_non_night_one_then_the_earliest_start(self):
+		day, night, eve = _assignment("A", DAY), _assignment("B", NIGHT), _assignment("C", EVENING)
+		self.assertEqual(rec.rostered_shift([night], TIMES), NIGHT)
+		self.assertEqual(rec.rostered_shift([night, day], TIMES), DAY)
+		self.assertEqual(rec.rostered_shift([night, eve], TIMES), EVENING)  # both night: earliest start wins
+		self.assertEqual(
+			rec.rostered_shift(
+				[eve, _assignment("D", "22-06")], {**TIMES, "22-06": ("22:00:00", "06:00:00")}
+			),
+			EVENING,
+		)
+		self.assertIsNone(rec.rostered_shift([], TIMES))
+
+	def test_two_shifts_are_a_problem_when_they_overlap_or_exceed_14_hours(self):
+		self.assertEqual(
+			rec.concurrent_shift_problem(TIMES[DAY], TIMES[EVENING]), "overlap by scheduled hours"
+		)
+		self.assertIn("21.5 scheduled hours", rec.concurrent_shift_problem(TIMES[DAY], TIMES[NIGHT]))
+		self.assertIsNone(rec.concurrent_shift_problem(("08:00:00", "12:00:00"), ("14:00:00", "18:00:00")))
+
+
 class TestWrongShiftTaps(_Planners):
-	def test_rias_evening_tap_splits_the_day_session_across_two_shifts(self):
-		# Day IN at 08:00 stamped day; 19:30 tap typed IN stamped night: one session, two stamps.
+	def test_rias_day_plus_night_roster_is_hrs_and_her_evening_tap_is_fixable(self):
+		# 8AM-6PM + 19:30-07:00 do not overlap but add up to 21.5 h; the day shift is the
+		# rostered one, so the 19:30 tap stamped night is a wrong stamp on the day.
 		taps = [
 			_tap("a", datetime(2026, 9, 2, 8, 0)),
 			_tap("b", datetime(2026, 9, 2, 19, 30), "IN", shift=NIGHT),
 		]
 		both = [_assignment("SA-DAY", DAY), _assignment("SA-NIGHT", NIGHT)]
 		plan = rec._plan_wrong_shift_taps(self.win, ctx=self.ctx(taps, assignments=both))
-		self.assertEqual(plan["planned"], [])
 		self.assertEqual(len(plan["hr_list"]), 1)
-		self.assertIn("session split across 7PM-3.30AM, 8AM-6PM", plan["hr_list"][0]["reason"])
-		self.assertIn("two shifts rostered", plan["hr_list"][0]["reason"])
+		self.assertIn("add up to 21.5 scheduled hours", plan["hr_list"][0]["reason"])
+		self.assertEqual(plan["hr_list"][0]["assignments"], ["SA-DAY", "SA-NIGHT"])
+		self.assertEqual(len(plan["planned"]), 1)
+		self.assertEqual((plan["planned"][0]["rostered"], plan["planned"][0]["shift"]), (DAY, NIGHT))
+
+	def test_both_shifts_on_purpose_silences_the_roster_row_only(self):
+		taps = [
+			_tap("a", datetime(2026, 9, 2, 8, 0)),
+			_tap("b", datetime(2026, 9, 2, 19, 30), "IN", shift=NIGHT),
+		]
+		both = [_assignment("SA-DAY", DAY), _assignment("SA-NIGHT", NIGHT)]
+		with patch.object(rec, "_both_on_purpose", return_value={"SA-NIGHT"}):
+			plan = rec._plan_wrong_shift_taps(self.win, ctx=self.ctx(taps, assignments=both))
+		self.assertEqual(plan["hr_list"], [])
+		self.assertEqual(len(plan["planned"]), 1)
 
 	def test_a_tap_stamped_off_the_only_rostered_shift_is_fixable(self):
 		taps = [
@@ -355,7 +396,7 @@ class TestWrongShiftTaps(_Planners):
 		]
 		plan = rec._plan_wrong_shift_taps(self.win, ctx=self.ctx(taps))
 		self.assertEqual(len(plan["planned"]), 1)
-		self.assertEqual(plan["planned"][0]["rostered"], [DAY])
+		self.assertEqual(plan["planned"][0]["rostered"], DAY)
 		self.assertIn("stamped to 7PM-3.30AM", plan["planned"][0]["reason"])
 
 	def test_two_assignments_overlapping_by_scheduled_hours_go_to_hr_once(self):
@@ -366,9 +407,17 @@ class TestWrongShiftTaps(_Planners):
 		self.assertIn("overlap by scheduled hours", plan["hr_list"][0]["reason"])
 		self.assertEqual(plan["hr_list"][0]["assignments"], ["SA-DAY", "SA-EVE"])
 
-	def test_a_genuine_day_worker_is_untouched(self):
+	def test_a_genuine_day_worker_and_a_genuine_night_worker_are_untouched(self):
 		taps = [_tap("a", datetime(2026, 9, 2, 8, 0)), _tap("b", datetime(2026, 9, 2, 18, 0), "OUT")]
 		plan = rec._plan_wrong_shift_taps(self.win, ctx=self.ctx(taps))
+		self.assertEqual((plan["planned"], plan["held_back"]), ([], []))
+		night = [
+			_tap("c", datetime(2026, 9, 2, 19, 30), shift=NIGHT),
+			_tap("d", datetime(2026, 9, 3, 7, 0), "OUT", shift=NIGHT),
+		]
+		plan = rec._plan_wrong_shift_taps(
+			self.win, ctx=self.ctx(night, assignments=[_assignment("SA-N", NIGHT)])
+		)
 		self.assertEqual((plan["planned"], plan["held_back"]), ([], []))
 
 

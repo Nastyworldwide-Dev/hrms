@@ -2139,8 +2139,8 @@ def session_days(taps) -> dict:
 			duplicate = tap.get("log_type") == "IN" and moment - open_in[0] <= timedelta(
 				minutes=DUPLICATE_TAP_MINUTES
 			)
-			if not duplicate:
-				open_in = None
+			# a duplicate advances the anchor so the next double tap is measured from it
+			open_in = (moment, open_in[1]) if duplicate else None
 			continue
 		anchors[tap["name"]] = moment.date()
 		open_in = (moment, moment.date()) if tap.get("log_type") == "IN" else None
@@ -2331,21 +2331,76 @@ def _sorted_days(ctx):
 	return sorted(ctx["days"].items(), key=lambda i: (str(i[0][0]), i[0][1]))
 
 
+#: Two shifts rostered on one day may add up to this many scheduled hours; more
+#: (Ria: 8AM-6PM + 19:30-07:00 = 21.5 h) is a roster nobody can work.
+MAX_CONCURRENT_SHIFT_HOURS = 14
+#: Shift Assignment Check field (S3 adds it); read with a default so its absence reads as 0.
+BOTH_ON_PURPOSE_FIELD = "both_shifts_on_purpose"
+
+
+def is_night(start_time, end_time) -> bool:
+	"""Starts at 18:00 or later, or crosses midnight. Pure."""
+	return _minutes(start_time) >= NIGHT_START_MIN or _minutes(end_time) < _minutes(start_time)
+
+
+def concurrent_shift_problem(a, b) -> str | None:
+	"""Why two shifts (start, end) cannot both be rostered on one day, or None. Pure."""
+	if shifts_overlap(a, b):
+		return "overlap by scheduled hours"
+	hours = (_shift_length_minutes(*a) + _shift_length_minutes(*b)) / 60
+	if hours > MAX_CONCURRENT_SHIFT_HOURS:
+		return f"add up to {hours:g} scheduled hours a day (over {MAX_CONCURRENT_SHIFT_HOURS})"
+	return None
+
+
+def rostered_shift(covering, times) -> str | None:
+	"""The ONE shift an employee is rostered on for a date, from the assignments
+	covering it: the single one, else the non-night one, else the earliest start. Pure."""
+	names = sorted({a.get("shift_type") for a in covering if a.get("shift_type")})
+	if len(names) <= 1:
+		return names[0] if names else None
+	known = [n for n in names if n in times]
+	day_ones = [n for n in known if not is_night(*times[n])]
+	pool = day_ones or known or names
+	return min(pool, key=lambda n: (_minutes(times[n][0]) if n in times else 24 * 60, n))
+
+
+def _both_on_purpose(names) -> set:
+	"""Assignments HR ticked as two shifts on purpose (E4). Empty until S3 adds the field."""
+	if not names or not frappe.get_meta("Shift Assignment").has_field(BOTH_ON_PURPOSE_FIELD):
+		return set()
+	return set(
+		frappe.get_all(
+			"Shift Assignment",
+			filters={"name": ["in", sorted(names)], BOTH_ON_PURPOSE_FIELD: 1},
+			pluck="name",
+			limit_page_length=0,
+		)
+	)
+
+
 def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
-	"""F1: a session-day whose taps carry a shift the employee is not rostered on that
-	day (fixable: re-stamp to the rostered shift), and two Active assignments whose
-	SCHEDULED hours overlap (HR ends one, or keeps both on purpose)."""
+	"""F1 (coordinator's definition, 15 Sep 2026). An employee-day is flagged when
+	(a) two Active submitted assignments cover it and their scheduled hours overlap
+	or add up to more than MAX_CONCURRENT_SHIFT_HOURS — unless one carries
+	both_shifts_on_purpose — (HR ends one), or (b) a tap on it is stamped to a shift
+	that is not the rostered shift for that date (fixable: re-stamp)."""
 	ctx = ctx or _context(win)
-	times, planned, held, overlapping = ctx["times"], [], [], {}
+	times, planned, held = ctx["times"], [], []
+	on_purpose = _both_on_purpose(
+		{a.name for own in ctx["assignments"].values() if len(own) > 1 for a in own}
+	)
 	for employee, assignments in sorted(ctx["assignments"].items()):
 		for i, a in enumerate(assignments):
 			for b in assignments[i + 1 :]:
 				if a.shift_type == b.shift_type or a.shift_type not in times or b.shift_type not in times:
 					continue
-				span = _overlap(a, [b], win)
-				if not span or not shifts_overlap(times[a.shift_type], times[b.shift_type]):
+				if a.name in on_purpose or b.name in on_purpose:
 					continue
-				overlapping.setdefault(employee, []).append(span)
+				span = _overlap(a, [b], win)
+				problem = span and concurrent_shift_problem(times[a.shift_type], times[b.shift_type])
+				if not problem:
+					continue
 				entry = _unclaimable(
 					"F1",
 					employee,
@@ -2358,55 +2413,34 @@ def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
 				held.append(
 					_held(
 						entry,
-						f"two Active assignments overlap by scheduled hours until {span[1]} "
-						f"({a.name} {a.shift_type}, {b.name} {b.shift_type}): HR ends one or keeps both on purpose",
+						f"two Active assignments {problem} until {span[1]} "
+						f"({a.name} {a.shift_type}, {b.name} {b.shift_type}): HR ends one or ticks both on purpose",
 					)
 				)
 	for (employee, day), taps in _sorted_days(ctx):
 		if not _in_window(win, day):
 			continue
-		rostered = sorted({a.shift_type for a in _covering(ctx, employee, day)})
+		rostered = rostered_shift(_covering(ctx, employee, day), times)
 		if not rostered:
 			continue  # shiftless: section b's family
-		if any(s <= day <= e for s, e in overlapping.get(employee, [])):
-			continue  # listed above: the roster itself is ambiguous
-		stamps = sorted({t.shift for t in taps if t.shift})
-		wrong = sorted(set(stamps) - set(rostered))
-		if not wrong and len(stamps) < 2:
+		wrong = sorted({t.shift for t in taps if t.shift and t.shift != rostered})
+		if not wrong:
 			continue
-		# One session, one shift (Nabil): a session whose taps carry two stamps was
-		# split by a buffer window (Ria's 19:30 tap on a day-shift session).
-		what = (
-			f"session split across {', '.join(stamps)}"
-			if len(stamps) > 1
-			else f"tap(s) stamped to {', '.join(wrong)}"
-		)
 		row = _live_row(ctx, employee, day)
 		entry = _unclaimable(
 			"F1",
 			employee,
 			day,
-			f"{what}; rostered on {', '.join(rostered)}",
+			f"tap(s) stamped to {', '.join(wrong)}; rostered on {rostered}",
 			employee_name=taps[0].employee_name,
-			shift=", ".join(stamps),
+			shift=", ".join(wrong),
 			rostered=rostered,
 			attendance=row and row.name,
 			status=row and row.status,
 			taps=len(taps),
 		)
 		reason = _protection(ctx, employee, day, for_update)
-		if reason:
-			held.append(_held(entry, reason))
-		elif len(rostered) > 1:
-			held.append(
-				_held(
-					entry,
-					f"{what}; two shifts rostered that day ({', '.join(rostered)}): "
-					"HR ends one assignment or keeps both on purpose",
-				)
-			)
-		else:
-			planned.append(entry)
+		(held.append(_held(entry, reason)) if reason else planned.append(entry))
 	logger.info(
 		"[attendance_recovery] F1 %s..%s: %d to re-stamp, %d held",
 		win.start,
