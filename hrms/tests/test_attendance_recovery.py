@@ -203,22 +203,6 @@ class TestMirroredCandidate(unittest.TestCase):
 				)
 
 
-class TestSplitByHeldDates(unittest.TestCase):
-	def test_a_date_holding_a_protected_day_is_not_applied_for_anyone(self):
-		planned = [
-			{"employee": "E1", "date": "2026-09-01"},
-			{"employee": "E2", "date": "2026-09-01"},
-			{"employee": "E3", "date": "2026-09-02"},
-		]
-		held = [{"employee": "E9", "date": "2026-09-01", "reason": "HR hand-marked"}]
-		dates, more_held = rec.split_by_held_dates(planned, held)
-		self.assertEqual(dates, ["2026-09-02"])
-		self.assertEqual(
-			{(h["employee"], h["date"]) for h in more_held}, {("E1", "2026-09-01"), ("E2", "2026-09-01")}
-		)
-		self.assertTrue(all(ROW_KEYS <= set(h) for h in more_held))
-
-
 # --- the envelope ---------------------------------------------------------------
 
 
@@ -1258,6 +1242,118 @@ class TestRebuildLinkedAndLateCheckout(_Base):
 
 	def test_the_f9_family_is_fixed_by_the_rebuild_step(self):
 		self.assertEqual(rec.LATE_CHECKOUT_FIX, "rebuild")
+
+
+# --- S7: per employee-day holds for the dated tools -----------------------------------
+
+
+class TestApplyDatedPerEmployeeDay(_Base):
+	"""S7: one protected employee-day no longer blocks the whole date."""
+
+	PLAN: ClassVar[dict] = {
+		"planned": [
+			{"employee": "E1", "date": "2026-09-01", "k": 1},
+			{"employee": "E2", "date": "2026-09-01", "k": 2},
+			{"employee": "E3", "date": "2026-09-02", "k": 3},
+		],
+		"held_back": [{"employee": "E9", "date": "2026-09-01", "reason": "ATT-9 is a leave record"}],
+	}
+
+	def preview(self, day):
+		if day == "2026-09-01":
+			return [("E1", "2026-09-01"), ("E2", "2026-09-01"), ("E9", "2026-09-01")]
+		return [("E3", "2026-09-02")]
+
+	def test_a_date_with_a_held_day_is_applied_row_by_row_for_the_others(self):
+		ran, rows = [], []
+		outcome = rec._apply_dated(
+			self.PLAN,
+			self.preview,
+			lambda day: ran.append(day) or {"ok": day},
+			"tool",
+			run_row=lambda e: rows.append(e["k"]) or {"row": e["k"]},
+		)
+		self.assertEqual(ran, ["2026-09-02"])
+		self.assertEqual(rows, [1, 2])
+		self.assertEqual(outcome["held_back"], [])
+		self.assertEqual(len(outcome["done"]), 3)
+
+	def test_without_a_row_applier_the_whole_date_hold_stands(self):
+		outcome = rec._apply_dated(self.PLAN, self.preview, lambda day: {"ok": day}, "tool")
+		held = {(h["employee"], h["date"]) for h in outcome["held_back"]}
+		self.assertEqual(held, {("E1", "2026-09-01"), ("E2", "2026-09-01")})
+
+	def test_a_stranger_on_a_date_is_held_alone_and_the_planned_rows_still_run(self):
+		rows = []
+		outcome = rec._apply_dated(
+			self.PLAN,
+			lambda day: [*self.preview(day), ("E7", day)],
+			lambda day: {"ok": day},
+			"tool",
+			run_row=lambda e: rows.append(e["k"]) or {"row": e["k"]},
+		)
+		self.assertEqual(rows, [1, 2, 3])
+		stranger = [h for h in outcome["held_back"] if h["employee"] == "E7"]
+		self.assertEqual(len(stranger), 2)
+		self.assertFalse(stranger[0]["hr"])
+
+	def test_one_failing_row_holds_only_itself(self):
+		def run_row(entry):
+			if entry["k"] == 2:
+				raise frappe.ValidationError("boom")
+			return {"row": entry["k"]}
+
+		outcome = rec._apply_dated(self.PLAN, self.preview, lambda day: {"ok": day}, "tool", run_row=run_row)
+		self.assertEqual([h["employee"] for h in outcome["held_back"]], ["E2"])
+		self.assertEqual({d.get("employee") for d in outcome["done"] if "employee" in d}, {"E1"})
+
+	def test_the_three_dated_steps_hand_over_a_row_applier(self):
+		win = rec.recovery_window("2026-09-01", "2026-09-02", TODAY.date())
+		plan = {"planned": [], "held_back": [], "instance": "erp"}
+		with patch.object(
+			rec, "_apply_dated", MagicMock(return_value={"done": [], "held_back": []})
+		) as dated:
+			rec._apply_overwritten(win, plan)
+			rec._apply_skip_stamps(win, plan)
+			rec._apply_import(win, plan)
+		self.assertEqual(dated.call_count, 3)
+		self.assertTrue(all(callable(c.kwargs.get("run_row")) for c in dated.call_args_list))
+
+
+# --- S6 registration: the ERP lone-IN closer runs as a step -------------------------
+
+
+class TestCloseLoneInsRegistration(_Base):
+	def setUp(self):
+		super().setUp()
+		self.win = rec.recovery_window("2026-09-01", "2026-09-02", TODAY.date())
+
+	def test_the_step_sits_right_after_import_and_runs_nightly_while_import_does_not(self):
+		self.assertEqual(rec.STEPS.index("close_lone_ins"), rec.STEPS.index("import") + 1)
+		self.assertIn("close_lone_ins", auto.AUTO_STEPS)
+		self.assertNotIn("import", auto.AUTO_STEPS)
+
+	def test_without_the_closer_the_step_holds_in_plain_words_and_plans_nothing(self):
+		with patch.dict(sys.modules, {"hrms.sync.lone_in_closer": None}):
+			plan = rec._plan_close_lone_ins(self.win, for_update=True)
+			outcome = rec._apply_close_lone_ins(self.win, plan)
+		self.assertEqual(plan["planned"], [])
+		self.assertEqual([h["reason"] for h in plan["held_back"]], ["ERP closer not installed"])
+		self.assertFalse(plan["held_back"][0]["hr"])
+		self.assertEqual(outcome["done"], [])
+
+	def test_with_the_closer_the_step_delegates_plan_and_apply(self):
+		closer = types.ModuleType("hrms.sync.lone_in_closer")
+		closer.plan_close_lone_ins = MagicMock(
+			return_value={"planned": [{"employee": "E1", "date": "2026-09-01"}], "held_back": []}
+		)
+		closer.apply_close_lone_ins = MagicMock(return_value={"done": [{"employee": "E1"}], "held_back": []})
+		with patch.dict(sys.modules, {"hrms.sync.lone_in_closer": closer}):
+			plan = rec._plan_close_lone_ins(self.win, for_update=True)
+			outcome = rec._apply_close_lone_ins(self.win, plan)
+		closer.plan_close_lone_ins.assert_called_once_with(self.win, True)
+		closer.apply_close_lone_ins.assert_called_once_with(self.win, plan)
+		self.assertEqual(outcome["done"], [{"employee": "E1"}])
 
 
 if __name__ == "__main__":

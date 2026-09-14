@@ -19,6 +19,8 @@ still has planned work (System Manager may `force=1`):
 2. overwritten   checkin_recovery.recover_overwritten_checkins (August overwrite)
 3. mirrored_rows cancel automation-owned mirrored Absent rows over hub punches
 4. import        checkin_import.import_missing_checkins (source-only punches)
+4b. close_lone_ins hrms.sync.lone_in_closer (S6, F3): a lone IN before cutover
+   closed by the OUT the old ERP still holds — tagged insert-only copy
 5. heal          offshift_punch_heal (shiftless punches, not_before 1 Aug)
 6. skip_stamps   attendance_day_audit.repair_attendance_days
 7. rebuild       the engine re-marks each unread day
@@ -75,6 +77,7 @@ STEPS = (
 	"overwritten",
 	"mirrored_rows",
 	"import",
+	"close_lone_ins",
 	"heal",
 	"skip_stamps",
 	"rebuild",
@@ -209,33 +212,6 @@ def is_mirrored_release_candidate(row) -> bool:
 			or (row.get("status") == "Half Day" and not flt(row.get("working_hours")))
 		)
 	)
-
-
-def split_by_held_dates(planned, held) -> tuple[list, list]:
-	"""(dates safe to run a whole-date repair on, extra held rows). Pure.
-
-	`repair_attendance_days`, `recover_overwritten_checkins` and
-	`import_missing_checkins` take a date window and no employee, so a date that
-	holds one protected day cannot be run for anyone.
-	"""
-	# ceiling: whole-date granularity, upgrade: add an employee filter to those three tools
-	bad = {str(h["date"]) for h in held}
-	dates, more_held = set(), []
-	for entry in planned:
-		day = str(entry["date"])
-		if day in bad:
-			more_held.append(
-				{
-					**entry,
-					"date": day,
-					"reason": "shares its date with a held-back day; this tool cannot run for one employee",
-					"hr": False,
-				}
-			)
-		else:
-			dates.add(day)
-	logger.debug("[attendance_recovery] %d date(s) clear, %d row(s) held by date", len(dates), len(more_held))
-	return sorted(dates), more_held
 
 
 # --- reads ----------------------------------------------------------------------
@@ -1083,6 +1059,7 @@ def _plan_overwritten(win, for_update=False) -> dict:
 			"log_type": entry.get("log_type"),
 			"source_name": entry.get("source_name"),
 			"confidence": entry.get("confidence"),
+			"entry": entry,
 		}
 		reason = _day_protection(row["employee"], row["date"], for_update)
 		(held.append(_held(row, reason)) if reason else planned.append(row))
@@ -1090,34 +1067,60 @@ def _plan_overwritten(win, for_update=False) -> dict:
 	return _outcome(planned, held)
 
 
-def _apply_dated(plan, preview, run, label) -> dict:
-	"""Run a date-window tool one clear date at a time, re-checking that date first."""
-	dates, more_held = split_by_held_dates(plan["planned"], plan["held_back"])
-	allowed = {(e["employee"], str(e["date"])) for e in plan["planned"] + plan.get("noop", [])}
-	done, held = [], list(more_held)
-	for day in dates:
-		keys = preview(day)
-		strangers = [k for k in keys if k not in allowed]
-		if strangers:
+def _apply_dated(plan, preview, run, label, run_row=None) -> dict:
+	"""Run a date-window tool one clear date at a time, re-checking that date first.
+
+	S7: a date that also holds a protected employee-day, or a day the tool would
+	now touch that was not in the plan, is applied row by row through `run_row`
+	— the tool's own per-punch write — so one protected person no longer holds
+	back everyone on that date. Without a row applier the whole-date hold stands.
+	A preview that refuses the date (frappe.ValidationError) holds its rows.
+	"""
+	held_dates = {str(h["date"]) for h in plan["held_back"]}
+	# planned, already right, or held by the planner: every day the plan knows
+	allowed = {
+		(e["employee"], str(e["date"])) for e in plan["planned"] + plan.get("noop", []) + plan["held_back"]
+	}
+	by_date = {}
+	for entry in plan["planned"]:
+		by_date.setdefault(str(entry["date"]), []).append(entry)
+	done, held = [], []
+	for day, entries in sorted(by_date.items()):
+		try:
+			strangers = [k for k in preview(day) if k not in allowed]
+		except frappe.ValidationError as exc:
+			held.extend(_held(e, f"{label} on {day}: {exc}", hr=False) for e in entries)
+			continue
+		held.extend(
+			_held(
+				{"employee": e, "date": d},
+				f"{label} on {day} now also touches this day; re-run the dry run",
+				hr=False,
+			)
+			for e, d in strangers
+		)
+		if not strangers and day not in held_dates:
+			result, error = _guarded(f"{label} {day}", lambda day=day: run(day))
+			if error:
+				held.extend(_held(e, f"{label} failed: {error}", hr=False) for e in entries)
+			else:
+				done.append({"date": day, "result": result})
+			continue
+		if not run_row:
 			held.extend(
 				_held(
-					{"employee": e, "date": d},
-					f"{label} on {day} now also touches this day; re-run the dry run",
-					hr=False,
+					e, "shares its date with a held-back day; this tool cannot run for one employee", hr=False
 				)
-				for e, d in strangers
+				for e in entries
 			)
 			continue
-		result, error = _guarded(f"{label} {day}", lambda day=day: run(day))
-		if error:
-			held.extend(
-				_held(e, f"{label} failed: {error}", hr=False)
-				for e in plan["planned"]
-				if str(e["date"]) == day
-			)
-		else:
-			done.append({"date": day, "result": result})
-	logger.info("[attendance_recovery] %s: %d date(s) applied, %d row(s) held", label, len(done), len(held))
+		for entry in entries:
+			result, error = _guarded(f"{label} {entry['employee']} {day}", lambda entry=entry: run_row(entry))
+			if error:
+				held.append(_held(entry, f"{label} failed: {error}", hr=False))
+			else:
+				done.append({"employee": entry["employee"], "date": day, "result": result})
+	logger.info("[attendance_recovery] %s: %d applied, %d row(s) held", label, len(done), len(held))
 	return {"done": done, "held_back": held}
 
 
@@ -1131,7 +1134,14 @@ def _apply_overwritten(win, plan) -> dict:
 		result = recover_overwritten_checkins(day, day, dry_run=0)
 		return {"inserted": result.get("inserted"), "failed": result.get("failed")}
 
-	return _apply_dated(plan, preview, run, "overwritten punch recovery")
+	def run_row(entry):
+		# the tool's own insert for one punch (S7: per employee-day)
+		from hrms.sync.checkin_recovery import _insert_recovered
+
+		_insert_recovered(entry["entry"])
+		return {"inserted": 1}
+
+	return _apply_dated(plan, preview, run, "overwritten punch recovery", run_row=run_row)
 
 
 # --- 3. mirrored rows -----------------------------------------------------------------
@@ -1259,47 +1269,56 @@ def _plan_import(win, for_update=False) -> dict:
 
 
 def _apply_import(win, plan) -> dict:
-	from hrms.sync.checkin_import import import_missing_checkins
+	from hrms.sync.checkin_import import import_missing_checkins, insert_source_punch
 
 	instance = plan.get("instance")
-	done, held = [], []
-	day = win.start
-	while instance and day <= win.end:
-		preview = _import_preview(instance, day, day)
-		samples = preview.get("inserts") or []
-		if int(preview.get("to_insert") or 0) > len(samples):
-			held.append(
-				_held(
-					{"employee": None, "date": day},
-					"too many punches to check one by one; import this date by hand",
-					hr=False,
-				)
-			)
-		elif samples:
-			reasons = [(s, _day_protection(s["employee"], s["attendance_day"], True)) for s in samples]
-			blocked = [(s, r) for s, r in reasons if r]
-			if blocked:
-				held.extend(_held({**s, "date": s["attendance_day"]}, r) for s, r in blocked)
-			else:
-				result, error = _guarded(
-					f"import {day}",
-					lambda day=day: import_missing_checkins(
-						instance=instance, from_date=str(day), to_date=str(day), dry_run=0
-					),
-				)
-				if error:
-					held.append(_held({"employee": None, "date": day}, f"import failed: {error}", hr=False))
-				else:
-					done.append(
-						{
-							"date": str(day),
-							"inserted": result.get("inserted"),
-							"errored": result.get("errored"),
-						}
-					)
-		day += timedelta(days=1)
-	logger.info("[attendance_recovery] import applied on %d date(s), %d held", len(done), len(held))
-	return {"done": done, "held_back": held}
+	if not instance:
+		return {"done": [], "held_back": []}
+
+	def preview(day):
+		result = _import_preview(instance, day, day)
+		samples = result.get("inserts") or []
+		if int(result.get("to_insert") or 0) > len(samples):
+			raise frappe.ValidationError("too many punches to check one by one; import this date by hand")
+		return [(s["employee"], str(s["attendance_day"])) for s in samples]
+
+	def run(day):
+		result = import_missing_checkins(instance=instance, from_date=str(day), to_date=str(day), dry_run=0)
+		return {"inserted": result.get("inserted"), "errored": result.get("errored")}
+
+	def run_row(sample):
+		# the import's own per-punch insert (S7: per employee-day)
+		return {"inserted": insert_source_punch(sample, instance)}
+
+	return _apply_dated(plan, preview, run, "ERP punch import", run_row=run_row)
+
+
+# --- 4b. close_lone_ins (S6, F3) --------------------------------------------------------
+
+CLOSER_MISSING = "ERP closer not installed"
+
+
+def _plan_close_lone_ins(win, for_update=False) -> dict:
+	"""Step `close_lone_ins`: a lone IN before cutover closed by the OUT the old ERP
+	still holds (S6, F3) — planned and applied by hrms.sync.lone_in_closer, which
+	carries its own guards (tagged insert-only copy, dup refusal, off switch)."""
+	try:
+		from hrms.sync.lone_in_closer import plan_close_lone_ins
+	except ImportError:
+		logger.warning("[attendance_recovery] close_lone_ins: %s", CLOSER_MISSING)
+		return _outcome(held=[_held({"employee": None, "date": str(win.start)}, CLOSER_MISSING, hr=False)])
+	return plan_close_lone_ins(win, for_update)
+
+
+def _apply_close_lone_ins(win, plan) -> dict:
+	try:
+		from hrms.sync.lone_in_closer import apply_close_lone_ins
+	except ImportError:
+		return {
+			"done": [],
+			"held_back": [_held({"employee": None, "date": str(win.start)}, CLOSER_MISSING, hr=False)],
+		}
+	return apply_close_lone_ins(win, plan)
 
 
 # --- 5. heal ---------------------------------------------------------------------------------
@@ -1463,7 +1482,62 @@ def _apply_skip_stamps(win, plan) -> dict:
 		result = repair_attendance_days(day, day, dry_run=0)
 		return {"touched": result.get("touched"), "unchanged": result.get("unchanged")}
 
-	return _apply_dated(plan, preview, run, "attendance day audit repair")
+	return _apply_dated(plan, preview, run, "attendance day audit repair", run_row=_repair_audit_entry)
+
+
+def _repair_audit_entry(entry) -> dict:
+	"""One employee-day of `attendance_day_audit.repair_attendance_days`, the same
+	writes in the same order, so a protected neighbour on the date holds only itself (S7)."""
+	# ceiling: mirrors the audit's per-entry loop, upgrade: give repair_attendance_days
+	# an employee filter and call it here instead
+	from hrms.utils import attendance_day_audit as audit
+
+	action, punches = entry["action"], entry["punches"]
+	if action == "refetch-shift" and not audit._day_is_rewritable(punches):
+		logger.warning(
+			"[attendance_recovery] %s on %s left alone: a punch would land on a shift the job never reads",
+			entry["employee"],
+			entry["date"],
+		)
+		return {"touched": 0, "unchanged": 0, "skipped": "a punch would land on a shift the job never reads"}
+	touched = unchanged = 0
+	for name in punches:
+		if action == "refetch-shift":
+			punch = frappe.get_doc("Employee Checkin", name)
+			was_shift = punch.shift
+			punch.attendance = None
+			punch.fetch_shift()
+			if punch.shift == was_shift:
+				unchanged += 1
+				continue
+			if not audit._job_can_read(punch):
+				continue
+			punch.flags.ignore_validate = True
+			punch.save()
+			what = "shift re-resolved"
+		elif action == "unskip":
+			if not cint(frappe.db.get_value("Employee Checkin", name, "skip_auto_attendance")):
+				continue
+			frappe.db.set_value("Employee Checkin", name, "skip_auto_attendance", 0, update_modified=False)
+			what = "skip stamp cleared"
+		else:
+			frappe.db.set_value("Employee Checkin", name, "attendance", None, update_modified=False)
+			what = "link to a cancelled attendance cleared"
+		frappe.get_doc("Employee Checkin", name).add_comment(
+			"Comment",
+			_("Attendance recovery by {0}: {1} — the engine re-marks this day.").format(
+				frappe.session.user, what
+			),
+		)
+		touched += 1
+	logger.info(
+		"[attendance_recovery] audit repair %s on %s: touched=%d unchanged=%d",
+		entry["employee"],
+		entry["date"],
+		touched,
+		unchanged,
+	)
+	return {"touched": touched, "unchanged": unchanged}
 
 
 # --- 7. rebuild ------------------------------------------------------------------------------------
@@ -2103,6 +2177,7 @@ _PLANNERS = {
 	"overwritten": _plan_overwritten,
 	"mirrored_rows": _plan_mirrored_rows,
 	"import": _plan_import,
+	"close_lone_ins": _plan_close_lone_ins,
 	"heal": _plan_heal,
 	"skip_stamps": _plan_skip_stamps,
 	"rebuild": _plan_rebuild,
@@ -2116,6 +2191,7 @@ _APPLIERS = {
 	"overwritten": _apply_overwritten,
 	"mirrored_rows": _apply_mirrored_rows,
 	"import": _apply_import,
+	"close_lone_ins": _apply_close_lone_ins,
 	"heal": _apply_heal,
 	"skip_stamps": _apply_skip_stamps,
 	"rebuild": _apply_rebuild,
