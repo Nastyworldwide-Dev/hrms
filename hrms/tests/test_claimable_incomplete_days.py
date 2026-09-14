@@ -39,7 +39,9 @@ PENDING = date(2026, 9, 25)
 ON_LEAVE = date(2026, 9, 26)  # a lone tap on a leave day is not "incomplete"
 HR_MARKED = date(2026, 9, 27)  # HR keyed the row by hand: theirs, not the engine's
 GENUINE_ZERO = date(2026, 9, 28)  # both taps, attendance row, no overtime: nothing to say
-CLAIMABLE = date(2026, 9, 29)
+CLAIMABLE = date(2026, 9, 18)
+RUNNING_NIGHT = date(2026, 9, 29)  # IN taken, shift ends today: still running
+BEFORE_WINDOW_NIGHT = date(2026, 5, 15)  # only its after-midnight OUT is inside the window
 CLAIMED = date(2026, 9, 20)
 
 
@@ -79,6 +81,25 @@ TAPS = [
 	_tap(date(2026, 9, 19), "IN", requires_remote_approval=1, remote_approval_status="Rejected"),
 	# today is still running: a lone IN on it is not incomplete yet
 	_tap(TODAY, "IN"),
+	# a night shift that started yesterday and ends today is still running too
+	_tap(
+		date(2026, 9, 29),
+		"IN",
+		time=datetime(2026, 9, 29, 19, 30),
+		shift_start=datetime(2026, 9, 29, 19, 30),
+		shift_end=datetime(2026, 9, 30, 3, 30),
+		shift="Night",
+	),
+	# the window opens on a day: only the after-midnight OUT of the night shift
+	# before it is read, and that shift day (outside the window) must not be listed
+	_tap(
+		date(2026, 5, 16),
+		"OUT",
+		time=datetime(2026, 5, 16, 3, 30),
+		shift_start=datetime(2026, 5, 15, 19, 30),
+		shift_end=datetime(2026, 5, 16, 3, 30),
+		shift="Night",
+	),
 ]
 
 
@@ -169,7 +190,16 @@ class TestIncompleteDaysAreListedWithTheirReason(unittest.TestCase):
 
 	def test_legit_claimed_and_genuine_zero_days_are_not_listed(self):
 		listed = set(self._codes(_discover(eligible=True)))
-		for day in (ON_LEAVE, HR_MARKED, GENUINE_ZERO, CLAIMABLE, CLAIMED, TODAY):
+		for day in (
+			ON_LEAVE,
+			HR_MARKED,
+			GENUINE_ZERO,
+			CLAIMABLE,
+			CLAIMED,
+			TODAY,
+			RUNNING_NIGHT,
+			BEFORE_WINDOW_NIGHT,
+		):
 			self.assertNotIn(str(day), listed, day)
 		self.assertNotIn("2026-09-19", listed, "a rejected tap alone is not a worked day")
 

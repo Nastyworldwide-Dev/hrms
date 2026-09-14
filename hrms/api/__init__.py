@@ -799,6 +799,7 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 		fields=[
 			"time",
 			"shift_start",
+			"shift_end",
 			"log_type",
 			"shift",
 			"offshift",
@@ -820,12 +821,21 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 
 	incomplete = []
 	for day in sorted(set(by_day) | set(rows_by_day), reverse=True):
-		if day in skip or day >= today:
+		# Before the window: only the after-midnight OUT of a night shift that
+		# started the day before was read, so that day would read "no check-in".
+		if day in skip or day >= today or day < getdate(from_date):
+			continue
+		taps_of_day = by_day.get(day, [])
+		# A night shift still running (IN taken, shift_end not yet past) is not
+		# a missing check-out — same class as the nightly-recovery guard.
+		if not any(tap.get("log_type") == "OUT" for tap in taps_of_day) and any(
+			tap.get("shift_end") and getdate(str(tap.get("shift_end"))[:10]) >= today for tap in taps_of_day
+		):
 			continue
 		rows = rows_by_day.get(day, [])
 		if any(_legit_zero_day(row) for row in rows):
 			continue
-		code, reason = explain_no_overtime_rows(by_day.get(day, []), has_attendance=bool(rows))
+		code, reason = explain_no_overtime_rows(taps_of_day, has_attendance=bool(rows))
 		if not code or code == NO_OT_DISABLED:
 			continue
 		incomplete.append({"date": str(day), "reason_code": code, "reason": reason})

@@ -792,7 +792,7 @@ def explain_no_overtime_rows(rows, *, has_attendance=None) -> tuple[str, str]:
 	if not shifts:
 		return NO_OT_NO_SHIFT, _(
 			"Your check-ins for this date are not attached to any shift, so overtime cannot be "
-			"measured. Ask HR to check your shift assignment for that day."
+			"measured. HR can see this and check the shift assignment for that day."
 		)
 
 	without_ot = [name for name in shifts if not _get_shift_ot_config(name)]
