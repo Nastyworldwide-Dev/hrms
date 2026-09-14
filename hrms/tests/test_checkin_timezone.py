@@ -77,10 +77,10 @@ class TestLateCheckoutUsesAttendanceClock(unittest.TestCase):
 	"""The reported bug: 'Check-out time cannot be in the future' for a time
 	that has already passed where the employee actually is."""
 
-	def _submit(self, checkout_datetime, attendance_now):
+	def _submit(self, checkout_datetime, attendance_now, in_time=None, shift_actual_end=None):
 		from hrms.api import remote_checkin
 
-		in_time = _kl_now() - datetime.timedelta(hours=8)
+		in_time = in_time or _kl_now() - datetime.timedelta(hours=8)
 		db = MagicMock()
 		db.get_value.side_effect = lambda doctype, name, fields=None, **kw: (
 			# filter-dict lookups (next-IN window probe) find nothing
@@ -93,6 +93,7 @@ class TestLateCheckoutUsesAttendanceClock(unittest.TestCase):
 					time=in_time,
 					log_type="IN",
 					shift="9AM - 6PM",
+					shift_actual_end=shift_actual_end,
 				),
 				"Employee": "staff@example.com",
 			}.get(doctype)
@@ -214,8 +215,13 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 	submit_late_checkout rejected the session because ANY later OUT counted."""
 
 	def _rows(self, now):
-		"""yesterday: IN never closed; today: normal IN+OUT session."""
-		yesterday_in = now - datetime.timedelta(days=1, hours=2)
+		"""two days ago: IN never closed; today: normal IN+OUT session.
+
+		Two days, not "yesterday minus two hours": a session stays live until
+		06:00 the morning after its IN, so between 00:00 and 06:00 KL a 26-hour-
+		old IN is still inside its own cutoff and the banner rightly stays
+		quiet — the fixture, not the rule, was wrong there."""
+		yesterday_in = now - datetime.timedelta(days=2)
 		return [
 			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", is_abandoned=1),
 			frappe._dict(
@@ -267,7 +273,7 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 		"""A rejected late-OUT must not hide the banner — the employee needs
 		to resubmit a corrected time."""
 		now = _kl_now()
-		yesterday_in = now - datetime.timedelta(days=1, hours=2)
+		yesterday_in = now - datetime.timedelta(days=2)  # past its 06:00 cutoff at any hour
 		rows = [
 			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", is_abandoned=0),
 			frappe._dict(
@@ -291,18 +297,24 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 		self.assertEqual(self._unresolved(rows, now), {})
 
 	def test_late_checkout_allowed_when_out_belongs_to_newer_session(self):
-		"""submit_late_checkout: today's OUT must not close yesterday's IN."""
+		"""submit_late_checkout: today's OUT must not close yesterday's IN.
+
+		The rule is no longer a time window (see leaves_consecutive_outs): the
+		filing is read against the whole sequence from the IN onward, and is
+		fine when the newer session keeps its own OUT — no two check-outs end
+		up adjacent."""
 		from hrms.api import remote_checkin
 
 		now = _kl_now()
 		yesterday_in = now - datetime.timedelta(days=1, hours=4)
 		next_in = now - datetime.timedelta(hours=8)
+		next_out = now - datetime.timedelta(hours=1)
 
 		def get_value(doctype, name, fields=None, **kw):
 			if isinstance(name, dict):
-				# the next-IN window probe finds today's IN (name + time, so the
-				# error can name the genuine later punch)
-				return frappe._dict(name="CKIN-NEW", time=next_in) if name.get("log_type") == "IN" else None
+				if name.get("log_type") == "IN":
+					return frappe._dict(name="CKIN-NEW", time=next_in)
+				return frappe._dict(name="CKOUT-NEW", time=next_out)
 			return {
 				"Employee Checkin": frappe._dict(
 					name="CKIN-OLD",
@@ -316,9 +328,11 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 
 		db = MagicMock()
 		db.get_value.side_effect = get_value
-		probes = []
-		db.exists.side_effect = lambda doctype, filters: probes.append(dict(filters)) or None
-
+		sequence = [
+			frappe._dict(name="CKIN-OLD", time=yesterday_in, log_type="IN", remote_approval_status=None),
+			frappe._dict(name="CKIN-NEW", time=next_in, log_type="IN", remote_approval_status=None),
+			frappe._dict(name="CKOUT-NEW", time=next_out, log_type="OUT", remote_approval_status=None),
+		]
 		out_doc = MagicMock()
 		out_doc.name = "CKOUT-LATE"
 
@@ -326,26 +340,58 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 			patch.object(frappe, "db", db),
 			patch.object(frappe, "session", frappe._dict(user="staff@example.com")),
 			patch.object(frappe, "local", _fresh_local()),
+			patch.object(frappe, "get_all", return_value=sequence) as get_all,
 			patch.object(frappe, "new_doc", return_value=out_doc),
 			patch.object(remote_checkin, "employee_now", return_value=now),
 		):
-			remote_checkin.submit_late_checkout(
+			result = remote_checkin.submit_late_checkout(
 				in_checkin="CKIN-OLD",
 				checkout_datetime=(yesterday_in + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S"),
 				reason="forgot to check out",
 			)
 
-		# the later-OUT probes must be bounded by the next IN, not open-ended,
-		# and must cover BOTH non-rejected and never-set statuses (a bare !=
-		# filter would skip NULL-status legacy OUTs — SQL three-valued logic)
-		self.assertEqual(len(probes), 2)
-		for probe in probes:
-			self.assertEqual(probe["time"][0], "between")
-			self.assertLess(probe["time"][1][1], next_in)
-		self.assertEqual(
-			[p["remote_approval_status"] for p in probes],
-			[["!=", "Rejected"], ["is", "not set"]],
-		)
+		self.assertEqual(result["checkin"], "CKOUT-LATE")
+		out_doc.insert.assert_called_once()
+		# the sequence is read from the IN being closed, with no forward bound
+		filters = get_all.call_args.kwargs["filters"]
+		self.assertEqual(filters["time"], [">=", yesterday_in])
+		self.assertEqual(get_all.call_args.kwargs.get("limit_page_length"), 0)
+
+
+class TestLateCheckoutRefusesAnImplausibleGap(unittest.TestCase):
+	"""E28: any gap was accepted, so a typo (the next day's time, the wrong
+	month) filed a 30-hour session and the day was rebuilt around it. Past the
+	shift's actual end plus LATE_CHECKOUT_MAX_HOURS_AFTER_END the employee is
+	told to pick the real time or ask HR."""
+
+	_submit = TestLateCheckoutUsesAttendanceClock._submit
+
+	def _timeline(self):
+		now = _kl_now()
+		in_time = now - datetime.timedelta(hours=30)
+		return now, in_time, in_time + datetime.timedelta(hours=9)
+
+	def test_a_checkout_too_long_after_the_shift_end_is_refused_with_advice(self):
+		from hrms.api import remote_checkin
+
+		now, in_time, end = self._timeline()
+		too_late = end + datetime.timedelta(hours=remote_checkin.LATE_CHECKOUT_MAX_HOURS_AFTER_END + 1)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self._submit(too_late, now, in_time=in_time, shift_actual_end=end)
+		message = str(caught.exception)
+		self.assertIn(str(remote_checkin.LATE_CHECKOUT_MAX_HOURS_AFTER_END), message)
+		self.assertIn("HR", message)
+
+	def test_a_checkout_inside_the_window_is_accepted(self):
+		from hrms.api import remote_checkin
+
+		now, in_time, end = self._timeline()
+		inside = end + datetime.timedelta(hours=remote_checkin.LATE_CHECKOUT_MAX_HOURS_AFTER_END - 1)
+		self._submit(inside, now, in_time=in_time, shift_actual_end=end)
+
+	def test_an_in_without_a_shift_end_keeps_the_old_rule(self):
+		now, in_time, _ = self._timeline()
+		self._submit(in_time + datetime.timedelta(hours=26), now, in_time=in_time, shift_actual_end=None)
 
 
 if __name__ == "__main__":

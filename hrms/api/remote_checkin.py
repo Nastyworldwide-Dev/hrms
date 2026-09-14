@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 
 HR_MANAGER_ROLE = "HR Manager"
 
+#: A forgotten check-out this long after the IN's shift actually ended (buffer
+#: included) is a typo, not a session: refused at filing with advice (E28).
+LATE_CHECKOUT_MAX_HOURS_AFTER_END = 12
+
 
 def _ensure_owner(request_name: str) -> dict:
 	row = frappe.db.get_value(
@@ -747,7 +751,7 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	(skipping geofence validation) and a Pending Remote Checkin Request
 	with is_late_checkout=1 (via the after_insert hook).
 	"""
-	from frappe.utils import get_datetime
+	from datetime import timedelta
 
 	if not in_checkin or not checkout_datetime or not (reason or "").strip():
 		frappe.throw(_("Check-in reference, checkout time, and reason are required."))
@@ -780,6 +784,21 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	# from their device, and stored check-in times are in that same basis.
 	if out_dt > employee_now(in_doc.employee):
 		frappe.throw(_("Check-out time cannot be in the future."))
+
+	# E28: any gap used to be accepted, so the next day's time or the wrong
+	# month filed a 30-hour session and the day was rebuilt around it.
+	if in_doc.shift_actual_end:
+		latest = get_datetime(in_doc.shift_actual_end) + timedelta(hours=LATE_CHECKOUT_MAX_HOURS_AFTER_END)
+		if out_dt > latest:
+			logger.info(
+				"[remote_checkin] late check-out %s refused: %s is past %s", in_doc.name, out_dt, latest
+			)
+			frappe.throw(
+				_(
+					"That check-out is more than {0} hours after your shift ended ({1}). "
+					"Pick the time you really left, or ask HR to correct the day."
+				).format(LATE_CHECKOUT_MAX_HOURS_AFTER_END, get_datetime(in_doc.shift_actual_end))
+			)
 
 	# The earliest IN that starts a NEW session, where "new session" means the
 	# open one ENDED first. Two things end it:
