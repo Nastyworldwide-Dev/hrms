@@ -195,6 +195,10 @@ class FakeCheckin:
 		self._site.tables["Employee Checkin"][self.name] = self._row()
 		return self
 
+	def _restamp_later_session_punches(self):
+		"""The override's after-insert restamp; records the saves before it ran."""
+		self._site.__dict__.setdefault("restamps", []).append((self.name, len(self._site.saves)))
+
 
 class FakeShift:
 	name = "Day"
@@ -507,6 +511,16 @@ class TestAppendOnlyImport(_SiteCase):
 		)
 		self.assertEqual(self.site.fetch_shift_calls, [name])
 		self.assertEqual(row["shift"], "Day", "the resolved shift must be saved")
+
+	def test_an_imported_punch_restamps_its_session_once_its_shift_is_saved(self):
+		"""Group 1 review W4: the punch is inserted with no shift, so the
+		override's after_insert restamp returned early, and the later save does
+		not fire after_insert. A late-arriving imported IN left the later punches
+		of its session on another shift. The restamp runs after the save."""
+		self.use(FakeSite(employees=["EMP-1"]))
+		self.run_import(FakeClient([punch("EMP-1", "2026-09-10 08:30:00", "IN", "R-1")]))
+		((name, _row),) = self.site.checkins().items()
+		self.assertEqual(getattr(self.site, "restamps", []), [(name, 1)])
 
 	def test_the_window_is_by_punch_time_not_modified(self):
 		self.use(FakeSite(employees=["EMP-1"]))

@@ -16,10 +16,7 @@ export function canOfferCancel(doc, doctype = doc?.doctype) {
 	// No decision field: only HR Manager / System Manager may cancel (to correct a
 	// mistake), and only they hold `cancel` on these, so the permission check decides.
 	if (APPROVED_ON_SUBMIT.includes(doctype)) return true
-	if (HR_ONLY_CANCELLABLE_WHEN_APPROVED.includes(doctype)) {
-		console.info("[cancelRule]", doctype, "defers to the cancel permission (HR-only rule)")
-		return true
-	}
+	if (HR_ONLY_CANCELLABLE_WHEN_APPROVED.includes(doctype)) return true
 	const decision = doctype === "Expense Claim" ? doc.approval_status : doc.status
 	return decision !== "Approved"
 }

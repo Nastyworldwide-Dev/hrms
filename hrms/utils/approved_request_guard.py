@@ -52,6 +52,29 @@ DECISION_FIELD_BY_DOCTYPE = {
 }
 
 
+def _paying_salary_slip(ot_request: str) -> str | None:
+	"""The submitted Salary Slip that already paid this OT Request, if any.
+
+	Only Overtime Pay reaches the slip: ot_calculation._approved_ot_pay_hours
+	prices submitted OT-Pay requests whose ot_date falls in the slip's period.
+	Replacement Leave is banked as leave, never paid. Same "submitted slip
+	covering this employee and date" test as the late check-out repair's
+	_repair_financial_dependency."""
+	ot = frappe.db.get_value("OT Request", ot_request, ["employee", "ot_date", "compensation"], as_dict=True)
+	if not ot or ot.compensation != "Overtime Pay":
+		return None
+	return frappe.db.get_value(
+		"Salary Slip",
+		{
+			"employee": ot.employee,
+			"start_date": ["<=", ot.ot_date],
+			"end_date": [">=", ot.ot_date],
+			"docstatus": 1,
+		},
+		"name",
+	)
+
+
 def block_cancel_of_approved(doc, method=None):
 	if doc.doctype not in DECISION_FIELD_BY_DOCTYPE:
 		return
@@ -69,6 +92,20 @@ def block_cancel_of_approved(doc, method=None):
 			frappe.session.user,
 		)
 		return
+	if doc.doctype == "OT Request" and (slip := _paying_salary_slip(doc.name)):
+		logger.info(
+			"[approved_request_guard] refused cancel of paid OT Request %s (Salary Slip %s) by %s",
+			doc.name,
+			slip,
+			frappe.session.user,
+		)
+		frappe.throw(
+			_(
+				"This overtime is already paid in a submitted salary slip. "
+				"Correct it with a payroll adjustment instead."
+			),
+			frappe.ValidationError,
+		)
 	if doc.doctype == "OT Request" and OT_REQUEST_HR_ROLES & set(frappe.get_roles()):
 		logger.info(
 			"[approved_request_guard] HR cancel of approved OT Request %s by %s",

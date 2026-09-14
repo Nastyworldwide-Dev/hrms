@@ -562,9 +562,11 @@ def get_unresolved_stale_in() -> dict:
 	Walking the recent log — instead of only looking at the last row — is the
 	point: checking in the next morning buries yesterday's forgotten checkout
 	under a newer IN, and the sweeper's abandoned tag lands on the old row."""
-	from datetime import timedelta
+	from collections import Counter
 
 	from frappe.utils import add_days, cint, get_datetime
+
+	from hrms.utils.shift_resolution import counts_toward_session, session_is_open
 
 	employee = get_employee()
 	if not employee:
@@ -579,20 +581,46 @@ def get_unresolved_stale_in() -> dict:
 			frappe.get_all(
 				"Employee Checkin",
 				filters={"employee": employee, "time": [">=", add_days(now, -10)]},
-				fields=["name", "time", "log_type", "is_abandoned", "remote_approval_status"],
+				fields=[
+					"name",
+					"time",
+					"log_type",
+					"is_abandoned",
+					"remote_approval_status",
+					"skip_auto_attendance",
+					"shift",
+					"shift_start",
+				],
 				order_by="time desc",
 				limit=200,
 			)
 		)
 	)
-	# a REJECTED late-OUT doesn't close its session (mirrors the OT pairing
-	# engine) — the employee must be able to resubmit a corrected time
-	rows = [r for r in rows if not (r.log_type == "OUT" and r.remote_approval_status == "Rejected")]
+	# a REJECTED punch neither closes nor is a session (mirrors the OT pairing
+	# engine) — after a rejected late-OUT the employee must be able to resubmit
+	rows = [r for r in rows if r.remote_approval_status != "Rejected"]
 
+	# W3: live shifts pair "Alternating entries" within the shift group, so an
+	# IN that is the group's even-numbered punch (08:55 IN, 18:31 IN) is the
+	# check-out, and a later punch of the group closes the one before it. The
+	# same open-session rule the shift stamp uses; unshifted punches keep the
+	# log_type rule below.
+	def group(row):
+		if not row.get("shift") or not counts_toward_session(row):
+			return None
+		return (row.shift, str(row.shift_start))
+
+	totals = Counter(key for key in map(group, rows) if key)
+	seen = Counter()
 	unresolved = {}
 	for i, row in enumerate(rows):
+		key = group(row)
+		if key:
+			seen[key] += 1
 		if row.log_type != "IN":
 			continue
+		if key and (not session_is_open(seen[key], row.log_type) or totals[key] > seen[key]):
+			continue  # the shift's own pairing already closed this session
 		next_row = rows[i + 1] if i + 1 < len(rows) else None
 		if next_row and next_row.log_type == "OUT":
 			continue  # session closed (a pending late-OUT also closes it)

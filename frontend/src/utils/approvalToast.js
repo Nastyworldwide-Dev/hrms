@@ -13,11 +13,23 @@ export function decisionToast(decision, repair, __) {
 		const hours = Math.round(Number(repair.working_hours || 0) * 10) / 10
 		return {
 			title: __("Approved"),
-			text: __("Attendance updated to {0} {1}h.", [__(repair.status || ""), hours]),
+			text: __("Attendance updated to {0} {1}.", [
+				__(repair.status || ""),
+				__("{0} hours", [hours]),
+			]),
 			tone: "success",
 		}
 	}
-	let text = __("Attendance NOT updated: {0}", [repair.message || ""])
+	// The shift is still today: the hourly job updates it after the shift ends.
+	// Nothing failed, so it is not a warning.
+	if (repair.reason_code === "today") {
+		return {
+			title: __("Approved"),
+			text: __("Approved — attendance will update after the shift ends."),
+			tone: "success",
+		}
+	}
+	let text = __("Attendance was not updated: {0}", [repair.message || ""])
 	if (repair.hr_notified) text += " " + __("HR has been told.")
 	else if (repair.will_retry) text += " " + __("It will update automatically once that clears.")
 	return { title: __("Approved"), text, tone: "warning" }

@@ -512,6 +512,14 @@ def insert_source_punch(entry: dict, instance_name: str) -> str | None:
 	doc.fetch_shift()
 	doc.flags.ignore_validate = True
 	doc.save()
+	# The punch went in with no shift, so after_insert's session restamp had
+	# nothing to anchor on, and save() does not fire after_insert. Run it now
+	# that the shift is stored: an imported IN arriving after its later punches
+	# pulls them onto its session. One read per punch; mirrored and
+	# attendance-linked punches are never rewritten (see the override).
+	restamp = getattr(doc, "_restamp_later_session_punches", None)
+	if restamp:
+		restamp()
 	logger.info(
 		"[checkin_import] inserted %s for %s at %s %s from source %s",
 		doc.name,

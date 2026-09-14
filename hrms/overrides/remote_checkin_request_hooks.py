@@ -356,6 +356,11 @@ def propagate_approval_decision(doc, method=None):
 				"skip_auto_attendance": 1,
 			},
 		)
+		if not cint(doc.get("is_late_checkout")):
+			# W2: a rejected pending punch is skip-stamped and leaves the shift,
+			# which clears a late OUT's pending_punch blocker as surely as an
+			# approval does.
+			reapply_late_checkouts_unblocked_by(doc)
 
 	logger.info(
 		"[remote_checkin_request] %s -> %s checkin=%s by=%s",
@@ -464,9 +469,10 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 			False, reason_code, reason, attendance=attendance, hr_notified=_tell_hr_once(checkin, reason)
 		)
 	if attempt >= MAX_REPAIR_RETRIES:
-		# pending_punch keeps its own trigger (approving that punch re-runs the
-		# repair); a lock that never frees needs a person.
-		hr_notified = reason_code != "pending_punch" and _tell_hr_once(checkin, reason)
+		# Out of retries: HR hears about it once. pending_punch also keeps its own
+		# trigger (deciding that punch re-runs the repair), but a punch nobody
+		# decides must not leave the day stuck in silence (W2).
+		hr_notified = _tell_hr_once(checkin, reason)
 		return _repair_result(False, reason_code, reason, attendance=attendance, hr_notified=hr_notified)
 	# ceiling: retries run right after commit with no backoff, upgrade: a delayed queue if lock refusals recur
 	frappe.enqueue(

@@ -223,6 +223,10 @@ def _punch(name, time, cand, **kw):
 		"overtime_type": None,
 		"attendance": None,
 		"synced_from_instance": None,
+		"log_type": "IN",
+		"group_count": 1,
+		"skip_auto_attendance": 0,
+		"remote_approval_status": None,
 	}
 	row.update(kw)
 	return frappe._dict(row)
@@ -287,9 +291,12 @@ class TestOneSessionOneShift(unittest.TestCase):
 		self.assertEqual(session_restamps(anchor, later), [])
 
 	def test_punches_already_on_the_shift_carry_the_walk_forward(self):
+		"""Lunch out and back on the day shift leave the session open again, so
+		the evening tap still joins it."""
 		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
 		later = [
-			_punch("CKIN-L", datetime(2026, 9, 11, 13), _day9(), attendance="HR-ATT-AUTO"),
+			_punch("CKIN-L", datetime(2026, 9, 11, 13), _day9(), attendance="HR-ATT-AUTO", log_type="OUT"),
+			_punch("CKIN-B", datetime(2026, 9, 11, 14), _day9(), attendance="HR-ATT-AUTO"),
 			_punch("CKIN-OUT", datetime(2026, 9, 11, 18, 31), _night1930()),
 		]
 		self.assertEqual(session_restamps(anchor, later), ["CKIN-OUT"])
@@ -298,6 +305,224 @@ class TestOneSessionOneShift(unittest.TestCase):
 		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
 		later = [_punch("CKIN-NEXT", datetime(2026, 9, 12, 1, 0), _night1930())]
 		self.assertEqual(session_restamps(anchor, later), [])
+
+
+class TestOnlyAnOpenSessionIsContinued(unittest.TestCase):
+	"""Group 1 review C1 (14 Sep 2026): the E4 rule continued the previous
+	punch's shift even when that punch had already CLOSED its session, so the
+	next shift's first punch was swallowed. A session is open while its shift
+	group (same shift and shift_start, not rejected, not skip-stamped) holds an
+	odd number of punches up to the earlier one — and that punch is not a
+	check-out."""
+
+	def test_a_closed_day_session_does_not_swallow_the_real_night_in(self):
+		"""B: day OUT 18:00 is the second punch of the day group."""
+		out = _punch("CKIN-1800", datetime(2026, 9, 11, 18), _day9(), log_type="OUT", group_count=2)
+		self.assertFalse(continues_session(datetime(2026, 9, 11, 19, 30), out))
+
+	def test_a_closed_night_session_does_not_swallow_the_next_day_in(self):
+		"""C: night OUT 03:30 is the second punch of the night group."""
+		out = _punch("CKIN-0330", datetime(2026, 9, 12, 3, 30), _night1930(11), log_type="OUT", group_count=2)
+		self.assertFalse(continues_session(datetime(2026, 9, 12, 8, 0), out))
+
+	def test_a_lone_check_out_on_the_stray_night_opens_nothing(self):
+		"""A: an 18:31 OUT stamped Night with no IN in that group. The next
+		morning's 08:55 IN is inside the night window and within 20h, but a
+		check-out closes a session, it never opens one."""
+		out = _punch("CKIN-1831", datetime(2026, 9, 11, 18, 31), _night1930(11), log_type="OUT")
+		self.assertFalse(continues_session(datetime(2026, 9, 12, 8, 55), out))
+
+	def test_a_mislabelled_second_in_closes_the_session(self):
+		"""E4's 18:31 IN is the day group's second punch: the next morning is new."""
+		second = _punch("CKIN-1831", datetime(2026, 9, 11, 18, 31), _day9(), group_count=2)
+		self.assertFalse(continues_session(datetime(2026, 9, 12, 8, 55), second))
+
+	def test_an_earlier_punch_with_no_group_count_is_treated_as_closed(self):
+		earlier = _punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), _day9(), group_count=None)
+		self.assertFalse(continues_session(datetime(2026, 9, 11, 18, 31), earlier))
+
+	def test_a_late_arriving_in_restamps_only_the_punch_that_closes_it(self):
+		"""The restamp walk obeys the same rule: IN 09:00 arrives late; the
+		18:00 OUT filed on Night joins it and closes the session; the real
+		19:30 night IN and its 03:30 OUT stay on Night."""
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [
+			_punch("CKIN-1800", datetime(2026, 9, 11, 18), _night1930(), log_type="OUT"),
+			_punch("CKIN-1930", datetime(2026, 9, 11, 19, 30), _night1930()),
+			_punch("CKIN-0330", datetime(2026, 9, 12, 3, 30), _night1930(), log_type="OUT"),
+		]
+		self.assertEqual(session_restamps(anchor, later), ["CKIN-1800"])
+
+	def test_an_anchor_that_closes_its_group_restamps_nothing(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 18), _day9(), group_count=2)
+		later = [_punch("CKIN-N", datetime(2026, 9, 11, 19, 30), _night1930())]
+		self.assertEqual(session_restamps(anchor, later), [])
+
+	def test_a_late_arriving_check_out_restamps_nothing(self):
+		anchor = _punch("CKIN-OUT", datetime(2026, 9, 11, 18), _day9(), log_type="OUT")
+		later = [_punch("CKIN-N", datetime(2026, 9, 11, 19, 30), _night1930())]
+		self.assertEqual(session_restamps(anchor, later), [])
+
+	def test_rejected_and_skipped_punches_neither_count_nor_move(self):
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [
+			_punch("CKIN-REJ", datetime(2026, 9, 11, 12), _night1930(), remote_approval_status="Rejected"),
+			_punch("CKIN-SKIP", datetime(2026, 9, 11, 13), _night1930(), skip_auto_attendance=1),
+			_punch("CKIN-OUT", datetime(2026, 9, 11, 18), _night1930(), log_type="OUT"),
+		]
+		self.assertEqual(session_restamps(anchor, later), ["CKIN-OUT"])
+
+
+def _matches(row, filters):
+	for field, want in (filters or {}).items():
+		have = row.get(field)
+		if isinstance(want, tuple | list) and want and want[0] in ("between", "!=", "<=", "<", "is"):
+			op, arg = want[0], want[1]
+			if op == "between" and not (have is not None and arg[0] <= have <= arg[1]):
+				return False
+			if op == "!=" and have == arg:
+				return False
+			if op == "<=" and not (have is not None and have <= arg):
+				return False
+			if op == "<" and not (have is not None and have < arg):
+				return False
+			if op == "is" and bool(have) != (arg == "set"):
+				return False
+		elif (have or 0) != (want or 0):
+			return False
+	return True
+
+
+class _Store:
+	"""Stored punches, answering the lookups the override makes."""
+
+	def __init__(self):
+		self.rows = []
+
+	def get_all(self, doctype, filters=None, fields=None, order_by="", limit_page_length=None, **kw):
+		rows = sorted((r for r in self.rows if _matches(r, filters)), key=lambda r: r["time"])
+		if "desc" in (order_by or ""):
+			rows.reverse()
+		rows = [frappe._dict(r) for r in rows]
+		return rows[:limit_page_length] if limit_page_length else rows
+
+	def count(self, doctype, filters=None, **kw):
+		return len(self.get_all(doctype, filters))
+
+	def get_value(self, doctype, name, fields=None, as_dict=False, **kw):
+		row = next((frappe._dict(r) for r in self.rows if r["name"] == name), None)
+		if row is None or as_dict:
+			return row
+		return row.get(fields) if isinstance(fields, str) else [row.get(f) for f in fields]
+
+
+# Every assignment a stray-night day worker holds, anchored 10-12 Sep.
+_CANDS = [_day9(10), _day9(11), _day9(12), _night1930(10), _night1930(11), _night1930(12)]
+
+
+class TestStrayNightScenarios(unittest.TestCase):
+	"""C1 counterexamples end to end through the override: each new punch runs
+	the session rule, falls back to choose_shift, and is stored."""
+
+	DAY11 = ("9AM-6PM", datetime(2026, 9, 11, 9))
+	DAY12 = ("9AM-6PM", datetime(2026, 9, 12, 9))
+	NIGHT11 = ("Night 1930-0330", datetime(2026, 9, 11, 19, 30))
+
+	def setUp(self):
+		self.store = _Store()
+
+	def _punch(self, name, time, log_type):
+		from unittest.mock import patch
+
+		import hrms.overrides.employee_checkin_override as mod
+
+		doc = mod.CustomEmployeeCheckin.__new__(mod.CustomEmployeeCheckin)
+		doc.name, doc.employee, doc.time, doc.log_type = name, "HR-EMP-00009", time, log_type
+		doc.attendance = doc.synced_from_instance = None
+		doc.flags = frappe._dict()
+		doc.shift = doc.shift_start = doc.shift_end = doc.overtime_type = None
+		doc.shift_actual_start = doc.shift_actual_end = doc.offshift = None
+		with (
+			patch.object(frappe, "get_all", side_effect=self.store.get_all),
+			patch.object(frappe.db, "count", side_effect=self.store.count, create=True),
+			patch.object(frappe.db, "get_value", side_effect=self.store.get_value),
+		):
+			if not doc._close_open_session():
+				chosen = choose_shift(time, log_type, _CANDS, doc._open_in())
+				doc._stamp_shift(
+					shift=chosen["shift_type"],
+					start_datetime=chosen["start_datetime"],
+					end_datetime=chosen["end_datetime"],
+					actual_start=chosen["actual_start"],
+					actual_end=chosen["actual_end"],
+					overtime_type=None,
+				)
+		self._store_row(name, time, log_type, doc)
+		return (doc.shift, doc.shift_start)
+
+	def _store_row(self, name, time, log_type, stamp):
+		get = stamp.get if isinstance(stamp, dict) else lambda f: getattr(stamp, f)
+		self.store.rows.append(
+			{
+				"name": name,
+				"employee": "HR-EMP-00009",
+				"time": time,
+				"log_type": log_type,
+				"shift": get("shift"),
+				"shift_start": get("shift_start"),
+				"shift_end": get("shift_end"),
+				"shift_actual_start": get("shift_actual_start"),
+				"shift_actual_end": get("shift_actual_end"),
+				"overtime_type": None,
+				"skip_auto_attendance": 0,
+				"remote_approval_status": None,
+			}
+		)
+
+	def _stored(self, name, time, log_type, cand, **kw):
+		self._store_row(name, time, log_type, _punch(name, time, cand))
+		self.store.rows[-1].update(kw)
+
+	def test_a_lone_night_stamped_out_does_not_pull_in_the_next_work_day(self):
+		"""A: 18:31 OUT stamped Night (no open IN); next morning 08:55 IN and
+		18:00 OUT became ~23h of Night with ~9h invented overtime."""
+		self._stored("CKIN-1831", datetime(2026, 9, 11, 18, 31), "OUT", _night1930(11))
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 12, 8, 55), "IN"), self.DAY12)
+		self.assertEqual(self._punch("CKIN-1800", datetime(2026, 9, 12, 18), "OUT"), self.DAY12)
+
+	def test_an_old_night_stamp_after_a_day_in_does_not_pull_in_the_next_day(self):
+		"""A, old-stamp form: the day IN is on the day shift, the 18:31 OUT kept
+		its pre-fix Night stamp."""
+		self._stored("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN", _day9(11))
+		self._stored("CKIN-1831", datetime(2026, 9, 11, 18, 31), "OUT", _night1930(11))
+		self.assertEqual(self._punch("CKIN-N0855", datetime(2026, 9, 12, 8, 55), "IN"), self.DAY12)
+		self.assertEqual(self._punch("CKIN-N1800", datetime(2026, 9, 12, 18), "OUT"), self.DAY12)
+
+	def test_a_real_double_shift_keeps_the_night_on_the_night_shift(self):
+		"""B: day 09:00-18:00, then a real night IN 19:30 and OUT 03:30."""
+		self.assertEqual(self._punch("CKIN-0900", datetime(2026, 9, 11, 9), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1800", datetime(2026, 9, 11, 18), "OUT"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1930", datetime(2026, 9, 11, 19, 30), "IN"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-0330", datetime(2026, 9, 12, 3, 30), "OUT"), self.NIGHT11)
+
+	def test_a_closed_night_does_not_swallow_the_next_day_in(self):
+		"""C: night 19:30-03:30, then a day IN at 08:00."""
+		self.assertEqual(self._punch("CKIN-1930", datetime(2026, 9, 11, 19, 30), "IN"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-0330", datetime(2026, 9, 12, 3, 30), "OUT"), self.NIGHT11)
+		self.assertEqual(self._punch("CKIN-0800", datetime(2026, 9, 12, 8), "IN"), self.DAY12)
+
+	def test_e4_the_mislabelled_second_in_still_closes_the_day(self):
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-1831", datetime(2026, 9, 11, 18, 31), "IN"), self.DAY11)
+		self.assertEqual(self._punch("CKIN-N0855", datetime(2026, 9, 12, 8, 55), "IN"), self.DAY12)
+
+	def test_a_rejected_punch_is_not_the_session_before(self):
+		"""A rejected lunch OUT does not close the morning's session."""
+		self.assertEqual(self._punch("CKIN-0855", datetime(2026, 9, 11, 8, 55), "IN"), self.DAY11)
+		self._stored(
+			"CKIN-REJ", datetime(2026, 9, 11, 12), "OUT", _day9(11), remote_approval_status="Rejected"
+		)
+		self.assertEqual(self._punch("CKIN-1831", datetime(2026, 9, 11, 18, 31), "IN"), self.DAY11)
 
 
 class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
@@ -360,7 +585,9 @@ class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 			mod.CustomEmployeeCheckin.after_insert(doc)
 		filters = get_all.call_args.kwargs["filters"]
 		self.assertEqual(filters["employee"], "HR-EMP-00009")
-		self.assertEqual(filters["time"], ("between", [datetime(2026, 9, 11, 9), datetime(2026, 9, 12, 5)]))
+		# From the start of the shift day (the anchor's own group, for its
+		# position) to the end of the session window.
+		self.assertEqual(filters["time"], ("between", [datetime(2026, 9, 11, 0), datetime(2026, 9, 12, 5)]))
 		set_value.assert_called_once()
 		target, values = set_value.call_args.args[1], set_value.call_args.args[2]
 		self.assertEqual(target["name"], "CKIN-OUT")

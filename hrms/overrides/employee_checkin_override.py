@@ -60,34 +60,74 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		self._restamp_later_session_punches()
 
 	def _restamp_later_session_punches(self) -> None:
-		"""An earlier punch arriving after later ones (import, late request, HR
-		adding a forgotten IN) re-resolves the later punches of its session onto
-		its shift — the same rule fetch_shift applies at insert, run backwards.
+		"""An earlier punch arriving after later ones (late request, HR adding a
+		forgotten IN, and the source-punch import, which calls this itself once
+		the shift is saved because its insert carries no shift) re-resolves the
+		later punches of its session onto its shift — the same rule fetch_shift
+		applies at insert, run backwards, and only while that session is open.
 
 		Only unlinked, local rows are rewritten: a punch linked to Attendance
 		(auto or HR hand-marked) and a mirrored punch are left as they are, and
 		no Attendance row is touched — the hourly job reads the corrected stamps.
 		"""
-		from hrms.utils.shift_resolution import SESSION_WINDOW, session_restamps
+		from datetime import datetime, time
+
+		from hrms.utils.shift_resolution import SESSION_WINDOW, counts_toward_session, session_restamps
 
 		if not self.shift or getattr(self, "synced_from_instance", None):
 			return
+		if not counts_toward_session(
+			{
+				"skip_auto_attendance": getattr(self, "skip_auto_attendance", 0),
+				"remote_approval_status": getattr(self, "remote_approval_status", None),
+			}
+		):
+			return
 		log_time = get_datetime(self.time)
-		later = frappe.get_all(
+		anchor = {field: getattr(self, field, None) for field in SESSION_STAMP_FIELDS}
+		for field in ("shift_start", "shift_actual_start", "shift_actual_end"):
+			anchor[field] = get_datetime(anchor[field]) if anchor[field] else None
+		anchor["time"] = log_time
+		anchor["log_type"] = self.log_type
+		# One read covers the anchor's own group (for its position) and the later
+		# punches: every member of a shift group lies after the start of its
+		# shift day or its actual start (early arrivals attach on the same date).
+		earliest = min(
+			log_time,
+			anchor["shift_actual_start"] or log_time,
+			datetime.combine(anchor["shift_start"].date(), time.min) if anchor["shift_start"] else log_time,
+		)
+		rows = frappe.get_all(
 			"Employee Checkin",
 			filters={
 				"employee": self.employee,
-				"time": ("between", [log_time, log_time + SESSION_WINDOW]),
+				"time": ("between", [earliest, log_time + SESSION_WINDOW]),
 				"name": ("!=", self.name),
 			},
-			fields=["name", "time", "attendance", "synced_from_instance", *SESSION_STAMP_FIELDS],
+			fields=[
+				"name",
+				"time",
+				"log_type",
+				"attendance",
+				"synced_from_instance",
+				"skip_auto_attendance",
+				"remote_approval_status",
+				*SESSION_STAMP_FIELDS,
+			],
 			order_by="time asc",
 		)
-		later = [row for row in later if get_datetime(row["time"]) >= log_time]
-		anchor = {field: getattr(self, field, None) for field in SESSION_STAMP_FIELDS}
-		for field in ("shift_actual_start", "shift_actual_end"):
-			anchor[field] = get_datetime(anchor[field]) if anchor[field] else None
-		anchor["time"] = log_time
+		for row in rows:
+			row["time"] = get_datetime(row["time"])
+			row["shift_start"] = get_datetime(row["shift_start"]) if row.get("shift_start") else None
+		key = (anchor["shift"], anchor["shift_start"])
+		anchor["group_count"] = 1 + sum(
+			1
+			for row in rows
+			if row["time"] < log_time
+			and (row.get("shift"), row["shift_start"]) == key
+			and counts_toward_session(row)
+		)
+		later = [row for row in rows if row["time"] >= log_time]
 		values = {field: anchor[field] for field in SESSION_STAMP_FIELDS}
 		values["offshift"] = 0
 		for name in session_restamps(anchor, later):
@@ -307,18 +347,23 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 
 	def _previous_punch(self) -> dict | None:
 		"""The employee's stored punch just before this one, inside the session
-		window, with its shift stamp."""
+		window, with its shift stamp and `group_count`: its position among the
+		counted punches of its shift group, which says whether its session is
+		still open (C1). Rejected and skip-stamped punches are not in any session,
+		so they are never the punch before."""
 		from hrms.utils.shift_resolution import SESSION_WINDOW
 
 		log_time = get_datetime(self.time)
+		counted = {"skip_auto_attendance": 0, "remote_approval_status": ("!=", "Rejected")}
 		rows = frappe.get_all(
 			"Employee Checkin",
 			filters={
 				"employee": self.employee,
 				"time": ("between", [log_time - SESSION_WINDOW, log_time]),
 				"name": ("!=", self.name),
+				**counted,
 			},
-			fields=["name", "time", *SESSION_STAMP_FIELDS],
+			fields=["name", "time", "log_type", *SESSION_STAMP_FIELDS],
 			order_by="time desc",
 			limit_page_length=1,
 		)
@@ -334,6 +379,19 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		row["time"] = get_datetime(row["time"])
 		for field in ("shift_actual_start", "shift_actual_end"):
 			row[field] = get_datetime(row[field]) if row.get(field) else None
+		row["group_count"] = 0
+		if row.get("shift"):
+			row["group_count"] = frappe.db.count(
+				"Employee Checkin",
+				filters={
+					"employee": self.employee,
+					"shift": row["shift"],
+					"shift_start": row.get("shift_start"),
+					"time": ("<=", row["time"]),
+					"name": ("!=", self.name),
+					**counted,
+				},
+			)
 		return row
 
 	def _inherit_open_in(self) -> bool:

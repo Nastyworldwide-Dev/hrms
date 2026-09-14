@@ -530,6 +530,16 @@ class TestWholeShiftRepair(unittest.TestCase):
 		self.assertFalse(result.will_retry)
 		self.enqueue.assert_not_called()
 
+	def test_exhausted_pending_punch_retries_tell_hr_once(self):
+		"""Group 1 review W2: when the retries run out the day was dropped in
+		silence. It goes on HR's list, once, like any other stuck repair."""
+		self.rows[0].remote_approval_status = "Pending"
+		result, _ = self.run_repair(attempt=hooks.MAX_REPAIR_RETRIES)
+		self.run_repair(attempt=hooks.MAX_REPAIR_RETRIES)
+		self.assertTrue(result.hr_notified)
+		self.assertEqual(result.reason_code, "pending_punch")
+		self.assertEqual([log["title"] for log in self.error_logs], ["Late check-out not applied"])
+
 	def test_permanent_blocker_writes_one_error_log_for_hr_and_is_not_retried(self):
 		self.attendance.auto_attendance = 0
 		first, _ = self.run_repair()

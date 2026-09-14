@@ -139,9 +139,20 @@ class TestApprovingTheBlockingPunchReappliesTheLateOut(unittest.TestCase):
 		self.assertEqual(filters["is_late_checkout"], 1)
 		self.assertEqual(filters["status"], "Approved")
 
-	def test_rejecting_the_in_reapplies_nothing(self):
-		outs = {"OUT-UNAPPLIED": frappe._dict(attendance=None, remote_approval_status="Approved")}
+	def test_rejecting_the_blocking_punch_also_reapplies_the_late_out(self):
+		"""Group 1 review W2: a rejected pending punch clears the blocker just as
+		an approval does — it is skip-stamped and leaves the shift — so the late
+		OUT refused while it was pending must be re-applied then too."""
+		outs = {
+			"OUT-UNAPPLIED": frappe._dict(attendance=None, remote_approval_status="Approved"),
+			"OUT-APPLIED": frappe._dict(attendance="HR-ATT-DONE", remote_approval_status="Approved"),
+		}
 		reprocess = self._propagate(_request("Rejected", is_late_checkout=0), outs)
+		reprocess.assert_called_once_with("OUT-UNAPPLIED")
+
+	def test_rejecting_a_late_checkout_itself_reapplies_nothing(self):
+		outs = {"OUT-UNAPPLIED": frappe._dict(attendance=None, remote_approval_status="Approved")}
+		reprocess = self._propagate(_request("Rejected", is_late_checkout=1), outs)
 		reprocess.assert_not_called()
 
 

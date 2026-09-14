@@ -10,18 +10,38 @@ import { decisionToast } from "../approvalToast.js"
 
 const __ = (text, args = []) => text.replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)]))
 
-test("an applied repair names the new status and hours", () => {
+test("an applied repair names the new status and hours through a translated label", () => {
+	const seen = []
+	const spy = (text, args) => (seen.push(text), __(text, args))
 	const toast = decisionToast(
 		"approve",
 		{ repaired: true, status: "Present", working_hours: 9.5, reason_code: null },
+		spy
+	)
+	assert.equal(toast.title, "Approved")
+	assert.equal(toast.text, "Attendance updated to Present 9.5 hours.")
+	assert.equal(toast.tone, "success")
+	assert.ok(seen.includes("{0} hours"), "the hours unit must be a translatable string")
+})
+
+// Group 1 review S3: a shift that is still today is not a failure — the hourly
+// job updates it once the shift ends.
+test("a shift day that is today is a success, not a warning", () => {
+	const toast = decisionToast(
+		"approve",
+		{
+			repaired: false,
+			reason_code: "today",
+			message: "This shift is today; attendance updates automatically after the shift.",
+		},
 		__
 	)
 	assert.equal(toast.title, "Approved")
-	assert.equal(toast.text, "Attendance updated to Present 9.5h.")
+	assert.equal(toast.text, "Approved — attendance will update after the shift ends.")
 	assert.equal(toast.tone, "success")
 })
 
-test("a refused repair says NOT updated, gives the plain reason, and never a raw code", () => {
+test("a refused repair says it was not updated, gives the plain reason, and never a raw code", () => {
 	const toast = decisionToast(
 		"approve",
 		{
@@ -34,7 +54,8 @@ test("a refused repair says NOT updated, gives the plain reason, and never a raw
 		__
 	)
 	assert.equal(toast.title, "Approved")
-	assert.match(toast.text, /^Attendance NOT updated: HR marked this day by hand\./)
+	assert.match(toast.text, /^Attendance was not updated: HR marked this day by hand\./)
+	assert.doesNotMatch(toast.text, /NOT/)
 	assert.match(toast.text, /HR has been told\./)
 	assert.doesNotMatch(toast.text, /hr_marked/)
 	assert.equal(toast.tone, "warning")

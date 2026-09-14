@@ -107,6 +107,86 @@ def _cancel(doc, stored=None, flags=None, roles=("HR User",)):
 	return db
 
 
+PAID_MESSAGE = (
+	"This overtime is already paid in a submitted salary slip. Correct it with a payroll adjustment instead."
+)
+
+
+def _cancel_ot(roles, paid_slip=None, compensation="Overtime Pay"):
+	"""Cancel an approved OT Request; `paid_slip` is the submitted Salary Slip
+	covering its employee and date, if any. Returns the db mock."""
+	from hrms.utils.approved_request_guard import block_cancel_of_approved
+
+	def get_value(doctype, name=None, fieldname=None, **kw):
+		if doctype == "OT Request" and fieldname == "status":
+			return "Approved"
+		if doctype == "OT Request":
+			return frappe._dict(employee="HR-EMP-001", ot_date="2026-08-20", compensation=compensation)
+		if doctype == "Salary Slip":
+			return paid_slip
+		return None
+
+	db = MagicMock()
+	db.get_value.side_effect = get_value
+	with (
+		patch.object(frappe, "db", db),
+		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
+		patch.object(frappe, "flags", frappe._dict(), create=True),
+		patch.object(frappe, "session", frappe._dict(user="hr@example.com"), create=True),
+	):
+		block_cancel_of_approved(_doc("OT Request"), "before_cancel")
+	return db
+
+
+class TestPaidOvertimeIsNeverCancelled(unittest.TestCase):
+	"""Owner ruling W5, 14 Sep 2026: HR may correct an approved OT Request only
+	while it is unpaid. Once a submitted Salary Slip covers the employee and the
+	OT date, the pay is out — every role is refused and pointed at a payroll
+	adjustment."""
+
+	def test_hr_may_cancel_approved_overtime_not_yet_paid(self):
+		for role in OT_REQUEST_HR_ROLES:
+			with self.subTest(role=role):
+				_cancel_ot(roles=("Employee", role), paid_slip=None)
+
+	def test_paid_overtime_is_refused_for_every_role(self):
+		for roles in (("HR Manager",), ("System Manager",), ("HR User",), ("Employee",)):
+			with self.subTest(roles=roles):
+				with self.assertRaises(frappe.ValidationError) as caught:
+					_cancel_ot(roles=roles, paid_slip="Sal Slip/HR-EMP-001/00008")
+				self.assertEqual(str(caught.exception), PAID_MESSAGE)
+
+	def test_the_payroll_lookup_is_a_submitted_slip_covering_the_ot_date(self):
+		db = _cancel_ot(roles=("HR Manager",), paid_slip=None)
+		slip_calls = [c for c in db.get_value.call_args_list if c.args[0] == "Salary Slip"]
+		self.assertEqual(len(slip_calls), 1)
+		filters = slip_calls[0].args[1]
+		self.assertEqual(filters["employee"], "HR-EMP-001")
+		self.assertEqual(filters["docstatus"], 1)
+		self.assertEqual(filters["start_date"], ["<=", "2026-08-20"])
+		self.assertEqual(filters["end_date"], [">=", "2026-08-20"])
+
+	def test_replacement_leave_overtime_never_reaches_a_slip(self):
+		"""Only Overtime Pay is priced into the slip (ot_calculation
+		_approved_ot_pay_hours); replacement leave is banked, not paid."""
+		_cancel_ot(
+			roles=("HR Manager",), paid_slip="Sal Slip/HR-EMP-001/00008", compensation="Replacement Leave"
+		)
+
+	def test_a_refused_paid_cancel_is_logged(self):
+		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
+			with self.assertRaises(frappe.ValidationError):
+				_cancel_ot(roles=("HR Manager",), paid_slip="Sal Slip/HR-EMP-001/00008")
+		self.assertTrue(any("Sal Slip/HR-EMP-001/00008" in line for line in logs.output))
+
+	def test_leave_application_never_looks_at_payroll(self):
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_cancel(_doc("Leave Application"), stored="Approved", roles=("HR Manager",))
+		self.assertEqual(str(caught.exception), MESSAGE)
+		db = _cancel(_doc("Leave Application"), stored="Rejected", roles=("HR Manager",))
+		self.assertEqual(db.get_value.call_count, 1)
+
+
 class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 	def test_an_approved_request_is_refused_for_every_decision_doctype(self):
 		# OT Request is the one exception (owner ruling): the default role here,
@@ -176,18 +256,18 @@ class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 		# decision doctype HR may still cancel/amend.
 		for role in OT_REQUEST_HR_ROLES:
 			with self.subTest(role=role):
-				_cancel(_doc("OT Request"), stored="Approved", roles=("Employee", role))
+				_cancel_ot(roles=("Employee", role))
 
 	def test_non_hr_roles_are_refused_for_an_approved_ot_request(self):
 		for roles in (("Employee",), ("Leave Approver",), ("Expense Approver", "Leave Approver")):
 			with self.subTest(roles=roles):
 				with self.assertRaises(frappe.ValidationError) as caught:
-					_cancel(_doc("OT Request"), stored="Approved", roles=roles)
+					_cancel_ot(roles=roles)
 				self.assertEqual(str(caught.exception), MESSAGE)
 
 	def test_hr_cancel_of_an_approved_ot_request_is_logged(self):
 		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
-			_cancel(_doc("OT Request"), stored="Approved", roles=("HR User",))
+			_cancel_ot(roles=("HR User",))
 		self.assertTrue(any("OT Request" in line for line in logs.output))
 
 	def test_sync_patch_migrate_and_install_are_exempt(self):
