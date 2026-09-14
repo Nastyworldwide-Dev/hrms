@@ -13,6 +13,9 @@ still has planned work (System Manager may `force=1`):
 
 0. release_mirrored  broken days still stamped as the ERP's copy become Verifica's
 1. assignments   end a night assignment a day worker never used (Ria)
+1b. rostered_shift put a day whose taps sit on a shift the person is not
+   rostered on back on the rostered shift (S4, F1: end the extra assignment,
+   cancel the invented rows, re-stamp the taps, the engine rebuilds)
 2. overwritten   checkin_recovery.recover_overwritten_checkins (August overwrite)
 3. mirrored_rows cancel automation-owned mirrored Absent rows over hub punches
 4. import        checkin_import.import_missing_checkins (source-only punches)
@@ -68,6 +71,7 @@ MAX_WINDOW_DAYS = 62
 STEPS = (
 	"release_mirrored",
 	"assignments",
+	"rostered_shift",
 	"overwritten",
 	"mirrored_rows",
 	"import",
@@ -692,6 +696,363 @@ def _apply_assignments(win, plan) -> dict:
 			held.append(_held(entry, f"could not be ended: {error}"))
 		else:
 			done.append(result)
+	return {"done": done, "held_back": held}
+
+
+# --- 1b. rostered_shift (S4: F1's fixer) ----------------------------------------------------
+
+
+def _lock_employee(employee) -> None:
+	"""The per-employee lock HR's master edit and the hourly job take (S3 G6, E35)."""
+	from hrms.hr.doctype.shift_type.shift_type import lock_employee_row
+
+	lock_employee_row(employee)
+
+
+def _attendance_row(name):
+	return frappe.db.get_value("Attendance", name, [*ATTENDANCE_FIELDS, "shift", "in_time"], as_dict=True)
+
+
+def _row_summary(row) -> dict:
+	return {
+		"name": row.get("name"),
+		"date": str(getdate(row.get("attendance_date"))) if row.get("attendance_date") else None,
+		"shift": row.get("shift"),
+		"status": row.get("status"),
+		"working_hours": round(flt(row.get("working_hours")), 2),
+		"in_time": str(row.get("in_time")) if row.get("in_time") else None,
+		"out_time": str(row.get("out_time")) if row.get("out_time") else None,
+	}
+
+
+def _expected_on_rostered(employee, day, rostered, taps) -> dict:
+	"""What the engine would mark on the rostered shift once these taps carry its
+	stamp — computed on copies, nothing written (the dry run's "after")."""
+	from hrms.api.attendance_master_edit import _shift_window, punch_stamp
+	from hrms.sync.checkin_import import _preview
+
+	day = getdate(day)
+	try:
+		stamp = punch_stamp(rostered, _shift_window(rostered, day))
+		logs = [frappe._dict({**t, **stamp}) for t in sorted(taps, key=lambda t: get_datetime(t["time"]))]
+		return _preview(frappe.get_doc("Shift Type", rostered), employee, day, logs)
+	except Exception as exc:
+		if _lost_transaction(exc):
+			raise
+		logger.warning(
+			"[attendance_recovery] no preview for %s on %s under %s: %s", employee, day, rostered, exc
+		)
+		return {"shift": rostered, "status": None, "detail": f"could not preview the rebuilt day: {exc}"}
+
+
+def _used_after(ctx, employee, shift_type, after, flagged) -> date | None:
+	"""The first session day after `after`, not on the fix list, with a tap inside
+	the shift's SCHEDULED hours — the person really works that shift later (E15)."""
+	start_time, end_time = ctx["times"][shift_type]
+	for (who, day), taps in _sorted_days(ctx):
+		if who != employee or day <= after or day in flagged:
+			continue
+		if any(in_shift_window(t["time"], start_time, end_time) for t in taps):
+			return day
+	return None
+
+
+def _plan_rostered_shift(win, for_update=False) -> dict:
+	"""Step `rostered_shift`: every employee-day the F1 detector lists as fixable —
+	a tap stamped to a shift the person is not rostered on that day (Ria's 18:33
+	IN opened an invented night; the next 07:50 closed it) — is put back:
+
+	1. the extra assignment is ended the day before the first affected date
+	   (split by end date when it also covers earlier dates, else Inactive; a
+	   comment says who and why; never deleted, HR can reverse it);
+	2. the day's rows on the wrong shift are cancelled through the document;
+	3. the wrong taps are re-stamped oldest-first by the override's own
+	   fetch_shift (S2's session-first rule);
+	4. the engine re-marks the day (`checkin_import._remark_day`).
+
+	Protections on every row: today, HR-edited / HR-removed, leave, Attendance
+	Request, paid (`_day_protection`); a row HR marked by hand is left alone on
+	purpose; invented hours already paid go to HR (E13, D5); "both shifts on
+	purpose" (E4) is respected. The dry run carries `before` (the live rows)
+	and `expected` (the engine's result on the rostered shift) per day.
+	"""
+	ctx = _context(win)
+	f1 = _plan_wrong_shift_taps(win, for_update, ctx=ctx)
+	times = ctx["times"]
+	rows_by_name = {r.get("name"): r for r in ctx["rows"]}
+	on_purpose = _both_on_purpose(
+		{a.name for own in ctx["assignments"].values() if len(own) > 1 for a in own}
+	)
+	keys = ("employee", "employee_name", "date", "rostered", "shift", "reason", "attendance", "taps")
+	tap_level = [r for r in f1["planned"] + f1["held_back"] if r.get("rostered")]
+	planned, held, endings = [], [], {}
+	for f in sorted(tap_level, key=lambda r: (str(r["employee"]), str(r["date"]))):
+		employee, day, rostered = f["employee"], getdate(f["date"]), f["rostered"]
+		entry = {k: f.get(k) for k in keys}
+		day_rows = [r for r in ctx["rows_by_day"].get((employee, day), []) if cint(r.get("docstatus")) == 1]
+		if f in f1["held_back"]:
+			paid = _financial(employee, day, day_rows, for_update)
+			reason = (
+				f"approved overtime or payroll already uses this day ({paid}): HR decides whether the hours stand"
+				if paid
+				else f["reason"]
+			)
+			held.append(_held(entry, reason, hr=True))
+			continue
+		covering = _covering(ctx, employee, day)
+		ticked = [a.name for a in covering if a.name in on_purpose]
+		if ticked:
+			held.append(
+				_held(entry, f"HR ticked both shifts on purpose on {', '.join(ticked)}: left alone", hr=False)
+			)
+			continue
+		taps = sorted(ctx["days"].get((employee, day), []), key=lambda t: get_datetime(t["time"]))
+		wrong = [t for t in taps if t.get("shift") and t.get("shift") != rostered]
+		copied = [t for t in wrong if t.get(PROVENANCE_FIELD)]
+		if copied:
+			held.append(
+				_held(
+					entry,
+					f"the punch {copied[0]['name']} copied from the ERP carries the wrong shift: the ERP copy owns it",
+				)
+			)
+			continue
+		wrong_shifts = {t.get("shift") for t in wrong}
+		names = {r.get("name") for r in day_rows if r.get("shift") in wrong_shifts}
+		names |= {t.get("attendance") for t in wrong if t.get("attendance")}
+		rows = [rows_by_name.get(n) or _attendance_row(n) for n in sorted(names)]
+		rows = [r for r in rows if r and cint(r.get("docstatus")) == 1]
+		problem = None
+		for row in rows:
+			# the master edit's cancel rules: a row HR marked by hand is HR's
+			# (on purpose); a paid row is HR's decision (E13, D5)
+			row_day = getdate(row.get("attendance_date"))
+			if not cint(row.get("auto_attendance")):
+				problem = f"{row.get('name')} was marked by HR by hand"
+				break
+			paid = _financial(employee, row_day, [row], for_update)
+			if paid:
+				problem = (
+					f"approved overtime or payroll already uses {row.get('name')} on {row_day} ({paid}): "
+					"HR decides whether the hours stand"
+				)
+				break
+			why = row_day != day and _day_protection(employee, row_day, for_update)
+			if why:
+				problem = f"{row.get('name')} on {row_day}: {why}"
+				break
+		if problem:
+			held.append(_held(entry, problem, hr=True))
+			continue
+		extra = [a for a in covering if a.get("shift_type") != rostered]
+		for a in extra:
+			spec = endings.setdefault(
+				a.name,
+				{
+					"employee": employee,
+					"assignment": a.name,
+					"shift_type": a.get("shift_type"),
+					"rostered": rostered,
+					"start_date": str(getdate(a.get("start_date"))),
+					"first_affected": str(day),
+					"last_affected": str(day),
+					"days": [],
+				},
+			)
+			spec["last_affected"] = max(spec["last_affected"], str(day))
+			spec["days"].append(day)
+		live = [t for t in taps if not cint(t.get("skip_auto_attendance")) and not t.get(PROVENANCE_FIELD)]
+		planned.append(
+			{
+				**entry,
+				"restamp": [t["name"] for t in wrong],
+				"cancel_rows": [r.get("name") for r in rows],
+				"end_assignments": [a.name for a in extra],
+				"before": [_row_summary(r) for r in day_rows]
+				+ [_row_summary(r) for r in rows if getdate(r.get("attendance_date")) != day],
+				"expected": _expected_on_rostered(employee, day, rostered, live),
+			}
+		)
+	assignments = []
+	for spec in endings.values():
+		first, last = getdate(spec["first_affected"]), getdate(spec["last_affected"])
+		flagged = set(spec.pop("days"))
+		again = (
+			_used_after(ctx, spec["employee"], spec["shift_type"], last, flagged)
+			if spec["shift_type"] in times
+			else None
+		)
+		if again:
+			held.append(
+				_held(
+					{"employee": spec["employee"], "date": spec["first_affected"], **spec},
+					f"{spec['assignment']} ({spec['shift_type']}) is worked again on {again}: HR ends it for "
+					f"{first}..{last} or ticks both shifts on purpose",
+				)
+			)
+			for entry in planned:
+				if entry["employee"] == spec["employee"]:
+					entry["end_assignments"] = [
+						n for n in entry["end_assignments"] if n != spec["assignment"]
+					]
+			continue
+		# ended the day before the first affected date — never before it started
+		start = getdate(spec["start_date"])
+		spec["split"] = start < first
+		spec["end_date"] = str(max(start, first - timedelta(days=1)))
+		assignments.append(spec)
+	logger.info(
+		"[attendance_recovery] rostered_shift %s..%s: %d day(s) to put back, %d assignment(s) to end, %d held",
+		win.start,
+		win.end,
+		len(planned),
+		len(assignments),
+		len(held),
+	)
+	return _outcome(planned, held, assignments=assignments)
+
+
+def _end_extra_assignment(spec) -> dict:
+	doc = frappe.get_doc("Shift Assignment", spec["assignment"])
+	if doc.get("synced_from_instance"):
+		raise frappe.ValidationError(f"{doc.name} is the ERP's copy: it is ended there")
+	doc.flags.ignore_permissions = True
+	end = getdate(spec["end_date"])
+	if spec.get("split"):
+		# End date only: the earlier dates stay as they were. Written directly —
+		# the after-submit validation would refuse the overlap HR already has.
+		doc.db_set({"end_date": end})
+		action = f"end date set to {end}; the dates before it stay as they were"
+	else:
+		doc.status = "Inactive"
+		doc.end_date = end
+		doc.save()
+		action = f"set Inactive, end date {end}"
+	doc.add_comment(
+		"Comment",
+		_(
+			"Attendance recovery by {0}: {1}. {2} is rostered on {3} from {4}; the taps stamped to {5} on "
+			"{4}..{6} were moved back to it. Reverse by setting the status and end date back."
+		).format(
+			frappe.session.user,
+			action,
+			spec["employee"],
+			spec["rostered"],
+			spec["first_affected"],
+			spec["shift_type"],
+			spec["last_affected"],
+		),
+	)
+	logger.info("[attendance_recovery] %s %s", spec["assignment"], action)
+	return {**spec, "action": action}
+
+
+def _cancel_wrong_row(name, employee, rostered) -> dict | None:
+	"""Cancel one row through the document (Attendance.on_cancel unlinks its taps);
+	returns the local taps it held so strays can be re-stamped, or None if it is
+	already cancelled."""
+	doc = frappe.get_doc("Attendance", name)
+	if cint(doc.docstatus) != 1:
+		logger.info("[attendance_recovery] %s already cancelled", name)
+		return None
+	linked = [
+		p.get("name")
+		for p in frappe.get_all(
+			"Employee Checkin",
+			filters={"attendance": name, "synced_from_instance": ["is", "not set"], "shift": doc.shift},
+			fields=["name"],
+			limit_page_length=0,
+		)
+	]
+	doc.flags.ignore_permissions = True
+	doc.cancel()
+	doc.add_comment(
+		"Comment",
+		_(
+			"Attendance recovery by {0}: cancelled. {1} is rostered on {2}; this row was built from taps that belong to it."
+		).format(frappe.session.user, employee, rostered),
+	)
+	logger.info("[attendance_recovery] cancelled %s (%s on %s)", name, doc.shift, doc.attendance_date)
+	return {"name": name, "shift": doc.shift, "linked": linked}
+
+
+def _restamp_tap(name, rostered) -> dict:
+	"""Clear the link and let the override's fetch_shift place the tap (S2's rule)."""
+	doc = frappe.get_doc("Employee Checkin", name)
+	if doc.get("synced_from_instance"):
+		raise frappe.ValidationError(f"{name} is the ERP's copy: never re-stamped here")
+	was = doc.shift
+	doc.attendance = None
+	doc.fetch_shift()
+	doc.flags.ignore_validate = True
+	doc.save()
+	doc.add_comment(
+		"Comment",
+		_("Attendance recovery by {0}: moved from {1} to {2} ({3} is the rostered shift).").format(
+			frappe.session.user, was, doc.shift, rostered
+		),
+	)
+	if doc.shift != rostered:
+		logger.warning(
+			"[attendance_recovery] %s resolved to %s, not the rostered %s", name, doc.shift, rostered
+		)
+	logger.info("[attendance_recovery] %s re-stamped %s -> %s", name, was, doc.shift)
+	return {"name": name, "was": was, "now": doc.shift, "shift_start": doc.shift_start}
+
+
+def _fix_rostered_day(entry, endings, ended, plan_taps, win) -> dict:
+	employee, day, rostered = entry["employee"], getdate(entry["date"]), entry["rostered"]
+	_lock_employee(employee)
+	result = {"ended": [], "cancelled": [], "restamped": [], "marked": [], "errors": []}
+	for name in entry.get("end_assignments") or []:
+		if name in ended or name not in endings:
+			continue
+		result["ended"].append(_end_extra_assignment(endings[name]))
+	strays = []
+	for name in entry.get("cancel_rows") or []:
+		cancelled = _cancel_wrong_row(name, employee, rostered)
+		if cancelled:
+			result["cancelled"].append(name)
+			# a tap this row held that no planned day re-stamps (today's 07:50) would
+			# otherwise be re-read under the wrong shift and re-invent the row
+			strays += [p for p in cancelled["linked"] if p not in plan_taps]
+	days = {day}
+	for name in [*(entry.get("restamp") or []), *strays]:
+		moved = _restamp_tap(name, rostered)
+		result["restamped"].append(moved)
+		if moved.get("shift_start"):
+			days.add(getdate(moved["shift_start"]))
+	for when in sorted(days):
+		if when > win.end:
+			continue
+		remark = _remark_day(employee, when, True) or {}
+		result["marked"] += remark.get("marked") or []
+		result["errors"] += remark.get("errors") or []
+		if remark.get("action") not in (None, "remark"):
+			result["errors"].append(f"{when}: {remark.get('detail') or remark.get('action')}")
+	logger.info("[attendance_recovery] %s on %s put back on %s: %s", employee, day, rostered, result)
+	return result
+
+
+def _apply_rostered_shift(win, plan) -> dict:
+	done, held, ended = [], [], set()
+	endings = {e["assignment"]: e for e in plan.get("assignments") or []}
+	plan_taps = {name for entry in plan["planned"] for name in entry.get("restamp") or []}
+	for entry in plan["planned"]:
+		result, error = _guarded(
+			f"rostered_shift {entry['employee']} {entry['date']}",
+			lambda entry=entry: _fix_rostered_day(entry, endings, ended, plan_taps, win),
+		)
+		if error:
+			held.append(_held(entry, f"could not be put back on {entry['rostered']}: {error}", hr=False))
+			continue
+		ended.update(e["assignment"] for e in result["ended"])
+		if result.get("marked"):
+			done.append({"employee": entry["employee"], "date": entry["date"], **result})
+		else:
+			held.append(
+				_held(entry, "; ".join(result.get("errors") or []) or "the engine did not re-mark this day")
+			)
 	return {"done": done, "held_back": held}
 
 
@@ -1610,6 +1971,7 @@ def _guarded(label, fn):
 _PLANNERS = {
 	"release_mirrored": _plan_release_mirrored,
 	"assignments": _plan_assignments,
+	"rostered_shift": _plan_rostered_shift,
 	"overwritten": _plan_overwritten,
 	"mirrored_rows": _plan_mirrored_rows,
 	"import": _plan_import,
@@ -1622,6 +1984,7 @@ _PLANNERS = {
 _APPLIERS = {
 	"release_mirrored": _apply_release_mirrored,
 	"assignments": _apply_assignments,
+	"rostered_shift": _apply_rostered_shift,
 	"overwritten": _apply_overwritten,
 	"mirrored_rows": _apply_mirrored_rows,
 	"import": _apply_import,
