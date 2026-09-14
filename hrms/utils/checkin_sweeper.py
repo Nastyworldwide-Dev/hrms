@@ -3,7 +3,9 @@
 sweep_stale_ins() -- daily 10:00 AM job (registered via hrms/hooks.py
 scheduler_events) that tags Employee Checkin IN logs older than
 STALE_HOURS hours without a matching OUT as is_abandoned=1, and pings
-HR Manager(s) with a count.
+HR Manager(s) with a count. The same run escalates forgotten check-out
+requests nobody has decided for STALE_REQUEST_DAYS to HR, once per request
+(escalate_stale_late_checkout_requests, E18). It never decides for them.
 """
 
 from __future__ import annotations
@@ -23,6 +25,9 @@ STALE_HOURS = 36
 # stale row is missed; the exact per-employee cutoff is applied in Python.
 MAX_TZ_SPREAD_HOURS = 26
 HR_MANAGER_ROLE = "HR Manager"
+#: a Pending forgotten check-out request older than this goes on HR's list
+STALE_REQUEST_DAYS = 3
+STALE_REQUEST_TITLE = "Late check-out request waiting"
 
 
 def sweep_stale_ins() -> int:
@@ -81,7 +86,46 @@ def sweep_stale_ins() -> int:
 		_notify_hr(tagged)
 
 	logger.info("[scheduler] sweep_stale_ins -> tagged %d", tagged)
+	try:
+		escalate_stale_late_checkout_requests()
+	except Exception:
+		# the tagging above is done; a failed escalation must not undo it
+		logger.exception("[scheduler] stale late check-out escalation failed")
 	return tagged
+
+
+def escalate_stale_late_checkout_requests() -> int:
+	"""Tell HR, once per request, about forgotten check-out requests still
+	Pending after STALE_REQUEST_DAYS (E18). The day stays Half Day until
+	somebody decides; this only makes sure somebody knows. Returns how many
+	were escalated in this run."""
+	from hrms.overrides.remote_checkin_request_hooks import notify_hr
+
+	cutoff = add_to_date(now_datetime(), days=-STALE_REQUEST_DAYS)
+	stale = frappe.get_all(
+		"Remote Checkin Request",
+		filters={"status": "Pending", "is_late_checkout": 1, "creation": ["<=", cutoff]},
+		fields=["name", "employee", "employee_name", "checkin", "checkin_time", "creation"],
+		order_by="creation asc",
+		limit_page_length=0,
+	)
+	logger.info("[scheduler] stale late check-out requests: %d (cutoff %s)", len(stale), cutoff)
+	escalated = 0
+	for request in stale:
+		reference = {"reference_doctype": "Remote Checkin Request", "reference_name": request.name}
+		if frappe.db.exists("Error Log", {"method": STALE_REQUEST_TITLE, **reference}):
+			continue
+		message = (
+			f"{request.employee_name or request.employee} filed a forgotten check-out for "
+			f"{request.checkin_time} on {request.creation} and nobody has decided it. "
+			f"The day stays Half Day until it is approved or rejected."
+		)
+		frappe.log_error(title=STALE_REQUEST_TITLE, message=message, **reference)
+		company = frappe.db.get_value("Employee", request.employee, "company")
+		notify_hr(STALE_REQUEST_TITLE, message, "Remote Checkin Request", request.name, company)
+		escalated += 1
+		logger.warning("[scheduler] stale late check-out request %s escalated to HR", request.name)
+	return escalated
 
 
 def _has_matching_close(in_row: dict) -> bool:
