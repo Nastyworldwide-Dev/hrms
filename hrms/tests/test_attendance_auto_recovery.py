@@ -199,8 +199,14 @@ class TestSwitchesAndRecheck(_Case):
 	def flagged(self, win):
 		return [r for r in self.rows if win.start <= date.fromisoformat(r["date"]) <= win.end]
 
-	def fixable(self, day, employee="E1"):
-		return {"employee": employee, "date": day, "status": auto.rec.STATUS_FIXABLE, "family": "F1"}
+	def fixable(self, day, employee="E1", family="F1", fix="rostered_shift"):
+		return {
+			"employee": employee,
+			"date": day,
+			"status": auto.rec.STATUS_FIXABLE,
+			"family": family,
+			"fix": fix,
+		}
 
 	def windows(self):
 		return sorted({(c[1], c[2]) for c in self.calls})
@@ -246,6 +252,18 @@ class TestSwitchesAndRecheck(_Case):
 		# 200 employee-days = 20 days x 10 people: the re-check stops at 20 August
 		self.assertNotIn("2026-08-21", starts + ends)
 		self.assertTrue(all(e <= "2026-09-13" for e in ends))
+
+	def test_a_detector_crash_during_the_recheck_never_reaches_the_scheduler(self):
+		with patch.object(auto.rec, "unclaimable_rows", side_effect=RuntimeError("boom")):
+			self.assertIsNone(auto.run_nightly())
+		self.assertEqual(frappe.log_error.call_args.kwargs["title"], auto.FAILURE_TITLE)
+
+	def test_a_family_no_step_fixes_is_not_rechecked(self):
+		# F4 (OUT-first / double OUT) is listed as fixable for the report, but no
+		# nightly step acts on it: re-checking it would only crowd out real days
+		self.rows = [self.fixable("2026-08-03", family="F4", fix=None), self.fixable("2026-08-05")]
+		auto.run_nightly()
+		self.assertEqual(self.windows(), [("2026-08-05", "2026-08-05"), ("2026-09-07", "2026-09-13")])
 
 	def test_the_recheck_has_its_own_switch(self):
 		self.rows = [self.fixable("2026-08-03")]

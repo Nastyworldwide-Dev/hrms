@@ -239,19 +239,26 @@ def _report(summary: dict) -> None:
 	logger.info("[attendance_recovery_auto] reported: %s", title)
 
 
-def _safe(from_date, to_date, extra_windows=()) -> dict | None:
-	"""Run the window, then each extra (re-check) window, and report ONCE."""
+def _safe(from_date, to_date, recheck: bool = False) -> dict | None:
+	"""Run the window — and with `recheck`, every flagged day outside it (S7) —
+	and report ONCE. Everything, the detector pass included, stays inside this
+	one exception boundary: nothing raises into the scheduler."""
 	try:
 		# Background jobs and the scheduler run as Administrator; say so, since
 		# recovery's writers check System Manager rights.
 		frappe.set_user("Administrator")
 		summary = _run(from_date, to_date)
+		extra = (
+			recheck_windows(flagged_days(getdate(to_date)), getdate(from_date), getdate(to_date))
+			if recheck
+			else []
+		)
 		rechecked = 0
-		for start, end in extra_windows:
+		for start, end in extra:
 			if summary.get("stopped_at"):
 				break
-			rechecked += (end - start).days + 1
 			summary = _merge(summary, _run(start, end))
+			rechecked += (end - start).days + 1
 		summary["rechecked"] = rechecked
 		_report(summary)
 		return summary
@@ -283,8 +290,7 @@ def run_nightly() -> dict | None:
 	end = _yesterday() - timedelta(days=1)
 	start = max(rec.REPAIR_FLOOR, end - timedelta(days=NIGHTLY_DAYS - 1))
 	logger.info("[attendance_recovery_auto] nightly run %s..%s", start, end)
-	extra = [] if switched_off("recheck") else recheck_windows(flagged_days(end), start, end)
-	return _safe(start, end, extra)
+	return _safe(start, end, recheck=not switched_off("recheck"))
 
 
 def flagged_days(end: date) -> list:
@@ -296,7 +302,10 @@ def flagged_days(end: date) -> list:
 	for start, stop in _chunks(rec.REPAIR_FLOOR, end):
 		win = rec.recovery_window(start, stop, getdate(nowdate()))
 		for row in rec.unclaimable_rows(win):
-			if row.get("status") == rec.STATUS_FIXABLE and row.get("employee") and row.get("date"):
+			# only a day one of the nightly steps can act on (F4 is listed, not fixed)
+			if row.get("status") != rec.STATUS_FIXABLE or row.get("fix") not in AUTO_STEPS:
+				continue
+			if row.get("employee") and row.get("date"):
 				found.add((row["employee"], getdate(row["date"])))
 	days = sorted(found, key=lambda d: (d[1], str(d[0])))[:RECHECK_CAP]
 	logger.info("[attendance_recovery_auto] %d flagged day(s) to re-check (of %d)", len(days), len(found))

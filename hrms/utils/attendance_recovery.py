@@ -979,7 +979,7 @@ def _restamp_tap(name, rostered) -> dict:
 	return {"name": name, "was": was, "now": doc.shift, "shift_start": doc.shift_start}
 
 
-def _fix_rostered_day(entry, endings, ended, plan_taps, win) -> dict:
+def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
 	employee, day, rostered = entry["employee"], getdate(entry["date"]), entry["rostered"]
 	_lock_employee(employee)
 	result = {"ended": [], "cancelled": [], "restamped": [], "marked": [], "errors": []}
@@ -987,19 +987,24 @@ def _fix_rostered_day(entry, endings, ended, plan_taps, win) -> dict:
 		if name in ended or name not in endings:
 			continue
 		result["ended"].append(_end_extra_assignment(endings[name]))
-	strays = []
+	targets = list(entry.get("restamp") or [])
 	for name in entry.get("cancel_rows") or []:
 		cancelled = _cancel_wrong_row(name, employee, rostered)
 		if cancelled:
 			result["cancelled"].append(name)
-			# a tap this row held that no planned day re-stamps (today's 07:50) would
-			# otherwise be re-read under the wrong shift and re-invent the row
-			strays += [p for p in cancelled["linked"] if p not in plan_taps]
+			# Every tap the row held is re-stamped NOW, before any re-mark: the next
+			# morning's 07:50 still carried the night stamp, and re-marking this day
+			# re-invented a night Half Day from it (fresh.local, 15 Sep 2026).
+			targets += [p for p in cancelled["linked"] if p not in targets]
 	days = {day}
-	for name in [*(entry.get("restamp") or []), *strays]:
+	for name in targets:
+		if name in done_taps:
+			continue
 		moved = _restamp_tap(name, rostered)
 		result["restamped"].append(moved)
-		if moved.get("shift_start"):
+		# an earlier day whose row this tap left (a night row dated the day before)
+		# is re-marked here; a later day is its own step's business
+		if moved.get("shift_start") and getdate(moved["shift_start"]) < day:
 			days.add(getdate(moved["shift_start"]))
 	for when in sorted(days):
 		if when > win.end:
@@ -1014,18 +1019,19 @@ def _fix_rostered_day(entry, endings, ended, plan_taps, win) -> dict:
 
 
 def _apply_rostered_shift(win, plan) -> dict:
-	done, held, ended = [], [], set()
+	done, held, ended, done_taps = [], [], set(), set()
 	endings = {e["assignment"]: e for e in plan.get("assignments") or []}
-	plan_taps = {name for entry in plan["planned"] for name in entry.get("restamp") or []}
 	for entry in plan["planned"]:
 		result, error = _guarded(
 			f"rostered_shift {entry['employee']} {entry['date']}",
-			lambda entry=entry: _fix_rostered_day(entry, endings, ended, plan_taps, win),
+			lambda entry=entry: _fix_rostered_day(entry, endings, ended, done_taps, win),
 		)
 		if error:
 			held.append(_held(entry, f"could not be put back on {entry['rostered']}: {error}", hr=False))
 			continue
+		# only after the day's writes stand: a failed day was rolled back
 		ended.update(e["assignment"] for e in result["ended"])
+		done_taps.update(m["name"] for m in result["restamped"])
 		if result.get("marked"):
 			done.append({"employee": entry["employee"], "date": entry["date"], **result})
 		else:
@@ -1059,7 +1065,11 @@ def _plan_overwritten(win, for_update=False) -> dict:
 			"log_type": entry.get("log_type"),
 			"source_name": entry.get("source_name"),
 			"confidence": entry.get("confidence"),
-			"entry": entry,
+			# what checkin_recovery._insert_recovered needs, for the per-row apply (S7)
+			"entry": {
+				k: entry.get(k)
+				for k in ("employee", "log_type", "time", "source_name", "stamped_from", "confidence")
+			},
 		}
 		reason = _day_protection(row["employee"], row["date"], for_update)
 		(held.append(_held(row, reason)) if reason else planned.append(row))
@@ -3298,8 +3308,28 @@ def _plan_late_checkout_requests(win, for_update=False, ctx=None) -> dict:
 		protection = _protection(ctx, request.employee, day, for_update)
 		if protection:
 			held.append(_held(entry, protection))
-		else:
-			planned.append({**entry, "reason": f"approved late check-out, {why}"})
+			continue
+		# The approval's repair refuses while another punch of the shift is still
+		# Pending (pending_punch); planning it every night would only block the
+		# later steps. It waits, without a word to HR, until that punch is decided.
+		waiting = [
+			t
+			for t in ctx["days"].get((request.employee, day), [])
+			if t.get("name") != request.checkin
+			and t.get("remote_approval_status") == "Pending"
+			and not cint(t.get("skip_auto_attendance"))
+		]
+		if waiting:
+			held.append(
+				_held(
+					entry,
+					f"another punch of this day ({get_datetime(waiting[0]['time']):%H:%M}) is still waiting "
+					"for approval: the approved check-out is applied once it is decided",
+					hr=False,
+				)
+			)
+			continue
+		planned.append({**entry, "reason": f"approved late check-out, {why}"})
 	# Orphans: an OUT that asked for approval but no request refers to it any more.
 	asked = [
 		t

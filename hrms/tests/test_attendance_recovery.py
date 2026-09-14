@@ -1244,6 +1244,83 @@ class TestRebuildLinkedAndLateCheckout(_Base):
 		self.assertEqual(rec.LATE_CHECKOUT_FIX, "rebuild")
 
 
+class TestLateCheckoutBesideAPendingPunch(_Base):
+	"""S5b review: the approval's repair refuses while another punch of the shift
+	is Pending (pending_punch), so a day planned every night and refused every
+	night would block the later steps for everyone. The planner holds it."""
+
+	def test_a_pending_sibling_holds_the_day_without_calling_hr(self):
+		win = rec.recovery_window("2026-09-01", "2026-09-13", TODAY.date())
+		taps = [
+			frappe._dict(
+				name="CK-IN",
+				employee="E1",
+				employee_name="E1",
+				time=datetime(2026, 9, 5, 8, 0),
+				log_type="IN",
+				shift="Day",
+				shift_start=datetime(2026, 9, 5, 9, 0),
+				attendance="ATT-L",
+				skip_auto_attendance=0,
+				remote_approval_status="Pending",
+				synced_from_instance=None,
+			),
+			frappe._dict(
+				name="CK-OUT",
+				employee="E1",
+				employee_name="E1",
+				time=datetime(2026, 9, 5, 22, 0),
+				log_type="OUT",
+				shift="Day",
+				shift_start=datetime(2026, 9, 5, 9, 0),
+				attendance=None,
+				skip_auto_attendance=0,
+				remote_approval_status="Approved",
+				synced_from_instance=None,
+			),
+		]
+		row = _row(
+			name="ATT-L", employee="E1", attendance_date=date(2026, 9, 5), status="Half Day", shift="Day"
+		)
+		request = frappe._dict(
+			name="RCR-1",
+			employee="E1",
+			employee_name="E1",
+			checkin="CK-OUT",
+			checkin_time=datetime(2026, 9, 5, 22, 0),
+			status="Approved",
+			creation=datetime(2026, 9, 6),
+		)
+
+		def get_all(doctype, **kw):
+			if doctype != "Remote Checkin Request":
+				return []
+			# the request read, then the orphan check (pluck="checkin")
+			return ["CK-OUT"] if kw.get("pluck") == "checkin" else [request]
+
+		with (
+			patch.object(frappe, "get_all", get_all),
+			patch.object(rec, "_shift_times", lambda names: {}),
+			patch.object(rec, "_day_protection", return_value=None),
+		):
+			ctx = rec._build_context(
+				win,
+				taps,
+				[row],
+				[
+					frappe._dict(
+						name="SA", employee="E1", shift_type="Day", start_date=date(2026, 8, 1), end_date=None
+					)
+				],
+			)
+			plan = rec._plan_late_checkout_requests(win, ctx=ctx)
+		self.assertEqual(plan["planned"], [])
+		(held,) = plan["held_back"]
+		self.assertFalse(held["hr"])
+		self.assertIn("waiting for approval", held["reason"])
+		self.assertIn("08:00", held["reason"])
+
+
 # --- S7: per employee-day holds for the dated tools -----------------------------------
 
 

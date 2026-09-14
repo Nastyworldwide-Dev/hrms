@@ -190,6 +190,7 @@ class _Step(unittest.TestCase):
 
 	def _remark(self, employee, day, apply):
 		self.remarks.append((employee, str(day), apply))
+		self.log.append(("remark", "Attendance", str(day), apply))
 		return {"action": "remark", "marked": [f"ATT-NEW-{day}"], "errors": []}
 
 	def _get_doc(self, doctype, name, **kw):
@@ -412,6 +413,43 @@ class TestApply(_Step):
 		held = {h["date"] for h in outcome["held_back"]}
 		self.assertIn("2026-09-09", held)
 		self.assertIn("2026-09-08", {d["date"] for d in outcome["done"]})
+
+
+class TestStrayTapsAfterACancel(_Step):
+	"""fresh.local, 15 Sep 2026: cancelling the night row of 8 Sep unlinked the
+	07:50 of 9 Sep, which still carried the night stamp when 8 Sep was
+	re-marked — the engine re-invented a night Half Day from it. Every tap a
+	cancelled row held is re-stamped BEFORE any day is re-marked, once."""
+
+	def setUp(self):
+		super().setUp()
+		linked = {
+			"ATT-N8": ["T-8-1833", "T-9-0750"],
+			"ATT-N9": ["T-9-1833", "T-10-0750"],
+			"ATT-N10": ["T-10-1833", "T-11-0750"],
+		}
+
+		def get_all(doctype, filters=None, **kw):
+			if doctype == "Employee Checkin" and filters and filters.get("attendance"):
+				return [frappe._dict(name=n) for n in linked.get(filters["attendance"], [])]
+			return []
+
+		patcher = patch.object(frappe, "get_all", get_all)
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
+	def test_the_next_mornings_tap_is_restamped_before_the_day_is_remarked(self):
+		self.apply()
+		kinds = [e[:3] for e in self.log]
+		first_remark = kinds.index(("remark", "Attendance", "2026-09-08"))
+		self.assertLess(kinds.index(("fetch_shift", "Employee Checkin", "T-9-0750")), first_remark)
+		# re-stamped once, by the day that cancelled the row it hung on
+		self.assertEqual(sum(1 for k in kinds if k == ("fetch_shift", "Employee Checkin", "T-9-0750")), 1)
+
+	def test_a_day_is_remarked_by_its_own_step_never_earlier(self):
+		self.apply()
+		remarks = [e[2] for e in self.log if e[0] == "remark"]
+		self.assertEqual(remarks[:4], ["2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11"])
 
 
 # --- E16: a pending forgotten check-out is not evidence -----------------------------------
