@@ -86,6 +86,41 @@ class TestScheduledHoursOverlap(unittest.TestCase):
 			self.assertTrue(sa.has_overlapping_timings("NIGHT", "EARLY"))
 
 
+class TestTooManyHoursOnOneDay(unittest.TestCase):
+	"""Ria's real shape: 19:30-07:00 and 08:00-18:00 never overlap, but together
+	they roster 21.5 h a day. Two shifts on the same dates are refused when their
+	hours add up past MAX_CONCURRENT_SHIFT_HOURS, or overlap."""
+
+	def _clash(self, a, b):
+		rows = {
+			"A": frappe._dict(start_time=a[0], end_time=a[1]),
+			"B": frappe._dict(start_time=b[0], end_time=b[1]),
+		}
+		with patch.object(frappe.db, "get_value", side_effect=lambda dt, name, *x, **k: rows[name]):
+			return sa.shifts_clash("A", "B")
+
+	def test_the_ceiling_is_fourteen_hours(self):
+		self.assertEqual(sa.MAX_CONCURRENT_SHIFT_HOURS, 14)
+
+	def test_night_plus_day_is_refused_for_hours_not_overlap(self):
+		self.assertFalse(sa.scheduled_hours_overlap(_t(19, 30), _t(7), _t(8), _t(18)))
+		self.assertTrue(self._clash((_t(19, 30), _t(7)), (_t(8), _t(18))))
+
+	def test_split_shifts_pass(self):
+		self.assertFalse(self._clash((_t(8), _t(13)), (_t(14), _t(18))))
+
+	def test_overlapping_hours_still_clash(self):
+		self.assertTrue(self._clash((_t(8), _t(18)), (_t(9), _t(17))))
+
+	def test_the_guard_and_the_tool_use_the_clash_rule(self):
+		for path in (sa.__file__,):
+			tree = ast.parse(pathlib.Path(path).read_text())
+			for fn_name in ("refuse_overlapping_assignments", "overlapping_shift_types"):
+				fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == fn_name)
+				names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+				self.assertTrue(names & {"shifts_clash", "scheduled_hours_clash"}, fn_name)
+
+
 class _Assignment(SimpleNamespace):
 	def __init__(self, **kw):
 		defaults = dict(
@@ -113,7 +148,7 @@ class TestRefuseOverlappingAssignments(unittest.TestCase):
 	def _run(self, doc, existing, overlap):
 		with (
 			patch.object(sa, "active_assignments_on", return_value=list(existing)),
-			patch.object(sa, "has_overlapping_timings", return_value=overlap),
+			patch.object(sa, "shifts_clash", return_value=overlap),
 			patch.object(frappe.db, "get_single_value", return_value=1),
 		):
 			sa.refuse_overlapping_assignments(doc)
@@ -151,7 +186,8 @@ class TestRefuseOverlappingAssignments(unittest.TestCase):
 			frappe._dict(name="PM", start_time=_t(14), end_time=_t(18)),
 		]
 		with patch.object(frappe, "get_all", return_value=rows):
-			self.assertEqual(sa.overlapping_shift_types("NIGHT"), ["EARLY", "NIGHT"])
+			# EARLY overlaps; PM (14-18, 4 h) + NIGHT (11.5 h) = 15.5 h > 14 also clashes
+			self.assertEqual(sa.overlapping_shift_types("NIGHT"), ["EARLY", "NIGHT", "PM"])
 
 
 # --- G3: a punch inside an Attendance row is locked; a skip needs a reason ------
