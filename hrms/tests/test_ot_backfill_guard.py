@@ -61,3 +61,24 @@ class TestBackfillRowsToWrite(unittest.TestCase):
 		_write, skipped = backfill_rows_to_write(rows, locked={("EMP-1", "2026-09-09")})
 		self.assertEqual(skipped[0]["old_ot_hours"], 0.0)
 		self.assertEqual(skipped[0]["new_ot_hours"], 1.0)
+
+
+class TestStoredPrecisionIsNotAChange(unittest.TestCase):
+	"""Live, 15 Sep 2026: "5.669444444 stored, 5.669444444444444 correct".
+
+	ot_hours is stored at precision 9, the engine returns the raw float, so the
+	same figure read as changed on every deploy — rewritten when free, and listed
+	to HR as a payout-locked day when not.
+	"""
+
+	def test_the_same_figure_at_stored_precision_is_unchanged(self):
+		from hrms.hr.doctype.attendance.attendance import ot_figures_changed
+
+		self.assertFalse(ot_figures_changed(5.669444444, 5.669444444, 5.669444444444444, 5.669444444444444))
+		self.assertFalse(ot_figures_changed(3.667777778, 0, 3.6677777777777778, 0))
+
+	def test_a_real_difference_is_a_change(self):
+		from hrms.hr.doctype.attendance.attendance import ot_figures_changed
+
+		self.assertTrue(ot_figures_changed(0, 0, 1.0, 1.0))
+		self.assertTrue(ot_figures_changed(5.5, 5.5, 5.5, 8.25))

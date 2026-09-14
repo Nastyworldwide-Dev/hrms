@@ -900,6 +900,24 @@ def repair_typed_working_hours(from_date, to_date, dry_run=1) -> dict:
 	}
 
 
+#: ot_hours and ot_rate_weighted_hours are Float fields at precision 9.
+OT_STORED_PRECISION = 9
+
+
+def ot_figures_changed(old_hours, old_weighted, new_hours, new_weighted) -> bool:
+	"""Whether a recount really moves the stored OT. Pure.
+
+	The engine returns the raw float (5.669444444444444) and the row stores it at
+	precision 9 (5.669444444), so an exact compare read every priced day as
+	changed on every deploy — and listed payout-locked ones to HR for nothing.
+	"""
+
+	def stored(value):
+		return round(float(value or 0), OT_STORED_PRECISION)
+
+	return stored(old_hours) != stored(new_hours) or stored(old_weighted) != stored(new_weighted)
+
+
 def backfill_rows_to_write(rows, locked) -> tuple[list, list]:
 	"""Split recomputed rows into (write, skipped). Pure.
 
@@ -973,8 +991,9 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 		if not doc.flags.get("ot_priced_from_punches"):
 			punchless += 1
 			continue
-		new_hours, new_weighted = flt(doc.ot_hours), flt(doc.ot_rate_weighted_hours)
-		if new_hours == old_hours and new_weighted == old_weighted:
+		new_hours = round(flt(doc.ot_hours), OT_STORED_PRECISION)
+		new_weighted = round(flt(doc.ot_rate_weighted_hours), OT_STORED_PRECISION)
+		if not ot_figures_changed(old_hours, old_weighted, new_hours, new_weighted):
 			continue
 		changed.append(
 			{
