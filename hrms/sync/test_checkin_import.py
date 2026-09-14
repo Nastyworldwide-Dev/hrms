@@ -24,6 +24,7 @@ a small in-memory site below. Run it as a FILE:
 import datetime
 import json
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -75,6 +76,13 @@ def _matches(row, filters) -> bool:
 				ok = bool(value) == (operand == "set")
 			elif operator == "<":
 				ok = value is not None and value < operand
+			elif operator == ">=":
+				ok = value is not None and _moment(value) >= _moment(operand)
+			elif operator == "like":
+				pattern = "".join(
+					".*" if ch == "%" else "." if ch == "_" else re.escape(ch) for ch in operand
+				)
+				ok = value is not None and re.fullmatch(pattern, str(value), re.DOTALL) is not None
 			elif operator == "!=":
 				ok = value != operand
 			else:
@@ -218,7 +226,7 @@ class FakeShift:
 
 
 class FakeSite:
-	def __init__(self, employees=(), checkins=(), attendance=(), runs=()):
+	def __init__(self, employees=(), checkins=(), attendance=(), runs=(), deleted=()):
 		"""`employees`: a name is an employee mirrored from INSTANCE; pass a dict to
 		describe any other (unstamped, another instance's, Left)."""
 		rows = [
@@ -230,6 +238,7 @@ class FakeSite:
 			"Employee Checkin": {row["name"]: dict(row) for row in checkins},
 			"Attendance": {row["name"]: dict(row) for row in attendance},
 			"HRMS Sync Run": {row["name"]: dict(row) for row in runs},
+			"Deleted Document": {row["name"]: dict(row) for row in deleted},
 		}
 		self.db = FakeDB(self)
 		self.locked = False
@@ -244,13 +253,20 @@ class FakeSite:
 		self.fetch_shift_calls = []
 		self.saves = []
 		self.only_for_calls = []
+		self.get_all_calls = []
 		self.shift = FakeShift()
 
-	def get_all(self, doctype, filters=None, fields=None, pluck=None, order_by=None, **kwargs):
+	def get_all(self, doctype, filters=None, fields=None, pluck=None, order_by=None, limit=None, **kwargs):
+		self.get_all_calls.append((doctype, filters))
 		rows = [row for row in self.tables.get(doctype, {}).values() if _matches(row, filters)]
 		if order_by:
 			field = order_by.split()[0]
-			rows.sort(key=lambda row: _moment(row.get(field) or ""))
+			rows.sort(
+				key=lambda row: _moment(row.get(field) or ""),
+				reverse=doctype == "HRMS Sync Run" and "desc" in order_by,
+			)
+		if limit:
+			rows = rows[:limit]
 		if pluck:
 			return [row.get(pluck) for row in rows]
 		if fields:
@@ -697,6 +713,121 @@ class TestAppendOnlyImport(_SiteCase):
 		self.assertIn(f'SOURCE_CHECKIN_FIELD = "{ci.SOURCE_FIELD}"', runner)
 
 
+def completed_run(name, started_at, status="Completed"):
+	return {"name": name, "source_instance": INSTANCE, "status": status, "started_at": started_at}
+
+
+def deleted_punch(name, source_checkin, restored=0, creation="2026-09-10 12:00:00"):
+	"""A Deleted Document as Frappe writes it: `data` is `frappe.as_json(doc.as_dict())`."""
+	data = {
+		"doctype": "Employee Checkin",
+		"name": name,
+		"employee": "EMP-1",
+		"time": "2026-09-03 08:48:00",
+		"log_type": "IN",
+		"source_checkin": source_checkin,
+	}
+	return {
+		"name": f"DEL-{name}",
+		"deleted_doctype": "Employee Checkin",
+		"deleted_name": name,
+		"restored": restored,
+		"creation": creation,
+		"data": json.dumps(data, indent=1, sort_keys=True, separators=(",", ": ")),
+	}
+
+
+class TestSyncWindowCoversTheGap(_SiteCase):
+	"""The pass reads back to the last Completed run, so skipped weekends lose no
+	punch silently; past the 62-day cap the uncovered dates are named in the run."""
+
+	def window_after(self, runs):
+		self.use(FakeSite(employees=["EMP-1"], runs=runs))
+		client = FakeClient([])
+		result = self.run_import(client)
+		(call,) = [c for c in client.calls if c["doctype"] == "Employee Checkin"]
+		return call["filters"]["time"][1], result
+
+	def test_a_run_5_days_ago_keeps_the_14_day_window_and_says_nothing(self):
+		window, result = self.window_after([completed_run("SYNC-1", D(2026, 9, 9, 10, 0))])
+		self.assertEqual(window, ["2026-09-01", "2026-09-14"])
+		self.assertEqual(result["row_errors"], [])
+
+	def test_a_run_30_days_ago_widens_the_window_to_a_day_before_it(self):
+		window, result = self.window_after(
+			[
+				completed_run("SYNC-OLD", D(2026, 7, 1, 10, 0)),
+				completed_run("SYNC-1", D(2026, 8, 15, 10, 0)),
+				completed_run("SYNC-PARTIAL", D(2026, 9, 7, 10, 0), status="Partial"),
+			]
+		)
+		self.assertEqual(window, ["2026-08-14", "2026-09-14"])
+		self.assertEqual(result["row_errors"], [])
+
+	def test_a_run_90_days_ago_caps_at_62_days_and_names_the_unread_dates(self):
+		window, result = self.window_after([completed_run("SYNC-1", D(2026, 6, 16, 10, 0))])
+		self.assertEqual(window, ["2026-07-15", "2026-09-14"])
+		(note,) = result["row_errors"]
+		self.assertIn("before 2026-07-15 were not read", note)
+		self.assertIn("2026-06-16", note)
+		self.assertIn("import_missing_checkins for 2026-06-15..2026-07-14", note)
+		self.assertIn("dry run first", note)
+		self.assertEqual((result["errored"], result["orphaned"], result["contested"]), (0, 0, 0))
+
+	def test_no_completed_run_keeps_14_days_and_says_older_punches_need_the_manual_import(self):
+		window, result = self.window_after([completed_run("SYNC-F", D(2026, 9, 1, 10, 0), status="Failed")])
+		self.assertEqual(window, ["2026-09-01", "2026-09-14"])
+		(note,) = result["row_errors"]
+		self.assertIn("before 2026-09-01 were not read", note)
+		self.assertIn("no completed sync", note)
+		self.assertIn("import_missing_checkins", note)
+
+	def test_the_note_is_recorded_even_when_a_manual_import_holds_the_lock(self):
+		site = self.use(FakeSite(employees=["EMP-1"], runs=[completed_run("SYNC-1", D(2026, 6, 16))]))
+		site.locked = True
+		result = self.run_import(FakeClient([]))
+		self.assertTrue(result["outcomes"]["busy"])
+		self.assertEqual(len(result["row_errors"]), 1)
+
+
+class TestAPunchDeletedHereStaysDeleted(_SiteCase):
+	"""HR deleted an imported punch on the hub: the source punch is never re-imported."""
+
+	PUNCH = punch("EMP-1", "2026-09-03 08:48:00", "IN", "R-1")
+
+	def import_with(self, deleted):
+		self.use(FakeSite(employees=["EMP-1"], deleted=deleted))
+		return self.run_import(FakeClient([self.PUNCH]))
+
+	def test_a_deleted_imported_punch_is_refused_deleted_here(self):
+		result = self.import_with([deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1")])
+		self.assertEqual(self.site.checkins(), {})
+		self.assertEqual(result["outcomes"]["refused"], 1)
+		self.assertIn("R-1 (deleted_here)", result["outcomes"]["sample"][0])
+
+	def test_a_deleted_local_punch_blocks_nothing(self):
+		result = self.import_with(
+			[deleted_punch("HR-EMP-CHK-2", None), deleted_punch("HR-EMP-CHK-3", "other-live::R-1")]
+		)
+		self.assertEqual(
+			{row["source_checkin"] for row in self.site.checkins().values()}, {"nasty-live::R-1"}
+		)
+		self.assertEqual(result["outcomes"]["refused"], 0)
+
+	def test_a_restored_deleted_document_is_not_a_deletion(self):
+		result = self.import_with([deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1", restored=1)])
+		self.assertEqual(
+			{row["source_checkin"] for row in self.site.checkins().values()}, {"nasty-live::R-1"}
+		)
+		self.assertEqual(result["outcomes"]["refused"], 0)
+
+	def test_the_deleted_lookup_is_one_query_bounded_by_the_window(self):
+		self.import_with([deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1")])
+		calls = [filters for doctype, filters in self.site.get_all_calls if doctype == "Deleted Document"]
+		self.assertEqual(len(calls), 1)
+		self.assertEqual(calls[0]["creation"][0], ">=")
+
+
 # --- the heal: dry run first ------------------------------------------------------
 
 
@@ -805,6 +936,20 @@ class TestImportMissingCheckins(_WhitelistCase):
 		site.locked = True
 		ci.import_missing_checkins(INSTANCE, "2026-09-01", "2026-09-14", dry_run=1)
 		self.assertEqual(site.lock_requests, [])
+
+	def test_a_dry_run_refuses_a_punch_deleted_here(self):
+		site = self.site()
+		site.tables["Deleted Document"]["DEL-1"] = deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1")
+		self.use(site, self.PUNCHES)
+		result = ci.import_missing_checkins(INSTANCE, "2026-09-01", "2026-09-14", dry_run=1)
+		self.assertEqual((result["to_insert"], result["refused"]), (1, 1))
+		self.assertEqual(
+			[(row["remote_name"], row["reason"]) for row in result["refused_sample"]],
+			[("R-1", "deleted_here")],
+		)
+		applied = ci.import_missing_checkins(INSTANCE, "2026-09-01", "2026-09-14", dry_run=0)
+		self.assertEqual({row["source_checkin"] for row in site.checkins().values()}, {"nasty-live::R-2"})
+		self.assertEqual(applied["inserted"], 1)
 
 	def test_dry_run_0_inserts_through_the_same_append_only_path(self):
 		site = self.use(self.site(), self.PUNCHES)
@@ -919,6 +1064,12 @@ class TestRemarkAttendance(_WhitelistCase):
 			),
 			[("EMP-1", datetime.date(2026, 9, 3)), ("EMP-2", datetime.date(2026, 9, 4))],
 		)
+
+	def test_a_non_string_employee_is_refused_so_it_never_becomes_a_filter_operator(self):
+		with self.assertRaises(ValueError):
+			ci.parse_employee_days([{"employee": ["like", "%"], "attendance_date": "2026-09-03"}])
+		with self.assertRaises(ValueError):
+			ci.parse_employee_days([[["like", "%"], "2026-09-03"]])
 
 
 if __name__ == "__main__":

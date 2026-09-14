@@ -60,9 +60,11 @@ import frappe
 from frappe import _
 
 from hrms.sync.missing_checkins import (
+	DEFAULT_WINDOW_DAYS,
 	DOCTYPE,
 	LOCAL_SLACK,
 	MAX_SAMPLE,
+	MAX_WINDOW_DAYS,
 	_remote_scope,
 	_resolve_instance,
 	_to_date,
@@ -200,6 +202,44 @@ def drop_already_imported(plan: dict, imported: dict, instance_name: str) -> dic
 	return {**plan, "insert": insert, "already_imported": already}
 
 
+def drop_deleted_here(plan: dict, deleted_keys, instance_name: str) -> dict:
+	"""Refuse every planned insert HR already deleted here, reason `deleted_here`:
+	a deletion on the hub is a decision the next pull must not undo. Pure."""
+	insert, refused = [], list(plan["refused"])
+	for entry in plan["insert"]:
+		if source_key(instance_name, entry["remote_name"]) in deleted_keys:
+			refused.append({**entry, "reason": "deleted_here"})
+		else:
+			insert.append(entry)
+	return {**plan, "insert": insert, "refused": refused}
+
+
+def sync_window(today: date, last_completed=None) -> tuple[tuple[date, date], str | None]:
+	"""The sync pass's punch window and, when it cannot reach back far enough, the
+	note naming the dates it did not read. Pure.
+
+	It reaches a day before the last Completed run started (the default 14 days
+	when that is nearer), so a skipped weekend loses no punch; past
+	MAX_WINDOW_DAYS it reads the capped window and says what is left uncovered.
+	"""
+	default_start = today - timedelta(days=DEFAULT_WINDOW_DAYS - 1)
+	if last_completed is None:
+		return (default_start, today), (
+			f"punches before {default_start} were not read automatically: no completed sync is on record; "
+			f"run import_missing_checkins for any earlier dates that matter (dry run first)"
+		)
+	last = _to_date(last_completed)
+	wanted = min(default_start, last - LOCAL_SLACK)
+	floor = today - timedelta(days=MAX_WINDOW_DAYS - 1)
+	if wanted >= floor:
+		return (wanted, today), None
+	return (floor, today), (
+		f"punches before {floor} were not read automatically: the last completed sync started {last}; "
+		f"run import_missing_checkins for {wanted}..{floor - timedelta(days=1)} "
+		f"(dry run first, at most {MAX_WINDOW_DAYS} days per call)"
+	)
+
+
 def parse_employee_days(value) -> list[tuple[str, date]]:
 	"""[(employee, date)] from JSON or a list of pairs / {employee, attendance_date}."""
 	if isinstance(value, str):
@@ -280,6 +320,54 @@ def _local_punches(employees, window) -> list:
 	)
 
 
+def _last_completed_start(instance_name: str):
+	"""When the last Completed run for this instance started — `runner.get_watermark`'s
+	query, repeated so this module needs no runner import."""
+	last = frappe.get_all(
+		"HRMS Sync Run",
+		filters={"source_instance": instance_name, "status": "Completed"},
+		fields=["started_at"],
+		order_by="started_at desc",
+		limit=1,
+	)
+	return last[0]["started_at"] if last else None
+
+
+def _deleted_source_keys(instance_name: str, window) -> set:
+	"""`source_key`s of this instance's imported punches HR deleted on the hub and
+	has not restored. One query: a punch in the window was deleted after its punch
+	time, so no older Deleted Document can hold one. The LIKE only narrows; the
+	parsed `source_checkin` decides, so a deleted local punch never counts."""
+	prefix = source_key(instance_name, "")
+	rows = frappe.get_all(
+		"Deleted Document",
+		filters={
+			"deleted_doctype": DOCTYPE,
+			"restored": 0,
+			"creation": [">=", (window[0] - LOCAL_SLACK).isoformat()],
+			"data": ["like", f"%{prefix}%"],
+		},
+		fields=["data"],
+	)
+	keys = set()
+	for row in rows:
+		try:
+			data = json.loads(row.get("data") or "{}")
+		except ValueError:
+			logger.warning("[checkin_import] unreadable Deleted Document data for %s; ignored", instance_name)
+			continue
+		key = data.get(SOURCE_FIELD) if isinstance(data, dict) else None
+		if isinstance(key, str) and key.startswith(prefix):
+			keys.add(key)
+	logger.info(
+		"[checkin_import] %s: %s imported punch(es) deleted here since %s",
+		instance_name,
+		len(keys),
+		window[0],
+	)
+	return keys
+
+
 def _imported_keys(entries, instance_name: str) -> dict:
 	"""`source_key` -> hub punch, for punches imported earlier. Saves work; the
 	unique index, not this read, is what stops a second copy."""
@@ -301,6 +389,7 @@ def _plan(remote_rows, window, instance_name: str) -> dict:
 	mapped = sorted({row.get("employee") for row in remote_rows if row.get("employee") in employees})
 	plan = plan_import(remote_rows, _local_punches(mapped, window), employees)
 	plan = drop_already_imported(plan, _imported_keys(plan["insert"], instance_name), instance_name)
+	plan = drop_deleted_here(plan, _deleted_source_keys(instance_name, window), instance_name)
 	logger.info(
 		"[checkin_import] %s..%s: remote=%s matched=%s insert=%s already_imported=%s refused=%s unmapped=%s",
 		window[0],
@@ -373,6 +462,8 @@ def _sample(entry: dict) -> dict:
 		"device_id": entry.get("device_id"),
 		"attendance_day": attendance_day(entry).isoformat(),
 	}
+	if entry.get("reason"):
+		row["reason"] = entry["reason"]
 	if "local_log_type" in entry:
 		row.update(local_log_type=entry["local_log_type"], local_name=entry["local_name"])
 	return row
@@ -494,7 +585,16 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 		from frappe.utils import getdate
 
 		today = getdate()
-	window = resolve_window(None, None, today)
+	last_completed = _last_completed_start(instance_name)
+	window, uncovered = sync_window(today, last_completed)
+	logger.info(
+		"[checkin_import] %s: window %s..%s (last completed sync started %s)%s",
+		instance_name,
+		window[0],
+		window[1],
+		last_completed or "never",
+		" — " + uncovered if uncovered else "",
+	)
 	outcomes = {"unmapped": 0, "refused": 0, "insert_errors": 0, "busy": False, "sample": []}
 	result = {
 		"doctype": DOCTYPE,
@@ -508,7 +608,8 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 		"contested": 0,
 		"contested_names": [],
 		"missing_parents": [],
-		"row_errors": [],
+		# Recorded in the run's error log, never counted: the run stays Completed.
+		"row_errors": [uncovered] if uncovered else [],
 		"dropped_fields": [],
 		"schema_gaps": [],
 		"window": {"from_date": window[0].isoformat(), "to_date": window[1].isoformat()},
