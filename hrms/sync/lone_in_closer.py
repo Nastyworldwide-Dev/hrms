@@ -48,6 +48,8 @@ CUTOVER = date(2026, 9, 4)
 LAST_DAY = CUTOVER - timedelta(days=1)
 #: The session rule: a tap up to this long after the IN closes it.
 CLOSE_WITHIN = timedelta(hours=20)
+#: A tap this soon after the IN is the same arrival made in the other app, not a departure.
+MIN_SESSION = timedelta(minutes=30)
 #: A hub tap this close to the ERP candidate is the same tap, not a missing one.
 DUPLICATE_TOLERANCE = timedelta(minutes=3)
 DEVICE_ID = "ERP-CLOSER"
@@ -80,18 +82,19 @@ def _fmt(moment: datetime) -> str:
 def choose_closing_punch(in_time: datetime, remote_rows) -> dict | None:
 	"""The ERP punch that closes this IN, or None. Pure.
 
-	The first ERP punch strictly after the IN, not at the IN's own second (that
-	is the ERP's copy of the same tap), within `CLOSE_WITHIN`. Its log_type is
-	recorded, never consulted.
+	The first ERP punch at least `MIN_SESSION` after the IN (anything sooner is
+	the same arrival tapped in the other app) and within `CLOSE_WITHIN`. Its
+	log_type is recorded, never consulted.
 	"""
 	in_second = _to_second(in_time)
+	earliest = in_second + MIN_SESSION
 	latest = in_second + CLOSE_WITHIN
 	rows = sorted(
 		({**row, "time": _to_second(row.get("time"))} for row in remote_rows),
 		key=lambda row: (row["time"], row.get("name") or ""),
 	)
 	for row in rows:
-		if in_second < row["time"] <= latest:
+		if earliest <= row["time"] <= latest:
 			return row
 	return None
 

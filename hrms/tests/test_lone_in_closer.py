@@ -350,3 +350,27 @@ class TestApply(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestDoubleAppTapIsNotAnOut(unittest.TestCase):
+	"""A tap in the other app minutes after the IN is the same arrival, not a departure."""
+
+	def test_a_tap_within_the_floor_is_skipped_and_the_later_one_closes(self):
+		from datetime import datetime
+
+		from hrms.sync.lone_in_closer import choose_closing_punch
+
+		at = datetime(2026, 8, 21, 9, 32, 28)
+		rows = [
+			{"name": "A", "time": datetime(2026, 8, 21, 9, 40, 0), "log_type": "IN"},
+			{"name": "B", "time": datetime(2026, 8, 21, 18, 12, 0), "log_type": "IN"},
+		]
+		self.assertEqual(choose_closing_punch(at, rows)["name"], "B")
+
+	def test_only_a_tap_within_the_floor_means_no_closer(self):
+		from datetime import datetime
+
+		from hrms.sync.lone_in_closer import choose_closing_punch
+
+		at = datetime(2026, 8, 21, 9, 32, 28)
+		self.assertIsNone(choose_closing_punch(at, [{"name": "A", "time": datetime(2026, 8, 21, 9, 45, 0)}]))
