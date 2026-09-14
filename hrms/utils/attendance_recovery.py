@@ -995,6 +995,19 @@ def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
 		if name in done_taps:
 			continue
 		moved = _restamp_tap(name, rostered)
+		if moved["now"] != rostered:
+			# I2 (integration review): the resolver keeps a tap that sits inside the
+			# other shift's SCHEDULED hours on that shift while its assignment stands
+			# (worked again later, E15). Re-marking would rebuild the row just
+			# cancelled — churn every night. The day is HR's: roll this day's
+			# writes back to the step's savepoint and hold it.
+			frappe.db.rollback(save_point=ROW_SAVEPOINT)
+			reason = (
+				f"{name} sits inside {moved['now']}'s scheduled hours and goes back there, "
+				f"not on the rostered {rostered}: end that shift first, then run this step again"
+			)
+			logger.warning("[attendance_recovery] %s on %s held: %s", employee, day, reason)
+			return {"hold": reason}
 		result["restamped"].append(moved)
 		# an earlier day whose row this tap left (a night row dated the day before)
 		# is re-marked here; a later day is its own step's business
@@ -1022,6 +1035,9 @@ def _apply_rostered_shift(win, plan) -> dict:
 		)
 		if error:
 			held.append(_held(entry, f"could not be put back on {entry['rostered']}: {error}", hr=False))
+			continue
+		if result.get("hold"):
+			held.append(_held(entry, result["hold"], hr=True))  # rolled back inside (I2)
 			continue
 		# only after the day's writes stand: a failed day was rolled back
 		ended.update(e["assignment"] for e in result["ended"])

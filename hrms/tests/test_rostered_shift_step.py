@@ -451,6 +451,41 @@ class TestStrayTapsAfterACancel(_Step):
 		self.assertEqual(remarks[:4], ["2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11"])
 
 
+class TestTapInsideTheOtherShiftsHours(_Step):
+	"""I2 (integration review): the resolver gives a tap that sits inside the
+	night's SCHEDULED hours back to the night while the roster says day. When
+	the night assignment stays (it is worked again later, E15) the step cancelled
+	the night row, got the night back on re-stamp, only warned, and re-marked the
+	same row — cancel/rebuild churn every night. The day is HR's: hold it and
+	roll the cancel back."""
+
+	def setUp(self):
+		super().setUp()
+		doc = self._get_doc("Employee Checkin", "T-9-1833")
+
+		def stays_on_the_night():
+			self.log.append(("fetch_shift", "Employee Checkin", doc.name, doc.attendance))
+			doc.shift = NIGHT
+			doc.shift_start = datetime(2026, 9, 9, 19, 30)
+
+		doc.fetch_shift = stays_on_the_night
+
+	def test_the_day_is_held_for_hr_and_its_cancel_is_rolled_back(self):
+		_plan, outcome = self.apply()
+		held = next(h for h in outcome["held_back"] if h["date"] == "2026-09-09")
+		self.assertTrue(held["hr"])
+		self.assertIn("end that shift first", held["reason"])
+		self.assertTrue(auto.needs_hr(held), held["reason"])
+		# nothing of that day stands: no re-mark, the row's cancel rolled back
+		self.assertNotIn(("remark", "Attendance", "2026-09-09", True), [e[:4] for e in self.log])
+		frappe.db.rollback.assert_any_call(save_point=rec.ROW_SAVEPOINT)
+		self.assertIn(("cancel", "Attendance", "ATT-N9"), [e[:3] for e in self.log])
+		# the other days are still fixed
+		self.assertEqual(
+			{d["date"] for d in outcome["done"]} & {"2026-09-08", "2026-09-10"}, {"2026-09-08", "2026-09-10"}
+		)
+
+
 # --- E16: a pending forgotten check-out is not evidence -----------------------------------
 
 BASE = pathlib.Path(__file__).resolve().parents[1]
