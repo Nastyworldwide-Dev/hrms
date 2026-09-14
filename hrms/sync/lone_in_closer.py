@@ -408,7 +408,11 @@ def apply_close_lone_ins(win, plan) -> dict:
 			continue
 		done.append({**entry, "checkin": name, "already": name is None})
 		if index % COMMIT_EVERY == 0:
+			# The commit releases the instance row lock; take it again or stop here.
 			frappe.db.commit()
+			if index < len(planned) and not _lock(instance):
+				held.extend({**e, "reason": "sync running, skipped", "hr": False} for e in planned[index:])
+				break
 	frappe.db.commit()
 	logger.info("[lone_in_closer] %s: %d closed, %d held", instance, len(done), len(held))
 	return {"done": done, "held_back": held}

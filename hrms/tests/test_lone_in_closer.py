@@ -338,6 +338,15 @@ class TestApply(unittest.TestCase):
 		self.assertIn("boom", result["held_back"][0]["reason"])
 		self.db.rollback.assert_called_once_with(save_point=closer.ROW_SAVEPOINT)
 
+	def test_the_lock_is_taken_again_after_each_commit(self):
+		self.plan["planned"] = [dict(self.entry, candidate_source_name=f"ERP-{i}") for i in range(51)]
+		with patch.object(closer, "_lock", side_effect=[True, False]) as lock:
+			result = closer.apply_close_lone_ins(WIN, self.plan)
+		self.assertEqual(lock.call_count, 2)
+		self.assertEqual(len(result["done"]), 50)
+		self.assertEqual(result["held_back"][0]["reason"], "sync running, skipped")
+		self.assertEqual(self.db.commit.call_count, 2)
+
 
 if __name__ == "__main__":
 	unittest.main()
