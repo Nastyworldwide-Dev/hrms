@@ -33,9 +33,15 @@ def _set_value_dicts(func):
 
 class TestRejectedPunchAttendance(unittest.TestCase):
 	def test_rejection_sets_skip_auto_attendance(self):
-		func = _function(
-			HRMS / "overrides" / "remote_checkin_request_hooks.py", "propagate_approval_decision"
-		)
+		hooks = HRMS / "overrides" / "remote_checkin_request_hooks.py"
+		# E17 moved the write into a helper that also records the reason; the
+		# reject branch must still reach it.
+		propagate = _function(hooks, "propagate_approval_decision")
+		called = {
+			getattr(node.func, "id", None) for node in ast.walk(propagate) if isinstance(node, ast.Call)
+		}
+		self.assertIn("_skip_rejected_punch", called, "the reject branch no longer skip-stamps the punch")
+		func = _function(hooks, "_skip_rejected_punch")
 		rejected_writes = [keys for keys in _set_value_dicts(func) if "remote_approval_status" in keys]
 		self.assertTrue(rejected_writes, "expected set_value writes of remote_approval_status")
 		self.assertTrue(

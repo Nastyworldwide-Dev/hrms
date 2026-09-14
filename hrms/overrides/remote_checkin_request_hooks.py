@@ -1,17 +1,67 @@
-"""Remote Checkin Request doc_event handlers + notification helpers."""
+"""Remote Checkin Request doc_event handlers + notification helpers.
+
+Late check-out repair, for other callers (the attendance recovery's rebuild
+step, section e):
+
+    reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> frappe._dict
+
+The OUT punch's name is all it needs. It rebuilds the whole shift day the OUT
+closes (linked + unlinked punches, hours and overtime through the Shift Type's
+own rule) inside a savepoint, and never commits. Side effects on refusal: a
+Desk message, a retry job after commit for a transient blocker, and — for a
+final refusal — one Error Log + HR alert per request and a machine-readable
+Comment on the request (below). Result keys:
+
+    repaired        bool
+    reason_code     None on success, else one of the codes below
+    message         plain text for a person
+    attendance      the Attendance name involved, or None
+    status          the rebuilt row's status (success only)
+    working_hours   the rebuilt row's hours (success only)
+    attendance_date the shift day (success only)
+    will_retry      a job (or the hourly job) will apply it later
+    hr_notified     HR was told this once
+
+Refusal codes and who clears them:
+
+    today                the shift may still be running — queued after the shift ends (E19)
+    pending_punch        another punch of the shift awaits approval — retried when decided
+    locked               another write held the day — retried after commit
+    financial_lock       approved OT / RL / payroll uses the day — HR
+    hr_marked            HR corrected the day by hand, or another site owns it — HR
+    hr_removed           HR removed the day in Shift Attendance — HR
+    not_eligible         the OUT is not an approved local punch — HR
+    no_open_shift        the IN it closes is not on a shift — HR
+    duplicate_attendance two rows cover the shift — HR
+    attendance_mismatch  the row belongs to another shift — HR
+    cross_boundary       linked punches from another shift or site — HR
+    other_attendance     a punch is already counted elsewhere — HR
+    incomplete_pairs     the punches do not pair up — HR
+    not_markable         the shift does not mark this day (holiday) — HR
+    rebuild_failed       the rebuild raised; the old row was kept — HR
+    not_found            the OUT punch no longer exists — HR
+
+A final refusal (anything but `today`, and a transient one once its retries
+are spent) is written on the request as a Comment
+"REFUSAL_COMMENT_PREFIX <code> — <message>" so a later pass can read the
+blocker back (`last_refusal_code(request)`) and re-apply when it clears (E30).
+"""
 
 from __future__ import annotations
 
 import logging
+import re
 from datetime import timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import cint, get_datetime, getdate, now_datetime
+from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
 from hrms.overrides.company_scope import company_visible
+from hrms.utils.attendance_day_audit import SKIP_PREFIX
 from hrms.utils.email_flush import flush_email_queue_after_commit
 from hrms.utils.hr_removed_day import removed_by_hr
+from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +225,9 @@ def _notify_employee(request, decision: str) -> None:
 		approver=request.approver or "HR",
 		remark=f"\n\nRemarks: {request.approver_remarks}" if request.approver_remarks else "",
 	)
+	outcome = _repair_outcome_text(request.flags.get("late_checkout_repair"))
+	if outcome:
+		body = f"{body}\n\n{outcome}"
 
 	_create_notification_log(user_id, subject, body, request)
 	_create_pwa_notification(user_id, request.approver, body, request)
@@ -186,6 +239,27 @@ def _notify_employee(request, decision: str) -> None:
 		request.name,
 		decision,
 	)
+
+
+def _repair_outcome_text(repair) -> str:
+	"""What a late check-out approval did to the day, in the employee's words (E20).
+	Empty for an ordinary approval, which has no repair."""
+	if not repair:
+		return ""
+	if repair.get("repaired"):
+		return _("Your day {0} was rebuilt: {1} h.").format(
+			repair.get("attendance_date"), flt(repair.get("working_hours"), 2)
+		)
+	if repair.get("reason_code") == "today":
+		return _("Your day will be rebuilt after your shift ends.")
+	text = _("Your check-out was approved, but the day could not be rebuilt: {0}").format(
+		repair.get("message") or ""
+	)
+	if repair.get("hr_notified"):
+		return f"{text} — {_('HR has been told.')}"
+	if repair.get("will_retry"):
+		return f"{text} — {_('It will be rebuilt automatically once that clears.')}"
+	return text
 
 
 def _create_notification_log(user: str, subject: str, body: str, request) -> None:
@@ -395,6 +469,7 @@ def propagate_approval_decision(doc, method=None):
 			# The approve endpoint reads this back so the approver sees what the
 			# approval did to the day (E1) instead of an unconditional "notified".
 			doc.flags.late_checkout_repair = reprocess_late_checkout_attendance(doc.checkin)
+			_announce_repair(doc.flags.late_checkout_repair)
 		else:
 			reapply_late_checkouts_unblocked_by(doc)
 	else:  # Rejected
@@ -406,15 +481,7 @@ def propagate_approval_decision(doc, method=None):
 		# lands AFTER the hourly attendance job has already marked the day
 		# still needs a manual attendance correction; this closes the
 		# from-now-on path, which is the one that ran on every punch.
-		frappe.db.set_value(
-			"Employee Checkin",
-			doc.checkin,
-			{
-				"requires_remote_approval": 0,
-				"remote_approval_status": "Rejected",
-				"skip_auto_attendance": 1,
-			},
-		)
+		_skip_rejected_punch(doc)
 		if not cint(doc.get("is_late_checkout")):
 			# W2: a rejected pending punch is skip-stamped and leaves the shift,
 			# which clears a late OUT's pending_punch blocker as surely as an
@@ -429,6 +496,47 @@ def propagate_approval_decision(doc, method=None):
 		frappe.session.user,
 	)
 	_notify_employee(doc, doc.status)
+
+
+def _skip_rejected_punch(doc) -> None:
+	"""Skip-stamp the rejected punch WITH its reason (E17): a Comment the day
+	audit reads (SKIP_PREFIX) and `doc.flags.skip_reason` for the Employee
+	Checkin guard that refuses a reason-less skip write."""
+	kind = (
+		_("forgotten check-out request")
+		if cint(doc.get("is_late_checkout"))
+		else _("remote check-in request")
+	)
+	reason = _("Skipped: {0} {1} rejected by {2}").format(kind, doc.name, frappe.session.user)
+	doc.flags.skip_reason = reason
+	frappe.db.set_value(
+		"Employee Checkin",
+		doc.checkin,
+		{
+			"requires_remote_approval": 0,
+			"remote_approval_status": "Rejected",
+			"skip_auto_attendance": 1,
+		},
+	)
+	try:
+		frappe.get_doc("Employee Checkin", doc.checkin).add_comment("Comment", f"{SKIP_PREFIX}: {reason}")
+	except Exception:
+		logger.exception("[remote_checkin_request] skip reason could not be written on %s", doc.checkin)
+	logger.info("[remote_checkin_request] %s skip-stamped: %s", doc.checkin, reason)
+
+
+def _announce_repair(repair) -> None:
+	"""Desk approvers save the form and get no JSON back: a rebuilt day is
+	announced the way a refused one already is (E20)."""
+	if not repair or not repair.get("repaired"):
+		return
+	frappe.msgprint(
+		_("Day {0} rebuilt: {1}, {2} h.").format(
+			repair.get("attendance_date"), _(repair.get("status") or ""), flt(repair.get("working_hours"), 2)
+		),
+		title=_("Attendance updated"),
+		indicator="green",
+	)
 
 
 _REPAIR_CHECKIN_FIELDS = [
@@ -469,21 +577,72 @@ def _repair_result(repaired, reason_code=None, message="", marked=None, attendan
 		attendance=marked.name if marked else attendance,
 		status=marked.get("status") if marked else None,
 		working_hours=marked.get("working_hours") if marked else None,
+		attendance_date=marked.get("attendance_date") if marked else None,
 		will_retry=flags.get("will_retry", False),
 		hr_notified=flags.get("hr_notified", False),
 	)
 
 
-def _shift_day_is_today(employee, attendance_date) -> bool:
-	"""Owner ruling: the employee may still be working today, so the day is
-	left to the hourly job rather than rebuilt from an approval."""
-	from hrms.utils.timezone import employee_now
-
-	return getdate(attendance_date) >= employee_now(employee).date()
+def _shift_day_is_today(employee, attendance_date, shift_actual_end=None) -> bool:
+	"""Owner ruling: the employee may still be working, so the day is left
+	alone rather than rebuilt from an approval. "Still working" is the shift's
+	actual end (buffer included) not yet reached — a day shift approved at
+	20:00 is over and rebuilt at once; a night shift approved at 00:30 is
+	still running although its day is yesterday's date (caught on
+	fresh.local). The calendar date is only the fallback when the IN carries
+	no shift end (E19)."""
+	now = employee_now(employee)
+	if shift_actual_end:
+		return now < get_datetime(shift_actual_end)
+	return getdate(attendance_date) >= now.date()
 
 
 def _request_for(checkin):
 	return frappe.db.get_value("Remote Checkin Request", {"checkin": checkin}, "name")
+
+
+REFUSAL_COMMENT_PREFIX = "late-checkout-repair-refused:"
+
+
+def parse_refusal(text) -> str | None:
+	"""The reason code in a refusal Comment, or None for any other comment."""
+	text = re.sub(r"<[^>]+>", "", text or "").strip()
+	if not text.startswith(REFUSAL_COMMENT_PREFIX):
+		return None
+	return text[len(REFUSAL_COMMENT_PREFIX) :].split("—", 1)[0].strip() or None
+
+
+def last_refusal_code(request) -> str | None:
+	"""The newest recorded refusal on a request (E30), for a pass that re-applies
+	once the blocker is gone."""
+	rows = frappe.get_all(
+		"Comment",
+		filters={
+			"reference_doctype": "Remote Checkin Request",
+			"reference_name": request,
+			"comment_type": "Comment",
+			"content": ["like", f"{REFUSAL_COMMENT_PREFIX}%"],
+		},
+		fields=["content"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	code = parse_refusal(rows[0].content) if rows else None
+	logger.debug("[remote_checkin_request] last refusal on %s: %s", request, code)
+	return code
+
+
+def _record_refusal(checkin, reason_code, reason) -> None:
+	"""One machine-readable Comment per distinct final refusal on the request."""
+	request = _request_for(checkin)
+	if not request:
+		return
+	if last_refusal_code(request) == reason_code:
+		return
+	frappe.get_doc("Remote Checkin Request", request).add_comment(
+		"Comment", f"{REFUSAL_COMMENT_PREFIX} {reason_code} — {reason}"
+	)
+	logger.info("[remote_checkin_request] refusal recorded on %s: %s", request, reason_code)
 
 
 def _tell_hr_once(checkin, reason) -> bool:
@@ -518,13 +677,34 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 		attempt,
 	)
 	if reason_code == "today":
-		return _repair_result(False, reason_code, reason, attendance=attendance)
+		# E19: not dropped. The job runs right after commit and rebuilds the day
+		# if the shift has ended by then; a shift still running is left to the
+		# hourly job, which rebuilds from every punch once the shift is over.
+		# attempt > 0 is that job itself: it must not queue itself again.
+		# ceiling: no delayed jobs (Frappe disables the RQ scheduler), upgrade: enqueue at shift end if workers gain one
+		if attempt == 0:
+			frappe.enqueue(
+				_RETRY_METHOD,
+				queue="short",
+				out_checkin=checkin,
+				attempt=1,
+				enqueue_after_commit=True,
+				job_id=f"late-checkout-repair::{checkin}",
+				deduplicate=True,
+			)
+			frappe.msgprint(
+				_("Approved — the day will be rebuilt after the shift ends."),
+				title=_("Attendance queued"),
+				indicator="blue",
+			)
+		return _repair_result(False, reason_code, reason, attendance=attendance, will_retry=True)
 	frappe.msgprint(
 		_("Check-out approved, but attendance was not updated: {0}").format(reason),
 		title=_("Attendance not updated"),
 		indicator="orange",
 	)
 	if reason_code not in _TRANSIENT_REFUSALS:
+		_record_refusal(checkin, reason_code, reason)
 		return _repair_result(
 			False, reason_code, reason, attendance=attendance, hr_notified=_tell_hr_once(checkin, reason)
 		)
@@ -532,6 +712,7 @@ def _refuse(checkin, reason_code, reason, attempt=0, attendance=None):
 		# Out of retries: HR hears about it once. pending_punch also keeps its own
 		# trigger (deciding that punch re-runs the repair), but a punch nobody
 		# decides must not leave the day stuck in silence (W2).
+		_record_refusal(checkin, reason_code, reason)
 		hr_notified = _tell_hr_once(checkin, reason)
 		return _repair_result(False, reason_code, reason, attendance=attendance, hr_notified=hr_notified)
 	# ceiling: retries run right after commit with no backoff, upgrade: a delayed queue if lock refusals recur
@@ -627,7 +808,10 @@ def _repair_financial_dependency(employee, attendance_date, attendance_name, for
 def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> frappe._dict:
 	"""Repair the complete original shift, preserving the old record if rebuilding fails.
 
-	Returns what happened (see _repair_result); a refusal is retried or reported.
+	`out_checkin` is the approved late OUT's name; `attempt` counts background
+	retries (0 = a direct approval). Returns what happened (see _repair_result
+	and the module docstring for the keys and reason codes); a refusal is
+	retried or reported. Never commits: the caller's transaction owns it.
 	"""
 	from hrms.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
 	from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import get_previous_session_checkin
@@ -655,11 +839,11 @@ def reprocess_late_checkout_attendance(out_checkin: str, attempt: int = 0) -> fr
 		)
 	anchor = get_datetime(in_row.shift_start)
 	attendance_date = anchor.date()
-	if _shift_day_is_today(out.employee, attendance_date):
+	if _shift_day_is_today(out.employee, attendance_date, in_row.shift_actual_end):
 		return _refuse(
 			out_checkin,
 			"today",
-			_("This shift is today; attendance updates automatically after the shift."),
+			_("This shift is still running; the day is rebuilt after it ends."),
 			attempt,
 			None,
 		)

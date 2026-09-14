@@ -276,5 +276,172 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		self.assertEqual(result.attendance, "HR-ATT-NEW")
 
 
+class TestRejectionLeavesAReasonOnThePunch(unittest.TestCase):
+	"""E17: a rejected request skip-stamped the punch with no comment, so the
+	day audit listed it as "skipped by hand, no reason" and nobody could tell a
+	rejection from an accident."""
+
+	def _reject(self, is_late_checkout):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		doc = _request("Rejected", is_late_checkout=is_late_checkout)
+		punch = MagicMock()
+		db = MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", return_value=punch) as get_doc,
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+			patch.object(hooks, "now_datetime", return_value=datetime.datetime(2026, 9, 2, 9, 0)),
+			patch.object(hooks, "_notify_employee"),
+			patch.object(hooks, "reapply_late_checkouts_unblocked_by"),
+		):
+			hooks.propagate_approval_decision(doc)
+		get_doc.assert_called_once_with("Employee Checkin", OUT_NAME)
+		return doc, db, punch
+
+	def test_rejected_late_checkout_is_skipped_with_a_readable_reason(self):
+		from hrms.utils.attendance_day_audit import SKIP_PREFIX
+
+		doc, db, punch = self._reject(is_late_checkout=1)
+		values = db.set_value.call_args.args[2]
+		self.assertEqual(values["skip_auto_attendance"], 1)
+		reason = "Skipped: forgotten check-out request RCR-1 rejected by hr@example.com"
+		self.assertEqual(doc.flags.skip_reason, reason)
+		punch.add_comment.assert_called_once()
+		kind, text = punch.add_comment.call_args.args
+		self.assertEqual(kind, "Comment")
+		self.assertIn(reason, text)
+		self.assertIn(SKIP_PREFIX, text, "the day audit reads skip reasons by this prefix")
+		self.assertNotIn("<", text, "plain text")
+
+	def test_rejected_remote_punch_names_its_request_kind(self):
+		doc, _, _ = self._reject(is_late_checkout=0)
+		self.assertEqual(
+			doc.flags.skip_reason, "Skipped: remote check-in request RCR-1 rejected by hr@example.com"
+		)
+
+
+class TestEmployeeIsToldWhatHappenedToTheDay(unittest.TestCase):
+	"""E20: the employee heard "approved" while the day stayed Half Day. The
+	notification now carries the rebuild result (or why there was none)."""
+
+	def _notify(self, repair):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		doc = _request("Approved")
+		doc.employee_name = "Ria"
+		doc.log_type = "OUT"
+		doc.checkin_time = OUT_TIME
+		doc.approver = "hr@example.com"
+		doc.approver_remarks = ""
+		if repair is not None:
+			doc.flags.late_checkout_repair = repair
+		bodies = []
+		db = MagicMock()
+		db.get_value.return_value = "staff@example.com"
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(hooks, "_create_notification_log", side_effect=lambda u, s, b, r: bodies.append(b)),
+			patch.object(hooks, "_create_pwa_notification"),
+			patch.object(hooks, "_send_email"),
+			patch.object(hooks, "_send_push"),
+		):
+			hooks._notify_employee(doc, "Approved")
+		return bodies[0]
+
+	def test_a_rebuilt_day_reports_its_hours(self):
+		body = self._notify(
+			frappe._dict(
+				repaired=True, attendance_date=datetime.date(2026, 9, 1), working_hours=9.5, status="Present"
+			)
+		)
+		self.assertIn("Your day 2026-09-01 was rebuilt: 9.5 h", body)
+
+	def test_a_day_that_could_not_be_rebuilt_says_why_and_that_hr_knows(self):
+		body = self._notify(
+			frappe._dict(
+				repaired=False,
+				reason_code="hr_marked",
+				message="HR corrected this day by hand.",
+				hr_notified=True,
+				will_retry=False,
+			)
+		)
+		self.assertIn(
+			"approved, but the day could not be rebuilt: HR corrected this day by hand. — HR has been told",
+			body,
+		)
+
+	def test_a_shift_still_running_says_when(self):
+		body = self._notify(frappe._dict(repaired=False, reason_code="today", message="x", will_retry=True))
+		self.assertIn("after your shift ends", body)
+
+	def test_an_ordinary_approval_says_nothing_about_a_rebuild(self):
+		body = self._notify(None)
+		self.assertNotIn("rebuilt", body)
+
+
+class TestDeskApproverSeesTheRebuild(unittest.TestCase):
+	"""E20, Desk side: the form save path has no JSON response, so the result
+	is shown as a message; a refusal already was."""
+
+	def test_success_is_announced(self):
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		doc = _request("Approved", is_late_checkout=1)
+		repair = frappe._dict(
+			repaired=True, attendance_date=datetime.date(2026, 9, 1), working_hours=9.5, status="Present"
+		)
+		with (
+			patch.object(frappe, "db", MagicMock()),
+			patch.object(frappe, "msgprint") as notice,
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+			patch.object(hooks, "now_datetime", return_value=datetime.datetime(2026, 9, 2, 9, 0)),
+			patch.object(hooks, "_notify_employee"),
+			patch.object(hooks, "reprocess_late_checkout_attendance", return_value=repair),
+		):
+			hooks.propagate_approval_decision(doc)
+		self.assertIn("2026-09-01", notice.call_args.args[0])
+		self.assertIn("9.5", notice.call_args.args[0])
+
+
+class TestDeletedRequestMarksItsPunch(unittest.TestCase):
+	"""E31: deleting a request left an orphan OUT nobody could explain. The
+	punch stays (it is evidence) and says what happened to it."""
+
+	def test_on_trash_comments_the_punch_and_keeps_it(self):
+		from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import RemoteCheckinRequest
+
+		doc = object.__new__(RemoteCheckinRequest)
+		doc.__dict__.update(name="RCR-1", checkin=OUT_NAME, is_late_checkout=1, flags=frappe._dict())
+		punch = MagicMock()
+		db = MagicMock()
+		db.exists.return_value = OUT_NAME
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", return_value=punch),
+			patch.object(frappe, "session", frappe._dict(user="hr@example.com")),
+		):
+			doc.on_trash()
+		kind, text = punch.add_comment.call_args.args
+		self.assertEqual(kind, "Comment")
+		self.assertIn("request deleted", text)
+		self.assertIn("RCR-1", text)
+		self.assertIn("hr@example.com", text)
+		punch.delete.assert_not_called()
+		db.delete.assert_not_called()
+
+	def test_a_request_whose_punch_is_gone_deletes_quietly(self):
+		from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import RemoteCheckinRequest
+
+		doc = object.__new__(RemoteCheckinRequest)
+		doc.__dict__.update(name="RCR-1", checkin=OUT_NAME, is_late_checkout=1, flags=frappe._dict())
+		db = MagicMock()
+		db.exists.return_value = None
+		with patch.object(frappe, "db", db), patch.object(frappe, "get_doc") as get_doc:
+			doc.on_trash()
+		get_doc.assert_not_called()
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -59,6 +59,29 @@ class RemoteCheckinRequest(Document):
 			)
 			frappe.throw(_("Only the assigned approver or an HR Manager can approve/reject this request."))
 
+	def on_trash(self):
+		"""The punch this request was about stays — it is evidence — and says
+		what happened to it, so an orphan OUT is never a mystery (E31)."""
+		if not self.checkin or not frappe.db.exists("Employee Checkin", self.checkin):
+			logger.info("[remote_checkin_request] %s deleted; its punch is already gone", self.name)
+			return
+		try:
+			frappe.get_doc("Employee Checkin", self.checkin).add_comment(
+				"Comment",
+				_("Remote check-in request {0} deleted by {1}; this punch was left in place.").format(
+					self.name, frappe.session.user
+				)
+				+ " (request deleted)",
+			)
+		except Exception:
+			logger.exception("[remote_checkin_request] could not mark punch %s on delete", self.checkin)
+		logger.info(
+			"[remote_checkin_request] %s deleted by %s; punch %s kept",
+			self.name,
+			frappe.session.user,
+			self.checkin,
+		)
+
 	def validate_inherited_checkout(self):
 		"""Verify trusted derivation against persisted punches, never a submitted parent ID alone."""
 		logger.info("[remote_checkin_request] verifying inherited checkout request=%s", self.name)

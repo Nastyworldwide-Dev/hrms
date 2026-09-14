@@ -73,11 +73,15 @@ class TestWholeShiftRepair(unittest.TestCase):
 		self.financial_rows = []
 		self.saved_snapshot = None
 		self.today = False
+		self.now = self.anchor + timedelta(days=1)
 		self.error_logs = []
 		self.db.exists.side_effect = self.exists
 		self.enqueue = MagicMock()
 		self.hr_users = []
 		self.notifications = []
+		self.request_comments = []
+		self.request_doc = MagicMock()
+		self.request_doc.add_comment.side_effect = lambda kind, text: self.request_comments.append(text)
 
 	def matches(self, row, filters):
 		for field, expected in (filters or {}).items():
@@ -124,6 +128,11 @@ class TestWholeShiftRepair(unittest.TestCase):
 			return list(self.hr_users)
 		if doctype == "Attendance":
 			return [frappe._dict(name=self.attendance.name)] if self.attendance else []
+		if doctype == "Comment":
+			# the real query filters `content like "<prefix>%"`; honour it here
+			prefix = (filters or {}).get("content", ["like", "%"])[1].rstrip("%")
+			matching = [text for text in self.request_comments if text.startswith(prefix)]
+			return [frappe._dict(content=text) for text in reversed(matching)][:1]
 		if doctype != "Employee Checkin":
 			return []
 		self.read_before_cancel.append(not self.attendance.cancel.called)
@@ -148,7 +157,7 @@ class TestWholeShiftRepair(unittest.TestCase):
 		if doctype == "Shift Type":
 			return self.shift
 		if doctype == "Remote Checkin Request":
-			return MagicMock()
+			return self.request_doc
 		raise AssertionError(doctype)
 
 	def cancel(self):
@@ -185,9 +194,13 @@ class TestWholeShiftRepair(unittest.TestCase):
 			patch.object(frappe, "msgprint") as notice,
 			patch.object(frappe, "enqueue", self.enqueue),
 			patch.object(frappe, "log_error", side_effect=self.log_error),
-			patch.object(hooks, "_shift_day_is_today", create=True, return_value=self.today),
+			patch.object(hooks, "employee_now", return_value=self.now, create=True),
 		):
-			result = (fn or hooks.reprocess_late_checkout_attendance)("LATE-OUT", **kwargs)
+			if self.today is not None:
+				with patch.object(hooks, "_shift_day_is_today", create=True, return_value=self.today):
+					result = (fn or hooks.reprocess_late_checkout_attendance)("LATE-OUT", **kwargs)
+			else:
+				result = (fn or hooks.reprocess_late_checkout_attendance)("LATE-OUT", **kwargs)
 		return result, notice
 
 	def test_rebuild_includes_morning_and_afternoon_before_cancelling(self):
@@ -627,16 +640,88 @@ class TestWholeShiftRepair(unittest.TestCase):
 
 	# ---- Owner ruling: today's day is never auto-rewritten ------------------------
 
-	def test_todays_shift_is_left_to_the_hourly_job(self):
+	def test_todays_shift_is_queued_for_after_the_shift_ends(self):
+		"""E19: approving while the shift may still be running used to refuse in
+		silence. The rebuild is queued after commit, once per punch."""
 		self.today = True
-		result, _ = self.run_repair()
+		result, notice = self.run_repair()
 		self.assertFalse(result.repaired)
 		self.assertEqual(result.reason_code, "today")
+		self.assertTrue(result.will_retry)
 		self.attendance.cancel.assert_not_called()
 		self.shift.mark_attendance_for_shift_logs.assert_not_called()
 		self.db.set_value.assert_not_called()
-		self.enqueue.assert_not_called()
 		self.assertEqual(self.error_logs, [])
+		self.enqueue.assert_called_once()
+		call = self.enqueue.call_args
+		self.assertEqual(call.args[0], hooks._RETRY_METHOD)
+		self.assertEqual(call.kwargs["job_id"], "late-checkout-repair::LATE-OUT")
+		self.assertTrue(call.kwargs["deduplicate"])
+		self.assertTrue(call.kwargs["enqueue_after_commit"])
+		self.assertEqual(call.kwargs["out_checkin"], "LATE-OUT")
+		self.assertIn("after the shift ends", notice.call_args.args[0])
+
+	def test_the_queued_job_does_not_queue_itself_again(self):
+		self.today = True
+		result, _ = self.run_repair(fn=hooks.retry_late_checkout_repair, attempt=1)
+		self.assertEqual(result.reason_code, "today")
+		self.enqueue.assert_not_called()
+
+	def test_a_shift_that_ended_today_is_rebuilt_at_once(self):
+		"""The calendar day is today, but the IN's shift (actual end 22:00) is
+		over: the employee is not still working it, so the ruling does not apply."""
+		self.today = None
+		self.now = self.anchor.replace(hour=23)
+		result, _ = self.run_repair()
+		self.assertTrue(result.repaired)
+
+	def test_a_night_shift_still_running_past_midnight_is_not_rebuilt(self):
+		"""Caught on fresh.local at 00:31: the shift day is yesterday's date, so
+		the date rule said "not today" and rebuilt a shift that runs until 07:31.
+		The ruling is about the shift still running, not the calendar."""
+		self.today = None
+		for row in self.rows:
+			row.shift_actual_end = self.anchor + timedelta(days=1, hours=7, minutes=31)
+		self.now = self.anchor + timedelta(days=1, minutes=31)
+		result, _ = self.run_repair()
+		self.assertEqual(result.reason_code, "today")
+		self.shift.mark_attendance_for_shift_logs.assert_not_called()
+
+	def test_a_shift_still_running_today_is_not_rebuilt(self):
+		self.today = None
+		self.now = self.anchor.replace(hour=20)
+		result, _ = self.run_repair()
+		self.assertEqual(result.reason_code, "today")
+		self.shift.mark_attendance_for_shift_logs.assert_not_called()
+
+	# ---- E30: a final refusal is machine-readable on the request ----------------
+
+	def test_a_final_refusal_is_recorded_on_the_request_once(self):
+		self.protected = "Salary Slip"
+		self.run_repair()
+		self.run_repair()
+		recorded = [text for text in self.request_comments if text.startswith(hooks.REFUSAL_COMMENT_PREFIX)]
+		self.assertEqual(len(recorded), 1, recorded)
+		self.assertEqual(hooks.parse_refusal(recorded[0]), "financial_lock")
+		self.assertIn("Approved overtime", recorded[0])
+
+	def test_exhausted_transient_refusal_is_recorded_as_well(self):
+		self.rows[0].remote_approval_status = "Pending"
+		self.run_repair(attempt=hooks.MAX_REPAIR_RETRIES)
+		recorded = [text for text in self.request_comments if text.startswith(hooks.REFUSAL_COMMENT_PREFIX)]
+		self.assertEqual([hooks.parse_refusal(t) for t in recorded], ["pending_punch"])
+
+	def test_a_refusal_still_being_retried_is_not_recorded_yet(self):
+		self.rows[0].remote_approval_status = "Pending"
+		self.run_repair()
+		self.assertEqual([t for t in self.request_comments if t.startswith(hooks.REFUSAL_COMMENT_PREFIX)], [])
+
+	def test_the_last_refusal_code_can_be_read_back(self):
+		self.attendance.auto_attendance = 0
+		self.run_repair()
+		with patch.object(frappe, "get_all", side_effect=self.get_all):
+			self.assertEqual(hooks.last_refusal_code("RCR-LATE"), "hr_marked")
+		self.assertIsNone(hooks.parse_refusal("Check-out approved, but attendance needs correction: x"))
 
 
 if __name__ == "__main__":
