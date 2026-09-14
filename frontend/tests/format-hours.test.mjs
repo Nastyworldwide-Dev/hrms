@@ -14,15 +14,19 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 
 // formatters.js imports frappe-ui and an @/ alias, which node cannot load, so the
 // declaration itself is lifted out and run — the real source, not a copy.
-function loadFormatHours() {
+function loadFormatHours(name = "formatHours") {
 	const source = read("../src/utils/formatters.js")
-	const node = parse(source, { ecmaVersion: "latest", sourceType: "module" }).body.find(
-		(n) => n.declaration?.declarations?.[0]?.id.name === "formatHours"
-	)
-	assert.ok(node, "formatters.js exports formatHours")
+	const node = parse(source, {
+		ecmaVersion: "latest",
+		sourceType: "module",
+	}).body.find((n) => n.declaration?.declarations?.[0]?.id.name === name)
+	assert.ok(node, `formatters.js exports ${name}`)
 	const context = vm.createContext({})
-	vm.runInContext(source.slice(node.declaration.start, node.declaration.end), context)
-	return vm.runInContext("formatHours", context)
+	vm.runInContext(
+		source.slice(node.declaration.start, node.declaration.end),
+		context
+	)
+	return vm.runInContext(name, context)
 }
 
 test("formatHours: at most two decimals, trailing zeros dropped, empty is 0", () => {
@@ -37,11 +41,29 @@ test("formatHours: at most two decimals, trailing zeros dropped, empty is 0", ()
 	assert.equal(formatHours("1.10"), "1.1")
 })
 
+// A claim cap stored as 5.669444444 must never display as 5.67: typing the
+// shown number would then be refused by the cap check that compares the full value.
+test("formatHoursCap: rounds down to two decimals, exact values survive", () => {
+	const formatHoursCap = loadFormatHours("formatHoursCap")
+	assert.equal(formatHoursCap(5.669444444), "5.66")
+	assert.equal(formatHoursCap(5.67), "5.67")
+	assert.equal(formatHoursCap(0.29), "0.29")
+	assert.equal(formatHoursCap(3), "3")
+	assert.equal(formatHoursCap(null), "0")
+	assert.ok(Number(formatHoursCap(5.669444444)) <= 5.669444444)
+})
+
 // Every place an hours Float reaches the screen goes through the formatter.
 const sites = {
-	"../src/components/OTRequestItem.vue": [/formatHours\(props\.doc\.claimed_hours\)/],
-	"../src/components/ReplacementLeaveClaimItem.vue": [/formatHours\(props\.doc\.hours_cost\)/],
-	"../src/components/ReplacementLeaveCard.vue": [/formatHours\(bank\.data\?\.hours_available\)/],
+	"../src/components/OTRequestItem.vue": [
+		/formatHours\(props\.doc\.claimed_hours\)/,
+	],
+	"../src/components/ReplacementLeaveClaimItem.vue": [
+		/formatHours\(props\.doc\.hours_cost\)/,
+	],
+	"../src/components/ReplacementLeaveCard.vue": [
+		/formatHours\(bank\.data\?\.hours_available\)/,
+	],
 	"../src/views/ot/ReplacementLeave.vue": [
 		/formatHours\(bank\.data\.hours_available\)/,
 		/formatHours\(bank\.data\.hours_claimed\)/,
@@ -49,28 +71,37 @@ const sites = {
 		/formatHours\(claimRow\.hours_cost\)/,
 	],
 	"../src/views/ot/OTRequestForm.vue": [
-		/formatHours\(otSummary\.data\.punch_ot_hours\)/,
-		/formatHours\(d\.hours\)/,
-		/formatHours\(cap\)/,
+		/formatHoursCap\(otSummary\.data\.punch_ot_hours\)/,
+		/formatHoursCap\(d\.hours\)/,
+		/formatHoursCap\(cap\)/,
 	],
 	"../src/views/ot/ReplacementLeaveClaimForm.vue": [
 		/formatHours\(data\.hours_available\)/,
 		/formatHours\(cost\)/,
 		/formatHours\(available\)/,
 	],
-	"../src/views/attendance/Dashboard.vue": [/formatHours\(claimableOt\.data\.claimable_hours\)/],
+	"../src/views/attendance/Dashboard.vue": [
+		/formatHours\(claimableOt\.data\.claimable_hours\)/,
+	],
 }
 
 test("every hours render goes through formatHours", () => {
 	for (const [path, patterns] of Object.entries(sites)) {
 		const source = read(path)
-		assert.match(source, /import \{[^}]*formatHours[^}]*\} from "@\/utils\/formatters"/, path)
+		assert.match(
+			source,
+			/import \{[^}]*formatHours[^}]*\} from "@\/utils\/formatters"/,
+			path
+		)
 		for (const pattern of patterns) assert.match(source, pattern, path)
 	}
 })
 
 test("the request sheet formats Float hours fields", () => {
 	const source = read("../src/components/RequestActionSheet.vue")
-	assert.match(source, /import \{[^}]*formatHours[^}]*\} from "@\/utils\/formatters"/)
+	assert.match(
+		source,
+		/import \{[^}]*formatHours[^}]*\} from "@\/utils\/formatters"/
+	)
 	assert.match(source, /formatHours\(raw\)/)
 })

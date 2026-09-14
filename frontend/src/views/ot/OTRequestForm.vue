@@ -31,7 +31,9 @@
 					     whole-day blocks — showing raw hours there just confuses, so the day
 					     result (from `expectation`) speaks for it. -->
 							<span v-if="!isRL" class="text-sm text-ink-600">
-								{{ __("Available to claim: {0} h", [formatHours(otSummary.data.punch_ot_hours)]) }}
+								{{
+									__("Available to claim: {0} h", [formatHoursCap(otSummary.data.punch_ot_hours)])
+								}}
 							</span>
 							<span v-if="isRL" class="text-sm text-ink-600">{{ expectation }}</span>
 						</template>
@@ -45,20 +47,25 @@
 						<button
 							v-for="d in displayDays"
 							:key="d.date"
-							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between"
+							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between gap-3"
 							:class="
 								d.claimed
-									? 'border-divider opacity-60 cursor-not-allowed'
+									? 'border-divider bg-icon-bg cursor-not-allowed'
 									: otRequest.ot_date === d.date
 									? 'border-accent-ink cursor-pointer'
 									: 'border-divider hover:bg-icon-bg cursor-pointer'
 							"
 							:disabled="d.claimed"
 							:aria-disabled="d.claimed ? 'true' : undefined"
+							:aria-pressed="d.claimed ? undefined : String(otRequest.ot_date === d.date)"
 							@click="pickDay(d)"
 						>
-							<span class="text-inkbase font-semibold">{{ formatDay(d.date) }}</span>
-							<span class="text-sm text-ink-600">{{ d.label }}</span>
+							<span class="font-semibold" :class="d.claimed ? 'text-ink-700' : 'text-inkbase'">{{
+								formatDay(d.date)
+							}}</span>
+							<span class="text-sm" :class="d.claimed ? 'text-ink-700' : 'text-ink-600'">{{
+								d.label
+							}}</span>
 						</button>
 					</div>
 
@@ -93,7 +100,7 @@ import { computed, inject, ref, shallowRef, watch } from "vue"
 import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
-import { formatHours } from "@/utils/formatters"
+import { formatHoursCap } from "@/utils/formatters"
 import { requestStatusChip } from "@/utils/requestStatus"
 import { emptyClaimReason } from "./claimEmptyReason.js"
 
@@ -158,7 +165,7 @@ const displayDays = computed(() => {
 	const data = claimableDays.value.data
 	const days = data?.days || []
 	const open = !isRL.value
-		? days.map((d) => ({ ...d, label: __("{0} h", [formatHours(d.hours)]) }))
+		? days.map((d) => ({ ...d, label: __("{0} h", [formatHoursCap(d.hours)]) }))
 		: days
 				.map((d) => ({ ...d, leaveDays: rlDays(d.hours) }))
 				.filter((d) => d.leaveDays > 0)
@@ -346,7 +353,7 @@ const saveError = computed(() => {
 	const claimed = Number(otRequest.value.claimed_hours)
 	if (!Number.isFinite(claimed) || claimed <= 0) return __("Enter the hours to claim.")
 	return claimed > cap
-		? __("Cannot claim more than the punch-verified {0} h", [formatHours(cap)])
+		? __("Cannot claim more than the punch-verified {0} h", [formatHoursCap(cap)])
 		: ""
 })
 watch(

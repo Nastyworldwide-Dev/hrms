@@ -53,6 +53,11 @@ export const formatLeaveDays = (value) => {
 // 5.669444 -> 5.67, 2.5 -> 2.5, 3 -> 3; empty reads as 0
 export const formatHours = (value) => (Math.round((Number(value) || 0) * 100) / 100).toString()
 
+// A CAP rounds down: showing 5.67 for a 5.669444444 cap offers a number the cap check refuses.
+// The 1e-9 keeps an exact 5.67 (566.9999… after * 100) from dropping to 5.66.
+export const formatHoursCap = (value) =>
+	(Math.floor((Number(value) || 0) * 100 + 1e-9) / 100).toString()
+
 export const formatTimestamp = (timestamp) => {
 	const formattedTime = dayjs(timestamp).format("hh:mm a")
 

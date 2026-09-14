@@ -20,13 +20,18 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 // real formatHours declaration out of it for the sandboxed form script.
 const formatHoursSource = (() => {
 	const source = read("../src/utils/formatters.js")
-	const node = parse(source, {
+	const body = parse(source, {
 		ecmaVersion: "latest",
 		sourceType: "module",
-	}).body.find(
-		(n) => n.declaration?.declarations?.[0]?.id.name === "formatHours"
-	)
-	return node ? source.slice(node.declaration.start, node.declaration.end) : ""
+	}).body
+	return ["formatHours", "formatHoursCap"]
+		.map((name) =>
+			body.find((n) => n.declaration?.declarations?.[0]?.id.name === name)
+		)
+		.map((node) =>
+			node ? source.slice(node.declaration.start, node.declaration.end) : ""
+		)
+		.join("\n")
 })()
 const script = (path) =>
 	read(path).split("<script setup>")[1].split("</script>")[0]
@@ -373,7 +378,7 @@ test("claimed days are listed beside claimable ones, disabled and labelled by st
 		rows.map((d) => [d.date, Boolean(d.claimed), d.label]),
 		[
 			["2026-09-05", true, "Claimed · Approved"],
-			["2026-09-04", false, "5.67 h"],
+			["2026-09-04", false, "5.66 h"],
 			["2026-09-03", true, "Claimed · Pending"],
 			["2026-09-02", true, "Claimed · Rejected"],
 		]

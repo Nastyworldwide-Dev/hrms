@@ -661,9 +661,12 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 		fields=["ot_date", "claimed_hours", "status", "docstatus"],
 	)
 	claimed = {row["ot_date"] for row in requests}
-	# One row per date: a legacy duplicate shows its most final state (submitted over draft).
+	# One row per date: a legacy duplicate shows its most final state (submitted over draft,
+	# then Approved over Rejected).
 	claimed_by_date = {}
-	for row in sorted(requests, key=lambda row: cint(row.get("docstatus"))):
+	for row in sorted(
+		requests, key=lambda row: (cint(row.get("docstatus")), row.get("status") == "Approved")
+	):
 		claimed_by_date[row["ot_date"]] = {
 			"date": str(row["ot_date"]),
 			"hours": flt(row.get("claimed_hours")),

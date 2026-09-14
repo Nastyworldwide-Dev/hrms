@@ -134,6 +134,19 @@ class TestClaimedDaysAreReturned(unittest.TestCase):
 		self.assertEqual(reads[0]["filters"]["docstatus"], ["<", 2])
 		self.assertNotIn("pluck", reads[0])
 
+	def test_a_legacy_duplicate_shows_approved_over_rejected(self):
+		# Two submitted requests on one date: the day reads as its approved one,
+		# whichever order the database returns them in.
+		for order in (1, -1):
+			rows = (
+				dict(ot_date=RECENT, claimed_hours=2.0, status="Approved", docstatus=1),
+				dict(ot_date=RECENT, claimed_hours=1.0, status="Rejected", docstatus=1),
+			)[::order]
+			self.assertEqual(
+				_discover(requests=rows)["claimed"],
+				[{"date": "2026-09-25", "hours": 2.0, "status": "Approved", "docstatus": 1}],
+			)
+
 	def test_no_requests_means_an_empty_claimed_list(self):
 		self.assertEqual(_discover()["claimed"], [])
 
