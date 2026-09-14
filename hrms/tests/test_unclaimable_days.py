@@ -378,7 +378,10 @@ class TestWrongShiftTaps(_Planners):
 		self.assertEqual(len(plan["planned"]), 1)
 		self.assertEqual((plan["planned"][0]["rostered"], plan["planned"][0]["shift"]), (DAY, NIGHT))
 
-	def test_both_shifts_on_purpose_silences_the_roster_row_only(self):
+	def test_both_shifts_on_purpose_silences_the_roster_row_and_the_tap_check(self):
+		# I1 (integration review): a ticked two-shift person's night taps were listed
+		# fixable every night, held "on purpose" by S4 and re-queued by the recheck.
+		# E4/E32: not on the list at all.
 		taps = [
 			_tap("a", datetime(2026, 9, 2, 8, 0)),
 			_tap("b", datetime(2026, 9, 2, 19, 30), "IN", shift=NIGHT),
@@ -386,8 +389,7 @@ class TestWrongShiftTaps(_Planners):
 		both = [_assignment("SA-DAY", DAY), _assignment("SA-NIGHT", NIGHT)]
 		with patch.object(rec, "_both_on_purpose", return_value={"SA-NIGHT"}):
 			plan = rec._plan_wrong_shift_taps(self.win, ctx=self.ctx(taps, assignments=both))
-		self.assertEqual(plan["hr_list"], [])
-		self.assertEqual(len(plan["planned"]), 1)
+		self.assertEqual((plan["hr_list"], plan["planned"], plan["held_back"]), ([], [], []))
 
 	def test_a_tap_stamped_off_the_only_rostered_shift_is_fixable(self):
 		taps = [

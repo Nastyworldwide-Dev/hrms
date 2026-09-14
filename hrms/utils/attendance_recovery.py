@@ -758,9 +758,6 @@ def _plan_rostered_shift(win, for_update=False) -> dict:
 	f1 = _plan_wrong_shift_taps(win, for_update, ctx=ctx)
 	times = ctx["times"]
 	rows_by_name = {r.get("name"): r for r in ctx["rows"]}
-	on_purpose = _both_on_purpose(
-		{a.name for own in ctx["assignments"].values() if len(own) > 1 for a in own}
-	)
 	keys = ("employee", "employee_name", "date", "rostered", "shift", "reason", "attendance", "taps")
 	tap_level = [r for r in f1["planned"] + f1["held_back"] if r.get("rostered")]
 	planned, held, endings = [], [], {}
@@ -777,13 +774,8 @@ def _plan_rostered_shift(win, for_update=False) -> dict:
 			)
 			held.append(_held(entry, reason, hr=True))
 			continue
+		# a "both shifts on purpose" tick (E4) never reaches here: F1 lists nothing for it
 		covering = _covering(ctx, employee, day)
-		ticked = [a.name for a in covering if a.name in on_purpose]
-		if ticked:
-			held.append(
-				_held(entry, f"HR ticked both shifts on purpose on {', '.join(ticked)}: left alone", hr=False)
-			)
-			continue
 		taps = sorted(ctx["days"].get((employee, day), []), key=lambda t: get_datetime(t["time"]))
 		wrong = [t for t in taps if t.get("shift") and t.get("shift") != rostered]
 		copied = [t for t in wrong if t.get(PROVENANCE_FIELD)]
@@ -2965,9 +2957,10 @@ def _both_on_purpose(names) -> set:
 def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
 	"""F1 (coordinator's definition, 15 Sep 2026). An employee-day is flagged when
 	(a) two Active submitted assignments cover it and their scheduled hours overlap
-	or add up to more than MAX_CONCURRENT_SHIFT_HOURS — unless one carries
-	both_shifts_on_purpose — (HR ends one), or (b) a tap on it is stamped to a shift
-	that is not the rostered shift for that date (fixable: re-stamp)."""
+	or add up to more than MAX_CONCURRENT_SHIFT_HOURS (HR ends one), or (b) a tap
+	on it is stamped to a shift that is not the rostered shift for that date
+	(fixable: re-stamp). A covering assignment carrying both_shifts_on_purpose
+	exempts the employee-day from both checks (E4/E32, I1): not listed at all."""
 	ctx = ctx or _context(win)
 	times, planned, held = ctx["times"], [], []
 	on_purpose = _both_on_purpose(
@@ -3003,7 +2996,12 @@ def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
 	for (employee, day), taps in _sorted_days(ctx):
 		if not _in_window(win, day):
 			continue
-		rostered = rostered_shift(_covering(ctx, employee, day), times)
+		covering = _covering(ctx, employee, day)
+		if any(a.name in on_purpose for a in covering):
+			# E4/E32 (I1): HR ticked both shifts on purpose — the taps on the other
+			# shift are that person's real work, not on the list at all
+			continue
+		rostered = rostered_shift(covering, times)
 		if not rostered:
 			continue  # shiftless: section b's family
 		wrong = sorted({t.shift for t in taps if t.shift and t.shift != rostered})

@@ -287,13 +287,12 @@ class TestPlan(_Step):
 		plan = self.plan()
 		self.assertEqual((plan["planned"], plan["held_back"], plan["assignments"]), ([], [], []))
 
-	def test_e4_two_shifts_on_purpose_are_left_alone_on_purpose(self):
+	def test_e4_two_shifts_on_purpose_are_not_on_the_list_at_all(self):
+		# I1 (integration review): held "on purpose" every night still fed the S7
+		# recheck and ate RECHECK_CAP; E4/E32 — the ticked person is simply not listed.
 		with patch.object(rec, "_both_on_purpose", return_value={"SA-NIGHT"}):
 			plan = self.plan()
-		self.assertEqual(plan["planned"], [])
-		self.assertEqual(plan["assignments"], [])
-		self.assertTrue(plan["held_back"])
-		self.assertTrue(all("on purpose" in h["reason"] and h["hr"] is False for h in plan["held_back"]))
+		self.assertEqual((plan["planned"], plan["assignments"], plan["held_back"]), ([], [], []))
 
 	def test_e13_an_invented_night_row_already_paid_goes_to_hr_untouched(self):
 		self.financial[(RIA, "2026-09-09")] = "OT-REQ-9"
