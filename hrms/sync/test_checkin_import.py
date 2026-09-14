@@ -802,8 +802,22 @@ class TestAPunchDeletedHereStaysDeleted(_SiteCase):
 	def test_a_deleted_imported_punch_is_refused_deleted_here(self):
 		result = self.import_with([deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1")])
 		self.assertEqual(self.site.checkins(), {})
-		self.assertEqual(result["outcomes"]["refused"], 1)
-		self.assertIn("R-1 (deleted_here)", result["outcomes"]["sample"][0])
+		# A settled decision: counted apart, never sampled into the error log.
+		self.assertEqual(result["outcomes"]["deleted_here"], 1)
+		self.assertEqual(result["outcomes"]["refused"], 0)
+		self.assertFalse([line for line in result["outcomes"]["sample"] if "deleted_here" in line])
+
+	def test_many_hub_deletes_never_crowd_an_unmapped_employee_out_of_the_log(self):
+		# Review of eef9bb6e8: ten sampled deletions hid the one line that needs someone.
+		punches = [
+			punch("EMP-1", f"2026-09-03 08:{minute:02d}:00", "IN", f"R-{minute}") for minute in range(12)
+		]
+		punches.append(punch("EMP-9", "2026-09-03 09:00:00", "IN", "R-UNMAPPED"))
+		deleted = [deleted_punch(f"HR-EMP-CHK-{minute}", f"nasty-live::R-{minute}") for minute in range(12)]
+		self.use(FakeSite(employees=["EMP-1"], deleted=deleted))
+		result = self.run_import(FakeClient(punches))
+		self.assertEqual(result["outcomes"]["deleted_here"], 12)
+		self.assertIn("unmapped EMP-9: 1 punch(es)", result["outcomes"]["sample"])
 
 	def test_a_deleted_local_punch_blocks_nothing(self):
 		result = self.import_with(
@@ -826,6 +840,8 @@ class TestAPunchDeletedHereStaysDeleted(_SiteCase):
 		calls = [filters for doctype, filters in self.site.get_all_calls if doctype == "Deleted Document"]
 		self.assertEqual(len(calls), 1)
 		self.assertEqual(calls[0]["creation"][0], ">=")
+		# TODAY is 2026-09-14 and no Completed run exists: window from 09-01, minus one day.
+		self.assertTrue(str(calls[0]["creation"][1]).startswith("2026-08-31"), calls[0]["creation"])
 
 
 # --- the heal: dry run first ------------------------------------------------------
@@ -942,7 +958,7 @@ class TestImportMissingCheckins(_WhitelistCase):
 		site.tables["Deleted Document"]["DEL-1"] = deleted_punch("HR-EMP-CHK-1", "nasty-live::R-1")
 		self.use(site, self.PUNCHES)
 		result = ci.import_missing_checkins(INSTANCE, "2026-09-01", "2026-09-14", dry_run=1)
-		self.assertEqual((result["to_insert"], result["refused"]), (1, 1))
+		self.assertEqual((result["to_insert"], result["refused"], result["deleted_here"]), (1, 1, 1))
 		self.assertEqual(
 			[(row["remote_name"], row["reason"]) for row in result["refused_sample"]],
 			[("R-1", "deleted_here")],

@@ -322,7 +322,8 @@ def _local_punches(employees, window) -> list:
 
 def _last_completed_start(instance_name: str):
 	"""When the last Completed run for this instance started — `runner.get_watermark`'s
-	query, repeated so this module needs no runner import."""
+	query, repeated so this module needs no runner import. Keep the two in step: a
+	different anchor would let the punch window and the mirror disagree."""
 	last = frappe.get_all(
 		"HRMS Sync Run",
 		filters={"source_instance": instance_name, "status": "Completed"},
@@ -595,7 +596,14 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 		last_completed or "never",
 		" — " + uncovered if uncovered else "",
 	)
-	outcomes = {"unmapped": 0, "refused": 0, "insert_errors": 0, "busy": False, "sample": []}
+	outcomes = {
+		"unmapped": 0,
+		"refused": 0,
+		"deleted_here": 0,
+		"insert_errors": 0,
+		"busy": False,
+		"sample": [],
+	}
 	result = {
 		"doctype": DOCTYPE,
 		"pulled": 0,
@@ -626,14 +634,20 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 	plan = _plan(remote_rows, window, instance_name)
 	outcome = _insert_all(plan["insert"], instance_name)
 	inserted = len(outcome["inserted"])
+	# A hub delete is a settled decision (Nabil, 14 Sep 2026): counted, never sampled,
+	# so it cannot crowd the unmapped and refused lines that need someone out of the
+	# ten-line error log for the weeks it stays inside the window.
+	deleted_here = [entry for entry in plan["refused"] if entry.get("reason") == "deleted_here"]
+	refused = [entry for entry in plan["refused"] if entry.get("reason") != "deleted_here"]
 	outcomes.update(
 		unmapped=sum(plan["unmapped"].values()),
-		refused=len(plan["refused"]),
+		refused=len(refused),
+		deleted_here=len(deleted_here),
 		insert_errors=outcome["errored"],
 		sample=(
 			[
 				f"refused {entry['remote_name']} ({entry['reason']}) for {entry['employee']} at {entry['time']}"
-				for entry in plan["refused"]
+				for entry in refused
 			]
 			+ [f"unmapped {employee}: {count} punch(es)" for employee, count in plan["unmapped"].items()]
 			+ outcome["row_errors"]
@@ -648,7 +662,7 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 		+ outcome["already_imported"],
 	)
 	logger.info(
-		"[checkin_import] %s %s..%s: pulled=%s inserted=%s skipped=%s unmapped=%s refused=%s insert_errors=%s",
+		"[checkin_import] %s %s..%s: pulled=%s inserted=%s skipped=%s unmapped=%s refused=%s deleted_here=%s insert_errors=%s",
 		instance_name,
 		window[0],
 		window[1],
@@ -657,6 +671,7 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 		result["skipped"],
 		outcomes["unmapped"],
 		outcomes["refused"],
+		outcomes["deleted_here"],
 		outcomes["insert_errors"],
 	)
 	return result
@@ -723,6 +738,7 @@ def import_missing_checkins(instance: str | None = None, from_date=None, to_date
 		"to_insert": len(plan["insert"]),
 		"already_imported": len(plan["already_imported"]),
 		"refused": len(plan["refused"]),
+		"deleted_here": sum(1 for entry in plan["refused"] if entry.get("reason") == "deleted_here"),
 		"unmapped_employees": [
 			{"employee": employee, "remote_punches": count} for employee, count in plan["unmapped"].items()
 		],
