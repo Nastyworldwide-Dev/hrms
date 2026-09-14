@@ -7,7 +7,8 @@ import ast
 import pathlib
 import sys
 import unittest
-from datetime import date
+from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 sys.path[:0] = [
@@ -46,6 +47,10 @@ class _Case(unittest.TestCase):
 			patch.object(auto, "notify_hr", MagicMock()),
 			patch.object(auto, "nowdate", return_value="2026-09-15"),
 			patch.object(frappe, "log_error", MagicMock(return_value=MagicMock(name="ERR-1"))),
+			patch.object(
+				frappe, "get_single", lambda doctype: SimpleNamespace(get=lambda k, d=None: d), create=True
+			),
+			patch.object(auto.rec, "unclaimable_rows", lambda win, **kw: []),
 		]
 		for p in patches:
 			p.start()
@@ -164,6 +169,96 @@ class TestWhatNeedsHR(unittest.TestCase):
 	def test_a_day_the_engine_could_not_fix_needs_hr(self):
 		self.assertTrue(auto.needs_hr({"reason": "the engine would not mark this day: no shift", "hr": True}))
 		self.assertFalse(auto.needs_hr({"reason": "rebuild failed: boom", "hr": False}))
+
+
+class TestSwitchesAndRecheck(_Case):
+	"""S7 (15 Sep 2026): per-family off switches read from HR Settings (a missing
+	field reads as ON), and the nightly run re-checks every employee-day the
+	detectors list as fixable, however old, oldest first, at most RECHECK_CAP a
+	night, never today or yesterday."""
+
+	def setUp(self):
+		super().setUp()
+		self.settings = {}
+		self.rows = []
+		patches = [
+			patch.object(
+				frappe,
+				"get_single",
+				lambda doctype: SimpleNamespace(
+					get=lambda key, default=None: self.settings.get(key, default)
+				),
+				create=True,
+			),
+			patch.object(auto.rec, "unclaimable_rows", lambda win, **kw: self.flagged(win)),
+		]
+		for p in patches:
+			p.start()
+			self.addCleanup(p.stop)
+
+	def flagged(self, win):
+		return [r for r in self.rows if win.start <= date.fromisoformat(r["date"]) <= win.end]
+
+	def fixable(self, day, employee="E1"):
+		return {"employee": employee, "date": day, "status": auto.rec.STATUS_FIXABLE, "family": "F1"}
+
+	def windows(self):
+		return sorted({(c[1], c[2]) for c in self.calls})
+
+	def test_a_family_switched_off_in_hr_settings_is_skipped_and_said_so(self):
+		self.settings["attendance_recovery_skip_heal"] = 1
+		summary = auto.run_once()
+		self.assertNotIn("heal", [c[0] for c in self.calls])
+		self.assertIn("rebuild", [c[0] for c in self.calls])
+		self.assertEqual(summary["steps"]["heal"]["skipped"], "switched off in HR Settings")
+		self.assertIn("heal", frappe.log_error.call_args.kwargs["message"])
+
+	def test_a_switch_field_that_does_not_exist_yet_reads_as_on(self):
+		auto.run_once()
+		self.assertEqual({c[0] for c in self.calls}, set(auto.AUTO_STEPS))
+
+	def test_nightly_rechecks_flagged_days_outside_the_window_oldest_first(self):
+		self.rows = [
+			self.fixable("2026-08-03"),
+			self.fixable("2026-08-04", "E2"),
+			self.fixable("2026-08-20"),
+			self.fixable("2026-09-10"),  # inside the 7-day window already
+			{"employee": "E3", "date": "2026-08-10", "status": auto.rec.STATUS_NEEDS_HR, "family": "F2"},
+		]
+		auto.run_nightly()
+		self.assertEqual(
+			self.windows(),
+			[("2026-08-03", "2026-08-04"), ("2026-08-20", "2026-08-20"), ("2026-09-07", "2026-09-13")],
+		)
+		self.assertEqual(frappe.log_error.call_count, 1)
+		self.assertIn("3 flagged day(s) re-checked", frappe.log_error.call_args.kwargs["message"])
+
+	def test_the_recheck_never_touches_today_or_yesterday_and_caps_at_200_days(self):
+		day = date(2026, 8, 1)
+		while day <= date(2026, 9, 15):
+			for n in range(10):
+				self.rows.append(self.fixable(day.isoformat(), f"E{n}"))
+			day += timedelta(days=1)
+		auto.run_nightly()
+		starts = [w[0] for w in self.windows()]
+		ends = [w[1] for w in self.windows()]
+		self.assertEqual(min(starts), "2026-08-01")
+		# 200 employee-days = 20 days x 10 people: the re-check stops at 20 August
+		self.assertNotIn("2026-08-21", starts + ends)
+		self.assertTrue(all(e <= "2026-09-13" for e in ends))
+
+	def test_the_recheck_has_its_own_switch(self):
+		self.rows = [self.fixable("2026-08-03")]
+		self.settings["attendance_recovery_skip_recheck"] = 1
+		auto.run_nightly()
+		self.assertEqual(self.windows(), [("2026-09-07", "2026-09-13")])
+
+	def test_e34_the_summary_has_one_line_per_family_fixed_on_purpose_needs_hr(self):
+		auto.run_once()
+		message = frappe.log_error.call_args.kwargs["message"]
+		self.assertRegex(message, r"rebuild \(F6/F9/F13[^)]*\): fixed 2 · on purpose 2 · needs HR 4")
+		self.assertRegex(message, r"rostered_shift \(F1[^)]*\): fixed 0 · on purpose 0 · needs HR 0")
+		self.assertRegex(message, r"close_lone_ins \(F3[^)]*\)")
 
 
 class TestWiring(unittest.TestCase):
