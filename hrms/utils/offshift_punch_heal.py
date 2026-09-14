@@ -48,6 +48,7 @@ from frappe.utils import cint, get_datetime, getdate, now_datetime
 from hrms.overrides.company_scope import require_unfenced
 from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
 from hrms.utils.attendance_day_audit import _job_can_read
+from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.filing_window import cycle_start
 
 logger = logging.getLogger(__name__)
@@ -282,6 +283,13 @@ def _heal(start, end=None, *, dry_run, for_update, not_before=None, report_expos
 				raise
 			frappe.db.rollback(save_point=ROW_SAVEPOINT)
 			logger.exception("[offshift_punch_heal] could not write %s; skipped", punch.name)
+			# After the row rollback, so it is not undone with the row. Worker logs
+			# are unread on Frappe Cloud; a punch skipped every hour must be visible.
+			frappe.log_error(
+				title="Off-shift punch heal skipped a punch",
+				reference_doctype="Employee Checkin",
+				reference_name=punch.name,
+			)
 			entry["held_because"] = f"could not be written: {exc}"
 			not_readable.append(entry)
 			continue
@@ -328,7 +336,7 @@ def _window(from_date, to_date):
 	return start, datetime.combine(end_day, datetime.min.time()) + timedelta(days=1)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def heal_offshift_punches(from_date=None, to_date=None, dry_run=1, employee=None, not_before=None) -> dict:
 	"""Give shiftless local punches the shift today's rule gives them, then let
 	each affected shift type re-mark its days. Dry run by default.
@@ -339,7 +347,7 @@ def heal_offshift_punches(from_date=None, to_date=None, dry_run=1, employee=None
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	require_unfenced(_("re-resolve punches across every company"))
-	dry_run = cint(dry_run)
+	dry_run = wants_dry_run(dry_run)
 	start, end = _window(from_date, to_date)
 	not_before = getdate(not_before) if not_before else cycle_start(getdate(now_datetime()))
 	result = _heal(
@@ -415,10 +423,14 @@ def heal_recent_offshift_punches() -> int:
 		result = _heal(start, dry_run=0, for_update=True, log_type="OUT", limit=RECENT_LIMIT, order="desc")
 		if result["candidates"] >= RECENT_LIMIT:
 			logger.warning("[offshift_punch_heal] hourly pass hit the limit of %d", RECENT_LIMIT)
-			frappe.log_error(
-				title="Off-shift punch heal hit its limit",
-				message=f"{result['candidates']} shiftless check-outs in the last 2 days; limit {RECENT_LIMIT}.",
-			)
+			try:
+				frappe.log_error(
+					title="Off-shift punch heal hit its limit",
+					message=f"{result['candidates']} shiftless check-outs in the last 2 days; limit {RECENT_LIMIT}.",
+				)
+			except Exception:
+				# Never undo an hour of heals to lose a log line.
+				logger.exception("[offshift_punch_heal] could not record the limit")
 		if not frappe.in_test:
 			# Releases the payroll row locks taken above before the long job starts.
 			frappe.db.commit()  # nosemgrep

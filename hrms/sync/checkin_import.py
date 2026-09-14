@@ -72,6 +72,7 @@ from hrms.sync.missing_checkins import (
 	local_employees,
 	resolve_window,
 )
+from hrms.utils.dry_run import wants_dry_run
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +210,7 @@ def parse_employee_days(value) -> list[tuple[str, date]]:
 			employee, day = item.get("employee"), item.get("attendance_date")
 		else:
 			employee, day = item
-		if not employee or not day:
+		if not isinstance(employee, str) or not employee or not day:
 			raise ValueError(f"not an (employee, attendance_date) pair: {item!r}")
 		days.append((employee, _to_date(day)))
 	return list(dict.fromkeys(days))
@@ -563,7 +564,7 @@ def import_source_checkins(client, instance_name: str, today=None) -> dict:
 # --- the heal: dry run first ------------------------------------------------------
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def import_missing_checkins(instance: str | None = None, from_date=None, to_date=None, dry_run=1) -> dict:
 	"""Fill old gaps: source punches in [from_date, to_date] missing on this hub.
 
@@ -581,7 +582,7 @@ def import_missing_checkins(instance: str | None = None, from_date=None, to_date
 
 	from hrms.sync.client import RemoteInstanceClient, RemoteInstanceError
 
-	dry_run = cint(dry_run)
+	dry_run = wants_dry_run(dry_run)
 	try:
 		window = resolve_window(from_date, to_date, getdate())
 	except ValueError as e:
@@ -777,7 +778,7 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 	return entry
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def remark_attendance(employee_days, dry_run=1) -> dict:
 	"""Re-mark exactly these (employee, attendance_date) days from their punches.
 
@@ -802,7 +803,7 @@ def remark_attendance(employee_days, dry_run=1) -> dict:
 	if len(days) > MAX_REMARK_DAYS:
 		frappe.throw(_("{0} days in one call; send at most {1}.").format(len(days), MAX_REMARK_DAYS))
 
-	apply = not cint(dry_run)
+	apply = not wants_dry_run(dry_run)
 	results = [_remark_day(employee, day, apply) for employee, day in days]
 	counts = dict(Counter(row["action"] for row in results))
 	logger.info(

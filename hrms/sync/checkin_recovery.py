@@ -42,6 +42,7 @@ from frappe import _
 from frappe.utils import add_days, cint, get_datetime, getdate
 
 from hrms.overrides.company_scope import allowed_companies, require_unfenced
+from hrms.utils.dry_run import wants_dry_run
 
 logger = logging.getLogger(__name__)
 
@@ -404,7 +405,7 @@ def recover_overwritten_checkins(from_date, to_date, dry_run=1) -> dict:
 	require_unfenced("recover overwritten check-ins")
 	plan = collect(from_date, to_date)["plan"]
 	inserts = [e for e in plan if e["action"] == "insert"]
-	if cint(dry_run):
+	if wants_dry_run(dry_run):
 		logger.info("[checkin_recovery] dry run by %s: %d inserts", frappe.session.user, len(inserts))
 		return {"dry_run": True, "inserts": len(inserts), "plan": plan}
 

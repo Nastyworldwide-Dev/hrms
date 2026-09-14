@@ -25,6 +25,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, get_datetime, getdate
 
+from hrms.utils.dry_run import wants_dry_run
+
 logger = logging.getLogger(__name__)
 
 # ceiling: judge_day is a 185-line if/elif returning 18 distinct verdicts, and
@@ -527,9 +529,9 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 	those days. System Manager only; dry run by default; writes nothing else."""
 	frappe.only_for("System Manager")
 	days = collect(from_date, to_date)["days"]
-	locked = _financially_locked(days, for_update=not cint(dry_run))
+	locked = _financially_locked(days, for_update=not wants_dry_run(dry_run))
 	plan = plan_repairs(days, locked)
-	if cint(dry_run):
+	if wants_dry_run(dry_run):
 		logger.info(
 			"[attendance_day_audit] dry run by %s: %d day(s), %d held back for a payout",
 			frappe.session.user,

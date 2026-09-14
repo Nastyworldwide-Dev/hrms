@@ -263,7 +263,7 @@ class TestJobReadability(unittest.TestCase):
 	def test_the_endpoint_locks_only_when_it_is_about_to_write(self):
 		src = pathlib.Path(attendance_day_audit.__file__).read_text()
 		body = src[src.index("def repair_attendance_days") :]
-		self.assertIn("for_update=not cint(dry_run)", body)
+		self.assertIn("for_update=not wants_dry_run(dry_run)", body)
 
 
 class TestWindowGuard(unittest.TestCase):

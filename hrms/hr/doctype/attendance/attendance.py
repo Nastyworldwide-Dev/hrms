@@ -31,6 +31,7 @@ from hrms.hr.utils import (
 	get_holidays_for_employee,
 	validate_active_employee,
 )
+from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.holiday_list import get_holiday_dates_between_range
 from hrms.utils.identity import get_employee
 
@@ -823,7 +824,7 @@ def repair_typed_working_hours(from_date, to_date, dry_run=1) -> dict:
 	guard as the OT backfill: a day a payout depends on is reported, never
 	rewritten.
 	"""
-	dry_run = cint(dry_run)
+	dry_run = wants_dry_run(dry_run)
 	logger.info("[attendance] typed-hours repair %s..%s dry_run=%s", from_date, to_date, dry_run)
 	names = frappe.get_all(
 		"Attendance",
@@ -921,7 +922,7 @@ def recompute_ot_backfill(from_date, to_date, dry_run=1):
 	Run: bench --site <site> execute
 	hrms.hr.doctype.attendance.attendance.recompute_ot_backfill
 	--kwargs "{'from_date':'2026-06-16','to_date':'2026-07-31','dry_run':1}\""""
-	dry_run = cint(dry_run)
+	dry_run = wants_dry_run(dry_run)
 	logger.info("[attendance] OT backfill %s..%s dry_run=%s", from_date, to_date, dry_run)
 	names = frappe.get_all(
 		"Attendance",

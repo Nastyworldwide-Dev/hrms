@@ -449,6 +449,16 @@ class TestHourlyPass(_Case):
 		self.assertNotIn(
 			{"save_point": "offshift_punch_heal"}, [c.kwargs for c in self.fake_db.rollback.call_args_list]
 		)
+		self.assertIn(
+			"Off-shift punch heal skipped a punch",
+			[c.kwargs.get("title") for c in self.log_error.call_args_list],
+		)
+
+	def test_a_failing_limit_log_does_not_undo_the_hour(self):
+		self.log_error.side_effect = RuntimeError("Error Log insert failed")
+		with patch.object(heal, "RECENT_LIMIT", 1), self.at(datetime(2026, 9, 4, 11, 0)):
+			self.assertEqual(heal.heal_recent_offshift_punches(), 1)
+		self.assertEqual(self.db.saved, ["OUT-0904"])
 
 	def test_hitting_the_hourly_limit_reaches_the_error_log(self):
 		with patch.object(heal, "RECENT_LIMIT", 1), self.at(datetime(2026, 9, 4, 11, 0)):
