@@ -348,5 +348,149 @@ class TestFinalizeCancelByTheApprover(unittest.TestCase):
 		self.assertFalse(doc.flags_at_cancel.get("ignore_permissions"))
 
 
+class TestCanCancelApproved(unittest.TestCase):
+	"""Hotfix 14 Sep 2026: a reports_to-only manager saw no Cancel on an approved
+	request (PWA and Desk) although the guard lets them cancel it. The read
+	endpoint answers with the guard's own decision — no second copy of the rule."""
+
+	CALLER = "manager@example.com"
+	STAFF_USER = "staff@example.com"
+	MESSAGE = "Only HR or the approver can cancel an approved request."
+	PAID = (
+		"This overtime is already paid in a submitted salary slip. "
+		"Correct it with a payroll adjustment instead."
+	)
+
+	@classmethod
+	def setUpClass(cls):
+		TestFinalizeCancelByTheApprover.setUpClass.__func__(cls)
+
+	def _ask(
+		self,
+		doctype="Leave Application",
+		stored="Approved",
+		docstatus=1,
+		roles=("Employee",),
+		own_employee=None,
+		reports_to=None,
+		readable=True,
+		paid_slip=None,
+		**fields,
+	):
+		from unittest.mock import patch
+
+		frappe, approval = self.frappe, self.approval
+		doc = frappe._dict(
+			doctype=doctype, name="REQ-1", docstatus=docstatus, employee="HR-EMP-STAFF", **fields
+		)
+		employee_user = self.CALLER if own_employee == "HR-EMP-STAFF" else self.STAFF_USER
+
+		def get_value(dt, name=None, fieldname=None, **kw):
+			if dt == doctype and name == "REQ-1" and isinstance(fieldname, str):
+				return stored
+			if dt == "OT Request":
+				return frappe._dict(
+					employee="HR-EMP-STAFF", ot_date="2026-08-20", compensation="Overtime Pay"
+				)
+			if dt == "Salary Slip":
+				return paid_slip
+			if dt == "Employee":
+				return {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}[fieldname]
+			return None
+
+		db = self.MagicMock()
+		db.get_value.side_effect = get_value
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "get_roles", return_value=list(roles), create=True),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(frappe, "session", frappe._dict(user=self.CALLER)),
+			patch.object(approval, "_request_read_allowed", return_value=readable),
+			patch("hrms.overrides.company_scope.company_visible", return_value=True),
+			patch("hrms.utils.identity.own_employees", return_value=[own_employee] if own_employee else []),
+		):
+			return approval.can_cancel_approved(doctype, "REQ-1")
+
+	def test_the_reports_to_manager_may_cancel(self):
+		for doctype in ("Leave Application", "OT Request", "Attendance Request", "Travel Request"):
+			with self.subTest(doctype=doctype):
+				stored = None if doctype == "Travel Request" else "Approved"
+				self.assertEqual(
+					self._ask(doctype, stored=stored, own_employee="HR-EMP-MGR", reports_to="HR-EMP-MGR"),
+					{"can_cancel": True, "reason": None},
+				)
+
+	def test_hr_and_the_named_approver_may_cancel(self):
+		self.assertEqual(self._ask(roles=("HR User",)), {"can_cancel": True, "reason": None})
+		self.assertEqual(
+			self._ask(leave_approver=self.CALLER, own_employee="HR-EMP-MGR"),
+			{"can_cancel": True, "reason": None},
+		)
+
+	def test_the_employee_may_not_even_as_hr(self):
+		self.assertEqual(
+			self._ask(roles=("HR Manager",), own_employee="HR-EMP-STAFF"),
+			{"can_cancel": False, "reason": self.MESSAGE},
+		)
+
+	def test_an_unrouted_viewer_may_not(self):
+		self.assertEqual(
+			self._ask(own_employee="HR-EMP-OTHER", reports_to="HR-EMP-MGR"),
+			{"can_cancel": False, "reason": self.MESSAGE},
+		)
+
+	def test_paid_overtime_is_refused_even_for_hr(self):
+		self.assertEqual(
+			self._ask("OT Request", roles=("HR Manager",), paid_slip="Sal Slip/1"),
+			{"can_cancel": False, "reason": self.PAID},
+		)
+
+	def test_a_request_that_is_not_approved_and_submitted_is_not_its_business(self):
+		for kwargs in ({"stored": "Rejected"}, {"stored": "Open"}, {"docstatus": 0}, {"docstatus": 2}):
+			with self.subTest(**kwargs):
+				self.assertEqual(
+					self._ask(roles=("HR Manager",), **kwargs), {"can_cancel": False, "reason": None}
+				)
+		self.assertEqual(
+			self._ask("Salary Slip", roles=("HR Manager",)), {"can_cancel": False, "reason": None}
+		)
+
+	def test_a_request_the_caller_cannot_read_is_refused(self):
+		with self.assertRaises(self.frappe.PermissionError):
+			self._ask(roles=("HR Manager",), readable=False)
+
+	def test_it_is_a_whitelisted_read_sharing_the_guard(self):
+		fn = _fn("can_cancel_approved")
+		decorators = [ast.unparse(d) for d in fn.decorator_list]
+		self.assertTrue(any(d.startswith("frappe.whitelist") for d in decorators), decorators)
+		self.assertNotIn("POST", "".join(decorators))
+		src = ast.unparse(fn)
+		self.assertIn("cancel_refusal(", src)
+		self.assertIn("_request_read_allowed(", src)
+		self.assertNotIn("_is_routed_approver(", src, "the rule lives in cancel_refusal only")
+
+
+DESK_CANCEL_JS = pathlib.Path(__file__).resolve().parents[1] / "public/js/utils/approved_request_cancel.js"
+
+
+class TestDeskApprovedCancelWiring(unittest.TestCase):
+	def test_desk_doctypes_match_the_guard_map(self):
+		guard = pathlib.Path(__file__).resolve().parents[1] / "utils/approved_request_guard.py"
+		tree = ast.parse(guard.read_text())
+		keys = next(
+			{k.value for k in n.value.keys}
+			for n in ast.walk(tree)
+			if isinstance(n, ast.Assign)
+			and any(getattr(t, "id", None) == "DECISION_FIELD_BY_DOCTYPE" for t in n.targets)
+		)
+		js = _array_items(DESK_CANCEL_JS.read_text(), "APPROVED_CANCEL_DOCTYPES = [")
+		self.assertEqual(keys, js)
+
+	def test_it_ships_in_the_desk_bundle(self):
+		bundle = pathlib.Path(__file__).resolve().parents[1] / "public/js/hrms.bundle.js"
+		self.assertIn('import "./utils/approved_request_cancel";', bundle.read_text())
+
+
 if __name__ == "__main__":
 	unittest.main()

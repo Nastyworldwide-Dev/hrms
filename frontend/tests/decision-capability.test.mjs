@@ -559,7 +559,7 @@ test("approvable FormView never falls back to a raw Submit while its decision ca
 })
 
 test("FormView offers Cancel on an approved request to HR and the approver, never the employee", () => {
-	const button = (status, viewer, canCancel = false) => {
+	const button = (status, viewer, canCancel = false, serverSays = false) => {
 		const context = vm.createContext({
 			computed,
 			props: {
@@ -578,6 +578,7 @@ test("FormView offers Cancel on an approved request to HR and the approver, neve
 			hasPermission: (action) => action === "cancel" && canCancel,
 			canOfferCancel,
 			cancelViewer: ref(viewer),
+			approvedCancel: ref(serverSays),
 			REQUEST_SUMMARY_FIELDS: Object.fromEntries(types.map((dt) => [dt, []])),
 		})
 		vm.runInContext(
@@ -604,14 +605,29 @@ test("FormView offers Cancel on an approved request to HR and the approver, neve
 		roles: ["Employee"],
 		employee: "OTHER",
 	}
-	assert.equal(button("Approved", hr), "Cancel")
-	assert.equal(button("Approved", boss), "Cancel")
+	const manager = {
+		user: "manager@example.com",
+		roles: ["Employee"],
+		employee: "MANAGER",
+	}
+	assert.equal(button("Approved", hr, false, true), "Cancel")
+	assert.equal(button("Approved", boss, false, true), "Cancel")
+	assert.equal(
+		button("Approved", manager, false, true),
+		"Cancel",
+		"reports_to manager with no approver field, server says yes"
+	)
+	assert.equal(
+		button("Approved", hr),
+		null,
+		"no Cancel until the server says yes"
+	)
 	assert.equal(
 		button("Approved", staff, true),
 		null,
 		"own request, even as HR with cancel"
 	)
-	assert.equal(button("Approved", other, true), null)
+	assert.equal(button("Approved", other, true), null, "server says no")
 	assert.equal(
 		button("Rejected", other),
 		null,

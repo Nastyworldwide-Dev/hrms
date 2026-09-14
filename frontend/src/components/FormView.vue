@@ -420,6 +420,7 @@ import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 import { FileAttachment, guessStatusColor } from "@/composables"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
+import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency } from "@/utils/formatters"
@@ -782,6 +783,13 @@ const permittedWriteFields = createResource({
 	params: { doctype: props.doctype },
 })
 
+// Approved: Cancel only when the server's guard says this viewer may.
+const approvedCancel = useApprovedCancel(() =>
+	props.id && canOfferCancel(formModel.value, props.doctype, cancelViewer.value) === "approved"
+		? { doctype: props.doctype, name: props.id, modified: formModel.value?.modified }
+		: null
+)
+
 const formButton = computed(() => {
 	if (!props.showFormButton) return null
 
@@ -796,7 +804,10 @@ const formButton = computed(() => {
 			return "Submit"
 		}
 		const cancelOffer = canOfferCancel(formModel.value, props.doctype, cancelViewer.value)
-		if (cancelOffer === "approver" || (cancelOffer === "own" && hasPermission("cancel"))) {
+		if (
+			(cancelOffer === "approved" && approvedCancel.value) ||
+			(cancelOffer === "own" && hasPermission("cancel"))
+		) {
 			return "Cancel"
 		}
 		// submitted-and-cancel-blocked, or any other docstatus: no button.

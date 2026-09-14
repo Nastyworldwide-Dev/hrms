@@ -1,10 +1,10 @@
-// Owner ruling, 14 Sep 2026: HR and the request's approver may cancel an approved
-// request; the employee (and anyone else) may not. The server guard decides; this
-// keeps the PWA from offering a Cancel that can only fail.
+// Owner ruling, 14 Sep 2026: HR and the request's approver (named or reports_to)
+// may cancel an approved request; the employee (and anyone else) may not. For an
+// approved request the PWA asks the server (can_cancel_approved) — this rule only
+// says whether to ask.
 // Run: cd frontend && node --test src/utils/__tests__/cancelRule.test.js
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 
 import { canOfferCancel } from "../cancelRule.js"
 
@@ -35,7 +35,7 @@ test("a submitted request that is not approved is the cancel permission's call",
 	assert.equal(canOfferCancel(claim, "Expense Claim", OTHER), "own")
 })
 
-test("HR roles may cancel an approved request of any type", () => {
+test("an approved request of any type is referred to the server for non-employees", () => {
 	const types = [
 		"Leave Application",
 		"Expense Claim",
@@ -52,23 +52,21 @@ test("HR roles may cancel an approved request of any type", () => {
 			const viewer = { user: "hr@example.com", roles: ["Employee", role], employee: "EMP-HR" }
 			assert.equal(
 				canOfferCancel(approved(doctype), doctype, viewer),
-				"approver",
+				"approved",
 				`${role} ${doctype}`
 			)
 		}
 })
 
-test("the named approver may cancel an approved request", () => {
-	const viewer = { user: "boss@example.com", roles: ["Employee"], employee: "EMP-BOSS" }
-	for (const [doctype, field] of [
-		["Leave Application", "leave_approver"],
-		["Expense Claim", "expense_approver"],
-		["Shift Request", "approver"],
-	]) {
-		const doc = approved(doctype, { [field]: "boss@example.com" })
-		assert.equal(canOfferCancel(doc, doctype, viewer), "approver", doctype)
-		assert.equal(canOfferCancel(approved(doctype), doctype, viewer), false, `${doctype} not named`)
-	}
+test("a reports_to manager with no approver field is referred to the server", () => {
+	const manager = { user: "boss@example.com", roles: ["Employee"], employee: "EMP-BOSS" }
+	for (const doctype of [
+		"Leave Application",
+		"OT Request",
+		"Attendance Request",
+		"Travel Request",
+	])
+		assert.equal(canOfferCancel(approved(doctype), doctype, manager), "approved", doctype)
 })
 
 test("the employee never gets Cancel on their own approved request, even as HR or approver", () => {
@@ -79,12 +77,6 @@ test("the employee never gets Cancel on their own approved request, even as HR o
 	assert.equal(canOfferCancel(approved("Employee Advance"), "Employee Advance", hrSelf), false)
 })
 
-test("an unrelated employee gets no Cancel on an approved request", () => {
-	for (const doctype of ["Leave Application", "OT Request", "Travel Request"])
-		assert.equal(canOfferCancel(approved(doctype), doctype, OTHER), false, doctype)
-	assert.equal(canOfferCancel(approved("Leave Application"), "Leave Application"), false)
-})
-
 test("Expense Claim decides in approval_status", () => {
 	const doc = {
 		doctype: "Expense Claim",
@@ -92,8 +84,11 @@ test("Expense Claim decides in approval_status", () => {
 		approval_status: "Approved",
 		status: "Unpaid",
 	}
-	assert.equal(canOfferCancel(doc, "Expense Claim", OTHER), false)
-	assert.equal(canOfferCancel(doc, "Expense Claim", { ...OTHER, roles: ["HR User"] }), "approver")
+	assert.equal(canOfferCancel(doc, "Expense Claim", OTHER), "approved")
+	assert.equal(
+		canOfferCancel({ ...doc, approval_status: "Rejected" }, "Expense Claim", OTHER),
+		"own"
+	)
 })
 
 test("only a submitted document can be cancelled at all", () => {
@@ -110,30 +105,12 @@ test("only a submitted document can be cancelled at all", () => {
 })
 
 test("doctype may be passed when the doc does not carry it", () => {
-	const hr = { user: "hr@example.com", roles: ["HR User"] }
 	assert.equal(
 		canOfferCancel({ docstatus: 1, status: "Approved" }, "Leave Application", OTHER),
-		false
+		"approved"
 	)
 	assert.equal(
-		canOfferCancel({ docstatus: 1, approval_status: "Approved" }, "Expense Claim", hr),
-		"approver"
+		canOfferCancel({ docstatus: 1, approval_status: "Draft" }, "Expense Claim", OTHER),
+		"own"
 	)
-})
-
-test("both Cancel buttons apply the rule with the viewer", () => {
-	const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
-	const offer =
-		/cancelOffer === "approver" \|\|\s*\(cancelOffer === "own" && hasPermission\("cancel"\)\)/
-	const sheet = read("../../components/RequestActionSheet.vue")
-	assert.match(sheet, /import \{ canOfferCancel \} from "@\/utils\/cancelRule"/)
-	assert.match(
-		sheet,
-		/canOfferCancel\(document\.doc, props\.modelValue\?\.doctype, cancelViewer\.value\)/
-	)
-	assert.match(sheet.replaceAll("'", '"'), offer)
-	const form = read("../../components/FormView.vue")
-	assert.match(form, /import \{ canOfferCancel \} from "@\/utils\/cancelRule"/)
-	assert.match(form, /canOfferCancel\(formModel\.value, props\.doctype, cancelViewer\.value\)/)
-	assert.match(form, offer)
 })

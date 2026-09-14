@@ -178,7 +178,10 @@
 		</div>
 
 		<div
-			v-else-if="cancelOffer === 'approver' || (cancelOffer === 'own' && hasPermission('cancel'))"
+			v-else-if="
+				(cancelOffer === 'approved' && approvedCancel) ||
+				(cancelOffer === 'own' && hasPermission('cancel'))
+			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
@@ -251,6 +254,7 @@ import GConfirm from "@/components/glass/GConfirm.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
+import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
@@ -360,6 +364,16 @@ const cancelViewer = computed(() => ({
 }))
 const cancelOffer = computed(() =>
 	canOfferCancel(document.doc, props.modelValue?.doctype, cancelViewer.value)
+)
+// Approved: Cancel only when the server's guard says this viewer may.
+const approvedCancel = useApprovedCancel(() =>
+	cancelOffer.value === "approved"
+		? {
+				doctype: props.modelValue.doctype,
+				name: document.doc?.name,
+				modified: document.doc?.modified,
+		  }
+		: null
 )
 
 // Withdraw / edit your OWN draft. Employees have no delete permission on these

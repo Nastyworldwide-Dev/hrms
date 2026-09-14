@@ -95,16 +95,11 @@ def _paying_salary_slip(ot_request: str) -> str | None:
 	)
 
 
-def block_cancel_of_approved(doc, method=None):
-	if doc.doctype not in DECISION_FIELD_BY_DOCTYPE:
-		return
-	if any(getattr(frappe.flags, flag, False) for flag in EXEMPT_FLAGS):
-		logger.debug("[approved_request_guard] exempt context, %s %s not checked", doc.doctype, doc.name)
-		return
-	if not is_approved_request(doc):
-		return
-
-	user = frappe.session.user
+def cancel_refusal(doc, user: str | None = None) -> str | None:
+	"""Why `user` (default: session) may not cancel this APPROVED request, or None
+	when they may. The one copy of the rule: block_cancel_of_approved enforces it,
+	hrms.api.approval.can_cancel_approved shows it. Callers check is_approved_request."""
+	user = frappe.session.user if user is None else user
 	# Paid overtime first, before any role is considered: nobody reopens pay.
 	if doc.doctype == "OT Request" and (slip := _paying_salary_slip(doc.name)):
 		logger.info(
@@ -113,12 +108,9 @@ def block_cancel_of_approved(doc, method=None):
 			slip,
 			user,
 		)
-		frappe.throw(
-			_(
-				"This overtime is already paid in a submitted salary slip. "
-				"Correct it with a payroll adjustment instead."
-			),
-			frappe.ValidationError,
+		return _(
+			"This overtime is already paid in a submitted salary slip. "
+			"Correct it with a payroll adjustment instead."
 		)
 
 	from hrms.api.approval import _is_routed_approver
@@ -130,7 +122,7 @@ def block_cancel_of_approved(doc, method=None):
 			doc.name,
 			user,
 		)
-		return
+		return None
 
 	logger.info(
 		"[approved_request_guard] refused cancel of approved %s %s by %s (own request or not the approver)",
@@ -138,4 +130,16 @@ def block_cancel_of_approved(doc, method=None):
 		doc.name,
 		user,
 	)
-	frappe.throw(_("Only HR or the approver can cancel an approved request."), frappe.ValidationError)
+	return _("Only HR or the approver can cancel an approved request.")
+
+
+def block_cancel_of_approved(doc, method=None):
+	if doc.doctype not in DECISION_FIELD_BY_DOCTYPE:
+		return
+	if any(getattr(frappe.flags, flag, False) for flag in EXEMPT_FLAGS):
+		logger.debug("[approved_request_guard] exempt context, %s %s not checked", doc.doctype, doc.name)
+		return
+	if not is_approved_request(doc):
+		return
+	if refusal := cancel_refusal(doc):
+		frappe.throw(refusal, frappe.ValidationError)

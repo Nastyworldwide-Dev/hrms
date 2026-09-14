@@ -6,6 +6,7 @@ import "./utils";
 import "./utils/payroll_utils";
 import "./utils/request_approval";
 import "./utils/correction_cancel";
+import "./utils/approved_request_cancel";
 import "./utils/leave_utils";
 import "./utils/telemetry.js";
 import "./salary_slip_deductions_report_filters.js";

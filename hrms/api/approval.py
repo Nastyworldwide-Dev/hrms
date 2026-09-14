@@ -16,7 +16,12 @@ import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 
-from hrms.utils.approved_request_guard import is_approved_request, is_own_request
+from hrms.utils.approved_request_guard import (
+	DECISION_FIELD_BY_DOCTYPE,
+	cancel_refusal,
+	is_approved_request,
+	is_own_request,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +318,29 @@ def can_decide(doctype: str, name: str) -> bool:
 	transition endpoint. Business validators still run at submission time.
 	"""
 	return "Approved" in get_decision_actions(doctype, name)["actions"]
+
+
+@frappe.whitelist()
+def can_cancel_approved(doctype: str, name: str) -> dict:
+	"""May the session user cancel this submitted, approved request?
+
+	A reports_to manager holds no cancel DocPerm, so neither the PWA nor Desk could
+	tell they may cancel what they approved. This answers with the guard's own
+	decision (cancel_refusal); `finalize` then elevates the cancel. A request that
+	is not submitted and approved is not this rule's business: can_cancel False,
+	reason None, and the normal cancel permission governs it.
+	"""
+	answer = {"can_cancel": False, "reason": None}
+	if doctype not in DECISION_FIELD_BY_DOCTYPE:
+		return answer
+	doc = frappe.get_doc(doctype, name)
+	if not _request_read_allowed(doc):
+		frappe.throw(_("You are not permitted to access this request."), frappe.PermissionError)
+	if doc.docstatus != 1 or not is_approved_request(doc):
+		logger.debug("[approval] %s %s not an approved submitted request", doctype, name)
+		return answer
+	reason = cancel_refusal(doc)
+	return {"can_cancel": reason is None, "reason": reason}
 
 
 @frappe.whitelist()
