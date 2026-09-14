@@ -341,3 +341,74 @@ def plan_close_lone_ins(win, for_update=False) -> dict:
 		"[lone_in_closer] %s %s..%s: %d to close, %d held", instance, start, end, len(planned), len(held)
 	)
 	return _outcome(planned, held, instance=instance)
+
+
+# --- the write -------------------------------------------------------------------------
+
+
+def _insert(entry: dict, instance: str) -> str | None:
+	from hrms.sync.checkin_import import insert_source_punch
+
+	return insert_source_punch(
+		{
+			"employee": entry["employee"],
+			"time": entry["candidate_time"],
+			"log_type": "OUT",
+			"device_id": DEVICE_ID,
+			"remote_name": entry["candidate_source_name"],
+		},
+		instance,
+	)
+
+
+def _lock(instance: str) -> bool:
+	from hrms.sync.checkin_import import _lock_instance
+
+	return _lock_instance(instance)
+
+
+def apply_close_lone_ins(win, plan) -> dict:
+	"""Insert the planned OUTs, one savepoint per row, a commit per 50. Insert-only:
+	a row already here (same second, or the same ERP punch via the unique index)
+	is skipped, never updated."""
+	from hrms.sync.checkin_import import is_source_key_duplicate
+	from hrms.utils.offshift_punch_heal import _lost_transaction
+
+	instance = plan.get("instance")
+	planned = plan.get("planned") or []
+	if not planned:
+		return {"done": [], "held_back": []}
+	if not _enabled():
+		return {
+			"done": [],
+			"held_back": [{**e, "reason": f"switched off ({SETTING})", "hr": False} for e in planned],
+		}
+	if _sync_running(instance) or not _lock(instance):
+		return {
+			"done": [],
+			"held_back": [{**e, "reason": "sync running, skipped", "hr": False} for e in planned],
+		}
+	done, held = [], []
+	for index, entry in enumerate(planned, start=1):
+		frappe.db.savepoint(ROW_SAVEPOINT)
+		try:
+			name = _insert(entry, instance)
+		except Exception as exc:
+			if _lost_transaction(exc):
+				raise
+			frappe.db.rollback(save_point=ROW_SAVEPOINT)
+			if is_source_key_duplicate(exc):
+				from frappe.utils.messages import clear_last_message
+
+				clear_last_message()
+				done.append({**entry, "checkin": None, "already": True})
+				continue
+			logger.exception("[lone_in_closer] %s on %s not closed", entry["employee"], entry["date"])
+			held.append({**entry, "reason": f"could not be inserted: {exc}", "hr": True})
+			continue
+		done.append({**entry, "checkin": name, "already": name is None})
+		if index % COMMIT_EVERY == 0:
+			frappe.db.commit()
+	frappe.db.commit()
+	logger.info("[lone_in_closer] %s: %d closed, %d held", instance, len(done), len(held))
+	return {"done": done, "held_back": held}

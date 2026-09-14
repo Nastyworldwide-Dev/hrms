@@ -271,5 +271,73 @@ class TestPlan(_Planned):
 		self.assertEqual(plan["note"], "sync running, skipped")
 
 
+# --- the write -----------------------------------------------------------------------------
+
+
+class TestApply(unittest.TestCase):
+	def setUp(self):
+		self.entry = {
+			"employee": EMP,
+			"date": "2026-09-02",
+			"in_time": "2026-09-02 08:30:00",
+			"candidate_time": "2026-09-02 17:30:00",
+			"candidate_source_name": "EMP-CKIN-ERP-9",
+			"source_log_type": "IN",
+		}
+		self.plan = {"planned": [self.entry], "instance": INSTANCE}
+		self.db = MagicMock(name="db")
+		self.db.exists.return_value = None
+		self.doc = MagicMock(name="doc")
+		self.doc.name = "EC-NEW"
+		self.patches = [
+			patch.object(frappe, "db", self.db),
+			patch.object(frappe, "new_doc", return_value=self.doc),
+			patch.object(frappe, "get_single", lambda name: frappe._dict(), create=True),
+			patch.object(closer, "_sync_running", return_value=False),
+			patch.object(closer, "_lock", return_value=True),
+		]
+		for p in self.patches:
+			p.start()
+
+	def tearDown(self):
+		for p in reversed(self.patches):
+			p.stop()
+
+	def test_the_out_is_inserted_tagged_and_nothing_is_updated(self):
+		result = closer.apply_close_lone_ins(WIN, self.plan)
+		self.assertEqual(result["held_back"], [])
+		self.assertEqual(result["done"][0]["checkin"], "EC-NEW")
+		values = self.doc.update.call_args.args[0]
+		self.assertEqual(values["log_type"], "OUT")
+		self.assertEqual(values["time"], "2026-09-02 17:30:00")
+		self.assertEqual(values["device_id"], closer.DEVICE_ID)
+		self.assertEqual(values["source_checkin"], f"{INSTANCE}::EMP-CKIN-ERP-9")
+		self.assertTrue(self.doc.flags.ignore_validate)
+		self.doc.insert.assert_called_once()
+		self.db.set_value.assert_not_called()
+		self.db.delete.assert_not_called()
+		self.db.commit.assert_called()
+
+	def test_a_punch_already_here_is_skipped_not_rewritten(self):
+		self.db.exists.return_value = "EC-OLD"
+		result = closer.apply_close_lone_ins(WIN, self.plan)
+		self.assertTrue(result["done"][0]["already"])
+		self.doc.insert.assert_not_called()
+
+	def test_a_running_sync_holds_every_row(self):
+		with patch.object(closer, "_sync_running", return_value=True):
+			result = closer.apply_close_lone_ins(WIN, self.plan)
+		self.assertEqual(result["done"], [])
+		self.assertEqual(result["held_back"][0]["reason"], "sync running, skipped")
+		self.doc.insert.assert_not_called()
+
+	def test_one_failing_row_is_rolled_back_alone(self):
+		self.doc.insert.side_effect = RuntimeError("boom")
+		result = closer.apply_close_lone_ins(WIN, self.plan)
+		self.assertEqual(result["done"], [])
+		self.assertIn("boom", result["held_back"][0]["reason"])
+		self.db.rollback.assert_called_once_with(save_point=closer.ROW_SAVEPOINT)
+
+
 if __name__ == "__main__":
 	unittest.main()
