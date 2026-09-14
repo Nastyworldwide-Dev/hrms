@@ -61,6 +61,9 @@ shift_class.body = [
 		"get_holiday_list",
 		"is_half_holiday",
 		"mark_attendance_for_shift_logs",
+		# mark_attendance_for_shift_logs reads the day through this since the
+		# read/write split (51902996c); the rule under test lives here.
+		"shift_day_result",
 	}
 ]
 # Module-level helpers the class body calls by name. `counts_for_attendance` is
