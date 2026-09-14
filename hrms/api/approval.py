@@ -16,6 +16,8 @@ import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 
+from hrms.utils.approved_request_guard import is_approved_request, is_own_request
+
 logger = logging.getLogger(__name__)
 
 #: doctype -> (decision field, the value meaning "nobody has decided yet")
@@ -405,50 +407,45 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		if access == "routed":
 			doc.flags.ignore_permissions = True
 	else:
-		# AN APPROVED REQUEST IS NEVER CANCELLED — Nabil, 13 September 2026.
-		# One exception (owner ruling, 14 Sep 2026): "leave, attendance yes ...
-		# overtime no ... only HR can edit overtime" — an approved OT Request
-		# MAY be cancelled/amended by HR User, HR Manager or System Manager.
-		# Every other approved decision doctype stays refused for every role.
+		# HR OR THE APPROVER MAY CANCEL AN APPROVED REQUEST — Nabil, 14 Sep 2026.
+		# Reverses the 13 Sep "an approved request is never cancelled". The
+		# request's own employee, and anyone else, still may not.
 		#
 		# The branch above catches every submit of a DECIDE_THEN_SUBMIT doctype,
 		# which is every request doctype — so in PRACTICE this else is the cancel
 		# path. Not only: `finalize` is whitelisted with no doctype allow-list, so
 		# a submit of any other submittable doctype lands here too, which is why
 		# the "not routed to you" refusal below is still live and must not be
-		# deleted as dead. It used to elevate on routing alone: being
-		# the person a request was addressed to was enough to withdraw a decision
-		# that had already been made and acted on — a settled approval reopened
-		# with the framework's own cancel right bypassed.
+		# deleted as dead.
 		#
-		# Routing answers "may you DECIDE this", which is not the same question as
-		# "may you UNDO a decision". So the elevation is gone and cancelling needs
-		# the right itself, from whatever the doctype's permissions say. The
-		# manager who approved it keeps every power the ruling gives them —
-		# approving is untouched — and loses only the one it takes away.
+		# Many reports_to approvers hold only Employee and no `cancel` DocPerm.
+		# So a CANCEL is elevated for a routed approver (_is_routed_approver: HR
+		# inside their company fence, the doc's approver field, reports_to) — but
+		# only when the stored request is approved (a rejected/open one stays
+		# governed by the cancel DocPerm) and only when the caller is not the
+		# request's own employee. Submit is never elevated here.
 		#
-		# WHERE THE RULING IS ACTUALLY HELD:
-		#   * The permission check below only decides who may reach a cancel. The
-		#     "approved is never cancelled" rule itself is
-		#     hrms.utils.approved_request_guard, a before_cancel doc_event, so it
-		#     holds on every doc.cancel path (this endpoint, Desk, bulk, cancel
-		#     all linked, amend) for every request doctype and every role — except
-		#     the two guard exceptions below. A rejected request stays cancellable
-		#     by anyone holding `cancel`. The three doctypes with no decision field
-		#     (Employee Advance, Compensatory Leave Request, Travel Request) may be
-		#     cancelled by HR Manager or System Manager only, to correct a mistake
-		#     (guard CORRECTION_ROLES). An approved OT Request may be cancelled by
-		#     HR User, HR Manager or System Manager (guard OT_REQUEST_HR_ROLES,
-		#     owner ruling, 14 Sep 2026) — the only decision doctype HR may still
-		#     correct after approval; the permission check below still gates who
-		#     among those roles actually holds `cancel` on OT Request.
-		#   * HR User holds `cancel` on Shift Request too, like the other five
-		#     request doctypes: hrms/patches/v16_0/hr_user_can_cancel_shift_request.py
-		#     grants it on the live permission row, so through this endpoint that
-		#     reaches rejected Shift Requests only.
+		# WHERE THE RULING IS ACTUALLY HELD: hrms.utils.approved_request_guard, a
+		# before_cancel doc_event, runs on this elevated cancel and on every other
+		# cancel path (Desk, bulk, cancel all linked, amend, correction_cancel). It
+		# refuses the own employee and non-approvers, and refuses approved
+		# Overtime Pay OT already on a submitted Salary Slip for every role.
 		action = "submit" if docstatus == SUBMIT else "cancel"
 		if frappe.has_permission(doctype, action, doc=doc):
 			doc.check_permission("read")
+		elif (
+			action == "cancel"
+			and is_approved_request(doc)
+			and not is_own_request(doc)
+			and _is_routed_approver(doc)
+		):
+			doc.flags.ignore_permissions = True
+			logger.info(
+				"[approval] %s cancels approved %s %s as routed approver (elevated)",
+				frappe.session.user,
+				doctype,
+				name,
+			)
 		else:
 			frappe.throw(
 				_("You are not permitted to cancel this request.")

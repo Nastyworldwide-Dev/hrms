@@ -1,15 +1,16 @@
-"""An approved request is never cancelled — Nabil, 13 September 2026.
+"""HR and the approver may cancel an approved request — Nabil, 14 Sep 2026.
 
-`finalize` catches every SUBMIT of a decide-then-submit doctype in its first
-branch, and all of the request doctypes are in that set. So its `else` is
-reachable only on a CANCEL — and that branch used to elevate on ROUTING alone:
-being the person a request was addressed to was enough to withdraw a decision
-that had already been made and acted on, with the framework's own cancel right
-bypassed.
+Reverses the 13 Sep ruling that removed routed-approver elevation from
+`finalize`'s cancel branch. Many reports_to approvers hold only the Employee role
+and no `cancel` DocPerm, so without elevation they could approve a request and
+never undo it. The elevation is back, bounded three ways:
 
-Routing answers "may you DECIDE this". That is not the same question as "may you
-UNDO a decision". Approving is untouched by this — the manager keeps every power
-the ruling gives them, and loses only the one it takes away.
+  * only on CANCEL, never on the submit fall-through;
+  * only for an approved request (a rejected/open one stays DocPerm-governed);
+  * only for a routed approver who is NOT the request's own employee.
+
+hrms.utils.approved_request_guard still runs on the elevated cancel (paid OT
+lock, self exclusion). The filename is kept so history and references hold.
 
 AST-based and bench-free: `hrms.api.approval` needs a bench to import.
 Run as `python3 hrms/tests/test_cancel_is_not_a_routing_right.py`.
@@ -29,49 +30,45 @@ def _function(name: str) -> ast.FunctionDef:
 	raise AssertionError(f"{name} not found in {SOURCE}")
 
 
-class TestCancelNeedsTheRightNotTheRouting(unittest.TestCase):
+def _elevating_tests(fn):
+	"""The test of every `if` whose own body sets ignore_permissions and whose
+	condition calls `_is_routed_approver`."""
+	found = []
+	for node in ast.walk(fn):
+		if not isinstance(node, ast.If) or "_is_routed_approver" not in ast.unparse(node.test):
+			continue
+		body = ast.Module(body=node.body, type_ignores=[])
+		if any(isinstance(n, ast.Assign) and "ignore_permissions" in ast.unparse(n) for n in ast.walk(body)):
+			found.append(ast.unparse(node.test))
+	return found
+
+
+class TestApprovedCancelIsRoutedToHrAndTheApprover(unittest.TestCase):
 	def setUp(self):
 		self.finalize = _function("finalize")
 		self.decide = _function("decide")
 
-	def _elevations_guarded_by_routing(self, fn):
-		"""Every `ignore_permissions = True` whose nearest enclosing test calls
-		`_is_routed_approver`."""
-		found = []
-		for node in ast.walk(fn):
-			if not isinstance(node, ast.If):
-				continue
-			test = ast.unparse(node.test)
-			if "_is_routed_approver" not in test:
-				continue
-			for child in ast.walk(node):
-				if isinstance(child, ast.Assign) and "ignore_permissions" in ast.unparse(child):
-					found.append(test)
-		return found
-
-	def test_finalize_never_elevates_on_routing(self):
-		"""Its only remaining branch is the cancel, and routing is not a cancel
-		right. Approval elevates in `decide`, which is a different door."""
-		self.assertEqual(
-			self._elevations_guarded_by_routing(self.finalize),
-			[],
-			"finalize elevates permissions because the caller is the routed approver. That branch "
-			"is reachable only on CANCEL, and an approved request is never cancelled — being the "
-			"person it was addressed to is not authority to undo a decision already acted on.",
+	def test_finalize_elevates_cancel_for_the_routed_approver_only(self):
+		tests = _elevating_tests(self.finalize)
+		self.assertEqual(len(tests), 1, f"expected one routed cancel elevation, found {tests}")
+		test = tests[0]
+		self.assertIn("'cancel'", test, "the elevation is for CANCEL only, never the submit fall-through")
+		self.assertIn("_is_routed_approver(doc)", test)
+		self.assertIn(
+			"not is_own_request(doc)", test, "the request's own employee must never be elevated to cancel"
+		)
+		self.assertIn(
+			"is_approved_request(doc)", test, "a rejected/open request stays governed by the cancel DocPerm"
 		)
 
 	def test_the_refusal_says_cancel_when_it_means_cancel(self):
-		"""It used to say "not routed to you for approval" while refusing a
-		cancellation, which sends the reader looking for the wrong thing."""
 		self.assertIn("not permitted to cancel", ast.unparse(self.finalize), "name the action being refused")
 
 	def test_deciding_is_untouched(self):
-		"""The ruling narrows cancellation and nothing else. If this ever goes
-		red, approval itself has been broken while trying to fix cancellation."""
 		self.assertIn(
 			"ignore_permissions",
 			ast.unparse(self.decide),
-			"decide must still elevate for a routed approver — that is the ruling, not the defect",
+			"decide must still elevate for a routed approver",
 		)
 
 

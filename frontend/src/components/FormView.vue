@@ -484,6 +484,16 @@ const { downloadPDF } = useDownloadPDF()
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
+const currentUser = inject("$user")
+const currentEmployee = inject("$employee")
+
+// HR or the approver may cancel an approved request; the employee may not
+// (owner ruling, 14 Sep 2026 — see utils/cancelRule.js).
+const cancelViewer = computed(() => ({
+	user: currentUser?.data?.name,
+	roles: currentUser?.data?.roles || [],
+	employee: currentEmployee?.data?.name,
+}))
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
 const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
@@ -784,7 +794,9 @@ const formButton = computed(() => {
 			!REQUEST_SUMMARY_FIELDS[props.doctype]
 		) {
 			return "Submit"
-		} else if (canOfferCancel(formModel.value, props.doctype) && hasPermission("cancel")) {
+		}
+		const cancelOffer = canOfferCancel(formModel.value, props.doctype, cancelViewer.value)
+		if (cancelOffer === "approver" || (cancelOffer === "own" && hasPermission("cancel"))) {
 			return "Cancel"
 		}
 		// submitted-and-cancel-blocked, or any other docstatus: no button.

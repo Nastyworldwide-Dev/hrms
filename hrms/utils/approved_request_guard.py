@@ -1,20 +1,22 @@
-"""An approved request is never cancelled — Nabil, 13 September 2026.
+"""Only HR or the approver can cancel an approved request — Nabil, 14 Sep 2026.
+
+Reverses the 13 Sep ruling "an approved request is never cancelled": HR and the
+request's approver must be able to cancel (and so amend / re-decide) an approved
+request of any type. The employee who raised it, and anyone else, still cannot.
 
 Wired as `before_cancel` in hooks.py, so it holds on every cancel path: Desk
-Cancel, bulk cancel, "cancel all linked", hrms/api/approval.py `finalize`, and
-amend (which must cancel first). An approved request is refused for every role,
-HR Manager and System Manager included. A rejected request stays cancellable.
+Cancel, bulk cancel, "cancel all linked", hrms/api/approval.py `finalize`,
+hrms/api/correction_cancel.py, and amend (which must cancel first).
 
-One exception (Nabil, 14 Sep 2026): Employee Advance, Compensatory Leave Request
-and Travel Request record no decision, so submitting one IS approving it; only
-CORRECTION_ROLES may cancel those, to reverse a mistake such as a wrong advance.
-
-Second exception (owner ruling, 14 Sep 2026): "leave, attendance yes ...
-overtime no ... only HR can edit overtime." Approved Leave Application,
-Attendance Request etc. stay never-cancellable for every role including HR —
-but an approved OT Request MAY be cancelled/amended by HR User, HR Manager or
-System Manager (OT_REQUEST_HR_ROLES); every other role is refused exactly like
-any other approved request.
+  * "HR or the approver" is routing — hrms.api.approval._is_routed_approver: HR
+    User / HR Manager / System Manager inside their company fence, the doc's
+    approver field, or the employee's reports_to manager.
+  * The request's own employee is refused even when they are HR or the approver.
+  * Employee Advance, Compensatory Leave Request and Travel Request record no
+    decision, so submitting one IS approving it: the same rule applies.
+  * Kept from W5 (14 Sep 2026): approved Overtime Pay OT already on a submitted
+    Salary Slip is refused for every role — correct it through payroll.
+  * A rejected or undecided request is not this guard's business: DocPerm decides.
 
 The decision is read from the stored row, never from `doc`:
 LeaveApplication.before_cancel sets status = "Cancelled" before doc_events run.
@@ -29,16 +31,12 @@ logger = logging.getLogger(__name__)
 
 APPROVED = "Approved"
 EXEMPT_FLAGS = ("in_shadow_sync", "in_patch", "in_migrate", "in_install")
-# Nabil, 14 Sep 2026: a doctype with no decision field (submitted == approved) may
-# still be cancelled by these roles, to reverse a mistake such as a wrong advance.
+# The roles hrms/api/correction_cancel.py lets through its endpoint. The guard
+# itself no longer special-cases them: they are HR operators, so routing covers them.
 CORRECTION_ROLES = {"HR Manager", "System Manager"}
-# Owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ... only HR can
-# edit overtime." An approved OT Request is the one decision doctype these roles
-# may still cancel/amend; every other decision doctype stays refused for HR too.
-OT_REQUEST_HR_ROLES = {"HR User", "HR Manager", "System Manager"}
 
 # doctype -> field recording the decision. None: the doctype has no decision
-# field, so submitting it IS approving it; only CORRECTION_ROLES may cancel it.
+# field, so submitting it IS approving it.
 DECISION_FIELD_BY_DOCTYPE = {
 	"Leave Application": "status",
 	"Expense Claim": "approval_status",
@@ -50,6 +48,28 @@ DECISION_FIELD_BY_DOCTYPE = {
 	"Employee Advance": None,
 	"Travel Request": None,
 }
+
+
+def is_approved_request(doc) -> bool:
+	"""Does the STORED row count as approved? No decision field: submitted is approved."""
+	if doc.doctype not in DECISION_FIELD_BY_DOCTYPE:
+		return False
+	field = DECISION_FIELD_BY_DOCTYPE[doc.doctype]
+	approved = not field or frappe.db.get_value(doc.doctype, doc.name, field) == APPROVED
+	logger.debug("[approved_request_guard] %s %s approved: %s", doc.doctype, doc.name, approved)
+	return approved
+
+
+def is_own_request(doc, user: str | None = None) -> bool:
+	"""Is `user` (default: session) the Employee this request belongs to?"""
+	from hrms.utils.identity import normalize_login
+
+	user = frappe.session.user if user is None else user
+	employee = doc.get("employee")
+	employee_user = frappe.db.get_value("Employee", employee, "user_id") if employee else None
+	own = bool(employee_user) and normalize_login(employee_user) == normalize_login(user)
+	logger.debug("[approved_request_guard] %s %s own request of %s: %s", doc.doctype, doc.name, user, own)
+	return own
 
 
 def _paying_salary_slip(ot_request: str) -> str | None:
@@ -79,25 +99,19 @@ def block_cancel_of_approved(doc, method=None):
 	if doc.doctype not in DECISION_FIELD_BY_DOCTYPE:
 		return
 	if any(getattr(frappe.flags, flag, False) for flag in EXEMPT_FLAGS):
+		logger.debug("[approved_request_guard] exempt context, %s %s not checked", doc.doctype, doc.name)
+		return
+	if not is_approved_request(doc):
 		return
 
-	field = DECISION_FIELD_BY_DOCTYPE[doc.doctype]
-	if field and frappe.db.get_value(doc.doctype, doc.name, field) != APPROVED:
-		return
-	if not field and CORRECTION_ROLES & set(frappe.get_roles()):
-		logger.info(
-			"[approved_request_guard] correction cancel of %s %s by %s",
-			doc.doctype,
-			doc.name,
-			frappe.session.user,
-		)
-		return
+	user = frappe.session.user
+	# Paid overtime first, before any role is considered: nobody reopens pay.
 	if doc.doctype == "OT Request" and (slip := _paying_salary_slip(doc.name)):
 		logger.info(
 			"[approved_request_guard] refused cancel of paid OT Request %s (Salary Slip %s) by %s",
 			doc.name,
 			slip,
-			frappe.session.user,
+			user,
 		)
 		frappe.throw(
 			_(
@@ -106,18 +120,22 @@ def block_cancel_of_approved(doc, method=None):
 			),
 			frappe.ValidationError,
 		)
-	if doc.doctype == "OT Request" and OT_REQUEST_HR_ROLES & set(frappe.get_roles()):
+
+	from hrms.api.approval import _is_routed_approver
+
+	if not is_own_request(doc, user) and _is_routed_approver(doc, user):
 		logger.info(
-			"[approved_request_guard] HR cancel of approved OT Request %s by %s",
+			"[approved_request_guard] allowed cancel of approved %s %s by approver %s",
+			doc.doctype,
 			doc.name,
-			frappe.session.user,
+			user,
 		)
 		return
 
 	logger.info(
-		"[approved_request_guard] refused cancel of approved %s %s by %s",
+		"[approved_request_guard] refused cancel of approved %s %s by %s (own request or not the approver)",
 		doc.doctype,
 		doc.name,
-		frappe.session.user,
+		user,
 	)
-	frappe.throw(_("An approved request cannot be cancelled."), frappe.ValidationError)
+	frappe.throw(_("Only HR or the approver can cancel an approved request."), frappe.ValidationError)

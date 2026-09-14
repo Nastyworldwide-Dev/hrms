@@ -178,9 +178,7 @@
 		</div>
 
 		<div
-			v-else-if="
-				canOfferCancel(document.doc, props.modelValue?.doctype) && hasPermission('cancel')
-			"
+			v-else-if="cancelOffer === 'approver' || (cancelOffer === 'own' && hasPermission('cancel'))"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
@@ -351,6 +349,18 @@ const submitting = computed(
 )
 
 const sessionEmployee = inject("$employee")
+const currentUser = inject("$user")
+
+// HR or the approver may cancel an approved request; the employee may not
+// (owner ruling, 14 Sep 2026 — see utils/cancelRule.js).
+const cancelViewer = computed(() => ({
+	user: currentUser?.data?.name,
+	roles: currentUser?.data?.roles || [],
+	employee: sessionEmployee?.data?.name,
+}))
+const cancelOffer = computed(() =>
+	canOfferCancel(document.doc, props.modelValue?.doctype, cancelViewer.value)
+)
 
 // Withdraw / edit your OWN draft. Employees have no delete permission on these
 // doctypes, so a fenced API (owner + docstatus 0) does the removal. Employee

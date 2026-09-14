@@ -226,18 +226,14 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 		src = ast.unparse(self._fn("_is_routed_approver"))
 		self.assertIn("company_visible", src)
 
-	def test_legacy_finalize_still_routes_its_submit_authority(self):
-		"""AMENDED 13 Sep 2026, after the ruling that an approved request is never
-		cancelled.
+	def test_legacy_finalize_routes_submit_and_approved_cancel(self):
+		"""AMENDED 14 Sep 2026, owner ruling: HR and the approver may cancel an
+		approved request; the employee may not.
 
-		This used to require a DIRECT `_is_routed_approver` call in `finalize`,
-		and that call was the CANCEL branch's elevation — the one the ruling
-		removes. Routing is still consulted, through `_decision_access`, which is
-		the submit path's gate and calls it internally. So the invariant the test
-		was written for holds; what changed is that finalize no longer asks the
-		routing question on its own account, only through the decision gate.
-
-		The narrowing itself is pinned separately, from both sides, in
+		Submit authority is routed through `_decision_access`. The cancel branch
+		asks `_is_routed_approver` directly again — excluding the request's own
+		employee — so a reports_to manager holding only Employee (no `cancel`
+		DocPerm) can cancel what they approved. The exact shape is pinned in
 		hrms/tests/test_cancel_is_not_a_routing_right.py."""
 		called = {
 			n.func.id
@@ -249,12 +245,8 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 			called,
 			"finalize must still route its submit authority through the decision gate",
 		)
-		self.assertNotIn(
-			"_is_routed_approver",
-			called,
-			"finalize must not consult routing directly — its only remaining direct use was the "
-			"cancel elevation, and being the routed approver is not authority to undo a decision",
-		)
+		self.assertIn("_is_routed_approver", called, "an approved cancel is routed to HR and the approver")
+		self.assertIn("is_own_request", called, "the request's own employee is never elevated to cancel")
 
 	# Public native tests exercise denial and routed elevation through both
 	# endpoints; a source-position assertion cannot follow their shared gate.
@@ -270,6 +262,90 @@ class TestTheSheetUsesIt(unittest.TestCase):
 
 	def test_the_sheet_calls_the_finalize_endpoint(self):
 		self.assertIn("hrms.api.approval.finalize", SHEET.read_text())
+
+
+class TestFinalizeCancelByTheApprover(unittest.TestCase):
+	"""Owner ruling, 14 Sep 2026: HR and the approver may cancel an approved
+	request. A reports_to manager usually holds only Employee — no `cancel`
+	DocPerm — so finalize elevates the CANCEL for a routed approver who is not the
+	request's own employee. Runs finalize itself against the frappe stub."""
+
+	APPROVER = "manager@example.com"
+	STAFF_USER = "staff@example.com"
+
+	@classmethod
+	def setUpClass(cls):
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		cls.frappe, cls.approval, cls.MagicMock, cls.patch = frappe, approval, MagicMock, patch
+
+	def _finalize(self, user, stored="Approved", can_cancel=False, routed=True):
+		frappe, approval = self.frappe, self.approval
+		doc = frappe._dict(
+			doctype="Leave Application",
+			name="HR-LAP-0001",
+			docstatus=1,
+			employee="HR-EMP-STAFF",
+			modified="2026-09-14 10:00:00",
+			flags=frappe._dict(),
+		)
+		doc.check_permission = lambda ptype: None
+		doc.cancel = lambda: doc.update(docstatus=2, flags_at_cancel=dict(doc.flags))
+
+		def get_value(doctype, name, fieldname, **kw):
+			if doctype == "Employee" and fieldname == "user_id":
+				return self.STAFF_USER
+			return 1 if fieldname == "docstatus" else stored
+
+		db = self.MagicMock()
+		db.exists.return_value = True
+		db.get_value.side_effect = get_value
+		patch = self.patch
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "has_permission", return_value=can_cancel, create=True),
+			patch.object(frappe, "session", frappe._dict(user=user)),
+			patch.object(approval, "_request_read_allowed", return_value=True),
+			patch.object(approval, "_is_routed_approver", return_value=routed),
+		):
+			approval.finalize(doc.doctype, doc.name, 2)
+		return doc
+
+	def test_a_routed_approver_without_cancel_permission_is_elevated_and_cancels(self):
+		doc = self._finalize(self.APPROVER)
+		self.assertEqual(doc.docstatus, 2)
+		self.assertIs(doc.flags_at_cancel.get("ignore_permissions"), True)
+
+	def test_the_employee_is_not_elevated(self):
+		doc = None
+		with self.assertRaises(self.frappe.PermissionError):
+			doc = self._finalize(self.STAFF_USER)
+		self.assertIsNone(doc)
+
+	def test_someone_not_routed_is_not_elevated(self):
+		with self.assertRaises(self.frappe.PermissionError):
+			self._finalize(self.APPROVER, routed=False)
+
+	def test_a_rejected_request_stays_governed_by_the_cancel_permission(self):
+		with self.assertRaises(self.frappe.PermissionError):
+			self._finalize(self.APPROVER, stored="Rejected")
+
+	def test_a_holder_of_cancel_permission_is_not_elevated(self):
+		doc = self._finalize(self.APPROVER, can_cancel=True)
+		self.assertEqual(doc.docstatus, 2)
+		self.assertFalse(doc.flags_at_cancel.get("ignore_permissions"))
 
 
 if __name__ == "__main__":

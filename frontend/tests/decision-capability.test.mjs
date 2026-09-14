@@ -536,6 +536,11 @@ test("approvable FormView never falls back to a raw Submit while its decision ca
 				employee: { data: { name: "REVIEWER" } },
 				hasPermission: () => true,
 				canOfferCancel,
+				cancelViewer: ref({
+					user: "reviewer@example.com",
+					roles: [],
+					employee: "REVIEWER",
+				}),
 				REQUEST_SUMMARY_FIELDS: Object.fromEntries(types.map((dt) => [dt, []])),
 			})
 			vm.runInContext(
@@ -551,6 +556,68 @@ test("approvable FormView never falls back to a raw Submit while its decision ca
 			)
 		}
 	}
+})
+
+test("FormView offers Cancel on an approved request to HR and the approver, never the employee", () => {
+	const button = (status, viewer, canCancel = false) => {
+		const context = vm.createContext({
+			computed,
+			props: {
+				doctype: "Leave Application",
+				id: "REQUEST",
+				isSubmittable: true,
+				showFormButton: true,
+			},
+			isFormDirty: ref(false),
+			formModel: ref({
+				docstatus: 1,
+				status,
+				employee: "STAFF",
+				leave_approver: "boss@example.com",
+			}),
+			hasPermission: (action) => action === "cancel" && canCancel,
+			canOfferCancel,
+			cancelViewer: ref(viewer),
+			REQUEST_SUMMARY_FIELDS: Object.fromEntries(types.map((dt) => [dt, []])),
+		})
+		vm.runInContext(
+			["SUBMIT_REQUIRES_STATUS", "formButton"]
+				.map((name) => declaration(form, name))
+				.join("\n"),
+			context
+		)
+		return vm.runInContext("formButton.value", context)
+	}
+	const hr = { user: "hr@example.com", roles: ["HR User"], employee: "HR" }
+	const boss = {
+		user: "boss@example.com",
+		roles: ["Employee"],
+		employee: "BOSS",
+	}
+	const staff = {
+		user: "staff@example.com",
+		roles: ["HR Manager"],
+		employee: "STAFF",
+	}
+	const other = {
+		user: "other@example.com",
+		roles: ["Employee"],
+		employee: "OTHER",
+	}
+	assert.equal(button("Approved", hr), "Cancel")
+	assert.equal(button("Approved", boss), "Cancel")
+	assert.equal(
+		button("Approved", staff, true),
+		null,
+		"own request, even as HR with cancel"
+	)
+	assert.equal(button("Approved", other, true), null)
+	assert.equal(
+		button("Rejected", other),
+		null,
+		"not approved needs the cancel DocPerm"
+	)
+	assert.equal(button("Rejected", other, true), "Cancel")
 })
 
 test("legacy PWA Submit uses finalize with its reviewed revision for all six types", async () => {

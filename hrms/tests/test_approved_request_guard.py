@@ -1,27 +1,21 @@
-"""An approved request is never cancelled — Nabil, 13 September 2026.
+"""Only HR or the approver may cancel an approved request — Nabil, 14 Sep 2026.
 
-The ruling holds on EVERY cancel path: Desk Cancel, bulk cancel, "cancel all
-linked", hrms/api/approval.py `finalize`, and amend (which needs a cancel
-first). All of them run `doc.cancel()`, so one `before_cancel` doc_event is the
-single place that can hold it. An approved request of a doctype that records
-a decision is refused for every role, HR Manager and System Manager included. A
-rejected request stays cancellable.
+Reverses the 13 Sep "an approved request is never cancelled". The rule is held in
+one `before_cancel` doc_event, so it covers every cancel path: Desk Cancel, bulk
+cancel, "cancel all linked", hrms/api/approval.py `finalize`, and amend.
 
 Pinned here, bench-free (frappe stubbed when no bench is on the path):
 
-  * approved -> refused, for every doctype that records a decision;
-  * rejected / open -> allowed;
+  * an approved request (or a no-decision doctype, where submitted == approved)
+    may be cancelled by a ROUTED APPROVER of it: HR User / HR Manager / System
+    Manager inside their company fence, the named approver field, or the
+    employee's reports_to manager;
+  * never by the request's own employee — HR included — nor by anyone else;
+  * approved Overtime Pay OT already on a submitted Salary Slip is refused for
+    every role, checked before any role is considered;
+  * rejected / open requests are untouched (DocPerm still decides);
   * the decision is read from the DATABASE, not the in-memory doc:
-    LeaveApplication.before_cancel sets status = "Cancelled" before the
-    doc_event runs, so doc.status would always read as not-approved;
-  * doctypes with no decision field (submitted == approved) refuse cancel below
-    HR Manager; HR Manager / System Manager may cancel them to correct a mistake
-    (Nabil, 14 Sep 2026) — their cancel permission still decides who reaches it;
-  * OT Request is the one decision doctype HR may still correct after approval
-    (owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ... only
-    HR can edit overtime") — HR User, HR Manager and System Manager may cancel
-    an approved OT Request; every other role is refused like any other approved
-    request, and every other decision doctype stays refused for HR too;
+    LeaveApplication.before_cancel sets status = "Cancelled" first;
   * sync / patch / migrate / install contexts are exempt;
   * hooks.py wires the guard on before_cancel for every doctype without
     dropping a single handler that was there before.
@@ -47,7 +41,10 @@ import frappe
 
 HRMS_ROOT = Path(__file__).resolve().parents[1]
 GUARD = "hrms.utils.approved_request_guard.block_cancel_of_approved"
-MESSAGE = "An approved request cannot be cancelled."
+MESSAGE = "Only HR or the approver can cancel an approved request."
+PAID_MESSAGE = (
+	"This overtime is already paid in a submitted salary slip. Correct it with a payroll adjustment instead."
+)
 
 # From the ruling, not from the module: doctype -> the field that records the decision.
 DECISION_FIELD = {
@@ -58,12 +55,9 @@ DECISION_FIELD = {
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
 }
-# No decision field: submitting IS approving; only HR Manager / System Manager may cancel.
+# No decision field: submitting IS approving.
 SUBMIT_IS_APPROVAL = ("Compensatory Leave Request", "Employee Advance", "Travel Request")
-# From the ruling, not the module: HR roles that may still cancel/amend an approved
-# OT Request ("leave, attendance yes ... overtime no ... only HR can edit overtime" —
-# owner ruling, 14 Sep 2026).
-OT_REQUEST_HR_ROLES = ("HR User", "HR Manager", "System Manager")
+HR_ROLES = ("HR User", "HR Manager", "System Manager")
 
 # Every before_cancel handler that was wired BEFORE this rule, per doctype.
 EXISTING_BEFORE_CANCEL = {
@@ -82,48 +76,48 @@ EXISTING_BEFORE_CANCEL = {
 	"Compensatory Leave Request": ["hrms.sync.write_block.block_transactions_for_mirrored_employee"],
 }
 
+CALLER = "caller@example.com"
+STAFF_USER = "staff@example.com"
+STAFF = "HR-EMP-STAFF"
+MANAGER = "HR-EMP-MANAGER"
 
-def _doc(doctype, in_memory_status=None):
-	doc = frappe._dict(doctype=doctype, name=f"{doctype}-0001")
+
+def _doc(doctype, in_memory_status=None, **fields):
+	doc = frappe._dict(doctype=doctype, name=f"{doctype}-0001", employee=STAFF, **fields)
 	if in_memory_status is not None:
 		doc.status = in_memory_status
 		doc.approval_status = in_memory_status
 	return doc
 
 
-def _cancel(doc, stored=None, flags=None, roles=("HR User",)):
-	"""Run the guard with `stored` as the DB's decision value. Returns the db mock."""
+def _cancel(
+	doc,
+	stored=None,
+	flags=None,
+	roles=("Employee",),
+	own_employee=None,
+	reports_to=None,
+	paid_slip=None,
+	compensation="Overtime Pay",
+	fenced_out=False,
+):
+	"""Run the guard as CALLER holding `roles`. `stored` is the DB's decision value,
+	`own_employee` the caller's Employee (STAFF = the request's own employee),
+	`reports_to` the request employee's manager, `paid_slip` the submitted Salary
+	Slip covering an OT Request. Returns the db mock."""
 	from hrms.utils.approved_request_guard import block_cancel_of_approved
 
-	db = MagicMock()
-	db.get_value.return_value = stored
-	with (
-		patch.object(frappe, "db", db),
-		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
-		patch.object(frappe, "flags", frappe._dict(flags or {}), create=True),
-		patch.object(frappe, "session", frappe._dict(user="hr@example.com"), create=True),
-	):
-		block_cancel_of_approved(doc, "before_cancel")
-	return db
-
-
-PAID_MESSAGE = (
-	"This overtime is already paid in a submitted salary slip. Correct it with a payroll adjustment instead."
-)
-
-
-def _cancel_ot(roles, paid_slip=None, compensation="Overtime Pay"):
-	"""Cancel an approved OT Request; `paid_slip` is the submitted Salary Slip
-	covering its employee and date, if any. Returns the db mock."""
-	from hrms.utils.approved_request_guard import block_cancel_of_approved
+	employee_user = CALLER if own_employee == STAFF else STAFF_USER
 
 	def get_value(doctype, name=None, fieldname=None, **kw):
-		if doctype == "OT Request" and fieldname == "status":
-			return "Approved"
+		if doctype == doc.doctype and name == doc.name and isinstance(fieldname, str):
+			return stored
 		if doctype == "OT Request":
-			return frappe._dict(employee="HR-EMP-001", ot_date="2026-08-20", compensation=compensation)
+			return frappe._dict(employee=STAFF, ot_date="2026-08-20", compensation=compensation)
 		if doctype == "Salary Slip":
 			return paid_slip
+		if doctype == "Employee":
+			return {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}[fieldname]
 		return None
 
 	db = MagicMock()
@@ -131,91 +125,155 @@ def _cancel_ot(roles, paid_slip=None, compensation="Overtime Pay"):
 	with (
 		patch.object(frappe, "db", db),
 		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
-		patch.object(frappe, "flags", frappe._dict(), create=True),
-		patch.object(frappe, "session", frappe._dict(user="hr@example.com"), create=True),
+		patch.object(frappe, "flags", frappe._dict(flags or {}), create=True),
+		patch.object(frappe, "session", frappe._dict(user=CALLER), create=True),
+		patch("hrms.overrides.company_scope.company_visible", return_value=not fenced_out),
+		patch("hrms.utils.identity.own_employees", return_value=[own_employee] if own_employee else []),
 	):
-		block_cancel_of_approved(_doc("OT Request"), "before_cancel")
+		block_cancel_of_approved(doc, "before_cancel")
 	return db
 
 
-class TestPaidOvertimeIsNeverCancelled(unittest.TestCase):
-	"""Owner ruling W5, 14 Sep 2026: HR may correct an approved OT Request only
-	while it is unpaid. Once a submitted Salary Slip covers the employee and the
-	OT date, the pay is out — every role is refused and pointed at a payroll
-	adjustment."""
+class TestWhoMayCancelAnApprovedRequest(unittest.TestCase):
+	def assertRefused(self, doc, message=MESSAGE, **kwargs):
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_cancel(doc, **kwargs)
+		self.assertEqual(str(caught.exception), message)
 
-	def test_hr_may_cancel_approved_overtime_not_yet_paid(self):
-		for role in OT_REQUEST_HR_ROLES:
+	def test_hr_roles_may_cancel_an_approved_leave_application(self):
+		for role in HR_ROLES:
 			with self.subTest(role=role):
-				_cancel_ot(roles=("Employee", role), paid_slip=None)
+				_cancel(_doc("Leave Application"), stored="Approved", roles=("Employee", role))
 
-	def test_paid_overtime_is_refused_for_every_role(self):
-		for roles in (("HR Manager",), ("System Manager",), ("HR User",), ("Employee",)):
+	def test_hr_may_cancel_every_approved_request_type(self):
+		for doctype in (*DECISION_FIELD, *SUBMIT_IS_APPROVAL):
+			with self.subTest(doctype=doctype):
+				stored = "Approved" if doctype in DECISION_FIELD else None
+				_cancel(_doc(doctype), stored=stored, roles=("HR User",))
+
+	def test_a_fenced_out_hr_operator_is_refused(self):
+		self.assertRefused(
+			_doc("Leave Application"), stored="Approved", roles=("HR Manager",), fenced_out=True
+		)
+
+	def test_the_named_leave_approver_may_cancel(self):
+		doc = _doc("Leave Application", leave_approver=CALLER)
+		_cancel(doc, stored="Approved", roles=("Employee", "Leave Approver"))
+
+	def test_the_named_expense_and_shift_approvers_may_cancel(self):
+		_cancel(_doc("Expense Claim", expense_approver=CALLER), stored="Approved")
+		_cancel(_doc("Shift Request", approver=CALLER), stored="Approved")
+
+	def test_the_reports_to_manager_may_cancel(self):
+		for doctype in ("Leave Application", "Attendance Request", "Replacement Leave Claim"):
+			with self.subTest(doctype=doctype):
+				_cancel(_doc(doctype), stored="Approved", own_employee=MANAGER, reports_to=MANAGER)
+
+	def test_the_employee_themselves_is_refused(self):
+		self.assertRefused(_doc("Leave Application"), stored="Approved", own_employee=STAFF)
+
+	def test_the_employee_is_refused_even_when_hr_or_named_approver(self):
+		for roles in (("HR User",), ("HR Manager",), ("System Manager",)):
 			with self.subTest(roles=roles):
+				self.assertRefused(
+					_doc("Leave Application", leave_approver=CALLER),
+					stored="Approved",
+					roles=roles,
+					own_employee=STAFF,
+				)
+		self.assertRefused(_doc("Employee Advance"), stored=None, roles=("HR Manager",), own_employee=STAFF)
+
+	def test_an_unrelated_employee_is_refused(self):
+		for doctype in (*DECISION_FIELD, *SUBMIT_IS_APPROVAL):
+			with self.subTest(doctype=doctype):
+				stored = "Approved" if doctype in DECISION_FIELD else None
+				self.assertRefused(
+					_doc(doctype),
+					stored=stored,
+					roles=("Employee", "Leave Approver", "Expense Approver"),
+					own_employee="HR-EMP-OTHER",
+					reports_to=MANAGER,
+				)
+
+	def test_allow_and_refuse_are_logged(self):
+		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
+			_cancel(_doc("Leave Application"), stored="Approved", roles=("HR User",))
+			with self.assertRaises(frappe.ValidationError):
+				_cancel(_doc("Leave Application"), stored="Approved", own_employee=STAFF)
+		self.assertTrue(any("allowed" in line and CALLER in line for line in logs.output))
+		self.assertTrue(any("refused" in line and CALLER in line for line in logs.output))
+
+
+class TestPaidOvertimeIsNeverCancelled(unittest.TestCase):
+	"""Owner ruling W5, 14 Sep 2026, kept by the 14 Sep reversal: once a submitted
+	Salary Slip pays an OT Request, every role is refused — HR and approver too."""
+
+	def test_paid_overtime_is_refused_for_hr_and_the_approver(self):
+		for kwargs in (
+			{"roles": ("HR Manager",)},
+			{"roles": ("System Manager",)},
+			{"roles": ("HR User",)},
+			{"own_employee": MANAGER, "reports_to": MANAGER},
+		):
+			with self.subTest(**kwargs):
 				with self.assertRaises(frappe.ValidationError) as caught:
-					_cancel_ot(roles=roles, paid_slip="Sal Slip/HR-EMP-001/00008")
+					_cancel(_doc("OT Request"), stored="Approved", paid_slip="Sal Slip/STAFF/00008", **kwargs)
 				self.assertEqual(str(caught.exception), PAID_MESSAGE)
 
+	def test_unpaid_overtime_follows_the_approver_rule(self):
+		_cancel(_doc("OT Request"), stored="Approved", roles=("HR User",))
+		_cancel(_doc("OT Request"), stored="Approved", own_employee=MANAGER, reports_to=MANAGER)
+		with self.assertRaises(frappe.ValidationError):
+			_cancel(_doc("OT Request"), stored="Approved", own_employee=STAFF)
+
 	def test_the_payroll_lookup_is_a_submitted_slip_covering_the_ot_date(self):
-		db = _cancel_ot(roles=("HR Manager",), paid_slip=None)
+		db = _cancel(_doc("OT Request"), stored="Approved", roles=("HR Manager",))
 		slip_calls = [c for c in db.get_value.call_args_list if c.args[0] == "Salary Slip"]
 		self.assertEqual(len(slip_calls), 1)
 		filters = slip_calls[0].args[1]
-		self.assertEqual(filters["employee"], "HR-EMP-001")
+		self.assertEqual(filters["employee"], STAFF)
 		self.assertEqual(filters["docstatus"], 1)
 		self.assertEqual(filters["start_date"], ["<=", "2026-08-20"])
 		self.assertEqual(filters["end_date"], [">=", "2026-08-20"])
 
 	def test_replacement_leave_overtime_never_reaches_a_slip(self):
-		"""Only Overtime Pay is priced into the slip (ot_calculation
-		_approved_ot_pay_hours); replacement leave is banked, not paid."""
-		_cancel_ot(
-			roles=("HR Manager",), paid_slip="Sal Slip/HR-EMP-001/00008", compensation="Replacement Leave"
+		_cancel(
+			_doc("OT Request"),
+			stored="Approved",
+			roles=("HR Manager",),
+			paid_slip="Sal Slip/STAFF/00008",
+			compensation="Replacement Leave",
 		)
 
 	def test_a_refused_paid_cancel_is_logged(self):
 		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
 			with self.assertRaises(frappe.ValidationError):
-				_cancel_ot(roles=("HR Manager",), paid_slip="Sal Slip/HR-EMP-001/00008")
-		self.assertTrue(any("Sal Slip/HR-EMP-001/00008" in line for line in logs.output))
+				_cancel(
+					_doc("OT Request"), stored="Approved", roles=("HR Manager",), paid_slip="Sal Slip/X/1"
+				)
+		self.assertTrue(any("Sal Slip/X/1" in line for line in logs.output))
 
 	def test_leave_application_never_looks_at_payroll(self):
-		with self.assertRaises(frappe.ValidationError) as caught:
-			_cancel(_doc("Leave Application"), stored="Approved", roles=("HR Manager",))
-		self.assertEqual(str(caught.exception), MESSAGE)
-		db = _cancel(_doc("Leave Application"), stored="Rejected", roles=("HR Manager",))
-		self.assertEqual(db.get_value.call_count, 1)
+		db = _cancel(_doc("Leave Application"), stored="Approved", roles=("HR Manager",))
+		self.assertEqual([c for c in db.get_value.call_args_list if c.args[0] == "Salary Slip"], [])
 
 
-class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
-	def test_an_approved_request_is_refused_for_every_decision_doctype(self):
-		# OT Request is the one exception (owner ruling): the default role here,
-		# HR User, is one of the roles that MAY cancel it — covered separately by
-		# test_hr_roles_may_cancel_an_approved_ot_request.
-		for doctype in DECISION_FIELD:
-			if doctype == "OT Request":
-				continue
-			with self.subTest(doctype=doctype):
-				with self.assertRaises(frappe.ValidationError) as caught:
-					_cancel(_doc(doctype), stored="Approved")
-				self.assertIs(type(caught.exception), frappe.ValidationError)
-				self.assertEqual(str(caught.exception), MESSAGE)
-
+class TestUndecidedRequestsAreUntouched(unittest.TestCase):
 	def test_the_decision_is_read_from_the_stored_row(self):
 		for doctype, field in DECISION_FIELD.items():
 			with self.subTest(doctype=doctype):
 				db = _cancel(_doc(doctype), stored="Rejected")
 				db.get_value.assert_called_once_with(doctype, f"{doctype}-0001", field)
 
-	def test_a_rejected_request_stays_cancellable(self):
+	def test_a_rejected_request_is_left_to_the_docperm(self):
 		for doctype in DECISION_FIELD:
 			with self.subTest(doctype=doctype):
-				_cancel(_doc(doctype), stored="Rejected")
+				_cancel(_doc(doctype), stored="Rejected", own_employee=STAFF)
 
-	def test_an_undecided_request_stays_cancellable(self):
+	def test_an_undecided_request_is_left_to_the_docperm(self):
 		for stored in ("Open", "Draft", None):
 			with self.subTest(stored=stored):
-				_cancel(_doc("Leave Application"), stored=stored)
+				_cancel(_doc("Leave Application"), stored=stored, own_employee=STAFF)
 
 	def test_in_memory_cancelled_status_does_not_hide_a_stored_approval(self):
 		# LeaveApplication.before_cancel sets status = "Cancelled" before hooks run.
@@ -225,56 +283,11 @@ class TestApprovedRequestIsNeverCancelled(unittest.TestCase):
 	def test_in_memory_approved_status_does_not_override_a_stored_rejection(self):
 		_cancel(_doc("OT Request", in_memory_status="Approved"), stored="Rejected")
 
-	def test_submit_is_approval_doctypes_refuse_cancel_below_hr_manager(self):
-		for doctype in SUBMIT_IS_APPROVAL:
-			for roles in (("Employee",), ("HR User", "Expense Approver", "Leave Approver")):
-				with self.subTest(doctype=doctype, roles=roles):
-					with self.assertRaises(frappe.ValidationError) as caught:
-						_cancel(_doc(doctype, in_memory_status="Unpaid"), stored=None, roles=roles)
-					self.assertEqual(str(caught.exception), MESSAGE)
-
-	def test_hr_manager_or_system_manager_may_correct_a_submit_is_approval_doctype(self):
-		# Nabil, 14 Sep 2026: a wrong advance must still be reversible.
-		for doctype in SUBMIT_IS_APPROVAL:
-			for role in ("HR Manager", "System Manager"):
-				with self.subTest(doctype=doctype, role=role):
-					_cancel(_doc(doctype), stored=None, roles=("Employee", role))
-
-	def test_no_role_may_cancel_an_approved_decision_doctype(self):
-		# OT Request is the one exception (owner ruling): HR may still cancel it.
-		# Covered separately by test_hr_roles_may_cancel_an_approved_ot_request.
-		for doctype in DECISION_FIELD:
-			if doctype == "OT Request":
-				continue
-			with self.subTest(doctype=doctype):
-				with self.assertRaises(frappe.ValidationError):
-					_cancel(_doc(doctype), stored="Approved", roles=("HR Manager", "System Manager"))
-
-	def test_hr_roles_may_cancel_an_approved_ot_request(self):
-		# Owner ruling, 14 Sep 2026: "leave, attendance yes ... overtime no ...
-		# only HR can edit overtime" — an approved OT Request is the one
-		# decision doctype HR may still cancel/amend.
-		for role in OT_REQUEST_HR_ROLES:
-			with self.subTest(role=role):
-				_cancel_ot(roles=("Employee", role))
-
-	def test_non_hr_roles_are_refused_for_an_approved_ot_request(self):
-		for roles in (("Employee",), ("Leave Approver",), ("Expense Approver", "Leave Approver")):
-			with self.subTest(roles=roles):
-				with self.assertRaises(frappe.ValidationError) as caught:
-					_cancel_ot(roles=roles)
-				self.assertEqual(str(caught.exception), MESSAGE)
-
-	def test_hr_cancel_of_an_approved_ot_request_is_logged(self):
-		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
-			_cancel_ot(roles=("HR User",))
-		self.assertTrue(any("OT Request" in line for line in logs.output))
-
 	def test_sync_patch_migrate_and_install_are_exempt(self):
 		for flag in ("in_shadow_sync", "in_patch", "in_migrate", "in_install"):
 			for doctype in (*DECISION_FIELD, *SUBMIT_IS_APPROVAL):
 				with self.subTest(flag=flag, doctype=doctype):
-					_cancel(_doc(doctype), stored="Approved", flags={flag: True})
+					_cancel(_doc(doctype), stored="Approved", flags={flag: True}, own_employee=STAFF)
 
 	def test_other_doctypes_are_not_touched(self):
 		db = _cancel(_doc("Salary Slip"), stored="Approved")
