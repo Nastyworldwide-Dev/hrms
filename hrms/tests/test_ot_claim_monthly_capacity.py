@@ -44,7 +44,9 @@ api_tree = ast.parse(api_source.read_text())
 api_nodes = [
 	node
 	for node in api_tree.body
-	if isinstance(node, ast.FunctionDef) and node.name in {"get_ot_claim_summary", "get_claimable_ot_summary"}
+	if isinstance(node, ast.FunctionDef)
+	and node.name
+	in {"get_ot_claim_summary", "get_claimable_ot_summary", "_incomplete_ot_days", "_legit_zero_day"}
 ]
 for node in api_nodes:
 	node.decorator_list = []

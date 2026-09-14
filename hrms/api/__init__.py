@@ -645,7 +645,19 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 			"attendance_date": ["between", [from_date, to_date]],
 			"docstatus": 1,
 		},
-		fields=["attendance_date", "ot_hours"],
+		# The extra fields are what makes a zero-OT day LEGIT (leave, half-day leave,
+		# Attendance Request, HR-marked) — the same signals attendance_recovery's
+		# protected_reason reads — so the incomplete list below never names them.
+		fields=[
+			"attendance_date",
+			"ot_hours",
+			"leave_type",
+			"leave_application",
+			"status",
+			"modify_half_day_status",
+			"attendance_request",
+			"auto_attendance",
+		],
 	)
 	# A date is "claimed" the moment a request exists for it, drafts included — filing
 	# a second for the same day is the double-claim the form's own cap already blocks.
@@ -724,6 +736,13 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 			if (hours := get_ot_claim_capacity(employee, work_date, compensation)["hours"]) > 0
 		]
 		total = sum(day["hours"] for day in days)
+	incomplete = _incomplete_ot_days(
+		employee,
+		from_date,
+		to_date,
+		worked,
+		skip=claimed | {getdate(day["date"]) for day in days},
+	)
 	return {
 		"claimable_hours": flt(total),
 		"claimable_days": len(days),
@@ -731,6 +750,9 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 		"days": days,
 		# Days that already have a request, newest first — shown, never offered.
 		"claimed": claimed_days,
+		# Days worked (a tap or a row) that cannot be claimed and say why, newest
+		# first — shown greyed, never offered. Goal G2: a broken day is not hidden.
+		"incomplete": incomplete,
 		"from_date": str(from_date),
 		"to_date": str(to_date),
 		# Why the list is empty, when it is. Without these the form shows a blank
@@ -739,6 +761,82 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 		"days_already_claimed": len(claimed),
 		"days_with_overtime": len({row["attendance_date"] for row in worked if flt(row["ot_hours"]) > 0}),
 	}
+
+
+def _legit_zero_day(row) -> bool:
+	"""A submitted Attendance row that is rightly not overtime — leave, half-day leave,
+	an Attendance Request, or a row HR keyed by hand. Same signals as
+	attendance_recovery.protected_reason, read here so the API does not import it."""
+	return bool(
+		row.get("leave_type")
+		or row.get("leave_application")
+		or row.get("status") == "On Leave"
+		or cint(row.get("modify_half_day_status") or 0)
+		or row.get("attendance_request")
+		or not cint(row.get("auto_attendance") or 0)
+	)
+
+
+def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict]:
+	"""Days in the window with a tap (or a submitted row) and no claim capacity, and why.
+
+	One read of the window's taps, grouped by the shift day they attached to
+	(an after-midnight OUT stays on its IN's day); the rows already read for
+	discovery say which days have attendance. Only days the engine gave nothing
+	for are explained, through the same rules the form's refusal uses. Today is
+	still running and is never "incomplete"; a day whose taps look fine and
+	simply carry no overtime is a genuine zero and is not listed; a day whose
+	shift has overtime switched off is policy, not a broken record, and is not
+	listed either. Days on leave / half-day leave / Attendance Request /
+	HR-marked are legit and skipped.
+	"""
+	from hrms.utils.ot_calculation import NO_OT_DISABLED, explain_no_overtime_rows
+
+	today = getdate()
+	taps = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "time": ["between", [f"{from_date} 00:00:00", f"{to_date} 23:59:59"]]},
+		fields=[
+			"time",
+			"shift_start",
+			"log_type",
+			"shift",
+			"offshift",
+			"skip_auto_attendance",
+			"requires_remote_approval",
+			"remote_approval_status",
+		],
+		limit_page_length=0,
+	)
+	by_day: dict = {}
+	for tap in taps:
+		if (tap.get("remote_approval_status") or "") == "Rejected":
+			continue
+		day = getdate(str(tap.get("shift_start") or tap.get("time"))[:10])
+		by_day.setdefault(day, []).append(tap)
+	rows_by_day: dict = {}
+	for row in worked:
+		rows_by_day.setdefault(getdate(row["attendance_date"]), []).append(row)
+
+	incomplete = []
+	for day in sorted(set(by_day) | set(rows_by_day), reverse=True):
+		if day in skip or day >= today:
+			continue
+		rows = rows_by_day.get(day, [])
+		if any(_legit_zero_day(row) for row in rows):
+			continue
+		code, reason = explain_no_overtime_rows(by_day.get(day, []), has_attendance=bool(rows))
+		if not code or code == NO_OT_DISABLED:
+			continue
+		incomplete.append({"date": str(day), "reason_code": code, "reason": reason})
+	logger.info(
+		"[api] incomplete OT days employee=%s window=%s..%s -> %d",
+		employee,
+		from_date,
+		to_date,
+		len(incomplete),
+	)
+	return incomplete
 
 
 @frappe.whitelist()

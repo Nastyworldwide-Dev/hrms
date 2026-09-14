@@ -761,6 +761,87 @@ def get_day_ot_breakdown(employee, day, basic=0):
 	return get_ot_breakdown(employee, day, day, basic).get(day) or _empty_breakdown()
 
 
+# Reason codes for a zero: the PWA keys its wording and greying off these, the
+# text stays the human sentence. "" means the punches look fine and the hours
+# really are zero — no honest cause to name.
+NO_OT_NO_CHECKINS = "no_checkins"
+NO_OT_NO_SHIFT = "no_shift"
+NO_OT_DISABLED = "ot_disabled"
+NO_OT_OFFSHIFT = "offshift"
+NO_OT_SKIPPED = "skipped"
+NO_OT_PENDING_APPROVAL = "pending_approval"
+NO_OT_NO_CHECKOUT = "no_checkout"
+NO_OT_NO_CHECKIN = "no_checkin"
+NO_OT_NO_ATTENDANCE_ROW = "no_attendance_row"
+
+
+def explain_no_overtime_rows(rows, *, has_attendance=None) -> tuple[str, str]:
+	"""(code, reason) for a day's check-in rows that yielded no overtime. Pure.
+
+	`rows` are the day's Employee Checkin rows (log_type, shift, offshift,
+	skip_auto_attendance, requires_remote_approval, remote_approval_status).
+	`has_attendance` — whether a submitted Attendance row exists for the day —
+	is optional: a caller that has not looked leaves it None and that check is
+	skipped. Wording never asks the person to fix a record: every cause below
+	except a genuine zero is HR's to see.
+	"""
+	if not rows:
+		return NO_OT_NO_CHECKINS, _("No check-ins were recorded for this date.")
+
+	shifts = {row.shift for row in rows if row.shift}
+	if not shifts:
+		return NO_OT_NO_SHIFT, _(
+			"Your check-ins for this date are not attached to any shift, so overtime cannot be "
+			"measured. Ask HR to check your shift assignment for that day."
+		)
+
+	without_ot = [name for name in shifts if not _get_shift_ot_config(name)]
+	if len(without_ot) == len(shifts):
+		# Plain text, no markup: this sentence is shown in the PWA hint as well as
+		# thrown in Desk, and the PWA renders it as text — a <b> would appear
+		# literally to the person reading it.
+		return NO_OT_DISABLED, _("Overtime is not enabled on the shift you worked ({0}).").format(
+			", ".join(sorted(without_ot))
+		)
+
+	if any(cint(row.offshift) for row in rows):
+		return NO_OT_OFFSHIFT, _(
+			"Some of your check-ins for this date are marked off-shift, so they are not counted "
+			"towards overtime."
+		)
+	if any(cint(row.skip_auto_attendance) for row in rows):
+		return NO_OT_SKIPPED, _(
+			"Your check-ins for this date are marked to skip attendance, so no overtime is measured."
+		)
+	pending = [
+		row
+		for row in rows
+		if cint(row.requires_remote_approval) and (row.remote_approval_status or "") != "Approved"
+	]
+	if pending:
+		status = (pending[0].remote_approval_status or "Pending").lower()
+		return NO_OT_PENDING_APPROVAL, _(
+			"Your check-ins for this date are {0} approval, so they do not count towards overtime yet."
+		).format(status)
+
+	types = [row.log_type for row in rows if row.log_type in ("IN", "OUT")]
+	if "OUT" not in types:
+		return NO_OT_NO_CHECKOUT, _(
+			"Only a check-in was recorded for this date (no check-out), so there is nothing to "
+			"measure overtime against."
+		)
+	if "IN" not in types:
+		return NO_OT_NO_CHECKIN, _(
+			"This date has no check-in, so there is nothing to measure overtime against."
+		)
+	if has_attendance is False:
+		return NO_OT_NO_ATTENDANCE_ROW, _(
+			"This date has check-ins but no attendance record yet, so overtime cannot be measured."
+		)
+
+	return "", ""
+
+
 def _explain_no_overtime(employee, day) -> str:
 	"""Why this date yielded no overtime, in words the person can act on.
 
@@ -774,7 +855,9 @@ def _explain_no_overtime(employee, day) -> str:
 
 	Runs ONLY on the refusal path, so it costs nothing on the ordinary case.
 	Returns "" when the punches look fine and the hours really are zero — there
-	is no honest cause to name then.
+	is no honest cause to name then. The rules live in explain_no_overtime_rows
+	so a caller that already holds a window of taps can explain many days
+	without a read per day.
 	"""
 	rows = frappe.get_all(
 		"Employee Checkin",
@@ -788,50 +871,7 @@ def _explain_no_overtime(employee, day) -> str:
 			"remote_approval_status",
 		],
 	)
-	if not rows:
-		return _("No check-ins were recorded for this date.")
-
-	shifts = {row.shift for row in rows if row.shift}
-	if not shifts:
-		return _(
-			"Your check-ins for this date are not attached to any shift, so overtime cannot be "
-			"measured. Ask HR to check your shift assignment for that day."
-		)
-
-	without_ot = [name for name in shifts if not _get_shift_ot_config(name)]
-	if len(without_ot) == len(shifts):
-		# Plain text, no markup: this sentence is shown in the PWA hint as well as
-		# thrown in Desk, and the PWA renders it as text — a <b> would appear
-		# literally to the person reading it.
-		return _("Overtime is not enabled on the shift you worked ({0}).").format(
-			", ".join(sorted(without_ot))
-		)
-
-	if any(cint(row.offshift) for row in rows):
-		return _(
-			"Some of your check-ins for this date are marked off-shift, so they are not counted "
-			"towards overtime."
-		)
-	if any(cint(row.skip_auto_attendance) for row in rows):
-		return _("Your check-ins for this date are marked to skip attendance, so no overtime is measured.")
-	pending = [
-		row
-		for row in rows
-		if cint(row.requires_remote_approval) and (row.remote_approval_status or "") != "Approved"
-	]
-	if pending:
-		status = (pending[0].remote_approval_status or "Pending").lower()
-		return _(
-			"Your check-ins for this date are {0} approval, so they do not count towards overtime yet."
-		).format(status)
-
-	types = [row.log_type for row in rows if row.log_type in ("IN", "OUT")]
-	if "OUT" not in types:
-		return _("This date has no check-out, so there is nothing to measure overtime against.")
-	if "IN" not in types:
-		return _("This date has no check-in, so there is nothing to measure overtime against.")
-
-	return ""
+	return explain_no_overtime_rows(rows)[1]
 
 
 def get_ot_claim_capacity(
