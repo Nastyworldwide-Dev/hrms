@@ -16,13 +16,18 @@ const source = readFileSync(
 	"utf8"
 )
 
-function desk({ docstatus = 1, nativeCancel = 0 } = {}) {
+function desk({
+	docstatus = 1,
+	nativeCancel = 0,
+	doctype = "OT Request",
+	roles = [],
+} = {}) {
 	const calls = [],
 		confirms = [],
 		buttons = new Map(),
 		handlers = {}
 	const frm = {
-		doctype: "OT Request",
+		doctype,
 		doc: { name: "OT-A", modified: "2026-09-14 12:00:00", docstatus },
 		perm: [{ read: 1, cancel: nativeCancel }],
 		add_custom_button(label, click) {
@@ -40,6 +45,7 @@ function desk({ docstatus = 1, nativeCancel = 0 } = {}) {
 			provide(path) {
 				context.hrms[path.split(".")[1]] ||= {}
 			},
+			user: { has_role: (role) => roles.includes(role) },
 			ui: {
 				form: {
 					on(doctype, events) {
@@ -133,4 +139,26 @@ test("a late answer for an older revision adds nothing", () => {
 	state.frm.doc = { ...state.frm.doc, modified: "2026-09-14 12:05:00" }
 	state.calls[0].callback({ message: { can_cancel: true } })
 	assert.equal(state.buttons.size, 0)
+})
+
+test("correction doctypes: HR Manager / System Manager get only Cancel (correction), no second Cancel", () => {
+	for (const doctype of [
+		"Employee Advance",
+		"Travel Request",
+		"Compensatory Leave Request",
+	]) {
+		for (const role of ["HR Manager", "System Manager"]) {
+			const { frm, calls, buttons, handlers } = desk({ doctype, roles: [role] })
+			handlers[doctype].refresh(frm)
+			assert.equal(calls.length, 0, `${doctype} / ${role}: no server check`)
+			assert.equal(buttons.size, 0, `${doctype} / ${role}: no extra button`)
+		}
+	}
+	// an approver without those roles still gets the check on a correction doctype
+	const other = desk({
+		doctype: "Employee Advance",
+		roles: ["Expense Approver"],
+	})
+	other.handlers["Employee Advance"].refresh(other.frm)
+	assert.equal(other.calls.length, 1)
 })
