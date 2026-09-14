@@ -2,9 +2,12 @@
 
 Wired as `before_cancel` in hooks.py, so it holds on every cancel path: Desk
 Cancel, bulk cancel, "cancel all linked", hrms/api/approval.py `finalize`, and
-amend (which must cancel first). No role bypass: HR User, HR Manager and System
-Manager hold `cancel` and are refused like anyone else. A rejected request stays
-cancellable.
+amend (which must cancel first). An approved request is refused for every role,
+HR Manager and System Manager included. A rejected request stays cancellable.
+
+One exception (Nabil, 14 Sep 2026): Employee Advance, Compensatory Leave Request
+and Travel Request record no decision, so submitting one IS approving it; only
+CORRECTION_ROLES may cancel those, to reverse a mistake such as a wrong advance.
 
 The decision is read from the stored row, never from `doc`:
 LeaveApplication.before_cancel sets status = "Cancelled" before doc_events run.

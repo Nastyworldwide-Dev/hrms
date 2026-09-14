@@ -429,7 +429,10 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		#     hrms.utils.approved_request_guard, a before_cancel doc_event, so it
 		#     holds on every doc.cancel path (this endpoint, Desk, bulk, cancel
 		#     all linked, amend) for every request doctype and every role. A
-		#     rejected request stays cancellable by anyone holding `cancel`.
+		#     rejected request stays cancellable by anyone holding `cancel`. The
+		#     three doctypes with no decision field (Employee Advance, Compensatory
+		#     Leave Request, Travel Request) may be cancelled by HR Manager or
+		#     System Manager only, to correct a mistake (guard CORRECTION_ROLES).
 		#   * HR User holds `cancel` on Shift Request too, like the other five
 		#     request doctypes: hrms/patches/v16_0/hr_user_can_cancel_shift_request.py
 		#     grants it on the live permission row, so through this endpoint that
