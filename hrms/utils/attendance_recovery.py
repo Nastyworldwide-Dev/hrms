@@ -2077,6 +2077,8 @@ def hr_list(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -> dict
 
 #: A tap this many hours after an open IN still closes that IN's session.
 SESSION_HOURS = 20
+#: A second IN this soon after an open IN is a double tap (E5), not the session's OUT (E6).
+DUPLICATE_TAP_MINUTES = 10
 #: A pending late-checkout request older than this: the approver never acted.
 LATE_CHECKOUT_STALE_DAYS = 3
 #: hr_list wording for a lone IN (owner ruling: never auto-closed).
@@ -2124,15 +2126,21 @@ def session_days(taps) -> dict:
 
 	A tap within SESSION_HOURS after an open IN closes that IN, whatever its
 	label, and belongs to the IN's clock day (a 07:00 tap after a 19:30 IN is
-	the night session's OUT). Anything else starts on its own clock day; only
-	an IN opens a session.
+	the night session's OUT). A second IN within DUPLICATE_TAP_MINUTES is a
+	double tap: it joins the session and leaves it open (E5); hours later it
+	is the OUT (E6). Anything else starts on its own clock day; only an IN
+	opens a session.
 	"""
 	anchors, open_in = {}, None
 	for tap in sorted(taps, key=lambda t: get_datetime(t["time"])):
 		moment = get_datetime(tap["time"])
 		if open_in and moment - open_in[0] <= timedelta(hours=SESSION_HOURS):
 			anchors[tap["name"]] = open_in[1]
-			open_in = None
+			duplicate = tap.get("log_type") == "IN" and moment - open_in[0] <= timedelta(
+				minutes=DUPLICATE_TAP_MINUTES
+			)
+			if not duplicate:
+				open_in = None
 			continue
 		anchors[tap["name"]] = moment.date()
 		open_in = (moment, moment.date()) if tap.get("log_type") == "IN" else None
@@ -2212,7 +2220,8 @@ def _unclaimable(family, employee, day, reason, **extra) -> dict:
 		"reason": reason,
 		"shift": extra.pop("shift", None),
 		"attendance": extra.pop("attendance", None),
-		"status": extra.pop("status", None),
+		# the row's Attendance status; "status" is the verdict unclaimable_rows sets
+		"attendance_status": extra.pop("status", None),
 		"taps": extra.pop("taps", 0),
 		**extra,
 	}

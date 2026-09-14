@@ -108,6 +108,16 @@ class TestSessionDays(unittest.TestCase):
 		taps = [_tap("a", datetime(2026, 9, 1, 8, 0)), _tap("b", datetime(2026, 9, 1, 19, 0), "IN")]
 		self.assertEqual(rec.session_days(taps), {"a": date(2026, 9, 1), "b": date(2026, 9, 1)})
 
+	def test_a_double_tap_in_minutes_apart_keeps_the_session_open_for_the_real_out(self):
+		# E5 / E26: two INs minutes apart are one tap; the 18:00 OUT still closes the day.
+		taps = [
+			_tap("a", datetime(2026, 9, 1, 8, 0)),
+			_tap("b", datetime(2026, 9, 1, 8, 2)),
+			_tap("c", datetime(2026, 9, 1, 18, 0), "OUT"),
+		]
+		self.assertEqual(set(rec.session_days(taps).values()), {date(2026, 9, 1)})
+		self.assertIsNone(rec.day_shape(taps))
+
 	def test_an_in_more_than_20h_after_the_last_in_starts_its_own_day(self):
 		taps = [_tap("a", datetime(2026, 9, 1, 8, 0)), _tap("b", datetime(2026, 9, 2, 7, 30))]
 		self.assertEqual(rec.session_days(taps), {"a": date(2026, 9, 1), "b": date(2026, 9, 2)})
@@ -439,6 +449,7 @@ class TestUnclaimableRowsE34(_Planners):
 		self.assertEqual({r["family"] for r in rows}, {"F1", "F2", "F6", "F7"})
 		lone = next(r for r in rows if r["family"] == "F2")
 		self.assertEqual((lone["status"], lone["date"]), ("needs HR", "2026-09-02"))
+		self.assertIn("attendance_status", lone)  # the row's own status is kept apart from the verdict
 
 
 # --- the report -----------------------------------------------------------------------
