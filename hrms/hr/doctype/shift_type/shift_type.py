@@ -841,6 +841,19 @@ def get_actual_shift_end(shift, current_datetime):
 
 def process_auto_attendance_for_all_shifts():
 	"""Called from hooks"""
+	from hrms.utils.offshift_punch_heal import heal_recent_offshift_punches
+
+	# A check-out saved without a shift is never read below; give recent ones
+	# the shift of the check-in they close first (hrms/utils/offshift_punch_heal.py).
+	# Nothing the heal does may stop attendance being marked this hour.
+	try:
+		heal_recent_offshift_punches()
+	except Exception:
+		logger.exception("[shift_type] off-shift punch heal failed; marking attendance anyway")
+		try:
+			frappe.log_error(title="Off-shift punch heal failed")
+		except Exception:
+			logger.exception("[shift_type] could not record the heal failure")
 	shift_list = frappe.get_all("Shift Type", filters={"enable_auto_attendance": "1"}, pluck="name")
 	for shift in shift_list:
 		doc = frappe.get_cached_doc("Shift Type", shift)
