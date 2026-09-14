@@ -11,6 +11,7 @@ rule `remark_attendance` uses) re-mark the day.
 Steps, in this order — a later step refuses to write while an earlier one
 still has planned work (System Manager may `force=1`):
 
+0. release_mirrored  broken days still stamped as the ERP's copy become Verifica's
 1. assignments   end a night assignment a day worker never used (Ria)
 2. overwritten   checkin_recovery.recover_overwritten_checkins (August overwrite)
 3. mirrored_rows cancel automation-owned mirrored Absent rows over hub punches
@@ -25,6 +26,14 @@ touched; HR hand-marked, leave, half-day-leave and Attendance Request rows are
 never rebuilt; a day tied to an approved OT Request, submitted Salary Slip or
 Overtime Details is left alone (`_repair_financial_dependency`); nobody is
 asked — what cannot be fixed goes to `hr_list`.
+
+Mirrored broken days (step 0, inputs_report section j): rows copied from the
+ERP before cutover keep `synced_from_instance`, and every automation path
+skips a stamped row, so a broken August day copied from the ERP was invisible
+to every step below. Verifica owns its data since cutover (owner ruling 14 Sep
+2026), so for exactly the broken, unprotected days the stamp is cleared —
+nothing deleted or cancelled, links kept — and `rebuild` then re-marks those
+days (`_remark_released_day`). Healthy mirrored days keep their stamp.
 
 Mirrored release path: `Attendance.cancel()` through the document, so the
 write-block hook (`hrms.sync.write_block.block_mirrored_writes`, before_cancel)
@@ -43,6 +52,7 @@ from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
 from hrms.overrides.company_scope import require_unfenced
+from hrms.sync.write_block import PROVENANCE_FIELD
 from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.offshift_punch_heal import _lost_transaction
@@ -55,6 +65,7 @@ REPAIR_FLOOR = date(2026, 8, 1)
 CUTOVER = date(2026, 9, 4)
 MAX_WINDOW_DAYS = 62
 STEPS = (
+	"release_mirrored",
 	"assignments",
 	"overwritten",
 	"mirrored_rows",
@@ -70,6 +81,8 @@ SYSTEM_MANAGER_STEPS = ("overwritten", "skip_stamps")
 NIGHT_START_MIN = 18 * 60
 NIGHT_END_MAX = 6 * 60
 ROW_SAVEPOINT = "attendance_recovery_row"
+#: The Comment on every row `release_mirrored` released; the rebuild step finds released days by it.
+RELEASE_NOTE = "Released from ERP copy by attendance recovery (Verifica owns this day)"
 SAMPLE = 10
 ATTENDANCE_FIELDS = [
 	"name",
@@ -322,6 +335,181 @@ def _local_punches(employee, start, end) -> list:
 	kept = [r for r in rows if r.get("remote_approval_status") != "Rejected"]
 	logger.debug("[attendance_recovery] %s: %d punch(es) in %s..%s", employee, len(kept), start, end)
 	return kept
+
+
+# --- 0. release mirrored broken days -------------------------------------------------
+
+
+def mirrored_day_problems(rows, punches) -> list[tuple[str, str]]:
+	"""Why one employee-day of ERP-copied data looks broken: [(shape, text)]. Pure.
+
+	Empty when the day is healthy or holds no mirrored row at all. `rows`: the
+	day's Attendance (any docstatus, mirrored or not); `punches`: its
+	non-rejected punches, mirrored or local, on that shift day.
+	"""
+	submitted = [r for r in rows if cint(r.get("docstatus")) == 1]
+	mirrored_rows = [r for r in submitted if r.get(PROVENANCE_FIELD)]
+	mirrored_punch = any(p.get(PROVENANCE_FIELD) for p in punches)
+	if not punches or not (mirrored_rows or mirrored_punch):
+		return []
+	count = len(punches)
+	if not submitted:
+		return [("no_attendance", f"{count} punch(es) and no submitted attendance")] if mirrored_punch else []
+	types = {p.get("log_type") for p in punches}
+	one_sided = next(iter(types)) if len(types) == 1 and types <= {"IN", "OUT"} else None
+	problems = []
+	for row in mirrored_rows:
+		hours = flt(row.get("working_hours"))
+		label = f"mirrored {row.get('status')} {row.get('name')}"
+		if row.get("status") in ("Absent", "Half Day") or not hours:
+			problems.append(("broken_row", f"{label} ({hours} h) on a day with {count} punch(es)"))
+		elif count % 2 or one_sided:
+			shape = f"all {one_sided}" if one_sided else "an odd number"
+			problems.append(("unpaired_punches", f"{label} over {count} punch(es), {shape}"))
+	return problems
+
+
+def _plan_release_mirrored(win, for_update=False) -> dict:
+	"""Section j and step `release_mirrored`: broken days that are still the ERP's copy.
+
+	One Attendance read and one Employee Checkin read for the window. A day is
+	listed only when `mirrored_day_problems` finds it broken and
+	`protected_reason` finds nothing (today, HR-kept, leave, Attendance Request,
+	half-day leave, HR-removed, paid); a protected day goes to held_back.
+	"""
+	rows = frappe.get_all(
+		"Attendance",
+		filters={"attendance_date": ["between", [win.start, win.end]], "docstatus": ["<", 2]},
+		fields=ATTENDANCE_FIELDS,
+		limit_page_length=0,
+	)
+	punches = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["time", ">=", datetime.combine(win.start - timedelta(days=1), time.min)],
+			["time", "<", datetime.combine(win.end + timedelta(days=2), time.min)],
+		],
+		fields=[
+			"name",
+			"employee",
+			"time",
+			"log_type",
+			"shift_start",
+			"attendance",
+			PROVENANCE_FIELD,
+			"remote_approval_status",
+		],
+		limit_page_length=0,
+	)
+	days = {}
+	for row in rows:
+		day = getdate(row.get("attendance_date"))
+		if win.start <= day <= win.end:
+			days.setdefault((row.get("employee"), day), ([], []))[0].append(row)
+	for punch in punches:
+		day = getdate(punch.get("shift_start") or punch.get("time"))
+		if win.start <= day <= win.end:
+			days.setdefault((punch.get("employee"), day), ([], []))[1].append(punch)
+
+	today, planned, held, shapes = _today(), [], [], Counter()
+	for (employee, day), (day_rows, day_punches) in sorted(
+		days.items(), key=lambda i: (str(i[0][0]), i[0][1])
+	):
+		kept = [p for p in day_punches if p.get("remote_approval_status") != "Rejected"]
+		problems = mirrored_day_problems(day_rows, kept)
+		if not problems:
+			continue
+		stamped_rows = [r for r in day_rows if cint(r.get("docstatus")) == 1 and r.get(PROVENANCE_FIELD)]
+		first = stamped_rows[0] if stamped_rows else {}
+		entry = {
+			"employee": employee,
+			"date": str(day),
+			"attendance": first.get("name"),
+			"status": first.get("status"),
+			"working_hours": flt(first.get("working_hours")) if first else None,
+			"punch_count": len(kept),
+			"problem": "; ".join(text for _shape, text in problems),
+			"shapes": [shape for shape, _text in problems],
+			"release_checkins": sorted(p.get("name") for p in day_punches if p.get(PROVENANCE_FIELD)),
+			"release_attendance": sorted(r.get("name") for r in stamped_rows),
+		}
+		reason = protected_reason(day, today, day_rows) or protected_reason(
+			day,
+			today,
+			day_rows,
+			_financial(employee, day, day_rows, for_update),
+			removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
+		)
+		if reason:
+			held.append(_held(entry, reason))
+			continue
+		planned.append(entry)
+		shapes.update(entry["shapes"])
+	logger.info(
+		"[attendance_recovery] mirrored broken days %s..%s: %d to release, %d held, shapes %s",
+		win.start,
+		win.end,
+		len(planned),
+		len(held),
+		dict(shapes),
+	)
+	return _outcome(planned, held, employees=len({p["employee"] for p in planned}), shapes=dict(shapes))
+
+
+def _release_day(entry, win) -> dict:
+	"""Clear the ERP stamp on one listed day's rows, with one Comment on each.
+
+	Deletes nothing, cancels nothing, and keeps every punch's `attendance` link.
+	`frappe.db.set_value` (as `purge.release_instance_stamp`) because the
+	write-block's validate hook would put the stamp back on a saved document.
+
+	What the hourly job then does (ShiftType.get_employee_checkins reads punches
+	with this shift, attendance not set, no stamp, time >= process_attendance_after
+	and shift_actual_end < last_sync_of_checkin): a released punch that is still
+	LINKED is never read by it — only the `rebuild` step re-marks that day. A
+	released punch that was UNLINKED becomes readable, so if the shift's
+	process_attendance_after is on or before that day the next hourly run marks
+	it with the same engine rule `rebuild` uses; only the listed (unprotected)
+	days can be reached that way, never a healthy mirrored day. The absent sweep
+	already counted mirrored punches as punched, so it changes nothing. After
+	cutover the sync never pulls Attendance again, and the punch import matches
+	(employee, time, log_type), so a released punch is not re-imported.
+	"""
+	day = getdate(entry["date"])
+	if day > win.end:
+		raise frappe.ValidationError(f"{day} is today or later")
+	released = []
+	for doctype, key in (("Employee Checkin", "release_checkins"), ("Attendance", "release_attendance")):
+		for name in entry.get(key) or []:
+			frappe.db.set_value(doctype, name, PROVENANCE_FIELD, None, update_modified=False)
+			frappe.get_doc(
+				{
+					"doctype": "Comment",
+					"comment_type": "Comment",
+					"reference_doctype": doctype,
+					"reference_name": name,
+					"content": RELEASE_NOTE,
+				}
+			).insert(ignore_permissions=True)
+			released.append(name)
+	logger.info(
+		"[attendance_recovery] released %s on %s from the ERP copy: %s", entry["employee"], day, released
+	)
+	return {"employee": entry["employee"], "date": str(day), "released": released}
+
+
+def _apply_release_mirrored(win, plan) -> dict:
+	done, held = [], []
+	for entry in plan["planned"]:
+		result, error = _guarded(
+			f"release {entry['employee']} {entry['date']}", lambda entry=entry: _release_day(entry, win)
+		)
+		if error:
+			held.append(_held(entry, f"could not be released: {error}", hr=False))
+		else:
+			done.append(result)
+	logger.info("[attendance_recovery] release: %d day(s) released, %d held", len(done), len(held))
+	return {"done": done, "held_back": held}
 
 
 # --- 1. assignments ----------------------------------------------------------------
@@ -922,8 +1110,156 @@ def _remark_day(employee, day, apply):
 	return engine_remark(employee, getdate(day), apply)
 
 
+def _released_days(win) -> set:
+	"""(employee, day) in the window that `release_mirrored` released, found by its Comment."""
+	# ceiling: every released row's Comment is read each run, upgrade: store the
+	# release date on the Comment and filter by it if releases reach tens of thousands
+	comments = frappe.get_all(
+		"Comment",
+		filters={"reference_doctype": ["in", ["Attendance", "Employee Checkin"]], "content": RELEASE_NOTE},
+		fields=["reference_doctype", "reference_name"],
+		limit_page_length=0,
+	)
+	names = {"Attendance": set(), "Employee Checkin": set()}
+	for comment in comments:
+		if comment.get("reference_doctype") in names:
+			names[comment["reference_doctype"]].add(comment.get("reference_name"))
+	days = set()
+	if names["Attendance"]:
+		for row in frappe.get_all(
+			"Attendance",
+			filters={
+				"name": ["in", sorted(names["Attendance"])],
+				"docstatus": 1,
+				"attendance_date": ["between", [win.start, win.end]],
+			},
+			fields=["employee", "attendance_date"],
+			limit_page_length=0,
+		):
+			days.add((row.employee, getdate(row.attendance_date)))
+	if names["Employee Checkin"]:
+		for punch in frappe.get_all(
+			"Employee Checkin",
+			filters={"name": ["in", sorted(names["Employee Checkin"])]},
+			fields=["employee", "time", "shift_start"],
+			limit_page_length=0,
+		):
+			day = getdate(punch.shift_start or punch.time)
+			if win.start <= day <= win.end:
+				days.add((punch.employee, day))
+	logger.debug("[attendance_recovery] %d released day(s) in %s..%s", len(days), win.start, win.end)
+	return days
+
+
+def _same_result(result, shift_name) -> bool:
+	from hrms.hr.doctype.employee_checkin.employee_checkin import _same_day_result
+
+	return _same_day_result(
+		result.existing,
+		result.status,
+		result.working_hours,
+		result.get("in_time"),
+		result.get("out_time"),
+		shift_name,
+	)
+
+
+def _remark_released_day(employee, day, apply) -> dict:
+	"""The engine's own marking for a released day, whose punches may all still be linked.
+
+	`checkin_import._remark_day` reads only unlinked punches, so a day whose ERP
+	copy linked every punch to its Absent row would read "up to date" forever.
+	Here the day's punches are: unlinked, linked to this day's submitted row, or
+	linked to a row that is not submitted anywhere (a link the ERP copy left
+	dangling). `ShiftType.mark_attendance_for_shift_logs` then keeps the row when
+	the result is the same, or cancels and re-marks it from all of them.
+	"""
+	from hrms.hr.doctype.shift_type.shift_type import CHECKIN_FIELDS
+
+	day = getdate(day)
+	start = datetime.combine(day, time.min)
+	punches = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["employee", "=", employee],
+			["shift_start", ">=", start],
+			["shift_start", "<", start + timedelta(days=1)],
+			["shift", "is", "set"],
+			[PROVENANCE_FIELD, "is", "not set"],
+		],
+		fields=list(CHECKIN_FIELDS),
+		order_by="time asc",
+		limit_page_length=0,
+	)
+	links = sorted({p.get("attendance") for p in punches if p.get("attendance")})
+	submitted = {}
+	if links:
+		for row in frappe.get_all(
+			"Attendance",
+			filters={"name": ["in", links], "docstatus": 1},
+			fields=["name", "attendance_date"],
+			limit_page_length=0,
+		):
+			submitted[row.name] = getdate(row.attendance_date)
+	by_shift = {}
+	for punch in punches:
+		if cint(punch.get("skip_auto_attendance")):
+			continue
+		if punch.get("attendance") and submitted.get(punch.get("attendance"), day) != day:
+			continue  # linked to another day's row
+		by_shift.setdefault(punch.get("shift"), []).append(punch)
+
+	changed, expected, marked, errors = False, [], [], []
+	for shift_name, logs in sorted(by_shift.items()):
+		shift = frappe.get_doc("Shift Type", shift_name)
+		result = shift.shift_day_result(employee, day, logs)
+		if not result:
+			expected.append(
+				{"shift": shift_name, "status": None, "detail": "the shift's rules would not mark this day"}
+			)
+			continue
+		existing = result.get("existing")
+		same = (
+			bool(existing)
+			and all(p.get("attendance") == existing.name for p in result.eligible_logs)
+			and _same_result(result, shift_name)
+		)
+		expected.append(
+			{
+				"shift": shift_name,
+				"status": result.status,
+				"working_hours": round(flt(result.working_hours), 2),
+				"rebuilds": existing.name if existing else None,
+				"unchanged": same,
+			}
+		)
+		if same:
+			continue
+		changed = True
+		if not apply:
+			continue
+		if shift.has_incorrect_shift_config():
+			errors.append(f"{shift_name}: auto attendance is off or not configured")
+			continue
+		doc = shift.mark_attendance_for_shift_logs(employee, day, logs)
+		if doc:
+			marked.append(doc.name)
+		else:
+			errors.append(f"{shift_name}: the shift's rules did not mark this day")
+	logger.info(
+		"[attendance_recovery] released day %s %s: changed=%s marked=%s errors=%s",
+		employee,
+		day,
+		changed,
+		marked,
+		errors,
+	)
+	return {"changed": changed, "expected": expected, "marked": marked, "errors": errors}
+
+
 def _plan_rebuild(win, for_update=False) -> dict:
-	"""Days holding punches the engine would read (shift set, unlinked, not skipped)."""
+	"""Days holding punches the engine would read (shift set, unlinked, not skipped),
+	and days `release_mirrored` released whose engine result would change."""
 	rows = frappe.get_all(
 		"Employee Checkin",
 		filters=[
@@ -937,7 +1273,10 @@ def _plan_rebuild(win, for_update=False) -> dict:
 		fields=["employee", "shift_start"],
 		limit_page_length=0,
 	)
-	days = sorted({(r.employee, getdate(r.shift_start)) for r in rows})
+	released = _released_days(win)
+	days = sorted(
+		{(r.employee, getdate(r.shift_start)) for r in rows} | released, key=lambda d: (str(d[0]), d[1])
+	)
 	planned, held = [], []
 	for employee, day in days:
 		if not (win.start <= day <= win.end):
@@ -946,6 +1285,14 @@ def _plan_rebuild(win, for_update=False) -> dict:
 		reason = _day_protection(employee, day, for_update)
 		if reason:
 			held.append(_held(entry, reason))
+			continue
+		if (employee, day) in released:
+			preview = _remark_released_day(employee, day, False)
+			expected = preview.get("expected") or []
+			if preview.get("changed"):
+				planned.append({**entry, "expected": expected, "released": True})
+			elif expected and not any(e.get("status") for e in expected):
+				held.append(_held(entry, "the engine would not mark this released day"))
 			continue
 		preview = _remark_day(employee, day, False) or {}
 		action = preview.get("action")
@@ -1171,7 +1518,8 @@ def _rebuild_day(entry, win) -> dict:
 	day = getdate(entry["date"])
 	if day > win.end:
 		raise frappe.ValidationError(f"{day} is today or later")
-	result = _remark_day(entry["employee"], day, True) or {}
+	remark = _remark_released_day if entry.get("released") else _remark_day
+	result = remark(entry["employee"], day, True) or {}
 	for name in result.get("marked") or []:
 		frappe.get_doc("Attendance", name).add_comment(
 			"Comment",
@@ -1259,6 +1607,7 @@ def _guarded(label, fn):
 
 
 _PLANNERS = {
+	"release_mirrored": _plan_release_mirrored,
 	"assignments": _plan_assignments,
 	"overwritten": _plan_overwritten,
 	"mirrored_rows": _plan_mirrored_rows,
@@ -1270,6 +1619,7 @@ _PLANNERS = {
 	"ot_recount": _plan_ot_recount,
 }
 _APPLIERS = {
+	"release_mirrored": _apply_release_mirrored,
 	"assignments": _apply_assignments,
 	"overwritten": _apply_overwritten,
 	"mirrored_rows": _apply_mirrored_rows,
@@ -1630,6 +1980,17 @@ def inputs_report(from_date=str(REPAIR_FLOOR), to_date=None, include_source=0) -
 		}
 
 	run("i_ot_requests_priced_below_claim", ot_requests)
+
+	def mirrored():
+		plan = _plan_release_mirrored(win)
+		logger.info("[attendance_recovery] section j: %d mirrored broken day(s)", len(plan["planned"]))
+		return {
+			**_section("release_mirrored", plan),
+			"employees": plan.get("employees", 0),
+			"shapes": plan.get("shapes", {}),
+		}
+
+	run("j_mirrored_broken_days", mirrored)
 	logger.info(
 		"[attendance_recovery] inputs report %s..%s by %s: %s",
 		win.start,

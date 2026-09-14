@@ -822,5 +822,329 @@ class TestExistingModulesInDryRun(_Base):
 		repair.assert_not_called()
 
 
+# --- mirrored broken days (section j, step release_mirrored) ----------------------
+
+
+def _aug(day, hour=9):
+	return datetime(2026, 8, day, hour, 0)
+
+
+def _att(name, employee, day, **extra):
+	return _row(
+		name=name,
+		employee=employee,
+		attendance_date=day,
+		synced_from_instance="erp",
+		**extra,
+	)
+
+
+def _ck(name, employee, when, log_type, stamp="erp", **extra):
+	return frappe._dict(
+		name=name,
+		employee=employee,
+		time=when,
+		shift_start=when.replace(hour=9, minute=0),
+		log_type=log_type,
+		attendance=extra.pop("attendance", None),
+		synced_from_instance=stamp,
+		remote_approval_status=extra.pop("remote_approval_status", None),
+		**extra,
+	)
+
+
+class TestMirroredDayProblems(unittest.TestCase):
+	IN_OUT = (_ck("P1", "E1", _aug(12), "IN"), _ck("P2", "E1", _aug(12, 18), "OUT"))
+
+	def shapes(self, rows, punches):
+		return [shape for shape, _text in rec.mirrored_day_problems(rows, punches)]
+
+	def test_a_mirrored_absent_half_day_or_zero_hours_over_punches_is_broken(self):
+		for extra in (
+			{"status": "Absent"},
+			{"status": "Half Day", "working_hours": 4},
+			{"status": "Present", "working_hours": 0},
+		):
+			with self.subTest(extra=extra):
+				self.assertEqual(
+					self.shapes([_att("A", "E1", _aug(12).date(), **extra)], self.IN_OUT), ["broken_row"]
+				)
+
+	def test_local_punches_under_a_mirrored_absent_still_count(self):
+		local = [
+			_ck("P1", "E1", _aug(12), "IN", stamp=None),
+			_ck("P2", "E1", _aug(12, 18), "OUT", stamp=None),
+		]
+		self.assertEqual(self.shapes([_att("A", "E1", _aug(12).date())], local), ["broken_row"])
+
+	def test_mirrored_punches_without_a_submitted_attendance_are_broken(self):
+		self.assertEqual(self.shapes([], self.IN_OUT), ["no_attendance"])
+		cancelled = _att("A", "E1", _aug(12).date(), docstatus=2)
+		self.assertEqual(self.shapes([cancelled], self.IN_OUT), ["no_attendance"])
+
+	def test_odd_or_one_sided_punches_under_a_mirrored_present_are_broken(self):
+		present = _att("A", "E1", _aug(12).date(), status="Present", working_hours=8)
+		for punches in (
+			[_ck("P1", "E1", _aug(12), "IN")],
+			[_ck("P1", "E1", _aug(12), "IN"), _ck("P2", "E1", _aug(12, 13), "IN")],
+			[*self.IN_OUT, _ck("P3", "E1", _aug(12, 19), "OUT")],
+		):
+			with self.subTest(punches=[p.name for p in punches]):
+				self.assertEqual(self.shapes([present], punches), ["unpaired_punches"])
+
+	def test_healthy_or_unmirrored_days_are_not_listed(self):
+		present = _att("A", "E1", _aug(12).date(), status="Present", working_hours=8)
+		untyped = [_ck("P1", "E1", _aug(12), None), _ck("P2", "E1", _aug(12, 18), None)]
+		local = [
+			_ck("P1", "E1", _aug(12), "IN", stamp=None),
+			_ck("P2", "E1", _aug(12, 18), "OUT", stamp=None),
+		]
+		self.assertEqual(self.shapes([present], self.IN_OUT), [])
+		self.assertEqual(self.shapes([present], untyped), [])
+		self.assertEqual(self.shapes([_att("A", "E1", _aug(12).date())], []), [])
+		self.assertEqual(self.shapes([], local), [])
+		self.assertEqual(self.shapes([_row(name="L", status="Absent")], local), [])
+
+
+class _MirroredSite(_Base):
+	"""Seven employee-days of August mirrored data, one of them today."""
+
+	def setUp(self):
+		super().setUp()
+		today = TODAY.replace(hour=9)
+		self.rows = [
+			_att("ATT-ABS", "E-BROKEN", date(2026, 8, 12)),
+			_att("ATT-OK", "E-OK", date(2026, 8, 13), status="Present", working_hours=8),
+			_att("ATT-HR", "E-HR", date(2026, 8, 14), auto_attendance=0),
+			_att("ATT-PAID", "E-PAID", date(2026, 8, 15)),
+			_att("ATT-ODD", "E-ODD", date(2026, 8, 17), status="Present", working_hours=8),
+			_att("ATT-NOP", "E-NOPUNCH", date(2026, 8, 19)),
+			_att("ATT-TODAY", "E-TODAY", today.date()),
+		]
+		self.punches = [
+			_ck("CK-B1", "E-BROKEN", _aug(12), "IN"),
+			_ck("CK-B2", "E-BROKEN", _aug(12, 18), "OUT", stamp=None),
+			_ck("CK-OK1", "E-OK", _aug(13), "IN", attendance="ATT-OK"),
+			_ck("CK-OK2", "E-OK", _aug(13, 18), "OUT", attendance="ATT-OK"),
+			_ck("CK-HR1", "E-HR", _aug(14), "IN"),
+			_ck("CK-HR2", "E-HR", _aug(14, 18), "OUT"),
+			_ck("CK-P1", "E-PAID", _aug(15), "IN"),
+			_ck("CK-P2", "E-PAID", _aug(15, 18), "OUT"),
+			_ck("CK-N1", "E-NOATT", _aug(16), "IN"),
+			_ck("CK-N2", "E-NOATT", _aug(16, 18), "OUT"),
+			_ck("CK-O1", "E-ODD", _aug(17), "IN", attendance="ATT-ODD"),
+			_ck("CK-L1", "E-LOCAL", _aug(18), "IN", stamp=None),
+			_ck("CK-L2", "E-LOCAL", _aug(18, 18), "OUT", stamp=None),
+			_ck("CK-T1", "E-TODAY", today, "IN"),
+			_ck("CK-T2", "E-TODAY", today.replace(hour=18), "OUT"),
+		]
+
+		def get_all(doctype, **kw):
+			return {"Attendance": self.rows, "Employee Checkin": self.punches}.get(doctype, [])
+
+		self.patches += [
+			patch.object(frappe, "get_all", get_all),
+			patch.object(
+				rec, "_financial", lambda e, d, rows, for_update: "SAL-9" if e == "E-PAID" else None
+			),
+			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: False),
+		]
+		for p in self.patches[-3:]:
+			p.start()
+
+	def released(self):
+		return {
+			(c.args[0], c.args[1])
+			for c in frappe.db.set_value.call_args_list
+			if c.args[2:] == ("synced_from_instance", None) and c.kwargs == {"update_modified": False}
+		}
+
+
+EXPECTED_RELEASE = {
+	("Employee Checkin", "CK-B1"),
+	("Attendance", "ATT-ABS"),
+	("Employee Checkin", "CK-N1"),
+	("Employee Checkin", "CK-N2"),
+	("Employee Checkin", "CK-O1"),
+	("Attendance", "ATT-ODD"),
+}
+
+
+class TestReleaseMirroredPlan(_MirroredSite):
+	def plan(self):
+		return rec._plan_release_mirrored(rec.recovery_window(None, None, TODAY.date()))
+
+	def test_only_broken_unprotected_days_before_today_are_planned(self):
+		plan = self.plan()
+		self.assertEqual(
+			{(p["employee"], p["date"]) for p in plan["planned"]},
+			{("E-BROKEN", "2026-08-12"), ("E-NOATT", "2026-08-16"), ("E-ODD", "2026-08-17")},
+		)
+		self.assertEqual(
+			{(h["employee"], h["date"]) for h in plan["held_back"]},
+			{("E-HR", "2026-08-14"), ("E-PAID", "2026-08-15")},
+		)
+		self.assertIn("by hand", next(h["reason"] for h in plan["hr_list"] if h["employee"] == "E-HR"))
+		self.assertIn("SAL-9", next(h["reason"] for h in plan["hr_list"] if h["employee"] == "E-PAID"))
+
+	def test_each_day_lists_only_its_own_stamped_rows(self):
+		by_employee = {p["employee"]: p for p in self.plan()["planned"]}
+		self.assertEqual(by_employee["E-BROKEN"]["release_checkins"], ["CK-B1"])
+		self.assertEqual(by_employee["E-BROKEN"]["release_attendance"], ["ATT-ABS"])
+		self.assertEqual(by_employee["E-NOATT"]["release_checkins"], ["CK-N1", "CK-N2"])
+		self.assertEqual(by_employee["E-NOATT"]["release_attendance"], [])
+		self.assertEqual(by_employee["E-BROKEN"]["punch_count"], 2)
+		self.assertEqual(by_employee["E-BROKEN"]["status"], "Absent")
+
+	def test_inputs_report_carries_section_j(self):
+		section = rec.inputs_report()["sections"]["j_mirrored_broken_days"]
+		self.assertEqual(section["fix"], "release_mirrored")
+		self.assertEqual((section["count"], section["days"], section["employees"]), (3, 3, 3))
+		self.assertEqual(section["held_back"], 2)
+		self.assertLessEqual(
+			{"employee", "date", "attendance", "status", "working_hours", "punch_count", "problem"},
+			set(section["sample"][0]),
+		)
+
+
+class TestReleaseMirroredApply(_MirroredSite):
+	def run_step(self, dry_run):
+		with patch.dict(rec._PLANNERS, _fake_planners() | {"release_mirrored": rec._plan_release_mirrored}):
+			return rec.apply_recovery("release_mirrored", dry_run=dry_run)
+
+	def test_the_step_comes_first_and_blocks_every_later_step(self):
+		self.assertEqual(rec.STEPS[0], "release_mirrored")
+		applier = MagicMock()
+		with (
+			patch.dict(rec._PLANNERS, _fake_planners({"release_mirrored": 1})),
+			patch.dict(rec._APPLIERS, {"assignments": applier}),
+		):
+			with self.assertRaises(frappe.ValidationError) as caught:
+				rec.apply_recovery("assignments", dry_run=0)
+		self.assertIn("release_mirrored", str(caught.exception))
+		applier.assert_not_called()
+
+	def test_a_dry_run_writes_nothing(self):
+		result = self.run_step(dry_run=1)
+		self.assertEqual(result["planned_count"], 3)
+		frappe.db.set_value.assert_not_called()
+		frappe.get_doc.assert_not_called()
+
+	def test_apply_clears_only_the_listed_stamps_and_comments_each(self):
+		result = self.run_step(dry_run=0)
+		self.assertEqual(self.released(), EXPECTED_RELEASE)
+		self.assertEqual(len(frappe.db.set_value.call_args_list), len(EXPECTED_RELEASE))
+		comments = [c.args[0] for c in frappe.get_doc.call_args_list]
+		self.assertEqual({(c["reference_doctype"], c["reference_name"]) for c in comments}, EXPECTED_RELEASE)
+		self.assertTrue(all(c["content"] == rec.RELEASE_NOTE for c in comments))
+		self.assertEqual(len(result["done"]), 3)
+
+	def test_links_are_kept_and_nothing_is_cancelled_or_deleted(self):
+		self.run_step(dry_run=0)
+		self.assertFalse([c for c in frappe.db.set_value.call_args_list if "attendance" in c.args[2:]])
+		frappe.get_doc.return_value.cancel.assert_not_called()
+		self.assertFalse(getattr(frappe, "delete_doc", MagicMock()).called)
+
+	def test_today_hr_and_paid_days_are_never_released(self):
+		self.run_step(dry_run=0)
+		names = {name for _dt, name in self.released()}
+		self.assertFalse(
+			names & {"CK-T1", "CK-T2", "ATT-TODAY", "CK-HR1", "ATT-HR", "CK-P1", "ATT-PAID", "CK-OK1"}
+		)
+
+
+class TestRebuildReleasedDay(_Base):
+	def setUp(self):
+		super().setUp()
+		released = {("E-R", date(2026, 8, 12)), ("E-SAME", date(2026, 8, 13))}
+		self.remark_released = MagicMock(
+			side_effect=lambda e, d, apply: {
+				"changed": e == "E-R",
+				"expected": [{"status": "Present"}],
+				"marked": ["ATT-NEW"] if apply else [],
+			}
+		)
+		self.remark = MagicMock()
+		self.patches += [
+			patch.object(frappe, "get_all", MagicMock(return_value=[])),
+			patch.object(rec, "_released_days", lambda win: set(released), create=True),
+			patch.object(rec, "_remark_released_day", self.remark_released, create=True),
+			patch.object(rec, "_remark_day", self.remark),
+			patch.object(rec, "_attendance_rows", lambda e, d: []),
+			patch.object(rec, "_financial", lambda e, d, rows, for_update: None),
+			patch.object(rec.hr_removed_day, "removed_by_hr", lambda e, d: False),
+		]
+		for p in self.patches[-7:]:
+			p.start()
+
+	def test_a_released_day_with_linked_punches_is_rebuilt_and_an_unchanged_one_is_not(self):
+		plan = rec._plan_rebuild(rec.recovery_window(None, None, TODAY.date()))
+		self.assertEqual(
+			[(p["employee"], p["date"], p["released"]) for p in plan["planned"]],
+			[("E-R", "2026-08-12", True)],
+		)
+		with patch.dict(rec._PLANNERS, _fake_planners() | {"rebuild": rec._plan_rebuild}):
+			result = rec.apply_recovery("rebuild", dry_run=0)
+		self.assertEqual(
+			[c.args[:2] for c in self.remark_released.call_args_list if c.args[2]],
+			[("E-R", date(2026, 8, 12))],
+		)
+		self.remark.assert_not_called()
+		self.assertEqual(result["done"][0]["marked"], ["ATT-NEW"])
+
+	def test_the_engine_reads_unlinked_this_day_and_dangling_links_only(self):
+		self.patches[-5].stop()  # the real _remark_released_day
+		punches = [
+			frappe._dict(name="P1", attendance=None, shift="Day", skip_auto_attendance=0),
+			frappe._dict(name="P2", attendance="ATT-DAY", shift="Day", skip_auto_attendance=0),
+			frappe._dict(name="P3", attendance="ATT-GONE", shift="Day", skip_auto_attendance=0),
+			frappe._dict(name="P4", attendance="ATT-OTHER", shift="Day", skip_auto_attendance=0),
+			frappe._dict(name="P5", attendance=None, shift="Day", skip_auto_attendance=1),
+		]
+		live = [
+			frappe._dict(name="ATT-DAY", attendance_date=date(2026, 8, 12)),
+			frappe._dict(name="ATT-OTHER", attendance_date=date(2026, 8, 11)),
+		]
+		shift = MagicMock()
+		shift.has_incorrect_shift_config.return_value = False
+		shift.shift_day_result.return_value = frappe._dict(
+			existing=None, status="Present", working_hours=8, eligible_logs=punches[:3]
+		)
+		shift.mark_attendance_for_shift_logs.return_value = frappe._dict(name="ATT-NEW")
+		frappe.get_doc.return_value = shift
+		with patch.object(
+			frappe, "get_all", lambda doctype, **kw: punches if doctype == "Employee Checkin" else live
+		):
+			result = rec._remark_released_day("E-R", date(2026, 8, 12), True)
+		logs = shift.mark_attendance_for_shift_logs.call_args.args[2]
+		self.assertEqual([p.name for p in logs], ["P1", "P2", "P3"])
+		self.assertEqual(result["marked"], ["ATT-NEW"])
+
+	def test_an_unchanged_released_day_is_not_re_marked(self):
+		self.patches[-5].stop()
+		existing = frappe._dict(name="ATT-DAY")
+		punches = [frappe._dict(name="P1", attendance="ATT-DAY", shift="Day", skip_auto_attendance=0)]
+		shift = MagicMock()
+		shift.shift_day_result.return_value = frappe._dict(
+			existing=existing, status="Present", working_hours=8, eligible_logs=punches
+		)
+		frappe.get_doc.return_value = shift
+		with (
+			patch.object(
+				frappe,
+				"get_all",
+				lambda doctype, **kw: (
+					punches
+					if doctype == "Employee Checkin"
+					else [frappe._dict(name="ATT-DAY", attendance_date=date(2026, 8, 12))]
+				),
+			),
+			patch.object(rec, "_same_result", lambda result, shift_name: True, create=True),
+		):
+			result = rec._remark_released_day("E-R", date(2026, 8, 12), True)
+		self.assertFalse(result["changed"])
+		shift.mark_attendance_for_shift_logs.assert_not_called()
+
+
 if __name__ == "__main__":
 	unittest.main()
