@@ -4,7 +4,7 @@ import ast
 import importlib
 import sys
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from itertools import product
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -53,6 +53,9 @@ for node in api_nodes:
 API = {
 	"frappe": frappe,
 	"getdate": lambda value=None: date(2026, 9, 30) if value is None else date.fromisoformat(str(value)),
+	# The API reads "today" from the employee's clock now (66a5e6145); this suite
+	# pins that clock to the same day its getdate() answers.
+	"employee_now": lambda employee=None, shift_location=None: datetime(2026, 9, 30, 12, 0),
 	"add_days": lambda value, days: value + timedelta(days=days),
 	"cint": int,
 	"flt": float,
