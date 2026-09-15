@@ -43,7 +43,11 @@ test("employeeGate: no matching employee goes to the failure page, and stays the
 		employeeGate({ to: "Home", employee: { user_id: "other@example.com" }, user }),
 		{ name: "InvalidEmployee" }
 	)
-	assert.equal(employeeGate({ to: "InvalidEmployee", employee: null, user }), null, "no redirect loop")
+	assert.equal(
+		employeeGate({ to: "InvalidEmployee", employee: null, user }),
+		null,
+		"no redirect loop"
+	)
 })
 
 test("non-strings normalize to empty, never throw", () => {

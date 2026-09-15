@@ -33,7 +33,7 @@ function browser(user, store, origin = "https://example.invalid", sessionStorage
 		delMany: async (keys) => keys.forEach((key) => store.delete(key)),
 		reactive: (value) => value, computed: (fn) => ({ get value() { return fn() } }),
 		getConfig: (key) => config[key], setConfig: (key, value) => { config[key] = value },
-		request, frappeRequest: request, makeLoudRequest: (fetcher) => fetcher,
+		request, frappeRequest: request, makeLoudRequest: (fetcher) => fetcher, swallowReportedRejection: () => {},
 		employeeResource: { data: { name: user }, reset() {} },
 		userResource: { data: { name: user }, reset() {} },
 		router: { replace() {} },

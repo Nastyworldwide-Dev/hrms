@@ -90,7 +90,10 @@ test("an auto resource that fails shows its error state and raises no page error
 test("an explicit submit still rejects so its caller can react", async () => {
 	const resource = createResource({
 		url: "/api/method/hrms.api.helpdesk.new_ticket",
-		resourceFetcher: loudFailing({ exc_type: "ValidationError", messages: ["Subject is required"] }),
+		resourceFetcher: loudFailing({
+			exc_type: "ValidationError",
+			messages: ["Subject is required"],
+		}),
 	})
 	const originalConsole = console.error
 	console.error = quiet.error
@@ -102,12 +105,18 @@ test("an explicit submit still rejects so its caller can react", async () => {
 })
 
 test("a rejection that never passed through the request seam still surfaces", () => {
-	assert.ok(loudModule.swallowReportedRejection, "loudRequest must export swallowReportedRejection")
+	assert.ok(
+		loudModule.swallowReportedRejection,
+		"loudRequest must export swallowReportedRejection"
+	)
 	assert.equal(surfacesAsPageError(new TypeError("x is undefined")), true)
 	assert.equal(surfacesAsPageError("plain string"), true)
 })
 
 test("resourceConfig installs the rejection guard on window", () => {
 	const config = readFileSync(new URL("../resourceConfig.js", import.meta.url), "utf8")
-	assert.match(config, /addEventListener\(\s*"unhandledrejection",\s*swallowReportedRejection\s*\)/)
+	assert.match(
+		config,
+		/addEventListener\(\s*"unhandledrejection",\s*swallowReportedRejection\s*\)/
+	)
 })
