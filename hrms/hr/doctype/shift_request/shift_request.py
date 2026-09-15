@@ -11,6 +11,7 @@ import hrms
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
 from hrms.hr.utils import share_doc_with_approver, validate_active_employee, validate_self_submission
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
+from hrms.overrides.employee_company_default import set_company_from_employee
 
 
 class OverlappingShiftRequestError(frappe.ValidationError):
@@ -19,6 +20,9 @@ class OverlappingShiftRequestError(frappe.ValidationError):
 
 class ShiftRequest(Document, PWANotificationsMixin):
 	def validate(self):
+		# The PWA form sends no company; the Employee's company is the only
+		# right answer, and it must be set before the mandatory check.
+		set_company_from_employee(self)
 		validate_active_employee(self.employee)
 		self.validate_from_to_dates("from_date", "to_date")
 		self.validate_overlapping_shift_requests()
