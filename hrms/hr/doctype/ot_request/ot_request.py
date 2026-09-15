@@ -208,6 +208,9 @@ class OTRequest(Document, PWANotificationsMixin):
 				"employee": self.employee,
 				"ot_date": self.ot_date,
 				"docstatus": ("<", 2),
+				# a rejected request reaches docstatus 1 (rejection is a decision,
+				# not a cancellation) and must not go on reserving its day
+				"status": ("!=", "Rejected"),
 				"name": ("!=", self.name or "New OT Request"),
 			},
 			"name",

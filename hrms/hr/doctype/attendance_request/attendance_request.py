@@ -120,6 +120,9 @@ class AttendanceRequest(Document):
 			.where(
 				(Request.employee == self.employee)
 				& (Request.docstatus < 2)
+				# a rejected request reaches docstatus 1 (rejection is a decision,
+				# not a cancellation) and must not go on reserving its dates
+				& (Request.status != "Rejected")
 				& (Request.name != self.name)
 				& (self.to_date >= Request.from_date)
 				& (self.from_date <= Request.to_date)

@@ -133,6 +133,9 @@ class ShiftRequest(Document, PWANotificationsMixin):
 			.where(
 				(shift.employee == self.employee)
 				& (shift.docstatus < 2)
+				# a rejected request reaches docstatus 1 (rejection is a decision,
+				# not a cancellation) and must not go on reserving its dates
+				& (shift.status != "Rejected")
 				& (shift.name != self.name)
 				& ((shift.to_date >= self.from_date) | (shift.to_date.isnull()))
 			)
