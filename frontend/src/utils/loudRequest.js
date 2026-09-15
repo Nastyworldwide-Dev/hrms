@@ -64,8 +64,14 @@ function endpointOf(options) {
 // ("Insufficient leave balance", "outside leave allocation period"), not a
 // generic "Error creating X" — which is what an employee reported as "unknown
 // error" when their leave application was refused (15 Sep 2026).
+// The toast renders `text` with v-html, and server refusals carry Desk links
+// and <strong> markup: plain text only, so an employee never sees a live
+// link to a Desk page they cannot open.
 export function firstMessage(error) {
-	return error?.messages?.[0] || error?.message || "Request failed"
+	const message = error?.messages?.[0] || error?.message || "Request failed"
+	return String(message)
+		.replace(/<[^>]*>/g, "")
+		.trim()
 }
 
 function isRepeat(endpoint, now) {

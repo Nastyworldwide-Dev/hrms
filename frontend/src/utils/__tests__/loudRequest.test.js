@@ -110,4 +110,11 @@ test("firstMessage is the one reader of a server refusal, shared with the forms"
 	)
 	assert.equal(firstMessage({ message: "Network down" }), "Network down")
 	assert.equal(firstMessage(undefined), "Request failed")
+	// the toast renders with v-html: a Desk link in the refusal must arrive as text
+	assert.equal(
+		firstMessage({
+			messages: ['Already applied: <a href="/app/leave-application/HR-LAP-1">HR-LAP-1</a>'],
+		}),
+		"Already applied: HR-LAP-1"
+	)
 })
