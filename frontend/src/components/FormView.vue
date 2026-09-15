@@ -1014,6 +1014,12 @@ async function setFormattedCurrency() {
 	})
 }
 
+const isFormReady = computed(() => {
+	if (!props.id) return true
+
+	return !documentResource.get.loading && documentResource.doc
+})
+
 const isFormReadOnly = computed(() => {
 	if (!isFormReady.value) return true
 	if (!props.id) return false
@@ -1025,12 +1031,6 @@ const isFormReadOnly = computed(() => {
 	if (workflow.value?.isReadOnly(formModel.value)) return true
 
 	return false
-})
-
-const isFormReady = computed(() => {
-	if (!props.id) return true
-
-	return !documentResource.get.loading && documentResource.doc
 })
 
 onMounted(async () => {

@@ -115,21 +115,6 @@ const days = computed(() =>
 // __("Present"), __("Half Day"), __("Absent"), __("On Leave"), __("Work From Home")
 const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]
 
-const summary = computed(() => {
-	const summary = {}
-
-	for (const status of Object.values(calendarEvents.value.data || {})) {
-		let updatedStatus = status === "Work From Home" ? "Present" : status
-		if (updatedStatus in summary) {
-			summary[updatedStatus] += 1
-		} else {
-			summary[updatedStatus] = 1
-		}
-	}
-
-	return summary
-})
-
 const getEventOnDate = (date) => {
 	return (calendarEvents.value.data || {})[firstOfMonth.value.date(date).format("YYYY-MM-DD")]
 }
@@ -171,6 +156,21 @@ function monthResource(firstDay) {
 	return months.get(key)
 }
 const calendarEvents = computed(() => monthResource(firstOfMonth.value))
+
+const summary = computed(() => {
+	const summary = {}
+
+	for (const status of Object.values(calendarEvents.value.data || {})) {
+		let updatedStatus = status === "Work From Home" ? "Present" : status
+		if (updatedStatus in summary) {
+			summary[updatedStatus] += 1
+		} else {
+			summary[updatedStatus] = 1
+		}
+	}
+
+	return summary
+})
 
 // A processed day never reached a calendar that was already open: the hourly
 // job's Attendance appeared only after a full reload. Reload the month on

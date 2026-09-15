@@ -146,6 +146,17 @@ const formatDay = (date) => dayjs(date).format("ddd, D MMM")
 // HR's full-day ratio: overtime hours that make ONE day of replacement leave.
 const rlHoursPerDay = computed(() => settings.data?.replacement_leave_hours_per_day ?? 8)
 
+// Each employee/date owns a summary resource (loadSummary below swaps it);
+// declared ahead of every computed that reads it so setup never touches a
+// binding still in its temporal dead zone (the 14 Sep KPI/OT crash class).
+const summaryRequest = shallowRef(null)
+const otSummary = computed(
+	() => summaryRequest.value?.resource || { data: null, loading: false, error: null }
+)
+const compensation = computed(
+	() => otSummary.value.data?.compensation || claimableDays.value.data?.compensation
+)
+
 const isRL = computed(() => compensation.value === "Replacement Leave")
 
 // Replacement leave earned by ONE day's OT, in whole 4-hour blocks — mirrors the
@@ -277,13 +288,6 @@ const canEditClaim = computed(
 		(otRequest.value.name === props.id &&
 			otRequest.value.docstatus === 0 &&
 			otRequest.value.employee === employee.data?.name)
-)
-const summaryRequest = shallowRef(null)
-const otSummary = computed(
-	() => summaryRequest.value?.resource || { data: null, loading: false, error: null }
-)
-const compensation = computed(
-	() => otSummary.value.data?.compensation || claimableDays.value.data?.compensation
 )
 const summaryKey = computed(() => {
 	if (!canEditClaim.value) return ""

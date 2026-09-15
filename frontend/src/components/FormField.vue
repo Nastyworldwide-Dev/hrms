@@ -238,6 +238,10 @@ const props = defineProps({
 const emit = defineEmits(["change", "update:modelValue"])
 const dayjs = inject("$dayjs")
 
+const isLayoutField = computed(() => {
+	return ["Section Break", "Column Break"].includes(props.fieldtype)
+})
+
 const showField = computed(() => {
 	if (
 		props.readOnly &&
@@ -251,10 +255,6 @@ const showField = computed(() => {
 
 const isNumberType = computed(() => {
 	return ["Int", "Float", "Currency"].includes(props.fieldtype)
-})
-
-const isLayoutField = computed(() => {
-	return ["Section Break", "Column Break"].includes(props.fieldtype)
 })
 
 const isReadOnly = computed(() => {

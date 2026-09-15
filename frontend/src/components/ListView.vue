@@ -315,17 +315,6 @@ const formViewRoute = computed(() => {
 	return `${props.doctype.replace(/\s+/g, "")}FormView`
 })
 
-// Show "New" only when the create route actually exists. Some doctypes
-// (Shift Assignment, Employee Checkin) are read-only in the app on purpose and
-// have no FormView route; without this guard the button rendered from the
-// backend create permission and its tap resolved no route — a dead control.
-const canCreate = computed(
-	() =>
-		createPermission?.data?.has_permission &&
-		props.doctype !== "Employee Checkin" &&
-		router.hasRoute(formViewRoute.value)
-)
-
 const detailViewRoute = computed(() => {
 	return `${props.doctype.replace(/\s+/g, "")}DetailView`
 })
@@ -384,6 +373,17 @@ const createPermission = createResource({
 	params: { doctype: props.doctype, docname: "", perm_type: "create" },
 	auto: true,
 })
+
+// Show "New" only when the create route actually exists. Some doctypes
+// (Shift Assignment, Employee Checkin) are read-only in the app on purpose and
+// have no FormView route; without this guard the button rendered from the
+// backend create permission and its tap resolved no route — a dead control.
+const canCreate = computed(
+	() =>
+		createPermission?.data?.has_permission &&
+		props.doctype !== "Employee Checkin" &&
+		router.hasRoute(formViewRoute.value)
+)
 
 // helper functions
 
