@@ -423,6 +423,7 @@ import useDecisionCapability from "@/composables/decisionCapability"
 import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
+import { firstMessage } from "@/utils/loudRequest"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
 
@@ -685,15 +686,17 @@ const docList = createListResource({
 				params: { id: data.name },
 			})
 		},
-		onError() {
+		onError(error) {
+			// The server names the refusal (balance, allocation period, approver,
+			// holiday list). Dropping it left the employee with "unknown error".
 			toast({
 				title: __("Error"),
-				text: __("Error creating {0}", [__(props.doctype)]),
+				text: __("Error creating {0}: {1}", [__(props.doctype), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
 			})
-			console.log(`Error creating ${props.doctype}`)
+			console.log(`Error creating ${props.doctype}`, firstMessage(error))
 		},
 	},
 })

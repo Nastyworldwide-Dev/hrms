@@ -17,8 +17,8 @@ const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8
 	'import { toast } from "frappe-ui"',
 	"const toast = () => {}"
 )
-const makeLoudRequest = new Function(
-	`${source.replace("export function", "function")}\nreturn makeLoudRequest`
+const { makeLoudRequest, firstMessage } = new Function(
+	`${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage }`
 )()
 
 const PERMISSION_ERROR = {
@@ -101,4 +101,13 @@ test("silencing the toast does not swallow the rejection", async () => {
 		() => loud({ url: "/api/method/frappe.desk.search.search_link" }),
 		(e) => e.exc_type === "PermissionError"
 	)
+})
+
+test("firstMessage is the one reader of a server refusal, shared with the forms", () => {
+	assert.equal(
+		firstMessage({ messages: ["Insufficient leave balance"] }),
+		"Insufficient leave balance"
+	)
+	assert.equal(firstMessage({ message: "Network down" }), "Network down")
+	assert.equal(firstMessage(undefined), "Request failed")
 })

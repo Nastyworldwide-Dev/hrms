@@ -36,3 +36,19 @@ test("the recovery branch gives the user a way out (Back + Try again)", () => {
 		"recovery branch distinguishes loading from error"
 	)
 })
+
+test("a refused creation shows the server's reason, not a generic 'Error creating'", () => {
+	// "unknown error" report (15 Sep 2026): an employee's leave application was
+	// refused and the toast said only "Error creating Leave Application". The
+	// server names the reason (balance, allocation period, approver, holiday
+	// list); the insert handler must carry it to the toast.
+	const insertIdx = src.indexOf("insert: {")
+	assert.ok(insertIdx > 0, "docList.insert handler exists")
+	const insertBlock = src.slice(insertIdx, src.indexOf("setValue: {", insertIdx))
+	assert.match(insertBlock, /onError\(error\)/, "the insert error handler receives the error")
+	assert.match(
+		insertBlock,
+		/firstMessage\(error\)/,
+		"the toast text carries the server's first message"
+	)
+})

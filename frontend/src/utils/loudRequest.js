@@ -60,7 +60,11 @@ function endpointOf(options) {
 	return url.replace(/^\/api\/method\//, "")
 }
 
-function firstMessage(error) {
+// Shared with the forms: a refused create/update must show the server's reason
+// ("Insufficient leave balance", "outside leave allocation period"), not a
+// generic "Error creating X" — which is what an employee reported as "unknown
+// error" when their leave application was refused (15 Sep 2026).
+export function firstMessage(error) {
 	return error?.messages?.[0] || error?.message || "Request failed"
 }
 
