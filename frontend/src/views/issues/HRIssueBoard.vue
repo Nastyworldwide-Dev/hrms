@@ -1,165 +1,167 @@
 <template>
-	<BaseLayout :pageTitle="__('Issue Board')">
-		<template #body>
-			<div class="flex flex-col w-full pt-2 pb-8">
-				<div class="w-full max-w-content-column-lg lg:mx-0 mx-auto">
-					<div class="px-4 pt-4">
-						<span class="g-eyebrow">{{ __("HR · People & Culture") }}</span>
-					</div>
+	<!-- body only: the page chrome (header "Helpdesk" + the HR Issues / IT
+	     Helpdesk pills) belongs to views/helpdesk/HelpdeskHub.vue since 15 Sep
+	     2026. Who sees this board is unchanged: IssuesTab.vue picks it by role,
+	     and server row scope is the real fence. -->
+	<div>
+		<div class="flex flex-col w-full pt-2 pb-8">
+			<div class="w-full max-w-content-column-lg lg:mx-0 mx-auto">
+				<div class="px-4 pt-4">
+					<span class="g-eyebrow">{{ __("HR · People & Culture") }}</span>
+				</div>
 
-					<!-- stats: ONE surface with internal dividers (§15.2), not one
+				<!-- stats: ONE surface with internal dividers (§15.2), not one
 					     per tile. The count is dynamic, and the panel is 1 either way. -->
-					<div class="px-4 pt-3.5">
-						<GStatPanel :columns="statTiles.length === 4 ? 4 : 3">
-							<GStatTile
-								v-for="stat in statTiles"
-								:key="stat.label"
-								:value="stat.value"
-								:label="stat.label"
-							/>
-						</GStatPanel>
-					</div>
-
-					<!-- search + type filter -->
-					<div class="flex gap-2 px-4 pt-2.5">
-						<GSearchBar
-							v-model="search"
-							class="flex-1"
-							:placeholder="__('Search name, id, text…')"
-							:label="__('Search issues')"
+				<div class="px-4 pt-3.5">
+					<GStatPanel :columns="statTiles.length === 4 ? 4 : 3">
+						<GStatTile
+							v-for="stat in statTiles"
+							:key="stat.label"
+							:value="stat.value"
+							:label="stat.label"
 						/>
-						<select
-							v-model="issueType"
-							class="w-[130px] text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
-						>
-							<option value="">{{ __("All types") }}</option>
-							<option v-for="type in ISSUE_TYPES" :key="type" :value="type">
-								{{ __(TYPE_SHORT[type]) }}
-							</option>
-						</select>
-					</div>
+					</GStatPanel>
+				</div>
 
-					<!-- status tabs: counts stay in the label, so the selected state
+				<!-- search + type filter -->
+				<div class="flex gap-2 px-4 pt-2.5">
+					<GSearchBar
+						v-model="search"
+						class="flex-1"
+						:placeholder="__('Search name, id, text…')"
+						:label="__('Search issues')"
+					/>
+					<select
+						v-model="issueType"
+						class="w-[130px] text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
+					>
+						<option value="">{{ __("All types") }}</option>
+						<option v-for="type in ISSUE_TYPES" :key="type" :value="type">
+							{{ __(TYPE_SHORT[type]) }}
+						</option>
+					</select>
+				</div>
+
+				<!-- status tabs: counts stay in the label, so the selected state
 					     is never carried by colour alone (§14.1) -->
-					<div class="px-4 mt-2.5">
-						<GSegmented
-							v-model="activeStatus"
-							:buttons="statusButtons"
-							:label="__('Issue status')"
-						/>
-					</div>
+				<div class="px-4 mt-2.5">
+					<GSegmented
+						v-model="activeStatus"
+						:buttons="statusButtons"
+						:label="__('Issue status')"
+					/>
+				</div>
 
-					<!-- cards -->
-					<div class="flex flex-col gap-2.5 w-full p-4">
-						<div
-							v-for="issue in visibleIssues"
-							:key="issue.name"
-							class="bg-surface border border-divider p-3 cursor-pointer"
-							@click="openIssue(issue.name)"
-						>
-							<div class="flex justify-between items-center mb-1.5">
-								<span class="text-caption font-extrabold tracking-wide text-ink-600">
-									{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
-								</span>
-								<span
-									class="g-eyebrow tracking-wider px-2 py-0.5 border bg-transparent"
-									:class="URGENCY_CHIP[issue.urgency]"
-								>
-									{{ __(issue.urgency) }}
-								</span>
-							</div>
-							<div class="text-card-title font-extrabold text-inkbase mb-0.5">
-								{{ issue.employee_name }}
-								<span class="text-ink-600 font-semibold">· {{ issue.department || "—" }}</span>
-							</div>
-							<div class="text-kra-label text-ink-600 truncate">
-								<b>{{ __(TYPE_SHORT[issue.issue_type]) }}</b> — {{ issue.details }}
-							</div>
+				<!-- cards -->
+				<div class="flex flex-col gap-2.5 w-full p-4">
+					<div
+						v-for="issue in visibleIssues"
+						:key="issue.name"
+						class="bg-surface border border-divider p-3 cursor-pointer"
+						@click="openIssue(issue.name)"
+					>
+						<div class="flex justify-between items-center mb-1.5">
+							<span class="text-caption font-extrabold tracking-wide text-ink-600">
+								{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
+							</span>
+							<span
+								class="g-eyebrow tracking-wider px-2 py-0.5 border bg-transparent"
+								:class="URGENCY_CHIP[issue.urgency]"
+							>
+								{{ __(issue.urgency) }}
+							</span>
 						</div>
-
-						<ResourceError v-if="issues.error" :resource="issues" :what="__('the issue board')" />
-						<GEmptyState
-							v-else-if="!issues.loading && !visibleIssues.length"
-							:title="__('Nothing in {0}', [__(activeStatus).toLowerCase()])"
-							:body="__('Issues move here as they are triaged')"
-						/>
+						<div class="text-card-title font-extrabold text-inkbase mb-0.5">
+							{{ issue.employee_name }}
+							<span class="text-ink-600 font-semibold">· {{ issue.department || "—" }}</span>
+						</div>
+						<div class="text-kra-label text-ink-600 truncate">
+							<b>{{ __(TYPE_SHORT[issue.issue_type]) }}</b> — {{ issue.details }}
+						</div>
 					</div>
+
+					<ResourceError v-if="issues.error" :resource="issues" :what="__('the issue board')" />
+					<GEmptyState
+						v-else-if="!issues.loading && !visibleIssues.length"
+						:title="__('Nothing in {0}', [__(activeStatus).toLowerCase()])"
+						:body="__('Issues move here as they are triaged')"
+					/>
 				</div>
 			</div>
+		</div>
 
-			<!-- detail sheet -->
-			<ion-modal
-				:is-open="sheetOpen"
-				@didDismiss="sheetOpen = false"
-				:initial-breakpoint="1"
-				:breakpoints="[0, 1]"
+		<!-- detail sheet -->
+		<ion-modal
+			:is-open="sheetOpen"
+			@didDismiss="sheetOpen = false"
+			:initial-breakpoint="1"
+			:breakpoints="[0, 1]"
+		>
+			<ResourceError :resource="detail" what="this issue" />
+			<div
+				v-if="detail.data"
+				class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
 			>
-				<ResourceError :resource="detail" what="this issue" />
-				<div
-					v-if="detail.data"
-					class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
-				>
-					<div class="w-full flex flex-col gap-1 pt-6 pb-3 px-4">
-						<div class="g-eyebrow">{{ detail.data.name }}</div>
-						<span class="text-inkbase font-extrabold text-screen-title leading-tight">
-							{{ detail.data.employee_name }}
-						</span>
-						<span class="text-xs text-ink-600">
-							{{ detail.data.department || "—" }} ·
-							{{ dayjs(detail.data.creation).format("D MMM YYYY, HH:mm") }}
-						</span>
-					</div>
-
-					<div class="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 px-4 text-xs">
-						<template v-for="row in detailRows" :key="row.label">
-							<div class="g-eyebrow pt-px">
-								{{ row.label }}
-							</div>
-							<div class="text-inkbase" :class="row.classes">{{ row.value }}</div>
-						</template>
-					</div>
-
-					<div class="px-4 mt-4">
-						<label class="text-xs uppercase text-ink-700 tracking-wide font-extrabold">
-							{{ __("Status") }}
-						</label>
-						<div class="flex gap-1.5 mt-1.5">
-							<button
-								v-for="status in ISSUE_STATUSES"
-								:key="status"
-								class="g-eyebrow flex-1 py-2 border"
-								:class="
-									detail.data.status === status
-										? 'bg-accent-ink text-ground border-accent-ink'
-										: 'bg-surface text-ink-700 border-divider'
-								"
-								:disabled="saving"
-								@click="setStatus(status)"
-							>
-								{{ __(status) }}
-							</button>
-						</div>
-
-						<label class="block text-xs uppercase text-ink-700 tracking-wide font-extrabold mt-4">
-							{{ __("Internal HR notes") }}
-							<span class="text-ink-500 normal-case font-semibold">
-								({{ __("never shown to the employee") }})
-							</span>
-						</label>
-						<textarea
-							v-model="hrNotes"
-							rows="3"
-							class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent-ink"
-							:placeholder="__('Notes for the HR team…')"
-						/>
-						<Button variant="solid" class="w-full mt-3 py-5" :loading="saving" @click="saveNotes">
-							{{ __("Save") }}
-						</Button>
-					</div>
+				<div class="w-full flex flex-col gap-1 pt-6 pb-3 px-4">
+					<div class="g-eyebrow">{{ detail.data.name }}</div>
+					<span class="text-inkbase font-extrabold text-screen-title leading-tight">
+						{{ detail.data.employee_name }}
+					</span>
+					<span class="text-xs text-ink-600">
+						{{ detail.data.department || "—" }} ·
+						{{ dayjs(detail.data.creation).format("D MMM YYYY, HH:mm") }}
+					</span>
 				</div>
-			</ion-modal>
-		</template>
-	</BaseLayout>
+
+				<div class="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 px-4 text-xs">
+					<template v-for="row in detailRows" :key="row.label">
+						<div class="g-eyebrow pt-px">
+							{{ row.label }}
+						</div>
+						<div class="text-inkbase" :class="row.classes">{{ row.value }}</div>
+					</template>
+				</div>
+
+				<div class="px-4 mt-4">
+					<label class="text-xs uppercase text-ink-700 tracking-wide font-extrabold">
+						{{ __("Status") }}
+					</label>
+					<div class="flex gap-1.5 mt-1.5">
+						<button
+							v-for="status in ISSUE_STATUSES"
+							:key="status"
+							class="g-eyebrow flex-1 py-2 border"
+							:class="
+								detail.data.status === status
+									? 'bg-accent-ink text-ground border-accent-ink'
+									: 'bg-surface text-ink-700 border-divider'
+							"
+							:disabled="saving"
+							@click="setStatus(status)"
+						>
+							{{ __(status) }}
+						</button>
+					</div>
+
+					<label class="block text-xs uppercase text-ink-700 tracking-wide font-extrabold mt-4">
+						{{ __("Internal HR notes") }}
+						<span class="text-ink-500 normal-case font-semibold">
+							({{ __("never shown to the employee") }})
+						</span>
+					</label>
+					<textarea
+						v-model="hrNotes"
+						rows="3"
+						class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent-ink"
+						:placeholder="__('Notes for the HR team…')"
+					/>
+					<Button variant="solid" class="w-full mt-3 py-5" :loading="saving" @click="saveNotes">
+						{{ __("Save") }}
+					</Button>
+				</div>
+			</div>
+		</ion-modal>
+	</div>
 </template>
 
 <script setup>
@@ -171,8 +173,6 @@ import GStatPanel from "@/components/glass/GStatPanel.vue"
 import { IonModal } from "@ionic/vue"
 import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, ref } from "vue"
-
-import BaseLayout from "@/components/BaseLayout.vue"
 
 import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
 

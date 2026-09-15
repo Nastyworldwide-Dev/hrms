@@ -59,11 +59,10 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
-import { MORE_ITEMS, visibleAppItems, HELPDESK_ITEM } from "@/data/navItems"
+import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
 import { userResource } from "@/data/user"
-import { helpdeskAvailable } from "@/data/helpdesk"
 
 const router = useRouter()
 const __ = inject("$translate")
@@ -71,9 +70,9 @@ const __ = inject("$translate")
 // Team is manager-only: the entry appears once has_team confirms direct reports
 // (or the caller is HR, who browse teams via the selector)
 const moreItems = computed(() => {
+	// Helpdesk (HR Issues + IT Helpdesk) is in MORE_ITEMS for everyone; the IT
+	// pill inside it is what the Helpdesk-app availability gate hides now
 	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
-	// native Helpdesk, only where the app is installed on this site
-	if (helpdeskAvailable.data) items.push({ ...HELPDESK_ITEM, title: __(HELPDESK_ITEM.title) })
 	if (hasTeam.data) {
 		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
 		// §13.1 lists Remote Approvals behind More; it had no entry in any nav

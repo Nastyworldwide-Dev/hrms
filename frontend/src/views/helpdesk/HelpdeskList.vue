@@ -1,85 +1,81 @@
 <template>
-	<BaseLayout :pageTitle="__('Helpdesk')">
-		<template #body>
-			<div
-				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto"
+	<!-- body only: the page chrome (header "Helpdesk" + the HR Issues / IT
+	     Helpdesk pills) belongs to HelpdeskHub.vue since 15 Sep 2026 -->
+	<div
+		class="flex flex-col gap-4 px-4 pt-4 pb-8 w-full lg:px-7 lg:pb-7 max-w-content-column-lg mx-auto"
+	>
+		<ResourceError :resource="myTickets" what="your IT tickets" />
+
+		<router-link :to="{ name: 'HelpdeskTicketNew' }" v-slot="{ navigate }">
+			<GButton :label="__('New IT Ticket')" @click="navigate">
+				<template #trailing>
+					<FeatherIcon name="arrow-right" class="h-[17px] w-[17px]" aria-hidden="true" />
+				</template>
+			</GButton>
+		</router-link>
+
+		<!-- chips bucket by what the employee has to do (utils/helpdesk.js) -->
+		<div
+			class="flex flex-row gap-2 overflow-x-auto"
+			role="group"
+			:aria-label="__('Filter tickets')"
+		>
+			<button
+				v-for="chip in CHIPS"
+				:key="chip.key"
+				type="button"
+				class="g-focusable flex-none min-h-11 rounded-full border px-3.5 text-kra-label font-semibold"
+				:class="
+					activeChip === chip.key
+						? 'bg-inkbase text-[var(--g-bg)] border-inkbase'
+						: 'border-divider text-ink-600'
+				"
+				:aria-pressed="activeChip === chip.key"
+				@click="activeChip = chip.key"
 			>
-				<ResourceError :resource="myTickets" what="your tickets" />
+				{{ __(chip.label) }}
+			</button>
+		</div>
 
-				<router-link :to="{ name: 'HelpdeskTicketNew' }" v-slot="{ navigate }">
-					<GButton :label="__('Raise a ticket')" @click="navigate">
-						<template #trailing>
-							<FeatherIcon name="arrow-right" class="h-[17px] w-[17px]" aria-hidden="true" />
-						</template>
-					</GButton>
-				</router-link>
-
-				<!-- chips bucket by what the employee has to do (utils/helpdesk.js) -->
-				<div
-					class="flex flex-row gap-2 overflow-x-auto"
-					role="group"
-					:aria-label="__('Filter tickets')"
+		<span class="g-eyebrow mt-1">{{ __("Tickets") }}</span>
+		<div class="flex flex-col gap-2.5">
+			<!-- ONE panel for the whole list (§15.1), exactly as Issues does -->
+			<GListPanel
+				v-if="myTickets.loading || rows.length"
+				:loading="myTickets.loading && !myTickets.data"
+			>
+				<GListRow
+					v-for="ticket in rows"
+					:key="ticket.name"
+					:label="ticket.subject || ticket.name"
+					:sublabel="ticketMeta(ticket)"
+					@click="router.push({ name: 'HelpdeskTicketDetail', params: { id: ticket.name } })"
 				>
-					<button
-						v-for="chip in CHIPS"
-						:key="chip.key"
-						type="button"
-						class="g-focusable flex-none min-h-11 rounded-full border px-3.5 text-kra-label font-semibold"
-						:class="
-							activeChip === chip.key
-								? 'bg-inkbase text-[var(--g-bg)] border-inkbase'
-								: 'border-divider text-ink-600'
-						"
-						:aria-pressed="activeChip === chip.key"
-						@click="activeChip = chip.key"
-					>
-						{{ __(chip.label) }}
-					</button>
-				</div>
+					<template #badge>
+						<GStatusChip :status="ticket.status" :label="__(statusLabel(ticket.status))" />
+					</template>
+				</GListRow>
+			</GListPanel>
 
-				<span class="g-eyebrow mt-1">{{ __("Tickets") }}</span>
-				<div class="flex flex-col gap-2.5">
-					<!-- ONE panel for the whole list (§15.1), exactly as Issues does -->
-					<GListPanel
-						v-if="myTickets.loading || rows.length"
-						:loading="myTickets.loading && !myTickets.data"
-					>
-						<GListRow
-							v-for="ticket in rows"
-							:key="ticket.name"
-							:label="ticket.subject || ticket.name"
-							:sublabel="ticketMeta(ticket)"
-							@click="router.push({ name: 'HelpdeskTicketDetail', params: { id: ticket.name } })"
-						>
-							<template #badge>
-								<GStatusChip :status="ticket.status" :label="__(statusLabel(ticket.status))" />
-							</template>
-						</GListRow>
-					</GListPanel>
+			<GEmptyState
+				v-if="!myTickets.loading && !rows.length"
+				:title="activeChip === 'all' ? __('No IT tickets yet') : __('Nothing here')"
+				:body="
+					activeChip === 'all'
+						? __(
+								'Laptop, access, email or admin trouble? Raise a ticket and the IT Helpdesk team will pick it up.'
+						  )
+						: __('No tickets match this filter.')
+				"
+			/>
+		</div>
 
-					<GEmptyState
-						v-if="!myTickets.loading && !rows.length"
-						:title="activeChip === 'all' ? __('No tickets yet') : __('Nothing here')"
-						:body="
-							activeChip === 'all'
-								? __(
-										'Laptop, access, email or admin trouble? Raise a ticket and the Helpdesk team will pick it up.'
-								  )
-								: __('No tickets match this filter.')
-						"
-					/>
-				</div>
-
-				<span class="text-caption text-ink-600">
-					{{
-						__(
-							"IT & admin tickets are handled by the Helpdesk team. Tap a ticket to read replies."
-						)
-					}}
-				</span>
-			</div>
-		</template>
-	</BaseLayout>
+		<span class="text-caption text-ink-600">
+			{{
+				__("IT & admin tickets are handled by the IT Helpdesk team. Tap a ticket to read replies.")
+			}}
+		</span>
+	</div>
 </template>
 
 <script setup>
@@ -92,7 +88,6 @@ import { FeatherIcon } from "frappe-ui"
 import { useRouter } from "vue-router"
 import { computed, inject, onMounted, ref } from "vue"
 
-import BaseLayout from "@/components/BaseLayout.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import { myTickets } from "@/data/helpdesk"
 import { CHIPS, filterTickets, statusLabel } from "@/utils/helpdesk"

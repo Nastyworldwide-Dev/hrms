@@ -4,7 +4,9 @@ import TabbedView from "@/views/TabbedView.vue"
 import attendanceRoutes from "./attendance"
 import claimRoutes from "./claims"
 import helpdeskRoutes from "./helpdesk"
+import helpdeskHubRoutes from "./helpdeskHub"
 import issueRoutes from "./issues"
+import { HUB_PATH, HUB_ROUTE_NAME } from "@/utils/helpdeskHub"
 import leaveRoutes from "./leaves"
 import otRoutes from "./ot"
 import sopRoutes from "./sop"
@@ -49,19 +51,16 @@ const routes = [
 				component: () => import("@/views/kpi/Dashboard.vue"),
 			},
 			{
-				// lives in the tab shell (bottom tabs / side nav stay visible);
-				// renders the HR board or the personal list depending on role
-				path: "/issues",
-				name: "EmployeeIssueListView",
-				component: () => import("@/views/issues/IssuesTab.vue"),
+				// ONE Helpdesk page (15 Sep 2026): pills switch between HR Issues
+				// (the role-switched board/list) and IT Helpdesk (native HD
+				// Tickets, drawn only where the app is installed). ?tab=hr|it.
+				// Lives in the tab shell so bottom tabs / side nav stay visible.
+				path: HUB_PATH,
+				name: HUB_ROUTE_NAME,
+				component: () => import("@/views/helpdesk/HelpdeskHub.vue"),
 			},
-			{
-				// native Helpdesk list (v16.23.0): the employee's HD Tickets, in
-				// the tab shell; hidden from nav on sites without the Helpdesk app
-				path: "/helpdesk",
-				name: "HelpdeskList",
-				component: () => import("@/views/helpdesk/HelpdeskList.vue"),
-			},
+			// old /issues, /hr/issues and /helpdesk → the hub with the right pill
+			...helpdeskHubRoutes,
 			{
 				// SOP library tab: one list for everyone, HR additionally gets
 				// every department group, drafts and the authoring sheet

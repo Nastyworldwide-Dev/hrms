@@ -1,7 +1,7 @@
 // Sibling Frappe apps that live on the same site as the HRMS PWA and are
 // reached by leaving it: Approva (/approva) and Project Board (/board).
 // Helpdesk left this list in v16.23.0 — it has a native front end now
-// (data/navItems.js HELPDESK_ITEM). Both apps each ship their own SPA under their own PWA scope, so vue-
+// (the IT Helpdesk pill of views/helpdesk/HelpdeskHub.vue). Both apps each ship their own SPA under their own PWA scope, so vue-
 // router cannot reach them — the row does a full navigation via `href`, not a
 // `route`. Same origin means the Frappe session cookie carries over and the
 // target opens signed in.

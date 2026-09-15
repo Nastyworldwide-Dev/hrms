@@ -156,9 +156,8 @@ import { useRoute } from "vue-router"
 
 import { markRaw } from "vue"
 
-import { TAB_ITEMS, MORE_ITEMS, visibleAppItems, HELPDESK_ITEM } from "@/data/navItems"
+import { TAB_ITEMS, MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
-import { helpdeskAvailable } from "@/data/helpdesk"
 import TeamIcon from "@/components/icons/TeamIcon.vue"
 import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
 
@@ -190,11 +189,12 @@ const directItems = computed(() =>
 	}))
 )
 
-// …and everything More holds, flat, below it. Team appears only once has_team
-// confirms direct reports (or the caller is HR browsing via the selector).
+// …and everything More holds, flat, below it. Helpdesk (HR Issues + IT
+// Helpdesk) is in MORE_ITEMS for everyone — the IT pill inside it carries the
+// Helpdesk-app availability gate. Team appears only once has_team confirms
+// direct reports (or the caller is HR browsing via the selector).
 const moreItems = computed(() => [
 	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
-	...(helpdeskAvailable.data ? [{ ...HELPDESK_ITEM, title: __(HELPDESK_ITEM.title) }] : []),
 	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
 ])
 

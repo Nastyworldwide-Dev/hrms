@@ -1,6 +1,7 @@
-// the Issues LIST/BOARD tab route lives in router/index.js under TabbedView
-// (IssuesTab.vue switches board vs personal list by role — server row scope
-// is the real protection); only form + detail render in the FormShell
+// the Issues LIST/BOARD lives in the merged Helpdesk page (router/index.js,
+// HelpdeskHub.vue → IssuesTab.vue switches board vs personal list by role —
+// server row scope is the real protection); only form + detail render in the
+// FormShell. The legacy v15.105.0 alias redirects from router/helpdeskHub.js.
 const routes = [
 	{
 		name: "EmployeeIssueFormView",
@@ -12,11 +13,6 @@ const routes = [
 		path: "/issues/:id",
 		props: true,
 		component: () => import("@/views/issues/IssueForm.vue"),
-	},
-	{
-		// legacy deep links from the v15.105.0 quick link
-		path: "/hr/issues",
-		redirect: "/issues",
 	},
 ]
 

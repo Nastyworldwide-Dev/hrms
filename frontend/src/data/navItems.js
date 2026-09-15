@@ -5,13 +5,13 @@ import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import KPIIcon from "@/components/icons/KPIIcon.vue"
-import SupportIcon from "@/components/icons/SupportIcon.vue"
 import SopIcon from "@/components/icons/SopIcon.vue"
 import MoreIcon from "@/components/icons/MoreIcon.vue"
 import HelpdeskIcon from "@/components/icons/HelpdeskIcon.vue"
 import ApprovaIcon from "@/components/icons/ApprovaIcon.vue"
 import ProjectBoardIcon from "@/components/icons/ProjectBoardIcon.vue"
 import { APP_LINKS, visibleAppLinks } from "@/data/appLinks"
+import { HUB_PATH } from "@/utils/helpdeskHub"
 
 // Single source of truth for primary navigation, consumed by both shells
 // (BottomTabs on phone, SideNav on lg+). `title` and `shortTitle` are i18n
@@ -45,10 +45,13 @@ export const NAV_ITEMS = [
 		route: "/dashboard/kpi",
 	},
 	{
-		icon: markRaw(SupportIcon),
-		title: "Issues",
-		shortTitle: "Issues",
-		route: "/issues",
+		// ONE entry for Issues + Helpdesk (owner, 15 Sep 2026), in the slot
+		// Issues held. HR Issues is for everyone, so the entry is never gated;
+		// the IT pill inside is what hides on sites without the Helpdesk app.
+		icon: markRaw(HelpdeskIcon),
+		title: "Helpdesk",
+		shortTitle: "Helpdesk",
+		route: HUB_PATH,
 	},
 	{
 		icon: markRaw(SopIcon),
@@ -57,16 +60,6 @@ export const NAV_ITEMS = [
 		route: "/sop",
 	},
 ]
-
-// Native Helpdesk (v16.23.0): a router destination, not an Apps link-out.
-// More and SideNav append it only once data/helpdesk.js confirms the app is
-// installed on this site — same gate pattern as Team.
-export const HELPDESK_ITEM = {
-	icon: markRaw(HelpdeskIcon),
-	title: "Helpdesk",
-	shortTitle: "Helpdesk",
-	route: "/helpdesk",
-}
 
 // Phone tab bar — FIVE fixed destinations (spec §13.1, §10.1 #8). A bar whose
 // destinations change under the user breaks Ionic's per-tab navigation stacks,
@@ -89,19 +82,11 @@ export const TAB_ITEMS = [
 		title: "More",
 		shortTitle: "More",
 		route: "/more",
-		routes: [
-			"/more",
-			"/dashboard/kpi",
-			"/issues",
-			"/sop",
-			"/team",
-			"/remote-approvals",
-			"/helpdesk",
-		],
+		routes: ["/more", "/dashboard/kpi", HUB_PATH, "/sop", "/team", "/remote-approvals"],
 	},
 ]
 
-// Everything not in the tab bar (§13.1): KPI, Issues, SOPs — plus Team and
+// Everything not in the tab bar (§13.1): KPI, Helpdesk, SOPs — plus Team and
 // Remote Approvals, which the More screen adds conditionally.
 export const MORE_ITEMS = NAV_ITEMS.slice(4)
 

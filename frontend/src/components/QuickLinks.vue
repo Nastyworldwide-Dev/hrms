@@ -20,7 +20,7 @@
 				v-for="link in props.items"
 				:key="link.title"
 				:label="link.title"
-				@click="router.push({ name: link.route })"
+				@click="router.push({ name: link.route, query: link.query })"
 			>
 				<template #icon>
 					<component :is="link.icon" class="h-[18px] w-[18px]" />

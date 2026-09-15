@@ -25,6 +25,7 @@
 import { computed, inject, markRaw } from "vue"
 
 import { userResource } from "@/data/user"
+import { HR_TAB, HUB_ROUTE_NAME } from "@/utils/helpdeskHub"
 import { hasHRRole } from "@/utils/issueBoard"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
@@ -72,19 +73,21 @@ const baseQuickLinks = [
 	},
 	{
 		icon: markRaw(SupportIcon),
-		title: __("Report an Issue"),
+		title: __("New HR Issue"),
 		route: "EmployeeIssueFormView",
 	},
 ]
 
-// same destination for both — the Issues tab renders the board for HR roles
-// and the personal list for everyone else; only the label differs
+// same destination for both — the HR Issues pill of the Helpdesk page renders
+// the board for HR roles and the personal list for everyone else; only the
+// label differs
 const quickLinks = computed(() => [
 	...baseQuickLinks,
 	{
 		icon: markRaw(SupportIcon),
-		title: isHR.value ? __("Issue Board") : __("My Issues"),
-		route: "EmployeeIssueListView",
+		title: isHR.value ? __("Issue Board") : __("HR Issues"),
+		route: HUB_ROUTE_NAME,
+		query: { tab: HR_TAB },
 	},
 ])
 </script>
