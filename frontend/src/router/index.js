@@ -11,6 +11,7 @@ import leaveRoutes from "./leaves"
 import otRoutes from "./ot"
 import sopRoutes from "./sop"
 import { isStaleChunkError } from "./stale-chunk"
+import { queueBehindTraversal } from "./traversalQueue"
 
 const routes = [
 	{
@@ -180,6 +181,12 @@ const router = createRouter({
 	history: createWebHistory("/hrms"),
 	routes,
 })
+
+// A push/replace during an in-flight Back/Forward cancelled it and left Ionic
+// animating the next page as a back (the new page never showed). The same
+// router object is app.use()d, so $router, useRouter() and RouterLink all get
+// the held push. See traversalQueue.js.
+queueBehindTraversal(router)
 
 // Release focus before every navigation. Ionic keeps the outgoing page mounted
 // and stamps it aria-hidden — but the control that triggered the navigation
