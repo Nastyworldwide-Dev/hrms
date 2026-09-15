@@ -254,7 +254,7 @@ def attachment_content(name: str):
 	frappe.local.response.type = "binary"
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def remove_attachment(name: str):
 	"""Explicit removal of the SOP's attachment. The controller's on_update
 	cleanup only sees field transitions — legacy rows (and Desk sidebar

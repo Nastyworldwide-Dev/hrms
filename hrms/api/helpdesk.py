@@ -93,7 +93,7 @@ def get_ticket(name: str) -> dict:
 	return ticket
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def new_ticket(
 	subject: str, description: str, ticket_type: str | None = None, priority: str | None = None
 ) -> dict:
@@ -115,7 +115,7 @@ def new_ticket(
 	return {"name": ticket.name}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reply(name: str, message: str) -> dict:
 	"""Customer reply on a ticket; Helpdesk reopens a resolved ticket itself."""
 	message = (message or "").strip()

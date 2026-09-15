@@ -113,7 +113,7 @@ WITHDRAWABLE_REQUEST_DOCTYPES = frozenset(
 )
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def withdraw_request(doctype: str, name: str) -> None:
 	"""Delete the caller's OWN, still-DRAFT request.
 
@@ -249,7 +249,7 @@ def get_unread_notifications_count() -> int:
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark_notification_as_read(name: str | int) -> None:
 	"""Mark one PWA Notification read — the tap on a row.
 
@@ -268,7 +268,7 @@ def mark_notification_as_read(name: str | int) -> None:
 	frappe.db.set_value("PWA Notification", name, "read", 1, update_modified=False)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark_all_notifications_as_read() -> None:
 	frappe.db.set_value(
 		"PWA Notification",
@@ -1757,7 +1757,7 @@ def get_attachments(dt: str, dn: str):
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_base64_file(
 	content: str, filename: str, dt: str | None = None, dn: str | None = None, fieldname: str | None = None
 ):
@@ -1804,7 +1804,7 @@ def upload_base64_file(
 	).insert()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def delete_attachment(filename: str):
 	row = frappe.db.get_value(
 		"File", filename, ["attached_to_doctype", "attached_to_name", "owner"], as_dict=True

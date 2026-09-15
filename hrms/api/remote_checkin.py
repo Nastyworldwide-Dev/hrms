@@ -98,7 +98,7 @@ def _ensure_approver(request_name: str) -> dict:
 	return row
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def submit_remarks(request: str, employee_remarks: str = "") -> dict:
 	"""Backfill the employee's reason after the check-in was saved.
 
@@ -269,12 +269,12 @@ def _decide(request: str, decision: str, approver_remarks: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def approve(request: str, approver_remarks: str = "") -> dict:
 	return _decide(request, "Approved", approver_remarks)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reject(request: str, approver_remarks: str = "") -> dict:
 	return _decide(request, "Rejected", approver_remarks)
 
@@ -430,7 +430,7 @@ def resolve_punch_type(recent_rows, requested: str, now):
 	return "OUT", open_in
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def punch(
 	employee: str,
 	log_type: str,
@@ -751,7 +751,7 @@ def leaves_consecutive_outs(sequence, out_dt) -> bool:
 	return before == "OUT" or after == "OUT"
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -> dict:
 	"""Retroactively submit a forgotten check-out.
 
