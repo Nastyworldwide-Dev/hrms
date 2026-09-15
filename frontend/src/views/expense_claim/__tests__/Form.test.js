@@ -27,3 +27,14 @@ test("the seed does not depend on a FormField default that never mounts", () => 
 		"posting_date default via field.default is dead code: the field is outside the rendered tab"
 	)
 })
+
+test("cost tags picked on an expense line survive the claim-level stamp", () => {
+	// Form.vue stamps the company cost center onto rows; a row that already
+	// carries a cost tag (picked in the item sheet) must keep it.
+	assert.doesNotMatch(src, /expense\.cost_center = /, "rows must not be overwritten")
+	assert.match(
+		src,
+		/expense\.cost_center \|\|= /,
+		"the claim-level cost center only fills an empty row"
+	)
+})

@@ -68,6 +68,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.calculate_taxes()
 		self.set_status()
 		self.validate_company_and_department()
+		self.validate_cost_center_company()
 		if self.task and not self.project:
 			self.project = frappe.db.get_value("Task", self.task, "project")
 
@@ -152,6 +153,28 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			if company and self.company != company:
 				frappe.throw(
 					_("Department {0} does not belong to company: {1}").format(self.department, self.company),
+					exc=MismatchError,
+				)
+
+	def validate_cost_center_company(self):
+		"""Every cost tag on the claim belongs to the claim's company.
+
+		The PWA offers only the company's own cost centers
+		(hrms.api.get_expense_cost_tags); this is the fence behind the picker,
+		so a hand-built payload cannot tag a line with another company's cost
+		center. GL would refuse it much later, at submit, in the approver's lap.
+		"""
+		tags = [(_("Claim"), self.cost_center)]
+		tags += [(_("Row #{0}").format(row.idx), row.cost_center) for row in self.expenses or []]
+		for where, cost_center in tags:
+			if not cost_center:
+				continue
+			owner = frappe.get_cached_value("Cost Center", cost_center, "company")
+			if owner and owner != self.company:
+				frappe.throw(
+					_("{0}: Cost Center {1} belongs to {2}, not {3}").format(
+						where, cost_center, owner, self.company
+					),
 					exc=MismatchError,
 				)
 

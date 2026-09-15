@@ -137,6 +137,7 @@ import CustomIonModal from "@/components/CustomIonModal.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
+import { withCostTagFields } from "@/utils/expenseCostTags"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
 
@@ -219,11 +220,26 @@ const expenseTypeOptions = computed(() =>
 	(claimTypesResource.data || []).map((type) => ({ label: type.name, value: type.name }))
 )
 
+// Cost tags (Cost Center + Accounting Dimensions) for this claim's company,
+// fenced server-side. get_doctype_fields drops those Links for an Employee
+// (no Desk read on the masters), which left the section header empty.
+const costTags = createResource({ url: "hrms.api.get_expense_cost_tags" })
+watch(
+	() => props.expenseClaim.company,
+	(company) => {
+		if (company) costTags.fetch({ company })
+	},
+	{ immediate: true }
+)
+
 const expenseFields = computed(() =>
-	(expensesTableFields.data || []).map((field) =>
-		field.fieldname === "expense_type"
-			? { ...field, documentList: expenseTypeOptions.value }
-			: field
+	withCostTagFields(
+		(expensesTableFields.data || []).map((field) =>
+			field.fieldname === "expense_type"
+				? { ...field, documentList: expenseTypeOptions.value }
+				: field
+		),
+		costTags.data
 	)
 )
 
@@ -252,7 +268,8 @@ watch(
 			expenseItem.value.description = claimTypesByID[value]?.description
 		}
 
-		expenseItem.value.cost_center = props.expenseClaim.cost_center
+		// fill only: a cost tag picked on the line is the employee's choice
+		expenseItem.value.cost_center ||= props.expenseClaim.cost_center
 	}
 )
 

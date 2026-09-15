@@ -1569,6 +1569,88 @@ def get_company_cost_center_and_expense_account(company: str) -> dict:
 	}
 
 
+def expense_cost_tags(cost_centers, employee_cost_center, company_cost_center, dimensions) -> dict:
+	"""Shape the cost-tag choices for an expense line (pure; test_expense_cost_tags).
+
+	The employee's payroll cost center is the default when it is one of the
+	company's choices, otherwise the company default. Dimensions pass through.
+	"""
+	options = [
+		{"value": row["name"], "label": row.get("cost_center_name") or row["name"]} for row in cost_centers
+	]
+	offered = {row["value"] for row in options}
+	default = employee_cost_center if employee_cost_center in offered else company_cost_center
+	return {"cost_center": {"default": default, "options": options}, "dimensions": dimensions}
+
+
+def _dimension_choices(doctype: str, company: str) -> list[dict]:
+	"""The leaf rows of a dimension's master, narrowed to `company` when it has one."""
+	meta = frappe.get_meta(doctype)
+	filters = {}
+	if meta.has_field("company"):
+		filters["company"] = company
+	if meta.has_field("disabled"):
+		filters["disabled"] = 0
+	if meta.has_field("is_group"):
+		filters["is_group"] = 0
+	# ceiling: 500 names, upgrade: search endpoint if a dimension master outgrows a picker
+	rows = frappe.get_all(doctype, filters=filters, pluck="name", order_by="name", limit=500)
+	return [{"value": name, "label": name} for name in rows]
+
+
+@frappe.whitelist()
+def get_expense_cost_tags(company: str) -> dict:
+	"""Cost Center and Accounting Dimension choices for an expense line.
+
+	An Employee has no Desk read on Cost Center, Department or Branch, so
+	`get_doctype_fields` drops those Links and the New Expense Item sheet
+	showed an "Accounting Dimensions" header with nothing under it (15 Sep
+	2026). Own company answers without any Desk read; another company needs
+	real Company read (Desk/HR callers), the fence
+	`get_company_cost_center_and_expense_account` already uses. Only names of
+	the company's own leaf cost centers and dimension rows leave here.
+	"""
+	from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_dimensions
+
+	own = get_employee_info(fields=("name", "company", "payroll_cost_center"))
+	is_own = bool(own and own.get("company") == company)
+	if not is_own:
+		frappe.has_permission("Company", "read", company, throw=True)
+
+	cost_centers = frappe.get_all(
+		"Cost Center",
+		filters={"company": company, "is_group": 0, "disabled": 0},
+		fields=["name", "cost_center_name"],
+		order_by="name",
+	)
+	company_default = frappe.get_cached_value("Company", company, "cost_center")
+
+	dimension_filters, defaults_by_company = get_dimensions()
+	company_defaults = defaults_by_company.get(company, {})
+	employee_meta = frappe.get_meta("Employee")
+	dimensions = []
+	for dim in dimension_filters:
+		default = None
+		if is_own and employee_meta.has_field(dim.fieldname):
+			default = frappe.db.get_value("Employee", own["name"], dim.fieldname)
+		dimensions.append(
+			{
+				"fieldname": dim.fieldname,
+				"label": dim.label,
+				"document_type": dim.document_type,
+				"default": default or company_defaults.get(dim.fieldname),
+				"options": _dimension_choices(dim.document_type, company),
+			}
+		)
+
+	logger.info(
+		"[api] cost tags for %s: %d cost centers, %d dimensions", company, len(cost_centers), len(dimensions)
+	)
+	return expense_cost_tags(
+		cost_centers, own.get("payroll_cost_center") if own else None, company_default, dimensions
+	)
+
+
 @frappe.whitelist()
 def get_salary_currency(employee: str | None = None) -> str | None:
 	"""The currency an expense claim should default to for `employee`.

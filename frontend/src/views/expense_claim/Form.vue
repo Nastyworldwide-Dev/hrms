@@ -168,7 +168,7 @@ watch(
 	() => expenseClaim.value.cost_center,
 	() => {
 		expenseClaim?.value?.expenses?.forEach((expense) => {
-			expense.cost_center = expenseClaim.value.cost_center
+			expense.cost_center ||= expenseClaim.value.cost_center
 		})
 	}
 )
@@ -314,9 +314,9 @@ function setFormReadOnly() {
 }
 
 function validateForm() {
-	// stamp the cost center (from company defaults) onto each expense row
+	// fill the company cost center into rows that carry no cost tag of their own
 	expenseClaim?.value?.expenses?.forEach((expense) => {
-		expense.cost_center = expenseClaim.value.cost_center
+		expense.cost_center ||= expenseClaim.value.cost_center
 	})
 }
 </script>
