@@ -77,14 +77,18 @@ class AttendanceRequest(Document):
 		# Attendance requests are typically posted after the shift period for corrections.
 		# Expired shift assignments are auto-marked Inactive, but should still be considered
 		# here so that the shift is auto-fetched for backdated requests.
+		# An open-ended assignment (no end date) is the standing roster on this
+		# site; `end_date >= to_date` never matched it, so every request came back
+		# shiftless and missed the rostered day's Attendance row (then the approval
+		# died inserting a duplicate). Same shape as get_shifts_for_date.
 		shifts = frappe.get_all(
 			"Shift Assignment",
 			filters={
 				"docstatus": 1,
 				"employee": self.employee,
 				"start_date": ("<=", self.from_date),
-				"end_date": (">=", self.to_date),
 			},
+			or_filters=[["end_date", "is", "not set"], ["end_date", ">=", self.to_date]],
 			pluck="shift_type",
 		)
 
