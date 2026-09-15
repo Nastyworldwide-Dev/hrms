@@ -7,7 +7,7 @@
 // target opens signed in.
 //
 // Kept free of Vue imports so the data can be unit-tested under node; icons
-// are attached in navItems.js (APP_ITEMS).
+// are attached in navItems.js (visibleAppItems).
 //
 // `title` and `sublabel` are i18n source strings — wrap with $translate.
 // `roles` is the allowlist that decides whether the row is OFFERED. It is not

@@ -6,7 +6,9 @@ import { employeeResource } from "./employee"
 let employeesByID = reactive({})
 let employeesByUserID = reactive({})
 
-export const employees = createResource({
+// Fetched once at import (auto) to fill the two lookup maps below; nothing
+// reads the resource itself, so it is not bound to a name.
+createResource({
 	url: "hrms.api.get_all_employees",
 	auto: true,
 	transform(data) {

@@ -6,7 +6,7 @@ import { createAnimation, iosTransitionAnimation } from "@ionic/core"
  * The config here takes care of the same
  */
 
-export const animationBuilder = (baseEl, opts) => {
+const animationBuilder = (baseEl, opts) => {
 	if (opts.direction === "back") {
 		/**
 		 * Even after disabling swipeBackEnabled, when the swipe is completed & we're back on the first screen

@@ -10,7 +10,7 @@ import MoreIcon from "@/components/icons/MoreIcon.vue"
 import HelpdeskIcon from "@/components/icons/HelpdeskIcon.vue"
 import ApprovaIcon from "@/components/icons/ApprovaIcon.vue"
 import ProjectBoardIcon from "@/components/icons/ProjectBoardIcon.vue"
-import { APP_LINKS, visibleAppLinks } from "@/data/appLinks"
+import { visibleAppLinks } from "@/data/appLinks"
 import { HUB_PATH } from "@/utils/helpdeskHub"
 
 // Single source of truth for primary navigation, consumed by both shells
@@ -18,7 +18,7 @@ import { HUB_PATH } from "@/utils/helpdeskHub"
 // source strings — consumers must wrap them with the injected $translate.
 // `shortTitle` is the design's compact tab-bar label. The phone bar shows
 // TAB_ITEMS (5 primaries + More); SideNav shows the full NAV_ITEMS list.
-export const NAV_ITEMS = [
+const NAV_ITEMS = [
 	{ icon: markRaw(HomeIcon), title: "Home", shortTitle: "Home", route: "/home" },
 	{
 		icon: markRaw(AttendanceIcon),
@@ -97,7 +97,6 @@ const APP_ICONS = {
 	approva: markRaw(ApprovaIcon),
 	board: markRaw(ProjectBoardIcon),
 }
-export const APP_ITEMS = APP_LINKS.map((link) => ({ ...link, icon: APP_ICONS[link.key] }))
 
 // The rows this user may be offered, icons attached. Both shells (More on the
 // phone, SideNav on lg+) render the same list, so the allowlist is applied
