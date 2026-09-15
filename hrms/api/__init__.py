@@ -792,6 +792,7 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 	listed either. Days on leave / half-day leave / Attendance Request /
 	HR-marked are legit and skipped.
 	"""
+	from hrms.utils.leave_cover import request_covered_days
 	from hrms.utils.ot_calculation import NO_OT_DISABLED, explain_no_overtime_rows
 
 	today = getdate()
@@ -820,12 +821,16 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 	rows_by_day: dict = {}
 	for row in worked:
 		rows_by_day.setdefault(getdate(row["attendance_date"]), []).append(row)
+	# A leave or attendance request still awaiting a decision has no Attendance
+	# row yet, so `_legit_zero_day` cannot see it; the request itself says the
+	# day is not the employee's broken record (owner ruling, 15 Sep 2026).
+	held = request_covered_days(employee, from_date, to_date)
 
 	incomplete = []
 	for day in sorted(set(by_day) | set(rows_by_day), reverse=True):
 		# Before the window: only the after-midnight OUT of a night shift that
 		# started the day before was read, so that day would read "no check-in".
-		if day in skip or day >= today or day < getdate(from_date):
+		if day in skip or day in held or day >= today or day < getdate(from_date):
 			continue
 		taps_of_day = by_day.get(day, [])
 		# A night shift still running (IN taken, shift_end not yet past) is not

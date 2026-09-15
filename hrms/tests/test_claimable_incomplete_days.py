@@ -45,6 +45,7 @@ ABSENT_WITH_TAP = date(2026, 9, 16)  # auto-Absent but a tap exists: still liste
 RUNNING_NIGHT = date(2026, 9, 29)  # IN taken, shift ends today: still running
 BEFORE_WINDOW_NIGHT = date(2026, 5, 15)  # only its after-midnight OUT is inside the window
 CLAIMED = date(2026, 9, 20)
+PENDING_LEAVE = date(2026, 9, 14)  # lone tap, no row: the open leave speaks for the day
 
 
 def _tap(day, log_type, **extra):
@@ -80,6 +81,7 @@ TAPS = [
 	_tap(CLAIMABLE, "OUT"),
 	_tap(CLAIMED, "IN"),
 	_tap(ABSENT_WITH_TAP, "IN"),
+	_tap(PENDING_LEAVE, "IN"),
 	# a rejected tap is not a tap: the day it sits on alone must not be listed
 	_tap(date(2026, 9, 19), "IN", requires_remote_approval=1, remote_approval_status="Rejected"),
 	# today is still running: a lone IN on it is not incomplete yet
@@ -153,6 +155,14 @@ def _discover(eligible, reads=None):
 			return ATTENDANCE
 		if doctype == "OT Request":
 			return [frappe._dict(ot_date=CLAIMED, claimed_hours=1.0, status="Open", docstatus=0)]
+		if doctype == "Leave Application":
+			return [
+				frappe._dict(
+					name="HR-LAP-PENDING", status="Open", from_date=PENDING_LEAVE, to_date=PENDING_LEAVE
+				)
+			]
+		if doctype == "Attendance Request":
+			return []
 		if doctype == "Employee Checkin":
 			start, end = filters["time"][1]
 			# the whole filing window, day-bounded: never a fixed lookback
@@ -198,6 +208,7 @@ class TestIncompleteDaysAreListedWithTheirReason(unittest.TestCase):
 		listed = set(self._codes(_discover(eligible=True)))
 		for day in (
 			ON_LEAVE,
+			PENDING_LEAVE,
 			HR_MARKED,
 			GENUINE_ZERO,
 			CLAIMABLE,

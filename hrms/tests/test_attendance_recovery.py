@@ -150,6 +150,41 @@ class TestProtectedReason(unittest.TestCase):
 	def test_c1_a_day_hr_removed_in_shift_attendance_is_held(self):
 		self.assertIn("removed by HR", rec.protected_reason(YESTERDAY, TODAY.date(), [], removed_by_hr=True))
 
+	def test_a_day_a_pending_leave_or_attendance_request_speaks_for_is_held(self):
+		# Owner ruling (15 Sep 2026): an OPEN leave has no Attendance row yet, so
+		# the rows alone say "free"; the request itself is the protection.
+		reason = rec.protected_reason(
+			YESTERDAY, TODAY.date(), [_row()], request="Leave Application HR-LAP-1 (Open) covers it"
+		)
+		self.assertIn("HR-LAP-1", reason)
+		self.assertIsNone(rec.protected_reason(YESTERDAY, TODAY.date(), [_row()], request=None))
+
+
+class TestDayProtectionAsksTheLeaveCover(_Base):
+	"""Every planner goes through _day_protection: a pending leave must reach it."""
+
+	def test_a_pending_leave_with_no_row_holds_the_day(self):
+		with (
+			patch.object(rec, "_attendance_rows", return_value=[_row()]),
+			patch.object(rec, "_financial", return_value=None),
+			patch.object(rec.hr_removed_day, "removed_by_hr", return_value=False),
+			patch.object(
+				rec,
+				"request_covered_days",
+				lambda employee, start, end: {YESTERDAY: "Attendance Request HR-ARQ-1 (Open) covers it"},
+			),
+		):
+			self.assertIn("HR-ARQ-1", rec._day_protection("E1", YESTERDAY, False))
+
+	def test_no_request_no_rows_of_note_stays_free(self):
+		with (
+			patch.object(rec, "_attendance_rows", return_value=[_row()]),
+			patch.object(rec, "_financial", return_value=None),
+			patch.object(rec.hr_removed_day, "removed_by_hr", return_value=False),
+			patch.object(rec, "request_covered_days", lambda employee, start, end: {}),
+		):
+			self.assertIsNone(rec._day_protection("E1", YESTERDAY, False))
+
 
 class TestNightShift(unittest.TestCase):
 	def test_night_means_starting_18_00_or_later_and_ending_before_06_00(self):

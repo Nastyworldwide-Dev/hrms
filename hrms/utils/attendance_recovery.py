@@ -62,6 +62,7 @@ from hrms.sync.checkin_import import without_pending_late_outs
 from hrms.sync.write_block import PROVENANCE_FIELD
 from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
+from hrms.utils.leave_cover import request_covered_days
 from hrms.utils.offshift_punch_heal import _lost_transaction
 
 logger = logging.getLogger(__name__)
@@ -130,12 +131,16 @@ def recovery_window(from_date, to_date, today: date) -> Window:
 	return Window(start, end, excluded, requested_end)
 
 
-def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False) -> str | None:
+def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False, request=None) -> str | None:
 	"""Why this employee-day must not be rebuilt, or None. Pure.
 
 	`rows` are the day's Attendance rows (any docstatus); `financial` is what
 	`_repair_financial_dependency` returned for the day; `removed_by_hr` is
-	whether HR removed the day in Shift Attendance (hrms.utils.hr_removed_day).
+	whether HR removed the day in Shift Attendance (hrms.utils.hr_removed_day);
+	`request` is what `_request_cover` found — a live Leave Application or
+	Attendance Request for the day. Owner ruling (15 Sep 2026): an OPEN leave has
+	no Attendance row yet, so the rows alone read "free"; the request itself
+	holds the day.
 	"""
 	day = getdate(day)
 	if day >= today:
@@ -157,6 +162,8 @@ def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False
 			return f"{name} comes from an Attendance Request"
 		if not cint(row.get("auto_attendance")):
 			return f"{name} was marked by HR by hand"
+	if request:
+		return request
 	if financial:
 		return f"approved overtime or submitted payroll depends on this day ({financial})"
 	return None
@@ -264,6 +271,11 @@ def _held(entry, reason, hr=True) -> dict:
 	}
 
 
+def _request_cover(employee, day) -> str | None:
+	"""The live Leave Application or Attendance Request speaking for the day, or None."""
+	return request_covered_days(employee, day, day).get(getdate(day))
+
+
 def _day_protection(employee, day, for_update, ignore=None) -> str | None:
 	rows = [r for r in _attendance_rows(employee, day) if r.get("name") != ignore]
 	return protected_reason(
@@ -272,6 +284,7 @@ def _day_protection(employee, day, for_update, ignore=None) -> str | None:
 		rows,
 		_financial(employee, day, rows, for_update),
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
+		request=_request_cover(employee, day),
 	)
 
 
@@ -421,6 +434,7 @@ def _plan_release_mirrored(win, for_update=False) -> dict:
 			day_rows,
 			_financial(employee, day, day_rows, for_update),
 			removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
+			request=_request_cover(employee, day),
 		)
 		if reason:
 			held.append(_held(entry, reason))
@@ -2475,6 +2489,7 @@ def _late_checkouts(win) -> dict:
 			rows,
 			_financial(request.employee, day, rows, False),
 			removed_by_hr=hr_removed_day.removed_by_hr(request.employee, day),
+			request=_request_cover(request.employee, day),
 		)
 		(held.append(_held(entry, reason)) if reason else planned.append(entry))
 	logger.info(
