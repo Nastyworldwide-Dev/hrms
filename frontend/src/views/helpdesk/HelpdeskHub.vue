@@ -63,16 +63,19 @@ const remember = (value) => {
 }
 
 // The IT pill exists only where the Helpdesk app is installed (nasty-live has
-// none). helpdeskAvailable is auto-fetched and cached; until it answers the
-// pill is absent, and GSegmented draws nothing for a single option (8.8).
-const itAvailable = computed(() => Boolean(helpdeskAvailable.data))
+// none). helpdeskAvailable is auto-fetched and cached, but its data is NULL
+// until the cache hydrates or the probe answers — and setup runs before
+// either. Only an ANSWERED false removes the pill: treating "not yet" as
+// "no" clamped a cold ?tab=it to hr and rewrote the URL before the probe
+// could say yes (review of 8b38ddfc8), losing every IT deep link on reload.
+const itRefused = computed(() => helpdeskAvailable.data === false)
 const tabButtons = computed(() => [
 	{ key: HR_TAB, label: __("HR Issues") },
-	...(itAvailable.value ? [{ key: IT_TAB, label: __("IT Helpdesk") }] : []),
+	...(itRefused.value ? [] : [{ key: IT_TAB, label: __("IT Helpdesk") }]),
 ])
 
 // Which pill a request asks for, clamped to what this site offers.
-const clamp = (value) => (value === IT_TAB && !itAvailable.value ? HR_TAB : value)
+const clamp = (value) => (value === IT_TAB && itRefused.value ? HR_TAB : value)
 
 // DECLARED BEFORE THE WATCHES BELOW, on purpose (the KPI dashboard's TDZ
 // lesson: a watch getter runs synchronously at setup, and a `const` further
@@ -119,7 +122,7 @@ onMounted(() => {
 
 // The availability probe can answer AFTER setup: a cached "it" pill on a site
 // that lost the app clamps back to HR Issues instead of a pill that is not drawn.
-watch(itAvailable, () => {
+watch(itRefused, () => {
 	const next = clamp(tab.value)
 	if (next !== tab.value) selectTab(next)
 })

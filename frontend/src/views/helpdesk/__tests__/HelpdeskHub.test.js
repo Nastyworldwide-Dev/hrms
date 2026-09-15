@@ -136,6 +136,37 @@ test("without the Helpdesk app the IT pill is absent and ?tab=it clamps to HR Is
 	)
 })
 
+test("a cold ?tab=it survives the availability probe still being unanswered", async () => {
+	// frappe-ui hydrates the cache asynchronously: data is null at setup
+	const { vm, mount, replaced, helpdeskAvailable } = page({
+		query: { tab: "it" },
+		available: null,
+	})
+	assert.equal(vm.tab.value, "it", "not-yet-answered is not a refusal")
+	assert.deepEqual(
+		vm.tabButtons.value.map((b) => b.key),
+		["hr", "it"]
+	)
+	mount()
+	assert.deepEqual(replaced, [], "the URL keeps the pill the link asked for")
+	helpdeskAvailable.data = true
+	await nextTick()
+	assert.equal(vm.tab.value, "it")
+	assert.deepEqual(replaced, [])
+})
+
+test("the probe answering no after a cold ?tab=it clamps to HR Issues", async () => {
+	const { vm, route, helpdeskAvailable } = page({ query: { tab: "it" }, available: null })
+	helpdeskAvailable.data = false
+	await nextTick()
+	assert.equal(vm.tab.value, "hr")
+	assert.equal(route.query.tab, "hr")
+	assert.deepEqual(
+		vm.tabButtons.value.map((b) => b.key),
+		["hr"]
+	)
+})
+
 test("availability answering late clamps a remembered IT pill back to HR Issues", async () => {
 	const { vm, helpdeskAvailable, storage } = page({ stored: "it", available: true })
 	assert.equal(vm.tab.value, "it")
