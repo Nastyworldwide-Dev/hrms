@@ -49,7 +49,7 @@
 
 			<!-- §11.1 -->
 			<GEmptyState
-				v-if="!myIssues.loading && !myIssues.data?.length"
+				v-if="!myIssues.loading && !myIssues.error && !myIssues.data?.length"
 				:title="__('No HR issues yet')"
 				:body="__('If something looks wrong, tell us — a screenshot helps')"
 			/>

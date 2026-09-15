@@ -145,7 +145,7 @@
 				</div>
 
 				<GEmptyState
-					v-else-if="!teamStatus.loading"
+					v-else-if="!teamStatus.loading && !teamStatus.error"
 					:title="__('Nothing waiting on you')"
 					:body="__('Approvals will appear here when your team submits')"
 				/>

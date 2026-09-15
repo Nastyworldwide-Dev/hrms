@@ -58,7 +58,7 @@
 			</GListPanel>
 
 			<GEmptyState
-				v-if="!myTickets.loading && !rows.length"
+				v-if="!myTickets.loading && !myTickets.error && !rows.length"
 				:title="activeChip === 'all' ? __('No IT tickets yet') : __('Nothing here')"
 				:body="
 					activeChip === 'all'

@@ -83,7 +83,7 @@
 			</div>
 
 			<GEmptyState
-				v-else-if="!sop.loading"
+				v-else-if="!sop.loading && !sop.error"
 				:title="__('Nothing to show yet')"
 				:body="__('This procedure has no content published')"
 			/>
