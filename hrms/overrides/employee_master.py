@@ -14,6 +14,8 @@ from frappe.utils import add_years, cint, get_link_to_form, getdate
 
 from erpnext.setup.doctype.employee.employee import Employee
 
+from hrms.utils.identity import own_employees
+
 logger = logging.getLogger(__name__)
 
 #: Framework accounts that must never be provisioned: Administrator already holds
@@ -163,6 +165,9 @@ def update_approver_role(doc, method=None):
 
 
 def update_approver_user_roles(doc, method=None):
+	"""User.validate: approver roles from the Employee master, then the keeper
+	below — it must run AFTER erpnext's `validate_employee_role`, which this
+	hook already does (hooks.py lists it second on the same event)."""
 	approver_roles = set()
 	if frappe.db.exists("Employee", {"leave_approver": doc.name}):
 		approver_roles.add("Leave Approver")
@@ -171,7 +176,43 @@ def update_approver_user_roles(doc, method=None):
 		approver_roles.add("Expense Approver")
 
 	if approver_roles:
+		logger.info(
+			"[employee_master] %s is a named approver: appending %s", doc.name, sorted(approver_roles)
+		)
 		doc.append_roles(*approver_roles)
+
+	keep_employee_role_for_linked_login(doc)
+
+
+def keep_employee_role_for_linked_login(doc, method=None) -> bool:
+	"""Put the Employee role back on a User whose login resolves to an Employee.
+
+	ERPNext's `validate_employee_role` strips the role on EVERY User save
+	unless `Employee.user_id` equals the login EXACTLY. A mirrored row written
+	through `db.set_value` can carry `"  Amran@Example.com "`; the app still
+	resolves that person (`hrms.utils.identity` normalizes), so they sign in,
+	open Nadi, and are refused every request at the role gate — "No
+	permission for Leave Application" — because a password reset or a role
+	edit silently took Employee away. Two answers to "is this an employee?",
+	and the stricter one was deciding permissions.
+
+	This asks the canonical resolver and appends the role when it finds
+	exactly ONE Active Employee; ambiguity and no-record stay role-less, as
+	everywhere else. Never saves (validate chain), never grants anything else.
+	Returns True when the role was appended.
+	"""
+	if not doc.name or doc.name in _NON_PROVISIONABLE_USERS:
+		return False
+	if any(row.role == "Employee" for row in doc.get("roles") or []):
+		return False
+	if not own_employees(doc.name):
+		return False
+	doc.append_roles("Employee")
+	logger.info(
+		"[employee_master] %s resolves to an Active Employee but carried no Employee role — restored",
+		doc.name,
+	)
+	return True
 
 
 def update_employee_transfer(doc, method=None):

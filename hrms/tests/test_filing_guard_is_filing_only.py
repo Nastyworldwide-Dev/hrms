@@ -36,6 +36,7 @@ _frappe_stub.install()
 _erpnext_stub.install()
 import frappe
 
+from hrms.hr import utils as hr_utils
 from hrms.hr.utils import validate_filing_for_self
 
 APPROVER = "manager@example.com"
@@ -62,14 +63,25 @@ class _Doc:
 
 
 class TestFilingGuardIsFilingOnly(unittest.TestCase):
-	def guard(self, doc, *, user=APPROVER, roles=("Employee",), can_write_employee=False):
+	def guard(
+		self,
+		doc,
+		*,
+		user=APPROVER,
+		roles=("Employee",),
+		can_write_employee=False,
+		user_of_employee=EMPLOYEE_USER,
+	):
 		"""Run the guard as a plain employee who is NOT the subject: no HR role,
 		no Employee write permission. The approver's real authority lives in the
 		row scope, which this function never consults."""
 		with (
 			patch.object(frappe, "session", MagicMock(user=user)),
 			patch.object(frappe, "get_roles", return_value=list(roles)),
-			patch.object(frappe, "db", MagicMock(get_value=MagicMock(return_value=EMPLOYEE_USER))),
+			# identity is the canonical resolver's answer, never a raw user_id read
+			patch.object(
+				hr_utils, "own_employees", side_effect=lambda u: [EMPLOYEE] if u == user_of_employee else []
+			),
 			patch.object(frappe, "has_permission", return_value=can_write_employee),
 		):
 			validate_filing_for_self(doc)
@@ -106,6 +118,27 @@ class TestFilingGuardIsFilingOnly(unittest.TestCase):
 	def test_the_employee_may_file_for_themselves(self):
 		doc = _Doc(EMPLOYEE, is_new=True)
 		self.guard(doc, user=EMPLOYEE_USER)
+
+	def test_a_case_drifted_login_still_files_for_themselves(self):
+		"""15 Sep 2026: `Employee.user_id` held "  Staff@Example.com " (a mirror
+		wrote it through db.set_value, which does not normalize). The app
+		resolved the person; this guard compared the raw column to the session
+		and refused their OWN OT Request, Replacement Leave Claim and Employee
+		Issue with "You can only file requests for yourself." Identity is the
+		canonical resolver's answer, here as everywhere."""
+		doc = _Doc(EMPLOYEE, is_new=True)
+		self.guard(doc, user=EMPLOYEE_USER, user_of_employee=EMPLOYEE_USER)
+
+	def test_the_guard_never_reads_user_id_itself(self):
+		import ast
+		import inspect
+
+		tree = ast.parse(inspect.getsource(validate_filing_for_self))
+		for node in ast.walk(tree):
+			if isinstance(node, ast.Constant) and node.value == "user_id":
+				self.fail(
+					"validate_filing_for_self compares user_id raw — use hrms.utils.identity.own_employees"
+				)
 
 	def test_hr_may_file_on_someone_s_behalf(self):
 		doc = _Doc(EMPLOYEE, is_new=True)

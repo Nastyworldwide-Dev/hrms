@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from hrms.hr.utils import is_hr_operator
+from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,15 @@ def _has_hr_access(user: str) -> bool:
 
 
 def _get_own_employees(user: str) -> list[str]:
-	return frappe.get_all("Employee", filters={"user_id": user}, pluck="name")
+	"""The caller's own Active Employee, by the canonical resolver.
+
+	Shared by Employee One On One, Employee Instant Feedback and Shift Swap
+	Request. Was a raw `user_id` compare: case-blind to nothing, status-blind,
+	and answering both claimants of a duplicated login — the three holes
+	`hrms.utils.identity.own_employees` closes. A case-drifted mirror row
+	refused its owner's own Shift Swap Request at the create gate.
+	"""
+	return own_employees(user)
 
 
 class EmployeeOneOnOne(Document):

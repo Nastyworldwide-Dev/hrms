@@ -43,6 +43,7 @@ from erpnext.setup.doctype.employee.employee import (
 from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
 	calculate_pro_rated_leaves,
 )
+from hrms.utils.identity import own_employees
 
 DateTimeLikeObject = str | datetime.date | datetime.datetime
 
@@ -1100,7 +1101,11 @@ def validate_filing_for_self(doc):
 	user = frappe.session.user
 	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
 		return
-	if frappe.db.get_value("Employee", doc.employee, "user_id") == user:
+	# Canonical identity, never a raw `user_id` compare: a mirror writes that
+	# column through db.set_value with case or whitespace drift, and the raw
+	# compare refused the person's OWN OT Request, Replacement Leave Claim and
+	# Employee Issue with a filing message (15 Sep 2026).
+	if doc.employee in own_employees(user):
 		return
 	if frappe.has_permission("Employee", ptype="write", doc=doc.employee):
 		return
@@ -1142,7 +1147,6 @@ def get_direct_report_employees(user: str) -> list[str]:
 	no Company UP is unfenced, matching hrms.overrides.company_scope.
 	"""
 	from hrms.overrides.company_scope import allowed_companies
-	from hrms.utils.identity import own_employees
 
 	# Canonical identity for the manager's own record too: a case-drifted mirror
 	# user_id no longer hides a manager's whole team, and two Active rows fail
