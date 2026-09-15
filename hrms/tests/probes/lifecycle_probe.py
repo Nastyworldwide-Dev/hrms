@@ -52,6 +52,7 @@ DECIDE = {
 	"OT Request": ("status", "Open"),
 	"Attendance Request": ("status", "Open"),
 	"Replacement Leave Claim": ("status", "Open"),
+	"Compensatory Leave Request": ("status", "Open"),
 }
 
 
@@ -947,28 +948,52 @@ def scenario_comp_leave(f):
 	record(D, "visibility after create", "all", str(_visibility(D, doc.name, P)))
 	record(D, "notified on create", "-", str(_notified(D, doc.name)))
 	step(D, "duplicate filing (overlap)", "employee", lambda: insert_as(f.staff_user, payload()))
-	step(D, "submit(=approve) as employee", "employee", lambda: submit_as(D, doc.name, f.staff_user))
-	step(D, "submit(=approve) as reports_to manager", "approver", lambda: submit_as(D, doc.name, f.mgr_user))
-	before = _balance(f.staff, f.comp_type, add_days(f.last_sat, 1))
-	step(D, "submit(=approve) as HR", "hr", lambda: submit_as(D, doc.name, f.hr_user))
-	after = _balance(f.staff, f.comp_type, add_days(f.last_sat, 1))
+	# Reject button, 15 Sep 2026: comp leave decides in `status`. A site whose
+	# schema predates the doctype JSON has no column; say so instead of erroring.
+	if not frappe.db.has_column(D, "status"):
+		record(D, "decide / reject / cancel", "-", "SKIPPED no status column (doctype JSON not synced)")
+		return
+	on = add_days(f.last_sat, 1)
+	step(D, "approve own as employee", "employee", lambda: decide(D, doc.name, "Approved", f.staff_user))
+	step(D, "reject as stranger", "stranger", lambda: decide(D, doc.name, "Rejected", f.stranger_user))
+	before = _balance(f.staff, f.comp_type, on)
+	step(D, "reject as reports_to manager", "approver", lambda: decide(D, doc.name, "Rejected", f.mgr_user))
+	rejected = _balance(f.staff, f.comp_type, on)
 	record(
 		D,
-		"comp balance before -> after",
+		"comp balance after reject",
 		"-",
-		f"{before} -> {after}" + ("" if after == before + 1 else " WRONG"),
+		f"{before} -> {rejected}" + ("" if rejected == before else " WRONG"),
 	)
-	record(D, "notified on approve", "-", str(_notified(D, doc.name)))
-	step(D, "cancel approved as employee", "employee", lambda: cancel_as(D, doc.name, f.staff_user))
-	step(D, "cancel approved as approver", "approver", lambda: cancel_as(D, doc.name, f.mgr_user))
-	step(D, "cancel approved as HR", "hr", lambda: cancel_as(D, doc.name, f.hr_user))
-	restored = _balance(f.staff, f.comp_type, add_days(f.last_sat, 1))
-	record(D, "comp balance after cancel", "-", f"{restored}" + ("" if restored == before else " WRONG"))
-	# HR files their own and approves it
+	record(D, "notified on reject", "-", str(_notified(D, doc.name)))
+	step(D, "cancel rejected as HR", "hr", lambda: cancel_as(D, doc.name, f.hr_user))
+	after_cancel = _balance(f.staff, f.comp_type, on)
+	record(
+		D,
+		"comp balance after cancelling the rejection",
+		"-",
+		f"{after_cancel}" + ("" if after_cancel == before else " WRONG"),
+	)
+	again = step(D, "refile after the rejection", "employee", lambda: insert_as(f.staff_user, payload()))
+	if again:
+		step(D, "approve as HR", "hr", lambda: decide(D, again.name, "Approved", f.hr_user))
+		after = _balance(f.staff, f.comp_type, on)
+		record(
+			D,
+			"comp balance before -> after approve",
+			"-",
+			f"{before} -> {after}" + ("" if after == before + 1 else " WRONG"),
+		)
+		record(D, "notified on approve", "-", str(_notified(D, again.name)))
+		step(D, "cancel approved as employee", "employee", lambda: cancel_as(D, again.name, f.staff_user))
+		step(D, "cancel approved as approver", "approver", lambda: cancel_as(D, again.name, f.mgr_user))
+		restored = _balance(f.staff, f.comp_type, on)
+		record(D, "comp balance after cancel", "-", f"{restored}" + ("" if restored == before else " WRONG"))
+	# HR files their own and tries to decide it
 	_attendance(f.hr, f.last_sat, "Present")
 	own = step(D, "HR files own comp leave", "hr", lambda: insert_as(f.hr_user, payload(employee=f.hr)))
 	if own:
-		step(D, "HR submits (approves) own comp leave", "hr", lambda: submit_as(D, own.name, f.hr_user))
+		step(D, "HR approves own comp leave", "hr", lambda: decide(D, own.name, "Approved", f.hr_user))
 	step(D, "create in a colleague's name", "stranger", lambda: insert_as(f.stranger_user, payload()))
 	step(D, "create for a Left employee", "left", lambda: insert_as(f.left_user, payload(employee=f.left)))
 
