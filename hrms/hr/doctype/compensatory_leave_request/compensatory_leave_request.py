@@ -86,14 +86,26 @@ class CompensatoryLeaveRequest(Document, PWANotificationsMixin):
 			frappe.throw(msg)
 
 	def on_submit(self):
-		# No decision field: submitting IS approving, and it adds days to the
-		# allocation. The employee on the request must never be the submitter —
-		# HR included — the same fence OT Request, Replacement Leave Claim and
-		# Shift Request run (an HR user could file and approve their own days).
+		# The employee on the request must never be the submitter — HR included —
+		# the same fence OT Request, Replacement Leave Claim and Shift Request run
+		# (an HR user could file and approve their own days).
 		validate_self_submission(self)
-		logger.info("[comp_leave] %s approved by %s for %s", self.name, frappe.session.user, self.employee)
+		# Reject button, Nabil 15 Sep 2026. A rejection reaches docstatus 1 too —
+		# rejecting is a decision, not a cancellation — so the grant below is
+		# guarded on the decision, as OTRequest.on_submit does.
+		if self.status not in ("Approved", "Rejected"):
+			frappe.throw(
+				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
+			)
+		logger.info(
+			"[comp_leave] %s %s by %s for %s", self.name, self.status, frappe.session.user, self.employee
+		)
 		# the employee hears the decision, like Leave and Attendance Request
 		self.notify_approval_status()
+		if self.status == "Approved":
+			self.grant_compensatory_days()
+
+	def grant_compensatory_days(self):
 		company = frappe.db.get_value("Employee", self.employee, "company")
 		date_difference = date_diff(self.work_end_date, self.work_from_date) + 1
 		if self.half_day:
@@ -128,7 +140,12 @@ class CompensatoryLeaveRequest(Document, PWANotificationsMixin):
 			frappe.throw(msg, title=_("No Leave Period Found"))
 
 	def on_cancel(self):
-		if self.leave_allocation:
+		# Only an approval granted days. leave_allocation alone does not prove it:
+		# an amendment copies the field from the request it replaces.
+		logger.info(
+			"[comp_leave] cancel %s (%s, allocation %s)", self.name, self.status, self.leave_allocation
+		)
+		if self.status == "Approved" and self.leave_allocation:
 			date_difference = date_diff(self.work_end_date, self.work_from_date) + 1
 			if self.half_day:
 				date_difference -= 0.5
