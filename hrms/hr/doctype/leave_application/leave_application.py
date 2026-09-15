@@ -84,6 +84,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.notify_approver()
 
 	def validate(self):
+		self.set_posting_date()
 		validate_active_employee(self.employee)
 		block_transaction_after_relieving(self.employee, self.to_date, "Leave")
 		set_employee_name(self)
@@ -103,6 +104,20 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.validate_leave_approver()
 		self.set_leave_approver_name()
 		self.validate_staff_approver()
+
+	def set_posting_date(self):
+		"""A leave filed without a posting date is posted today.
+
+		Nadi's leave form never renders posting_date. Frappe's own "Today"
+		default fills only an ABSENT field; one that arrives as "" reaches the
+		mandatory check and the whole application is refused — the same class
+		as the Expense Claim fix of 15 Sep 2026, and reproduced on fresh.local
+		as "MandatoryError: posting_date".
+		"""
+		if self.posting_date:
+			return
+		self.posting_date = nowdate()
+		logger.info("[leave_application] %s: posting date defaulted to today", self.name)
 
 	def validate_staff_approver(self):
 		validate_staff_approver(self, "leave_approver", "leave_approver", "leave_approvers")
