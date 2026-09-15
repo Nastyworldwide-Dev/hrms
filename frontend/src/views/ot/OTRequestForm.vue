@@ -194,12 +194,6 @@ function pickDay(d) {
 // the date or try to save; the grey hint under the panel still shows from the start.
 const dateTouched = ref(false)
 const saveAttempted = ref(false)
-watch(
-	() => otRequest.value.ot_date,
-	(date) => {
-		if (date) dateTouched.value = true
-	}
-)
 
 // Why the list above is empty, when it is. "Already claimed", "no overtime" and
 // "every day is under the replacement-leave threshold" are very different
@@ -233,6 +227,15 @@ const props = defineProps({
 })
 
 const otRequest = ref({})
+
+// Declared after otRequest on purpose: watch() reads its source at creation, and a
+// ref declared below it crashes setup (the KPI page did exactly this, d8c5f58b4).
+watch(
+	() => otRequest.value.ot_date,
+	(date) => {
+		if (date) dateTouched.value = true
+	}
+)
 
 const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",
