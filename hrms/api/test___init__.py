@@ -16,7 +16,13 @@ HR-fence access open and everyone else shut.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from hrms.api import _may_read_employee, get_leave_types, get_shifts, withdraw_request
+from hrms.api import (
+	_may_read_employee,
+	get_employee_identity_status,
+	get_leave_types,
+	get_shifts,
+	withdraw_request,
+)
 
 COMPANY = "_Test Company"
 
@@ -195,3 +201,27 @@ class TestWithdrawRequest(FrappeTestCase):
 		# withdrawable request), are all refused up front.
 		for dt in ("ToDo", "User", "Employee Checkin"):
 			self.assertRaises(frappe.ValidationError, withdraw_request, dt, "whatever")
+
+
+class TestEmployeeIdentityStatus(FrappeTestCase):
+	"""The invalid-employee page shows this message. A valid employee who reached
+	that page (runtime crawl, 15 Sep 2026) was told "Employee not found":
+	denial_message has no text for OK and fell back to it."""
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_resolved_employee_gets_ok_and_no_denial(self):
+		_make_employee("identity.status.ok@bench.test", [])
+		frappe.set_user("identity.status.ok@bench.test")
+		status = get_employee_identity_status()
+		self.assertEqual(status["reason"], "ok")
+		self.assertEqual(status["message"], "", "a resolved identity is not a denial")
+
+	def test_unlinked_user_still_gets_its_reason(self):
+		_make_user("identity.status.none@bench.test", ["Employee"])
+		frappe.set_user("identity.status.none@bench.test")
+		status = get_employee_identity_status()
+		self.assertEqual(status["reason"], "no_employee")
+		self.assertTrue(status["message"])
+		self.assertNotEqual(status["message"], "Employee not found")

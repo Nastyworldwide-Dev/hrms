@@ -20,7 +20,7 @@ import { employeeResource } from "@/data/employee"
 
 import dayjs from "@/utils/dayjs"
 import getIonicConfig from "@/utils/ionicConfig"
-import { normalizeLogin } from "@/utils/identity"
+import { employeeGate } from "@/utils/identity"
 
 import FrappePushNotification from "@/utils/frappe-push-notification"
 
@@ -156,23 +156,17 @@ router.beforeEach(async (to, _, next) => {
 		}
 	}
 
-	if (isLoggedIn && to.name !== "InvalidEmployee") {
+	if (isLoggedIn) {
 		await employeeResource.promise
-		// user should be an employee to access the app
-		// since all views are employee specific. Compare logins normalized: the
-		// backend resolves a case-drifted mirror user_id fine and returns it raw,
-		// so a raw !== would strand exactly those resolved users here.
-		if (
-			!employeeResource?.data ||
-			normalizeLogin(employeeResource.data.user_id) !== normalizeLogin(userResource.data.name)
-		) {
-			next({ name: "InvalidEmployee" })
-		} else if (["Login"].includes(to.name)) {
-			next({ name: "Home" })
-		} else {
-			next()
-		}
-	} else {
-		next()
+		// user should be an employee to access the app since all views are
+		// employee specific — and a valid employee is never kept on the failure
+		// page. The decision (logins compared normalized) is utils/identity.js.
+		const redirect = employeeGate({
+			to: to.name,
+			employee: employeeResource?.data,
+			user: userResource.data,
+		})
+		return redirect ? next(redirect) : next()
 	}
+	next()
 })

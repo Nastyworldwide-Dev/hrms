@@ -13,6 +13,7 @@ from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employe
 from hrms.api.diagnose import diagnose_create_permission
 from hrms.hr.utils import get_designated_approvers, is_hr_operator
 from hrms.utils.identity import (
+	OK,
 	denial_message,
 	get_employee,
 	get_employee_info,
@@ -90,9 +91,15 @@ def get_employee_identity_status() -> dict:
 	one extra request, and only on the failure page.
 	"""
 	identity = resolve_employee_identity()
+	# A resolved identity is not a denial: it has no message. denial_message
+	# falls back to "Employee not found" for any reason it has no text for, and
+	# OK is one — which told valid employees who reached the failure page that
+	# their record did not exist.
+	message = "" if identity.reason == OK else denial_message(identity.reason)
+	logger.info("[api] identity status for %s: %s", frappe.session.user, identity.reason)
 	return {
 		"reason": identity.reason,
-		"message": denial_message(identity.reason),
+		"message": message,
 		"user": frappe.session.user,
 	}
 
