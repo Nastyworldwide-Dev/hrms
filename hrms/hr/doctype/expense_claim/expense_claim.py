@@ -55,6 +55,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.notify_approver()
 
 	def validate(self):
+		self.set_posting_date()
 		validate_active_employee(self.employee)
 		set_employee_name(self)
 		self.set_payable_account()
@@ -105,6 +106,19 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			self.notify_update()
 		else:
 			self.status = status
+
+	def set_posting_date(self):
+		"""A claim filed without a posting date is posted today.
+
+		The PWA form has no posting-date input (the field lives in the Desk
+		form's Accounting tab), so a claim can arrive with the date empty.
+		Frappe's own "Today" default fills only an ABSENT field; one sent as ""
+		reached the mandatory check and refused the whole claim (15 Sep 2026).
+		"""
+		if self.posting_date:
+			return
+		self.posting_date = today()
+		frappe.logger("hrms").info("[expense_claim] %s: posting date defaulted to today", self.name)
 
 	def set_payable_account(self):
 		"""Default the payable account the way the Desk form does, server-side.

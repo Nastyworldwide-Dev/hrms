@@ -82,6 +82,10 @@ const expenseClaim = ref({
 	doctype: "Expense Claim",
 	// reqd on the doctype; defaulted so a hidden field never blocks submit.
 	exchange_rate: 1,
+	// reqd, but it lives in the Desk form's Accounting tab — past `taxes`, the
+	// last field of the one tab rendered here — so no FormField ever mounts
+	// for it and a mount-time `field.default` never ran. Seed the model.
+	posting_date: today,
 })
 
 const companyCurrency = computed(() => getCompanyCurrency(expenseClaim.value.company))
@@ -91,12 +95,7 @@ const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",
 	params: { doctype: "Expense Claim" },
 	transform(data) {
-		let fields = getFilteredFields(data)
-
-		return fields.map((field) => {
-			if (field.fieldname === "posting_date") field.default = today
-			return field
-		})
+		return getFilteredFields(data)
 	},
 	onSuccess(_data) {
 		expenseApproverDetails.reload()
