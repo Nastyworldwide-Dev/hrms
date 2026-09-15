@@ -1,6 +1,7 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import logging
 
 import frappe
 from frappe import _
@@ -31,6 +32,8 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
+logger = logging.getLogger(__name__)
+
 
 class InvalidExpenseApproverError(frappe.ValidationError):
 	pass
@@ -60,6 +63,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		set_employee_name(self)
 		self.set_payable_account()
 		self.validate_staff_approver()
+		self.set_sanctioned_amount_default()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
 		self.validate_advances()
@@ -180,6 +184,25 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def validate_staff_approver(self):
 		validate_staff_approver(self, "expense_approver", "expense_approver", "expense_approvers")
+
+	def set_sanctioned_amount_default(self):
+		"""A NEW line with an amount and no sanctioned amount is sanctioned in full.
+
+		Desk's form script and Nadi's ExpensesTable.vue both copy amount into
+		sanctioned_amount as the user types; the server never did, so a claim
+		filed through the API without it was approved paying nothing — total
+		sanctioned 0, no GL, nothing to tell the approver (fresh.local, 15 Sep
+		2026). Only a new claim is defaulted: an approver who reduces a line to
+		0 on purpose is editing an existing row and is left alone.
+		"""
+		if not self.is_new():
+			return
+		for row in self.get("expenses"):
+			if flt(row.amount) and not flt(row.sanctioned_amount):
+				logger.info(
+					"[expense_claim] %s: sanctioned_amount defaulted to amount %s", self.name, row.amount
+				)
+				row.sanctioned_amount = row.amount
 
 	def validate_for_self_approval(self):
 		self_expense_approval_not_allowed = frappe.db.get_single_value(
