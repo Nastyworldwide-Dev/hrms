@@ -81,6 +81,10 @@ class ShiftRequest(Document, PWANotificationsMixin):
 		if shift_assignment_list:
 			for shift in shift_assignment_list:
 				shift_assignment_doc = frappe.get_doc("Shift Assignment", shift["name"])
+				# The named approver may cancel an approved request (approved_request_guard)
+				# but holds no `cancel` on Shift Assignment; undoing the assignment this
+				# approval created is part of that cancel. Same shape as AttendanceRequest.
+				shift_assignment_doc.flags.ignore_permissions = True
 				shift_assignment_doc.cancel()
 
 	def on_discard(self):

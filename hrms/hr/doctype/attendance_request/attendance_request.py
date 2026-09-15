@@ -195,6 +195,11 @@ class AttendanceRequest(Document):
 		if attendance_list:
 			for attendance in attendance_list:
 				attendance_obj = frappe.get_doc("Attendance", attendance["name"])
+				# The approver (reports_to manager, Employee role only) may cancel
+				# an approved request — approved_request_guard already said so —
+				# but holds no `cancel` on Attendance. Undoing what this approval
+				# created is part of that cancel, not a separate authority question.
+				attendance_obj.flags.ignore_permissions = True
 				attendance_obj.cancel()
 
 	def create_attendance_records(self):
