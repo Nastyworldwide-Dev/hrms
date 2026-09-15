@@ -591,6 +591,21 @@ function onTeamCompanyChange() {
 // other trigger: fetchTeam is otherwise reachable only from the filter bar,
 // which itself only renders once a fetch has returned. Permanently empty, for
 // the two tiers the feature was built for.
+//
+// Whichever fetcher the tier put in play answers for the shared chrome — the
+// filter bar, the hero and the people list all read ONE payload, so they cannot
+// end up describing different scopes on the same screen.
+//
+// DECLARED BEFORE THE WATCHES BELOW, on purpose. `watch(() => teamData.value)`
+// runs its getter synchronously at setup to collect dependencies, so with this
+// `const` further down the getter hit the temporal dead zone: setup threw
+// "Cannot access 'teamData' before initialization", the KPI page never mounted
+// its <ion-page>, and Ionic's outlet was left holding a view with no element —
+// every later enter/leave errored ("instance.update is not a function") and the
+// page looked stuck going back and forth. Pinned by __tests__/Dashboard.test.js.
+const teamData = computed(() => (isManagerTier.value ? teamKpi.data : departmentKpi.data))
+const teamResource = computed(() => (isManagerTier.value ? teamKpi : departmentKpi))
+
 watch(activeTab, (tab) => {
 	closeEmployee()
 	if (tab !== MINE && !teamData.value && !teamResource.value.loading) fetchTeam()
@@ -620,11 +635,6 @@ const teamCycles = computed(() => teamData.value?.cycles || [])
 const teamDepartments = computed(
 	() => (isManagerTier.value ? teamKpi.data?.departments : []) || []
 )
-// Whichever fetcher the tier put in play answers for the shared chrome — the
-// filter bar, the hero and the people list all read ONE payload, so they cannot
-// end up describing different scopes on the same screen.
-const teamData = computed(() => (isManagerTier.value ? teamKpi.data : departmentKpi.data))
-const teamResource = computed(() => (isManagerTier.value ? teamKpi : departmentKpi))
 const teamCompanies = computed(() => teamData.value?.companies || [])
 const teamSummary = computed(() => teamData.value?.summary)
 
