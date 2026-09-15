@@ -1749,11 +1749,16 @@ def get_doctype_states(doctype: str) -> dict:
 # File
 @frappe.whitelist()
 def get_attachments(dt: str, dn: str):
+	# The caller must be able to read the parent; its attachments follow it.
+	# Reading File through get_list also appended every app's File list filter,
+	# and the Helpdesk identity filter broke on a collation clash (live 15 Sep
+	# 2026: error 1267 on every attachment panel).
 	frappe.has_permission(dt, doc=dn, throw=True)
-	return frappe.get_list(
+	return frappe.get_all(
 		"File",
 		fields=["name", "file_name", "file_url", "is_private"],
-		filters={"attached_to_name": str(dn), "attached_to_doctype": dt},
+		filters={"attached_to_doctype": dt, "attached_to_name": str(dn)},
+		order_by="creation desc",
 	)
 
 
