@@ -113,3 +113,4 @@ hrms.patches.v16_0.attendance_recovery_switches #2026-09-15 HR had no way to pau
 hrms.patches.v16_0.run_attendance_recovery_v2_once #2026-09-15 queue the automatic attendance recovery 2026-08-01→yesterday once after the lost-OT release
 hrms.patches.v16_0.restore_staff_create_on_pwa_requests #2026-09-15 an employee filing an Attendance Request in Nadi was refused create; custom perm rows had lost the flag the JSON grants
 hrms.patches.v16_0.realign_self_employee_permission #2026-09-15 a self Employee User Permission naming another Employee record refused every request the person filed for themselves
+hrms.patches.v16_0.normalize_employee_user_ids #2026-09-15 a drifted user_id cost employees the Employee role and every own request

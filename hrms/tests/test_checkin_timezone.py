@@ -53,6 +53,13 @@ def _install_erpnext_stub():
 
 _install_erpnext_stub()
 
+# Ownership resolves through hrms.utils.identity.own_employees now (a raw
+# user_id compare failed on case drift). This suite's staff user owns the one
+# synthetic employee, so the resolver is pinned for the whole module.
+from hrms.api import remote_checkin as _remote_checkin
+
+patch.object(_remote_checkin, "own_employees", lambda user: ["HR-EMP-001", "EMP-CKIN"]).start()
+
 KL = "Asia/Kuala_Lumpur"
 DUBAI = "Asia/Dubai"
 

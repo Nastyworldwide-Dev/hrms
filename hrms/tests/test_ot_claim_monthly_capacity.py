@@ -167,6 +167,8 @@ class TestClaimCapacity(unittest.TestCase):
 				# suite models no punches, so an empty log is the honest answer —
 				# _explain_no_overtime then says "No check-ins were recorded".
 				return []
+			if doctype in ("Leave Application", "Attendance Request"):
+				return []  # nothing covers a day in this suite
 			self.assertEqual(doctype, "OT Request")
 			if kwargs.get("pluck"):
 				return []

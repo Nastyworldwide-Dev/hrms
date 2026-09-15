@@ -628,6 +628,10 @@ scheduler_events = {
 		# own read-only report; one Error Log when a day is broken, so HR
 		# finds out before a staff complaint does. Never touches today.
 		"hrms.utils.attendance_health.run_daily_health_check",
+		# Nabil, 15 Sep 2026: nobody is asked to run a diagnostic — the known
+		# permission shapes (stripped Employee role, stale self User Permission,
+		# drifted user_id) are healed every night; the report lists the rest.
+		"hrms.utils.request_access.heal_known_shapes",
 	],
 	"cron": {
 		# 10:00 local — tag abandoned IN check-ins (no matching OUT within 36h).

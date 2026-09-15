@@ -71,8 +71,8 @@ def _discover(requests=(), reads=None, **params):
 				for row in requests
 				if start <= row["ot_date"] <= end and row["docstatus"] < limit
 			]
-		if doctype == "Employee Checkin":
-			return []
+		if doctype in ("Employee Checkin", "Leave Application", "Attendance Request"):
+			return []  # no punches, no leave or attendance request covering a day
 		raise AssertionError(doctype)
 
 	with (

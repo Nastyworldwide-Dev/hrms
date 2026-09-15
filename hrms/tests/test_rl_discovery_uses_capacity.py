@@ -38,7 +38,7 @@ def _discover():
 	def get_all(doctype, filters=None, fields=None, **kwargs):
 		if doctype == "Attendance":
 			return [frappe._dict(attendance_date=day, ot_hours=2.0) for day in CAPACITY]
-		if doctype in ("OT Request", "Employee Checkin"):
+		if doctype in ("OT Request", "Employee Checkin", "Leave Application", "Attendance Request"):
 			return []
 		raise AssertionError(doctype)
 
