@@ -77,6 +77,7 @@ import { toast } from "frappe-ui"
 
 import { formatTimestamp } from "@/utils/formatters"
 import { submitLateCheckoutResource } from "@/data/remoteCheckin"
+import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
 
@@ -170,7 +171,7 @@ const submit = async () => {
 		console.error("[LateCheckout] submit failed:", err)
 		toast({
 			title: __("Could not submit"),
-			text: err?.messages?.[0] || __("Try again in a moment."),
+			text: firstMessage(err, __("Try again in a moment.")),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-danger-ink",

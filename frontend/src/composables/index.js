@@ -1,4 +1,5 @@
 import { createResource, toast } from "frappe-ui"
+import { firstMessage } from "@/utils/loudRequest"
 
 function getFileReader() {
 	const fileReader = new FileReader()
@@ -25,7 +26,7 @@ export class FileAttachment {
 				onError: (error) => {
 					toast({
 						title: "Error",
-						text: `File upload failed for ${this.fileName}. ${error.messages?.[0] || ""}`,
+						text: `File upload failed for ${this.fileName}. ${firstMessage(error, "")}`,
 						icon: "alert-circle",
 						position: "bottom-center",
 						iconClasses: "text-red-500",
@@ -59,7 +60,7 @@ export class FileAttachment {
 			onError: (error) => {
 				toast({
 					title: "Error",
-					text: `File deletion failed. ${error.messages?.[0] || ""}`,
+					text: `File deletion failed. ${firstMessage(error, "")}`,
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

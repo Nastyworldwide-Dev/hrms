@@ -188,6 +188,7 @@ import { personalCacheKey } from "@/utils/personalCache"
 import { IonModal } from "@ionic/vue"
 import { createListResource, createResource, FeatherIcon, toast } from "frappe-ui"
 import { computed, inject, reactive, ref } from "vue"
+import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
 
@@ -393,7 +394,10 @@ const save = async () => {
 				console.warn("[SOP] Attachment upload failed after create:", error)
 				toast({
 					title: __("Attachment failed"),
-					text: __("Saved as an unpublished draft without the attachment — open it to retry."),
+					text: __(
+						"Saved as an unpublished draft without the attachment — open it to retry. ({0})",
+						[firstMessage(error)]
+					),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
@@ -422,7 +426,7 @@ const save = async () => {
 		console.warn("[SOP] Save failed:", error)
 		toast({
 			title: __("Error"),
-			text: error?.messages?.[0] || error?.message || __("Could not save the SOP"),
+			text: firstMessage(error, __("Could not save the SOP")),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

@@ -72,6 +72,7 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		"toast",
 		"__",
 		"actionLabel",
+		"firstMessage",
 		`return ({ ${punchBlock} } }).onError`
 	)(
 		1,
@@ -80,7 +81,9 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		() => restarts++,
 		(notice) => notices.push(notice),
 		(text) => text,
-		"Check-in"
+		"Check-in",
+		// the shared reader (utils/loudRequest): first server message, plain text
+		(error, fallback) => error?.messages?.[0] || fallback
 	)
 	onError({})
 	assert.equal(cameraStatus.value, "idle")

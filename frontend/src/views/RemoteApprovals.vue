@@ -249,6 +249,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { formatTimestamp } from "@/utils/formatters"
 import GSegmented from "@/components/glass/GSegmented.vue"
+import { firstMessage } from "@/utils/loudRequest"
 import {
 	pendingForApproverResource,
 	decidedForApproverResource,
@@ -342,7 +343,7 @@ const submitDecision = async () => {
 		console.error("[RemoteApprovals] decision failed:", err)
 		toast({
 			title: __("Could not save"),
-			text: err?.messages?.[0] || __("Try again."),
+			text: firstMessage(err, __("Try again.")),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

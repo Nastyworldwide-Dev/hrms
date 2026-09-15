@@ -714,15 +714,15 @@ const documentResource = createDocumentResource({
 				iconClasses: "text-green-500",
 			})
 		},
-		onError() {
+		onError(error) {
 			toast({
 				title: __("Error"),
-				text: __("Error updating {0}", [__(props.doctype)]),
+				text: __("Error updating {0}: {1}", [__(props.doctype), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
 			})
-			console.log(`Error updating ${props.doctype}`)
+			console.log(`Error updating ${props.doctype}`, firstMessage(error))
 		},
 	},
 	delete: {
@@ -736,15 +736,15 @@ const documentResource = createDocumentResource({
 				iconClasses: "text-green-500",
 			})
 		},
-		onError() {
+		onError(error) {
 			toast({
 				title: __("Error"),
-				text: __("Error deleting {0}", [__(props.doctype)]),
+				text: __("Error deleting {0}: {1}", [__(props.doctype), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
 			})
-			console.log(`Error deleting ${props.doctype}`)
+			console.log(`Error deleting ${props.doctype}`, firstMessage(error))
 		},
 	},
 })
@@ -768,7 +768,7 @@ const finalize = createResource({
 		console.warn(`[FormView] ${props.doctype} transition failed:`, error)
 		toast({
 			title: __("Error"),
-			text: error?.messages?.[0] || __("Error updating {0}", [__(props.doctype)]),
+			text: firstMessage(error, __("Error updating {0}", [__(props.doctype)])),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

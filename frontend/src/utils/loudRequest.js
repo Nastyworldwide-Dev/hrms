@@ -67,8 +67,10 @@ function endpointOf(options) {
 // The toast renders `text` with v-html, and server refusals carry Desk links
 // and <strong> markup: plain text only, so an employee never sees a live
 // link to a Desk page they cannot open.
-export function firstMessage(error) {
-	const message = error?.messages?.[0] || error?.message || "Request failed"
+// `fallback` is the caller's own wording for a failure that carries no
+// server message at all (a network drop, a thrown TypeError).
+export function firstMessage(error, fallback = "Request failed") {
+	const message = error?.messages?.[0] || error?.message || fallback
 	return String(message)
 		.replace(/<[^>]*>/g, "")
 		.trim()

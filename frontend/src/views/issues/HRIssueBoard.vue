@@ -176,6 +176,7 @@ import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
+import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
@@ -255,7 +256,7 @@ const detail = createResource({
 		console.error("[HRIssueBoard] failed to load issue detail:", error)
 		toast({
 			title: __("Error"),
-			text: __("Could not load the issue"),
+			text: __("Could not load the issue: {0}", [firstMessage(error)]),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",
@@ -302,7 +303,7 @@ const updateIssue = createResource({
 		console.error("[HRIssueBoard] failed to update issue:", error)
 		toast({
 			title: __("Error"),
-			text: error.messages?.join(" ") || __("Update failed"),
+			text: firstMessage(error, __("Update failed")),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

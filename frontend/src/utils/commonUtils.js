@@ -1,5 +1,6 @@
 import { toast } from "frappe-ui"
 import { inject } from "vue"
+import { firstMessage } from "@/utils/loudRequest"
 
 export function useDownloadPDF() {
 	// inject() must run synchronously during a component's setup(), which is
@@ -54,7 +55,7 @@ export function useDownloadPDF() {
 			.catch((error) => {
 				toast({
 					title: __("Error"),
-					text: __("Error downloading PDF", [__(error)]),
+					text: __("Error downloading PDF: {0}", [firstMessage(error)]),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

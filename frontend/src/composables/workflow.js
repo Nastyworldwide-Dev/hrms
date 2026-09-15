@@ -2,6 +2,7 @@ import { personalCacheKey } from "@/utils/personalCache"
 import { createResource, toast } from "frappe-ui"
 import { computed } from "vue"
 import { userResource } from "@/data/user"
+import { firstMessage } from "@/utils/loudRequest"
 
 export default function useWorkflow(doctype) {
 	const workflowDoc = createResource({
@@ -68,10 +69,10 @@ export default function useWorkflow(doctype) {
 					iconClasses: "text-green-500",
 				})
 			},
-			onError() {
+			onError(error) {
 				toast({
 					title: "Error",
-					text: `Error applying workflow action: ${action}`,
+					text: `Error applying workflow action: ${action}. ${firstMessage(error)}`,
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

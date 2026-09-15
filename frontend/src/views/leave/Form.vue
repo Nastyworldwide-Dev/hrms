@@ -23,6 +23,7 @@ import { createResource, toast } from "frappe-ui"
 import { ref, watch, inject, nextTick } from "vue"
 
 import FormView from "@/components/FormView.vue"
+import { firstMessage } from "@/utils/loudRequest"
 
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
@@ -97,13 +98,17 @@ const leaveTypes = createResource({
 	onSuccess(data) {
 		setLeaveTypes(data)
 	},
-	onError() {
+	onError(error) {
 		// without this, a failed fetch leaves the dropdown as a silent
 		// "No results found" that reads like the employee has no leave
-		console.warn("[LeaveForm] Failed to fetch leave types:", currEmployee.value)
+		console.warn(
+			"[LeaveForm] Failed to fetch leave types:",
+			currEmployee.value,
+			firstMessage(error)
+		)
 		toast({
 			title: __("Error"),
-			text: __("Could not load leave types. Please contact HR."),
+			text: __("Could not load leave types: {0}. Please contact HR.", [firstMessage(error)]),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

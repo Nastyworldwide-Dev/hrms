@@ -110,6 +110,9 @@ test("firstMessage is the one reader of a server refusal, shared with the forms"
 	)
 	assert.equal(firstMessage({ message: "Network down" }), "Network down")
 	assert.equal(firstMessage(undefined), "Request failed")
+	// a caller's own wording stands in only when there is no message at all
+	assert.equal(firstMessage(undefined, "Try again."), "Try again.")
+	assert.equal(firstMessage({ messages: ["Refused"] }, "Try again."), "Refused")
 	// the toast renders with v-html: a Desk link in the refusal must arrive as text
 	assert.equal(
 		firstMessage({

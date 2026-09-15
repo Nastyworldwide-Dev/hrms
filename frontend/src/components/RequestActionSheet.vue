@@ -258,6 +258,7 @@ import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
+import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
 
@@ -424,7 +425,7 @@ function withdrawDraft() {
 				showWithdrawDialog.value = false
 				toast({
 					title: __("Error"),
-					text: err?.messages?.[0] || __("Could not withdraw the request."),
+					text: firstMessage(err, __("Could not withdraw the request.")),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-danger-ink",
@@ -515,7 +516,7 @@ const onActionError =
 		console.warn("[RequestActionSheet] action failed:", error)
 		toast({
 			title: __("Error"),
-			text: error?.messages?.[0] || getFailureMessage({ status, docstatus }),
+			text: firstMessage(error, getFailureMessage({ status, docstatus })),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-danger-ink",

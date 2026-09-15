@@ -242,6 +242,7 @@ import {
 import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
+import { firstMessage } from "@/utils/loudRequest"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -1059,7 +1060,7 @@ const runSubmitLog = async (logType) => {
 			console.error("[Selfie] Capture/upload error:", err)
 			toast({
 				title: __("Selfie failed"),
-				text: err?.message || __("Could not attach selfie — proceeding without it."),
+				text: firstMessage(err, __("Could not attach selfie — proceeding without it.")),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -1174,7 +1175,8 @@ const runSubmitLog = async (logType) => {
 			for (const message of messages) {
 				toast({
 					title: __("Error"),
-					text: message,
+					// one toast per server message, each stripped of Desk markup
+					text: firstMessage({ messages: [message] }),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
