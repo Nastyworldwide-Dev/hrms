@@ -110,6 +110,68 @@ def ria_rows():
 	return rows
 
 
+def ria_live_taps():
+	"""Ria HR-EMP-00299 as live showed her on 15 Sep 2026 (build 338deae05), every
+	stamp and link as found: 4 Sep four taps on the day shift, unlinked, the last a
+	Pending late check-out; 7 and 9 Sep an IN linked to a 0 h day row and an OUT
+	stamped to the night and linked to a night Half Day; 8 and 10 Sep clean."""
+	day_start = lambda d: datetime(2026, 9, d, 8, 0)  # noqa: E731
+	taps = [
+		_tap("T-4-0800", datetime(2026, 9, 4, 8, 0, 11), DAY, day_start(4)),
+		_tap("T-4-1900", datetime(2026, 9, 4, 19, 0, 27), DAY, day_start(4), log_type="OUT"),
+		_tap("T-4-1900b", datetime(2026, 9, 4, 19, 0, 33), DAY, day_start(4)),
+		_tap(
+			"T-4-1901",
+			datetime(2026, 9, 4, 19, 1),
+			DAY,
+			day_start(4),
+			log_type="OUT",
+			remote_approval_status="Pending",
+			is_late_checkout=1,
+		),
+	]
+	for d, out_shift, out_at in (
+		(7, NIGHT, (19, 15, 48)),
+		(8, DAY, (18, 22, 0)),
+		(9, NIGHT, (18, 33, 29)),
+		(10, DAY, (18, 22, 0)),
+	):
+		taps.append(_tap(f"T-{d}-0750", datetime(2026, 9, d, 7, 50, 33), DAY, day_start(d), f"ATT-D{d}"))
+		if out_shift == DAY:
+			taps.append(
+				_tap(
+					f"T-{d}-OUT",
+					datetime(2026, 9, d, *out_at),
+					DAY,
+					day_start(d),
+					f"ATT-D{d}",
+					log_type="OUT",
+				)
+			)
+		else:
+			taps.append(
+				_tap(
+					f"T-{d}-OUT",
+					datetime(2026, 9, d, *out_at),
+					NIGHT,
+					datetime(2026, 9, d, 19, 30),
+					f"ATT-N{d}",
+					log_type="OUT",
+				)
+			)
+	return taps
+
+
+def ria_live_rows():
+	rows = []
+	for d in (7, 9):
+		rows.append(_row(f"ATT-D{d}", date(2026, 9, d), DAY, "Present", 0, out_time=None))
+		rows.append(_row(f"ATT-N{d}", date(2026, 9, d), NIGHT, "Half Day", 0))
+	for d in (8, 10):
+		rows.append(_row(f"ATT-D{d}", date(2026, 9, d), DAY, "Present", 10.5))
+	return rows
+
+
 class FakeDoc(SimpleNamespace):
 	def __init__(self, log, doctype, **fields):
 		super().__init__(**fields)
@@ -150,6 +212,7 @@ class _Step(unittest.TestCase):
 			_assignment("SA-DAY", DAY, date(2026, 8, 1)),
 			_assignment("SA-NIGHT", NIGHT, date(2026, 8, 20)),
 		]
+		self.defaults = {}
 		self.protection = {}
 		self.financial = {}
 		self.docs = {}
@@ -186,7 +249,8 @@ class _Step(unittest.TestCase):
 			p.stop()
 
 	def ctx(self):
-		return rec._build_context(self.win, list(self.taps), list(self.rows), list(self.assignments))
+		extra = {"defaults": dict(self.defaults)} if self.defaults else {}
+		return rec._build_context(self.win, list(self.taps), list(self.rows), list(self.assignments), **extra)
 
 	def _remark(self, employee, day, apply):
 		self.remarks.append((employee, str(day), apply))
@@ -489,6 +553,93 @@ class TestTapInsideTheOtherShiftsHours(_Step):
 # --- E16: a pending forgotten check-out is not evidence -----------------------------------
 
 BASE = pathlib.Path(__file__).resolve().parents[1]
+
+
+class TestLiveRia(_Step):
+	"""Ria's live shape (15 Sep 2026): E1/E2 with LINKED taps, a Pending late OUT on 4 Sep."""
+
+	def setUp(self):
+		super().setUp()
+		self.taps = ria_live_taps()
+		self.rows = ria_live_rows()
+		self.assignments = [
+			_assignment("SA-DAY", DAY, date(2026, 8, 1)),
+			_assignment("SA-NIGHT", NIGHT, date(2026, 8, 1)),
+		]
+
+	def test_7_and_9_sep_go_back_on_the_day_shift_and_the_clean_days_are_left_alone(self):
+		plan, result = self.apply()
+		self.assertEqual([p["date"] for p in plan["planned"]], ["2026-09-07", "2026-09-09"])
+		self.assertEqual([p["restamp"] for p in plan["planned"]], [["T-7-OUT"], ["T-9-OUT"]])
+		self.assertEqual([p["cancel_rows"] for p in plan["planned"]], [["ATT-N7"], ["ATT-N9"]])
+		self.assertEqual(plan["assignments"][0]["end_date"], "2026-09-06")
+		self.assertEqual([d["date"] for d in result["done"]], ["2026-09-07", "2026-09-09"])
+		self.assertEqual(result["held_back"], [])
+		self.assertEqual(sorted(self.remarks), [(RIA, "2026-09-07", True), (RIA, "2026-09-09", True)])
+
+	def test_a_day_worker_rostered_only_by_her_default_shift_is_held_for_hr_never_moved_to_the_night(self):
+		# fresh.local, 15 Sep 2026: with no day assignment the night assignment read as
+		# "rostered" and the step moved her real 8, 9 and 10 Sep day taps onto the night
+		# (22.86 h night rows). The Employee default shift says day; the assignment
+		# says night: nobody guesses, HR decides.
+		self.assignments = [_assignment("SA-NIGHT", NIGHT, date(2026, 8, 1))]
+		self.defaults = {RIA: DAY}
+		plan, result = self.apply()
+		self.assertEqual(plan["planned"], [])
+		self.assertEqual(plan["assignments"], [])
+		self.assertEqual(result["done"], [])
+		self.assertEqual(self.log, [])
+		held = {h["date"]: h for h in plan["held_back"]}
+		self.assertEqual(sorted(held), ["2026-09-04", "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10"])
+		for h in held.values():
+			self.assertTrue(h["hr"])
+			self.assertIn("default shift", h["reason"])
+			self.assertIn(DAY, h["reason"])
+			self.assertIn("SA-NIGHT", h["reason"])
+
+	def test_skip_stamps_never_refetches_a_tap_off_the_employee_default_shift(self):
+		# fresh.local, 15 Sep 2026: once rostered_shift held her, the skip_stamps step's
+		# "punches split across shifts" repair re-fetched the 9 Sep 07:54 IN onto the
+		# night (the only assignment) and the rebuild invented an 8 Sep night Half Day.
+		entry = {
+			"employee": RIA,
+			"date": "2026-09-09",
+			"action": "refetch-shift",
+			"punches": ["T-9-0750", "T-9-OUT"],
+		}
+		moves = [("T-9-0750", DAY, NIGHT)]
+		with (
+			patch.object(rec, "_audit_plan", return_value=([], [entry], set())),
+			patch.object(rec, "_refetch_moves", return_value=moves),
+			patch.object(frappe.db, "get_value", return_value=DAY),
+		):
+			plan = rec._plan_skip_stamps(self.win)
+		self.assertEqual(plan["planned"], [])
+		held = plan["held_back"][0]
+		self.assertTrue(held["hr"])
+		self.assertIn("default shift", held["reason"])
+		self.assertIn("T-9-0750", held["reason"])
+		self.assertIn(NIGHT, held["reason"])
+		# no default shift on the employee record: the repair runs as before
+		with (
+			patch.object(rec, "_audit_plan", return_value=([], [entry], set())),
+			patch.object(rec, "_refetch_moves", return_value=moves),
+			patch.object(frappe.db, "get_value", return_value=None),
+		):
+			plan = rec._plan_skip_stamps(self.win)
+		self.assertEqual([p["date"] for p in plan["planned"]], ["2026-09-09"])
+		self.assertEqual(plan["planned"][0]["moves"], moves)
+
+	def test_f17_the_pending_late_out_alone_is_left_out_and_4_sep_is_still_a_day_to_mark(self):
+		# "missing day" family: 4 Sep has IN 08:00, OUT 19:00:27, a double-tap IN and a
+		# Pending late OUT, no row for 11 days. The claim is not evidence (E16); the
+		# other three taps are, so the day is on the list to mark, not hidden.
+		with patch.object(rec, "_holiday_days", return_value=set()):
+			plan = rec._plan_no_attendance_row(self.win, ctx=self.ctx())
+		self.assertEqual([p["date"] for p in plan["planned"]], ["2026-09-04"])
+		self.assertEqual(plan["held_back"], [])
+		self.assertEqual(plan["planned"][0]["taps"], 3)
+		self.assertIn("3 tap(s)", plan["planned"][0]["reason"])
 
 
 def _shift_type_namespace():

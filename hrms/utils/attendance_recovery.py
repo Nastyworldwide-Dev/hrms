@@ -58,7 +58,7 @@ from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
 from hrms.overrides.company_scope import require_unfenced
-from hrms.sync.checkin_import import without_pending_late_outs
+from hrms.sync.checkin_import import pending_late_outs, without_pending_late_outs
 from hrms.sync.write_block import PROVENANCE_FIELD
 from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
@@ -1447,10 +1447,12 @@ def _apply_heal(win, plan) -> dict:
 # --- 6. skip stamps ---------------------------------------------------------------------------
 
 
-def _refetch_changes(punch_names) -> bool:
-	"""Would fetch_shift give any of these punches another shift? Nothing is saved."""
+def _refetch_moves(punch_names) -> list:
+	"""[(name, shift now, shift fetch_shift would give)] for the punches that would
+	move. Nothing is saved."""
 	# ceiling: each punch is re-resolved alone against the stored rows, as the audit's
 	# apply loop does; upgrade: carry resolved shifts forward if a day re-plans forever
+	moves = []
 	for name in punch_names:
 		punch = frappe.get_doc("Employee Checkin", name)
 		was = punch.shift
@@ -1458,8 +1460,27 @@ def _refetch_changes(punch_names) -> bool:
 		punch.fetch_shift()
 		if punch.shift != was:
 			logger.debug("[attendance_recovery] %s would move %s -> %s", name, was, punch.shift)
-			return True
-	return False
+			moves.append((name, was, punch.shift))
+	return moves
+
+
+def refetch_off_default_shift(default, moves) -> str | None:
+	"""Why a refetch-shift repair must wait for HR, or None. Pure.
+
+	Same family as `default_shift_conflict` (fresh.local, 15 Sep 2026): with only
+	a stray night assignment covering the date, fetch_shift re-resolves a day
+	worker's 07:54 IN onto the night, and the rebuild then invents a night Half
+	Day. A tap already on the Employee default shift stays there until HR settles
+	the roster.
+	"""
+	off = [(name, now) for name, was, now in moves if default and was == default and now != default]
+	if not off:
+		return None
+	return (
+		f"{', '.join(n for n, _ in off)} would leave the Employee default shift {default} for "
+		f"{', '.join(sorted({now for _, now in off}))}: HR ends that assignment or clears the "
+		"default shift, then this day is fixed"
+	)
 
 
 def _audit_plan(start, end, for_update=False) -> tuple[list, list, set]:
@@ -1483,10 +1504,17 @@ def _plan_skip_stamps(win, for_update=False) -> dict:
 			"action": entry["action"],
 			"punches": entry["punches"],
 		}
-		if entry["action"] == "refetch-shift" and not _refetch_changes(entry["punches"]):
-			noop.append(row)
-			continue
-		reason = _day_protection(row["employee"], row["date"], for_update)
+		reason = None
+		if entry["action"] == "refetch-shift":
+			moves = _refetch_moves(entry["punches"])
+			if not moves:
+				noop.append(row)
+				continue
+			row["moves"] = moves
+			reason = refetch_off_default_shift(
+				frappe.db.get_value("Employee", row["employee"], "default_shift"), moves
+			)
+		reason = reason or _day_protection(row["employee"], row["date"], for_update)
 		(held.append(_held(row, reason)) if reason else planned.append(row))
 	held.extend(
 		_held(
@@ -2864,11 +2892,36 @@ def _context(win) -> dict:
 		limit_page_length=0,
 	)
 	assignments = _submitted_assignments(win.start, win.end)
-	return _build_context(win, taps, rows, assignments)
+	# E16: a Pending late check-out is a claim, not evidence — the engine's own
+	# `counts_for_attendance` reads this flag, the detectors read the same one.
+	late = pending_late_outs(taps)
+	for tap in taps:
+		tap["is_late_checkout"] = 1 if tap.get("name") in late else 0
+	return _build_context(win, taps, rows, assignments, defaults=_default_shifts(taps, rows, assignments))
 
 
-def _build_context(win, taps, rows, assignments) -> dict:
-	"""Group what `_context` read; separate so a test can hand in plain rows."""
+def _default_shifts(taps, rows, assignments) -> dict:
+	"""{employee: Employee.default_shift} for everyone in the window who has one."""
+	employees = {r.get("employee") for r in [*taps, *rows, *assignments] if r.get("employee")}
+	if not employees:
+		return {}
+	found = frappe.get_all(
+		"Employee",
+		filters={"name": ["in", sorted(employees)], "default_shift": ["is", "set"]},
+		fields=["name", "default_shift"],
+		limit_page_length=0,
+	)
+	logger.debug(
+		"[attendance_recovery] %d of %d employee(s) carry a default shift", len(found), len(employees)
+	)
+	return {r.name: r.default_shift for r in found}
+
+
+def _build_context(win, taps, rows, assignments, defaults=None) -> dict:
+	"""Group what `_context` read; separate so a test can hand in plain rows.
+
+	`defaults`: {employee: Employee.default_shift} — the shift the engine rosters
+	a person on when no assignment covers a date (`consider_default_shift`)."""
 	by_employee, anchors = {}, {}
 	for tap in taps:
 		by_employee.setdefault(tap.get("employee"), []).append(tap)
@@ -2893,8 +2946,11 @@ def _build_context(win, taps, rows, assignments) -> dict:
 		"rows": rows,
 		"rows_by_day": rows_by_day,
 		"assignments": assigned,
+		"defaults": dict(defaults or {}),
 		"times": _shift_times(
-			{a.get("shift_type") for a in assignments} | {r.get("shift") for r in rows if r.get("shift")}
+			{a.get("shift_type") for a in assignments}
+			| {r.get("shift") for r in rows if r.get("shift")}
+			| set((defaults or {}).values())
 		),
 	}
 	logger.info(
@@ -2969,6 +3025,28 @@ def rostered_shift(covering, times) -> str | None:
 	day_ones = [n for n in known if not is_night(*times[n])]
 	pool = day_ones or known or names
 	return min(pool, key=lambda n: (_minutes(times[n][0]) if n in times else 24 * 60, n))
+
+
+def default_shift_conflict(default, rostered, wrong, covering) -> str | None:
+	"""Why the roster for this day is nobody's to guess, or None. Pure.
+
+	fresh.local, 15 Sep 2026: a day worker whose day shift was only her Employee
+	default shift, with a stray open-ended night assignment, read as "rostered on
+	the night" — and the fixer moved her real 8, 9 and 10 Sep day taps onto the
+	night (22.86 h night rows). The taps sit on the shift the employee record
+	says; the assignment says another: HR ends the assignment or clears the
+	default, the machine does not choose (E3 stays safe: a night worker with a
+	stale day default is held, not re-rostered).
+	"""
+	if not default or default == rostered or default not in wrong:
+		return None
+	names = ", ".join(
+		sorted(a.get("name") for a in covering if a.get("name") and a.get("shift_type") != default)
+	)
+	return (
+		f"rostered on {rostered} by assignment {names} but the Employee default shift is {default}, "
+		"where the tap(s) sit: HR ends the assignment or clears the default shift, then this day is fixed"
+	)
 
 
 def _both_on_purpose(names) -> set:
@@ -3051,7 +3129,9 @@ def _plan_wrong_shift_taps(win, for_update=False, ctx=None) -> dict:
 			status=row and row.status,
 			taps=len(taps),
 		)
-		reason = _protection(ctx, employee, day, for_update)
+		reason = _protection(ctx, employee, day, for_update) or default_shift_conflict(
+			ctx["defaults"].get(employee), rostered, wrong, covering
+		)
 		(held.append(_held(entry, reason)) if reason else planned.append(entry))
 	logger.info(
 		"[attendance_recovery] F1 %s..%s: %d to re-stamp, %d held",
@@ -3157,7 +3237,11 @@ def _plan_no_attendance_row(win, for_update=False, ctx=None) -> dict:
 	ctx = ctx or _context(win)
 	candidates = []
 	for (employee, day), taps in _sorted_days(ctx):
-		live = [t for t in taps if not cint(t.get("skip_auto_attendance"))]
+		# E16 / F17: a Pending late check-out is a claim, not evidence; the day is
+		# judged (and marked) from its other taps, and re-marked on approval
+		live = [
+			t for t in taps if not cint(t.get("skip_auto_attendance")) and not cint(t.get("is_late_checkout"))
+		]
 		if not _in_window(win, day) or len(live) < 2 or ctx["rows_by_day"].get((employee, day)):
 			continue
 		covering = _covering(ctx, employee, day)
