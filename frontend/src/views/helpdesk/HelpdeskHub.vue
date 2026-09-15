@@ -4,7 +4,12 @@
 			<!-- ONE page, two pills (owner, 15 Sep 2026): HR Issues for everyone,
 			     IT Helpdesk where the Helpdesk app is installed. Each pill renders
 			     the list that used to be its own page; the page chrome is here. -->
-			<div class="px-4 pt-4 w-full lg:px-7 lg:pt-6 max-w-content-column-lg mx-auto">
+			<!-- GSegmented draws nothing for a single option (8.8), so on a site
+			     without the Helpdesk app the row must go too, not leave a spacer -->
+			<div
+				v-if="tabButtons.length > 1"
+				class="px-4 pt-4 w-full lg:px-7 lg:pt-6 max-w-content-column-lg mx-auto"
+			>
 				<GSegmented
 					:modelValue="tab"
 					:buttons="tabButtons"

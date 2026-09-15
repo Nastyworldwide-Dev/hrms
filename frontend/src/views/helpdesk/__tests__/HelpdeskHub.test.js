@@ -63,6 +63,8 @@ test("the template swaps the two EXISTING lists on the pill", () => {
 	assert.match(template, /<HelpdeskList v-else \/>/)
 	assert.match(template, /<GSegmented[\s\S]*?@update:modelValue="selectTab"/)
 	assert.match(template, /pageTitle="__\('Helpdesk'\)"/)
+	// a single-option segment renders nothing, so its row must not leave a spacer
+	assert.match(template, /v-if="tabButtons\.length > 1"[\s\S]*?<GSegmented/)
 })
 
 test("opens on HR Issues by default, with both pills offered", () => {
