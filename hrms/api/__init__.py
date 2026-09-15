@@ -9,6 +9,8 @@ from frappe.utils import add_days, cint, date_diff, flt, get_last_day, getdate, 
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
+# re-exported so the browser URL is /api/method/hrms.api.diagnose_create_permission
+from hrms.api.diagnose import diagnose_create_permission
 from hrms.hr.utils import get_designated_approvers, is_hr_operator
 from hrms.utils.identity import (
 	denial_message,
