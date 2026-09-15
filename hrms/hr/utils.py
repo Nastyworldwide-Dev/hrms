@@ -1042,6 +1042,28 @@ def share_doc_with_approver(doc, user):
 			frappe.share.remove(doc.doctype, doc.name, doc_before_save.get(approver))
 
 
+def is_own_employee(employee: str | None, user: str | None = None) -> bool:
+	"""Is `user` (default: session) the person behind `employee`? The one
+	question every self-approval fence asks.
+
+	Canonical first: own_employees normalizes the login, so a mirror-drifted
+	user_id ("  Staff@Example.com ") still matches — a raw compare missed it
+	and the fence failed OPEN. own_employees fails closed to [] for an inactive
+	or duplicated login, which for a fence that REFUSES would mean "not you, go
+	ahead"; so a normalized user_id match still counts as own.
+	"""
+	from hrms.utils.identity import normalize_login
+
+	user = user or frappe.session.user
+	if not employee or not normalize_login(user):
+		return False
+	if employee in own_employees(user):
+		return True
+	own = normalize_login(frappe.db.get_value("Employee", employee, "user_id")) == normalize_login(user)
+	logger.debug("[self_submission] %s own employee %s by user_id: %s", user, employee, own)
+	return own
+
+
 def validate_self_submission(doc):
 	"""Doctypes with no approver/status flow treat submission AS the approval —
 	the employee on the request must never be the submitter, whatever roles
@@ -1050,8 +1072,7 @@ def validate_self_submission(doc):
 	logger.info("[self_submission] fence: %s %s", doc.doctype, doc.name)
 	from frappe.model.workflow import get_workflow_name
 
-	employee_user = frappe.db.get_value("Employee", doc.employee, "user_id")
-	if employee_user == frappe.session.user and not get_workflow_name(doc.doctype):
+	if is_own_employee(doc.employee) and not get_workflow_name(doc.doctype):
 		logger.warning("[self_submission] blocked: %s %s by %s", doc.doctype, doc.name, frappe.session.user)
 		frappe.throw(_("Self-approval for {0} is not allowed").format(_(doc.doctype)))
 

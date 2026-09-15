@@ -208,10 +208,11 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self_expense_approval_not_allowed = frappe.db.get_single_value(
 			"HR Settings", "prevent_self_expense_approval"
 		)
-		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		from hrms.hr.utils import is_own_employee
+
 		if (
 			self_expense_approval_not_allowed
-			and employee_user == frappe.session.user
+			and is_own_employee(self.employee)
 			and not get_workflow_name("Expense Claim")
 		):
 			frappe.throw(_("Self-approval for Expense Claims is not allowed"))

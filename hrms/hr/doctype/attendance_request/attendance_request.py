@@ -194,8 +194,9 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		# approval, so the employee on the request must never be the submitter,
 		# regardless of role (System Manager / HR roles hold submit permission).
 		# Mirrors LeaveApplication.validate_for_self_approval.
-		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
-		if employee_user == frappe.session.user and not get_workflow_name("Attendance Request"):
+		from hrms.hr.utils import is_own_employee
+
+		if is_own_employee(self.employee) and not get_workflow_name("Attendance Request"):
 			logger.warning(
 				"[attendance_request] self-submission blocked: %s by %s", self.name, frappe.session.user
 			)

@@ -961,10 +961,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self_leave_approval_not_allowed = frappe.db.get_single_value(
 			"HR Settings", "prevent_self_leave_approval"
 		)
-		employee_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		from hrms.hr.utils import is_own_employee
+
 		if (
 			self_leave_approval_not_allowed
-			and employee_user == frappe.session.user
+			and is_own_employee(self.employee)
 			and not get_workflow_name("Leave Application")
 			and self.status == "Approved"
 		):
