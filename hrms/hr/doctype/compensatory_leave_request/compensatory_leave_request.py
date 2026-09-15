@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import datetime
+import logging
 
 import frappe
 from frappe import _
@@ -15,7 +16,10 @@ from hrms.hr.utils import (
 	validate_active_employee,
 	validate_dates,
 	validate_overlap,
+	validate_self_submission,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CompensatoryLeaveRequest(Document):
@@ -71,6 +75,12 @@ class CompensatoryLeaveRequest(Document):
 			frappe.throw(msg)
 
 	def on_submit(self):
+		# No decision field: submitting IS approving, and it adds days to the
+		# allocation. The employee on the request must never be the submitter —
+		# HR included — the same fence OT Request, Replacement Leave Claim and
+		# Shift Request run (an HR user could file and approve their own days).
+		validate_self_submission(self)
+		logger.info("[comp_leave] %s approved by %s for %s", self.name, frappe.session.user, self.employee)
 		company = frappe.db.get_value("Employee", self.employee, "company")
 		date_difference = date_diff(self.work_end_date, self.work_from_date) + 1
 		if self.half_day:
