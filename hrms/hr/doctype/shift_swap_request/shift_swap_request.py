@@ -97,6 +97,21 @@ class ShiftSwapRequest(Document):
 		if old and old.status == "Pending" and self.status == "Approved" and not self.new_shift_assignment:
 			self.apply_swap()
 
+	def on_trash(self):
+		# Approval already moved the shift: the requester's assignment is cancelled
+		# and the covering employee holds a new one. Deleting the request leaves
+		# both in place and erases the only record of why — a reversal the
+		# approved-request rule refuses, through the back door.
+		if self.get("status") != "Approved":
+			return
+		logger.warning("[shift_swap] refused delete of approved %s by %s", self.name, frappe.session.user)
+		frappe.throw(
+			_(
+				"An approved shift swap cannot be deleted. The shifts it moved stay as they are. "
+				"To undo it, cancel the covering Shift Assignment {0}."
+			).format(self.get("new_shift_assignment") or "")
+		)
+
 	def apply_swap(self):
 		assignment = frappe.get_doc("Shift Assignment", self.shift_assignment)
 
@@ -127,7 +142,18 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	scope must be enforced here."""
 	user = user or frappe.session.user
 	if _has_hr_access(user):
-		return ""
+		# broad, but never outside the company fence — like every other request type
+		from hrms.overrides.company_scope import allowed_companies
+
+		companies = allowed_companies(user)
+		if not companies:
+			return ""
+		values = ", ".join(frappe.db.escape(c) for c in companies)
+		inside = f"(select `name` from `tabEmployee` where `company` in ({values}))"
+		return (
+			f"(`tabShift Swap Request`.`requesting_employee` in {inside}"
+			f" and `tabShift Swap Request`.`target_employee` in {inside})"
+		)
 	own = _get_own_employees(user)
 	logger.debug("[shift_swap] query scope user=%s employees=%d", user, len(own))
 	if not own:
@@ -139,12 +165,29 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	)
 
 
+def _inside_hr_fence(doc, user: str) -> bool:
+	"""Every company the swap touches — both employees' and its own — must be
+	inside HR's company fence. Unfenced HR passes; a fenced one with nothing
+	to place the row in fails closed (company_visible(None))."""
+	from hrms.overrides.company_scope import company_visible
+
+	companies = {doc.get("company")}
+	for field in ("requesting_employee", "target_employee"):
+		if employee := doc.get(field):
+			companies.add(frappe.db.get_value("Employee", employee, "company"))
+	companies = {c for c in companies if c} or {None}
+	allowed = all(company_visible(company, user) for company in companies)
+	if not allowed:
+		logger.info("[shift_swap] HR %s outside company fence for %s", user, doc.get("name"))
+	return allowed
+
+
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	"""Participants read; the requester writes (validate freezes finalized
 	docs and blocks non-HR status changes); HR unrestricted."""
 	user = user or frappe.session.user
 	if _has_hr_access(user):
-		return True
+		return _inside_hr_fence(doc, user)
 	if not doc.requesting_employee and not doc.target_employee:
 		# new/unsaved doc — validate() pins the requester to the session user
 		return True
