@@ -419,8 +419,14 @@ doc_events = {
 		"after_insert": [
 			"hrms.overrides.employee_checkin_after_insert.create_remote_request_if_needed",
 			"hrms.telemetry.on_employee_checkin",
+			# A punch landing on a day that is already marked re-marks it (15 Sep 2026).
+			"hrms.overrides.day_remark_hooks.remark_punch_day",
 		],
-		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
+		"on_update": "hrms.overrides.day_remark_hooks.remark_changed_punch_day",
+		"on_trash": [
+			"hrms.sync.write_block.block_mirrored_writes",
+			"hrms.overrides.day_remark_hooks.remark_punch_day",
+		],
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
 	# Mirrored during the parallel run (hrms/sync/runner.py): every write path
@@ -491,6 +497,7 @@ doc_events = {
 	# which is how the out-of-radius handler was lost in the v16 port.
 	"Leave Application": {
 		"on_submit": "hrms.telemetry.on_leave_application_submit",
+		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
@@ -522,6 +529,7 @@ doc_events = {
 	# source instance owns.
 	"Attendance Request": {
 		"on_submit": "hrms.telemetry.on_attendance_request_submit",
+		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
