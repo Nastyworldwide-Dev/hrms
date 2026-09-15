@@ -19,6 +19,7 @@ import logging
 
 import frappe
 from frappe import _
+from frappe.utils import cint
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,8 @@ def list_tickets(limit: int = 100) -> list[dict]:
 		"HD Ticket",
 		fields=TICKET_FIELDS,
 		order_by="modified desc",
-		limit_page_length=int(limit or 100),
+		# ceiling: 200 tickets a page, upgrade: cursor paging if a raiser outgrows it
+		limit_page_length=min(cint(limit) or 100, 200),
 	)
 	return _attach_raiser_names(rows)
 

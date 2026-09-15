@@ -19,8 +19,20 @@ from hrms.utils.identity import (
 	require_employee,
 	resolve_employee_identity,
 )
+from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
+
+#: Page size when a list reader is called without one, and the most any caller
+#: may ask for in one page. The PWA sends 10 or 20; `frappe.get_list(limit=None)`
+#: sets NO limit, so a caller who omits it pulled every row the fence allowed.
+DEFAULT_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 500
+
+
+def _bounded_limit(limit) -> int:
+	return min(cint(limit) or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
+
 
 SUPPORTED_FIELD_TYPES = [
 	"Link",
@@ -430,7 +442,7 @@ def get_shift_requests(
 		fields=fields,
 		filters=filters,
 		order_by="creation desc",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 	if workflow_state_field:
@@ -479,7 +491,7 @@ def get_attendance_requests(
 		fields=fields,
 		filters=filters,
 		order_by="creation desc",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 	if workflow_state_field:
@@ -528,7 +540,7 @@ def get_ot_requests(
 		],
 		filters=filters,
 		order_by="creation desc",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 
@@ -568,7 +580,7 @@ def get_replacement_leave_claims(
 		],
 		filters=filters,
 		order_by="creation desc",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 
@@ -634,7 +646,7 @@ def get_claimable_ot_summary(employee: str | None = None, days: int | None = Non
 
 	employee = employee or get_current_employee()
 	_ensure_own_employee_or_permitted(employee)
-	to_date = getdate()
+	to_date = employee_now(employee).date()
 	from_date = earliest_filable_date(to_date)
 	if days is not None:
 		from_date = max(from_date, add_days(to_date, -max(0, cint(days))))
@@ -795,7 +807,7 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 	from hrms.utils.leave_cover import request_covered_days
 	from hrms.utils.ot_calculation import NO_OT_DISABLED, explain_no_overtime_rows
 
-	today = getdate()
+	today = getdate(to_date)  # the employee's day, resolved by the caller
 	taps = frappe.get_all(
 		"Employee Checkin",
 		filters={"employee": employee, "time": ["between", [f"{from_date} 00:00:00", f"{to_date} 23:59:59"]]},
@@ -876,7 +888,9 @@ def get_replacement_leave_bank_summary(employee: str) -> dict:
 	# Floor for display: the raw total can read negative once a spent credit ages
 	# out of the window (the cancel guard needs that signal, the UI does not).
 	bank["hours_available"] = max(0, cint(bank["hours_available"]))
-	bank["balance_days"] = flt(get_leave_balance_on(employee, REPLACEMENT_LEAVE_TYPE, getdate()) or 0)
+	bank["balance_days"] = flt(
+		get_leave_balance_on(employee, REPLACEMENT_LEAVE_TYPE, employee_now(employee).date()) or 0
+	)
 	logger.info(
 		"[api] rl_bank_summary %s: balance %s days, bank %sh",
 		employee,
@@ -1068,7 +1082,7 @@ def get_leave_applications(
 		fields=fields,
 		filters=filters,
 		order_by="posting_date desc",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 	if workflow_state_field:
@@ -1121,7 +1135,7 @@ def get_leave_balance_map() -> dict[str, dict[str, float]]:
 	# permissions (frappe.get_all), and rejects unknown employee ids cleanly.
 	_ensure_own_employee_or_permitted(employee)
 
-	date = getdate()
+	date = employee_now(employee).date()
 	leave_map = {}
 
 	leave_details = get_leave_details(employee, date)
@@ -1315,7 +1329,7 @@ def get_leave_types(employee: str, date: str) -> list:
 		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
 	from hrms.hr.doctype.leave_application.leave_application import get_leave_details
 
-	date = date or getdate()
+	date = date or employee_now(employee).date()
 
 	# Get leave details validate leave access internally
 	leave_details = get_leave_details(employee, date)
@@ -1380,7 +1394,7 @@ def get_expense_claims(
 		filters=filters,
 		order_by="`tabExpense Claim`.posting_date desc",
 		group_by="`tabExpense Claim`.name",
-		limit=limit,
+		limit=_bounded_limit(limit),
 	)
 
 	if workflow_state_field:
@@ -1792,9 +1806,13 @@ def upload_base64_file(
 
 @frappe.whitelist()
 def delete_attachment(filename: str):
-	attached_to_doctype, attached_to_name, owner = frappe.db.get_value(
-		"File", filename, ["attached_to_doctype", "attached_to_name", "owner"]
+	row = frappe.db.get_value(
+		"File", filename, ["attached_to_doctype", "attached_to_name", "owner"], as_dict=True
 	)
+	if not row:
+		# Unpacking None here answered a 500 to every persona in the matrix.
+		frappe.throw(_("Attachment {0} not found.").format(filename), frappe.DoesNotExistError)
+	attached_to_doctype, attached_to_name, owner = row.attached_to_doctype, row.attached_to_name, row.owner
 	if attached_to_doctype and attached_to_name:
 		frappe.has_permission(attached_to_doctype, "write", attached_to_name, throw=True)
 	elif owner != frappe.session.user and "System Manager" not in frappe.get_roles():

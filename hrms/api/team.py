@@ -138,8 +138,11 @@ def get_managers() -> list[dict]:
 def get_team_status(date: str | None = None, manager: str | None = None) -> dict:
 	# getdate returns None (not an exception) for some malformed strings —
 	# fail closed to today instead of sending "None 00:00:00" into a filter
-	day = getdate(date) or getdate()
 	employee = _my_employee()
+	# The CALLER's day, not the site's: on a Dubai site a Malaysian manager
+	# opening the team view at 00:30 local was shown yesterday.
+	# getdate(None) is the site's today too, so the empty case is spelled out.
+	day = (getdate(date) if date else None) or employee_now(employee).date()
 	# HR may browse any manager's team; everyone else is pinned to their own
 	if manager and manager != employee and not _is_hr():
 		logger.warning("[team] %s denied manager override %s", frappe.session.user, manager)
