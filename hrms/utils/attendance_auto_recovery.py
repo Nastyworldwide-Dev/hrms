@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 AUTO_STEPS = tuple(step for step in rec.STEPS if step != "import")
 NIGHTLY_DAYS = 7
 ONCE_JOB_ID = "attendance_recovery_once"
+#: Default Value written when a one-time run finished; absent = the nightly runs that window.
+ONCE_MARK = "attendance_recovery_once_done"
 CHUNK_DAYS = 31
 #: Flagged employee-days re-checked per night, oldest first (S7).
 RECHECK_CAP = 200
@@ -279,9 +281,20 @@ def _safe(from_date, to_date, recheck: bool = False) -> dict | None:
 
 
 def run_once() -> dict | None:
-	"""After deploy: 1 August (recovery's floor) to yesterday."""
+	"""After deploy: 1 August (recovery's floor) to yesterday.
+
+	Leaves ONCE_MARK (a Default Value) only when the run came back: a job a
+	deploy's worker restart killed, or one `deduplicate=True` dropped because the
+	earlier release's job carried the same id, leaves nothing — and the next
+	nightly runs this window in its place (live, 15 Sep 2026: two deploys the
+	same day, Ria's 7 and 9 Sep never reached).
+	"""
 	logger.info("[attendance_recovery_auto] one-time run %s..%s", rec.REPAIR_FLOOR, _yesterday())
-	return _safe(rec.REPAIR_FLOOR, _yesterday())
+	summary = _safe(rec.REPAIR_FLOOR, _yesterday())
+	if summary is not None:
+		frappe.db.set_default(ONCE_MARK, str(nowdate()))
+		logger.info("[attendance_recovery_auto] one-time run on record as %s", nowdate())
+	return summary
 
 
 def run_nightly() -> dict | None:
@@ -289,11 +302,17 @@ def run_nightly() -> dict | None:
 
 	Daily jobs fire just after midnight, while yesterday's night shift
 	(19:30-03:30) still has only its IN — so yesterday waits one more night.
-	Skips while the one-time run is still queued or running.
+	Skips while the one-time run is still queued or running; runs the one-time
+	window itself while no finished one-time run is on record (ONCE_MARK).
 	"""
 	if is_job_enqueued(ONCE_JOB_ID):
 		logger.info("[attendance_recovery_auto] one-time run still going; nightly skipped")
 		return None
+	if not frappe.db.get_default(ONCE_MARK):
+		logger.warning(
+			"[attendance_recovery_auto] no finished one-time run on record: running its window tonight"
+		)
+		return run_once()
 	end = _yesterday() - timedelta(days=1)
 	start = max(rec.REPAIR_FLOOR, end - timedelta(days=NIGHTLY_DAYS - 1))
 	logger.info("[attendance_recovery_auto] nightly run %s..%s", start, end)

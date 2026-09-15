@@ -110,6 +110,33 @@ class TestOrder(_Case):
 	def test_nightly_waits_while_the_one_time_run_is_queued_or_running(self):
 		with patch.object(auto, "is_job_enqueued", return_value=True):
 			self.assertIsNone(auto.run_nightly())
+
+	def test_the_one_time_run_leaves_a_mark_when_it_finishes(self):
+		auto.run_once()
+		self.db.set_default.assert_called_once_with(auto.ONCE_MARK, "2026-09-15")
+
+	def test_nightly_runs_the_whole_window_when_the_one_time_run_never_finished(self):
+		# Live, 15 Sep 2026: two deploys the same day — the release's once-run was
+		# queued under the same job id as the earlier release's and a worker restart
+		# can kill a four-hour job; either way nothing ran and Ria's 7 and 9 Sep
+		# stayed Half Day. No mark on record: the nightly runs the once-run's window.
+		self.db.get_default.return_value = None
+		auto.run_nightly()
+		windows = sorted({(c[1], c[2]) for c in self.calls})
+		self.assertEqual(windows[0][0], "2026-08-01")
+		self.assertEqual(windows[-1][1], "2026-09-14")
+		self.db.set_default.assert_called_once_with(auto.ONCE_MARK, "2026-09-15")
+
+	def test_nightly_keeps_its_seven_days_once_the_one_time_run_is_on_record(self):
+		self.db.get_default.return_value = "2026-09-15"
+		auto.run_nightly()
+		self.assertEqual(sorted({(c[1], c[2]) for c in self.calls}), [("2026-09-07", "2026-09-13")])
+		self.db.set_default.assert_not_called()
+
+	def test_a_crashed_one_time_run_leaves_no_mark(self):
+		with patch.object(auto, "_run", side_effect=RuntimeError("killed")):
+			self.assertIsNone(auto.run_once())
+		self.db.set_default.assert_not_called()
 		self.assertEqual(self.calls, [])
 
 	def test_a_refusing_step_is_recorded_and_the_other_steps_and_chunks_go_on(self):
