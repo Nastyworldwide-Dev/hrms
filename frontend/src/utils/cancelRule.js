@@ -11,8 +11,9 @@
 //              server says so; hrms.api.approval.finalize elevates the routed cancel
 //   false      no Cancel
 
-// No decision field on these — submission IS the approval.
-const APPROVED_ON_SUBMIT = ["Compensatory Leave Request", "Employee Advance", "Travel Request"]
+// No decision field on these — submission IS the approval. Compensatory Leave
+// Request left this list on 15 Sep 2026: it decides in `status` and can be rejected.
+const APPROVED_ON_SUBMIT = ["Employee Advance", "Travel Request"]
 
 export function canOfferCancel(doc, doctype = doc?.doctype, viewer = {}) {
 	if (Number(doc?.docstatus) !== 1) return false

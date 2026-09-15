@@ -21,7 +21,14 @@ const approved = (doctype, extra = {}) => ({
 })
 
 test("a submitted request that is not approved is the cancel permission's call", () => {
-	for (const doctype of ["Leave Application", "Shift Request", "OT Request"]) {
+	// Compensatory Leave Request decides in `status` since 15 Sep 2026 ("yes add
+	// that reject button"): a rejection is submitted too, and granted nothing.
+	for (const doctype of [
+		"Leave Application",
+		"Shift Request",
+		"OT Request",
+		"Compensatory Leave Request",
+	]) {
 		const doc = { doctype, docstatus: 1, status: "Rejected", employee: "EMP-STAFF" }
 		assert.equal(canOfferCancel(doc, doctype, STAFF), "own", doctype)
 		assert.equal(canOfferCancel(doc, doctype, OTHER), "own", doctype)
