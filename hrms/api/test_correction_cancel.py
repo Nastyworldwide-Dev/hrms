@@ -32,7 +32,9 @@ import frappe
 from hrms.api import correction_cancel
 from hrms.utils import approved_request_guard
 
-CORRECTABLE = {"Employee Advance", "Travel Request", "Compensatory Leave Request"}
+# Compensatory Leave Request left on 15 Sep 2026: it decides in status, so HR or
+# its approver cancels it through approval.finalize like the other requests.
+CORRECTABLE = {"Employee Advance", "Travel Request"}
 USER = "hr.manager@example.invalid"
 
 

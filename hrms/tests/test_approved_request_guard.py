@@ -54,9 +54,10 @@ DECISION_FIELD = {
 	"Attendance Request": "status",
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
+	"Compensatory Leave Request": "status",
 }
 # No decision field: submitting IS approving.
-SUBMIT_IS_APPROVAL = ("Compensatory Leave Request", "Employee Advance", "Travel Request")
+SUBMIT_IS_APPROVAL = ("Employee Advance", "Travel Request")
 HR_ROLES = ("HR User", "HR Manager", "System Manager")
 
 # Every before_cancel handler that was wired BEFORE this rule, per doctype.

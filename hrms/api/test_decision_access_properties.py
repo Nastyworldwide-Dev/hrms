@@ -24,6 +24,7 @@ TYPES = [
 	"OT Request",
 	"Attendance Request",
 	"Replacement Leave Claim",
+	"Compensatory Leave Request",
 ]
 namespace = {"frappe": frappe, "logger": logging.getLogger(__name__)}
 nodes = []

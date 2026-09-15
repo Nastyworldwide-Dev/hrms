@@ -36,6 +36,7 @@ DECIDING_STATUS = {
 	"hr/doctype/leave_application/leave_application.json": "status",
 	"hr/doctype/attendance_request/attendance_request.json": "status",
 	"hr/doctype/ot_request/ot_request.json": "status",
+	"hr/doctype/compensatory_leave_request/compensatory_leave_request.json": "status",
 }
 
 

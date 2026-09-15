@@ -114,3 +114,4 @@ hrms.patches.v16_0.run_attendance_recovery_v2_once #2026-09-15 queue the automat
 hrms.patches.v16_0.restore_staff_create_on_pwa_requests #2026-09-15 an employee filing an Attendance Request in Nadi was refused create; custom perm rows had lost the flag the JSON grants
 hrms.patches.v16_0.realign_self_employee_permission #2026-09-15 a self Employee User Permission naming another Employee record refused every request the person filed for themselves
 hrms.patches.v16_0.normalize_employee_user_ids #2026-09-15 a drifted user_id cost employees the Employee role and every own request
+hrms.patches.v16_0.backfill_comp_leave_decision_status #2026-09-15 comp leave gained Reject; old submitted rows are Approved, drafts Open

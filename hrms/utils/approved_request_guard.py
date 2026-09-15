@@ -44,7 +44,8 @@ DECISION_FIELD_BY_DOCTYPE = {
 	"Attendance Request": "status",
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
-	"Compensatory Leave Request": None,
+	# decides in status since 15 Sep 2026 (Reject button); a rejection grants nothing
+	"Compensatory Leave Request": "status",
 	"Employee Advance": None,
 	"Travel Request": None,
 }

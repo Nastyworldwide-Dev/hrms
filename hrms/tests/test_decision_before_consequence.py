@@ -44,6 +44,8 @@ CONSEQUENCE = {
 	"ot_request": None,  # no method; the BANK QUERY is the effect. See its own test.
 	"attendance_request": "create_attendance_records",
 	"replacement_leave_claim": "add_to_leave_allocation",
+	# 15 Sep 2026, "yes add that reject button": same trap, same guard.
+	"compensatory_leave_request": "grant_compensatory_days",
 }
 
 

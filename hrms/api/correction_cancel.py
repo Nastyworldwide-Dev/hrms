@@ -1,8 +1,9 @@
 """Cancel a submitted no-decision request to correct a mistake — Nabil, 14 Sep 2026.
 
-Employee Advance, Travel Request and Compensatory Leave Request have no
-decision field: submitting one IS approving it, so a wrong one could never be
-reversed. The ruling: HR Manager / System Manager may cancel them to correct a
+Employee Advance and Travel Request have no decision field: submitting one IS
+approving it, so a wrong one could never be reversed. (Compensatory Leave
+Request was here until 15 Sep 2026; it now decides in `status` and HR or its
+approver cancels it through hrms.api.approval.finalize.) The ruling: HR Manager / System Manager may cancel them to correct a
 mistake, but the doctypes' permissions stay LOCKED (Employee Advance is
 read-only for every role — v15_112_0.lock_employee_advance_readonly).
 
