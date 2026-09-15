@@ -149,5 +149,54 @@ class TestTheReport(_Diagnose):
 		self.assertIn("no active Employee", report["why"])
 
 
+class TestThePerUserDoor(_Diagnose):
+	"""`diagnose_for_user` is the same walk for ANY user — the report and the
+	health log call it for every linked person, impersonating first."""
+
+	def test_the_endpoint_delegates_to_the_session_user(self):
+		with patch.object(diagnose, "diagnose_for_user", return_value={"ok": 1}) as walk:
+			with patch.object(frappe, "session", frappe._dict(user=USER)):
+				self.assertEqual(diagnose.diagnose_create_permission(DOCTYPE), {"ok": 1})
+		walk.assert_called_once_with(DOCTYPE, USER)
+
+	def test_an_explicit_employee_is_the_probe_employee(self):
+		doc = frappe._dict(doctype=DOCTYPE, name=None, company=None, __islocal=1)
+		meta = MagicMock()
+		meta.has_field.return_value = True
+		with (
+			patch.object(frappe, "get_meta", return_value=meta),
+			patch.object(frappe, "get_roles", return_value=["Employee"]),
+			patch.object(diagnose, "own_employees") as resolver,
+			patch.object(frappe, "get_all", return_value=[]),
+			patch.object(diagnose, "get_valid_perms", return_value=[]),
+			patch.object(diagnose, "get_doctypes_with_custom_docperms", return_value=[]),
+			patch.object(diagnose, "get_role_permissions", return_value={"create": 1}),
+			patch.object(frappe, "new_doc", return_value=doc),
+			patch.object(frappe, "get_hooks", return_value={}),
+			patch.object(diagnose, "has_user_permission", return_value=True),
+			patch.object(diagnose, "check_permission", return_value=True),
+			patch.object(frappe, "get_system_settings", return_value=0),
+		):
+			report = diagnose.diagnose_for_user(DOCTYPE, "bob@example.com", employee="EMP-BOB")
+		resolver.assert_not_called()
+		self.assertEqual(report["own_employees"], ["EMP-BOB"])
+		self.assertEqual(doc.employee, "EMP-BOB")
+		self.assertTrue(report["allowed"])
+
+	def test_create_allowed_asks_frappe_once_and_nothing_else(self):
+		doc = frappe._dict(doctype="Shift Swap Request", name=None, __islocal=1)
+		meta = MagicMock()
+		meta.has_field.side_effect = lambda f: f == "requesting_employee"
+		with (
+			patch.object(frappe, "new_doc", return_value=doc),
+			patch.object(diagnose, "check_permission", return_value=False) as check,
+			patch.object(frappe, "call") as hooks,
+		):
+			self.assertFalse(diagnose.create_allowed("Shift Swap Request", USER, "EMP-1", meta=meta))
+		check.assert_called_once_with("Shift Swap Request", "create", doc, user=USER, print_logs=False)
+		hooks.assert_not_called()
+		self.assertEqual(doc.requesting_employee, "EMP-1", "Shift Swap names its employee differently")
+
+
 if __name__ == "__main__":
 	unittest.main()

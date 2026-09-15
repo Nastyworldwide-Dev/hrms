@@ -472,5 +472,45 @@ class TestSchedulerEntry(unittest.TestCase):
 		self.assertIn(NEW_ENTRY, current.get("daily", []))
 
 
+# --- request access: the one line the owner asked for -----------------------------
+class TestRequestAccessLine(_Base):
+	"""15 Sep 2026: nobody is asked to run a diagnostic. The daily check walks
+	every linked user and says how many cannot file their own requests."""
+
+	def _run(self, access, broken=None):
+		sections = broken or {"a_wrong_night_assignment": _section(count=0)}
+		with (
+			patch.object(health.rec, "inputs_report", return_value=_report(sections)),
+			patch.object(health, "_request_access_block", return_value=access),
+		):
+			health.run_daily_health_check()
+
+	def test_the_line_and_the_top_reasons_reach_the_log_even_with_no_broken_day(self):
+		self._run({"users": 3, "rows": 7, "top": [("user_permission", 5), ("role", 2)]})
+		frappe.log_error.assert_called_once()
+		title = frappe.log_error.call_args.kwargs["title"]
+		self.assertEqual(title, f"Attendance health: 3 user(s) cannot file their own requests on {YESTERDAY}")
+		message = frappe.log_error.call_args.kwargs["message"]
+		self.assertIn("3 users cannot file their own requests (7 refusals)", message)
+		self.assertIn("user_permission: 5", message)
+		self.assertIn("role: 2", message)
+		self.assertIn("Request Access Health", message)
+
+	def test_a_broken_day_keeps_its_title_and_carries_the_access_block(self):
+		broken = {"a_wrong_night_assignment": _section(count=2, sample=[{"employee": "E1", "date": "x"}])}
+		self._run({"users": 1, "rows": 1, "top": [("role", 1)]}, broken=broken)
+		title = frappe.log_error.call_args.kwargs["title"]
+		self.assertEqual(title, f"Attendance health: 2 broken day(s) on {YESTERDAY}")
+		self.assertIn("1 users cannot file", frappe.log_error.call_args.kwargs["message"])
+
+	def test_everyone_can_file_and_nothing_broken_logs_nothing(self):
+		self._run({"users": 0, "rows": 0, "top": []})
+		frappe.log_error.assert_not_called()
+
+	def test_a_crashing_walk_is_reported_as_absent_not_raised(self):
+		with patch("hrms.utils.request_access.refusal_summary", side_effect=RuntimeError("db gone")):
+			self.assertIsNone(health._request_access_block())
+
+
 if __name__ == "__main__":
 	unittest.main()

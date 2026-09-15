@@ -52,6 +52,7 @@ from hrms.overrides.company_scope import require_unfenced
 from hrms.overrides.remote_checkin_request_hooks import notify_hr
 from hrms.utils import attendance_recovery as rec
 from hrms.utils.offshift_punch_heal import _lost_transaction
+from hrms.utils.request_access import summary_lines
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,9 @@ def _config_block(section: dict | None = None) -> dict:
 		return {"error": str(exc), "issues": [], "shifts": [], "count": 0}
 
 
-def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to, config=None) -> str:
+def _message(
+	day, daily_broken: dict, trend_broken: dict, trend_from, trend_to, config=None, access=None
+) -> str:
 	parts = [f"Yesterday ({day}):"]
 	if daily_broken:
 		for name in sorted(daily_broken):
@@ -196,27 +199,52 @@ def _message(day, daily_broken: dict, trend_broken: dict, trend_from, trend_to, 
 	if config is not None:
 		parts.append("")
 		parts += _config_lines(config)
+	if access is not None:
+		parts.append("")
+		parts += summary_lines(access)
 	return "\n".join(parts)
 
 
-def _write_log(day, daily: dict, trend: dict, config: dict | None = None) -> None:
+def _request_access_block() -> dict | None:
+	"""One more thing the daily check looks at: can every linked user file
+	their own requests? Owner's rule (15 Sep 2026) — the system finds it, nobody
+	is asked to run a diagnostic. A failing walk is logged and reported as
+	absent; it never takes the attendance sections down with it."""
+	try:
+		from hrms.utils.request_access import refusal_summary
+
+		return refusal_summary()
+	except Exception:
+		logger.exception("[attendance_health] request access walk failed")
+		return None
+
+
+def _write_log(day, daily: dict, trend: dict, config: dict | None = None, access: dict | None = None) -> None:
 	daily_broken = _broken(daily.get("sections"))
 	trend_broken = _broken(trend.get("sections"))
 	config_issues = cint((config or {}).get("count")) + (1 if (config or {}).get("error") else 0)
-	if not daily_broken and not trend_broken and not config_issues:
+	access_users = cint((access or {}).get("users"))
+	if not daily_broken and not trend_broken and not config_issues and not access_users:
 		logger.info("[attendance_health] %s: nothing broken", day)
 		return
 	total = sum(_count(s) for s in daily_broken.values()) or sum(_count(s) for s in trend_broken.values())
-	title = (
-		f"{TITLE_PREFIX}: {total} broken day(s) on {day}"
-		if total
-		else f"{TITLE_PREFIX}: {config_issues} config issue(s) on {day}"
-	)
+	if total:
+		title = f"{TITLE_PREFIX}: {total} broken day(s) on {day}"
+	elif config_issues:
+		title = f"{TITLE_PREFIX}: {config_issues} config issue(s) on {day}"
+	else:
+		title = f"{TITLE_PREFIX}: {access_users} user(s) cannot file their own requests on {day}"
 	if frappe.db.exists("Error Log", {"method": title}):
 		logger.info("[attendance_health] %s already logged, not duplicating", title)
 		return
 	message = _message(
-		day, daily_broken, trend_broken, trend.get("from_date"), trend.get("to_date"), config=config
+		day,
+		daily_broken,
+		trend_broken,
+		trend.get("from_date"),
+		trend.get("to_date"),
+		config=config,
+		access=access,
 	)
 	log = frappe.log_error(title=title, message=message)
 	logger.warning("[attendance_health] %s", title)
@@ -235,7 +263,14 @@ def _run_daily_health_check() -> None:
 	daily = rec.inputs_report(from_date=str(yesterday), to_date=str(yesterday), include_source=0)
 	trend = rec.inputs_report(from_date=str(trend_start), to_date=str(yesterday), include_source=0)
 	config = (daily.get("sections") or {}).get(rec.CONFIG_SECTION)
-	_write_log(yesterday, daily, trend, _config_block(config) if config is not None else _config_block())
+	access = _request_access_block()
+	_write_log(
+		yesterday,
+		daily,
+		trend,
+		_config_block(config) if config is not None else _config_block(),
+		access=access,
+	)
 
 
 def run_daily_health_check() -> None:
