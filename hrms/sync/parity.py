@@ -280,8 +280,14 @@ def source_inventory(client, doctypes=None) -> dict:
 #: here and not itself mirrored gets surfaced for a ruling, which is how Gender,
 #: Salutation and Employment Type — doctypes that ship EMPTY, so their VALUES are the
 #: gap even though the doctype exists — stop being invisible.
+#: Cost Center is NOT here any more: the framework creates the doctype but only
+#: ERPNext's company setup populates it (one root and "Main - <abbr>"), so an
+#: `Employee.payroll_cost_center` or an expense line pointing at the ERP's real
+#: cost centers resolved to nothing here and no audit ever said so. The sync
+#: carries it since 15 Sep 2026 (`runner.MASTER_DOCTYPES`), so it is audited
+#: like every other master.
 _ALWAYS_RESOLVABLE_LINKS = frozenset(
-	{"User", "Role", "Company", "Currency", "Country", "Cost Center", "UOM", "File", "DocType"}
+	{"User", "Role", "Company", "Currency", "Country", "UOM", "File", "DocType"}
 )
 
 #: Link fields on a mirrored row that are framework identity, not HR config: user_id

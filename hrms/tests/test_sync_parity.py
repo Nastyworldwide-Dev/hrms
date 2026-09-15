@@ -658,5 +658,48 @@ class TestScopedReportHoldsBackAfterCutover(unittest.TestCase):
 		self.assertIn("Attendance", {line["doctype"] for line in report["lines"]})
 
 
+class TestCostCenterIsAuditedOnceMirrored(unittest.TestCase):
+	"""Cost Center used to be waved through as "always resolvable" — the framework
+	does not populate it, so an Employee.payroll_cost_center or an expense line
+	pointing at a cost center the hub never had passed every audit silently. Now
+	that the sync carries it, the gap audit must look at it like any other master.
+	"""
+
+	class _Field:
+		def __init__(self, fieldname, fieldtype, options=None):
+			self.fieldname = fieldname
+			self.fieldtype = fieldtype
+			self.options = options
+
+	def test_it_is_no_longer_waved_through(self):
+		mod = _load(_FakeDB())
+		self.assertNotIn("Cost Center", mod._ALWAYS_RESOLVABLE_LINKS)
+
+	def test_the_sync_carries_it_so_link_coverage_reports_it_as_carried(self):
+		mod = _load(_FakeDB())
+		runner = sys.modules["hrms.sync.runner"]
+		self.assertIn("Cost Center", runner.DEFAULT_SYNC_DOCTYPES)
+		fields = {
+			"Employee": [self._Field("payroll_cost_center", "Link", "Cost Center")],
+			"Expense Claim Detail": [self._Field("cost_center", "Link", "Cost Center")],
+		}
+		mod.frappe.get_meta = lambda dt: types.SimpleNamespace(fields=fields.get(dt, []))
+		mod.frappe.db.exists = lambda doctype, name: name in fields or name == "Cost Center"
+		self.assertIn("Cost Center", mod._mirrored_link_targets({"Employee"}))
+		coverage = mod.unmirrored_link_targets()
+		self.assertIn("Cost Center", coverage["carried"])
+		self.assertNotIn("Cost Center", coverage["always_resolvable"])
+
+	def test_a_cost_center_link_is_audited_for_fill(self):
+		mod = _load(_FakeDB())
+		mod.frappe.get_meta = lambda dt: types.SimpleNamespace(
+			fields=[
+				self._Field("payroll_cost_center", "Link", "Cost Center"),
+				self._Field("company", "Link", "Company"),
+			]
+		)
+		self.assertEqual(mod._auditable_link_fields("Employee"), ["payroll_cost_center"])
+
+
 if __name__ == "__main__":
 	unittest.main()

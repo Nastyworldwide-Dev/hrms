@@ -184,6 +184,8 @@ def _matches(row, filters):
 				return False
 			if operator == ">" and not (value and value > operand):
 				return False
+			if operator == "is" and bool(value) != (operand == "set"):
+				return False
 		elif value != condition:
 			return False
 	return True
@@ -620,7 +622,13 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 		asked for. The stamped doctypes still update in place.
 		"""
 		self.seed_parent("Company", "Acme", company_name="Acme")
-		self.assertEqual(runner.CREATE_ONLY_DOCTYPES, frozenset({"Company", *runner.MASTER_DOCTYPES}))
+		# Every master but the source-owned ones: a Cost Center is the ERP's
+		# finance tag and is overwritten on purpose — see TestCostCenterIsTheErpsTree.
+		self.assertEqual(
+			runner.CREATE_ONLY_DOCTYPES,
+			frozenset({"Company", *runner.MASTER_DOCTYPES}) - runner.SOURCE_OWNED_MASTERS,
+		)
+		self.assertEqual(runner.SOURCE_OWNED_MASTERS, frozenset({"Cost Center"}))
 		for doctype in runner.STAMPED_DOCTYPES:
 			self.assertNotIn(doctype, runner.CREATE_ONLY_DOCTYPES)
 
@@ -2659,6 +2667,213 @@ class TestDepartmentKeepsItsShapeAndNotItsArithmetic(_RunnerTestCase):
 		call = source.index("_rebuild_department_tree()", source.index("def sync_instance"))
 		self.assertIn("try:", source[call - 200 : call])
 		self.assertIn("except Exception", source[call : call + 200])
+
+
+class TestCostCenterIsTheErpsTree(_RunnerTestCase):
+	"""Expense claims in Nadi need the ERP's cost tags, so Cost Center is mirrored.
+
+	It is a master by position (Employee.payroll_cost_center and every expense
+	line link to it) and a NestedSet like Department — but unlike every other
+	master it is the ERP's finance configuration, not HR's: a re-pull OVERWRITES
+	a row the hub already holds. The hub's own contributions are protected by
+	the two rules that already hold everywhere: a row the source never sends is
+	never touched, and nothing is ever deleted. The root the company shell
+	created ("<company> - <abbr>") is the tree the ERP's rows hang from, so the
+	source's root maps onto it instead of landing beside it, and the shell's
+	"Main - <abbr>" leaf survives.
+	"""
+
+	SEED_EXCLUDE: ClassVar[tuple] = ("Employee",)
+
+	class _OrderedClient(_FakeClient):
+		"""Honours `order_by`, which the plain fake ignores: the parents-first
+		promise rests on the SOURCE returning rows in `lft` order."""
+
+		def get_list(self, doctype, filters=None, fields=None, limit=None, start=0, order_by=None):
+			rows = super().get_list(doctype, filters=filters, fields=fields, start=0, order_by=order_by)
+			if order_by:
+				for term in reversed([t.strip() for t in order_by.split(",")]):
+					field, _, direction = term.partition(" ")
+					rows.sort(key=lambda r: r.get(field) or 0, reverse=direction.strip().lower() == "desc")
+			return rows[start : start + limit] if limit else rows[start:]
+
+	def _seed_shell(self, abbr="AC"):
+		self.seed_parent("Company", "Acme", company_name="Acme", abbr=abbr)
+		self.seed_parent(
+			"Cost Center",
+			f"Acme - {abbr}",
+			cost_center_name="Acme",
+			company="Acme",
+			is_group=1,
+			parent_cost_center=None,
+		)
+		self.seed_parent(
+			"Cost Center",
+			f"Main - {abbr}",
+			cost_center_name="Main",
+			company="Acme",
+			is_group=0,
+			parent_cost_center=f"Acme - {abbr}",
+		)
+
+	@staticmethod
+	def _erp_tree():
+		# `modified` order puts the CHILD first — the accident the lft order exists for.
+		return [
+			{
+				"name": "Digital - AC",
+				"cost_center_name": "Digital",
+				"parent_cost_center": "Marketing - AC",
+				"company": "Acme",
+				"is_group": 0,
+				"lft": 4,
+				"rgt": 5,
+				"modified": "2026-09-01 09:00:00",
+			},
+			{
+				"name": "Marketing - AC",
+				"cost_center_name": "Marketing",
+				"parent_cost_center": "Acme - AC",
+				"company": "Acme",
+				"is_group": 1,
+				"lft": 3,
+				"rgt": 6,
+				"old_parent": "Acme - AC",
+				"modified": "2026-09-02 09:00:00",
+			},
+			{
+				"name": "Acme - AC",
+				"cost_center_name": "Acme",
+				"parent_cost_center": None,
+				"company": "Acme",
+				"is_group": 1,
+				"lft": 1,
+				"rgt": 8,
+				"modified": "2026-09-03 09:00:00",
+			},
+		]
+
+	def _sync(self, rows=None, filters=None):
+		client = self._OrderedClient("nasty-live", {"Cost Center": rows or self._erp_tree()})
+		return client, runner.sync_doctype(client, "Cost Center", filters=filters)
+
+	def test_it_is_a_master_that_precedes_the_employees_who_carry_it(self):
+		order = list(runner.DEFAULT_SYNC_DOCTYPES)
+		self.assertIn("Cost Center", runner.MASTER_DOCTYPES)
+		self.assertLess(order.index("Cost Center"), order.index("Employee"))
+		self.assertEqual(runner.ROW_DEPENDENCIES["Cost Center"], {"company": "Company"})
+
+	def test_the_source_is_read_in_lft_order_so_parents_land_first(self):
+		self._seed_shell()
+		client, result = self._sync()
+		self.assertEqual(client.calls[0]["order_by"], "lft asc, name asc")
+		landed = [name for doctype, name in self.store.inserts if doctype == "Cost Center"]
+		self.assertEqual(landed, ["Marketing - AC", "Digital - AC"], "a child must never precede its parent")
+		self.assertEqual((result["inserted"], result["errored"]), (2, 0))
+
+	def test_the_positions_are_never_copied(self):
+		payload = runner._mirror_payload(self._erp_tree()[1], "nasty-live", "Cost Center")
+		for positional in ("lft", "rgt", "old_parent"):
+			self.assertNotIn(positional, payload)
+		self.assertEqual(payload["parent_cost_center"], "Acme - AC")
+		self.assertNotIn(runner.PROVENANCE_FIELD, payload, "a master, never stamped")
+
+	def test_the_erp_root_maps_onto_the_shell_root_and_main_survives(self):
+		self._seed_shell()
+		_, result = self._sync()
+		roots = [r for r in self.store.rows("Cost Center").values() if not r.get("parent_cost_center")]
+		self.assertEqual([r["name"] for r in roots], ["Acme - AC"], "one root per company, the shell's")
+		self.assertIn("Main - AC", self.store.rows("Cost Center"), "the shell's own leaf stays")
+		self.assertEqual(self.store.rows("Cost Center")["Marketing - AC"]["parent_cost_center"], "Acme - AC")
+		self.assertEqual(result["inserted"], 2)
+		self.assertEqual(self.store.deletes, [])
+
+	def test_an_abbr_hr_changed_here_is_remapped_on_every_name(self):
+		"""The company shell copied the source's abbr, and ERPNext autonames a
+		cost center "<name> - <abbr>" — so the names normally agree. When HR has
+		since changed the hub's abbr, the source's suffix is swapped for the hub's
+		on the row AND its parent link, and the root still lands on the shell's."""
+		self._seed_shell(abbr="ACX")
+		_, result = self._sync()
+		names = set(self.store.rows("Cost Center"))
+		self.assertEqual(names, {"Acme - ACX", "Main - ACX", "Marketing - ACX", "Digital - ACX"})
+		self.assertEqual(
+			self.store.rows("Cost Center")["Marketing - ACX"]["parent_cost_center"], "Acme - ACX"
+		)
+		self.assertEqual(
+			self.store.rows("Cost Center")["Digital - ACX"]["parent_cost_center"], "Marketing - ACX"
+		)
+		self.assertEqual(result["inserted"], 2)
+
+	def test_a_changed_erp_row_overwrites_the_hub_copy(self):
+		"""ERP-owned: the finance team renames or regroups a cost center on the
+		ERP and the hub follows. This is the deliberate opposite of the HR-owned
+		masters, and of the post-cutover guard for stamped rows — a hub edit to a
+		MIRRORED cost center is not preserved, by design."""
+		self._seed_shell()
+		self.seed_parent(
+			"Cost Center",
+			"Marketing - AC",
+			cost_center_name="Marketing (old)",
+			company="Acme",
+			is_group=1,
+			parent_cost_center="Acme - AC",
+		)
+		_, result = self._sync()
+		row = self.store.rows("Cost Center")["Marketing - AC"]
+		self.assertEqual(row["cost_center_name"], "Marketing")
+		self.assertEqual(
+			(result["inserted"], result["updated"]), (1, 2), "root + Marketing updated, Digital new"
+		)
+
+	def test_a_hub_only_cost_center_is_left_alone(self):
+		"""Never deletes, never touches what the source did not send: a cost
+		center HR made on the hub keeps its name, its parent and its fields."""
+		self._seed_shell()
+		mine = dict(
+			cost_center_name="HR Made", company="Acme", is_group=0, parent_cost_center="Acme - AC", disabled=0
+		)
+		self.seed_parent("Cost Center", "HR Made - AC", **mine)
+		self._sync()
+		self.assertEqual(self.store.rows("Cost Center")["HR Made - AC"], dict(mine, name="HR Made - AC"))
+		self.assertNotIn(("Cost Center", "HR Made - AC"), [(d, n) for d, n, _ in self.store.updates])
+		self.assertEqual(self.store.deletes, [])
+
+	def test_a_company_this_hub_does_not_serve_is_scoped_out_at_the_source(self):
+		self.assertEqual(
+			runner.scope_filter("Cost Center", ["Acme"], "nasty-live"), {"company": ("in", ["Acme"])}
+		)
+
+	def test_a_cost_center_of_an_unknown_company_is_skipped_not_guessed(self):
+		self._seed_shell()
+		stray = dict(
+			self._erp_tree()[2], name="Other - OT", cost_center_name="Other", company="Other", lft=20
+		)
+		_, result = self._sync([*self._erp_tree(), stray])
+		self.assertEqual(result["orphaned"], 1)
+		self.assertEqual(result["missing_parents"], ["Company: Other"])
+		self.assertNotIn("Other - OT", self.store.rows("Cost Center"))
+
+	def test_the_tree_is_rebuilt_after_the_run_and_cannot_fail_it(self):
+		source = (HRMS_ROOT / "sync" / "runner.py").read_text(encoding="utf-8")
+		call = source.index("_rebuild_cost_center_tree()", source.index("def sync_instance"))
+		self.assertIn("try:", source[call - 200 : call])
+		self.assertIn("except Exception", source[call : call + 200])
+
+	def test_the_rebuild_walks_parent_cost_center(self):
+		calls = []
+		nestedset = types.ModuleType("frappe.utils.nestedset")
+		nestedset.rebuild_tree = lambda *args: calls.append(args)
+		saved = sys.modules.get("frappe.utils.nestedset")
+		sys.modules["frappe.utils.nestedset"] = nestedset
+		try:
+			runner._rebuild_cost_center_tree()
+		finally:
+			if saved is None:
+				del sys.modules["frappe.utils.nestedset"]
+			else:
+				sys.modules["frappe.utils.nestedset"] = saved
+		self.assertEqual(calls, [("Cost Center", "parent_cost_center")])
 
 
 class TestAnUnconstrainedSelectConstrainsNothing(unittest.TestCase):

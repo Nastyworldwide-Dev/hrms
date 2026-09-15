@@ -122,6 +122,15 @@ MASTER_DOCTYPES = (
 	"Leave Policy",
 	"Designation",
 	"Branch",
+	# The ERP's cost tags, for the expense claims filed in Nadi (15 Sep 2026):
+	# every expense line and `Employee.payroll_cost_center` link to one, and the
+	# company shells carry only ERPNext's "Main - <abbr>" leaf. A NestedSet like
+	# Department, handled the same way — `parent_cost_center` is mirrored, the
+	# positions are recomputed here by `_rebuild_cost_center_tree` — with two
+	# differences. It is read in `lft` order (`PAGE_ORDER_BY_DOCTYPE`) so a parent
+	# always lands before its child, and it is SOURCE-OWNED: see
+	# `SOURCE_OWNED_MASTERS` for why a re-pull overwrites the hub's copy.
+	"Cost Center",
 	"Employee Grade",
 	"Holiday List",
 	# Before Shift Type, which links to it, and before every stamped doctype that
@@ -208,6 +217,9 @@ ROW_DEPENDENCIES = {
 	# an ordering accident, and the link resolves as soon as the parent lands —
 	# `_rebuild_department_tree` then recomputes the arithmetic over the finished set.
 	"Department": {"company": "Company"},
+	# Not `parent_cost_center` either: the parent is remapped onto the hub's own
+	# root by `localise_cost_center`, and the `lft` read order lands it first.
+	"Cost Center": {"company": "Company"},
 	"Employee": {"company": "Company"},
 	"Attendance": {"employee": "Employee"},
 	"Employee Checkin": {"employee": "Employee"},
@@ -330,7 +342,24 @@ def blocked_by(doctype: str, failed: set[str] | frozenset[str]) -> list[str]:
 #: the record exists so `Employee.company` resolves. Requiring HR to hand-create
 #: them instead would be strictly worse — one typo and every mirrored Employee
 #: links to a company that does not exist.
-CREATE_ONLY_DOCTYPES = frozenset({"Company", *MASTER_DOCTYPES})
+#: Masters the SOURCE owns: mirrored like a master (unstamped, pulled before
+#: the rows that link to them, never write-blocked) but UPDATED on every pull.
+#:
+#: A Cost Center is the ERP's finance configuration — the finance team renames,
+#: regroups or disables one there, and an expense claim posted against the
+#: hub's stale copy would tag the wrong ledger. So the hub follows the ERP, and a
+#: hub edit to a mirrored cost center does not survive the next pull; that is
+#: the intended reading of the post-cutover re-pull rule for these rows, not a
+#: hazard of it. What the hub adds is still safe under the two rules that hold
+#: for every doctype here: a cost center the source never sends (one HR made on
+#: the hub, or the shell's own "Main - <abbr>") is never touched, and nothing is
+#: ever deleted. No provenance stamp, so the rows are told apart from hub-made
+#: ones by name alone — ERPNext autonames both sides "<name> - <abbr>", and the
+#: company shell copied the source's abbr, so the names agree by construction
+#: (`localise_cost_center` handles an abbr HR changed since).
+SOURCE_OWNED_MASTERS = frozenset({"Cost Center"})
+
+CREATE_ONLY_DOCTYPES = frozenset({"Company", *MASTER_DOCTYPES}) - SOURCE_OWNED_MASTERS
 
 #: Identity-only projection for create-only doctypes. Everything else on the
 #: remote row — accounting defaults above all — is deliberately dropped.
@@ -366,6 +395,15 @@ PAGE_SIZE = 500
 #: or never returned at all, which is an employee that silently does not exist
 #: here. `name` is the primary key, so appending it makes the order total.
 PAGE_ORDER = "modified asc, name asc"
+
+#: Trees whose parent must exist before the child can be inserted: a NestedSet's
+#: `on_update` reads the parent's `rgt`, so a child arriving first is a row
+#: error, not a dangling link. `lft` is a pre-order walk of the source's tree —
+#: unique per table, so the order is still total — and reading in it lands every
+#: parent before its children without gating anything. Department stays on
+#: `modified` order deliberately: its rows are create-only and its shape has
+#: been proven in production that way.
+PAGE_ORDER_BY_DOCTYPE = {"Cost Center": "lft asc, name asc"}
 
 #: Savepoint wrapping each row write, so a row that fails rolls back ITSELF and
 #: not the whole uncommitted pass. `sync_instance` commits once per doctype, so
@@ -497,7 +535,78 @@ def _mirror_children(rows: list) -> list:
 LOCALLY_OWNED_FIELDS = {
 	"Employee": ("user_id",),
 	"Department": ("lft", "rgt", "old_parent"),
+	"Cost Center": ("lft", "rgt", "old_parent"),
 }
+
+
+def cost_center_abbr(name: str) -> str:
+	"""The abbr ERPNext's autoname put on a cost center: the text after the last
+	" - ". "" when the name carries none."""
+	_head, sep, tail = (name or "").rpartition(" - ")
+	return tail if sep else ""
+
+
+def localise_cost_center(row: dict, hub_abbr: str | None, hub_root: str | None, remote_roots: dict) -> dict:
+	"""Rewrite one source Cost Center row into the names this hub uses. Pure.
+
+	Two things can differ between the two trees, and both are handled by name:
+
+	* the source's ROOT ("<company> - <abbr>") is the tree the company shell
+	  already created here — mapped onto `hub_root`, never landed beside it.
+	  `remote_roots` remembers the mapping so a child that names the source's
+	  root as its parent is hung under the hub's. The `lft` read order means the
+	  root of a company is always seen before its children in a full pull; on an
+	  incremental pull the abbr rule below resolves the same name anyway;
+	* the abbr: the shell copied the source's, so the names normally agree. When
+	  HR has changed the hub's abbr since, every "<name> - <source abbr>" becomes
+	  "<name> - <hub abbr>", on the row and on its parent link, so the mirror
+	  keys on the name ERPNext would give the row HERE.
+	"""
+	row = dict(row)
+	source_abbr = cost_center_abbr(row.get("name") or "")
+	if hub_abbr and source_abbr and source_abbr != hub_abbr:
+		suffix = f" - {source_abbr}"
+		for field in ("name", "parent_cost_center"):
+			value = row.get(field)
+			if value and value.endswith(suffix):
+				row[field] = value[: -len(suffix)] + f" - {hub_abbr}"
+	parent = row.get("parent_cost_center")
+	if not parent:
+		if hub_root:
+			remote_roots[row.get("name")] = hub_root
+			row["name"] = hub_root
+	elif parent in remote_roots:
+		row["parent_cost_center"] = remote_roots[parent]
+	return row
+
+
+def _localise_row(doctype: str, row: dict, state: dict) -> dict:
+	"""Source row -> the row as this hub names it. Identity for every doctype
+	but Cost Center; `state` lives for one `sync_doctype` call."""
+	if doctype != "Cost Center":
+		return row
+	company = row.get("company")
+	companies = state.setdefault("companies", {})
+	if company not in companies:
+		roots = frappe.get_all(
+			"Cost Center",
+			filters={"company": company, "parent_cost_center": ("is", "not set")},
+			pluck="name",
+			order_by="name asc",
+		)
+		companies[company] = (
+			frappe.db.get_value("Company", company, "abbr") if company else None,
+			roots[0] if roots else None,
+		)
+		if len(roots) > 1:
+			_log().warning(
+				"[sync] Cost Center: %s has %s roots here, using %s", company, len(roots), roots[0]
+			)
+	hub_abbr, hub_root = companies[company]
+	localised = localise_cost_center(row, hub_abbr, hub_root, state.setdefault("remote_roots", {}))
+	if localised.get("name") != row.get("name"):
+		_log().info("[sync] Cost Center %s lands here as %s", row.get("name"), localised.get("name"))
+	return localised
 
 
 def get_provenance_custom_fields() -> dict:
@@ -1098,6 +1207,10 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 		flat = {key: value for key, value in payload.items() if not isinstance(value, list)}
 		if doctype == "Leave Allocation":
 			flat = _keep_hub_grants(remote_name, flat)
+		if doctype in SOURCE_OWNED_MASTERS:
+			_log().info(
+				"[sync] %s %s overwritten from the source (source-owned master)", doctype, remote_name
+			)
 		if flat:
 			frappe.db.set_value(doctype, remote_name, flat, update_modified=False)
 		if children:
@@ -1191,6 +1304,9 @@ COMPANY_SCOPED_DOCTYPES = frozenset(
 		"Shift Assignment",
 		"Shift Schedule Assignment",
 		"Appraisal",
+		# The one master with a company: the ERP holds every company's tree, and
+		# only the served companies' cost centers belong here.
+		"Cost Center",
 	}
 )
 
@@ -1229,8 +1345,8 @@ def scope_filter(doctype: str, companies: list[str], instance_name: str) -> dict
 	doctype inside the loop rather than computed up front, and why Employee must
 	precede Employee Checkin in `DEFAULT_SYNC_DOCTYPES` — it does.
 
-	Masters have no company at all and are never filtered: sending them a `company`
-	filter would make the remote reject the read.
+	Masters (Cost Center apart) have no company at all and are never filtered:
+	sending them a `company` filter would make the remote reject the read.
 	"""
 	if not companies:
 		return None
@@ -1304,6 +1420,8 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 	# counter never moved. Collected across every page, then applied once.
 	forced_names: list[str] = []
 	seen = set()
+	localiser_state: dict = {}
+	order_by = PAGE_ORDER_BY_DOCTYPE.get(doctype, PAGE_ORDER)
 
 	for chunk in _split_filters(remote_filters):
 		start = 0
@@ -1314,13 +1432,14 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				fields=["*"],
 				limit=page_size,
 				start=start,
-				order_by=PAGE_ORDER,
+				order_by=order_by,
 			)
 			if not page:
 				break
 
 			for row in page:
 				pulled += 1
+				row = _localise_row(doctype, row, localiser_state)
 				remote_name = row.get("name")
 				if not remote_name:
 					skipped += 1
@@ -1535,6 +1654,19 @@ def _rebuild_department_tree() -> None:
 
 	rebuild_tree("Department")
 	_log().info("[sync] rebuilt the Department tree from mirrored parent links")
+
+
+def _rebuild_cost_center_tree() -> None:
+	"""Recompute Cost Center's `lft`/`rgt` from the parent links just mirrored —
+	the same rule as `_rebuild_department_tree`, for the same reason: the
+	positions describe the source's tree and were dropped at the payload. A
+	mirrored UPDATE that moved a cost center under a new parent went through
+	`db.set_value`, which renumbers nothing, so the walk is what makes the
+	"all cost centers under Marketing" reports answer correctly."""
+	from frappe.utils.nestedset import rebuild_tree
+
+	rebuild_tree("Cost Center", "parent_cost_center")
+	_log().info("[sync] rebuilt the Cost Center tree from mirrored parent links")
 
 
 def _mirror_company_holiday_defaults(client) -> int:
@@ -1923,6 +2055,11 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			_rebuild_department_tree()
 		except Exception as e:
 			_log().warning("[sync] could not rebuild the Department tree: %s", e)
+
+		try:
+			_rebuild_cost_center_tree()
+		except Exception as e:
+			_log().warning("[sync] could not rebuild the Cost Center tree: %s", e)
 		_finish_run(run_name, status, totals, errors, gaps=run_gaps, notes=schema_notes)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.
