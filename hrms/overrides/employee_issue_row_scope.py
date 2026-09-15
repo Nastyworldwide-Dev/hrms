@@ -15,7 +15,7 @@ import frappe
 from frappe.share import get_shared
 
 from hrms.hr.utils import is_hr_operator
-from hrms.overrides.company_scope import allowed_companies, company_condition, company_visible
+from hrms.overrides.company_scope import allowed_companies, company_condition
 from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
@@ -74,18 +74,74 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	return "(" + " or ".join(conditions) + ")"
 
 
-# employees only ever look at their tickets — every mutating ptype is HR's
+# employees only ever look at their tickets — every mutating ptype is HR's,
+# except the one act that opens a ticket in the first place: `create` of a
+# row naming the caller's own Employee. See has_permission.
 READ_PTYPES = frozenset({"read", "select", "print", "email"})
 
 
+def _row_companies(doc) -> set[str]:
+	"""The companies a ticket belongs to — every one must be inside HR's fence.
+
+	A saved row answers with its stored `company`. An UNSAVED row cannot:
+	`Document.insert` runs `check_permission("create")` before
+	`_validate_links()`, which is where `fetch_from: employee.company` is
+	written, and the PWA never sends `company`. At check time the field holds
+	whatever Frappe's user default supplied — None for an "HR (Instance)" user
+	(several Company User Permissions, so no single default), which refused HR
+	their OWN ticket with "You need the 'create' permission"; or the fenced
+	company for an "HR (Company)" user whatever employee the row names. So an
+	unsaved row is fenced on its employee's company — the value the save will
+	write — as well as any company it already carries. Same shape as
+	hrms.overrides.employee_owned_row_scope._row_companies; nothing here can
+	widen the fence.
+	"""
+	companies: set[str] = set()
+	stored = doc.get("company")
+	if stored:
+		companies.add(stored)
+	unsaved = bool(doc.get("__islocal")) or not doc.get("name")
+	if not stored or unsaved:
+		employee = doc.get("employee")
+		via_employee = frappe.db.get_value("Employee", employee, "company") if employee else None
+		if via_employee:
+			companies.add(via_employee)
+	return companies
+
+
+def _inside_company_fence(doc, user: str) -> bool:
+	"""No allow=Company User Permission: unrestricted. Fenced: every company
+	the row belongs to must be permitted; a row with no resolvable company
+	fails closed for a fenced user."""
+	fence = allowed_companies(user)
+	if not fence:
+		return True
+	companies = _row_companies(doc)
+	inside = bool(companies) and all(company in fence for company in companies)
+	logger.debug("[employee_issue_row_scope] fence %s row companies %s inside=%s", fence, companies, inside)
+	return inside
+
+
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
-	"""Per-row check: HR unrestricted; the reporting employee may read but
+	"""Per-row check: HR unrestricted inside their company fence; the reporting
+	employee may READ their own tickets and CREATE one in their own name, and
 	never mutate — enforced here as defense-in-depth so the invariant survives
-	even if someone later loosens the DocPerm matrix (SEC-01)."""
+	even if someone later loosens the DocPerm matrix (SEC-01).
+
+	`create` is answered for everyone below HR the same way, whatever extra
+	roles they hold: a Leave Approver, an Expense Approver or a System Manager
+	is still an employee, and filing a ticket about their own leave or pay is
+	the basic act the owner's rule protects ("everyone must be able to do
+	these basic things"). Before this the hook refused every non-HR `create`
+	— the DocPerm row (Employee, if_owner, create=1) said yes and this hook
+	said no, so the framework rendered "You need the 'create' permission on
+	Employee Issue". A ticket in a COLLEAGUE'S name stays refused here, and
+	`validate_filing_for_self` refuses it again on save.
+	"""
 	user = user or frappe.session.user
 	# the company fence outranks every role: it applies before the HR shortcut
 	# and is a no-op for users with no allow=Company User Permission
-	if not company_visible(getattr(doc, "company", None), user):
+	if not _inside_company_fence(doc, user):
 		logger.info(
 			"[employee_issue_row_scope] denying %s on %s for %s — outside their company fence",
 			ptype,
@@ -95,6 +151,16 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		return False
 	if _unrestricted(user):
 		return True
+	if ptype == "create":
+		own = _own_employees(user)
+		allowed = bool(own) and doc.get("employee") in own
+		logger.info(
+			"[employee_issue_row_scope] create by %s for employee %s: %s",
+			user,
+			doc.get("employee"),
+			"own ticket, allowed" if allowed else "not their own employee, refused",
+		)
+		return allowed
 	if ptype not in READ_PTYPES:
 		logger.debug(
 			"[employee_issue_row_scope] denying ptype=%s for %s on %s",
@@ -117,7 +183,7 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	# The list returns `1=0` for those callers. The document API did not, so a
 	# ticket could be opened by name. Confidential HR cases: somebody else's
 	# grievance, somebody else's disciplinary record.
-	allowed = doc.employee in _own_employees(user)
+	allowed = doc.get("employee") in _own_employees(user)
 	logger.debug(
 		"[employee_issue_row_scope] has_permission user=%s ptype=%s name=%s allowed=%s",
 		user,
