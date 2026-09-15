@@ -25,7 +25,7 @@
 // through, so it is the only place a failure can be reported once instead of
 // in seventeen templates. See utils/loudRequest.js for why that matters.
 import { setConfig, frappeRequest } from "frappe-ui"
-import { makeLoudRequest } from "@/utils/loudRequest"
+import { makeLoudRequest, swallowReportedRejection } from "@/utils/loudRequest"
 import { sessionIsCurrent } from "@/utils/personalCache"
 
 // The only resources the LOGIN PAGE itself needs — both are allow_guest on
@@ -75,3 +75,9 @@ function guestQuiet(fetcher) {
 }
 
 setConfig("resourceFetcher", guestQuiet(makeLoudRequest(frappeRequest)))
+
+// A failed auto-load is already on screen (ResourceError) and in the console;
+// its unawaited rejection must not also surface as an uncaught page error.
+// Installed here, with the fetcher, so it is in place before the first
+// module-scope resource can fail.
+window.addEventListener("unhandledrejection", swallowReportedRejection)

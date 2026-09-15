@@ -76,6 +76,24 @@ export function firstMessage(error, fallback = "Request failed") {
 		.trim()
 }
 
+// Failures this seam has already logged (and toasted, unless silent). frappe-ui
+// fires `auto: true` fetches with a bare `out.fetch()` that nobody awaits, and
+// its handleError always rethrows — so every failed auto-load ALSO reached the
+// browser as an unhandled rejection (`pageerror: …DoesNotExistError` on every
+// missing document, crawl of 15 Sep 2026), on top of the ResourceError the page
+// drew. The rejection itself is kept: an awaited `.submit()` still throws to its
+// caller. Only the browser's "nobody caught this" report is cancelled, and only
+// for an error that is provably already on record here.
+const reported = new WeakSet()
+
+/** `unhandledrejection` listener: cancel the report for a failure already reported above. */
+export function swallowReportedRejection(event) {
+	const reason = event?.reason
+	if (reason === null || typeof reason !== "object" || !reported.has(reason)) return
+	console.info("[request] unawaited failure already reported:", reason?.exc_type || "")
+	event.preventDefault()
+}
+
 function isRepeat(endpoint, now) {
 	const last = recentlyReported.get(endpoint)
 	recentlyReported.set(endpoint, now)
@@ -114,6 +132,7 @@ export function makeLoudRequest(request, { notify = toast, now = () => Date.now(
 				})
 			}
 
+			if (error !== null && typeof error === "object") reported.add(error)
 			throw error
 		})
 	}
