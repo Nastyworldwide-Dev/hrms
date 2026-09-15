@@ -63,18 +63,35 @@ class PWANotification(Document):
 
 	def get_notification_link(self):
 		base_url = f"{frappe.utils.get_url()}/hrms"
+		doctype = self.reference_document_type
 
-		if self.reference_document_type == "Leave Application":
-			return f"{base_url}/leave-applications/{self.reference_document_name}"
-		elif self.reference_document_type == "Expense Claim":
-			return f"{base_url}/expense-claims/{self.reference_document_name}"
-		elif self.reference_document_type == "Remote Checkin Request":
+		if doctype == "Remote Checkin Request":
 			# no per-request PWA route; land on the feed with inline Approve/Reject
 			return f"{base_url}/notifications"
-		elif self.reference_document_type == "Employee Issue":
-			return f"{base_url}/issues/{self.reference_document_name}"
+		path = PWA_DETAIL_PATHS.get(doctype)
+		if path and self.reference_document_name:
+			return f"{base_url}/{path}/{self.reference_document_name}"
 
+		logger.debug("[pwa_notification] no PWA detail route for %s — linking home", doctype)
 		return base_url
+
+
+#: The PWA detail page of each request doctype, as `/hrms/<path>/<name>`. Must match
+#: the `${Doctype}DetailView` routes in frontend/src/router — pinned by
+#: frontend/tests/audit/notification-links.test.mjs. Only Leave, Expense and Issue
+#: used to be mapped, so an OT Request, Shift Request or Replacement Leave Claim
+#: push opened the PWA home (runtime crawl, 15 Sep 2026). Employee Advance is
+#: deliberately absent: it stays hidden in the PWA (owner ruling, 15 Sep 2026).
+PWA_DETAIL_PATHS = {
+	"Leave Application": "leave-applications",
+	"Expense Claim": "expense-claims",
+	"Attendance Request": "attendance-requests",
+	"Shift Request": "shift-requests",
+	"Shift Assignment": "shift-assignments",
+	"OT Request": "ot-requests",
+	"Replacement Leave Claim": "replacement-leave/claims",
+	"Employee Issue": "issues",
+}
 
 
 def send_push_for(name: str) -> None:
