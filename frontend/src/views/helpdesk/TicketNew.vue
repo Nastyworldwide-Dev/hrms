@@ -11,28 +11,47 @@
 					<span class="text-xl font-extrabold text-inkbase">{{ __("New ticket") }}</span>
 				</div>
 
-				<GBanner v-if="errorMessage" variant="error">{{ errorMessage }}</GBanner>
-				<!-- The ticket exists but some files did not attach: keep the id, show
-				     exactly which files failed, and let Submit become Retry — never a
-				     second ticket for the same problem. -->
-				<GBanner v-if="ticketName && failedFiles.length" variant="error">
-					{{
-						__("Ticket {0} is raised, but {1} file(s) did not upload:", [
-							ticketName,
-							failedFiles.length,
-						])
-					}}
-					<ul class="mt-1 list-disc pl-5">
-						<li v-for="(f, i) in failedFiles" :key="`${f.name}-${i}`">
-							{{ f.name }} — {{ f.reason }}
-						</li>
-					</ul>
-					<!-- Said inside the alert: a screen reader on the focused button does not
-					     hear its label change from Submit to Retry. -->
-					<p class="mt-1">{{ __("Press Retry uploads to send them again.") }}</p>
-				</GBanner>
+				<!-- Same gate as the hub's IT pill: only an ANSWERED "no" is unavailable,
+				     and the form (with its get_options fetch) waits for an answered yes. -->
+				<GEmptyState
+					v-if="availability === 'no'"
+					:title="__('IT Helpdesk isn’t set up here')"
+					:body="__('This site has no IT Helpdesk. For HR matters, raise an HR issue instead.')"
+				>
+					<template #action>
+						<GButton :label="__('Back')" @click="goBack" />
+					</template>
+				</GEmptyState>
+				<ResourceError
+					v-else-if="availability === 'error'"
+					:resource="helpdeskAvailable"
+					back
+					what="the IT Helpdesk"
+				/>
+				<GSkeleton v-else-if="availability === 'pending'" height="220px" />
 
-				<form class="flex flex-col gap-4" novalidate @submit.prevent="submit">
+				<form v-else class="flex flex-col gap-4" novalidate @submit.prevent="submit">
+					<GBanner v-if="errorMessage" variant="error">{{ errorMessage }}</GBanner>
+					<!-- The ticket exists but some files did not attach: keep the id, show
+					     exactly which files failed, and let Submit become Retry — never a
+					     second ticket for the same problem. -->
+					<GBanner v-if="ticketName && failedFiles.length" variant="error">
+						{{
+							__("Ticket {0} is raised, but {1} file(s) did not upload:", [
+								ticketName,
+								failedFiles.length,
+							])
+						}}
+						<ul class="mt-1 list-disc pl-5">
+							<li v-for="(f, i) in failedFiles" :key="`${f.name}-${i}`">
+								{{ f.name }} — {{ f.reason }}
+							</li>
+						</ul>
+						<!-- Said inside the alert: a screen reader on the focused button does not
+						     hear its label change from Submit to Retry. -->
+						<p class="mt-1">{{ __("Press Retry uploads to send them again.") }}</p>
+					</GBanner>
+
 					<GInput
 						v-model="form.subject"
 						:label="__('Subject')"
@@ -107,13 +126,15 @@ import GInput from "@/components/glass/GInput.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
+import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { IonContent } from "@ionic/vue"
 import { FeatherIcon } from "frappe-ui"
-import { computed, inject, reactive, ref } from "vue"
+import { computed, inject, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
 import { FileAttachment } from "@/composables"
-import { myTickets, newTicket, ticketOptions } from "@/data/helpdesk"
+import { helpdeskAvailable, myTickets, newTicket, ticketOptions } from "@/data/helpdesk"
 import { goBackOrHome } from "@/utils/navigation"
 
 const router = useRouter()
@@ -129,7 +150,25 @@ const ticketName = ref(null)
 const failedFiles = ref([])
 const showDiscardDialog = ref(false)
 
-ticketOptions.fetch()
+// The route is reachable by URL on a site without the Helpdesk app, where the
+// hub already hides the IT pill. get_options there answers "Helpdesk is not
+// installed" (runtime crawl, 15 Sep 2026). helpdeskAvailable is the hub's own
+// probe; its data is null until the cache hydrates or the probe answers.
+const availability = computed(() => {
+	if (helpdeskAvailable.data === true) return "yes"
+	if (helpdeskAvailable.data === false) return "no"
+	return helpdeskAvailable.error ? "error" : "pending"
+})
+
+watch(
+	availability,
+	(answer) => {
+		if (answer !== "yes" || ticketOptions.data || ticketOptions.loading) return
+		console.info("[TicketNew] Helpdesk available — loading ticket options")
+		ticketOptions.fetch()
+	},
+	{ immediate: true }
+)
 
 const isDirty = computed(
 	() =>

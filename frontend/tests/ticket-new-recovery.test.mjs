@@ -13,7 +13,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import vm from "node:vm"
 import { readFileSync } from "node:fs"
-import { computed, reactive, ref, effectScope, nextTick } from "vue"
+import { computed, reactive, ref, watch, effectScope, nextTick } from "vue"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 const script = (path) => read(path).split("<script setup>")[1].split("</script>")[0]
@@ -51,8 +51,11 @@ function fixture({ failing = [] } = {}) {
 		computed,
 		reactive,
 		ref,
+		watch,
 		console: { info() {}, warn() {} },
 		FileAttachment,
+		// recovery runs on a site that has Helpdesk; the gate has its own test
+		helpdeskAvailable: reactive({ data: true }),
 		newTicket: {
 			loading: false,
 			submit: (payload) => {
