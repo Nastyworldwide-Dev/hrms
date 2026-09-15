@@ -45,6 +45,7 @@ from hrms.utils.company_fence import (
 	get_instance_companies,
 	plan_company_fence,
 )
+from hrms.utils.identity import own_employees
 from hrms.utils.user_permission_scope import (
 	ACTION_REVERT,
 	ACTION_SCOPED,
@@ -90,8 +91,10 @@ def sync_hrms_only_user_permission(doc, method=None):
 
 	# And after everything: an HR-sight user never leaves the save carrying a
 	# self allow=Employee permission, whichever branch (or ERPNext's own
-	# create_user_permission) put one there.
+	# create_user_permission) put one there — and a staff user never leaves it
+	# carrying one that names somebody else's record.
 	drop_self_employee_permission_for_hr(user_id)
+	realign_self_employee_permission(user_id)
 
 
 def drop_self_employee_permission_for_hr(user_id: str) -> list[str]:
@@ -125,12 +128,65 @@ def drop_self_employee_permission_for_hr(user_id: str) -> list[str]:
 	return rows
 
 
+def realign_self_employee_permission(user_id: str) -> int:
+	"""Point a staff user's `allow=Employee` User Permissions at the Employee
+	their login resolves to. Returns the number of rows moved.
+
+	ERPNext creates the self permission once, when the Employee is first
+	linked to the User, and never moves it. A record re-created after an
+	offboarding, a duplicate, or a mirror re-link leaves the row naming the
+	OLD record while `hrms.utils.identity.own_employees` — the one identity
+	rule the app and every row-scope fence use — resolves the login to the
+	new one. Frappe then fails the document's `employee` link against the
+	stale row and drops the caller to owner-only rights, which never include
+	create: "You need the 'create' permission on Attendance Request" for a
+	request in the person's OWN name (matrix probe, 15 Sep 2026: six of the
+	nine self-service doctypes refused for that one shape).
+
+	Same rule as patches.v16_0.realign_self_employee_permission, applied at
+	the two moments the shape can appear — an Employee save and a User save —
+	so the site never has to wait for the nightly heal. A login resolving to
+	zero or several employees is left alone (that is a reconciliation, not a
+	repair); an HR-sight user is the drop hook's business. `applicable_for`
+	and `is_default` are kept; nothing is created or deleted.
+	"""
+	if not user_id or user_id == "Administrator" or sees_all_employee_data(user_id):
+		return 0
+	own = own_employees(user_id)
+	if len(own) != 1:
+		logger.debug(
+			"[employee_hrms_scope] %s resolves to %d employee(s) — self rows left alone", user_id, len(own)
+		)
+		return 0
+	employee = own[0]
+	rows = frappe.get_all(
+		"User Permission", filters={"user": user_id, "allow": "Employee"}, fields=["name", "for_value"]
+	)
+	stale = [row.name for row in rows if row.for_value != employee]
+	for name in stale:
+		frappe.db.set_value("User Permission", name, "for_value", employee)
+	if stale:
+		frappe.clear_cache(user=user_id)
+		logger.info(
+			"[employee_hrms_scope] re-pointed %d self Employee permission(s) of %s at %s: %s",
+			len(stale),
+			user_id,
+			employee,
+			stale,
+		)
+	return len(stale)
+
+
 def drop_self_employee_permission_on_user_update(doc, method=None):
 	"""User.on_update: granting HR User / HR Manager on the User form touches
 	no Employee record, so the Employee hook never fires. The role cache is
-	cleared first so the predicate reads the rows this save just wrote."""
+	cleared first so the predicate reads the rows this save just wrote. The
+	realign runs here too: the keeper in employee_master re-adds the Employee
+	role on this same save, and a staff login must leave it with self rows
+	that name their own record."""
 	frappe.clear_cache(user=doc.name)
 	drop_self_employee_permission_for_hr(doc.name)
+	realign_self_employee_permission(doc.name)
 
 
 def sync_company_user_permission(doc, user_id: str):

@@ -153,5 +153,109 @@ class TestHooksReachTheDrop(unittest.TestCase):
 		self.assertTrue(found, "drop_self_employee_permission_on_user_update must be an on_update event")
 
 
+# --- the stale self permission --------------------------------------------------
+
+NEW, OLD = "HR-EMP-00200", "HR-EMP-00042"
+
+
+class TestRealignSelfEmployeePermission(unittest.TestCase):
+	"""15 Sep 2026, matrix probe: a plain employee whose allow=Employee User
+	Permission named a DIFFERENT record than the one their login resolves to
+	was refused their own Attendance Request, Compensatory Leave Request,
+	Remote Checkin Request, OT Request, Replacement Leave Claim and Employee
+	Issue — "You need the 'create' permission" — because Frappe drops a user
+	whose document fails a User Permission on a link field to owner-only
+	rights, which never include create. ERPNext creates the row once, when
+	the Employee is first linked, and never moves it; a re-created record
+	after an offboarding, a duplicate, or a mirror re-link leaves it stale.
+
+	The gate: every time an Employee with a user_id is saved, and every time
+	a User is saved, the self rows are pointed at the employee the login
+	resolves to. The realign patch does the same for rows already on the
+	site; the nightly heal re-runs it.
+	"""
+
+	def _realign(self, user, *, own, rows, hr_sight=False):
+		from hrms.overrides import employee_hrms_scope as scope
+
+		with (
+			patch.object(scope, "sees_all_employee_data", return_value=hr_sight),
+			patch.object(scope, "own_employees", return_value=list(own)),
+			patch.object(frappe, "get_all", return_value=[frappe._dict(r) for r in rows]),
+			patch.object(frappe.db, "set_value") as set_value,
+			patch.object(frappe, "clear_cache") as clear_cache,
+		):
+			moved = scope.realign_self_employee_permission(user)
+		return moved, set_value, clear_cache
+
+	def test_a_row_naming_another_employee_is_pointed_at_the_resolved_one(self):
+		moved, set_value, clear_cache = self._realign(
+			STAFF, own=[NEW], rows=[{"name": "UP-1", "for_value": OLD}, {"name": "UP-2", "for_value": NEW}]
+		)
+		self.assertEqual(moved, 1)
+		set_value.assert_called_once_with("User Permission", "UP-1", "for_value", NEW)
+		clear_cache.assert_called_once_with(user=STAFF)
+
+	def test_rows_already_right_are_not_written(self):
+		moved, set_value, clear_cache = self._realign(
+			STAFF, own=[NEW], rows=[{"name": "UP-2", "for_value": NEW}]
+		)
+		self.assertEqual(moved, 0)
+		set_value.assert_not_called()
+		clear_cache.assert_not_called()
+
+	def test_an_ambiguous_or_unlinked_login_is_left_for_reconciliation(self):
+		"""own_employees fails closed on two claimants; guessing would hand one
+		person the other's data. Nothing moves."""
+		moved, set_value, _ = self._realign(STAFF, own=[], rows=[{"name": "UP-1", "for_value": OLD}])
+		self.assertEqual(moved, 0)
+		set_value.assert_not_called()
+
+	def test_an_hr_sight_user_is_the_drop_hooks_business(self):
+		moved, set_value, _ = self._realign(
+			HR, own=[NEW], rows=[{"name": "UP-1", "for_value": OLD}], hr_sight=True
+		)
+		self.assertEqual(moved, 0)
+		set_value.assert_not_called()
+
+	def test_administrator_is_never_touched(self):
+		moved, set_value, _ = self._realign(
+			"Administrator", own=[NEW], rows=[{"name": "UP-1", "for_value": OLD}]
+		)
+		self.assertEqual(moved, 0)
+		set_value.assert_not_called()
+
+
+class TestHooksReachTheRealign(unittest.TestCase):
+	def test_employee_sync_ends_by_realigning_after_the_drop(self):
+		from hrms.overrides import employee_hrms_scope as scope
+
+		doc = frappe._dict(name=NEW, user_id=STAFF, company="NHSB", restrict_user_permission_to_hrms=0)
+		order = []
+		with (
+			patch.object(frappe, "get_all", return_value=[]),
+			patch.object(scope, "sync_company_user_permission"),
+			patch.object(
+				scope, "drop_self_employee_permission_for_hr", side_effect=lambda u: order.append("drop")
+			),
+			patch.object(
+				scope, "realign_self_employee_permission", side_effect=lambda u: order.append("realign")
+			),
+		):
+			scope.sync_hrms_only_user_permission(doc)
+		self.assertEqual(order, ["drop", "realign"])
+
+	def test_user_hook_realigns_too(self):
+		from hrms.overrides import employee_hrms_scope as scope
+
+		with (
+			patch.object(frappe, "clear_cache"),
+			patch.object(scope, "drop_self_employee_permission_for_hr"),
+			patch.object(scope, "realign_self_employee_permission") as realign,
+		):
+			scope.drop_self_employee_permission_on_user_update(frappe._dict(name=STAFF))
+		realign.assert_called_once_with(STAFF)
+
+
 if __name__ == "__main__":
 	unittest.main()
