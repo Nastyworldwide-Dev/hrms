@@ -39,6 +39,7 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import (
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between, holiday_list_covers
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, hold_punches, removed_by_hr
+from hrms.utils.leave_cover import request_covered_days
 
 logger = logging.getLogger(__name__)
 
@@ -788,9 +789,24 @@ class ShiftType(Document):
 		# day the employee punched under the other one; the real marking then
 		# failed as an overlap and the punches were stamped skip.
 		punched_dates = self.get_dates_with_checkins(employee, start_date, end_date)
+		# Owner ruling (15 Sep 2026): a day a Leave Application or Attendance
+		# Request speaks for — approved OR still awaiting a decision — is never
+		# resolved to Absent by the automation. An open leave has no Attendance
+		# row yet, so "dates with attendance" alone let the marker through.
+		held_dates = request_covered_days(employee, start_date, end_date)
+		if held_dates:
+			logger.info(
+				"[shift_type] %s: %d day(s) held from Absent marking by a leave or attendance request",
+				employee,
+				len(held_dates),
+			)
 
 		return sorted(
-			set(date_range) - set(holiday_dates) - set(marked_attendance_dates) - set(punched_dates)
+			set(date_range)
+			- set(holiday_dates)
+			- set(marked_attendance_dates)
+			- set(punched_dates)
+			- set(held_dates)
 		)
 
 	def get_dates_with_checkins(self, employee: str, start_date, end_date) -> list:
