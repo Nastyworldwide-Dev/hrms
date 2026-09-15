@@ -73,7 +73,7 @@ const sites = {
 	],
 	"../src/views/ot/OTRequestForm.vue": [
 		/formatHoursCap\(otSummary\.data\.punch_ot_hours\)/,
-		/formatHoursCap\(d\.hours\)/,
+		/formatHours: formatHoursCap/,
 		/formatHoursCap\(cap\)/,
 	],
 	"../src/views/ot/ReplacementLeaveClaimForm.vue": [
@@ -89,9 +89,10 @@ const sites = {
 test("every hours render goes through formatHours", () => {
 	for (const [path, patterns] of Object.entries(sites)) {
 		const source = read(path)
+		// formatHours or its cap-aware sibling; either way the one display rule.
 		assert.match(
 			source,
-			/import \{[^}]*formatHours[^}]*\} from "@\/utils\/formatters"/,
+			/import \{[^}]*formatHours(Cap)?[^}]*\} from "@\/utils\/formatters"/,
 			path
 		)
 		for (const pattern of patterns) assert.match(source, pattern, path)

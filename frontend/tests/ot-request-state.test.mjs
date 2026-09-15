@@ -33,6 +33,9 @@ const formatHoursSource = (() => {
 		)
 		.join("\n")
 })()
+// claimEmptyReason.js is plain ESM; the form's <script setup> calls its helpers
+// from computeds the tests evaluate, so it runs in the sandbox next to formatHours.
+const claimHelpersSource = read("../src/views/ot/claimEmptyReason.js").replace(/^export /gm, "")
 const script = (path) =>
 	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>
@@ -87,6 +90,7 @@ function fixture(id) {
 				: () => ({ format: () => "date" }),
 	})
 	vm.runInContext(formatHoursSource, context)
+	vm.runInContext(claimHelpersSource, context)
 	vm.runInContext(
 		executable(read("../node_modules/frappe-ui/src/resources/resources.js")),
 		context
@@ -392,8 +396,9 @@ test("claimed days are listed beside claimable ones, disabled and labelled by st
 
 test("claimed-day buttons carry native and accessible disabled semantics", () => {
 	const template = read(ot).split("<script setup>")[0]
-	assert.match(template, /:disabled="d\.claimed"/)
-	assert.match(template, /:aria-disabled="d\.claimed \? 'true' : undefined"/)
+	// A claimed day and an incomplete (unclaimable) day are both non-selectable rows.
+	assert.match(template, /:disabled="d\.disabled"/)
+	assert.match(template, /:aria-disabled="d\.disabled \? 'true' : undefined"/)
 	assert.match(template, /@click="pickDay\(d\)"/)
 })
 
