@@ -176,14 +176,33 @@ def _company_condition(doctype: str, user: str) -> str:
 	return f"`tab{doctype}`.`company` in ({values})"
 
 
-def _row_company(doc, doctype: str):
-	"""The company a row belongs to, resolved through the employee when needed."""
-	if doctype not in _COMPANY_VIA_EMPLOYEE:
-		return doc.get("company")
-	employee = doc.get(OWNED_DOCTYPES[doctype][0])
-	if not employee:
-		return None
-	return frappe.db.get_value("Employee", employee, "company")
+def _row_companies(doc, doctype: str) -> set[str]:
+	"""The companies a row belongs to — every one of them must be inside HR's fence.
+
+	A saved row answers with its stored `company`. An UNSAVED row cannot:
+	`Document.insert` runs `check_permission("create")` before
+	`_validate_links()`, which is where the `fetch_from: employee.company`
+	value is written, and the PWA never sends `company`. At check time the
+	field holds whatever Frappe's user default supplied — None for an "HR
+	(Instance)" user (several Company User Permissions, so no single default),
+	which refused HR their OWN Attendance Request with "You need the 'create'
+	permission"; or the fenced company for an "HR (Company)" user whatever
+	employee the row names, which let the fence pass a request the save then
+	stamped with another company. So an unsaved row is fenced on its
+	employee's company — the value the save will write — as well as any
+	company it already carries; nothing here can widen the fence.
+	"""
+	companies: set[str] = set()
+	stored = None if doctype in _COMPANY_VIA_EMPLOYEE else doc.get("company")
+	if stored:
+		companies.add(stored)
+	unsaved = bool(doc.get("__islocal")) or not doc.get("name")
+	if not stored or unsaved:
+		employee = doc.get(OWNED_DOCTYPES[doctype][0])
+		via_employee = frappe.db.get_value("Employee", employee, "company") if employee else None
+		if via_employee:
+			companies.add(via_employee)
+	return companies
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
@@ -229,14 +248,18 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		return True
 
 	if _is_hr(user):
-		allowed = company_visible(_row_company(doc, doctype), user)
+		# an empty set fails closed for a fenced user (company_visible(None)),
+		# and stays open for group HR, whose fence is empty
+		companies = _row_companies(doc, doctype) or {None}
+		allowed = all(company_visible(company, user) for company in companies)
 		if not allowed:
 			logger.info(
-				"[employee_owned_row_scope] HR user %s denied %s on %s %s — outside company fence",
+				"[employee_owned_row_scope] HR user %s denied %s on %s %s — %s outside company fence",
 				user,
 				ptype,
 				doctype,
 				doc.get("name"),
+				sorted(c for c in companies if c),
 			)
 		return allowed
 
