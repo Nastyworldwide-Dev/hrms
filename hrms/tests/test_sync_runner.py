@@ -2873,7 +2873,25 @@ class TestCostCenterIsTheErpsTree(_RunnerTestCase):
 				del sys.modules["frappe.utils.nestedset"]
 			else:
 				sys.modules["frappe.utils.nestedset"] = saved
-		self.assertEqual(calls, [("Cost Center", "parent_cost_center")])
+		# One argument: frappe v16's `rebuild_tree(doctype)` reads the parent
+		# field from the meta. A second argument is a TypeError the run swallows
+		# as a warning — and a tree that is never renumbered.
+		self.assertEqual(calls, [("Cost Center",)])
+
+	def test_an_incremental_pull_without_the_root_still_hangs_under_the_hub_root(self):
+		"""`modified >` sends the changed child alone; the root it names is
+		ERPNext's default "<company> - <abbr>", mapped onto whatever root the
+		hub holds — here one HR renamed."""
+		self.seed_parent("Company", "Acme", company_name="Acme", abbr="AC")
+		self.seed_parent(
+			"Cost Center", "Acme Group - AC", cost_center_name="Acme Group", company="Acme", is_group=1
+		)
+		_, result = self._sync([self._erp_tree()[1]])
+		self.assertEqual(result["inserted"], 1)
+		self.assertEqual(
+			self.store.rows("Cost Center")["Marketing - AC"]["parent_cost_center"], "Acme Group - AC"
+		)
+		self.assertNotIn("Acme - AC", self.store.rows("Cost Center"), "no second root")
 
 
 class TestAnUnconstrainedSelectConstrainsNothing(unittest.TestCase):

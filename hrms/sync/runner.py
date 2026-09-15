@@ -555,8 +555,10 @@ def localise_cost_center(row: dict, hub_abbr: str | None, hub_root: str | None, 
 	  already created here — mapped onto `hub_root`, never landed beside it.
 	  `remote_roots` remembers the mapping so a child that names the source's
 	  root as its parent is hung under the hub's. The `lft` read order means the
-	  root of a company is always seen before its children in a full pull; on an
-	  incremental pull the abbr rule below resolves the same name anyway;
+	  root of a company is always seen before its children in a full pull. On an
+	  incremental pull the root is not re-sent, so a parent that reads as
+	  ERPNext's default root name for the company ("<company> - <abbr>") is
+	  mapped onto `hub_root` too — which also covers a hub root HR has renamed;
 	* the abbr: the shell copied the source's, so the names normally agree. When
 	  HR has changed the hub's abbr since, every "<name> - <source abbr>" becomes
 	  "<name> - <hub abbr>", on the row and on its parent link, so the mirror
@@ -577,6 +579,8 @@ def localise_cost_center(row: dict, hub_abbr: str | None, hub_root: str | None, 
 			row["name"] = hub_root
 	elif parent in remote_roots:
 		row["parent_cost_center"] = remote_roots[parent]
+	elif hub_root and parent == f"{row.get('company')} - {hub_abbr or source_abbr}":
+		row["parent_cost_center"] = hub_root
 	return row
 
 
@@ -1665,7 +1669,7 @@ def _rebuild_cost_center_tree() -> None:
 	"all cost centers under Marketing" reports answer correctly."""
 	from frappe.utils.nestedset import rebuild_tree
 
-	rebuild_tree("Cost Center", "parent_cost_center")
+	rebuild_tree("Cost Center")
 	_log().info("[sync] rebuilt the Cost Center tree from mirrored parent links")
 
 
