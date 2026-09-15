@@ -182,8 +182,22 @@ class LeaveApplication(Document, PWANotificationsMixin):
 						)
 
 	def validate_dates(self):
-		if frappe.db.get_single_value("HR Settings", "restrict_backdated_leave_application"):
+		# "Restrict Backdated Leave Application" governs who may CREATE (or move)
+		# an application into the past. A decision on an existing one changes no
+		# date, yet approval submits the document and runs validate again — with
+		# the approver's roles and with "today" moved on — so a leave filed in
+		# time and decided a few days later was refused as "backdated" ("Cannot
+		# approve older leaves", 15 Sep 2026).
+		dates_set_now = self.is_new() or self.has_value_changed("from_date")
+		if dates_set_now and frappe.db.get_single_value(
+			"HR Settings", "restrict_backdated_leave_application"
+		):
 			if self.from_date and getdate(self.from_date) < getdate():
+				logger.info(
+					"[leave_application] backdated creation check for %s by %s",
+					self.name,
+					frappe.session.user,
+				)
 				allowed_role = frappe.db.get_single_value(
 					"HR Settings", "role_allowed_to_create_backdated_leave_application"
 				)
