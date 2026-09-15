@@ -472,6 +472,7 @@ def propagate_approval_decision(doc, method=None):
 			_announce_repair(doc.flags.late_checkout_repair)
 		else:
 			reapply_late_checkouts_unblocked_by(doc)
+			_remark_decided_day(doc)
 	else:  # Rejected
 		# skip_auto_attendance as well, or the rejection is cosmetic: the OT
 		# pairing engine and the PWA banner both read remote_approval_status,
@@ -487,6 +488,7 @@ def propagate_approval_decision(doc, method=None):
 			# which clears a late OUT's pending_punch blocker as surely as an
 			# approval does.
 			reapply_late_checkouts_unblocked_by(doc)
+		_remark_decided_day(doc)
 
 	logger.info(
 		"[remote_checkin_request] %s -> %s checkin=%s by=%s",
@@ -496,6 +498,23 @@ def propagate_approval_decision(doc, method=None):
 		frappe.session.user,
 	)
 	_notify_employee(doc, doc.status)
+
+
+def _remark_decided_day(doc) -> None:
+	"""Re-mark the decided punch's day right after commit (hrms.utils.day_remark).
+
+	15 Sep 2026 (Nor Syamira, weekly-off Saturday): the decision flipped the punch
+	flags and waited for the hourly job, so an approved rest-day pair showed nothing
+	for up to an hour, and a punch rejected after its day was marked never changed
+	the day at all — every punch was linked, so no job read it again. Never raises:
+	a refresh that cannot be queued must not undo the decision."""
+	try:
+		from hrms.utils.day_remark import punch_day, remark_day_after_commit
+
+		employee, day = punch_day(doc.checkin)
+		remark_day_after_commit(employee or doc.employee, day, f"{doc.name} {doc.status}")
+	except Exception:
+		logger.exception("[remote_checkin_request] could not queue the re-mark for %s", doc.name)
 
 
 def _skip_rejected_punch(doc) -> None:
