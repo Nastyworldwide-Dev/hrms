@@ -59,6 +59,17 @@ class TestInheritedCheckoutProperties(unittest.TestCase):
 		logger = patch("hrms.hr.doctype.remote_checkin_request.remote_checkin_request.logger")
 		logger.start()
 		self.addCleanup(logger.stop)
+		# The decision gate routes like hrms.api.approval: it reads the doctype a
+		# real Document always carries, the company fence and the caller's own
+		# employee. Pin those to "unfenced, no employee" so the generated roles and
+		# actors above stay the only inputs.
+		for seam in (
+			patch.object(RemoteCheckinRequest, "doctype", "Remote Checkin Request", create=True),
+			patch("hrms.overrides.company_scope.allowed_companies", return_value=[]),
+			patch("hrms.utils.identity.own_employees", return_value=[]),
+		):
+			seam.start()
+			self.addCleanup(seam.stop)
 
 	@settings(max_examples=80, deadline=None, derandomize=True)
 	@given(marker=JSON_VALUES, decision=st.sampled_from(["Approved", "Rejected"]))

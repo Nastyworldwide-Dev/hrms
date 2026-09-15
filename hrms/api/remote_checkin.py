@@ -35,8 +35,6 @@ logger = logging.getLogger(__name__)
 # that employee could never file a late check-out at all. No constant is right
 # here, so there is no longer a constant.
 
-HR_MANAGER_ROLE = "HR Manager"
-
 #: A forgotten check-out this long after the IN's shift actually ended (buffer
 #: included) is a typo, not a session: refused at filing with advice (E28).
 LATE_CHECKOUT_MAX_HOURS_AFTER_END = 12
@@ -84,10 +82,12 @@ def _ensure_approver(request_name: str) -> dict:
 	if not row:
 		frappe.throw(_("Request not found."))
 
+	# One rule with the Desk save gate: HR inside its fence, the approver on
+	# file, the reports_to manager — never the request's own employee.
+	from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import may_decide
+
 	user = frappe.session.user
-	roles = set(frappe.get_roles(user))
-	is_admin = bool(roles & {"System Manager", HR_MANAGER_ROLE})
-	if not (is_admin or user == row.approver):
+	if not may_decide(frappe._dict(row, doctype="Remote Checkin Request"), user):
 		logger.warning(
 			"[remote_checkin] DENY action by %s on %s (approver=%s)",
 			user,

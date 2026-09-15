@@ -46,18 +46,14 @@ class RemoteCheckinRequest(Document):
 			return
 
 		user = frappe.session.user
-		roles = set(frappe.get_roles(user))
-		is_admin = bool(roles & {"System Manager", HR_MANAGER_ROLE})
-		is_approver = user == self.approver
-
-		if not (is_admin or is_approver):
+		if not may_decide(self, user):
 			logger.warning(
 				"[remote_checkin_request] DENY status change by %s on %s (approver=%s)",
 				user,
 				self.name,
 				self.approver,
 			)
-			frappe.throw(_("Only the assigned approver or an HR Manager can approve/reject this request."))
+			frappe.throw(_("Only HR or the approver of this request can approve or reject it."))
 
 	def on_trash(self):
 		"""The punch this request was about stays — it is evidence — and says
@@ -125,6 +121,28 @@ class RemoteCheckinRequest(Document):
 		)
 		if not valid:
 			frappe.throw(_("Invalid inherited check-out approval."))
+
+
+def may_decide(request, user: str) -> bool:
+	"""May `user` approve or reject this remote check-in request?
+
+	The same people who decide every other request (hrms.api.approval): HR —
+	HR User included — inside its company fence, the approver on file, or the
+	reports_to manager. Never the request's own employee, whatever roles they
+	hold. The Desk save gate and the PWA endpoint (hrms.api.remote_checkin.
+	_ensure_approver) both ask here; each used to admit only System Manager /
+	HR Manager / the approver, so an HR User the rest of the app treats as HR
+	was refused, and an HR Manager could decide their own punch.
+	"""
+	from hrms.api.approval import _is_routed_approver
+	from hrms.utils.approved_request_guard import is_own_request
+	from hrms.utils.identity import normalize_login
+
+	approver = normalize_login(request.get("approver"))
+	is_approver = bool(approver) and approver == normalize_login(user)
+	allowed = not is_own_request(request, user) and (is_approver or _is_routed_approver(request, user))
+	logger.debug("[remote_checkin_request] %s may decide %s: %s", user, request.get("name"), allowed)
+	return allowed
 
 
 def get_previous_session_checkin(employee, checkout_time):
