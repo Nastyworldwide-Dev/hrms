@@ -22,6 +22,7 @@ hrms.approval.DECIDE_DOCTYPES = [
 	"OT Request",
 	"Attendance Request",
 	"Replacement Leave Claim",
+	"Compensatory Leave Request",
 ];
 
 hrms.approval.is_current = function (frm, review) {

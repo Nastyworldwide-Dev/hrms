@@ -14,14 +14,9 @@ class PWANotificationsMixin:
 	def notify_approval_status(self):
 		"""Send Leave Application, Expense Claim & Shift Request Approval status notification - to employees"""
 		status_field = self._get_doc_status_field()
-		if status_field:
-			status = self.get(status_field)
-			decided = self.has_value_changed(status_field)
-		else:
-			# No decision field (Compensatory Leave Request): submitting IS approving.
-			status, decided = ("Approved" if self.get("docstatus") == 1 else None), True
+		status = self.get(status_field)
 
-		if decided and status in ["Approved", "Rejected"]:
+		if self.has_value_changed(status_field) and status in ["Approved", "Rejected"]:
 			from_user = frappe.session.user
 			from_user_name = self._get_user_name(from_user)
 			to_user = self._get_employee_user()
@@ -67,8 +62,7 @@ class PWANotificationsMixin:
 			"OT Request": "status",
 			"Replacement Leave Claim": "status",
 			"Attendance Request": "status",
-			# no decision field: submitting IS approving
-			"Compensatory Leave Request": None,
+			"Compensatory Leave Request": "status",
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
 

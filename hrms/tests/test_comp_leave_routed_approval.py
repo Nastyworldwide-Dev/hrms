@@ -13,10 +13,11 @@ hrms.api.approval with elevated rights. Comp leave had none of it: nobody was
 told, the reports_to manager could not even read it, and only an HR role
 holding the submit DocPerm could approve.
 
-Comp leave has no decision field — submitting IS approving — so the approver
-is offered "Submit" by get_decision_actions and finalize elevates that submit
-for a routed approver who is not the request's own employee. The approver is
-the employee's leave_approver, else the reports_to manager.
+Since 15 Sep 2026 ("yes add that reject button") comp leave decides in a
+`status` field like Leave Application: get_decision_actions offers Approve and
+Reject, and decide elevates the routed approver who is not the request's own
+employee. The approver is the employee's leave_approver, else the reports_to
+manager.
 
 Bench-free:  python3 hrms/tests/test_comp_leave_routed_approval.py
 """
@@ -72,14 +73,18 @@ class _CompLeave(PWANotificationsMixin):
 	employee = STAFF
 	employee_name = "Staff"
 
-	def __init__(self, docstatus=0):
+	def __init__(self, docstatus=0, status="Open"):
 		self.docstatus = docstatus
+		self.status = status
 
 	def get(self, field):
 		return getattr(self, field, None)
 
 	def has_value_changed(self, field):
-		raise AssertionError("comp leave has no decision field to compare")
+		# decide() writes status then submits, so the decision is always a change
+		if field != "status":
+			raise AssertionError(f"comp leave decides in status, not {field}")
+		return True
 
 
 class TestTheMixinKnowsCompLeave(unittest.TestCase):
@@ -91,7 +96,7 @@ class TestTheMixinKnowsCompLeave(unittest.TestCase):
 		with patch.object(frappe, "db", _employee_db()):
 			self.assertEqual(_CompLeave()._get_doc_approver(), MANAGER_USER)
 
-	def test_submitting_tells_the_employee_it_was_approved(self):
+	def _notify(self, status):
 		sent = MagicMock()
 		with (
 			patch.object(frappe, "db", _employee_db()),
@@ -99,9 +104,19 @@ class TestTheMixinKnowsCompLeave(unittest.TestCase):
 			patch.object(frappe, "session", frappe._dict(user=MANAGER_USER)),
 			patch("hrms.mixins.pwa_notifications.bold", side_effect=str),
 		):
-			_CompLeave(docstatus=1).notify_approval_status()
+			_CompLeave(docstatus=1, status=status).notify_approval_status()
+		return sent
+
+	def test_approving_tells_the_employee_it_was_approved(self):
+		sent = self._notify("Approved")
 		self.assertEqual(sent.to_user, STAFF_USER)
 		self.assertIn("Approved", str(sent.message))
+		sent.insert.assert_called_once()
+
+	def test_rejecting_tells_the_employee_it_was_rejected(self):
+		sent = self._notify("Rejected")
+		self.assertEqual(sent.to_user, STAFF_USER)
+		self.assertIn("Rejected", str(sent.message))
 		sent.insert.assert_called_once()
 
 
@@ -128,53 +143,66 @@ class TestRouting(unittest.TestCase):
 		self.assertFalse(self._routed("stranger@example.com", leave_approver=LEAVE_APPROVER))
 
 
-class TestFinalizeSubmitsForTheRoutedApprover(unittest.TestCase):
+class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
+	"""Nabil, 15 Sep 2026: "yes add that reject button". Comp leave now decides
+	through decide() — Approve AND Reject — the shape Leave Application uses."""
+
 	def _doc(self):
 		doc = frappe._dict(
 			doctype=D,
 			name="HR-CMP-0001",
 			docstatus=0,
+			status="Open",
 			employee=STAFF,
 			modified="2026-09-15 10:00:00",
 			flags=frappe._dict(),
 		)
 		doc.check_permission = lambda ptype: None
+		doc.set = lambda field, value: doc.update({field: value})
 		doc.submit = lambda: doc.update(docstatus=1, flags_at_submit=dict(doc.flags))
 		return doc
 
-	def _run(self, user, fn, routed=True, can_submit=False):
+	def _run(self, user, fn, routed=True, native=False):
 		doc = self._doc()
 		with (
 			patch.object(frappe, "db", _employee_db()),
 			patch.object(frappe, "get_doc", return_value=doc),
-			patch.object(frappe, "has_permission", return_value=can_submit, create=True),
+			patch.object(frappe, "has_permission", return_value=native, create=True),
 			patch.object(frappe, "session", frappe._dict(user=user)),
 			patch.object(approval, "_request_read_allowed", return_value=True),
 			patch.object(approval, "_is_routed_approver", return_value=routed),
+			patch.object(approval, "get_permitted_fields", return_value=["status"]),
+			patch("frappe.model.workflow.get_workflow_name", return_value=None),
 		):
 			return doc, fn(D, doc.name)
 
-	def test_the_routed_approver_without_submit_permission_is_elevated(self):
-		doc, _ = self._run(MANAGER_USER, lambda dt, n: approval.finalize(dt, n, 1))
-		self.assertEqual(doc.docstatus, 1)
+	def test_the_approver_is_offered_approve_and_reject(self):
+		_, answer = self._run(MANAGER_USER, approval.get_decision_actions)
+		self.assertEqual(answer["actions"], ["Approved", "Rejected"])
+
+	def test_the_routed_approver_rejects_elevated_and_nothing_else_changes(self):
+		doc, state = self._run(MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Rejected"))
+		self.assertEqual((doc.status, doc.docstatus), ("Rejected", 1))
+		self.assertEqual(state["status"], "Rejected")
 		self.assertIs(doc.flags_at_submit.get("ignore_permissions"), True)
 
-	def test_the_approver_is_offered_submit(self):
-		_, answer = self._run(MANAGER_USER, approval.get_decision_actions)
-		self.assertEqual(answer["actions"], ["Submit"])
+	def test_the_routed_approver_approves(self):
+		doc, _ = self._run(MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Approved"))
+		self.assertEqual((doc.status, doc.docstatus), ("Approved", 1))
 
-	def test_the_employee_is_neither_offered_nor_elevated(self):
+	def test_the_employee_is_offered_nothing_and_cannot_decide_their_own(self):
 		_, answer = self._run(STAFF_USER, approval.get_decision_actions)
 		self.assertEqual(answer["actions"], [])
-		with self.assertRaises(frappe.PermissionError):
-			self._run(STAFF_USER, lambda dt, n: approval.finalize(dt, n, 1))
+		for status in ("Approved", "Rejected"):
+			with self.subTest(status=status), self.assertRaises(frappe.PermissionError):
+				self._run(STAFF_USER, lambda dt, n, s=status: approval.decide(dt, n, s))
 
 	def test_someone_not_routed_is_refused(self):
 		with self.assertRaises(frappe.PermissionError):
-			self._run("stranger@example.com", lambda dt, n: approval.finalize(dt, n, 1), routed=False)
+			self._run("stranger@example.com", lambda dt, n: approval.decide(dt, n, "Rejected"), routed=False)
 
 	def test_a_holder_of_submit_permission_is_not_elevated(self):
-		doc, _ = self._run("hr@example.com", lambda dt, n: approval.finalize(dt, n, 1), can_submit=True)
+		doc, _ = self._run("hr@example.com", lambda dt, n: approval.decide(dt, n, "Rejected"), native=True)
 		self.assertEqual(doc.docstatus, 1)
 		self.assertFalse(doc.flags_at_submit.get("ignore_permissions"))
 
