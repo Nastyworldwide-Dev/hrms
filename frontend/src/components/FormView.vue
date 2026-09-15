@@ -79,7 +79,10 @@
 					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">
+						<!-- One tab is no choice: its button does nothing and the strip only
+						     spends a sticky row (the expense claim's lone "Expenses"). -->
 						<div
+							v-if="tabs?.length > 1"
 							class="px-4 sticky top-0 z-overlay bg-ground text-sm font-medium text-center text-ink-600 border-b border-divider"
 						>
 							<ul class="flex -mb-px overflow-auto hide-scrollbar">
