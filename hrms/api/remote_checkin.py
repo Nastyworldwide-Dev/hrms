@@ -23,7 +23,7 @@ from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
 
 #: The PWA names the provider it got the fix from; the row stores a word HR can read.
 LOCATION_SOURCES = {"high": "GPS", "gps": "GPS", "coarse": "Network", "network": "Network"}
-from hrms.utils.identity import get_employee
+from hrms.utils.identity import get_employee, own_employees
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,23 @@ HR_MANAGER_ROLE = "HR Manager"
 LATE_CHECKOUT_MAX_HOURS_AFTER_END = 12
 
 
+def _is_own_employee(employee: str | None) -> bool:
+	"""Is `employee` the caller's own record — by the canonical resolver.
+
+	The three self-checks in this module (edit my request, punch as myself,
+	close my own session) compared `Employee.user_id` to the session raw. A
+	mirror writes that column through `db.set_value` with case or whitespace
+	drift; the app resolved the person, and these gates refused them their own
+	forgotten check-out with "You can only submit a late check-out for your own
+	session" (matrix probe, 15 Sep 2026). `own_employees` normalizes, is
+	Active-only and fails closed on a duplicated login, like every row scope.
+	"""
+	allowed = bool(employee) and employee in own_employees(frappe.session.user)
+	if not allowed:
+		logger.info("[remote_checkin] %s is not %s's own employee", employee, frappe.session.user)
+	return allowed
+
+
 def _ensure_owner(request_name: str) -> dict:
 	row = frappe.db.get_value(
 		"Remote Checkin Request",
@@ -52,8 +69,7 @@ def _ensure_owner(request_name: str) -> dict:
 	if not row:
 		frappe.throw(_("Request not found."))
 
-	employee_user = frappe.db.get_value("Employee", row.employee, "user_id")
-	if employee_user != frappe.session.user:
+	if not _is_own_employee(row.employee):
 		frappe.throw(_("You can only edit your own request."), frappe.PermissionError)
 	return row
 
@@ -448,8 +464,7 @@ def punch(
 		frappe.session.user,
 		accuracy,
 	)
-	employee_user = frappe.db.get_value("Employee", employee, "user_id")
-	if not employee_user or employee_user != frappe.session.user:
+	if not _is_own_employee(employee):
 		frappe.throw(_("You can only check in as yourself."), frappe.PermissionError)
 
 	if log_type not in ("IN", "OUT"):
@@ -765,8 +780,7 @@ def submit_late_checkout(in_checkin: str, checkout_datetime: str, reason: str) -
 	if not in_doc:
 		frappe.throw(_("Original check-in not found."))
 
-	employee_user = frappe.db.get_value("Employee", in_doc.employee, "user_id")
-	if employee_user != frappe.session.user:
+	if not _is_own_employee(in_doc.employee):
 		frappe.throw(
 			_("You can only submit a late check-out for your own session."),
 			frappe.PermissionError,

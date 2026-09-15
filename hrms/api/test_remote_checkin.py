@@ -40,6 +40,66 @@ EMPLOYEE = "EMP-0001"
 USER = "jane@example.com"
 
 
+class _Everyone(list):
+	"""Identity resolves for whichever employee a harness names: the cases in
+	this module are about punches and sessions, not about who the caller is.
+	`TestIdentityIsCanonical` narrows the seam to test the gate itself."""
+
+	def __contains__(self, item):
+		return True
+
+
+_IDENTITY_SEAM = patch.object(remote_checkin, "own_employees", side_effect=lambda user: _Everyone())
+
+
+def setUpModule():
+	_IDENTITY_SEAM.start()
+
+
+def tearDownModule():
+	_IDENTITY_SEAM.stop()
+
+
+class TestIdentityIsCanonical(unittest.TestCase):
+	"""The forgotten-check-out door (and punch, and edit-my-request) asks "is
+	this my employee?" through hrms.utils.identity.own_employees — never by
+	comparing Employee.user_id to the session raw. 15 Sep 2026: a user whose
+	user_id read "  Staff@Example.com " (mirror drift) was refused their own
+	late check-out with "You can only submit a late check-out for your own
+	session" while the app resolved them fine."""
+
+	def _gate(self, employee, own):
+		with (
+			patch.object(remote_checkin, "own_employees", return_value=list(own)) as resolver,
+			patch.object(remote_checkin, "frappe", SimpleNamespace(session=SimpleNamespace(user=USER))),
+		):
+			allowed = remote_checkin._is_own_employee(employee)
+		if employee:
+			resolver.assert_called_once_with(USER)
+		return allowed
+
+	def test_the_resolved_employee_is_mine(self):
+		self.assertTrue(self._gate(EMPLOYEE, own=[EMPLOYEE]))
+
+	def test_someone_elses_employee_is_not(self):
+		self.assertFalse(self._gate("EMP-0002", own=[EMPLOYEE]))
+
+	def test_no_resolvable_employee_fails_closed(self):
+		self.assertFalse(self._gate(EMPLOYEE, own=[]))
+		self.assertFalse(self._gate(None, own=[EMPLOYEE]))
+
+	def test_no_gate_in_this_module_reads_user_id_raw(self):
+		import ast
+		import inspect
+
+		tree = ast.parse(inspect.getsource(remote_checkin))
+		for fn in ("_ensure_owner", "punch", "submit_late_checkout"):
+			node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == fn)
+			for sub in ast.walk(node):
+				if isinstance(sub, ast.Constant) and sub.value == "user_id":
+					self.fail(f"{fn} compares user_id raw — use _is_own_employee")
+
+
 class _FakeDoc(SimpleNamespace):
 	"""Stands in for a new Employee Checkin document."""
 
