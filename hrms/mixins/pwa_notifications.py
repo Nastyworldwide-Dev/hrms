@@ -14,9 +14,14 @@ class PWANotificationsMixin:
 	def notify_approval_status(self):
 		"""Send Leave Application, Expense Claim & Shift Request Approval status notification - to employees"""
 		status_field = self._get_doc_status_field()
-		status = self.get(status_field)
+		if status_field:
+			status = self.get(status_field)
+			decided = self.has_value_changed(status_field)
+		else:
+			# No decision field (Compensatory Leave Request): submitting IS approving.
+			status, decided = ("Approved" if self.get("docstatus") == 1 else None), True
 
-		if self.has_value_changed(status_field) and status in ["Approved", "Rejected"]:
+		if decided and status in ["Approved", "Rejected"]:
 			from_user = frappe.session.user
 			from_user_name = self._get_user_name(from_user)
 			to_user = self._get_employee_user()
@@ -62,8 +67,21 @@ class PWANotificationsMixin:
 			"OT Request": "status",
 			"Replacement Leave Claim": "status",
 			"Attendance Request": "status",
+			# no decision field: submitting IS approving
+			"Compensatory Leave Request": None,
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
+
+	def _get_leave_approver_or_manager(self) -> str | None:
+		"""The employee's leave approver, else their reports_to manager's user —
+		the routing hrms.api.approval._is_routed_approver accepts for comp leave."""
+		leave_approver = frappe.db.get_value("Employee", self.employee, "leave_approver")
+		manager = None if leave_approver else frappe.db.get_value("Employee", self.employee, "reports_to")
+		approver = leave_approver or (
+			frappe.db.get_value("Employee", manager, "user_id") if manager else None
+		)
+		logger.debug("[pwa_notifications] %s approver resolved: %s", self.doctype, bool(approver))
+		return approver
 
 	def _get_doc_approver(self) -> str | None:
 		"""Who should be told. The field when there is one, otherwise resolved.
@@ -84,6 +102,8 @@ class PWANotificationsMixin:
 		field = APPROVER_FIELD.get(self.doctype)
 		if field:
 			return self.get(field)
+		if self.doctype == "Compensatory Leave Request":
+			return self._get_leave_approver_or_manager()
 		if self.doctype in ("OT Request", "Replacement Leave Claim", "Attendance Request"):
 			# Same routing as approval.decide accepts for all three: reports_to, then HR.
 			# Attendance Request used to fall through to the remote check-in shift

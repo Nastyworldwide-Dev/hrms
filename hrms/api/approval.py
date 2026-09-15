@@ -38,6 +38,15 @@ APPROVER_FIELD = {
 	"Shift Request": "approver",
 }
 
+#: Doctype -> the EMPLOYEE field naming its approver, for requests that carry no
+#: approver field of their own. Compensatory Leave Request goes to the employee's
+#: leave approver — the person Leave Application routes to — then reports_to.
+EMPLOYEE_APPROVER_FIELD = {"Compensatory Leave Request": "leave_approver"}
+
+#: Requests with no decision field: submitting IS approving. Their routed approver
+#: is offered "Submit" and finalize elevates it, as decide does for the others.
+SUBMIT_IS_APPROVAL = frozenset({"Compensatory Leave Request"})
+
 
 def _is_routed_approver(doc, user: str | None = None) -> bool:
 	"""Is the supplied user (by default the session) this request's approver?
@@ -81,11 +90,19 @@ def _is_routed_approver(doc, user: str | None = None) -> bool:
 	employee = doc.get("employee")
 	if not employee:
 		return False
+	from hrms.utils.identity import normalize_login, own_employees
+
+	on_employee = EMPLOYEE_APPROVER_FIELD.get(doc.doctype)
+	if on_employee and normalize_login(user):
+		approver = frappe.db.get_value("Employee", employee, on_employee)
+		if normalize_login(approver) == normalize_login(user):
+			logger.debug(
+				"[approval] routing %s %s -> %s via employee %s", doc.doctype, doc.name, user, on_employee
+			)
+			return True
 	# Canonical identity, not a raw user_id read: a reports_to manager whose
 	# mirror user_id drifted in case would otherwise be refused approval of their
 	# own report's request; ambiguous logins fail closed here too.
-	from hrms.utils.identity import own_employees
-
 	mine = own_employees(user)
 	if not mine:
 		return False
@@ -171,6 +188,23 @@ def _decision_access(doc, status: str = "Approved") -> str | None:
 		):
 			return "native"
 	return "routed" if _is_routed_approver(doc) else None
+
+
+def _submit_access(doc) -> str | None:
+	"""Who may submit — which IS approve — a request with no decision field.
+
+	The request's own employee never, whatever roles they hold (on_submit's
+	validate_self_submission double-guards it). A holder of the submit DocPerm
+	submits natively; otherwise the routed approver submits elevated, the same
+	shape _decision_access gives decide.
+	"""
+	if not _request_read_allowed(doc) or is_own_request(doc):
+		return None
+	if frappe.has_permission(doc.doctype, "submit", doc=doc):
+		return "native"
+	access = "routed" if _is_routed_approver(doc) else None
+	logger.debug("[approval] submit access for %s %s: %s", doc.doctype, doc.name, access)
+	return access
 
 
 def _state(doc) -> dict:
@@ -297,6 +331,10 @@ def _check_review_revision(doc, expected_modified: str | None) -> None:
 def get_decision_actions(doctype: str, name: str) -> dict:
 	"""Action-specific authority bound to the persisted revision being reviewed."""
 	logger.debug("[approval] checking available actions for %s", doctype)
+	if doctype in SUBMIT_IS_APPROVAL and frappe.db.exists(doctype, name):
+		doc = frappe.get_doc(doctype, name)
+		actions = ["Submit"] if doc.docstatus == 0 and _submit_access(doc) else []
+		return {"actions": actions, "modified": doc.get("modified") if actions else None}
 	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
 		return {"actions": [], "modified": None}
 	doc = frappe.get_doc(doctype, name)
@@ -434,6 +472,20 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 			frappe.throw(_("You are not permitted to decide this request."), frappe.PermissionError)
 		if access == "routed":
 			doc.flags.ignore_permissions = True
+	elif docstatus == SUBMIT and doctype in SUBMIT_IS_APPROVAL:
+		# No decision field: this submit IS the approval. The approver on file
+		# usually holds no submit DocPerm, so a routed one runs elevated.
+		access = _submit_access(doc)
+		if not access:
+			frappe.throw(_("This request is not routed to you for approval."), frappe.PermissionError)
+		if access == "routed":
+			doc.flags.ignore_permissions = True
+			logger.info(
+				"[approval] %s approves %s %s as routed approver (elevated)",
+				frappe.session.user,
+				doctype,
+				name,
+			)
 	else:
 		# HR OR THE APPROVER MAY CANCEL AN APPROVED REQUEST — Nabil, 14 Sep 2026.
 		# Reverses the 13 Sep "an approved request is never cancelled". The

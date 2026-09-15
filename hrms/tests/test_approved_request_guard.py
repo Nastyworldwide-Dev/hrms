@@ -117,7 +117,9 @@ def _cancel(
 		if doctype == "Salary Slip":
 			return paid_slip
 		if doctype == "Employee":
-			return {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}[fieldname]
+			# leave_approver: unset — comp leave's approver on file is not the caller here
+			fields = {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}
+			return fields.get(fieldname) if fieldname == "leave_approver" else fields[fieldname]
 		return None
 
 	db = MagicMock()

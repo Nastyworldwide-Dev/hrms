@@ -13,16 +13,27 @@ from hrms.hr.utils import (
 	create_additional_leave_ledger_entry,
 	get_holiday_dates_for_employee,
 	get_leave_period,
+	share_doc_with_approver,
 	validate_active_employee,
 	validate_dates,
 	validate_overlap,
 	validate_self_submission,
 )
+from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 logger = logging.getLogger(__name__)
 
 
-class CompensatoryLeaveRequest(Document):
+class CompensatoryLeaveRequest(Document, PWANotificationsMixin):
+	def after_insert(self):
+		# Once, when filed. Before this nobody was told, and the approver — usually
+		# holding only Employee — could not even read it; the share is that read
+		# (employee_owned_row_scope honours DocShare), as Expense Claim does.
+		approver = self._get_doc_approver()
+		logger.info("[comp_leave] %s filed for %s, approver %s", self.name, self.employee, approver)
+		share_doc_with_approver(self, approver)
+		self.notify_approver()
+
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_dates(self, self.work_from_date, self.work_end_date)
@@ -81,6 +92,8 @@ class CompensatoryLeaveRequest(Document):
 		# Shift Request run (an HR user could file and approve their own days).
 		validate_self_submission(self)
 		logger.info("[comp_leave] %s approved by %s for %s", self.name, frappe.session.user, self.employee)
+		# the employee hears the decision, like Leave and Attendance Request
+		self.notify_approval_status()
 		company = frappe.db.get_value("Employee", self.employee, "company")
 		date_difference = date_diff(self.work_end_date, self.work_from_date) + 1
 		if self.half_day:

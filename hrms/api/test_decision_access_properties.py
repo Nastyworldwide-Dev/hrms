@@ -29,7 +29,8 @@ namespace = {"frappe": frappe, "logger": logging.getLogger(__name__)}
 nodes = []
 for node in ast.parse(SOURCE.read_text()).body:
 	if isinstance(node, ast.Assign) and any(
-		getattr(t, "id", "") in {"DECIDE_THEN_SUBMIT", "DECISIONS"} for t in node.targets
+		getattr(t, "id", "") in {"DECIDE_THEN_SUBMIT", "DECISIONS", "SUBMIT_IS_APPROVAL"}
+		for t in node.targets
 	):
 		nodes.append(node)
 	if isinstance(node, ast.FunctionDef) and node.name in {
