@@ -61,6 +61,7 @@ class PWANotificationsMixin:
 			"Shift Request": "status",
 			"OT Request": "status",
 			"Replacement Leave Claim": "status",
+			"Attendance Request": "status",
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
 
@@ -83,8 +84,10 @@ class PWANotificationsMixin:
 		field = APPROVER_FIELD.get(self.doctype)
 		if field:
 			return self.get(field)
-		if self.doctype in ("OT Request", "Replacement Leave Claim"):
-			# Same routing as approval.decide accepts for both: reports_to, then HR.
+		if self.doctype in ("OT Request", "Replacement Leave Claim", "Attendance Request"):
+			# Same routing as approval.decide accepts for all three: reports_to, then HR.
+			# Attendance Request used to fall through to the remote check-in shift
+			# approver — the wrong person — and, with no mixin at all, notified nobody.
 			return self._get_ot_approver()
 
 		from hrms.overrides.remote_checkin_request_hooks import resolve_approver

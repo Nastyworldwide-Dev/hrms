@@ -15,6 +15,7 @@ from erpnext.setup.doctype.employee.employee import is_holiday
 
 import hrms
 from hrms.hr.utils import validate_active_employee, validate_dates
+from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,13 @@ class OverlappingAttendanceRequestError(frappe.ValidationError):
 	pass
 
 
-class AttendanceRequest(Document):
+class AttendanceRequest(Document, PWANotificationsMixin):
+	def after_insert(self):
+		# Once, when filed — not in validate, which runs on every save (see
+		# OTRequest.after_insert). Before this an Attendance Request notified
+		# nobody at all: it sat in a list until the manager scrolled past.
+		self.notify_approver()
+
 	def validate(self):
 		validate_active_employee(self.employee)
 		validate_dates(self, self.from_date, self.to_date, False)
@@ -161,6 +168,10 @@ class AttendanceRequest(Document):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
+		# The employee hears the decision here, like Leave, Shift and OT do —
+		# before this, an Attendance Request was approved or refused in silence.
+		logger.info("[attendance_request] %s decided %s by %s", self.name, self.status, frappe.session.user)
+		self.notify_approval_status()
 		if self.status == "Approved":
 			self.create_attendance_records()
 
