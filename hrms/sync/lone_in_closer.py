@@ -40,6 +40,7 @@ import frappe
 from frappe.utils import cint, get_datetime, getdate
 
 from hrms.sync.missing_checkins import DOCTYPE, REMOTE_FIELDS, _to_second, local_employees
+from hrms.utils.leave_cover import request_covered_days
 
 logger = logging.getLogger(__name__)
 
@@ -105,11 +106,14 @@ def near_duplicate(candidate_time: datetime, hub_taps) -> bool:
 	return any(abs(_to_second(tap.get("time")) - moment) <= DUPLICATE_TOLERANCE for tap in hub_taps)
 
 
-def protection_reason(rows, financial=None, removed_by_hr=False) -> str | None:
+def protection_reason(rows, financial=None, removed_by_hr=False, request=None) -> str | None:
 	"""Why this employee-day must not be closed, or None. Pure.
 
 	`rows` are the day's Attendance rows (docstatus < 2); `financial` is what
-	`_repair_financial_dependency` returned for the day.
+	`_repair_financial_dependency` returned for the day; `request` is the live
+	Leave Application or Attendance Request `_request_cover` found — an OPEN
+	one has no row yet, so the rows alone cannot say the employee already
+	called the day leave (owner ruling, 15 Sep 2026).
 	"""
 	if removed_by_hr:
 		return "removed by HR in Shift Attendance: HR hands it back first"
@@ -125,9 +129,16 @@ def protection_reason(rows, financial=None, removed_by_hr=False) -> str | None:
 			return f"{name} comes from an Attendance Request"
 		if not cint(row.get("auto_attendance")):
 			return f"{name} was marked by HR by hand"
+	if request:
+		return request
 	if financial:
 		return f"approved overtime or submitted payroll depends on this day ({financial})"
 	return None
+
+
+def _request_cover(employee: str, day: date) -> str | None:
+	"""The live Leave Application or Attendance Request speaking for the day, or None."""
+	return request_covered_days(employee, day, day).get(getdate(day))
 
 
 def _counted(tap) -> bool:
@@ -315,7 +326,10 @@ def plan_close_lone_ins(win, for_update=False) -> dict:
 			if any(r.get("out_time") for r in rows):
 				continue  # not lone: an out time is on the row already
 			reason = protection_reason(
-				rows, _financial(employee, day, rows, for_update), _removed_by_hr(employee, day)
+				rows,
+				_financial(employee, day, rows, for_update),
+				_removed_by_hr(employee, day),
+				request=_request_cover(employee, day),
 			)
 			if reason:
 				held.append(_held(employee, day, reason))

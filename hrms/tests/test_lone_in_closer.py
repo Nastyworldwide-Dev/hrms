@@ -156,6 +156,13 @@ class TestProtection(unittest.TestCase):
 		self.assertIn("SAL-1", closer.protection_reason([_row()], financial="SAL-1"))
 		self.assertIsNone(closer.protection_reason([_row()]))
 
+	def test_a_pending_leave_with_no_row_holds_the_day(self):
+		# an OPEN leave writes no Attendance row: the request is the protection
+		self.assertIn(
+			"HR-LAP-1",
+			closer.protection_reason([], request="Leave Application HR-LAP-1 (Open) covers it"),
+		)
+
 
 # --- the plan ----------------------------------------------------------------------------
 
@@ -188,6 +195,7 @@ class _Planned(unittest.TestCase):
 			patch.object(closer, "_client", return_value=self.client),
 			patch.object(closer, "_financial", return_value=None),
 			patch.object(closer, "_removed_by_hr", return_value=False),
+			patch.object(closer, "_request_cover", return_value=None, create=True),
 		]
 		for p in self.patches:
 			p.start()
@@ -237,6 +245,15 @@ class TestPlan(_Planned):
 		self.attendance = [_row(auto_attendance=0)]
 		plan = closer.plan_close_lone_ins(WIN)
 		self.assertIn("by hand", plan["held_back"][0]["reason"])
+		self.client.get_list.assert_not_called()
+
+	def test_a_day_under_a_pending_leave_never_reaches_the_erp(self):
+		self.attendance = []
+		with patch.object(
+			closer, "_request_cover", return_value="Leave Application HR-LAP-1 (Open) covers it", create=True
+		):
+			plan = closer.plan_close_lone_ins(WIN)
+		self.assertIn("HR-LAP-1", plan["held_back"][0]["reason"])
 		self.client.get_list.assert_not_called()
 
 	def test_a_day_with_an_out_time_on_the_row_is_not_lone(self):
