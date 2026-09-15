@@ -241,7 +241,9 @@ class TestBuriedForgottenCheckout(unittest.TestCase):
 			patch.object(frappe, "db", db),
 			patch.object(frappe, "session", frappe._dict(user="staff@example.com")),
 			patch.object(frappe, "local", _fresh_local()),
-			patch.object(frappe, "get_all", return_value=rows),
+			# The real query is `order_by="time desc"` and the rule reverses it; a
+			# fixture handed over ascending only passed at some hours of the day.
+			patch.object(frappe, "get_all", return_value=sorted(rows, key=lambda r: r.time, reverse=True)),
 			# identity resolution needs a bound site; the session rule under
 			# test does not, so the employee is given
 			patch.object(remote_checkin, "get_employee", return_value="HR-EMP-001"),
