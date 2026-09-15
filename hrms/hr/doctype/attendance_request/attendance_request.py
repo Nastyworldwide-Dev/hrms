@@ -51,20 +51,15 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		if len(attendance_warnings) == attendance_request_days and not any(
 			warning["action"] == "Overwrite" for warning in attendance_warnings
 		):
-			message_table = [[_("Date"), _("Reason"), _("Action")]]
-			for warning in attendance_warnings:
-				message_table.append(
-					[
-						format_date(warning["date"]),
-						_(warning["reason"]),
-						_(warning["action"]),
-					]
-				)
-			frappe.msgprint(
-				title=_("No attendance records to create due to following reasons"),
-				msg=message_table,
-				as_table=True,
-				raise_exception=True,
+			# One sentence, not a msgprint table: Desk rendered the table, the PWA
+			# showed the employee the raw list-of-lists it was built from.
+			days = ", ".join(
+				f"{format_date(warning['date'])} ({_(warning['reason'])})" for warning in attendance_warnings
+			)
+			logger.info("[attendance_request] %s creates nothing: %s", self.name, days)
+			frappe.throw(
+				_("No attendance to create: {0}.").format(frappe.bold(days)),
+				title=_("No attendance records to create"),
 			)
 
 	def validate_shifts(self):
