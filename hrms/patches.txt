@@ -112,3 +112,4 @@ hrms.patches.v16_0.add_unclaimable_days_link #2026-09-15 HR had no list of days 
 hrms.patches.v16_0.attendance_recovery_switches #2026-09-15 HR had no way to pause one recovery family without a redeploy
 hrms.patches.v16_0.run_attendance_recovery_v2_once #2026-09-15 queue the automatic attendance recovery 2026-08-01→yesterday once after the lost-OT release
 hrms.patches.v16_0.restore_staff_create_on_pwa_requests #2026-09-15 an employee filing an Attendance Request in Nadi was refused create; custom perm rows had lost the flag the JSON grants
+hrms.patches.v16_0.realign_self_employee_permission #2026-09-15 a self Employee User Permission naming another Employee record refused every request the person filed for themselves
