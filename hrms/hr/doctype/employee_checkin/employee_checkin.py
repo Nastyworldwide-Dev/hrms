@@ -1,6 +1,21 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+"""Employee Checkin: the punches, and the day they are marked into.
+
+LOCK ORDER — Attendance first, then Employee Checkin. A writer that touches
+both takes the day's Attendance row (`SELECT … FOR UPDATE`) BEFORE it updates
+the punches' `attendance` column, because that is the order
+`create_or_update_attendance` already takes on its way through
+`Attendance.validate_duplicate_record` (`get_duplicate_attendance_record`).
+
+`_link_to_hr_row` took them the other way round — punches first, while the
+other transaction held the Attendance row — and on 16 Sep 2026 two rebuilds of
+the same day met head-on in that cycle (verifica-live, two Error Logs, MariaDB
+1213). `update_attendance_in_checkins` now takes the row lock itself, so go
+through it rather than writing the `attendance` column by hand, and keep any
+new writer on this order.
+"""
 
 import logging
 from datetime import date, datetime, timedelta
@@ -897,6 +912,20 @@ def skip_punch(name: str, reason: str) -> None:
 
 
 def update_attendance_in_checkins(log_names: list, attendance_id: str):
+	"""Link these punches to their Attendance row — that row's own lock FIRST.
+
+	LOCK ORDER (see the note at the top of this module): Attendance, then
+	Employee Checkin. Both call sites come through here, so neither can take
+	the two the other way round and close the cycle.
+	"""
+	Attendance = frappe.qb.DocType("Attendance")
+	(
+		frappe.qb.from_(Attendance)
+		.select(Attendance.name)
+		.where(Attendance.name == attendance_id)
+		.for_update()
+	).run()
+	logger.debug("[checkin] %s locked before its %d punch(es) are linked", attendance_id, len(log_names))
 	EmployeeCheckin = frappe.qb.DocType("Employee Checkin")
 	(
 		frappe.qb.update(EmployeeCheckin)
