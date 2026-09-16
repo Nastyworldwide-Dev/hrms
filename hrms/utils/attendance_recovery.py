@@ -2285,11 +2285,61 @@ def before_rebuild(employee, day) -> tuple:
 	return row, evidence_shrank(row, day_taps(employee, day))
 
 
-def guarded_rebuild(employee, day, remark) -> dict:
+#: Part C's store for HR's Fix Day actions. The automatic rebuilds write to the
+#: SAME doctype — `source` says which path wrote the entry — so there is one log
+#: and one undo for a person's correction and a machine's alike.
+DAY_FIX_LOG = "HR Day Fix Log"
+
+
+def log_day_fix(employee, day, action, before=None, after=None, source="recovery") -> str | None:
+	"""Record one automatic day change in Part C's HR Day Fix Log. Never raises.
+
+	The doctype ships with Part C; while it is not installed this is a no-op —
+	a rebuild must not fail for want of its own logbook, and the day's own
+	Comment trail is written either way. Every other failure is swallowed for
+	the same reason: the day is already rebuilt when this runs.
+
+	The field names are the doctype's own — `fix_date`, `fixed_by`,
+	`before_state`, `after_state`. An earlier draft wrote `date`, `actor`,
+	`before` and `after`; Frappe drops unknown keys in silence, so those
+	entries would have inserted with no day, no author and no before/after,
+	which is worse than no entry at all because it reads like a record.
+	"""
+	import json
+
+	try:
+		if not frappe.db.exists("DocType", DAY_FIX_LOG):
+			logger.debug("[attendance_recovery] %s is not installed; no fix log written", DAY_FIX_LOG)
+			return None
+		doc = frappe.get_doc(
+			{
+				"doctype": DAY_FIX_LOG,
+				"source": source,
+				"employee": employee,
+				"fix_date": str(getdate(day)),
+				"action": action,
+				"fixed_by": frappe.session.user,
+				"before_state": json.dumps(before or {}, default=str),
+				"after_state": json.dumps(after or {}, default=str),
+				"undone": 0,
+			}
+		)
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		logger.info("[attendance_recovery] %s %s on %s logged as %s", source, action, day, doc.name)
+		return doc.name
+	except Exception:
+		logger.exception("[attendance_recovery] could not log the %s of %s on %s", action, employee, day)
+		return None
+
+
+def guarded_rebuild(employee, day, remark, source="recovery") -> dict:
 	"""Run `remark` for the day and roll it back when it made a submitted day worse (B4).
 
 	Returns the remark's own result, or `{"held": <before/after>, "hr": True}` when
-	the guard refused it — the caller lists that day for HR.
+	the guard refused it — the caller lists that day for HR. Either way the day's
+	before and after go to the shared day-fix log under `source`, so one day, one
+	employee or a whole run can be undone from one place.
 	"""
 	before, shrank = before_rebuild(employee, day)
 	frappe.db.savepoint(NEVER_WORSE_SAVEPOINT)
@@ -2298,6 +2348,15 @@ def guarded_rebuild(employee, day, remark) -> dict:
 	worse = rebuild_verdict(before, after, shrank)
 	if not worse:
 		logger.info("[attendance_recovery] %s on %s rebuilt, never-worse guard content", employee, day)
+		if result.get("marked"):
+			log_day_fix(
+				employee,
+				day,
+				"rebuild",
+				before=_row_summary(before) if before else None,
+				after=_row_summary(after) if after else None,
+				source=source,
+			)
 		return result
 	frappe.db.rollback(save_point=NEVER_WORSE_SAVEPOINT)
 	held = (
@@ -2306,6 +2365,14 @@ def guarded_rebuild(employee, day, remark) -> dict:
 		"— rolled back, HR decides"
 	)
 	logger.warning("[attendance_recovery] %s on %s rolled back: %s", employee, day, held)
+	log_day_fix(
+		employee,
+		day,
+		"rebuild-rolled-back",
+		before=_row_summary(before) if before else None,
+		after=_row_summary(after) if after else None,
+		source=source,
+	)
 	return {"held": held, "hr": True}
 
 

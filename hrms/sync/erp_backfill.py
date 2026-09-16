@@ -445,7 +445,9 @@ def _guarded_rebuild(employee: str, day: date) -> dict:
 	"""The engine's own re-mark of the day, under the never-worse guard (B4)."""
 	from hrms.utils import attendance_recovery as rec
 
-	return rec.guarded_rebuild(employee, getdate(day), rec._remark_released_day)
+	# `source` separates this run's entries from the recovery's in the shared
+	# HR Day Fix Log, so a reader can tell which path rebuilt the day.
+	return rec.guarded_rebuild(employee, getdate(day), rec._remark_released_day, source="erp_backfill")
 
 
 def rebuild_days(days, instance: str) -> dict:
