@@ -15,7 +15,7 @@ This module has two halves, and the reporting half comes first:
   ever GETs from the ERP (`RemoteInstanceClient` can issue nothing else) and
   writes nothing here;
 * the copy (`backfill_punches`) — insert-only, source-keyed, behind an HR
-  Settings switch that reads as OFF while its field does not exist.
+  Settings switch that reads as ON while its field does not exist.
 
 A punch within `DUPLICATE_TOLERANCE` of one on the other side is the SAME
 punch: the two clocks and the two apps do not agree to the second, and the
@@ -43,7 +43,7 @@ LAST_DAY = CUTOVER - timedelta(days=1)
 FLOOR = date(2026, 8, 1)
 #: Two taps this close are the same tap, on either side.
 DUPLICATE_TOLERANCE = timedelta(minutes=3)
-#: HR Settings Check; ABSENT OR UNTICKED = off. Only the copy asks it.
+#: HR Settings Check; ABSENT = on, UNTICKED = off. Only the copy asks it.
 SWITCH = "attendance_erp_backfill"
 #: HR Settings Small Text, comma-separated Employee ids; empty = everyone.
 PILOT = "attendance_rebuild_pilot_employees"
@@ -180,12 +180,17 @@ def resolve_window(from_date, to_date) -> tuple:
 
 
 def _enabled() -> bool:
-	"""HR Settings `attendance_erp_backfill`. A field that is absent reads as OFF."""
+	"""HR Settings `attendance_erp_backfill`. A field that is absent reads as ON.
+
+	Nabil, 16 Sep 2026: an EMERGENCY STOP, not a start gate — the copy runs on
+	deploy without anyone ticking a box, and HR unticks this to halt it.
+	"""
 	try:
-		return cint(frappe.get_single("HR Settings").get(SWITCH)) == 1
+		value = frappe.get_single("HR Settings").get(SWITCH)
 	except Exception:
-		logger.exception("[erp_backfill] could not read the %s switch; treating it as off", SWITCH)
-		return False
+		logger.exception("[erp_backfill] could not read the %s switch; it stays on", SWITCH)
+		return True
+	return True if value is None else bool(cint(value))
 
 
 def _pilot_text() -> str:

@@ -20,7 +20,7 @@ This module answers the question from what actually happened to the row:
   `auto_attendance` directly.
 * `relabel_system_rows` — writes `auto_attendance = 1` back onto rows this
   module proves are system-made, and onto nothing else. Behind an HR Settings
-  switch that is off until HR turns it on, and a pilot list that fences a run
+  switch that is ON until HR turns it off, and a pilot list that fences a run
   to named employees.
 
 Four owners, and UNSURE is treated as HR's by every caller. Fail safe: a row we
@@ -65,8 +65,8 @@ DECIDING_FIELDS = ("status", "in_time", "out_time", "working_hours")
 #: The HR master edit's own comment (attendance_master_edit._save).
 MASTER_EDIT_MARKER = "via Shift Attendance"
 
-#: HR Settings write switch (Custom Field, patches/v16_0/attendance_recovery_switches.py).
-#: An absent field reads as OFF: a deploy lands with nothing relabelled.
+#: HR Settings stop switch (Custom Field, patches/v16_0/attendance_recovery_switches.py).
+#: An absent field reads as ON: a deploy repairs the month without being asked.
 RELABEL_SWITCH = "attendance_ownership_relabel"
 #: HR Settings pilot list (Custom Field, comma-separated employee ids). Empty = everyone.
 PILOT_FIELD = "attendance_rebuild_pilot_employees"
@@ -352,8 +352,19 @@ def owner_counts(rows) -> dict:
 
 
 def relabel_enabled() -> bool:
-	"""The HR Settings write switch. An absent Custom Field reads as OFF."""
-	return bool(cint(frappe.get_single("HR Settings").get(RELABEL_SWITCH)))
+	"""The HR Settings stop switch. An absent Custom Field reads as ON.
+
+	Nabil, 16 Sep 2026: this is an EMERGENCY STOP, not a start gate. The deploy
+	repairs the month by itself, so nothing here waits for a person to tick a
+	box; HR unticks it to halt the relabel. A settings row that cannot be read is
+	not evidence of a stop either.
+	"""
+	try:
+		value = frappe.get_single("HR Settings").get(RELABEL_SWITCH)
+	except Exception:
+		logger.exception("[attendance_ownership] could not read %s; it stays on", RELABEL_SWITCH)
+		return True
+	return True if value is None else bool(cint(value))
 
 
 def pilot_employees() -> list[str]:
@@ -387,9 +398,8 @@ def relabel_system_rows(from_date, to_date, employees=None, dry_run=1) -> dict:
 	Only rows `classify_row` proves the machine made are touched: an HR row, a
 	leave or request row and an UNSURE row are counted and left exactly as they
 	are. Idempotent — a row that already carries the tick is not written again —
-	and refused outright while the HR Settings switch is off, so a deploy lands
-	with nothing changed. When the pilot list is set, only those employees are
-	read at all.
+	and refused outright once HR unticks the HR Settings stop switch, which is on
+	by default. When the pilot list is set, only those employees are read at all.
 	"""
 	dry = wants_dry_run(dry_run)
 	if not relabel_enabled():

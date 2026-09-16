@@ -12,9 +12,11 @@ sys.path[:0] = [
 	str(pathlib.Path(__file__).resolve().parents[2]),
 	str(pathlib.Path(__file__).resolve().parent),
 ]
+import _erpnext_stub
 import _frappe_stub
 
 _frappe_stub.install()
+_erpnext_stub.install()
 import frappe
 
 HRMS = pathlib.Path(__file__).resolve().parents[1]

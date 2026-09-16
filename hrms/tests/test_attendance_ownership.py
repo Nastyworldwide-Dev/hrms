@@ -338,11 +338,15 @@ class TestRelabel(unittest.TestCase):
 			out = own.relabel_system_rows(DAY, DAY, employees=employees, dry_run=dry_run)
 		return out, set_value, comment, lock
 
-	def test_the_switch_is_off_when_the_field_is_absent(self):
+	def test_the_switch_runs_when_the_field_is_absent(self):
+		# Nabil, 16 Sep 2026: the switch is an EMERGENCY STOP, not a start gate.
+		# An absent Custom Field used to mean "relabel nothing until a person
+		# ticks a box" — the mechanical work the owner refused. Absent now runs.
 		out, set_value, _comment, _lock = self._run({})
-		self.assertFalse(out["ok"])
-		self.assertIn("attendance_ownership_relabel", out["refused"])
-		set_value.assert_not_called()
+		self.assertTrue(out["ok"])
+		self.assertIsNone(out.get("refused"))
+		self.assertEqual([r["attendance"] for r in out["changed"]], ["ATT-SYS"])
+		set_value.assert_called_once()
 
 	def test_the_switch_off_refuses_even_a_dry_run(self):
 		out, set_value, _c, _l = self._run({"attendance_ownership_relabel": 0}, dry_run=1)
