@@ -33,6 +33,11 @@ from hrms.utils import attendance_recovery as rec
 TODAY = datetime(2026, 9, 14, 11, 0)
 YESTERDAY = date(2026, 9, 13)
 ROW_KEYS = {"employee", "date", "reason"}
+#: A person in the Desk created the row. Since Part A, ownership is read from
+#: evidence — a real-user `owner` with no punch behind the row is HR marking a
+#: day by hand — and a blank `auto_attendance` on its own proves nothing, so a
+#: row that is meant to be HR's says so with this.
+HR_USER = "hr@nasty.local"
 
 
 def _row(**extra):
@@ -129,7 +134,7 @@ class TestProtectedReason(unittest.TestCase):
 
 	def test_hr_hand_marked_leave_request_half_day_and_draft_are_held(self):
 		for row, word in (
-			(_row(auto_attendance=0), "HR"),
+			(_row(auto_attendance=0, owner=HR_USER), "HR"),
 			(_row(leave_type="Annual Leave", status="On Leave"), "leave"),
 			(_row(leave_application="HR-LAP-1"), "leave"),
 			(_row(attendance_request="HR-ARQ-1", status="Present"), "Attendance Request"),
@@ -141,7 +146,9 @@ class TestProtectedReason(unittest.TestCase):
 
 	def test_a_cancelled_row_protects_nothing(self):
 		self.assertIsNone(
-			rec.protected_reason(YESTERDAY, TODAY.date(), [_row(auto_attendance=0, docstatus=2)])
+			rec.protected_reason(
+				YESTERDAY, TODAY.date(), [_row(auto_attendance=0, owner=HR_USER, docstatus=2)]
+			)
 		)
 
 	def test_a_paid_day_is_held(self):
@@ -339,7 +346,7 @@ class TestRebuild(_Base):
 			frappe._dict(employee="E-RIA", shift_start=datetime(2026, 9, 14, 9, 0)),  # today
 		]
 		rows = {
-			("E-HR", date(2026, 9, 10)): [_row(auto_attendance=0, status="Present")],
+			("E-HR", date(2026, 9, 10)): [_row(auto_attendance=0, owner=HR_USER, status="Present")],
 			("E-LEAVE", date(2026, 9, 12)): [_row(leave_type="Annual Leave", status="On Leave")],
 		}
 		self.remark = MagicMock(side_effect=lambda e, d, apply: {"action": "remark", "marked": ["ATT-NEW"]})
@@ -465,7 +472,7 @@ class TestLeftoverVerdict(unittest.TestCase):
 		self.assertIsNone(_verdict(punch_times=[datetime(2026, 9, 11, 22, 0)]))
 
 	def test_hr_row_is_kept(self):
-		self.assertIn("HR", _verdict(_leftover(auto_attendance=0)))
+		self.assertIn("HR", _verdict(_leftover(auto_attendance=0, owner=HR_USER)))
 
 	def test_leave_half_day_leave_and_request_rows_are_kept(self):
 		for extra, word in (
@@ -518,6 +525,7 @@ class TestLeftoverRowsStep(_Base):
 				shift="Night",
 				status="Absent",
 				auto_attendance=0,
+				owner=HR_USER,
 			),
 			_row(name="ATT-SOLO", employee="E-SOLO", attendance_date=day, shift="Night", status="Absent"),
 		]
@@ -943,7 +951,7 @@ class _MirroredSite(_Base):
 		self.rows = [
 			_att("ATT-ABS", "E-BROKEN", date(2026, 8, 12)),
 			_att("ATT-OK", "E-OK", date(2026, 8, 13), status="Present", working_hours=8),
-			_att("ATT-HR", "E-HR", date(2026, 8, 14), auto_attendance=0),
+			_att("ATT-HR", "E-HR", date(2026, 8, 14), auto_attendance=0, owner=HR_USER),
 			_att("ATT-PAID", "E-PAID", date(2026, 8, 15)),
 			_att("ATT-ODD", "E-ODD", date(2026, 8, 17), status="Present", working_hours=8),
 			_att("ATT-NOP", "E-NOPUNCH", date(2026, 8, 19)),

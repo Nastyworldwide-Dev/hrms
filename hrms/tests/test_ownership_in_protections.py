@@ -88,8 +88,13 @@ class TestWithoutTheClassifier(unittest.TestCase):
 	"""The module is not installed: the old reading stands, exactly as before."""
 
 	def setUp(self):
-		self.addCleanup(sys.modules.pop, MODULE, None)
-		sys.modules.pop(MODULE, None)
+		# Part A ships the module ON DISK, so popping it from sys.modules only
+		# makes the next import re-read it. Mapping the name to None is what
+		# `import` treats as "not installed" (ImportError), which is the state
+		# this class is about.
+		absent = patch.dict(sys.modules, {MODULE: None})
+		absent.start()
+		self.addCleanup(absent.stop)
 
 	def test_a_blank_tick_is_still_hr_owned(self):
 		for reason in _protections([_row(auto_attendance=0)]):

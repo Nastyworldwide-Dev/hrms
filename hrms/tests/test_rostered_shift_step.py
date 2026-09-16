@@ -34,6 +34,9 @@ TODAY = datetime(2026, 9, 14, 11, 0)
 DAY, NIGHT = "8AM-6PM", "7PM-3.30AM"
 TIMES = {DAY: ("08:00:00", "18:00:00"), NIGHT: ("19:30:00", "07:00:00")}
 RIA, NITE = "E-RIA", "E-NITE"
+#: A person in the Desk created the row. Since Part A that — not a blank
+#: `auto_attendance` — is what says "HR's" to `attendance_ownership.classify_row`.
+HR_USER = "hr@nasty.local"
 
 
 def _tap(name, moment, shift, shift_start, attendance=None, employee=RIA, **extra):
@@ -380,6 +383,7 @@ class TestPlan(_Step):
 
 	def test_a_wrong_row_hr_marked_by_hand_holds_its_day_on_purpose(self):
 		self.rows[1].auto_attendance = 0  # ATT-N8
+		self.rows[1].owner = HR_USER  # ... and a person, not the job, created it
 		plan = self.plan()
 		held = {h["date"]: h for h in plan["held_back"]}
 		self.assertIn("marked by HR by hand", held["2026-09-08"]["reason"])

@@ -34,6 +34,9 @@ TODAY = datetime(2026, 9, 14, 11, 0)
 DAY, NIGHT, EVENING = "8AM-6PM", "7PM-3.30AM", "5PM-2AM"
 TIMES = {DAY: ("08:00:00", "18:00:00"), NIGHT: ("19:30:00", "07:00:00"), EVENING: ("17:00:00", "02:00:00")}
 LEAVE = "ATT-L is a leave record"
+#: A person in the Desk created the row. Since Part A that — not a blank
+#: `auto_attendance` — is what says "HR's" to `attendance_ownership.classify_row`.
+HR_USER = "hr@nasty.local"
 
 
 def _tap(name, moment, log_type="IN", **extra):
@@ -476,7 +479,7 @@ class TestPresentWithoutLiveTaps(_Planners):
 		self.assertIn("all 1 linked tap(s) rejected", plan["planned"][0]["reason"])
 
 	def test_an_hr_hand_marked_present_row_is_on_purpose(self):
-		rows = [_row("ATT-1", "2026-09-02", auto_attendance=0)]
+		rows = [_row("ATT-1", "2026-09-02", auto_attendance=0, owner=HR_USER)]
 		plan = rec._plan_present_without_live_taps(self.win, ctx=self.ctx([], rows))
 		self.assertEqual((plan["planned"], plan["held_back"]), ([], []))
 

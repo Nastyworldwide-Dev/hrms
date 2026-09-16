@@ -17,9 +17,11 @@ from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import _erpnext_stub
 import _frappe_stub
 
 _frappe_stub.install()
+_erpnext_stub.install()
 
 import frappe
 
@@ -28,6 +30,10 @@ from hrms.sync import lone_in_closer as closer
 Window = namedtuple("Window", "start end")
 WIN = Window(date(2026, 8, 1), date(2026, 9, 13))
 EMP = "HR-EMP-00001"
+#: A person in the Desk created the row. Since Part A, that — not a blank
+#: `auto_attendance` — is what says "HR's" to `attendance_ownership.classify_row`:
+#: a real-user `owner` with no punch behind the row is HR marking a day by hand.
+HR_USER = "hr@nasty.local"
 INSTANCE = "erp-live"
 IN_TIME = datetime(2026, 9, 2, 8, 30)
 
@@ -148,7 +154,7 @@ class TestLoneInDays(unittest.TestCase):
 class TestProtection(unittest.TestCase):
 	def test_each_protection_holds(self):
 		self.assertIn("removed by HR", closer.protection_reason([], removed_by_hr=True))
-		self.assertIn("by hand", closer.protection_reason([_row(auto_attendance=0)]))
+		self.assertIn("by hand", closer.protection_reason([_row(auto_attendance=0, owner=HR_USER)]))
 		self.assertIn("leave", closer.protection_reason([_row(leave_type="Annual Leave")]))
 		self.assertIn("half-day", closer.protection_reason([_row(modify_half_day_status=1)]))
 		self.assertIn("Attendance Request", closer.protection_reason([_row(attendance_request="AR-1")]))
@@ -242,7 +248,7 @@ class TestPlan(_Planned):
 		)
 
 	def test_a_protected_day_never_reaches_the_erp(self):
-		self.attendance = [_row(auto_attendance=0)]
+		self.attendance = [_row(auto_attendance=0, owner=HR_USER)]
 		plan = closer.plan_close_lone_ins(WIN)
 		self.assertIn("by hand", plan["held_back"][0]["reason"])
 		self.client.get_list.assert_not_called()
