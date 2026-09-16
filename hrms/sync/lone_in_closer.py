@@ -106,6 +106,21 @@ def near_duplicate(candidate_time: datetime, hub_taps) -> bool:
 	return any(abs(_to_second(tap.get("time")) - moment) <= DUPLICATE_TOLERANCE for tap in hub_taps)
 
 
+def _owner_hold(row) -> str | None:
+	"""Why this row's OWNER holds the day, or None when the system owns it.
+
+	The one supplier both protections ask (`attendance_recovery.owner_hold`): a
+	blank `auto_attendance` is not evidence of a person — the field was added on
+	1 September 2026 with no backfill and ERP copies never carried it.
+	"""
+	from hrms.utils.attendance_recovery import owner_hold
+
+	held = owner_hold(row)
+	if held:
+		logger.info("[lone_in_closer] %s is not the system's: %s", row.get("name"), held)
+	return held
+
+
 def protection_reason(rows, financial=None, removed_by_hr=False, request=None) -> str | None:
 	"""Why this employee-day must not be closed, or None. Pure.
 
@@ -127,8 +142,9 @@ def protection_reason(rows, financial=None, removed_by_hr=False, request=None) -
 			return f"{name} is a half-day leave"
 		if row.get("attendance_request"):
 			return f"{name} comes from an Attendance Request"
-		if not cint(row.get("auto_attendance")):
-			return f"{name} was marked by HR by hand"
+		held = _owner_hold(row)
+		if held:
+			return held
 	if request:
 		return request
 	if financial:
