@@ -169,6 +169,70 @@ def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False
 	return None
 
 
+#: Status ranking for the never-worse guard: a rebuild may raise it, never lower it.
+STATUS_RANK = {None: 0, "Absent": 1, "Half Day": 2, "Present": 3, "Work From Home": 3}
+#: Working hours may not fall by more than this (rounding, not a loss).
+HOURS_SLACK = 0.01
+NEVER_WORSE_SAVEPOINT = "attendance_recovery_never_worse"
+
+
+def evidence_shrank(row, taps) -> bool:
+	"""Did this day's own evidence get SMALLER since the row was marked? Pure.
+
+	A tap rejected by an approver, skip-stamped by HR, or deleted is less
+	evidence than the row was built from, so a lower result is then the truth
+	and the never-worse guard stands aside. `row` is the submitted Attendance;
+	`taps` are the day's Employee Checkins (any state). `row["linked"]`, when
+	given, is how many taps the row was built from.
+	"""
+	live = [
+		t
+		for t in taps
+		if t.get("remote_approval_status") != "Rejected" and not cint(t.get("skip_auto_attendance"))
+	]
+	if len(live) < len(taps):
+		return True  # a rejected or skip-stamped tap
+	linked = row.get("linked") if row else None
+	if linked is not None and len(taps) < cint(linked):
+		return True  # a tap the row was built from is gone
+	if row and row.get("out_time") and not any(t.get("log_type") == "OUT" for t in live):
+		return True  # the row closed on a tap that is no longer here
+	return False
+
+
+def rebuild_verdict(before, after, evidence_shrank: bool) -> str | None:
+	"""Why an AUTOMATIC rebuild of this day must be rolled back, or None. Pure.
+
+	B4 (16 Sep 2026): the engine re-marks a day from the punches it can see. When
+	those are incomplete — an OUT that only the old ERP holds, a shift that no
+	longer resolves — the rebuild turns a submitted Present into Absent or drops
+	its hours, and the person loses pay for a day they worked. No automatic path
+	may do that. It may always make a day BETTER, and it may make it worse when
+	the day's evidence shrank (`evidence_shrank`); anything else goes back and
+	on to HR's list with the before and after spelled out.
+
+	Only a SUBMITTED row is guarded: a draft or a missing row is HR's and is held
+	by `protected_reason` before this is ever reached.
+	"""
+	if not before or cint(before.get("docstatus")) != 1 or evidence_shrank:
+		return None
+	old_status, new_status = before.get("status"), (after or {}).get("status")
+	old_rank = STATUS_RANK.get(old_status, 3)
+	new_rank = STATUS_RANK.get(new_status, 0) if after else 0
+	if new_rank < old_rank:
+		return (
+			f"the rebuild would turn a submitted {old_status} into "
+			f"{new_status or 'no attendance at all'} with no rejected or deleted tap to show for it"
+		)
+	old_hours, new_hours = flt(before.get("working_hours")), flt((after or {}).get("working_hours"))
+	if new_hours < old_hours - HOURS_SLACK:
+		return (
+			f"the rebuild would cut {old_status} from {old_hours} h to {new_hours} h "
+			"with no rejected or deleted tap to show for it"
+		)
+	return None
+
+
 def _minutes(value) -> int:
 	"""Minutes past midnight of a Shift Type time (timedelta, time, datetime or 'HH:MM:SS')."""
 	if isinstance(value, timedelta):
@@ -2139,15 +2203,73 @@ def _apply_late_checkout(entry) -> dict:
 	return {"held": reason, "hr": hr}
 
 
+def submitted_row(employee, day):
+	"""The day's one submitted Attendance, or None."""
+	return next((r for r in _attendance_rows(employee, day) if cint(r.get("docstatus")) == 1), None)
+
+
+def day_taps(employee, day) -> list:
+	"""Every tap stamped onto this shift day, any state — the day's evidence."""
+	start = datetime.combine(getdate(day), time.min)
+	taps = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["employee", "=", employee],
+			["shift_start", ">=", start],
+			["shift_start", "<", start + timedelta(days=1)],
+		],
+		fields=["name", "log_type", "attendance", "skip_auto_attendance", "remote_approval_status"],
+		limit_page_length=0,
+	)
+	logger.debug("[attendance_recovery] %s on %s: %d tap(s) of evidence", employee, day, len(taps))
+	return taps
+
+
+def before_rebuild(employee, day) -> tuple:
+	"""(the submitted row as it stands, did its evidence shrink?) — read before a rebuild."""
+	row = submitted_row(employee, day)
+	if not row:
+		logger.debug("[attendance_recovery] %s on %s has no submitted row to protect", employee, day)
+		return None, False
+	return row, evidence_shrank(row, day_taps(employee, day))
+
+
+def guarded_rebuild(employee, day, remark) -> dict:
+	"""Run `remark` for the day and roll it back when it made a submitted day worse (B4).
+
+	Returns the remark's own result, or `{"held": <before/after>, "hr": True}` when
+	the guard refused it — the caller lists that day for HR.
+	"""
+	before, shrank = before_rebuild(employee, day)
+	frappe.db.savepoint(NEVER_WORSE_SAVEPOINT)
+	result = remark(employee, day, True) or {}
+	after = submitted_row(employee, day)
+	worse = rebuild_verdict(before, after, shrank)
+	if not worse:
+		logger.info("[attendance_recovery] %s on %s rebuilt, never-worse guard content", employee, day)
+		return result
+	frappe.db.rollback(save_point=NEVER_WORSE_SAVEPOINT)
+	held = (
+		f"{worse} (before: {before.get('status')} {flt(before.get('working_hours'))} h; "
+		f"after: {(after or {}).get('status') or 'none'} {flt((after or {}).get('working_hours'))} h) "
+		"— rolled back, HR decides"
+	)
+	logger.warning("[attendance_recovery] %s on %s rolled back: %s", employee, day, held)
+	return {"held": held, "hr": True}
+
+
 def _rebuild_day(entry, win) -> dict:
 	day = getdate(entry["date"])
 	if day > win.end:
 		raise frappe.ValidationError(f"{day} is today or later")
+	logger.debug("[attendance_recovery] rebuilding %s on %s", entry["employee"], day)
 	_lock_employee(entry["employee"])
 	if entry.get("late_checkout"):
 		return _apply_late_checkout(entry)
 	remark = _remark_released_day if entry.get("released") else _remark_day
-	result = remark(entry["employee"], day, True) or {}
+	result = guarded_rebuild(entry["employee"], day, remark)
+	if result.get("held"):
+		return result
 	for name in result.get("marked") or []:
 		frappe.get_doc("Attendance", name).add_comment(
 			"Comment",
