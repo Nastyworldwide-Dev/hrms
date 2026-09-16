@@ -448,20 +448,33 @@ def _guarded_rebuild(employee: str, day: date) -> dict:
 	return rec.guarded_rebuild(employee, getdate(day), rec._remark_released_day)
 
 
-def rebuild_days(days) -> dict:
+def rebuild_days(days, instance: str) -> dict:
 	"""Rebuild every copied employee-day through the engine, oldest first.
 
-	Per-employee lock, small batches, resumable: a day already rebuilt marks the
-	same result the second time, so a killed run is simply re-run. Never raises —
-	one bad day is held for HR and the rest go on.
+	The instance lock is taken here in its own right: the insert phase's last
+	commit released it, so without this the whole rebuild would race a sync that
+	started meanwhile. Per-day savepoint, per-employee lock, small batches,
+	resumable — a day already rebuilt marks the same result the second time.
+	Never raises: one bad day is held for HR and the rest go on.
 	"""
+	ordered = sorted(days, key=lambda pair: (pair[1], str(pair[0])))
+	if not _lock(instance):
+		logger.warning("[erp_backfill] %s: sync running, no day rebuilt", instance)
+		return {
+			"rebuilt": [],
+			"held_back": [
+				{"employee": e, "date": str(d), "reason": "sync running, skipped", "hr": False}
+				for e, d in ordered
+			],
+		}
 	rebuilt, held = [], []
-	for index, (employee, day) in enumerate(sorted(days, key=lambda pair: (pair[1], str(pair[0]))), start=1):
+	for index, (employee, day) in enumerate(ordered, start=1):
 		entry = {"employee": employee, "date": str(day)}
 		reason = _protection(employee, day, True)
 		if reason:
 			held.append({**entry, "reason": reason, "hr": True})
 			continue
+		frappe.db.savepoint(ROW_SAVEPOINT)
 		try:
 			_lock_employee(employee)
 			result = _guarded_rebuild(employee, day)
@@ -475,7 +488,14 @@ def rebuild_days(days) -> dict:
 		else:
 			rebuilt.append({**entry, "marked": result.get("marked") or []})
 		if index % COMMIT_EVERY == 0:
+			# The commit releases the instance lock; take it again or stop here.
 			frappe.db.commit()
+			if index < len(ordered) and not _lock(instance):
+				held.extend(
+					{"employee": e, "date": str(d), "reason": "sync running, skipped", "hr": False}
+					for e, d in ordered[index:]
+				)
+				break
 	frappe.db.commit()
 	logger.info("[erp_backfill] rebuilt %d day(s), held %d", len(rebuilt), len(held))
 	return {"rebuilt": rebuilt, "held_back": held}
@@ -512,6 +532,13 @@ def _insert_all(planned, instance: str) -> dict:
 				continue
 			logger.exception("[erp_backfill] %s could not be copied", entry["remote_name"])
 			held.append({**entry, "reason": f"could not be inserted: {exc}", "hr": True})
+			continue
+		if name is None:
+			# The same second is already on the hub: nothing was written, so
+			# nothing may be reported as written (insert_source_punch's own
+			# best-effort re-check).
+			already += 1
+			logger.info("[erp_backfill] %s is already here; not inserted", entry["remote_name"])
 			continue
 		inserted.append({**entry, "checkin": name})
 		if index % COMMIT_EVERY == 0:
@@ -551,14 +578,19 @@ def backfill_punches(from_date, to_date, employees=None, dry_run=1) -> dict:
 		scope = _employees_in_scope(instance, pilot_employees(_pilot_text(), employees))
 		hub = _hub_punches(scope, start, end)
 		client = _client(instance)
-		planned, refused = [], []
+		planned, refused, seen = [], [], {}
 		for employee in scope:
 			found, dropped = plan_backfill(
 				employee, _erp_punches(client, employee, start, end), hub.get(employee, []), start, end
 			)
 			refused.extend(dropped)
 			for entry in found:
-				reason = _protection(entry["employee"], getdate(entry["date"]), apply)
+				key = (entry["employee"], entry["date"])
+				# One protection read per employee-day, not per punch: it takes a
+				# row lock, and several punches of one day ask the same question.
+				if key not in seen:
+					seen[key] = _protection(entry["employee"], getdate(entry["date"]), apply)
+				reason = seen[key]
 				if reason:
 					refused.append({**entry, "reason": reason, "hr": True})
 				else:
@@ -570,7 +602,7 @@ def backfill_punches(from_date, to_date, employees=None, dry_run=1) -> dict:
 			return _outcome(False, note="another import holds the lock, skipped", instance=instance)
 		written = _insert_all(planned, instance)
 		days = {(entry["employee"], getdate(entry["date"])) for entry in written["inserted"]}
-		rebuild = rebuild_days(sorted(days, key=lambda pair: (pair[1], pair[0]))) if days else {}
+		rebuild = rebuild_days(sorted(days, key=lambda pair: (pair[1], pair[0])), instance) if days else {}
 	except Exception as exc:
 		logger.exception("[erp_backfill] run crashed")
 		return _outcome(not apply, note=f"the copy stopped: {exc}")

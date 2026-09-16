@@ -141,8 +141,9 @@ class _CopyCase(unittest.TestCase):
 		self.inserted.append(entry)
 		return f"EC-NEW-{len(self.inserted)}"
 
-	def _rebuild(self, days):
+	def _rebuild(self, days, instance):
 		self.rebuilt = list(days)
+		self.rebuild_instance = instance
 		return {"rebuilt": [{"employee": e, "date": str(d)} for e, d in days], "held_back": []}
 
 	def run_copy(self, **kwargs):
@@ -155,6 +156,15 @@ class TestCopyGuards(_CopyCase):
 		self.assertEqual(len(out["inserted"]), 1)
 		self.assertEqual(self.inserted[0]["time"], "2026-08-17 18:00:00")
 		self.assertEqual(self.rebuilt, [(EMP, DAY)])
+		self.assertEqual(self.rebuild_instance, "erp-live", "the rebuild needs the instance to re-lock it")
+
+	def test_a_punch_already_here_is_not_reported_as_copied(self):
+		"""insert_source_punch returns None when the same second is already on the
+		hub: nothing was written, so nothing may be reported as written."""
+		with patch.object(bf, "_insert", return_value=None):
+			out = self.run_copy()
+		self.assertEqual(out["inserted"], [])
+		self.assertEqual(out["already_imported"], 1)
 
 	def test_the_switch_off_copies_nothing(self):
 		with patch.object(bf, "_enabled", return_value=False):
@@ -244,6 +254,7 @@ class TestRebuildDays(unittest.TestCase):
 		patches = [
 			patch.object(frappe, "db", self.db),
 			patch.object(bf, "_lock_employee", side_effect=self.locked.append),
+			patch.object(bf, "_lock", return_value=True),
 			patch.object(bf, "_protection", return_value=None),
 			patch.object(bf, "_guarded_rebuild", side_effect=self._rebuild),
 		]
@@ -259,28 +270,50 @@ class TestRebuildDays(unittest.TestCase):
 		return {"marked": [f"HR-ATT-{day.day}"]}
 
 	def test_days_are_rebuilt_oldest_first_under_the_employee_lock(self):
-		out = bf.rebuild_days([(EMP, date(2026, 8, 19)), (EMP, DAY)])
+		out = bf.rebuild_days([(EMP, date(2026, 8, 19)), (EMP, DAY)], "erp-live")
 		self.assertEqual(self.guarded, [(EMP, DAY), (EMP, date(2026, 8, 19))])
 		self.assertEqual(self.locked, [EMP, EMP])
 		self.assertEqual(len(out["rebuilt"]), 2)
 
 	def test_a_day_the_never_worse_guard_refused_is_listed_for_hr(self):
 		self.held[DAY] = "would turn Present into Absent"
-		out = bf.rebuild_days([(EMP, DAY)])
+		out = bf.rebuild_days([(EMP, DAY)], "erp-live")
 		self.assertEqual(out["rebuilt"], [])
 		self.assertIn("Present into Absent", out["held_back"][0]["reason"])
 		self.assertTrue(out["held_back"][0]["hr"])
 
 	def test_a_protected_day_is_not_rebuilt(self):
 		with patch.object(bf, "_protection", return_value="HR-ATT-1 is a leave record"):
-			out = bf.rebuild_days([(EMP, DAY)])
+			out = bf.rebuild_days([(EMP, DAY)], "erp-live")
 		self.assertEqual(self.guarded, [])
 		self.assertIn("leave", out["held_back"][0]["reason"])
 
 	def test_it_commits_in_batches_and_never_raises(self):
 		with patch.object(bf, "_guarded_rebuild", side_effect=RuntimeError("engine blew up")):
-			out = bf.rebuild_days([(EMP, DAY)])
+			out = bf.rebuild_days([(EMP, DAY)], "erp-live")
 		self.assertIn("engine blew up", out["held_back"][0]["reason"])
+
+	def test_each_day_is_rebuilt_inside_its_own_savepoint(self):
+		"""The except branch rolls back to ROW_SAVEPOINT, so ROW_SAVEPOINT must
+		have been taken — a rollback to a savepoint that was never set is itself
+		an error, and it would take the whole run down with it."""
+		bf.rebuild_days([(EMP, DAY)], "erp-live")
+		self.db.savepoint.assert_called_with(bf.ROW_SAVEPOINT)
+
+	def test_the_rebuild_holds_the_instance_lock(self):
+		"""The insert phase's last commit released it; a sync starting now must win."""
+		with patch.object(bf, "_lock", return_value=False):
+			out = bf.rebuild_days([(EMP, DAY)], "erp-live")
+		self.assertEqual(self.guarded, [])
+		self.assertIn("sync running", out["held_back"][0]["reason"])
+
+	def test_the_lock_is_taken_again_after_each_commit(self):
+		days = [(EMP, date(2026, 8, 1) + timedelta(days=i)) for i in range(bf.COMMIT_EVERY + 1)]
+		with patch.object(bf, "_lock", side_effect=[True, False]) as lock:
+			out = bf.rebuild_days(days, "erp-live")
+		self.assertEqual(lock.call_count, 2)
+		self.assertEqual(len(out["rebuilt"]), bf.COMMIT_EVERY)
+		self.assertIn("sync running", out["held_back"][0]["reason"])
 
 
 if __name__ == "__main__":
