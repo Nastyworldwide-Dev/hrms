@@ -45,8 +45,24 @@ test("the window starts where recovery starts and ends yesterday", () => {
 	assert.ok(JS.includes("frappe.datetime.add_days(frappe.datetime.get_today(), -1)"));
 });
 
-test("the page is read-only: no call, no button, no confirm", () => {
-	assert.ok(!JS.includes("frappe.call"));
-	assert.ok(!JS.includes("add_inner_button"));
+// The report itself still writes nothing and still asks the server nothing of
+// its own. Its ONE button is an entry point: it hands the ticked employee-day
+// to the Fix Day screen, which owns every correction and every guard.
+test("the page computes nothing itself: no call, no confirm", () => {
+	assert.ok(!JS.includes("frappe.call"), "the report makes no server call of its own");
 	assert.ok(!JS.includes("frappe.confirm"));
+});
+
+test("its only button is the Fix entry point into the Fix Day screen", () => {
+	const buttons = [...JS.matchAll(/add_inner_button\(__\("([^"]+)"\)/g)].map((m) => m[1]);
+	assert.deepStrictEqual(buttons, ["Fix"]);
+	assert.ok(JS.includes('frappe.require("fix_day.bundle.js"'), "the screen is loaded on demand");
+	assert.ok(JS.includes("hrms.fix_day.open("), "the screen is opened for the ticked row");
+	// and only HR sees it
+	assert.ok(JS.includes("if (ud_hr()) report.page.add_inner_button"));
+});
+
+test("the Fix entry point never sends hours or overtime", () => {
+	assert.ok(!JS.includes("working_hours"));
+	assert.ok(!JS.includes("ot_hours"));
 });

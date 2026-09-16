@@ -25,6 +25,8 @@ add_to_apps_screen = [
 # include js, css files in header of desk.html
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
+	# HR's Fix Day screen, opened from Employee Checkin / the two attendance reports.
+	"fix_day.bundle.js",
 	"hrms.bundle.js",
 ]
 app_include_css = "hrms.bundle.css"

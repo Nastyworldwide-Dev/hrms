@@ -119,9 +119,32 @@ class ShiftAttendanceGrid {
 		page.add_inner_button(__("Add row"), () => this.add_row(), group);
 		page.add_inner_button(__("Add / change shift"), () => this.change_shift(), group);
 		page.add_inner_button(__("Hand back to system"), () => this.hand_back_selected(), group);
+		page.add_inner_button(__("Fix day"), () => this.fix_day(), group);
 		console.info("[ShiftAttendance] edit tools shown");
 		this.guard_refresh();
 		this.update_indicator();
+	}
+
+	// Entry point only. The master edit above types a day's result; the Fix Day
+	// screen (hrms/public/js/fix_day.bundle.js) corrects the day's EVIDENCE —
+	// which taps count and which session they belong to — and lets the engine
+	// recompute hours and OT. Nothing about that day is decided here.
+	fix_day() {
+		const days = this.require_selection();
+		if (!days.length) return;
+		if (days.length !== 1) {
+			frappe.msgprint(__("Tick exactly one day to fix."));
+			return;
+		}
+		const day = days[0];
+		console.info("[ShiftAttendance] fix day", day.employee, day.attendance_date);
+		frappe.require("fix_day.bundle.js", () => {
+			hrms.fix_day.open({
+				employee: day.employee,
+				date: day.attendance_date,
+				on_close: () => this.reload(),
+			});
+		});
 	}
 
 	// --- cell editing ---------------------------------------------------------

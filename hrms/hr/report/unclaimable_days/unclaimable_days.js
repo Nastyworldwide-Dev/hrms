@@ -3,6 +3,34 @@
 
 // Read-only. The rows come from hrms/utils/attendance_recovery.py's detectors;
 // nothing on this page writes. Today is never read (the server clips to yesterday).
+//
+// "Fix" is an ENTRY POINT and nothing more: it opens the Fix Day screen
+// (hrms/public/js/fix_day.bundle.js) for the ticked row's employee-day. Every
+// correction and every guard lives there and in hrms.api.attendance_fix_day;
+// this report still computes nothing and writes nothing itself.
+const UD_HR_ROLES = ["HR User", "HR Manager", "System Manager"];
+
+function ud_hr() {
+	return UD_HR_ROLES.some((role) => frappe.user.has_role(role));
+}
+
+function ud_fix(report) {
+	const rows = (report.get_checked_items && report.get_checked_items()) || [];
+	const day = rows.length === 1 ? rows[0] : null;
+	if (!day || !day.employee || !day.date) {
+		frappe.msgprint(__("Tick exactly one row to fix."));
+		return;
+	}
+	console.info("[UnclaimableDays] fix", day.employee, day.date);
+	frappe.require("fix_day.bundle.js", () => {
+		hrms.fix_day.open({
+			employee: day.employee,
+			date: day.date,
+			on_close: () => report.refresh(),
+		});
+	});
+}
+
 frappe.query_reports["Unclaimable Days"] = {
 	filters: [
 		{
@@ -39,6 +67,14 @@ frappe.query_reports["Unclaimable Days"] = {
 			options: ["", "fixable", "on purpose", "needs HR"],
 		},
 	],
+
+	onload(report) {
+		if (ud_hr()) report.page.add_inner_button(__("Fix"), () => ud_fix(report));
+	},
+
+	get_datatable_options(options) {
+		return ud_hr() ? Object.assign(options, { checkboxColumn: true }) : options;
+	},
 
 	formatter(value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);

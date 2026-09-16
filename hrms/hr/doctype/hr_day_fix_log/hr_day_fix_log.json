@@ -1,0 +1,221 @@
+{
+ "actions": [],
+ "autoname": "format:HRFIX-{YY}-{MM}-{#####}",
+ "creation": "2026-09-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "source",
+  "run",
+  "employee",
+  "employee_name",
+  "fix_date",
+  "action",
+  "column_break_1",
+  "refs",
+  "reason",
+  "fixed_by",
+  "state_section",
+  "before_state",
+  "after_state",
+  "rebuild",
+  "undo_section",
+  "undone",
+  "undone_on",
+  "column_break_2",
+  "undone_by",
+  "undo_of"
+ ],
+ "fields": [
+  {
+   "description": "Which writer made this entry. One log serves HR's Fix Day screen and the automatic backfills, so a reader can always tell a person's correction from a machine's.",
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source",
+   "options": "hr_fix_day\nerp_backfill\nrecovery",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "The batch this entry belongs to, for a writer that changes many employee-days in one pass. Undoing a whole run means undoing every entry carrying this value. Empty for a single correction.",
+   "fieldname": "run",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fix_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Day Fixed",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "What the writer did, in its own words (pair_taps, move_tap, ignore_tap, restore_tap, add_tap, undo_fix for the Fix Day screen; a backfill names its own steps). Deliberately free text, not a Select, so a second writer needs no schema change.",
+   "fieldname": "action",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Action",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The records this action touched, comma separated — Employee Checkin names from the Fix Day screen, whatever rows a backfill changed.",
+   "fieldname": "refs",
+   "fieldtype": "Small Text",
+   "label": "Records Touched",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fixed_by",
+   "fieldtype": "Link",
+   "label": "Fixed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "state_section",
+   "fieldtype": "Section Break",
+   "label": "Before and After"
+  },
+  {
+   "description": "The day as it stood before this action, with each touched tap exactly as it was. The undo reads this.",
+   "fieldname": "before_state",
+   "fieldtype": "Code",
+   "label": "Before",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "The day as the engine re-marked it after this action.",
+   "fieldname": "after_state",
+   "fieldtype": "Code",
+   "label": "After",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "What the re-mark through hrms.utils.day_remark answered for each day.",
+   "fieldname": "rebuild",
+   "fieldtype": "Code",
+   "label": "Rebuild",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "undo_section",
+   "fieldtype": "Section Break",
+   "label": "Undo"
+  },
+  {
+   "default": "0",
+   "fieldname": "undone",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Undone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "undone_on",
+   "fieldtype": "Datetime",
+   "label": "Undone On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "undone_by",
+   "fieldtype": "Link",
+   "label": "Undone By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "description": "The entry this one undid.",
+   "fieldname": "undo_of",
+   "fieldtype": "Link",
+   "label": "Undo Of",
+   "options": "HR Day Fix Log",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "HR Day Fix Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}
