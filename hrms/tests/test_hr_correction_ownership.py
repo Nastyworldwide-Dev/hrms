@@ -70,6 +70,28 @@ class TestAnAmendmentIsHRs(unittest.TestCase):
 		att.Attendance.claim_hr_ownership_on_amend(row)
 		self.assertEqual(row.auto_attendance, 1)
 
+	def test_the_helper_is_how_an_automated_path_says_so(self):
+		"""One helper raises the flag, so a path that forgets it is a missing call.
+
+		Only employee_checkin.py's provisional repair ever set the flag by hand,
+		so an amendment from any other automated path — the ERP re-mark, the
+		remote check-in repair, recovery — was claimed as HR's for ever, and 9
+		Sep 2026 read "Present (HR)" though no person touched it.
+		"""
+		row = _Row()
+		self.assertIs(att.mark_automation_rebuild(row), row)
+		self.assertTrue(att.is_automation_rebuild(row))
+		att.Attendance.claim_hr_ownership_on_amend(row)
+		self.assertEqual(row.auto_attendance, 1)
+
+	def test_a_row_nobody_marked_is_not_an_automated_rebuild(self):
+		self.assertFalse(att.is_automation_rebuild(_Row()))
+
+	def test_the_rule_asks_the_helper_rather_than_the_flag(self):
+		body = (HRMS / "hr/doctype/attendance/attendance.py").read_text()
+		rule = body[body.index("def claim_hr_ownership_on_amend") : body.index("def apply_manual_times")]
+		self.assertIn("is_automation_rebuild(self)", rule)
+
 	def test_a_plain_new_row_is_left_alone(self):
 		row = _Row(amended_from=None)
 		att.Attendance.claim_hr_ownership_on_amend(row)
@@ -87,7 +109,12 @@ class TestAnAmendmentIsHRs(unittest.TestCase):
 		self.assertIn("claim_hr_ownership_on_amend", calls)
 		self.assertLess(calls.index("claim_hr_ownership_on_amend"), calls.index("apply_manual_times"))
 		src = (HRMS / "hr/doctype/employee_checkin/employee_checkin.py").read_text()
-		self.assertIn("replacement.flags.automation_rebuild = True", src)
+		self.assertIn("mark_automation_rebuild(replacement)", src)
+		self.assertNotIn(
+			"flags.automation_rebuild = True",
+			src,
+			"automated paths say so through the shared helper, not by raising the flag themselves",
+		)
 
 
 class TestACorrectedSubmittedRowIsHRs(unittest.TestCase):
