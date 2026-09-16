@@ -2469,11 +2469,30 @@ def guarded_rebuild(employee, day, remark, source="recovery") -> dict:
 	The day is this pass's own for the length of the rebuild: the punch links the
 	engine writes under it must not queue a second rebuild of the same day, which
 	is what deadlocked against this one (`hrms.utils.day_remark.rebuilding`).
-	"""
-	from hrms.utils.day_remark import rebuilding
 
-	with rebuilding(employee, getdate(day)):
-		return _rebuild_under_guard(employee, day, remark, source)
+	A deadlock against another writer takes the transaction with it, so the whole
+	rebuild is run again — it re-reads the day and re-marks it from scratch, so a
+	retry writes what the first try would have. A day that loses every try is
+	held for the nightly pass instead of raising into the worker.
+	"""
+	from hrms.utils.day_remark import despite_deadlock, rebuilding
+
+	day = getdate(day)
+
+	def rebuild():
+		with rebuilding(employee, day):
+			return _rebuild_under_guard(employee, day, remark, source)
+
+	return despite_deadlock(
+		rebuild, f"rebuild {employee} on {day}", give_up=lambda: _deadlocked_day(employee, day)
+	)
+
+
+def _deadlocked_day(employee, day) -> dict:
+	"""Held, but not HR's to decide: the nightly pass rebuilds it for free."""
+	reason = "the database deadlocked on this day three times — left for the nightly pass"
+	logger.warning("[attendance_recovery] %s on %s: %s", employee, day, reason)
+	return {"held": reason, "hr": False}
 
 
 def _rebuild_under_guard(employee, day, remark, source="recovery") -> dict:

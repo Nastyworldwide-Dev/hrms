@@ -30,6 +30,8 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta
 from functools import partial
+from random import uniform
+from time import sleep
 
 import frappe
 from frappe.utils import getdate
@@ -138,13 +140,79 @@ def punch_day(checkin):
 	return row.employee, getdate(row.shift_start or row.time)
 
 
+#: MariaDB: 1213 deadlock, 1205 lock-wait timeout. Either way the transaction is
+#: gone — not just the statement — so the whole unit has to be run again.
+LOST_TRANSACTION_CODES = (1205, 1213)
+#: Tries per unit, and the base of the jittered wait between them.
+DEADLOCK_ATTEMPTS = 3
+DEADLOCK_BACKOFF = 0.2
+
+
+def _lost_types() -> tuple:
+	pair = (getattr(frappe, "QueryDeadlockError", None), getattr(frappe, "QueryTimeoutError", None))
+	return tuple(t for t in pair if isinstance(t, type))
+
+
+def is_lost_transaction(exc) -> bool:
+	"""A deadlock or lock-wait timeout, by class or by MariaDB's own error code."""
+	args = getattr(exc, "args", None)
+	return isinstance(exc, _lost_types()) or (bool(args) and args[0] in LOST_TRANSACTION_CODES)
+
+
+def despite_deadlock(unit, describe, attempts=DEADLOCK_ATTEMPTS, give_up=None):
+	"""Run `unit`, and run it AGAIN when a deadlock took the transaction with it.
+
+	Every unit here re-reads the day and re-marks it from scratch, so running it
+	twice writes what running it once would have; and the alternative to a retry
+	is a day nobody marks. After `attempts` the loss is recorded ONCE and
+	`give_up` answers — the day is left to the nightly pass, and nothing raises
+	into the worker, where it would only become another Error Log.
+	"""
+	for attempt in range(1, attempts + 1):
+		try:
+			return unit()
+		except Exception as exc:
+			if not is_lost_transaction(exc):
+				raise
+			frappe.db.rollback()
+			if attempt >= attempts:
+				logger.error(
+					"[day_remark] %s: deadlocked %d times; left for the nightly pass", describe, attempts
+				)
+				_record_deadlock(describe, attempts)
+				return give_up() if give_up else None
+			logger.warning("[day_remark] %s: deadlock on try %d of %d; retrying", describe, attempt, attempts)
+			sleep(uniform(DEADLOCK_BACKOFF, DEADLOCK_BACKOFF * 2 * attempt))
+
+
+def _record_deadlock(describe, attempts) -> None:
+	"""One Error Log for a day that lost every try — never one per attempt."""
+	try:
+		frappe.log_error(
+			title="Day re-mark left for the nightly pass",
+			message=f"{describe}: the database deadlocked {attempts} times",
+		)
+	except Exception:
+		logger.exception("[day_remark] could not record the deadlock of %s", describe)
+
+
 def remark_day(employee, day, reason=""):
 	"""The job: re-mark one past employee-day through the engine, unless it is protected.
 
 	The day is this job's own while it runs, so the links and skip stamps the
-	engine writes under it cannot queue the same day a second time.
+	engine writes under it cannot queue the same day a second time; and a
+	deadlock against another writer is retried rather than raised at the worker.
 	"""
 	day = getdate(day)
+	return despite_deadlock(
+		lambda: _remark_owning_the_day(employee, day, reason),
+		f"{employee} on {day} ({reason})",
+		give_up=lambda: {"action": "deadlocked"},
+	)
+
+
+def _remark_owning_the_day(employee, day, reason=""):
+	logger.debug("[day_remark] %s on %s: taking the day", employee, day)
 	with rebuilding(employee, day):
 		return _remark_once(employee, day, reason)
 

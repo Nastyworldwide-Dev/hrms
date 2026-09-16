@@ -480,6 +480,87 @@ class TestEveryDecisionAsksForTheRemark(unittest.TestCase):
 		notify.assert_called_once()
 
 
+class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
+	"""Both 16 Sep Error Logs were this job raising MariaDB 1213 at the worker,
+	which left the day unmarked until the nightly pass and told nobody. The unit
+	re-reads the day and re-marks it from scratch, so it is simply run again."""
+
+	def _run(self, deadlocks, final=None):
+		from hrms.utils import day_remark as dr
+
+		class _Deadlock(Exception):
+			pass
+
+		calls, answer = [], final if final is not None else {"action": "remarked"}
+
+		def once(employee, day, reason=""):
+			calls.append(day)
+			if len(calls) <= deadlocks:
+				raise _Deadlock()
+			return answer
+
+		db, log_error = MagicMock(), MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(frappe, "QueryDeadlockError", _Deadlock, create=True),
+			patch.object(frappe, "log_error", log_error, create=True),
+			patch.object(dr, "sleep"),
+			patch.object(dr, "_remark_once", side_effect=once),
+		):
+			result = dr.remark_day(EMP, str(DAY), "CKIN-1 edited (shift, shift_start)")
+		return result, calls, db, log_error
+
+	def test_one_deadlock_is_retried_and_the_day_is_marked(self):
+		result, calls, db, log_error = self._run(deadlocks=1)
+		self.assertEqual(result["action"], "remarked")
+		self.assertEqual(len(calls), 2)
+		self.assertEqual(db.rollback.call_count, 1)
+		log_error.assert_not_called()
+
+	def test_the_transaction_goes_back_before_every_retry(self):
+		"""The deadlock already rolled MariaDB's transaction back; the retry must
+		start from a clean one rather than on top of a dead transaction."""
+		_result, _calls, db, _log = self._run(deadlocks=2)
+		self.assertEqual(db.rollback.call_count, 2)
+		self.assertEqual(db.rollback.call_args, ((), {}))
+
+	def test_three_deadlocks_are_recorded_once_and_never_raise(self):
+		result, calls, _db, log_error = self._run(deadlocks=3)
+		self.assertEqual(result, {"action": "deadlocked"})
+		self.assertEqual(len(calls), 3, "the unit was not tried three times")
+		self.assertEqual(log_error.call_count, 1, "the give-up was recorded more than once")
+
+	def test_an_ordinary_failure_is_not_retried_and_still_raises(self):
+		"""Only a lost transaction is worth running again; a bug must stay loud."""
+		from hrms.utils import day_remark as dr
+
+		calls = []
+
+		def once(employee, day, reason=""):
+			calls.append(day)
+			raise ValueError("boom")
+
+		with (
+			patch.object(frappe, "db", MagicMock()),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(dr, "sleep"),
+			patch.object(dr, "_remark_once", side_effect=once),
+		):
+			with self.assertRaises(ValueError):
+				dr.remark_day(EMP, str(DAY), "CKIN-1 edited")
+		self.assertEqual(len(calls), 1)
+
+	def test_a_deadlock_is_known_by_its_mariadb_code_too(self):
+		"""pymysql raises the bare code where the frappe class is not in play."""
+		from hrms.utils import day_remark as dr
+
+		self.assertTrue(dr.is_lost_transaction(Exception(1213, "Deadlock found")))
+		self.assertTrue(dr.is_lost_transaction(Exception(1205, "Lock wait timeout")))
+		self.assertFalse(dr.is_lost_transaction(Exception(1054, "Unknown column")))
+		self.assertFalse(dr.is_lost_transaction(ValueError("boom")))
+
+
 class TestAnAutomaticPassOwnsTheDayItRebuilds(unittest.TestCase):
 	"""16 Sep 2026, verifica-live: two QueryDeadlockError (1213) Error Logs out of
 	remark_day. The endgame re-stamped punches in bulk while its own pass rebuilt

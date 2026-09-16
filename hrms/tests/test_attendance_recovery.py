@@ -407,22 +407,61 @@ class TestRebuild(_Base):
 		self.assertIn(("E-RIA", "2026-09-10"), {(d["employee"], d["date"]) for d in result["done"]})
 		frappe.db.rollback.assert_called_with(save_point=rec.ROW_SAVEPOINT)
 
-	def test_a_lost_transaction_is_re_raised(self):
+	def test_a_day_that_deadlocks_every_try_is_left_for_the_nightly_pass(self):
+		"""16 Sep 2026: a deadlock out of the rebuild ended the whole run as an
+		Error Log. The transaction is gone either way, so the unit — which
+		re-reads the day and re-marks it from scratch — is simply run again, and
+		a day that loses all three tries is held, not raised."""
+
 		class _Deadlock(Exception):
 			pass
 
+		tries = []
+
 		def remark(e, d, apply):
 			if apply:
+				tries.append(d)
 				raise _Deadlock()
 			return {"action": "remark"}
 
 		self.remark.side_effect = remark
 		with (
 			patch.object(frappe, "QueryDeadlockError", _Deadlock, create=True),
+			patch.object(frappe, "log_error", MagicMock(), create=True) as log_error,
+			patch("hrms.utils.day_remark.sleep"),
 			patch.dict(rec._PLANNERS, _fake_planners() | {"rebuild": rec._plan_rebuild}),
 		):
-			with self.assertRaises(_Deadlock):
-				rec.apply_recovery("rebuild", dry_run=0)
+			result = rec.apply_recovery("rebuild", dry_run=0)
+		self.assertEqual(len(tries), 3, "the rebuild was not retried three times")
+		self.assertEqual(log_error.call_count, 1, "the give-up was recorded more than once")
+		held = next(h for h in result["held_back"] if h["employee"] == "E-RIA")
+		self.assertIn("nightly pass", held["reason"])
+		self.assertFalse(held["hr"], "a deadlock is not HR's to decide")
+		self.assertEqual(result["done"], [])
+
+	def test_a_day_that_deadlocks_once_is_retried_and_then_rebuilt(self):
+		class _Deadlock(Exception):
+			pass
+
+		tries = []
+
+		def remark(e, d, apply):
+			if not apply:
+				return {"action": "remark"}
+			tries.append(d)
+			if len(tries) == 1:
+				raise _Deadlock()
+			return {"action": "remark", "marked": ["ATT-NEW"]}
+
+		self.remark.side_effect = remark
+		with (
+			patch.object(frappe, "QueryDeadlockError", _Deadlock, create=True),
+			patch("hrms.utils.day_remark.sleep"),
+			patch.dict(rec._PLANNERS, _fake_planners() | {"rebuild": rec._plan_rebuild}),
+		):
+			result = rec.apply_recovery("rebuild", dry_run=0)
+		self.assertEqual(len(tries), 2)
+		self.assertEqual([(d["employee"], d["date"]) for d in result["done"]], [("E-RIA", "2026-09-10")])
 
 
 class TestARebuildOwnsItsDay(unittest.TestCase):
