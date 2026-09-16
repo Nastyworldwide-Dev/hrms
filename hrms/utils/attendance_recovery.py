@@ -2383,6 +2383,22 @@ def before_rebuild(employee, day) -> tuple:
 DAY_FIX_LOG = "HR Day Fix Log"
 
 
+def _current_run() -> str | None:
+	"""The batch the endgame orchestrator is running under, or None.
+
+	Stamping it on every entry is what lets HR undo a whole automatic run from
+	one filter instead of hunting the day-fix log entry by entry. Read lazily
+	and defensively: the log must never fail for want of a batch id.
+	"""
+	try:
+		from hrms.utils import attendance_endgame
+
+		return attendance_endgame.current_run()
+	except Exception:
+		logger.debug("[attendance_recovery] no endgame run id available for this entry")
+		return None
+
+
 def log_day_fix(employee, day, action, before=None, after=None, source="recovery") -> str | None:
 	"""Record one automatic day change in Part C's HR Day Fix Log. Never raises.
 
@@ -2407,6 +2423,7 @@ def log_day_fix(employee, day, action, before=None, after=None, source="recovery
 			{
 				"doctype": DAY_FIX_LOG,
 				"source": source,
+				"run": _current_run(),
 				"employee": employee,
 				"fix_date": str(getdate(day)),
 				"action": action,

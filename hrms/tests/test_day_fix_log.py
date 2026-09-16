@@ -45,10 +45,13 @@ EMP = "HR-EMP-1"
 DAY = date(2026, 8, 17)
 HR_USER = "hr@nasty.local"
 
-#: Exactly what HR Day Fix Log ships with, and nothing else.
+#: Exactly what HR Day Fix Log ships with, and nothing else. `run` joined the
+#: list on 16 Sep 2026: the endgame stamps its batch id on every entry it
+#: causes, which is what makes "undo the whole run" one filter.
 WRITTEN_FIELDS = {
 	"doctype",
 	"source",
+	"run",
 	"employee",
 	"fix_date",
 	"action",

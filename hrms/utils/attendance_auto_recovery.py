@@ -308,6 +308,13 @@ def run_nightly() -> dict | None:
 	if is_job_enqueued(ONCE_JOB_ID):
 		logger.info("[attendance_recovery_auto] one-time run still going; nightly skipped")
 		return None
+	if _endgame_running():
+		# The endgame orchestrator is part-way through the same window and does
+		# strictly more than this pass. Without this the nightly would see no
+		# ONCE_MARK yet, decide the one-time run never happened, and re-run the
+		# whole month underneath it.
+		logger.info("[attendance_recovery_auto] an endgame run is unfinished; nightly stands aside")
+		return None
 	if not frappe.db.get_default(ONCE_MARK):
 		logger.warning(
 			"[attendance_recovery_auto] no finished one-time run on record: running its window tonight"
@@ -317,6 +324,19 @@ def run_nightly() -> dict | None:
 	start = max(rec.REPAIR_FLOOR, end - timedelta(days=NIGHTLY_DAYS - 1))
 	logger.info("[attendance_recovery_auto] nightly run %s..%s", start, end)
 	return _safe(start, end, recheck=not switched_off("recheck"))
+
+
+def _endgame_running() -> bool:
+	"""Is an endgame repair part-way through its own window? Never raises."""
+	try:
+		import json
+
+		from hrms.utils import attendance_endgame
+
+		raw = frappe.db.get_default(attendance_endgame.STATE_MARK)
+		return bool(raw and json.loads(raw).get("run"))
+	except Exception:
+		return False
 
 
 def flagged_days(end: date) -> list:
