@@ -206,12 +206,14 @@ def owner_hold(row) -> str | None:
 	if module is None or verdict is None:
 		return None if cint(row.get("auto_attendance")) else f"{name} {BY_HAND}"
 	owner, reason = verdict
-	if owner == module.OWNER_SYSTEM:
+	# getattr with a default, never module.OWNER_*: a classifier that ships an
+	# Enum or renames a constant must not raise out of a fail-safe helper.
+	if owner == getattr(module, "OWNER_SYSTEM", "system"):
 		return None
 	logger.info("[attendance_recovery] %s is %s-owned: %s", name, owner, reason)
-	if owner == module.OWNER_UNSURE:
+	if owner == getattr(module, "OWNER_UNSURE", "unsure"):
 		return f"{name} may have been {BY_HAND} ({reason}): left alone until the ownership check says so"
-	if owner == module.OWNER_REQUEST:
+	if owner == getattr(module, "OWNER_REQUEST", "request"):
 		return f"{name} comes from a leave or request ({reason})"
 	return f"{name} {BY_HAND} ({reason})"
 
@@ -922,8 +924,9 @@ def _plan_rostered_shift(win, for_update=False) -> dict:
 			# the master edit's cancel rules: a row HR marked by hand is HR's
 			# (on purpose); a paid row is HR's decision (E13, D5)
 			row_day = getdate(row.get("attendance_date"))
-			if not cint(row.get("auto_attendance")):
-				problem = f"{row.get('name')} was marked by HR by hand"
+			owned = owner_hold(row)
+			if owned:
+				problem = owned
 				break
 			if row.get(PROVENANCE_FIELD):
 				problem = f"{row.get('name')} is the ERP's copy: release it first (step release_mirrored)"
@@ -2051,8 +2054,9 @@ def leftover_verdict(
 		return f"{name} is not a submitted row"
 	if day >= today:
 		return "today or later: never touched"
-	if not cint(row.get("auto_attendance")):
-		return f"{name} was marked by HR by hand"
+	owned = owner_hold(row)
+	if owned:
+		return owned
 	if row.get("leave_type") or row.get("leave_application") or row.get("status") == "On Leave":
 		return f"{name} is a leave record"
 	if cint(row.get("modify_half_day_status")):
@@ -3684,7 +3688,7 @@ def _plan_present_without_live_taps(win, for_update=False, ctx=None) -> dict:
 		if (
 			cint(row.get("docstatus")) != 1
 			or row.get("status") not in ("Present", "Half Day")
-			or not cint(row.get("auto_attendance"))
+			or owner_hold(row)
 			or row.get(PROVENANCE_FIELD)
 		):
 			continue

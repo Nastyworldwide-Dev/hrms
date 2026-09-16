@@ -168,5 +168,42 @@ class TestEveryOtherProtectionStillHolds(unittest.TestCase):
 			self.assertIn("today", rec.protected_reason(TODAY, TODAY, [_row()]))
 
 
+class TestTheSiblingReadersAskTooAndReviewFollowUp(unittest.TestCase):
+	"""Every reader of the blank tick in this module asks the same supplier.
+
+	Three more sites read `auto_attendance` directly — the master edit's
+	wrong-shift cancel check, `leftover_verdict`, and the "Present without a
+	live tap" plan. Left as they were, a pre-1-September or mirrored row would
+	still claim to be HR's in those three places, which is the same defect in
+	another room.
+	"""
+
+	def _verdict(self, row):
+		return rec.leftover_verdict(
+			row,
+			[],
+			linked=False,
+			punch_times=[],
+			window=None,
+			night=False,
+			assignment_ended=True,
+			today=TODAY,
+		)
+
+	def test_leftover_verdict_no_longer_reads_the_blank_tick(self):
+		row = _row(auto_attendance=0, attendance_date=date(2026, 8, 17), shift="9AM-6PM", status="Absent")
+		with _classifier("system"):
+			self.assertNotIn("by hand", self._verdict(row) or "")
+		with _classifier("hr", "Nabil amended it on 9 September"):
+			self.assertIn("by hand", self._verdict(row))
+
+	def test_an_owner_that_cannot_be_read_still_holds_the_row(self):
+		"""A classifier whose constants are named differently must not raise."""
+		module = types.ModuleType(MODULE)
+		module.classify_row = lambda row, versions=None, source=None: ("hr", "a person saved it")
+		with patch.dict(sys.modules, {MODULE: module}):
+			self.assertIn("by hand", rec.owner_hold(_row(auto_attendance=1)))
+
+
 if __name__ == "__main__":
 	unittest.main()
