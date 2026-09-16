@@ -650,6 +650,10 @@ scheduler_events = {
 		],
 	},
 	"daily_long": [
+		# Nabil, 16 Sep 2026: the whole attendance repair runs itself — ownership,
+		# the old system's punches, the rebuild, the OT recount, one HR summary.
+		# It resumes where a killed pass stopped, and stops on the HR Settings switch.
+		"hrms.utils.attendance_endgame.run_endgame",
 		# Nabil, 14 Sep 2026: the system fixes broken attendance itself — every
 		# recovery step for the 7 days ending the day before yesterday (last night's
 		# shift may still be open), then one HR summary. The one-time 1 Aug run is

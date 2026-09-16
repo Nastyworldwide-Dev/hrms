@@ -472,6 +472,9 @@ class TestSchedulerEntry(unittest.TestCase):
 				"hrms.utils.attendance_auto_recovery.run_nightly",
 				# 15 Sep 2026: nightly heal of the known request-permission shapes.
 				"hrms.utils.request_access.heal_known_shapes",
+				# 16 Sep 2026: the endgame repair runs itself nightly until its
+				# one-time pass over 1 Aug -> yesterday is on record.
+				"hrms.utils.attendance_endgame.run_endgame",
 			},
 		)
 
