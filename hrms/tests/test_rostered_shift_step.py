@@ -517,6 +517,10 @@ class TestStrayTapsAfterACancel(_Step):
 		self.apply()
 		remarks = [e[2] for e in self.log if e[0] == "remark"]
 		self.assertEqual(remarks[:4], ["2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11"])
+		# A tap moved onto a later day is re-marked by THAT day's step, so no day
+		# is rebuilt twice in one pass (two rebuilds of one day race each other
+		# and deadlock against the punch hook, live 15 Sep 2026).
+		self.assertEqual(sorted(set(remarks)), sorted(remarks))
 
 
 class TestTapInsideTheOtherShiftsHours(_Step):

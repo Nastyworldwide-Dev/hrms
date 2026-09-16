@@ -310,3 +310,8 @@ NEXT: approve the concrete fresh.local synthetic-fixture and outbound-suppressio
   complete route/operation ledger and a separately reviewed quick-gate proposal.
   ANN.0 next prepares exact minimal schema/permissions for approval. Preserve
   deferred Script Reports, open business policies and historical-repair boundary.
+- 2026-09-16 SELF-RUNNING: hrms/utils/attendance_endgame.run_endgame does relabel -> ERP punch copy -> recovery -> OT recount -> one HR summary, chunked/resumable, run id on every HR Day Fix Log entry, undo_run(run_id); switches are emergency stops (default ON), pilot list optional; deploy patch only enqueues, nightly resumes until the once-window is on record
+- 2026-09-16 EVIDENCE: 88 touched backend suite files green, ruff + format clean; worker bench probe relabelled 1 row, copied 2 punches, rebuilt 1 day, needs_hr 1, errors none
+NEXT: Nabil deploys c40088335; then only reads the HR summary + Unclaimable Days; HR uses Fix Day for the rest; undo_run(run_id) reverses a whole pass if needed
+- 2026-09-16 REPAIR: rostered_shift re-marked a moved-to day twice when that day had its own step later in the plan (two rebuilds of one employee-day = the 1213 deadlock shape); the step now leaves a not-yet-reached day to the step that owns it
+- 2026-09-16 EVIDENCE: test_rostered_shift_step 27 green incl. a new never-twice invariant assertion; per-file sweep 211 files, 8 failing, all 8 identical on a clean HEAD worktree (pre-existing, none import attendance_recovery); ruff + format clean

@@ -1,66 +1,32 @@
-# PLAN — Nadi PWA: KPI page gains a CEO-only Team KPI view
+# Attendance recovery — one deploy (branch feat/attendance-recovery off nz-glass d3392681e)
 
-GOAL: Rename the "My KPI" nav entry to "KPI". Inside the KPI page add a
-My KPI / Team KPI segmented selector. Team KPI is read-only and carries
-Company + Department selectors.
+AUTHORITY: Nabil, 14 Sep 2026: "straight to fast pace plan… break it to small workable set… combine and
+review at a proper pace"; "deploy when total work is complete… all at once". Rulings: HR corrects (never the
+employee); HR master edit on Shift Attendance for all HR roles (inline cell edit, bulk, add, remove, add
+shift); auto-fix never touches today (yesterday and older only); HR-edited days never overwritten; OT after
+midnight on the shift day; HR may edit/cancel approved OT. Full evidence: .claude/plans/attendance-integrity-plan.md.
+TIER: risky (attendance engine, permissions, report UI, repair writes).
 
-TWO ALLOWLISTS, different in kind and deliberately so:
-  ceo — by DESIGNATION ("Chief Executive Officer"). Roles here are bundled
-        into role profiles, so "the CEO" is not expressible as a role.
-  hr  — by ROLE, through hrms.hr.utils.is_hr_operator: the SAME predicate
-        that already governs every other HR-only surface (issue board, SOPs,
-        the directory, the PWA `is_hr` flag). HR User / HR Manager only;
-        System Manager is technical and confers nothing.
-NEITHER IS COMPANY-FENCED. Team KPI is group-level sight by definition: HR
-sees every company, the CEO sees every company, nobody else sees the page.
-This is the ONE place on the hub where an allow=Company User Permission — the
-fence behind the "HR (Company)" / "HR (Instance)" roles — does not narrow an
-HR user. Everywhere else it still does. Nabil's ruling, 11 Sep 2026.
+GOAL: attendance 1 Aug → yesterday correct and claimable for OT; stays correct; HR fixes the rest in Desk.
 
-## FLOW
-1. PWA boots -> data/kpi.js `canViewTeamKpi` (auto, personal-cached) calls
-   `hrms.api.kpi.can_view_team_kpi`.
-2. KPI page renders the GSegmented strip only when that is true. GSegmented
-   already refuses to render a one-option control, so every other employee
-   sees exactly today's page.
-3. Team KPI tab -> `hrms.api.kpi.get_team_kpi(year, cycle, department)`.
-   Server re-checks the designation and raises PermissionError otherwise;
-   the UI is never the security boundary.
-4. Scope: every company on the hub. Company/Department are presentation
-   filters only, and both key on EMPLOYEE.company — never Appraisal.company,
-   which is copied from the Appraisal Cycle, has no fetch_from and is never
-   reconciled, so it names the wrong company often enough that the filter, the
-   selector and the Company column would disagree with the Employee master.
-   Selectors and rows derive from ONE set, so they can neither offer what the
-   rows exclude nor omit what the rows contain.
-5. Read-only: no write endpoint, no form, no submit.
+FLOW:
+- punch insert -> employee_checkin_override.fetch_shift -> shift stamp -> re-check later punches (1.2)
+- late checkout approve -> remote_checkin_request_hooks.reprocess -> result returned to approver + retry (1.1)
+- ot_calculation slices -> shift day (1.3)
+- attendance_recovery.inputs_report -> apply (dry run) -> existing tools -> engine rebuild -> OT recount (2)
+- Shift Attendance report grid -> attendance_master_edit API -> punches/attendance/assignment -> rebuild (3)
+- scheduler -> attendance health alert (4.1); Desk forgotten check-outs list (4.2)
 
-## MOCKUP
-/home/nabil/mockups/mockup-team-kpi.html
-(in-place, existing tokens — the strip, filter bar and table below describe it)
-  [ My KPI | Team KPI ]            <- GSegmented, g-seg
-  Year [2026 v] Cycle [All v] Company [All v] Department [All v] <- .kpi-filter
-  ------------------------------------------------------------  border-b-2
-  DEPARTMENT AVERAGE        72.4 / 100      ( GProgressRing 88 )
-  ------------------------------------------------------------
-  Name                 Designation            Score   Grade
-  ...rows, border-b border-hair, py-3, tabular-nums...
-Spacing identical to My KPI: page px-4 py-7 gap-8 / lg:px-7 lg:py-9,
-filter bar gap-x-6 gap-y-3 pb-5, rows py-3.
+SLICES: 0.1 HR edit/cancel approved OT · 1.1 forgotten-checkout result + retry · 1.2 shift re-check ·
+1.3 OT after midnight on shift day · 2 recovery report + fixer (never today, skip HR/leave/paid) ·
+3.1 master-edit API · 3.2 report grid UI · 4.1 daily health alert · 4.2 forgotten check-outs list.
+Group reviews: G1 (0.1,1.1–1.3) · G2 (2) · G3 (3.1–3.2) · G4 (4.x), then one full sweep before push.
 
-## EXPECTED OUTPUT
-- More + SideNav show "KPI".
-- Non-CEO: KPI page byte-identical to today (no strip, no extra fetch result).
-- CEO: strip appears; Team KPI lists that department's employees with their
-  appraisal score for the selected year/cycle, plus a department average.
-- `get_team_kpi` called by a non-CEO raises PermissionError.
+MOCKUP: NOT NEEDED (owner explicitly declined a mockup: "no mockup, straight to fast pace plan")
 
-## RISK
-Permission-adjacent. Fence is designation-based and server-side; the endpoint
-reads only, and is company-scoped so a multi-company hub cannot leak sideways.
-
-PRE-DEPLOY CHECK (flagged): the designation gate matches the Designation master
-named exactly "Chief Executive Officer" (compared case- and whitespace-
-insensitively). If the live site spells the office differently ("CEO", "Chief
-Executive Officer (Group)"), the CEO gets no tab and no error — only a server
-warning. Confirm the live master before deploy.
+EXPECTED OUTPUT:
+- Approver sees whether a forgotten check-out really fixed the day; blocked repairs retry automatically.
+- Punches no longer split a day across a stray night shift; OT after midnight claimable on the shift day.
+- A dry-run list and apply for 1 Aug → yesterday; Nadi attendance and claimable OT reflect it.
+- HR edits any day inline in Shift Attendance (cells, bulk, add, remove, shift); edits stick, no clash.
+- Daily health alert; Desk "Forgotten check-outs" list. One push, one deploy by Nabil. No data written without dry run + Nabil OK.

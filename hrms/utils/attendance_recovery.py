@@ -1198,7 +1198,7 @@ def _restamp_tap(name, rostered) -> dict:
 	return {"name": name, "was": was, "now": doc.shift, "shift_start": doc.shift_start}
 
 
-def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
+def _fix_rostered_day(entry, endings, ended, done_taps, win, pending=frozenset()) -> dict:
 	employee, day, rostered = entry["employee"], getdate(entry["date"]), entry["rostered"]
 	_lock_employee(employee)
 	result = {"ended": [], "cancelled": [], "restamped": [], "marked": [], "errors": []}
@@ -1237,12 +1237,16 @@ def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
 		# Every day this tap touched is re-marked HERE — the earlier day whose row
 		# it left (a night row dated the day before) and the day it landed on
 		# alike. The tap's own hook is silenced for both (`also_rebuilding` in
-		# `_restamp_tap`), so leaving the later day to its own step would leave it
-		# re-marked by nobody. Re-marking is idempotent; today is skipped below.
+		# `_restamp_tap`), so a day with no step of its own in this pass would be
+		# re-marked by nobody. A day this pass has not reached yet is left to the
+		# step that owns it (`pending` below): re-marked once, never twice.
 		if moved.get("shift_start"):
 			days.add(getdate(moved["shift_start"]))
 	for when in sorted(days):
 		if when > win.end:
+			continue
+		if when != day and (employee, when) in pending:
+			logger.info("[attendance_recovery] %s on %s is left to its own step in this pass", employee, when)
 			continue
 		remark = _remark_day(employee, when, True) or {}
 		result["marked"] += remark.get("marked") or []
@@ -1258,7 +1262,11 @@ def _apply_rostered_shift(win, plan) -> dict:
 
 	done, held, ended, done_taps = [], [], set(), set()
 	endings = {e["assignment"]: e for e in plan.get("assignments") or []}
-	for entry in plan["planned"]:
+	planned = plan["planned"]
+	for i, entry in enumerate(planned):
+		# The days this pass has not reached yet: a tap moved onto one of them is
+		# re-marked by that day's own step, so no day is re-marked twice.
+		pending = {(e["employee"], getdate(e["date"])) for e in planned[i + 1 :]}
 		# The day — and every day a tap moves to (`also_rebuilding` in
 		# `_restamp_tap`) — is this pass's own while the unit runs: it re-stamps
 		# those punches and re-marks those days itself, so the punch hook must not
@@ -1267,7 +1275,9 @@ def _apply_rostered_shift(win, plan) -> dict:
 		with rebuilding(entry["employee"], getdate(entry["date"])):
 			result, error = _guarded(
 				f"rostered_shift {entry['employee']} {entry['date']}",
-				lambda entry=entry: _fix_rostered_day(entry, endings, ended, done_taps, win),
+				lambda entry=entry, pending=pending: _fix_rostered_day(
+					entry, endings, ended, done_taps, win, pending
+				),
 			)
 		if error:
 			held.append(_held(entry, f"could not be put back on {entry['rostered']}: {error}", hr=False))
