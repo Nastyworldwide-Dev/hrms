@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 from hrms.hr.doctype.attendance.attendance import (
 	DuplicateAttendanceError,
 	OverlappingShiftAttendanceError,
+	mark_automation_rebuild,
 )
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
 from hrms.hr.utils import (
@@ -578,8 +579,9 @@ def _replace_automation_attendance(absence, **fields):
 		# attendance" button runs this under whoever pressed it.
 		replacement.flags.ignore_permissions = True
 		# The job's own amendment stays automation-owned; a person's does not
-		# (Attendance.claim_hr_ownership_on_amend).
-		replacement.flags.automation_rebuild = True
+		# (Attendance.claim_hr_ownership_on_amend). One shared seam, so every
+		# automated path says it the same way.
+		mark_automation_rebuild(replacement)
 		replacement.update(
 			{
 				"employee": employee,

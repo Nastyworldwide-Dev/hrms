@@ -38,6 +38,27 @@ from hrms.utils.identity import get_employee
 logger = logging.getLogger(__name__)
 
 
+def mark_automation_rebuild(doc):
+	"""Say that automation, not a person, is making this amendment.
+
+	The ONE seam every automated rebuild goes through. Before it there was one
+	hand-raised flag in employee_checkin.py, so an amendment from any other
+	automated path — the ERP re-mark, the remote check-in repair, the recovery
+	steps — was read as HR's work and left alone for ever (live, 9 Sep 2026: a
+	day reading "Present (HR)" that no person had touched).
+
+	Returns the document, so a caller can mark it in the line that builds it.
+	"""
+	doc.flags.automation_rebuild = True
+	logger.info("[attendance] automated rebuild of %s", getattr(doc, "amended_from", None) or "a new row")
+	return doc
+
+
+def is_automation_rebuild(doc) -> bool:
+	"""Did an automated path claim this amendment through the helper?"""
+	return bool(getattr(doc.flags, "automation_rebuild", False))
+
+
 class DuplicateAttendanceError(frappe.ValidationError):
 	pass
 
@@ -71,14 +92,18 @@ class Attendance(Document):
 		Frappe's Amend copies `auto_attendance = 1` from the cancelled row, so
 		HR's corrected day stayed automation-owned and the next hourly run
 		cancelled it and re-marked the day from the punches — the two pages
-		disagreeing again an hour after HR fixed them (9 Sep 2026). The job's
-		own rebuild says so with `flags.automation_rebuild`; nobody else does.
+		disagreeing again an hour after HR fixed them (9 Sep 2026).
+
+		An automated path says the amendment is its own through
+		`mark_automation_rebuild`; everything else is a person. That is the
+		whole rule, so a path that forgets the call is a row handed to HR, not
+		a row silently rebuilt behind HR's back.
 		"""
 		if (
 			self.is_new()
 			and self.amended_from
 			and cint(self.auto_attendance)
-			and not getattr(self.flags, "automation_rebuild", False)
+			and not is_automation_rebuild(self)
 		):
 			self.auto_attendance = 0
 			logger.info(
