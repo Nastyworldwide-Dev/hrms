@@ -160,13 +160,60 @@ def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False
 			return f"{name} is a half-day leave"
 		if row.get("attendance_request"):
 			return f"{name} comes from an Attendance Request"
-		if not cint(row.get("auto_attendance")):
-			return f"{name} was marked by HR by hand"
+		held = owner_hold(row)
+		if held:
+			return held
 	if request:
 		return request
 	if financial:
 		return f"approved overtime or submitted payroll depends on this day ({financial})"
 	return None
+
+
+#: Part A's classifier. Imported by name so this module runs with or without it.
+OWNERSHIP_MODULE = "hrms.utils.attendance_ownership"
+#: The phrase HR's summary counts as "left alone on purpose" — keep it in every owner hold.
+BY_HAND = "was marked by HR by hand"
+
+
+def _classify(row):
+	"""(module, (owner, reason)) from the ownership classifier, or (None, None).
+
+	A missing module — or one that raises — is not an answer, so the caller falls
+	back to the old `auto_attendance` reading rather than guessing.
+	"""
+	import importlib
+
+	try:
+		module = importlib.import_module(OWNERSHIP_MODULE)
+		return module, module.classify_row(row)
+	except Exception:
+		logger.debug("[attendance_recovery] %s cannot answer for %s", OWNERSHIP_MODULE, row.get("name"))
+		return None, None
+
+
+def owner_hold(row) -> str | None:
+	"""Why this row's OWNER holds the day, or None when the system owns it.
+
+	`auto_attendance` alone cannot say: the field was added on 1 September 2026
+	with default 0 and no backfill, and an ERP copy never carried it, so nearly
+	every row before that date read "HR's" and no automatic fix ever touched it.
+	The classifier is asked instead; UNSURE is treated as HR's (fail safe), and
+	with no classifier installed the old reading stands.
+	"""
+	name = row.get("name")
+	module, verdict = _classify(row)
+	if module is None or verdict is None:
+		return None if cint(row.get("auto_attendance")) else f"{name} {BY_HAND}"
+	owner, reason = verdict
+	if owner == module.OWNER_SYSTEM:
+		return None
+	logger.info("[attendance_recovery] %s is %s-owned: %s", name, owner, reason)
+	if owner == module.OWNER_UNSURE:
+		return f"{name} may have been {BY_HAND} ({reason}): left alone until the ownership check says so"
+	if owner == module.OWNER_REQUEST:
+		return f"{name} comes from a leave or request ({reason})"
+	return f"{name} {BY_HAND} ({reason})"
 
 
 #: Status ranking for the never-worse guard: a rebuild may raise it, never lower it.
