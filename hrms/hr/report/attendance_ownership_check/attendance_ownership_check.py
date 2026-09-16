@@ -65,10 +65,14 @@ def _apply_defaults(filters) -> None:
 	offered today.
 	"""
 	yesterday = _today() - timedelta(days=1)
-	if not filters.get("from_date"):
-		filters["from_date"] = str(START_FLOOR)
 	asked = getdate(filters["to_date"]) if filters.get("to_date") else yesterday
 	filters["to_date"] = str(min(asked, yesterday))
+	if not filters.get("from_date"):
+		filters["from_date"] = str(START_FLOOR)
+	elif getdate(filters["from_date"]) > getdate(filters["to_date"]):
+		# Clamping the end can leave the start behind it. An inverted range is
+		# zero rows, and a blank page says nothing about why it is blank.
+		filters["from_date"] = filters["to_date"]
 
 
 def fence_rows(rows, filters, employees, companies) -> list:

@@ -117,6 +117,15 @@ class TestFilters(unittest.TestCase):
 			report._apply_defaults(filters)
 		self.assertEqual(filters["to_date"], "2026-09-15")
 
+	def test_a_window_that_starts_after_it_ends_is_pulled_back_to_the_ceiling(self):
+		"""Clamping the end can leave the start behind it. An inverted range reads
+		as zero rows, so HR would get a blank page with nothing saying why."""
+		filters = frappe._dict(from_date="2026-09-16")
+		with patch.object(report, "_today", return_value=date(2026, 9, 16)):
+			report._apply_defaults(filters)
+		self.assertEqual(filters["to_date"], "2026-09-15")
+		self.assertEqual(filters["from_date"], "2026-09-15")
+
 	def test_a_future_date_is_clamped_too(self):
 		filters = frappe._dict(from_date="2026-09-01", to_date="2027-01-01")
 		with patch.object(report, "_today", return_value=date(2026, 9, 16)):
