@@ -247,5 +247,60 @@ class TestTheDayAfterAPunchEventIsWhatTheEngineMarksFromScratch(unittest.TestCas
 						self.assertEqual(actual(store), oracle(store, day_type))
 
 
+class TestThePunchHookLeavesAPassOwnDayAlone(unittest.TestCase):
+	"""The live deadlock's own shape: the endgame re-stamps a punch (shift,
+	shift_start) on a day it is rebuilding itself. That save must queue nothing.
+	The same edit made by HR, and a new employee punch, queue as ever."""
+
+	def _edited_punch(self):
+		store = Store()
+		row = frappe._dict(store.punches[OUT], shift="Night", shift_start=datetime(2026, 9, 12, 19, 30))
+		before = frappe._dict(store.punches[OUT])
+		return punch_doc(row, before=before)
+
+	def _registered(self, handler, doc, method, owned=()):
+		"""The after-commit callbacks the real remark_day_after_commit registered."""
+		from hrms.overrides import day_remark_hooks as dh
+		from hrms.utils import day_remark as dr
+
+		db = MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(dr, "employee_now", return_value=NOW),
+		):
+			frappe.flags[dr.REBUILD_FLAG] = {dr._key(e, d) for e, d in owned}
+			handler(doc, method)
+			self.assertIs(dh.remark_day_after_commit, dr.remark_day_after_commit)
+		return db.after_commit.add.call_args_list
+
+	def test_the_pass_own_restamp_queues_no_second_rebuild(self):
+		from hrms.overrides import day_remark_hooks as dh
+
+		doc = self._edited_punch()
+		registered = self._registered(dh.remark_changed_punch_day, doc, "on_update", owned=[(EMP, DAY)])
+		self.assertEqual(registered, [])
+
+	def test_the_same_edit_by_hr_still_queues(self):
+		from hrms.overrides import day_remark_hooks as dh
+
+		doc = self._edited_punch()
+		self.assertEqual(len(self._registered(dh.remark_changed_punch_day, doc, "on_update")), 1)
+
+	def test_a_new_employee_punch_still_queues(self):
+		from hrms.overrides import day_remark_hooks as dh
+
+		store = Store()
+		doc = punch_doc(frappe._dict(store.punches[OUT]))
+		self.assertEqual(len(self._registered(dh.remark_punch_day, doc, "after_insert")), 1)
+
+	def test_a_punch_the_pass_moves_to_a_day_it_owns_queues_neither_day(self):
+		from hrms.overrides import day_remark_hooks as dh
+
+		doc = self._edited_punch()
+		owned = [(EMP, DAY), (EMP, date(2026, 9, 12))]
+		self.assertEqual(self._registered(dh.remark_changed_punch_day, doc, "on_update", owned=owned), [])
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -244,6 +244,33 @@ class TestCopyGuards(_CopyCase):
 		self.assertIn("database gone", out["note"])
 
 
+class TestTheCopyOwnsTheDaysItRebuilds(unittest.TestCase):
+	"""`backfill_punches` rebuilds exactly the days it inserted into, so the new
+	punch's own after_insert hook must not queue that rebuild a second time and
+	race it — that race deadlocked on 16 Sep 2026 (MariaDB 1213)."""
+
+	def test_the_day_is_the_copy_own_while_the_punch_is_inserted(self):
+		from hrms.utils import day_remark as dr
+
+		seen = {}
+
+		def insert(entry, instance):
+			seen["owned"] = dr.owned_by_an_automatic_pass(entry["employee"], entry["date"])
+			return "EC-NEW-1"
+
+		entry = {"employee": EMP, "date": "2026-08-17", "remote_name": "EC-ERP-1"}
+		with (
+			patch.object(frappe, "db", MagicMock()),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(bf, "_insert", side_effect=insert),
+			patch.object(bf, "_lock", return_value=True),
+		):
+			out = bf._insert_all([entry], "erp-live")
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, "2026-08-17"))
+		self.assertTrue(seen["owned"], "the copy did not take the day it was about to rebuild")
+		self.assertEqual(len(out["inserted"]), 1)
+
+
 class TestRebuildDays(unittest.TestCase):
 	"""The copied days go back through the engine, oldest first, under the guard."""
 

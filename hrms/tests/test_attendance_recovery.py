@@ -425,6 +425,34 @@ class TestRebuild(_Base):
 				rec.apply_recovery("rebuild", dry_run=0)
 
 
+class TestARebuildOwnsItsDay(unittest.TestCase):
+	"""16 Sep 2026: the engine's writes under a rebuild (punch links, skip stamps)
+	enqueued a SECOND rebuild of the day this one was already rebuilding, and the
+	two deadlocked (MariaDB 1213). The day is the rebuild's own while it runs."""
+
+	def test_the_day_is_the_pass_own_while_the_engine_writes(self):
+		from hrms.utils import day_remark as dr
+
+		day, seen = date(2026, 9, 10), {}
+
+		def remark(employee, when, apply):
+			seen["owned"] = dr.owned_by_an_automatic_pass(employee, when)
+			return {"marked": ["ATT-NEW"]}
+
+		with (
+			patch.object(frappe, "db", MagicMock()),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(rec, "before_rebuild", return_value=(None, False)),
+			patch.object(rec, "submitted_row", return_value=None),
+			patch.object(rec, "rebuild_verdict", return_value=None),
+			patch.object(rec, "log_day_fix", MagicMock()),
+		):
+			result = rec.guarded_rebuild("E-RIA", day, remark)
+			self.assertFalse(dr.owned_by_an_automatic_pass("E-RIA", day))
+		self.assertTrue(seen["owned"], "the rebuild did not take its own day")
+		self.assertEqual(result["marked"], ["ATT-NEW"])
+
+
 NIGHT_WINDOW = ("19:30:00", "03:30:00")
 DAY_WINDOW = ("09:00:00", "18:00:00")
 

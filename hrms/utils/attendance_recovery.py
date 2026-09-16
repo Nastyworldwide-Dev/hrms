@@ -1171,12 +1171,17 @@ def _cancel_wrong_row(name, employee, rostered) -> dict | None:
 
 def _restamp_tap(name, rostered) -> dict:
 	"""Clear the link and let the override's fetch_shift place the tap (S2's rule)."""
+	from hrms.utils.day_remark import also_rebuilding
+
 	doc = frappe.get_doc("Employee Checkin", name)
 	if doc.get("synced_from_instance"):
 		raise frappe.ValidationError(f"{name} is the ERP's copy: never re-stamped here")
 	was = doc.shift
 	doc.attendance = None
 	doc.fetch_shift()
+	# The day it lands on is known only now, and the caller re-marks it below —
+	# so it joins the pass's own days before the save fires the punch hook.
+	also_rebuilding(doc.employee, getdate(doc.shift_start or doc.time))
 	doc.flags.ignore_validate = True
 	doc.save()
 	doc.add_comment(
@@ -1229,9 +1234,12 @@ def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
 			logger.warning("[attendance_recovery] %s on %s held: %s", employee, day, reason)
 			return {"hold": reason}
 		result["restamped"].append(moved)
-		# an earlier day whose row this tap left (a night row dated the day before)
-		# is re-marked here; a later day is its own step's business
-		if moved.get("shift_start") and getdate(moved["shift_start"]) < day:
+		# Every day this tap touched is re-marked HERE — the earlier day whose row
+		# it left (a night row dated the day before) and the day it landed on
+		# alike. The tap's own hook is silenced for both (`also_rebuilding` in
+		# `_restamp_tap`), so leaving the later day to its own step would leave it
+		# re-marked by nobody. Re-marking is idempotent; today is skipped below.
+		if moved.get("shift_start"):
 			days.add(getdate(moved["shift_start"]))
 	for when in sorted(days):
 		if when > win.end:
@@ -1246,13 +1254,21 @@ def _fix_rostered_day(entry, endings, ended, done_taps, win) -> dict:
 
 
 def _apply_rostered_shift(win, plan) -> dict:
+	from hrms.utils.day_remark import rebuilding
+
 	done, held, ended, done_taps = [], [], set(), set()
 	endings = {e["assignment"]: e for e in plan.get("assignments") or []}
 	for entry in plan["planned"]:
-		result, error = _guarded(
-			f"rostered_shift {entry['employee']} {entry['date']}",
-			lambda entry=entry: _fix_rostered_day(entry, endings, ended, done_taps, win),
-		)
+		# The day — and every day a tap moves to (`also_rebuilding` in
+		# `_restamp_tap`) — is this pass's own while the unit runs: it re-stamps
+		# those punches and re-marks those days itself, so the punch hook must not
+		# queue a second rebuild that would race this one and deadlock against it.
+		logger.info("[attendance_recovery] %s on %s is this pass's own", entry["employee"], entry["date"])
+		with rebuilding(entry["employee"], getdate(entry["date"])):
+			result, error = _guarded(
+				f"rostered_shift {entry['employee']} {entry['date']}",
+				lambda entry=entry: _fix_rostered_day(entry, endings, ended, done_taps, win),
+			)
 		if error:
 			held.append(_held(entry, f"could not be put back on {entry['rostered']}: {error}", hr=False))
 			continue
@@ -2449,7 +2465,18 @@ def guarded_rebuild(employee, day, remark, source="recovery") -> dict:
 	the guard refused it — the caller lists that day for HR. Either way the day's
 	before and after go to the shared day-fix log under `source`, so one day, one
 	employee or a whole run can be undone from one place.
+
+	The day is this pass's own for the length of the rebuild: the punch links the
+	engine writes under it must not queue a second rebuild of the same day, which
+	is what deadlocked against this one (`hrms.utils.day_remark.rebuilding`).
 	"""
+	from hrms.utils.day_remark import rebuilding
+
+	with rebuilding(employee, getdate(day)):
+		return _rebuild_under_guard(employee, day, remark, source)
+
+
+def _rebuild_under_guard(employee, day, remark, source="recovery") -> dict:
 	before, shrank = before_rebuild(employee, day)
 	frappe.db.savepoint(NEVER_WORSE_SAVEPOINT)
 	result = remark(employee, day, True) or {}

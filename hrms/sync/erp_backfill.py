@@ -526,11 +526,17 @@ def _insert_all(planned, instance: str) -> dict:
 	"""Insert the planned punches, one savepoint each, a commit per COMMIT_EVERY —
 	and the instance lock taken again after every commit, because the commit
 	releases it and a sync starting meanwhile must win."""
+	from hrms.utils.day_remark import rebuilding
+
 	inserted, held, already = [], [], 0
 	for index, entry in enumerate(planned, start=1):
 		frappe.db.savepoint(ROW_SAVEPOINT)
 		try:
-			name = _insert(entry, instance)
+			# `backfill_punches` rebuilds exactly the days it inserted into, so the
+			# new punch's own hook must not queue that rebuild a second time and
+			# race it (`hrms.utils.day_remark.rebuilding`).
+			with rebuilding(entry["employee"], getdate(entry["date"])):
+				name = _insert(entry, instance)
 		except Exception as exc:
 			frappe.db.rollback(save_point=ROW_SAVEPOINT)
 			if is_source_key_duplicate(exc):

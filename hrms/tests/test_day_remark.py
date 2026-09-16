@@ -480,5 +480,110 @@ class TestEveryDecisionAsksForTheRemark(unittest.TestCase):
 		notify.assert_called_once()
 
 
+class TestAnAutomaticPassOwnsTheDayItRebuilds(unittest.TestCase):
+	"""16 Sep 2026, verifica-live: two QueryDeadlockError (1213) Error Logs out of
+	remark_day. The endgame re-stamped punches in bulk while its own pass rebuilt
+	the same days, so every punch save enqueued a SECOND rebuild of a day the pass
+	already had in hand, and the two took the Attendance and Employee Checkin row
+	locks in opposite orders. A day a pass owns is not queued again; every other
+	day — HR's edit, a real employee punch — is queued exactly as before."""
+
+	def _queue(self, employee=EMP, day=DAY, owned=()):
+		from hrms.utils import day_remark as dr
+
+		db = MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(dr, "employee_now", return_value=NOW),
+		):
+			frappe.flags[dr.REBUILD_FLAG] = {dr._key(e, d) for e, d in owned}
+			queued = dr.remark_day_after_commit(employee, day, f"{OUT} edited (shift, shift_start)")
+		return queued, db
+
+	def test_the_day_the_pass_is_rebuilding_is_not_queued_again(self):
+		queued, db = self._queue(owned=[(EMP, DAY)])
+		self.assertFalse(queued)
+		db.after_commit.add.assert_not_called()
+
+	def test_another_day_of_the_same_employee_is_still_queued(self):
+		queued, db = self._queue(day=date(2026, 9, 11), owned=[(EMP, DAY)])
+		self.assertTrue(queued)
+		db.after_commit.add.assert_called_once()
+
+	def test_another_employee_on_the_same_day_is_still_queued(self):
+		queued, _db = self._queue(employee="HR-EMP-OTHER", owned=[(EMP, DAY)])
+		self.assertTrue(queued)
+
+	def test_an_hr_edit_while_no_pass_runs_is_queued_as_ever(self):
+		queued, db = self._queue()
+		self.assertTrue(queued)
+		db.after_commit.add.assert_called_once()
+
+	def test_the_days_go_back_when_the_pass_ends(self):
+		from hrms.utils import day_remark as dr
+
+		with patch.object(frappe, "flags", frappe._dict(), create=True):
+			with dr.rebuilding(EMP, DAY):
+				self.assertTrue(dr.owned_by_an_automatic_pass(EMP, DAY))
+				with dr.rebuilding(EMP, date(2026, 9, 11)):
+					self.assertTrue(dr.owned_by_an_automatic_pass(EMP, DAY))
+					self.assertTrue(dr.owned_by_an_automatic_pass(EMP, date(2026, 9, 11)))
+				self.assertFalse(dr.owned_by_an_automatic_pass(EMP, date(2026, 9, 11)))
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, DAY))
+
+	def test_a_tap_restamped_onto_another_day_joins_the_running_pass(self):
+		from hrms.utils import day_remark as dr
+
+		moved_to = date(2026, 9, 11)
+		with patch.object(frappe, "flags", frappe._dict(), create=True):
+			with dr.rebuilding(EMP, DAY):
+				dr.also_rebuilding(EMP, moved_to)
+				self.assertTrue(dr.owned_by_an_automatic_pass(EMP, moved_to))
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, moved_to))
+
+	def test_a_lone_restamp_outside_a_pass_still_queues_its_day(self):
+		from hrms.utils import day_remark as dr
+
+		with patch.object(frappe, "flags", frappe._dict(), create=True):
+			dr.also_rebuilding(EMP, DAY)
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, DAY))
+
+	def test_an_unstubbed_flags_object_never_reads_as_owned(self):
+		"""The default must be "queue it": a flags object that answers anything —
+		a MagicMock in a bench-free test, a missing key on a bench — must not
+		silence every re-mark in the system."""
+		from hrms.utils import day_remark as dr
+
+		with patch.object(frappe, "flags", MagicMock(), create=True):
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, DAY))
+
+	def test_the_job_owns_its_own_day_while_it_runs(self):
+		"""remark_day's own writes (links, skip stamps) cannot queue the day again."""
+		from hrms.utils import attendance_recovery as rec
+		from hrms.utils import day_remark as dr
+
+		seen = {}
+
+		def remark(employee, day, apply):
+			seen["owned"] = dr.owned_by_an_automatic_pass(employee, day)
+			return {"expected": [], "marked": []}
+
+		db = MagicMock()
+		db.exists.return_value = None
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(frappe, "get_all", return_value=[]),
+			patch.object(dr, "employee_now", return_value=NOW),
+			patch.object(dr, "lock_employee_row"),
+			patch.object(rec, "_day_protection", return_value=None),
+			patch.object(rec, "_remark_released_day", side_effect=remark),
+		):
+			dr.remark_day(EMP, str(DAY), "hourly")
+			self.assertTrue(seen["owned"])
+			self.assertFalse(dr.owned_by_an_automatic_pass(EMP, DAY))
+
+
 if __name__ == "__main__":
 	unittest.main()
