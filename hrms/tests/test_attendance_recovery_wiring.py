@@ -42,6 +42,27 @@ class TestSwitches(unittest.TestCase):
 		self.assertEqual(closer["default"], "1")
 
 
+class TestEndgameSwitches(unittest.TestCase):
+	"""Part A and Part B write nothing until HR ticks their switch, and a pilot
+	list can hold them to a few employees first (Nabil, 16 Sep 2026)."""
+
+	def _fields(self):
+		from hrms.patches.v16_0.attendance_recovery_switches import fields
+
+		return {f["fieldname"]: f for f in fields()}
+
+	def test_the_two_write_switches_exist_and_start_off(self):
+		fields = self._fields()
+		for name in ("attendance_ownership_relabel", "attendance_erp_backfill"):
+			self.assertEqual(fields[name]["fieldtype"], "Check", name)
+			self.assertEqual(fields[name]["default"], "0", name)
+
+	def test_a_pilot_list_can_hold_them_to_a_few_employees(self):
+		field = self._fields()["attendance_rebuild_pilot_employees"]
+		self.assertEqual(field["fieldtype"], "Small Text")
+		self.assertIn("empty = everyone", field["label"])
+
+
 class TestOnceAndNightly(unittest.TestCase):
 	def test_v2_patch_only_enqueues_the_full_run(self):
 		from hrms.patches.v16_0 import run_attendance_recovery_v2_once as p

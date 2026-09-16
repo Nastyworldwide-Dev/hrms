@@ -46,7 +46,32 @@ def fields() -> list:
 			"insert_after": "attendance_recovery_section",
 		},
 	]
-	previous = "attendance_close_lone_ins_from_erp"
+	rows.extend(
+		[
+			{
+				"fieldname": "attendance_ownership_relabel",
+				"fieldtype": "Check",
+				"label": "Relabel system-made attendance rows (endgame Part A)",
+				"default": "0",
+				"insert_after": "attendance_close_lone_ins_from_erp",
+			},
+			{
+				"fieldname": "attendance_erp_backfill",
+				"fieldtype": "Check",
+				"label": "Copy missing punches from the old ERP and rebuild those days (Part B)",
+				"default": "0",
+				"insert_after": "attendance_ownership_relabel",
+			},
+			{
+				"fieldname": "attendance_rebuild_pilot_employees",
+				"fieldtype": "Small Text",
+				"label": "Pilot employees (comma separated; empty = everyone)",
+				"description": "While this is set, the relabel and the ERP backfill touch only these employees.",
+				"insert_after": "attendance_erp_backfill",
+			},
+		]
+	)
+	previous = "attendance_rebuild_pilot_employees"
 	for step in SWITCH_STEPS:
 		name = f"attendance_recovery_skip_{step}"
 		rows.append(
