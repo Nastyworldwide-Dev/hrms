@@ -57,6 +57,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate, now_datetime
 
+from hrms.hr.doctype.attendance.attendance import mark_automation_rebuild
 from hrms.overrides.company_scope import company_visible
 from hrms.utils.attendance_day_audit import SKIP_PREFIX
 from hrms.utils.email_flush import flush_email_queue_after_commit
@@ -1093,6 +1094,10 @@ def reprocess_late_checkout_attendance(
 					"auto_attendance": 1,
 				}
 			)
+		# Automation is rebuilding this day, not a person: without the flag an
+		# amendment claims HR ownership and every later fix leaves the day alone
+		# (hrms/hr/doctype/attendance/attendance.py mark_automation_rebuild).
+		mark_automation_rebuild(repair)
 		marked = shift.mark_attendance_for_shift_logs(
 			out.employee, attendance_date, logs, repair_attendance=repair
 		)
