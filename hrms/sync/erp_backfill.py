@@ -553,6 +553,144 @@ def _insert_all(planned, instance: str) -> dict:
 	return {"inserted": inserted, "held_back": held, "already_imported": already}
 
 
+NO_EVIDENCE = "no punch is linked to either row: HR decides which one is the day"
+
+
+def resolve_duplicates(rows) -> dict:
+	"""Which of an employee-day's live Attendance rows to keep, cancel, list. Pure.
+
+	Keep the row the punches are linked to — that is the day that was actually
+	worked. Cancel another ONLY when the ownership classifier says the system
+	made it (`owner_hold` is None); a row a person made, or one nobody can
+	vouch for, goes on HR's list. With no punches anywhere there is nothing to
+	prefer, so nothing is cancelled at all.
+	"""
+	ordered = sorted(
+		rows, key=lambda row: (-cint(row.get("linked_punches")), -flt(row.get("working_hours")), row["name"])
+	)
+	if not ordered:
+		return {"keep": None, "cancel": [], "hr": []}
+	if not cint(ordered[0].get("linked_punches")):
+		logger.info("[erp_backfill] %d row(s) and no linked punch: HR decides", len(ordered))
+		return {
+			"keep": None,
+			"cancel": [],
+			"hr": [{"name": row["name"], "reason": NO_EVIDENCE} for row in ordered],
+		}
+	keep, cancel, hr = ordered[0], [], []
+	for row in ordered[1:]:
+		if row.get("owner_hold"):
+			hr.append({"name": row["name"], "reason": row["owner_hold"]})
+		else:
+			cancel.append(row["name"])
+	logger.info("[erp_backfill] keeping %s, cancelling %s, %d for HR", keep["name"], cancel, len(hr))
+	return {"keep": keep["name"], "cancel": cancel, "hr": hr}
+
+
+def duplicate_days(from_date, to_date, employees=None) -> list:
+	"""Every employee-day in the window holding more than one submitted Attendance.
+
+	Each row carries how many punches link to it and what its owner says, so
+	`resolve_duplicates` can decide without reading anything itself.
+	"""
+	from hrms.utils.attendance_recovery import owner_hold
+
+	filters = {"attendance_date": ["between", [getdate(from_date), getdate(to_date)]], "docstatus": 1}
+	if employees:
+		filters["employee"] = ["in", sorted(employees)]
+	rows = frappe.get_all(
+		"Attendance",
+		filters=filters,
+		fields=[
+			"name",
+			"employee",
+			"attendance_date",
+			"status",
+			"docstatus",
+			"working_hours",
+			"auto_attendance",
+			"leave_type",
+			"leave_application",
+			"attendance_request",
+			"modify_half_day_status",
+			"synced_from_instance",
+		],
+		limit_page_length=0,
+	)
+	days: dict = {}
+	for row in rows:
+		days.setdefault((row.get("employee"), getdate(row.get("attendance_date"))), []).append(row)
+	found = []
+	for (employee, day), group in sorted(days.items(), key=lambda item: (item[0][1], str(item[0][0]))):
+		if len(group) < 2:
+			continue
+		for row in group:
+			row["linked_punches"] = frappe.db.count("Employee Checkin", {"attendance": row["name"]})
+			row["owner_hold"] = owner_hold(row)
+		found.append({"employee": employee, "date": day, "rows": group})
+	logger.info("[erp_backfill] %d employee-day(s) hold two or more live rows", len(found))
+	return found
+
+
+def resolve_duplicate_rows(from_date, to_date, employees=None, dry_run=1) -> dict:
+	"""Decide — and with `dry_run` off, cancel — the duplicate rows a day cannot keep.
+
+	Only a system-made row is ever cancelled, and only on a day nothing else
+	protects. Never raises: a cancel the database refuses (a payout links it) is
+	one line on HR's list.
+	"""
+	apply = not wants_dry_run(dry_run)
+	if apply and not _enabled():
+		return {
+			"dry_run": False,
+			"days": [],
+			"cancelled": [],
+			"held_back": [],
+			"note": f"switched off in HR Settings ({SWITCH})",
+		}
+	days, cancelled, held = [], [], []
+	try:
+		for found in duplicate_days(from_date, to_date, employees):
+			employee, day = found["employee"], found["date"]
+			entry = {"employee": employee, "date": str(day)}
+			decision = resolve_duplicates(found["rows"])
+			days.append({**entry, **decision})
+			held.extend(
+				{**entry, "reason": line["reason"], "hr": True, "attendance": line["name"]}
+				for line in decision["hr"]
+			)
+			if not apply or not decision["cancel"]:
+				continue
+			reason = _protection(employee, day, True)
+			if reason:
+				held.append({**entry, "reason": reason, "hr": True})
+				continue
+			for name in decision["cancel"]:
+				frappe.db.savepoint(ROW_SAVEPOINT)
+				try:
+					doc = frappe.get_doc("Attendance", name)
+					doc.flags.ignore_permissions = True
+					doc.cancel()
+				except Exception as exc:
+					frappe.db.rollback(save_point=ROW_SAVEPOINT)
+					logger.exception("[erp_backfill] %s could not be cancelled", name)
+					held.append({**entry, "reason": f"{name} could not be cancelled: {exc}", "hr": True})
+					continue
+				cancelled.append(name)
+				logger.info("[erp_backfill] cancelled %s: %s keeps %s", name, day, decision["keep"])
+	except Exception as exc:
+		logger.exception("[erp_backfill] duplicate resolution stopped")
+		return {
+			"dry_run": not apply,
+			"days": days,
+			"cancelled": cancelled,
+			"held_back": held,
+			"note": f"stopped: {exc}",
+		}
+	logger.info("[erp_backfill] %d duplicate day(s), %d row(s) cancelled", len(days), len(cancelled))
+	return {"dry_run": not apply, "days": days, "cancelled": cancelled, "held_back": held, "note": None}
+
+
 def backfill_punches(from_date, to_date, employees=None, dry_run=1) -> dict:
 	"""Copy the ERP's pre-cutover punches this hub is missing, then rebuild those days.
 
