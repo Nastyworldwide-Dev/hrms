@@ -120,32 +120,14 @@ def _employee_info(names) -> dict:
 def _expected_day(employee: str, day) -> dict:
 	"""What the engine would mark for this employee-day. Reads only.
 
-	Goes through the recovery's own dry-run preview, so the page cannot drift
-	from what a rebuild would really do.
+	One public seam (`attendance_recovery.preview_expected_day`), never this
+	module's private helpers: a signature change there used to leave the page
+	quietly reading "could not be previewed", or showing a preview HR trusts
+	while deciding whether to flip the relabel switch.
 	"""
-	from datetime import datetime, time
-
 	from hrms.utils import attendance_recovery as rec
 
-	day = getdate(day)
-	assignments = rec._submitted_assignments(day, day)
-	covering = [
-		a
-		for a in assignments
-		if a.get("employee") == employee
-		and getdate(a.get("start_date")) <= day
-		and (not a.get("end_date") or getdate(a.get("end_date")) >= day)
-	]
-	times = rec._shift_times({a.get("shift_type") for a in covering if a.get("shift_type")})
-	rostered = rec.rostered_shift(covering, times) or frappe.db.get_value(
-		"Employee", employee, "default_shift"
-	)
-	if not rostered:
-		return {"detail": "no shift is rostered for this day"}
-	taps = rec._local_punches(
-		employee, datetime.combine(day, time.min), datetime.combine(day + timedelta(days=1), time.min)
-	)
-	return rec._expected_on_rostered(employee, day, rostered, taps)
+	return rec.preview_expected_day(employee, getdate(day))
 
 
 def preview_for(row) -> str:

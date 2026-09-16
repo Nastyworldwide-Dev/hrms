@@ -829,6 +829,98 @@ def _row_summary(row) -> dict:
 	}
 
 
+#: Every key `preview_expected_day` returns, so a caller can rely on the shape.
+PREVIEW_KEYS = (
+	"shift",
+	"status",
+	"working_hours",
+	"in_time",
+	"out_time",
+	"late_entry",
+	"early_exit",
+	"overtime_type",
+	"ot_hours",
+	"rebuilds",
+	"punches",
+	"detail",
+)
+
+
+def _expected_ot(employee, shift, day, expected) -> float | None:
+	"""The OT the previewed hours would earn, or None when it cannot be worked out."""
+	logger.debug("[attendance_recovery] OT preview for %s on %s under %s", employee, day, shift)
+	if not expected.get("status") or not expected.get("out_time"):
+		return None
+	try:
+		from hrms.utils.ot_calculation import get_shift_ot_breakdown
+
+		breakdown = (
+			get_shift_ot_breakdown(employee, shift, day, expected.get("out_time"), expected.get("in_time"))
+			or {}
+		)
+	except Exception as exc:
+		logger.warning("[attendance_recovery] no OT preview for %s on %s: %s", employee, day, exc)
+		return None
+	for key in ("ot_hours", "hours", "total_hours"):
+		if breakdown.get(key) is not None:
+			return flt(breakdown.get(key))
+	return None
+
+
+def preview_expected_day(employee, day) -> dict:
+	"""What the engine would mark for one employee-day. READ-ONLY — no write, no lock.
+
+	The one public seam for "what would a rebuild write here?", so a reader (the
+	Attendance Ownership Check report, HR's Fix Day screen) never has to reach
+	into this module's private helpers and silently degrade when one changes.
+
+	Always returns every key in PREVIEW_KEYS. `detail` carries the reason when
+	the engine would mark nothing — today or later (the shift is still running),
+	no shift rostered, no punch on the day, or the shift's own rules declining —
+	and is None when the day would be marked. Never raises.
+	"""
+	day = getdate(day)
+	blank = dict.fromkeys(PREVIEW_KEYS)
+	blank["punches"] = []
+	if not employee:
+		return {**blank, "detail": "no employee"}
+	if day >= _today():
+		logger.debug("[attendance_recovery] %s on %s: the shift is still running", employee, day)
+		return {**blank, "detail": "today or later: the shift is still running"}
+	try:
+		covering = [
+			a
+			for a in _submitted_assignments(day, day)
+			if a.get("employee") == employee
+			and getdate(a.get("start_date")) <= day
+			and (not a.get("end_date") or getdate(a.get("end_date")) >= day)
+		]
+		times = _shift_times({a.get("shift_type") for a in covering if a.get("shift_type")})
+		rostered = rostered_shift(covering, times) or frappe.db.get_value(
+			"Employee", employee, "default_shift"
+		)
+		if not rostered:
+			return {**blank, "detail": "no shift is rostered for this day"}
+		taps = _local_punches(
+			employee, datetime.combine(day, time.min), datetime.combine(day + timedelta(days=1), time.min)
+		)
+		if not taps:
+			return {**blank, "shift": rostered, "detail": "no punch on this day"}
+		expected = {**blank, **(_expected_on_rostered(employee, day, rostered, taps) or {})}
+		expected["ot_hours"] = _expected_ot(employee, rostered, day, expected)
+	except Exception as exc:
+		logger.warning("[attendance_recovery] no preview for %s on %s: %s", employee, day, exc)
+		return {**blank, "detail": f"could not preview this day: {exc}"}
+	logger.info(
+		"[attendance_recovery] preview %s on %s: %s (%s h)",
+		employee,
+		day,
+		expected.get("status"),
+		expected.get("working_hours"),
+	)
+	return expected
+
+
 def _expected_on_rostered(employee, day, rostered, taps) -> dict:
 	"""What the engine would mark on the rostered shift once these taps carry its
 	stamp — computed on copies, nothing written (the dry run's "after")."""
