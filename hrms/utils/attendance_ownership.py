@@ -164,6 +164,8 @@ def classify_row(row, versions=None, source=None) -> tuple[str, str]:
 		return OWNER_HR, "HR wrote this row in the Shift Attendance master edit"
 
 	for entry in versions:
+		if not entry:
+			continue
 		editor = entry.get("owner")
 		if not is_real_user(editor, extra_system):
 			continue
@@ -195,6 +197,11 @@ def classify_row(row, versions=None, source=None) -> tuple[str, str]:
 			return OWNER_SYSTEM, f"{creator} marked it from {punches} linked punch(es)"
 		if row.get("amended_from"):
 			return OWNER_SYSTEM, f"{creator} amended {row.get('amended_from')}"
+		# Punchless and machine-created: the hourly Absent sweep's own shape. It
+		# marks a day Absent precisely because no punch arrived, so "no punches"
+		# is the evidence, not the absence of it. Nothing on this hub creates
+		# Attendance from a console — every fix ships as a patch or a hook — so
+		# an Administrator-owned punchless row is the sweep's, not a person's.
 		return OWNER_SYSTEM, f"{creator} created it and no person has touched it"
 
 	return OWNER_UNSURE, f"{creator} created it with punches linked and no version entry settles it"
@@ -261,12 +268,19 @@ def _removed_days(employees, start, end) -> dict:
 	return {employee: hr_removed_day.removed_days(employee, start, end) for employee in sorted(employees)}
 
 
-def classify_window(from_date, to_date, employees=None) -> list[dict]:
+def classify_window(from_date, to_date, employees=None, system_users=None, erp_owners=None) -> list[dict]:
 	"""One verdict per live Attendance row in [from_date, to_date].
 
 	Rows are read once, and so is every piece of evidence: the Version history,
 	the linked punches and the master-edit comments come back in one query each
 	however many rows the window holds.
+
+	Two things this hub cannot see for itself, so a caller that knows them says
+	so: `system_users`, the accounts that are not people (a dedicated sync or
+	API account beside Administrator), and `erp_owners`, {attendance name: who
+	owns the row on the old instance}. Without them a mirrored row falls back to
+	who copied it here, which is the safe direction — a mirrored row a person
+	may have written reads HR, never system.
 	"""
 	start, end = getdate(from_date), getdate(to_date)
 	filters = {"attendance_date": ["between", [str(start), str(end)]], "docstatus": ["<", 2]}
@@ -293,6 +307,8 @@ def classify_window(from_date, to_date, employees=None) -> list[dict]:
 		source = {
 			"hr_master_edit": row.get("name") in edited,
 			"hr_removed": day in removed.get(row.get("employee"), set()),
+			"system_users": system_users or (),
+			"erp_owner": (erp_owners or {}).get(row.get("name")),
 		}
 		owner, reason = classify_row(payload, versions.get(row.get("name")), source)
 		out.append(
@@ -322,9 +338,9 @@ def classify_window(from_date, to_date, employees=None) -> list[dict]:
 	return out
 
 
-def classify_day(employee: str, day) -> list[dict]:
+def classify_day(employee: str, day, system_users=None, erp_owners=None) -> list[dict]:
 	"""Every live Attendance row of one employee-day, classified."""
-	return classify_window(day, day, employees=[employee])
+	return classify_window(day, day, employees=[employee], system_users=system_users, erp_owners=erp_owners)
 
 
 def owner_counts(rows) -> dict:
@@ -389,6 +405,12 @@ def relabel_system_rows(from_date, to_date, employees=None, dry_run=1) -> dict:
 
 	pilot = pilot_employees()
 	wanted = sorted(set(employees) & set(pilot)) if (employees and pilot) else (employees or pilot or None)
+	if wanted == []:
+		# Asked for employees, none of them on the pilot list. An empty list is
+		# falsy further down, which would read as "no filter" and scan the whole
+		# window to throw all of it away.
+		logger.info("[attendance_ownership] relabel: nothing asked for is on the pilot list")
+		return {"ok": True, "dry_run": dry, "pilot": pilot, "counts": {}, "changed": [], "scanned": 0}
 	rows = classify_window(from_date, to_date, employees=wanted)
 	if pilot:
 		# The list is the fence, not a hint: a row outside it is never written,

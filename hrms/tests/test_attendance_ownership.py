@@ -134,6 +134,17 @@ class TestTheTruthTable(unittest.TestCase):
 		row = _row(synced_from_instance="nasty-live", owner="Administrator", punches=0)
 		self.assertEqual(self._owner(row, source={}), own.OWNER_SYSTEM)
 
+	def test_a_punchless_row_the_machine_created_is_still_the_machines(self):
+		"""The hourly Absent sweep's own shape: it marks the day BECAUSE no punch
+		arrived, so "no punches" is the evidence, not the absence of it. Live,
+		fresh.local: 13 such August days for one employee, all Administrator's."""
+		self.assertEqual(
+			self._owner(_row(owner="Administrator", punches=0, status="Absent")), own.OWNER_SYSTEM
+		)
+
+	def test_an_unreadable_version_entry_proves_nothing_instead_of_crashing(self):
+		self.assertEqual(self._owner(_row(), [None, _version("Administrator", "status")]), own.OWNER_SYSTEM)
+
 	def test_evidence_that_settles_nothing_reads_unsure(self):
 		# a person owns it, punches are linked, no version, no marker: not provable either way
 		self.assertEqual(self._owner(_row(owner=HR, punches=2)), own.OWNER_UNSURE)
@@ -216,6 +227,27 @@ class TestTheDatabaseWrappers(unittest.TestCase):
 			out = own.classify_day("E0", DAY)
 		self.assertEqual(len(out), 1)
 		self.assertEqual(out[0]["employee"], "E0")
+
+	def test_a_caller_can_name_the_sync_accounts_and_the_erp_side_owner(self):
+		"""The hub cannot see who wrote a row on the old instance; Part B can, and says so."""
+		rows = [_row(name="ATT-0", employee="E0", synced_from_instance="nasty-live", owner=SYNC, punches=0)]
+		reads = _Reads(rows=rows)
+		with (
+			patch.object(frappe, "get_all", reads),
+			patch.object(own.hr_removed_day, "removed_days", return_value=set()),
+		):
+			out = own.classify_window(DAY, DAY, system_users={SYNC}, erp_owners={"ATT-0": "Administrator"})
+		self.assertEqual(out[0]["owner"], own.OWNER_SYSTEM)
+
+	def test_without_that_answer_a_mirrored_row_is_never_called_the_machines(self):
+		rows = [_row(name="ATT-0", employee="E0", synced_from_instance="nasty-live", owner=SYNC, punches=0)]
+		reads = _Reads(rows=rows)
+		with (
+			patch.object(frappe, "get_all", reads),
+			patch.object(own.hr_removed_day, "removed_days", return_value=set()),
+		):
+			out = own.classify_window(DAY, DAY)
+		self.assertNotEqual(out[0]["owner"], own.OWNER_SYSTEM)
 
 	def test_an_hr_removed_day_is_hrs_however_the_row_reads(self):
 		reads = self._reads(count=1)
@@ -359,6 +391,25 @@ class TestRelabel(unittest.TestCase):
 		)
 		self.assertEqual(out["changed"], [])
 		set_value.assert_not_called()
+
+	def test_nothing_on_the_pilot_list_reads_no_rows_at_all(self):
+		"""An empty intersection must not fall through as "no filter" and scan
+		the whole window only to discard it."""
+		window = MagicMock(return_value=[])
+		with (
+			patch.object(
+				frappe,
+				"get_single",
+				return_value=_Settings(
+					{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "E9"}
+				),
+			),
+			patch.object(own, "classify_window", window),
+		):
+			out = own.relabel_system_rows(DAY, DAY, employees=["E1"], dry_run=0)
+		window.assert_not_called()
+		self.assertEqual(out["scanned"], 0)
+		self.assertEqual(out["changed"], [])
 
 	def test_each_employee_written_is_locked_first(self):
 		_out, _sv, _c, lock = self._run({"attendance_ownership_relabel": 1})
