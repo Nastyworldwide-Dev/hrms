@@ -280,7 +280,7 @@ def classify_window(from_date, to_date, employees=None, system_users=None, erp_o
 	API account beside Administrator), and `erp_owners`, {attendance name: who
 	owns the row on the old instance}. Without them a mirrored row falls back to
 	who copied it here, which is the safe direction — a mirrored row a person
-	may have written reads HR, never system.
+	may have written reads unsure, never system.
 	"""
 	start, end = getdate(from_date), getdate(to_date)
 	filters = {"attendance_date": ["between", [str(start), str(end)]], "docstatus": ["<", 2]}

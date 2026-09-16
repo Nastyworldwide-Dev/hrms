@@ -239,6 +239,19 @@ class TestTheDatabaseWrappers(unittest.TestCase):
 			out = own.classify_window(DAY, DAY, system_users={SYNC}, erp_owners={"ATT-0": "Administrator"})
 		self.assertEqual(out[0]["owner"], own.OWNER_SYSTEM)
 
+	def test_a_named_erp_owner_who_is_a_real_person_reads_hr_never_system(self):
+		"""The invariant boundary: if these two arms were ever swapped, a row a
+		person wrote in the old system would become relabel-eligible."""
+		rows = [_row(name="ATT-0", employee="E0", synced_from_instance="nasty-live", owner=SYNC, punches=0)]
+		reads = _Reads(rows=rows)
+		with (
+			patch.object(frappe, "get_all", reads),
+			patch.object(own.hr_removed_day, "removed_days", return_value=set()),
+		):
+			out = own.classify_window(DAY, DAY, system_users={SYNC}, erp_owners={"ATT-0": HR})
+		self.assertEqual(out[0]["owner"], own.OWNER_HR)
+		self.assertFalse(out[0]["would_relabel"])
+
 	def test_without_that_answer_a_mirrored_row_is_never_called_the_machines(self):
 		rows = [_row(name="ATT-0", employee="E0", synced_from_instance="nasty-live", owner=SYNC, punches=0)]
 		reads = _Reads(rows=rows)
@@ -410,6 +423,16 @@ class TestRelabel(unittest.TestCase):
 		window.assert_not_called()
 		self.assertEqual(out["scanned"], 0)
 		self.assertEqual(out["changed"], [])
+
+	def test_the_early_return_answers_with_the_same_fields_as_a_real_run(self):
+		"""A caller reading `scanned` or `counts` must not hit a missing key on
+		the path that short-circuits."""
+		early, *_ = self._run(
+			{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "E9"},
+			employees=["E1"],
+		)
+		full, *_ = self._run({"attendance_ownership_relabel": 1})
+		self.assertEqual(set(early), set(full))
 
 	def test_each_employee_written_is_locked_first(self):
 		_out, _sv, _c, lock = self._run({"attendance_ownership_relabel": 1})
