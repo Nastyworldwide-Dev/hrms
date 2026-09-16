@@ -30,8 +30,9 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate
 
-from hrms.sync.checkin_import import attendance_day
+from hrms.sync.checkin_import import attendance_day, is_source_key_duplicate
 from hrms.sync.missing_checkins import DOCTYPE, REMOTE_FIELDS, _to_second
+from hrms.utils.dry_run import wants_dry_run
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,12 @@ SWITCH = "attendance_erp_backfill"
 #: HR Settings Small Text, comma-separated Employee ids; empty = everyone.
 PILOT = "attendance_rebuild_pilot_employees"
 MAX_WINDOW_DAYS = 62
+#: One punch's insert rolls back alone.
+ROW_SAVEPOINT = "hrms_erp_backfill_row"
+#: Commit this often, then take the instance lock again (the lone_in_closer lesson).
+COMMIT_EVERY = 50
+DEVICE_ID = "ERP-BACKFILL"
+DUPLICATE = "already recorded in Verifica — duplicate"
 
 
 # --- pure -----------------------------------------------------------------------
@@ -342,3 +349,246 @@ def parity_report(from_date, to_date, employees=None) -> dict:
 		frappe.throw(str(exc))
 	logger.info("[erp_backfill] parity read by %s", frappe.session.user)
 	return result
+
+
+# --- the copy ---------------------------------------------------------------------
+
+
+def near_duplicate(moment, hub_taps, tolerance=DUPLICATE_TOLERANCE) -> bool:
+	"""Is a hub tap of ANY state within `tolerance` of this ERP punch? Pure.
+
+	Skipped and rejected taps count: the tap IS here and a person decided about
+	it, so copying it back would undo that decision.
+	"""
+	moment = _to_second(moment)
+	return any(abs(_to_second(tap.get("time")) - moment) <= tolerance for tap in hub_taps)
+
+
+def plan_backfill(employee, erp_rows, hub_taps, start: date, end: date) -> tuple:
+	"""(to insert, refused) for one employee, before any day protection. Pure.
+
+	Only this employee's ERP punches, only shift days inside the window, and
+	never a punch a hub tap already stands for.
+	"""
+	planned, refused = [], []
+	for row in sorted(erp_rows, key=lambda r: (_to_second(r.get("time")), r.get("name") or "")):
+		if row.get("employee") != employee:
+			continue
+		day = _punch_day(row)
+		if not (start <= day <= end):
+			continue
+		entry = {
+			"employee": employee,
+			"date": str(day),
+			"time": _fmt(row.get("time")),
+			"log_type": row.get("log_type"),
+			"remote_name": row.get("name"),
+		}
+		if near_duplicate(row.get("time"), hub_taps):
+			refused.append({**entry, "reason": DUPLICATE, "hr": False})
+		else:
+			planned.append(entry)
+	logger.info("[erp_backfill] %s: %d punch(es) to copy, %d refused", employee, len(planned), len(refused))
+	return planned, refused
+
+
+def _sync_running(instance: str) -> bool:
+	from hrms.sync.runner import running_run
+
+	return bool(running_run(instance))
+
+
+def _lock(instance: str) -> bool:
+	from hrms.sync.checkin_import import _lock_instance
+
+	return _lock_instance(instance)
+
+
+def _lock_employee(employee: str) -> None:
+	from hrms.hr.doctype.shift_type.shift_type import lock_employee_row
+
+	lock_employee_row(employee)
+
+
+def _protection(employee: str, day: date, for_update: bool = True) -> str | None:
+	"""Why this employee-day must be left alone, or None.
+
+	Recovery's own rule and nothing beside it: today, HR-removed, a draft, a
+	leave or request (live, not just a row), a paid or approved-OT day, and —
+	through the ownership classifier it now asks — a day a person owns.
+	"""
+	from hrms.utils import attendance_recovery as rec
+
+	held = rec._day_protection(employee, getdate(day), for_update)
+	if held:
+		logger.info("[erp_backfill] %s on %s held: %s", employee, day, held)
+	return held
+
+
+def _insert(entry: dict, instance: str) -> str | None:
+	from hrms.sync.checkin_import import insert_source_punch
+
+	logger.debug("[erp_backfill] copying %s for %s", entry["remote_name"], entry["employee"])
+	return insert_source_punch(
+		{
+			"employee": entry["employee"],
+			"time": entry["time"],
+			"log_type": entry.get("log_type"),
+			"device_id": DEVICE_ID,
+			"remote_name": entry["remote_name"],
+		},
+		instance,
+	)
+
+
+def _guarded_rebuild(employee: str, day: date) -> dict:
+	"""The engine's own re-mark of the day, under the never-worse guard (B4)."""
+	from hrms.utils import attendance_recovery as rec
+
+	return rec.guarded_rebuild(employee, getdate(day), rec._remark_released_day)
+
+
+def rebuild_days(days) -> dict:
+	"""Rebuild every copied employee-day through the engine, oldest first.
+
+	Per-employee lock, small batches, resumable: a day already rebuilt marks the
+	same result the second time, so a killed run is simply re-run. Never raises —
+	one bad day is held for HR and the rest go on.
+	"""
+	rebuilt, held = [], []
+	for index, (employee, day) in enumerate(sorted(days, key=lambda pair: (pair[1], str(pair[0]))), start=1):
+		entry = {"employee": employee, "date": str(day)}
+		reason = _protection(employee, day, True)
+		if reason:
+			held.append({**entry, "reason": reason, "hr": True})
+			continue
+		try:
+			_lock_employee(employee)
+			result = _guarded_rebuild(employee, day)
+		except Exception as exc:
+			frappe.db.rollback(save_point=ROW_SAVEPOINT)
+			logger.exception("[erp_backfill] %s on %s could not be rebuilt", employee, day)
+			held.append({**entry, "reason": f"rebuild failed: {exc}", "hr": True})
+			continue
+		if result.get("held"):
+			held.append({**entry, "reason": result["held"], "hr": result.get("hr", True)})
+		else:
+			rebuilt.append({**entry, "marked": result.get("marked") or []})
+		if index % COMMIT_EVERY == 0:
+			frappe.db.commit()
+	frappe.db.commit()
+	logger.info("[erp_backfill] rebuilt %d day(s), held %d", len(rebuilt), len(held))
+	return {"rebuilt": rebuilt, "held_back": held}
+
+
+def _outcome(dry_run=True, planned=None, inserted=None, held=None, note=None, **extra) -> dict:
+	logger.debug("[erp_backfill] outcome: dry_run=%s note=%s", dry_run, note)
+	return {
+		"dry_run": dry_run,
+		"planned": planned or [],
+		"inserted": inserted or [],
+		"held_back": held or [],
+		"already_imported": 0,
+		"rebuilt": [],
+		"note": note,
+		**extra,
+	}
+
+
+def _insert_all(planned, instance: str) -> dict:
+	"""Insert the planned punches, one savepoint each, a commit per COMMIT_EVERY —
+	and the instance lock taken again after every commit, because the commit
+	releases it and a sync starting meanwhile must win."""
+	inserted, held, already = [], [], 0
+	for index, entry in enumerate(planned, start=1):
+		frappe.db.savepoint(ROW_SAVEPOINT)
+		try:
+			name = _insert(entry, instance)
+		except Exception as exc:
+			frappe.db.rollback(save_point=ROW_SAVEPOINT)
+			if is_source_key_duplicate(exc):
+				already += 1
+				logger.info("[erp_backfill] %s was imported already", entry["remote_name"])
+				continue
+			logger.exception("[erp_backfill] %s could not be copied", entry["remote_name"])
+			held.append({**entry, "reason": f"could not be inserted: {exc}", "hr": True})
+			continue
+		inserted.append({**entry, "checkin": name})
+		if index % COMMIT_EVERY == 0:
+			frappe.db.commit()
+			if index < len(planned) and not _lock(instance):
+				held.extend({**e, "reason": "sync running, skipped", "hr": False} for e in planned[index:])
+				break
+	frappe.db.commit()
+	logger.info(
+		"[erp_backfill] inserted %d punch(es), held %d, already here %d", len(inserted), len(held), already
+	)
+	return {"inserted": inserted, "held_back": held, "already_imported": already}
+
+
+def backfill_punches(from_date, to_date, employees=None, dry_run=1) -> dict:
+	"""Copy the ERP's pre-cutover punches this hub is missing, then rebuild those days.
+
+	Insert-only and source-keyed: the unique index on `source_checkin` makes a
+	second copy impossible, and nothing here updates or deletes anything, on
+	either side. Background-safe: it never raises — every refusal is a note or a
+	held-back line for HR.
+	"""
+	apply = not wants_dry_run(dry_run)
+	try:
+		start, end = resolve_window(from_date, to_date)
+	except ValueError as exc:
+		logger.warning("[erp_backfill] refused: %s", exc)
+		return _outcome(not apply, note=str(exc))
+	try:
+		if not _enabled():
+			return _outcome(not apply, note=f"switched off in HR Settings ({SWITCH})")
+		instance = _source_instance()
+		if not instance:
+			return _outcome(not apply, note="no single enabled ERP instance with credentials")
+		if _sync_running(instance):
+			return _outcome(not apply, note="sync running, skipped", instance=instance)
+		scope = _employees_in_scope(instance, pilot_employees(_pilot_text(), employees))
+		hub = _hub_punches(scope, start, end)
+		client = _client(instance)
+		planned, refused = [], []
+		for employee in scope:
+			found, dropped = plan_backfill(
+				employee, _erp_punches(client, employee, start, end), hub.get(employee, []), start, end
+			)
+			refused.extend(dropped)
+			for entry in found:
+				reason = _protection(entry["employee"], getdate(entry["date"]), apply)
+				if reason:
+					refused.append({**entry, "reason": reason, "hr": True})
+				else:
+					planned.append(entry)
+		if not apply:
+			logger.info("[erp_backfill] dry run %s..%s: %d to copy", start, end, len(planned))
+			return _outcome(True, planned=planned, held=refused, instance=instance)
+		if not _lock(instance):
+			return _outcome(False, note="another import holds the lock, skipped", instance=instance)
+		written = _insert_all(planned, instance)
+		days = {(entry["employee"], getdate(entry["date"])) for entry in written["inserted"]}
+		rebuild = rebuild_days(sorted(days, key=lambda pair: (pair[1], pair[0]))) if days else {}
+	except Exception as exc:
+		logger.exception("[erp_backfill] run crashed")
+		return _outcome(not apply, note=f"the copy stopped: {exc}")
+	logger.info(
+		"[erp_backfill] %s..%s: %d copied, %d rebuilt",
+		start,
+		end,
+		len(written["inserted"]),
+		len(rebuild.get("rebuilt") or []),
+	)
+	return {
+		"dry_run": False,
+		"instance": instance,
+		"window": {"from_date": str(start), "to_date": str(end)},
+		"planned": planned,
+		"inserted": written["inserted"],
+		"already_imported": written["already_imported"],
+		"held_back": refused + written["held_back"] + (rebuild.get("held_back") or []),
+		"rebuilt": rebuild.get("rebuilt") or [],
+		"note": None,
+	}
