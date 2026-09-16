@@ -20,6 +20,9 @@ frappe.query_reports["Attendance Ownership Check"] = {
 			label: __("To Date"),
 			fieldtype: "Date",
 			default: frappe.datetime.add_days(frappe.datetime.get_today(), -1),
+			// Today's shifts are still running; the server clamps to yesterday
+			// too, this stops the picker offering a date it would only undo.
+			max_date: frappe.datetime.add_days(frappe.datetime.get_today(), -1),
 			reqd: 1,
 		},
 		{

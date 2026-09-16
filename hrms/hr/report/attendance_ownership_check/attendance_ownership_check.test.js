@@ -34,8 +34,8 @@ test("the four filters HR needs are all there, and the window is required", () =
 	for (const field of ["from_date", "to_date", "employee", "owner"]) {
 		assert.ok(JS.includes(`fieldname: "${field}"`), `missing filter ${field}`);
 	}
-	assert.match(JS, /fieldname: "from_date"[\s\S]{0,200}reqd: 1/);
-	assert.match(JS, /fieldname: "to_date"[\s\S]{0,200}reqd: 1/);
+	assert.match(JS, /fieldname: "from_date"[\s\S]{0,400}reqd: 1/);
+	assert.match(JS, /fieldname: "to_date"[\s\S]{0,400}reqd: 1/);
 });
 
 test("the page starts on the date the report module starts on", () => {
@@ -48,6 +48,11 @@ test("the page starts on the date the report module starts on", () => {
 
 test("today is never the default end of the window", () => {
 	assert.match(JS, /add_days\(frappe\.datetime\.get_today\(\), -1\)/);
+});
+
+test("the date picker will not offer today either", () => {
+	const block = JS.slice(JS.indexOf('fieldname: "to_date"'), JS.indexOf('fieldname: "employee"'));
+	assert.match(block, /max_date:/, "to_date needs a max_date so today cannot be picked");
 });
 
 test("the page offers nothing that writes", () => {

@@ -57,11 +57,18 @@ def _today() -> date:
 
 
 def _apply_defaults(filters) -> None:
-	"""1 August → yesterday. Today is never read: its shifts are still running."""
+	"""1 August → yesterday, where yesterday is a ceiling and not just a default.
+
+	Today's shifts are still running: its rows would be judged on punches that
+	have not arrived, and the preview would propose a rebuild from half a day.
+	Filling in the blank was not enough — HR can type a date, and the picker
+	offered today.
+	"""
+	yesterday = _today() - timedelta(days=1)
 	if not filters.get("from_date"):
 		filters["from_date"] = str(START_FLOOR)
-	if not filters.get("to_date"):
-		filters["to_date"] = str(_today() - timedelta(days=1))
+	asked = getdate(filters["to_date"]) if filters.get("to_date") else yesterday
+	filters["to_date"] = str(min(asked, yesterday))
 
 
 def fence_rows(rows, filters, employees, companies) -> list:
@@ -148,7 +155,9 @@ def preview_for(row) -> str:
 			row.get("date"),
 			exc,
 		)
-		return _("could not be previewed: {0}").format(exc)
+		# The reason is in the log above, not in a cell: a page is not the place
+		# to print an internal identifier at whoever is reading it.
+		return _("could not be previewed — see the error log")
 	if not expected.get("status"):
 		return expected.get("detail") or _("the rules would not mark this day")
 	hours = flt(expected.get("working_hours"))

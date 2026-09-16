@@ -65,6 +65,31 @@ class TestEveryOwnerReachesThePage(unittest.TestCase):
 		self.assertIn(str(report.START_FLOOR), JS)
 
 
+class TestUnsureNeverReadsAsTheMachines(unittest.TestCase):
+	"""The page must keep "we cannot tell" visibly apart from "the machine made it"."""
+
+	def test_an_unsure_row_keeps_its_own_label_and_is_not_offered_for_relabel(self):
+		row = {**_row("ATT-U"), "owner": own.OWNER_UNSURE, "would_relabel": False}
+		out = report.fence_rows([row], frappe._dict(), {}, [])
+		self.assertEqual(out[0]["owner_label"], report.OWNER_LABELS[own.OWNER_UNSURE])
+		self.assertNotEqual(out[0]["owner_label"], report.OWNER_LABELS[own.OWNER_SYSTEM])
+		self.assertEqual(out[0]["would_relabel"], "no")
+
+	def test_the_summary_counts_it_apart_from_the_system_rows(self):
+		rows = report.fence_rows(
+			[
+				{**_row("ATT-U"), "owner": own.OWNER_UNSURE, "would_relabel": False},
+				_row("ATT-S"),
+			],
+			frappe._dict(),
+			{},
+			[],
+		)
+		message = report._summary(rows)
+		self.assertIn(f"{report.OWNER_LABELS[own.OWNER_UNSURE]} 1", message)
+		self.assertIn(f"{report.OWNER_LABELS[own.OWNER_SYSTEM]} 1", message)
+
+
 class TestThePreviewCap(unittest.TestCase):
 	"""A month-wide window must not compute a preview per row and time HR out."""
 

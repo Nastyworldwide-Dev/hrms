@@ -104,9 +104,24 @@ class TestFilters(unittest.TestCase):
 
 	def test_a_window_hr_typed_is_left_alone(self):
 		filters = frappe._dict(from_date="2026-09-01", to_date="2026-09-10")
-		report._apply_defaults(filters)
+		with patch.object(report, "_today", return_value=date(2026, 9, 16)):
+			report._apply_defaults(filters)
 		self.assertEqual(filters["from_date"], "2026-09-01")
 		self.assertEqual(filters["to_date"], "2026-09-10")
+
+	def test_hr_asking_for_today_is_given_yesterday_instead(self):
+		"""Today's shifts are still running: a verdict on them would be read off
+		half a day. The rule is a ceiling, not just a default."""
+		filters = frappe._dict(from_date="2026-09-01", to_date="2026-09-16")
+		with patch.object(report, "_today", return_value=date(2026, 9, 16)):
+			report._apply_defaults(filters)
+		self.assertEqual(filters["to_date"], "2026-09-15")
+
+	def test_a_future_date_is_clamped_too(self):
+		filters = frappe._dict(from_date="2026-09-01", to_date="2027-01-01")
+		with patch.object(report, "_today", return_value=date(2026, 9, 16)):
+			report._apply_defaults(filters)
+		self.assertEqual(filters["to_date"], "2026-09-15")
 
 	def test_the_owner_filter_offers_exactly_the_labels_the_classifier_produces(self):
 		for owner in own.OWNERS:
@@ -167,6 +182,10 @@ class TestThePreviewNeverWrites(unittest.TestCase):
 	def test_the_preview_goes_through_the_recoverys_dry_run_and_swallows_its_failures(self):
 		with patch.object(report, "_expected_day", side_effect=RuntimeError("no shift")):
 			self.assertIn("could not", report.preview_for(_classified()).lower())
+
+	def test_a_failed_preview_keeps_the_exception_in_the_log_not_in_the_cell(self):
+		with patch.object(report, "_expected_day", side_effect=RuntimeError("secret-internal-id")):
+			self.assertNotIn("secret-internal-id", report.preview_for(_classified()))
 
 	def test_a_preview_reads_as_the_status_and_the_hours_the_engine_would_mark(self):
 		with patch.object(
