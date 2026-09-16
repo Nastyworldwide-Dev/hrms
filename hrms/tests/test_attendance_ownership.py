@@ -20,7 +20,7 @@ import pathlib
 import sys
 import unittest
 from datetime import date, datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _erpnext_stub
@@ -225,6 +225,144 @@ class TestTheDatabaseWrappers(unittest.TestCase):
 		):
 			out = own.classify_window(DAY, DAY)
 		self.assertEqual(out[0]["owner"], own.OWNER_HR)
+
+
+class _Settings(dict):
+	def get(self, key, default=None):
+		return super().get(key, default)
+
+
+class TestRelabel(unittest.TestCase):
+	"""`relabel_system_rows` writes the tick back on system-made rows and nothing else."""
+
+	def _classified(self):
+		return [
+			{
+				"employee": "E1",
+				"date": str(DAY),
+				"attendance": "ATT-SYS",
+				"owner": own.OWNER_SYSTEM,
+				"reason": "the hourly job marked it from 2 punch(es)",
+				"auto_attendance": 0,
+				"would_relabel": True,
+				"status": "Present",
+			},
+			{
+				"employee": "E2",
+				"date": str(DAY),
+				"attendance": "ATT-HR",
+				"owner": own.OWNER_HR,
+				"reason": "HR changed the status",
+				"auto_attendance": 0,
+				"would_relabel": False,
+				"status": "Present",
+			},
+			{
+				"employee": "E3",
+				"date": str(DAY),
+				"attendance": "ATT-UNSURE",
+				"owner": own.OWNER_UNSURE,
+				"reason": "nothing settles it",
+				"auto_attendance": 0,
+				"would_relabel": False,
+				"status": "Absent",
+			},
+			{
+				"employee": "E4",
+				"date": str(DAY),
+				"attendance": "ATT-DONE",
+				"owner": own.OWNER_SYSTEM,
+				"reason": "the hourly job marked it",
+				"auto_attendance": 1,
+				"would_relabel": False,
+				"status": "Present",
+			},
+		]
+
+	def _run(self, settings, dry_run=0, employees=None, rows=None):
+		single = _Settings(settings)
+		with (
+			patch.object(frappe, "get_single", return_value=single),
+			patch.object(
+				own, "classify_window", return_value=rows if rows is not None else self._classified()
+			),
+			patch.object(own, "_lock", MagicMock()) as lock,
+			patch.object(frappe.db, "set_value") as set_value,
+			patch.object(own, "_comment", MagicMock()) as comment,
+		):
+			out = own.relabel_system_rows(DAY, DAY, employees=employees, dry_run=dry_run)
+		return out, set_value, comment, lock
+
+	def test_the_switch_is_off_when_the_field_is_absent(self):
+		out, set_value, _comment, _lock = self._run({})
+		self.assertFalse(out["ok"])
+		self.assertIn("attendance_ownership_relabel", out["refused"])
+		set_value.assert_not_called()
+
+	def test_the_switch_off_refuses_even_a_dry_run(self):
+		out, set_value, _c, _l = self._run({"attendance_ownership_relabel": 0}, dry_run=1)
+		self.assertFalse(out["ok"])
+		set_value.assert_not_called()
+
+	def test_only_system_made_rows_with_the_tick_off_are_written(self):
+		out, set_value, comment, _lock = self._run({"attendance_ownership_relabel": 1})
+		self.assertTrue(out["ok"])
+		self.assertEqual([r["attendance"] for r in out["changed"]], ["ATT-SYS"])
+		set_value.assert_called_once_with(
+			"Attendance", "ATT-SYS", "auto_attendance", 1, update_modified=False
+		)
+		self.assertEqual(comment.call_count, 1)
+		self.assertEqual(out["counts"][own.OWNER_HR], 1)
+		self.assertEqual(out["counts"][own.OWNER_UNSURE], 1)
+
+	def test_a_dry_run_reports_the_same_rows_and_writes_nothing(self):
+		out, set_value, comment, _lock = self._run({"attendance_ownership_relabel": 1}, dry_run=1)
+		self.assertTrue(out["dry_run"])
+		self.assertEqual([r["attendance"] for r in out["changed"]], ["ATT-SYS"])
+		set_value.assert_not_called()
+		comment.assert_not_called()
+
+	def test_running_it_again_changes_nothing(self):
+		"""Idempotent: the second pass sees `auto_attendance = 1` and skips the row."""
+		done = [{**r, "auto_attendance": 1, "would_relabel": False} for r in self._classified()]
+		out, set_value, _c, _l = self._run({"attendance_ownership_relabel": 1}, rows=done)
+		self.assertEqual(out["changed"], [])
+		set_value.assert_not_called()
+
+	def test_the_pilot_list_holds_the_run_to_those_employees(self):
+		out, set_value, _c, _l = self._run(
+			{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "E7, E8"}
+		)
+		self.assertEqual(out["changed"], [])
+		self.assertEqual(out["pilot"], ["E7", "E8"])
+		set_value.assert_not_called()
+
+	def test_an_employee_on_the_pilot_list_is_relabelled(self):
+		out, set_value, _c, _l = self._run(
+			{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "E1"}
+		)
+		self.assertEqual([r["attendance"] for r in out["changed"]], ["ATT-SYS"])
+		set_value.assert_called_once()
+
+	def test_an_empty_pilot_list_means_everyone(self):
+		out, _sv, _c, _l = self._run(
+			{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "  "}
+		)
+		self.assertEqual([r["attendance"] for r in out["changed"]], ["ATT-SYS"])
+		self.assertEqual(out["pilot"], [])
+
+	def test_a_caller_asking_for_someone_off_the_pilot_list_gets_nothing(self):
+		"""The list fences the run; a caller's own employee list can only narrow it."""
+		out, set_value, _c, _l = self._run(
+			{"attendance_ownership_relabel": 1, "attendance_rebuild_pilot_employees": "E9"},
+			employees=["E1"],
+		)
+		self.assertEqual(out["changed"], [])
+		set_value.assert_not_called()
+
+	def test_each_employee_written_is_locked_first(self):
+		_out, _sv, _c, lock = self._run({"attendance_ownership_relabel": 1})
+		lock.assert_called_once_with("E1")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,10 @@ This module answers the question from what actually happened to the row:
   one Comment query for the whole window, whatever its size.
 * `is_system_owned` — what other modules call instead of reading
   `auto_attendance` directly.
+* `relabel_system_rows` — writes `auto_attendance = 1` back onto rows this
+  module proves are system-made, and onto nothing else. Behind an HR Settings
+  switch that is off until HR turns it on, and a pilot list that fences a run
+  to named employees.
 
 Four owners, and UNSURE is treated as HR's by every caller. Fail safe: a row we
 cannot prove the machine made is a row the machine does not touch.
@@ -31,9 +35,11 @@ import json
 import logging
 
 import frappe
+from frappe import _
 from frappe.utils import cint, getdate
 
 from hrms.utils import hr_removed_day
+from hrms.utils.dry_run import wants_dry_run
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +64,12 @@ DECIDING_FIELDS = ("status", "in_time", "out_time", "working_hours")
 
 #: The HR master edit's own comment (attendance_master_edit._save).
 MASTER_EDIT_MARKER = "via Shift Attendance"
+
+#: HR Settings write switch (Custom Field, patches/v16_0/attendance_recovery_switches.py).
+#: An absent field reads as OFF: a deploy lands with nothing relabelled.
+RELABEL_SWITCH = "attendance_ownership_relabel"
+#: HR Settings pilot list (Custom Field, comma-separated employee ids). Empty = everyone.
+PILOT_FIELD = "attendance_rebuild_pilot_employees"
 
 #: Fields `classify_row` reads. Kept as one list so the wrappers cannot drift.
 OWNERSHIP_FIELDS = (
@@ -318,3 +330,105 @@ def classify_day(employee: str, day) -> list[dict]:
 def owner_counts(rows) -> dict:
 	"""How many rows per label. Pure."""
 	return {owner: sum(1 for row in rows if row.get("owner") == owner) for owner in OWNERS}
+
+
+# --- relabel -------------------------------------------------------------------------
+
+
+def relabel_enabled() -> bool:
+	"""The HR Settings write switch. An absent Custom Field reads as OFF."""
+	return bool(cint(frappe.get_single("HR Settings").get(RELABEL_SWITCH)))
+
+
+def pilot_employees() -> list[str]:
+	"""The pilot list from HR Settings. Empty (or absent) means everyone."""
+	raw = frappe.get_single("HR Settings").get(PILOT_FIELD) or ""
+	return [part.strip() for part in str(raw).split(",") if part.strip()]
+
+
+def _lock(employee: str) -> None:
+	"""The per-employee lock HR's master edit and the hourly job take."""
+	from hrms.hr.doctype.shift_type.shift_type import lock_employee_row
+
+	lock_employee_row(employee)
+
+
+def _comment(name: str, text: str) -> None:
+	frappe.get_doc(
+		{
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": "Attendance",
+			"reference_name": name,
+			"content": text,
+		}
+	).insert(ignore_permissions=True)
+
+
+def relabel_system_rows(from_date, to_date, employees=None, dry_run=1) -> dict:
+	"""Give system-made rows their `auto_attendance` tick back. Dry run by default.
+
+	Only rows `classify_row` proves the machine made are touched: an HR row, a
+	leave or request row and an UNSURE row are counted and left exactly as they
+	are. Idempotent — a row that already carries the tick is not written again —
+	and refused outright while the HR Settings switch is off, so a deploy lands
+	with nothing changed. When the pilot list is set, only those employees are
+	read at all.
+	"""
+	dry = wants_dry_run(dry_run)
+	if not relabel_enabled():
+		logger.info("[attendance_ownership] relabel refused: %s is off", RELABEL_SWITCH)
+		return {
+			"ok": False,
+			"dry_run": dry,
+			"refused": _("HR Settings switch {0} is off").format(RELABEL_SWITCH),
+			"changed": [],
+			"counts": {},
+			"pilot": [],
+		}
+
+	pilot = pilot_employees()
+	wanted = sorted(set(employees) & set(pilot)) if (employees and pilot) else (employees or pilot or None)
+	rows = classify_window(from_date, to_date, employees=wanted)
+	if pilot:
+		# The list is the fence, not a hint: a row outside it is never written,
+		# whatever the caller asked for or the window returned.
+		rows = [row for row in rows if row.get("employee") in set(pilot)]
+	targets = [row for row in rows if row.get("would_relabel")]
+
+	changed = []
+	for row in targets:
+		if dry:
+			changed.append(row)
+			continue
+		_lock(row["employee"])
+		frappe.db.set_value("Attendance", row["attendance"], "auto_attendance", 1, update_modified=False)
+		_comment(
+			row["attendance"],
+			_("Ownership check: system-made — {0}. auto_attendance set back to 1.").format(row["reason"]),
+		)
+		changed.append(row)
+
+	result = {
+		"ok": True,
+		"dry_run": dry,
+		"pilot": pilot,
+		"counts": owner_counts(rows),
+		"changed": changed,
+		"scanned": len(rows),
+	}
+	logger.info(
+		"[attendance_ownership] relabel %s..%s: %d of %d row(s) %s",
+		getdate(from_date),
+		getdate(to_date),
+		len(changed),
+		len(rows),
+		"would be relabelled" if dry else "relabelled",
+	)
+	return result
+
+
+def relabel_preview(from_date, to_date, employees=None) -> dict:
+	"""What a relabel would do, without the switch mattering. Read-only."""
+	rows = classify_window(from_date, to_date, employees=employees)
+	return {"counts": owner_counts(rows), "would_relabel": [r for r in rows if r["would_relabel"]]}
