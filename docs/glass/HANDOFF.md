@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   pairing/relinking entry point
+prompt:   Norazlin 4 Sep / two-row day
 status:   done
-commit:   ae106aecc on nz-glass
-files:    hrms/public/js/fix_day.bundle.js
-          hrms/public/js/fix_day.bundle.test.js
-          hrms/hr/doctype/employee_checkin/employee_checkin_list.js
-          hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js
-          hrms/hr/doctype/attendance/attendance_list.js
-          hrms/hr/doctype/attendance/attendance_list.test.js
-          hrms/tests/js/desk_list_harness.js
-          .claude/plans/ticket-attendance-list-onload.md
-verify:   node --test hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js hrms/hr/doctype/attendance/attendance_list.test.js hrms/public/js/fix_day.bundle.test.js
-flags:    none
-next:     deploy; the "Fix day" button appears on Employee Checkin and Attendance
+commit:   7a3d20bf0 on nz-glass
+files:    hrms/api/attendance_fix_day.py
+          hrms/public/js/fix_day.bundle.js
+          hrms/tests/test_fix_day_refuses_a_two_row_day.py
+          hrms/tests/test_attendance_fix_day.py
+          hrms/tests/test_fix_day_screen.py
+verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_fix_day_refuses_a_two_row_day.py hrms/tests/test_attendance_fix_day.py
+flags:    Norazlin 4 Sep is fixable on live TODAY without this deploy - remove
+          the duplicate row BEFORE pairing; the order was the whole blocker
+next:     deploy; then the ghost-row list (rows holding times with zero punches)
