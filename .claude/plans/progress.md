@@ -221,3 +221,11 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:19:48Z COMMIT: a84b89973 fix(attendance): the half day fix lands even on a site with its own override → review dispatched
 - 2026-09-17T04:20:22Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-17T04:20:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:20:40Z COMMIT: d4494a658 fix(attendance): an on-duty request stops being unapprovable forever → review dispatched
+- 2026-09-17T06:10:00Z REPAIR: review Critical on d4494a658 — the overlapping-shift fallback could silently repurpose a STALE leave row, because should_mark_attendance guards on the Leave Application while the fallback reads the row, and create_or_update_attendance writes with db_set (no validation). A candidate with leave_type or status On Leave is now skipped and logged; the framework's overlap refusal stands, which is the right answer for a day that still says leave.
+- 2026-09-17T06:10:00Z EVIDENCE: rung 2 — 2 more tests RED first, 13 green after; 397 attendance-request neighbour tests green. Hotspot ticket opened (.claude/plans/ticket-attendance-request-refactor.md): six methods now re-derive the same day state, which is why this fix had to be written twice.
+- 2026-09-17T04:26:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-17T04:27:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T04:27:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T04:27:17Z EVIDENCE: 6 behaves — family hunt: class=Attendance is keyed by (employee, date, shift), but a request is about; 1 call site(s) given verdicts, 5 same-root ⟂f0de8b38c48e
+- 2026-09-17T04:27:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753

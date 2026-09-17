@@ -68,16 +68,23 @@ class FindsTheConflictingRowCase(unittest.TestCase):
 			if doctype != "Attendance":
 				return None
 			shift = filters.get("shift")
-			for name, row_shift in rows.items():
+			for name, row in rows.items():
+				row_shift = row["shift"] if isinstance(row, dict) else row
 				if shift is None or row_shift == shift:
 					return name
 			return None
 
 		def get_all(doctype, filters=None, **kwargs):
+			if doctype != "Attendance":
+				return []
 			return [
-				frappe._dict(name=name, shift=shift)
-				for name, shift in rows.items()
-				if doctype == "Attendance"
+				frappe._dict(
+					name=name,
+					shift=row["shift"] if isinstance(row, dict) else row,
+					status=row.get("status") if isinstance(row, dict) else None,
+					leave_type=row.get("leave_type") if isinstance(row, dict) else None,
+				)
+				for name, row in rows.items()
 			]
 
 		db = MagicMock()
@@ -113,6 +120,27 @@ class FindsTheConflictingRowCase(unittest.TestCase):
 
 	def test_a_day_with_no_attendance_still_creates_one(self):
 		self.assertIsNone(self._lookup(FLEXIBLE, {}))
+
+	def test_a_row_that_is_on_leave_is_never_repurposed(self):
+		"""A day already on leave is a real conflict — surface it, never overwrite.
+
+		`should_mark_attendance` skips a day a live Leave Application covers, but
+		that guard reads the APPLICATION. A stale leave row left behind by a
+		cancelled or reversed leave would otherwise be found here and silently
+		flipped to Present by `create_or_update_attendance`'s db_set, which runs
+		no validation at all.
+		"""
+		leave_row = {"HR-ATT-2026-16752": {"shift": DAY_SHIFT, "status": "On Leave"}}
+		self.assertIsNone(self._lookup(FLEXIBLE, leave_row, overlaps=True))
+
+	def test_a_row_carrying_a_leave_type_is_never_repurposed(self):
+		"""A Half Day on leave says Half Day, not On Leave — the type is the tell."""
+		half = {"HR-ATT-2026-16752": {"shift": DAY_SHIFT, "status": "Half Day", "leave_type": "Annual"}}
+		self.assertIsNone(self._lookup(FLEXIBLE, half, overlaps=True))
+
+	def test_a_plain_row_on_an_overlapping_shift_is_still_taken(self):
+		plain = {"HR-ATT-2026-16752": {"shift": DAY_SHIFT, "status": "Present"}}
+		self.assertEqual(self._lookup(FLEXIBLE, plain, overlaps=True).name, "HR-ATT-2026-16752")
 
 	def test_a_request_with_no_shift_is_unchanged(self):
 		"""No shift means no overlap test to make — the old lookup is the answer."""

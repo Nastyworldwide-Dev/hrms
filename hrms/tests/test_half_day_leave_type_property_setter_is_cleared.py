@@ -33,7 +33,10 @@ OVERRIDE = {
 class PatchCase(unittest.TestCase):
 	def _run(self, existing: list[str]):
 		db = MagicMock()
-		db.get_all.return_value = list(existing)
+		db.get_all.return_value = [
+			frappe._dict(name=name, value="eval:whatever", owner="hr@example.com", modified="2026-01-01")
+			for name in existing
+		]
 		deleted: list[tuple] = []
 		with (
 			patch.object(frappe, "db", db),
@@ -48,6 +51,12 @@ class PatchCase(unittest.TestCase):
 		doctype, kwargs = db.get_all.call_args[0][0], db.get_all.call_args[1]
 		self.assertEqual(doctype, "Property Setter")
 		self.assertEqual(kwargs["filters"], OVERRIDE)
+
+	def test_it_reads_what_it_is_about_to_delete(self):
+		"""The value goes in the log before the row goes — a deliberate site
+		customisation must be readable back from the log alone."""
+		db, _ = self._run([])
+		self.assertIn("value", db.get_all.call_args[1]["fields"])
 
 	def test_an_override_is_removed(self):
 		_, deleted = self._run(["Attendance-leave_type-mandatory_depends_on"])

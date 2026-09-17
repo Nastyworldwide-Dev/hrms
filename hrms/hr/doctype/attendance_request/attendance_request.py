@@ -387,21 +387,45 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				"attendance_date": attendance_date,
 				"docstatus": ("!=", 2),
 			},
-			fields=["name", "shift"],
+			fields=["name", "shift", "status", "leave_type", "attendance_request"],
 		)
 		for row in rows:
 			if not row.shift or row.shift == self.shift:
 				continue
-			if has_overlapping_timings(self.shift, row.shift):
-				logger.info(
-					"[attendance_request] %s on %s: updating %s (%s) — it overlaps %s",
+			if not has_overlapping_timings(self.shift, row.shift):
+				continue
+			# A LEAVE row is never repurposed. `should_mark_attendance` already
+			# skips a day a live Leave Application covers, but that guard reads
+			# the APPLICATION; a row left behind by a cancelled or reversed leave
+			# would be found here and silently flipped to Present, because
+			# `create_or_update_attendance` writes with db_set and db_set runs no
+			# validation at all. Better to leave the framework's overlap refusal
+			# standing: a day that still says leave is a real conflict, and a
+			# person has to decide it.
+			if row.leave_type or row.status == "On Leave":
+				logger.warning(
+					"[attendance_request] %s on %s: %s (%s) overlaps %s but is a leave row "
+					"(status=%s, leave_type=%s) — left alone",
 					self.employee,
 					attendance_date,
 					row.name,
 					row.shift,
 					self.shift,
+					row.status,
+					row.leave_type,
 				)
-				return row.name
+				continue
+			logger.info(
+				"[attendance_request] %s on %s: updating %s (%s, status=%s, request=%s) — it overlaps %s",
+				self.employee,
+				attendance_date,
+				row.name,
+				row.shift,
+				row.status,
+				row.attendance_request,
+				self.shift,
+			)
+			return row.name
 		return None
 
 	def get_attendance_status(self, attendance_date: str) -> str:

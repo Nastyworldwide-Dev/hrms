@@ -116,3 +116,4 @@ hrms.patches.v16_0.realign_self_employee_permission #2026-09-15 a self Employee 
 hrms.patches.v16_0.normalize_employee_user_ids #2026-09-15 a drifted user_id cost employees the Employee role and every own request
 hrms.patches.v16_0.backfill_comp_leave_decision_status #2026-09-15 comp leave gained Reject; old submitted rows are Approved, drafts Open
 hrms.patches.v16_0.run_attendance_endgame_once #2026-09-16 queue the whole attendance repair once after deploy
+hrms.patches.v16_0.half_day_leave_type_not_mandatory #2026-09-17 a site override kept Leave Type mandatory on an hours-based Half Day, so HR could not save the rows they opened to correct

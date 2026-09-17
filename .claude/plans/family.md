@@ -38,3 +38,27 @@ hrms/hr/doctype/leave_application/leave_application.py:338 (`update_attendance`)
 hrms/hr/doctype/attendance/attendance.py:250 (`validate_duplicate_record`) — ticket duplicate-attendance-rows
   The other half of that ruling: it permits a second row per day as long as the
   shifts do not overlap, which is how Norazlin's 4 September ended up with two.
+
+## Second pass, same day — the review's Critical
+
+The fallback found the right row but wrote to it with `db_set`, which runs no
+validation. `should_mark_attendance` already skips a day a live Leave
+Application covers — but that guard reads the APPLICATION, not the ROW. A row
+left behind by a cancelled or reversed leave would have been found here and
+silently flipped to Present.
+
+hrms/hr/doctype/attendance_request/attendance_request.py:404 — same-root (fixed here)
+  A candidate carrying `leave_type`, or whose status is "On Leave", is now left
+  alone and logged. The framework's overlap refusal then stands, which is the
+  correct outcome: a day that still says leave is a real conflict and a person
+  has to decide it. Two regression tests.
+hrms/hr/doctype/attendance_request/attendance_request.py:412 — same-root (fixed here)
+  The log line now names the row's previous status and its previous
+  `attendance_request` before `create_or_update_attendance` reassigns them, so
+  a wrong overwrite is recoverable from the log.
+hrms/patches/v16_0/half_day_leave_type_not_mandatory.py:30 — same-root (fixed here)
+  The patch now reads `value`, `owner` and `modified` and logs them before
+  deleting, so a site that had customised that rule on purpose can read back
+  exactly what was removed.
+
+hrms/sync/runner.py:1734 — not-affected — it calls a DIFFERENT patch's `execute` (`create_holiday_list_assignments`), reused on purpose so holiday arithmetic has one implementation. Neither patch touched here is called from application code.
