@@ -157,6 +157,75 @@ class EveryOtherProtectionStillWinsCase(unittest.TestCase):
 			)
 
 
+class TheNeverWorseGuardCovversHrsPressCase(unittest.TestCase):
+	"""Review of b9794c65b, second Critical.
+
+	There are two rebuild paths in this codebase and only one of them has the
+	never-worse guard: `attendance_recovery.guarded_rebuild` takes a savepoint,
+	compares the day before and after, and ROLLS BACK a rebuild that lowered a
+	submitted day's status or hours. `day_remark.remark_day` — the path Fix Day
+	uses — calls `_remark_released_day` bare.
+
+	That was harmless while `owner_hold` refused to rebuild an HR-owned row at
+	all. `hr_asked` opens exactly that door: a day HR raised to Present by hand
+	could be recomputed from punches alone and come back Absent, with nothing
+	catching it. The waiver has to bring the guard with it.
+	"""
+
+	def run_remark(self, hr_asked, remark_result=None, guard_result=None):
+		from hrms.utils import day_remark as dr
+
+		calls = {"guarded": 0, "bare": 0}
+
+		def guarded(employee, day, remark, source="recovery"):
+			calls["guarded"] += 1
+			calls["source"] = source
+			return guard_result if guard_result is not None else {"marked": ["ATT-1"]}
+
+		def bare(employee, day, apply):
+			calls["bare"] += 1
+			return remark_result if remark_result is not None else {"marked": ["ATT-1"]}
+
+		with (
+			patch.object(dr, "_shift_still_running", lambda employee, day: False),
+			patch.object(dr, "lock_employee_row", lambda employee: None),
+			patch.object(dr, "_retire_unmarkable_rows", lambda *a, **k: []),
+			patch.object(rec, "_day_protection", lambda *a, **k: None),
+			patch.object(rec, "_rebuild_under_guard", guarded),
+			patch.object(rec, "_remark_released_day", bare),
+		):
+			answer = dr._remark_once("HR-EMP-00021", DAY, "fix day: rebuild_day", hr_asked=hr_asked)
+		return answer, calls
+
+	def test_hrs_press_goes_through_the_guard(self):
+		_, calls = self.run_remark(hr_asked=True)
+		self.assertEqual(calls["guarded"], 1, "a rebuild HR asked for must be rollback-protected")
+		self.assertEqual(calls["bare"], 0)
+
+	def test_a_rollback_comes_back_as_held_not_as_success(self):
+		answer, _ = self.run_remark(
+			hr_asked=True, guard_result={"held": "it would have gone Present -> Absent", "hr": True}
+		)
+		self.assertEqual(answer["action"], "held")
+		self.assertIn("Absent", answer["detail"])
+
+	def test_a_rebuild_that_did_not_make_the_day_worse_is_applied(self):
+		answer, _ = self.run_remark(hr_asked=True)
+		self.assertEqual(answer["action"], "remarked")
+		self.assertEqual(answer["marked"], ["ATT-1"])
+
+	def test_the_nightly_path_is_left_exactly_as_it_was(self):
+		# Its missing guard is older than this change and is ticketed, not
+		# widened here: a behaviour change to the automatic pass is its own job.
+		_, calls = self.run_remark(hr_asked=False)
+		self.assertEqual(calls["bare"], 1)
+		self.assertEqual(calls["guarded"], 0)
+
+	def test_the_guard_records_who_asked(self):
+		_, calls = self.run_remark(hr_asked=True)
+		self.assertIn("fix", calls["source"], "the day-fix log says which pass rebuilt the day")
+
+
 class ItIsWiredAllTheWayThroughCase(unittest.TestCase):
 	"""A parameter nothing passes is a parameter that fixes nothing."""
 

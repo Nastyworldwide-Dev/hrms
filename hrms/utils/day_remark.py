@@ -231,7 +231,29 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 	if held:
 		logger.info("[day_remark] %s on %s held (%s): %s", employee, day, reason, held)
 		return {"action": "held", "detail": held}
-	result = rec._remark_released_day(employee, day, apply=True)
+	if hr_asked:
+		# HR's press brings the never-worse guard with it. There are two rebuild
+		# paths here and only `attendance_recovery`'s own takes a savepoint,
+		# compares the day before and after, and rolls back a rebuild that
+		# lowered a submitted day. That was harmless while `owner_hold` refused
+		# to rebuild an HR-owned row at all; `hr_asked` opens exactly that door,
+		# so a day HR raised to Present by hand cannot come back Absent from a
+		# recompute nobody was watching (review of b9794c65b).
+		#
+		# `_rebuild_under_guard`, not `guarded_rebuild`: the outer one takes the
+		# day and retries deadlocks, and this is already inside both.
+		result = rec._rebuild_under_guard(employee, day, rec._remark_released_day, source="hr_fix_day")
+		if result.get("held"):
+			logger.warning(
+				"[day_remark] %s on %s rolled back by the never-worse guard (%s): %s",
+				employee,
+				day,
+				reason,
+				result["held"],
+			)
+			return {"action": "held", "detail": result["held"], "rolled_back": True}
+	else:
+		result = rec._remark_released_day(employee, day, apply=True)
 	retired = _retire_unmarkable_rows(employee, day, result, shift_type)
 	logger.info(
 		"[day_remark] %s on %s re-marked (%s): marked=%s retired=%s errors=%s",

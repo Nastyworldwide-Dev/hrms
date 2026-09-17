@@ -43,6 +43,21 @@ attendance request, a row owned by a REQUEST, a day HR removed in Shift
 Attendance, an approved payout or submitted payroll, a live request over the
 day, a running shift, today or later.
 
+REVIEW OF b9794c65b — two Criticals, both closed:
+* a MIRRORED row reads as OWNER_HR when a person wrote it on the ERP side, so
+  the waiver lifted its hold. `_is_hr_hold` refuses any row carrying
+  `synced_from_instance` (f369e51d4), and `day_block_reason` now refuses it on
+  the screen with the site's name instead of letting the re-mark refuse it three
+  layers down where it reads as "nothing changed".
+* the never-worse guard (savepoint, rebuild_verdict, rollback) lives on
+  `attendance_recovery.guarded_rebuild` and NOT on `day_remark.remark_day`,
+  which is the path Fix Day uses. Harmless while owner_hold refused HR-owned
+  rows outright; `hr_asked` opened exactly that door, so a day HR raised to
+  Present by hand could have come back Absent. HR's press goes through
+  `_rebuild_under_guard` now and a rollback returns `action: held`, not success.
+  The nightly path's own missing guard is older and is ticketed, not widened:
+  .claude/plans/ticket-nightly-remark-is-unguarded.md
+
 LOCK:
 * regression (the instance): hrms/tests/test_hr_asked_for_this_day.py drives
   Norazlin's row shape — Absent, auto_attendance 0, classifier says HR — and

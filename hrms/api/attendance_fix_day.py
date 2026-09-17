@@ -255,6 +255,13 @@ def day_block_reason(
 			return _("{0} is a half-day leave. Cancel the leave first.").format(name)
 		if row.get("attendance_request"):
 			return _("{0} came from an Attendance Request. Cancel that request first.").format(name)
+		if row.get("synced_from_instance"):
+			# The same line this screen already draws for a mirrored TAP. Without
+			# it the row was refused three layers down by the re-mark, which the
+			# screen could only report as "nothing changed" (review of b9794c65b).
+			return _("{0} is {1}'s copy of this day; it is corrected there.").format(
+				name, row["synced_from_instance"]
+			)
 	if not duplicate_rows_ok:
 		live = [row for row in rows or [] if cint(row.get("docstatus")) != 2]
 		if len(live) > 1:

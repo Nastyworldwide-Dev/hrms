@@ -284,3 +284,16 @@ closer (29) and the ownership classifier (40).
 NEXT: review, then the owner deploys; after deploy, confirm on Norazlin's 4 Sep
 that the day reads Present with hours and that the OT is claimable in Nadi.
 - 2026-09-17T09:42:12Z PUSH: nz-glass @ b9794c65b
+- 2026-09-17T09:46:05Z PUSH: nz-glass @ f369e51d4
+REPAIR: review of b9794c65b, two Criticals. (1) a mirrored row reads as OWNER_HR
+when a person wrote it on the ERP side - closed in f369e51d4 and now refused on
+the screen by name too. (2) the never-worse guard is on attendance_recovery's
+rebuild path and NOT on day_remark's, which is the one Fix Day uses; hr_asked
+opened that door, so HR's press now goes through _rebuild_under_guard and a
+rollback comes back as held, not as success.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 6 new tests red before, green after;
+14 suites green (405 tests) including the recovery engine and day_remark.
+DEAD END: putting the mirrored rule in protected_reason broke five tests of the
+mirrored RELEASE plan, which asks that same function about mirrored rows on
+purpose. It belongs to the waiver.
+NEXT: re-review, then the owner deploys.

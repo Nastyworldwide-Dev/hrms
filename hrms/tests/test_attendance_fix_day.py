@@ -530,6 +530,13 @@ class TestProtectedDays(FixDayCase):
 		self.store.row("ATT-1", DAY, attendance_request="ATR-0001")
 		self.every_action_is_refused("came from an Attendance Request")
 
+	def test_a_mirrored_row_is_refused_with_the_site_that_owns_it(self):
+		"""The screen already refuses a mirrored TAP ("another site"). The ROW
+		was refused three layers down by the re-mark instead, which the screen
+		could only show as "nothing changed" (review of b9794c65b)."""
+		self.store.row("ATT-1", DAY, synced_from_instance="nasty-live")
+		self.every_action_is_refused("nasty-live")
+
 	def test_a_day_hr_removed_is_refused(self):
 		self.removed = True
 		self.every_action_is_refused("Hand the day back")

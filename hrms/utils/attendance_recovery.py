@@ -244,7 +244,16 @@ def _is_hr_hold(row) -> bool:
 		return False
 	module, verdict = _classify(row)
 	if module is None or verdict is None:
-		return True  # the old reading: a blank tick means a person's row
+		# The old reading, and deliberately the LOOSE direction here: with no
+		# classifier, nearly every pre-September row reads "a person's", and
+		# holding them all would mean HR's own button never works on the days it
+		# exists for. Said out loud because the same UNSURE reading is the SAFE
+		# direction on the read path — the two are not the same choice.
+		logger.warning(
+			"[attendance_recovery] %s: no ownership verdict, so HR's press is trusted on it",
+			row.get("name"),
+		)
+		return True
 	owner = verdict[0]
 	return owner in (
 		getattr(module, "OWNER_HR", "hr"),
