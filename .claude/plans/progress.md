@@ -292,3 +292,14 @@ HEAD (1 and 3 failures respectively), green after. 23/23 with the bundle suite.
 NEXT: commit, review, then answer the owner's SOP question — his pairing SOP is
 what Fix Day already does; it was unreachable from the page he uses.
 - 2026-09-17T07:59:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-09-17T07:59:20Z COMMIT: cba7c3f11 fix(attendance): the pairing screen is reachable from the pages HR uses → review dispatched
+- 2026-09-17T08:00:44Z PUSH: nz-glass @ cba7c3f11
+- 2026-09-17T08:01:26Z COMMIT: 3e24ccdf8 docs(glass): handoff for the Fix Day entry point → review dispatched
+EVIDENCE: 7 (invariant + ticket) — review of cba7c3f11 returned DEPLOY with three
+warnings, all closed here: the class invariant now reads hooks.app_include_js
+instead of one flat directory and is scoped to the files that can actually lose
+the race; the role gate is asserted by name (the harness records which role
+string was asked); the attendance_list.js hotspot has a refactor ticket rather
+than a seventh inline fix. Both new tests proven by mutation.
+NEXT: deploy is the owner's. Open flags unchanged: the carry-forward/encashment
+window between approval and withdrawal still wants a bench check.

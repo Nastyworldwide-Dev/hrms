@@ -56,7 +56,14 @@ function loadDesk(files, options = {}) {
 			msgprint: (message) => (sandbox.__messages.push(message), message),
 			utils: { escape_html: (value) => String(value == null ? "" : value) },
 			perm: { has_perm: () => options.has_perm !== false },
-			user: { has_role: () => options.has_role !== false },
+			// Records WHICH role was asked about: a stub that answers the same for
+			// every string cannot tell a correct role list from a typo'd one.
+			user: {
+				has_role: (role) => {
+					sandbox.__roles_checked.push(role);
+					return options.has_role !== false;
+				},
+			},
 			ui: { Dialog: function () {}, form: {} },
 			datetime: { get_today: () => "2026-09-10", obj_to_str: () => "2026-09-01" },
 			model: {},
@@ -74,12 +81,13 @@ function loadDesk(files, options = {}) {
 		format_number: (value) => String(value),
 	};
 	sandbox.__messages = [];
+	sandbox.__roles_checked = [];
 	sandbox.frappe.provide = provide(sandbox);
 	sandbox.hrms = {};
 	for (const file of files) {
 		vm.runInNewContext(fs.readFileSync(file, "utf8"), sandbox);
 	}
-	return { settings, sandbox, messages: sandbox.__messages };
+	return { settings, sandbox, messages: sandbox.__messages, roles: sandbox.__roles_checked };
 }
 
 module.exports = { loadDesk, fakeListview, fakePage };

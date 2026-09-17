@@ -58,21 +58,30 @@ test("no control on this screen types a result", () => {
 	}
 })
 
-// The class, not the instance. This bundle loads at boot; a doctype's list
-// script loads when the list opens, and assigns frappe.listview_settings for
-// that doctype outright. Whatever a bundle wrote there is gone. That cost HR
-// the "Fix day" button on Employee Checkin for a week without a single test
-// going red, so no file shipped at boot may write that key again.
-import { readdirSync } from "node:fs"
+// The class, not the instance. A file loaded at BOOT (hooks.app_include_js)
+// cannot own a doctype's listview_settings: the doctype's own list script is
+// fetched when the list opens, assigns that key outright, and whatever the
+// bundle wrote is gone. That cost HR the "Fix day" button on Employee Checkin
+// for a week without a single test going red.
+//
+// Scoped to the boot bundles on purpose, and read from hooks.py rather than
+// hard-coded: an on-demand bundle (hierarchy-chart, interview) cannot race a
+// list script, and extending a doctype whose folder this app does not own is a
+// legitimate reason for one to write that key.
+import { readFileSync as read } from "node:fs"
 
-test("no boot bundle claims a doctype's listview_settings", () => {
-	const dir = fileURLToPath(new URL(".", import.meta.url))
-	for (const file of readdirSync(dir).filter((f) => f.endsWith(".js"))) {
-		const text = readFileSync(`${dir}${file}`, "utf8")
+test("no file loaded at boot claims a doctype's listview_settings", () => {
+	const here = fileURLToPath(new URL(".", import.meta.url))
+	const hooks = read(`${here}../../hooks.py`, "utf8")
+	const block = hooks.match(/app_include_js\s*=\s*\[([\s\S]*?)\]/)
+	assert.ok(block, "app_include_js not found in hooks.py — this test has no subject")
+	const entries = Array.from(block[1].matchAll(/"([^"]+\.js)"/g)).map((m) => m[1])
+	assert.ok(entries.includes("fix_day.bundle.js"), "the Fix Day screen must still load at boot")
+	for (const entry of entries) {
 		assert.doesNotMatch(
-			text,
+			read(`${here}${entry}`, "utf8"),
 			/frappe\.listview_settings\[[^\]]+\]\s*=/,
-			`${file}: the doctype's own list script owns that key and is loaded last`
+			`${entry}: the doctype's own list script owns that key and is loaded last`
 		)
 	}
 })

@@ -24,9 +24,23 @@ Call sites the machine lists for `hrms.fix_day.*` and for the two list scripts:
 Rest of the app: no other file assigns frappe.listview_settings for a doctype
 that a bundle also writes (checked below).
 
+HOTSPOT: hrms/hr/doctype/attendance/attendance_list.js has taken 6 fixes in
+90 days. Refactor ticket filed, not done inline:
+.claude/plans/ticket-attendance-list-onload.md
+
 LOCK:
 * regression (the instance): the two list tests load the bundle and then the
   list script in Desk's real order and ask the resulting onload what it
   registered — the failing shape, executed rather than read.
-* invariant (the class): no file under hrms/public/js may assign
-  frappe.listview_settings, enforced in hrms/public/js/fix_day.bundle.test.js.
+* invariant (the class): no file listed in hooks.app_include_js — the files
+  that load at BOOT, which are the only ones that can lose the race — may
+  assign frappe.listview_settings. Read from hooks.py, not hard-coded, and
+  enforced in hrms/public/js/fix_day.bundle.test.js. An on-demand bundle is
+  deliberately not covered: it cannot race a list script, and extending a
+  doctype whose folder this app does not own is a fair reason to write that key.
+* the role gate is asserted by NAME (the harness records which role string was
+  asked about), so a renamed or typo'd role fails here instead of silently
+  taking the button away from real HR users.
+
+Both proven by mutation: claiming the key in the boot bundle fails the
+invariant; typing "HR Manger" into the role list fails both list suites.

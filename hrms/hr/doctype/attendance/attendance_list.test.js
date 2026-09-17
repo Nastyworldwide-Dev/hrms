@@ -59,7 +59,7 @@ const { loadDesk, fakeListview } = require("../../../tests/js/desk_list_harness.
 const BUNDLE = path.join(__dirname, "..", "..", "..", "public", "js", "fix_day.bundle.js");
 
 function controls(options) {
-	const { settings, sandbox } = loadDesk(
+	const { settings, sandbox, roles } = loadDesk(
 		[BUNDLE, path.join(__dirname, "attendance_list.js")],
 		options,
 	);
@@ -67,7 +67,7 @@ function controls(options) {
 		{ name: "HR-ATT-2026-15657", employee: "HR-EMP-00069", attendance_date: "2026-09-04" },
 	]);
 	settings["Attendance"].onload.call(settings["Attendance"], listview);
-	return { listview, labels: listview.page.buttons.map((b) => b.label), sandbox };
+	return { listview, labels: listview.page.buttons.map((b) => b.label), sandbox, roles };
 }
 
 test("HR finds Fix day on the Attendance list", () => {
@@ -76,6 +76,19 @@ test("HR finds Fix day on the Attendance list", () => {
 
 test("the list keeps Mark Attendance", () => {
 	assert.ok(controls().labels.includes("Mark Attendance"));
+});
+
+test("the gate asks for the HR roles by name", () => {
+	// A stub that answers the same for every string cannot tell a correct role
+	// list from a typo'd one, and a renamed role would take the button away in
+	// production with this suite still green. The names come from the rule —
+	// only HR corrects a day — not from the bundle's own constant.
+	// Asked with nobody holding any of them: a matching role short-circuits the
+	// check, so only a refused user sees the whole list go by.
+	const asked = controls({ has_role: false }).roles;
+	for (const role of ["HR User", "HR Manager", "System Manager"]) {
+		assert.ok(asked.includes(role), `the gate never asked about ${role}`);
+	}
 });
 
 test("a non-HR user is not offered the fix screen", () => {
