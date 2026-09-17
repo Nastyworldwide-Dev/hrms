@@ -44,6 +44,13 @@ function panel() {
 			reload: async () => resource.data,
 			submit: async (params) => {
 				requests.push({ url: options.url, params })
+				// The selfie now goes through hrms.api, not a raw fetch, so this
+				// is where a slow upload is held open — the same seam the
+				// `upload.respond` tests always drove, moved to match the code.
+				if (options.url === "hrms.api.remote_checkin.upload_selfie")
+					return new Promise((resolve) => {
+						upload.respond = resolve
+					})
 				return null
 			},
 		})
@@ -348,10 +355,7 @@ test("a selfie upload outliving the fix aborts the punch and releases the camera
 	await new Promise(setImmediate)
 	assert.equal(typeof h.upload.respond, "function")
 	h.advance(61_000)
-	h.upload.respond({
-		ok: true,
-		json: async () => ({ message: { file_url: "/files/selfie.jpg" } }),
-	})
+	h.upload.respond({ file_url: "/files/selfie.jpg" })
 	await submit
 	assert.equal(h.requests.filter((row) => row.url === "hrms.api.remote_checkin.punch").length, 0)
 	assert.notEqual(h.vm.cameraStatus.value, "submitting")
@@ -392,10 +396,7 @@ test("an old upload cannot stop the camera belonging to a reopened sheet", async
 	await h.vm.handleEmployeeCheckin()
 	h.vm.onModalPresent()
 	await new Promise(setImmediate)
-	h.upload.respond({
-		ok: true,
-		json: async () => ({ message: { file_url: "/files/selfie.jpg" } }),
-	})
+	h.upload.respond({ file_url: "/files/selfie.jpg" })
 	await submit
 	assert.deepEqual(stops, [1, 0])
 	assert.equal(h.vm.cameraStatus.value, "live")
