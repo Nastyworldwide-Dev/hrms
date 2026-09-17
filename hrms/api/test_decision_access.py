@@ -195,14 +195,29 @@ class TestDecisionAccess(unittest.TestCase):
 		with self.assertRaises(frappe.PermissionError):
 			self.decide()
 
-	def test_self_policy_matches_all_six_controller_settings(self):
+	def test_self_policy_follows_the_chain_of_command_not_only_the_tickbox(self):
+		"""Owner report and ruling, 17 Sep 2026.
+
+		Leave Application and Expense Claim used to let the applicant approve
+		their own request whenever the HR Settings tickbox was off — this test
+		asserted exactly that, for a user holding Employee + HR Manager. An
+		approver with their own approver above them could therefore approve
+		their own leave.
+
+		Now: somebody above them (reporting manager, the approver on their
+		Employee record, a department approver) means no self-approval,
+		whatever the tickbox says. Nobody above them is left as it was — "they
+		dont have to. nothing. if and in my company only one." — so the
+		tickbox still governs that case, and nothing is ever stranded.
+		"""
 		frappe.session.user = STAFF
 		self.users[STAFF]["roles"] = ["Employee", "HR Manager"]
-		for dt, prevent in product(approval.DECIDE_THEN_SUBMIT, [False, True]):
-			with self.subTest(doctype=dt, prevent=prevent):
+		for dt, prevent, above in product(approval.DECIDE_THEN_SUBMIT, [False, True], [True, False]):
+			with self.subTest(doctype=dt, prevent=prevent, approver_above=above):
 				self.set_doctype(dt)
 				self.prevent_self = prevent
-				allowed = dt in {"Leave Application", "Expense Claim"} and not prevent
+				self.reports_to = "MANAGER" if above else None
+				allowed = dt in {"Leave Application", "Expense Claim"} and not prevent and not above
 				self.assertEqual(self.can_decide(), allowed)
 				if allowed:
 					self.assertEqual(self.decide()["docstatus"], 1)

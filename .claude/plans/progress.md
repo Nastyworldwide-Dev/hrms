@@ -269,3 +269,11 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T02:41:16Z COMMIT: 16f6fa473 fix(checkin): the employee id cannot shape the selfie filename → review dispatched
 - 2026-09-17T02:42:27Z PUSH: nz-glass @ 16f6fa473
 - 2026-09-17T02:45:00Z DEAD END: the PUSH line above is the hook's, not a fact — `git push origin nz-glass` was REJECTED (non-fast-forward). Another session had pushed five attendance commits (c68597277..ca2831a0e) while this one worked. Rebasing the three selfie/chore commits onto origin/nz-glass; nothing force-pushed.
+- 2026-09-17T02:44:20Z PUSH: nz-glass @ c1438f2b1
+- 2026-09-17T03:10:00Z PLAN: .claude/plans/current-plan.md approved (hash 8bfb80e2146d) — nobody approves their own request while somebody is above them; owner ruled the top of the chain untouched (R1) and HR's blanket authority out of scope (R2).
+- 2026-09-17T03:10:00Z REPAIR: _decision_access made Leave Application and Expense Claim self-approval conditional on an HR Settings tickbox (default 0, one click to untick) while the other five doctypes refused outright, and asked a raw Employee.user_id instead of the canonical is_own_employee. Both fixed at the one root.
+- 2026-09-17T03:10:00Z EVIDENCE: rung 2 — 8 new tests RED on HEAD first (4 defect cases + the canonical-resolver AST check), green after; on the identical file list the blast-radius run has ONE FEWER failure than HEAD (a latent NameError in test_ot_notification_properties, missing EMPLOYEE_APPROVER_FIELD in its exec namespace) and no new ones; verify-bench test_decision_access: 2 pre-existing failures removed, remaining OT Request subtests fail identically on HEAD.
+- 2026-09-17T03:02:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 11 file(s) ⟂a204f4f4a3bd
+- 2026-09-17T03:02:56Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 4 extra test file(s) ⟂36d20de2ec08
+- 2026-09-17T03:03:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 11 file(s) ⟂a204f4f4a3bd
+- 2026-09-17T03:03:12Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 4 extra test file(s) ⟂36d20de2ec08

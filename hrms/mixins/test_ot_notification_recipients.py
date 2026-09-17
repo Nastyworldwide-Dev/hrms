@@ -123,6 +123,11 @@ class TestOTNotificationRecipients(unittest.TestCase):
 				"company": "B" if name == "HR_B" else "A",
 				"reports_to": self.reports_to if name == "STAFF" else None,
 				"shift_request_approver": SHIFT,
+				# The approver named on the Employee record itself. None here on
+				# purpose: `reports_to` is this fixture's chain of command, and
+				# `_has_approver_above` must find it through that alone.
+				"leave_approver": None,
+				"expense_approver": None,
 				"department": None,
 			}
 			values["user_id"] = (

@@ -30,7 +30,8 @@ namespace = {"frappe": frappe, "logger": logging.getLogger(__name__)}
 nodes = []
 for node in ast.parse(SOURCE.read_text()).body:
 	if isinstance(node, ast.Assign) and any(
-		getattr(t, "id", "") in {"DECIDE_THEN_SUBMIT", "DECISIONS", "SUBMIT_IS_APPROVAL"}
+		getattr(t, "id", "")
+		in {"DECIDE_THEN_SUBMIT", "DECISIONS", "SUBMIT_IS_APPROVAL", "SELF_APPROVAL_SETTING"}
 		for t in node.targets
 	):
 		nodes.append(node)
@@ -54,6 +55,7 @@ exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), name
 	submit=st.booleans(),
 	routed=st.booleans(),
 	self_employee=st.booleans(),
+	has_approver_above=st.booleans(),
 	prevent_self=st.booleans(),
 	company=st.booleans(),
 	workflow=st.booleans(),
@@ -68,6 +70,7 @@ def test_capability_is_exactly_the_shared_decision_access(
 	submit,
 	routed,
 	self_employee,
+	has_approver_above,
 	prevent_self,
 	company,
 	workflow,
@@ -87,6 +90,12 @@ def test_capability_is_exactly_the_shared_decision_access(
 	setattr(doc, decision_field, initial if state == "pending" else state)
 	doc.get = lambda key: getattr(doc, key, None)
 	namespace["_is_routed_approver"] = lambda doc: routed
+	# Identity and "who is above this person" are explicit inputs here, like
+	# every other predicate in this file — the resolver itself is covered by
+	# hrms/tests/test_self_approval_fences_are_canonical.py and
+	# hrms/tests/test_nobody_approves_their_own_request_under_an_approver.py.
+	namespace["is_own_employee"] = lambda employee: self_employee
+	namespace["_has_approver_above"] = lambda employee, doctype: has_approver_above
 	namespace["get_permitted_fields"] = lambda *args, **kwargs: [decision_field] if field else []
 
 	def get_value(doctype, name, fieldname, **kwargs):
@@ -126,10 +135,17 @@ def test_capability_is_exactly_the_shared_decision_access(
 		capability = namespace["get_decision_actions"](doctype, doc.name)
 
 	def self_allowed(action):
-		return not self_employee or (
-			doctype in {"Leave Application", "Expense Claim"}
-			and (not prevent_self or (doctype == "Leave Application" and action == "Rejected"))
-		)
+		"""Owner ruling, 17 Sep 2026: nobody approves their own request while
+		somebody is above them. The HR Settings tickbox may only make the rule
+		stricter. Rejecting your own request is a withdrawal, and the top of
+		the chain keeps the behaviour it always had."""
+		if not self_employee:
+			return True
+		if doctype not in {"Leave Application", "Expense Claim"}:
+			return False
+		if action == "Approved" and has_approver_above:
+			return False
+		return not prevent_self or (doctype == "Leave Application" and action == "Rejected")
 
 	authority = (submit and write and field) or routed
 	baseline = docstatus == 0 and not workflow and company and read and authority

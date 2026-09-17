@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 
+from hrms.hr.utils import is_own_employee
 from hrms.utils.approved_request_guard import (
 	DECISION_FIELD_BY_DOCTYPE,
 	cancel_refusal,
@@ -42,6 +43,51 @@ APPROVER_FIELD = {
 #: approver field of their own. Compensatory Leave Request goes to the employee's
 #: leave approver — the person Leave Application routes to — then reports_to.
 EMPLOYEE_APPROVER_FIELD = {"Compensatory Leave Request": "leave_approver"}
+
+#: doctype -> the HR Settings tickbox that used to be the WHOLE self-approval
+#: rule for it. Every other approvable doctype refuses a self-decision outright.
+SELF_APPROVAL_SETTING = {
+	"Leave Application": "prevent_self_leave_approval",
+	"Expense Claim": "prevent_self_expense_approval",
+}
+
+#: doctype -> (the Employee field naming its approver, the Department child
+#: table naming its approvers) — the pair `validate_staff_approver` passes to
+#: `get_designated_approvers`, so "who is above this person" has one answer.
+APPROVER_SOURCE = {
+	"Leave Application": ("leave_approver", "leave_approvers"),
+	"Expense Claim": ("expense_approver", "expense_approvers"),
+}
+
+
+def _has_approver_above(employee: str, doctype: str) -> bool:
+	"""Does anyone outrank `employee` for this kind of request?
+
+	Owner report, 17 Sep 2026: an approver who has their own approver could
+	approve their own leave. Leave Application and Expense Claim were the two
+	doctypes whose self-approval refusal hung on an HR Settings tickbox that
+	defaults to 0 and can be unticked in one click; the other five refuse a
+	self-decision outright.
+
+	The refusal is conditional on this question because of the owner's ruling
+	on the top of the chain the same day — "they dont have to. nothing. if and
+	in my company only one. system might detect. this is to fix the ones who
+	can self approve despite having their reported to". So an empty list IS
+	the detection of a one-person company, and needs no setting of its own.
+
+	`get_designated_approvers` is the single source of truth for the answer —
+	the same list the PWA's approver selector and `validate_staff_approver`
+	read — and it already excludes the employee's own login, so nobody counts
+	as their own senior.
+	"""
+	source = APPROVER_SOURCE.get(doctype)
+	if not source:
+		return False
+	from hrms.hr.utils import get_designated_approvers
+
+	above = get_designated_approvers(employee, *source)
+	logger.debug("[approval] %s has %d approver(s) above them for %s", employee, len(above), doctype)
+	return bool(above)
 
 
 def _is_routed_approver(doc, user: str | None = None) -> bool:
@@ -161,8 +207,6 @@ def _decision_access(doc, status: str = "Approved") -> str | None:
 	"""Return the authorized execution mode without changing session or rights."""
 	from frappe.model.workflow import get_workflow_name
 
-	from hrms.utils.identity import normalize_login
-
 	logger.debug("[approval] checking decision access for %s", doc.doctype)
 	entry = DECIDE_THEN_SUBMIT.get(doc.doctype)
 	employee = doc.get("employee")
@@ -170,13 +214,18 @@ def _decision_access(doc, status: str = "Approved") -> str | None:
 		return None
 	if not _request_read_allowed(doc):
 		return None
-	employee_user = frappe.db.get_value("Employee", employee, "user_id")
-	if normalize_login(employee_user) == normalize_login(frappe.session.user):
-		setting = {
-			"Leave Application": "prevent_self_leave_approval",
-			"Expense Claim": "prevent_self_expense_approval",
-		}.get(doc.doctype)
+	if is_own_employee(employee):
+		setting = SELF_APPROVAL_SETTING.get(doc.doctype)
 		if not setting:
+			return None
+		if status == "Approved" and _has_approver_above(employee, doc.doctype):
+			logger.warning(
+				"[approval] %s %s: %s may not approve their own request — %s has approvers above them",
+				doc.doctype,
+				doc.name,
+				frappe.session.user,
+				employee,
+			)
 			return None
 		if frappe.db.get_single_value("HR Settings", setting) and (
 			doc.doctype != "Leave Application" or status == "Approved"

@@ -30,6 +30,11 @@ namespace = {"frappe": frappe, "bold": str, "logger": logging.getLogger(__name__
 load_nodes(ROOT / "mixins/pwa_notifications.py", {"PWANotificationsMixin"}, namespace)
 load_nodes(ROOT / "api/approval.py", {"_is_routed_approver"}, namespace)
 namespace["APPROVER_FIELD"] = {}
+# _is_routed_approver reads this one too. Its absence was a latent NameError:
+# the generated cases only reach that line when APPROVER_FIELD misses and the
+# doc still carries an employee, and the example database found it on
+# 17 Sep 2026 (the routing function itself was unchanged).
+namespace["EMPLOYEE_APPROVER_FIELD"] = {}
 normalize = load_nodes(ROOT / "utils/identity.py", {"normalize_login"}, {})["normalize_login"]
 
 
