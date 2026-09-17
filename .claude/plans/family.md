@@ -54,3 +54,35 @@ hrms/overrides/employee_checkin_override.py:605 — same-root (fixed here)
   The enforcement point on every punch. Same call, same inheritance. Neither
   caller needed a change of its own: the rule lives in one function on purpose,
   and that is why fixing it once fixed both.
+
+## Second pass, same day — the review's two Warnings
+
+**W1, strict mode.** The reviewer is right that this is a policy point and
+wrong that the ceiling moved. Strict mode already tolerated up to 250 m of
+error bar for any reading at or under the cap: a person 200 m from a 50 m fence
+with 250 m of reported error was ALWAYS allowed. What changed is that a reading
+one metre coarser stopped being treated as a separate, blocked class. The
+maximum permissiveness of strict mode is unchanged at radius + 250 m; the
+discontinuity below it is gone. Named here rather than left to be rediscovered,
+and flagged to the owner in the same breath: if he wants strict to stay harsh
+on coarse readings specifically, that is a different rule and he can have it.
+
+**W2, the dialogs overclaim.** Real, and fixed. The reason code used to stand
+in for "was this reading precise", and it no longer does.
+
+frontend/src/components/StrictRejectionDialog.vue:24 — same-root (fixed here)
+  The distance card is now gated on the reading, not the reason string: a
+  coarse one falls through to the accuracy wording it always had.
+frontend/src/components/RemoteCheckinDialog.vue:28 — same-root (fixed here)
+  Same gate. It gained an `accuracyM` prop, because it could not have judged
+  this without one.
+frontend/src/components/CheckInPanel.vue:895 (`locationVerdict`) — same-root (fixed here)
+  The sheet's own copy of the same call, found by its existing test: a coarse
+  far reading was about to be announced as "Too far from X" with no caveat.
+  It says "Your location is uncertain", as it did before the boundary moved.
+frontend/src/utils/geolocation.js — same-root (fixed here)
+  The two caps are exported under the server's own names, so all three
+  surfaces read one number instead of three retyped copies of 250.
+docs/glass/audit/2026-09-08-probes.py:98 — same-root (fixed here)
+  A dated audit probe asserting the old reason for a 1.3 km reading. Amended
+  with the reason, so anyone re-running it is not misled.

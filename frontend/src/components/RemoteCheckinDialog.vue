@@ -18,9 +18,14 @@
 
 			<div class="w-full flex flex-col px-4 gap-3">
 				<!-- An unplaceable reading computes to a distance of 0 m, so the
-				     metric row is hidden rather than shown as a reassuring lie. -->
+				     metric row is hidden rather than shown as a reassuring lie.
+				     A COARSE one is hidden for the same reason: since 17 Sep 2026
+				     a reading of a few hundred metres' error is placed rather
+				     than refused, so a far one arrives as `outside_radius` and
+				     would otherwise show a confident figure drawn from a reading
+				     that cannot support it. -->
 				<div
-					v-if="reason !== 'imprecise_location'"
+					v-if="reason !== 'imprecise_location' && !readingIsCoarse"
 					class="bg-brand/15 border border-brand px-3 py-2 text-xs text-accent-ink"
 				>
 					<div class="flex justify-between">
@@ -63,6 +68,7 @@
 </template>
 
 <script setup>
+import { ACCURACY_ALLOWANCE_CAP_M } from "@/utils/geolocation"
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject, ref, watch } from "vue"
 import { toast } from "frappe-ui"
@@ -77,6 +83,8 @@ const props = defineProps({
 	requestName: { type: String, default: "" },
 	logType: { type: String, default: "IN" },
 	distanceM: { type: Number, default: 0 },
+	// How wide the device said its own error was, in metres. 0 means unknown.
+	accuracyM: { type: Number, default: 0 },
 	approverName: { type: String, default: "" },
 	reason: {
 		type: String,
@@ -98,6 +106,11 @@ const headline = computed(() =>
 		? __("We couldn't confirm where you are")
 		: __("You're outside the office geofence")
 )
+
+// Past the allowance cap the reading cannot widen a fence, so its distance is
+// not a figure to put in front of anybody. The reason code used to stand in for
+// this and no longer does.
+const readingIsCoarse = computed(() => Number(props.accuracyM) > ACCURACY_ALLOWANCE_CAP_M)
 
 const formattedDistance = computed(() => {
 	const d = props.distanceM || 0

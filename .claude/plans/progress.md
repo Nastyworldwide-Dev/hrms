@@ -226,3 +226,9 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T06:46:06Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 2 call site(s) given verdicts, 5 same-root ⟂c74f27e58591
 - 2026-09-17T06:46:23Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
 - 2026-09-17T06:46:23Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:46:25Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 2 call site(s) given verdicts, 5 same-root ⟂c74f27e58591
+- 2026-09-17T06:46:28Z COMMIT: 07a945371 fix(geofence): one metre more error stops costing 250 metres of tolerance → review dispatched
+- 2026-09-17T06:54:00Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-09-17T06:54:30Z COMMIT: 5458850c7 docs(audit): the 8 Sep probe expects the reason the boundary now returns → review dispatched
+- 2026-09-17T06:54:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-09-17T06:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8

@@ -179,6 +179,7 @@
 		:request-name="remoteRequest.name"
 		:log-type="remoteRequest.logType"
 		:distance-m="remoteRequest.distanceM"
+		:accuracy-m="remoteRequest.accuracyM"
 		:approver-name="remoteRequest.approverName"
 		:reason="remoteRequest.reason"
 		@close="remoteDialogOpen = false"
@@ -230,6 +231,7 @@ import {
 	GEO_TIMEOUT,
 	GEO_UNSUPPORTED,
 	describeGeolocationError,
+	ACCURACY_ALLOWANCE_CAP_M,
 	formatAccuracy,
 	geolocationBlockedReason,
 	preferFreshFix,
@@ -361,6 +363,7 @@ const remoteRequest = ref({
 	name: "",
 	logType: "IN",
 	distanceM: 0,
+	accuracyM: 0,
 	approverName: "",
 	reason: "outside_radius",
 })
@@ -886,7 +889,12 @@ const locationVerdict = computed(() => {
 		}
 	}
 
-	if (fencePreview.value.reason === "imprecise_location") {
+	// A coarse reading may now be PLACED rather than refused (17 Sep 2026), so
+	// a far one comes back as "outside_radius" — but a distance drawn from a
+	// reading that cannot widen a fence is not a distance to say out loud. Both
+	// dialogs make the same call on the same cap; this is the sheet's copy of it.
+	const coarseReading = Number(accuracyM.value) > ACCURACY_ALLOWANCE_CAP_M
+	if (fencePreview.value.reason === "imprecise_location" || coarseReading) {
 		return {
 			tone: loc.strict ? "blocked" : "warn",
 			title: __("Your location is uncertain"),
@@ -1160,6 +1168,11 @@ const runSubmitLog = async (logType) => {
 							name: req.name,
 							logType: req.log_type || logType,
 							distanceM: Number(req.distance_m) || 0,
+							// What the DEVICE said about its own error for the
+							// reading this punch used. Without it the dialog can
+							// only judge by the reason code, which no longer tells
+							// it whether the distance beside it means anything.
+							accuracyM: Number(location.accuracy) || 0,
 							approverName: req.approver || "",
 							// From the punch response, not the request row: the
 							// row records the distance, not whether the distance

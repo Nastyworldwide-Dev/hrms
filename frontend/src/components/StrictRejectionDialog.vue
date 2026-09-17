@@ -17,8 +17,11 @@
 			</div>
 
 			<div class="w-full flex flex-col px-4 pt-4 gap-3">
-				<!-- outside_radius: distance card + location summary -->
-				<template v-if="reason === 'outside_radius'">
+				<!-- outside_radius: distance card + location summary. The card is
+				     for a reading precise enough for its distance to mean
+				     something; a coarse one falls through to the accuracy
+				     wording below, whatever verdict it produced. -->
+				<template v-if="reason === 'outside_radius' && !readingIsCoarse">
 					<div class="bg-danger/10 border border-danger-ink px-3 py-2.5">
 						<div class="flex justify-between text-xs text-danger-ink">
 							<span>{{ __("Distance from geofence") }}</span>
@@ -49,7 +52,7 @@
 				</template>
 
 				<!-- imprecise_location: the reading, not the employee, is the problem -->
-				<template v-else-if="reason === 'imprecise_location'">
+				<template v-else-if="reason === 'imprecise_location' || readingIsCoarse">
 					<div class="bg-danger/10 border border-danger-ink px-3 py-2.5">
 						<div class="flex justify-between text-xs text-danger-ink">
 							<span>{{ __("Your device's accuracy") }}</span>
@@ -107,7 +110,7 @@
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
 import { FeatherIcon, Button } from "frappe-ui"
-import { formatAccuracy } from "@/utils/geolocation"
+import { ACCURACY_ALLOWANCE_CAP_M, formatAccuracy } from "@/utils/geolocation"
 
 const __ = inject("$translate")
 
@@ -171,6 +174,12 @@ const adminMisconfigMessage = computed(() => {
 		[props.shiftLocation || __("(unnamed)")]
 	)
 })
+
+// Past the allowance cap the reading cannot widen a fence, so a distance drawn
+// from it is not a number to put in front of anybody. Until 17 Sep 2026 the
+// `imprecise_location` reason stood in for this, and it no longer does: a
+// coarse reading that is genuinely far away now comes back as `outside_radius`.
+const readingIsCoarse = computed(() => Number(props.accuracyM) > ACCURACY_ALLOWANCE_CAP_M)
 
 const formattedAccuracy = computed(() => formatAccuracy(props.accuracyM) || __("unknown"))
 

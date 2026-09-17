@@ -119,6 +119,12 @@ export function usablePosition(position, now = Date.now()) {
 	}
 }
 
+// The two caps the server keeps under the same names. Exported because the
+// dialogs need the first one: past it a reading is too coarse for a distance
+// figure to mean anything, whatever verdict it produced.
+export const ACCURACY_ALLOWANCE_CAP_M = 250
+export const POINT_ESTIMATE_TRUST_CAP_M = 2000
+
 // Mirrors hrms.utils.geofence.evaluate_geofence; executable cross-language
 // boundary tests keep the written preview aligned with authoritative enforcement.
 export function previewGeofence({
@@ -141,11 +147,12 @@ export function previewGeofence({
 	// cap and nothing beyond it, so the same person 80 m from a 50 m fence was
 	// allowed at 250 m of reported error and sent to their approver at 251 m.
 	// Past 2000 m the reading places nobody and buys nothing at all.
-	const allowance = error > 2000 ? 0 : Math.min(error, 250)
+	const allowance =
+		error > POINT_ESTIMATE_TRUST_CAP_M ? 0 : Math.min(error, ACCURACY_ALLOWANCE_CAP_M)
 	let reason = null
 	if (!hasLocation) reason = "no_shift_location"
 	else if (!(radius > 0)) reason = "no_radius"
-	else if (error > 2000) reason = "imprecise_location"
+	else if (error > POINT_ESTIMATE_TRUST_CAP_M) reason = "imprecise_location"
 	else if (metres > radius + allowance) reason = "outside_radius"
 	const unchecked = reason === "no_shift_location" || reason === "no_radius"
 	const action = !reason || (unchecked && !strict) ? "allow" : strict ? "throw" : "require_remote"
