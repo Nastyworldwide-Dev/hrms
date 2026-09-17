@@ -228,6 +228,7 @@ def day_block_reason(
 	removed_by_hr=False,
 	request=None,
 	shift_running=False,
+	duplicate_rows_ok=False,
 ) -> str | None:
 	"""Why this employee-day must not be touched here, in one sentence, or None. Pure.
 
@@ -253,6 +254,20 @@ def day_block_reason(
 			return _("{0} is a half-day leave. Cancel the leave first.").format(name)
 		if row.get("attendance_request"):
 			return _("{0} came from an Attendance Request. Cancel that request first.").format(name)
+	if not duplicate_rows_ok:
+		live = [row for row in rows or [] if cint(row.get("docstatus")) != 2]
+		if len(live) > 1:
+			# The engine cannot re-mark a day that already has a row, so every
+			# action that rebuilds the day is a no-op here — and it used to be
+			# reported as a success. Owner, 17 Sep 2026, on Norazlin's 4 Sep:
+			# pairing answered "The day was rebuilt" over Frappe's own
+			# "Attendance ... is already marked", with before and after
+			# identical. `remove_duplicate_row` waives this for itself; it is
+			# the way out, and it is a button on this same screen.
+			return _(
+				"This day has {0} attendance rows ({1}). Remove the duplicate first — nothing else "
+				"can rebuild the day while both exist."
+			).format(len(live), ", ".join(sorted(str(row.get("name")) for row in live)))
 	if request:
 		return _("{0} speaks for this day. Cancel it first.").format(request)
 	if financial:
@@ -505,7 +520,8 @@ def remove_duplicate_row(attendance: str, reason: str) -> dict:
 	row = _attendance(attendance)
 	emp = _require_employee(row.employee)
 	day = getdate(row.attendance_date)
-	_lock_and_guard(emp.name, [day])
+	# The only action allowed to run on a two-row day: it is what ends one.
+	_lock_and_guard(emp.name, [day], duplicate_rows_ok=True)
 
 	rows = _rows_with_punch_counts(emp.name, day)
 	# The employee row is locked above, so the day cannot change under us; a
@@ -594,7 +610,11 @@ def _screen(emp, day) -> dict:
 		"taps": [tap_view(tap) for tap in taps],
 		"attendance": [row_view(row) for row in rows],
 		"owner": owner_label(emp.name, day, rows),
-		"blocked": _day_block(emp.name, day, rows, for_update=False),
+		# `blocked` hides every control, so the two-row rule is NOT part of it:
+		# the way out of a two-row day is a button on this screen. It comes back
+		# as a notice instead — shown above the actions, blocking none of them.
+		"blocked": _day_block(emp.name, day, rows, for_update=False, duplicate_rows_ok=True),
+		"notice": _day_block(emp.name, day, rows, for_update=False),
 	}
 
 
@@ -647,17 +667,23 @@ def _day_states(employee, days) -> dict:
 	return {str(day): [row_view(row) for row in _day_attendance(employee, day)] for day in days}
 
 
-def _lock_and_guard(employee, days) -> None:
+def _lock_and_guard(employee, days, duplicate_rows_ok=False) -> None:
 	"""The per-employee lock every other writer takes, then the day guards."""
 	_lock_employee(employee)
 	for day in days:
-		blocked = _day_block(employee, day, _day_attendance(employee, day), for_update=True)
+		blocked = _day_block(
+			employee,
+			day,
+			_day_attendance(employee, day),
+			for_update=True,
+			duplicate_rows_ok=duplicate_rows_ok,
+		)
 		if blocked:
 			logger.info("[attendance_fix_day] %s on %s refused: %s", employee, day, blocked)
 			_refuse(blocked)
 
 
-def _day_block(employee, day, rows, for_update) -> str | None:
+def _day_block(employee, day, rows, for_update, duplicate_rows_ok=False) -> str | None:
 	return day_block_reason(
 		day,
 		_today(employee),
@@ -666,6 +692,7 @@ def _day_block(employee, day, rows, for_update) -> str | None:
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
 		request=_request_cover(employee, day),
 		shift_running=_shift_running(employee, day),
+		duplicate_rows_ok=duplicate_rows_ok,
 	)
 
 
@@ -703,28 +730,39 @@ def _refuse(sentence) -> None:
 	frappe.throw(sentence, Refused)
 
 
-def owner_label(employee, day, rows):
-	"""What Part A's classifier calls this day, or None while it is not merged.
+def owner_label(employee, day, rows) -> str | None:
+	"""What Part A's classifier calls this day, as ONE line of text, or None.
 
 	`hrms.utils.attendance_ownership` is another worker's module; this screen
 	shows its label when it is there and says nothing when it is not, rather
 	than guessing an owner from a blank tick (the defect the endgame plan
 	opens with).
+
+	It answers with a verdict PER ROW — a list of dicts — and the header is a
+	pill, so the list is folded into one line here. It used to be handed over
+	whole and the header printed "[object Object],[object Object]" (owner,
+	17 Sep 2026, on Norazlin's 4 September). The day's rows were also being
+	passed as the third positional argument, which is `system_users`: the
+	accounts that are not people. They are not that, so they are not passed.
 	"""
 	try:
 		from hrms.utils.attendance_ownership import classify_day
 	except ImportError:
 		logger.debug("[attendance_fix_day] no ownership classifier yet; the screen shows no owner label")
 		return None
-	for args in ((employee, day, rows), (employee, day)):
-		try:
-			return classify_day(*args)
-		except TypeError:
-			continue
-		except Exception:
-			logger.warning("[attendance_fix_day] the ownership classifier failed for %s on %s", employee, day)
-			return None
-	return None
+	try:
+		verdicts = classify_day(employee, day)
+	except Exception:
+		logger.warning("[attendance_fix_day] the ownership classifier failed for %s on %s", employee, day)
+		return None
+	if isinstance(verdicts, str):
+		return verdicts or None
+	owners = [str(v.get("owner")) for v in (verdicts or []) if isinstance(v, dict) and v.get("owner")]
+	if not owners:
+		return None
+	# One row: its owner. Several: each one, in the order the rows come back,
+	# so a two-row day reads "system, HR" and HR can see which is which.
+	return ", ".join(owners)
 
 
 # --- seams: every database touch, one small function each -------------------------

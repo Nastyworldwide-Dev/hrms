@@ -1,46 +1,38 @@
-# FAMILY — the Fix Day entry point HR could not find
+# FAMILY — a two-row day is a no-op reported as a rebuild
 
-CLASS: a shared bundle registering itself into a key the page's own script
-owns. The later assignment wins silently, so the feature exists, tests pass on
-its source, and the button is simply absent from the screen.
+CLASS: an action whose precondition lives in another module. The engine refuses
+to re-mark a day that already carries an attendance row; the screen never asked,
+ran the action anyway, and titled the result "The day was rebuilt" over Frappe's
+own "already marked" message, with before and after identical.
 
-Changed: fix_day.bundle.js stops assigning frappe.listview_settings; each
-doctype's list script registers the entry point itself.
+Changed: `day_block_reason` gains the two-row rule (waived by the one endpoint
+that ends a two-row day); `_screen` reports it as a NOTICE, never as `blocked`,
+because the way out is a button on the same screen; `owner_label` returns text;
+`show_change` titles itself from whether the day actually changed.
 
-Call sites the machine lists for `hrms.fix_day.*` and for the two list scripts:
+Call sites the machine lists for `day_block_reason` / `_day_block` /
+`_lock_and_guard` / `owner_label`:
 
-* hrms/public/js/fix_day.bundle.js — same-root (the assignment is removed; the
-  screen, `open`, `from_taps` and the new `from_attendance` stay)
-* hrms/hr/doctype/employee_checkin/employee_checkin_list.js — same-root (now the
-  one owner of that key, and registers the button)
-* hrms/hr/doctype/attendance/attendance_list.js — same-root (same, plus
-  `employee` in add_fields so a ticked row can name its own day)
-* hrms/hr/report/shift_attendance/shift_attendance.js:142 — not-affected: opens
-  the screen with frappe.require + hrms.fix_day.open, touches no listview_settings
-* hrms/hr/report/unclaimable_days/unclaimable_days.js:26 — not-affected: same shape
-* hrms/hooks.py (app_include_js) — not-affected: the bundle still loads at boot,
-  which is what makes hrms.fix_day.enabled() answerable when a list opens
-
-Rest of the app: no other file assigns frappe.listview_settings for a doctype
-that a bundle also writes (checked below).
-
-HOTSPOT: hrms/hr/doctype/attendance/attendance_list.js has taken 6 fixes in
-90 days. Refactor ticket filed, not done inline:
-.claude/plans/ticket-attendance-list-onload.md
+* hrms/api/attendance_fix_day.py::pair_taps, move_tap, ignore_tap, restore_tap,
+  add_tap — same-root: all five reach `_lock_and_guard` and are now refused on a
+  two-row day, which is the fix.
+* hrms/api/attendance_fix_day.py::remove_duplicate_row — same-root: waives the
+  rule for itself, asserted by a test that no other action does.
+* hrms/api/attendance_fix_day.py::undo_fix — same-root by the same path; an undo
+  on a two-row day cannot rebuild either, and now says so.
+* hrms/api/attendance_fix_day.py::_screen (get_day) — same-root: `blocked` is
+  computed with the waiver so the controls stay, `notice` carries the sentence.
+* hrms/hr/doctype/hr_day_fix_log/hr_day_fix_log.py — not-affected: reads the
+  log, never the guard.
+* hrms/utils/attendance_endgame.py / hrms/sync/erp_backfill.resolve_duplicate_rows
+  — not-affected: the automatic resolver has its own path and its own rule (the
+  same rule), and does not call this guard.
+* hrms/public/js/fix_day.bundle.js — same-root: renders the notice and stops
+  claiming a rebuild it cannot see.
 
 LOCK:
-* regression (the instance): the two list tests load the bundle and then the
-  list script in Desk's real order and ask the resulting onload what it
-  registered — the failing shape, executed rather than read.
-* invariant (the class): no file listed in hooks.app_include_js — the files
-  that load at BOOT, which are the only ones that can lose the race — may
-  assign frappe.listview_settings. Read from hooks.py, not hard-coded, and
-  enforced in hrms/public/js/fix_day.bundle.test.js. An on-demand bundle is
-  deliberately not covered: it cannot race a list script, and extending a
-  doctype whose folder this app does not own is a fair reason to write that key.
-* the role gate is asserted by NAME (the harness records which role string was
-  asked about), so a renamed or typo'd role fails here instead of silently
-  taking the button away from real HR users.
-
-Both proven by mutation: claiming the key in the boot bundle fails the
-invariant; typing "HR Manger" into the role list fails both list suites.
+* regression (the instance): hrms/tests/test_fix_day_refuses_a_two_row_day.py
+  drives Norazlin's actual two rows through the guard.
+* invariant (the class): a test asserts that of the six actions, exactly one
+  waives the rule; and that the screen is never `blocked` by a condition whose
+  remedy is one of its own buttons (test_a_two_row_day_is_noticed_but_never_blocked).

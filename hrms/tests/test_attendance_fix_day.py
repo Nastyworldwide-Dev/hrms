@@ -23,6 +23,7 @@ functions, which `Store` replaces with an in-memory day. Run it as a FILE:
 import copy
 import json
 import sys
+import types
 import unittest
 from contextlib import ExitStack
 from datetime import date, datetime, time
@@ -608,8 +609,48 @@ class TestTheScreen(FixDayCase):
 			self.assertIsNone(fd.get_day(EMP, str(DAY))["owner"])
 
 	def test_it_shows_the_owner_label_the_classifier_gives(self):
+		"""Amended 17 Sep 2026. This asserted only `is not None`, and the
+		classifier answers with a LIST of per-row verdicts — so it passed on the
+		empty list of a day with no attendance row at all, while the real screen
+		was printing "[object Object],[object Object]" into its header. The
+		label is one line of text or nothing, and a day with a row has one."""
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
-		self.assertIsNotNone(fd.get_day(EMP, str(DAY))["owner"])
+		module = types.ModuleType("hrms.utils.attendance_ownership")
+		module.classify_day = lambda employee, day, **kw: [
+			{"attendance": "ATT-1", "owner": "system"},
+			{"attendance": "ATT-2", "owner": "HR"},
+		]
+		with patch.dict(sys.modules, {"hrms.utils.attendance_ownership": module}):
+			label = fd.get_day(EMP, str(DAY))["owner"]
+		self.assertIsInstance(label, str)
+		self.assertNotIn("object", label)
+		self.assertIn("system", label)
+		self.assertIn("HR", label)
+
+	def test_a_two_row_day_is_noticed_but_never_blocked(self):
+		"""Owner, 17 Sep 2026, Norazlin 4 Sep. A day carrying two attendance
+		rows cannot be rebuilt — but the button that ends a two-row day is on
+		THIS screen, so the sentence must not hide the controls with it."""
+		self.store.tap("CKIN-A", at(DAY, "19:30"))
+		self.store.row("ATT-1")
+		self.store.row("ATT-2")
+		day = fd.get_day(EMP, str(DAY))
+		self.assertIsNone(day["blocked"], "hiding every action is the dead end HR reported")
+		self.assertIn("duplicate", (day["notice"] or "").lower())
+		self.assertIn("ATT-1", day["notice"])
+		self.assertIn("ATT-2", day["notice"])
+
+	def test_a_one_row_day_carries_no_notice(self):
+		self.store.tap("CKIN-A", at(DAY, "19:30"))
+		self.store.row("ATT-1")
+		self.assertIsNone(fd.get_day(EMP, str(DAY))["notice"])
+
+	def test_a_day_the_classifier_has_no_verdict_on_shows_no_owner(self):
+		self.store.tap("CKIN-A", at(DAY, "19:30"))
+		module = types.ModuleType("hrms.utils.attendance_ownership")
+		module.classify_day = lambda employee, day, **kw: []
+		with patch.dict(sys.modules, {"hrms.utils.attendance_ownership": module}):
+			self.assertIsNone(fd.get_day(EMP, str(DAY))["owner"])
 
 
 if __name__ == "__main__":

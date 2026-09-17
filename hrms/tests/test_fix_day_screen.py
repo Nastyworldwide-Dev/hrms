@@ -170,10 +170,27 @@ class TestTheThreeDoors(unittest.TestCase):
 		self.assertIn("if (sa_enabled()) sa_grid(report).setup_toolbar();", js)
 
 	def test_the_employee_checkin_list_opens_it_for_one_employee_day(self):
+		"""Amended 17 Sep 2026 (cba7c3f11). The bundle used to assign
+		`frappe.listview_settings["Employee Checkin"]` itself, at boot, and the
+		doctype's own list script — loaded when the list opens — threw it away,
+		so HR never saw the button. The bundle keeps the opener; the list script
+		is the door."""
 		js = read(BUNDLE)
-		self.assertIn('frappe.listview_settings["Employee Checkin"]', js)
+		self.assertNotIn(
+			'frappe.listview_settings["Employee Checkin"] =',
+			js,
+			"a boot bundle cannot own that key; the list script is loaded last",
+		)
 		self.assertIn("hrms.fix_day.from_taps", js)
 		self.assertIn("Tick taps of one person on one day.", js)
+		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
+		self.assertIn("hrms.fix_day.from_taps(listview)", listing)
+
+	def test_the_attendance_list_opens_it_for_one_ticked_day(self):
+		js = read(BUNDLE)
+		self.assertIn("hrms.fix_day.from_attendance", js)
+		listing = read(ROOT / "hr/doctype/attendance/attendance_list.js")
+		self.assertIn("hrms.fix_day.from_attendance(list_view)", listing)
 
 
 if __name__ == "__main__":

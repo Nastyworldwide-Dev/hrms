@@ -112,7 +112,7 @@ class FixDayScreen {
 				this.header(day),
 				this.taps_html(day),
 				this.attendance_html(day),
-				day.blocked ? this.blocked_html(day) : this.actions_html(),
+				day.blocked ? this.blocked_html(day) : this.notice_html(day) + this.actions_html(),
 			].join("")
 		);
 		wrapper.off("click.fixday").on("click.fixday", "[data-fd-action]", (event) => {
@@ -132,6 +132,14 @@ class FixDayScreen {
 			: `<span class="text-muted">${__("owner not classified yet")}</span>`;
 		return `<div class="mb-3"><b>${fd_escape(day.employee_name || day.employee)}</b> —
 			${fd_escape(day.date)} ${owner}</div>`;
+	}
+
+	// A day that is usable but not yet rebuildable — two attendance rows — says
+	// so here. It is not `blocked`: the button that ends a two-row day is one of
+	// the ones below, so hiding them would be the dead end it is warning about.
+	notice_html(day) {
+		if (!day.notice || day.notice === day.blocked) return "";
+		return `<div class="alert alert-warning mb-3">${fd_escape(day.notice)}</div>`;
 	}
 
 	taps_html(day) {
@@ -367,10 +375,17 @@ class FixDayScreen {
 					${__("Before")}: ${fd_day_lines(before[day])}<br>
 					${__("After")}: ${fd_day_lines(after[day])}</li>`
 		);
-		console.info("[FixDay] fixed", answer.log, before, after);
+		// The day is rebuilt from its punches by the server, and sometimes it
+		// cannot be: a day carrying two attendance rows comes back exactly as it
+		// went in. Saying "rebuilt" over an unchanged day is how a no-op read as
+		// a success for a week (owner, 17 Sep 2026, Norazlin 4 Sep).
+		const changed = Object.keys(after).some(
+			(day) => fd_day_lines(before[day]) !== fd_day_lines(after[day])
+		);
+		console.info("[FixDay] fixed", answer.log, "changed:", changed, before, after);
 		frappe.msgprint({
-			title: __("The day was rebuilt"),
-			indicator: "green",
+			title: changed ? __("The day was rebuilt") : __("The day came back unchanged"),
+			indicator: changed ? "green" : "orange",
 			message: `<ul>${lines.join("")}</ul>`,
 		});
 	}
