@@ -14,6 +14,7 @@ import binascii
 import logging
 import re
 import time as time_module
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -38,6 +39,34 @@ logger = logging.getLogger(__name__)
 # thing: production carried a duplicate IN 10m53s later with no OUT between, and
 # that employee could never file a late check-out at all. No constant is right
 # here, so there is no longer a constant.
+
+#: Taps this close together are one tap. Nobody works twelve seconds: the shape
+#: is somebody tapping again because the screen told them the wrong thing
+#: (Norazlin, 4 Sep 2026 — IN 18:09:14, OUT 18:09:26, IN 18:09:30, read as a
+#: twelve-second session and a dangling check-in). Deliberately much narrower
+#: than the 60-second SAME_PUNCH_WINDOW this app once had and removed: that one
+#: REFUSED the punch, and so refused real ones too.
+BURST_WINDOW = timedelta(seconds=45)
+
+
+def is_burst_tap(previous, punch_time) -> bool:
+	"""Is this punch part of the burst the one before it started? Pure.
+
+	`previous` is the newest punch this employee already has, as a row with
+	`time` (and optionally `synced_from_instance` / `remote_approval_status`),
+	or None. A mirrored row is not a finger on this phone, and a rejected punch
+	is not a tap this one continues.
+	"""
+	if not previous or previous.get("synced_from_instance"):
+		return False
+	if (previous.get("remote_approval_status") or "") == "Rejected":
+		return False
+	earlier = get_datetime(previous.get("time"))
+	if not earlier:
+		return False
+	gap = get_datetime(punch_time) - earlier
+	return timedelta(0) <= gap < BURST_WINDOW
+
 
 #: A forgotten check-out this long after the IN's shift actually ended (buffer
 #: included) is a typo, not a session: refused at filing with advice (E28).
@@ -626,8 +655,32 @@ def punch(
 			)
 			frappe.throw(_("Invalid selfie attachment."), frappe.PermissionError)
 		doc.selfie_image = selfie_image
+
+	# Taps seconds apart are one tap. The row is STORED — its time, its type and
+	# its selfie are evidence, and the old 60-second window that REFUSED such a
+	# punch also refused real ones — but it does not count toward the day, so a
+	# stutter can never write a twelve-second session. HR brings it back from
+	# Fix Day in one click if it was real.
+	burst = is_burst_tap(recent[-1] if recent else None, punch_time)
+	if burst:
+		doc.skip_auto_attendance = 1
+		logger.warning(
+			"[remote_checkin] %s tapped again within %ss — stored, not counted",
+			employee,
+			int(BURST_WINDOW.total_seconds()),
+		)
+
 	doc.flags.ignore_permissions = True
 	doc.insert()
+
+	if burst:
+		doc.add_comment(
+			"Info",
+			_(
+				"Not counted: this tap landed within {0} seconds of the one before it, so it is "
+				"the same tap. Restore it from Fix Day if it was a real punch."
+			).format(int(BURST_WINDOW.total_seconds())),
+		)
 
 	if resolved_type != requested_type:
 		# A DURABLE trace, not just a log line. HR reading Employee Checkin must

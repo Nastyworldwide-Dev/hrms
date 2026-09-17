@@ -261,3 +261,11 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:21:19Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
 - 2026-09-17T05:21:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-17T05:21:32Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-17T05:21:37Z COMMIT: 22f5541cb feat(attendance): the repair takes a two-row day back to one → review dispatched
+- 2026-09-17T09:05:00Z REPAIR: item 1 — a burst of taps seconds apart wrote a twelve-second session (Norazlin 18:09:14/26/30). A punch within 45s of the previous one is now stored and skip-stamped with a comment, never refused: the old 60-second SAME_PUNCH_WINDOW refused real punches too, which is why it was removed.
+- 2026-09-17T09:05:00Z EVIDENCE: rung 2 — 11 tests RED first, green after; 497 remote_checkin neighbour tests green.
+- 2026-09-17T05:24:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:24:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:25:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:25:08Z EVIDENCE: 6 behaves — family hunt: class=every punch is treated as a deliberate act, however close it lands to; 37 call site(s) given verdicts, 2 same-root ⟂0e7de744fe27
+- 2026-09-17T05:25:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
