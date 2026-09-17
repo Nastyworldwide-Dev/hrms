@@ -295,3 +295,15 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green; the single failure in
 test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
 NEXT: the owner deploys; the day's column is created by the patch on migrate,
 and until it exists every skipped punch simply stays a wall.
+- 2026-09-17T11:13:24Z PUSH: nz-glass @ c4a0fca32
+REPAIR: review of c4a0fca32 found a third set of un-skippers I had missed -
+pair_taps and the rebuild's session keep both set skip_auto_attendance 0 and
+left the noise tick behind. Fixed at the CHOKE POINT instead of the call sites:
+_write_tap clears the verdict whenever the skip is written as 0, so none of the
+five callers can forget it. Its Warning is closed too: taps HR ignored before
+the field existed are backfilled from the HR Day Fix Log (action ignore_tap or
+rebuild_day, not undone, and only those still skipped) - the app's own audit
+record rather than a guess from comment text.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 suites green; the one failure in
+test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
+NEXT: the owner deploys.

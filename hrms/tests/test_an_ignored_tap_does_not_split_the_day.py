@@ -176,6 +176,11 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 	NEVER REACHES THIS CALCULATION — the whole day is refused upstream:
 	  * utils/hr_removed_day.py and api/attendance_master_edit.py — a day HR
 	    removed in Shift Attendance.
+
+	READS THE TICK RATHER THAN SETTING IT, and listed because this census cannot
+	tell a filter from a write:
+	  * patches/v16_0/add_skipped_as_noise_field.py — selects the taps that are
+	    still skipped, to backfill the ones a Fix Day ignore already judged.
 	"""
 
 	WRITERS: ClassVar[frozenset] = frozenset(
@@ -185,6 +190,7 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 			"hrms/api/remote_checkin.py",
 			"hrms/hr/doctype/employee_checkin/employee_checkin.py",
 			"hrms/overrides/remote_checkin_request_hooks.py",
+			"hrms/patches/v16_0/add_skipped_as_noise_field.py",
 			"hrms/utils/hr_removed_day.py",
 		}
 	)
@@ -237,6 +243,17 @@ class TheVerdictGoesWithTheSkipCase(unittest.TestCase):
 		("hrms/utils/attendance_recovery.py", 'elif action == "unskip":'),
 	)
 
+	def test_the_one_tap_writer_clears_it_for_every_caller(self):
+		"""The choke point, not a list. `restore_tap` was the only call site that
+		remembered; `pair_taps` and the rebuild's session-keep both un-skipped a
+		tap and left the tick set (review of c4a0fca32). Five callers is four too
+		many to remember, so `_write_tap` does it."""
+		source = (pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_fix_day.py").read_text()
+		start = source.index("def _write_tap(")
+		body = source[start : source.index("\ndef ", start + 10)]
+		self.assertIn('fields["skipped_as_noise"] = 0', body)
+		self.assertIn('not cint(fields["skip_auto_attendance"])', body)
+
 	def test_every_place_that_unskips_also_clears_the_verdict(self):
 		root = pathlib.Path(__file__).resolve().parents[2]
 		for rel, marker in self.CLEARERS:
@@ -249,6 +266,38 @@ class TheVerdictGoesWithTheSkipCase(unittest.TestCase):
 					window,
 					f"{rel} clears the skip near {marker} without clearing the verdict",
 				)
+
+
+class TheLegacyIgnoresAreTickedCase(unittest.TestCase):
+	"""A tap HR ignored BEFORE the field existed must not read as a wall again.
+
+	Re-running the Fix Day rebuild heals such a day by itself, but a day the
+	hourly job quietly reprocesses never goes through that — so the taps are
+	ticked from the app's own audit record, not guessed from comment text.
+	"""
+
+	PATCH: ClassVar[str] = "hrms/patches/v16_0/add_skipped_as_noise_field.py"
+
+	def source(self):
+		return (pathlib.Path(__file__).resolve().parents[2] / self.PATCH).read_text()
+
+	def test_it_reads_the_fix_log_not_a_comment_trail(self):
+		body = self.source()
+		self.assertIn("HR Day Fix Log", body)
+		self.assertIn("ignore_tap", body)
+		self.assertIn("rebuild_day", body)
+
+	def test_an_undone_fix_is_not_backfilled(self):
+		self.assertIn('"undone": 0', self.source(), "an undone ignore means the tap came back")
+
+	def test_only_a_tap_that_is_still_skipped_is_ticked(self):
+		# A rebuild's refs name the session taps it KEPT as well as the ones it
+		# dropped; a kept tap counts, and a counted tap is not noise.
+		self.assertIn('"skip_auto_attendance": 1', self.source())
+
+	def test_it_never_ticks_anything_the_log_does_not_name(self):
+		body = self.source()
+		self.assertIn('filters={"name": ["in", sorted(names)]', body)
 
 
 class TheColumnMayNotExistYetCase(unittest.TestCase):

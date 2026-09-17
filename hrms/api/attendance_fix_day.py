@@ -621,9 +621,8 @@ def restore_tap(tap: str, reason: str) -> dict:
 	if not cint(row.skip_auto_attendance) and not rejected:
 		_refuse(_("This tap already counts in the day."))
 	before = _before(emp.name, days, [row])
-	# The noise verdict goes with the skip: a tap that counts again is not a
-	# judgement about anything, and leaving the tick set would make it read as
-	# noise the day after somebody ignores it again.
+	# `_write_tap` clears the noise verdict with the skip; both are named here
+	# because this is the action whose whole point is that the tap counts again.
 	fields = {"skip_auto_attendance": 0, "skipped_as_noise": 0}
 	if rejected:
 		fields["remote_approval_status"] = "Approved"
@@ -1155,6 +1154,16 @@ def _write_tap(tap, fields) -> None:
 	if refusal:
 		logger.info("[attendance_fix_day] %s refused: %s", tap.get("name"), refusal)
 		_refuse(refusal)
+	fields = dict(fields)
+	if "skip_auto_attendance" in fields and not cint(fields["skip_auto_attendance"]):
+		# A tap that counts again carries no verdict. Here rather than at the
+		# call sites because there are five of them and `restore_tap` was the
+		# only one that remembered — `pair_taps` and the rebuild's session keep
+		# both un-skipped a tap and left `skipped_as_noise` set (review of
+		# c4a0fca32). A stale tick would make the NEXT skip of that punch read as
+		# noise on a judgement nobody gave, which is the whole thing this field
+		# exists to prevent.
+		fields["skipped_as_noise"] = 0
 	frappe.db.set_value("Employee Checkin", tap["name"], fields)
 	logger.info(
 		"[attendance_fix_day] %s changed by %s: %s", tap.get("name"), frappe.session.user, sorted(fields)
