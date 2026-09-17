@@ -1,33 +1,36 @@
-# FAMILY — a decorative layer painted ON TOP of the text it decorates
+# FAMILY — a Half Day is assumed to always mean half a day of LEAVE
 
-CLASS: a full-bleed `position: absolute; inset: 0` pseudo-element with no
-z-index. A positioned element whose `z-index` is `auto` paints in the
-positioned-descendants layer — ABOVE the in-flow, unpositioned content of the
-same box. Every cell, number and label on a glass panel is in-flow and
-unpositioned, so the §6 gloss was washed over them: up to 55% white
-(`--g-sheen`, light mode) at the panel's top-left, fading out by 40% across it.
-The FIRST tile of every glass panel lost contrast; the rest kept it.
+CLASS: upstream metadata that models "Half Day" as a leave state, inside an app
+that also produces a Half Day from WORKING HOURS. `Attendance.leave_type`
+carried `mandatory_depends_on: eval:in_list(["On Leave", "Half Day"],
+doc.status)`. The hourly job writes an hours-based Half Day with no leave and
+no Leave Type; the moment a person opens that row in Desk, saving is refused
+with "Leave Type is required".
 
-Reported 17 Sep 2026 by an employee about her own leave balance — "annual leave
-tu nape dia mcm samar samar" — which is exactly the top-left tile.
+The rows HR opens to correct are exactly the rows HR cannot save.
 
-ROOT CAUSE: `frontend/src/theme/glass-components.css`, `.g-glass::after`.
-Fixed there: the panel isolates, the gloss sits at z-index -1 — above the
-panel's own fill, below everything written on it.
+ROOT CAUSE: the field metadata disagrees with this doctype's own controller.
+`Attendance.check_leave_record` explicitly supports a leave-less Half Day —
+finding no Leave Application, it sets `half_day_status = "Absent"` and only
+raises an alert. Fixed in the metadata, so the two agree: mandatory for
+On Leave, offered but optional on a Half Day.
 
-NOT A DATA DEFECT. The numbers were right the whole time; only the first one
-was unreadable.
+REPORTED: 17 Sep 2026, HR-ATT-2026-15978 (Norazlin, 4 Sep, Half Day, 0.00 h,
+Status for Other Half = Absent). Screenshot of the refusal supplied.
 
-## Every full-bleed pseudo-overlay in the stylesheet
+## Everything else that pairs Half Day with a leave type
 
-frontend/src/theme/glass-components.css:332 (`.g-glass::after`) — same-root (fixed here)
-  The reported symptom. One rule, every glass panel in the app.
-frontend/src/theme/glass-components.css:333 (`.g-glass-ghost::after`) — same-root (fixed here)
-  The same declaration block; the ghost variant had the identical bug.
-frontend/src/theme/glass-components.css:830 (`.g-skeleton::after`) — not-affected
-  The loading shimmer. A skeleton is a placeholder shape and never holds text,
-  so an overlay above it covers nothing legible. Exempt in the new gate, by name.
-frontend/src/theme/glass-components.css:48 (`.g-lightfield`) — not-affected
-  The page-level twin, and the precedent: it was already given `z-index: 0`
-  with `.g-page ion-content` lifted to `z-index: 1`. The panel-level layer was
-  simply never wired the same way.
+hrms/hr/doctype/attendance/attendance.py:373 (`check_leave_record`) — not-affected
+  It is the AUTHORITY the fix aligns to: a Half Day with no leave record is a
+  real state there, and it writes `half_day_status = "Absent"` for it.
+hrms/hr/doctype/attendance/attendance.py:358 (`check_leave_record`, leave path) — not-affected
+  When the half day IS leave, it fills `leave_type` and `leave_application`
+  from the approved Leave Application, so nothing is lost by dropping the
+  mandatory flag: the value arrives on its own.
+hrms/payroll/doctype/salary_slip/salary_slip.py:812 — not-affected
+  Already guards with `and d.leave_type` before pricing a Half Day as LWP, so
+  a leave-less Half Day was never counted there. Independent confirmation that
+  the codebase already expects this state.
+hrms/hr/doctype/attendance/attendance.json (`half_day_status`) — not-affected
+  Shown on every Half Day with options Present/Absent and NO leave option at
+  all — the doctype's own admission that a Half Day need not be leave.

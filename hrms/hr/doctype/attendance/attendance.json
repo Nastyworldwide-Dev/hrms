@@ -144,7 +144,7 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Leave Type",
-   "mandatory_depends_on": "eval:in_list([\"On Leave\", \"Half Day\"], doc.status)",
+   "mandatory_depends_on": "eval:doc.status==\"On Leave\"",
    "oldfieldname": "leave_type",
    "oldfieldtype": "Link",
    "options": "Leave Type"

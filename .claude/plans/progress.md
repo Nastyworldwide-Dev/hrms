@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  Then the two rulings: approval.py:413-414 must stop elevating CANCEL on routing alone (an approved
-  request is never cancelled), and the filing window widens to four months keeping its 16th-to-15th
-  cycle shape.
-- 2026-09-13T18:07:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T18:07:05Z COMMIT: bdcb02fcb fix(hr): a manager's team was re-derived here, and the fences drifted → review dispatched
-- 2026-09-13 EVIDENCE(2): C4 done. reverse_replacement_leave fetched the Leave Allocation with a bare
-  get_doc while running INSIDE A CANCEL, so an allocation that HR had cancelled or that the sync had
-  re-pulled under a new name froze the employee's own withdrawal with DoesNotExistError. And a
-  CANCELLED allocation is worse than a missing one — decrementing it writes a negative ledger entry
-  onto a document no longer in force. Existence and docstatus are both checked now; it returns cleanly
-  and records the skip in the Error Log rather than throwing, because the person's cancellation
-  succeeded and the allocation's fate is not theirs to fix. Four AST cases (the module cannot be
-  imported without a bench — pypika), proven red by restoring the bare get_doc.
-NEXT: the two rulings, both from Nabil in this session. (1) "an approved request is never cancelled" —
-  hrms/api/approval.py:413-414 elevates CANCEL on routing alone (`elif _is_routed_approver(doc):
-  doc.flags.ignore_permissions = True`), with only _request_read_allowed ahead of it, and the guard at
-  :400 means the else branch is reachable ONLY on cancel. Close it. (2) the filing window widens to
-  four months from the present day while KEEPING its 16th-to-15th cycle shape, and covers OT Request
-  and expense-shaped requests alongside it — hrms/utils/filing_window.py currently implements two
-  cycles.
-- 2026-09-13T18:08:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-13T18:08:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 12 extra test file(s) ⟂ca1c1f300426
-- 2026-09-13T18:08:53Z COMMIT: d2f9602b3 fix(hr): withdrawing a request must not freeze on an allocation that moved on → review dispatched
-- 2026-09-13 EVIDENCE(2): RULING 1 implemented. "An approved request is never cancelled" — Nabil, this
-  session. approval.py::finalize's else branch is reachable ONLY on a cancel (the first branch catches
-  every submit of a decide-then-submit doctype, and every request doctype is in that set), and it
-  elevated on ROUTING alone with only _request_read_allowed ahead of it — so a settled approval could
-  be withdrawn with the framework's own cancel right bypassed. The elevation is gone; cancelling needs
-  the cancel right. The refusal also names cancellation instead of saying "not routed to you for
-  approval", which sent the reader looking for the wrong thing. Three AST cases, including one pinning
-  that `decide` STILL elevates — so a future narrowing of cancellation cannot quietly take approval
-  away. Proven red by restoring the elevation.
-NEXT: RULING 2 — the filing window widens to FOUR MONTHS from the present day while KEEPING its
-  16th-to-15th cycle shape, covering OT Request and expense-shaped requests alongside it.
-  hrms/utils/filing_window.py currently implements two cycles. Read it, widen it, and check every
-  caller: filing, discovery and validation all consult it and must move together.
-- 2026-09-13T18:10:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T18:10:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-13T18:10:52Z COMMIT: 9fbd5085f fix(approval): being the approver is not permission to undo an approval → review dispatched
-- 2026-09-13 EVIDENCE(2): RULING 2 implemented. Backdated OT filing widens from two cycles to FOUR
-  (Nabil, this session: "4 month before the current date", and separately "still 16th to 15th" — so the
-  cycle shape is untouched and only the depth changes). hrms/utils/filing_window.py BACKDATE_CYCLES
-  2 -> 4. Anchoring to the 16th means four cycles back from the CURRENT cycle's start reaches a little
-  beyond four calendar months for most of a cycle; that is the anchoring the module was built around,
-  not a rounding error, and it errs towards letting somebody file.
-- 2026-09-13 EVIDENCE(3): every consumer moves together because they all read the same function —
-  filing (ot_request.validate_filing_window), discovery (api/__init__.py:636) and the deploy-time
-  backfill (backfill_ot_after_rounding_rule:63) all call earliest_filable_date. Verified by grep; no
-  second copy of the rule exists.
-- 2026-09-13 SCOPE NOTE on ruling 2: it names "OT request and related requests like expenses". Expense
-  Claim enforces NO filing window at all — there is nothing to widen there, and nothing was invented.
-  Recorded so the next reader does not go looking for the expense half of this change.
-- 2026-09-13 LEARNING(gate): test_ot_filing_edits.py hardcoded CUTOFF as a literal date, so a policy
-  change broke a test that was only ever meant to say "an edit gets the same window as a new filing" —
-  true whatever the window is. It DERIVES the cutoff from the module now (loaded by path, because
-  importing through the package pulls hrms/__init__.py and needs a bench), so the next policy change
-  moves the fence and the test keeps asking its own question.
-- 2026-09-13T18:13:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T18:13:48Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
-- 2026-09-13T18:13:51Z COMMIT: fa8565990 fix(approval): being the approver is not permission to undo an approval → review dispatched
-- 2026-09-13T18:14:32Z COMMIT: f2e8dd05f feat(overtime): backdated filing reaches four months instead of two → review dispatched
-- 2026-09-13 DEAD END (twice now, same trap): a commit message written with `cat > $GD/MSG` inside a
-  command that a PreToolUse gate BLOCKS never runs, so the following `git commit -F` silently reuses
-  the PREVIOUS message. 616d6b119 and fa8565990 both landed with the wrong subject and had to be
-  amended. ALWAYS write the message file in its own command, then commit in the next.
-NEXT: every defect on the ranked plan is CLOSED. What remains is the report project (26 Script Reports
-  with no company fence + 4 that read past one), the tickets filed today (C-routing, C-mayread,
-  C-roster, C-appraisal, C-ctc, C-1on1, C-fence, the session_state refactor, the two permanently-red
-  timezone tests, the spurious-extra-session invariant, KPI route state DSN-16, the provenance Recover
-  button), and Nabil's three production questions (is a biometric device in use; is HR Settings
-  allow_multiple_shift_assignments on; did the OT precision patches ever run on Verifica). Historical
-  data repair still needs his explicit word for that exact change. NOTHING IS PUSHED.
-- 2026-09-13T18:15:25Z COMMIT: 7472b03ef docs(plans): every defect on the ranked plan is closed → review dispatched
-- 2026-09-13 RULING (Nabil): **THE SCRIPT REPORT PROJECT IS DEFERRED. DO NOT OPEN IT.** That covers all
-  three steps proposed today — the role patch stripping Accounts User / Projects User / Manufacturing
-  User / Expense Approver / Leave Approver / System Manager off the pay reports, the company guard on
-  frappe.desk.query_report.run, and the per-report self-scoping. No commits, no patches, no probes
-  against it until he says otherwise, in those words.
-  The exposure is recorded and understood: those roles can read gross pay, employer contributions,
-  whole-company leave balances and full CTC today, and 26 of 32 Script Reports accept any company typed
-  into the filter. It is written down in .claude/plans/audit-2026-09-13-approver.md. Leaving it open is
-  HIS CALL, made with the facts in front of him — not an oversight for a later session to "helpfully"
-  correct.
-  The two policy questions that would gate the work if it resumes: should Accounts see gross pay (they
-  may have a legitimate cost-allocation reason), and should a Leave Approver see whole-company balances
-  or only their team.
-NEXT: nothing is queued. Every defect on the ranked plan is closed and committed; the reports project
-  is DEFERRED by ruling; historical data repair still needs Nabil's explicit word for that exact
-  change. 50 commits sit unpushed on nz-glass ahead of the live build a741f3e. Do not push, deploy or
-  repair anything without him saying so.
-- 2026-09-13T18:21:43Z COMMIT: ffcfcc52b docs(plans): the reports project is deferred, by decision not by oversight → review dispatched
-- 2026-09-13 REPAIR: acted on the ruling review's four spec warnings. (a) test_ot_discovery_window still
-  hardcoded the fence — the exact rot its sibling had just been fixed for — so it DERIVES it now; that
-  file's question ("discovery offers exactly what filing accepts, never wider") is policy-independent
-  and must not need editing when the policy moves. (b) the comment in approval.py claimed the else is
-  "reachable only on a CANCEL": finalize is whitelisted with no doctype allow-list, so a submit of any
-  other submittable doctype lands there too, which is why the "not routed to you" refusal is still live
   and must not be deleted as dead. (c) the backfill patch's docstring still quoted "repair last 2
   months" while its code now follows the four-cycle filing window. (d) the empty-range early return
   omitted keys the calling patch reads and would have raised KeyError inside after_migrate.
@@ -297,3 +200,12 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T03:20:57Z COMMIT: 1f2376126 docs(plans): ticket the two request types with no self-approval fence → review dispatched
 - 2026-09-17T04:30:00Z EVIDENCE: rung 2 — design review of b3ee126b3 DESIGN_APPROVED: stacking order verified correct in BOTH the backdrop-filter path and the @supports-not fallback (isolation:isolate is what makes it unconditional), holds in dark mode and under prefers-reduced-transparency, and the stylesheet-wide scan finds no other overlay with the bug. Incidental second fix it noticed: GProviderButton's brand mark (an in-flow <img> inside .g-glass-ghost, contract says "RENDERED UNMODIFIED") was being washed by the same gloss and now is not.
 - 2026-09-17T04:30:00Z NEXT: push nz-glass (5 commits: selfie upload, self-approval API door, self-approval Desk door, glass gloss, the unfenced-self-submission ticket). Then Nabil deploys. OPEN FOR THE OWNER: (1) are Employee Advance / Travel Request in use — they have no self-approval fence at all (.claude/plans/ticket-unfenced-self-submission.md); (2) should the attendance calendar carry the day's HOURS and its SOURCE so an employee can tell a genuine half day from an old-system leftover (Norazlin, 2 Sep); (3) the Shift Attendance free-form master edit, keep or retire.
+- 2026-09-17T03:23:14Z COMMIT: dc06907d5 docs(glass): warn the next person off a second z-index -1 child → review+design dispatched
+- 2026-09-17T03:23:24Z PUSH: nz-glass @ dc06907d5
+- 2026-09-17T03:23:52Z PUSH: nz-glass @ 07c824401
+- 2026-09-17T03:23:52Z COMMIT: 07c824401 docs(glass): handoff for the selfie, self-approval and gloss fixes → review dispatched
+- 2026-09-17T05:05:00Z REPAIR: "Leave Type is required" blocked HR from saving ANY hours-based Half Day (HR-ATT-2026-15978, Norazlin, 4 Sep). Attendance.leave_type was mandatory for both On Leave and Half Day — upstream's assumption that a Half Day is always leave — while this app's own check_leave_record writes leave-less Half Days deliberately. Mandatory for On Leave only; still offered on a Half Day.
+- 2026-09-17T05:05:00Z EVIDENCE: rung 2 — 1 test RED on HEAD first, 4 green after; 186 mapped/neighbour tests green (test_day_remark's single failure is the known batch-ordering pollution, green alone).
+- 2026-09-17T04:00:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:11:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T04:11:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
