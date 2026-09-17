@@ -266,3 +266,6 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T00:25:00Z REPAIR: reviewer follow-ups — the employee id is slugged before it reaches the selfie filename (new test), and the hotspot ticket the rule requires is on record at .claude/plans/ticket-remote-checkin-refactor.md.
 - 2026-09-17T02:41:01Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-17T02:41:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-17T02:41:16Z COMMIT: 16f6fa473 fix(checkin): the employee id cannot shape the selfie filename → review dispatched
+- 2026-09-17T02:42:27Z PUSH: nz-glass @ 16f6fa473
+- 2026-09-17T02:45:00Z DEAD END: the PUSH line above is the hook's, not a fact — `git push origin nz-glass` was REJECTED (non-fast-forward). Another session had pushed five attendance commits (c68597277..ca2831a0e) while this one worked. Rebasing the three selfie/chore commits onto origin/nz-glass; nothing force-pushed.
