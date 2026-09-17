@@ -251,7 +251,10 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 				reason,
 				result["held"],
 			)
-			return {"action": "held", "detail": result["held"], "rolled_back": True}
+			# No `rolled_back` flag beside it: nothing reads one, and `detail`
+			# already says which guard spoke. A field kept for a screen that does
+			# not exist yet is scaffolding, and scaffolding rots.
+			return {"action": "held", "detail": result["held"]}
 	else:
 		result = rec._remark_released_day(employee, day, apply=True)
 	retired = _retire_unmarkable_rows(employee, day, result, shift_type)
