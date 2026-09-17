@@ -423,6 +423,17 @@ const fetchRemoteRequest = createResource({
 // Holding the last delivered row keeps the label honest while the list catches
 // up. It is only ever a label: `resolve_punch_type` still decides the type
 // server-side, and the sheet still commits to one action when it opens.
+//
+// It can hold a PARTIAL row: between a punch and the reload that follows it,
+// this is the punch endpoint's own answer, which carries name, log_type and
+// time but not device_id or is_abandoned. Nothing reads those two off it today
+// — is_abandoned is read from `unresolvedStaleIn` and matched by name — but a
+// future addition that does would see undefined without knowing why.
+//
+// ceiling: a reload that resolves out of order overwrites a newer row, and the
+// label is stale until the next reload; upgrade: tag reloads with a counter the
+// way geoGeneration does and ignore an older response, if anyone reports the
+// label flipping back after a punch
 const lastKnownLog = shallowRef(null)
 watch(
 	() => checkins.data,
