@@ -94,8 +94,11 @@ shift = NS(determine_check_in_and_check_out="Strictly based on Log Type in Emplo
 result = get_attendance(shift, [NS(shift_start=start.replace(hour=9, minute=0), shift_end=start.replace(hour=18, minute=0))], 2, 4)
 check("non-working-day short session status and flags", (result[0], result[2], result[3]), ("Present", False, False))
 
+# Amended 17 Sep 2026: `imprecise_location` now means "past the 2000 m trust
+# cap" only. A 1500 m reading is placed, and 1300 m from a 1000 m fence is
+# outside the capped 250 m allowance — so the verdict is about distance now.
 decision = evaluate_geofence(False, True, 1000, 1300, 1500)
-check("coarse 1.3km reading: server reason", decision[1]["reason"], "imprecise_location")
+check("coarse 1.3km reading: server reason", decision[1]["reason"], "outside_radius")
 decision = evaluate_geofence(False, True, 100, 120, 40)
 check("120m point with 40m accuracy and 100m radius: server allows", decision, None)
 print("INFO 194 minutes =", round(194 / 60, 2), "decimal hours; existing OT-pay rounding =", ot.round_ot_pay_hours(194 / 60))
