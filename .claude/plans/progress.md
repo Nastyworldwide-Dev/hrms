@@ -283,3 +283,4 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 new tests red before, green after;
 closer (29) and the ownership classifier (40).
 NEXT: review, then the owner deploys; after deploy, confirm on Norazlin's 4 Sep
 that the day reads Present with hours and that the OT is claimable in Nadi.
+- 2026-09-17T09:42:12Z PUSH: nz-glass @ b9794c65b

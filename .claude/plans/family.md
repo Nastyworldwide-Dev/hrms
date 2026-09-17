@@ -32,6 +32,12 @@ Call sites the machine lists for protected_reason / _day_protection / remark_day
 * hrms/utils/attendance_endgame.py, hrms/sync/erp_backfill.py — not-affected:
   automatic passes, unchanged, still held by the owner rule as designed.
 
+NOT WAIVED, and the one that nearly slipped: a MIRRORED row reads as UNSURE, so
+the waiver lifted its hold and HR's press could have rewritten a row the other
+instance owns. The rule sits in `_is_hr_hold`, not in `protected_reason` — the
+mirrored RELEASE plan asks that function about mirrored rows on purpose, and
+putting it there broke five of its tests.
+
 WHAT IS NOT WAIVED, and a test for each: a draft, a leave, a half-day leave, an
 attendance request, a row owned by a REQUEST, a day HR removed in Shift
 Attendance, an approved payout or submitted payroll, a live request over the

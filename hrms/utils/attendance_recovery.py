@@ -232,7 +232,16 @@ def _is_hr_hold(row) -> bool:
 
 	Only an HR/unsure hold is waived when HR asks; a leave or attendance request
 	speaks for the day whoever is pressing the button, and is cancelled first.
+
+	A MIRRORED row is never waived. It belongs to the site that wrote it — the
+	line every other mirrored guard here draws (_restamp_tap,
+	_end_extra_assignment, Fix Day's own tap writer) — and it was held only by
+	reading as UNSURE, which this waiver lifts. The rule lives here rather than
+	in `protected_reason` because the mirrored RELEASE plan asks that function
+	about mirrored rows on purpose.
 	"""
+	if row.get("synced_from_instance"):
+		return False
 	module, verdict = _classify(row)
 	if module is None or verdict is None:
 		return True  # the old reading: a blank tick means a person's row

@@ -133,6 +133,23 @@ class EveryOtherProtectionStillWinsCase(unittest.TestCase):
 				rec.protected_reason(DAY, TODAY, [row()], financial="OTR-0007", hr_asked=True)
 			)
 
+	def test_a_mirrored_row_still_holds(self):
+		"""A row the other instance owns is not HR's to rewrite here, whoever
+		presses. Every other mirrored guard in this codebase says the same
+		(_restamp_tap, _end_extra_assignment, Fix Day's own tap writer); before
+		this, a mirrored row was held only by reading as UNSURE — which
+		`hr_asked` waives."""
+		with classifier("unsure"):
+			self.assertIsNotNone(
+				rec.protected_reason(DAY, TODAY, [row(synced_from_instance="nasty-live")], hr_asked=True)
+			)
+
+	def test_the_mirrored_row_is_held_by_its_own_hold_not_a_new_one(self):
+		with classifier("unsure"):
+			held = rec.protected_reason(DAY, TODAY, [row(synced_from_instance="nasty-live")], hr_asked=True)
+		self.assertIsNotNone(held)
+		self.assertIn("HR-ATT-2026-15657", held)
+
 	def test_a_live_request_over_the_day_still_holds(self):
 		with classifier("hr"):
 			self.assertIsNotNone(
