@@ -1175,6 +1175,11 @@ def _restore_tap_state(snapshot) -> None:
 	not bound by the counted-tap rule — that rule stops NEW evidence being
 	invented, not an action being reversed."""
 	fields = {field: snapshot.get(field) for field in TAP_FIELDS if field not in ("name", "employee")}
+	# A snapshot taken before `skipped_as_noise` existed has no such key, and a
+	# Check column is not a place to put NULL. 0 is also the right answer: the
+	# WALL, which is how that tap read when the snapshot was taken.
+	if fields.get("skipped_as_noise") is None:
+		fields["skipped_as_noise"] = 0
 	frappe.db.set_value("Employee Checkin", snapshot["name"], fields)
 	logger.info("[attendance_fix_day] %s restored to its state before the fix", snapshot["name"])
 

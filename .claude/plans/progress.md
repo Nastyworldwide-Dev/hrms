@@ -2,112 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-17T05:42:06Z PUSH: nz-glass @ 926e404ae
-- 2026-09-17T05:42:07Z COMMIT: 926e404ae chore(plans): record the final review verdict → review dispatched
-- 2026-09-17T05:42:21Z PUSH: nz-glass @ 559b9608a
-- 2026-09-17T05:42:21Z COMMIT: 559b9608a docs(glass): handoff for the one-row-per-day work → review dispatched
-- 2026-09-17T11:00:00Z REPAIR: geofence — the allowance was `accuracy` up to 250 m and ZERO beyond, so 251 m of reported error cost 250 m of tolerance. Measured before the fix: the same person 80 m from a 50 m fence was ALLOWED at 250 m and sent to remote approval at 251 m. Now min(accuracy, 250) for any reading inside the 2000 m trust cap; past the cap nothing changes.
-- 2026-09-17T11:00:00Z EVIDENCE: rung 2 — 7 tests RED first, green after; the cross-language parity property test caught the frontend preview drifting the moment the server changed, and both sides now agree case for case. test_geofence_coordinate_contract's 5 subtest failures are pre-existing — identical count on HEAD's copies of both files.
-- 2026-09-17T06:44:37Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:44:37Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:44:57Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:44:57Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:45:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:45:10Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:45:33Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:45:33Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:46:04Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:46:04Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:46:06Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 2 call site(s) given verdicts, 5 same-root ⟂c74f27e58591
-- 2026-09-17T06:46:23Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
-- 2026-09-17T06:46:23Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-09-17T06:46:25Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 2 call site(s) given verdicts, 5 same-root ⟂c74f27e58591
-- 2026-09-17T06:46:28Z COMMIT: 07a945371 fix(geofence): one metre more error stops costing 250 metres of tolerance → review dispatched
-- 2026-09-17T06:54:00Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-09-17T06:54:30Z COMMIT: 5458850c7 docs(audit): the 8 Sep probe expects the reason the boundary now returns → review dispatched
-- 2026-09-17T06:54:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-09-17T06:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-09-17T06:54:53Z COMMIT: 06e6f1466 fix(geofence): a coarse reading stops being announced as a precise distance → review+design dispatched
-- 2026-09-17T12:00:00Z REPAIR: review Warnings on 06e6f1466 — the RemoteCheckinDialog HEADLINE and both StrictRejectionDialog strings still asserted the verdict in words over a card that had just refused to show the number; and the dialog read the panel's LIVE accuracy after two round trips instead of the reading the server judged. The punch now echoes accuracy_m, like check_geofence already did. `isReadingCoarse` is exported once — three hand-copies were what let this drift twice in a day — and a test fails if any surface re-derives it.
-- 2026-09-17T12:00:00Z EVIDENCE: rung 2 — 7 dialog tests, 4 RED against HEAD's copies of both dialogs; every frontend suite green; 499 remote_checkin neighbour tests green (test_day_remark's one failure is the known batch-ordering pollution, green alone).
-- 2026-09-17T12:00:00Z NEXT: owner to rule on WITHDRAWAL — every request type already reverses what it granted on cancel (leave ledger, allocation, replacement leave, attendance row, shift assignment), but his own 14 Sep ruling bars the EMPLOYEE from cancelling. Options put to him: (a) employee cancels outright, (b) withdrawal request the approver confirms, (c) self-service before it starts, approver after. Also open: whether strict geofence should stay harsh on coarse readings specifically.
-- 2026-09-17T07:01:07Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
-- 2026-09-17T07:01:24Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
-- 2026-09-17T07:01:31Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
-- 2026-09-17T07:01:32Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 37 call site(s) given verdicts, 15 same-root ⟂4ae4a89db443
-- 2026-09-17T07:01:47Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
-- 2026-09-17T07:01:49Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 37 call site(s) given verdicts, 15 same-root ⟂4ae4a89db443
-- 2026-09-17T07:01:55Z PUSH: nz-glass @ 265d49afa
-- 2026-09-17T07:01:55Z COMMIT: 265d49afa fix(geofence): the words match the number the dialog refuses to show → review+design dispatched
-- 2026-09-17T13:00:00Z PLAN: current-plan.md approved — an employee may withdraw their own approved request. Owner answered "withdrawal. a." to the three shapes offered, reversing his own 14 Sep ruling.
-- 2026-09-17T13:00:00Z REPAIR: the reverting half already worked for every request type (leave ledger, allocation, replacement leave, Attendance row, Shift Assignment). The DOOR was shut in three places, each with its own copy of "who may cancel": the guard, finalize, and the PWA's cancelRule.js — the last in a file whose own comment says it keeps no copy. may_cancel is now the one routing answer and all three ask it. Two money refusals stay: paid OT, and days inside a submitted salary slip (the employee is told to ask HR; HR is not stopped).
-- 2026-09-17T13:00:00Z EVIDENCE: rung 2 — 10 new tests RED first; four suites that pinned the 14 Sep ruling AMENDED, each naming the ruling that replaced it; 126 guard/approval/cancel neighbour tests green, ruff clean, every frontend suite green.
-- 2026-09-17T07:13:06Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
-- 2026-09-17T07:13:06Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
-- 2026-09-17T07:13:21Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
-- 2026-09-17T07:13:21Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
-- 2026-09-17T07:13:26Z COMMIT: 96962182a feat(requests): an employee can withdraw their own approved request → review dispatched
-- 2026-09-17T13:40:00Z REPAIR: review CRITICAL on 96962182a — REQUEST_PERIOD_FIELDS aimed Travel Request at `creation`, the row's save timestamp, so a trip filed after its pay period would have been withdrawable after it was paid. The doctype's dates live on its itinerary child table; it is out of the map on purpose, and absence now REFUSES the employee rather than waving them through. The helper returns the sentence, so "I cannot check" and "it is not paid" stop looking the same.
-- 2026-09-17T13:40:00Z EVIDENCE: rung 2 — the new test reads each doctype's own JSON and fails a named field that is not a Date there; it is red against the `creation` entry. 120 guard/approval/withdrawal tests green, ruff clean.
-- 2026-09-17T13:40:00Z NEXT: two open flags for the owner — (1) the review could not confirm what happens if a carry-forward expiry or an encashment ran against the allocation BETWEEN approval and withdrawal; worth a bench check before anyone withdraws an old leave. (2) whether strict geofence should stay harsh on coarse readings specifically.
-- 2026-09-17T07:20:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:20:32Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:20:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:20:46Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:21:02Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:21:15Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:26Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:21:26Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:21:34Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-17T07:21:50Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:21:53Z COMMIT: 7e788e996 fix(requests): the payroll check reads the request's real dates → review dispatched
-- 2026-09-17T07:22:13Z COMMIT: f09db725b docs(plans): ticket the approved-request guard hotspot → review dispatched
-- 2026-09-17T14:05:00Z EVIDENCE: rung 2 — review of 7e788e996 NEXT_ACTION DEPLOY. It walked all nine decidable doctypes against their own JSON and confirmed no employee can withdraw days inside a submitted salary slip by any of them; Travel Request is refused outright. Its Warning — the JSON test skipped an unreadable doctype silently — is fixed: skips are collected and compared against an EXTERNAL set that is empty on purpose.
-- 2026-09-17T07:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-17T07:26:53Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:27:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-17T07:27:09Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
-- 2026-09-17T07:27:13Z COMMIT: 3f510070e fix(requests): a check that cannot read a doctype says so → review dispatched
-- 2026-09-17T07:27:29Z PUSH: nz-glass @ 262f70acb
-- 2026-09-17T07:27:29Z COMMIT: 262f70acb docs(glass): handoff for the withdrawal and geofence work → review dispatched
-- 2026-09-17T07:48:04Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: the "Fix day" (pair/relink) button was registered by fix_day.bundle.js
-at boot into frappe.listview_settings["Employee Checkin"], and the doctype's own
-list script — which Desk loads when the list opens — assigned that same key
-again and threw it away. The owner stood on the page and could not find it.
-EVIDENCE: 2 (mapped) — hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js
-and hrms/hr/doctype/attendance/attendance_list.test.js now load bundle-then-list
-in Desk's real order and ask the resulting onload what it registered; red on
-HEAD (1 and 3 failures respectively), green after. 23/23 with the bundle suite.
-NEXT: commit, review, then answer the owner's SOP question — his pairing SOP is
-what Fix Day already does; it was unreachable from the page he uses.
-- 2026-09-17T07:59:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
-- 2026-09-17T07:59:20Z COMMIT: cba7c3f11 fix(attendance): the pairing screen is reachable from the pages HR uses → review dispatched
-- 2026-09-17T08:00:44Z PUSH: nz-glass @ cba7c3f11
-- 2026-09-17T08:01:26Z COMMIT: 3e24ccdf8 docs(glass): handoff for the Fix Day entry point → review dispatched
-EVIDENCE: 7 (invariant + ticket) — review of cba7c3f11 returned DEPLOY with three
-warnings, all closed here: the class invariant now reads hooks.app_include_js
-instead of one flat directory and is scoped to the files that can actually lose
-the race; the role gate is asserted by name (the harness records which role
-string was asked); the attendance_list.js hotspot has a refactor ticket rather
-than a seventh inline fix. Both new tests proven by mutation.
-NEXT: deploy is the owner's. Open flags unchanged: the carry-forward/encashment
-window between approval and withdrawal still wants a bench check.
-- 2026-09-17T08:05:27Z COMMIT: ae106aecc test: the invariant watches what loads at boot, and names the roles → review dispatched
-- 2026-09-17T08:08:32Z COMMIT: a800464b1 docs(glass): handoff points at the reviewed commit → review dispatched
-- 2026-09-17T08:08:39Z PUSH: nz-glass @ a800464b1
-EVIDENCE: 2 (prove red, by hand) — the prove-red gate chose the JS runner for a
-Python test set and reported them green on HEAD. Proven properly instead: HEAD
-extracted with `git archive` into the scratchpad, the three test files copied
-in, `PYTHONPATH=. pytest` there -> 12 failed / 76 passed, including
-`[{'attendance': 'ATT-1', 'owner': 'system'}, ...] is not an instance of str`,
-which is the header's [object Object] verbatim. Green on the fix: 131 passed
-across the six fix-day suites plus the duplicate backfill.
 - 2026-09-17T08:51:06Z PUSH: nz-glass @ f45a0f593
 REPAIR: the two-row rule shut the door its own sibling refusal points at — on a
 punch-count TIE, remove_duplicate_row refuses with "Move a tap to the row it
@@ -307,3 +201,11 @@ record rather than a guess from comment text.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 suites green; the one failure in
 test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
 NEXT: the owner deploys.
+- 2026-09-17T11:16:36Z PUSH: nz-glass @ 672a4b1df
+REPAIR: the undo's writer bypasses _write_tap on purpose (it reverses an action
+rather than inventing evidence), so the choke point does not cover it. It
+restores every TAP_FIELD, which now carries the verdict, so a new snapshot round
+trips - but a snapshot taken TODAY, before the field existed, has no such key
+and would have written NULL into a Check column. It lands as 0 now: the wall,
+which is how that tap read when the snapshot was taken.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green.

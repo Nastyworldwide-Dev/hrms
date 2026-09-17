@@ -300,6 +300,31 @@ class TheLegacyIgnoresAreTickedCase(unittest.TestCase):
 		self.assertIn('filters={"name": ["in", sorted(names)]', body)
 
 
+class TheUndoPutsTheVerdictBackCase(unittest.TestCase):
+	"""`_restore_tap_state` deliberately bypasses `_write_tap` — it is reversing
+	an action, not inventing evidence — so the choke point does not cover it. It
+	restores every field in TAP_FIELDS, which now carries the verdict, so a new
+	snapshot round-trips. An OLD one, taken today before the field existed, has
+	no such key: that must land as 0 (the wall, which is how the tap read when
+	the snapshot was taken), never NULL in a Check column.
+	"""
+
+	def source(self):
+		return (pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_fix_day.py").read_text()
+
+	def test_the_snapshot_carries_the_verdict(self):
+		body = self.source()
+		start = body.index("TAP_FIELDS = [")
+		self.assertIn("skipped_as_noise", body[start : body.index("]", start)])
+
+	def test_a_snapshot_without_the_key_restores_the_wall(self):
+		body = self.source()
+		start = body.index("def _restore_tap_state(")
+		window = body[start : body.index("\ndef ", start + 10)]
+		self.assertIn('fields.get("skipped_as_noise") is None', window)
+		self.assertIn('fields["skipped_as_noise"] = 0', window)
+
+
 class TheColumnMayNotExistYetCase(unittest.TestCase):
 	"""A SELECT naming a column a site has not caught up with dies with
 	"Unknown column" — this fork has been bitten by exactly that before
