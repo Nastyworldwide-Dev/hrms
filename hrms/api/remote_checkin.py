@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import binascii
 import logging
+import re
 import time as time_module
 
 import frappe
@@ -489,10 +490,14 @@ def upload_selfie(image: str) -> dict:
 		)
 		frappe.throw(_("The check-in photo is too large."))
 
+	# The employee id is server-resolved, not user input, but it reaches a
+	# filename — a naming series or a mirrored record producing anything
+	# stranger than HR-EMP-0001 must not be able to shape a path.
+	slug = re.sub(r"[^A-Za-z0-9_-]", "", str(employee))[:40] or "employee"
 	stored = frappe.get_doc(
 		{
 			"doctype": "File",
-			"file_name": f"selfie-{employee}-{int(time_module.time() * 1000)}.{extension}",
+			"file_name": f"selfie-{slug}-{int(time_module.time() * 1000)}.{extension}",
 			"content": content,
 			"is_private": 0,
 			"folder": "Home",

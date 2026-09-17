@@ -80,6 +80,11 @@ class UploadSelfieCase(unittest.TestCase):
 		_, created = self._upload()
 		self.assertEqual(created[0].doc["content"], base64.b64decode(PIXEL))
 
+	def test_the_employee_id_cannot_shape_the_filename(self):
+		"""Server-resolved, but it still reaches a path — so it is slugged."""
+		_, created = self._upload(employee="../../HR EMP/0001")
+		self.assertRegex(created[0].doc["file_name"], r"^selfie-HREMP0001-\d+\.jpg$")
+
 	def test_only_the_caller_with_an_employee_may_upload(self):
 		with patch.object(
 			remote_checkin,
