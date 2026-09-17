@@ -65,6 +65,7 @@ LOG_DOCTYPE = "HR Day Fix Log"
 #: so a reader can tell a person's correction from a machine's.
 LOG_SOURCE = "hr_fix_day"
 ACTIONS = (
+	"rebuild_day",
 	"pair_taps",
 	"move_tap",
 	"ignore_tap",
@@ -316,6 +317,140 @@ def duplicate_refusal(target, rows) -> str | None:
 	return _("{0} holds this day's punches. Remove {1} instead.").format(target.get("name"), other)
 
 
+#: a dropped tap this far from the next one is named on screen, so HR sees the
+#: size of the hole the rule leaves before it is written (owner rule, 17 Sep 2026)
+GAP_NOTE_HOURS = 2
+
+
+def _evidence(taps) -> list:
+	"""The day's counted taps, earliest first. Pure.
+
+	A mirrored tap belongs to the site that recorded it, and an ignored or
+	rejected tap is not evidence — neither is read, and neither is touched.
+	"""
+	live = [tap for tap in taps or [] if counted(tap) and not tap.get("synced_from_instance")]
+	return sorted(live, key=lambda tap: get_datetime(tap.get("time")))
+
+
+def _gap_words(seconds) -> str:
+	hours, rest = divmod(int(seconds), 3600)
+	return _("{0} h {1} m").format(hours, rest // 60)
+
+
+def day_plan(taps, rows) -> dict:
+	"""What this day should look like, read from its own evidence. Pure.
+
+	Owner ruling, 17 Sep 2026, after correcting one day by hand through five
+	dialogs: "the 11 am out is possible accidental and should be fine for us to
+	fix by removing it alongside the broken glitch stuff. applicable to any
+	scenarios."
+
+	So the rule is the simplest one that fits what a shift means: the day's
+	FIRST counted IN opens it, its LAST counted OUT closes it, and every counted
+	tap between them is noise — the repeated-tap glitch and the accidental
+	mid-day OUT alike. An attendance row with no punches behind it is cancelled.
+
+	This supersedes deducting a mid-day gap: the OUT that made the gap is now
+	read as a mistap, so somebody who really leaves mid-day and punches out is
+	paid for that time unless HR intervenes. The safeguard is not another rule,
+	it is SIGHT — `notes` names every long gap this drops, on screen, before a
+	single field is written, and the five manual actions are still there for the
+	day that looks wrong.
+
+	Where the evidence cannot say this much — nothing opens the day, nothing
+	closes it, the OUT precedes the IN, or two rows and no punches anywhere —
+	it REFUSES and writes nothing. Guessing a session is how a screen invents
+	somebody's pay.
+	"""
+	empty = {"cancel": [], "session": None, "drop": [], "notes": [], "refusal": None}
+	live = [row for row in rows or [] if cint(row.get("docstatus")) != 2]
+	evidence = _evidence(taps)
+	if not evidence:
+		return {**empty, "refusal": _("This day has no counted taps to read it from.")}
+
+	opening = next((tap for tap in evidence if (tap.get("log_type") or "") == "IN"), None)
+	closing = next((tap for tap in reversed(evidence) if (tap.get("log_type") or "") == "OUT"), None)
+	if not opening:
+		return {**empty, "refusal": _("Nothing opens this day: it has no counted IN tap.")}
+	if not closing:
+		return {**empty, "refusal": _("Nothing closes this day: it has no counted OUT tap.")}
+	if get_datetime(closing.get("time")) <= get_datetime(opening.get("time")):
+		return {
+			**empty,
+			"refusal": _("This day closes before it opens ({0} out, {1} in); fix the taps by hand.").format(
+				closing.get("name"), opening.get("name")
+			),
+		}
+
+	# An empty row beside a worked one is the ghost the endgame leaves behind.
+	# With punches nowhere there is nothing to prefer, which is HR's call and
+	# not a screen's — the same answer `erp_backfill.resolve_duplicates` gives.
+	cancel = []
+	if len(live) > 1:
+		if not any(cint(row.get("linked_punches")) for row in live):
+			return {
+				**empty,
+				"refusal": _(
+					"This day has {0} attendance rows and no punches point at any of them. "
+					"Remove the one that should go, by hand."
+				).format(len(live)),
+			}
+		cancel = [
+			{
+				"name": row.get("name"),
+				"shift": row.get("shift"),
+				"status": row.get("status"),
+				"why": _("no punches point at it"),
+			}
+			for row in live
+			if not cint(row.get("linked_punches"))
+		]
+
+	keep = {opening.get("name"), closing.get("name")}
+	drop, notes = [], []
+	for index, tap in enumerate(evidence):
+		if tap.get("name") in keep:
+			continue
+		drop.append(
+			{
+				"name": tap.get("name"),
+				"time": str(tap.get("time")),
+				"log_type": tap.get("log_type"),
+				"why": _("between the day's first in and last out"),
+			}
+		)
+		following = evidence[index + 1] if index + 1 < len(evidence) else None
+		if not following:
+			continue
+		gap = (get_datetime(following.get("time")) - get_datetime(tap.get("time"))).total_seconds()
+		if gap >= GAP_NOTE_HOURS * 3600:
+			notes.append(
+				_("{0} {1} sat {2} before the next tap.").format(
+					fd_clock_text(tap.get("time")), tap.get("log_type"), _gap_words(gap)
+				)
+			)
+	logger.info(
+		"[attendance_fix_day] plan: keep %s -> %s, drop %d tap(s), cancel %s",
+		opening.get("name"),
+		closing.get("name"),
+		len(drop),
+		[entry["name"] for entry in cancel],
+	)
+	return {
+		"cancel": cancel,
+		"session": {"in": tap_view(opening), "out": tap_view(closing)},
+		"drop": drop,
+		"notes": notes,
+		"refusal": None,
+	}
+
+
+def fd_clock_text(value) -> str:
+	"""The clock part of a stamp, for a sentence HR reads. Pure."""
+	text = str(value or "")
+	return text[11:19] or text
+
+
 def tap_view(tap) -> dict:
 	"""One tap as the screen shows it. Pure."""
 	return {
@@ -555,10 +690,84 @@ def remove_duplicate_row(attendance: str, reason: str) -> dict:
 	)
 	_cancel_attendance(row.name)
 	note = _("cancelled as this day's duplicate attendance row")
-	_comment(
-		"Attendance", row.name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason)
-	)
+	_comment("Attendance", row.name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason))
 	return _finish(emp, [day], "remove_duplicate_row", reason, {}, before)
+
+
+@frappe.whitelist(methods=["POST"])
+def plan_day(employee: str, date: str) -> dict:
+	"""What `rebuild_day` would do, in words, writing nothing. HR reads it first."""
+	_require_hr()
+	emp = _require_employee(employee)
+	day = getdate(date)
+	rows = _rows_with_punch_counts(emp.name, day)
+	plan = day_plan(_day_taps(emp.name, day), rows)
+	plan["blocked"] = _day_block(emp.name, day, rows, for_update=False, duplicate_rows_ok=True)
+	return plan
+
+
+@frappe.whitelist(methods=["POST"])
+def rebuild_day(employee: str, date: str, reason: str) -> dict:
+	"""Apply the whole plan in one press: the owner asked for one step, not five.
+
+	Nothing here decides anything `day_plan` has not already put on the screen,
+	and nothing here types a result — the engine re-marks the day from the
+	evidence this leaves behind, exactly as it does for the five single actions.
+	"""
+	_require_hr()
+	reason = _require_reason(reason)
+	emp = _require_employee(employee)
+	day = getdate(date)
+	# It ENDS a two-row day, like remove_duplicate_row: cancelling the empty row
+	# is the first thing it does.
+	_lock_and_guard(emp.name, [day], duplicate_rows_ok=True)
+
+	taps = _day_taps(emp.name, day)
+	plan = day_plan(taps, _rows_with_punch_counts(emp.name, day))
+	if plan["refusal"]:
+		_refuse(plan["refusal"])
+
+	by_name = {tap.get("name"): tap for tap in taps}
+	before = _before(emp.name, [day], list(by_name.values()))
+	logger.warning(
+		"[attendance_fix_day] rebuilding %s on %s for %s: cancel %s, drop %s",
+		emp.name,
+		day,
+		frappe.session.user,
+		[entry["name"] for entry in plan["cancel"]],
+		[entry["name"] for entry in plan["drop"]],
+	)
+
+	for entry in plan["cancel"]:
+		_cancel_attendance(entry["name"])
+		_comment(
+			"Attendance",
+			entry["name"],
+			_("cancelled by the day rebuild ({0}) by {1}. Reason: {2}").format(
+				entry["why"], frappe.session.user, reason
+			),
+		)
+
+	notes = {}
+	for entry in plan["drop"]:
+		tap = by_name[entry["name"]]
+		if not cint(tap.get("skip_auto_attendance")):
+			_write_tap(tap, {"skip_auto_attendance": 1})
+		notes[entry["name"]] = _("ignored by the day rebuild: {0}").format(entry["why"])
+
+	opening = by_name[plan["session"]["in"]["name"]]
+	closing = by_name[plan["session"]["out"]["name"]]
+	stamp = _session_stamp(opening)
+	_write_tap(opening, {"skip_auto_attendance": 0})
+	# `attendance: None` for the same reason pairing releases the second tap.
+	_write_tap(closing, {**stamp, "skip_auto_attendance": 0, "attendance": None})
+	session_note = _("kept by the day rebuild as this day's session with {0}").format(opening.get("name"))
+	notes[opening.get("name")] = session_note
+	notes[closing.get("name")] = session_note
+
+	answer = _finish(emp, [day], "rebuild_day", reason, notes, before)
+	answer["plan"] = plan
+	return answer
 
 
 @frappe.whitelist(methods=["POST"])

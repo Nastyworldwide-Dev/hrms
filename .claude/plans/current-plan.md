@@ -1,77 +1,81 @@
-# PLAN — an employee can withdraw their own approved request
+# PLAN — one button rebuilds a day from its own evidence
 
-Owner, 17 Sep 2026: "approved leave or others made by request (the employee)
-can be withdrawn and whatever the approved must be reverted back to its
-original content, for example, i have 14 days leave balance (annual leave), i
-request for 1 day al leave... once approved, deduct... and let say i had to
-cancel my leave despite the approved. i withdrawn. it must reflect back to 14
-days. this is one of example, and must be applied back to how everything else
-is."
+Owner, 17 Sep 2026, after doing Norazlin's 4 September by hand:
 
-Offered three shapes — (a) the employee cancels outright, (b) a withdrawal the
-approver confirms, (c) self-service before it starts — he answered:
-**"withdrawal. a."**
+> "so confusing. can we make the sop and the flow far more easier to
+> understand? ... idk what am i suppose to do. the ux here is bad. the logic and
+> flow is bad. too much steps to achieve one goals."
 
-This REVERSES his own ruling of 14 Sep, recorded in the guard's own docstring:
-"The employee who raised it, and anyone else, still cannot."
+and then the ruling this plan turns into code:
 
-## What already worked, and what did not
+> "the 11 am out is possible accidental and should be fine for us to fix by
+> removing it alongside the broken glitch stuff. applicable to any scenarios."
 
-The **reverting** half was complete and is untouched. Every request type undoes
-its own work in `on_cancel`: the leave ledger entry (14 back to 14), the
-allocated comp-leave days, the replacement leave the OT granted, the Attendance
-row, the Shift Assignment.
+## What it costs HR today
 
-What was missing was the door — and there were three of them, each keeping its
-own copy of "who may cancel":
+Five dialogs and five typed reasons for ONE day: remove the duplicate row, pair
+the session, ignore three stray taps. Multiplied by every damaged day in the
+month.
 
-* `approved_request_guard.cancel_refusal` — the authority;
-* `approval.finalize` — re-derived it as `not is_own_request and routed`;
-* `frontend/src/utils/cancelRule.js` — returned `false` for the owner, in a
-  file whose own comment says it keeps no copy of the rule.
+## THE RULE (owner's, stated above)
 
-Granting the right in the guard alone would have produced a permission nobody
-could reach.
+A day's **first counted IN** opens it and its **last counted OUT** closes it.
+Every counted tap between them is noise and is ignored — the burst glitch and
+the accidental mid-day OUT alike. An attendance row with no punches behind it is
+cancelled.
+
+This SUPERSEDES the 16 Sep reading of "no on gap" for punch evidence. A mid-day
+gap is no longer deducted, because the OUT that created it is now treated as a
+mistap. Stated plainly so the change of policy is on record:
+
+  **a person who really leaves mid-day and punches out is paid for that time
+  unless HR intervenes.**
+
+The safeguard is not a rule, it is SIGHT: the plan names every tap it will drop
+and how long the gap around it was, before anything is written, and HR can close
+the dialog and use the five manual actions instead on any day that looks wrong.
 
 ## FLOW
 
-1. `may_cancel(doc, user)` — the routing answer, once: the request's own
-   employee, HR, or the person it is routed to.
-2. `cancel_refusal` = the money refusals, then `may_cancel`. The owner is
-   allowed; two refusals stay and are about money, not roles:
-   * paid overtime on a submitted salary slip (refused for everyone, since W5);
-   * a request whose days fall inside a submitted salary slip — handing the
-     days back while the money stays paid is a hole, so the employee is told to
-     ask HR, who can still do it. `REQUEST_PERIOD_FIELDS` names every decidable
-     doctype's dates and a test fails if one is missing; a row carrying no
-     dates fails CLOSED.
-3. `finalize` asks `may_cancel` instead of re-deriving it.
-4. `cancelRule.js` returns "approved" for everyone and lets the server answer.
+1. `day_plan(taps, rows)` — pure. Returns `cancel`, `session`, `drop`, `notes`,
+   `refusal`. Decides nothing it cannot justify: no IN, no OUT, an OUT before
+   the IN, or no punches anywhere → `refusal`, and HR uses the manual actions.
+2. `plan_day(employee, date)` — whitelisted READ. The screen shows the plan.
+3. `rebuild_day(employee, date, reason)` — whitelisted WRITE. One reason, one
+   transaction, one re-mark: cancel the empty rows, ignore the noise, pair the
+   session. Recorded in the HR Day Fix Log like every other action, so
+   `undo_fix` reverses the whole pass.
+4. The screen gets ONE primary button, "Rebuild this day", showing the plan in
+   sentences with a single Reason field. The five manual actions stay exactly
+   where they are for the days the plan refuses.
 
-MOCKUP: NOT NEEDED (no new screen or control — the existing Cancel action on
-the request sheet stops being hidden from the person it belongs to.)
+MOCKUP: not needed — no new screen, one button and a list of sentences inside
+the dialog that already exists. Owner asked for fewer steps, not a new surface.
 
 ## EXPECTED OUTPUT
 
-* 14 days, one requested, approved, balance 13. Withdraw: balance 14.
-* The same for comp leave days, replacement leave, an Attendance row, a Shift
-  Assignment — each already reverses itself.
-* A request whose days are in a submitted salary slip: the employee is refused
-  with a sentence naming HR; HR and the approver are not.
-* Paid overtime: refused for everyone, unchanged.
-* Somebody else's request: refused, unchanged.
+Norazlin, 4 September:
+
+    cancel  HR-ATT-2026-15978 · 7PM - 3.30AM · no punches point at it
+    session 09:03:34 IN -> 18:09:26 OUT
+    drop    11:44:06 OUT · between the day's first in and last out
+            18:09:14 IN · between the day's first in and last out
+            18:09:30 IN · between the day's first in and last out
+    note    11:44:06 OUT sat 6 h 25 m before the next tap
+
+One reason, one Apply. Afterwards: one row, 9AM-6PM, in 09:03, out 18:09, hours
+recomputed, and the Attendance list and Shift Attendance report follow.
 
 ## Risk
 
-This widens who may cancel, by the owner's explicit instruction. The money
-guards above are the deliberate limit. Four tests that pinned the 14 Sep
-ruling are AMENDED, each naming the ruling that replaced it, so the change of
-policy is on record rather than silently rewritten.
+It writes pay-affecting evidence in one press. Bounded by: the same day guard
+as every other action (paid days, leave, requests, running shifts refused); a
+refusal rather than a guess whenever the evidence is incoherent; every tap it
+drops named on screen first; the whole pass undoable from the fix log; and the
+rule itself is the owner's, recorded above with its consequence.
 
 ## Pipeline Summary
 
-owner ruling -> this plan -> red tests first (10 new, plus the four amended
-suites) -> the four doors -> mapped + neighbour tests -> commit with the family
-ledger -> hook-dispatched review -> push -> the owner releases. No schema
-change, no patch, no data repair: the next withdrawal is decided by the new
-rule, and the reversal that follows it already existed.
+owner ruling -> this plan -> red tests on the pure planner first -> planner ->
+endpoints -> screen -> mapped + neighbour suites -> commit with the family
+ledger -> hook-dispatched review -> push -> the owner deploys.

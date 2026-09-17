@@ -26,8 +26,21 @@ UNCLAIMABLE = ROOT / "hr/report/unclaimable_days/unclaimable_days.js"
 SHIFT_ATTENDANCE = ROOT / "hr/report/shift_attendance/shift_attendance.js"
 
 # Six since 17 Sep 2026: HR can take a day back to ONE attendance row from the
-# same screen, instead of a two-row day being untouchable everywhere.
-ACTIONS = ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap", "remove_duplicate_row")
+# same screen, instead of a two-row day being untouchable everywhere. Seven the
+# same evening: the owner did one day through five dialogs and five typed
+# reasons and asked for one step, so `rebuild_day` applies the whole plan at
+# once. The five single actions stay for the days the plan refuses.
+ACTIONS = (
+	"rebuild_day",
+	"pair_taps",
+	"move_tap",
+	"ignore_tap",
+	"restore_tap",
+	"add_tap",
+	"remove_duplicate_row",
+)
+#: reads: `get_day` paints the screen, `plan_day` says what the rebuild would do
+READS = ("get_day", "plan_day")
 #: what a control on this screen must never be for
 RESULT_WORDS = ("working_hours", "ot_hours", "overtime_hours", "hours_worked")
 
@@ -40,10 +53,10 @@ class TestTheScreenOffersEvidenceOnly(unittest.TestCase):
 	def setUp(self):
 		self.js = read(BUNDLE)
 
-	def test_the_five_actions_and_the_undo_are_all_it_can_do(self):
+	def test_the_actions_and_the_undo_are_all_it_can_do(self):
 		read = set(re.findall(r'FD_API \+ "(\w+)"', self.js))
 		writes = set(re.findall(r'this\.run\("(\w+)"', self.js))
-		self.assertEqual(read, {"get_day"}, "the only direct call is the read")
+		self.assertEqual(read, set(READS), "the only direct calls are the reads")
 		self.assertEqual(writes, {"undo_fix", *ACTIONS})
 		# every write goes through the one `run`, which reloads and shows before/after
 		self.assertIn("fd_call(FD_API + method, args)", self.js)
@@ -81,12 +94,12 @@ class TestTheEndpointsArePostOnly(unittest.TestCase):
 		for args, name in decorated:
 			self.assertIn('methods=["POST"]', args, f"{name} must be POST only")
 
-	def test_the_endpoints_are_exactly_the_six_actions_the_read_and_the_undo(self):
+	def test_the_endpoints_are_exactly_the_actions_the_reads_and_the_undo(self):
 		names = {name for _, name in re.findall(r"@frappe\.whitelist\(([^)]*)\)\ndef (\w+)", self.source)}
-		self.assertEqual(names, {"get_day", "undo_fix", *ACTIONS})
+		self.assertEqual(names, {*READS, "undo_fix", *ACTIONS})
 
 	def test_every_endpoint_checks_the_role_first(self):
-		for name in ("get_day", "undo_fix", *ACTIONS):
+		for name in (*READS, "undo_fix", *ACTIONS):
 			body = self.source.split(f"def {name}(", 1)[1].split("\n\n\n", 1)[0]
 			self.assertIn("_require_hr()", body, f"{name} does not check the role")
 

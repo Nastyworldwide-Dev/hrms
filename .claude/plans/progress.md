@@ -247,3 +247,19 @@ EVIDENCE: 2 (mapped) - 4 new tests red on HEAD, green after; 117 passed across
 the five fix-day suites; the stub now records the doctype and asserts on it.
 NEXT: the owner says the flow has too many steps for one goal - propose the
 one-screen "rebuild this day" plan/apply before building it.
+- 2026-09-17T09:19:49Z PUSH: nz-glass @ 1295034e2
+PLAN: .claude/plans/current-plan.md — one button rebuilds a day (risky tier: it
+writes pay-affecting evidence in one press; the owner's rule, recorded with its
+consequence — a real mid-day absence is now paid unless HR intervenes, and the
+safeguard is that every dropped tap and every long gap is named on screen first).
+EVIDENCE: 2 (mapped) — 20 new tests red on HEAD, green after; 147 Python and 27
+JS across the seven fix-day suites and the three list/report doors.
+NEXT: review, then the owner deploys.
+- 2026-09-17T09:29:48Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-09-17T09:29:48Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T09:30:19Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-09-17T09:30:19Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T09:30:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-09-17T09:30:38Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T09:30:48Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-09-17T09:30:48Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10

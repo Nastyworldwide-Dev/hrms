@@ -1,45 +1,38 @@
-# FAMILY — a two-row day is a no-op reported as a rebuild
+# FAMILY — one press rebuilds a day
 
-CLASS: an action whose precondition lives in another module. The engine refuses
-to re-mark a day that already carries an attendance row; the screen never asked,
-ran the action anyway, and titled the result "The day was rebuilt" over Frappe's
-own "already marked" message, with before and after identical.
+CLASS: a screen that makes the person do the machine's job. Five dialogs and
+five typed reasons to restore one day to one session, when the rule that decides
+it has no judgment in it at all.
 
-Changed: `day_block_reason` gains the two-row rule (waived by the one endpoint
-that ends a two-row day); `_screen` reports it as a NOTICE, never as `blocked`,
-because the way out is a button on the same screen; `owner_label` returns text;
-`show_change` titles itself from whether the day actually changed.
+Owner ruling, 17 Sep 2026: "the 11 am out is possible accidental and should be
+fine for us to fix by removing it alongside the broken glitch stuff. applicable
+to any scenarios." So: first counted IN opens the day, last counted OUT closes
+it, everything between is noise, a row with no punches is cancelled.
 
-Call sites the machine lists for `day_block_reason` / `_day_block` /
-`_lock_and_guard` / `owner_label`:
+Added: `day_plan` (pure), `plan_day` (read), `rebuild_day` (write), and one
+primary button that shows the plan before applying it.
 
-* hrms/api/attendance_fix_day.py::pair_taps, ignore_tap, restore_tap, add_tap —
-  same-root: all four rebuild the day and are now refused on a two-row day,
-  which is the fix.
-* hrms/api/attendance_fix_day.py::remove_duplicate_row, move_tap — same-root:
-  the two ways OUT of a two-row day, and both waive the rule. Review of
-  f45a0f593 caught the trap in the first version: on two rows holding the SAME
-  punch count, `duplicate_refusal` refuses and says "Move a tap to the row it
-  belongs to first" — while the rule had just shut that door too. A refusal
-  that names a remedy must leave the remedy reachable; a test now asserts the
-  tie sentence and the open door agree.
-* hrms/api/attendance_fix_day.py::undo_fix — same-root by the same path; an undo
-  on a two-row day cannot rebuild either, and now says so.
-* hrms/api/attendance_fix_day.py::_screen (get_day) — same-root: `blocked` is
-  computed with the waiver so the controls stay, `notice` carries the sentence.
-* hrms/hr/doctype/hr_day_fix_log/hr_day_fix_log.py — not-affected: reads the
-  log, never the guard.
-* hrms/utils/attendance_endgame.py / hrms/sync/erp_backfill.resolve_duplicate_rows
-  — not-affected: the automatic resolver has its own path and its own rule (the
-  same rule), and does not call this guard.
-* hrms/public/js/fix_day.bundle.js — same-root: renders the notice and stops
-  claiming a rebuild it cannot see.
+Call sites the machine lists for the guard, the tap writer and the finish:
+
+* hrms/api/attendance_fix_day.py::rebuild_day — same-root: new, and it goes
+  through the same `_lock_and_guard`, `_write_tap`, `_comment` and `_finish` as
+  the five single actions, so every existing protection applies unchanged.
+* hrms/api/attendance_fix_day.py::pair_taps, ignore_tap, restore_tap, move_tap,
+  add_tap, remove_duplicate_row — not-affected: untouched, and they are what HR
+  uses on the days `day_plan` refuses.
+* hrms/api/attendance_fix_day.py::undo_fix — same-root: a rebuild is one log
+  entry, so undoing it reverses the whole pass. The cancelled rows stay
+  cancelled, which `undo_fix` already says in a sentence.
+* hrms/hr/doctype/hr_day_fix_log — not-affected: `action` is free text by
+  design, so a seventh writer needs no schema change.
+* hrms/utils/attendance_endgame.py, hrms/sync/erp_backfill.py — not-affected:
+  the automatic resolver keeps its own rule; this is HR's press.
+* hrms/public/js/fix_day.bundle.js — same-root: the button and the plan.
 
 LOCK:
-* regression (the instance): hrms/tests/test_fix_day_refuses_a_two_row_day.py
-  drives Norazlin's actual two rows through the guard.
-* invariant (the class): a refusal never closes the door it points at —
-  TheRemedyIsAlwaysReachableCase pins both escapes open, pins the four
-  rebuilding actions shut, and reads the tie sentence itself; and the screen is
-  never `blocked` by a condition whose remedy is one of its own buttons
-  (test_a_two_row_day_is_noticed_but_never_blocked).
+* regression (the instance): hrms/tests/test_fix_day_rebuilds_a_day.py drives
+  Norazlin's real 4 September through the planner.
+* invariant (the class): the planner REFUSES rather than guesses — no IN, no
+  OUT, an OUT before the IN, no counted taps, or two rows with no punches
+  anywhere — and a refused plan writes nothing. `rebuild_day` is asserted to
+  type no hours, no overtime and no status, like the other six actions.

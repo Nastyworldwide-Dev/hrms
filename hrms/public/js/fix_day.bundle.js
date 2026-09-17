@@ -189,7 +189,15 @@ class FixDayScreen {
 	actions_html() {
 		const button = (action, label) =>
 			`<button class="btn btn-default btn-sm mr-2" data-fd-action="${action}">${label}</button>`;
+		const primary = (action, label) =>
+			`<button class="btn btn-primary btn-sm mr-2" data-fd-action="${action}">${label}</button>`;
 		return `<div class="mt-3">
+			${primary("rebuild", __("Rebuild this day"))}
+		</div>
+		<div class="text-muted small mt-2 mb-2">
+			${__("One press: it shows what it will do, you say why, and the day is rebuilt. The buttons below are for the days it cannot read.")}
+		</div>
+		<div class="mt-3">
 			${button("pair", __("Pair as one session"))}
 			${button("move", __("Move to shift / day"))}
 			${button("ignore", __("Ignore tap"))}
@@ -207,6 +215,7 @@ class FixDayScreen {
 
 	act(action) {
 		const run = {
+			rebuild: () => this.rebuild(),
 			pair: () => this.pair(),
 			move: () => this.move(),
 			ignore: () => this.ignore(),
@@ -262,6 +271,89 @@ class FixDayScreen {
 	duplicate_rows() {
 		const rows = (this.day && this.day.attendance) || [];
 		return rows.length > 1 ? rows : [];
+	}
+
+	// One press instead of five dialogs. It asks the server what it WOULD do,
+	// shows that in sentences, takes one reason, and applies the lot. The five
+	// single actions below it are untouched: this refuses any day whose evidence
+	// it cannot read, and then they are how HR fixes it.
+	rebuild() {
+		return fd_call(FD_API + "plan_day", { employee: this.employee, date: this.date }).then((plan) => {
+			if (!plan) return null;
+			if (plan.blocked) {
+				frappe.msgprint({ title: __("This day is not mine to fix"), message: fd_escape(plan.blocked) });
+				return null;
+			}
+			if (plan.refusal) {
+				frappe.msgprint({
+					title: __("I cannot read this day"),
+					indicator: "orange",
+					message: `${fd_escape(plan.refusal)}<br><br>${__(
+						"Use the buttons below to correct the taps by hand."
+					)}`,
+				});
+				return null;
+			}
+			return this.ask(
+				__("Rebuild this day"),
+				[{ fieldtype: "HTML", fieldname: "plan", options: this.plan_html(plan) }],
+				(values) =>
+					this.run("rebuild_day", {
+						employee: this.employee,
+						date: this.date,
+						reason: values.reason,
+					})
+			);
+		});
+	}
+
+	// The plan in words, before anything is written. Every tap it will drop is
+	// named here, and so is every long gap that dropping one leaves behind —
+	// that sight IS the safeguard for the rule (owner, 17 Sep 2026).
+	plan_html(plan) {
+		const item = (text) => `<li>${text}</li>`;
+		const lines = [];
+		for (const row of plan.cancel || []) {
+			lines.push(
+				item(
+					__("Cancel {0} · {1} — {2}", [
+						fd_escape(row.name),
+						fd_escape(row.shift || __("no shift")),
+						fd_escape(row.why),
+					])
+				)
+			);
+		}
+		if (plan.session) {
+			lines.push(
+				item(
+					__("Keep {0} in and {1} out as this day's session", [
+						fd_clock(plan.session.in.time),
+						fd_clock(plan.session.out.time),
+					])
+				)
+			);
+		}
+		for (const tap of plan.drop || []) {
+			lines.push(
+				item(
+					__("Ignore {0} {1} — {2}", [
+						fd_clock(tap.time),
+						fd_escape(tap.log_type || "—"),
+						fd_escape(tap.why),
+					])
+				)
+			);
+		}
+		const notes = (plan.notes || [])
+			.map((note) => `<div class="alert alert-warning py-1 my-1">${fd_escape(note)}</div>`)
+			.join("");
+		return `<div class="mb-2"><b>${__("This is what I will do")}</b></div>
+			<ul>${lines.join("")}</ul>
+			${notes}
+			<div class="text-muted small">
+				${__("Hours and overtime are recomputed from what is left; nothing is typed.")}
+			</div>`;
 	}
 
 	dedupe() {
