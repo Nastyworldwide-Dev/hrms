@@ -276,9 +276,20 @@ def release_to_automation(employee, day) -> list:
 	about who computed the values in that row. HR keys the day by hand again and
 	`Attendance.claim_hr_ownership_on_amend` takes it straight back.
 
-	Never handed back, matching `get_automation_attendance`'s own filters
-	exactly: a leave, a half-day leave, an On Leave row, a row from an
-	Attendance Request, a mirrored row, and anything not submitted.
+	Never handed back: a leave, a half-day leave, an On Leave row, a row from an
+	Attendance Request or a Leave Application, a mirrored row, and anything not
+	submitted. That is deliberately a SUPERSET of what
+	`get_automation_attendance` filters on — it never looks at
+	`leave_application` or `attendance_request` — and the extra caution is in
+	the safe direction: a row not handed back is simply left for HR.
+
+	The two lists are hand-maintained in two files because one builds a SQL
+	filter and the other reads a row dict, so they cannot share a predicate.
+	What must never happen is the other direction — a field the lookup protects
+	that this does not — and a test asserts exactly that
+	(TheTwoOwnershipFiltersDoNotDriftCase). It is the third place in this app
+	encoding "who owns this row"; unifying them is on
+	.claude/plans/ticket-attendance-fix-day-split.md.
 	"""
 	released = []
 	for row in _attendance_rows(employee, day):

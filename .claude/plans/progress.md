@@ -229,3 +229,15 @@ On Leave, Attendance Request, mirrored or unsubmitted row.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 11 new tests red before, green after;
 17 suites green.
 NEXT: the owner deploys and re-runs Norazlin 4 Sep.
+- 2026-09-17T10:21:21Z PUSH: nz-glass @ c82687052
+REPAIR: review of c82687052 returned DEPLOY with two warnings, both about the
+same thing: release_to_automation's docstring claimed its exclusions match
+get_automation_attendance "exactly" and they do not - it is a deliberate
+superset - and the two lists are hand-maintained in two files with nothing
+holding them together. The claim is corrected and the dangerous direction is
+locked by a drift test, proven by mutation: a new exclusion added to the lookup
+alone fails it. The real fix, ONE declared field set all three owners build
+from, is on the existing split ticket.
+EVIDENCE: 7 (invariant) - 1 new test, red on a mutated lookup, green on HEAD;
+9 suites green.
+NEXT: the owner deploys and re-runs Norazlin 4 Sep.

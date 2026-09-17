@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -294,6 +295,52 @@ class TheDayIsHandedBackToTheEngineCase(unittest.TestCase):
 
 	def test_a_cancelled_row_is_never_handed_back(self):
 		self.assertEqual(self.released({"docstatus": 2})[0], [])
+
+
+class TheTwoOwnershipFiltersDoNotDriftCase(unittest.TestCase):
+	"""Two places encode "this row is never rebuilt from punches" and they are
+	hand-maintained separately.
+
+	`shift_type.get_automation_attendance` builds a SQL filter; this module's
+	`release_to_automation` inspects a row dict. They cannot share one function,
+	so the thing that can rot is the field list: a new exclusion added to the
+	lookup and forgotten here would silently hand back a row the engine then
+	refuses — reopening exactly the defect c82687052 closed.
+
+	`release_to_automation` is deliberately a SUPERSET: it also refuses
+	`leave_application` and `attendance_request`, which the lookup does not
+	check. Cautious in the safe direction. What must never happen is the other
+	direction — a field the lookup excludes that this one does not.
+	"""
+
+	def filter_keys(self, source, marker, end):
+		"""The dict KEYS in a slice of source — `("is", "not set")` is a value."""
+		text = pathlib.Path(source).read_text()
+		start = text.index(marker)
+		return set(re.findall(r'^\s*"(\w+)":', text[start : text.index(end, start)], re.M))
+
+	def row_fields(self, source, marker, end):
+		"""The fields a row predicate reads: `row.get("x")` and `row["x"]`."""
+		text = pathlib.Path(source).read_text()
+		start = text.index(marker)
+		slice_ = text[start : text.index(end, start)]
+		return set(re.findall(r'\.get\("(\w+)"\)', slice_)) | set(re.findall(r'\["(\w+)"\]', slice_))
+
+	def test_every_field_the_lookup_excludes_is_refused_here_too(self):
+		from hrms.hr.doctype.shift_type import shift_type
+
+		lookup = self.filter_keys(shift_type.__file__, "\tbase = {", "\tname = frappe.db.get_value")
+		release = self.row_fields(rec.__file__, "def release_to_automation(", "\treturn released")
+		# `employee`, `attendance_date` and `docstatus` are how the lookup finds
+		# the day at all, not reasons a row is protected.
+		protective = lookup - {"employee", "attendance_date"}
+		missing = protective - release
+		self.assertEqual(
+			missing,
+			set(),
+			f"the lookup protects {sorted(missing)} and release_to_automation does not — "
+			"a row handed back that the engine will then refuse",
+		)
 
 
 class OnlyOnHrsPressCase(unittest.TestCase):

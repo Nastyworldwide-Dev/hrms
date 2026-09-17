@@ -22,8 +22,23 @@ WHAT TO DO (not now — nothing is wrong today):
   * that alone makes "does every auto-decision obey the same caps as the manual
     one?" a question you can answer by reading one short file.
 
-TRIGGER: the eighth action, or the next review finding that two rules in here
-disagree with each other.
+ADDED 17 Sep 2026, review of c82687052: there are now THREE places encoding
+"this row is never rebuilt from punches" —
+`shift_type.get_automation_attendance` (a SQL filter),
+`attendance_recovery.release_to_automation` (a row predicate) and
+`attendance_recovery.protected_reason` (a sentence). They cannot share one
+function as written, because one filters and two inspect. A drift test holds the
+first two in the dangerous direction (test_hr_asked_for_this_day.py,
+TheTwoOwnershipFiltersDoNotDriftCase) — a test is a rope, not a fix. The fix is
+one declared field set that all three build from.
+
+Also raised there and not done: flipping `auto_attendance` with
+`frappe.db.set_value` writes no Version row, so an HR dispute about why a row
+became engine-owned has only the error log to go on. The day-fix log already
+records the rebuild; it could carry the released names too.
+
+TRIGGER: the eighth action, the fourth copy of the ownership rule, or the next
+review finding that two rules in here disagree with each other.
 
 # ceiling: one module holding rules, endpoints, seams and the log writer
 # upgrade: an eighth action, or a second rule disagreement found in review
