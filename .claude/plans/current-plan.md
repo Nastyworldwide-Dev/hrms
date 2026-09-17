@@ -1,93 +1,79 @@
-# PLAN — HR can save a half day that came from hours, not leave
+# PLAN — one day, one attendance row
 
-Reported 17 Sep 2026 with four screenshots: HR opens Norazlin's 4 September
-Attendance (HR-ATT-2026-15978) to correct it and gets
+Owner, 17 Sep 2026, approving the three-item list and nothing more: "go and
+finish all". Earlier in the same conversation he cut the scope himself — "i
+think we are overengineering most of what we did today and prev. we could just
+simplify things. manual things base on report. auto things on what can be done
+auto" — and ruled out the one policy change on the table: **"no on gap"**, so
+hours stay on *Every Valid Check-in and Check-out* and a punched-out gap is
+never paid.
 
-    Missing Fields — Please fill the following mandatory fields before saving:
-      • Leave Type is required.
+## The three items, in his words
 
-The row is Half Day, 0.00 hours, Status for Other Half = Absent. There is no
-leave. There is no Leave Type to name. Nothing on that row can be saved.
+1. **Auto** — collapse tap bursts: punches seconds apart are one tap, not a
+   session.
+2. **Auto** — cancel the duplicate attendance row where one row holds the
+   punches and the other was made by the system. The resolver for this already
+   exists (`hrms.sync.erp_backfill.resolve_duplicates`) and nothing calls it.
+3. **Manual** — "delete the record (duplicate), tick 2 to link as one", from
+   the report, and the system does the rest on Attendance and Shift Attendance.
 
-## What the code says
+Item 3's "tick 2 to link as one" already exists (`pair_taps`). What was missing
+is the other half: a day carrying two rows could not be reduced to one from
+anywhere. The report shows one row, the Attendance list shows two, and the
+master edit refuses such a day outright ("edit it in Desk").
 
-`Attendance.leave_type` carries
-`mandatory_depends_on: eval:in_list(["On Leave", "Half Day"], doc.status)` —
-upstream hrms's assumption that a Half Day is always half a day of LEAVE. It is
-the same in `.reference/hrms-as-hr_kpi`, so this is inherited, not introduced
-here.
+## FLOW
 
-But this app also produces a Half Day from WORKING HOURS, and its own
-controller says so: `Attendance.check_leave_record` (attendance.py:373) finds
-no Leave Application for the date, sets `half_day_status = "Absent"`, and only
-raises an alert. That is how every hours-based Half Day in this app is written.
-The `half_day_status` field itself offers only Present/Absent — no leave option
-at all.
+**3 first**, because it is manual, reversible and unblocks the reported day
+without anything writing by itself.
 
-So the metadata and the controller disagree, and the automation wins: it writes
-the row, and a person opening the same row cannot save it. **The rows HR opens
-to correct are exactly the rows HR cannot save.**
+* `hrms/api/attendance_fix_day.py` gains `remove_duplicate_row(attendance,
+  reason)` — HR only, reason required, the existing day guard first (paid,
+  leave, half-day leave, Attendance Request, HR-removed, future, running
+  shift), then a pure `duplicate_refusal` that KEEPS the row the day's punches
+  are linked to. The row is CANCELLED, never deleted, and `_finish` re-marks
+  the day through the one engine, so Attendance, Shift Attendance, OT and the
+  PWA all follow from the punches.
+* `undo_fix` refuses this one action in a sentence rather than pretending:
+  Frappe has no un-cancel, and the day was already rebuilt from its punches.
+* `hrms/public/js/fix_day.bundle.js` offers the button only on a day that
+  really has more than one live row.
 
-## FLOW — what changes
+**2 next** — the existing resolver is wired into the automatic pass, with its
+own switch and the recovery's day protections, so the days nobody opens are
+reduced to one row too.
 
-One attribute, in `hrms/hr/doctype/attendance/attendance.json`:
+**1 last** — a burst guard, so the shape stops being created. The client-side
+60-second duplicate guard and the server deciding IN/OUT already stop the
+common case since 11 Sep; this closes the alternating burst
+(IN 18:09:14, OUT 18:09:26, IN 18:09:30) that those two do not.
 
-    leave_type.mandatory_depends_on
-      was:  eval:in_list(["On Leave", "Half Day"], doc.status)
-      now:  eval:doc.status=="On Leave"
-
-`depends_on` is NOT changed: the field stays visible on a Half Day, because a
-half day CAN be leave and HR must still be able to name it. When it is leave,
-`check_leave_record` fills `leave_type` and `leave_application` from the
-approved Leave Application by itself, so dropping the flag loses nothing.
-
-MOCKUP: NOT NEEDED (no new screen, control or copy. The only visible change is
-that an existing Desk form stops refusing to save; the field renders exactly as
-it does today.)
+MOCKUP: NOT NEEDED (item 3 adds one button to an existing Desk screen, in the
+same style as the five beside it, and one standard Frappe dialog. Items 1 and 2
+have no UI at all.)
 
 ## EXPECTED OUTPUT
 
-* HR opens an hours-based Half Day, changes a time or a status, and it saves.
-* HR opens an On Leave row with no leave type: still refused, unchanged.
-* The Leave Type field still appears on a Half Day and can still be set.
-* A Half Day that came from an approved Leave Application still carries its
-  leave type — filled by the controller, as today.
-* Payroll untouched: `salary_slip.py:812` already guards with `and d.leave_type`
-  before pricing a Half Day as LWP.
+* Norazlin, 4 Sep: HR opens Fix Day, removes the 7PM-3.30AM row, and the day
+  rebuilds from its five punches on 9AM-6PM. One row, everywhere.
+* A day with one row: the button is not offered.
+* The row holding the punches: refused, naming the row to remove instead.
+* Two rows holding the same punches: refused — move a tap first.
+* A paid day, a leave, a day HR removed: the existing sentence, unchanged.
+* Hours, status and OT are never typed by any of this.
 
 ## Risk
 
-Doctype metadata only — no column, no data, no migration. Ships with the normal
-`bench migrate`. A site carrying a Property Setter on
-`Attendance.leave_type.mandatory_depends_on` would keep the old rule; this repo
-creates no such Property Setter (checked), and none is expected.
-
-## Amendments
-
-**A1, same day — the release must not depend on a site being clean.**
-The Risk section above left the Property Setter case as "not expected", and the
-review of 2ed460509 named it as the one way this fix could fail to land while
-still looking like it had worked. On this project a fix runs itself on release;
-nobody is asked to check a site by hand. So the plan gains one guarded,
-idempotent patch, `hrms/patches/v16_0/half_day_leave_type_not_mandatory.py`,
-registered in `patches.txt`: it deletes a Property Setter on
-`Attendance.leave_type.mandatory_depends_on` if one exists, clears the doctype
-cache, and does nothing at all on a site that never had one. No behaviour is
-added — this only makes the already-approved change take effect everywhere.
-
-## NOT in this plan
-
-The duplicate-rows problem the same screenshots show — Norazlin has THREE
-Attendance rows for 4 September (a 9AM-6PM row linked to five punches, a
-7PM-3.30AM Half Day, and a 9AM-6PM "Absent (HR)") because the duplicate check
-is per OVERLAPPING shift, and a 9-6 row does not overlap a 7PM-3.30AM row. That
-is a bigger, separate defect; written up for the owner, not fixed here.
+Item 3 writes only by cancelling one Attendance row, behind the day guard that
+already refuses anything paid or human-owned, and every action is logged with
+the day before and after. Items 1 and 2 are automatic and therefore ship with
+their own switch and the recovery's protections; neither touches a day the
+guards hold back.
 
 ## Pipeline Summary
 
-requirements (owner report + four screenshots) -> this plan -> owner approval
--> red test first (`hrms/tests/test_half_day_without_leave_can_be_saved.py`,
-already RED on HEAD) -> the one-attribute change -> mapped + neighbour tests ->
-commit with the family ledger -> hook-dispatched review -> push -> the owner
-releases it (bench migrate applies the metadata). No schema change, no patch,
-no data repair.
+owner approval (above) -> red tests first for each item -> implementation ->
+mapped + neighbour tests -> commit per item with its family ledger ->
+hook-dispatched review per commit -> push -> the owner releases it. No schema
+change. Item 2 may need a patch to queue one pass; item 3 needs none.

@@ -25,7 +25,9 @@ API = ROOT / "api/attendance_fix_day.py"
 UNCLAIMABLE = ROOT / "hr/report/unclaimable_days/unclaimable_days.js"
 SHIFT_ATTENDANCE = ROOT / "hr/report/shift_attendance/shift_attendance.js"
 
-ACTIONS = ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap")
+# Six since 17 Sep 2026: HR can take a day back to ONE attendance row from the
+# same screen, instead of a two-row day being untouchable everywhere.
+ACTIONS = ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap", "remove_duplicate_row")
 #: what a control on this screen must never be for
 RESULT_WORDS = ("working_hours", "ot_hours", "overtime_hours", "hours_worked")
 
@@ -79,7 +81,7 @@ class TestTheEndpointsArePostOnly(unittest.TestCase):
 		for args, name in decorated:
 			self.assertIn('methods=["POST"]', args, f"{name} must be POST only")
 
-	def test_the_endpoints_are_exactly_the_five_actions_the_read_and_the_undo(self):
+	def test_the_endpoints_are_exactly_the_six_actions_the_read_and_the_undo(self):
 		names = {name for _, name in re.findall(r"@frappe\.whitelist\(([^)]*)\)\ndef (\w+)", self.source)}
 		self.assertEqual(names, {"get_day", "undo_fix", *ACTIONS})
 

@@ -179,6 +179,7 @@ class FixDayScreen {
 			${button("ignore", __("Ignore tap"))}
 			${button("restore", __("Bring tap back"))}
 			${button("add", __("Add missing tap"))}
+			${this.duplicate_rows().length ? button("dedupe", __("Remove duplicate row")) : ""}
 			${this.last_fix ? button("undo", __("Undo last fix")) : ""}
 		</div>
 		<div class="text-muted small mt-2">
@@ -195,6 +196,7 @@ class FixDayScreen {
 			ignore: () => this.ignore(),
 			restore: () => this.restore(),
 			add: () => this.add(),
+			dedupe: () => this.dedupe(),
 			undo: () => this.undo(),
 		}[action];
 		console.info("[FixDay] action", action);
@@ -232,6 +234,42 @@ class FixDayScreen {
 					tap: taps[0],
 					shift: values.shift,
 					day: values.day,
+					reason: values.reason,
+				})
+		);
+	}
+
+	// Offered only on a day that actually has more than one live row. The server
+	// decides WHICH row may go — it keeps the row the punches are linked to,
+	// the same rule the automatic resolver uses — so this only has to ask which
+	// one HR means.
+	duplicate_rows() {
+		const rows = (this.day && this.day.attendance) || [];
+		return rows.length > 1 ? rows : [];
+	}
+
+	dedupe() {
+		const rows = this.duplicate_rows();
+		if (!rows.length) {
+			frappe.msgprint(__("This day has only one attendance row."));
+			return;
+		}
+		return this.ask(
+			__("Remove a duplicate attendance row"),
+			[
+				{
+					fieldname: "attendance",
+					label: __("Row to cancel"),
+					fieldtype: "Select",
+					reqd: 1,
+					options: rows
+						.map((row) => `${row.name} — ${row.shift || __("no shift")} — ${row.status || "—"}`)
+						.join("\n"),
+				},
+			],
+			(values) =>
+				this.run("remove_duplicate_row", {
+					attendance: String(values.attendance).split(" — ")[0],
 					reason: values.reason,
 				})
 		);

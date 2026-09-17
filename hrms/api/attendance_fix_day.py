@@ -64,7 +64,15 @@ LOG_DOCTYPE = "HR Day Fix Log"
 #: ERP backfill and the recovery write their own entries with their own source,
 #: so a reader can tell a person's correction from a machine's.
 LOG_SOURCE = "hr_fix_day"
-ACTIONS = ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap", "undo_fix")
+ACTIONS = (
+	"pair_taps",
+	"move_tap",
+	"ignore_tap",
+	"restore_tap",
+	"add_tap",
+	"remove_duplicate_row",
+	"undo_fix",
+)
 #: What this screen may change on a tap. `time` and `log_type` are deliberately
 #: absent: the shift stamp says which session a tap belongs to, the skip tick
 #: says whether it counts, and neither re-writes what the device recorded.
@@ -254,6 +262,38 @@ def day_block_reason(
 	return None
 
 
+def duplicate_refusal(target, rows) -> str | None:
+	"""Why this row may not be cancelled as the day's duplicate, or None. Pure.
+
+	The rule is the one `hrms.sync.erp_backfill.resolve_duplicates` already
+	uses, so the machine and the person answer the same question the same way:
+	KEEP the row the day's punches are linked to — that is the day that was
+	actually worked — and cancel the other.
+
+	Two rows holding the same number of punches is not a coin toss: there is
+	nothing to prefer, so it is refused and HR moves a tap first.
+	"""
+	live = [row for row in rows or [] if cint(row.get("docstatus")) != 2]
+	if len(live) < 2:
+		return _("This day has only one attendance row; there is no duplicate to remove.")
+	if not any(row.get("name") == target.get("name") for row in live):
+		return _("{0} is not a live attendance row on this day.").format(target.get("name"))
+
+	most = max(cint(row.get("linked_punches")) for row in live)
+	mine = cint(target.get("linked_punches"))
+	if not most:
+		return None  # no punches anywhere: nothing to protect, HR decides
+	if mine < most:
+		return None
+	holders = [row for row in live if cint(row.get("linked_punches")) == most]
+	if len(holders) > 1:
+		return _("{0} and {1} hold the same punches. Move a tap to the row it belongs to first.").format(
+			*sorted(row.get("name") for row in holders)[:2]
+		)
+	other = next(row.get("name") for row in live if row.get("name") != target.get("name"))
+	return _("{0} holds this day's punches. Remove {1} instead.").format(target.get("name"), other)
+
+
 def tap_view(tap) -> dict:
 	"""One tap as the screen shows it. Pure."""
 	return {
@@ -438,6 +478,51 @@ def add_tap(employee: str, moment: str, log_type: str, reason: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def remove_duplicate_row(attendance: str, reason: str) -> dict:
+	"""Cancel the attendance row a day should not have, and rebuild that day.
+
+	Reported 17 Sep 2026: a day carrying two rows could not be acted on
+	anywhere — the report shows one, the Attendance list shows two, and the
+	master edit refuses the day outright. This is the sixth action on the
+	evidence, and like the other five it types no hours: the day is re-marked
+	from its punches the moment the row is gone.
+
+	CANCELLED, never deleted. The row keeps its name, its links and its
+	history, and it stays readable in Desk. A cancelled row cannot be brought
+	back by `undo_fix` — Frappe has no un-cancel — so the undo says that in a
+	sentence instead of pretending; the day itself is rebuilt from its punches
+	either way, which is the real recovery.
+	"""
+	_require_hr()
+	reason = _require_reason(reason)
+	row = _attendance(attendance)
+	emp = _require_employee(row.employee)
+	day = getdate(row.attendance_date)
+	_lock_and_guard(emp.name, [day])
+
+	rows = _rows_with_punch_counts(emp.name, day)
+	target = next((r for r in rows if r.get("name") == row.name), None) or dict(row)
+	refusal = duplicate_refusal(target, rows)
+	if refusal:
+		_refuse(refusal)
+
+	before = _before(emp.name, [day], [])
+	logger.warning(
+		"[attendance_fix_day] cancelling %s (%s, %s punch(es)) on %s for %s by %s",
+		row.name,
+		row.get("shift"),
+		cint(target.get("linked_punches")),
+		day,
+		emp.name,
+		frappe.session.user,
+	)
+	_cancel_attendance(row.name)
+	note = _("cancelled as this day's duplicate attendance row")
+	_comment(row.name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason))
+	return _finish(emp, [day], "remove_duplicate_row", reason, {}, before)
+
+
+@frappe.whitelist(methods=["POST"])
 def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	"""Put back exactly what one action changed — tap flags, shift stamp, time —
 	then rebuild the same days."""
@@ -445,6 +530,16 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	entry = _log_entry(log_entry)
 	if cint(entry.undone):
 		_refuse(_("This fix was already undone."))
+	if entry.action == "remove_duplicate_row":
+		# Frappe has no un-cancel. Saying so is better than a no-op that looks
+		# like it worked; the day was rebuilt from its punches when the row
+		# went, and correcting the taps is how it is changed from here.
+		_refuse(
+			_(
+				"A cancelled attendance row cannot be brought back. The day was rebuilt from "
+				"its punches; correct the taps instead."
+			)
+		)
 	emp = _require_employee(entry.employee)
 	before_state = json.loads(entry.before_state or "{}")
 	days = sorted(getdate(d) for d in (before_state.get("days") or {}))
@@ -682,6 +777,27 @@ def _day_attendance(employee, day) -> list:
 		fields=ATTENDANCE_FIELDS,
 		order_by="creation asc",
 	)
+
+
+def _attendance(name):
+	row = frappe.db.get_value("Attendance", name, ATTENDANCE_FIELDS, as_dict=True)
+	if not row:
+		_refuse(_("Attendance {0} not found.").format(name))
+	return row
+
+
+def _rows_with_punch_counts(employee, day) -> list:
+	"""The day's live rows, each carrying how many punches point at it."""
+	rows = [dict(row) for row in _day_attendance(employee, day)]
+	for row in rows:
+		row["linked_punches"] = frappe.db.count("Employee Checkin", {"attendance": row["name"]})
+	return rows
+
+
+def _cancel_attendance(name) -> None:
+	doc = frappe.get_doc("Attendance", name)
+	doc.flags.ignore_permissions = True
+	doc.cancel()
 
 
 def _financial(employee, day, rows, for_update):

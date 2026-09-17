@@ -244,3 +244,13 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:50:19Z COMMIT: e86ae521c fix(checkin): the label is right the moment the punch lands, both ways → review+design dispatched
 - 2026-09-17T07:45:00Z EVIDENCE: rung 2 — re-review of e86ae521c NEXT_ACTION DEPLOY. It verified from the server source that punch() returns name/employee/employee_name/log_type/time/requires_remote_approval/remote_approval_status and nothing else, and that every reader of lastLog touches only log_type, time and name — is_abandoned is read off the separate unresolvedStaleIn resource and matched by name, so the optimistic row cannot mislead anything today. Dropping { immediate: true } confirmed dead-code removal.
 - 2026-09-17T07:45:00Z NEXT: owner to say go on Phase 1 (settle row ownership) and Phase 2 (wire the duplicate resolver that already exists in hrms/sync/erp_backfill.py and is called by nothing). Its one Warning — an out-of-order reload can drag the label back for one round trip — is on record as a ceiling marker with its upgrade trigger rather than fixed, because the window closes on the next reload and the counter machinery is not worth it unless anyone reports it.
+- 2026-09-17T04:54:56Z COMMIT: f0412ebc4 docs(checkin): mark what the held-over row does not promise → review+design dispatched
+- 2026-09-17T04:55:14Z PUSH: nz-glass @ 21541e304
+- 2026-09-17T04:55:14Z COMMIT: 21541e304 docs(glass): handoff for the attendance pipeline fixes → review dispatched
+- 2026-09-17T08:20:00Z PLAN: current-plan.md approved (hash 097aeb7619dd) — one day, one attendance row; the owner's three-item list, with "no on gap" ruled out of scope.
+- 2026-09-17T08:20:00Z REPAIR: item 3 — Fix Day gains remove_duplicate_row. A day carrying two rows could not be reduced to one anywhere: the report shows one, the Attendance list shows two, the master edit refuses the day outright. Cancels, never deletes; keeps the row the punches are linked to; the day is re-marked from its punches.
+- 2026-09-17T08:20:00Z EVIDENCE: rung 2 — 14 tests RED on HEAD first (7 pure refusal cases + 7 contract), green after; 132 fix-day tests green including the two existing suites that pin "five actions" and now pin six.
+- 2026-09-17T05:18:18Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T05:18:18Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T05:18:31Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T05:18:31Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
