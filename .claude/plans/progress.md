@@ -257,3 +257,7 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T02:36:41Z EVIDENCE: 6 behaves — family hunt: class=a PWA screen asking frappe's generic `upload_file` to create a PUBLIC; 8 call site(s) given verdicts, 1 same-root ⟂5580d66af7a2
 - 2026-09-17T02:36:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-09-17T02:43:21Z COMMIT: ca2831a0e docs(glass): handoff for the one-rebuild-per-day fix → review dispatched
+- 2026-09-17T02:36:53Z EVIDENCE: 6 behaves — family hunt: class=a PWA screen asking frappe's generic `upload_file` to create a PUBLIC; 8 call site(s) given verdicts, 1 same-root ⟂5580d66af7a2
+- 2026-09-17T02:36:57Z COMMIT: b8af8c241 fix(checkin): the punch photo no longer needs the employee's own file rights → review+design dispatched
+- 2026-09-17T00:10:00Z COMMIT: b8af8c241 fix(checkin): the punch photo no longer needs the employee's own file rights — family ledger .claude/plans/family.md (CLASS: a PWA screen asking frappe's generic upload_file for a PUBLIC File; the two other upload sites use is_private=1 and are not-affected).
+- 2026-09-17T00:10:00Z NEXT: wait for the frappe-reviewer verdict on b8af8c241 (it hit its turn limit and was resumed for the report), fix anything Critical, then push nz-glass. Danial's 3/4 Sep off-shift OUT needs no new code — the endgame repair on this branch heals it on deploy. OPEN FOR THE OWNER: keep or retire the Shift Attendance free-form master edit now that Fix Day exists (its documented two-row race, W7, is the reason to ask).
