@@ -278,6 +278,13 @@ def duplicate_refusal(target, rows) -> str | None:
 		return _("This day has only one attendance row; there is no duplicate to remove.")
 	if not any(row.get("name") == target.get("name") for row in live):
 		return _("{0} is not a live attendance row on this day.").format(target.get("name"))
+	if cint(target.get("docstatus")) == 0:
+		# `doc.cancel()` refuses a draft with a raw framework error, and this
+		# screen answers in sentences. A draft is also not what makes a day
+		# read wrong — nothing counts it — so Desk is the right place for it.
+		return _("{0} is a draft. Submit or delete it in Desk; a draft counts toward nothing.").format(
+			target.get("name")
+		)
 
 	most = max(cint(row.get("linked_punches")) for row in live)
 	mine = cint(target.get("linked_punches"))
@@ -501,8 +508,15 @@ def remove_duplicate_row(attendance: str, reason: str) -> dict:
 	_lock_and_guard(emp.name, [day])
 
 	rows = _rows_with_punch_counts(emp.name, day)
-	target = next((r for r in rows if r.get("name") == row.name), None) or dict(row)
-	refusal = duplicate_refusal(target, rows)
+	# The employee row is locked above, so the day cannot change under us; a
+	# target that is not in the list is a stale screen, not a race, and it is
+	# refused rather than guessed at with a row carrying no punch count.
+	target = next((r for r in rows if r.get("name") == row.name), None)
+	refusal = (
+		duplicate_refusal(target, rows)
+		if target
+		else _("{0} is no longer on this day. Reload and look again.").format(row.name)
+	)
 	if refusal:
 		_refuse(refusal)
 
@@ -511,7 +525,7 @@ def remove_duplicate_row(attendance: str, reason: str) -> dict:
 		"[attendance_fix_day] cancelling %s (%s, %s punch(es)) on %s for %s by %s",
 		row.name,
 		row.get("shift"),
-		cint(target.get("linked_punches")),
+		cint((target or {}).get("linked_punches")),
 		day,
 		emp.name,
 		frappe.session.user,

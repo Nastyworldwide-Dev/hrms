@@ -269,3 +269,12 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:25:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-17T05:25:08Z EVIDENCE: 6 behaves — family hunt: class=every punch is treated as a deliberate act, however close it lands to; 37 call site(s) given verdicts, 2 same-root ⟂0e7de744fe27
 - 2026-09-17T05:25:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:25:22Z EVIDENCE: 6 behaves — family hunt: class=every punch is treated as a deliberate act, however close it lands to; 37 call site(s) given verdicts, 2 same-root ⟂0e7de744fe27
+- 2026-09-17T05:25:24Z COMMIT: 960ed4c16 fix(checkin): a stutter of taps is one tap, not a session → review dispatched
+- 2026-09-17T09:25:00Z EVIDENCE: rung 2 — review of 58f475c6b NEXT_ACTION DEPLOY. It traced the re-link by hand: after the cancel, _finish -> _rebuild -> day_remark.remark_day -> attendance_recovery re-points every checkin's `attendance` field at the surviving row (7 assignment sites), in the same request, so nothing is left pointing at a cancelled row; and if the rebuild threw, the whole request rolls back and the cancel with it.
+- 2026-09-17T09:25:00Z REPAIR: its one Warning — a DRAFT attendance row was treated as live, and doc.cancel() answers a draft with a raw framework error. Refused in the pure guard with a sentence naming Desk. Also refused: a target that is no longer on the day (stale screen), which was falling back to a row with no punch count.
+- 2026-09-17T09:25:00Z NEXT: the bench probe for the sixth action is the one thing left undone, ticketed at the foot of .claude/plans/ticket-attendance-request-refactor.md — it is what would catch the unit stub diverging from a real site.
+- 2026-09-17T05:26:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:26:28Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T05:26:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:26:41Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10

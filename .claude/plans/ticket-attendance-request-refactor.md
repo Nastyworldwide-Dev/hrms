@@ -32,3 +32,19 @@ reader, or when the 90-day fix count is still above 6 at the next retro.
 `.claude/plans/ticket-approval-refactor.md`,
 `.claude/plans/ticket-remote-checkin-refactor.md`,
 `.claude/plans/ticket-unfenced-self-submission.md`.
+
+---
+
+# Also open: the bench probe for Fix Day's sixth action
+
+`hrms/tests/probes/fix_day_probe.py` is the one place that exercises Fix Day
+against a REAL bench rather than the unit stub. It still says "all five
+actions" and was not extended when `remove_duplicate_row` landed (17 Sep 2026).
+
+Add: a genuine two-row duplicate day (Norazlin's shape — a 9AM-6PM row holding
+the punches beside a 7PM-3.30AM row holding a burst), the action against it, and
+the action as the sixth entry in the probe's paid-day refusal pass. That is what
+would catch the stub diverging from the real site — `frappe.db.count` filter
+semantics, or a `doc.cancel()` side effect on a linked document.
+
+Raised by the review of 58f475c6b, which was otherwise DEPLOY.

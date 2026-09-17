@@ -68,6 +68,19 @@ class DuplicateRefusalCase(unittest.TestCase):
 	def test_a_row_that_is_not_on_the_day_is_refused(self):
 		self.assertIsNotNone(fix_day.duplicate_refusal(EMPTY, [WORKED, STRAY]))
 
+	def test_with_no_punches_anywhere_there_is_nothing_to_protect(self):
+		"""Two empty rows: nothing prefers either, so HR's choice stands."""
+		other = {**EMPTY, "name": "HR-ATT-2026-16001"}
+		self.assertIsNone(fix_day.duplicate_refusal(EMPTY, [EMPTY, other]))
+
+	def test_a_draft_row_is_refused_with_a_sentence_not_a_stack_trace(self):
+		"""`doc.cancel()` raises a raw framework error on a docstatus 0 row, and
+		this screen answers in sentences."""
+		draft = {**STRAY, "docstatus": 0}
+		refusal = fix_day.duplicate_refusal(draft, [WORKED, draft])
+		self.assertIsNotNone(refusal)
+		self.assertIn("Desk", refusal, "it must say where the draft can be dealt with")
+
 
 class ContractCase(unittest.TestCase):
 	"""The action keeps this screen's promises."""
