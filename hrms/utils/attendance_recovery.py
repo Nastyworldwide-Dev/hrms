@@ -261,6 +261,50 @@ def _is_hr_hold(row) -> bool:
 	)
 
 
+def release_to_automation(employee, day) -> list:
+	"""Hand this day's hand-marked rows back to the engine. Returns their names.
+
+	The fourth door, found on live 17 Sep 2026. `protected_reason` was taught to
+	let HR's own press through, and the day still did not move:
+	`shift_type.get_automation_attendance` filters `auto_attendance: 1` and its
+	docstring says "Never returned, so never rebuilt from punches: a row HR
+	marked by hand". The engine found nothing to update, tried to CREATE a row,
+	hit DuplicateAttendanceError and swallowed it.
+
+	Asking the engine to rebuild a day from its punches IS handing the row back
+	to the engine, so the flag is set to say so — and it then tells the truth
+	about who computed the values in that row. HR keys the day by hand again and
+	`Attendance.claim_hr_ownership_on_amend` takes it straight back.
+
+	Never handed back, matching `get_automation_attendance`'s own filters
+	exactly: a leave, a half-day leave, an On Leave row, a row from an
+	Attendance Request, a mirrored row, and anything not submitted.
+	"""
+	released = []
+	for row in _attendance_rows(employee, day):
+		if cint(row.get("docstatus")) != 1 or cint(row.get("auto_attendance")):
+			continue
+		if (
+			row.get("leave_type")
+			or row.get("leave_application")
+			or row.get("attendance_request")
+			or row.get("synced_from_instance")
+			or cint(row.get("modify_half_day_status"))
+			or row.get("status") == "On Leave"
+		):
+			continue
+		frappe.db.set_value("Attendance", row["name"], "auto_attendance", 1, update_modified=False)
+		released.append(row["name"])
+		logger.warning(
+			"[attendance_recovery] %s handed back to the engine: HR asked for %s on %s to be "
+			"rebuilt from its punches",
+			row["name"],
+			employee,
+			day,
+		)
+	return released
+
+
 #: Status ranking for the never-worse guard: a rebuild may raise it, never lower it.
 STATUS_RANK = {None: 0, "Absent": 1, "Half Day": 2, "Present": 3, "Work From Home": 3}
 #: Working hours may not fall by more than this (rounding, not a loss).

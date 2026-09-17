@@ -242,7 +242,13 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 		#
 		# `_rebuild_under_guard`, not `guarded_rebuild`: the outer one takes the
 		# day and retries deadlocks, and this is already inside both.
-		result = rec._rebuild_under_guard(employee, day, rec._remark_released_day, source="hr_fix_day")
+		def remark(employee, day, apply):
+			# Inside the guard's savepoint on purpose: if the rebuild is rolled
+			# back for making the day worse, the ownership goes back with it.
+			rec.release_to_automation(employee, day)
+			return rec._remark_released_day(employee, day, apply)
+
+		result = rec._rebuild_under_guard(employee, day, remark, source="hr_fix_day")
 		if result.get("held"):
 			logger.warning(
 				"[day_remark] %s on %s rolled back by the never-worse guard (%s): %s",

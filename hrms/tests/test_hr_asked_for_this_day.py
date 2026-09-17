@@ -46,9 +46,9 @@ TODAY = date(2026, 9, 17)
 DAY = date(2026, 9, 4)
 
 
-def row(**extra):
+def row(name="HR-ATT-2026-15657", **extra):
 	base = {
-		"name": "HR-ATT-2026-15657",
+		"name": name,
 		"docstatus": 1,
 		"status": "Absent",
 		"auto_attendance": 0,
@@ -224,6 +224,108 @@ class TheNeverWorseGuardCovversHrsPressCase(unittest.TestCase):
 	def test_the_guard_records_who_asked(self):
 		_, calls = self.run_remark(hr_asked=True)
 		self.assertIn("fix", calls["source"], "the day-fix log says which pass rebuilt the day")
+
+
+class TheDayIsHandedBackToTheEngineCase(unittest.TestCase):
+	"""The fourth door, found on live after everything else was fixed.
+
+	Owner, 17 Sep 2026: he cancelled the ghost row, paired 09:03 IN with 18:09
+	OUT and ignored the three glitch taps. The Fix Day screen showed exactly
+	that. `HR-ATT-2026-15657` still read "Absent (HR) · in — · out — · 0 h".
+
+	`shift_type.get_automation_attendance` filters `auto_attendance: 1` and says
+	so in its own docstring: "Never returned, so never rebuilt from punches: a
+	row HR marked by hand". So the engine found no row to update, tried to
+	CREATE one, hit DuplicateAttendanceError, and swallowed it — the day was
+	never touched. Waiving the hold in `protected_reason` got the rebuild
+	started; this is the gate three layers further down with its own copy of
+	"who owns this row".
+
+	Asking the engine to rebuild a day from its punches IS handing the row back
+	to the engine, so that is what happens — and the ownership flag then tells
+	the truth about who computed the values in it.
+	"""
+
+	def rows(self, *extra):
+		return [row(name=f"ATT-{i}", **kw) for i, kw in enumerate(extra, start=1)]
+
+	def released(self, *extra):
+		store = {r["name"]: dict(r) for r in self.rows(*extra)}
+
+		def get_all(doctype, filters=None, fields=None, **kw):
+			return [dict(r) for r in store.values()]
+
+		def set_value(doctype, name, field, value, **kw):
+			store[name][field] = value
+
+		with (
+			patch.object(rec, "_attendance_rows", lambda employee, day: list(store.values())),
+			patch.object(rec.frappe.db, "set_value", set_value, create=True),
+		):
+			names = rec.release_to_automation("HR-EMP-00021", DAY)
+		return names, store
+
+	def test_an_hr_owned_row_is_handed_back(self):
+		names, store = self.released({})
+		self.assertEqual(names, ["ATT-1"])
+		self.assertEqual(store["ATT-1"]["auto_attendance"], 1)
+
+	def test_a_row_the_engine_already_owns_is_left_alone(self):
+		names, _ = self.released({"auto_attendance": 1})
+		self.assertEqual(names, [], "nothing to hand back")
+
+	def test_a_leave_row_is_never_handed_back(self):
+		self.assertEqual(self.released({"leave_type": "Annual Leave"})[0], [])
+
+	def test_an_on_leave_row_is_never_handed_back(self):
+		self.assertEqual(self.released({"status": "On Leave"})[0], [])
+
+	def test_a_half_day_leave_is_never_handed_back(self):
+		self.assertEqual(self.released({"modify_half_day_status": 1})[0], [])
+
+	def test_a_row_from_an_attendance_request_is_never_handed_back(self):
+		self.assertEqual(self.released({"attendance_request": "ATR-0001"})[0], [])
+
+	def test_a_mirrored_row_is_never_handed_back(self):
+		self.assertEqual(self.released({"synced_from_instance": "nasty-live"})[0], [])
+
+	def test_a_draft_is_never_handed_back(self):
+		self.assertEqual(self.released({"docstatus": 0})[0], [])
+
+	def test_a_cancelled_row_is_never_handed_back(self):
+		self.assertEqual(self.released({"docstatus": 2})[0], [])
+
+
+class OnlyOnHrsPressCase(unittest.TestCase):
+	def run_remark(self, hr_asked):
+		from hrms.utils import day_remark as dr
+
+		order = []
+
+		def guarded(employee, day, remark, source="recovery"):
+			return remark(employee, day, True)
+
+		with (
+			patch.object(dr, "_shift_still_running", lambda employee, day: False),
+			patch.object(dr, "lock_employee_row", lambda employee: None),
+			patch.object(dr, "_retire_unmarkable_rows", lambda *a, **k: []),
+			patch.object(rec, "_day_protection", lambda *a, **k: None),
+			patch.object(rec, "_rebuild_under_guard", guarded),
+			patch.object(rec, "release_to_automation", lambda e, d: order.append("released") or ["ATT-1"]),
+			patch.object(
+				rec,
+				"_remark_released_day",
+				lambda e, d, apply: order.append("remarked") or {"marked": ["ATT-1"]},
+			),
+		):
+			dr._remark_once("HR-EMP-00021", DAY, "fix day", hr_asked=hr_asked)
+		return order
+
+	def test_the_day_is_handed_back_before_it_is_remarked(self):
+		self.assertEqual(self.run_remark(hr_asked=True), ["released", "remarked"])
+
+	def test_the_nightly_job_hands_nothing_back(self):
+		self.assertEqual(self.run_remark(hr_asked=False), ["remarked"])
 
 
 class ItIsWiredAllTheWayThroughCase(unittest.TestCase):

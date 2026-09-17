@@ -213,3 +213,19 @@ than kept: scaffolding rots.
 NEXT: the owner deploys. Then: Norazlin 4 Sep must read Present with hours and
 her OT must be claimable in Nadi. Open offer, not started: the ghost-row list
 (rows holding times with zero punches) across all staff.
+- 2026-09-17T09:53:14Z COMMIT: 956e9d22d refactor: drop a flag nothing reads → review dispatched
+- 2026-09-17T09:53:32Z PUSH: nz-glass @ 956e9d22d
+- 2026-09-17T09:53:45Z PUSH: nz-glass @ fb53ba256
+- 2026-09-17T09:53:45Z COMMIT: fb53ba256 docs(glass): handoff for the day rebuild → review dispatched
+REPAIR: the FOURTH door. After the ghost was cancelled, the session paired and
+the strays ignored, HR-ATT-2026-15657 still read "Absent (HR) · in - · out -".
+shift_type.get_automation_attendance filters auto_attendance: 1 and its own
+docstring says a row HR marked by hand is "never rebuilt from punches" - so the
+engine found no row to update, tried to CREATE one, hit DuplicateAttendanceError
+and swallowed it. protected_reason was only the first gate.
+release_to_automation hands the day's hand-marked rows back to the engine,
+inside the guard's savepoint, only when HR asked. Never a leave, half-day leave,
+On Leave, Attendance Request, mirrored or unsubmitted row.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 11 new tests red before, green after;
+17 suites green.
+NEXT: the owner deploys and re-runs Norazlin 4 Sep.
