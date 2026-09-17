@@ -348,6 +348,21 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		)
 
 	def get_attendance_doc(self, attendance_date: str) -> str | None:
+		"""The day's Attendance this request should UPDATE, if one exists.
+
+		Same shift first — that is this request's own row, and the only row this
+		ever looked for. Failing that, a row on an OVERLAPPING shift, because
+		`Attendance.validate_overlapping_shift_attendance` will refuse to insert
+		a second row against it: so that row is either the one this request
+		updates, or the reason the request can never be approved at all. An
+		approver hit exactly that on 17 Sep 2026 — HR-ARQ-26-09-00032 (shift
+		Flexible) against HR-ATT-2026-16752 (9AM - 6PM), refused twice with no
+		way forward, for a request that is about the DAY.
+
+		A row on a NON-overlapping shift is a genuinely different session on the
+		same day. It does not block the insert and it is not this request's row,
+		so it is left alone.
+		"""
 		attendance = frappe.db.exists(
 			"Attendance",
 			{
@@ -357,7 +372,37 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				"shift": self.shift,
 			},
 		)
+		if not attendance and self.shift:
+			attendance = self.get_overlapping_attendance(attendance_date)
 		return frappe.get_doc("Attendance", attendance) if attendance else None
+
+	def get_overlapping_attendance(self, attendance_date: str) -> str | None:
+		"""The day's row whose shift overlaps this request's — the blocker."""
+		from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
+
+		rows = frappe.db.get_all(
+			"Attendance",
+			filters={
+				"employee": self.employee,
+				"attendance_date": attendance_date,
+				"docstatus": ("!=", 2),
+			},
+			fields=["name", "shift"],
+		)
+		for row in rows:
+			if not row.shift or row.shift == self.shift:
+				continue
+			if has_overlapping_timings(self.shift, row.shift):
+				logger.info(
+					"[attendance_request] %s on %s: updating %s (%s) — it overlaps %s",
+					self.employee,
+					attendance_date,
+					row.name,
+					row.shift,
+					self.shift,
+				)
+				return row.name
+		return None
 
 	def get_attendance_status(self, attendance_date: str) -> str:
 		if self.half_day and date_diff(getdate(self.half_day_date), getdate(attendance_date)) == 0:

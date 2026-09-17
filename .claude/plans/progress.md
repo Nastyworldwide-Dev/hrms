@@ -217,3 +217,7 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:19:33Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-17T04:19:34Z EVIDENCE: 6 behaves — family hunt: class=upstream metadata that models "Half Day" as a leave state, inside an app; 1 call site(s) given verdicts, 1 same-root ⟂0c35df7d632a
 - 2026-09-17T04:19:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:19:45Z EVIDENCE: 6 behaves — family hunt: class=upstream metadata that models "Half Day" as a leave state, inside an app; 1 call site(s) given verdicts, 1 same-root ⟂0c35df7d632a
+- 2026-09-17T04:19:48Z COMMIT: a84b89973 fix(attendance): the half day fix lands even on a site with its own override → review dispatched
+- 2026-09-17T04:20:22Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:20:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

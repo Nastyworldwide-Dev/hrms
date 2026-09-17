@@ -1,6 +1,6 @@
-GOAL: The half-day fix lands on every site, including one carrying its own
- override of that field rule.
-DONE WHEN: a guarded, idempotent patch removes a Property Setter on
- Attendance.leave_type.mandatory_depends_on and is listed in patches.txt.
+GOAL: An Attendance Request whose day already has attendance on an overlapping
+ shift can be approved.
+DONE WHEN: get_attendance_doc returns the same-shift row first, then a row on
+ an overlapping shift, and never a row on a non-overlapping shift.
 CHECK: PYTHONPATH=. python3 -m pytest -q
- hrms/tests/test_half_day_leave_type_property_setter_is_cleared.py
+ hrms/tests/test_attendance_request_finds_the_day_it_conflicts_with.py
