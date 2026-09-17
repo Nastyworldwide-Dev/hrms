@@ -444,6 +444,51 @@ class TestTheCountedTapRule(FixDayCase):
 		self.assertIn("another site", self.refusal(fd.ignore_tap, "CKIN-A", reason="x"))
 
 
+class TestATwoRowDayKeepsItsEscapesOpen(FixDayCase):
+	"""The engine cannot re-mark a day that already has a row, so the actions
+	that REBUILD a two-row day are refused — and the two that END one are not.
+
+	Owner, 17 Sep 2026, Norazlin 4 Sep: pairing on such a day changed nothing
+	and said "The day was rebuilt". The first fix refused everything, which shut
+	the door `duplicate_refusal` itself points at on a punch-count tie ("Move a
+	tap to the row it belongs to first"). Both halves are behaviour, so both are
+	driven here rather than read out of the source.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self.store.tap("CKIN-A", at(DAY, "19:30"))
+		self.store.tap("CKIN-B", at(DAY, "23:30"), "OUT")
+		self.store.row("ATT-1", DAY)
+		self.store.row("ATT-2", DAY)
+
+	def test_everything_that_rebuilds_the_day_is_refused(self):
+		for call, args, kwargs in (
+			(fd.pair_taps, ("CKIN-A", "CKIN-B"), {}),
+			(fd.ignore_tap, ("CKIN-A",), {"reason": "x"}),
+			(fd.restore_tap, ("CKIN-A",), {"reason": "x"}),
+			(fd.add_tap, (EMP, str(at(DAY, "22:00")), "OUT"), {"reason": "x"}),
+		):
+			with self.subTest(action=call.__name__):
+				self.assertIn("Remove the duplicate first", self.refusal(call, *args, **kwargs))
+
+	def test_moving_a_tap_is_not_refused(self):
+		"""The tie escape, driven end to end: a text search for the waiver would
+		pass while a refactor left the door shut."""
+		answer = fd.move_tap("CKIN-A", shift=MORNING, reason="it belongs to the other row")
+		self.assertTrue(answer["ok"])
+		self.assertEqual(self.store.taps["CKIN-A"]["shift"], MORNING)
+
+	def test_the_refusal_names_both_rows(self):
+		sentence = self.refusal(fd.ignore_tap, "CKIN-A", reason="x")
+		self.assertIn("ATT-1", sentence)
+		self.assertIn("ATT-2", sentence)
+
+	def test_one_row_refuses_nothing(self):
+		self.store.rows.pop("ATT-2")
+		self.assertTrue(fd.ignore_tap("CKIN-A", reason="x")["ok"])
+
+
 class TestProtectedDays(FixDayCase):
 	"""Every action is refused on a day HR must settle elsewhere first."""
 

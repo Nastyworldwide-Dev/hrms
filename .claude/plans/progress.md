@@ -219,3 +219,11 @@ EVIDENCE: 2 (mapped) — 132 passed across the seven fix-day and duplicate suite
 the two new tests red before the waiver, green after.
 NEXT: deploy is the owner's; he can already fix Norazlin today by removing the
 duplicate row BEFORE pairing.
+- 2026-09-17T08:57:02Z PUSH: nz-glass @ 5beef7501
+EVIDENCE: 7 (invariant, behavioural) — review of 5beef7501 returned DEPLOY with
+one warning: the escape invariant was an AST substring match, which a refactor
+could keep while shutting the door. It is now driven end to end on a real
+two-row day (TestATwoRowDayKeepsItsEscapesOpen). Proven by two mutations: the
+waiver removed from move_tap fails the behavioural escape test; the rule itself
+removed fails six tests including the notice. The mutation drill the reviewer
+ran out of turns for was also run: both AST tests fail without the waiver.
