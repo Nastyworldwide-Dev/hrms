@@ -133,3 +133,40 @@ test("without the free flag a strict far punch still throws", () => {
 	})
 	assert.equal(r.action, "throw")
 })
+
+test("one metre more reported error does not cost 250 metres of tolerance", () => {
+	// Reported 17 Sep 2026: people inside the area were still sent to remote
+	// approval. The allowance was `accuracy` up to 250 m and ZERO beyond it, so
+	// the same person 80 m from the centre of a 50 m fence was allowed at 250 m
+	// of reported error and refused at 251 m. A phone indoors reports hundreds
+	// of metres of error while sitting at a desk.
+	const at = (accuracy) =>
+		previewGeofence({ strict: false, hasLocation: true, radius: 50, distance: 80, accuracy })
+	assert.equal(at(250).action, "allow")
+	assert.equal(at(251).action, "allow", "a metre more error cannot flip the answer")
+	assert.equal(at(1500).action, "allow", "still inside the capped allowance")
+})
+
+test("the allowance stays capped, so a kilometre of error does not widen the fence", () => {
+	const far = previewGeofence({
+		strict: false,
+		hasLocation: true,
+		radius: 50,
+		distance: 400,
+		accuracy: 1500,
+	})
+	assert.equal(far.action, "require_remote")
+	assert.equal(far.reason, "outside_radius")
+})
+
+test("past the trust cap a reading places nobody, even when its point is inside", () => {
+	const ip = previewGeofence({
+		strict: false,
+		hasLocation: true,
+		radius: 50,
+		distance: 10,
+		accuracy: 2001,
+	})
+	assert.equal(ip.action, "require_remote")
+	assert.equal(ip.reason, "imprecise_location")
+})

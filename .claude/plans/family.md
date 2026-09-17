@@ -1,78 +1,56 @@
-# FAMILY — a comment written in a type nobody reads
+# FAMILY — an allowance that falls to zero one metre past its cap
 
-CLASS: a writer and a reader agreeing on the TEXT of a marker while disagreeing
-on the ROW TYPE that carries it. `Document.add_comment(comment_type, text)`
-stores its first argument as `Comment.comment_type`; every reader of a skip
-reason in this app filters `comment_type == "Comment"`. The burst-skip comment
-was written as `"Info"`, so the row was never seen: the audit would have shown
-the punch skipped with no reason and no way back — the exact thing the comment
-exists to prevent — while every string-consistency test passed.
+CLASS: a tolerance expressed as "up to X, then nothing", where the step lands
+exactly where the measurements are noisiest. The geofence allowance was
+`accuracy` up to 250 m and ZERO beyond it, so the same person, standing in the
+same place 80 m from the centre of a 50 m fence, was allowed at 250 m of
+reported error and sent to remote approval at 251 m.
 
-Found by the review of 2f969afd0, which traced the real read path instead of
-trusting the diff.
+Measured on the real function before the fix, not inferred.
 
-ROOT CAUSE: the writer. Both other skip writers in this app already use
-"Comment"; this one is now the third.
+ROOT CAUSE: between the allowance cap and the point-estimate trust cap the code
+already treats the device's estimate as meaningful — it allows a point that
+lands inside — but gave that same estimate no tolerance when the point landed
+just outside. Trusted when it helps, discarded when it does not. The allowance
+is now `min(accuracy, 250)` for every reading the code trusts at all, so it
+never decreases as the reading gets worse and never exceeds the cap.
 
-## Every writer and reader of a skip reason
+## Both sides of the same rule, and everything that reads it
 
-hrms/api/remote_checkin.py (the burst comment) — same-root (fixed here)
-  Now "Comment". A test reads the type out of BOTH the writer and the audit's
-  query and fails if they ever differ again — the marker strings matching was
-  what let this through.
-hrms/hr/doctype/employee_checkin/employee_checkin.py:152 — not-affected
-  Already writes "Comment"; it is one of the two the fix follows.
-hrms/overrides/remote_checkin_request_hooks.py:542 — not-affected
-  Already writes "Comment", and already imports SKIP_PREFIX at module scope —
-  which is the proof there is no cycle to guard against, so the burst import
-  was moved up beside it.
-hrms/utils/attendance_day_audit.py:343 — not-affected
-  The reader. Its filter is right; the writer was wrong.
-hrms/utils/attendance_recovery.py:3695 — not-affected
-  The second reader, same filter, now also reached by the burst comment.
-hrms/api/remote_checkin.py (the resolved-type trace) — not-affected
-  Stays "Info" on purpose: it is a durable note for a human reading the punch,
-  not a skip reason, and no query looks for it.
+hrms/utils/geofence.py:155 (`evaluate_geofence`) — same-root (fixed here)
+  The authority. Every punch is decided here.
+frontend/src/utils/geolocation.js:124 (`previewGeofence`) — same-root (fixed here)
+  The phone's preview of that decision. It must agree case for case, and
+  `hrms/tests/test_geolocation_properties.py::TestPreviewParity` failed the
+  moment the server changed — which is the test doing exactly its job.
+hrms/api/geofence.py (`check_geofence`) — not-affected
+  The pre-flight endpoint; it calls `evaluate_geofence` and inherits the fix.
+hrms/overrides/employee_checkin_override.py
+  (`validate_distance_from_shift_location`) — not-affected
+  The enforcement point; also calls `evaluate_geofence`.
+hrms/utils/geofence.py::usable_accuracy — not-affected
+  Parses the number. An unreadable or absent accuracy is still "unknown" and
+  still buys nothing — a device that reports no error estimate is measured as
+  a surveyed point, as before.
+hrms/utils/geofence.py::POINT_ESTIMATE_TRUST_CAP_M — not-affected
+  Unchanged at 2000 m, and still the line past which a reading places nobody.
 
-## Machine-listed sites (the scan matched the word `punch` in prose)
+## The test that pinned the old policy
 
-None of these calls `punch`: each is a log line, a docstring or a comment
-containing the word.
+hrms/utils/test_geofence.py::test_a_coarse_reading_whose_point_is_outside_still_cannot_clear_the_fence
+  — same-root (amended here, not deleted)
+  It asserted that a coarse reading whose point lands outside buys NOTHING,
+  which IS the cliff, written down as expected behaviour. Amended to the new
+  rule and renamed: a trusted reading buys the capped allowance and no more —
+  50 m outside a fence with 600 m of error is allowed, 300 m outside is not.
 
-hrms/api/attendance_fix_day.py:525 — not-affected — prose or a log line containing the word "punch".
-hrms/api/attendance_master_edit.py:845 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:420 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:823 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:857 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:928 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/shift_type/shift_type.py:557 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/report/attendance_day_audit/attendance_day_audit.js:102 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:256 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:314 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:381 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:45 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:313 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:438 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:458 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:734 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:239 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:396 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:564 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:119 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:176 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:197 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:200 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:235 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:625 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:631 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_ownership.py:197 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1309 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1404 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1675 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:444 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:465 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:473 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:476 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/hr_removed_day.py:72 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/offshift_punch_heal.py:192 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/shift_resolution.py:88 — not-affected — prose or a log line containing the word "punch".
+## The two real callers, with the line numbers the scan asked for
+
+hrms/api/geofence.py:152 — same-root (fixed here)
+  The PWA's pre-flight. It calls `evaluate_geofence` and inherits the corrected
+  allowance, which is what stops the sheet warning somebody that it is about to
+  send them to an approver they do not need.
+hrms/overrides/employee_checkin_override.py:605 — same-root (fixed here)
+  The enforcement point on every punch. Same call, same inheritance. Neither
+  caller needed a change of its own: the rule lives in one function on purpose,
+  and that is why fixing it once fixed both.

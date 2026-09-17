@@ -136,11 +136,17 @@ export function previewGeofence({
 	}
 	const error = Number(accuracy) > 0 ? Number(accuracy) : 0
 	const metres = Number.isFinite(distance) ? distance : Infinity
+	// The allowance the reading buys: capped at 250 m, and capped is NOT zero
+	// one metre further on. Until 17 Sep 2026 both sides gave `error` up to the
+	// cap and nothing beyond it, so the same person 80 m from a 50 m fence was
+	// allowed at 250 m of reported error and sent to their approver at 251 m.
+	// Past 2000 m the reading places nobody and buys nothing at all.
+	const allowance = error > 2000 ? 0 : Math.min(error, 250)
 	let reason = null
 	if (!hasLocation) reason = "no_shift_location"
 	else if (!(radius > 0)) reason = "no_radius"
-	else if (error > 250 && !(metres <= radius && error <= 2000)) reason = "imprecise_location"
-	else if (metres > radius + error) reason = "outside_radius"
+	else if (error > 2000) reason = "imprecise_location"
+	else if (metres > radius + allowance) reason = "outside_radius"
 	const unchecked = reason === "no_shift_location" || reason === "no_radius"
 	const action = !reason || (unchecked && !strict) ? "allow" : strict ? "throw" : "require_remote"
 	console.debug("[geolocation] preview decision", action, reason)

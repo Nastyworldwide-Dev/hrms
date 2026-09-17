@@ -165,51 +165,54 @@ def evaluate_geofence(
 		"accuracy_m": accuracy,
 	}
 
-	if (
-		accuracy > ACCURACY_ALLOWANCE_CAP_M
-		and distance_m <= radius_m
-		and accuracy <= POINT_ESTIMATE_TRUST_CAP_M
-	):
-		# Too coarse to widen the fence, but the device's own best estimate is
-		# inside it. That estimate is the answer to "where are you", and the
-		# wide error bar is the receiver's problem, not evidence of absence.
-		logger.info(
-			"[geofence] inside on the point estimate — accuracy %.0fm past the allowance cap, distance=%.1fm radius=%dm",
-			accuracy,
-			distance_m,
-			radius_m,
-		)
-		return None
-
-	if accuracy > ACCURACY_ALLOWANCE_CAP_M:
-		# The fix is too coarse to place anyone: its point is outside the fence
-		# and the allowance that would carry it inside is not evidence — or it
-		# is kilometre-scale, where the point is not evidence either. Letting
-		# such a reading clear the fence is the direction that gets abused: an
-		# IP-geolocated desktop anywhere in the city reports coordinates near
-		# the city centre, which is "inside" for any site near it, by luck
-		# rather than by presence.
+	if accuracy > POINT_ESTIMATE_TRUST_CAP_M:
+		# Past the trust cap the number has stopped describing a position: an
+		# IP-geolocated desktop reports the provider's centroid, and landing
+		# inside a fence by that is luck rather than presence. Neither trusting
+		# it nor rejecting it is available from the data, so the reading is
+		# refused as a reading and the punch goes to whoever the shift's rules
+		# put in front of it.
 		context["reason"] = REASON_IMPRECISE_LOCATION
 		if strict:
 			logger.info(
-				"[geofence] strict throw — accuracy %.0fm exceeds the %dm cap (distance=%.1fm)",
+				"[geofence] strict throw — accuracy %.0fm exceeds the %dm trust cap (distance=%.1fm)",
 				accuracy,
-				ACCURACY_ALLOWANCE_CAP_M,
+				POINT_ESTIMATE_TRUST_CAP_M,
 				distance_m,
 			)
 			return ("throw", context)
 		logger.info(
-			"[geofence] route to remote approval — accuracy %.0fm exceeds the %dm cap",
+			"[geofence] route to remote approval — accuracy %.0fm exceeds the %dm trust cap",
 			accuracy,
-			ACCURACY_ALLOWANCE_CAP_M,
+			POINT_ESTIMATE_TRUST_CAP_M,
 		)
 		return ("require_remote", context)
 
-	# The device's own error bar widens the fence. Everything inside the sum is
-	# somewhere the employee could genuinely be standing while the reading says
-	# what it says, and a fence that rejects those is measuring the receiver,
-	# not the person.
-	if distance_m <= radius_m + accuracy:
+	# The allowance the reading buys — capped, and CAPPED IS NOT ZERO one metre
+	# further on. Until 17 Sep 2026 the allowance was `accuracy` up to the cap
+	# and nothing beyond it, so a reading one metre coarser than the cap lost
+	# the whole 250 m at once: the same person, standing in the same place 80 m
+	# from the centre of a 50 m fence, was allowed at 250 m of reported error
+	# and sent to remote approval at 251 m. The error bar was trusted when it
+	# placed them inside and discarded when it did not, which is not a rule
+	# about where anybody is.
+	#
+	# It never shrinks as the reading gets worse, and it never exceeds the cap,
+	# so a kilometre of error still cannot widen the fence by a kilometre.
+	allowance = min(accuracy, float(ACCURACY_ALLOWANCE_CAP_M))
+
+	# Everything inside the sum is somewhere the employee could genuinely be
+	# standing while the reading says what it says, and a fence that rejects
+	# those is measuring the receiver, not the person.
+	if distance_m <= radius_m + allowance:
+		if accuracy > ACCURACY_ALLOWANCE_CAP_M:
+			logger.info(
+				"[geofence] inside on a coarse reading — accuracy %.0fm, allowance %.0fm, distance=%.1fm radius=%dm",
+				accuracy,
+				allowance,
+				distance_m,
+				radius_m,
+			)
 		return None
 
 	if strict:

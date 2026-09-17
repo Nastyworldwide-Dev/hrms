@@ -207,3 +207,22 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:39:26Z EVIDENCE: 6 behaves — family hunt: class=a writer and a reader agreeing on the TEXT of a marker while disagreeing; 37 call site(s) given verdicts, 1 same-root ⟂3cf557ee1323
 - 2026-09-17T05:39:29Z COMMIT: a9519ef65 fix(checkin): the skip reason is written where the readers look for it → review dispatched
 - 2026-09-17T10:35:00Z EVIDENCE: rung 2 — review of a9519ef65 NEXT_ACTION DEPLOY, no Critical, no Warning. It confirmed end to end that a burst-skipped punch is now found by BOTH skip-reason readers and offered "unskip", that the module-scope import has no cycle on the real interpreter, that the resolved-type trace is untouched, and that the new test reads BOTH sides from source so reverting the fix would fail it.
+- 2026-09-17T05:42:06Z PUSH: nz-glass @ 926e404ae
+- 2026-09-17T05:42:07Z COMMIT: 926e404ae chore(plans): record the final review verdict → review dispatched
+- 2026-09-17T05:42:21Z PUSH: nz-glass @ 559b9608a
+- 2026-09-17T05:42:21Z COMMIT: 559b9608a docs(glass): handoff for the one-row-per-day work → review dispatched
+- 2026-09-17T11:00:00Z REPAIR: geofence — the allowance was `accuracy` up to 250 m and ZERO beyond, so 251 m of reported error cost 250 m of tolerance. Measured before the fix: the same person 80 m from a 50 m fence was ALLOWED at 250 m and sent to remote approval at 251 m. Now min(accuracy, 250) for any reading inside the 2000 m trust cap; past the cap nothing changes.
+- 2026-09-17T11:00:00Z EVIDENCE: rung 2 — 7 tests RED first, green after; the cross-language parity property test caught the frontend preview drifting the moment the server changed, and both sides now agree case for case. test_geofence_coordinate_contract's 5 subtest failures are pre-existing — identical count on HEAD's copies of both files.
+- 2026-09-17T06:44:37Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:44:37Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:44:57Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:44:57Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:45:10Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:45:10Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:45:33Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:45:33Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:46:04Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:46:04Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
+- 2026-09-17T06:46:06Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 2 call site(s) given verdicts, 5 same-root ⟂c74f27e58591
+- 2026-09-17T06:46:23Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-17T06:46:23Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02

@@ -1,79 +1,75 @@
-# PLAN — one day, one attendance row
+# PLAN — the geofence allowance has a cliff in it
 
-Owner, 17 Sep 2026, approving the three-item list and nothing more: "go and
-finish all". Earlier in the same conversation he cut the scope himself — "i
-think we are overengineering most of what we did today and prev. we could just
-simplify things. manual things base on report. auto things on what can be done
-auto" — and ruled out the one policy change on the table: **"no on gap"**, so
-hours stay on *Every Valid Check-in and Check-out* and a punched-out gap is
-never paid.
+Owner, 17 Sep 2026: "i still get report regarding geofence, some experience had
+to remote request despite in the area for check in. accuracy problems. or idk.
+do check."
 
-## The three items, in his words
+## Measured, not guessed
 
-1. **Auto** — collapse tap bursts: punches seconds apart are one tap, not a
-   session.
-2. **Auto** — cancel the duplicate attendance row where one row holds the
-   punches and the other was made by the system. The resolver for this already
-   exists (`hrms.sync.erp_backfill.resolve_duplicates`) and nothing calls it.
-3. **Manual** — "delete the record (duplicate), tick 2 to link as one", from
-   the report, and the system does the rest on Attendance and Shift Attendance.
+Run against the real function, same person, standing 80 m from the centre of a
+50 m fence:
 
-Item 3's "tick 2 to link as one" already exists (`pair_taps`). What was missing
-is the other half: a day carrying two rows could not be reduced to one from
-anywhere. The report shows one row, the Attendance list shows two, and the
-master edit refuses such a day outright ("edit it in Desk").
+    accuracy 249 m -> ALLOWED
+    accuracy 250 m -> ALLOWED
+    accuracy 251 m -> require_remote (imprecise_location)
+
+One metre of extra reported error costs 250 metres of tolerance.
+
+## Why
+
+The allowance a reading buys was `accuracy`, up to `ACCURACY_ALLOWANCE_CAP_M`
+(250 m), and **zero** beyond it. Between that cap and
+`POINT_ESTIMATE_TRUST_CAP_M` (2000 m) the code already treats the device's own
+estimate as meaningful — it says so, and it allows a point that lands inside
+the radius — but it gave that same estimate no tolerance at all the moment the
+point landed a few metres outside.
+
+Trusted when it helps, discarded when it does not. A phone indoors reporting
+400 m of error, with its point estimate 80 m from the office centre, was sent
+to its approver; the error bar that would have covered the whole building
+bought nothing.
 
 ## FLOW
 
-**3 first**, because it is manual, reversible and unblocks the reported day
-without anything writing by itself.
+`hrms/utils/geofence.py::evaluate_geofence`, and its mirror
+`frontend/src/utils/geolocation.js::previewGeofence` (a property test asserts
+the two agree case for case, and it caught the drift immediately):
 
-* `hrms/api/attendance_fix_day.py` gains `remove_duplicate_row(attendance,
-  reason)` — HR only, reason required, the existing day guard first (paid,
-  leave, half-day leave, Attendance Request, HR-removed, future, running
-  shift), then a pure `duplicate_refusal` that KEEPS the row the day's punches
-  are linked to. The row is CANCELLED, never deleted, and `_finish` re-marks
-  the day through the one engine, so Attendance, Shift Attendance, OT and the
-  PWA all follow from the punches.
-* `undo_fix` refuses this one action in a sentence rather than pretending:
-  Frappe has no un-cancel, and the day was already rebuilt from its punches.
-* `hrms/public/js/fix_day.bundle.js` offers the button only on a day that
-  really has more than one live row.
+    allowance = 0                       when accuracy > 2000 m   (unchanged)
+    allowance = min(accuracy, 250 m)    otherwise                (was: accuracy
+                                                                  under 250,
+                                                                  zero over it)
 
-**2 next** — the existing resolver is wired into the automatic pass, with its
-own switch and the recovery's day protections, so the days nobody opens are
-reduced to one row too.
+Past the trust cap nothing changes: an IP-level fix places nobody, and landing
+inside a fence by a provider's centroid is luck, not presence — still
+`imprecise_location`, still a throw in strict mode.
 
-**1 last** — a burst guard, so the shape stops being created. The client-side
-60-second duplicate guard and the server deciding IN/OUT already stop the
-common case since 11 Sep; this closes the alternating burst
-(IN 18:09:14, OUT 18:09:26, IN 18:09:30) that those two do not.
-
-MOCKUP: NOT NEEDED (item 3 adds one button to an existing Desk screen, in the
-same style as the five beside it, and one standard Frappe dialog. Items 1 and 2
-have no UI at all.)
+MOCKUP: NOT NEEDED (no screen, control or copy changes. The employee sees the
+same check-in sheet; it stops sending them to an approver they do not need.)
 
 ## EXPECTED OUTPUT
 
-* Norazlin, 4 Sep: HR opens Fix Day, removes the 7PM-3.30AM row, and the day
-  rebuilds from its five punches on 9AM-6PM. One row, everywhere.
-* A day with one row: the button is not offered.
-* The row holding the punches: refused, naming the row to remove instead.
-* Two rows holding the same punches: refused — move a tap first.
-* A paid day, a leave, a day HR removed: the existing sentence, unchanged.
-* Hours, status and OT are never typed by any of this.
+* The reported case: allowed at 251 m of error, as it already was at 250 m.
+* The allowance never shrinks as a reading gets worse (monotonic).
+* A kilometre of error still widens a fence by at most 250 m.
+* A sharp reading well outside is still outside.
+* A reading past 2000 m still places nobody, even when it lands inside.
+* Strict mode still throws exactly where lenient routes to approval.
 
-## Risk
+## The trade-off, stated
 
-Item 3 writes only by cancelling one Attendance row, behind the day guard that
-already refuses anything paid or human-owned, and every action is logged with
-the day before and after. Items 1 and 2 are automatic and therefore ship with
-their own switch and the recovery's protections; neither touches a day the
-guards hold back.
+This is more permissive than today for readings between 250 m and 2000 m of
+error: such a reading now buys up to 250 m of tolerance instead of none. In
+lenient mode that means fewer remote approvals for people who are where they
+say they are — the reported complaint. In strict mode it means fewer refusals.
+It cannot be used to clear a fence from far away: the allowance is capped, and
+anyone beyond radius + 250 m is still outside.
 
 ## Pipeline Summary
 
-owner approval (above) -> red tests first for each item -> implementation ->
-mapped + neighbour tests -> commit per item with its family ledger ->
-hook-dispatched review per commit -> push -> the owner releases it. No schema
-change. Item 2 may need a patch to queue one pass; item 3 needs none.
+owner report -> measured on the real function -> this plan -> red tests first
+(7 cases: the exact metre it flipped, monotonicity, the cap still capping, and
+four that pin what must not change) -> the change on both sides -> the
+cross-language parity property test -> commit with the family ledger ->
+hook-dispatched review -> push -> the owner releases. No schema change, no
+patch, no data repair; the next punch is decided by the new rule.

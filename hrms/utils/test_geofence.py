@@ -178,14 +178,23 @@ class TestAccuracyAllowance(unittest.TestCase):
 				f"strict={strict}",
 			)
 
-	def test_a_coarse_reading_whose_point_is_outside_still_cannot_clear_the_fence(self):
-		# The allowance is what would have carried it inside, and past the cap
-		# the allowance is not evidence. Unchanged.
-		action, ctx = evaluate_geofence(
-			False, has_shift_location=True, radius_m=100, distance_m=150, accuracy_m=600
+	def test_a_coarse_reading_buys_the_capped_allowance_and_no_more(self):
+		"""Amended 17 Sep 2026. This used to assert that a coarse reading whose
+		point lands outside buys NOTHING, which is what put the cliff in: the
+		same person 80 m from a 50 m fence was allowed at 250 m of reported
+		error and refused at 251 m. A reading the code trusts at all now buys
+		`min(accuracy, ACCURACY_ALLOWANCE_CAP_M)`, so 50 m outside a fence with
+		600 m of error is inside the allowance — and 300 m outside is not.
+		"""
+		self.assertIsNone(
+			evaluate_geofence(False, has_shift_location=True, radius_m=100, distance_m=150, accuracy_m=600),
+			"50 m outside, with 600 m of error, is somewhere they could be standing",
 		)
-		self.assertEqual(action, "require_remote")
-		self.assertEqual(ctx["reason"], REASON_IMPRECISE_LOCATION)
+		action, ctx = evaluate_geofence(
+			False, has_shift_location=True, radius_m=100, distance_m=400, accuracy_m=600
+		)
+		self.assertEqual(action, "require_remote", "the allowance is capped, so this is still outside")
+		self.assertEqual(ctx["reason"], REASON_OUTSIDE_RADIUS)
 
 	def test_a_kilometre_scale_fix_is_never_presence_even_when_its_point_is_inside(self):
 		# IP geolocation: the point is the provider's centroid, not the person.
