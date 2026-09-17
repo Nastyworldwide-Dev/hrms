@@ -91,3 +91,31 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 	assert.equal(notices.length, 1)
 	assert.match(notices[0].text, /failed.*try again/)
 })
+
+test("the button never falls back to Check In while the log reloads", () => {
+	// Reported 17 Sep 2026: "they do checked in, sometimes their nadi pwa glitch
+	// or show cached showing, they need to clock in again (their clock in goes
+	// missing, suppose to show clock out)".
+	//
+	// `lastLog` answered `{}` for the whole of any reload — a socket
+	// list_update, a pull-to-refresh, the app resuming, the reload after a
+	// punch — and on 4G that window is seconds. `liveAction` reads `{}` as "no
+	// open session" and renders **Check In** on somebody who is checked in.
+	// They tap it, the server correctly records a check-OUT, and from their
+	// side the check-in went missing. The stored punch was right; the label
+	// lied. Holding the last row the list actually delivered keeps it honest.
+	assert.match(
+		src,
+		/const lastKnownLog = shallowRef\(null\)/,
+		"the last delivered row must be kept across a reload"
+	)
+	const idx = src.indexOf("const lastLog = computed(")
+	assert.ok(idx > 0, "lastLog exists")
+	const body = src.slice(idx, src.indexOf("\n})", idx))
+	assert.doesNotMatch(
+		body,
+		/loading \|\| !checkins\.data\) return \{\}/,
+		"a reload must not read as 'no open session'"
+	)
+	assert.match(body, /lastKnownLog\.value/, "lastLog must fall back to the last known row")
+})

@@ -1,24 +1,36 @@
-# FAMILY — a test drove a seam the code no longer uses
+# FAMILY — the button reads "Check In" to somebody who is checked in
 
-CLASS: a suite that reaches the code through a specific transport. b8af8c241
-moved the selfie upload off a raw `fetch` onto
-`hrms.api.remote_checkin.upload_selfie`; the location suite's harness still held
-the upload open through its `fetch` binding, so the two tests that pin "a selfie
-upload outliving the location fix aborts the punch" stopped exercising anything
-and started failing. I ran only `CheckInPanel.test.js` after that change and did
-not see it.
+CLASS: a derived label that treats "I do not know yet" as "no". `lastLog`
+answered `{}` for the whole of any list reload — a socket list_update, a
+pull-to-refresh, the app resuming, the reload after a punch — and `liveAction`
+reads `{}` as "no open session", which renders **Check In**. On 4G that window
+is seconds long.
 
-ROOT CAUSE: the harness, not the component. The invariant is unchanged and
-still worth pinning; it just has to be driven where the upload now lives.
+Reported 17 Sep 2026 by the owner, from what staff report: "they do checked in,
+sometimes their nadi pwa glitch or show cached showing, they need to clock in
+again (their clock in goes missing, suppose to show clock out)".
 
-## The two tests, and everything else that drives the upload
+What then happens is the SAFE half of an earlier fix: they tap, and the server
+decides the type for itself (`resolve_punch_type`), so it records a check-OUT.
+The stored punch is right. The label lied, and from the employee's side their
+check-in vanished.
 
-frontend/src/components/__tests__/CheckInPanel.location.test.js:342 — same-root (fixed here)
-  "a selfie upload outliving the fix aborts the punch and releases the camera
-  button". Now held open by the resource stub for the upload_selfie URL.
-frontend/src/components/__tests__/CheckInPanel.location.test.js:367 — same-root (fixed here)
-  "an old upload cannot stop the camera belonging to a reopened sheet". Same seam.
-frontend/src/components/__tests__/CheckInPanel.test.js — not-affected
-  Source-asserted; it reads the file's text and never drives a transport.
-hrms/tests/test_selfie_upload_survives_a_public_file_lockdown.py — not-affected
-  Covers the server endpoint, which is the other half of the same change.
+ROOT CAUSE: the fallback value, not the reload. Holding the last row the list
+actually delivered keeps the label honest while the list catches up.
+
+## Everything that reads this state
+
+frontend/src/components/CheckInPanel.vue:414 (`lastLog`) — same-root (fixed here)
+  The fallback. Now the last delivered row, not `{}`.
+frontend/src/components/CheckInPanel.vue:476 (`liveAction`) — same-root (fixed here)
+  The reader that turns `{}` into "Check In". Unchanged in itself: it is right
+  about what it is given, and is now given the truth.
+frontend/src/components/CheckInPanel.vue:494 (`committedAction`) — not-affected
+  Already fixed for the OTHER half of this on 11 Sep: the sheet commits to one
+  action when it opens so a reload underneath it cannot flip Confirm. That
+  covered the open sheet; this covers the button behind it.
+hrms/api/remote_checkin.py::resolve_punch_type — not-affected
+  The server has never taken the client's word for the type, which is why this
+  was a display defect and not a data one. Left exactly as it is.
+hrms/api/remote_checkin.py::get_unresolved_stale_in — not-affected
+  The "Forgot to check out?" banner is server-resolved and never read `lastLog`.

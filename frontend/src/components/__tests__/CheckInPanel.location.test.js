@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { readFileSync } from "node:fs"
 import { compileScript, parse } from "@vue/compiler-sfc"
-import { computed, nextTick, reactive, ref } from "vue"
+import { computed, nextTick, reactive, ref, shallowRef, watch } from "vue"
 import * as geolocation from "../../utils/geolocation.js"
 
 const source = readFileSync(new URL("../CheckInPanel.vue", import.meta.url), "utf8")
@@ -68,7 +68,12 @@ function panel() {
 		return resource
 	}
 	const dayjs = () => ({ format: () => "2027-01-15 08:00:00" })
+	// Every import the component uses must be bound REALLY here: anything left
+	// out becomes `{}` below, and `{}(...)` throws the moment the setup body
+	// runs — which reads as 27 unrelated location failures.
 	const bindings = {
+		shallowRef,
+		watch,
 		fetch: async (url) =>
 			url.startsWith("data:")
 				? { blob: async () => new Blob([]) }

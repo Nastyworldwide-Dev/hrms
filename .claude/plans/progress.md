@@ -233,3 +233,7 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:27:35Z COMMIT: f27a0e402 fix(attendance): a leave row is never repurposed by an on-duty request → review dispatched
 - 2026-09-17T04:30:41Z PUSH: nz-glass @ 783d241c5
 - 2026-09-17T04:30:41Z COMMIT: 783d241c5 chore(plans): record the review verdicts on the attendance fixes → review dispatched
+- 2026-09-17T04:45:11Z COMMIT: 05b42c583 test(checkin): drive the selfie timing tests where the upload now happens → review dispatched
+- 2026-09-17T07:00:00Z REPAIR: the owner's report that a staff member's clock-in "goes missing" and the app shows Check In when it should show Check Out. Not a cache and not a lost punch: lastLog answered {} for the whole of any list reload and liveAction reads {} as "no open session". The server still decided the type, so the punch stored was a correct check-OUT — the label was the only thing wrong, and it is what makes people tap again.
+- 2026-09-17T07:00:00Z EVIDENCE: rung 2 — 1 test RED first, green after; CheckInPanel + location suites 32/32, including the two selfie-timing tests that b8af8c241 had silently detached from the code (fixed in the commit before this one).
+- 2026-09-17T04:45:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8

@@ -219,7 +219,7 @@ import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, nextTick, ref, onBeforeUnmount } from "vue"
+import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { modalController } from "@ionic/vue"
 
@@ -411,8 +411,29 @@ const fetchRemoteRequest = createResource({
 	},
 })
 
+// The last row the list actually delivered. A reload — a socket list_update, a
+// pull-to-refresh, the app resuming, the reload after a punch — leaves
+// `checkins.data` unreadable for as long as the round trip takes, and on 4G
+// that is seconds. `lastLog` used to answer `{}` for that whole window;
+// `liveAction` reads `{}` as "no open session" and renders **Check In** on
+// somebody who is checked in. They tap it, the server correctly records a
+// check-OUT, and from their side the check-in went missing (reported 17 Sep
+// 2026). The stored punch was right, the label lied.
+//
+// Holding the last delivered row keeps the label honest while the list catches
+// up. It is only ever a label: `resolve_punch_type` still decides the type
+// server-side, and the sheet still commits to one action when it opens.
+const lastKnownLog = shallowRef(null)
+watch(
+	() => checkins.data,
+	(rows) => {
+		if (rows) lastKnownLog.value = rows[0] ?? null
+	},
+	{ immediate: true }
+)
+
 const lastLog = computed(() => {
-	if (checkins.list.loading || !checkins.data) return {}
+	if (checkins.list.loading || !checkins.data) return lastKnownLog.value || {}
 	const row = checkins.data[0]
 	// Diagnostic for the "Last check-out shown after a check-in" bug — when
 	// the displayed log_type doesn't match what the user just submitted, the
