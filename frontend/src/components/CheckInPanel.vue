@@ -428,8 +428,7 @@ watch(
 	() => checkins.data,
 	(rows) => {
 		if (rows) lastKnownLog.value = rows[0] ?? null
-	},
-	{ immediate: true }
+	}
 )
 
 const lastLog = computed(() => {
@@ -1119,6 +1118,13 @@ const runSubmitLog = async (logType) => {
 	await punchCheckin.submit(payload, {
 		async onSuccess(doc) {
 			punchOk = true
+
+			// The label must be right NOW, not one round trip from now. The
+			// reload below is the authority, but until it lands `lastKnownLog`
+			// still holds the row this punch just closed — which would render
+			// "Check Out" to somebody who has just checked out: the same lie,
+			// reversed. The stored row is already in hand, so use it.
+			if (doc) lastKnownLog.value = doc
 
 			// Refresh the log list so lastLog (and the stale "Forgot to check out"
 			// banner / button state) reflect the log just inserted. The socket

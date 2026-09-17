@@ -34,3 +34,20 @@ hrms/api/remote_checkin.py::resolve_punch_type — not-affected
   was a display defect and not a data one. Left exactly as it is.
 hrms/api/remote_checkin.py::get_unresolved_stale_in — not-affected
   The "Forgot to check out?" banner is server-resolved and never read `lastLog`.
+
+## Second pass, same day — the review's Warning
+
+Holding the last delivered row fixed the label in ONE direction. After a
+check-OUT succeeds the reload is a round trip, and until it lands the held row
+is still the IN that punch just closed — so the button would read "Check Out"
+to somebody who has just checked out. The same lie, reversed, on a narrower
+window.
+
+frontend/src/components/CheckInPanel.vue:1120 (`onSuccess`) — same-root (fixed here)
+  The punch response already carries the stored row, so it sets the label
+  immediately and the reload stays the authority. Regression test added for the
+  OUT direction beside the IN one.
+frontend/src/components/CheckInPanel.vue:427 (the `watch`) — same-root (fixed here)
+  `{ immediate: true }` was dead: `checkins` has no cache key and `data` starts
+  null, so it could never seed anything. Dropped rather than left for a reader
+  to puzzle over.

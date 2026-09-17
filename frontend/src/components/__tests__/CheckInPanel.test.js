@@ -119,3 +119,19 @@ test("the button never falls back to Check In while the log reloads", () => {
 	)
 	assert.match(body, /lastKnownLog\.value/, "lastLog must fall back to the last known row")
 })
+
+test("the punch's own answer updates the label before the reload lands", () => {
+	// The held-over row fixes the label in one direction only. After a
+	// check-OUT succeeds, the reload is a round trip, and until it lands the
+	// held row is still the IN this punch just closed — so the button would
+	// read "Check Out" to somebody who has just checked out: the same lie,
+	// reversed. The punch response already carries the stored row, so use it.
+	const idx = src.indexOf("async onSuccess(doc) {")
+	assert.ok(idx > 0, "the punch success handler exists")
+	const body = src.slice(idx, src.indexOf("checkins.reload()", idx))
+	assert.match(
+		body,
+		/lastKnownLog\.value = doc/,
+		"the stored punch must set the label before the reload is asked for"
+	)
+})
