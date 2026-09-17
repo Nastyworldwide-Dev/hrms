@@ -598,8 +598,14 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 			elif entry["action"] == "unskip":
 				if not cint(frappe.db.get_value("Employee Checkin", name, "skip_auto_attendance")):
 					continue
+				# The noise verdict goes with the skip: a tap that counts again is
+				# not a judgement, and a tick left behind would make the NEXT
+				# skip of that punch read as noise when nobody said so.
 				frappe.db.set_value(
-					"Employee Checkin", name, "skip_auto_attendance", 0, update_modified=False
+					"Employee Checkin",
+					name,
+					{"skip_auto_attendance": 0, "skipped_as_noise": 0},
+					update_modified=False,
 				)
 			else:
 				frappe.db.set_value("Employee Checkin", name, "attendance", None, update_modified=False)

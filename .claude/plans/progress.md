@@ -221,3 +221,13 @@ reach; its shift stamp carries the clear now.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 16 suites green; the one failure in
 test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
 NEXT: the owner deploys.
+- 2026-09-17T11:23:55Z PUSH: nz-glass @ 5d5282203
+REPAIR: my own sweep (told the reviewer to assume the list is still wrong) found
+the sixth: attendance_day_audit's `unskip` repair cleared skip_auto_attendance
+and left the verdict. Fixed, and added to both the census and the clearers test.
+Also confirmed by reading: master_edit's second "skip_auto_attendance": 0 is an
+in-memory PREVIEW stamp for a what-if calculation, not a write; and there is
+exactly one _finish(..., "rebuild_day", ...) call and it passes plan=plan, so no
+rebuild entry is invisible to the backfill.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 14 suites green.
+NEXT: the owner deploys once the verification comes back.

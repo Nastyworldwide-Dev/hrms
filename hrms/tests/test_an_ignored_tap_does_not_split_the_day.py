@@ -177,6 +177,9 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 	  * utils/hr_removed_day.py and api/attendance_master_edit.py — a day HR
 	    removed in Shift Attendance.
 
+	CLEARS IT WITH THE SKIP, like every other un-skipper:
+	  * utils/attendance_day_audit.py — the audit's `unskip` repair.
+
 	READS THE TICK RATHER THAN SETTING IT, and listed because this census cannot
 	tell a filter from a write:
 	  * patches/v16_0/add_skipped_as_noise_field.py — selects the taps that are
@@ -191,6 +194,7 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 			"hrms/hr/doctype/employee_checkin/employee_checkin.py",
 			"hrms/overrides/remote_checkin_request_hooks.py",
 			"hrms/patches/v16_0/add_skipped_as_noise_field.py",
+			"hrms/utils/attendance_day_audit.py",
 			"hrms/utils/hr_removed_day.py",
 		}
 	)
@@ -241,6 +245,7 @@ class TheVerdictGoesWithTheSkipCase(unittest.TestCase):
 		("hrms/api/attendance_fix_day.py", "def restore_tap("),
 		("hrms/api/attendance_master_edit.py", "def _set_skip("),
 		("hrms/utils/attendance_recovery.py", 'elif action == "unskip":'),
+		("hrms/utils/attendance_day_audit.py", 'elif entry["action"] == "unskip":'),
 	)
 
 	def test_the_one_tap_writer_clears_it_for_every_caller(self):
