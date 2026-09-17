@@ -1192,7 +1192,11 @@ def _rebuild(employee, day, reason) -> dict:
 	"""The one engine re-mark every other path uses. Never a second calculation here."""
 	from hrms.utils.day_remark import remark_day
 
-	answer = remark_day(employee, day, reason)
+	# HR is the one asking, on one day, with a reason that is already in the fix
+	# log: the "a person keyed this row" hold does not apply to the person it
+	# protects. Without this the screen corrected every tap on Norazlin's
+	# 4 September and the day stayed Absent (owner, 17 Sep 2026).
+	answer = remark_day(employee, day, reason, hr_asked=True)
 	logger.info("[attendance_fix_day] re-mark of %s on %s: %s", employee, day, answer)
 	return answer
 

@@ -273,3 +273,13 @@ All three closed, plus a refactor ticket for the hotspot.
 EVIDENCE: 2 (mapped) - 7 new tests red before, green after; 154 passed across
 the seven fix-day suites.
 NEXT: re-review, then the owner deploys.
+REPAIR: the Fix Day rebuild would have left the complained-about days exactly
+as they were. attendance_recovery.protected_reason holds any HR-owned row -
+right for the nightly job, wrong for HR's own button - and Norazlin's row is
+"Absent (HR)", so correcting every tap on it would still have ended in Absent,
+0 hours, no OT. protected_reason now takes hr_asked and waives ONLY that hold.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 new tests red before, green after;
+14 suites green including the recovery engine (96), day_remark (28), lone-in
+closer (29) and the ownership classifier (40).
+NEXT: review, then the owner deploys; after deploy, confirm on Norazlin's 4 Sep
+that the day reads Present with hours and that the OT is claimable in Nadi.

@@ -131,7 +131,9 @@ def recovery_window(from_date, to_date, today: date) -> Window:
 	return Window(start, end, excluded, requested_end)
 
 
-def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False, request=None) -> str | None:
+def protected_reason(
+	day, today: date, rows, financial=None, removed_by_hr=False, request=None, hr_asked=False
+) -> str | None:
 	"""Why this employee-day must not be rebuilt, or None. Pure.
 
 	`rows` are the day's Attendance rows (any docstatus); `financial` is what
@@ -160,8 +162,15 @@ def protected_reason(day, today: date, rows, financial=None, removed_by_hr=False
 			return f"{name} is a half-day leave"
 		if row.get("attendance_request"):
 			return f"{name} comes from an Attendance Request"
+		# `hr_asked` is HR pressing a button on this one day, with a reason, in
+		# the fix log, undoable. The owner hold exists to stop the NIGHTLY JOB
+		# overwriting a day a person keyed by hand — there is nobody to protect
+		# HR from when HR is the one asking, and holding here is what would have
+		# left Norazlin's 4 September Absent after HR had corrected every tap on
+		# it (owner, 17 Sep 2026). A row owned by a REQUEST is not HR's
+		# handiwork and still holds; so does every other protection above.
 		held = owner_hold(row)
-		if held:
+		if held and not (hr_asked and _is_hr_hold(row)):
 			return held
 	if request:
 		return request
@@ -216,6 +225,22 @@ def owner_hold(row) -> str | None:
 	if owner == getattr(module, "OWNER_REQUEST", "request"):
 		return f"{name} comes from a leave or request ({reason})"
 	return f"{name} {BY_HAND} ({reason})"
+
+
+def _is_hr_hold(row) -> bool:
+	"""Whether this row's hold is "a person made it", rather than a request. Pure.
+
+	Only an HR/unsure hold is waived when HR asks; a leave or attendance request
+	speaks for the day whoever is pressing the button, and is cancelled first.
+	"""
+	module, verdict = _classify(row)
+	if module is None or verdict is None:
+		return True  # the old reading: a blank tick means a person's row
+	owner = verdict[0]
+	return owner in (
+		getattr(module, "OWNER_HR", "hr"),
+		getattr(module, "OWNER_UNSURE", "unsure"),
+	)
 
 
 #: Status ranking for the never-worse guard: a rebuild may raise it, never lower it.
@@ -389,7 +414,7 @@ def _request_cover(employee, day) -> str | None:
 	return request_covered_days(employee, day, day).get(getdate(day))
 
 
-def _day_protection(employee, day, for_update, ignore=None) -> str | None:
+def _day_protection(employee, day, for_update, ignore=None, hr_asked=False) -> str | None:
 	rows = [r for r in _attendance_rows(employee, day) if r.get("name") != ignore]
 	return protected_reason(
 		day,
@@ -398,6 +423,7 @@ def _day_protection(employee, day, for_update, ignore=None) -> str | None:
 		_financial(employee, day, rows, for_update),
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
 		request=_request_cover(employee, day),
+		hr_asked=hr_asked,
 	)
 
 

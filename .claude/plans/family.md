@@ -1,54 +1,45 @@
-# FAMILY — one press rebuilds a day
+# FAMILY — HR's own press was protected from HR
 
-CLASS: a screen that makes the person do the machine's job. Five dialogs and
-five typed reasons to restore one day to one session, when the rule that decides
-it has no judgment in it at all.
+CLASS: a guard that cannot tell WHO is asking. `protected_reason` holds any row
+the ownership classifier calls HR's — the rule that stops the nightly job
+overwriting a day a person keyed by hand. It was asked the same way by the job
+and by HR's own button, so HR could correct every tap on a day and the re-mark
+would decline and leave it exactly as found.
 
-Owner ruling, 17 Sep 2026: "the 11 am out is possible accidental and should be
-fine for us to fix by removing it alongside the broken glitch stuff. applicable
-to any scenarios." So: first counted IN opens the day, last counted OUT closes
-it, everything between is noise, a row with no punches is cancelled.
+Live proof: Norazlin's HR-ATT-2026-15657 reads "Absent (HR)". Cancel the ghost,
+pair the session, ignore the glitch taps — and the day stays Absent, 0 hours,
+no OT, still wrong on the calendar and unclaimable in Nadi. The owner's actual
+requirement (17 Sep 2026) is the opposite: "the system must automate things
+that it needs, like their total working hours, if they have ot? make sure it
+can be claim in their nadi pwa, and calendar wont show absent, half day".
 
-Added: `day_plan` (pure), `plan_day` (read), `rebuild_day` (write), and one
-primary button that shows the plan before applying it.
+Changed: `protected_reason(..., hr_asked=False)` waives ONLY the "a person made
+this row" hold, and only when HR is the one asking.
 
-Call sites the machine lists for the guard, the tap writer and the finish:
+Call sites the machine lists for protected_reason / _day_protection / remark_day:
 
-* hrms/api/attendance_fix_day.py::rebuild_day — same-root: new, and it goes
-  through the same `_lock_and_guard`, `_write_tap`, `_comment` and `_finish` as
-  the five single actions, so every existing protection applies unchanged.
-* hrms/api/attendance_fix_day.py::pair_taps, ignore_tap, restore_tap, move_tap,
-  add_tap, remove_duplicate_row — not-affected: untouched, and they are what HR
-  uses on the days `day_plan` refuses.
-* hrms/api/attendance_fix_day.py::undo_fix — same-root: a rebuild is one log
-  entry, so undoing it reverses the whole pass. The cancelled rows stay
-  cancelled, which `undo_fix` already says in a sentence.
-* hrms/hr/doctype/hr_day_fix_log — not-affected: `action` is free text by
-  design, so a seventh writer needs no schema change.
+* hrms/utils/attendance_recovery.py::protected_reason — same-root (the rule).
+* hrms/utils/attendance_recovery.py::_day_protection — same-root (passes it on).
+* hrms/utils/day_remark.py::remark_day, _remark_owning_the_day, _remark_once —
+  same-root (the chain HR's press travels down). Default False, so every
+  existing caller behaves exactly as before.
+* hrms/utils/day_remark.py::remark_day_after_commit — not-affected, and a test
+  pins it: the nightly path must never ask as HR.
+* hrms/api/attendance_fix_day.py::_rebuild — same-root: the one place that asks
+  as HR, which is every action on the Fix Day screen.
+* hrms/sync/checkin_import.py — not-affected: an import is the machine, and it
+  calls remark_day without the flag.
 * hrms/utils/attendance_endgame.py, hrms/sync/erp_backfill.py — not-affected:
-  the automatic resolver keeps its own rule; this is HR's press.
-* hrms/public/js/fix_day.bundle.js — same-root: the button and the plan.
+  automatic passes, unchanged, still held by the owner rule as designed.
 
-HOTSPOT: six fixes in 90 days here and three on the bundle. Refactor ticket
-filed, not done inline: .claude/plans/ticket-attendance-fix-day-split.md
-
-REVIEW OF d00b4de62 — three holes, all closed before deploy:
-* the planner built a session with NO length cap while `pair_taps` refuses any
-  span over MAX_PAIR_GAP_HOURS. Taps at 00:05 and 23:55 became a 24-hour day and
-  the engine would have priced it. It asks `pair_refusal` now — the same rule,
-  not a second copy of the number.
-* two live rows BOTH holding punches is a split shift, not a ghost duplicate.
-  Merging them would have re-stamped the second shift's closing tap onto the
-  first and swallowed the real gap as noise. Refused, by hand from here.
-* `undo_fix` refused only `remove_duplicate_row` for the un-cancel it cannot do.
-  A rebuild can cancel rows too, so the two share CANCELLING_ACTIONS and the
-  plan is written to the LOG (not just the answer) so the undo can tell whether
-  this pass actually cancelled anything.
+WHAT IS NOT WAIVED, and a test for each: a draft, a leave, a half-day leave, an
+attendance request, a row owned by a REQUEST, a day HR removed in Shift
+Attendance, an approved payout or submitted payroll, a live request over the
+day, a running shift, today or later.
 
 LOCK:
-* regression (the instance): hrms/tests/test_fix_day_rebuilds_a_day.py drives
-  Norazlin's real 4 September through the planner.
-* invariant (the class): the planner REFUSES rather than guesses — no IN, no
-  OUT, an OUT before the IN, no counted taps, or two rows with no punches
-  anywhere — and a refused plan writes nothing. `rebuild_day` is asserted to
-  type no hours, no overtime and no status, like the other six actions.
+* regression (the instance): hrms/tests/test_hr_asked_for_this_day.py drives
+  Norazlin's row shape — Absent, auto_attendance 0, classifier says HR — and
+  asserts the hold stands for the job and lifts for HR.
+* invariant (the class): the flag is asserted to be wired end to end (a
+  parameter nothing passes fixes nothing) AND absent from the nightly path.

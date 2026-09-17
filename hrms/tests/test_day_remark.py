@@ -493,7 +493,7 @@ class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
 
 		calls, answer = [], final if final is not None else {"action": "remarked"}
 
-		def once(employee, day, reason=""):
+		def once(employee, day, reason="", hr_asked=False):
 			calls.append(day)
 			if len(calls) <= deadlocks:
 				raise _Deadlock()
@@ -537,7 +537,7 @@ class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
 
 		calls = []
 
-		def once(employee, day, reason=""):
+		def once(employee, day, reason="", hr_asked=False):
 			calls.append(day)
 			raise ValueError("boom")
 
