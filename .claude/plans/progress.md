@@ -277,3 +277,13 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T03:02:56Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 4 extra test file(s) ⟂36d20de2ec08
 - 2026-09-17T03:03:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 11 file(s) ⟂a204f4f4a3bd
 - 2026-09-17T03:03:12Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 4 extra test file(s) ⟂36d20de2ec08
+- 2026-09-17T03:03:16Z COMMIT: e3ef2f4de fix(approvals): nobody approves their own request while somebody is above them → review dispatched
+- 2026-09-17T03:40:00Z REPAIR: review of e3ef2f4de found the fix closed the API door only — the Desk approves by SAVING and never reaches _decision_access, so both controller validators were still tickbox-only. has_approver_above moved to hrms/hr/utils.py beside the other fences and is now asked by all three. is_own_request (the cancel guard) migrated off its raw user_id compare, and api/approval.py + utils/approved_request_guard.py were added to the canonical-fence AST list that never named them.
+- 2026-09-17T03:40:00Z EVIDENCE: rung 2 — 5 more tests RED first (both Desk validators + has_approver_above), green after; canonical-fence + approved-request-guard suites 45 passed / 113 subtests; the shift_resolution and hr_correction_ownership failures seen in a whole-directory run are this repo's known cross-module MagicMock ordering pollution (120 passed when those files run alone).
+- 2026-09-17T03:12:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T03:12:54Z EVIDENCE: 3 works — blast radius green: 40 dependent(s), 32 extra test file(s) ⟂7a3d85320767
+- 2026-09-17T03:13:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T03:13:14Z EVIDENCE: 3 works — blast radius green: 40 dependent(s), 32 extra test file(s) ⟂7a3d85320767
+- 2026-09-17T03:13:15Z EVIDENCE: 6 behaves — family hunt: class=a self-approval refusal made OPTIONAL by a site setting. Five of the; 3 call site(s) given verdicts, 8 same-root ⟂cab2898eb775
+- 2026-09-17T03:13:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T03:13:31Z EVIDENCE: 3 works — blast radius green: 40 dependent(s), 32 extra test file(s) ⟂7a3d85320767

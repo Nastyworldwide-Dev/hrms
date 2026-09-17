@@ -47,6 +47,11 @@ FENCES = {
 	),
 	"hr/doctype/leave_application/leave_application.py": ("LeaveApplication", "validate_for_self_approval"),
 	"hr/doctype/expense_claim/expense_claim.py": ("ExpenseClaim", "validate_for_self_approval"),
+	# Added 17 Sep 2026. The list named only the doctype validators, so the
+	# decision endpoint — the PWA's whole approval path — kept the raw user_id
+	# compare this test exists to forbid, and the cancel guard with it.
+	"api/approval.py": (None, "_decision_access"),
+	"utils/approved_request_guard.py": (None, "is_own_request"),
 }
 
 

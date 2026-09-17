@@ -49,3 +49,34 @@ hrms/hr/doctype/expense_claim/expense_claim.py:207 — not-affected — same sha
 hrms/hr/utils.py:1067 (`validate_self_submission`) — not-affected
   The unconditional fence for the five doctypes that never had a tickbox.
   Already canonical, already refuses.
+
+## Second pass, 17 Sep 2026 — the same class behind the Desk door
+
+Review of e3ef2f4de found the fix closed the API door only. Both are now
+fixed at the one shared helper, `hrms.hr.utils.has_approver_above`:
+
+hrms/hr/doctype/leave_application/leave_application.py:960
+  (`validate_for_self_approval`) — same-root (fixed here)
+  The Desk approves by SAVING and never reaches `_decision_access`. This
+  validator was still tickbox-only, so the reported person could open their own
+  leave in Desk, set Approved and submit.
+hrms/hr/doctype/expense_claim/expense_claim.py:207
+  (`validate_for_self_approval`) — same-root (fixed here)
+  Same shape. The new refusal is scoped to an APPROVED claim, because
+  submitting a claim of your own is how it is filed.
+hrms/utils/approved_request_guard.py:64 (`is_own_request`) — same-root (fixed here)
+  The raw `Employee.user_id` compare this fix declared non-canonical, left in
+  the guard that refuses CANCELLING an approved request. Under-matching there
+  let the employee cancel their own approved request. `is_own_employee` can
+  only match more often, which for a refusal is the closed direction.
+hrms/overrides/approval_row_scope.py:97 (`has_permission`) — not-affected
+  Grants the employee write/submit on their OWN request by design (that is how
+  a request is filed and withdrawn). It is a ROW scope, not a decision fence;
+  the decision is policed by the two validators above and by
+  `_decision_access`, which now agree.
+
+## Machine-listed call sites of the changed names
+
+hrms/hr/doctype/attendance_request/attendance_request.py:199 — not-affected — its validate_for_self_approval already refuses every self-approval outright (no tickbox, no chain to consult); it is stricter than the new rule, not looser.
+hrms/hr/doctype/remote_checkin_request/remote_checkin_request.py:143 — same-root (fixed here) — reads `not is_own_request(...)` to decide who may approve a remote punch, so it inherits the canonical resolver through the shared helper; the migration can only make it match MORE often, which for a refusal is the closed direction.
+hrms/tests/probes/lifecycle_probe.py:339 — not-affected — a probe script, not a fence; it reads the same helper and reports what it sees.

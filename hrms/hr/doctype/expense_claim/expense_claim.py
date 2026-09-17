@@ -205,16 +205,23 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				row.sanctioned_amount = row.amount
 
 	def validate_for_self_approval(self):
-		self_expense_approval_not_allowed = frappe.db.get_single_value(
-			"HR Settings", "prevent_self_expense_approval"
-		)
-		from hrms.hr.utils import is_own_employee
+		"""The Desk twin of `hrms.api.approval._decision_access` — see the
+		Leave Application version for the 17 Sep 2026 report behind it.
 
-		if (
-			self_expense_approval_not_allowed
-			and is_own_employee(self.employee)
-			and not get_workflow_name("Expense Claim")
-		):
+		The chain-of-command refusal is scoped to an APPROVED claim on purpose:
+		submitting a claim of your own is how it is filed, and blocking that
+		would stop people claiming at all. The tickbox keeps its existing,
+		wider meaning untouched.
+		"""
+		from hrms.hr.utils import has_approver_above, is_own_employee
+
+		if not is_own_employee(self.employee) or get_workflow_name("Expense Claim"):
+			return
+
+		if self.approval_status == "Approved" and has_approver_above(self.employee, "Expense Claim"):
+			frappe.throw(_("Your own expense claim is decided by your approver, not by you."))
+
+		if frappe.db.get_single_value("HR Settings", "prevent_self_expense_approval"):
 			frappe.throw(_("Self-approval for Expense Claims is not allowed"))
 
 	def on_update(self):

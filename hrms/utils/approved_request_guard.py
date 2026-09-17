@@ -62,13 +62,20 @@ def is_approved_request(doc) -> bool:
 
 
 def is_own_request(doc, user: str | None = None) -> bool:
-	"""Is `user` (default: session) the Employee this request belongs to?"""
-	from hrms.utils.identity import normalize_login
+	"""Is `user` (default: session) the Employee this request belongs to?
+
+	Asks the canonical resolver, like every other self fence. The raw
+	`Employee.user_id` compare that used to live here is the shape that failed
+	OPEN elsewhere (a mirror writes user_id through db.set_value, which does
+	not normalise) — and this guard REFUSES on a match, so under-matching let
+	the employee cancel their own approved request. `is_own_employee` can only
+	match more often, which for a refusal is the closed direction.
+	"""
+	from hrms.hr.utils import is_own_employee
 
 	user = frappe.session.user if user is None else user
 	employee = doc.get("employee")
-	employee_user = frappe.db.get_value("Employee", employee, "user_id") if employee else None
-	own = bool(employee_user) and normalize_login(employee_user) == normalize_login(user)
+	own = bool(employee) and is_own_employee(employee, user)
 	logger.debug("[approved_request_guard] %s %s own request of %s: %s", doc.doctype, doc.name, user, own)
 	return own
 

@@ -135,6 +135,83 @@ class SelfDecisionCase(unittest.TestCase):
 		self.assertIsNone(self._access("Leave Application", reports_to=None, prevent_self=True))
 
 
+class DeskFenceCase(unittest.TestCase):
+	"""The Desk approves by SAVING, and never reaches `_decision_access`.
+
+	Closing the hole only in the decision endpoint would leave the same person
+	able to open their own leave in Desk, set it Approved and submit. Both
+	controller validators must ask the same question, through the one helper.
+	"""
+
+	FENCES = (
+		("hr/doctype/leave_application/leave_application.py", "validate_for_self_approval"),
+		("hr/doctype/expense_claim/expense_claim.py", "validate_for_self_approval"),
+	)
+
+	def test_both_desk_validators_consult_the_chain_of_command(self):
+		root = pathlib.Path(__file__).resolve().parents[1]
+		for relative, function in self.FENCES:
+			with self.subTest(file=relative):
+				tree = ast.parse((root / relative).read_text())
+				fn = next(
+					node
+					for node in ast.walk(tree)
+					if isinstance(node, ast.FunctionDef) and node.name == function
+				)
+				names = {
+					node.func.id
+					for node in ast.walk(fn)
+					if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+				}
+				self.assertIn(
+					"has_approver_above",
+					names,
+					f"{relative}::{function} must refuse a self-approval when somebody is above "
+					"the applicant, not only when the HR Settings tickbox is on",
+				)
+
+
+class ApproverAboveCase(unittest.TestCase):
+	"""`has_approver_above` — one implementation, shared by both fences."""
+
+	def _above(self, reports_to=MANAGER, employee_approver=None, department=None, approvers=()):
+		from hrms.hr import utils as hr_utils
+
+		row = {
+			"user_id": SESSION,
+			"reports_to": reports_to,
+			"department": department,
+			"leave_approver": employee_approver,
+			"expense_approver": employee_approver,
+		}
+
+		def get_value(dt, name, fieldname=None, *args, **kwargs):
+			if dt == "Employee" and name == MANAGER:
+				return "boss@example.com" if fieldname == "user_id" else None
+			if isinstance(fieldname, list):
+				return frappe._dict({field: row.get(field) for field in fieldname})
+			return row.get(fieldname)
+
+		db = MagicMock()
+		db.get_value.side_effect = get_value
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", return_value=list(approvers)),
+		):
+			return hr_utils.has_approver_above(STAFF, "Leave Application")
+
+	def test_a_reporting_manager_is_above_them(self):
+		self.assertTrue(self._above())
+
+	def test_nobody_above_a_one_person_company(self):
+		self.assertFalse(self._above(reports_to=None))
+
+	def test_an_unknown_doctype_is_never_treated_as_supervised(self):
+		from hrms.hr import utils as hr_utils
+
+		self.assertFalse(hr_utils.has_approver_above(STAFF, "Journal Entry"))
+
+
 class CanonicalFenceCase(unittest.TestCase):
 	"""This fence asks the same question as every other one."""
 

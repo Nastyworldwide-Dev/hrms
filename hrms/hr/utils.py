@@ -1064,6 +1064,43 @@ def is_own_employee(employee: str | None, user: str | None = None) -> bool:
 	return own
 
 
+#: doctype -> (the Employee field naming its approver, the Department child
+#: table naming its approvers) — the pair `validate_staff_approver` passes to
+#: `get_designated_approvers`, so "who is above this person" has one answer.
+APPROVER_SOURCE = {
+	"Leave Application": ("leave_approver", "leave_approvers"),
+	"Expense Claim": ("expense_approver", "expense_approvers"),
+}
+
+
+def has_approver_above(employee: str, doctype: str) -> bool:
+	"""Does anyone outrank `employee` for this kind of request?
+
+	Owner report, 17 Sep 2026: an approver who has their own approver could
+	approve their own leave. Leave Application and Expense Claim were the two
+	doctypes whose self-approval refusal hung on an HR Settings tickbox that
+	defaults to 0 and can be unticked in one click; the other five refuse a
+	self-decision outright.
+
+	The refusal is conditional on this question because of the owner's ruling
+	on the top of the chain the same day — "they dont have to. nothing. if and
+	in my company only one. system might detect. this is to fix the ones who
+	can self approve despite having their reported to". So an empty list IS
+	the detection of a one-person company, and needs no setting of its own.
+
+	`get_designated_approvers` is the single source of truth for the answer —
+	the same list the PWA's approver selector and `validate_staff_approver`
+	read — and it already excludes the employee's own login, so nobody counts
+	as their own senior.
+	"""
+	source = APPROVER_SOURCE.get(doctype)
+	if not source:
+		return False
+	above = get_designated_approvers(employee, *source)
+	logger.debug("[self_submission] %s has %d approver(s) above them for %s", employee, len(above), doctype)
+	return bool(above)
+
+
 def validate_self_submission(doc):
 	"""Doctypes with no approver/status flow treat submission AS the approval —
 	the employee on the request must never be the submitter, whatever roles

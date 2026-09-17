@@ -958,17 +958,30 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			self.leave_approver_name = get_fullname(self.leave_approver)
 
 	def validate_for_self_approval(self):
-		self_leave_approval_not_allowed = frappe.db.get_single_value(
-			"HR Settings", "prevent_self_leave_approval"
-		)
-		from hrms.hr.utils import is_own_employee
+		"""The Desk approves by SAVING, so this is the twin of
+		`hrms.api.approval._decision_access` and must ask the same questions.
+
+		Until 17 Sep 2026 it asked only one: is the HR Settings tickbox on?
+		That tickbox defaults to 0 and unticks in one click, so an approver
+		who has their own approver could approve their own leave — the owner's
+		report that day. The reporting line now decides, and the tickbox can
+		only add to the refusal, never remove it.
+		"""
+		from hrms.hr.utils import has_approver_above, is_own_employee
 
 		if (
-			self_leave_approval_not_allowed
-			and is_own_employee(self.employee)
-			and not get_workflow_name("Leave Application")
-			and self.status == "Approved"
+			not is_own_employee(self.employee)
+			or get_workflow_name("Leave Application")
+			or self.status != "Approved"
 		):
+			return
+
+		if has_approver_above(self.employee, "Leave Application"):
+			frappe.throw(_("Your own leave is decided by your approver, not by you."))
+
+		# Nobody above them — the owner ruled that case unchanged, so the
+		# tickbox still governs it on its own.
+		if frappe.db.get_single_value("HR Settings", "prevent_self_leave_approval"):
 			frappe.throw(_("Self-approval for leaves is not allowed"))
 
 	def onload(self):
