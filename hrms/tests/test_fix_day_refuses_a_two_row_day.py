@@ -93,8 +93,21 @@ class TwoRowDayCase(unittest.TestCase):
 		self.assertIn("leave", (refusal or "").lower())
 
 
-class OnlyTheDedupeIsWaivedCase(unittest.TestCase):
-	"""Read from the source: the waiver must be on one endpoint, not on the guard."""
+class TheRemedyIsAlwaysReachableCase(unittest.TestCase):
+	"""A refusal that names a remedy must leave that remedy usable.
+
+	Review of f45a0f593 found the trap the first version of this rule set: when
+	two rows hold the SAME punch count, `duplicate_refusal` refuses and says
+	"Move a tap to the row it belongs to first" — and the two-row rule had just
+	blocked `move_tap` as well. Both doors shut, on a day whose only way out was
+	one of them. That is the same class as the dead end the rule exists to
+	prevent, one level down.
+	"""
+
+	#: The two escapes from a two-row day: cancel the duplicate, or move a tap
+	#: so the rows stop tying. Every other action rebuilds and is refused.
+	ESCAPES = ("remove_duplicate_row", "move_tap")
+	REBUILDERS = ("pair_taps", "ignore_tap", "restore_tap", "add_tap")
 
 	def setUp(self):
 		self.tree = ast.parse(fix_day.__file__ and pathlib.Path(fix_day.__file__).read_text())
@@ -102,17 +115,32 @@ class OnlyTheDedupeIsWaivedCase(unittest.TestCase):
 			node.name: node for node in ast.walk(self.tree) if isinstance(node, ast.FunctionDef)
 		}
 
-	def test_remove_duplicate_row_waives_the_rule_for_itself(self):
-		body = ast.unparse(self.functions["remove_duplicate_row"])
-		self.assertIn("duplicate_rows_ok=True", body)
+	def test_both_escapes_are_open_on_a_two_row_day(self):
+		for action in self.ESCAPES:
+			self.assertIn(
+				"duplicate_rows_ok=True",
+				ast.unparse(self.functions[action]),
+				f"{action} is named as a way out of a two-row day; it must be usable on one",
+			)
 
-	def test_no_other_action_waives_it(self):
-		for action in ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap"):
+	def test_nothing_that_rebuilds_the_day_waives_it(self):
+		for action in self.REBUILDERS:
 			self.assertNotIn(
 				"duplicate_rows_ok=True",
 				ast.unparse(self.functions[action]),
 				f"{action} would rebuild a day the engine refuses to re-mark",
 			)
+
+	def test_the_tie_refusal_points_at_an_action_that_is_open(self):
+		# Two rows, same punch count: there is nothing to prefer, so the
+		# duplicate cannot be chosen — HR moves a tap instead. That sentence is
+		# only true while move_tap is one of the escapes above.
+		tie = fix_day.duplicate_refusal(
+			row("A", linked_punches=2), [row("A", linked_punches=2), row("B", linked_punches=2)]
+		)
+		self.assertIn("Move a tap", tie)
+		self.assertIn("move_tap", self.ESCAPES)
+		self.assertIn("duplicate_rows_ok=True", ast.unparse(self.functions["move_tap"]))
 
 
 class OwnerLabelCase(unittest.TestCase):

@@ -13,11 +13,16 @@ because the way out is a button on the same screen; `owner_label` returns text;
 Call sites the machine lists for `day_block_reason` / `_day_block` /
 `_lock_and_guard` / `owner_label`:
 
-* hrms/api/attendance_fix_day.py::pair_taps, move_tap, ignore_tap, restore_tap,
-  add_tap — same-root: all five reach `_lock_and_guard` and are now refused on a
-  two-row day, which is the fix.
-* hrms/api/attendance_fix_day.py::remove_duplicate_row — same-root: waives the
-  rule for itself, asserted by a test that no other action does.
+* hrms/api/attendance_fix_day.py::pair_taps, ignore_tap, restore_tap, add_tap —
+  same-root: all four rebuild the day and are now refused on a two-row day,
+  which is the fix.
+* hrms/api/attendance_fix_day.py::remove_duplicate_row, move_tap — same-root:
+  the two ways OUT of a two-row day, and both waive the rule. Review of
+  f45a0f593 caught the trap in the first version: on two rows holding the SAME
+  punch count, `duplicate_refusal` refuses and says "Move a tap to the row it
+  belongs to first" — while the rule had just shut that door too. A refusal
+  that names a remedy must leave the remedy reachable; a test now asserts the
+  tie sentence and the open door agree.
 * hrms/api/attendance_fix_day.py::undo_fix — same-root by the same path; an undo
   on a two-row day cannot rebuild either, and now says so.
 * hrms/api/attendance_fix_day.py::_screen (get_day) — same-root: `blocked` is
@@ -33,6 +38,8 @@ Call sites the machine lists for `day_block_reason` / `_day_block` /
 LOCK:
 * regression (the instance): hrms/tests/test_fix_day_refuses_a_two_row_day.py
   drives Norazlin's actual two rows through the guard.
-* invariant (the class): a test asserts that of the six actions, exactly one
-  waives the rule; and that the screen is never `blocked` by a condition whose
-  remedy is one of its own buttons (test_a_two_row_day_is_noticed_but_never_blocked).
+* invariant (the class): a refusal never closes the door it points at —
+  TheRemedyIsAlwaysReachableCase pins both escapes open, pins the four
+  rebuilding actions shut, and reads the tie sentence itself; and the screen is
+  never `blocked` by a condition whose remedy is one of its own buttons
+  (test_a_two_row_day_is_noticed_but_never_blocked).

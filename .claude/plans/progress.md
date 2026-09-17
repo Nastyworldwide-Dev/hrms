@@ -210,3 +210,12 @@ in, `PYTHONPATH=. pytest` there -> 12 failed / 76 passed, including
 `[{'attendance': 'ATT-1', 'owner': 'system'}, ...] is not an instance of str`,
 which is the header's [object Object] verbatim. Green on the fix: 131 passed
 across the six fix-day suites plus the duplicate backfill.
+- 2026-09-17T08:51:06Z PUSH: nz-glass @ f45a0f593
+REPAIR: the two-row rule shut the door its own sibling refusal points at — on a
+punch-count TIE, remove_duplicate_row refuses with "Move a tap to the row it
+belongs to first" and move_tap had just been blocked by the same rule. Both
+escapes are waived now; the four rebuilding actions are not.
+EVIDENCE: 2 (mapped) — 132 passed across the seven fix-day and duplicate suites;
+the two new tests red before the waiver, green after.
+NEXT: deploy is the owner's; he can already fix Norazlin today by removing the
+duplicate row BEFORE pairing.

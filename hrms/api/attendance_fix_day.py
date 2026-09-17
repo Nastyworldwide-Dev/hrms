@@ -405,7 +405,14 @@ def move_tap(tap: str, shift: str | None = None, day: str | None = None, reason:
 	if not target_shift:
 		_refuse(_("This tap has no shift. Choose the shift it belongs to."))
 	days = sorted({_tap_day(row), target_day})
-	_lock_and_guard(emp.name, days)
+	# The second action allowed on a two-row day, and for the same reason: it is
+	# a way OUT of one. When two rows hold the same punch count there is nothing
+	# to prefer between them, so `duplicate_refusal` sends HR here to move a tap
+	# and break the tie — a sentence that was only true while this door was open
+	# (review of f45a0f593). Moving the tap is the whole value; the day itself
+	# will not rebuild until one row is gone, and the screen now says so plainly
+	# instead of reporting a rebuild that did not happen.
+	_lock_and_guard(emp.name, days, duplicate_rows_ok=True)
 	before = _before(emp.name, days, [row])
 	# released from its old row for the same reason pairing releases one
 	_write_tap(row, {**_shift_stamp(target_shift, target_day), "attendance": None})
