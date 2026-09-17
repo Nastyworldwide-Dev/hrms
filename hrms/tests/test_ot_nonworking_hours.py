@@ -367,6 +367,12 @@ class TestNonworkingHours(unittest.TestCase):
 	def test_an_off_shift_boundary_does_not_bridge_either(self):
 		self.assertEqual(self.boundary_hours(offshift=1), 6)
 
+	def test_a_tap_the_system_deferred_is_still_a_wall(self):
+		"""Skipped without a verdict — `handle_attendance_exception` gave up on
+		the batch when the financial guard refused the rebuild. Nobody judged
+		that punch, so the day is still not read across it."""
+		self.assertEqual(self.boundary_hours(skip_auto_attendance=1), 6)
+
 	def test_a_tap_somebody_ignored_is_removed_and_the_day_is_one_span(self):
 		"""Owner ruling, 17 Sep 2026: "the 11 am out is possible accidental and
 		should be fine for us to fix by removing it alongside the broken glitch
@@ -377,7 +383,7 @@ class TestNonworkingHours(unittest.TestCase):
 		4 September, where HR ignored the accidental mid-day OUT and the glitch
 		burst and the day came back "in 09:03 · out — · 0 h worked", because the
 		two real taps had been left in two one-tap spans."""
-		self.assertEqual(self.boundary_hours(skip_auto_attendance=1), 10)
+		self.assertEqual(self.boundary_hours(skip_auto_attendance=1, skipped_as_noise=1), 10)
 
 	def test_rest_day_all_194_minutes_reach_breakdowns_claim_and_payroll(self):
 		hours = 194 / 60

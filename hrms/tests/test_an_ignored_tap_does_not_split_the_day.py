@@ -33,7 +33,10 @@ alongside the broken glitch stuff. applicable to any scenarios."
 
 from __future__ import annotations
 
+import pathlib
+import re
 import unittest
+from typing import ClassVar
 
 from hrms.tests._erpnext_stub import install as install_erpnext_stub
 
@@ -48,7 +51,9 @@ def tap(time, log_type, **extra):
 	return {"time": f"{DAY} {time}", "log_type": log_type, **extra}
 
 
-IGNORED = {"skip_auto_attendance": 1}
+IGNORED = {"skip_auto_attendance": 1, "skipped_as_noise": 1}
+#: skipped, but nobody judged it — the system merely deferred the batch
+DEFERRED = {"skip_auto_attendance": 1}
 REJECTED = {"skip_auto_attendance": 1, "remote_approval_status": "Rejected"}
 OFF_SHIFT = {"offshift": 1}
 PENDING_LATE = {"remote_approval_status": "Pending", "is_late_checkout": 1}
@@ -77,6 +82,12 @@ class WhatStillSeparatesTwoSpansCase(unittest.TestCase):
 
 	def test_a_tap_somebody_ignored_is_not_a_wall(self):
 		self.assertFalse(st.splits_the_day(tap("11:44", "OUT", **IGNORED)))
+
+	def test_a_tap_the_system_merely_deferred_is_still_a_wall(self):
+		"""`handle_attendance_exception` skip-stamps punches when a rebuild is
+		refused by the financial guard. Nobody judged those; the system gave up
+		on the batch. Found in review of ff1493e85, which read them as noise."""
+		self.assertTrue(st.splits_the_day(tap("12:00", "OUT", **DEFERRED)))
 
 	def test_a_counted_tap_is_not_a_wall(self):
 		self.assertFalse(st.splits_the_day(tap("09:03", "IN")))
@@ -112,6 +123,10 @@ class TheDayIsSegmentedAroundWallsOnlyCase(unittest.TestCase):
 		logs = [tap("09:00", "IN"), tap("12:00", "OUT", **OFF_SHIFT), tap("18:00", "OUT")]
 		self.assertEqual(self.segments(logs), [["09:00"], ["18:00"]])
 
+	def test_a_deferred_tap_still_separates_the_spans(self):
+		logs = [tap("09:00", "IN"), tap("12:00", "OUT", **DEFERRED), tap("18:00", "OUT")]
+		self.assertEqual(self.segments(logs), [["09:00"], ["18:00"]])
+
 	def test_a_clean_day_is_untouched(self):
 		logs = [tap("09:00", "IN"), tap("18:00", "OUT")]
 		self.assertEqual(self.segments(logs), [["09:00", "18:00"]])
@@ -128,6 +143,81 @@ class TheDayIsSegmentedAroundWallsOnlyCase(unittest.TestCase):
 			tap("18:00", "OUT"),
 		]
 		self.assertEqual(self.segments(logs), [["09:00"], ["18:00"]])
+
+
+class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
+	"""The safety of this change rests on ONE claim: nothing sets
+	`skip_auto_attendance` to mean "unverified evidence sitting inside an
+	otherwise good day" except the reject path, which `splits_the_day` catches.
+
+	A claim in a commit message rots, and my own first list of writers was
+	incomplete — it missed the master editor's two. So this reads the app. It
+	asserts the set of MODULES, not a line count: a refactor inside one of them
+	is not news, a new module touching the tick is.
+
+	Since the review of ff1493e85 the DEFAULT is the wall, so this list is no
+	longer load-bearing for safety — a writer that says nothing gets the old,
+	conservative reading. It is still the map of who means what.
+
+	NOISE — ticks `skipped_as_noise`, so the day reads straight across it:
+	  * api/attendance_fix_day.py — HR ignored it, or the rebuild did.
+	  * api/remote_checkin.py — a burst stutter, "stored, not counted".
+
+	WALL — skipped without that tick, so the spans stay apart:
+	  * overrides/remote_checkin_request_hooks.py — the approver rejected it.
+	  * hr/doctype/employee_checkin/employee_checkin.py — `attendance_status ==
+	    "Skip"`, and `handle_attendance_exception` when the financial guard
+	    refuses a rebuild. The system DEFERRED those; nobody judged them. This
+	    is the case the first version of this rule got wrong.
+	  * api/attendance_master_edit.py — a device punch HR superseded with their
+	    own typed time. Arguably noise, deliberately left a wall: HR restated
+	    the day themselves, so there is no span to bridge anyway.
+
+	NEVER REACHES THIS CALCULATION — the whole day is refused upstream:
+	  * utils/hr_removed_day.py and api/attendance_master_edit.py — a day HR
+	    removed in Shift Attendance.
+	"""
+
+	WRITERS: ClassVar[frozenset] = frozenset(
+		{
+			"hrms/api/attendance_fix_day.py",
+			"hrms/api/attendance_master_edit.py",
+			"hrms/api/remote_checkin.py",
+			"hrms/hr/doctype/employee_checkin/employee_checkin.py",
+			"hrms/overrides/remote_checkin_request_hooks.py",
+			"hrms/utils/hr_removed_day.py",
+		}
+	)
+
+	def test_no_unclassified_module_skips_a_punch(self):
+		root = pathlib.Path(__file__).resolve().parents[2]
+		found = set()
+		for path in sorted((root / "hrms").rglob("*.py")):
+			rel = path.relative_to(root).as_posix()
+			if "test" in pathlib.Path(rel).name or "/tests/" in rel:
+				continue
+			for line in path.read_text().splitlines():
+				if "skip_auto_attendance" not in line or line.lstrip().startswith("#"):
+					continue
+				if re.search(r'skip_auto_attendance"?\s*(=|:|,)\s*(1|value)\b', line) or re.search(
+					r'\.set\("skip_auto_attendance", 1\)|_set_skip\(', line
+				):
+					found.add(rel)
+		unclassified = found - self.WRITERS
+		self.assertEqual(
+			unclassified,
+			set(),
+			"a new module skips punches — say in this test's docstring whether that means "
+			"NOISE (dropped from the day) or a WALL (splits_the_day), then list it here",
+		)
+
+	def test_the_classified_writers_are_all_still_there(self):
+		"""The other direction: a module that stops skipping punches should not
+		leave a stale name in the list pretending to be covered."""
+		root = pathlib.Path(__file__).resolve().parents[2]
+		for rel in sorted(self.WRITERS):
+			with self.subTest(module=rel):
+				self.assertIn("skip_auto_attendance", (root / rel).read_text())
 
 
 if __name__ == "__main__":

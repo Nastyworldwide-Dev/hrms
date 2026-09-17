@@ -56,6 +56,23 @@ def get_extension_custom_fields() -> dict:
 		],
 		"Employee Checkin": [
 			{
+				"fieldname": "skipped_as_noise",
+				"fieldtype": "Check",
+				"label": _("Skipped as Noise"),
+				"insert_after": "skip_auto_attendance",
+				"default": "0",
+				"read_only": 1,
+				"description": _(
+					"This punch was judged NOISE — a mistap, a repeated tap, or a tap HR "
+					"ignored — so the day is read straight across it. A punch that is "
+					"skipped WITHOUT this tick still separates the spans on either side of "
+					"it: rejected, off-shift, and anything the system merely deferred are "
+					"evidence nobody verified, and time is never counted across them."
+				),
+				"module": "HR",
+				"translatable": 0,
+			},
+			{
 				"fieldname": "requires_remote_approval",
 				"fieldtype": "Check",
 				"label": _("Requires Remote Approval"),

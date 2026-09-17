@@ -669,6 +669,9 @@ def punch(
 	burst = is_burst_tap(recent[-1] if recent else None, punch_time)
 	if burst:
 		doc.skip_auto_attendance = 1
+		# Noise by definition — a stutter on the same tap. The day is read
+		# straight across it (shift_type.splits_the_day).
+		doc.skipped_as_noise = 1
 		logger.warning(
 			"[remote_checkin] %s tapped again within %ss — stored, not counted",
 			employee,

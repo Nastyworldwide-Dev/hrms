@@ -87,6 +87,8 @@ CHANGEABLE_TAP_FIELDS = frozenset(
 		"offshift",
 		"overtime_type",
 		"skip_auto_attendance",
+		# says WHY it was skipped: noise (read across it) or not-verified (a wall)
+		"skipped_as_noise",
 		"remote_approval_status",
 		# the link to the row the tap was evidence for: re-stamping a tap
 		# releases it, so both days can be rebuilt from the taps they now hold
@@ -104,6 +106,8 @@ COUNTED_TAP_FIELDS = frozenset(
 		"offshift",
 		"overtime_type",
 		"skip_auto_attendance",
+		# ignoring a counted tap says it is noise, in the same write
+		"skipped_as_noise",
 		"attendance",
 	)
 )
@@ -119,6 +123,7 @@ TAP_FIELDS = [
 	"shift_actual_end",
 	"attendance",
 	"skip_auto_attendance",
+	"skipped_as_noise",
 	"device_id",
 	"offshift",
 	"overtime_type",
@@ -589,7 +594,10 @@ def ignore_tap(tap: str, reason: str) -> dict:
 	if cint(row.skip_auto_attendance):
 		_refuse(_("This tap is already ignored."))
 	before = _before(emp.name, days, [row])
-	_write_tap(row, {"skip_auto_attendance": 1})
+	# NOISE, not "unverified": HR looked at this tap and said it is not there, so
+	# the day reads straight across it. Everything else that is skipped stays a
+	# wall (hrms.hr.doctype.shift_type.shift_type.splits_the_day).
+	_write_tap(row, {"skip_auto_attendance": 1, "skipped_as_noise": 1})
 	return _finish(emp, days, "ignore_tap", reason, {row.name: _("ignored: not counted in the day")}, before)
 
 
@@ -613,7 +621,10 @@ def restore_tap(tap: str, reason: str) -> dict:
 	if not cint(row.skip_auto_attendance) and not rejected:
 		_refuse(_("This tap already counts in the day."))
 	before = _before(emp.name, days, [row])
-	fields = {"skip_auto_attendance": 0}
+	# The noise verdict goes with the skip: a tap that counts again is not a
+	# judgement about anything, and leaving the tick set would make it read as
+	# noise the day after somebody ignores it again.
+	fields = {"skip_auto_attendance": 0, "skipped_as_noise": 0}
 	if rejected:
 		fields["remote_approval_status"] = "Approved"
 	_write_tap(row, fields)
@@ -771,8 +782,8 @@ def rebuild_day(employee: str, date: str, reason: str) -> dict:
 	notes = {}
 	for entry in plan["drop"]:
 		tap = by_name[entry["name"]]
-		if not cint(tap.get("skip_auto_attendance")):
-			_write_tap(tap, {"skip_auto_attendance": 1})
+		if not cint(tap.get("skip_auto_attendance")) or not cint(tap.get("skipped_as_noise")):
+			_write_tap(tap, {"skip_auto_attendance": 1, "skipped_as_noise": 1})
 		notes[entry["name"]] = _("ignored by the day rebuild: {0}").format(entry["why"])
 
 	opening = by_name[plan["session"]["in"]["name"]]

@@ -255,3 +255,18 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) - 12 new tests red before, green after;
 16 suites green, one pre-existing failure in test_ot_nonworking_hours confirmed
 identical on a clean HEAD extract.
 NEXT: the owner deploys and re-runs Norazlin 4 Sep; it should read Present.
+- 2026-09-17T10:55:55Z PUSH: nz-glass @ ff1493e85
+REPAIR: review of ff1493e85 found a Critical I missed and it was right. The
+financial-guard refusal path (handle_attendance_exception ->
+skip_attendance_in_checkins) skip-stamps punches so a blocked batch is not
+retried - that means "the system deferred this", not "HR judged this noise" -
+and my inverted reading would have bridged across them and paid the time. The
+rule is fail-safe now: every skipped punch is a WALL unless it carries the new
+Employee Checkin.skipped_as_noise tick, which only Fix Day's ignore/rebuild and
+the burst stutter set. Default 0 = exactly the behaviour before this branch.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 16 suites green incl. remote_checkin
+(67) and master edit (54); the one failure in test_ot_nonworking_hours is
+pre-existing and identical on a clean HEAD extract.
+DEAD END: classifying writers by reading them was wrong twice (I missed the
+master editor's two, then the deferral path). The default had to change, not
+the list.

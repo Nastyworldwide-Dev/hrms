@@ -95,6 +95,9 @@ CHECKIN_FIELDS = (
 	"device_id",
 	"overtime_type",
 	"skip_auto_attendance",
+	# whether that skip means "noise" (read straight across it) or "not verified"
+	# (a wall). Absent/0 is the safe reading: a wall.
+	"skipped_as_noise",
 	"remote_approval_status",
 	"requires_remote_approval",
 	"offshift",
@@ -219,20 +222,27 @@ def splits_the_day(row) -> bool:
 	"""A punch that separates two spans and must never be bridged across. Pure.
 
 	Not the same question as `counts_for_attendance`. Both a REJECTED punch and
-	a tap somebody ignored are "not evidence", but only the first is a WALL:
-	bridging across rejected, off-shift or not-yet-approved time would pay
-	minutes nobody verified. A tap HR ignored is simply not there, and the taps
-	on either side of it are one session — which is what "ignore" means.
+	a tap HR ignored are "not evidence", but only the first is a WALL: bridging
+	across time nobody verified would pay it. A tap judged NOISE is simply not
+	there, and the taps on either side of it are one session — which is what
+	ignoring a tap means.
+
+	The default is the WALL, and that is the whole safety of this rule. A punch
+	has to be ticked `skipped_as_noise` by the code that judged it noise — Fix
+	Day's ignore and rebuild, and the burst-tap stutter — to be read across.
+	Everything else that does not count keeps the old, conservative behaviour,
+	including anything a future writer adds and, specifically, the punches
+	`handle_attendance_exception` skip-stamps when a rebuild is refused by the
+	financial guard: the system DEFERRED those, nobody judged them (found in
+	review of ff1493e85, which had inverted this and would have bridged them).
 
 	Live, 17 Sep 2026: Norazlin's 4 September had its accidental mid-day OUT and
 	its 16-second glitch burst ignored, and the two real taps then sat in two
 	one-tap segments and never paired. The day read "in 09:03 · out — · 0 h".
 	"""
-	return bool(
-		cint(row.get("offshift") or 0)
-		or row.get("remote_approval_status") == "Rejected"
-		or (row.get("remote_approval_status") == "Pending" and cint(row.get("is_late_checkout") or 0))
-	)
+	if counts_for_attendance(row):
+		return False
+	return not cint(row.get("skipped_as_noise") or 0)
 
 
 def attendance_segments(logs) -> list:
