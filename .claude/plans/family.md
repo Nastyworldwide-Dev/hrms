@@ -1,66 +1,40 @@
-# FAMILY — HR's own press was protected from HR
+# FAMILY — an ignored tap was a wall, not an absence
 
-CLASS: a guard that cannot tell WHO is asking. `protected_reason` holds any row
-the ownership classifier calls HR's — the rule that stops the nightly job
-overwriting a day a person keyed by hand. It was asked the same way by the job
-and by HR's own button, so HR could correct every tap on a day and the re-mark
-would decline and leave it exactly as found.
+CLASS: "not evidence" and "must not be bridged across" asked as one question.
+`ShiftType.get_attendance` grouped the day into contiguous runs of
+`counts_for_attendance`, so ANY non-counting tap separated the taps around it —
+a rejected punch and a tap HR deliberately ignored alike.
 
-Live proof: Norazlin's HR-ATT-2026-15657 reads "Absent (HR)". Cancel the ghost,
-pair the session, ignore the glitch taps — and the day stays Absent, 0 hours,
-no OT, still wrong on the calendar and unclaimable in Nadi. The owner's actual
-requirement (17 Sep 2026) is the opposite: "the system must automate things
-that it needs, like their total working hours, if they have ot? make sure it
-can be claim in their nadi pwa, and calendar wont show absent, half day".
+Live proof: Norazlin's 4 September, after HR corrected every tap on it. Counted
+IN 09:03:34, counted OUT 18:09:26, three ignored taps between them. Two
+one-tap segments, no pair, `Half Day · in 09:03 · out — · 0 h`.
 
-Changed: `protected_reason(..., hr_asked=False)` waives ONLY the "a person made
-this row" hold, and only when HR is the one asking.
+Changed: `splits_the_day(row)` names the walls (off-shift, rejected, a late
+check-out awaiting approval); `attendance_segments(logs)` drops ignored taps
+before grouping and keeps the walls in place.
 
-Call sites the machine lists for protected_reason / _day_protection / remark_day:
+Call sites the machine lists for counts_for_attendance / the segmentation:
 
-* hrms/utils/attendance_recovery.py::protected_reason — same-root (the rule).
-* hrms/utils/attendance_recovery.py::_day_protection — same-root (passes it on).
-* hrms/utils/day_remark.py::remark_day, _remark_owning_the_day, _remark_once —
-  same-root (the chain HR's press travels down). Default False, so every
-  existing caller behaves exactly as before.
-* hrms/utils/day_remark.py::remark_day_after_commit — not-affected, and a test
-  pins it: the nightly path must never ask as HR.
-* hrms/api/attendance_fix_day.py::_rebuild — same-root: the one place that asks
-  as HR, which is every action on the Fix Day screen.
-* hrms/sync/checkin_import.py — not-affected: an import is the machine, and it
-  calls remark_day without the flag.
-* hrms/utils/attendance_endgame.py, hrms/sync/erp_backfill.py — not-affected:
-  automatic passes, unchanged, still held by the owner rule as designed.
-
-NOT WAIVED, and the one that nearly slipped: a MIRRORED row reads as UNSURE, so
-the waiver lifted its hold and HR's press could have rewritten a row the other
-instance owns. The rule sits in `_is_hr_hold`, not in `protected_reason` — the
-mirrored RELEASE plan asks that function about mirrored rows on purpose, and
-putting it there broke five of its tests.
-
-WHAT IS NOT WAIVED, and a test for each: a draft, a leave, a half-day leave, an
-attendance request, a row owned by a REQUEST, a day HR removed in Shift
-Attendance, an approved payout or submitted payroll, a live request over the
-day, a running shift, today or later.
-
-REVIEW OF b9794c65b — two Criticals, both closed:
-* a MIRRORED row reads as OWNER_HR when a person wrote it on the ERP side, so
-  the waiver lifted its hold. `_is_hr_hold` refuses any row carrying
-  `synced_from_instance` (f369e51d4), and `day_block_reason` now refuses it on
-  the screen with the site's name instead of letting the re-mark refuse it three
-  layers down where it reads as "nothing changed".
-* the never-worse guard (savepoint, rebuild_verdict, rollback) lives on
-  `attendance_recovery.guarded_rebuild` and NOT on `day_remark.remark_day`,
-  which is the path Fix Day uses. Harmless while owner_hold refused HR-owned
-  rows outright; `hr_asked` opened exactly that door, so a day HR raised to
-  Present by hand could have come back Absent. HR's press goes through
-  `_rebuild_under_guard` now and a rollback returns `action: held`, not success.
-  The nightly path's own missing guard is older and is ticketed, not widened:
-  .claude/plans/ticket-nightly-remark-is-unguarded.md
+* hrms/hr/doctype/shift_type/shift_type.py::get_attendance — same-root, the fix.
+* hrms/hr/doctype/shift_type/shift_type.py::get_employee_checkins,
+  should_mark_attendance — not-affected: they filter which punches are READ, not
+  how a read day is cut into spans.
+* hrms/utils/ot_calculation.py::_is_eligible_checkin — not-affected: overtime
+  keeps the strict rule on purpose ("unverified minutes are never paid"), and
+  this change does not touch it.
+* hrms/utils/break_calculation.py, worked_intervals — not-affected by the
+  grouping, but they now receive ONE interval where they received two; that is
+  the point, and test_break_deduction_worked_intervals (8) covers it.
+* hrms/api/attendance_fix_day.py::ignore_tap, rebuild_day — same-root in effect:
+  these are what set the skip tick HR means as "not there".
+* every other writer of skip_auto_attendance was read: the burst-tap stutter
+  (noise by definition), and hold_punches on a day HR removed (never reaches
+  this calculation). The REJECT path also sets remote_approval_status, so it is
+  caught as a wall.
 
 LOCK:
-* regression (the instance): hrms/tests/test_hr_asked_for_this_day.py drives
-  Norazlin's row shape — Absent, auto_attendance 0, classifier says HR — and
-  asserts the hold stands for the job and lifts for HR.
-* invariant (the class): the flag is asserted to be wired end to end (a
-  parameter nothing passes fixes nothing) AND absent from the nightly path.
+* regression (the instance): test_an_ignored_tap_does_not_split_the_day.py
+  drives Norazlin's exact five taps and asserts one segment.
+* invariant (the class): no row is ever both evidence and a wall, asserted over
+  every shape; and the wall cases are asserted to still separate the spans, at
+  the same figure they gave before.

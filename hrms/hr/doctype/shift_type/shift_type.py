@@ -215,6 +215,39 @@ def counts_for_attendance(row) -> bool:
 	)
 
 
+def splits_the_day(row) -> bool:
+	"""A punch that separates two spans and must never be bridged across. Pure.
+
+	Not the same question as `counts_for_attendance`. Both a REJECTED punch and
+	a tap somebody ignored are "not evidence", but only the first is a WALL:
+	bridging across rejected, off-shift or not-yet-approved time would pay
+	minutes nobody verified. A tap HR ignored is simply not there, and the taps
+	on either side of it are one session — which is what "ignore" means.
+
+	Live, 17 Sep 2026: Norazlin's 4 September had its accidental mid-day OUT and
+	its 16-second glitch burst ignored, and the two real taps then sat in two
+	one-tap segments and never paired. The day read "in 09:03 · out — · 0 h".
+	"""
+	return bool(
+		cint(row.get("offshift") or 0)
+		or row.get("remote_approval_status") == "Rejected"
+		or (row.get("remote_approval_status") == "Pending" and cint(row.get("is_late_checkout") or 0))
+	)
+
+
+def attendance_segments(logs) -> list:
+	"""The day's logs as contiguous runs of evidence, split only at a wall. Pure.
+
+	An ignored tap is dropped before grouping, so it cannot separate the taps
+	around it; `splits_the_day` rows stay in place and do separate them. Each
+	segment is then given to the shift's own configured calculation, so the
+	native first-in/last-out or alternating pairing is preserved WITHIN a span
+	and never across a wall.
+	"""
+	usable = [row for row in logs if counts_for_attendance(row) or splits_the_day(row)]
+	return [list(group) for eligible, group in groupby(usable, key=counts_for_attendance) if eligible]
+
+
 class ShiftType(Document):
 	def validate(self):
 		start = get_time(self.start_time)
@@ -676,7 +709,7 @@ class ShiftType(Document):
 		# first-IN/last-OUT span, even with the First/Last working-hours policy.
 		pairing = self.determine_check_in_and_check_out
 		policy = self.working_hours_calculation_based_on
-		segments = [list(group) for eligible, group in groupby(logs, key=counts_for_attendance) if eligible]
+		segments = attendance_segments(logs)
 		parts = [calculate_working_hours(segment, pairing, policy) for segment in segments]
 		total_working_hours = sum(part[0] for part in parts)
 		in_time = next((part[1] for part in parts if part[1]), None)

@@ -241,3 +241,17 @@ from, is on the existing split ticket.
 EVIDENCE: 7 (invariant) - 1 new test, red on a mutated lookup, green on HEAD;
 9 suites green.
 NEXT: the owner deploys and re-runs Norazlin 4 Sep.
+- 2026-09-17T10:28:09Z PUSH: nz-glass @ 75c0055bf
+- 2026-09-17T10:28:23Z PUSH: nz-glass @ 4cf17cc5b
+- 2026-09-17T10:28:23Z COMMIT: 4cf17cc5b docs(glass): handoff for the fourth door → review dispatched
+REPAIR: the fifth door, and the last one. The rebuild ran, both taps were
+counted and linked, and the day still read "Half Day, in 09:03, out -, 0 h".
+get_attendance cut the day into contiguous runs of counts_for_attendance, so the
+three ignored taps BETWEEN the real IN and the real OUT left them in two one-tap
+segments that never paired. "Not evidence" and "must not be bridged" were one
+question; they are two now - splits_the_day names the walls (off-shift,
+rejected, unapproved late check-out) and attendance_segments drops the rest.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 12 new tests red before, green after;
+16 suites green, one pre-existing failure in test_ot_nonworking_hours confirmed
+identical on a clean HEAD extract.
+NEXT: the owner deploys and re-runs Norazlin 4 Sep; it should read Present.

@@ -70,10 +70,16 @@ shift_class.body = [
 # the attendance evidence rule (a pending punch counts; rejected/off-shift/skipped
 # do not) — wider than overtime's `_is_eligible_checkin` on purpose.
 # `paid_intervals_from` trims an early arrival off the paid hours.
+# `attendance_segments`/`splits_the_day` cut the day into spans: a tap somebody
+# ignored is dropped, a rejected/off-shift/unapproved one is a wall (17 Sep 2026).
 shift_helpers = [
 	node
 	for node in shift_tree.body
-	if (isinstance(node, ast.FunctionDef) and node.name in {"counts_for_attendance", "paid_intervals_from"})
+	if (
+		isinstance(node, ast.FunctionDef)
+		and node.name
+		in {"counts_for_attendance", "paid_intervals_from", "attendance_segments", "splits_the_day"}
+	)
 	or (
 		isinstance(node, ast.Assign)
 		and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in node.targets)
@@ -330,7 +336,7 @@ class TestNonworkingHours(unittest.TestCase):
 					self.assertEqual(marker.call_args.args[3], 1)
 					self.assertNotIn("PUNCH-SYNTHETIC-1", [row.name for row in marker.call_args.args[0]])
 
-	def test_weekday_invalid_boundary_does_not_bridge_native_first_last_policy(self):
+	def boundary_hours(self, **boundary):
 		rows = [
 			punch(DAY, value, kind)
 			for value, kind in [
@@ -341,11 +347,37 @@ class TestNonworkingHours(unittest.TestCase):
 				("19:00", "OUT"),
 			]
 		]
-		rows[1].skip_auto_attendance = 1
+		for field, value in boundary.items():
+			setattr(rows[1], field, value)
 		shift = self.shift()
 		shift.breaks = []
 		with self.context(rows=rows, holidays={}):
-			self.assertEqual(shift.get_attendance(rows, 4, 8)[1], 6)
+			return shift.get_attendance(rows, 4, 8)[1]
+
+	def test_weekday_invalid_boundary_does_not_bridge_native_first_last_policy(self):
+		"""A REJECTED punch is still a wall: 13:00-19:00 only, never 09:00-19:00.
+
+		Amended 17 Sep 2026. This drove the boundary with a bare
+		`skip_auto_attendance = 1`, which is now the OTHER case — see below. The
+		rule the test is named for is about evidence nobody verified, and
+		rejection is what makes a punch that; it is asserted with a rejection now.
+		"""
+		self.assertEqual(self.boundary_hours(skip_auto_attendance=1, remote_approval_status="Rejected"), 6)
+
+	def test_an_off_shift_boundary_does_not_bridge_either(self):
+		self.assertEqual(self.boundary_hours(offshift=1), 6)
+
+	def test_a_tap_somebody_ignored_is_removed_and_the_day_is_one_span(self):
+		"""Owner ruling, 17 Sep 2026: "the 11 am out is possible accidental and
+		should be fine for us to fix by removing it alongside the broken glitch
+		stuff. applicable to any scenarios."
+
+		So a plain skipped tap is not a wall — it is not there at all, and the
+		day runs 09:00 to 19:00. Live proof of the old reading: Norazlin's
+		4 September, where HR ignored the accidental mid-day OUT and the glitch
+		burst and the day came back "in 09:03 · out — · 0 h worked", because the
+		two real taps had been left in two one-tap spans."""
+		self.assertEqual(self.boundary_hours(skip_auto_attendance=1), 10)
 
 	def test_rest_day_all_194_minutes_reach_breakdowns_claim_and_payroll(self):
 		hours = 194 / 60

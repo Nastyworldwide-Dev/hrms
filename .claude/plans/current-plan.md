@@ -79,3 +79,33 @@ rule itself is the owner's, recorded above with its consequence.
 owner ruling -> this plan -> red tests on the pure planner first -> planner ->
 endpoints -> screen -> mapped + neighbour suites -> commit with the family
 ledger -> hook-dispatched review -> push -> the owner deploys.
+
+
+## AMENDMENT — 17 Sep 2026, after deploy
+
+The rebuild ran on Norazlin's 4 September and the day still came back wrong:
+`Half Day · in 09:03 · out — · 0 h worked`, with BOTH real taps counted and
+linked to the row. The pairing was right; the CALCULATION was not.
+
+`ShiftType.get_attendance` cuts the day into contiguous runs of eligible logs:
+
+    segments = [g for eligible, g in groupby(logs, counts_for_attendance) if eligible]
+
+Her three ignored taps sit between the real IN and the real OUT, so the two
+counted taps landed in two segments of one tap each and never paired. Under
+alternating pairing a one-tap segment has no out time at all.
+
+RULING APPLIED (the owner's, already recorded above): a tap somebody ignored is
+REMOVED from the day, not a wall across it. What stays a wall, because bridging
+it would pay unverified minutes: an off-shift punch, a REJECTED punch, and a
+late check-out still waiting for its approver. Those are now asked by name
+(`splits_the_day`) instead of being lumped in with "not evidence".
+
+Every other writer of `skip_auto_attendance` was checked and is noise by
+construction: HR's own ignore, the burst-tap stutter, and the hold on a day HR
+removed (which never reaches this calculation at all).
+
+CONSEQUENCE, stated plainly: on a day where a mid-day OUT is ignored, the hours
+now run first-IN to last-OUT across it. One existing test asserted the opposite
+with a bare skipped tap and is amended into two — the wall case, asserted with a
+rejection, and the ignore case, asserted at the new figure.
