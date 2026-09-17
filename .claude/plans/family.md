@@ -1,155 +1,51 @@
-# FAMILY — an allowance that falls to zero one metre past its cap
+# FAMILY — a permission granted in one place and refused in three others
 
-CLASS: a tolerance expressed as "up to X, then nothing", where the step lands
-exactly where the measurements are noisiest. The geofence allowance was
-`accuracy` up to 250 m and ZERO beyond it, so the same person, standing in the
-same place 80 m from the centre of a 50 m fence, was allowed at 250 m of
-reported error and sent to remote approval at 251 m.
+CLASS: one rule kept in four copies. "Who may cancel an approved request" was
+written in the guard, re-derived in `finalize`, re-derived again in the PWA's
+`cancelRule.js` — in a file whose own comment says it does not keep a copy —
+and asserted in each of their tests. Granting the employee the right to
+withdraw in the guard alone would have produced a permission nobody could
+reach: the server would say yes and every door would still say no.
 
-Measured on the real function before the fix, not inferred.
+Owner, 17 Sep 2026: "approved leave or others made by request (the employee)
+can be withdrawn and whatever the approved must be reverted back to its
+original content... i have 14 days leave balance... i withdrawn. it must
+reflect back to 14 days." Asked which shape, he answered "withdrawal. a." —
+outright, by the employee. This reverses his own 14 Sep ruling, which the guard
+recorded as "The employee who raised it, and anyone else, still cannot."
 
-ROOT CAUSE: between the allowance cap and the point-estimate trust cap the code
-already treats the device's estimate as meaningful — it allows a point that
-lands inside — but gave that same estimate no tolerance when the point landed
-just outside. Trusted when it helps, discarded when it does not. The allowance
-is now `min(accuracy, 250)` for every reading the code trusts at all, so it
-never decreases as the reading gets worse and never exceeds the cap.
+ROOT CAUSE: the copies. `may_cancel` is now the one routing answer and every
+door asks it.
 
-## Both sides of the same rule, and everything that reads it
+## Every copy, and the reverting half that already worked
 
-hrms/utils/geofence.py:155 (`evaluate_geofence`) — same-root (fixed here)
-  The authority. Every punch is decided here.
-frontend/src/utils/geolocation.js:124 (`previewGeofence`) — same-root (fixed here)
-  The phone's preview of that decision. It must agree case for case, and
-  `hrms/tests/test_geolocation_properties.py::TestPreviewParity` failed the
-  moment the server changed — which is the test doing exactly its job.
-hrms/api/geofence.py (`check_geofence`) — not-affected
-  The pre-flight endpoint; it calls `evaluate_geofence` and inherits the fix.
-hrms/overrides/employee_checkin_override.py
-  (`validate_distance_from_shift_location`) — not-affected
-  The enforcement point; also calls `evaluate_geofence`.
-hrms/utils/geofence.py::usable_accuracy — not-affected
-  Parses the number. An unreadable or absent accuracy is still "unknown" and
-  still buys nothing — a device that reports no error estimate is measured as
-  a surveyed point, as before.
-hrms/utils/geofence.py::POINT_ESTIMATE_TRUST_CAP_M — not-affected
-  Unchanged at 2000 m, and still the line past which a reading places nobody.
-
-## The test that pinned the old policy
-
-hrms/utils/test_geofence.py::test_a_coarse_reading_whose_point_is_outside_still_cannot_clear_the_fence
-  — same-root (amended here, not deleted)
-  It asserted that a coarse reading whose point lands outside buys NOTHING,
-  which IS the cliff, written down as expected behaviour. Amended to the new
-  rule and renamed: a trusted reading buys the capped allowance and no more —
-  50 m outside a fence with 600 m of error is allowed, 300 m outside is not.
-
-## The two real callers, with the line numbers the scan asked for
-
-hrms/api/geofence.py:152 — same-root (fixed here)
-  The PWA's pre-flight. It calls `evaluate_geofence` and inherits the corrected
-  allowance, which is what stops the sheet warning somebody that it is about to
-  send them to an approver they do not need.
-hrms/overrides/employee_checkin_override.py:605 — same-root (fixed here)
-  The enforcement point on every punch. Same call, same inheritance. Neither
-  caller needed a change of its own: the rule lives in one function on purpose,
-  and that is why fixing it once fixed both.
-
-## Second pass, same day — the review's two Warnings
-
-**W1, strict mode.** The reviewer is right that this is a policy point and
-wrong that the ceiling moved. Strict mode already tolerated up to 250 m of
-error bar for any reading at or under the cap: a person 200 m from a 50 m fence
-with 250 m of reported error was ALWAYS allowed. What changed is that a reading
-one metre coarser stopped being treated as a separate, blocked class. The
-maximum permissiveness of strict mode is unchanged at radius + 250 m; the
-discontinuity below it is gone. Named here rather than left to be rediscovered,
-and flagged to the owner in the same breath: if he wants strict to stay harsh
-on coarse readings specifically, that is a different rule and he can have it.
-
-**W2, the dialogs overclaim.** Real, and fixed. The reason code used to stand
-in for "was this reading precise", and it no longer does.
-
-frontend/src/components/StrictRejectionDialog.vue:24 — same-root (fixed here)
-  The distance card is now gated on the reading, not the reason string: a
-  coarse one falls through to the accuracy wording it always had.
-frontend/src/components/RemoteCheckinDialog.vue:28 — same-root (fixed here)
-  Same gate. It gained an `accuracyM` prop, because it could not have judged
-  this without one.
-frontend/src/components/CheckInPanel.vue:895 (`locationVerdict`) — same-root (fixed here)
-  The sheet's own copy of the same call, found by its existing test: a coarse
-  far reading was about to be announced as "Too far from X" with no caveat.
-  It says "Your location is uncertain", as it did before the boundary moved.
-frontend/src/utils/geolocation.js — same-root (fixed here)
-  The two caps are exported under the server's own names, so all three
-  surfaces read one number instead of three retyped copies of 250.
-docs/glass/audit/2026-09-08-probes.py:98 — same-root (fixed here)
-  A dated audit probe asserting the old reason for a 1.3 km reading. Amended
-  with the reason, so anyone re-running it is not misled.
-
-## Third pass, same day — the review's two Warnings on the dialog fix
-
-Both mine, both the same class as the one before: a surface deciding from the
-reason string, one line away from a surface that already knows better.
-
-frontend/src/components/RemoteCheckinDialog.vue (`headline`) — same-root (fixed here)
-  The metric row was gated and the HEADLINE above it was not, so it still said
-  "You're outside the office geofence" over a card that had just refused to
-  show a distance for that same reading.
-frontend/src/components/StrictRejectionDialog.vue (`title`, `subtitle`) — same-root (fixed here)
-  Found by the same question, not reported: both switch on the reason alone.
-  A coarse reading is now named as one whatever verdict it produced.
-frontend/src/utils/geolocation.js (`isReadingCoarse`) — same-root (fixed here)
-  Three hand-copies of `accuracy > 250` across two dialogs and the sheet were
-  what let this drift out of step twice in one day. One exported function now,
-  and a test that fails if any surface re-derives the comparison.
-hrms/api/remote_checkin.py (`punch` return) — same-root (fixed here)
-  The dialog was reading the panel's LIVE accuracy after two round trips, so a
-  newer fix landing mid-flight would caveat — or fail to caveat — a verdict the
-  server reached on a different reading. The punch now echoes `accuracy_m`, the
-  way `check_geofence` already did for the strict path.
-frontend/src/components/CheckInPanel.vue:1176 — same-root (fixed here)
-  Reads that echo instead of its own `location.accuracy`.
-
-## Machine-listed sites (the scan matched the word `punch` in prose)
-
-None of these calls `punch` or `isReadingCoarse`: each is a log line, a
-docstring or a comment containing the word.
-
-hrms/api/attendance_fix_day.py:525 — not-affected — prose or a log line containing the word "punch".
-hrms/api/attendance_master_edit.py:845 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:420 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:823 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:857 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/employee_checkin/employee_checkin.py:928 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/doctype/shift_type/shift_type.py:557 — not-affected — prose or a log line containing the word "punch".
-hrms/hr/report/attendance_day_audit/attendance_day_audit.js:102 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:256 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:314 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:381 — not-affected — prose or a log line containing the word "punch".
-hrms/overrides/employee_checkin_override.py:45 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:313 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:438 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:458 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/checkin_import.py:734 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:239 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:396 — not-affected — prose or a log line containing the word "punch".
-hrms/sync/erp_backfill.py:564 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:119 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:176 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:197 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:200 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:235 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:625 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_day_audit.py:631 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_ownership.py:197 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1309 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1404 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:1675 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:444 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:465 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:473 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/attendance_recovery.py:476 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/hr_removed_day.py:72 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/offshift_punch_heal.py:192 — not-affected — prose or a log line containing the word "punch".
-hrms/utils/shift_resolution.py:88 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/approved_request_guard.py::cancel_refusal — same-root (fixed here)
+  The authority. The owner is allowed; the two money refusals stay.
+hrms/utils/approved_request_guard.py::may_cancel — same-root (added here)
+  The routing half on its own, so `finalize` can ask it without reading
+  payroll a second time on a path that checks payroll moments later anyway.
+hrms/api/approval.py::finalize — same-root (fixed here)
+  It elevated only for `not is_own_request(doc) and _is_routed_approver(doc)`.
+  That second copy is exactly what would have left the owner outside.
+frontend/src/utils/cancelRule.js — same-root (fixed here)
+  Returned `false` for the owner, so the button never rendered. It now returns
+  "approved" for everyone and lets the server answer, which is what its own
+  comment always claimed it did.
+hrms/api/approval.py::can_cancel_approved — not-affected
+  Already answers with `cancel_refusal`, so it inherited the new permission
+  without a change. The one door that was built right.
+hrms/hr/doctype/leave_application/leave_application.py::on_cancel — not-affected
+  `create_leave_ledger_entry(submit=False)` reverses the ledger: 13 back to 14.
+hrms/hr/doctype/compensatory_leave_request/compensatory_leave_request.py:142
+  — not-affected — takes the allocated days back off the allocation.
+hrms/hr/doctype/ot_request/ot_request.py:265 — not-affected — reverses the
+  replacement leave it granted, from the stored day count.
+hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py:145 —
+  not-affected — the shared `reverse_replacement_leave`.
+hrms/hr/doctype/attendance_request/attendance_request.py:205 — not-affected —
+  cancels the Attendance rows the approval created.
+hrms/hr/doctype/shift_request/shift_request.py:77 — not-affected — cancels the
+  Shift Assignment it created.
+hrms/api/correction_cancel.py — not-affected
+  The HR-only endpoint for the two doctypes with no decision field. Its own
+  role gate is unchanged; this ruling is about the employee's own request.

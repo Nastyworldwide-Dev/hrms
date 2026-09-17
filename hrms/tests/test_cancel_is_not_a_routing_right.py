@@ -32,10 +32,14 @@ def _function(name: str) -> ast.FunctionDef:
 
 def _elevating_tests(fn):
 	"""The test of every `if` whose own body sets ignore_permissions and whose
-	condition calls `_is_routed_approver`."""
+	condition asks who may cancel.
+
+	Amended 17 Sep 2026: it looked for `_is_routed_approver` by name, which was
+	the second copy of that rule living in `finalize`. The one copy is
+	`may_cancel` in the guard, and this looks for the call that asks it."""
 	found = []
 	for node in ast.walk(fn):
-		if not isinstance(node, ast.If) or "_is_routed_approver" not in ast.unparse(node.test):
+		if not isinstance(node, ast.If) or "may_cancel" not in ast.unparse(node.test):
 			continue
 		body = ast.Module(body=node.body, type_ignores=[])
 		if any(isinstance(n, ast.Assign) and "ignore_permissions" in ast.unparse(n) for n in ast.walk(body)):
@@ -53,9 +57,14 @@ class TestApprovedCancelIsRoutedToHrAndTheApprover(unittest.TestCase):
 		self.assertEqual(len(tests), 1, f"expected one routed cancel elevation, found {tests}")
 		test = tests[0]
 		self.assertIn("'cancel'", test, "the elevation is for CANCEL only, never the submit fall-through")
-		self.assertIn("_is_routed_approver(doc)", test)
-		self.assertIn(
-			"not is_own_request(doc)", test, "the request's own employee must never be elevated to cancel"
+		# Amended 17 Sep 2026. This asserted the elevation re-derived routing
+		# here AND excluded the request's own employee. The owner may now
+		# withdraw their own ("withdrawal. a."), and re-deriving the rule in a
+		# second place is exactly what made that permission unreachable — the
+		# guard said yes and this said no. One copy, asked by name.
+		self.assertIn("may_cancel(doc)", test, "the elevation asks the guard, it does not re-derive")
+		self.assertNotIn(
+			"_is_routed_approver(doc)", test, "a second copy of the routing rule is how the owner got lost"
 		)
 		self.assertIn(
 			"is_approved_request(doc)", test, "a rejected/open request stays governed by the cancel DocPerm"

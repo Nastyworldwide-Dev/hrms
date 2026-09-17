@@ -245,8 +245,15 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 			called,
 			"finalize must still route its submit authority through the decision gate",
 		)
-		self.assertIn("_is_routed_approver", called, "an approved cancel is routed to HR and the approver")
-		self.assertIn("is_own_request", called, "the request's own employee is never elevated to cancel")
+		# Amended 17 Sep 2026. finalize used to re-derive who may cancel — "not
+		# the owner, and routed" — which is precisely how the owner was left
+		# out when the owner became allowed to withdraw. It asks the ONE copy
+		# now, and the test asks for that instead of for the copy.
+		self.assertIn(
+			"may_cancel",
+			called,
+			"an approved cancel asks the guard who may cancel; it does not re-derive it",
+		)
 
 	# Public native tests exercise denial and routed elevation through both
 	# endpoints; a source-position assertion cannot follow their shared gate.
@@ -328,11 +335,13 @@ class TestFinalizeCancelByTheApprover(unittest.TestCase):
 		self.assertEqual(doc.docstatus, 2)
 		self.assertIs(doc.flags_at_cancel.get("ignore_permissions"), True)
 
-	def test_the_employee_is_not_elevated(self):
-		doc = None
-		with self.assertRaises(self.frappe.PermissionError):
-			doc = self._finalize(self.STAFF_USER)
-		self.assertIsNone(doc)
+	def test_the_employee_is_elevated_to_withdraw_their_own(self):
+		"""Amended 17 Sep 2026. This asserted the owner was refused — which is
+		what made the guard's new permission unreachable: it said yes, and this
+		endpoint, the only way the app cancels, said no."""
+		doc = self._finalize(self.STAFF_USER)
+		self.assertEqual(doc.docstatus, 2)
+		self.assertTrue(doc.flags_at_cancel.get("ignore_permissions"))
 
 	def test_someone_not_routed_is_not_elevated(self):
 		with self.assertRaises(self.frappe.PermissionError):
@@ -355,7 +364,9 @@ class TestCanCancelApproved(unittest.TestCase):
 
 	CALLER = "manager@example.com"
 	STAFF_USER = "staff@example.com"
-	MESSAGE = "Only HR or the approver can cancel an approved request."
+	# Amended 17 Sep 2026: the employee may withdraw their own, so the refusal
+	# names all three of the people who can.
+	MESSAGE = "Only you, HR or your approver can cancel an approved request."
 	PAID = (
 		"This overtime is already paid in a submitted salary slip. "
 		"Correct it with a payroll adjustment instead."
@@ -428,10 +439,18 @@ class TestCanCancelApproved(unittest.TestCase):
 			{"can_cancel": True, "reason": None},
 		)
 
-	def test_the_employee_may_not_even_as_hr(self):
+	def test_the_employee_may_withdraw_their_own(self):
+		"""Amended 17 Sep 2026 — this asserted they could not, until the owner
+		answered "withdrawal. a." The screen must offer the button, or the
+		guard's new permission is one nobody can reach."""
 		self.assertEqual(
-			self._ask(roles=("HR Manager",), own_employee="HR-EMP-STAFF"),
-			{"can_cancel": False, "reason": self.MESSAGE},
+			self._ask(
+				roles=("HR Manager",),
+				own_employee="HR-EMP-STAFF",
+				from_date="2026-08-20",
+				to_date="2026-08-20",
+			),
+			{"can_cancel": True, "reason": None},
 		)
 
 	def test_an_unrouted_viewer_may_not(self):

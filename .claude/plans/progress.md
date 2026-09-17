@@ -241,3 +241,13 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T07:01:31Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
 - 2026-09-17T07:01:32Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 37 call site(s) given verdicts, 15 same-root ⟂4ae4a89db443
 - 2026-09-17T07:01:47Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-17T07:01:49Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 37 call site(s) given verdicts, 15 same-root ⟂4ae4a89db443
+- 2026-09-17T07:01:55Z PUSH: nz-glass @ 265d49afa
+- 2026-09-17T07:01:55Z COMMIT: 265d49afa fix(geofence): the words match the number the dialog refuses to show → review+design dispatched
+- 2026-09-17T13:00:00Z PLAN: current-plan.md approved — an employee may withdraw their own approved request. Owner answered "withdrawal. a." to the three shapes offered, reversing his own 14 Sep ruling.
+- 2026-09-17T13:00:00Z REPAIR: the reverting half already worked for every request type (leave ledger, allocation, replacement leave, Attendance row, Shift Assignment). The DOOR was shut in three places, each with its own copy of "who may cancel": the guard, finalize, and the PWA's cancelRule.js — the last in a file whose own comment says it keeps no copy. may_cancel is now the one routing answer and all three ask it. Two money refusals stay: paid OT, and days inside a submitted salary slip (the employee is told to ask HR; HR is not stopped).
+- 2026-09-17T13:00:00Z EVIDENCE: rung 2 — 10 new tests RED first; four suites that pinned the 14 Sep ruling AMENDED, each naming the ruling that replaced it; 126 guard/approval/cancel neighbour tests green, ruff clean, every frontend suite green.
+- 2026-09-17T07:13:06Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
+- 2026-09-17T07:13:06Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-17T07:13:21Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
+- 2026-09-17T07:13:21Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28

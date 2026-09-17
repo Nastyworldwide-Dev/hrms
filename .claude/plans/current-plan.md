@@ -1,75 +1,77 @@
-# PLAN — the geofence allowance has a cliff in it
+# PLAN — an employee can withdraw their own approved request
 
-Owner, 17 Sep 2026: "i still get report regarding geofence, some experience had
-to remote request despite in the area for check in. accuracy problems. or idk.
-do check."
+Owner, 17 Sep 2026: "approved leave or others made by request (the employee)
+can be withdrawn and whatever the approved must be reverted back to its
+original content, for example, i have 14 days leave balance (annual leave), i
+request for 1 day al leave... once approved, deduct... and let say i had to
+cancel my leave despite the approved. i withdrawn. it must reflect back to 14
+days. this is one of example, and must be applied back to how everything else
+is."
 
-## Measured, not guessed
+Offered three shapes — (a) the employee cancels outright, (b) a withdrawal the
+approver confirms, (c) self-service before it starts — he answered:
+**"withdrawal. a."**
 
-Run against the real function, same person, standing 80 m from the centre of a
-50 m fence:
+This REVERSES his own ruling of 14 Sep, recorded in the guard's own docstring:
+"The employee who raised it, and anyone else, still cannot."
 
-    accuracy 249 m -> ALLOWED
-    accuracy 250 m -> ALLOWED
-    accuracy 251 m -> require_remote (imprecise_location)
+## What already worked, and what did not
 
-One metre of extra reported error costs 250 metres of tolerance.
+The **reverting** half was complete and is untouched. Every request type undoes
+its own work in `on_cancel`: the leave ledger entry (14 back to 14), the
+allocated comp-leave days, the replacement leave the OT granted, the Attendance
+row, the Shift Assignment.
 
-## Why
+What was missing was the door — and there were three of them, each keeping its
+own copy of "who may cancel":
 
-The allowance a reading buys was `accuracy`, up to `ACCURACY_ALLOWANCE_CAP_M`
-(250 m), and **zero** beyond it. Between that cap and
-`POINT_ESTIMATE_TRUST_CAP_M` (2000 m) the code already treats the device's own
-estimate as meaningful — it says so, and it allows a point that lands inside
-the radius — but it gave that same estimate no tolerance at all the moment the
-point landed a few metres outside.
+* `approved_request_guard.cancel_refusal` — the authority;
+* `approval.finalize` — re-derived it as `not is_own_request and routed`;
+* `frontend/src/utils/cancelRule.js` — returned `false` for the owner, in a
+  file whose own comment says it keeps no copy of the rule.
 
-Trusted when it helps, discarded when it does not. A phone indoors reporting
-400 m of error, with its point estimate 80 m from the office centre, was sent
-to its approver; the error bar that would have covered the whole building
-bought nothing.
+Granting the right in the guard alone would have produced a permission nobody
+could reach.
 
 ## FLOW
 
-`hrms/utils/geofence.py::evaluate_geofence`, and its mirror
-`frontend/src/utils/geolocation.js::previewGeofence` (a property test asserts
-the two agree case for case, and it caught the drift immediately):
+1. `may_cancel(doc, user)` — the routing answer, once: the request's own
+   employee, HR, or the person it is routed to.
+2. `cancel_refusal` = the money refusals, then `may_cancel`. The owner is
+   allowed; two refusals stay and are about money, not roles:
+   * paid overtime on a submitted salary slip (refused for everyone, since W5);
+   * a request whose days fall inside a submitted salary slip — handing the
+     days back while the money stays paid is a hole, so the employee is told to
+     ask HR, who can still do it. `REQUEST_PERIOD_FIELDS` names every decidable
+     doctype's dates and a test fails if one is missing; a row carrying no
+     dates fails CLOSED.
+3. `finalize` asks `may_cancel` instead of re-deriving it.
+4. `cancelRule.js` returns "approved" for everyone and lets the server answer.
 
-    allowance = 0                       when accuracy > 2000 m   (unchanged)
-    allowance = min(accuracy, 250 m)    otherwise                (was: accuracy
-                                                                  under 250,
-                                                                  zero over it)
-
-Past the trust cap nothing changes: an IP-level fix places nobody, and landing
-inside a fence by a provider's centroid is luck, not presence — still
-`imprecise_location`, still a throw in strict mode.
-
-MOCKUP: NOT NEEDED (no screen, control or copy changes. The employee sees the
-same check-in sheet; it stops sending them to an approver they do not need.)
+MOCKUP: NOT NEEDED (no new screen or control — the existing Cancel action on
+the request sheet stops being hidden from the person it belongs to.)
 
 ## EXPECTED OUTPUT
 
-* The reported case: allowed at 251 m of error, as it already was at 250 m.
-* The allowance never shrinks as a reading gets worse (monotonic).
-* A kilometre of error still widens a fence by at most 250 m.
-* A sharp reading well outside is still outside.
-* A reading past 2000 m still places nobody, even when it lands inside.
-* Strict mode still throws exactly where lenient routes to approval.
+* 14 days, one requested, approved, balance 13. Withdraw: balance 14.
+* The same for comp leave days, replacement leave, an Attendance row, a Shift
+  Assignment — each already reverses itself.
+* A request whose days are in a submitted salary slip: the employee is refused
+  with a sentence naming HR; HR and the approver are not.
+* Paid overtime: refused for everyone, unchanged.
+* Somebody else's request: refused, unchanged.
 
-## The trade-off, stated
+## Risk
 
-This is more permissive than today for readings between 250 m and 2000 m of
-error: such a reading now buys up to 250 m of tolerance instead of none. In
-lenient mode that means fewer remote approvals for people who are where they
-say they are — the reported complaint. In strict mode it means fewer refusals.
-It cannot be used to clear a fence from far away: the allowance is capped, and
-anyone beyond radius + 250 m is still outside.
+This widens who may cancel, by the owner's explicit instruction. The money
+guards above are the deliberate limit. Four tests that pinned the 14 Sep
+ruling are AMENDED, each naming the ruling that replaced it, so the change of
+policy is on record rather than silently rewritten.
 
 ## Pipeline Summary
 
-owner report -> measured on the real function -> this plan -> red tests first
-(7 cases: the exact metre it flipped, monotonicity, the cap still capping, and
-four that pin what must not change) -> the change on both sides -> the
-cross-language parity property test -> commit with the family ledger ->
-hook-dispatched review -> push -> the owner releases. No schema change, no
-patch, no data repair; the next punch is decided by the new rule.
+owner ruling -> this plan -> red tests first (10 new, plus the four amended
+suites) -> the four doors -> mapped + neighbour tests -> commit with the family
+ledger -> hook-dispatched review -> push -> the owner releases. No schema
+change, no patch, no data repair: the next withdrawal is decided by the new
+rule, and the reversal that follows it already existed.

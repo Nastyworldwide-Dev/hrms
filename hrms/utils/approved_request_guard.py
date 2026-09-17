@@ -1,8 +1,26 @@
-"""Only HR or the approver can cancel an approved request — Nabil, 14 Sep 2026.
+"""Who may cancel an approved request — the employee, HR, or its approver.
 
-Reverses the 13 Sep ruling "an approved request is never cancelled": HR and the
-request's approver must be able to cancel (and so amend / re-decide) an approved
-request of any type. The employee who raised it, and anyone else, still cannot.
+* 13 Sep 2026: an approved request is never cancelled.
+* 14 Sep 2026: HR and the request's approver may cancel (and so amend /
+  re-decide) an approved request of any type. The employee who raised it, and
+  anyone else, still cannot.
+* 17 Sep 2026: the employee may WITHDRAW their own. Asked which shape he
+  wanted — outright, or a withdrawal the approver confirms — Nabil answered
+  "withdrawal. a.": outright.
+
+Withdrawing reverses what the approval granted, because every request type
+already undoes its own work in `on_cancel`: the leave ledger entry, the
+allocated days, the replacement leave, the Attendance row, the Shift
+Assignment. Asking for one day of a fourteen-day balance and then withdrawing
+it puts the balance back at fourteen.
+
+Two refusals are about MONEY and survive the new ruling, for the employee only
+— HR and the approver keep the authority they were given on 14 Sep:
+
+* paid overtime on a submitted salary slip (refused for everyone, since W5);
+* a request whose days fall inside a submitted salary slip. Handing the days
+  back while the money stays paid is not a withdrawal, it is a hole; the
+  employee is told to talk to HR, who can still do it.
 
 Wired as `before_cancel` in hooks.py, so it holds on every cancel path: Desk
 Cancel, bulk cancel, "cancel all linked", hrms/api/approval.py `finalize`,
@@ -30,6 +48,23 @@ from frappe import _
 logger = logging.getLogger(__name__)
 
 APPROVED = "Approved"
+#: doctype -> the field(s) naming the days it covers. Every decidable doctype is
+#: here on purpose and a test fails if one is missing: a doctype with no period
+#: named could not be checked against payroll, and would be silently withdrawable
+#: after it was paid. A single field means a one-day period.
+REQUEST_PERIOD_FIELDS = {
+	"Leave Application": ("from_date", "to_date"),
+	"Expense Claim": ("posting_date",),
+	"Shift Request": ("from_date", "to_date"),
+	"Attendance Request": ("from_date", "to_date"),
+	"OT Request": ("ot_date",),
+	# The claim banks a month of replacement leave; the month it banks is the
+	# period a payslip would have paid.
+	"Replacement Leave Claim": ("bank_month",),
+	"Compensatory Leave Request": ("work_from_date", "work_end_date"),
+	"Employee Advance": ("posting_date",),
+	"Travel Request": ("creation",),
+}
 EXEMPT_FLAGS = ("in_shadow_sync", "in_patch", "in_migrate", "in_install")
 # The roles hrms/api/correction_cancel.py lets through its endpoint. The guard
 # itself no longer special-cases them: they are HR operators, so routing covers them.
@@ -103,6 +138,20 @@ def _paying_salary_slip(ot_request: str) -> str | None:
 	)
 
 
+def may_cancel(doc, user: str | None = None) -> bool:
+	"""Is `user` one of the three people who may cancel this approved request —
+	its own employee, HR, or the person it was routed to?
+
+	The ROUTING half of the rule, on its own, because `finalize` needs exactly
+	this to decide whether to elevate the cancel: the money half below is
+	enforced by `block_cancel_of_approved` on the cancel itself, moments later,
+	and asking it twice only reads payroll twice.
+	"""
+	from hrms.api.approval import _is_routed_approver
+
+	return bool(is_own_request(doc, user) or _is_routed_approver(doc, user))
+
+
 def cancel_refusal(doc, user: str | None = None) -> str | None:
 	"""Why `user` (default: session) may not cancel this APPROVED request, or None
 	when they may. The one copy of the rule: block_cancel_of_approved enforces it,
@@ -121,9 +170,28 @@ def cancel_refusal(doc, user: str | None = None) -> str | None:
 			"Correct it with a payroll adjustment instead."
 		)
 
-	from hrms.api.approval import _is_routed_approver
+	if is_own_request(doc, user):
+		# The 17 Sep ruling. The only thing that still stops them is payroll:
+		# the days would come back while the money stays paid, and unwinding
+		# that is HR's job, not a button on somebody's phone.
+		if slip := _slip_covering(doc):
+			logger.info(
+				"[approved_request_guard] refused withdrawal of %s %s by %s — paid in %s",
+				doc.doctype,
+				doc.name,
+				user,
+				slip,
+			)
+			return _("These days are already in a paid salary slip. Ask HR to cancel it for you.")
+		logger.info(
+			"[approved_request_guard] allowed withdrawal of own approved %s %s by %s",
+			doc.doctype,
+			doc.name,
+			user,
+		)
+		return None
 
-	if not is_own_request(doc, user) and _is_routed_approver(doc, user):
+	if may_cancel(doc, user):
 		logger.info(
 			"[approved_request_guard] allowed cancel of approved %s %s by approver %s",
 			doc.doctype,
@@ -133,12 +201,52 @@ def cancel_refusal(doc, user: str | None = None) -> str | None:
 		return None
 
 	logger.info(
-		"[approved_request_guard] refused cancel of approved %s %s by %s (own request or not the approver)",
+		"[approved_request_guard] refused cancel of approved %s %s by %s (not theirs, not the approver)",
 		doc.doctype,
 		doc.name,
 		user,
 	)
-	return _("Only HR or the approver can cancel an approved request.")
+	return _("Only you, HR or your approver can cancel an approved request.")
+
+
+def _slip_covering(doc) -> str | None:
+	"""A submitted Salary Slip whose period covers any day this request names.
+
+	Fails CLOSED on a doctype whose days are not named: a withdrawal that cannot
+	be checked against payroll is not one to wave through. `REQUEST_PERIOD_FIELDS`
+	carries every decidable doctype, and a test keeps it that way.
+	"""
+	fields = REQUEST_PERIOD_FIELDS.get(doc.doctype)
+	if not fields:
+		logger.warning("[approved_request_guard] %s names no period — treated as paid", doc.doctype)
+		return "unknown period"
+	days = [doc.get(field) for field in fields if doc.get(field)]
+	if not days:
+		# The fields are named but the row carries none of them. That is a
+		# malformed request, not an unpaid one, and this guard fails closed:
+		# HR can still cancel it, and they will see why in the log.
+		logger.warning(
+			"[approved_request_guard] %s %s names no dates in %s — treated as paid",
+			doc.doctype,
+			doc.name,
+			fields,
+		)
+		return "no dates on the request"
+	start, end = min(days), max(days)
+	slip = frappe.db.get_value(
+		"Salary Slip",
+		{
+			"docstatus": 1,
+			"employee": doc.get("employee"),
+			"start_date": ("<=", end),
+			"end_date": (">=", start),
+		},
+		"name",
+	)
+	logger.debug(
+		"[approved_request_guard] %s %s covers %s..%s, paid slip: %s", doc.doctype, doc.name, start, end, slip
+	)
+	return slip
 
 
 def block_cancel_of_approved(doc, method=None):

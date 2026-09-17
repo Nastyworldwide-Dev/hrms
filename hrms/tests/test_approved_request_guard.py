@@ -41,7 +41,9 @@ import frappe
 
 HRMS_ROOT = Path(__file__).resolve().parents[1]
 GUARD = "hrms.utils.approved_request_guard.block_cancel_of_approved"
-MESSAGE = "Only HR or the approver can cancel an approved request."
+# Amended 17 Sep 2026: the employee may withdraw their own, so the refusal
+# names all three of the people who can.
+MESSAGE = "Only you, HR or your approver can cancel an approved request."
 PAID_MESSAGE = (
 	"This overtime is already paid in a submitted salary slip. Correct it with a payroll adjustment instead."
 )
@@ -84,7 +86,20 @@ MANAGER = "HR-EMP-MANAGER"
 
 
 def _doc(doctype, in_memory_status=None, **fields):
-	doc = frappe._dict(doctype=doctype, name=f"{doctype}-0001", employee=STAFF, **fields)
+	"""A request row. Since 17 Sep 2026 the guard reads the days a request
+	covers, to refuse a WITHDRAWAL of days already in a paid salary slip — so a
+	row with none is malformed and fails closed. Every doctype gets its own
+	period fields filled unless the caller names them."""
+	from hrms.utils.approved_request_guard import REQUEST_PERIOD_FIELDS
+
+	dates = {
+		field: "2026-08-20"
+		for field in REQUEST_PERIOD_FIELDS.get(doctype, ())
+		if field not in fields and field != "creation"
+	}
+	doc = frappe._dict(
+		doctype=doctype, name=f"{doctype}-0001", employee=STAFF, creation="2026-08-20", **dates, **fields
+	)
 	if in_memory_status is not None:
 		doc.status = in_memory_status
 		doc.approval_status = in_memory_status
@@ -172,19 +187,33 @@ class TestWhoMayCancelAnApprovedRequest(unittest.TestCase):
 			with self.subTest(doctype=doctype):
 				_cancel(_doc(doctype), stored="Approved", own_employee=MANAGER, reports_to=MANAGER)
 
-	def test_the_employee_themselves_is_refused(self):
-		self.assertRefused(_doc("Leave Application"), stored="Approved", own_employee=STAFF)
+	def test_the_employee_themselves_may_withdraw_it(self):
+		"""Amended 17 Sep 2026. This asserted the opposite until the owner
+		answered "withdrawal. a." — the employee takes their own request back,
+		and every doctype's on_cancel gives the days or the row back with it."""
+		_cancel(_doc("Leave Application"), stored="Approved", own_employee=STAFF)
 
-	def test_the_employee_is_refused_even_when_hr_or_named_approver(self):
+	def test_the_employee_may_withdraw_whatever_else_they_also_hold(self):
+		"""Their own request is theirs to withdraw whether or not they are HR."""
 		for roles in (("HR User",), ("HR Manager",), ("System Manager",)):
 			with self.subTest(roles=roles):
-				self.assertRefused(
+				_cancel(
 					_doc("Leave Application", leave_approver=CALLER),
 					stored="Approved",
 					roles=roles,
 					own_employee=STAFF,
 				)
-		self.assertRefused(_doc("Employee Advance"), stored=None, roles=("HR Manager",), own_employee=STAFF)
+		_cancel(_doc("Employee Advance"), stored=None, roles=("HR Manager",), own_employee=STAFF)
+
+	def test_the_employee_is_refused_once_the_days_are_paid(self):
+		"""The only thing left standing between them and their own request."""
+		self.assertRefused(
+			_doc("Leave Application", from_date="2026-08-20", to_date="2026-08-20"),
+			message="These days are already in a paid salary slip. Ask HR to cancel it for you.",
+			stored="Approved",
+			own_employee=STAFF,
+			paid_slip="HR-SAL-0009",
+		)
 
 	def test_an_unrelated_employee_is_refused(self):
 		for doctype in (*DECISION_FIELD, *SUBMIT_IS_APPROVAL):
@@ -202,7 +231,8 @@ class TestWhoMayCancelAnApprovedRequest(unittest.TestCase):
 		with self.assertLogs("hrms.utils.approved_request_guard", level="INFO") as logs:
 			_cancel(_doc("Leave Application"), stored="Approved", roles=("HR User",))
 			with self.assertRaises(frappe.ValidationError):
-				_cancel(_doc("Leave Application"), stored="Approved", own_employee=STAFF)
+				# Somebody else's request: still refused, still logged.
+				_cancel(_doc("Leave Application"), stored="Approved", roles=("Employee",))
 		self.assertTrue(any("allowed" in line and CALLER in line for line in logs.output))
 		self.assertTrue(any("refused" in line and CALLER in line for line in logs.output))
 
@@ -223,11 +253,11 @@ class TestPaidOvertimeIsNeverCancelled(unittest.TestCase):
 					_cancel(_doc("OT Request"), stored="Approved", paid_slip="Sal Slip/STAFF/00008", **kwargs)
 				self.assertEqual(str(caught.exception), PAID_MESSAGE)
 
-	def test_unpaid_overtime_follows_the_approver_rule(self):
+	def test_unpaid_overtime_follows_the_same_rule_as_everything_else(self):
+		"""Amended 17 Sep 2026: the last line asserted the employee was refused."""
 		_cancel(_doc("OT Request"), stored="Approved", roles=("HR User",))
 		_cancel(_doc("OT Request"), stored="Approved", own_employee=MANAGER, reports_to=MANAGER)
-		with self.assertRaises(frappe.ValidationError):
-			_cancel(_doc("OT Request"), stored="Approved", own_employee=STAFF)
+		_cancel(_doc("OT Request"), stored="Approved", own_employee=STAFF)
 
 	def test_the_payroll_lookup_is_a_submitted_slip_covering_the_ot_date(self):
 		db = _cancel(_doc("OT Request"), stored="Approved", roles=("HR Manager",))

@@ -22,6 +22,7 @@ from hrms.utils.approved_request_guard import (
 	cancel_refusal,
 	is_approved_request,
 	is_own_request,
+	may_cancel,
 )
 
 logger = logging.getLogger(__name__)
@@ -489,15 +490,16 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		action = "submit" if docstatus == SUBMIT else "cancel"
 		if frappe.has_permission(doctype, action, doc=doc):
 			doc.check_permission("read")
-		elif (
-			action == "cancel"
-			and is_approved_request(doc)
-			and not is_own_request(doc)
-			and _is_routed_approver(doc)
-		):
+		elif action == "cancel" and is_approved_request(doc) and may_cancel(doc):
+			# `may_cancel` IS who may cancel an approved request — HR, the routed
+			# approver, and since 17 Sep 2026 the employee withdrawing their own.
+			# Re-deriving the rule here is what left the owner out: the guard
+			# said yes and this said no, so the permission the owner had was one
+			# they could not reach. The money rule is not re-asked here; the
+			# before_cancel guard enforces it on the cancel itself.
 			doc.flags.ignore_permissions = True
 			logger.info(
-				"[approval] %s cancels approved %s %s as routed approver (elevated)",
+				"[approval] %s cancels approved %s %s (elevated; the guard permits it)",
 				frappe.session.user,
 				doctype,
 				name,
