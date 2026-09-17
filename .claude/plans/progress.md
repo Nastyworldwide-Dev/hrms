@@ -283,3 +283,15 @@ failure in test_ot_nonworking_hours is pre-existing and identical on a clean
 HEAD extract. Two AST harnesses updated to see the new module-level names.
 NEXT: re-review, then the owner deploys (this one needs the migrate to create
 the column; until it exists every skipped punch simply stays a wall).
+- 2026-09-17T11:11:53Z PUSH: nz-glass @ 3e02ec548
+REPAIR: two places cleared skip_auto_attendance without clearing the new noise
+verdict (attendance_recovery's unskip, the master edit's hand-back). Harmless
+while the tap counts - splits_the_day answers on counted first - but the tick
+would have survived onto the NEXT skip and made a deferral read as noise. Both
+clear it now, and a test anchors on each definition (all three names are also
+called earlier in their own files, which is how the first version of that test
+found the wrong line).
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green; the single failure in
+test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
+NEXT: the owner deploys; the day's column is created by the patch on migrate,
+and until it exists every skipped punch simply stays a wall.

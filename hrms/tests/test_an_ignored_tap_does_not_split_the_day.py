@@ -220,6 +220,37 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 				self.assertIn("skip_auto_attendance", (root / rel).read_text())
 
 
+class TheVerdictGoesWithTheSkipCase(unittest.TestCase):
+	"""Clearing the skip clears the noise verdict, everywhere.
+
+	A tap that counts again is not a judgement about anything. A tick left
+	behind on it would make the NEXT skip — possibly one the system merely
+	deferred — read as noise, which is the very thing the default protects
+	against.
+	"""
+
+	#: (file, the anchor the clearing code follows). Anchored on the DEFINITION,
+	#: not the name: every one of these is also called earlier in its own file.
+	CLEARERS: ClassVar[tuple] = (
+		("hrms/api/attendance_fix_day.py", "def restore_tap("),
+		("hrms/api/attendance_master_edit.py", "def _set_skip("),
+		("hrms/utils/attendance_recovery.py", 'elif action == "unskip":'),
+	)
+
+	def test_every_place_that_unskips_also_clears_the_verdict(self):
+		root = pathlib.Path(__file__).resolve().parents[2]
+		for rel, marker in self.CLEARERS:
+			with self.subTest(where=f"{rel}:{marker}"):
+				text = (root / rel).read_text()
+				start = text.index(marker)
+				window = text[start : start + 1200]
+				self.assertIn(
+					"skipped_as_noise",
+					window,
+					f"{rel} clears the skip near {marker} without clearing the verdict",
+				)
+
+
 class TheColumnMayNotExistYetCase(unittest.TestCase):
 	"""A SELECT naming a column a site has not caught up with dies with
 	"Unknown column" — this fork has been bitten by exactly that before

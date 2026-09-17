@@ -985,7 +985,13 @@ def _insert_punch(fields):
 
 
 def _set_skip(name, value):
-	frappe.db.set_value("Employee Checkin", name, "skip_auto_attendance", value)
+	"""Skip or unskip a punch. Clearing the skip clears the noise verdict with
+	it: a tap that counts again is not a judgement, and a tick left behind would
+	make the next skip read as noise when nobody said so."""
+	fields = {"skip_auto_attendance": value}
+	if not cint(value):
+		fields["skipped_as_noise"] = 0
+	frappe.db.set_value("Employee Checkin", name, fields)
 
 
 def _skip_marked(names):

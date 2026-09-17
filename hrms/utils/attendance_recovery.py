@@ -1911,7 +1911,15 @@ def _repair_audit_entry(entry) -> dict:
 		elif action == "unskip":
 			if not cint(frappe.db.get_value("Employee Checkin", name, "skip_auto_attendance")):
 				continue
-			frappe.db.set_value("Employee Checkin", name, "skip_auto_attendance", 0, update_modified=False)
+			# The noise verdict goes with the skip. A tap that counts again is
+			# not a judgement about anything, and a tick left behind would make
+			# the NEXT skip read as noise when nobody said so.
+			frappe.db.set_value(
+				"Employee Checkin",
+				name,
+				{"skip_auto_attendance": 0, "skipped_as_noise": 0},
+				update_modified=False,
+			)
 			what = "skip stamp cleared"
 		else:
 			frappe.db.set_value("Employee Checkin", name, "attendance", None, update_modified=False)
