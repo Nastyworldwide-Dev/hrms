@@ -131,5 +131,57 @@ class ContractCase(unittest.TestCase):
 		self.assertIn("remove_duplicate_row", ast.unparse(undo))
 
 
+class TheCommentGoesOnTheRightDoctypeCase(unittest.TestCase):
+	"""Live, 17 Sep 2026. HR picked the 7PM row, gave a reason, pressed Apply:
+
+	    Could not find Reference Name: HR-ATT-2026-15978
+
+	`_comment` was written for taps and hardcodes
+	`reference_doctype: "Employee Checkin"`. The dedupe hands it an ATTENDANCE
+	name, so Frappe's link check looked for a punch by that name, found none,
+	and threw — which rolled the whole request back, cancel included. The one
+	action that unblocks a two-row day could never complete.
+
+	The harness for the other suite stubs `_comment` out entirely, which is why
+	nothing saw it. So this reads the real call: a comment writer must be TOLD
+	which doctype it is commenting on, never guess from its own history.
+	"""
+
+	def setUp(self):
+		self.source = pathlib.Path(fix_day.__file__).read_text()
+		self.tree = ast.parse(self.source)
+		self.functions = {
+			node.name: node for node in ast.walk(self.tree) if isinstance(node, ast.FunctionDef)
+		}
+
+	def test_the_comment_writer_does_not_name_a_doctype_of_its_own(self):
+		body = ast.unparse(self.functions["_comment"])
+		self.assertNotIn(
+			'reference_doctype\': \'Employee Checkin\'',
+			body,
+			"a hardcoded doctype is what sent an Attendance name to the punch table",
+		)
+
+	def test_every_caller_says_which_doctype_it_means(self):
+		for call in ast.walk(self.tree):
+			if not isinstance(call, ast.Call):
+				continue
+			if not (isinstance(call.func, ast.Name) and call.func.id == "_comment"):
+				continue
+			first = ast.unparse(call.args[0]) if call.args else ""
+			self.assertIn(
+				first,
+				("'Attendance'", "'Employee Checkin'"),
+				f"_comment{ast.unparse(call)[8:]} must lead with the doctype it is commenting on",
+			)
+
+	def test_the_duplicate_row_is_commented_as_an_attendance_row(self):
+		body = ast.unparse(self.functions["remove_duplicate_row"])
+		self.assertIn("_comment('Attendance'", body)
+
+	def test_a_tap_note_is_still_commented_on_the_punch(self):
+		self.assertIn("_comment('Employee Checkin'", ast.unparse(self.functions["_finish"]))
+
+
 if __name__ == "__main__":
 	unittest.main()

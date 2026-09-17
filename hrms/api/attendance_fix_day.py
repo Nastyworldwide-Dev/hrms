@@ -555,7 +555,9 @@ def remove_duplicate_row(attendance: str, reason: str) -> dict:
 	)
 	_cancel_attendance(row.name)
 	note = _("cancelled as this day's duplicate attendance row")
-	_comment(row.name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason))
+	_comment(
+		"Attendance", row.name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason)
+	)
 	return _finish(emp, [day], "remove_duplicate_row", reason, {}, before)
 
 
@@ -637,7 +639,9 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None) 
 	carrying the day before and after. The screen gets both."""
 	for name, note in notes.items():
 		_comment(
-			name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason or _("not given"))
+			"Employee Checkin",
+			name,
+			_("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason or _("not given")),
 		)
 	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}") for day in days}
 	after = {"days": _day_states(emp.name, days)}
@@ -935,13 +939,21 @@ def _delete_tap(name) -> None:
 	frappe.delete_doc("Employee Checkin", name, ignore_permissions=True)
 
 
-def _comment(tap, text) -> None:
+def _comment(reference_doctype, name, text) -> None:
+	"""Leave a note on a record. The DOCTYPE is always said out loud.
+
+	Live, 17 Sep 2026: this was written for taps and named "Employee Checkin"
+	itself, then `remove_duplicate_row` passed it an Attendance name. Frappe
+	looked for a punch called HR-ATT-2026-15978, did not find one, and threw
+	"Could not find Reference Name" — which rolled the request back, the cancel
+	with it, so the one action that unblocks a two-row day never completed.
+	"""
 	frappe.get_doc(
 		{
 			"doctype": "Comment",
 			"comment_type": "Comment",
-			"reference_doctype": "Employee Checkin",
-			"reference_name": tap,
+			"reference_doctype": reference_doctype,
+			"reference_name": name,
 			"content": text,
 		}
 	).insert(ignore_permissions=True)

@@ -237,3 +237,13 @@ already in row_view; only the line was missing it.
 EVIDENCE: 2 (mapped) - fix_day.bundle.test.js red on HEAD, green after; 27 JS
 and 109 Python tests across the fix-day suites.
 NEXT: deploy; the ghost-row list is still on offer.
+- 2026-09-17T09:05:40Z PUSH: nz-glass @ 01a4c79af
+REPAIR: "Could not find Reference Name: HR-ATT-2026-15978" on live - _comment
+hardcoded reference_doctype "Employee Checkin" and remove_duplicate_row handed
+it an Attendance name, so the request threw and rolled back the cancel with it.
+The one action that unblocks a two-row day could never complete. The store
+harness stubbed _comment with a 2-arg lambda, which is why no test saw it.
+EVIDENCE: 2 (mapped) - 4 new tests red on HEAD, green after; 117 passed across
+the five fix-day suites; the stub now records the doctype and asserts on it.
+NEXT: the owner says the flow has too many steps for one goal - propose the
+one-screen "rebuild this day" plan/apply before building it.

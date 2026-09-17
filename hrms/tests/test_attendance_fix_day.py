@@ -164,7 +164,13 @@ class FixDayCase(unittest.TestCase):
 		seam("_day_attendance", self.day_attendance)
 		seam("_day_taps", self.day_taps)
 		seam("_shift_stamp", self.shift_stamp)
-		seam("_comment", lambda tap, text: self.store.comments.append((tap, text)))
+		# The doctype is recorded, not dropped: this stub hid a live defect for a
+		# day — `_comment` named "Employee Checkin" itself while the dedupe passed
+		# it an Attendance row, and nothing here could see it.
+		seam(
+			"_comment",
+			lambda doctype, name, text: self.store.comments.append((doctype, name, text)),
+		)
 		seam("_rebuild", self.rebuild)
 		seam("_write_log", self.write_log)
 		seam("_insert_tap", self.insert_tap)
@@ -343,8 +349,8 @@ class TestIgnoreAndRestore(FixDayCase):
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
 		answer = fd.ignore_tap("CKIN-A", reason="the guard tapped for someone else")
 		self.assertEqual(self.store.taps["CKIN-A"]["skip_auto_attendance"], 1)
-		self.assertIn("the guard tapped for someone else", self.store.comments[0][1])
-		self.assertEqual(self.store.comments[0][0], "CKIN-A")
+		self.assertIn("the guard tapped for someone else", self.store.comments[0][2])
+		self.assertEqual(self.store.comments[0][:2], ("Employee Checkin", "CKIN-A"))
 		self.assertEqual(
 			json.loads(self.store.logs[answer["log"]]["before_state"])["taps"][0]["name"], "CKIN-A"
 		)
@@ -368,7 +374,7 @@ class TestIgnoreAndRestore(FixDayCase):
 		self.store.tap("CKIN-A", at(DAY, "19:30"), skip_auto_attendance=1, remote_approval_status="Rejected")
 		fd.restore_tap("CKIN-A", reason="rejected by mistake, the punch is genuine")
 		self.assertEqual(self.store.taps["CKIN-A"]["remote_approval_status"], "Approved")
-		self.assertIn("rejection on it cleared", self.store.comments[0][1])
+		self.assertIn("rejection on it cleared", self.store.comments[0][2])
 
 	def test_a_tap_that_already_counts_is_not_restored(self):
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
@@ -560,9 +566,9 @@ class TestTheTrailAndTheUndo(FixDayCase):
 
 	def test_an_action_comments_the_tap_logs_the_day_and_rebuilds_in_that_order(self):
 		answer = fd.ignore_tap("CKIN-A", reason="tapped by the wrong person")
-		self.assertEqual(self.store.comments[0][0], "CKIN-A")
-		self.assertIn(USER, self.store.comments[0][1])
-		self.assertIn("tapped by the wrong person", self.store.comments[0][1])
+		self.assertEqual(self.store.comments[0][:2], ("Employee Checkin", "CKIN-A"))
+		self.assertIn(USER, self.store.comments[0][2])
+		self.assertIn("tapped by the wrong person", self.store.comments[0][2])
 		entry = self.store.logs[answer["log"]]
 		self.assertEqual(entry["action"], "ignore_tap")
 		self.assertEqual(entry["employee"], EMP)
