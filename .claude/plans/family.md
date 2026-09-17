@@ -35,3 +35,18 @@ OT Request (ot_date), Replacement Leave Claim (bank_month),
 Compensatory Leave Request (work_from_date, work_end_date),
 Employee Advance (posting_date) — not-affected
   Each verified against its own doctype JSON by the new test, not by eye.
+
+## Third pass, same day — the review's Warning, same shape again
+
+hrms/tests/…::test_every_named_field_exists_on_its_doctype — same-root (fixed here)
+  The test skipped any doctype whose JSON it could not find, silently. Nothing
+  is skipped today, but the next entry for a doctype owned outside this app
+  would have passed green while checking nothing — the exact shape of the bug
+  the test was written for, one level up. The skips are collected and compared
+  against an EXTERNAL set that is empty on purpose, so a new one has to be
+  acknowledged.
+hrms/utils/approved_request_guard.py::_withdrawal_block — same-root (fixed here)
+  The slip's name had dropped to DEBUG when the helper started returning a
+  sentence. The sentence is the same every time, so at INFO it identifies
+  nothing; the name is logged at INFO again, where an on-call reader is.
+  The two "cannot check" sentences also read properly now.

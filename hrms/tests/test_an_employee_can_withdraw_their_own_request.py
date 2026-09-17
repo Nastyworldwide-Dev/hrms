@@ -30,6 +30,7 @@ TWO refusals stay, and they are about money, not about roles:
 from __future__ import annotations
 
 import unittest
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import frappe
@@ -182,18 +183,24 @@ class PeriodFieldsAreRealCase(unittest.TestCase):
 	"is the doctype listed" test because the doctype WAS listed.
 	"""
 
+	#: Doctypes whose JSON lives outside this app, so this test cannot read it.
+	#: EMPTY on purpose: every entry in the map is owned here today. A new entry
+	#: that is not must be added here deliberately — a silent skip is a test that
+	#: checks nothing, which is the same shape as the bug this test exists for.
+	EXTERNAL: ClassVar[frozenset] = frozenset()
+
 	def test_every_named_field_exists_on_its_doctype(self):
 		import json
 		import pathlib
 
 		root = pathlib.Path(__file__).resolve().parents[1]
+		skipped = set()
 		for doctype, fields in guard.REQUEST_PERIOD_FIELDS.items():
 			slug = doctype.lower().replace(" ", "_")
 			path = next(root.rglob(f"doctype/{slug}/{slug}.json"), None)
-			if path is None:
-				continue  # an erpnext-owned doctype; its JSON is not in this app
-			meta = json.loads(path.read_text())
+			meta = json.loads(path.read_text()) if path else None
 			if not isinstance(meta, dict):
+				skipped.add(doctype)
 				continue
 			dates = {
 				f["fieldname"] for f in meta.get("fields", []) if f.get("fieldtype") in ("Date", "Datetime")
@@ -205,6 +212,12 @@ class PeriodFieldsAreRealCase(unittest.TestCase):
 						dates,
 						f"{doctype}.{field} is not a date field on the doctype — it cannot be its period",
 					)
+		self.assertEqual(
+			skipped,
+			set(self.EXTERNAL),
+			"a doctype this test could not read is a doctype it did not check — name it in EXTERNAL "
+			"deliberately, or the check quietly stops being one",
+		)
 
 	def test_a_doctype_with_no_usable_period_refuses_rather_than_guesses(self):
 		self.assertNotIn(

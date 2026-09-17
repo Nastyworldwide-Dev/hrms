@@ -269,3 +269,10 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T07:21:34Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
 - 2026-09-17T07:21:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-17T07:21:50Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:53Z COMMIT: 7e788e996 fix(requests): the payroll check reads the request's real dates → review dispatched
+- 2026-09-17T07:22:13Z COMMIT: f09db725b docs(plans): ticket the approved-request guard hotspot → review dispatched
+- 2026-09-17T14:05:00Z EVIDENCE: rung 2 — review of 7e788e996 NEXT_ACTION DEPLOY. It walked all nine decidable doctypes against their own JSON and confirmed no employee can withdraw days inside a submitted salary slip by any of them; Travel Request is refused outright. Its Warning — the JSON test skipped an unreadable doctype silently — is fixed: skips are collected and compared against an EXTERNAL set that is empty on purpose.
+- 2026-09-17T07:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-17T07:26:53Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:27:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-17T07:27:09Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901

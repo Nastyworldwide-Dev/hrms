@@ -229,9 +229,9 @@ def _withdrawal_block(doc) -> str | None:
 	fields = REQUEST_PERIOD_FIELDS.get(doc.doctype)
 	if not fields:
 		logger.warning("[approved_request_guard] %s names no period this can check", doc.doctype)
-		return _("A {0} has no dates this can check against payroll. Ask HR to cancel it for you.").format(
-			_(doc.doctype)
-		)
+		return _(
+			"A {0} has no dates that can be checked against payroll. Ask HR to cancel it for you."
+		).format(_(doc.doctype))
 	days = [doc.get(field) for field in fields if doc.get(field)]
 	if not days:
 		# The fields are named but the row carries none of them. That is a
@@ -243,7 +243,9 @@ def _withdrawal_block(doc) -> str | None:
 			doc.name,
 			fields,
 		)
-		return _("This request carries no dates to check against payroll. Ask HR to cancel it for you.")
+		return _(
+			"This request carries no dates that can be checked against payroll. Ask HR to cancel it for you."
+		)
 	start, end = min(days), max(days)
 	slip = frappe.db.get_value(
 		"Salary Slip",
@@ -255,11 +257,22 @@ def _withdrawal_block(doc) -> str | None:
 		},
 		"name",
 	)
-	logger.debug(
-		"[approved_request_guard] %s %s covers %s..%s, paid slip: %s", doc.doctype, doc.name, start, end, slip
-	)
 	if not slip:
+		logger.debug(
+			"[approved_request_guard] %s %s covers %s..%s, no paid slip", doc.doctype, doc.name, start, end
+		)
 		return None
+	# At INFO, with the slip's name: the sentence the employee reads is the same
+	# every time, so the only traceable identifier has to be here or an on-call
+	# reader cannot tell which slip blocked which withdrawal.
+	logger.info(
+		"[approved_request_guard] %s %s covers %s..%s — paid in %s",
+		doc.doctype,
+		doc.name,
+		start,
+		end,
+		slip,
+	)
 	return _("These days are already in a paid salary slip. Ask HR to cancel it for you.")
 
 
