@@ -29,6 +29,22 @@ Call sites the machine lists for the guard, the tap writer and the finish:
   the automatic resolver keeps its own rule; this is HR's press.
 * hrms/public/js/fix_day.bundle.js — same-root: the button and the plan.
 
+HOTSPOT: six fixes in 90 days here and three on the bundle. Refactor ticket
+filed, not done inline: .claude/plans/ticket-attendance-fix-day-split.md
+
+REVIEW OF d00b4de62 — three holes, all closed before deploy:
+* the planner built a session with NO length cap while `pair_taps` refuses any
+  span over MAX_PAIR_GAP_HOURS. Taps at 00:05 and 23:55 became a 24-hour day and
+  the engine would have priced it. It asks `pair_refusal` now — the same rule,
+  not a second copy of the number.
+* two live rows BOTH holding punches is a split shift, not a ghost duplicate.
+  Merging them would have re-stamped the second shift's closing tap onto the
+  first and swallowed the real gap as noise. Refused, by hand from here.
+* `undo_fix` refused only `remove_duplicate_row` for the un-cancel it cannot do.
+  A rebuild can cancel rows too, so the two share CANCELLING_ACTIONS and the
+  plan is written to the LOG (not just the answer) so the undo can tell whether
+  this pass actually cancelled anything.
+
 LOCK:
 * regression (the instance): hrms/tests/test_fix_day_rebuilds_a_day.py drives
   Norazlin's real 4 September through the planner.

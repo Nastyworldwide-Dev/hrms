@@ -374,20 +374,33 @@ def day_plan(taps, rows) -> dict:
 		return {**empty, "refusal": _("Nothing opens this day: it has no counted IN tap.")}
 	if not closing:
 		return {**empty, "refusal": _("Nothing closes this day: it has no counted OUT tap.")}
-	if get_datetime(closing.get("time")) <= get_datetime(opening.get("time")):
-		return {
-			**empty,
-			"refusal": _("This day closes before it opens ({0} out, {1} in); fix the taps by hand.").format(
-				closing.get("name"), opening.get("name")
-			),
-		}
+	# The same rule the manual pair answers with, asked the same way: a session
+	# HR is forbidden to build by hand is not one this may build in one press.
+	# Review of d00b4de62: without this, taps at 00:05 and 23:55 became a
+	# twenty-four hour "session" and the engine priced it.
+	session_refusal = pair_refusal(opening, closing)
+	if session_refusal:
+		return {**empty, "refusal": session_refusal}
 
 	# An empty row beside a worked one is the ghost the endgame leaves behind.
 	# With punches nowhere there is nothing to prefer, which is HR's call and
 	# not a screen's — the same answer `erp_backfill.resolve_duplicates` gives.
 	cancel = []
 	if len(live) > 1:
-		if not any(cint(row.get("linked_punches")) for row in live):
+		worked = [row for row in live if cint(row.get("linked_punches"))]
+		if len(worked) > 1:
+			# Two rows that BOTH hold punches are two real sessions, not a ghost
+			# beside a worked day. Merging them would re-stamp the second
+			# shift's closing tap onto the first shift and swallow the gap
+			# between them as noise (review of d00b4de62).
+			return {
+				**empty,
+				"refusal": _(
+					"This day has two attendance rows and punches on both ({0}). That is two "
+					"sessions, not a duplicate — correct it by hand."
+				).format(", ".join(sorted(str(row.get("name")) for row in worked))),
+			}
+		if not worked:
 			return {
 				**empty,
 				"refusal": _(
@@ -765,9 +778,7 @@ def rebuild_day(employee: str, date: str, reason: str) -> dict:
 	notes[opening.get("name")] = session_note
 	notes[closing.get("name")] = session_note
 
-	answer = _finish(emp, [day], "rebuild_day", reason, notes, before)
-	answer["plan"] = plan
-	return answer
+	return _finish(emp, [day], "rebuild_day", reason, notes, before, plan=plan)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -778,10 +789,15 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	entry = _log_entry(log_entry)
 	if cint(entry.undone):
 		_refuse(_("This fix was already undone."))
-	if entry.action == "remove_duplicate_row":
+	if entry.action in CANCELLING_ACTIONS and _cancelled_a_row(entry):
 		# Frappe has no un-cancel. Saying so is better than a no-op that looks
 		# like it worked; the day was rebuilt from its punches when the row
 		# went, and correcting the taps is how it is changed from here.
+		#
+		# `rebuild_day` is here too since the review of d00b4de62: it can cancel
+		# rows as well, and undoing one silently would hand HR a brand new row
+		# in place of the original, with the original's history orphaned on a
+		# permanently cancelled document.
 		_refuse(
 			_(
 				"A cancelled attendance row cannot be brought back. The day was rebuilt from "
@@ -843,7 +859,7 @@ def _before(employee, days, taps) -> dict:
 	}
 
 
-def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None) -> dict:
+def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, plan=None) -> dict:
 	"""A Comment on each tap, then the engine's re-mark, then the log entry
 	carrying the day before and after. The screen gets both."""
 	for name, note in notes.items():
@@ -856,6 +872,10 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None) 
 	after = {"days": _day_states(emp.name, days)}
 	if added:
 		after["added"] = added
+	if plan:
+		# On the LOG, not just in the answer: the undo reads it to find out
+		# whether this pass cancelled a row it cannot bring back.
+		after["plan"] = plan
 	entry = _write_log(
 		{
 			"employee": emp.name,
@@ -1194,6 +1214,29 @@ def _log_entry(name):
 	if not row:
 		_refuse(_("Fix {0} was not found.").format(name))
 	return row
+
+
+#: actions that can cancel an attendance row, which Frappe cannot un-cancel
+CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day")
+
+
+def _cancelled_a_row(entry) -> bool:
+	"""Whether this log entry actually cancelled a row. Pure enough to read.
+
+	`remove_duplicate_row` always does. `rebuild_day` only does when the day
+	carried a ghost row, so its own plan is the record: an undo of a rebuild
+	that cancelled nothing is an ordinary undo and stays allowed.
+	"""
+	if entry.action == "remove_duplicate_row":
+		return True
+	try:
+		after = json.loads(entry.after_state or "{}")
+	except ValueError:
+		logger.warning(
+			"[attendance_fix_day] %s has unreadable after_state; assuming it cancelled", entry.name
+		)
+		return True
+	return bool((after.get("plan") or {}).get("cancel"))
 
 
 def _tap_names(entry) -> list:

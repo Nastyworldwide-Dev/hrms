@@ -173,6 +173,94 @@ class ItRefusesRatherThanGuessCase(unittest.TestCase):
 		self.assertEqual(plan["cancel"], [])
 
 
+class ItNeverBuildsASessionHrCouldNotBuildCase(unittest.TestCase):
+	"""Review of d00b4de62 found the hole this closes.
+
+	`pair_taps` refuses two taps more than MAX_PAIR_GAP_HOURS apart — a session
+	is at most twenty hours. The planner picked the first IN and the last OUT
+	with no bound at all, so one press could write a span HR is forbidden from
+	making by hand, and the engine would price it. A rule the machine may break
+	and the person may not is not a rule.
+	"""
+
+	def plan(self, taps, rows=None):
+		return fix_day.day_plan(taps, rows if rows is not None else [row("ATT-1", punches=len(taps))])
+
+	def test_a_span_longer_than_a_session_is_refused(self):
+		plan = self.plan([tap("A", "00:05", "IN"), tap("B", "23:55", "OUT")])
+		self.assertIsNotNone(plan["refusal"])
+		self.assertEqual(plan["drop"], [], "a refused plan writes nothing")
+		self.assertEqual(plan["cancel"], [])
+
+	def test_the_refusal_says_how_long_and_how_long_is_allowed(self):
+		refusal = self.plan([tap("A", "00:05", "IN"), tap("B", "23:55", "OUT")])["refusal"]
+		self.assertIn(str(fix_day.MAX_PAIR_GAP_HOURS), refusal)
+
+	def test_the_cap_is_the_one_the_manual_pair_uses(self):
+		# Not a second copy of the number: the two must move together.
+		short = [tap("A", "09:00", "IN"), tap("B", "18:00", "OUT")]
+		self.assertIsNone(self.plan(short)["refusal"])
+		self.assertIsNone(fix_day.pair_refusal(short[0], short[1]))
+
+	def test_a_day_whose_evidence_spans_two_worked_rows_is_hrs_call(self):
+		"""A split shift is not a ghost duplicate. Two live rows BOTH holding
+		punches means two real sessions, and merging them would re-stamp the
+		second shift's closing tap onto the first shift and swallow the real
+		gap between them as noise."""
+		plan = fix_day.day_plan(
+			[
+				tap("A", "09:00", "IN"),
+				tap("B", "12:00", "OUT"),
+				tap("C", "19:00", "IN"),
+				tap("D", "22:00", "OUT"),
+			],
+			[row("ATT-1", punches=2, shift="9AM - 6PM"), row("ATT-2", punches=2, shift="7PM - 3.30AM")],
+		)
+		self.assertIsNotNone(plan["refusal"])
+		self.assertIn("two", plan["refusal"].lower())
+		self.assertEqual(plan["drop"], [])
+		self.assertEqual(plan["cancel"], [])
+
+
+class TheUndoIsHonestCase(unittest.TestCase):
+	def setUp(self):
+		import ast
+		import pathlib as _pathlib
+
+		source = _pathlib.Path(fix_day.__file__).read_text()
+		self.undo = next(
+			ast.unparse(node)
+			for node in ast.walk(ast.parse(source))
+			if isinstance(node, ast.FunctionDef) and node.name == "undo_fix"
+		)
+
+	def test_a_rebuild_that_cancelled_a_row_says_the_row_stays_cancelled(self):
+		"""`remove_duplicate_row`'s undo says plainly that Frappe has no
+		un-cancel. A rebuild can cancel rows too, so its undo must say the same
+		thing rather than quietly re-marking the day into a brand new row."""
+		self.assertIn("CANCELLING_ACTIONS", self.undo)
+		self.assertIn("rebuild_day", fix_day.CANCELLING_ACTIONS)
+		self.assertIn("remove_duplicate_row", fix_day.CANCELLING_ACTIONS)
+
+	def test_a_rebuild_that_cancelled_nothing_is_an_ordinary_undo(self):
+		# The rebuild only cancels when the day carried a ghost row; undoing a
+		# pass that cancelled nothing must not be refused for something it did
+		# not do.
+		self.assertIn("_cancelled_a_row(entry)", self.undo)
+
+	def test_the_plan_is_written_to_the_log_so_the_undo_can_read_it(self):
+		import ast
+		import pathlib as _pathlib
+
+		source = _pathlib.Path(fix_day.__file__).read_text()
+		rebuild = next(
+			ast.unparse(node)
+			for node in ast.walk(ast.parse(source))
+			if isinstance(node, ast.FunctionDef) and node.name == "rebuild_day"
+		)
+		self.assertIn("plan=plan", rebuild, "an answer-only plan never reaches the log")
+
+
 class TheEndpointsCase(unittest.TestCase):
 	def test_the_plan_is_a_read_and_the_rebuild_is_an_action(self):
 		self.assertIn("rebuild_day", fix_day.ACTIONS)

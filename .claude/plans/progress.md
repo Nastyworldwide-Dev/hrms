@@ -263,3 +263,13 @@ NEXT: review, then the owner deploys.
 - 2026-09-17T09:30:38Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-17T09:30:48Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
 - 2026-09-17T09:30:48Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T09:30:52Z COMMIT: d00b4de62 feat(attendance): one press rebuilds a day from its own evidence → review dispatched
+- 2026-09-17T09:30:59Z PUSH: nz-glass @ d00b4de62
+REPAIR: review of d00b4de62 returned FIX_CRITICAL. The planner had no session
+length cap (a 24h "session" was writable in one press, while the manual pair
+refuses anything over 20h); two rows both holding punches were merged as if one
+were a ghost; and undo_fix only warned about un-cancel for remove_duplicate_row.
+All three closed, plus a refactor ticket for the hotspot.
+EVIDENCE: 2 (mapped) - 7 new tests red before, green after; 154 passed across
+the seven fix-day suites.
+NEXT: re-review, then the owner deploys.

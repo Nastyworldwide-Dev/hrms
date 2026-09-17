@@ -123,12 +123,21 @@ class ContractCase(unittest.TestCase):
 			self.assertNotIn(f'"{forbidden}"', self.body)
 
 	def test_the_undo_says_plainly_that_a_cancelled_row_stays_cancelled(self):
+		"""Amended 17 Sep 2026. This looked for the action's name inside
+		`undo_fix`. `rebuild_day` can cancel a row too, so the two share one
+		list and the undo asks that — the name moved, the promise did not."""
 		undo = next(
 			node
 			for node in ast.walk(self.tree)
 			if isinstance(node, ast.FunctionDef) and node.name == "undo_fix"
 		)
-		self.assertIn("remove_duplicate_row", ast.unparse(undo))
+		self.assertIn("CANCELLING_ACTIONS", ast.unparse(undo))
+		self.assertIn("remove_duplicate_row", fix_day.CANCELLING_ACTIONS)
+		self.assertIn(
+			"cannot be brought back",
+			ast.unparse(undo),
+			"the refusal is a sentence, not a silent no-op",
+		)
 
 
 class TheCommentGoesOnTheRightDoctypeCase(unittest.TestCase):
@@ -157,7 +166,7 @@ class TheCommentGoesOnTheRightDoctypeCase(unittest.TestCase):
 	def test_the_comment_writer_does_not_name_a_doctype_of_its_own(self):
 		body = ast.unparse(self.functions["_comment"])
 		self.assertNotIn(
-			'reference_doctype\': \'Employee Checkin\'',
+			"reference_doctype': 'Employee Checkin'",
 			body,
 			"a hardcoded doctype is what sent an Attendance name to the punch table",
 		)
