@@ -1,15 +1,17 @@
 # HANDOFF
-prompt:   one day, one attendance row (the owner's three-item list)
+prompt:   withdrawal (owner ruling "a"), geofence accuracy cliff
 status:   done
-commit:   926e404ae on nz-glass
-files:    hrms/api/attendance_fix_day.py (remove_duplicate_row, 6th action)
-          hrms/public/js/fix_day.bundle.js (+ its test)
-          hrms/utils/attendance_endgame.py (the `duplicates` step)
-          hrms/api/remote_checkin.py (BURST_WINDOW, is_burst_tap)
-          hrms/utils/attendance_day_audit.py (REPAIRABLE_SKIP_REASONS)
-verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_fix_day_removes_a_duplicate_row.py hrms/tests/test_endgame_resolves_duplicate_rows.py hrms/tests/test_a_tap_burst_is_one_tap.py
-flags:    FIRST real run of resolve_duplicate_rows. Read the new HR summary line
-          "Duplicate attendance rows cancelled: N" after the release — small is
-          expected. No gap is ever paid (owner ruling, held throughout).
-next:     Owner releases. Then the bench probe for the 6th action, ticketed at
-          the foot of .claude/plans/ticket-attendance-request-refactor.md.
+commit:   3f510070e on nz-glass
+files:    hrms/utils/approved_request_guard.py (may_cancel, _withdrawal_block)
+          hrms/api/approval.py (finalize asks may_cancel)
+          frontend/src/utils/cancelRule.js (server answers, not this file)
+          hrms/utils/geofence.py + frontend/src/utils/geolocation.js
+          frontend/src/components/{StrictRejection,RemoteCheckin}Dialog.vue
+verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_an_employee_can_withdraw_their_own_request.py hrms/tests/test_geofence_allowance_has_no_cliff.py
+flags:    Employee withdrawal REVERSES the 14 Sep ruling (owner said "a").
+          Money limits kept: paid OT, and days inside a submitted salary slip.
+          UNVERIFIED: a leave encashment or carry-forward expiry landing
+          BETWEEN approval and withdrawal — needs a bench check before anyone
+          withdraws an old leave.
+next:     Owner releases. Open: should strict geofence stay harsh on coarse
+          readings specifically (today it keeps the same 250 m it always had).
