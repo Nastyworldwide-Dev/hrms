@@ -96,5 +96,42 @@ class PunchContractCase(unittest.TestCase):
 		self.assertIn("add_comment", self.punch)
 
 
+class HrCanSeeItCase(unittest.TestCase):
+	"""A skip nobody is told about is a skip nobody fixes.
+
+	The Attendance Day Audit already lists skip-stamped punches and offers HR
+	"unskip" — but only for a skip whose reason it can READ (a comment carrying
+	`SKIP_PREFIX`) and recognise (`REPAIRABLE_SKIP_REASONS`). A burst tap that
+	was really a short session would otherwise sit uncounted with a comment
+	nobody reads, for a whole pay cycle.
+	"""
+
+	def test_the_burst_comment_is_one_the_audit_reads(self):
+		from hrms.utils.attendance_day_audit import SKIP_PREFIX
+
+		tree = ast.parse(pathlib.Path(remote_checkin.__file__).read_text())
+		punch = ast.unparse(
+			next(
+				node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "punch"
+			)
+		)
+		self.assertTrue(SKIP_PREFIX, "the audit's prefix must exist to be reused")
+		self.assertIn(
+			"SKIP_PREFIX",
+			punch,
+			"the comment must carry the audit's own prefix — taken from it, not retyped, "
+			"so the two cannot drift apart",
+		)
+
+	def test_the_audit_offers_hr_the_way_back(self):
+		from hrms.utils.attendance_day_audit import REPAIRABLE_SKIP_REASONS
+
+		self.assertTrue(
+			any(remote_checkin.BURST_SKIP_REASON.startswith(key) for key in REPAIRABLE_SKIP_REASONS)
+			or remote_checkin.BURST_SKIP_REASON in REPAIRABLE_SKIP_REASONS,
+			"a burst skip must be one the audit can offer to undo",
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -278,7 +278,7 @@ def duplicate_refusal(target, rows) -> str | None:
 		return _("This day has only one attendance row; there is no duplicate to remove.")
 	if not any(row.get("name") == target.get("name") for row in live):
 		return _("{0} is not a live attendance row on this day.").format(target.get("name"))
-	if cint(target.get("docstatus")) == 0:
+	if "docstatus" in target and cint(target["docstatus"]) == 0:
 		# `doc.cancel()` refuses a draft with a raw framework error, and this
 		# screen answers in sentences. A draft is also not what makes a day
 		# read wrong — nothing counts it — so Desk is the right place for it.

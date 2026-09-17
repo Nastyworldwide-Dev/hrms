@@ -278,3 +278,15 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:26:28Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-17T05:26:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
 - 2026-09-17T05:26:41Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T05:26:45Z COMMIT: b05a4afb7 fix(attendance): the duplicate-row action refuses in sentences, not traces → review dispatched
+- 2026-09-17T09:50:00Z EVIDENCE: rung 2 — review of 22f5541cb..b05a4afb7 NEXT_ACTION DEPLOY, no Critical. It verified by reading that remark_day_after_commit registers on frappe.db.after_commit, so the cancel and its re-mark ride the SAME commit the endgame loop makes; and that the duplicates step is idempotent on resume, because a cancelled row carries docstatus 2 and duplicate_days reads docstatus 1 only.
+- 2026-09-17T09:50:00Z REPAIR: its Warning — a burst-skipped punch was invisible to HR. The comment now carries the Attendance Day Audit's own SKIP_PREFIX and "Tapped again" joins REPAIRABLE_SKIP_REASONS, so the existing detector lists it with the way back. No new report was built.
+- 2026-09-17T05:32:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:32:49Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-17T05:33:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:33:07Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-17T05:33:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:33:14Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-17T05:33:15Z EVIDENCE: 6 behaves — family hunt: class=a guard that reasons about rows without asking whether the write it; 29 call site(s) given verdicts, 5 same-root ⟂f8dbc7841a1e
+- 2026-09-17T05:33:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T05:33:29Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075

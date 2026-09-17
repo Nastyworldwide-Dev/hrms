@@ -47,6 +47,10 @@ logger = logging.getLogger(__name__)
 #: than the 60-second SAME_PUNCH_WINDOW this app once had and removed: that one
 #: REFUSED the punch, and so refused real ones too.
 BURST_WINDOW = timedelta(seconds=45)
+#: Written on the skipped row in the form the Attendance Day Audit reads, so a
+#: burst tap that was really a short session appears on HR's list with an
+#: "unskip" beside it instead of sitting in a comment nobody opens.
+BURST_SKIP_REASON = "Tapped again within seconds of the punch before it"
 
 
 def is_burst_tap(previous, punch_time) -> bool:
@@ -674,12 +678,13 @@ def punch(
 	doc.insert()
 
 	if burst:
+		from hrms.utils.attendance_day_audit import SKIP_PREFIX
+
 		doc.add_comment(
 			"Info",
-			_(
-				"Not counted: this tap landed within {0} seconds of the one before it, so it is "
-				"the same tap. Restore it from Fix Day if it was a real punch."
-			).format(int(BURST_WINDOW.total_seconds())),
+			_("{0}: {1} ({2}s). Restore it from Fix Day if it was a real punch.").format(
+				SKIP_PREFIX, BURST_SKIP_REASON, int(BURST_WINDOW.total_seconds())
+			),
 		)
 
 	if resolved_type != requested_type:

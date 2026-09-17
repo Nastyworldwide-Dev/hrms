@@ -36,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 #: Skip comments the OLD failure handler left that the repair may clear: the day
 #: was blocked by another row, not by anything wrong with the punch.
-REPAIRABLE_SKIP_REASONS = ("Duplicate", "Overlapping", "already exists")
+#: "Tapped again" is the burst guard in hrms.api.remote_checkin: a tap seconds
+#: after the one before it is stored and not counted. Repairable on purpose —
+#: if it was a real short session, HR unskips it from here.
+REPAIRABLE_SKIP_REASONS = ("Duplicate", "Overlapping", "already exists", "Tapped again")
 #: A skip the job writes when payroll, approved overtime or replacement leave
 #: already depends on the day (_repair_financial_dependency). Clearing it would
 #: only make the next run write it back; HR corrects such a day by hand.
