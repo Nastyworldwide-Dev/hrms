@@ -229,3 +229,5 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:27:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-09-17T04:27:17Z EVIDENCE: 6 behaves — family hunt: class=Attendance is keyed by (employee, date, shift), but a request is about; 1 call site(s) given verdicts, 5 same-root ⟂f0de8b38c48e
 - 2026-09-17T04:27:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-17T04:27:32Z EVIDENCE: 6 behaves — family hunt: class=Attendance is keyed by (employee, date, shift), but a request is about; 1 call site(s) given verdicts, 5 same-root ⟂f0de8b38c48e
+- 2026-09-17T04:27:35Z COMMIT: f27a0e402 fix(attendance): a leave row is never repurposed by an on-duty request → review dispatched
