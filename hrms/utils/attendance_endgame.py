@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 #: The owner's order. Each step covers the WHOLE window before the next begins,
 #: so the OT recount sees every rebuild the earlier steps made.
-STEPS = ("relabel", "punches", "recovery", "ot")
+STEPS = ("relabel", "punches", "recovery", "duplicates", "ot")
 CHUNK_DAYS = 31
 #: Step-chunks per pass. A killed or capped pass leaves a marker and the next
 #: one carries on, so no single job has to survive the whole month's repair.
@@ -124,6 +124,7 @@ def _counts(previous=None) -> dict:
 		"days_rebuilt": 0,
 		"left_alone": 0,
 		"needs_hr": 0,
+		"rows_cancelled": 0,
 		"ot_rows": 0,
 		"notes": [],
 	}
@@ -245,6 +246,50 @@ def _step_recovery(start, end, counts, errors) -> None:
 		errors.append(f"recovery step {step} {start}..{end}: {detail}")
 
 
+def _step_duplicates(start, end, counts, errors) -> None:
+	"""(d) A day left holding two attendance rows goes back to one.
+
+	`resolve_duplicate_rows` has existed, tested, since the backfill work — keep
+	the row the day's punches are linked to, cancel a system-made duplicate, put
+	a human-made one on HR's list — and until 17 Sep 2026 NOTHING called it. The
+	recovery's `leftover_rows` removes only EMPTY leftovers on a rebuilt split
+	day, so a day whose two rows both carry punches survived every pass. That is
+	why the last release did not finish the job.
+
+	Placed after `recovery` because the decision reads which punches link to
+	which row, and the recovery is what links them; placed before `ot` because
+	the recount must price the row that survived. It applies through the
+	backfill's own switch and the recovery's day protections, so a paid, leave
+	or HR-owned day is reported, never forced.
+	"""
+	out = backfill.resolve_duplicate_rows(start, end, dry_run=0) or {}
+	cancelled = set(out.get("cancelled") or [])
+	counts["rows_cancelled"] += len(cancelled)
+	_tally_held(out.get("held_back"), counts)
+	if out.get("note"):
+		counts["notes"].append(f"duplicates {start}..{end}: {out['note']}")
+
+	# Cancelling a row changes the day and nothing else would re-mark it: the
+	# resolver only cancels. One deduplicated re-mark per day through the shared
+	# engine, which keeps the protections and the ordering with every other
+	# writer.
+	from hrms.utils.day_remark import remark_day_after_commit
+
+	for entry in out.get("days") or []:
+		if not (cancelled & set(entry.get("cancel") or [])):
+			continue
+		try:
+			remark_day_after_commit(
+				entry.get("employee"), entry.get("date"), f"duplicate row cancelled ({start}..{end})"
+			)
+		except Exception:
+			logger.exception(
+				"[attendance_endgame] could not queue the re-mark of %s on %s",
+				entry.get("employee"),
+				entry.get("date"),
+			)
+
+
 def _step_ot(start, end, counts, errors) -> None:
 	"""(d) OT recount, last, so it prices every day the earlier steps rebuilt."""
 	out = _recount_ot(start, end) or {}
@@ -256,6 +301,7 @@ _RUNNERS = {
 	"relabel": _step_relabel,
 	"punches": _step_punches,
 	"recovery": _step_recovery,
+	"duplicates": _step_duplicates,
 	"ot": _step_ot,
 }
 
@@ -273,6 +319,8 @@ def _message(run, start, end, counts, errors, reason) -> str:
 		f"Punches copied from the old system: {counts['punches_copied']}"
 		+ (f" (of {counts['punches_missing']} missing)" if counts.get("punches_missing") else ""),
 		f"Days rebuilt: {counts['days_rebuilt']}",
+		f"Duplicate attendance rows cancelled (the day keeps the row its punches "
+		f"are linked to): {counts['rows_cancelled']}",
 		f"Days left alone on purpose (a leave, HR's own edit, or already paid): {counts['left_alone']}",
 		f"Days that still need HR: {counts['needs_hr']} — open Shift Attendance and use Fix Day.",
 		f"OT rows recounted: {counts['ot_rows']}",

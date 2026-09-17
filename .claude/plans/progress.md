@@ -254,3 +254,10 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:18:18Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-17T05:18:31Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
 - 2026-09-17T05:18:31Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-17T05:18:34Z COMMIT: 58f475c6b feat(attendance): HR can take a day back to one attendance row → review dispatched
+- 2026-09-17T08:45:00Z REPAIR: item 2 — resolve_duplicate_rows existed, tested, with NO caller. Wired in as the endgame's `duplicates` step between recovery and ot, with a re-mark queued for each day it changed and a line in HR's summary. This is the specific reason the last release did not finish the job.
+- 2026-09-17T08:45:00Z EVIDENCE: rung 2 — 10 tests RED first, green after; 207 endgame + backfill tests green.
+- 2026-09-17T05:21:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:21:19Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-09-17T05:21:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:21:32Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916

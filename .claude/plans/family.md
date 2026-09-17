@@ -1,37 +1,31 @@
-# FAMILY — a day carrying two attendance rows could not be reduced to one
+# FAMILY — a repair that could not take a day back to one row
 
-CLASS: every surface reads a day through ONE row, but the data allows several
-(the duplicate check is per OVERLAPPING shift, so a 9AM-6PM row and a
-7PM-3.30AM row both stand). No screen and no automatic pass could take such a
-day back to one row, so the day that most needs fixing is the day every tool
-refuses.
+CLASS: a decision engine that was written, tested and never called.
+`hrms/sync/erp_backfill.py::resolve_duplicate_rows` — keep the row the day's
+punches are linked to, cancel a system-made duplicate, put a human-made one on
+HR's list — had no caller anywhere in the app. The automatic passes therefore
+had no answer at all for a day holding two rows, which is why the owner said
+"our end game wasnt truly end game".
 
-Reported 17 Sep 2026: Norazlin, 4 September — HR-ATT-2026-15657 (9AM-6PM,
-five punches) and HR-ATT-2026-15978 (7PM-3.30AM, a 16-second burst).
+ROOT CAUSE: the wiring, not the rule. The resolver now runs as the endgame's
+fourth step, after `recovery` (which links the punches the decision reads) and
+before `ot` (which must price the row that survived).
 
-ROOT CAUSE: the missing action, not the data. Fix Day already reads a day's
-rows as a list and already has the five evidence actions; it simply had no way
-to say "this row should not be here". Added there, behind the same day guard,
-with the same rule the automatic resolver already uses: keep the row the
-punches are linked to.
+## What could and could not reduce a day to one row, before this
 
-## Every surface that meets a two-row day
-
-hrms/api/attendance_fix_day.py:445 (`remove_duplicate_row`) — same-root (fixed here)
-  The new sixth action. Cancels, never deletes; `_finish` re-marks the day.
-hrms/api/attendance_fix_day.py:470 (`undo_fix`) — same-root (fixed here)
-  Refuses to "undo" a cancellation in a sentence instead of a silent no-op:
-  Frappe has no un-cancel, and the day was rebuilt from its punches already.
-hrms/public/js/fix_day.bundle.js:177 — same-root (fixed here)
-  Offers the button only when the day really holds more than one live row.
-hrms/api/attendance_master_edit.py:689 — ticket duplicate-attendance-rows
-  Still refuses a multi-row day with "edit it in Desk". Left alone on purpose:
-  it types a day's RESULT, and the owner's standing rule is that HR corrects
-  the evidence. Fix Day is now the answer for these days; retiring the master
-  edit is his open ruling, not this commit's.
-hrms/sync/erp_backfill.py:572 (`resolve_duplicates`) — not-affected
-  The pure rule this action borrows, unchanged. Wiring it into the automatic
-  pass is item 2 of the same plan, next commit.
+hrms/utils/attendance_endgame.py:255 (`_RUNNERS`) — same-root (fixed here)
+  Four steps, none of which resolved duplicates. Now five.
+hrms/sync/erp_backfill.py:648 (`resolve_duplicate_rows`) — not-affected
+  Unchanged. It was always right; it was never called. Its own switch and the
+  recovery's day protections still govern what it may touch.
 hrms/utils/attendance_recovery.py:2228 (`_plan_leftover_rows`) — not-affected
   Removes only EMPTY leftover rows on a rebuilt split day. Norazlin's two rows
-  both carry punches, which is why it never saw them; it stays as it is.
+  both carry punches, which is exactly why it never saw them. Left as it is —
+  narrowing or widening it would give the repair two implementations of the
+  same question.
+hrms/api/attendance_fix_day.py::remove_duplicate_row — same-root (fixed in
+  58f475c6b, the commit before this one)
+  The manual half, using the same rule, for the days a person opens.
+hrms/utils/day_remark.py::remark_day_after_commit — not-affected
+  The shared re-mark the new step queues for each day it changed. The resolver
+  only cancels; nothing else would have rebuilt those days.
