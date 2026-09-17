@@ -209,3 +209,15 @@ trips - but a snapshot taken TODAY, before the field existed, has no such key
 and would have written NULL into a Check column. It lands as 0 now: the wall,
 which is how that tap read when the snapshot was taken.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green.
+- 2026-09-17T11:19:56Z PUSH: nz-glass @ d643e66d2
+REPAIR: review of 672a4b1df, two more. (1) the backfill pooled `refs` from every
+Fix Day entry, and a rebuild's refs name the session taps it KEPT as well as the
+ones it dropped - so a kept tap that something later skipped for a real reason
+would have been ticked noise, a wall mislabelled, the inverse of the defect.
+It reads after_state.plan.drop for a rebuild and refs only for an ignore_tap,
+and chunks the IN clause. (2) attendance_master_edit has its OWN punch writer
+(_update_punch does a plain doc.update/save), which Fix Day's choke point cannot
+reach; its shift stamp carries the clear now.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 16 suites green; the one failure in
+test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
+NEXT: the owner deploys.

@@ -751,6 +751,13 @@ def punch_stamp(shift, window) -> dict:
 		"shift_actual_end": window.actual_end,
 		"offshift": 0,
 		"skip_auto_attendance": 0,
+		# The verdict goes with the skip, here as in Fix Day's `_write_tap`. This
+		# module has its OWN punch writer (`_update_punch` does a plain
+		# doc.update/save), so the choke point over there does not cover this
+		# one, and `doc.update` only overwrites the keys it is given — a tap Fix
+		# Day had ignored would come back counted with the tick still on it
+		# (review of 672a4b1df).
+		"skipped_as_noise": 0,
 	}
 	if window.get("overtime_type"):
 		stamp["overtime_type"] = window.overtime_type

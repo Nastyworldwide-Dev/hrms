@@ -290,14 +290,39 @@ class TheLegacyIgnoresAreTickedCase(unittest.TestCase):
 	def test_an_undone_fix_is_not_backfilled(self):
 		self.assertIn('"undone": 0', self.source(), "an undone ignore means the tap came back")
 
+	def test_a_rebuild_is_read_from_its_plan_not_its_refs(self):
+		"""A rebuild's `refs` names the session taps it KEPT alongside the ones
+		it dropped. Pooling them would tick a kept tap that something later
+		skipped for a real reason — a wall mislabelled as noise, which is the
+		inverse of the defect this field exists to stop."""
+		body = self.source()
+		self.assertIn("after_state", body)
+		self.assertIn('plan.get("drop")', body)
+		self.assertIn('entry.get("action") == "ignore_tap"', body)
+
+	def test_the_ignore_case_still_reads_its_one_ref(self):
+		self.assertIn('(entry.get("refs") or "").split(",")', self.source())
+
 	def test_only_a_tap_that_is_still_skipped_is_ticked(self):
 		# A rebuild's refs name the session taps it KEPT as well as the ones it
 		# dropped; a kept tap counts, and a counted tap is not noise.
 		self.assertIn('"skip_auto_attendance": 1', self.source())
 
 	def test_it_never_ticks_anything_the_log_does_not_name(self):
-		body = self.source()
-		self.assertIn('filters={"name": ["in", sorted(names)]', body)
+		self.assertIn("ordered[start : start + CHUNK]", self.source())
+
+	def test_the_master_edits_own_punch_writer_clears_the_verdict_too(self):
+		"""`attendance_master_edit` has its own ORM writer (`_update_punch` does
+		a plain doc.update/save), so Fix Day's choke point does not reach it, and
+		`doc.update` only overwrites the keys it is handed. Its shift stamp
+		carries the clear (review of 672a4b1df)."""
+		stamp = (
+			pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_master_edit.py"
+		).read_text()
+		start = stamp.index("def punch_stamp(")
+		window = stamp[start : stamp.index("\ndef ", start + 10)]
+		self.assertIn('"skip_auto_attendance": 0', window)
+		self.assertIn('"skipped_as_noise": 0', window)
 
 
 class TheUndoPutsTheVerdictBackCase(unittest.TestCase):
