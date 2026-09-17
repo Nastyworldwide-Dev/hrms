@@ -32,6 +32,22 @@ Call sites the machine lists for counts_for_attendance / the segmentation:
   this calculation). The REJECT path also sets remote_approval_status, so it is
   caught as a wall.
 
+REVIEW OF ff1493e85 — one Critical, closed by inverting the default:
+* `handle_attendance_exception` skip-stamps a day's remaining punches when the
+  financial guard refuses a rebuild, so the batch is not retried hourly. That is
+  the system DEFERRING, not a person judging — and the first version of this
+  rule read it as noise and would have bridged it once the guard cleared.
+* Fixed by making the WALL the default. A punch is read across only if it
+  carries `Employee Checkin.skipped_as_noise`, set by Fix Day's ignore/rebuild
+  and the burst stutter alone. Default 0 = the behaviour before this branch, for
+  every existing row and every future writer that says nothing.
+
+STILL HAND-ROLLING THEIR OWN EVIDENCE TEST, pre-existing and untouched here:
+* hrms/utils/shift_resolution.py:127
+* hrms/overrides/employee_checkin_override.py:367
+Both read `not skip and not Rejected` directly and do not know about the late
+check-out wall. Named so the next change to `splits_the_day` has to look at them.
+
 LOCK:
 * regression (the instance): test_an_ignored_tap_does_not_split_the_day.py
   drives Norazlin's exact five taps and asserts one segment.

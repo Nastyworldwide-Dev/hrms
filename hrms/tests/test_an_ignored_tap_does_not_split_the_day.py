@@ -220,5 +220,26 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 				self.assertIn("skip_auto_attendance", (root / rel).read_text())
 
 
+class TheColumnMayNotExistYetCase(unittest.TestCase):
+	"""A SELECT naming a column a site has not caught up with dies with
+	"Unknown column" — this fork has been bitten by exactly that before
+	(`ensure_extension_custom_fields`, and the OT suite falling over on
+	`remote_approval_status`). So the noise verdict is asked for only when the
+	column is there, and its absence reads as the WALL.
+	"""
+
+	def test_the_field_is_not_in_the_static_list(self):
+		self.assertNotIn(st.NOISE_FIELD, st.CHECKIN_FIELDS)
+
+	def test_a_row_without_the_column_is_a_wall(self):
+		row = tap("11:44", "OUT", skip_auto_attendance=1)  # no skipped_as_noise key at all
+		self.assertTrue(st.splits_the_day(row))
+
+	def test_the_reader_asks_for_it_only_when_the_column_exists(self):
+		source = pathlib.Path(st.__file__).read_text()
+		self.assertNotIn("fields=list(CHECKIN_FIELDS)", source, "read through checkin_fields()")
+		self.assertIn("has_column", source)
+
+
 if __name__ == "__main__":
 	unittest.main()

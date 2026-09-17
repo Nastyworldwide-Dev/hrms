@@ -270,3 +270,16 @@ pre-existing and identical on a clean HEAD extract.
 DEAD END: classifying writers by reading them was wrong twice (I missed the
 master editor's two, then the deferral path). The default had to change, not
 the list.
+- 2026-09-17T11:05:54Z PUSH: nz-glass @ 8c06af285
+REPAIR: naming skipped_as_noise in CHECKIN_FIELDS would have put an unmigrated
+column in a live SELECT - the "Unknown column" class this fork has already been
+burned by (ensure_extension_custom_fields, the OT suite on
+remote_approval_status). checkin_fields() asks frappe.db.has_column once per
+request and leaves the field out when it is absent; a row without the key reads
+as 0, which splits_the_day treats as a WALL - the conservative answer, so that
+window behaves exactly like the code did before the field existed.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 suites green (600+ tests); the one
+failure in test_ot_nonworking_hours is pre-existing and identical on a clean
+HEAD extract. Two AST harnesses updated to see the new module-level names.
+NEXT: re-review, then the owner deploys (this one needs the migrate to create
+the column; until it exists every skipped punch simply stays a wall).

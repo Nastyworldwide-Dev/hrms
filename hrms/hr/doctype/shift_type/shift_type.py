@@ -95,9 +95,6 @@ CHECKIN_FIELDS = (
 	"device_id",
 	"overtime_type",
 	"skip_auto_attendance",
-	# whether that skip means "noise" (read straight across it) or "not verified"
-	# (a wall). Absent/0 is the safe reading: a wall.
-	"skipped_as_noise",
 	"remote_approval_status",
 	"requires_remote_approval",
 	"offshift",
@@ -105,6 +102,30 @@ CHECKIN_FIELDS = (
 	# punches that were linked and fine before it ran
 	"attendance",
 )
+#: Read alongside the rest, but only once the column exists. A SELECT naming a
+#: column a site has not caught up with yet dies with "Unknown column" — this
+#: fork has been bitten by exactly that (`ensure_extension_custom_fields`).
+#: Absent from a row, `skipped_as_noise` reads as 0, which `splits_the_day`
+#: treats as a WALL: the conservative answer, so that window behaves like the
+#: code did before this field existed.
+NOISE_FIELD = "skipped_as_noise"
+
+
+def checkin_fields() -> list:
+	"""CHECKIN_FIELDS, plus the noise verdict on sites that have the column."""
+	if getattr(frappe.local, "_hrms_has_noise_field", None) is None:
+		try:
+			frappe.local._hrms_has_noise_field = bool(frappe.db.has_column("Employee Checkin", NOISE_FIELD))
+		except Exception:
+			logger.warning("[shift_type] could not check for %s; reading without it", NOISE_FIELD)
+			frappe.local._hrms_has_noise_field = False
+		if not frappe.local._hrms_has_noise_field:
+			logger.warning(
+				"[shift_type] Employee Checkin.%s is not on this site yet; every skipped punch "
+				"reads as a wall until the column exists",
+				NOISE_FIELD,
+			)
+	return [*CHECKIN_FIELDS, NOISE_FIELD] if frappe.local._hrms_has_noise_field else list(CHECKIN_FIELDS)
 
 
 def get_automation_attendance(employee, attendance_date, shift):
@@ -160,7 +181,7 @@ def linked_checkins(attendance_name) -> list:
 	return frappe.get_all(
 		"Employee Checkin",
 		filters={"attendance": attendance_name},
-		fields=list(CHECKIN_FIELDS),
+		fields=checkin_fields(),
 		order_by="time",
 	)
 
@@ -651,7 +672,7 @@ class ShiftType(Document):
 	def get_employee_checkins(self) -> list[dict]:
 		rows = frappe.get_all(
 			"Employee Checkin",
-			fields=list(CHECKIN_FIELDS),
+			fields=checkin_fields(),
 			filters={
 				"attendance": ("is", "not set"),
 				"time": (">=", self.process_attendance_after),

@@ -78,11 +78,19 @@ shift_helpers = [
 	if (
 		isinstance(node, ast.FunctionDef)
 		and node.name
-		in {"counts_for_attendance", "paid_intervals_from", "attendance_segments", "splits_the_day"}
+		in {
+			"counts_for_attendance",
+			"paid_intervals_from",
+			"attendance_segments",
+			"splits_the_day",
+			# the field list is asked for at read time: a site without the
+			# `skipped_as_noise` column must not have it named in the SELECT
+			"checkin_fields",
+		}
 	)
 	or (
 		isinstance(node, ast.Assign)
-		and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in node.targets)
+		and any(isinstance(t, ast.Name) and t.id in {"CHECKIN_FIELDS", "NOISE_FIELD"} for t in node.targets)
 	)
 ]
 checkin_tree = ast.parse((BASE / "hr/doctype/employee_checkin/employee_checkin.py").read_text())

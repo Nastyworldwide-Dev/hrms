@@ -658,10 +658,15 @@ def _shift_type_namespace():
 	helpers = [
 		n
 		for n in tree.body
-		if (isinstance(n, ast.FunctionDef) and n.name in {"counts_for_attendance", "pending_late_checkouts"})
+		if (
+			isinstance(n, ast.FunctionDef)
+			# `checkin_fields` since 17 Sep 2026: the SELECT asks for the noise
+			# verdict only on a site whose column exists.
+			and n.name in {"counts_for_attendance", "pending_late_checkouts", "checkin_fields"}
+		)
 		or (
 			isinstance(n, ast.Assign)
-			and any(isinstance(t, ast.Name) and t.id == "CHECKIN_FIELDS" for t in n.targets)
+			and any(isinstance(t, ast.Name) and t.id in {"CHECKIN_FIELDS", "NOISE_FIELD"} for t in n.targets)
 		)
 	]
 	ns = {"frappe": frappe, "cint": int, "logger": __import__("logging").getLogger("t")}
