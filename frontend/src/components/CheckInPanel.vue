@@ -346,6 +346,15 @@ const punchCheckin = createResource({
 	url: "hrms.api.remote_checkin.punch",
 })
 
+// The punch photo goes to OUR endpoint, not frappe's generic upload_file — see
+// uploadSelfie() below for what that generic call did on a locked-down site.
+const storeSelfie = createResource({
+	url: "hrms.api.remote_checkin.upload_selfie",
+	makeParams(values) {
+		return values
+	},
+})
+
 // Remote checkin dialog state
 const remoteDialogOpen = ref(false)
 const remoteRequest = ref({
@@ -1253,34 +1262,19 @@ function captureFrame() {
 }
 
 async function uploadSelfie(dataUrl) {
-	const blob = await (await fetch(dataUrl)).blob()
-	const filename = `selfie-${employee.data.name}-${Date.now()}.jpg`
-	const file = new File([blob], filename, { type: "image/jpeg" })
-	const fd = new FormData()
-	fd.append("file", file, filename)
-	fd.append("is_private", "0")
-	// Intentionally NOT setting doctype/docname/fieldname: the Employee Checkin
-	// record doesn't exist yet, and passing doctype without a valid docname makes
-	// Frappe error with "Attached To Name must be a string or an integer". The
-	// file is created standalone; the returned file_url is then written onto the
-	// new Employee Checkin via the insert payload's selfie_image field.
-
-	const headers = { "X-Frappe-Site-Name": window.location.hostname }
-	if (window.csrf_token) {
-		headers["X-Frappe-CSRF-Token"] = window.csrf_token
-	}
-
-	const res = await fetch("/api/method/upload_file", {
-		method: "POST",
-		headers,
-		body: fd,
-	})
-	const out = await res.json()
-	if (!res.ok || !out?.message?.file_url) {
-		throw new Error(out?.exception || __("Upload failed"))
-	}
-	console.info("[Selfie] Uploaded:", out.message.file_url)
-	return out.message.file_url
+	// Deliberately NOT frappe's generic /api/method/upload_file. That created a
+	// PUBLIC File as the employee, and a site with System Settings ->
+	// only_allow_system_managers_to_upload_public_files on refuses that for
+	// everyone below System Manager. Worse, frappe's friendly guard there
+	// catches the BUILTIN PermissionError instead of frappe's own, so the
+	// refusal arrived with no message at all: the sheet showed "Selfie failed /
+	// frappe.exceptions.PermissionError" and the punch went in with no photo
+	// (live 15 Sep 2026). Staff have no create rights of their own on File or
+	// Employee Checkin on a hardened site; both now go through hrms.api.
+	const result = await storeSelfie.submit({ image: dataUrl })
+	if (!result?.file_url) throw new Error(__("Upload failed"))
+	console.info("[Selfie] Uploaded:", result.file_url)
+	return result.file_url
 }
 
 function onModalPresent() {

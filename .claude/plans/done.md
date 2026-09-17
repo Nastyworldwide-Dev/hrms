@@ -1,7 +1,8 @@
-GOAL: Begin authorised Nadi 2.0 W0 baseline; normal evidence and test-harness packet.
-DONE WHEN: Current test/build/browser results and integration gaps are recorded;
-      existing lint and test-harness failures are repaired without weakening assertions;
-      installed announcement candidates and remaining runtime prerequisites are identified.
-CHECK: Frontend unit suites, selected Python suites, lint, isolated build output,
-      contrast/surface gates, guest login browser check and fresh-context diff review.
-      No schema, permission, CI, fixture, migration or deployment changes in this packet.
+GOAL: A staff punch photo reaches the server on a site that forbids public
+ file uploads by non-System-Managers.
+DONE WHEN: the PWA stores the frame through hrms.api.remote_checkin.upload_selfie
+ (image type + size checked, stored for the caller), never frappe's upload_file.
+CHECK: PYTHONPATH=. python3 -m pytest -q
+ hrms/tests/test_selfie_upload_survives_a_public_file_lockdown.py; and
+ cd frontend && node --experimental-test-module-mocks --test
+ src/components/__tests__/CheckInPanel.test.js

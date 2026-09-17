@@ -9,7 +9,10 @@ hrms.api.remote_checkin.get_pending_count()  # for Profile badge
 
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
+import time as time_module
 
 import frappe
 from frappe import _
@@ -23,7 +26,7 @@ from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
 
 #: The PWA names the provider it got the fix from; the row stores a word HR can read.
 LOCATION_SOURCES = {"high": "GPS", "gps": "GPS", "coarse": "Network", "network": "Network"}
-from hrms.utils.identity import get_employee, own_employees
+from hrms.utils.identity import get_employee, own_employees, require_employee
 from hrms.utils.timezone import employee_now
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,15 @@ logger = logging.getLogger(__name__)
 #: A forgotten check-out this long after the IN's shift actually ended (buffer
 #: included) is a typo, not a session: refused at filing with advice (E28).
 LATE_CHECKOUT_MAX_HOURS_AFTER_END = 12
+
+#: What the camera may hand us. A punch photo is a JPEG frame; PNG is accepted
+#: because a browser that cannot encode JPEG falls back to it.
+SELFIE_MIMETYPES = {"image/jpeg": "jpg", "image/png": "png"}
+
+#: A phone camera frame at the quality the sheet captures is well under this.
+#: Anything larger is not a selfie, and the endpoint says so instead of
+#: letting it through to the disk.
+SELFIE_MAX_BYTES = 4 * 1024 * 1024
 
 
 def _is_own_employee(employee: str | None) -> bool:
@@ -428,6 +440,66 @@ def resolve_punch_type(recent_rows, requested: str, now):
 		open_in.name,
 	)
 	return "OUT", open_in
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_selfie(image: str) -> dict:
+	"""Store one punch photo and return the URL the punch will carry.
+
+	The PWA used to POST the frame to frappe's generic `upload_file` as a
+	PUBLIC file. A site with System Settings ->
+	`only_allow_system_managers_to_upload_public_files` on refuses that for
+	every non-System-Manager, and frappe's friendly guard around it catches the
+	BUILTIN PermissionError rather than `frappe.exceptions.PermissionError`, so
+	the refusal never became a sentence — the phone showed the bare class name
+	("Selfie failed / frappe.exceptions.PermissionError", live 15 Sep 2026;
+	reproduced on a bench 17 Sep 2026). The photo was lost and the punch went
+	in without its evidence.
+
+	So the frame is stored here, the same way `punch()` stores the punch: staff
+	hold no create rights of their own on either doctype, and this endpoint is
+	the whole write path. The file is owned by the caller, and `punch()` only
+	accepts a `selfie_image` whose File the caller owns — so nothing widens.
+
+	# ceiling: the stored file stays public, upgrade: private File + a share of
+	# the punch with its approver, when a face photo must stop being readable
+	# by anyone holding the link
+	"""
+	employee = require_employee()
+
+	header, _sep, payload = (image or "").partition(",")
+	mimetype = header[5:].split(";")[0].strip().lower() if header.startswith("data:") else ""
+	extension = SELFIE_MIMETYPES.get(mimetype)
+	if not extension or not payload:
+		logger.warning("[remote_checkin] selfie refused for %s: mimetype=%r", employee, mimetype)
+		frappe.throw(_("A check-in photo must be a JPEG or PNG image."))
+
+	try:
+		content = base64.b64decode(payload, validate=True)
+	except (binascii.Error, ValueError):
+		logger.warning("[remote_checkin] selfie refused for %s: undecodable frame", employee)
+		frappe.throw(_("The check-in photo could not be read. Try again."))
+
+	if len(content) > SELFIE_MAX_BYTES:
+		logger.warning(
+			"[remote_checkin] selfie refused for %s: %d bytes over the %d limit",
+			employee,
+			len(content),
+			SELFIE_MAX_BYTES,
+		)
+		frappe.throw(_("The check-in photo is too large."))
+
+	stored = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"selfie-{employee}-{int(time_module.time() * 1000)}.{extension}",
+			"content": content,
+			"is_private": 0,
+			"folder": "Home",
+		}
+	).insert(ignore_permissions=True)
+	logger.info("[remote_checkin] selfie stored for %s: %s", employee, stored.file_url)
+	return {"file_url": stored.file_url, "name": stored.name}
 
 
 @frappe.whitelist(methods=["POST"])
