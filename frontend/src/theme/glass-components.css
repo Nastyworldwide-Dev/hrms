@@ -342,7 +342,11 @@ html[data-transparency="reduce"] .g-sidenav {
    employee reported it about her own leave balance: "annual leave tu nape dia
    mcm samar samar".
    The page-level twin was already wired this way — .g-lightfield sits at
-   z-index 0 with .g-page ion-content lifted to 1. */
+   z-index 0 with .g-page ion-content lifted to 1.
+   For the next person: `isolation: isolate` above makes the panel a stacking
+   context unconditionally, so a CHILD you also give `z-index: -1` would tie
+   with this gloss and lose on document order — the gloss paints last and would
+   wash it. Put such a child at z-index 0 with the gloss left where it is. */
 .g-glass::after,
 .g-glass-ghost::after {
 	content: "";
