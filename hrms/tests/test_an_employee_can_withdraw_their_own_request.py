@@ -63,7 +63,7 @@ class WithdrawalCase(unittest.TestCase):
 			patch.object(guard, "is_own_request", return_value=own),
 			patch("hrms.api.approval._is_routed_approver", return_value=approver),
 			patch.object(guard, "_paying_salary_slip", return_value=None),
-			patch.object(guard, "_slip_covering", return_value=paid_slip),
+			patch.object(guard, "_withdrawal_block", return_value=paid_slip),
 			patch.object(frappe, "session", frappe._dict(user=ME)),
 		):
 			return guard.cancel_refusal(doc, ME)
@@ -80,13 +80,21 @@ class WithdrawalCase(unittest.TestCase):
 
 	def test_i_cannot_withdraw_days_that_are_already_paid(self):
 		"""The days would come back while the money stays paid."""
-		refusal = self._refusal(paid_slip="HR-SAL-0009")
+		refusal = self._refusal(
+			paid_slip="These days are already in a paid salary slip. Ask HR to cancel it for you."
+		)
 		self.assertIsNotNone(refusal)
 		self.assertIn("HR", refusal, "it must say who can still do it")
 
 	def test_the_approver_is_not_stopped_by_the_payslip(self):
 		"""HR and the approver keep the authority they already had."""
-		self.assertIsNone(self._refusal(own=False, approver=True, paid_slip="HR-SAL-0009"))
+		self.assertIsNone(
+			self._refusal(
+				own=False,
+				approver=True,
+				paid_slip="These days are already in a paid salary slip. Ask HR to cancel it for you.",
+			)
+		)
 
 	def test_paid_overtime_is_still_refused_for_everyone(self):
 		with (
@@ -100,27 +108,33 @@ class WithdrawalCase(unittest.TestCase):
 
 
 class SlipLookupCase(unittest.TestCase):
-	"""`_slip_covering` reads each doctype's own dates, never a guessed field."""
+	"""`_withdrawal_block` reads each doctype's own dates, never a guessed field."""
 
-	def test_every_decidable_doctype_has_its_dates_named(self):
+	def test_every_decidable_doctype_is_answered_one_way_or_the_other(self):
+		"""Amended 17 Sep 2026: a doctype may be absent from the map ON PURPOSE
+		— Travel Request's dates live on a child table — as long as being absent
+		REFUSES the employee rather than waving them through."""
 		for doctype in guard.DECISION_FIELD_BY_DOCTYPE:
-			self.assertIn(
-				doctype,
-				guard.REQUEST_PERIOD_FIELDS,
-				f"{doctype} has no date fields named, so a withdrawal could not be checked against payroll",
-			)
+			with self.subTest(doctype=doctype):
+				if doctype in guard.REQUEST_PERIOD_FIELDS:
+					continue
+				with patch.object(frappe, "db", MagicMock()):
+					self.assertIsNotNone(
+						guard._withdrawal_block(request(doctype)),
+						f"{doctype} has no period named and is not refused — it would be waved through",
+					)
 
 	def test_a_doctype_with_no_period_is_never_silently_allowed(self):
 		"""An unknown doctype must fail CLOSED, not skip the payroll check."""
 		self.assertIsNotNone(guard.REQUEST_PERIOD_FIELDS.get("Leave Application"))
 		with patch.object(frappe, "db", MagicMock()):
-			self.assertIsNotNone(guard._slip_covering(request("Journal Entry")))
+			self.assertIsNotNone(guard._withdrawal_block(request("Journal Entry")))
 
 	def test_a_request_carrying_no_dates_fails_closed(self):
 		"""Malformed, not unpaid — HR can still cancel it."""
 		bare = frappe._dict(doctype="Leave Application", name="X", employee=MY_EMPLOYEE)
 		with patch.object(frappe, "db", MagicMock()):
-			self.assertIsNotNone(guard._slip_covering(bare))
+			self.assertIsNotNone(guard._withdrawal_block(bare))
 
 
 class TheDoorIsReachableCase(unittest.TestCase):
@@ -141,9 +155,7 @@ class TheDoorIsReachableCase(unittest.TestCase):
 
 		tree = ast.parse(pathlib.Path(approval.__file__).read_text())
 		fn = next(
-			node
-			for node in ast.walk(tree)
-			if isinstance(node, ast.FunctionDef) and node.name == "finalize"
+			node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "finalize"
 		)
 		body = ast.unparse(fn)
 		# The fix is not "add the owner to the second copy of the rule" — it is
@@ -158,3 +170,48 @@ class TheDoorIsReachableCase(unittest.TestCase):
 			body.split("action == 'cancel'")[-1].split("else:")[0],
 			"re-deriving routing here is how the owner got left out",
 		)
+
+
+class PeriodFieldsAreRealCase(unittest.TestCase):
+	"""A wrong-but-present field name passes silently where a missing one shouts.
+
+	`REQUEST_PERIOD_FIELDS["Travel Request"]` was `("creation",)` — Frappe's row
+	timestamp, not any travel date — which meant a request filed today for a trip
+	in a paid period would have compared today against that payslip, found no
+	overlap, and let the employee withdraw something already paid. It passed the
+	"is the doctype listed" test because the doctype WAS listed.
+	"""
+
+	def test_every_named_field_exists_on_its_doctype(self):
+		import json
+		import pathlib
+
+		root = pathlib.Path(__file__).resolve().parents[1]
+		for doctype, fields in guard.REQUEST_PERIOD_FIELDS.items():
+			slug = doctype.lower().replace(" ", "_")
+			path = next(root.rglob(f"doctype/{slug}/{slug}.json"), None)
+			if path is None:
+				continue  # an erpnext-owned doctype; its JSON is not in this app
+			meta = json.loads(path.read_text())
+			if not isinstance(meta, dict):
+				continue
+			dates = {
+				f["fieldname"] for f in meta.get("fields", []) if f.get("fieldtype") in ("Date", "Datetime")
+			}
+			for field in fields:
+				with self.subTest(doctype=doctype, field=field):
+					self.assertIn(
+						field,
+						dates,
+						f"{doctype}.{field} is not a date field on the doctype — it cannot be its period",
+					)
+
+	def test_a_doctype_with_no_usable_period_refuses_rather_than_guesses(self):
+		self.assertNotIn(
+			"Travel Request",
+			guard.REQUEST_PERIOD_FIELDS,
+			"its dates live on a child table; aiming at `creation` checked nothing",
+		)
+		blocked = guard._withdrawal_block(frappe._dict(doctype="Travel Request", name="T", employee="E"))
+		self.assertIsNotNone(blocked)
+		self.assertIn("HR", blocked, "the employee must be told who can still do it")

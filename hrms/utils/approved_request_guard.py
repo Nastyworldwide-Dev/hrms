@@ -63,7 +63,13 @@ REQUEST_PERIOD_FIELDS = {
 	"Replacement Leave Claim": ("bank_month",),
 	"Compensatory Leave Request": ("work_from_date", "work_end_date"),
 	"Employee Advance": ("posting_date",),
-	"Travel Request": ("creation",),
+	# Travel Request is DELIBERATELY absent. Its dates live on the itinerary
+	# child table, not on the request, and the first version of this map aimed
+	# at `creation` — the row's save timestamp, which is not any travel date. A
+	# trip filed after its pay period would have compared TODAY against that
+	# payslip, found no overlap, and let the employee withdraw something already
+	# paid. A doctype with no period this can read is refused to the employee
+	# and left to HR.
 }
 EXEMPT_FLAGS = ("in_shadow_sync", "in_patch", "in_migrate", "in_install")
 # The roles hrms/api/correction_cancel.py lets through its endpoint. The guard
@@ -174,15 +180,15 @@ def cancel_refusal(doc, user: str | None = None) -> str | None:
 		# The 17 Sep ruling. The only thing that still stops them is payroll:
 		# the days would come back while the money stays paid, and unwinding
 		# that is HR's job, not a button on somebody's phone.
-		if slip := _slip_covering(doc):
+		if blocked := _withdrawal_block(doc):
 			logger.info(
-				"[approved_request_guard] refused withdrawal of %s %s by %s — paid in %s",
+				"[approved_request_guard] refused withdrawal of %s %s by %s — %s",
 				doc.doctype,
 				doc.name,
 				user,
-				slip,
+				blocked,
 			)
-			return _("These days are already in a paid salary slip. Ask HR to cancel it for you.")
+			return blocked
 		logger.info(
 			"[approved_request_guard] allowed withdrawal of own approved %s %s by %s",
 			doc.doctype,
@@ -209,17 +215,23 @@ def cancel_refusal(doc, user: str | None = None) -> str | None:
 	return _("Only you, HR or your approver can cancel an approved request.")
 
 
-def _slip_covering(doc) -> str | None:
-	"""A submitted Salary Slip whose period covers any day this request names.
+def _withdrawal_block(doc) -> str | None:
+	"""Why the EMPLOYEE may not withdraw this one, in a sentence, or None.
 
-	Fails CLOSED on a doctype whose days are not named: a withdrawal that cannot
-	be checked against payroll is not one to wave through. `REQUEST_PERIOD_FIELDS`
-	carries every decidable doctype, and a test keeps it that way.
+	HR and the routed approver are never stopped by this: it guards a
+	self-service button, not the operation.
+
+	Fails CLOSED. A doctype whose days this cannot read is refused rather than
+	waved through — a wrong-but-PRESENT field name is how the first version got
+	past its own test (Travel Request pointed at `creation`), so "I cannot
+	check" and "it is not paid" must never look the same from here.
 	"""
 	fields = REQUEST_PERIOD_FIELDS.get(doc.doctype)
 	if not fields:
-		logger.warning("[approved_request_guard] %s names no period — treated as paid", doc.doctype)
-		return "unknown period"
+		logger.warning("[approved_request_guard] %s names no period this can check", doc.doctype)
+		return _("A {0} has no dates this can check against payroll. Ask HR to cancel it for you.").format(
+			_(doc.doctype)
+		)
 	days = [doc.get(field) for field in fields if doc.get(field)]
 	if not days:
 		# The fields are named but the row carries none of them. That is a
@@ -231,7 +243,7 @@ def _slip_covering(doc) -> str | None:
 			doc.name,
 			fields,
 		)
-		return "no dates on the request"
+		return _("This request carries no dates to check against payroll. Ask HR to cancel it for you.")
 	start, end = min(days), max(days)
 	slip = frappe.db.get_value(
 		"Salary Slip",
@@ -246,7 +258,9 @@ def _slip_covering(doc) -> str | None:
 	logger.debug(
 		"[approved_request_guard] %s %s covers %s..%s, paid slip: %s", doc.doctype, doc.name, start, end, slip
 	)
-	return slip
+	if not slip:
+		return None
+	return _("These days are already in a paid salary slip. Ask HR to cancel it for you.")
 
 
 def block_cancel_of_approved(doc, method=None):

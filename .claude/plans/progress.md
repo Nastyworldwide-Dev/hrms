@@ -251,3 +251,21 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T07:13:06Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
 - 2026-09-17T07:13:21Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 13 file(s) ⟂ad7bb4cb625b
 - 2026-09-17T07:13:21Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-17T07:13:26Z COMMIT: 96962182a feat(requests): an employee can withdraw their own approved request → review dispatched
+- 2026-09-17T13:40:00Z REPAIR: review CRITICAL on 96962182a — REQUEST_PERIOD_FIELDS aimed Travel Request at `creation`, the row's save timestamp, so a trip filed after its pay period would have been withdrawable after it was paid. The doctype's dates live on its itinerary child table; it is out of the map on purpose, and absence now REFUSES the employee rather than waving them through. The helper returns the sentence, so "I cannot check" and "it is not paid" stop looking the same.
+- 2026-09-17T13:40:00Z EVIDENCE: rung 2 — the new test reads each doctype's own JSON and fails a named field that is not a Date there; it is red against the `creation` entry. 120 guard/approval/withdrawal tests green, ruff clean.
+- 2026-09-17T13:40:00Z NEXT: two open flags for the owner — (1) the review could not confirm what happens if a carry-forward expiry or an encashment ran against the allocation BETWEEN approval and withdrawal; worth a bench check before anyone withdraws an old leave. (2) whether strict geofence should stay harsh on coarse readings specifically.
+- 2026-09-17T07:20:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:20:32Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:20:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:20:46Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:21:02Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:21:15Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:26Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:21:26Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:21:34Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:21:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T07:21:50Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
