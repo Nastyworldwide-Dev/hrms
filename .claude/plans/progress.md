@@ -209,3 +209,11 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T04:00:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-09-17T04:11:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
 - 2026-09-17T04:11:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-17T04:11:53Z COMMIT: 2ed460509 fix(attendance): a half day earned by hours stops demanding a leave type → review dispatched
+- 2026-09-17T05:40:00Z EVIDENCE: rung 2 — review of 2ed460509 NEXT_ACTION DEPLOY, no Critical: no other server or client rule requires leave_type on a Half Day (attendance.js has none at all), and every consumer guards — salary_slip.get_half_absent_days prices hours-based half days by half_day_status == "Absent" and never reads leave_type, the LWP branch is falsy-guarded, the Monthly Attendance Sheet filters empty types out, and shift_attendance.mark_hr_owned already uses "no leave_type" as its HR-editable signal. check_leave_record still backfills the type for a genuine leave half day before the mandatory check runs.
+- 2026-09-17T05:40:00Z REPAIR: the review's one Warning — a site Property Setter on Attendance.leave_type.mandatory_depends_on would outrank the JSON and keep refusing the save. Patch added so the release self-heals instead of asking anyone to check a site.
+- 2026-09-17T04:18:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:19:17Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:19:33Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-17T04:19:34Z EVIDENCE: 6 behaves — family hunt: class=upstream metadata that models "Half Day" as a leave state, inside an app; 1 call site(s) given verdicts, 1 same-root ⟂0c35df7d632a
+- 2026-09-17T04:19:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

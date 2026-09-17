@@ -34,3 +34,17 @@ hrms/payroll/doctype/salary_slip/salary_slip.py:812 — not-affected
 hrms/hr/doctype/attendance/attendance.json (`half_day_status`) — not-affected
   Shown on every Half Day with options Present/Absent and NO leave option at
   all — the doctype's own admission that a Half Day need not be leave.
+
+## Amendment, same day — the release must not depend on a site being clean
+
+Review of 2ed460509 named the one way it could fail to land: a Property Setter
+on `Attendance.leave_type.mandatory_depends_on` outranks the reloaded JSON, so a
+site where someone once opened Customize Form on Attendance keeps the old rule
+and the release only LOOKS like it worked.
+
+hrms/patches/v16_0/half_day_leave_type_not_mandatory.py — same-root (fixed here)
+  Clears that one override if it is there, no-ops if it is not, and is
+  registered in patches.txt so it runs on release. Nobody is asked to check a
+  site by hand — the standing rule on this project.
+
+hrms/sync/runner.py:1734 — not-affected — it calls a DIFFERENT patch's `execute` (`create_holiday_list_assignments`), reused on purpose so holiday arithmetic has one implementation. The new patch is named only in patches.txt and is never called from application code.

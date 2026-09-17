@@ -62,6 +62,19 @@ Doctype metadata only — no column, no data, no migration. Ships with the norma
 `Attendance.leave_type.mandatory_depends_on` would keep the old rule; this repo
 creates no such Property Setter (checked), and none is expected.
 
+## Amendments
+
+**A1, same day — the release must not depend on a site being clean.**
+The Risk section above left the Property Setter case as "not expected", and the
+review of 2ed460509 named it as the one way this fix could fail to land while
+still looking like it had worked. On this project a fix runs itself on release;
+nobody is asked to check a site by hand. So the plan gains one guarded,
+idempotent patch, `hrms/patches/v16_0/half_day_leave_type_not_mandatory.py`,
+registered in `patches.txt`: it deletes a Property Setter on
+`Attendance.leave_type.mandatory_depends_on` if one exists, clears the doctype
+cache, and does nothing at all on a site that never had one. No behaviour is
+added — this only makes the already-approved change take effect everywhere.
+
 ## NOT in this plan
 
 The duplicate-rows problem the same screenshots show — Norazlin has THREE
