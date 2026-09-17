@@ -1,5 +1,4 @@
-GOAL: A burst tap that was really a short session reaches HR's list.
-DONE WHEN: the burst comment carries the Attendance Day Audit's own SKIP_PREFIX
- and its reason is in REPAIRABLE_SKIP_REASONS, so the audit lists it with
- "unskip"; and a row dict with no docstatus is no longer read as a draft.
+GOAL: The burst comment is written in the type the skip-reason readers query.
+DONE WHEN: the burst path calls add_comment("Comment", ...), and a test reads
+ the type from the writer AND from the audit's query and fails if they differ.
 CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_a_tap_burst_is_one_tap.py

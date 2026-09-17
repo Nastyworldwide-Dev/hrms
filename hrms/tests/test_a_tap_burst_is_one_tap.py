@@ -123,6 +123,34 @@ class HrCanSeeItCase(unittest.TestCase):
 			"so the two cannot drift apart",
 		)
 
+	def test_the_comment_is_written_in_the_type_the_readers_query(self):
+		"""Matching the marker strings is not enough — the ROW TYPE must match too.
+
+		`Document.add_comment(comment_type, text)` stores its first argument as
+		`Comment.comment_type`, and every reader of a skip reason filters
+		`comment_type == "Comment"`. Written as "Info" the row is simply never
+		seen, so the audit shows the punch skipped with no reason and no way
+		back — the exact thing this comment exists to prevent, passing every
+		string-consistency test while doing nothing at all.
+		"""
+		import re
+
+		source = pathlib.Path(remote_checkin.__file__).read_text()
+		burst = source[source.index("BURST_SKIP_REASON") :]
+		written = re.search(r'add_comment\(\s*"(\w+)"', burst[burst.index("if burst:") :])
+		self.assertIsNotNone(written, "the burst path comments on the row")
+
+		audit = pathlib.Path(
+			pathlib.Path(remote_checkin.__file__).parents[1] / "utils" / "attendance_day_audit.py"
+		).read_text()
+		queried = re.search(r'"comment_type":\s*"(\w+)"', audit)
+		self.assertIsNotNone(queried, "the audit queries a comment type")
+		self.assertEqual(
+			written.group(1),
+			queried.group(1),
+			"the burst comment must be written in the type the audit reads",
+		)
+
 	def test_the_audit_offers_hr_the_way_back(self):
 		from hrms.utils.attendance_day_audit import REPAIRABLE_SKIP_REASONS
 

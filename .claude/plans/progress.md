@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  and must not be deleted as dead. (c) the backfill patch's docstring still quoted "repair last 2
-  months" while its code now follows the four-cycle filing window. (d) the empty-range early return
-  omitted keys the calling patch reads and would have raised KeyError inside after_migrate.
-- 2026-09-13 **DEPLOY RISK, READ BEFORE PUSHING**: widening the filing window silently re-scoped the
-  deploy-time OT repair from at most 92 days to at most 153, and it runs on EVERY deploy via
-  hooks.py after_migrate. _repair_financial_dependency is per-day rather than per-range so it is no
-  weaker across the wider window — but under the parallel-run setup a month settled on the SOURCE
-  instance may have no Salary Slip HERE to protect it. Dry-run the newly reachable slice first:
-    bench --site <site> execute hrms.hr.doctype.attendance.attendance.recompute_ot_backfill \
-      --kwargs "{'from_date':'2026-04-16','to_date':'2026-06-15','dry_run':1}"
-  Read `changed` against `locked`. If changed > locked, settle it with Nabil BEFORE deploying.
-  Recorded in the patch docstring too, where whoever deploys will meet it.
-- 2026-09-13 OPEN DECISION for Nabil (the cancel ruling is narrower than it reads): it is a NO-OP on
-  Leave Application, Expense Claim and Shift Request. patches/v15_106_3/allow_staff_cancel_own_requests
-  grants Employee/ESS the cancel flag on those three, and employee_master auto-grants the Leave/Expense
-  Approver roles which carry cancel — so the routed approver passes the framework check anyway. The
-  ruling bites only on OT Request, Attendance Request and Replacement Leave Claim. Either "an approved
-  request is never cancelled" means those roles lose cancel on approved rows (a DocPerm + patch change),
-  or it means "routing is not a cancel right", which is what shipped. HIS CALL.
-- 2026-09-13 OPEN DECISION for Nabil (a consequence of the four-month window): ot_request's
-  validate_duplicate_request checks only for another OT REQUEST on the same employee+date — nothing
-  consults Overtime Details, Overtime Slip or a submitted Salary Slip. At two cycles the reachable
-  window stayed near the open payroll cycle; at four it reaches five calendar months, into closed and
-  PAID periods. So an employee can file for an April day whose overtime was already paid without an OT
-  Request on record, and the only thing between that and a second payout is an approver recognising a
-  five-month-old date. Either accept it explicitly (every OT Request is human-approved) or add an
-  already-paid check. HIS CALL.
-- 2026-09-13 LEARNING(fact): the live cancel matrix is NOT what the doctype JSON says.
-  patches/v15_106_3/allow_staff_cancel_own_requests grants cancel to Employee/ESS on Leave Application,
-  Expense Claim and Shift Request via update_permission_property, and employee_master's
-  update_approver_user_roles auto-grants the Leave/Expense Approver roles. Any permission analysis on
-  those three must read the patch and that hook as well as the JSON.
-- 2026-09-13T18:26:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-13T18:26:53Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
-- 2026-09-13T18:26:57Z COMMIT: 10802dfe4 fix(overtime): the wider filing window quietly widened a deploy-time repair too → review dispatched
-- 2026-09-13 PLAN: inspected the existing 2.0 UX proposal, surface map, Glass
-  amendment and current frontend/API/gates. Revised proposal:
-  docs/glass/plan/NADI_2.0_DELIVERY_PLAN_2026-09-13.md. Documentation-only scope.
-  Baseline: 166 frontend tests passed; selected Python checks 19 passed, 1 skipped,
-  3 subtests passed; contrast 54 pairs passed; surface gate passed. No live audit.
-- 2026-09-13 LEARNING(fact): scripts/ci-local.sh is absent; scripts/smoke.sh runs
-  bench migrate, which invokes the widened OT repair. It is not read-only verification.
-- 2026-09-13 REVIEW: fresh-context documentation review found no Critical,
-  Important or Minor corrections. Links and git diff --check passed.
-  NEXT_ACTION: DEPLOY is a documentation-review verdict, not release permission.
-NEXT: review the revised 2.0 proposal's five decision rows, then B0 (route,
-  lifecycle, persona and fixture baseline). The proposal is not implementation
-  approval. Script Reports remain deferred; no push, deploy or historical repair
-  without Nabil's explicit instruction. Existing open policy decisions still apply.
-- 2026-09-13T18:42:04Z COMMIT: 5ef3877d7 docs(plans): green light for the push → review dispatched
-- 2026-09-13T18:42:12Z PUSH: nz-glass @ 5ef3877d7
-- 2026-09-13T18:42:47Z PUSH: nz-glass @ 6218a01bf
-- 2026-09-13T18:42:47Z COMMIT: 6218a01bf docs(glass): handoff for the pushed branch → review dispatched
-- 2026-09-13 PLAN: Nabil requested a paced, regression-controlled breakdown
-  focused on Nadi PWA and frontend/backend connections. Added
-  docs/glass/plan/NADI_2.0_EXECUTION_WAVES.md (W0–W8, 28–39 engineer-days plus
-  contingency, half-to-two-day packets) and NADI_2.0_API_CONNECTIONS.md (102 RPC
-  names; 82 local HRMS definitions resolved; every runtime verdict Pending).
-  Generic document operations, uploads, workflows, push overrides, sessions,
-  cache/realtime and retained PWA families are explicitly part of coverage.
-- 2026-09-13 CHECK: eight relative document links resolve; 102 inventory rows
-  verified, 82 Python handler names/line numbers verified; nine wave ranges sum
-  to 28–39 days; git diff --check clean. No application or site changes.
-- 2026-09-13 LEARNING(fact): FormView writes through generated Frappe resource
-  operations; an inventory restricted to named hrms.api calls misses those contracts.
-NEXT: W0.1 expand source references by caller/doctype/operation; W0.2–W0.4
-  establish isolated-site contract/journey evidence and the usable regression gate.
-  Source resolution is not runtime verification. Preserve open 2.0 decisions,
-  deferred Script Report work and exact approval boundaries for infrastructure,
-  permissions, schema, deployment and historical repair.
-- 2026-09-13 PLAN: Nabil added Announcements to Home. Contract at
-  docs/glass/plan/NADI_2.0_ANNOUNCEMENTS.md: HR User/HR Manager authoring within
-  company scope; company/optional department audiences; compact Home card;
-  draft/publish/update/expiry/archive; no push, comments or read receipts at launch.
-  ANN.0 checks reusable storage; any new schema proposal precedes implementation.
-  Added ANN.0–ANN.3 to W0/W6/W8; company events remain deferred. Nine doc links
-  resolve and git diff --check passes. Application unchanged.
-NEXT: ANN.0 alongside W0: confirm installed content model and prepare the exact
-  storage/permissions contract; then test backend publication/audience enforcement,
-  HR editor, recipient detail/list and Home integration. Execute verified milestones;
-  prior human-day estimates are superseded by Nabil's instruction. Preserve all
-  other active 2.0 work and deferred Script Report/production-repair boundaries.
-
-- 2026-09-14 W0 START: Nabil authorised beginning the baseline. Reference 396817e9d.
-  Evidence/initial generic form expansion/setup proposal:
-  docs/glass/plan/NADI_2.0_W0_BASELINE.md. Read-only fresh.local metadata showed
-  no Announcement model and mute_emails=false. No fixture/site configuration writes.
-- 2026-09-14 RED/GREEN: full frontend discovery exposed 5 harness failures missed
-  by frontend/tests-only (299 pass/5 fail). Injected navigator/window instead of
-  assigning Node globals; replaced check-in's 3000-character truncation with
-  asserted callback boundaries and executed its recovery logic. No assertion weakened.
-  Final full discovery 304 passed/0 skipped; full ESLint clean after 7 formatting
-  repairs. Selected Python 19 passed/1 skipped/3 subtests; temporary Vite build,
-  contrast and surfaces passed; guest login browser check 1 passed.
-- 2026-09-14 DEAD END: scripts/smoke.sh remains unsuitable for read-only W0 since
-  it migrates. No authenticated journey claimed; local server/site/HEAD identity
-  must be established before synthetic writes. Full W0 remains open.
 NEXT: approve the concrete fresh.local synthetic-fixture and outbound-suppression
   setup in NADI_2.0_W0_BASELINE.md; then W0.2 persona journeys, browser-test gaps,
   complete route/operation ledger and a separately reviewed quick-gate proposal.
@@ -290,3 +193,14 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:33:15Z EVIDENCE: 6 behaves — family hunt: class=a guard that reasons about rows without asking whether the write it; 29 call site(s) given verdicts, 5 same-root ⟂f8dbc7841a1e
 - 2026-09-17T05:33:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
 - 2026-09-17T05:33:29Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 5 extra test file(s) ⟂2da7a836b075
+- 2026-09-17T05:33:30Z EVIDENCE: 6 behaves — family hunt: class=a guard that reasons about rows without asking whether the write it; 29 call site(s) given verdicts, 5 same-root ⟂f8dbc7841a1e
+- 2026-09-17T05:33:32Z COMMIT: 2f969afd0 fix(checkin): a tap the system stops counting reaches HR's list → review dispatched
+- 2026-09-17T10:15:00Z REPAIR: review CRITICAL on 2f969afd0 — the burst comment was written with add_comment("Info", ...), and every skip-reason reader filters comment_type == "Comment". The row was never seen, so the "reaches HR's list" fix did nothing while all its tests passed: they checked that the marker STRINGS agreed, not that the writer and the reader agreed on the row type. Now "Comment", and the new test reads the type out of both sides.
+- 2026-09-17T10:15:00Z EVIDENCE: rung 2 — 1 test RED first, 14 green after; 596 remote_checkin + audit neighbour tests green; module import checked on verify-bench python (no cycle, SKIP_PREFIX identical on both sides).
+- 2026-09-17T10:15:00Z LEARNING(gate): a marker string shared by a writer and a reader is not the whole contract — add_comment's first argument is the stored comment_type, and a test that only compares constants will pass while the feature does nothing.
+- 2026-09-17T05:38:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:38:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:39:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:39:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:39:15Z EVIDENCE: 6 behaves — family hunt: class=a writer and a reader agreeing on the TEXT of a marker while disagreeing; 37 call site(s) given verdicts, 1 same-root ⟂3cf557ee1323
+- 2026-09-17T05:39:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73

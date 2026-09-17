@@ -22,6 +22,7 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Count
 from frappe.utils import add_days, cint, get_datetime, now_datetime
 
+from hrms.utils.attendance_day_audit import SKIP_PREFIX
 from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.geofence import usable_accuracy
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
@@ -678,10 +679,12 @@ def punch(
 	doc.insert()
 
 	if burst:
-		from hrms.utils.attendance_day_audit import SKIP_PREFIX
-
+		# "Comment", not "Info": add_comment's first argument IS the stored
+		# Comment.comment_type, and every reader of a skip reason filters
+		# comment_type == "Comment". Written as "Info" the row is never seen,
+		# and the audit shows the punch skipped with no reason and no way back.
 		doc.add_comment(
-			"Info",
+			"Comment",
 			_("{0}: {1} ({2}s). Restore it from Fix Day if it was a real punch.").format(
 				SKIP_PREFIX, BURST_SKIP_REASON, int(BURST_WINDOW.total_seconds())
 			),
