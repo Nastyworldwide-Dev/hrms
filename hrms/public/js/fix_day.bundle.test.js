@@ -98,3 +98,14 @@ test("each attendance line says which row it is and on which shift", () => {
 	assert.match(body, /row\.name/, "HR matches these lines against the Attendance list by name")
 	assert.match(body, /row\.shift/, "the shift is how a 9AM-6PM row is told from a 7PM-3.30AM one")
 })
+
+// A rebuild the engine HELD — the never-worse guard rolled it back, or a
+// protection refused the day — comes back with the day unchanged. Saying only
+// "unchanged" leaves HR staring at a screen that did what they asked and shows
+// nothing for it. The engine's own sentence is in the answer; print it.
+test("a held rebuild tells HR why the day did not move", () => {
+	const start = src.indexOf("show_change(answer) {")
+	const body = src.slice(start, src.indexOf("\n\t}", start))
+	assert.match(body, /answer\.rebuild/, "the engine's verdict per day is in the answer")
+	assert.match(body, /held/, "a held day has a reason and HR needs to read it")
+})

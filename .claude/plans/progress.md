@@ -297,3 +297,9 @@ DEAD END: putting the mirrored rule in protected_reason broke five tests of the
 mirrored RELEASE plan, which asks that same function about mirrored rows on
 purpose. It belongs to the waiver.
 NEXT: re-review, then the owner deploys.
+- 2026-09-17T09:48:32Z PUSH: nz-glass @ 944aeec7a
+REPAIR: a rebuild the engine HELD (never-worse rollback, or a protection) showed
+HR "The day came back unchanged" and nothing else - the engine's sentence was in
+the answer and only reached the console. It is printed now.
+EVIDENCE: 2 (mapped) - 1 new JS test red before, green after; 28 JS green. The
+hr_asked branch was also proven by mutation: removing it fails 3 tests.

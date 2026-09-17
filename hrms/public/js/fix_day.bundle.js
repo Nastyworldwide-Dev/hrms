@@ -482,11 +482,25 @@ class FixDayScreen {
 		const changed = Object.keys(after).some(
 			(day) => fd_day_lines(before[day]) !== fd_day_lines(after[day])
 		);
+		// The engine answers per day, and "held" is an answer: the never-worse
+		// guard rolled the rebuild back, or a protection refused the day. Its
+		// sentence is the only thing that explains a day that did not move, so
+		// it is printed rather than left in the console.
+		const held = Object.entries(answer.rebuild || {})
+			.filter(([, verdict]) => verdict && verdict.action === "held")
+			.map(
+				([day, verdict]) =>
+					`<div class="alert alert-warning py-1 my-1">${__("{0}: {1}", [
+						fd_escape(day),
+						fd_escape(verdict.detail || __("the engine held this day")),
+					])}</div>`
+			)
+			.join("");
 		console.info("[FixDay] fixed", answer.log, "changed:", changed, before, after);
 		frappe.msgprint({
 			title: changed ? __("The day was rebuilt") : __("The day came back unchanged"),
 			indicator: changed ? "green" : "orange",
-			message: `<ul>${lines.join("")}</ul>`,
+			message: `${held}<ul>${lines.join("")}</ul>`,
 		});
 	}
 }
