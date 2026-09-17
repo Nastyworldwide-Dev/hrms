@@ -86,3 +86,70 @@ frontend/src/utils/geolocation.js — same-root (fixed here)
 docs/glass/audit/2026-09-08-probes.py:98 — same-root (fixed here)
   A dated audit probe asserting the old reason for a 1.3 km reading. Amended
   with the reason, so anyone re-running it is not misled.
+
+## Third pass, same day — the review's two Warnings on the dialog fix
+
+Both mine, both the same class as the one before: a surface deciding from the
+reason string, one line away from a surface that already knows better.
+
+frontend/src/components/RemoteCheckinDialog.vue (`headline`) — same-root (fixed here)
+  The metric row was gated and the HEADLINE above it was not, so it still said
+  "You're outside the office geofence" over a card that had just refused to
+  show a distance for that same reading.
+frontend/src/components/StrictRejectionDialog.vue (`title`, `subtitle`) — same-root (fixed here)
+  Found by the same question, not reported: both switch on the reason alone.
+  A coarse reading is now named as one whatever verdict it produced.
+frontend/src/utils/geolocation.js (`isReadingCoarse`) — same-root (fixed here)
+  Three hand-copies of `accuracy > 250` across two dialogs and the sheet were
+  what let this drift out of step twice in one day. One exported function now,
+  and a test that fails if any surface re-derives the comparison.
+hrms/api/remote_checkin.py (`punch` return) — same-root (fixed here)
+  The dialog was reading the panel's LIVE accuracy after two round trips, so a
+  newer fix landing mid-flight would caveat — or fail to caveat — a verdict the
+  server reached on a different reading. The punch now echoes `accuracy_m`, the
+  way `check_geofence` already did for the strict path.
+frontend/src/components/CheckInPanel.vue:1176 — same-root (fixed here)
+  Reads that echo instead of its own `location.accuracy`.
+
+## Machine-listed sites (the scan matched the word `punch` in prose)
+
+None of these calls `punch` or `isReadingCoarse`: each is a log line, a
+docstring or a comment containing the word.
+
+hrms/api/attendance_fix_day.py:525 — not-affected — prose or a log line containing the word "punch".
+hrms/api/attendance_master_edit.py:845 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/doctype/employee_checkin/employee_checkin.py:420 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/doctype/employee_checkin/employee_checkin.py:823 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/doctype/employee_checkin/employee_checkin.py:857 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/doctype/employee_checkin/employee_checkin.py:928 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/doctype/shift_type/shift_type.py:557 — not-affected — prose or a log line containing the word "punch".
+hrms/hr/report/attendance_day_audit/attendance_day_audit.js:102 — not-affected — prose or a log line containing the word "punch".
+hrms/overrides/employee_checkin_override.py:256 — not-affected — prose or a log line containing the word "punch".
+hrms/overrides/employee_checkin_override.py:314 — not-affected — prose or a log line containing the word "punch".
+hrms/overrides/employee_checkin_override.py:381 — not-affected — prose or a log line containing the word "punch".
+hrms/overrides/employee_checkin_override.py:45 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/checkin_import.py:313 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/checkin_import.py:438 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/checkin_import.py:458 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/checkin_import.py:734 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/erp_backfill.py:239 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/erp_backfill.py:396 — not-affected — prose or a log line containing the word "punch".
+hrms/sync/erp_backfill.py:564 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:119 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:176 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:197 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:200 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:235 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:625 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_day_audit.py:631 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_ownership.py:197 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:1309 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:1404 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:1675 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:444 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:465 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:473 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/attendance_recovery.py:476 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/hr_removed_day.py:72 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/offshift_punch_heal.py:192 — not-affected — prose or a log line containing the word "punch".
+hrms/utils/shift_resolution.py:88 — not-affected — prose or a log line containing the word "punch".

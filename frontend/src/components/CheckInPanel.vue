@@ -231,9 +231,9 @@ import {
 	GEO_TIMEOUT,
 	GEO_UNSUPPORTED,
 	describeGeolocationError,
-	ACCURACY_ALLOWANCE_CAP_M,
 	formatAccuracy,
 	geolocationBlockedReason,
+	isReadingCoarse,
 	preferFreshFix,
 	shouldReplaceFix,
 	usablePosition,
@@ -893,7 +893,7 @@ const locationVerdict = computed(() => {
 	// a far one comes back as "outside_radius" — but a distance drawn from a
 	// reading that cannot widen a fence is not a distance to say out loud. Both
 	// dialogs make the same call on the same cap; this is the sheet's copy of it.
-	const coarseReading = Number(accuracyM.value) > ACCURACY_ALLOWANCE_CAP_M
+	const coarseReading = isReadingCoarse(accuracyM.value)
 	if (fencePreview.value.reason === "imprecise_location" || coarseReading) {
 		return {
 			tone: loc.strict ? "blocked" : "warn",
@@ -1168,11 +1168,12 @@ const runSubmitLog = async (logType) => {
 							name: req.name,
 							logType: req.log_type || logType,
 							distanceM: Number(req.distance_m) || 0,
-							// What the DEVICE said about its own error for the
-							// reading this punch used. Without it the dialog can
-							// only judge by the reason code, which no longer tells
-							// it whether the distance beside it means anything.
-							accuracyM: Number(location.accuracy) || 0,
+							// The accuracy the SERVER judged on, echoed by the
+							// punch — not this panel's live reading, which a newer
+							// fix can have replaced during the round trip. The
+							// dialog would otherwise caveat a verdict reached on a
+							// reading it no longer holds.
+							accuracyM: Number(doc.accuracy_m) || 0,
 							approverName: req.approver || "",
 							// From the punch response, not the request row: the
 							// row records the distance, not whether the distance

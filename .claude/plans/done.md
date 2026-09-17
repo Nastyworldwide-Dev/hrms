@@ -1,8 +1,7 @@
-GOAL: A coarse reading that puts somebody at their desk stops sending them to
- their approver.
-DONE WHEN: the allowance is min(accuracy, 250) for any reading inside the trust
- cap, never decreases as accuracy worsens, and the phone's preview agrees with
- the server case for case.
-CHECK: PYTHONPATH=. python3 -m pytest -q
- hrms/tests/test_geofence_allowance_has_no_cliff.py
- hrms/tests/test_geolocation_properties.py
+GOAL: No surface asserts a distance, in numbers or in words, that a coarse
+ reading cannot support — and none of them re-derives what "coarse" means.
+DONE WHEN: title, subtitle and headline all ask isReadingCoarse; the shared
+ helper is exported once and no surface compares against the cap itself; the
+ dialog reads the accuracy the SERVER judged on, echoed by the punch.
+CHECK: cd frontend && node --experimental-test-module-mocks --test
+ src/components/__tests__/geofence-dialogs-do-not-overclaim.test.js

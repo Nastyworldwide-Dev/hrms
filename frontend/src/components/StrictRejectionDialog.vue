@@ -110,7 +110,7 @@
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
 import { FeatherIcon, Button } from "frappe-ui"
-import { ACCURACY_ALLOWANCE_CAP_M, formatAccuracy } from "@/utils/geolocation"
+import { formatAccuracy, isReadingCoarse } from "@/utils/geolocation"
 
 const __ = inject("$translate")
 
@@ -132,6 +132,10 @@ const props = defineProps({
 const emit = defineEmits(["close"])
 
 const title = computed(() => {
+	// A coarse reading is named as one whatever verdict it produced: since
+	// 17 Sep 2026 such a reading can come back as "outside_radius", and the
+	// wording must not assert a distance the card below it refuses to show.
+	if (readingIsCoarse.value) return __("Location not precise enough")
 	switch (props.reason) {
 		case "no_shift_location":
 			return __("Check-in unavailable")
@@ -145,6 +149,8 @@ const title = computed(() => {
 })
 
 const subtitle = computed(() => {
+	if (readingIsCoarse.value)
+		return __("Your device could not pin down where you are accurately enough to check you in.")
 	switch (props.reason) {
 		case "no_shift_location":
 		case "no_radius":
@@ -179,7 +185,7 @@ const adminMisconfigMessage = computed(() => {
 // from it is not a number to put in front of anybody. Until 17 Sep 2026 the
 // `imprecise_location` reason stood in for this, and it no longer does: a
 // coarse reading that is genuinely far away now comes back as `outside_radius`.
-const readingIsCoarse = computed(() => Number(props.accuracyM) > ACCURACY_ALLOWANCE_CAP_M)
+const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
 
 const formattedAccuracy = computed(() => formatAccuracy(props.accuracyM) || __("unknown"))
 

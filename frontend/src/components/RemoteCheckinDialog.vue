@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import { ACCURACY_ALLOWANCE_CAP_M } from "@/utils/geolocation"
+import { isReadingCoarse } from "@/utils/geolocation"
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject, ref, watch } from "vue"
 import { toast } from "frappe-ui"
@@ -102,7 +102,10 @@ const submitting = ref(false)
 // left the geofence when their phone simply could not see the sky is both
 // wrong and the kind of wrong that gets argued about at payroll.
 const headline = computed(() =>
-	props.reason === "imprecise_location"
+	// The headline must not assert what the metric row beside it has just
+	// refused to show. A coarse reading is "we could not confirm", whatever
+	// verdict it produced.
+	props.reason === "imprecise_location" || readingIsCoarse.value
 		? __("We couldn't confirm where you are")
 		: __("You're outside the office geofence")
 )
@@ -110,7 +113,7 @@ const headline = computed(() =>
 // Past the allowance cap the reading cannot widen a fence, so its distance is
 // not a figure to put in front of anybody. The reason code used to stand in for
 // this and no longer does.
-const readingIsCoarse = computed(() => Number(props.accuracyM) > ACCURACY_ALLOWANCE_CAP_M)
+const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
 
 const formattedDistance = computed(() => {
 	const d = props.distanceM || 0

@@ -125,6 +125,14 @@ export function usablePosition(position, now = Date.now()) {
 export const ACCURACY_ALLOWANCE_CAP_M = 250
 export const POINT_ESTIMATE_TRUST_CAP_M = 2000
 
+// Past the allowance cap a reading cannot widen a fence, so no figure drawn
+// from it — a distance, or a sentence asserting one — is a claim the data
+// supports. Written ONCE: three hand-copies across two dialogs and the sheet
+// are what let the older reason-string test drift out of step twice in a day.
+export function isReadingCoarse(accuracyM) {
+	return Number(accuracyM) > ACCURACY_ALLOWANCE_CAP_M
+}
+
 // Mirrors hrms.utils.geofence.evaluate_geofence; executable cross-language
 // boundary tests keep the written preview aligned with authoritative enforcement.
 export function previewGeofence({

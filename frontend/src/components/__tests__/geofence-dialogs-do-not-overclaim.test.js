@@ -32,8 +32,8 @@ for (const name of DIALOGS) {
 		)
 		assert.match(
 			src,
-			/ACCURACY_ALLOWANCE_CAP_M/,
-			"and on the same cap the geofence uses, not a retyped number"
+			/isReadingCoarse/,
+			"and through the shared test, not a retyped comparison against 250"
 		)
 	})
 
@@ -42,3 +42,43 @@ for (const name of DIALOGS) {
 		assert.match(src, /accuracyM/, "it needs the accuracy to say anything honest about it")
 	})
 }
+
+// A hidden number and a confident sentence above it is still an overclaim.
+for (const name of DIALOGS) {
+	test(`${name} does not assert the verdict in words either`, () => {
+		const src = read(name)
+		// Every branch that decides WORDING from the reason must also ask how
+		// coarse the reading was — otherwise the card says "we cannot place you"
+		// while the headline right above it says "you are outside the geofence".
+		const wording = [...src.matchAll(/const (?:title|subtitle|headline) = computed\(/g)]
+		assert.ok(wording.length, "the dialog decides some wording")
+		for (const match of wording) {
+			const block = src.slice(match.index, src.indexOf("\n})", match.index))
+			assert.match(
+				block,
+				/readingIsCoarse/,
+				"wording branched on the reason string alone, one line above a card that knows better"
+			)
+		}
+	})
+}
+
+test("the coarse-reading test is written once, not copied into each surface", () => {
+	// Three hand-copies of `accuracy > 250` across two dialogs and the sheet is
+	// the exact shape that let the reason-string check drift out of step twice
+	// in one day.
+	const shared = readFileSync(
+		fileURLToPath(new URL("../../utils/geolocation.js", import.meta.url)),
+		"utf8"
+	)
+	assert.match(shared, /export function isReadingCoarse/, "one definition, exported")
+	for (const name of [...DIALOGS, "CheckInPanel.vue"]) {
+		const src = read(name)
+		assert.match(src, /isReadingCoarse/, `${name} must use the shared test`)
+		assert.doesNotMatch(
+			src,
+			/>\s*ACCURACY_ALLOWANCE_CAP_M/,
+			`${name} must not re-derive the comparison`
+		)
+	}
+})

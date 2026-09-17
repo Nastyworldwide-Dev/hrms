@@ -712,6 +712,12 @@ def punch(
 		requires_remote_approval=doc.requires_remote_approval,
 		remote_approval_status=doc.remote_approval_status,
 		remote_reason=getattr(doc, "_remote_reason", None),
+		# The accuracy the DECISION was made on, echoed like check_geofence
+		# does. The phone must not re-read its own live fix to judge how coarse
+		# the reading was: a newer one lands during the round trip, and the
+		# dialog would then caveat — or fail to caveat — a verdict that was
+		# reached on a different reading entirely.
+		accuracy_m=accuracy_m or 0,
 	)
 
 

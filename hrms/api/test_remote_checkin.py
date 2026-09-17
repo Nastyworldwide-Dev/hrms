@@ -1106,3 +1106,35 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TheAnswerCarriesTheAccuracyItJudgedOn(unittest.TestCase):
+	"""The phone must not re-read its own live fix to caveat a verdict.
+
+	The check-in sheet keeps watching for a better reading, so by the time the
+	punch's answer comes back the panel's `location.accuracy` can be a DIFFERENT
+	fix from the one the server scored. The remote-approval dialog decides from
+	that number whether the distance beside it means anything, so reading the
+	live one makes it caveat — or fail to caveat — a decision reached on a
+	reading it no longer holds. `check_geofence` already echoes `accuracy_m` for
+	the strict path; the punch does too (17 Sep 2026).
+	"""
+
+	def test_the_punch_answer_echoes_the_accuracy(self):
+		import ast
+		from pathlib import Path as _Path
+
+		source = _Path(remote_checkin.__file__).read_text()
+		fn = next(
+			node
+			for node in ast.walk(ast.parse(source))
+			if isinstance(node, ast.FunctionDef) and node.name == "punch"
+		)
+		returns = [node for node in ast.walk(fn) if isinstance(node, ast.Return) and node.value]
+		answer = ast.unparse(returns[-1])
+		self.assertIn("accuracy_m", answer, "the caller cannot caveat a verdict it cannot see")
+		self.assertIn(
+			"accuracy_m=accuracy_m",
+			answer,
+			"it must be the accuracy the DECISION used, not a re-read of anything",
+		)

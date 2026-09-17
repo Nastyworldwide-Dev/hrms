@@ -232,3 +232,12 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T06:54:30Z COMMIT: 5458850c7 docs(audit): the 8 Sep probe expects the reason the boundary now returns → review dispatched
 - 2026-09-17T06:54:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
 - 2026-09-17T06:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-09-17T06:54:53Z COMMIT: 06e6f1466 fix(geofence): a coarse reading stops being announced as a precise distance → review+design dispatched
+- 2026-09-17T12:00:00Z REPAIR: review Warnings on 06e6f1466 — the RemoteCheckinDialog HEADLINE and both StrictRejectionDialog strings still asserted the verdict in words over a card that had just refused to show the number; and the dialog read the panel's LIVE accuracy after two round trips instead of the reading the server judged. The punch now echoes accuracy_m, like check_geofence already did. `isReadingCoarse` is exported once — three hand-copies were what let this drift twice in a day — and a test fails if any surface re-derives it.
+- 2026-09-17T12:00:00Z EVIDENCE: rung 2 — 7 dialog tests, 4 RED against HEAD's copies of both dialogs; every frontend suite green; 499 remote_checkin neighbour tests green (test_day_remark's one failure is the known batch-ordering pollution, green alone).
+- 2026-09-17T12:00:00Z NEXT: owner to rule on WITHDRAWAL — every request type already reverses what it granted on cancel (leave ledger, allocation, replacement leave, attendance row, shift assignment), but his own 14 Sep ruling bars the EMPLOYEE from cancelling. Options put to him: (a) employee cancels outright, (b) withdrawal request the approver confirms, (c) self-service before it starts, approver after. Also open: whether strict geofence should stay harsh on coarse readings specifically.
+- 2026-09-17T07:01:07Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-17T07:01:24Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-17T07:01:31Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-17T07:01:32Z EVIDENCE: 6 behaves — family hunt: class=a tolerance expressed as "up to X, then nothing", where the step lands; 37 call site(s) given verdicts, 15 same-root ⟂4ae4a89db443
+- 2026-09-17T07:01:47Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
