@@ -303,3 +303,4 @@ string was asked); the attendance_list.js hotspot has a refactor ticket rather
 than a seventh inline fix. Both new tests proven by mutation.
 NEXT: deploy is the owner's. Open flags unchanged: the carry-forward/encashment
 window between approval and withdrawal still wants a bench check.
+- 2026-09-17T08:05:27Z COMMIT: ae106aecc test: the invariant watches what loads at boot, and names the roles → review dispatched
