@@ -287,3 +287,9 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T03:13:15Z EVIDENCE: 6 behaves — family hunt: class=a self-approval refusal made OPTIONAL by a site setting. Five of the; 3 call site(s) given verdicts, 8 same-root ⟂cab2898eb775
 - 2026-09-17T03:13:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-09-17T03:13:31Z EVIDENCE: 3 works — blast radius green: 40 dependent(s), 32 extra test file(s) ⟂7a3d85320767
+- 2026-09-17T03:13:32Z EVIDENCE: 6 behaves — family hunt: class=a self-approval refusal made OPTIONAL by a site setting. Five of the; 3 call site(s) given verdicts, 8 same-root ⟂cab2898eb775
+- 2026-09-17T03:13:36Z COMMIT: 115516ae2 fix(approvals): the Desk door had the same hole as the API door → review dispatched
+- 2026-09-17T04:10:00Z REPAIR: "annual leave tu nape dia mcm samar samar" — not a data defect. .g-glass::after (the §6 diagonal gloss) is position:absolute inset:0 with NO z-index, so it painted in the positioned-descendants layer, above the panel's in-flow content: up to 55% white over the top-left tile of every glass panel. The page-level twin (.g-lightfield) was already wired with z-index 0/1; the panel-level one never was.
+- 2026-09-17T04:10:00Z EVIDENCE: rung 2 — 3 tests RED on HEAD first, green after, incl. a stylesheet-wide gate that fails any future full-bleed pseudo-overlay without a negative z-index (skeleton shimmer exempt by name). theme suite 12 passed; design gates: contrast/surfaces/tokens OK, the 9 new lint + 1 usage violations belong to views/helpdesk/TicketNew.vue (another session), not this change.
+- 2026-09-17T03:19:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-17T03:19:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
