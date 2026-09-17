@@ -45,8 +45,16 @@ function fd_clock(value) {
 
 // One Attendance row in words. Hours and overtime are SHOWN here and never
 // sent back: this screen has no control that could edit them.
+//
+// It leads with the row's NAME and SHIFT because that is how HR matches this
+// line to the Attendance list, and on a two-row day it is the only way to tell
+// the rows apart. Owner, 17 Sep 2026, on Norazlin's 4 September: "no such 7pm
+// stuff, the number att is different?" — the 7PM row was on the screen the
+// whole time, printed as a bare status and two zeroes.
 function fd_row_line(row) {
-	return __("{0} · in {1} · out {2} · {3} h worked · {4} h OT", [
+	return __("{0} · {1} · {2} · in {3} · out {4} · {5} h worked · {6} h OT", [
+		fd_escape(row.name || "—"),
+		fd_escape(row.shift || __("no shift")),
 		fd_escape(row.status || "—"),
 		fd_clock(row.in_time),
 		fd_clock(row.out_time),

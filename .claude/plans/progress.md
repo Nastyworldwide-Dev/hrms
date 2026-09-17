@@ -227,3 +227,13 @@ two-row day (TestATwoRowDayKeepsItsEscapesOpen). Proven by two mutations: the
 waiver removed from move_tap fails the behavioural escape test; the rule itself
 removed fails six tests including the notice. The mutation drill the reviewer
 ran out of turns for was also run: both AST tests fail without the waiver.
+- 2026-09-17T09:01:58Z PUSH: nz-glass @ 7a3d20bf0
+- 2026-09-17T09:02:12Z PUSH: nz-glass @ 641fd4bdc
+- 2026-09-17T09:02:12Z COMMIT: 641fd4bdc docs(glass): handoff for the two-row day → review dispatched
+REPAIR: the Fix Day screen listed a day's attendance rows without naming them
+- status, in, out, hours, OT and nothing else - so on a two-row day HR could
+not tell which line was which row, or which shift it was on. The data was
+already in row_view; only the line was missing it.
+EVIDENCE: 2 (mapped) - fix_day.bundle.test.js red on HEAD, green after; 27 JS
+and 109 Python tests across the fix-day suites.
+NEXT: deploy; the ghost-row list is still on offer.

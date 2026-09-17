@@ -85,3 +85,16 @@ test("no file loaded at boot claims a doctype's listview_settings", () => {
 		)
 	}
 })
+
+// Owner, 17 Sep 2026, looking at Norazlin's 4 September on this screen: "uhm
+// nope? no such 7pm stuff, the number att is different?" The Attendance
+// section printed a status and some hours and NOTHING that identifies the row —
+// no name, no shift — so the two lines could not be matched to the two rows the
+// Attendance list shows, and the duplicate could not be told apart at all. The
+// data was already there; only the line was missing it.
+test("each attendance line says which row it is and on which shift", () => {
+	const start = src.indexOf("function fd_row_line(")
+	const body = src.slice(start, src.indexOf("\n}", start))
+	assert.match(body, /row\.name/, "HR matches these lines against the Attendance list by name")
+	assert.match(body, /row\.shift/, "the shift is how a 9AM-6PM row is told from a 7PM-3.30AM one")
+})
