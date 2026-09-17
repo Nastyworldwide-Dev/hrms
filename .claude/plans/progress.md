@@ -204,3 +204,6 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T05:39:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-17T05:39:15Z EVIDENCE: 6 behaves — family hunt: class=a writer and a reader agreeing on the TEXT of a marker while disagreeing; 37 call site(s) given verdicts, 1 same-root ⟂3cf557ee1323
 - 2026-09-17T05:39:25Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-17T05:39:26Z EVIDENCE: 6 behaves — family hunt: class=a writer and a reader agreeing on the TEXT of a marker while disagreeing; 37 call site(s) given verdicts, 1 same-root ⟂3cf557ee1323
+- 2026-09-17T05:39:29Z COMMIT: a9519ef65 fix(checkin): the skip reason is written where the readers look for it → review dispatched
+- 2026-09-17T10:35:00Z EVIDENCE: rung 2 — review of a9519ef65 NEXT_ACTION DEPLOY, no Critical, no Warning. It confirmed end to end that a burst-skipped punch is now found by BOTH skip-reason readers and offered "unskip", that the module-scope import has no cycle on the real interpreter, that the resolved-type trace is untouched, and that the new test reads BOTH sides from source so reverting the fix would fail it.
