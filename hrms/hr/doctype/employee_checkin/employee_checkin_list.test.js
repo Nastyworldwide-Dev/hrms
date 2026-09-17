@@ -87,3 +87,42 @@ test("the fields behind the indicator are fetched", () => {
 		assert.ok(SETTINGS.add_fields.includes(field), `add_fields missing: ${field}`);
 	}
 });
+
+// --- the entry point HR actually has to find -------------------------------
+// Reported 17 Sep 2026, by the owner standing on this page: "im at employee
+// checkin page yet i cant see things that is mentioned. how do i even pair the
+// the attendance to become one row?" The Fix Day bundle did register a
+// "Fix day" button here — at boot — and then this file, which Desk loads when
+// the list opens, assigned frappe.listview_settings["Employee Checkin"] again
+// and threw it away. Nothing read the source and found it missing, because the
+// source was fine. So these load both files in Desk's real order.
+const { loadDesk, fakeListview } = require("../../../tests/js/desk_list_harness.js");
+
+const BUNDLE = path.join(__dirname, "..", "..", "..", "public", "js", "fix_day.bundle.js");
+const LIST = path.join(__dirname, "employee_checkin_list.js");
+
+function controls(options) {
+	const { settings, sandbox } = loadDesk([BUNDLE, LIST], options);
+	const listview = fakeListview([]);
+	settings["Employee Checkin"].onload.call(settings["Employee Checkin"], listview);
+	return {
+		labels: listview.page.actions.concat(listview.page.buttons).map((c) => c.label),
+		sandbox,
+	};
+}
+
+test("HR finds Fix day on the Employee Checkin list", () => {
+	assert.ok(
+		controls().labels.includes("Fix day"),
+		"the pairing screen has no other entry point from this page",
+	);
+});
+
+test("the list keeps its own action when the bundle is loaded first", () => {
+	// The regression cut both ways: whichever file assigned last won outright.
+	assert.ok(controls().labels.includes("Fetch Shifts"), "Fetch Shifts must survive");
+});
+
+test("a non-HR user is not offered the fix screen", () => {
+	assert.ok(!controls({ has_role: false }).labels.includes("Fix day"));
+});

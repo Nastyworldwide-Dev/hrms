@@ -1,6 +1,7 @@
-GOAL: The payroll check behind a withdrawal reads the request's real period.
-DONE WHEN: every entry in REQUEST_PERIOD_FIELDS is a real Date field on its
- doctype (asserted from the JSON), a doctype absent from the map refuses the
- employee, and the three refusals say three different things.
-CHECK: PYTHONPATH=. python3 -m pytest -q
- hrms/tests/test_an_employee_can_withdraw_their_own_request.py
+GOAL: the "Fix day" (pair/relink) entry point actually appears on the Employee
+Checkin list and on the Attendance list, because today the bundle registers it
+and the doctype's own list script silently throws it away.
+DONE WHEN: loading fix_day.bundle.js and then the doctype list script — the real
+Desk order — leaves an onload that registers BOTH the list's own actions and
+"Fix day", proven by an executing test, not by reading the source.
+CHECK: node --test hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js hrms/hr/doctype/attendance/attendance_list.test.js hrms/public/js/fix_day.bundle.test.js

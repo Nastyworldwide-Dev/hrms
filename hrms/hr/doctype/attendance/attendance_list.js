@@ -2,7 +2,16 @@ frappe.listview_settings["Attendance"] = {
 	// `shift` and `auto_attendance` ride along so HR can see, without opening a
 	// row, which shift a day was marked under and whether a person or the
 	// hourly job owns it.
-	add_fields: ["status", "attendance_date", "shift", "auto_attendance", "working_hours"],
+	// `employee` rides along so a ticked row can name its own employee-day to
+	// the Fix Day screen below.
+	add_fields: [
+		"status",
+		"attendance_date",
+		"employee",
+		"shift",
+		"auto_attendance",
+		"working_hours",
+	],
 
 	// Hours are stored to 9 decimals; HR reads them to 2.
 	formatters: {
@@ -24,6 +33,15 @@ frappe.listview_settings["Attendance"] = {
 	},
 	onload: function (list_view) {
 		let me = this;
+		// Same screen as the Employee Checkin list and the two attendance
+		// reports: HR corrects the day's punches there and the engine recomputes
+		// this row. Registered here because a doctype's listview_settings has one
+		// owner — see the note at the foot of fix_day.bundle.js.
+		if (typeof hrms !== "undefined" && hrms.fix_day && hrms.fix_day.enabled()) {
+			list_view.page.add_inner_button(__("Fix day"), () =>
+				hrms.fix_day.from_attendance(list_view),
+			);
+		}
 		if (frappe.perm.has_perm("Attendance", 0, "create")) {
 			list_view.page.add_inner_button(__("Mark Attendance"), function () {
 				let first_day_of_month = moment().startOf("month");

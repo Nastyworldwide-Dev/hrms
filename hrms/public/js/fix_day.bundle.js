@@ -416,16 +416,31 @@ hrms.fix_day.from_taps = function (listview) {
 	});
 };
 
-frappe.listview_settings["Employee Checkin"] = Object.assign(
-	{},
-	frappe.listview_settings["Employee Checkin"],
-	{
-		onload(listview) {
-			const previous = (frappe.listview_settings["Employee Checkin"] || {}).__fd_previous_onload;
-			if (previous) previous.call(this, listview);
-			if (!fd_enabled()) return;
-			listview.page.add_inner_button(__("Fix day"), () => hrms.fix_day.from_taps(listview));
-			console.info("[FixDay] Employee Checkin list entry point ready");
-		},
+// Attendance list: tick the row of ONE employee-day and fix that day. The row
+// is the symptom HR sees (two rows for one day); the taps behind it are what
+// the screen actually corrects.
+hrms.fix_day.from_attendance = function (listview) {
+	const rows = (listview.get_checked_items() || []).filter(Boolean);
+	if (!rows.length) {
+		frappe.msgprint(__("Tick the day you want to fix."));
+		return null;
 	}
-);
+	const employees = new Set(rows.map((row) => row.employee));
+	const days = new Set(rows.map((row) => String(row.attendance_date || "").slice(0, 10)));
+	if (employees.size !== 1 || days.size !== 1 || !Array.from(days)[0]) {
+		frappe.msgprint(__("Tick rows of one person on one day."));
+		return null;
+	}
+	return hrms.fix_day.open({
+		employee: Array.from(employees)[0],
+		date: Array.from(days)[0],
+		on_close: () => listview.refresh(),
+	});
+};
+
+// The list entry points themselves are registered by each doctype's own list
+// script (employee_checkin_list.js, attendance_list.js), which Desk loads after
+// this bundle. Assigning frappe.listview_settings here as well cost HR the
+// button for a week: the later assignment simply replaced this one, and the
+// chain this file tried to keep (__fd_previous_onload) was never set by anyone.
+// One owner per doctype; this bundle owns the screen, not the page.

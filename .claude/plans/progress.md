@@ -276,3 +276,19 @@ NEXT: resolve the reviewer suppression detail in the concrete fixture setup befo
 - 2026-09-17T07:26:53Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
 - 2026-09-17T07:27:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-17T07:27:09Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 3 extra test file(s) ⟂c121a8ab8901
+- 2026-09-17T07:27:13Z COMMIT: 3f510070e fix(requests): a check that cannot read a doctype says so → review dispatched
+- 2026-09-17T07:27:29Z PUSH: nz-glass @ 262f70acb
+- 2026-09-17T07:27:29Z COMMIT: 262f70acb docs(glass): handoff for the withdrawal and geofence work → review dispatched
+- 2026-09-17T07:48:04Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: the "Fix day" (pair/relink) button was registered by fix_day.bundle.js
+at boot into frappe.listview_settings["Employee Checkin"], and the doctype's own
+list script — which Desk loads when the list opens — assigned that same key
+again and threw it away. The owner stood on the page and could not find it.
+EVIDENCE: 2 (mapped) — hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js
+and hrms/hr/doctype/attendance/attendance_list.test.js now load bundle-then-list
+in Desk's real order and ask the resulting onload what it registered; red on
+HEAD (1 and 3 failures respectively), green after. 23/23 with the bundle suite.
+NEXT: commit, review, then answer the owner's SOP question — his pairing SOP is
+what Fix Day already does; it was unreachable from the page he uses.
+- 2026-09-17T07:59:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6

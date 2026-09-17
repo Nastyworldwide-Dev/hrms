@@ -57,3 +57,22 @@ test("no control on this screen types a result", () => {
 		assert.ok(!name.includes("status"), `${field[1]} would let HR type a result`)
 	}
 })
+
+// The class, not the instance. This bundle loads at boot; a doctype's list
+// script loads when the list opens, and assigns frappe.listview_settings for
+// that doctype outright. Whatever a bundle wrote there is gone. That cost HR
+// the "Fix day" button on Employee Checkin for a week without a single test
+// going red, so no file shipped at boot may write that key again.
+import { readdirSync } from "node:fs"
+
+test("no boot bundle claims a doctype's listview_settings", () => {
+	const dir = fileURLToPath(new URL(".", import.meta.url))
+	for (const file of readdirSync(dir).filter((f) => f.endsWith(".js"))) {
+		const text = readFileSync(`${dir}${file}`, "utf8")
+		assert.doesNotMatch(
+			text,
+			/frappe\.listview_settings\[[^\]]+\]\s*=/,
+			`${file}: the doctype's own list script owns that key and is loaded last`
+		)
+	}
+})

@@ -48,3 +48,51 @@ test("a day HR keyed by hand is told apart from the job's own", () => {
 	assert.notStrictEqual(manual[0], job[0]);
 	assert.match(manual[0], /HR|manual|by hand/i);
 });
+
+// --- the same day, reached from the row instead of the punches --------------
+// Owner, 17 Sep 2026: "each of these pages must have relinking,pairing button".
+// HR lands here as often as on Employee Checkin — a duplicated day is visible
+// as two rows on THIS list — so the day's fix screen opens from here too, on
+// the employee and date of the ticked row.
+const { loadDesk, fakeListview } = require("../../../tests/js/desk_list_harness.js");
+
+const BUNDLE = path.join(__dirname, "..", "..", "..", "public", "js", "fix_day.bundle.js");
+
+function controls(options) {
+	const { settings, sandbox } = loadDesk(
+		[BUNDLE, path.join(__dirname, "attendance_list.js")],
+		options,
+	);
+	const listview = fakeListview([
+		{ name: "HR-ATT-2026-15657", employee: "HR-EMP-00069", attendance_date: "2026-09-04" },
+	]);
+	settings["Attendance"].onload.call(settings["Attendance"], listview);
+	return { listview, labels: listview.page.buttons.map((b) => b.label), sandbox };
+}
+
+test("HR finds Fix day on the Attendance list", () => {
+	assert.ok(controls().labels.includes("Fix day"));
+});
+
+test("the list keeps Mark Attendance", () => {
+	assert.ok(controls().labels.includes("Mark Attendance"));
+});
+
+test("a non-HR user is not offered the fix screen", () => {
+	assert.ok(!controls({ has_role: false }).labels.includes("Fix day"));
+});
+
+test("the employee rides along, or the row cannot name its own day", () => {
+	assert.ok(SETTINGS.add_fields.includes("employee"));
+});
+
+test("the ticked row opens its own employee-day", () => {
+	const { listview, sandbox } = controls();
+	let opened = null;
+	sandbox.hrms.fix_day.open = (options) => (opened = options);
+	listview.page.buttons.find((b) => b.label === "Fix day").handler();
+	assert.deepStrictEqual(
+		{ employee: opened.employee, date: opened.date },
+		{ employee: "HR-EMP-00069", date: "2026-09-04" },
+	);
+});

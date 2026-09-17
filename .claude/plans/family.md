@@ -1,52 +1,32 @@
-# FAMILY — a money check aimed at a field that is not the period
+# FAMILY — the Fix Day entry point HR could not find
 
-CLASS: a per-doctype map whose entries are validated for EXISTENCE and not for
-MEANING. `REQUEST_PERIOD_FIELDS["Travel Request"]` was `("creation",)` —
-Frappe's row-save timestamp, not any travel date. A trip filed after its pay
-period would have compared TODAY against that payslip, found no overlap, and
-let the employee withdraw something already paid. The test that was supposed to
-catch this asked "is the doctype listed", and it was.
+CLASS: a shared bundle registering itself into a key the page's own script
+owns. The later assignment wins silently, so the feature exists, tests pass on
+its source, and the button is simply absent from the screen.
 
-Found by the review of 96962182a.
+Changed: fix_day.bundle.js stops assigning frappe.listview_settings; each
+doctype's list script registers the entry point itself.
 
-ROOT CAUSE: the entry. Travel Request's dates live on its itinerary child
-table, so it is now absent from the map on purpose, and absence REFUSES the
-employee instead of waving them through — "I cannot check" and "it is not
-paid" must never look the same from inside this guard.
+Call sites the machine lists for `hrms.fix_day.*` and for the two list scripts:
 
-## Every entry, checked against the doctype's own JSON
+* hrms/public/js/fix_day.bundle.js — same-root (the assignment is removed; the
+  screen, `open`, `from_taps` and the new `from_attendance` stay)
+* hrms/hr/doctype/employee_checkin/employee_checkin_list.js — same-root (now the
+  one owner of that key, and registers the button)
+* hrms/hr/doctype/attendance/attendance_list.js — same-root (same, plus
+  `employee` in add_fields so a ticked row can name its own day)
+* hrms/hr/report/shift_attendance/shift_attendance.js:142 — not-affected: opens
+  the screen with frappe.require + hrms.fix_day.open, touches no listview_settings
+* hrms/hr/report/unclaimable_days/unclaimable_days.js:26 — not-affected: same shape
+* hrms/hooks.py (app_include_js) — not-affected: the bundle still loads at boot,
+  which is what makes hrms.fix_day.enabled() answerable when a list opens
 
-hrms/utils/approved_request_guard.py:66 (Travel Request) — same-root (fixed here)
-  Removed, with the reason written where the next person will look.
-hrms/utils/approved_request_guard.py::_withdrawal_block — same-root (fixed here)
-  Was `_slip_covering`, returning a slip name. It returns the SENTENCE now, so
-  the three cases (unreadable doctype, no dates on the row, genuinely paid) say
-  three different things to the employee instead of one borrowed one.
-hrms/tests/…::test_every_named_field_exists_on_its_doctype — same-root (added here)
-  Reads each doctype's JSON and fails if a named field is not a Date or
-  Datetime on it. This is the test that would have caught `creation`.
-hrms/tests/…::test_every_decidable_doctype_is_answered_one_way_or_the_other
-  — same-root (amended here)
-  Was "every decidable doctype must be in the map". A doctype may be absent on
-  purpose now, as long as absence refuses.
-Leave Application (from_date, to_date), Expense Claim (posting_date),
-Shift Request (from_date, to_date), Attendance Request (from_date, to_date),
-OT Request (ot_date), Replacement Leave Claim (bank_month),
-Compensatory Leave Request (work_from_date, work_end_date),
-Employee Advance (posting_date) — not-affected
-  Each verified against its own doctype JSON by the new test, not by eye.
+Rest of the app: no other file assigns frappe.listview_settings for a doctype
+that a bundle also writes (checked below).
 
-## Third pass, same day — the review's Warning, same shape again
-
-hrms/tests/…::test_every_named_field_exists_on_its_doctype — same-root (fixed here)
-  The test skipped any doctype whose JSON it could not find, silently. Nothing
-  is skipped today, but the next entry for a doctype owned outside this app
-  would have passed green while checking nothing — the exact shape of the bug
-  the test was written for, one level up. The skips are collected and compared
-  against an EXTERNAL set that is empty on purpose, so a new one has to be
-  acknowledged.
-hrms/utils/approved_request_guard.py::_withdrawal_block — same-root (fixed here)
-  The slip's name had dropped to DEBUG when the helper started returning a
-  sentence. The sentence is the same every time, so at INFO it identifies
-  nothing; the name is logged at INFO again, where an on-call reader is.
-  The two "cannot check" sentences also read properly now.
+LOCK:
+* regression (the instance): the two list tests load the bundle and then the
+  list script in Desk's real order and ask the resulting onload what it
+  registered — the failing shape, executed rather than read.
+* invariant (the class): no file under hrms/public/js may assign
+  frappe.listview_settings, enforced in hrms/public/js/fix_day.bundle.test.js.
