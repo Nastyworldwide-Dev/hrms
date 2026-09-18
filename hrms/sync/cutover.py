@@ -48,6 +48,18 @@ def leave_existing_row_alone(doctype: str, exists: bool, unlocked: bool, create_
 
 	What it gives up is corrections flowing from the source after cutover. That
 	is the point — HR works here now.
+
+	ONE CONSEQUENCE WORTH KNOWING, because it is not about shift data. The pull
+	used to call `_reconcile_user_status` for every Employee row it rewrote, so
+	somebody marked Left on the SOURCE had their hub login disabled on the next
+	sync. A skipped row never reaches that call, so after cutover the source can
+	no longer disable anyone here.
+
+	It is covered in the model the owner described — HR marks a leaver in this
+	site, and `Employee.on_update` disables the User through the ordinary save —
+	and it is NOT covered if somebody is terminated only on the old ERP. Raised
+	with the owner 18 Sep 2026; recorded here rather than fixed by quietly
+	letting the source write again, which is the thing he asked to stop.
 	"""
 	if not exists:
 		return False

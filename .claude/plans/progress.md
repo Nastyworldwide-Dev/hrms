@@ -267,3 +267,12 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) - 23 tests red before, green after; 18
 sync suites green (400+ tests).
 NEXT: review, then the owner deploys. The rows already reverted are a SEPARATE
 repair - Frappe Version history holds the previous shift and branch values.
+- 2026-09-18T03:22:43Z PUSH: nz-glass @ 5baf3c99a
+EVIDENCE: 7 (invariant + a ruling surfaced) - review of 5baf3c99a returned
+DEPLOY. Its parity warning was checked and is not a defect: parity compares row
+COUNTS and this stops only updates. Its second warning is real and is the
+owner's call, not mine: after cutover the source can no longer disable a hub
+login for somebody marked Left on the ERP, because the Employee row is skipped
+before _reconcile_user_status. Recorded in cutover.py and raised with him.
+NEXT: the owner deploys 5baf3c99a and rules on whether a leaver marked only on
+the old ERP should still lose their Verifica login.
