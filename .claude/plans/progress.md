@@ -246,3 +246,15 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 tests red before, green after; 8
 fix-day suites green.
 NEXT: the owner deploys; Danial's OUT then moves to 3 Sep and his OT is claimable.
 - 2026-09-18T04:35:10Z PUSH: nz-glass @ 907765845
+- 2026-09-18T04:35:21Z PUSH: nz-glass @ 627907e6c
+- 2026-09-18T04:35:21Z COMMIT: 627907e6c style: format the leave-day move test → review dispatched
+EVIDENCE: 7 (invariant) - review of 907765845 returned DEPLOY, no Critical, no
+Warning. It confirmed by tracing that _finish's re-mark of the emptied day does
+nothing (protected_reason refuses a leave/half-day/request day and hr_asked
+waives only the owner hold), that leaving_days can never cover the TARGET day
+(set difference of two singletons), and that the money guard sits outside the
+loop and still fires. Its one suggestion is closed: an Attendance Request can
+mean On Duty or Work From Home rather than leave, so the comment no longer calls
+them "the leave family", and four tests now pin the fact the whole waiver rests
+on - that the engine refuses all three the same way.
+NEXT: the owner deploys nz-glass and moves Danial's 4 Sep 01:04 OUT to 3 Sep.

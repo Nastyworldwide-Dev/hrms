@@ -84,6 +84,44 @@ class NothingElseChangesCase(unittest.TestCase):
 		self.assertIsNotNone(block([row(attendance_request="ATR-0001")]))
 
 
+class TheWaiverRestsOnTheEngineRefusingTooCase(unittest.TestCase):
+	"""The whole argument is that emptying one of these days rebuilds nothing.
+
+	It holds because `attendance_recovery.protected_reason` asks the SAME three
+	questions and refuses to re-mark such a day — and `hr_asked` does not waive
+	them, it only waives the owner hold. If that ever changed, this waiver would
+	start letting a punch move off a day that then really is recomputed.
+
+	Attendance Request is in the family on purpose. It can mean On Duty or Work
+	From Home rather than leave, and the reasoning is identical: the row is not
+	recomputed from punches, so one leaving does not harm it.
+	"""
+
+	def setUp(self):
+		from hrms.utils import attendance_recovery
+
+		self.protected = ast.unparse(
+			next(
+				node
+				for node in ast.walk(ast.parse(pathlib.Path(attendance_recovery.__file__).read_text()))
+				if isinstance(node, ast.FunctionDef) and node.name == "protected_reason"
+			)
+		)
+
+	def test_the_engine_still_refuses_a_leave_day(self):
+		self.assertIn("is a leave record", self.protected)
+
+	def test_the_engine_still_refuses_a_half_day_leave(self):
+		self.assertIn("is a half-day leave", self.protected)
+
+	def test_the_engine_still_refuses_an_attendance_request_day(self):
+		self.assertIn("comes from an Attendance Request", self.protected)
+
+	def test_hr_asked_does_not_waive_any_of_them(self):
+		"""`hr_asked` waives the owner hold alone — see `_is_hr_hold`."""
+		self.assertIn("hr_asked and _is_hr_hold(row)", self.protected)
+
+
 class OnlyTheMoveAsksForItCase(unittest.TestCase):
 	def setUp(self):
 		source = pathlib.Path(fix_day.__file__).read_text()

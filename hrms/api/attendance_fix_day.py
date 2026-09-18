@@ -255,10 +255,14 @@ def day_block_reason(
 		if cint(row.get("docstatus")) == 2:
 			continue
 		name = row.get("name")
-		# `leaving` is the day a tap is being moved AWAY from. The leave family
-		# below exists to stop such a day being REBUILT from punches; taking a
-		# punch off it rebuilds nothing — the leave keeps its own result, and
-		# `attendance_recovery` refuses to re-mark a leave day in any case.
+		# `leaving` is the day a tap is being moved AWAY from. Everything below
+		# exists to stop such a day being REBUILT from punches; taking a punch
+		# off it rebuilds nothing, and `attendance_recovery.protected_reason`
+		# refuses to re-mark any of these days regardless — it asks the same
+		# three questions, and `hr_asked` does not waive them. Whatever the row
+		# says the day is (leave, half-day leave, or an Attendance Request, which
+		# may mean On Duty or Work From Home rather than leave), it keeps saying
+		# it: the row is untouched and nothing recomputes it.
 		# Live, 18 Sep 2026: Danial's past-midnight OUT landed on a leave day and
 		# this refusal was the only thing standing between HR and the remedy.
 		if leaving:
@@ -290,6 +294,9 @@ def day_block_reason(
 				"This day has {0} attendance rows ({1}). Remove the duplicate first — nothing else "
 				"can rebuild the day while both exist."
 			).format(len(live), ", ".join(sorted(str(row.get("name")) for row in live)))
+	# Same reasoning, and `request` is a live Leave Application OR Attendance
+	# Request — neither is recomputed from punches, so neither is harmed by one
+	# leaving.
 	if request and not leaving:
 		return _("{0} speaks for this day. Cancel it first.").format(request)
 	if financial:
