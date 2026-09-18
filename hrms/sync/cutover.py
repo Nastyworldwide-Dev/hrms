@@ -32,6 +32,33 @@ APPEND_ONLY_AFTER_CUTOVER = ("Employee Checkin",)
 UNGRADED_AFTER_CUTOVER = LOCALLY_OWNED_AFTER_CUTOVER + APPEND_ONLY_AFTER_CUTOVER
 
 
+def leave_existing_row_alone(doctype: str, exists: bool, unlocked: bool, create_only: bool) -> bool:
+	"""Whether a pull must leave a row that is already here exactly as it is. Pure.
+
+	Owner ruling, 18 Sep 2026, after a sync reverted live employees' shift and
+	location to whatever the source holds: "its better to only pull what is
+	absent not overwrite what is already exist".
+
+	So once this site is unlocked, EVERY mirrored doctype behaves the way the
+	master lists always have — added if missing, never rewritten. Not a list of
+	protected doctypes and not a list of protected fields: the run that caused
+	this touched Employee (default_shift, branch, holiday_list), Shift
+	Assignment and Shift Schedule Assignment, and a rule written as a list is a
+	rule that is wrong the next time somebody mirrors something new.
+
+	What it gives up is corrections flowing from the source after cutover. That
+	is the point — HR works here now.
+	"""
+	if not exists:
+		return False
+	if create_only:
+		return True
+	if unlocked:
+		logger.info("[sync] %s is already here and this site is unlocked: left untouched", doctype)
+		return True
+	return False
+
+
 def _hold_back(requested, unlocked: bool, owned, what: str) -> tuple[list, list]:
 	requested = list(requested)
 	if not unlocked:

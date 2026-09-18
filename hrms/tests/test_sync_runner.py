@@ -2276,10 +2276,10 @@ class TestCheckpointNeverSkipsAnUnwrittenRow(_RunnerTestCase):
 		]
 		original = runner._write_row
 
-		def explode(doctype, remote_name, payload):
+		def explode(doctype, remote_name, payload, unlocked=False):
 			if remote_name == "HR-EMP-0010":
 				raise RuntimeError("schema drift: unknown Select option")
-			return original(doctype, remote_name, payload)
+			return original(doctype, remote_name, payload, unlocked=unlocked)
 
 		runner._write_row = explode
 		try:

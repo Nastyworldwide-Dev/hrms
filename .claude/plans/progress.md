@@ -254,3 +254,16 @@ containing /api/method/ now.
 EVIDENCE: 2 (mapped) - 1 new test red before, green after; 87 passed.
 NEXT: the owner's ruling on whether Employee master still comes from the ERP,
 then the cutover hold-back for shift/location data.
+- 2026-09-18T03:17:49Z PUSH: nz-glass @ 96e0df238
+REPAIR: live employees had shift and location reverted to the source's values.
+No scheduler runs a sync - HRMS Sync Run logs every press - but the sync was
+ALLOWED to: unlock_mirrored_writes held back Attendance alone, and every other
+mirrored doctype was still pulled and UPDATED, including Employee
+(default_shift, branch, holiday_list), Shift Assignment and Shift Schedule
+Assignment. Owner ruling: after cutover, add what is absent, never overwrite
+what exists. One pure rule, asked where the create-only question was already
+asked.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 23 tests red before, green after; 18
+sync suites green (400+ tests).
+NEXT: review, then the owner deploys. The rows already reverted are a SEPARATE
+repair - Frappe Version history holds the previous shift and branch values.

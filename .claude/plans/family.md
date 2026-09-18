@@ -1,56 +1,36 @@
-# FAMILY — an ignored tap was a wall, not an absence
+# FAMILY — a pull overwrote what this site owns
 
-CLASS: "not evidence" and "must not be bridged across" asked as one question.
-`ShiftType.get_attendance` grouped the day into contiguous runs of
-`counts_for_attendance`, so ANY non-counting tap separated the taps around it —
-a rejected punch and a tap HR deliberately ignored alike.
+CLASS: a cutover switch that names the doctypes it protects. Attendance was
+listed after the 9 Sep incident; Employee, Shift Assignment and Shift Schedule
+Assignment were not, so a pull rewrote live shift and location data back to the
+source. Owner, 18 Sep 2026: "it affecting many employees... we dont want that."
 
-Live proof: Norazlin's 4 September, after HR corrected every tap on it. Counted
-IN 09:03:34, counted OUT 18:09:26, three ignored taps between them. Two
-one-tap segments, no pair, `Half Day · in 09:03 · out — · 0 h`.
+THE RULE (his): after cutover a pull adds what is missing and rewrites nothing.
 
-Changed: `splits_the_day(row)` names the walls (off-shift, rejected, a late
-check-out awaiting approval); `attendance_segments(logs)` drops ignored taps
-before grouping and keeps the walls in place.
+Changed: `cutover.leave_existing_row_alone(doctype, exists, unlocked,
+create_only)` — pure; `_write_row` asks it where it already asked the
+create-only question; `sync_doctype` carries `unlocked` down.
 
-Call sites the machine lists for counts_for_attendance / the segmentation:
+Call sites the machine lists for _write_row / sync_doctype / the cutover rules:
 
-* hrms/hr/doctype/shift_type/shift_type.py::get_attendance — same-root, the fix.
-* hrms/hr/doctype/shift_type/shift_type.py::get_employee_checkins,
-  should_mark_attendance — not-affected: they filter which punches are READ, not
-  how a read day is cut into spans.
-* hrms/utils/ot_calculation.py::_is_eligible_checkin — not-affected: overtime
-  keeps the strict rule on purpose ("unverified minutes are never paid"), and
-  this change does not touch it.
-* hrms/utils/break_calculation.py, worked_intervals — not-affected by the
-  grouping, but they now receive ONE interval where they received two; that is
-  the point, and test_break_deduction_worked_intervals (8) covers it.
-* hrms/api/attendance_fix_day.py::ignore_tap, rebuild_day — same-root in effect:
-  these are what set the skip tick HR means as "not there".
-* every other writer of skip_auto_attendance was read: the burst-tap stutter
-  (noise by definition), and hold_punches on a day HR removed (never reaches
-  this calculation). The REJECT path also sets remote_approval_status, so it is
-  caught as a wall.
-
-REVIEW OF ff1493e85 — one Critical, closed by inverting the default:
-* `handle_attendance_exception` skip-stamps a day's remaining punches when the
-  financial guard refuses a rebuild, so the batch is not retried hourly. That is
-  the system DEFERRING, not a person judging — and the first version of this
-  rule read it as noise and would have bridged it once the guard cleared.
-* Fixed by making the WALL the default. A punch is read across only if it
-  carries `Employee Checkin.skipped_as_noise`, set by Fix Day's ignore/rebuild
-  and the burst stutter alone. Default 0 = the behaviour before this branch, for
-  every existing row and every future writer that says nothing.
-
-STILL HAND-ROLLING THEIR OWN EVIDENCE TEST, pre-existing and untouched here:
-* hrms/utils/shift_resolution.py:127
-* hrms/overrides/employee_checkin_override.py:367
-Both read `not skip and not Rejected` directly and do not know about the late
-check-out wall. Named so the next change to `splits_the_day` has to look at them.
+* hrms/sync/runner.py::_write_row — same-root, the one gate.
+* hrms/sync/runner.py::sync_doctype — same-root, carries the flag.
+* hrms/sync/runner.py::sync_instance — same-root: already computed `unlocked`
+  for plan_pull_doctypes; it passes the same value down now.
+* hrms/sync/checkin_import.py — not-affected: punches never went through
+  `_write_row` after cutover, they have their own append-only importer.
+* hrms/sync/parity.py — not-affected: it counts stamped rows. Inserts still
+  stamp; only updates stop, and an update never changed a count.
+* hrms/sync/purge.py, release.py — not-affected: they read the stamp, not this.
+* hrms/sync/cutover.py::plan_pull_doctypes / plan_parity_doctypes —
+  not-affected: Attendance is still held back entirely and Employee Checkin is
+  still append-only. This rule sits under both, not instead of them.
 
 LOCK:
-* regression (the instance): test_an_ignored_tap_does_not_split_the_day.py
-  drives Norazlin's exact five taps and asserts one segment.
-* invariant (the class): no row is ever both evidence and a wall, asserted over
-  every shape; and the wall cases are asserted to still separate the spans, at
-  the same figure they gave before.
+* regression (the instance): test_sync_adds_what_is_missing.py drives the
+  doctypes that were actually reverted — Employee, Shift Assignment, Shift
+  Schedule Assignment — plus one invented name, because the ruling is about
+  rows and a rule written as a list is wrong the next time somebody mirrors
+  something new.
+* invariant (the class): before cutover nothing changes, and the two older
+  cutover rules are asserted untouched.

@@ -51,6 +51,8 @@ def _log():
 
 
 #: Custom field stamped on every mirrored row. Read by `hrms.sync.parity`.
+from hrms.sync.cutover import leave_existing_row_alone
+
 PROVENANCE_FIELD = "synced_from_instance"
 
 #: Employee Checkin only: "<instance>::<source name>" for a punch imported add-only
@@ -1153,7 +1155,7 @@ def _keep_hub_grants(allocation: str, payload: dict) -> dict:
 	return merged
 
 
-def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
+def _write_row(doctype: str, remote_name: str, payload: dict, unlocked: bool = False) -> str:
 	"""Upsert one row keyed by the remote name.
 
 	Returns "inserted", "updated", "skipped" (create-only doctype that already
@@ -1174,8 +1176,15 @@ def _write_row(doctype: str, remote_name: str, payload: dict) -> str:
 		if value is not None:
 			seen_values.add(str(value))
 
-	if doctype in CREATE_ONLY_DOCTYPES and frappe.db.exists(doctype, remote_name):
+	if leave_existing_row_alone(
+		doctype,
+		bool(frappe.db.exists(doctype, remote_name)),
+		unlocked,
+		doctype in CREATE_ONLY_DOCTYPES,
+	):
 		# Not even the identity fields: whatever is here locally wins, always.
+		# After cutover that is every mirrored doctype, not only the masters —
+		# the owner's ruling of 18 Sep 2026, see cutover.leave_existing_row_alone.
 		_log().debug("[sync] %s %s already exists locally, left untouched", doctype, remote_name)
 		return "skipped"
 
@@ -1402,7 +1411,9 @@ def _split_filters(filters):
 	yield filters
 
 
-def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, filters=None) -> dict:
+def sync_doctype(
+	client, doctype: str, since=None, page_size: int = PAGE_SIZE, filters=None, unlocked: bool = False
+) -> dict:
 	"""Mirror one doctype from `client` into this site.
 
 	Pulls in pages ordered by `modified`, upserting on the remote `name`.
@@ -1481,7 +1492,10 @@ def sync_doctype(client, doctype: str, since=None, page_size: int = PAGE_SIZE, f
 				frappe.db.savepoint(ROW_SAVEPOINT)
 				try:
 					outcome = _write_row(
-						doctype, remote_name, _mirror_payload(row, client.instance_name, doctype)
+						doctype,
+						remote_name,
+						_mirror_payload(row, client.instance_name, doctype),
+						unlocked=unlocked,
 					)
 				except Exception as e:  # one bad row must not lose the other 5,000
 					# Almost always schema drift: the source holds a value this site's
@@ -1912,7 +1926,11 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 					# Evaluated here, not up front: Employee Checkin's scope is the
 					# employees the Employee pass has just written.
 					result = sync_doctype(
-						client, doctype, since=since, filters=scope_filter(doctype, companies, instance_name)
+						client,
+						doctype,
+						since=since,
+						filters=scope_filter(doctype, companies, instance_name),
+						unlocked=unlocked,
 					)
 			except Exception as e:  # an independent doctype must not abort the run
 				frappe.db.rollback()
