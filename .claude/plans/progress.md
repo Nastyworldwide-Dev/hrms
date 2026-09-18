@@ -232,3 +232,16 @@ Rebuild this day on Norazlin 3 and 4 Sep. Offered and not started: a Desk door
 for hrms.utils.offshift_punch_heal.heal_offshift_punches - whitelisted, written
 for Danial's 3->4 Sep 01:04 OUT, and reachable from nowhere; today that punch is
 healed one at a time with Fix Day's "Move to shift / day".
+- 2026-09-18T04:23:34Z PUSH: nz-glass @ 087cddca1
+- 2026-09-18T04:23:34Z COMMIT: 087cddca1 docs(plans): the next step and the one door still missing → review dispatched
+REPAIR: Danial's past-midnight OUT (3 Sep IN 08:48, OUT 4 Sep 01:04, off-shift)
+could not be moved back onto the 3rd: the 4th is a LEAVE day and Fix Day refused
+"cancel the leave first". The guard is about a leave day being REBUILT from
+punches; taking a punch away rebuilds nothing, the leave keeps its own result,
+and attendance_recovery refuses to re-mark a leave day anyway. The leave family
+no longer blocks the day a tap is LEAVING - only that day, only for move_tap.
+Paid days, HR-removed days, running shifts and future days still block, and
+moving a tap ONTO a leave day is refused exactly as before.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 tests red before, green after; 8
+fix-day suites green.
+NEXT: the owner deploys; Danial's OUT then moves to 3 Sep and his OT is claimable.

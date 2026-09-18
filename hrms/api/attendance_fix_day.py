@@ -235,6 +235,7 @@ def day_block_reason(
 	request=None,
 	shift_running=False,
 	duplicate_rows_ok=False,
+	leaving=False,
 ) -> str | None:
 	"""Why this employee-day must not be touched here, in one sentence, or None. Pure.
 
@@ -254,6 +255,14 @@ def day_block_reason(
 		if cint(row.get("docstatus")) == 2:
 			continue
 		name = row.get("name")
+		# `leaving` is the day a tap is being moved AWAY from. The leave family
+		# below exists to stop such a day being REBUILT from punches; taking a
+		# punch off it rebuilds nothing — the leave keeps its own result, and
+		# `attendance_recovery` refuses to re-mark a leave day in any case.
+		# Live, 18 Sep 2026: Danial's past-midnight OUT landed on a leave day and
+		# this refusal was the only thing standing between HR and the remedy.
+		if leaving:
+			continue
 		if row.get("leave_type") or row.get("leave_application") or row.get("status") == "On Leave":
 			return _("{0} is a leave day. Cancel the leave first.").format(name)
 		if cint(row.get("modify_half_day_status")):
@@ -281,7 +290,7 @@ def day_block_reason(
 				"This day has {0} attendance rows ({1}). Remove the duplicate first — nothing else "
 				"can rebuild the day while both exist."
 			).format(len(live), ", ".join(sorted(str(row.get("name")) for row in live)))
-	if request:
+	if request and not leaving:
 		return _("{0} speaks for this day. Cancel it first.").format(request)
 	if financial:
 		return _("This day is already paid or carries approved overtime ({0}). Cancel that first.").format(
@@ -611,7 +620,15 @@ def move_tap(tap: str, shift: str | None = None, day: str | None = None, reason:
 	# (review of f45a0f593). Moving the tap is the whole value; the day itself
 	# will not rebuild until one row is gone, and the screen now says so plainly
 	# instead of reporting a rebuild that did not happen.
-	_lock_and_guard(emp.name, days, duplicate_rows_ok=True)
+	# The day it LEAVES is not guarded by the leave family: emptying a day is not
+	# rebuilding it. The day it arrives on is guarded exactly as before — a tap
+	# may not be moved ONTO a leave day.
+	_lock_and_guard(
+		emp.name,
+		days,
+		duplicate_rows_ok=True,
+		leaving_days={_tap_day(row)} - {target_day},
+	)
 	before = _before(emp.name, days, [row])
 	# released from its old row for the same reason pairing releases one
 	_write_tap(row, {**_shift_stamp(target_shift, target_day), "attendance": None})
@@ -1007,9 +1024,14 @@ def _day_states(employee, days) -> dict:
 	return {str(day): [row_view(row) for row in _day_attendance(employee, day)] for day in days}
 
 
-def _lock_and_guard(employee, days, duplicate_rows_ok=False) -> None:
-	"""The per-employee lock every other writer takes, then the day guards."""
+def _lock_and_guard(employee, days, duplicate_rows_ok=False, leaving_days=()) -> None:
+	"""The per-employee lock every other writer takes, then the day guards.
+
+	`leaving_days` are days a tap is being moved AWAY from — guarded, but not by
+	the leave family, which is about rebuilding a day rather than emptying one.
+	"""
 	_lock_employee(employee)
+	leaving_days = {getdate(day) for day in leaving_days}
 	for day in days:
 		blocked = _day_block(
 			employee,
@@ -1017,13 +1039,14 @@ def _lock_and_guard(employee, days, duplicate_rows_ok=False) -> None:
 			_day_attendance(employee, day),
 			for_update=True,
 			duplicate_rows_ok=duplicate_rows_ok,
+			leaving=getdate(day) in leaving_days,
 		)
 		if blocked:
 			logger.info("[attendance_fix_day] %s on %s refused: %s", employee, day, blocked)
 			_refuse(blocked)
 
 
-def _day_block(employee, day, rows, for_update, duplicate_rows_ok=False) -> str | None:
+def _day_block(employee, day, rows, for_update, duplicate_rows_ok=False, leaving=False) -> str | None:
 	return day_block_reason(
 		day,
 		_today(employee),
@@ -1033,6 +1056,7 @@ def _day_block(employee, day, rows, for_update, duplicate_rows_ok=False) -> str 
 		request=_request_cover(employee, day),
 		shift_running=_shift_running(employee, day),
 		duplicate_rows_ok=duplicate_rows_ok,
+		leaving=leaving,
 	)
 
 
