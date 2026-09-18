@@ -68,6 +68,12 @@ def s3_key_from_public_url(url) -> str | None:
 	text = (url or "").strip()
 	if not text.startswith(("http://", "https://")):
 		return None
+	if "/api/method/" in text:
+		# An ABSOLUTE url to this site's own endpoint is already the private
+		# shape, just written with a host on the front. Splitting it on slashes
+		# would read "api" as the bucket and rewrite a good photo's address to
+		# nonsense — on a patch that runs once (review of 8c2f4c6eb).
+		return None
 	# scheme://host/bucket/key...
 	parts = text.split("/", 4)
 	if len(parts) < 5 or not parts[4]:

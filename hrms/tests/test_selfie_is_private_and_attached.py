@@ -105,6 +105,17 @@ class TheRepairReadsTheUrlItWasGivenCase(unittest.TestCase):
 			rc.s3_key_from_public_url("/api/method/frappe_s3_attachment.controller.generate_file?key=a/b.jpg")
 		)
 
+	def test_an_absolute_url_to_our_own_endpoint_is_left_alone(self):
+		"""Already the private shape, just written with a host on the front.
+		Splitting it on slashes would read "api" as the bucket and rewrite a
+		good photo's address to nonsense — on a patch that runs once."""
+		self.assertIsNone(
+			rc.s3_key_from_public_url(
+				"https://verifica.example.com/api/method/"
+				"frappe_s3_attachment.controller.generate_file?key=2026/09/x.jpg&file_name=x.jpg"
+			)
+		)
+
 	def test_nothing_is_nothing(self):
 		for value in (None, "", "   "):
 			self.assertIsNone(rc.s3_key_from_public_url(value))

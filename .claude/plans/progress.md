@@ -245,3 +245,12 @@ named this upgrade already; it arrived for a different reason than expected.
 EVIDENCE: 2 (mapped) - 13 new tests red before, green after; 176 passed across
 remote_checkin and the fix-day suites.
 NEXT: deploy; the patch repairs the photos already taken.
+- 2026-09-18T03:12:18Z PUSH: nz-glass @ 8c2f4c6eb
+REPAIR: the selfie url parser treated any http(s) url as a bucket url. An
+ABSOLUTE url to this site's own generate_file endpoint would have been split on
+slashes, read "api" as the bucket, and rewritten a good photo's address to
+nonsense - on a patch that runs once and is hard to undo. It refuses anything
+containing /api/method/ now.
+EVIDENCE: 2 (mapped) - 1 new test red before, green after; 87 passed.
+NEXT: the owner's ruling on whether Employee master still comes from the ERP,
+then the cutover hold-back for shift/location data.
