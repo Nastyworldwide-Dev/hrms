@@ -349,7 +349,13 @@ def _gap_words(seconds) -> str:
 	return _("{0} h {1} m").format(hours, rest // 60)
 
 
-def day_plan(taps, rows) -> dict:
+#: How a shift decides which tap opens a session and which closes it. Under the
+#: alternating reading the device's own IN/OUT label is not consulted at all —
+#: the first counted tap opens the day and the last one closes it.
+ALTERNATING_PAIRING = "Alternating entries as IN and OUT during the same shift"
+
+
+def day_plan(taps, rows, pairing: str | None = None) -> dict:
 	"""What this day should look like, read from its own evidence. Pure.
 
 	Owner ruling, 17 Sep 2026, after correcting one day by hand through five
@@ -380,12 +386,26 @@ def day_plan(taps, rows) -> dict:
 	if not evidence:
 		return {**empty, "refusal": _("This day has no counted taps to read it from.")}
 
-	opening = next((tap for tap in evidence if (tap.get("log_type") or "") == "IN"), None)
-	closing = next((tap for tap in reversed(evidence) if (tap.get("log_type") or "") == "OUT"), None)
-	if not opening:
-		return {**empty, "refusal": _("Nothing opens this day: it has no counted IN tap.")}
-	if not closing:
-		return {**empty, "refusal": _("Nothing closes this day: it has no counted OUT tap.")}
+	if pairing == ALTERNATING_PAIRING:
+		# The shift does not read the device's label, so neither does this.
+		# Owner, 18 Sep 2026, on a day the device recorded as two INs: the engine
+		# marked it Present with 8.04 h from exactly those two taps, and the
+		# planner refused it — stricter than the engine it plans for, sending HR
+		# to hunt a fault that was not there.
+		opening = evidence[0]
+		closing = evidence[-1] if len(evidence) > 1 else None
+		if not closing:
+			return {
+				**empty,
+				"refusal": _("This day has one counted tap; a session needs two. Add the missing one."),
+			}
+	else:
+		opening = next((tap for tap in evidence if (tap.get("log_type") or "") == "IN"), None)
+		closing = next((tap for tap in reversed(evidence) if (tap.get("log_type") or "") == "OUT"), None)
+		if not opening:
+			return {**empty, "refusal": _("Nothing opens this day: it has no counted IN tap.")}
+		if not closing:
+			return {**empty, "refusal": _("Nothing closes this day: it has no counted OUT tap.")}
 	# The same rule the manual pair answers with, asked the same way: a session
 	# HR is forbidden to build by hand is not one this may build in one press.
 	# Review of d00b4de62: without this, taps at 00:05 and 23:55 became a
@@ -731,7 +751,8 @@ def plan_day(employee: str, date: str) -> dict:
 	emp = _require_employee(employee)
 	day = getdate(date)
 	rows = _rows_with_punch_counts(emp.name, day)
-	plan = day_plan(_day_taps(emp.name, day), rows)
+	taps = _day_taps(emp.name, day)
+	plan = day_plan(taps, rows, pairing=_day_pairing(taps))
 	plan["blocked"] = _day_block(emp.name, day, rows, for_update=False, duplicate_rows_ok=True)
 	return plan
 
@@ -753,7 +774,7 @@ def rebuild_day(employee: str, date: str, reason: str) -> dict:
 	_lock_and_guard(emp.name, [day], duplicate_rows_ok=True)
 
 	taps = _day_taps(emp.name, day)
-	plan = day_plan(taps, _rows_with_punch_counts(emp.name, day))
+	plan = day_plan(taps, _rows_with_punch_counts(emp.name, day), pairing=_day_pairing(taps))
 	if plan["refusal"]:
 		_refuse(plan["refusal"])
 
@@ -849,6 +870,21 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 
 
 # --- the shape of one action ------------------------------------------------------
+
+
+def _day_pairing(taps) -> str | None:
+	"""How the shift these taps belong to pairs them, or None when unknown.
+
+	Read from the day's own shift rather than a setting: two employees on two
+	shifts can read their days differently, and the planner must answer the way
+	the engine will for THAT day.
+	"""
+	shift = next((tap.get("shift") for tap in taps or [] if tap.get("shift")), None)
+	if not shift:
+		return None
+	pairing = frappe.db.get_value("Shift Type", shift, "determine_check_in_and_check_out")
+	logger.debug("[attendance_fix_day] %s pairs taps as: %s", shift, pairing)
+	return pairing
 
 
 def _screen(emp, day) -> dict:

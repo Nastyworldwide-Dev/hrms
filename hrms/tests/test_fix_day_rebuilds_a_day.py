@@ -296,3 +296,71 @@ class TheEndpointsCase(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+# --- the day the device mislabelled ------------------------------------------
+# Owner, 18 Sep 2026, on Norazlin's 3 September: two taps, both recorded IN,
+# nothing recorded OUT. "it doesnt fix or rebuild if there is no out.. how can i
+# fix the in in then?"
+#
+# The engine reads that day perfectly well — the shift pairs ALTERNATING entries,
+# where the first counted tap opens the day and the last one closes it whatever
+# the device called them, and it marked her Present with 8.04 h from exactly
+# those two INs. The planner was stricter than the engine it plans for: it
+# demanded a tap whose log_type is OUT and refused a day nothing was wrong with.
+#
+# A screen that refuses what the engine accepts sends HR hunting for a fault
+# that is not there.
+ALTERNATING = "Alternating entries as IN and OUT during the same shift"
+STRICT = "Strictly based on Log Type in Employee Checkin"
+
+#: Norazlin's 3 September, as the device recorded it.
+TWO_INS = [tap("CKIN-446", "08:48:10", "IN"), tap("CKIN-447", "18:02:52", "IN")]
+
+
+class AnAlternatingShiftReadsTheLastTapAsTheOutCase(unittest.TestCase):
+	def plan(self, taps, pairing=ALTERNATING):
+		return fix_day.day_plan(taps, [row("ATT-1", punches=len(taps))], pairing=pairing)
+
+	def test_two_ins_are_a_day(self):
+		plan = self.plan(TWO_INS)
+		self.assertIsNone(plan["refusal"])
+		self.assertEqual(plan["session"]["in"]["name"], "CKIN-446")
+		self.assertEqual(plan["session"]["out"]["name"], "CKIN-447")
+
+	def test_the_taps_between_are_still_noise(self):
+		plan = self.plan([tap("A", "09:00", "IN"), tap("B", "12:00", "IN"), tap("C", "18:00", "IN")])
+		self.assertEqual([d["name"] for d in plan["drop"]], ["B"])
+
+	def test_one_tap_alone_is_still_refused(self):
+		plan = self.plan([tap("A", "09:00", "IN")])
+		self.assertIsNotNone(plan["refusal"])
+		self.assertEqual(plan["drop"], [])
+
+	def test_the_session_cap_still_applies(self):
+		plan = self.plan([tap("A", "00:05", "IN"), tap("B", "23:55", "IN")])
+		self.assertIsNotNone(plan["refusal"])
+
+	def test_a_strict_shift_still_wants_a_real_out(self):
+		"""Where the shift reads the log type, so does the planner."""
+		plan = self.plan(TWO_INS, pairing=STRICT)
+		self.assertIn("nothing closes", plan["refusal"].lower())
+
+	def test_a_strict_shift_reads_a_proper_day_as_before(self):
+		plan = self.plan([tap("A", "09:00", "IN"), tap("B", "18:00", "OUT")], pairing=STRICT)
+		self.assertIsNone(plan["refusal"])
+		self.assertEqual(plan["session"]["out"]["name"], "B")
+
+
+class ThePlannerAsksTheShiftCase(unittest.TestCase):
+	def test_the_endpoints_look_up_the_pairing_rule(self):
+		import pathlib
+
+		source = pathlib.Path(fix_day.__file__).read_text()
+		self.assertIn("determine_check_in_and_check_out", source)
+
+	def test_the_default_is_the_strict_reading(self):
+		"""A caller that says nothing gets the stricter answer, which refuses
+		rather than inventing a session."""
+		plan = fix_day.day_plan(TWO_INS, [row("ATT-1", punches=2)])
+		self.assertIsNotNone(plan["refusal"])

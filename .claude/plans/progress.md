@@ -276,3 +276,15 @@ login for somebody marked Left on the ERP, because the Employee row is skipped
 before _reconcile_user_status. Recorded in cutover.py and raised with him.
 NEXT: the owner deploys 5baf3c99a and rules on whether a leaver marked only on
 the old ERP should still lose their Verifica login.
+- 2026-09-18T03:27:02Z PUSH: nz-glass @ f08b27f70
+- 2026-09-18T03:27:02Z COMMIT: f08b27f70 docs(sync): name the one thing the insert-only rule gives up → review dispatched
+REPAIR: the planner was stricter than the engine it plans for. Norazlin's 3 Sep
+holds two taps the device both recorded as IN; the shift pairs ALTERNATING
+entries, so the engine read them as in 08:48 / out 18:02 and marked her Present
+with 8.04 h - and "Rebuild this day" refused with "Nothing closes this day",
+sending HR to hunt a fault that was not there. day_plan takes the shift's own
+pairing rule now, read per day from the taps' shift, and the strict reading stays
+the default for a caller that says nothing.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 8 new tests red before, green after;
+10 suites green.
+NEXT: the owner deploys; an IN-IN day then rebuilds with one press like any other.
