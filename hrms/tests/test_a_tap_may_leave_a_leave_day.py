@@ -72,9 +72,7 @@ class WhatStillBlocksItCase(unittest.TestCase):
 		self.assertIsNotNone(block([row()], shift_running=True, leaving=True))
 
 	def test_a_future_day_still_blocks(self):
-		self.assertIsNotNone(
-			fix_day.day_block_reason("2026-09-30", TODAY, [row()], leaving=True)
-		)
+		self.assertIsNotNone(fix_day.day_block_reason("2026-09-30", TODAY, [row()], leaving=True))
 
 
 class NothingElseChangesCase(unittest.TestCase):

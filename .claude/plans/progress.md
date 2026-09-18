@@ -245,3 +245,4 @@ moving a tap ONTO a leave day is refused exactly as before.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 tests red before, green after; 8
 fix-day suites green.
 NEXT: the owner deploys; Danial's OUT then moves to 3 Sep and his OT is claimable.
+- 2026-09-18T04:35:10Z PUSH: nz-glass @ 907765845
