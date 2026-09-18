@@ -288,3 +288,13 @@ the default for a caller that says nothing.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 8 new tests red before, green after;
 10 suites green.
 NEXT: the owner deploys; an IN-IN day then rebuilds with one press like any other.
+- 2026-09-18T03:38:02Z PUSH: nz-glass @ da5fa456c
+REPAIR: the rebuild got 3 Sep right in Attendance and the report and left the
+check-in list showing two INs. Owner: "check in must show correct in and out
+despite it was in in or anything". The rebuild relabels the two taps that ARE
+the session - and nothing else - through a narrow, explicit exception in
+_write_tap. Shown in the plan before Apply, commented on the punch, restored by
+the undo (log_type is already in TAP_FIELDS).
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 10 new tests red before, green after;
+11 Python suites and 20 JS green.
+NEXT: the owner deploys; an IN-IN day then reads IN/OUT on all four pages.

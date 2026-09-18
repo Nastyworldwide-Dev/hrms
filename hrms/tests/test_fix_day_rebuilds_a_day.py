@@ -364,3 +364,72 @@ class ThePlannerAsksTheShiftCase(unittest.TestCase):
 		rather than inventing a session."""
 		plan = fix_day.day_plan(TWO_INS, [row("ATT-1", punches=2)])
 		self.assertIsNotNone(plan["refusal"])
+
+
+# --- the punch page must read like the result --------------------------------
+# Owner, 18 Sep 2026, after the rebuild got her 3 September right everywhere
+# except the check-in list: "supposely check in must show correct in and out
+# despite it was in in or anything. and the rest follow the rebuilds correctly".
+#
+# This REVERSES the 16 Sep rule that a tap keeps what the device recorded. The
+# device recorded two INs; the day has one in and one out; and HR reading the
+# punch page saw neither. The relabel is shown in the plan before it is applied,
+# recorded on the punch, and put back by the undo — so what the device said is
+# still recoverable, it is just no longer the only thing on the screen.
+
+
+class TheSessionTapsAreLabelledAsTheyAreReadCase(unittest.TestCase):
+	def plan(self, taps, pairing=ALTERNATING):
+		return fix_day.day_plan(taps, [row("ATT-1", punches=len(taps))], pairing=pairing)
+
+	def test_the_closing_tap_of_an_in_in_day_is_relabelled(self):
+		relabel = self.plan(TWO_INS)["relabel"]
+		self.assertEqual(
+			[(r["name"], r["from"], r["to"]) for r in relabel],
+			[("CKIN-447", "IN", "OUT")],
+		)
+
+	def test_the_opening_tap_is_relabelled_when_it_is_wrong(self):
+		relabel = self.plan([tap("A", "09:00", "OUT"), tap("B", "18:00", "OUT")])["relabel"]
+		self.assertIn(("A", "OUT", "IN"), [(r["name"], r["from"], r["to"]) for r in relabel])
+
+	def test_a_day_already_labelled_right_is_relabelled_nowhere(self):
+		self.assertEqual(self.plan([tap("A", "09:00", "IN"), tap("B", "18:00", "OUT")])["relabel"], [])
+
+	def test_a_dropped_tap_keeps_its_label(self):
+		"""Only the two taps that ARE the session are relabelled. A tap nobody
+		counts is left exactly as the device recorded it."""
+		plan = self.plan([tap("A", "09:00", "IN"), tap("B", "12:00", "IN"), tap("C", "18:00", "IN")])
+		self.assertNotIn("B", [r["name"] for r in plan["relabel"]])
+
+	def test_a_strict_shift_relabels_nothing(self):
+		"""There the session was chosen BY the label, so it already agrees."""
+		plan = self.plan([tap("A", "09:00", "IN"), tap("B", "18:00", "OUT")], pairing=STRICT)
+		self.assertEqual(plan["relabel"], [])
+
+	def test_a_refused_day_relabels_nothing(self):
+		self.assertEqual(self.plan([tap("A", "09:00", "IN")])["relabel"], [])
+
+
+class TheRelabelIsAppliedAndRecordedCase(unittest.TestCase):
+	def setUp(self):
+		import ast
+		import pathlib
+
+		self.rebuild = next(
+			ast.unparse(node)
+			for node in ast.walk(ast.parse(pathlib.Path(fix_day.__file__).read_text()))
+			if isinstance(node, ast.FunctionDef) and node.name == "rebuild_day"
+		)
+
+	def test_the_rebuild_writes_the_new_label(self):
+		self.assertIn("'log_type'", self.rebuild)
+
+	def test_it_goes_through_the_one_tap_writer(self):
+		self.assertIn("_write_tap", self.rebuild)
+
+	def test_the_change_is_noted_on_the_punch(self):
+		self.assertIn("relabel", self.rebuild)
+
+	def test_the_undo_can_put_the_label_back(self):
+		self.assertIn("log_type", fix_day.TAP_FIELDS)

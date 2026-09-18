@@ -380,7 +380,7 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 	it REFUSES and writes nothing. Guessing a session is how a screen invents
 	somebody's pay.
 	"""
-	empty = {"cancel": [], "session": None, "drop": [], "notes": [], "refusal": None}
+	empty = {"cancel": [], "session": None, "drop": [], "relabel": [], "notes": [], "refusal": None}
 	live = [row for row in rows or [] if cint(row.get("docstatus")) != 2]
 	evidence = _evidence(taps)
 	if not evidence:
@@ -451,6 +451,24 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 			if not cint(row.get("linked_punches"))
 		]
 
+	# The punch page must read like the result. Owner ruling, 18 Sep 2026, after
+	# a day the device recorded as two INs came out right in Attendance and
+	# wrong on the check-in list: "check in must show correct in and out despite
+	# it was in in or anything". This REVERSES the 16 Sep rule that a tap keeps
+	# what the device recorded — for the two taps that ARE the session, and for
+	# nothing else. It is shown here before it is applied, recorded on the punch,
+	# and put back by the undo.
+	relabel = [
+		{
+			"name": tap.get("name"),
+			"time": str(tap.get("time")),
+			"from": tap.get("log_type"),
+			"to": wanted,
+		}
+		for tap, wanted in ((opening, "IN"), (closing, "OUT"))
+		if (tap.get("log_type") or "") != wanted
+	]
+
 	keep = {opening.get("name"), closing.get("name")}
 	drop, notes = [], []
 	for index, tap in enumerate(evidence):
@@ -485,6 +503,7 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 		"cancel": cancel,
 		"session": {"in": tap_view(opening), "out": tap_view(closing)},
 		"drop": drop,
+		"relabel": relabel,
 		"notes": notes,
 		"refusal": None,
 	}
@@ -809,12 +828,30 @@ def rebuild_day(employee: str, date: str, reason: str) -> dict:
 	opening = by_name[plan["session"]["in"]["name"]]
 	closing = by_name[plan["session"]["out"]["name"]]
 	stamp = _session_stamp(opening)
-	_write_tap(opening, {"skip_auto_attendance": 0})
+	# The label the day is read by, written onto the punch itself, so the
+	# check-in page reads like Attendance and the report (owner, 18 Sep 2026).
+	wanted = {entry["name"]: entry["to"] for entry in plan["relabel"]}
+	open_label = {"log_type": wanted[opening.name]} if opening.name in wanted else {}
+	close_label = {"log_type": wanted[closing.name]} if closing.name in wanted else {}
+	_write_tap(opening, {"skip_auto_attendance": 0, **open_label}, relabelling=bool(open_label))
 	# `attendance: None` for the same reason pairing releases the second tap.
-	_write_tap(closing, {**stamp, "skip_auto_attendance": 0, "attendance": None})
+	_write_tap(
+		closing,
+		{**stamp, "skip_auto_attendance": 0, "attendance": None, **close_label},
+		relabelling=bool(close_label),
+	)
 	session_note = _("kept by the day rebuild as this day's session with {0}").format(opening.get("name"))
 	notes[opening.get("name")] = session_note
 	notes[closing.get("name")] = session_note
+	for entry in plan["relabel"]:
+		notes[entry["name"]] = _(
+			"relabelled {0} -> {1} by the day rebuild: it is the tap that {2} this day. "
+			"The device recorded {0}; the undo puts that back."
+		).format(
+			entry["from"] or _("nothing"),
+			entry["to"],
+			_("opens") if entry["to"] == "IN" else _("closes"),
+		)
 
 	return _finish(emp, [day], "rebuild_day", reason, notes, before, plan=plan)
 
@@ -1183,10 +1220,18 @@ def _resolve_shift(emp, day):
 	return emp.get("default_shift")
 
 
-def _write_tap(tap, fields) -> None:
+def _write_tap(tap, fields, relabelling: bool = False) -> None:
 	"""The ONLY writer of an existing tap: the counted-tap rule lives here, so no
-	action can route around it."""
-	refusal = counted_tap_change_reason(tap, fields)
+	action can route around it.
+
+	`relabelling` is the one exception, and it is the owner's (18 Sep 2026): the
+	day rebuild may write `log_type` on the two taps that ARE the session, so the
+	check-in page reads like the result. Nothing else may — not the time, not a
+	tap nobody counts, and not any other action — and the plan shows the change
+	before it is applied.
+	"""
+	checked = {field: value for field, value in fields.items() if not (relabelling and field == "log_type")}
+	refusal = counted_tap_change_reason(tap, checked)
 	if refusal:
 		logger.info("[attendance_fix_day] %s refused: %s", tap.get("name"), refusal)
 		_refuse(refusal)

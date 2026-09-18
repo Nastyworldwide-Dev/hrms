@@ -79,3 +79,22 @@ owner ruling -> this plan -> red tests on the pure rule -> the rule -> the one
 call site -> mapped + sync suites -> commit with the family ledger ->
 hook-dispatched review -> push -> the owner deploys. Repair of the rows already
 reverted is SEPARATE and not in this change.
+
+
+## AMENDMENT 2 — 18 Sep 2026, the punch page must read like the result
+
+Owner, after the rebuild got Norazlin's 3 September right in Attendance and in
+the report and left the check-in list showing two INs:
+
+> "supposely check in must show correct in and out despite it was in in or
+> anything. and the rest follow the rebuilds correctly"
+
+This REVERSES the 16 Sep rule that "a tap keeps what the device recorded". It
+is reversed narrowly: the rebuild writes `log_type` on the TWO taps that are
+the session and on nothing else. Not the time, not a tap nobody counts, not any
+other action, and only through `_write_tap`, which carries the exception
+explicitly so no path can acquire it by accident.
+
+What the device said stays recoverable: the change is named in the plan before
+Apply, written as a comment on the punch, and restored by `undo_fix` — `log_type`
+is in TAP_FIELDS, so the snapshot already carries it.

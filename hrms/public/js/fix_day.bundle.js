@@ -334,6 +334,18 @@ class FixDayScreen {
 				)
 			);
 		}
+		for (const row of plan.relabel || []) {
+			lines.push(
+				item(
+					__("Relabel {0} from {1} to {2} — it is the tap that {3} this day", [
+						fd_clock(row.time),
+						fd_escape(row.from || "—"),
+						fd_escape(row.to),
+						row.to === "IN" ? __("opens") : __("closes"),
+					])
+				)
+			);
+		}
 		for (const tap of plan.drop || []) {
 			lines.push(
 				item(

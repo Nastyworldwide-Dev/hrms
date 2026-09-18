@@ -109,3 +109,14 @@ test("a held rebuild tells HR why the day did not move", () => {
 	assert.match(body, /answer\.rebuild/, "the engine's verdict per day is in the answer")
 	assert.match(body, /held/, "a held day has a reason and HR needs to read it")
 })
+
+// Owner, 18 Sep 2026: the check-in page must read like the result, so the
+// rebuild relabels the two taps that ARE the session. That rewrites what the
+// device recorded, so HR sees it in the plan BEFORE pressing Apply — the same
+// rule every other line of the plan follows.
+test("the plan names a relabel before it happens", () => {
+	const start = src.indexOf("plan_html(plan) {")
+	const body = src.slice(start, src.indexOf("\n\t}", start))
+	assert.match(body, /plan\.relabel/, "a rewritten punch label is not a silent change")
+	assert.match(body, /Relabel/, "and it says so in words")
+})
