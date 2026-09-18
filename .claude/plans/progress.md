@@ -225,3 +225,10 @@ NEXT: the owner deploys. Open: a stranded off-shift OUT past midnight (Danial,
 3->4 Sep 01:04) is healed today only by Fix Day's "Move to shift / day" one tap
 at a time - hrms.utils.offshift_punch_heal.heal_offshift_punches is whitelisted,
 was written for that exact punch, and NOTHING in the Desk reaches it.
+- 2026-09-18T04:23:04Z PUSH: nz-glass @ 99a380d32
+NEXT: the owner deploys nz-glass @ 99a380d32 (it carries a new column,
+Employee Checkin.skipped_as_noise, so the patch must run) and re-runs Fix Day ->
+Rebuild this day on Norazlin 3 and 4 Sep. Offered and not started: a Desk door
+for hrms.utils.offshift_punch_heal.heal_offshift_punches - whitelisted, written
+for Danial's 3->4 Sep 01:04 OUT, and reachable from nowhere; today that punch is
+healed one at a time with Fix Day's "Move to shift / day".
