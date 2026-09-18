@@ -195,7 +195,10 @@ class TestTheThreeDoors(unittest.TestCase):
 			"a boot bundle cannot own that key; the list script is loaded last",
 		)
 		self.assertIn("hrms.fix_day.from_taps", js)
-		self.assertIn("Tick taps of one person on one day.", js)
+		# Amended 18 Sep 2026: a shift that runs past midnight puts ONE session on
+		# two calendar dates, and refusing that refused the commonest broken day
+		# here. Two PEOPLE is still refused; the opener works out which day.
+		self.assertIn("Tick taps of one person.", js)
 		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
 		self.assertIn("hrms.fix_day.from_taps(listview)", listing)
 

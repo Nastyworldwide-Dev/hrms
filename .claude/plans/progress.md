@@ -258,3 +258,14 @@ mean On Duty or Work From Home rather than leave, so the comment no longer calls
 them "the leave family", and four tests now pin the fact the whole waiver rests
 on - that the engine refuses all three the same way.
 NEXT: the owner deploys nz-glass and moves Danial's 4 Sep 01:04 OUT to 3 Sep.
+- 2026-09-18T04:38:26Z PUSH: nz-glass @ 925d40ec1
+REPAIR: ticking both taps of ONE working day that runs past midnight - an IN on
+the 3rd and its stranded 01:04 OUT on the 4th - was refused with "Tick taps of
+one person on one day". That refusal refused the commonest broken day in this
+system. The opener works the day out instead: the STRANDED tap's date (a tap
+with no shift is the one that needs moving and lives only on its own date),
+otherwise the earliest ticked day, and it says which day it opened. Two people
+is still refused.
+EVIDENCE: 2 (mapped) - 1 JS test red before, green after; 30 JS and 19 Python
+green.
+NEXT: the owner deploys and moves Danial's OUT from the 4th to the 3rd.

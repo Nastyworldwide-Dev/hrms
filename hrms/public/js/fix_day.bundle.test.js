@@ -120,3 +120,24 @@ test("the plan names a relabel before it happens", () => {
 	assert.match(body, /plan\.relabel/, "a rewritten punch label is not a silent change")
 	assert.match(body, /Relabel/, "and it says so in words")
 })
+
+// Owner, 18 Sep 2026, having ticked both taps of ONE working day — an IN on the
+// 3rd and its stranded OUT at 01:04 on the 4th — and been told "Tick taps of one
+// person on one day": "yeah, now i cant do much."
+//
+// A shift that runs past midnight puts one session on two calendar dates. That
+// is not a mistake to refuse, it is the commonest broken day in this system. The
+// opener works out which day HR has to act on: the STRANDED tap's, because a
+// tap with no shift is the one that needs moving, and it only lives on its own
+// date. Two people, or dates further apart than a night, are still refused.
+test("a session that crosses midnight can be opened", () => {
+	const start = src.indexOf("hrms.fix_day.from_taps = function")
+	const body = src.slice(start, src.indexOf("\n};", start))
+	assert.doesNotMatch(
+		body,
+		/days\.size !== 1/,
+		"a past-midnight session lands on two dates by nature; refusing it refuses the case"
+	)
+	assert.match(body, /employees\.size !== 1/, "two people is still two people")
+	assert.match(body, /shift/, "the stranded tap — the one with no shift — names the day to open")
+})

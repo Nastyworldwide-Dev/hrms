@@ -539,19 +539,44 @@ hrms.fix_day.from_taps = function (listview) {
 	return Promise.resolve(
 		frappe.db.get_list("Employee Checkin", {
 			filters: { name: ["in", names] },
-			fields: ["name", "employee", "shift_start", "time"],
+			fields: ["name", "employee", "shift_start", "time", "shift"],
 			limit: names.length,
 		})
 	).then((rows) => {
 		const employees = new Set((rows || []).map((row) => row.employee));
-		const days = new Set((rows || []).map((row) => String(row.shift_start || row.time).slice(0, 10)));
-		if (employees.size !== 1 || days.size !== 1) {
-			frappe.msgprint(__("Tick taps of one person on one day."));
+		if (employees.size !== 1) {
+			frappe.msgprint(__("Tick taps of one person."));
 			return null;
+		}
+		// A shift that runs past midnight puts ONE session on two calendar
+		// dates: the IN on the 3rd, its OUT at 01:04 on the 4th. That is the
+		// commonest broken day here, not a mis-tick to refuse (owner, 18 Sep
+		// 2026, having ticked exactly that pair: "now i cant do much").
+		//
+		// The day to open is the day HR has to act ON. A STRANDED tap — one with
+		// no shift — is the one that needs moving, and it exists only on its own
+		// date; open there. With nothing stranded, the earliest ticked day is the
+		// day the session belongs to.
+		const dated = (rows || []).map((row) => ({
+			day: String(row.shift_start || row.time).slice(0, 10),
+			stranded: !row.shift,
+		}));
+		const stranded = dated.filter((row) => row.stranded).map((row) => row.day);
+		const days = Array.from(new Set(dated.map((row) => row.day))).sort();
+		if (!days.length) {
+			frappe.msgprint(__("Tick the taps of the day you want to fix."));
+			return null;
+		}
+		const date = stranded.length ? stranded.sort()[0] : days[0];
+		if (days.length > 1) {
+			frappe.show_alert({
+				message: __("Ticked taps span {0} days; opening {1}.", [days.length, date]),
+				indicator: "blue",
+			});
 		}
 		return hrms.fix_day.open({
 			employee: Array.from(employees)[0],
-			date: Array.from(days)[0],
+			date,
 			on_close: () => listview.refresh(),
 		});
 	});
