@@ -1,100 +1,72 @@
-# PLAN — after cutover a pull adds what is missing and rewrites nothing
+# PLAN — HR can take over a punch the old ERP sent
 
-Owner, 18 Sep 2026, after live employees had their shift and location reverted
-to whatever the old ERP holds:
+Owner, 18 Sep 2026, on Danial's 3 September: the day cannot be fixed by any path
+that exists. Offered two options — claim the punch, or leave those days to be
+typed by hand — he answered: **"A. go"**.
 
-> "but somehow the current system changed people shift location, and stuff back
-> following what erp contains? it affecting many employees. there is something
-> auto run that makes things like this or either manual run. we dont want that."
+## Why the day is unfixable today
 
-and, asked whether Employee master should still come from the ERP:
+His OUT (4 Sep 01:04, past midnight, now carrying its shift after Fetch Shifts)
+is a MIRRORED punch: `synced_from_instance` names the old ERP. Two doors, both
+shut, both for good reasons:
 
-> "no, hr creates them here. idk why but hr sometimes do need to sync, its
-> better to only pull what is absent not overwrite what is already exist like
-> the stated problems above"
+* Fix Day refuses it — `_tap`: "This tap came from another site; change it
+  there." The screen does not even draw its tick box.
+* The hourly job never reads it — `ShiftType.get_employee_checkins` excludes
+  mirrored punches at the query, because processing one would create a duplicate
+  local Attendance and stamp the source's rows hook-free.
 
-## What happened
+So `Fetch Shifts` gave the punch its shift and nothing downstream will ever look
+at it. Every historical ERP punch is in that state, so ANY day whose closing
+punch came from the old system is unfixable. That is bigger than one employee.
 
-Nothing auto-runs — there is no scheduled sync, only `enqueue_sync`/`run_sync`
-behind a button, and `HRMS Sync Run` logs every press. So somebody synced. The
-defect is that the sync was ALLOWED to do this.
+## THE RULE
 
-The cutover switch (`unlock_mirrored_writes`) holds back exactly one doctype,
-Attendance, and turns exactly one other, Employee Checkin, into an append-only
-import. Everything else mirrored is still pulled and UPDATED in place:
+Cutover is on and this hub marks attendance. A punch the source sent, on a day
+this site owns, may be TAKEN OVER: the provenance stamp is cleared, this site
+owns the row, the job reads it, the day rebuilds.
 
-  Employee (which carries default_shift, branch, holiday_list),
-  Shift Assignment, Shift Schedule Assignment, Leave Allocation,
-  Leave Application, Attendance Request, Shift Request, Appraisal,
-  Leave Ledger Entry, Leave Policy Assignment
+Bounded, because it breaks the single-writer rule deliberately:
 
-and `plan_cross_instance_write` returns True for a row already stamped by the
-same instance — so a re-pull overwrites the hub's own edits. This is the 9
-September incident's exact shape, fixed then for Attendance alone.
+* only when that instance is UNLOCKED (`write_block._instance_unlocked`) — before
+  cutover the source really is the writer and claiming would be the old fight;
+* only through `claim_tap`, which is the only action `_tap` lets see a mirrored
+  row and the only caller allowed to write the stamp;
+* HR-only, a reason required, a comment on the punch, an HR Day Fix Log entry;
+* reversible — `synced_from_instance` is already in TAP_FIELDS, so the snapshot
+  carries it and `undo_fix` puts the stamp back.
 
-## THE RULE (the owner's, above)
-
-After cutover a pull INSERTS what this site does not have and leaves everything
-it does have exactly as it is. No updates, no merges, no field-level cleverness.
-
-It is the rule `CREATE_ONLY_DOCTYPES` already follows for the master lists, and
-the one `checkin_import` already follows for punches. It becomes the rule for
-every mirrored doctype once the instance is unlocked.
+Nothing else changes. Every other action still refuses a mirrored tap, and the
+sync still refuses to rewrite a row this hub holds (after cutover it only adds
+what is missing, 5baf3c99a).
 
 ## FLOW
 
-1. `cutover.leave_existing_row_alone(doctype, exists, unlocked, create_only)` —
-   pure. True when a row must not be rewritten: a create-only master that is
-   already here (today's rule), or ANY row already here once unlocked (the new
-   one).
-2. `_write_row` asks it once, in the one place that already asks the
-   create-only question, and returns "skipped".
-3. `sync_doctype` takes `unlocked` and passes it down; the run loop already
-   knows it (`_instance_unlocked(instance_name)`).
-4. Attendance stays fully held back and Employee Checkin stays append-only —
-   this changes neither.
+1. `claim_tap(tap, reason)` — refuse if the tap is not mirrored, refuse if its
+   instance is still locked, then clear the stamp through `_write_tap`.
+2. `synced_from_instance` joins CHANGEABLE/COUNTED tap fields; a test asserts no
+   other action writes it.
+3. The screen draws a tick box for a mirrored tap (it could not be ticked at
+   all) and offers "Take over this punch" only when one is ticked.
+4. Once claimed the tap is ordinary evidence: `day_plan._evidence` stops
+   excluding it, so "Rebuild this day" pairs it and the day is marked.
 
-MOCKUP: not needed, no screen.
+MOCKUP: not needed — one more button on a screen that already has six.
 
 ## EXPECTED OUTPUT
 
-* Before cutover: unchanged. A pull mirrors and updates as it does today.
-* After cutover: a sync adds employees, assignments and requests the hub has
-  never seen, and does not touch one field of anything already here. Shift and
-  location stay as HR set them.
-* The run reports those rows as `skipped`, which is already a counted outcome
-  on `HRMS Sync Run`, so an operator sees "added 12, left 4,300 alone".
+Danial 3 Sep: tick the 01:04 OUT, Take over this punch, reason. It stops being
+the ERP's. Then Rebuild this day pairs 08:48 with 01:04 and the day reads
+Present with his real hours, and his overtime becomes claimable.
 
 ## Risk
 
-This is the narrowest change that answers the ruling, and it FAILS SAFE: a row
-already here is never written, so no pull can revert hub data again. What it
-gives up is corrections flowing from the ERP after cutover — which is the point,
-since HR works here now. A field-level exclusion was considered and rejected:
-it needs a list of owned fields, and lists have been wrong repeatedly this week.
+It breaks single-writer for one row, on purpose, with the owner's word. The
+bound is the cutover switch: before it, this refuses. The undo restores the
+stamp. The sync cannot overwrite the row afterwards because after cutover it
+only inserts what is missing.
 
 ## Pipeline Summary
 
-owner ruling -> this plan -> red tests on the pure rule -> the rule -> the one
-call site -> mapped + sync suites -> commit with the family ledger ->
-hook-dispatched review -> push -> the owner deploys. Repair of the rows already
-reverted is SEPARATE and not in this change.
-
-
-## AMENDMENT 2 — 18 Sep 2026, the punch page must read like the result
-
-Owner, after the rebuild got Norazlin's 3 September right in Attendance and in
-the report and left the check-in list showing two INs:
-
-> "supposely check in must show correct in and out despite it was in in or
-> anything. and the rest follow the rebuilds correctly"
-
-This REVERSES the 16 Sep rule that "a tap keeps what the device recorded". It
-is reversed narrowly: the rebuild writes `log_type` on the TWO taps that are
-the session and on nothing else. Not the time, not a tap nobody counts, not any
-other action, and only through `_write_tap`, which carries the exception
-explicitly so no path can acquire it by accident.
-
-What the device said stays recoverable: the change is named in the plan before
-Apply, written as a comment on the punch, and restored by `undo_fix` — `log_type`
-is in TAP_FIELDS, so the snapshot already carries it.
+owner ruling -> this plan -> red tests -> claim_tap -> the screen -> mapped and
+sync suites -> commit with the family ledger -> review -> push -> owner deploys.

@@ -269,3 +269,14 @@ is still refused.
 EVIDENCE: 2 (mapped) - 1 JS test red before, green after; 30 JS and 19 Python
 green.
 NEXT: the owner deploys and moves Danial's OUT from the 4th to the 3rd.
+- 2026-09-18T07:01:33Z PUSH: nz-glass @ 4517ab771
+REPAIR: the last locked door. Danial's 4 Sep 01:04 OUT is MIRRORED, so Fix Day
+refused it and get_employee_checkins excluded it at the query - Fetch Shifts gave
+it a shift and nothing would ever read it. Every historical ERP punch is in that
+state, so any day whose closing punch came from the old system was unfixable.
+Owner chose to claim: claim_tap clears the stamp, only after cutover, only
+through that action, HR-only, reasoned, logged, and undone by the snapshot that
+already carried the field.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 25 tests red before, green after; 12
+Python suites, the sync release/contested suites and 10 JS green.
+NEXT: the owner deploys, takes over Danial's OUT, then Rebuild this day on 3 Sep.

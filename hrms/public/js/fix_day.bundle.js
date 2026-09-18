@@ -154,9 +154,10 @@ class FixDayScreen {
 		const rows = (day.taps || [])
 			.map((tap) => {
 				const colour = FD_STATE_COLOUR[tap.state] || "grey";
-				const box = tap.mirrored
-					? ""
-					: `<input type="checkbox" data-fd-tap="${fd_escape(tap.name)}">`;
+				// A mirrored tap IS selectable: taking it over is the only way to
+				// fix its day, and it was the one punch HR could not tick (owner,
+				// 18 Sep 2026). Every other action still refuses it server-side.
+				const box = `<input type="checkbox" data-fd-tap="${fd_escape(tap.name)}">`;
 				return `<tr>
 					<td>${box}</td>
 					<td>${fd_clock(tap.time)}</td>
@@ -203,6 +204,7 @@ class FixDayScreen {
 			${button("ignore", __("Ignore tap"))}
 			${button("restore", __("Bring tap back"))}
 			${button("add", __("Add missing tap"))}
+			${this.mirrored_taps().length ? button("claim", __("Take over this punch")) : ""}
 			${this.duplicate_rows().length ? button("dedupe", __("Remove duplicate row")) : ""}
 			${this.last_fix ? button("undo", __("Undo last fix")) : ""}
 		</div>
@@ -221,6 +223,7 @@ class FixDayScreen {
 			ignore: () => this.ignore(),
 			restore: () => this.restore(),
 			add: () => this.add(),
+			claim: () => this.claim(),
 			dedupe: () => this.dedupe(),
 			undo: () => this.undo(),
 		}[action];
@@ -366,6 +369,38 @@ class FixDayScreen {
 			<div class="text-muted small">
 				${__("Hours and overtime are recomputed from what is left; nothing is typed.")}
 			</div>`;
+	}
+
+	mirrored_taps() {
+		return (this.day && this.day.taps ? this.day.taps : []).filter((tap) => tap.mirrored);
+	}
+
+	// The punch the old system sent. Until this site owns it, Fix Day refuses it
+	// and the hourly job does not even read it — so its day cannot be fixed at
+	// all. Offered only when the day actually holds one.
+	claim() {
+		const ticked = this.selection;
+		const mine = this.mirrored_taps().filter((tap) => ticked.has(tap.name));
+		if (mine.length !== 1) {
+			frappe.msgprint(__("Tick exactly one punch that came from the other site."));
+			return;
+		}
+		const tap = mine[0];
+		return this.ask(
+			__("Take over {0} {1}?", [fd_clock(tap.time), fd_escape(tap.log_type || "")]),
+			[
+				{
+					fieldtype: "HTML",
+					fieldname: "what",
+					options: `<div class="mb-2">${__(
+						"This punch belongs to the site that recorded it, so nothing here reads it. " +
+							"Taking it over makes it this site's: the day can then be rebuilt from it. " +
+							"Nothing the device recorded changes, and the undo gives it back."
+					)}</div>`,
+				},
+			],
+			(values) => this.run("claim_tap", { tap: tap.name, reason: values.reason })
+		);
 	}
 
 	dedupe() {

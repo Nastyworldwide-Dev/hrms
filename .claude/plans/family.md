@@ -1,47 +1,41 @@
-# FAMILY — a pull overwrote what this site owns
+# FAMILY — a punch the old ERP sent could not be read or corrected
 
-CLASS: a cutover switch that names the doctypes it protects. Attendance was
-listed after the 9 Sep incident; Employee, Shift Assignment and Shift Schedule
-Assignment were not, so a pull rewrote live shift and location data back to the
-source. Owner, 18 Sep 2026: "it affecting many employees... we dont want that."
+CLASS: a row this site must act on that no path here may touch. `Fix Day`
+refuses a mirrored tap ("change it there") and `ShiftType.get_employee_checkins`
+excludes mirrored punches at the query. Both are right in isolation; together
+they made every day whose closing punch came from the old system unfixable.
 
-THE RULE (his): after cutover a pull adds what is missing and rewrites nothing.
+Owner ruling, 18 Sep 2026, offered "claim the punch" or "type those days by
+hand": **"A. go"**.
 
-Changed: `cutover.leave_existing_row_alone(doctype, exists, unlocked,
-create_only)` — pure; `_write_row` asks it where it already asked the
-create-only question; `sync_doctype` carries `unlocked` down.
+Added: `claim_tap(tap, reason)` — clears `synced_from_instance`, only after
+cutover, only through this action, HR-only, reasoned, logged, undoable.
 
-Call sites the machine lists for _write_row / sync_doctype / the cutover rules:
+Call sites the machine lists for _tap / the provenance stamp / the actions:
 
-* hrms/sync/runner.py::_write_row — same-root, the one gate.
-* hrms/sync/runner.py::sync_doctype — same-root, carries the flag.
-* hrms/sync/runner.py::sync_instance — same-root: already computed `unlocked`
-  for plan_pull_doctypes; it passes the same value down now.
-* hrms/sync/checkin_import.py — not-affected: punches never went through
-  `_write_row` after cutover, they have their own append-only importer.
-* hrms/sync/parity.py — not-affected: it counts stamped rows. Inserts still
-  stamp; only updates stop, and an update never changed a count.
-* hrms/sync/purge.py, release.py — not-affected: they read the stamp, not this.
-* hrms/sync/cutover.py::plan_pull_doctypes / plan_parity_doctypes —
-  not-affected: Attendance is still held back entirely and Employee Checkin is
-  still append-only. This rule sits under both, not instead of them.
-
-REVIEW OF 5baf3c99a — DEPLOY, two warnings, both answered:
-* parity: NOT a defect. `compare_doctype` compares row COUNTS, and this stops
-  updates, never inserts — every source row missing here is still added, so the
-  counts still meet. Checked rather than assumed.
-* `_reconcile_user_status` no longer runs for an existing Employee, so the
-  SOURCE can no longer disable a hub login for somebody marked Left over there.
-  Covered by HR marking the leaver here (Employee.on_update disables the User);
-  not covered if they are terminated only on the old ERP. Surfaced to the owner
-  rather than fixed by letting the source write again — that is what he asked to
-  stop, and a login is not a shift field.
+* hrms/api/attendance_fix_day.py::_tap — same-root: gains `mirrored_ok`, used by
+  `claim_tap` alone. A test asserts no other action asks for it.
+* hrms/api/attendance_fix_day.py::pair_taps, move_tap, ignore_tap, restore_tap,
+  add_tap, rebuild_day — not-affected: each still refuses a mirrored tap, and a
+  test asserts none writes the stamp.
+* hrms/api/attendance_fix_day.py::undo_fix — same-root by the snapshot:
+  `synced_from_instance` was already in TAP_FIELDS, so the undo hands the punch
+  back to its source without any new code.
+* hrms/api/attendance_fix_day.py::day_plan::_evidence — not-affected and the
+  REASON this exists: it excludes a mirrored tap, so until the stamp is gone the
+  punch is not evidence for this site's day. Once claimed it is ordinary.
+* hrms/sync/write_block.py::block_mirrored_writes — not-affected: it guards
+  mirrored DOCUMENTS through doc events; this clears a field through
+  `frappe.db.set_value`, the same way every other Fix Day write goes.
+* hrms/sync/runner.py — not-affected: after cutover a pull only ADDS what is
+  missing (5baf3c99a), so a claimed punch cannot be re-stamped by the next sync.
+* hrms/hr/doctype/shift_type/shift_type.py::get_employee_checkins —
+  not-affected and the point: once the stamp is gone the job reads the punch.
 
 LOCK:
-* regression (the instance): test_sync_adds_what_is_missing.py drives the
-  doctypes that were actually reverted — Employee, Shift Assignment, Shift
-  Schedule Assignment — plus one invented name, because the ruling is about
-  rows and a rule written as a list is wrong the next time somebody mirrors
-  something new.
-* invariant (the class): before cutover nothing changes, and the two older
-  cutover rules are asserted untouched.
+* regression (the instance): test_hr_can_take_over_a_source_punch.py drives
+  Danial's shape — a mirrored punch on a day this site owns.
+* invariant (the class): only `claim_tap` may see a mirrored tap and only it may
+  write the stamp, both asserted over every other action; and the claim is
+  refused while that instance is still locked, because before cutover the source
+  really is the writer.

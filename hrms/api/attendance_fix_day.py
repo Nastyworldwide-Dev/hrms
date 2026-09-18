@@ -66,6 +66,7 @@ LOG_DOCTYPE = "HR Day Fix Log"
 LOG_SOURCE = "hr_fix_day"
 ACTIONS = (
 	"rebuild_day",
+	"claim_tap",
 	"pair_taps",
 	"move_tap",
 	"ignore_tap",
@@ -90,6 +91,9 @@ CHANGEABLE_TAP_FIELDS = frozenset(
 		# says WHY it was skipped: noise (read across it) or not-verified (a wall)
 		"skipped_as_noise",
 		"remote_approval_status",
+		# whose punch this is. Only `claim_tap` writes it, and only after cutover
+		# (owner ruling, 18 Sep 2026) — see that action.
+		"synced_from_instance",
 		# the link to the row the tap was evidence for: re-stamping a tap
 		# releases it, so both days can be rebuilt from the taps they now hold
 		"attendance",
@@ -108,6 +112,9 @@ COUNTED_TAP_FIELDS = frozenset(
 		"skip_auto_attendance",
 		# ignoring a counted tap says it is noise, in the same write
 		"skipped_as_noise",
+		# taking over a punch changes nothing the device recorded, so a COUNTED
+		# tap — which is exactly the kind worth claiming — may still be claimed
+		"synced_from_instance",
 		"attendance",
 	)
 )
@@ -735,6 +742,60 @@ def add_tap(employee: str, moment: str, log_type: str, reason: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def claim_tap(tap: str, reason: str) -> dict:
+	"""Take over a punch the source instance sent, so this site can read it.
+
+	Owner ruling, 18 Sep 2026, on a day that could not be fixed by any path:
+	Danial's OUT at 4 Sep 01:04 is mirrored, so Fix Day refused it ("change it
+	there") and `ShiftType.get_employee_checkins` excluded it at the query —
+	processing a mirrored punch would create a duplicate local Attendance and
+	stamp the source's rows hook-free. The punch had its shift and nothing
+	would ever read it. Every historical ERP punch is in that state, so any day
+	whose closing punch came from the old system was unfixable.
+
+	This breaks the single-writer rule for ONE row, deliberately, and is bounded
+	by the thing that makes it honest: the instance must be UNLOCKED. Before
+	cutover the source really is the writer and claiming would be the very fight
+	single-writer exists to stop.
+
+	Nothing the device recorded changes. The stamp goes, a comment says who took
+	it and why, the fix log carries the day before and after, and `undo_fix`
+	puts the stamp back — `synced_from_instance` is in TAP_FIELDS, so the
+	snapshot already holds it.
+	"""
+	from hrms.sync.write_block import _instance_unlocked
+
+	_require_hr()
+	reason = _require_reason(reason)
+	row = _tap(tap, mirrored_ok=True)
+	source = row.get("synced_from_instance")
+	if not source:
+		_refuse(_("This tap is already this site's; there is nothing to take over."))
+	if not _instance_unlocked(source):
+		_refuse(
+			_(
+				"{0} is still the writer for its records. Take over its punches only after "
+				"cutover, when this site marks attendance."
+			).format(source)
+		)
+	emp = _require_employee(row.employee)
+	days = [_tap_day(row)]
+	_lock_and_guard(emp.name, days)
+	before = _before(emp.name, days, [row])
+	logger.warning(
+		"[attendance_fix_day] %s taking over %s from %s for %s: %s",
+		frappe.session.user,
+		row.name,
+		source,
+		emp.name,
+		reason,
+	)
+	_write_tap(row, {"synced_from_instance": None})
+	note = _("taken over from {0}: this site reads it now").format(source)
+	return _finish(emp, days, "claim_tap", reason, {row.name: note}, before)
+
+
+@frappe.whitelist(methods=["POST"])
 def remove_duplicate_row(attendance: str, reason: str) -> dict:
 	"""Cancel the attendance row a day should not have, and rebuild that day.
 
@@ -1166,11 +1227,16 @@ def _lock_employee(employee) -> None:
 	lock_employee_row(employee)
 
 
-def _tap(name):
+def _tap(name, mirrored_ok: bool = False):
+	"""One tap, refused if it belongs to another site.
+
+	`mirrored_ok` is for `claim_tap` alone — the action whose whole purpose is a
+	punch the source sent. Every other action still refuses one.
+	"""
 	row = frappe.db.get_value("Employee Checkin", name, TAP_FIELDS, as_dict=True)
 	if not row:
 		_refuse(_("Tap {0} was not found.").format(name))
-	if row.get("synced_from_instance"):
+	if row.get("synced_from_instance") and not mirrored_ok:
 		_refuse(_("This tap came from another site; change it there."))
 	return row
 

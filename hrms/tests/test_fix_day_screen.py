@@ -30,8 +30,12 @@ SHIFT_ATTENDANCE = ROOT / "hr/report/shift_attendance/shift_attendance.js"
 # same evening: the owner did one day through five dialogs and five typed
 # reasons and asked for one step, so `rebuild_day` applies the whole plan at
 # once. The five single actions stay for the days the plan refuses.
+# Eight since 18 Sep 2026: a punch the old ERP sent is refused by this screen and
+# invisible to the hourly job, so any day whose closing punch came from there was
+# unfixable. `claim_tap` takes one over, after cutover only.
 ACTIONS = (
 	"rebuild_day",
+	"claim_tap",
 	"pair_taps",
 	"move_tap",
 	"ignore_tap",

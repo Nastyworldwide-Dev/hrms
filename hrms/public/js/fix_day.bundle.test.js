@@ -141,3 +141,19 @@ test("a session that crosses midnight can be opened", () => {
 	assert.match(body, /employees\.size !== 1/, "two people is still two people")
 	assert.match(body, /shift/, "the stranded tap — the one with no shift — names the day to open")
 })
+
+// A mirrored tap had no tick box at all, so the punch HR must now take over was
+// the one punch they could not select (owner, 18 Sep 2026: "i cant do much").
+// It gets one, and the action that accepts it is offered only when one is
+// ticked — every other action still refuses a tap from another site.
+test("a tap from another site can be ticked, and claimed", () => {
+	assert.match(src, /claim_tap/, "the screen offers the take-over")
+	const taps = src.slice(src.indexOf("taps_html(day) {"), src.indexOf("attendance_html("))
+	assert.doesNotMatch(
+		taps,
+		/tap\.mirrored\s*\?\s*""/,
+		"a mirrored tap must be selectable — claiming it is the only way to fix its day"
+	)
+	const actions = src.slice(src.indexOf("actions_html() {"), src.indexOf("act(action) {"))
+	assert.match(actions, /claim/, "and the button is there to press")
+})
