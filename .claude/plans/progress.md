@@ -215,3 +215,13 @@ import report. Ticketed, not touched: the owner has had one bad sync day already
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 4 new tests red before, green after;
 179 passed across five fix-day suites.
 NEXT: the owner deploys.
+- 2026-09-18T04:04:05Z PUSH: nz-glass @ 99d11766d
+REPAIR: _shift_stamp dropped skip_auto_attendance from the move stamp but not
+skipped_as_noise, so moving an IGNORED tap would have turned it from noise into
+a wall. The two halves of that verdict travel together; the stamp now carries
+neither.
+EVIDENCE: 2 (mapped) - 1 test red before, green after; 140 passed.
+NEXT: the owner deploys. Open: a stranded off-shift OUT past midnight (Danial,
+3->4 Sep 01:04) is healed today only by Fix Day's "Move to shift / day" one tap
+at a time - hrms.utils.offshift_punch_heal.heal_offshift_punches is whitelisted,
+was written for that exact punch, and NOTHING in the Desk reaches it.

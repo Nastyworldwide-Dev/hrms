@@ -355,6 +355,23 @@ class TheUndoPutsTheVerdictBackCase(unittest.TestCase):
 		self.assertIn('fields["skipped_as_noise"] = 0', window)
 
 
+class MovingATapChangesNeitherHalfOfTheVerdictCase(unittest.TestCase):
+	"""`_shift_stamp` drops `skip_auto_attendance` from the stamp on purpose —
+	moving a tap to another shift says nothing about whether it counts. The
+	noise verdict is the other half of that same answer and must travel with
+	it, or moving an IGNORED tap would quietly turn it from noise into a wall.
+	"""
+
+	def test_the_move_stamp_carries_neither(self):
+		source = (
+			pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_fix_day.py"
+		).read_text()
+		start = source.index("def _shift_stamp(")
+		body = source[start : source.index("\ndef ", start + 10)]
+		self.assertIn('stamp.pop("skip_auto_attendance", None)', body)
+		self.assertIn('stamp.pop("skipped_as_noise", None)', body)
+
+
 class TheColumnMayNotExistYetCase(unittest.TestCase):
 	"""A SELECT naming a column a site has not caught up with dies with
 	"Unknown column" — this fork has been bitten by exactly that before

@@ -1217,7 +1217,12 @@ def _shift_stamp(shift, day) -> dict:
 	from hrms.api.attendance_master_edit import _shift_window, punch_stamp
 
 	stamp = punch_stamp(shift, _shift_window(shift, getdate(day)))
+	# Moving a tap to another shift says nothing about whether it counts, so the
+	# stamp carries neither half of that answer. Dropping only the skip would
+	# quietly turn an IGNORED tap from noise into a wall the next time the day
+	# was read (the two travel together — see `_write_tap`).
 	stamp.pop("skip_auto_attendance", None)
+	stamp.pop("skipped_as_noise", None)
 	return stamp
 
 
