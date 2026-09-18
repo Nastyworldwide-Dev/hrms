@@ -1781,8 +1781,14 @@ def upload_base64_file(
 
 	from frappe.handler import ALLOWED_MIMETYPES
 
+	# READ, not write. The PWA only ever shows a person their own requests, so
+	# being able to read one is what makes it theirs; demanding write refused a
+	# staff member their own request the moment it left draft, and refused an
+	# approver attaching to a request they are judging. Owner ruling, 18 Sep
+	# 2026: "everyone must able regardless of their permission, as long as they
+	# can use nadi, they can upload properly."
 	if dt and dn:
-		frappe.has_permission(dt, ptype="write", doc=dn, throw=True)
+		frappe.has_permission(dt, ptype="read", doc=dn, throw=True)
 
 	decoded_content = base64.b64decode(content)
 	content_type = guess_type(filename)[0]
@@ -1800,8 +1806,6 @@ def upload_base64_file(
 	else:
 		file_content = decoded_content
 
-	frappe.has_permission(dt, "write", dn, throw=True)
-
 	return frappe.get_doc(
 		{
 			"doctype": "File",
@@ -1813,7 +1817,7 @@ def upload_base64_file(
 			"content": file_content,
 			"is_private": 1,
 		}
-	).insert()
+	).insert(ignore_permissions=True)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -1825,14 +1829,20 @@ def delete_attachment(filename: str):
 		# Unpacking None here answered a 500 to every persona in the matrix.
 		frappe.throw(_("Attachment {0} not found.").format(filename), frappe.DoesNotExistError)
 	attached_to_doctype, attached_to_name, owner = row.attached_to_doctype, row.attached_to_name, row.owner
-	if attached_to_doctype and attached_to_name:
+	if owner == frappe.session.user:
+		# They could attach it, so they may take it back. Requiring WRITE on the
+		# parent refused a staff member their OWN file for the same reason the
+		# upload refused them: the PWA write path is server-side because staff
+		# hold no Desk rights of their own (owner ruling, 18 Sep 2026).
+		pass
+	elif attached_to_doctype and attached_to_name:
 		frappe.has_permission(attached_to_doctype, "write", attached_to_name, throw=True)
-	elif owner != frappe.session.user and "System Manager" not in frappe.get_roles():
+	elif "System Manager" not in frappe.get_roles():
 		# an UNattached file has no parent document to borrow a permission
 		# check from — without this, any signed-in user could delete any
 		# orphan File by name
 		frappe.throw(_("You can only delete your own attachments."), frappe.PermissionError)
-	frappe.delete_doc("File", filename)
+	frappe.delete_doc("File", filename, ignore_permissions=True)
 
 
 @frappe.whitelist()

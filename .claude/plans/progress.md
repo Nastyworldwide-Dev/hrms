@@ -291,3 +291,18 @@ out of its set, so a purge count short against the source's export is the
 intended answer and not data loss.
 NEXT: the owner deploys nz-glass, takes over Danial's 4 Sep 01:04 OUT from
 Fix Day on 3 Sep, then presses Rebuild this day.
+- 2026-09-18T07:12:44Z PUSH: nz-glass @ 59422a537
+REPAIR: every PWA attachment failed with "Not allowed via controller permission
+check" — the SELFIE defect of 17 Sep in a second place. upload_base64_file
+called .insert() with no ignore_permissions, and staff hold no create right on
+File (the whole PWA write path is server-side for that reason). It also demanded
+WRITE on the request, which refused a staff member their own request past draft
+and an approver attaching to one they judge; READ is the honest bar because the
+PWA only shows a person their own requests. And the write check was made TWICE,
+the second time unguarded, so a file with no parent asked permission on doctype
+None. delete_attachment had the same shape: the uploader could not remove their
+own file.
+EVIDENCE: 2 (mapped) + 3 (blast radius) — 10 new tests red before, green after;
+the api, company-scope, attachment and remote_checkin suites green.
+NEXT: the owner deploys; S3 is untouched — the File still inserts, so the S3
+hook still fires.

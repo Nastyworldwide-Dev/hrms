@@ -1,8 +1,6 @@
-GOAL: the approver can see the check-in photo again — Remote Approvals showed a
-broken image because a PUBLIC File on S3 is addressed as the bucket object, and
-the bucket does not serve objects to the public.
-DONE WHEN: new selfies are stored private and attached to their punch (so
-File.is_downloadable grants everyone with read on that Employee Checkin), and a
-patch repairs the ones already taken — private, attached, and readdressed from
-the bucket url to the generate_file api url where they were on S3.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_selfie_is_private_and_attached.py hrms/api/test_remote_checkin.py
+GOAL: anyone who can use Nadi can attach a file to their own request — no "Not
+allowed via controller permission check".
+DONE WHEN: the upload inserts the File as the server (staff hold no File create
+right), asks only that the caller may READ the request, and asks once; the
+person who uploaded a file may delete it.
+CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_nadi_attachments_do_not_need_desk_rights.py hrms/tests/test_get_attachments_reads_by_parent.py
