@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-17T08:51:06Z PUSH: nz-glass @ f45a0f593
-REPAIR: the two-row rule shut the door its own sibling refusal points at — on a
-punch-count TIE, remove_duplicate_row refuses with "Move a tap to the row it
-belongs to first" and move_tap had just been blocked by the same rule. Both
-escapes are waived now; the four rebuilding actions are not.
-EVIDENCE: 2 (mapped) — 132 passed across the seven fix-day and duplicate suites;
-the two new tests red before the waiver, green after.
-NEXT: deploy is the owner's; he can already fix Norazlin today by removing the
-duplicate row BEFORE pairing.
-- 2026-09-17T08:57:02Z PUSH: nz-glass @ 5beef7501
-EVIDENCE: 7 (invariant, behavioural) — review of 5beef7501 returned DEPLOY with
-one warning: the escape invariant was an AST substring match, which a refactor
-could keep while shutting the door. It is now driven end to end on a real
-two-row day (TestATwoRowDayKeepsItsEscapesOpen). Proven by two mutations: the
-waiver removed from move_tap fails the behavioural escape test; the rule itself
-removed fails six tests including the notice. The mutation drill the reviewer
-ran out of turns for was also run: both AST tests fail without the waiver.
-- 2026-09-17T09:01:58Z PUSH: nz-glass @ 7a3d20bf0
-- 2026-09-17T09:02:12Z PUSH: nz-glass @ 641fd4bdc
-- 2026-09-17T09:02:12Z COMMIT: 641fd4bdc docs(glass): handoff for the two-row day → review dispatched
-REPAIR: the Fix Day screen listed a day's attendance rows without naming them
-- status, in, out, hours, OT and nothing else - so on a two-row day HR could
-not tell which line was which row, or which shift it was on. The data was
-already in row_view; only the line was missing it.
-EVIDENCE: 2 (mapped) - fix_day.bundle.test.js red on HEAD, green after; 27 JS
-and 109 Python tests across the fix-day suites.
-NEXT: deploy; the ghost-row list is still on offer.
-- 2026-09-17T09:05:40Z PUSH: nz-glass @ 01a4c79af
-REPAIR: "Could not find Reference Name: HR-ATT-2026-15978" on live - _comment
-hardcoded reference_doctype "Employee Checkin" and remove_duplicate_row handed
-it an Attendance name, so the request threw and rolled back the cancel with it.
-The one action that unblocks a two-row day could never complete. The store
-harness stubbed _comment with a 2-arg lambda, which is why no test saw it.
-EVIDENCE: 2 (mapped) - 4 new tests red on HEAD, green after; 117 passed across
-the five fix-day suites; the stub now records the doctype and asserts on it.
-NEXT: the owner says the flow has too many steps for one goal - propose the
-one-screen "rebuild this day" plan/apply before building it.
-- 2026-09-17T09:19:49Z PUSH: nz-glass @ 1295034e2
-PLAN: .claude/plans/current-plan.md — one button rebuilds a day (risky tier: it
-writes pay-affecting evidence in one press; the owner's rule, recorded with its
-consequence — a real mid-day absence is now paid unless HR intervenes, and the
-safeguard is that every dropped tap and every long gap is named on screen first).
-EVIDENCE: 2 (mapped) — 20 new tests red on HEAD, green after; 147 Python and 27
-JS across the seven fix-day suites and the three list/report doors.
-NEXT: review, then the owner deploys.
-- 2026-09-17T09:29:48Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
-- 2026-09-17T09:29:48Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-17T09:30:19Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
-- 2026-09-17T09:30:19Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-17T09:30:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
-- 2026-09-17T09:30:38Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-17T09:30:48Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
-- 2026-09-17T09:30:48Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-17T09:30:52Z COMMIT: d00b4de62 feat(attendance): one press rebuilds a day from its own evidence → review dispatched
-- 2026-09-17T09:30:59Z PUSH: nz-glass @ d00b4de62
-REPAIR: review of d00b4de62 returned FIX_CRITICAL. The planner had no session
-length cap (a 24h "session" was writable in one press, while the manual pair
-refuses anything over 20h); two rows both holding punches were merged as if one
-were a ghost; and undo_fix only warned about un-cancel for remove_duplicate_row.
-All three closed, plus a refactor ticket for the hotspot.
-EVIDENCE: 2 (mapped) - 7 new tests red before, green after; 154 passed across
-the seven fix-day suites.
-NEXT: re-review, then the owner deploys.
-REPAIR: the Fix Day rebuild would have left the complained-about days exactly
-as they were. attendance_recovery.protected_reason holds any HR-owned row -
-right for the nightly job, wrong for HR's own button - and Norazlin's row is
-"Absent (HR)", so correcting every tap on it would still have ended in Absent,
-0 hours, no OT. protected_reason now takes hr_asked and waives ONLY that hold.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 new tests red before, green after;
-14 suites green including the recovery engine (96), day_remark (28), lone-in
-closer (29) and the ownership classifier (40).
-NEXT: review, then the owner deploys; after deploy, confirm on Norazlin's 4 Sep
-that the day reads Present with hours and that the OT is claimable in Nadi.
-- 2026-09-17T09:42:12Z PUSH: nz-glass @ b9794c65b
-- 2026-09-17T09:46:05Z PUSH: nz-glass @ f369e51d4
-REPAIR: review of b9794c65b, two Criticals. (1) a mirrored row reads as OWNER_HR
-when a person wrote it on the ERP side - closed in f369e51d4 and now refused on
-the screen by name too. (2) the never-worse guard is on attendance_recovery's
-rebuild path and NOT on day_remark's, which is the one Fix Day uses; hr_asked
-opened that door, so HR's press now goes through _rebuild_under_guard and a
-rollback comes back as held, not as success.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 6 new tests red before, green after;
-14 suites green (405 tests) including the recovery engine and day_remark.
-DEAD END: putting the mirrored rule in protected_reason broke five tests of the
-mirrored RELEASE plan, which asks that same function about mirrored rows on
-purpose. It belongs to the waiver.
-NEXT: re-review, then the owner deploys.
-- 2026-09-17T09:48:32Z PUSH: nz-glass @ 944aeec7a
-REPAIR: a rebuild the engine HELD (never-worse rollback, or a protection) showed
-HR "The day came back unchanged" and nothing else - the engine's sentence was in
-the answer and only reached the console. It is printed now.
-EVIDENCE: 2 (mapped) - 1 new JS test red before, green after; 28 JS green. The
-hr_asked branch was also proven by mutation: removing it fails 3 tests.
-- 2026-09-17T09:51:28Z PUSH: nz-glass @ 723f79b25
-EVIDENCE: 7 (invariant + tickets) - verification review of 944aeec7a executed
-all 14 suites, ruff and the bundle test: 0 failures, no Critical, no Warning,
-DEPLOY. It confirmed by reading the code that _rebuild_under_guard (not
 guarded_rebuild) is the right inner call, that skipping _retire_unmarkable_rows
 on the rollback path is REQUIRED - it reads the rolled-back result and would
 cancel the very row the guard just protected - and that the held verdict reaches
@@ -298,3 +201,17 @@ the undo (log_type is already in TAP_FIELDS).
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 10 new tests red before, green after;
 11 Python suites and 20 JS green.
 NEXT: the owner deploys; an IN-IN day then reads IN/OUT on all four pages.
+- 2026-09-18T03:58:40Z PUSH: nz-glass @ e1f4165b7
+REPAIR: review of e1f4165b7. (1) undo_fix refused an ENTIRE rebuild when it had
+also cancelled a ghost row - so the relabel my commit called reversible was not.
+A remove_duplicate_row IS its cancel and is still refused; a rebuild restores its
+taps and says the cancelled row stays cancelled. (2) session_is_open reads
+log_type != "OUT", so relabelling a closing tap makes the session read CLOSED -
+the relabel is a CORRECTNESS improvement there, not a risk: an IN-IN day used to
+leave its session reading open. (3) the checkin_import worry was checked and does
+not corrupt anything - drop_already_imported matches on the SOURCE key, so no
+duplicate and no revert; the real effect is a permanent type_mismatch line on the
+import report. Ticketed, not touched: the owner has had one bad sync day already.
+EVIDENCE: 2 (mapped) + 3 (blast radius) - 4 new tests red before, green after;
+179 passed across five fix-day suites.
+NEXT: the owner deploys.

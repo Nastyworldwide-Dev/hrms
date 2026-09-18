@@ -864,7 +864,8 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	entry = _log_entry(log_entry)
 	if cint(entry.undone):
 		_refuse(_("This fix was already undone."))
-	if entry.action in CANCELLING_ACTIONS and _cancelled_a_row(entry):
+	cancelled_a_row = entry.action in CANCELLING_ACTIONS and _cancelled_a_row(entry)
+	if cancelled_a_row and entry.action not in UNDOABLE_APART_FROM_THE_CANCEL:
 		# Frappe has no un-cancel. Saying so is better than a no-op that looks
 		# like it worked; the day was rebuilt from its punches when the row
 		# went, and correcting the taps is how it is changed from here.
@@ -903,6 +904,15 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 		undo_of=entry.name,
 	)
 	_mark_undone(entry.name)
+	if cancelled_a_row:
+		# Said out loud rather than left for HR to notice: the taps are back as
+		# they were, and the row this pass cancelled stays cancelled, because
+		# Frappe has no un-cancel. The day was rebuilt from the taps either way.
+		answer["note"] = _(
+			"The taps are back as they were. The attendance row this rebuild cancelled "
+			"stays cancelled — the day is marked again from its punches."
+		)
+		logger.info("[attendance_fix_day] undo of %s restored the taps; its cancel stands", entry.name)
 	return answer
 
 
@@ -1335,6 +1345,13 @@ def _log_entry(name):
 
 #: actions that can cancel an attendance row, which Frappe cannot un-cancel
 CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day")
+#: ... and of those, the ones that did OTHER things worth putting back. A
+#: `remove_duplicate_row` IS its cancel, so there is nothing else to restore and
+#: refusing is the honest answer. A rebuild also ignored taps, paired a session
+#: and relabelled it — refusing all of that because one row cannot come back
+#: threw away three recoverable things to be strict about a fourth (review of
+#: e1f4165b7, which had promised the relabel was reversible).
+UNDOABLE_APART_FROM_THE_CANCEL = ("rebuild_day",)
 
 
 def _cancelled_a_row(entry) -> bool:

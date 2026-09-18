@@ -433,3 +433,44 @@ class TheRelabelIsAppliedAndRecordedCase(unittest.TestCase):
 
 	def test_the_undo_can_put_the_label_back(self):
 		self.assertIn("log_type", fix_day.TAP_FIELDS)
+
+
+class TheUndoRestoresWhatItCanCase(unittest.TestCase):
+	"""Review of e1f4165b7: my commit promised the relabel is reversible, and it
+	was not when the same rebuild had also cancelled a ghost row — `undo_fix`
+	refused the whole action, so the device's original label was lost for good.
+
+	Refusing is right for `remove_duplicate_row`, whose only effect IS the
+	cancel: there is nothing else to put back. A rebuild does four things, and
+	three of them are restorable. It restores those and says plainly that the
+	cancelled row stays cancelled.
+	"""
+
+	def setUp(self):
+		import ast
+		import pathlib
+
+		self.undo = next(
+			ast.unparse(node)
+			for node in ast.walk(ast.parse(pathlib.Path(fix_day.__file__).read_text()))
+			if isinstance(node, ast.FunctionDef) and node.name == "undo_fix"
+		)
+
+	def test_a_bare_row_cancel_is_still_refused(self):
+		# The names live in the module constants, not in the function body —
+		# assert the contract, not where the literal happens to sit.
+		self.assertIn("CANCELLING_ACTIONS", self.undo)
+		self.assertIn("cannot be brought back", self.undo)
+		self.assertIn("remove_duplicate_row", fix_day.CANCELLING_ACTIONS)
+		self.assertNotIn("remove_duplicate_row", fix_day.UNDOABLE_APART_FROM_THE_CANCEL)
+
+	def test_a_rebuild_is_not_refused_for_the_row_it_cancelled(self):
+		self.assertIn("UNDOABLE_APART_FROM_THE_CANCEL", self.undo)
+		self.assertIn("rebuild_day", fix_day.UNDOABLE_APART_FROM_THE_CANCEL)
+		self.assertIn("rebuild_day", fix_day.CANCELLING_ACTIONS)
+
+	def test_the_answer_says_the_row_stays_cancelled(self):
+		self.assertIn("stays cancelled", self.undo)
+
+	def test_the_two_actions_are_named_apart(self):
+		self.assertEqual(fix_day.UNDOABLE_APART_FROM_THE_CANCEL, ("rebuild_day",))
