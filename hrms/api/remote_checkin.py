@@ -54,6 +54,52 @@ BURST_WINDOW = timedelta(seconds=45)
 BURST_SKIP_REASON = "Tapped again within seconds of the punch before it"
 
 
+def s3_key_from_public_url(url) -> str | None:
+	"""The S3 object key inside a PUBLIC bucket url, or None. Pure.
+
+	The S3 hook stores a public file as `{endpoint}/{bucket}/{key}` and a
+	private one as the `generate_file` api url. Repairing the first into the
+	second needs the key, and it must come back exactly as stored — it is
+	already %-quoted and goes straight back into a url.
+
+	Anything that is not a bucket url — a local /files path, an api url, an
+	empty value — is not this function's business.
+	"""
+	text = (url or "").strip()
+	if not text.startswith(("http://", "https://")):
+		return None
+	# scheme://host/bucket/key...
+	parts = text.split("/", 4)
+	if len(parts) < 5 or not parts[4]:
+		return None
+	return parts[4]
+
+
+def _attach_selfie_to_punch(file_name, punch) -> None:
+	"""Hang the photo on the punch it proves, so the right people can see it.
+
+	A private File with no parent is readable by its owner and a System Manager
+	and nobody else — which is the employee who took the selfie, and not the
+	approver who has to look at it. Attached to the punch, `File.is_downloadable`
+	grants anyone with read on that Employee Checkin, which is exactly the set
+	that is allowed to judge it.
+
+	It also gives the file a real `attached_to_doctype`. Without one the S3 hook
+	reads the parent as "File", which no site's `ignore_s3_upload_for_doctype`
+	lists — the path that took down every upload on 17 Sep 2026.
+	"""
+	if not file_name:
+		logger.warning("[remote_checkin] punch %s has a selfie url with no File behind it", punch)
+		return
+	frappe.db.set_value(
+		"File",
+		file_name,
+		{"attached_to_doctype": "Employee Checkin", "attached_to_name": punch},
+		update_modified=False,
+	)
+	logger.info("[remote_checkin] selfie %s attached to punch %s", file_name, punch)
+
+
 def is_burst_tap(previous, punch_time) -> bool:
 	"""Is this punch part of the burst the one before it started? Pure.
 
@@ -496,9 +542,13 @@ def upload_selfie(image: str) -> dict:
 	the whole write path. The file is owned by the caller, and `punch()` only
 	accepts a `selfie_image` whose File the caller owns — so nothing widens.
 
-	# ceiling: the stored file stays public, upgrade: private File + a share of
-	# the punch with its approver, when a face photo must stop being readable
-	# by anyone holding the link
+	The file is PRIVATE and is attached to its punch as soon as the punch exists
+	(`_attach_selfie_to_punch`). Public was the shortcut, and it broke in the
+	approver's app on 18 Sep 2026: with S3 configured, a public File's stored
+	url is the bucket object itself, and the bucket does not serve objects to
+	the public — so Remote Approvals showed a broken image where the face should
+	be. A private File is streamed back through the site instead, which also
+	stops a face photo being readable by anyone holding the link.
 	"""
 	employee = require_employee()
 
@@ -533,7 +583,10 @@ def upload_selfie(image: str) -> dict:
 			"doctype": "File",
 			"file_name": f"selfie-{slug}-{int(time_module.time() * 1000)}.{extension}",
 			"content": content,
-			"is_private": 0,
+			# Private, and attached to the punch by `_attach_selfie_to_punch`
+			# the moment the punch exists: that is what makes it readable by the
+			# approver and by nobody else with the link.
+			"is_private": 1,
 			"folder": "Home",
 		}
 	).insert(ignore_permissions=True)
@@ -647,6 +700,7 @@ def punch(
 		pass
 	doc.flags.location_source = LOCATION_SOURCES.get(str(source or "").strip().lower(), "Unknown")
 
+	selfie_file = None
 	if selfie_image:
 		# only accept a file this user actually uploaded — a stale or borrowed
 		# file_url must not stand in as proof of presence
@@ -660,6 +714,7 @@ def punch(
 			)
 			frappe.throw(_("Invalid selfie attachment."), frappe.PermissionError)
 		doc.selfie_image = selfie_image
+		selfie_file = frappe.db.get_value("File", {"file_url": selfie_image}, "name")
 
 	# Taps seconds apart are one tap. The row is STORED — its time, its type and
 	# its selfie are evidence, and the old 60-second window that REFUSED such a
@@ -680,6 +735,9 @@ def punch(
 
 	doc.flags.ignore_permissions = True
 	doc.insert()
+
+	if selfie_image:
+		_attach_selfie_to_punch(selfie_file, doc.name)
 
 	if burst:
 		# "Comment", not "Info": add_comment's first argument IS the stored

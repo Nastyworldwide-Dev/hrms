@@ -231,3 +231,17 @@ exactly one _finish(..., "rebuild_day", ...) call and it passes plan=plan, so no
 rebuild entry is invisible to the backfill.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 14 suites green.
 NEXT: the owner deploys once the verification comes back.
+- 2026-09-17T11:26:46Z PUSH: nz-glass @ 951af8d8a
+- 2026-09-17T11:28:48Z PUSH: nz-glass @ 5735179cf
+- 2026-09-17T11:28:49Z COMMIT: 5735179cf docs(glass): handoff for the wall-vs-noise rule → review dispatched
+REPAIR: 18 Sep, live. Remote Approvals showed a BROKEN IMAGE for every pending
+selfie. The 17 Sep crash was gone - the photo uploaded - but upload_selfie stored
+the File public, and the S3 hook addresses a public file as the bucket object
+itself ({endpoint}/{bucket}/{key}), which is readable only with a public-read
+ACL this bucket does not grant. Selfies are private now and attached to their
+punch, so File.is_downloadable grants exactly the people who can read that
+Employee Checkin - the approver included. The `# ceiling:` on that function had
+named this upgrade already; it arrived for a different reason than expected.
+EVIDENCE: 2 (mapped) - 13 new tests red before, green after; 176 passed across
+remote_checkin and the fix-day suites.
+NEXT: deploy; the patch repairs the photos already taken.
