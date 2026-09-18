@@ -280,3 +280,14 @@ already carried the field.
 EVIDENCE: 2 (mapped) + 3 (blast radius) - 25 tests red before, green after; 12
 Python suites, the sync release/contested suites and 10 JS green.
 NEXT: the owner deploys, takes over Danial's OUT, then Rebuild this day on 3 Sep.
+- 2026-09-18T07:08:19Z PUSH: nz-glass @ fcd5cec85
+EVIDENCE: 7 (invariant) - review of fcd5cec85 returned DEPLOY, no Critical, no
+Warning. Both its suggestions are taken: the interaction it verified by READING
+is now a test - a claimed punch survives the next sync because neither path
+consults the stamp (the mirror keys on the source's own name, which claim_tap
+never touches; the punch importer keys on employee/time/log_type, which it never
+changes) - and purge_instance's docstring says a claimed punch is deliberately
+out of its set, so a purge count short against the source's export is the
+intended answer and not data loss.
+NEXT: the owner deploys nz-glass, takes over Danial's 4 Sep 01:04 OUT from
+Fix Day on 3 Sep, then presses Rebuild this day.

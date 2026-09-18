@@ -80,6 +80,13 @@ def purge_instance(instance_name: str, confirm: str | None = None) -> dict:
 	Returns per-doctype counts, plus every row a LOCAL document still links to.
 	Those are not failures to retry: something the hub owns points at them, and
 	that link is the answer to whether the row should go at all.
+
+
+	One exception, since 18 Sep 2026: a punch HR took over with
+	`hrms.api.attendance_fix_day.claim_tap` no longer carries the stamp, so it is
+	deliberately NOT in this set — it is this hub's row now. A purge count
+	reconciled against the source's own export will be short by however many were
+	claimed, and that is the intended answer, not data loss.
 	"""
 	frappe.only_for("System Manager")
 	require_unfenced(_("purge a mirrored instance"))

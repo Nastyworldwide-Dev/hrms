@@ -120,3 +120,51 @@ class AClaimedTapIsOrdinaryEvidenceCase(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class ASubsequentSyncLeavesAClaimedPunchAloneCase(unittest.TestCase):
+	"""The sharpest edge, and the one this area has burned on before: a punch
+	whose stamp HR cleared must not be resurrected, re-stamped or duplicated by
+	the next pull.
+
+	Two independent mechanisms hold it, and neither reads the stamp — which is
+	why clearing the stamp cannot reach them:
+
+	* the full-document mirror keys on the SOURCE's own name, which `claim_tap`
+	  never touches, and after cutover a row that exists here is left untouched
+	  (`cutover.leave_existing_row_alone`);
+	* `checkin_import.insert_source_punch` keys on the natural key — employee,
+	  time, log_type — none of which `claim_tap` changes.
+
+	The review of fcd5cec85 verified both by reading. This pins them, because
+	reading is what was verified last time too.
+	"""
+
+	def test_the_post_cutover_rule_never_asks_who_owns_the_row(self):
+		from hrms.sync import cutover
+
+		# exists=True is the whole answer after cutover, stamp or no stamp.
+		self.assertTrue(cutover.leave_existing_row_alone("Employee Checkin", True, True, False))
+
+	def test_the_mirror_keys_on_the_sources_own_name(self):
+		runner = pathlib.Path(
+			pathlib.Path(fix_day.__file__).resolve().parents[1] / "sync/runner.py"
+		).read_text()
+		self.assertIn("frappe.db.exists(doctype, remote_name)", runner)
+
+	def test_the_punch_importer_keys_on_what_the_device_recorded(self):
+		importer = pathlib.Path(
+			pathlib.Path(fix_day.__file__).resolve().parents[1] / "sync/checkin_import.py"
+		).read_text()
+		start = importer.index("def insert_source_punch(")
+		window = importer[start : start + 1400]
+		for field in ("employee", "time", "log_type"):
+			self.assertIn(field, window)
+		self.assertNotIn("synced_from_instance", window)
+
+	def test_the_claim_changes_none_of_those(self):
+		claim = body("claim_tap")
+		# `ast.unparse` renders the dict with single quotes.
+		self.assertIn("{'synced_from_instance': None}", claim)
+		for untouched in ('"time"', '"log_type"', "rename"):
+			self.assertNotIn(untouched, claim)
