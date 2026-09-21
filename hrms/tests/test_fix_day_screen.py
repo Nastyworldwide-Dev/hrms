@@ -64,15 +64,17 @@ class TestTheScreenOffersEvidenceOnly(unittest.TestCase):
 	def setUp(self):
 		self.js = read(BUNDLE)
 
-	def test_the_actions_and_the_undo_are_all_it_can_do(self):
-		read = set(re.findall(r'FD_API \+ "(\w+)"', self.js))
-		writes = set(re.findall(r'this\.run\("(\w+)"', self.js))
-		self.assertEqual(read, set(READS), "the only direct calls are the reads")
-		# `fix_days` is the range form's one write (dry_run=1 previews, dry_run=0
-		# applies); its undo is the same `undo_fix`, per day.
-		self.assertEqual(writes, {"undo_fix", "fix_days", *ACTIONS})
-		# every write goes through the one `run`, which reloads and shows before/after
-		self.assertIn("fd_call(FD_API + method, args)", self.js)
+	def test_the_screen_reads_one_way_and_writes_one_way(self):
+		"""Amended 21 Sep 2026 (one "Fix attendance" button): the dialog reads the
+		day with `get_day`, writes it with `save_day` (HR's ticked pair is the
+		evidence; the engine recomputes the row) and undoes with `undo_fix`.
+		The eight single actions stay on the module for history and undo, but no
+		button on the screen reaches them any more."""
+		calls = set(re.findall(r'FD_API \+ "(\w+)"', self.js))
+		self.assertEqual(calls, {"get_day", "save_day", "undo_fix"})
+		for action in ACTIONS:
+			self.assertNotIn(f'"{action}"', self.js, f"{action} is no longer a button")
+		self.assertNotIn("fix_days", self.js, "the range form is retired")
 
 	def test_no_control_edits_a_result(self):
 		fields = re.findall(r'fieldname: "(\w+)"', self.js)
@@ -94,7 +96,10 @@ class TestTheScreenOffersEvidenceOnly(unittest.TestCase):
 	def test_every_action_states_a_reason(self):
 		"""`ask` adds a required Reason to every action dialog, so no correction
 		lands without one on the tap and in the fix log."""
-		self.assertIn('fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1', self.js)
+		reason = re.search(
+			r'fieldname: "reason",\s*label: __\("Reason"\),\s*fieldtype: "Small Text",\s*reqd: 1', self.js
+		)
+		self.assertIsNotNone(reason, "Save & rebuild needs a reason")
 
 
 class TestTheEndpointsArePostOnly(unittest.TestCase):
@@ -230,16 +235,18 @@ class TestTheOneDoor(unittest.TestCase):
 		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
 		self.assertIn("hrms.fix_day.from_taps(listview)", listing)
 
-	def test_the_employee_checkin_list_opens_the_range_form_beside_it(self):
-		"""21 Sep 2026: tick -> choose shift -> Apply, on the same page, behind
-		the same HR gate. Apply is refused until a preview of the same inputs
-		has been seen."""
+	def test_the_employee_checkin_list_has_exactly_one_fix_button(self):
+		"""21 Sep 2026: "Fix day" and "Fix days" confused HR (same name, one
+		letter apart). One button, one dialog: tick the pair, Save & rebuild."""
 		js = read(BUNDLE)
-		self.assertIn("hrms.fix_day.fix_days_from_taps", js)
-		self.assertIn("class FixDaysDialog", js)
-		self.assertIn("Preview first", js)
+		self.assertNotIn("fix_days_from_taps", js)
+		self.assertNotIn("class FixDaysDialog", js)
+		self.assertIn("Save & rebuild", js)
 		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
-		self.assertIn("hrms.fix_day.fix_days_from_taps(listview)", listing)
+		self.assertEqual(listing.count("add_inner_button"), 1)
+		self.assertIn('add_inner_button(__("Fix attendance")', listing)
+		self.assertNotIn('__("Fix day")', listing)
+		self.assertNotIn('__("Fix days")', listing)
 
 
 if __name__ == "__main__":

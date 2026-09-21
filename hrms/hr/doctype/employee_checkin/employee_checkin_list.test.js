@@ -112,11 +112,12 @@ function controls(options) {
 	};
 }
 
-test("HR finds Fix day on the Employee Checkin list", () => {
-	assert.ok(
-		controls().labels.includes("Fix day"),
-		"the pairing screen has no other entry point from this page",
-	);
+test("HR finds exactly one Fix attendance button on the Employee Checkin list", () => {
+	// Owner, 21 Sep 2026: one button. "Fix day" and "Fix days" are gone.
+	const labels = controls().labels;
+	assert.strictEqual(labels.filter((l) => l === "Fix attendance").length, 1);
+	assert.ok(!labels.includes("Fix day"), "the old single-day door is gone");
+	assert.ok(!labels.includes("Fix days"), "the old range form is gone");
 });
 
 test("the list keeps its own action when the bundle is loaded first", () => {
@@ -138,83 +139,71 @@ test("the gate asks for the HR roles by name", () => {
 });
 
 test("a non-HR user is not offered the fix screen", () => {
-	assert.ok(!controls({ has_role: false }).labels.includes("Fix day"));
+	assert.ok(!controls({ has_role: false }).labels.includes("Fix attendance"));
 });
 
-// --- Fix days: tick → choose shift → Apply ---------------------------------
-// Owner, 21 Sep 2026: one employee, a range of days, one shift for every punch
-// in it, IN and OUT alike. Nothing is written until a preview of the SAME
-// inputs has been seen, and the reason is required to apply. These drive the
-// real dialog through a fake frappe.ui.Dialog that behaves like Desk's:
-// defaults become values, set_value fires onchange, the primary button can be
-// disabled, the HTML field has a wrapper that records what was painted.
+// --- Fix attendance: tick the pair → Save & rebuild ----------------------------
+// Owner, 21 Sep 2026: keep the compact Fix day dialog. A tick means "this punch
+// counts"; the type cell flips; one Shift box applies to the pair; unticked
+// punches are deleted (the fix log keeps a copy, Undo brings them back). The
+// After line is computed HERE from the ticks, so HR sees the row before it is
+// written. These drive the real dialog through a fake frappe.ui.Dialog that
+// behaves like Desk's: defaults become values, set_value fires onchange, the
+// primary button can be disabled or swapped, the HTML fields have wrappers that
+// record what was painted and which handlers were hung on them.
 const FD = "hrms.api.attendance_fix_day.";
-const TAPS = [
-	{
-		name: "CK-1",
-		employee: "HR-EMP-00069",
-		employee_name: "Norazlin",
-		shift_start: "2026-09-04 19:00:00",
-		time: "2026-09-04 20:02:00",
-	},
-	{
-		name: "CK-2",
-		employee: "HR-EMP-00069",
-		employee_name: "Norazlin",
-		shift_start: null,
-		time: "2026-09-06 08:01:00",
-	},
-];
-const PREVIEW = {
-	ok: true,
-	dry_run: true,
-	days: [
-		{
-			date: "2026-09-04",
-			blocked: null,
-			taps: [
-				{
-					name: "CK-1",
-					time: "2026-09-04 20:02:00",
-					log_type: "IN",
-					before: { shift: "7PM-3.30AM" },
-					after: { shift: "8AM-6PM" },
-					changed: true,
-				},
-			],
-			rows_to_cancel: [{ name: "HR-ATT-1", status: "Present", hours: 7.5, marked_by_hr: 1 }],
-			requests_kept: [
-				{
-					doctype: "OT Request",
-					name: "OTR-0007",
-					label: "OT Request OTR-0007 2 h (Approved) — OT hours on the row are recomputed from the punches; the request keeps its approval",
-				},
-			],
-			noise: [],
-			session: { in: "20:02:00", out: "03:30:00" },
-			result: "will rebuild from 20:02:00 to 03:30:00",
-			log: null,
-		},
-		{
-			date: "2026-09-05",
-			blocked: "Salary Slip SAL-1 already depends on this day.",
-			taps: [],
-			rows_to_cancel: [],
-			noise: [{ name: "CK-9", why: "duplicate within 2 minutes" }],
-			session: null,
-			result: "refused: payroll",
-			log: null,
-		},
+const EMP = "HR-EMP-00071";
+
+// Norazmi, 27 Aug: four punches, three rows. The engine's pair is 21:00 → 08:07.
+function tap(name, time, log_type, extra) {
+	return Object.assign(
+		{ name, time, log_type, shift: "7PM-3.30AM", state: "counted", counted: false },
+		extra || {},
+	);
+}
+const DAY_27 = {
+	employee: EMP,
+	employee_name: "Norazmi",
+	date: "2026-08-27",
+	seen_modified: "2026-08-28 09:00:00.000001",
+	taps: [
+		tap("CK-A", "2026-08-27 08:00:00", "IN", { shift: "8AM-6PM", counted: true }),
+		tap("CK-B", "2026-08-27 19:00:00", "OUT", { shift: "8AM-6PM", counted: true }),
+		tap("CK-C", "2026-08-27 21:00:00", "IN", { counted: true, suggested: "IN" }),
+		tap("CK-D", "2026-08-28 08:07:00", "OUT", { counted: true, suggested: "OUT" }),
+		tap("CK-X", "2026-08-27 21:00:30", "IN", { state: "skipped", why: "burst within 45 s" }),
 	],
-	totals: { days: 2, rebuilt: 1, open: 0, blocked: 1, restamped: 1, noise: 1, cancelled: 1, kept: 1 },
+	attendance: [
+		{ name: "HR-ATT-1", shift: "8AM-6PM", status: "Present", in_time: "08:00:00", out_time: "19:00:00", hours: 11, overtime: 0 },
+		{ name: "HR-ATT-2", shift: "7PM-3.30AM", status: "Present", in_time: "21:00:00", out_time: "08:07:00", hours: 11.1, overtime: 0 },
+		{ name: "HR-ATT-3", shift: null, status: "Absent", in_time: null, out_time: null, hours: 0, overtime: 0 },
+	],
+	blocked: null,
 };
-const APPLIED = Object.assign({}, PREVIEW, {
-	dry_run: false,
-	days: [
-		Object.assign({}, PREVIEW.days[0], { result: "Present 7.4 h", log: "LOG-0004" }),
-		PREVIEW.days[1],
+// 29 Aug: a plain day whose OUT came from an approved Forgotten check-out.
+const DAY_29 = {
+	employee: EMP,
+	employee_name: "Norazmi",
+	date: "2026-08-29",
+	seen_modified: "2026-08-29 20:00:00.000000",
+	taps: [
+		tap("CK-E", "2026-08-29 09:00:00", "IN", { shift: "8AM-6PM", counted: true, suggested: "IN" }),
+		tap("CK-F", "2026-08-29 18:00:00", "OUT", {
+			shift: "8AM-6PM",
+			counted: true, suggested: "OUT",
+			linked_request: "Attendance Request HR-ATR-0007",
+		}),
 	],
-});
+	attendance: [],
+	blocked: null,
+};
+const DAYS = { "2026-08-27": DAY_27, "2026-08-29": DAY_29 };
+const LIST_ROWS = {
+	"CK-A": { name: "CK-A", employee: EMP, shift_start: "2026-08-27 08:00:00", time: "2026-08-27 08:00:00", shift: "8AM-6PM" },
+	"CK-D": { name: "CK-D", employee: EMP, shift_start: "2026-08-27 19:00:00", time: "2026-08-28 08:07:00", shift: "7PM-3.30AM" },
+	"CK-E": { name: "CK-E", employee: EMP, shift_start: "2026-08-29 08:00:00", time: "2026-08-29 09:00:00", shift: "8AM-6PM" },
+	"CK-Z": { name: "CK-Z", employee: "HR-EMP-00002", shift_start: null, time: "2026-08-27 09:00:00", shift: null },
+};
 
 class FakeWrapper {
 	constructor() {
@@ -229,7 +218,7 @@ class FakeWrapper {
 		return this;
 	}
 	on(event, selector, handler) {
-		this.handlers[selector] = handler;
+		this.handlers[`${event.split(".")[0]} ${selector}`] = handler;
 		return this;
 	}
 	find() {
@@ -243,6 +232,9 @@ class FakeDialog {
 		this.values = {};
 		this.fields_dict = {};
 		this.primary_disabled = false;
+		this.primary_label = opts.primary_action_label;
+		this.primary = opts.primary_action;
+		this.hidden = false;
 		for (const df of opts.fields) {
 			if (!df.fieldname) continue;
 			this.values[df.fieldname] = df.default === undefined ? null : df.default;
@@ -251,7 +243,9 @@ class FakeDialog {
 		FakeDialog.opened.push(this);
 	}
 	show() {}
-	hide() {}
+	hide() {
+		this.hidden = true;
+	}
 	get_value(name) {
 		return this.values[name];
 	}
@@ -266,209 +260,338 @@ class FakeDialog {
 	enable_primary_action() {
 		this.primary_disabled = false;
 	}
-	preview() {
-		return this.opts.secondary_action();
+	set_primary_action(label, click) {
+		this.primary_label = label;
+		this.primary = click;
 	}
-	apply() {
-		return this.opts.primary_action(this.values);
+	// what HR sees
+	screen() {
+		return this.fields_dict.screen.$wrapper.painted;
 	}
-	table() {
-		return this.fields_dict.days.$wrapper.painted;
+	summary() {
+		return this.fields_dict.summary.$wrapper.painted;
+	}
+	// what HR does: the handlers the bundle hung on the screen, fed a fake event
+	fire(event, selector, attrs) {
+		const handler = this.fields_dict.screen.$wrapper.handlers[`${event} ${selector}`];
+		assert.ok(handler, `no ${event} handler for ${selector}`);
+		return handler({
+			preventDefault() {},
+			currentTarget: Object.assign(
+				{ getAttribute: (key) => (attrs[key] === undefined ? null : attrs[key]) },
+				attrs,
+			),
+		});
+	}
+	tick(name, checked) {
+		return this.fire("change", "[data-fd-tick]", { "data-fd-tick": name, checked });
+	}
+	flip(name) {
+		return this.fire("click", "[data-fd-flip]", { "data-fd-flip": name });
+	}
+	act(action) {
+		return this.fire("click", "[data-fd-action]", { "data-fd-action": action });
+	}
+	save() {
+		return this.primary(this.values);
 	}
 }
 FakeDialog.opened = [];
 
-function fixDays({ confirm_answer = true } = {}) {
+function fixAttendance({ ticked = ["CK-A", "CK-D"], prompt_time = "08:07", throw_on_save = null } = {}) {
 	const { settings, sandbox } = loadDesk([BUNDLE, LIST]);
 	const calls = [];
-	const confirms = [];
 	let refreshed = 0;
+	let logs = 0;
 	FakeDialog.opened = [];
 	sandbox.frappe.ui.Dialog = FakeDialog;
-	sandbox.frappe.db.get_list = () => Promise.resolve(TAPS);
-	sandbox.frappe.confirm = (text, yes, no) => {
-		confirms.push(text);
-		return confirm_answer ? yes() : no();
-	};
+	sandbox.frappe.db.get_list = (doctype, { filters }) =>
+		Promise.resolve(filters.name[1].map((name) => LIST_ROWS[name]));
+	sandbox.frappe.prompt = (fields, then) => then({ time: `${prompt_time}:00` });
+	sandbox.frappe.confirm = (text, yes) => yes();
+	sandbox.frappe.show_alert = () => {};
 	sandbox.frappe.call = ({ method, args }) => {
 		calls.push({ method, args: JSON.parse(JSON.stringify(args)) });
-		if (method === FD + "fix_days") {
-			return Promise.resolve({ message: args.dry_run ? PREVIEW : APPLIED });
+		if (method === FD + "get_day") {
+			return Promise.resolve({ message: JSON.parse(JSON.stringify(DAYS[args.date])) });
+		}
+		if (method === FD + "save_day") {
+			if (throw_on_save) return Promise.reject(new Error(throw_on_save));
+			logs += 1;
+			return Promise.resolve({
+				message: {
+					ok: true,
+					log: `LOG-${logs}`,
+					before: { days: {} },
+					after: {
+						days: {
+							[args.date]: [
+								{ name: "HR-ATT-9", shift: "7PM-3.30AM", status: "Present", in_time: "21:00:00", out_time: "08:07:00", hours: 11.1, overtime: 0 },
+							],
+						},
+					},
+					rebuild: {},
+					warnings: args.date === "2026-08-27" ? ["21:00 is outside 8AM-6PM; the roster says 7PM-3.30AM"] : [],
+				},
+			});
 		}
 		if (method === FD + "undo_fix") return Promise.resolve({ message: { ok: true } });
 		return Promise.resolve({ message: null });
 	};
-	const listview = fakeListview(TAPS.map((tap) => ({ name: tap.name })));
+	const listview = fakeListview(ticked.map((name) => ({ name })));
 	listview.refresh = () => (refreshed += 1);
 	settings["Employee Checkin"].onload.call(settings["Employee Checkin"], listview);
-	const button = listview.page.buttons.find((b) => b.label === "Fix days");
-	assert.ok(button, "HR finds Fix days beside Fix day");
+	const button = listview.page.buttons.find((b) => b.label === "Fix attendance");
+	assert.ok(button, "HR finds Fix attendance");
 	return {
 		open: () => button.handler().then(() => FakeDialog.opened[0]),
 		calls,
-		confirms,
 		messages: sandbox.__messages,
 		refreshed: () => refreshed,
 	};
 }
+const saves = (calls) => calls.filter((c) => c.method === FD + "save_day");
 
-test("ticking two days of one employee opens Fix days on that employee and range", async () => {
-	const dialog = await fixDays().open();
-	assert.strictEqual(dialog.opts.title, "Fix days");
-	assert.strictEqual(dialog.get_value("employee"), "HR-EMP-00069");
-	assert.strictEqual(dialog.get_value("employee_name"), "Norazlin");
-	assert.strictEqual(
-		dialog.get_value("from_date"),
-		"2026-09-04",
-		"shift_start wins over the tap's own date",
-	);
-	assert.strictEqual(dialog.get_value("to_date"), "2026-09-06");
-	assert.strictEqual(dialog.fields_dict.employee.df.read_only, 1);
+test("the dialog opens on the earliest ticked day, pre-ticks the engine's pair, no six buttons", async () => {
+	const { open, calls } = fixAttendance();
+	const dialog = await open();
+	assert.strictEqual(dialog.opts.title, "Fix attendance");
+	assert.deepStrictEqual(calls[0], { method: FD + "get_day", args: { employee: EMP, date: "2026-08-27" } });
+	const screen = dialog.screen();
+	assert.match(screen, /Norazmi/);
+	assert.match(screen, /data-fd-tick="CK-C" checked/);
+	assert.match(screen, /data-fd-tick="CK-D" checked/);
+	// A and B count today but the engine did not suggest them: the suggestion
+	// wins over "counted" (it is read per tap, as get_day sends it)
+	assert.doesNotMatch(screen, /data-fd-tick="CK-A" checked/);
+	assert.doesNotMatch(screen, /data-fd-tick="CK-B" checked/);
+	assert.doesNotMatch(screen, /data-fd-tick="CK-A" checked/);
+	for (const gone of [
+		"Rebuild this day",
+		"Pair as one session",
+		"Move to shift",
+		"Ignore tap",
+		"Bring tap back",
+		"Add missing tap",
+		"remove the duplicate first",
+		"HR-ATT-1",
+	]) {
+		assert.ok(!screen.includes(gone), `${gone} is gone from the screen`);
+	}
 	assert.strictEqual(dialog.fields_dict.shift.df.options, "Shift Type");
+	assert.strictEqual(dialog.get_value("shift"), "7PM-3.30AM", "the ticked IN's shift");
 	assert.strictEqual(dialog.fields_dict.reason.df.reqd, 1);
+	assert.strictEqual(dialog.primary_label, "Save & rebuild");
 });
 
-test("Preview asks the server with dry_run=1 and the chosen shift, writing nothing", async () => {
-	const { open, calls } = fixDays();
+test("the After line is computed from the ticks; unticking says how many will be deleted", async () => {
+	const dialog = await fixAttendance().open();
+	assert.match(
+		dialog.summary(),
+		/After: Present · 21:00 → 08:07 · 11\.1 h · lands on 27 Aug \(7PM-3\.30AM\)/,
+	);
+	assert.match(dialog.summary(), /2 punches will be deleted/);
+	assert.match(dialog.summary(), /Now: .*HR-ATT-1.*HR-ATT-2.*HR-ATT-3/, "today's rows in one line");
+	assert.match(dialog.screen(), /fd-struck[^>]*data-fd-row="CK-A"/, "an unticked row is struck through");
+	// HR's ticks win over the suggestion
+	dialog.tick("CK-C", false);
+	dialog.tick("CK-D", false);
+	dialog.tick("CK-A", true);
+	dialog.tick("CK-B", true);
+	assert.match(
+		dialog.summary(),
+		/After: Present · 08:00 → 19:00 · 11\.0 h · lands on 27 Aug \(8AM-6PM\)/,
+	);
+	assert.strictEqual(dialog.get_value("shift"), "8AM-6PM", "the shift follows the ticked IN");
+	assert.strictEqual(dialog.primary_disabled, false);
+});
+
+test("two ticked pairs are one row with the hours added up", async () => {
+	const dialog = await fixAttendance().open();
+	dialog.tick("CK-A", true);
+	dialog.tick("CK-B", true);
+	assert.match(
+		dialog.summary(),
+		/After: Present · 08:00 → 08:07 · 22\.1 h \(two sessions, added up\) · lands on 27 Aug/,
+	);
+});
+
+test("G4: not one IN and one OUT per session turns Save off with the reason", async () => {
+	const dialog = await fixAttendance().open();
+	dialog.flip("CK-D");
+	assert.match(dialog.screen(), /data-fd-flip="CK-D"[^>]*>IN</, "the type cell flipped");
+	assert.match(dialog.summary(), /Tick 1 IN and 1 OUT for each session \(ticked: 2 IN, 0 OUT\)/);
+	assert.doesNotMatch(dialog.summary(), /After:/);
+	assert.strictEqual(dialog.primary_disabled, true);
+	dialog.flip("CK-D");
+	assert.strictEqual(dialog.primary_disabled, false, "flipping back restores Save");
+});
+
+test("G6: an IN after an OUT is refused", async () => {
+	const dialog = await fixAttendance().open();
+	dialog.tick("CK-D", false);
+	dialog.tick("CK-B", true);
+	assert.match(dialog.summary(), /IN after OUT: 21:00 IN comes after 19:00 OUT/);
+	assert.strictEqual(dialog.primary_disabled, true);
+});
+
+test("G3: a pair longer than 20 h is refused", async () => {
+	const dialog = await fixAttendance().open();
+	dialog.tick("CK-C", false);
+	dialog.tick("CK-A", true);
+	assert.match(dialog.summary(), /this pair is 24\.1 h long/);
+	assert.strictEqual(dialog.primary_disabled, true);
+});
+
+test("G10: overlapping sessions are refused", async () => {
+	const dialog = await fixAttendance().open();
+	dialog.tick("CK-A", true);
+	dialog.tick("CK-B", true);
+	dialog.flip("CK-B");
+	dialog.flip("CK-C");
+	assert.match(dialog.summary(), /sessions overlap: 19:00 IN opens before 08:00 IN is closed/);
+	assert.strictEqual(dialog.primary_disabled, true);
+});
+
+test("G5: one tick is saved as open only through Leave open", async () => {
+	const { open, calls } = fixAttendance();
 	const dialog = await open();
-	dialog.set_value("shift", "8AM-6PM");
-	await dialog.preview();
-	assert.deepStrictEqual(calls, [
+	dialog.tick("CK-D", false);
+	assert.match(dialog.summary(), /one punch ticked: add its pair or Leave open/);
+	assert.strictEqual(dialog.primary_disabled, true);
+	assert.match(dialog.screen(), /data-fd-action="leave_open"/);
+	dialog.act("leave_open");
+	assert.match(dialog.summary(), /After: no row \(left open\) · 21:00 IN/);
+	assert.strictEqual(dialog.primary_disabled, false);
+	dialog.set_value("reason", "she never clocked out");
+	await dialog.save();
+	assert.strictEqual(saves(calls)[0].args.leave_open, 1);
+	assert.deepStrictEqual(JSON.parse(saves(calls)[0].args.pairs), [
+		{ in: "CK-C", out: null, shift: "7PM-3.30AM" },
+	]);
+});
+
+test("Save & rebuild sends the ticks as given, once per touched day, then offers Undo", async () => {
+	const { open, calls, refreshed } = fixAttendance();
+	const dialog = await open();
+	await dialog.save();
+	assert.strictEqual(saves(calls).length, 0, "no reason: nothing written");
+	dialog.set_value("reason", "two rows for one night");
+	await dialog.save();
+	assert.deepStrictEqual(saves(calls), [
 		{
-			method: FD + "fix_days",
+			method: FD + "save_day",
 			args: {
-				dry_run: 1,
-				employee: "HR-EMP-00069",
-				from_date: "2026-09-04",
-				to_date: "2026-09-06",
-				shift: "8AM-6PM",
+				employee: EMP,
+				date: "2026-08-27",
+				pairs: JSON.stringify([{ in: "CK-C", out: "CK-D", shift: "7PM-3.30AM" }]),
+				delete: JSON.stringify(["CK-A", "CK-B"]),
+				reason: "two rows for one night",
+				leave_open: 0,
+				seen_modified: "2026-08-28 09:00:00.000001",
 			},
 		},
 	]);
-	assert.match(dialog.table(), /nothing written yet/);
-});
-
-test("Apply stays disabled until a preview has run, and again after a field changes", async () => {
-	const { open, calls, messages } = fixDays();
-	const dialog = await open();
-	assert.strictEqual(dialog.primary_disabled, true, "no preview yet");
-	dialog.set_value("reason", "wrong roster");
-	await dialog.apply();
-	assert.strictEqual(calls.filter((c) => !c.args.dry_run).length, 0, "nothing written");
-	assert.match(messages[messages.length - 1], /Preview first/);
-
-	await dialog.preview();
-	assert.strictEqual(dialog.primary_disabled, false, "previewed: Apply is offered");
-	dialog.set_value("to_date", "2026-09-07");
-	assert.strictEqual(dialog.primary_disabled, true, "the inputs changed: the preview is stale");
-	await dialog.apply();
-	assert.strictEqual(calls.filter((c) => !c.args.dry_run).length, 0, "stale preview: no write");
-});
-
-test("Apply confirms with the totals, sends dry_run=0 with the reason, refreshes the list", async () => {
-	const { open, calls, confirms, refreshed } = fixDays();
-	const dialog = await open();
-	dialog.set_value("shift", "8AM-6PM");
-	await dialog.preview();
-	dialog.set_value("reason", "night shift was rostered by mistake");
-	await dialog.apply();
-	assert.deepStrictEqual(confirms, ["Rebuild 1 days, cancel 1 rows?"]);
-	assert.deepStrictEqual(calls[1], {
-		method: FD + "fix_days",
-		args: {
-			dry_run: 0,
-			reason: "night shift was rostered by mistake",
-			employee: "HR-EMP-00069",
-			from_date: "2026-09-04",
-			to_date: "2026-09-06",
-			shift: "8AM-6PM",
-		},
-	});
+	assert.match(dialog.summary(), /HR-ATT-9/, "the result replaces the After line");
+	assert.match(dialog.summary(), /alert-warning[^]*21:00 is outside 8AM-6PM/, "warnings are yellow notes");
+	assert.strictEqual(dialog.primary_label, "Undo");
 	assert.strictEqual(refreshed(), 1);
-	assert.strictEqual(
-		dialog.primary_disabled,
-		true,
-		"applied: a second Apply needs a new preview",
+	await dialog.save();
+	assert.deepStrictEqual(
+		calls.filter((c) => c.method === FD + "undo_fix"),
+		[{ method: FD + "undo_fix", args: { log_entry: "LOG-1", reason: "two rows for one night" } }],
 	);
-});
-
-test("a preview without a reason never applies", async () => {
-	const { open, calls, messages } = fixDays();
-	const dialog = await open();
-	await dialog.preview();
-	await dialog.apply();
-	assert.strictEqual(calls.length, 1, "only the preview reached the server");
-	assert.match(messages[messages.length - 1], /Say why/);
-});
-
-test("the table shows each day: restamp, row to cancel, noise, and a blocked day's reason", async () => {
-	const dialog = await fixDays().open();
-	await dialog.preview();
-	const table = dialog.table();
-	assert.match(
-		table,
-		/IN 20:02 7PM-3\.30AM → <b>8AM-6PM<\/b>/,
-		"before → after on a changed punch",
-	);
-	assert.match(table, /Present 7\.5 h \(HR\)/, "the row to cancel, marked HR");
-	assert.match(table, /CK-9: duplicate within 2 minutes/, "noise with its reason");
-	assert.match(table, /will rebuild from 20:02:00 to 03:30:00/);
-	assert.match(
-		table,
-		/table-warning[^]*indicator-pill orange">Salary Slip SAL-1 already depends on this day\./,
-		"the blocked day in the refusal colour with its reason",
-	);
-	assert.match(
-		table,
-		/2 days · 1 rebuilt · 0 left open · 1 blocked · 1 punches restamped · 1 noise · 1 rows cancelled/,
-	);
-	assert.doesNotMatch(table, /Undo/, "nothing to undo before Apply");
-});
-
-test("a day rebuilt through an approved request shows it in the Kept column, untouched", async () => {
-	// Owner ruling, 21 Sep 2026: the request keeps its approval; the row is rebuilt
-	const dialog = await fixDays().open();
-	await dialog.preview();
-	const table = dialog.table();
-	assert.match(table, /<th>Kept<\/th>/, "the column is there");
-	assert.match(
-		table,
-		/OT Request OTR-0007 2 h \(Approved\) — OT hours on the row are recomputed from the punches; the request keeps its approval/,
-	);
-	assert.match(table, /1 rows cancelled · 1 requests kept/);
-	assert.doesNotMatch(table, /cancel .*OTR-0007/, "nothing offers to cancel the request");
-});
-
-test("after Apply each rebuilt day offers Undo, which undoes that day's own log", async () => {
-	const { open, calls, refreshed } = fixDays();
-	const dialog = await open();
-	await dialog.preview();
-	dialog.set_value("reason", "wrong roster");
-	await dialog.apply();
-	const table = dialog.table();
-	assert.match(table, /Present 7\.4 h/, "actual results replace the preview");
-	assert.match(table, /data-fd-undo="LOG-0004"/);
-	assert.strictEqual(
-		(table.match(/data-fd-undo=/g) || []).length,
-		1,
-		"a blocked day has no Undo",
-	);
-	await dialog.fields_dict.days.$wrapper.handlers["[data-fd-undo]"]({
-		currentTarget: { getAttribute: () => "LOG-0004" },
-	});
-	assert.deepStrictEqual(calls[2], { method: FD + "undo_fix", args: { log_entry: "LOG-0004" } });
+	assert.strictEqual(calls[calls.length - 1].method, FD + "get_day", "the day is read again");
+	assert.strictEqual(dialog.primary_label, "Save & rebuild", "Undo done: Save is back");
 	assert.strictEqual(refreshed(), 2);
 });
 
-test("declining the confirm writes nothing", async () => {
-	const { open, calls } = fixDays({ confirm_answer: false });
+test("+ Add OUT adds a ticked new row and is sent as a time", async () => {
+	const { open, calls } = fixAttendance({ prompt_time: "08:07" });
 	const dialog = await open();
-	await dialog.preview();
-	dialog.set_value("reason", "wrong roster");
-	await dialog.apply();
-	assert.strictEqual(calls.length, 1);
+	dialog.tick("CK-D", false);
+	dialog.act("add_out");
+	assert.match(dialog.screen(), /new/);
+	assert.match(
+		dialog.summary(),
+		/After: Present · 21:00 → 08:07 · 11\.1 h/,
+		"a clock before the IN is the next morning",
+	);
+	dialog.set_value("reason", "reader missed the out");
+	await dialog.save();
+	assert.deepStrictEqual(JSON.parse(saves(calls)[0].args.pairs), [
+		{ in: "CK-C", out: { time: "08:07" }, shift: "7PM-3.30AM" },
+	]);
+	assert.deepStrictEqual(JSON.parse(saves(calls)[0].args.delete), ["CK-A", "CK-B", "CK-D"]);
 });
 
-test("a non-HR user is not offered Fix days", () => {
-	assert.ok(!controls({ has_role: false }).labels.includes("Fix days"));
+test("the Shift box applies to the pair", async () => {
+	const { open, calls } = fixAttendance();
+	const dialog = await open();
+	dialog.set_value("shift", "8AM-6PM");
+	assert.match(dialog.summary(), /\(8AM-6PM\)/);
+	dialog.set_value("reason", "wrong roster");
+	await dialog.save();
+	assert.deepStrictEqual(JSON.parse(saves(calls)[0].args.pairs)[0].shift, "8AM-6PM");
 });
+
+test("a hidden punch is listed greyed with why; ticking it restores it", async () => {
+	const dialog = await fixAttendance().open();
+	assert.match(dialog.screen(), /text-muted[^]*CK-X[^]*burst within 45 s/);
+	dialog.tick("CK-X", true);
+	assert.match(dialog.summary(), /Tick 1 IN and 1 OUT/, "a restored IN takes part in the rule");
+});
+
+test("several ticked days: Next day walks them and Save & rebuild counts the visited days", async () => {
+	const { open, calls } = fixAttendance({ ticked: ["CK-D", "CK-E"] });
+	const dialog = await open();
+	assert.match(dialog.screen(), /data-fd-nav="next"/);
+	assert.doesNotMatch(dialog.screen(), /data-fd-nav="prev"/);
+	assert.strictEqual(dialog.primary_label, "Save & rebuild");
+	await dialog.fire("click", "[data-fd-nav]", { "data-fd-nav": "next" });
+	assert.strictEqual(calls[1].args.date, "2026-08-29");
+	assert.match(dialog.screen(), /2026-08-29/);
+	assert.match(dialog.screen(), /data-fd-nav="prev"/);
+	assert.strictEqual(dialog.get_value("shift"), "8AM-6PM", "the shift box follows the day");
+	assert.strictEqual(dialog.primary_label, "Save & rebuild 2 days");
+	dialog.set_value("reason", "night glitch");
+	await dialog.save();
+	assert.deepStrictEqual(
+		saves(calls).map((c) => c.args.date),
+		["2026-08-27", "2026-08-29"],
+		"one save per visited day, in date order",
+	);
+	assert.strictEqual(saves(calls)[1].args.delete, "[]");
+});
+
+test("a punch from an approved request cannot be unticked", async () => {
+	const { open } = fixAttendance({ ticked: ["CK-E"] });
+	const dialog = await open();
+	assert.match(dialog.screen(), /data-fd-tick="CK-F" checked disabled/);
+	assert.match(dialog.screen(), /from approved request/);
+	dialog.tick("CK-F", false);
+	assert.match(dialog.summary(), /After: Present · 09:00 → 18:00/);
+	assert.doesNotMatch(dialog.summary(), /will be deleted/);
+});
+
+test("two people's punches are refused", async () => {
+	const { open, messages } = fixAttendance({ ticked: ["CK-A", "CK-Z"] });
+	await open();
+	assert.strictEqual(FakeDialog.opened.length, 0);
+	assert.match(messages[messages.length - 1], /Tick taps of one person/);
+});
+
+test("a refusal from the server leaves Save on and writes no further day", async () => {
+	const { open, calls } = fixAttendance({
+		ticked: ["CK-D", "CK-E"],
+		throw_on_save: "reopen the day",
+	});
+	const dialog = await open();
+	await dialog.fire("click", "[data-fd-nav]", { "data-fd-nav": "next" });
+	dialog.set_value("reason", "x");
+	await dialog.save();
+	assert.strictEqual(saves(calls).length, 1, "the second day is not attempted");
+	assert.strictEqual(dialog.primary_label, "Save & rebuild 2 days");
+	assert.strictEqual(dialog.primary_disabled, false);
+});
+
