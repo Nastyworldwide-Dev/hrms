@@ -43,3 +43,22 @@ before landing), and a hook review.
    and the request timeline shows nothing extra.
 4. Leave Application → menu → View → Version history exists on a fresh edit.
 5. Expense Claim review sheet on the approver's phone shows Approve/Reject.
+
+## Added after R3: one "Fix attendance" button (00fb350ba..ae09f78bd)
+
+Owner, 21 Sep: "Fix day" and "Fix days" were confusing. One button now. Same dialog, four changes:
+tick = this punch counts (the engine's pair is pre-ticked; your ticks win) · click IN/OUT to flip ·
+one Shift box for the pair · **Save & rebuild** + Undo. Unticked punches are deleted (the fix log keeps
+a copy; Undo brings them back). Every old row of the day is cancelled and one new row is written from
+the pair. Screenshot from the real Desk: `docs/glass/fix-attendance-dialog.png`.
+
+Guards (plain sentences, before any write): one IN + one OUT per pair · IN before OUT · a pair at
+most 20 h · pairs never overlap · one punch in one pair · a punch from an approved request stays ·
+a punch mirrored from a still-locked site is refused · a day that changed since you opened it is
+refused. Times outside the chosen shift are a warning naming the roster's shift.
+
+Setting to know: two pairs in one day give ONE row with hours **added** only when the Shift Type's
+"Working hours calculation" is *Every Valid Check-in and Check-out*; *First Check-in and Last
+Check-out* pays the gap. Check the live shift types before relying on two-pair days.
+
+Site update: no schema change; rebuild the Desk bundle (`fix_day.bundle.js`) and restart workers.
