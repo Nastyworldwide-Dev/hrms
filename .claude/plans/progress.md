@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-the api, company-scope, attachment and remote_checkin suites green.
-NEXT: the owner deploys; S3 is untouched — the File still inserts, so the S3
-hook still fires.
-- 2026-09-18T08:17:06Z PUSH: nz-glass @ a17725dc2
-- 2026-09-21T03:15:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-21T03:15:14Z COMMIT: bdbfd5005 fix(attendance-request): a request whose day was marked since filing can still be decided → review dispatched
-- 2026-09-21T03:16:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-21T03:16:08Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-21T03:16:11Z COMMIT: 65ccdd6fc fix(roles): an approver's User is not re-saved when the role is already there → review dispatched
-- 2026-09-21T03:17:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-21T03:17:57Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
-- 2026-09-21T03:18:00Z COMMIT: f085ff325 fix(pwa): a refused request decision shows one toast, not two → review dispatched
-- 2026-09-21T03:40Z TRIAGE (6 reports, 21 Sep): (1)+(5)+(6) "manager cannot approve attendance
-request" = two refusals in sequence. First "already marked for an overlapping shift" —
-fixed 17 Sep (d4494a658), screenshot predates it (Tue 15 Sep). Second "No attendance to
-create … status unchanged" — a FILING rule re-run at DECISION time (validate runs on the
-decide() save); the day had been marked since filing so the request could be neither
-approved nor rejected. REPAIR: bdbfd5005 (filing check judges status == Open only).
-(4) Amy's roles "changed by themselves" — Frappe re-derives roles from the Role Profile on
-EVERY User save (populate_role_profile_roles); update_approver_role re-saved her User on
-every Employee save naming her approver. REPAIR: 65ccdd6fc (save only when a role is
-missing). Site note: roles beyond the profile must go INTO the profile.
-PWA double toast on refused decisions: f085ff325.
-(3) "Complete the workaround, impact, location and requested flow" — NOT in this repo, NOT
-in upstream Helpdesk (gh code search 0 hits): a Server/Client Script or Ticket Template
-rule on the live site; the Nadi form does not carry those fields. Owner checks Desk →
-Server Script / Client Script filtered on HD Ticket.
-(2) "unable to clock in china" — screenshot shows the lenient path working (outside
-1000 m → sent to approver). No error text; the punch, if refused, needs its message.
-Note "Last check-out 07:56 pm" one minute before the IN attempt: resolve_punch_type turns
-an IN inside a live session into an OUT — Hanif's 16 Sep Employee Checkin rows (log_type,
-comments "Recorded as OUT…") decide it.
-EVIDENCE: 2 (mapped) — 3 bench-free suites red before, green after; 3 attendance-request
-suites + loudRequest (8) green.
-NEXT: reviews on bdbfd5005 / 65ccdd6fc / f085ff325, push, HANDOFF.md; owner deploys and
-checks the HD Ticket script + Amy's User Version log.
-- 2026-09-21T03:20:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-21T03:20:02Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
-- 2026-09-21T03:20:06Z COMMIT: d45e1fbfa fix(pwa): a refused plain submit or cancel shows one toast, not two → review dispatched
-EVIDENCE: 6 (reviews) — bdbfd5005, 65ccdd6fc, f085ff325, d45e1fbfa all DEPLOY, no Critical;
-finalize double-toast taken from the f085ff325 Warning as d45e1fbfa.
-NEXT: the owner deploys nz-glass; checks Server Script / Client Script on HD Ticket for the
-"Complete the workaround…" rule; reads Amy's User Version log; gets the China clock-in
-error text (or Hanif's 16 Sep Employee Checkin rows).
-- 2026-09-21T03:21:52Z COMMIT: dd833debc docs(glass): handoff for the 21 Sep triage → review dispatched
-NEXT: the owner deploys nz-glass (dd833debc); then the HD Ticket script text, Amy's User Version log, and the China clock-in error text come back here.
-- 2026-09-21T03:23:20Z COMMIT: 690cd5417 chore: progress NEXT after the 21 Sep triage → review dispatched
-- 2026-09-21T03:39Z NEXT: full-stack NADI audit (Fix Day / approval status / attendance correction) — spec confirm, then read-only audit report before edits.
-- 2026-09-21T03:39:27Z COMMIT: ff7ef690b chore: progress NEXT for the 21 Sep full-stack audit → review dispatched
-- 2026-09-21T04:04Z EVIDENCE: audit written docs/glass/audit-2026-09-21.md (C4 H16 M30 L28); no code touched.
-NEXT: owner reads the audit; on go, slice 1 (status truth on Home: socket reconnect + my_* reload + 3 controllers publish_update) — red test first.
-- 2026-09-21T04:04:04Z COMMIT: ab27e8a22 docs(glass): 21 Sep full-stack audit — approval status, Fix Day, correction → review dispatched
-- 2026-09-21T04:44Z EVIDENCE: audit v2 written docs/glass/audit-2026-09-21.md (C8 H26 M46 L40); owner-hold no-op verified by reading owner_hold+classify_row; no code touched.
-NEXT: owner reads v2 + answers the 7 rulings; on go, Stage 1 slice 1 (owner_hold → classify_day, field-set invariant test) — red test first.
-- 2026-09-21T04:44:13Z COMMIT: 90c2d8f20 docs(glass): audit v2 — attendance pipeline first, workers, Fix Day 24→23, holidays → review dispatched
-- 2026-09-21T06:10:37Z COMMIT: 1245b6dd5 docs(plan): three-release plan for deterministic attendance → review dispatched
-- 2026-09-21T06:16:47Z PLAN: approved 2c92aa6e5cbf — # Plan — attendance made deterministic, three releases (21 Sep 2026)
-- 2026-09-21T06:16:54Z COMMIT: 02589baf4 chore(plan): Release 1 approved — tier risky, clarify record, two gaps closed → review dispatched
-- 2026-09-21T06:28:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-21T06:28:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-21T06:29:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-09-21T06:29:41Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-21T06:30:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-21T06:30:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-21T06:30:16Z EVIDENCE: 6 behaves — family hunt: class=a request's decision field was fenced on the decision PATH (decide/finalize) and on; 15 call site(s) given verdicts, 0 same-root ⟂2f3135137d60
-- 2026-09-21T06:30:17Z COMMIT: 4b9290e24 fix(approval): the decision field can only be changed by someone allowed to decide → review+cross-app dispatched
-- 2026-09-21T06:31:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-21T06:31:19Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
-- 2026-09-21T06:31:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-21T06:31:34Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
-- 2026-09-21T06:31:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-21T06:31:55Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
-- 2026-09-21T06:31:56Z EVIDENCE: 6 behaves — family hunt: class=a whitelisted transition endpoint trusted the caller's native DocPerm instead of na; 2 call site(s) given verdicts, 1 same-root ⟂9a9a4a68df92
-- 2026-09-21T06:31:57Z COMMIT: f1cd52161 fix(approval): finalize transitions request doctypes only → review dispatched
-- 2026-09-21T06:34:35Z COMMIT: e17799754 test(approval): no decision field may become editable after submit → review dispatched
-- 2026-09-21T06:35:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
-- 2026-09-21T06:35:44Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 0 extra test file(s) ⟂6439c1299438
-- 2026-09-21T06:35:46Z EVIDENCE: 6 behaves — family hunt: class=v16 moved the holiday truth to Holiday List + Holiday List Assignment, hid Employee; 1 call site(s) given verdicts, 0 same-root ⟂08ea94c68428
-- 2026-09-21T06:35:48Z COMMIT: 089904a03 fix(holidays): HR User can see the holiday calendar in Desk → review+cross-app dispatched
-- 2026-09-21T06:36:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-21T06:36:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-21T06:36:57Z COMMIT: c5d09ab5c fix(holidays): assignment derivation inserts nothing the second time → review dispatched
-- 2026-09-21T06:37:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-21T06:37:22Z COMMIT: 24767e60d feat(readiness): name the employees with no holiday calendar before payroll does → review dispatched
-- 2026-09-21T06:42Z EVIDENCE: 2 correct — test_day_evidence_is_read_one_way red on HEAD (8 failed: ('Present', 9.0) != ('Half Day', 4.0)), green with the loader (11 passed).
-- 2026-09-21T06:42Z EVIDENCE: 3 works — 20 mapped+dependent files green ONE AT A TIME (fix_day×6, recovery, rostered_shift, hr_asked, day_remark, day_remark_hooks, checkin_import, master_edit, endgame, take_over, tap_burst, ignored_tap, leave_day, writes_no_hours); the gate's bundled run fails test_day_remark::rejected_out via MagicMock employee_now leaked from test_remote_checkin_request_hooks — reproduced IDENTICALLY on a detached HEAD worktree (1 failed, 24 passed). Pre-existing leakage class (memory: whole-dir pytest unusable); gate skipped for this one commit.
-- 2026-09-21T06:48Z R1 landed so far: 4b9290e24 f1cd52161 e17799754 089904a03 c5d09ab5c 24767e60d 302974dec ef1da4adb bc3d1d53f (9). Running: A3a (guards/stopgap/heals), A3b (manual re-mark paths). Queued: A2 pairing table, A4 restamp job, A5 clock+index+sweep lock+sweep skips no-calendar.
-BACKLOG (from reviews): readiness 'replaced' per-employee false negative (24767e60d W); test locking linked_checkins narrowing (302974dec W); Shift Assignment System Manager permlevel-1 row without level 0 (pre-existing, Desk-save only); Property Setter drift check for allow_on_submit on decision fields.
-NEXT: integrate A3a G1+G3, then A3b, then A3a G2+G4; then A2/A4/A5.
-- 2026-09-21T07:00Z EVIDENCE: 6 (reviews) — 4b9290e24 f1cd52161 e17799754 089904a03 c5d09ab5c 24767e60d 302974dec ef1da4adb bc3d1d53f ca64457f6 b62a05384 eaf1ee70b a7daac645 all DEPLOY; 6d2bd53b8 reviewer cut off before running, I ran its 3-TZ suite (34/34 ×3) + eslint myself; its Important (grace ceiling) is 9a868abe0.
-- 2026-09-21T07:00:52Z COMMIT: 9a868abe0 chore: name the button that exists; mark the midnight grace as a ceiling → review+design dispatched
-- 2026-09-21T07:05:19Z COMMIT: c02d9ba67 test(attendance): the owner's pairing rule as a table against the real engine → review dispatched
-- 2026-09-21T07:09Z EVIDENCE: 2 correct — A3a groups red on ROOT per verifier (owner_hold 3/6, never_worse 5/25, hr_asked 4, fix_day 2, day_remark inline/held, rostered guard); green with the fix.
-- 2026-09-21T07:09Z EVIDENCE: 3 works — 22 mapped+dependent files green one at a time (list in this session); bundled gate skipped for the known MagicMock-leak class (identical failure reproduced on HEAD earlier today).
-- 2026-09-21T07:21:00Z COMMIT: aced32dd2 test(attendance): a system row whose punches all left the day is retired → review dispatched
-- 2026-09-21T07:26Z EVIDENCE: 2 correct — pairing table rows 5b/7/8/13b + 7c red on ROOT (verifier: 9 failed), green with the engine fix (23 passed, 4 xfail). EVIDENCE: 3 works — 24 mapped+dependent files green one at a time (bundled gate skipped: MagicMock-leak class).
-- 2026-09-21T07:31:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-21T07:31:45Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-21T07:31:47Z COMMIT: f940ba4d7 perf(attendance): hot-filter indexes, re-asserted on every migrate → review+cross-app dispatched
 - 2026-09-21T07:33Z RELEASE 1 COMPLETE: 26 commits 4b9290e24..f940ba4d7; notes docs/glass/release-1-notes.md; every fix verified fresh + reviewed (last two reviews in flight: A5 eba706551..f940ba4d7, cross-app f940ba4d7).
@@ -289,3 +192,59 @@ NEXT: slices 5 and 6 of the request-status unification wait on the owner — the
 NEXT: also open — .claude/plans/ticket-waiting-word-in-filters.md (the two list
   filters still offer the stored word; needs FormField Select to take
   {label, value} pairs first).
+- 2026-09-21T18:56:48Z COMMIT: aea8da075 docs(plans): record what the waiting word left open → review dispatched
+- 2026-09-21T18:56:48Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T18:58:56Z PUSH: nz-glass @ aea8da075
+- 2026-09-21T18:59:20Z PUSH: nz-glass @ c1200e921
+- 2026-09-21T18:59:20Z COMMIT: c1200e921 docs(glass): handoff for the one-waiting-word slice → review dispatched
+- 2026-09-21T19:01:13Z PUSH: nz-glass @ 61b16f93e
+- 2026-09-21T19:01:13Z COMMIT: 61b16f93e style(remote-approvals): the name gives ground on purpose, not by accident → review+design dispatched
+- 2026-09-21T19:01:25Z PUSH: nz-glass @ 5cc2206f2
+- 2026-09-21T19:01:25Z COMMIT: 5cc2206f2 docs(glass): point the handoff at the tip commit → review dispatched
+- 2026-09-21T19:10:36Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T20:05:00Z EVIDENCE: rung 5 (looks right) — nadi-2.0-mockup-4.html rendered in Chromium at 320/390/1280, light+dark, 12 states captured, 0 console + 0 page errors; axe-core WCAG 2 A/AA + 2.1 + 2.2 AA = 0 violations across 13 states.
+- 2026-09-21T20:05:00Z REPAIR: nine defects found by that pass and fixed — dev strip covering the app bar (assumed 38px, now measured), [hidden] losing to a class selector, focus ring drawn round <main>, tab labels colliding at 320px, calendar role="grid" without rows (now role="list"), and five AA contrast pairs (waiting chip, segmented control, caption on page bg, text+chips on sheet glass, three dark chips).
+- 2026-09-21T20:05:00Z LEARNING(how): text laid on CHROME GLASS has no fixed backdrop, so token inks tuned for a white card fall under AA there. Any .sub/.eyebrow/.chip inside a sheet needs its own ink rule. Cheapest check is axe with the sheet OPEN — a closed-sheet pass reports nothing.
+- 2026-09-21T20:05:00Z NEXT: owner reviews "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" (+ -notes.md); the folder is gitignored so neither file is committed. Thread F slice 5 still waits on the backdating ruling.
+- 2026-09-21T19:28:50Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T19:44:50Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T20:45:00Z REPAIR: mockup 4 reworked onto nadi-2.0-mockup.html at the owner's preference — Inter Tight/Inter web fonts, 390x844 device on a dark stage with the mockup toolbar, blurred light field + four-layer liquid glass, 11 screens + 5 sheets, switchable Lime B. Done as a rebase, not a merge: mockup 1 became the file, then every a11y fix the old mockup 4 had earned was re-applied on top.
+- 2026-09-21T20:45:00Z EVIDENCE: rung 5 (looks right) — axe-core WCAG 2 A/AA + 2.1 + 2.2 AA over 20 states (5 tabs, 5 secondary screens, 3 sheets, 4 dark, desktop, Lime B) = 0 violations; 12 Chromium screenshot states = 0 console + 0 page errors.
+- 2026-09-21T20:45:00Z REPAIR: mockup 1's palette carried eleven AA failures the old mockup 4 did not — four pill inks, the quiet caption on two surfaces, the weekday header, the row chevron, the out-of-range day opacity, dark ink3, and black UA text on button-as-surface. Every replacement computed as a luminance ratio, not eyeballed (e.g. 3.84 -> 6.10, 2.84 -> 5.87, 1.17 -> inherit).
+- 2026-09-21T20:45:00Z LEARNING(how): a <button> used as a SURFACE (button.panel / button.card) never inherits the app's ink — the .row reset only covers .row, so it keeps the UA's black and disappears on a dark surface at 1.17:1. It is invisible to a light-mode-only audit; only axe run in dark finds it.
+- 2026-09-21T20:45:00Z LEARNING(how): a coloured pill ink tuned for a white card fails on its own 14-26% wash. Measure each pill ink against the wash it actually sits on, and give light mode its own value while dark falls back to the token.
+- 2026-09-21T20:45:00Z NEXT: owner reviews the reworked "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" (+ rewritten -notes.md); the folder is gitignored (.gitignore:40) so neither file is committed — un-ignoring is his call. Thread F slice 5 still waits on the backdating ruling; deploy ecc3b8d7b..5cc2206f2 still pending.
+- 2026-09-21T20:01:29Z COMPACT: context compacted — read the last NEXT above before continuing
+
+2026-09-21T23:40:00Z REPAIR: mockup-4 reworked against 2026 standards — 13 findings, each an external rule plus a measured number in the file.
+2026-09-21T23:40:00Z EVIDENCE: rung 5 (looks right) — tab bar inside the frame at 320/360/390/414 (was +117..+262px off-screen); axe 0 violations across phone screens, 4 request states, dark, desktop; every visible button >=44px; 19 screenshots, 0 console + 0 page errors.
+2026-09-21T23:40:00Z LEARNING(fact): a flex child with no min-height:0 will not shrink below its content — that alone pushed an absolutely-positioned tab bar out of an overflow:hidden frame at EVERY width, not just the reported one. The user reported "missing on mobile"; measurement found it missing everywhere.
+2026-09-21T23:40:00Z LEARNING(how): for "too much scrolling", measure screen depth before cutting content. Eight of eleven screens already fit one viewport; the real defect was two NESTED horizontal scrollers, which is a different fix from pagination.
+2026-09-21T23:40:00Z DEAD END: axe reports target-size x13 on the desktop preview. It is the mockup's own 0.72 scale transform, not the layout — at real desktop size nothing is under 24px CSS. Not a finding.
+2026-09-21T23:40:00Z NEXT: owner reviews the reworked "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" + notes; the folder is gitignored (.gitignore:40) so neither file is committed — un-ignoring is his call.
+- 2026-09-21T20:44:24Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T21:15:48Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T21:44:34Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: mockup 4 defect-family audit closed. 7 families found by measurement,
+  all fixed: A contrast through glass (61 -> 0), B inert ellipsis on
+  display:inline (7 -> 0), C home depth (1.59 -> 1.36 viewports), D sheet detent
+  (226px top-edge swing -> 0), F tap targets (3 -> 0), G ragged column edge
+  (259/338px -> clean), G2 ragged inner edge (12px pill spread -> clean),
+  H text resting under floating chrome (12 -> 0).
+EVIDENCE: rung 2. a2 NO LOW-CONTRAST TEXT over 1754 verified boxes, both themes,
+  29 states, self-test 13.80:1. a3 no clipped text; sheet top=399 h=444 on all
+  30 days. a5 ANIMATES 19 frames 482->0. a7 under 44px: none, clean at 8 widths
+  320-1440. a8 COLUMN EDGE CLEAN + INNER EDGE CLEAN. a9 NO TEXT RESTS UNDER
+  CHROME. Visual read of 10 screenshots, light and dark.
+EVIDENCE: 6 probe defects found and fixed while closing the families, each
+  recorded in .claude/plans/family-mockup4.md because each would have hidden a
+  real defect later. The worst: offsetParent reports a collapsed <details> as
+  visible, so three probes were measuring text nobody can see.
+DEAD END: axe-core cannot answer contrast through backdrop-filter — it returns
+  INCOMPLETE, never a violation. The earlier "0 violations" verdict was the tool
+  declining to answer. Real-pixel sampling replaced it; notes file corrected.
+NEXT: owner's word on two things before Phase 2 starts — (1) un-ignore
+  "Nadi PWA UI UX 2.0" (.gitignore:40) so the mockup repairs can be committed,
+  or leave it uncommitted; (2) confirm Mockup 4 is signed off as the visual
+  contract, which is the gate he set for the full PWA 2.0 frontend build.
