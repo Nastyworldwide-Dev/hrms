@@ -87,7 +87,7 @@ class TestFixDayWritesNoResult(unittest.TestCase):
 		# button on one day is not the nightly job, and the "a person keyed this
 		# row" hold would otherwise leave the day exactly as HR found it. Still
 		# ONE engine and still no local maths, which is what this test is for.
-		self.assertIn("remark_day(employee, day, reason, hr_asked=True)", source)
+		self.assertIn("remark_day(employee, day, reason, hr_asked=True, requests_ok=requests_ok)", source)
 
 	def test_reading_the_result_for_the_screen_is_still_allowed(self):
 		"""The guard above must not be satisfied by showing HR nothing: the

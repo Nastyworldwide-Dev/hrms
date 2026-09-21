@@ -1,8 +1,9 @@
-# Family — fix(pwa): one status rule and buttons from the doc (21 Sep 2026)
-CLASS: the phone decided a request's status and its buttons from hand-typed word lists in eight places; a Desk-saved "Approved" on an unsubmitted row read as Approved; a whole-doc JSON equality hid Approve/Reject on any local touch.
-Changed: utils/requestStatus.js (ONE table mirroring api/approval.py DECIDE_THEN_SUBMIT: decision field + pending word per doctype; decided-but-docstatus-0 → pending word; Expense Claim infers docstatus from status), six *Item.vue + GStatusChip + FormView call it; RequestActionSheet Approve/Reject = isPending && hasPermission('approval'); decisionCapability edited-server-field check by VALUE (originalDoc is a JSON deep copy); api/__init__.py get_leave_applications sends docstatus.
-frontend/src/views/ReplacementLeave.vue not-affected — calls requestStatusChip (kept wrapper), same row as OT
-frontend/src/components/ListView.vue not-affected — generic list, no status chip of its own
-frontend/src/components/AttendanceRequestList.vue ticket — its field list lacks "status" (M3, worker note); shows the raw row today as before
-hrms/api/__init__.py get_expense_claims ticket — sends no docstatus; the PWA infers it from status (set_status writes Draft at docstatus 0), sound but a second source
-frontend/src/components/CheckInPanel.vue / LateCheckoutDialog.vue not-affected — not request rows
+# Family — feat(attendance): HR saves the pair, the day is rebuilt from it (21 Sep 2026)
+CLASS: new endpoint `save_day` on the Fix Day API; no existing behaviour changed except `undo_fix` (now re-inserts deleted taps, deletes typed ones) and `get_day` (three read-only additions).
+hrms/api/attendance_fix_day.py rebuild_day / pair_taps / move_tap / ignore_tap / restore_tap / add_tap / remove_duplicate_row not-affected — untouched; slice B retires their buttons, the endpoints stay for undo/history
+hrms/api/attendance_fix_days.py not-affected — range loop unchanged (retired from the UI in slice C, endpoint kept)
+hrms/public/js/fix_day.bundle.js ticket — slice B (next commit) calls save_day
+hrms/tests/test_fix_day_screen.py same-root — pinned endpoint list extended
+hrms/tests/test_fix_day_rebuilds_a_day.py same-root — pinned UNDOABLE tuple extended
+hrms/tests/test_attendance_fix_day_writes_no_hours.py same-root — pin amended for the R2 requests_ok call (was red on HEAD since e80c18259)
+hrms/sync/checkin_import.py not-affected — already honours Deleted Document for mirrored punches (G8)

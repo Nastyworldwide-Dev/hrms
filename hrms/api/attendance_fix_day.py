@@ -46,6 +46,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, time, timedelta
+from itertools import pairwise
 
 import frappe
 from frappe import _
@@ -82,6 +83,7 @@ ACTIONS = (
 	"add_tap",
 	"remove_duplicate_row",
 	"fix_days",
+	"save_day",
 	"undo_fix",
 )
 #: What this screen may change on a tap. `time` and `log_type` are deliberately
@@ -249,6 +251,76 @@ def pair_refusal(first, second, max_gap_hours=MAX_PAIR_GAP_HOURS) -> str | None:
 			round(gap, 1), max_gap_hours
 		)
 	return None
+
+
+def pairs_refusal(sessions, leave_open=False, max_gap_hours=MAX_PAIR_GAP_HOURS) -> str | None:
+	"""Why these ticked sessions cannot be saved as a day, or None. Pure.
+
+	`sessions` is [{"in": datetime|None, "out": datetime|None}] in the order HR
+	ticked them. The guards of the plan (21 Sep 2026), in this order: G4 a pair
+	is one IN and one OUT — unless HR said "leave open", which allows exactly
+	one tap and writes no row (G5); G6 the IN comes before the OUT; G3 a pair
+	is at most a session long; G10 two pairs never overlap.
+	"""
+	if leave_open:
+		taps = [side for session in sessions for side in (session.get("in"), session.get("out")) if side]
+		if len(sessions) != 1 or len(taps) != 1:
+			return _("Leave open keeps exactly one tap; tick one IN or one OUT and nothing else.")
+		return None
+	if not sessions:
+		return _("Tick the IN and the OUT that make the day.")
+	for session in sessions:
+		if not session.get("in") or not session.get("out"):
+			return _("Every pair needs one IN and one OUT. Add the missing tap, or choose Leave open.")
+		if get_datetime(session["out"]) <= get_datetime(session["in"]):
+			return _("The IN must be before the OUT ({0} is not before {1}).").format(
+				fd_clock_text(session["in"]), fd_clock_text(session["out"])
+			)
+		gap = (get_datetime(session["out"]) - get_datetime(session["in"])).total_seconds() / 3600
+		if gap > max_gap_hours:
+			return _("This pair is {0} hours long; a session is at most {1} hours.").format(
+				round(gap, 1), max_gap_hours
+			)
+	ordered = sorted(sessions, key=lambda session: get_datetime(session["in"]))
+	for earlier, later in pairwise(ordered):
+		if get_datetime(later["in"]) < get_datetime(earlier["out"]):
+			return _("Two pairs overlap ({0}-{1} and {2}-{3}). A person works one session at a time.").format(
+				fd_clock_text(earlier["in"]),
+				fd_clock_text(earlier["out"]),
+				fd_clock_text(later["in"]),
+				fd_clock_text(later["out"]),
+			)
+	return None
+
+
+def outside_window(session, window) -> bool:
+	"""Whether a pair's taps fall outside the shift's check-in window. Pure.
+
+	The window is the shift's own (`actual_start`/`actual_end`, margins
+	included, night shifts already wrapped), so this asks the same question
+	the engine asks when it stamps a live tap. The IN must sit inside it; the
+	OUT only has to come after the window opens — a late OUT is overtime, not
+	the wrong shift (Norazmi's 21:00 -> 08:07 on 7PM-3.30AM warns of nothing;
+	08:00 -> 19:00 on that shift does)."""
+	if not window or not window.get("actual_start") or not window.get("actual_end"):
+		return False
+	start, end = get_datetime(window["actual_start"]), get_datetime(window["actual_end"])
+	opening, closing = session.get("in"), session.get("out")
+	if opening:
+		return not (start <= get_datetime(opening) <= end) or (
+			closing is not None and get_datetime(closing) < start
+		)
+	return closing is not None and not (start <= get_datetime(closing) <= end)
+
+
+def day_version(taps) -> str | None:
+	"""The day's taps as one stamp: the latest `modified` among them. Pure.
+
+	The dialog carries it back as `seen_modified`; a save against a day whose
+	taps changed since is refused rather than applied to punches HR never saw
+	(G11)."""
+	stamps = [str(get_datetime(tap.get("modified"))) for tap in taps or [] if tap.get("modified")]
+	return max(stamps) if stamps else None
 
 
 def day_block_reason(
@@ -1030,6 +1102,212 @@ def fix_days(
 
 
 @frappe.whitelist(methods=["POST"])
+def save_day(
+	employee: str,
+	date: str,
+	pairs,
+	delete=None,
+	reason: str = "",
+	leave_open=False,
+	seen_modified: str | None = None,
+) -> dict:
+	"""HR's ticks become the day: one press, the engine does the rest.
+
+	Owner rulings, 21 Sep 2026 ("one Fix attendance button"): HR ticks the IN
+	and the OUT that make each pair, may flip a tap's IN/OUT, may set the
+	shift for the pair; Save & rebuild cancels EVERY attendance row of the day,
+	deletes the unticked punches (the fix log keeps a copy; `undo_fix` recreates
+	them), and the one engine re-marks the day from the taps that remain. Two
+	pairs in a day are one row with the hours added — by the engine's own
+	pairing, never summed here.
+
+	`pairs` is a JSON list of {"in": tap | {"time": "HH:MM"}, "out": same,
+	"shift": Shift Type | null}; a {"time"} entry is a punch HR adds, written
+	the way `add_tap` writes one. `delete` is the JSON list of unticked tap
+	names. `leave_open` allows exactly one tap and writes no row (G5).
+	`seen_modified` is `get_day`'s `seen_modified`: the day as the dialog saw it.
+
+	G8 needs no code here: `_delete_tap` goes through `frappe.delete_doc`,
+	which writes a Deleted Document, and the mirror import already honours
+	those, so a deleted mirrored punch is not resurrected by the next sync.
+	"""
+	_require_hr()
+	reason = _require_reason(reason)
+	emp = _require_employee(employee)
+	day = getdate(date)
+	asked = _as_list(pairs)
+	deleting = [str(name) for name in _as_list(delete)]
+	leave_open = str(leave_open).lower() in ("1", "true", "yes")
+
+	# Resolve every tick to a tap on record or a moment HR typed. A ticked tap
+	# from another site is refused by `_tap` (claim it first); an unticked one
+	# may be deleted here (G8).
+	sessions, by_name = [], {}
+	for pair in asked:
+		if not isinstance(pair, dict):
+			_refuse(_("Each pair is an IN and an OUT."))
+		session = {"shift": pair.get("shift") or None}
+		for side in ("in", "out"):
+			given = pair.get(side)
+			if not given:
+				session[side] = None
+				continue
+			if isinstance(given, dict):
+				session[side] = {
+					"new": True,
+					"time": _typed_moment(given.get("time"), day, session.get("in")),
+				}
+			else:
+				tap = _tap(str(given))
+				if tap.employee != emp.name:
+					_refuse(_("Tap {0} belongs to somebody else.").format(tap.name))
+				if tap.name in deleting:
+					_refuse(_("Tap {0} is both ticked and unticked. Pick one.").format(tap.name))
+				if tap.name in by_name:
+					# One punch is one side of one pair; used twice it would be
+					# written twice with the last label winning (verifier, 21 Sep).
+					_refuse(
+						_("Tap {0} is ticked in two pairs. A punch belongs to one pair.").format(tap.name)
+					)
+				by_name[tap.name] = tap
+				session[side] = {"new": False, "name": tap.name, "time": get_datetime(tap.time)}
+		sessions.append(session)
+	# G4, G6, G3, G10 — pure, before any lock is taken
+	refusal = pairs_refusal(
+		[{"in": s["in"] and s["in"]["time"], "out": s["out"] and s["out"]["time"]} for s in sessions],
+		leave_open=leave_open,
+	)
+	if refusal:
+		_refuse(refusal)
+	doomed = []
+	for name in deleting:
+		tap = _tap(name, mirrored_ok=True)
+		if tap.employee != emp.name:
+			_refuse(_("Tap {0} belongs to somebody else.").format(tap.name))
+		doomed.append(tap)
+
+	# The day itself, and every day a ticked or unticked tap is leaving: each
+	# is re-marked, as `pair_taps` re-marks both days of a night pair.
+	days = sorted({day, *(_tap_day(t) for t in [*by_name.values(), *doomed])})
+	_lock_and_guard(emp.name, days, duplicate_rows_ok=True, leaving_days=set(days) - {day})
+
+	# G7: a punch an approver said yes to is not HR's to delete
+	kept = _approved_requests([tap.name for tap in doomed])
+	if kept:
+		name, request = sorted(kept.items())[0]
+		_refuse(_("{0} came from an approved request ({1}); cancel the request first.").format(name, request))
+	# G11: the punches HR looked at are the punches this writes to
+	taps_now = _day_taps(emp.name, day)
+	version = day_version(taps_now)
+	if seen_modified and version and version != str(get_datetime(seen_modified)):
+		_refuse(_("This day's punches changed since the dialog opened; reopen the day and look again."))
+
+	stamp = _pair_stamp(emp, day, sessions, by_name)
+	# G2 is a warning, not a refusal: HR's shift is saved as asked, and the
+	# roster's own shift for the day is named beside it.
+	warnings = []
+	window = _shift_window_of(stamp.get("shift"), day) if stamp.get("shift") else None
+	for session in sessions:
+		moments = {side: session[side] and session[side]["time"] for side in ("in", "out")}
+		if window and outside_window(moments, window):
+			roster = _roster_shift(emp.name, day)
+			warnings.append(
+				_("{0}-{1} falls outside {2}'s hours; the roster says {3} for {4}.").format(
+					fd_clock_text(moments["in"]) if moments["in"] else _("open"),
+					fd_clock_text(moments["out"]) if moments["out"] else _("open"),
+					stamp.get("shift"),
+					roster or _("no shift"),
+					day,
+				)
+			)
+
+	snapshot_of = {tap.get("name"): tap for tap in [*taps_now, *by_name.values(), *doomed]}
+	before = _before(emp.name, days, list(snapshot_of.values()))
+	logger.warning(
+		"[attendance_fix_day] %s saving %s on %s: %d pair(s), delete %s, shift %s%s",
+		frappe.session.user,
+		emp.name,
+		day,
+		len(sessions),
+		deleting,
+		stamp.get("shift"),
+		" (left open)" if leave_open else "",
+	)
+
+	# 3. every attendance row of the day goes, duplicates included
+	cancel = []
+	for row in _day_attendance(emp.name, day):
+		_cancel_attendance(row["name"])
+		_comment(
+			"Attendance",
+			row["name"],
+			_(
+				"cancelled by Save & rebuild by {0}: the day is re-marked from its ticked punches. Reason: {1}"
+			).format(frappe.session.user, reason),
+		)
+		cancel.append({"name": row["name"], "shift": row.get("shift"), "why": _("re-marked from the ticks")})
+
+	# 4. the ticked taps: IN and OUT as HR said (G1), counting, released from
+	# their old rows, all on the one stamp so the engine reads one day
+	notes, added, plan_pairs = {}, [], []
+	for session in sessions:
+		recorded = {}
+		for side, label in (("in", "IN"), ("out", "OUT")):
+			tick = session[side]
+			if not tick:
+				continue
+			if tick["new"]:
+				name = _insert_tap(
+					{
+						"employee": emp.name,
+						"time": tick["time"],
+						"log_type": label,
+						"device_id": HR_TAP_DEVICE,
+						**stamp,
+					}
+				)
+				added.append(name)
+				notes[name] = _("entered by HR as a {0} at {1}").format(label, tick["time"])
+			else:
+				tap = by_name[tick["name"]]
+				fields = {**stamp, "skip_auto_attendance": 0, "skipped_as_noise": 0, "attendance": None}
+				if (tap.get("log_type") or "") != label:
+					fields["log_type"] = label
+				if (tap.get("remote_approval_status") or "") == "Rejected":
+					# ticking a hidden tap is restoring it (G9), rejection and all
+					fields["remote_approval_status"] = "Approved"
+				_write_tap(tap, fields, relabelling="log_type" in fields)
+				name = tap.name
+				flipped = (
+					_(" (the device recorded {0}; the undo puts that back)").format(tap.get("log_type"))
+					if "log_type" in fields
+					else ""
+				)
+				notes[name] = _("kept by Save & rebuild as this day's {0}{1}").format(label, flipped)
+			recorded[side] = name
+		plan_pairs.append({**recorded, "shift": stamp.get("shift")})
+
+	# 5. the unticked taps go; the log above holds their snapshot
+	for tap in doomed:
+		_delete_tap(tap.name)
+		logger.info(
+			"[attendance_fix_day] %s deleted %s on %s (Save & rebuild)", frappe.session.user, tap.name, day
+		)
+
+	# 6. the engine re-marks every day touched from what remains
+	plan = {
+		"pairs": plan_pairs,
+		"deleted": [tap.name for tap in doomed],
+		"cancel": cancel,
+		"leave_open": leave_open,
+		"shift": stamp.get("shift"),
+	}
+	answer = _finish(emp, days, "save_day", reason, notes, before, added=added or None, plan=plan)
+	answer["warnings"] = warnings
+	return answer
+
+
+@frappe.whitelist(methods=["POST"])
 def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	"""Put back exactly what one action changed — tap flags, shift stamp, time —
 	then rebuild the same days."""
@@ -1069,16 +1347,39 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 		for name in _tap_names(entry):
 			_delete_tap(name)
 			logger.info("[attendance_fix_day] undo %s deleted the tap HR added: %s", entry.name, name)
+	if entry.action == "save_day":
+		for name in _added_taps(entry):
+			_delete_tap(name)
+			logger.info("[attendance_fix_day] undo %s deleted the tap HR typed: %s", entry.name, name)
 	# A tap's snapshot still names the row it was evidence for. When THIS entry
 	# cancelled that row, linking the tap back to it would hide the tap from
 	# the engine for ever (a linked tap is another day's), so the link stays
 	# off and the day is rebuilt from the tap itself.
 	gone = {entry["name"] for entry in _cancelled_rows(entry)}
+	recreated = {}
 	for snapshot in before_state.get("taps") or []:
 		if snapshot.get("attendance") in gone:
 			snapshot = {**snapshot, "attendance": None}
+		if not _tap_exists(snapshot["name"]):
+			# A punch `save_day` deleted (G14): the snapshot is the whole tap,
+			# so it comes back as a new Employee Checkin with the same employee,
+			# time, label, stamp and device. The name is new — Frappe does not
+			# reuse one — and the log's `refs` maps old to new.
+			fresh = _insert_tap({field: snapshot.get(field) for field in TAP_FIELDS if field != "name"})
+			recreated[snapshot["name"]] = fresh
+			notes[fresh] = _("recreated by the undo of {0} (was {1})").format(entry.name, snapshot["name"])
+			logger.info(
+				"[attendance_fix_day] undo %s recreated %s as %s", entry.name, snapshot["name"], fresh
+			)
+			continue
 		_restore_tap_state(snapshot)
 		notes[snapshot["name"]] = _("restored to how it stood before {0}").format(entry.name)
+	refs = None
+	if recreated:
+		refs = ", ".join(
+			sorted(name for name in notes if name not in recreated.values())
+			+ [f"{old}->{new}" for old, new in sorted(recreated.items())]
+		)
 	answer = _finish(
 		emp,
 		days,
@@ -1087,6 +1388,7 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 		notes,
 		before,
 		undo_of=entry.name,
+		refs=refs,
 	)
 	_mark_undone(entry.name)
 	if cancelled_a_row:
@@ -1122,11 +1424,25 @@ def _day_pairing(taps) -> str | None:
 def _screen(emp, day) -> dict:
 	rows = _day_attendance(emp.name, day)
 	taps = _day_taps(emp.name, day)
+	linked = _approved_requests([tap.get("name") for tap in taps])
+	suggested = _suggested_roles(emp, day, taps)
 	return {
 		"employee": emp.name,
 		"employee_name": emp.employee_name,
 		"date": str(day),
-		"taps": [tap_view(tap) for tap in taps],
+		"taps": [
+			{
+				**tap_view(tap),
+				# what the Save & rebuild dialog needs: whether an approver
+				# stands behind the tap (G7), and the engine's own reading of
+				# the day as a pre-tick (advisory only — HR's ticks win, G1)
+				"linked_request": linked.get(tap.get("name")),
+				"suggested": suggested.get(tap.get("name")),
+			}
+			for tap in taps
+		],
+		# the version the dialog hands back as `seen_modified` (G11)
+		"seen_modified": day_version(taps),
 		"attendance": [row_view(row) for row in rows],
 		"owner": owner_label(emp.name, day, rows),
 		# `blocked` hides every control, so the two-row rule is NOT part of it:
@@ -1144,7 +1460,7 @@ def _before(employee, days, taps) -> dict:
 	}
 
 
-def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, plan=None) -> dict:
+def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, plan=None, refs=None) -> dict:
 	"""A Comment on each tap, then the engine's re-mark, then the log entry
 	carrying the day before and after. The screen gets both."""
 	for name, note in notes.items():
@@ -1182,7 +1498,7 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, 
 			"fix_date": str(days[0]),
 			"action": action,
 			"source": LOG_SOURCE,
-			"refs": ", ".join(sorted(notes)),
+			"refs": refs if refs is not None else ", ".join(sorted(notes)),
 			"reason": reason,
 			"fixed_by": frappe.session.user,
 			"before_state": json.dumps(before, default=str, indent=1),
@@ -1268,6 +1584,74 @@ def _session_stamp(tap) -> dict:
 			_("The first tap has no shift, so there is no session to join it to. Move it to a shift first.")
 		)
 	return session_stamp_from(tap)
+
+
+def _as_list(value) -> list:
+	"""A JSON list as the browser sends it, or the list itself."""
+	if value in (None, ""):
+		return []
+	if isinstance(value, str):
+		try:
+			value = json.loads(value)
+		except ValueError:
+			_refuse(_("The pairs could not be read. Reopen the day and try again."))
+	if not isinstance(value, list):
+		_refuse(_("The pairs could not be read. Reopen the day and try again."))
+	return value
+
+
+def _typed_moment(text, day, opening=None):
+	"""The moment of a punch HR typed: a clock on the day, or a full timestamp.
+	An OUT clock earlier than the pair's IN is the next morning's."""
+	text = (text or "").strip()
+	if not text:
+		_refuse(_("A typed punch needs a time (HH:MM)."))
+	if len(text) <= 8 and ":" in text:
+		moment = datetime.combine(getdate(day), time.fromisoformat(text))
+		if opening and moment <= get_datetime(opening["time"]):
+			moment += timedelta(days=1)
+		return moment
+	return get_datetime(text)
+
+
+def _pair_stamp(emp, day, sessions, by_name) -> dict:
+	"""The one shift stamp every ticked tap of the day carries.
+
+	HR's chosen shift first (any pair's — two pairs are one day, so the
+	second is stamped the same); else the session of the first ticked tap on
+	record, as `pair_taps` joins the second to the first; else the day's
+	resolved shift, as `add_tap` places a typed punch."""
+	chosen = next((s.get("shift") for s in sessions if s.get("shift")), None)
+	if chosen:
+		return _shift_stamp(chosen, day)
+	for session in sessions:
+		for side in ("in", "out"):
+			tick = session.get(side)
+			if tick and not tick["new"]:
+				tap = by_name[tick["name"]]
+				if tap.get("shift") and tap.get("shift_start"):
+					return _session_stamp(tap)
+	resolved = _resolve_shift(emp, day)
+	if not resolved:
+		_refuse(_("This day has no shift. Choose the shift the pair belongs to."))
+	return _shift_stamp(resolved, day)
+
+
+def _suggested_roles(emp, day, taps) -> dict:
+	"""{tap name: "IN" | "OUT"} — the engine's own pair for the day, as a pre-tick.
+	Advisory: a day the planner cannot read simply suggests nothing, and a
+	failure here must never take the screen down with it."""
+	try:
+		# rows deliberately left out: the suggestion is about the TAPS; a
+		# three-row day still has a first IN and a last OUT worth pre-ticking
+		plan = day_plan(taps, [], pairing=_day_pairing(taps))
+	except Exception:
+		logger.warning("[attendance_fix_day] no suggestion for %s on %s", emp.name, day, exc_info=True)
+		return {}
+	session = plan.get("session") or {}
+	return {
+		session[side]["name"]: label for side, label in (("in", "IN"), ("out", "OUT")) if session.get(side)
+	}
 
 
 def _require_reason(reason) -> str:
@@ -1371,7 +1755,7 @@ def _day_taps(employee, day) -> list:
 			["shift_start", ">=", start],
 			["time", ">=", start],
 		],
-		fields=TAP_FIELDS,
+		fields=[*TAP_FIELDS, "modified"],
 		order_by="time asc",
 		limit_page_length=0,
 	)
@@ -1610,6 +1994,44 @@ def _delete_tap(name) -> None:
 	frappe.delete_doc("Employee Checkin", name, ignore_permissions=True)
 
 
+def _tap_exists(name) -> bool:
+	return bool(frappe.db.get_value("Employee Checkin", name, "name"))
+
+
+def _approved_requests(names) -> dict:
+	"""{tap name: Remote Checkin Request} for the taps an APPROVED request stands
+	behind. The doctype is not submittable; `status` is its whole verdict."""
+	names = [name for name in names or [] if name]
+	if not names:
+		return {}
+	return {
+		row.checkin: row.name
+		for row in frappe.get_all(
+			"Remote Checkin Request",
+			filters={"checkin": ("in", names), "status": "Approved"},
+			fields=["name", "checkin"],
+		)
+	}
+
+
+def _roster_shift(employee, day) -> str | None:
+	"""The shift the roster gives this person on this day, or None."""
+	from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift
+
+	found = get_employee_shift(
+		employee, datetime.combine(getdate(day), time.min), consider_default_shift=True
+	)
+	return found.shift_type.name if found and found.get("shift_type") else None
+
+
+def _shift_window_of(shift, day) -> dict | None:
+	"""The shift's check-in window on that day (margins in, nights wrapped)."""
+	from hrms.api.attendance_master_edit import _shift_window
+
+	window = _shift_window(shift, getdate(day))
+	return {"actual_start": window.actual_start, "actual_end": window.actual_end} if window else None
+
+
 def _comment(reference_doctype, name, text) -> None:
 	"""Leave a note on a record. The DOCTYPE is always said out loud.
 
@@ -1665,14 +2087,17 @@ def _log_entry(name):
 
 
 #: actions that can cancel an attendance row, which Frappe cannot un-cancel
-CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day", "fix_days")
+CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day", "fix_days", "save_day")
 #: ... and of those, the ones that did OTHER things worth putting back. A
 #: `remove_duplicate_row` IS its cancel, so there is nothing else to restore and
 #: refusing is the honest answer. A rebuild also ignored taps, paired a session
 #: and relabelled it — refusing all of that because one row cannot come back
 #: threw away three recoverable things to be strict about a fourth (review of
 #: e1f4165b7, which had promised the relabel was reversible).
-UNDOABLE_APART_FROM_THE_CANCEL = ("rebuild_day", "fix_days")
+#: `save_day` cancels every row of the day BY DESIGN (the engine writes the
+#: one that replaces them); its undo recreates the deleted punches and lets
+#: the engine re-mark the day — rows are never restored by hand (G14).
+UNDOABLE_APART_FROM_THE_CANCEL = ("rebuild_day", "fix_days", "save_day")
 
 
 def _cancelled_a_row(entry) -> bool:
@@ -1697,6 +2122,16 @@ def _cancelled_rows(entry) -> list:
 		)
 		return [{"name": None}]
 	return list((after.get("plan") or {}).get("cancel") or [])
+
+
+def _added_taps(entry) -> list:
+	"""The taps a `save_day` typed, from its own after_state."""
+	try:
+		after = json.loads(entry.get("after_state") or "{}")
+	except ValueError:
+		return []
+	added = after.get("added") or []
+	return list(added) if isinstance(added, list) else [added]
 
 
 def _tap_names(entry) -> list:

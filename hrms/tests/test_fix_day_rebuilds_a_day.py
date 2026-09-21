@@ -519,4 +519,5 @@ class TheUndoRestoresWhatItCanCase(unittest.TestCase):
 
 	def test_the_two_actions_are_named_apart(self):
 		# `fix_days` is the range form of the rebuild and cancels rows the same way
-		self.assertEqual(fix_day.UNDOABLE_APART_FROM_THE_CANCEL, ("rebuild_day", "fix_days"))
+		# `save_day` cancels every row by design (21 Sep 2026); its undo recreates the punches
+		self.assertEqual(fix_day.UNDOABLE_APART_FROM_THE_CANCEL, ("rebuild_day", "fix_days", "save_day"))

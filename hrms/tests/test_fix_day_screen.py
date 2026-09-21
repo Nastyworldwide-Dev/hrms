@@ -47,7 +47,9 @@ ACTIONS = (
 #: Nine since 21 Sep 2026: a date range in one press (the loop is
 #: attendance_fix_days). An endpoint on this module; its Desk dialog is the next
 #: slice, so the bundle's write set does not carry it yet.
-RANGE_ACTIONS = ("fix_days",)
+#: `save_day` (21 Sep 2026, one "Fix attendance" button) is the same shape: the
+#: endpoint lands first, the dialog's Save & rebuild is slice B.
+RANGE_ACTIONS = ("fix_days", "save_day")
 #: reads: `get_day` paints the screen, `plan_day` says what the rebuild would do
 READS = ("get_day", "plan_day")
 #: what a control on this screen must never be for
