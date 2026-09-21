@@ -248,3 +248,24 @@ NEXT: owner's word on two things before Phase 2 starts — (1) un-ignore
   "Nadi PWA UI UX 2.0" (.gitignore:40) so the mockup repairs can be committed,
   or leave it uncommitted; (2) confirm Mockup 4 is signed off as the visual
   contract, which is the gate he set for the full PWA 2.0 frontend build.
+- 2026-09-21T22:12:27Z COMMIT: 3fe415b8e docs(glass): what the mockup-4 audit found, and why the last one missed it → review dispatched
+- 2026-09-21T22:12:56Z COMMIT: a0412dbb1 docs(glass): point the handoff at the audit commit → review dispatched
+
+CORRECTION: the REPAIR line above paraphrased three numbers from
+  family-mockup4.md instead of copying them, and the paraphrase drifted. Caught
+  by the reviewer on 3fe415b8e. The ledger is the measurement; these are the
+  real figures:
+  - CLASS C home depth: 1.63 -> 1.39 viewports (not "1.59 -> 1.36"). 1264px of
+    content in a 774px viewport before, 1072px after.
+  - CLASS D sheet swing: tops at 418/488/444/600 = 182px swing (not "226px").
+    After: top=399 h=444 on every day, swing 0.
+  - The 44px tap-target family is CLASS E in the ledger, not "F". There is no
+    CLASS F. Letters in family-mockup4.md are A B C D E G H G2.
+EVIDENCE: rung 2, re-run after the CLASS G2 pill fix landed, so these verdicts
+  cover the current mockup rather than the state at the time of the commit:
+  a2 NO LOW-CONTRAST TEXT (1754 boxes, self-test 13.80:1 both themes) ·
+  a3 no clipped text, sheet top=399 h=444 all four probe days ·
+  a8 COLUMN EDGE CLEAN + INNER EDGE CLEAN · a9 NO TEXT RESTS UNDER CHROME.
+LEARNING(gate): numbers paraphrased from a sibling ledger drift -> when a commit
+  adds both a family-*.md and a progress.md summary of it, copy the figures,
+  do not restate them.
