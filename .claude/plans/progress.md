@@ -292,3 +292,21 @@ LEARNING(gate): a correction block is not exempt from the rule it enforces ->
   every figure gets a source token (ledger line, or probe file + section) in
   the same sentence, and "the ledger says" is only written above numbers that
   are literally in the ledger.
+- 2026-09-21T22:24:21Z COMMIT: b3eab04d4 docs(plans): the correction broke its own rule → review dispatched
+- 2026-09-21T22:24:51Z COMMIT: f9f907943 docs(glass): the handoff pointed two commits back → review dispatched
+
+CORRECTION: third time, same class, one level up again. The bullet above says
+  the REPAIR line "lists eight (A B C D E G G2 H)". It does not. Line 232
+  literally reads "F tap targets (3 -> 0)". What I printed was the CORRECTED
+  set with the F already silently swapped to E, inside a sentence that promises
+  a transcription. Literal content of line 229-234: A B C D F G G2 H — eight
+  entries, and the F among them is the letter the first correction fixed.
+  So: the count is 8, not 7, and the sixth letter as written is F and should
+  be read as E. Both statements, separately, instead of one blended one.
+STOP: this is the third correction in a row and every one of them had the same
+  shape — a paraphrase wearing the clothes of a quote. The rule is not "be more
+  careful". It is mechanical:
+LEARNING(gate): quoting another line means copying its bytes. If a quoted
+  figure or letter needs correcting, the corrected value goes in a SEPARATE
+  sentence after the quote, never inside it. A sentence may carry a quote or a
+  correction, not both.
