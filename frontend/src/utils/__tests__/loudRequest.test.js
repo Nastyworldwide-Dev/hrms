@@ -70,6 +70,19 @@ test("a late check-out submit failure is not toasted twice", async () => {
 	assert.deepEqual(toasts, [], "submit_late_checkout reports through its own dialog")
 })
 
+test("a refused request decision is not toasted twice", async () => {
+	// RequestActionSheet's onActionError already shows "Error" with the
+	// server's reason. Managers photographed BOTH toasts stacked — "Could not
+	// load" on top of "Error", same sentence twice — on every refused Approve
+	// (21 Sep 2026, "No attendance to create …").
+	const { loud, toasts } = harness({
+		exc_type: "ValidationError",
+		messages: ["No attendance to create: 07-08-2026 (Attendance status unchanged)."],
+	})
+	await assert.rejects(() => loud({ url: "/api/method/hrms.api.approval.decide" }))
+	assert.deepEqual(toasts, [], "decide reports through the action sheet's own toast")
+})
+
 test("the same failure on any other endpoint still toasts", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))

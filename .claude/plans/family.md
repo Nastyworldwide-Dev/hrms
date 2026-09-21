@@ -1,30 +1,23 @@
-# FAMILY — an HR user's Desk roles changed with nobody editing the User
+# FAMILY — one refused decision, two red toasts
 
-CLASS: a needless programmatic User save. Frappe re-derives a User's roles
-from its Role Profile on EVERY save (`User.populate_role_profile_roles`,
-frappe/core/doctype/user/user.py:263): roles not in the profile are dropped.
-So any code path that saves a User for no reason silently resets hand-granted
-roles. Reported 21 Sep 2026 (Amy, HR, verifica-live).
+CLASS: a WRITE endpoint whose caller already presents the refusal, still
+toasted by the loudRequest seam as "Could not load". Managers photographed
+"Could not load" stacked on "Error", the same sentence twice, on every refused
+Approve (21 Sep 2026).
 
-Call sites the machine lists for update_approver_role / add_roles:
+Call sites the machine lists for SILENT_ENDPOINTS / makeLoudRequest:
 
-* hrms/hooks.py:386 Employee.on_update → update_approver_role — same-root:
-  saved the approver's User on EVERY Employee save naming them (add_roles
-  saves unconditionally). Now reads get_roles first; saves only when a role
-  is missing.
-* hrms/overrides/employee_master.py:135 ensure_employee_role → add_roles —
-  not-affected: already guarded by `"Employee" in frappe.get_roles(user)`
-  before the save.
-* hrms/overrides/employee_master.py:173 (this function) — same-root, fixed here.
-* hrms/sync/runner.py:745 _reconcile_user_enabled → user.save — not-affected:
-  saves only when `enabled` actually differs; a legitimate change.
-* erpnext Employee.update_user (erpnext/setup/doctype/employee/employee.py:309)
-  — not-affected — upstream: saves the linked User on that employee's OWN
-  record. By design; the Role Profile is the truth for such a User.
+* frontend/src/utils/loudRequest.js SILENT_ENDPOINTS — same-root: adds
+  hrms.api.approval.decide (RequestActionSheet.onActionError owns the toast).
+* frontend/src/components/RequestActionSheet.vue:339 decision resource +
+  :510 onActionError — not-affected: keeps showing "Error" + server reason.
+* frontend/src/components/RequestActionSheet.vue finalize
+  (hrms.api.approval.finalize) — not-affected — it goes through the same
+  onActionError, but no report of a double toast on it; left loud on purpose
+  until seen (one cause per commit).
+* frontend/src/data/helpdesk.js new_ticket — not-affected: the ticket form
+  shows NO toast of its own (the screenshot shows one "Could not load" only),
+  so the seam's toast is its only feedback.
 
-Site note (config, not code): a User carrying a Role Profile keeps only that
-profile's roles across any save. Roles Amy needs beyond the "HR" profile go
-INTO the profile (or the profile comes off her User). The User's Version log
-names the save that reset her: modified_by Administrator = programmatic.
-
-Regression test: hrms/tests/test_approver_role_grant_is_idempotent.py
+Regression test: frontend/src/utils/__tests__/loudRequest.test.js
+("a refused request decision is not toasted twice").

@@ -53,6 +53,10 @@ const SILENT_ENDPOINTS = new Set([
 	"hrms.api.remote_checkin.submit_late_checkout",
 	// CheckInPanel presents the failed punch and restores its retry controls.
 	"hrms.api.remote_checkin.punch",
+	// RequestActionSheet's onActionError shows "Error" with the server's reason;
+	// managers photographed this seam's toast stacked on top of it, the same
+	// sentence twice, on every refused Approve.
+	"hrms.api.approval.decide",
 ])
 
 function endpointOf(options) {
