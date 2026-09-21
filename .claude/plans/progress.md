@@ -245,3 +245,56 @@ error text (or Hanif's 16 Sep Employee Checkin rows).
 NEXT: the owner deploys nz-glass (dd833debc); then the HD Ticket script text, Amy's User Version log, and the China clock-in error text come back here.
 - 2026-09-21T03:23:20Z COMMIT: 690cd5417 chore: progress NEXT after the 21 Sep triage → review dispatched
 - 2026-09-21T03:39Z NEXT: full-stack NADI audit (Fix Day / approval status / attendance correction) — spec confirm, then read-only audit report before edits.
+- 2026-09-21T03:39:27Z COMMIT: ff7ef690b chore: progress NEXT for the 21 Sep full-stack audit → review dispatched
+- 2026-09-21T04:04Z EVIDENCE: audit written docs/glass/audit-2026-09-21.md (C4 H16 M30 L28); no code touched.
+NEXT: owner reads the audit; on go, slice 1 (status truth on Home: socket reconnect + my_* reload + 3 controllers publish_update) — red test first.
+- 2026-09-21T04:04:04Z COMMIT: ab27e8a22 docs(glass): 21 Sep full-stack audit — approval status, Fix Day, correction → review dispatched
+- 2026-09-21T04:44Z EVIDENCE: audit v2 written docs/glass/audit-2026-09-21.md (C8 H26 M46 L40); owner-hold no-op verified by reading owner_hold+classify_row; no code touched.
+NEXT: owner reads v2 + answers the 7 rulings; on go, Stage 1 slice 1 (owner_hold → classify_day, field-set invariant test) — red test first.
+- 2026-09-21T04:44:13Z COMMIT: 90c2d8f20 docs(glass): audit v2 — attendance pipeline first, workers, Fix Day 24→23, holidays → review dispatched
+- 2026-09-21T06:10:37Z COMMIT: 1245b6dd5 docs(plan): three-release plan for deterministic attendance → review dispatched
+- 2026-09-21T06:16:47Z PLAN: approved 2c92aa6e5cbf — # Plan — attendance made deterministic, three releases (21 Sep 2026)
+- 2026-09-21T06:16:54Z COMMIT: 02589baf4 chore(plan): Release 1 approved — tier risky, clarify record, two gaps closed → review dispatched
+- 2026-09-21T06:28:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-21T06:28:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-21T06:29:41Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-21T06:29:41Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-21T06:30:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-21T06:30:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-21T06:30:16Z EVIDENCE: 6 behaves — family hunt: class=a request's decision field was fenced on the decision PATH (decide/finalize) and on; 15 call site(s) given verdicts, 0 same-root ⟂2f3135137d60
+- 2026-09-21T06:30:17Z COMMIT: 4b9290e24 fix(approval): the decision field can only be changed by someone allowed to decide → review+cross-app dispatched
+- 2026-09-21T06:31:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T06:31:19Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
+- 2026-09-21T06:31:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T06:31:34Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
+- 2026-09-21T06:31:55Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T06:31:55Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 5 extra test file(s) ⟂49c99f739277
+- 2026-09-21T06:31:56Z EVIDENCE: 6 behaves — family hunt: class=a whitelisted transition endpoint trusted the caller's native DocPerm instead of na; 2 call site(s) given verdicts, 1 same-root ⟂9a9a4a68df92
+- 2026-09-21T06:31:57Z COMMIT: f1cd52161 fix(approval): finalize transitions request doctypes only → review dispatched
+- 2026-09-21T06:34:35Z COMMIT: e17799754 test(approval): no decision field may become editable after submit → review dispatched
+- 2026-09-21T06:35:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-21T06:35:44Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 0 extra test file(s) ⟂6439c1299438
+- 2026-09-21T06:35:46Z EVIDENCE: 6 behaves — family hunt: class=v16 moved the holiday truth to Holiday List + Holiday List Assignment, hid Employee; 1 call site(s) given verdicts, 0 same-root ⟂08ea94c68428
+- 2026-09-21T06:35:48Z COMMIT: 089904a03 fix(holidays): HR User can see the holiday calendar in Desk → review+cross-app dispatched
+- 2026-09-21T06:36:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T06:36:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-21T06:36:57Z COMMIT: c5d09ab5c fix(holidays): assignment derivation inserts nothing the second time → review dispatched
+- 2026-09-21T06:37:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-21T06:37:22Z COMMIT: 24767e60d feat(readiness): name the employees with no holiday calendar before payroll does → review dispatched
+- 2026-09-21T06:42Z EVIDENCE: 2 correct — test_day_evidence_is_read_one_way red on HEAD (8 failed: ('Present', 9.0) != ('Half Day', 4.0)), green with the loader (11 passed).
+- 2026-09-21T06:42Z EVIDENCE: 3 works — 20 mapped+dependent files green ONE AT A TIME (fix_day×6, recovery, rostered_shift, hr_asked, day_remark, day_remark_hooks, checkin_import, master_edit, endgame, take_over, tap_burst, ignored_tap, leave_day, writes_no_hours); the gate's bundled run fails test_day_remark::rejected_out via MagicMock employee_now leaked from test_remote_checkin_request_hooks — reproduced IDENTICALLY on a detached HEAD worktree (1 failed, 24 passed). Pre-existing leakage class (memory: whole-dir pytest unusable); gate skipped for this one commit.
+- 2026-09-21T06:48Z R1 landed so far: 4b9290e24 f1cd52161 e17799754 089904a03 c5d09ab5c 24767e60d 302974dec ef1da4adb bc3d1d53f (9). Running: A3a (guards/stopgap/heals), A3b (manual re-mark paths). Queued: A2 pairing table, A4 restamp job, A5 clock+index+sweep lock+sweep skips no-calendar.
+BACKLOG (from reviews): readiness 'replaced' per-employee false negative (24767e60d W); test locking linked_checkins narrowing (302974dec W); Shift Assignment System Manager permlevel-1 row without level 0 (pre-existing, Desk-save only); Property Setter drift check for allow_on_submit on decision fields.
+NEXT: integrate A3a G1+G3, then A3b, then A3a G2+G4; then A2/A4/A5.
+- 2026-09-21T07:00Z EVIDENCE: 6 (reviews) — 4b9290e24 f1cd52161 e17799754 089904a03 c5d09ab5c 24767e60d 302974dec ef1da4adb bc3d1d53f ca64457f6 b62a05384 eaf1ee70b a7daac645 all DEPLOY; 6d2bd53b8 reviewer cut off before running, I ran its 3-TZ suite (34/34 ×3) + eslint myself; its Important (grace ceiling) is 9a868abe0.
+- 2026-09-21T07:00:52Z COMMIT: 9a868abe0 chore: name the button that exists; mark the midnight grace as a ceiling → review+design dispatched
+- 2026-09-21T07:05:19Z COMMIT: c02d9ba67 test(attendance): the owner's pairing rule as a table against the real engine → review dispatched
+- 2026-09-21T07:09Z EVIDENCE: 2 correct — A3a groups red on ROOT per verifier (owner_hold 3/6, never_worse 5/25, hr_asked 4, fix_day 2, day_remark inline/held, rostered guard); green with the fix.
+- 2026-09-21T07:09Z EVIDENCE: 3 works — 22 mapped+dependent files green one at a time (list in this session); bundled gate skipped for the known MagicMock-leak class (identical failure reproduced on HEAD earlier today).
+- 2026-09-21T07:21:00Z COMMIT: aced32dd2 test(attendance): a system row whose punches all left the day is retired → review dispatched
+- 2026-09-21T07:26Z EVIDENCE: 2 correct — pairing table rows 5b/7/8/13b + 7c red on ROOT (verifier: 9 failed), green with the engine fix (23 passed, 4 xfail). EVIDENCE: 3 works — 24 mapped+dependent files green one at a time (bundled gate skipped: MagicMock-leak class).
+- 2026-09-21T07:31:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-21T07:31:45Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-21T07:31:47Z COMMIT: f940ba4d7 perf(attendance): hot-filter indexes, re-asserted on every migrate → review+cross-app dispatched
+- 2026-09-21T07:33Z RELEASE 1 COMPLETE: 26 commits 4b9290e24..f940ba4d7; notes docs/glass/release-1-notes.md; every fix verified fresh + reviewed (last two reviews in flight: A5 eba706551..f940ba4d7, cross-app f940ba4d7).
+NEXT: owner rules on payroll 'consider unmarked attendance as' and deploys nz-glass (migrate + restart); then Release 2 starts with a built mockup of the Correct form on the Employee Check-in page + plan re-approval.
