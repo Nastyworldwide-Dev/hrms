@@ -258,3 +258,22 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   not px string), pre-existing, NOT fixed here; and the test's comment-stripper
   only handles full-line //, which can only ever cause a false RED, never hide a
   real call. Both recorded rather than silently carried.
+- 2026-09-21T23:28:03Z COMMIT: 6a9b01d9e fix(gates): the lg: blob model was a copy of hand-written CSS → review dispatched
+- CORRECTION: the commit message on 6a9b01d9e says the derivation "lands within
+  0.003vw" of the CSS. Measured from the tokens: deltas are a 0.0035, b 0.0005,
+  c 0.0022 — max 0.0035, so the claim is false as written by 0.0005vw. The code
+  is unaffected (tolerance is 0.005vw and every delta clears it); the SENTENCE
+  was wrong. Caught by verifying my own claim numerically instead of restating
+  it. Same class as the three progress.md correction blocks above: a figure
+  quoted from memory rather than from the measurement.
+  Corrected in the test's comment, which is where it will be read.
+- EVIDENCE: rung 2 — 0.005vw = 0.0512px at 1024 and 0.0960px at 1920; a real
+  1px drift at the 1024 breakpoint is 0.0977vw, ~20x the tolerance, so the
+  tolerance is tight enough to catch anything that matters and is exactly the
+  CSS's own 2dp rounding granularity. Media-block capture verified independently:
+  the regex finds 5 blocks at min-width:1024px, and ALL three blob rules sit in
+  block 1 with the other four capturing none — no truncation, no vacuous pass.
+- NOTE: swept every sibling gate for the same copied-CSS-literal class. Only
+  coherence.mjs holds a unit literal ("0px", a radius comparison, not a copy of
+  a CSS declaration). No other gate models CSS geometry. The class is closed in
+  design/gates/ as far as unit literals go.

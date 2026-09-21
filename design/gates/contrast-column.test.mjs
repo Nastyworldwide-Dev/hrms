@@ -140,12 +140,17 @@ test("parseFloat is called in exactly one place — inside px(), after validatio
 // The offsets are a subtler version. The gate does NOT copy them — it derives
 // each from the mobile tokens as (offset/size)*scale, because glass-components
 // .css holds "the origin:size ratio solved for mobile". That derivation lands
-// within 0.003vw of the CSS's own -25.04/-22.51/-19.03vw. That agreement is
+// within 0.0035vw of the CSS's own -25.04/-22.51/-19.03vw (a 0.0035, b 0.0005,
+// c 0.0022 — measured, not rounded down). That agreement is
 // the whole basis for the lg: proof being about the shipped app rather than
 // about a model of it, and nothing was checking it.
 //
 // So this asserts the gate's MODEL against the CSS's DECLARATION, in both
-// halves. Tolerance is 0.005vw: the CSS rounds to 2dp, the derivation does not.
+// halves. Tolerance is 0.005vw, which is not a round number picked for comfort:
+// the CSS states these to 2dp, so +/-0.005vw IS its rounding granularity, and
+// the largest real delta (0.0035) sits under it. It is also far tighter than
+// any drift worth catching — 1px at the 1024px breakpoint is 0.098vw, twenty
+// times the tolerance.
 const css = readFileSync(
 	join(HERE, "..", "..", "frontend", "src", "theme", "glass-components.css"),
 	"utf8",
