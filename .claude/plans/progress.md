@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-trips - but a snapshot taken TODAY, before the field existed, has no such key
-and would have written NULL into a Check column. It lands as 0 now: the wall,
-which is how that tap read when the snapshot was taken.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green.
-- 2026-09-17T11:19:56Z PUSH: nz-glass @ d643e66d2
-REPAIR: review of 672a4b1df, two more. (1) the backfill pooled `refs` from every
-Fix Day entry, and a rebuild's refs name the session taps it KEPT as well as the
-ones it dropped - so a kept tap that something later skipped for a real reason
-would have been ticked noise, a wall mislabelled, the inverse of the defect.
-It reads after_state.plan.drop for a rebuild and refs only for an ignore_tap,
-and chunks the IN clause. (2) attendance_master_edit has its OWN punch writer
-(_update_punch does a plain doc.update/save), which Fix Day's choke point cannot
-reach; its shift stamp carries the clear now.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 16 suites green; the one failure in
-test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
-NEXT: the owner deploys.
-- 2026-09-17T11:23:55Z PUSH: nz-glass @ 5d5282203
-REPAIR: my own sweep (told the reviewer to assume the list is still wrong) found
-the sixth: attendance_day_audit's `unskip` repair cleared skip_auto_attendance
-and left the verdict. Fixed, and added to both the census and the clearers test.
-Also confirmed by reading: master_edit's second "skip_auto_attendance": 0 is an
-in-memory PREVIEW stamp for a what-if calculation, not a write; and there is
-exactly one _finish(..., "rebuild_day", ...) call and it passes plan=plan, so no
-rebuild entry is invisible to the backfill.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 14 suites green.
-NEXT: the owner deploys once the verification comes back.
-- 2026-09-17T11:26:46Z PUSH: nz-glass @ 951af8d8a
-- 2026-09-17T11:28:48Z PUSH: nz-glass @ 5735179cf
-- 2026-09-17T11:28:49Z COMMIT: 5735179cf docs(glass): handoff for the wall-vs-noise rule → review dispatched
-REPAIR: 18 Sep, live. Remote Approvals showed a BROKEN IMAGE for every pending
-selfie. The 17 Sep crash was gone - the photo uploaded - but upload_selfie stored
-the File public, and the S3 hook addresses a public file as the bucket object
-itself ({endpoint}/{bucket}/{key}), which is readable only with a public-read
-ACL this bucket does not grant. Selfies are private now and attached to their
-punch, so File.is_downloadable grants exactly the people who can read that
-Employee Checkin - the approver included. The `# ceiling:` on that function had
-named this upgrade already; it arrived for a different reason than expected.
-EVIDENCE: 2 (mapped) - 13 new tests red before, green after; 176 passed across
-remote_checkin and the fix-day suites.
-NEXT: deploy; the patch repairs the photos already taken.
-- 2026-09-18T03:12:18Z PUSH: nz-glass @ 8c2f4c6eb
-REPAIR: the selfie url parser treated any http(s) url as a bucket url. An
-ABSOLUTE url to this site's own generate_file endpoint would have been split on
-slashes, read "api" as the bucket, and rewritten a good photo's address to
-nonsense - on a patch that runs once and is hard to undo. It refuses anything
-containing /api/method/ now.
-EVIDENCE: 2 (mapped) - 1 new test red before, green after; 87 passed.
-NEXT: the owner's ruling on whether Employee master still comes from the ERP,
-then the cutover hold-back for shift/location data.
-- 2026-09-18T03:17:49Z PUSH: nz-glass @ 96e0df238
-REPAIR: live employees had shift and location reverted to the source's values.
-No scheduler runs a sync - HRMS Sync Run logs every press - but the sync was
-ALLOWED to: unlock_mirrored_writes held back Attendance alone, and every other
-mirrored doctype was still pulled and UPDATED, including Employee
-(default_shift, branch, holiday_list), Shift Assignment and Shift Schedule
-Assignment. Owner ruling: after cutover, add what is absent, never overwrite
-what exists. One pure rule, asked where the create-only question was already
-asked.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 23 tests red before, green after; 18
-sync suites green (400+ tests).
-NEXT: review, then the owner deploys. The rows already reverted are a SEPARATE
-repair - Frappe Version history holds the previous shift and branch values.
-- 2026-09-18T03:22:43Z PUSH: nz-glass @ 5baf3c99a
-EVIDENCE: 7 (invariant + a ruling surfaced) - review of 5baf3c99a returned
-DEPLOY. Its parity warning was checked and is not a defect: parity compares row
-COUNTS and this stops only updates. Its second warning is real and is the
-owner's call, not mine: after cutover the source can no longer disable a hub
-login for somebody marked Left on the ERP, because the Employee row is skipped
-before _reconcile_user_status. Recorded in cutover.py and raised with him.
-NEXT: the owner deploys 5baf3c99a and rules on whether a leaver marked only on
-the old ERP should still lose their Verifica login.
-- 2026-09-18T03:27:02Z PUSH: nz-glass @ f08b27f70
-- 2026-09-18T03:27:02Z COMMIT: f08b27f70 docs(sync): name the one thing the insert-only rule gives up → review dispatched
-REPAIR: the planner was stricter than the engine it plans for. Norazlin's 3 Sep
-holds two taps the device both recorded as IN; the shift pairs ALTERNATING
-entries, so the engine read them as in 08:48 / out 18:02 and marked her Present
-with 8.04 h - and "Rebuild this day" refused with "Nothing closes this day",
-sending HR to hunt a fault that was not there. day_plan takes the shift's own
-pairing rule now, read per day from the taps' shift, and the strict reading stays
-the default for a caller that says nothing.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 8 new tests red before, green after;
-10 suites green.
-NEXT: the owner deploys; an IN-IN day then rebuilds with one press like any other.
-- 2026-09-18T03:38:02Z PUSH: nz-glass @ da5fa456c
-REPAIR: the rebuild got 3 Sep right in Attendance and the report and left the
-check-in list showing two INs. Owner: "check in must show correct in and out
-despite it was in in or anything". The rebuild relabels the two taps that ARE
-the session - and nothing else - through a narrow, explicit exception in
-_write_tap. Shown in the plan before Apply, commented on the punch, restored by
-the undo (log_type is already in TAP_FIELDS).
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 10 new tests red before, green after;
-11 Python suites and 20 JS green.
-NEXT: the owner deploys; an IN-IN day then reads IN/OUT on all four pages.
-- 2026-09-18T03:58:40Z PUSH: nz-glass @ e1f4165b7
-REPAIR: review of e1f4165b7. (1) undo_fix refused an ENTIRE rebuild when it had
-also cancelled a ghost row - so the relabel my commit called reversible was not.
-A remove_duplicate_row IS its cancel and is still refused; a rebuild restores its
 taps and says the cancelled row stays cancelled. (2) session_is_open reads
 log_type != "OUT", so relabelling a closing tap makes the session read CLOSED -
 the relabel is a CORRECTNESS improvement there, not a risk: an IN-IN day used to
@@ -298,3 +201,26 @@ NEXT: integrate A3a G1+G3, then A3b, then A3a G2+G4; then A2/A4/A5.
 - 2026-09-21T07:31:47Z COMMIT: f940ba4d7 perf(attendance): hot-filter indexes, re-asserted on every migrate → review+cross-app dispatched
 - 2026-09-21T07:33Z RELEASE 1 COMPLETE: 26 commits 4b9290e24..f940ba4d7; notes docs/glass/release-1-notes.md; every fix verified fresh + reviewed (last two reviews in flight: A5 eba706551..f940ba4d7, cross-app f940ba4d7).
 NEXT: owner rules on payroll 'consider unmarked attendance as' and deploys nz-glass (migrate + restart); then Release 2 starts with a built mockup of the Correct form on the Employee Check-in page + plan re-approval.
+- 2026-09-21T07:33:19Z COMMIT: 3301237b6 docs(glass): Release 1 notes and handoff → review dispatched
+- 2026-09-21T07:34:18Z COMMIT: a0b2e3a77 docs(glass): handoff verify line uses repo paths only → review dispatched
+- 2026-09-21T08:01:36Z PLAN: approved afde05ce22e6 — # Plan — attendance made deterministic, three releases (21 Sep 2026)
+- 2026-09-21T08:02:34Z COMMIT: 6afcab1c1 docs(glass): request dates, types and approval-state addendum; folded into Release 3 → review dispatched
+- 2026-09-21T08:06:33Z PUSH: nz-glass @ 6afcab1c1
+- 2026-09-21T08:42:04Z PLAN: approved bd020ba50f4c — # Plan — attendance made deterministic, three releases (21 Sep 2026)
+- 2026-09-21T08:42Z R1 PUSHED (6afcab1c1), owner deploying; payroll switch stays as is. R2 started: slice 1 fix_days backend (worker), then Check-in dialog, then remove old buttons. Owner's screenshots: Norazmi 1–4 Sep = punches fixed, rows Absent(HR) 0 h + cancelled night rows + Half Day double tap; 3 Sep IN still night-stamped.
+NEXT: integrate fix_days backend (verify fresh), then the dialog on employee_checkin_list.js / fix_day.bundle.js.
+- 2026-09-21T09:13:53Z COMMIT: 15701f285 test(attendance): fix_days reads a form's string dry_run correctly → review dispatched
+- 2026-09-21T09:14:13Z COMMIT: 15701f285 test(attendance): fix_days reads a form's string dry_run correctly → review dispatched
+- 2026-09-21T09:14:27Z COMMIT: 62fc68b67 test(attendance): the string dry_run test counts rebuilds from the fixture's own apply → review dispatched
+- 2026-09-21T09:33Z EVIDENCE: 2 correct — TestTheRequestsOnADayAreKept 6/6 red on HEAD (no _paid_day / requests_ok), green with the fix (test_fix_days 34). EVIDENCE: 3 works — 15 mapped+dependent files green one at a time + 22 JS.
+- R2 landed: e79030f00 (fix_days backend) 72f6ece10 (dialog; other pages link to punches) 15701f285/62fc68b67 (string dry_run test) e80c18259 (approved requests kept). NEXT: review the last commit, push, owner deploys R2 with R1 or next; then R3.
+- 2026-09-21T09:36:16Z PUSH: nz-glass @ e80c18259
+- 2026-09-21T09:45:18Z PUSH: nz-glass @ a46f43956
+- 2026-09-21T09:45:18Z COMMIT: a46f43956 docs(glass): handoff for Release 2 → review dispatched
+- 2026-09-21T10:02:30Z COMPACT: context compacted — read the last NEXT above before continuing
+COMMIT: ba8ae8c3e fix(pwa): decided request shows without reload (R3 lane A) — JS 25 pass (TZ=Asia/Kuala_Lumpur), eslint/ruff clean, test_request_publish_update 3 pass
+EVIDENCE: 2 correct — lane A tests red on a46f43956 (socket gave up after 5; no reload registry; RL/CL publish absent), green on ba8ae8c3e
+NEXT: verify lane B (afed63e) + lane C (af0b9bf) diffs with fresh verifiers, integrate as separate commits, push R3, write HANDOFF
+EVIDENCE: 2 correct — lane B new tests red on a46f43956 (verifier: recordable 5F/7P, cancel 6F/3P, no_lie 10F/2P, who_approved ImportError), D1/D5 refutation tests red on the worker's version (2 failed), all green after: 13 files per-file (see runB.sh) 100% pass, ruff clean
+EVIDENCE: 2 correct — lane C: requestStatus.test.js + review-sheet-buttons-from-doc red on a46f43956 (no export), child-table case red on the shallow compare (1 failed), green now: 9 JS files 63 pass, npm-test suite 491/494 (3 known: dead-code gate, TDZ gate, approved-cancel needs the npm flag), eslint clean, test_api_clean_errors_and_bounds OK, ruff clean
+EVIDENCE: 6 behaves — hook reviews: ba8ae8c3e FIX_CRITICAL (boot.time_zone object) → fixed 75e56c451; f04526cea DEPLOY (0 Critical, 1 Warning = product ruling on a stuck cancel); 527baf268 DEPLOY (0 Critical). Verifier refutations (lane B D1/D5, lane C T2) fixed before landing.
