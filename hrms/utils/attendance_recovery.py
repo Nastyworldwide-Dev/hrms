@@ -201,8 +201,31 @@ def _classify(row):
 		return None, None
 
 
+def typed_by_a_person(row) -> bool:
+	"""`auto_attendance == 0` on a row that is not a leave's or a request's. Pure.
+
+	Stopgap (E-C1, 21 Sep 2026) until Release 2 removes typed rows: every path
+	that lets a person write a row flips `auto_attendance` to 0 (the master
+	edit, Desk after-submit edits, `claim_hr_ownership_on_amend`) and the
+	engine's own rows carry 1 — while the rows this module reads
+	(`ATTENDANCE_FIELDS`) carry no `owner`, so the classifier alone answers
+	SYSTEM for every one of them. A leave or request row is held by its own
+	rule, not this one.
+	"""
+	return not cint(row.get("auto_attendance")) and not (
+		row.get("leave_type")
+		or row.get("leave_application")
+		or row.get("attendance_request")
+		or cint(row.get("modify_half_day_status"))
+		or row.get("status") == "On Leave"
+	)
+
+
 def owner_hold(row) -> str | None:
 	"""Why this row's OWNER holds the day, or None when the system owns it.
+
+	A row a person typed (`typed_by_a_person`) holds before the classifier is
+	consulted; the classifier decides the engine's own rows.
 
 	`auto_attendance` alone cannot say: the field was added on 1 September 2026
 	with default 0 and no backfill, and an ERP copy never carried it, so nearly
@@ -211,9 +234,11 @@ def owner_hold(row) -> str | None:
 	with no classifier installed the old reading stands.
 	"""
 	name = row.get("name")
+	if typed_by_a_person(row):
+		return f"{name} {BY_HAND}"
 	module, verdict = _classify(row)
 	if module is None or verdict is None:
-		return None if cint(row.get("auto_attendance")) else f"{name} {BY_HAND}"
+		return None
 	owner, reason = verdict
 	# getattr with a default, never module.OWNER_*: a classifier that ships an
 	# Enum or renames a constant must not raise out of a fail-safe helper.
@@ -242,6 +267,8 @@ def _is_hr_hold(row) -> bool:
 	"""
 	if row.get("synced_from_instance"):
 		return False
+	if typed_by_a_person(row):
+		return True
 	module, verdict = _classify(row)
 	if module is None or verdict is None:
 		# The old reading, and deliberately the LOOSE direction here: with no
@@ -323,26 +350,39 @@ HOURS_SLACK = 0.01
 NEVER_WORSE_SAVEPOINT = "attendance_recovery_never_worse"
 
 
-def evidence_shrank(row, taps) -> bool:
-	"""Did this day's own evidence get SMALLER since the row was marked? Pure.
+def _live(tap) -> bool:
+	return tap.get("remote_approval_status") != "Rejected" and not cint(tap.get("skip_auto_attendance"))
 
-	A tap rejected by an approver, skip-stamped by HR, or deleted is less
-	evidence than the row was built from, so a lower result is then the truth
-	and the never-worse guard stands aside. `row` is the submitted Attendance;
-	`taps` are the day's Employee Checkins (any state). `row["linked"]`, when
-	given, is how many taps the row was built from.
+
+def evidence_shrank(row, taps) -> bool:
+	"""Did the evidence this row was BUILT FROM get smaller since it was marked? Pure.
+
+	A tap the row counted — one linked to it — that an approver has since
+	rejected, HR has skip-stamped, or that was re-stamped onto another day or
+	deleted is less evidence than the row was built from, so a lower result is
+	then the truth and the never-worse guard stands aside. A rejected or
+	skipped tap the row never counted (an old out-of-radius punch, a burst tap)
+	is not a shrink: the row was marked without it (B-H2, 21 Sep 2026 — the old
+	reading compared the list against itself and stood the guard aside for
+	every day carrying any such tap).
+
+	`row` is the submitted Attendance; `taps` are the day's Employee Checkins
+	(any state, with `attendance`); `row["linked"]`, when given, are the names
+	linked to the row now (`before_rebuild` reads them) — a name missing from
+	`taps` has left the day.
 	"""
-	live = [
-		t
-		for t in taps
-		if t.get("remote_approval_status") != "Rejected" and not cint(t.get("skip_auto_attendance"))
-	]
-	if len(live) < len(taps):
-		return True  # a rejected or skip-stamped tap
-	linked = row.get("linked") if row else None
-	if linked is not None and len(taps) < cint(linked):
-		return True  # a tap the row was built from is gone
-	if row and row.get("out_time") and not any(t.get("log_type") == "OUT" for t in live):
+	if not row:
+		return False
+	name = row.get("name")
+	here = {t.get("name"): t for t in taps}
+	counted = set(row.get("linked") or ()) | {n for n, t in here.items() if t.get("attendance") == name}
+	for tap_name in counted:
+		tap = here.get(tap_name)
+		if tap is None:
+			return True  # a tap the row was built from left the day or is gone
+		if not _live(tap):
+			return True  # a tap the row was built from is now rejected or skip-stamped
+	if row.get("out_time") and not any(t.get("log_type") == "OUT" and _live(t) for t in taps):
 		return True  # the row closed on a tap that is no longer here
 	return False
 
@@ -1347,10 +1387,15 @@ def _fix_rostered_day(entry, endings, ended, done_taps, win, pending=frozenset()
 		if when != day and (employee, when) in pending:
 			logger.info("[attendance_recovery] %s on %s is left to its own step in this pass", employee, when)
 			continue
-		remark = _remark_day(employee, when, True) or {}
+		# Under the never-worse guard like every other automatic rebuild (B-H5):
+		# a re-mark that lowers a submitted day is rolled back and listed for HR,
+		# and the day-fix log names the recovery as the writer either way.
+		remark = _rebuild_under_guard(employee, when, _remark_day, source="recovery") or {}
 		result["marked"] += remark.get("marked") or []
 		result["errors"] += remark.get("errors") or []
-		if remark.get("action") not in (None, "remark"):
+		if remark.get("held"):
+			result["errors"].append(f"{when}: {remark['held']}")
+		elif remark.get("action") not in (None, "remark"):
 			result["errors"].append(f"{when}: {remark.get('detail') or remark.get('action')}")
 	logger.info("[attendance_recovery] %s on %s put back on %s: %s", employee, day, rostered, result)
 	return result
@@ -2501,6 +2546,11 @@ def before_rebuild(employee, day) -> tuple:
 	if not row:
 		logger.debug("[attendance_recovery] %s on %s has no submitted row to protect", employee, day)
 		return None, False
+	# What the row was built from: the taps linked to it now, wherever their
+	# shift day is — one re-stamped onto another day is a shrink here.
+	row["linked"] = list(
+		frappe.get_all("Employee Checkin", filters={"attendance": row["name"]}, pluck="name")
+	)
 	return row, evidence_shrank(row, day_taps(employee, day))
 
 
@@ -2606,21 +2656,31 @@ def _deadlocked_day(employee, day) -> dict:
 	return {"held": reason, "hr": False}
 
 
-def _rebuild_under_guard(employee, day, remark, source="recovery") -> dict:
+def _rebuild_under_guard(employee, day, remark, source="recovery", hr_asked=False, action="rebuild") -> dict:
+	"""`action` names the entry in HR Day Fix Log (`rebuild`; the punch-hook
+	job writes `remark`). `hr_asked`: the guard JUDGES but never rolls back. It exists to catch an
+	AUTOMATIC rebuild lowering a day by mistake; when HR presses, a lower result
+	is usually the intent (a duplicate ignored, a wrong OUT removed) — "HR's edit
+	always wins; the system recalculates" (owner, 21 Sep 2026). The drop is
+	still on record: the verdict goes into the log row's after-state."""
 	before, shrank = before_rebuild(employee, day)
 	frappe.db.savepoint(NEVER_WORSE_SAVEPOINT)
 	result = remark(employee, day, True) or {}
 	after = submitted_row(employee, day)
 	worse = rebuild_verdict(before, after, shrank)
-	if not worse:
-		logger.info("[attendance_recovery] %s on %s rebuilt, never-worse guard content", employee, day)
+	if not worse or hr_asked:
+		if worse:
+			logger.warning("[attendance_recovery] %s on %s lowered on HR's press: %s", employee, day, worse)
+		else:
+			logger.info("[attendance_recovery] %s on %s rebuilt, never-worse guard content", employee, day)
 		if result.get("marked"):
+			summary = _row_summary(after) if after else {}
 			log_day_fix(
 				employee,
 				day,
-				"rebuild",
+				action,
 				before=_row_summary(before) if before else None,
-				after=_row_summary(after) if after else None,
+				after={**summary, "lowered": worse} if worse else (summary or None),
 				source=source,
 			)
 		return result

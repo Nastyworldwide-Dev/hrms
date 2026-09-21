@@ -721,3 +721,43 @@ class TestTheScreen(FixDayCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestFixDayNeverSaysOkWhenItLostTheWork(FixDayCase):
+	"""D-H1 (21 Sep 2026): a rebuild that came back `deadlocked` or `running`
+	did not apply HR's fix, yet `_finish` wrote the log row and answered ok.
+	Now the action is refused with the engine's own reason, no log row is
+	written, and the request rolls back as a whole. `held` is NOT a refusal:
+	HR's taps stand and are logged — HR's edit always wins (owner ruling)."""
+
+	def setUp(self):
+		super().setUp()
+		self.the_night_shape()
+		self.verdict = {"action": "remarked", "marked": 1}
+		stack = ExitStack()
+		self.addCleanup(stack.close)
+		stack.enter_context(patch.object(fd, "_rebuild", lambda employee, day, reason: self.verdict))
+
+	def refused_with(self, verdict):
+		self.verdict = verdict
+		return self.refusal(fd.pair_taps, "CKIN-A", "CKIN-B", reason="closing tap read as a new shift")
+
+	def test_a_held_day_still_keeps_hrs_taps_and_is_logged(self):
+		self.verdict = {"action": "held", "detail": "HR-ATT-1 is a leave record"}
+		answer = fd.pair_taps("CKIN-A", "CKIN-B", reason="closing tap read as a new shift")
+		self.assertTrue(answer["ok"])
+		self.assertEqual(answer["rebuild"]["2026-09-02"]["action"], "held")
+		self.assertEqual(len(self.store.logs), 1)
+
+	def test_a_deadlocked_rebuild_is_refused(self):
+		self.refused_with({"action": "deadlocked"})
+		self.assertEqual(self.store.logs, {})
+
+	def test_a_running_shift_answer_is_refused(self):
+		self.refused_with({"action": "running"})
+		self.assertEqual(self.store.logs, {})
+
+	def test_a_remarked_day_is_still_ok(self):
+		answer = fd.pair_taps("CKIN-A", "CKIN-B", reason="closing tap read as a new shift")
+		self.assertTrue(answer["ok"])
+		self.assertEqual(len(self.store.logs), 1)

@@ -29,3 +29,25 @@ edit, or the next change that widens what reaches `remark_day`.
 
 # ceiling: only HR's press is rollback-protected on the day_remark path
 # upgrade: a day reported as having gone backwards after an automatic re-mark
+
+
+## Amended 21 Sep 2026 (Release 1 slice r1-guarded-rebuilds)
+
+"Two rebuild paths" was not the whole inventory. Every path that re-marks a day:
+
+| # | path | guard | log | status |
+|---|------|-------|-----|--------|
+| 1 | `attendance_recovery._rebuild_day` -> `guarded_rebuild` (nightly step 7, endgame) | yes | `recovery` / `rebuild` | already guarded |
+| 2 | `erp_backfill` -> `guarded_rebuild(source="erp_backfill")` | yes | `erp_backfill` | already guarded |
+| 3 | `day_remark._remark_once(hr_asked=True)` (Fix Day's press, inline) | judges, never rolls back (HR's edit wins; a drop is logged in the after-state as `lowered`) | `hr_fix_day` | CLOSED here (G3) |
+| 4 | `day_remark._remark_once(hr_asked=False)` (the punch-hook job; request cancels; decisions) | yes: rolled back and answered `held` | `day_remark` / `remark`; retirements `retire` | CLOSED here (G4c) |
+| 5 | `attendance_recovery._fix_rostered_day` (nightly rostered_shift step, was bare `checkin_import._remark_day`) | yes: `_rebuild_under_guard(source="recovery")`, a rolled-back day listed for HR | `recovery` / `rebuild` | CLOSED here (G4b) |
+| - | `checkin_import.remark_attendance` (operator tool, dry-run default) | no | none | OPEN: not this slice (file owned elsewhere) |
+
+Also closed here: `evidence_shrank` compares the taps the row was BUILT FROM
+(linked now, including names re-stamped off the day) against their state now,
+not the list against itself (G4a); the heal writers run under `rebuilding()` so
+a pass never queues a day-remark against itself (G2).
+
+# ceiling: only `checkin_import.remark_attendance` re-marks bare
+# upgrade: route it through `_rebuild_under_guard(source="recovery")` when that file's owner next touches it

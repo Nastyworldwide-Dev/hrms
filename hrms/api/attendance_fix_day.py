@@ -65,6 +65,10 @@ LOG_DOCTYPE = "HR Day Fix Log"
 #: ERP backfill and the recovery write their own entries with their own source,
 #: so a reader can tell a person's correction from a machine's.
 LOG_SOURCE = "hr_fix_day"
+#: `remark_day` answers that mean HR's fix was NOT applied; `_finish` refuses on them.
+#: "held" is not one: a protection (leave, request, payout) answers held and the
+#: taps HR wrote still stand, logged — HR's edit always wins; the engine recalculates.
+NOT_APPLIED = ("deadlocked", "running")
 ACTIONS = (
 	"rebuild_day",
 	"claim_tap",
@@ -1069,6 +1073,21 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, 
 			_("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason or _("not given")),
 		)
 	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}") for day in days}
+	lost = {day: verdict for day, verdict in rebuild.items() if verdict.get("action") in NOT_APPLIED}
+	if lost:
+		# The engine did not apply HR's fix: the shift is still running, or the
+		# database deadlocked. Logging it as done and answering
+		# ok is how a lost fix read as a success (D-H1, 21 Sep 2026). Raising
+		# rolls the whole request back — taps, Comments and all — and HR sees why.
+		logger.warning("[attendance_fix_day] %s on %s not applied: %s", action, emp.name, lost)
+		frappe.throw(
+			_("The day was not rebuilt, so nothing was changed: {0}").format(
+				"; ".join(
+					f"{day}: {verdict.get('detail') or verdict.get('action')}"
+					for day, verdict in lost.items()
+				)
+			)
+		)
 	after = {"days": _day_states(emp.name, days)}
 	if added:
 		after["added"] = added

@@ -95,9 +95,14 @@ class WhenHrAsksCase(unittest.TestCase):
 
 	def test_a_row_from_a_request_still_holds(self):
 		"""Owner-by-REQUEST is not HR's handiwork: a leave or an attendance
-		request speaks for the day and has to be cancelled first, whoever asks."""
+		request speaks for the day and has to be cancelled first, whoever asks.
+		The classifier says REQUEST only for a row carrying a request marker
+		(attendance_ownership.classify_row), so the row carries one here too:
+		since 21 Sep 2026 a marker-less `auto_attendance=0` row is a person's."""
 		with classifier("request"):
-			self.assertIsNotNone(rec.protected_reason(DAY, TODAY, [row()], hr_asked=True))
+			self.assertIsNotNone(
+				rec.protected_reason(DAY, TODAY, [row(attendance_request="HR-ATR-1")], hr_asked=True)
+			)
 
 
 class EveryOtherProtectionStillWinsCase(unittest.TestCase):
@@ -178,9 +183,10 @@ class TheNeverWorseGuardCovversHrsPressCase(unittest.TestCase):
 
 		calls = {"guarded": 0, "bare": 0}
 
-		def guarded(employee, day, remark, source="recovery"):
+		def guarded(employee, day, remark, source="recovery", hr_asked=False, action="rebuild"):
 			calls["guarded"] += 1
 			calls["source"] = source
+			calls["hr_asked"] = hr_asked
 			return guard_result if guard_result is not None else {"marked": ["ATT-1"]}
 
 		def bare(employee, day, apply):
@@ -215,16 +221,63 @@ class TheNeverWorseGuardCovversHrsPressCase(unittest.TestCase):
 		self.assertEqual(answer["action"], "remarked")
 		self.assertEqual(answer["marked"], ["ATT-1"])
 
-	def test_the_nightly_path_is_left_exactly_as_it_was(self):
-		# Its missing guard is older than this change and is ticketed, not
-		# widened here: a behaviour change to the automatic pass is its own job.
+	def test_the_job_path_goes_through_the_guard_too(self):
+		# Reversed 21 Sep 2026 (B-H6, ticket-nightly-remark-is-unguarded): the
+		# punch-hook job was the last bare rebuild path; it now runs under the
+		# guard and logs as `day_remark`, so a rolled-back day is listed.
 		_, calls = self.run_remark(hr_asked=False)
-		self.assertEqual(calls["bare"], 1)
-		self.assertEqual(calls["guarded"], 0)
+		self.assertEqual(calls["bare"], 0)
+		self.assertEqual(calls["guarded"], 1)
+		self.assertEqual(calls["source"], "day_remark")
+		self.assertFalse(calls["hr_asked"], "the job is automatic: the guard rolls back for it")
 
 	def test_the_guard_records_who_asked(self):
 		_, calls = self.run_remark(hr_asked=True)
 		self.assertIn("fix", calls["source"], "the day-fix log says which pass rebuilt the day")
+
+	def test_the_guard_is_told_hr_asked_so_it_judges_without_rolling_back(self):
+		"""Owner ruling, 21 Sep 2026: HR's edit always wins; the system recalculates."""
+		_, calls = self.run_remark(hr_asked=True)
+		self.assertTrue(calls["hr_asked"])
+
+
+class TheGuardNeverRollsBackHrsOwnPressCase(unittest.TestCase):
+	"""The never-worse guard catches an AUTOMATIC rebuild lowering a day by
+	mistake. When HR presses, a lower result is usually the intent (a duplicate
+	ignored, a wrong OUT removed): the guard judges, LOGS the drop in the
+	after-state, and never rolls back. Automatic callers are unchanged."""
+
+	def _guard(self, hr_asked):
+		from unittest.mock import MagicMock
+
+		before = {"name": "ATT-1", "status": "Present", "working_hours": 9.0, "docstatus": 1}
+		after = {"name": "ATT-2", "status": "Half Day", "working_hours": 4.0, "docstatus": 1}
+		rows, logged, db = [before, after], [], MagicMock()
+		with (
+			patch.object(rec.frappe, "db", db),
+			patch.object(rec, "submitted_row", side_effect=lambda *_a: rows.pop(0)),
+			patch.object(rec, "day_taps", return_value=[]),
+			patch.object(rec, "log_day_fix", side_effect=lambda *a, **k: logged.append((a, k))),
+		):
+			result = rec._rebuild_under_guard(
+				"HR-EMP-00021", DAY, lambda *_a: {"marked": ["ATT-2"]}, source="hr_fix_day", hr_asked=hr_asked
+			)
+		return result, logged, db
+
+	def test_hrs_press_applies_the_lower_result_and_logs_the_drop(self):
+		result, logged, db = self._guard(hr_asked=True)
+		self.assertEqual(result["marked"], ["ATT-2"])
+		db.rollback.assert_not_called()
+		[(args, kwargs)] = logged
+		self.assertEqual(args[2], "rebuild")
+		self.assertEqual(kwargs["after"]["status"], "Half Day")
+		self.assertIn("Present", kwargs["after"]["lowered"])
+
+	def test_an_automatic_caller_is_still_rolled_back(self):
+		result, logged, db = self._guard(hr_asked=False)
+		self.assertIn("held", result)
+		db.rollback.assert_called_once_with(save_point=rec.NEVER_WORSE_SAVEPOINT)
+		self.assertEqual(logged[0][0][2], "rebuild-rolled-back")
 
 
 class TheDayIsHandedBackToTheEngineCase(unittest.TestCase):
@@ -349,7 +402,7 @@ class OnlyOnHrsPressCase(unittest.TestCase):
 
 		order = []
 
-		def guarded(employee, day, remark, source="recovery"):
+		def guarded(employee, day, remark, source="recovery", hr_asked=False, action="rebuild"):
 			return remark(employee, day, True)
 
 		with (

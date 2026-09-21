@@ -148,7 +148,7 @@ class TestTheFixLogIsSharedWithTheBackfills(unittest.TestCase):
 
 	def test_source_names_every_writer_of_this_log(self):
 		options = set(self.fields["source"]["options"].split("\n"))
-		self.assertEqual(options, {"hr_fix_day", "erp_backfill", "recovery"})
+		self.assertEqual(options, {"hr_fix_day", "erp_backfill", "recovery", "day_remark"})
 		self.assertEqual(self.fields["source"]["reqd"], 1)
 
 	def test_a_batch_can_be_undone_as_one_run(self):

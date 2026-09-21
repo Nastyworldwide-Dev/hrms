@@ -482,6 +482,41 @@ class TestApply(_Step):
 		self.assertIn("2026-09-08", {d["date"] for d in outcome["done"]})
 
 
+class TestTheRemarkGoesThroughTheNeverWorseGuard(_Step):
+	"""B-H5 (21 Sep 2026): `_fix_rostered_day` re-marked every day it touched
+	through the bare `checkin_import._remark_day`, outside the guard that every
+	other automatic rebuild runs under — a Present could come back Half Day with
+	no rollback and no log entry. The re-mark is the guard's apply function now;
+	a rolled-back day is listed for HR, and the log says `recovery` did it."""
+
+	def _guarded(self, held_on=()):
+		calls = []
+
+		def guard(employee, day, remark, source="recovery", **kw):
+			calls.append((employee, str(day), remark, source))
+			if str(day) in held_on:
+				return {"held": "it would have turned a submitted Present into Half Day", "hr": True}
+			return remark(employee, day, True)
+
+		with patch.object(rec, "_rebuild_under_guard", guard):
+			_plan, result = self.apply()
+		return calls, result
+
+	def test_every_day_is_remarked_under_the_guard_with_the_recovery_as_source(self):
+		calls, _result = self._guarded()
+		self.assertEqual([c[1] for c in calls][:3], ["2026-09-08", "2026-09-09", "2026-09-10"])
+		self.assertTrue(all(c[2] is rec._remark_day and c[3] == "recovery" for c in calls))
+		self.assertEqual(len(self.remarks), len(calls), "the engine is still the one that marks")
+
+	def test_a_day_the_guard_rolled_back_is_listed_for_hr(self):
+		_calls, result = self._guarded(held_on=("2026-09-09",))
+		held = [h for h in result["held_back"] if h["date"] == "2026-09-09"]
+		self.assertEqual(len(held), 1)
+		self.assertIn("Present into Half Day", held[0]["reason"])
+		self.assertTrue(held[0]["hr"])
+		self.assertNotIn("2026-09-09", [d["date"] for d in result["done"]])
+
+
 class TestStrayTapsAfterACancel(_Step):
 	"""fresh.local, 15 Sep 2026: cancelling the night row of 8 Sep unlinked the
 	07:50 of 9 Sep, which still carried the night stamp when 8 Sep was

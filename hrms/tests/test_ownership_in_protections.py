@@ -106,11 +106,15 @@ class TestWithoutTheClassifier(unittest.TestCase):
 
 
 class TestWithTheClassifier(unittest.TestCase):
-	def test_a_system_owned_row_with_a_blank_tick_is_no_longer_protected(self):
-		"""The whole point: a pre-1-September row the hourly job made is fixable."""
+	def test_a_blank_tick_holds_before_the_classifier_is_asked(self):
+		"""Reversed 21 Sep 2026 (E-C1 stopgap, test_owner_hold.py): the rows these
+		protections read carry no `owner`, so the classifier answered SYSTEM for
+		every HR master-edit row and the nightly could cancel it. Until Release 2
+		removes typed rows, `auto_attendance=0` with no request marker IS a
+		person's row — the classifier decides the engine's own rows only."""
 		with _classifier("system"):
 			for reason in _protections([_row(auto_attendance=0)]):
-				self.assertIsNone(reason)
+				self.assertIn("marked by HR by hand", reason)
 
 	def test_an_hr_owned_row_is_protected_even_with_the_tick_set(self):
 		with _classifier("hr", "Nabil amended it on 9 September"):
@@ -195,12 +199,14 @@ class TestTheSiblingReadersAskTooAndReviewFollowUp(unittest.TestCase):
 			today=TODAY,
 		)
 
-	def test_leftover_verdict_no_longer_reads_the_blank_tick(self):
-		row = _row(auto_attendance=0, attendance_date=date(2026, 8, 17), shift="9AM-6PM", status="Absent")
+	def test_leftover_verdict_holds_a_blank_tick_and_asks_the_classifier_about_the_rest(self):
+		# The blank-tick half reversed 21 Sep 2026 (E-C1 stopgap): see test_owner_hold.py.
+		typed = _row(auto_attendance=0, attendance_date=date(2026, 8, 17), shift="9AM-6PM", status="Absent")
 		with _classifier("system"):
-			self.assertNotIn("by hand", self._verdict(row) or "")
+			self.assertIn("by hand", self._verdict(typed))
+		engine = _row(auto_attendance=1, attendance_date=date(2026, 8, 17), shift="9AM-6PM", status="Absent")
 		with _classifier("hr", "Nabil amended it on 9 September"):
-			self.assertIn("by hand", self._verdict(row))
+			self.assertIn("by hand", self._verdict(engine))
 
 	def test_an_owner_that_cannot_be_read_still_holds_the_row(self):
 		"""A classifier whose constants are named differently must not raise."""

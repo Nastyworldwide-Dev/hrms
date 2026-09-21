@@ -196,14 +196,26 @@ def _record_deadlock(describe, attempts) -> None:
 		logger.exception("[day_remark] could not record the deadlock of %s", describe)
 
 
-def remark_day(employee, day, reason="", hr_asked=False):
+def remark_day(employee, day, reason="", hr_asked=False, inline=None):
 	"""The job: re-mark one past employee-day through the engine, unless it is protected.
 
 	The day is this job's own while it runs, so the links and skip stamps the
 	engine writes under it cannot queue the same day a second time; and a
 	deadlock against another writer is retried rather than raised at the worker.
+
+	`inline` (default: `hr_asked`) says the caller is a REQUEST, not the job.
+	There `despite_deadlock`'s full rollback would also drop the caller's own
+	writes — Fix Day's taps and Comments — and the retry would re-mark the day
+	on the old evidence while the caller logs ok (D-H1, 21 Sep 2026). So inline
+	the unit runs once and a lost transaction propagates: the request rolls back
+	as a whole and the person sees an error.
 	"""
 	day = getdate(day)
+	if inline is None:
+		inline = hr_asked
+	if inline:
+		logger.debug("[day_remark] %s on %s (%s): inline, no deadlock retry", employee, day, reason)
+		return _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked)
 	return despite_deadlock(
 		lambda: _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked),
 		f"{employee} on {day} ({reason})",
@@ -241,14 +253,14 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 		# recompute nobody was watching (review of b9794c65b).
 		#
 		# `_rebuild_under_guard`, not `guarded_rebuild`: the outer one takes the
-		# day and retries deadlocks, and this is already inside both.
+		# day and retries deadlocks, and this is already inside both. With
+		# `hr_asked` the guard judges and LOGS a lowered day but never rolls it
+		# back: HR's edit always wins; the system recalculates (owner, 21 Sep).
 		def remark(employee, day, apply):
-			# Inside the guard's savepoint on purpose: if the rebuild is rolled
-			# back for making the day worse, the ownership goes back with it.
 			rec.release_to_automation(employee, day)
 			return rec._remark_released_day(employee, day, apply)
 
-		result = rec._rebuild_under_guard(employee, day, remark, source="hr_fix_day")
+		result = rec._rebuild_under_guard(employee, day, remark, source="hr_fix_day", hr_asked=True)
 		if result.get("held"):
 			logger.warning(
 				"[day_remark] %s on %s rolled back by the never-worse guard (%s): %s",
@@ -261,9 +273,28 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 			# already says which guard spoke. A field kept for a screen that does
 			# not exist yet is scaffolding, and scaffolding rots.
 			return {"action": "held", "detail": result["held"]}
+		source = "hr_fix_day"
 	else:
-		result = rec._remark_released_day(employee, day, apply=True)
-	retired = _retire_unmarkable_rows(employee, day, result, shift_type)
+		# The job is automatic, so the guard ROLLS BACK a re-mark that would
+		# lower a submitted day and lists it (B-H6, 21 Sep 2026: this was the
+		# most-used rebuild path and the only bare, unlogged one). Every
+		# re-mark that marks is on the day-fix log as `day_remark` / `remark`.
+		source = "day_remark"
+		result = rec._rebuild_under_guard(
+			employee, day, rec._remark_released_day, source=source, action="remark"
+		)
+		if result.get("held"):
+			logger.warning(
+				"[day_remark] %s on %s rolled back by the never-worse guard (%s): %s",
+				employee,
+				day,
+				reason,
+				result["held"],
+			)
+			# Return before `_retire_unmarkable_rows`: it reads the result that
+			# was just undone and would cancel the row the guard protected.
+			return {"action": "held", "detail": result["held"]}
+	retired = _retire_unmarkable_rows(employee, day, result, shift_type, source=source)
 	logger.info(
 		"[day_remark] %s on %s re-marked (%s): marked=%s retired=%s errors=%s",
 		employee,
@@ -291,11 +322,14 @@ def _shift_still_running(employee, day) -> bool:
 	)
 
 
-def _retire_unmarkable_rows(employee, day, result, shift_type) -> list:
+def _retire_unmarkable_rows(employee, day, result, shift_type, source="day_remark") -> list:
 	"""A punch-owned row the engine would no longer write (every punch of its shift
 	rejected or skipped, or a rest day left without an approved pair) is cancelled,
 	so the day reads what the engine marks from scratch. HR's, leave and mirrored
-	rows are never found (get_automation_attendance); protected days never get here."""
+	rows are never found (get_automation_attendance); protected days never get here.
+	Each cancellation is on the day-fix log as `retire` under `source`."""
+	from hrms.utils import attendance_recovery as rec
+
 	marking = {e.get("shift") for e in result.get("expected") or [] if e.get("status")}
 	shifts = {
 		s
@@ -318,8 +352,10 @@ def _retire_unmarkable_rows(employee, day, result, shift_type) -> list:
 			continue
 		row.flags = getattr(row, "flags", None) or frappe._dict()
 		row.flags.ignore_permissions = True
+		before = rec._row_summary(row)
 		row.cancel()
 		retired.append(row.name)
+		rec.log_day_fix(employee, day, "retire", before=before, after=None, source=source)
 		logger.info(
 			"[day_remark] %s on %s: %s no longer has evidence under %s, cancelled",
 			employee,

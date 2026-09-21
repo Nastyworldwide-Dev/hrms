@@ -425,6 +425,97 @@ class TestRemarkDayJob(unittest.TestCase):
 		self.assertEqual(result["action"], "remarked")
 
 
+class TestTheJobIsGuardedAndLogged(unittest.TestCase):
+	"""B-H6 / ticket-nightly-remark-is-unguarded (21 Sep 2026): the punch-hook
+	job was the most-used rebuild path and the only bare one — a punch edit
+	that lowered a submitted day was applied with nothing catching it and
+	nothing in HR Day Fix Log. Now: rolled back and listed when it would lower
+	the day; logged as `day_remark` / `remark` when it marks; every retirement
+	logged as `retire`."""
+
+	def _run(self, before, after, marked=("HR-ATT-2",), retire=None):
+		from hrms.utils import attendance_recovery as rec
+		from hrms.utils import day_remark as dr
+
+		db, logged, rows = MagicMock(), [], [before, after]
+		db.exists.return_value = None
+
+		def get_all(*a, **k):
+			return []
+
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(frappe, "get_all", side_effect=get_all),
+			patch.object(dr, "employee_now", return_value=NOW),
+			patch.object(dr, "lock_employee_row"),
+			patch.object(dr, "_retire_unmarkable_rows", retire or (lambda *a, **k: [])),
+			patch.object(rec, "_day_protection", return_value=None),
+			patch.object(rec, "submitted_row", side_effect=lambda *_a: rows.pop(0)),
+			patch.object(rec, "day_taps", return_value=[]),
+			patch.object(rec, "log_day_fix", side_effect=lambda *a, **k: logged.append((a, k))),
+			patch.object(rec, "_remark_released_day", return_value={"expected": [], "marked": list(marked)}),
+		):
+			result = dr.remark_day(EMP, str(DAY), "CKIN-OUT edited (skip_auto_attendance)")
+		return result, logged, db
+
+	def _row(self, status, hours):
+		return {
+			"name": "HR-ATT-1",
+			"status": status,
+			"working_hours": hours,
+			"docstatus": 1,
+			"attendance_date": DAY,
+		}
+
+	def test_a_re_mark_that_would_lower_the_day_is_rolled_back_and_listed(self):
+		result, logged, db = self._run(self._row("Present", 9.0), self._row("Half Day", 4.0))
+		self.assertEqual(result["action"], "held")
+		self.assertIn("Present", result["detail"])
+		db.rollback.assert_called_once_with(save_point="attendance_recovery_never_worse")
+		[(args, kwargs)] = logged
+		self.assertEqual((args[2], kwargs["source"]), ("rebuild-rolled-back", "day_remark"))
+
+	def test_a_plain_re_mark_writes_a_log_row_as_day_remark(self):
+		result, logged, db = self._run(self._row("Half Day", 4.0), self._row("Present", 9.0))
+		self.assertEqual(result["action"], "remarked")
+		db.rollback.assert_not_called()
+		[(args, kwargs)] = logged
+		self.assertEqual((args[0], args[1], args[2]), (EMP, DAY, "remark"))
+		self.assertEqual(kwargs["source"], "day_remark")
+		self.assertEqual(kwargs["after"]["status"], "Present")
+
+	def test_a_retirement_is_logged(self):
+		from hrms.utils import attendance_recovery as rec
+		from hrms.utils import day_remark as dr
+
+		db, logged = MagicMock(), []
+		db.exists.return_value = None
+		row = Row(
+			name="HR-ATT-1",
+			status="Present",
+			working_hours=9.0,
+			docstatus=1,
+			attendance_date=DAY,
+			shift=SHIFT,
+		)
+		row.store = Store()
+		shift_type = SimpleNamespace(get_automation_attendance=lambda e, d, s: row)
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", return_value=[SHIFT]),
+			patch.object(rec, "log_day_fix", side_effect=lambda *a, **k: logged.append((a, k))),
+		):
+			retired = dr._retire_unmarkable_rows(EMP, DAY, {"expected": []}, shift_type, source="day_remark")
+		self.assertEqual(retired, ["HR-ATT-1"])
+		self.assertEqual(row.docstatus, 2)
+		[(args, kwargs)] = logged
+		self.assertEqual(args[2], "retire")
+		self.assertEqual(kwargs["source"], "day_remark")
+		self.assertEqual(kwargs["before"]["status"], "Present")
+		self.assertIsNone(kwargs["after"])
+
+
 class TestEveryDecisionAsksForTheRemark(unittest.TestCase):
 	"""Approval and rejection of an ordinary punch, and rejection of a forgotten
 	check-out, each name the punch's shift day (approval of a forgotten check-out
@@ -559,6 +650,73 @@ class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
 		self.assertTrue(dr.is_lost_transaction(Exception(1205, "Lock wait timeout")))
 		self.assertFalse(dr.is_lost_transaction(Exception(1054, "Unknown column")))
 		self.assertFalse(dr.is_lost_transaction(ValueError("boom")))
+
+
+class TestInlineTheDeadlockIsNotRetried(unittest.TestCase):
+	"""D-H1 (21 Sep 2026): `despite_deadlock` does a FULL `frappe.db.rollback()`
+	and runs the unit again — right in the RQ job, where the unit is the whole
+	transaction. Reached inline from Fix Day's request, that rollback also
+	drops HR's tap writes, the retry re-marks the day on the OLD evidence, and
+	`_finish` logs ok. Inline (HR asked) the exception must propagate: the
+	request rolls back as a whole and HR sees an error."""
+
+	def _run(self, hr_asked, inline=None):
+		from hrms.utils import day_remark as dr
+
+		calls = []
+
+		def once(employee, day, reason="", hr_asked=False):
+			calls.append(day)
+			if len(calls) == 1:
+				raise Exception(1213, "Deadlock found when trying to get lock")
+			return {"action": "remarked"}
+
+		db = MagicMock()
+		kwargs = {} if inline is None else {"inline": inline}
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(frappe, "log_error", MagicMock(), create=True),
+			patch.object(dr, "sleep"),
+			patch.object(dr, "_remark_once", side_effect=once),
+		):
+			return dr.remark_day(EMP, str(DAY), "fix day: pair_taps", hr_asked=hr_asked, **kwargs), calls, db
+
+	def test_hrs_press_raises_the_deadlock_and_rolls_nothing_back_itself(self):
+		with self.assertRaises(Exception) as caught:
+			self._run(hr_asked=True)
+		self.assertEqual(caught.exception.args[0], 1213)
+
+	def test_hrs_press_never_retries_on_old_evidence(self):
+		from hrms.utils import day_remark as dr
+
+		calls, db = [], MagicMock()
+
+		def once(employee, day, reason="", hr_asked=False):
+			calls.append(day)
+			raise Exception(1213, "Deadlock found when trying to get lock")
+
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(dr, "sleep"),
+			patch.object(dr, "_remark_once", side_effect=once),
+		):
+			with self.assertRaises(Exception):
+				dr.remark_day(EMP, str(DAY), "fix day: pair_taps", hr_asked=True)
+		self.assertEqual(len(calls), 1, "inline, the unit is tried once")
+		db.rollback.assert_not_called()
+
+	def test_the_job_still_retries(self):
+		result, calls, db = self._run(hr_asked=False)
+		self.assertEqual(result["action"], "remarked")
+		self.assertEqual(len(calls), 2)
+		self.assertEqual(db.rollback.call_count, 1)
+
+	def test_inline_can_be_said_outright(self):
+		with self.assertRaises(Exception) as caught:
+			self._run(hr_asked=False, inline=True)
+		self.assertEqual(caught.exception.args[0], 1213)
 
 
 class TestAnAutomaticPassOwnsTheDayItRebuilds(unittest.TestCase):

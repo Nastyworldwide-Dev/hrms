@@ -49,20 +49,37 @@ def _tap(rejected=False, skipped=False, **extra):
 
 
 class TestEvidenceShrank(unittest.TestCase):
-	"""What counts as "the punches themselves got smaller"."""
+	"""What counts as "the punches the row was built from got smaller".
+
+	B-H2 (21 Sep 2026): the old predicate compared the tap list against itself
+	— ANY rejected or skipped tap on the day, however old, stood the guard
+	aside. Shrank means: a tap that was LINKED to the row (counted when it was
+	marked) is now rejected, skip-stamped, moved to another day or gone."""
 
 	def test_untouched_taps_are_not_a_shrink(self):
-		self.assertFalse(rec.evidence_shrank(_row(), [_tap(), _tap(name="EC-2")]))
+		self.assertFalse(rec.evidence_shrank(_row(), [_tap(attendance="HR-ATT-1"), _tap(name="EC-2")]))
 
-	def test_a_rejected_tap_is_a_shrink(self):
-		self.assertTrue(rec.evidence_shrank(_row(), [_tap(), _tap(name="EC-2", rejected=True)]))
+	def test_a_linked_tap_now_rejected_is_a_shrink(self):
+		self.assertTrue(
+			rec.evidence_shrank(_row(), [_tap(), _tap(name="EC-2", rejected=True, attendance="HR-ATT-1")])
+		)
 
-	def test_a_skip_stamped_tap_is_a_shrink(self):
-		self.assertTrue(rec.evidence_shrank(_row(), [_tap(skipped=True)]))
+	def test_a_linked_tap_now_skip_stamped_is_a_shrink(self):
+		self.assertTrue(rec.evidence_shrank(_row(), [_tap(skipped=True, attendance="HR-ATT-1")]))
 
-	def test_a_deleted_tap_is_a_shrink(self):
-		"""The row was built from two taps; only one is still here."""
-		self.assertTrue(rec.evidence_shrank(_row(linked=2), [_tap()]))
+	def test_a_pre_existing_rejected_tap_the_row_never_counted_is_not_a_shrink(self):
+		"""The B-H2 case: one old rejected out-of-radius tap, no new change — guarded."""
+		taps = [_tap(attendance="HR-ATT-1"), _tap(name="EC-2", rejected=True)]
+		self.assertFalse(rec.evidence_shrank(_row(), taps))
+
+	def test_a_pre_existing_skip_stamp_the_row_never_counted_is_not_a_shrink(self):
+		taps = [_tap(attendance="HR-ATT-1"), _tap(name="EC-2", skipped=True)]
+		self.assertFalse(rec.evidence_shrank(_row(), taps))
+
+	def test_a_linked_tap_that_left_the_day_is_a_shrink(self):
+		"""`linked` is what before_rebuild read as linked to the row NOW; a name
+		not among the day's taps any more was re-stamped onto another day."""
+		self.assertTrue(rec.evidence_shrank(_row(linked=["EC-1", "EC-2"]), [_tap()]))
 
 	def test_a_row_with_an_out_time_and_no_tap_left_is_a_shrink(self):
 		self.assertTrue(rec.evidence_shrank(_row(out_time="2026-08-17 18:00:00"), []))
@@ -145,13 +162,40 @@ class TestGuardedRebuild(unittest.TestCase):
 		self.assertEqual(result["marked"], ["HR-ATT-1"])
 
 	def test_a_rejected_tap_lets_the_day_fall(self):
-		result = self._guard(_row("Present", 9.0), _row("Absent", 0.0), [_tap(rejected=True)])
+		result = self._guard(
+			_row("Present", 9.0), _row("Absent", 0.0), [_tap(rejected=True, attendance="HR-ATT-1")]
+		)
 		self.db.rollback.assert_not_called()
 		self.assertEqual(result["marked"], ["HR-ATT-1"])
 
 	def test_the_savepoint_is_taken_before_the_rebuild_runs(self):
 		self._guard(_row("Present", 9.0), _row("Present", 9.0), [_tap()])
 		self.db.savepoint.assert_called_once_with(rec.NEVER_WORSE_SAVEPOINT)
+
+	def test_a_day_with_one_old_rejected_tap_and_no_new_change_stays_guarded(self):
+		"""B-H2: a large share of live days carry an old rejected or skipped tap;
+		the guard must not stand aside for them."""
+		taps = [_tap(attendance="HR-ATT-1"), _tap(name="EC-2", rejected=True)]
+		result = self._guard(_row("Present", 9.0), _row("Absent", 0.0), taps)
+		self.db.rollback.assert_called_once_with(save_point=rec.NEVER_WORSE_SAVEPOINT)
+		self.assertIn("held", result)
+
+
+class TestBeforeRebuildReadsWhatTheRowWasBuiltFrom(unittest.TestCase):
+	def test_the_rows_linked_taps_are_passed_as_linked(self):
+		seen = {}
+		with (
+			patch.object(frappe, "db", MagicMock()),
+			patch.object(rec, "submitted_row", return_value=_row()),
+			patch.object(frappe, "get_all", return_value=["EC-1", "EC-9"]),
+			patch.object(rec, "day_taps", return_value=[_tap()]),
+			patch.object(rec, "evidence_shrank", side_effect=lambda row, taps: seen.update(row=row) or True),
+		):
+			_before, shrank = rec.before_rebuild("HR-EMP-1", date(2026, 8, 17))
+		self.assertTrue(shrank)
+		self.assertEqual(sorted(seen["row"]["linked"]), ["EC-1", "EC-9"])
+		self.assertEqual(frappe.get_all.call_args.kwargs.get("pluck"), "name")
+		self.assertEqual(frappe.get_all.call_args.kwargs["filters"], {"attendance": "HR-ATT-1"})
 
 
 if __name__ == "__main__":
