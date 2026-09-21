@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   release-3 (requests tell the truth)
+prompt:   fix-attendance (one button, HR ticks the pair)
 status:   done
-commit:   306394c5f on nz-glass (pushed)
-files:    frontend/src/{socket.js,composables/realtime.js,data/requestLists.js,utils/siteTime.js,utils/requestStatus.js}
-          frontend/src/components/{RequestPanel,RequestActionSheet,FormView,glass/GStatusChip}.vue + six *Item.vue
-          hrms/hr/doctype/{leave_application,shift_request,expense_claim,ot_request,replacement_leave_claim}/*.py
-          hrms/hr/utils.py · hrms/mixins/pwa_notifications.py · hrms/api/approval.py · hrms/patches/v16_0/track_changes_on_leave_and_expense.py
-verify:   cd frontend && npm test; PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_a_decision_is_always_recordable.py
-flags:    migrate + bundle build + worker restart. Ruling needed: an OT/RL cancel is refused when its leave was already taken (HR must cancel the leave first). Not done: RL grant dated by worked day; Leave-cancel ledger reverse; expense_date in the PWA; reminders (4 answers pending).
-next:     owner deploys R3 after R2; then reminders once the four answers are in (docs/glass/release-3-notes.md).
+commit:   33da0c2d8 on nz-glass (pushed)
+files:    hrms/api/attendance_fix_day.py (save_day, _mirror_delete_allowed, undo re-inserts)
+          hrms/public/js/fix_day.bundle.js (one dialog) · employee_checkin_list.js (one button)
+          hrms/tests/test_attendance_fix_day_save_day.py (26) · employee_checkin_list.test.js (28)
+          docs/glass/fix-attendance-dialog.png (real Desk render) · release-3-notes.md
+verify:   PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_attendance_fix_day_save_day.py; node --test hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js
+flags:    no schema change; bundle rebuild + worker restart. Two pairs = summed hours only under Shift Type "Every Valid Check-in and Check-out". Fix days endpoint kept, no UI door. Reminders (4 answers) and the R3 rulings still open.
+next:     owner deploys R2 → R3 (+ this); check the live Shift Types' working-hours setting; then reminders.
