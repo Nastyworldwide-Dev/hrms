@@ -63,6 +63,7 @@ from frappe.utils import cint, flt, get_datetime, get_time, getdate, now_datetim
 from hrms.hr.doctype.attendance.attendance import validate_attendance_times
 from hrms.hr.doctype.shift_assignment.shift_assignment import MultipleShiftError, OverlappingShiftError
 from hrms.overrides import company_scope
+from hrms.utils.day_remark import remark_day_after_commit
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, SKIP_MARKER
 from hrms.utils.offshift_punch_heal import _lost_transaction
 
@@ -278,6 +279,8 @@ def _save_row(row, is_sm: bool) -> dict:
 			raise RowRefused("target_day_taken", _("This day already has attendance; edit it instead."))
 		name, final_day = _edit(emp, day, changes, snap, is_sm), day
 
+	after = _snapshot(emp, final_day)
+	_log_day(emp, day, "master-edit", snap, after, _reason_for(action, snap, after, new_day))
 	logger.info("[attendance_master_edit] %s %s on %s -> %s", action, employee, day, name)
 	return {
 		"ok": True,
@@ -286,8 +289,22 @@ def _save_row(row, is_sm: bool) -> dict:
 		"error": None,
 		"attendance": name,
 		"attendance_date": str(final_day),
-		"revision": _snapshot(emp, final_day)["revision"],
+		"revision": after["revision"],
 	}
+
+
+def _reason_for(action, before, after, new_day) -> str:
+	"""The grid collects no reason; the log carries what the Comment says."""
+	user = frappe.session.user
+	if action == "remove":
+		return _("Removed by {0} via Shift Attendance.").format(user)
+	target = owned_target(before["attendance"], before["punches"])
+	saved = next((r for r in after["attendance"] if cint(r.docstatus) == 1), None)
+	changed = "; ".join(describe_changes(target, saved or {})) or _("no field changed")
+	text = _("Edited by {0} via Shift Attendance: {1}").format(user, changed)
+	if new_day:
+		text += " " + _("(moved to {0})").format(new_day)
+	return text
 
 
 def _edit(emp, day, changes, snap, is_sm, replaces=None) -> str:
@@ -450,14 +467,17 @@ def _hand_back(employee, attendance_date, revision, is_sm) -> dict:
 	for marker in markers:
 		_delete_punch(marker.name)
 
-	shift = (target.shift if target else None) or next(
-		(p.shift for p in snap["punches"] if p.shift and p.device_id not in (HR_DEVICE, HR_REMOVED_DEVICE)),
-		next((p.shift for p in snap["punches"] if p.shift), None),
+	# one employee-day, deduplicated; today is left to the hourly job (day_remark)
+	enqueued = remark_day_after_commit(emp.name, day, f"handed back by {user}")
+	_log_day(
+		emp,
+		day,
+		"master-hand-back",
+		snap,
+		_snapshot(emp, day),
+		_("Handed back to automation by {0}.").format(user),
+		refs=released,
 	)
-	# today is the hourly job's to mark once the shift ends
-	enqueued = bool(shift and day < _today())
-	if enqueued:
-		_enqueue_engine(shift)
 	logger.info(
 		"[attendance_master_edit] %s handed back %s on %s: row=%s released=%d enqueued=%s",
 		user,
@@ -1074,11 +1094,48 @@ def _comment(doctype, name, text):
 	).insert(ignore_permissions=True)
 
 
-def _enqueue_engine(shift):
-	frappe.enqueue(
-		"hrms.utils.offshift_punch_heal.process_shift_types",
-		queue="long",
-		timeout=3600,
-		shift_types=[shift],
-		enqueue_after_commit=True,
+def _log_day(emp, day, action, before, after, reason, refs=()) -> str:
+	"""One HR Day Fix Log row per day saved, beside Fix Day's and the recovery's.
+
+	In the row's savepoint on purpose: an edit whose log cannot be written is
+	refused with the rest of the row, never saved unrecorded.
+	"""
+	entry = _write_fix_log(
+		{
+			"employee": emp.name,
+			"fix_date": str(day),
+			"action": action,
+			# ceiling: `source` is a Select without a master-edit option yet, upgrade:
+			# "hr_master_edit" once the HR Day Fix Log doctype carries that option
+			"source": "hr_fix_day",
+			"refs": ", ".join(sorted(refs)),
+			"reason": reason,
+			"fixed_by": frappe.session.user,
+			"before_state": json.dumps(_day_state(before), default=str, indent=1),
+			"after_state": json.dumps(_day_state(after), default=str, indent=1),
+		}
 	)
+	logger.info("[attendance_master_edit] %s %s on %s logged as %s", action, emp.name, day, entry)
+	return entry
+
+
+def _day_state(snap) -> dict:
+	return {
+		"attendance": [
+			{
+				k: r.get(k)
+				for k in ("name", "docstatus", "status", "shift", "in_time", "out_time", "working_hours")
+			}
+			for r in snap["attendance"]
+		],
+		"punches": [
+			{k: p.get(k) for k in ("name", "time", "log_type", "shift", "skip_auto_attendance", "device_id")}
+			for p in snap["punches"]
+		],
+	}
+
+
+def _write_fix_log(fields) -> str:
+	from hrms.api.attendance_fix_day import _write_log
+
+	return _write_log(fields)

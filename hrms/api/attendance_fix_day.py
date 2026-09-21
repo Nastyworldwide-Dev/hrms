@@ -959,6 +959,11 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	entry = _log_entry(log_entry)
 	if cint(entry.undone):
 		_refuse(_("This fix was already undone."))
+	if entry.action not in ACTIONS:
+		# The master edit and the automatic passes log here too, with their own
+		# before-state shapes; this undo knows only this screen's actions and
+		# would restore nothing while marking the entry undone.
+		_refuse(_("{0} was not made on this screen and cannot be undone here.").format(entry.action))
 	cancelled_a_row = entry.action in CANCELLING_ACTIONS and _cancelled_a_row(entry)
 	if cancelled_a_row and entry.action not in UNDOABLE_APART_FROM_THE_CANCEL:
 		# Frappe has no un-cancel. Saying so is better than a no-op that looks

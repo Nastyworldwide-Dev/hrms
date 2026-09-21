@@ -628,6 +628,14 @@ class TestTheTrailAndTheUndo(FixDayCase):
 		fd.undo_fix(answer["log"])
 		self.assertIn("already undone", self.refusal(fd.undo_fix, answer["log"]))
 
+	def test_a_log_row_from_another_door_cannot_be_undone_here(self):
+		"""The master edit logs to the same table with its own before-state
+		shape; this undo would restore nothing and still mark it undone."""
+		answer = fd.ignore_tap("CKIN-A", reason="x")
+		self.store.logs[answer["log"]]["action"] = "master-edit"
+		self.assertIn("cannot be undone here", self.refusal(fd.undo_fix, answer["log"]))
+		self.assertEqual(self.store.logs[answer["log"]]["undone"], 0)
+
 	def test_the_undo_is_itself_on_the_record(self):
 		answer = fd.ignore_tap("CKIN-A", reason="x")
 		undo = fd.undo_fix(answer["log"])

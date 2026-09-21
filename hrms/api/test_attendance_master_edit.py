@@ -61,7 +61,7 @@ class Store:
 			EMP: frappe._dict(name=EMP, employee_name="Aina", company="Company A", default_shift=None)
 		}
 		self.attendance, self.punches, self.assignments = [], [], []
-		self.comments, self.enqueued, self.deleted = [], [], []
+		self.comments, self.enqueued, self.deleted, self.fix_logs = [], [], [], []
 		self.locked = {}
 		self.overlap_with = None
 		self.breaks = []
@@ -261,8 +261,9 @@ class Store:
 	def _comment(self, doctype, name, text):
 		self.comments.append({"doctype": doctype, "name": name, "text": text})
 
-	def _enqueue_engine(self, shift):
-		self.enqueued.append(shift)
+	def _write_fix_log(self, fields):
+		self.fix_logs.append(fields)
+		return self.next("LOG")
 
 	def _today(self):
 		return TODAY
@@ -271,7 +272,7 @@ class Store:
 		"_employee _day_attendance _day_punches _day_assignments _financial_dependency "
 		"_cancel_attendance _shift_doc _is_half_holiday _shift_window _update_punch _insert_punch _set_skip "
 		"_skip_marked _delete_punch _insert_attendance _link_punches _submit_assignment _comment "
-		"_enqueue_engine _today"
+		"_write_fix_log _today"
 	).split()
 
 	@staticmethod
@@ -280,7 +281,15 @@ class Store:
 
 	# --- transaction -------------------------------------------------------------
 	def _state(self):
-		return (self.attendance, self.punches, self.assignments, self.comments, self.enqueued, self.deleted)
+		return (
+			self.attendance,
+			self.punches,
+			self.assignments,
+			self.comments,
+			self.enqueued,
+			self.deleted,
+			self.fix_logs,
+		)
 
 	def savepoint(self, name):
 		self.savepoints[name] = copy.deepcopy(self._state())
@@ -293,6 +302,7 @@ class Store:
 			self.comments,
 			self.enqueued,
 			self.deleted,
+			self.fix_logs,
 		) = copy.deepcopy(self.savepoints[save_point])
 
 	def patched(self, roles=("HR User",), fenced_out=False, user="hr.user@example.invalid"):
@@ -302,6 +312,19 @@ class Store:
 		db = MagicMock()
 		db.savepoint.side_effect = self.savepoint
 		db.rollback.side_effect = self.rollback
+		# the real day_remark queues after commit; "commit" here is leaving the block
+		db.after_commit.add.side_effect = lambda fn: (fn(), None)
+		stack.enter_context(
+			patch.object(
+				frappe,
+				"enqueue",
+				side_effect=lambda method, **kw: self.enqueued.append((method, kw)),
+				create=True,
+			)
+		)
+		stack.enter_context(
+			patch("hrms.utils.day_remark.employee_now", return_value=dt.datetime.combine(TODAY, dt.time(10)))
+		)
 
 		def only_for(allowed, message=False):
 			if set(allowed).isdisjoint(roles):
@@ -770,7 +793,12 @@ class TestHandBack(unittest.TestCase):
 			result = ame.hand_back(EMP, str(DAY), store.revision())
 		self.assertTrue(result["ok"], result)
 		self.assertEqual(store._row(store.punches, punch.name).skip_auto_attendance, 0)
-		self.assertEqual(store.enqueued, ["Day"])
+		self.assertTrue(result["enqueued"])
+		[(method, kwargs)] = store.enqueued
+		self.assertEqual(method, "hrms.utils.day_remark.remark_day", "one day, not a whole shift-type pass")
+		self.assertEqual(kwargs["job_id"], f"day-remark::{EMP}::{DAY}")
+		self.assertTrue(kwargs["deduplicate"])
+		self.assertNotIn("process_shift_types", json.dumps(store.enqueued, default=str))
 
 	def test_hand_back_cancels_the_hr_row_deletes_the_marker_and_skips_today(self):
 		store = Store()
@@ -1023,6 +1051,42 @@ class TestPureRules(unittest.TestCase):
 		)
 		self.assertTrue(ame.punch_belongs_to(night_out, DAY, []))
 		self.assertFalse(ame.punch_belongs_to(night_out, DAY + dt.timedelta(days=1), []))
+
+
+class TestFixLog(unittest.TestCase):
+	"""D-M3: a master edit is the highest-trust write in the domain; it leaves
+	one HR Day Fix Log row per day saved, like Fix Day and the recovery do."""
+
+	def test_an_edit_writes_one_fix_log_row_for_the_day(self):
+		store = Store()
+		row, _punch = half_day_zero(store)
+		result = store.edit({"status": "Present", "in_time": "09:00", "out_time": "17:30"})
+		self.assertTrue(result["ok"], result)
+		[entry] = store.fix_logs
+		self.assertEqual(
+			(entry["employee"], entry["fix_date"], entry["action"]), (EMP, str(DAY), "master-edit")
+		)
+		self.assertEqual(entry["fixed_by"], "hr.user@example.invalid")
+		before, after = json.loads(entry["before_state"]), json.loads(entry["after_state"])
+		self.assertEqual([r["name"] for r in before["attendance"]], [row.name])
+		self.assertEqual(after["attendance"][-1]["status"], "Present")
+		self.assertIn("Present", entry["reason"])
+
+	def test_a_refused_row_writes_no_fix_log_row(self):
+		store = Store()
+		half_day_zero(store)
+		result = store.edit({"status": "Present"}, revision="stale")
+		self.assertFalse(result["ok"])
+		self.assertEqual(store.fix_logs, [])
+
+	def test_a_remove_and_a_hand_back_are_logged_too(self):
+		store = Store()
+		half_day_zero(store)
+		store.edit({}, action="remove")
+		with store.patched():
+			result = ame.hand_back(EMP, str(DAY), store.revision())
+		self.assertTrue(result["ok"], result)
+		self.assertEqual([e["action"] for e in store.fix_logs], ["master-edit", "master-hand-back"])
 
 
 def _matches(row, filters):

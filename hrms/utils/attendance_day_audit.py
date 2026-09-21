@@ -25,6 +25,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, get_datetime, getdate
 
+from hrms.utils.day_remark import remark_day_after_commit
 from hrms.utils.dry_run import wants_dry_run
 
 logger = logging.getLogger(__name__)
@@ -545,6 +546,7 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 
 	touched = 0
 	unchanged = 0
+	touched_days = []
 	for entry in plan:
 		if entry["action"] == "refetch-shift" and not _day_is_rewritable(entry["punches"]):
 			# Half-applying it is worse than not applying it: if the IN's
@@ -621,12 +623,13 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 				),
 			)
 			touched += 1
-	if cint(remark_now) and touched:
-		frappe.enqueue(
-			"hrms.hr.doctype.shift_type.shift_type.process_auto_attendance_for_all_shifts",
-			queue="long",
-			timeout=3600,
-		)
+			if (entry["employee"], entry["date"]) not in touched_days:
+				touched_days.append((entry["employee"], entry["date"]))
+	if cint(remark_now):
+		# one deduplicated job per touched employee-day (F3/J30) — never the
+		# whole-site engine pass, which re-marks every shift for one button
+		for employee, day in touched_days:
+			remark_day_after_commit(employee, day, "attendance day audit repair")
 	logger.info(
 		"[attendance_day_audit] applied by %s: %d punch(es) over %d day(s), remark_now=%s",
 		frappe.session.user,
@@ -641,5 +644,5 @@ def repair_attendance_days(from_date, to_date, dry_run=1, remark_now=0) -> dict:
 		"unchanged": unchanged,
 		"days": len(plan),
 		"plan": plan,
-		"remark_queued": bool(cint(remark_now) and touched),
+		"remark_queued": bool(cint(remark_now) and touched_days),
 	}

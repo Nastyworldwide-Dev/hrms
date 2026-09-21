@@ -461,5 +461,44 @@ class TestCollectWindow(unittest.TestCase):
 		self.assertEqual(plan_repairs(days), [])
 
 
+class TestRemarkNow(unittest.TestCase):
+	"""F3/J30: the "re-mark now" button re-marks the days it touched, one
+	deduplicated job per employee-day — never a whole-site engine pass."""
+
+	def _repair(self):
+		from unittest.mock import MagicMock, patch
+
+		days = [
+			{"employee": "E1", "date": "2026-09-07", "repair": "unskip", "repair_punches": ["P1", "P2"]},
+			{"employee": "E2", "date": "2026-09-08", "repair": "unlink", "repair_punches": ["P3"]},
+		]
+		db = MagicMock()
+		db.get_value.return_value = 1
+		with (
+			patch.object(attendance_day_audit, "collect", return_value={"days": days}),
+			patch.object(attendance_day_audit, "_financially_locked", return_value=set()),
+			patch.object(attendance_day_audit, "remark_day_after_commit", return_value=True) as remark,
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", MagicMock()),
+			patch.object(frappe, "enqueue", MagicMock(), create=True) as enqueue,
+			patch.object(frappe, "only_for", MagicMock(), create=True),
+			patch.object(frappe, "session", frappe._dict(user="sm@example.invalid")),
+		):
+			result = attendance_day_audit.repair_attendance_days(
+				"2026-09-07", "2026-09-08", dry_run=0, remark_now=1
+			)
+		return result, remark, enqueue
+
+	def test_each_touched_employee_day_is_queued_once_and_no_site_wide_pass_runs(self):
+		result, remark, enqueue = self._repair()
+		self.assertEqual(result["touched"], 3)
+		self.assertTrue(result["remark_queued"])
+		self.assertEqual(
+			[(c.args[0], str(c.args[1])) for c in remark.call_args_list],
+			[("E1", "2026-09-07"), ("E2", "2026-09-08")],
+		)
+		enqueue.assert_not_called()
+
+
 if __name__ == "__main__":
 	unittest.main()
