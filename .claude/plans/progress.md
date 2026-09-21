@@ -243,3 +243,5 @@ NEXT: the owner deploys nz-glass; checks Server Script / Client Script on HD Tic
 error text (or Hanif's 16 Sep Employee Checkin rows).
 - 2026-09-21T03:21:52Z COMMIT: dd833debc docs(glass): handoff for the 21 Sep triage → review dispatched
 NEXT: the owner deploys nz-glass (dd833debc); then the HD Ticket script text, Amy's User Version log, and the China clock-in error text come back here.
+- 2026-09-21T03:23:20Z COMMIT: 690cd5417 chore: progress NEXT after the 21 Sep triage → review dispatched
+- 2026-09-21T03:39Z NEXT: full-stack NADI audit (Fix Day / approval status / attendance correction) — spec confirm, then read-only audit report before edits.
