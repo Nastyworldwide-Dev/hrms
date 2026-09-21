@@ -13,8 +13,10 @@ Scripts: `lint` (eslint), `test` (node --test), `build`, `gates`, `test:e2e`.
 - **46 named routes.** 45 are string literals:
   `grep -rhoE "name: *[\"'][^\"']+[\"']" frontend/src/router/*.js | sort -u | wc -l`
   (run that, do not retype it — the source uses single quotes, so a
-  double-quote-only class returns 0, and the outer quotes must be double or
-  the shell eats the pattern). The 46th is `router/index.js:60`, whose name
+  double-quote-only class returns 0. The outer quotes must be double for THIS
+  pattern specifically, because the pattern itself contains a literal `'`
+  which a single-quoted shell string cannot hold; single outer quotes are
+  fine for any pattern that does not). The 46th is `router/index.js:60`, whose name
   comes from an imported constant — `HUB_ROUTE_NAME = "HelpdeskView"` in
   `utils/helpdeskHub.js:9` — so no grep for a quote after `name:` will ever
   see it. Use 46 as the denominator for coverage math.
