@@ -185,7 +185,12 @@ const LG = {
 	nav: [72, 216],
 	// §20.1 breakpoint, plus common desktop widths
 	viewports: [1024, 1280, 1440, 1920],
-	column: 720, // §20.3
+	// §20.3. Read from the token, never copied: this value exists precisely to
+	// be tuned ("a starting value, expected to be tuned once on device" —
+	// tokens.json), and a literal here would keep proving the old geometry
+	// after the app moved. 880px, for instance, puts the column on blob B at
+	// 1024px dark (ink-muted 4.31:1). Guarded by contrast-column.test.mjs.
+	column: parseFloat(tokens.layout["content-column-lg"].value),
 	gutter: 15,
 };
 
