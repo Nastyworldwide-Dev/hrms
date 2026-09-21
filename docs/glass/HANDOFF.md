@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   release-2 (Fix days for HR)
+prompt:   release-3 (requests tell the truth)
 status:   done
-commit:   e80c18259 on nz-glass (pushed)
-files:    hrms/api/attendance_fix_days.py (new) · hrms/api/attendance_fix_day.py
-          hrms/public/js/fix_day.bundle.js · employee_checkin_list.js (Fix days button)
-          attendance_list.js · shift_attendance.js · unclaimable_days.js (Punches link)
-          hrms/utils/{attendance_recovery,day_remark,leave_cover}.py · remote_checkin_request_hooks.py
-verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_fix_days.py; node --test hrms/hr/doctype/employee_checkin/employee_checkin_list.test.js
-flags:    no schema change; needs worker restart + bench build (bundle). Approved OT converted to RL keeps its leave day even if rebuilt hours are lower (owner ruling; drift warning optional in R3).
-next:     owner deploys R2; Release 3 (requests tell the truth) in progress on nz-glass.
+commit:   306394c5f on nz-glass (pushed)
+files:    frontend/src/{socket.js,composables/realtime.js,data/requestLists.js,utils/siteTime.js,utils/requestStatus.js}
+          frontend/src/components/{RequestPanel,RequestActionSheet,FormView,glass/GStatusChip}.vue + six *Item.vue
+          hrms/hr/doctype/{leave_application,shift_request,expense_claim,ot_request,replacement_leave_claim}/*.py
+          hrms/hr/utils.py · hrms/mixins/pwa_notifications.py · hrms/api/approval.py · hrms/patches/v16_0/track_changes_on_leave_and_expense.py
+verify:   cd frontend && npm test; PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_a_decision_is_always_recordable.py
+flags:    migrate + bundle build + worker restart. Ruling needed: an OT/RL cancel is refused when its leave was already taken (HR must cancel the leave first). Not done: RL grant dated by worked day; Leave-cancel ledger reverse; expense_date in the PWA; reminders (4 answers pending).
+next:     owner deploys R3 after R2; then reminders once the four answers are in (docs/glass/release-3-notes.md).
