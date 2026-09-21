@@ -1,36 +1,30 @@
-# FAMILY — an Attendance Request that can no longer be decided
+# FAMILY — an HR user's Desk roles changed with nobody editing the User
 
-CLASS: a FILING rule re-run at DECISION time. `validate` runs on every save;
-`decide()` writes the status and submits in one save, so a check meant to stop
-an employee filing a no-op request ran again when the manager tapped Approve.
-The day had been marked since filing (punches / mirror), so the request could
-be neither approved nor rejected — a rejection is the same save. Reported
-21 Sep 2026 on verifica-live: "No attendance to create: 07-08-2026
-(Attendance status unchanged)" on every tap.
+CLASS: a needless programmatic User save. Frappe re-derives a User's roles
+from its Role Profile on EVERY save (`User.populate_role_profile_roles`,
+frappe/core/doctype/user/user.py:263): roles not in the profile are dropped.
+So any code path that saves a User for no reason silently resets hand-granted
+roles. Reported 21 Sep 2026 (Amy, HR, verifica-live).
 
-Call sites the machine lists for validate_no_attendance_to_create /
-status_unchanged / get_attendance_warnings:
+Call sites the machine lists for update_approver_role / add_roles:
 
-* hrms/hr/doctype/attendance_request/attendance_request.py:41 validate — same-root:
-  the guard sits inside the method, so the filing path is unchanged and only a
-  decided request skips it.
-* hrms/hr/doctype/attendance_request/attendance_request.py:449 status_unchanged —
-  not-affected: a pure read, still feeds the warning list.
-* hrms/hr/doctype/attendance_request/attendance_request.py:470 get_attendance_warnings —
-  not-affected: whitelisted for the Desk form's warning table, read-only.
-* hrms/hr/doctype/attendance_request/attendance_request.js:12 frm.call — not-affected:
-  Desk shows the same warnings; the refusal itself only ever came from validate.
-* hrms/api/approval.py:300 decide → doc.submit() — same-root by consequence: the
-  submit now reaches on_submit, where `create_or_update_attendance` treats an
-  already-marked day as the no-op it is.
+* hrms/hooks.py:386 Employee.on_update → update_approver_role — same-root:
+  saved the approver's User on EVERY Employee save naming them (add_roles
+  saves unconditionally). Now reads get_roles first; saves only when a role
+  is missing.
+* hrms/overrides/employee_master.py:135 ensure_employee_role → add_roles —
+  not-affected: already guarded by `"Employee" in frappe.get_roles(user)`
+  before the save.
+* hrms/overrides/employee_master.py:173 (this function) — same-root, fixed here.
+* hrms/sync/runner.py:745 _reconcile_user_enabled → user.save — not-affected:
+  saves only when `enabled` actually differs; a legitimate change.
+* erpnext Employee.update_user (erpnext/setup/doctype/employee/employee.py:309)
+  — not-affected — upstream: saves the linked User on that employee's OWN
+  record. By design; the Role Profile is the truth for such a User.
 
-Sibling doctypes checked for the same class (a validate-time throw whose truth
-can change between filing and decision): OT Request, Shift Request,
-Compensatory Leave Request, Replacement Leave Claim — their validate() rules
-judge the request's own fields (dates, self, overlap with OTHER requests),
-which the decision does not move. Leave Application's balance check is
-upstream and by design. not-affected.
+Site note (config, not code): a User carrying a Role Profile keeps only that
+profile's roles across any save. Roles Amy needs beyond the "HR" profile go
+INTO the profile (or the profile comes off her User). The User's Version log
+names the save that reset her: modified_by Administrator = programmatic.
 
-Regression test: hrms/tests/test_attendance_request_decision_is_always_possible.py
-Invariant: a decided request never re-runs the filing refusal (the three cases
-Open / Approved / Rejected in that file).
+Regression test: hrms/tests/test_approver_role_grant_is_idempotent.py

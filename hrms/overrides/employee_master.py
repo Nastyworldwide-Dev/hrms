@@ -152,16 +152,25 @@ def ensure_employee_role(user: str | None) -> bool:
 
 
 def update_approver_role(doc, method=None):
-	"""Adds relevant approver role for the user linked to Employee"""
-	if doc.leave_approver:
-		user = frappe.get_doc("User", doc.leave_approver)
-		user.flags.ignore_permissions = True
-		user.add_roles("Leave Approver")
+	"""Adds relevant approver role for the user linked to Employee.
 
-	if doc.expense_approver:
-		user = frappe.get_doc("User", doc.expense_approver)
+	Only when the role is MISSING. `User.add_roles` saves unconditionally, and
+	a User save re-derives the roles from the User's Role Profile
+	(`User.populate_role_profile_roles`), dropping any role granted by hand
+	outside the profile. An HR user named approver on twenty Employee records
+	had their roles reset every time any of those records was saved — and
+	nobody had touched the User (21 Sep 2026).
+	"""
+	for approver, role in (
+		(doc.leave_approver, "Leave Approver"),
+		(doc.expense_approver, "Expense Approver"),
+	):
+		if not approver or role in frappe.get_roles(approver):
+			continue
+		logger.info("[employee_master] granting %s to %s (approver on %s)", role, approver, doc.name)
+		user = frappe.get_doc("User", approver)
 		user.flags.ignore_permissions = True
-		user.add_roles("Expense Approver")
+		user.add_roles(role)
 
 
 def update_approver_user_roles(doc, method=None):
