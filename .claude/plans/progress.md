@@ -224,3 +224,53 @@ NEXT: verify lane B (afed63e) + lane C (af0b9bf) diffs with fresh verifiers, int
 EVIDENCE: 2 correct — lane B new tests red on a46f43956 (verifier: recordable 5F/7P, cancel 6F/3P, no_lie 10F/2P, who_approved ImportError), D1/D5 refutation tests red on the worker's version (2 failed), all green after: 13 files per-file (see runB.sh) 100% pass, ruff clean
 EVIDENCE: 2 correct — lane C: requestStatus.test.js + review-sheet-buttons-from-doc red on a46f43956 (no export), child-table case red on the shallow compare (1 failed), green now: 9 JS files 63 pass, npm-test suite 491/494 (3 known: dead-code gate, TDZ gate, approved-cancel needs the npm flag), eslint clean, test_api_clean_errors_and_bounds OK, ruff clean
 EVIDENCE: 6 behaves — hook reviews: ba8ae8c3e FIX_CRITICAL (boot.time_zone object) → fixed 75e56c451; f04526cea DEPLOY (0 Critical, 1 Warning = product ruling on a stuck cancel); 527baf268 DEPLOY (0 Critical). Verifier refutations (lane B D1/D5, lane C T2) fixed before landing.
+- 2026-09-21T10:15:56Z PUSH: nz-glass @ 306394c5f
+- 2026-09-21T10:15:56Z COMMIT: 306394c5f docs(glass): Release 3 notes → review dispatched
+- 2026-09-21T10:16:21Z PUSH: nz-glass @ 291a20331
+- 2026-09-21T10:16:21Z COMMIT: 291a20331 docs(glass): handoff for Release 3 → review dispatched
+PUSH: 291a20331 nz-glass — Release 3 complete (4 fix + 2 docs). Retro: 4 shots; causes oracle-gap (boot shape mock) + 2 verifier-caught before landing.
+LEARNING(gate): boot-shape mock -> siteTime.test.js now mocks the real {system,user} object; any new reader of frappe.boot must test against a real bootinfo shape
+NEXT: wait for the owner: deploy order R2 → R3; four reminder answers; stuck-cancel override ruling. Then build reminders as the last R3 slice.
+PLAN: .claude/plans/fix-attendance-plan.md — one "Fix attendance" button, reuse the Fix day dialog (4 changes), guards G1–G15, slices A/B/C; owner: straightforward, build after R3 deploy
+NEXT: owner deploys R2 → R3; then slice A (engine save_day + guards, red tests first)
+- 2026-09-21T11:14:48Z PLAN: approved b050f780b9c7 — # Plan — one "Fix attendance" button (21 Sep 2026, final shape)
+EVIDENCE: 2 correct — test_attendance_fix_day_save_day.py red on 291a20331 (23F/0P, verifier), green 24 (incl. the two-pairs-one-tap refutation); 8 fix-day suites green per file; ruff clean
+EVIDENCE: 2 correct — employee_checkin_list.test.js 28 pass (pre-tick pin red on the wrong key: 8 failed, green on the per-tap key); test_fix_day_screen.py 21 pass after the amended pins; save_day/rebuilds/fix_days suites green; ruff + eslint@8 clean
+EVIDENCE: 2 correct — G8 locked-instance test red without the seam (2 failed), green 26/26; JS 28 pass; screen pins 21 pass; ruff/eslint clean
+EVIDENCE: 5 looks right — real Desk render on verify-bench test.local (yarn --ignore-engines build, frappe serve in tmux): docs/glass/fix-attendance-dialog.png
+- 2026-09-21T11:50:30Z COMMIT: ae09f78bd docs(attendance): save_day docstring names the G8 pre-flight → review dispatched
+- 2026-09-21T11:50:48Z PUSH: nz-glass @ 33da0c2d8
+- 2026-09-21T11:50:48Z COMMIT: 33da0c2d8 docs(glass): Fix attendance in the Release 3 notes → review dispatched
+PUSH: 33da0c2d8+handoff nz-glass — Fix attendance complete (engine 00fb350ba, dialog 9e5232647, review fix b6a484247, docs). Reviews: FIX_CRITICAL → fixed → DEPLOY.
+LEARNING(gate): vm-harness JS tests pass with an invented server shape -> the real-Desk render on verify-bench (yarn --ignore-engines build + frappe serve in tmux + Playwright with host-resolver-rules) is the check; recipe in memory
+NEXT: owner deploys R2 → R3 (+ Fix attendance). Open: reminders (4 answers), stuck-cancel override, ledger reverse, expense_date, live Shift Type working-hours setting.
+- 2026-09-21T11:51:22Z PUSH: nz-glass @ 72f6d9069
+- 2026-09-21T11:51:22Z COMMIT: 72f6d9069 docs(glass): handoff for Fix attendance → review dispatched
+- 2026-09-21T15:53:42Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T16:26:59Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T16:40:21Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T16:57:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 17 file(s) ⟂d50eeeeab44e
+- 2026-09-21T16:57:00Z EVIDENCE: 3 works — blast radius green: 39 dependent(s), 25 extra test file(s) ⟂03aeaee7733f
+- 2026-09-21T16:57:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 17 file(s) ⟂d50eeeeab44e
+- 2026-09-21T16:57:32Z EVIDENCE: 3 works — blast radius green: 39 dependent(s), 25 extra test file(s) ⟂03aeaee7733f
+- 2026-09-21T16:57:57Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 17 file(s) ⟂d50eeeeab44e
+- 2026-09-21T16:57:57Z EVIDENCE: 3 works — blast radius green: 39 dependent(s), 25 extra test file(s) ⟂03aeaee7733f
+- 2026-09-21T16:57:59Z COMMIT: 3409a2c7b fix(approval): a superior named as approver can open and decide an On Duty request → review+security dispatched
+- 2026-09-21T16:59:14Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T17:07:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T17:07:53Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 1 extra test file(s) ⟂878a988d4e57
+- 2026-09-21T17:07:54Z COMMIT: 04e7bb62e fix(fix-day): an approved request no longer blocks Save & rebuild → review dispatched
+
+REPAIR: Fix attendance refused every day carrying an approved OT/Attendance Request. The
+21 Sep ruling was fully plumbed (requests_ok through day_block_reason, _day_block, _rebuild,
+_paid_day, _leave_cover) but NO entry point passed it — plan_day, _screen, _lock_and_guard
+and _finish all took the False default. Spec guard G12 had no test. Commit 04e7bb62e.
+EVIDENCE: 2 correct — TestAnApprovedRequestDoesNotBlockTheFix red on HEAD (5 failures:
+plan/screen/three actions/engine-hold), green after; money and leave still block.
+EVIDENCE: 3 works — pytest test_attendance_fix_day + test_fix_days: 105 passed, 47 subtests;
+blast radius (attendance_fix_days, attendance_master_edit, fix_day_probe) green via the gate.
+LEARNING(gate): spec-gap -> a threaded flag that no caller ever passes reads as implemented.
+Gate proposal: a test that drives the ENTRY POINT, never the helper the flag lands in.
+NEXT: owner decision needed — reviewers of 3409a2c7b raised (a) reporting managers lost
+Desk-side write/submit on OT Request (PWA unaffected), (b) Department Approver now reads the
+whole department's requests in list queries. Neither blocks. Nothing pushed.
