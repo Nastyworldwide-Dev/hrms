@@ -130,11 +130,14 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 		share_doc_with_approver(self, self.leave_approver)
 		self.publish_update()
-		self.notify_approval_status()
 
 	def on_submit(self):
 		if self.status in ["Open", "Cancelled"]:
 			frappe.throw(_("Only Leave Applications with status 'Approved' and 'Rejected' can be submitted"))
+
+		# The employee hears the decision once it is transacted — not on a Desk
+		# Save of the status field on a draft (on_update), which pays nothing out.
+		self.notify_approval_status()
 
 		self.validate_back_dated_application()
 		self.update_attendance()
@@ -409,6 +412,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				frappe.db.set_value("Attendance", name, "docstatus", 2)
 
 	def validate_salary_processed_days(self):
+		# A FILING / APPROVE rule. A rejection deducts nothing, so a payroll that
+		# has since closed over these days must not stop the approver refusing it.
+		if self.status == "Rejected":
+			logger.info("[leave_application] %s rejected — salary-processed check skipped", self.name)
+			return
 		if not frappe.db.get_value("Leave Type", self.leave_type, "is_lwp"):
 			return
 
@@ -667,6 +675,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		)
 
 	def validate_attendance(self):
+		# `validate` runs again when the approver decides, and by then the punches
+		# (or the mirror) may have marked a day Present. That still refuses an
+		# APPROVE — the days are named below — but a REJECT writes no attendance,
+		# so it must go through (the Attendance Request pattern of 21 Sep).
+		if self.status == "Rejected":
+			logger.info("[leave_application] %s rejected — attendance check skipped", self.name)
+			return
 		attendance_dates = frappe.get_all(
 			"Attendance",
 			filters=[

@@ -4,6 +4,7 @@ import logging
 
 import frappe
 from frappe import bold
+from frappe.utils import format_datetime, now_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +13,20 @@ class PWANotificationsMixin:
 	"""Mixin class for managing PWA updates"""
 
 	def notify_approval_status(self):
-		"""Send Leave Application, Expense Claim & Shift Request Approval status notification - to employees"""
+		"""Tell the employee a decision was TRANSACTED (docstatus 1), and when.
+
+		Only a submitted request has paid out — ledger, attendance, GL. A Desk
+		Save of status=Approved on a draft (docstatus 0) used to send "has been
+		Approved" with nothing behind it, and the later submit sent nothing. So
+		the gate is docstatus, not "did the field change"; on_submit runs once.
+		"""
 		status_field = self._get_doc_status_field()
 		status = self.get(status_field)
 
-		if self.has_value_changed(status_field) and status in ["Approved", "Rejected"]:
+		if self.get("docstatus") != 1:
+			logger.info("[pwa_notifications] %s %s not submitted — no decision notification", self.doctype, self.name)
+			return
+		if status in ["Approved", "Rejected"]:
 			from_user = frappe.session.user
 			from_user_name = self._get_user_name(from_user)
 			to_user = self._get_employee_user()
@@ -29,7 +39,11 @@ class PWANotificationsMixin:
 			notification.from_user = from_user
 			notification.to_user = to_user
 
-			notification.message = f"{bold('Your')} {bold(self.doctype)} {self.name} has been {bold(status)} by {bold(from_user_name)}"
+			decided_at = format_datetime(now_datetime())
+			notification.message = (
+				f"{bold('Your')} {bold(self.doctype)} {self.name} has been {bold(status)} "
+				f"by {bold(from_user_name)} on {decided_at}"
+			)
 
 			notification.reference_document_type = self.doctype
 			notification.reference_document_name = self.name

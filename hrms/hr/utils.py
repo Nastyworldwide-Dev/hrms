@@ -754,60 +754,39 @@ def _reversible_days(total_allocated, taken, requested):
 def reverse_replacement_leave(allocation_name, days):
 	"""Undo a grant_replacement_leave top-up when the source request is cancelled.
 
-	Two things make the naive reversal freeze the cancel, both handled here:
+	Runs inside a CANCEL. Returns None when the grant was taken back in full,
+	or a plain sentence when there was nothing to take it back FROM — the
+	allocation is gone or not submitted (HR cancelled it, or the sync re-pulled
+	the mirrored doctype under a new name; nothing HR can repair from Desk).
+	The cancel then goes through and the caller shows the sentence: on the
+	request's timeline and in finalize's answer. It used to log_error and
+	return None — the cancel reported success and nobody read the Error Log.
 
-	  * Clamp to what is still unused. A day already taken can't be un-taken, so
-	    reverse only the remainder (get_approved_leaves_for_period is the same
-	    "taken" the balance is measured against) and tell HR about the rest.
-	    Prevents a silent negative available balance.
+	Days ALREADY TAKEN cannot be un-taken: that reversal is impossible, so the
+	cancel is refused with the reason and nothing is written — it used to clamp
+	to the unused days with a msgprint and report success.
 
-	  * Do NOT re-validate the allocation. A reversal only ever REDUCES the
-	    allocation, so the growth guards don't apply — and set_total_leaves_allocated
-	    throws "Total leaves allocated is mandatory" the moment a sole grant is
-	    reversed to zero (Replacement Leave is neither earned nor compensatory),
-	    which would freeze the cancel even when nothing was taken. Decrement
-	    straight through db_set. unused_leaves stays 0 (the leave type is
-	    is_carry_forward=0, per ensure_replacement_leave_type), so total == new.
+	Does NOT re-validate the allocation: a reversal only REDUCES it, and
+	set_total_leaves_allocated throws "Total leaves allocated is mandatory" the
+	moment a sole grant is reversed to zero (Replacement Leave is neither earned
+	nor compensatory). Decrement straight through db_set; unused_leaves stays 0
+	(is_carry_forward=0 per ensure_replacement_leave_type), so total == new.
 	"""
 	from hrms.hr.doctype.leave_application.leave_application import get_approved_leaves_for_period
 
 	days = flt(days)
-
-	# THE ALLOCATION MAY NOT BE THERE ANY MORE, AND THE CANCEL MUST STILL WORK.
-	#
-	# A bare get_doc here throws DoesNotExistError, and this runs inside a cancel:
-	# the person is trying to withdraw a request, and instead the whole
-	# transaction freezes on a row that is nobody's fault. The allocation can be
-	# gone for ordinary reasons — HR cancelled it, or the sync re-pulled the
-	# mirrored doctype and the name moved. And a CANCELLED allocation is worse
-	# than a missing one: decrementing it writes a negative ledger entry onto a
-	# document that is no longer in force, which nothing downstream expects.
-	#
-	# Neither case is an error the employee can act on, so neither is raised at
-	# them. Both are recorded where HR reconciles balances.
 	allocation = (
 		frappe.get_doc("Leave Allocation", allocation_name)
 		if frappe.db.exists("Leave Allocation", allocation_name)
 		else None
 	)
 	if allocation is None or cint(allocation.docstatus) != 1:
-		state = "missing" if allocation is None else f"docstatus={cint(allocation.docstatus)}"
-		logger.warning(
-			"[rl_grant] cannot reverse %s day(s): allocation %s is %s — leaving the balance alone",
-			days,
-			allocation_name,
-			state,
-		)
-		frappe.log_error(
-			title=_("Replacement Leave reversal skipped"),
-			message=_(
-				"A cancelled request asked to take back {0} day(s) of Replacement Leave from "
-				"allocation {1}, but that allocation is {2}. The cancellation went through and no "
-				"balance was changed — if the employee's Replacement Leave balance looks too high, "
-				"this is the day to reconcile."
-			).format(days, allocation_name, state),
-		)
-		return
+		state = _("missing") if allocation is None else _("not submitted")
+		note = _(
+			"No allocation to reverse: {0} day(s) of Replacement Leave stay as they are ({1} {2})."
+		).format(days, allocation_name, state)
+		logger.warning("[rl_grant] cannot reverse %s day(s): allocation %s %s", days, allocation_name, state)
+		return note
 	taken = flt(
 		get_approved_leaves_for_period(
 			allocation.employee, allocation.leave_type, allocation.from_date, allocation.to_date
@@ -818,22 +797,19 @@ def reverse_replacement_leave(allocation_name, days):
 		"[rl_grant] reverse %s of %s day(s) from %s (taken %s)", to_reverse, days, allocation_name, taken
 	)
 	if to_reverse < days:
-		msg = _(
-			"Reversed {0} of {1} day(s) — {2} day(s) of Replacement Leave were already taken and stay allocated."
-		).format(to_reverse, days, flt(days - to_reverse))
-		frappe.msgprint(msg)
-		# Queryable trail for HR reconciliation: the msgprint is transient and the
-		# logger line isn't in Desk, so stamp the un-reversed amount onto the
-		# allocation's timeline — that is where HR lands when a balance looks off.
-		allocation.add_comment("Comment", msg)
-	if not to_reverse:
-		return
+		frappe.throw(
+			_(
+				"{0} day(s) of the Replacement Leave this request granted were already taken, "
+				"so the grant cannot be taken back. Cancel that leave first, then cancel this request."
+			).format(flt(days - to_reverse))
+		)
 	new_total = max(0.0, flt(allocation.new_leaves_allocated) - to_reverse)
 	allocation.db_set("new_leaves_allocated", new_total)
 	allocation.db_set("total_leaves_allocated", new_total)
 	# writes the negative ledger delta; mutates in-memory new_leaves_allocated, so it
 	# must come AFTER the db_set that persists the real remaining balance.
 	create_additional_leave_ledger_entry(allocation, to_reverse * -1, getdate())
+	return None
 
 
 def get_expected_allocation_date_for_period(

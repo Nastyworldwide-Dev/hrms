@@ -227,7 +227,11 @@ class OTRequest(Document, PWANotificationsMixin):
 
 	def on_submit(self):
 		validate_self_submission(self)
-		validate_mandatory_attachment(self)
+		# Evidence is required to APPROVE. A rejection banks nothing, and the
+		# missing attachment may be exactly why it is refused — it must not stop
+		# the refusal from being recorded.
+		if self.status != "Rejected":
+			validate_mandatory_attachment(self)
 		# Submitting IS the payout for this doctype, so it must not happen before
 		# somebody decided. And a REJECTION still reaches docstatus 1 — rejecting
 		# is a decision, not a cancellation — so the consequence below is guarded
@@ -275,7 +279,12 @@ class OTRequest(Document, PWANotificationsMixin):
 			self.leave_days_granted,
 		)
 		if self.compensation == REPLACEMENT_LEAVE and self.leave_allocation and self.leave_days_granted:
-			reverse_replacement_leave(self.leave_allocation, flt(self.leave_days_granted))
+			note = reverse_replacement_leave(self.leave_allocation, flt(self.leave_days_granted))
+			if note:
+				# The cancel goes through, but not silently: on the request's
+				# timeline for HR, and in finalize's answer for whoever tapped.
+				self.add_comment("Comment", note)
+				self.flags.reversal_note = note
 
 
 def get_replacement_leave_bank(employee: str, as_of=None, exclude_request: str | None = None) -> dict:

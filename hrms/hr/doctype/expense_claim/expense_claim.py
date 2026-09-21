@@ -227,7 +227,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def on_update(self):
 		share_doc_with_approver(self, self.expense_approver)
 		self.publish_update()
-		self.notify_approval_status()
 
 	def after_delete(self):
 		self.publish_update()
@@ -248,6 +247,8 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		if self.approval_status == "Draft":
 			frappe.throw(_("""Approval Status must be 'Approved' or 'Rejected'"""))
 
+		# Told on submit, not on a draft save: only now is the decision transacted.
+		self.notify_approval_status()
 		self.update_task_and_project()
 		self.make_gl_entries()
 		update_reimbursed_amount(self)

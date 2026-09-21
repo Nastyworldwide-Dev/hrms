@@ -257,9 +257,12 @@ class TestClaimCapacity(unittest.TestCase):
 				):
 					state = approval.decide("OT Request", doc.name, decision)
 					self_guard.assert_called_once_with(doc)
-					attachment_guard.assert_called_once_with(doc)
 					if decision == "Rejected":
+						# Evidence is needed to approve; a refusal is recordable without it.
+						attachment_guard.assert_not_called()
 						grant.assert_not_called()
+					else:
+						attachment_guard.assert_called_once_with(doc)
 					return state
 			if consumer == "payroll":
 				return ot.get_ot_pay("EMP-SYNTHETIC", payroll_day, payroll_day, 2080)

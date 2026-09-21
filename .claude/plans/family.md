@@ -1,7 +1,9 @@
-# Family — fix(pwa): site timezone read from the real bootinfo shape (21 Sep 2026)
-CLASS: a boot value assumed to be a string is an object — frappe.boot.time_zone is {system, user} (frappe/boot.py set_time_zone); dayjs.tz() threw on it in every request list and on Notifications.
-Changed: frontend/src/utils/siteTime.js siteTimeZone() (sysdefaults.time_zone → time_zone string → time_zone.system → default) + try/catch fallback in siteTime().
-frontend/src/components/RequestPanel.vue same-root — caller of siteTime, fixed here
-frontend/src/views/Notifications.vue same-root — caller of siteTime, fixed here
-frontend/src/utils/__tests__/siteTime.test.js same-root — mock now uses the real bootinfo shape
-grep -rn "boot.time_zone\|boot?.time_zone" frontend/src → only siteTime.js; no other reader of the object
+# Family — fix(requests): an approver's decision is always recordable (21 Sep 2026)
+CLASS: filing-time validators re-run at decision time and refuse the decision; the employee is told on a draft save instead of on submit; a cancel's reversal skips with only an Error Log line; no Version history on Leave / Expense.
+Changed: leave_application.py (validate_salary_processed_days / validate_attendance skip on Rejected; notify on_submit), shift_request.py (validate_approver skipped only for the decision itself: not new, approver unchanged; notify on_submit), expense_claim.py (notify on_submit), pwa_notifications.py (docstatus==1 gate, "by <name> on <time>"), hr/utils.py reverse_replacement_leave (throw on days taken, note on missing allocation), ot_request.py + replacement_leave_claim.py on_cancel (comment + flags.reversal_note), api/approval.py _state (reversal in the answer), track_changes on Leave Application + Expense Claim JSON + patch v16_0/track_changes_on_leave_and_expense.py.
+hrms/hr/doctype/attendance_request/attendance_request.py not-affected — already skips its overlap check on Rejected (the pattern this copies); notifies in on_submit
+hrms/hr/doctype/compensatory_leave_request/compensatory_leave_request.py not-affected — notifies in on_submit at docstatus 1; no filing validator re-runs at decision
+hrms/hr/doctype/ot_request/ot_request.py same-root — attachment rule skipped on Rejected; cancel note surfaced
+hrms/api/approval.py decide() not-affected — still refuses a decision on a non-initial status; the trust boundary for WHO decides is unchanged
+hrms/hr/doctype/leave_application/leave_application.py on_cancel ledger delete — ticket (owner ruling pending: reverse vs delete)
+notify_approval_status callers (grep): 7 controllers, all in on_submit now; the mixin's docstatus gate makes a stray on_update call harmless

@@ -218,12 +218,18 @@ def _state(doc) -> dict:
 	real bench, not by reading.
 	"""
 	mapping = DECIDE_THEN_SUBMIT.get(doc.doctype)
-	return {
+	state = {
 		"doctype": doc.doctype,
 		"name": doc.name,
 		"docstatus": doc.docstatus,
 		"status": doc.get(mapping[0]) if mapping else None,
 	}
+	# A cancel that found no allocation to reverse (OTRequest.on_cancel) says so
+	# here, so the caller can show it instead of a plain "cancelled".
+	note = (getattr(doc, "flags", None) or {}).get("reversal_note")
+	if note:
+		state["reversal"] = note
+	return state
 
 
 @frappe.whitelist(methods=["POST"])

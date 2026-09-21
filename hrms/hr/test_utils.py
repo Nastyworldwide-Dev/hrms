@@ -88,18 +88,17 @@ class TestReverseDoesNotValidate(unittest.TestCase):
 		)
 
 
-class TestReverseLeavesAuditTrail(unittest.TestCase):
-	"""When a cancel can't fully reverse (leave already taken), the un-reversed
-	amount must be recorded somewhere HR can query — a msgprint is transient and
-	the logger line isn't in Desk, so the allocation timeline carries it."""
+class TestReverseIsAllOrNothing(unittest.TestCase):
+	"""A cancel that cannot take the whole grant back is refused (frappe.throw)
+	before anything is written — it used to clamp to the unused days, msgprint
+	and stamp a Comment, and the cancel reported success. Behaviour is pinned in
+	hrms/tests/test_cancel_never_silently_skips_reversal.py; this only guards
+	that the partial path did not creep back."""
 
-	def test_partial_reverse_stamps_a_comment(self):
+	def test_no_partial_reverse_path(self):
 		body = _function_source("reverse_replacement_leave")
-		self.assertIn(
-			'add_comment("Comment"',
-			body,
-			"a partial reversal must leave a queryable record on the allocation",
-		)
+		self.assertNotIn("add_comment", body, "a partial reversal must be refused, not recorded")
+		self.assertIn("frappe.throw", body)
 
 
 if __name__ == "__main__":

@@ -352,5 +352,6 @@
  "sort_order": "DESC",
  "states": [],
  "timeline_field": "employee",
- "title_field": "employee_name"
+ "title_field": "employee_name",
+ "track_changes": 1
 }

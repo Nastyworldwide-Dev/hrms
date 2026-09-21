@@ -31,7 +31,6 @@ class ShiftRequest(Document, PWANotificationsMixin):
 
 	def on_update(self):
 		share_doc_with_approver(self, self.approver)
-		self.notify_approval_status()
 		self.publish_update()
 
 	def after_delete(self):
@@ -55,6 +54,8 @@ class ShiftRequest(Document, PWANotificationsMixin):
 		validate_self_submission(self)
 		if self.status not in ["Approved", "Rejected"]:
 			frappe.throw(_("Only Shift Request with status 'Approved' and 'Rejected' can be submitted"))
+		# Told on submit, not on a draft save: only now is the decision transacted.
+		self.notify_approval_status()
 		if self.status == "Approved":
 			assignment_doc = frappe.new_doc("Shift Assignment")
 			assignment_doc.company = self.company
@@ -98,6 +99,14 @@ class ShiftRequest(Document, PWANotificationsMixin):
 			)
 
 	def validate_approver(self):
+		# A FILING rule: the request must name someone allowed to decide it. It
+		# runs again at decision time, and if the department's approver table
+		# changed in between, the named approver could neither approve nor reject.
+		# Once decided the request goes through; who may DECIDE is enforced by
+		# hrms.api.approval, not by this table. The skip is only for the decision
+		# itself: a new row, or one whose approver changes, is still a filing.
+		if self.status != "Draft" and not self.is_new() and not self.has_value_changed("approver"):
+			return
 		department = frappe.get_value("Employee", self.employee, "department")
 		shift_approver = frappe.get_value("Employee", self.employee, "shift_request_approver")
 		dept_approver = frappe.qb.DocType("Department Approver")

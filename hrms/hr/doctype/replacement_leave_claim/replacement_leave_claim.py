@@ -166,7 +166,11 @@ class ReplacementLeaveClaim(Document, PWANotificationsMixin):
 			return
 		from hrms.hr.utils import reverse_replacement_leave
 
-		reverse_replacement_leave(self.leave_allocation, flt(self.claimed_days))
+		note = reverse_replacement_leave(self.leave_allocation, flt(self.claimed_days))
+		if note:
+			# Same as the OT cancel: the skip is on the timeline and in finalize's answer.
+			self.add_comment("Comment", note)
+			self.flags.reversal_note = note
 
 	def get_existing_allocation(self, valid_from):
 		allocation = frappe.db.get_all(
