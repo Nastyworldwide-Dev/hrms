@@ -11,6 +11,7 @@ import hrms
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
 from hrms.hr.utils import (
 	get_designated_approvers,
+	no_approver_message,
 	share_doc_with_approver,
 	validate_active_employee,
 	validate_self_submission,
@@ -123,7 +124,13 @@ class ShiftRequest(Document, PWANotificationsMixin):
 			self.employee, "shift_request_approver", "shift_request_approver"
 		)
 		if self.approver not in approvers:
-			frappe.throw(_("Only Approvers can Approve this Request."))
+			# Same two cases, same words as every other request type: an empty
+			# list is HR configuration the employee cannot fix, not a wrong pick.
+			frappe.throw(
+				no_approver_message(approvers, self.approver)
+				if not approvers
+				else _("Only Approvers can Approve this Request.")
+			)
 
 	def validate_overlapping_shift_requests(self):
 		overlapping_dates = self.get_overlapping_dates()

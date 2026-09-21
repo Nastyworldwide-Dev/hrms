@@ -1468,11 +1468,34 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 			doc.name,
 			sorted(allowed),
 		)
-		frappe.throw(
-			_("{0} is not one of your designated approvers. Please select your reporting manager.").format(
-				approver
-			)
+		frappe.throw(no_approver_message(allowed, approver))
+
+
+def no_approver_message(allowed, approver) -> str:
+	"""Why the approver was refused, in words the reader can act on.
+
+	An EMPTY list is not a wrong pick — nobody is above this employee at all,
+	because their Employee record names no approver and no `reports_to`, or the
+	people above are inactive. Telling them to "select your reporting manager"
+	sends them to a dropdown that has nothing in it, and there is nothing they
+	can do about it from the PWA. Only HR can, in Desk.
+
+	The project rule this serves (owner, Sep 2026): the system self-identifies.
+	We never ask an employee or HR to run a URL or a console step to find out
+	what is wrong — the message says it.
+
+	A non-empty list keeps the original wording: the pick really was wrong, and
+	the dropdown holds the right answer.
+	"""
+	if not allowed:
+		logger.warning("[staff_lockdown] no approver configured above the employee")
+		return _(
+			"No approver is set up for you yet, so this request cannot be submitted. "
+			"Please ask HR to set your approver or your reporting manager."
 		)
+	return _("{0} is not one of your designated approvers. Please select your reporting manager.").format(
+		approver
+	)
 
 
 def validate_active_employee(employee, method=None):

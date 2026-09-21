@@ -2,104 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-taps and says the cancelled row stays cancelled. (2) session_is_open reads
-log_type != "OUT", so relabelling a closing tap makes the session read CLOSED -
-the relabel is a CORRECTNESS improvement there, not a risk: an IN-IN day used to
-leave its session reading open. (3) the checkin_import worry was checked and does
-not corrupt anything - drop_already_imported matches on the SOURCE key, so no
-duplicate and no revert; the real effect is a permanent type_mismatch line on the
-import report. Ticketed, not touched: the owner has had one bad sync day already.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 4 new tests red before, green after;
-179 passed across five fix-day suites.
-NEXT: the owner deploys.
-- 2026-09-18T04:04:05Z PUSH: nz-glass @ 99d11766d
-REPAIR: _shift_stamp dropped skip_auto_attendance from the move stamp but not
-skipped_as_noise, so moving an IGNORED tap would have turned it from noise into
-a wall. The two halves of that verdict travel together; the stamp now carries
-neither.
-EVIDENCE: 2 (mapped) - 1 test red before, green after; 140 passed.
-NEXT: the owner deploys. Open: a stranded off-shift OUT past midnight (Danial,
-3->4 Sep 01:04) is healed today only by Fix Day's "Move to shift / day" one tap
-at a time - hrms.utils.offshift_punch_heal.heal_offshift_punches is whitelisted,
-was written for that exact punch, and NOTHING in the Desk reaches it.
-- 2026-09-18T04:23:04Z PUSH: nz-glass @ 99a380d32
-NEXT: the owner deploys nz-glass @ 99a380d32 (it carries a new column,
-Employee Checkin.skipped_as_noise, so the patch must run) and re-runs Fix Day ->
-Rebuild this day on Norazlin 3 and 4 Sep. Offered and not started: a Desk door
-for hrms.utils.offshift_punch_heal.heal_offshift_punches - whitelisted, written
-for Danial's 3->4 Sep 01:04 OUT, and reachable from nowhere; today that punch is
-healed one at a time with Fix Day's "Move to shift / day".
-- 2026-09-18T04:23:34Z PUSH: nz-glass @ 087cddca1
-- 2026-09-18T04:23:34Z COMMIT: 087cddca1 docs(plans): the next step and the one door still missing → review dispatched
-REPAIR: Danial's past-midnight OUT (3 Sep IN 08:48, OUT 4 Sep 01:04, off-shift)
-could not be moved back onto the 3rd: the 4th is a LEAVE day and Fix Day refused
-"cancel the leave first". The guard is about a leave day being REBUILT from
-punches; taking a punch away rebuilds nothing, the leave keeps its own result,
-and attendance_recovery refuses to re-mark a leave day anyway. The leave family
-no longer blocks the day a tap is LEAVING - only that day, only for move_tap.
-Paid days, HR-removed days, running shifts and future days still block, and
-moving a tap ONTO a leave day is refused exactly as before.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 tests red before, green after; 8
-fix-day suites green.
-NEXT: the owner deploys; Danial's OUT then moves to 3 Sep and his OT is claimable.
-- 2026-09-18T04:35:10Z PUSH: nz-glass @ 907765845
-- 2026-09-18T04:35:21Z PUSH: nz-glass @ 627907e6c
-- 2026-09-18T04:35:21Z COMMIT: 627907e6c style: format the leave-day move test → review dispatched
-EVIDENCE: 7 (invariant) - review of 907765845 returned DEPLOY, no Critical, no
-Warning. It confirmed by tracing that _finish's re-mark of the emptied day does
-nothing (protected_reason refuses a leave/half-day/request day and hr_asked
-waives only the owner hold), that leaving_days can never cover the TARGET day
-(set difference of two singletons), and that the money guard sits outside the
-loop and still fires. Its one suggestion is closed: an Attendance Request can
-mean On Duty or Work From Home rather than leave, so the comment no longer calls
-them "the leave family", and four tests now pin the fact the whole waiver rests
-on - that the engine refuses all three the same way.
-NEXT: the owner deploys nz-glass and moves Danial's 4 Sep 01:04 OUT to 3 Sep.
-- 2026-09-18T04:38:26Z PUSH: nz-glass @ 925d40ec1
-REPAIR: ticking both taps of ONE working day that runs past midnight - an IN on
-the 3rd and its stranded 01:04 OUT on the 4th - was refused with "Tick taps of
-one person on one day". That refusal refused the commonest broken day in this
-system. The opener works the day out instead: the STRANDED tap's date (a tap
-with no shift is the one that needs moving and lives only on its own date),
-otherwise the earliest ticked day, and it says which day it opened. Two people
-is still refused.
-EVIDENCE: 2 (mapped) - 1 JS test red before, green after; 30 JS and 19 Python
-green.
-NEXT: the owner deploys and moves Danial's OUT from the 4th to the 3rd.
-- 2026-09-18T07:01:33Z PUSH: nz-glass @ 4517ab771
-REPAIR: the last locked door. Danial's 4 Sep 01:04 OUT is MIRRORED, so Fix Day
-refused it and get_employee_checkins excluded it at the query - Fetch Shifts gave
-it a shift and nothing would ever read it. Every historical ERP punch is in that
-state, so any day whose closing punch came from the old system was unfixable.
-Owner chose to claim: claim_tap clears the stamp, only after cutover, only
-through that action, HR-only, reasoned, logged, and undone by the snapshot that
-already carried the field.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 25 tests red before, green after; 12
-Python suites, the sync release/contested suites and 10 JS green.
-NEXT: the owner deploys, takes over Danial's OUT, then Rebuild this day on 3 Sep.
-- 2026-09-18T07:08:19Z PUSH: nz-glass @ fcd5cec85
-EVIDENCE: 7 (invariant) - review of fcd5cec85 returned DEPLOY, no Critical, no
-Warning. Both its suggestions are taken: the interaction it verified by READING
-is now a test - a claimed punch survives the next sync because neither path
-consults the stamp (the mirror keys on the source's own name, which claim_tap
-never touches; the punch importer keys on employee/time/log_type, which it never
-changes) - and purge_instance's docstring says a claimed punch is deliberately
-out of its set, so a purge count short against the source's export is the
-intended answer and not data loss.
-NEXT: the owner deploys nz-glass, takes over Danial's 4 Sep 01:04 OUT from
-Fix Day on 3 Sep, then presses Rebuild this day.
-- 2026-09-18T07:12:44Z PUSH: nz-glass @ 59422a537
-REPAIR: every PWA attachment failed with "Not allowed via controller permission
-check" — the SELFIE defect of 17 Sep in a second place. upload_base64_file
-called .insert() with no ignore_permissions, and staff hold no create right on
-File (the whole PWA write path is server-side for that reason). It also demanded
-WRITE on the request, which refused a staff member their own request past draft
-and an approver attaching to one they judge; READ is the honest bar because the
-PWA only shows a person their own requests. And the write check was made TWICE,
-the second time unguarded, so a file with no parent asked permission on doctype
-None. delete_attachment had the same shape: the uploader could not remove their
-own file.
-EVIDENCE: 2 (mapped) + 3 (blast radius) — 10 new tests red before, green after;
 the api, company-scope, attachment and remote_checkin suites green.
 NEXT: the owner deploys; S3 is untouched — the File still inserts, so the S3
 hook still fires.
@@ -292,3 +194,14 @@ whole department's requests in list queries. Neither blocks. Nothing pushed.
 - 2026-09-21T17:57Z EVIDENCE: 2 correct — test_shift_requests_route_by_the_same_chain.py 7/7, proved red (6 failed) before the fix
 - 2026-09-21T17:57Z EVIDENCE: 3 works — blast radius green: 98 passed + 30 subtests, plus 50 passed + 113 subtests across the fence suites
 - 2026-09-21T17:58:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-09-21T17:58:16Z COMMIT: 5134f4856 fix(shift-request): a shift request routes up the employee's own chain → review dispatched
+- 2026-09-21T17:59:57Z PUSH: nz-glass @ 5134f4856
+- 2026-09-21T18:00:18Z PUSH: nz-glass @ c86ebd8ad
+- 2026-09-21T18:00:18Z COMMIT: c86ebd8ad docs(glass): handoff for the approver chain → review dispatched
+- 2026-09-21T18:03Z REPAIR: an employee with no approver configured is told that, instead of being sent to an empty dropdown (owner: "make it clear and not confusing")
+- 2026-09-21T18:03Z EVIDENCE: 2 correct — test_no_approver_configured_says_so.py 6/6; proved red on clean HEAD source (4 failed), tree restored
+- 2026-09-21T18:03Z EVIDENCE: 3 works — blast radius green: 104 passed + 30 subtests across 13 suites
+- 2026-09-21T18:03:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-21T18:03:40Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 13 extra test file(s) ⟂2d3ffee99479
+- 2026-09-21T18:04:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-21T18:04:07Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 13 extra test file(s) ⟂2d3ffee99479
