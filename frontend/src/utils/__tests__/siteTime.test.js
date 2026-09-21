@@ -39,6 +39,24 @@ test("boot's site timezone wins over the fallback", () => {
 	delete globalThis.window
 })
 
+test("the real bootinfo shape ({system, user} object) resolves to the site string, never throws", () => {
+	globalThis.window = {
+		frappe: {
+			boot: {
+				time_zone: { system: "Asia/Dubai", user: "Asia/Kuala_Lumpur" },
+				sysdefaults: { time_zone: "Asia/Dubai" },
+			},
+		},
+	}
+	assert.equal(siteTimeZone(), "Asia/Dubai")
+	assert.equal(siteTime(CREATION).toISOString(), "2026-09-21T06:00:00.000Z")
+	globalThis.window = { frappe: { boot: { time_zone: { system: "Asia/Dubai" } } } }
+	assert.equal(siteTimeZone(), "Asia/Dubai")
+	globalThis.window = { frappe: { boot: { sysdefaults: { time_zone: "Not/AZone" } } } }
+	assert.equal(siteTime(CREATION).isValid(), true, "a bad zone falls back instead of throwing")
+	delete globalThis.window
+})
+
 test("microsecond strings parse (Frappe's default serialisation); garbage stays invalid", () => {
 	assert.equal(
 		siteTime("2026-09-21 10:00:00.123456").valueOf(),

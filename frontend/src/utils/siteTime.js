@@ -14,9 +14,14 @@ dayjs.extend(timezone)
 // The live site's System Settings timezone; used only when boot carries none.
 export const DEFAULT_SITE_TZ = "Asia/Dubai"
 
+// Frappe's bootinfo carries `time_zone` as an OBJECT {system, user} (boot.py
+// set_time_zone); the site string sits at sysdefaults.time_zone. Reading the
+// object as a string made dayjs.tz() throw on every list (review, 21 Sep 2026).
 export function siteTimeZone() {
 	const boot = globalThis.window?.frappe?.boot
-	return boot?.time_zone || boot?.sysdefaults?.time_zone || DEFAULT_SITE_TZ
+	const tz = boot?.time_zone
+	const candidate = boot?.sysdefaults?.time_zone || (typeof tz === "string" ? tz : tz?.system)
+	return typeof candidate === "string" && candidate ? candidate : DEFAULT_SITE_TZ
 }
 
 // A dayjs instant for a site-clock string; invalid input stays invalid (dayjs
@@ -31,5 +36,11 @@ export function siteTime(value) {
 	if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(String(value).trim())) {
 		return dayjs(value)
 	}
-	return dayjs.tz(value, siteTimeZone())
+	try {
+		return dayjs.tz(value, siteTimeZone())
+	} catch (error) {
+		// An unknown zone name must not take the whole list down with it.
+		console.warn("[siteTime] unknown site zone, using the default:", error?.message)
+		return dayjs.tz(value, DEFAULT_SITE_TZ)
+	}
 }
