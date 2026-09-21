@@ -117,17 +117,22 @@ checked++;
 // CSS does, finds the strongest blob alpha that lands inside the column, and
 // measures --ink2 and --ink-muted over the composite.
 
-const VIEWPORT = { w: 390, h: 844 }; // §5 reference
-const GUTTER = 15; // content column = 100% − 30px
+// §5 reference viewport and the screen gutter, read from the tokens rather
+// than copied. The `column` fix below caught one literal of this class; these
+// three are the rest of it. A gate that keeps its own copy of a token proves
+// the geometry the app USED to have. Guarded by contrast-column.test.mjs.
+const px = (group, name) => parseFloat(tokens[group][name].value);
+const VIEWPORT = { w: px("layout", "viewport-width"), h: px("layout", "viewport-height") };
+const GUTTER = px("spacing", "screen-gutter");
 
-const px = (name) => parseFloat(tokens.field[name].value);
+const fieldPx = (name) => px("field", name);
 
 function blobGeometry(id) {
-	const size = px(`blob-${id}-size`);
+	const size = fieldPx(`blob-${id}-size`);
 	const r = size / 2;
 	const f = tokens.field;
-	const cx = f[`blob-${id}-left`] ? px(`blob-${id}-left`) + r : VIEWPORT.w - px(`blob-${id}-right`) - r;
-	const cy = f[`blob-${id}-top`] ? px(`blob-${id}-top`) + r : VIEWPORT.h - px(`blob-${id}-bottom`) - r;
+	const cx = f[`blob-${id}-left`] ? fieldPx(`blob-${id}-left`) + r : VIEWPORT.w - fieldPx(`blob-${id}-right`) - r;
+	const cy = f[`blob-${id}-top`] ? fieldPx(`blob-${id}-top`) + r : VIEWPORT.h - fieldPx(`blob-${id}-bottom`) - r;
 	return { cx, cy, r, colour: parse(f[`blob-${id}-color`].value) };
 }
 
@@ -191,7 +196,7 @@ const LG = {
 	// after the app moved. 880px, for instance, puts the column on blob B at
 	// 1024px dark (ink-muted 4.31:1). Guarded by contrast-column.test.mjs.
 	column: parseFloat(tokens.layout["content-column-lg"].value),
-	gutter: 15,
+	gutter: GUTTER,
 };
 
 let lgClear = 0;

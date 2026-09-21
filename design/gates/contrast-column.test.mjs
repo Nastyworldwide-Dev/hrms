@@ -38,3 +38,43 @@ test("the token the gate depends on still exists and is a px length", () => {
 	assert.ok(v, "tokens.layout['content-column-lg'] is missing");
 	assert.match(v, /^\d+px$/, `expected a px length, got ${v}`);
 });
+
+// The same class, found by reviewing the fix above rather than by the fix
+// itself: `column` was not the only literal in this gate duplicating a token.
+// Two lines under it sat `gutter: 15`, and twenty lines up `VIEWPORT = {w:390,
+// h:844}` and `GUTTER = 15` — all four are tokens (spacing.screen-gutter,
+// layout.viewport-width, layout.viewport-height). The commit that fixed
+// `column` claimed "this was the one literal". It was not; it was the one I
+// happened to be looking at.
+//
+// Each is asserted by NAME rather than by value, for the reason above: an
+// assertion on 15 passes the moment someone edits the token to 16 and copies
+// 16 into the gate, which is the defect restated.
+
+const LITERAL_TOKENS = [
+	{ literal: /const\s+GUTTER\s*=\s*\d/, token: "spacing.screen-gutter", reads: /screen-gutter/ },
+	{ literal: /\bgutter:\s*\d/, token: "spacing.screen-gutter", reads: /screen-gutter/ },
+	{ literal: /\bw:\s*\d{3}/, token: "layout.viewport-width", reads: /viewport-width/ },
+	{ literal: /\bh:\s*\d{3}/, token: "layout.viewport-height", reads: /viewport-height/ },
+];
+
+test("no geometry literal in the gate duplicates a token it could read", () => {
+	for (const { literal, token, reads } of LITERAL_TOKENS) {
+		const hit = literal.exec(src);
+		assert.equal(hit, null, `contrast.mjs hardcodes ${hit?.[0]}; read ${token} instead`);
+		assert.match(src, reads, `expected contrast.mjs to read ${token}`);
+	}
+});
+
+test("every token the gate's geometry depends on exists and is a px length", () => {
+	const need = [
+		["spacing", "screen-gutter"],
+		["layout", "viewport-width"],
+		["layout", "viewport-height"],
+	];
+	for (const [group, name] of need) {
+		const v = tokens[group]?.[name]?.value;
+		assert.ok(v, `tokens.${group}['${name}'] is missing`);
+		assert.match(v, /^\d+px$/, `expected a px length for ${group}.${name}, got ${v}`);
+	}
+});
