@@ -392,11 +392,12 @@ class TestTheNorazmiCaseApplied(FixDaysCase):
 	def test_a_form_posts_dry_run_as_a_string(self):
 		"""frappe hands whitelisted methods form values as strings: "0" must
 		apply, "1" must not — bool("0") would have read a cleared tick as set."""
+		before = len(self.store.rebuilt)
 		self.assertTrue(self.fix(dry_run="1")["dry_run"])
-		self.assertEqual(self.store.rebuilt, [])
+		self.assertEqual(len(self.store.rebuilt), before, 'a string "1" is a dry run')
 		answer = self.fix(dry_run="0")
 		self.assertFalse(answer["dry_run"])
-		self.assertEqual(answer["totals"]["rebuilt"], 4)
+		self.assertEqual(len(self.store.rebuilt), before + 4, 'a string "0" applies')
 
 
 class TestTheDaysItLeavesAlone(FixDaysCase):
