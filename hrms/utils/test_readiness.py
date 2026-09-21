@@ -79,6 +79,8 @@ HEALTHY = {
 	"hr_users_scoped_to_themselves": [],
 	"active_employees": 40,
 	"employees_without_leave_allocation": 0,
+	"employees_without_holiday_calendar": [],
+	"holiday_calendars_ending": {},
 }
 
 
@@ -300,6 +302,46 @@ class TestGeofenceConfiguration(unittest.TestCase):
 		self.assertIn("Menara Nasty", by_id(found, "location_radius")["detail"])
 
 
+class TestNobodyIsWithoutAHolidayCalendar(unittest.TestCase):
+	"""The automatic pipeline treats "no calendar" as "no holidays": the absent
+	sweep marks rest days Absent, OT prices a public holiday at 1.5x, the PWA
+	calendar goes blank. Nothing raises (G-holiday-list.md F2/F5). The system
+	must say who has no calendar before payroll finds out."""
+
+	def setUp(self):
+		self.evaluate = _evaluate()
+
+	def test_an_active_employee_with_no_covering_assignment_fails(self):
+		found = self.evaluate(facts(employees_without_holiday_calendar=["EMP-0007"]))
+		finding = by_id(found, "holiday_calendar")
+		self.assertEqual(finding["status"], "fail")
+		self.assertIn("EMP-0007", finding["detail"])
+		self.assertIn("Holiday List Assignment", finding["fix"])
+
+	def test_a_calendar_ending_within_sixty_days_warns(self):
+		"""The yearly rollover has no owner: from 1 Jan every day is a working
+		day until someone notices. Warn while there is still time to assign."""
+		found = self.evaluate(
+			facts(holiday_calendars_ending={"MY-2026": {"days_left": 30, "employees": 12, "replaced": False}})
+		)
+		finding = by_id(found, "holiday_calendar_rollover")
+		self.assertEqual(finding["status"], "warn")
+		self.assertIn("MY-2026", finding["detail"])
+		self.assertIn("12", finding["detail"])
+
+	def test_a_calendar_with_a_successor_already_assigned_is_quiet(self):
+		found = self.evaluate(
+			facts(holiday_calendars_ending={"MY-2026": {"days_left": 30, "employees": 12, "replaced": True}})
+		)
+		self.assertNotIn("holiday_calendar_rollover", ids(found))
+
+	def test_a_calendar_with_more_than_sixty_days_left_is_quiet(self):
+		found = self.evaluate(
+			facts(holiday_calendars_ending={"MY-2026": {"days_left": 61, "employees": 12, "replaced": False}})
+		)
+		self.assertNotIn("holiday_calendar_rollover", ids(found))
+
+
 class TestEveryFindingIsActionable(unittest.TestCase):
 	"""The report exists to be acted on by whoever reads it at 9am.
 
@@ -318,6 +360,8 @@ class TestEveryFindingIsActionable(unittest.TestCase):
 		locations_without_radius=["B"],
 		orphan_requests=2,
 		series_behind={"X-": (0, 9)},
+		employees_without_holiday_calendar=["E"],
+		holiday_calendars_ending={"HL": {"days_left": 1, "employees": 1, "replaced": False}},
 	)
 
 	def test_every_finding_carries_a_fix(self):

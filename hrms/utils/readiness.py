@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 
 FAIL = "fail"
 WARN = "warn"
+#: Warn this many days before a holiday calendar in use ends with no successor
+#: assigned — the yearly rollover the `# ceiling` in holiday_list._ended_calendar
+#: names. Long enough to create next year's list and assign it.
+HOLIDAY_ROLLOVER_WARN_DAYS = 60
 
 
 def _finding(id, status, detail, fix):
@@ -202,6 +206,47 @@ def evaluate(facts: dict) -> list[dict]:
 			)
 		)
 
+	# The automatic pipeline treats "no calendar" as "no holidays": the absent
+	# sweep marks rest days Absent, OT prices a public holiday at 1.5x, the PWA
+	# calendar goes blank. Nothing raises. Say who before payroll finds out.
+	no_calendar = facts.get("employees_without_holiday_calendar") or []
+	if no_calendar:
+		out.append(
+			_finding(
+				"holiday_calendar",
+				FAIL,
+				f"{len(no_calendar)} of {total_emp} active employee(s) have no holiday calendar "
+				f"covering today: {', '.join(no_calendar[:5])}"
+				+ (f" and {len(no_calendar) - 5} more" if len(no_calendar) > 5 else "")
+				+ ". Every rest day and public holiday reads as a working day for them — "
+				"auto-Absent on Sundays, holiday overtime priced at the weekday rate.",
+				"Submit a Holiday List Assignment for the Company (covers everyone) or for "
+				"each employee, naming a Holiday List whose dates include today.",
+			)
+		)
+
+	ending = facts.get("holiday_calendars_ending") or {}
+	rollover = {
+		name: info
+		for name, info in ending.items()
+		if info.get("days_left", 0) <= HOLIDAY_ROLLOVER_WARN_DAYS and not info.get("replaced")
+	}
+	if rollover:
+		lines = ", ".join(
+			f"{name} ends in {info['days_left']} day(s), {info['employees']} employee(s) on it"
+			for name, info in sorted(rollover.items())
+		)
+		out.append(
+			_finding(
+				"holiday_calendar_rollover",
+				WARN,
+				f"Holiday calendar(s) ending soon with nothing assigned after them: {lines}. "
+				"From the day after, every day is a working day for those employees.",
+				"Create next year's Holiday List and submit a Holiday List Assignment for it "
+				"before the current one ends.",
+			)
+		)
+
 	orphans = facts.get("orphan_requests", 0)
 	if orphans:
 		out.append(
@@ -347,6 +392,8 @@ def collect_facts() -> dict:
 		u for u in set(hr_users) if frappe.db.exists("User Permission", {"user": u, "allow": "Employee"})
 	)
 
+	no_calendar, ending = _holiday_calendar_facts(active)
+
 	push = (
 		frappe.get_single("Push Notification Settings")
 		if frappe.db.exists("DocType", "Push Notification Settings")
@@ -368,6 +415,8 @@ def collect_facts() -> dict:
 		"hr_users_scoped_to_themselves": hr_self_scoped,
 		"active_employees": len(active),
 		"employees_without_leave_allocation": without_allocation,
+		"employees_without_holiday_calendar": no_calendar,
+		"holiday_calendars_ending": ending,
 		"checkin_enabled": bool(settings.get("allow_employee_checkin_from_mobile_app")),
 		"geo_enabled": bool(settings.get("allow_geolocation_tracking")),
 		"auto_attendance_shifts": sum(1 for s in shifts if s.enable_auto_attendance),
@@ -382,6 +431,45 @@ def collect_facts() -> dict:
 		else 0,
 		"series_behind": behind,
 	}
+
+
+def _holiday_calendar_facts(active: list) -> tuple[list, dict]:
+	"""Who has no calendar covering today, and which calendars in use end soon.
+
+	Asks the one resolver (hrms.utils.holiday_list) rather than restating its
+	employee-then-company rule. The resolver serves an ENDED calendar as a
+	fallback with a warning, so "covers today" is checked explicitly — an ended
+	calendar holds no rows for this year and is as good as none.
+	"""
+	from frappe.utils import add_days, date_diff, getdate
+
+	from hrms.utils.holiday_list import get_holiday_list_for_employee, holiday_list_covers
+
+	today = getdate()
+	no_calendar = []
+	ending: dict[str, dict] = {}
+	for employee in active:
+		holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
+		if not holiday_list_covers(holiday_list, today):
+			no_calendar.append(employee)
+			continue
+		if holiday_list not in ending:
+			to_date = frappe.db.get_value("Holiday List", holiday_list, "to_date")
+			after = add_days(to_date, 1)
+			successor = get_holiday_list_for_employee(employee, raise_exception=False, as_on=after)
+			ending[holiday_list] = {
+				"days_left": date_diff(to_date, today),
+				"employees": 0,
+				"replaced": holiday_list_covers(successor, after),
+			}
+		ending[holiday_list]["employees"] += 1
+	logger.info(
+		"[readiness] %d of %d active employee(s) without a holiday calendar today; %d calendar(s) in use",
+		len(no_calendar),
+		len(active),
+		len(ending),
+	)
+	return no_calendar, ending
 
 
 @frappe.whitelist()
