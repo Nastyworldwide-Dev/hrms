@@ -155,6 +155,7 @@ function panel({ employee = "EMP", storage = new Map() } = {}) {
 		resources,
 		fix,
 		unmount: () => unmount.forEach((fn) => fn()),
+		Date: bindings.Date,
 		advance: (ms) => {
 			now += ms
 			for (const [id, timer] of timers)
@@ -508,6 +509,29 @@ test("a punch the server answered is finished; the next tap is a new one", async
 	const ids = punchIds(h)
 	assert.equal(ids.length, 2)
 	assert.notEqual(ids[1], ids[0])
+})
+
+test("a pending tap from yesterday is not replayed today", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	failThePunch(h)
+	await h.vm.submitLog("IN")
+	// walk the fake clock past local midnight (at most 12 h away, the TTL)
+	const start = h.Date.now()
+	let hours = 0
+	while (
+		new h.Date(h.Date.now()).toDateString() === new h.Date(start).toDateString() &&
+		hours < 13
+	) {
+		h.advance(60 * 60 * 1000)
+		hours += 1
+	}
+	h.watches[0].success(h.fix())
+	await h.vm.submitLog("IN")
+	const ids = punchIds(h)
+	assert.equal(ids.length, 2)
+	assert.notEqual(ids[1], ids[0], "a new day is a new tap, never yesterday's replay")
 })
 
 test("a different action after a lost answer is a new tap, not the old one's replay", async () => {

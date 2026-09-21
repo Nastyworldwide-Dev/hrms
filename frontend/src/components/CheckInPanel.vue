@@ -966,7 +966,9 @@ const lastSubmit = ref({ action: null, at: 0 })
 // Keyed by employee, not by phone: on a shared device the next person must
 // not inherit — and replay — somebody else's tap.
 const PENDING_TAP_KEY = `checkin.pendingTap:${employee.data.name}`
-// A pending id older than this is somebody else's day, not this tap's retry.
+// A pending id older than this, or from another calendar day, is not this
+// tap's retry: a replay would answer with yesterday's stored punch and today
+// would get none.
 const PENDING_TAP_TTL_MS = 12 * 60 * 60 * 1000
 function pendingTapId(logType) {
 	let pending = null
@@ -975,7 +977,12 @@ function pendingTapId(logType) {
 	} catch {
 		pending = null
 	}
-	if (pending?.action === logType && Date.now() - pending.at < PENDING_TAP_TTL_MS) {
+	const today = new Date(Date.now()).toDateString()
+	if (
+		pending?.action === logType &&
+		pending.day === today &&
+		Date.now() - pending.at < PENDING_TAP_TTL_MS
+	) {
 		console.info("[CheckInPanel] retrying pending tap", pending.id)
 		return pending.id
 	}
@@ -985,7 +992,7 @@ function pendingTapId(logType) {
 	try {
 		window.localStorage.setItem(
 			PENDING_TAP_KEY,
-			JSON.stringify({ id, action: logType, at: Date.now() })
+			JSON.stringify({ id, action: logType, at: Date.now(), day: today })
 		)
 	} catch {
 		console.warn("[CheckInPanel] tap id could not be kept; a lost answer cannot be replayed")
