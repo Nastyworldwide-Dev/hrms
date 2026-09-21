@@ -83,6 +83,14 @@ test("a refused request decision is not toasted twice", async () => {
 	assert.deepEqual(toasts, [], "decide reports through the action sheet's own toast")
 })
 
+test("a refused plain submit or cancel is not toasted twice either", async () => {
+	// finalize is the decision-less transition on the same sheet, wired to the
+	// same onActionError — the same two toasts, just not photographed yet.
+	const { loud, toasts } = harness({ exc_type: "ValidationError", messages: ["Refused."] })
+	await assert.rejects(() => loud({ url: "/api/method/hrms.api.approval.finalize" }))
+	assert.deepEqual(toasts, [], "finalize reports through the action sheet's own toast")
+})
+
 test("the same failure on any other endpoint still toasts", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))

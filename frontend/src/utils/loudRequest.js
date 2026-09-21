@@ -57,6 +57,8 @@ const SILENT_ENDPOINTS = new Set([
 	// managers photographed this seam's toast stacked on top of it, the same
 	// sentence twice, on every refused Approve.
 	"hrms.api.approval.decide",
+	// Same sheet, same onActionError, for the plain submit/cancel transition.
+	"hrms.api.approval.finalize",
 ])
 
 function endpointOf(options) {

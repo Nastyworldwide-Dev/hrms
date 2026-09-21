@@ -12,9 +12,8 @@ Call sites the machine lists for SILENT_ENDPOINTS / makeLoudRequest:
 * frontend/src/components/RequestActionSheet.vue:339 decision resource +
   :510 onActionError — not-affected: keeps showing "Error" + server reason.
 * frontend/src/components/RequestActionSheet.vue finalize
-  (hrms.api.approval.finalize) — not-affected — it goes through the same
-  onActionError, but no report of a double toast on it; left loud on purpose
-  until seen (one cause per commit).
+  (hrms.api.approval.finalize) — same-root: same sheet, same onActionError;
+  silenced in the follow-up commit (reviewer of f085ff325 asked for it now).
 * frontend/src/data/helpdesk.js new_ticket — not-affected: the ticket form
   shows NO toast of its own (the screenshot shows one "Could not load" only),
   so the seam's toast is its only feedback.
