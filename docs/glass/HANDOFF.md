@@ -1,16 +1,15 @@
 # HANDOFF
-prompt:   Thread F — unify request status across the request family
-status:   partial
-commit:   61b16f93e on nz-glass
-files:    frontend/src/utils/requestStatus.js
-          frontend/src/utils/__tests__/requestStatus.test.js
-          frontend/src/views/RemoteApprovals.vue
-          .claude/plans/current-plan.md
-          .claude/plans/family.md
-          .claude/plans/ticket-waiting-word-in-filters.md
+prompt:   mockup-4 defect-family audit
+status:   done
+commit:   3fe415b8e on nz-glass
+files:    .claude/plans/family-mockup4.md
           .claude/plans/progress.md
-verify:   cd frontend && node --experimental-test-module-mocks --test src/utils/__tests__/*.test.js src/components/__tests__/*.test.js
-flags:    slice 5 (RequestPolicy + date windows) needs the owner's backdating
-          ruling; Shift Request and Expense Claim have no window at all today.
-          Leave/shift list filters still offer the stored word (ticket filed).
-next:     deploy ecc3b8d7b..61b16f93e on Frappe Cloud, then slice 5.
+          Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html (gitignored, uncommitted)
+          Nadi PWA UI UX 2.0/nadi-2.0-mockup-4-notes.md (gitignored, uncommitted)
+          frontend/_audit/*.mjs (throwaway probes, uncommitted)
+verify:   cd frontend && node _audit/a2.mjs && node _audit/a3.mjs && node _audit/a8.mjs && node _audit/a9.mjs
+flags:    axe-core's earlier "0 violations" was the tool declining to answer
+          contrast through backdrop-filter, not a pass. 7 defect families fixed,
+          6 probe defects fixed. Mockup folder is gitignored (.gitignore:40).
+next:     owner's word on un-ignoring the mockup folder, and sign-off on
+          Mockup 4 as the visual contract, before the PWA 2.0 frontend build
