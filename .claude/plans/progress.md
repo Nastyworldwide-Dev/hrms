@@ -277,3 +277,12 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   coherence.mjs holds a unit literal ("0px", a radius comparison, not a copy of
   a CSS declaration). No other gate models CSS geometry. The class is closed in
   design/gates/ as far as unit literals go.
+- 2026-09-21T23:29:23Z COMMIT: 838018826 fix(gates): "within 0.003vw" was 0.0035vw → review dispatched
+- NEXT: owner's word on FOUR, unchanged and still blocking — un-ignore the
+  mockup folder (.gitignore:40)? is Mockup 4 signed off? visual contract or
+  information-architecture contract? adopt --g-glass-fill .86 against
+  tokens.json's own "do not correct (spec 6)" note? Phase 2 section 2 cannot
+  start without #3. ~32 commits unpushed on nz-glass; no push authorisation
+  given. Open reviewer Suggestion carried, not actioned: blob-opacity
+  (contrast.mjs:167,246) read raw and used arithmetically with no validator —
+  pre-existing, different value class (number not px string).
