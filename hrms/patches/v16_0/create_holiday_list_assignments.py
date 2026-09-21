@@ -17,7 +17,16 @@ def execute():
 
 
 def create_holiday_list_assignment(entity_details):
-	if not frappe.db.exists("Holiday List Assignment", entity_details):
+	# Filter on columns the assignment HAS. The row from the queries below also
+	# carries `to_date` and `company`; an unknown column makes frappe.db.exists
+	# swallow the error and answer None, so every post-sync run re-inserted every
+	# row and logged a DuplicateAssignment per employee (21 Sep 2026, G-F4).
+	existing = {
+		"assigned_to": entity_details.get("assigned_to"),
+		"from_date": entity_details.get("from_date"),
+		"docstatus": 1,
+	}
+	if not frappe.db.exists("Holiday List Assignment", existing):
 		hla = frappe.new_doc("Holiday List Assignment")
 		hla.update(entity_details)
 		hla.save()
