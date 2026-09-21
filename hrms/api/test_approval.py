@@ -357,6 +357,50 @@ class TestFinalizeCancelByTheApprover(unittest.TestCase):
 		self.assertFalse(doc.flags_at_cancel.get("ignore_permissions"))
 
 
+class TestFinalizeOnlyTransitionsRequestDoctypes(unittest.TestCase):
+	"""Audit 21 Sep 2026, H4. `finalize` had no doctype allow-list, so a PWA
+	session could submit or cancel ANY submittable doctype (Salary Slip, Payroll
+	Entry, Journal Entry) with nothing but the native perm. Refused up front, by
+	name, before any DB read — the same shape as `decide` and `cancel_for_correction`."""
+
+	@classmethod
+	def setUpClass(cls):
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		cls.frappe, cls.approval, cls.MagicMock, cls.patch = frappe, approval, MagicMock, patch
+
+	def test_a_salary_slip_is_refused_before_any_db_read(self):
+		db = self.MagicMock()
+		with (
+			self.patch.object(self.frappe, "db", db),
+			self.assertRaises(self.frappe.ValidationError) as ctx,
+		):
+			self.approval.finalize("Salary Slip", "Sal Slip/HR-EMP-0001/00001", 1)
+		self.assertIn("Salary Slip", str(ctx.exception))
+		db.exists.assert_not_called()
+		db.get_value.assert_not_called()
+
+	def test_every_request_doctype_is_still_served(self):
+		from hrms.utils.approved_request_guard import DECISION_FIELD_BY_DOCTYPE
+
+		tree = ast.parse(API.read_text())
+		fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "finalize")
+		names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+		self.assertIn("DECISION_FIELD_BY_DOCTYPE", names, "finalize must gate on the request allow-list")
+		self.assertIn("Employee Advance", DECISION_FIELD_BY_DOCTYPE)
+
+
 class TestCanCancelApproved(unittest.TestCase):
 	"""Hotfix 14 Sep 2026: a reports_to-only manager saw no Cancel on an approved
 	request (PWA and Desk) although the guard lets them cancel it. The read

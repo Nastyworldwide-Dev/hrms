@@ -444,6 +444,14 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 			_("{0} is not a transition this endpoint performs.").format(docstatus),
 			frappe.ValidationError,
 		)
+	# Request doctypes only (audit 21 Sep 2026, H4). Without this the endpoint
+	# was a generic submit/cancel for ANY submittable doctype a PWA session held
+	# the native perm on — Salary Slip, Payroll Entry, Journal Entry — bypassing
+	# every Desk-side guard. Same shape as `decide` and `cancel_for_correction`.
+	if doctype not in DECISION_FIELD_BY_DOCTYPE:
+		frappe.throw(
+			_("{0} is not a request this endpoint transitions.").format(_(doctype)), frappe.ValidationError
+		)
 
 	if not frappe.db.exists(doctype, name):
 		frappe.throw(_("{0} {1} not found.").format(_(doctype), name), frappe.DoesNotExistError)
@@ -469,11 +477,11 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 		# request's own employee, and anyone else, still may not.
 		#
 		# The branch above catches every submit of a DECIDE_THEN_SUBMIT doctype,
-		# which is every request doctype — so in PRACTICE this else is the cancel
-		# path. Not only: `finalize` is whitelisted with no doctype allow-list, so
-		# a submit of any other submittable doctype lands here too, which is why
-		# the "not routed to you" refusal below is still live and must not be
-		# deleted as dead.
+		# which is every request doctype with a decision field — so in PRACTICE
+		# this else is the cancel path. Not only: a submit of Employee Advance or
+		# Travel Request (no decision field; submitting IS approving) lands here
+		# too, which is why the "not routed to you" refusal below is still live
+		# and must not be deleted as dead.
 		#
 		# Many reports_to approvers hold only Employee and no `cancel` DocPerm.
 		# So a CANCEL is elevated for a routed approver (_is_routed_approver: HR
