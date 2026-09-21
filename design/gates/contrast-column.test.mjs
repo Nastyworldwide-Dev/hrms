@@ -88,7 +88,11 @@ test("every token the gate's geometry depends on exists and is a px length", () 
 // would drift from the thing it claims to test, which is the defect this whole
 // file exists to catch.
 test("px() validates its token value against an exact px length", () => {
-	const m = /test\((\/\^[^/]+\/)\.test\(raw\)/.exec(src) || /!(\/\^-\?[^/]+\/)\.test\(raw\)/.exec(src);
+	// `[^/]+` stops at the first forward slash, so this capture assumes the px
+	// pattern contains no escaped `/`. It does not today (digits, dot, minus,
+	// "px"); if one is ever added, this stops matching and the assert below
+	// fails loudly rather than silently testing a truncated regex.
+	const m = /!(\/\^-\?[^/]+\/)\.test\(raw\)/.exec(src);
 	assert.ok(m, "contrast.mjs px() must test `raw` against a px-length regex before parseFloat");
 	const re = new RegExp(m[1].slice(1, -1));
 
@@ -101,4 +105,25 @@ test("px() validates its token value against an exact px length", () => {
 	// exactly how this geometry was misread once already
 	for (const v of ["15px", "-163px", "844px", "0px", "1.5px"])
 		assert.equal(re.test(v), true, `px() must accept ${v}`);
+});
+
+// The guard added above only protects the reads that GO THROUGH px(). Three
+// did not: `column: parseFloat(tokens.layout["content-column-lg"].value)` and
+// the two blob reads in the lg: block. So the commit that added validation
+// left unvalidated the very token whose copied literal started this whole
+// chain — a guard is only as wide as its call sites.
+//
+// Asserting the ABSENCE of the unguarded form, not the presence of the guarded
+// one: a test that checks `px("layout", "content-column-lg")` appears would
+// stay green while a fourth raw parseFloat is added next to it.
+test("parseFloat is called in exactly one place — inside px(), after validation", () => {
+	// comments talk ABOUT parseFloat; only real calls count
+	const code = src.replace(/^\s*\/\/.*$/gm, "");
+	const calls = [...code.matchAll(/parseFloat\(([^)]*)\)/g)].map((m) => m[1].trim());
+	assert.deepEqual(
+		calls,
+		["raw"],
+		"every geometry read must go through px()/fieldPx(); found raw parseFloat call(s) on: " +
+			calls.filter((c) => c !== "raw").join(", "),
+	);
 });

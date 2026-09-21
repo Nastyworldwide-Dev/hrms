@@ -219,3 +219,19 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
 - 2026-09-21T23:11:29Z COMMIT: 7948be9ab chore(plans): record the four copied tokens and the reviewer budget → review dispatched
 - 2026-09-21T23:11:52Z COMMIT: f6d148172 docs(glass): the handoff named a file set from before this session's work → review dispatched
 - 2026-09-21T23:12:11Z COMMIT: 7705661ce chore(plans): the ring trimmed 115 lines, as designed → review dispatched
+- 2026-09-21T23:16:13Z COMMIT: 166a20a67 fix(gates): px() accepted anything parseFloat would guess at → review dispatched
+- 2026-09-21T23:19:37Z COMPACT: context compacted — read the last NEXT above before continuing
+- REPAIR: the px() guard added in 166a20a67 was narrower than its own commit
+  message implied. It validated the reads that went THROUGH px() and left three
+  raw parseFloat calls beside it — including layout.content-column-lg, the very
+  token whose copied literal (59e20f697) started this chain. A reviewer named
+  one of the three; grepping by name instead of trusting the report found the
+  other two in the lg: block. CLASS: a guard is only as wide as its call sites,
+  and "I added validation" is not the same claim as "every read is validated".
+- EVIDENCE: rung 2 — new test proved RED on HEAD's own source (5 pass/1 fail,
+  the failure naming all three sites by expression), GREEN after: 9/9 tests,
+  contrast 54 checked 0 failures. Guard reach proven by perturbation: pointing
+  content-column-lg at "calc(100% - 30px)" now exits 1 naming that token and
+  emits NO GATE_RESULT, so the runner reports FAIL rather than a silent pass.
+  tokens.json restored, git status clean.
+- 2026-09-21T23:24:07Z COMMIT: 166a20a67 fix(gates): px() accepted anything parseFloat would guess at → review dispatched

@@ -209,7 +209,7 @@ const LG = {
 	// tokens.json), and a literal here would keep proving the old geometry
 	// after the app moved. 880px, for instance, puts the column on blob B at
 	// 1024px dark (ink-muted 4.31:1). Guarded by contrast-column.test.mjs.
-	column: parseFloat(tokens.layout["content-column-lg"].value),
+	column: px("layout", "content-column-lg"),
 	gutter: GUTTER,
 };
 
@@ -225,9 +225,9 @@ for (const vw of LG.viewports) {
 			const f = tokens.field;
 			// offsets scale with the size at lg: (glass-components.css holds the
 			// origin:size ratio solved for mobile), so the model must too
-			const mobileSize = parseFloat(f[`blob-${id}-size`].value);
+			const mobileSize = fieldPx(`blob-${id}-size`);
 			const isLeft = Boolean(f[`blob-${id}-left`]);
-			const mobileOffset = parseFloat(f[`blob-${id}-${isLeft ? "left" : "right"}`].value);
+			const mobileOffset = fieldPx(`blob-${id}-${isLeft ? "left" : "right"}`);
 			const offset = (mobileOffset / mobileSize) * size;
 			const cx = isLeft ? offset + r : vw - offset - r;
 
