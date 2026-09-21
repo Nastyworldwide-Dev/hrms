@@ -27,21 +27,19 @@ Deliberately asymmetric and NOT to be "fixed": only the downward walk is
 `approval._is_routed_approver`), never from a per-row `has_permission`. Check
 the call sites before adding a cache.
 
-## 2. Shift Request still routes by department (spec — OWNER QUESTION)
+## 2. Shift Request routed by department — CLOSED 21 Sep 2026
 
-`hrms/api/__init__.py` `get_shift_request_approvers` and
-`hrms/hr/doctype/shift_request/shift_request.py` `validate_approver` resolve
-through `get_department_approvers`, the department-ancestor walk. The 21 Sep
-ruling ("no, dont" — a Department Approver is not a routing source) was applied
-to Leave, Expense and OT only, because that is what the report was about.
+Answered by the owner the same day: "close it".
 
-So Shift Request now disagrees with every other request type about what counts
-as a route: one department approver still reaches every employee under that
-department's tree for shift requests.
+`get_shift_request_approvers` and `ShiftRequest.validate_approver` now read
+`get_designated_approvers`, like leave and expense. `get_department_approvers`
+had no caller left and was deleted rather than kept as a trap. Pinned by
+`hrms/tests/test_shift_requests_route_by_the_same_chain.py`.
 
-Needs the owner's word, not a guess: does the ruling extend to Shift Request,
-or is the department table intentionally kept there? Do not change it either
-way until that is answered.
+A second defect surfaced while closing it: the selector walked department
+ANCESTORS while the fence accepted only the immediate department's table, so a
+pick from the dropdown could be refused on save. Both read one list now, and
+`test_everything_offered_is_accepted` is the invariant that keeps them one.
 
 ## 3. Company fence, unchanged but now wider (house pattern)
 

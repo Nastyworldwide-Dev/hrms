@@ -287,3 +287,8 @@ whole department's requests in list queries. Neither blocks. Nothing pushed.
 - 2026-09-21T17:45:48Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
 - 2026-09-21T17:45:49Z EVIDENCE: 6 behaves — family hunt: class=approval routing asked the wrong question in two opposite directions —; 6 call site(s) given verdicts, 12 same-root ⟂dc8c11dd7807
 - 2026-09-21T17:45:51Z COMMIT: cf94549e7 fix(approval): routing follows each employee's own chain, bottom-up → review dispatched
+- 2026-09-21T17:49:45Z COMMIT: 12ab90104 docs(ticket): shift requests still route by department, and two walkers drift → review dispatched
+- 2026-09-21T17:57Z REPAIR: shift requests route by the employee's own chain too; the department ancestor walk is deleted (owner: "close it")
+- 2026-09-21T17:57Z EVIDENCE: 2 correct — test_shift_requests_route_by_the_same_chain.py 7/7, proved red (6 failed) before the fix
+- 2026-09-21T17:57Z EVIDENCE: 3 works — blast radius green: 98 passed + 30 subtests, plus 50 passed + 113 subtests across the fence suites
+- 2026-09-21T17:58:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707

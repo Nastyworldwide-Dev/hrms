@@ -979,37 +979,13 @@ def get_filters(
 @frappe.whitelist()
 def get_shift_request_approvers(employee: str) -> str | list[str]:
 	_ensure_own_employee_or_permitted(employee)
-	shift_request_approver, department = frappe.get_cached_value(
-		"Employee",
-		employee,
-		["shift_request_approver", "department"],
-	)
-
-	department_approvers = []
-	if department:
-		# NO Department read demand here (upstream v16 added one; v15 never had
-		# it). The own-employee fence above is the authorization, and this list
-		# is exactly what the save-time fence reads permissionlessly — a
-		# bare-Employee user must be able to see who they may route to.
-		# Pinned by test_self_service_department_reads.
-		department_approvers = get_department_approvers(department, "shift_request_approver")
-		if not shift_request_approver:
-			shift_request_approver = frappe.db.get_value(
-				"Department Approver",
-				{"parent": department, "parentfield": "shift_request_approver", "idx": 1},
-				"approver",
-			)
-
-	shift_request_approver_name = frappe.db.get_value("User", shift_request_approver, "full_name", cache=True)
-
-	if shift_request_approver and shift_request_approver not in [
-		approver.name for approver in department_approvers
-	]:
-		department_approvers.insert(
-			0, {"name": shift_request_approver, "full_name": shift_request_approver_name}
-		)
-
-	return department_approvers
+	# No department read (neither the ancestor walk nor row 1 of the table):
+	# `Department Approver` is no longer a routing source — owner ruling
+	# 21 Sep 2026, extended to Shift Request on 21 Sep ("close it"). The
+	# own-employee fence above is the authorization, and this list is exactly
+	# what `validate_approver` accepts, so nothing offered here can fail on
+	# save. Pinned by test_shift_requests_route_by_the_same_chain.
+	return _approver_options(employee, "shift_request_approver", "shift_request_approver")
 
 
 @frappe.whitelist()
@@ -1258,10 +1234,9 @@ def get_leave_approval_details(employee: str) -> dict:
 	# (owner ruling, 21 Sep 2026) — see hrms.hr.utils.get_designated_approvers.
 	leave_approver = frappe.get_cached_value("Employee", employee, "leave_approver")
 
-	# Options come from the same list validate_staff_approver enforces. Using
-	# get_department_approvers here instead would offer the whole department
-	# ANCESTOR chain, and picking one of those failed on save with "not one of
-	# your designated approvers".
+	# Options come from the same list validate_staff_approver enforces. The
+	# department ANCESTOR walk that used to build this offered approvers the
+	# save then refused with "not one of your designated approvers".
 	department_approvers = _approver_options(employee, "leave_approver", "leave_approvers")
 	leave_approver = _default_approver(leave_approver, department_approvers)
 	leave_approver_name = frappe.db.get_value("User", leave_approver, "full_name", cache=True)
@@ -1308,34 +1283,6 @@ def _approver_options(employee: str, employee_approver_field: str, department_pa
 		{"name": user, "full_name": frappe.db.get_value("User", user, "full_name", cache=True) or user}
 		for user in approvers
 	]
-
-
-def get_department_approvers(department: str, parentfield: str) -> list[str]:
-	if not department:
-		return []
-
-	department_details = frappe.db.get_value("Department", department, ["lft", "rgt"], as_dict=True)
-	departments = frappe.get_all(
-		"Department",
-		filters={
-			"lft": ("<=", department_details.lft),
-			"rgt": (">=", department_details.rgt),
-			"disabled": 0,
-		},
-		pluck="name",
-	)
-
-	Approver = frappe.qb.DocType("Department Approver")
-	User = frappe.qb.DocType("User")
-	department_approvers = (
-		frappe.qb.from_(User)
-		.join(Approver)
-		.on(Approver.approver == User.name)
-		.select(User.name.as_("name"), User.full_name.as_("full_name"))
-		.where((Approver.parent.isin(departments)) & (Approver.parentfield == parentfield))
-	).run(as_dict=True)
-
-	return department_approvers
 
 
 @frappe.whitelist()

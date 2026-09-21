@@ -9,7 +9,12 @@ from frappe.utils import get_link_to_form
 
 import hrms
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
-from hrms.hr.utils import share_doc_with_approver, validate_active_employee, validate_self_submission
+from hrms.hr.utils import (
+	get_designated_approvers,
+	share_doc_with_approver,
+	validate_active_employee,
+	validate_self_submission,
+)
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.overrides.employee_company_default import set_company_from_employee
 
@@ -107,19 +112,16 @@ class ShiftRequest(Document, PWANotificationsMixin):
 		# itself: a new row, or one whose approver changes, is still a filing.
 		if self.status != "Draft" and not self.is_new() and not self.has_value_changed("approver"):
 			return
-		department = frappe.get_value("Employee", self.employee, "department")
-		shift_approver = frappe.get_value("Employee", self.employee, "shift_request_approver")
-		dept_approver = frappe.qb.DocType("Department Approver")
-		approvers = (
-			frappe.qb.from_(dept_approver)
-			.select(dept_approver.approver)
-			.where(
-				(dept_approver.parent == department) & (dept_approver.parentfield == "shift_request_approver")
-			)
-			.run()
+		# One list, the same one the PWA selector is built from: the approver on
+		# the Employee record, the reporting manager, and the same two questions
+		# asked of each person that reaches. `Department Approver` is not a
+		# routing source (owner ruling 21 Sep 2026, extended to Shift Request:
+		# "close it") — it admitted a whole department tree that nobody's record
+		# routes to, and it did not even match what this fence accepted, so a
+		# pick from the dropdown could fail here.
+		approvers = get_designated_approvers(
+			self.employee, "shift_request_approver", "shift_request_approver"
 		)
-		approvers = [approver[0] for approver in approvers]
-		approvers.append(shift_approver)
 		if self.approver not in approvers:
 			frappe.throw(_("Only Approvers can Approve this Request."))
 

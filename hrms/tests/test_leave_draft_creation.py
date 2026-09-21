@@ -139,9 +139,10 @@ class TestDesignatedApproversAreTheSingleSourceOfTruth(FrappeTestCase):
 	def test_parent_department_approver_is_not_offered(self):
 		"""An ancestor-department approver is outside the authorised set.
 
-		`get_department_approvers` (still used by the Shift Request selector)
-		walks ancestors; the leave/expense selectors must not, because
-		validate_staff_approver would refuse the pick on save.
+		The department ANCESTOR walk this selector once used offered every
+		approver ticked on the department or any department above it, and
+		validate_staff_approver refused the pick on save. That walk is gone
+		(21 Sep 2026); this pins the behaviour it was replaced with.
 		"""
 		employee = make_employee("dept_child_staff@example.com", company="_Test Company")
 		department = frappe.db.get_value("Employee", employee, "department")
