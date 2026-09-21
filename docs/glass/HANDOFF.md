@@ -9,6 +9,6 @@ files:    docs/glass/release-1-notes.md
           hrms/utils/{attendance_recovery,day_remark,restamp,hot_indexes,holiday_access}.py
           hrms/api/{remote_checkin,attendance_fix_day,attendance_master_edit,approval}.py
           frontend/src/components/CheckInPanel.vue
-verify:   bash /tmp/claude-1009/-home-nabil-nz-version-16/f6faadaf-fbf0-407c-92cb-48d5396bf104/scratchpad/run_files.sh hrms/tests/test_pairing_rule_table.py hrms/tests/test_day_evidence_is_read_one_way.py hrms/tests/test_restamp.py
+verify:   PYTHONPATH=. python3 -m pytest -q hrms/tests/test_pairing_rule_table.py; PYTHONPATH=. python3 -m pytest -q hrms/tests/test_day_evidence_is_read_one_way.py; PYTHONPATH=. python3 -m pytest -q hrms/tests/test_restamp.py
 flags:    RULINGS before deploy — payroll "consider unmarked attendance as" (open day = paid under default); restamp preview range. Migrate + worker restart needed.
 next:     owner reads release-1-notes.md, rules on payroll, deploys; then Release 2 mockup (Correct form on the Check-in page).
