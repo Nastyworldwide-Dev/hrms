@@ -606,6 +606,80 @@ class TestOneShiftTypeFailingDoesNotStopTheRest(unittest.TestCase):
 		self.assertIn("7PM-3:30AM", log_error.call_args.kwargs.get("title", ""))
 
 
+class TestAHealNeverQueuesARebuildAgainstItsOwnPass(_Case):
+	"""F1/F2 (21 Sep 2026): `punch.save()` fires Employee Checkin on_update →
+	`remark_changed_punch_day` → a `day-remark::` job queued at the pass's own
+	commit, racing the hourly job's (or the nightly's rebuild step's) marking of
+	the same day — the 16 Sep deadlock class through a door the fix missed.
+	The heal writes under `rebuilding(employee, clock day, shift day)`, so the
+	punch hook drops the day as the pass's own; the pass marks it itself."""
+
+	HOOK_FIELDS = (*STAMP, "offshift", "name", "employee", "time", "log_type", "synced_from_instance")
+
+	def setUp(self):
+		super().setUp()
+		from hrms.overrides import day_remark_hooks as hooks
+		from hrms.utils import day_remark as dr
+
+		self.queued = []
+		self.fake_db.after_commit.add.side_effect = self.queued.append
+		real_get_doc = self.db.get_doc
+
+		def get_doc(doctype, name):
+			punch = real_get_doc(doctype, name)
+			before = frappe._dict(self.db.checkins[name])
+			stub_save = punch.save
+
+			def save():
+				stub_save()
+				doc = frappe._dict({f: getattr(punch, f, None) for f in self.HOOK_FIELDS})
+				doc.get_doc_before_save = lambda: before
+				hooks.remark_changed_punch_day(doc)
+
+			punch.save = save
+			return punch
+
+		for p in (
+			patch.object(frappe, "get_doc", side_effect=get_doc),
+			patch.object(frappe, "flags", frappe._dict(), create=True),
+			patch.object(dr, "employee_now", return_value=datetime(2026, 9, 4, 11, 0)),
+		):
+			p.start()
+			self.addCleanup(p.stop)
+
+	def test_the_hourly_heal_queues_no_day_remark(self):
+		with patch.object(heal, "now_datetime", return_value=datetime(2026, 9, 4, 11, 0)):
+			self.assertEqual(heal.heal_recent_offshift_punches(), 1)
+		self.assertEqual(self.db.saved, ["OUT-0904"], "the heal itself still writes")
+		self.assertEqual(
+			self.queued, [], "the pass marks the day itself; its own punch save must not queue it"
+		)
+
+	def test_the_nightly_heal_step_queues_no_day_remark(self):
+		from hrms.utils import attendance_recovery as rec
+
+		plan = {
+			"planned": [
+				{"checkin": "OUT-0904", "employee": "HR-EMP-DANIAL", "time": datetime(2026, 9, 4, 1, 4)}
+			],
+			"held_back": [],
+		}
+		with patch.object(rec, "REPAIR_FLOOR", date(2026, 8, 1)):
+			result = rec._apply_heal(None, plan)
+		self.assertEqual([d["checkin"] for d in result["done"]], ["OUT-0904"])
+		self.assertEqual(self.queued, [])
+
+	def test_a_punch_the_pass_is_not_healing_still_queues(self):
+		"""The flag is request-local and scoped to the block: a lone re-stamp
+		outside any pass queues its re-mark as ever."""
+		punch = frappe.get_doc("Employee Checkin", "OUT-0904")
+		punch.shift = SHIFT
+		punch.shift_start = datetime(2026, 9, 3, 9, 0)
+		punch.save()
+		# the clock day (4 Sep) is today to the job and is left to the hourly run
+		self.assertEqual([q.args[1] for q in self.queued], ["2026-09-03"])
+
+
 class TestNoCopyOfTheSweep(unittest.TestCase):
 	def test_shift_type_carries_no_one_day_absent_predictor(self):
 		"""A per-day copy of the absent sweep drifted from it twice (roster read

@@ -48,6 +48,7 @@ from frappe.utils import cint, get_datetime, getdate, now_datetime
 from hrms.overrides.company_scope import require_unfenced
 from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
 from hrms.utils.attendance_day_audit import _job_can_read
+from hrms.utils.day_remark import rebuilding
 from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.filing_window import cycle_start
 from hrms.utils.hr_removed_day import removed_by_hr
@@ -274,9 +275,16 @@ def _heal(start, end=None, *, dry_run, for_update, not_before=None, report_expos
 				# The same write the Attendance Day Audit repair and probe B3 make:
 				# through the document, validate skipped (geofence and duplicate checks
 				# judge a live punch, not a re-stamp of a stored one).
+				#
+				# Under `rebuilding`: the save fires Employee Checkin on_update, which
+				# would queue a `day-remark::` job for the clock day and the shift day at
+				# this pass's commit — racing the hourly job's (or the nightly rebuild
+				# step's) own marking of that day, the 16 Sep deadlock class (F1/F2,
+				# 21 Sep 2026). Every caller of this writer marks the healed day itself.
 				punch.flags.ignore_validate = True
 				punch.flags.ignore_permissions = True
-				punch.save()
+				with rebuilding(punch.employee, getdate(punch.time), getdate(entry["shift_date"])):
+					punch.save()
 				punch.add_comment(
 					"Comment",
 					_(
