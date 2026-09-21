@@ -261,6 +261,7 @@ def day_block_reason(
 	shift_running=False,
 	duplicate_rows_ok=False,
 	leaving=False,
+	requests_ok=False,
 ) -> str | None:
 	"""Why this employee-day must not be touched here, in one sentence, or None. Pure.
 
@@ -268,6 +269,11 @@ def day_block_reason(
 	exactly a day HR may still correct the evidence of; whether the engine then
 	re-marks it is the re-mark's own decision (`attendance_recovery`), and the
 	answer comes back to the screen.
+
+	`requests_ok` is Fix days (owner ruling, 21 Sep 2026): a row from an
+	Attendance Request is rebuilt from the punches like any other, and the
+	request keeps its approval — so it is not a reason. The caller then passes
+	`request` as the LEAVE cover only and `financial` as what is PAID only.
 	"""
 	day = getdate(day)
 	if day >= getdate(today):
@@ -296,7 +302,7 @@ def day_block_reason(
 			return _("{0} is a leave day. Cancel the leave first.").format(name)
 		if cint(row.get("modify_half_day_status")):
 			return _("{0} is a half-day leave. Cancel the leave first.").format(name)
-		if row.get("attendance_request"):
+		if row.get("attendance_request") and not requests_ok:
 			return _("{0} came from an Attendance Request. Cancel that request first.").format(name)
 		if row.get("synced_from_instance"):
 			# The same line this screen already draws for a mirrored TAP. Without
@@ -1223,17 +1229,24 @@ def _lock_and_guard(employee, days, duplicate_rows_ok=False, leaving_days=()) ->
 			_refuse(blocked)
 
 
-def _day_block(employee, day, rows, for_update, duplicate_rows_ok=False, leaving=False) -> str | None:
+def _day_block(
+	employee, day, rows, for_update, duplicate_rows_ok=False, leaving=False, requests_ok=False
+) -> str | None:
+	"""`requests_ok` is Fix days only: money and leave still block; an approved OT
+	Request or Attendance Request does not (it keeps its approval)."""
 	return day_block_reason(
 		day,
 		_today(employee),
 		rows,
-		financial=_financial(employee, day, rows, for_update),
+		financial=_paid_day(employee, day, rows, for_update)
+		if requests_ok
+		else _financial(employee, day, rows, for_update),
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
-		request=_request_cover(employee, day),
+		request=_leave_cover(employee, day) if requests_ok else _request_cover(employee, day),
 		shift_running=_shift_running(employee, day),
 		duplicate_rows_ok=duplicate_rows_ok,
 		leaving=leaving,
+		requests_ok=requests_ok,
 	)
 
 
@@ -1409,10 +1422,67 @@ def _financial(employee, day, rows, for_update):
 	return _repair_financial_dependency(employee, getdate(day), submitted, for_update=for_update)
 
 
+def _paid_day(employee, day, rows, for_update):
+	"""What already PAID this day — a submitted Salary Slip covering it, submitted
+	Overtime Details on its row — or None. An approved OT Request is not money."""
+	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+	submitted = next((r.get("name") for r in rows or [] if cint(r.get("docstatus")) == 1), None)
+	return _repair_financial_dependency(
+		employee, getdate(day), submitted, for_update=for_update, requests_ok=True
+	)
+
+
 def _request_cover(employee, day):
 	from hrms.utils.leave_cover import request_covered_days
 
 	return request_covered_days(employee, day, day).get(getdate(day))
+
+
+def _leave_cover(employee, day):
+	"""The live Leave Application covering the day, or None; an Attendance Request is not asked."""
+	from hrms.utils.leave_cover import request_covered_days
+
+	return request_covered_days(employee, day, day, doctypes=("Leave Application",)).get(getdate(day))
+
+
+#: the requests Fix days rebuilds THROUGH, untouched: doctype -> the fields naming its days
+KEPT_REQUESTS = {
+	"OT Request": ("ot_date", "ot_date", "claimed_hours"),
+	"Attendance Request": ("from_date", "to_date", None),
+	"Compensatory Leave Request": ("work_from_date", "work_end_date", None),
+}
+
+
+def _requests_on(employee, day) -> list:
+	"""The approved requests speaking for this day that Fix days leaves intact:
+	[{doctype, name, status, hours}], submitted and approved only."""
+	day = getdate(day)
+	found = []
+	for doctype, (start, end, hours) in KEPT_REQUESTS.items():
+		for row in frappe.get_all(
+			doctype,
+			filters={
+				"employee": employee,
+				"docstatus": 1,
+				"status": "Approved",
+				start: ["<=", day],
+				end: [">=", day],
+			},
+			fields=["name", "status"] + ([hours] if hours else []),
+			order_by="name asc",
+		):
+			found.append(
+				{
+					"doctype": doctype,
+					"name": row.name,
+					"status": row.status,
+					"hours": row.get(hours) if hours else None,
+				}
+			)
+	if found:
+		logger.info("[attendance_fix_day] %s on %s: %d approved request(s) kept", employee, day, len(found))
+	return found
 
 
 def _shift_running(employee, day) -> bool:
@@ -1560,15 +1630,17 @@ def _comment(reference_doctype, name, text) -> None:
 	).insert(ignore_permissions=True)
 
 
-def _rebuild(employee, day, reason) -> dict:
-	"""The one engine re-mark every other path uses. Never a second calculation here."""
+def _rebuild(employee, day, reason, requests_ok=False) -> dict:
+	"""The one engine re-mark every other path uses. Never a second calculation here.
+	`requests_ok` is Fix days: the engine's own hold for an approved OT Request or
+	Attendance Request is lifted the same way `_day_block` lifts this screen's."""
 	from hrms.utils.day_remark import remark_day
 
 	# HR is the one asking, on one day, with a reason that is already in the fix
 	# log: the "a person keyed this row" hold does not apply to the person it
 	# protects. Without this the screen corrected every tap on Norazlin's
 	# 4 September and the day stayed Absent (owner, 17 Sep 2026).
-	answer = remark_day(employee, day, reason, hr_asked=True)
+	answer = remark_day(employee, day, reason, hr_asked=True, requests_ok=requests_ok)
 	logger.info("[attendance_fix_day] re-mark of %s on %s: %s", employee, day, answer)
 	return answer
 

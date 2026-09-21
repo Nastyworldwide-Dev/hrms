@@ -183,6 +183,13 @@ const PREVIEW = {
 				},
 			],
 			rows_to_cancel: [{ name: "HR-ATT-1", status: "Present", hours: 7.5, marked_by_hr: 1 }],
+			requests_kept: [
+				{
+					doctype: "OT Request",
+					name: "OTR-0007",
+					label: "OT Request OTR-0007 2 h (Approved) — OT hours on the row are recomputed from the punches; the request keeps its approval",
+				},
+			],
 			noise: [],
 			session: { in: "20:02:00", out: "03:30:00" },
 			result: "will rebuild from 20:02:00 to 03:30:00",
@@ -199,7 +206,7 @@ const PREVIEW = {
 			log: null,
 		},
 	],
-	totals: { days: 2, rebuilt: 1, open: 0, blocked: 1, restamped: 1, noise: 1, cancelled: 1 },
+	totals: { days: 2, rebuilt: 1, open: 0, blocked: 1, restamped: 1, noise: 1, cancelled: 1, kept: 1 },
 };
 const APPLIED = Object.assign({}, PREVIEW, {
 	dry_run: false,
@@ -416,6 +423,20 @@ test("the table shows each day: restamp, row to cancel, noise, and a blocked day
 		/2 days · 1 rebuilt · 0 left open · 1 blocked · 1 punches restamped · 1 noise · 1 rows cancelled/,
 	);
 	assert.doesNotMatch(table, /Undo/, "nothing to undo before Apply");
+});
+
+test("a day rebuilt through an approved request shows it in the Kept column, untouched", async () => {
+	// Owner ruling, 21 Sep 2026: the request keeps its approval; the row is rebuilt
+	const dialog = await fixDays().open();
+	await dialog.preview();
+	const table = dialog.table();
+	assert.match(table, /<th>Kept<\/th>/, "the column is there");
+	assert.match(
+		table,
+		/OT Request OTR-0007 2 h \(Approved\) — OT hours on the row are recomputed from the punches; the request keeps its approval/,
+	);
+	assert.match(table, /1 rows cancelled · 1 requests kept/);
+	assert.doesNotMatch(table, /cancel .*OTR-0007/, "nothing offers to cancel the request");
 });
 
 test("after Apply each rebuilt day offers Undo, which undoes that day's own log", async () => {

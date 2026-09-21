@@ -22,14 +22,17 @@ logger = logging.getLogger(__name__)
 
 #: Leave Application and Attendance Request share these decision states.
 LIVE_STATES = ["Open", "Approved"]
+COVERING = ("Leave Application", "Attendance Request")
 
 
-def request_covered_days(employee: str, start, end) -> dict:
+def request_covered_days(employee: str, start, end, doctypes=COVERING) -> dict:
 	"""{day: reason} for every day in [start, end] a live Leave Application or
-	Attendance Request of `employee` covers. The reason names the document."""
+	Attendance Request of `employee` covers. The reason names the document.
+	`doctypes` narrows the question: Fix days asks about leave only, because an
+	Attendance Request keeps its approval while the row is rebuilt (21 Sep 2026)."""
 	start, end = getdate(start), getdate(end)
 	covered: dict = {}
-	for doctype in ("Leave Application", "Attendance Request"):
+	for doctype in doctypes:
 		rows = frappe.get_all(
 			doctype,
 			filters={

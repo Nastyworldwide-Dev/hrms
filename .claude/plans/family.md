@@ -1,9 +1,9 @@
-# Family — feat(desk): "Fix days" dialog on the Employee Check-in list; the other pages link to the punches (21 Sep 2026)
-CLASS: the correction tool had three entry points and nine per-day buttons; the owner ruled one place (the Check-in page), three steps (tick → shift → Apply)
-New: FixDaysDialog + hrms.fix_day.fix_days_from_taps in fix_day.bundle.js; button in employee_checkin_list.js. Removed: Fix day on attendance_list.js, shift_attendance.js, unclaimable_days.js (replaced by "Punches" → the Check-in list filtered to that employee-day); hrms.fix_day.from_attendance deleted.
-hrms/hr/doctype/employee_checkin/employee_checkin_list.js same-root — registers both buttons (one owner of listview_settings, memory rule kept)
-hrms/hr/doctype/attendance/attendance_list.js same-root — Punches link
-hrms/hr/report/shift_attendance/shift_attendance.js same-root — Punches in the Edit Attendance group; + a message for the R1 refusal code not_one_session (the grid's own census test demanded it)
-hrms/hr/report/unclaimable_days/unclaimable_days.js same-root — Punches (HR-gated)
-hrms/tests/test_fix_day_screen.py same-root — bundle write-set pin admits fix_days/undo_fix; the three-doors pin becomes one door
-hrms/hooks.py:app_include_js not-affected — the bundle stays a boot bundle; registration stays in the list script (desk-listview-settings-one-owner)
+# Family — fix(attendance): Fix days rebuilds through approved requests and keeps them (21 Sep 2026)
+CLASS: two guards (the screen's day block and the engine's day protection) refused any day covered by an approved OT / Attendance Request, so HR had to cancel a request before the row could be recomputed; the owner ruled the request stays and the row is rebuilt
+Changed symbols: attendance_fix_day.day_block_reason/_day_block/_rebuild (requests_ok), _paid_day, _leave_cover, _requests_on (new); attendance_fix_days (requests_kept, keeps_the_day); day_remark.remark_day/_remark_owning_the_day/_remark_once (requests_ok threaded); attendance_recovery._day_protection (requests_ok, _paid, _leave_cover); remote_checkin_request_hooks._repair_financial_dependency (requests_ok skips the OT Request clause only); leave_cover.request_covered_days(doctypes).
+Every other caller of each changed function passes the default (verifier grep, 18 call sites listed) — behaviour byte-identical outside fix_days.
+hrms/api/attendance_fix_day.py:rebuild_day / single actions not-affected — default False; the per-day screen still refuses request days as before
+hrms/utils/attendance_recovery.py:protected_reason not-affected — still holds a submitted AR row; fix_days cancels that row first, so the engine sees none (ordering, noted)
+hrms/hr/doctype/attendance/attendance.py:on_cancel not-affected — unlinks punches only; no hook touches the request
+hrms/hr/doctype/attendance_request/attendance_request.py:on_cancel not-affected — cancels only rows linked to itself; the rebuilt engine row carries no link
+Paid days: Salary Slip and Overtime Details still refuse (money); approved-unpaid OT is kept and the row's OT hours recomputed from punches.

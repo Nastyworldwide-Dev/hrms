@@ -19,10 +19,17 @@ For EACH day of the range, in order, with the person locked for the whole call:
    reported "left open" and NOTHING on it is written — no Absent invented.
 3. CANCEL. Every submitted row on the day that `release_to_automation` would
    hand back — INCLUDING HR's own `auto_attendance = 0` rows, because HR is
-   asking — and any extra row. Leave, half-day leave, On Leave, Attendance
-   Request and mirrored rows are never cancelled; such a day is refused whole
-   by `_day_block`, as is a paid day, a future day and a running shift. The
-   refusal is per day; the other days proceed.
+   asking — and any extra row, and a row an Attendance Request wrote. Leave,
+   half-day leave, On Leave and mirrored rows are never cancelled; such a day
+   is refused whole by `_day_block`, as is a paid day, a future day and a
+   running shift. The refusal is per day; the other days proceed.
+   REQUESTS STAY INTACT (owner ruling, 21 Sep 2026): a day under an approved
+   OT Request, Attendance Request or Compensatory Leave Request is rebuilt
+   like any other and the request document is never touched — no cancel, no
+   edit. The answer lists them per day as `requests_kept`; OT hours on the
+   row are recomputed from the punches and the request keeps its approval.
+   The one line not crossed is money already paid: a submitted salary slip
+   covering the day, or overtime already on one — refused and named.
 4. REBUILD. `_rebuild` — the one engine, `hr_asked`, inline — one row.
 5. LOG. One HR Day Fix Log row per day, action `fix_days`, the touched taps
    snapshotted so `undo_fix` puts their stamps back.
@@ -61,15 +68,16 @@ COMPARED_FIELDS = ("shift", "shift_start", "shift_end", "offshift")
 def keeps_the_day(row) -> bool:
 	"""Whether this row speaks for the day and is never cancelled here. Pure.
 
-	The same list `attendance_recovery.release_to_automation` keeps its hands
-	off: a leave, a half-day leave, On Leave, an Attendance Request, a Leave
-	Application, a mirrored row — and anything not submitted.
+	The list `attendance_recovery.release_to_automation` keeps its hands off —
+	a leave, a half-day leave, On Leave, a Leave Application, a mirrored row,
+	anything not submitted — EXCEPT a row from an Attendance Request: that row
+	is rebuilt from the punches here while the request keeps its approval
+	(owner ruling, 21 Sep 2026).
 	"""
 	return bool(
 		cint(row.get("docstatus")) != 1
 		or row.get("leave_type")
 		or row.get("leave_application")
-		or row.get("attendance_request")
 		or row.get("synced_from_instance")
 		or cint(row.get("modify_half_day_status"))
 		or row.get("status") == "On Leave"
@@ -142,12 +150,16 @@ def _fix_one_day(emp, day, shift, taps, reason, dry_run) -> dict:
 	# The day guard first, and per day: a refused day is reported, not raised —
 	# the person pressed once for the whole range. `duplicate_rows_ok`: a
 	# two-row day is exactly what this ends.
-	blocked = fd._day_block(emp.name, day, rows, for_update=not dry_run, duplicate_rows_ok=True)
+	blocked = fd._day_block(
+		emp.name, day, rows, for_update=not dry_run, duplicate_rows_ok=True, requests_ok=True
+	)
 	entry = {
 		"date": str(day),
 		"blocked": blocked,
 		"taps": [_tap_change(tap, new) for tap, new in taps],
 		"rows_to_cancel": [] if blocked else [_row_brief(row) for row in rows_to_cancel(rows)],
+		# read on a refused day too: HR sees what the day carries either way
+		"requests_kept": [request_kept(req) for req in fd._requests_on(emp.name, day)],
 		"noise": [],
 		"session": None,
 		"result": None,
@@ -259,7 +271,7 @@ def _apply(emp, day, shift, taps, plan, rows, reason, entry) -> dict:
 			"Employee Checkin", name, _("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason)
 		)
 
-	rebuild = fd._rebuild(emp.name, day, f"fix days: {reason}")
+	rebuild = fd._rebuild(emp.name, day, f"fix days: {reason}", requests_ok=True)
 	if rebuild.get("action") in fd.NOT_APPLIED:
 		# The Release 1 rule: a fix the engine did not apply is never logged as
 		# done. Raising rolls the whole request back and HR sees why.
@@ -287,6 +299,7 @@ def _apply(emp, day, shift, taps, plan, rows, reason, entry) -> dict:
 						"cancel": cancel,
 						"shift": shift,
 						"restamped": [t["name"] for t, n in taps if n],
+						"requests_kept": entry["requests_kept"],
 					},
 				}
 			),
@@ -346,6 +359,17 @@ def _tap_change(tap, new) -> dict:
 	}
 
 
+def request_kept(req) -> dict:
+	"""How a kept request reads on the screen and in the log. Pure."""
+	hours = f" {req['hours']} h" if req.get("hours") else ""
+	label = f"{req['doctype']} {req['name']}{hours} ({req.get('status') or 'Approved'})"
+	if req["doctype"] == "OT Request":
+		label += " — " + _(
+			"OT hours on the row are recomputed from the punches; the request keeps its approval"
+		)
+	return {"doctype": req["doctype"], "name": req["name"], "label": label}
+
+
 def _row_brief(row) -> dict:
 	"""Read through the screen's own row view: hours are read here, never written."""
 	view = fd.row_view(row)
@@ -369,6 +393,7 @@ def _totals(report) -> dict:
 		"restamped": sum(1 for e in report if e["session"] for t in e["taps"] if t["changed"]),
 		"noise": sum(len(e["noise"]) for e in report),
 		"cancelled": sum(len(e["rows_to_cancel"]) for e in report),
+		"kept": sum(len(e["requests_kept"]) for e in report),
 	}
 
 

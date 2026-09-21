@@ -196,7 +196,7 @@ def _record_deadlock(describe, attempts) -> None:
 		logger.exception("[day_remark] could not record the deadlock of %s", describe)
 
 
-def remark_day(employee, day, reason="", hr_asked=False, inline=None):
+def remark_day(employee, day, reason="", hr_asked=False, inline=None, requests_ok=False):
 	"""The job: re-mark one past employee-day through the engine, unless it is protected.
 
 	The day is this job's own while it runs, so the links and skip stamps the
@@ -215,23 +215,25 @@ def remark_day(employee, day, reason="", hr_asked=False, inline=None):
 		inline = hr_asked
 	if inline:
 		logger.debug("[day_remark] %s on %s (%s): inline, no deadlock retry", employee, day, reason)
-		return _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked)
+		return _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked, requests_ok=requests_ok)
 	return despite_deadlock(
-		lambda: _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked),
+		lambda: _remark_owning_the_day(employee, day, reason, hr_asked=hr_asked, requests_ok=requests_ok),
 		f"{employee} on {day} ({reason})",
 		give_up=lambda: {"action": "deadlocked"},
 	)
 
 
-def _remark_owning_the_day(employee, day, reason="", hr_asked=False):
+def _remark_owning_the_day(employee, day, reason="", hr_asked=False, requests_ok=False):
 	logger.debug("[day_remark] %s on %s: taking the day", employee, day)
 	with rebuilding(employee, day):
-		return _remark_once(employee, day, reason, hr_asked=hr_asked)
+		return _remark_once(employee, day, reason, hr_asked=hr_asked, requests_ok=requests_ok)
 
 
-def _remark_once(employee, day, reason="", hr_asked=False):
+def _remark_once(employee, day, reason="", hr_asked=False, requests_ok=False):
 	"""`hr_asked` waives ONLY the "a person made this row" hold, and only
-	because HR is the one asking — see attendance_recovery.protected_reason."""
+	because HR is the one asking — see attendance_recovery.protected_reason.
+	`requests_ok` (Fix days) lets an approved OT / Attendance Request day through:
+	the request keeps its approval, the row is rebuilt from the punches."""
 	from hrms.hr.doctype.shift_type import shift_type
 	from hrms.utils import attendance_recovery as rec
 
@@ -239,7 +241,7 @@ def _remark_once(employee, day, reason="", hr_asked=False):
 		logger.info("[day_remark] %s on %s: shift still running, left to the hourly job", employee, day)
 		return {"action": "running"}
 	lock_employee_row(employee)
-	held = rec._day_protection(employee, day, for_update=True, hr_asked=hr_asked)
+	held = rec._day_protection(employee, day, for_update=True, hr_asked=hr_asked, requests_ok=requests_ok)
 	if held:
 		logger.info("[day_remark] %s on %s held (%s): %s", employee, day, reason, held)
 		return {"action": "held", "detail": held}

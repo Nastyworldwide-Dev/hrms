@@ -734,6 +734,11 @@ class FixDaysDialog {
 		return `${fd_escape(row.status || "—")} ${fd_escape(row.hours)} h${hr}`;
 	}
 
+	// Requests the day is rebuilt THROUGH, untouched (owner ruling, 21 Sep 2026)
+	kept_text(day) {
+		return (day.requests_kept || []).map((req) => fd_escape(req.label)).join("<br>");
+	}
+
 	day_row(day, applied) {
 		const blocked = !!day.blocked;
 		const result = blocked
@@ -752,6 +757,7 @@ class FixDaysDialog {
 			<td>${fd_escape(day.date)}</td>
 			<td>${taps || "—"}</td>
 			<td>${cancels || "—"}</td>
+			<td>${this.kept_text(day) || "—"}</td>
 			<td>${noise || "—"}</td>
 			<td>${result}${undo}</td>
 		</tr>`;
@@ -760,7 +766,7 @@ class FixDaysDialog {
 	render(answer, applied) {
 		const t = answer.totals || {};
 		const totals = __(
-			"{0} days · {1} rebuilt · {2} left open · {3} blocked · {4} punches restamped · {5} noise · {6} rows cancelled",
+			"{0} days · {1} rebuilt · {2} left open · {3} blocked · {4} punches restamped · {5} noise · {6} rows cancelled · {7} requests kept",
 			[
 				fd_escape(t.days || 0),
 				fd_escape(t.rebuilt || 0),
@@ -769,6 +775,7 @@ class FixDaysDialog {
 				fd_escape(t.restamped || 0),
 				fd_escape(t.noise || 0),
 				fd_escape(t.cancelled || 0),
+				fd_escape(t.kept || 0),
 			]
 		);
 		const title = applied ? __("Done") : __("Preview — nothing written yet");
@@ -777,7 +784,7 @@ class FixDaysDialog {
 			<table class="table table-bordered table-sm">
 				<thead><tr>
 					<th>${__("Day")}</th><th>${__("Punches")}</th><th>${__("Rows to cancel")}</th>
-					<th>${__("Noise")}</th><th>${__("Result")}</th>
+					<th>${__("Kept")}</th><th>${__("Noise")}</th><th>${__("Result")}</th>
 				</tr></thead>
 				<tbody>${(answer.days || []).map((day) => this.day_row(day, applied)).join("")}</tbody>
 			</table>`);

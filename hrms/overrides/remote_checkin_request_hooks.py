@@ -797,21 +797,36 @@ def reapply_late_checkouts_unblocked_by(doc) -> None:
 		reprocess_late_checkout_attendance(out)
 
 
-def _repair_financial_dependency(employee, attendance_date, attendance_name, for_update: bool = True):
+def _repair_financial_dependency(
+	employee, attendance_date, attendance_name, for_update: bool = True, requests_ok: bool = False
+):
 	"""Claims accepted by existing payout rules and submitted payroll require explicit correction.
 
 	`for_update` holds row locks so a repair decides against a payout that
 	cannot then be submitted underneath it. A read-only caller — a preview or a
 	dry run — must pass False: locking Salary Slip rows from a report would
 	block payroll while somebody reads a screen.
+
+	`requests_ok` (Fix days, owner ruling 21 Sep 2026): an approved OT Request
+	is a request, not money — it keeps its approval while the row is rebuilt
+	from the punches. Only what is PAID answers: a submitted Salary Slip
+	covering the day, or submitted Overtime Details on the row.
 	"""
 	logger.debug("[remote_checkin_request] checking attendance repair dependencies")
 	return (
-		frappe.db.get_value(
-			"OT Request",
-			{"employee": employee, "ot_date": attendance_date, "status": ["!=", "Rejected"], "docstatus": 1},
-			"name",
-			for_update=for_update,
+		(
+			not requests_ok
+			and frappe.db.get_value(
+				"OT Request",
+				{
+					"employee": employee,
+					"ot_date": attendance_date,
+					"status": ["!=", "Rejected"],
+					"docstatus": 1,
+				},
+				"name",
+				for_update=for_update,
+			)
 		)
 		or frappe.db.get_value(
 			"Salary Slip",

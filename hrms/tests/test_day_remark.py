@@ -586,7 +586,7 @@ class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
 
 		calls, answer = [], final if final is not None else {"action": "remarked"}
 
-		def once(employee, day, reason="", hr_asked=False):
+		def once(employee, day, reason="", hr_asked=False, **kwargs):
 			calls.append(day)
 			if len(calls) <= deadlocks:
 				raise _Deadlock()
@@ -630,7 +630,7 @@ class TestADeadlockIsRetriedNotRaised(unittest.TestCase):
 
 		calls = []
 
-		def once(employee, day, reason="", hr_asked=False):
+		def once(employee, day, reason="", hr_asked=False, **kwargs):
 			calls.append(day)
 			raise ValueError("boom")
 
@@ -667,7 +667,7 @@ class TestInlineTheDeadlockIsNotRetried(unittest.TestCase):
 
 		calls = []
 
-		def once(employee, day, reason="", hr_asked=False):
+		def once(employee, day, reason="", hr_asked=False, **kwargs):
 			calls.append(day)
 			if len(calls) == 1:
 				raise Exception(1213, "Deadlock found when trying to get lock")
@@ -694,7 +694,7 @@ class TestInlineTheDeadlockIsNotRetried(unittest.TestCase):
 
 		calls, db = [], MagicMock()
 
-		def once(employee, day, reason="", hr_asked=False):
+		def once(employee, day, reason="", hr_asked=False, **kwargs):
 			calls.append(day)
 			raise Exception(1213, "Deadlock found when trying to get lock")
 

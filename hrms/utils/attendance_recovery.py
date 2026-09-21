@@ -531,15 +531,40 @@ def _request_cover(employee, day) -> str | None:
 	return request_covered_days(employee, day, day).get(getdate(day))
 
 
-def _day_protection(employee, day, for_update, ignore=None, hr_asked=False) -> str | None:
+def _leave_cover(employee, day) -> str | None:
+	"""The live Leave Application speaking for the day, or None — an Attendance
+	Request is not asked (Fix days, 21 Sep 2026: it keeps its approval)."""
+	return request_covered_days(employee, day, day, doctypes=("Leave Application",)).get(getdate(day))
+
+
+def _paid(employee, day, rows, for_update):
+	"""What already PAID the day — a submitted slip, submitted overtime details —
+	or None. An approved OT Request is not money and is not named here."""
+	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+	submitted = next((r.get("name") for r in rows if cint(r.get("docstatus")) == 1), None)
+	found = _repair_financial_dependency(
+		employee, getdate(day), submitted, for_update=for_update, requests_ok=True
+	)
+	if found:
+		logger.info("[attendance_recovery] %s on %s is paid by %s", employee, day, found)
+	return found
+
+
+def _day_protection(employee, day, for_update, ignore=None, hr_asked=False, requests_ok=False) -> str | None:
+	"""`requests_ok` (Fix days only): an approved OT Request or Attendance Request
+	does not hold the day — the row is rebuilt from the punches and the request
+	keeps its approval. A leave and a paid day hold as ever."""
 	rows = [r for r in _attendance_rows(employee, day) if r.get("name") != ignore]
 	return protected_reason(
 		day,
 		_today(employee),
 		rows,
-		_financial(employee, day, rows, for_update),
+		_paid(employee, day, rows, for_update)
+		if requests_ok
+		else _financial(employee, day, rows, for_update),
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
-		request=_request_cover(employee, day),
+		request=_leave_cover(employee, day) if requests_ok else _request_cover(employee, day),
 		hr_asked=hr_asked,
 	)
 

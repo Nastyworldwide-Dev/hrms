@@ -155,7 +155,11 @@ class FixDaysCase(unittest.TestCase):
 	def setUp(self):
 		self.store = Store()
 		self.financial = {}
+		self.paid = {}
 		self.request = None
+		self.leave = None
+		self.requests = {}
+		self.docs_fetched = []
 		self.roster = {}
 		stack = ExitStack()
 		self.addCleanup(stack.close)
@@ -173,6 +177,17 @@ class FixDaysCase(unittest.TestCase):
 		seam("_shift_running", lambda employee, day: False)
 		seam("_financial", lambda employee, day, rows, for_update: self.financial.get(getdate(day)))
 		seam("_request_cover", lambda employee, day: self.request)
+		seam("_paid_day", lambda employee, day, rows, for_update: self.paid.get(getdate(day)))
+		seam("_leave_cover", lambda employee, day: self.leave)
+		seam("_requests_on", lambda employee, day: [dict(r) for r in self.requests.get(getdate(day), [])])
+		# any controller load of a request document is recorded: Fix days must never make one
+		stack.enter_context(
+			patch.object(
+				frappe,
+				"get_doc",
+				lambda doctype, name=None, *a, **k: self.docs_fetched.append((doctype, name)),
+			)
+		)
 		seam("_day_attendance", self.day_attendance)
 		seam("_day_taps", self.day_taps)
 		seam("_range_taps", self.range_taps)
@@ -214,11 +229,16 @@ class FixDaysCase(unittest.TestCase):
 			<= getdate(to_date) + (date(2026, 1, 2) - date(2026, 1, 1))
 		]
 
+	def keep_request(self, day, doctype, name, status="Approved", hours=None):
+		req = {"doctype": doctype, "name": name, "status": status, "hours": hours}
+		self.requests.setdefault(getdate(day), []).append(req)
+		return req
+
 	def cancel_attendance(self, name):
 		self.store.rows[name]["docstatus"] = 2
 		self.store.cancelled.append(name)
 
-	def rebuild(self, employee, day, reason):
+	def rebuild(self, employee, day, reason, **kwargs):
 		self.store.rebuilt.append((employee, str(getdate(day)), reason))
 		self.store.counter += 1
 		self.store.row(
@@ -418,7 +438,9 @@ class TestTheDaysItLeavesAlone(FixDaysCase):
 		self.assertEqual(len(self.store.rebuilt), 3)
 
 	def test_a_paid_day_is_refused_for_that_day_only(self):
-		self.financial[SEP3] = "Sal Slip/HR-EMP-0042/00009"
+		# `_paid_day`: the slip / paid overtime reader Fix days asks (an approved
+		# OT Request alone is not money any more — see TestTheRequestsOnADayAreKept)
+		self.paid[SEP3] = "Sal Slip/HR-EMP-0042/00009"
 		days = self.by_date(self.fix(dry_run=False))
 		self.assertIn("already paid", days["2026-09-03"]["blocked"])
 		self.assertEqual(
@@ -441,6 +463,97 @@ class TestTheDaysItLeavesAlone(FixDaysCase):
 	def test_a_future_day_is_blocked(self):
 		answer = fd.fix_days(EMP, str(SEP4), str(TODAY), shift=DAY_SHIFT, reason="x", dry_run=True)
 		self.assertIn("not over yet", self.by_date(answer)[str(TODAY)]["blocked"])
+
+
+class TestTheRequestsOnADayAreKept(FixDaysCase):
+	"""Owner ruling, 21 Sep 2026: an approved request stays intact and the
+	attendance row is rebuilt from the punches anyway. HR cancels nothing by
+	hand first; the request is never touched. Leave and money still hold."""
+
+	def setUp(self):
+		super().setUp()
+		self.norazmi()
+		self.ot = self.keep_request(SEP2, "OT Request", "OTR-0007", hours=2)
+		# what `_financial` answers today for a day with approved overtime on it —
+		# Fix days must not be asking it any more
+		self.financial[SEP2] = "OTR-0007"
+
+	def test_an_approved_ot_request_day_is_rebuilt_and_the_request_untouched(self):
+		days = self.by_date(self.fix(dry_run=False))
+		self.assertIsNone(days["2026-09-02"]["blocked"])
+		self.assertIn("2026-09-02", [day for _, day, _ in self.store.rebuilt])
+		self.assertEqual(len(self.store.rebuilt), 4)
+		self.assertIn("HR-ATT-2026-15174", self.store.cancelled)
+		self.assertEqual(self.docs_fetched, [], "no controller load of the request: no cancel, no save")
+		self.assertEqual(self.ot["status"], "Approved")
+		self.assertEqual(
+			days["2026-09-02"]["requests_kept"],
+			[
+				{
+					"doctype": "OT Request",
+					"name": "OTR-0007",
+					"label": "OT Request OTR-0007 2 h (Approved) — OT hours on the row are recomputed "
+					"from the punches; the request keeps its approval",
+				}
+			],
+		)
+		log = next(e for e in self.store.logs.values() if e["fix_date"] == "2026-09-02")
+		plan = json.loads(log["after_state"])["plan"]
+		self.assertEqual([r["name"] for r in plan["requests_kept"]], ["OTR-0007"])
+
+	def test_an_attendance_request_day_is_rebuilt_from_its_punches_and_the_request_kept(self):
+		self.store.row(
+			"HR-ATT-2026-15175",
+			SEP3,
+			status="Work From Home",
+			attendance_request="HR-AREQ-0001",
+			auto_attendance=0,
+		)
+		self.keep_request(SEP3, "Attendance Request", "HR-AREQ-0001")
+		self.request = "Attendance Request HR-AREQ-0001 (Approved) covers it"  # what `_request_cover` says
+		days = self.by_date(self.fix(dry_run=False))
+		self.assertIsNone(days["2026-09-03"]["blocked"])
+		self.assertEqual([r["name"] for r in days["2026-09-03"]["rows_to_cancel"]], ["HR-ATT-2026-15175"])
+		self.assertIn("HR-ATT-2026-15175", self.store.cancelled)
+		self.assertIn("2026-09-03", [day for _, day, _ in self.store.rebuilt])
+		self.assertEqual(self.docs_fetched, [])
+		self.assertEqual([r["name"] for r in days["2026-09-03"]["requests_kept"]], ["HR-AREQ-0001"])
+		self.assertEqual(self.store.taps["CK-3-IN"]["shift"], DAY_SHIFT)
+
+	def test_a_leave_day_is_still_skipped_and_named(self):
+		self.leave = "Leave Application HR-LAP-0003 (Approved) covers it"
+		days = self.by_date(self.fix(dry_run=False))
+		for day in ("2026-09-01", "2026-09-03", "2026-09-04"):
+			self.assertIn("HR-LAP-0003", days[day]["blocked"])
+			self.assertNotEqual(days[day]["taps"], [], "the punches are still listed")
+		self.assertEqual(self.store.rebuilt, [], "a leave day is never rebuilt")
+
+	def test_a_paid_ot_day_stays_refused_and_the_other_days_proceed(self):
+		self.paid[SEP2] = "Sal Slip/HR-EMP-0042/00009"
+		days = self.by_date(self.fix(dry_run=False))
+		self.assertIn("already paid", days["2026-09-02"]["blocked"])
+		self.assertIn("Sal Slip/HR-EMP-0042/00009", days["2026-09-02"]["blocked"])
+		self.assertNotIn("HR-ATT-2026-15174", self.store.cancelled)
+		self.assertEqual(len(self.store.rebuilt), 3)
+		self.assertEqual([r["name"] for r in days["2026-09-02"]["requests_kept"]], ["OTR-0007"])
+
+	def test_a_dry_run_lists_the_kept_requests_and_writes_nothing(self):
+		answer = self.fix(dry_run=True)
+		days = self.by_date(answer)
+		self.assertEqual([r["name"] for r in days["2026-09-02"]["requests_kept"]], ["OTR-0007"])
+		self.assertEqual(days["2026-09-01"]["requests_kept"], [])
+		self.assertIsNone(days["2026-09-02"]["blocked"])
+		self.assertEqual(self.store.rebuilt, [])
+		self.assertEqual(self.store.cancelled, [])
+		self.assertEqual(self.docs_fetched, [])
+		self.assertEqual(answer["totals"]["kept"], 1)
+
+	def test_the_engine_is_asked_with_requests_ok(self):
+		seen = []
+		with patch.object(fd, "_rebuild", lambda *a, **k: seen.append(k) or self.rebuild(*a)):
+			self.fix(dry_run=False)
+		self.assertEqual(len(seen), 4)
+		self.assertTrue(all(k.get("requests_ok") for k in seen), "the engine's own hold is lifted too")
 
 
 class TestANightSessionBelongsToItsInsDay(FixDaysCase):
