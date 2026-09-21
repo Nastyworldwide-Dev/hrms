@@ -147,7 +147,24 @@ def preview(employee, from_date, to_date) -> dict:
 	Shift Assignment hooks queue when HR fixes the roster.
 	"""
 	frappe.only_for(HR_ROLES)
+	_ensure_company_visible(employee)
 	return restamp(employee, from_date, to_date, reason=f"preview by {frappe.session.user}", dry_run=True)
+
+
+def _ensure_company_visible(employee) -> None:
+	"""HR role membership and the company fence are two different things in
+	this hub (hrms/api/roster.py::_ensure_can_roster is the reference): an HR
+	User fenced to company A must not read company B's punches through here."""
+	from frappe import _
+
+	from hrms.overrides.company_scope import company_visible
+
+	company = frappe.db.get_value("Employee", employee, "company")
+	if company is None:
+		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
+	if not company_visible(company):
+		logger.warning("[restamp] %s denied preview of %s (company fence)", frappe.session.user, employee)
+		frappe.throw(_("You are not permitted to see this employee's punches."), frappe.PermissionError)
 
 
 def _stamp(doc) -> dict:

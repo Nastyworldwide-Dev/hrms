@@ -305,9 +305,29 @@ class TestPreviewIsHrOnly(unittest.TestCase):
 		run.assert_not_called()
 
 	def test_preview_is_a_dry_run(self):
-		with patch.object(frappe, "only_for", lambda roles: None), patch.object(mod, "restamp") as run:
+		with (
+			patch.object(frappe, "only_for", lambda roles: None),
+			patch.object(mod, "_ensure_company_visible", lambda employee: None),
+			patch.object(mod, "restamp") as run,
+		):
 			mod.preview(EMP, "2026-08-24", "2026-08-24")
 		self.assertTrue(run.call_args.kwargs["dry_run"])
+
+	def test_a_fenced_hr_user_cannot_preview_another_companys_employee(self):
+		"""Role membership is not the company fence (roster.py is the pattern)."""
+		import hrms.overrides.company_scope as scope
+
+		db = SimpleNamespace(get_value=lambda *a, **k: "Company B")
+		with (
+			patch.object(frappe, "only_for", lambda roles: None),
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "session", SimpleNamespace(user="hr-a@x.com")),
+			patch.object(scope, "company_visible", lambda company, **k: company != "Company B"),
+			patch.object(mod, "restamp") as run,
+		):
+			with self.assertRaises(frappe.PermissionError):
+				mod.preview(EMP, "2026-08-24", "2026-08-24")
+		run.assert_not_called()
 
 
 if __name__ == "__main__":
