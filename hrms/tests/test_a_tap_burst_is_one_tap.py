@@ -95,6 +95,19 @@ class PunchContractCase(unittest.TestCase):
 		"""HR reading the punch must see the reason, not just a tick."""
 		self.assertIn("add_comment", self.punch)
 
+	def test_two_parallel_taps_queue_behind_the_employee_row(self):
+		"""Burst detection is read-then-insert. Two POSTs in flight together —
+		a retry, a double submit before the button disables — both read an
+		empty log and both count (audit D-M1). The Employee row lock every
+		attendance writer takes (lock_employee_row) must be held BEFORE the
+		read that feeds is_burst_tap, so the second tap waits for the first
+		to land and then sees it."""
+		self.assertIn("for_update=True", self.punch, "punch must take the employee row lock")
+		lock = self.punch.index("for_update=True")
+		self.assertIn("'Employee'", self.punch[self.punch.rindex("frappe.db.get_value(", 0, lock) : lock])
+		self.assertLess(lock, self.punch.index("frappe.get_all("), "the lock precedes the log read")
+		self.assertLess(lock, self.punch.index("is_burst_tap("))
+
 
 class HrCanSeeItCase(unittest.TestCase):
 	"""A skip nobody is told about is a skip nobody fixes.

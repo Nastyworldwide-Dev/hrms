@@ -338,6 +338,12 @@ def get_pending_count() -> int:
 
 
 def _decide(request: str, decision: str, approver_remarks: str) -> dict:
+	# Lock the row BEFORE reading its state — the same gate approval.decide,
+	# finalize and correction_cancel take. Without it Approve and Reject in the
+	# same second both read Pending, both save, and the punch is propagated
+	# twice. The second decider now waits and reads the settled status, so the
+	# Pending check below is the idempotency gate (audit D-H2).
+	frappe.db.get_value("Remote Checkin Request", request, "status", for_update=True)
 	row = _ensure_approver(request)
 	if row.status != "Pending":
 		frappe.throw(_("This request has already been decided."))
@@ -644,6 +650,12 @@ def punch(
 	# only chooses the type of the row about to be created, so there is no
 	# overwrite to get wrong and no punch is ever dropped.
 	punch_time = employee_now(employee)
+	# Two taps in flight together must queue. Burst detection below is
+	# read-then-insert: two POSTs that both read an empty log both count
+	# (audit D-M1). The Employee row is the lock every attendance writer takes
+	# (lock_employee_row); held until this request commits, so the second tap
+	# reads the first one's row and is stored as the stutter it is.
+	frappe.db.get_value("Employee", employee, "name", for_update=True)
 	# NEWEST first, then reversed for the walk. `time asc` with a limit keeps the
 	# OLDEST rows, so a busy log would truncate away the very punch this rule
 	# depends on — the open IN — and silently stop coercing. The walk below still
