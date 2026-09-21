@@ -1,9 +1,8 @@
 # HANDOFF
 prompt:   mockup-4 defect-family audit
 status:   done
-commit:   49131862f on nz-glass (parent of this one)
-files:    .claude/plans/family-mockup4.md
-          .claude/plans/progress.md
+commit:   c11bdc513 on nz-glass (the parent of the commit that writes this line)
+files:    .claude/plans/family-mockup4.md + progress.md
           frontend/_audit/*.mjs + README.md
           docs/glass/HANDOFF.md
 verify:   cd frontend && node _audit/a2.mjs && node _audit/a3.mjs && node _audit/a8.mjs && node _audit/a9.mjs
