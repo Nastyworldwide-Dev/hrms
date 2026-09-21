@@ -121,7 +121,21 @@ checked++;
 // than copied. The `column` fix below caught one literal of this class; these
 // three are the rest of it. A gate that keeps its own copy of a token proves
 // the geometry the app USED to have. Guarded by contrast-column.test.mjs.
-const px = (group, name) => parseFloat(tokens[group][name].value);
+// parseFloat is why this validates. It silently truncates: "calc(100% - 30px)"
+// reads as 100, and a value whose sign or unit is unexpected reads as a
+// plausible number rather than an error. A wrong number here does not crash
+// the gate, it moves the geometry and still prints PASS. (A hand probe that
+// dropped the minus from blob-b-right's -163px is how the mechanism behind
+// these numbers was misread once already — the gate itself was correct, the
+// throwaway script was not.) So: exact px length only, sign allowed, and say
+// which token failed.
+const px = (group, name) => {
+	const raw = tokens[group]?.[name]?.value;
+	if (raw === undefined) throw new Error(`contrast: tokens.${group}["${name}"] is missing`);
+	if (!/^-?\d+(\.\d+)?px$/.test(raw))
+		throw new Error(`contrast: tokens.${group}["${name}"] = "${raw}" is not a px length; parseFloat would truncate it silently`);
+	return parseFloat(raw);
+};
 const VIEWPORT = { w: px("layout", "viewport-width"), h: px("layout", "viewport-height") };
 const GUTTER = px("spacing", "screen-gutter");
 

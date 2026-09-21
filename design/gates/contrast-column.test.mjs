@@ -78,3 +78,27 @@ test("every token the gate's geometry depends on exists and is a px length", () 
 		assert.match(v, /^\d+px$/, `expected a px length for ${group}.${name}, got ${v}`);
 	}
 });
+
+// px() must refuse a value parseFloat would truncate into a plausible number.
+// `calc(100% - 30px)` reads as 100 — a geometry input wrong by 85px that still
+// prints PASS. layout.content-column IS a calc() today, so this is one
+// mis-pointed lookup away, not hypothetical.
+//
+// The regex is lifted OUT of contrast.mjs rather than retyped here: a copy
+// would drift from the thing it claims to test, which is the defect this whole
+// file exists to catch.
+test("px() validates its token value against an exact px length", () => {
+	const m = /test\((\/\^[^/]+\/)\.test\(raw\)/.exec(src) || /!(\/\^-\?[^/]+\/)\.test\(raw\)/.exec(src);
+	assert.ok(m, "contrast.mjs px() must test `raw` against a px-length regex before parseFloat");
+	const re = new RegExp(m[1].slice(1, -1));
+
+	// values parseFloat would turn into a plausible wrong number
+	for (const v of ["calc(100% - 30px)", "1rem", "12", "100%", "auto", ""])
+		assert.equal(re.test(v), false, `px() must reject ${JSON.stringify(v)}`);
+
+	// shapes real tokens use, including the negative offsets the field blobs
+	// are positioned with — blob-b-right is -163px, and dropping that minus is
+	// exactly how this geometry was misread once already
+	for (const v of ["15px", "-163px", "844px", "0px", "1.5px"])
+		assert.equal(re.test(v), true, `px() must accept ${v}`);
+});

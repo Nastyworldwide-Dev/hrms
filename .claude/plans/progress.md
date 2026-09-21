@@ -187,9 +187,24 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   720->880px gives 57/1 with the documented 4.31 blob-B failure, from tokens.json
   ALONE with no gate edit. tokens.json restored, git status clean each time.
 - NOTE: layout.viewport-width is currently INERT (390->320px moves no ratio).
-  Traced, not waved through: blob B is the only right-anchored blob and its centre
-  is inside the content column at both widths (dx=0, peak alpha either way). Read
-  from the token anyway so a future blob move cannot silently re-pin it to 390.
+  My first mechanism for this was WRONG and a reviewer refuted it: I wrote "blob
+  B's centre is inside the column, dx=0". The probe that produced dx=0 had
+  stripped the minus sign off blob-b-right (-163px), so it computed a different
+  blob than the gate does. Real distance is 73px at EVERY width, against a
+  cutoff of r*0.7=73.5 — outside the column, not inside.
+  The true reason is algebraic, and stronger: blob B is right-anchored, so
+  cx = W - right - r, and the right clamp boundary is also W - GUTTER. The two
+  W terms cancel: dist = GUTTER - right - r = 73, for ANY width, while the
+  right-clamp branch stays active. Blobs A and C are left-anchored and never
+  reference W at all. So the input is inert by construction, not by coincidence
+  — but that is contingent on blob-b-right/-size/screen-gutter, NOT guaranteed
+  against edits to those three. Read from the token for that reason.
+- NOTE: all three blobs sit within ~1px of their alpha cutoff (A 80.0 vs 80.5,
+  B 73.0 vs 73.5, C 62.0 vs 63.0), i.e. contributing 0.6-1.6% of peak. That is
+  the §3.3 PLACEMENT mechanism working as designed — blobs held just clear of
+  the column — but the margin is thin enough that a few px of blob movement
+  turns a 4.5x pass into a fail. Pre-existing, unchanged by this work, worth
+  knowing before anyone moves a blob.
 - NOTE: lint 242/9 and usage 2/1 are UNCHANGED with and without the gate diff
   (verified by stashing it). Pre-existing, not introduced by this work.
 - DEAD END: two frappe-reviewers in a row burned all 10 turns gathering and
@@ -203,3 +218,4 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   commits unpushed on nz-glass; no push authorisation given.
 - 2026-09-21T23:11:29Z COMMIT: 7948be9ab chore(plans): record the four copied tokens and the reviewer budget → review dispatched
 - 2026-09-21T23:11:52Z COMMIT: f6d148172 docs(glass): the handoff named a file set from before this session's work → review dispatched
+- 2026-09-21T23:12:11Z COMMIT: 7705661ce chore(plans): the ring trimmed 115 lines, as designed → review dispatched
