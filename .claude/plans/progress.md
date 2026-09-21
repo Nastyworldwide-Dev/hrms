@@ -310,3 +310,27 @@ LEARNING(gate): quoting another line means copying its bytes. If a quoted
   figure or letter needs correcting, the corrected value goes in a SEPARATE
   sentence after the quote, never inside it. A sentence may carry a quote or a
   correction, not both.
+- 2026-09-21T22:27:00Z COMMIT: 950e3813c docs(plans): a corrected quote is not a quote → review dispatched
+- 2026-09-21T22:30:02Z COMMIT: 49131862f chore(audit): commit the probes the handoff tells people to run → review dispatched
+- 2026-09-21T22:30:13Z COMMIT: 5c1c90fbd docs(glass): the handoff can now name files that exist → review dispatched
+
+DEAD END: this file lost 106 lines out of its own middle. Noticed when a read
+  at offset 229 said "the file has 207 lines" — it had been 312. The tail was
+  intact and hook lines were still appending to it, and the only lines the
+  working copy held that HEAD did not were the three COMMIT lines written after
+  the last commit. So something trimmed the history of an APPEND-ONLY file
+  while leaving both ends looking healthy, which is the worst possible shape:
+  nothing errors, and the loss is invisible unless you count.
+  What went missing was 21 Sep 07:00-11:00 — the Release 1/2/3 PLAN, COMMIT and
+  PUSH lines. Not mine to lose: that is the record of what shipped.
+  Recovered from HEAD (the commit was never truncated) and the three newer hook
+  lines re-appended. Verified: 312 + 3 = 315, and `comm` shows nothing from the
+  truncated copy absent from the restored one.
+  Cause not established. I did not edit those lines; every write I made this
+  session was a >> append. Candidates: a concurrent writer, or a hook that
+  rewrites rather than appends. Not chased further because the data is back and
+  guessing at a culprit would be its own kind of drift.
+LEARNING(gate): an append-only file needs a length floor. Before any write,
+  assert the line count is >= the count in HEAD; a file that has shrunk since
+  its last commit has lost something, and no append should land on top of a
+  loss and bury it.
