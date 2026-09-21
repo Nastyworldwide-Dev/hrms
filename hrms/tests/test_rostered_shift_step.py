@@ -224,6 +224,8 @@ class _Step(unittest.TestCase):
 		self.win = rec.recovery_window("2026-09-01", "2026-09-13", TODAY.date())
 		self.patches = [
 			patch.object(rec, "now_datetime", return_value=TODAY),
+			# One clock (B-H1): the employee's attendance date is the same day here.
+			patch.object(rec, "attendance_today", lambda employee: TODAY.date()),
 			patch.object(frappe, "db", MagicMock()),
 			patch.object(frappe, "session", SimpleNamespace(user="hr@x"), create=True),
 			patch.object(frappe, "only_for", MagicMock(), create=True),

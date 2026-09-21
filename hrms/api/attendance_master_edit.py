@@ -58,7 +58,7 @@ from datetime import datetime, time, timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, get_datetime, get_time, getdate, now_datetime
+from frappe.utils import cint, flt, get_datetime, get_time, getdate
 
 from hrms.hr.doctype.attendance.attendance import validate_attendance_times
 from hrms.hr.doctype.shift_assignment.shift_assignment import MultipleShiftError, OverlappingShiftError
@@ -66,6 +66,7 @@ from hrms.overrides import company_scope
 from hrms.utils.day_remark import remark_day_after_commit
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, SKIP_MARKER
 from hrms.utils.offshift_punch_heal import _lost_transaction
+from hrms.utils.timezone import attendance_today
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +255,7 @@ def hand_back(employee: str, attendance_date: str, revision: str) -> dict:
 def _save_row(row, is_sm: bool) -> dict:
 	employee, day, action, changes, revision = normalize_row(row)
 	emp = _require_employee(employee, lock=True)
-	if day > _today():
+	if day > _today(emp.name):
 		raise RowRefused("invalid", _("Attendance cannot be saved for a future date."))
 	snap = _snapshot(emp, day)
 	if revision != snap["revision"]:
@@ -416,7 +417,7 @@ def _remove(emp, day, snap, is_sm) -> None:
 
 def _move(emp, day, new_day, changes, snap, is_sm) -> str:
 	"""A date change is remove-old-day plus add-new-day, inside one savepoint."""
-	if new_day > _today():
+	if new_day > _today(emp.name):
 		raise RowRefused("invalid", _("Attendance cannot be moved to a future date."))
 	target = owned_target(snap["attendance"], snap["punches"])
 	if _snapshot(emp, new_day)["attendance"]:
@@ -932,8 +933,9 @@ def _require_employee(employee, lock: bool):
 # --- seams: every database touch, one small function each -------------------------
 
 
-def _today():
-	return getdate(now_datetime())
+def _today(employee):
+	"""Today on the employee's attendance clock, the clock Fix Day and the rebuild decide on (B-H1)."""
+	return attendance_today(employee)
 
 
 def _employee(employee, lock=False):

@@ -64,6 +64,7 @@ from hrms.utils import hr_removed_day
 from hrms.utils.dry_run import wants_dry_run
 from hrms.utils.leave_cover import request_covered_days
 from hrms.utils.offshift_punch_heal import _lost_transaction
+from hrms.utils.timezone import attendance_today
 
 logger = logging.getLogger(__name__)
 
@@ -476,8 +477,11 @@ def is_mirrored_release_candidate(row) -> bool:
 # --- reads ----------------------------------------------------------------------
 
 
-def _today() -> date:
-	return getdate(now_datetime())
+def _today(employee=None) -> date:
+	"""Today on the employee's attendance clock — the clock Fix Day and the punch
+	hook decide on (B-H1). With no employee named (a window over everyone) the
+	site clock, as before."""
+	return attendance_today(employee) if employee else getdate(now_datetime())
 
 
 def _require_operator(action: str) -> None:
@@ -531,7 +535,7 @@ def _day_protection(employee, day, for_update, ignore=None, hr_asked=False) -> s
 	rows = [r for r in _attendance_rows(employee, day) if r.get("name") != ignore]
 	return protected_reason(
 		day,
-		_today(),
+		_today(employee),
 		rows,
 		_financial(employee, day, rows, for_update),
 		removed_by_hr=hr_removed_day.removed_by_hr(employee, day),
@@ -658,7 +662,7 @@ def _plan_release_mirrored(win, for_update=False) -> dict:
 		if win.start <= day <= win.end:
 			days.setdefault((punch.get("employee"), day), ([], []))[1].append(punch)
 
-	today, planned, held, shapes = _today(), [], [], Counter()
+	planned, held, shapes = [], [], Counter()
 	for (employee, day), (day_rows, day_punches) in sorted(
 		days.items(), key=lambda i: (str(i[0][0]), i[0][1])
 	):
@@ -680,6 +684,7 @@ def _plan_release_mirrored(win, for_update=False) -> dict:
 			"release_checkins": sorted(p.get("name") for p in day_punches if p.get(PROVENANCE_FIELD)),
 			"release_attendance": sorted(r.get("name") for r in stamped_rows),
 		}
+		today = _today(employee)
 		reason = protected_reason(day, today, day_rows) or protected_reason(
 			day,
 			today,
@@ -807,13 +812,13 @@ def _plan_assignments(win, for_update=False) -> dict:
 	times = _shift_times({r.shift_type for r in rows})
 	night_types = {name for name, (start, end) in times.items() if is_night_shift(start, end)}
 	editor_made = _editor_assignments({r.name for r in rows if r.shift_type in night_types})
-	today = _today()
 	by_employee = {}
 	for row in rows:
 		by_employee.setdefault(row.employee, []).append(row)
 
 	planned, held = [], []
 	for employee, assignments in sorted(by_employee.items()):
+		today = _today(employee)
 		days = [a for a in assignments if a.shift_type not in night_types]
 		for night in (a for a in assignments if a.shift_type in night_types):
 			span = _overlap(night, days, win)
@@ -1023,7 +1028,7 @@ def preview_expected_day(employee, day) -> dict:
 	blank["punches"] = []
 	if not employee:
 		return {**blank, "detail": "no employee"}
-	if day >= _today():
+	if day >= _today(employee):
 		logger.debug("[attendance_recovery] %s on %s: the shift is still running", employee, day)
 		return {**blank, "detail": "today or later: the shift is still running"}
 	try:
@@ -2440,7 +2445,7 @@ def _plan_leftover_rows(win, for_update=False) -> dict:
 				"assignment_ended": bool(
 					row.shift and _assignment_ended_by_recovery(employee, row.shift, day)
 				),
-				"today": _today(),
+				"today": _today(employee),
 			}
 			reason = leftover_verdict(row, others, **args)
 			if reason is None:
@@ -3114,7 +3119,7 @@ def _late_checkouts(win) -> dict:
 		entry.update(date=str(day), attendance=row.name if row else None, status=row.status if row else None)
 		reason = protected_reason(
 			day,
-			_today(),
+			_today(request.employee),
 			rows,
 			_financial(request.employee, day, rows, False),
 			removed_by_hr=hr_removed_day.removed_by_hr(request.employee, day),
@@ -3576,7 +3581,7 @@ def _covering(ctx, employee, day) -> list:
 
 def _protection(ctx, employee, day, for_update) -> str | None:
 	"""Cheap check on the rows already read, then the full one (financial, HR-removed)."""
-	quick = protected_reason(day, _today(), ctx["rows_by_day"].get((employee, day), []))
+	quick = protected_reason(day, _today(employee), ctx["rows_by_day"].get((employee, day), []))
 	return quick or _day_protection(employee, day, for_update)
 
 

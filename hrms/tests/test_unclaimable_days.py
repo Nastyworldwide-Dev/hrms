@@ -296,6 +296,8 @@ class _Planners(unittest.TestCase):
 	def setUp(self):
 		self.patches = [
 			patch.object(rec, "now_datetime", return_value=TODAY),
+			# One clock (B-H1): the employee's attendance date is the same day here.
+			patch.object(rec, "attendance_today", lambda employee: TODAY.date()),
 			patch.object(rec, "_shift_times", lambda names: {n: TIMES[n] for n in names if n in TIMES}),
 			patch.object(rec, "_day_protection", return_value=None),
 			patch.object(rec, "_skip_reasons", return_value={}),

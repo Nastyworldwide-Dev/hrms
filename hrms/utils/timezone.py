@@ -15,7 +15,7 @@ valid check-outs and match the wrong shift.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 import frappe
 from frappe.utils import get_datetime_in_timezone, get_system_timezone, nowdate
@@ -126,3 +126,14 @@ def employee_now(employee: str | None, shift_location: str | None = None) -> dat
 	"""
 	tz = get_attendance_timezone(employee, shift_location)
 	return get_datetime_in_timezone(tz).replace(tzinfo=None)
+
+
+def attendance_today(employee: str | None) -> date:
+	"""The date it is now on the employee's attendance clock.
+
+	The one answer to "is this day over?" for every attendance writer — Fix
+	Day, the punch hook, the sweeper and the recovery's protections — so a
+	site west of its staff never accepts a day on one clock and holds it as
+	"today or later" on another (audit B-H1).
+	"""
+	return employee_now(employee).date()

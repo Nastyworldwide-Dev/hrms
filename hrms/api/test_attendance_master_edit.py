@@ -265,7 +265,7 @@ class Store:
 		self.fix_logs.append(fields)
 		return self.next("LOG")
 
-	def _today(self):
+	def _today(self, employee=None):
 		return TODAY
 
 	SEAMS = (

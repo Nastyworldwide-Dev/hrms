@@ -62,6 +62,8 @@ class _Base(unittest.TestCase):
 		self.roles = ["HR Manager"]
 		self.patches = [
 			patch.object(rec, "now_datetime", return_value=TODAY),
+			# One clock (B-H1): the employee's attendance date is the same day here.
+			patch.object(rec, "attendance_today", lambda employee: TODAY.date()),
 			patch.object(frappe, "only_for", MagicMock(), create=True),
 			patch.object(frappe, "get_roles", lambda *a: list(self.roles), create=True),
 			patch.object(frappe, "db", MagicMock()),
