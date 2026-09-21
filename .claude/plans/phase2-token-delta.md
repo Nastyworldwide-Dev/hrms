@@ -18,6 +18,12 @@ Do not diff against `glass.variables.css` — that is output 3 of
 output 1 and is the `--g-*` file. I diffed the wrong one first and got a
 nonsensical "zero overlap".
 
+**Every number in this file is reproduced by `node
+design/tools/mockup-token-diff.mjs`.** Run it rather than trusting the figures
+below; re-run it rather than editing them by hand. It exists because four
+counts here drifted before it did, each time by quoting a number from one
+measurement beside a number from another.
+
 ## Values that differ on a shared name
 
 **Light: 49 of 53 shared names identical, 4 differ.**
