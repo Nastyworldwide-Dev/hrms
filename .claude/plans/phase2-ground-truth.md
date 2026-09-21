@@ -10,10 +10,20 @@ writing code. This is that inspection. Nothing here changes a file.
 Vue 3 + Ionic Vue 7 PWA, Vite, `frappe-ui` for the data layer, Tailwind.
 Scripts: `lint` (eslint), `test` (node --test), `build`, `gates`, `test:e2e`.
 
-- **45 named routes** (`grep -rhoE 'name: *["\'][^"\']+["\']' frontend/src/router/
-  | sort -u | wc -l` — single quotes in the source, so a double-quote-only
-  pattern returns 0), 38 of them with visual baselines (115 PNGs at 390 and
-  1440, light and dark).
+- **46 named routes.** 45 are string literals:
+  `grep -rhoE "name: *[\"'][^\"']+[\"']" frontend/src/router/*.js | sort -u | wc -l`
+  (run that, do not retype it — the source uses single quotes, so a
+  double-quote-only class returns 0, and the outer quotes must be double or
+  the shell eats the pattern). The 46th is `router/index.js:60`, whose name
+  comes from an imported constant — `HUB_ROUTE_NAME = "HelpdeskView"` in
+  `utils/helpdeskHub.js:9` — so no grep for a quote after `name:` will ever
+  see it. Use 46 as the denominator for coverage math.
+  Scope the glob to `router/*.js`, not `router/`: the `__tests__` mocks reuse
+  the names `Home` and `NotFound`, which `sort -u` currently hides. A future
+  stub with a fresh name would silently inflate the count.
+- **38 screens have visual baselines**, 114 PNGs (`design/baselines`, at 390
+  and 1440, light and dark). 114 is the PNG count; the directory holds 115
+  entries because of its README.
 - **42 Glass components** under `src/components/glass/`, plus 47 feature
   components.
 - **Design system is generated**: `design/tokens.json` -> `build-tokens.mjs`
@@ -40,6 +50,10 @@ Scripts: `lint` (eslint), `test` (node --test), `build`, `gates`, `test:e2e`.
 | 3 | Requests | Leaves |
 | 4 | Score | Expenses |
 | 5 | More | More |
+
+`TAB_ITEMS` (navItems.js:75) is `NAV_ITEMS[0..3]` plus a More entry written
+inline — NOT `NAV_ITEMS[4]`, which is KPI. `MORE_ITEMS = NAV_ITEMS.slice(4)`
+is what More actually shows. Resolve the indices; the shape invites a misread.
 
 This is not a restyle. The mockup proposes a different information
 architecture: one Calendar that absorbs attendance + roster + claims, and one
