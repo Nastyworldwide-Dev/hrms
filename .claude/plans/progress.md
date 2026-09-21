@@ -251,3 +251,35 @@ LEARNING(fact): .claude/plans/progress.md is capped at 300 lines by cs_progress
   INFORMATION-ARCHITECTURE contract (these five tabs, these merged screens).
   Section 3 token work can start without an answer; section 2 per-screen work
   cannot, because it names three screens this app does not have.
+- 2026-09-21T22:39:53Z COMMIT: af7593f79 fix(plans): the ledger was not losing lines, it is a ring buffer → review dispatched
+- 2026-09-21T22:40:27Z COMMIT: 1c98ca521 docs(glass): the commit: convention now states its own precondition → review dispatched
+- 2026-09-21T22:41:20Z COMMIT: 83d844dc2 docs(plans): ground truth says how each number was counted → review dispatched
+- 2026-09-21T22:43:12Z COMMIT: 449d81478 docs(glass): files: says which commit its paths are in → review dispatched
+- 2026-09-21T22:45:23Z COMMIT: 3f1143f22 fix(plans): the ground-truth file had three wrong numbers and a command that would not paste → review dispatched
+- 2026-09-21T22:45:57Z COMMIT: 9469e033d docs(glass): commit: names a range, because the work was a range → review dispatched
+- 2026-09-21T22:46:16Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T22:54:40Z COMMIT: 237eeb07b docs(plans): the grep note stated a rule that is only true of this pattern → review dispatched
+- 2026-09-21T22:54:54Z COMMIT: 4a071aa78 docs(plans): section 3 has no design system to author, only two to reconcile → review+security dispatched
+REPAIR: section 3 of the implementation brief is not "author a design system".
+  Measured: 53 of the mockup's 62 --g-* names already exist shipped, and the
+  overwhelming majority carry identical values. The job is reconciling two
+  systems that overlap, and it is nearly done. Landed as
+  .claude/plans/phase2-token-delta.md (4a071aa78).
+EVIDENCE: rung 2 — node design/gates/contrast.mjs, read-only, 54 checks 0
+  failures, ink-muted over blob 4.54-4.56 both themes. This is what shows the
+  shipped app fixed family-mockup4 CLASS A by blob PLACEMENT, not by a thicker
+  veil, so the mockup's --g-glass-fill .56 -> .86 buys taste and not
+  correctness. Under review (237eeb07b^..HEAD).
+DEAD END: I diffed the mockup against frontend/src/theme/glass.variables.css
+  and got zero overlap, then nearly wrote that up as a finding. That file is
+  output 3 of build-tokens.mjs and holds five --ion-* variables. glass.css is
+  output 1 and is the --g-* file. A "zero overlap" between two systems that
+  visibly share a prefix is not a finding, it is a wrong input file.
+NOTE: the commit hook asked for a security-reviewer on 4a071aa78. Not spawned:
+  both commits are one markdown file each, which CLAUDE.md's own rule exempts
+  (docs commits touching <=2 files), and a security review of prose has no
+  target. Recorded rather than silently skipped.
+NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
+  mockup 4 signed off? visual contract or information-architecture contract?
+  and: adopt the mockup's --g-glass-fill .86 (thicker glass, both themes)
+  against tokens.json's own "do not correct (spec 6)" note?
