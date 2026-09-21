@@ -1,18 +1,34 @@
 import { createResource } from "frappe-ui"
 import { computed, shallowRef, watch } from "vue"
 
+// originalDoc is frappe-ui's JSON deep copy, so a child table is never the
+// same reference; compare by value or every Expense Claim reads as edited.
+function editedServerField(doc, original) {
+	const field = Object.keys(original).find(
+		(key) => JSON.stringify(doc[key]) !== JSON.stringify(original[key])
+	)
+	if (field) console.warn("[approval] capability withheld: local edit to", field)
+	return Boolean(field)
+}
+
 export default function useDecisionCapability(getResource, getIdentity, onStale) {
 	const latest = shallowRef(null)
 	const target = computed(() => {
 		const resource = getResource()
 		const doc = resource?.doc
 		const identity = getIdentity()
-		// isDirty updates on the next Vue tick; compare the persisted snapshot
-		// directly so a shared resource edit cannot authorize unseen values.
+		// The revision is `modified` — the same key the server checks as
+		// expected_modified. A whole-doc JSON equality sat here before, so any
+		// local touch (a formatter writing a display value) silently removed
+		// Approve/Reject with no message (audit 21 Sep 2026, C-H-6). Only the
+		// SERVER's fields count as an edit: a same-tick change to one of them
+		// still refuses, because the approver would be reading values the
+		// server never saw — and it is logged, not silent.
 		if (
 			!doc?.modified ||
 			!resource.originalDoc ||
-			JSON.stringify(doc) !== JSON.stringify(resource.originalDoc) ||
+			doc.modified !== resource.originalDoc.modified ||
+			editedServerField(doc, resource.originalDoc) ||
 			doc.docstatus !== 0 ||
 			doc.name !== identity.name ||
 			doc.doctype !== identity.doctype

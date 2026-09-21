@@ -383,7 +383,7 @@ test("claimed days are listed beside claimable ones, disabled and labelled by st
 		[
 			["2026-09-05", true, "Claimed · Approved"],
 			["2026-09-04", false, "5.66 h"],
-			["2026-09-03", true, "Claimed · Pending"],
+			["2026-09-03", true, "Claimed · Open"],
 			["2026-09-02", true, "Claimed · Rejected"],
 		]
 	)

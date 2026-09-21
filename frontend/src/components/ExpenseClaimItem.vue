@@ -31,6 +31,7 @@ import { computed, inject } from "vue"
 import ListItem from "@/components/ListItem.vue"
 
 import { formatCurrency } from "@/utils/formatters"
+import { requestStatus } from "@/utils/requestStatus"
 
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
@@ -49,17 +50,8 @@ const props = defineProps({
 })
 
 const status = computed(() => {
-	if (props.workflowStateField) {
-		return props.doc[props.workflowStateField]
-	} else if (
-		props.doc.approval_status === "Approved" &&
-		["Draft", "Unpaid", "Submitted"].includes(props.doc.status)
-	) {
-		return `${props.doc.approval_status} & ${props.doc.status}`
-	} else if (props.doc.approval_status === "Rejected") {
-		return "Rejected"
-	}
-	return props.doc.status
+	if (props.workflowStateField) return props.doc[props.workflowStateField]
+	return requestStatus("Expense Claim", props.doc).label
 })
 
 const claimTitle = computed(() => {

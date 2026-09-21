@@ -28,6 +28,7 @@ import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
 import { getLeaveDates } from "@/data/leaves"
+import { requestStatus } from "@/utils/requestStatus"
 
 const props = defineProps({
 	doc: {
@@ -44,6 +45,7 @@ const props = defineProps({
 })
 
 const status = computed(() => {
-	return props.workflowStateField ? props.doc[props.workflowStateField] : props.doc.status
+	if (props.workflowStateField) return props.doc[props.workflowStateField]
+	return requestStatus("Leave Application", props.doc).label
 })
 </script>

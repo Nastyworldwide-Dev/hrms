@@ -31,23 +31,39 @@ test("cancelled and draft requests keep their own chips", () => {
 		requestStatusChip({ docstatus: 2, status: "Approved" }),
 		"Cancelled"
 	)
-	assert.equal(requestStatusChip({ docstatus: 0, status: "Open" }), "Pending")
-	assert.equal(requestStatusChip({}), "Pending")
+	// the doctype's own word, not a third "Pending" (audit A-M4)
+	assert.equal(requestStatusChip({ docstatus: 0, status: "Open" }), "Open")
+	assert.equal(requestStatusChip({}), "Open")
 })
 
-test("every chip surface for the two doctypes uses the shared helper", () => {
+test("every request row, the detail header and the OT views use the shared helper", () => {
 	for (const rel of [
+		"../src/components/LeaveRequestItem.vue",
+		"../src/components/AttendanceRequestItem.vue",
+		"../src/components/ShiftRequestItem.vue",
+		"../src/components/ExpenseClaimItem.vue",
 		"../src/components/OTRequestItem.vue",
 		"../src/components/ReplacementLeaveClaimItem.vue",
+		"../src/components/FormView.vue",
 		"../src/views/ot/ReplacementLeave.vue",
 	]) {
 		const source = read(rel)
 		assert.match(
 			source,
-			/import \{ requestStatusChip \} from "@\/utils\/requestStatus"/,
+			/import \{ requestStatus(Chip)? \} from "@\/utils\/requestStatus"/,
 			rel
 		)
-		assert.match(source, /requestStatusChip\(/, rel)
+		assert.match(source, /requestStatus(Chip)?\(/, rel)
+		// no hand-picked pending word
+		assert.doesNotMatch(
+			source,
+			/docstatus \? props\.doc\.status : ['"](Draft|Open)['"]/,
+			rel
+		)
+		// the chip's variant is looked up from the English word: never hand a
+		// translated string to :status (the Malay neutral-chip bug, C-M-6)
+		assert.doesNotMatch(source, /:status="__\(/, rel)
+		assert.doesNotMatch(source, /return __\(requestStatus/, rel)
 		// no chip derived from docstatus alone
 		assert.doesNotMatch(source, /docstatus === 1 \? ['"]Approved['"]/, rel)
 		assert.doesNotMatch(

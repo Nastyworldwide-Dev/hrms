@@ -1,9 +1,8 @@
-# Family — fix(requests): an approver's decision is always recordable (21 Sep 2026)
-CLASS: filing-time validators re-run at decision time and refuse the decision; the employee is told on a draft save instead of on submit; a cancel's reversal skips with only an Error Log line; no Version history on Leave / Expense.
-Changed: leave_application.py (validate_salary_processed_days / validate_attendance skip on Rejected; notify on_submit), shift_request.py (validate_approver skipped only for the decision itself: not new, approver unchanged; notify on_submit), expense_claim.py (notify on_submit), pwa_notifications.py (docstatus==1 gate, "by <name> on <time>"), hr/utils.py reverse_replacement_leave (throw on days taken, note on missing allocation), ot_request.py + replacement_leave_claim.py on_cancel (comment + flags.reversal_note), api/approval.py _state (reversal in the answer), track_changes on Leave Application + Expense Claim JSON + patch v16_0/track_changes_on_leave_and_expense.py.
-hrms/hr/doctype/attendance_request/attendance_request.py not-affected — already skips its overlap check on Rejected (the pattern this copies); notifies in on_submit
-hrms/hr/doctype/compensatory_leave_request/compensatory_leave_request.py not-affected — notifies in on_submit at docstatus 1; no filing validator re-runs at decision
-hrms/hr/doctype/ot_request/ot_request.py same-root — attachment rule skipped on Rejected; cancel note surfaced
-hrms/api/approval.py decide() not-affected — still refuses a decision on a non-initial status; the trust boundary for WHO decides is unchanged
-hrms/hr/doctype/leave_application/leave_application.py on_cancel ledger delete — ticket (owner ruling pending: reverse vs delete)
-notify_approval_status callers (grep): 7 controllers, all in on_submit now; the mixin's docstatus gate makes a stray on_update call harmless
+# Family — fix(pwa): one status rule and buttons from the doc (21 Sep 2026)
+CLASS: the phone decided a request's status and its buttons from hand-typed word lists in eight places; a Desk-saved "Approved" on an unsubmitted row read as Approved; a whole-doc JSON equality hid Approve/Reject on any local touch.
+Changed: utils/requestStatus.js (ONE table mirroring api/approval.py DECIDE_THEN_SUBMIT: decision field + pending word per doctype; decided-but-docstatus-0 → pending word; Expense Claim infers docstatus from status), six *Item.vue + GStatusChip + FormView call it; RequestActionSheet Approve/Reject = isPending && hasPermission('approval'); decisionCapability edited-server-field check by VALUE (originalDoc is a JSON deep copy); api/__init__.py get_leave_applications sends docstatus.
+frontend/src/views/ReplacementLeave.vue not-affected — calls requestStatusChip (kept wrapper), same row as OT
+frontend/src/components/ListView.vue not-affected — generic list, no status chip of its own
+frontend/src/components/AttendanceRequestList.vue ticket — its field list lacks "status" (M3, worker note); shows the raw row today as before
+hrms/api/__init__.py get_expense_claims ticket — sends no docstatus; the PWA infers it from status (set_status writes Draft at docstatus 0), sound but a second source
+frontend/src/components/CheckInPanel.vue / LateCheckoutDialog.vue not-affected — not request rows

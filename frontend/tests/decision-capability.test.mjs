@@ -742,7 +742,7 @@ test("actual installed shared document resource refuses same-revision local edit
 		state.context.document,
 		"actual installed cache shares the resource"
 	)
-	shared.doc.claimed_hours = 9
+	shared.doc.employee = "OTHER"
 	assert.equal(shared.isDirty, false, "installed dirty watcher has not run yet")
 	assert.equal(
 		state.run("hasPermission('approval')"),
@@ -757,18 +757,16 @@ test("actual installed shared document resource refuses same-revision local edit
 	await tick()
 	assert.equal(shared.isDirty, true)
 	assert.equal(state.run("hasPermission('approval')"), false)
-	delete shared.doc.claimed_hours
+	shared.doc.employee = "STAFF"
 	assert.equal(
 		state.run("hasPermission('approval')"),
 		false,
 		"restoring clean data requires a fresh capability"
 	)
-	state.requests
-		.at(-1)
-		.resolve({
-			actions: ["Approved", "Rejected"],
-			modified: shared.doc.modified,
-		})
+	state.requests.at(-1).resolve({
+		actions: ["Approved", "Rejected"],
+		modified: shared.doc.modified,
+	})
 	await tick()
 	assert.equal(shared.isDirty, false)
 	assert.equal(state.run("hasPermission('approval')"), true)

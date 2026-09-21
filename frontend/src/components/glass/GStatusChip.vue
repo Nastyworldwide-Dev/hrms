@@ -38,38 +38,15 @@
 <script setup>
 import { computed } from "vue"
 
-// Taken from the chipMaps this component replaces, not invented. Keys are
+// The state -> variant table lives in utils/requestStatus.js so the helper
+// that names a request's status and this chip agree on one map; keys are
 // compared case-insensitively so "Open" and "open" behave the same.
-const STATES = {
-	draft: "neutral",
-	open: "attention",
-	pending: "attention",
-	unpaid: "attention",
-	submitted: "progress",
-	"approved & draft": "progress",
-	"approved & unpaid": "progress",
-	"approved & submitted": "progress",
-	approved: "success",
-	paid: "success",
-	rejected: "danger",
-	cancelled: "muted",
-	// attendance states — TeamDashboard mapped these by hand and noted "the DS
-	// has no red variant"; it does now, so Absent stops rendering as a brand chip
-	present: "success",
-	absent: "danger",
-	"on leave": "progress",
-	"half day": "attention",
-	// Helpdesk (HD Ticket) statuses — Replied means "waiting on you"
-	replied: "progress",
-	paused: "neutral",
-	resolved: "success",
-	closed: "muted",
-}
+import { chipVariant } from "@/utils/requestStatus"
 
 const props = defineProps({
 	status: { type: String, required: true },
 	label: { type: String, default: "" },
 })
 
-const variant = computed(() => STATES[String(props.status).trim().toLowerCase()] ?? "neutral")
+const variant = computed(() => chipVariant(props.status))
 </script>

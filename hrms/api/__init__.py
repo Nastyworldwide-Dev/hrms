@@ -1069,6 +1069,10 @@ def get_leave_applications(
 		"employee_name",
 		"leave_type",
 		"status",
+		# A Desk-saved decision that was never submitted (status=Approved,
+		# docstatus=0) must not read "Approved" on the phone: the chip needs
+		# docstatus to tell a decided draft from a decision that ran.
+		"docstatus",
 		"from_date",
 		"to_date",
 		"half_day",

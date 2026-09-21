@@ -30,6 +30,7 @@ import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
 import { getDates, getTotalDays } from "@/data/attendance"
+import { requestStatus } from "@/utils/requestStatus"
 
 const props = defineProps({
 	doc: {
@@ -43,8 +44,6 @@ const props = defineProps({
 
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
-	// Once submitted, show the real Open/Approved/Rejected decision (matches the
-	// detail view and ShiftRequestItem) — not a flat "Submitted" that hid it.
-	return props.doc.docstatus ? props.doc.status : "Draft"
+	return requestStatus("Attendance Request", props.doc).label
 })
 </script>

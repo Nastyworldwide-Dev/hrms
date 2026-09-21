@@ -105,6 +105,23 @@ class TestBoundedLists(unittest.TestCase):
 	def test_the_pwa_page_size_passes_through_untouched(self):
 		self.assertEqual(self._limit_sent("get_leave_applications", limit=10), 10)
 
+	def test_list_rows_carry_docstatus_so_a_decided_draft_is_not_shown_approved(self):
+		# Audit 21 Sep 2026 A-H4: Desk can save status=Approved without
+		# submitting. The PWA chip can only show that row as still pending
+		# when the list payload says docstatus=0.
+		import hrms.api as api
+
+		for reader in ("get_leave_applications", "get_shift_requests"):
+			with self.subTest(reader=reader):
+				get_list = MagicMock(return_value=[])
+				with (
+					patch.object(frappe, "get_list", get_list),
+					patch.object(api, "_ensure_own_employee_or_permitted"),
+					patch.object(api, "get_workflow_state_field", return_value=None),
+				):
+					getattr(api, reader)(employee="HR-EMP-00001")
+				self.assertIn("docstatus", get_list.call_args.kwargs["fields"])
+
 	def test_helpdesk_ticket_list_is_capped(self):
 		from hrms.api import helpdesk
 

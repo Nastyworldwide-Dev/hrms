@@ -114,9 +114,7 @@
 		/>
 
 		<div
-			v-else-if="
-				['Open', 'Draft'].includes(document?.doc?.[approvalField]) && hasPermission('approval')
-			"
+			v-else-if="isPending && hasPermission('approval')"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<Button
@@ -258,6 +256,7 @@ import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
+import { requestStatus } from "@/utils/requestStatus"
 import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
@@ -480,6 +479,13 @@ const approvalField = computed(() => {
 	return props.modelValue.doctype === "Expense Claim" ? "approval_status" : "status"
 })
 
+// Whether the request still needs a decision — the shared rule, so the sheet
+// and the list chip cannot disagree. The server's get_decision_actions is
+// still the authority on WHO may decide (hasPermission).
+const isPending = computed(
+	() => Boolean(document?.doc) && requestStatus(props.modelValue.doctype, document.doc).pending
+)
+
 const getSuccessMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
 		return __("{0} successfully!", [__(status)])
@@ -490,7 +496,7 @@ const getSuccessMessage = ({ status = "", docstatus = 0 }) => {
 
 const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
-		return __("{0} failed!", [status === __("Approved") ? __("Approval") : __("Rejection")])
+		return __("{0} failed!", [status === "Approved" ? __("Approval") : __("Rejection")])
 	} else if (docstatus) {
 		return __("Document {0} failed!", [docstatus === 1 ? __("submission") : __("cancellation")])
 	}

@@ -21,7 +21,7 @@
 			</div>
 		</template>
 		<template #right>
-			<GStatusChip :status="status" :label="status" />
+			<GStatusChip :status="status" :label="__(status, null, 'Shift Request')" />
 		</template>
 	</ListItem>
 </template>
@@ -32,6 +32,7 @@ import { computed } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
 import { getDates, getTotalDays } from "@/data/attendance"
+import { requestStatus } from "@/utils/requestStatus"
 
 const props = defineProps({
 	doc: {
@@ -49,6 +50,6 @@ const props = defineProps({
 
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
-	return props.doc.docstatus ? props.doc.status : "Open"
+	return requestStatus("Shift Request", props.doc).label
 })
 </script>

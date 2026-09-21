@@ -21,7 +21,7 @@
 			</div>
 		</template>
 		<template #right>
-			<GStatusChip :status="status" :label="status" />
+			<GStatusChip :status="status" :label="__(status)" />
 		</template>
 	</ListItem>
 </template>
@@ -32,7 +32,7 @@ import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
 import { formatHours } from "@/utils/formatters"
-import { requestStatusChip } from "@/utils/requestStatus"
+import { requestStatus } from "@/utils/requestStatus"
 
 const __ = inject("$translate")
 
@@ -50,9 +50,9 @@ const props = defineProps({
 	},
 })
 
-// The decision is in `status`; docstatus alone cannot tell Rejected from Approved.
+// English word here (the chip picks its variant from it); translated in the template.
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
-	return __(requestStatusChip(props.doc))
+	return requestStatus("Replacement Leave Claim", props.doc).label
 })
 </script>

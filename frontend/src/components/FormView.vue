@@ -426,6 +426,7 @@ import useDecisionCapability from "@/composables/decisionCapability"
 import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
+import { requestStatus } from "@/utils/requestStatus"
 import { firstMessage } from "@/utils/loudRequest"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
@@ -548,7 +549,7 @@ const status = computed(() => {
 		if (stateField) return formModel.value[stateField]
 	}
 
-	return formModel.value.status || formModel.value.approval_status
+	return requestStatus(props.doctype, formModel.value).label
 })
 
 // A new form has no server copy to diff against, so `dirty` was never armed
