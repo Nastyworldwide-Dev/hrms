@@ -884,15 +884,35 @@ class ShiftType(Document):
 	def mark_absent_for_dates_with_no_attendance(self, employee: str):
 		"""Marks Absents for the given employee on working days in this shift that have no attendance marked.
 		The Absent status is marked starting from 'process_attendance_after' or employee creation date.
+
+		The employee row lock is taken before the first Absent is written — the
+		same lock `_process`, the nightly recovery and HR's master edit take —
+		so a provisional Absent is never inserted under a rebuild of the same
+		person (audit F14 / D-H3). A day no Holiday List covers is skipped, not
+		marked: without a calendar every rest day and public holiday reads as a
+		workday (owner ruling, G §3); the readiness check already names them.
 		"""
 		start_time = get_time(self.start_time)
 		dates = self.get_dates_for_attendance(employee)
+		locked = no_calendar = False
 
 		for date in dates:
 			timestamp = datetime.combine(date, start_time)
 			shift_details = get_employee_shift(employee, timestamp, True)
 
 			if shift_details and shift_details.shift_type.name == self.name:
+				if not holiday_list_covers(self.get_holiday_list(employee, date), date):
+					if not no_calendar:
+						logger.warning(
+							"[shift_type] %s: no Holiday List covers %s — not marked Absent (assign a calendar)",
+							employee,
+							date,
+						)
+					no_calendar = True
+					continue
+				if not locked:
+					lock_employee_row(employee)
+					locked = True
 				attendance = mark_attendance(employee, date, "Absent", self.name, auto_attendance=True)
 
 				if not attendance:

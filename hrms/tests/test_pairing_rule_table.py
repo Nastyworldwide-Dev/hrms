@@ -380,6 +380,8 @@ class NoPunchesRowCase(_Table):
 		with (
 			patch.object(st, "get_date_range", lambda a, b: [DAY]),
 			patch.object(st, "get_holiday_dates_between", lambda hl, a, b: list(holidays)),
+			patch.object(st, "holiday_list_covers", lambda hl, d: True),
+			patch.object(st, "lock_employee_row", lambda employee: None),
 			patch.object(st, "request_covered_days", lambda e, a, b: set(held)),
 			patch.object(st, "get_employee_shift", lambda e, ts, consider_default: rostered),
 			patch.object(st, "mark_attendance", mark),
