@@ -192,6 +192,20 @@ class TestEveryExposedDecisionFieldIsGuarded(unittest.TestCase):
 			with self.subTest(doctype=doctype):
 				self.assertIn(GUARD, self._validate_handlers(doctype))
 
+	def test_no_decision_field_is_editable_after_submit(self):
+		"""The guard runs on `validate`, which Frappe skips for the
+		update_after_submit action. That is safe only while every decision field
+		keeps allow_on_submit = 0 — a JSON edit (or a live Property Setter) that
+		flips it would reopen the hole with nothing enforcing it."""
+		for doctype, (field, _pending) in approval.DECIDE_THEN_SUBMIT.items():
+			with self.subTest(doctype=doctype):
+				meta = self._json(doctype)
+				spec = next(f for f in meta["fields"] if f["fieldname"] == field)
+				self.assertFalse(
+					spec.get("allow_on_submit", 0),
+					f"{doctype}.{field} is editable after submit; the guard never sees that write",
+				)
+
 
 if __name__ == "__main__":
 	unittest.main()
