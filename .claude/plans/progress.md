@@ -283,3 +283,36 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   mockup 4 signed off? visual contract or information-architecture contract?
   and: adopt the mockup's --g-glass-fill .86 (thicker glass, both themes)
   against tokens.json's own "do not correct (spec 6)" note?
+- 2026-09-21T22:56:00Z COMMIT: 95d098cc2 docs(plans): record the token measurement, and the wrong file it started on → review dispatched
+- 2026-09-21T22:57:29Z COMMIT: 86cb48ab2 docs(plans): "5 of 53" added a dark-theme result to a light-theme total → review+security dispatched
+- 2026-09-21T22:58:13Z COMMIT: aacd7c179 chore(design): the token figures had no way to be re-derived → review+security dispatched
+- 2026-09-21T22:59:29Z COMMIT: efecccb98 docs(plans): 880px does not "re-run the gate", it FAILS it → review+security dispatched
+- 2026-09-21T23:00:26Z COMMIT: 59e20f697 fix(gates): the lg: contrast proof could not see the token it proves → review dispatched
+- 2026-09-21T23:00:54Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T23:09:54Z COMMIT: 1aacc7529 fix(gates): "this was the one literal" was wrong — there were four → review dispatched
+- 2026-09-21T23:10:58Z COMMIT: 69a8dbb29 docs(plans): the gate defect this file reports is now fixed → review+security dispatched
+- REPAIR: "this was the one literal" (59e20f697) was refuted by reviewing its own
+  claim by name instead of from memory. contrast.mjs held FOUR copied tokens, not
+  one: column, gutter: 15, const GUTTER = 15, VIEWPORT {w:390,h:844}. CLASS: a
+  proof that keeps its own copy of a token proves the geometry the app USED to
+  have. Fixed in 1aacc7529; px() now takes a group.
+- EVIDENCE: rung 2 — node --test design/gates/*.test.mjs 7/7; contrast 54 checked
+  0 failures. Perturbation proves the inputs are live, not decorative:
+  screen-gutter 15->60px moves the gate 54 -> 42 checks; content-column-lg
+  720->880px gives 57/1 with the documented 4.31 blob-B failure, from tokens.json
+  ALONE with no gate edit. tokens.json restored, git status clean each time.
+- NOTE: layout.viewport-width is currently INERT (390->320px moves no ratio).
+  Traced, not waved through: blob B is the only right-anchored blob and its centre
+  is inside the content column at both widths (dx=0, peak alpha either way). Read
+  from the token anyway so a future blob move cannot silently re-pin it to 390.
+- NOTE: lint 242/9 and usage 2/1 are UNCHANGED with and without the gate diff
+  (verified by stashing it). Pre-existing, not introduced by this work.
+- DEAD END: two frappe-reviewers in a row burned all 10 turns gathering and
+  reported nothing. Resuming with already-verified command output and an explicit
+  "spend your turns on judgement, report by turn 4" budget is what got a usable
+  pass. A reviewer that has to re-run the commands has no turns left to think.
+- NEXT: owner's word on FOUR, unchanged and still blocking — un-ignore the mockup
+  folder (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
+  architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
+  not correct (spec 6)" note? Phase 2 section 2 cannot start without #3. 25
+  commits unpushed on nz-glass; no push authorisation given.
