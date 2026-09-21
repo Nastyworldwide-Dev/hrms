@@ -390,7 +390,11 @@ class TestHooksWiring(unittest.TestCase):
 			with self.subTest(doctype=doctype):
 				events = self._events(doctype)
 				for event in ("validate", "before_update_after_submit", "on_trash", "before_rename"):
-					self.assertEqual(events.get(event), "hrms.sync.write_block.block_mirrored_writes")
+					# `validate` became a list on 21 Sep 2026 when the decision-field
+					# guard joined it; the write-block handler must survive the merge.
+					handlers = events.get(event, [])
+					handlers = [handlers] if isinstance(handlers, str) else handlers
+					self.assertIn("hrms.sync.write_block.block_mirrored_writes", handlers)
 				self.assertEqual(
 					events.get("before_submit"),
 					"hrms.sync.write_block.block_transactions_for_mirrored_employee",

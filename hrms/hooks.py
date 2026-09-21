@@ -501,7 +501,10 @@ doc_events = {
 		"on_submit": "hrms.telemetry.on_leave_application_submit",
 		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
-		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"validate": [
+			"hrms.sync.write_block.block_mirrored_writes",
+			"hrms.utils.decision_field_guard.validate",
+		],
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
 			"hrms.utils.approved_request_guard.block_cancel_of_approved",
@@ -511,16 +514,24 @@ doc_events = {
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
+	# Only the approver changes a decision field (hrms/utils/decision_field_guard.py):
+	# every DECIDE_THEN_SUBMIT doctype runs the guard on validate, because Frappe does
+	# not enforce `read_only` server-side and Employee writes at permlevel 0 (audit C1).
 	# An approved request is never cancelled (hrms/utils/approved_request_guard.py):
 	# every request doctype carries the guard on before_cancel, merged into the one
 	# existing key where there is one.
 	"Expense Claim": {
 		"on_submit": "hrms.telemetry.on_expense_claim_submit",
+		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
 	},
-	"OT Request": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
+	"OT Request": {
+		"validate": "hrms.utils.decision_field_guard.validate",
+		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
+	},
 	"Replacement Leave Claim": {
-		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"
+		"validate": "hrms.utils.decision_field_guard.validate",
+		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
 	},
 	"Employee Advance": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
 	"Travel Request": {"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved"},
@@ -533,7 +544,10 @@ doc_events = {
 		"on_submit": "hrms.telemetry.on_attendance_request_submit",
 		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
-		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"validate": [
+			"hrms.sync.write_block.block_mirrored_writes",
+			"hrms.utils.decision_field_guard.validate",
+		],
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
 			"hrms.utils.approved_request_guard.block_cancel_of_approved",
@@ -546,7 +560,10 @@ doc_events = {
 	"Shift Request": {
 		"on_submit": "hrms.telemetry.on_shift_request_submit",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
-		"validate": "hrms.sync.write_block.block_mirrored_writes",
+		"validate": [
+			"hrms.sync.write_block.block_mirrored_writes",
+			"hrms.utils.decision_field_guard.validate",
+		],
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"before_cancel": [
 			"hrms.utils.approved_request_guard.block_cancel_of_approved",
@@ -559,6 +576,7 @@ doc_events = {
 	# Not mirrored itself (no row guard), but its on_submit adds days to a Leave
 	# Allocation and its on_cancel takes them back — mirrored balances either way.
 	"Compensatory Leave Request": {
+		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"before_cancel": [
 			"hrms.utils.approved_request_guard.block_cancel_of_approved",
