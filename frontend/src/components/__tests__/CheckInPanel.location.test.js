@@ -15,8 +15,8 @@ const code = script.content
 
 // one counter for every panel: a real uuid never collides across people
 let tapIds = 0
-function panel({ employee = "EMP", storage = new Map() } = {}) {
-	let now = 1_800_000_000_000
+function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_000 } = {}) {
+	let now = start
 	const watches = [],
 		coarse = [],
 		requests = [],
@@ -511,27 +511,50 @@ test("a punch the server answered is finished; the next tap is a new one", async
 	assert.notEqual(ids[1], ids[0])
 })
 
+// Two hours before LOCAL midnight, whatever the runner's timezone — so the
+// day boundary, not the 12 h TTL, is what the walk below crosses.
+function twoHoursBeforeMidnight() {
+	const d = new Date(1_800_000_000_000)
+	d.setHours(22, 0, 0, 0)
+	return d.getTime()
+}
+
 test("a pending tap from yesterday is not replayed today", async () => {
-	const h = panel()
+	const h = panel({ start: twoHoursBeforeMidnight() })
 	await h.vm.handleEmployeeCheckin()
 	h.watches[0].success(h.fix())
 	failThePunch(h)
 	await h.vm.submitLog("IN")
-	// walk the fake clock past local midnight (at most 12 h away, the TTL)
 	const start = h.Date.now()
 	let hours = 0
-	while (
-		new h.Date(h.Date.now()).toDateString() === new h.Date(start).toDateString() &&
-		hours < 13
-	) {
+	while (new h.Date(h.Date.now()).toDateString() === new h.Date(start).toDateString()) {
 		h.advance(60 * 60 * 1000)
 		hours += 1
 	}
+	assert.ok(hours <= 3, `crossed midnight within the TTL (walked ${hours} h)`)
 	h.watches[0].success(h.fix())
 	await h.vm.submitLog("IN")
 	const ids = punchIds(h)
 	assert.equal(ids.length, 2)
 	assert.notEqual(ids[1], ids[0], "a new day is a new tap, never yesterday's replay")
+})
+
+test("a retry three minutes after a lost answer at 23:58 is still the same tap", async () => {
+	const h = panel({ start: twoHoursBeforeMidnight() + 118 * 60 * 1000 })
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	failThePunch(h)
+	await h.vm.submitLog("IN")
+	h.advance(3 * 60 * 1000)
+	assert.notEqual(
+		new h.Date(h.Date.now()).toDateString(),
+		new h.Date(h.Date.now() - 3 * 60 * 1000).toDateString(),
+		"the clock crossed midnight"
+	)
+	h.watches[0].success(h.fix())
+	await h.vm.submitLog("IN")
+	const ids = punchIds(h)
+	assert.equal(ids[1], ids[0], "a fresh id here would be coerced into a check-out")
 })
 
 test("a different action after a lost answer is a new tap, not the old one's replay", async () => {

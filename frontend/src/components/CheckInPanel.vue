@@ -968,8 +968,11 @@ const lastSubmit = ref({ action: null, at: 0 })
 const PENDING_TAP_KEY = `checkin.pendingTap:${employee.data.name}`
 // A pending id older than this, or from another calendar day, is not this
 // tap's retry: a replay would answer with yesterday's stored punch and today
-// would get none.
+// would get none. Except right around midnight: a lost answer at 23:58 and
+// the retap at 00:01 ARE the same tap, and a fresh id there would be coerced
+// into a check-out by the open session — so a short grace crosses the day.
 const PENDING_TAP_TTL_MS = 12 * 60 * 60 * 1000
+const PENDING_TAP_GRACE_MS = 10 * 60 * 1000
 function pendingTapId(logType) {
 	let pending = null
 	try {
@@ -978,10 +981,10 @@ function pendingTapId(logType) {
 		pending = null
 	}
 	const today = new Date(Date.now()).toDateString()
+	const age = pending ? Date.now() - pending.at : Infinity
 	if (
 		pending?.action === logType &&
-		pending.day === today &&
-		Date.now() - pending.at < PENDING_TAP_TTL_MS
+		(age < PENDING_TAP_GRACE_MS || (pending.day === today && age < PENDING_TAP_TTL_MS))
 	) {
 		console.info("[CheckInPanel] retrying pending tap", pending.id)
 		return pending.id
