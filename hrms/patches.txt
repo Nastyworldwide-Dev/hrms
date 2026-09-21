@@ -119,3 +119,4 @@ hrms.patches.v16_0.run_attendance_endgame_once #2026-09-16 queue the whole atten
 hrms.patches.v16_0.half_day_leave_type_not_mandatory #2026-09-17 a site override kept Leave Type mandatory on an hours-based Half Day, so HR could not save the rows they opened to correct
 hrms.patches.v16_0.add_skipped_as_noise_field #2026-09-17 tell "HR judged this tap noise" apart from "nobody has verified this yet"; default 0 keeps every existing punch a wall
 hrms.patches.v16_0.repair_public_selfies #2026-09-18 a public check-in photo on S3 is a bucket url the bucket will not serve, so the approver saw a broken image; make them private and attach each to its punch
+hrms.patches.v16_0.hr_user_can_read_holiday_lists #2026-09-21 HR (HR User) could not open Holiday List or Holiday List Assignment in Desk: v16 hid the Employee field and granted HR User select only

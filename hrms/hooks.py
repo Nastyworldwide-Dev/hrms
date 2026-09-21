@@ -116,6 +116,11 @@ after_migrate = [
 	# not the rows loses the field for good. Re-asserted on every migrate; writes
 	# nothing when the rows are already there. See hrms/utils/permlevel_guard.py.
 	"hrms.utils.permlevel_guard.after_migrate",
+	# HR User holds read+select on Holiday List and Holiday List Assignment. The
+	# Holiday List grant is a Custom DocPerm row (not our JSON), so a clone or a
+	# "Restore Original Permissions" drops it for good; re-asserted every
+	# migrate, writes nothing when present. See hrms/utils/holiday_access.py.
+	"hrms.utils.holiday_access.after_migrate",
 	# Attendance and overtime repairs. A one-shot patch would leave every row it
 	# could not touch that day wrong for ever, and the only remedy on offer was
 	# asking HR to hand-edit records — which is the burden this exists to remove.

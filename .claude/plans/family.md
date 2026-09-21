@@ -1,9 +1,9 @@
-# Family — fix(approval): finalize transitions request doctypes only (21 Sep 2026)
-CLASS: a whitelisted transition endpoint trusted the caller's native DocPerm instead of naming the doctypes it serves
-Changed symbol: `finalize` in hrms/api/approval.py. Callers:
-frontend/src/components/RequestActionSheet.vue (finalize resource) not-affected — sends request doctypes only (Attendance Request, OT Request, Replacement Leave Claim, and cancels of every request type), all in DECISION_FIELD_BY_DOCTYPE
-frontend/src/components/FormView.vue (finalize on submit/cancel) not-affected — same request doctypes
-hrms/api/test_approval.py same-root — new test pins the refusal
-Sibling endpoints already allow-listed: `decide` (DECIDE_THEN_SUBMIT), `cancel_for_correction` (DECISION_FIELD_BY_DOCTYPE). No other whitelisted generic submit/cancel found (grep `docstatus` in hrms/api).
-hrms/tests/probes/lifecycle_probe.py:316 not-affected — docstring mention; the probe calls doc.submit() directly, not finalize
-hrms/tests/probes/lifecycle_probe.py:328 not-affected — docstring mention; the probe re-implements the cancel elevation and never calls finalize
+# Family — fix(holidays): HR User can see the holiday calendar (21 Sep 2026)
+CLASS: v16 moved the holiday truth to Holiday List + Holiday List Assignment, hid Employee.holiday_list, and left HR User with `select` only — Frappe 16 drops a doctype from sidebar and Ctrl+K without `read`
+Changed symbols: new module hrms/utils/holiday_access.py (ensure_holiday_access, after_migrate), new patch, HLA JSON permission row, hooks.py after_migrate entry.
+hrms/utils/permlevel_guard.py not-affected — sibling re-assert for permlevel>0 rows; by design never writes level-0 rows, which is why this is a separate module
+hrms/patches/v15_99_0/staff_perm_lockdown.py not-affected — creates the level-1 rows permlevel_guard re-asserts; does not touch Holiday List
+hrms/hr/doctype/holiday_list_assignment/holiday_list_assignment.py not-affected — controller unchanged; HR User gains read/select only, no create/submit (owner ruling)
+hrms/utils/holiday_list.py not-affected — resolver reads submitted assignments; permissions do not change what it resolves
+Same-root, fixed here: Custom DocPerm for Holiday List (ERPNext-owned JSON) + JSON row for HLA (ours), idempotent on every migrate.
+hrms/sync/runner.py:1748 not-affected — that execute() is create_holiday_list_assignments.execute (the derivation), not this patch's execute
