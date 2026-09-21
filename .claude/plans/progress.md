@@ -241,3 +241,5 @@ finalize double-toast taken from the f085ff325 Warning as d45e1fbfa.
 NEXT: the owner deploys nz-glass; checks Server Script / Client Script on HD Ticket for the
 "Complete the workaround…" rule; reads Amy's User Version log; gets the China clock-in
 error text (or Hanif's 16 Sep Employee Checkin rows).
+- 2026-09-21T03:21:52Z COMMIT: dd833debc docs(glass): handoff for the 21 Sep triage → review dispatched
+NEXT: the owner deploys nz-glass (dd833debc); then the HD Ticket script text, Amy's User Version log, and the China clock-in error text come back here.
