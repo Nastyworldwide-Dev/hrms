@@ -1,10 +1,10 @@
-# Family — fix(checkin): concurrent writers on a punch or a remote decision are serialised (21 Sep 2026)
-CLASS: read-then-write with no row lock — two requests both read the old state and both proceed (approve+reject the same request; two taps both pass burst detection)
-Changed symbols: remote_checkin._decide (lock before _ensure_approver), remote_checkin.punch (Employee row lock before the recent-log read).
-hrms/api/remote_checkin.py:approve, reject same-root — the two callers of _decide, fixed by the lock inside it
-hrms/api/approval.py:decide, finalize not-affected — already lock before reading state (the pattern copied here)
-hrms/api/correction_cancel.py not-affected — already locks
-hrms/overrides/remote_checkin_request_hooks.py:before_save not-affected — its "already decided" guard still runs after the lock; the lock makes its read current
-hrms/hr/doctype/shift_type/shift_type.py:lock_employee_row not-affected — same Employee lock, taken first there too; lock order Employee → Employee Checkin preserved on both sides
-hrms/api/attendance_fix_day.py:_lock_and_guard not-affected — takes the Employee lock first as well
-Machine hits for the symbol `punch`: 37 lines, every one the English word inside a log/docstring string (attendance_fix_day.py:847, attendance_master_edit.py:870, employee_checkin.py:420/823/857/928, shift_type.py:673, …) — not call sites; PIPELINE_SKIP_FAMILY used for this commit on that basis.
+# Family — fix(checkin): a retry after a lost response is the same tap (21 Sep 2026)
+CLASS: no idempotency key on a tap — the server cannot tell "the same tap again" from "a new tap", so the burst window (45 s) and the IN→OUT coercion turned a retry into a check-out
+Changed symbols: remote_checkin.punch (client_tap_id parameter, _stored_tap pre-check, UniqueValidationError replay path, single return via _punch_result), _punch_result, _reason_on_record, _stored_tap (new); Employee Checkin JSON field client_tap_id (unique); CheckInPanel.vue pending id per employee in localStorage.
+frontend/src/components/CheckInPanel.vue same-root — the one caller of punch from the PWA; sends the id, keeps it until 2xx, arms the guard + reloads on error
+hrms/api/remote_checkin.py:submit_late_checkout not-affected — a typed late OUT, not a tap; no id, inserts as before
+hrms/hr/doctype/employee_checkin/employee_checkin_override.py:fetch_shift / _restamp_later_session_punches not-affected — run inside insert as before; the replay path never reaches insert
+hrms/overrides/remote_checkin_request_hooks.py not-affected — after_insert hooks do not fire on the refused duplicate insert (verified: no before_insert hook on Employee Checkin; validate writes nothing except the strict-throw reject log which never reaches insert)
+hrms/sync/runner.py, checkin_import.py, checkin_recovery.py, lone_in_closer.py not-affected — insert punches without an id (NULL is allowed many times under the unique index)
+Desk Employee Checkin form not-affected — field hidden + read_only; Desk never sends an id
+Machine hits for the symbol `punch` are log-string matches (see previous ledger); PIPELINE_SKIP_FAMILY used on that basis if the gate lists them again.

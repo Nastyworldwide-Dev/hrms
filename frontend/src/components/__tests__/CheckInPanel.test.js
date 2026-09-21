@@ -19,14 +19,21 @@ test("the punch is awaited, not fire-and-forget", () => {
 	)
 })
 
-test("the duplicate guard arms only on a successful punch", () => {
-	// runSubmitLog returns a success boolean; submitLog gates lastSubmit on it.
+test("the duplicate guard arms on a successful punch and on a lost answer, never on a preflight block", () => {
+	// runSubmitLog returns a success boolean; submitLog gates lastSubmit on it
+	// — a strict-geofence block (ok=false, no error) must leave retry open.
 	assert.match(
 		src,
 		/if \(ok\) lastSubmit\.value = \{ action: logType, at: Date\.now\(\) \}/,
-		"lastSubmit must arm only when ok"
+		"lastSubmit must arm when ok"
 	)
 	assert.match(src, /return punchOk/, "runSubmitLog must report success/failure")
+	// A rejected POST may still have been STORED — only the answer was lost.
+	// The punch's own onError arms the guard and reloads the log (audit E-H2).
+	const errorIdx = src.indexOf("onError(error) {", src.indexOf("await punchCheckin.submit("))
+	const punchBlock = src.slice(errorIdx, src.indexOf("\n\t\t},\n\t})", errorIdx))
+	assert.match(punchBlock, /lastSubmit\.value = \{ action: logType, at: Date\.now\(\) \}/)
+	assert.match(punchBlock, /checkins\.reload\(\)/)
 })
 
 test("session staleness parses Frappe datetimes iOS-safely (space -> T)", () => {
@@ -63,7 +70,9 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 
 	const cameraStatus = { value: "submitting" }
 	const notices = []
+	const lastSubmit = { value: { action: null, at: 0 } }
 	let restarts = 0
+	let reloads = 0
 	const onError = new Function(
 		"generation",
 		"geoGeneration",
@@ -73,6 +82,10 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		"__",
 		"actionLabel",
 		"firstMessage",
+		"lastSubmit",
+		"logType",
+		"Date",
+		"checkins",
 		`return ({ ${punchBlock} } }).onError`
 	)(
 		1,
@@ -83,9 +96,16 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		(text) => text,
 		"Check-in",
 		// the shared reader (utils/loudRequest): first server message, plain text
-		(error, fallback) => error?.messages?.[0] || fallback
+		(error, fallback) => error?.messages?.[0] || fallback,
+		lastSubmit,
+		"IN",
+		{ now: () => 1234 },
+		{ reload: () => reloads++ }
 	)
 	onError({})
+	// the answer was lost, not refused: the guard is armed and the log reloaded
+	assert.deepEqual(lastSubmit.value, { action: "IN", at: 1234 })
+	assert.equal(reloads, 1)
 	assert.equal(cameraStatus.value, "idle")
 	assert.equal(restarts, 1)
 	assert.equal(notices.length, 1)

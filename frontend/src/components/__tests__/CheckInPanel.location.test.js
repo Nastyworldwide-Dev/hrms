@@ -13,7 +13,9 @@ const code = script.content
 	.replace(/import[\s\S]*?from ["'][^"']+["'];?/g, "")
 	.replace("export default", "return")
 
-function panel() {
+// one counter for every panel: a real uuid never collides across people
+let tapIds = 0
+function panel({ employee = "EMP", storage = new Map() } = {}) {
 	let now = 1_800_000_000_000
 	const watches = [],
 		coarse = [],
@@ -37,7 +39,18 @@ function panel() {
 			},
 		},
 	}
-	const window = { navigator, isSecureContext: true, location: { hostname: "example.invalid" } }
+	const stored = storage
+	const window = {
+		navigator,
+		isSecureContext: true,
+		location: { hostname: "example.invalid" },
+		localStorage: {
+			getItem: (key) => (stored.has(key) ? stored.get(key) : null),
+			setItem: (key, value) => stored.set(key, String(value)),
+			removeItem: (key) => stored.delete(key),
+		},
+		crypto: { randomUUID: () => `tap-${++tapIds}` },
+	}
 	const createResource = (options) => {
 		const resource = reactive({
 			data: null,
@@ -95,7 +108,7 @@ function panel() {
 		}),
 		inject: (name) =>
 			({
-				$employee: { data: { name: "EMP" } },
+				$employee: { data: { name: employee } },
 				$translate: (text) => text,
 				$dayjs: dayjs,
 				$socket: {},
@@ -427,6 +440,103 @@ test("an old successful POST refreshes confirmed punches without dismissing a ne
 	assert.equal(h.counters.dismiss, 0)
 	assert.equal(h.counters.reload, 2)
 	assert.equal(h.vm.lastSubmit.value.action, "IN")
+})
+
+// A retry after a lost response is the same tap, not a new one (audit E-H2).
+// The server stored IN 09:00 but the 200 never reached the phone; the phone
+// still said "Check In", the retap two minutes later was stored as the OUT.
+const punchIds = (h) =>
+	h.requests
+		.filter((row) => row.url === "hrms.api.remote_checkin.punch")
+		.map((row) => row.params.client_tap_id)
+
+const failThePunch = (h) => {
+	h.resources.get("hrms.api.remote_checkin.punch").submit = async (payload, options) => {
+		h.requests.push({ url: "hrms.api.remote_checkin.punch", params: payload })
+		options.onError(new Error("Failed to fetch"))
+		throw new Error("Failed to fetch")
+	}
+}
+
+test("a punch whose answer is lost arms the guard and reloads the log", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	failThePunch(h)
+	await h.vm.submitLog("IN")
+	assert.equal(h.vm.lastSubmit.value.action, "IN", "a reflex retap must not be a second tap")
+	assert.equal(
+		h.counters.reload,
+		2,
+		"the log is reloaded so the button shows what the server holds"
+	)
+	assert.equal(h.vm.submitting.value, false)
+})
+
+test("the retry after a lost answer carries the same tap id", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	failThePunch(h)
+	await h.vm.submitLog("IN")
+	h.advance(61_000)
+	h.watches[0].success(h.fix())
+	await h.vm.submitLog("IN")
+	const ids = punchIds(h)
+	assert.equal(ids.length, 2)
+	assert.ok(ids[0], "every punch carries a client_tap_id")
+	assert.equal(ids[1], ids[0], "the retry is a replay of the same tap")
+})
+
+test("a punch the server answered is finished; the next tap is a new one", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.resources.get("hrms.api.remote_checkin.punch").submit = async (payload, options) => {
+		h.requests.push({ url: "hrms.api.remote_checkin.punch", params: payload })
+		await options.onSuccess({ name: "PUNCH-1", log_type: "IN" })
+	}
+	await h.vm.submitLog("IN")
+	assert.equal(
+		h.window.localStorage.getItem("checkin.pendingTap:EMP"),
+		null,
+		"nothing left to retry"
+	)
+	h.advance(61_000)
+	h.watches[0].success(h.fix())
+	await h.vm.submitLog("OUT")
+	const ids = punchIds(h)
+	assert.equal(ids.length, 2)
+	assert.notEqual(ids[1], ids[0])
+})
+
+test("a different action after a lost answer is a new tap, not the old one's replay", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	failThePunch(h)
+	await h.vm.submitLog("IN")
+	h.watches[0].success(h.fix())
+	await h.vm.submitLog("OUT")
+	const ids = punchIds(h)
+	assert.equal(ids.length, 2)
+	assert.notEqual(ids[1], ids[0])
+})
+
+test("two people on one phone never share a pending tap", async () => {
+	const storage = new Map()
+	const a = panel({ employee: "EMP-A", storage })
+	await a.vm.handleEmployeeCheckin()
+	a.watches[0].success(a.fix())
+	failThePunch(a)
+	await a.vm.submitLog("IN")
+	const b = panel({ employee: "EMP-B", storage })
+	await b.vm.handleEmployeeCheckin()
+	b.watches[0].success(b.fix())
+	failThePunch(b)
+	await b.vm.submitLog("IN")
+	assert.notEqual(punchIds(b)[0], punchIds(a)[0], "B must not replay A's tap")
+	assert.equal(storage.size, 2, "each person keeps their own pending tap")
 })
 
 test("generated session histories never revive a closed, denied or expired location", async () => {

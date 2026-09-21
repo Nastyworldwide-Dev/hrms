@@ -24,7 +24,7 @@ from frappe.utils import add_days, cint, get_datetime, now_datetime
 
 from hrms.utils.attendance_day_audit import SKIP_PREFIX
 from hrms.utils.company_scope import permitted_company_filter
-from hrms.utils.geofence import usable_accuracy
+from hrms.utils.geofence import REASON_IMPRECISE_LOCATION, REASON_OUTSIDE_RADIUS, usable_accuracy
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE
 
 #: The PWA names the provider it got the fix from; the row stores a word HR can read.
@@ -617,8 +617,17 @@ def punch(
 	accuracy=None,
 	fix_age_s=None,
 	source=None,
+	client_tap_id=None,
 ) -> dict:
-	"""PWA check-in/out — the only write path staff have into Employee Checkin."""
+	"""PWA check-in/out — the only write path staff have into Employee Checkin.
+
+	`client_tap_id` is the phone's own id for the INTENDED tap, kept and re-sent
+	until a 2xx lands. A punch carrying an id this employee's log already holds
+	is the same tap again — the stored row is answered and nothing is inserted
+	— so a retry after a lost response can never be read as a second tap and
+	coerced into a two-minute session (audit E-H2). Taps without an id (Desk,
+	imports, older clients) go through the burst rule exactly as before.
+	"""
 	# Staff desk permissions on Employee Checkin are read-only, so this endpoint
 	# is the whole staff write path. The stored time is ALWAYS the server clock —
 	# any client-supplied `time` is ignored, which kills typed-in and backdated
@@ -649,139 +658,170 @@ def punch(
 	# The phone proposes; the server decides. Nothing existing is touched — this
 	# only chooses the type of the row about to be created, so there is no
 	# overwrite to get wrong and no punch is ever dropped.
-	punch_time = employee_now(employee)
 	# Two taps in flight together must queue. Burst detection below is
 	# read-then-insert: two POSTs that both read an empty log both count
 	# (audit D-M1). The Employee row is the lock every attendance writer takes
 	# (lock_employee_row); held until this request commits, so the second tap
 	# reads the first one's row and is stored as the stutter it is.
 	frappe.db.get_value("Employee", employee, "name", for_update=True)
-	# NEWEST first, then reversed for the walk. `time asc` with a limit keeps the
-	# OLDEST rows, so a busy log would truncate away the very punch this rule
-	# depends on — the open IN — and silently stop coercing. The walk below still
-	# wants ascending order, so the reversal happens here rather than in the rule.
-	recent = list(
-		reversed(
-			frappe.get_all(
-				"Employee Checkin",
-				filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
-				fields=[
-					"name",
-					"time",
-					"log_type",
-					"is_abandoned",
-					"remote_approval_status",
-					"synced_from_instance",
-					"shift_actual_end",
-					"device_id",
-				],
-				order_by="time desc",
-				limit=100,
+
+	client_tap_id = (client_tap_id or "").strip() or None
+	# The retry's fast path: the tap is already stored, so answer that row. A
+	# PLAIN read — a locking read that MISSES takes a gap lock on the index,
+	# and two employees tapping at once could deadlock on it. The race this
+	# read can lose (same id, both POSTs in flight) is settled by the unique
+	# index at insert time below.
+	doc = _stored_tap(employee, client_tap_id) if client_tap_id else None
+	accuracy_m = getattr(doc, "location_accuracy_m", None) if doc else None
+	if doc is None:
+		punch_time = employee_now(employee)
+		# NEWEST first, then reversed for the walk. `time asc` with a limit keeps the
+		# OLDEST rows, so a busy log would truncate away the very punch this rule
+		# depends on — the open IN — and silently stop coercing. The walk below still
+		# wants ascending order, so the reversal happens here rather than in the rule.
+		recent = list(
+			reversed(
+				frappe.get_all(
+					"Employee Checkin",
+					filters={"employee": employee, "time": [">=", add_days(punch_time, -3)]},
+					fields=[
+						"name",
+						"time",
+						"log_type",
+						"is_abandoned",
+						"remote_approval_status",
+						"synced_from_instance",
+						"shift_actual_end",
+						"device_id",
+					],
+					order_by="time desc",
+					limit=100,
+				)
 			)
 		)
-	)
-	requested_type = log_type
-	resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
-	if resolved_type != log_type:
-		logger.warning(
-			"[remote_checkin] %s asked for %s, recorded %s (session %s still open)",
-			employee,
-			log_type,
-			resolved_type,
-			closing.name if closing else "?",
-		)
-		log_type = resolved_type
-
-	doc = frappe.new_doc("Employee Checkin")
-	doc.update(
-		{
-			"employee": employee,
-			"log_type": log_type,
-			"time": punch_time,
-			"latitude": latitude,
-			"longitude": longitude,
-		}
-	)
-	# Parsed with the same helper the fence uses, so "what counts as a usable
-	# accuracy" has one definition. Unusable is left unset, not zeroed: absent
-	# means "unknown, no allowance", 0 would mean "perfect fix".
-	accuracy_m = usable_accuracy(accuracy) or None
-	if accuracy_m:
-		doc.flags.location_accuracy_m = accuracy_m
-	# How old the fix was and which provider gave it. Evidence for the row, not
-	# inputs to the decision; junk is dropped rather than stored as a number.
-	try:
-		age = int(float(fix_age_s))
-		if age >= 0:
-			doc.flags.location_fix_age_s = age
-	except (TypeError, ValueError):
-		pass
-	doc.flags.location_source = LOCATION_SOURCES.get(str(source or "").strip().lower(), "Unknown")
-
-	selfie_file = None
-	if selfie_image:
-		# only accept a file this user actually uploaded — a stale or borrowed
-		# file_url must not stand in as proof of presence
-		owner = frappe.db.get_value("File", {"file_url": selfie_image}, "owner")
-		if owner != frappe.session.user:
+		requested_type = log_type
+		resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
+		if resolved_type != log_type:
 			logger.warning(
-				"[remote_checkin] rejected selfie %s (owner=%s) for %s",
-				selfie_image,
-				owner,
-				frappe.session.user,
+				"[remote_checkin] %s asked for %s, recorded %s (session %s still open)",
+				employee,
+				log_type,
+				resolved_type,
+				closing.name if closing else "?",
 			)
-			frappe.throw(_("Invalid selfie attachment."), frappe.PermissionError)
-		doc.selfie_image = selfie_image
-		selfie_file = frappe.db.get_value("File", {"file_url": selfie_image}, "name")
+			log_type = resolved_type
 
-	# Taps seconds apart are one tap. The row is STORED — its time, its type and
-	# its selfie are evidence, and the old 60-second window that REFUSED such a
-	# punch also refused real ones — but it does not count toward the day, so a
-	# stutter can never write a twelve-second session. HR brings it back from
-	# Fix Day in one click if it was real.
-	burst = is_burst_tap(recent[-1] if recent else None, punch_time)
-	if burst:
-		doc.skip_auto_attendance = 1
-		# Noise by definition — a stutter on the same tap. The day is read
-		# straight across it (shift_type.splits_the_day).
-		doc.skipped_as_noise = 1
-		logger.warning(
-			"[remote_checkin] %s tapped again within %ss — stored, not counted",
-			employee,
-			int(BURST_WINDOW.total_seconds()),
+		doc = frappe.new_doc("Employee Checkin")
+		doc.update(
+			{
+				"employee": employee,
+				"log_type": log_type,
+				"time": punch_time,
+				"latitude": latitude,
+				"longitude": longitude,
+				"client_tap_id": client_tap_id,
+			}
 		)
+		# Parsed with the same helper the fence uses, so "what counts as a usable
+		# accuracy" has one definition. Unusable is left unset, not zeroed: absent
+		# means "unknown, no allowance", 0 would mean "perfect fix".
+		accuracy_m = usable_accuracy(accuracy) or None
+		if accuracy_m:
+			doc.flags.location_accuracy_m = accuracy_m
+		# How old the fix was and which provider gave it. Evidence for the row, not
+		# inputs to the decision; junk is dropped rather than stored as a number.
+		try:
+			age = int(float(fix_age_s))
+			if age >= 0:
+				doc.flags.location_fix_age_s = age
+		except (TypeError, ValueError):
+			pass
+		doc.flags.location_source = LOCATION_SOURCES.get(str(source or "").strip().lower(), "Unknown")
 
-	doc.flags.ignore_permissions = True
-	doc.insert()
+		selfie_file = None
+		if selfie_image:
+			# only accept a file this user actually uploaded — a stale or borrowed
+			# file_url must not stand in as proof of presence
+			owner = frappe.db.get_value("File", {"file_url": selfie_image}, "owner")
+			if owner != frappe.session.user:
+				logger.warning(
+					"[remote_checkin] rejected selfie %s (owner=%s) for %s",
+					selfie_image,
+					owner,
+					frappe.session.user,
+				)
+				frappe.throw(_("Invalid selfie attachment."), frappe.PermissionError)
+			doc.selfie_image = selfie_image
+			selfie_file = frappe.db.get_value("File", {"file_url": selfie_image}, "name")
 
-	if selfie_image:
-		_attach_selfie_to_punch(selfie_file, doc.name)
+		# Taps seconds apart are one tap. The row is STORED — its time, its type and
+		# its selfie are evidence, and the old 60-second window that REFUSED such a
+		# punch also refused real ones — but it does not count toward the day, so a
+		# stutter can never write a twelve-second session. HR brings it back from
+		# Fix Day in one click if it was real.
+		burst = is_burst_tap(recent[-1] if recent else None, punch_time)
+		if burst:
+			doc.skip_auto_attendance = 1
+			# Noise by definition — a stutter on the same tap. The day is read
+			# straight across it (shift_type.splits_the_day).
+			doc.skipped_as_noise = 1
+			logger.warning(
+				"[remote_checkin] %s tapped again within %ss — stored, not counted",
+				employee,
+				int(BURST_WINDOW.total_seconds()),
+			)
 
-	if burst:
-		# "Comment", not "Info": add_comment's first argument IS the stored
-		# Comment.comment_type, and every reader of a skip reason filters
-		# comment_type == "Comment". Written as "Info" the row is never seen,
-		# and the audit shows the punch skipped with no reason and no way back.
-		doc.add_comment(
-			"Comment",
-			_("{0}: {1} ({2}s). Restore it from Fix Day if it was a real punch.").format(
-				SKIP_PREFIX, BURST_SKIP_REASON, int(BURST_WINDOW.total_seconds())
-			),
-		)
+		doc.flags.ignore_permissions = True
+		try:
+			doc.insert()
+		except (frappe.UniqueValidationError, frappe.DuplicateEntryError):
+			# The phone's retry overtook its first POST: the unique index on
+			# client_tap_id refused this second row. Answer the row that won —
+			# locked, because it exists now and this transaction's snapshot may
+			# predate it (a locking read of an EXISTING unique key takes no gap).
+			logger.warning(
+				"[remote_checkin] %s tap %s already stored — answering it", employee, client_tap_id
+			)
+			doc = _stored_tap(employee, client_tap_id, lock=True)
+			if doc is None:
+				raise
+			accuracy_m = getattr(doc, "location_accuracy_m", None)
+			selfie_image = burst = False
+			resolved_type = requested_type
 
-	if resolved_type != requested_type:
-		# A DURABLE trace, not just a log line. HR reading Employee Checkin must
-		# be able to tell a server-corrected OUT from a hand-tapped one — and
-		# when somebody disputes their hours, the evidence cannot live only in an
-		# application log that rotates.
-		doc.add_comment(
-			"Info",
-			_("Recorded as {0}: {1} was requested while {2} was still open.").format(
-				resolved_type, requested_type, closing.name if closing else "an earlier session"
-			),
-		)
+		if selfie_image:
+			_attach_selfie_to_punch(selfie_file, doc.name)
 
-	# minimal contract — don't expose the full doc as the endpoint's API
+		if burst:
+			# "Comment", not "Info": add_comment's first argument IS the stored
+			# Comment.comment_type, and every reader of a skip reason filters
+			# comment_type == "Comment". Written as "Info" the row is never seen,
+			# and the audit shows the punch skipped with no reason and no way back.
+			doc.add_comment(
+				"Comment",
+				_("{0}: {1} ({2}s). Restore it from Fix Day if it was a real punch.").format(
+					SKIP_PREFIX, BURST_SKIP_REASON, int(BURST_WINDOW.total_seconds())
+				),
+			)
+
+		if resolved_type != requested_type:
+			# A DURABLE trace, not just a log line. HR reading Employee Checkin must
+			# be able to tell a server-corrected OUT from a hand-tapped one — and
+			# when somebody disputes their hours, the evidence cannot live only in an
+			# application log that rotates.
+			doc.add_comment(
+				"Info",
+				_("Recorded as {0}: {1} was requested while {2} was still open.").format(
+					resolved_type, requested_type, closing.name if closing else "an earlier session"
+				),
+			)
+
+	return _punch_result(doc, accuracy_m=accuracy_m)
+
+
+def _punch_result(doc, accuracy_m=None) -> dict:
+	"""The endpoint's answer for a stored punch — minimal contract, never the
+	full doc. One builder, so a replayed tap and a fresh one read the same."""
 	return frappe._dict(
 		name=doc.name,
 		employee=doc.employee,
@@ -790,7 +830,7 @@ def punch(
 		time=doc.time,
 		requires_remote_approval=doc.requires_remote_approval,
 		remote_approval_status=doc.remote_approval_status,
-		remote_reason=getattr(doc, "_remote_reason", None),
+		remote_reason=getattr(doc, "_remote_reason", None) or _reason_on_record(doc),
 		# The accuracy the DECISION was made on, echoed like check_geofence
 		# does. The phone must not re-read its own live fix to judge how coarse
 		# the reading was: a newer one lands during the round trip, and the
@@ -798,6 +838,45 @@ def punch(
 		# reached on a different reading entirely.
 		accuracy_m=accuracy_m or 0,
 	)
+
+
+#: Read back from the row what the override keeps in memory only: it writes
+#: `geofence_outcome` "Imprecise" for REASON_IMPRECISE_LOCATION and "Outside"
+#: for REASON_OUTSIDE_RADIUS (employee_checkin_override.py, `_remote_reason`).
+_REASON_BY_OUTCOME = {"Imprecise": REASON_IMPRECISE_LOCATION, "Outside": REASON_OUTSIDE_RADIUS}
+
+
+def _reason_on_record(doc) -> str | None:
+	"""Why a stored punch needed approving, for a row answered again.
+
+	`_remote_reason` lives on the in-memory doc of the request that inserted
+	it; a replay reads the row back and would otherwise answer None, which the
+	PWA renders as the "outside radius" wording for an unplaceable reading.
+	"""
+	if not cint(getattr(doc, "requires_remote_approval", 0)):
+		return None
+	return _REASON_BY_OUTCOME.get(getattr(doc, "geofence_outcome", None), REASON_OUTSIDE_RADIUS)
+
+
+def _stored_tap(employee, client_tap_id, lock=False):
+	"""The Employee Checkin this employee already stored for this tap id, or None.
+
+	`lock` is for the one caller that KNOWS the row exists (the insert was
+	just refused as a duplicate): FOR UPDATE reads the latest committed row
+	past this transaction's snapshot, and on an existing unique key it takes a
+	record lock only. Never lock a lookup that may miss — a miss gap-locks the
+	index and two employees' punches can deadlock.
+	"""
+	name = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": employee, "client_tap_id": client_tap_id},
+		"name",
+		for_update=lock,
+	)
+	if not name:
+		return None
+	logger.info("[remote_checkin] %s replayed tap -> %s", employee, name)
+	return frappe.get_doc("Employee Checkin", name)
 
 
 @frappe.whitelist()

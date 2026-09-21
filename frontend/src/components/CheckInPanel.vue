@@ -957,6 +957,49 @@ const DUPLICATE_WINDOW_MS = 60 * 1000
 const submitting = ref(false)
 const lastSubmit = ref({ action: null, at: 0 })
 
+// A retry after a lost answer is the SAME tap. The server stored IN 09:00 but
+// the 200 never reached the phone; the phone still said "Check In", and the
+// retap two minutes later was stored as the OUT — a two-minute day for someone
+// who did everything right. So every intended tap gets an id, kept here until
+// a 2xx lands and re-sent on every retry: the server answers the row it
+// already holds instead of judging a second tap.
+// Keyed by employee, not by phone: on a shared device the next person must
+// not inherit — and replay — somebody else's tap.
+const PENDING_TAP_KEY = `checkin.pendingTap:${employee.data.name}`
+// A pending id older than this is somebody else's day, not this tap's retry.
+const PENDING_TAP_TTL_MS = 12 * 60 * 60 * 1000
+function pendingTapId(logType) {
+	let pending = null
+	try {
+		pending = JSON.parse(window.localStorage.getItem(PENDING_TAP_KEY) || "null")
+	} catch {
+		pending = null
+	}
+	if (pending?.action === logType && Date.now() - pending.at < PENDING_TAP_TTL_MS) {
+		console.info("[CheckInPanel] retrying pending tap", pending.id)
+		return pending.id
+	}
+	const id =
+		window.crypto?.randomUUID?.() ??
+		`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+	try {
+		window.localStorage.setItem(
+			PENDING_TAP_KEY,
+			JSON.stringify({ id, action: logType, at: Date.now() })
+		)
+	} catch {
+		console.warn("[CheckInPanel] tap id could not be kept; a lost answer cannot be replayed")
+	}
+	return id
+}
+function clearPendingTap() {
+	try {
+		window.localStorage.removeItem(PENDING_TAP_KEY)
+	} catch {
+		// nothing kept, nothing to clear
+	}
+}
+
 const submitLog = async (logType) => {
 	if (submitting.value) {
 		console.info("[CheckInPanel] punch already in flight, ignoring tap")
@@ -972,9 +1015,10 @@ const submitLog = async (logType) => {
 	submitting.value = true
 	const generation = geoGeneration
 	try {
-		// Arm the duplicate guard ONLY on a successful punch. The old code armed
-		// it right after a fire-and-forget submit, so a punch that later FAILED
-		// still locked the user out of retrying the same action for 60s.
+		// Arm the duplicate guard on a successful punch (and, in the punch's
+		// own onError, on a lost answer). Never on a preflight block: the old
+		// code armed it right after a fire-and-forget submit, so a punch the
+		// fence refused still locked the user out of retrying for 60s.
 		const ok = await runSubmitLog(logType)
 		if (ok) lastSubmit.value = { action: logType, at: Date.now() }
 		if (!ok && generation === geoGeneration && cameraStatus.value === "submitting") {
@@ -983,9 +1027,9 @@ const submitLog = async (logType) => {
 		}
 	} catch (err) {
 		// A rejected punch is already surfaced to the user by onError (toast +
-		// camera reset); swallow here so it is not an unhandled rejection, and
-		// leave lastSubmit un-armed so retry is allowed. Belt-and-suspenders
-		// camera reset in case onError did not run.
+		// camera reset + guard armed); swallow here so it is not an unhandled
+		// rejection. Belt-and-suspenders camera reset in case onError did not
+		// run.
 		console.error("[CheckInPanel] submit failed:", err)
 		if (generation === geoGeneration && cameraStatus.value === "submitting") {
 			cameraStatus.value = "idle"
@@ -1128,6 +1172,7 @@ const runSubmitLog = async (logType) => {
 		latitude: location.latitude ?? null,
 		longitude: location.longitude ?? null,
 		accuracy: location.accuracy ?? null,
+		client_tap_id: pendingTapId(logType),
 	}
 	if (selfieUrl) {
 		payload.selfie_image = selfieUrl
@@ -1137,6 +1182,7 @@ const runSubmitLog = async (logType) => {
 	await punchCheckin.submit(payload, {
 		async onSuccess(doc) {
 			punchOk = true
+			clearPendingTap()
 
 			// The label must be right NOW, not one round trip from now. The
 			// reload below is the authority, but until it lands `lastKnownLog`
@@ -1230,6 +1276,13 @@ const runSubmitLog = async (logType) => {
 				cameraStatus.value = "idle"
 				startCamera()
 			}
+			// The server may have STORED this punch and only the answer was
+			// lost. Treat it as sent: arm the guard so a reflex retap is not a
+			// second tap, and reload the log so the button shows what the
+			// server actually holds. The tap id stays pending, so even a
+			// deliberate retry is a replay of this punch, never a new one.
+			lastSubmit.value = { action: logType, at: Date.now() }
+			checkins.reload()
 			const messages = error?.messages?.length
 				? error.messages
 				: [__("{0} failed. Check your connection and try again.", [actionLabel])]

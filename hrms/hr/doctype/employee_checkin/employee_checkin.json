@@ -14,6 +14,7 @@
   "column_break_4",
   "time",
   "device_id",
+  "client_tap_id",
   "skip_auto_attendance",
   "attendance",
   "location_section",
@@ -98,6 +99,15 @@
    "fieldname": "device_id",
    "fieldtype": "Data",
    "label": "Location / Device ID"
+  },
+  {
+   "description": "The phone's own id for the tap. A punch that arrives again with an id already stored is the same tap replayed, not a new one.",
+   "fieldname": "client_tap_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Client Tap ID",
+   "read_only": 1,
+   "unique": 1
   },
   {
    "default": "0",
@@ -279,7 +289,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-09 11:56:48.361825",
+ "modified": "2026-09-21 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Checkin",
