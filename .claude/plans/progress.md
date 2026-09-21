@@ -269,3 +269,26 @@ EVIDENCE: rung 2, re-run after the CLASS G2 pill fix landed, so these verdicts
 LEARNING(gate): numbers paraphrased from a sibling ledger drift -> when a commit
   adds both a family-*.md and a progress.md summary of it, copy the figures,
   do not restate them.
+- 2026-09-21T22:19:09Z COMMIT: 09f08df05 docs(plans): the audit summary quoted its own ledger wrong → review dispatched
+- 2026-09-21T22:19:27Z COMPACT: context compacted — read the last NEXT above before continuing
+
+CORRECTION: the correction above has the same flaw it was written to fix, one
+  level up. It says "the ledger is the measurement; these are the real figures"
+  and then cites "1.39 viewports / 1072px" for CLASS C — a figure the ledger
+  does not contain. family-mockup4.md:47 records only the BEFORE state (1264px
+  in a 774px viewport = 1.63); classes A-E carry no FIX line, so no after-value
+  was ever written there. The number itself is real, but its source is a probe
+  run, not the ledger, and quoting a probe under a sentence that promises a
+  ledger is how the first drift happened.
+  - CLASS C after-state: s:home 1.39 viewports (1072px / 774px). SOURCE:
+    frontend/_audit/a3.mjs section C, re-run 21 Sep 2026. Not in the ledger.
+  - CLASS D after-state: top=399 h=444 swing 0. SOURCE: a3.mjs section D, days
+    2/8/16/24 — the four days that probe opens, not all 30. The "all 30 days"
+    figure on the EVIDENCE line above came from a separate earlier sweep; the
+    two are different runs and the later one is narrower.
+  - "7 families" on the REPAIR line is wrong: the same line lists eight
+    (A B C D E G G2 H) and the ledger documents eight. Read it as 8.
+LEARNING(gate): a correction block is not exempt from the rule it enforces ->
+  every figure gets a source token (ledger line, or probe file + section) in
+  the same sentence, and "the ledger says" is only written above numbers that
+  are literally in the ledger.
