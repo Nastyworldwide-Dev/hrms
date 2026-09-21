@@ -1254,27 +1254,17 @@ def get_holidays_for_employee(employee: str) -> list[dict]:
 @frappe.whitelist()
 def get_leave_approval_details(employee: str) -> dict:
 	_ensure_own_employee_or_permitted(employee)
-	leave_approver, department = frappe.get_cached_value(
-		"Employee",
-		employee,
-		["leave_approver", "department"],
-	)
+	# No department read: `Department Approver` is no longer a routing source
+	# (owner ruling, 21 Sep 2026) — see hrms.hr.utils.get_designated_approvers.
+	leave_approver = frappe.get_cached_value("Employee", employee, "leave_approver")
 
-	if not leave_approver and department:
-		# No Department read demand — see get_shift_request_approvers; pinned
-		# by test_self_service_department_reads.
-		leave_approver = frappe.db.get_value(
-			"Department Approver",
-			{"parent": department, "parentfield": "leave_approvers", "idx": 1},
-			"approver",
-		)
-
-	leave_approver_name = frappe.db.get_value("User", leave_approver, "full_name", cache=True)
 	# Options come from the same list validate_staff_approver enforces. Using
 	# get_department_approvers here instead would offer the whole department
 	# ANCESTOR chain, and picking one of those failed on save with "not one of
 	# your designated approvers".
 	department_approvers = _approver_options(employee, "leave_approver", "leave_approvers")
+	leave_approver = _default_approver(leave_approver, department_approvers)
+	leave_approver_name = frappe.db.get_value("User", leave_approver, "full_name", cache=True)
 
 	return dict(
 		leave_approver=leave_approver,
@@ -1284,6 +1274,24 @@ def get_leave_approval_details(employee: str) -> dict:
 			"HR Settings", "leave_approver_mandatory_in_leave_application"
 		),
 	)
+
+
+def _default_approver(named: str | None, options: list[dict]) -> str | None:
+	"""The value the form prefills — always one the save would accept.
+
+	The Employee record's own approver when it names one, otherwise the first
+	option offered, which is the employee's immediate superior (the chain is
+	built bottom-up). Before 21 Sep 2026 the fallback was row 1 of the
+	department's approver table while the fence read `get_designated_approvers`,
+	so the form prefilled a value its own save then rejected — the original
+	"{0} is not one of your designated approvers". With Department Approver
+	removed from the routing set entirely, that fallback could only ever be
+	wrong.
+	"""
+	offered = [option["name"] for option in options]
+	default = named if named in offered else (offered[0] if offered else None)
+	frappe.logger("hrms").debug("[api] default approver %s of %d option(s)", default, len(offered))
+	return default
 
 
 def _approver_options(employee: str, employee_approver_field: str, department_parentfield: str) -> list[dict]:
@@ -1509,24 +1517,14 @@ def get_expense_claim_types() -> list[dict]:
 @frappe.whitelist()
 def get_expense_approval_details(employee: str) -> dict:
 	_ensure_own_employee_or_permitted(employee)
-	expense_approver, department = frappe.get_cached_value(
-		"Employee",
-		employee,
-		["expense_approver", "department"],
-	)
+	# No department read: `Department Approver` is no longer a routing source
+	# (owner ruling, 21 Sep 2026) — see hrms.hr.utils.get_designated_approvers.
+	expense_approver = frappe.get_cached_value("Employee", employee, "expense_approver")
 
-	if not expense_approver and department:
-		# No Department read demand — see get_shift_request_approvers; pinned
-		# by test_self_service_department_reads.
-		expense_approver = frappe.db.get_value(
-			"Department Approver",
-			{"parent": department, "parentfield": "expense_approvers", "idx": 1},
-			"approver",
-		)
-
-	expense_approver_name = frappe.db.get_value("User", expense_approver, "full_name", cache=True)
 	# same source of truth as the backend fence — see get_leave_approval_details
 	department_approvers = _approver_options(employee, "expense_approver", "expense_approvers")
+	expense_approver = _default_approver(expense_approver, department_approvers)
+	expense_approver_name = frappe.db.get_value("User", expense_approver, "full_name", cache=True)
 
 	return dict(
 		expense_approver=expense_approver,

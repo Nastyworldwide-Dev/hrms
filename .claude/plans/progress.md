@@ -274,3 +274,14 @@ Gate proposal: a test that drives the ENTRY POINT, never the helper the flag lan
 NEXT: owner decision needed — reviewers of 3409a2c7b raised (a) reporting managers lost
 Desk-side write/submit on OT Request (PWA unaffected), (b) Department Approver now reads the
 whole department's requests in list queries. Neither blocks. Nothing pushed.
+- 2026-09-21T17:08:18Z COMMIT: c26118547 docs(progress): the G12 spec-gap and the two reviewer questions → review dispatched
+- 2026-09-21T17:09:42Z COMMIT: ab601bee3 docs(ticket): five hand-threaded guard call sites are the next bug → review dispatched
+- 2026-09-21T17:15:38Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T17:39:45Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T17:43Z REPAIR: approval routing walks each employee's own chain bottom-up; Department Approver is no longer a routing source (owner ruling)
+- 2026-09-21T17:43Z EVIDENCE: 2 correct — test_approver_chain_follows_each_employee.py 15/15, proved red before the fix
+- 2026-09-21T17:43Z EVIDENCE: 3 works — blast radius green: 85 passed + 121 subtests across 7 dependent suites
+- 2026-09-21T17:43:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-21T17:43:56Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-09-21T17:45:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-21T17:45:48Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed

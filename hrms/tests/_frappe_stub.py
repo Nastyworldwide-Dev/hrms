@@ -101,7 +101,28 @@ def install():
 	root.__getattr__ = lambda _name: MagicMock()
 	sys.modules["frappe"] = root
 	sys.modules["frappe.utils"] = _utils_module()
+	sys.modules["frappe.utils.caching"] = _caching_module()
 	sys.meta_path.insert(0, _Finder())
+
+
+def _caching_module():
+	"""frappe.utils.caching with REAL pass-through decorators.
+
+	A MagicMock `request_cache` does not decorate — it swallows the function and
+	hands back a mock, so every call to a cached helper answers with a MagicMock:
+	truthy, equal to nothing, and silently wrong. A test reaching one reads
+	`'X' not found in <MagicMock ...>` instead of the assertion it wrote.
+
+	Caching is a performance decision, never a behavioural one, so identity is
+	the honest stand-in: the function under test runs, every time.
+	"""
+	module = types.ModuleType("frappe.utils.caching")
+	module.__path__ = []
+	module.request_cache = lambda func: func
+	module.site_cache = lambda *args, **kwargs: lambda func: func
+	module.redis_cache = lambda *args, **kwargs: lambda func: func
+	module.__getattr__ = lambda _name: MagicMock()
+	return module
 
 
 def _utils_module():

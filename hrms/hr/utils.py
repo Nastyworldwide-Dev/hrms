@@ -1216,57 +1216,96 @@ def get_designated_approvers(
 	"{0} is not one of your designated approvers" looked like from the
 	employee's side.
 
-	The set is deliberately narrow: the explicit approver on the Employee
-	record, the reporting manager, and the approvers named on the employee's
-	OWN department. It does not walk up the department tree. Nothing in this
-	repo or in the donor branch says a parent-department approver may approve
-	for a child department, so the fence keeps the narrower boundary until HR
-	says otherwise; widening it would hand approval authority to people nobody
-	has authorised.
+	OWNER RULING, 21 Sep 2026 ("Superior cannot approve on duty application ...
+	because it persist again"): routing is per EMPLOYEE and it goes bottom-up.
+	"each employee will have their approver. and the chain goes until they dont
+	have which will be be several people but dont hardcode, respect the
+	configuration set from hr (desk)". So the set is:
 
-	The employee's own user is never included — self-approval is refused
-	separately, with its own message.
+	  * the approver named on the employee's own Employee record;
+	  * their reporting manager;
+	  * and the same two questions asked again of each person that reaches,
+	    until somebody has neither — the escalation an employee actually has
+	    when their immediate approver forgets.
+
+	`Department Approver` rows are NOT a source. They name no employee, so
+	nothing in anyone's record routes to them, and admitting them handed one
+	person approval authority over a whole department — which after the read
+	fences began reading this list (3409a2c7b) also meant every colleague's
+	pay-adjacent rows in their Team queue. The owner refused that outright.
+	`department_parentfield` is kept in the signature because it names the
+	request TYPE at every call site, and `get_employees_routed_to` must be given
+	the same pair to answer the inverse question.
+
+	Depth is whatever HR configured, never a constant: the walk ends when a
+	record names nobody, and a cycle HR can save in Desk ends it too rather than
+	hanging. The employee's own user is never included — self-approval is
+	refused separately, with its own message.
 	"""
-	info = frappe.db.get_value(
-		"Employee",
-		employee,
-		["user_id", employee_approver_field, "reports_to", "department"],
-		as_dict=True,
-	)
+	info = _routing_row(employee, employee_approver_field)
 	if not info:
 		logger.warning("[staff_lockdown] no Employee %s while resolving approvers", employee)
 		return []
 
-	approvers = []
-	if info.get(employee_approver_field):
-		approvers.append(info.get(employee_approver_field))
-	if info.reports_to:
-		if manager_user := frappe.db.get_value("Employee", info.reports_to, "user_id"):
-			approvers.append(manager_user)
-	if info.department:
-		approvers.extend(
-			frappe.get_all(
-				"Department Approver",
-				filters={"parent": info.department, "parentfield": department_parentfield},
-				pluck="approver",
-			)
-		)
+	own_user = info.user_id
+	ordered: list[str] = []
+	seen: set[str] = set()
+	visited = {employee}
+	frontier = [info]
 
-	# de-duplicate but keep order: the Employee-record approver is the default
-	seen = set()
-	ordered = []
-	for approver in approvers:
-		if approver and approver != info.user_id and approver not in seen:
-			seen.add(approver)
-			ordered.append(approver)
+	while frontier:
+		for login, senior in _one_rung_up(frontier.pop(0), employee_approver_field):
+			if login and login != own_user and login not in seen:
+				seen.add(login)
+				ordered.append(login)
+			# Keep climbing even when that rung has no login of its own: a
+			# manager with no User account still has a manager above them.
+			if senior and senior not in visited:
+				visited.add(senior)
+				if senior_row := _routing_row(senior, employee_approver_field):
+					frontier.append(senior_row)
 
 	logger.info(
-		"[staff_lockdown] %s designated approver(s) for %s via %s",
+		"[staff_lockdown] %s designated approver(s) for %s via %s, %d rung(s) of chain",
 		len(ordered),
 		employee,
 		department_parentfield,
+		len(visited) - 1,
 	)
 	return ordered
+
+
+def _routing_row(employee: str, employee_approver_field: str) -> frappe._dict | None:
+	"""The fields that decide where one employee's requests go."""
+	row = frappe.db.get_value(
+		"Employee",
+		employee,
+		["user_id", employee_approver_field, "reports_to"],
+		as_dict=True,
+	)
+	logger.debug("[staff_lockdown] routing row for %s: %s", employee, "found" if row else "missing")
+	return row
+
+
+def _one_rung_up(row, employee_approver_field: str):
+	"""(login, Employee) pairs one step above this record, in preference order.
+
+	Either half may be missing and the pair still matters: an approver named by
+	login may have no Employee record to climb from, and a reporting manager may
+	have no User account while still reporting to someone who does.
+	"""
+	from hrms.utils.identity import normalize_login
+
+	logger.debug("[staff_lockdown] climbing from %s / %s", row.get(employee_approver_field), row.reports_to)
+	if named := row.get(employee_approver_field):
+		# own_employees, never a raw user_id compare: it normalizes the login and
+		# fails closed on the ambiguous duplicates a mirror can leave behind.
+		claimants = own_employees(named)
+		yield named, (claimants[0] if claimants else None)
+
+	if row.reports_to:
+		manager_login = normalize_login(frappe.db.get_value("Employee", row.reports_to, "user_id"))
+		yield manager_login or None, row.reports_to
 
 
 @request_cache
@@ -1287,23 +1326,29 @@ def get_employees_routed_to(
 	The row scopes need the question the other way round from
 	`get_designated_approvers` — not "who may approve for this employee" but
 	"whose requests may this user see" — and a list query cannot ask it one
-	employee at a time. Same three sources, same narrowness, so the two can
-	never disagree about a given pair:
+	employee at a time. So this walks the SAME chain downwards: everyone who
+	names this user as their approver or reports to them, then everyone who
+	names or reports to one of those, until nobody new is reached. Two sources,
+	the two the employee's own record carries, so the two directions can never
+	disagree about a given pair.
 
-	  * the explicit approver field on the Employee record;
-	  * the reporting line (`get_direct_report_employees`, the one definition
-	    of "my team", already status- and company-fenced);
-	  * `Department Approver` rows on the employee's OWN department — no
-	    walking up the tree, exactly as `get_designated_approvers` refuses to.
+	OWNER RULING, 21 Sep 2026: `Department Approver` rows are not a source in
+	either direction. Admitting them here returned every colleague in a
+	department to one person's Team queue — rows about other people's pay — for
+	a routing no employee record names. Removed with the same arm in
+	`get_designated_approvers`; `department_parentfield` stays in the signature
+	so callers keep naming the request type in one place.
 
 	Active employees only, inside the caller's company fence, and never the
 	caller's own records (self-approval is refused separately, with its own
 	message). A user who is nobody's approver gets an empty list, which every
-	caller must read as "no admission", never as "no restriction".
+	caller must read as "no admission", never as "no restriction". The first
+	rung is `get_direct_report_employees`'s query by another name — same
+	filters, but carrying `user_id` so the walk can continue past it.
 
-	`request_cache`d because `has_permission` calls it once PER ROW on a list
-	of requests, and the answer cannot change inside one request — three
-	queries would otherwise become three per row.
+	`request_cache`d because `has_permission` calls it once PER ROW on a list of
+	requests, and the answer cannot change inside one request — a walk of the
+	org chart per row would otherwise be the cost of opening the Team tab.
 	"""
 	from hrms.overrides.company_scope import allowed_companies
 	from hrms.utils.identity import normalize_login
@@ -1317,27 +1362,41 @@ def get_employees_routed_to(
 	if companies:
 		filters["company"] = ("in", companies)
 
-	named = frappe.get_all("Employee", filters={**filters, employee_approver_field: login}, pluck="name")
-
-	departments = frappe.get_all(
-		"Department Approver",
-		filters={"parentfield": department_parentfield, "approver": login, "parenttype": "Department"},
-		pluck="parent",
-	)
-	by_department = (
-		frappe.get_all("Employee", filters={**filters, "department": ("in", departments)}, pluck="name")
-		if departments
-		else []
-	)
-
 	mine = set(own_employees(user))
-	routed = [
-		e
-		for e in dict.fromkeys([*named, *by_department, *get_direct_report_employees(user)])
-		if e not in mine
-	]
+	routed: list[str] = []
+	seen = set(mine)
+	# Two frontiers because the chain has two rails: a record may name an
+	# approver by LOGIN, or report to an EMPLOYEE. One rung can be reached by
+	# either, and a manager with no User account still has people under them.
+	by_login = [login]
+	by_manager = list(mine)
+
+	while by_login or by_manager:
+		below = []
+		if by_login:
+			below += frappe.get_all(
+				"Employee",
+				filters={**filters, employee_approver_field: ("in", by_login)},
+				fields=["name", "user_id"],
+			)
+		if by_manager:
+			below += frappe.get_all(
+				"Employee",
+				filters={**filters, "reports_to": ("in", by_manager)},
+				fields=["name", "user_id"],
+			)
+		by_login, by_manager = [], []
+		for row in below:
+			if row.name in seen:
+				continue
+			seen.add(row.name)
+			routed.append(row.name)
+			by_manager.append(row.name)
+			if below_login := normalize_login(row.user_id):
+				by_login.append(below_login)
+
 	logger.debug(
-		"[approval_scope] %s is the designated approver of %d employee(s), company fence=%s",
+		"[approval_scope] %s is in the approver chain of %d employee(s), company fence=%s",
 		user,
 		len(routed),
 		companies or "none",

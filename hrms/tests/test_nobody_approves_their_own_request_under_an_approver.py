@@ -17,9 +17,14 @@ Owner ruling the same day, on the top of the chain: "they dont have to.
 nothing. if and in my company only one. system might detect. this is to fix
 the ones who can self approve despite having their reported to, which is
 wrong." So the refusal is conditional on somebody being above them — a
-reporting manager, the approver on their Employee record, or an approver on
-their department — and a person with nobody above them is left exactly as they
-were. An empty approver list IS the detection; no new setting.
+reporting manager, or the approver on their Employee record, and the same two
+questions asked again of each person that reaches — and a person with nobody
+above them is left exactly as they were. An empty approver list IS the
+detection; no new setting.
+
+Amended 21 Sep 2026 by the owner's routing ruling ("no, dont"): a
+`Department Approver` row is no longer a source, so it is no longer what makes a
+self-decision refused; a further rung up the chain now is.
 
 Rejecting your own request is a withdrawal, pays nothing out, and is unchanged.
 
@@ -41,10 +46,12 @@ from hrms.tests._erpnext_stub import install as install_erpnext_stub
 install_erpnext_stub()
 
 from hrms.api import approval
+from hrms.hr import utils as hr_utils
 
 STAFF = "HR-EMP-STAFF"
 SESSION = "supervisor@example.com"
 MANAGER = "HR-EMP-BOSS"
+GRAND = "HR-EMP-GRAND"
 
 
 class SelfDecisionCase(unittest.TestCase):
@@ -59,6 +66,8 @@ class SelfDecisionCase(unittest.TestCase):
 		employee_approver=None,
 		department=None,
 		department_approvers=(),
+		manager_reports_to=None,
+		manager_user_id="boss@example.com",
 	):
 		row = {
 			"user_id": SESSION,
@@ -68,15 +77,34 @@ class SelfDecisionCase(unittest.TestCase):
 			"expense_approver": employee_approver,
 			"company": "Alpha",
 		}
+		#: the rung above the applicant, so the walk has somewhere to go
+		manager_row = {
+			"user_id": manager_user_id,
+			"reports_to": manager_reports_to,
+			"department": department,
+			"leave_approver": None,
+			"expense_approver": None,
+			"company": "Alpha",
+		}
+		grand_row = {
+			"user_id": "grand@example.com",
+			"reports_to": None,
+			"department": department,
+			"leave_approver": None,
+			"expense_approver": None,
+			"company": "Alpha",
+		}
+		rows = {STAFF: row, MANAGER: manager_row, GRAND: grand_row}
 
 		def get_value(dt, name, fieldname=None, *args, **kwargs):
-			if dt == "Employee" and name == MANAGER:
-				return "boss@example.com" if fieldname == "user_id" else None
 			if dt != "Employee":
 				return None
+			known = rows.get(name)
+			if known is None:
+				return None
 			if isinstance(fieldname, list):
-				return frappe._dict({field: row.get(field) for field in fieldname})
-			return row.get(fieldname)
+				return frappe._dict({field: known.get(field) for field in fieldname})
+			return known.get(fieldname)
 
 		db = MagicMock()
 		db.get_value.side_effect = get_value
@@ -95,6 +123,14 @@ class SelfDecisionCase(unittest.TestCase):
 			patch.object(approval, "get_permitted_fields", return_value=["status", "approval_status"]),
 			patch.object(frappe, "get_all", return_value=list(department_approvers)),
 			patch("hrms.utils.identity.own_employees", return_value=[STAFF]),
+			# The chain walk resolves a NAMED approver back to an Employee so it can
+			# keep climbing; without this it would reach the real helper and read a
+			# database that is not here.
+			patch.object(
+				hr_utils,
+				"own_employees",
+				side_effect=lambda user: [name for name, r in rows.items() if r["user_id"] == user],
+			),
 		):
 			return approval._decision_access(doc, status)
 
@@ -112,8 +148,26 @@ class SelfDecisionCase(unittest.TestCase):
 			self._access("Leave Application", reports_to=None, employee_approver="boss@example.com")
 		)
 
-	def test_a_department_approver_counts_as_above_them(self):
+	def test_a_rung_further_up_the_chain_counts_as_above_them(self):
+		"""Their own manager has no User account, but that manager's manager does.
+
+		Owner ruling, 21 Sep 2026: "the chain goes until they dont have which will
+		be be several people". Somebody is above them, so the self-decision is
+		refused — the walk does not stop at the first rung.
+		"""
 		self.assertIsNone(
+			self._access(
+				"Leave Application",
+				manager_user_id=None,
+				manager_reports_to=GRAND,
+			)
+		)
+
+	def test_a_department_approver_is_not_somebody_above_them(self):
+		"""Owner ruling, 21 Sep 2026: "no, dont" — a `Department Approver` row is
+		not a routing source, so it cannot be what makes a self-decision refused.
+		Nobody is above this applicant; the top-of-chain case is left as it was."""
+		self.assertIsNotNone(
 			self._access(
 				"Leave Application",
 				reports_to=None,
