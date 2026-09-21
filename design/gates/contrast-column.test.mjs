@@ -185,6 +185,17 @@ test("the lg: blob model matches what glass-components.css actually declares", (
 		const side = tokens.field[`blob-${id}-left`] ? "left" : "right";
 		const cssOff = new RegExp(`${side}:\\s*(-?[\\d.]+)vw`).exec(rule[1]);
 		assert.ok(cssOff, `blob ${id} lg: rule declares no ${side} offset in vw`);
+		// raw parseFloat, deliberately, and NOT the px() this file spent three
+		// commits making mandatory in contrast.mjs. px() cannot be imported:
+		// contrast.mjs has no exports and no main-guard, so importing it runs
+		// the entire gate and calls process.exit() — it would take the test
+		// runner down with it (verified: the import prints the gate's own PASS
+		// lines). The alternative is restructuring the gate for testability,
+		// which is a larger change than the thing it would tidy.
+		// Safe because this computes the test's EXPECTED value from the same
+		// source the gate reads, and a bad token degrades loudly rather than
+		// vacuously: NaN fails every comparison below, so the test goes red.
+		// Verified by pointing blob-a-size at a calc() — 6 pass, 1 fail.
 		const mobileOffset = parseFloat(tokens.field[`blob-${id}-${side}`].value);
 		const mobileSize = parseFloat(tokens.field[`blob-${id}-size`].value);
 		const derived = (mobileOffset / mobileSize) * Number(gateScale[1]) * 100;

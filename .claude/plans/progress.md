@@ -286,3 +286,22 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   given. Open reviewer Suggestion carried, not actioned: blob-opacity
   (contrast.mjs:167,246) read raw and used arithmetically with no validator —
   pre-existing, different value class (number not px string).
+- 2026-09-21T23:29:51Z COMMIT: 7873ee6f6 docs(glass): the handoff described a file set two sessions old → review dispatched
+- NOTE: reviewer on 6a9b01d9e returned DEPLOY. Its Warning was the 0.003 vs
+  0.0035vw claim I had already corrected in 838018826 — and it recomputed the
+  deltas independently from tokens.json, matching all three (a .0035 b .0005
+  c .0022). Independent agreement, not an echo.
+  Its Suggestion — route the test's parseFloat through px() too — is NOT
+  actionable and is now documented in place rather than left looking like an
+  oversight. px() cannot be imported: contrast.mjs has ZERO exports and no
+  main-guard, so `import("./contrast.mjs")` runs the whole gate and calls
+  process.exit(), taking the test runner with it (verified: the import printed
+  the gate's own PASS lines). Fixing that means restructuring the gate for
+  testability — a bigger change than the tidy it buys.
+  Its safety argument checked out though: pointing blob-a-size at a calc() makes
+  the test go RED (6 pass/1 fail), because NaN fails every comparison. Degrades
+  loudly, never vacuously.
+LEARNING(fact): design/gates/contrast.mjs is not importable — no exports, no
+  main-guard, process.exit() at module scope. A source-grep test is the only
+  seam available for it. Any future "just import the helper" suggestion against
+  this file is blocked on giving it exports first.
