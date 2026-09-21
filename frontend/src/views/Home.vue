@@ -8,6 +8,10 @@
 			     desktop, and the divergence was invisible below lg:, which is how
 			     three build batches passed over it. Same correction on Leave and
 			     Attendance. -->
+			<!-- Pull to refresh: the socket is not a delivery guarantee on a phone,
+			     so the employee always has a hand-driven way to see the decided
+			     status without a full reload (A-C1). -->
+			<GPullRefresh @refresh="refreshRequests" />
 			<div
 				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
@@ -24,6 +28,7 @@
 <script setup>
 import { computed, inject, markRaw } from "vue"
 
+import { reloadRequestLists } from "@/data/requestLists"
 import { userResource } from "@/data/user"
 import { HR_TAB, HUB_ROUTE_NAME } from "@/utils/helpdeskHub"
 import { hasHRRole } from "@/utils/issueBoard"
@@ -33,6 +38,7 @@ import PendingApprovalsBanner from "@/components/PendingApprovalsBanner.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
+import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
@@ -44,6 +50,12 @@ import SupportIcon from "@/components/icons/SupportIcon.vue"
 const __ = inject("$translate")
 
 const isHR = computed(() => hasHRRole(userResource.data))
+
+async function refreshRequests(event) {
+	console.info("[Home] pull-to-refresh")
+	await reloadRequestLists("pull")
+	event.target?.complete?.()
+}
 
 const baseQuickLinks = [
 	{

@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, get_first_day, get_link_to_form, getdate
 
+import hrms
 from hrms.hr.doctype.ot_request.ot_request import (
 	get_replacement_leave_bank,
 	replacement_leave_hours_per_day,
@@ -90,6 +91,19 @@ class ReplacementLeaveClaim(Document, PWANotificationsMixin):
 				)
 			)
 
+	def on_update(self):
+		self.publish_update()
+
+	def after_delete(self):
+		self.publish_update()
+
+	def publish_update(self):
+		# Home's "My Requests" learns about a filed/decided row through this push
+		# (mirrors ShiftRequest); the four upstream types had it, this one did not.
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+		hrms.refetch_resource("hrms:my_replacement_leave_claims", employee_user)
+		hrms.refetch_resource("hrms:team_replacement_leave_claims")
+
 	def on_submit(self):
 		validate_self_submission(self)
 		validate_mandatory_attachment(self)
@@ -143,6 +157,7 @@ class ReplacementLeaveClaim(Document, PWANotificationsMixin):
 		)
 
 	def on_cancel(self):
+		self.publish_update()
 		# Route through the shared reverse so a claim whose leave was already taken
 		# cancels gracefully instead of freezing — the copy that lived here had the
 		# same un-clamped, validate()-calling bug as the OT path.

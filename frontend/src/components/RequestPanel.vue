@@ -4,6 +4,9 @@
 			{{ __("Requests") }}
 		</div>
 		<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
+		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
+			{{ __("Refreshing…") }}
+		</p>
 		<RequestList v-if="activeTab == 'My Requests'" :items="myRequests" />
 		<RequestList
 			v-else-if="activeTab == 'Team Requests'"
@@ -48,7 +51,15 @@ import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import OTRequestItem from "@/components/OTRequestItem.vue"
 import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
 
-import { useListUpdate } from "@/composables/realtime"
+import { useListUpdate, useReloadOnGap } from "@/composables/realtime"
+import {
+	MY_REQUEST_LISTS,
+	REQUEST_LISTS,
+	TEAM_REQUEST_LISTS,
+	reloadLists,
+	reloadRequestLists,
+} from "@/data/requestLists"
+import { siteTime } from "@/utils/siteTime"
 
 const activeTab = ref("My Requests")
 const socket = inject("$socket")
@@ -70,6 +81,14 @@ watch(TAB_BUTTONS, (tabs) => {
 		activeTab.value = "My Requests"
 	}
 })
+
+// A cached (IndexedDB) paint can show last session's status until the first
+// fetch of this session answers; say so instead of painting it as current.
+const refreshing = computed(() =>
+	(activeTab.value == "My Requests" ? MY_REQUEST_LISTS : TEAM_REQUEST_LISTS).some(
+		(list) => !list.fetched && !list.error
+	)
+)
 
 const myRequests = computed(() =>
 	updateRequestDetails(
@@ -137,26 +156,20 @@ function getSortedRequests(list) {
 	// return top 10 requests sorted by posting date
 	return list
 		.sort((a, b) => {
-			return new Date(b.creation) - new Date(a.creation)
+			// site-clock strings; the Date constructor rejects them on Safari (I-F3)
+			return siteTime(b.creation).valueOf() - siteTime(a.creation).valueOf()
 		})
 		.splice(0, 10)
 }
 
 onMounted(() => {
-	useListUpdate(socket, "Leave Application", () => {
-		teamLeaves.reload()
-		historyLeaves.reload()
-	})
-	useListUpdate(socket, "Expense Claim", () => {
-		teamClaims.reload()
-		historyClaims.reload()
-	})
-	useListUpdate(socket, "Shift Request", () => {
-		teamShiftRequests.reload()
-		historyShiftRequests.reload()
-	})
-	useListUpdate(socket, "Attendance Request", () => teamAttendanceRequests.reload())
-	useListUpdate(socket, "OT Request", () => teamOTRequests.reload())
-	useListUpdate(socket, "Replacement Leave Claim", () => teamReplacementLeaveClaims.reload())
+	// Every list_update reloads the employee's own list too: the server pushes
+	// hrms:refetch_resource for `my_*` only while the socket is alive, and a
+	// list_update is the one event the room replays after a rejoin.
+	for (const [doctype, lists] of Object.entries(REQUEST_LISTS)) {
+		useListUpdate(socket, doctype, () => reloadLists([lists.my, ...lists.team], doctype))
+	}
+	useReloadOnGap(reloadRequestLists)
+	reloadRequestLists("mount")
 })
 </script>

@@ -1,9 +1,8 @@
-# Family — fix(attendance): Fix days rebuilds through approved requests and keeps them (21 Sep 2026)
-CLASS: two guards (the screen's day block and the engine's day protection) refused any day covered by an approved OT / Attendance Request, so HR had to cancel a request before the row could be recomputed; the owner ruled the request stays and the row is rebuilt
-Changed symbols: attendance_fix_day.day_block_reason/_day_block/_rebuild (requests_ok), _paid_day, _leave_cover, _requests_on (new); attendance_fix_days (requests_kept, keeps_the_day); day_remark.remark_day/_remark_owning_the_day/_remark_once (requests_ok threaded); attendance_recovery._day_protection (requests_ok, _paid, _leave_cover); remote_checkin_request_hooks._repair_financial_dependency (requests_ok skips the OT Request clause only); leave_cover.request_covered_days(doctypes).
-Every other caller of each changed function passes the default (verifier grep, 18 call sites listed) — behaviour byte-identical outside fix_days.
-hrms/api/attendance_fix_day.py:rebuild_day / single actions not-affected — default False; the per-day screen still refuses request days as before
-hrms/utils/attendance_recovery.py:protected_reason not-affected — still holds a submitted AR row; fix_days cancels that row first, so the engine sees none (ordering, noted)
-hrms/hr/doctype/attendance/attendance.py:on_cancel not-affected — unlinks punches only; no hook touches the request
-hrms/hr/doctype/attendance_request/attendance_request.py:on_cancel not-affected — cancels only rows linked to itself; the rebuilt engine row carries no link
-Paid days: Salary Slip and Overtime Details still refuse (money); approved-unpaid OT is kept and the row's OT hours recomputed from punches.
+# Family — fix(pwa): the phone shows a decided request without a reload (21 Sep 2026)
+CLASS: realtime treated as a delivery guarantee — one socket event was the only refresh of the Home request lists; the socket gave up after five reconnects; two request types never published; server timestamps read on the device clock
+Changed: socket.js (reconnect forever, reconnect on visible), composables/realtime.js (gap hooks after room rejoin, visibility > 60 s), data/requestLists.js (registry + reloadRequestLists), RequestPanel.vue (reload on mount / list_update / gap; "Refreshing…"), Home.vue (GPullRefresh), Notifications.vue + RequestPanel sort (siteTime), utils/siteTime.js (new); RL + Comp Leave controllers publish_update.
+frontend/src/components/ListView.vue not-affected — fetches on mount and on list_update already; the same GPullRefresh precedent
+frontend/src/data/*.js not-affected — cache keys kept on purpose: frappe-ui registers socket-refetch targets only through `cache:` (verifier read resources.js:11-19)
+hrms/hr/doctype/{leave_application,shift_request,expense_claim,attendance_request} not-affected — already publish; the two missing publishers now mirror shift_request
+frontend/src/components/CheckInPanel.vue / LateCheckoutDialog.vue not-affected — their `new Date(...replace(" ","T"))` on server strings pre-exist (backlog: route through siteTime)
+Residual: pull-to-refresh sits inside BaseLayout's body div, not a direct child of ion-content (gesture works via closest(); one device check on deploy).

@@ -9,6 +9,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, cint, date_diff, format_date, get_url_to_list, getdate
 
+import hrms
 from hrms.hr.utils import (
 	create_additional_leave_ledger_entry,
 	get_holiday_dates_for_employee,
@@ -85,6 +86,19 @@ class CompensatoryLeaveRequest(Document, PWANotificationsMixin):
 
 			frappe.throw(msg)
 
+	def on_update(self):
+		self.publish_update()
+
+	def after_delete(self):
+		self.publish_update()
+
+	def publish_update(self):
+		# Home's "My Requests" learns about a filed/decided row through this push
+		# (mirrors ShiftRequest); the four upstream types had it, this one did not.
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+		hrms.refetch_resource("hrms:my_compensatory_leave_requests", employee_user)
+		hrms.refetch_resource("hrms:team_compensatory_leave_requests")
+
 	def on_submit(self):
 		# The employee on the request must never be the submitter — HR included —
 		# the same fence OT Request, Replacement Leave Claim and Shift Request run
@@ -140,6 +154,7 @@ class CompensatoryLeaveRequest(Document, PWANotificationsMixin):
 			frappe.throw(msg, title=_("No Leave Period Found"))
 
 	def on_cancel(self):
+		self.publish_update()
 		# Only an approval granted days. leave_allocation alone does not prove it:
 		# an amendment copies the field from the request it replaces.
 		logger.info(

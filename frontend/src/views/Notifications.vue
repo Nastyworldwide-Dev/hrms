@@ -94,7 +94,7 @@
 									     so a pixel baseline of it fails an hour later for no reason.
 									     The visual gate masks anything carrying this attribute. -->
 									<div class="text-xs font-normal text-ink-600" data-visual-mask>
-										{{ dayjs(item.creation).fromNow() }}
+										{{ siteTime(item.creation).fromNow() }}
 									</div>
 								</div>
 							</component>
@@ -135,6 +135,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
+import { siteTime } from "@/utils/siteTime"
 import { createResource, FeatherIcon, Button } from "frappe-ui"
 
 import { computed, inject, onMounted, ref, watch } from "vue"
@@ -142,7 +143,6 @@ import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 
 import { unreadNotificationsCount, notifications } from "@/data/notifications"
 
-const dayjs = inject("$dayjs")
 const router = useRouter()
 const __ = inject("$translate")
 const currentStart = ref(0)
