@@ -37,8 +37,29 @@ Also raised there and not done: flipping `auto_attendance` with
 became engine-owned has only the error log to go on. The day-fix log already
 records the rebuild; it could carry the released names too.
 
-TRIGGER: the eighth action, the fourth copy of the ownership rule, or the next
-review finding that two rules in here disagree with each other.
+ADDED 21 Sep 2026, review of 04e7bb62e (the G12 spec-gap): a guard FLAG is
+threaded by hand through five independent call sites — `plan_day`, `_screen`'s
+`blocked` and its `notice`, `_lock_and_guard`, and `_finish`'s `_rebuild`. The
+owner's 21 Sep ruling was plumbed through `day_block_reason`, `_day_block`,
+`_rebuild`, `_paid_day` and `_leave_cover` and shipped with NOT ONE of the five
+passing it, so a fully-built rule read as implemented and HR met a dead end on
+every day carrying an approved request. The bulk API passed it and the single-day
+screen did not, so the two screens refused the same day differently.
 
-# ceiling: one module holding rules, endpoints, seams and the log writer
-# upgrade: an eighth action, or a second rule disagreement found in review
+This is the general shape, not one bug: a per-call-site boolean means the next
+flag has five places to miss. The fix is ONE policy object — a `FixDayPolicy`
+dataclass, or a single `_guard(mode="fix_day")` the endpoints all enter through —
+so a new rule is threaded once and the screens cannot disagree.
+
+Until then the rope is the test style this commit used: drive the ENTRY POINT,
+never the helper the flag lands in. A test that calls `day_block_reason` directly
+would have passed throughout the gap.
+
+TRIGGER: the eighth action, the fourth copy of the ownership rule, a SIXTH guard
+call site or a second guard flag, or the next review finding that two rules in
+here disagree with each other.
+
+# ceiling: one module holding rules, endpoints, seams and the log writer, with
+#          each guard flag threaded by hand through five separate call sites
+# upgrade: an eighth action, a sixth guard call site or a second guard flag, or
+#          a second rule disagreement found in review
