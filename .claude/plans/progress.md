@@ -2,121 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  remote_checkin_request_hooks 25, two_approvers 3, selfie 4, company_api_scope
-  31, api/test_approval 31, chain 15, shift chain 7, no-approver 6, self-approval
-  13. Two pre-existing skips need a real bench. ruff clean.
-EVIDENCE: 6 — family ledger .claude/plans/family.md, 11 call sites same-root,
-  team.py's display-only tab gate ticketed.
-NEXT: commit, review, push, refresh HANDOFF.
-- 2026-09-21T18:22:33Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T18:25:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-21T18:25:07Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
-- 2026-09-21T18:25:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-21T18:25:31Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
-- 2026-09-21T18:25:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-21T18:25:48Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
-- 2026-09-21T18:25:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-21T18:25:59Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
-- 2026-09-21T18:26:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-09-21T18:26:37Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
-- 2026-09-21T18:26:41Z COMMIT: 0a0d0402c fix(remote-checkin): a remote punch routes up the employee's own chain → review+cross-app dispatched
-
-LEARNING(gate): family-hunt sweeps production call sites of the CHANGED symbols only ->
-  it misses test files that call the changed function directly (here
-  hrms/overrides/test_remote_checkin_request_hooks.py pinned the removed
-  Department Approver tier, and is bench-only so no local run catches it).
-  Proposed gate: the family scan greps the changed function NAMES across
-  test_*.py as well, and a bench-only test (FrappeTestCase) naming a changed
-  function needs a verdict line like any other call site.
-NEXT: push 0a0d0402c + the bench-test amendment, refresh docs/glass/HANDOFF.md.
-- 2026-09-21T18:29:59Z COMMIT: 353ceb7d6 test(remote-checkin): the department tier is pinned as absent, not as winning → review+cross-app dispatched
-- 2026-09-21T18:30:58Z PUSH: nz-glass @ 353ceb7d6
-- 2026-09-21T18:31:16Z PUSH: nz-glass @ 1c36eeebc
-- 2026-09-21T18:31:16Z COMMIT: 1c36eeebc docs(glass): handoff for the remote check-in routing fix → review dispatched
-- 2026-09-21T18:43:17Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T18:54:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-21T18:54:27Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-21T18:54:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-21T18:54:34Z COMMIT: 1c36eeebc docs(glass): handoff for the remote check-in routing fix → review dispatched
-- 2026-09-21T18:54:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-21T18:55:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-21T18:55:09Z COMMIT: ecc3b8d7b fix(pwa): one waiting word, and a rejected remote punch looks rejected → review+design dispatched
-
-REPAIR: 21 Sep — one waiting word on screen; Remote Approvals joins the shared
-  status rule; Employee Issue states get colour. Commit ecc3b8d7b.
-EVIDENCE: 2 correct — frontend/src/utils/__tests__/requestStatus.test.js, 5 RED
-  on HEAD before the change, 9 green after.
-EVIDENCE: 3 works — 143 frontend tests green (utils + components), prettier
-  clean on the three changed files.
-LEARNING(fact): slice 4 of the Thread F plan (track_changes on Leave
-  Application and Expense Claim, plus the guarded Property Setter patch) was
-  already shipped this morning in f04526cea with test_who_approved_when.py. The
-  audit that surfaced it (H-request-dates-backend.md H1) predates that commit.
-NEXT: slices 5 and 6 of the request-status unification wait on the owner — the
-  RequestPolicy table needs his ruling on backdating windows for Shift Request,
-  Expense Claim, Attendance Request and Compensatory Leave (today: none at all),
-  and the clock unification is its own change. Deploy ecc3b8d7b first.
-NEXT: also open — .claude/plans/ticket-waiting-word-in-filters.md (the two list
-  filters still offer the stored word; needs FormField Select to take
-  {label, value} pairs first).
-- 2026-09-21T18:56:48Z COMMIT: aea8da075 docs(plans): record what the waiting word left open → review dispatched
-- 2026-09-21T18:56:48Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T18:58:56Z PUSH: nz-glass @ aea8da075
-- 2026-09-21T18:59:20Z PUSH: nz-glass @ c1200e921
-- 2026-09-21T18:59:20Z COMMIT: c1200e921 docs(glass): handoff for the one-waiting-word slice → review dispatched
-- 2026-09-21T19:01:13Z PUSH: nz-glass @ 61b16f93e
-- 2026-09-21T19:01:13Z COMMIT: 61b16f93e style(remote-approvals): the name gives ground on purpose, not by accident → review+design dispatched
-- 2026-09-21T19:01:25Z PUSH: nz-glass @ 5cc2206f2
-- 2026-09-21T19:01:25Z COMMIT: 5cc2206f2 docs(glass): point the handoff at the tip commit → review dispatched
-- 2026-09-21T19:10:36Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T20:05:00Z EVIDENCE: rung 5 (looks right) — nadi-2.0-mockup-4.html rendered in Chromium at 320/390/1280, light+dark, 12 states captured, 0 console + 0 page errors; axe-core WCAG 2 A/AA + 2.1 + 2.2 AA = 0 violations across 13 states.
-- 2026-09-21T20:05:00Z REPAIR: nine defects found by that pass and fixed — dev strip covering the app bar (assumed 38px, now measured), [hidden] losing to a class selector, focus ring drawn round <main>, tab labels colliding at 320px, calendar role="grid" without rows (now role="list"), and five AA contrast pairs (waiting chip, segmented control, caption on page bg, text+chips on sheet glass, three dark chips).
-- 2026-09-21T20:05:00Z LEARNING(how): text laid on CHROME GLASS has no fixed backdrop, so token inks tuned for a white card fall under AA there. Any .sub/.eyebrow/.chip inside a sheet needs its own ink rule. Cheapest check is axe with the sheet OPEN — a closed-sheet pass reports nothing.
-- 2026-09-21T20:05:00Z NEXT: owner reviews "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" (+ -notes.md); the folder is gitignored so neither file is committed. Thread F slice 5 still waits on the backdating ruling.
-- 2026-09-21T19:28:50Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T19:44:50Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T20:45:00Z REPAIR: mockup 4 reworked onto nadi-2.0-mockup.html at the owner's preference — Inter Tight/Inter web fonts, 390x844 device on a dark stage with the mockup toolbar, blurred light field + four-layer liquid glass, 11 screens + 5 sheets, switchable Lime B. Done as a rebase, not a merge: mockup 1 became the file, then every a11y fix the old mockup 4 had earned was re-applied on top.
-- 2026-09-21T20:45:00Z EVIDENCE: rung 5 (looks right) — axe-core WCAG 2 A/AA + 2.1 + 2.2 AA over 20 states (5 tabs, 5 secondary screens, 3 sheets, 4 dark, desktop, Lime B) = 0 violations; 12 Chromium screenshot states = 0 console + 0 page errors.
-- 2026-09-21T20:45:00Z REPAIR: mockup 1's palette carried eleven AA failures the old mockup 4 did not — four pill inks, the quiet caption on two surfaces, the weekday header, the row chevron, the out-of-range day opacity, dark ink3, and black UA text on button-as-surface. Every replacement computed as a luminance ratio, not eyeballed (e.g. 3.84 -> 6.10, 2.84 -> 5.87, 1.17 -> inherit).
-- 2026-09-21T20:45:00Z LEARNING(how): a <button> used as a SURFACE (button.panel / button.card) never inherits the app's ink — the .row reset only covers .row, so it keeps the UA's black and disappears on a dark surface at 1.17:1. It is invisible to a light-mode-only audit; only axe run in dark finds it.
-- 2026-09-21T20:45:00Z LEARNING(how): a coloured pill ink tuned for a white card fails on its own 14-26% wash. Measure each pill ink against the wash it actually sits on, and give light mode its own value while dark falls back to the token.
-- 2026-09-21T20:45:00Z NEXT: owner reviews the reworked "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" (+ rewritten -notes.md); the folder is gitignored (.gitignore:40) so neither file is committed — un-ignoring is his call. Thread F slice 5 still waits on the backdating ruling; deploy ecc3b8d7b..5cc2206f2 still pending.
-- 2026-09-21T20:01:29Z COMPACT: context compacted — read the last NEXT above before continuing
-
-2026-09-21T23:40:00Z REPAIR: mockup-4 reworked against 2026 standards — 13 findings, each an external rule plus a measured number in the file.
-2026-09-21T23:40:00Z EVIDENCE: rung 5 (looks right) — tab bar inside the frame at 320/360/390/414 (was +117..+262px off-screen); axe 0 violations across phone screens, 4 request states, dark, desktop; every visible button >=44px; 19 screenshots, 0 console + 0 page errors.
-2026-09-21T23:40:00Z LEARNING(fact): a flex child with no min-height:0 will not shrink below its content — that alone pushed an absolutely-positioned tab bar out of an overflow:hidden frame at EVERY width, not just the reported one. The user reported "missing on mobile"; measurement found it missing everywhere.
-2026-09-21T23:40:00Z LEARNING(how): for "too much scrolling", measure screen depth before cutting content. Eight of eleven screens already fit one viewport; the real defect was two NESTED horizontal scrollers, which is a different fix from pagination.
-2026-09-21T23:40:00Z DEAD END: axe reports target-size x13 on the desktop preview. It is the mockup's own 0.72 scale transform, not the layout — at real desktop size nothing is under 24px CSS. Not a finding.
-2026-09-21T23:40:00Z NEXT: owner reviews the reworked "Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html" + notes; the folder is gitignored (.gitignore:40) so neither file is committed — un-ignoring is his call.
-- 2026-09-21T20:44:24Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T21:15:48Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T21:44:34Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: mockup 4 defect-family audit closed. 7 families found by measurement,
-  all fixed: A contrast through glass (61 -> 0), B inert ellipsis on
-  display:inline (7 -> 0), C home depth (1.59 -> 1.36 viewports), D sheet detent
-  (226px top-edge swing -> 0), F tap targets (3 -> 0), G ragged column edge
-  (259/338px -> clean), G2 ragged inner edge (12px pill spread -> clean),
-  H text resting under floating chrome (12 -> 0).
-EVIDENCE: rung 2. a2 NO LOW-CONTRAST TEXT over 1754 verified boxes, both themes,
-  29 states, self-test 13.80:1. a3 no clipped text; sheet top=399 h=444 on all
-  30 days. a5 ANIMATES 19 frames 482->0. a7 under 44px: none, clean at 8 widths
-  320-1440. a8 COLUMN EDGE CLEAN + INNER EDGE CLEAN. a9 NO TEXT RESTS UNDER
-  CHROME. Visual read of 10 screenshots, light and dark.
-EVIDENCE: 6 probe defects found and fixed while closing the families, each
-  recorded in .claude/plans/family-mockup4.md because each would have hidden a
-  real defect later. The worst: offsetParent reports a collapsed <details> as
-  visible, so three probes were measuring text nobody can see.
-DEAD END: axe-core cannot answer contrast through backdrop-filter — it returns
-  INCOMPLETE, never a violation. The earlier "0 violations" verdict was the tool
-  declining to answer. Real-pixel sampling replaced it; notes file corrected.
-NEXT: owner's word on two things before Phase 2 starts — (1) un-ignore
-  "Nadi PWA UI UX 2.0" (.gitignore:40) so the mockup repairs can be committed,
-  or leave it uncommitted; (2) confirm Mockup 4 is signed off as the visual
-  contract, which is the gate he set for the full PWA 2.0 frontend build.
-- 2026-09-21T22:12:27Z COMMIT: 3fe415b8e docs(glass): what the mockup-4 audit found, and why the last one missed it → review dispatched
-- 2026-09-21T22:12:56Z COMMIT: a0412dbb1 docs(glass): point the handoff at the audit commit → review dispatched
 
 CORRECTION: the REPAIR line above paraphrased three numbers from
   family-mockup4.md instead of copying them, and the paraphrase drifted. Caught
@@ -316,3 +201,5 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
   not correct (spec 6)" note? Phase 2 section 2 cannot start without #3. 25
   commits unpushed on nz-glass; no push authorisation given.
+- 2026-09-21T23:11:29Z COMMIT: 7948be9ab chore(plans): record the four copied tokens and the reviewer budget → review dispatched
+- 2026-09-21T23:11:52Z COMMIT: f6d148172 docs(glass): the handoff named a file set from before this session's work → review dispatched
