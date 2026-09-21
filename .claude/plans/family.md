@@ -1,8 +1,7 @@
-# Family — fix(attendance): the re-stamp preview is company-fenced (21 Sep 2026)
-CLASS: frappe.only_for(<HR roles>) taken as sufficient on an endpoint that reads one employee — role membership is not the company fence in this multi-company hub
-Changed symbol: restamp.preview (+ _ensure_company_visible).
-hrms/api/roster.py:_ensure_can_roster not-affected — the reference pattern, already fenced
-hrms/api/attendance_fix_day.py:_require_employee not-affected — company_scope.company_visible applied there already
-hrms/api/attendance_master_edit.py not-affected — fenced via its own read seam
-hrms/utils/restamp.py:restamp (the job) not-affected — runs as the RQ worker from a Shift Assignment hook, not from a user session
-Class sweep: grep -n "only_for(" hrms/api hrms/utils → every other hit either resolves the employee through a fenced seam or reads no employee (checked: roster, fix_day, master_edit, checkin_import.remark_attendance preview — reads by employee_days: NOTE fence not applied there either; it is System Manager/HR Manager only and dry-run → ticket).
+# Family — fix(checkin): a second IN within ten minutes is a duplicate tap, not a check-out (21 Sep 2026)
+CLASS: the tap-time session rule coerced ANY IN inside an open session into an OUT; only the 45-second burst window protected against a repeat — a 60-second double tap became a one-minute session
+Changed symbols: remote_checkin.resolve_punch_type, is_burst_tap (log_type-aware), DUPLICATE_TAP_WINDOW (new, 10 min = attendance_recovery.DUPLICATE_TAP_MINUTES).
+hrms/api/remote_checkin.py:punch same-root — the one caller of both; passes the requested type
+hrms/utils/attendance_recovery.py:DUPLICATE_TAP_MINUTES not-affected — the recovery's own 10-minute detector; now the same width at tap time (ticket: one constant, day_rules)
+BURST_WINDOW (45 s) kept — a different kind (any-type stutter, e.g. IN/OUT/IN); folding it into 10 min would swallow a real second OUT (pairing table row 6)
+Frontend CheckInPanel.vue not-affected — sends the requested type as before; the replay id covers the lost-answer retry

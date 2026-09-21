@@ -98,8 +98,9 @@ class _FakeDoc(SimpleNamespace):
 class _Site:
 	"""An in-memory Employee Checkin table behind the `frappe` name punch uses.
 
-	The clock advances two minutes per punch — the audit's exact shape — so a
-	second tap is a coercion candidate, never a burst.
+	The clock advances two minutes per punch — the audit's exact shape — past
+	the 45 s burst; since the 21 Sep duplicate rule a second IN there is a
+	duplicate tap (stored, noise), no longer the session's OUT.
 	"""
 
 	def __enter__(self):
@@ -160,14 +161,18 @@ class ReplayedTapCase(unittest.TestCase):
 		self.assertEqual(again.log_type, "IN", "the replay answers the stored row, not a coerced OUT")
 		self.assertEqual(again.time, first.time)
 
-	def test_a_different_id_is_a_new_tap_and_is_coerced_as_today(self):
+	def test_a_different_id_is_a_new_tap_and_is_a_duplicate_as_today(self):
+		"""A second IN two minutes into an open session is a new ROW (its own id)
+		but the same TAP: stored as the IN it asked for and stamped noise, never
+		the session's OUT (owner's rule, 21 Sep 2026; DUPLICATE_TAP_WINDOW)."""
 		with _Site() as site:
 			remote_checkin.punch(EMPLOYEE, "IN", latitude=3.1, longitude=101.6, client_tap_id="tap-1")
 			second = remote_checkin.punch(
 				EMPLOYEE, "IN", latitude=3.1, longitude=101.6, client_tap_id="tap-2"
 			)
 		self.assertEqual(len(site.rows), 2)
-		self.assertEqual(second.log_type, "OUT", "a genuinely new IN inside an open session is still the OUT")
+		self.assertEqual(second.log_type, "IN", "a duplicate IN is not coerced into the OUT")
+		self.assertEqual((site.rows[1].skip_auto_attendance, site.rows[1].skipped_as_noise), (1, 1))
 
 	def test_the_id_is_stored_on_the_row(self):
 		with _Site() as site:

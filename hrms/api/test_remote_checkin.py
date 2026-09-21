@@ -494,11 +494,13 @@ class TestPunchHonoursTheResolvedType(unittest.TestCase):
 	"""The rule is wired into punch(), not merely available beside it."""
 
 	def test_an_in_while_a_session_is_open_is_recorded_as_the_check_out(self):
+		# 08:15 → the harness clock is 09:00: past DUPLICATE_TAP_WINDOW, so this
+		# is a departure, not a repeat of the open IN
 		open_in = frappe._dict(
 			{
 				"name": "EMP-CKIN-OPEN",
 				"log_type": "IN",
-				"time": datetime.datetime(2026, 8, 24, 8, 51),
+				"time": datetime.datetime(2026, 8, 24, 8, 15),
 				"is_abandoned": 0,
 				"remote_approval_status": None,
 			}
@@ -546,7 +548,7 @@ class TestPunchHonoursTheResolvedType(unittest.TestCase):
 			{
 				"name": "EMP-CKIN-OPEN",
 				"log_type": "IN",
-				"time": datetime.datetime(2026, 8, 24, 8, 51),
+				"time": datetime.datetime(2026, 8, 24, 8, 15),
 				"is_abandoned": 0,
 				"remote_approval_status": None,
 			}
@@ -827,11 +829,16 @@ class TestPunchTypeIsNotTakenOnTrust(unittest.TestCase):
 		self.assertEqual(resolved, "OUT")
 		self.assertEqual(closing.name, "CK-IN-0851")
 
-	def test_a_duplicate_in_minutes_later_is_the_check_out_too(self):
-		"""7 Sep: IN 09:08 then IN 09:18. The second one must not open a session."""
+	def test_a_duplicate_in_minutes_later_is_the_same_tap(self):
+		"""7 Sep: IN 09:08 then IN 09:18. The second one must not open a session —
+		and (21 Sep ruling) it is not the check-out either: inside
+		DUPLICATE_TAP_WINDOW it stays an IN and `is_burst_tap` stamps it noise."""
 		rows = [self.row("IN", self.at(9, 8))]
-		resolved, _ = self.mod.resolve_punch_type(rows, "IN", self.at(9, 18))
-		self.assertEqual(resolved, "OUT")
+		resolved, closing = self.mod.resolve_punch_type(rows, "IN", self.at(9, 18))
+		self.assertEqual((resolved, closing), ("IN", None))
+		self.assertTrue(self.mod.is_burst_tap(rows[0], self.at(9, 18), "IN"))
+		# a minute past the window it is the departure again
+		self.assertEqual(self.mod.resolve_punch_type(rows, "IN", self.at(9, 19))[0], "OUT")
 
 	def test_the_first_in_of_the_day_opens_a_session(self):
 		resolved, closing = self.mod.resolve_punch_type([], "IN", self.at(8, 51))

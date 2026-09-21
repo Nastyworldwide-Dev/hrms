@@ -48,10 +48,18 @@ logger = logging.getLogger(__name__)
 #: than the 60-second SAME_PUNCH_WINDOW this app once had and removed: that one
 #: REFUSED the punch, and so refused real ones too.
 BURST_WINDOW = timedelta(seconds=45)
+#: A second IN this soon after an open IN is the SAME tap, not its check-out
+#: (owner's rule, 21 Sep 2026: "a same-type tap within minutes is a duplicate,
+#: not a session"). The one number `attendance_recovery.DUPLICATE_TAP_MINUTES`
+#: uses to read a stored day; here it decides at tap time. Wider than
+#: BURST_WINDOW and narrower in kind: the burst is any stutter, this is only
+#: an IN repeating an open IN — OUT after OUT two minutes apart is still two
+#: stored punches (Every Valid pays to the first).
+DUPLICATE_TAP_WINDOW = timedelta(minutes=10)
 #: Written on the skipped row in the form the Attendance Day Audit reads, so a
 #: burst tap that was really a short session appears on HR's list with an
 #: "unskip" beside it instead of sitting in a comment nobody opens.
-BURST_SKIP_REASON = "Tapped again within seconds of the punch before it"
+BURST_SKIP_REASON = "Tapped again too soon after the punch before it"
 
 
 def s3_key_from_public_url(url) -> str | None:
@@ -106,13 +114,17 @@ def _attach_selfie_to_punch(file_name, punch) -> None:
 	logger.info("[remote_checkin] selfie %s attached to punch %s", file_name, punch)
 
 
-def is_burst_tap(previous, punch_time) -> bool:
-	"""Is this punch part of the burst the one before it started? Pure.
+def is_burst_tap(previous, punch_time, log_type=None) -> bool:
+	"""Is this punch a repeat of the one before it? Pure.
 
 	`previous` is the newest punch this employee already has, as a row with
-	`time` (and optionally `synced_from_instance` / `remote_approval_status`),
-	or None. A mirrored row is not a finger on this phone, and a rejected punch
-	is not a tap this one continues.
+	`time` and `log_type` (and optionally `synced_from_instance` /
+	`remote_approval_status`), or None. A mirrored row is not a finger on this
+	phone, and a rejected punch is not a tap this one continues.
+
+	Two shapes are one tap: any stutter inside BURST_WINDOW, and an IN within
+	DUPLICATE_TAP_WINDOW of the IN before it. `log_type` is what the phone
+	asked for; left out, the tap is read as a repeat of the previous one's type.
 	"""
 	if not previous or previous.get("synced_from_instance"):
 		return False
@@ -122,7 +134,12 @@ def is_burst_tap(previous, punch_time) -> bool:
 	if not earlier:
 		return False
 	gap = get_datetime(punch_time) - earlier
-	return timedelta(0) <= gap < BURST_WINDOW
+	if gap < timedelta(0):
+		return False
+	if gap < BURST_WINDOW:
+		return True
+	same_in = previous.get("log_type") == "IN" and (log_type or "IN") == "IN"
+	return same_in and gap <= DUPLICATE_TAP_WINDOW
 
 
 #: A forgotten check-out this long after the IN's shift actually ended (buffer
@@ -527,6 +544,14 @@ def resolve_punch_type(recent_rows, requested: str, now):
 			return requested, None
 	if not _session_is_live(get_datetime(open_in.time), now):
 		return "IN", None
+	# A second IN minutes after the open one is the same tap, not a one-minute
+	# session: stored as asked and stamped noise by `is_burst_tap`, so the day
+	# reads straight across it (owner's rule, 21 Sep 2026).
+	if now - get_datetime(open_in.time) <= DUPLICATE_TAP_WINDOW:
+		logger.info(
+			"[remote_checkin] IN repeats %s within %s — a duplicate tap", open_in.name, DUPLICATE_TAP_WINDOW
+		)
+		return "IN", None
 
 	logger.warning(
 		"[remote_checkin] IN requested while %s is still open — recording a check-out instead",
@@ -759,16 +784,19 @@ def punch(
 		# punch also refused real ones — but it does not count toward the day, so a
 		# stutter can never write a twelve-second session. HR brings it back from
 		# Fix Day in one click if it was real.
-		burst = is_burst_tap(recent[-1] if recent else None, punch_time)
+		burst = is_burst_tap(recent[-1] if recent else None, punch_time, requested_type)
+		burst_gap_s = 0
 		if burst:
 			doc.skip_auto_attendance = 1
-			# Noise by definition — a stutter on the same tap. The day is read
-			# straight across it (shift_type.splits_the_day).
+			# Noise by definition — a stutter on the same tap, or an IN repeating
+			# the open IN minutes later. The day is read straight across it
+			# (shift_type.splits_the_day).
 			doc.skipped_as_noise = 1
+			burst_gap_s = int((get_datetime(punch_time) - get_datetime(recent[-1].time)).total_seconds())
 			logger.warning(
-				"[remote_checkin] %s tapped again within %ss — stored, not counted",
+				"[remote_checkin] %s tapped again %ss after the punch before — stored, not counted",
 				employee,
-				int(BURST_WINDOW.total_seconds()),
+				burst_gap_s,
 			)
 
 		doc.flags.ignore_permissions = True
@@ -800,7 +828,7 @@ def punch(
 			doc.add_comment(
 				"Comment",
 				_("{0}: {1} ({2}s). Restore it from Fix Day if it was a real punch.").format(
-					SKIP_PREFIX, BURST_SKIP_REASON, int(BURST_WINDOW.total_seconds())
+					SKIP_PREFIX, BURST_SKIP_REASON, burst_gap_s
 				),
 			)
 
