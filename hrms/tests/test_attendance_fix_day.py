@@ -126,6 +126,10 @@ class FakeDB:
 	def get_value(self, doctype, name, fields=None, as_dict=False, for_update=False, **kwargs):
 		if doctype == "Employee":
 			row = {"name": name, "employee_name": "Nabil", "company": "NZ", "default_shift": NIGHT}
+		elif doctype == "Shift Type":
+			# `plan_day` asks the roster how this shift pairs. Strict log-type
+			# reading — the default, and what every other test here assumes.
+			row = {"name": name, "determine_check_in_and_check_out": "Strictly based on Log Type"}
 		else:
 			row = self._table(doctype).get(name)
 		if row is None:
@@ -143,7 +147,12 @@ class FixDayCase(unittest.TestCase):
 		self.store = Store()
 		self.running = False
 		self.financial = None
+		# What Fix attendance asks instead (owner ruling, 21 Sep 2026): money
+		# only, and leave only. An approved OT Request answers `financial` but
+		# not `paid` — that difference IS the ruling, so both are seamed.
+		self.paid = None
 		self.request = None
+		self.leave = None
 		self.removed = False
 		stack = ExitStack()
 		self.addCleanup(stack.close)
@@ -160,7 +169,9 @@ class FixDayCase(unittest.TestCase):
 		seam("_lock_employee", lambda employee: None)
 		seam("_shift_running", lambda employee, day: self.running)
 		seam("_financial", lambda employee, day, rows, for_update: self.financial)
+		seam("_paid_day", lambda employee, day, rows, for_update: self.paid)
 		seam("_request_cover", lambda employee, day: self.request)
+		seam("_leave_cover", lambda employee, day: self.leave)
 		seam("_day_attendance", self.day_attendance)
 		seam("_day_taps", self.day_taps)
 		seam("_shift_stamp", self.shift_stamp)
@@ -202,8 +213,8 @@ class FixDayCase(unittest.TestCase):
 			"offshift": 0,
 		}
 
-	def rebuild(self, employee, day, reason):
-		self.store.rebuilt.append((employee, str(getdate(day)), reason))
+	def rebuild(self, employee, day, reason, requests_ok=False):
+		self.store.rebuilt.append((employee, str(getdate(day)), reason, requests_ok))
 		return {"action": "remarked", "marked": 1}
 
 	def write_log(self, fields):
@@ -252,7 +263,7 @@ class TestPairTaps(FixDayCase):
 		self.assertEqual(joined["skip_auto_attendance"], 0)
 		self.assertTrue(answer["ok"])
 		# both days are rebuilt: the tap left one and joined the other
-		self.assertEqual(sorted(day for _, day, _ in self.store.rebuilt), ["2026-09-02", "2026-09-03"])
+		self.assertEqual(sorted(day for _, day, _, _ in self.store.rebuilt), ["2026-09-02", "2026-09-03"])
 
 	def test_the_joined_tap_is_released_from_the_row_it_was_evidence_for(self):
 		"""Found on fresh.local (fix_day_probe): a tap still linked to its old
@@ -312,7 +323,7 @@ class TestMoveTap(FixDayCase):
 		self.assertEqual(self.store.taps["CKIN-A"]["shift"], NIGHT)
 		self.assertEqual(self.store.taps["CKIN-A"]["shift_start"], at(DAY, "19:30"))
 		self.assertTrue(answer["ok"])
-		self.assertEqual(sorted(day for _, day, _ in self.store.rebuilt), ["2026-09-02", "2026-09-03"])
+		self.assertEqual(sorted(day for _, day, _, _ in self.store.rebuilt), ["2026-09-02", "2026-09-03"])
 
 	def test_the_tap_keeps_its_time(self):
 		self.store.tap(
@@ -391,7 +402,7 @@ class TestAddTap(FixDayCase):
 		self.assertEqual(added["time"], at(DAY, "23:45"))
 		self.assertEqual(added["shift"], NIGHT)
 		self.assertTrue(answer["ok"])
-		self.assertEqual([day for _, day, _ in self.store.rebuilt], ["2026-09-02"])
+		self.assertEqual([day for _, day, _, _ in self.store.rebuilt], ["2026-09-02"])
 
 	def test_a_tap_hr_entered_reads_as_hr_entered(self):
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
@@ -514,8 +525,11 @@ class TestProtectedDays(FixDayCase):
 			with self.subTest(action=call.__name__):
 				self.assertIn(expected, self.refusal(call, *args, **kwargs))
 
-	def test_a_paid_day_or_approved_overtime_is_refused(self):
-		self.financial = "OTR-0007"
+	def test_a_paid_day_is_refused(self):
+		"""Money still blocks: a submitted Salary Slip, or submitted Overtime
+		Details on the row. `_paid_day` is what this screen asks — see
+		TestAnApprovedRequestDoesNotBlockTheFix for the half that changed."""
+		self.paid = "SAL-0009"
 		self.every_action_is_refused("already paid or carries approved overtime")
 
 	def test_a_leave_day_is_refused(self):
@@ -525,10 +539,6 @@ class TestProtectedDays(FixDayCase):
 	def test_a_half_day_leave_is_refused(self):
 		self.store.row("ATT-1", DAY, modify_half_day_status=1)
 		self.every_action_is_refused("half-day leave")
-
-	def test_a_day_from_an_attendance_request_is_refused(self):
-		self.store.row("ATT-1", DAY, attendance_request="ATR-0001")
-		self.every_action_is_refused("came from an Attendance Request")
 
 	def test_a_mirrored_row_is_refused_with_the_site_that_owns_it(self):
 		"""The screen already refuses a mirrored TAP ("another site"). The ROW
@@ -542,7 +552,10 @@ class TestProtectedDays(FixDayCase):
 		self.every_action_is_refused("Hand the day back")
 
 	def test_a_live_request_over_the_day_is_refused(self):
-		self.request = "Leave Application LAP-0003"
+		# LEAVE cover: what Fix attendance asks now. An Attendance Request over
+		# the day is no longer a reason (owner ruling, 21 Sep 2026) — see
+		# TestAnApprovedRequestDoesNotBlockTheFix.
+		self.leave = "Leave Application LAP-0003"
 		self.every_action_is_refused("speaks for this day")
 
 	def test_a_running_shift_is_refused(self):
@@ -583,7 +596,7 @@ class TestTheTrailAndTheUndo(FixDayCase):
 		self.assertEqual(entry["refs"], "CKIN-A")
 		# the log is shared with the automatic backfills; this screen signs its own
 		self.assertEqual(entry["source"], "hr_fix_day")
-		self.assertEqual([day for _, day, _ in self.store.rebuilt], ["2026-09-02"])
+		self.assertEqual([day for _, day, _, _ in self.store.rebuilt], ["2026-09-02"])
 
 	def test_the_log_carries_the_day_before_and_after_with_hours_and_overtime(self):
 		answer = fd.ignore_tap("CKIN-A", reason="x")
@@ -645,6 +658,73 @@ class TestTheTrailAndTheUndo(FixDayCase):
 		self.assertEqual(self.store.logs[answer["log"]]["undone"], 1)
 
 
+class TestAnApprovedRequestDoesNotBlockTheFix(FixDayCase):
+	"""Owner ruling, 21 Sep 2026, and spec guards G7/G12: an approved request is
+	a request, not money. It keeps its approval while the day is rebuilt from
+	the punches; only what is PAID answers.
+
+	Reported 21 Sep 2026 with the dialog open on Norazmi's 1 September: two
+	ticked punches, Save & rebuild refused with "This day is already paid or
+	carries approved overtime (HR-OTR-26-09-00034)". Nothing had been paid.
+	`day_block_reason` takes `requests_ok` and `_day_block` threads it — but no
+	Fix attendance entry point ever passed it, so every day carrying an approved
+	OT Request or Attendance Request was a dead end for HR. The bulk API
+	(attendance_fix_days) had been passing it since the ruling; this screen had
+	not, which is why the two disagreed on the same day.
+
+	Driven through the API, not read out of the source: a text search for
+	`requests_ok=True` would pass while the value never reached the guard.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self.store.tap("CKIN-A", at(DAY, "08:04"))
+		self.store.tap("CKIN-B", at(DAY, "20:04"), "OUT")
+		# The reported shape: an approved OT Request speaks for the day, and the
+		# engine's own `_financial` therefore names it. Nothing is paid.
+		self.financial = "HR-OTR-26-09-00034"
+
+	def test_the_screen_offers_the_day(self):
+		self.assertIsNone(fd.get_day(EMP, str(DAY))["blocked"])
+
+	def test_the_plan_offers_the_day(self):
+		self.assertIsNone(fd.plan_day(EMP, str(DAY))["blocked"])
+
+	def test_every_action_is_allowed(self):
+		for call, args, kwargs in (
+			(fd.pair_taps, ("CKIN-A", "CKIN-B"), {}),
+			(fd.ignore_tap, ("CKIN-A",), {"reason": "x"}),
+			(fd.add_tap, (EMP, str(at(DAY, "22:00")), "OUT"), {"reason": "x"}),
+		):
+			with self.subTest(action=call.__name__):
+				self.assertTrue(call(*args, **kwargs)["ok"])
+
+	def test_a_row_from_an_attendance_request_is_rebuilt_too(self):
+		"""G7's sibling: the ROW an approved Attendance Request made is rebuilt
+		from the punches like any other, and the request keeps its approval."""
+		self.store.row("ATT-1", DAY, attendance_request="ATR-0001")
+		self.assertIsNone(fd.get_day(EMP, str(DAY))["blocked"])
+		self.assertTrue(fd.ignore_tap("CKIN-A", reason="x")["ok"])
+
+	def test_the_rebuild_lifts_the_engines_hold_as_well(self):
+		"""Lifting the screen's guard and leaving the engine's would refuse the
+		day one layer down, which HR can only read as "nothing changed"."""
+		fd.pair_taps("CKIN-A", "CKIN-B")
+		self.assertEqual([call[-1] for call in self.store.rebuilt], [True])
+
+	def test_money_still_blocks(self):
+		"""The half of the ruling that did NOT move: a submitted Salary Slip or
+		submitted Overtime Details on the row is not waived by any of this."""
+		self.paid = "SAL-0009"
+		self.assertIn("already paid", fd.get_day(EMP, str(DAY))["blocked"])
+		self.assertIn("already paid", self.refusal(fd.ignore_tap, "CKIN-A", reason="x"))
+
+	def test_leave_still_blocks(self):
+		"""A live Leave Application still speaks for the day; only requests are waived."""
+		self.leave = "Leave Application LAP-0003"
+		self.assertIn("speaks for this day", fd.get_day(EMP, str(DAY))["blocked"])
+
+
 class TestTheScreen(FixDayCase):
 	def test_it_shows_every_tap_with_its_state_and_the_day_as_it_stands(self):
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
@@ -664,7 +744,7 @@ class TestTheScreen(FixDayCase):
 
 	def test_it_names_the_reason_when_the_day_may_not_be_touched(self):
 		self.store.tap("CKIN-A", at(DAY, "19:30"))
-		self.financial = "SAL-0009"
+		self.paid = "SAL-0009"
 		self.assertIn("already paid", fd.get_day(EMP, str(DAY))["blocked"])
 
 	def test_it_says_nothing_about_the_owner_when_the_classifier_cannot_be_read(self):
@@ -736,7 +816,9 @@ class TestFixDayNeverSaysOkWhenItLostTheWork(FixDayCase):
 		self.verdict = {"action": "remarked", "marked": 1}
 		stack = ExitStack()
 		self.addCleanup(stack.close)
-		stack.enter_context(patch.object(fd, "_rebuild", lambda employee, day, reason: self.verdict))
+		stack.enter_context(
+			patch.object(fd, "_rebuild", lambda employee, day, reason, requests_ok=False: self.verdict)
+		)
 
 	def refused_with(self, verdict):
 		self.verdict = verdict

@@ -25,10 +25,13 @@ What holds the line:
   from) keeps its time and its log type for ever. Only its shift stamp and its
   skip tick may change, and `_write_tap` is the only writer, so no action can
   route around that (`counted_tap_change_reason`).
-* A day that is paid, carries approved overtime, is a leave or half-day leave,
-  came from an Attendance Request, or was removed by HR is refused with a plain
-  sentence naming the reason — HR cancels that first (`day_block_reason`).
-  A future day and a shift still running are refused the same way.
+* A day that is PAID, is a leave or half-day leave, or was removed by HR is
+  refused with a plain sentence naming the reason — HR cancels that first
+  (`day_block_reason`). A future day and a shift still running are refused the
+  same way. An approved REQUEST is not a reason (owner ruling, 21 Sep 2026,
+  spec G7/G12): an approved OT Request or Attendance Request keeps its approval
+  while the day is rebuilt from the punches, so every entry point here passes
+  `requests_ok=True` and only money answers.
 * Every action leaves a Comment on each tap it touched (who, what, why), an
   HR Day Fix Log entry carrying the day before and after, and an IMMEDIATE
   re-mark through `hrms.utils.day_remark.remark_day` — the same engine the
@@ -1000,7 +1003,9 @@ def plan_day(employee: str, date: str) -> dict:
 	rows = _rows_with_punch_counts(emp.name, day)
 	taps = _day_taps(emp.name, day)
 	plan = day_plan(taps, rows, pairing=_day_pairing(taps))
-	plan["blocked"] = _day_block(emp.name, day, rows, for_update=False, duplicate_rows_ok=True)
+	plan["blocked"] = _day_block(
+		emp.name, day, rows, for_update=False, duplicate_rows_ok=True, requests_ok=True
+	)
 	return plan
 
 
@@ -1462,8 +1467,10 @@ def _screen(emp, day) -> dict:
 		# `blocked` hides every control, so the two-row rule is NOT part of it:
 		# the way out of a two-row day is a button on this screen. It comes back
 		# as a notice instead — shown above the actions, blocking none of them.
-		"blocked": _day_block(emp.name, day, rows, for_update=False, duplicate_rows_ok=True),
-		"notice": _day_block(emp.name, day, rows, for_update=False),
+		"blocked": _day_block(
+			emp.name, day, rows, for_update=False, duplicate_rows_ok=True, requests_ok=True
+		),
+		"notice": _day_block(emp.name, day, rows, for_update=False, requests_ok=True),
 	}
 
 
@@ -1483,7 +1490,7 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, 
 			name,
 			_("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason or _("not given")),
 		)
-	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}") for day in days}
+	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}", requests_ok=True) for day in days}
 	lost = {day: verdict for day, verdict in rebuild.items() if verdict.get("action") in NOT_APPLIED}
 	if lost:
 		# The engine did not apply HR's fix: the shift is still running, or the
@@ -1553,6 +1560,7 @@ def _lock_and_guard(employee, days, duplicate_rows_ok=False, leaving_days=()) ->
 			for_update=True,
 			duplicate_rows_ok=duplicate_rows_ok,
 			leaving=getdate(day) in leaving_days,
+			requests_ok=True,
 		)
 		if blocked:
 			logger.info("[attendance_fix_day] %s on %s refused: %s", employee, day, blocked)

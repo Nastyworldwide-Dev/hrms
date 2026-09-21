@@ -1,40 +1,35 @@
-# Family — fix(approval): a superior named as approver can open and decide an On Duty request (21 Sep 2026)
+# Family — fix(fix-day): an approved request no longer blocks Save & rebuild (21 Sep 2026)
 
-CLASS: for the three request doctypes that carry NO approver field of their own (Attendance
-Request, OT Request, Replacement Leave Claim), every fence equated "superior" with `reports_to`
-alone, and their `employee` link was left fenced by User Permissions. A superior who is instead
-the employee's named `leave_approver`, or a Department Approver, was refused READ before any
-decision gate ran — so the PWA rendered no Approve button, the Team queue was empty, the
-notification went to Administrator, and `decide()` threw PermissionError. Reported as "Superior
-cannot approve on duty application ... still persist" — the two earlier fixes (d4494a658,
-bdbfd5005) were validation-layer, which is why it survived them.
+CLASS: spec-gap. `day_block_reason` takes `requests_ok`, `_day_block` and `_rebuild` thread it,
+and `_paid_day` / `_leave_cover` exist to answer under it — the whole 21 Sep owner ruling ("an
+approved request is a request, not money") was plumbed. But NO Fix attendance entry point ever
+passed it, so the value never reached the guard and every day carrying an approved OT Request or
+Attendance Request was a dead end for HR. The bulk API (attendance_fix_days) passed it from the
+start, so the two screens disagreed on the same day.
 
-Bench evidence (probe_on_duty_approve4.py, test.local): before — A reports_to True/Approved,
-B named approver read False routed False actions [] PermissionError, C department approver same.
-After — all three read True, routed True, actions ['Approved','Rejected'], DECIDE Approved.
+Reported 21 Sep 2026 with the dialog open on Norazmi's 1 September: two ticked punches,
+Save & rebuild refused with "This day is already paid or carries approved overtime
+(HR-OTR-26-09-00034)". Nothing had been paid. Spec guard G12 ("approved OT with higher hours
+than the rebuilt day -> row rebuilt, claim kept, warning") had no test — which is how the gap
+survived.
 
-hrms/hr/utils.py get_employees_routed_to same-root — new inverse of get_designated_approvers; the one list all four fences now read
-hrms/overrides/employee_owned_row_scope.py same-root — TEAM_REVIEWED read admission widened from reports_to to every routed superior, still READ only
-hrms/overrides/ot_row_scope.py same-root — same class on OT Request + Replacement Leave Claim; _reporting_employees replaced (it is a subset). has_permission was ptype-BLIND, so the widening first handed a department approver write/submit/cancel on another employee's draft (adversarial verifier, 21 Sep); now gated on ptype == "read" like the sibling fence, red proved on the un-gated version
-hrms/api/approval.py _is_routed_approver same-root — DESIGNATED_APPROVER_DOCTYPES; the gate that threw PermissionError
-hrms/mixins/pwa_notifications.py _get_ot_approver same-root — the approver was never told; now walks get_designated_approvers before HR fallback
-hrms/hr/doctype/{attendance_request,ot_request,replacement_leave_claim}.json same-root — employee link gains ignore_user_permissions, as Leave Application/Expense Claim/Shift Request always had
-hrms/patches/v16_0/approver_reads_past_employee_user_permissions.py same-root — the JSON alone is shadowed on a live site by a Property Setter; the patch writes the DocField and strips the override
-hrms/utils/decision_field_guard.py not-affected — delegates to _decision_access, so it widens with the fix by design; test_decision_field_guard green
-hrms/api/__init__.py get_filters not-affected — line 968 already excludes these three from approver-field filtering; the Team queue rides on the row scope, which is what was fixed
-hrms/api/__init__.py _may_read_employee not-affected — already admitted designated approvers (test_employee_read_fence_admits_approvers); this fix brings the request fences up to it
-hrms/overrides/approval_row_scope.py not-affected — Leave Application / Expense Claim / Shift Request name their approver ON THE DOC, so the named approver already matched; different shape, no gap
-hrms/hr/utils.py get_direct_report_employees not-affected — still the one definition of "my team"; get_employees_routed_to consumes it rather than duplicating it
-hrms/mixins/pwa_notifications.py _ot_approver_can_receive not-affected — calls _is_routed_approver, so it widens with the fix; that is the intended coupling
-frontend/src/utils/cancelRule.js not-affected — defers to hrms.api.approval.can_cancel_approved; no second copy of the routing rule in the PWA
-frontend/src/utils/team.js not-affected — the Team ROSTER is a reports_to view by design (who works for whom), a different question from who may approve
-hrms/tests/test_ot_row_scope.py same-root — its AST guard pinned the DELETED _reporting_employees; repointed to get_employees_routed_to (same invariant: no local employee query) and given the ptype-gate assertion, red proved on the un-gated version
-hrms/api/test_approval.py same-root — a SECOND copy of the same single-field Employee stub, caught by the pre-commit blast-radius run; taught the as_dict list shape like the other three
-hrms/tests/{test_hr_own_request_create,test_restore_staff_create_on_pwa_requests,test_approved_request_guard}.py same-root — stubs pinned the replaced collaborator / a single-field Employee read; repointed, no production behaviour changed
+hrms/api/attendance_fix_day.py plan_day:1003 same-root — passes requests_ok=True
+hrms/api/attendance_fix_day.py _screen:1467,1470 same-root — both `blocked` and `notice`
+hrms/api/attendance_fix_day.py _lock_and_guard:1553 same-root — the write-path guard, the one the reported refusal came through
+hrms/api/attendance_fix_day.py _finish -> _rebuild:1490 same-root — lifting the screen's guard and leaving the engine's would refuse the day one layer down, which HR reads as "nothing changed"
+hrms/api/attendance_fix_day.py module docstring same-root — it still advertised "carries approved overtime" as a refusal
+hrms/api/attendance_fix_days.py:153,274 not-affected — already passed requests_ok=True since the ruling; this commit brings the single-day screen up to it
+hrms/api/attendance_fix_day.py day_block_reason:326 not-affected — pure, already correct under the flag; nothing changed here
+hrms/api/attendance_fix_day.py _day_block:1566 not-affected — the router was already right; only its callers were wrong
+hrms/api/attendance_fix_day.py _paid_day / _leave_cover not-affected — written for this ruling, now finally reached
+hrms/utils/day_remark.py remark_day not-affected — already takes requests_ok; _rebuild forwards it
+hrms/utils/attendance_recovery.py guarded_rebuild not-affected — the nightly/hourly path asks its own protected_reason and is not HR pressing a button
+hrms/sync/erp_backfill.py _guarded_rebuild not-affected — machine path, same reasoning
+hrms/public/js/fix_day.bundle.js not-affected — renders whatever `blocked` says; no copy of the rule in the dialog
 
-LOCK: hrms/tests/test_a_named_approver_can_decide_an_on_duty_request.py — the regression (the
-reported Attendance Request instance) plus the invariant for the class: OT Request and
-Replacement Leave Claim must admit and route the same superior, a stranger must still be
-refused, and the admission must stay READ-only — asserted on ALL THREE doctypes,
-not just Attendance Request, which is the assertion whose absence let the OT/RLC fence
-drift ptype-blind in the first place.
+LOCK: hrms/tests/test_attendance_fix_day.py::TestAnApprovedRequestDoesNotBlockTheFix — the
+regression (the reported shape: two punches, an approved OT Request, nothing paid) plus the
+invariant for the class, driven through the API rather than read out of the source: the screen
+and the plan both offer the day, every action is allowed, the ROW an Attendance Request made is
+rebuilt too, the engine's own hold is lifted in the same press — and the two halves that did NOT
+move still block: a submitted Salary Slip, and a live Leave Application.
