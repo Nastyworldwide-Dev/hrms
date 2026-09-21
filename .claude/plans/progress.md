@@ -259,3 +259,33 @@ LEARNING(gate): family-hunt sweeps production call sites of the CHANGED symbols 
   test_*.py as well, and a bench-only test (FrappeTestCase) naming a changed
   function needs a verdict line like any other call site.
 NEXT: push 0a0d0402c + the bench-test amendment, refresh docs/glass/HANDOFF.md.
+- 2026-09-21T18:29:59Z COMMIT: 353ceb7d6 test(remote-checkin): the department tier is pinned as absent, not as winning → review+cross-app dispatched
+- 2026-09-21T18:30:58Z PUSH: nz-glass @ 353ceb7d6
+- 2026-09-21T18:31:16Z PUSH: nz-glass @ 1c36eeebc
+- 2026-09-21T18:31:16Z COMMIT: 1c36eeebc docs(glass): handoff for the remote check-in routing fix → review dispatched
+- 2026-09-21T18:43:17Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T18:54:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-21T18:54:27Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-21T18:54:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-21T18:54:34Z COMMIT: 1c36eeebc docs(glass): handoff for the remote check-in routing fix → review dispatched
+- 2026-09-21T18:54:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-21T18:55:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-21T18:55:09Z COMMIT: ecc3b8d7b fix(pwa): one waiting word, and a rejected remote punch looks rejected → review+design dispatched
+
+REPAIR: 21 Sep — one waiting word on screen; Remote Approvals joins the shared
+  status rule; Employee Issue states get colour. Commit ecc3b8d7b.
+EVIDENCE: 2 correct — frontend/src/utils/__tests__/requestStatus.test.js, 5 RED
+  on HEAD before the change, 9 green after.
+EVIDENCE: 3 works — 143 frontend tests green (utils + components), prettier
+  clean on the three changed files.
+LEARNING(fact): slice 4 of the Thread F plan (track_changes on Leave
+  Application and Expense Claim, plus the guarded Property Setter patch) was
+  already shipped this morning in f04526cea with test_who_approved_when.py. The
+  audit that surfaced it (H-request-dates-backend.md H1) predates that commit.
+NEXT: slices 5 and 6 of the request-status unification wait on the owner — the
+  RequestPolicy table needs his ruling on backdating windows for Shift Request,
+  Expense Claim, Attendance Request and Compensatory Leave (today: none at all),
+  and the clock unification is its own change. Deploy ecc3b8d7b first.
+NEXT: also open — .claude/plans/ticket-waiting-word-in-filters.md (the two list
+  filters still offer the stored word; needs FormField Select to take
+  {label, value} pairs first).
