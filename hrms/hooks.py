@@ -121,6 +121,11 @@ after_migrate = [
 	# "Restore Original Permissions" drops it for good; re-asserted every
 	# migrate, writes nothing when present. See hrms/utils/holiday_access.py.
 	"hrms.utils.holiday_access.after_migrate",
+	# The schema sync drops a non-unique index led by a field without
+	# search_index whenever a doctype JSON reloads, so the attendance hot-filter
+	# indexes (audit D-H3/M11) are re-asserted after every sync; add_index checks
+	# first and writes nothing when present. See hrms/utils/hot_indexes.py.
+	"hrms.utils.hot_indexes.after_migrate",
 	# Attendance and overtime repairs. A one-shot patch would leave every row it
 	# could not touch that day wrong for ever, and the only remedy on offer was
 	# asking HR to hand-edit records — which is the burden this exists to remove.
