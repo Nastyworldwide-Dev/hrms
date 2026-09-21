@@ -11,6 +11,9 @@
 // renders neutral rather than throwing (Frappe workflow states are open-ended).
 const STATUS_VARIANTS = {
 	draft: "neutral",
+	// The one word every pending request says on screen. Open / Draft /
+	// Pending stay in the DB untouched — see WAITING below.
+	waiting: "attention",
 	open: "attention",
 	pending: "attention",
 	unpaid: "attention",
@@ -28,6 +31,11 @@ const STATUS_VARIANTS = {
 	absent: "danger",
 	"on leave": "progress",
 	"half day": "attention",
+	// Employee Issue — an issue being worked on is in flight, a finished one is
+	// done. Both used to fall through to neutral, so IssueList painted a closed
+	// issue the same grey as an untouched one.
+	"in progress": "progress",
+	completed: "success",
 	// Helpdesk (HD Ticket) statuses — Replied means "waiting on you"
 	replied: "progress",
 	paused: "neutral",
@@ -36,6 +44,14 @@ const STATUS_VARIANTS = {
 }
 
 const DECIDED = ["Approved", "Rejected", "Cancelled"]
+
+// ONE waiting word on screen (owner ruling, 21 Sep 2026). The seven request
+// doctypes store three different pending words — Open, Draft and Pending — and
+// a staff member reading two of their own requests side by side saw two words
+// for one state. The stored word is left alone: it is wired into list filters,
+// Desk views, reports and every existing row, so changing it would be a data
+// migration, not a wording fix. Only the label changes.
+const WAITING = "Waiting"
 
 // Decision field and the doctype's own pending word — mirrors
 // hrms/api/approval.py DECIDE_THEN_SUBMIT. A row is pending until it is
@@ -48,6 +64,10 @@ const REQUEST_TYPES = {
 	"Replacement Leave Claim": { field: "status", pending: "Open" },
 	"Compensatory Leave Request": { field: "status", pending: "Open" },
 	"Shift Request": { field: "status", pending: "Draft" },
+	// Not submittable: it has no docstatus, so its decision field is the whole
+	// truth. Listed here so RemoteApprovals reads the same rule as every other
+	// surface instead of hand-rolling a chip on `status === "Approved"`.
+	"Remote Checkin Request": { field: "status", pending: "Pending" },
 	"Expense Claim": {
 		field: "approval_status",
 		pending: "Draft",
@@ -89,9 +109,13 @@ export function requestStatus(doctype, doc = {}) {
 		if (rule && DECIDED.includes(decision)) {
 			// A-H4: the Desk Save path left a decision that never ran.
 			console.info("[requestStatus] decided draft shown as pending", doctype, doc.name)
-			label = rule.pending
+			label = WAITING
+		} else if (rule) {
+			label = WAITING
 		} else {
-			label = decision || (rule ? rule.pending : "")
+			// An unknown doctype keeps its own state word (a Shift Assignment
+			// is "Active"); we do not know that its draft means "waiting".
+			label = decision || ""
 		}
 	} else if (rule?.submitted) {
 		label = rule.submitted(doc)

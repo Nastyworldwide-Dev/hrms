@@ -1,55 +1,49 @@
-# Remote Check-in Request routes up the employee's own chain
+# Unify request status: one chip, one waiting word, a decision record
 
-APPROVED by the owner, 21 Sep 2026. I described the change in plain words
-("make remote check-in route up the same chain and drop the department tier")
-and the answer was "sure".
+APPROVED by the owner, 21 Sep 2026: "proceed as u suggested, make it faster."
+The suggestion was the six-slice plan in the Thread F audit reply. Slices 1-4
+here; slice 5 (the RequestPolicy table incl. date windows) waits on the owner's
+payroll ruling, slice 6 (clocks) is its own change.
 
-## The defect
-Remote Checkin Request is the one request type the 21 Sep routing ruling never
-reached. It does not call `get_designated_approvers`, so the family hunt (a
-call-site sweep) could not see it. It still carries the two behaviours the
-owner refused:
-
-  1. ONE HOP. `may_decide` -> `_is_routed_approver`, and Remote Checkin Request
-     is in none of approval.py's routing maps, so it falls through to
-     `reports_to` only. The grand-manager — the escalation when the immediate
-     approver forgets — gets PermissionError. This is the reported defect,
-     verbatim, for this doctype.
-  2. DEPARTMENT BLANKET. `resolve_approver` tier 2 reads a
-     `Department Approver` row. Owner ruling 21 Sep: "no, dont".
+## The defect class
+Each surface carries its own private copy of "what state is this request in".
+`frontend/src/utils/requestStatus.js` was made the one rule on 21 Sep, but two
+surfaces never joined it and two states have no colour; and the two doctypes
+the fork inherited keep no record of who decided them.
 
 ## FLOW (after)
-file a remote punch
-  -> resolve_approver stamps approver = chain[0]   (Employee field, else
-     reports_to, else the HR-Manager fallback unchanged)
-  -> notification addressed to that person          (unchanged path)
-  -> anyone on that employee's chain may decide     (NEW: approval.py map)
-  -> and sees it in their pending queue             (NEW: queue widened)
+a request is decided
+  -> every surface reads requestStatus()          (NEW: RemoteApprovals joins)
+  -> a pending row says ONE word, "Waiting"       (NEW: display only)
+  -> Employee Issue states carry colour           (NEW: two variants)
+  -> Leave / Expense write a Version row          (NEW: track_changes)
 
-## MOCKUP: NOT NEEDED (server-side routing only — no screen, wording or field changes)
-Server-side only. No new screen, no changed wording, no new field. The PWA
-renders the same queue rows and the same Approve/Reject sheet it renders today;
-the only difference is WHICH rows reach a senior approver.
+## MOCKUP: NOT NEEDED (chip colour and one display word inside an existing component)
+No new screen and no new field. The same chips render in the same places; a
+pending row's WORD changes from Open/Draft/Pending to Waiting, and the remote
+approvals card swaps a hand-rolled span for the standard GStatusChip.
 
 ## EXPECTED OUTPUT
-  * `resolve_approver(E)` returns the first entry of
-    `get_designated_approvers(E, "shift_request_approver", "shift_request_approver")`,
-    and never a `Department Approver` login.
-  * `may_decide(row, grand_manager)` is True where it is False on HEAD.
-  * `may_decide(row, department_approver)` is False.
-  * `may_decide(row, own_employee)` stays False (self-decision unchanged).
-  * `_pending_for_approver_query` returns the row for the grand-manager as well
-    as the stamped approver, still inside the company fence.
-  * The HR-Manager fallback, the company fence and the self-decision refusal are
-    byte-for-byte unchanged.
+  * `requestStatus(dt, {docstatus: 0}).label === "Waiting"` for all seven types,
+    and `.pending` stays true. Stored values are untouched: no write path,
+    no list filter and no server word changes.
+  * `chipVariant("Waiting") === "attention"`; `"In Progress"` -> progress,
+    `"Completed"` -> success.
+  * `RemoteApprovals.vue` renders `<GStatusChip>`; a Rejected row no longer
+    renders identically to a Pending one.
+  * `Leave Application` and `Expense Claim` JSONs carry `"track_changes": 1`,
+    and a patch clears any Property Setter that shadows it.
 
 ## FILES
-  hrms/overrides/remote_checkin_request_hooks.py   resolve_approver tiers 1-3
-  hrms/api/approval.py                             DESIGNATED_APPROVER_DOCTYPES
-  hrms/api/remote_checkin.py                       _pending_for_approver_query
-  hrms/tests/test_remote_checkin_routes_up_the_chain.py   NEW
+  frontend/src/utils/requestStatus.js                      WAITING + variants
+  frontend/src/utils/__tests__/requestStatus.test.js       pinned
+  frontend/src/views/RemoteApprovals.vue                   GStatusChip
+  hrms/hr/doctype/leave_application/leave_application.json track_changes
+  hrms/hr/doctype/expense_claim/expense_claim.json         track_changes
+  hrms/patches/v16_0/track_decisions_on_leave_and_expense.py  NEW
+  hrms/tests/test_a_decision_leaves_a_record.py            NEW
 
 ## OUT OF SCOPE
-  * hrms/api/team.py's Department Approver tab gate — display only, the queues
-    fence themselves. Ticketed, not fixed here.
-  * Consolidating the two chain walkers (existing ticket).
+  * The RequestPolicy table and the missing date windows (owner ruling).
+  * Clock unification and the notification "4 hours ago" bug.
+  * Stored status words on the live site: never rewritten here.

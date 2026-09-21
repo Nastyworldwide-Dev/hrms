@@ -46,16 +46,21 @@
 									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
 										{{ req.employee_name || req.employee }}
 									</div>
-									<span
-										class="g-eyebrow px-2 py-[3px]"
-										:class="
-											req.status === 'Approved'
-												? 'border border-accent-ink text-accent-700'
-												: 'bg-inkbase text-ground'
-										"
-									>
-										{{ __(req.status) }} · {{ req.log_type }}
-									</span>
+									<div class="flex flex-row items-center gap-2 shrink-0">
+										<!--
+										  The one status rule (utils/requestStatus.js). This card used to
+										  hand-roll its chip on `status === "Approved"`, so a REJECTED punch
+										  rendered exactly like a pending one and an approver could not tell
+										  a refusal from an undecided row.
+										-->
+										<GStatusChip
+											:status="statusOf(req)"
+											:label="__(statusOf(req), null, 'Remote Checkin Request')"
+										/>
+										<span class="g-eyebrow px-2 py-[3px] bg-inkbase text-ground">
+											{{ req.log_type }}
+										</span>
+									</div>
 								</div>
 								<div
 									class="flex flex-row items-center justify-between text-kra-label text-ink-600"
@@ -237,6 +242,8 @@
 
 <script setup>
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
+import { requestStatus } from "@/utils/requestStatus"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { goBackOrHome } from "@/utils/navigation"
@@ -257,6 +264,8 @@ import {
 	rejectResource,
 	pendingCountResource,
 } from "@/data/remoteCheckin"
+
+const statusOf = (req) => requestStatus("Remote Checkin Request", req).label
 
 const __ = inject("$translate")
 const socket = inject("$socket")

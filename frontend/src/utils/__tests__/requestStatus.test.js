@@ -10,8 +10,9 @@ import assert from "node:assert/strict"
 
 import { requestStatus, chipVariant } from "../requestStatus.js"
 
-// (doctype, its decision field, the doctype's own pending word) — the same
-// table as hrms/api/approval.py DECIDE_THEN_SUBMIT.
+// (doctype, its decision field, the doctype's own STORED pending word) — the
+// same table as hrms/api/approval.py DECIDE_THEN_SUBMIT. The stored word is
+// what the DB holds and what a list filter sends; it is NOT what the chip says.
 const TABLE = [
 	["Leave Application", "status", "Open"],
 	["Attendance Request", "status", "Open"],
@@ -20,17 +21,32 @@ const TABLE = [
 	["Compensatory Leave Request", "status", "Open"],
 	["Shift Request", "status", "Draft"],
 	["Expense Claim", "approval_status", "Draft"],
+	["Remote Checkin Request", "status", "Pending"],
 ]
 
-test("a decided draft (Approved, docstatus 0) is still pending and says the doctype's own word", () => {
+// One waiting word on screen. The DB still holds Open / Draft / Pending per
+// doctype (three words for one state, audit A-M4); the employee is shown one.
+const WAITING = "Waiting"
+
+test("a decided draft (Approved, docstatus 0) is still pending and says ONE waiting word", () => {
 	for (const [doctype, field, pendingWord] of TABLE) {
 		const chip = requestStatus(doctype, { [field]: "Approved", docstatus: 0 })
-		assert.equal(chip.label, pendingWord, doctype)
+		assert.equal(chip.label, WAITING, doctype)
 		assert.equal(chip.pending, true, doctype)
-		assert.equal(chip.variant, chipVariant(pendingWord), doctype)
-		// a plain untouched draft says the same word
-		assert.equal(requestStatus(doctype, { [field]: pendingWord, docstatus: 0 }).label, pendingWord)
-		assert.equal(requestStatus(doctype, { docstatus: 0 }).label, pendingWord, `${doctype} empty`)
+		assert.equal(chip.variant, "attention", doctype)
+		// a plain untouched draft says the same word, whatever the DB holds
+		assert.equal(requestStatus(doctype, { [field]: pendingWord, docstatus: 0 }).label, WAITING)
+		assert.equal(requestStatus(doctype, { docstatus: 0 }).label, WAITING, `${doctype} empty`)
+	}
+})
+
+test("the stored pending word is never rewritten — only what the screen says changes", () => {
+	// A regression here would be a data migration wearing a wording fix's
+	// clothes: filters, list views and existing rows all read the stored word.
+	for (const [doctype, field, pendingWord] of TABLE) {
+		const doc = { [field]: pendingWord, docstatus: 0 }
+		requestStatus(doctype, doc)
+		assert.equal(doc[field], pendingWord, `${doctype} document was mutated`)
 	}
 })
 
@@ -66,7 +82,7 @@ test("Expense Claim keeps its payment state after approval", () => {
 	// get_expense_claims sends no docstatus: `status` says whether it was submitted
 	assert.equal(
 		requestStatus("Expense Claim", { approval_status: "Approved", status: "Draft" }).label,
-		"Draft"
+		WAITING
 	)
 	assert.equal(
 		requestStatus("Expense Claim", { approval_status: "Approved", status: "Unpaid" }).label,
@@ -78,6 +94,7 @@ test("a payload without docstatus trusts the decision field (older list endpoint
 	assert.equal(requestStatus("Leave Application", { status: "Approved" }).label, "Approved")
 	assert.equal(requestStatus("Leave Application", { status: "Approved" }).pending, false)
 	assert.equal(requestStatus("Leave Application", { status: "Open" }).pending, true)
+	assert.equal(requestStatus("Leave Application", { status: "Open" }).label, WAITING)
 	// OT/RL submitted rows from before `status` was in the payload
 	assert.equal(requestStatus("OT Request", { docstatus: 1 }).label, "Approved")
 })
@@ -103,4 +120,26 @@ test("the variant is looked up from the English word, never from a translation",
 	assert.equal(chipVariant("Diluluskan"), "neutral")
 	assert.equal(chipVariant("approved & unpaid"), "progress")
 	assert.equal(chipVariant(undefined), "neutral")
+})
+
+test("Employee Issue states carry colour — a finished issue does not look untouched", () => {
+	// IssueList renders the raw Employee Issue status through GStatusChip, and
+	// `in progress` / `completed` had no entry, so both fell through to grey.
+	assert.equal(chipVariant("In Progress"), "progress")
+	assert.equal(chipVariant("Completed"), "success")
+	assert.equal(chipVariant("Open"), "attention")
+})
+
+test("a remote check-in row reads the same rule as every other request", () => {
+	// RemoteApprovals hand-rolled its chip on `status === 'Approved'`, so a
+	// Rejected punch rendered identically to a Pending one.
+	const rejected = requestStatus("Remote Checkin Request", { status: "Rejected" })
+	assert.equal(rejected.label, "Rejected")
+	assert.equal(rejected.variant, "danger")
+	assert.equal(rejected.pending, false)
+	const approved = requestStatus("Remote Checkin Request", { status: "Approved" })
+	assert.equal(approved.label, "Approved")
+	assert.equal(approved.variant, "success")
+	// not submittable: it has no docstatus at all, so the decision field decides
+	assert.equal(requestStatus("Remote Checkin Request", { status: "Pending" }).label, WAITING)
 })
