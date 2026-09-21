@@ -10,7 +10,9 @@ writing code. This is that inspection. Nothing here changes a file.
 Vue 3 + Ionic Vue 7 PWA, Vite, `frappe-ui` for the data layer, Tailwind.
 Scripts: `lint` (eslint), `test` (node --test), `build`, `gates`, `test:e2e`.
 
-- **45 named routes**, 38 of them with visual baselines (115 PNGs at 390 and
+- **45 named routes** (`grep -rhoE 'name: *["\'][^"\']+["\']' frontend/src/router/
+  | sort -u | wc -l` — single quotes in the source, so a double-quote-only
+  pattern returns 0), 38 of them with visual baselines (115 PNGs at 390 and
   1440, light and dark).
 - **42 Glass components** under `src/components/glass/`, plus 47 feature
   components.
@@ -18,8 +20,11 @@ Scripts: `lint` (eslint), `test` (node --test), `build`, `gates`, `test:e2e`.
   -> `frontend/src/theme/glass.variables.css`. tokens.json is the single
   source of truth and is itself downstream of the spec. Hand-editing the CSS
   is explicitly forbidden by `design/README.md`.
-- **Eight gates** in `design/gates/`: lint, usage, contrast, surfaces, tokens,
-  a11y, visual, coherence. The contrast gate COMPUTES WCAG ratios from
+- **Eight gates**, named in `design/gates/run.mjs` (the directory holds 12
+  `.mjs` files — the other four are the runner, a verdict helper, its test and
+  a rules table, so counting files gives the wrong number): lint, usage,
+  contrast, surfaces, tokens, a11y, visual, coherence. The contrast gate
+  COMPUTES WCAG ratios from
   tokens.json rather than trusting the spec table, and alpha-composites glass
   over the app background first. a11y and visual are render-time and skip
   without a running site.
