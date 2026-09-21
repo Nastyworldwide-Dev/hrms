@@ -57,10 +57,19 @@ EMPLOYEE_APPROVER_FIELD = {"Compensatory Leave Request": "leave_approver"}
 #: `_may_read_employee` admits them — but `decide()` threw PermissionError. All
 #: four now read the same list, `get_designated_approvers`, so they cannot
 #: disagree about who approves for whom.
+#:
+#: Remote Checkin Request joined them on 21 Sep 2026. It DOES carry an approver
+#: field, but a stamped one: `resolve_approver` writes the first name on the
+#: chain when the punch is filed, so `APPROVER_FIELD` alone admitted exactly one
+#: person. When that person forgot, nobody above them could decide it — the same
+#: defect, in the one doctype the day's family hunt could not see because it
+#: called none of the changed symbols. Its pair names the shift fields: a remote
+#: punch is a shift matter.
 DESIGNATED_APPROVER_DOCTYPES = {
 	"Attendance Request": ("leave_approver", "leave_approvers"),
 	"OT Request": ("leave_approver", "leave_approvers"),
 	"Replacement Leave Claim": ("leave_approver", "leave_approvers"),
+	"Remote Checkin Request": ("shift_request_approver", "shift_request_approver"),
 }
 
 #: doctype -> the HR Settings tickbox that used to be the WHOLE self-approval

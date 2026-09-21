@@ -68,17 +68,38 @@ def _request(**values):
 	return request
 
 
+def _employee_value(doctype, name, field=None, *a, **k):
+	"""One Employee read, single field or several.
+
+	The routing walk asks for `["user_id", <approver field>, "reports_to"]` in
+	one go (as_dict), so a stub that only understands a single fieldname gets a
+	list where it expects a string. It must answer BOTH shapes honestly: a walk
+	that silently reads nothing would let "a stranger may not decide" pass for
+	the wrong reason.
+	"""
+	if doctype != "Employee":
+		return None
+	row = EMPLOYEES.get(name, {})
+	if isinstance(field, list | tuple):
+		return frappe._dict({key: row.get(key) for key in field})
+	return row.get(field)
+
+
 def _gate(user, roles=("Employee",), fence=(), own=(), **doc):
 	db = MagicMock()
-	db.get_value.side_effect = lambda doctype, name, field=None, *a, **k: (
-		EMPLOYEES.get(name, {}).get(field) if doctype == "Employee" else None
-	)
+	db.get_value.side_effect = _employee_value
 	with (
 		patch.object(frappe, "db", db),
 		patch.object(frappe, "session", frappe._dict(user=user)),
 		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
 		patch("hrms.overrides.company_scope.allowed_companies", return_value=list(fence)),
 		patch("hrms.utils.identity.own_employees", return_value=list(own)),
+		# The chain walk resolves an approver login back to an Employee so it can
+		# keep climbing. Answered from the same fixture, so the walk is real.
+		patch(
+			"hrms.hr.utils.own_employees",
+			side_effect=lambda u: [n for n, r in EMPLOYEES.items() if r.get("user_id") == u],
+		),
 	):
 		_request(**doc).before_save()
 

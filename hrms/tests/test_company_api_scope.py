@@ -131,7 +131,12 @@ class FakeQuery:
 
 	# assertion helpers
 	def predicate(self, field: str) -> Expr | None:
-		return next((p for p in self.predicates if p.field == field), None)
+		# `isinstance` rather than a bare attribute read: one fake query object
+		# is shared by everything an endpoint calls under ScopedFrappe, and a
+		# helper that builds its own query (a row-scope walker, say) records its
+		# predicates here too — including plain booleans from a mocked read.
+		# Those are not this endpoint's predicates and must not crash the lookup.
+		return next((p for p in self.predicates if isinstance(p, Expr) and p.field == field), None)
 
 
 class _Joiner:
@@ -177,8 +182,22 @@ def fresh_local():
 
 
 def patched_frappe(companies, **extra):
-	"""Patch the frappe surface these endpoints touch."""
+	"""Patch the frappe surface these endpoints touch.
+
+	`get_all` here answers ONE question — which companies the caller is fenced
+	to — so any helper an endpoint calls that reads Employee rows through it
+	gets company names where it expects records. The approver-chain walker is
+	one such helper (the remote check-in queue admits a senior approver as well
+	as the stamped one), and it is not what this file is about: it is stubbed
+	to "nobody", which leaves every fencing assertion below reading exactly the
+	predicates it did before. The chain arm has its own file,
+	hrms/tests/test_remote_checkin_routes_up_the_chain.py.
+	"""
 	patches = [
+		# Patched on the MODULE THAT USES IT: `remote_checkin` imports the walker
+		# by name at load, so it holds its own reference and patching
+		# `hrms.hr.utils` would leave the real one live here.
+		patch.object(remote_checkin, "get_employees_routed_to", return_value=[]),
 		patch.object(frappe, "get_all", company_user_permissions(companies)),
 		patch.object(frappe, "local", fresh_local()),
 		patch.object(frappe, "session", frappe._dict(user=USER)),

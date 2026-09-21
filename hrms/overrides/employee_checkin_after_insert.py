@@ -103,10 +103,12 @@ def create_remote_request_if_needed(doc, method=None):
 			request.approver,
 		)
 		if not request.approver:
-			# resolve_approver falls through five tiers and can still return None.
+			# resolve_approver falls through the employee's whole approver chain
+			# and then the HR fallback, and can still return None.
 			# The request is created regardless — the employee punched in good
 			# faith and their log must be kept — but from here it is INVISIBLE:
-			# `list_pending_for_approver` filters on `approver == user`, and
+			# a blank approver matches no queue arm (neither the stamped name nor
+			# the routed chain, which is empty for the same reason), and
 			# `notify_approver` returns early on a blank one. Nobody is told,
 			# nobody can find it, and the employee waits on an approval that is
 			# in no queue.

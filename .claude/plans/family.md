@@ -1,36 +1,48 @@
-CLASS: one message for two different situations. Both approver fences threw the
-same text whether the employee picked the wrong approver (they can fix it from
-the dropdown) or had NO approver configured at all (only HR can fix it, in
-Desk). "Please select your reporting manager" pointed at an empty dropdown.
-Owner ruling 21 Sep 2026: "make it clear and not confusing", on the standing
-project rule that the system self-identifies — we never ask an employee or HR to
-run a URL or a console step to find out what is wrong.
+CLASS: a request type routing by its own private copy of the approver rule.
+The 21 Sep ruling ("the chain goes until they dont have"; "no, dont" to the
+department blanket) was applied to seven request types through one shared
+resolver. Remote Checkin Request never called that resolver — it carried its
+own one-hop lookup with `Department Approver` as tier 2 — so a call-site family
+hunt could not see it, and it kept both refused behaviours: nobody above the
+stamped approver could decide a remote punch, and a department blanket could be
+stamped on one.
 
-Instance test: hrms/tests/test_no_approver_configured_says_so.py
-Invariant test: same file, TestAWrongPickStillSaysWrongPick — a non-empty list
-  keeps the original wording, so the new branch cannot swallow the old one.
+Instance test: hrms/tests/test_remote_checkin_routes_up_the_chain.py
+Invariant test: same file, TestTheThreeSurfacesAgree — everyone the chain names
+  must be able to decide, so the stamp, the decision gate and the queue cannot
+  drift apart again.
 
-Call sites of validate_staff_approver / no_approver_message:
+Call sites of resolve_approver / may_decide / _pending_for_approver_query /
+DESIGNATED_APPROVER_DOCTYPES:
 
-hrms/hr/utils.py:1471 validate_staff_approver same-root — the throw now routes
-  through no_approver_message.
-hrms/hr/doctype/leave_application/leave_application.py:123 same-root — the
-  wrapper that calls the fixed fence; no change needed here, the message follows.
-hrms/hr/doctype/leave_application/leave_application.py:106 same-root — validate()
-  calling that wrapper; the new message reaches a leave filing through it.
-hrms/hr/doctype/expense_claim/expense_claim.py:186 same-root — the same wrapper.
-hrms/hr/doctype/expense_claim/expense_claim.py:65 same-root — validate() calling
-  it; the new message reaches an expense claim through it.
-hrms/hr/doctype/shift_request/shift_request.py:130 same-root — has its own throw
-  (its list comes from the same resolver but the wording differed); now shares
-  the empty-list branch and keeps its own wrong-pick wording.
-hrms/overrides/approval_row_scope.py:105 not-affected — a comment naming the
-  fence, not a call.
-hrms/api/team.py:49, hrms/api/approval.py:56, hrms/api/__init__.py:1237,1276
-  not-affected — comments and docstrings naming the fence, not calls.
+hrms/overrides/remote_checkin_request_hooks.py:79 same-root — resolve_approver
+  itself; now reads get_designated_approvers and stamps chain[0].
+hrms/api/approval.py:68 same-root — the routing map; Remote Checkin Request
+  added, which is what lets the rest of the chain decide.
+hrms/api/approval.py:135 same-root — the only read of that map; unchanged code,
+  the new entry reaches the decision through it.
+hrms/api/remote_checkin.py:204 same-root — _ensure_approver's may_decide import;
+  the PWA decision path, widened by the map above.
+hrms/api/remote_checkin.py:207 same-root — the call itself.
+hrms/hr/doctype/remote_checkin_request/remote_checkin_request.py:49 same-root —
+  the Desk save gate, same helper, same widening. One rule, both surfaces.
+hrms/api/remote_checkin.py:325 same-root — list_pending_for_approver; the queue
+  now admits routed employees as well as the stamped name.
+hrms/api/remote_checkin.py:352 same-root — list_decided_for_approver, same query
+  builder; a senior approver sees the history of what they may decide.
+hrms/api/remote_checkin.py:368 same-root — get_pending_count, same query; the
+  badge and the list must count the same rows or the badge lies.
+hrms/mixins/pwa_notifications.py:125 same-root — the notification addressee is
+  the stamped name, which is now chain[0] instead of a department row.
+hrms/overrides/employee_checkin_after_insert.py:72 same-root — where the stamp is
+  written at filing time; its stale "five tiers" comment corrected with it.
 
 Not affected:
-Attendance Request, OT Request, Replacement Leave Claim, Compensatory Leave
-  Claim — they do not call validate_staff_approver; their approver is resolved
-  at decision time by hrms.api.approval, which has its own messages. Out of
-  scope for this commit and not part of the reported confusion.
+hrms/api/team.py:60 ticket .claude/plans/ticket-approver-chain-consolidation.md
+  — the Team TAB gate still lights up for a Department Approver row. Display
+  only: every queue behind it fences itself (this commit's included), so it
+  shows an empty tab, not another person's data. Left for the consolidation
+  ticket rather than widened in a commit about routing.
+Leave / Expense / Shift / OT / Attendance Request / Replacement Leave Claim /
+  Compensatory Leave Request — already on the shared resolver since cf94549e7
+  and 5134f4856; unchanged here and pinned by their own files.

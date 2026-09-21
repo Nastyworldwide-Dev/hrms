@@ -22,6 +22,7 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Count
 from frappe.utils import add_days, cint, get_datetime, now_datetime
 
+from hrms.hr.utils import get_employees_routed_to
 from hrms.utils.attendance_day_audit import SKIP_PREFIX
 from hrms.utils.company_scope import permitted_company_filter
 from hrms.utils.geofence import REASON_IMPRECISE_LOCATION, REASON_OUTSIDE_RADIUS, usable_accuracy
@@ -261,12 +262,29 @@ def _pending_for_approver_query(user: str, statuses: tuple[str, ...] = ("Pending
 	see the row: a group HR user fenced to one company must not be handed
 	another company's out-of-radius punches. ONE query for the pending queue,
 	the badge count and the decided history — three surfaces, one scope.
+
+	ROUTED, not just STAMPED (21 Sep 2026). `resolve_approver` writes ONE name on
+	the request when the punch is filed, but the whole chain above the employee
+	may decide it — that is the owner's ruling, and the escalation an employee
+	has when their approver forgets. Keying on the stamped name alone left a
+	decidable request in nobody's queue: the senior approver could approve it and
+	could not find it. `get_employees_routed_to` is the exact inverse of the list
+	`may_decide` reads, so the queue and the decision gate cannot disagree.
+
+	The company fence still applies to BOTH arms — it is applied once, below, to
+	the whole query. An auto-routed queue stays fenced (see
+	test_approval_scoping_invariant).
 	"""
 	RemoteCheckinRequest = frappe.qb.DocType("Remote Checkin Request")
+	routed = get_employees_routed_to(user, "shift_request_approver", "shift_request_approver")
+	addressed = RemoteCheckinRequest.approver == user
+	if routed:
+		addressed = addressed | RemoteCheckinRequest.employee.isin(routed)
+		logger.debug("[api] remote_checkin pending for %s covers %d routed employee(s)", user, len(routed))
 	query = (
 		frappe.qb.from_(RemoteCheckinRequest)
 		.where(RemoteCheckinRequest.status.isin(list(statuses)))
-		.where(RemoteCheckinRequest.approver == user)
+		.where(addressed)
 	)
 
 	companies = permitted_company_filter(endpoint="remote_checkin.list_pending_for_approver")

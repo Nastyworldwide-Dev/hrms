@@ -80,58 +80,43 @@ def resolve_approver(employee: str) -> str | None:
 	"""Resolve the approver user for an employee.
 
 	Priority:
-	  1. Employee.shift_request_approver  (mirrors Shift Request's approver flow)
-	  2. Department Approver row with parentfield='shift_request_approver'
-	  3. Employee.reports_to -> Employee.user_id
-	  4. Any user with HR Manager role (oldest creation)
-	  5. None
+	  1. the employee's own approver chain, bottom-up — the approver named on
+	     their Employee record, then their reporting manager, then the same two
+	     questions of each person that reaches;
+	  2. an HR Manager, preferring the employee's own company (below).
+
+	OWNER RULING, 21 Sep 2026 — applied to every other request type that day and
+	missed here, because this function calls none of the symbols that changed so
+	a call-site family hunt could not see it. Two things were wrong:
+
+	  * it stopped after ONE hop, so the escalation an employee actually has
+	    when their approver forgets did not exist for a remote punch;
+	  * tier 2 read a `Department Approver` row — the blanket the owner refused
+	    ("no, dont"), which names no employee, so nothing in anyone's record
+	    routes to it.
+
+	Only the FIRST entry is stamped on the request: the notification and the
+	badge need one addressee. Everyone else on the chain may still decide it
+	(`may_decide` -> `_is_routed_approver`) and sees it in their pending queue
+	(`_pending_for_approver_query`) — the three surfaces read this one list, and
+	`test_remote_checkin_routes_up_the_chain` pins that they agree.
+
+	The shift pair names the request TYPE: a remote punch is a shift matter, and
+	`shift_request_approver` is the field HR already fills for it.
 	"""
-	emp = (
-		frappe.db.get_value(
-			"Employee",
-			employee,
-			["shift_request_approver", "department", "reports_to"],
-			as_dict=True,
-		)
-		or {}
-	)
+	from hrms.hr.utils import get_designated_approvers
 
-	shift_approver = emp.get("shift_request_approver")
-	if shift_approver:
+	chain = get_designated_approvers(employee, "shift_request_approver", "shift_request_approver")
+	if chain:
 		logger.info(
-			"[remote_checkin_request] approver=shift_request_approver employee=%s -> %s",
+			"[remote_checkin_request] approver=chain employee=%s -> %s (of %d on the chain)",
 			employee,
-			shift_approver,
+			chain[0],
+			len(chain),
 		)
-		return shift_approver
+		return chain[0]
 
-	department = emp.get("department")
-	if department:
-		dept_approver = frappe.db.get_value(
-			"Department Approver",
-			{"parent": department, "parentfield": "shift_request_approver", "idx": 1},
-			"approver",
-		)
-		if dept_approver:
-			logger.info(
-				"[remote_checkin_request] approver=department_shift_approver employee=%s -> %s",
-				employee,
-				dept_approver,
-			)
-			return dept_approver
-
-	reports_to = emp.get("reports_to")
-	if reports_to:
-		user_id = frappe.db.get_value("Employee", reports_to, "user_id")
-		if user_id:
-			logger.info(
-				"[remote_checkin_request] approver=reports_to employee=%s -> %s",
-				employee,
-				user_id,
-			)
-			return user_id
-
-	# Fallback 4 prefers an HR Manager WITHIN the employee's own company.
+	# The HR fallback prefers an HR Manager WITHIN the employee's own company.
 	# Assignment and visibility must use the same rule: the approver queue
 	# (list_pending_for_approver) is fenced by the viewer's permitted
 	# companies, so a request assigned to an HR Manager fenced to a DIFFERENT

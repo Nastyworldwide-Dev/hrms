@@ -205,3 +205,47 @@ whole department's requests in list queries. Neither blocks. Nothing pushed.
 - 2026-09-21T18:03:40Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 13 extra test file(s) ⟂2d3ffee99479
 - 2026-09-21T18:04:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-09-21T18:04:07Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 13 extra test file(s) ⟂2d3ffee99479
+- 2026-09-21T18:04:08Z EVIDENCE: 6 behaves — family hunt: class=one message for two different situations. Both approver fences threw the; 4 call site(s) given verdicts, 6 same-root ⟂89f3246126b4
+- 2026-09-21T18:04:10Z COMMIT: ab74a7904 fix(approval): say "no approver is set up" instead of "pick your manager" → review dispatched
+- 2026-09-21T18:04:10Z COMPACT: context compacted — read the last NEXT above before continuing
+
+LEARNING(gate): spec-gap -> family hunt sweeps CALL SITES only. Both spec-gaps in
+  the 21 Sep range had one shape: a structurally identical sibling that does NOT
+  call the changed symbol (Shift Request's own validate_approver/get_department_
+  approvers pair; a 6th hand-threaded guard call site). Proposed gate: when a
+  commit changes a routing/guard rule, also grep the function-NAME PATTERN
+  (get_*_approvers, validate_approver, *_block_reason) across all modules and
+  require the same same-root/ticket/not-affected verdict for each match.
+  8th spec-gap row in tasks.csv with no gate. Raised by the retro, 21 Sep 2026.
+NEXT: frappe-reviewer verdict on ab74a7904, then push + refresh docs/glass/HANDOFF.md.
+- 2026-09-21T18:08:08Z PUSH: nz-glass @ ab74a7904
+- 2026-09-21T18:08:17Z PUSH: nz-glass @ 2ecd6223b
+- 2026-09-21T18:08:18Z COMMIT: 2ecd6223b docs(glass): handoff for the approver message fix → review dispatched
+
+REPAIR: Remote Checkin Request routed by its own private copy of the approver
+  rule — one hop, Department Approver as tier 2. The one request type the
+  21 Sep ruling missed, because it calls none of the symbols that changed.
+  Owner approved closing it ("sure"). resolve_approver now stamps chain[0];
+  approval.DESIGNATED_APPROVER_DOCTYPES admits the rest of the chain to decide;
+  _pending_for_approver_query admits them to the queue so a decidable request
+  is never in nobody's list.
+EVIDENCE: 2 — test_remote_checkin_routes_up_the_chain.py 6 RED on clean HEAD
+  (grand-manager refused, department approver stamped), 11 green + 2 subtests.
+EVIDENCE: 3 — blast radius green per file: approval_scoping_invariant 3,
+  remote_checkin_request_hooks 25, two_approvers 3, selfie 4, company_api_scope
+  31, api/test_approval 31, chain 15, shift chain 7, no-approver 6, self-approval
+  13. Two pre-existing skips need a real bench. ruff clean.
+EVIDENCE: 6 — family ledger .claude/plans/family.md, 11 call sites same-root,
+  team.py's display-only tab gate ticketed.
+NEXT: commit, review, push, refresh HANDOFF.
+- 2026-09-21T18:22:33Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-21T18:25:07Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-21T18:25:07Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
+- 2026-09-21T18:25:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-21T18:25:31Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
+- 2026-09-21T18:25:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-21T18:25:48Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
+- 2026-09-21T18:25:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-21T18:25:59Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
+- 2026-09-21T18:26:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-09-21T18:26:37Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
