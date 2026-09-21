@@ -249,3 +249,13 @@ NEXT: commit, review, push, refresh HANDOFF.
 - 2026-09-21T18:25:59Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
 - 2026-09-21T18:26:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-09-21T18:26:37Z EVIDENCE: 3 works — blast radius green: 23 dependent(s), 20 extra test file(s) ⟂d5cc3dd5241d
+- 2026-09-21T18:26:41Z COMMIT: 0a0d0402c fix(remote-checkin): a remote punch routes up the employee's own chain → review+cross-app dispatched
+
+LEARNING(gate): family-hunt sweeps production call sites of the CHANGED symbols only ->
+  it misses test files that call the changed function directly (here
+  hrms/overrides/test_remote_checkin_request_hooks.py pinned the removed
+  Department Approver tier, and is bench-only so no local run catches it).
+  Proposed gate: the family scan greps the changed function NAMES across
+  test_*.py as well, and a bench-only test (FrappeTestCase) naming a changed
+  function needs a verdict line like any other call site.
+NEXT: push 0a0d0402c + the bench-test amendment, refresh docs/glass/HANDOFF.md.

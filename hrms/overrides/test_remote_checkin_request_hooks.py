@@ -2,9 +2,15 @@
 # See license.txt
 """Regression tests for remote_checkin_request_hooks.resolve_approver.
 
-The priority order is load-bearing for who receives out-of-radius approval
-requests; an out-of-order resolution silently routes approvals to the wrong
-user. Each tier is exercised in isolation by disabling the higher tiers.
+Who receives an out-of-radius approval request is load-bearing; the wrong
+resolution silently routes approvals to somebody who is not this employee's
+approver. Each source is exercised in isolation by clearing the others.
+
+Amended 21 Sep 2026 by the owner's routing ruling ("no, dont"): a
+`Department Approver` row is NOT a routing source — nobody's Employee record
+names it, so nothing routes to it. The employee's own chain is: the approver on
+their Employee record, else `reports_to`, applied again to whoever that reaches.
+The department test below now pins the ABSENCE of the old tier.
 """
 
 from __future__ import annotations
@@ -82,7 +88,7 @@ class TestResolveApprover(FrappeTestCase):
 			},
 		)
 
-	def test_priority_1_shift_request_approver_wins(self):
+	def test_the_approver_on_the_employee_record_wins(self):
 		frappe.db.set_value(
 			"Employee",
 			self.employee,
@@ -94,13 +100,19 @@ class TestResolveApprover(FrappeTestCase):
 		# even with reports_to set, shift_request_approver must win
 		self.assertEqual(resolve_approver(self.employee), self.direct_approver)
 
-	def test_priority_2_department_approver_when_no_direct_approver(self):
+	def test_a_department_approver_row_is_not_a_routing_source(self):
+		"""Owner ruling, 21 Sep 2026: "no, dont".
+
+		Same setup that used to prove the Department Approver tier: the row is
+		configured, the Employee field is empty, `reports_to` is set. The chain
+		now walks past the department entirely and lands on the manager.
+		"""
 		department = frappe.db.get_value("Employee", self.employee, "department")
 		if not department:
-			self.skipTest("Employee has no department; cannot exercise department-approver tier")
+			self.skipTest("Employee has no department; cannot configure a department approver row")
 
 		dept_doc = frappe.get_doc("Department", department)
-		# clear any pre-existing rows so the test's row is the one at idx=1
+		# clear any pre-existing rows so the only row present is this test's
 		dept_doc.set("shift_request_approver", [])
 		dept_doc.append("shift_request_approver", {"approver": self.dept_approver})
 		dept_doc.save()
@@ -114,14 +126,15 @@ class TestResolveApprover(FrappeTestCase):
 					"reports_to": self.manager,
 				},
 			)
-			# direct approver unset, reports_to set: dept approver still wins
-			self.assertEqual(resolve_approver(self.employee), self.dept_approver)
+			resolved = resolve_approver(self.employee)
+			self.assertNotEqual(resolved, self.dept_approver)
+			self.assertEqual(resolved, self.manager_user)
 		finally:
 			dept_doc.reload()
 			dept_doc.set("shift_request_approver", [])
 			dept_doc.save()
 
-	def test_priority_3_reports_to_when_no_shift_approver(self):
+	def test_reports_to_is_the_next_rung_when_no_approver_is_named(self):
 		department = frappe.db.get_value("Employee", self.employee, "department")
 		if department:
 			dept_doc = frappe.get_doc("Department", department)
