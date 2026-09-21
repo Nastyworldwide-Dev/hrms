@@ -3,7 +3,7 @@ frappe.listview_settings["Attendance"] = {
 	// row, which shift a day was marked under and whether a person or the
 	// hourly job owns it.
 	// `employee` rides along so a ticked row can name its own employee-day to
-	// the Fix Day screen below.
+	// the Punches link below.
 	add_fields: [
 		"status",
 		"attendance_date",
@@ -33,15 +33,26 @@ frappe.listview_settings["Attendance"] = {
 	},
 	onload: function (list_view) {
 		let me = this;
-		// Same screen as the Employee Checkin list and the two attendance
-		// reports: HR corrects the day's punches there and the engine recomputes
-		// this row. Registered here because a doctype's listview_settings has one
-		// owner — see the note at the foot of fix_day.bundle.js.
-		if (typeof hrms !== "undefined" && hrms.fix_day && hrms.fix_day.enabled()) {
-			list_view.page.add_inner_button(__("Fix day"), () =>
-				hrms.fix_day.from_attendance(list_view),
+		// The row is the symptom; the punches behind it are what HR corrects, and
+		// the Fix Day tools live on the Employee Checkin list only (owner, 21 Sep
+		// 2026). "Punches" opens that list on the ticked row's employee-day.
+		list_view.page.add_inner_button(__("Punches"), () => {
+			const rows = (list_view.get_checked_items() || []).filter(Boolean);
+			const employees = new Set(rows.map((row) => row.employee));
+			const days = new Set(
+				rows.map((row) => String(row.attendance_date || "").slice(0, 10)),
 			);
-		}
+			if (employees.size !== 1 || days.size !== 1 || !Array.from(days)[0]) {
+				frappe.msgprint(__("Tick rows of one person on one day."));
+				return;
+			}
+			const day = Array.from(days)[0];
+			console.info("[Attendance] punches", Array.from(employees)[0], day);
+			frappe.set_route("List", "Employee Checkin", {
+				employee: Array.from(employees)[0],
+				time: ["Between", [day, day]],
+			});
+		});
 		if (frappe.perm.has_perm("Attendance", 0, "create")) {
 			list_view.page.add_inner_button(__("Mark Attendance"), function () {
 				let first_day_of_month = moment().startOf("month");

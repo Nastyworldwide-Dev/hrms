@@ -1,10 +1,9 @@
-# Family — feat(attendance): Fix days — one press re-stamps, re-pairs and rebuilds a range (21 Sep 2026)
-CLASS: HR could correct punches day by day but nothing recomputed the rows they were linked to; HR-owned Absent rows and duplicates survived beside corrected punches, and the glitch left IN and OUT of one day on two shifts
-New: hrms/api/attendance_fix_days.py (range loop, preview, per-day refuse/re-stamp/plan/cancel/rebuild/log); attendance_fix_day.fix_days delegate + seams (_range_taps, _roster_stamp, _remark_later), undo reads after_state; restamp.resolved_stamp factored out; day_plan drops burst noise before choosing the closer.
-hrms/api/attendance_fix_day.py:rebuild_day same-root — per-day primitive reused; undo now sees its own cancels (latent bug: _log_entry never read after_state)
-hrms/utils/restamp.py:restamp same-root — loop body now resolved_stamp(); roster mode of fix_days reuses it
-hrms/utils/attendance_recovery.py:session_days same-root — the IN-anchored walk used for day assignment
-hrms/utils/attendance_recovery.py:release_to_automation same-root — its exclusion list is the cancel rule (HR-owned rows included when HR asks)
-hrms/api/remote_checkin.py:BURST_WINDOW same-root — imported, not copied
-hrms/tests/test_an_ignored_tap_does_not_split_the_day.py same-root — census gains the new NOISE writer
-Residual (backlog, owner question): a double-OUT day 40 min apart pays to the later OUT (day_plan first-IN/last-OUT) — the engine's pairing setting should decide; an imported IN→IN across midnight leaves both days open for HR (nothing written).
+# Family — feat(desk): "Fix days" dialog on the Employee Check-in list; the other pages link to the punches (21 Sep 2026)
+CLASS: the correction tool had three entry points and nine per-day buttons; the owner ruled one place (the Check-in page), three steps (tick → shift → Apply)
+New: FixDaysDialog + hrms.fix_day.fix_days_from_taps in fix_day.bundle.js; button in employee_checkin_list.js. Removed: Fix day on attendance_list.js, shift_attendance.js, unclaimable_days.js (replaced by "Punches" → the Check-in list filtered to that employee-day); hrms.fix_day.from_attendance deleted.
+hrms/hr/doctype/employee_checkin/employee_checkin_list.js same-root — registers both buttons (one owner of listview_settings, memory rule kept)
+hrms/hr/doctype/attendance/attendance_list.js same-root — Punches link
+hrms/hr/report/shift_attendance/shift_attendance.js same-root — Punches in the Edit Attendance group; + a message for the R1 refusal code not_one_session (the grid's own census test demanded it)
+hrms/hr/report/unclaimable_days/unclaimable_days.js same-root — Punches (HR-gated)
+hrms/tests/test_fix_day_screen.py same-root — bundle write-set pin admits fix_days/undo_fix; the three-doors pin becomes one door
+hrms/hooks.py:app_include_js not-affected — the bundle stays a boot bundle; registration stays in the list script (desk-listview-settings-one-owner)

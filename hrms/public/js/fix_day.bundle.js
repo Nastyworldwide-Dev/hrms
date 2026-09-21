@@ -11,10 +11,12 @@
 // hrms.api.attendance_fix_day -> hrms.utils.day_remark, and answers with the
 // day before and after, which is what the screen shows.
 //
-// Loaded on demand with frappe.require("fix_day.bundle.js") from the
-// Unclaimable Days report ("Fix") and the Shift Attendance report ("Fix day"),
-// and at boot — when hooks.py includes it in app_include_js — to add the
-// "Fix day" button to the Employee Checkin list.
+// Loaded at boot (hooks.py app_include_js). Its only doors are the "Fix day"
+// and "Fix days" buttons on the Employee Checkin list (owner, 21 Sep 2026: the
+// tool lives on the punches page only; the Attendance list and the two reports
+// link there with "Punches"). "Fix days" is the range form: tick, choose a
+// shift, preview, apply — every punch in the range is restamped to that shift,
+// IN and OUT alike, and each day is rebuilt by the same engine.
 //
 // Tests: hrms/tests/test_fix_day_screen.py
 
@@ -553,6 +555,239 @@ class FixDayScreen {
 	}
 }
 
+// HR Fix Days — one employee, a range of days, one shift.
+//
+// The owner's three steps (21 Sep 2026): tick the punches, choose the shift,
+// Apply. Nothing is written until a PREVIEW of the same inputs has been seen:
+// the server answers dry_run=1 with what it would do to every day, the table
+// shows it, and only then does Apply send dry_run=0 with the reason. Changing
+// any field throws the preview away. No hours, no overtime, no status: the
+// shift is evidence, the engine recomputes the rest.
+class FixDaysDialog {
+	constructor({ employee, employee_name, from_date, to_date, on_change }) {
+		this.employee = employee;
+		this.employee_name = employee_name;
+		this.from_date = from_date;
+		this.to_date = to_date;
+		this.on_change = on_change;
+		this.preview = null;
+	}
+
+	show() {
+		const invalidate = () => this.invalidate();
+		this.dialog = new frappe.ui.Dialog({
+			title: __("Fix days"),
+			size: "extra-large",
+			fields: [
+				{
+					fieldname: "employee",
+					label: __("Employee"),
+					fieldtype: "Link",
+					options: "Employee",
+					default: this.employee,
+					read_only: 1,
+				},
+				{
+					fieldname: "employee_name",
+					label: __("Name"),
+					fieldtype: "Data",
+					default: this.employee_name,
+					read_only: 1,
+				},
+				{ fieldtype: "Column Break" },
+				{
+					fieldname: "from_date",
+					label: __("From"),
+					fieldtype: "Date",
+					default: this.from_date,
+					reqd: 1,
+					onchange: invalidate,
+				},
+				{
+					fieldname: "to_date",
+					label: __("To"),
+					fieldtype: "Date",
+					default: this.to_date,
+					reqd: 1,
+					onchange: invalidate,
+				},
+				{ fieldtype: "Column Break" },
+				{
+					fieldname: "shift",
+					label: __("Shift"),
+					fieldtype: "Link",
+					options: "Shift Type",
+					description: __(
+						"applies to every punch in these days, IN and OUT alike; empty = the roster"
+					),
+					onchange: invalidate,
+				},
+				{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1 },
+				{ fieldtype: "Section Break" },
+				{ fieldname: "days", fieldtype: "HTML" },
+			],
+			primary_action_label: __("Apply"),
+			primary_action: () => this.apply(),
+			secondary_action_label: __("Preview"),
+			secondary_action: () => this.preview_days(),
+		});
+		this.dialog.show();
+		this.invalidate();
+		console.info("[FixDays] opened", this.employee, this.from_date, "to", this.to_date);
+		return this.dialog;
+	}
+
+	inputs() {
+		const dialog = this.dialog;
+		return {
+			employee: this.employee,
+			from_date: dialog.get_value("from_date"),
+			to_date: dialog.get_value("to_date"),
+			shift: dialog.get_value("shift") || null,
+		};
+	}
+
+	key() {
+		return JSON.stringify(this.inputs());
+	}
+
+	// A preview belongs to the inputs it was made for and to nothing else.
+	invalidate() {
+		this.preview = null;
+		this.dialog.disable_primary_action();
+		this.dialog.fields_dict.days.$wrapper.html(
+			`<div class="text-muted small">${__("Press Preview to see what each day will become.")}</div>`
+		);
+	}
+
+	preview_days() {
+		const key = this.key();
+		console.info("[FixDays] preview", key);
+		return this.run("fix_days", Object.assign({ dry_run: 1 }, this.inputs())).then((answer) => {
+			if (!answer || !answer.ok) return null;
+			this.preview = { key, answer };
+			this.render(answer, false);
+			this.dialog.enable_primary_action();
+			return answer;
+		});
+	}
+
+	apply() {
+		const reason = this.dialog.get_value("reason");
+		if (!this.preview || this.preview.key !== this.key()) {
+			frappe.msgprint(__("Preview first: the inputs changed since the last preview."));
+			return Promise.resolve(null);
+		}
+		if (!reason) {
+			frappe.msgprint(__("Say why: the reason goes on every punch and in the fix log."));
+			return Promise.resolve(null);
+		}
+		const totals = this.preview.answer.totals || {};
+		return new Promise((resolve) => {
+			frappe.confirm(
+				__("Rebuild {0} days, cancel {1} rows?", [totals.rebuilt || 0, totals.cancelled || 0]),
+				() => resolve(this.write(reason)),
+				() => resolve(null)
+			);
+		});
+	}
+
+	write(reason) {
+		return this.run("fix_days", Object.assign({ dry_run: 0, reason }, this.inputs())).then((answer) => {
+			if (!answer || !answer.ok) return null;
+			console.info("[FixDays] applied", answer.totals);
+			this.preview = null;
+			this.dialog.disable_primary_action();
+			this.render(answer, true);
+			if (this.on_change) this.on_change();
+			return answer;
+		});
+	}
+
+	undo(log) {
+		console.info("[FixDays] undo", log);
+		return this.run("undo_fix", { log_entry: log }).then((answer) => {
+			if (!answer || !answer.ok) return null;
+			this.dialog.fields_dict.days.$wrapper
+				.find(`[data-fd-undo="${log}"]`)
+				.replaceWith(`<span class="text-muted">${__("undone")}</span>`);
+			if (this.on_change) this.on_change();
+			return answer;
+		});
+	}
+
+	run(method, args) {
+		return fd_call(FD_API + method, args);
+	}
+
+	// --- painting -------------------------------------------------------------
+
+	tap_text(tap) {
+		const before = fd_escape((tap.before && tap.before.shift) || "—");
+		const after = fd_escape((tap.after && tap.after.shift) || "—");
+		const head = `${fd_escape(tap.log_type || "—")} ${fd_clock(tap.time)}`;
+		return tap.changed ? `${head} ${before} → <b>${after}</b>` : `${head} ${before}`;
+	}
+
+	cancel_text(row) {
+		const hr = row.marked_by_hr ? " " + __("(HR)") : "";
+		return `${fd_escape(row.status || "—")} ${fd_escape(row.hours)} h${hr}`;
+	}
+
+	day_row(day, applied) {
+		const blocked = !!day.blocked;
+		const result = blocked
+			? `<span class="indicator-pill orange">${fd_escape(day.blocked)}</span>`
+			: fd_escape(day.result || "—");
+		const undo =
+			applied && day.log && !blocked
+				? ` <a href="#" data-fd-undo="${fd_escape(day.log)}">${__("Undo")}</a>`
+				: "";
+		const taps = (day.taps || []).map((tap) => this.tap_text(tap)).join("<br>");
+		const cancels = (day.rows_to_cancel || []).map((row) => this.cancel_text(row)).join("<br>");
+		const noise = (day.noise || [])
+			.map((tap) => `${fd_escape(tap.name)}: ${fd_escape(tap.why)}`)
+			.join("<br>");
+		return `<tr class="${blocked ? "table-warning" : ""}">
+			<td>${fd_escape(day.date)}</td>
+			<td>${taps || "—"}</td>
+			<td>${cancels || "—"}</td>
+			<td>${noise || "—"}</td>
+			<td>${result}${undo}</td>
+		</tr>`;
+	}
+
+	render(answer, applied) {
+		const t = answer.totals || {};
+		const totals = __(
+			"{0} days · {1} rebuilt · {2} left open · {3} blocked · {4} punches restamped · {5} noise · {6} rows cancelled",
+			[
+				fd_escape(t.days || 0),
+				fd_escape(t.rebuilt || 0),
+				fd_escape(t.open || 0),
+				fd_escape(t.blocked || 0),
+				fd_escape(t.restamped || 0),
+				fd_escape(t.noise || 0),
+				fd_escape(t.cancelled || 0),
+			]
+		);
+		const title = applied ? __("Done") : __("Preview — nothing written yet");
+		const wrapper = this.dialog.fields_dict.days.$wrapper;
+		wrapper.html(`<div class="mb-2"><b>${title}</b> <span class="text-muted">— ${totals}</span></div>
+			<table class="table table-bordered table-sm">
+				<thead><tr>
+					<th>${__("Day")}</th><th>${__("Punches")}</th><th>${__("Rows to cancel")}</th>
+					<th>${__("Noise")}</th><th>${__("Result")}</th>
+				</tr></thead>
+				<tbody>${(answer.days || []).map((day) => this.day_row(day, applied)).join("")}</tbody>
+			</table>`);
+		wrapper.off("click.fixdays").on("click.fixdays", "[data-fd-undo]", (event) => {
+			if (event.preventDefault) event.preventDefault();
+			return this.undo(event.currentTarget.getAttribute("data-fd-undo"));
+		});
+	}
+}
+
 hrms.fix_day.enabled = fd_enabled;
 
 hrms.fix_day.open = function (options) {
@@ -618,30 +853,45 @@ hrms.fix_day.from_taps = function (listview) {
 	});
 };
 
-// Attendance list: tick the row of ONE employee-day and fix that day. The row
-// is the symptom HR sees (two rows for one day); the taps behind it are what
-// the screen actually corrects.
-hrms.fix_day.from_attendance = function (listview) {
-	const rows = (listview.get_checked_items() || []).filter(Boolean);
-	if (!rows.length) {
-		frappe.msgprint(__("Tick the day you want to fix."));
-		return null;
+// Employee Checkin list: tick the taps of ONE employee over any days, choose
+// the shift they all belong to, preview, apply.
+hrms.fix_day.fix_days_from_taps = function (listview) {
+	if (!fd_enabled()) {
+		frappe.msgprint(__("Only HR can fix a day."));
+		return Promise.resolve(null);
 	}
-	const employees = new Set(rows.map((row) => row.employee));
-	const days = new Set(rows.map((row) => String(row.attendance_date || "").slice(0, 10)));
-	if (employees.size !== 1 || days.size !== 1 || !Array.from(days)[0]) {
-		frappe.msgprint(__("Tick rows of one person on one day."));
-		return null;
+	const names = (listview.get_checked_items(true) || []).filter(Boolean);
+	if (!names.length) {
+		frappe.msgprint(__("Tick the taps of the days you want to fix."));
+		return Promise.resolve(null);
 	}
-	return hrms.fix_day.open({
-		employee: Array.from(employees)[0],
-		date: Array.from(days)[0],
-		on_close: () => listview.refresh(),
+	return Promise.resolve(
+		frappe.db.get_list("Employee Checkin", {
+			filters: { name: ["in", names] },
+			fields: ["name", "employee", "employee_name", "shift_start", "time"],
+			limit: names.length,
+		})
+	).then((rows) => {
+		const employees = new Set((rows || []).map((row) => row.employee));
+		if (employees.size !== 1) {
+			frappe.msgprint(__("Tick taps of one person."));
+			return null;
+		}
+		const days = rows.map((row) => String(row.shift_start || row.time).slice(0, 10)).sort();
+		const dialog = new FixDaysDialog({
+			employee: rows[0].employee,
+			employee_name: rows[0].employee_name,
+			from_date: days[0],
+			to_date: days[days.length - 1],
+			on_change: () => listview.refresh(),
+		});
+		dialog.show();
+		return dialog;
 	});
 };
 
 // The list entry points themselves are registered by each doctype's own list
-// script (employee_checkin_list.js, attendance_list.js), which Desk loads after
+// script (employee_checkin_list.js), which Desk loads after
 // this bundle. Assigning frappe.listview_settings here as well cost HR the
 // button for a week: the later assignment simply replaced this one, and the
 // chain this file tried to keep (__fd_previous_onload) was never set by anyone.

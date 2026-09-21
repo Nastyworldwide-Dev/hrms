@@ -8,8 +8,9 @@ Static checks over the shipped sources — no bench, no browser:
 * every server call it makes is a whitelisted POST endpoint of
   hrms.api.attendance_fix_day, and every endpoint of that module is POST-only
   (a GET would let a link change attendance);
-* the Unclaimable Days report, the Shift Attendance report and the Employee
-  Checkin list each open the screen, and each is HR-gated.
+* the Employee Checkin list is the ONLY door (owner, 21 Sep 2026); the
+  Unclaimable Days report, the Shift Attendance report and the Attendance list
+  link there with "Punches" and open nothing themselves.
 
     PYTHONPATH=. python3 hrms/tests/test_fix_day_screen.py
 """
@@ -65,7 +66,9 @@ class TestTheScreenOffersEvidenceOnly(unittest.TestCase):
 		read = set(re.findall(r'FD_API \+ "(\w+)"', self.js))
 		writes = set(re.findall(r'this\.run\("(\w+)"', self.js))
 		self.assertEqual(read, set(READS), "the only direct calls are the reads")
-		self.assertEqual(writes, {"undo_fix", *ACTIONS})
+		# `fix_days` is the range form's one write (dry_run=1 previews, dry_run=0
+		# applies); its undo is the same `undo_fix`, per day.
+		self.assertEqual(writes, {"undo_fix", "fix_days", *ACTIONS})
 		# every write goes through the one `run`, which reloads and shows before/after
 		self.assertIn("fd_call(FD_API + method, args)", self.js)
 
@@ -174,21 +177,36 @@ class TestTheFixLogIsSharedWithTheBackfills(unittest.TestCase):
 		self.assertEqual(ordered, [f["fieldname"] for f in self.spec["fields"]])
 
 
-class TestTheThreeDoors(unittest.TestCase):
-	def test_unclaimable_days_opens_it_for_the_ticked_row(self):
+class TestTheOneDoor(unittest.TestCase):
+	"""Amended 21 Sep 2026: the owner moved the tool to the punches page. The
+	reports and the Attendance list LINK there ("Punches" -> the Employee
+	Checkin list on that employee-day) and open nothing themselves."""
+
+	PUNCHES = 'frappe.set_route("List", "Employee Checkin"'
+
+	def test_unclaimable_days_links_to_the_punches_and_opens_nothing(self):
 		js = read(UNCLAIMABLE)
-		self.assertIn('frappe.require("fix_day.bundle.js"', js)
-		self.assertIn("hrms.fix_day.open(", js)
-		self.assertIn('add_inner_button(__("Fix")', js)
+		self.assertNotIn("fix_day.bundle.js", js)
+		self.assertNotIn("hrms.fix_day", js)
+		self.assertIn('add_inner_button(__("Punches")', js)
+		self.assertIn(self.PUNCHES, js)
 		self.assertIn("UD_HR_ROLES", js)
 
-	def test_shift_attendance_opens_it_for_one_ticked_day(self):
+	def test_shift_attendance_links_to_the_punches_and_opens_nothing(self):
 		js = read(SHIFT_ATTENDANCE)
-		self.assertIn('frappe.require("fix_day.bundle.js"', js)
-		self.assertIn("hrms.fix_day.open(", js)
-		self.assertIn('add_inner_button(__("Fix day")', js)
+		self.assertNotIn("fix_day.bundle.js", js)
+		self.assertNotIn("hrms.fix_day", js)
+		self.assertIn('add_inner_button(__("Punches")', js)
+		self.assertIn(self.PUNCHES, js)
 		# the master edit's own HR gate already wraps setup_toolbar
 		self.assertIn("if (sa_enabled()) sa_grid(report).setup_toolbar();", js)
+
+	def test_the_attendance_list_links_to_the_punches_and_opens_nothing(self):
+		self.assertNotIn("hrms.fix_day.from_attendance", read(BUNDLE))
+		listing = read(ROOT / "hr/doctype/attendance/attendance_list.js")
+		self.assertNotIn("hrms.fix_day", listing)
+		self.assertIn('add_inner_button(__("Punches")', listing)
+		self.assertIn(self.PUNCHES, listing)
 
 	def test_the_employee_checkin_list_opens_it_for_one_employee_day(self):
 		"""Amended 17 Sep 2026 (cba7c3f11). The bundle used to assign
@@ -210,11 +228,16 @@ class TestTheThreeDoors(unittest.TestCase):
 		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
 		self.assertIn("hrms.fix_day.from_taps(listview)", listing)
 
-	def test_the_attendance_list_opens_it_for_one_ticked_day(self):
+	def test_the_employee_checkin_list_opens_the_range_form_beside_it(self):
+		"""21 Sep 2026: tick -> choose shift -> Apply, on the same page, behind
+		the same HR gate. Apply is refused until a preview of the same inputs
+		has been seen."""
 		js = read(BUNDLE)
-		self.assertIn("hrms.fix_day.from_attendance", js)
-		listing = read(ROOT / "hr/doctype/attendance/attendance_list.js")
-		self.assertIn("hrms.fix_day.from_attendance(list_view)", listing)
+		self.assertIn("hrms.fix_day.fix_days_from_taps", js)
+		self.assertIn("class FixDaysDialog", js)
+		self.assertIn("Preview first", js)
+		listing = read(ROOT / "hr/doctype/employee_checkin/employee_checkin_list.js")
+		self.assertIn("hrms.fix_day.fix_days_from_taps(listview)", listing)
 
 
 if __name__ == "__main__":

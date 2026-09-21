@@ -29,13 +29,17 @@ frappe.listview_settings["Employee Checkin"] = {
 	},
 	onload: function (listview) {
 		// The pairing/relinking screen. It lives in fix_day.bundle.js (loaded at
-		// boot by hooks.app_include_js) and is opened from here, from the Shift
-		// Attendance report and from Unclaimable Days. It is registered HERE, in
-		// the list script Desk loads last, because a doctype's listview_settings
-		// has exactly one owner: the bundle used to assign this key itself and
-		// this file then overwrote it, so HR never saw the button.
+		// boot by hooks.app_include_js) and this list is its only door: "Fix day"
+		// for one employee-day, "Fix days" for a range of days under one shift
+		// (owner, 21 Sep 2026). It is registered HERE, in the list script Desk
+		// loads last, because a doctype's listview_settings has exactly one
+		// owner: the bundle used to assign this key itself and this file then
+		// overwrote it, so HR never saw the button.
 		if (typeof hrms !== "undefined" && hrms.fix_day && hrms.fix_day.enabled()) {
 			listview.page.add_inner_button(__("Fix day"), () => hrms.fix_day.from_taps(listview));
+			listview.page.add_inner_button(__("Fix days"), () =>
+				hrms.fix_day.fix_days_from_taps(listview),
+			);
 		}
 		listview.page.add_action_item(__("Fetch Shifts"), () => {
 			const checkins = listview.get_checked_items().map((checkin) => checkin.name);

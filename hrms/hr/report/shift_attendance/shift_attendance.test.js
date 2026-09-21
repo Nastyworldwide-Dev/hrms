@@ -25,6 +25,7 @@ function load({ roles = ["HR User"], handlers = {}, checked = [], confirm_answer
 	const messages = [];
 	const dialogs = [];
 	const confirms = [];
+	const routes = [];
 	const page = {
 		buttons: new Map(),
 		indicator: null,
@@ -91,6 +92,7 @@ function load({ roles = ["HR User"], handlers = {}, checked = [], confirm_answer
 		},
 		msgprint: (m) => messages.push(typeof m === "string" ? m : m.message),
 		show_alert: () => {},
+		set_route: (...route) => routes.push(JSON.parse(JSON.stringify(route))),
 		confirm: (text, yes, no) => {
 			confirms.push(text);
 			return confirm_answer ? yes() : no && no();
@@ -100,7 +102,7 @@ function load({ roles = ["HR User"], handlers = {}, checked = [], confirm_answer
 	const context = vm.createContext({ frappe, __: translate, console: quiet, setTimeout, Promise, JSON });
 	vm.runInContext(SOURCE, context);
 	const settings = frappe.query_reports["Shift Attendance"];
-	return { settings, report, page, calls, messages, dialogs, confirms, frappe };
+	return { settings, report, page, calls, messages, dialogs, confirms, routes, frappe };
 }
 
 // get_day answers with a revision derived from the day, so a payload can be
@@ -164,6 +166,24 @@ for (const role of ["HR User", "HR Manager", "System Manager"]) {
 		assert.strictEqual(typeof options.getEditor, "function");
 	});
 }
+
+// Owner, 21 Sep 2026: the Fix Day tools live on the Employee Checkin list only.
+// This report links there — "Punches" in the same group — and no longer opens
+// the screen itself.
+test("Fix day is gone; Punches opens the check-in list on the one ticked day", () => {
+	const { settings, report, page, routes, messages } = load({ checked: [ROW_A] });
+	settings.onload(report);
+	assert.ok(!page.buttons.has("Fix day"));
+	assert.strictEqual(page.buttons.get("Punches").group, "Edit Attendance");
+	page.buttons.get("Punches").action();
+	assert.deepStrictEqual(routes, [
+		["List", "Employee Checkin", { employee: "EMP-1", time: ["Between", ["2026-09-02", "2026-09-02"]] }],
+	]);
+	report.checked = [ROW_A, ROW_B];
+	page.buttons.get("Punches").action();
+	assert.strictEqual(routes.length, 1, "two ticked days route nowhere");
+	assert.match(messages[0], /exactly one day/);
+});
 
 test("only date, shift, status, in and out are editable", () => {
 	const { settings } = load();

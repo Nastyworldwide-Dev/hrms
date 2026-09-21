@@ -39,6 +39,7 @@ const SA_CODE_TEXT = {
 	nothing_to_remove: "There is no attendance on this day to remove",
 	nothing_to_hand_back: "Nothing on this day was set by HR",
 	not_hr_owned: "The system already manages this day",
+	not_one_session: "A typed day longer than 20 hours is not one session; check the times",
 	error: "Could not save this row; try again",
 };
 
@@ -119,31 +120,28 @@ class ShiftAttendanceGrid {
 		page.add_inner_button(__("Add row"), () => this.add_row(), group);
 		page.add_inner_button(__("Add / change shift"), () => this.change_shift(), group);
 		page.add_inner_button(__("Hand back to system"), () => this.hand_back_selected(), group);
-		page.add_inner_button(__("Fix day"), () => this.fix_day(), group);
+		page.add_inner_button(__("Punches"), () => this.punches(), group);
 		console.info("[ShiftAttendance] edit tools shown");
 		this.guard_refresh();
 		this.update_indicator();
 	}
 
-	// Entry point only. The master edit above types a day's result; the Fix Day
-	// screen (hrms/public/js/fix_day.bundle.js) corrects the day's EVIDENCE —
-	// which taps count and which session they belong to — and lets the engine
-	// recompute hours and OT. Nothing about that day is decided here.
-	fix_day() {
+	// A link, not an editor. The master edit above types a day's result; the
+	// day's EVIDENCE — which taps count and which session they belong to — is
+	// corrected on the Employee Checkin list, the only page that carries the
+	// Fix Day tools (owner, 21 Sep 2026). This opens that list on the ticked day.
+	punches() {
 		const days = this.require_selection();
 		if (!days.length) return;
 		if (days.length !== 1) {
-			frappe.msgprint(__("Tick exactly one day to fix."));
+			frappe.msgprint(__("Tick exactly one day."));
 			return;
 		}
 		const day = days[0];
-		console.info("[ShiftAttendance] fix day", day.employee, day.attendance_date);
-		frappe.require("fix_day.bundle.js", () => {
-			hrms.fix_day.open({
-				employee: day.employee,
-				date: day.attendance_date,
-				on_close: () => this.reload(),
-			});
+		console.info("[ShiftAttendance] punches", day.employee, day.attendance_date);
+		frappe.set_route("List", "Employee Checkin", {
+			employee: day.employee,
+			time: ["Between", [day.attendance_date, day.attendance_date]],
 		});
 	}
 

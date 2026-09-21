@@ -4,30 +4,27 @@
 // Read-only. The rows come from hrms/utils/attendance_recovery.py's detectors;
 // nothing on this page writes. Today is never read (the server clips to yesterday).
 //
-// "Fix" is an ENTRY POINT and nothing more: it opens the Fix Day screen
-// (hrms/public/js/fix_day.bundle.js) for the ticked row's employee-day. Every
-// correction and every guard lives there and in hrms.api.attendance_fix_day;
-// this report still computes nothing and writes nothing itself.
+// "Punches" is a LINK and nothing more: it opens the Employee Checkin list on
+// the ticked row's employee-day, the only page that carries the Fix Day tools
+// (owner, 21 Sep 2026). Every correction and every guard lives there and in
+// hrms.api.attendance_fix_day; this report computes nothing and writes nothing.
 const UD_HR_ROLES = ["HR User", "HR Manager", "System Manager"];
 
 function ud_hr() {
 	return UD_HR_ROLES.some((role) => frappe.user.has_role(role));
 }
 
-function ud_fix(report) {
+function ud_punches(report) {
 	const rows = (report.get_checked_items && report.get_checked_items()) || [];
 	const day = rows.length === 1 ? rows[0] : null;
 	if (!day || !day.employee || !day.date) {
-		frappe.msgprint(__("Tick exactly one row to fix."));
+		frappe.msgprint(__("Tick exactly one row."));
 		return;
 	}
-	console.info("[UnclaimableDays] fix", day.employee, day.date);
-	frappe.require("fix_day.bundle.js", () => {
-		hrms.fix_day.open({
-			employee: day.employee,
-			date: day.date,
-			on_close: () => report.refresh(),
-		});
+	console.info("[UnclaimableDays] punches", day.employee, day.date);
+	frappe.set_route("List", "Employee Checkin", {
+		employee: day.employee,
+		time: ["Between", [day.date, day.date]],
 	});
 }
 
@@ -69,7 +66,7 @@ frappe.query_reports["Unclaimable Days"] = {
 	],
 
 	onload(report) {
-		if (ud_hr()) report.page.add_inner_button(__("Fix"), () => ud_fix(report));
+		if (ud_hr()) report.page.add_inner_button(__("Punches"), () => ud_punches(report));
 	},
 
 	get_datatable_options(options) {
