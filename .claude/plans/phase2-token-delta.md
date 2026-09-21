@@ -73,11 +73,30 @@ slate is the difference between "tinted air" and "a card".
 
 `tokens.json` calls 720px *"a starting value, expected to be tuned once on
 device — which is why the spec insists it be a single token"*. The mockup tuned
-it. This is the token doing its job; 880px is adoptable with no argument.
-Caveat: the contrast gate's blob-clearance proof is computed against the
-content column, so widening it moves the column toward the blobs. Re-run
-`node design/gates/contrast.mjs` after the change — it is a one-line check, not
-a risk, but it is not free either.
+it. **It is not adoptable as it stands: 880px FAILS the contrast gate.**
+
+Measured, not reasoned about — I copied the gate, changed the one number, ran
+it, and deleted the copy:
+
+    [contrast] FAIL lg 1024px nav:216 dark  ink-muted over blob B = 4.31 (min 4.5)
+    GATE_RESULT {"gate":"contrast","checked":57,"failures":1,"skipped":0}
+
+At the narrowest desktop width with the side nav expanded, a 880px column
+reaches far enough right to sit on blob B, and muted ink over that composite
+falls to 4.31:1 — under the 4.5 floor. At 720px the same combination clears
+the blob entirely.
+
+**There is a second defect here, and it is the more serious one.** The gate
+hardcodes `column: 720` at `contrast.mjs:188`; it does NOT read
+`--g-content-column-lg` from `tokens.json`. So editing the token to 880 would
+change the app and leave the gate still proving 720 — green, and wrong. The
+failure above only appeared because I changed the gate's own constant by hand.
+
+Adopting 880 therefore means three things, in order: widen the column, make
+the gate read the token instead of its own literal, and then resolve the dark
+blob-B overlap the new width creates (move blob B, lower its alpha at `lg`, or
+cap the column at the narrow end). That is a real piece of work, not a token
+edit.
 
 ### 3 & 4. `--g-font-display` and `--g-font-ui` — order, not content
 
@@ -104,20 +123,20 @@ package. This is a performance decision wearing a typography costume.
 |---|---|---|
 | `--g-elev-1/2/3` | `none` / two-layer / `0 10px 30px` | **Naming collision, not a gap.** Shipped has `--g-lift` (`0 10px 30px rgba(20,26,40,.10)`) and `--g-shadow-action`. Same idea, different scheme: the mockup numbers elevation, the app names it by role. Pick ONE. Numbered elevation is the more conventional 2026 practice; role-named is what 196 shipped tokens and every component already use. Renaming is a 196-token sweep for no user-visible gain — recommend keeping the shipped scheme and mapping `elev-2 -> lift`. |
 | `--g-glass-solid`, `--g-well-solid` | `#F4F6F8` / `#15171D`, `#E8EAEE` / `#101219` | Only needed because of the .86 fill above. Decide `--g-glass-fill` first; these follow from it. `--g-radius-well: 9px` exists shipped with no matching surface colour, so a `well` role is half-present already. |
-| `--g-sat` | `180%` | **Adopt.** The app hard-codes `saturate(180%)` at six sites in `glass-components.css`. That is exactly the literal the lint gate exists to catch, and the mockup already names it. Cheap, real, low risk. |
+| `--g-sat` | `180%` | **Adopt.** The app repeats `saturate(180%)` at six sites in `glass-components.css`, and the mockup already names it. Note the lint gate would NOT catch this: `design/gates/lint.mjs` scans for hex/`rgb()`/`hsl()` literals and arbitrary Tailwind values — colour, not filter functions. So this is a duplication no gate is watching, which is a reason to name it, not a violation to clear. Cheap, low risk. |
 | `--g-badge-bg` | `#C81E1E` | A red count badge. The app's unread indicator (`.g-header__dot`, glass-components.css:1967) is an 8px dot painted `var(--g-brand)` — chartreuse, no count. Different component, not a missing token. Only needed if the owner wants counted badges. |
 | `--g-train`, `--g-travel` | `#F472B6`, `#38BDF8` | Calendar day markers (`.m-tr`, `.m-tv`). The app has `--g-leave` and uses `--g-brand` for OT, but no training/travel marker — the only shipped mention of travel is `cancelRule.js:19`, a business rule, not a colour. **These are new product surface, not a restyle**: adding them means the calendar renders event types it does not render today. Belongs with the IA question, not with tokens. |
 
 ## What this means for sequencing
 
-Of the four tokens whose values differ, exactly ONE is adoptable without a
-ruling: `--g-content-column-lg` (720 -> 880), which `tokens.json` already
-describes as a value meant to be tuned. Add `--g-sat` alongside it — that is a
-NEW name, not a value diff, so it does not come out of the four. Together they
-are a small `tokens.json`-only commit with no screen work.
+**NONE of the four tokens whose values differ is a free adoption.** I wrote the
+opposite first: `--g-content-column-lg` looked like the token doing its job
+until I ran the gate at 880 and it failed. The only genuinely cheap change on
+this page is `--g-sat`, which is a NEW name rather than a value diff and
+therefore does not come out of the four at all.
 
-The remaining three tokens are two decisions, not edits — `--g-font-display`
-and `--g-font-ui` are one choice made twice:
+The four break down as three decisions, not edits — `--g-font-display` and
+`--g-font-ui` are one choice made twice:
 
 1. **`--g-glass-fill` .56 -> .86** — changes the entire feel of every panel in
    both themes, and contradicts a "do not correct" note already in
@@ -125,6 +144,9 @@ and `--g-font-ui` are one choice made twice:
    mechanism, so this buys taste, not correctness.
 2. **font stack order** — buys the mockup's look at the cost of first paint,
    and would mean loading Inter twice unless the shipped self-hosting is kept.
+3. **`--g-content-column-lg` 720 -> 880** — fails the contrast gate at
+   1024px/dark, and the gate hardcodes the old width so it would not notice.
+   See above; this is the one I had wrong.
 
 Both are the same shape as the tab question in
 `phase2-ground-truth.md`: visual contract vs. something bigger. Neither should
