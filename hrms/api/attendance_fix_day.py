@@ -1127,9 +1127,10 @@ def save_day(
 	names. `leave_open` allows exactly one tap and writes no row (G5).
 	`seen_modified` is `get_day`'s `seen_modified`: the day as the dialog saw it.
 
-	G8 needs no code here: `_delete_tap` goes through `frappe.delete_doc`,
-	which writes a Deleted Document, and the mirror import already honours
-	those, so a deleted mirrored punch is not resurrected by the next sync.
+	G8: `_delete_tap` goes through `frappe.delete_doc`, which writes a Deleted
+	Document the mirror import honours, so a deleted mirrored punch is not
+	resurrected by the next sync. Whether the on_trash hook would ALLOW the
+	delete is asked up front (`_mirror_delete_allowed`), with the other guards.
 	"""
 	_require_hr()
 	reason = _require_reason(reason)
