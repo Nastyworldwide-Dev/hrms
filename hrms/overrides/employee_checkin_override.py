@@ -28,6 +28,7 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import (
 )
 from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_setting_enabled_for_employee
+from hrms.utils.day_remark import remark_day_after_commit
 from hrms.utils.geofence import (
 	REASON_IMPRECISE_LOCATION,
 	REASON_NO_RADIUS,
@@ -139,6 +140,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		later = [row for row in rows if row["time"] >= log_time]
 		values = {field: anchor[field] for field in SESSION_STAMP_FIELDS}
 		values["offshift"] = 0
+		left_days = []
 		for name in session_restamps(anchor, later):
 			frappe.db.set_value(
 				"Employee Checkin",
@@ -153,6 +155,15 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 				self.name,
 				log_time,
 			)
+			row = next(r for r in later if r["name"] == name)
+			left = (row["shift_start"] or row["time"]).date()
+			if left not in left_days:
+				left_days.append(left)
+		# db.set_value fires no doc_event, so nobody else hears that these punches
+		# left their day (F4): re-mark it. Inside an automatic pass day_remark
+		# refuses the days the pass owns; outside one this queues after commit.
+		for left in left_days:
+			remark_day_after_commit(self.employee, left, f"session restamp by {self.name}")
 
 	@frappe.whitelist()
 	def fetch_shift(self):

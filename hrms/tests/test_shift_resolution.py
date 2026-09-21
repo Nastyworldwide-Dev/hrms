@@ -738,8 +738,12 @@ class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 		with (
 			patch.object(frappe, "get_all", return_value=later) as get_all,
 			patch.object(frappe.db, "set_value") as set_value,
+			patch.object(mod, "remark_day_after_commit") as remark,
 		):
 			mod.CustomEmployeeCheckin.after_insert(doc)
+		# F4: the OUT left the 11 Sep night; that day is re-marked
+		remark.assert_called_once()
+		self.assertEqual(remark.call_args.args[:2], ("HR-EMP-00009", datetime(2026, 9, 11).date()))
 		filters = get_all.call_args.kwargs["filters"]
 		self.assertEqual(filters["employee"], "HR-EMP-00009")
 		# From the start of the shift day (the anchor's own group, for its
