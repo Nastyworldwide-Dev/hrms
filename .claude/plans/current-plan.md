@@ -61,6 +61,11 @@ EXPECTED: missing clock-out fixed in 1 screen, 3 clicks; 20 rows bulk, 1 refused
 3. No lie from a decided draft: notify from on_submit; return docstatus; one `requestStatus()` helper for every row/chip/filter.
 4. Frontend cost: one user-info fetch; parallel detail loads; buttons from the doc; in-flight guards.
 5. A failed decide/finalize/punch on a flaky connection is never silent: error toast names the action, button re-arms, list reloads (C-H4).
+6. Request dates and proof (audit-2026-09-21-requests.md): track_changes on Leave Application + Expense Claim (guarded patch);
+   RL grant/reversal dated by ot_date (as Comp Leave does); PWA parses naive server datetimes as SITE time (one helper), Home sort via dayjs;
+   frappe-ui DatePicker typed-date fix at source + TZ-parameterised test; OT/RL cancel reversal never silent; Comp Leave cancel no freeze;
+   notify on submit only, message carries the time. One request table (decision field · pending · business dates · summary · withdrawable ·
+   notify-on) replaces the eight maps. Rulings pending: Leave-cancel ledger reversal vs delete; Expense Claim shows expense_date.
 EXPECTED: employee files leave → approver approves on phone → employee Home shows Approved without reload with the socket dead.
 
 ## DROPPED / BACKLOG
