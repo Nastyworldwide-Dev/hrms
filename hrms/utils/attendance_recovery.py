@@ -2014,24 +2014,20 @@ def _remark_released_day(employee, day, apply) -> dict:
 	dangling). `ShiftType.mark_attendance_for_shift_logs` then keeps the row when
 	the result is the same, or cancels and re-marks it from all of them.
 	"""
-	from hrms.hr.doctype.shift_type.shift_type import CHECKIN_FIELDS
+	from hrms.hr.doctype.shift_type.shift_type import day_evidence
 
 	day = getdate(day)
 	start = datetime.combine(day, time.min)
-	punches = without_pending_late_outs(
-		frappe.get_all(
-			"Employee Checkin",
-			filters=[
-				["employee", "=", employee],
-				["shift_start", ">=", start],
-				["shift_start", "<", start + timedelta(days=1)],
-				["shift", "is", "set"],
-				[PROVENANCE_FIELD, "is", "not set"],
-			],
-			fields=list(CHECKIN_FIELDS),
-			order_by="time asc",
-			limit_page_length=0,
-		)
+	# The engine's own loader: mirrored and pending late OUTs left out, a
+	# skipped punch KEPT as the wall it is (E-H1, 21 Sep 2026).
+	punches = day_evidence(
+		[
+			["employee", "=", employee],
+			["shift_start", ">=", start],
+			["shift_start", "<", start + timedelta(days=1)],
+			["shift", "is", "set"],
+		],
+		order_by="time asc",
 	)
 	links = sorted({p.get("attendance") for p in punches if p.get("attendance")})
 	submitted = {}
@@ -2045,8 +2041,6 @@ def _remark_released_day(employee, day, apply) -> dict:
 			submitted[row.name] = getdate(row.attendance_date)
 	by_shift = {}
 	for punch in punches:
-		if cint(punch.get("skip_auto_attendance")):
-			continue
 		if punch.get("attendance") and submitted.get(punch.get("attendance"), day) != day:
 			continue  # linked to another day's row
 		by_shift.setdefault(punch.get("shift"), []).append(punch)

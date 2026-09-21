@@ -324,6 +324,18 @@ def punch(employee, time, log_type, name, **extra):
 
 
 class _SiteCase(unittest.TestCase):
+	def use_real_loader(self):
+		"""The engine's loader against the fake site: `checkin_fields` asks the
+		site for the noise column once per request-local, so answer it here."""
+		import _erpnext_stub
+
+		_erpnext_stub.install()
+		from hrms.hr.doctype.shift_type import shift_type as st
+
+		patcher = mock.patch.object(st.frappe, "local", types.SimpleNamespace(_hrms_has_noise_field=True))
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
 	def use(self, site):
 		self.site = site
 		patcher = site.patch()
@@ -1039,19 +1051,9 @@ class TestRemarkAttendance(_WhitelistCase):
 
 	def setUp(self):
 		self.use(self.site())
-		shift_module = types.ModuleType("hrms.hr.doctype.shift_type.shift_type")
-		shift_module.CHECKIN_FIELDS = (
-			"name",
-			"employee",
-			"log_type",
-			"time",
-			"shift",
-			"shift_start",
-			"attendance",
-		)
-		modules = mock.patch.dict(sys.modules, {"hrms.hr.doctype.shift_type.shift_type": shift_module})
-		modules.start()
-		self.addCleanup(modules.stop)
+		# `_remark_day` reads through the engine's own loader (`shift_type
+		# .day_evidence`, 21 Sep 2026) — the real one, against the fake site.
+		self.use_real_loader()
 		self.lock_calls = []
 
 		def locked(employee, day, attendance, for_update):
@@ -1207,20 +1209,7 @@ class TestRemarkStuckDay(_WhitelistCase):
 				],
 			)
 		)
-		shift_module = types.ModuleType("hrms.hr.doctype.shift_type.shift_type")
-		shift_module.CHECKIN_FIELDS = (
-			"name",
-			"employee",
-			"log_type",
-			"time",
-			"shift",
-			"shift_start",
-			"attendance",
-			"remote_approval_status",
-		)
-		modules = mock.patch.dict(sys.modules, {"hrms.hr.doctype.shift_type.shift_type": shift_module})
-		modules.start()
-		self.addCleanup(modules.stop)
+		self.use_real_loader()
 		for name, value in (
 			("_financially_locked", lambda *a, **k: None),
 			("_same_engine_result", lambda *a: False),

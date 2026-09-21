@@ -662,7 +662,8 @@ def _shift_type_namespace():
 			isinstance(n, ast.FunctionDef)
 			# `checkin_fields` since 17 Sep 2026: the SELECT asks for the noise
 			# verdict only on a site whose column exists.
-			and n.name in {"counts_for_attendance", "pending_late_checkouts", "checkin_fields"}
+			and n.name
+			in {"counts_for_attendance", "pending_late_checkouts", "checkin_fields", "day_evidence"}
 		)
 		or (
 			isinstance(n, ast.Assign)

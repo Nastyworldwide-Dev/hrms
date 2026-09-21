@@ -86,6 +86,9 @@ shift_helpers = [
 			# the field list is asked for at read time: a site without the
 			# `skipped_as_noise` column must not have it named in the SELECT
 			"checkin_fields",
+			# the one loader every reader shares (21 Sep 2026)
+			"day_evidence",
+			"pending_late_checkouts",
 		}
 	)
 	or (

@@ -49,6 +49,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate
 
+from hrms.hr.doctype.shift_type.shift_type import counts_for_attendance
 from hrms.overrides import company_scope
 from hrms.utils import hr_removed_day
 
@@ -167,14 +168,20 @@ class Refused(frappe.ValidationError):
 def tap_state(tap) -> str:
 	"""What this tap is worth to the day, in HR's words. Pure.
 
-	Order matters: a rejected tap is rejected even when it is also skipped (the
-	rejection is what skipped it), and a tap HR typed here is still "skipped"
-	once somebody ignores it.
+	The words follow the engine's own verdict (`counts_for_attendance`): a tap
+	it does not read is named by WHY — rejected, skipped, off-shift, or a late
+	check-out still awaiting its approver. Order matters: a rejected tap is
+	rejected even when it is also skipped (the rejection is what skipped it),
+	and a tap HR typed here is still "skipped" once somebody ignores it. A
+	Pending tap the engine DOES count (provisional presence) still reads
+	"awaiting approval", so HR sees that it may yet be rejected.
 	"""
 	if (tap.get("remote_approval_status") or "") == "Rejected":
 		return "rejected"
 	if cint(tap.get("skip_auto_attendance")):
 		return "skipped"
+	if cint(tap.get("offshift")):
+		return "off-shift"
 	if (tap.get("remote_approval_status") or "") == "Pending":
 		return "awaiting approval"
 	if tap.get("device_id") == HR_TAP_DEVICE:
@@ -183,8 +190,11 @@ def tap_state(tap) -> str:
 
 
 def counted(tap) -> bool:
-	"""Whether the engine reads this tap as evidence. Pure."""
-	return tap_state(tap) in ("counted", "HR-entered")
+	"""Whether the engine reads this tap as evidence. Pure — and the engine's
+	own predicate, not a second one: this screen called an off-shift tap
+	"counted" and a pending IN not, and planned days the engine read the other
+	way round (21 Sep 2026 audit, B-C1 / B-H4)."""
+	return counts_for_attendance(tap)
 
 
 def counted_tap_change_reason(tap, fields) -> str | None:
@@ -1137,18 +1147,15 @@ def _tap_day(tap):
 
 
 def _session_stamp(tap) -> dict:
-	"""The first tap's whole shift stamp, so the second joins the same session."""
+	"""The first tap's whole shift stamp, so the second joins the same session —
+	built where the master edit builds its own, so there is one such stamp."""
+	from hrms.api.attendance_master_edit import session_stamp_from
+
 	if not tap.get("shift") or not tap.get("shift_start"):
 		_refuse(
 			_("The first tap has no shift, so there is no session to join it to. Move it to a shift first.")
 		)
-	return {
-		"shift": tap.get("shift"),
-		"shift_start": tap.get("shift_start"),
-		"shift_end": tap.get("shift_end"),
-		"shift_actual_start": tap.get("shift_actual_start"),
-		"shift_actual_end": tap.get("shift_actual_end"),
-	}
+	return session_stamp_from(tap)
 
 
 def _require_reason(reason) -> str:
@@ -1256,6 +1263,13 @@ def _day_taps(employee, day) -> list:
 		order_by="time asc",
 		limit_page_length=0,
 	)
+	# A forgotten check-out still Pending is a claim, not evidence (E16); the
+	# engine learns that from the request filed for it, and so must this screen.
+	from hrms.hr.doctype.shift_type.shift_type import pending_late_checkouts
+
+	late = pending_late_checkouts(rows)
+	for row in rows:
+		row["is_late_checkout"] = 1 if row.get("name") in late else 0
 	return [row for row in rows if start <= get_datetime(row.get("shift_start") or row.get("time")) < end]
 
 

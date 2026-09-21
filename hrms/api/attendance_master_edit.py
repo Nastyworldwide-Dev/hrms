@@ -764,6 +764,24 @@ def punch_stamp(shift, window) -> dict:
 	return stamp
 
 
+def session_stamp_from(tap) -> dict:
+	"""The shift stamp another tap joins to sit in the same session as `tap`.
+
+	`offshift: 0` with it: Fix Day's pair and rebuild copied the shift fields
+	but left `offshift=1` on an off-shift tap, so the engine walled the very tap
+	HR had just made the closing OUT (21 Sep 2026 audit, B-C1). The skip and
+	its noise verdict are NOT here — the caller says whether the tap counts.
+	"""
+	return {
+		"shift": tap.get("shift"),
+		"shift_start": tap.get("shift_start"),
+		"shift_end": tap.get("shift_end"),
+		"shift_actual_start": tap.get("shift_actual_start"),
+		"shift_actual_end": tap.get("shift_actual_end"),
+		"offshift": 0,
+	}
+
+
 def engine_day(shift_doc, employee, window, in_time, out_time, half_holiday=False):
 	"""HR's in and out through the hourly job's own day rule
 	(ShiftType.get_attendance, with shift_day_result's thresholds): pairing,

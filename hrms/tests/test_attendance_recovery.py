@@ -1220,7 +1220,9 @@ class TestRebuildReleasedDay(_Base):
 		):
 			result = rec._remark_released_day("E-R", date(2026, 8, 12), True)
 		logs = shift.mark_attendance_for_shift_logs.call_args.args[2]
-		self.assertEqual([p.name for p in logs], ["P1", "P2", "P3"])
+		# P5 is skipped and still handed over: a skipped punch is a WALL the
+		# engine splits the day at, not a row to drop (E-H1, 21 Sep 2026).
+		self.assertEqual([p.name for p in logs], ["P1", "P2", "P3", "P5"])
 		self.assertEqual(result["marked"], ["ATT-NEW"])
 
 	def test_an_unchanged_released_day_is_not_re_marked(self):

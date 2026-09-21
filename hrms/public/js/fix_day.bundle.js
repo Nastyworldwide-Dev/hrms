@@ -26,6 +26,7 @@ const FD_STATE_COLOUR = {
 	counted: "green",
 	"HR-entered": "blue",
 	skipped: "grey",
+	"off-shift": "grey",
 	"awaiting approval": "orange",
 	rejected: "red",
 };

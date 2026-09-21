@@ -178,12 +178,64 @@ def get_automation_attendance(employee, attendance_date, shift):
 
 def linked_checkins(attendance_name) -> list:
 	"""The punches already linked to an Attendance, shaped like the job's rows."""
-	return frappe.get_all(
+	return day_evidence({"attendance": attendance_name}, order_by="time")
+
+
+def pending_late_checkouts(rows) -> set:
+	"""Names of the rows that are forgotten check-outs still waiting for their
+	approver (E16). One read of Remote Checkin Request, only for Pending rows.
+	Employee Checkin carries no late-checkout flag; the request filed for it does."""
+	pending = sorted({row.get("name") for row in rows if row.get("remote_approval_status") == "Pending"})
+	if not pending:
+		return set()
+	late = {
+		r.get("checkin")
+		for r in frappe.get_all(
+			"Remote Checkin Request",
+			filters={"checkin": ["in", pending], "is_late_checkout": 1, "status": "Pending"},
+			fields=["checkin"],
+			limit_page_length=0,
+		)
+	} & set(pending)
+	if late:
+		logger.info("[shift_type] %d pending late check-out(s) wait for approval", len(late))
+	return late
+
+
+def day_evidence(filters, order_by="time") -> list:
+	"""The Employee Checkin rows the engine must see, whoever asks. ONE loader.
+
+	Callers say WHICH punches (a shift's unlinked window, one employee-day, the
+	rows linked to an Attendance); this says what every reading has in common:
+
+	* the full field list, `skipped_as_noise` included, so `attendance_segments`
+	  can tell a wall from noise;
+	* a skipped or rejected punch is KEPT — it is a wall that separates two
+	  spans, and dropping it here bridged time the approver had rejected
+	  (21 Sep 2026 audit, E-H1: the hourly job kept it, both re-mark paths
+	  dropped it, and the same day flipped between Half Day and Present);
+	* a mirrored punch is left to the instance that owns it (single writer,
+	  hrms/sync/write_block.py);
+	* a forgotten check-out still Pending is a claim, not evidence (E16): it is
+	  left out and its approval rebuilds the day.
+	"""
+	mirrored = ("synced_from_instance", "is", "not set")
+	if isinstance(filters, dict):
+		filters = {**filters, mirrored[0]: mirrored[1:]}
+	else:
+		filters = [*filters, list(mirrored)]
+	rows = frappe.get_all(
 		"Employee Checkin",
-		filters={"attendance": attendance_name},
 		fields=checkin_fields(),
-		order_by="time",
+		filters=filters,
+		order_by=order_by,
+		limit_page_length=0,
 	)
+	late = pending_late_checkouts(rows)
+	for row in rows:
+		row["is_late_checkout"] = 1 if row.get("name") in late else 0
+	logger.debug("[shift_type] day_evidence: %d row(s), %d pending late check-out(s)", len(rows), len(late))
+	return [row for row in rows if not row["is_late_checkout"]]
 
 
 def paid_intervals_from(intervals, shift_start) -> tuple[list, float]:
@@ -670,47 +722,20 @@ class ShiftType(Document):
 		return False
 
 	def get_employee_checkins(self) -> list[dict]:
-		rows = frappe.get_all(
-			"Employee Checkin",
-			fields=checkin_fields(),
-			filters={
+		return day_evidence(
+			{
 				"attendance": ("is", "not set"),
 				"time": (">=", self.process_attendance_after),
 				"shift_actual_end": ("<", self.last_sync_of_checkin),
 				"shift": self.name,
-				# Retain ineligible punches as interval boundaries. Only eligible
-				# evidence is linked after calculation; filtering here bridges gaps.
 				# Mirrored punches are owned by their source instance
-				# (single-writer, hrms/sync/write_block.py). Processing them
-				# would create a duplicate local Attendance and stamp the
-				# mirrored rows hook-free, so exclude them at the query.
+				# (single-writer, hrms/sync/write_block.py). `day_evidence`
+				# excludes them for every reader; named here as well so the
+				# hub-writer audit (test_leave_rules) sees it at this site.
 				"synced_from_instance": ("is", "not set"),
 			},
 			order_by="employee,time",
 		)
-		# E16 (15 Sep 2026): a forgotten check-out filed late is a claim until its
-		# approver says yes — neither evidence nor a boundary while Pending. It
-		# stays unlinked; the approval rebuilds the day. Employee Checkin carries
-		# no late-checkout flag, the Remote Checkin Request filed for it does.
-		pending = [row.get("name") for row in rows if row.get("remote_approval_status") == "Pending"]
-		late = set()
-		if pending:
-			late = {
-				r.get("checkin")
-				for r in frappe.get_all(
-					"Remote Checkin Request",
-					filters={"checkin": ["in", sorted(pending)], "is_late_checkout": 1, "status": "Pending"},
-					fields=["checkin"],
-					limit_page_length=0,
-				)
-			} & set(pending)
-			if late:
-				logger.info(
-					"[shift_type] %s: %d pending late check-out(s) wait for approval", self.name, len(late)
-				)
-		for row in rows:
-			row["is_late_checkout"] = 1 if row.get("name") in late else 0
-		return [row for row in rows if not row["is_late_checkout"]]
 
 	def get_attendance(self, logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day):
 		"""Return attendance_status, working_hours, late_entry, early_exit, in_time, out_time

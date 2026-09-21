@@ -296,22 +296,9 @@ def plan_remark(punches, attendance_rows, removed=False) -> tuple[str, str]:
 def pending_late_outs(rows) -> set:
 	"""Names of the rows that are forgotten check-outs still waiting for their
 	approver (E16). One read of Remote Checkin Request, only for Pending rows."""
-	pending = sorted(
-		{r.get("name") for r in rows if r.get("name") and r.get("remote_approval_status") == "Pending"}
-	)
-	if not pending:
-		return set()
-	late = {
-		r.get("checkin")
-		for r in frappe.get_all(
-			"Remote Checkin Request",
-			filters={"checkin": ["in", pending], "is_late_checkout": 1, "status": "Pending"},
-			fields=["checkin"],
-			limit_page_length=0,
-		)
-	} & set(pending)
-	logger.debug("[checkin_import] %d of %d pending punch(es) are late check-outs", len(late), len(pending))
-	return late
+	from hrms.hr.doctype.shift_type.shift_type import pending_late_checkouts
+
+	return pending_late_checkouts([r for r in rows if r.get("name")])
 
 
 def without_pending_late_outs(rows) -> list:
@@ -907,21 +894,15 @@ def _preview(shift, employee: str, day: date, logs, unchanged: bool = False) -> 
 
 def _remark_day(employee: str, day: date, apply: bool) -> dict:
 	"""Plan — and with `apply`, run — the hourly job's own marking for one day."""
-	from hrms.hr.doctype.shift_type.shift_type import CHECKIN_FIELDS
+	from hrms.hr.doctype.shift_type.shift_type import day_evidence
 
 	iso = day.isoformat()
-	punches = frappe.get_all(
-		DOCTYPE,
-		filters={
-			"employee": employee,
-			"shift_start": ["between", [iso, iso]],
-			"shift": ["is", "set"],
-			PROVENANCE_FIELD: ["is", "not set"],
-		},
-		fields=list(CHECKIN_FIELDS),
+	# The engine's own loader: mirrored and pending late OUTs left out, a
+	# skipped punch KEPT as the wall it is (E-H1, 21 Sep 2026).
+	punches = day_evidence(
+		{"employee": employee, "shift_start": ["between", [iso, iso]], "shift": ["is", "set"]},
 		order_by="time asc",
 	)
-	punches = without_pending_late_outs(punches)
 	attendance = frappe.get_all(
 		"Attendance",
 		filters={"employee": employee, "attendance_date": iso, "docstatus": ["<", 2]},
@@ -961,12 +942,12 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 	if action != "remark":
 		return entry
 
-	# What the hourly job reads: unlinked, not skipped. It then merges the punches
-	# already linked to the day's automation row and rebuilds it — cancel, and
-	# amend from all of them — or keeps it when nothing changed. A stuck day
-	# (E21) has nothing unlinked: its taps linked to this day's submitted rows
-	# are handed over instead, and the day is left alone when the engine would
-	# mark it the same.
+	# What the hourly job reads: unlinked punches, a skipped one kept as the wall
+	# it is. It then merges the punches already linked to the day's automation
+	# row and rebuilds it — cancel, and amend from all of them — or keeps it when
+	# nothing changed. A stuck day (E21) has nothing unlinked that counts: its
+	# taps linked to this day's submitted rows are handed over instead, and the
+	# day is left alone when the engine would mark it the same.
 	submitted_rows = {row.get("name") for row in attendance if _flag(row.get("docstatus")) == 1}
 	unlinked = [
 		row for row in punches if not row.get("attendance") and not _flag(row.get("skip_auto_attendance"))
@@ -974,8 +955,6 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 	stuck = not unlinked
 	by_shift: dict[str, list] = {}
 	for row in punches:
-		if _flag(row.get("skip_auto_attendance")):
-			continue
 		if not row.get("attendance") or (stuck and row.get("attendance") in submitted_rows):
 			by_shift.setdefault(row.get("shift"), []).append(row)
 	shifts = {shift_name: frappe.get_doc("Shift Type", shift_name) for shift_name in by_shift}
