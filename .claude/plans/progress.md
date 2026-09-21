@@ -235,3 +235,26 @@ NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
   emits NO GATE_RESULT, so the runner reports FAIL rather than a silent pass.
   tokens.json restored, git status clean.
 - 2026-09-21T23:24:07Z COMMIT: 166a20a67 fix(gates): px() accepted anything parseFloat would guess at → review dispatched
+- 2026-09-21T23:24:23Z COMMIT: a51daf3fa fix(gates): the parseFloat guard did not cover three of its own call sites → review dispatched
+- REPAIR: fifth instance of the same class, and the first that is not a token.
+  contrast.mjs LG.scale {a:.32,b:.29,c:.25} said "matching glass-components.css"
+  — a file whose own header says HAND-AUTHORED, holding width:32vw/29vw/25vw as
+  literals under @media(min-width:1024px). The gate kept a copy of a number with
+  no token behind it, so editing the CSS would leave the lg: proof green and
+  proving the old geometry. CLASS unchanged: a proof that reads a copy of its
+  input. Found by tracing a literal to its source instead of believing the
+  comment that named one.
+- EVIDENCE: rung 2 — new test asserts the gate's MODEL against the CSS's
+  DECLARATION in both halves (scale vs vw width; the derived (offset/size)*scale
+  origin vs the CSS's own -25.04/-22.51/-19.03vw, agreeing to 0.003vw). Proven
+  red twice by perturbing the CSS: width 29->34vw and right -22.51->-18.00vw each
+  fail with the drift named. 10/10 tests, contrast 54/0. CSS restored, clean.
+- NOTE: my first version of that assertion was itself wrong — assert.equal(0.29
+  * 100, 29) fails, because 0.29*100 is 28.999999999999996. Tolerance, not
+  equality: the assertion is about the app's geometry, not about IEEE 754.
+- NOTE: reviewer on a51daf3fa returned DEPLOY, no Critical/Warning. Its two
+  Suggestions: blob-opacity (lines 167/246) is read raw and used arithmetically
+  with no validator — same shape as px() but a different value class (number,
+  not px string), pre-existing, NOT fixed here; and the test's comment-stripper
+  only handles full-line //, which can only ever cause a false RED, never hide a
+  real call. Both recorded rather than silently carried.

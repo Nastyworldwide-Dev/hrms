@@ -127,3 +127,66 @@ test("parseFloat is called in exactly one place — inside px(), after validatio
 			calls.filter((c) => c !== "raw").join(", "),
 	);
 });
+
+// Fifth instance of the class, and the first one that is not a token at all.
+//
+// LG.scale in contrast.mjs says `{ a: 0.32, b: 0.29, c: 0.25 }` with the
+// comment "matching glass-components.css". That file is HAND-AUTHORED (its own
+// header says so) and holds `width: 32vw` / `29vw` / `25vw` as literals under
+// @media (min-width: 1024px). So the gate keeps a copy of a number that has no
+// token behind it: edit the CSS and the lg: proof goes on proving the old
+// geometry, green. Exactly 59e20f697's defect, one layer further out.
+//
+// The offsets are a subtler version. The gate does NOT copy them — it derives
+// each from the mobile tokens as (offset/size)*scale, because glass-components
+// .css holds "the origin:size ratio solved for mobile". That derivation lands
+// within 0.003vw of the CSS's own -25.04/-22.51/-19.03vw. That agreement is
+// the whole basis for the lg: proof being about the shipped app rather than
+// about a model of it, and nothing was checking it.
+//
+// So this asserts the gate's MODEL against the CSS's DECLARATION, in both
+// halves. Tolerance is 0.005vw: the CSS rounds to 2dp, the derivation does not.
+const css = readFileSync(
+	join(HERE, "..", "..", "frontend", "src", "theme", "glass-components.css"),
+	"utf8",
+);
+
+test("the lg: blob model matches what glass-components.css actually declares", () => {
+	const lgBlock = /@media\s*\(min-width:\s*1024px\)\s*\{([\s\S]*?)\n\}/g;
+	const blocks = [...css.matchAll(lgBlock)].map((m) => m[1]).join("\n");
+	assert.ok(blocks, "no @media (min-width: 1024px) block found in glass-components.css");
+
+	const scale = /scale:\s*\{([^}]*)\}/.exec(src);
+	assert.ok(scale, "contrast.mjs must declare LG.scale");
+
+	for (const id of ["a", "b", "c"]) {
+		const rule = new RegExp(`\\.g-lightfield__blob--${id}\\s*\\{([^}]*)\\}`).exec(blocks);
+		assert.ok(rule, `glass-components.css has no lg: rule for blob ${id}`);
+
+		// width: the gate's scale must equal the CSS's vw
+		const cssVw = /width:\s*([\d.]+)vw/.exec(rule[1]);
+		assert.ok(cssVw, `blob ${id} lg: rule declares no vw width`);
+		const gateScale = new RegExp(`\\b${id}:\\s*([\\d.]+)`).exec(scale[1]);
+		assert.ok(gateScale, `LG.scale has no entry for blob ${id}`);
+		// a tolerance, not equality: 0.29 * 100 is 28.999999999999996 in binary
+		// floating point, and this assertion is about the app's geometry, not
+		// about IEEE 754. 1e-9 is far below any real CSS edit.
+		assert.ok(
+			Math.abs(Number(gateScale[1]) * 100 - Number(cssVw[1])) < 1e-9,
+			`LG.scale.${id} says ${gateScale[1]} but glass-components.css ships ${cssVw[1]}vw`,
+		);
+
+		// offset: the gate derives it from the mobile tokens; the CSS states it
+		const side = tokens.field[`blob-${id}-left`] ? "left" : "right";
+		const cssOff = new RegExp(`${side}:\\s*(-?[\\d.]+)vw`).exec(rule[1]);
+		assert.ok(cssOff, `blob ${id} lg: rule declares no ${side} offset in vw`);
+		const mobileOffset = parseFloat(tokens.field[`blob-${id}-${side}`].value);
+		const mobileSize = parseFloat(tokens.field[`blob-${id}-size`].value);
+		const derived = (mobileOffset / mobileSize) * Number(gateScale[1]) * 100;
+		assert.ok(
+			Math.abs(derived - Number(cssOff[1])) < 0.005,
+			`blob ${id}: the gate derives ${derived.toFixed(3)}vw from the mobile tokens, ` +
+				`glass-components.css ships ${cssOff[1]}vw. The lg: proof models a blob the app does not draw.`,
+		);
+	}
+});
