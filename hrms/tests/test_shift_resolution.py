@@ -871,10 +871,21 @@ class TestWiring(unittest.TestCase):
 		self.assertIn("def _open_in", src)
 
 	def test_the_supersede_hook_is_registered_on_submit(self):
-		hooks = (HRMS / "hooks.py").read_text()
-		self.assertIn(
-			'"on_submit": "hrms.overrides.shift_assignment_hooks.close_superseded_assignments"', hooks
+		# on_submit is a list since the restamp hook joined it (21 Sep 2026)
+		doc_events = next(
+			node.value
+			for node in ast.walk(ast.parse((HRMS / "hooks.py").read_text()))
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "doc_events" for t in node.targets)
 		)
+		entry = next(
+			ast.literal_eval(value)
+			for key, value in zip(doc_events.keys, doc_events.values, strict=True)
+			if isinstance(key, ast.Constant) and key.value == "Shift Assignment"
+		)
+		on_submit = entry["on_submit"]
+		on_submit = [on_submit] if isinstance(on_submit, str) else list(on_submit)
+		self.assertIn("hrms.overrides.shift_assignment_hooks.close_superseded_assignments", on_submit)
 		tree = ast.parse((HRMS / "overrides" / "shift_assignment_hooks.py").read_text())
 		fn = next(
 			n

@@ -363,4 +363,80 @@ def _retire_unmarkable_rows(employee, day, result, shift_type, source="day_remar
 			row.name,
 			shift,
 		)
+	if not shifts and not _any_punch_on(employee, day):
+		retired.extend(_retire_emptied_day(employee, day))
+	return retired
+
+
+def _any_punch_on(employee, day) -> bool:
+	"""A punch whose clock falls on the day, whatever its stamp (a cleared one has no shift_start)."""
+	start = datetime.combine(day, time.min)
+	found = bool(
+		frappe.db.exists(
+			"Employee Checkin",
+			[["employee", "=", employee], ["time", ">=", start], ["time", "<", start + timedelta(days=1)]],
+		)
+	)
+	logger.info(
+		"[day_remark] %s on %s: %s", employee, day, "punches by clock" if found else "no punch at all"
+	)
+	return found
+
+
+def _retire_emptied_day(employee, day) -> list:
+	"""The day has no punch at all any more: every SYSTEM row on it is retired.
+
+	The roster re-stamp (hrms/utils/restamp.py) can move a day's only punch
+	onto another day and release its link; the shift loop above never sees
+	that shift, so the stale row — old out_time, dangling link — survived
+	(21 Sep 2026). A typed row (auto_attendance=0), a leave or request row,
+	and one the owner check calls a person's are left alone.
+	"""
+	from hrms.utils import attendance_recovery as rec
+
+	rows = frappe.get_all(
+		"Attendance",
+		filters={
+			"employee": employee,
+			"attendance_date": day,
+			"docstatus": 1,
+			"auto_attendance": 1,
+			"synced_from_instance": ("is", "not set"),
+			"leave_type": ("is", "not set"),
+			"attendance_request": ("is", "not set"),
+			"modify_half_day_status": 0,
+			"status": ("!=", "On Leave"),
+		},
+		fields=[
+			"name",
+			"attendance_date",
+			"shift",
+			"status",
+			"working_hours",
+			"in_time",
+			"out_time",
+			"owner",
+		],
+	)
+	retired = []
+	for row in rows:
+		hold = rec.owner_hold(row)
+		if hold:
+			logger.info("[day_remark] %s on %s: emptied day, %s kept: %s", employee, day, row["name"], hold)
+			continue
+		doc = frappe.get_doc("Attendance", row["name"])
+		doc.flags.ignore_permissions = True
+		doc.cancel()
+		retired.append(row["name"])
+		rec.log_day_fix(
+			employee,
+			day,
+			"retire",
+			before=rec._row_summary(row),
+			after={"reason": "no punches left on the day"},
+			source="day_remark",
+		)
+		logger.info(
+			"[day_remark] %s on %s: %s retired, no punches left on the day", employee, day, row["name"]
+		)
 	return retired

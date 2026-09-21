@@ -472,9 +472,16 @@ doc_events = {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		# A new open-ended assignment ends the ones it supersedes, so one day's
 		# punches never split across an old shift and a new one.
-		"on_submit": "hrms.overrides.shift_assignment_hooks.close_superseded_assignments",
+		"on_submit": [
+			"hrms.overrides.shift_assignment_hooks.close_superseded_assignments",
+			# The roster is the source of the shift stamp: submit, cancel and an
+			# end_date edit each queue one re-stamp of the range's punches.
+			"hrms.overrides.shift_assignment_hooks.queue_restamp",
+		],
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
+		"on_update_after_submit": "hrms.overrides.shift_assignment_hooks.queue_restamp",
 		"before_cancel": "hrms.sync.write_block.block_mirrored_writes",
+		"on_cancel": "hrms.overrides.shift_assignment_hooks.queue_restamp",
 		"on_trash": "hrms.sync.write_block.block_mirrored_writes",
 		"before_rename": "hrms.sync.write_block.block_mirrored_writes",
 	},
