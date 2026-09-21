@@ -1196,6 +1196,19 @@ def save_day(
 	if kept:
 		name, request = sorted(kept.items())[0]
 		_refuse(_("{0} came from an approved request ({1}); cancel the request first.").format(name, request))
+	# G8: a mirrored punch is deleted here and its Deleted Document keeps the
+	# sync from bringing it back — but only once the instance is unlocked
+	# (cutover). Before that the on_trash hook would throw HALF-WAY through the
+	# save, after the rows were cancelled; refuse up front instead (review, 21 Sep).
+	for tap in doomed:
+		instance = tap.get("synced_from_instance")
+		if instance and not _mirror_delete_allowed(instance):
+			_refuse(
+				_(
+					"{0} is mirrored from {1}, which is still locked; delete it there, "
+					"or unlock the instance first."
+				).format(tap.name, instance)
+			)
 	# G11: the punches HR looked at are the punches this writes to
 	taps_now = _day_taps(emp.name, day)
 	version = day_version(taps_now)
@@ -1996,6 +2009,16 @@ def _delete_tap(name) -> None:
 
 def _tap_exists(name) -> bool:
 	return bool(frappe.db.get_value("Employee Checkin", name, "name"))
+
+
+def _mirror_delete_allowed(instance) -> bool:
+	"""What the on_trash hook (`hrms.sync.write_block`) will say to a delete of
+	a punch stamped from `instance`: yes once the instance is unlocked, or for a
+	System Manager. Asked BEFORE any write so the answer is a refusal, not a
+	half-saved day."""
+	from hrms.sync.write_block import _instance_unlocked
+
+	return _instance_unlocked(instance) or "System Manager" in frappe.get_roles()
 
 
 def _approved_requests(names) -> dict:

@@ -73,9 +73,11 @@ function fd_ref(t) {
 // One Attendance row in words: hours and overtime are SHOWN, never sent back.
 // Leads with NAME and SHIFT, how HR matches it to the list (owner, 17 Sep 2026).
 function fd_row_line(row) {
-	const cells = [row.name || "—", row.shift || __("no shift"), row.status || "—"].map(fd_escape);
-	cells.push(fd_clock(row.in_time), fd_clock(row.out_time), fd_escape(row.hours), fd_escape(row.overtime));
-	return __("{0} · {1} · {2} · in {3} · out {4} · {5} h worked · {6} h OT", cells);
+	// what HR reads, no record ids (owner, 21 Sep 2026): status, shift, clocks, hours
+	const cells = [row.status || "—", row.shift || __("no shift")].map(fd_escape);
+	cells.push(fd_clock(row.in_time), fd_clock(row.out_time), fd_escape(row.hours));
+	const ot = fd_escape(row.overtime);
+	return __("{0} · {1} · {2} → {3} · {4} h", cells) + (row.overtime ? __(" · {0} h OT", [ot]) : "");
 }
 
 function fd_button(action, label, klass) {
@@ -232,7 +234,9 @@ class FixDayScreen {
 				name: tap.name,
 				time: tap.time,
 				clock: fd_clock(tap.time),
-				log_type: tap.log_type || "IN",
+				// the engine's reading of the tap (IN/OUT) is the pre-applied label;
+				// the device's label stays visible through the flip (G1)
+				log_type: (from_engine && tap.suggested) || tap.log_type || "IN",
 				shift: tap.shift,
 				state: tap.state,
 				device_id: tap.device_id,
@@ -332,7 +336,7 @@ class FixDayScreen {
 		return `<table class="table table-bordered table-sm">
 			<thead><tr>
 				<th>${__("Counts")}</th><th>${__("Time")}</th><th>${__("Type")}</th>
-				<th>${__("Shift")}</th><th></th><th>${__("Device")}</th>
+				<th>${__("Shift")}</th><th>${__("State")}</th><th>${__("Device")}</th>
 			</tr></thead>
 			<tbody>${rows || `<tr><td colspan="6">${__("No punches on this day.")}</td></tr>`}</tbody>
 		</table>`;

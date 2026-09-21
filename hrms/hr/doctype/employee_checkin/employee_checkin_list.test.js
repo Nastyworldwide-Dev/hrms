@@ -391,7 +391,8 @@ test("the After line is computed from the ticks; unticking says how many will be
 		/After: Present · 21:00 → 08:07 · 11\.1 h · lands on 27 Aug \(7PM-3\.30AM\)/,
 	);
 	assert.match(dialog.summary(), /2 punches will be deleted/);
-	assert.match(dialog.summary(), /Now: .*HR-ATT-1.*HR-ATT-2.*HR-ATT-3/, "today's rows in one line");
+	assert.match(dialog.summary(), /Now: Present · 8AM-6PM · 08:00 → 19:00 · 11 h \| Present .* \| Absent/, "today's rows in one line");
+	assert.doesNotMatch(dialog.summary(), /HR-ATT-/, "no record ids in what HR reads");
 	assert.match(dialog.screen(), /fd-struck[^>]*data-fd-row="CK-A"/, "an unticked row is struck through");
 	// HR's ticks win over the suggestion
 	dialog.tick("CK-C", false);
@@ -492,7 +493,7 @@ test("Save & rebuild sends the ticks as given, once per touched day, then offers
 			},
 		},
 	]);
-	assert.match(dialog.summary(), /HR-ATT-9/, "the result replaces the After line");
+	assert.match(dialog.summary(), /rebuilt \(LOG-1\)[^]*After: Present · 7PM-3.30AM · 21:00 → 08:07 · 11.1 h/, "the result replaces the After line");
 	assert.match(dialog.summary(), /alert-warning[^]*21:00 is outside 8AM-6PM/, "warnings are yellow notes");
 	assert.strictEqual(dialog.primary_label, "Undo");
 	assert.strictEqual(refreshed(), 1);

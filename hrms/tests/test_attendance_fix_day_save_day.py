@@ -45,11 +45,13 @@ class SaveDayCase(FixDayCase):
 	def setUp(self):
 		super().setUp()
 		self.approved = {}  # tap name -> approved Remote Checkin Request
+		self.unlocked = set()  # ERP instances whose mirrored rows HR may delete
 		self.roster = MORNING
 		for name, value in (
 			("_cancel_attendance", self.cancel_attendance),
 			("_approved_requests", lambda names: {n: self.approved[n] for n in names if n in self.approved}),
 			("_roster_shift", lambda employee, day: self.roster),
+			("_mirror_delete_allowed", lambda instance: instance in self.unlocked),
 			("_shift_window_of", self.shift_window_of),
 			("_day_pairing", lambda taps: STRICT),
 		):
@@ -208,6 +210,22 @@ class TestTheGuards(SaveDayCase):
 		self.assertIn("RCR-0007", message)
 		self.assertIn("approved request", message)
 		self.assertEqual(self.store.deleted, [])
+
+	def test_g8_a_mirrored_punch_on_a_locked_instance_is_refused_before_any_write(self):
+		# The on_trash hook would throw after the rows were cancelled (review, 21 Sep)
+		self.store.taps["CKIN-B"]["synced_from_instance"] = "nasty-live"
+		message = self.refusal(self.save, {"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertIn("nasty-live", message)
+		self.assertIn("locked", message)
+		self.assertEqual(self.store.deleted, [])
+		self.assertNotEqual(self.store.rows["ATT-1"]["docstatus"], 2, "nothing was cancelled")
+
+	def test_g8_a_mirrored_punch_on_an_unlocked_instance_is_deleted(self):
+		self.store.taps["CKIN-B"]["synced_from_instance"] = "nasty-live"
+		self.unlocked.add("nasty-live")
+		answer = self.save({"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertTrue(answer["ok"])
+		self.assertIn("CKIN-B", self.store.deleted)
 
 	def test_g10_overlapping_pairs_are_refused(self):
 		self.store.tap("CKIN-E", at(NEXT, "01:00"), "OUT", NIGHT, at(DAY, "19:30"))
