@@ -3,23 +3,34 @@
 Section 3 of the brief is "a cohesive, production-quality Liquid Glass
 interface — not scattered transparency and blur effects". The shipped app
 already HAS that system. So section 3 is not authoring a design system; it is
-reconciling two that overlap by 53 tokens. This file is that reconciliation,
-measured. It changes nothing.
+reconciling two that already overlap almost completely. This file is that
+reconciliation, measured. It changes nothing.
 
 Method: the first (light `:root`) and dark-block declarations of every `--g-*`
 property in `frontend/src/theme/glass.css` (generated from `design/tokens.json`)
 compared against the same in `Nadi PWA UI UX 2.0/nadi-2.0-mockup-4.html`.
-Counts: 196 shipped, 62 in the mockup, 53 names shared.
+Counts: 196 shipped, 62 in the mockup. Light and dark are SEPARATE passes over
+different name sets, and the two must not be added together: the light `:root`
+blocks share 53 names, the dark blocks share 19.
 
 Do not diff against `glass.variables.css` — that is output 3 of
 `build-tokens.mjs` and holds only 5 Ionic `--ion-*` variables. `glass.css` is
 output 1 and is the `--g-*` file. I diffed the wrong one first and got a
 nonsensical "zero overlap".
 
-## Values that differ on a shared name — 5 of 53
+## Values that differ on a shared name
 
-Four in light, one in dark. Everything else is byte-identical, which is the
-real headline: **the mockup is already 92% the shipped system.**
+**Light: 49 of 53 shared names identical, 4 differ.**
+**Dark: 18 of 19 identical, 1 differs.**
+
+Five differing (token, theme) pairs across four distinct tokens, because
+`--g-glass-fill` differs in BOTH passes. Counting the pairs and then dividing
+by the light denominator alone is how "5 of 53" gets written — it silently
+adds a dark result to a light total. Quote the two lines above, not a merged
+ratio.
+
+The headline survives the correction: **almost everything the mockup names,
+the shipped system already defines identically.**
 
 ### 1. `--g-glass-fill` — the only one that is a design decision
 
@@ -93,11 +104,14 @@ package. This is a performance decision wearing a typography costume.
 
 ## What this means for sequencing
 
-Three of the five value diffs are adoptable now and touch `tokens.json` only:
-`--g-sat` (new), `--g-content-column-lg` (720 -> 880). That is a small,
-gate-checkable commit with no screen work.
+Of the four tokens whose values differ, exactly ONE is adoptable without a
+ruling: `--g-content-column-lg` (720 -> 880), which `tokens.json` already
+describes as a value meant to be tuned. Add `--g-sat` alongside it — that is a
+NEW name, not a value diff, so it does not come out of the four. Together they
+are a small `tokens.json`-only commit with no screen work.
 
-The other two are decisions, not edits:
+The remaining three tokens are two decisions, not edits — `--g-font-display`
+and `--g-font-ui` are one choice made twice:
 
 1. **`--g-glass-fill` .56 -> .86** — changes the entire feel of every panel in
    both themes, and contradicts a "do not correct" note already in
