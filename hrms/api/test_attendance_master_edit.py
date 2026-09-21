@@ -947,6 +947,18 @@ class TestStatusAndHoursFollowTheEngine(unittest.TestCase):
 		self.assertTrue(result["ok"], result)
 		self.assertEqual(store.hr_rows()[0].status, "Half Day", "2 h is under the 4 h half-day threshold")
 
+	def test_a_typed_day_longer_than_20h_is_refused_as_not_one_session(self):
+		"""The engine cuts a session longer than SESSION_WINDOW (21 Sep ruling), so
+		HR's typed pair 09:00 → 06:00 next day (21 h) pairs nothing; the row is
+		refused with a plain sentence, not crashed, and nothing is written."""
+		store = Store()
+		half_day_zero(store)
+		result = store.edit({"in_time": "09:00", "out_time": "06:00", "status": "Present"})
+		self.assertFalse(result["ok"], result)
+		self.assertEqual(result["code"], "not_one_session")
+		self.assertIn("20 hours", result["error"])
+		self.assertEqual(store.hr_rows(), [])
+
 	def test_a_status_hr_sent_is_kept(self):
 		store = Store()
 		half_day_zero(store)

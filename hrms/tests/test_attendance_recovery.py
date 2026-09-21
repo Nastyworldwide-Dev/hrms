@@ -1225,6 +1225,59 @@ class TestRebuildReleasedDay(_Base):
 		self.assertEqual([p.name for p in logs], ["P1", "P2", "P3", "P5"])
 		self.assertEqual(result["marked"], ["ATT-NEW"])
 
+	def _open_day(self, stale_row, hold=None):
+		"""A lone IN (the engine yields None: open day) with `stale_row` standing
+		for that shift day. Returns (result, the row) after apply=True."""
+		from hrms.hr.doctype.shift_type import shift_type as shift_type_module
+
+		self.patches[-5].stop()
+		punches = [frappe._dict(name="P1", attendance=stale_row.name, shift="Day", skip_auto_attendance=0)]
+		shift = MagicMock()
+		shift.shift_day_result.return_value = None
+		frappe.get_doc.return_value = shift
+		with (
+			patch.object(
+				frappe,
+				"get_all",
+				lambda doctype, **kw: (
+					punches
+					if doctype == "Employee Checkin"
+					else [frappe._dict(name=stale_row.name, attendance_date=date(2026, 8, 12))]
+				),
+			),
+			patch.object(shift_type_module, "get_automation_attendance", lambda e, d, s: stale_row),
+			patch.object(rec, "owner_hold", lambda row: hold),
+			patch.object(rec, "log_day_fix") as self.fix_log,
+		):
+			result = rec._remark_released_day("E-R", date(2026, 8, 12), True)
+		shift.mark_attendance_for_shift_logs.assert_not_called()
+		return result, stale_row
+
+	def test_an_open_day_retires_the_stale_automation_row(self):
+		"""Owner's rule (21 Sep 2026): a lone IN is an OPEN day, the engine writes
+		nothing. An Absent 0 h the old rule wrote for it must not keep standing:
+		the release cancels it and logs a retire, so HR's exception filter sees
+		the open day instead of a wrong Absent."""
+		stale = MagicMock()
+		stale.name, stale.status, stale.working_hours, stale.auto_attendance = "ATT-ABS", "Absent", 0.0, 1
+		result, row = self._open_day(stale)
+		row.cancel.assert_called_once()
+		self.assertTrue(row.flags.ignore_permissions)
+		self.assertEqual(result["retired"], ["ATT-ABS"])
+		self.assertTrue(result["changed"])
+		self.assertEqual(result["errors"], [])
+		self.assertEqual(self.fix_log.call_args.args[:3], ("E-R", date(2026, 8, 12), "retire"))
+		self.assertIn("open", self.fix_log.call_args.kwargs["after"]["reason"])
+
+	def test_an_open_day_leaves_a_typed_row_alone(self):
+		typed = MagicMock()
+		typed.name, typed.status, typed.auto_attendance = "ATT-HR", "Present", 0
+		result, row = self._open_day(typed, hold="ATT-HR was marked by hand")
+		row.cancel.assert_not_called()
+		self.assertEqual(result["retired"], [])
+		self.assertFalse(result["changed"])
+		self.fix_log.assert_not_called()
+
 	def test_an_unchanged_released_day_is_not_re_marked(self):
 		self.patches[-5].stop()
 		existing = frappe._dict(name="ATT-DAY")

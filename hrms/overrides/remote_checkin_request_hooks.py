@@ -1102,7 +1102,20 @@ def reprocess_late_checkout_attendance(
 			out.employee, attendance_date, logs, repair_attendance=repair
 		)
 		if not marked:
-			raise frappe.ValidationError("Shift attendance rebuild returned no record")
+			# The engine writes nothing for a day with no IN→OUT pair — here, an
+			# approved OUT more than 20 h after its IN is not that IN's closer
+			# (owner's rule, 21 Sep 2026): the day stays open for HR, the
+			# previous row is kept, and the message must say so, not "failed".
+			frappe.db.rollback(save_point="late_checkout_repair")
+			return refuse(
+				out_checkin,
+				"day_left_open",
+				_(
+					"This check-out does not close the check-in of that day (the shift's rules left the day open, e.g. more than 20 hours apart); HR closes it in Shift Attendance."
+				),
+				attempt,
+				attendance.name if attendance else None,
+			)
 	except Exception as exc:
 		frappe.db.rollback(save_point="late_checkout_repair")
 		logger.exception("[remote_checkin_request] shift repair rolled back for OUT=%s", out_checkin)

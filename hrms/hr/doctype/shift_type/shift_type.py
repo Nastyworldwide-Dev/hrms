@@ -40,6 +40,7 @@ from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between, holiday_list_covers
 from hrms.utils.hr_removed_day import HR_REMOVED_DEVICE, hold_punches, removed_by_hr
 from hrms.utils.leave_cover import request_covered_days
+from hrms.utils.shift_resolution import SESSION_WINDOW
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +329,35 @@ def attendance_segments(logs) -> list:
 	and never across a wall.
 	"""
 	usable = [row for row in logs if counts_for_attendance(row) or splits_the_day(row)]
-	return [list(group) for eligible, group in groupby(usable, key=counts_for_attendance) if eligible]
+	spans = [list(group) for eligible, group in groupby(usable, key=counts_for_attendance) if eligible]
+	return [part for span in spans for part in _cut_overlong_sessions(span)]
+
+
+def _cut_overlong_sessions(span) -> list:
+	"""A session longer than SESSION_WINDOW is cut (owner's rule, 21 Sep 2026). Pure.
+
+	An OUT more than 20 h after the IN it would close is not that IN's closer:
+	the IN is left open (missing clock-out) and the OUT starts its own span (a
+	lone OUT, missing clock-in). `choose_shift` applies the same window at tap
+	time; this is for the punches that reach the engine stamped on one shift by
+	an import or a re-stamp, which a 23-hour "Present" came from.
+	"""
+	parts, current, open_in = [], [], None
+	for row in span:
+		moment, log_type = get_datetime(row.get("time")), row.get("log_type")
+		if log_type == "OUT" and open_in is not None and moment - open_in > SESSION_WINDOW:
+			logger.info(
+				"[shift_type] %s is %s after its IN — the session is cut", row.get("name"), moment - open_in
+			)
+			parts.append(current)
+			current, open_in = [], None
+		current.append(row)
+		if log_type == "IN":
+			open_in = moment if open_in is None else open_in
+		elif log_type == "OUT":
+			open_in = None
+	parts.append(current)
+	return [part for part in parts if part]
 
 
 class ShiftType(Document):
@@ -692,6 +721,12 @@ class ShiftType(Document):
 			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
 
 		overtime_type = eligible_logs[0].get("overtime_type")
+		day = self.get_attendance(
+			single_shift_logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day
+		)
+		if day is None:
+			# an open day (no IN→OUT pair): nothing to write, HR closes it
+			return None
 		(
 			attendance_status,
 			working_hours,
@@ -699,9 +734,7 @@ class ShiftType(Document):
 			early_exit,
 			in_time,
 			out_time,
-		) = self.get_attendance(
-			single_shift_logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day
-		)
+		) = day
 
 		return frappe._dict(
 			existing=existing,
@@ -739,10 +772,16 @@ class ShiftType(Document):
 
 	def get_attendance(self, logs, working_hours_threshold_for_absent, working_hours_threshold_for_half_day):
 		"""Return attendance_status, working_hours, late_entry, early_exit, in_time, out_time
-		for a set of logs belonging to a single shift.
+		for a set of logs belonging to a single shift — or None when the day is OPEN.
 		Assumptions:
 		1. These logs belong to a single shift and employee; holidays use eligible pairs.
 		2. Logs are in chronological order
+
+		An open day is one with punches but no complete IN→OUT pair: a lone IN
+		is "missing clock-out", a lone OUT is "missing clock-in" (owner's rule,
+		21 Sep 2026). It is not Absent 0 h and it is not a status of its own:
+		the engine writes nothing, HR's exception filter sees the day first, and
+		payroll's unmarked-day setting decides it if nobody does.
 		"""
 		from hrms.utils.ot_calculation import _classify_day, _is_eligible_checkin, _pair_sessions
 
@@ -758,7 +797,9 @@ class ShiftType(Document):
 				hours = sum((row["last_out"] - row["first_in"]).total_seconds() for row in intervals) / 3600
 				logger.debug("[shift_type] eligible holiday work is Present without weekday deductions")
 				return "Present", hours, False, False, intervals[0]["first_in"], intervals[-1]["last_out"]
-			return "Absent", 0.0, False, False, None, None
+			# a lone punch on a holiday is an open day too, never Absent 0 h
+			logger.info("[shift_type] holiday with %d punch(es) but no eligible pair — left open", len(logs))
+			return None
 		late_entry = early_exit = False
 		# Preserve the configured native calculation within each contiguous
 		# eligible segment. An invalid boundary never joins the surrounding
@@ -777,6 +818,14 @@ class ShiftType(Document):
 			for segment in segments
 			for start, end in worked_intervals(segment, pairing, policy)
 		]
+		if not intervals:
+			logger.info(
+				"[shift_type] %s on %s: %d punch(es) but no IN→OUT pair — the day is left open for HR",
+				logs[0].employee,
+				getdate(logs[0].shift_start or logs[0].time),
+				len(logs),
+			)
+			return None
 		# Arriving early is presence, not paid work: the day's hours start when
 		# the shift starts. The check-in keeps its real time on the punch and in
 		# In Time, so HR still sees 07:30; only the hours begin at 09:00. HR's

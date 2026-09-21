@@ -2059,7 +2059,7 @@ def _remark_released_day(employee, day, apply) -> dict:
 	dangling). `ShiftType.mark_attendance_for_shift_logs` then keeps the row when
 	the result is the same, or cancels and re-marks it from all of them.
 	"""
-	from hrms.hr.doctype.shift_type.shift_type import day_evidence
+	from hrms.hr.doctype.shift_type.shift_type import day_evidence, get_automation_attendance
 
 	day = getdate(day)
 	start = datetime.combine(day, time.min)
@@ -2090,13 +2090,47 @@ def _remark_released_day(employee, day, apply) -> dict:
 			continue  # linked to another day's row
 		by_shift.setdefault(punch.get("shift"), []).append(punch)
 
-	changed, expected, marked, errors = False, [], [], []
+	changed, expected, marked, retired, errors = False, [], [], [], []
 	for shift_name, logs in sorted(by_shift.items()):
 		shift = frappe.get_doc("Shift Type", shift_name)
 		result = shift.shift_day_result(employee, day, logs)
 		if not result:
+			# An OPEN day (punches, no IN→OUT pair; owner's rule 21 Sep 2026): the
+			# engine writes nothing. A row automation wrote for it under the old
+			# rule (Absent / Half Day 0 h) is retired, so the day reads open in
+			# HR's exception filter instead of standing as a wrong Absent. A
+			# person's or a request's row is never touched (owner_hold).
+			stale = get_automation_attendance(employee, day, shift_name)
+			if stale is not None and owner_hold(stale) is not None:
+				stale = None
+			if stale is not None:
+				changed = True
+				if apply:
+					stale.flags = getattr(stale, "flags", None) or frappe._dict()
+					stale.flags.ignore_permissions = True
+					stale.cancel()
+					retired.append(stale.name)
+					log_day_fix(
+						employee,
+						day,
+						"retire",
+						before={
+							"attendance": stale.name,
+							"status": stale.status,
+							"hours": stale.working_hours,
+						},
+						after={"attendance": None, "reason": "day left open: no complete session"},
+					)
+					logger.info(
+						"[attendance_recovery] %s on %s: %s retired, day left open", employee, day, stale.name
+					)
 			expected.append(
-				{"shift": shift_name, "status": None, "detail": "the shift's rules would not mark this day"}
+				{
+					"shift": shift_name,
+					"status": None,
+					"detail": "the shift's rules would not mark this day",
+					"retires": stale.name if stale is not None else None,
+				}
 			)
 			continue
 		existing = result.get("existing")
@@ -2128,14 +2162,15 @@ def _remark_released_day(employee, day, apply) -> dict:
 		else:
 			errors.append(f"{shift_name}: the shift's rules did not mark this day")
 	logger.info(
-		"[attendance_recovery] released day %s %s: changed=%s marked=%s errors=%s",
+		"[attendance_recovery] released day %s %s: changed=%s marked=%s retired=%s errors=%s",
 		employee,
 		day,
 		changed,
 		marked,
+		retired,
 		errors,
 	)
-	return {"changed": changed, "expected": expected, "marked": marked, "errors": errors}
+	return {"changed": changed, "expected": expected, "marked": marked, "retired": retired, "errors": errors}
 
 
 def _stuck_days(win) -> set:

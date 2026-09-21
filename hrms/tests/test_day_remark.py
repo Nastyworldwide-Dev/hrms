@@ -343,12 +343,14 @@ class TestTheDayAfterADecisionIsWhatTheEngineMarksFromScratch(unittest.TestCase)
 		self.assertEqual(hours, 9.13)
 
 	def test_a_rejected_out_no_longer_leaves_the_day_present(self):
+		"""The Present row goes; with the OUT rejected the day has a lone IN and is
+		left OPEN for HR (no row at all, owner's rule 21 Sep 2026) — not Present,
+		and not Absent 0 h either."""
 		store = Store()
 		PRIOR["Present"](store)
 		decide_and_commit(store, "normal", DECISIONS["approve IN, reject OUT"])
-		status, _hours, linked = actual(store)
-		self.assertNotEqual(status, "Present")
-		self.assertNotIn(OUT, linked)
+		self.assertIsNone(actual(store), "an open day has no live Attendance row")
+		self.assertFalse(store.punches[OUT].attendance, "the rejected OUT is linked to nothing")
 
 
 class TestRemarkDayAfterCommit(unittest.TestCase):

@@ -82,6 +82,7 @@ shift_helpers = [
 			"counts_for_attendance",
 			"paid_intervals_from",
 			"attendance_segments",
+			"_cut_overlong_sessions",
 			"splits_the_day",
 			# the field list is asked for at read time: a site without the
 			# `skipped_as_noise` column must not have it named in the SELECT
@@ -111,6 +112,7 @@ SHIFT = {
 	"get_datetime": ot.get_datetime,
 	"getdate": ot.getdate,
 	"timedelta": timedelta,
+	"SESSION_WINDOW": timedelta(hours=20),
 	"groupby": groupby,
 	"logger": __import__("logging").getLogger(__name__),
 	"_company_of_logs": lambda logs: "COMPANY-SYNTHETIC",

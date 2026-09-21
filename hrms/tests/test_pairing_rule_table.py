@@ -3,10 +3,15 @@
 Ruling: walk punches in time order; an IN opens a session; the NEXT punch
 closes it as OUT whatever the phone said, within 20 h and before the next
 rostered shift; one Attendance row per session-day dated on the IN's day; a
-rejected mid-day punch is a WALL; a burst < 45 s is noise; a leftover IN is
-"Missing clock-out" (incomplete, not Absent); a leftover OUT is "Missing
-clock-in"; no punches on a rostered day is Absent unless holiday / rest /
-leave; a session longer than 20 h is cut.
+rejected mid-day punch is a WALL; a burst < 45 s is noise, and so is a second
+IN within 10 min of the open IN; a leftover IN is "Missing clock-out"
+(incomplete, not Absent); a leftover OUT is "Missing clock-in"; no punches on
+a rostered day is Absent unless holiday / rest / leave; a session longer than
+20 h is cut.
+
+An OPEN day (punches, no IN→OUT pair) yields NO row from the engine — the
+harness reads that as (None, None, segments). There is no new status: HR's
+exception filter sees the open day, payroll's unmarked-day setting decides it.
 
 This file is a TABLE, not a rewrite. Every row builds the punch bag for a
 09:00-18:00 shift (row 2 uses the 19:30-03:30 night shift) and asserts what
@@ -181,12 +186,13 @@ class SameShiftRowsCase(_Table):
 
 	def test_row03b_engine_alone_does_not_close_an_in_with_an_in(self):
 		"""(3, engine only) IN → IN stored raw (pre-rule rows, imports): the engine
-		pairs nothing. Observed: Absent 0 h. Ruled: the second IN closes the first,
-		9 h. The rule lives at tap time only; a raw pair reaching the engine is unpaired."""
+		pairs nothing, so the day is OPEN (missing clock-out) — never Absent 0 h.
+		The closing rule lives at tap time only; a raw pair reaching the engine
+		is unpaired and left for HR."""
 		bag = [punch("09:00", "IN"), punch("18:00", "IN")]
 		status, hours, segments = self.engine(bag)
 		self.assertEqual(segments, [["CKIN-04-09:00-IN", "CKIN-04-18:00-IN"]])
-		self.assertEqual((status, hours), ("Absent", 0.0))
+		self.assertEqual((status, hours), (None, None))
 
 	def test_row04_in_out_out_every_valid_pairs_the_first_out(self):
 		"""(4) IN 09:00 → OUT 18:00 → OUT 18:30, Every Valid: the first OUT closes, 9 h."""
@@ -213,16 +219,21 @@ class SameShiftRowsCase(_Table):
 		# the noise tap is dropped before grouping: the two real taps are one span
 		self.assertEqual(segments, [["CKIN-04-09:03:00-IN", "CKIN-04-18:00-OUT"]])
 
-	@unittest.expectedFailure
-	def test_row05b_double_tap_at_60s_is_not_noise_but_becomes_an_out(self):
-		"""(5) IN 09:03 + IN 09:04 (60 s): observed NOT a burst (BURST_WINDOW 45 s) and
-		`resolve_punch_type` stores it as OUT — a one-minute session. Ruled: a double
-		tap is noise (the recovery's DUPLICATE_TAP_MINUTES = 10 says so too)."""
+	def test_row05b_double_tap_at_60s_is_noise_too(self):
+		"""(5) IN 09:03 + IN 09:04 (60 s): past the 45 s burst but inside
+		DUPLICATE_TAP_WINDOW (10 min, the recovery's DUPLICATE_TAP_MINUTES): a
+		double tap is noise, not a one-minute session."""
 		self.assertTrue(rc.is_burst_tap(punch("09:03", "IN"), at(DAY, "09:04")))
+		self.assertTrue(rc.is_burst_tap(punch("09:03", "IN"), at(DAY, "09:13"), "IN"))
+		self.assertFalse(rc.is_burst_tap(punch("09:03", "IN"), at(DAY, "09:14"), "IN"))
+		self.assertEqual(rc.DUPLICATE_TAP_WINDOW, timedelta(minutes=10))
 
-	def test_row05c_the_60s_double_tap_is_coerced_to_out_at_tap_time(self):
-		"""(5, what happens today) the 09:04 IN is written as the 09:03 IN's OUT."""
-		log_type, closing = rc.resolve_punch_type([punch("09:03", "IN")], "IN", at(DAY, "09:04"))
+	def test_row05c_the_60s_double_tap_is_not_coerced_to_out_at_tap_time(self):
+		"""(5) the 09:04 IN stays an IN (a duplicate, stamped noise by the burst
+		rule) — it is NOT written as the 09:03 IN's OUT. Eleven minutes later it
+		would be (row 3)."""
+		self.assertEqual(rc.resolve_punch_type([punch("09:03", "IN")], "IN", at(DAY, "09:04")), ("IN", None))
+		log_type, closing = rc.resolve_punch_type([punch("09:03", "IN")], "IN", at(DAY, "09:14"))
 		self.assertEqual((log_type, closing.name), ("OUT", "CKIN-04-09:03-IN"))
 
 	def test_row06_out_then_out_two_minutes_later_is_a_real_second_out(self):
@@ -242,34 +253,45 @@ class SameShiftRowsCase(_Table):
 		bag = [punch("09:00", "IN"), punch("18:00", "OUT"), punch("18:02", "OUT")]
 		self.assertEqual(self.engine(bag)[:2], ("Present", 9.0))
 
-	@unittest.expectedFailure
 	def test_row07_lone_in_is_incomplete_not_absent(self):
-		"""(7) IN 09:00, no OUT. Observed: the engine yields a row of 0 h — "Absent"
-		when working_hours_threshold_for_absent is set, "Half Day" when it is 0;
-		there is no Incomplete status. Ruled: Missing clock-out, never Absent."""
+		"""(7) IN 09:00, no OUT: missing clock-out — the engine writes NO row (it
+		used to write Absent 0 h, or Half Day 0 h with the absent threshold at 0)."""
 		bag = [punch("09:00", "IN")]
 		status, _hours, _ = self.engine(bag)
 		self.assertNotIn(status, ("Absent", "Half Day", "Present"))
 
-	def test_row07b_what_the_lone_in_yields_today(self):
-		"""(7, observed) threshold_for_absent=1 → Absent 0 h; threshold 0 → Half Day 0 h."""
+	def test_row07b_the_lone_in_is_open_whatever_the_thresholds(self):
+		"""(7) No threshold turns an open day into a 0 h row."""
 		bag = [punch("09:00", "IN")]
-		self.assertEqual(self.engine(bag)[:2], ("Absent", 0.0))
-		self.assertEqual(self.engine(bag, shift(absent_threshold=0))[:2], ("Half Day", 0.0))
+		self.assertEqual(self.engine(bag)[:2], (None, None))
+		self.assertEqual(self.engine(bag, shift(absent_threshold=0))[:2], (None, None))
+		self.assertEqual(self.engine(bag, shift(policy=EVERY_VALID))[:2], (None, None))
 
-	@unittest.expectedFailure
+	def test_row07c_a_lone_punch_on_a_holiday_is_open_too(self):
+		"""(7, holiday branch) mark_auto_attendance_on_holidays=1 and the day is a
+		holiday: a lone IN pairs nothing, so `get_attendance` yields None — not
+		Absent 0 h — exactly as on a working day. A pair is still Present."""
+		s = shift()
+		s.mark_auto_attendance_on_holidays = 1
+		with patch.object(ot, "_classify_day", return_value="holiday"):
+			self.assertIsNone(s.get_attendance([punch("09:00", "IN")], 1, 5))
+			self.assertIsNone(s.get_attendance([punch("18:00", "OUT")], 1, 5))
+			self.assertEqual(
+				s.get_attendance([punch("09:00", "IN"), punch("18:00", "OUT")], 1, 5)[:2], ("Present", 9.0)
+			)
+			self.assertEqual(self.engine([punch("09:00", "IN")], s)[:2], (None, None))
+
 	def test_row08_lone_out_is_missing_clock_in_not_absent(self):
-		"""(8) OUT 18:00 with no IN. Observed: a 0 h row (Absent / Half Day by
-		threshold), the OUT is "counted" as evidence. Ruled: Missing clock-in, no
-		session; not counted."""
+		"""(8) OUT 18:00 with no IN: missing clock-in, no session — the engine
+		writes NO row (it used to write a 0 h row)."""
 		bag = [punch("18:00", "OUT")]
 		status, _hours, _ = self.engine(bag)
 		self.assertNotIn(status, ("Absent", "Half Day", "Present"))
 
-	def test_row08b_what_the_lone_out_yields_today(self):
+	def test_row08b_the_lone_out_is_seen_but_not_paid(self):
 		bag = [punch("18:00", "OUT")]
 		status, hours, segments = self.engine(bag)
-		self.assertEqual((status, hours), ("Absent", 0.0))
+		self.assertEqual((status, hours), (None, None))
 		self.assertEqual(segments, [["CKIN-04-18:00-OUT"]])
 
 	def test_row11_lunch_two_sessions_one_row_summed(self):
@@ -306,13 +328,17 @@ class SameShiftRowsCase(_Table):
 		self.assertIsNone(sr.choose_shift(at(NEXT, "08:00"), "OUT", candidates, open_in))
 		self.assertEqual(sr.SESSION_WINDOW, timedelta(hours=20))
 
-	@unittest.expectedFailure
-	def test_row13b_the_engine_itself_has_no_20h_cap(self):
+	def test_row13b_the_engine_cuts_a_session_longer_than_20h(self):
 		"""(13) IN 09:00 → OUT 08:00 next day, BOTH stamped on the day shift (an
-		import or re-stamp can do that): observed Present 23 h; ruled: cut, lone IN."""
+		import or re-stamp can do that): the OUT is not the IN's closer — the IN
+		is left open (row 7) and the OUT is a lone OUT (row 8): no row, not 23 h."""
 		bag = [punch("09:00", "IN"), punch("08:00", "OUT", day=NEXT)]
-		_status, hours, _ = self.engine(bag)
-		self.assertLessEqual(hours, 20.0)
+		status, hours, segments = self.engine(bag)
+		self.assertEqual((status, hours), (None, None))
+		self.assertEqual(segments, [["CKIN-04-09:00-IN"], ["CKIN-05-08:00-OUT"]])
+		# exactly 20 h still closes; the cut is the SAME constant choose_shift uses
+		bag = [punch("09:00", "IN"), punch("05:00", "OUT", day=NEXT)]
+		self.assertEqual(self.engine(bag)[:2], ("Present", 20.0))
 
 	def test_row14_a_leave_day_holds_against_the_rebuild(self):
 		"""(14) A punch on a leave day: the engine would compute it, but
@@ -384,20 +410,18 @@ class GlitchRowCase(_Table):
 	def glitch_bag():
 		return [punch("09:00", "IN"), punch("20:00", "OUT", shift=NIGHT)]
 
-	def test_row10_what_the_engine_yields_today_two_half_rows(self):
-		"""Observed: the day shift sees only the IN (Absent 0 h), the night shift only
-		the OUT (Absent 0 h) — two rows, nothing paired."""
+	def test_row10_what_the_engine_yields_today_two_open_days(self):
+		"""Observed: the day shift sees only the IN, the night shift only the OUT —
+		nothing paired, so BOTH are open days (no row; before 21 Sep: two Absent 0 h rows)."""
 		day_status, day_hours, day_segments = self.engine(self.glitch_bag(), shift())
 		night_status, night_hours, night_segments = self.engine(self.glitch_bag(), shift(NIGHT))
-		self.assertEqual((day_status, day_hours, day_segments), ("Absent", 0.0, [["CKIN-04-09:00-IN"]]))
-		self.assertEqual(
-			(night_status, night_hours, night_segments), ("Absent", 0.0, [["CKIN-04-20:00-OUT"]])
-		)
+		self.assertEqual((day_status, day_hours, day_segments), (None, None, [["CKIN-04-09:00-IN"]]))
+		self.assertEqual((night_status, night_hours, night_segments), (None, None, [["CKIN-04-20:00-OUT"]]))
 
 	@unittest.expectedFailure
 	def test_row10_ruled_one_row_of_11h_on_the_in_day(self):
-		"""Ruled: the OUT closes the IN within 20 h — one row, 11 h. Observed: two 0 h
-		rows. Fix is P1-H3 (re-stamp on roster change, lane A4), not the engine."""
+		"""Ruled: the OUT closes the IN within 20 h — one row, 11 h. Observed: two open
+		days. Fix is P1-H3 (re-stamp on roster change, lane A4), not the engine."""
 		self.assertEqual(self.engine(self.glitch_bag(), shift())[:2], ("Present", 11.0))
 
 

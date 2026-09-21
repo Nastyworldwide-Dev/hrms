@@ -157,7 +157,7 @@ class TestApprovingTheBlockingPunchReappliesTheLateOut(unittest.TestCase):
 
 
 class TestReprocessLateCheckoutAttendance(unittest.TestCase):
-	def _run(self, attendance_auto=1, existing_attendance="HR-ATT-HALF", removed=False):
+	def _run(self, attendance_auto=1, existing_attendance="HR-ATT-HALF", removed=False, marked="new"):
 		from hrms.overrides import remote_checkin_request_hooks as hooks
 
 		out_row = frappe._dict(
@@ -186,7 +186,7 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 				return in_row
 			return None
 
-		db = MagicMock()
+		db = self.db = MagicMock()
 		db.get_value.side_effect = get_value
 
 		attendance = MagicMock()
@@ -197,8 +197,9 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		attendance.shift = "9AM - 6PM"
 		attendance.attendance_date = SHIFT_START.date()
 		attendance.get.return_value = None
-		marked = MagicMock()
-		marked.name = "HR-ATT-NEW"
+		if marked == "new":
+			marked = MagicMock()
+			marked.name = "HR-ATT-NEW"
 		shift = MagicMock()
 		shift.determine_check_in_and_check_out = "Strictly based on Log Type in Employee Checkin"
 		shift.working_hours_calculation_based_on = "Every Valid Check-in and Check-out"
@@ -268,6 +269,23 @@ class TestReprocessLateCheckoutAttendance(unittest.TestCase):
 		self.assertFalse(result.repaired)
 		self.assertEqual(result.reason_code, "hr_removed")
 		self.removed_by_hr.assert_called_once_with(EMPLOYEE, SHIFT_START.date())
+
+	def test_an_out_the_engine_will_not_pair_leaves_the_day_open_and_keeps_the_row(self):
+		"""An approved late OUT more than 20 h after its IN is not that IN's closer
+		(owner's rule, 21 Sep 2026): the engine writes nothing. That is not a
+		failed rebuild — the previous row is restored, the refusal says the day
+		was left open for HR, and nothing is raised."""
+		from hrms.overrides import remote_checkin_request_hooks as hooks
+
+		with patch.object(hooks, "_record_refusal") as record:
+			result, _attendance, shift, _ = self._run(marked=None)
+		shift.mark_attendance_for_shift_logs.assert_called_once()
+		self.assertFalse(result.repaired)
+		self.assertEqual(result.reason_code, "day_left_open")
+		self.assertIn("left the day open", result.message)
+		self.assertIn("HR", result.message)
+		self.db.rollback.assert_called_with(save_point="late_checkout_repair")
+		record.assert_called_once()
 
 	def test_no_attendance_yet_still_marks_the_session(self):
 		result, attendance, shift, _ = self._run(existing_attendance=None)

@@ -828,7 +828,13 @@ def engine_day(shift_doc, employee, window, in_time, out_time, half_holiday=Fals
 	half = flt(shift_doc.working_hours_threshold_for_half_day)
 	if half_holiday:
 		absent, half = absent / 2, half / 2
-	status, hours, late, early, _in, _out = ShiftType.get_attendance(shift_doc, logs, absent, half)
+	day = ShiftType.get_attendance(shift_doc, logs, absent, half)
+	if day is None:
+		# the engine pairs no IN→OUT more than SESSION_WINDOW apart (owner's rule,
+		# 21 Sep 2026); a typed day that long is not one session
+		logger.warning("[attendance_master_edit] %s %s-%s: not one session", employee, in_time, out_time)
+		raise RowRefused("not_one_session", _("A typed day longer than 20 hours is not one session."))
+	status, hours, late, early, _in, _out = day
 	logger.info(
 		"[attendance_master_edit] engine day for %s %s-%s on %s: %s %.2fh",
 		employee,
