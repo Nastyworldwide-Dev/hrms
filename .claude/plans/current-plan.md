@@ -28,7 +28,8 @@ FLOW: punch → (one loader) → engine → one guarded writer; roster change �
 4. `restamp(employee, from, to)`: clear stamps → re-stamp from roster → re-pair → recompute → cancel wrong rows → log.
    Triggered on Shift Assignment submit/cancel/after-submit; nightly F1 calls it; operator dry-run for the 7:30PM–3:30AM
    glitch range (owner names range/people or the dry-run lists them).
-5. One clock `attendance_today(employee)`. Composite index Attendance(employee, attendance_date, docstatus); sweep takes the employee lock.
+5. One clock `attendance_today(employee)`. Composite index Attendance(employee, attendance_date, docstatus) and Employee Checkin(attendance) + request date columns (D-M11); sweep takes the employee lock.
+   Stopgap signal: auto_attendance=0 is set by the master edit, Attendance Request/Leave rows, Desk after-submit edits and claim_hr_ownership_on_amend; the engine's own rows carry flags.automation_rebuild — verified before the stopgap ships.
 6. Side fixes: client tap guard armed on error + `client_tap_id` idempotency (retry can't become OUT); decision-field guard on the
    five request doctypes; remote check-in decision lock; `finalize` allow-list.
 7. Holiday: HR User read on Holiday List + Holiday List Assignment (patch); sweep skips employees with no calendar; readiness finding;
@@ -37,7 +38,7 @@ EXPECTED: 5 known-bad days show the same result on all three screens; nightly ru
 lists the days it would re-stamp.
 
 ## RELEASE 2 — one tool for HR (Employee Check-in page)
-MOCKUP (sign-off before code):
+Form sketch (a built mockup + re-approval precedes R2 code):
   Norazlin · Tue 24 Aug   Shift [Day 9–6 ▾]
   Clock-in  [09:03]   Clock-out [__:__]   Reason [________]   [Save]   (details ▸ punch history)
 1. Remove typed hours/status everywhere (master edit cells, Desk after-submit hours, Mark Attendance dialog), the owner flag,
@@ -59,6 +60,7 @@ EXPECTED: missing clock-out fixed in 1 screen, 3 clicks; 20 rows bulk, 1 refused
    Leave first, then Shift, OT, AR, RL, Comp. Table test.
 3. No lie from a decided draft: notify from on_submit; return docstatus; one `requestStatus()` helper for every row/chip/filter.
 4. Frontend cost: one user-info fetch; parallel detail loads; buttons from the doc; in-flight guards.
+5. A failed decide/finalize/punch on a flaky connection is never silent: error toast names the action, button re-arms, list reloads (C-H4).
 EXPECTED: employee files leave → approver approves on phone → employee Home shows Approved without reload with the socket dead.
 
 ## DROPPED / BACKLOG
@@ -70,3 +72,20 @@ Medium/Low audit items (docs/glass/audit-2026-09-21.md §7); Script Report fenci
 ## Pipeline Summary
 requirements = audit v2 + 21 Sep rulings → this plan → R1: TDD slices (red on HEAD) → commit per cause → hook review →
 owner deploys → smoke → R2: mockup sign-off → TDD → commit → review → owner deploys → R3 same. No deploy by the agent.
+
+## MOCKUP
+MOCKUP: NOT NEEDED (Release 1 is non-UI; Release 2's Correct form gets a built mockup and re-approval before any R2 code)
+
+## EXPECTED OUTPUT
+UI result: R1 none (Desk/PWA look the same; days compute the same everywhere; HR User sees Holiday List). R2: one "Correct"
+form on the Employee Check-in list (mockup above); Attendance list/report lose the Fix Day button. R3: Home shows the
+decided status without reload.
+Code changed: R1 — shift_type.py (one loader, sweep skip/lock), attendance_recovery.py, day_remark.py, checkin_import.py,
+attendance_fix_day.py, offshift_punch_heal.py, shift_assignment_hooks.py + restamp job, timezone.py, remote_checkin.py,
+CheckInPanel.vue, employee_checkin.json (client_tap_id), approval.py, hooks.py, new decision_field_guard.py,
+holiday_access, readiness.py, patches (indexes, perms). R2 — attendance_fix_day.py apply(), fix_day.bundle.js,
+employee_checkin_list.js, attendance_master_edit.py (typed cells removed), attendance_list.js, conversion patch.
+R3 — socket.js, realtime.js, RequestPanel.vue, Home.vue, data/*.js, three controllers, leave/shift/ot/ar validators,
+requestStatus helper, FormView.vue, main.js.
+How it ships: one commit per cause with its tests (red on HEAD first), hook review per commit, owner deploys once per
+release on Frappe Cloud; patches and hooks self-run on migrate (no console steps); smoke = the EXPECTED lines per release.
