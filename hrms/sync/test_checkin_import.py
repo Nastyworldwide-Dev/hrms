@@ -1066,6 +1066,21 @@ class TestRemarkAttendance(_WhitelistCase):
 
 	DAYS = json.dumps([["EMP-1", DAY], ["EMP-2", DAY], ["EMP-3", DAY], ["EMP-4", DAY]])
 
+	@staticmethod
+	def apply(employee_days) -> dict:
+		"""The engine rule the recovery runs under its guard — the endpoint no
+		longer offers it bare (F6)."""
+		return {"days": [ci._remark_day(e, d, True) for e, d in ci.parse_employee_days(employee_days)]}
+
+	def test_apply_is_refused_here_and_writes_nothing(self):
+		"""F6: 500 historical days rewritten inline with no lock, guard or log.
+		The preview stays; the write belongs to the nightly or to Fix Day."""
+		with self.assertRaises(Exception) as refused:
+			ci.remark_attendance(self.DAYS, dry_run=0)
+		self.assertIn("Fix day", str(refused.exception))
+		self.assertEqual(self.site.shift.calls, [])
+		self.assertEqual(self.site.db.deletes, [])
+
 	def test_a_dry_run_marks_nothing_and_says_what_it_would_do(self):
 		result = ci.remark_attendance(self.DAYS, dry_run=1)
 
@@ -1082,7 +1097,7 @@ class TestRemarkAttendance(_WhitelistCase):
 		self.assertEqual(self.site.shift.previews, [("EMP-1", datetime.date(2026, 9, 3), ["CK-1", "CK-2"])])
 
 	def test_apply_re_marks_exactly_the_days_asked_through_the_shift_rule(self):
-		result = ci.remark_attendance(self.DAYS, dry_run=0)
+		result = self.apply(self.DAYS)
 
 		self.assertEqual(self.site.shift.calls, [("EMP-1", datetime.date(2026, 9, 3), ["CK-1", "CK-2"])])
 		self.assertEqual(self.site.db.deletes, [])
@@ -1094,7 +1109,7 @@ class TestRemarkAttendance(_WhitelistCase):
 		with mock.patch(
 			"hrms.utils.hr_removed_day.removed_by_hr", side_effect=lambda employee, day: employee == "EMP-1"
 		):
-			result = ci.remark_attendance(self.DAYS, dry_run=0)
+			result = self.apply(self.DAYS)
 
 		removed = next(row for row in result["days"] if row["employee"] == "EMP-1")
 		self.assertEqual(
@@ -1162,6 +1177,7 @@ class TestPlanRemarkStuckDayE21(unittest.TestCase):
 
 
 class TestRemarkStuckDay(_WhitelistCase):
+	apply = staticmethod(TestRemarkAttendance.apply)
 	DAY = "2026-09-03"
 
 	def setUp(self):
@@ -1226,20 +1242,20 @@ class TestRemarkStuckDay(_WhitelistCase):
 		self.site.tables["Remote Checkin Request"] = {
 			"RCR-7": {"name": "RCR-7", "checkin": "CK-7", "is_late_checkout": 1, "status": "Pending"}
 		}
-		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		result = self.apply(json.dumps([["EMP-5", self.DAY]]))
 		(day,) = result["days"]
 		self.assertEqual(day["action"], "up-to-date", day)
 		self.assertEqual(self.site.shift.calls, [])
 
 		self.site.checkins()["CK-7"]["remote_approval_status"] = "Approved"
 		self.site.tables["Remote Checkin Request"]["RCR-7"]["status"] = "Approved"
-		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		result = self.apply(json.dumps([["EMP-5", self.DAY]]))
 		(day,) = result["days"]
 		self.assertEqual(day["action"], "remark")
 		self.assertEqual(self.site.shift.calls, [("EMP-5", datetime.date(2026, 9, 3), ["CK-6", "CK-7"])])
 
 	def test_the_stuck_day_is_rebuilt_from_its_linked_taps(self):
-		result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+		result = self.apply(json.dumps([["EMP-5", self.DAY]]))
 		(day,) = result["days"]
 		self.assertEqual(day["action"], "remark")
 		self.assertEqual(self.site.shift.calls, [("EMP-5", datetime.date(2026, 9, 3), ["CK-6", "CK-7"])])
@@ -1247,14 +1263,14 @@ class TestRemarkStuckDay(_WhitelistCase):
 
 	def test_a_stuck_day_the_engine_would_mark_the_same_is_left_as_it_is(self):
 		with mock.patch.object(ci, "_same_engine_result", lambda *a: True):
-			result = ci.remark_attendance(json.dumps([["EMP-5", self.DAY]]), dry_run=0)
+			result = self.apply(json.dumps([["EMP-5", self.DAY]]))
 		(day,) = result["days"]
 		self.assertEqual(day["action"], "up-to-date")
 		self.assertIn("same", day["detail"])
 		self.assertEqual(self.site.shift.calls, [])
 
 	def test_a_whole_linked_day_is_not_touched(self):
-		result = ci.remark_attendance(json.dumps([["EMP-6", self.DAY]]), dry_run=0)
+		result = self.apply(json.dumps([["EMP-6", self.DAY]]))
 		self.assertEqual(result["days"][0]["action"], "up-to-date")
 		self.assertEqual(self.site.shift.previews, [])
 

@@ -94,8 +94,9 @@ REMARK_SAVEPOINT = "hrms_checkin_import_remark"
 MAX_NAMES_REPORTED = 10
 #: `IN` lists longer than this are split into several local queries.
 LOOKUP_CHUNK = 500
-# ceiling: remark_attendance rebuilds every day inside one request; upgrade:
-# enqueue it per chunk if HR ever needs more than this many days at once.
+#: Days one `remark_attendance` PREVIEW reads in a request. The apply path is
+#: not offered here (F6, 21 Sep 2026): the guarded rebuild runs nightly, Fix Day
+#: corrects one day under lock, guard and log.
 MAX_REMARK_DAYS = 500
 
 
@@ -996,14 +997,15 @@ def _remark_day(employee: str, day: date, apply: bool) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def remark_attendance(employee_days, dry_run=1) -> dict:
-	"""Re-mark exactly these (employee, attendance_date) days from their punches.
+	"""Preview what re-marking these (employee, attendance_date) days from their
+	punches would do — the hourly job's own rule (`ShiftType.mark_attendance_for_shift_logs`)
+	planned, not run. Held: a day HR maintains by hand, a leave, a draft, another
+	instance's row, and any day a payout already depends on.
 
-	Dry run by default. For a day whose Attendance the automation owns, runs the
-	hourly job's own rule (`ShiftType.mark_attendance_for_shift_logs`), which
-	cancels and amends the old row when the result changed — never a delete, so
-	the cancelled row stays traceable through `amended_from`. Refused: a day HR
-	maintains by hand, a leave, a draft, another instance's row, and any day a
-	payout already depends on.
+	`dry_run=0` is refused: up to 500 historical days rewritten inline with no
+	employee lock, no never-worse guard and no HR Day Fix Log row was the widest
+	unguarded write in the domain (F6). The guarded rebuild runs nightly
+	(attendance_auto_recovery); one day is corrected with Fix Day.
 	"""
 	frappe.only_for(("System Manager", "HR Manager"))
 	from hrms.overrides.company_scope import require_unfenced
@@ -1019,13 +1021,19 @@ def remark_attendance(employee_days, dry_run=1) -> dict:
 	if len(days) > MAX_REMARK_DAYS:
 		frappe.throw(_("{0} days in one call; send at most {1}.").format(len(days), MAX_REMARK_DAYS))
 
-	apply = not wants_dry_run(dry_run)
-	results = [_remark_day(employee, day, apply) for employee, day in days]
+	if not wants_dry_run(dry_run):
+		logger.warning(
+			"[checkin_import] remark_attendance apply refused for %s (%d day(s)): preview only",
+			frappe.session.user,
+			len(days),
+		)
+		frappe.throw(
+			_(
+				"Apply is not offered here. The guarded rebuild runs nightly; "
+				"to correct one day now, press Correct / Fix day on that day."
+			)
+		)
+	results = [_remark_day(employee, day, False) for employee, day in days]
 	counts = dict(Counter(row["action"] for row in results))
-	logger.info(
-		"[checkin_import] remark_attendance %s by %s: %s",
-		"applied" if apply else "dry run",
-		frappe.session.user,
-		counts,
-	)
-	return {"dry_run": not apply, "counts": counts, "days": results}
+	logger.info("[checkin_import] remark_attendance dry run by %s: %s", frappe.session.user, counts)
+	return {"dry_run": True, "counts": counts, "days": results}
