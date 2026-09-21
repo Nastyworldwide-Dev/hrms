@@ -86,17 +86,22 @@ reaches far enough right to sit on blob B, and muted ink over that composite
 falls to 4.31:1 — under the 4.5 floor. At 720px the same combination clears
 the blob entirely.
 
-**There is a second defect here, and it is the more serious one.** The gate
-hardcodes `column: 720` at `contrast.mjs:188`; it does NOT read
-`--g-content-column-lg` from `tokens.json`. So editing the token to 880 would
-change the app and leave the gate still proving 720 — green, and wrong. The
-failure above only appeared because I changed the gate's own constant by hand.
+**Measuring this turned up a second defect, and it was the more serious one.**
+The gate hardcoded `column: 720`; it did not read `--g-content-column-lg` from
+`tokens.json`. Editing the token to 880 would have changed the app and left the
+gate still proving 720 — green, and wrong. The failure above only appeared
+because I changed the gate's own constant by hand.
 
-Adopting 880 therefore means three things, in order: widen the column, make
-the gate read the token instead of its own literal, and then resolve the dark
-blob-B overlap the new width creates (move blob B, lower its alpha at `lg`, or
-cap the column at the narrow end). That is a real piece of work, not a token
-edit.
+FIXED, in 59e20f697 and 1aacc7529. The gate now reads the token, so the run
+above reproduces by editing `tokens.json` alone. Reviewing that first fix
+refuted its own commit message: `column` was not the only copied value —
+`gutter: 15`, `const GUTTER = 15` and `VIEWPORT = {w:390,h:844}` were the same
+class, and the gutter one was live (60px moves the gate from 54 checks to 42).
+
+Adopting 880 therefore now means two things, not three: widen the token, then
+resolve the dark blob-B overlap the new width creates (move blob B, lower its
+alpha at `lg`, or cap the column at the narrow end). Still a real piece of
+work, not a token edit — but the gate will now tell you so by itself.
 
 ### 3 & 4. `--g-font-display` and `--g-font-ui` — order, not content
 
@@ -145,7 +150,8 @@ The four break down as three decisions, not edits — `--g-font-display` and
 2. **font stack order** — buys the mockup's look at the cost of first paint,
    and would mean loading Inter twice unless the shipped self-hosting is kept.
 3. **`--g-content-column-lg` 720 -> 880** — fails the contrast gate at
-   1024px/dark, and the gate hardcodes the old width so it would not notice.
+   1024px/dark. The gate used to hardcode the old width and would not have
+   noticed; that is fixed, so the failure is now reproducible from the token.
    See above; this is the one I had wrong.
 
 Both are the same shape as the tab question in
