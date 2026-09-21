@@ -90,16 +90,10 @@ def restamp(employee, from_date, to_date, *, reason, dry_run=True) -> dict:
 	planned, released, days = [], [], []
 	for row in rows:
 		old_day = getdate(row.get("shift_start") or row.get("time"))
-		doc = frappe.get_doc("Employee Checkin", row["name"])
-		old = _stamp(doc)
-		# _stamp_shift and _close_open_session both stand down for a linked punch;
-		# the resolution must run as if the link were not there.
-		doc.attendance = None
-		doc.fetch_shift()
-		new = _stamp(doc) if doc.shift else dict(CLEARED)
+		old, new = resolved_stamp(row["name"])
 		if _same(old, new):
 			continue
-		new_day = getdate(new["shift_start"] or doc.time)
+		new_day = getdate(new["shift_start"] or row["time"])
 		planned.append({"name": row["name"], "time": str(row["time"]), "old": old, "new": new})
 		_touch(days, old_day)
 		_touch(days, new_day)
@@ -165,6 +159,23 @@ def _ensure_company_visible(employee) -> None:
 	if not company_visible(company):
 		logger.warning("[restamp] %s denied preview of %s (company fence)", frappe.session.user, employee)
 		frappe.throw(_("You are not permitted to see this employee's punches."), frappe.PermissionError)
+
+
+def resolved_stamp(name) -> tuple:
+	"""(old, new): the stamp this punch carries and the one the roster gives it now.
+
+	The one resolution, shared with Fix Days (`hrms.api.attendance_fix_days`)
+	so a roster-driven re-stamp and HR's range fix answer the same question the
+	same way. `new` is CLEARED when no assignment covers the punch any more.
+	"""
+	doc = frappe.get_doc("Employee Checkin", name)
+	old = _stamp(doc)
+	# _stamp_shift and _close_open_session both stand down for a linked punch;
+	# the resolution must run as if the link were not there.
+	doc.attendance = None
+	doc.fetch_shift()
+	new = _stamp(doc) if doc.shift else dict(CLEARED)
+	return old, new
 
 
 def _stamp(doc) -> dict:

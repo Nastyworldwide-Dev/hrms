@@ -38,6 +38,13 @@ EXPECTED: 5 known-bad days show the same result on all three screens; nightly ru
 lists the days it would re-stamp.
 
 ## RELEASE 2 — one tool for HR (Employee Check-in page)
+OWNER, 21 Sep (after Release 1 push): no mockup. The tool is "Fix days" on the Employee Check-in list: tick a person's punches →
+choose the shift (applies to EVERY punch in those days, IN and OUT alike — the glitch leaves the IN on 7PM–3.30AM and the OUT on
+8AM–6PM) → preview per day (punches before→after, rows to cancel incl. "Absent (HR)" and duplicates, result) → Apply. Per day:
+re-stamp → pair/noise by the rule → cancel every non-leave row → rebuild → one row → one log row; undo. Missing IN/OUT → add in the same
+dialog. Any day since 1 Aug incl. ERP-copied rows. This supersedes the "Correct" three-field form below as the FIRST slice; the
+three-field edit stays as the per-day path inside the same dialog.
+
 Form sketch (a built mockup + re-approval precedes R2 code):
   Norazlin · Tue 24 Aug   Shift [Day 9–6 ▾]
   Clock-in  [09:03]   Clock-out [__:__]   Reason [________]   [Save]   (details ▸ punch history)

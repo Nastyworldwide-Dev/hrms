@@ -222,6 +222,51 @@ class ItNeverBuildsASessionHrCouldNotBuildCase(unittest.TestCase):
 		self.assertEqual(plan["cancel"], [])
 
 
+class ABurstOfTapsIsOneTapCase(unittest.TestCase):
+	"""Owner, 21 Sep 2026, Norazmi's 4 September: a stutter at the reader made
+	IN 18:03:01 / OUT 18:03:22 under the night stamp, and "last OUT closes"
+	read the stutter as the day's end. The rule, in `day_plan`'s own words: a
+	tap within 45 s of its neighbour is noise; between an IN and an OUT 21 s
+	apart while a session is open, the IN is the noise. The window is
+	`hrms.api.remote_checkin.BURST_WINDOW` — one number, not a second one."""
+
+	def plan(self, taps):
+		return fix_day.day_plan(taps, [row("ATT-1", punches=len(taps))])
+
+	def test_a_stutter_after_the_real_out_is_noise_and_the_real_out_closes(self):
+		plan = self.plan(
+			[
+				tap("IN", "08:02:00", "IN"),
+				tap("OUT", "18:02:50", "OUT"),
+				tap("STRAY-IN", "18:03:01", "IN"),
+				tap("STRAY-OUT", "18:03:22", "OUT"),
+			]
+		)
+		self.assertIsNone(plan["refusal"])
+		self.assertEqual(plan["session"]["out"]["name"], "OUT")
+		self.assertEqual(sorted(d["name"] for d in plan["drop"]), ["STRAY-IN", "STRAY-OUT"])
+
+	def test_a_stray_in_seconds_before_the_closing_out_is_the_noise(self):
+		plan = self.plan(
+			[tap("IN", "07:57:00", "IN"), tap("STRAY-IN", "18:03:01", "IN"), tap("OUT", "18:03:22", "OUT")]
+		)
+		self.assertIsNone(plan["refusal"])
+		self.assertEqual(plan["session"]["in"]["name"], "IN")
+		self.assertEqual(plan["session"]["out"]["name"], "OUT")
+		self.assertEqual([d["name"] for d in plan["drop"]], ["STRAY-IN"])
+
+	def test_the_window_is_the_readers_own(self):
+		from hrms.api.remote_checkin import BURST_WINDOW
+
+		self.assertIs(fix_day.BURST_WINDOW, BURST_WINDOW)
+
+	def test_norazlins_day_still_closes_on_her_evening_out(self):
+		# 18:09:14 IN / 18:09:26 OUT / 18:09:30 IN, six hours after the accidental
+		# 11:44 OUT: the 18:09 IN is the stray, the 18:09:26 OUT closes the day
+		plan = fix_day.day_plan(NORAZLIN_TAPS, NORAZLIN_ROWS)
+		self.assertEqual(plan["session"]["out"]["name"], "CKIN-626")
+
+
 class TheUndoIsHonestCase(unittest.TestCase):
 	def setUp(self):
 		import ast
@@ -473,4 +518,5 @@ class TheUndoRestoresWhatItCanCase(unittest.TestCase):
 		self.assertIn("stays cancelled", self.undo)
 
 	def test_the_two_actions_are_named_apart(self):
-		self.assertEqual(fix_day.UNDOABLE_APART_FROM_THE_CANCEL, ("rebuild_day",))
+		# `fix_days` is the range form of the rebuild and cancels rows the same way
+		self.assertEqual(fix_day.UNDOABLE_APART_FROM_THE_CANCEL, ("rebuild_day", "fix_days"))

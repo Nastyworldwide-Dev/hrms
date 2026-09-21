@@ -161,6 +161,8 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 
 	NOISE — ticks `skipped_as_noise`, so the day reads straight across it:
 	  * api/attendance_fix_day.py — HR ignored it, or the rebuild did.
+	  * api/attendance_fix_days.py — the range form of the rebuild: the day
+	    plan's noise, written through Fix Day's own `_write_tap`.
 	  * api/remote_checkin.py — a burst stutter, "stored, not counted".
 
 	WALL — skipped without that tick, so the spans stay apart:
@@ -189,6 +191,7 @@ class EveryModuleThatSkipsAPunchIsClassifiedCase(unittest.TestCase):
 	WRITERS: ClassVar[frozenset] = frozenset(
 		{
 			"hrms/api/attendance_fix_day.py",
+			"hrms/api/attendance_fix_days.py",
 			"hrms/api/attendance_master_edit.py",
 			"hrms/api/remote_checkin.py",
 			"hrms/hr/doctype/employee_checkin/employee_checkin.py",
@@ -363,9 +366,7 @@ class MovingATapChangesNeitherHalfOfTheVerdictCase(unittest.TestCase):
 	"""
 
 	def test_the_move_stamp_carries_neither(self):
-		source = (
-			pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_fix_day.py"
-		).read_text()
+		source = (pathlib.Path(__file__).resolve().parents[2] / "hrms/api/attendance_fix_day.py").read_text()
 		start = source.index("def _shift_stamp(")
 		body = source[start : source.index("\ndef ", start + 10)]
 		self.assertIn('stamp.pop("skip_auto_attendance", None)', body)

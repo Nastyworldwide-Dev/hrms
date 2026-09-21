@@ -43,6 +43,10 @@ ACTIONS = (
 	"add_tap",
 	"remove_duplicate_row",
 )
+#: Nine since 21 Sep 2026: a date range in one press (the loop is
+#: attendance_fix_days). An endpoint on this module; its Desk dialog is the next
+#: slice, so the bundle's write set does not carry it yet.
+RANGE_ACTIONS = ("fix_days",)
 #: reads: `get_day` paints the screen, `plan_day` says what the rebuild would do
 READS = ("get_day", "plan_day")
 #: what a control on this screen must never be for
@@ -100,10 +104,10 @@ class TestTheEndpointsArePostOnly(unittest.TestCase):
 
 	def test_the_endpoints_are_exactly_the_actions_the_reads_and_the_undo(self):
 		names = {name for _, name in re.findall(r"@frappe\.whitelist\(([^)]*)\)\ndef (\w+)", self.source)}
-		self.assertEqual(names, {*READS, "undo_fix", *ACTIONS})
+		self.assertEqual(names, {*READS, "undo_fix", *ACTIONS, *RANGE_ACTIONS})
 
 	def test_every_endpoint_checks_the_role_first(self):
-		for name in (*READS, "undo_fix", *ACTIONS):
+		for name in (*READS, "undo_fix", *ACTIONS, *RANGE_ACTIONS):
 			body = self.source.split(f"def {name}(", 1)[1].split("\n\n\n", 1)[0]
 			self.assertIn("_require_hr()", body, f"{name} does not check the role")
 

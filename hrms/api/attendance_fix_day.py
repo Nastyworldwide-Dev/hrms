@@ -16,6 +16,8 @@ One employee, one day. Five actions, nothing free-form:
     add_tap(employee, moment, log_type, reason)   a tap entered by HR
 
 and `undo_fix(log_entry)`, which puts back exactly what one action changed.
+`fix_days` (a range, one press; the loop lives in `attendance_fix_days`) is
+built from the same primitives and logs one entry per day, undoable the same way.
 
 What holds the line:
 
@@ -49,6 +51,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, get_datetime, getdate
 
+from hrms.api.remote_checkin import BURST_WINDOW
 from hrms.hr.doctype.shift_type.shift_type import counts_for_attendance
 from hrms.overrides import company_scope
 from hrms.utils import hr_removed_day
@@ -78,6 +81,7 @@ ACTIONS = (
 	"restore_tap",
 	"add_tap",
 	"remove_duplicate_row",
+	"fix_days",
 	"undo_fix",
 )
 #: What this screen may change on a tap. `time` and `log_type` are deliberately
@@ -386,6 +390,43 @@ def _gap_words(seconds) -> str:
 	return _("{0} h {1} m").format(hours, rest // 60)
 
 
+def _burst_noise(evidence) -> dict:
+	"""{tap name: (tap, why)} for the reader's stutter, read in time order. Pure.
+
+	A tap within BURST_WINDOW of the previous LIVE tap is noise. An IN that
+	arrives while a session is open and is followed within BURST_WINDOW by an
+	OUT is the noise and that OUT is live — the stutter that reads as the day's
+	end otherwise (Norazmi, 4 Sep 2026). Norazlin's 18:09:14 IN / 18:09:26 OUT
+	/ 18:09:30 IN six hours after an accidental OUT reads the same way: the
+	18:09:26 OUT stays, the two INs around it go.
+	"""
+	noise, live, open_session = {}, [], False
+	for index, tap in enumerate(evidence):
+		moment = get_datetime(tap.get("time"))
+		if live and moment - get_datetime(live[-1].get("time")) <= BURST_WINDOW:
+			noise[tap.get("name")] = (
+				tap,
+				_("within {0} s of the tap before it").format(BURST_WINDOW.seconds),
+			)
+			continue
+		following = evidence[index + 1] if index + 1 < len(evidence) else None
+		if (
+			open_session
+			and (tap.get("log_type") or "") == "IN"
+			and following
+			and (following.get("log_type") or "") == "OUT"
+			and get_datetime(following.get("time")) - moment <= BURST_WINDOW
+		):
+			noise[tap.get("name")] = (tap, _("a stray IN seconds before the OUT that closes the session"))
+			continue
+		live.append(tap)
+		# open in the DAY's sense: the first IN opens it and an accidental mid-day OUT does not close it
+		open_session = open_session or (tap.get("log_type") or "") == "IN"
+	if noise:
+		logger.info("[attendance_fix_day] burst noise: %s", sorted(noise))
+	return noise
+
+
 #: How a shift decides which tap opens a session and which closes it. Under the
 #: alternating reading the device's own IN/OUT label is not consulted at all —
 #: the first counted tap opens the day and the last one closes it.
@@ -405,6 +446,12 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 	tap between them is noise — the repeated-tap glitch and the accidental
 	mid-day OUT alike. An attendance row with no punches behind it is cancelled.
 
+	BEFORE the last OUT is chosen, the reader's stutter is taken out (owner,
+	21 Sep 2026, Norazmi's 4 September: IN 18:03:01 / OUT 18:03:22 read as the
+	day's end): a tap within 45 s of its neighbour is noise; between an IN and
+	an OUT 21 s apart while a session is open, the IN is the noise. The window
+	is the reader's own, `remote_checkin.BURST_WINDOW` (`_burst_noise`).
+
 	This supersedes deducting a mid-day gap: the OUT that made the gap is now
 	read as a mistap, so somebody who really leaves mid-day and punches out is
 	paid for that time unless HR intervenes. The safeguard is not another rule,
@@ -422,6 +469,8 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 	evidence = _evidence(taps)
 	if not evidence:
 		return {**empty, "refusal": _("This day has no counted taps to read it from.")}
+	burst = _burst_noise(evidence)
+	evidence = [tap for tap in evidence if tap.get("name") not in burst]
 
 	if pairing == ALTERNATING_PAIRING:
 		# The shift does not read the device's label, so neither does this.
@@ -508,6 +557,8 @@ def day_plan(taps, rows, pairing: str | None = None) -> dict:
 
 	keep = {opening.get("name"), closing.get("name")}
 	drop, notes = [], []
+	for name, (tap, why) in burst.items():
+		drop.append({"name": name, "time": str(tap.get("time")), "log_type": tap.get("log_type"), "why": why})
 	for index, tap in enumerate(evidence):
 		if tap.get("name") in keep:
 			continue
@@ -956,6 +1007,23 @@ def rebuild_day(employee: str, date: str, reason: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def fix_days(
+	employee: str,
+	from_date: str,
+	to_date: str,
+	shift: str | None = None,
+	reason: str = "",
+	dry_run=True,
+) -> dict:
+	"""Every day of a range in one press: re-stamp, pair, cancel HR's rows, rebuild,
+	log — per day, partial refusals reported. The loop is `attendance_fix_days`."""
+	from hrms.api.attendance_fix_days import fix_days as run
+
+	_require_hr()
+	return run(employee, from_date, to_date, shift=shift, reason=reason, dry_run=dry_run)
+
+
+@frappe.whitelist(methods=["POST"])
 def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 	"""Put back exactly what one action changed — tap flags, shift stamp, time —
 	then rebuild the same days."""
@@ -995,7 +1063,14 @@ def undo_fix(log_entry: str, reason: str | None = None) -> dict:
 		for name in _tap_names(entry):
 			_delete_tap(name)
 			logger.info("[attendance_fix_day] undo %s deleted the tap HR added: %s", entry.name, name)
+	# A tap's snapshot still names the row it was evidence for. When THIS entry
+	# cancelled that row, linking the tap back to it would hide the tap from
+	# the engine for ever (a linked tap is another day's), so the link stays
+	# off and the day is rebuilt from the tap itself.
+	gone = {entry["name"] for entry in _cancelled_rows(entry)}
 	for snapshot in before_state.get("taps") or []:
+		if snapshot.get("attendance") in gone:
+			snapshot = {**snapshot, "attendance": None}
 		_restore_tap_state(snapshot)
 		notes[snapshot["name"]] = _("restored to how it stood before {0}").format(entry.name)
 	answer = _finish(
@@ -1346,6 +1421,40 @@ def _shift_running(employee, day) -> bool:
 	return _shift_still_running(employee, getdate(day))
 
 
+def _range_taps(employee, from_date, to_date) -> list:
+	"""This site's own taps clocked in [from_date, to_date + 1], oldest first — one
+	day past, as `restamp` reads, so a night shift's OUT is seen with its IN."""
+	start = datetime.combine(getdate(from_date), time.min)
+	end = datetime.combine(getdate(to_date) + timedelta(days=1), time.max)
+	return frappe.get_all(
+		"Employee Checkin",
+		filters={
+			"employee": employee,
+			"synced_from_instance": ("is", "not set"),
+			"time": ("between", [start, end]),
+		},
+		fields=TAP_FIELDS,
+		order_by="time asc",
+		limit_page_length=0,
+	)
+
+
+def _roster_stamp(tap) -> dict:
+	"""The stamp the roster gives this tap now — `restamp`'s own resolution, so a
+	Fix Days over the roster and a Shift Assignment change agree."""
+	from hrms.utils.restamp import resolved_stamp
+
+	return resolved_stamp(tap["name"])[1]
+
+
+def _remark_later(employee, day, reason) -> None:
+	"""Queue the engine for a day outside a fix's range that a tap left — the
+	same queue `restamp` uses."""
+	from hrms.utils.day_remark import remark_day_after_commit
+
+	remark_day_after_commit(employee, day, reason)
+
+
 def _shift_stamp(shift, day) -> dict:
 	"""The shift stamp a tap carries on that day, as `fetch_shift` would write it —
 	through the master edit's own helpers, so there is one such calculation."""
@@ -1475,7 +1584,7 @@ def _log_entry(name):
 	row = frappe.db.get_value(
 		LOG_DOCTYPE,
 		name,
-		["name", "employee", "fix_date", "action", "refs", "before_state", "undone"],
+		["name", "employee", "fix_date", "action", "refs", "before_state", "after_state", "undone"],
 		as_dict=True,
 	)
 	if not row:
@@ -1484,14 +1593,14 @@ def _log_entry(name):
 
 
 #: actions that can cancel an attendance row, which Frappe cannot un-cancel
-CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day")
+CANCELLING_ACTIONS = ("remove_duplicate_row", "rebuild_day", "fix_days")
 #: ... and of those, the ones that did OTHER things worth putting back. A
 #: `remove_duplicate_row` IS its cancel, so there is nothing else to restore and
 #: refusing is the honest answer. A rebuild also ignored taps, paired a session
 #: and relabelled it — refusing all of that because one row cannot come back
 #: threw away three recoverable things to be strict about a fourth (review of
 #: e1f4165b7, which had promised the relabel was reversible).
-UNDOABLE_APART_FROM_THE_CANCEL = ("rebuild_day",)
+UNDOABLE_APART_FROM_THE_CANCEL = ("rebuild_day", "fix_days")
 
 
 def _cancelled_a_row(entry) -> bool:
@@ -1503,14 +1612,19 @@ def _cancelled_a_row(entry) -> bool:
 	"""
 	if entry.action == "remove_duplicate_row":
 		return True
+	return bool(_cancelled_rows(entry))
+
+
+def _cancelled_rows(entry) -> list:
+	"""The rows this entry's plan cancelled, from the log's own after_state."""
 	try:
-		after = json.loads(entry.after_state or "{}")
+		after = json.loads(entry.get("after_state") or "{}")
 	except ValueError:
 		logger.warning(
 			"[attendance_fix_day] %s has unreadable after_state; assuming it cancelled", entry.name
 		)
-		return True
-	return bool((after.get("plan") or {}).get("cancel"))
+		return [{"name": None}]
+	return list((after.get("plan") or {}).get("cancel") or [])
 
 
 def _tap_names(entry) -> list:
