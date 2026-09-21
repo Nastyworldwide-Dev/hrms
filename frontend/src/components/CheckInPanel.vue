@@ -972,6 +972,9 @@ const PENDING_TAP_KEY = `checkin.pendingTap:${employee.data.name}`
 // the retap at 00:01 ARE the same tap, and a fresh id there would be coerced
 // into a check-out by the open session — so a short grace crosses the day.
 const PENDING_TAP_TTL_MS = 12 * 60 * 60 * 1000
+// ceiling: 10 min grace across midnight, upgrade: derive it from the observed
+// retry latency (backgrounded PWA, service-worker backoff) if lost answers
+// still surface as duplicate rows after midnight
 const PENDING_TAP_GRACE_MS = 10 * 60 * 1000
 function pendingTapId(logType) {
 	let pending = null

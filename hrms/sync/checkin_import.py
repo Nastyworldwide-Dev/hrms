@@ -1030,7 +1030,7 @@ def remark_attendance(employee_days, dry_run=1) -> dict:
 		frappe.throw(
 			_(
 				"Apply is not offered here. The guarded rebuild runs nightly; "
-				"to correct one day now, press Correct / Fix day on that day."
+				"to correct one day now, press Fix day on that day."
 			)
 		)
 	results = [_remark_day(employee, day, False) for employee, day in days]
