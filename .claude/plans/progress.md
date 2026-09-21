@@ -202,3 +202,42 @@ NEXT: the owner deploys; S3 is untouched — the File still inserts, so the S3
 hook still fires.
 - 2026-09-18T08:17:06Z PUSH: nz-glass @ a17725dc2
 - 2026-09-21T03:15:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-21T03:15:14Z COMMIT: bdbfd5005 fix(attendance-request): a request whose day was marked since filing can still be decided → review dispatched
+- 2026-09-21T03:16:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-21T03:16:08Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-21T03:16:11Z COMMIT: 65ccdd6fc fix(roles): an approver's User is not re-saved when the role is already there → review dispatched
+- 2026-09-21T03:17:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-21T03:17:57Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
+- 2026-09-21T03:18:00Z COMMIT: f085ff325 fix(pwa): a refused request decision shows one toast, not two → review dispatched
+- 2026-09-21T03:40Z TRIAGE (6 reports, 21 Sep): (1)+(5)+(6) "manager cannot approve attendance
+request" = two refusals in sequence. First "already marked for an overlapping shift" —
+fixed 17 Sep (d4494a658), screenshot predates it (Tue 15 Sep). Second "No attendance to
+create … status unchanged" — a FILING rule re-run at DECISION time (validate runs on the
+decide() save); the day had been marked since filing so the request could be neither
+approved nor rejected. REPAIR: bdbfd5005 (filing check judges status == Open only).
+(4) Amy's roles "changed by themselves" — Frappe re-derives roles from the Role Profile on
+EVERY User save (populate_role_profile_roles); update_approver_role re-saved her User on
+every Employee save naming her approver. REPAIR: 65ccdd6fc (save only when a role is
+missing). Site note: roles beyond the profile must go INTO the profile.
+PWA double toast on refused decisions: f085ff325.
+(3) "Complete the workaround, impact, location and requested flow" — NOT in this repo, NOT
+in upstream Helpdesk (gh code search 0 hits): a Server/Client Script or Ticket Template
+rule on the live site; the Nadi form does not carry those fields. Owner checks Desk →
+Server Script / Client Script filtered on HD Ticket.
+(2) "unable to clock in china" — screenshot shows the lenient path working (outside
+1000 m → sent to approver). No error text; the punch, if refused, needs its message.
+Note "Last check-out 07:56 pm" one minute before the IN attempt: resolve_punch_type turns
+an IN inside a live session into an OUT — Hanif's 16 Sep Employee Checkin rows (log_type,
+comments "Recorded as OUT…") decide it.
+EVIDENCE: 2 (mapped) — 3 bench-free suites red before, green after; 3 attendance-request
+suites + loudRequest (8) green.
+NEXT: reviews on bdbfd5005 / 65ccdd6fc / f085ff325, push, HANDOFF.md; owner deploys and
+checks the HD Ticket script + Amy's User Version log.
+- 2026-09-21T03:20:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-21T03:20:02Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
+- 2026-09-21T03:20:06Z COMMIT: d45e1fbfa fix(pwa): a refused plain submit or cancel shows one toast, not two → review dispatched
+EVIDENCE: 6 (reviews) — bdbfd5005, 65ccdd6fc, f085ff325, d45e1fbfa all DEPLOY, no Critical;
+finalize double-toast taken from the f085ff325 Warning as d45e1fbfa.
+NEXT: the owner deploys nz-glass; checks Server Script / Client Script on HD Ticket for the
+"Complete the workaround…" rule; reads Amy's User Version log; gets the China clock-in
+error text (or Hanif's 16 Sep Employee Checkin rows).
