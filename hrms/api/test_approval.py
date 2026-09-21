@@ -450,7 +450,18 @@ class TestCanCancelApproved(unittest.TestCase):
 			if dt == "Salary Slip":
 				return paid_slip
 			if dt == "Employee":
-				return {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}[fieldname]
+				fields = {
+					"user_id": employee_user,
+					"company": "Company A",
+					"reports_to": reports_to,
+					# unset: the approver on file is not the caller in these cases
+					"leave_approver": None,
+					"department": None,
+				}
+				if isinstance(fieldname, list | tuple):
+					# get_designated_approvers reads several fields at once (as_dict)
+					return frappe._dict({f: fields.get(f) for f in fieldname})
+				return fields[fieldname]
 			return None
 
 		db = self.MagicMock()

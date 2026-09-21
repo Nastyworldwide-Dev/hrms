@@ -32,6 +32,7 @@ from frappe.utils import (
 	getdate,
 	nowdate,
 )
+from frappe.utils.caching import request_cache
 
 import erpnext
 from erpnext import get_company_currency
@@ -1266,6 +1267,82 @@ def get_designated_approvers(
 		department_parentfield,
 	)
 	return ordered
+
+
+@request_cache
+def get_employees_routed_to(
+	user: str,
+	employee_approver_field: str = "leave_approver",
+	department_parentfield: str = "leave_approvers",
+) -> list[str]:
+	"""Employees whose requests route to `user` — get_designated_approvers, inverted.
+
+	REPORTED 21 Sep 2026: "Superior cannot approve on duty application". A
+	superior named as the employee's `leave_approver`, who was NOT their
+	`reports_to` manager, was refused READ on the On Duty request before any
+	decision gate ran: Attendance Request carries no approver field of its own,
+	so its row scope knew only reports_to, HR and DocShare. No Approve button
+	rendered, the Team queue came back empty, and decide() threw.
+
+	The row scopes need the question the other way round from
+	`get_designated_approvers` — not "who may approve for this employee" but
+	"whose requests may this user see" — and a list query cannot ask it one
+	employee at a time. Same three sources, same narrowness, so the two can
+	never disagree about a given pair:
+
+	  * the explicit approver field on the Employee record;
+	  * the reporting line (`get_direct_report_employees`, the one definition
+	    of "my team", already status- and company-fenced);
+	  * `Department Approver` rows on the employee's OWN department — no
+	    walking up the tree, exactly as `get_designated_approvers` refuses to.
+
+	Active employees only, inside the caller's company fence, and never the
+	caller's own records (self-approval is refused separately, with its own
+	message). A user who is nobody's approver gets an empty list, which every
+	caller must read as "no admission", never as "no restriction".
+
+	`request_cache`d because `has_permission` calls it once PER ROW on a list
+	of requests, and the answer cannot change inside one request — three
+	queries would otherwise become three per row.
+	"""
+	from hrms.overrides.company_scope import allowed_companies
+	from hrms.utils.identity import normalize_login
+
+	login = normalize_login(user)
+	if not login:
+		return []
+
+	filters = {"status": "Active"}
+	companies = allowed_companies(user)
+	if companies:
+		filters["company"] = ("in", companies)
+
+	named = frappe.get_all("Employee", filters={**filters, employee_approver_field: login}, pluck="name")
+
+	departments = frappe.get_all(
+		"Department Approver",
+		filters={"parentfield": department_parentfield, "approver": login, "parenttype": "Department"},
+		pluck="parent",
+	)
+	by_department = (
+		frappe.get_all("Employee", filters={**filters, "department": ("in", departments)}, pluck="name")
+		if departments
+		else []
+	)
+
+	mine = set(own_employees(user))
+	routed = [
+		e
+		for e in dict.fromkeys([*named, *by_department, *get_direct_report_employees(user)])
+		if e not in mine
+	]
+	logger.debug(
+		"[approval_scope] %s is the designated approver of %d employee(s), company fence=%s",
+		user,
+		len(routed),
+		companies or "none",
+	)
+	return routed
 
 
 def validate_staff_approver(doc, approver_field, employee_approver_field, department_parentfield):

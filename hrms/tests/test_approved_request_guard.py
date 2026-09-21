@@ -135,6 +135,9 @@ def _cancel(
 		if doctype == "Employee":
 			# leave_approver: unset — comp leave's approver on file is not the caller here
 			fields = {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}
+			if isinstance(fieldname, list | tuple):
+				# get_designated_approvers reads several fields at once (as_dict)
+				return frappe._dict({f: fields.get(f) for f in fieldname})
 			return fields.get(fieldname) if fieldname == "leave_approver" else fields[fieldname]
 		return None
 

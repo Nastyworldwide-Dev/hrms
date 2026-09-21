@@ -55,7 +55,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import get_direct_report_employees, sees_all_employee_data
+from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies, company_visible
 from hrms.utils.identity import own_employees
 
@@ -129,6 +129,15 @@ _COMPANY_VIA_EMPLOYEE = {
 #: Everything else stays own + share + HR. A manager has no automatic claim on a
 #: report's pay, benefits, promotion or PIP; that is an HR policy question, and
 #: the fail-closed reading is the safe one.
+#:
+#: REPORTED 21 Sep 2026 — "Superior cannot approve on duty application": the
+#: reporting manager is not the only superior this app routes to. A person named
+#: `leave_approver` on the Employee record, or a Department Approver on the
+#: employee's own department, is equally designated, and for Attendance Request
+#: they were refused READ here before any decision gate ran — so the PWA showed
+#: them no Approve button and their Team queue came back empty. The scope now
+#: admits them through `get_employees_routed_to`, the inverse of the one list
+#: the approver selector and the save-time fence already share. Still READ only.
 TEAM_REVIEWED_DOCTYPES = {"Attendance Request"}
 
 #: DocShare rows carry read/write/share/submit flags; anything destructive is
@@ -220,7 +229,8 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	conditions = []
 	visible = _own_employees(user)
 	if doctype in TEAM_REVIEWED_DOCTYPES:
-		visible = visible + get_direct_report_employees(user)
+		# get_employees_routed_to already includes the reporting line
+		visible = visible + get_employees_routed_to(user)
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.extend(f"`tab{doctype}`.`{field}` in ({values})" for field in owner_fields)
@@ -268,9 +278,11 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		return True
 
 	if ptype == "read" and doctype in TEAM_REVIEWED_DOCTYPES:
-		# the reporting manager reviews, and only reads
-		reports = set(get_direct_report_employees(user))
-		if reports and any(doc.get(field) in reports for field in owner_fields):
+		# every superior this app routes to — reporting manager, the approver
+		# named on the Employee record, a department approver — reviews, and
+		# only reads. The decision itself runs elevated through hrms.api.approval.
+		routed = set(get_employees_routed_to(user))
+		if routed and any(doc.get(field) in routed for field in owner_fields):
 			return True
 
 	rights = [ptype] if ptype in _SHARE_RIGHTS else ["write"]

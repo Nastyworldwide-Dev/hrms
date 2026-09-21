@@ -122,3 +122,4 @@ hrms.patches.v16_0.repair_public_selfies #2026-09-18 a public check-in photo on 
 hrms.patches.v16_0.hr_user_can_read_holiday_lists #2026-09-21 HR (HR User) could not open Holiday List or Holiday List Assignment in Desk: v16 hid the Employee field and granted HR User select only
 hrms.patches.v16_0.add_attendance_hot_filter_indexes #2026-09-21 the per-day attendance read, the punch->attendance link and the request duplicate checks walked whole histories: composite indexes on the hot filters
 hrms.patches.v16_0.track_changes_on_leave_and_expense #2026-09-21 Leave Application and Expense Claim left no record of who decided them or when; a site Property Setter could keep tracking off after the JSON turned it on
+hrms.patches.v16_0.approver_reads_past_employee_user_permissions #2026-09-21 a superior named as approver could not even OPEN an On Duty request: the employee link on the three approver-field-less doctypes was fenced by User Permissions

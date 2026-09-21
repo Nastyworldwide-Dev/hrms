@@ -245,7 +245,7 @@ class TestCreateStaysFencedToOwnEmployee(unittest.TestCase):
 		with (
 			patch.object(scope, "own_employees", return_value=["HR-EMP-00013"]),
 			patch.object(scope, "sees_all_employee_data", return_value=False),
-			patch.object(scope, "get_direct_report_employees", return_value=[]),
+			patch.object(scope, "get_employees_routed_to", return_value=[]),
 			patch.object(scope, "get_shared", return_value=[]),
 		):
 			return scope.has_permission(doc, "create", "staff@example.com")

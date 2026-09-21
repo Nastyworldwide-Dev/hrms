@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 
-from hrms.hr.utils import has_approver_above, is_own_employee
+from hrms.hr.utils import get_designated_approvers, has_approver_above, is_own_employee
 from hrms.utils.approved_request_guard import (
 	DECISION_FIELD_BY_DOCTYPE,
 	cancel_refusal,
@@ -44,6 +44,24 @@ APPROVER_FIELD = {
 #: approver field of their own. Compensatory Leave Request goes to the employee's
 #: leave approver — the person Leave Application routes to — then reports_to.
 EMPLOYEE_APPROVER_FIELD = {"Compensatory Leave Request": "leave_approver"}
+
+#: Doctype -> (employee approver field, Department Approver parentfield) for the
+#: requests routed by the employee's DESIGNATED APPROVERS rather than by a field
+#: on the request.
+#:
+#: REPORTED 21 Sep 2026 — "Superior cannot approve on duty application". These
+#: three carry no approver field, and routing recognised only reports_to and HR.
+#: A superior named `leave_approver` on the Employee record, or a Department
+#: Approver on the employee's own department, is just as designated: the PWA
+#: approver selector offers them, `validate_staff_approver` accepts them, and
+#: `_may_read_employee` admits them — but `decide()` threw PermissionError. All
+#: four now read the same list, `get_designated_approvers`, so they cannot
+#: disagree about who approves for whom.
+DESIGNATED_APPROVER_DOCTYPES = {
+	"Attendance Request": ("leave_approver", "leave_approvers"),
+	"OT Request": ("leave_approver", "leave_approvers"),
+	"Replacement Leave Claim": ("leave_approver", "leave_approvers"),
+}
 
 #: doctype -> the HR Settings tickbox that used to be the WHOLE self-approval
 #: rule for it. Every other approvable doctype refuses a self-decision outright.
@@ -105,6 +123,15 @@ def _is_routed_approver(doc, user: str | None = None) -> bool:
 				"[approval] routing %s %s -> %s via employee %s", doc.doctype, doc.name, user, on_employee
 			)
 			return True
+	designated = DESIGNATED_APPROVER_DOCTYPES.get(doc.doctype)
+	if designated and normalize_login(user):
+		approvers = {normalize_login(a) for a in get_designated_approvers(employee, *designated)}
+		if normalize_login(user) in approvers:
+			logger.debug(
+				"[approval] routing %s %s -> %s via designated approvers", doc.doctype, doc.name, user
+			)
+			return True
+
 	# Canonical identity, not a raw user_id read: a reports_to manager whose
 	# mirror user_id drifted in case would otherwise be refused approval of their
 	# own report's request; ambiguous logins fail closed here too.

@@ -24,7 +24,9 @@ class PWANotificationsMixin:
 		status = self.get(status_field)
 
 		if self.get("docstatus") != 1:
-			logger.info("[pwa_notifications] %s %s not submitted — no decision notification", self.doctype, self.name)
+			logger.info(
+				"[pwa_notifications] %s %s not submitted — no decision notification", self.doctype, self.name
+			)
 			return
 		if status in ["Approved", "Rejected"]:
 			from_user = frappe.session.user
@@ -123,16 +125,24 @@ class PWANotificationsMixin:
 		return resolve_approver(self.employee)
 
 	def _get_ot_approver(self) -> str | None:
-		"""Prefer the reporting manager, then an eligible HR Manager."""
+		"""Prefer a designated approver, then an eligible HR Manager.
+
+		Only the reporting manager was tried until 21 Sep 2026, so an On Duty
+		request whose superior was the named `leave_approver` — not the manager
+		— was addressed to Administrator instead of to the person who could
+		decide it. `get_designated_approvers` names them in preference order
+		(the Employee-record approver first, then reports_to, then department),
+		which is the same order the PWA's approver selector offers.
+		"""
+		from hrms.hr.utils import get_designated_approvers
 		from hrms.utils.identity import normalize_login
 
 		logger.debug("[pwa_notifications] resolving OT recipient")
 		if self.get("docstatus") != 0:
 			return None
 		company = frappe.db.get_value("Employee", self.employee, "company")
-		manager = frappe.db.get_value("Employee", self.employee, "reports_to")
-		if manager:
-			user = normalize_login(frappe.db.get_value("Employee", manager, "user_id"))
+		for approver in get_designated_approvers(self.employee, "leave_approver", "leave_approvers"):
+			user = normalize_login(approver)
 			if self._ot_approver_can_receive(user, company):
 				return user
 

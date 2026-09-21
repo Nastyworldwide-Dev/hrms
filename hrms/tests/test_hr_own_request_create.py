@@ -73,7 +73,7 @@ class _Scope(unittest.TestCase):
 			patch.object(scope, "sees_all_employee_data", return_value=hr),
 			patch.object(company_scope, "allowed_companies", return_value=list(fence)),
 			patch.object(scope, "own_employees", return_value=list(own)),
-			patch.object(scope, "get_direct_report_employees", return_value=[]),
+			patch.object(scope, "get_employees_routed_to", return_value=[]),
 			patch.object(scope, "get_shared", return_value=[]),
 			patch.object(frappe.db, "get_value", side_effect=_employee_company),
 		):

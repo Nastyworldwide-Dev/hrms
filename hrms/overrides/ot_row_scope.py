@@ -2,8 +2,18 @@
 
 These doctypes carry no approver field — approval is the submit action — so
 visibility is: HR roles and Administrator unrestricted; staff see their own
-rows; a reporting manager sees their reports' rows (they are the natural
-approver). Registered in hooks.py as permission_query_conditions +
+rows; and every superior the request is addressed to sees it —
+`get_employees_routed_to`: the reporting manager, the approver named on the
+Employee record, and a Department Approver on the employee's own department.
+
+The last two were added 21 Sep 2026 with the Attendance Request fix. Only
+reports_to counted before, so a superior named as approver was refused READ
+before any decision gate ran: no Approve button, empty Team queue,
+PermissionError from decide(). These three doctypes share the shape (no
+approver field of their own) so they share the rule; the class is locked by
+tests/test_a_named_approver_can_decide_an_on_duty_request.py.
+
+Registered in hooks.py as permission_query_conditions +
 has_permission; no User Permissions in play (same model as
 hrms/overrides/approval_row_scope.py).
 """
@@ -13,7 +23,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import sees_all_employee_data
+from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
 from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
@@ -31,34 +41,15 @@ def _own_employees(user: str) -> list[str]:
 	return own_employees(user)
 
 
-def _reporting_employees(user: str) -> list[str]:
-	"""This user's team, by the ONE definition of it.
-
-	This asked its own question and got its own answer: `reports_to in (mine)`,
-	with no status filter and no company predicate — the word "company" did not
-	appear in this file at all. So a manager saw the overtime and
-	replacement-leave rows of people who had LEFT, and of people in a company
-	they cannot otherwise reach, purely because the reporting line crosses the
-	boundary. Both are rows about pay.
-
-	`get_direct_report_employees` is the definition every other row scope uses,
-	and its docstring says why duplicating it is a mistake: the fences drift.
-	It filters both sides by status — an offboarded manager whose login is still
-	enabled keeps nothing — and narrows to the manager's permitted companies
-	when they carry one, which is a no-op for an unfenced manager.
-	"""
-	from hrms.hr.utils import get_direct_report_employees
-
-	return get_direct_report_employees(user)
-
-
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
 	"""List scope: own rows, direct reports' rows, and shared docs."""
 	user = user or frappe.session.user
 	if _unrestricted(user):
 		return ""
 
-	visible = _own_employees(user) + _reporting_employees(user)
+	# routed = the reporting line PLUS the approver named on the Employee record
+	# and any department approver — the superiors these doctypes address.
+	visible = _own_employees(user) + get_employees_routed_to(user)
 	conditions = []
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
@@ -94,7 +85,14 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
 	if _unrestricted(user):
 		return True
-	if doc.employee in _own_employees(user) or doc.employee in _reporting_employees(user):
+	if doc.employee in _own_employees(user):
+		return True
+	if ptype == "read" and doc.employee in get_employees_routed_to(user):
+		# A superior REVIEWS the request they are asked to decide; the decision
+		# itself runs elevated through hrms.api.approval, so read is all it
+		# needs. Gated on ptype like the sibling fence (employee_owned_row_scope),
+		# or the Employee DocPerm's `write` would hand every routed approver an
+		# edit on somebody else's draft.
 		return True
 	if doc.name in get_shared(doc.doctype, user):
 		return True
