@@ -1,12 +1,15 @@
 # HANDOFF
-prompt:   mockup-4 defect-family audit
-status:   done
-commit:   c11bdc513 on nz-glass (the parent of the commit that writes this line)
-files:    .claude/plans/family-mockup4.md + progress.md
-          frontend/_audit/*.mjs + README.md
+prompt:   mockup-4 audit close-out + phase 2 ground truth
+status:   partial — phase 2 blocked on the owner, see next:
+commit:   af7593f79 on nz-glass (the parent of the commit that writes this
+          line; true only because this file is committed on its own, after
+          the work — if you bundle it with the work, name this commit itself)
+files:    .claude/plans/phase2-ground-truth.md (new)
+          .claude/plans/progress.md
           docs/glass/HANDOFF.md
-verify:   cd frontend && node _audit/a2.mjs && node _audit/a3.mjs && node _audit/a8.mjs && node _audit/a9.mjs
-flags:    verify needs the mockup, which is gitignored (.gitignore:40) and so
-          absent from a fresh checkout; the probes exit 2 and say so.
-          Nothing pushed. Phase 2 (real frontend) not started.
-next:     owner's word: un-ignore the mockup folder? is mockup 4 signed off?
+verify:   grep -n 'tail -200' ~/humanless-pipeline/core/hooks/lib/commit-scope.sh
+flags:    progress.md is a RING (capped 300 lines, head -4 + tail -200), not
+          append-only. Long-lived records go in plans/*.md, not in it.
+          Mockup tabs != app tabs; that is an IA change, not a restyle.
+next:     owner's word on three: un-ignore the mockup folder? is mockup 4
+          signed off? is it a VISUAL or an INFORMATION-ARCHITECTURE contract?
