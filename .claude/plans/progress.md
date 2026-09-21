@@ -285,3 +285,5 @@ whole department's requests in list queries. Neither blocks. Nothing pushed.
 - 2026-09-21T17:43:56Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
 - 2026-09-21T17:45:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-09-21T17:45:48Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-09-21T17:45:49Z EVIDENCE: 6 behaves — family hunt: class=approval routing asked the wrong question in two opposite directions —; 6 call site(s) given verdicts, 12 same-root ⟂dc8c11dd7807
+- 2026-09-21T17:45:51Z COMMIT: cf94549e7 fix(approval): routing follows each employee's own chain, bottom-up → review dispatched
