@@ -1,6 +1,3 @@
-GOAL: anyone who can use Nadi can attach a file to their own request — no "Not
-allowed via controller permission check".
-DONE WHEN: the upload inserts the File as the server (staff hold no File create
-right), asks only that the caller may READ the request, and asks once; the
-person who uploaded a file may delete it.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_nadi_attachments_do_not_need_desk_rights.py hrms/tests/test_get_attachments_reads_by_parent.py
+GOAL: an Attendance Request can always be decided (approve/reject) even when its day is already marked; an Employee save no longer re-saves an approver's User when the role is already there.
+DONE WHEN: decide() on a request whose only day is "Attendance status unchanged" submits instead of throwing; update_approver_role calls User.save() only when a role is missing.
+CHECK: python3 hrms/tests/test_attendance_request_decision_is_always_possible.py && python3 hrms/tests/test_approver_role_grant_is_idempotent.py

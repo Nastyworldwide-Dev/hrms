@@ -1,41 +1,36 @@
-# FAMILY — a punch the old ERP sent could not be read or corrected
+# FAMILY — an Attendance Request that can no longer be decided
 
-CLASS: a row this site must act on that no path here may touch. `Fix Day`
-refuses a mirrored tap ("change it there") and `ShiftType.get_employee_checkins`
-excludes mirrored punches at the query. Both are right in isolation; together
-they made every day whose closing punch came from the old system unfixable.
+CLASS: a FILING rule re-run at DECISION time. `validate` runs on every save;
+`decide()` writes the status and submits in one save, so a check meant to stop
+an employee filing a no-op request ran again when the manager tapped Approve.
+The day had been marked since filing (punches / mirror), so the request could
+be neither approved nor rejected — a rejection is the same save. Reported
+21 Sep 2026 on verifica-live: "No attendance to create: 07-08-2026
+(Attendance status unchanged)" on every tap.
 
-Owner ruling, 18 Sep 2026, offered "claim the punch" or "type those days by
-hand": **"A. go"**.
+Call sites the machine lists for validate_no_attendance_to_create /
+status_unchanged / get_attendance_warnings:
 
-Added: `claim_tap(tap, reason)` — clears `synced_from_instance`, only after
-cutover, only through this action, HR-only, reasoned, logged, undoable.
+* hrms/hr/doctype/attendance_request/attendance_request.py:41 validate — same-root:
+  the guard sits inside the method, so the filing path is unchanged and only a
+  decided request skips it.
+* hrms/hr/doctype/attendance_request/attendance_request.py:449 status_unchanged —
+  not-affected: a pure read, still feeds the warning list.
+* hrms/hr/doctype/attendance_request/attendance_request.py:470 get_attendance_warnings —
+  not-affected: whitelisted for the Desk form's warning table, read-only.
+* hrms/hr/doctype/attendance_request/attendance_request.js:12 frm.call — not-affected:
+  Desk shows the same warnings; the refusal itself only ever came from validate.
+* hrms/api/approval.py:300 decide → doc.submit() — same-root by consequence: the
+  submit now reaches on_submit, where `create_or_update_attendance` treats an
+  already-marked day as the no-op it is.
 
-Call sites the machine lists for _tap / the provenance stamp / the actions:
+Sibling doctypes checked for the same class (a validate-time throw whose truth
+can change between filing and decision): OT Request, Shift Request,
+Compensatory Leave Request, Replacement Leave Claim — their validate() rules
+judge the request's own fields (dates, self, overlap with OTHER requests),
+which the decision does not move. Leave Application's balance check is
+upstream and by design. not-affected.
 
-* hrms/api/attendance_fix_day.py::_tap — same-root: gains `mirrored_ok`, used by
-  `claim_tap` alone. A test asserts no other action asks for it.
-* hrms/api/attendance_fix_day.py::pair_taps, move_tap, ignore_tap, restore_tap,
-  add_tap, rebuild_day — not-affected: each still refuses a mirrored tap, and a
-  test asserts none writes the stamp.
-* hrms/api/attendance_fix_day.py::undo_fix — same-root by the snapshot:
-  `synced_from_instance` was already in TAP_FIELDS, so the undo hands the punch
-  back to its source without any new code.
-* hrms/api/attendance_fix_day.py::day_plan::_evidence — not-affected and the
-  REASON this exists: it excludes a mirrored tap, so until the stamp is gone the
-  punch is not evidence for this site's day. Once claimed it is ordinary.
-* hrms/sync/write_block.py::block_mirrored_writes — not-affected: it guards
-  mirrored DOCUMENTS through doc events; this clears a field through
-  `frappe.db.set_value`, the same way every other Fix Day write goes.
-* hrms/sync/runner.py — not-affected: after cutover a pull only ADDS what is
-  missing (5baf3c99a), so a claimed punch cannot be re-stamped by the next sync.
-* hrms/hr/doctype/shift_type/shift_type.py::get_employee_checkins —
-  not-affected and the point: once the stamp is gone the job reads the punch.
-
-LOCK:
-* regression (the instance): test_hr_can_take_over_a_source_punch.py drives
-  Danial's shape — a mirrored punch on a day this site owns.
-* invariant (the class): only `claim_tap` may see a mirrored tap and only it may
-  write the stamp, both asserted over every other action; and the claim is
-  refused while that instance is still locked, because before cutover the source
-  really is the writer.
+Regression test: hrms/tests/test_attendance_request_decision_is_always_possible.py
+Invariant: a decided request never re-runs the filing refusal (the three cases
+Open / Approved / Rejected in that file).

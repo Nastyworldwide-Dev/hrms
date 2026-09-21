@@ -2,112 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-guarded_rebuild) is the right inner call, that skipping _retire_unmarkable_rows
-on the rollback path is REQUIRED - it reads the rolled-back result and would
-cancel the very row the guard just protected - and that the held verdict reaches
-the screen. Its one suggestion, an unread `rolled_back` flag, is removed rather
-than kept: scaffolding rots.
-NEXT: the owner deploys. Then: Norazlin 4 Sep must read Present with hours and
-her OT must be claimable in Nadi. Open offer, not started: the ghost-row list
-(rows holding times with zero punches) across all staff.
-- 2026-09-17T09:53:14Z COMMIT: 956e9d22d refactor: drop a flag nothing reads → review dispatched
-- 2026-09-17T09:53:32Z PUSH: nz-glass @ 956e9d22d
-- 2026-09-17T09:53:45Z PUSH: nz-glass @ fb53ba256
-- 2026-09-17T09:53:45Z COMMIT: fb53ba256 docs(glass): handoff for the day rebuild → review dispatched
-REPAIR: the FOURTH door. After the ghost was cancelled, the session paired and
-the strays ignored, HR-ATT-2026-15657 still read "Absent (HR) · in - · out -".
-shift_type.get_automation_attendance filters auto_attendance: 1 and its own
-docstring says a row HR marked by hand is "never rebuilt from punches" - so the
-engine found no row to update, tried to CREATE one, hit DuplicateAttendanceError
-and swallowed it. protected_reason was only the first gate.
-release_to_automation hands the day's hand-marked rows back to the engine,
-inside the guard's savepoint, only when HR asked. Never a leave, half-day leave,
-On Leave, Attendance Request, mirrored or unsubmitted row.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 11 new tests red before, green after;
-17 suites green.
-NEXT: the owner deploys and re-runs Norazlin 4 Sep.
-- 2026-09-17T10:21:21Z PUSH: nz-glass @ c82687052
-REPAIR: review of c82687052 returned DEPLOY with two warnings, both about the
-same thing: release_to_automation's docstring claimed its exclusions match
-get_automation_attendance "exactly" and they do not - it is a deliberate
-superset - and the two lists are hand-maintained in two files with nothing
-holding them together. The claim is corrected and the dangerous direction is
-locked by a drift test, proven by mutation: a new exclusion added to the lookup
-alone fails it. The real fix, ONE declared field set all three owners build
-from, is on the existing split ticket.
-EVIDENCE: 7 (invariant) - 1 new test, red on a mutated lookup, green on HEAD;
-9 suites green.
-NEXT: the owner deploys and re-runs Norazlin 4 Sep.
-- 2026-09-17T10:28:09Z PUSH: nz-glass @ 75c0055bf
-- 2026-09-17T10:28:23Z PUSH: nz-glass @ 4cf17cc5b
-- 2026-09-17T10:28:23Z COMMIT: 4cf17cc5b docs(glass): handoff for the fourth door → review dispatched
-REPAIR: the fifth door, and the last one. The rebuild ran, both taps were
-counted and linked, and the day still read "Half Day, in 09:03, out -, 0 h".
-get_attendance cut the day into contiguous runs of counts_for_attendance, so the
-three ignored taps BETWEEN the real IN and the real OUT left them in two one-tap
-segments that never paired. "Not evidence" and "must not be bridged" were one
-question; they are two now - splits_the_day names the walls (off-shift,
-rejected, unapproved late check-out) and attendance_segments drops the rest.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 12 new tests red before, green after;
-16 suites green, one pre-existing failure in test_ot_nonworking_hours confirmed
-identical on a clean HEAD extract.
-NEXT: the owner deploys and re-runs Norazlin 4 Sep; it should read Present.
-- 2026-09-17T10:55:55Z PUSH: nz-glass @ ff1493e85
-REPAIR: review of ff1493e85 found a Critical I missed and it was right. The
-financial-guard refusal path (handle_attendance_exception ->
-skip_attendance_in_checkins) skip-stamps punches so a blocked batch is not
-retried - that means "the system deferred this", not "HR judged this noise" -
-and my inverted reading would have bridged across them and paid the time. The
-rule is fail-safe now: every skipped punch is a WALL unless it carries the new
-Employee Checkin.skipped_as_noise tick, which only Fix Day's ignore/rebuild and
-the burst stutter set. Default 0 = exactly the behaviour before this branch.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 16 suites green incl. remote_checkin
-(67) and master edit (54); the one failure in test_ot_nonworking_hours is
-pre-existing and identical on a clean HEAD extract.
-DEAD END: classifying writers by reading them was wrong twice (I missed the
-master editor's two, then the deferral path). The default had to change, not
-the list.
-- 2026-09-17T11:05:54Z PUSH: nz-glass @ 8c06af285
-REPAIR: naming skipped_as_noise in CHECKIN_FIELDS would have put an unmigrated
-column in a live SELECT - the "Unknown column" class this fork has already been
-burned by (ensure_extension_custom_fields, the OT suite on
-remote_approval_status). checkin_fields() asks frappe.db.has_column once per
-request and leaves the field out when it is absent; a row without the key reads
-as 0, which splits_the_day treats as a WALL - the conservative answer, so that
-window behaves exactly like the code did before the field existed.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 suites green (600+ tests); the one
-failure in test_ot_nonworking_hours is pre-existing and identical on a clean
-HEAD extract. Two AST harnesses updated to see the new module-level names.
-NEXT: re-review, then the owner deploys (this one needs the migrate to create
-the column; until it exists every skipped punch simply stays a wall).
-- 2026-09-17T11:11:53Z PUSH: nz-glass @ 3e02ec548
-REPAIR: two places cleared skip_auto_attendance without clearing the new noise
-verdict (attendance_recovery's unskip, the master edit's hand-back). Harmless
-while the tap counts - splits_the_day answers on counted first - but the tick
-would have survived onto the NEXT skip and made a deferral read as noise. Both
-clear it now, and a test anchors on each definition (all three names are also
-called earlier in their own files, which is how the first version of that test
-found the wrong line).
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 13 suites green; the single failure in
-test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
-NEXT: the owner deploys; the day's column is created by the patch on migrate,
-and until it exists every skipped punch simply stays a wall.
-- 2026-09-17T11:13:24Z PUSH: nz-glass @ c4a0fca32
-REPAIR: review of c4a0fca32 found a third set of un-skippers I had missed -
-pair_taps and the rebuild's session keep both set skip_auto_attendance 0 and
-left the noise tick behind. Fixed at the CHOKE POINT instead of the call sites:
-_write_tap clears the verdict whenever the skip is written as 0, so none of the
-five callers can forget it. Its Warning is closed too: taps HR ignored before
-the field existed are backfilled from the HR Day Fix Log (action ignore_tap or
-rebuild_day, not undone, and only those still skipped) - the app's own audit
-record rather than a guess from comment text.
-EVIDENCE: 2 (mapped) + 3 (blast radius) - 17 suites green; the one failure in
-test_ot_nonworking_hours is pre-existing and identical on a clean HEAD extract.
-NEXT: the owner deploys.
-- 2026-09-17T11:16:36Z PUSH: nz-glass @ 672a4b1df
-REPAIR: the undo's writer bypasses _write_tap on purpose (it reverses an action
-rather than inventing evidence), so the choke point does not cover it. It
-restores every TAP_FIELD, which now carries the verdict, so a new snapshot round
 trips - but a snapshot taken TODAY, before the field existed, has no such key
 and would have written NULL into a Check column. It lands as 0 now: the wall,
 which is how that tap read when the snapshot was taken.
@@ -306,3 +200,5 @@ EVIDENCE: 2 (mapped) + 3 (blast radius) — 10 new tests red before, green after
 the api, company-scope, attachment and remote_checkin suites green.
 NEXT: the owner deploys; S3 is untouched — the File still inserts, so the S3
 hook still fires.
+- 2026-09-18T08:17:06Z PUSH: nz-glass @ a17725dc2
+- 2026-09-21T03:15:12Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9

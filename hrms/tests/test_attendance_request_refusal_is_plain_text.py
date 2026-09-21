@@ -55,7 +55,11 @@ def _run(warnings, from_date="2026-09-09", to_date="2026-09-09"):
 	validate = _lift(ns)
 	validate(
 		SimpleNamespace(
-			name="AR-1", from_date=from_date, to_date=to_date, get_attendance_warnings=lambda: warnings
+			name="AR-1",
+			status="Open",
+			from_date=from_date,
+			to_date=to_date,
+			get_attendance_warnings=lambda: warnings,
 		)
 	)
 	return frappe

@@ -46,6 +46,16 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				frappe.throw(_("Half day date should be in between from date and to date"))
 
 	def validate_no_attendance_to_create(self):
+		# A FILING rule, not a decision rule. `validate` runs on every save and
+		# `decide()` sets the status and submits in one save, so this ran again
+		# when the manager tapped Approve. By then the punches (or the mirror)
+		# had marked the day, and the request could be neither approved nor
+		# rejected — a rejection is the same save. Once decided, the request
+		# goes through: approving a day already marked is the no-op
+		# `create_or_update_attendance` handles; rejecting creates nothing.
+		if self.status != "Open":
+			logger.info("[attendance_request] %s is %s — filing check skipped", self.name, self.status)
+			return
 		attendance_warnings = self.get_attendance_warnings()
 		attendance_request_days = date_diff(self.to_date, self.from_date) + 1
 		if len(attendance_warnings) == attendance_request_days and not any(
