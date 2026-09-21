@@ -43,7 +43,9 @@
 								class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
-									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
+									<div
+										class="min-w-0 font-sans font-extrabold text-button-label text-inkbase truncate"
+									>
 										{{ req.employee_name || req.employee }}
 									</div>
 									<div class="flex flex-row items-center gap-2 shrink-0">
@@ -117,7 +119,9 @@
 								class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
 							>
 								<div class="flex flex-row items-center justify-between">
-									<div class="font-sans font-extrabold text-button-label text-inkbase truncate">
+									<div
+										class="min-w-0 font-sans font-extrabold text-button-label text-inkbase truncate"
+									>
 										{{ req.employee_name || req.employee }}
 									</div>
 									<span
