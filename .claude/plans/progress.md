@@ -2,110 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-
-CORRECTION: the REPAIR line above paraphrased three numbers from
-  family-mockup4.md instead of copying them, and the paraphrase drifted. Caught
-  by the reviewer on 3fe415b8e. The ledger is the measurement; these are the
-  real figures:
-  - CLASS C home depth: 1.63 -> 1.39 viewports (not "1.59 -> 1.36"). 1264px of
-    content in a 774px viewport before, 1072px after.
-  - CLASS D sheet swing: tops at 418/488/444/600 = 182px swing (not "226px").
-    After: top=399 h=444 on every day, swing 0.
-  - The 44px tap-target family is CLASS E in the ledger, not "F". There is no
-    CLASS F. Letters in family-mockup4.md are A B C D E G H G2.
-EVIDENCE: rung 2, re-run after the CLASS G2 pill fix landed, so these verdicts
-  cover the current mockup rather than the state at the time of the commit:
-  a2 NO LOW-CONTRAST TEXT (1754 boxes, self-test 13.80:1 both themes) ·
-  a3 no clipped text, sheet top=399 h=444 all four probe days ·
-  a8 COLUMN EDGE CLEAN + INNER EDGE CLEAN · a9 NO TEXT RESTS UNDER CHROME.
-LEARNING(gate): numbers paraphrased from a sibling ledger drift -> when a commit
-  adds both a family-*.md and a progress.md summary of it, copy the figures,
-  do not restate them.
-- 2026-09-21T22:19:09Z COMMIT: 09f08df05 docs(plans): the audit summary quoted its own ledger wrong → review dispatched
-- 2026-09-21T22:19:27Z COMPACT: context compacted — read the last NEXT above before continuing
-
-CORRECTION: the correction above has the same flaw it was written to fix, one
-  level up. It says "the ledger is the measurement; these are the real figures"
-  and then cites "1.39 viewports / 1072px" for CLASS C — a figure the ledger
-  does not contain. family-mockup4.md:47 records only the BEFORE state (1264px
-  in a 774px viewport = 1.63); classes A-E carry no FIX line, so no after-value
-  was ever written there. The number itself is real, but its source is a probe
-  run, not the ledger, and quoting a probe under a sentence that promises a
-  ledger is how the first drift happened.
-  - CLASS C after-state: s:home 1.39 viewports (1072px / 774px). SOURCE:
-    frontend/_audit/a3.mjs section C, re-run 21 Sep 2026. Not in the ledger.
-  - CLASS D after-state: top=399 h=444 swing 0. SOURCE: a3.mjs section D, days
-    2/8/16/24 — the four days that probe opens, not all 30. The "all 30 days"
-    figure on the EVIDENCE line above came from a separate earlier sweep; the
-    two are different runs and the later one is narrower.
-  - "7 families" on the REPAIR line is wrong: the same line lists eight
-    (A B C D E G G2 H) and the ledger documents eight. Read it as 8.
-LEARNING(gate): a correction block is not exempt from the rule it enforces ->
-  every figure gets a source token (ledger line, or probe file + section) in
-  the same sentence, and "the ledger says" is only written above numbers that
-  are literally in the ledger.
-- 2026-09-21T22:24:21Z COMMIT: b3eab04d4 docs(plans): the correction broke its own rule → review dispatched
-- 2026-09-21T22:24:51Z COMMIT: f9f907943 docs(glass): the handoff pointed two commits back → review dispatched
-
-CORRECTION: third time, same class, one level up again. The bullet above says
-  the REPAIR line "lists eight (A B C D E G G2 H)". It does not. Line 232
-  literally reads "F tap targets (3 -> 0)". What I printed was the CORRECTED
-  set with the F already silently swapped to E, inside a sentence that promises
-  a transcription. Literal content of line 229-234: A B C D F G G2 H — eight
-  entries, and the F among them is the letter the first correction fixed.
-  So: the count is 8, not 7, and the sixth letter as written is F and should
-  be read as E. Both statements, separately, instead of one blended one.
-STOP: this is the third correction in a row and every one of them had the same
-  shape — a paraphrase wearing the clothes of a quote. The rule is not "be more
-  careful". It is mechanical:
-LEARNING(gate): quoting another line means copying its bytes. If a quoted
-  figure or letter needs correcting, the corrected value goes in a SEPARATE
-  sentence after the quote, never inside it. A sentence may carry a quote or a
-  correction, not both.
-- 2026-09-21T22:27:00Z COMMIT: 950e3813c docs(plans): a corrected quote is not a quote → review dispatched
-- 2026-09-21T22:30:02Z COMMIT: 49131862f chore(audit): commit the probes the handoff tells people to run → review dispatched
-- 2026-09-21T22:30:13Z COMMIT: 5c1c90fbd docs(glass): the handoff can now name files that exist → review dispatched
-
-DEAD END: this file lost 106 lines out of its own middle. Noticed when a read
-  at offset 229 said "the file has 207 lines" — it had been 312. The tail was
-  intact and hook lines were still appending to it, and the only lines the
-  working copy held that HEAD did not were the three COMMIT lines written after
-  the last commit. So something trimmed the history of an APPEND-ONLY file
-  while leaving both ends looking healthy, which is the worst possible shape:
-  nothing errors, and the loss is invisible unless you count.
-  What went missing was 21 Sep 07:00-11:00 — the Release 1/2/3 PLAN, COMMIT and
-  PUSH lines. Not mine to lose: that is the record of what shipped.
-  Recovered from HEAD (the commit was never truncated) and the three newer hook
-  lines re-appended. Verified: 312 + 3 = 315, and `comm` shows nothing from the
-  truncated copy absent from the restored one.
-  Cause not established. I did not edit those lines; every write I made this
-  session was a >> append. Candidates: a concurrent writer, or a hook that
-  rewrites rather than appends. Not chased further because the data is back and
-  guessing at a culprit would be its own kind of drift.
-LEARNING(gate): an append-only file needs a length floor. Before any write,
-  assert the line count is >= the count in HEAD; a file that has shrunk since
-  its last commit has lost something, and no append should land on top of a
-  loss and bury it.
-- 2026-09-21T22:32:22Z COMMIT: c11bdc513 fix(plans): the append-only ledger had lost its own middle → review dispatched
-- 2026-09-21T22:32:51Z COMMIT: 0fb2298e9 docs(glass): say what commit: means, so it stops drifting → review dispatched
-- 2026-09-21T22:33:15Z COMPACT: context compacted — read the last NEXT above before continuing
-
-CORRECTION: the DEAD END above ("this file lost 106 lines out of its own
-  middle", "cause not established", "candidates: a concurrent writer, or a hook
-  that rewrites rather than appends") named the right suspect and then stopped
-  one step short of reading it. The cause IS a hook, it is not a defect, and it
-  is documented in the function's own comment: cs_progress() in
-  humanless-pipeline/core/hooks/lib/commit-scope.sh:198 ends with
-      if [ "$n" -gt 300 ]; then { head -4 "$f"; tail -200 "$f"; } > "$f.tmp" ...
-  Past 300 lines it keeps the first 4 and the last 200 and DROPS THE MIDDLE.
-  312 -> 204, plus the appends that followed = the 206 I measured. Proven, not
-  inferred: head-4 + tail-200 of HEAD, diffed against the working copy, leaves
-  exactly the three hook lines written after the trim.
-  So my "recovery" in c11bdc513 restored 315 lines into a file capped at 300,
-  and the next COMMIT hook re-trimmed it within minutes. I did not lose the
-  history a second time; I re-created a condition the cap exists to handle.
-  The comment two lines above the cap says "capped so it cannot rot into a
-  wall". I had read the ledger's contract as "append-only" from its header and
   never opened the writer.
 LEARNING(gate): the length floor I proposed last hour is WRONG and is withdrawn
   before it was ever built — it would have fired on every trim forever, which is
@@ -305,3 +201,24 @@ LEARNING(fact): design/gates/contrast.mjs is not importable — no exports, no
   main-guard, process.exit() at module scope. A source-grep test is the only
   seam available for it. Any future "just import the helper" suggestion against
   this file is blocked on giving it exports first.
+- 2026-09-21T23:31:43Z COMMIT: d23bdfd7a docs(gates): say why the test's parseFloat is not the px() it enforces → review dispatched
+- 2026-09-21T23:31:54Z COMMIT: ef3137541 docs(glass): the range ended two commits after the handoff said → review dispatched
+- 2026-09-22T00:11:54Z PUSH: nz-glass @ ef3137541
+- PUSH: 5cc2206f2..ef3137541 nz-glass, 35 commits, on the owner's explicit word
+  ("push"). Gates green immediately before: tests 10/0, contrast 54/0.
+- NOTE: owner asked which version is safest to revert to "pre 2.0". Answered from
+  history, not memory, and the honest answer is that the premise does not hold:
+  NO 2.0 redesign code has shipped to frontend/src. Everything there since the
+  2.0 work began (93 commits since v16.23.0) is attendance / requests / check-in
+  repair. The 2.0 work to date is plans, measurements and gates only.
+  Boundary if one is ever wanted: v16.23.0 (230d1be08, 8 Sep) is the last tagged
+  release before the first 2.0 planning commit (602502d24, 8 Sep) — verified as
+  an ancestor of HEAD. Older alternative: safety/nz-glass-preintegration-20260902
+  (0b18a11fd, 1 Sep).
+  COST stated to the owner rather than buried: reverting to v16.23.0 discards the
+  attendance recovery release, the lost-OT work, the one-status-rule and decision
+  fixes, and the 23:58 check-in retry fix. It would revert the FIXES, not the
+  redesign. Recommended per-cause revert instead.
+LEARNING(how): before answering a "revert to before X" question, check whether X
+  actually shipped. Here it had not, and the tag the question implied would have
+  cost two releases of unrelated repair work.

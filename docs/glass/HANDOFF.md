@@ -8,7 +8,8 @@ files:    design/gates/contrast.mjs
           docs/glass/HANDOFF.md
 verify:   node --test design/gates/*.test.mjs   # 10 pass, 0 fail
           node design/gates/contrast.mjs        # 54 checked, 0 failures, exit 0
-flags:    Nothing pushed, nothing deployed, no backend touched. ONE defect class
+flags:    PUSHED to origin/nz-glass. Nothing deployed, no backend or app code
+          touched (frontend/src unchanged this range). ONE defect class
           this whole range: a proof that reads a copy of its input. Five
           instances now closed — 4 copied tokens, plus LG.scale copying
           hand-authored CSS. Reviewer Suggestion NOT actioned: blob-opacity
