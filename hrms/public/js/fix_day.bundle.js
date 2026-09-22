@@ -591,6 +591,10 @@ class FixDayScreen {
 				for (const day of Object.keys((answer.after && answer.after.days) || {})) {
 					delete this.state[day];
 				}
+				// A safety net, not a second rule: `move_tap` builds its day list as
+				// {_tap_day(row), target_day}, so the open day is already in the loop
+				// above. It stays because a future endpoint that answers with fewer
+				// days would otherwise leave the screen HR is looking at stale.
 				delete this.state[this.date];
 				if (this.on_change) this.on_change();
 				return this.load(this.date).then(() => answer);

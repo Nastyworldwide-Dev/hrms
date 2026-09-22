@@ -1,12 +1,16 @@
 # HANDOFF
-prompt:   S2 review follow-up (Home density, plan §2 C1)
+prompt:   Fix attendance: wrong shift days, duplicate rows, useless Fix dialog
+commit:   c16453e48+ on nz-glass (with 86f324f4b, 16cdf6a68, ecf4ac9b8)
 status:   done
-commit:   5b2486fca on nz-glass
-files:    frontend/src/theme/glass-components.css
-          frontend/src/components/__tests__/QuickLinks.grid.test.js
-          .claude/plans/progress.md
-verify:   cd frontend && node --experimental-test-module-mocks --test src/components/__tests__/*.test.js src/views/__tests__/*.test.js
-flags:    usage.mjs exits 1 on views/helpdesk/TicketDetail.vue — pre-existing at
-          HEAD, not this commit. All "after" heights are computed from tokens,
-          not measured in a browser; no site was reachable.
-next:     S4 — lucide-vue-next migration, feather removed in the same commit.
+files:    hrms/utils/shift_resolution.py
+          hrms/utils/grace_restamp_repair.py
+          hrms/patches/v16_0/run_grace_restamp_repair_once.py
+          hrms/public/js/fix_day.bundle.js
+          hrms/tests/test_shift_resolution.py
+          hrms/tests/test_grace_restamp_repair.py
+verify:   node --test hrms/public/js/fix_day.bundle.test.js && PYTHONPATH=. python3 hrms/tests/test_fix_day_screen.py
+flags:    bench migrate runs the one-time re-stamp repair itself (long queue,
+          idempotent, mirrored punches untouched). No site was reachable; every
+          check is stub/source-level. Retro agent blocked by the sandbox.
+next:     Norazmi 11 Aug should come back as ONE Attendance row with the morning
+          IN on its own shift, and the Fix dialog should offer Move.

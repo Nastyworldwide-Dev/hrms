@@ -201,4 +201,15 @@ LEARNING(gate): progress.md lost 116 lines a THIRD time this session, same
 NEXT: push nz-glass (86f324f4b, 16cdf6a68, ecf4ac9b8 + this), write
   docs/glass/HANDOFF.md, and hand over. Nabil deploys — bench migrate runs the
   one-time grace re-stamp repair patch on its own.
+
+EVIDENCE: 3 works — frappe review of c16453e48 came back clean, no Critical, no
+  Warning. It verified at source the one thing the fix rests on: move_tap builds
+  `days = sorted({_tap_day(row), target_day})` and _finish returns exactly those
+  in `after.days`, so nothing the server rebuilt can be missing from the list
+  the screen invalidates. Its suggestion is taken here: the trailing
+  `delete this.state[this.date]` is marked a safety net, not a second rule.
+NEXT: hand over. Post-check: Norazmi 11 Aug shows ONE Attendance row with the
+  morning IN on its own shift, and the Fix dialog offers Move.
 - 2026-09-22T07:06:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-22T07:06:19Z COMMIT: c16453e48 fix(fix-day): a Move was throwing away days it had not changed → review dispatched
+- 2026-09-22T07:06:45Z PUSH: nz-glass @ c16453e48
