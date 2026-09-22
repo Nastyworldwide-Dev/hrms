@@ -1,16 +1,12 @@
 # HANDOFF
-prompt:   hotfix — Fix attendance does nothing on a broken day
+prompt:   S2 review follow-up (Home density, plan §2 C1)
 status:   done
-commit:   ecb213981 on nz-glass (8 commits, 0c23be5f9..ecb213981)
-files:    hrms/api/attendance_fix_day.py
-          hrms/public/js/fix_day.bundle.js
-          hrms/public/js/fix_day.bundle.test.js
-          hrms/tests/test_fix_day_unreadable_day.py
-          hrms/tests/test_attendance_fix_day_save_day.py
-          hrms/tests/test_fix_day_refuses_a_two_row_day.py
-          .claude/design-tokens.css
-          .claude/plans/ticket-g13-has-no-test.md
-verify:   node --test hrms/public/js/fix_day.bundle.test.js (13) and
-          python3 -m pytest hrms/tests/test_fix_day_unreadable_day.py hrms/tests/test_attendance_fix_day_save_day.py hrms/tests/test_fix_day_refuses_a_two_row_day.py -q (43)
-flags:    UI not browser-verified (no dev site reachable); G13 still has no test (ticket filed)
-next:     deploy on Frappe Cloud, then open Adam Daniel 18 Aug and confirm 4 punches, none ticked
+commit:   5b2486fca on nz-glass
+files:    frontend/src/theme/glass-components.css
+          frontend/src/components/__tests__/QuickLinks.grid.test.js
+          .claude/plans/progress.md
+verify:   cd frontend && node --experimental-test-module-mocks --test src/components/__tests__/*.test.js src/views/__tests__/*.test.js
+flags:    usage.mjs exits 1 on views/helpdesk/TicketDetail.vue — pre-existing at
+          HEAD, not this commit. All "after" heights are computed from tokens,
+          not measured in a browser; no site was reachable.
+next:     S4 — lucide-vue-next migration, feather removed in the same commit.

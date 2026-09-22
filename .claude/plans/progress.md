@@ -264,3 +264,4 @@ NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete t
   recording the real gzip delta (revert if it is not negative). Verify the
   Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
 - 2026-09-22T04:50:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-22T04:50:17Z COMMIT: 5b2486fca fix(home): a short last row is a decision, and a long word could clip → review+design dispatched
