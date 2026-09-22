@@ -396,3 +396,287 @@ opening. E1 closes the debt that has been owed since the 9 Sep audit.
    only the count? (Leave reasons are never shown either way.)
 4. **Density (V4)** — 56px rows is a real change to how the app feels.
    Worth one screenshot round before A4 lands.
+
+---
+
+## 12. Rulings received, 22 September 2026
+
+**Q1 — Announcements authorship: ANY HR USER.**
+Permission is `HR User` create/write, `Employee` read through the API only.
+No Desk read for staff. One consequence worth naming: any HR User can post
+to Everyone, so the post carries `owner` and is shown to HR in the list —
+accountability by attribution, not by approval. No maker-checker workflow;
+it would stop the feature being used.
+
+**Q2 — What acknowledgement is.**
+Two different things, and the difference matters:
+
+- **Read tracking** (always on, silent): the PWA records that you opened
+  the card. HR gets *"read by 31 of 44"*. You do nothing; you are not
+  asked anything.
+- **Acknowledgement** (`acknowledge_required`, off by default): the card
+  grows a button — **"I've read and understood this"** — and stays pinned
+  at the top of your Home until you press it. It writes your name and the
+  timestamp. It is the difference between *"we published it"* and *"she
+  confirmed she read it on 3 Oct at 09:12"*, which is what a policy or a
+  safety notice needs and a canteen-closed notice does not.
+
+**Ruling taken:** build both. Read tracking always; the button only when
+HR ticks the box. HR sees who has not acknowledged, as a list of names.
+
+**Q3 — Manager coverage: YES, names are allowed.**
+A department head sees *who* is off, not only the count. Bounded by two
+rules that are not negotiable:
+- **Leave REASON is never shown** to anyone but the employee and the
+  approval chain. Type ("Annual Leave") yes; reason no.
+- The list is whatever the server returns for that caller (P5). A manager
+  sees their departments; nobody enumerates another.
+
+**Q4 — Density: measured, not guessed (see §13).**
+
+**Q5 (new) — KPI/Score visibility is a protected boundary (see §14).**
+
+---
+
+## 13. Density — the real method
+
+"How dense" is not a taste question; it has an established answer.
+
+**The constraint that is fixed:** a tap target is **44×44pt** (Apple HIG,
+Accessibility → Buttons and Controls) / **48dp** (Material 3, minimum
+touch target). That is the floor and it does not move. Body text stays
+≥ 14px (P3) with a 1.5 line-height for readability (WCAG 2.1 SC 1.4.12,
+Text Spacing).
+
+**What actually shrinks** is the space *between* rows, not the rows:
+
+| Today | Target | Where the number comes from |
+|---|---|---|
+| row height ~64px | **56px** | 44px target + 2×6px padding = 56. Still above both platform floors. |
+| gap between rows 20px | **0**, with a 1px divider | Material list spec: items in a group are separated by dividers, not by gaps. Gaps mean "different group". |
+| gap between groups 20px | **24px** | 4pt grid, one step above the in-group spacing so grouping is legible. |
+| section padding 28px | **24px** | same grid |
+
+**Measured effect** on a 390×844 phone (usable ≈ 640px after header, tab
+bar and safe areas): today 640 ÷ (64+20) = **7.6 rows**. After:
+640 ÷ (56+1) = **11.2 rows**. Three to four more rows per screen, with no
+target smaller than the platform minimum.
+
+**How it gets signed off, so nobody has to guess:** slice A4 ships as a
+before/after screenshot pair on three widths (360, 390, 430) before it is
+merged. That is the "screenshot round" — it costs one capture run, and
+`~/verify-bench` with `spoke.localhost` can produce it.
+
+**What density must never buy:** a target below 44px, body text below
+14px, a contrast below 4.5:1, or a focus ring that no longer clears the
+row. All four are already gates.
+
+---
+
+## 14. Score / KPI — the protected boundary
+
+This is the highest-risk surface in the app. A performance score leaking
+to the wrong person is not a UI bug; it is a personnel incident. The
+revamp must not widen it by one row, and §6's visual work sits strictly
+inside the existing fence.
+
+### What the fence is today (verified in `hrms/api/kpi.py`)
+
+`_scope(user)` is **the one place** that answers "who is this caller and
+whose rows may they see". It returns a tier plus the employees it admits:
+
+| Tier | Who | Admits |
+|---|---|---|
+| `hr` | `is_hr_operator(user)` — by ROLE only | everyone |
+| `ceo` | own Employee's designation == `CEO_DESIGNATION` | everyone |
+| `manager` | reporting chain via `get_allowed_appraisal_employees` | their chain only |
+| `self` | `employee in own_employees(user)` | themselves |
+| `None` | everyone else | nothing |
+
+Three properties that must survive the revamp, each already load-bearing:
+
+1. **HR is decided by role and only by role**, answered before the
+   identity gate — so an HR account with no Employee row still works
+   (new hire, shared login, Administrator during support).
+2. **CEO and manager are identity-gated first, fail-closed.** No Active
+   Employee → no tier. That is what closes the duplicate-Employee-row
+   forgery path.
+3. **The department tree is `ceo` + `hr` ONLY** (`kpi.py:722`). A manager
+   never sees structure, only people. Their tab is labelled "My Team" for
+   exactly that reason.
+
+And the rule that keeps it honest: **`can_view_team_kpi()` is a NAV gate,
+not a data gate.** It decides whether a tab is drawn. Every read
+re-derives the tier through `_scope`, and `_require_kpi_read` re-checks
+before a single KRA row is loaded. Two answers to "may I see this person"
+is precisely how the filing guard and the row scope once disagreed
+(`.claude/plans/family.md`).
+
+### Rules this revamp binds itself to
+
+- **KR1 — No new KPI endpoint.** The Score work in §6 reads the payload
+  `get_my_kpi_dashboard` / `get_team_kpi` already return. Nothing new is
+  exposed.
+- **KR2 — The frontend never decides.** No role literal, no designation
+  string, no "if HR" in `views/kpi/`. It renders the sections the server
+  sends. Enforced by P5's gate.
+- **KR3 — Empty is not a leak.** §6 adds cycle dates and the appraiser's
+  name to the empty path. Both are about the READER's own cycle and come
+  from the same fenced payload. No other person's data enters an empty
+  state, ever.
+- **KR4 — Density and tokens do not touch scope.** A4/A2 change CSS in
+  `KpiDetail`; they may not touch a `v-if` that gates a section.
+- **KR5 — A guard test, committed with A5.** `test_kpi_fence.py` asserts,
+  on a site: a tierless user gets no tab AND is refused the detail; a
+  manager is refused an employee outside their chain; a manager is refused
+  the department tree; HR without an Employee row keeps the tab. Four
+  assertions, and they fail if anyone widens the fence later.
+- **KR6 — Screenshots are a leak vector.** The baseline re-shoot (E1) runs
+  as a tierless persona plus `self` only. No team baseline is captured;
+  114 PNGs of somebody's real appraisal do not belong in the repo.
+
+---
+
+## 15. Every screen — nothing left alone
+
+All 48. `states` = which of loading / empty / error / content are missing
+today. Slice column maps to §10.
+
+### Primary destinations
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `Home.vue` | Now bar · check in/out · Needs you · Announcements · Your requests (§2) | — | D1, B2, B3 |
+| `attendance/Dashboard.vue` | Calendar. Title fixed. Dots on tiles, day sheet on tap (§4) | empty | A1, C2, C3, C4 |
+| `Requests.vue` | Balance strip above the tiles (§5) | loading, empty | C1 |
+| `kpi/Dashboard.vue` | Score. Title fixed. Real empty path (§6, §14) | — | A1, A5 |
+| `More.vue` | Grouped, with counts on Helpdesk and SOPs | — | D3 |
+
+### Attendance family
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `EmployeeCheckinList.vue` | Grouped by day with a per-day total; a missing-punch row is flagged, not silent | error | A4, A5 |
+| `AttendanceRequestList.vue` | Status chips, date-filtered from the balance strip | empty, error | A5, C1 |
+| `AttendanceRequestForm.vue` | Pre-fills the date when opened from a day sheet | error | C3 |
+| `ShiftAssignmentList.vue` | Shows the window (`19:00–03:30`), not just the name | empty, error | A5 |
+| `ShiftAssignmentForm.vue` | Read-only detail; density pass | — | A4 |
+| `ShiftRequestList.vue` | Chips; merged into the Requests list feed | empty, error | A5 |
+| `ShiftRequestForm.vue` | Allowlist already done; density + 4 states | error | A4, A5 |
+
+### Leave
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `leave/Dashboard.vue` | Balance per type with expiry dates — the source of the Requests strip | empty | C1, A5 |
+| `leave/List.vue` | Chips, grouped by status; approver name on pending rows | error | A4, A5 |
+| `leave/Form.vue` | Allowlist done; add remaining-balance inline as you pick the type (P2) | error | C1 |
+
+### Expenses
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `expense_claim/Dashboard.vue` | Totals: awaiting / approved-unpaid / paid this period | empty | C1 |
+| `expense_claim/List.vue` | Amount right-aligned, chip, grouped by month | error | A4 |
+| `expense_claim/Form.vue` | Allowlist done; running total as rows are added | error | A5 |
+
+### Overtime
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `ot/OTRequestList.vue` | Hours + the money it becomes; unclaimed days surfaced | empty, error | C1, A5 |
+| `ot/OTRequestForm.vue` | Pre-fill from a calendar day; show computed hours before submit | error | C3 |
+| `ot/ReplacementLeave.vue` | Balance + expiry, same shape as leave | empty | C1 |
+| `ot/ReplacementLeaveClaimForm.vue` | Density + 4 states | error | A4, A5 |
+
+### Approvals
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `RemoteApprovals.vue` | Stays remote-only, but gains the count in its header and the density pass | error | A4 |
+| — *(new)* | The unified queue `home.needs_you` feeds — all five request types, decided in place | all | B3 |
+
+### Helpdesk & issues
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `helpdesk/HelpdeskHub.vue` | Two pills with YOUR open count each, one line of "ask here when…", HR contacts folded in | empty | D3 |
+| `helpdesk/HelpdeskList.vue` | Status chips, last-reply time (not created time — the useful one) | empty, error | D3, A5 |
+| `helpdesk/TicketDetail.vue` | Thread reads as a conversation, newest last, your replies aligned | error | A4 |
+| `helpdesk/TicketNew.vue` | Category first, then one field. Density | error | A5 |
+| `issues/HRIssueBoard.vue` | HR-only (already fenced). Density + counts per column | error | A4 |
+| `issues/IssueList.vue` | Chips, grouped | empty, error | A5 |
+| `issues/IssueForm.vue` | 4 states | error | A5 |
+| `issues/IssuesTab.vue` | Folds into the hub; no second entry point | — | D3 |
+
+### Team
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `team/TeamDashboard.vue` | Server-gated. Today's status per person; truthful refusal when not entitled (§7, P5) | all | D2 |
+| `team/TeamRoster.vue` | Who is in / off today, by department the server allows | empty, error | D2 |
+
+### SOPs
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `sop/SopList.vue` | **Rebuilt** — search first, category chips, recently-updated row. Worst offender: 20 of the 103 stray pixel values | empty, error | A3, D3 |
+| `sop/SopDetail.vue` | Readable long-form: 16px body, 1.6 line-height, sticky section nav | error | A4 |
+| `sop/SopFormSheet.vue` | Density + 4 states | error | A5 |
+
+### Account & shell
+
+| Screen | What it becomes | States | Slice |
+|---|---|---|---|
+| `Profile.vue` | Four groups: You · Work · App · Account (§7). 17 stray pixel values go | — | A3, D3 |
+| `AppSettings.vue` | Folds into Profile → App. Add text size + build string | — | D3 |
+| `ChangePassword.vue` | Strength feedback, 4 states | error | A5 |
+| `Notifications.vue` | Grouped by day, unread first, mark-all-read | empty, error | A5 |
+| `HRContacts.vue` | Folds into the Helpdesk hub; kept as a route | empty | D3 |
+| `More.vue` | See primaries | — | D3 |
+| `Login.vue` | Density + error clarity; never says "invalid" without saying what to do | — | A4 |
+| `InvalidEmployee.vue` | Says who to contact, from HRContacts data | — | D3 |
+| `NotFound.vue` | One action back to Home | — | A4 |
+
+### Infrastructure (no user-facing change, but in scope)
+
+| File | What it becomes | Slice |
+|---|---|---|
+| `FormShell.vue` | Carries the 4-state contract so forms inherit it instead of each rebuilding it | A5 |
+| `TabbedView.vue` | Density tokens | A4 |
+| `kpi/KpiDetail.vue` | Tokens + density ONLY. No `v-if` on a gated section may change (KR4) | A2, A4 |
+| `DesignSpecimen.vue` | Regenerated from the new tokens; it is the visual proof A2 landed | A2 |
+| `components/glass/*` (47) | Re-tokenised against the 4pt grid and the modular scale | A2, A3 |
+| `SideNav.vue` | 13 stray pixel values go | A3 |
+
+**Count check:** 48 screens listed. 33 gain at least one missing state,
+which closes P4's backlog entirely rather than ratcheting it.
+
+---
+
+## 16. Revised order of work
+
+Unchanged from §10 except for what the rulings added:
+
+| # | Slice | Kind | New? |
+|---|---|---|---|
+| A1 | Two page titles + naming gate | fix | |
+| A2 | `tokens.mjs` gate, 4pt grid, 1.200 type | refactor | |
+| A3 | 103 stray values → tokens + lint rule | refactor | |
+| A4 | Density pass, **screenshots at 360/390/430 before merge** | refactor | Q4 |
+| A5 | Four states across 33 screens + Score's empty path | feat | |
+| A6 | **`test_kpi_fence.py` — the four-assertion guard (KR5)** | chore | Q5 |
+| B1 | `HR Announcement` + `HR Announcement Read`, 3 endpoints, **any HR User** | feat | Q1 |
+| B2 | Announcements in the PWA, **read tracking + acknowledge button** | feat | Q2 |
+| B3 | `home.needs_you` — five request types | feat | |
+| C1 | `requests.summary` + balance strip | feat | |
+| C2 | `calendar.month` dots | feat | |
+| C3 | `calendar.day`, employee sections | feat | |
+| C4 | Day sheet approver + manager, **names allowed, reasons never** | feat | Q3 |
+| D1 | Home Now bar | feat | |
+| D2 | Team, server-gated | feat | |
+| D3 | Helpdesk / SOP / Profile / More consolidation | feat | |
+| E1 | Re-shoot 114 baselines, **tierless + self personas only (KR6)** | chore | Q5 |
+
+A6 runs before anything touches `kpi/`, so the fence is pinned before the
+revamp goes near it.
