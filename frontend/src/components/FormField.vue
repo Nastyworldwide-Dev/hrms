@@ -49,7 +49,7 @@
 			@change="(v) => emit('update:modelValue', v)"
 			:fixedMenu="true"
 			:editable="!isReadOnly"
-			editor-class="prose-sm border-b border-x border-gray-200 rounded-b-sm p-1 min-h-[4rem]"
+			editor-class="prose-sm border-b border-x border-gray-200 rounded-b-sm p-1 min-h-16"
 		/>
 
 		<!-- Text -->

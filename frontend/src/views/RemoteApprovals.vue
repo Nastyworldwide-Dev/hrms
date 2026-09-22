@@ -2,7 +2,7 @@
 	<GPage>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-[680px] mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<header
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
@@ -59,7 +59,7 @@
 											:status="statusOf(req)"
 											:label="__(statusOf(req), null, 'Remote Checkin Request')"
 										/>
-										<span class="g-eyebrow px-2 py-[3px] bg-inkbase text-ground">
+										<span class="g-eyebrow px-2 py-1 bg-inkbase text-ground">
 											{{ req.log_type }}
 										</span>
 									</div>
@@ -137,7 +137,7 @@
 											{{ req.employee_name || req.employee }}
 										</div>
 										<span
-											class="g-eyebrow px-2 py-[3px]"
+											class="g-eyebrow px-2 py-1"
 											:class="
 												req.log_type === 'IN'
 													? 'bg-inkbase text-ground'

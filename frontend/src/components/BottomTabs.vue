@@ -14,7 +14,7 @@
 			     selected tab is carried by the icon (full ink) + bold label, not a
 			     well/capsule — the bar is one continuous glass material. -->
 			<span class="g-tabbar__well" :class="{ 'g-tabbar__well--active': isActive(item) }">
-				<component :is="item.icon" class="h-[19px] w-[19px] flex-none" />
+				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 			</span>
 			<span class="g-tabbar__label" :class="{ 'g-tabbar__label--active': isActive(item) }">{{
 				item.shortTitle

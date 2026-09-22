@@ -9,7 +9,7 @@
 		<router-link :to="{ name: 'HelpdeskTicketNew' }" v-slot="{ navigate }">
 			<GButton :label="__('New IT Ticket')" @click="navigate">
 				<template #trailing>
-					<ArrowRight class="h-[17px] w-[17px]" aria-hidden="true" />
+					<ArrowRight class="h-icon-md w-icon-md" aria-hidden="true" />
 				</template>
 			</GButton>
 		</router-link>

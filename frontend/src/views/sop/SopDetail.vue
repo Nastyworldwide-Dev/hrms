@@ -21,7 +21,7 @@
 				:aria-label="__('Edit {0}', [sop.data?.title || __('SOP')])"
 				@click="sheetOpen = true"
 			>
-				<PenLine class="h-[17px] w-[17px]" />
+				<PenLine class="h-icon-md w-icon-md" />
 			</button>
 		</header>
 
@@ -29,7 +29,7 @@
 			<ResourceError :resource="sop" what="this document" />
 			<div
 				v-if="sop.data"
-				class="flex flex-col gap-3.5 w-full max-w-[820px] mx-auto px-4 pt-[18px] pb-16 lg:my-8 lg:bg-surface lg:border lg:border-divider lg:shadow-sm lg:px-14 lg:py-11"
+				class="flex flex-col gap-3.5 w-full max-w-content-column-read mx-auto px-4 pt-4 pb-16 lg:my-8 lg:bg-surface lg:border lg:border-divider lg:shadow-sm lg:px-14 lg:py-11"
 			>
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
@@ -52,7 +52,7 @@
 					<span class="g-eyebrow">{{ __("Attachment") }}</span>
 					<div class="border border-divider rounded-panel overflow-hidden">
 						<div class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5">
-							<FileText class="h-[18px] w-[18px] flex-none text-accent-700" />
+							<FileText class="h-icon-md w-icon-md flex-none text-accent-700" />
 							<span class="flex-1 text-card-title font-bold text-inkbase truncate">
 								{{ attachment.file_name }}
 							</span>
@@ -60,7 +60,7 @@
 								:href="attachment.file_url"
 								target="_blank"
 								rel="noopener"
-								class="relative flex-none inline-flex h-[30px] w-[30px] items-center justify-center border border-accent-ink text-accent-ink no-underline before:absolute before:-inset-2 before:content-['']"
+								class="relative flex-none inline-flex h-icon-xl w-icon-xl items-center justify-center border border-accent-ink text-accent-ink no-underline before:absolute before:-inset-2 before:content-['']"
 								:title="__('Download')"
 								:aria-label="__('Download')"
 							>

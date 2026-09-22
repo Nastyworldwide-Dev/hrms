@@ -34,7 +34,7 @@
 		<div class="flex flex-col py-3.5 flex-1">
 			<button
 				type="button"
-				class="g-eyebrow flex items-center gap-3 px-[18px] py-3 mb-1.5 border-l-[3px] border-transparent text-ink-500 hover:text-inkbase text-left"
+				class="g-eyebrow flex items-center gap-3 px-4 py-3 mb-1.5 border-l-4 border-transparent text-ink-500 hover:text-inkbase text-left"
 				:aria-label="collapsed ? __('Expand sidebar') : __('Collapse sidebar')"
 				:aria-expanded="String(!collapsed)"
 				@click="toggleCollapse"
@@ -70,7 +70,7 @@
 					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
 					@click="navigate"
 				>
-					<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
+					<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
 				</button>
 			</router-link>
@@ -93,7 +93,7 @@
 					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
 					@click="navigate"
 				>
-					<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
+					<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
 				</button>
 			</router-link>
@@ -115,7 +115,7 @@
 				:aria-label="item.title"
 				:title="item.sublabel"
 			>
-				<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
+				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
 				<ExternalLink v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
 			</a>
@@ -124,17 +124,17 @@
 		<!-- Profile -->
 		<router-link
 			:to="{ name: 'Profile' }"
-			class="flex items-center gap-2.5 px-[18px] py-4 border-t-2 border-divider hover:bg-inkbase/[0.05]"
+			class="flex items-center gap-2.5 px-4 py-4 border-t-2 border-divider hover:bg-inkbase/[0.05]"
 		>
 			<img
 				v-if="employeeImage"
 				:src="employeeImage"
 				:alt="employeeName"
-				class="w-[34px] h-[34px] object-cover flex-none grayscale"
+				class="w-icon-xl h-icon-xl object-cover flex-none grayscale"
 			/>
 			<div
 				v-else
-				class="w-[34px] h-[34px] flex-none grayscale bg-surface flex items-center justify-center font-extrabold text-inkbase"
+				class="w-icon-xl h-icon-xl flex-none grayscale bg-surface flex items-center justify-center font-extrabold text-inkbase"
 			>
 				{{ employeeName ? employeeName[0] : "?" }}
 			</div>

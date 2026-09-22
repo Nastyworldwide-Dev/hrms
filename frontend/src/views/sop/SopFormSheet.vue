@@ -18,7 +18,7 @@
 					:aria-label="__('Close')"
 					@click="close"
 				>
-					<X class="h-[18px] w-[18px]" />
+					<X class="h-icon-md w-icon-md" />
 				</button>
 			</div>
 
@@ -101,18 +101,22 @@
 					<button
 						type="button"
 						role="switch"
-						class="flex h-11 w-[52px] -my-2.5 -mr-[5px] flex-none items-center justify-center"
+						class="flex h-11 w-control-lg -my-2.5 -mr-1 flex-none items-center justify-center"
 						:aria-label="__(toggle.label)"
 						:aria-checked="form[toggle.field]"
 						@click="form[toggle.field] = !form[toggle.field]"
 					>
+						<!-- The track is 44x24 and the knob 20, so the travel is
+						     exactly 44 - 20 - (2 + 2) = 20px = translate-x-5. It was
+						     42 wide, which left the knob 2px short of its own end
+						     stop. -->
 						<span
-							class="relative h-[22px] w-[42px]"
+							class="relative h-icon-lg w-11"
 							:class="form[toggle.field] ? 'bg-accent-ink' : 'bg-ink-400'"
 							style="transition: background-color var(--motion-glide)"
 						>
 							<span
-								class="absolute top-0.5 left-0.5 h-[18px] w-[18px] bg-ground"
+								class="absolute top-0.5 left-0.5 h-icon-md w-icon-md bg-ground"
 								:class="form[toggle.field] ? 'translate-x-5' : ''"
 								style="transition: transform var(--motion-glide)"
 							></span>
@@ -127,7 +131,7 @@
 						v-model="form.content"
 						rows="4"
 						:placeholder="__('Write the procedure…')"
-						class="m-field-input resize-y min-h-[80px]"
+						class="m-field-input resize-y min-h-20"
 					/>
 				</div>
 

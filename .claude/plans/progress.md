@@ -222,3 +222,9 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T16:13:15Z EVIDENCE: 2 correct — mapped tests green (bun ) for 23 file(s) ⟂0e43e1303bdf
 - 2026-09-22T16:13:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d
 - 2026-09-22T16:13:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d
+- 2026-09-22T16:26:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 8 file(s) ⟂514b00a817f9
+- 2026-09-22T16:26:40Z COMMIT: 56806afef refactor(design): a 4pt grid and one modular type ramp, with a gate → review+security+design dispatched
+- 2026-09-22T16:26:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-22T16:26:54Z COMMIT: ce4de0c9f refactor(helpdesk): a chat thread cost one glass surface per message → review+design dispatched
+- 2026-09-22T16:27:03Z PUSH: nz-glass @ ce4de0c9f
+- 2026-09-22T16:32:56Z EVIDENCE: 2 correct — mapped tests green (bun ) for 41 file(s) ⟂3e88cfe6592f

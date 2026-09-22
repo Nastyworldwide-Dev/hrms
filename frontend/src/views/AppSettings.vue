@@ -2,7 +2,7 @@
 	<GPage>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-[620px] mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<header
 						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
 					>
@@ -20,7 +20,7 @@
 						<span class="g-eyebrow">{{ __("Appearance") }}</span>
 						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
 							<div class="flex items-center gap-3">
-								<Moon class="h-[18px] w-[18px] text-accent-ink" />
+								<Moon class="h-icon-md w-icon-md text-accent-ink" />
 								<div class="flex flex-col">
 									<span class="text-sm font-semibold text-inkbase">
 										{{ __("Theme") }}
@@ -58,7 +58,7 @@
 						     unaffected; the Switch is flex-1 so its justify-between still
 						     pushes the toggle to the right edge. -->
 						<div class="flex items-center gap-3 border-t-2 border-divider pt-4 g-switch-row">
-							<Bell class="h-[18px] w-[18px] text-accent-ink shrink-0" />
+							<Bell class="h-icon-md w-icon-md text-accent-ink shrink-0" />
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
@@ -88,12 +88,12 @@
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<Lock class="h-[18px] w-[18px] text-inkbase" />
+									<Lock class="h-icon-md w-icon-md text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ __("Change Password") }}
 									</div>
 								</div>
-								<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
+								<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
 							</router-link>
 						</div>
 					</div>

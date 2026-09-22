@@ -97,7 +97,7 @@
 						:disabled="newTicket.loading || uploading"
 					>
 						<template #trailing>
-							<ArrowRight class="h-[17px] w-[17px]" aria-hidden="true" />
+							<ArrowRight class="h-icon-md w-icon-md" aria-hidden="true" />
 						</template>
 					</GButton>
 				</form>

@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('SOPs')">
 		<template #body>
 			<div
-				class="flex flex-col gap-[18px] w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-4 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-24 lg:p-7"
 			>
 				<!-- Essentials (pinned) -->
 				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">
@@ -16,7 +16,7 @@
 							v-for="sop in pinned"
 							:key="sop.name"
 							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-							class="relative flex flex-col gap-[18px] bg-accent-ink text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
+							class="relative flex flex-col gap-4 bg-accent-ink text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
 							style="
 								transition: transform var(--g-motion-button-press-duration)
 										var(--g-motion-button-press-easing),
@@ -24,7 +24,7 @@
 										var(--g-motion-button-press-easing);
 							"
 						>
-							<BookOpen class="h-[22px] w-[22px] flex-none" />
+							<BookOpen class="h-icon-lg w-icon-lg flex-none" />
 							<button
 								v-if="isHR"
 								type="button"
@@ -32,7 +32,7 @@
 								:aria-label="__('Edit {0}', [sop.title])"
 								@click.prevent.stop="openEdit(sop)"
 							>
-								<PenLine class="h-[15px] w-[15px]" />
+								<PenLine class="h-icon-sm w-icon-sm" />
 							</button>
 							<span class="flex flex-col gap-0.5">
 								<span class="font-extrabold text-card-title leading-tight">
@@ -49,18 +49,18 @@
 				<!-- Search -->
 				<div class="relative">
 					<Search
-						class="absolute left-2.5 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-ink-500 pointer-events-none"
+						class="absolute left-2.5 top-1/2 -translate-y-1/2 h-icon-sm w-icon-sm text-ink-500 pointer-events-none"
 					/>
 					<input
 						v-model="query"
 						:placeholder="__('Search SOPs…')"
 						:aria-label="__('Search SOPs')"
-						class="g-focusable w-full bg-surface border border-divider py-2.5 pl-[34px] pr-3 text-card-title text-inkbase placeholder:text-ink-500"
+						class="g-focusable w-full bg-surface border border-divider py-2.5 pl-8 pr-3 text-card-title text-inkbase placeholder:text-ink-500"
 					/>
 				</div>
 
 				<!-- Sections -->
-				<div v-if="!isEmpty" class="flex flex-col gap-[18px]">
+				<div v-if="!isEmpty" class="flex flex-col gap-4">
 					<div v-for="section in sections" :key="section.key" class="flex flex-col gap-2">
 						<span class="g-eyebrow">{{ sectionLabel(section) }}</span>
 						<div class="flex flex-col border-t-2 border-divider">
@@ -100,7 +100,7 @@
 									:aria-label="__('Edit {0}', [sop.title])"
 									@click.prevent.stop="openEdit(sop)"
 								>
-									<PenLine class="h-[15px] w-[15px]" />
+									<PenLine class="h-icon-sm w-icon-sm" />
 								</button>
 								<ChevronRight class="h-4 w-4 flex-none text-ink-400" />
 							</router-link>
@@ -113,7 +113,7 @@
 					v-else-if="query"
 					class="flex flex-col items-center gap-2 px-5 py-11 text-center text-ink-600"
 				>
-					<Search class="h-[34px] w-[34px] text-ink-300" />
+					<Search class="h-icon-xl w-icon-xl text-ink-300" />
 					<div class="text-card-title">
 						{{ __("No SOPs match “{0}”.", [query]) }}<br />
 						{{ __("Try a different search term.") }}
@@ -131,7 +131,7 @@
 			<button
 				v-if="isHR"
 				type="button"
-				class="fixed right-4 bottom-[76px] z-30 flex h-[52px] w-[52px] items-center justify-center bg-accent-ink text-ground shadow-md active:scale-90 lg:bottom-8"
+				class="fixed right-4 bottom-fab z-30 flex h-control-lg w-control-lg items-center justify-center bg-accent-ink text-ground shadow-md active:scale-90 lg:bottom-8"
 				style="
 					transition: transform var(--g-motion-button-press-duration)
 						var(--g-motion-button-press-easing);
@@ -139,7 +139,7 @@
 				:aria-label="__('New SOP')"
 				@click="openCreate"
 			>
-				<Plus class="h-[22px] w-[22px]" />
+				<Plus class="h-icon-lg w-icon-lg" />
 			</button>
 
 			<SopFormSheet

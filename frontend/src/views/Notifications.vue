@@ -2,7 +2,7 @@
 	<GPage>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-[620px] mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<!-- bg-ground belongs on the STICKY element, not an ancestor.
 					     8.4 removed an opaque page-colour fill from the container
 					     above (it was painting over the light field) and this

@@ -16,7 +16,7 @@
 	<!-- backdrop -->
 	<div
 		v-if="showModalBackdrop"
-		class="fixed inset-0 z-[10000] !mt-0 bg-black opacity-30 cursor-pointer"
+		class="fixed inset-0 z-scrim-backdrop !mt-0 bg-black opacity-30 cursor-pointer"
 		@click="() => modalController.dismiss()"
 	></div>
 </template>

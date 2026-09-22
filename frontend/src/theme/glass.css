@@ -62,6 +62,7 @@
 	--g-warn-ink: #B45309;
 	--g-warn-ink-rgb: 180 83 9;
 	/* spacing */
+	--g-fab-bottom: calc(var(--g-tabbar-height) + var(--g-tabbar-gap) + var(--g-tabbar-pad-top) + var(--g-tabbar-pad-bottom));
 	--g-pad-action: 16px 20px;
 	--g-pad-badge: 4px 8px;
 	--g-pad-panel: 16px;
@@ -91,10 +92,12 @@
 	/* layer */
 	--g-layer-overlay: 100;
 	--g-layer-scrim: 10000;
+	--g-layer-scrim-backdrop: 10000;
 	--g-layer-sticky: 1000;
 	/* layout */
 	--g-content-column: calc(100% - 32px);
 	--g-content-column-lg: 720px;
+	--g-content-column-read: 720px;
 	--g-sheet-max-height: calc(100vh - 5rem);
 	--g-sheet-max-height: calc(100dvh - 5rem);
 	--g-tabbar-border: 1px;
@@ -119,6 +122,13 @@
 	--g-field-blob-c-left: -137px;
 	--g-field-blob-c-size: 180px;
 	--g-field-blur: 36px;
+	/* icon */
+	--g-control-lg: 56px;
+	--g-control-md: 44px;
+	--g-icon-lg: 24px;
+	--g-icon-md: 20px;
+	--g-icon-sm: 16px;
+	--g-icon-xl: 32px;
 	/* type */
 	--g-font-display: -apple-system, BlinkMacSystemFont, 'Inter Tight', 'Inter', 'Segoe UI', Roboto, sans-serif;
 	--g-font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;

@@ -154,12 +154,20 @@ module.exports = {
 	maxWidth: {
 		"content-column": "var(--g-content-column)",
 		"content-column-lg": "var(--g-content-column-lg)",
+		"content-column-read": "var(--g-content-column-read)",
 		"viewport-width": "var(--g-viewport-width)",
 	},
 	opacity: {
 		blob: "var(--g-blob-opacity)",
 	},
 	spacing: {
+		"control-lg": "var(--g-control-lg)",
+		"control-md": "var(--g-control-md)",
+		"fab-bottom": "var(--g-fab-bottom)",
+		"icon-lg": "var(--g-icon-lg)",
+		"icon-md": "var(--g-icon-md)",
+		"icon-sm": "var(--g-icon-sm)",
+		"icon-xl": "var(--g-icon-xl)",
 		"pad-panel": "var(--g-pad-panel)",
 		"screen-gutter": "var(--g-screen-gutter)",
 		"sheet-pad-bottom": "var(--g-sheet-pad-bottom)",
@@ -180,6 +188,7 @@ module.exports = {
 	zIndex: {
 		overlay: "var(--g-layer-overlay)",
 		scrim: "var(--g-layer-scrim)",
+		"scrim-backdrop": "var(--g-layer-scrim-backdrop)",
 		sticky: "var(--g-layer-sticky)",
 	},
 };

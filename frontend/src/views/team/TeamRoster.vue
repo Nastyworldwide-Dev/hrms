@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('Team Roster')">
 		<template #body>
 			<div
-				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-24 lg:p-7"
 			>
 				<!-- HR-only team selector: HR has no direct reports, so without this
 				     the roster is empty. Same pattern as TeamDashboard. -->

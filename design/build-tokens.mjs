@@ -33,7 +33,7 @@ const isHex = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
 const isVal = (v) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
 const sorted = (obj) => Object.keys(obj).sort();
 
-for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "field", "type", "motion"]) {
+for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon", "type", "motion"]) {
 	if (!tokens[group] || typeof tokens[group] !== "object") bad(group, "missing group");
 }
 if (errors.length) die();
@@ -48,7 +48,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 			bad(`${group}.${name}`, "value must be { light, dark }");
 	}
 }
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon"]) {
 	for (const name of sorted(tokens[group])) {
 		if (!isVal(tokens[group][name].value)) bad(`${group}.${name}`, "value must be a non-empty string");
 	}
@@ -111,7 +111,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 	}
 }
 
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon"]) {
 	light.push(`\t/* ${group} */`);
 	// shadow and layer names take the group prefix (--g-shadow-action,
 	// --g-layer-scrim); the rest already carry theirs (radius-panel,
@@ -206,9 +206,20 @@ for (const name of sorted(tokens.blur)) backdropBlur[name.replace(/^blur-/, "")]
 const spacing = {};
 const multiValueSpacing = []; // two-value shorthands can't be Tailwind spacing entries — reported
 for (const name of sorted(tokens.spacing)) {
-	if (tokens.spacing[name].value.trim().includes(" ")) multiValueSpacing.push(name);
+	// A two-value SHORTHAND ("14px 13px") cannot be a Tailwind spacing entry.
+	// A calc() can — and it must contain spaces to be valid CSS, so a bare
+	// includes(" ") test called `calc(a + b)` a shorthand and silently dropped
+	// fab-bottom from the scale. Strip balanced function calls before looking.
+	const bare = tokens.spacing[name].value.trim().replace(/[a-z-]+\([^()]*(?:\([^()]*\)[^()]*)*\)/gi, "F");
+	if (bare.includes(" ")) multiValueSpacing.push(name);
 	else spacing[name] = `var(--g-${name})`;
 }
+// Icon and control sizes ride the SPACING scale, which is what gives a call
+// site `w-icon-md h-icon-md` instead of `w-[18px] h-[18px]`. They are their own
+// token group rather than more spacing entries because they answer a different
+// question — how big is this glyph, not how far apart are these blocks — and a
+// designer tuning the gap between cards must not resize every chevron.
+for (const name of sorted(tokens.icon)) spacing[name] = `var(--g-${name})`;
 
 const fontFamily = {};
 for (const name of sorted(tokens.type.family)) fontFamily[name] = `var(--g-font-${name})`;

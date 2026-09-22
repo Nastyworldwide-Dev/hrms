@@ -51,7 +51,7 @@
 						<div class="flex flex-row items-center gap-3">
 							<Autocomplete
 								v-if="filterConditionMap[filter.fieldtype]"
-								class="mt-1 w-[75px]"
+								class="mt-1 w-20"
 								:options="filterConditionMap[filter.fieldtype]"
 								v-model="filters[filter.fieldname].condition"
 							/>

@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col w-full gap-[13px]" v-if="calendarEvents.data">
+	<div class="flex flex-col w-full gap-3" v-if="calendarEvents.data">
 		<GCalendar
 			:title="`${firstOfMonth.format('MMMM')} ${firstOfMonth.format('YYYY')}`"
 			:days="days"

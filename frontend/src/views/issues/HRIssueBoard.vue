@@ -34,7 +34,7 @@
 					/>
 					<select
 						v-model="issueType"
-						class="w-[130px] text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
+						class="w-32 text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
 					>
 						<option value="">{{ __("All types") }}</option>
 						<option v-for="type in ISSUE_TYPES" :key="type" :value="type">

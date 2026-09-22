@@ -74,8 +74,16 @@ test("the two bubble sides are told apart by more than a name", () => {
 	const c = code(read("components/glass/GChatBubble.vue"))
 	assert.match(c, /mine \? 'g-bubble--mine' : 'g-bubble--theirs'/, "one prop decides the side")
 	const css = code(read("theme/glass-components.css"))
-	assert.match(css, /\.g-bubble--mine[\s\S]*?border-bottom-right-radius/, "the reader's tail points right")
-	assert.match(css, /\.g-bubble--theirs[\s\S]*?border-bottom-left-radius/, "and theirs points left")
+	assert.match(
+		css,
+		/\.g-bubble--mine[\s\S]*?border-bottom-right-radius/,
+		"the reader's tail points right"
+	)
+	assert.match(
+		css,
+		/\.g-bubble--theirs[\s\S]*?border-bottom-left-radius/,
+		"and theirs points left"
+	)
 	// Both sides are solid. A fill that differs is what carries the distinction
 	// once the blur is gone.
 	const mine = css.slice(css.indexOf(".g-bubble--mine"), css.indexOf(".g-bubble--theirs"))

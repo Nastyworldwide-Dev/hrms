@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
 			<div
-				class="flex flex-col gap-[13px] w-full max-w-content-column-lg mx-auto px-4 pt-[18px] pb-24 lg:p-7"
+				class="flex flex-col gap-3 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-24 lg:p-7"
 			>
 				<span class="g-eyebrow">{{ __("More") }}</span>
 
@@ -16,7 +16,7 @@
 						@click="router.push(item.route)"
 					>
 						<template #icon>
-							<component :is="item.icon" class="h-[17px] w-[17px]" />
+							<component :is="item.icon" class="h-icon-md w-icon-md" />
 						</template>
 					</GListRow>
 				</GListPanel>
@@ -26,7 +26,7 @@
 				     it trails an arrow-out glyph instead of the chevron. Second glass
 				     surface on this screen, well inside the §15 budget. -->
 				<template v-if="appItems.length">
-					<span class="g-eyebrow mt-[5px]">{{ __("Apps") }}</span>
+					<span class="g-eyebrow mt-1">{{ __("Apps") }}</span>
 					<GListPanel>
 						<GListRow
 							v-for="item in appItems"
@@ -37,7 +37,7 @@
 							@click="openApp(item)"
 						>
 							<template #icon>
-								<component :is="item.icon" class="h-[17px] w-[17px]" />
+								<component :is="item.icon" class="h-icon-md w-icon-md" />
 							</template>
 							<template #badge>
 								<ExternalLink class="flex-none text-ink-3" aria-hidden="true" />

@@ -91,7 +91,7 @@
 				@click="handleEmployeeCheckin"
 			>
 				<template #trailing>
-					<ArrowRight class="w-[17px] h-[17px]" />
+					<ArrowRight class="w-icon-md h-icon-md" />
 				</template>
 			</GButton>
 		</template>
@@ -174,7 +174,7 @@
 				@click="submitLog(nextAction.action)"
 			>
 				<template #trailing>
-					<Check class="w-[17px] h-[17px]" />
+					<Check class="w-icon-md h-icon-md" />
 				</template>
 			</GButton>
 		</div>
