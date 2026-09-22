@@ -6,14 +6,19 @@
 	>
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
+				<!-- The OUTCOME first, the input second (2.0 slice 2.2). An
+				     employee knows how long they stayed; what they opened this
+				     to find out is whether it became pay or a day off. So the
+				     row leads with that and carries the hours as the detail
+				     they belong to. -->
 				<div class="text-button-label font-semibold text-inkbase">
-					{{ __("{0}h overtime", [formatHours(props.doc.claimed_hours)]) }}
+					{{ outcome }}
 				</div>
 				<div class="text-xs text-ink-600">
 					<span>{{ props.doc.ot_date_label || props.doc.ot_date }}</span>
-					<span v-if="props.doc.compensation">
-						<span class="whitespace-pre"> &middot; </span>
-						<span class="whitespace-nowrap">{{ __(props.doc.compensation) }}</span>
+					<span class="whitespace-pre"> &middot; </span>
+					<span class="whitespace-nowrap">
+						{{ __("{0}h", [formatHours(props.doc.claimed_hours)]) }}
 					</span>
 				</div>
 			</div>
@@ -49,6 +54,23 @@ const props = defineProps({
 })
 
 // English word here (the chip picks its variant from it); translated in the template.
+//: The wire values of `compensation`, which are the doctype's Select options
+//: and cannot change without a migration. Mapping them EXPLICITLY, rather than
+//: passing the raw value through `__()`, is what keeps the server's vocabulary
+//: off the screen — and makes it visible here which two words exist.
+const OUTCOME = {
+	"Overtime Pay": () => __("Overtime pay"),
+	"Replacement Leave": () => __("A day off in return"),
+}
+
+//: What the claim turned into. Before a decision there is nothing to state, so
+//: it falls back to the hours — the row still has to say what it is about.
+const outcome = computed(() => {
+	const chosen = OUTCOME[props.doc.compensation]
+	if (chosen) return chosen()
+	return __("{0}h overtime", [formatHours(props.doc.claimed_hours)])
+})
+
 const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
 	return requestStatus("OT Request", props.doc).label

@@ -514,3 +514,36 @@ EVIDENCE: 2 correct — 6 tests red first (4 of 6), 5 mutants killed (wrong
   598 / 594 pass, same 4 red at HEAD. Gates: lint 234/0, contrast 56/0,
   surfaces 47 / 0 over, tokens ok. Build clean.
 NEXT: 2.0 slice 2.2 — OT claims read as money owed, not documents.
+- 2026-09-22T14:23:17Z PUSH: nz-glass @ 2ebffe118
+- 2026-09-22T14:23:17Z COMMIT: 2ebffe118 feat(home): Home is what is happening, what needs you, what you asked for → review+design dispatched
+- 2026-09-22T14:27:07Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+
+REPAIR: 2.0 slice 2.2 — overtime reads as what is owed, not as a document.
+  An OT claim is the one request in this app ABOUT MONEY and the screens
+  described it as paperwork: the history was "OT Request History" (a table),
+  its filter offered "Compensation" (the field's label in Desk) with options
+  "Overtime Pay" and "Replacement Leave", and a row read "1.5h overtime ·
+  Overtime Pay".
+  The row led with the INPUT. An employee knows how long they stayed; what
+  they opened the screen to find out is whether it turned into money or into a
+  day off. So the row leads with the outcome and carries the hours as the
+  detail they belong to, beside the date.
+  The two wire values are mapped EXPLICITLY rather than passed through __():
+  "Overtime Pay" and "Replacement Leave" are the doctype's Select options and
+  cannot change without a migration, so translating the raw value is exactly
+  how the server's vocabulary reaches the screen — the same defect slice 1.2
+  fixed on the shift chip. Naming them in a map also makes it visible here
+  that there are only two.
+  Filters: "Date worked" and "Paid or time off". The OPTIONS keep the server's
+  spelling because the filter sends them as-is; only the label is the
+  question the employee is actually asking.
+NOTE: the forms needed nothing — slice 1.1's `noun` prop already gave them
+  "overtime request" and "replacement leave claim".
+EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: the title
+  reverts to the doctype; the filter label reverts to Desk's; the row leads
+  with hours again; the raw compensation is translated through. Suite 603 /
+  599 pass — the same 4 red at HEAD, and one of them NAMES OT claims, so it
+  was verified against a stashed tree rather than assumed. Gates: lint 234/0,
+  contrast 56/0, surfaces 47/0, tokens ok. Build clean.
+NEXT: 2.0 slice 2.1 — Attendance and clock-in history, then 4.1 (Approvals +
+  Helpdesk) and D.1 (desktop).
