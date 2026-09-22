@@ -851,6 +851,12 @@ def _assigned_windows(employee, log_time, ahead: int = 0) -> list:
 		],
 		fields=["name", "shift_type", "start_date", "end_date", "overtime_type"],
 	)
+	# ceiling: one Shift Assignment read per punch insert, upgrade: cache the
+	# assignments per employee for the request if a bulk punch import ever shows
+	# it in a profile. Per-employee assignment counts are 1-3 rows on a filtered
+	# index, and correctness here is worth a small read: without the roster the
+	# session rule cannot tell grace from working time, which is the defect this
+	# exists to close. Reviewed 22 Sep 2026.
 	windows = []
 	# `ahead` is for the FORWARD walk: session_restamps looks up to 20 hours
 	# past the anchor, so a punch on the next calendar day needs its own day's

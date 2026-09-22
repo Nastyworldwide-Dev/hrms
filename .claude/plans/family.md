@@ -25,3 +25,13 @@ Call sites of what changed (continues_session, session_restamps):
 Lock: regression test for the instance (the 08:09 case, both directions) and an
 invariant test for the class (a punch inside the session shift's OWN scheduled
 hours is never taken away, whatever else overlaps) — all mutation-checked.
+
+REFACTOR TICKET (hotspot, review of 86f324f4b): employee_checkin_override.py has
+taken 20 fixes in 90 days and shift_resolution.py 6, and the session rules have
+now absorbed four point-fixes in sequence (E4, C1, S2, grace). Each was correct
+in isolation; together they are a resolution spread across two files with the
+roster passed in by hand at two call sites. The next change here should extract
+ONE resolver that takes (punch, roster, neighbours) and answers the shift, so a
+new rule has one place to live and one place to test. Not done in this commit:
+the owner needs the fix deployed, and a refactor under a live defect is how the
+defect comes back. Logged so it is a task, not a note.
