@@ -67,3 +67,31 @@
 	--g-touch-target-min: 44px;
 	--g-screen-gutter: 15px;
 }
+
+/* ===================================================================
+   Desk snapshot (Frappe v16) — for HR/attendance Desk dialogs/mockups.
+   Source: apps/frappe/frappe/public/scss/{common/css_variables.scss,
+   espresso/_colors.scss, common/indicator.scss, espresso/_typography.scss}
+   This is a SEPARATE surface from the Glass PWA tokens above — Desk
+   dialogs (frappe.ui.Dialog) must look like Desk, not like Glass.
+   icon-set: feather (matches hrms/public/js/*.bundle.js existing usage)
+   =================================================================== */
+:root {
+	--desk-gray-50:#f8f8f8;  --desk-gray-100:#f3f3f3; --desk-gray-200:#ededed; --desk-gray-300:#e2e2e2;
+	--desk-gray-400:#c7c7c7; --desk-gray-500:#999999; --desk-gray-600:#7c7c7c; --desk-gray-700:#525252;
+	--desk-gray-800:#383838; --desk-gray-900:#171717;
+	--desk-blue-100:#edf6fd; --desk-blue-600:#007be0; --desk-blue-700:#0070cc;
+	--desk-green-100:#e4f5e9; --desk-green-600:#30a66d; --desk-green-700:#278f5e;
+	--desk-orange-100:#fff1e7; --desk-orange-600:#d45a08; --desk-orange-700:#bd3e0c;
+	--desk-red-100:#fff0f0; --desk-red-600:#cc2929; --desk-red-700:#b52a2a;
+	--desk-bg: #ffffff;
+	--desk-control-bg: var(--desk-gray-100);   /* input fill */
+	--desk-border-color: var(--desk-gray-200);
+	--desk-btn-primary: var(--desk-gray-900);  /* black primary button */
+	--desk-btn-default-bg: var(--desk-gray-100);
+	--desk-font-stack: "InterVariable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+	--desk-font-size-base: 13px;
+	--desk-radius: 6px;
+	--desk-radius-pill: 10px; /* .indicator-pill */
+}
+/* indicator-pill pattern: pill bg = <color>-100, text = <color>-700, 6px dot = <color>-600 */

@@ -203,3 +203,9 @@ NOTE: the stale-test repair widens this hotfix beyond the defect. Kept visible, 
 NEXT: commit the hotfix + test repair, push, write docs/glass/HANDOFF.md.
 - 2026-09-22T02:56:54Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
 - 2026-09-22T02:56:54Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 1 extra test file(s) ⟂878a988d4e57
+- 2026-09-22T02:56:57Z COMMIT: a531bd3d4 fix(fix-attendance): a refused day is not an unknown day → review dispatched
+- 2026-09-22 NOTE: Desk token snapshot + the two attendance plan files were untracked/unstaged
+  across the hotfix. They are the design contract this fix was built against, not scratch —
+  committed as docs so the next session reads the same spec. .claude/brag/ is self-ignored.
+NEXT: read the frappe-reviewer verdict on a531bd3d4; if DEPLOY, push nz-glass and write
+  docs/glass/HANDOFF.md; if FIX_CRITICAL, fix and re-commit (review re-triggers).
