@@ -246,3 +246,21 @@ LEARNING(gate): a subagent's mutation test can leave the source mutated -> befor
   not day CONTENT - a name/behaviour mismatch worth recording on the G13 ticket.
 NEXT: land the design reviewer's verdict on 7950344fd, then push nz-glass and write
   docs/glass/HANDOFF.md.
+- 2026-09-22T03:09:29Z COMMIT: 4ffa311f1 docs(plans): G13's absence confirmed, and the test that hid it → review dispatched
+- 2026-09-22T03:13:16Z COMMIT: ecb213981 test(fix-attendance): six tests red since 21 Sep, none of them a defect → review dispatched
+- 2026-09-22T03:15:33Z PUSH: nz-glass @ ecb213981
+- 2026-09-22T03:15:59Z PUSH: nz-glass @ f4a6c1de4
+- 2026-09-22T03:15:59Z COMMIT: f4a6c1de4 docs(handoff): the unreadable-day hotfix, pushed → review dispatched
+- 2026-09-22 REPAIR: six tests had been red since 21 Sep and none was a defect. Five were a stale
+  3-unpack after 04e7bb62e gave the rebuild stub a 4th element; one armed `_financial` when
+  Save & rebuild runs requests_ok=True and reads `_paid_day`; one asserted on `show_change`,
+  removed by the one-button rewrite 9e5232647. Re-aimed at result_html. Committed ecb213981.
+  EVIDENCE: 2 correct - the paid-day guard driven through the seam save_day actually uses still
+  refuses ("This day is already paid... (SAL-0001)"); 3 mutants bite (stop filtering held
+  verdicts / drop verdict.detail / financial=None). 43 green across the three files.
+  Reviewer confirmed at source: the Salary Slip leg of _repair_financial_dependency is
+  unconditional, so the seam change silenced nothing.
+- 2026-09-22 PUSH: 0c23be5f9..f4a6c1de4 nz-glass (9 commits). docs/glass/HANDOFF.md written.
+NEXT: Nabil deploys on Frappe Cloud; then open Adam Daniel 18 Aug in Fix attendance and confirm
+  four punches listed, none ticked, the engine's reason shown, and Save & rebuild enabled once
+  the true pair is ticked. The UI itself was never browser-verified here (no dev site reachable).
