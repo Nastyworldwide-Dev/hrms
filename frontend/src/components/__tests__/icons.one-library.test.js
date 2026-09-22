@@ -158,9 +158,24 @@ test("no call site overrides the icon weight", () => {
 // Lucide's geometry (headphones, chart-line, kanban, life-buoy, circle-check,
 // external-link, user-check) on its 24-grid.
 test("the expenses glyph is still a coin, not a receipt", () => {
-	for (const file of ["views/Home.vue", "data/navItems.js"]) {
+	// The expense link moved from Home to Requests (2.0 slice 1.3). The RULE is
+	// unchanged — the Expenses glyph is the coin the app had, not a receipt —
+	// and this follows it to the two files that draw it now.
+	for (const file of ["views/Requests.vue", "data/navItems.js"]) {
 		const text = readFileSync(join(SRC, file), "utf8")
 		assert.match(text, /\bCircleDollarSign\b/, `${file} should draw the coin the app had`)
-		assert.doesNotMatch(text, /\bReceipt\b/, `${file}: Receipt is a different pictogram`)
+		// `Receipt` may legitimately appear for a DIFFERENT link — Requests uses
+		// it for "Claim Overtime", which is a receipt-shaped idea. What must
+		// not happen is the EXPENSES row taking it back.
+		// The whole ENTRY — from its opening brace to its label. An entry may be
+		// one line or five depending on how the formatter last wrapped it, so
+		// neither a line match nor a fixed-width window is reliable: the first
+		// looked at the wrong line, the second stopped before the icon.
+		for (const label of ['__("Claim an Expense")', 'title: "Expenses"']) {
+			const at = text.indexOf(label)
+			if (at < 0) continue
+			const entry = text.slice(text.lastIndexOf("{", at), at)
+			assert.doesNotMatch(entry, /\bReceipt\b/, `${file}: Receipt is a different pictogram`)
+		}
 	}
 })

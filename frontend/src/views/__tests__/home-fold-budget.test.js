@@ -63,9 +63,12 @@ test("CheckInPanel does not render a second h1", () => {
 // decide." is 11 words for one count and one tap. The row is already
 // interactive, so the hint is redundant to a sighted user and noise to a
 // screen reader.
-test("the approvals banner does not tell the user to tap what is already a button", () => {
+// Amended 22 Sep 2026 (2.0 slice 1.3): the banner became a ROW inside
+// `NeedsYou`, which carries the same two rules. The rules are what matter, not
+// the file that used to hold them.
+test("the approvals row does not tell the user to tap what is already a button", () => {
 	assert.doesNotMatch(
-		src("../../components/PendingApprovalsBanner.vue"),
+		src("../../components/NeedsYou.vue"),
 		/Tap to review and decide/,
 		"the whole banner is interactive; the instruction is noise"
 	)
@@ -79,9 +82,9 @@ test("the approvals banner does not tell the user to tap what is already a butto
 // elsewhere, which is the one failure a visibility banner must not cause.
 // Brevity is a budget for words, not a licence to drop the qualifier that makes
 // the count true.
-test("the approvals banner names the scope of the count it shows", () => {
+test("the approvals row names the scope of the count it shows", () => {
 	assert.match(
-		src("../../components/PendingApprovalsBanner.vue"),
+		src("../../components/NeedsYou.vue"),
 		/__\("\{0\} remote check-in\(s\)/,
 		"the count is remote-only (hrms.api.remote_checkin.get_pending_count); say so"
 	)

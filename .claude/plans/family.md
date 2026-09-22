@@ -40,3 +40,19 @@ LOCKING THE CLASS: the regression is test_wrong_shift_repair's WHO tests (the
 instance). The invariant is TestThePowersAreOffEverywhereElse — a repo-wide
 scan asserting exactly ONE caller holds the owner's grant, so a future job
 cannot quietly inherit the power to rewrite mirrored punches or override HR.
+
+## DEBT — the row-icon literal (opened 22 Sep 2026, 2.0 slice 1.3)
+
+`h-[17px] w-[17px]` appears ELEVEN times across SEVEN files — CheckInPanel,
+SideNav, More, HelpdeskList, TicketNew, SopDetail, and until this slice
+NeedsYou. Every one is an arbitrary-value utility the lint gate counts, and
+every one is the same number saying the same thing: the glyph inside a list
+row's well.
+
+`.g-row-icon` is that name, added with NeedsYou. The other ten are NOT swept
+here: a sweep across seven files inside a Home restructure is two changes in
+one commit, and the second one would be reviewed as a detail of the first.
+
+TICKET: replace the ten remaining literals with `.g-row-icon` in one commit of
+its own. Cost: ten lines. Evidence it is done: `grep -rc 'h-\[17px\]' src`
+returns nothing, and the lint gate's `arbitrary` total falls by ten.

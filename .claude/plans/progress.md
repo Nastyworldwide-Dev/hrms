@@ -469,3 +469,48 @@ NOTE: my own test read the bar's order from COMMENTS (stripped, so never
   matched), then from literal titles (only More has one), before resolving
   NAV_ITEMS[n] against the source list. Three attempts to read five names.
 NEXT: 2.0 slice 1.3 — Home, now that the bar says what Home is for.
+- 2026-09-22T12:15:28Z PUSH: nz-glass @ bb3796ebe
+- 2026-09-22T12:15:28Z COMMIT: bb3796ebe feat(nav): the tab bar is Home, Calendar, Requests, Score, More → review+design dispatched
+- 2026-09-22T14:23:10Z EVIDENCE: 2 correct — mapped tests green (bun ) for 13 file(s) ⟂884c4344e835
+
+REPAIR: 2.0 slice 1.3 — Home. §3.1's order is check-in, what NEEDS YOU, then
+  your requests. What shipped was an approvals banner, the check-in card,
+  SEVEN QUICK LINKS, then the request panel.
+  The quick links are the change. They were Home's answer to "how do I start a
+  request?" — a question that now has a screen of its own one tap from
+  anywhere (slice 0.1's Requests tab). Keeping them meant Home's LARGEST block
+  existed to answer what the navigation answers, while the thing the plan puts
+  in that slot — what needs the employee today — was one conditional banner.
+  PendingApprovalsBanner is now a ROW inside NeedsYou. It answered exactly one
+  question; the plan's row is wider (approvals, geofence reviews, issue
+  replies, later SOPs and expiring certs) and as banners each new kind would
+  be another conditional block above the fold with its own empty state. As
+  rows in one bounded list, a new kind is a row. Bounded at three with "N
+  more", the request panel's shape, because this is the list that spikes when
+  an approver goes on leave.
+  Its empty state is ABSENCE: a permanent "nothing needs you" row is wrong
+  most of the time and costs the fold every day.
+NOTE: the banner's two hard-won copy rules travelled with it and are now
+  pinned against NeedsYou — no "tap to review" on a row that is already a
+  button, and "REMOTE check-in(s)", because the count is
+  remote_checkin.get_pending_count and an approver reading a bare "check-ins
+  to approve" would take it for all of them and stop looking.
+NOTE: two existing tests failed for the right reason and were re-aimed, not
+  loosened: the skeleton-tile count read Home for the link count (the links
+  moved), and the expenses-coin rule pointed at Home (same). Re-aiming the
+  first found a REAL defect — GTileGrid's skeleton still defaulted to seven
+  tiles while Requests passes six, so the panel would have jumped a row on
+  load. That is the defect that test was written for, caught by moving it.
+NOTE: the coin mutant survived TWICE before the assertion was right. A window
+  ending at the label missed the icon on the same line; a line match missed it
+  once the formatter wrapped the entry across five lines. It matches the whole
+  ENTRY now, brace to label.
+NOTE: `h-[17px] w-[17px]` is ELEVEN literals across SEVEN files. NeedsYou uses
+  the named `.g-row-icon` instead; the other ten are a TICKET in family.md,
+  not smuggled into a Home restructure.
+EVIDENCE: 2 correct — 6 tests red first (4 of 6), 5 mutants killed (wrong
+  order; quick links return to Home; needs-you unbounded; it renders when
+  empty; a quick link lost in the move) plus 2 on the re-aimed tests. Suite
+  598 / 594 pass, same 4 red at HEAD. Gates: lint 234/0, contrast 56/0,
+  surfaces 47 / 0 over, tokens ok. Build clean.
+NEXT: 2.0 slice 2.2 — OT claims read as money owed, not documents.

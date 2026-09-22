@@ -30,7 +30,11 @@ const quicklinks = () => src("../QuickLinks.vue")
 // version of this grid built the surface inline in QuickLinks and the gate
 // caught it, which is the gate doing its job.
 const tilegrid = () => src("../glass/GTileGrid.vue")
-const homeView = () => src("../../views/Home.vue")
+// The quick links moved from Home to Requests (2.0 slice 1.3): Home's largest
+// block existed to answer "how do I start a request?", and the Requests tab
+// now answers that in one tap from anywhere. This file's subject is the LINK
+// COUNT, wherever the links live.
+const linksView = () => src("../../views/Requests.vue")
 const css = () => src("../../theme/glass-components.css")
 const tokens = () => src("../../theme/glass.css")
 
@@ -109,18 +113,22 @@ test("four across, so seven links are two rows", () => {
 // said eight. Read the number out of Home.vue instead of trusting the comment,
 // so adding a quick link fails this test rather than silently making the panel
 // jump a row on load.
-test("the skeleton shows as many tiles as Home actually passes", () => {
-	const home = homeView().replace(/<!--[\s\S]*?-->/g, "")
-	const base = (home.match(/const baseQuickLinks\s*=\s*\[([\s\S]*?)\n\]/) || [])[1]
-	assert.ok(base, "baseQuickLinks should still be a literal array in Home.vue")
-	const extra = (home.match(/const quickLinks\s*=\s*computed\(\(\)\s*=>\s*\[([\s\S]*?)\n\]\)/) ||
+test("the skeleton shows as many tiles as the screen actually passes", () => {
+	const view = linksView().replace(/<!--[\s\S]*?-->/g, "")
+	const base = (view.match(/const baseLinks\s*=\s*\[([\s\S]*?)\n\]/) || [])[1]
+	assert.ok(base, "baseLinks should still be a literal array in Requests.vue")
+	const extra = (view.match(/const quickLinks\s*=\s*computed\(\(\)\s*=>\s*\[([\s\S]*?)\n\]\)/) ||
 		[])[1]
 	assert.ok(extra, "quickLinks should still spread baseQuickLinks and add its own")
 	const count = (base.match(/\broute:/g) || []).length + (extra.match(/\broute:/g) || []).length
 	const dflt = Number(
 		(tilegrid().match(/tiles:\s*\{\s*type:\s*Number,\s*default:\s*(\d+)/) || [])[1]
 	)
-	assert.equal(dflt, count, `Home passes ${count} links; GTileGrid's skeleton default is ${dflt}`)
+	assert.equal(
+		dflt,
+		count,
+		`Requests passes ${count} links; GTileGrid's skeleton default is ${dflt}`
+	)
 })
 
 // A design review asked whether a long label could clip. The line-clamp caps

@@ -43,11 +43,12 @@ import GSkeleton from "./GSkeleton.vue"
 
 defineProps({
 	loading: { type: Boolean, default: false },
-	// Seven is the count the grid settles at on Home (six base quick links plus
-	// the HR row). Matching it matters only for the ROW count: seven and eight
-	// both fill two rows of four, but a four-tile default would make the panel
-	// jump a row when the real tiles land.
-	tiles: { type: Number, default: 7 },
+	// Six is the count the grid settles at on Requests (five request links plus
+	// the HR row) — the screen the links moved to in 2.0 slice 1.3. Matching it
+	// matters only for the ROW count: five through eight all fill two rows of
+	// four, but a four-tile default would make the panel jump a row when the
+	// real tiles land.
+	tiles: { type: Number, default: 6 },
 	empty: { type: Boolean, default: false },
 })
 </script>

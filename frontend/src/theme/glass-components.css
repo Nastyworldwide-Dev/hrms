@@ -432,6 +432,18 @@ html[data-transparency="reduce"] .g-glass-ghost {
    does not. A named class rather than a min-h-[] utility: the token is the
    one definition of the floor, and an arbitrary-value utility is a second
    copy of the number. */
+/* The glyph inside a list row's well. 17px is the size every row icon in this
+   app already uses — eleven `h-[17px] w-[17px]` literals across seven files —
+   and each of those is an arbitrary-value utility the lint gate counts. This
+   is the name for it. The eleven are not swept here: that is a sweep, not a
+   slice, and it is on the debt ledger rather than smuggled into a Home
+   restructure. New code uses this. */
+.g-row-icon {
+	width: 17px;
+	height: 17px;
+	flex: none;
+}
+
 .g-list-more {
 	min-height: var(--g-touch-target-min);
 }

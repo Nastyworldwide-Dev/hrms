@@ -23,9 +23,14 @@
 			<div
 				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
-				<PendingApprovalsBanner />
+				<!-- §3.1's order, and the order is the argument: what is
+				     happening now, what is waiting on you, what you already
+				     asked for. The quick links that used to sit in the middle
+				     answered "how do I start a request?" — a question the
+				     Requests tab now answers in one tap from anywhere, which
+				     is why Home's largest block could go. -->
 				<CheckInPanel />
-				<QuickLinks :items="quickLinks" :title="__('Quick Links')" />
+				<NeedsYou />
 				<RequestPanel />
 			</div>
 			<PushNotificationPrompt />
@@ -34,24 +39,12 @@
 </template>
 
 <script setup>
-import {
-	CalendarClock,
-	CalendarDays,
-	ChartLine,
-	LifeBuoy,
-	CircleDollarSign,
-	UserCheck,
-} from "lucide-vue-next"
-import { computed, inject, markRaw } from "vue"
+import { inject } from "vue"
 
 import { reloadRequestLists } from "@/data/requestLists"
-import { userResource } from "@/data/user"
-import { HR_TAB, HUB_ROUTE_NAME } from "@/utils/helpdeskHub"
-import { hasHRRole } from "@/utils/issueBoard"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
-import PendingApprovalsBanner from "@/components/PendingApprovalsBanner.vue"
-import QuickLinks from "@/components/QuickLinks.vue"
+import NeedsYou from "@/components/NeedsYou.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
@@ -59,57 +52,9 @@ import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 
 const __ = inject("$translate")
 
-const isHR = computed(() => hasHRRole(userResource.data))
-
 async function refreshRequests(event) {
 	console.info("[Home] pull-to-refresh")
 	await reloadRequestLists("pull")
 	event.target?.complete?.()
 }
-
-const baseQuickLinks = [
-	{
-		icon: markRaw(UserCheck),
-		title: __("Request Attendance"),
-		route: "AttendanceRequestFormView",
-	},
-	{
-		icon: markRaw(CalendarClock),
-		title: __("Request a Shift"),
-		route: "ShiftRequestFormView",
-	},
-	{
-		icon: markRaw(CalendarDays),
-		title: __("Request Leave"),
-		route: "LeaveApplicationFormView",
-	},
-	{
-		icon: markRaw(CircleDollarSign),
-		title: __("Claim an Expense"),
-		route: "ExpenseClaimFormView",
-	},
-	{
-		icon: markRaw(ChartLine),
-		title: __("My KPI"),
-		route: "KPIDashboard",
-	},
-	{
-		icon: markRaw(LifeBuoy),
-		title: __("New HR Issue"),
-		route: "EmployeeIssueFormView",
-	},
-]
-
-// same destination for both — the HR Issues pill of the Helpdesk page renders
-// the board for HR roles and the personal list for everyone else; only the
-// label differs
-const quickLinks = computed(() => [
-	...baseQuickLinks,
-	{
-		icon: markRaw(LifeBuoy),
-		title: isHR.value ? __("Issue Board") : __("HR Issues"),
-		route: HUB_ROUTE_NAME,
-		query: { tab: HR_TAB },
-	},
-])
 </script>
