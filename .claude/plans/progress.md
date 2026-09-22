@@ -256,3 +256,42 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
   FIX_CRITICAL branch of the silent-reviewer rule never applied. Recorded here
   because a later prompt asked whether it was still outstanding: it was not, and
   3d4fa0dfe has been an ancestor of origin/nz-glass since 00:57Z.
+- 2026-09-22T01:26:52Z PUSH: nz-glass @ d62bddd53
+- 2026-09-22T01:26:52Z COMMIT: d62bddd53 chore(plans): dedupe a doubled ledger entry, record reviewer status → review dispatched
+- 2026-09-22T01:07Z COMMIT: d62bddd53 chore(plans): dedupe a doubled ledger entry, record reviewer status
+- 2026-09-22T01:07Z PUSH: nz-glass @ d62bddd53
+- NOTE: skipped reviewer + retro-analyst dispatch on d62bddd53 (docs, 1 file,
+  no code changed) — exempted per this repo's own chore/docs/style ≤2-files
+  rule, same as 36b5baacb, 078698b5b and 9c4df8ac3 earlier this session.
+- EVIDENCE (owner question 4, --g-glass-fill .86): measured, not reasoned. Two
+  probes added under design/tools/ using the same WCAG math contrast.mjs uses:
+  glass-fill-candidates.mjs (shipped .56/.075 vs mockup-4 .86/.86-dark vs a
+  .86-light-only hybrid) and glass-fill-premise.mjs (does the mockup's stated
+  reason hold?).
+  FINDING 1 — the mockup's premise is FALSE for the shipped field geometry. Its
+  comment says .56 drags --ink2 from 6.2:1 to 3.7:1 over the light field. All
+  three blob centres sit OUTSIDE the content column (x=-65, x=448, x=-47 against
+  a column of x=[15,375]), each 62-80px away with a gradient reach of 63-81px,
+  so the alpha landing on text is 0.0045/0.0042/0.0105. Measured drop: 6.36 flat
+  -> 6.34 worst blob. Delta 0.02, not 2.5. The 3.7:1 figure is reproducible only
+  with a blob centre inside the column, which §3.3's own placement rule forbids
+  and contrast.mjs already proves never happens.
+  FINDING 2 — the dark half of the proposal FAILS the repo's own floor. A
+  #2A2E38 tint at .86 puts --ink-muted at 3.84:1 against the 4.5 minimum, flat
+  AND over all three blobs. Shipped .075 white measures 4.58. Adopting mockup-4's
+  dark value as written would introduce the first contrast regression in the
+  token set.
+  FINDING 3 — .86 LIGHT alone is safe but buys almost nothing: +0.27 on ink2
+  (6.36->6.63), +0.20 on ink-muted, +0.20 on danger-ink, and it costs 30 points
+  of backdrop visibility (44% -> 14%), i.e. most of the glass effect the design
+  exists for. tokens.json's own note ("Light is deliberately more opaque than
+  dark; do not correct (spec 6)") is the standing ruling and the measurements
+  support it.
+  RECOMMENDATION to the owner: do NOT adopt .86. Keep .56/.075. The proposal
+  fixes a legibility problem the shipped geometry does not have, and its dark
+  value creates a real one. If the owner wants the panels visually denser, that
+  is a taste call to make on its own terms, not on the mockup's contrast
+  argument, and the light-only variant is the sole adoptable form of it.
+- EVIDENCE: rung 1+2 — both probes run clean; gate suite unaffected, 13/13
+  tests, contrast 54 checked 0 failures. No token changed; this is measurement,
+  not a fix.
