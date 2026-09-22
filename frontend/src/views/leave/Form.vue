@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Leave Application"
+				:noun="__('leave request')"
 				v-model="leaveApplication"
 				:isSubmittable="true"
 				:fields="formFields.data"

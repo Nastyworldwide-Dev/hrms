@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Employee Issue"
+				:noun="__('issue')"
 				v-model="issue"
 				:isSubmittable="false"
 				:fields="formFields.data"

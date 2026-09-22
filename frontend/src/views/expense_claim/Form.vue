@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Expense Claim"
+				:noun="__('expense claim')"
 				v-model="expenseClaim"
 				:isSubmittable="true"
 				:fields="formFields.data"

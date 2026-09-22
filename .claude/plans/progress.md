@@ -265,3 +265,38 @@ NEXT: Nabil deploys e28041076. Four things to check by hand, because they are
   tapping a text field does not zoom; Home's icons and "Show N more" behave.
 - 2026-09-22T11:17:53Z PUSH: nz-glass @ 0b0c622a7
 - 2026-09-22T11:17:53Z COMMIT: 0b0c622a7 docs(plans): a real bench was here all along → review dispatched
+- 2026-09-22T11:18:25Z COMMIT: 1f86d40ad docs(plans): the hook lines for the bench-discovery note → review dispatched
+- 2026-09-22T11:46:52Z EVIDENCE: 2 correct — mapped tests green (bun ) for 14 file(s) ⟂ae4f8cfceb8c
+
+NOTE: 2.0's five open questions ANSWERED by the owner, 22 Sep 2026, and
+  recorded in the plan of record rather than in a reply: O1 the SHIPPED lime
+  #C8FF00 stays (so no token moves and the 114 baselines stay valid) · O2 720px
+  desktop column accepted, D.1 no longer waits · O3 the light-field blobs STAY,
+  Amendment A Q0a declined · O4 tab bar AS PLANNED — Home · Calendar ·
+  Requests · Score · More, replacing the five in data/navItems.js, old routes
+  redirect · O5 UX_PLAN Q2-Q10 take the recommendation already written against
+  each row. O4 reorders the work: the tab set decides what Home is FOR, so 1.3
+  now depends on a new slice 0.1 (the tabs) instead of the reverse.
+REPAIR: 2.0 slice 1.1 — the form shell named the DOCTYPE. FormView builds its
+  own user-facing copy out of props.doctype, so an employee deleting a punch
+  read "Delete Employee Checkin" and one filing time off read "Permanently
+  submit Attendance Request". Table names, in the two moments that most need
+  to be understood: a confirm dialog and a failure toast.
+  `__(props.doctype)` did not save it — the translation files carry UI strings,
+  not doctype names, so the lookup missed and the raw name fell through; on an
+  English install there is nothing to translate to anyway. The fix is not a
+  better translation, it is not handing a table name to a person.
+  A `noun` prop now carries the employee's word ("leave request", "punch",
+  "expense claim") and all 13 sentences are built from it. Its default is a
+  SENTENCE, "this request", so a screen that forgets reads vague-but-true
+  rather than precise-and-meaningless.
+EVIDENCE: 2 correct — 4 tests RED first (3 of 4), 4 mutants killed: a sentence
+  reverts to the doctype; the default becomes the doctype; a screen drops its
+  noun; a screen passes `:noun="doctype"` (which would satisfy every other
+  check and change nothing). Suite 571 / 567 pass, same 4 red at HEAD. Gates:
+  lint 234/0, contrast 56/0, surfaces 46/0, tokens ok. Build clean.
+NOTE: two `props.doctype` uses remain in FormView and both are correct — a
+  lookup key into REQUEST_SUMMARY_FIELDS and a route name. Neither is read by
+  a person, which is the whole distinction this slice draws.
+NEXT: slice 1.2 — status chips. ShiftAssignmentItem renders
+  `:label="status"` with no __(), so "Draft" and "Submitted" reach staff raw.

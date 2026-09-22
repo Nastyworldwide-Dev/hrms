@@ -296,7 +296,7 @@
 			</div>
 			<GEmptyState
 				v-else
-				:title="__('Could not open this {0}', [__(props.doctype)])"
+				:title="__('Could not open this {0}', [__(props.noun)])"
 				:body="
 					__(
 						'It may have been removed, or you may not have access. Check your connection and try again.'
@@ -332,14 +332,14 @@
 
 	<GConfirm
 		:is-open="showDeleteDialog"
-		:title="__('Delete {0}', [__(props.doctype)])"
+		:title="__('Delete {0}', [__(props.noun)])"
 		:confirm-label="__('Delete')"
 		:cancel-label="__('Cancel')"
 		destructive
 		@confirm="handleDocDelete"
 		@cancel="showDeleteDialog = false"
 	>
-		{{ __("Are you sure you want to delete the {0}", [__(props.doctype)]) }}
+		{{ __("Are you sure you want to delete this {0}?", [__(props.noun)]) }}
 		{{ formModel.name }}?
 	</GConfirm>
 
@@ -351,7 +351,7 @@
 		@confirm="handleDocUpdate('submit')"
 		@cancel="showSubmitDialog = false"
 	>
-		{{ __("Permanently submit {0}", [__(props.doctype)]) }}
+		{{ __("Send this {0} for approval?", [__(props.noun)]) }}
 		{{ formModel.name }}?
 	</GConfirm>
 
@@ -373,7 +373,7 @@
 		</template>
 		<template #body-content>
 			<p>
-				{{ __("Permanently cancel {0}", [__(props.doctype)]) }}
+				{{ __("Cancel this {0}?", [__(props.noun)]) }}
 				<span class="font-bold">{{ formModel.name }}</span
 				>?
 			</p>
@@ -436,6 +436,20 @@ const props = defineProps({
 	doctype: {
 		type: String,
 		required: true,
+	},
+	// The word an EMPLOYEE would use for the thing on this screen — "leave
+	// request", "expense claim", "punch". Every sentence the shell shows is
+	// built from this, because `props.doctype` is a table name and the people
+	// reading these dialogs have never seen one. `__(doctype)` did not save
+	// it: the translation files carry UI strings, not doctype names, so the
+	// lookup missed and the raw name fell through.
+	//
+	// The default is a sentence rather than a word so that a screen which
+	// forgets reads "Delete this request", which is vague but true, instead of
+	// "Delete Employee Checkin", which is precise and meaningless.
+	noun: {
+		type: String,
+		default: "this request",
 	},
 	modelValue: {
 		type: Object,
@@ -678,7 +692,7 @@ const docList = createListResource({
 		async onSuccess(data) {
 			toast({
 				title: __("Success"),
-				text: __("{0} created successfully!", [__(props.doctype)]),
+				text: __("Your {0} was created.", [__(props.noun)]),
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -695,7 +709,7 @@ const docList = createListResource({
 			// holiday list). Dropping it left the employee with "unknown error".
 			toast({
 				title: __("Error"),
-				text: __("Error creating {0}: {1}", [__(props.doctype), firstMessage(error)]),
+				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -712,7 +726,7 @@ const documentResource = createDocumentResource({
 		onSuccess() {
 			toast({
 				title: __("Success"),
-				text: __("{0} updated successfully!", [__(props.doctype)]),
+				text: __("Your {0} was updated.", [__(props.noun)]),
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -721,7 +735,7 @@ const documentResource = createDocumentResource({
 		onError(error) {
 			toast({
 				title: __("Error"),
-				text: __("Error updating {0}: {1}", [__(props.doctype), firstMessage(error)]),
+				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -734,7 +748,7 @@ const documentResource = createDocumentResource({
 			router.back()
 			toast({
 				title: __("Success"),
-				text: __("{0} deleted successfully!", [__(props.doctype)]),
+				text: __("Your {0} was deleted.", [__(props.noun)]),
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -743,7 +757,7 @@ const documentResource = createDocumentResource({
 		onError(error) {
 			toast({
 				title: __("Error"),
-				text: __("Error deleting {0}: {1}", [__(props.doctype), firstMessage(error)]),
+				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -762,7 +776,7 @@ const finalize = createResource({
 	onSuccess() {
 		toast({
 			title: __("Success"),
-			text: __("{0} updated successfully!", [__(props.doctype)]),
+			text: __("Your {0} was updated.", [__(props.noun)]),
 			icon: "check-circle",
 			position: "bottom-center",
 			iconClasses: "text-green-500",
@@ -772,7 +786,7 @@ const finalize = createResource({
 		console.warn(`[FormView] ${props.doctype} transition failed:`, error)
 		toast({
 			title: __("Error"),
-			text: firstMessage(error, __("Error updating {0}", [__(props.doctype)])),
+			text: firstMessage(error, __("Could not save this {0}.", [__(props.noun)])),
 			icon: "alert-circle",
 			position: "bottom-center",
 			iconClasses: "text-red-500",

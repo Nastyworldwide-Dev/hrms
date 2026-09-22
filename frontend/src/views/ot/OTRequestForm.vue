@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="OT Request"
+				:noun="__('overtime request')"
 				v-model="otRequest"
 				:isSubmittable="true"
 				:fields="formFields.data"

@@ -39,15 +39,23 @@ schema, not new features.
    deliberate. Standing ruling.
 8. **Scope is the PWA** at phone and desktop widths. Nothing else.
 
-## 3. Open — needs the owner
+## 3. Open — ANSWERED 22 Sep 2026
 
-| # | Question | State |
+All five were put to the owner after the pre-2.0 programme shipped, and all
+five came back in one line each. Recorded verbatim, because "as planned" only
+means something if the plan it points at is named.
+
+| # | Question | Answer |
 |---|---|---|
-| O1 | Brand lime: shipped `#C8FF00` vs prototype `#c4ee15`. The mockup will carry a switch; decide on the mockup. | OPEN |
-| O2 | Desktop content column: 720px is a provisional token, never signed off. | OPEN |
-| O3 | Do the three light-field blobs stay? `GLightField` and the `field.*` tokens still ship and `GPage.vue:26` renders them. Amendment A Q0a proposed retiring them; never ruled. | OPEN |
-| O4 | Tab bar set (UX_PLAN Q1). `frontend/src/data/navItems.js` still ships the pre-2.0 five: Home · Attendance · Leaves · Expenses · More. The plan proposed Home · Calendar · Requests · Score · More. | OPEN |
-| O5 | UX_PLAN Q2–Q10 (bulk leave approval, one issue system, leave policy, expense/travel rules, events source, roster cover, SOP acknowledgement, nudges, launch scope) — all still unanswered. | OPEN |
+| O1 | Brand lime: shipped `#C8FF00` vs prototype `#c4ee15` | **SHIPPED.** `#C8FF00` stays. The prototype's lime is not adopted, the mockup's A/B switch is settled, and no token moves — so the 114 visual baselines stay valid and §7's "token values are not in scope" holds without an exception. |
+| O2 | Desktop content column: 720px, provisional | **ACCEPTED.** `--g-content-column-lg: 720px` is the signed-off value, not a placeholder. D.1 no longer waits on anything. |
+| O3 | Do the three light-field blobs stay? | **THEY STAY.** Amendment A Q0a proposed retiring `GLightField`; declined. `GPage.vue` keeps rendering them and the `field.*` tokens keep shipping. |
+| O4 | Tab bar set | **AS PLANNED: Home · Calendar · Requests · Score · More.** This replaces the five in `data/navItems.js` (Home · Attendance · Leaves · Expenses · More). Old routes keep working through redirects — five fixed tabs, because Ionic stacks them. |
+| O5 | UX_PLAN Q2–Q10 | **AS PLANNED.** Each takes the recommendation already written in `NADI_2.0_UX_PLAN.md` against its row; none is re-opened here. Where that document offers a choice rather than a recommendation, it is a slice-time question, not a plan-level one. |
+
+O4 is the one that reorders the work: the tab set decides what Home is for, so
+slice 1.3 now depends on a new slice 0.1 (the tabs themselves) rather than the
+other way round. The priority order in §6 is amended accordingly.
 
 ## 4. Evidence: what the app actually is
 

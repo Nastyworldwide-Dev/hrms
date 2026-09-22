@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Replacement Leave Claim"
+				:noun="__('replacement leave claim')"
 				v-model="claim"
 				:isSubmittable="true"
 				:fields="formFields.data"
