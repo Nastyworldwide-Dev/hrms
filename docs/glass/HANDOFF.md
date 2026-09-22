@@ -1,23 +1,22 @@
 # HANDOFF
-prompt:   close the reviewer findings on the contrast gate's copied-input defect
+prompt:   close the retro's finding on the contrast gate's copied-input chain
 status:   partial — phase 2 section 2 still blocked on the owner, see next:
-commit:   166a20a67..d23bdfd7a on nz-glass — 5 commits, a RANGE.
+commit:   ef3137541..b7ddc26d1 on nz-glass — 2 commits, a RANGE.
 files:    design/gates/contrast.mjs
-          design/gates/contrast-column.test.mjs
-          .claude/plans/progress.md
           docs/glass/HANDOFF.md
+          .claude/plans/progress.md
 verify:   node --test design/gates/*.test.mjs   # 10 pass, 0 fail
           node design/gates/contrast.mjs        # 54 checked, 0 failures, exit 0
-flags:    PUSHED to origin/nz-glass. Nothing deployed, no backend or app code
-          touched (frontend/src unchanged this range). ONE defect class
-          this whole range: a proof that reads a copy of its input. Five
-          instances now closed — 4 copied tokens, plus LG.scale copying
-          hand-authored CSS. Reviewer Suggestion NOT actioned: blob-opacity
-          (contrast.mjs:167,246) is read raw and used arithmetically with no
-          validator; pre-existing, different value class. Second Suggestion
-          (route the test through px()) is BLOCKED, not skipped: contrast.mjs
-          has no exports and exits at import. lint 242/9 and usage 2/1 fail
-          before this work too.
+flags:    PUSHED to origin/nz-glass. Nothing deployed; no backend or app code
+          touched. A retro flagged 6a9b01d9e as a possible fix-before-red —
+          REFUTED: its diff never touched contrast.mjs, so there was no pre-fix
+          code state to prove red. Underneath it was a real reporting defect:
+          that commit says the lg: model WAS a copy while LG.scale:202 still is
+          one. The copy is correct (no token exists behind it) and guarded by
+          contrast-column.test.mjs; the comment now says so. Retro's proposed
+          "no duplicated literal in gates/*.mjs" lint is RECORDED NOT BUILT —
+          its first hit would be this correct literal. Carried, not actioned:
+          blob-opacity (contrast.mjs:167,246) read raw, no validator.
 next:     owner's word on four — un-ignore the mockup folder? is mockup 4
           signed off? VISUAL or INFORMATION-ARCHITECTURE contract? adopt
           --g-glass-fill .86 against tokens.json's "do not correct" note?
