@@ -19,6 +19,11 @@ test("SideNav app anchors name themselves by title, not by the sublabel", () => 
 	assert.match(anchor, /rel="noopener"/)
 })
 
+// Amended 22 Sep 2026 (plan slice S4): `ExternalLinkIcon` was one of fourteen
+// hand-rolled components that were Lucide glyphs pasted by hand; the package
+// draws it now, as `<ExternalLink>`. The RULE is unchanged and is what this
+// pins — the arrow is a decoration beside a named link, so it takes the muted
+// ink token rather than competing with the label it sits next to.
 test("SideNav app arrow glyph uses the same ink-3 token as More", () => {
-	assert.match(anchor, /<ExternalLinkIcon[^>]*text-ink-3/)
+	assert.match(anchor, /<ExternalLink[^>]*text-ink-3/)
 })

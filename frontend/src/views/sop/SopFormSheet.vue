@@ -18,7 +18,7 @@
 					:aria-label="__('Close')"
 					@click="close"
 				>
-					<FeatherIcon name="x" class="h-[18px] w-[18px]" />
+					<X class="h-[18px] w-[18px]" />
 				</button>
 			</div>
 
@@ -137,7 +137,7 @@
 						<label
 							class="g-eyebrow g-touch flex items-center gap-1.5 border border-divider rounded-input text-inkbase px-3 py-2.5 cursor-pointer hover:bg-icon-bg"
 						>
-							<FeatherIcon name="paperclip" class="h-3.5 w-3.5" />
+							<Paperclip class="h-3.5 w-3.5" />
 							{{ __("Choose file") }}
 							<input type="file" class="hidden" @change="onFileSelect" />
 						</label>
@@ -152,7 +152,7 @@
 								:aria-label="__('Remove file')"
 								@click="clearAttachment"
 							>
-								<FeatherIcon name="x" class="h-3 w-3" />
+								<X class="h-3 w-3" />
 							</button>
 						</span>
 					</div>
@@ -184,9 +184,10 @@
 </template>
 
 <script setup>
+import { Paperclip, X } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import { IonModal } from "@ionic/vue"
-import { createListResource, createResource, FeatherIcon, toast } from "frappe-ui"
+import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, reactive, ref } from "vue"
 import { firstMessage } from "@/utils/loudRequest"
 

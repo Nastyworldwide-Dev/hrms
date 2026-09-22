@@ -24,7 +24,7 @@
 										var(--g-motion-button-press-easing);
 							"
 						>
-							<FeatherIcon name="book-open" class="h-[22px] w-[22px] flex-none" />
+							<BookOpen class="h-[22px] w-[22px] flex-none" />
 							<button
 								v-if="isHR"
 								type="button"
@@ -32,7 +32,7 @@
 								:aria-label="__('Edit {0}', [sop.title])"
 								@click.prevent.stop="openEdit(sop)"
 							>
-								<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
+								<PenLine class="h-[15px] w-[15px]" />
 							</button>
 							<span class="flex flex-col gap-0.5">
 								<span class="font-extrabold text-card-title leading-tight">
@@ -48,8 +48,7 @@
 
 				<!-- Search -->
 				<div class="relative">
-					<FeatherIcon
-						name="search"
+					<Search
 						class="absolute left-2.5 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-ink-500 pointer-events-none"
 					/>
 					<input
@@ -101,9 +100,9 @@
 									:aria-label="__('Edit {0}', [sop.title])"
 									@click.prevent.stop="openEdit(sop)"
 								>
-									<FeatherIcon name="edit" class="h-[15px] w-[15px]" />
+									<PenLine class="h-[15px] w-[15px]" />
 								</button>
-								<FeatherIcon name="chevron-right" class="h-4 w-4 flex-none text-ink-400" />
+								<ChevronRight class="h-4 w-4 flex-none text-ink-400" />
 							</router-link>
 						</div>
 					</div>
@@ -114,7 +113,7 @@
 					v-else-if="query"
 					class="flex flex-col items-center gap-2 px-5 py-11 text-center text-ink-600"
 				>
-					<FeatherIcon name="search" class="h-[34px] w-[34px] text-ink-300" />
+					<Search class="h-[34px] w-[34px] text-ink-300" />
 					<div class="text-card-title">
 						{{ __("No SOPs match “{0}”.", [query]) }}<br />
 						{{ __("Try a different search term.") }}
@@ -140,7 +139,7 @@
 				:aria-label="__('New SOP')"
 				@click="openCreate"
 			>
-				<FeatherIcon name="plus" class="h-[22px] w-[22px]" />
+				<Plus class="h-[22px] w-[22px]" />
 			</button>
 
 			<SopFormSheet
@@ -155,10 +154,11 @@
 </template>
 
 <script setup>
+import { BookOpen, ChevronRight, PenLine, Plus, Search } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
-import { createResource, FeatherIcon } from "frappe-ui"
+import { createResource } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"

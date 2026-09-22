@@ -9,7 +9,7 @@
 		<router-link :to="{ name: 'HelpdeskTicketNew' }" v-slot="{ navigate }">
 			<GButton :label="__('New IT Ticket')" @click="navigate">
 				<template #trailing>
-					<FeatherIcon name="arrow-right" class="h-[17px] w-[17px]" aria-hidden="true" />
+					<ArrowRight class="h-[17px] w-[17px]" aria-hidden="true" />
 				</template>
 			</GButton>
 		</router-link>
@@ -79,12 +79,13 @@
 </template>
 
 <script setup>
+import { ArrowRight } from "lucide-vue-next"
 import GListRow from "@/components/glass/GListRow.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GButton from "@/components/glass/GButton.vue"
-import { FeatherIcon } from "frappe-ui"
+
 import { useRouter } from "vue-router"
 import { computed, inject, onMounted, ref } from "vue"
 

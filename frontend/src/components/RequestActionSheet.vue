@@ -10,9 +10,8 @@
 					{{ __(document?.doctype) }}
 				</span>
 			</div>
-			<FeatherIcon
+			<ExternalLink
 				v-if="props.showOpenForm"
-				name="external-link"
 				class="h-4 w-4 text-ink-600 cursor-pointer shrink-0"
 				@click="openFormView"
 			/>
@@ -90,7 +89,7 @@
 				theme="red"
 			>
 				<template #prefix>
-					<FeatherIcon name="trash-2" class="w-4" />
+					<Trash class="w-4" />
 				</template>
 				{{ __("Withdraw") }}
 			</Button>
@@ -100,7 +99,7 @@
 				variant="solid"
 			>
 				<template #prefix>
-					<FeatherIcon name="edit-2" class="w-4" />
+					<Pencil class="w-4" />
 				</template>
 				{{ __("Edit") }}
 			</Button>
@@ -136,7 +135,7 @@
 				theme="red"
 			>
 				<template #prefix>
-					<FeatherIcon name="x" class="w-4" />
+					<X class="w-4" />
 				</template>
 				{{ __("Reject") }}
 			</Button>
@@ -150,7 +149,7 @@
 				variant="solid"
 			>
 				<template #prefix>
-					<FeatherIcon name="check" class="w-4" />
+					<Check class="w-4" />
 				</template>
 				{{ __("Approve") }}
 			</Button>
@@ -200,7 +199,7 @@
 				theme="red"
 			>
 				<template #prefix>
-					<FeatherIcon name="x" class="w-4" />
+					<X class="w-4" />
 				</template>
 				{{ __("Cancel") }}
 			</Button>
@@ -242,8 +241,9 @@
 </template>
 
 <script setup>
+import { Check, ExternalLink, Pencil, Trash, X } from "lucide-vue-next"
 import { IonModal, modalController } from "@ionic/vue"
-import { createDocumentResource, createResource, FeatherIcon, toast } from "frappe-ui"
+import { createDocumentResource, createResource, toast } from "frappe-ui"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"

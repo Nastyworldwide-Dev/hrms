@@ -40,7 +40,7 @@
 								<component :is="item.icon" class="h-[17px] w-[17px]" />
 							</template>
 							<template #badge>
-								<ExternalLinkIcon class="flex-none text-ink-3" aria-hidden="true" />
+								<ExternalLink class="flex-none text-ink-3" aria-hidden="true" />
 							</template>
 						</GListRow>
 					</GListPanel>
@@ -51,14 +51,13 @@
 </template>
 
 <script setup>
+import { ExternalLink, Users } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 import { computed, inject, markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import TeamIcon from "@/components/icons/TeamIcon.vue"
-import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
@@ -74,11 +73,11 @@ const moreItems = computed(() => {
 	// pill inside it is what the Helpdesk-app availability gate hides now
 	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
 	if (hasTeam.data) {
-		items.push({ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" })
+		items.push({ icon: markRaw(Users), title: __("Team"), route: "/team" })
 		// §13.1 lists Remote Approvals behind More; it had no entry in any nav
 		// surface before, reachable only by typing the URL
 		items.push({
-			icon: markRaw(TeamIcon),
+			icon: markRaw(Users),
 			title: __("Remote Approvals"),
 			route: "/remote-approvals",
 		})

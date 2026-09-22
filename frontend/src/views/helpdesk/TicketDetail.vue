@@ -6,7 +6,7 @@
 			>
 				<div class="flex flex-row items-center gap-2.5 min-w-0">
 					<GIconButton :label="__('Back')" @click="goBack">
-						<FeatherIcon name="chevron-left" class="h-4 w-4" />
+						<ChevronLeft class="h-4 w-4" />
 					</GIconButton>
 					<span class="text-lg font-extrabold text-inkbase truncate flex-1 min-w-0">
 						{{ ticket?.subject || props.id }}
@@ -80,7 +80,7 @@
 							:label="replyToTicket.loading ? __('Sending…') : __('Send')"
 							:disabled="replyToTicket.loading || !reply.trim()"
 						>
-							<FeatherIcon name="arrow-up" class="h-4 w-4" />
+							<ArrowUp class="h-4 w-4" />
 						</GIconButton>
 					</form>
 				</template>
@@ -90,6 +90,7 @@
 </template>
 
 <script setup>
+import { ArrowUp, ChevronLeft } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
@@ -97,7 +98,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import { IonContent } from "@ionic/vue"
-import { FeatherIcon } from "frappe-ui"
+
 import { computed, inject, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 

@@ -307,3 +307,36 @@ LEARNING(how): when a reviewer asks "is this the intended trade?", the answer
   question and no transcript.
 NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
   (19:00-03:30), then cut the check-out grace from 120.
+- 2026-09-22T08:11:37Z PUSH: nz-glass @ eb3e63b83
+- 2026-09-22T08:11:37Z COMMIT: eb3e63b83 docs(attendance): say why a drifted roster refuses the whole shift → review dispatched
+
+REPAIR: S4 — one icon library. 43 feather names across 27 files migrated to
+  lucide-vue-next, the three prop-driven sites converted by hand (Profile's
+  link list, WorkflowActionSheet's transition icon, FileUploaderView's
+  multi-line tag), and components/icons/ deleted: all fourteen were Lucide
+  glyphs pasted by hand, a copy of a library maintained by nobody.
+EVIDENCE: 2 correct — icons.one-library.test.js RED first (3 of 5 failing),
+  green after. Suite 512 pass / 4 fail, and those same 4 fail at HEAD
+  (verified by stashing): named-export, temporal-dead-zone, claimed-days,
+  request-chips. Lint clean. Gates: contrast 54 checked / 0 failures,
+  surfaces 46 screens / 0 over, tokens ok. usage and lint counters are
+  byte-identical to HEAD — measured, not assumed.
+NOTE: S4's stated revert condition COULD NOT BE MET and the plan's premise was
+  wrong. `feather-icons` is a dependency of frappe-ui, not of this app, and
+  frappe-ui's own Button imports FeatherIcon — the Button main.js registers
+  globally and 27 files render. So feather ships whatever we do. Measured on
+  real production builds: total JS gz 1121112 -> 1128339, +7.0 KB. The icon
+  map projected -9 KB from "feather leaving"; it was measuring feather as ours.
+  Reported to the owner BEFORE writing code, with three options; he chose to
+  proceed for the vocabulary, not the size. The failed condition is recorded in
+  the test file's own header so the next reader cannot mistake this for a win.
+NOTE: the icon sweep found 43 rendered names, not the 40 the map recorded. The
+  map's own count had already been corrected twice. Every one of the 43 has a
+  Lucide target — verified against the INSTALLED package, not its published
+  types, which was the reviewer's carry-over note from S3.
+NOTE: one test failed that was mine — sidenav-app-links-a11y pinned
+  `<ExternalLinkIcon`. Amended to the new tag, not loosened: the RULE it
+  protects (the arrow takes the muted ink token, so a decoration does not
+  compete with the label beside it) is unchanged and still asserted.
+NEXT: S5 — the 29 inline <svg>, triaged first; several are not icons (a
+  progress ring, an upload target) and must not be converted.

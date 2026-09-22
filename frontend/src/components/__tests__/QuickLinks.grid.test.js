@@ -113,11 +113,13 @@ test("the skeleton shows as many tiles as Home actually passes", () => {
 	const home = homeView().replace(/<!--[\s\S]*?-->/g, "")
 	const base = (home.match(/const baseQuickLinks\s*=\s*\[([\s\S]*?)\n\]/) || [])[1]
 	assert.ok(base, "baseQuickLinks should still be a literal array in Home.vue")
-	const extra = (home.match(/const quickLinks\s*=\s*computed\(\(\)\s*=>\s*\[([\s\S]*?)\n\]\)/) || [])[1]
+	const extra = (home.match(/const quickLinks\s*=\s*computed\(\(\)\s*=>\s*\[([\s\S]*?)\n\]\)/) ||
+		[])[1]
 	assert.ok(extra, "quickLinks should still spread baseQuickLinks and add its own")
-	const count =
-		(base.match(/\broute:/g) || []).length + (extra.match(/\broute:/g) || []).length
-	const dflt = Number((tilegrid().match(/tiles:\s*\{\s*type:\s*Number,\s*default:\s*(\d+)/) || [])[1])
+	const count = (base.match(/\broute:/g) || []).length + (extra.match(/\broute:/g) || []).length
+	const dflt = Number(
+		(tilegrid().match(/tiles:\s*\{\s*type:\s*Number,\s*default:\s*(\d+)/) || [])[1]
+	)
 	assert.equal(dflt, count, `Home passes ${count} links; GTileGrid's skeleton default is ${dflt}`)
 })
 

@@ -31,7 +31,7 @@
 					:href="`mailto:${contact.email}`"
 					class="flex flex-row items-center gap-1.5 text-kra-label text-accent-700 underline underline-offset-link"
 				>
-					<FeatherIcon name="mail" class="h-3 w-3 shrink-0" />
+					<Mail class="h-3 w-3 shrink-0" />
 					<span class="truncate">{{ contact.email }}</span>
 				</a>
 				<a
@@ -39,7 +39,7 @@
 					:href="`tel:${contact.phone}`"
 					class="flex flex-row items-center gap-1.5 text-kra-label text-accent-700 underline underline-offset-link"
 				>
-					<FeatherIcon name="phone" class="h-3 w-3 shrink-0" />
+					<Phone class="h-3 w-3 shrink-0" />
 					<span>{{ contact.phone }}</span>
 				</a>
 				<div v-if="!contact.email && !contact.phone" class="text-kra-label text-ink-500 italic">
@@ -51,8 +51,8 @@
 </template>
 
 <script setup>
+import { Mail, Phone } from "lucide-vue-next"
 import { computed, inject } from "vue"
-import { FeatherIcon } from "frappe-ui"
 
 const __ = inject("$translate")
 

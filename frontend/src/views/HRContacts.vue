@@ -8,14 +8,14 @@
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("HR Contacts") }}
 							</h2>
 						</div>
 						<GIconButton :label="__('Refresh')" @click="reload">
-							<FeatherIcon name="refresh-cw" class="h-4 w-4" />
+							<RefreshCw class="h-4 w-4" />
 						</GIconButton>
 					</header>
 
@@ -38,7 +38,7 @@
 							class="flex flex-col items-center justify-center py-16 px-6 text-center"
 						>
 							<div class="h-16 w-16 bg-ink-200 flex items-center justify-center mb-3">
-								<FeatherIcon name="users" class="h-7 w-7 text-ink-500" />
+								<Users class="h-7 w-7 text-ink-500" />
 							</div>
 							<div class="text-sm font-sans font-extrabold text-inkbase">
 								{{ __("No HR contacts available") }}
@@ -68,11 +68,12 @@
 </template>
 
 <script setup>
+import { ChevronLeft, RefreshCw, Users } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
-import { FeatherIcon } from "frappe-ui"
+
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import ContactCard from "@/components/ContactCard.vue"

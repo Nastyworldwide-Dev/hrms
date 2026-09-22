@@ -8,7 +8,7 @@
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Profile") }}
@@ -47,12 +47,12 @@
 								@click="openInfoModal(link)"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon :name="link.icon" class="h-[18px] w-[18px] text-inkbase" />
+									<component :is="link.icon" class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ link.title }}
 									</div>
 								</div>
-								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+								<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
 							</div>
 
 							<!-- HR Contacts -->
@@ -61,12 +61,12 @@
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon name="users" class="h-[18px] w-[18px] text-inkbase" />
+									<Users class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ __("HR Contacts") }}
 									</div>
 								</div>
-								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+								<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
 							</router-link>
 
 							<!-- Remote Approvals. Shown to APPROVERS (isApprover — HR,
@@ -81,7 +81,7 @@
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon name="check-square" class="h-[18px] w-[18px] text-inkbase" />
+									<SquareCheck class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ __("Remote Approvals") }}
 									</div>
@@ -93,7 +93,7 @@
 									>
 										{{ pendingApprovalsCount }}
 									</span>
-									<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+									<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
 								</div>
 							</router-link>
 
@@ -107,12 +107,12 @@
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon name="settings" class="h-[18px] w-[18px] text-inkbase" />
+									<Settings class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ __("Settings") }}
 									</div>
 								</div>
-								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+								<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
 							</router-link>
 						</div>
 
@@ -124,7 +124,7 @@
 						     system reserves for the ONE primary action on a screen, and it
 						     was the only accented element on Profile — so the loudest thing
 						     on the page was the way out of the app. -->
-							<FeatherIcon name="log-out" class="w-4 h-4" />
+							<LogOut class="w-4 h-4" />
 							{{ __("Log Out") }}
 						</button>
 					</div>
@@ -173,13 +173,24 @@
 </template>
 
 <script setup>
+import {
+	Book,
+	ChevronLeft,
+	ChevronRight,
+	File,
+	LogOut,
+	Settings,
+	SquareCheck,
+	User,
+	Users,
+} from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
 import { IonContent, IonModal } from "@ionic/vue"
-import { FeatherIcon, createDocumentResource, createResource } from "frappe-ui"
+import { createDocumentResource, createResource } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 
@@ -204,7 +215,7 @@ const router = useRouter()
 
 const profileLinks = [
 	{
-		icon: "user",
+		icon: User,
 		title: __("Employee Details"),
 		fields: [
 			"employee_name",
@@ -216,7 +227,7 @@ const profileLinks = [
 		],
 	},
 	{
-		icon: "file",
+		icon: File,
 		title: __("Company Information"),
 		fields: [
 			"company",
@@ -229,7 +240,7 @@ const profileLinks = [
 		],
 	},
 	{
-		icon: "book",
+		icon: Book,
 		title: __("Contact Information"),
 		kind: "contact",
 		fields: ["cell_number", "personal_email", "company_email", "preferred_email"],

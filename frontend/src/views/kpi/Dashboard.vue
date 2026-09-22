@@ -285,9 +285,8 @@
 								>
 									{{ crumb.label }}
 								</span>
-								<FeatherIcon
+								<ChevronRight
 									v-if="i < treeCrumbs.length - 1"
-									name="chevron-right"
 									class="h-3 w-3 flex-none text-ink-500"
 									aria-hidden="true"
 								/>
@@ -367,7 +366,7 @@
 							</template>
 						</GDataTable>
 						<span class="flex items-center gap-1.5 text-kra-label text-ink-600 mt-3">
-							<FeatherIcon name="lock" class="h-3 w-3 flex-none" />
+							<Lock class="h-3 w-3 flex-none" />
 							{{ __("Read-only. Scores cannot be changed from here.") }}
 						</span>
 					</div>
@@ -378,10 +377,11 @@
 </template>
 
 <script setup>
+import { ChevronRight, Lock } from "lucide-vue-next"
 import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, nextTick, ref, watch } from "vue"
-import { createResource, FeatherIcon, LoadingIndicator } from "frappe-ui"
+import { createResource, LoadingIndicator } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

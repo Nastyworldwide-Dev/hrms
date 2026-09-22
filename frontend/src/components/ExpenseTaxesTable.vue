@@ -44,7 +44,7 @@
 							<span class="text-inkbase font-semibold text-base">
 								{{ formatCurrency(item.total, expenseClaim.currency) }}
 							</span>
-							<FeatherIcon name="chevron-right" class="h-5 w-5 text-ink-500" />
+							<ChevronRight class="h-5 w-5 text-ink-500" />
 						</div>
 					</div>
 				</div>
@@ -97,7 +97,7 @@
 								@click="deleteExpenseTax()"
 							>
 								<template #prefix>
-									<FeatherIcon name="trash" class="w-4" />
+									<Trash class="w-4" />
 								</template>
 								{{ __("Delete") }}
 							</Button>
@@ -108,7 +108,7 @@
 								:disabled="addButtonDisabled"
 							>
 								<template #prefix>
-									<FeatherIcon :name="editingIdx === null ? 'plus' : 'check'" class="w-4" />
+									<component :is="editingIdx === null ? Plus : Check" class="w-4" />
 								</template>
 								{{ editingIdx === null ? __("Add Tax") : __("Update Tax") }}
 							</Button>
@@ -121,7 +121,8 @@
 </template>
 
 <script setup>
-import { FeatherIcon, createResource } from "frappe-ui"
+import { Check, ChevronRight, Plus, Trash } from "lucide-vue-next"
+import { createResource } from "frappe-ui"
 import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"

@@ -42,7 +42,7 @@
 					class="flex flex-row items-center justify-between w-full"
 				>
 					<div class="flex flex-row items-center gap-3 grow">
-						<FeatherIcon name="calendar" class="h-5 w-5 text-ink-500" />
+						<Calendar class="h-5 w-5 text-ink-500" />
 						<div class="text-button-label font-normal text-inkbase">
 							{{ __(holiday.description) }}
 						</div>
@@ -59,12 +59,13 @@
 </template>
 
 <script setup>
+import { Calendar } from "lucide-vue-next"
 import GModal from "@/components/glass/GModal.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import { inject, computed } from "vue"
-import { FeatherIcon, createResource } from "frappe-ui"
+import { createResource } from "frappe-ui"
 
 const employee = inject("$employee")
 const dayjs = inject("$dayjs")

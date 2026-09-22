@@ -20,11 +20,11 @@
 				<!-- week navigation -->
 				<div class="flex flex-row items-center justify-between">
 					<GIconButton :label="__('Previous week')" @click="changeWeek(-1)">
-						<FeatherIcon name="chevron-left" class="h-4 w-4" />
+						<ChevronLeft class="h-4 w-4" />
 					</GIconButton>
 					<span class="g-datenav__label" data-visual-mask>{{ weekLabel }}</span>
 					<GIconButton :label="__('Next week')" @click="changeWeek(1)">
-						<FeatherIcon name="chevron-right" class="h-4 w-4" />
+						<ChevronRight class="h-4 w-4" />
 					</GIconButton>
 				</div>
 
@@ -126,8 +126,9 @@
 </template>
 
 <script setup>
+import { ChevronLeft, ChevronRight } from "lucide-vue-next"
 import { computed, inject, reactive, ref, onMounted } from "vue"
-import { Autocomplete, FeatherIcon, LoadingIndicator, toast } from "frappe-ui"
+import { Autocomplete, LoadingIndicator, toast } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"

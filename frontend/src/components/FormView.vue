@@ -10,7 +10,7 @@
 				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 			>
 				<GIconButton :label="__('Back')" flush class="lg:hidden" @click="confirmBack">
-					<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+					<ChevronLeft class="h-5 w-5 text-inkbase" />
 				</GIconButton>
 				<div v-if="id" class="flex flex-row items-center gap-2 overflow-hidden grow">
 					<h2
@@ -73,7 +73,7 @@
 						class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
 						@click="confirmBack"
 					>
-						<FeatherIcon name="arrow-left" class="h-4 w-4" />
+						<ArrowLeft class="h-4 w-4" />
 						{{ __("Back") }}
 					</button>
 					<slot name="beforeFields"></slot>
@@ -280,7 +280,7 @@
 			class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
 		>
 			<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-				<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+				<ChevronLeft class="h-5 w-5 text-inkbase" />
 			</GIconButton>
 			<h2 class="text-xl font-extrabold text-inkbase tracking-tight ml-1 truncate">
 				{{ __(props.doctype) }}
@@ -392,6 +392,7 @@
 </template>
 
 <script setup>
+import { ArrowLeft, ChevronLeft } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
@@ -404,7 +405,6 @@ import { goBackOrHome } from "@/utils/navigation"
 import {
 	ErrorMessage,
 	Badge,
-	FeatherIcon,
 	createListResource,
 	createDocumentResource,
 	toast,

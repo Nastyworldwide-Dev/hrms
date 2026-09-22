@@ -34,6 +34,14 @@
 </template>
 
 <script setup>
+import {
+	CalendarClock,
+	CalendarDays,
+	ChartLine,
+	LifeBuoy,
+	Receipt,
+	UserCheck,
+} from "lucide-vue-next"
 import { computed, inject, markRaw } from "vue"
 
 import { reloadRequestLists } from "@/data/requestLists"
@@ -48,12 +56,6 @@ import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
-import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
-import ShiftIcon from "@/components/icons/ShiftIcon.vue"
-import LeaveIcon from "@/components/icons/LeaveIcon.vue"
-import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import KPIIcon from "@/components/icons/KPIIcon.vue"
-import SupportIcon from "@/components/icons/SupportIcon.vue"
 
 const __ = inject("$translate")
 
@@ -67,32 +69,32 @@ async function refreshRequests(event) {
 
 const baseQuickLinks = [
 	{
-		icon: markRaw(AttendanceIcon),
+		icon: markRaw(UserCheck),
 		title: __("Request Attendance"),
 		route: "AttendanceRequestFormView",
 	},
 	{
-		icon: markRaw(ShiftIcon),
+		icon: markRaw(CalendarClock),
 		title: __("Request a Shift"),
 		route: "ShiftRequestFormView",
 	},
 	{
-		icon: markRaw(LeaveIcon),
+		icon: markRaw(CalendarDays),
 		title: __("Request Leave"),
 		route: "LeaveApplicationFormView",
 	},
 	{
-		icon: markRaw(ExpenseIcon),
+		icon: markRaw(Receipt),
 		title: __("Claim an Expense"),
 		route: "ExpenseClaimFormView",
 	},
 	{
-		icon: markRaw(KPIIcon),
+		icon: markRaw(ChartLine),
 		title: __("My KPI"),
 		route: "KPIDashboard",
 	},
 	{
-		icon: markRaw(SupportIcon),
+		icon: markRaw(LifeBuoy),
 		title: __("New HR Issue"),
 		route: "EmployeeIssueFormView",
 	},
@@ -104,7 +106,7 @@ const baseQuickLinks = [
 const quickLinks = computed(() => [
 	...baseQuickLinks,
 	{
-		icon: markRaw(SupportIcon),
+		icon: markRaw(LifeBuoy),
 		title: isHR.value ? __("Issue Board") : __("HR Issues"),
 		route: HUB_ROUTE_NAME,
 		query: { tab: HR_TAB },

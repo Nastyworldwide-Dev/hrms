@@ -5,7 +5,7 @@
 				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-hair sticky top-0 z-overlay bg-bg"
 			>
 				<div class="h-12 w-12 bg-danger/15 flex items-center justify-center">
-					<FeatherIcon name="slash" class="h-6 w-6 text-danger-ink" />
+					<Slash class="h-6 w-6 text-danger-ink" />
 				</div>
 				<div class="g-eyebrow">{{ __("Check-in") }}</div>
 				<span class="text-ink font-extrabold text-stat-number leading-tight">
@@ -81,7 +81,7 @@
 				<template v-else>
 					<div class="bg-danger/10 border border-danger-ink px-3 py-3">
 						<div class="flex items-start gap-2">
-							<FeatherIcon name="alert-triangle" class="h-4 w-4 text-danger-ink mt-0.5 shrink-0" />
+							<TriangleAlert class="h-4 w-4 text-danger-ink mt-0.5 shrink-0" />
 							<div class="text-xs text-danger-ink leading-relaxed">
 								{{ adminMisconfigMessage }}
 							</div>
@@ -107,9 +107,10 @@
 </template>
 
 <script setup>
+import { Slash, TriangleAlert } from "lucide-vue-next"
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
-import { FeatherIcon, Button } from "frappe-ui"
+import { Button } from "frappe-ui"
 import { formatAccuracy, isReadingCoarse } from "@/utils/geolocation"
 
 const __ = inject("$translate")

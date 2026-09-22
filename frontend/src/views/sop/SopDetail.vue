@@ -9,7 +9,7 @@
 				:aria-label="__('Back')"
 				@click="goBackOrHome(router)"
 			>
-				<FeatherIcon name="chevron-left" class="h-5 w-5" />
+				<ChevronLeft class="h-5 w-5" />
 			</button>
 			<h2 class="text-base font-extrabold tracking-tight text-inkbase truncate">
 				{{ sop.data?.title || __("SOP") }}
@@ -21,7 +21,7 @@
 				:aria-label="__('Edit {0}', [sop.data?.title || __('SOP')])"
 				@click="sheetOpen = true"
 			>
-				<FeatherIcon name="edit" class="h-[17px] w-[17px]" />
+				<PenLine class="h-[17px] w-[17px]" />
 			</button>
 		</header>
 
@@ -52,7 +52,7 @@
 					<span class="g-eyebrow">{{ __("Attachment") }}</span>
 					<div class="border border-divider rounded-panel overflow-hidden">
 						<div class="flex items-center gap-2.5 bg-surface border-b border-divider px-3 py-2.5">
-							<FeatherIcon name="file-text" class="h-[18px] w-[18px] flex-none text-accent-700" />
+							<FileText class="h-[18px] w-[18px] flex-none text-accent-700" />
 							<span class="flex-1 text-card-title font-bold text-inkbase truncate">
 								{{ attachment.file_name }}
 							</span>
@@ -64,7 +64,7 @@
 								:title="__('Download')"
 								:aria-label="__('Download')"
 							>
-								<FeatherIcon name="download" class="h-3.5 w-3.5" />
+								<Download class="h-3.5 w-3.5" />
 							</a>
 						</div>
 
@@ -100,9 +100,10 @@
 </template>
 
 <script setup>
+import { ChevronLeft, Download, FileText, PenLine } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
-import { createResource, FeatherIcon } from "frappe-ui"
+import { createResource } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 import { useRouter } from "vue-router"
 

@@ -6,7 +6,7 @@
 				<div
 					class="flex flex-col w-full bg-surface border border-divider rounded-input items-center p-4 gap-2"
 				>
-					<FeatherIcon name="upload" class="h-6 w-6 text-ink-700" />
+					<Upload class="h-6 w-6 text-ink-700" />
 					<span class="block text-sm font-normal leading-5 text-ink-700">
 						{{ __("Upload images or documents") }}
 					</span>
@@ -33,8 +33,7 @@
 						<span class="grow" @click="showFilePreview(file)">
 							{{ file.file_name || file.name }}
 						</span>
-						<FeatherIcon
-							name="x"
+						<X
 							class="h-4 w-4 cursor-pointer text-ink-700"
 							@click="() => confirmDeleteAttachment(file)"
 						/>
@@ -64,8 +63,9 @@
 </template>
 
 <script setup>
+import { Upload, X } from "lucide-vue-next"
 import GConfirm from "@/components/glass/GConfirm.vue"
-import { FeatherIcon } from "frappe-ui"
+
 import { ref } from "vue"
 import { IonModal } from "@ionic/vue"
 

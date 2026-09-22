@@ -8,14 +8,14 @@
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Remote Approvals") }}
 							</h2>
 						</div>
 						<GIconButton :label="__('Refresh')" @click="reload">
-							<FeatherIcon name="refresh-cw" class="h-4 w-4" />
+							<RefreshCw class="h-4 w-4" />
 						</GIconButton>
 					</header>
 
@@ -245,6 +245,7 @@
 </template>
 
 <script setup>
+import { ChevronLeft, RefreshCw } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { requestStatus } from "@/utils/requestStatus"
@@ -254,7 +255,7 @@ import { goBackOrHome } from "@/utils/navigation"
 import { inject, onMounted, onBeforeUnmount, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { IonContent, IonModal } from "@ionic/vue"
-import { FeatherIcon, toast } from "frappe-ui"
+import { toast } from "frappe-ui"
 import { decisionToast } from "@/utils/approvalToast"
 import GIconButton from "@/components/glass/GIconButton.vue"
 

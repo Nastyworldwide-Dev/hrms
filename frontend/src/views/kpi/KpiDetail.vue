@@ -206,7 +206,7 @@
 					     disproves it. On the drill-down it says what IS true, in the
 					     same words the team list already uses. -->
 					<span class="flex items-center gap-1.5 text-kra-label text-ink-600 mt-3">
-						<FeatherIcon name="lock" class="h-3 w-3 flex-none" />
+						<Lock class="h-3 w-3 flex-none" />
 						{{
 							heading
 								? __("Read-only. Scores cannot be changed from here.")
@@ -226,8 +226,8 @@
 </template>
 
 <script setup>
+import { Lock } from "lucide-vue-next"
 import { computed, inject, ref } from "vue"
-import { FeatherIcon } from "frappe-ui"
 
 import GBadge from "@/components/glass/GBadge.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

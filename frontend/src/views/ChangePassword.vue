@@ -10,7 +10,7 @@
 						class="flex flex-row bg-ground py-4 px-3 items-center sticky top-0 z-sticky border-b border-divider"
 					>
 						<GIconButton :label="__('Back')" flush class="mr-1" @click="goBackOrHome(router)">
-							<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+							<ChevronLeft class="h-5 w-5 text-inkbase" />
 						</GIconButton>
 						<h2 class="text-xl font-extrabold text-inkbase tracking-tight">
 							{{ __("Change Password") }}
@@ -58,6 +58,7 @@
 </template>
 
 <script setup>
+import { ChevronLeft } from "lucide-vue-next"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GInput from "@/components/glass/GInput.vue"
@@ -65,7 +66,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
-import { FeatherIcon, toast, createResource } from "frappe-ui"
+import { toast, createResource } from "frappe-ui"
 
 import { inject, ref } from "vue"
 

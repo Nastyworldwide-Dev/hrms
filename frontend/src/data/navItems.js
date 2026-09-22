@@ -1,15 +1,17 @@
+import {
+	BookOpenText,
+	CalendarDays,
+	ChartLine,
+	CircleCheckBig,
+	Ellipsis,
+	Headphones,
+	House,
+	Kanban,
+	Receipt,
+	UserCheck,
+} from "lucide-vue-next"
 import { markRaw } from "vue"
 
-import HomeIcon from "@/components/icons/HomeIcon.vue"
-import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
-import LeaveIcon from "@/components/icons/LeaveIcon.vue"
-import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import KPIIcon from "@/components/icons/KPIIcon.vue"
-import SopIcon from "@/components/icons/SopIcon.vue"
-import MoreIcon from "@/components/icons/MoreIcon.vue"
-import HelpdeskIcon from "@/components/icons/HelpdeskIcon.vue"
-import ApprovaIcon from "@/components/icons/ApprovaIcon.vue"
-import ProjectBoardIcon from "@/components/icons/ProjectBoardIcon.vue"
 import { visibleAppLinks } from "@/data/appLinks"
 import { HUB_PATH } from "@/utils/helpdeskHub"
 
@@ -19,27 +21,27 @@ import { HUB_PATH } from "@/utils/helpdeskHub"
 // `shortTitle` is the design's compact tab-bar label. The phone bar shows
 // TAB_ITEMS (5 primaries + More); SideNav shows the full NAV_ITEMS list.
 const NAV_ITEMS = [
-	{ icon: markRaw(HomeIcon), title: "Home", shortTitle: "Home", route: "/home" },
+	{ icon: markRaw(House), title: "Home", shortTitle: "Home", route: "/home" },
 	{
-		icon: markRaw(AttendanceIcon),
+		icon: markRaw(UserCheck),
 		title: "Attendance",
 		shortTitle: "Attend",
 		route: "/dashboard/attendance",
 	},
 	{
-		icon: markRaw(LeaveIcon),
+		icon: markRaw(CalendarDays),
 		title: "Leaves",
 		shortTitle: "Leaves",
 		route: "/dashboard/leaves",
 	},
 	{
-		icon: markRaw(ExpenseIcon),
+		icon: markRaw(Receipt),
 		title: "Expenses",
 		shortTitle: "Expenses",
 		route: "/dashboard/expense-claims",
 	},
 	{
-		icon: markRaw(KPIIcon),
+		icon: markRaw(ChartLine),
 		title: "KPI",
 		shortTitle: "KPI",
 		route: "/dashboard/kpi",
@@ -48,13 +50,13 @@ const NAV_ITEMS = [
 		// ONE entry for Issues + Helpdesk (owner, 15 Sep 2026), in the slot
 		// Issues held. HR Issues is for everyone, so the entry is never gated;
 		// the IT pill inside is what hides on sites without the Helpdesk app.
-		icon: markRaw(HelpdeskIcon),
+		icon: markRaw(Headphones),
 		title: "Helpdesk",
 		shortTitle: "Helpdesk",
 		route: HUB_PATH,
 	},
 	{
-		icon: markRaw(SopIcon),
+		icon: markRaw(BookOpenText),
 		title: "SOPs",
 		shortTitle: "SOPs",
 		route: "/sop",
@@ -78,7 +80,7 @@ export const TAB_ITEMS = [
 	NAV_ITEMS[2], // Leaves
 	NAV_ITEMS[3], // Expenses — stands in for §13.1's PAY
 	{
-		icon: markRaw(MoreIcon),
+		icon: markRaw(Ellipsis),
 		title: "More",
 		shortTitle: "More",
 		route: "/more",
@@ -94,8 +96,8 @@ export const MORE_ITEMS = NAV_ITEMS.slice(4)
 // their own "Apps" group under More and below the SideNav divider; never in the
 // phone tab bar, whose five destinations are fixed.
 const APP_ICONS = {
-	approva: markRaw(ApprovaIcon),
-	board: markRaw(ProjectBoardIcon),
+	approva: markRaw(CircleCheckBig),
+	board: markRaw(Kanban),
 }
 
 // The rows this user may be offered, icons attached. Both shells (More on the

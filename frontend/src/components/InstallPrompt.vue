@@ -18,7 +18,7 @@
 						{{ __("Install Nadi") }}
 					</span>
 					<span class="inline-flex items-baseline">
-						<FeatherIcon name="x" class="ml-auto h-4 w-4 text-ink-700" @click="dismiss" />
+						<X class="ml-auto h-4 w-4 text-ink-700" @click="dismiss" />
 					</span>
 				</div>
 				<div class="text-xs text-ink-800 px-3">
@@ -28,7 +28,7 @@
 						</span>
 						<span class="inline-flex items-start whitespace-nowrap">
 							<span>Tap&nbsp;</span>
-							<FeatherIcon name="share" class="h-4 w-4 text-accent-600" />
+							<Share class="h-4 w-4 text-accent-600" />
 							<span>&nbsp;and then "Add to Home Screen"</span>
 						</span>
 					</span>
@@ -39,11 +39,12 @@
 </template>
 
 <script setup>
+import { Share, X } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
 import GModal from "@/components/glass/GModal.vue"
 import { ref } from "vue"
 
-import { Popover, FeatherIcon } from "frappe-ui"
+import { Popover } from "frappe-ui"
 
 import { INSTALL_DISMISS_KEY, isWithinCooldown } from "@/utils/installPromptMemory"
 import { sessionUser } from "@/data/session"

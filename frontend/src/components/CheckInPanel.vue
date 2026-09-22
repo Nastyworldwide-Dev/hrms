@@ -51,7 +51,7 @@
 				@click="lateCheckoutOpen = true"
 			>
 				<div class="flex flex-row items-center gap-3">
-					<FeatherIcon :name="isAbandoned ? 'alert-triangle' : 'clock'" class="h-4 w-4 shrink-0" />
+					<component :is="isAbandoned ? TriangleAlert : Clock" class="h-4 w-4 shrink-0" />
 					<div class="flex flex-col flex-1 min-w-0">
 						<!-- data-visual-mask: both branches embed formatTimestamp(), whose
 						     wording changes as the check-in ages. -->
@@ -91,7 +91,7 @@
 				@click="handleEmployeeCheckin"
 			>
 				<template #trailing>
-					<FeatherIcon name="arrow-right" class="w-[17px] h-[17px]" />
+					<ArrowRight class="w-[17px] h-[17px]" />
 				</template>
 			</GButton>
 		</template>
@@ -174,7 +174,7 @@
 				@click="submitLog(nextAction.action)"
 			>
 				<template #trailing>
-					<FeatherIcon name="check" class="w-[17px] h-[17px]" />
+					<Check class="w-[17px] h-[17px]" />
 				</template>
 			</GButton>
 		</div>
@@ -219,13 +219,14 @@
 </template>
 
 <script setup>
+import { ArrowRight, Check, Clock, TriangleAlert } from "lucide-vue-next"
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
 import GClock from "@/components/glass/GClock.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
-import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
+import { createResource, createListResource, toast } from "frappe-ui"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { modalController } from "@ionic/vue"

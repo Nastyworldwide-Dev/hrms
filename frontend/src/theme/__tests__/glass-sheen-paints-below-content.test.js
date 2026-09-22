@@ -26,11 +26,16 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-const css = readFileSync(fileURLToPath(new URL("../glass-components.css", import.meta.url)), "utf8")
+const css = readFileSync(
+	fileURLToPath(new URL("../glass-components.css", import.meta.url)),
+	"utf8"
+)
 
 /** The declaration block of the first rule whose selector list matches. */
 function rule(selectorPattern) {
-	const match = css.match(new RegExp(`(^|\\})\\s*([^{}]*${selectorPattern}[^{}]*)\\{([^}]*)\\}`, "m"))
+	const match = css.match(
+		new RegExp(`(^|\\})\\s*([^{}]*${selectorPattern}[^{}]*)\\{([^}]*)\\}`, "m")
+	)
 	return match && { selector: match[2].trim(), body: match[3] }
 }
 

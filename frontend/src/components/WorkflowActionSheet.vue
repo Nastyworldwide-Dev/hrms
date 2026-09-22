@@ -15,7 +15,7 @@
 				variant="solid"
 			>
 				<template #prefix>
-					<FeatherIcon name="chevron-up" class="w-4" />
+					<ChevronUp class="w-4" />
 				</template>
 				{{ __("Actions") }}
 			</Button>
@@ -29,8 +29,8 @@
 					:theme="action.theme"
 					@click="applyWorkflow({ workflowAction: action.text })"
 				>
-					<template #prefix v-if="action.featherIcon">
-						<FeatherIcon :name="action.featherIcon" class="w-4" />
+					<template #prefix v-if="action.icon">
+						<component :is="action.icon" class="w-4" />
 					</template>
 					{{ __(action.text, null, props.doc?.doctype) }}
 				</Button>
@@ -47,9 +47,9 @@
 </template>
 
 <script setup>
+import { Check, ChevronUp, X } from "lucide-vue-next"
 import { IonActionSheet, modalController } from "@ionic/vue"
 import { ref, onMounted, inject } from "vue"
-import { FeatherIcon } from "frappe-ui"
 
 const props = defineProps({
 	doc: {
@@ -80,18 +80,18 @@ const getTransitions = async () => {
 		let role = ""
 		let theme = "gray"
 		let variant = "subtle"
-		let icon = ""
+		let icon = null
 		let actionLabel = transition.toLowerCase()
 
 		if (actionLabel.includes("reject") || actionLabel.includes("cancel")) {
 			role = "destructive"
 			theme = "red"
 			variant = "subtle"
-			icon = "x"
+			icon = X
 		} else if (actionLabel.includes("approve")) {
 			theme = "green"
 			variant = "solid"
-			icon = "check"
+			icon = Check
 		}
 
 		return {
@@ -99,7 +99,7 @@ const getTransitions = async () => {
 			role: role,
 			theme: theme,
 			variant: variant,
-			featherIcon: icon,
+			icon,
 			data: {
 				action: transition,
 			},

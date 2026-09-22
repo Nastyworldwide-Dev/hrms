@@ -6,7 +6,7 @@
 			>
 				<div class="flex flex-row items-center gap-2.5">
 					<GIconButton :label="__('Back')" @click="goBack">
-						<FeatherIcon name="chevron-left" class="h-4 w-4" />
+						<ChevronLeft class="h-4 w-4" />
 					</GIconButton>
 					<span class="text-xl font-extrabold text-inkbase">{{ __("New ticket") }}</span>
 				</div>
@@ -97,7 +97,7 @@
 						:disabled="newTicket.loading || uploading"
 					>
 						<template #trailing>
-							<FeatherIcon name="arrow-right" class="h-[17px] w-[17px]" aria-hidden="true" />
+							<ArrowRight class="h-[17px] w-[17px]" aria-hidden="true" />
 						</template>
 					</GButton>
 				</form>
@@ -118,6 +118,7 @@
 </template>
 
 <script setup>
+import { ArrowRight, ChevronLeft } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
@@ -129,7 +130,7 @@ import GConfirm from "@/components/glass/GConfirm.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { IonContent } from "@ionic/vue"
-import { FeatherIcon } from "frappe-ui"
+
 import { computed, inject, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 

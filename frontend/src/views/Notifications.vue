@@ -14,7 +14,7 @@
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Notifications") }}
@@ -55,7 +55,7 @@
 									:loading="markAllAsRead.loading"
 								>
 									<template #prefix>
-										<FeatherIcon name="check-circle" class="w-4" />
+										<CircleCheck class="w-4" />
 									</template>
 									{{ __("Mark all as read") }}
 								</Button>
@@ -126,6 +126,7 @@
 </template>
 
 <script setup>
+import { ChevronLeft, CircleCheck } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GPage from "@/components/glass/GPage.vue"
@@ -136,7 +137,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
 import { siteTime } from "@/utils/siteTime"
-import { createResource, FeatherIcon, Button } from "frappe-ui"
+import { createResource, Button } from "frappe-ui"
 
 import { computed, inject, onMounted, ref, watch } from "vue"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"

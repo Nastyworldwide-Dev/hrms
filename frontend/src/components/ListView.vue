@@ -6,7 +6,7 @@
 			>
 				<div class="flex flex-row items-center">
 					<GIconButton :label="__('Back')" flush class="mr-1" @click="router.back()">
-						<FeatherIcon name="chevron-left" class="h-5 w-5 text-inkbase" />
+						<ChevronLeft class="h-5 w-5 text-inkbase" />
 					</GIconButton>
 					<h2 class="text-xl font-extrabold text-inkbase tracking-tight">{{ pageTitle }}</h2>
 				</div>
@@ -22,7 +22,7 @@
 						class="g-iconbtn--boxed"
 						:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
 					>
-						<FeatherIcon name="filter" class="h-4 w-4" />
+						<Funnel class="h-4 w-4" />
 					</GIconButton>
 					<!-- A create action is a GButton wherever it appears (§18, v1.11).
 					     This was a white frappe-ui pill in the header while the same
@@ -150,8 +150,9 @@
 </template>
 
 <script setup>
+import { ChevronLeft, Funnel } from "lucide-vue-next"
 import { IonContent, IonHeader, modalController } from "@ionic/vue"
-import { createResource, debounce, FeatherIcon } from "frappe-ui"
+import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"

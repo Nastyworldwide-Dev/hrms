@@ -81,11 +81,17 @@ test("the employee's own approved request is put to the server, not answered her
 	// which is the third copy of a rule this file says it does not keep. The
 	// owner may withdraw now ("withdrawal. a."), unless payroll says otherwise —
 	// and payroll is something only the server knows.
-	assert.equal(canOfferCancel(approved("Leave Application"), "Leave Application", STAFF), "approved")
+	assert.equal(
+		canOfferCancel(approved("Leave Application"), "Leave Application", STAFF),
+		"approved"
+	)
 	const hrSelf = { ...STAFF, roles: ["HR Manager"] }
 	const doc = approved("Leave Application", { leave_approver: STAFF.user })
 	assert.equal(canOfferCancel(doc, "Leave Application", hrSelf), "approved")
-	assert.equal(canOfferCancel(approved("Employee Advance"), "Employee Advance", hrSelf), "approved")
+	assert.equal(
+		canOfferCancel(approved("Employee Advance"), "Employee Advance", hrSelf),
+		"approved"
+	)
 })
 
 test("Expense Claim decides in approval_status", () => {
@@ -132,6 +138,11 @@ test("an approved request of my own is offered to the server, not hidden here", 
 	// "asks it rather than keeping a second copy here"; it kept one anyway for
 	// the owner, and that third copy is what would have hidden the button from
 	// the only person the new permission is for.
-	const doc = { docstatus: 1, status: "Approved", employee: "HR-EMP-1", doctype: "Leave Application" }
+	const doc = {
+		docstatus: 1,
+		status: "Approved",
+		employee: "HR-EMP-1",
+		doctype: "Leave Application",
+	}
 	assert.equal(canOfferCancel(doc, "Leave Application", { employee: "HR-EMP-1" }), "approved")
 })

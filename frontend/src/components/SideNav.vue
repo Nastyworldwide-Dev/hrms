@@ -117,7 +117,7 @@
 			>
 				<component :is="item.icon" class="h-[17px] w-[17px] flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
-				<ExternalLinkIcon v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
+				<ExternalLink v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
 			</a>
 		</div>
 
@@ -151,6 +151,7 @@
 </template>
 
 <script setup>
+import { ExternalLink, Users } from "lucide-vue-next"
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
 
@@ -158,8 +159,6 @@ import { markRaw } from "vue"
 
 import { TAB_ITEMS, MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { hasTeam } from "@/data/team"
-import TeamIcon from "@/components/icons/TeamIcon.vue"
-import ExternalLinkIcon from "@/components/icons/ExternalLinkIcon.vue"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -195,7 +194,7 @@ const directItems = computed(() =>
 // direct reports (or the caller is HR browsing via the selector).
 const moreItems = computed(() => [
 	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
-	...(hasTeam.data ? [{ icon: markRaw(TeamIcon), title: __("Team"), route: "/team" }] : []),
+	...(hasTeam.data ? [{ icon: markRaw(Users), title: __("Team"), route: "/team" }] : []),
 ])
 
 // Role-gated (data/appLinks.js); same list the More screen renders.

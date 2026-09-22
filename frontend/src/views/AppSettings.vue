@@ -8,7 +8,7 @@
 					>
 						<div class="flex flex-row items-center gap-2.5">
 							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<FeatherIcon name="chevron-left" class="h-5 w-5" />
+								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
 								{{ __("Settings") }}
@@ -20,7 +20,7 @@
 						<span class="g-eyebrow">{{ __("Appearance") }}</span>
 						<div class="flex flex-col gap-3.5 border-t-2 border-divider pt-4 mb-2">
 							<div class="flex items-center gap-3">
-								<FeatherIcon name="moon" class="h-[18px] w-[18px] text-accent-ink" />
+								<Moon class="h-[18px] w-[18px] text-accent-ink" />
 								<div class="flex flex-col">
 									<span class="text-sm font-semibold text-inkbase">
 										{{ __("Theme") }}
@@ -58,7 +58,7 @@
 						     unaffected; the Switch is flex-1 so its justify-between still
 						     pushes the toggle to the right edge. -->
 						<div class="flex items-center gap-3 border-t-2 border-divider pt-4 g-switch-row">
-							<FeatherIcon name="bell" class="h-[18px] w-[18px] text-accent-ink shrink-0" />
+							<Bell class="h-[18px] w-[18px] text-accent-ink shrink-0" />
 							<Switch
 								size="md"
 								:label="__('Enable Push Notifications')"
@@ -88,12 +88,12 @@
 								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
 							>
 								<div class="flex flex-row items-center gap-3 grow">
-									<FeatherIcon name="lock" class="h-[18px] w-[18px] text-inkbase" />
+									<Lock class="h-[18px] w-[18px] text-inkbase" />
 									<div class="text-button-label text-inkbase">
 										{{ __("Change Password") }}
 									</div>
 								</div>
-								<FeatherIcon name="chevron-right" class="h-[18px] w-[18px] text-ink-600" />
+								<ChevronRight class="h-[18px] w-[18px] text-ink-600" />
 							</router-link>
 						</div>
 					</div>
@@ -104,12 +104,13 @@
 </template>
 
 <script setup>
+import { Bell, ChevronLeft, ChevronRight, Lock, Moon } from "lucide-vue-next"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
-import { FeatherIcon, Switch, toast } from "frappe-ui"
+import { Switch, toast } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { computed, inject, ref } from "vue"
