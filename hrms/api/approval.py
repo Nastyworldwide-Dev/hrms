@@ -364,7 +364,7 @@ def _check_review_revision(doc, expected_modified: str | None) -> None:
 		)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_decision_actions(doctype: str, name: str) -> dict:
 	"""Action-specific authority bound to the persisted revision being reviewed."""
 	logger.debug("[approval] checking available actions for %s", doctype)
@@ -381,7 +381,7 @@ def get_decision_actions(doctype: str, name: str) -> dict:
 	return {"actions": actions, "modified": doc.get("modified") if actions else None}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def can_decide(doctype: str, name: str) -> bool:
 	"""Whether the current user can open and approve this pending request.
 
@@ -391,7 +391,7 @@ def can_decide(doctype: str, name: str) -> bool:
 	return "Approved" in get_decision_actions(doctype, name)["actions"]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def can_cancel_approved(doctype: str, name: str) -> dict:
 	"""May the session user cancel this submitted, approved request?
 
@@ -414,7 +414,7 @@ def can_cancel_approved(doctype: str, name: str) -> dict:
 	return {"can_cancel": reason is None, "reason": reason}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def report_half_transitioned(doctype: str | None = None) -> dict:
 	"""Requests already stuck decided-but-draft, for an HR ruling.
 

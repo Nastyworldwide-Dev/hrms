@@ -37,7 +37,7 @@ TICKET_FIELDS = [
 ]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def is_available() -> bool:
 	"""True when the Helpdesk app is installed on this site."""
 	return "helpdesk" in frappe.get_installed_apps()
@@ -65,7 +65,7 @@ def _attach_raiser_names(rows: list[dict]) -> list[dict]:
 	return rows
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def list_tickets(limit: int = 100) -> list[dict]:
 	"""Tickets the caller may see, newest activity first, with who raised each."""
 	_require_helpdesk()
@@ -79,7 +79,7 @@ def list_tickets(limit: int = 100) -> list[dict]:
 	return _attach_raiser_names(rows)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_ticket(name: str) -> dict:
 	"""One ticket with its conversation, via Helpdesk's own portal read."""
 	_require_helpdesk()
@@ -134,7 +134,7 @@ def reply(name: str, message: str) -> dict:
 	return {"name": name, "status": frappe.db.get_value("HD Ticket", name, "status")}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_options() -> dict:
 	"""Ticket type and priority choices for the raise form."""
 	_require_helpdesk()

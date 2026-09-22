@@ -69,6 +69,14 @@ const ALLOWED_TAGS = new Set([
  *  it can load a url(), and none of these screens needs inline styling. */
 const ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "colspan", "rowspan"])
 
+/** Dropped WHOLE rather than unwrapped, because their contents are the payload.
+ *  `plaintext` is here for a tokenizer quirk rather than for danger: once
+ *  opened it has no closing tag and swallows every following sibling as text,
+ *  so unwrapping it promotes one enormous inert node that has eaten the rest
+ *  of the document. Deleting it loses the same content and says so.
+ *  (Security review of 62f83eff8.) */
+const DELETE_WHOLE = new Set(["script", "style", "iframe", "object", "embed", "plaintext"])
+
 /** A url must be plainly inert. `javascript:` and `data:` both execute or can
  *  carry a payload; a relative or same-origin http(s) link cannot. */
 function safeUrl(value) {
@@ -126,13 +134,7 @@ function scrub(node) {
 			// or an unknown <x-widget> around a paragraph should not take the
 			// paragraph with it; a <script> or <iframe> has no text worth
 			// keeping and its contents are the payload.
-			if (
-				tag === "script" ||
-				tag === "style" ||
-				tag === "iframe" ||
-				tag === "object" ||
-				tag === "embed"
-			) {
+			if (DELETE_WHOLE.has(tag)) {
 				child.remove()
 			} else {
 				scrub(child)

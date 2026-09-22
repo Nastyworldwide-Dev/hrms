@@ -62,7 +62,7 @@ GATE_FRAMEWORK = "frappe.has_permission"
 EMPLOYEE_FIELD = {"Shift Swap Request": "requesting_employee"}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def diagnose_create_permission(doctype: str) -> dict:
 	"""Every gate of `frappe.has_permission(doctype, "create", <new doc>)` for the caller, with verdicts."""
 	user = frappe.session.user

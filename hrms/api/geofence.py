@@ -75,7 +75,7 @@ def _strict_block(reason, shift_type, shift_loc_name, ctx) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def check_geofence(employee, log_type, latitude=None, longitude=None, time=None, accuracy=None):
 	"""Preflight a check-in: would inserting it right now succeed under
 	the Shift Type's geofence policy?
@@ -170,7 +170,7 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 	return _ok()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_active_shift_location(employee: str, time: str | None = None) -> dict | None:
 	"""Return the Shift Location attached to the employee's active assignment,
 	along with the strict flag, for the SPA's check-in map.

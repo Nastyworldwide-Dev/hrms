@@ -55,7 +55,7 @@ SUPPORTED_FIELD_TYPES = [
 ]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_current_user_info() -> dict:
 	current_user = frappe.session.user
 	user = frappe.db.get_value(
@@ -71,7 +71,7 @@ def get_current_user_info() -> dict:
 	return user
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_current_employee_info() -> dict:
 	# Returns None when the caller resolves to no Employee — the PWA router keys
 	# its /hrms/invalid-employee redirect off exactly that, so the contract is
@@ -82,7 +82,7 @@ def get_current_employee_info() -> dict:
 	return get_employee_info()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_employee_identity_status() -> dict:
 	"""Why the caller was denied, for the invalid-employee page.
 
@@ -161,7 +161,7 @@ def withdraw_request(doctype: str, name: str) -> None:
 STAFF_DIRECTORY_FIELDS = ["name", "employee_name", "designation", "department", "image"]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_all_employees() -> list[dict]:
 	# is_hr_operator, not a hand-rolled intersection. One reachable delta from
 	# the old `HR_ROLES & roles` body: Administrator now gets the HR field set
@@ -198,7 +198,7 @@ def get_all_employees() -> list[dict]:
 	return frappe.get_all("Employee", fields=fields, filters=filters, limit=999999)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_reports_to_employee_name(employee: str) -> str:
 	caller = get_employee()
 	reports_to = frappe.db.get_value("Employee", caller, "reports_to") if caller else None
@@ -217,7 +217,7 @@ def get_current_employee() -> str:
 
 
 # HR Settings
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_hr_settings() -> dict:
 	"""Settings the PWA renders against, resolved for the SESSION EMPLOYEE.
 
@@ -248,7 +248,7 @@ def get_hr_settings() -> dict:
 
 
 # Notifications
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_unread_notifications_count() -> int:
 	return frappe.db.count(
 		"PWA Notification",
@@ -286,7 +286,7 @@ def mark_all_notifications_as_read() -> None:
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def are_push_notifications_enabled() -> bool:
 	try:
 		return frappe.db.get_single_value("Push Notification Settings", "enable_push_notification_relay")
@@ -358,7 +358,7 @@ def _may_read_employee(employee: str) -> bool:
 	return False
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_attendance_calendar_events(
 	from_date: str, to_date: str, employee: str | None = None
 ) -> dict[str, str]:
@@ -412,7 +412,7 @@ def get_holidays_for_calendar(employee: str, from_date: str, to_date: str) -> li
 	return []
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_shift_requests(
 	employee: str | None = None,
 	approver_id: str | None = None,
@@ -459,7 +459,7 @@ def get_shift_requests(
 	return shift_requests
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_attendance_requests(
 	employee: str | None = None,
 	for_approval: bool = False,
@@ -508,7 +508,7 @@ def get_attendance_requests(
 	return attendance_requests
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_ot_requests(
 	employee: str | None = None,
 	for_approval: bool = False,
@@ -551,7 +551,7 @@ def get_ot_requests(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_replacement_leave_claims(
 	employee: str | None = None,
 	for_approval: bool = False,
@@ -591,7 +591,7 @@ def get_replacement_leave_claims(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_ot_claim_summary(employee: str, date: str) -> dict:
 	"""Live form helper: what the punches prove for a day, and how this
 	employee's approved OT is compensated."""
@@ -632,7 +632,7 @@ def get_ot_claim_summary(employee: str, date: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_claimable_ot_summary(employee: str | None = None, days: int | None = None) -> dict:
 	"""Unclaimed overtime the employee has already worked — so they KNOW it is there.
 
@@ -879,7 +879,7 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 	return incomplete
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_replacement_leave_bank_summary(employee: str) -> dict:
 	"""The current month's convertible OT hours plus the requests feeding it,
 	and the Replacement Leave allocation balance so the dashboard can show a
@@ -976,7 +976,7 @@ def get_filters(
 	return filters
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_shift_request_approvers(employee: str) -> str | list[str]:
 	_ensure_own_employee_or_permitted(employee)
 	# No department read (neither the ancestor walk nor row 1 of the table):
@@ -988,7 +988,7 @@ def get_shift_request_approvers(employee: str) -> str | list[str]:
 	return _approver_options(employee, "shift_request_approver", "shift_request_approver")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_shifts(employee: str | None = None) -> list[dict[str, str]]:
 	# `employee` is optional because the PWA is session-scoped: it knows who is
 	# signed in, not their Employee id. Required, this raised TypeError before a
@@ -1022,7 +1022,7 @@ def get_shifts(employee: str | None = None) -> list[dict[str, str]]:
 
 
 # Leaves and Holidays
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_leave_applications(
 	employee: str | None = None,
 	approver_id: str | None = None,
@@ -1079,7 +1079,7 @@ def get_leave_applications(
 	return applications
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_leave_balance_map() -> dict[str, dict[str, float]]:
 	"""
 	Returns a map of leave type and balance details like:
@@ -1195,7 +1195,7 @@ def get_policy_annual_allocations(employee: str, date) -> dict[str, float]:
 	return {d.leave_type: flt(d.annual_allocation) for d in details}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_holidays_for_employee(employee: str) -> list[dict]:
 	_ensure_own_employee_or_permitted(employee)
 	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
@@ -1227,7 +1227,7 @@ def get_holidays_for_employee(employee: str) -> list[dict]:
 	return holidays
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_leave_approval_details(employee: str) -> dict:
 	_ensure_own_employee_or_permitted(employee)
 	# No department read: `Department Approver` is no longer a routing source
@@ -1285,7 +1285,7 @@ def _approver_options(employee: str, employee_approver_field: str, department_pa
 	]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_leave_types(employee: str, date: str) -> list:
 	# Scope is enforced by get_leave_details' own guard, which — unlike
 	# _ensure_own_employee_or_permitted — also admits the applicant's leave
@@ -1318,7 +1318,7 @@ def get_leave_types(employee: str, date: str) -> list:
 
 
 # Expense Claims
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_expense_claims(
 	employee: str | None = None,
 	approver_id: str | None = None,
@@ -1370,7 +1370,7 @@ def get_expense_claims(
 	return claims
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_expense_claim_summary(employee: str | None = None) -> dict:
 	# `employee` is optional because the PWA is session-scoped: it knows who is
 	# signed in, not their Employee id. Required, this raised TypeError before a
@@ -1452,7 +1452,7 @@ def configured_expense_claim_types(types: list, account_rows: list, company: str
 	return offered
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
 	types = (frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description)).run(as_dict=True)
@@ -1461,7 +1461,7 @@ def get_expense_claim_types() -> list[dict]:
 	return configured_expense_claim_types(types, accounts, own.get("company") if own else None)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_expense_approval_details(employee: str) -> dict:
 	_ensure_own_employee_or_permitted(employee)
 	# No department read: `Department Approver` is no longer a routing source
@@ -1489,7 +1489,7 @@ def get_expense_approval_details(employee: str) -> dict:
 
 
 # Company
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_company_currencies() -> dict:
 	Company = frappe.qb.DocType("Company")
 	Currency = frappe.qb.DocType("Currency")
@@ -1510,7 +1510,7 @@ def get_company_currencies() -> dict:
 	return {company.name: (company.default_currency, company.symbol) for company in companies}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_currency_symbols() -> dict:
 	Currency = frappe.qb.DocType("Currency")
 
@@ -1519,7 +1519,7 @@ def get_currency_symbols() -> dict:
 	return {currency.name: currency.symbol or currency.name for currency in currencies}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_company_cost_center_and_expense_account(company: str) -> dict:
 	# Own company answers without any Desk read. Upstream v16 added a Company
 	# read demand here that v15 never had — the Department disease again: a
@@ -1575,7 +1575,7 @@ def _dimension_choices(doctype: str, company: str) -> list[dict]:
 	return [{"value": name, "label": name} for name in rows]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_expense_cost_tags(company: str) -> dict:
 	"""Cost Center and Accounting Dimension choices for an expense line.
 
@@ -1628,7 +1628,7 @@ def get_expense_cost_tags(company: str) -> dict:
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_salary_currency(employee: str | None = None) -> str | None:
 	"""The currency an expense claim should default to for `employee`.
 
@@ -1648,7 +1648,7 @@ def get_salary_currency(employee: str | None = None) -> str | None:
 
 
 # Form View APIs
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_doctype_fields(doctype: str) -> list[dict]:
 	"""The fields this CALLER can actually fill in.
 
@@ -1696,14 +1696,14 @@ def get_doctype_fields(doctype: str) -> list[dict]:
 	return visible
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_doctype_states(doctype: str) -> dict:
 	states = frappe.get_meta(doctype).states
 	return {state.title: state.color.lower() for state in states}
 
 
 # File
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_attachments(dt: str, dn: str):
 	# The caller must be able to read the parent; its attachments follow it.
 	# Reading File through get_list also appended every app's File list filter,
@@ -1794,7 +1794,7 @@ def delete_attachment(filename: str):
 	frappe.delete_doc("File", filename, ignore_permissions=True)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def _download_pdf(doctype: str, docname: str) -> str:
 	import base64
 
@@ -1814,7 +1814,7 @@ def _download_pdf(doctype: str, docname: str) -> str:
 
 
 # Workflow
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_workflow(doctype: str) -> dict:
 	workflow = get_workflow_name(doctype)
 	if not workflow:
@@ -1844,6 +1844,6 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 
 
 # Permissions
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
 	return get_permitted_fields(doctype, permission_type="write")

@@ -32,7 +32,7 @@ def _is_hr() -> bool:
 	return sees_all_employee_data(frappe.session.user)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def has_team() -> bool:
 	"""Nav gate: direct reports, or HR (who browse teams via the selector)."""
 	if _is_hr():
@@ -56,7 +56,7 @@ EMPLOYEE_APPROVER_FIELDS = ("leave_approver", "expense_approver", "shift_request
 DEPARTMENT_APPROVER_PARENTFIELDS = ("leave_approvers", "expense_approvers", "shift_request_approver")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def is_approver() -> bool:
 	"""Gate for the RequestPanel's Team tabs: does ANY approval work route here?
 
@@ -87,7 +87,7 @@ def is_approver() -> bool:
 	return found
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_managers() -> list[dict]:
 	"""HR-only selector data: active employees with ≥1 active direct report.
 	Non-HR callers get [] — their view is always their own team."""
@@ -134,7 +134,7 @@ def get_managers() -> list[dict]:
 	return managers
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_team_status(date: str | None = None, manager: str | None = None) -> dict:
 	# getdate returns None (not an exception) for some malformed strings —
 	# fail closed to today instead of sending "None 00:00:00" into a filter
@@ -276,7 +276,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	return {"date": str(day), "manager": team_of, "members": out, "summary": summary}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_team_roster(start_date: str, end_date: str, manager: str | None = None) -> dict:
 	"""The Nadi Team Roster grid: each direct report and their shifts across the
 	[start_date, end_date] window. Same fence as get_team_status — a leader sees

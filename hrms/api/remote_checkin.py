@@ -318,7 +318,7 @@ def _with_checkin_selfie(query, RemoteCheckinRequest):
 	return query, EmployeeCheckin.selfie_image.as_("selfie_image")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def list_pending_for_approver() -> list[dict]:
 	"""List pending requests where the current user is the approver."""
 	user = frappe.session.user
@@ -337,7 +337,7 @@ def list_pending_for_approver() -> list[dict]:
 DECIDED_REQUEST_FIELDS = (*PENDING_REQUEST_FIELDS, "status", "approved_at", "approver_remarks")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def list_decided_for_approver(limit: int = 50) -> list[dict]:
 	"""Requests this approver has already decided — the History tab.
 
@@ -361,7 +361,7 @@ def list_decided_for_approver(limit: int = 50) -> list[dict]:
 	return rows
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_pending_count() -> int:
 	"""Badge count — must use the same fence as the list it opens."""
 	user = frappe.session.user
@@ -925,7 +925,7 @@ def _stored_tap(employee, client_tap_id, lock=False):
 	return frappe.get_doc("Employee Checkin", name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_unresolved_stale_in() -> dict:
 	"""The session the 'Forgot to check out?' banner should offer to resolve:
 	the employee's NEWEST IN with no OUT inside its session window that is

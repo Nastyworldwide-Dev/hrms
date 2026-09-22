@@ -139,7 +139,7 @@ def _year_average(year_appraisals, year: int, verify_appraisal_permission: bool 
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None) -> dict:
 	"""Personal KRA/KPI dashboard for the logged-in employee (PWA "My KPI").
 
@@ -408,7 +408,7 @@ def _team_kpi_viewer() -> str | None:
 	return _scope()[0]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def can_view_team_kpi() -> str | None:
 	"""Nav/tab gate for the PWA: the tier, or None. It says nothing about the
 	data itself — every read re-checks through
@@ -464,7 +464,7 @@ def _require_kpi_read(employee: str) -> str:
 	frappe.throw(_("You are not permitted to view this employee's KPI."), frappe.PermissionError)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_employee_kpi(employee: str, year: str | int | None = None, cycle: str | None = None) -> dict:
 	"""One person's KRA detail — the My KPI layout, pointed at somebody else.
 
@@ -691,7 +691,7 @@ def _department_index() -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_department_kpi(
 	parent: str | None = None,
 	year: str | int | None = None,
@@ -872,7 +872,7 @@ def get_department_kpi(
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_team_kpi(
 	year: str | int | None = None,
 	cycle: str | None = None,

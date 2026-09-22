@@ -53,7 +53,8 @@ test("every v-html renders a sanitised value", () => {
 		for (const m of code(path).matchAll(/v-html="([^"]*)"/g)) {
 			// `safeHtml(...)` is the one door. A bare field, a ternary over two
 			// bare fields, or a template string all reach the DOM unchecked.
-			if (!m[1].trim().startsWith('safeHtml(')) offenders.push(`${path.slice(SRC.length)}: ${m[1]}`)
+			if (!m[1].trim().startsWith("safeHtml("))
+				offenders.push(`${path.slice(SRC.length)}: ${m[1]}`)
 		}
 	}
 	assert.deepEqual(offenders, [], "pass it through safeHtml() from @/utils/safeHtml")
@@ -65,7 +66,7 @@ test("nothing writes innerHTML by hand", () => {
 		// safeHtml IS the sanitiser: it writes into a detached <template>,
 		// which parses without executing, and that is the whole technique.
 		// Exempting it by name keeps the rule absolute everywhere else.
-		if (path.endsWith('utils/safeHtml.js')) continue
+		if (path.endsWith("utils/safeHtml.js")) continue
 		if (/\binnerHTML\s*=/.test(code(path))) offenders.push(path.slice(SRC.length))
 	}
 	assert.deepEqual(offenders, [], "innerHTML bypasses both Vue and the sanitiser")
@@ -117,7 +118,11 @@ test("the sanitiser keeps the formatting these screens rely on", async () => {
 	for (const tag of ["script", "iframe", "object", "embed", "form", "style"]) {
 		assert.doesNotMatch(tags, new RegExp(`"${tag}"`), `<${tag}> must not be allowed`)
 	}
-	const attrs = source.slice(source.indexOf("ALLOWED_ATTRS"), source.indexOf("function safeUrl"))
+	// Bounded by the next CONST, not by the next function: DELETE_WHOLE now
+	// sits between them, and slicing to safeUrl() swept it in — so the
+	// "must not be allowed" check was reading the delete-list, where those
+	// very names legitimately appear.
+	const attrs = source.slice(source.indexOf("ALLOWED_ATTRS"), source.indexOf("const DELETE_WHOLE"))
 	assert.match(attrs, /"href"/, "an ordinary link survives")
 	assert.doesNotMatch(attrs, /"style"/, "inline style can load a url()")
 	assert.doesNotMatch(attrs, /"srcset"|"formaction"/, "these carry urls too")
@@ -132,4 +137,22 @@ test("with no DOM the sanitiser returns text, not markup it has not checked", as
 	assert.equal(safeHtml("<p>a</p><p>b</p>"), "ab")
 	assert.equal(safeHtml('<img src=x onerror="alert(1)">'), "")
 	assert.equal(safeHtml(null), "")
+})
+
+// Unwrapping promotes a stray container's children so a <font> around a
+// paragraph does not take the paragraph with it. These are the exceptions:
+// their CONTENTS are the payload, so the whole node goes. `plaintext` is here
+// for a tokenizer quirk — once opened it swallows every following sibling as
+// text — found by the security review of 62f83eff8.
+test("the tags whose contents are the payload are deleted, not unwrapped", async () => {
+	const source = readFileSync(join(SRC, "utils/safeHtml.js"), "utf8")
+	const list = source.slice(
+		source.indexOf("const DELETE_WHOLE"),
+		source.indexOf("export function")
+	)
+	for (const tag of ["script", "style", "iframe", "object", "embed", "plaintext"]) {
+		assert.match(list, new RegExp(`"${tag}"`), `<${tag}> must be removed whole`)
+	}
+	// And the branch must USE the set — a list nothing reads is a comment.
+	assert.match(source, /if \(DELETE_WHOLE\.has\(tag\)\) \{\s*child\.remove\(\)/)
 })

@@ -125,7 +125,7 @@ def _validate_shift_filters(shift_filters: dict[str, str]) -> None:
 			)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_default_company() -> str:
 	"""Company the roster header should preselect.
 
@@ -148,7 +148,7 @@ def get_default_company() -> str:
 	return company or ""
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_events(
 	month_start: str, month_end: str, employee_filters: dict[str, str], shift_filters: dict[str, str]
 ) -> dict[str, list[dict]]:
@@ -168,7 +168,7 @@ def get_events(
 	return events
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_schedule_from_assignment(shift_schedule_assignment: str):
 	frappe.has_permission("Shift Schedule Assignment", "read", shift_schedule_assignment, throw=True)
 	shift_schedule = frappe.db.get_value(

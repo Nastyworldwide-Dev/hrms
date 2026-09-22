@@ -535,10 +535,22 @@ class TestCanCancelApproved(unittest.TestCase):
 			self._ask(roles=("HR Manager",), readable=False)
 
 	def test_it_is_a_whitelisted_read_sharing_the_guard(self):
+		"""Amended 22 Sep 2026 (pre-2.0 R2). This asserted the read-ness by
+		forbidding the string "POST" in the decorator, and R2 now makes every
+		endpoint in this layer DECLARE its methods — a read as `["GET",
+		"POST"]`, a write as `["POST"]` — so the old spelling read a declared
+		read as a write. The INTENT is unchanged and is what is asserted now:
+		this endpoint must not be POST-ONLY, because a POST-only decorator is
+		how a WRITE is marked here, and nothing in this function writes."""
 		fn = _fn("can_cancel_approved")
 		decorators = [ast.unparse(d) for d in fn.decorator_list]
 		self.assertTrue(any(d.startswith("frappe.whitelist") for d in decorators), decorators)
-		self.assertNotIn("POST", "".join(decorators))
+		joined = "".join(decorators)
+		self.assertIn("GET", joined, "a read answers GET")
+		self.assertNotIn("methods=['POST']", joined, "POST-only is how a write is marked")
+		src_body = ast.unparse(fn)
+		for write in (".save(", ".insert(", ".submit(", ".cancel(", "db_set"):
+			self.assertNotIn(write, src_body, f"a read must not {write}")
 		src = ast.unparse(fn)
 		self.assertIn("cancel_refusal(", src)
 		self.assertIn("_request_read_allowed(", src)

@@ -57,7 +57,7 @@ def _current_employee() -> str | None:
 	return get_employee()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_reporting_manager(employee: str | None = None) -> dict | None:
 	"""Return the reporting manager's contact card for `employee`.
 
@@ -100,7 +100,7 @@ def get_reporting_manager(employee: str | None = None) -> dict | None:
 	return card
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def list_hr_contacts() -> list[dict]:
 	"""Return curated active HR contacts from the HR Contact doctype.
 
@@ -145,7 +145,7 @@ def list_hr_contacts() -> list[dict]:
 	return cards
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def employee_with_hr_role_query(
 	doctype: str,
 	txt: str,

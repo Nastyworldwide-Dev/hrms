@@ -1,34 +1,41 @@
-fix(security): three screens wrote server HTML into the page unchecked
+feat(api): the PWA and its own backend had no contract between them
 
-Notifications, SOP bodies and Helpdesk replies each hand a server string to
-`v-html`, which is an unguarded write into the DOM: any script, any onerror=,
-any javascript: href in that string runs as the logged-in employee.
+`hrms/api/` is the Nadi PWA's backend. It is not Desk — no doctype renders
+these endpoints, no workspace links them, and the only caller of most of them
+is `frontend/src`. That makes the two sides one unit with nothing checking the
+seam: a renamed endpoint, a dropped guard or a method left undeclared breaks a
+screen silently, at run time, for one employee at a time.
 
-None of the three is exploitable today — Frappe sanitises Helpdesk's rich text,
-SOP content is authored by HR, notification bodies are built server-side. Every
-one of those is a statement about the backend as it currently stands, and none
-of them is enforced on this side. A field that becomes employee-writable later
-turns an internal tool into stored XSS with no change here at all.
+Three rules now hold, and a test says so.
 
-`safeHtml` is the one door. An allow-list, because a blocklist is a list of the
-attacks somebody thought of and permits everything else — the wrong default for
-markup written by someone else. The browser's own parser does the parsing,
-inside a detached <template> that parses without executing: hand-written tag
-regexes are how sanitisers get bypassed, and a parser the same engine will use
-to render is the only one guaranteed to agree with it. With no DOM — SSR, or a
-unit test importing one of these components — it returns text rather than
-markup nothing has checked.
+EVERY ENDPOINT THE PWA CALLS EXISTS. 84 called, 117 defined, none missing.
 
-Not DOMPurify, deliberately. A dependency is the right call for untrusted
-third-party HTML; this is three internal fields with a known tag vocabulary.
-The condition for taking it is written in the file.
+EVERY ENDPOINT DECLARES ITS METHOD. 76 did not. Every one of those turned out
+to be a read — checked individually rather than assumed — so nothing was
+GET-exposed. But nothing stopped the next writer added here inheriting "any
+method" by default, and a write reachable by GET is a write a link can perform:
+an image tag in an email, a URL in a chat, no CSRF token involved.
+`attendance_fix_day` already pinned all thirteen of its own; this generalises
+what that file had decided.
 
-Also records the five spec decisions the owner answered today, two of which
-turned out to be ALREADY DONE and unrecorded. The iOS focus-zoom fix has been
-in glass-components.css for some time, pinning 16px below every other input
-rule so source order wins — and this audit re-derived the defect from
-`.g-input`'s 12.5px token and started fixing it a second time before finding
-it. The 10px type floor was likewise already applied. Both are pinned by tests
-now, because a fix nobody can find is a fix somebody pays for twice.
+EVERY ENDPOINT GUARDS, or is a named open read carrying its reason. The
+exemption list is short and is itself checked: an entry that writes, or that
+reads Employee, fails the test.
+
+Two audit passes of mine were wrong before this landed, both the same way. The
+first said 28 endpoints were unguarded — it read only each endpoint's own body
+and missed every delegation. The real number was 5, of which four are built on
+`get_employee()`, which resolves the caller's own employee and nobody else's:
+scoped by construction rather than by a check it could forget. The fifth is the
+HR contact directory, which filters on the HR role rather than on the caller
+because every employee is meant to see who in HR to ask — now recorded as a
+decision instead of read as an omission. The second pass claimed five writers
+were GET-reachable; the regex had run past each endpoint into the next
+function. All five are reads.
+
+Also takes the one finding from the security review of 62f83eff8's sanitiser,
+which found no bypass: `plaintext` is deleted whole rather than unwrapped. It
+has no closing tag and swallows every following sibling as text, so unwrapping
+promoted one enormous node that had eaten the rest of the document.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>

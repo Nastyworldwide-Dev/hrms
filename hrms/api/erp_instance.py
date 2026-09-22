@@ -61,7 +61,7 @@ def get_instance_for_company(company: str) -> dict | None:
 	return {field: instance.get(field) for field in PUBLIC_INSTANCE_FIELDS}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_my_erp_instance() -> dict | None:
 	"""The ERP instance for the logged-in user's own employee record.
 

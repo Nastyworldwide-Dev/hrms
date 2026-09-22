@@ -74,7 +74,7 @@ def _names_with_file_rows(names: list[str]) -> set[str]:
 	return attached
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_sops() -> dict:
 	"""Everything the SOP Library screen needs, scoped to the session user."""
 	user = frappe.session.user
@@ -153,7 +153,7 @@ def _get_visible_doc(name: str, caller: str) -> tuple:
 	return doc, is_hr
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_sop(name: str) -> dict:
 	"""Full SOP for the reader sheet."""
 	doc, is_hr = _get_visible_doc(name, "get_sop")
@@ -219,7 +219,7 @@ def _s3_presigned_location(file_url: str) -> str | None:
 	return location
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def attachment_content(name: str):
 	"""Stream the SOP's attachment bytes same-origin so the inline viewer can
 	fetch them (S3-backed files redirect to presigned URLs without CORS

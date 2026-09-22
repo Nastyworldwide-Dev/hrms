@@ -1,12 +1,12 @@
 import frappe
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["GET", "POST"])
 def get_user_pass_login_disabled():
 	return frappe.get_system_settings("disable_user_pass_login")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["GET", "POST"])
 def get_timezones() -> list[str]:
 	"""Timezone list for the attendance-timezone pickers on Shift Location and
 	Company. Frappe's own loader (system_settings.load) is System Manager-only,

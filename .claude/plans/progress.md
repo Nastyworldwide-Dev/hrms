@@ -202,3 +202,53 @@ NEXT: R2 — API contract. ~60 of 115 endpoints do not pin an HTTP method (no
   writer is GET-exposed today; verified), 15 carry no visible guard, and
   nothing checks that the endpoints the PWA calls still exist.
 - 2026-09-22T10:16:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-09-22T10:16:35Z COMMIT: 62f83eff8 fix(security): three screens wrote server HTML into the page unchecked → review+design dispatched
+
+REPAIR: pre-2.0 R2 — the contract between the PWA and its OWN api layer.
+  `hrms/api/` is the PWA's backend, not Desk: 117 endpoints whose only caller
+  is frontend/src, with no compiler between the two sides. Three rules now
+  hold, each pinned by hrms/tests/test_pwa_api_contract.py:
+  (1) every `hrms.api.*` the frontend names resolves to a real endpoint — 84
+  called, 117 defined, nothing missing;
+  (2) every endpoint DECLARES its method. 76 did not. All 76 turned out to be
+  reads (checked one by one, not assumed), so nothing was GET-exposed — but
+  nothing stopped the next writer inheriting "any method" by default, and a
+  write reachable by GET is a write a link can perform;
+  (3) every endpoint guards, or is a NAMED open read with its reason in the
+  file. The exemption list is short and is itself checked: an entry that
+  writes, or that reads Employee, fails the test.
+NOTE: my first guard scan said 28 of 115 were unguarded. Wrong — it read only
+  the endpoint's own body and missed every delegation (`_decide`,
+  `is_hr_operator`, `_get_visible_doc`, `_decision_access`). The real figure
+  was 5, and of those four delegate to `get_employee()` from utils/identity,
+  which resolves the CALLER's own employee and nobody else's — scoped by
+  construction rather than by a check it could forget. The fifth,
+  hr_contacts, is a DIRECTORY: it filters on the HR role rather than on the
+  caller because every employee is meant to see who in HR to ask. That is now
+  recorded as a decision instead of read as an omission.
+NOTE: a second scan claimed 5 write endpoints were GET-reachable. Also wrong,
+  same cause — the regex ran past each endpoint into the next function. All
+  five are reads. Both scans were corrected by reading the actual bodies.
+EVIDENCE: 2 correct — test RED first (2 of 4 failing, 76 unpinned + 5
+  unguarded), green after. 3 mutants killed: an endpoint loses its pin; a new
+  unguarded endpoint appears; an open read starts writing. ruff clean, 36
+  files already formatted. The 76-line diff across 14 api files is decorators
+  ONLY — verified by diffing every changed line against /methods=/.
+NOTE: a `git checkout` to revert a mutant took the real method pins with it
+  (same file). Caught by the test going red on a "clean" tree; re-pinned and
+  re-verified. Restore a mutant from a COPY, never from git, when the file
+  also carries uncommitted work.
+EVIDENCE: 3 works — security review of R1's sanitiser: SECURE, not blocking,
+  no bypass found. It traced the real mXSS gadget classes against the code —
+  noscript's scripting-flag mismatch, RAWTEXT round-trip (textarea/title/xmp),
+  SVG/MathML foreign-content revival, and the SVG `<a>` + `<animate>`
+  attribute hijack that was a real DOMPurify CVE — and each is closed, mostly
+  because UNWRAP removes the wrapper tag entirely so the serializer mismatch
+  has nothing to attach to. Its one INFO is taken: `plaintext` now deletes
+  whole rather than unwrapping (it has no closing tag and swallows every
+  following sibling), and the delete-list is a named set with its own test.
+NEXT: R3 — reliability. navigator.onLine appears nowhere (the offline banner
+  has no trigger), skipWaiting() takes a new build over mid-form, and the
+  double-submit guards need a sweep.
+- 2026-09-22T10:22:36Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
+- 2026-09-22T10:22:36Z EVIDENCE: 3 works — blast radius green: 16 dependent(s), 11 extra test file(s) ⟂7ccc0c0a1133
