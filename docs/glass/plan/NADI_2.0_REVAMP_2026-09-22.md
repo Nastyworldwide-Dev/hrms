@@ -1062,3 +1062,223 @@ it stops being true.
 | Q7 | Appearance — dark only (stated), follow the system, or follow + override? **Recommendation: follow + override** |
 | Q8 | Offline check-in queueing — the device clock stamps it and the server validates on arrival. Acceptable, given attendance history? |
 | Q9 | Landscape — must not break is the proposal. Anyone using it? |
+
+---
+
+## 31. Rulings received, second round (22 September 2026)
+
+**Q6 — Bahasa Malaysia: LATER.**
+Not built now. What IS built now is the thing that makes "later" cheap:
+the terminology glossary (§23, slice D4) and a test that fails any
+user-facing string not wrapped in `__()`. Today every string happens to be
+wrapped; nothing enforces that, so the next twenty screens will drift and
+"later" will cost a sweep. **Slice D4 gains that gate.** No `.po` / `.csv`
+catalogue until the owner says go.
+
+**Q7 — Appearance: follow the system, with an override.**
+Option C. Light palette + `@media (prefers-color-scheme)` + a three-way
+control in Profile → App (System · Light · Dark), defaulting to System.
+*Sources:* Material 3 (color schemes are a system-level preference);
+Apple HIG Dark Mode ("respect the person's setting, and offer an
+in-app override only as an addition"); WCAG 1.4.8 / the astigmatism
+halation research behind offering a light option at all.
+*Consequence, stated:* the contrast gate already runs per theme, so the
+light palette is gated from day one. Visual baselines double: 114 → 228.
+That is the real cost and it is in slice E1.
+
+**Q8 — Offline check-in: NEVER. Withdrawn entirely.**
+Slice **F2 is deleted**, not deferred-with-a-flag. The owner's reason is
+the correct one and it is on record in this repo: September was spent
+repairing attendance where the *server* was the only writer. A punch
+stamped by a device clock and replayed minutes later is a second writer,
+and this codebase has already paid for what two writers do to an
+attendance row (`attendance-incident-sep-2026`).
+
+What replaces it — because the employee still deserves an honest answer:
+- Offline, the check-in button is **disabled with a reason**: *"You need
+  signal to check in. Your punch is recorded by the server, not the
+  phone."* Not a spinner, not a silent failure.
+- The banner states what to do: move to signal, then tap.
+- **Nothing is queued. Nothing is stamped locally. No fallback path
+  exists in the code**, so no future refactor can quietly enable one.
+- **Gate:** `offline-writes.test.js` fails if any queued-write mechanism
+  reaches a check-in endpoint. The rule is enforced, not remembered.
+
+G3's other two layers stand: offline **reads** (stale-while-revalidate)
+and **freshness stamps**. Those only ever show what the server already
+said, which is the opposite of a second writer.
+
+**Q9 — Orientation: portrait-locked on phones, adaptive above.**
+This needs care, because the naive version fails accessibility.
+
+- **Phones (< 768px): portrait-locked** via the manifest
+  (`"orientation": "portrait"`). Rationale: every layout in this app is a
+  single column with a bottom bar; landscape on a 390px phone leaves
+  ~320px of height, and a bottom bar plus a keyboard leaves almost
+  nothing.
+- **Tablet and desktop (≥ 768px): fully adaptive.** No lock, both
+  orientations, the §20 desktop shell.
+- **The accessibility constraint that makes this legal:** WCAG 2.1 SC
+  **1.3.4 (Orientation, AA)** — content must not restrict its view to a
+  single orientation *unless a specific orientation is essential*. A
+  manifest-level lock on an installed PWA is the documented, permitted
+  form; what is NOT permitted is a CSS rotate-your-device wall that
+  blocks a user whose device is mounted or who cannot rotate it.
+  **So: the manifest asks for portrait; the layout never breaks if a
+  browser ignores it.** Someone in a wheelchair with a mounted phone
+  still gets a working app, which is exactly who 1.3.4 was written for.
+- **Gate:** the responsive test (A12) adds landscape phone widths
+  (640×360, 844×390) and fails on overflow — the lock is a preference,
+  not a load-bearing assumption.
+
+---
+
+## 32. Four more gaps found on the second scan
+
+The owner asked for more before saying go. These came out of the same
+method — scanning, not brainstorming.
+
+### G11 — Loading is a skeleton, not a spinner
+
+**Found:** 7 views use `GSkeleton`, 2 use `LoadingIndicator`, and 30 of 48
+use neither. Three different answers to one question.
+
+**The rule:** a spinner says *"something is happening"*; a skeleton says
+*"here is the shape of what is coming"*. Skeletons measurably reduce
+perceived wait because the layout does not jump when content lands —
+which is also a **CLS** win (G4).
+
+- Content whose shape is known → **skeleton** matching the real layout.
+- An action in flight (submit, approve) → **the button itself** goes busy
+  and disabled. Never a full-screen overlay.
+- Under 300ms → **show nothing.** A flash of skeleton is worse than a
+  brief blank; 300ms is the standard perceptual threshold (Nielsen,
+  *Response Times: The 3 Important Limits*, 1993 — still the cited one).
+
+**Sources:** NN/g skeleton-screen guidance; web.dev on CLS and reserved
+space; Nielsen's response-time limits (0.1s / 1s / 10s).
+**Folded into slice A5** (four states), which already touches all 33.
+
+### G12 — Deep links, back, and state in the URL
+
+**Found:** eleven route modules, and no stated contract for what a URL
+carries. Four consequences, all real:
+
+1. **Filters live in component state.** Filter a list, open a row, press
+   back — the filter is gone. The URL should carry it
+   (`?status=pending`), which is also the only way a filter survives a
+   refresh or is shareable.
+2. **Sheets are not routes.** A sheet opened from a list should be a
+   route, so the Android back button closes the sheet rather than the
+   screen. This is the single most-reported "PWA feels wrong on Android"
+   defect class.
+3. **Deep links from notifications** must land on the *thing*. This repo
+   has already paid for that twice (`pwa-notification-tap-defects`).
+4. **Scroll position** on back must be restored.
+
+**Rule:** anything a person would want to return to belongs in the URL.
+**Sources:** Vue Router `scrollBehavior`; Android's predictive back
+guidance; web.dev app-history patterns.
+**New slice A13.**
+
+### G13 — Search and empty results
+
+**Found:** search exists in 4 views (SOP, Team, HR Issue Board,
+DesignSpecimen) with no shared behaviour.
+
+**Rule set:**
+- Debounce **300ms**; never search on every keystroke.
+- A clear (×) button, always, on any field with content.
+- **"No results for X"** is a different state from "nothing here yet" —
+  and it must offer a way out (clear the search, or the nearest match).
+  Conflating the two is why an empty search box reads as a broken app.
+- Searching is a **filter**, not a navigation: the URL carries it (G12),
+  and the result count is stated.
+
+**Sources:** NN/g search-UX guidance; Polaris and Carbon both encode
+no-results as a distinct state.
+**Folded into A5 + A13.**
+
+### G14 — First run, and the empty account
+
+**Found:** no onboarding, no first-run path, and `InvalidEmployee.vue` is
+the only thing resembling one.
+
+Three moments nobody designed:
+
+1. **First open, ever.** A new employee with no punches, no requests, no
+   appraisal sees five empty screens and concludes the app is broken.
+   *Fix:* each empty state, on a brand-new account, says what will fill it
+   and when — *"Your punches appear here after your first check-in."*
+   This is P4 done properly rather than a dashed box.
+2. **The install prompt.** `InstallPrompt.vue` exists. The rule it needs:
+   offer install **after** the first successful check-in, never at first
+   launch. Prompting before value is delivered is the largest cause of a
+   permanent dismissal, same rule as notifications (§25).
+3. **A new capability appearing.** When someone becomes an approver, the
+   Approvals surface appears with no explanation. *Fix:* the first time a
+   role-gated surface appears, one dismissible line saying what it is.
+   Once, never again, stored per-user.
+
+**Sources:** NN/g onboarding research (contextual > upfront tours — an
+upfront tour is a documented failure pattern, which is why none is
+proposed); web.dev install-prompt timing.
+**New slice D6.**
+
+---
+
+## 33. The discipline itself — how this plan avoids guesswork
+
+The owner's standing instruction, restated so it is checkable rather than
+remembered:
+
+> No guesswork. Every change is backed by evidence, a citation, a rule, a
+> discipline, an industry standard, or a best practice.
+
+**How this document complies, mechanically:**
+
+1. **Every rule names its source.** Not "best practice says" — a named
+   document: WCAG 2.2 SC number, Material 3 section, Apple HIG chapter,
+   an NN/g article, a Core Web Vitals threshold, or a defect already paid
+   for in this repo with its memory key.
+2. **Every number is derived, not chosen.** 56px rows comes from
+   44 + 2×6. 11.2 rows comes from 640 ÷ 57. 320px comes from WCAG 1.4.10.
+   200KB comes from web.dev's budget guidance. Where a number is ours, the
+   arithmetic is shown.
+3. **Every rule becomes a gate** (§29, now 18). A rule nobody can fail is
+   a preference wearing a rule's clothes.
+4. **Every measurement in §0 is reproducible.** The 103 stray values, the
+   11-of-14 off-grid tokens, the 1.05 type step, 33 screens without a
+   state, `aria-live` in one view, reduced-motion in four components —
+   each came from a command, and each command is re-runnable.
+5. **A claim with no evidence is marked as a claim.** Where this plan says
+   "likely" (focus-obscured under the tab bar, §18) it is labelled
+   untested and becomes a check, not a fix.
+6. **Where the discipline conflicts with the owner's ruling, the ruling
+   wins and the conflict is recorded.** Q8 is the example: an offline
+   queue is the documented PWA pattern, and it is withdrawn because this
+   app's attendance history outweighs the general case. That reasoning is
+   written down so a future reader does not "restore" it.
+
+**The failure this guards against is named:** 2.0 shipped seven
+string-only slices because no rule said a slice must change something.
+R2 now says it, and the plan is the record.
+
+---
+
+## 34. Final shape
+
+**31 slices.** F2 deleted (Q8), A13 and D6 added (G12, G14).
+
+| Phase | Slices | What it buys |
+|---|---|---|
+| **A — craft** | A1–A13 (13) | The app looks and behaves like a 2026 product |
+| **F — resilience** | F1, F3, F4 (3) | Offline reads, freshness, recovery. **No offline writes** |
+| **B — announcements & approvals** | B1–B3 (3) | The features that were promised and not built |
+| **C — calendar & counters** | C1–C4 (4) | The data that makes a page worth opening |
+| **D — the rest** | D1–D6 (6) | Home bar, Team, Helpdesk/SOP/Profile, glossary, notifications, first run |
+| **E — baselines** | E1 (1) | 228 baselines (both themes), low-privilege personas only |
+
+**18 gates**, 9 of them new.
+
+**Open rulings: none.** Every question asked has been answered.
