@@ -156,6 +156,49 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	return _kpi_dashboard(_get_session_employee(), year, cycle, verify_appraisal_permission=True)
 
 
+
+def _whats_next_for(employee: str) -> dict | None:
+	"""What an employee with no appraisal should be told instead of nothing.
+
+	The Score screen's empty state was a dashed box in a field of black. The
+	question it left unanswered is the only one an employee actually has:
+	"am I late for something?" A box saying "No appraisals yet" does not answer
+	it, so people ask HR, and HR asks us.
+
+	THE FENCE (revamp KR3): everything returned here is about the READER'S OWN
+	cycle. An Appraisal Cycle is org-level configuration, not a person's data,
+	and membership is checked against THIS employee's own row in `appraisees`.
+	No other employee's name, score or appraisal is read, and nothing here
+	widens `_scope` — it is a different question ("when does mine open") asked
+	of the same fenced caller.
+
+	Returns None when there is genuinely nothing scheduled, which is itself an
+	answer the screen can state plainly.
+	"""
+	rows = frappe.get_all(
+		"Appraisal Cycle",
+		filters={"status": ("in", ("Not Started", "In Progress"))},
+		fields=["name", "cycle_name", "start_date", "end_date", "status"],
+		order_by="start_date asc",
+	)
+	for row in rows:
+		# Membership, not visibility: an employee is IN a cycle when the cycle
+		# lists them. Checked per cycle rather than by joining, because the
+		# child table is small and a join here would read other appraisees.
+		if not frappe.db.exists("Appraisee", {"parent": row.name, "employee": employee}):
+			continue
+		logger.info("[kpi] whats-next employee=%s cycle=%s status=%s", employee, row.name, row.status)
+		return {
+			"cycle": row.name,
+			"cycle_name": row.cycle_name or row.name,
+			"start_date": row.start_date,
+			"end_date": row.end_date,
+			"status": row.status,
+		}
+	logger.info("[kpi] whats-next employee=%s — no scheduled cycle", employee)
+	return None
+
+
 def _kpi_dashboard(
 	employee: str,
 	year: str | int | None,
@@ -219,6 +262,11 @@ def _kpi_dashboard(
 	)
 
 	if not year_appraisals:
+		# An empty payload is still an ANSWER, and until 22 Sep 2026 it was not:
+		# the screen drew a dashed box and left the reader to guess whether they
+		# were late for something. `whats_next` is about this employee's own
+		# cycle only (see _whats_next_for) and is None when nothing is scheduled,
+		# which the screen states rather than hides.
 		return {
 			"employee": emp,
 			"current": None,
@@ -229,6 +277,7 @@ def _kpi_dashboard(
 			"cycles": cycles,
 			"selected_year": selected_year,
 			"selected_cycle": None,
+			"whats_next": _whats_next_for(employee),
 		}
 
 	trend = [

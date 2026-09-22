@@ -52,11 +52,33 @@
 					     right about somebody's performance review. -->
 					<KpiDetail v-if="dashboard.data && current" :data="dashboard.data" />
 
+					<!-- THE EMPTY PATH IS THE SCREEN for most employees most of
+					     the year, so it gets built rather than apologised for. A
+					     dashed box in a field of black does not answer the only
+					     question a person actually has — "am I late for
+					     something?" — which is why they ask HR instead.
+
+					     Everything here is about the READER'S OWN cycle (revamp
+					     KR3). No other employee's data enters an empty state. -->
 					<GEmptyState
-						v-else-if="dashboard.data"
-						:title="__('No appraisals yet')"
-						:body="__('Your KPI appears here once a review cycle opens for you')"
+						v-else-if="dashboard.data && !whatsNext"
+						:title="__('No review scheduled')"
+						:body="
+							__(
+								'Your score appears here once HR opens a review cycle that includes you. There is nothing for you to do yet.'
+							)
+						"
 					/>
+
+					<div v-else-if="dashboard.data" class="flex flex-col gap-4">
+						<GBanner variant="info">
+							<div class="flex flex-col gap-1">
+								<span class="text-panel-title">{{ nextCycleTitle }}</span>
+								<span class="text-caption text-ink-600">{{ nextCycleBody }}</span>
+							</div>
+						</GBanner>
+						<GMetaGrid :cells="nextCycleFacts" />
+					</div>
 
 					<!-- loading: the missing fourth state — without it the page was a
 				     blank shell during the initial fetch. -->
@@ -386,6 +408,8 @@ import { createResource, LoadingIndicator } from "frappe-ui"
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
+import GBanner from "@/components/glass/GBanner.vue"
+import GMetaGrid from "@/components/glass/GMetaGrid.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
 import ResourceError from "@/components/ResourceError.vue"
@@ -393,6 +417,7 @@ import KpiDetail from "@/views/kpi/KpiDetail.vue"
 import { canViewTeamKpi, departmentKpi, employeeKpi, teamKpi } from "@/data/kpi"
 
 const __ = inject("$translate")
+const $dayjs = inject("$dayjs")
 
 // Sentinel understood by the API: average across every cycle of the year.
 const ALL_CYCLES = "_all"
@@ -443,6 +468,60 @@ function onYearChange() {
 }
 
 const current = computed(() => dashboard.data?.current)
+
+// ————— THE EMPTY PATH —————
+// For most employees most of the year there IS no appraisal, so this is the
+// screen they see. It answers "am I late for something?", which a dashed box
+// does not, and it carries only the reader's own cycle (revamp KR3).
+const whatsNext = computed(() => dashboard.data?.whats_next || null)
+
+const nextCycleTitle = computed(() => {
+	const next = whatsNext.value
+	if (!next) return ""
+	return next.status === "In Progress"
+		? __("Your review is open now")
+		: __("Your next review is scheduled")
+})
+
+const nextCycleBody = computed(() => {
+	const next = whatsNext.value
+	if (!next) return ""
+	// The date is the thing being communicated, so it goes in the sentence
+	// rather than being left for the reader to find in a table below.
+	if (next.status === "In Progress") {
+		return next.end_date
+			? __("It closes on {0}. Your score appears here once it is scored.", [
+					formatCycleDate(next.end_date),
+			  ])
+			: __("Your score appears here once it is scored.")
+	}
+	return next.start_date
+		? __("It opens on {0}. Nothing for you to do until then.", [formatCycleDate(next.start_date)])
+		: __("Nothing for you to do until it opens.")
+})
+
+const nextCycleFacts = computed(() => {
+	const next = whatsNext.value
+	if (!next) return []
+	return [
+		{ k: __("Cycle"), v: next.cycle_name },
+		{ k: __("Status"), v: cycleStatusLabel(next.status) },
+		{ k: __("Opens"), v: formatCycleDate(next.start_date) || __("Not set") },
+		{ k: __("Closes"), v: formatCycleDate(next.end_date) || __("Not set") },
+	]
+})
+
+function formatCycleDate(value) {
+	return value ? $dayjs(value).format("D MMM YYYY") : ""
+}
+
+// The wire values are a doctype Select, so they are MAPPED rather than passed
+// to __(): the translation files do not contain a doctype's own option values,
+// so `__(status)` renders the raw word. Same defect the OT compensation row
+// and the attendance chip both carried.
+function cycleStatusLabel(status) {
+	return { "Not Started": __("Not started yet"), "In Progress": __("Open now") }[status] || status
+}
 
 // ————— TEAM KPI (CEO by designation, or HR by role; read-only) —————
 // The tab is only drawn when canViewTeamKpi says so, and the endpoint refuses
