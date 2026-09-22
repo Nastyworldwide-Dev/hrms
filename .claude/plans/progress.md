@@ -264,3 +264,14 @@ NEXT: land the design reviewer's verdict on 7950344fd, then push nz-glass and wr
 NEXT: Nabil deploys on Frappe Cloud; then open Adam Daniel 18 Aug in Fix attendance and confirm
   four punches listed, none ticked, the engine's reason shown, and Save & rebuild enabled once
   the true pair is ticked. The UI itself was never browser-verified here (no dev site reachable).
+- 2026-09-22T03:16:17Z PUSH: nz-glass @ cfc78998e
+- 2026-09-22T03:16:17Z COMMIT: cfc78998e docs(plans): progress through the push → review dispatched
+- 2026-09-22 NOTE: retro on 0c23be5f9..ecb213981 counted SHOTS: 3, extra shots 9aae23f42
+  (oracle-gap: assertions scoped to the whole bundle, not the method) and 7950344fd. It filed the
+  second as 'spec-gap', which would make spec-gap x7 and aim the next gate at specs. It is not a
+  spec gap: the spec was fine, the arithmetic was mine and I published it unchecked. Class is
+  unverified-figure. The gate that would have caught it is cheap and worth having either way:
+  any commit whose message or diff states a contrast ratio recomputes it from the committed hexes
+  before the commit stands. Both extra shots were caught by a reviewer, not by me.
+NEXT: Nabil deploys on Frappe Cloud; then open Adam Daniel 18 Aug in Fix attendance and confirm
+  four punches listed, none ticked, the engine's reason shown.
