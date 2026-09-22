@@ -144,10 +144,29 @@
 					</template>
 				</div>
 
+				<!-- TWO different empties, and saying the wrong one is a false
+				     statement about somebody's job. An employee who is nobody's
+				     manager was told "approvals will appear here when your team
+				     submits" — about a team they do not have — because the
+				     server returned the same payload for both cases. It now
+				     says which, and this renders the truth rather than the
+				     friendlier of the two.
+
+				     The role is NEVER decided here (revamp P5): `entitled` is
+				     the server's answer, and the screen has no opinion. -->
+				<GEmptyState
+					v-else-if="notEntitled"
+					:title="__('You do not have a team here')"
+					:body="
+						__(
+							'This screen shows the people who report to you. Ask HR if you think that is wrong.'
+						)
+					"
+				/>
 				<GEmptyState
 					v-else-if="!teamStatus.loading && !teamStatus.error"
-					:title="__('Nothing waiting on you')"
-					:body="__('Approvals will appear here when your team submits')"
+					:title="__('Nobody on your team today')"
+					:body="__('Pick another day on the calendar, or check back tomorrow.')"
 				/>
 
 				<div v-if="teamStatus.loading" class="flex mt-2 items-center justify-center">
@@ -207,6 +226,15 @@ const LEGEND = [
 	{ state: "today", label: __("Today") },
 ]
 const selectedManager = ref("")
+//: The SERVER's answer to "do you have a team at all" (revamp P5). The screen
+//: never decides this — no role check, no reports_to lookup — so there is
+//: nothing here that could disagree with the backend's rules.
+//:
+//: `=== false` deliberately, not `!entitled`: while the payload is absent the
+//: flag is undefined, and treating that as "not entitled" would flash "you do
+//: not have a team" at every manager on every load.
+const notEntitled = computed(() => teamStatus.data?.entitled === false)
+
 const selectedOption = ref(null) // null renders the placeholder: "My team"
 const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("My team")))
 

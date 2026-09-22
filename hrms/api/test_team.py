@@ -15,7 +15,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, nowdate
 
-from hrms.api.team import get_team_roster
+from hrms.api.team import get_team_roster, get_team_status
 
 COMPANY = "_Test Company"
 
@@ -124,3 +124,71 @@ class TestTeamRosterFence(FrappeTestCase):
 		self._as(self.hr)
 		out = get_team_roster(manager=self.leader, **self._week())
 		self.assertIn(self.report, [m["name"] for m in out["members"]])
+
+
+class TestTeamEntitlement(FrappeTestCase):
+	"""Two different empties, and saying the wrong one is a false statement
+	about somebody's job.
+
+	Until 22 Sep 2026 "you have no team" and "your team has nobody today"
+	returned the same payload, so an employee who is nobody's manager was told
+	"approvals will appear here when your team submits" — about a team they do
+	not have. The screen could not tell them apart because the server did not.
+	"""
+
+	def setUp(self):
+		# This module's own helpers, not erpnext's: they create the User as
+		# well as the Employee and wire reports_to in one call, which is what
+		# every other class here uses.
+		self.boss_user = "team_ent_boss@bench.test"
+		self.staff_user = "team_ent_staff@bench.test"
+		self.boss = _make_employee(self.boss_user, [])
+		self.staff = _make_employee(self.staff_user, [], reports_to=self.boss)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _status(self, user):
+		frappe.set_user(user)
+		try:
+			return get_team_status(nowdate())
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_a_manager_is_entitled(self):
+		status = self._status(self.boss_user)
+		self.assertTrue(status["entitled"])
+		self.assertEqual(len(status["members"]), 1)
+
+	def test_somebody_who_manages_nobody_is_not(self):
+		"""The defect this fixes. `team_of` falls back to the caller's own
+		employee id, so an early "no team_of" check only ever caught somebody
+		with no Employee record at all — every ordinary employee came back
+		entitled and was told their team was quiet today."""
+		status = self._status(self.staff_user)
+		self.assertFalse(status["entitled"])
+		self.assertEqual(status["members"], [])
+
+	def test_a_manager_whose_reports_left_is_still_entitled(self):
+		"""A different position from somebody who was never a manager, and the
+		screen says two different things about it."""
+		frappe.db.set_value("Employee", self.staff, "status", "Left")
+		try:
+			status = self._status(self.boss_user)
+			self.assertTrue(
+				status["entitled"], "an approver with nobody active still has the screen"
+			)
+			self.assertEqual(status["members"], [])
+		finally:
+			frappe.db.set_value("Employee", self.staff, "status", "Active")
+
+	def test_entitlement_uses_the_app_s_one_definition(self):
+		"""`is_approver` already answers "does anything route to this person"
+		for the RequestPanel's team tabs. Two definitions of that would drift,
+		and the drift would be somebody told they have no team while their
+		approvals pile up."""
+		import inspect
+
+		from hrms.api import team
+
+		self.assertIn("entitled = is_approver()", inspect.getsource(team.get_team_status))

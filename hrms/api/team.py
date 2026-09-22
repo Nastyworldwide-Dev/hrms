@@ -148,7 +148,21 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		logger.warning("[team] %s denied manager override %s", frappe.session.user, manager)
 		frappe.throw(_("Only HR can view another manager's team."), frappe.PermissionError)
 	team_of = manager or employee
-	empty = {"date": str(day), "manager": team_of, "members": [], "summary": {}}
+	# `entitled` distinguishes the two empties the screen could not tell apart.
+	#
+	# Until 22 Sep 2026 both "you have no team" and "your team has nobody on
+	# this day" returned the same payload, so the Team screen told an employee
+	# with no reports "Nothing waiting on you — approvals will appear here when
+	# your team submits". That is a false statement about a team they do not
+	# have, and it is exactly the shape the owner named: respect the backend,
+	# and say the truth the backend actually knows.
+	empty = {
+		"date": str(day),
+		"manager": team_of,
+		"members": [],
+		"summary": {},
+		"entitled": False,
+	}
 	if not team_of:
 		return empty
 
@@ -169,7 +183,22 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		ignore_permissions=True,
 	)
 	if not members:
-		return empty
+		# NO MEMBERS IS NOT THE SAME QUESTION as "is this person a manager".
+		#
+		# `team_of` falls back to the caller's own employee id, so the branch
+		# above only fires for somebody with no Employee record at all — which
+		# meant every ordinary employee came back entitled=True and got "nobody
+		# on your team today" about a team they have never had. Caught on the
+		# bench: the non-manager and the manager returned the same flag.
+		#
+		# The honest test is whether anything routes to them, which is what
+		# `is_approver` already answers for the RequestPanel's team tabs. One
+		# definition of "does this person manage anybody", not two.
+		entitled = is_approver()
+		logger.info(
+			"[team] %s has no members on %s (entitled=%s)", frappe.session.user, day, entitled
+		)
+		return {**empty, "entitled": entitled}
 	ids = [m.name for m in members]
 
 	attendance = {
@@ -273,7 +302,13 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 			}
 		)
 	logger.info("[team] %s viewed team of %s on %s: %d members", frappe.session.user, team_of, day, len(out))
-	return {"date": str(day), "manager": team_of, "members": out, "summary": summary}
+	return {
+		"date": str(day),
+		"manager": team_of,
+		"members": out,
+		"summary": summary,
+		"entitled": True,
+	}
 
 
 @frappe.whitelist(methods=["GET", "POST"])

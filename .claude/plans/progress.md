@@ -209,3 +209,19 @@ NEXT: Calendar (C2/C3) — month dots, then the day sheet.
 - 2026-09-22T17:39:53Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
 - 2026-09-22T17:40:18Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
 - 2026-09-22T17:40:18Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-22T17:40:21Z COMMIT: bc896836f feat(calendar): dates carry dots, and one tap carries the words → review+design dispatched
+- 2026-09-22T17:40:29Z PUSH: nz-glass @ bc896836f
+- 2026-09-22T17:44:20Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 19 file(s) ⟂9e4269db1302
+
+EVIDENCE: rung 2 (correct) — team entitlement: 736/736 frontend tests green, ruff clean.
+  Two mutants killed: entitled hardcoded True, and `!entitled` instead of `=== false`
+  (which would flash the refusal at every manager on every load).
+EVIDENCE: rung 3 (works) — three personas on spoke.localhost now give three answers:
+  manager entitled=True members=1; non-manager entitled=False members=0; ex-manager
+  (reports removed, still an approver) entitled=True members=0.
+DEAD END: testing `if not team_of` for "has no team". `team_of` falls back to the
+  caller's own employee id, so that branch only fires for somebody with NO Employee
+  record — every ordinary employee came back entitled=True and was told their team
+  was quiet today. Caught on the bench; `is_approver()` is the honest test and it is
+  the app's existing definition.
+NEXT: D3 — Helpdesk counts, SOP search, Profile grouping.
