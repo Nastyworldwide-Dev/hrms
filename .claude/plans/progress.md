@@ -209,3 +209,17 @@ NEXT: commit the hotfix + test repair, push, write docs/glass/HANDOFF.md.
   committed as docs so the next session reads the same spec. .claude/brag/ is self-ignored.
 NEXT: read the frappe-reviewer verdict on a531bd3d4; if DEPLOY, push nz-glass and write
   docs/glass/HANDOFF.md; if FIX_CRITICAL, fix and re-commit (review re-triggers).
+- 2026-09-22T02:58:29Z COMMIT: 8b7496492 docs(plans): the attendance spec the Fix Attendance work is built against → review+security+design dispatched
+- 2026-09-22T03:01:22Z COMMIT: 5e84d51fb docs(design): the Desk pills fail AA because Desk's pills fail AA → review+security+design dispatched
+- 2026-09-22 REPAIR: two assertions from the hotfix matched whole-file `src`, so they pinned the
+  CONSUMER only. Blanking `day_label` in fresh_state, or stubbing the summary's refusal branch,
+  left all 13 green — the wire was untested, and it is the wire this hotfix exists to fix.
+  Found by the reviewer's independent mutation re-derivation, not by mine: my 6-of-7 claim was
+  wrong (it was 4 of 7). Both now scoped to their method slice and pinned at the producer.
+- 2026-09-22 EVIDENCE: 2 correct — 4 mutants now bite where 2 did not: blank day_label producer,
+  drop the producer line, stub `const why =`, drop `why` from the render. Bundle restored clean.
+LEARNING(how): in fix_day.bundle.test.js the source-asserted tests slice per method
+  (src.indexOf("tap_html(row) {")). An assertion matched against whole-file `src` silently stops
+  pinning the producer->consumer wire. Match a name that occurs ONCE in the slice (the assignment
+  `const why = ...`), never the bare field name — it recurs and survives the mutation.
+NEXT: push nz-glass, then write docs/glass/HANDOFF.md.

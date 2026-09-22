@@ -209,11 +209,18 @@ test("an unreadable day pre-ticks nothing and shows the engine's reason", () => 
 })
 
 test("the engine's refusal reaches the summary, so HR reads why", () => {
+	const start = src.indexOf("render_summary() {")
+	assert.ok(start > 0, "render_summary exists")
+	const body = src.slice(start, src.indexOf("\n\trender_primary(", start))
+	// The BRANCH, not a mention: `state.day.suggestion_refusal` appears twice in
+	// this method, so matching the bare name survives stubbing the condition out.
 	assert.match(
-		src,
-		/render_summary\(\)\s*\{[\s\S]*?suggestion_refusal/,
-		"the sentence is shown above the ticks"
+		body,
+		/const why = state\.day\.suggestion_refusal/,
+		"the summary asks the engine whether it refused this day"
 	)
+	assert.match(body, /could not read this day/, "and says so in words HR can act on")
+	assert.match(body, /html\(why \+/, "above the After line, where nothing-ticked is explained")
 })
 
 // A punch of this shift-day landing the NEXT calendar morning read as "07:38"
@@ -224,4 +231,13 @@ test("a punch landing the next morning is shown with its date", () => {
 	assert.ok(start > 0, "tap_html exists")
 	const body = src.slice(start, src.indexOf("\n\ttaps_html(", start))
 	assert.match(body, /row\.day_label/, "the clock cell shows which day the punch is on")
+	// ...and the state builder must FILL it. Asserting only that tap_html reads
+	// the field leaves the wire untested: blank the producer and the cell renders
+	// empty with the suite still green — the very defect this pins (22 Sep 2026).
+	const fresh = src.slice(src.indexOf("fresh_state(day) {"), src.indexOf("\n\tdefault_shift(", start > 0 ? 0 : 0))
+	assert.match(
+		fresh,
+		/day_label: fd_other_day\(tap\.time, day\.date\)/,
+		"fresh_state fills it from the punch's own date"
+	)
 })
