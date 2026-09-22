@@ -1281,8 +1281,8 @@ html[data-theme="dark"] .g-badge--open {
    from the tokens rather than estimated. The count comes from Home.vue's
    baseQuickLinks plus its one HR row, and a test now reads it from there.)
    Same one-surface rule as the balance grid: the cells sit inside a single
-   .g-glass .g-cellgrid, so this is 1 surface against the §15 budget of 6, not
-   N. Dividers are drawn as cell borders for the same reason. */
+   .g-glass .g-cellgrid, so the panel spends 1 of the §15 budget of 6 rather
+   than one per tile. Dividers are drawn as cell borders for the same reason. */
 .g-cellgrid--quick {
 	grid-template-columns: repeat(4, 1fr);
 }
@@ -1308,10 +1308,15 @@ html[data-theme="dark"] .g-badge--open {
 	background: var(--g-icon-bg);
 }
 /* The panel clips overflow, so an outer ring cannot show on a tile (WCAG
-   2.4.7) — the inset variant, same as .g-row--tappable. It re-themes on its
-   own: the token is built from --g-ink and --g-brand, both of which the dark
-   block redefines, so replacing the outline leaves a ring that is visible in
-   both themes rather than an outline:none with nothing behind it. */
+   2.4.7) — the inset variant, same as .g-row--tappable. Replacing the outline
+   is safe in both themes, but for two different reasons, and an earlier draft
+   of this comment got the second one wrong: the ring's inner 2px is --g-ink,
+   which the dark block DOES redefine (glass.css:36 -> :231, #0B0C10 ->
+   #FFFFFF); its outer 5px is --g-brand, which is defined once at :root
+   (glass.css:6) and is deliberately constant — it is the accent, not a
+   text or surface colour, and lime reads against both a light and a dark
+   panel. So the ring adapts on one half and contrasts on the other, and
+   outline:none never leaves nothing behind it. */
 .g-cell--quick:focus-visible {
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring-inset);
@@ -1336,25 +1341,30 @@ html[data-theme="dark"] .g-badge--open {
    the one panel whose entire purpose was removing rows, and it would render the
    conditional HR tile four times the width of its siblings, which reads as
    importance it does not have. A 25% gap on a wrapped last row is the ordinary
-   shape of an icon grid; a full-width odd tile here would be the anomaly. */
+   shape of an icon grid; a full-width odd tile here would be the anomaly.
+   A third option does exist — :has(> .g-cell:nth-child(7):last-child) could
+   re-shape row two to centre three tiles without costing a row — and it is
+   declined, not overlooked: it would need a matching case for the six-tile
+   no-HR set, and the two cases would fall out of alignment with row one's
+   four columns. That is real machinery for a 25%-of-one-row cosmetic gap. */
 .g-cell__label {
 	font-family: var(--g-type-row-label-family);
 	font-size: var(--g-type-caption-size);
 	line-height: 1.2;
 	color: var(--g-ink);
-	/* Two lines, then clip: a long label must not push one tile taller than its
-	   neighbours and break the grid's rhythm.
-	   Checked rather than assumed — at the smallest supported width (360px:
-	   328px panel / 4 = 82px tile, 74px of text) the longest label Home passes,
-	   "Request Attendance", needs two lines and its longest word is ~55px, so
-	   nothing clips and no word overflows its column. The clamp is a guard
-	   against a future long label, not something the current set hits.
+	/* Two guards, one against height and one against width, because the label
+	   can overrun in either direction and the clamp only stops one of them.
+	   HEIGHT: -webkit-line-clamp caps the label at two lines so a long one
+	   cannot push its tile taller than its neighbours and break the grid's
+	   rhythm.
+	   WIDTH: the clamp counts LINES and says nothing about a single word wider
+	   than the column, which has nowhere to break and would spill sideways
+	   instead of wrapping into the second line — hence overflow-wrap.
+	   Both are guards against a FUTURE label, not something the current set
+	   hits: checked at the smallest supported width (360px -> 328px panel / 4
+	   = 82px tile = 74px of text), the longest label Home passes is "Request
+	   Attendance", which breaks at its space and whose longest word is ~55px.
 	   The full label stays in the accessible name either way. */
-	/* The clamp only limits LINES. A single word longer than the 74px column has
-	   no space to break at, so without this it would overflow its cell rather
-	   than wrap into the second line the clamp allows. No current label hits it
-	   ("Request Attendance" breaks at its space); this is the guard for the one
-	   that will. */
 	overflow-wrap: break-word;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;

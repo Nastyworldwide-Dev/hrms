@@ -32,6 +32,7 @@ const quicklinks = () => src("../QuickLinks.vue")
 const tilegrid = () => src("../glass/GTileGrid.vue")
 const homeView = () => src("../../views/Home.vue")
 const css = () => src("../../theme/glass-components.css")
+const tokens = () => src("../../theme/glass.css")
 
 // Strip comments before asserting on markup: an earlier test in this repo
 // matched its own explanatory prose, because a comment documenting a removal
@@ -131,5 +132,25 @@ test("a label too long to break at a space still wraps instead of overflowing", 
 		block[0],
 		/overflow-wrap:\s*break-word/,
 		"-webkit-line-clamp limits lines, not the width of one unbreakable word"
+	)
+})
+
+// The focus-ring comment next to .g-cell--quick makes a claim ABOUT THE TOKENS:
+// --g-ink flips per theme, --g-brand does not. A design reviewer caught an
+// earlier draft asserting that both flip, which was false. Prose cannot be
+// trusted to stay true, so the claim is pinned here: if someone later gives
+// --g-brand a dark value, this fails and the comment gets revisited rather than
+// quietly becoming wrong a second time.
+test("the focus ring's two halves behave the way the comment says they do", () => {
+	const t = tokens()
+	assert.equal(
+		(t.match(/^\s*--g-ink:/gm) || []).length,
+		2,
+		"--g-ink should be defined at :root and redefined once in the dark block"
+	)
+	assert.equal(
+		(t.match(/^\s*--g-brand:/gm) || []).length,
+		1,
+		"--g-brand is the accent and is deliberately constant across themes; if that changed, the .g-cell--quick focus-ring comment now describes something else"
 	)
 })

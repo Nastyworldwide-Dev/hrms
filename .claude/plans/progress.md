@@ -265,3 +265,39 @@ NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete t
   Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
 - 2026-09-22T04:50:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-09-22T04:50:17Z COMMIT: 5b2486fca fix(home): a short last row is a decision, and a long word could clip → review+design dispatched
+- 2026-09-22T04:51:33Z COMMIT: 478b041e7 docs(glass): the handoff still described an attendance hotfix → review dispatched
+
+REPAIR: 5b2486fca review — one of the two findings was a FALSE CLAIM I wrote in
+  the same commit that was supposed to be closing that exact class. The
+  focus-ring comment said --g-shadow-focus-ring-inset "is built from --g-ink and
+  --g-brand, both of which the dark block redefines". Checked: --g-ink is
+  redefined (glass.css:36 -> :231, #0B0C10 -> #FFFFFF); --g-brand is defined
+  ONCE at :root (glass.css:6) and never overridden. The ring is still correct in
+  both themes, but for two different reasons — one half adapts, the other is a
+  deliberately constant accent — and the comment now says that instead of
+  asserting a symmetry that does not exist. Both reviewers also read "not\nN."
+  in the surface-budget sentence as an unsubstituted placeholder; it was §15.1's
+  own shorthand, but shorthand two readers decode wrongly is not shorthand, so
+  it now reads "rather than one per tile".
+EVIDENCE: 2 correct — the token claim is no longer prose. New test "the focus
+  ring's two halves behave the way the comment says they do" asserts --g-ink is
+  defined twice and --g-brand once, straight out of glass.css. Mutation-checked:
+  adding a dark --g-brand turns it red (7/1) and removing it green (8/0), and
+  glass.css was restored byte-identical (git diff --numstat empty).
+EVIDENCE: 3 works — suite 64/64, gate self-tests 13/13, surfaces exit 0,
+  contrast 54 checked / 0 failures, biome exit 0, vite build exit 0.
+NOTE: also took DSN-06 (the label rule carried two comment blocks explaining the
+  same fact one rule apart — merged into one covering height and width, since two
+  copies of a rationale is the drift generator this slice exists to remove) and
+  recorded the reviewer's third option for the short row (a :has() re-shape of
+  row two) as CONSIDERED AND DECLINED rather than leaving it to be re-raised: it
+  needs a second case for the six-tile no-HR set and the two would fall out of
+  alignment with row one.
+LEARNING(gate): a comment that asserts how a TOKEN behaves is a testable claim,
+  not prose — assert it against the token file (QuickLinks.grid.test.js, "the
+  focus ring's two halves"). Three figure-drift incidents in this slice were all
+  prose nobody could fail.
+NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete the
+  14 hand-rolled icon components and REMOVE feather-icons in the same commit,
+  recording the real gzip delta (revert if it is not negative). Verify the
+  Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
