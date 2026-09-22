@@ -215,3 +215,54 @@
   Questions 1-3 still open and still blocking: un-ignore the mockup folder
   (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
   architecture contract? Nothing deployed; deploy is the owner's.
+- 2026-09-22T01:35:44Z COMMIT: a62ea0f11 chore(plans): record the exemptions and what question 4 now awaits → review dispatched
+- 2026-09-22T01:40:46Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T01:56:18Z COMPACT: context compacted — read the last NEXT above before continuing
+- EVIDENCE (owner questions 1-3, and a gate defect found while answering 2):
+  measured, not reasoned. New probe design/tools/mockup-column-candidates.mjs
+  models the desktop column three ways and prints all three.
+  Q2, the column: mockup-4's --g-content-column-lg: 880px FAILS the shipped
+  gate. Perturbed tokens.json to 880, ran the gate: FAIL lg 1024px nav:216 dark
+  ink-muted over blob B = 4.31, GATE_RESULT checked:57 failures:1, exit 1.
+  Restored; 54/0 and 13/13 again, git diff clean. Bisected: 773px is the widest
+  value that clears the gate's model, not 800px as this probe's first header
+  said. Above ~778 the value saturates at 4.31 because the column is
+  viewport-clamped.
+- CORRECTION: my first reading of that failure was wrong in the app's favour
+  and a fresh-context verifier refuted it. I had said the gate's lg: model is
+  left-aligned while the app centres the column, so the 880 failure was a
+  harmless model artifact. The centring half is right (15/15 uses of
+  max-w-content-column-lg pair it with mx-auto; browser-measured at 1024/nav216
+  the real text box is [288,952] at 720 and [244,996] at 880, against the
+  gate's [231,951]/[231,1009]). The rest was wrong: the field is NOT
+  viewport-anchored. GLightField mounts inside <ion-page> (GPage.vue:26) and
+  .g-lightfield is position:absolute inset:0, so in TabbedView's flex shell the
+  blob box starts at x=nav while the blob offsets stay in vw. Every
+  left-anchored blob shifts right by the nav width. Browser: blob A's real
+  centre at 1024/nav216 is x=+123, not the gate's -93. I had inherited the
+  gate's own centres, so my "no blob reaches the text box" derivation was built
+  on numbers 216px off.
+- REPAIR (none applied; measurement only): correcting both errors surfaces a
+  real defect the column question had nothing to do with. One shipped lg:
+  container is UNCAPPED — expense_claim/Dashboard.vue:5 is
+  `lg:grid lg:grid-cols-[1fr_1.2fr] lg:p-7` with no max-width, inside
+  BaseLayout's `lg:max-w-none lg:mx-0`. There the blobs DO reach the text box:
+  browser-measured alpha 0.019/0.023/0.032 at 1440px and 0.060/0.065/0.089 at
+  1920px, putting dark --ink-muted at 4.42 and 4.07 against the 4.5 floor
+  (light 4.44 at 1920 on blob C). The gate prints all 24 lg: combinations as
+  "ZERO alpha" clear. So the gate is not merely pessimistic about a wide
+  column — it is OPTIMISTIC about this view, in the direction that hides a real
+  sub-AA cell. CLASS: a gate proving geometry the app does not draw — the same
+  class contrast.mjs's own comments and contrast-column.test.mjs exist to
+  catch, and contrast-column.test.mjs asserts NOTHING about alignment or blob
+  anchoring, so nothing went red when the app centred.
+  Exposed call site: .g-chip--muted (glass-components.css:755) is
+  `background: transparent` + `color: var(--g-ink-muted)` with its own recorded
+  margin 4.56/4.58 — about 0.06 of headroom, so any blob alpha takes it under.
+  It renders on that screen via ExpenseClaimItem.vue:22 -> GStatusChip.
+  NOT FIXED HERE. Fixing it is a code change to a shipped view or to the gate,
+  neither of which is what was asked, and the right fix depends on O3 (do the
+  blobs stay?), still OPEN. Recorded for the owner's queue.
+- EVIDENCE: rung 1+2 — contrast 54 checked 0 failures exit 0, 13/13 tests, both
+  before and after. No token, no shipped CSS and no view changed; the only new
+  file is a probe nothing imports.
