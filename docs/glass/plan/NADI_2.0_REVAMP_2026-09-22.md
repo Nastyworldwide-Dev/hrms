@@ -1,0 +1,398 @@
+# Nadi 2.0 — the real revamp
+
+Written 22 September 2026, after the 2.0 deploy. Branch `nz-glass`.
+This document supersedes the per-page sections of `NADI_2.0_UX_PLAN.md`.
+It does not supersede the Glass spec (`docs/glass/spec/HR_Frappe_Glass_Spec_v1.1.md`);
+it proposes named, costed changes TO it, listed in §9.
+
+---
+
+## 0. Why the deploy looked unchanged
+
+Not an opinion — this is what the eight shipped slices actually did.
+
+| Slice | What changed | Visible? |
+|---|---|---|
+| 0.1 | tab labels in `data/navItems.js` | a word |
+| 1.1 | `PendingApprovalsBanner` → `NeedsYou` | a word |
+| 2.1 | attendance list titles | words |
+| 2.2 | OT compensation mapping | a word |
+| 3.1 | `Requests.vue` — composed two existing components | a page that existed, moved |
+| 3.2 | form field allowlists | invisible |
+| 4.1 | approvals tab wording | words |
+| D.1 | desktop column 720px signed off | desktop only |
+
+Seven of eight changed **strings**. Zero changed layout, density, type,
+spacing, colour, or information. None added data that was not already on
+the screen. That is the whole cause. The app is not different because
+nothing that makes a screen look like something was touched.
+
+Three concrete misses on top of that:
+
+1. `views/attendance/Dashboard.vue:2` still reads `pageTitle="__('Attendance')"`.
+   `views/kpi/Dashboard.vue:2` still reads `__('KPI')`. Slice 0.1 renamed the
+   tab labels and not the page headers, so the app contradicts itself in two
+   places. Genuine defect, not scope.
+2. Score is a near-empty screen: one dashed empty-state card in ~900px of
+   black. 33 of 48 screens have no empty state at all; Score has one and it
+   is still the whole page.
+3. Announcements — the one feature the owner asked for — do not exist.
+   §7 of the old plan put new backend out of 2.0's scope, which made the one
+   transformative item unbuildable by its own rules. That rule is wrong and
+   is withdrawn here (§9, change R1).
+
+### Measured, not felt
+
+- 103 arbitrary pixel values in components (`SopList` 20, `Profile` 17,
+  `SideNav` 13); 19 distinct values exist in no token.
+- `design/tokens.json` spacing/radius: `3.5 6 8 9 11.5 13 14 15 16 17 18 19 20 22`
+  — 11 of 14 off a 4pt grid. Five separate tokens are all `10px`.
+- Type sizes `10 10.5 11.5 12.5 14.5 15.5 21.5 22 25 31 36`, step ratios
+  1.05 → 1.387. No modular scale; 1.05 is not a perceivable step.
+- 30 of 48 screens have no loading state, 23 no error state, 33 no empty
+  state, 11 no test.
+
+---
+
+## 1. What "transformative" has to mean, and the discipline behind it
+
+The word the owner used is **transformative, not decorative**. The
+engineering meaning:
+
+> A screen is transformed when the *information* on it changes, not when
+> the *styling* of the same information changes.
+
+Four sourced principles this plan is held to. These are the "legit
+discipline" the work must cite, and each one produces a checkable gate.
+
+**P1 — Progressive disclosure.** Nielsen Norman Group: show the few
+options most users need; defer the rest behind one deliberate step.
+*Gate:* every screen states its answer above the fold; secondary detail is
+one tap away, never a second scroll of equal weight.
+Source: Nielsen, *Progressive Disclosure* (NN/g, 2006, rev. 2024).
+
+**P2 — Recognition over recall.** Nielsen's Heuristic #6. An employee must
+never hold a number in their head between two screens.
+*Gate:* every count that matters is rendered where the decision is made,
+not on the screen that owns the record.
+
+**P3 — 8-point grid, modular type.** Material Design 3 layout
+(m3.material.io/foundations/layout) uses a 4dp sub-grid / 8dp grid; Apple
+HIG uses 8pt. A modular type scale (1.200 minor third, Tim Brown,
+*More Perfect Type*) gives steps the eye can tell apart; 1.05 cannot be.
+*Gate:* `design/gates/tokens.mjs` refuses a spacing value off 4, and a type
+step outside 1.125–1.333.
+
+**P4 — Four states, always.** Every data surface renders loading, empty,
+error, content. (Scott Hurff, *Designing UI States*; Shopify Polaris and
+Material both encode it.)
+*Gate:* a test walks `views/` and fails any screen with a resource and
+fewer than four states. Currently 33 would fail.
+
+**P5 — Permission is the backend's answer, never the frontend's.**
+The PWA never decides who may see a department. It asks, renders what it
+gets, and shows a truthful empty state otherwise.
+*Gate:* no role-name string literal in `views/` or `components/`.
+
+---
+
+## 2. Home
+
+**Purpose:** answer "what do I do right now", in under two seconds, before
+any scroll.
+
+Order (top to bottom), each block collapsing to nothing when it has nothing:
+
+1. **Now bar** — greeting, live site time, today's shift window
+   (`19:00–03:30`), and the state word: *Not in yet · Working 6h 12m ·
+   Done 8h 03m*. Today it says "Last check-out was at 08:17 pm" and makes
+   the reader compute the rest.
+2. **Check in / out** — unchanged mechanically, but the button carries the
+   consequence: *Check out · 8h 03m today*.
+3. **Needs you** — approvals. Today it renders **one** row type (remote
+   check-in) because `home.needs_you` was never built. §3 of this plan
+   builds it: leave, expense, OT, attendance, shift requests in one list.
+4. **Announcements** — §3 below. Max 2 cards, unread first, then a link.
+5. **Your requests** — bounded at 3, with a real "Show N more".
+
+Everything else Home used to carry is now a tab. That part was right.
+
+---
+
+## 3. Announcements — including how HR operates it
+
+The owner asked for help on the HR side. This is the whole workflow, and
+it is deliberately boring: HR are not trained admins, and a feature they
+find frightening is a feature that ships empty.
+
+### The doctype
+`HR Announcement` (new, in `hrms/`), fields:
+
+| Field | Type | Why |
+|---|---|---|
+| `title` | Data, reqd | the one line in the card |
+| `body` | Text Editor | sanitised through the existing `utils/safeHtml.js` |
+| `category` | Select: Notice · Policy · Event · Urgent | colour + icon, nothing more |
+| `publish_from` / `publish_until` | Date | it disappears on its own — nobody has to remember to delete it |
+| `audience` | Select: Everyone · Company · Department · Branch | |
+| `audience_value` | Dynamic Link | filled only when audience ≠ Everyone |
+| `pinned` | Check | at most one pinned at a time, enforced in `validate` |
+| `acknowledge_required` | Check | turns the card into "I've read this" |
+
+Workflow: **Draft → Published**. Submit is not used; an announcement that
+must be corrected should be editable, and a cancelled submitted doc is a
+tombstone HR cannot clean up.
+
+### What HR actually does
+1. Desk → *HR Announcement* → New.
+2. Type title and body. Pick a category. Pick who sees it.
+3. Set `publish_until` (the form defaults it to +14 days — HR never has to
+   think about expiry, and the board never rots).
+4. Save, then *Publish*.
+
+That is four steps and no concepts HR does not already have. No channel,
+no segment builder, no scheduling engine.
+
+### Read tracking
+`HR Announcement Read` (child-free doctype: `announcement`, `employee`,
+`read_on`, `acknowledged`). Written by the PWA on card expand. Gives HR
+one number — *read by 31 of 44* — which is the only report they will ask
+for, and the reason `acknowledge_required` is worth having for policy
+documents.
+
+### In the PWA
+`home.announcements` returns at most 2 for the Home block; the full list
+lives at `/announcements` (reached from the Home block and from More).
+Card = category dot, title, relative date, 2-line clamp. Expanding marks
+read. Unread carries a lime dot; read cards drop to secondary weight and
+sort below.
+
+**Backend cost:** 2 doctypes, 3 endpoints (`list`, `mark_read`,
+`acknowledge`), one permission query. Roughly one slice.
+
+---
+
+## 4. Calendar
+
+The owner: *"each date must serve function… what is going on in that date?
+team roster who is off"*, per persona, **without overflowing with text**.
+
+The answer to "without overflowing" is architectural, not editorial:
+**the month grid carries DOTS, the day sheet carries WORDS.** A tile is
+~44px; it can hold a number and up to three 4px dots and nothing else.
+Tapping a day opens a sheet. That is P1 applied literally.
+
+### The tile (everyone)
+- Background = the day's attendance status (the existing colour legend).
+- Up to 3 dots, fixed order and colour, legend at the foot of the screen:
+  - **leave** — you are off
+  - **holiday / rest day**
+  - **event** — company event or announcement dated that day
+- A small corner mark when the day needs you: an unmarked day, a missing
+  punch, an unclaimed OT day.
+
+### The day sheet (employee)
+- Date, shift window, your punches as a timeline (IN 19:02 · OUT 03:28),
+  total worked, and the attendance status with its reason.
+- Anything actionable for that day, as a button: *Request attendance ·
+  Claim overtime · Request leave*, pre-filled with the date.
+- Holiday / leave named plainly.
+
+### The day sheet (approver — adds a section)
+- **Who is off** in their reporting line that day: name, leave type,
+  half-day marker. Names only, no reasons — a leave reason is private.
+- **Requests dated this day waiting on them**, tappable straight to the
+  decision.
+
+### The day sheet (manager / department head — adds)
+- **Roster coverage**: *Production · 12 of 15 in · 2 on leave · 1 unmarked.*
+  One line per department they own. This is the number a manager opens a
+  calendar for and today has no way to get without Desk.
+
+### Persona resolution
+One endpoint, `calendar.day(date)`, returns only the sections the caller
+is entitled to — the server decides from reports-to and department
+permissions (P5). The PWA renders sections that arrive. No role strings in
+the frontend, and no employee can enumerate a department by tampering.
+
+**Backend cost:** `calendar.month(dots)` + `calendar.day(date)`. One slice
+each; the month endpoint is mostly a reshape of queries the dashboard
+already runs.
+
+---
+
+## 5. Requests
+
+The owner: *"better info of the employee itself always prioritise…
+kinda like a counter of everything related to request stuff, remaining
+stuff."* That is P2 exactly — the balance belongs where the decision is
+made, not on the screen that stores it.
+
+Top of the screen, a **balance strip** before any tile:
+
+- **Leave** — per type, `12.5 of 16 left`, with a bar. Expiring-soon
+  carries a date.
+- **Overtime** — `6 days unclaimed` (the Unclaimable Days work already
+  computes this) and `RM 340 approved, unpaid`.
+- **Expenses** — `RM 120 awaiting approval`.
+- **Attendance** — `2 days unmarked` — the single most common cause of a
+  wrong payslip, and today invisible until payroll.
+
+Each stat is a filter: tapping "2 days unmarked" opens the list already
+filtered, never a fresh search.
+
+Below: the existing START A REQUEST tiles, then the request list with
+status chips. Tiles keep their current grid; they are the one part of the
+app that already works.
+
+**Backend cost:** one endpoint, `requests.summary`, returning the five
+numbers. Everything in it is already computed somewhere.
+
+---
+
+## 6. Score
+
+The empty screen. Fixes, in order:
+
+1. Title reads **Score** (defect, §0).
+2. The empty state stops being the page. When there is no appraisal, the
+   screen still shows: the current cycle and its dates, who the appraiser
+   is, and what happens next — *"Your review opens 1 Oct. Nothing for you
+   to do yet."* An employee's real question is "am I late for something",
+   and a dashed box does not answer it.
+3. When there IS an appraisal: the score ring, per-KPI rows with target vs
+   actual, and the cycle history as a sparkline. This already exists in
+   `KpiDetail` — it is the empty path that is unbuilt.
+4. Feedback and goals, if the site uses them, as two collapsed sections.
+
+**Backend cost:** one field added to the existing dashboard payload (the
+next cycle's dates). Not a new endpoint.
+
+---
+
+## 7. Helpdesk, Team, SOPs, Profile
+
+**Helpdesk** — already one page with two pills (HR Issues · IT Helpdesk);
+the structure the owner asked for is shipped. What it needs: each pill
+showing *your* open count, a two-line "what to ask here" under each, and
+the HR contact list folded in so an employee never leaves to find a name.
+
+**Team** — the permission rule is the feature (P5). The list shows exactly
+what the server returns for the caller: their own department, or their
+reporting line, or more. No role literal in the frontend. When the server
+returns nothing, the screen says *"Your role does not include the team
+directory"* — truthful, not a spinner that never resolves. Per person:
+name, role, department, today's status (in · on leave · off), and tap to
+call or message. Contact detail is server-gated the same way.
+
+**SOPs** — search first (it is a lookup tool, not a browse tool), category
+chips, and a "recently updated" row. `SopList` carries 20 of the 103
+arbitrary pixel values; it is the worst offender and gets rebuilt on the
+grid.
+
+**Profile / Settings** — today a long undifferentiated list. Reshape into
+four groups: **You** (photo, name, ID, join date, shift), **Work**
+(department, reports to, company — read-only, sourced), **App**
+(language, theme, notifications, text size), **Account** (password, sign
+out, version + build). Add: an "About this app" row showing the build
+string, because every phone-side defect this month began with "which
+version are you on".
+
+---
+
+## 8. The visual system — the part that makes it LOOK different
+
+None of §2–§7 changes how the app looks. This section does.
+
+**V1 — 4pt grid.** Every spacing and radius token becomes a multiple of 4.
+The 14 current values collapse to `4 8 12 16 20 24 32 40 48`. Five tokens
+that are all 10px become one.
+
+**V2 — modular type, ratio 1.200.** `12 · 14 · 17 · 20 · 24 · 29 · 35`
+(minor third from a 14px body). Body text never below 14px; the 16px
+input-font rule stays (iOS zoom).
+
+**V3 — the 103 arbitrary values go.** Each is replaced by the nearest
+token; `design/gates/lint.mjs` gains a rule that fails a new one.
+
+**V4 — density.** Current list rows are ~64px with 20px gaps. Target: 56px
+rows, 8px gaps, dividers instead of gaps inside a group. On a 390×844
+phone this is roughly **three more rows visible per screen**, which is the
+difference between "sparse" and "an app".
+
+**V5 — the empty-black problem.** A screen whose content ends above the
+fold gets a closing block rather than void: on Score the next cycle, on an
+empty list the primary action. Nothing decorative — a filler card is worse
+than black.
+
+**Cost, honestly:** V1–V4 re-shoot all 114 visual baselines, which needs a
+running site. `~/verify-bench/apps/hrms` symlinks this worktree and
+`spoke.localhost` has 31 employees, so this is available — it was believed
+unavailable for five releases and it was one `ls` away.
+
+---
+
+## 9. Rules this plan changes (the owner's explicit authority)
+
+**R1 — "no new backend in 2.0" is withdrawn.** Source: old plan §7. It
+made every transformative item unbuildable and is the root cause of §0.
+Announcements, `home.needs_you`, `calendar.day`, and `requests.summary`
+are in scope. The original constraint the owner set was *no Desk work*;
+`hrms/api/` is the PWA's own backend and was already amended in.
+
+**R2 — a slice that changes only strings is not a slice.** New gate: a
+2.0 slice must change at least one of {information rendered, layout,
+token}. A pure rename ships as `chore:` and does not count against the
+plan.
+
+**R3 — tokens are validated, not just generated.** `design/gates/` gains
+`tokens.mjs`: 4pt grid, type ratio band, no duplicate values under
+different names.
+
+**R4 — four states are a gate, not a guideline.** P4 above. 33 screens
+currently fail; the gate starts as a ratchet (no new failures) and the
+backlog is burned down per page.
+
+**R5 — the spec follows the code on renames.** The two page titles in §0
+are the evidence: a rename that touches one of {nav, page title, spec}
+must touch all three. One test, `naming-consistency.test.js`.
+
+---
+
+## 10. Order of work
+
+Each row is one commit with its own tests.
+
+| # | Slice | Kind | Depends |
+|---|---|---|---|
+| A1 | The two page titles + naming gate (R5) | fix | — |
+| A2 | `tokens.mjs` gate + 4pt grid + modular type (V1,V2) | refactor | A1 |
+| A3 | 103 arbitrary values → tokens, lint rule (V3) | refactor | A2 |
+| A4 | Density pass on lists (V4) | refactor | A2 |
+| A5 | Four-states ratchet (R4) + Score's real empty path (§6) | feat | — |
+| B1 | `HR Announcement` doctypes + 3 endpoints | feat | — |
+| B2 | Announcements in the PWA: Home block + list page | feat | B1 |
+| B3 | `home.needs_you` — all five request types | feat | — |
+| C1 | `requests.summary` + the balance strip (§5) | feat | — |
+| C2 | `calendar.month` dots | feat | — |
+| C3 | `calendar.day` sheet, employee sections | feat | C2 |
+| C4 | Day sheet, approver + manager sections (P5) | feat | C3 |
+| D1 | Home "Now bar" (§2) | feat | — |
+| D2 | Team, server-gated (§7) | feat | — |
+| D3 | Helpdesk counts, SOP search, Profile grouping (§7) | feat | A2 |
+| E1 | Re-shoot 114 baselines on `spoke.localhost` | chore | A4 |
+
+A1–A5 are what makes it look different. B–D are what makes it worth
+opening. E1 closes the debt that has been owed since the 9 Sep audit.
+
+---
+
+## 11. What I need a ruling on
+
+1. **Announcements authorship** — HR Manager only, or any HR User?
+2. **Acknowledgement** — is "I've read this" wanted for policy items, or
+   is read-tracking enough?
+3. **Manager coverage line** — may a department head see *who* is off, or
+   only the count? (Leave reasons are never shown either way.)
+4. **Density (V4)** — 56px rows is a real change to how the app feels.
+   Worth one screenshot round before A4 lands.
