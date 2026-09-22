@@ -2,168 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-CORRECTION: I cited "mockup-4 home = 723px, 0 overflow" as evidence the no-scroll
-  goal was already proven. Wrong file. 2026-09-09-prototype-measure.json measures
-  nadi-prototype.html (e2e/prototype-measure.mjs:12), not mockup-4. Withdrawn.
-EVIDENCE: rung 1 — mockup-4 measured directly instead. It hardcodes
-  .app{width:390px;height:844px;overflow:hidden} (line 124), so a fixed frame
-  CANNOT show overflow and eyeballing it reports "no scroll" at any window size.
-  Measured one screen at a time inside its own frame: s-home 912/774 = 138 over,
-  s-appr 1030/774 = 256, s-leaveform 915/774 = 141, s-score 27, s-req 25; six
-  screens fit. Frame released to real heights, home alone: 360x640 824 over,
-  360x740 501, 360x800 347, 390x844 229, 414x896 138, 430x932 67. So "no scroll"
-  is not proven anywhere yet — not in the app, not in the mockup.
-CORRECTION: my first tap-target pass reported minTap 12-14px on mockup-4. It was
-  measuring card DIVs matched by [class*=card]/[class*=row], not controls.
-  Re-audited over button/a/[role=button]/input/select only: exactly ONE target
-  under 24x24 (a 38x22 toggle track on s-leaveform). Mockup tap targets are
-  otherwise WCAG 2.2 SC 2.5.8 clean. Withdrawn.
-NOTE: latent bug found, NOT in scope for the Home work — glass.css:96
-  --g-sheet-max-height: calc(100vh - 5rem) plus 9 more 100vh/88vh/80vh/70vh
-  sites. 100vh is the LARGEST mobile viewport state, so sheets are cut off while
-  browser chrome shows. dvh/svh have been Baseline Widely Available since Jun
-  2025. Filed as its own slice (S7) with its own root cause.
-PLAN: .claude/plans/current-plan.md written, tier risky — Home density (4 named
-  causes, each with its own fix), the fold FORMULA (anchor block sized against
-  the SMALLEST usable height ~440px at 360x640, elastic list allowed to scroll;
-  invariant F1), and one icon library (recommend lucide-vue-next, feather
-  REMOVED with it). 7 slices. Mockup sign-off required before S2.
-NEXT: present the plan for approval — no code until the owner rules on it, and a
-  measured frameless mockup is required before the QuickLinks grid slice.
-
-REPAIR: S1 — Home spent its small-phone budget on air and said things twice.
-  Three causes, one slice: (a) four panels at gap-8 = 96px of inter-panel air on
-  a screen whose usable budget is ~440px at 360x640 -> gap-5; (b) CheckInPanel
-  rendered an <h1> greeting while GAppHeader.vue:44 already renders the page h1,
-  so every screen reader announced Home's title twice AND display-size type ate
-  anchor height -> <p>, same words, same look, no structural claim;
-  (c) PendingApprovalsBanner said "{0} remote check-in(s) awaiting your approval"
-  + "Tap to review and decide." = 11 words for one count and one tap, on a
-  GBanner that is already `interactive` -> "{0} check-in(s) to approve".
-EVIDENCE: rung 2 — frontend/src/views/__tests__/home-fold-budget.test.js, 3
-  tests, RED on all three before the edit (verified, not assumed). Mutation-
-  checked: reintroducing the <h1> turns it red again and restoring it green.
-  First draft of the h1 test matched its OWN explanatory comment (the comment
-  names the tag it removed), so it stripped comments before asserting — a test
-  its subject's prose can fail is not a test.
-EVIDENCE: rung 3 — contrast gate 54 checked / 0 failures, gate tests 13/13,
-  component+view tests 55/55, biome clean on all four files, production build
-  green (188 asset chunks, Home/CheckInPanel/PendingApprovalsBanner all emitted).
-- 2026-09-22T04:13:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-09-22T04:14:29Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-09-22T04:14:32Z COMMIT: 8e07bf701 fix(home): the fold is a budget, and Home overspent it → review+design dispatched
-- 2026-09-22T04:15:05Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: S1 review follow-up. The frappe reviewer's one Warning was right and I
-  verified it at source before acting: the banner's count is
-  hrms.api.remote_checkin.get_pending_count (data/remoteCheckin.js:21) and the
-  row routes to RemoteApprovals only, so cutting "remote" left a bare
-  "check-in(s) to approve" that reads as EVERY pending approval. An approver who
-  believes that stops looking elsewhere — the one failure a visibility banner
-  must not cause. Restored to "{0} remote check-in(s) to approve": five words,
-  still less than half the original eleven. CLASS: a trim that removed a
-  qualifier carrying scope, not prose. Brevity is a word budget, not a licence.
-  Also took the design reviewer's DSN-06: .g-approvals__hint had no emitter left
-  after S1, so the dead branch is gone from glass-components.css:931.
-  .g-banner__hint stays — CheckInPanel.vue:74 still emits it.
-EVIDENCE: 2 correct — new test "the approvals banner names the scope of the
-  count it shows" RED before the edit (3 pass / 1 fail, verified), green after
-  (4/4). Mutation-checked: re-cutting the scope word turns it red again, and the
-  file was restored byte-identical (git diff --numstat 8/2, the intended edit).
-EVIDENCE: 3 works — contrast 54 checked / 0 failures, gate tests 13/13,
-  component+view tests 56/56, biome clean on all three touched files.
-NOTE: both S1 reviewers cleared the commit (NEXT_ACTION: DEPLOY,
-  VERDICT: DESIGN_APPROVED, zero Critical between them). Both nonetheless hit
-  their 10-turn limit and returned nothing until nudged — a silent reviewer here
-  was a truncated one, not a clean one. Their remaining SUGGESTIONs are NOT
-  taken: the orphan-translation risk can only be settled against live Translation
-  doctype rows (repo has no .csv/.po; lookup is exact-source-string via
-  translationsPlugin.js), and converging content-column gaps onto one token
-  (--g-stack-column, Home/Team gap-5 vs Leave/Attendance/KPI/Expense gap-8) is a
-  five-view change that belongs to the owner, not to this slice.
-EVIDENCE: rung 1 — S3 icon map measured against real Lucide (1848 icons, fetched
-  from lucide-static). 36 feather names are actually rendered, NOT the 13 I
-  recorded earlier: that count came from literal name="" only and missed the
-  dynamic bindings, all three of which resolve to literals in the code
-  (WorkflowActionSheet.vue:89/94 x/check; Home.vue link.icon = components).
-  CORRECTION to the earlier inventory line. Coverage: 29 identical, 5 renamed
-  (alert-triangle->triangle-alert, check-circle->circle-check,
-  check-square->square-check, edit->pen-line, edit-2->pencil), and 2 with NO
-  same-name target (filter, trash-2) that need a named substitute before S4 can
-  claim parity. All 14 hand-rolled components have a Lucide target.
-NEXT: commit this follow-up, then finish S3 as a committed doc (the 2 unmapped
-  names get a decided substitute, not a guess) before S4 installs anything.
-- 2026-09-22T04:21:43Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-09-22T04:21:47Z COMMIT: d6c82f17e fix(home): "remote" was scope, not prose → review+design dispatched
-
-NOTE: d6c82f17e cleared by both reviewers — NEXT_ACTION: DEPLOY and
-  VERDICT: DESIGN_APPROVED, zero Critical, zero Warning on design. The frappe
-  reviewer INDEPENDENTLY verified at source what my fix rests on: get_pending_count
-  (hrms/api/remote_checkin.py:365-372) counts Remote Checkin Request rows only,
-  no union with Employee Checkin, so "remote" is factually correct and the bare
-  string shipped in 8e07bf701 was the defect. I read the same lines myself before
-  it reported. Its one Warning was that it never saw the test output (cut off by
-  my deliver-now nudge) — re-run to close it: 4/4.
-NOTE: reviewer truncation is now a pattern, not an incident — 3 of 4 agents this
-  session hit the 10-turn limit and returned NOTHING until nudged, including one
-  given an explicit 4-turn investigation budget in its prompt. A silent reviewer
-  here means truncated, never clean, so the circuit rule ("silent reviewer gets
-  one nudge, then counts as FIX_CRITICAL") is the right default and was applied.
-LEARNING(how): nudge a truncated reviewer with "deliver NOW, zero further tool
-  calls, mark anything unestablished as not-checked". All three nudged agents then
-  returned a usable report WITH honest not-checked lines. Asking for the verdict
-  without forbidding tools just burns the remaining turns.
-
-REPAIR: S3 complete — docs/glass/plan/ICON-COVERAGE-MAP.md, a doc and no code,
-  because S4 must not install anything until "does every icon have a target?" is
-  answered. It does, with two names that needed a DECISION and now have one:
-  filter -> funnel (not list-filter: three stacked lines is a different idea from
-  the funnel users already learned) and trash-2 -> trash (trash-2 is not a Lucide
-  name at all, only a back-compat alias, and two sibling tables already use plain
-  trash for the same destructive action, so this unifies an existing split).
-EVIDENCE: rung 1 — measured, not quoted: lucide-static fetched and counted at
-  1848 icons; lucide-vue-next's published .d.ts confirms Filter/Trash2/
-  AlertTriangle/CheckCircle/Edit/Edit2 still exist as ALIASES. S4 will not use
-  them — an alias keeps a dead vocabulary alive in a codebase that just paid to
-  replace it. 29 of 36 names identical, 5 mechanical renames, 2 decided above,
-  and all 14 hand-rolled components have a target, so src/components/icons/ can
-  go entirely.
-NOTE: the 14 component->Lucide rows are JUDGEMENT, not measurement, and the doc
-  says so: kanban for a project board and life-buoy for support change the
-  drawing noticeably even where the meaning holds. Listed so the owner can review
-  the change before it lands rather than discover it after.
-NEXT: commit S3, then S2 (QuickLinks 8 full-width rows -> 4-across grid) — the
-  largest single saving at ~274px, with a red tap-target test first at 44px.
-  S4 stays blocked on its own revert condition: the real gzip delta, measured.
-- 2026-09-22T04:24:37Z COMMIT: ac8890e81 docs(icons): every icon has a Lucide target, and two needed a decision → review dispatched
-- 2026-09-22T04:28:41Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-22T04:40:00Z REPAIR: my icon inventory was wrong and a fresh-context
-  verifier REFUTED it before S4 could act on it. I claimed "36 names across 28
-  files, three dynamic sites" and attributed two dynamic bindings to
-  RequestActionSheet.vue, which has none. Recount, scripted rather than eyeballed:
-  40 distinct names across 28 files, FIVE dynamic binding sites —
-  CheckInPanel.vue:54, ExpenseTaxesTable.vue:111, ExpensesTable.vue:119,
-  WorkflowActionSheet.vue:33, Profile.vue:50. The four names every earlier count
-  missed (book, file, user from Profile.vue's profileLinks literal, plus
-  external-link) are all identical in Lucide, so the load-bearing conclusion
-  survives: 33 identical + 5 renamed + 2 decided + 0 missing.
-EVIDENCE: rung 1 — byte figures re-derived with feather's own toSvg() then gzip,
-  and the methodology is now stated in the doc because it matters: all 287 icons
-  are 106.2 KB raw / 11.2 KB gz and the 40 used names are 14.1 KB / 1.9 KB gz.
-  My earlier 52.5/10.5 was wrong, and a raw read of dist/feather.js gives 159 KB
-  because it measures a different thing. Projected delta restated honestly as
-  "~9 KB gz from feather leaving, plus most of the 6.9 KB of hand-rolled SVG,
-  minus whatever Lucide's 40 tree-shaken icons add back" — not the "-14 KB gz"
-  I first wrote, which double-counted.
-NOTE: the coverage map was already committed (ac8890e81) when the verifier
-  refuted it. Correcting a shipped doc is cheaper than a shipped migration, which
-  is the entire reason S3 is a doc and runs before S4.
-LEARNING(how): an inventory I assemble by reading is an estimate. Three counts of
-  the same 28 files gave 13, then 36, then 40. Only the scripted one is a count.
-  Script the extraction, then have a fresh context try to refute it.
-NEXT: S2 — QuickLinks 8 full-width rows -> 4-across g-cellgrid grid, the largest
-  single saving at ~274px. The 5 red tests are written and the CSS is in place;
-  QuickLinks.vue is the remaining edit.
 - 2026-09-22T04:31:09Z COMMIT: 43fd4093c docs(icons): the inventory was an estimate three times, so I counted it → review dispatched
 - 2026-09-22T05:10:00Z REPAIR: S2 — QuickLinks was seven full-width rows at
   ~350px on a phone whose whole usable height is ~440px (invariant F1). Now a
@@ -317,3 +155,50 @@ NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete t
   14 hand-rolled icon components and REMOVE feather-icons in the same commit,
   recording the real gzip delta (revert if it is not negative). Verify the
   Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
+- 2026-09-22T06:21:44Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T06:37:33Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T06:47:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-22T06:47:32Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
+- 2026-09-22T06:48:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-22T06:48:08Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
+- 2026-09-22T06:48:11Z COMMIT: 86f324f4b fix(checkin): a night shift's grace was swallowing the next morning's IN → review dispatched
+- 2026-09-22T06:52:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-09-22T06:52:32Z COMMIT: 16cdf6a68 feat(checkin): repair the punches the grace fix cannot reach by itself → review dispatched
+- 2026-09-22T06:52:50Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T07:01:02Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-22T07:01:05Z COMMIT: ecf4ac9b8 fix(fix-day): a two-row day had no way out of itself → review dispatched
+- 2026-09-22T07:03:11Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: two defects in my OWN Move door (ecf4ac9b8), found before the review
+  landed. (a) `move_one` wiped `this.state` entirely. Both days DID change on
+  the server, but `visited()` reads that same object, so the wipe also dropped
+  HR's unsaved ticks on every OTHER day of a multi-day walk and the next Save &
+  rebuild would have saved fewer days than HR had walked, silently. It now
+  deletes exactly the days the server's `answer.after.days` names, plus the
+  current one. (b) the Move dialog's Date field defaulted to the punch's CLOCK
+  date. What a Move rewrites is the SHIFT day, and for a night shift's
+  after-midnight OUT they differ by one — so the screen opened BECAUSE a shift
+  day is wrong would have offered the wrong value as its default. `tap_view`
+  already sends `shift_start`; `fresh_state` carries it and the field uses it.
+EVIDENCE: 2 correct — two new node tests, each RED first, 4 mutants killed
+  (restore the whole wipe; ignore the server's day list; drop shift_start from
+  fresh_state; default to row.time). Suite 45 node / 0 fail, test_fix_day_screen
+  21/21, test_restamp 15/15, test_shift_resolution 85/85,
+  test_grace_restamp_repair 11/11, ruff + biome clean.
+NOTE: the frappe review of ecf4ac9b8 came back NEXT_ACTION: DEPLOY, no Critical.
+  It independently verified move_tap's server guards (_require_hr, _tap refuses
+  a mirrored tap, _lock_and_guard still fences the arrival day) and judged the
+  amended test_fix_day_screen assertion honest rather than loosened — it adds a
+  STRICTER pin (save_day has exactly one call site) alongside the new entry. Its
+  two open notes: the `.catch` in move_one shows the server's sentence through
+  fd_call, same as save_one (checked, no change needed); and fix_day.bundle.js
+  is a 10-fix/90d hotspot that now needs a consolidation ticket — filed in
+  family.md against the day-cache, which is what both defects above were.
+LEARNING(gate): progress.md lost 116 lines a THIRD time this session, same
+  concurrent-overwrite class as e2f01419f. `git diff --numstat` on an
+  append-only file is the only thing that has ever caught it. Rebuild as
+  `git show HEAD:<file>` + the genuinely new tail; never `git add` the tree copy.
+NEXT: push nz-glass (86f324f4b, 16cdf6a68, ecf4ac9b8 + this), write
+  docs/glass/HANDOFF.md, and hand over. Nabil deploys — bench migrate runs the
+  one-time grace re-stamp repair patch on its own.
+- 2026-09-22T07:06:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833

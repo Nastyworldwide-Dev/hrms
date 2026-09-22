@@ -278,3 +278,35 @@ test("Move is offered on a day the engine refuses to rebuild", () => {
 	const render = src.slice(src.indexOf("\trender() {"), src.indexOf("\theader_html(", src.indexOf("\trender() {")))
 	assert.match(render, /data-fd-move/, "and it is wired, not just drawn")
 })
+
+// A Move changes TWO days on the server, so their cached ticks are stale. The
+// first version answered that by wiping `this.state` entirely — which also
+// threw away HR's unsaved ticks on every OTHER day of a multi-day walk, and
+// `visited()` reads that same object, so the next Save & rebuild would have
+// saved fewer days than HR had walked, silently. Only the days the server says
+// it touched may be dropped.
+test("a Move forgets only the days it changed", () => {
+	const start = src.indexOf("move_one(name, values) {")
+	assert.ok(start > 0, "move_one exists")
+	const body = src.slice(start, src.indexOf("\n\t// --- Save & rebuild", start))
+	assert.doesNotMatch(body, /this\.state = \{\}/, "that also drops other days' unsaved ticks")
+	assert.match(
+		body,
+		/answer\.after[\s\S]*?days/,
+		"the server names the days it rebuilt; drop exactly those"
+	)
+	assert.match(body, /delete this\.state\[/, "one day at a time, not the whole walk")
+})
+
+// The Move dialog asks for the SHIFT DAY, which is what `_tap_day` reads and
+// what the wrong stamp actually is. It is not the punch's clock date: a night
+// shift's OUT at 01:04 on the 4th belongs to the 3rd, and defaulting the field
+// to "the 4th" would invite HR to confirm the very value that is wrong — on
+// the one screen opened because a shift day is wrong (22 Sep 2026).
+test("the Move dialog defaults to the shift day, not the clock date", () => {
+	const fresh = src.slice(src.indexOf("fresh_state(day) {"), src.indexOf("\n\tdefault_shift("))
+	assert.match(fresh, /shift_start: tap\.shift_start/, "the server already sends the shift day; carry it")
+	const start = src.indexOf("move(name) {")
+	const body = src.slice(start, src.indexOf("move_one(name, values) {", start))
+	assert.match(body, /row\.shift_start/, "the Date field defaults to the shift day")
+})

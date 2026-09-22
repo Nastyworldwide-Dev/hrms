@@ -256,6 +256,8 @@ class FixDayScreen {
 				// the device's label stays visible through the flip (G1)
 				log_type: (from_engine && tap.suggested) || tap.log_type || "IN",
 				shift: tap.shift,
+				// the SHIFT day, which is what a Move rewrites — not the clock date
+				shift_start: tap.shift_start,
 				state: tap.state,
 				device_id: tap.device_id,
 				why: tap.why || tap.state,
@@ -535,7 +537,11 @@ class FixDayScreen {
 	move(name) {
 		const row = this.current.rows.find((r) => r.name === name);
 		if (!row || row.is_new) return Promise.resolve(null);
-		const on = String(row.time || "").slice(0, 10) || this.date;
+		// The SHIFT day, which is the thing a Move rewrites and the thing that is
+		// wrong when this screen is open. A night shift's 01:04 OUT is filed on
+		// the day before, so its clock date would offer HR the wrong answer as
+		// the default on the one screen opened because a shift day is wrong.
+		const on = String(row.shift_start || row.time || "").slice(0, 10) || this.date;
 		return frappe.prompt(
 			[
 				{
@@ -577,8 +583,15 @@ class FixDayScreen {
 		})
 			.then((answer) => {
 				if (!answer || !answer.ok) return null;
-				// Both days changed, so neither cached state is true any more.
-				this.state = {};
+				// Both days changed on the server, so their cached ticks are
+				// stale — but ONLY theirs. Wiping the whole walk would also drop
+				// HR's unsaved ticks on every other day, and `visited()` reads
+				// this object, so the next Save would quietly save fewer days
+				// than HR had walked.
+				for (const day of Object.keys((answer.after && answer.after.days) || {})) {
+					delete this.state[day];
+				}
+				delete this.state[this.date];
 				if (this.on_change) this.on_change();
 				return this.load(this.date).then(() => answer);
 			})

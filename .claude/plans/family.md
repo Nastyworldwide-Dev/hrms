@@ -65,3 +65,27 @@ Lock: a regression test for the instance (Move exists, takes shift + day +
 reason, one call site) and an invariant test for the class (Move does NOT
 consult day.blocked — the dead end is the case it exists for). Four mutants
 killed. The repair job's default window is pinned to yesterday, mutant killed.
+
+FOLLOW-UP (same CLASS, self-found before the review landed, ecf4ac9b8..):
+- hrms/public/js/fix_day.bundle.js `move_one` — same-root: it wiped `this.state`
+  entirely. Both days DID change on the server, but `visited()` reads that same
+  object, so the wipe also dropped HR's unsaved ticks on every other day of a
+  multi-day walk and the next Save would have saved fewer days than HR walked,
+  silently. Now deletes exactly the days the server's answer names.
+- hrms/public/js/fix_day.bundle.js `move(name)` — same-root: the Date field
+  defaulted to the punch's CLOCK date. The thing a Move rewrites is the SHIFT
+  day, and for a night shift's after-midnight OUT they differ by one — so the
+  screen opened because a shift day is wrong would have offered the wrong value
+  as its default. `tap_view` already sends `shift_start`; `fresh_state` now
+  carries it and the field defaults to it.
+- the `.catch` in `move_one` — not-affected: same shape as `save_one`.
+  `frappe.call` shows the server's own refusal sentence; the catch only stops
+  the chain and logs.
+
+REFACTOR TICKET (hotspot, 10 fixes/90d): fix_day.bundle.js is one 700-line class
+holding the day cache, the pure pairing rule (`fd_plan`), all the HTML and four
+endpoints. Both defects above are cache-coherence bugs — `this.state` is mutated
+from five methods with no single place that says what invalidates a day. The next
+change here should lift the day cache into its own small object with one
+`invalidate(days)` door, so a new write path cannot get this wrong a third time.
+Not done in this commit: the owner is waiting to deploy the fix.
