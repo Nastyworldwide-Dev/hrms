@@ -21,9 +21,12 @@ import { readFileSync } from "node:fs"
 import { computed, ref, effectScope } from "vue"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
-const script = (path) => read(path).split("<script setup>")[1].split("</script>")[0]
+const script = (path) =>
+	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>
-	text.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "").replace(/export /g, "")
+	text
+		.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "")
+		.replace(/export /g, "")
 
 function fixture() {
 	const logouts = []
@@ -37,7 +40,10 @@ function fixture() {
 		console: { info() {}, warn() {} },
 		inject: (key) =>
 			key === "$session"
-				? { user: "staff@example.com", logout: { submit: () => logouts.push("logout") } }
+				? {
+						user: "staff@example.com",
+						logout: { submit: () => logouts.push("logout") },
+				  }
 				: (text) => text,
 		createResource: (options) => {
 			identityOptions = options
@@ -48,7 +54,14 @@ function fixture() {
 	})
 	const run = (code) => vm.runInContext(code, context)
 	scope.run(() => run(executable(script("../src/views/InvalidEmployee.vue"))))
-	return { run, logouts, navigations, leaveHooks, identity: () => identityOptions, stop: () => scope.stop() }
+	return {
+		run,
+		logouts,
+		navigations,
+		leaveHooks,
+		identity: () => identityOptions,
+		stop: () => scope.stop(),
+	}
 }
 
 test("leaving the page closes the sheet and does not sign the user out", () => {
@@ -56,9 +69,17 @@ test("leaving the page closes the sheet and does not sign the user out", () => {
 	assert.equal(s.run("showDialog.value"), true)
 	assert.equal(s.leaveHooks.length, 1, "the page must close its sheet on leave")
 	s.leaveHooks[0]()
-	assert.equal(s.run("showDialog.value"), false, "the sheet is closed before the next page shows")
+	assert.equal(
+		s.run("showDialog.value"),
+		false,
+		"the sheet is closed before the next page shows"
+	)
 	s.run("onDismissed()") // ion-modal's did-dismiss fires after the programmatic close
-	assert.deepEqual(s.logouts, [], "navigating away is not a request to sign out")
+	assert.deepEqual(
+		s.logouts,
+		[],
+		"navigating away is not a request to sign out"
+	)
 	s.stop()
 })
 
@@ -71,9 +92,15 @@ test("dismissing the sheet on the page still signs the user out", () => {
 
 test("a valid employee who lands here is sent Home, never shown 'not found'", () => {
 	const s = fixture()
-	s.identity().onSuccess({ reason: "ok", message: "", user: "staff@example.com" })
+	s.identity().onSuccess({
+		reason: "ok",
+		message: "",
+		user: "staff@example.com",
+	})
 	// built inside the VM, so compare plain structure, not that realm's prototypes
-	assert.deepEqual(JSON.parse(JSON.stringify(s.navigations)), [{ name: "Home" }])
+	assert.deepEqual(JSON.parse(JSON.stringify(s.navigations)), [
+		{ name: "Home" },
+	])
 	assert.equal(s.run("showDialog.value"), false)
 	s.run("onDismissed()")
 	assert.deepEqual(s.logouts, [], "being routed Home is not a sign-out")
@@ -82,7 +109,10 @@ test("a valid employee who lands here is sent Home, never shown 'not found'", ()
 
 test("a real denial keeps the sheet and its reason", () => {
 	const s = fixture()
-	s.identity().onSuccess({ reason: "no_employee", message: "Your account is not linked" })
+	s.identity().onSuccess({
+		reason: "no_employee",
+		message: "Your account is not linked",
+	})
 	assert.deepEqual(s.navigations, [])
 	assert.equal(s.run("showDialog.value"), true)
 	s.stop()

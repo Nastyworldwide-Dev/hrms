@@ -46,7 +46,10 @@ function read(path) {
 	return readFileSync(path, "utf8")
 		.replace(/<!--[\s\S]*?-->/g, (block) => block.replace(/[^\n]/g, " "))
 		.replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, " "))
-		.replace(/(^|[^:])\/\/[^\n]*/g, (line, lead) => lead + " ".repeat(line.length - lead.length))
+		.replace(
+			/(^|[^:])\/\/[^\n]*/g,
+			(line, lead) => lead + " ".repeat(line.length - lead.length)
+		)
 }
 
 test("no sheet is measured against the large viewport", () => {
@@ -61,16 +64,26 @@ test("no sheet is measured against the large viewport", () => {
 			offenders.push(`${path.slice(SRC.length)}: ${line.trim()}`)
 		}
 	}
-	assert.deepEqual(offenders, [], "use the dynamic viewport (dvh); the address bar eats the difference")
+	assert.deepEqual(
+		offenders,
+		[],
+		"use the dynamic viewport (dvh); the address bar eats the difference"
+	)
 })
 
 test("the sheet token declares dvh with a vh fallback, in that order", () => {
 	const css = read(join(SRC, "theme/glass.css"))
 	const fallback = css.indexOf("--g-sheet-max-height: calc(100vh")
 	const real = css.indexOf("--g-sheet-max-height: calc(100dvh")
-	assert.ok(fallback >= 0, "the vh line must stay: a browser without dvh would otherwise have nothing")
+	assert.ok(
+		fallback >= 0,
+		"the vh line must stay: a browser without dvh would otherwise have nothing"
+	)
 	assert.ok(real >= 0, "the dvh line must exist")
-	assert.ok(fallback < real, "the fallback comes FIRST; the last declaration a browser understands wins")
+	assert.ok(
+		fallback < real,
+		"the fallback comes FIRST; the last declaration a browser understands wins"
+	)
 })
 
 test("only the sheet may resize with the address bar", () => {
@@ -93,5 +106,9 @@ test("only the sheet may resize with the address bar", () => {
 			offenders.push(`${path.slice(SRC.length)}: ${line.trim()}`)
 		}
 	}
-	assert.deepEqual(offenders, [], "a surface that resizes as the bar slides repaints every layer above it")
+	assert.deepEqual(
+		offenders,
+		[],
+		"a surface that resizes as the bar slides repaints every layer above it"
+	)
 })

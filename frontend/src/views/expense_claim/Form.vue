@@ -175,50 +175,48 @@ watch(
 )
 
 // helper functions
+//: The fields this screen asks for. An ALLOWLIST, replacing an
+//: `excludeFields` blacklist that had grown to eighteen entries chasing the
+//: same problem: a blacklist hides what it knows and SHOWS what it does not,
+//: so every schema change is a potential leak.
+//:
+//: Read against the running site, the old list was letting through
+//: `gain_loss_account`, `total_exchange_gain_loss`, `delivery_trip`,
+//: `vehicle_log`, `amended_from`, `bank_or_cash_account`, `location`,
+//: `branch`, and the Accounting and Dashboard tabs — 36 of the doctype's 61
+//: fields reached an employee filing a receipt.
+const FIELDS = [
+	"expenses",
+	"posting_date",
+	"expense_approver",
+	"total_claimed_amount",
+	"total_sanctioned_amount",
+	"grand_total",
+]
+
+//: Shown only when READING an existing claim, as the blacklist also did: on a
+//: new one these come from the session or are not yet meaningful.
+const FIELDS_ON_EXISTING = [
+	"employee",
+	"employee_name",
+	"department",
+	"company",
+	"status",
+	"total_amount_reimbursed",
+]
+
+//: Layout by KIND, not by name — `column_break_imlz` and `column_break_quih`
+//: are generated and change whenever the doctype is reordered in Desk.
+//: Tab Break is NOT here: this form is one flow, and the doctype's tabs
+//: (Accounting, More Info, Dashboard) are the ERP's organisation, not the
+//: employee's.
+const LAYOUT = ["Section Break", "Column Break"]
+
 function getFilteredFields(fields) {
-	// reduce noise from the form view by excluding unnecessary fields
-	// eg: employee and other details can be fetched from the session user
-	// Currency section + Exchange Rate are ERP concerns removed from the
-	// employee flow; they sit before the expense table so they must be excluded
-	// explicitly (their values are set to the company currency at rate 1 above).
-	const excludeFields = [
-		"naming_series",
-		"task",
-		"taxes_and_charges_sb",
-		"advance_payments_sb",
-		"currency_section",
-		"currency",
-		"column_break_imlz",
-		"exchange_rate",
-		// Backend plumbing, not employee choices: cost_center and payable_account are
-		// filled from the company default (companyDetails, below) and stamped onto each
-		// row — showing them as pickers an Employee can't even search (Account / Cost
-		// Center masters) was pure confusion. project isn't used on employee claims.
-		// The values are still set on the object; only the inputs are hidden.
-		"cost_center",
-		"payable_account",
-		"project",
-	]
-	const extraFields = [
-		"employee",
-		"employee_name",
-		"department",
-		"company",
-		"remark",
-		"is_paid",
-		"mode_of_payment",
-		"clearance_date",
-		"approval_status",
-	]
-
-	if (!props.id) excludeFields.push(...extraFields)
-
-	return fields.filter((field) => {
-		if (excludeFields.includes(field.fieldname)) return false
-
-		if (field.fieldname?.startsWith("base_")) return false
-		return true
-	})
+	const wanted = props.id ? [...FIELDS, ...FIELDS_ON_EXISTING] : FIELDS
+	return fields.filter(
+		(field) => wanted.includes(field.fieldname) || LAYOUT.includes(field.fieldtype)
+	)
 }
 
 function setExpenseApprover(data) {

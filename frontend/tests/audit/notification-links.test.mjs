@@ -26,13 +26,25 @@ const HIDDEN = {
 	"Employee Advance": "stays hidden in the PWA (owner ruling, 15 Sep 2026)",
 }
 
-const PY = join(HRMS_PY, "hr", "doctype", "pwa_notification", "pwa_notification.py")
+const PY = join(
+	HRMS_PY,
+	"hr",
+	"doctype",
+	"pwa_notification",
+	"pwa_notification.py"
+)
 
 function backendPaths() {
 	const block = read(PY).match(/^PWA_DETAIL_PATHS\s*=\s*\{([\s\S]*?)^\}/m)
-	assert.ok(block, "pwa_notification.py must declare PWA_DETAIL_PATHS = { doctype: path }")
+	assert.ok(
+		block,
+		"pwa_notification.py must declare PWA_DETAIL_PATHS = { doctype: path }"
+	)
 	return Object.fromEntries(
-		[...block[1].matchAll(/"([^"]+)"\s*:\s*"([^"]+)"/g)].map((m) => [m[1], m[2]])
+		[...block[1].matchAll(/"([^"]+)"\s*:\s*"([^"]+)"/g)].map((m) => [
+			m[1],
+			m[2],
+		])
 	)
 }
 
@@ -40,12 +52,16 @@ const { top, flat } = routeTable()
 function toVueRoute(r) {
 	const out = { path: r.path }
 	if (r.name) out.name = r.name
-	if (r.redirect) out.redirect = r.redirect.path ? { path: r.redirect.path } : r.redirect
+	if (r.redirect)
+		out.redirect = r.redirect.path ? { path: r.redirect.path } : r.redirect
 	out.component = {}
 	if (r.children) out.children = r.children.map(toVueRoute)
 	return out
 }
-const router = createRouter({ history: createMemoryHistory(), routes: top.map(toVueRoute) })
+const router = createRouter({
+	history: createMemoryHistory(),
+	routes: top.map(toVueRoute),
+})
 const compact = (doctype) => `${doctype.replace(/\s+/g, "")}DetailView`
 
 test("every doctype with a PWA DetailView route has a push notification link", () => {
@@ -67,7 +83,8 @@ test("every push link is exactly its DetailView route's path", () => {
 			continue
 		}
 		const expected = router.resolve({ name, params: { id: "DOC-1" } }).path
-		if (`/${path}/DOC-1` !== expected) wrong.push(`${doctype}: /${path}/:id, route is ${expected}`)
+		if (`/${path}/DOC-1` !== expected)
+			wrong.push(`${doctype}: /${path}/:id, route is ${expected}`)
 	}
 	assert.deepEqual(wrong, [])
 })

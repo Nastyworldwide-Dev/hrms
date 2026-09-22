@@ -23,7 +23,12 @@ import assert from "node:assert/strict"
 import { babelParse } from "@vue/compiler-sfc"
 import { sourceFiles, sfc, read, rel, lineOf } from "./_lib.mjs"
 
-const EAGER_ALL_ARGS = new Set(["watchEffect", "watchPostEffect", "watchSyncEffect", "computed"])
+const EAGER_ALL_ARGS = new Set([
+	"watchEffect",
+	"watchPostEffect",
+	"watchSyncEffect",
+	"computed",
+])
 const FUNCTION_TYPES = new Set([
 	"ArrowFunctionExpression",
 	"FunctionExpression",
@@ -41,12 +46,15 @@ function tdzBindings(program) {
 	// compares equal, not later
 	const collect = (decl, start) => {
 		if (decl.type === "VariableDeclaration" && decl.kind !== "var") {
-			for (const d of decl.declarations) for (const name of patternNames(d.id)) out.set(name, start)
-		} else if (decl.type === "ClassDeclaration" && decl.id) out.set(decl.id.name, start)
+			for (const d of decl.declarations)
+				for (const name of patternNames(d.id)) out.set(name, start)
+		} else if (decl.type === "ClassDeclaration" && decl.id)
+			out.set(decl.id.name, start)
 	}
 	for (const stmt of program.body) {
 		collect(stmt, stmt.start)
-		if (stmt.type === "ExportNamedDeclaration" && stmt.declaration) collect(stmt.declaration, stmt.start)
+		if (stmt.type === "ExportNamedDeclaration" && stmt.declaration)
+			collect(stmt.declaration, stmt.start)
 	}
 	return out
 }
@@ -58,7 +66,8 @@ function patternNames(node, out = []) {
 			out.push(node.name)
 			break
 		case "ObjectPattern":
-			for (const p of node.properties) patternNames(p.type === "RestElement" ? p.argument : p.value, out)
+			for (const p of node.properties)
+				patternNames(p.type === "RestElement" ? p.argument : p.value, out)
 			break
 		case "ArrayPattern":
 			for (const e of node.elements) patternNames(e, out)
@@ -89,7 +98,8 @@ function isEagerCallback(fn, parent, argIndex) {
 					opts.properties.some(
 						(p) =>
 							p.type === "ObjectProperty" &&
-							((p.key.type === "Identifier" && p.key.name === "immediate") || p.key.value === "immediate") &&
+							((p.key.type === "Identifier" && p.key.name === "immediate") ||
+								p.key.value === "immediate") &&
 							p.value.type === "BooleanLiteral" &&
 							p.value.value === true
 					)
@@ -102,7 +112,8 @@ function isEagerCallback(fn, parent, argIndex) {
 // A `computed({ get() {} })` getter is eager for the same reason.
 function isComputedGetter(node, parent, grand) {
 	return (
-		(node.type === "ObjectMethod" || (parent?.type === "ObjectProperty" && parent.value === node)) &&
+		(node.type === "ObjectMethod" ||
+			(parent?.type === "ObjectProperty" && parent.value === node)) &&
 		grand?.type === "CallExpression" &&
 		grand.callee.type === "Identifier" &&
 		grand.callee.name === "computed"
@@ -129,14 +140,43 @@ function eagerReferences(stmt, bindings, report) {
 		}
 		if (node.type === "Identifier") {
 			// not a reference: property keys, member property names, labels
-			if (parent?.type === "MemberExpression" && parent.property === node && !parent.computed) return
-			if (parent?.type === "OptionalMemberExpression" && parent.property === node && !parent.computed) return
-			if (parent?.type === "ObjectProperty" && parent.key === node && !parent.computed && !parent.shorthand) return
+			if (
+				parent?.type === "MemberExpression" &&
+				parent.property === node &&
+				!parent.computed
+			)
+				return
+			if (
+				parent?.type === "OptionalMemberExpression" &&
+				parent.property === node &&
+				!parent.computed
+			)
+				return
+			if (
+				parent?.type === "ObjectProperty" &&
+				parent.key === node &&
+				!parent.computed &&
+				!parent.shorthand
+			)
+				return
 			if (parent?.type === "ObjectMethod" && parent.key === node) return
 			if (parent?.type === "VariableDeclarator" && parent.id === node) return
-			if ((parent?.type === "ClassDeclaration" || parent?.type === "FunctionDeclaration") && parent.id === node) return
-			if (parent?.type === "ImportSpecifier" || parent?.type === "ImportDefaultSpecifier") return
-			if (parent?.type === "LabeledStatement" || parent?.type === "BreakStatement" || parent?.type === "ContinueStatement")
+			if (
+				(parent?.type === "ClassDeclaration" ||
+					parent?.type === "FunctionDeclaration") &&
+				parent.id === node
+			)
+				return
+			if (
+				parent?.type === "ImportSpecifier" ||
+				parent?.type === "ImportDefaultSpecifier"
+			)
+				return
+			if (
+				parent?.type === "LabeledStatement" ||
+				parent?.type === "BreakStatement" ||
+				parent?.type === "ContinueStatement"
+			)
 				return
 			if (locals.has(node.name)) return
 			const declaredAt = bindings.get(node.name)
@@ -147,12 +187,24 @@ function eagerReferences(stmt, bindings, report) {
 	}
 	const visitChildren = (node, parent, locals) => {
 		for (const key of Object.keys(node)) {
-			if (key === "loc" || key === "start" || key === "end" || key === "leadingComments" || key === "trailingComments")
+			if (
+				key === "loc" ||
+				key === "start" ||
+				key === "end" ||
+				key === "leadingComments" ||
+				key === "trailingComments"
+			)
 				continue
 			const child = node[key]
 			if (Array.isArray(child)) {
-				child.forEach((c, i) => c && typeof c.type === "string" && visit(c, node, parent, locals, key === "arguments" ? i : -1))
-			} else if (child && typeof child.type === "string") visit(child, node, parent, locals, -1)
+				child.forEach(
+					(c, i) =>
+						c &&
+						typeof c.type === "string" &&
+						visit(c, node, parent, locals, key === "arguments" ? i : -1)
+				)
+			} else if (child && typeof child.type === "string")
+				visit(child, node, parent, locals, -1)
 		}
 	}
 	visit(stmt, null, null, new Set(), -1)
@@ -162,9 +214,11 @@ function eagerReferences(stmt, bindings, report) {
 function collectLocals(node, into) {
 	if (!node || typeof node !== "object") return
 	if (Array.isArray(node)) return node.forEach((n) => collectLocals(n, into))
-	if (node.type === "VariableDeclarator") for (const n of patternNames(node.id)) into.add(n)
+	if (node.type === "VariableDeclarator")
+		for (const n of patternNames(node.id)) into.add(n)
 	if (node.type === "FunctionDeclaration" && node.id) into.add(node.id.name)
-	if (node.type === "CatchClause" && node.param) for (const n of patternNames(node.param)) into.add(n)
+	if (node.type === "CatchClause" && node.param)
+		for (const n of patternNames(node.param)) into.add(n)
 	for (const key of Object.keys(node)) {
 		if (key === "loc") continue
 		const child = node[key]
@@ -179,7 +233,11 @@ export function scanModule(code, file, lineOffset = 0) {
 	for (const stmt of ast.program.body) {
 		eagerReferences(stmt, bindings, (id) => {
 			findings.push(
-				`${file}:${lineOffset + lineOf(code, id.start)} reads \`${id.name}\` before its declaration at line ${lineOffset + lineOf(code, bindings.get(id.name))}`
+				`${file}:${lineOffset + lineOf(code, id.start)} reads \`${
+					id.name
+				}\` before its declaration at line ${
+					lineOffset + lineOf(code, bindings.get(id.name))
+				}`
 			)
 		})
 	}
@@ -199,7 +257,11 @@ test("no <script setup> or module evaluates a binding before it is declared", ()
 		} else code = read(file)
 		findings.push(...scanModule(code, rel(file), offset))
 	}
-	assert.deepEqual(findings, [], `temporal-dead-zone reads:\n${findings.join("\n")}`)
+	assert.deepEqual(
+		findings,
+		[],
+		`temporal-dead-zone reads:\n${findings.join("\n")}`
+	)
 })
 
 // The scanner must actually see the KPI shape, or the test above is a tautology.

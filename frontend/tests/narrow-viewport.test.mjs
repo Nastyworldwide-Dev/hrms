@@ -29,7 +29,8 @@ function walk(dir, out = []) {
 	for (const entry of readdirSync(dir)) {
 		const path = join(dir, entry)
 		if (statSync(path).isDirectory()) walk(path, out)
-		else if (/\.(vue|css)$/.test(entry) && !path.includes("__tests__")) out.push(path)
+		else if (/\.(vue|css)$/.test(entry) && !path.includes("__tests__"))
+			out.push(path)
 	}
 	return out
 }
@@ -40,7 +41,10 @@ function code(path) {
 	return readFileSync(path, "utf8")
 		.replace(/<!--[\s\S]*?-->/g, (b) => b.replace(/[^\n]/g, " "))
 		.replace(/\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, " "))
-		.replace(/(^|[^:])\/\/[^\n]*/g, (l, lead) => lead + " ".repeat(l.length - lead.length))
+		.replace(
+			/(^|[^:])\/\/[^\n]*/g,
+			(l, lead) => lead + " ".repeat(l.length - lead.length)
+		)
 }
 
 const FILES = walk(SRC)
@@ -67,11 +71,15 @@ test("nothing demands more width than the narrowest phone has", () => {
 		// breakpoint in the app tripped the first version of this rule. The
 		// same two words mean "at least this much room is available" in a
 		// query and "this element needs at least this much" in a declaration.
-		for (const m of declarationsOnly(text).matchAll(/\bmin-width:\s*(\d+)px/g)) {
-			if (Number(m[1]) > FLOOR) offenders.push(`${path.slice(SRC.length)}: min-width ${m[1]}px`)
+		for (const m of declarationsOnly(text).matchAll(
+			/\bmin-width:\s*(\d+)px/g
+		)) {
+			if (Number(m[1]) > FLOOR)
+				offenders.push(`${path.slice(SRC.length)}: min-width ${m[1]}px`)
 		}
 		for (const m of text.matchAll(/\bmin-w-\[(\d+)px\]/g)) {
-			if (Number(m[1]) > FLOOR) offenders.push(`${path.slice(SRC.length)}: min-w-[${m[1]}px]`)
+			if (Number(m[1]) > FLOOR)
+				offenders.push(`${path.slice(SRC.length)}: min-w-[${m[1]}px]`)
 		}
 		// A fixed width on a block that is meant to fill the screen. Scoped to
 		// px because a % or a vw cannot overflow by itself.
@@ -80,11 +88,18 @@ test("nothing demands more width than the narrowest phone has", () => {
 		// are legitimate: GModal's --width is inside an lg: query and capped by
 		// --max-width beside it, and --g-viewport-width is the reference phone
 		// the measurement harness is pointed at, not a box anything renders.
-		for (const m of declarationsOnly(text).matchAll(/(?<![-\w])width:\s*(\d+)px/g)) {
-			if (Number(m[1]) > FLOOR) offenders.push(`${path.slice(SRC.length)}: width ${m[1]}px`)
+		for (const m of declarationsOnly(text).matchAll(
+			/(?<![-\w])width:\s*(\d+)px/g
+		)) {
+			if (Number(m[1]) > FLOOR)
+				offenders.push(`${path.slice(SRC.length)}: width ${m[1]}px`)
 		}
 	}
-	assert.deepEqual(offenders, [], `nothing may be wider than ${FLOOR}px unconditionally`)
+	assert.deepEqual(
+		offenders,
+		[],
+		`nothing may be wider than ${FLOOR}px unconditionally`
+	)
 })
 
 test("the horizontal axis is never the one that scrolls", () => {
@@ -92,9 +107,18 @@ test("the horizontal axis is never the one that scrolls", () => {
 	// does not fit hides the fact. On a TABLE or a deliberately scrollable
 	// strip it is a legitimate pattern, so this pins the rule at the app
 	// shell: the body and the page wrapper never scroll sideways.
-	const css = code(join(SRC, "theme/glass-components.css")) + code(join(SRC, "theme/glass.css"))
-	const page = css.slice(css.indexOf("\n.g-page {"), css.indexOf("}", css.indexOf("\n.g-page {")))
-	assert.doesNotMatch(page, /overflow-x:\s*(auto|scroll)/, ".g-page must not absorb a too-wide child")
+	const css =
+		code(join(SRC, "theme/glass-components.css")) +
+		code(join(SRC, "theme/glass.css"))
+	const page = css.slice(
+		css.indexOf("\n.g-page {"),
+		css.indexOf("}", css.indexOf("\n.g-page {"))
+	)
+	assert.doesNotMatch(
+		page,
+		/overflow-x:\s*(auto|scroll)/,
+		".g-page must not absorb a too-wide child"
+	)
 })
 
 test("the measurement harness can be pointed at the narrow phone", () => {
@@ -107,7 +131,11 @@ test("the measurement harness can be pointed at the narrow phone", () => {
 	// And it records the tab bar, which the 2026-09-09 baseline did not —
 	// every overflow in that file is understated by the bar's height because
 	// it was captured before the nav was repaired.
-	assert.match(harness, /tabH/, "the tab bar is measured, not assumed to be zero")
+	assert.match(
+		harness,
+		/tabH/,
+		"the tab bar is measured, not assumed to be zero"
+	)
 })
 
 test("the stale baseline is marked stale, not quietly trusted", () => {
@@ -115,9 +143,15 @@ test("the stale baseline is marked stale, not quietly trusted", () => {
 	// screen. Every 'overflow' in it is therefore ~65px too small, and the 2.0
 	// plan rests on those numbers. A reader must not be able to pick the file
 	// up without learning that.
-	const audit = join(FRONTEND, "../docs/glass/audit/2026-09-09-app-measure.json")
+	const audit = join(
+		FRONTEND,
+		"../docs/glass/audit/2026-09-09-app-measure.json"
+	)
 	const raw = readFileSync(audit, "utf8")
 	const data = JSON.parse(raw)
-	assert.ok(data.stale, "the file must say so in its own data, not only in a plan nobody opens")
+	assert.ok(
+		data.stale,
+		"the file must say so in its own data, not only in a plan nobody opens"
+	)
 	assert.match(data.stale, /tabH|tab bar/i, "and say why")
 })

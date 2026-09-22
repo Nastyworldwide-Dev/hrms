@@ -35,7 +35,10 @@ test("the tab shell and the form shell are mounted at distinct paths", () => {
 })
 
 test("form routes keep their absolute URLs under the moved shell", () => {
-	assert.match(source, /path: "\/form",\s*component: \(\) => import\("@\/views\/FormShell\.vue"\)/)
+	assert.match(
+		source,
+		/path: "\/form",\s*component: \(\) => import\("@\/views\/FormShell\.vue"\)/
+	)
 	// every leaf route file declares absolute paths — the shell prefix is inert
 	const leaves = readFileSync(
 		fileURLToPath(new URL("../src/router/leaves.js", import.meta.url)),

@@ -5,9 +5,12 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-globalThis.window = globalThis.window || { location: { hostname: "test.localhost" } }
+globalThis.window = globalThis.window || {
+	location: { hostname: "test.localhost" },
+}
 
-const call = (await import("../node_modules/frappe-ui/src/utils/call.js")).default
+const call = (await import("../node_modules/frappe-ui/src/utils/call.js"))
+	.default
 
 const mockFetch = (status, body) => {
 	globalThis.fetch = async () => ({
@@ -20,7 +23,8 @@ const mockFetch = (status, body) => {
 
 test("417 with _server_messages surfaces the real validation message", async () => {
 	const serverMessage = JSON.stringify({
-		message: "Only Leave Applications with status 'Approved' and 'Rejected' can be submitted",
+		message:
+			"Only Leave Applications with status 'Approved' and 'Rejected' can be submitted",
 	})
 	mockFetch(
 		417,

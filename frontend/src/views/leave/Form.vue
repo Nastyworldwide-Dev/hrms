@@ -187,25 +187,55 @@ watch(
 	}
 )
 
-// helper functions
+//: The fields this screen asks for, in the doctype's own order.
+//:
+//: An ALLOWLIST, replacing the `excludeFields` blacklist. A blacklist decides
+//: what to hide, so anything it has not heard of is shown — and it is a
+//: snapshot of the schema on the day somebody wrote it, while the schema keeps
+//: growing. Read against the running site, the old list was letting through
+//: `synced_from_instance` (this app's cross-instance mirror flag), `color` (a
+//: Desk calendar colour) and `amended_from` (Frappe's link to the cancelled
+//: document this one replaced). None is a question to ask somebody booking
+//: time off; none was deliberately allowed.
+//:
+//: Adding a field to this screen is now a deliberate act, and a migration
+//: cannot leak one by itself.
+const FIELDS = [
+	"leave_type",
+	"from_date",
+	"to_date",
+	"half_day",
+	"half_day_date",
+	"total_leave_days",
+	"description",
+	"leave_balance",
+	"leave_approver",
+	"leave_approver_name",
+]
+
+//: Shown only when READING an existing application — on a new one they are
+//: filled from the session, and asking is noise. Same split the blacklist made,
+//: kept deliberately.
+const FIELDS_ON_EXISTING = [
+	"employee",
+	"employee_name",
+	"department",
+	"company",
+	"status",
+	"posting_date",
+]
+
+//: Layout, kept by KIND rather than by name. These are called
+//: `section_break_5` and `column_break_18` — generated names that change the
+//: moment somebody reorders the doctype in Desk, so naming them would be a
+//: list that breaks on a layout edit.
+const LAYOUT = ["Section Break", "Column Break", "Tab Break"]
+
 function getFilteredFields(fields) {
-	// reduce noise from the form view by excluding unnecessary fields
-	// ex: employee and other details can be fetched from the session user
-	const excludeFields = ["naming_series", "sb_other_details", "salary_slip", "letter_head"]
-
-	const employeeFields = [
-		"employee",
-		"employee_name",
-		"department",
-		"company",
-		"follow_via_email",
-		"status",
-		"posting_date",
-	]
-
-	if (!props.id) excludeFields.push(...employeeFields)
-
-	return fields.filter((field) => !excludeFields.includes(field.fieldname))
+	const wanted = props.id ? [...FIELDS, ...FIELDS_ON_EXISTING] : FIELDS
+	return fields.filter(
+		(field) => wanted.includes(field.fieldname) || LAYOUT.includes(field.fieldtype)
+	)
 }
 
 function setFormReadOnly() {

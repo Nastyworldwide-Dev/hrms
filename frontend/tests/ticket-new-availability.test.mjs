@@ -18,7 +18,10 @@ import vm from "node:vm"
 import { readFileSync } from "node:fs"
 import { computed, reactive, ref, watch, effectScope, nextTick } from "vue"
 
-const source = readFileSync(new URL("../src/views/helpdesk/TicketNew.vue", import.meta.url), "utf8")
+const source = readFileSync(
+	new URL("../src/views/helpdesk/TicketNew.vue", import.meta.url),
+	"utf8"
+)
 const script = source.split("<script setup>")[1].split("</script>")[0]
 const template = source.split("<script setup>")[0]
 const executable = (text) =>
@@ -28,7 +31,11 @@ const executable = (text) =>
 
 function fixture(available) {
 	const optionFetches = []
-	const helpdeskAvailable = reactive({ data: available, error: null, loading: false })
+	const helpdeskAvailable = reactive({
+		data: available,
+		error: null,
+		loading: false,
+	})
 	const scope = effectScope()
 	const context = vm.createContext({
 		computed,
@@ -37,9 +44,16 @@ function fixture(available) {
 		watch,
 		console: { info() {}, warn() {} },
 		FileAttachment: class {},
-		newTicket: { loading: false, submit: () => Promise.resolve({ name: "HD-1" }) },
+		newTicket: {
+			loading: false,
+			submit: () => Promise.resolve({ name: "HD-1" }),
+		},
 		myTickets: { reload() {} },
-		ticketOptions: { data: null, loading: false, fetch: () => optionFetches.push("fetch") },
+		ticketOptions: {
+			data: null,
+			loading: false,
+			fetch: () => optionFetches.push("fetch"),
+		},
 		helpdeskAvailable,
 		goBackOrHome: () => {},
 		useRouter: () => ({ replace() {} }),
@@ -53,7 +67,11 @@ function fixture(available) {
 test("a site without Helpdesk shows the unavailable state and never asks for options", () => {
 	const s = fixture(false)
 	assert.equal(s.run("availability.value"), "no")
-	assert.deepEqual(s.optionFetches, [], "get_options on a site without Helpdesk is the crawl's error")
+	assert.deepEqual(
+		s.optionFetches,
+		[],
+		"get_options on a site without Helpdesk is the crawl's error"
+	)
 	s.stop()
 })
 
@@ -76,10 +94,28 @@ test("a site with Helpdesk loads the options straight away", () => {
 })
 
 test("the template gates the form on the answer and gives the unavailable state a way back", () => {
-	assert.match(template, /v-if="availability === 'no'"/, "an unavailable branch")
+	assert.match(
+		template,
+		/v-if="availability === 'no'"/,
+		"an unavailable branch"
+	)
 	assert.match(template, /IT Helpdesk isn’t set up here/)
-	assert.match(template, /v-else-if="availability === 'pending'"/, "a waiting branch")
-	assert.match(template, /<form[^>]*v-else/, "the form renders only once the probe said yes")
-	const unavailable = template.split(/v-if="availability === 'no'"/)[1].split("v-else-if")[0]
-	assert.match(unavailable, /@click="goBack"|goBackOrHome/, "the unavailable state has its own Back")
+	assert.match(
+		template,
+		/v-else-if="availability === 'pending'"/,
+		"a waiting branch"
+	)
+	assert.match(
+		template,
+		/<form[^>]*v-else/,
+		"the form renders only once the probe said yes"
+	)
+	const unavailable = template
+		.split(/v-if="availability === 'no'"/)[1]
+		.split("v-else-if")[0]
+	assert.match(
+		unavailable,
+		/@click="goBack"|goBackOrHome/,
+		"the unavailable state has its own Back"
+	)
 })

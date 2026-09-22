@@ -26,7 +26,10 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const source = readFileSync(
-	join(dirname(fileURLToPath(import.meta.url)), "../src/components/FormField.vue"),
+	join(
+		dirname(fileURLToPath(import.meta.url)),
+		"../src/components/FormField.vue"
+	),
 	"utf8"
 )
 
@@ -51,7 +54,11 @@ test("Time branch never renders the legacy frappe-ui Input component", () => {
 
 test("Time branch is a time input bound to the form model, glass-styled", () => {
 	const tag = timeBranchTag()
-	assert.match(tag, /^<GInput[\s>]/, "must render through GInput, not a bare unstyled <input>")
+	assert.match(
+		tag,
+		/^<GInput[\s>]/,
+		"must render through GInput, not a bare unstyled <input>"
+	)
 	assert.match(tag, /type="time"/)
 	assert.match(tag, /:model-value="modelValue"/)
 	assert.match(tag, /emit\('update:modelValue'/)

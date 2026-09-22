@@ -22,17 +22,35 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { HRMS_PY, rel, routeTable, sourceFiles, scriptText, templateText } from "./_lib.mjs"
+import {
+	HRMS_PY,
+	rel,
+	routeTable,
+	sourceFiles,
+	scriptText,
+	templateText,
+} from "./_lib.mjs"
 
 // The server's own allowlist of renderable field types (hrms/api/__init__.py).
 const api = readFileSync(join(HRMS_PY, "api", "__init__.py"), "utf8")
-const SUPPORTED = new Set([...api.match(/SUPPORTED_FIELD_TYPES = \[([\s\S]*?)\]/)[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]))
+const SUPPORTED = new Set(
+	[
+		...api
+			.match(/SUPPORTED_FIELD_TYPES = \[([\s\S]*?)\]/)[1]
+			.matchAll(/"([^"]+)"/g),
+	].map((m) => m[1])
+)
 
 function doctypeJson(doctype) {
 	const snake = doctype.toLowerCase().replace(/\s+/g, "_")
 	for (const module of readdirSync(HRMS_PY)) {
 		const path = join(HRMS_PY, module, "doctype", snake, `${snake}.json`)
-		if (existsSync(path)) return { json: JSON.parse(readFileSync(path, "utf8")), dir: join(HRMS_PY, module, "doctype", snake), snake }
+		if (existsSync(path))
+			return {
+				json: JSON.parse(readFileSync(path, "utf8")),
+				dir: join(HRMS_PY, module, "doctype", snake),
+				snake,
+			}
 	}
 	return null
 }
@@ -55,13 +73,42 @@ function viewShape(file) {
 	const script = scriptText(file)
 	const excluded = new Set()
 	// every string literal inside the formFields transform / getFilteredFields body
-	const transform = script.match(/transform\(data\)\s*\{([\s\S]*?)\n\t\},?\n/)?.[1] || ""
-	const filterFns = [...script.matchAll(/function getFilteredFields\(fields\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1])
-	const constArrays = [...script.matchAll(/^const [A-Z_]+ = \[([\s\S]*?)\]/gm)].map((m) => m[1])
-	for (const body of [transform, ...filterFns, ...constArrays])
+	const transform =
+		script.match(/transform\(data\)\s*\{([\s\S]*?)\n\t\},?\n/)?.[1] || ""
+	const filterFns = [
+		...script.matchAll(
+			/function getFilteredFields\(fields\)\s*\{([\s\S]*?)\n\}/g
+		),
+	].map((m) => m[1])
+	// Amended 22 Sep 2026 (2.0 slice 3.1). Every uppercase const array used to
+	// be read as an EXCLUSION list, which was true while the forms filtered by
+	// blacklist. They allowlist now — `FIELDS` and `FIELDS_ON_EXISTING` name
+	// what to KEEP — so reading them as exclusions inverted the meaning and
+	// this guard reported `from_date` as filtered out of a form that renders
+	// it. A list whose name says KEEP is subtracted from the exclusions, not
+	// added to them.
+	const constArrays = [
+		...script.matchAll(/^const ([A-Z_]+) = \[([\s\S]*?)\]/gm),
+	]
+	const allowlisted = new Set()
+	for (const [, name, body] of constArrays) {
+		const target = /^FIELDS/.test(name) ? allowlisted : excluded
+		for (const m of body.matchAll(/["']([a-z_0-9]+)["']/g)) target.add(m[1])
+	}
+	for (const body of [transform, ...filterFns])
 		for (const m of body.matchAll(/["']([a-z_0-9]+)["']/g)) excluded.add(m[1])
-	const hidden = new Set([...script.matchAll(/fieldname === ["'](\w+)["']\) field\.hidden = true/g)].map((m) => m[1]))
-	const defaults = new Set([...script.matchAll(/fieldname === ["'](\w+)["']\) field\.default/g)].map((m) => m[1]))
+	// An allowlisted field is rendered by definition, whatever else mentions it.
+	for (const name of allowlisted) excluded.delete(name)
+	const hidden = new Set(
+		[
+			...script.matchAll(/fieldname === ["'](\w+)["']\) field\.hidden = true/g),
+		].map((m) => m[1])
+	)
+	const defaults = new Set(
+		[...script.matchAll(/fieldname === ["'](\w+)["']\) field\.default/g)].map(
+			(m) => m[1]
+		)
+	)
 	// model seeds: `const x = ref({ a: ..., b: ... })` keys, and `x.value.f = …`
 	const seeds = new Set()
 	const model = script.match(/= ref\(\{([\s\S]*?)\n\}\)/)
@@ -69,13 +116,31 @@ function viewShape(file) {
 	for (const m of script.matchAll(/\.value\.(\w+) = /g)) seeds.add(m[1])
 	const tpl = templateText(file)
 	const tabs = script.match(/const tabs = \[([\s\S]*?)\]/)?.[1]
-	const lastField = tabs ? [...tabs.matchAll(/lastField: "(\w+)"/g)].map((m) => m[1]).pop() : null
+	const lastField = tabs
+		? [...tabs.matchAll(/lastField: "(\w+)"/g)].map((m) => m[1]).pop()
+		: null
 	const doctype = tpl.match(/<FormView[\s\S]*?doctype="([^"]+)"/)?.[1]
-	return { doctype, excluded, hidden, defaults, seeds, lastField }
+	// `allowsOnly` is empty for a blacklist form and holds the named fields for
+	// an allowlist one, where ABSENCE from the list is itself exclusion —
+	// which deleting names from `excluded` does not express. A mutant proved
+	// it: dropping `from_date` from the list did not fail this guard, while
+	// adding it to a blacklist at HEAD did.
+	return {
+		doctype,
+		excluded,
+		hidden,
+		defaults,
+		seeds,
+		lastField,
+		allowsOnly: allowlisted,
+	}
 }
 
 const forms = sourceFiles()
-	.filter((f) => f.endsWith(".vue") && /<FormView[\s\S]*?doctype="/.test(templateText(f)))
+	.filter(
+		(f) =>
+			f.endsWith(".vue") && /<FormView[\s\S]*?doctype="/.test(templateText(f))
+	)
 	.map((f) => ({ file: f, ...viewShape(f) }))
 
 test("every FormView-driven form is found with its doctype", () => {
@@ -83,26 +148,45 @@ test("every FormView-driven form is found with its doctype", () => {
 	for (const f of forms) assert.ok(f.doctype, `${rel(f.file)} has no doctype`)
 })
 
-const routeNames = new Set(routeTable().flat.map((r) => r.name).filter(Boolean))
+const routeNames = new Set(
+	routeTable()
+		.flat.map((r) => r.name)
+		.filter(Boolean)
+)
 const rows = []
 const gaps = []
 for (const form of forms) {
 	const createRoute = `${form.doctype.replace(/\s+/g, "")}FormView`
 	if (!routeNames.has(createRoute)) {
-		rows.push(`${form.doctype.padEnd(24)} ${"(all)".padEnd(16)} detail-only form — no ${createRoute} route, never inserts`)
+		rows.push(
+			`${form.doctype.padEnd(24)} ${"(all)".padEnd(
+				16
+			)} detail-only form — no ${createRoute} route, never inserts`
+		)
 		continue
 	}
 	const dt = doctypeJson(form.doctype)
 	if (!dt) {
-		gaps.push(`${rel(form.file)}: doctype JSON for ${form.doctype} not found under hrms/`)
+		gaps.push(
+			`${rel(form.file)}: doctype JSON for ${
+				form.doctype
+			} not found under hrms/`
+		)
 		continue
 	}
 	const controller = controllerText(dt)
 	for (const field of dt.json.fields) {
 		if (!field.reqd) continue
 		const status = classify(form, field, dt.json.fields, controller)
-		if (status.startsWith("GAP")) gaps.push(`${rel(form.file)} (${form.doctype}): reqd \`${field.fieldname}\` ${status.slice(6)}`)
-		rows.push(`${form.doctype.padEnd(24)} ${field.fieldname.padEnd(16)} ${status}`)
+		if (status.startsWith("GAP"))
+			gaps.push(
+				`${rel(form.file)} (${form.doctype}): reqd \`${
+					field.fieldname
+				}\` ${status.slice(6)}`
+			)
+		rows.push(
+			`${form.doctype.padEnd(24)} ${field.fieldname.padEnd(16)} ${status}`
+		)
 	}
 }
 
@@ -116,17 +200,30 @@ export function classify(form, field, fields, controller) {
 	const name = field.fieldname
 	const fieldnames = fields.map((f) => f.fieldname)
 	const cutoff = form.lastField ? fieldnames.indexOf(form.lastField) : Infinity
-	const controllerSets = new RegExp(`(self|doc)\\.${name} = |def set_${name}\\(|set_${name}_from`).test(controller)
+	const controllerSets = new RegExp(
+		`(self|doc)\\.${name} = |def set_${name}\\(|set_${name}_from`
+	).test(controller)
 	if (name === "naming_series") return "server-set (naming series)"
 	if (form.seeds.has(name) || form.defaults.has(name)) return "client-seeded"
 	// the view filters the field out, so the key is ABSENT from the insert and
 	// Document._set_defaults fills it from the JSON default
-	if (form.excluded.has(name) && field.default) return `server-set (key absent, JSON default ${field.default})`
-	if (SUPPORTED.has(field.fieldtype) && !form.excluded.has(name) && !form.hidden.has(name) && fieldnames.indexOf(name) <= cutoff)
+	if (form.excluded.has(name) && field.default)
+		return `server-set (key absent, JSON default ${field.default})`
+	const allowed = form.allowsOnly?.size
+		? form.allowsOnly.has(name)
+		: !form.excluded.has(name)
+	if (
+		SUPPORTED.has(field.fieldtype) &&
+		allowed &&
+		!form.hidden.has(name) &&
+		fieldnames.indexOf(name) <= cutoff
+	)
 		return "rendered"
 	if (controllerSets) return "server-set (controller)"
 	const why = !SUPPORTED.has(field.fieldtype)
 		? `fieldtype ${field.fieldtype} not renderable`
+		: form.allowsOnly?.size && !form.allowsOnly.has(name)
+		? "not named in the view's allowlist"
 		: form.excluded.has(name)
 		? "filtered out by the view"
 		: form.hidden.has(name)
@@ -147,7 +244,10 @@ test("every reqd field of every form doctype is rendered, seeded or defaulted", 
 
 test("the audit sees the Expense Claim posting_date seed and the Shift Request company default", () => {
 	const expense = forms.find((f) => f.doctype === "Expense Claim")
-	assert.ok(expense.seeds.has("posting_date"), "Expense Claim seeds posting_date in its model")
+	assert.ok(
+		expense.seeds.has("posting_date"),
+		"Expense Claim seeds posting_date in its model"
+	)
 	assert.equal(expense.lastField, "taxes")
 	const shift = doctypeJson("Shift Request")
 	assert.match(controllerText(shift), /set_company_from_employee/)
@@ -159,13 +259,35 @@ test("the audit catches the Expense Claim posting_date and Shift Request company
 		{ fieldname: "expenses", fieldtype: "Table", reqd: 1 },
 		{ fieldname: "taxes", fieldtype: "Table" },
 		{ fieldname: "posting_date", fieldtype: "Date", reqd: 1, default: "Today" },
-		{ fieldname: "company", fieldtype: "Link", reqd: 1, fetch_from: "employee.company" },
+		{
+			fieldname: "company",
+			fieldtype: "Link",
+			reqd: 1,
+			fetch_from: "employee.company",
+		},
 	]
-	const bare = { excluded: new Set(["company"]), hidden: new Set(), defaults: new Set(), seeds: new Set(), lastField: "taxes" }
-	assert.match(classify(bare, fields[3], fields, ""), /^GAP — .*past the last rendered tab field \(taxes\); JSON default Today/)
-	assert.match(classify(bare, fields[4], fields, ""), /^GAP — .*filtered out by the view; fetch_from employee.company/)
+	const bare = {
+		excluded: new Set(["company"]),
+		hidden: new Set(),
+		defaults: new Set(),
+		seeds: new Set(),
+		lastField: "taxes",
+	}
+	assert.match(
+		classify(bare, fields[3], fields, ""),
+		/^GAP — .*past the last rendered tab field \(taxes\); JSON default Today/
+	)
+	assert.match(
+		classify(bare, fields[4], fields, ""),
+		/^GAP — .*filtered out by the view; fetch_from employee.company/
+	)
 	assert.equal(
-		classify(bare, fields[4], fields, "from hrms.overrides.employee_company_default import set_company_from_employee"),
+		classify(
+			bare,
+			fields[4],
+			fields,
+			"from hrms.overrides.employee_company_default import set_company_from_employee"
+		),
 		"server-set (controller)"
 	)
 	const seeded = { ...bare, seeds: new Set(["posting_date"]) }

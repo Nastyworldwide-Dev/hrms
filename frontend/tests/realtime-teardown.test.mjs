@@ -41,7 +41,8 @@ test("the returned detach removes exactly this handler, leaving siblings", () =>
 	// Count only list_update handlers: subscribe() also wires one "connect"
 	// handler per socket (wireReconnect, rejoins rooms after a mobile reconnect),
 	// so raw handler count is list_update + 1 and isn't what this test is about.
-	const listUpdateHandlers = () => socket.handlers.filter((h) => h.event === "list_update").length
+	const listUpdateHandlers = () =>
+		socket.handlers.filter((h) => h.event === "list_update").length
 	assert.equal(listUpdateHandlers(), 2)
 
 	offA()

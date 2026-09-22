@@ -5,14 +5,24 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { buildSopSections, filterSops, matchesQuery } from "../src/utils/sopLibrary.js"
+import {
+	buildSopSections,
+	filterSops,
+	matchesQuery,
+} from "../src/utils/sopLibrary.js"
 
 const PAYLOAD = {
 	is_hr: true,
 	my_department: "Kitchen - NW",
-	pinned: [{ name: "HR-SOP-00001", title: "Employee Handbook", scope: "General" }],
+	pinned: [
+		{ name: "HR-SOP-00001", title: "Employee Handbook", scope: "General" },
+	],
 	general: [
-		{ name: "HR-SOP-00002", title: "Fire Evacuation Procedure", scope: "General" },
+		{
+			name: "HR-SOP-00002",
+			title: "Fire Evacuation Procedure",
+			scope: "General",
+		},
 		{ name: "HR-SOP-00003", title: "IT Acceptable Use", scope: "General" },
 	],
 	departments: [

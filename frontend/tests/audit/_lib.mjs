@@ -8,7 +8,11 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse as parseSfc } from "@vue/compiler-sfc"
 
-export const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
+export const FRONTEND = resolve(
+	dirname(fileURLToPath(import.meta.url)),
+	"..",
+	".."
+)
 export const SRC = join(FRONTEND, "src")
 export const REPO = resolve(FRONTEND, "..")
 export const HRMS_PY = join(REPO, "hrms")
@@ -18,8 +22,10 @@ export function sourceFiles(dir = SRC, out = []) {
 	for (const entry of readdirSync(dir)) {
 		const path = join(dir, entry)
 		if (statSync(path).isDirectory()) {
-			if (entry !== "__tests__" && entry !== "node_modules") sourceFiles(path, out)
-		} else if (/\.(vue|js)$/.test(entry) && !/\.test\./.test(entry)) out.push(path)
+			if (entry !== "__tests__" && entry !== "node_modules")
+				sourceFiles(path, out)
+		} else if (/\.(vue|js)$/.test(entry) && !/\.test\./.test(entry))
+			out.push(path)
 	}
 	return out.sort()
 }
@@ -36,7 +42,12 @@ export function resolveImport(spec, from) {
 	if (spec.startsWith("@/")) base = join(SRC, spec.slice(2))
 	else if (spec.startsWith(".")) base = resolve(dirname(from), spec)
 	else return null // a package
-	for (const candidate of [base, base + ".js", base + ".vue", join(base, "index.js")]) {
+	for (const candidate of [
+		base,
+		base + ".js",
+		base + ".vue",
+		join(base, "index.js"),
+	]) {
 		if (existsSync(candidate) && statSync(candidate).isFile()) return candidate
 	}
 	return base // missing — callers report it
@@ -50,7 +61,8 @@ export function sfc(path) {
 // Line number (1-based) of a character offset inside `text`.
 export function lineOf(text, offset) {
 	let line = 1
-	for (let i = 0; i < offset && i < text.length; i++) if (text[i] === "\n") line++
+	for (let i = 0; i < offset && i < text.length; i++)
+		if (text[i] === "\n") line++
 	return line
 }
 
@@ -58,7 +70,8 @@ export function lineOf(text, offset) {
 export function importsOf(path) {
 	const text = path.endsWith(".vue") ? scriptText(path) : read(path)
 	const specs = []
-	const re = /\bimport\s*(?:[\w${},*\s]+?\s*from\s*)?["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g
+	const re =
+		/\bimport\s*(?:[\w${},*\s]+?\s*from\s*)?["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g
 	let m
 	while ((m = re.exec(text))) specs.push(m[1] || m[2])
 	return specs
@@ -66,7 +79,9 @@ export function importsOf(path) {
 
 export function scriptText(path) {
 	const { descriptor } = sfc(path)
-	return [descriptor.scriptSetup?.content, descriptor.script?.content].filter(Boolean).join("\n")
+	return [descriptor.scriptSetup?.content, descriptor.script?.content]
+		.filter(Boolean)
+		.join("\n")
 }
 
 export function templateText(path) {
@@ -82,7 +97,8 @@ export function templateText(path) {
 const CONSTANTS = (() => {
 	const text = read(join(SRC, "utils", "helpdeskHub.js"))
 	const out = {}
-	for (const m of text.matchAll(/export const (\w+)\s*=\s*["']([^"']+)["']/g)) out[m[1]] = m[2]
+	for (const m of text.matchAll(/export const (\w+)\s*=\s*["']([^"']+)["']/g))
+		out[m[1]] = m[2]
 	return out
 })()
 
@@ -154,7 +170,9 @@ function routeFromBody(body) {
 	route.path = literal(pathM?.[1])
 	const nameM = own.match(/\bname\s*:\s*([^,\n]+)/)
 	route.name = literal(nameM?.[1])
-	const compM = own.match(/\bcomponent\s*:\s*(?:\(\)\s*=>\s*import\(\s*["']([^"']+)["']\s*\)|(\w+))/)
+	const compM = own.match(
+		/\bcomponent\s*:\s*(?:\(\)\s*=>\s*import\(\s*["']([^"']+)["']\s*\)|(\w+))/
+	)
 	if (compM) route.component = compM[1] || compM[2]
 	const redirM = own.match(/\bredirect\s*:\s*(\{[^}]*\}|[^,\n]+)/)
 	if (redirM) {
@@ -178,16 +196,19 @@ export function routeTable() {
 		modules[m[1]] = parseRouteObjects(read(join(routerDir, m[2] + ".js")))
 	}
 	const localImports = {}
-	for (const m of index.matchAll(/import (\w+) from "(@\/views\/[^"]+)"/g)) localImports[m[1]] = m[2]
+	for (const m of index.matchAll(/import (\w+) from "(@\/views\/[^"]+)"/g))
+		localImports[m[1]] = m[2]
 
 	const inline = (routes) =>
 		routes.map((r) => {
 			if (r.children) {
 				const expanded = inline(r.children)
-				for (const spread of r.spreads || []) expanded.push(...inline(modules[spread] || []))
+				for (const spread of r.spreads || [])
+					expanded.push(...inline(modules[spread] || []))
 				r.children = expanded
 			}
-			if (r.component && !r.component.includes("/")) r.component = localImports[r.component] || r.component
+			if (r.component && !r.component.includes("/"))
+				r.component = localImports[r.component] || r.component
 			return r
 		})
 	const top = inline(parseRouteObjects(index))

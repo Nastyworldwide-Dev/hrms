@@ -31,7 +31,10 @@ test("404 (pre-hardening frappe's unknown-user answer) resolves like success —
 	// Current frappe v15 always answers 200 regardless of user existence
 	// (CWE-204); older releases answered 404 for unknown users. The client
 	// must not let the two outcomes look different.
-	assert.equal(await sendPasswordResetLink("nobody@example.com", mockFetcher(404)), true)
+	assert.equal(
+		await sendPasswordResetLink("nobody@example.com", mockFetcher(404)),
+		true
+	)
 })
 
 test("429 (rate limited) surfaces a try-again-later message", async () => {

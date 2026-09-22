@@ -5,7 +5,11 @@ import assert from "node:assert/strict"
 
 import { groupByDepartment, UNASSIGNED_DEPARTMENT } from "../src/utils/team.js"
 
-const member = (name, department) => ({ employee: name, employee_name: name, department })
+const member = (name, department) => ({
+	employee: name,
+	employee_name: name,
+	department,
+})
 
 test("groups members under their department, sections alphabetical", () => {
 	const groups = groupByDepartment([
@@ -17,14 +21,25 @@ test("groups members under their department, sections alphabetical", () => {
 		groups.map((g) => g.department),
 		["HR - WWSB", "Sales - WWSB"]
 	)
-	assert.deepEqual(groups[1].members.map((m) => m.employee), ["C", "B"])
+	assert.deepEqual(
+		groups[1].members.map((m) => m.employee),
+		["C", "B"]
+	)
 })
 
 test("grouping never changes the member SET — presentation only", () => {
-	const members = [member("A", "X"), member("B", null), member("C", "X"), member("D", "Y")]
+	const members = [
+		member("A", "X"),
+		member("B", null),
+		member("C", "X"),
+		member("D", "Y"),
+	]
 	const regrouped = groupByDepartment(members).flatMap((g) => g.members)
 	assert.equal(regrouped.length, members.length)
-	assert.deepEqual(new Set(regrouped.map((m) => m.employee)), new Set(["A", "B", "C", "D"]))
+	assert.deepEqual(
+		new Set(regrouped.map((m) => m.employee)),
+		new Set(["A", "B", "C", "D"])
+	)
 })
 
 test("members without a department gather under the labelled bucket, last", () => {

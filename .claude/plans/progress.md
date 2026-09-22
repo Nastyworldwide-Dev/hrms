@@ -379,3 +379,48 @@ EVIDENCE: 2 correct — 5 tests red first (4 of 5), 6 mutants killed: the tab
   contrast 56/0, surfaces 46/0, tokens ok. Build clean.
 NEXT: Nabil re-deploys and re-checks the same three on the phone. Then 2.0
   slice 3.1 (forms use a blacklist).
+- 2026-09-22T11:56:59Z PUSH: nz-glass @ 941e4f3c9
+- 2026-09-22T11:56:59Z COMMIT: 941e4f3c9 fix(pwa): three things a real phone showed that every test had passed → review+design dispatched
+- 2026-09-22T12:05:43Z EVIDENCE: 2 correct — mapped tests green (bun ) for 34 file(s) ⟂97c80d538eb5
+
+REPAIR: 2.0 slice 3.1 — both request forms decided what to show by listing
+  what to HIDE. A blacklist hides what it knows and SHOWS what it does not, and
+  it is a snapshot of the schema on the day somebody wrote it while the schema
+  keeps growing. Read against the RUNNING SITE's metadata, not guessed:
+  LEAVE (30 fields, 19 shown) leaked `synced_from_instance` — this app's own
+  cross-instance mirror flag — plus `color` (a Desk calendar colour) and
+  `amended_from` (Frappe's link to the cancelled document it replaced).
+  EXPENSE (61 fields, 36 shown) leaked `gain_loss_account`,
+  `total_exchange_gain_loss`, `delivery_trip`, `vehicle_log`,
+  `bank_or_cash_account`, `location`, `branch`, `amended_from` and the
+  Accounting, More Info and Dashboard TABS. Its blacklist had grown to
+  eighteen entries chasing the same problem.
+  Both are allowlists now. Layout passes by KIND (Section/Column Break),
+  because those are called `section_break_5` and `column_break_imlz` —
+  generated names that change the moment somebody reorders the doctype in
+  Desk, so naming them would be a list that breaks on a layout edit.
+NOTE: an EXISTING guard went red, correctly, and its assumption was the thing
+  that needed fixing: form-mandatory-fields.test.mjs reads every uppercase
+  const array as an EXCLUSION list, which was true while the forms blacklisted.
+  It read my `FIELDS` allowlist as "hide these" and reported `from_date` as
+  filtered out of a form that renders it.
+NOTE: my first fix of that guard WEAKENED it and a mutant proved it. Deleting
+  the allowlisted names from `excluded` says "these are not hidden" but not
+  "everything else IS" — so a required field simply LEFT OUT of the list read
+  as "nobody mentioned it" and passed. Verified the asymmetry against HEAD: at
+  HEAD, adding `from_date` to the blacklist DID fail the guard, so the hole
+  was mine. `allowsOnly` now inverts the question for a form that has a list.
+EVIDENCE: 2 correct — 5 new tests red first (4 of 5), 5 mutants killed on the
+  forms (blacklist returns; the filter ignores the list; a leaked field is
+  allowlisted; layout kept by name; a real field dropped) and 2 on the guard
+  (it reverts to reading FIELDS as exclusions; a required field is left out of
+  the list). Suite 585 / 581 pass, same 4 red at HEAD. Gates: lint 234/0,
+  contrast 56/0, surfaces 46/0, tokens ok. Build clean.
+NOTE: the "still offers" test passed against a removed field at first —
+  `half_day_date` appears in four places in that file (a watcher, a lookup, a
+  hidden-flag branch), so a whole-file match found it anyway. Scoped to the
+  list itself.
+NEXT: 2.0 slice 0.1 — the tab bar. The owner ruled AS PLANNED: Home · Calendar
+  · Requests · Score · More, replacing the five in data/navItems.js, with the
+  old routes redirecting. 1.3 (Home) follows it, because the tabs decide what
+  Home is for.

@@ -23,15 +23,20 @@ const COMMENT = 3
 const DIRECTIVE = 7
 const EMPTY_STATES = new Set(["GEmptyState"])
 
-const directive = (node, name) => node.props?.find((p) => p.type === DIRECTIVE && p.name === name)
-const condition = (node) => (directive(node, "if") || directive(node, "else-if"))?.exp?.content || null
+const directive = (node, name) =>
+	node.props?.find((p) => p.type === DIRECTIVE && p.name === name)
+const condition = (node) =>
+	(directive(node, "if") || directive(node, "else-if"))?.exp?.content || null
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 // Resources a template shows an error state for: `<ResourceError :resource="X">`.
 function errorStateResources(node, out = new Set()) {
 	if (node.type === ELEMENT && node.tag === "ResourceError") {
 		const bound = node.props.find(
-			(p) => p.type === DIRECTIVE && p.name === "bind" && p.arg?.content === "resource"
+			(p) =>
+				p.type === DIRECTIVE &&
+				p.name === "bind" &&
+				p.arg?.content === "resource"
 		)
 		if (bound?.exp?.content) out.add(bound.exp.content.trim())
 	}
@@ -45,7 +50,8 @@ function chainConditions(siblings, index) {
 	if (!directive(siblings[index], "else-if")) return conditions
 	for (let i = index - 1; i >= 0; i--) {
 		const node = siblings[i]
-		if (node.type === COMMENT || (node.type === TEXT && !node.content.trim())) continue
+		if (node.type === COMMENT || (node.type === TEXT && !node.content.trim()))
+			continue
 		if (node.type !== ELEMENT) break
 		const own = condition(node)
 		if (own) conditions.unshift(own)
@@ -61,12 +67,21 @@ export function flagsIn(ast) {
 	const walk = (node) => {
 		const children = node.children || []
 		children.forEach((child, index) => {
-			if (child.type === ELEMENT && EMPTY_STATES.has(child.tag) && condition(child)) {
+			if (
+				child.type === ELEMENT &&
+				EMPTY_STATES.has(child.tag) &&
+				condition(child)
+			) {
 				const chain = chainConditions(children, index).join(" ")
 				for (const resource of withErrorState) {
-					const waitsForLoad = new RegExp(`!\\s*${escape(resource)}\\.loading\\b`).test(chain)
-					const namesError = new RegExp(`\\b${escape(resource)}\\.error\\b`).test(chain)
-					if (waitsForLoad && !namesError) out.push([child.loc.start.line, resource])
+					const waitsForLoad = new RegExp(
+						`!\\s*${escape(resource)}\\.loading\\b`
+					).test(chain)
+					const namesError = new RegExp(
+						`\\b${escape(resource)}\\.error\\b`
+					).test(chain)
+					if (waitsForLoad && !namesError)
+						out.push([child.loc.start.line, resource])
 				}
 			}
 			walk(child)
@@ -83,7 +98,9 @@ test("no empty state renders beside its resource's error state", () => {
 		const ast = sfc(file).descriptor.template?.ast
 		if (!ast) continue
 		for (const [line, resource] of flagsIn(ast))
-			found.push(`${rel(file)}:${line} empty state shows beside ${resource}'s error`)
+			found.push(
+				`${rel(file)}:${line} empty state shows beside ${resource}'s error`
+			)
 	}
 	assert.deepEqual(found, [])
 })
@@ -96,9 +113,15 @@ test("the audit flags the SopDetail shape and passes its fix (self-check)", () =
 		<!-- a comment between branches is still one chain -->
 		<GEmptyState v-else-if="!sop.loading" title="none" />
 	</div></template>`
-	const astOf = (source) => parseSfc(source, { filename: "SelfCheck.vue" }).descriptor.template.ast
+	const astOf = (source) =>
+		parseSfc(source, { filename: "SelfCheck.vue" }).descriptor.template.ast
 	assert.equal(flagsIn(astOf(bad)).length, 1)
-	assert.equal(flagsIn(astOf(bad.replace('"!sop.loading"', '"!sop.loading && !sop.error"'))).length, 0)
+	assert.equal(
+		flagsIn(
+			astOf(bad.replace('"!sop.loading"', '"!sop.loading && !sop.error"'))
+		).length,
+		0
+	)
 	// the error named in an EARLIER branch of the chain also excludes it
 	const earlier = bad.replace('v-if="sop.data"', 'v-if="sop.error || sop.data"')
 	assert.equal(flagsIn(astOf(earlier)).length, 0)

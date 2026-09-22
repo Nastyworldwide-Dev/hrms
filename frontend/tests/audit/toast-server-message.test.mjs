@@ -20,12 +20,15 @@ import { sourceFiles, read, rel, lineOf } from "./_lib.mjs"
 // Handlers whose failure is not a server refusal, with the reason on record.
 const EXEMPT = {
 	// Browser Notification / push-subscription errors; deliberately calm copy.
-	"src/components/PushNotificationPrompt.vue": "push enable is optional; calm copy by design",
-	"src/views/AppSettings.vue": "browser Notification API errors, not server refusals",
+	"src/components/PushNotificationPrompt.vue":
+		"push enable is optional; calm copy by design",
+	"src/views/AppSettings.vue":
+		"browser Notification API errors, not server refusals",
 }
 
 // `onError(...) {` / `onError: (e) => {` / `.catch((e) => {` / `catch (e) {`
-const HANDLER_RE = /\bonError\b\s*(?::\s*)?(?:async\s*)?(?:\([^)]*\)|\w+)?\s*(?:=>)?\s*\{|\.catch\(\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>\s*\{|\bcatch\s*(?:\([^)]*\))?\s*\{/g
+const HANDLER_RE =
+	/\bonError\b\s*(?::\s*)?(?:async\s*)?(?:\([^)]*\)|\w+)?\s*(?:=>)?\s*\{|\.catch\(\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>\s*\{|\bcatch\s*(?:\([^)]*\))?\s*\{/g
 
 function blockAt(text, openBrace) {
 	let depth = 0
@@ -60,9 +63,13 @@ export function auditToasts(text, file) {
 			const call = callAt(body, t.index + "toast".length)
 			const at = lineOf(text, open + t.index)
 			if (/\bmessages(?:\?\.|\.)?\s*\[\s*0\s*\]|\bmessages\??\.join/.test(call))
-				findings.push(`${file}:${at} reads error.messages directly — use firstMessage() (strips Desk markup)`)
+				findings.push(
+					`${file}:${at} reads error.messages directly — use firstMessage() (strips Desk markup)`
+				)
 			else if (!/\bfirstMessage\(/.test(call))
-				findings.push(`${file}:${at} error toast without the server message — use firstMessage()`)
+				findings.push(
+					`${file}:${at} error toast without the server message — use firstMessage()`
+				)
 		}
 	}
 	return findings
@@ -95,5 +102,6 @@ const x = createResource({
 
 test("every exemption still names a file that exists", () => {
 	const files = new Set(sourceFiles().map(rel))
-	for (const file of Object.keys(EXEMPT)) assert.ok(files.has(file), `${file} no longer exists — drop the exemption`)
+	for (const file of Object.keys(EXEMPT))
+		assert.ok(files.has(file), `${file} no longer exists — drop the exemption`)
 })

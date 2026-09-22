@@ -48,7 +48,9 @@ test("no source file references an undefined identifier", async () => {
 		for (const m of r.messages) {
 			if (!CORRECTNESS_RULES.includes(m.ruleId)) continue
 			offences.push(
-				`${r.filePath.replace(FRONTEND + "/", "")}:${m.line} ${m.ruleId} — ${m.message}`
+				`${r.filePath.replace(FRONTEND + "/", "")}:${m.line} ${m.ruleId} — ${
+					m.message
+				}`
 			)
 		}
 	}

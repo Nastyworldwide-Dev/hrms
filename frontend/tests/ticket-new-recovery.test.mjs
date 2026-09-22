@@ -16,7 +16,8 @@ import { readFileSync } from "node:fs"
 import { computed, reactive, ref, watch, effectScope, nextTick } from "vue"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
-const script = (path) => read(path).split("<script setup>")[1].split("</script>")[0]
+const script = (path) =>
+	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>
 	text
 		.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "")
@@ -67,10 +68,15 @@ function fixture({ failing = [] } = {}) {
 		ticketOptions: { data: null, fetch() {} },
 		goBackOrHome: () => navigations.push("home"),
 		useRouter: () => ({ replace: (to) => navigations.push(to) }),
-		inject: () => (s, args = []) => s.replace(/\{(\d+)\}/g, (_, i) => args[i]),
+		inject:
+			() =>
+			(s, args = []) =>
+				s.replace(/\{(\d+)\}/g, (_, i) => args[i]),
 	})
 	const run = (code) => vm.runInContext(code, context)
-	scope.run(() => run(executable(script("../src/views/helpdesk/TicketNew.vue"))))
+	scope.run(() =>
+		run(executable(script("../src/views/helpdesk/TicketNew.vue")))
+	)
 	return { run, created, uploads, navigations, stop: () => scope.stop() }
 }
 
@@ -82,9 +88,19 @@ test("a failed upload keeps the raised ticket and the retry re-sends only that f
 	await tick()
 	assert.equal(s.created.length, 1)
 	assert.equal(s.run("ticketName.value"), "HD-TICKET-1")
-	assert.deepEqual(plain(s.run("failedFiles.value.map((f) => f.name)")), ["b.png"])
-	assert.deepEqual(plain(s.run("files.value.map((f) => f.name)")), ["b.png"], "only the failure stays selected")
-	assert.equal(s.navigations.length, 0, "no navigation while a file is unattached")
+	assert.deepEqual(plain(s.run("failedFiles.value.map((f) => f.name)")), [
+		"b.png",
+	])
+	assert.deepEqual(
+		plain(s.run("files.value.map((f) => f.name)")),
+		["b.png"],
+		"only the failure stays selected"
+	)
+	assert.equal(
+		s.navigations.length,
+		0,
+		"no navigation while a file is unattached"
+	)
 	await s.run("submit()") // Retry uploads
 	await tick()
 	assert.equal(s.created.length, 1, "never a second ticket")
@@ -98,11 +114,15 @@ test("a failed upload keeps the raised ticket and the retry re-sends only that f
 
 test("a clean submit raises once, attaches, and lands on the ticket", async () => {
 	const s = fixture()
-	s.run("form.subject = 'Printer'; form.description = 'jammed'; files.value = [{ name: 'a.png' }]")
+	s.run(
+		"form.subject = 'Printer'; form.description = 'jammed'; files.value = [{ name: 'a.png' }]"
+	)
 	await s.run("submit()")
 	await tick()
 	assert.equal(s.created.length, 1)
-	assert.deepEqual(plain(s.navigations), [{ name: "HelpdeskTicketDetail", params: { id: "HD-TICKET-1" } }])
+	assert.deepEqual(plain(s.navigations), [
+		{ name: "HelpdeskTicketDetail", params: { id: "HD-TICKET-1" } },
+	])
 	s.stop()
 })
 
@@ -121,10 +141,15 @@ test("back on a dirty new ticket asks first; a pristine one just leaves", async 
 
 test("back after the ticket exists lands on that ticket, not on Home", async () => {
 	const s = fixture({ failing: ["a.png"] })
-	s.run("form.subject = 'x'; form.description = 'y'; files.value = [{ name: 'a.png' }]")
+	s.run(
+		"form.subject = 'x'; form.description = 'y'; files.value = [{ name: 'a.png' }]"
+	)
 	await s.run("submit()")
 	await tick()
 	s.run("goBack()")
-	assert.deepEqual(plain(s.navigations.at(-1)), { name: "HelpdeskTicketDetail", params: { id: "HD-TICKET-1" } })
+	assert.deepEqual(plain(s.navigations.at(-1)), {
+		name: "HelpdeskTicketDetail",
+		params: { id: "HD-TICKET-1" },
+	})
 	s.stop()
 })

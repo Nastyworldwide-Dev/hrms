@@ -34,13 +34,17 @@ const names = new Set(named.map((r) => r.name))
 function toVueRoute(r) {
 	const out = { path: r.path }
 	if (r.name) out.name = r.name
-	if (r.redirect) out.redirect = r.redirect.path ? { path: r.redirect.path } : r.redirect
+	if (r.redirect)
+		out.redirect = r.redirect.path ? { path: r.redirect.path } : r.redirect
 	if (r.component) out.component = { name: r.component }
 	if (r.children) out.children = r.children.map(toVueRoute)
 	if (!out.component && !out.redirect && !out.children) out.component = {}
 	return out
 }
-const router = createRouter({ history: createMemoryHistory(), routes: top.map(toVueRoute) })
+const router = createRouter({
+	history: createMemoryHistory(),
+	routes: top.map(toVueRoute),
+})
 
 const resolves = (target) => {
 	const resolved = router.resolve(target)
@@ -67,7 +71,8 @@ test("no two routes share a name", () => {
 	const seen = new Map()
 	const dupes = []
 	for (const r of named) {
-		if (seen.has(r.name)) dupes.push(`${r.name}: ${seen.get(r.name)} and ${r.path}`)
+		if (seen.has(r.name))
+			dupes.push(`${r.name}: ${seen.get(r.name)} and ${r.path}`)
 		seen.set(r.name, r.path)
 	}
 	assert.deepEqual(dupes, [])
@@ -78,8 +83,11 @@ test("every redirect lands on a real route", () => {
 	for (const r of flat) {
 		if (!r.redirect) continue
 		const target = typeof r.redirect === "string" ? r.redirect : r.redirect
-		if (target.name && !names.has(target.name)) dead.push(`${r.path} → name ${target.name}`)
-		else if (!resolves(target.name ? { name: target.name } : target.path || target))
+		if (target.name && !names.has(target.name))
+			dead.push(`${r.path} → name ${target.name}`)
+		else if (
+			!resolves(target.name ? { name: target.name } : target.path || target)
+		)
 			dead.push(`${r.path} → ${JSON.stringify(target)}`)
 	}
 	assert.deepEqual(dead, [])
@@ -89,7 +97,8 @@ test("every redirect lands on a real route", () => {
 //   { name: "X" } / name: 'X'      router.push / :to objects
 //   route: "X"                      Home.vue quick links (PascalCase = a name)
 //   hasRoute("X") / .name === "X"   guards and comparisons
-const NAME_RE = /(?:\bname\s*:\s*|\broute\s*:\s*|hasRoute\(\s*|\.name\s*===?\s*)["']([A-Z][A-Za-z]+)["']/g
+const NAME_RE =
+	/(?:\bname\s*:\s*|\broute\s*:\s*|hasRoute\(\s*|\.name\s*===?\s*)["']([A-Z][A-Za-z]+)["']/g
 // Identifiers that look like route names but are not navigation (component
 // registrations, doctype names never match — they carry spaces).
 const NOT_ROUTES = new Set(["GTag", "Expenses"])
@@ -156,7 +165,8 @@ test("every doctype rendered by ListView has DetailView and (unless read-only) F
 
 // PATH links: `route: "/x"` in navItems / More / SideNav, router.push("/x"),
 // to="/x". Each must resolve to something other than NotFound.
-const PATH_RE = /(?:\broute\s*:\s*|router\.(?:push|replace)\(\s*|(?<![:\w])to=)["'`](\/[^"'`]*)["'`]/g
+const PATH_RE =
+	/(?:\broute\s*:\s*|router\.(?:push|replace)\(\s*|(?<![:\w])to=)["'`](\/[^"'`]*)["'`]/g
 
 test("every sidebar, tab-bar, More and QuickLinks path resolves", () => {
 	const dead = []
@@ -180,7 +190,11 @@ test("navItems tab bar and More entries all resolve", async () => {
 	const dead = []
 	for (const m of text.matchAll(/route:\s*(\w+|"[^"]+")/g)) {
 		const raw = m[1].replace(/"/g, "")
-		const path = raw.startsWith("/") ? raw : read(`${SRC}/utils/helpdeskHub.js`).match(new RegExp(`${raw} = "([^"]+)"`))?.[1]
+		const path = raw.startsWith("/")
+			? raw
+			: read(`${SRC}/utils/helpdeskHub.js`).match(
+					new RegExp(`${raw} = "([^"]+)"`)
+			  )?.[1]
 		if (!path || !resolves(path)) dead.push(`navItems.js → ${raw}`)
 	}
 	assert.deepEqual(dead, [])
@@ -189,10 +203,14 @@ test("navItems tab bar and More entries all resolve", async () => {
 // Views are the unit of routing: a view file that no route and no other view
 // imports is a dead page (never reachable).
 test("every file under views/ is routed or imported by a routed view", () => {
-	const routed = new Set(flat.filter((r) => r.component).map((r) => resolveImport(r.component, SRC)))
+	const routed = new Set(
+		flat.filter((r) => r.component).map((r) => resolveImport(r.component, SRC))
+	)
 	const imported = new Set()
 	for (const file of sourceFiles()) {
-		for (const spec of file.endsWith(".vue") || file.endsWith(".js") ? importsFrom(file) : []) {
+		for (const spec of file.endsWith(".vue") || file.endsWith(".js")
+			? importsFrom(file)
+			: []) {
 			const target = resolveImport(spec, file)
 			if (target) imported.add(target)
 		}
@@ -206,7 +224,9 @@ test("every file under views/ is routed or imported by a routed view", () => {
 
 function importsFrom(file) {
 	const text = file.endsWith(".vue") ? scriptText(file) : read(file)
-	return [...text.matchAll(/\bimport\s*(?:[\w${},*\s]+?\s*from\s*)?["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g)].map(
-		(m) => m[1] || m[2]
-	)
+	return [
+		...text.matchAll(
+			/\bimport\s*(?:[\w${},*\s]+?\s*from\s*)?["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g
+		),
+	].map((m) => m[1] || m[2])
 }
