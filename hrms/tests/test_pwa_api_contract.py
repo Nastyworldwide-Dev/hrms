@@ -59,14 +59,29 @@ OPEN_READS = {
 }
 
 
+#: Docstrings and comments are PROSE. A body whose only mention of "approver"
+#: is in a sentence explaining the endpoint passes a substring check while
+#: performing no check at all — the same class as every comment-counted-as-code
+#: defect in this repo's frontend gates. Found by the review of fc5e8bf4a,
+#: which confirmed the gap existed and that nothing exploits it today.
+_DOCSTRING = re.compile(r'("""|\'\'\')(?:(?!\1).)*?\1', re.S)
+_COMMENT = re.compile(r"#[^\n]*")
+
+
+def _executable(body):
+	"""`body` with its docstrings and comments blanked, newlines preserved."""
+	body = _DOCSTRING.sub(lambda m: " " * len(m.group(0)), body)
+	return _COMMENT.sub(lambda m: " " * len(m.group(0)), body)
+
+
 def endpoints(path):
-	"""[(name, decorator args, body)] for every whitelisted function in a file."""
+	"""[(name, decorator args, executable body)] for every whitelisted function."""
 	source = path.read_text(encoding="utf-8")
 	found = []
 	for match in re.finditer(r"@frappe\.whitelist\(([^)]*)\)\s*\ndef (\w+)\(", source):
 		name = match.group(2)
 		body = re.search(rf"\ndef {name}\(.*?(?=\n@frappe\.whitelist|\Z)", source, re.S)
-		found.append((name, match.group(1), body.group(0) if body else ""))
+		found.append((name, match.group(1), _executable(body.group(0)) if body else ""))
 	return found
 
 
@@ -160,6 +175,7 @@ class TestEveryEndpointChecksSomething(unittest.TestCase):
 		# employee and nobody else's, so an endpoint built on it is scoped by
 		# construction rather than by a check it could forget.
 		"get_employee(",
+		"get_employee_info(",
 		"require_employee",
 		"own_employees",
 		"_decision_access",

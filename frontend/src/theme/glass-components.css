@@ -2713,3 +2713,124 @@ html[data-theme="dark"] .g-cal__day--present {
 		opacity: 0;
 	}
 }
+
+/* ---------- the offline bar (pre-2.0 R3) ---------- */
+
+/* Deliberately OPAQUE, not .g-glass. This renders in App.vue, above every
+   screen, so a glass surface here would add a compositing layer to all of
+   them against a budget of six (§15.1) — and the surfaces gate walks views/
+   only, so it would never be counted. A screen that silently costs one more
+   than it is charged for is what §15.3 exists to prevent. */
+.g-offline {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: var(--g-layer-sticky);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	/* The status bar's own height on a notched phone, so the text is not under it. */
+	padding: calc(env(safe-area-inset-top, 0px) + 7px) var(--g-screen-gutter) 7px;
+	background: var(--g-warn-ink);
+	/* --g-bg, not --g-ink: this bar's background is a CONSTANT amber in both
+	   themes, and --g-ink flips to white in dark — the label would vanish.
+	   --g-bg is near-white in light and near-black in dark, so it is the one
+	   that stays legible on a fixed dark fill. Not a raw white literal, which is
+	   the same answer with nothing to change it if the fill ever does. */
+	color: var(--g-bg);
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	text-align: center;
+}
+.g-offline__dot {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+}
+/* transform and opacity only (§15): anything else re-lays-out every screen
+   below this bar at the moment the network drops, which is the worst moment. */
+.g-offline-enter-active,
+.g-offline-leave-active {
+	/* The button-press easing, at the row-tap duration's scale. There is no
+	   generic "medium" token and inventing one for a single bar would be a
+	   token nobody else uses; a var() with a fallback the app never defines is
+	   just a literal with extra steps. */
+	transition:
+		transform 180ms var(--g-motion-button-press-easing),
+		opacity 180ms var(--g-motion-button-press-easing);
+}
+.g-offline-enter-from,
+.g-offline-leave-to {
+	transform: translateY(-100%);
+	opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.g-offline-enter-active,
+	.g-offline-leave-active {
+		transition: none;
+	}
+}
+
+/* ---------- the update prompt (pre-2.0 R3) ---------- */
+
+/* Opaque, for the same reason as .g-offline: it renders in App.vue above every
+   screen, and a glass surface there is a compositing layer on all of them that
+   the views/-only surfaces gate would never count (§15.1, §15.3).
+   Bottom, above the tab bar and its safe area — the top belongs to the offline
+   bar, and the two can be true at once. */
+.g-update {
+	position: fixed;
+	left: var(--g-screen-gutter);
+	right: var(--g-screen-gutter);
+	bottom: calc(env(safe-area-inset-bottom, 0px) + var(--g-tabbar-height) + 12px);
+	z-index: var(--g-layer-sticky);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px 10px 14px;
+	border-radius: var(--g-radius-action);
+	background: var(--g-ink);
+	color: var(--g-bg);
+	box-shadow: var(--g-shadow-panel);
+}
+.g-update__text {
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	line-height: var(--g-type-row-label-line-height);
+}
+.g-update__action {
+	flex: none;
+	min-height: var(--g-touch-target-min);
+	padding: 0 14px;
+	border: 0;
+	border-radius: var(--g-radius-action);
+	background: var(--g-brand);
+	color: var(--g-on-brand);
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-button-label-weight);
+	letter-spacing: var(--g-type-button-label-tracking);
+}
+.g-update-enter-active,
+.g-update-leave-active {
+	transition:
+		transform 180ms var(--g-motion-button-press-easing),
+		opacity 180ms var(--g-motion-button-press-easing);
+}
+.g-update-enter-from,
+.g-update-leave-to {
+	transform: translateY(12px);
+	opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.g-update-enter-active,
+	.g-update-leave-active {
+		transition: none;
+	}
+}

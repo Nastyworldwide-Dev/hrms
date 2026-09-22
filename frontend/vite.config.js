@@ -16,7 +16,11 @@ export default defineConfig({
 		vue(),
 		frappeui(),
 		VitePWA({
-			registerType: "autoUpdate",
+			// "prompt", not "autoUpdate": a new build used to activate and reload the
+			// page the moment it downloaded — mid-session, mid-form, losing whatever
+			// the employee had typed. It is still downloaded immediately; it takes
+			// the page when they press Reload (src/components/UpdatePrompt.vue).
+			registerType: "prompt",
 			strategies: "injectManifest",
 			injectRegister: null,
 			devOptions: {

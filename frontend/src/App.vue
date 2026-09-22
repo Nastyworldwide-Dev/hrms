@@ -10,6 +10,8 @@
 		<ion-router-outlet id="main-content" />
 		<Toasts />
 
+		<OfflineBanner />
+		<UpdatePrompt />
 		<InstallPrompt />
 	</ion-app>
 </template>
@@ -21,6 +23,8 @@ import { IonApp, IonRouterOutlet } from "@ionic/vue"
 import { Toasts } from "frappe-ui"
 
 import InstallPrompt from "@/components/InstallPrompt.vue"
+import OfflineBanner from "@/components/OfflineBanner.vue"
+import UpdatePrompt from "@/components/UpdatePrompt.vue"
 import { showNotification } from "@/utils/pushNotifications"
 
 onMounted(() => {

@@ -2,107 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  compete with the label beside it) is unchanged and still asserted.
-NEXT: S5 — the 29 inline <svg>, triaged first; several are not icons (a
-  progress ring, an upload target) and must not be converted.
-
-REPAIR: S5 — no page draws its own copy of a library icon. TRIAGED first, as
-  the icon map required, and the triage is most of the slice: of 20 inline
-  <svg>, THREE are drawings (GProgressRing's bound arc, KpiDetail's plotted
-  chart, SideNav's brand mark), ELEVEN are the SPEC'S OWN §9 icon set — a
-  16-grid at stroke 1.55 carried by .g-icon, which the spec says in as many
-  words no public set matches — and FOUR were pasted copies of Lucide's
-  arrow-right on a 24-grid at stroke 2, one drawn at 16px and three at 17px.
-  Only those four were converted. The plan called this "34 inline svg across
-  29 files"; the real figure is 20 across 15, and the great majority must NOT
-  be touched.
-EVIDENCE: 2 correct — icons.no-pasted-glyphs.test.js RED first (2 of 3), green
-  after. Suite 519 tests / 515 pass, and the 4 failures are the same ones that
-  fail at HEAD. Lint clean. Gates byte-identical to the S4 baseline: contrast
-  54/0, surfaces 46 screens / 0 over, tokens ok, usage and lint counters
-  unchanged. Build clean; total JS gz 1128339 -> 1127855 (-484 B).
-NOTE: my own test was wrong before the code was. It asserted every §9 glyph is
-  a 16-grid; GSelfiePanel's face is 24, and §9's own sentence allows exactly
-  that — "16 x 16 viewBox (24 x 24 for the selfie face only)". Written in as
-  the spec's exception, matched on the face's own geometry, so a SECOND
-  24-grid glyph still fails the test rather than the rule being loosened.
-NOTE: the working tree was silently reverted to pre-S4 mid-slice — the icons/
-  directory back, every call site un-migrated, and that revert STAGED. Cause
-  found: the review subagent ran a git checkout of HEAD~1 in the shared
-  worktree to verify my "these 4 tests also fail at HEAD" claim, and its turn
-  limit ended it before it checked back out. Recovered by `git reset` (the
-  commit itself was intact), deleting the resurrected files after confirming
-  they were byte-identical to HEAD~1, and redoing the four conversions.
-LEARNING(gate): a review subagent must be told read-only git ONLY (git show,
-  git diff A..B). A worktree is shared state; a reviewer that checks out a
-  different commit to verify a claim silently reverts whoever is working in it.
-NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)". Then S7, 100vh ->
-  dvh across the 5 sites (the plan says 10; measured, it is 5).
-- 2026-09-22T08:47:25Z COMMIT: 1bcb41e1a refactor(icons): four views drew their own arrow, and it had already drifted → review+design dispatched
-
-REPAIR: S7 — a sheet sized against 100vh runs its confirm button off the
-  bottom of a phone, because 100vh is the viewport with the address bar
-  RETRACTED and the bar is showing most of the time. The token now declares
-  dvh with the vh line kept above it as the fallback (a browser that cannot
-  read dvh drops that declaration entirely and would have no height at all),
-  and the three views that hardcoded the same calc use the token instead.
-  Five sites, not the ten the plan said.
-REPAIR: two design-review findings on bed29bbee, both real, both mine.
-  (a) WEIGHT: all fourteen hand-rolled components drew at stroke-width 1.5 and
-  Lucide defaults to 2 — a third heavier on every nav tab, side-nav item and
-  Home quick link. Its defaultAttributes are module-internal and not exported,
-  so main.js has nothing to assign; every icon does carry a `lucide` class, so
-  the weight is set once in CSS beside §9's own. 1.5, not §9's 1.55: that is
-  the line this set already drew at, and matching §9 exactly is a different
-  change (a 24-grid glyph at 1.55 is not a 16-grid glyph at 1.55).
-  (b) PICTOGRAM: ExpenseIcon was NOT a Lucide glyph. It drew a dollar COIN on
-  a "-1 -1 28 28" viewBox, from Streamline — its group id is that library's
-  slug — and I shipped it as Lucide's Receipt, a torn-paper receipt. A
-  different picture for the same idea, in a commit whose whole claim was that
-  only the source changed. Now CircleDollarSign, the coin the app had.
-  I checked the other thirteen the same way: six carry Lucide's own
-  `class="lucide lucide-*"` marker and seven draw its geometry on its 24-grid.
-  ExpenseIcon was the only one.
-EVIDENCE: 2 correct — sheet-height-dvh.test.mjs RED first (2 of 3), 4 mutants
-  killed (drop the fallback; put the fallback after dvh; leak dvh onto a glass
-  surface; a view reverts to the raw calc). Two new icon tests, each red
-  first. Suite 522 tests / 518 pass — the same 4 that fail at HEAD. Lint
-  clean. Gates byte-identical to baseline: contrast 54/0, surfaces 46/0,
-  tokens ok. Build clean, total JS gz 1127671.
-NOTE: two of my own test rules were wrong before the code was, same class both
-  times — a rule that counts a unit also counts the COMMENT explaining it.
-  Fixed by stripping /* */, // and <!-- --> before counting; the last of those
-  was found by a Vue comment in Home.vue. And `/\bdvh\b/` never matched
-  `50dvh` at all: there is no word boundary between a digit and a letter, so
-  the leak mutant survived a rule whose author could not see the hole.
-LEARNING(gate): a CSS length is a number glued to its unit — match
-  /\d(?:dvh|svh|lvh)\b/, never /\bdvh\b/. A mutant that adds the forbidden
-  unit is the only thing that finds this.
-NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)".
-- 2026-09-22T08:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 11 file(s) ⟂4c8e69619202
-- 2026-09-22T08:54:52Z COMMIT: 88e3f58e7 fix(sheets): a sheet measured itself against a viewport the phone was not showing → review+design dispatched
-- 2026-09-22T08:55:47Z PUSH: nz-glass @ 88e3f58e7
-
-REPAIR: S6 — Home's request panel rendered EVERY request a person had; ten of
-  them is ~620px, another whole screen past the thing they opened Home for.
-  Now five rows and a "Show {N} more" that expands in place.
-  Two decisions the plan did not make, both the owner's call, both recorded:
-  FIVE, not three. Measured: a row is two lines plus py-3 either side, ~62px,
-  so five is ~310px inside the ~440px small-phone budget. Three fits too and
-  hides rows from people who would never have scrolled anyway.
-  EXPAND, not "See all". Each tab MERGES six doctypes (leaves, claims, shift,
-  attendance, OT, replacement leave) and there is no combined list route, so
-  the plan's "See all (N) -> the existing route" had no target: it could only
-  point at ONE type's screen and answer a tap about nine requests with a page
-  showing three. Expanding is also this app's own idiom (TeamDashboard rows,
-  SideNav rail). Told the owner before building; he chose consistency of
-  MEANING over a control that misstates where it goes.
-  The control is a plain text button, NOT GGhostButton: that is a glass
-  surface and Home already spends 4 of its 6 (§15.1). Verified after: still
-  4/6.
-EVIDENCE: 2 correct — RequestPanel.cap.test.js RED first (5 of 6), 5 mutants
-  killed (count = total instead of hidden; cap removed; tab watch removed;
-  label loses its count; the cap leaks into RequestList, which the full-screen
   lists share). Suite 528 tests / 524 pass — the same 4 that fail at HEAD.
   Lint clean. Gates byte-identical to baseline: contrast 54/0, surfaces 46
   screens / 0 over, Home 4/6, tokens ok. Build clean.
@@ -252,3 +151,54 @@ NEXT: R3 — reliability. navigator.onLine appears nowhere (the offline banner
   double-submit guards need a sweep.
 - 2026-09-22T10:22:36Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
 - 2026-09-22T10:22:36Z EVIDENCE: 3 works — blast radius green: 16 dependent(s), 11 extra test file(s) ⟂7ccc0c0a1133
+- 2026-09-22T10:22:40Z COMMIT: fc5e8bf4a feat(api): the PWA and its own backend had no contract between them → review+security dispatched
+- 2026-09-22T10:23:09Z PUSH: nz-glass @ fc5e8bf4a
+
+REPAIR: pre-2.0 R3 — two things the app never told the employee.
+  OFFLINE: `navigator.onLine` appeared NOWHERE in src/. The offline banner
+  existed and only the design specimen ever drew it, so a phone that lost
+  signal mid-shift looked exactly like a slow server — tap, nothing, spinner,
+  tap again. Now composables/useOnline.js (ONE module-level ref: three
+  components each holding their own listener is three answers that can
+  disagree) and components/OfflineBanner.vue in App.vue, so every screen has
+  it rather than one screen having it.
+  UPDATES: `registerType: "autoUpdate"` plus `self.skipWaiting()` at module
+  scope meant a new build activated and reloaded the page the moment it
+  downloaded — mid-form, losing whatever was typed. Now "prompt": the build
+  still downloads immediately and takes the page when the employee presses
+  Reload. The worker waits for one SKIP_WAITING message from the page.
+NOTE: neither bar is GBanner or .g-glass, on purpose. Both render in App.vue
+  ABOVE every screen, so a glass surface there is a compositing layer on all
+  forty-odd of them against a budget of six — and the surfaces gate walks
+  views/ only, so it would never be counted. §15.3 exists for exactly that.
+  Opaque bars cost nothing and read the same. Verified after: 46 screens, 0
+  over.
+NOTE: `navigator.onLine` is weaker than it reads and the file says so: FALSE
+  is reliable, TRUE only means an interface exists — a captive-portal wifi
+  reports true and cannot reach Frappe. So it EXPLAINS a failure the employee
+  is already looking at; it never decides whether to attempt a request.
+EVIDENCE: 2 correct — offline-and-updates.test.js RED first (7 of 7), 5
+  mutants killed: autoUpdate returns; the worker seizes again; the message
+  listener is renamed; the composable leaks its listeners; the banner shouts
+  (role=alert). Suite 552 / 548 pass, same 4 red at HEAD. Lint 242/10,
+  contrast 54/0, surfaces 46/0, tokens ok. Build clean, and BOTH halves
+  verified IN the output: SKIP_WAITING in sw.js, registerSW in its own chunk.
+NOTE: mutant F4 survived twice. `void 0 && window.removeEventListener(...)`
+  keeps the call's TEXT, so an unanchored /removeEventListener/ matched a line
+  that removes nothing. A source-level test cannot see reachability; what it
+  can pin is the SHAPE, so the assertion is now anchored to the start of the
+  line — an unconditional statement, not a guarded expression.
+NOTE: R2's review (DEPLOY, no Critical) established something worth keeping:
+  a bare `@frappe.whitelist()` allows ALL verbs, so pinning ["GET","POST"] was
+  a NARROWING, not a widening. Its one real finding is taken: the contract
+  test matched guard words inside DOCSTRINGS, so an endpoint whose only
+  "approver" was in prose passed. Docstrings and comments are now blanked
+  before matching — and that immediately caught a real one,
+  get_current_employee_info, whose guard is one delegation further out
+  (get_employee_info in utils/identity). Two new mutants cover it.
+LEARNING(gate): four times today a rule counted the COMMENT that explains it —
+  usage.mjs, the dvh unit, the sanitiser's v-html, the worker's skipWaiting.
+  Strip comments before counting, in every gate, without waiting to be bitten.
+NEXT: R4 — accessibility over forms (labels, errors tied to fields, focus
+  traps) and observability (frontend error capture with the build id).
+- 2026-09-22T10:30:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb

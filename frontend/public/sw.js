@@ -62,6 +62,19 @@ try {
 	console.log("Failed to initialize Firebase", error)
 }
 
-self.skipWaiting()
+// NOT skipWaiting() at module scope. That activated every new build the instant
+// it installed and reloaded the page under whatever the employee was doing. The
+// page asks now (UpdatePrompt.vue -> vite-plugin-pwa's registerSW), and this
+// listens for that one message.
+self.addEventListener("message", (event) => {
+	if (event.data && event.data.type === "SKIP_WAITING") {
+		console.log("The page asked for the new version")
+		self.skipWaiting()
+	}
+})
+
+// `clientsClaim` stays: it decides which worker controls an ALREADY-OPEN page
+// once one has activated, and activation is now the employee's decision. It
+// does not activate anything by itself.
 clientsClaim()
 console.log("Service Worker Initialized")
