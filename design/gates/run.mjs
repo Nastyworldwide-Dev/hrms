@@ -21,6 +21,7 @@ const GATES = [
   "surfaces",
   "tokens",
   "scale",
+  "motion",
   "a11y",
   "visual",
   "coherence",
@@ -69,6 +70,8 @@ for (const { gate, code, info } of results) {
               ? `${info.screens ?? "?"} screens, ${info.violations ?? "?"} violation(s)`
               : gate === "scale"
                 ? `${info.steps ?? "?"} type steps, ${info.offGrid ?? 0} off the 4pt grid`
+              : gate === "motion"
+                ? `${info.files ?? "?"} files, ${info.undefinedVars ?? 0} dead vars, ${info.raw ?? 0} off-scale`
               : gate === "tokens"
                 ? `${info.bindings ?? "?"} bindings, ${info.collapses ?? info.newCollapses ?? "?"} collapse(s)`
                 : gate === "visual"

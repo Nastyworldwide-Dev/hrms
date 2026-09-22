@@ -226,6 +226,8 @@
 	--g-motion-skeleton-shimmer-duration: 1400ms;
 	--g-motion-skeleton-shimmer-easing: linear;
 	--g-motion-skeleton-shimmer-iteration: infinite;
+	--g-motion-state-change-duration: 200ms;
+	--g-motion-state-change-easing: cubic-bezier(.2,0,0,1);
 }
 
 html[data-theme="dark"] {

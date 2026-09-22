@@ -54,8 +54,11 @@
 							"
 							:aria-pressed="form.scope === scope"
 							style="
-								transition: background-color var(--motion-glide), color var(--motion-glide),
-									border-color var(--motion-glide);
+								transition: background-color var(--g-motion-state-change-duration)
+										var(--g-motion-state-change-easing),
+									color var(--g-motion-state-change-duration) var(--g-motion-state-change-easing),
+									border-color var(--g-motion-state-change-duration)
+										var(--g-motion-state-change-easing);
 							"
 							@click="setScope(scope)"
 						>
@@ -113,12 +116,18 @@
 						<span
 							class="relative h-icon-lg w-11"
 							:class="form[toggle.field] ? 'bg-accent-ink' : 'bg-ink-400'"
-							style="transition: background-color var(--motion-glide)"
+							style="
+								transition: background-color var(--g-motion-state-change-duration)
+									var(--g-motion-state-change-easing);
+							"
 						>
 							<span
 								class="absolute top-0.5 left-0.5 h-icon-md w-icon-md bg-ground"
 								:class="form[toggle.field] ? 'translate-x-5' : ''"
-								style="transition: transform var(--motion-glide)"
+								style="
+									transition: transform var(--g-motion-state-change-duration)
+										var(--g-motion-state-change-easing);
+								"
 							></span>
 						</span>
 					</button>

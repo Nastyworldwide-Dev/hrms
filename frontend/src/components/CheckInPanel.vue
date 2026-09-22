@@ -1451,8 +1451,17 @@ onBeforeUnmount(() => {
 	flex-direction: column;
 	gap: 2px;
 }
+/* The long form, not the `font:` shorthand. There is no --g-type-card-title:
+   the builder emits one variable per FACET (-family, -size, -weight,
+   -line-height), so the shorthand referenced nothing, the whole declaration
+   was invalid, and CSS dropped it without a word. This title has been
+   rendering at whatever it inherited. Found by design/gates/motion.mjs on
+   22 Sep 2026, which checks that every --g- reference resolves. */
 .checkin-sheet__where-title {
-	font: var(--g-type-card-title);
+	font-family: var(--g-type-card-title-family);
+	font-size: var(--g-type-card-title-size);
+	font-weight: var(--g-type-card-title-weight);
+	line-height: var(--g-type-card-title-line-height);
 	color: var(--g-ink);
 }
 .checkin-sheet__where-title.is-ok {
@@ -1462,9 +1471,15 @@ onBeforeUnmount(() => {
 .checkin-sheet__where-title.is-blocked {
 	color: var(--g-warn-ink, var(--g-ink));
 }
+/* Same dropped shorthand, and --g-ink-2 does not exist either: the token is
+   --g-ink2. Two invalid declarations in one rule, so this line had neither its
+   size nor its colour. */
 .checkin-sheet__where-detail {
-	font: var(--g-type-caption);
-	color: var(--g-ink-2);
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	font-weight: var(--g-type-caption-weight);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
 }
 .checkin-sheet__camera {
 	position: relative;

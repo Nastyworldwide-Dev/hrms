@@ -2963,7 +2963,11 @@ ion-router-outlet {
 	border-radius: var(--g-radius-action);
 	background: var(--g-ink);
 	color: var(--g-bg);
-	box-shadow: var(--g-shadow-panel);
+	/* --g-lift, not --g-shadow-panel: the shadow group holds action,
+	   focus-ring and focus-ring-inset, and the panel drop shadow is emitted as
+	   --g-lift. The undefined name made this declaration invalid, so the update
+	   prompt has had no shadow at all — it floated over the page flat. */
+	box-shadow: var(--g-lift);
 }
 .g-update__text {
 	font-family: var(--g-type-row-label-family);
@@ -3015,5 +3019,37 @@ ion-router-outlet {
 	.g-update-enter-active,
 	.g-update-leave-active {
 		transition: none;
+	}
+}
+
+/* ---------- reduced motion, app-wide (WCAG 2.3.3; revamp §19) ----------------
+
+   Until 22 Sep 2026 this preference was honoured in four components out of
+   about ninety — the skeleton shimmer, the pending bar, and the offline and
+   update banners. Everything else animated regardless.
+
+   That is a health matter rather than a taste one. Vestibular disorders are
+   the reason the media query exists: motion a person did not ask for can
+   produce nausea and dizziness, which is why WCAG 2.3.3 (Animation from
+   Interactions) asks for a way to turn it off and why every platform exposes
+   the switch. Honouring it in four places is the same as not honouring it.
+
+   near-zero, NOT zero. `transition: none` cancels a transition mid-flight and
+   Vue's <Transition> then never hears transitionend, so an element can be left
+   in its enter-from state — invisible, but still in the layout. 1ms completes,
+   fires the event, and is imperceptible. The three blocks above that already
+   used `none` are left alone: they are static-fill overrides on an infinite
+   animation, not transition lifecycles.
+
+   scroll-behavior goes with it: a smooth-scrolled page is unasked-for motion
+   at full screen size, which is the worst case this rule exists for. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 1ms !important;
+		scroll-behavior: auto !important;
 	}
 }

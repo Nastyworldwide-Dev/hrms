@@ -179,11 +179,13 @@ module.exports = {
 		"button-press": "var(--g-motion-button-press-duration)",
 		"row-tap": "var(--g-motion-row-tap-duration)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-duration)",
+		"state-change": "var(--g-motion-state-change-duration)",
 	},
 	transitionTimingFunction: {
 		"button-press": "var(--g-motion-button-press-easing)",
 		"row-tap": "var(--g-motion-row-tap-easing)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-easing)",
+		"state-change": "var(--g-motion-state-change-easing)",
 	},
 	zIndex: {
 		overlay: "var(--g-layer-overlay)",
