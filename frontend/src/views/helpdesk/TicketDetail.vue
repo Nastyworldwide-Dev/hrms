@@ -24,37 +24,27 @@
 
 				<template v-if="ticket">
 					<!-- meta grid: ONE glass surface with hair dividers (§15.2). The
-					     first cell is WHO raised it — the HRM's own addition. -->
-					<div class="g-glass grid grid-cols-2 rounded-panel overflow-hidden">
-						<div
-							v-for="(cell, i) in metaCells"
-							:key="cell.k"
-							class="flex flex-col gap-0.5 px-3.5 py-3 border-divider"
-							:class="[i % 2 === 0 ? 'border-r' : '', i < 2 ? 'border-b' : '']"
-						>
-							<span class="g-eyebrow">{{ cell.k }}</span>
-							<span class="font-semibold text-inkbase truncate">{{ cell.v }}</span>
-						</div>
-					</div>
+					     first cell is WHO raised it — the HRM's own addition.
+					     Built by hand until 22 Sep 2026, which put .g-glass in a
+					     view and hardcoded its own dividers and padding; GMetaGrid
+					     owns the surface now. -->
+					<GMetaGrid :cells="metaCells" />
 
 					<span class="g-eyebrow mt-1">{{ __("Conversation") }}</span>
 					<div class="flex flex-col gap-2.5">
-						<div
+						<GChatBubble
 							v-for="m in thread"
 							:key="m.id"
-							class="max-w-[86%] px-3.5 py-3 rounded-2xl text-sm leading-relaxed"
-							:class="
-								m.kind === 'me'
-									? 'self-end bg-accent-ink/10 border border-accent-ink/40 rounded-br-md'
-									: 'self-start g-glass rounded-bl-md'
-							"
+							:mine="m.kind === 'me'"
+							:who="m.who"
+							:when="formatWhen(m.when)"
 						>
-							<div class="text-caption font-bold text-ink-600 mb-1">
-								{{ m.who }} · {{ formatWhen(m.when) }}
-							</div>
-							<!-- Helpdesk stores rich text; sanitised server-side by frappe -->
-							<div class="prose-sm break-words" v-html="safeHtml(m.html)" />
-						</div>
+							<!-- Helpdesk stores rich text. Sanitised HERE as well as
+							     server-side: safeHtml is the app's own allow-list, and
+							     a thread is the one place a ticket's author controls
+							     the markup. -->
+							<div class="prose-sm" v-html="safeHtml(m.html)" />
+						</GChatBubble>
 						<GEmptyState
 							v-if="!thread.length"
 							:title="__('No messages yet')"
@@ -96,6 +86,8 @@ import GPage from "@/components/glass/GPage.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
+import GMetaGrid from "@/components/glass/GMetaGrid.vue"
+import GChatBubble from "@/components/glass/GChatBubble.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import { IonContent } from "@ionic/vue"

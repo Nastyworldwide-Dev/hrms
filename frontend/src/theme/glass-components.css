@@ -1268,6 +1268,66 @@ html[data-theme="dark"] .g-badge--open {
 .g-cellgrid--balance {
 	grid-template-columns: repeat(2, 1fr);
 }
+/* GMetaGrid: 2-up read-only facts. Same one-surface-with-hair-dividers rule as
+   the balance and stat grids (§15.2) — the cells are cells, not surfaces. */
+.g-cellgrid--meta {
+	grid-template-columns: repeat(2, 1fr);
+}
+.g-cell--meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.g-cell--meta .g-meta__value {
+	font-weight: 600;
+	color: var(--g-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.g-cellgrid--meta > .g-cell:nth-child(2n) {
+	border-left: 1px solid var(--g-hair);
+}
+.g-cellgrid--meta > .g-cell:nth-child(n + 3) {
+	border-top: 1px solid var(--g-hair);
+}
+.g-cellgrid--meta.g-cellgrid--odd > .g-cell:last-child {
+	grid-column: 1 / -1;
+}
+/* GChatBubble: a helpdesk message. The reader's own side is an accent-tinted
+   solid, the other side is glass — asymmetry is what lets a thread be skimmed
+   without reading names. The tail corner points at the author. */
+.g-bubble {
+	max-width: 86%;
+	padding: var(--g-pad-row);
+	border-radius: var(--g-radius-panel);
+	font-size: var(--g-type-row-label-size);
+	line-height: 1.5;
+}
+.g-bubble--mine {
+	align-self: flex-end;
+	background: rgb(var(--g-accent-ink-rgb) / 0.1);
+	border: 1px solid rgb(var(--g-accent-ink-rgb) / 0.4);
+	border-bottom-right-radius: var(--g-radius-well);
+}
+.g-bubble--theirs {
+	align-self: flex-start;
+	/* A SOLID fill, not glass (§15.2). One blurred surface per message put a
+	   twenty-message thread twenty over a budget of six. */
+	background: var(--g-glass-fill-fallback);
+	border: 1px solid var(--g-glass-rim);
+	border-bottom-left-radius: var(--g-radius-well);
+}
+.g-bubble__who {
+	font-size: var(--g-type-caption-size);
+	font-weight: 700;
+	color: var(--g-ink3);
+	margin-bottom: 4px;
+}
+.g-bubble__body {
+	overflow-wrap: break-word;
+}
 .g-cellgrid--stat-3 {
 	grid-template-columns: repeat(3, 1fr);
 }
