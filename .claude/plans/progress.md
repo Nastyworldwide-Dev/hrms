@@ -202,3 +202,46 @@ LEARNING(gate): four times today a rule counted the COMMENT that explains it —
 NEXT: R4 — accessibility over forms (labels, errors tied to fields, focus
   traps) and observability (frontend error capture with the build id).
 - 2026-09-22T10:30:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 10 file(s) ⟂b0f3c69c66bb
+- 2026-09-22T10:30:45Z PUSH: nz-glass @ 796d015c4
+- 2026-09-22T10:30:45Z COMMIT: 796d015c4 fix(pwa): the app never said it was offline, and updated without asking → review+design dispatched
+
+REPAIR: design review of 796d015c4 — two CRITICALs, both real, both mine.
+  (a) OVERLAP: the offline bar was `position: fixed; top: 0`, and `.g-header`
+  is TRANSPARENT and sits in NORMAL FLOW — its own comment says content never
+  scrolls under it, an assumption the bar broke. So the bar landed on the back
+  control: the employee is told they have no connection in the same moment
+  they lose the way out of the screen. It is in flow now and FIRST in
+  <ion-app>, so it pushes the outlet down for exactly as long as it shows.
+  Found independently here and by the reviewer, same reasoning.
+  (b) CONTRAST: --g-bg on --g-warn-ink measured 4.36:1 in light against the
+  4.5 floor. warn-ink is a TEXT colour for glass; using it as a FILL was the
+  error. New --g-warn-fill: 6.33 light, 6.32 dark.
+NOTE: the contrast GATE could not have caught it. Every pair it knew was
+  ink-on-glass or ink-on-tint; a solid themed fill had no shape in the table,
+  so the gate passed 54/54 while a real failure shipped. It has a "solid"
+  branch now, and the pair is listed. Verified by re-introducing #B45309:
+  FAIL light 4.36, exactly the number the review computed by hand.
+NOTE: the tokens gate then refused warn-fill for collapsing onto warn-ink in
+  dark — two names, one value, so a swap between them would be invisible. It
+  is right. Dark is #D97706 now, distinct and still 6.32.
+NOTE: S7's dvh fix WAS SILENTLY REVERTED and had been for two commits. It was
+  hand-patched into src/theme/glass.css, which is GENERATED from
+  design/tokens.json — so every `yarn tokens` since put `100vh` back, and
+  today's run did it twice while I watched the diff and restored the comment
+  instead of the cause. The token now carries `fallback` and the builder emits
+  two declarations. The behaviour test passed throughout, because it reads the
+  generated file and I had just restored it by hand.
+LEARNING(gate): never hand-edit a generated file. If a fix belongs in
+  glass.css it belongs in design/tokens.json, and if the generator cannot say
+  it, teach the generator.
+LEARNING(gate): FIVE separate times today a rule counted the COMMENT that
+  explains it. lint.mjs now strips comments before counting, as usage.mjs
+  already did — and the total fell 242 -> 234, so eight recorded "violations"
+  in this app were never violations. Baseline rewritten: 234 total, 0 new.
+EVIDENCE: 2 correct — 2 new tests (the bar takes its own room; the prompt
+  clears the tab bar), both red first. Suite 554 / 550 pass, same 4 red at
+  HEAD. Gates: lint 234/0 (first clean run this session), contrast 56/0,
+  surfaces 46/0, tokens ok. Build clean.
+NEXT: R4 — accessibility over forms (labels, errors tied to fields, focus
+  traps) and observability (frontend error capture carrying the build id).
+- 2026-09-22T10:39:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 12 file(s) ⟂1127c68211d5

@@ -56,6 +56,7 @@ module.exports = {
 		surface: "rgb(var(--g-surface-rgb) / <alpha-value>)",
 		"track-solid": "rgb(var(--g-track-solid-rgb) / <alpha-value>)",
 		warn: "rgb(var(--g-warn-rgb) / <alpha-value>)",
+		"warn-fill": "rgb(var(--g-warn-fill-rgb) / <alpha-value>)",
 		"warn-ink": "rgb(var(--g-warn-ink-rgb) / <alpha-value>)",
 	},
 	fontFamily: {

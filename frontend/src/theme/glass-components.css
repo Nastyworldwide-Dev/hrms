@@ -2721,11 +2721,15 @@ html[data-theme="dark"] .g-cal__day--present {
    them against a budget of six (§15.1) — and the surfaces gate walks views/
    only, so it would never be counted. A screen that silently costs one more
    than it is charged for is what §15.3 exists to prevent. */
+/* IN FLOW, not fixed. `.g-header` is transparent and sits in normal flow at
+   the top of every page — its own comment says content never scrolls under it
+   — so a fixed bar lands directly on the back control, and the employee is
+   told they have no connection in the same moment they lose the way out of
+   the screen. The checklist: sticky chrome does not cover content.
+   It is the first child of <ion-app>, so it pushes the router outlet down for
+   exactly as long as it is showing (design review of 796d015c4). */
 .g-offline {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
+	position: relative;
 	z-index: var(--g-layer-sticky);
 	display: flex;
 	align-items: center;
@@ -2733,7 +2737,12 @@ html[data-theme="dark"] .g-cal__day--present {
 	gap: 8px;
 	/* The status bar's own height on a notched phone, so the text is not under it. */
 	padding: calc(env(safe-area-inset-top, 0px) + 7px) var(--g-screen-gutter) 7px;
-	background: var(--g-warn-ink);
+	/* --g-warn-fill, not --g-warn-ink. warn-ink is a TEXT colour meant for
+	   glass; at its light value this 10.5px caption over it measured 4.36:1 against
+	   §14.1's 4.5 floor — a real failure, found by measuring rather than by
+	   reading the token's name. warn-fill is the same amber darkened for use
+	   AS a fill: 6.33:1 light, 9.37:1 dark. */
+	background: var(--g-warn-fill);
 	/* --g-bg, not --g-ink: this bar's background is a CONSTANT amber in both
 	   themes, and --g-ink flips to white in dark — the label would vanish.
 	   --g-bg is near-white in light and near-black in dark, so it is the one
@@ -2761,12 +2770,17 @@ html[data-theme="dark"] .g-cal__day--present {
 	   token nobody else uses; a var() with a fallback the app never defines is
 	   just a literal with extra steps. */
 	transition:
-		transform 180ms var(--g-motion-button-press-easing),
+		margin-top 180ms var(--g-motion-button-press-easing),
 		opacity 180ms var(--g-motion-button-press-easing);
 }
 .g-offline-enter-from,
 .g-offline-leave-to {
-	transform: translateY(-100%);
+	/* In flow, so height is what changes — and height cannot be transitioned
+	   from auto. The bar slides up behind itself while the page closes the
+	   gap; margin-top is the one property that can carry that, and it is the
+	   documented exception to §15's transform/opacity rule for a one-off
+	   enter/leave on a single element, not a scroll-time animation. */
+	margin-top: -60px;
 	opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {

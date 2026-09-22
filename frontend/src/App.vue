@@ -7,10 +7,13 @@
 		     missed: a routed page must be opaque. .g-page now owns an opaque
 		     ground, so per-page fields cannot stack visually — the top page
 		     occludes the rest. See .g-lightfield in glass-components.css. -->
+		<!-- FIRST, and in flow: the bar pushes every screen down while it shows
+		     rather than painting over GAppHeader's back control, which is not
+		     fixed and expects nothing above it. -->
+		<OfflineBanner />
 		<ion-router-outlet id="main-content" />
 		<Toasts />
 
-		<OfflineBanner />
 		<UpdatePrompt />
 		<InstallPrompt />
 	</ion-app>

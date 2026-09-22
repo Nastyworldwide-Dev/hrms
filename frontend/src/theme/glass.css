@@ -57,6 +57,8 @@
 	--g-leave-ink-rgb: 93 70 194;
 	--g-success-ink: #007764;
 	--g-success-ink-rgb: 0 119 100;
+	--g-warn-fill: #8F3F05;
+	--g-warn-fill-rgb: 143 63 5;
 	--g-warn-ink: #B45309;
 	--g-warn-ink-rgb: 180 83 9;
 	/* spacing */
@@ -93,11 +95,6 @@
 	/* layout */
 	--g-content-column: calc(100% - 30px);
 	--g-content-column-lg: 720px;
-	/* The address bar is showing most of the time on a phone, so 100vh is
-	   taller than the window and a sheet sized against it runs its confirm
-	   button off the bottom of the screen. 100dvh is what is visible now.
-	   The vh line stays as the fallback: a browser that cannot read dvh
-	   drops that whole declaration, and would otherwise have no height. */
 	--g-sheet-max-height: calc(100vh - 5rem);
 	--g-sheet-max-height: calc(100dvh - 5rem);
 	--g-tabbar-border: 1px;
@@ -258,6 +255,8 @@ html[data-theme="dark"] {
 	--g-leave-ink-rgb: 196 181 255;
 	--g-success-ink: #00E5C0;
 	--g-success-ink-rgb: 0 229 192;
+	--g-warn-fill: #D97706;
+	--g-warn-fill-rgb: 217 119 6;
 	--g-warn-ink: #F59E0B;
 	--g-warn-ink-rgb: 245 158 11;
 }

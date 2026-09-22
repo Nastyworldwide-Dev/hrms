@@ -70,6 +70,12 @@ const PAIRS = [
 	{ fg: "warn-ink", bg: "glass", min: 4.5, themes: ["light"] },
 	{ fg: "leave-ink", bg: ["tint", "leave", 0.26], min: 4.5, themes: ["light"] },
 	{ fg: "success-ink", bg: ["tint", "success", 0.2], min: 4.5, themes: ["light", "dark"] },
+	// The offline bar: --g-bg as text on a SOLID fill, not ink on glass. Every
+	// pair above shares one background shape, and this gate had no entry for
+	// any other — so a bar painting 10.5px caption on --g-warn-ink measured
+	// 4.36 and nothing said a word (design review of 796d015c4). The token it
+	// uses now exists for this pairing alone.
+	{ fg: "bg", bg: ["solid", "warn-fill"], min: 4.5, themes: ["light", "dark"] },
 ];
 // §14.2's "ink2 over blob edge" pair was skipped in prompt 1.5 because the blob
 // was not a token. Phase 4.1 made it one, so it is asserted below (§3.3 block).
@@ -85,6 +91,10 @@ for (const p of PAIRS) {
 		const bg =
 			p.bg === "glass" ? glassComposite(theme)
 			: p.bg[0] === "tint" ? tint(p.bg[1], p.bg[2], theme)
+			// "solid": a THEMED token used as an opaque fill. The "const" branch
+			// below reads color-constant, which is where the on-brand pair lives;
+			// a themed fill is not there and would resolve to undefined.
+			: p.bg[0] === "solid" ? parse(themedValue(p.bg[1], theme)).rgb
 			: parse(constant(p.bg[1])).rgb;
 		const r = ratio(fg, bg);
 		const ok = r >= p.min;

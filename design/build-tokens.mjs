@@ -117,8 +117,20 @@ for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "
 	// --g-layer-scrim); the rest already carry theirs (radius-panel,
 	// blur-ghost) or read fine bare
 	const prefixed = group === "shadow" || group === "layer" || group === "field";
-	for (const name of sorted(tokens[group]))
-		light.push(decl(prefixed ? `${group}-${name}` : name, tokens[group][name].value));
+	for (const name of sorted(tokens[group])) {
+		const token = tokens[group][name];
+		const key = prefixed ? `${group}-${name}` : name;
+		// `fallback` emits a SECOND declaration of the same custom property,
+		// before the real one. That is how a CSS unit a browser may not know
+		// degrades: the last declaration it can parse wins, and one it cannot
+		// is dropped entirely — leaving the property unset rather than merely
+		// less accurate if nothing came before it. Added for
+		// --g-sheet-max-height (100dvh with a 100vh fallback), which S7 had
+		// hand-patched into this GENERATED file, so the next `yarn tokens`
+		// silently reverted the fix.
+		if (token.fallback) light.push(decl(key, token.fallback));
+		light.push(decl(key, token.value));
+	}
 }
 
 light.push("\t/* type */");

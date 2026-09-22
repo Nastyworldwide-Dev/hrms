@@ -14,9 +14,6 @@
 	"components/CustomIonModal.vue": {
 		"arbitrary": 1
 	},
-	"components/ExpenseAdvancesTable.vue": {
-		"arbitrary": 1
-	},
 	"components/ExpenseTaxesTable.vue": {
 		"rawPalette": 2
 	},
@@ -25,11 +22,11 @@
 		"arbitrary": 1
 	},
 	"components/FormField.vue": {
-		"rawPalette": 2,
+		"rawPalette": 1,
 		"arbitrary": 2
 	},
 	"components/FormView.vue": {
-		"rawPalette": 6
+		"rawPalette": 8
 	},
 	"components/InstallPrompt.vue": {
 		"arbitrary": 1
@@ -44,11 +41,8 @@
 	"components/PushNotificationPrompt.vue": {
 		"rawPalette": 2
 	},
-	"components/QuickLinks.vue": {
-		"arbitrary": 2
-	},
 	"components/SideNav.vue": {
-		"arbitrary": 12
+		"arbitrary": 14
 	},
 	"composables/index.js": {
 		"rawPalette": 2
@@ -57,7 +51,7 @@
 		"rawPalette": 2
 	},
 	"theme/__tests__/contrast.test.js": {
-		"hex": 5
+		"hex": 2
 	},
 	"theme/glass-components.css": {
 		"hex": 1
@@ -79,7 +73,7 @@
 		"rawPalette": 1
 	},
 	"views/More.vue": {
-		"arbitrary": 4
+		"arbitrary": 7
 	},
 	"views/Notifications.vue": {
 		"arbitrary": 2
@@ -88,21 +82,30 @@
 		"arbitrary": 17
 	},
 	"views/RemoteApprovals.vue": {
-		"rawPalette": 2,
+		"rawPalette": 3,
 		"arbitrary": 4
-	},
-	"views/attendance/Dashboard.vue": {
-		"arbitrary": 1
 	},
 	"views/expense_claim/Dashboard.vue": {
 		"arbitrary": 1
+	},
+	"views/helpdesk/HelpdeskList.vue": {
+		"arbitrary": 3
+	},
+	"views/helpdesk/TicketDetail.vue": {
+		"arbitrary": 1
+	},
+	"views/helpdesk/TicketNew.vue": {
+		"arbitrary": 2
 	},
 	"views/issues/HRIssueBoard.vue": {
 		"rawPalette": 11,
 		"arbitrary": 3
 	},
-	"views/leave/Dashboard.vue": {
-		"arbitrary": 1
+	"views/kpi/Dashboard.vue": {
+		"outline": 1
+	},
+	"views/kpi/KpiDetail.vue": {
+		"outline": 1
 	},
 	"views/leave/Form.vue": {
 		"rawPalette": 1

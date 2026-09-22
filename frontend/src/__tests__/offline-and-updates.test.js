@@ -125,3 +125,42 @@ test("the prompt to reload is offered, not forced", () => {
 	const app = read("App.vue")
 	assert.match(app, /UpdatePrompt|needRefresh/, "the shell offers the reload")
 })
+
+// The offline bar must not COVER the screen it is warning about. `.g-header`
+// is transparent and sits in NORMAL FLOW at the top of every page — the
+// comment on it says so in as many words, and the back control is its first
+// child. A `position: fixed; top: 0` bar therefore lands directly on that
+// back button: the employee is told they have no connection and loses the
+// control that would take them somewhere useful. The checklist's own rule:
+// "sticky headers/navigation do not cover content".
+test("the offline bar pushes the page down, it does not sit on it", () => {
+	const css = readFileSync(join(SRC, "theme/glass-components.css"), "utf8")
+	const bar = css.slice(
+		css.indexOf("\n.g-offline {"),
+		css.indexOf("}", css.indexOf("\n.g-offline {"))
+	)
+	assert.doesNotMatch(bar, /position:\s*fixed/, "fixed puts it over .g-header's back button")
+	// The app shell reserves the room instead, so every screen moves down by
+	// exactly the bar's height while it is showing and by nothing when it is not.
+	// In flow, as the FIRST child of <ion-app>: the bar occupies real height,
+	// so the router outlet below it moves down by exactly that and back up
+	// when it goes. No second source of truth for the bar's height, which a
+	// reserved-padding approach would need and would drift from.
+	assert.match(bar, /position:\s*relative/, "in flow, so it takes its own room")
+	const app = read("App.vue")
+	const outlet = app.indexOf("<ion-router-outlet")
+	const banner = app.indexOf("<OfflineBanner")
+	assert.ok(banner > 0 && banner < outlet, "and it is ABOVE the outlet, or it pushes nothing")
+})
+
+// The update prompt is at the BOTTOM, where the tab bar lives and where most
+// screens put their primary action. It must clear both.
+test("the update prompt clears the tab bar and its safe area", () => {
+	const css = readFileSync(join(SRC, "theme/glass-components.css"), "utf8")
+	const prompt = css.slice(
+		css.indexOf("\n.g-update {"),
+		css.indexOf("}", css.indexOf("\n.g-update {"))
+	)
+	assert.match(prompt, /--g-tabbar-height/, "offset by the tab bar's own token, not a guess")
+	assert.match(prompt, /env\(safe-area-inset-bottom/, "and the home indicator below it")
+})

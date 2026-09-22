@@ -144,6 +144,15 @@ function themedInkOnConstant(file, content) {
 const RAW_PALETTE =
 	/\b(?:text|bg|border|ring|fill|stroke|from|via|to|divide|outline|decoration|shadow|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/g;
 
+/** `source` with /* *​/, // and <!-- --> comments replaced by spaces. */
+function decomment(source) {
+	return source
+		.replace(/<!--[\s\S]*?-->/g, (b) => b.replace(/[^\n]/g, " "))
+		.replace(/\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, " "))
+		// `//` only when it does not follow a colon, so a https:// url survives.
+		.replace(/(^|[^:])\/\/[^\n]*/g, (line, lead) => lead + " ".repeat(line.length - lead.length));
+}
+
 const RULES = {
 	rawPalette: (f, c) => count(c, RAW_PALETTE),
 	// (?<!&) so an HTML numeric entity like &#128205; (a 📍 emoji) is not read
@@ -160,7 +169,14 @@ const current = {};
 for (const file of walk(SRC)) {
 	const rel = relative(SRC, file);
 	if (EXCLUDE.has(rel)) continue;
-	const content = readFileSync(file, "utf8");
+	// Comments blanked before counting. A comment that NAMES the thing it
+	// forbids — "not a raw #B45309", "not min-h-[44px]" — is documentation,
+	// and counting it made every explanation a violation. Five separate
+	// incidents on 22 Sep 2026 across this gate, usage.mjs, the dvh rule, the
+	// sanitiser and the service worker; fixed here as a class rather than one
+	// reworded comment at a time. Newlines are preserved so line-based rules
+	// (outline, scopedOverride) still see their own file.
+	const content = decomment(readFileSync(file, "utf8"));
 	const counts = {};
 	for (const [rule, fn] of Object.entries(RULES)) {
 		const n = fn(file, content);
