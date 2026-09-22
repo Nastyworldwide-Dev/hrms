@@ -77,10 +77,24 @@ test("the zoom rule says why it is a literal and not a token", () => {
 
 test("the fix did not resize the rest of the app", () => {
 	// `row-label` is a LIST ROW's label — "Apply for leave" — shared by a dozen
-	// surfaces that are not inputs. Raising it to 16 would have fixed the
-	// keyboard by making every row bigger: a redesign wearing a bugfix's
-	// clothes. It is still 12.5, and `.g-input` overrides it for itself.
-	assert.equal(tokens.type.scale["row-label"].size, "12.5px", "row-label is not an input size")
+	// surfaces that are not inputs. The zoom fix must never have been the thing
+	// that set its size: raising every row to 16 to stop a keyboard zooming is a
+	// redesign wearing a bugfix's clothes.
+	//
+	// It was pinned at 12.5px when this test was written. The 22 Sep modular
+	// ramp moved it to 14px — the body-copy floor — as a TYPE decision taken on
+	// the ramp, not as a side effect of the input rule. So what is asserted is
+	// the invariant that actually protects the app: row-label stays BELOW the
+	// 16px input size, so `.g-input` still has to override it for itself, and
+	// the two cannot be collapsed into one value by a later edit.
+	const rowLabel = parseFloat(tokens.type.scale["row-label"].size)
+	assert.ok(
+		rowLabel < 16,
+		`row-label is ${rowLabel}px; at 16 the input rule would be indistinguishable from the row rule`
+	)
+	// And it is still real body copy, not a caption: the ramp's floor for
+	// anything a sentence is set in.
+	assert.ok(rowLabel >= 14, `row-label is ${rowLabel}px; body copy floor is 14px`)
 })
 
 test("pinch zoom is still available", () => {

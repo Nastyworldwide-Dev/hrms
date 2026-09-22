@@ -65,87 +65,87 @@ module.exports = {
 		ui: "var(--g-font-ui)",
 	},
 	fontSize: {
-		badge: ["10px", {
+		badge: ["12px", {
 			fontWeight: "700",
 			letterSpacing: "0.09em",
 			lineHeight: "1.2",
 		}],
-		"button-label": ["15.5px", {
+		"button-label": ["16px", {
 			fontWeight: "800",
 			letterSpacing: "-0.01em",
 			lineHeight: "1.2",
 		}],
-		caption: ["10.5px", {
+		caption: ["12px", {
 			fontWeight: "400",
 			letterSpacing: "0.02em",
 			lineHeight: "1.45",
 		}],
-		"card-title": ["12.5px", {
+		"card-title": ["14px", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		clock: ["36px", {
+		clock: ["40px", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"data-system": ["10px", {
+		"data-system": ["12px", {
 			fontWeight: "400",
 			letterSpacing: "0",
 			lineHeight: "1.5",
 		}],
-		"display-number": ["31px", {
+		"display-number": ["34px", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		eyebrow: ["10.5px", {
+		eyebrow: ["12px", {
 			fontWeight: "600",
 			letterSpacing: "0.13em",
 			lineHeight: "1.3",
 		}],
-		"field-label": ["10px", {
+		"field-label": ["12px", {
 			fontWeight: "600",
 			letterSpacing: "0.14em",
 			lineHeight: "1.3",
 		}],
-		"kra-label": ["11.5px", {
+		"kra-label": ["14px", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		"micro-label": ["10px", {
+		"micro-label": ["12px", {
 			fontWeight: "600",
 			letterSpacing: "0.13em",
 			lineHeight: "1.3",
 		}],
-		"panel-title": ["14.5px", {
+		"panel-title": ["16px", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1.2",
 		}],
-		"ring-centre": ["25px", {
+		"ring-centre": ["28px", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"row-label": ["12.5px", {
+		"row-label": ["14px", {
 			fontWeight: "500",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		"screen-title": ["21.5px", {
+		"screen-title": ["19px", {
 			fontWeight: "800",
 			letterSpacing: "-0.025em",
 			lineHeight: "1.15",
 		}],
-		"stat-number": ["22px", {
+		"stat-number": ["23px", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"tab-label": ["10px", {
+		"tab-label": ["12px", {
 			fontWeight: "600",
 			letterSpacing: "0.07em",
 			lineHeight: "1.2",
@@ -160,6 +160,7 @@ module.exports = {
 		blob: "var(--g-blob-opacity)",
 	},
 	spacing: {
+		"pad-panel": "var(--g-pad-panel)",
 		"screen-gutter": "var(--g-screen-gutter)",
 		"sheet-pad-bottom": "var(--g-sheet-pad-bottom)",
 		"stack-lg": "var(--g-stack-lg)",

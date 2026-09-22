@@ -179,7 +179,18 @@ for (const theme of ["light", "dark"]) {
 	for (const id of ["a", "b", "c"]) {
 		const b = blobGeometry(id);
 		const { alpha, centreInside } = worstAlphaInColumn(b);
-		if (alpha <= 0) continue;
+		if (alpha <= 0) {
+			// The blob does not reach the content column at all, so there is no
+			// pair to check. SAY SO: a skipped pair used to be invisible, and on
+			// 22 Sep the 4pt gutter (15 -> 16px) narrowed the column by 2px and
+			// pushed every mobile blob clear of it. The count fell 56 -> 44 with
+			// no other explanation on the board, which reads exactly like a gate
+			// quietly checking less than it did.
+			console.log(
+				`[contrast] CLEAR ${theme.padEnd(5)} blob ${id.toUpperCase()} does not reach the content column (§3.3) — no ink pair to check`
+			);
+			continue;
+		}
 
 		// blob over app bg, then the glass panel over that — text sits on glass
 		const overBg = over({ rgb: b.colour.rgb, a: alpha * fieldOpacity }, bg);

@@ -169,6 +169,15 @@ const current = {};
 for (const file of walk(SRC)) {
 	const rel = relative(SRC, file);
 	if (EXCLUDE.has(rel)) continue;
+	// A TEST that enforces a rule has to name what the rule forbids, so scanning
+	// it counts the guard as the thing it guards against. usage.mjs learned this
+	// on 22 Sep (`rel.split("/").includes("__tests__")`) and this gate did not,
+	// so a test asserting "no bare border-r here" scored an `arbitrary`
+	// violation for the pattern it searches with. Tests ship no CSS to a phone;
+	// they are not a surface this gate has anything to say about. Seventh
+	// instance of the same class in one day — see the comment below on blanking
+	// comments before counting.
+	if (rel.split("/").includes("__tests__")) continue;
 	// Comments blanked before counting. A comment that NAMES the thing it
 	// forbids — "not a raw #B45309", "not min-h-[44px]" — is documentation,
 	// and counting it made every explanation a violation. Five separate
