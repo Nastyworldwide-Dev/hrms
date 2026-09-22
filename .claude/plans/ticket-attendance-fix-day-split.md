@@ -63,3 +63,20 @@ here disagree with each other.
 #          each guard flag threaded by hand through five separate call sites
 # upgrade: an eighth action, a sixth guard call site or a second guard flag, or
 #          a second rule disagreement found in review
+
+## Update — 22 Sep 2026 (the rate quadrupled, and the class arrived)
+
+Raised at six fixes in 90 days. It is now **22 on the module and 9 on the
+bundle**, across ~16 fixes since, with no action taken.
+
+Today's hotfix is the ticket's own argument. `day_plan` answers "here is the
+pair, or here is why there is none"; `_suggested_roles` flattened that to "here
+is the pair, or nothing", and the screen read the absence as ignorance and
+ticked everything. The pure rule and its consumer sit in one 1700-line scope,
+so nobody reading either saw the contract between them. That is precisely the
+"cannot be reasoned about apart" failure this ticket predicted.
+
+DECISION NEEDED FROM THE OWNER — this is not a Claude call:
+  (a) give the split a date, or
+  (b) close the ticket with the reason it is not worth it.
+A hotspot ticket carried unactioned for a quarter is not a plan, it is a note.
