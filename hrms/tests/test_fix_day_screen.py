@@ -69,10 +69,23 @@ class TestTheScreenOffersEvidenceOnly(unittest.TestCase):
 		day with `get_day`, writes it with `save_day` (HR's ticked pair is the
 		evidence; the engine recomputes the row) and undoes with `undo_fix`.
 		The eight single actions stay on the module for history and undo, but no
-		button on the screen reaches them any more."""
+		button on the screen reaches them any more.
+
+		Amended 22 Sep 2026: `move_tap` is the ninth, and it is here on purpose.
+		A day carrying two Attendance rows refuses every rebuild (day_block_reason)
+		and `duplicate_refusal` answers "Move a tap to the row it belongs to
+		first" — a sentence that was only true while a door existed. It is the one
+		action the server allows on a two-row day (duplicate_rows_ok=True) because
+		it is the way OUT of one. It re-stamps ONE punch; a DAY is still written
+		one way only, by save_day from HR's ticks."""
 		calls = set(re.findall(r'FD_API \+ "(\w+)"', self.js))
-		self.assertEqual(calls, {"get_day", "save_day", "undo_fix"})
+		self.assertEqual(calls, {"get_day", "save_day", "undo_fix", "move_tap"})
+		self.assertEqual(len(re.findall(r'FD_API \+ "save_day"', self.js)), 1, "one way to write a day")
+		# move_tap is back on the screen (see the docstring); the other seven
+		# stay endpoints only.
 		for action in ACTIONS:
+			if action == "move_tap":
+				continue
 			self.assertNotIn(f'"{action}"', self.js, f"{action} is no longer a button")
 		self.assertNotIn("fix_days", self.js, "the range form is retired")
 

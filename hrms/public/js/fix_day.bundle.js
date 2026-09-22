@@ -305,6 +305,9 @@ class FixDayScreen {
 			.on("click.fixday", "[data-fd-flip]", (event) =>
 				this.flip(event.currentTarget.getAttribute("data-fd-flip"))
 			)
+			.on("click.fixday", "[data-fd-move]", (event) =>
+				this.move(event.currentTarget.getAttribute("data-fd-move"))
+			)
 			.on("click.fixday", "[data-fd-nav]", (event) => {
 				if (event.preventDefault) event.preventDefault();
 				return this.nav(event.currentTarget.getAttribute("data-fd-nav"));
@@ -343,7 +346,11 @@ class FixDayScreen {
 			<td><input type="checkbox" data-fd-tick="${fd_escape(row.name)}"${checked}${disabled}></td>
 			<td>${fd_escape(row.clock)}${row.day_label ? ` <span class="text-muted small">${fd_escape(row.day_label)}</span>` : ""}</td>
 			<td><button class="btn btn-xs btn-default" data-fd-flip="${fd_escape(row.name)}">${fd_escape(row.log_type)}</button></td>
-			<td>${fd_escape(row.shift || "—")}</td>
+			<td>${fd_escape(row.shift || "—")}${
+				row.is_new
+					? ""
+					: ` <button class="btn btn-xs btn-default ml-1" data-fd-move="${fd_escape(row.name)}">${__("Move")}</button>`
+			}</td>
 			<td>${tags.join(" ") || `<span class="text-muted small">${fd_escape(row.state)}</span>`}</td>
 			<td class="text-muted small">${fd_escape(row.device_id || "")}</td>
 		</tr>`;
@@ -508,6 +515,77 @@ class FixDayScreen {
 		state.leave_open = false;
 		console.info("[FixDay] added", log_type, clock);
 		this.render();
+	}
+
+	// A punch whose SHIFT STAMP is wrong: it is filed under the wrong shift, or
+	// under the wrong shift day, and no amount of ticking on this day can reach
+	// it. `move_tap` re-stamps it and rebuilds both days.
+	//
+	// Live, 22 Sep 2026 (Norazmi): a night shift's check-out grace had claimed
+	// the next morning's IN, so the morning was filed under the previous night.
+	// The day then held two Attendance rows, which blocks Save & rebuild
+	// outright, and `duplicate_refusal` answered "Move a tap to the row it
+	// belongs to first" — through a door this dialog did not have. It is the ONE
+	// action the server allows on a two-row day (duplicate_rows_ok=True) because
+	// it is the way OUT of one, so it is deliberately offered even when
+	// `day.blocked` has turned Save off.
+	//
+	// It writes ONE tap, never a day: `save_day` remains the only way a day is
+	// written from ticks.
+	move(name) {
+		const row = this.current.rows.find((r) => r.name === name);
+		if (!row || row.is_new) return Promise.resolve(null);
+		const on = String(row.time || "").slice(0, 10) || this.date;
+		return frappe.prompt(
+			[
+				{
+					fieldname: "shift",
+					label: __("Shift"),
+					fieldtype: "Link",
+					options: "Shift Type",
+					default: row.shift || null,
+					description: __("the shift this punch really belongs to"),
+				},
+				{
+					fieldname: "day",
+					label: __("Shift day"),
+					fieldtype: "Date",
+					default: on,
+					description: __("the day the shift STARTED; a night shift's OUT is the day before"),
+				},
+				{
+					fieldname: "reason",
+					label: __("Reason"),
+					fieldtype: "Small Text",
+					reqd: 1,
+					description: __("goes on the punch and in the fix log"),
+				},
+			],
+			(values) => this.move_one(name, values),
+			__("Move {0}", [row.clock]),
+			__("Move")
+		);
+	}
+
+	move_one(name, values) {
+		console.info("[FixDay] move", name, values.shift, values.day);
+		return fd_call(FD_API + "move_tap", {
+			tap: name,
+			shift: values.shift || null,
+			day: values.day || null,
+			reason: values.reason,
+		})
+			.then((answer) => {
+				if (!answer || !answer.ok) return null;
+				// Both days changed, so neither cached state is true any more.
+				this.state = {};
+				if (this.on_change) this.on_change();
+				return this.load(this.date).then(() => answer);
+			})
+			.catch((error) => {
+				console.warn("[FixDay] move refused", name, error && error.message);
+				return null;
+			});
 	}
 
 	// --- Save & rebuild ---------------------------------------------------------

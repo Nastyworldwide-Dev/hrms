@@ -241,3 +241,40 @@ test("a punch landing the next morning is shown with its date", () => {
 		"fresh_state fills it from the punch's own date"
 	)
 })
+
+// Reported live, 22 Sep 2026: "ultimately, the fix attendance appear no useful.
+// cant do anything." A night shift's check-out grace had claimed the next
+// morning's IN (86f324f4b), so the day carried two Attendance rows, the two
+// taps were 24.2 h apart, and every road out of the screen was closed —
+// `day.blocked` disables Save & rebuild, and `duplicate_refusal` tells HR to
+// "Move a tap to the row it belongs to first" through a door the dialog did
+// not have.
+//
+// `move_tap` has existed server-side since 17 Sep and is the ONE action
+// deliberately allowed on a two-row day (duplicate_rows_ok=True): it is the way
+// out of one. These pin the door, not the wording.
+test("a mis-stamped punch can be moved to its real shift day", () => {
+	const writes = src.match(/FD_API \+ "(\w+)"/g) || []
+	assert.equal(
+		writes.filter((call) => call.includes("move_tap")).length,
+		1,
+		"move_tap has one call site, as save_day does"
+	)
+	const start = src.indexOf("move(name) {")
+	assert.ok(start > 0, "the row action is a method, so it can be pinned")
+	const body = src.slice(start, src.indexOf("\n\t// --- Save & rebuild", start))
+	assert.match(body, /fieldtype: "Link",\s*options: "Shift Type"/, "HR says which shift it belongs to")
+	assert.match(body, /fieldtype: "Date"/, "...and which shift day, since the stamp is what is wrong")
+	assert.match(body, /reqd: 1/, "a reason goes on the punch and in the fix log, as every other write does")
+})
+
+// The whole point is that this door is open when nothing else is. A screen that
+// hid Move on a blocked day would reproduce the dead end it exists to end.
+test("Move is offered on a day the engine refuses to rebuild", () => {
+	const start = src.indexOf("tap_html(row) {")
+	const body = src.slice(start, src.indexOf("\n\ttaps_html(", start))
+	assert.match(body, /data-fd-move=/, "every punch on record carries its own Move")
+	assert.doesNotMatch(body, /blocked/, "the Move cell does not consult day.blocked")
+	const render = src.slice(src.indexOf("\trender() {"), src.indexOf("\theader_html(", src.indexOf("\trender() {")))
+	assert.match(render, /data-fd-move/, "and it is wired, not just drawn")
+})

@@ -122,6 +122,28 @@ class TestTheRepairGoesThroughTheOneResolution(unittest.TestCase):
 			out = repair.run_repair("2026-08-01", "2026-09-22")
 		self.assertEqual(out["punches"], 0)
 
+	def test_the_window_ends_yesterday_when_nobody_says_otherwise(self):
+		# The deploy calls run_repair() with no dates at all, so the default
+		# branch is the ONLY one the real one-time job ever takes. Every other
+		# test here passes an explicit to_date, which left it unexercised
+		# (review of 16cdf6a68).
+		seen = {}
+
+		def _at_risk(from_date, to_date):
+			seen["from"] = from_date
+			seen["to"] = to_date
+			return []
+
+		with (
+			patch.object(repair, "employees_at_risk", _at_risk),
+			patch.object(repair, "nowdate", lambda: "2026-09-22"),
+		):
+			repair.run_repair()
+		self.assertEqual(seen["from"], repair.FROM_DATE, "the floor is the cutover-era default")
+		self.assertEqual(
+			str(seen["to"]), "2026-09-21", "today is still being punched; yesterday is the last settled day"
+		)
+
 
 class TestTheDeployJustAsksForIt(unittest.TestCase):
 	def test_the_patch_only_enqueues(self):

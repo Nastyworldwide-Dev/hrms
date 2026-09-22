@@ -43,7 +43,7 @@ has — the same state as before the run — and the nightly re-mark is unaffect
 import logging
 
 import frappe
-from frappe.utils import getdate
+from frappe.utils import add_days, getdate, nowdate
 
 from hrms.utils.restamp import restamp
 
@@ -95,7 +95,9 @@ def run_repair(from_date=FROM_DATE, to_date=None, reason=REASON) -> dict:
 	Returns {"employees": attempted, "punches": re-stamped, "released": links
 	cleared, "failed": [employee, ...]}.
 	"""
-	to_date = getdate(to_date) if to_date else frappe.utils.add_days(frappe.utils.nowdate(), -1)
+	# Yesterday, not today: today is still being punched, and a day whose OUT
+	# has not happened yet would be re-marked from half a session.
+	to_date = getdate(to_date) if to_date else getdate(add_days(nowdate(), -1))
 	employees = employees_at_risk(from_date, to_date)
 	out = {"employees": 0, "punches": 0, "released": 0, "failed": []}
 	for employee in employees:

@@ -35,3 +35,33 @@ ONE resolver that takes (punch, roster, neighbours) and answers the shift, so a
 new rule has one place to live and one place to test. Not done in this commit:
 the owner needs the fix deployed, and a refactor under a live defect is how the
 defect comes back. Logged so it is a task, not a note.
+
+---
+
+CLASS (22 Sep 2026, second slice): a dead end. A day the grace defect broke
+carries two Attendance rows; day_block_reason then refuses every rebuild, and
+duplicate_refusal answers "Move a tap to the row it belongs to first" — through
+a door the dialog did not have. The owner: "the fix attendance appear no
+useful. cant do anything."
+
+Call sites of what changed (the bundle's FD_API write set):
+- hrms/public/js/fix_day.bundle.js — same-root: `move(name)` / `move_one`, one
+  call site, offered on every punch on record including a blocked day.
+- hrms/api/attendance_fix_day.py:764 (move_tap) — not-affected: unchanged. It
+  already re-stamps one tap, rebuilds both days, and is the one action allowed
+  on a two-row day (duplicate_rows_ok=True). Only its door was missing.
+- hrms/tests/test_fix_day_screen.py:74 — same-root: the test pinned the write
+  set to three endpoints. AMENDED deliberately, with the reason, not loosened:
+  move_tap joins it, and a second assertion now pins save_day to ONE call site
+  so "one way to write a DAY" survives the ninth endpoint.
+- hrms/public/js/fix_day.bundle.test.js "there is exactly one way to write a
+  day" — not-affected: it counts save_day call sites only, which is still 1.
+- hrms/utils/grace_restamp_repair.py:100 — same-root (review Warning): the
+  default window is now computed with directly-imported add_days/nowdate. The
+  module-attribute form was untestable here (the stub's frappe.utils is a
+  MagicMock), so the only branch the real deploy takes had no test.
+
+Lock: a regression test for the instance (Move exists, takes shift + day +
+reason, one call site) and an invariant test for the class (Move does NOT
+consult day.blocked — the dead end is the case it exists for). Four mutants
+killed. The repair job's default window is pinned to yesterday, mutant killed.
