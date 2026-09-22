@@ -7,18 +7,30 @@
 		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
-		<RequestList v-if="activeTab == 'My Requests'" :items="shown" />
-		<RequestList v-else-if="activeTab == 'Team Requests'" :items="shown" :teamRequests="true" />
-		<RequestList v-else-if="activeTab == 'History'" :items="shown" :teamRequests="true" />
+		<div ref="listRegion" id="request-panel-list" tabindex="-1" class="g-focusable">
+			<RequestList v-if="activeTab == 'My Requests'" :items="shown" />
+			<RequestList v-else-if="activeTab == 'Team Requests'" :items="shown" :teamRequests="true" />
+			<RequestList v-else-if="activeTab == 'History'" :items="shown" :teamRequests="true" />
+		</div>
+		<p class="sr-only" role="status">{{ revealed }}</p>
 
 		<!-- Not a GGhostButton: that is a glass surface and Home already spends
 		     4 of its 6 (§15.1). A text control under a list costs none, and the
-		     row it reveals is the one the person came for. -->
+		     row it reveals is the one the person came for.
+		     min-h, not padding arithmetic: py-3 + text-sm computes to exactly
+		     44px, which is §14's floor met by luck and one utility away from
+		     failing — and at 120% dynamic type the label grows while the
+		     padding does not. The list row (§10.1 #3) guards the same floor
+		     with an explicit minimum; so does this — through the token that
+		     defines the floor (--g-touch-target-min), not a literal 44px, so
+		     one value governs every target in the app. -->
 		<button
 			v-if="hidden > 0"
 			type="button"
-			class="g-focusable w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-			@click="showAll = true"
+			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+			aria-expanded="false"
+			aria-controls="request-panel-list"
+			@click="expand"
 		>
 			{{ __("Show {0} more", [hidden]) }}
 		</button>
@@ -26,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed, markRaw, watch } from "vue"
+import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
 
 import GSegmented from "@/components/glass/GSegmented.vue"
 import RequestList from "@/components/RequestList.vue"
@@ -71,14 +83,40 @@ const activeTab = ref("My Requests")
 // that reveals the rest in place. The fold is a budget, not a length
 // (home-fold-budget.test.js): the ANCHOR above this panel fits the smallest
 // usable height and this list is scrolled to by design — what the cap removes
-// is an UNBOUNDED scroll, not the scroll. A row is two lines plus py-3 either
-// side, ~62px, so five is ~310px inside a ~440px small-phone budget.
+// is an UNBOUNDED scroll, not the scroll.
+//
+// CORRECTED after design review. The commit that added this said "a row is
+// two lines, ~62px, so five is ~310px inside the ~440px budget". That was
+// measured on MY REQUESTS only. A team row carries a third line — ListItem
+// renders an avatar and the employee name under `isTeamRequest` — so:
+//     own rows  ~70px  ->  5 = ~348px
+//     team rows ~102px ->  5 = ~508px, past the small-phone budget on its own
+// Five stays, and the cap is the same on every tab, because this panel is
+// BELOW the anchor and is scrolled to either way: what five buys is a bound,
+// not a fit. One cap for three tabs is also the thing a person can predict.
+// The number to revisit if this panel ever moves above the fold is this one.
 //
 // Expanding, not linking: each tab merges SIX doctypes and there is no
 // combined list route, so "See all (9)" could only point at one type's screen
 // and answer a tap about nine requests with a page showing three.
 const HOME_ROWS = 5
 const showAll = ref(false)
+const listRegion = ref(null)
+const revealed = ref("")
+
+// The button renders `v-if="hidden > 0"`, so activating it unmounts the very
+// element that had focus and focus falls back to <body> — a keyboard or
+// screen-reader user presses Enter, rows appear, and they are returned to the
+// top of the page with no idea where they were. So the list takes focus, and
+// a polite live region says what happened; the control's own disappearance is
+// the one thing that cannot announce it (design review of 70bffe660).
+async function expand() {
+	const count = hidden.value
+	showAll.value = true
+	revealed.value = __("{0} more requests shown", [count])
+	await nextTick()
+	listRegion.value?.focus()
+}
 const socket = inject("$socket")
 const __ = inject("$translate")
 
@@ -157,6 +195,7 @@ const hidden = computed(() =>
 // the next tab already expanded, which is the opposite of what the cap is for.
 watch(activeTab, () => {
 	showAll.value = false
+	revealed.value = ""
 })
 
 function updateRequestDetails(

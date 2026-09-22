@@ -418,6 +418,16 @@ html[data-transparency="reduce"] .g-glass-ghost {
 
 .g-btn:focus-visible,
 .g-ghost-btn:focus-visible,
+/* "Show N more" under a capped list (§10.1 #3's floor, §14.1's 44px). Its
+   py-3 + text-sm computes to exactly 44, which is the minimum met by
+   arithmetic — and at 120% dynamic type the label grows while the padding
+   does not. A named class rather than a min-h-[] utility: the token is the
+   one definition of the floor, and an arbitrary-value utility is a second
+   copy of the number. */
+.g-list-more {
+	min-height: var(--g-touch-target-min);
+}
+
 .g-focusable:focus-visible {
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring);

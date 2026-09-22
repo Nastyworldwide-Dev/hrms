@@ -236,3 +236,46 @@ NEXT: S4-S7 are done. Re-measure the app (e2e/app-measure.mjs at 360x640) and
   re-bake Home's visual baselines; the recorded numbers predate the bottom-nav
   repair and understate every overflow by ~65px.
 - 2026-09-22T09:28:13Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-22T09:28:20Z PUSH: nz-glass @ 70bffe660
+- 2026-09-22T09:28:20Z COMMIT: 70bffe660 fix(home): the request panel printed every request a person had → review+design dispatched
+
+REPAIR: design review of 70bffe660 — one CRITICAL, two WARNINGs, all real, all
+  mine. (a) FOCUS: the control renders `v-if="hidden > 0"`, so activating it
+  unmounts the element that had focus and focus falls back to <body> — a
+  keyboard or screen-reader user presses Enter, rows appear, and they are
+  returned to the top of the page having pressed a button that as far as they
+  can tell did nothing. The list is now focusable by script and takes focus
+  after nextTick. (b) ANNOUNCEMENT: rows appearing announce nothing, and the
+  control that would have said so is the thing that just disappeared. A polite
+  sr-only region carries the count; the button carries aria-expanded and
+  aria-controls. (c) TOUCH TARGET: py-3 + text-sm computes to EXACTLY 44 — the
+  §14 floor met by arithmetic, one utility from failing, and at 120% dynamic
+  type the label grows while the padding does not. Now an explicit minimum, as
+  §10.1 #3's list row guards the same floor.
+NOTE: my "~62px per row, five = ~310px" was measured on MY REQUESTS only. A
+  TEAM row carries a third line — ListItem renders an avatar and employee name
+  under isTeamRequest — so own rows are ~70px (5 = ~348px) and team rows ~102px
+  (5 = ~508px, past the small-phone budget on its own). Five stays and the cap
+  is the same on all three tabs: the panel sits BELOW the anchor and is
+  scrolled to either way, so what five buys is a BOUND, not a fit, and one cap
+  is what a person can predict. The comment now says that instead of quoting a
+  figure that covered one tab of three.
+EVIDENCE: 2 correct — 4 new tests, each red first, 6 mutants killed (focus
+  before the rows exist; no focus call; live region removed; minimum removed;
+  tab reset keeps a stale announcement; tabindex dropped). Suite 534 / 530
+  pass, the same 4 red at HEAD. Gates back to baseline exactly: lint 242/10,
+  contrast 54/0, surfaces 46/0, Home still 4/6, tokens ok. Build clean.
+NOTE: the floor went through three spellings before it was right. `min-h-[44px]`
+  is a second copy of the number; `min-h-[var(--g-touch-target-min)]` still
+  trips the lint gate, which counts EVERY bracketed utility as an arbitrary
+  value and is right to. It is a named class (.g-list-more) resolving to the
+  token. Two of the three lint items I then "fixed" were in my own test's
+  PROSE — a comment naming the utility it forbids — which is the third time
+  this class has appeared today.
+LEARNING(gate): a rule that counts a token also counts the comment explaining
+  it. Strip comments before counting (usage.mjs already does); until then,
+  never write the forbidden spelling inside prose the gate reads.
+NEXT: S4-S7 all done. Re-measure (e2e/app-measure.mjs at 360x640) and re-bake
+  Home's baselines — the recorded numbers predate the bottom-nav repair and
+  understate every overflow by ~65px.
+- 2026-09-22T09:35:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
