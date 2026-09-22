@@ -279,3 +279,5 @@ NEXT: S4-S7 all done. Re-measure (e2e/app-measure.mjs at 360x640) and re-bake
   Home's baselines — the recorded numbers predate the bottom-nav repair and
   understate every overflow by ~65px.
 - 2026-09-22T09:35:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-22T09:35:14Z PUSH: nz-glass @ a46848871
+- 2026-09-22T09:35:14Z COMMIT: a46848871 fix(home): pressing "Show more" sent keyboard users back to nowhere → review+design dispatched
