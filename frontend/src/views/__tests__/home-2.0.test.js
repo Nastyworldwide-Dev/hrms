@@ -21,7 +21,7 @@
 // to improve rather than merely not worsen.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -102,4 +102,35 @@ test("Home still fits its budget", () => {
 		/g-glass/,
 		"Home composes primitives; it does not paint its own surface"
 	)
+})
+
+// A quick link navigates by ROUTE NAME (`router.push({ name: link.route })`),
+// and a name that does not exist throws at the moment of the tap — not at
+// build, not in any other test. Moving six links between screens is exactly
+// when one gets mistyped, so every name they carry is resolved against the
+// router here.
+//
+// The router splits across files and one name is a CONSTANT
+// (`name: HUB_ROUTE_NAME`), so this reads all of src/router and resolves that
+// import — a literal grep reported the helpdesk link missing when it was
+// perfectly fine.
+test("every link on Requests names a route that exists", () => {
+	const routerDir = join(SRC, "router")
+	let router = ""
+	for (const file of readdirSync(routerDir)) {
+		if (file.endsWith(".js")) router += readFileSync(join(routerDir, file), "utf8")
+	}
+	const names = new Set([...router.matchAll(/name: "([^"]+)"/g)].map((m) => m[1]))
+	const hub = readFileSync(join(SRC, "utils/helpdeskHub.js"), "utf8").match(
+		/HUB_ROUTE_NAME = "([^"]+)"/
+	)[1]
+	if (/name: HUB_ROUTE_NAME/.test(router)) names.add(hub)
+
+	const view = read("views/Requests.vue")
+	const used = [...view.matchAll(/route: (?:"([^"]+)"|(HUB_ROUTE_NAME))/g)].map((m) =>
+		m[1] ? m[1] : hub
+	)
+	assert.ok(used.length >= 6, `expected the six links, found ${used.length}`)
+	const missing = used.filter((name) => !names.has(name))
+	assert.deepEqual(missing, [], "a link whose route does not exist throws when tapped")
 })

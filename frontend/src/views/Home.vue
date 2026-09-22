@@ -39,8 +39,6 @@
 </template>
 
 <script setup>
-import { inject } from "vue"
-
 import { reloadRequestLists } from "@/data/requestLists"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
@@ -49,8 +47,6 @@ import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
-
-const __ = inject("$translate")
 
 async function refreshRequests(event) {
 	console.info("[Home] pull-to-refresh")

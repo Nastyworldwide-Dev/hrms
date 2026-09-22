@@ -1,38 +1,22 @@
-fix(security): the error itself went to the log unredacted
+chore(home): remove a dead translator binding, guard against dead links
 
-The reporter added yesterday redacted `detail` and handed the error straight to
-the console, while its own header claimed redaction was enforced there. In this
-app a failure arrives from Frappe as an Error whose message embeds the server's
-sentence — "Basic Salary must be positive, got 4500" — and whose response hangs
-off it as a property. So the commonest error shape in the app was the one shape
-that bypassed the filter entirely.
+Home kept `__` injected with no uses left after the quick links moved out.
+ESLint cannot flag that — a template might use it — so it sat there.
 
-Redaction runs on the error now, with an `instanceof Error` branch, because
-`Object.entries` on an Error returns nothing: message and name are not
-enumerable.
+A quick link navigates by route name, and a name that does not exist throws at
+the moment somebody taps it: not at build, not in any other test. Moving six
+links between screens is exactly when one gets mistyped, so every name they
+carry is now resolved against the router. This is a GUARD rather than a
+regression test: all six were already correct, and the check passes on the code
+before it — which is why this is a chore and not a fix.
 
-Depth also failed open. Past four levels the value came back raw, so the one
-case the limit exists for — a body nested deeper than expected — was the case
-it had stopped protecting. It returns a marker instead.
+My first pass at that check reported the helpdesk link missing. It was not —
+the route is registered under a constant, and a literal search cannot see
+through one. The test resolves the import, which is the difference between a
+guard and a false alarm somebody eventually mutes.
 
-And redaction no longer relies on the caller having named the field. Key
-matching cannot see `{ data: { value: <a bank account> } }`, so a long opaque
-token, a ten-to-nineteen digit number, an address or an NRIC is refused on
-sight whatever key it sits under.
-
-The first attempt at this fix put the leak straight back. I kept the stack
-unredacted "because it is file names and line numbers" — but a stack's first
-line IS the message, so the sentence returned to the log beside the redacted
-object. Only the frames are logged now, which keeps the one thing that says
-where a failure happened without the one thing that says what it was about.
-
-Also ships the honest half of the measurement work. No site is reachable, so
-the numbers wait; what can be checked without a browser is that nothing demands
-more width than the narrowest phone has — the first check in this repo at the
-320px floor the checklist names. And the 2026-09-09 measurement file now says
-in its own data that it must not be graded against: all thirty-six screens
-record a tab bar height of zero, captured before the nav was repaired, so every
-overflow it records is about 65px too small. The 2.0 plan rests on those
-numbers and a reader could have picked the file up without ever learning that.
+Also confirmed the CSS warning in every build today is noise: the minifier
+reports a position inside a comment, and the rule that follows is present and
+correct in the built output. Checked the output, not the source.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
