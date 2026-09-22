@@ -340,3 +340,36 @@ NOTE: one test failed that was mine — sidenav-app-links-a11y pinned
   compete with the label beside it) is unchanged and still asserted.
 NEXT: S5 — the 29 inline <svg>, triaged first; several are not icons (a
   progress ring, an upload target) and must not be converted.
+
+REPAIR: S5 — no page draws its own copy of a library icon. TRIAGED first, as
+  the icon map required, and the triage is most of the slice: of 20 inline
+  <svg>, THREE are drawings (GProgressRing's bound arc, KpiDetail's plotted
+  chart, SideNav's brand mark), ELEVEN are the SPEC'S OWN §9 icon set — a
+  16-grid at stroke 1.55 carried by .g-icon, which the spec says in as many
+  words no public set matches — and FOUR were pasted copies of Lucide's
+  arrow-right on a 24-grid at stroke 2, one drawn at 16px and three at 17px.
+  Only those four were converted. The plan called this "34 inline svg across
+  29 files"; the real figure is 20 across 15, and the great majority must NOT
+  be touched.
+EVIDENCE: 2 correct — icons.no-pasted-glyphs.test.js RED first (2 of 3), green
+  after. Suite 519 tests / 515 pass, and the 4 failures are the same ones that
+  fail at HEAD. Lint clean. Gates byte-identical to the S4 baseline: contrast
+  54/0, surfaces 46 screens / 0 over, tokens ok, usage and lint counters
+  unchanged. Build clean; total JS gz 1128339 -> 1127855 (-484 B).
+NOTE: my own test was wrong before the code was. It asserted every §9 glyph is
+  a 16-grid; GSelfiePanel's face is 24, and §9's own sentence allows exactly
+  that — "16 x 16 viewBox (24 x 24 for the selfie face only)". Written in as
+  the spec's exception, matched on the face's own geometry, so a SECOND
+  24-grid glyph still fails the test rather than the rule being loosened.
+NOTE: the working tree was silently reverted to pre-S4 mid-slice — the icons/
+  directory back, every call site un-migrated, and that revert STAGED. Cause
+  found: the review subagent ran a git checkout of HEAD~1 in the shared
+  worktree to verify my "these 4 tests also fail at HEAD" claim, and its turn
+  limit ended it before it checked back out. Recovered by `git reset` (the
+  commit itself was intact), deleting the resurrected files after confirming
+  they were byte-identical to HEAD~1, and redoing the four conversions.
+LEARNING(gate): a review subagent must be told read-only git ONLY (git show,
+  git diff A..B). A worktree is shared state; a reviewer that checks out a
+  different commit to verify a claim silently reverts whoever is working in it.
+NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)". Then S7, 100vh ->
+  dvh across the 5 sites (the plan says 10; measured, it is 5).

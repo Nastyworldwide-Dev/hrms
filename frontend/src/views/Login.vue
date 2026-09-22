@@ -43,19 +43,7 @@
 							:pending="session.login.loading"
 						>
 							<template #trailing>
-								<svg
-									width="16"
-									height="16"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<line x1="5" y1="12" x2="19" y2="12"></line>
-									<polyline points="12 5 19 12 12 19"></polyline>
-								</svg>
+								<ArrowRight :size="16" />
 							</template>
 						</GButton>
 
@@ -165,6 +153,7 @@
 </template>
 
 <script setup>
+import { ArrowRight } from "lucide-vue-next"
 import GLogoWell from "@/components/glass/GLogoWell.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GModal from "@/components/glass/GModal.vue"
