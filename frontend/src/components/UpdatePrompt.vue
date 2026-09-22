@@ -14,9 +14,15 @@
   reload they chose costs them nothing; one they did not costs them whatever
   they had typed.
 
-  NOT dismissible, and not on a timer. Dismissing would leave them on the old
-  build with no way back to the offer, which is the "stuck on old assets" half
-  of the same rule. It sits at the bottom, above the tab bar, until pressed.
+  DISMISSIBLE, which it was not at first. The reasoning then was that closing
+  it would strand the employee on the old build with no way back to the offer —
+  the "stuck on old assets" half of the same rule. On a real phone that came
+  out as a bar nobody could clear, sitting over the bottom of every screen
+  (owner, 22 Sep 2026: "it kinda stuck ... cant swipe or clear that").
+  The resolution is that dismissing is not refusing: the new build is still
+  downloaded and still takes over on the NEXT full load, which on a PWA people
+  leave open is the next time they cold-start it. So the offer can be put away
+  without being lost.
 -->
 <template>
 	<Transition name="g-update">
@@ -25,12 +31,21 @@
 			<button type="button" class="g-update__action g-focusable" @click="reload">
 				{{ __("Reload") }}
 			</button>
+			<button
+				type="button"
+				class="g-update__dismiss g-focusable"
+				:aria-label="__('Not now')"
+				@click="dismiss"
+			>
+				<X :size="16" />
+			</button>
 		</div>
 	</Transition>
 </template>
 
 <script setup>
 import { inject, ref } from "vue"
+import { X } from "lucide-vue-next"
 
 const __ = inject("$translate")
 
@@ -57,6 +72,13 @@ import("virtual:pwa-register")
 	.catch(() => {
 		console.info("[update] no service worker in this environment")
 	})
+
+function dismiss() {
+	// Hides the offer, does not decline the build. The worker stays waiting and
+	// activates on the next cold start; nothing is lost by putting it away.
+	console.info("[update] the employee put the offer away; it will apply on the next load")
+	needRefresh.value = false
+}
 
 function reload() {
 	// `true` reloads the page once the new worker has taken control — the

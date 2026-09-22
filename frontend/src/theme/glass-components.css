@@ -200,6 +200,14 @@ ion-tab-bar.g-tabbar {
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo), var(--g-lift);
+	/* An explicit layer, so a thing in App.vue can sit above it. The bar is
+	   `ion-tab-bar slot="bottom"` inside `ion-tabs` inside a `.relative`
+	   wrapper inside `ion-page` — three stacking contexts — and a z-index set
+	   outside them cannot reach in whatever its value. Naming the bar's own
+	   layer is what makes "above the bar" expressible at all.
+	   Reported on a real phone, 22 Sep 2026: the update prompt rendered
+	   BEHIND the bar and its Reload button was half unreachable. */
+	z-index: var(--g-layer-overlay);
 }
 /* §6.1 / §6.2 apply to the bar as to any other surface */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -2351,7 +2359,29 @@ html[data-theme="dark"] .g-cal__day--present {
    after every input rule above so it wins on equal specificity. */
 .g-input,
 .g-datefield input,
-.g-search__input {
+.g-search__input,
+/* frappe-ui's own class, on the inputs IT renders — ComboboxInput inside
+   Autocomplete, which is what the leave form's type picker uses. The list
+   above names only this app's classes, so that search box kept its smaller
+   size and iOS zoomed on it (reported on a real phone, 22 Sep 2026). A
+   third-party component will not adopt our class; naming theirs is the only
+   thing that reaches it. */
+.form-input,
+/* ...and the elements, for anything neither side has named. An element
+   selector loses to a class, so this is the floor UNDER the floor, not a
+   replacement for the list above. */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+select,
+textarea {
 	font-size: 16px;
 }
 .g-search__icon {
@@ -2655,6 +2685,21 @@ html[data-theme="dark"] .g-cal__day--present {
 
 /* ---------- GPullRefresh (§10.3 treatment list) ---------- */
 
+/* `ion-refresher` ships `position: absolute; top: 0; z-index: -1` — it is meant
+   to sit BEHIND the page and be revealed as you pull. That works while the page
+   is one flat layer, and this app's is not: `.g-page__content` carries
+   `z-index: 1` so Ionic's content sits above the light field, which puts the
+   refresher between the page background and the content instead of under both.
+   The result was "Pull to refresh" printed straight through Home's date and
+   greeting (reported on a real phone, 22 Sep 2026).
+   Raising it above the content is the fix rather than lowering the content,
+   because the content's layer is what keeps the light field behind everything
+   — and `pointer-events: none` is inherited from Ionic's own rule, so a bar
+   sitting over the page still cannot intercept a tap. */
+ion-refresher {
+	z-index: 2;
+}
+
 /* ion-refresher-content's inner icon nodes are shadow DOM with no published
    custom properties, so the spinner is switched OFF (refreshing-spinner=none,
    which §11.2 wants anyway) and this bar is ours. See the component header. */
@@ -2831,8 +2876,13 @@ ion-router-outlet {
 	position: fixed;
 	left: var(--g-screen-gutter);
 	right: var(--g-screen-gutter);
-	bottom: calc(env(safe-area-inset-bottom, 0px) + var(--g-tabbar-height) + 12px);
-	z-index: var(--g-layer-sticky);
+	/* The bar occupies tabbar-height + tabbar-gap from the bottom. Offsetting
+	   by height + 12 cleared that by THREE PIXELS — a number somebody hoped
+	   was big enough rather than the one the bar actually uses. */
+	bottom: calc(
+		env(safe-area-inset-bottom, 0px) + var(--g-tabbar-height) + var(--g-tabbar-gap) + 12px
+	);
+	z-index: var(--g-layer-scrim);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -2848,6 +2898,23 @@ ion-router-outlet {
 	font-size: var(--g-type-row-label-size);
 	line-height: var(--g-type-row-label-line-height);
 }
+.g-update__dismiss {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* 44x44 (§14.1) on a bar that is shorter than that — the target extends
+	   past the bar's padding, which is correct: what must be 44 is the area a
+	   thumb can hit, not the glyph. */
+	width: var(--g-touch-target-min);
+	height: var(--g-touch-target-min);
+	margin: calc((var(--g-touch-target-min) - 24px) / -2) -6px;
+	border: 0;
+	background: transparent;
+	color: var(--g-bg);
+	opacity: 0.7;
+}
+
 .g-update__action {
 	flex: none;
 	min-height: var(--g-touch-target-min);

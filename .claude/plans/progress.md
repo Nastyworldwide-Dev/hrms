@@ -331,3 +331,51 @@ NOTE: my own rule was wrong first. It demanded `__()` in the TEMPLATE binding,
 NEXT: slice 3.1 — the forms use a BLACKLIST (`excludeFields` with
   naming_series hand-listed in expense_claim/Form.vue and leave/Form.vue), so
   a new backend field leaks to staff unless each screen remembers to hide it.
+- 2026-09-22T11:49:31Z PUSH: nz-glass @ 5098f053b
+- 2026-09-22T11:49:31Z COMMIT: 5098f053b fix(chips): a shift said "Draft", which is not a thing that happens to a shift → review+design dispatched
+- 2026-09-22T11:56:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+
+REPAIR: three defects the owner found ON A REAL PHONE after deploying, all
+  three shipped green. Every one is a case where a source test was satisfied
+  and the browser did something else.
+  (a) THE UPDATE PROMPT WAS STUCK UNDER THE TAB BAR, unreachable and
+  undismissable. Two causes: it offset itself by tabbar-height + 12px when the
+  bar occupies height + GAP, clearing it by three pixels; and `ion-tab-bar
+  slot="bottom"` sits inside ion-tabs, inside a .relative wrapper, inside
+  ion-page — three stacking contexts a z-index set in App.vue cannot reach
+  into at any value. The bar now names its own layer so "above the bar" is
+  expressible at all, and the prompt offsets by the bar's own two tokens.
+  (b) PULL-TO-REFRESH PRINTED THROUGH THE GREETING. `ion-refresher` ships
+  z-index -1 — behind the page, revealed by pulling. That works while the page
+  is one flat layer and this one is not: `.g-page__content` carries z-index 1
+  so Ionic's content sits above the light field, which leaves the refresher
+  BETWEEN the background and the content. Raised above the content rather than
+  lowering the content, because the content's layer is what keeps the field
+  behind everything.
+  (c) iOS STILL ZOOMED on the leave-type search. The 16px rule names three of
+  THIS APP's classes; that box is frappe-ui's ComboboxInput with
+  `class="form-input"`, and a third-party component will not adopt our class.
+  Named theirs, plus the elements as a floor under the floor.
+  Also: the prompt is dismissible now. It was deliberately not, on the
+  reasoning that closing it strands the employee on the old build — which on a
+  real phone came out as a bar nobody could clear. Dismissing is not refusing:
+  the build still takes over on the next cold start.
+NOTE: my first diagnosis of (b) was WRONG and the mutant caught it. I added
+  `background: var(--g-bg)` to `.ion-page.g-page` — which already had one. The
+  test passed on the duplicate, and removing my line left the original, so the
+  mutant survived. That survival is what said the cause was elsewhere.
+LEARNING(gate): a mutant that SURVIVES is evidence the fix is not the fix.
+  Twice today a surviving mutant meant the real cause was somewhere else
+  (this, and the diagnostics stack). Do not weaken the test; go back to the
+  diagnosis.
+LEARNING(fact): App.vue cannot out-stack anything Ionic renders inside
+  ion-page/ion-tabs — those are stacking contexts. Chrome that must sit over
+  the tab bar needs the BAR to name a layer first. Third time this class has
+  cost a fix: the offline bar (twice) and now the update prompt.
+EVIDENCE: 2 correct — 5 tests red first (4 of 5), 6 mutants killed: the tab
+  bar loses its layer; the prompt reverts to +12px; the refresher's layer is
+  removed; the refresher drops below the content; frappe-ui's class is
+  unnamed. Suite 580 / 576 pass, same 4 red at HEAD. Gates: lint 234/0,
+  contrast 56/0, surfaces 46/0, tokens ok. Build clean.
+NEXT: Nabil re-deploys and re-checks the same three on the phone. Then 2.0
+  slice 3.1 (forms use a blacklist).
