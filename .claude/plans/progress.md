@@ -266,3 +266,10 @@
 - EVIDENCE: rung 1+2 — contrast 54 checked 0 failures exit 0, 13/13 tests, both
   before and after. No token, no shipped CSS and no view changed; the only new
   file is a probe nothing imports.
+- 2026-09-22T02:09:24Z COMMIT: 801c8fadd docs(design): the lg: contrast gate models geometry the app never draws → review dispatched
+- NOTE: skipped frappe-reviewer + retro on 801c8fadd — docs/evidence, 2 files
+  (one probe nothing imports, plus the ledger), zero Python/Frappe/doctype
+  surface, exempted per this repo's own chore/docs/style <=2-files rule, same as
+  36b5baacb, 078698b5b, 9c4df8ac3, d62bddd53, e56319358, 54b4b7b77. The
+  adversarial verifier already did the substantive review of this commit's
+  content, and its refutation is what the commit records.
