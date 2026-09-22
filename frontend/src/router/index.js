@@ -32,6 +32,15 @@ const routes = [
 				component: () => import("@/views/Home.vue"),
 			},
 			{
+				// The 2.0 tab bar's third destination (slice 0.1). A tab ROOT,
+				// so it sits beside the other four rather than under one of
+				// them — Ionic keeps a navigation stack per tab, and a root
+				// nested inside another tab's stack loses its own history.
+				path: "/requests",
+				name: "Requests",
+				component: () => import("@/views/Requests.vue"),
+			},
+			{
 				path: "/dashboard/attendance",
 				name: "AttendanceDashboard",
 				component: () => import("@/views/attendance/Dashboard.vue"),

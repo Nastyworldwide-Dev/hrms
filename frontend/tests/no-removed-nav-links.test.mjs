@@ -53,16 +53,26 @@ test("no view, component or data module still links to the removed Issues/Helpde
 test("the sidebar has exactly one Helpdesk entry, where Issues used to sit", () => {
 	const nav = readFileSync(join(src, "data", "navItems.js"), "utf8")
 	const titles = [...nav.matchAll(/title: "([^"]+)"/g)].map((m) => m[1])
-	assert.deepEqual(titles, [
-		"Home",
-		"Attendance",
-		"Leaves",
-		"Expenses",
-		"KPI",
-		"Helpdesk",
-		"SOPs",
-		"More",
-	])
+	// Amended 22 Sep 2026 (2.0 slice 0.1). This listed the pre-2.0 titles, so
+	// it failed on the rename it was never about: Attendance -> Calendar,
+	// KPI -> Score, plus the new Requests hub. What it EXISTS for is the
+	// Helpdesk consolidation — one entry, where Issues used to sit — and that
+	// is what it asserts now. Pinning every title made this test a second
+	// definition of the nav, which is how a rename becomes a failure nobody
+	// reads.
+	assert.equal(
+		titles.filter((t) => t === "Helpdesk").length,
+		1,
+		"exactly one Helpdesk entry"
+	)
+	assert.equal(titles[0], "Home", "Home is still first")
+	assert.equal(titles.at(-1), "More", "More is still last")
+	// The consolidation put Helpdesk in the slot Issues held: after SOPs' two
+	// neighbours, before More.
+	assert.ok(
+		titles.indexOf("Helpdesk") < titles.indexOf("SOPs"),
+		"in the slot Issues held"
+	)
 	assert.ok(!titles.includes("Issues"))
 	assert.match(nav, /title: "Helpdesk",[\s\S]*?route: HUB_PATH/)
 })

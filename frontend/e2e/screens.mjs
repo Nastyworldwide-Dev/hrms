@@ -58,6 +58,9 @@ export async function screens(request) {
 		S("login", "/login", true),
 		S("forgot-password", "/forgot-password", true),
 		S("home", "/home"),
+		// The 2.0 Requests hub (slice 0.1) — a tab root, so it belongs in every
+		// measurement alongside the other four.
+		S("requests", "/requests"),
 		S("dash-attendance", "/dashboard/attendance"),
 		S("dash-leaves", "/dashboard/leaves"),
 		S("dash-expense-claims", "/dashboard/expense-claims"),

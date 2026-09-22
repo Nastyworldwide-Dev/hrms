@@ -424,3 +424,48 @@ NEXT: 2.0 slice 0.1 — the tab bar. The owner ruled AS PLANNED: Home · Calenda
   · Requests · Score · More, replacing the five in data/navItems.js, with the
   old routes redirecting. 1.3 (Home) follows it, because the tabs decide what
   Home is for.
+- 2026-09-22T12:05:49Z PUSH: nz-glass @ 94a9e278a
+- 2026-09-22T12:05:49Z COMMIT: 94a9e278a fix(forms): the forms listed what to hide, so everything new was shown → review+security+design dispatched
+- 2026-09-22T12:15:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+
+REPAIR: 2.0 slice 0.1 — the tab bar. Home · Calendar · Requests · Score ·
+  More, replacing Home · Attendance · Leaves · Expenses · More.
+  Three of the five are RENAMES over the same routes, as the plan says in as
+  many words: §3.2 "Calendar (today: Attendance)" and §3.6 "Score screen is a
+  reroute". "Attendance" is what HR calls the record; "Calendar" is what an
+  employee calls the thing they open to see their month.
+  REQUESTS is the one new destination, and it is a COMPOSITION: what it is for
+  was spread across three places — starting a request in Home's quick links,
+  watching one in Home's request panel, the per-type lists on two dashboards —
+  so "where is my leave application?" had three plausible answers and no
+  obvious one. It renders the two components Home already renders; no new data
+  path.
+  Leaves and Expenses lost their TAB, not their screen or their URL: both are
+  bookmarks and both are push-notification targets. They are under More, and
+  More's `routes` lists them so the bar lights up when an employee is on one.
+NOTE: my first attempt DUPLICATED the nav. I wrote Calendar/Requests/Score as
+  new literals inside TAB_ITEMS while Attendance and KPI still existed in
+  NAV_ITEMS — and the SIDE NAV renders NAV_ITEMS, so it showed eight entries
+  with both old and new names. Caught by an existing test. Renamed at the
+  source instead: one entry serves both shells, TAB_ITEMS is indices again.
+NOTE: that test then failed for the right reason and had to be amended — it
+  pinned every title in order, which made it a SECOND definition of the nav,
+  so a deliberate rename read as a regression. Its real subject is the
+  Helpdesk consolidation (one entry, where Issues used to sit) and that is
+  what it asserts now.
+NOTE: MORE_ITEMS was `NAV_ITEMS.slice(4)`. A hand-kept index describing which
+  items are not tabs rots the moment the bar changes — it is computed from the
+  tab routes now.
+NOTE: two gates were silently stale and neither would have said so.
+  coherence-rules.mjs still listed the OLD tab roots, and it skips without a
+  running site, so nothing complained; e2e/screens.mjs did not know /requests
+  existed, so every future measurement would have missed a tab root.
+EVIDENCE: 2 correct — 7 tests red first (4 of 7), 4 mutants killed: wrong
+  order; Calendar points elsewhere; More drops the routes it inherited; a
+  sixth tab. Suite 592 / 588 pass, same 4 red at HEAD. Gates: lint 234/0,
+  contrast 56/0, surfaces 47 screens (the new hub) / 0 over, tokens ok. Build
+  clean.
+NOTE: my own test read the bar's order from COMMENTS (stripped, so never
+  matched), then from literal titles (only More has one), before resolving
+  NAV_ITEMS[n] against the source list. Three attempts to read five names.
+NEXT: 2.0 slice 1.3 — Home, now that the bar says what Home is for.

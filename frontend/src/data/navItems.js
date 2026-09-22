@@ -8,7 +8,7 @@ import {
 	House,
 	Kanban,
 	CircleDollarSign,
-	UserCheck,
+	FileText,
 } from "lucide-vue-next"
 import { markRaw } from "vue"
 
@@ -23,9 +23,13 @@ import { HUB_PATH } from "@/utils/helpdeskHub"
 const NAV_ITEMS = [
 	{ icon: markRaw(House), title: "Home", shortTitle: "Home", route: "/home" },
 	{
-		icon: markRaw(UserCheck),
-		title: "Attendance",
-		shortTitle: "Attend",
+		// "Calendar", not "Attendance" (2.0 slice 0.1, UX_PLAN §3.2: "Calendar
+		// (today: Attendance)"). The same screen — it already is a month grid.
+		// "Attendance" is what HR calls the record; "Calendar" is what an
+		// employee calls the thing they open to see their month.
+		icon: markRaw(CalendarDays),
+		title: "Calendar",
+		shortTitle: "Calendar",
 		route: "/dashboard/attendance",
 	},
 	{
@@ -35,15 +39,30 @@ const NAV_ITEMS = [
 		route: "/dashboard/leaves",
 	},
 	{
+		// The one genuinely new destination (UX_PLAN §3.3). What it is for was
+		// spread across three places — starting a request in Home's quick
+		// links, watching one in Home's request panel, the per-type lists on
+		// two dashboards — so "where is my leave application?" had three
+		// plausible answers and no obvious one.
+		icon: markRaw(FileText),
+		title: "Requests",
+		shortTitle: "Requests",
+		route: "/requests",
+	},
+	{
 		icon: markRaw(CircleDollarSign),
 		title: "Expenses",
 		shortTitle: "Expenses",
 		route: "/dashboard/expense-claims",
 	},
 	{
+		// "Score", not "KPI" (UX_PLAN §3.6: "Score screen is a reroute"). Same
+		// screen, the employee's word for it. Doubt on record in Q1 and worth
+		// keeping: a quarterly screen in a daily bar — revisit with four weeks
+		// of usage.
 		icon: markRaw(ChartLine),
-		title: "KPI",
-		shortTitle: "KPI",
+		title: "Score",
+		shortTitle: "Score",
 		route: "/dashboard/kpi",
 	},
 	{
@@ -76,21 +95,39 @@ const NAV_ITEMS = [
 // `routes` lists every path a tab claims for its active state.
 export const TAB_ITEMS = [
 	NAV_ITEMS[0], // Home
-	NAV_ITEMS[1], // Attendance
-	NAV_ITEMS[2], // Leaves
-	NAV_ITEMS[3], // Expenses — stands in for §13.1's PAY
+	NAV_ITEMS[1], // Calendar — was Attendance
+	NAV_ITEMS[3], // Requests
+	NAV_ITEMS[5], // Score — was KPI
 	{
+		// More
 		icon: markRaw(Ellipsis),
 		title: "More",
 		shortTitle: "More",
 		route: "/more",
-		routes: ["/more", "/dashboard/kpi", HUB_PATH, "/sop", "/team", "/remote-approvals"],
+		// Leaves and Expenses LOST THEIR TAB, not their screen: they are one
+		// tap further away, under More, and their routes are listed here so
+		// the bar lights More up when the employee is on one. A destination
+		// that moved without being listed leaves the bar showing nothing
+		// selected.
+		routes: [
+			"/more",
+			"/dashboard/leaves",
+			"/dashboard/expense-claims",
+			HUB_PATH,
+			"/sop",
+			"/team",
+			"/remote-approvals",
+		],
 	},
 ]
 
-// Everything not in the tab bar (§13.1): KPI, Helpdesk, SOPs — plus Team and
-// Remote Approvals, which the More screen adds conditionally.
-export const MORE_ITEMS = NAV_ITEMS.slice(4)
+// Everything not in the tab bar. The 2.0 bar (slice 0.1) took KPI up as Score
+// and dropped Leaves and Expenses down here, so the slice index no longer
+// describes the split — More is now "every nav item whose route no tab owns",
+// computed rather than counted, because a hand-kept index silently rots the
+// moment the bar changes again.
+const TAB_ROUTES = new Set(TAB_ITEMS.map((item) => item.route))
+export const MORE_ITEMS = NAV_ITEMS.filter((item) => !TAB_ROUTES.has(item.route))
 
 // Sibling apps reached by leaving the PWA (see data/appLinks.js). Rendered as
 // their own "Apps" group under More and below the SideNav divider; never in the
