@@ -54,6 +54,8 @@ class TestWhoIsSelected(unittest.TestCase):
 		seen = {}
 
 		def _get_all(doctype, filters=None, **kw):
+			if doctype == "Shift Assignment":
+				return [{"employee": "HR-EMP-00028"}, {"employee": "HR-EMP-00063"}]
 			seen.update(filters)
 			return [{"employee": "HR-EMP-00101"}, {"employee": "HR-EMP-00102"}, {"employee": "HR-EMP-00101"}]
 
@@ -74,6 +76,8 @@ class TestWhoIsSelected(unittest.TestCase):
 		seen = {}
 
 		def _get_all(doctype, filters=None, **kw):
+			if doctype == "Shift Assignment":
+				return [{"employee": "HR-EMP-00028"}, {"employee": "HR-EMP-00063"}]
 			seen.update(filters)
 			return []
 
@@ -87,6 +91,65 @@ class TestWhoIsSelected(unittest.TestCase):
 	def test_nobody_wrongly_stamped_means_nothing_to_do(self):
 		with patch.object(frappe, "get_all", return_value=[]):
 			self.assertEqual(repair.employees_holding_a_shift_they_do_not_own("2026-08-01", "2026-09-21"), [])
+
+	def test_a_roster_that_has_grown_a_third_owner_refuses_the_shift(self):
+		"""The owner list is a constant because the roster is what a stray
+		assignment corrupted. But it was true when he read it, and this job
+		runs later. A third person legitimately assigned the shift meanwhile
+		is an OWNER, and reverting their punches would be this job committing
+		the defect it exists to repair. Doing nothing is recoverable."""
+		calls = []
+
+		def _get_all(doctype, filters=None, **kw):
+			calls.append(doctype)
+			if doctype == "Shift Assignment":
+				return [
+					{"employee": "HR-EMP-00028"},
+					{"employee": "HR-EMP-00063"},
+					{"employee": "HR-EMP-00999"},
+				]
+			return [{"employee": "HR-EMP-00101"}]
+
+		with patch.object(frappe, "get_all", _get_all), patch.object(frappe, "log_error") as logged:
+			found = repair.employees_holding_a_shift_they_do_not_own("2026-08-01", "2026-09-21")
+		self.assertEqual(found, [], "nothing is repaired against a stale owner list")
+		self.assertNotIn("Employee Checkin", calls, "the punches are not even read")
+		logged.assert_called_once()
+		self.assertIn("HR-EMP-00999", logged.call_args.kwargs["message"])
+
+	def test_a_roster_that_lost_an_owner_still_repairs(self):
+		"""Fewer owners than the constant is not drift that can hurt anyone:
+		the missing person is simply never selected, because the query excludes
+		every name in the constant. Refusing there would strand the repair on a
+		site where one of the two has since left."""
+		# Asserting an empty RESULT is not enough — a refusal returns empty too
+		# (and did, under a mutant that made the drift check symmetric). What
+		# this pins is that the punches were READ.
+		calls = []
+
+		def _get_all(doctype, filters=None, **kw):
+			calls.append(doctype)
+			if doctype == "Shift Assignment":
+				return [{"employee": "HR-EMP-00028"}]
+			return [{"employee": "HR-EMP-00101"}]
+
+		with patch.object(frappe, "get_all", _get_all), patch.object(frappe, "log_error") as logged:
+			found = repair.employees_holding_a_shift_they_do_not_own("2026-08-01", "2026-09-21")
+		self.assertEqual(found, ["HR-EMP-00101"], "the repair runs as usual")
+		self.assertIn("Employee Checkin", calls)
+		logged.assert_not_called()
+
+	def test_drift_is_judged_on_submitted_assignments_only(self):
+		seen = {}
+
+		def _get_all(doctype, filters=None, **kw):
+			if doctype == "Shift Assignment":
+				seen.update(filters)
+			return []
+
+		with patch.object(frappe, "get_all", _get_all):
+			repair.roster_drifted("7PM - 3.30AM", ("HR-EMP-00028", "HR-EMP-00063"))
+		self.assertEqual(seen["docstatus"], 1, "a draft or cancelled assignment owns nothing")
 
 	def test_the_guarded_shift_names_its_two_owners(self):
 		self.assertEqual(repair.GUARDED_SHIFTS, {"7PM - 3.30AM": ("HR-EMP-00028", "HR-EMP-00063")})

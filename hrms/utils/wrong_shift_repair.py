@@ -65,12 +65,43 @@ FROM_DATE = "2026-08-01"
 #: A shift only these employees may ever be stamped with. Read from the roster
 #: would be circular — the roster is what a stray assignment corrupted, and the
 #: owner named the two holders explicitly after checking the list himself
-#: (Shift Assignment, filtered to this shift: 2 of 2).
+#: (Shift Assignment, filtered to this shift: 2 of 2). `roster_drifted` checks
+#: at RUN time that the list still says that, and refuses the shift if not: the
+#: job runs on the owner's schedule, not this commit's.
 GUARDED_SHIFTS = {
 	"7PM - 3.30AM": ("HR-EMP-00028", "HR-EMP-00063"),
 }
 
 REASON = "a shift that is not this employee's was holding the punch (owner rule, 22 Sep 2026)"
+
+
+def roster_drifted(shift, owners) -> str | None:
+	"""Why this shift's roster no longer says what the owner checked, or None.
+
+	The owner list here is a constant because the roster is exactly what a
+	stray assignment corrupted — reading it back would be circular. But the
+	list was true when he read it, and this job runs later, on his schedule,
+	against a site that has kept moving. A third person legitimately assigned
+	the shift meanwhile is an OWNER, and reverting their punches would be this
+	job committing the defect it exists to repair.
+
+	So a drifted roster REFUSES the shift rather than repairing against a
+	stale list. Doing nothing is recoverable; reverting a real owner's month
+	is not.
+	"""
+	assigned = {
+		row["employee"]
+		for row in frappe.get_all(
+			"Shift Assignment",
+			filters={"shift_type": shift, "docstatus": 1},
+			fields=["employee"],
+			limit_page_length=0,
+		)
+	}
+	extra = sorted(assigned - set(owners))
+	if extra:
+		return f"{shift} is also assigned to {', '.join(extra)}, who this job would treat as wrong"
+	return None
 
 
 def employees_holding_a_shift_they_do_not_own(from_date, to_date) -> list:
@@ -82,6 +113,19 @@ def employees_holding_a_shift_they_do_not_own(from_date, to_date) -> list:
 	"""
 	found = set()
 	for shift, owners in GUARDED_SHIFTS.items():
+		drifted = roster_drifted(shift, owners)
+		if drifted:
+			logger.error("[wrong_shift_repair] %s SKIPPED: %s", shift, drifted)
+			frappe.log_error(
+				title=f"Wrong-shift repair skipped {shift}",
+				message=(
+					f"{drifted}.\n\nThe owner named this shift's holders on 22 September 2026 "
+					"after reading the assignment list himself. The list has changed since, so "
+					"nothing was repaired for this shift: re-check who owns it and update "
+					"GUARDED_SHIFTS before running the job again."
+				),
+			)
+			continue
 		rows = frappe.get_all(
 			"Employee Checkin",
 			filters={

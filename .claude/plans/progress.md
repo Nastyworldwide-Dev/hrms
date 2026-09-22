@@ -255,3 +255,34 @@ NEXT: Nabil deploys. Order: this repair first, THEN save the corrected shift
 - 2026-09-22T08:04:38Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
 - 2026-09-22T08:05:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-09-22T08:05:08Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
+- 2026-09-22T08:05:11Z COMMIT: 6e07c61cb fix(attendance): a shift belonging to two people was holding everyone's punches → review dispatched
+- 2026-09-22T08:05:43Z PUSH: nz-glass @ 6e07c61cb
+- 2026-09-22T08:06:09Z PUSH: nz-glass @ 6ee0f6ea7
+- 2026-09-22T08:06:09Z COMMIT: 6ee0f6ea7 docs(glass): the handoff still described the Move slice → review dispatched
+
+REPAIR: the frappe review of 6e07c61cb came back DEPLOY, no Critical, 284
+  tests green across 9 suites. Its one Warning was real and is fixed here: the
+  two owners are a module constant, the job runs on Nabil's schedule rather
+  than at commit time, and a third person legitimately assigned that shift in
+  between would have had their punches reverted — the job committing the very
+  defect it exists to repair. `roster_drifted` now REFUSES the shift and logs
+  what changed rather than repairing against a stale list. Fewer owners than
+  the constant is not drift: the missing name is simply never selected.
+EVIDENCE: 2 correct — 3 new tests, 4 mutants killed: remove the check; warn but
+  continue anyway; make the difference symmetric so a DEPARTED owner also
+  refuses; count draft/cancelled assignments as ownership. Suite 25/25,
+  restamp 15/15, grace 11/11, day_remark 35/35, attendance_recovery and
+  fix_day_screen green, ruff clean.
+NOTE: mutant N3 SURVIVED its first run and the survival was a lie — a stale
+  __pycache__ entry (same size, same second, so the timestamp check missed the
+  edit) meant three runs scored the ORIGINAL file. Caught by reproducing the
+  case standalone and reading the source line back. Every mutation run here now
+  clears __pycache__ first. The test was genuinely weak too: it asserted an
+  empty RESULT, which a refusal also returns, so it now asserts the punches
+  were READ.
+LEARNING(gate): a mutation run must clear __pycache__ between mutants — a
+  same-size, same-second edit is invisible to Python's timestamp invalidation,
+  and a surviving mutant is then indistinguishable from a killed one.
+NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
+  (19:00-03:30), then cut the check-out grace from 120.
+- 2026-09-22T08:09:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
