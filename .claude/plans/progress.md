@@ -286,3 +286,18 @@ NEXT: patch to install the two announcement doctypes on deploy (a migrate that f
 - 2026-09-22T17:16:56Z COMMIT: 36413e436 chore(announcements): install the board's doctypes explicitly on release → review dispatched
 - 2026-09-22T17:17:05Z PUSH: nz-glass @ 36413e436
 - 2026-09-22T17:22:46Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 21 file(s) ⟂d2611f29f8fb
+- 2026-09-22T17:22:49Z COMMIT: 9f6fea7ab feat(home): "Needs you" showed one kind of work out of seven → review+design dispatched
+- 2026-09-22T17:22:58Z PUSH: nz-glass @ 9f6fea7ab
+- 2026-09-22T17:29:14Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
+
+EVIDENCE: rung 2 (correct) — requests_summary: 715/715 frontend tests green, ruff clean.
+EVIDENCE: rung 3 (works) — exercised on spoke.localhost. An active employee with a real
+  allocation returned balance 7.0 of 10.0 with expires_on 2026-12-31 and expiring_soon
+  false (100 days out, past the 45-day horizon). All four sections answered for five
+  different employees. Section independence proven by breaking _overtime on the live
+  site: "overtime" was ABSENT from the payload, not zero, and leave/expenses/attendance
+  all survived.
+DEAD END: reading `to_date` from get_leave_balance_map. The map emits from_date and NOT
+  to_date, so expires_on was always None and expiring_soon could never fire. The end
+  date comes from Leave Allocation now, earliest first.
+NEXT: Calendar (C2/C3) — month dots, then the day sheet.

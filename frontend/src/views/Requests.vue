@@ -24,6 +24,12 @@
 			<div
 				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
+				<!-- FIRST, above the tiles. §5: the numbers belong where the
+				     decision is made, not on the screen that stores them — an
+				     employee deciding how much leave to take should not have to
+				     remember a figure from another screen. The strip renders
+				     nothing when there is nothing to say. -->
+				<RequestBalances />
 				<QuickLinks :items="quickLinks" :title="__('Start a request')" />
 				<RequestPanel />
 			</div>
@@ -44,6 +50,7 @@ import {
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import QuickLinks from "@/components/QuickLinks.vue"
+import RequestBalances from "@/components/RequestBalances.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 
