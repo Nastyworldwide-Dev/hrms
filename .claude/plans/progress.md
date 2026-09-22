@@ -237,3 +237,6 @@ DEAD END: importing src/data/supportCounts.js directly in a node test. The modul
   in isolation with the resource stubs passed as FUNCTION PARAMETERS (a `new Function`
   body sees its own arguments, not the closure it was built in).
 NEXT: SOP search-first (the last D3 piece), then the deploy note.
+- 2026-09-22T17:53:10Z PUSH: nz-glass @ d0e98da13
+- 2026-09-22T17:53:10Z COMMIT: d0e98da13 feat(support): the pills never said whether anything was behind them → review+design dispatched
+- 2026-09-22T17:56:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 17 file(s) ⟂da5fdd6c5fcd

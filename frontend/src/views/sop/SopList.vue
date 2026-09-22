@@ -46,18 +46,23 @@
 					</div>
 				</div>
 
-				<!-- Search -->
-				<div class="relative">
-					<Search
-						class="absolute left-2.5 top-1/2 -translate-y-1/2 h-icon-sm w-icon-sm text-ink-500 pointer-events-none"
-					/>
-					<input
-						v-model="query"
-						:placeholder="__('Search SOPs…')"
-						:aria-label="__('Search SOPs')"
-						class="g-focusable w-full bg-surface border border-divider py-2.5 pl-8 pr-3 text-card-title text-inkbase placeholder:text-ink-500"
-					/>
-				</div>
+				<!-- SEARCH FIRST. An SOP library is a lookup tool, not a browse
+				     tool: somebody opening it is usually after one document they
+				     half remember, and a list of sections is not how they find
+				     it.
+
+				     GSearchBar, not a hand-built input. The system already had
+				     one — with the clear control and the two-tone focus ring —
+				     and this screen grew its own, which is the drift the usage
+				     gate exists to catch and did not, because an <input> is not
+				     a G* component being bypassed. It carries 20 of the app's
+				     103 stray pixel values for the same reason. -->
+				<GSearchBar
+					v-model="typed"
+					:placeholder="__('Search SOPs…')"
+					:label="__('Search SOPs')"
+					@clear="typed = ''"
+				/>
 
 				<!-- Sections -->
 				<div v-if="!isEmpty" class="flex flex-col gap-4">
@@ -158,8 +163,9 @@ import { BookOpen, ChevronRight, PenLine, Plus, Search } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
+import GSearchBar from "@/components/glass/GSearchBar.vue"
 import { createResource } from "frappe-ui"
-import { computed, inject, ref } from "vue"
+import { computed, inject, onBeforeUnmount, ref, watch } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import SopFormSheet from "./SopFormSheet.vue"
@@ -171,7 +177,37 @@ import { buildSopSections } from "@/utils/sopLibrary"
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
+//: TWO refs, and the difference is the feature. `typed` is what the person is
+//: holding; `query` is what the list has been filtered by, and it follows
+//: 300ms later.
+//:
+//: Searching on every keystroke re-filters and re-groups the whole library
+//: between letters, so the list flickers through nonsense while somebody is
+//: still typing a word. 300ms is the standard perceptual threshold (Nielsen,
+//: Response Times) — below it a person does not notice the wait, above it
+//: they do.
+//: 300ms — the standard perceptual threshold (Nielsen, Response Times: The 3
+//: Important Limits). Below it nobody notices the wait; above it they do.
+const SEARCH_DEBOUNCE_MS = 300
+
+const typed = ref("")
 const query = ref("")
+let debounce = null
+
+watch(typed, (value) => {
+	clearTimeout(debounce)
+	// Clearing is INSTANT. A person who taps the × wants the full list back
+	// now, and waiting 300ms to show them what they already had reads as lag.
+	if (!value) {
+		query.value = ""
+		return
+	}
+	debounce = setTimeout(() => {
+		query.value = value
+	}, SEARCH_DEBOUNCE_MS)
+})
+
+onBeforeUnmount(() => clearTimeout(debounce))
 const sheetOpen = ref(false)
 const editingName = ref(null)
 
