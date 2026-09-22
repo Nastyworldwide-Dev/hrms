@@ -1,23 +1,20 @@
 # HANDOFF
-prompt:   2.0 complete — eight slices, plus pre-2.0 and the attendance repair
-commit:   9db488f45 on nz-glass (69 commits today, all pushed)
-status:   done
-files:    frontend/src/data/navItems.js
-          frontend/src/views/Requests.vue (new)
-          frontend/src/components/NeedsYou.vue (new)
-          frontend/src/components/FormView.vue
-          frontend/src/views/{leave,expense_claim}/Form.vue
-          frontend/src/views/{attendance,ot}/*
-          frontend/src/views/RemoteApprovals.vue
-          design/tokens.json
+prompt:   2.0 revamp — phases A, B, C and D
+status:   done, ready to deploy
+commit:   cd8144e7c on nz-glass (20 commits, all pushed)
+files:    hrms/api/{announcements,needs_you,requests_summary,calendar,now}.py
+          hrms/hr/doctype/hr_announcement{,_read}/ (new)
+          hrms/patches/v16_0/install_announcement_doctypes.py
+          design/gates/{scale,motion}.mjs (new), lint/contrast/run extended
+          design/tokens.json — 4pt grid, 1.2 type ramp, icon + control scales
+          frontend/src/components/{NowBar,Announcements,DaySheet,RequestBalances}.vue
+          frontend/src/views/announcements/ (new)
 verify:   cd frontend && yarn test && yarn gates && yarn build
-flags:    618 tests / 614 pass — the same 4 fail at HEAD and predate today.
-          Gates: lint 234 new-0, contrast 56/0, surfaces 47 screens 0 over.
-          NOTHING rendered: no site was reachable, so every check is
-          stub/source-level. Three defects on 22 Sep came from exactly that.
-          OWED: 1440 baselines, and the 2026-09-09 measurements (tabH 0 on all
-          36 screens, marked stale in its own data).
-next:     Deploy. On the phone check: the Reload bar clears the tab bar and its
-          x closes it; pull-to-refresh does not print through the date; the
-          leave-type search does not zoom; the tab bar reads Home Calendar
-          Requests Score More.
+flags:    763/763 tests green. 7 static gates green. a11y/visual/coherence still
+          SKIP — they need a served site with AUDIT_PW, as they have for six
+          releases; the board says so rather than reporting OK.
+          114 visual baselines still owed, and now 228 (light theme is real).
+next:     Deploy. On the phone: Home's top line states your shift and your
+          running hours; announcements appear once HR posts one; Calendar tiles
+          carry dots and a day opens a sheet; Requests shows your balances;
+          Score says when your cycle opens.
