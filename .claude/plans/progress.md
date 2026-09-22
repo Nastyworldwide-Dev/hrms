@@ -283,3 +283,6 @@ DEAD END: audience_value as a Dynamic Link. Frappe resolves a Dynamic Link's tar
   plain Data name with our own existence check.
 NEXT: patch to install the two announcement doctypes on deploy (a migrate that fails
   earlier must not leave endpoints with no tables), then B3 home.needs_you.
+- 2026-09-22T17:16:56Z COMMIT: 36413e436 chore(announcements): install the board's doctypes explicitly on release → review dispatched
+- 2026-09-22T17:17:05Z PUSH: nz-glass @ 36413e436
+- 2026-09-22T17:22:46Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 21 file(s) ⟂d2611f29f8fb
