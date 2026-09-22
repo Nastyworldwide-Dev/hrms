@@ -2,106 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-CORRECTION: I cited "mockup-4 home = 723px, 0 overflow" as evidence the no-scroll
-  goal was already proven. Wrong file. 2026-09-09-prototype-measure.json measures
-  nadi-prototype.html (e2e/prototype-measure.mjs:12), not mockup-4. Withdrawn.
-EVIDENCE: rung 1 — mockup-4 measured directly instead. It hardcodes
-  .app{width:390px;height:844px;overflow:hidden} (line 124), so a fixed frame
-  CANNOT show overflow and eyeballing it reports "no scroll" at any window size.
-  Measured one screen at a time inside its own frame: s-home 912/774 = 138 over,
-  s-appr 1030/774 = 256, s-leaveform 915/774 = 141, s-score 27, s-req 25; six
-  screens fit. Frame released to real heights, home alone: 360x640 824 over,
-  360x740 501, 360x800 347, 390x844 229, 414x896 138, 430x932 67. So "no scroll"
-  is not proven anywhere yet — not in the app, not in the mockup.
-CORRECTION: my first tap-target pass reported minTap 12-14px on mockup-4. It was
-  measuring card DIVs matched by [class*=card]/[class*=row], not controls.
-  Re-audited over button/a/[role=button]/input/select only: exactly ONE target
-  under 24x24 (a 38x22 toggle track on s-leaveform). Mockup tap targets are
-  otherwise WCAG 2.2 SC 2.5.8 clean. Withdrawn.
-NOTE: latent bug found, NOT in scope for the Home work — glass.css:96
-  --g-sheet-max-height: calc(100vh - 5rem) plus 9 more 100vh/88vh/80vh/70vh
-  sites. 100vh is the LARGEST mobile viewport state, so sheets are cut off while
-  browser chrome shows. dvh/svh have been Baseline Widely Available since Jun
-  2025. Filed as its own slice (S7) with its own root cause.
-PLAN: .claude/plans/current-plan.md written, tier risky — Home density (4 named
-  causes, each with its own fix), the fold FORMULA (anchor block sized against
-  the SMALLEST usable height ~440px at 360x640, elastic list allowed to scroll;
-  invariant F1), and one icon library (recommend lucide-vue-next, feather
-  REMOVED with it). 7 slices. Mockup sign-off required before S2.
-NEXT: present the plan for approval — no code until the owner rules on it, and a
-  measured frameless mockup is required before the QuickLinks grid slice.
-
-REPAIR: S1 — Home spent its small-phone budget on air and said things twice.
-  Three causes, one slice: (a) four panels at gap-8 = 96px of inter-panel air on
-  a screen whose usable budget is ~440px at 360x640 -> gap-5; (b) CheckInPanel
-  rendered an <h1> greeting while GAppHeader.vue:44 already renders the page h1,
-  so every screen reader announced Home's title twice AND display-size type ate
-  anchor height -> <p>, same words, same look, no structural claim;
-  (c) PendingApprovalsBanner said "{0} remote check-in(s) awaiting your approval"
-  + "Tap to review and decide." = 11 words for one count and one tap, on a
-  GBanner that is already `interactive` -> "{0} check-in(s) to approve".
-EVIDENCE: rung 2 — frontend/src/views/__tests__/home-fold-budget.test.js, 3
-  tests, RED on all three before the edit (verified, not assumed). Mutation-
-  checked: reintroducing the <h1> turns it red again and restoring it green.
-  First draft of the h1 test matched its OWN explanatory comment (the comment
-  names the tag it removed), so it stripped comments before asserting — a test
-  its subject's prose can fail is not a test.
-EVIDENCE: rung 3 — contrast gate 54 checked / 0 failures, gate tests 13/13,
-  component+view tests 55/55, biome clean on all four files, production build
-  green (188 asset chunks, Home/CheckInPanel/PendingApprovalsBanner all emitted).
-- 2026-09-22T04:13:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-09-22T04:14:29Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-09-22T04:14:32Z COMMIT: 8e07bf701 fix(home): the fold is a budget, and Home overspent it → review+design dispatched
-- 2026-09-22T04:15:05Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: S1 review follow-up. The frappe reviewer's one Warning was right and I
-  verified it at source before acting: the banner's count is
-  hrms.api.remote_checkin.get_pending_count (data/remoteCheckin.js:21) and the
-  row routes to RemoteApprovals only, so cutting "remote" left a bare
-  "check-in(s) to approve" that reads as EVERY pending approval. An approver who
-  believes that stops looking elsewhere — the one failure a visibility banner
-  must not cause. Restored to "{0} remote check-in(s) to approve": five words,
-  still less than half the original eleven. CLASS: a trim that removed a
-  qualifier carrying scope, not prose. Brevity is a word budget, not a licence.
-  Also took the design reviewer's DSN-06: .g-approvals__hint had no emitter left
-  after S1, so the dead branch is gone from glass-components.css:931.
-  .g-banner__hint stays — CheckInPanel.vue:74 still emits it.
-EVIDENCE: 2 correct — new test "the approvals banner names the scope of the
-  count it shows" RED before the edit (3 pass / 1 fail, verified), green after
-  (4/4). Mutation-checked: re-cutting the scope word turns it red again, and the
-  file was restored byte-identical (git diff --numstat 8/2, the intended edit).
-EVIDENCE: 3 works — contrast 54 checked / 0 failures, gate tests 13/13,
-  component+view tests 56/56, biome clean on all three touched files.
-NOTE: both S1 reviewers cleared the commit (NEXT_ACTION: DEPLOY,
-  VERDICT: DESIGN_APPROVED, zero Critical between them). Both nonetheless hit
-  their 10-turn limit and returned nothing until nudged — a silent reviewer here
-  was a truncated one, not a clean one. Their remaining SUGGESTIONs are NOT
-  taken: the orphan-translation risk can only be settled against live Translation
-  doctype rows (repo has no .csv/.po; lookup is exact-source-string via
-  translationsPlugin.js), and converging content-column gaps onto one token
-  (--g-stack-column, Home/Team gap-5 vs Leave/Attendance/KPI/Expense gap-8) is a
-  five-view change that belongs to the owner, not to this slice.
-EVIDENCE: rung 1 — S3 icon map measured against real Lucide (1848 icons, fetched
-  from lucide-static). 36 feather names are actually rendered, NOT the 13 I
-  recorded earlier: that count came from literal name="" only and missed the
-  dynamic bindings, all three of which resolve to literals in the code
-  (WorkflowActionSheet.vue:89/94 x/check; Home.vue link.icon = components).
-  CORRECTION to the earlier inventory line. Coverage: 29 identical, 5 renamed
-  (alert-triangle->triangle-alert, check-circle->circle-check,
-  check-square->square-check, edit->pen-line, edit-2->pencil), and 2 with NO
-  same-name target (filter, trash-2) that need a named substitute before S4 can
-  claim parity. All 14 hand-rolled components have a Lucide target.
-NEXT: commit this follow-up, then finish S3 as a committed doc (the 2 unmapped
-  names get a decided substitute, not a guess) before S4 installs anything.
-- 2026-09-22T04:21:43Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-09-22T04:21:47Z COMMIT: d6c82f17e fix(home): "remote" was scope, not prose → review+design dispatched
-
-NOTE: d6c82f17e cleared by both reviewers — NEXT_ACTION: DEPLOY and
-  VERDICT: DESIGN_APPROVED, zero Critical, zero Warning on design. The frappe
-  reviewer INDEPENDENTLY verified at source what my fix rests on: get_pending_count
-  (hrms/api/remote_checkin.py:365-372) counts Remote Checkin Request rows only,
-  no union with Employee Checkin, so "remote" is factually correct and the bare
-  string shipped in 8e07bf701 was the defect. I read the same lines myself before
   it reported. Its one Warning was that it never saw the test output (cut off by
   my deliver-now nudge) — re-run to close it: 4/4.
 NOTE: reviewer truncation is now a pattern, not an incident — 3 of 4 agents this
@@ -301,3 +201,4 @@ NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete t
   14 hand-rolled icon components and REMOVE feather-icons in the same commit,
   recording the real gzip delta (revert if it is not negative). Verify the
   Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
+- 2026-09-22T04:55:32Z COMMIT: c61dd191d test(glass): pin the token claim a comment was making, and got wrong → review+design dispatched

@@ -1363,7 +1363,8 @@ html[data-theme="dark"] .g-badge--open {
 	   Both are guards against a FUTURE label, not something the current set
 	   hits: checked at the smallest supported width (360px -> 328px panel / 4
 	   = 82px tile = 74px of text), the longest label Home passes is "Request
-	   Attendance", which breaks at its space and whose longest word is ~55px.
+	   Attendance", which breaks at its space into two lines without reaching
+	   the clamp, and whose longest word is ~55px.
 	   The full label stays in the accessible name either way. */
 	overflow-wrap: break-word;
 	display: -webkit-box;
