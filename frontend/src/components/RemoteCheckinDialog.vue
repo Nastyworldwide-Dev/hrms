@@ -98,6 +98,11 @@ const emit = defineEmits(["close", "submitted"])
 const remarks = ref("")
 const submitting = ref(false)
 
+// Past the allowance cap the reading cannot widen a fence, so its distance is
+// not a figure to put in front of anybody. The reason code used to stand in for
+// this and no longer does.
+const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
+
 // Two different things send a punch to an approver, and telling someone they
 // left the geofence when their phone simply could not see the sky is both
 // wrong and the kind of wrong that gets argued about at payroll.
@@ -109,11 +114,6 @@ const headline = computed(() =>
 		? __("We couldn't confirm where you are")
 		: __("You're outside the office geofence")
 )
-
-// Past the allowance cap the reading cannot widen a fence, so its distance is
-// not a figure to put in front of anybody. The reason code used to stand in for
-// this and no longer does.
-const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
 
 const formattedDistance = computed(() => {
 	const d = props.distanceM || 0

@@ -55,24 +55,25 @@ test("being offline is one fact, read from one place", () => {
 	assert.match(composable, /navigator\.onLine/)
 	assert.match(composable, /addEventListener\(\s*["']online["']/)
 	assert.match(composable, /addEventListener\(\s*["']offline["']/)
-	// Not a bare mention: `void 0 && window.removeEventListener(...)` contains
-	// the word and removes nothing — it survived this assertion as a mutant.
-	// Pin the DISPOSAL: the pair the per-component helper adds must both come
-	// off in its scope-dispose hook.
-	const dispose = composable.slice(composable.indexOf("onScopeDispose"))
-	// Anchored to the START of its line. A source-level test cannot see
-	// reachability, so what it CAN pin is the shape: an unconditional
-	// statement, not an expression guarded by something that is always false.
-	// `void 0 && window.removeEventListener(...)` survived the unanchored
-	// version, because the call text was still there.
-	assert.match(dispose, /^\t*window\.removeEventListener\("online", up\)$/m)
-	assert.match(dispose, /^\t*window\.removeEventListener\("offline", down\)$/m)
-	// ...and the SHARED pair is deliberately permanent — one listener each for
-	// the app's lifetime. That is a decision, so it has to be stated.
+	// The per-component `onConnectivityChange` helper that used to live here
+	// was exported and never imported — the dead-code audit found it on
+	// 22 Sep 2026 — so it is gone rather than kept for a caller that never
+	// arrived. What it used to need pinning for (both listeners coming off in
+	// onScopeDispose) no longer exists to break.
+	//
+	// The SHARED pair is deliberately permanent — one listener each for the
+	// app's lifetime. That is a decision, so it has to be stated, and this is
+	// the assertion that keeps it stated.
 	assert.match(
 		composable,
 		/Deliberately not removed/,
 		"say which listeners outlive the caller, and why"
+	)
+	// And there is exactly ONE wiring site. Two would be two answers.
+	assert.equal(
+		(composable.match(/addEventListener\(\s*["']online["']/g) || []).length,
+		1,
+		"one place wires connectivity; a second would be a second answer"
 	)
 })
 

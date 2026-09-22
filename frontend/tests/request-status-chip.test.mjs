@@ -31,9 +31,14 @@ test("cancelled and draft requests keep their own chips", () => {
 		requestStatusChip({ docstatus: 2, status: "Approved" }),
 		"Cancelled"
 	)
-	// the doctype's own word, not a third "Pending" (audit A-M4)
-	assert.equal(requestStatusChip({ docstatus: 0, status: "Open" }), "Open")
-	assert.equal(requestStatusChip({}), "Open")
+	// ONE waiting word (owner ruling, 21 Sep 2026). This used to assert the
+	// doctype's own pending word — Open here, Draft on a Shift Request,
+	// Pending on a Remote Checkin Request — which is exactly the three-words-
+	// for-one-state the ruling removed. The STORED word is untouched; only the
+	// chip changed, and these assertions are about the chip.
+	assert.equal(requestStatusChip({ docstatus: 0, status: "Open" }), "Waiting")
+	assert.equal(requestStatusChip({ docstatus: 0, status: "Draft" }), "Waiting")
+	assert.equal(requestStatusChip({}), "Waiting")
 })
 
 test("every request row, the detail header and the OT views use the shared helper", () => {

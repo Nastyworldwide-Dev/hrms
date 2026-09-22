@@ -18,7 +18,7 @@
 // the employee is already looking at, never to decide whether a request is
 // worth attempting: a request that fails while `online` is true is a server
 // problem and says so, and the same failure while false gets the banner.
-import { onScopeDispose, readonly, ref } from "vue"
+import { readonly, ref } from "vue"
 
 // `navigator` is absent under SSR and in the node test runner; assume online
 // there, because a build-time "you are offline" banner would be a lie.
@@ -49,22 +49,4 @@ function wire() {
 export function useOnline() {
 	wire()
 	return readonly(online)
-}
-
-/**
- * Run `handler` each time connectivity changes, for the life of the calling
- * component. Unlike the shared ref above, this one owns its listeners and
- * removes them on unmount — a handler that outlives its component is the leak
- * the checklist's §15 names (clean up listeners, timers, observers).
- */
-export function onConnectivityChange(handler) {
-	if (typeof window === "undefined") return
-	const up = () => handler(true)
-	const down = () => handler(false)
-	window.addEventListener("online", up)
-	window.addEventListener("offline", down)
-	onScopeDispose(() => {
-		window.removeEventListener("online", up)
-		window.removeEventListener("offline", down)
-	})
 }

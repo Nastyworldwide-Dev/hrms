@@ -132,6 +132,12 @@ const props = defineProps({
 
 const emit = defineEmits(["close"])
 
+// Past the allowance cap the reading cannot widen a fence, so a distance drawn
+// from it is not a number to put in front of anybody. Until 17 Sep 2026 the
+// `imprecise_location` reason stood in for this, and it no longer does: a
+// coarse reading that is genuinely far away now comes back as `outside_radius`.
+const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
+
 const title = computed(() => {
 	// A coarse reading is named as one whatever verdict it produced: since
 	// 17 Sep 2026 such a reading can come back as "outside_radius", and the
@@ -181,12 +187,6 @@ const adminMisconfigMessage = computed(() => {
 		[props.shiftLocation || __("(unnamed)")]
 	)
 })
-
-// Past the allowance cap the reading cannot widen a fence, so a distance drawn
-// from it is not a number to put in front of anybody. Until 17 Sep 2026 the
-// `imprecise_location` reason stood in for this, and it no longer does: a
-// coarse reading that is genuinely far away now comes back as `outside_radius`.
-const readingIsCoarse = computed(() => isReadingCoarse(props.accuracyM))
 
 const formattedAccuracy = computed(() => formatAccuracy(props.accuracyM) || __("unknown"))
 

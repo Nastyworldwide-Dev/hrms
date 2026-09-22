@@ -207,3 +207,18 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T14:55:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 18 file(s) ⟂8670267188cb
 - 2026-09-22T14:55:21Z COMMIT: b46d8ea83 chore(home): remove a dead translator binding, guard against dead links → review+design dispatched
 - 2026-09-22T14:55:30Z PUSH: nz-glass @ b46d8ea83
+- 2026-09-22T14:55:42Z COMMIT: 37932ced9 docs(plans): hook lines for the post-2.0 audit → review dispatched
+- 2026-09-22T15:38:46Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T15:43:55Z COMMIT: 243d480f6 docs(plan): name why 2.0 looked unchanged, and what a real revamp is → review dispatched
+- 2026-09-22T15:44:03Z PUSH: nz-glass @ 243d480f6
+- 2026-09-22T15:50:26Z PUSH: nz-glass @ 2b7b595b4
+- 2026-09-22T15:50:26Z COMMIT: 2b7b595b4 docs(plan): the owner's rulings, and the fence the revamp must not widen → review dispatched
+- 2026-09-22T15:58:36Z PUSH: nz-glass @ fb6472af2
+- 2026-09-22T15:58:36Z COMMIT: fb6472af2 docs(plan): the ten dimensions the revamp plan was missing → review dispatched
+- 2026-09-22T16:04:15Z PUSH: nz-glass @ a9e98528b
+- 2026-09-22T16:04:15Z COMMIT: a9e98528b docs(plan): offline check-in is deleted, not deferred, and four more gaps → review dispatched
+- 2026-09-22T16:09:46Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-22T16:09:49Z COMMIT: fb315beae fix(nav): a tab and the screen it opens disagreed about what the screen is → review+design dispatched
+- 2026-09-22T16:13:15Z EVIDENCE: 2 correct — mapped tests green (bun ) for 23 file(s) ⟂0e43e1303bdf
+- 2026-09-22T16:13:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d
+- 2026-09-22T16:13:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d

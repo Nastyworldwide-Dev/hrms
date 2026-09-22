@@ -123,7 +123,7 @@ export function usablePosition(position, now = Date.now()) {
 // dialogs need the first one: past it a reading is too coarse for a distance
 // figure to mean anything, whatever verdict it produced.
 export const ACCURACY_ALLOWANCE_CAP_M = 250
-export const POINT_ESTIMATE_TRUST_CAP_M = 2000
+const POINT_ESTIMATE_TRUST_CAP_M = 2000
 
 // Past the allowance cap a reading cannot widen a fence, so no figure drawn
 // from it — a distance, or a sentence asserting one — is a claim the data
