@@ -2721,15 +2721,45 @@ html[data-theme="dark"] .g-cal__day--present {
    them against a budget of six (§15.1) — and the surfaces gate walks views/
    only, so it would never be counted. A screen that silently costs one more
    than it is charged for is what §15.3 exists to prevent. */
-/* IN FLOW, not fixed. `.g-header` is transparent and sits in normal flow at
-   the top of every page — its own comment says content never scrolls under it
-   — so a fixed bar lands directly on the back control, and the employee is
-   told they have no connection in the same moment they lose the way out of
-   the screen. The checklist: sticky chrome does not cover content.
-   It is the first child of <ion-app>, so it pushes the router outlet down for
-   exactly as long as it is showing (design review of 796d015c4). */
+/* `.g-header` is transparent and sits in normal flow at the top of every page
+   — its own comment says content never scrolls under it — so a bar painted
+   over the viewport lands on the back control, and the employee is told they
+   have no connection in the same moment they lose the way out of the screen.
+   The checklist: sticky chrome does not cover content.
+
+   The first fix put the bar IN FLOW as the first child of <ion-app>, expecting
+   it to push the outlet down. It does not. `ion-router-outlet` is
+   `position: absolute` with all four edges pinned (@ionic/core's own
+   router-outlet.css), so nothing in normal flow moves it — the bar simply
+   overlapped the header again, from a different position value.
+
+   So the OUTLET is inset instead. `--g-offline-height` is 0 by default and
+   the bar's own height while it shows: one source of truth, owned by the
+   thing whose height it is, and the outlet starts below it. */
+:root {
+	--g-offline-height: 0px;
+	/* 7px + caption line + 7px, plus whatever the notch takes. Declared once
+	   because the bar and the outlet's inset must be the same number. */
+	--g-offline-bar-height: calc(
+		env(safe-area-inset-top, 0px) + 14px + (var(--g-type-caption-size) * var(--g-type-caption-line-height))
+	);
+}
+.is-offline {
+	--g-offline-height: var(--g-offline-bar-height);
+}
+ion-router-outlet {
+	top: var(--g-offline-height);
+}
 .g-offline {
-	position: relative;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	/* The bar's height, as one number both it and the outlet read. A bar that
+	   measured itself and told the outlet would be two sources of truth that
+	   can disagree for a frame. */
+	height: var(--g-offline-bar-height);
+	box-sizing: border-box;
 	z-index: var(--g-layer-sticky);
 	display: flex;
 	align-items: center;

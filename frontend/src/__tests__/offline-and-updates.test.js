@@ -133,24 +133,54 @@ test("the prompt to reload is offered, not forced", () => {
 // back button: the employee is told they have no connection and loses the
 // control that would take them somewhere useful. The checklist's own rule:
 // "sticky headers/navigation do not cover content".
-test("the offline bar pushes the page down, it does not sit on it", () => {
+test("the offline bar never covers the header", () => {
 	const css = readFileSync(join(SRC, "theme/glass-components.css"), "utf8")
 	const bar = css.slice(
 		css.indexOf("\n.g-offline {"),
 		css.indexOf("}", css.indexOf("\n.g-offline {"))
 	)
-	assert.doesNotMatch(bar, /position:\s*fixed/, "fixed puts it over .g-header's back button")
-	// The app shell reserves the room instead, so every screen moves down by
-	// exactly the bar's height while it is showing and by nothing when it is not.
-	// In flow, as the FIRST child of <ion-app>: the bar occupies real height,
-	// so the router outlet below it moves down by exactly that and back up
-	// when it goes. No second source of truth for the bar's height, which a
-	// reserved-padding approach would need and would drift from.
-	assert.match(bar, /position:\s*relative/, "in flow, so it takes its own room")
-	const app = read("App.vue")
-	const outlet = app.indexOf("<ion-router-outlet")
-	const banner = app.indexOf("<OfflineBanner")
-	assert.ok(banner > 0 && banner < outlet, "and it is ABOVE the outlet, or it pushes nothing")
+	// `ion-router-outlet` is `position: absolute` pinned to all four edges —
+	// read from @ionic/core's own router-outlet.css — so NOTHING in normal
+	// flow can push it down. Being first in <ion-app> moves nothing; the bar
+	// simply painted over the header again, which is the defect the previous
+	// fix was for.
+	//
+	// So the outlet is inset instead: one custom property, set while the bar
+	// is showing, that the outlet's `top` reads. One source of truth for the
+	// height, and the bar is the thing that owns it.
+	assert.match(bar, /position:\s*fixed/, "over the page, because the outlet cannot be pushed")
+	// Comments stripped: the block ABOVE the rule explains why the outlet is
+	// inset and names `ion-router-outlet`, so an unstripped read matches the
+	// explanation instead of the declaration. Sixth time today.
+	const shell = readFileSync(join(SRC, "theme/glass-components.css"), "utf8").replace(
+		/\/\*[\s\S]*?\*\//g,
+		(b) => b.replace(/[^\n]/g, " ")
+	)
+	assert.match(
+		shell,
+		/ion-router-outlet\s*\{[\s\S]*?top:\s*var\(--g-offline-height/,
+		"the outlet starts BELOW the bar, so the header is never covered"
+	)
+	assert.match(
+		shell,
+		/--g-offline-height:\s*0/,
+		"and the inset is zero when the bar is not showing"
+	)
+	// The inset is a class on <html>, so SOMETHING has to set it — a rule
+	// nobody toggles insets nothing, and the bar covers the header again with
+	// every declaration in place. The banner owns it, because the banner is
+	// what knows whether it is showing.
+	const banner = read("components/OfflineBanner.vue")
+	assert.match(
+		banner,
+		/classList\.toggle\(\s*"is-offline"/,
+		"the bar toggles the class the outlet's inset hangs on"
+	)
+	assert.match(
+		shell,
+		/\.is-offline\s*\{[\s\S]*?--g-offline-height:/,
+		"and the class sets the height"
+	)
 })
 
 // The update prompt is at the BOTTOM, where the tab bar lives and where most

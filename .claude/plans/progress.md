@@ -203,3 +203,40 @@ NEXT: pre-2.0 R1-R5 are done. The measurement is the one thing outstanding and
   it needs a reachable site: `W=320 H=640 node e2e/app-measure.mjs`.
 - 2026-09-22T10:52:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
 - 2026-09-22T10:52:42Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-22T10:52:49Z PUSH: nz-glass @ 91ae9f96d
+- 2026-09-22T10:52:49Z COMMIT: 91ae9f96d fix(security): the error itself went to the log unredacted → review dispatched
+- 2026-09-22T11:01:21Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+
+REPAIR: the offline-bar overlap fix SHIPPED THIS MORNING DID NOT WORK, and I
+  found it only when the owner asked whether the app actually works. The
+  design review said the fixed bar covered `.g-header`'s back control; I moved
+  the bar into normal flow, made it the first child of <ion-app>, wrote a test
+  asserting exactly that, and shipped it in ca73a9046. `ion-router-outlet` is
+  `position: absolute` with all four edges pinned — read from @ionic/core's
+  own router-outlet.css — so NOTHING in normal flow can move it. The bar
+  covered the header exactly as before, from a different position value, and
+  both my test and the reviewer's suggested remedy described a mechanism that
+  does not exist in this framework.
+  The outlet is INSET now: `--g-offline-height` is 0 by default and the bar's
+  height while `.is-offline` is on <html>, and `ion-router-outlet { top: }`
+  reads it. One number, owned by the thing whose height it is.
+LEARNING(gate): a layout fix asserted only against MY OWN css is a fix
+  asserted against my own belief about the framework. The outlet's positioning
+  is in node_modules and took one grep; I wrote the test instead. When a fix
+  depends on how a third-party component lays out, read ITS stylesheet before
+  writing the assertion.
+EVIDENCE: 2 correct — the test now pins the real mechanism and was RED against
+  the shipped code, 3 mutants killed (remove the outlet inset; make the
+  default inset non-zero; never toggle the class). Suite 567 / 563 pass, same
+  4 red at HEAD. Gates: lint 234/0, contrast 56/0, surfaces 46/0, tokens ok.
+NOTE: the test file also carried a CONTRADICTION for one commit — a
+  `doesNotMatch(/position: fixed/)` line from the first fix sitting directly
+  above a `match(/position: fixed/)` from the second. It passed because the
+  first ran against the in-flow version. Two assertions about the same
+  property in one test is a rewrite that did not finish.
+NOTE: sixth comment-counted-as-code incident today, this time in my own new
+  assertion: the comment block ABOVE `ion-router-outlet { }` names the
+  selector, so the unstripped read matched the explanation instead of the
+  rule.
+NEXT: answer the owner's question with evidence — what in the PWA is verified,
+  what is asserted at source only, and what has never been run against a site.

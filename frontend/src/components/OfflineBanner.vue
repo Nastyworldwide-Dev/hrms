@@ -29,10 +29,22 @@
 </template>
 
 <script setup>
-import { inject } from "vue"
+import { inject, watch } from "vue"
 
 import { useOnline } from "@/composables/useOnline"
 
 const __ = inject("$translate")
 const online = useOnline()
+
+// The class on <html>, not a prop: `ion-router-outlet` is absolutely
+// positioned and cannot be pushed by anything in flow, so the outlet reads its
+// own inset from a custom property that this toggles. Written here because the
+// bar is what knows whether it is showing.
+watch(
+	online,
+	(is) => {
+		document.documentElement.classList.toggle("is-offline", !is)
+	},
+	{ immediate: true }
+)
 </script>
