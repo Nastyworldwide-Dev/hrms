@@ -7,6 +7,13 @@ import path from "path"
 import fs from "fs"
 
 export default defineConfig({
+	// Stamped into the bundle so a report can say which build produced it —
+	// "it worked yesterday" is only answerable if yesterday has a name. The
+	// commit sha would be better; this is what is available without asking git
+	// at build time on a host that may be a tarball.
+	define: {
+		__APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+	},
 	server: {
 		port: 8080,
 		proxy: getProxyOptions(),

@@ -245,3 +245,50 @@ EVIDENCE: 2 correct — 2 new tests (the bar takes its own room; the prompt
 NEXT: R4 — accessibility over forms (labels, errors tied to fields, focus
   traps) and observability (frontend error capture carrying the build id).
 - 2026-09-22T10:39:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 12 file(s) ⟂1127c68211d5
+- 2026-09-22T10:39:13Z PUSH: nz-glass @ ca73a9046
+- 2026-09-22T10:39:13Z COMMIT: ca73a9046 fix(pwa): the offline bar covered the back button and failed contrast → review+security+design dispatched
+
+REPAIR: pre-2.0 R4 — forms that explain themselves, failures somebody can
+  investigate. The audit expected far more than it found: GInput and GTextarea
+  already wrap their control in a <label>, already set aria-invalid, already
+  render the error in a live region, and GModal already carries the focus trap
+  the raw ion-modal lacks. Most of checklist §4 and §5 was built. Two were not.
+  (a) THE ERROR WAS NOT LINKED TO THE FIELD. aria-invalid says THAT it is
+  wrong; only aria-describedby says what. A screen reader announced "Reason,
+  invalid, edit text" while the sentence explaining it sat in a live region
+  already read and moved past. Both fields now carry a per-INSTANCE id from
+  Vue's own useId — shared ids would make the second invalid field on a form
+  describe the first one's error.
+  (b) NOTHING RECORDED A FAILURE. utils/diagnostics.js attaches the three
+  seams a browser offers (window.error, unhandledrejection, Vue's
+  errorHandler), carries a build stamp, and redacts before writing.
+NOTE: deliberately NOT a telemetry vendor. The server is Frappe and already
+  has an Error Log; a dependency, an egress path and a data-protection
+  question in exchange for a dashboard nobody would open is a bad trade for
+  forty employees. The reason is in the file so the next person does not add
+  one by default.
+NOTE: redaction is enforced in the reporter, not by asking callers to be
+  careful — password, token, api_key, session, salary, ctc, bank, nric,
+  passport, matched loosely at any depth, because a list of exact field names
+  ages badly. And report() swallows its own failure: a reporter that throws
+  inside an error handler takes the page down AND loses what it was reporting.
+EVIDENCE: 2 correct — 7 tests RED first (7 of 7), 5 mutants killed. THREE
+  survived the first round and all three for the same reason: the test read
+  the SOURCE for a word instead of exercising the behaviour. A shared
+  `const errorId = "field-error"` still contains "errorId"; a `redact` that is
+  never called still puts the word in the file; a reporter with no try/catch
+  still has the word "catch" elsewhere. Rewritten to import the module, stub
+  console.error, and assert on what is actually written — including that
+  redaction keeps the SHAPE (the key is still named, a non-sensitive value
+  survives) rather than being a synonym for silence.
+NOTE: the build stamp broke two checks that were right to break: eslint's
+  no-undef and tests/no-undefined-identifiers.test.mjs both flagged
+  __APP_BUILD__, which exists only after vite's `define` substitutes it.
+  Declared as a readonly global in .eslintrc.cjs. Verified in the OUTPUT, not
+  the source: the bundle carries the literal "2026-09-22 10:46".
+EVIDENCE: 3 works — suite 561 / 557 pass, the same 4 red at HEAD. Gates:
+  lint 234/0, contrast 56/0, surfaces 46/0, tokens ok. Build clean.
+NEXT: R5 — re-measure. The harness and the source-level checks ship; the
+  numbers wait on a reachable site (owner: "if site is inaccessible its okay").
+- 2026-09-22T10:47:54Z EVIDENCE: 2 correct — mapped tests green (bun ) for 8 file(s) ⟂514b00a817f9
+- 2026-09-22T10:47:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10

@@ -16,14 +16,17 @@
 			:placeholder="placeholder"
 			:disabled="disabled"
 			:aria-invalid="error ? 'true' : undefined"
+			:aria-describedby="error ? errorId : undefined"
 			:aria-disabled="disabled || undefined"
 			@input="$emit('update:modelValue', $event.target.value)"
 		/>
-		<span v-if="error" class="g-field__error" role="alert">{{ error }}</span>
+		<span v-if="error" :id="errorId" class="g-field__error" role="alert">{{ error }}</span>
 	</label>
 </template>
 
 <script setup>
+import { useId } from "vue"
+
 defineProps({
 	modelValue: { type: String, default: "" },
 	label: { type: String, default: "" },
@@ -32,4 +35,10 @@ defineProps({
 	disabled: { type: Boolean, default: false },
 })
 defineEmits(["update:modelValue"])
+
+// Per INSTANCE, not per component: two invalid fields on one form sharing an
+// id would mean the second field describes the first field's error. Vue's own
+// useId is stable across server and client, so it cannot mismatch on hydration
+// the way a random id would.
+const errorId = useId()
 </script>

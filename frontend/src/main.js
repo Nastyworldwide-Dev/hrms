@@ -39,8 +39,14 @@ import "./theme/glass.css"
 import "./theme/glass.variables.css"
 import "./theme/glass-components.css"
 import "./data/theme"
+import { installDiagnostics } from "@/utils/diagnostics"
 
 const app = createApp(App)
+
+// FIRST, before any plugin: a failure while the app is still starting is
+// exactly the one nobody can reproduce, and the seam has to exist before the
+// thing that might throw.
+installDiagnostics(app)
 const socket = initSocket()
 
 // The resourceFetcher config lives in ./resourceConfig, imported FIRST —

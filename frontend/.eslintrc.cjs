@@ -4,6 +4,12 @@ module.exports = {
 		es2021: true,
 		node: true,
 	},
+	globals: {
+		// Replaced at build time by vite.config.js's `define`, so it exists in
+		// the bundle and nowhere in the source. Declared readonly: writing to
+		// it would be writing to a literal.
+		__APP_BUILD__: "readonly",
+	},
 	extends: [
 		"eslint:recommended",
 		"plugin:vue/vue3-essential",
