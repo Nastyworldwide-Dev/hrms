@@ -1273,12 +1273,16 @@ html[data-theme="dark"] .g-badge--open {
 }
 
 /* ---------- quick-link tile grid (plan §2 C1) ----------
-   Eight full-width rows cost ~450px on a phone whose whole usable height is
-   ~440px (invariant F1). Four across x two rows carries the same eight
-   destinations for ~176px.
+   Home passes SEVEN links. As full-width rows that is 7 x 50px = ~350px on a
+   phone whose whole usable height is ~440px (invariant F1) — four fifths of the
+   screen for one panel. Four across is two rows: ~120px with one-line labels,
+   ~145px when they wrap.
+   (These figures were "eight rows, ~450px, ~176px" until they were computed
+   from the tokens rather than estimated. The count comes from Home.vue's
+   baseQuickLinks plus its one HR row, and a test now reads it from there.)
    Same one-surface rule as the balance grid: the cells sit inside a single
    .g-glass .g-cellgrid, so this is 1 surface against the §15 budget of 6, not
-   8. Dividers are drawn as cell borders for the same reason. */
+   N. Dividers are drawn as cell borders for the same reason. */
 .g-cellgrid--quick {
 	grid-template-columns: repeat(4, 1fr);
 }
@@ -1304,27 +1308,54 @@ html[data-theme="dark"] .g-badge--open {
 	background: var(--g-icon-bg);
 }
 /* The panel clips overflow, so an outer ring cannot show on a tile (WCAG
-   2.4.7) — the inset variant, same as .g-row--tappable. */
+   2.4.7) — the inset variant, same as .g-row--tappable. It re-themes on its
+   own: the token is built from --g-ink and --g-brand, both of which the dark
+   block redefines, so replacing the outline leaves a ring that is visible in
+   both themes rather than an outline:none with nothing behind it. */
 .g-cell--quick:focus-visible {
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring-inset);
 }
 /* One hairline between columns and between the two rows, drawn on the cells so
-   the panel keeps a single background. */
+   the panel keeps a single background.
+   Checked at SEVEN tiles, the count Home actually passes: tile 5 opens row two
+   and 5 % 4 == 1, so it correctly takes no left border, and the absent eighth
+   cell leaves no dangling line — the borders belong to cells, and there is no
+   eighth cell to draw one. */
 .g-cellgrid--quick > .g-cell:not(:nth-child(4n + 1)) {
 	border-left: 1px solid var(--g-hair);
 }
 .g-cellgrid--quick > .g-cell:nth-child(n + 5) {
 	border-top: 1px solid var(--g-hair);
 }
+/* SEVEN tiles in four columns leave row two as [5][6][7][gap]. That gap is a
+   DECISION, not an oversight. The balance grid above spans its odd last tile
+   (.g-cellgrid--balance.g-cellgrid--odd), and that is right for TWO columns: a
+   lone tile there leaves a 50% hole and spanning it costs no extra row. At four
+   columns the same remedy costs a row — [5][6] then [7] alone — adding ~72px to
+   the one panel whose entire purpose was removing rows, and it would render the
+   conditional HR tile four times the width of its siblings, which reads as
+   importance it does not have. A 25% gap on a wrapped last row is the ordinary
+   shape of an icon grid; a full-width odd tile here would be the anomaly. */
 .g-cell__label {
 	font-family: var(--g-type-row-label-family);
 	font-size: var(--g-type-caption-size);
 	line-height: 1.2;
 	color: var(--g-ink);
-	/* Two lines, then ellipsis: "Request Attendance" must not push one tile
-	   taller than its neighbours and break the grid's rhythm. The full label
-	   stays in the accessible name either way. */
+	/* Two lines, then clip: a long label must not push one tile taller than its
+	   neighbours and break the grid's rhythm.
+	   Checked rather than assumed — at the smallest supported width (360px:
+	   328px panel / 4 = 82px tile, 74px of text) the longest label Home passes,
+	   "Request Attendance", needs two lines and its longest word is ~55px, so
+	   nothing clips and no word overflows its column. The clamp is a guard
+	   against a future long label, not something the current set hits.
+	   The full label stays in the accessible name either way. */
+	/* The clamp only limits LINES. A single word longer than the 74px column has
+	   no space to break at, so without this it would overflow its cell rather
+	   than wrap into the second line the clamp allows. No current label hits it
+	   ("Request Attendance" breaks at its space); this is the guard for the one
+	   that will. */
+	overflow-wrap: break-word;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;

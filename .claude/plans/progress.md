@@ -202,3 +202,65 @@ NEXT: re-bake Home's visual baselines, then S4 (lucide-vue-next migration) —
   carrying the reviewer's note to re-verify the Trash2 alias against the
   INSTALLED package version, not the published .d.ts.
 - 2026-09-22T04:42:19Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-22T04:42:22Z COMMIT: 49a68f18f feat(home): seven quick links were eating four fifths of the fold → review+design dispatched
+- 2026-09-22T05:35:00Z REPAIR: the CSS comment for the tile grid still asserted
+  "eight rows, ~450px, ~176px" after the component comments and tests had been
+  corrected to seven/~350px/~145px. Exactly the drift class this repo already
+  has on record — a figure fixed in one place while the prose elsewhere keeps
+  quoting the superseded value — and I found it only because I had just warned a
+  reviewer to look for it. Fixed, with the old figures named so the correction
+  is legible rather than silent.
+EVIDENCE: rung 1 — three claims I had asserted but not checked are now checked
+  and the check is written next to the rule: (1) LABELS at the smallest width,
+  360px -> 328px panel / 4 = 82px tile = 74px of text, the longest label Home
+  passes ("Request Attendance") needs two lines and its longest word is ~55px,
+  so nothing clips and the line-clamp is a guard rather than a truncator;
+  (2) DIVIDERS at SEVEN tiles, not eight — tile 5 opens row two and 5 % 4 == 1
+  so it correctly takes no left border, and the absent eighth cell draws no
+  dangling line because borders belong to cells; (3) FOCUS RING in dark —
+  --g-shadow-focus-ring-inset is built from --g-ink and --g-brand, both
+  redefined in the dark block, so outline:none is replaced by a ring that
+  resolves per theme rather than by nothing (WCAG 2.4.7).
+  Suite 74/74, contrast 54/0, biome clean, vite build clean.
+NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files and delete
+  the 14 hand-rolled icon components, REMOVING feather-icons in the same commit,
+  and record the real gzip delta (revert if it is not negative). Carry the
+  reviewer's note: verify the Trash2/Filter aliases against the INSTALLED
+  package version, not the published .d.ts. Two reviews of 49a68f18f were still
+  in flight at this line; read their verdicts before starting.
+- 2026-09-22T04:45:32Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: S2 review follow-up, two findings, both real. (a) The design reviewer
+  found the precedent I had missed: .g-cellgrid--balance.g-cellgrid--odd spans
+  its short last tile, and .g-cellgrid--quick has no equivalent, so seven tiles
+  in four columns render [5][6][7][gap]. Its suggested fix is WRONG HERE and the
+  reason is now written beside the rule: spanning at TWO columns fills a 50% hole
+  for free, but at FOUR it pushes tile 7 onto a third row (+~72px on the one
+  panel whose purpose was removing rows) and draws the conditional HR tile at 4x
+  its siblings' width, signalling an importance it does not have. Recorded as a
+  decision, which was the reviewer's own second option. (b) DSN-03 was a real
+  gap: -webkit-line-clamp caps LINES, so a single word wider than the 74px column
+  would overflow sideways rather than wrap — overflow-wrap: break-word added.
+  The frappe reviewer's one Warning was the stale CSS comment already fixed in
+  the working tree; it is in this commit.
+EVIDENCE: 2 correct — new test "a label too long to break at a space still wraps
+  instead of overflowing" RED before the rule existed (6 pass / 1 fail, verified
+  by removing the declaration) and green after (7/7). Suite 63/63 across the
+  component and view test files, gate self-tests 13/13, surfaces PASS (24 screens,
+  0 over), contrast 54 checked / 0 failures, biome clean, vite build exit 0.
+  usage.mjs still exits 1 on views/helpdesk/TicketDetail.vue only — pre-existing
+  at HEAD, independently confirmed by the reviewer (the baseline has no diff in
+  49a68f18f, the file is not in that commit, and decomment/EXEMPT can only ever
+  REMOVE matches or EXCLUDE files, never manufacture a violation).
+NOTE: the reviewer's own suite count was 62 and mine is 63 because this commit
+  adds one test. Its NEXT_ACTION: FIX_CRITICAL was raised on the stale comment,
+  which it correctly observed was already written but uncommitted in the tree.
+LEARNING(how): a design finding can be correct about the ABSENCE and wrong about
+  the remedy. The balance grid's span rule is right for two columns and costs a
+  row at four. Check what the suggested fix does to the number the slice exists
+  to reduce before taking it.
+NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete the
+  14 hand-rolled icon components and REMOVE feather-icons in the same commit,
+  recording the real gzip delta (revert if it is not negative). Verify the
+  Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
+- 2026-09-22T04:50:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

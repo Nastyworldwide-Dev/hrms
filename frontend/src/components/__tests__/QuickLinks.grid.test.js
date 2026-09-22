@@ -119,3 +119,17 @@ test("the skeleton shows as many tiles as Home actually passes", () => {
 	const dflt = Number((tilegrid().match(/tiles:\s*\{\s*type:\s*Number,\s*default:\s*(\d+)/) || [])[1])
 	assert.equal(dflt, count, `Home passes ${count} links; GTileGrid's skeleton default is ${dflt}`)
 })
+
+// A design review asked whether a long label could clip. The line-clamp caps
+// LINES; it does nothing for a single word wider than the 74px column, which
+// would overflow sideways instead of wrapping into the second line. No label
+// Home passes today hits it, so only a rule can keep the guard honest.
+test("a label too long to break at a space still wraps instead of overflowing", () => {
+	const block = css().match(/\.g-cell__label\s*\{[^}]*\}/)
+	assert.ok(block, ".g-cell__label should exist in the theme")
+	assert.match(
+		block[0],
+		/overflow-wrap:\s*break-word/,
+		"-webkit-line-clamp limits lines, not the width of one unbreakable word"
+	)
+})
