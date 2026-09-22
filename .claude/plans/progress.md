@@ -245,3 +245,14 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
   everything past this. Minor, not actioned: Home has two <h1> elements on one
   page (GAppHeader + CheckInPanel greeting) — an a11y landmark issue, flagged
   for the owner's queue, not fixed here (out of scope of what was asked).
+- 2026-09-22T01:05:14Z PUSH: nz-glass @ 9c4df8ac3
+- 2026-09-22T01:05:15Z COMMIT: 9c4df8ac3 docs(glass): redundant-title and scroll complaints don't reproduce → review dispatched
+- NOTE: skipped reviewer + retro-analyst dispatch on 9c4df8ac3 (docs, 2 files,
+  no code changed) — exempted per this repo's own chore/docs/style ≤2-files
+  rule, same as 36b5baacb and 078698b5b earlier this session.
+- NOTE: frappe-reviewer on 3d4fa0dfe DID report: NEXT_ACTION DEPLOY, 0 critical.
+  It had needed one nudge first (it was trying to run ruff + bench run-tests in a
+  repo with neither), then ran the real Node/CSS gates instead. Not silent, so the
+  FIX_CRITICAL branch of the silent-reviewer rule never applied. Recorded here
+  because a later prompt asked whether it was still outstanding: it was not, and
+  3d4fa0dfe has been an ancestor of origin/nz-glass since 00:57Z.
