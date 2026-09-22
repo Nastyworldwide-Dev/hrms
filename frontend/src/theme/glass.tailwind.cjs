@@ -65,87 +65,87 @@ module.exports = {
 		ui: "var(--g-font-ui)",
 	},
 	fontSize: {
-		badge: ["12px", {
+		badge: ["0.75rem", {
 			fontWeight: "700",
 			letterSpacing: "0.09em",
 			lineHeight: "1.2",
 		}],
-		"button-label": ["16px", {
+		"button-label": ["1rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.01em",
 			lineHeight: "1.2",
 		}],
-		caption: ["12px", {
+		caption: ["0.75rem", {
 			fontWeight: "400",
 			letterSpacing: "0.02em",
 			lineHeight: "1.45",
 		}],
-		"card-title": ["14px", {
+		"card-title": ["0.875rem", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		clock: ["40px", {
+		clock: ["2.5rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"data-system": ["12px", {
+		"data-system": ["0.75rem", {
 			fontWeight: "400",
 			letterSpacing: "0",
 			lineHeight: "1.5",
 		}],
-		"display-number": ["34px", {
+		"display-number": ["2.125rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		eyebrow: ["12px", {
+		eyebrow: ["0.75rem", {
 			fontWeight: "600",
 			letterSpacing: "0.13em",
 			lineHeight: "1.3",
 		}],
-		"field-label": ["12px", {
+		"field-label": ["0.75rem", {
 			fontWeight: "600",
 			letterSpacing: "0.14em",
 			lineHeight: "1.3",
 		}],
-		"kra-label": ["14px", {
+		"kra-label": ["0.875rem", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		"micro-label": ["12px", {
+		"micro-label": ["0.75rem", {
 			fontWeight: "600",
 			letterSpacing: "0.13em",
 			lineHeight: "1.3",
 		}],
-		"panel-title": ["16px", {
+		"panel-title": ["1rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1.2",
 		}],
-		"ring-centre": ["28px", {
+		"ring-centre": ["1.75rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"row-label": ["14px", {
+		"row-label": ["0.875rem", {
 			fontWeight: "500",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		"screen-title": ["19px", {
+		"screen-title": ["1.1875rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.025em",
 			lineHeight: "1.15",
 		}],
-		"stat-number": ["23px", {
+		"stat-number": ["1.4375rem", {
 			fontWeight: "800",
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"tab-label": ["12px", {
+		"tab-label": ["0.75rem", {
 			fontWeight: "600",
 			letterSpacing: "0.07em",
 			lineHeight: "1.2",

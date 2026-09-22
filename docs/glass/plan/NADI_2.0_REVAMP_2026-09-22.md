@@ -1282,3 +1282,108 @@ R2 now says it, and the plan is the record.
 **18 gates**, 9 of them new.
 
 **Open rulings: none.** Every question asked has been answered.
+
+---
+
+## 35. Build log — what was done, and what the measurements got wrong
+
+Written as the work happened, 22 September 2026. Every row names the
+evidence, because a plan that records only its intentions is the thing
+this revamp exists to correct.
+
+### Landed
+
+| Slice | Commit | What changed |
+|---|---|---|
+| A1 | `fb315bea` | Calendar and Score page headers; Requests had no header at all; naming gate |
+| — | `c97ff35b` | The four "predate today" failures — two stale rulings, two temporal-dead-zone reads, two dead exports |
+| A2 | `56806afe` | 4pt grid, 1.2 type ramp, `scale.mjs` |
+| A3a | `ce4de0c9` | `GMetaGrid`, `GChatBubble`; a chat thread cost N glass surfaces |
+| A3b | `86408c93` | 103 hand-picked sizes → four scales; the one desktop column |
+| A6 | `5a645c72` | The KPI fence guard, verified on `spoke.localhost` |
+| A5 | `1be1c4d8` | Score's empty path — `whats_next`, inside the fence |
+| A4 | `f4ebcee0` | 96 off-grid CSS declarations; `scale.mjs` reads the stylesheet |
+| A8 | `0c844706` | Reduced motion app-wide; four dead CSS variables |
+| A7 | `a334190b` | The live region behind every toast; the skip link |
+| A12 | `8f365e67` | The 320px floor, mutation-tested |
+
+**Gates: 7 static, all green.** lint 127 known / 0 new, usage 0, contrast
+44 pairs, surfaces 47 screens, tokens, scale, motion. **Tests 671 / 671.**
+The suite has not been fully green in this repo for five releases.
+
+### Corrections to §17's measurements
+
+Three of the ten gaps were measured wrong. Recorded rather than quietly
+dropped, because a plan whose numbers cannot be trusted is worse than no
+plan.
+
+**G7 (appearance) is ALREADY BUILT.** §24 said `prefers-color-scheme`
+"appears nowhere" and proposed building option C. It is built: light is
+the BASE palette (213 tokens) with 38 dark overrides, `data/theme.js`
+holds a light/dark/system store, persists it, listens for system changes
+and drives a `<meta name="theme-color">`, and `AppSettings.vue` exposes
+all three modes. `index.html` even carries a preload script so there is no
+flash before Vue boots.
+
+The measurement was wrong because it grepped `src/theme/` for the media
+query, and the resolution lives in JavaScript — `matchMedia` in
+`theme.js`, not `@media` in CSS, which is the correct place for it when a
+manual override has to win. **Slice A11 is withdrawn as already done.**
+What remains from §24 is only the `rem` type work, which is real: sizes
+are in px, so OS text scaling does not reach them (WCAG 1.4.4).
+
+**G1 (accessibility) was overstated.** §18 said `aria-live` appears in one
+view. Eleven files carry a live region — `NeedsYou`, `RequestPanel`,
+`OfflineBanner`, `UpdatePrompt`, `ResourceError`, `GEmptyState`, `GInput`,
+`GTextarea`, `GPullRefresh`, the KPI dashboard and the OT form. The count
+came from grepping for the literal `aria-live` and missing `role="status"`
+/ `role="alert"`, which imply it.
+
+The defect underneath was real and worse than the count suggested: the
+TOAST — sixteen call sites, every save and every failure — was silent,
+because frappe-ui's `Toast.vue` has neither attribute. Fixed in A7.
+
+**G11 (loading states) was measured against the wrong owner.** §32 said 30
+of 48 screens have no loading state. The list screens delegate to
+`ListView.vue`, which carries all four states, and the forms delegate to
+`FormView.vue`. Counting per file attributed the shell's work to nobody.
+The real gap is the ~16 screens that own their own fetch, which is the
+number A5 should be scoped against.
+
+### Defects found while building, none of them in scope
+
+Each was found by a gate written minutes earlier, which is the argument
+for writing the gate first:
+
+- **Four dead CSS variables.** `--motion-glide` (4 uses, undefined since
+  the Modernist stylesheet was deleted — the SOP toggle just snapped);
+  `--g-type-card-title` and `--g-ink-2` in the check-in sheet, so the
+  location lines had neither size nor colour on the screen an employee
+  sees every time they punch in; `--g-shadow-panel` on the update prompt,
+  which has been floating flat. CSS drops invalid declarations in silence,
+  so none of these could be noticed by looking.
+- **Two temporal-dead-zone reads** in the two dialogs that tell somebody
+  their punch was refused.
+- **A chat thread was N glass surfaces** against a budget of 6. Invisible
+  until the bubble became a component, because the surfaces gate counts
+  markup in a view and resolves a component.
+- **The contrast gate silently checked 12 fewer pairs** after the gutter
+  moved 15→16px. Correct, but a gate quietly measuring less looks exactly
+  like a gate breaking, so it now says so.
+- **The lint gate counted the test that enforces it** — seventh instance
+  of that class in one day.
+- **The token builder called every `calc()` a two-value shorthand**, which
+  silently dropped a derived token from the Tailwind scale.
+
+### Not done, and why
+
+- **B, C, D, F series** (announcements, calendar days, request counters,
+  Home's now bar, Team, offline reads) — these need new endpoints and
+  doctypes. They are the plan's own §16 order and none of them is blocked;
+  they are simply after this.
+- **E1 baselines** — needs a served site with `AUDIT_PW`. The a11y,
+  visual and coherence gates have measured nothing for five releases for
+  the same reason, and the board says so on every run rather than
+  reporting OK.
+- **`rem` type sizes (WCAG 1.4.4)** — real, unbuilt, and now the only
+  surviving part of §24.

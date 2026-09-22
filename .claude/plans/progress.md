@@ -249,3 +249,6 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T16:57:27Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
 - 2026-09-22T16:57:30Z COMMIT: a334190b3 feat(a11y): every confirmation and every failure was silent to a screen reader → review+design dispatched
 - 2026-09-22T16:57:40Z PUSH: nz-glass @ a334190b3
+- 2026-09-22T16:59:23Z PUSH: nz-glass @ 8f365e67d
+- 2026-09-22T16:59:23Z COMMIT: 8f365e67d test(responsive): no layout in this app had ever been checked at 320px → review+security+design dispatched
+- 2026-09-22T17:02:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 20 file(s) ⟂9f33a174e0f9

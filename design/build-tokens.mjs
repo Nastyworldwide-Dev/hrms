@@ -92,6 +92,26 @@ function colorDecls(name, value) {
 
 // ---------- OUTPUT 1: glass.css ----------
 
+
+// Type sizes are authored in px — the scale is a px ramp, which is how it is
+// reasoned about and reviewed — and EMITTED in rem, because a px font-size
+// ignores the reader's browser or OS text setting entirely. WCAG 2.1 SC 1.4.4
+// (Resize Text) asks for text to reach 200% without loss of content, and a
+// fixed px size simply does not respond to it: somebody who has turned their
+// phone's text up gets the same 12px caption as everybody else.
+//
+// 16 is the root default, not a design choice: 1rem == the browser's base font
+// size, which is 16px unless the reader has changed it — and changing it is
+// exactly the case this exists to serve. SPACING stays in px on purpose; a
+// layout that grows with text size reflows unpredictably, and §27's 320px
+// floor is measured in CSS px.
+const remFromPx = (value) => {
+	const px = Number.parseFloat(value);
+	if (!Number.isFinite(px)) return value;
+	// Trailing zeros trimmed so 14px reads 0.875rem, not 0.8750rem.
+	return `${Number((px / 16).toFixed(4))}rem`;
+};
+
 const light = [];
 const dark = [];
 
@@ -139,7 +159,7 @@ for (const name of sorted(tokens.type.scale)) {
 	const s = tokens.type.scale[name];
 	light.push(decl(`type-${name}-family`, `var(--g-font-${s.family})`));
 	light.push(decl(`type-${name}-line-height`, s["line-height"]));
-	light.push(decl(`type-${name}-size`, s.size));
+	light.push(decl(`type-${name}-size`, remFromPx(s.size)));
 	light.push(decl(`type-${name}-tracking`, s.tracking));
 	light.push(decl(`type-${name}-weight`, s.weight));
 }
@@ -227,7 +247,7 @@ for (const name of sorted(tokens.type.family)) fontFamily[name] = `var(--g-font-
 const fontSize = {};
 for (const name of sorted(tokens.type.scale)) {
 	const s = tokens.type.scale[name];
-	fontSize[name] = [s.size, { fontWeight: String(s.weight), letterSpacing: s.tracking, lineHeight: String(s["line-height"]) }];
+	fontSize[name] = [remFromPx(s.size), { fontWeight: String(s.weight), letterSpacing: s.tracking, lineHeight: String(s["line-height"]) }];
 }
 
 const transitionDuration = {};
