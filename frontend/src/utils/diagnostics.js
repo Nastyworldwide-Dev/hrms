@@ -28,16 +28,53 @@ const BUILD = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev"
 const REDACT =
 	/(pass(word)?|secret|token|api[_-]?key|auth|cookie|session|salary|ctc|bank|nric|ic[_-]?no|passport)/i
 
-/** Replace the value of any key that looks sensitive, at any depth. */
+//: A value's own SHAPE, for the cases a key name cannot catch. Key matching
+//: only works when the caller named the field; `{ data: { value: <bank
+//: account> } }` defeats it entirely (security review of b7a23bc7c). These are
+//: the shapes worth refusing on sight in this app.
+const LOOKS_SECRET = [
+	/^[A-Za-z0-9_-]{20,}$/, // an opaque token: long, no spaces, no punctuation
+	/\b\d{10,19}\b/, // an account or card number
+	/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, // an address
+	/\b\d{6}-\d{2}-\d{4}\b/, // a Malaysian NRIC
+]
+
+/** Replace anything that looks sensitive by its key OR by its own shape. */
 function redact(value, depth = 0) {
-	if (depth > 4 || value == null) return value
+	// FAIL CLOSED past the limit. This used to return the value raw, which
+	// meant the one case the limit exists for — a body nested deeper than
+	// expected — was the case it stopped protecting. A Frappe error body
+	// reaches depth 5 in ordinary use.
+	if (depth > 4) return "[too deep]"
+	if (value == null) return value
 	if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1))
+	if (typeof value === "string")
+		return LOOKS_SECRET.some((r) => r.test(value)) ? "[redacted]" : value
 	if (typeof value !== "object") return value
+	// An Error carries its interesting parts on the prototype and as
+	// non-enumerable properties, so Object.entries alone returns {}.
+	if (value instanceof Error) {
+		return redact({ name: value.name, message: value.message, ...value }, depth)
+	}
+	// A Map or a Set is not traversable by Object.entries either, and its
+	// contents are exactly as unknown as an object's.
+	if (value instanceof Map || value instanceof Set) return "[unreadable]"
 	const out = {}
 	for (const [key, inner] of Object.entries(value)) {
 		out[key] = REDACT.test(key) ? "[redacted]" : redact(inner, depth + 1)
 	}
 	return out
+}
+
+/** An error's stack WITHOUT its first line, which is the message repeated. */
+function frames(error) {
+	const stack = error?.stack
+	if (typeof stack !== "string") return ""
+	const lines = stack.split("\n")
+	// V8 puts "Name: message" first and indents every frame; Firefox has no
+	// header line at all. Keeping only indented/`@`-shaped lines is true of
+	// both and cannot accidentally keep a message.
+	return lines.filter((line) => /^\s+at\s|@/.test(line)).join("\n")
 }
 
 /** The context every report carries, so one can be matched to a person and a build. */
@@ -68,7 +105,21 @@ function envelope() {
 export function report(where, error, detail = null) {
 	try {
 		const context = { ...envelope(), where, ...(detail ? { detail: redact(detail) } : {}) }
-		console.error(`[diagnostics] ${where}`, error, context)
+		// The ERROR goes through redaction too. It used to be logged raw, on the
+		// assumption that an Error is a message and a stack — but in this app a
+		// failure arrives from Frappe with the server's sentence in its message
+		// and the response hanging off it as a property, so the most ordinary
+		// error shape here was the one that bypassed the filter entirely
+		// (security review of b7a23bc7c, CRITICAL).
+		//
+		// The stack's FRAMES only. A stack's first line is the message — so
+		// logging the stack raw put the sentence straight back in the log,
+		// redacted object and all, which is what the first attempt at this fix
+		// did. The frames themselves are file names and line numbers from our
+		// own bundle and carry nothing about the employee; they are also the
+		// only thing that says WHERE the failure happened, and a report nobody
+		// can act on is the same as no report.
+		console.error(`[diagnostics] ${where}`, redact(error), context, frames(error))
 	} catch {
 		/* a reporter that throws inside an error handler loses the page AND the
 		   error it was reporting; there is nothing useful to do here. */

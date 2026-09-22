@@ -146,3 +146,49 @@ test("the diagnostics seam is used, not merely written", () => {
 		"and something calls it"
 	)
 })
+
+// The header claimed redaction was "enforced HERE" and it was enforced on
+// `detail` only — the error itself went to the log untouched. A Frappe failure
+// arrives as an Error whose message embeds the server's sentence and whose
+// `response`/`_server_messages` ride along as properties, which is the most
+// ordinary shape in this app. Security review of b7a23bc7c, CRITICAL.
+test("the error object is redacted too, not just the detail", async () => {
+	const { report } = await import("../utils/diagnostics.js")
+	const written = []
+	const original = console.error
+	console.error = (...args) => written.push(args)
+	try {
+		const error = new Error("Basic Salary must be positive, got 4500 (bank_account: 1234567890)")
+		error.response = { data: { session_token: "sk-live-1", _server_messages: "9000" } }
+		report("leave.submit", error)
+	} finally {
+		console.error = original
+	}
+	const dump = JSON.stringify(written)
+	for (const secret of ["sk-live-1", "1234567890"]) {
+		assert.ok(!dump.includes(secret), `${secret} reached the log through the error object`)
+	}
+	// The error must still be USEFUL: its type and where it happened survive,
+	// because a redacted report nobody can act on is the same as no report.
+	assert.ok(dump.includes("Error"), "the error's type is kept")
+	assert.ok(dump.includes("leave.submit"), "and where it happened")
+})
+
+// Depth was fail-OPEN: past four levels the value was returned raw. A Frappe
+// error body nests further than that in normal use, so the one case the limit
+// exists for was the case it stopped protecting.
+test("too deep is dropped, not waved through", async () => {
+	const { report } = await import("../utils/diagnostics.js")
+	const written = []
+	const original = console.error
+	console.error = (...args) => written.push(args)
+	try {
+		report("x", new Error("x"), { a: { b: { c: { d: { e: { token: "sk-deep-1" } } } } } })
+	} finally {
+		console.error = original
+	}
+	assert.ok(
+		!JSON.stringify(written).includes("sk-deep-1"),
+		"a value past the depth limit was logged raw"
+	)
+})

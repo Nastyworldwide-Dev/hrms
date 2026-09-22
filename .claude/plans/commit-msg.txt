@@ -1,40 +1,38 @@
-fix(pwa): the offline bar covered the back button and failed contrast
+fix(security): the error itself went to the log unredacted
 
-Two defects in yesterday's bar, both found by review, both mine.
+The reporter added yesterday redacted `detail` and handed the error straight to
+the console, while its own header claimed redaction was enforced there. In this
+app a failure arrives from Frappe as an Error whose message embeds the server's
+sentence — "Basic Salary must be positive, got 4500" — and whose response hangs
+off it as a property. So the commonest error shape in the app was the one shape
+that bypassed the filter entirely.
 
-IT SAT ON THE HEADER. The bar was `position: fixed; top: 0`, and `.g-header`
-is transparent and sits in normal flow — its own comment says content never
-scrolls under it, which the bar quietly made untrue. So it painted over the
-back control: the employee is told they have no connection in the same moment
-they lose the way out of the screen they are stuck on. It is in flow now, and
-first inside <ion-app>, so it pushes the router outlet down for exactly as long
-as it is showing and by nothing when it is not.
+Redaction runs on the error now, with an `instanceof Error` branch, because
+`Object.entries` on an Error returns nothing: message and name are not
+enumerable.
 
-IT WAS UNREADABLE IN LIGHT. `--g-bg` on `--g-warn-ink` measures 4.36:1 against
-§14.1's 4.5 floor, at 10.5px. `warn-ink` is a TEXT colour meant for glass, and
-using it as a FILL was the mistake — the name said so and I read past it.
-`--g-warn-fill` exists for this pairing alone: 6.33 light, 6.32 dark.
+Depth also failed open. Past four levels the value came back raw, so the one
+case the limit exists for — a body nested deeper than expected — was the case
+it had stopped protecting. It returns a marker instead.
 
-The contrast gate could not have caught that. Every pair it knew was ink on
-glass or ink on a tint; a solid themed fill had no shape in its table, so it
-reported 54 checked, 0 failures while a real failure shipped. It has a "solid"
-branch now and the pair is listed — verified by putting the old colour back and
-watching it fail at exactly 4.36.
+And redaction no longer relies on the caller having named the field. Key
+matching cannot see `{ data: { value: <a bank account> } }`, so a long opaque
+token, a ten-to-nineteen digit number, an address or an NRIC is refused on
+sight whatever key it sits under.
 
-The tokens gate then refused the new token for collapsing onto `warn-ink` in
-dark. It was right: two names for one value means a swap between them is
-invisible. Dark is its own value now.
+The first attempt at this fix put the leak straight back. I kept the stack
+unredacted "because it is file names and line numbers" — but a stack's first
+line IS the message, so the sentence returned to the log beside the redacted
+object. Only the frames are logged now, which keeps the one thing that says
+where a failure happened without the one thing that says what it was about.
 
-And S7's `dvh` fix had been silently reverted for two commits. It was
-hand-patched into src/theme/glass.css, which is GENERATED from
-design/tokens.json, so every `yarn tokens` put `100vh` back — twice today while
-I watched the diff and restored the comment instead of the cause. The token
-carries a `fallback` now and the builder emits both declarations. Its test
-passed throughout, because it reads the generated file I kept restoring.
-
-Lastly the lint gate counts code rather than prose. Five times today a rule
-counted the comment explaining it; total debt fell from 242 to 234 once
-comments were stripped, so eight recorded violations in this app were never
-violations. Baseline rewritten: 234, none new.
+Also ships the honest half of the measurement work. No site is reachable, so
+the numbers wait; what can be checked without a browser is that nothing demands
+more width than the narrowest phone has — the first check in this repo at the
+320px floor the checklist names. And the 2026-09-09 measurement file now says
+in its own data that it must not be graded against: all thirty-six screens
+record a tab bar height of zero, captured before the nav was repaired, so every
+overflow it records is about 65px too small. The 2.0 plan rests on those
+numbers and a reader could have picked the file up without ever learning that.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
