@@ -971,11 +971,11 @@ Per screen, in both themes, on the lowest-spec device available.
 | # | Decision | Blocks |
 |---|---|---|
 | 1 | Desktop `lg:` in scope? — **resolved: in scope, §20 governs** | §10 component contracts |
-| 2 | Tab bar five — confirm `HOME · ATTEND · LEAVE · PAY · MORE` | §13.1, information architecture |
-| 3 | Accept iOS focus-zoom, or raise input font-size to 16px | §13.2 |
-| 4 | Name the lowest-spec device in the fleet | §15, §18 |
-| 5 | Type floor 10px — P&C sign-off on the change from the mockup | §4.2 |
-| 6 | `frappe-ui` upgrade 0.1.105 → 0.1.278 in this programme, or after | §16.1 sequencing |
+| 2 | Tab bar five — **resolved 22 Sep 2026: NO. There is no PAY tab.** The bar keeps EXPENSES; §21's row stands as built, not as a gap | §13.1, information architecture |
+| 3 | iOS focus-zoom — **resolved 22 Sep 2026: FIXED, and it already was.** `.g-input`/`.g-search__input` pin 16px in glass-components.css, below every other input rule so source order wins. A pre-2.0 audit re-derived the defect from `.g-input`'s 12.5px token and began fixing it a SECOND time before finding the rule; `src/__tests__/input-zoom.test.js` now pins the behaviour so it cannot be re-found. Pinch zoom stays on | §13.2 |
+| 4 | Lowest-spec device — **owner cannot name one (22 Sep 2026).** §15's budget is therefore ASSUMED against a mid-range Android on 4G, not measured against a named handset. Recorded as an assumption, not a decision | §15, §18 |
+| 5 | Type floor 10px — **resolved 22 Sep 2026: accepted, and already applied.** Nothing in design/tokens.json is under 10px; the smallest are field-label, micro-label, badge, tab-label and data-system at exactly 10. Pinned by input-zoom.test.js | §4.2 |
+| 6 | `frappe-ui` upgrade — **resolved 22 Sep 2026: this branch is the official version.** The app stays on 0.1.105 for the pre-2.0 programme; an upgrade is its own slice with its own measurement, not a step inside another one | §16.1 sequencing |
 
 ---
 

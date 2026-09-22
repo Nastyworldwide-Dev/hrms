@@ -45,7 +45,7 @@
 				</div>
 
 				<!-- body -->
-				<div v-if="sop.data.content" class="sop-prose" v-html="sop.data.content"></div>
+				<div v-if="sop.data.content" class="sop-prose" v-html="safeHtml(sop.data.content)"></div>
 
 				<!-- attachment -->
 				<div v-if="attachment" class="flex flex-col gap-2">
@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import { safeHtml } from "@/utils/safeHtml"
 import { ChevronLeft, Download, FileText, PenLine } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"

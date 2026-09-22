@@ -1,0 +1,34 @@
+fix(security): three screens wrote server HTML into the page unchecked
+
+Notifications, SOP bodies and Helpdesk replies each hand a server string to
+`v-html`, which is an unguarded write into the DOM: any script, any onerror=,
+any javascript: href in that string runs as the logged-in employee.
+
+None of the three is exploitable today — Frappe sanitises Helpdesk's rich text,
+SOP content is authored by HR, notification bodies are built server-side. Every
+one of those is a statement about the backend as it currently stands, and none
+of them is enforced on this side. A field that becomes employee-writable later
+turns an internal tool into stored XSS with no change here at all.
+
+`safeHtml` is the one door. An allow-list, because a blocklist is a list of the
+attacks somebody thought of and permits everything else — the wrong default for
+markup written by someone else. The browser's own parser does the parsing,
+inside a detached <template> that parses without executing: hand-written tag
+regexes are how sanitisers get bypassed, and a parser the same engine will use
+to render is the only one guaranteed to agree with it. With no DOM — SSR, or a
+unit test importing one of these components — it returns text rather than
+markup nothing has checked.
+
+Not DOMPurify, deliberately. A dependency is the right call for untrusted
+third-party HTML; this is three internal fields with a known tag vocabulary.
+The condition for taking it is written in the file.
+
+Also records the five spec decisions the owner answered today, two of which
+turned out to be ALREADY DONE and unrecorded. The iOS focus-zoom fix has been
+in glass-components.css for some time, pinning 16px below every other input
+rule so source order wins — and this audit re-derived the defect from
+`.g-input`'s 12.5px token and started fixing it a second time before finding
+it. The 10px type floor was likewise already applied. Both are pinned by tests
+now, because a fix nobody can find is a fix somebody pays for twice.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>

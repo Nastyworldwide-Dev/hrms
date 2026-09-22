@@ -53,7 +53,7 @@
 								{{ m.who }} · {{ formatWhen(m.when) }}
 							</div>
 							<!-- Helpdesk stores rich text; sanitised server-side by frappe -->
-							<div class="prose-sm break-words" v-html="m.html" />
+							<div class="prose-sm break-words" v-html="safeHtml(m.html)" />
 						</div>
 						<GEmptyState
 							v-if="!thread.length"
@@ -90,6 +90,7 @@
 </template>
 
 <script setup>
+import { safeHtml } from "@/utils/safeHtml"
 import { ArrowUp, ChevronLeft } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"

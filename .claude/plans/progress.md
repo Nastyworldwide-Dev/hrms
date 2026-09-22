@@ -2,128 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-22T07:45:00Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: the shipped grace repair would barely have touched Nabil's data — two
-  filters excluded almost all of it: only MULTI-shift employees were selected,
-  and `restamp` skipped every punch the old ERP sent, which is the whole
-  1 Aug - 4 Sep window. The owner then found the real shape of the defect in
-  the shift's own config: "7PM - 3.30AM" was 19:30-07:00 with a 120-minute
-  check-out grace, so it accepted punches until 09:00 and swallowed day-shift
-  staff's morning INs. Shift Assignment, filtered: 2 of 2. His rule: "if the
-  fix on X isnt Y or Z then X should revert to its original shift."
-  So the WHO is a definition, not a heuristic — a punch on a guarded shift
-  whose employee is not one of its two owners is wrong whatever produced it.
-  hrms/utils/wrong_shift_repair.py + its patch. Two powers granted for this one
-  job and passed explicitly: `mirrored_ok` (ERP punches in scope — his word for
-  this exact change) and `authoritative` (a day HR keyed BY HAND on top of a
-  lying stamp is rebuilt, option B, 22 Sep). Money is never waived.
-EVIDENCE: 2 correct — 22 new tests, 9 mutants killed: drop mirrored_ok; drop
-  authoritative; select by shift_start instead of the clock; stop excluding the
-  two owners; flip the mirrored default to True; drop the write-side fence;
-  stop passing authority to the re-mark; collapse the job id; unforce
-  inline=False. restamp 15/15, grace 11/11, day_remark 35/35, fix_day_screen
-  21/21, ruff + format clean.
-EVIDENCE: 3 works — blast radius green on every importer of restamp/day_remark:
-  attendance_recovery, day_remark_retires_an_emptied_day, offshift_punch_heal,
-  day_remark_hooks, erp_backfill_copy, attendance_fix_day_writes_no_hours.
-  test_hr_asked_for_this_day needs a real bench (imports frappe) and fails the
-  same way at HEAD — unchanged by this commit.
-NOTE: two stale assertions elsewhere were amended rather than loosened. The
-  grace repair's mirrored test now pins the stronger fact (the guardrail is the
-  DEFAULT, and that job holds no grant); test_day_remark's job-id test still
-  passes because the plain id kept its old shape — only an authority-carrying
-  job gets a suffix, so a job queued before this deploy still deduplicates.
-NEXT: Nabil deploys. Order: this repair first, THEN save the corrected shift
-  times (19:00-03:30) — the "Unmarked Check-in Logs Found" refusal clears once
-  the stray punches are gone and their days re-marked. Then cut the check-out
-  grace from 120.
-- 2026-09-22T08:04:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-22T08:04:38Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
-- 2026-09-22T08:05:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-09-22T08:05:08Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
-- 2026-09-22T08:05:11Z COMMIT: 6e07c61cb fix(attendance): a shift belonging to two people was holding everyone's punches → review dispatched
-- 2026-09-22T08:05:43Z PUSH: nz-glass @ 6e07c61cb
-- 2026-09-22T08:06:09Z PUSH: nz-glass @ 6ee0f6ea7
-- 2026-09-22T08:06:09Z COMMIT: 6ee0f6ea7 docs(glass): the handoff still described the Move slice → review dispatched
-
-REPAIR: the frappe review of 6e07c61cb came back DEPLOY, no Critical, 284
-  tests green across 9 suites. Its one Warning was real and is fixed here: the
-  two owners are a module constant, the job runs on Nabil's schedule rather
-  than at commit time, and a third person legitimately assigned that shift in
-  between would have had their punches reverted — the job committing the very
-  defect it exists to repair. `roster_drifted` now REFUSES the shift and logs
-  what changed rather than repairing against a stale list. Fewer owners than
-  the constant is not drift: the missing name is simply never selected.
-EVIDENCE: 2 correct — 3 new tests, 4 mutants killed: remove the check; warn but
-  continue anyway; make the difference symmetric so a DEPARTED owner also
-  refuses; count draft/cancelled assignments as ownership. Suite 25/25,
-  restamp 15/15, grace 11/11, day_remark 35/35, attendance_recovery and
-  fix_day_screen green, ruff clean.
-NOTE: mutant N3 SURVIVED its first run and the survival was a lie — a stale
-  __pycache__ entry (same size, same second, so the timestamp check missed the
-  edit) meant three runs scored the ORIGINAL file. Caught by reproducing the
-  case standalone and reading the source line back. Every mutation run here now
-  clears __pycache__ first. The test was genuinely weak too: it asserted an
-  empty RESULT, which a refusal also returns, so it now asserts the punches
-  were READ.
-LEARNING(gate): a mutation run must clear __pycache__ between mutants — a
-  same-size, same-second edit is invisible to Python's timestamp invalidation,
-  and a surviving mutant is then indistinguishable from a killed one.
-NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
-  (19:00-03:30), then cut the check-out grace from 120.
-- 2026-09-22T08:09:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-09-22T08:09:57Z PUSH: nz-glass @ 29d56b08f
-- 2026-09-22T08:09:58Z COMMIT: 29d56b08f fix(attendance): the repair trusted an owner list that could go stale → review dispatched
-
-NOTE: second review (29d56b08f) came back DEPLOY, no Critical, 86 tests green.
-  Its one Warning asked me to confirm why `roster_drifted` refuses the WHOLE
-  shift rather than just excluding the drifted name — and one premise in it is
-  wrong, which is why the answer is now in the docstring rather than in a reply
-  nobody will read. It reasoned that an extra assignee "would only ever be
-  excluded, same as a legitimate owner", so treating them as an owner is free.
-  It is not: a STRAY assignment is what stamped these punches to the wrong
-  shift in the first place, so reading ownership back out of the roster lets
-  the defect grant itself an exemption and skip somebody who should be
-  repaired. The constant is the only reading of ownership taken while a human
-  was looking at the list. Refusing costs the two real owners nothing — their
-  punches on their own shift are correct by definition and this job never
-  touches them. What it defers is everyone else, until a human reads the log.
-LEARNING(how): when a reviewer asks "is this the intended trade?", the answer
-  belongs next to the rule, not in a reply — the next reader will have the same
-  question and no transcript.
-NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
-  (19:00-03:30), then cut the check-out grace from 120.
-- 2026-09-22T08:11:37Z PUSH: nz-glass @ eb3e63b83
-- 2026-09-22T08:11:37Z COMMIT: eb3e63b83 docs(attendance): say why a drifted roster refuses the whole shift → review dispatched
-
-REPAIR: S4 — one icon library. 43 feather names across 27 files migrated to
-  lucide-vue-next, the three prop-driven sites converted by hand (Profile's
-  link list, WorkflowActionSheet's transition icon, FileUploaderView's
-  multi-line tag), and components/icons/ deleted: all fourteen were Lucide
-  glyphs pasted by hand, a copy of a library maintained by nobody.
-EVIDENCE: 2 correct — icons.one-library.test.js RED first (3 of 5 failing),
-  green after. Suite 512 pass / 4 fail, and those same 4 fail at HEAD
-  (verified by stashing): named-export, temporal-dead-zone, claimed-days,
-  request-chips. Lint clean. Gates: contrast 54 checked / 0 failures,
-  surfaces 46 screens / 0 over, tokens ok. usage and lint counters are
-  byte-identical to HEAD — measured, not assumed.
-NOTE: S4's stated revert condition COULD NOT BE MET and the plan's premise was
-  wrong. `feather-icons` is a dependency of frappe-ui, not of this app, and
-  frappe-ui's own Button imports FeatherIcon — the Button main.js registers
-  globally and 27 files render. So feather ships whatever we do. Measured on
-  real production builds: total JS gz 1121112 -> 1128339, +7.0 KB. The icon
-  map projected -9 KB from "feather leaving"; it was measuring feather as ours.
-  Reported to the owner BEFORE writing code, with three options; he chose to
-  proceed for the vocabulary, not the size. The failed condition is recorded in
-  the test file's own header so the next reader cannot mistake this for a win.
-NOTE: the icon sweep found 43 rendered names, not the 40 the map recorded. The
-  map's own count had already been corrected twice. Every one of the 43 has a
-  Lucide target — verified against the INSTALLED package, not its published
-  types, which was the reviewer's carry-over note from S3.
-NOTE: one test failed that was mine — sidenav-app-links-a11y pinned
-  `<ExternalLinkIcon`. Amended to the new tag, not loosened: the RULE it
-  protects (the arrow takes the muted ink token, so a decoration does not
   compete with the label beside it) is unchanged and still asserted.
 NEXT: S5 — the 29 inline <svg>, triaged first; several are not icons (a
   progress ring, an upload target) and must not be converted.
@@ -281,3 +159,46 @@ NEXT: S4-S7 all done. Re-measure (e2e/app-measure.mjs at 360x640) and re-bake
 - 2026-09-22T09:35:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-09-22T09:35:14Z PUSH: nz-glass @ a46848871
 - 2026-09-22T09:35:14Z COMMIT: a46848871 fix(home): pressing "Show more" sent keyboard users back to nowhere → review+design dispatched
+- 2026-09-22T09:41:51Z COMMIT: 0cd678fe4 docs(plans): the hook lines for the Show-more accessibility fix → review dispatched
+
+REPAIR: pre-2.0 R1. Owner's checklist, sections 8 (XSS) and the two open spec
+  decisions he answered. THE REAL DEFECT was the sanitiser: three templates
+  hand a server string straight to v-html (Notifications, SopDetail,
+  TicketDetail). None is exploitable today — Frappe sanitises Helpdesk's rich
+  text, SOP content is HR-authored, notification bodies are server-built — and
+  every one of those is a statement about the CURRENT backend, enforced
+  nowhere on this side. src/utils/safeHtml.js is now the one door: an
+  ALLOW-list (a blocklist is a list of the attacks somebody thought of), the
+  browser's own parser inside a detached <template> (hand-written tag regexes
+  are how sanitisers get bypassed), and a no-DOM branch that returns TEXT
+  because SSR and every unit test take it.
+  NOT DOMPurify: a dependency is right for untrusted third-party HTML and this
+  is three internal fields with a known vocabulary. The marker is in the file.
+NOTE: the iOS input-zoom "defect" WAS ALREADY FIXED and I started fixing it a
+  second time. I re-derived it correctly from `.g-input`'s 12.5px
+  --g-type-row-label-size, added a `field-input` token, rebuilt the CSS — and
+  then found the real rule two thousand lines further down in
+  glass-components.css, pinning 16px below every other input rule so source
+  order wins. Reverted the whole duplicate (and had to restore glass.css: yarn
+  tokens regenerates it and dropped S7's dvh comment). The audit that found it
+  was right about the mechanism and wrong about the state, because NOTHING
+  SAID IT WAS DONE — §19 still listed DECISION 3 as open.
+EVIDENCE: 2 correct — two new test files, both RED first (3 of 5 and 3 of 5),
+  5 mutants killed: allow <script> through the tag list; allow the style
+  attribute; make the no-DOM branch return its input; unwire one call site;
+  delete the zoom rule. Suite 544 / 540 pass, the same 4 red at HEAD. Lint
+  clean. Gates at baseline exactly: lint 242/10, contrast 54/0, surfaces 46/0,
+  tokens ok. Build clean.
+NOTE: spec §19's five open decisions are now recorded with the owner's answers
+  (2 NO tab · 3 fixed · 4 cannot name a device, so §15's budget is an
+  ASSUMPTION not a measurement · 5 accepted and already applied · 6 this
+  branch is official, frappe-ui stays at 0.1.105). Decision 5 needed no work:
+  nothing in tokens.json is under 10px. Both facts are now pinned by tests
+  rather than left to be re-derived.
+LEARNING(gate): a fix with no test and no spec update is a fix that gets paid
+  for twice. Both re-found items today (DECISION 3, DECISION 5) were DONE and
+  unrecorded. When an audit finds a defect, grep for the fix before writing one.
+NEXT: R2 — API contract. ~60 of 115 endpoints do not pin an HTTP method (no
+  writer is GET-exposed today; verified), 15 carry no visible guard, and
+  nothing checks that the endpoints the PWA calls still exist.
+- 2026-09-22T10:16:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6

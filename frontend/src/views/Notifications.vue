@@ -85,7 +85,7 @@
 											'text-sm leading-5',
 											item.read ? 'font-normal text-ink-700' : 'font-medium text-inkbase',
 										]"
-										v-html="item.message"
+										v-html="safeHtml(item.message)"
 									></div>
 									<div v-else class="text-sm leading-5 font-normal text-ink-500 italic">
 										{{ fallbackMessage(item) }}
@@ -126,6 +126,7 @@
 </template>
 
 <script setup>
+import { safeHtml } from "@/utils/safeHtml"
 import { ChevronLeft, CircleCheck } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
