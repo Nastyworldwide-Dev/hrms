@@ -205,3 +205,5 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T14:54:57Z PUSH: nz-glass @ 082fbbeeb
 - 2026-09-22T14:54:58Z COMMIT: 082fbbeeb docs(glass): the handoff still described the attendance repair → review dispatched
 - 2026-09-22T14:55:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 18 file(s) ⟂8670267188cb
+- 2026-09-22T14:55:21Z COMMIT: b46d8ea83 chore(home): remove a dead translator binding, guard against dead links → review+design dispatched
+- 2026-09-22T14:55:30Z PUSH: nz-glass @ b46d8ea83
