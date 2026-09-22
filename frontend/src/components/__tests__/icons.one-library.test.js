@@ -55,7 +55,7 @@ test("no file renders a feather icon any more", () => {
 
 test("nothing imports FeatherIcon, not even unused", () => {
 	const offenders = FILES.filter((path) => /\bFeatherIcon\b/.test(source(path)))
-		.filter((path) => !path.endsWith('GIconButton.vue')) // names it in a comment explaining why it went
+		.filter((path) => !path.endsWith("GIconButton.vue")) // names it in a comment explaining why it went
 		.map((path) => path.slice(SRC.length))
 	assert.deepEqual(offenders, [], "an unused import still pins the dependency")
 })

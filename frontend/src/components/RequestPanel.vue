@@ -7,17 +7,21 @@
 		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
-		<RequestList v-if="activeTab == 'My Requests'" :items="myRequests" />
-		<RequestList
-			v-else-if="activeTab == 'Team Requests'"
-			:items="teamRequests"
-			:teamRequests="true"
-		/>
-		<RequestList
-			v-else-if="activeTab == 'History'"
-			:items="historyRequests"
-			:teamRequests="true"
-		/>
+		<RequestList v-if="activeTab == 'My Requests'" :items="shown" />
+		<RequestList v-else-if="activeTab == 'Team Requests'" :items="shown" :teamRequests="true" />
+		<RequestList v-else-if="activeTab == 'History'" :items="shown" :teamRequests="true" />
+
+		<!-- Not a GGhostButton: that is a glass surface and Home already spends
+		     4 of its 6 (§15.1). A text control under a list costs none, and the
+		     row it reveals is the one the person came for. -->
+		<button
+			v-if="hidden > 0"
+			type="button"
+			class="g-focusable w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+			@click="showAll = true"
+		>
+			{{ __("Show {0} more", [hidden]) }}
+		</button>
 	</div>
 </template>
 
@@ -62,6 +66,19 @@ import {
 import { siteTime } from "@/utils/siteTime"
 
 const activeTab = ref("My Requests")
+
+// Home shows the first five of whatever the active tab holds, and a control
+// that reveals the rest in place. The fold is a budget, not a length
+// (home-fold-budget.test.js): the ANCHOR above this panel fits the smallest
+// usable height and this list is scrolled to by design — what the cap removes
+// is an UNBOUNDED scroll, not the scroll. A row is two lines plus py-3 either
+// side, ~62px, so five is ~310px inside a ~440px small-phone budget.
+//
+// Expanding, not linking: each tab merges SIX doctypes and there is no
+// combined list route, so "See all (9)" could only point at one type's screen
+// and answer a tap about nine requests with a page showing three.
+const HOME_ROWS = 5
+const showAll = ref(false)
 const socket = inject("$socket")
 const __ = inject("$translate")
 
@@ -119,6 +136,28 @@ const teamRequests = computed(() =>
 const historyRequests = computed(() =>
 	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null)
 )
+
+const activeRequests = computed(() => {
+	if (activeTab.value === "Team Requests") return teamRequests.value
+	if (activeTab.value === "History") return historyRequests.value
+	return myRequests.value
+})
+
+const shown = computed(() =>
+	showAll.value ? activeRequests.value : activeRequests.value.slice(0, HOME_ROWS)
+)
+
+// What is HIDDEN, not what exists: a person with seven requests told "Show 7
+// more" taps it and finds two new rows.
+const hidden = computed(() =>
+	showAll.value ? 0 : Math.max(0, activeRequests.value.length - HOME_ROWS)
+)
+
+// The tab strip swaps the list under the control. A stale `showAll` would open
+// the next tab already expanded, which is the opposite of what the cap is for.
+watch(activeTab, () => {
+	showAll.value = false
+})
 
 function updateRequestDetails(
 	leaves,

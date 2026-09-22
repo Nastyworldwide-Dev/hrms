@@ -202,3 +202,37 @@ LEARNING(gate): a CSS length is a number glued to its unit — match
   unit is the only thing that finds this.
 NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)".
 - 2026-09-22T08:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 11 file(s) ⟂4c8e69619202
+- 2026-09-22T08:54:52Z COMMIT: 88e3f58e7 fix(sheets): a sheet measured itself against a viewport the phone was not showing → review+design dispatched
+- 2026-09-22T08:55:47Z PUSH: nz-glass @ 88e3f58e7
+
+REPAIR: S6 — Home's request panel rendered EVERY request a person had; ten of
+  them is ~620px, another whole screen past the thing they opened Home for.
+  Now five rows and a "Show {N} more" that expands in place.
+  Two decisions the plan did not make, both the owner's call, both recorded:
+  FIVE, not three. Measured: a row is two lines plus py-3 either side, ~62px,
+  so five is ~310px inside the ~440px small-phone budget. Three fits too and
+  hides rows from people who would never have scrolled anyway.
+  EXPAND, not "See all". Each tab MERGES six doctypes (leaves, claims, shift,
+  attendance, OT, replacement leave) and there is no combined list route, so
+  the plan's "See all (N) -> the existing route" had no target: it could only
+  point at ONE type's screen and answer a tap about nine requests with a page
+  showing three. Expanding is also this app's own idiom (TeamDashboard rows,
+  SideNav rail). Told the owner before building; he chose consistency of
+  MEANING over a control that misstates where it goes.
+  The control is a plain text button, NOT GGhostButton: that is a glass
+  surface and Home already spends 4 of its 6 (§15.1). Verified after: still
+  4/6.
+EVIDENCE: 2 correct — RequestPanel.cap.test.js RED first (5 of 6), 5 mutants
+  killed (count = total instead of hidden; cap removed; tab watch removed;
+  label loses its count; the cap leaks into RequestList, which the full-screen
+  lists share). Suite 528 tests / 524 pass — the same 4 that fail at HEAD.
+  Lint clean. Gates byte-identical to baseline: contrast 54/0, surfaces 46
+  screens / 0 over, Home 4/6, tokens ok. Build clean.
+NOTE: my first version put `activeRequests` above `historyRequests` and read
+  it — the exact temporal-dead-zone defect this repo already has a gate for
+  (script-setup-order.test.mjs, currently red on two OTHER files at HEAD).
+  Caught by reading the declaration order back before running anything.
+NEXT: S4-S7 are done. Re-measure the app (e2e/app-measure.mjs at 360x640) and
+  re-bake Home's visual baselines; the recorded numbers predate the bottom-nav
+  repair and understate every overflow by ~65px.
+- 2026-09-22T09:28:13Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
