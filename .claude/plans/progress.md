@@ -240,3 +240,26 @@ NOTE: sixth comment-counted-as-code incident today, this time in my own new
   rule.
 NEXT: answer the owner's question with evidence — what in the PWA is verified,
   what is asserted at source only, and what has never been run against a site.
+- 2026-09-22T11:01:27Z PUSH: nz-glass @ e28041076
+- 2026-09-22T11:01:27Z COMMIT: e28041076 fix(pwa): the offline bar still covered the header, from a different position value → review+design dispatched
+
+NOTE: a full local bench EXISTS at ~/verify-bench and its apps/hrms symlinks to
+  THIS worktree — the site spoke.localhost has 31 employees and hrms installed.
+  So "no site is reachable", which every pre-2.0 evidence line rests on, was
+  wrong: there is one, and finding it took one `ls`. Got the backend serving
+  (gunicorn from sites/, MariaDB is on 3306 not the 3307 the config implies),
+  got Chromium rendering the app, and took the FIRST real measurement of this
+  work: no horizontal scroll at 320, 360 or 390. Then stopped at the last mile
+  — gunicorn serves no static assets (nginx's job in production) and the vite
+  proxy forwards Host: 127.0.0.1, which is not a site.
+  Two steps were refused by the sandbox and both refusals were RIGHT: setting a
+  local admin password and minting a session token, each a secret-store write.
+  They were not worked around.
+  Owner: "its too hassle, lets just push and i will deploy."
+LEARNING(fact): ~/verify-bench/apps/hrms -> /home/nabil/nz-version-16. A real
+  site is one command from this worktree. Before writing "no site reachable"
+  in an evidence line again, look.
+NEXT: Nabil deploys e28041076. Four things to check by hand, because they are
+  the ones only a render can answer: airplane mode shows the bar WITHOUT
+  covering the back arrow; a second deploy offers "A new version is ready";
+  tapping a text field does not zoom; Home's icons and "Show N more" behave.
