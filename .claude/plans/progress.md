@@ -246,3 +246,44 @@ EVIDENCE: rung 1 — S3 icon map measured against real Lucide (1848 icons, fetch
 NEXT: commit this follow-up, then finish S3 as a committed doc (the 2 unmapped
   names get a decided substitute, not a guess) before S4 installs anything.
 - 2026-09-22T04:21:43Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-22T04:21:47Z COMMIT: d6c82f17e fix(home): "remote" was scope, not prose → review+design dispatched
+
+NOTE: d6c82f17e cleared by both reviewers — NEXT_ACTION: DEPLOY and
+  VERDICT: DESIGN_APPROVED, zero Critical, zero Warning on design. The frappe
+  reviewer INDEPENDENTLY verified at source what my fix rests on: get_pending_count
+  (hrms/api/remote_checkin.py:365-372) counts Remote Checkin Request rows only,
+  no union with Employee Checkin, so "remote" is factually correct and the bare
+  string shipped in 8e07bf701 was the defect. I read the same lines myself before
+  it reported. Its one Warning was that it never saw the test output (cut off by
+  my deliver-now nudge) — re-run to close it: 4/4.
+NOTE: reviewer truncation is now a pattern, not an incident — 3 of 4 agents this
+  session hit the 10-turn limit and returned NOTHING until nudged, including one
+  given an explicit 4-turn investigation budget in its prompt. A silent reviewer
+  here means truncated, never clean, so the circuit rule ("silent reviewer gets
+  one nudge, then counts as FIX_CRITICAL") is the right default and was applied.
+LEARNING(how): nudge a truncated reviewer with "deliver NOW, zero further tool
+  calls, mark anything unestablished as not-checked". All three nudged agents then
+  returned a usable report WITH honest not-checked lines. Asking for the verdict
+  without forbidding tools just burns the remaining turns.
+
+REPAIR: S3 complete — docs/glass/plan/ICON-COVERAGE-MAP.md, a doc and no code,
+  because S4 must not install anything until "does every icon have a target?" is
+  answered. It does, with two names that needed a DECISION and now have one:
+  filter -> funnel (not list-filter: three stacked lines is a different idea from
+  the funnel users already learned) and trash-2 -> trash (trash-2 is not a Lucide
+  name at all, only a back-compat alias, and two sibling tables already use plain
+  trash for the same destructive action, so this unifies an existing split).
+EVIDENCE: rung 1 — measured, not quoted: lucide-static fetched and counted at
+  1848 icons; lucide-vue-next's published .d.ts confirms Filter/Trash2/
+  AlertTriangle/CheckCircle/Edit/Edit2 still exist as ALIASES. S4 will not use
+  them — an alias keeps a dead vocabulary alive in a codebase that just paid to
+  replace it. 29 of 36 names identical, 5 mechanical renames, 2 decided above,
+  and all 14 hand-rolled components have a target, so src/components/icons/ can
+  go entirely.
+NOTE: the 14 component->Lucide rows are JUDGEMENT, not measurement, and the doc
+  says so: kanban for a project board and life-buoy for support change the
+  drawing noticeably even where the meaning holds. Listed so the owner can review
+  the change before it lands rather than discover it after.
+NEXT: commit S3, then S2 (QuickLinks 8 full-width rows -> 4-across grid) — the
+  largest single saving at ~274px, with a red tap-target test first at 44px.
+  S4 stays blocked on its own revert condition: the real gzip delta, measured.
