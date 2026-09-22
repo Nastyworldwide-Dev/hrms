@@ -122,6 +122,31 @@ Vertical slices. Each ships alone, carries its own tests, stays under the
 | 4.1 | Approvals and the Helpdesk hub follow the prototype's structure. | Both screens re-laid out; approver journey unchanged. | `views/RemoteApprovals.vue`, `views/helpdesk/*` |
 | D.1 | Desktop shell signed off at the chosen column width. | O2 answered; the token matches the answer; 1440 baselines re-shot. | `theme/glass.css`, `components/SideNav.vue` |
 
+### Status, 22 September 2026 — ALL SHIPPED
+
+| # | Commit | What it turned out to be |
+|---|---|---|
+| 0.1 | `bb3796ebe` | Tabs. Calendar and Score were RENAMES over the same routes; Requests was the one new screen, composed from Home's existing parts. Leaves and Expenses kept their URLs under More. |
+| 1.1 | `85691c270` | `FormView` built its copy from `props.doctype`, so dialogs read "Delete Employee Checkin". Each screen passes its own noun now. |
+| 1.2 | `5098f053b` | The shift chip was untranslated AND invented from `docstatus` — "Draft" on a real shift. Now "Scheduled" / "Not scheduled yet". |
+| 1.3 | `2ebffe118` | Home. The quick links moved to Requests; the approvals banner became a row in `NeedsYou`, bounded like the request panel. |
+| 2.1 | `1e4e07f51` | Three attendance screens were titled with doctypes; the dashboard translated a raw Select value. |
+| 2.2 | `be2e5f5a5` | Overtime led with hours — the input. It leads with the outcome now, and the two wire values are mapped rather than translated. |
+| 3.1 | `94a9e278a` | Both forms filtered by blacklist. Read against the running site, 36 of the Expense Claim's 61 fields reached an employee. Allowlists now. |
+| 4.1 | `2e3c01175` | "Pending" never said pending on whom. Now "Waiting on you" / "Decided by you", with the count. |
+| D.1 | this commit | 720px signed off, so the token stops calling itself provisional. §20.2's own text still named the pre-2.0 tabs; corrected. The shell itself needed nothing — `SideNav` reads the same list the phone bar does, so slice 0.1 reached the desktop by itself. |
+
+**What was deliberately NOT built**, each because the plan marks it as new
+backend and §7 puts that out of scope: the unified approval queue
+(`approval.list_pending_for_user`), the attendance day sheet and missing-punch
+flag, travel and training rows, the leave ledger breakdown. Each is a feature
+with its own endpoint, not a rename.
+
+**Owed:** the 1440px visual baselines D.1 asks for, and every measured number
+in `docs/glass/audit/2026-09-09-app-measure.json` — that file records `tabH: 0`
+on all 36 screens because it predates the bottom-nav repair, and it now says so
+in its own data. Both need a reachable site.
+
 ## 7. Explicitly NOT in scope
 
 Token values · a new colour or type system · Desk · backend, API, doctype,

@@ -991,8 +991,9 @@ One breakpoint: `lg:` — **1024px**, matching `SideNav.vue`'s existing usage. B
 
 - The tab bar (§10 #8) is hidden at `lg:` — already the case (`lg:hidden`).
 - `SideNav` becomes a **glass surface** (§6 recipe), retaining its existing 72px collapsed / 216px expanded widths and its collapse toggle.
-- **Top group** — the direct tab destinations from §13.1 in the same order: `HOME · ATTEND · LEAVE · PAY`. More is a container, not a destination; at `lg:` it dissolves.
-- Below a divider (1px `--hair`), the contents of More as a **flat list** in §13.1's order: KPI, Issues, SOPs, Expenses, Team, Remote Approvals. **No nested menus.**
+- **Top group** — the direct tab destinations in the same order as the phone bar. **Amended 22 Sep 2026** (2.0 slice 0.1): that is now `HOME · CALENDAR · REQUESTS · SCORE`, not the `HOME · ATTEND · LEAVE · PAY` this section was written against. More is a container, not a destination; at `lg:` it dissolves.
+- Below a divider (1px `--hair`), the contents of More as a **flat list**: Leaves, Expenses, Helpdesk, SOPs, Team, Remote Approvals. **No nested menus.**
+- **Neither list is maintained here.** `SideNav` reads the same `TAB_ITEMS` and `MORE_ITEMS` the phone bar reads, so a change to the navigation reaches both shells at once. A desktop copy of the list would drift — and it would drift on the surface fewest people look at, so the drift would survive for months.
 - Surface accounting: the SideNav surface **replaces** the tab bar surface in the §15 count — net zero against the budget.
 
 ### 20.3 Content column

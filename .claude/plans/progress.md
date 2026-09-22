@@ -615,3 +615,42 @@ EVIDENCE: 2 correct — 5 tests red first (3 of 5 after the count check was
   compiling, not only by reading.
 NEXT: D.1 — desktop. O2 answered (720px), so the token is signed off rather
   than provisional. The 1440 baselines it asks for need a reachable site.
+- 2026-09-22T14:37:04Z PUSH: nz-glass @ 2e3c01175
+- 2026-09-22T14:37:04Z COMMIT: 2e3c01175 fix(approvals): "Pending" never said pending on whom → review+design dispatched
+- 2026-09-22T14:40:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+
+REPAIR: 2.0 slice D.1 — desktop. Mostly VERIFICATION, and that is the finding:
+  the shell was built in phase 4 and slice 0.1's tab change reached it BY
+  ITSELF, because SideNav reads the same TAB_ITEMS and MORE_ITEMS the phone
+  bar reads. That is now pinned — a future edit giving the desktop its own
+  copy would let the two drift on the surface fewest people look at, and the
+  drift would survive for months.
+  Two real changes. (a) The 720px token still described itself as "a starting
+  value, expected to be tuned on device". The owner signed it off, so it says
+  that instead: a token that reads as unfinished invites the question to be
+  re-opened by whoever meets it next. (b) §20.2's own text still named the
+  PRE-2.0 side-nav order (HOME · ATTEND · LEAVE · PAY, then KPI, Issues,
+  SOPs, Expenses) — the spec describing a bar that no longer exists.
+NOTE: my own rule caught my own prose. The first rewrite of the token's
+  description explained the history using the words "expected to be tuned",
+  which is exactly what the test forbids. Reworded.
+NOTE: `yarn tokens` regenerated glass.css and the dvh fallback SURVIVED — the
+  generator-level fix from earlier today held, where the hand-patch had been
+  silently reverted twice.
+EVIDENCE: 2 correct — 5 tests, 1 red first (four already held, which is the
+  slice's point), 4 mutants killed: the token calls itself provisional again;
+  the side nav keeps its own list; the tab bar is visible at lg:; the width
+  changes. Suite 618 / 614 pass, same 4 red at HEAD all day. Gates: lint
+  234/0, contrast 56/0, surfaces 47 screens / 0 over, tokens ok. Build clean.
+
+=== 2.0 COMPLETE, 22 Sep 2026 ===
+All eight slices shipped: 0.1 tabs · 1.1 form copy · 1.2 chips · 1.3 Home ·
+2.1 attendance · 2.2 overtime · 3.1 form allowlists · 4.1 approvals · D.1
+desktop. Status table with commit shas is in the plan of record §6.
+NOT BUILT, deliberately, each because the plan marks it new backend and §7
+puts that out of scope: the unified approval queue, the attendance day sheet
+and missing-punch flag, travel and training rows, the leave ledger breakdown.
+OWED, both needing a reachable site: the 1440 visual baselines D.1 asks for,
+and every measured number in the 2026-09-09 audit (tabH 0 on all 36 screens,
+now marked stale in its own data).
+NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
