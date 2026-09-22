@@ -300,3 +300,34 @@ NOTE: two `props.doctype` uses remain in FormView and both are correct — a
   a person, which is the whole distinction this slice draws.
 NEXT: slice 1.2 — status chips. ShiftAssignmentItem renders
   `:label="status"` with no __(), so "Draft" and "Submitted" reach staff raw.
+- 2026-09-22T11:46:56Z COMMIT: 85691c270 fix(forms): every confirm and toast named a database table → review+design dispatched
+- 2026-09-22T11:49:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+
+REPAIR: 2.0 slice 1.2 — the shift chip. Two defects, one symptom.
+  UNTRANSLATED: ShiftAssignmentItem rendered `:label="status"` with no __()
+  at all, the only item component in the app that did not translate its label.
+  AND THE WORD WAS WRONG ANYWAY: its status is not a workflow state, it is
+  invented from docstatus — `props.doc.docstatus ? "Submitted" : "Draft"`.
+  Those are Frappe's two words for "this row is saved" and "this row is not".
+  "Draft" is the worse of the two: it reads as "you have not finished it" when
+  the shift is real and simply has not been submitted by whoever does the
+  rostering — not the employee, and not something they can act on.
+  So translating it was never the fix; a translation of the wrong word is the
+  wrong word in another language. `label` is now its own computed —
+  "Scheduled" / "Not scheduled yet" — and `status` still carries Frappe's
+  vocabulary because GStatusChip COLOURS from it and already knows those
+  names. Colour and word now come from the same fact without being the same
+  string.
+EVIDENCE: 2 correct — 4 tests RED first (4 of 4), 3 mutants killed: the label
+  reverts to status; the docstatus words return to the label; the translation
+  is dropped from inside the computed. Suite 575 / 571 pass, same 4 red at
+  HEAD. Gates: lint 234/0, contrast 56/0, surfaces 46/0, tokens ok.
+NOTE: my own rule was wrong first. It demanded `__()` in the TEMPLATE binding,
+  which the fix deliberately moved into the script — the better place once the
+  word is derived rather than passed through. The rule now follows a bound
+  identifier to its computed and checks there, and the docstatus rule is
+  scoped to label computeds so `status` may keep the vocabulary the chip needs
+  for colour.
+NEXT: slice 3.1 — the forms use a BLACKLIST (`excludeFields` with
+  naming_series hand-listed in expense_claim/Form.vue and leave/Form.vue), so
+  a new backend field leaks to staff unless each screen remembers to hide it.
