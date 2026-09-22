@@ -73,12 +73,23 @@ def _out_on_the_day_shift(**extra):
 	return row
 
 
+def _routed_get_all(assignments, punches):
+	def get_all(doctype, *a, **kw):
+		return assignments if doctype == "Shift Assignment" else punches
+
+	return get_all
+
+
 class TestTheDayAPunchLeftIsReMarked(unittest.TestCase):
 	def _restamp(self, rows):
 		db = MagicMock()
+		# The session rule now asks for the employee's assigned windows, so the
+		# stub has to answer two different queries. These cases are about the
+		# re-mark, not the roster: no assignment, so the rule falls back to the
+		# session window alone, exactly as it behaved before.
 		with (
 			patch.object(frappe, "db", db),
-			patch.object(frappe, "get_all", return_value=rows),
+			patch.object(frappe, "get_all", _routed_get_all([], rows)),
 			patch.object(mod, "remark_day_after_commit", return_value=True) as remark,
 		):
 			mod.CustomEmployeeCheckin._restamp_later_session_punches(_night_in())
@@ -106,6 +117,156 @@ class TestTheDayAPunchLeftIsReMarked(unittest.TestCase):
 	def test_a_punch_left_where_it_was_queues_nothing(self):
 		already_on_the_night = _out_on_the_day_shift(shift="Night", shift_start=NIGHT_IN)
 		db, remark = self._restamp([already_on_the_night])
+		db.set_value.assert_not_called()
+		remark.assert_not_called()
+
+
+# Norazmi, live 22 Sep 2026. A "7PM - 3.30AM" shift with a 360-minute check-out
+# grace has an actual window reaching 09:30 the next morning. His 08:09 IN — the
+# start of his own "8AM - 6PM" day — fell in that tail, so the session rule filed
+# it under the previous shift day: a 24.2-hour "pair" the engine refused, two
+# Attendance rows on one day, and a Fix screen that would not rebuild past them.
+#
+# shift_resolution.rostered_elsewhere settles it, but only if the override hands
+# the rule the employee's ASSIGNED windows. These pin that wiring: without the
+# candidates the rule is inert on live punches, which is the whole defect.
+
+NIGHT_ASSIGN = {
+	"name": "SA-NIGHT",
+	"shift_type": "7PM - 3.30AM",
+	"start_date": dt.date(2026, 8, 1),
+	"end_date": None,
+	"overtime_type": None,
+}
+DAY_ASSIGN = {
+	"name": "SA-DAY",
+	"shift_type": "8AM - 6PM",
+	"start_date": dt.date(2026, 8, 1),
+	"end_date": None,
+	"overtime_type": None,
+}
+
+
+def _shift_type(name, start, end, before=60, after=60):
+	doc = SimpleNamespace(
+		name=name,
+		start_time=start,
+		end_time=end,
+		begin_check_in_before_shift_start_time=before,
+		allow_check_out_after_shift_end_time=after,
+	)
+	doc.get = lambda key, default=None: getattr(doc, key, default)
+	return doc
+
+
+SHIFT_TYPES = {
+	"7PM - 3.30AM": _shift_type("7PM - 3.30AM", "19:00:00", "03:30:00", after=360),
+	"8AM - 6PM": _shift_type("8AM - 6PM", "08:00:00", "18:00:00"),
+}
+
+
+class TestTheNightsGraceDoesNotSwallowTheNextMorning(unittest.TestCase):
+	"""The override must give the session rule the assigned windows."""
+
+	def _morning_in(self):
+		return SimpleNamespace(
+			name="CK-MORNING-IN",
+			employee=EMP,
+			time=dt.datetime(2026, 8, 11, 8, 9, 39),
+			log_type="IN",
+			shift=None,
+			attendance=None,
+			skip_auto_attendance=0,
+			remote_approval_status=None,
+			synced_from_instance=None,
+			flags=SimpleNamespace(),
+		)
+
+	def _night_in_row(self):
+		return {
+			"name": "CK-NIGHT-IN",
+			"time": dt.datetime(2026, 8, 10, 19, 2),
+			"log_type": "IN",
+			"shift": "7PM - 3.30AM",
+			"shift_start": dt.datetime(2026, 8, 10, 19, 0),
+			"shift_end": dt.datetime(2026, 8, 11, 3, 30),
+			"shift_actual_start": dt.datetime(2026, 8, 10, 18, 0),
+			"shift_actual_end": dt.datetime(2026, 8, 11, 9, 30),
+			"overtime_type": None,
+			"group_count": 1,
+		}
+
+	def test_the_morning_in_does_not_continue_the_nights_session(self):
+		punch = self._morning_in()
+		stamped = []
+		with (
+			patch.object(frappe, "get_all", _routed_get_all([NIGHT_ASSIGN, DAY_ASSIGN], [])),
+			patch.object(frappe, "get_cached_doc", lambda _dt, name: SHIFT_TYPES[name]),
+		):
+			punch._previous_punch = self._night_in_row
+			punch._stamp_shift = lambda **kw: stamped.append(kw)
+			took = mod.CustomEmployeeCheckin._continue_previous_punch(punch)
+		self.assertFalse(took, "08:09 is inside 8AM - 6PM's own hours; the night's grace does not own it")
+		self.assertEqual(stamped, [], "nothing may be stamped onto the night")
+
+	def test_a_real_late_check_out_still_closes_its_night(self):
+		# 04:10 lies inside no other assigned shift's scheduled hours, so the
+		# grace does what the grace is for.
+		punch = self._morning_in()
+		punch.name = "CK-LATE-OUT"
+		punch.time = dt.datetime(2026, 8, 11, 4, 10)
+		punch.log_type = "OUT"
+		stamped = []
+		with (
+			patch.object(frappe, "get_all", _routed_get_all([NIGHT_ASSIGN, DAY_ASSIGN], [])),
+			patch.object(frappe, "get_cached_doc", lambda _dt, name: SHIFT_TYPES[name]),
+		):
+			punch._previous_punch = self._night_in_row
+			punch._stamp_shift = lambda **kw: stamped.append(kw)
+			took = mod.CustomEmployeeCheckin._continue_previous_punch(punch)
+		self.assertTrue(took)
+		self.assertEqual(stamped[0]["shift"], "7PM - 3.30AM")
+
+	def test_the_restamp_walk_leaves_the_next_mornings_punch_alone(self):
+		night = SimpleNamespace(
+			name="CK-NIGHT-IN",
+			employee=EMP,
+			time=dt.datetime(2026, 8, 10, 19, 2),
+			log_type="IN",
+			shift="7PM - 3.30AM",
+			shift_start=dt.datetime(2026, 8, 10, 19, 0),
+			shift_end=dt.datetime(2026, 8, 11, 3, 30),
+			shift_actual_start=dt.datetime(2026, 8, 10, 18, 0),
+			shift_actual_end=dt.datetime(2026, 8, 11, 9, 30),
+			overtime_type=None,
+			skip_auto_attendance=0,
+			remote_approval_status=None,
+			synced_from_instance=None,
+			flags=SimpleNamespace(),
+		)
+		morning = {
+			"name": "CK-MORNING-IN",
+			"time": dt.datetime(2026, 8, 11, 8, 9, 39),
+			"log_type": "IN",
+			"attendance": None,
+			"synced_from_instance": None,
+			"skip_auto_attendance": 0,
+			"remote_approval_status": None,
+			"shift": "8AM - 6PM",
+			"shift_start": dt.datetime(2026, 8, 11, 8, 0),
+			"shift_end": dt.datetime(2026, 8, 11, 18, 0),
+			"shift_actual_start": dt.datetime(2026, 8, 11, 7, 0),
+			"shift_actual_end": dt.datetime(2026, 8, 11, 19, 0),
+			"overtime_type": None,
+		}
+		db = MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_all", _routed_get_all([NIGHT_ASSIGN, DAY_ASSIGN], [morning])),
+			patch.object(frappe, "get_cached_doc", lambda _dt, name: SHIFT_TYPES[name]),
+			patch.object(mod, "remark_day_after_commit", return_value=True) as remark,
+		):
+			mod.CustomEmployeeCheckin._restamp_later_session_punches(night)
 		db.set_value.assert_not_called()
 		remark.assert_not_called()
 

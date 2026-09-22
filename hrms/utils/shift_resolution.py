@@ -122,6 +122,49 @@ def rostered_shift(punch_time: datetime, log_type: str | None, inside: list) -> 
 	return chosen
 
 
+def rostered_elsewhere(punch_time: datetime, candidates: list, shift: str | None) -> bool:
+	"""Whether another assigned shift's OWN SCHEDULED HOURS hold this punch,
+	while `shift`'s do not. Pure.
+
+	Norazmi, live 22 Sep 2026. A "7PM - 3.30AM" shift with a 360-minute
+	check-out grace has an actual window reaching 09:30 the next morning. His
+	08:09 IN — the start of his own 8AM - 6PM day — fell in that tail and 13
+	hours after the night IN, so the session rule claimed it for the night:
+	filed under the previous shift day, a 24.2-hour "pair" the engine refused,
+	and two Attendance rows the Fix screen then would not rebuild past.
+
+	S2 already ruled that a tap never jumps shift because a BUFFER overlaps
+	(15 Sep 2026). The session rule escaped that ruling; this is the same rule
+	applied to it. Grace is not working time: when the roster has a shift whose
+	real hours hold the punch, and the session's shift does not, the punch is
+	rostered there and no session may take it.
+
+	Deliberately narrow — both halves must hold:
+	  * a genuine late check-out at 04:10 lies inside no OTHER shift's
+	    scheduled hours, so it stays with its night, which is what the grace
+	    exists for;
+	  * a punch inside the session shift's own scheduled hours is never taken
+	    away, whatever else also covers it.
+	"""
+	if not candidates or not shift:
+		return False
+	for c in candidates:
+		if _shift_name(c) == shift and c["start_datetime"] <= punch_time <= c["end_datetime"]:
+			return False
+	for c in candidates:
+		if _shift_name(c) == shift:
+			continue
+		if c["start_datetime"] <= punch_time <= c["end_datetime"]:
+			logger.info(
+				"[shift_resolution] %s is inside %s's scheduled hours; %s's grace does not own it",
+				punch_time,
+				_shift_name(c),
+				shift,
+			)
+			return True
+	return False
+
+
 def counts_toward_session(row) -> bool:
 	"""A skip-stamped punch (a rejected one is skip-stamped) is not paired."""
 	return not int(row.get("skip_auto_attendance") or 0) and row.get("remote_approval_status") != "Rejected"
@@ -144,7 +187,7 @@ def _within_session(punch_time: datetime, stamp, since: datetime) -> bool:
 	return timedelta(0) <= punch_time - since <= SESSION_WINDOW and start <= punch_time <= end
 
 
-def continues_session(punch_time: datetime, earlier) -> bool:
+def continues_session(punch_time: datetime, earlier, candidates: list | None = None) -> bool:
 	"""Whether a punch continues the session of `earlier` — the employee's
 	stored punch just before it, as {time, log_type, group_count, shift,
 	shift_actual_start, shift_actual_end}. True when the earlier punch has a
@@ -154,8 +197,20 @@ def continues_session(punch_time: datetime, earlier) -> bool:
 	"Alternating entries" the engine pairs first and last of the shift group, so
 	an 18:31 tap recorded as IN after an 08:55 IN is the day's end, not a night
 	start (E4, 14 Sep 2026). A closed session is never continued — a day OUT at
-	18:00 must not swallow the real night IN at 19:30 (C1)."""
+	18:00 must not swallow the real night IN at 19:30 (C1).
+
+	`candidates` are the employee's assigned shift windows around the punch,
+	when the caller has them. With them, a punch the roster's own scheduled
+	hours put on ANOTHER shift is never continued (rostered_elsewhere): a night
+	shift's check-out grace must not swallow the next morning's day shift."""
 	if not earlier or not earlier.get("shift"):
+		return False
+	if rostered_elsewhere(punch_time, candidates or [], earlier.get("shift")):
+		logger.info(
+			"[shift_resolution] %s does not continue %s: it is rostered on another shift",
+			punch_time,
+			earlier["shift"],
+		)
 		return False
 	if not session_is_open(earlier.get("group_count") or 0, earlier.get("log_type")):
 		logger.info(
@@ -212,7 +267,7 @@ def returns_from_break(punch_time: datetime, log_type: str | None, earlier) -> b
 	return back
 
 
-def session_restamps(anchor, later: list) -> list:
+def session_restamps(anchor, later: list, candidates: list | None = None) -> list:
 	"""Names of `later` punches (time ascending, after `anchor`) that belong to
 	the anchor's session but carry another shift stamp. `anchor` carries
 	group_count (its position in its shift group) and log_type.
@@ -233,6 +288,16 @@ def session_restamps(anchor, later: list) -> list:
 		if not counts_toward_session(row):
 			continue
 		if not _within_session(row["time"], anchor, previous["time"]):
+			break
+		# The same rule as continues_session, walking forwards: a punch the
+		# roster's own scheduled hours put on another shift is not the anchor's
+		# to take, however open its session still is.
+		if rostered_elsewhere(row["time"], candidates or [], anchor.get("shift")):
+			logger.info(
+				"[shift_resolution] %s at %s is rostered on its own shift: walk stops",
+				row.get("name"),
+				row["time"],
+			)
 			break
 		if (row.get("shift"), row.get("shift_start")) == key:
 			count += 1

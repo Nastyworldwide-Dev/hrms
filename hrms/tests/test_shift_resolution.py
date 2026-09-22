@@ -21,6 +21,7 @@ import frappe
 from hrms.utils.shift_resolution import (
 	choose_shift,
 	continues_session,
+	rostered_elsewhere,
 	session_restamps,
 	superseded_assignments,
 )
@@ -735,8 +736,20 @@ class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 		)
 		doc.shift_actual_start, doc.shift_actual_end, doc.offshift = day["actual_start"], day["actual_end"], 0
 		later = [_punch("CKIN-OUT", datetime(2026, 9, 11, 23), _night1930())]
+		# The session rule now also asks for the employee's Shift Assignments, so
+		# the stub answers per doctype: this case is about the restamp and the
+		# re-mark, and with no assignment the rule falls back to the session
+		# window alone, exactly as it behaved before the roster was passed in.
+		checkin_calls = []
+
+		def _get_all(doctype, *a, **kw):
+			if doctype == "Shift Assignment":
+				return []
+			checkin_calls.append(kw)
+			return later
+
 		with (
-			patch.object(frappe, "get_all", return_value=later) as get_all,
+			patch.object(frappe, "get_all", _get_all),
 			patch.object(frappe.db, "set_value") as set_value,
 			patch.object(mod, "remark_day_after_commit") as remark,
 		):
@@ -744,7 +757,7 @@ class TestTheOverrideAppliesTheSessionRule(unittest.TestCase):
 		# F4: the OUT left the 11 Sep night; that day is re-marked
 		remark.assert_called_once()
 		self.assertEqual(remark.call_args.args[:2], ("HR-EMP-00009", datetime(2026, 9, 11).date()))
-		filters = get_all.call_args.kwargs["filters"]
+		filters = checkin_calls[-1]["filters"]
 		self.assertEqual(filters["employee"], "HR-EMP-00009")
 		# From the start of the shift day (the anchor's own group, for its
 		# position) to the end of the session window.
@@ -894,6 +907,113 @@ class TestWiring(unittest.TestCase):
 		)
 		names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
 		self.assertIn("superseded_assignments", names)
+
+
+class TestANightGraceDoesNotSwallowTheNextMorning(unittest.TestCase):
+	"""Norazmi (live, 22 Sep 2026), 10-11 August, "7PM - 3.30AM" + "8AM - 6PM".
+
+	The night shift's check-out grace stretches its actual window to 09:30 the
+	next morning. His 08:09 IN on the 11th — his OWN day shift's start, inside
+	8AM-6PM's scheduled hours — fell inside that grace tail and 13 hours after
+	the night IN, so `continues_session` claimed it for the previous night.
+
+	Everything the owner reported follows from that one stamp: the punch is
+	filed under the 10th's shift day (the list shows the 11th, the dialog shows
+	it under the 10th), the pair 07:58 -> 08:09-next-day spans 24.2 h so the
+	engine refuses the day ("a session is at most 20 hours"), and the two shift
+	groups produce TWO Attendance rows — which `day_block_reason` then refuses
+	to rebuild while both exist, so Fix attendance could do nothing at all.
+
+	The S2 rule already says a tap never jumps shift because a BUFFER overlaps.
+	The session rule escaped it: grace is not working time, and a punch the
+	roster's own scheduled hours hold is rostered there.
+	"""
+
+	def _night(self, day=10):
+		# 19:00 -> 03:30 with a 360-minute check-out grace: actual_end 09:30
+		return _cand("7PM - 3.30AM", datetime(2026, 8, day, 19), datetime(2026, 8, day + 1, 3, 30), grace=360)
+
+	def _morning(self, day=11):
+		return _cand("8AM - 6PM", datetime(2026, 8, day, 8), datetime(2026, 8, day, 18), grace=60)
+
+	def test_the_next_mornings_in_is_not_a_continuation_of_the_night(self):
+		"""The defect, in one line: with the day shift assigned too, 08:09 must
+		not continue the night session 13 hours earlier."""
+		night_in = _punch("CKIN-1900", datetime(2026, 8, 10, 19), self._night())
+		self.assertFalse(
+			continues_session(
+				datetime(2026, 8, 11, 8, 9, 39),
+				night_in,
+				candidates=[self._night(), self._morning()],
+			)
+		)
+
+	def test_with_no_other_shift_assigned_the_grace_tail_still_continues(self):
+		"""A genuine night worker holding ONE assignment is unchanged: nothing
+		else is rostered, so the grace tail keeps meaning what it meant."""
+		night_in = _punch("CKIN-1900", datetime(2026, 8, 10, 19), self._night())
+		self.assertTrue(
+			continues_session(datetime(2026, 8, 11, 8, 9, 39), night_in, candidates=[self._night()])
+		)
+
+	def test_the_morning_punch_is_claimed_by_its_own_rostered_shift(self):
+		self.assertTrue(
+			rostered_elsewhere(
+				datetime(2026, 8, 11, 8, 9, 39),
+				[self._night(), self._morning()],
+				"7PM - 3.30AM",
+			),
+			"08:09 sits inside 8AM - 6PM's own scheduled hours; the night's grace does not own it",
+		)
+
+	def test_a_real_late_check_out_in_the_grace_tail_still_belongs_to_the_night(self):
+		"""04:10, inside the grace tail and inside NO other shift's scheduled
+		hours, is the late check-out the grace exists for. It must still be the
+		night's."""
+		self.assertFalse(
+			rostered_elsewhere(
+				datetime(2026, 8, 11, 4, 10),
+				[self._night(), self._morning()],
+				"7PM - 3.30AM",
+			)
+		)
+
+	def test_a_punch_inside_the_nights_own_scheduled_hours_is_never_taken_away(self):
+		"""A double shift: 21:00 is inside the night's OWN hours. A morning
+		window anchored on the same clock day must not claim it — the guard
+		that answers False as soon as the session's shift holds the punch is
+		what stops an overlapping roster tearing a real session in half."""
+		overlapping = _cand("Long Day", datetime(2026, 8, 10, 8), datetime(2026, 8, 11, 2), grace=60)
+		self.assertFalse(
+			rostered_elsewhere(
+				datetime(2026, 8, 10, 21, 0),
+				[self._night(), overlapping],
+				"7PM - 3.30AM",
+			),
+			"the session's own scheduled hours hold 21:00; nothing else may take it",
+		)
+		self.assertFalse(
+			rostered_elsewhere(
+				datetime(2026, 8, 10, 21, 0),
+				[self._night(), self._morning()],
+				"7PM - 3.30AM",
+			)
+		)
+
+	def test_the_restamp_walk_does_not_pull_the_next_shift_days_punch_back(self):
+		"""The same hole on the way back: an earlier night IN arriving late
+		restamped the next morning's already-correct 8AM - 6PM punch onto the
+		night, silently moving it to the previous shift day."""
+		anchor = _punch("CKIN-1900", datetime(2026, 8, 10, 19), self._night())
+		later = [_punch("CKIN-0809", datetime(2026, 8, 11, 8, 9, 39), self._morning())]
+		self.assertEqual(session_restamps(anchor, later, candidates=[self._night(), self._morning()]), [])
+
+	def test_the_walk_still_claims_a_punch_its_own_shift_does_not_hold(self):
+		"""Unchanged: the 23:00 OUT mis-filed on the night, whose own scheduled
+		hours do hold it but on the anchor's OWN shift day, is still claimed."""
+		anchor = _punch("CKIN-IN", datetime(2026, 9, 11, 9), _day9())
+		later = [_punch("CKIN-OUT", datetime(2026, 9, 11, 23), _night1930())]
+		self.assertEqual(session_restamps(anchor, later), ["CKIN-OUT"])
 
 
 if __name__ == "__main__":

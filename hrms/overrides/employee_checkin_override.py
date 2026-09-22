@@ -141,7 +141,7 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		values = {field: anchor[field] for field in SESSION_STAMP_FIELDS}
 		values["offshift"] = 0
 		left_days = []
-		for name in session_restamps(anchor, later):
+		for name in session_restamps(anchor, later, _assigned_windows(self.employee, log_time, ahead=1)):
 			frappe.db.set_value(
 				"Employee Checkin",
 				{"name": name, "attendance": ("is", "not set"), "synced_from_instance": ("is", "not set")},
@@ -346,7 +346,11 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 
 		earlier = self._previous_punch()
 		log_time = get_datetime(self.time)
-		if not (continues_session(log_time, earlier) or returns_from_break(log_time, self.log_type, earlier)):
+		candidates = _assigned_windows(self.employee, log_time)
+		if not (
+			continues_session(log_time, earlier, candidates)
+			or returns_from_break(log_time, self.log_type, earlier)
+		):
 			return False
 		self._stamp_shift(
 			shift=earlier["shift"],
@@ -820,6 +824,51 @@ def _supports_for_shift() -> bool:
 		return "for_shift" in sig.parameters
 	except (TypeError, ValueError):
 		return False
+
+
+def _assigned_windows(employee, log_time, ahead: int = 0) -> list:
+	"""The employee's assigned shift windows around `log_time`, the same list
+	`fetch_shift` builds for `choose_shift`, anchored on the punch date AND
+	the day before so a night shift that started yesterday is in it.
+
+	The session rules need it to tell grace from working time: a "7PM -
+	3.30AM" shift with a 360-minute check-out grace reaches 09:30 the next
+	morning, and without this list the rule cannot see that 08:09 is the
+	employee's OWN day shift rather than the tail of the night
+	(shift_resolution.rostered_elsewhere; Norazmi, live 22 Sep 2026).
+	"""
+	assignments = frappe.get_all(
+		"Shift Assignment",
+		filters={
+			"employee": employee,
+			"status": "Active",
+			"docstatus": 1,
+			"start_date": ["<=", log_time.date()],
+		},
+		or_filters=[
+			["end_date", ">=", log_time.date()],
+			["end_date", "is", "not set"],
+		],
+		fields=["name", "shift_type", "start_date", "end_date", "overtime_type"],
+	)
+	windows = []
+	# `ahead` is for the FORWARD walk: session_restamps looks up to 20 hours
+	# past the anchor, so a punch on the next calendar day needs its own day's
+	# window in the list or the rule cannot see the shift it belongs to.
+	anchors = [log_time, log_time - timedelta(days=1)]
+	anchors += [log_time + timedelta(days=n) for n in range(1, ahead + 1)]
+	for assignment in assignments:
+		for anchor in anchors:
+			timings = _resolve_timings_fallback(employee, anchor, assignment)
+			if timings and timings.get("actual_start") and timings.get("actual_end"):
+				windows.append(timings)
+	logger.info(
+		"[employee_checkin] %s @ %s: %d assigned window(s) around the punch",
+		employee,
+		log_time,
+		len(windows),
+	)
+	return windows
 
 
 def _resolve_timings_fallback(employee, log_time, assignment):

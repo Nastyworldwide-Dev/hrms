@@ -1,39 +1,27 @@
-CLASS: a REFUSAL read as an ABSENCE. A producer that answers "here is the
-answer, or here is why there is none" is consumed as "here is the answer, or
-nothing is known" — and the consumer then falls back to a guess on exactly the
-inputs the producer refused. The refusal carries the information the fallback
-needed; dropping it turns the most-broken case into the least-informed one.
+CLASS: a shift's GRACE window is treated as its working hours, so a punch inside
+another assigned shift's own SCHEDULED hours is claimed by the neighbouring
+shift's session. S2 (15 Sep 2026) already ruled a tap never jumps shift because
+a BUFFER overlaps; choose_shift and rostered_shift honour it, the session rules
+did not.
 
-INSTANCE: `day_plan` suggests a pair only when it can READ the day. The dialog's
-`fresh_state` read "no suggestion" as "nothing known" and pre-ticked every
-counted punch — on a day the planner had explicitly refused. Four ticks are
-never 1 IN + 1 OUT, so the dialog refused its own opening state and Save &
-rebuild was dead. The only days HR opens this screen for are the refused ones.
+Instance: Norazmi, 10-11 Aug 2026. "7PM - 3.30AM" + 360-minute check-out grace
+reaches 09:30; his 08:09 IN (the start of his own "8AM - 6PM" day) was filed on
+the previous shift day -> a 24.2-hour pair the engine refused -> two Attendance
+rows on one day -> the Fix screen refused every rebuild.
 
-CALL SITES of what changed (`_suggested_roles`, `_screen`, `fresh_state`):
+Call sites of what changed (continues_session, session_restamps):
+- hrms/overrides/employee_checkin_override.py:351 (_continue_previous_punch)
+  same-root — now passes the assigned windows; this is the live path.
+- hrms/overrides/employee_checkin_override.py:144 (_restamp_later_session_punches)
+  same-root — same rule walking forwards, ahead=1 so the next day's window is
+  in the list.
+- hrms/utils/shift_resolution.py:240,244,292 — comments and the sibling rule
+  returns_from_break. not-affected: BREAK_RETURN_WINDOW is 6 hours and a return
+  from break is an OUT->IN inside one shift, so it cannot reach another shift's
+  scheduled hours.
+- hrms/api/attendance_fix_day.py — not-affected: it READS stamps and never
+  resolves a shift; it is the screen that showed the damage.
 
- hrms/api/attendance_fix_day.py:_screen        same-root — now also asks
-   `suggestion_refusal` when there is no pair, and ships it as
-   `suggestion_refusal` on the screen payload.
- hrms/public/js/fix_day.bundle.js:fresh_state  same-root — an unreadable day
-   pre-ticks NOTHING; the two "no suggestion" cases are now distinguished.
- hrms/public/js/fix_day.bundle.js:render_summary  same-root — shows the
-   planner's own sentence, so HR reads why nothing is ticked.
- hrms/public/js/fix_day.bundle.js:tap_html     same-root (second defect) — a
-   punch of this shift-day landing the NEXT calendar morning now carries its
-   date, so 07:38 (19 Aug) is not read as a twin of 07:39 (18 Aug).
- hrms/public/dist/js/fix_day.bundle.*.js       not-affected — build output,
-   gitignored, regenerated on deploy from the source above.
-
-No other consumer of `day_plan` drops its refusal: `plan_day` and `rebuild_day`
-both return/raise it. Verified by grep for `_suggested_roles|fresh_state|
-suggestion_refusal` across hrms/ — no call sites outside the two changed files.
-
-LOCKING THE CLASS:
- regression (the instance): hrms/tests/test_fix_day_unreadable_day.py
-   TheEngineCannotReadThisDay — Adam's 18 Aug really is refused by the planner.
- invariant (the class): same file, TheScreenSaysSoInsteadOfGuessing —
-   a refused day reports the planner's OWN sentence (not a second wording),
-   and a readable day reports none. Plus three source-asserted tests in
-   hrms/public/js/fix_day.bundle.test.js pinning that the dialog reads the
-   refusal rather than inferring it from an empty suggestion.
+Lock: regression test for the instance (the 08:09 case, both directions) and an
+invariant test for the class (a punch inside the session shift's OWN scheduled
+hours is never taken away, whatever else overlaps) — all mutation-checked.
