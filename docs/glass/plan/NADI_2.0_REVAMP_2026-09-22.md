@@ -680,3 +680,385 @@ Unchanged from §10 except for what the rulings added:
 
 A6 runs before anything touches `kpi/`, so the fence is pinned before the
 revamp goes near it.
+
+---
+
+## 17. The gap audit — what §1–§16 did not cover
+
+The owner's read was right: the plan covered **screens** comprehensively and
+**the craft underneath them** barely at all. §1 named five principles; a
+frontend discipline has roughly fifteen. What follows is the missing ten,
+each found by scanning the repo rather than by listing virtues.
+
+Every row below is a measured absence, not a preference.
+
+| # | Dimension | What the scan found | Severity |
+|---|---|---|---|
+| G1 | Accessibility beyond contrast | `aria-live` appears in **one** view. No skip link, no landmark audit, no keyboard-trap test | high |
+| G2 | Motion & animation | `prefers-reduced-motion` honoured in **4 of 90** components | high (WCAG 2.3.3, vestibular harm) |
+| G3 | Offline & data freshness | It is a **PWA**; there is no offline data strategy, no stale indicator, no queued write | high |
+| G4 | Performance budget | No budget, no bundle ceiling, no Core Web Vitals target | high |
+| G5 | Forms & validation | No shared validation, error-summary or recovery pattern | high |
+| G6 | Language & microcopy | No i18n catalogue in the repo; no term glossary; no BM strings | medium |
+| G7 | Theming & appearance | **No `prefers-color-scheme`** anywhere in `theme/`. Dark-only, by accident | medium |
+| G8 | Notifications | No strategy for what interrupts vs what waits | medium |
+| G9 | Session, error & recovery | No session-expiry UX, no retry policy, no crash boundary | high |
+| G10 | Device & input matrix | No stated support matrix; no landscape, tablet, or large-text case | medium |
+
+---
+
+## 18. G1 — Accessibility, the full standard
+
+**Target: WCAG 2.2 Level AA.** Not 2.1 — 2.2 is the current W3C
+Recommendation (October 2023) and adds three criteria this app fails.
+
+Current state: contrast is gated (56/0) and `design/gates/a11y.mjs` runs
+axe on serious+critical. That covers perhaps a third of AA.
+
+What is missing, each with its criterion:
+
+| Criterion | Rule | Where it bites |
+|---|---|---|
+| **1.3.1** Info & Relationships | Real landmarks (`main`, `nav`, `header`), headings in order | Ionic pages nest; no audit has been run |
+| **2.4.1** Bypass Blocks | A skip link to main content | Absent. Every screen makes a keyboard user walk the tab bar |
+| **2.4.3** Focus Order | Focus follows the visual order; a sheet traps focus and returns it | Sheets are used everywhere; untested |
+| **2.4.7** Focus Visible | Two-tone ring — already in the spec | Shipped, keep |
+| **2.4.11** Focus Not Obscured *(new in 2.2)* | The focused element is not hidden by the tab bar or a sticky header | Untested, and our tab bar is fixed — likely failing |
+| **2.5.7** Dragging Movements *(new in 2.2)* | Anything draggable has a non-drag alternative | Pull-to-refresh has a Refresh action? No |
+| **2.5.8** Target Size (Minimum) *(new in 2.2)* | 24×24 CSS px floor | We target 44; passes, but must be gated |
+| **4.1.3** Status Messages | `aria-live` for anything that appears without focus | **One view has it.** Every toast, every "saved", every error is silent to a screen reader |
+
+**Sources:** W3C WCAG 2.2 Recommendation; WAI-ARIA Authoring Practices 1.2
+(dialog, tabs, listbox patterns); MDN ARIA guidance.
+
+**Slice A7** — accessibility pass: skip link, landmarks, one shared
+`useAnnounce()` composable driving a single polite live region, focus
+return on every sheet close, and a keyboard walk test per screen.
+**Gate:** `a11y.mjs` gains the 2.2 criteria; a new `aria-live` test fails
+any component that shows a transient message without announcing it.
+
+---
+
+## 19. G2 — Motion
+
+**Rule: motion explains a change; it never decorates one.**
+
+Three things are missing:
+
+1. **`prefers-reduced-motion` is honoured in 4 of ~90 components.** WCAG
+   2.3.3 (Animation from Interactions, AAA) and the vestibular-disorder
+   research behind it make this a health issue, not a preference.
+   *Fix:* one `@media (prefers-reduced-motion: reduce)` block in
+   `glass.css` that zeroes every transition token, plus a gate refusing a
+   raw `transition:` outside the token system.
+2. **No duration scale.** Material 3 motion: **short 50–200ms**,
+   **medium 250–400ms**, **long 450–600ms**; emphasised easing for
+   entering, standard for moving, accelerate for leaving. Ours are ad hoc.
+   *Fix:* three duration tokens and three easing tokens, and that is all
+   there is.
+3. **No rule for what may move.** *Fix:* page transitions and sheets move;
+   list content never does. A list that animates on every refresh makes
+   the app feel slower than one that does not.
+
+**Sources:** Material 3 Motion (m3.material.io/styles/motion); Apple HIG
+Motion; WCAG 2.3.3; Val Head, *Designing Interface Animation*.
+
+**Slice A8.**
+
+---
+
+## 20. G3 — Offline, the part that makes it a PWA
+
+This is the largest genuine hole. The app installs, has a service worker
+and an update prompt, an `OfflineBanner` and a `useOnline` composable —
+and then **no offline data behaviour at all**. Offline today means an
+error screen with a nicer border.
+
+Three layers, in order of value:
+
+1. **Read: stale-while-revalidate.** Cache the last successful payload for
+   Home, Calendar, Requests, Score and Team in IndexedDB. Offline, render
+   it with an honest banner: *"Showing what we had at 08:12."* Never a
+   blank screen, never a silent lie.
+   *Source:* Google Workbox / web.dev offline cookbook — SWR is the
+   documented pattern for user-specific, frequently-changing data.
+2. **Write: queue the one write that matters.** Check-in/out is the only
+   action where being offline costs the employee money. A queued punch is
+   stamped with the device clock, shown as *"Queued — will send when
+   you're back"*, and replayed by a Background Sync registration.
+   *Source:* Background Sync API (W3C draft, shipped in Chromium; a
+   timer-based fallback for Safari, which is what our iOS users run).
+   *Constraint:* the server already owns punch validation, so a replayed
+   punch is validated on arrival exactly like a live one. **No client
+   trust.** A rejected replay surfaces as a notification, never silently.
+3. **Freshness, always visible.** Every cached screen carries the time its
+   data was fetched. An employee acting on a stale balance is a support
+   ticket; a timestamp costs one line.
+
+**What is explicitly NOT offline:** approvals and anything that spends
+money. A decision taken offline against stale data is worse than a
+decision deferred.
+
+**Slices F1 (read), F2 (queued punch), F3 (freshness stamps).**
+
+---
+
+## 21. G4 — Performance, with numbers
+
+**No budget exists today.** A budget that is not a number is not a budget.
+
+| Metric | Target | Source |
+|---|---|---|
+| **LCP** | ≤ 2.5s on 4G, mid-range Android | Core Web Vitals "good" threshold |
+| **INP** | ≤ 200ms | CWV, replaced FID March 2024 |
+| **CLS** | ≤ 0.1 | CWV |
+| **JS on first load** | ≤ 200KB gzipped | web.dev performance budget guidance |
+| **Route chunk** | ≤ 50KB gzipped | ours, derived from the above |
+| **Glass surfaces per screen** | ≤ 6 | spec §15, already gated |
+
+Known risks in this repo, each real:
+- **`pdfjs-dist`** and **`firebase`** are both heavyweight and must be
+  route-split, not in the entry chunk.
+- Blur is GPU-expensive on mid-range Android — the §15 surface cap exists
+  for this and is already gated. Keep it.
+- No image policy: no dimensions attribute means layout shift (CLS).
+
+**Slice A9** — a `bundle.mjs` gate reading the Vite manifest and failing
+on a chunk over budget, plus route-level code splitting, plus explicit
+width/height on every image.
+
+---
+
+## 22. G5 — Forms
+
+Ten forms in the app and no shared contract. Each one invents its own
+errors.
+
+The standard, all four sourced from NN/g form research and WCAG:
+
+1. **Label above the field, always visible.** Placeholder-as-label fails
+   as soon as typing begins (NN/g, *Placeholders in Form Fields Are
+   Harmful*).
+2. **Validate on blur, not on keystroke.** Errors that appear mid-word
+   punish the user for not having finished. Re-validate live only *after*
+   a field has already errored.
+3. **Error text sits at the field**, says what is wrong AND what to do,
+   and is bound with `aria-describedby`. WCAG 3.3.1 (Error
+   Identification) + 3.3.3 (Error Suggestion).
+4. **On failed submit, an error summary at the top** with links to each
+   field, focus moved to it. WCAG 3.3.1; this is the GOV.UK Design System
+   pattern and is the most-tested form pattern in existence.
+
+Plus two of ours, from defects already paid for:
+5. **Never lose typed input.** A failed submit, a session expiry, or a
+   navigation keeps the draft.
+6. **The submit button states the consequence** — *"Submit · 2 days
+   leave"*, not *"Submit"*.
+
+**Slice A10** — `FormShell.vue` carries all six; the ten forms inherit
+rather than each re-implementing.
+
+---
+
+## 23. G6 — Language and microcopy
+
+There is no translation catalogue in the repo. Every string goes through
+`__()` and resolves to English. For a Malaysian workforce that is a
+decision nobody took.
+
+Two separate things:
+
+**Terminology (do now, costs nothing).** A glossary file, one column
+"what the system calls it", one "what an employee calls it". The 2.0
+slices did this ad hoc for six screens; a glossary makes it checkable and
+is what R5's naming gate reads from. Examples already on record:
+Employee Checkin → *punches*; Shift Assignment → *your shifts*;
+Attendance Request → *fix a day*; Expense Claim → *claim*.
+
+**Bahasa Malaysia (a decision for the owner).** Every string is already
+wrapped, so the cost is translation, not engineering — plus one language
+toggle in Profile → App. Ruling needed; it is not assumed here.
+
+**Microcopy rules:** one idea per sentence; say the consequence before the
+action; never a doctype name; never "Error"; a number in a sentence, not
+on its own.
+
+**Slice D4** (glossary + gate). BM is ruling Q6.
+
+---
+
+## 24. G7 — Appearance
+
+`prefers-color-scheme` appears **nowhere** in `theme/`. The app is
+dark-only because nobody chose it, and dark-only is a real accessibility
+problem: people with astigmatism read light-on-dark measurably worse
+(halation).
+
+Three positions are defensible; one must be chosen (ruling Q7):
+- **A — dark only, stated.** Cheapest. Say so in Profile so it reads as a
+  decision. But it fails the astigmatism case permanently.
+- **B — follow the system, both themes.** Correct, and the token system
+  already has theme layers — the contrast gate runs per theme. Cost: a
+  light palette and 114 more baselines.
+- **C — system + manual override in Profile.** B plus one toggle. This is
+  what Material and HIG both recommend, and what users expect in 2026.
+
+**Recommendation: C**, built as B plus a toggle. The token architecture
+already supports it; what is missing is the light palette and the
+`@media` block.
+
+Also missing and cheap: **`prefers-contrast: more`** support, and honouring
+OS **text size** (Dynamic Type). Text that cannot grow fails WCAG 1.4.4
+(Resize Text, AA) — our fixed px sizes do exactly that. *Fix:* type
+tokens in `rem`, container queries where a layout would break.
+
+**Slice A11.**
+
+---
+
+## 25. G8 — Notifications
+
+Push exists (`firebase`, `PushNotificationPrompt`). What is missing is the
+policy for what earns an interruption.
+
+| Tier | What | Channel |
+|---|---|---|
+| **Interrupt** | A decision on your request; your punch failed; a notice needing acknowledgement | push + in-app |
+| **Inform** | New announcement; something now waiting on you as approver | in-app badge, batched daily push |
+| **Ambient** | Everything else | in-app only, no push |
+
+Rules: never two notifications for one event; tapping one lands on the
+**thing**, never a list; a batch says the count, not the last item; the
+permission prompt appears after the first value is delivered, never at
+first launch (the single largest cause of permanent denial).
+
+**Sources:** web.dev push UX patterns; Apple HIG Notifications;
+`pwa-notification-tap-defects` — this repo has already paid for tap
+routing twice.
+
+**Slice D5.**
+
+---
+
+## 26. G9 — Session, errors, recovery
+
+Three absences, all of which produce a confused employee and a support
+call.
+
+1. **Session expiry.** A Frappe session ends and the next call 403s. The
+   PWA has no handling: the employee sees a generic error. *Fix:* a
+   401/403 interceptor that routes to login **keeping the destination**,
+   and returns there after sign-in. Draft input preserved (G5 rule 5).
+2. **Retry policy.** No retry anywhere. A dropped request on a phone is
+   normal, not exceptional. *Fix:* exponential backoff, 3 attempts, on
+   **idempotent reads only** — a retried punch would double-punch, which
+   is exactly the class of defect this codebase spent September on.
+3. **Crash boundary.** A render error blanks the app. *Fix:* a top-level
+   `onErrorCaptured` boundary showing "Something broke on this screen",
+   a Reload action, and the build string — every phone defect this month
+   started with "which version are you on".
+
+**Slice F4.**
+
+---
+
+## 27. G10 — Devices, input, and what we support
+
+No support matrix exists, so "does it work" has no answer.
+
+**Stated matrix:**
+
+| | Supported |
+|---|---|
+| Widths | 320 (floor) · 360 · 390 · 430 · 768 · 1024+ |
+| Orientation | Portrait primary; landscape must not break, need not be optimised |
+| iOS | Safari, last 2 major versions |
+| Android | Chrome, last 2 major versions |
+| Input | Touch, keyboard, screen reader (VoiceOver, TalkBack) |
+| Text size | Up to 200% (WCAG 1.4.4) |
+
+**320px is the floor** because it is the narrowest device still in use and
+is what WCAG 1.4.10 (Reflow) effectively assumes. Our current layouts have
+never been checked at 320.
+
+**Slice A12** — a responsive test rendering every screen at each width and
+failing on horizontal overflow, plus a 200%-text pass.
+
+---
+
+## 28. What this adds to the order of work
+
+Twelve new slices. A-series are craft, F-series are resilience.
+
+| # | Slice | Kind | From |
+|---|---|---|---|
+| A7 | WCAG 2.2 AA pass — landmarks, skip link, live region, focus return | feat | G1 |
+| A8 | Motion tokens + reduced-motion, app-wide | refactor | G2 |
+| A9 | Performance budget gate + route splitting + image dimensions | refactor | G4 |
+| A10 | `FormShell` six-rule form contract | refactor | G5 |
+| A11 | Light theme + system follow + override + `rem` type | feat | G7 |
+| A12 | Responsive matrix test, 320→1024, 200% text | chore | G10 |
+| D4 | Terminology glossary + naming gate reads it | chore | G6 |
+| D5 | Notification tiering | feat | G8 |
+| F1 | Offline reads — stale-while-revalidate | feat | G3 |
+| F2 | Queued check-in with Background Sync | feat | G3 |
+| F3 | Freshness stamps on every cached screen | feat | G3 |
+| F4 | Session expiry, retry policy, crash boundary | feat | G9 |
+
+**Total: 29 slices** (17 from §16, 12 here).
+
+### Revised phase order
+
+1. **Phase A — craft (A1–A12).** Everything that makes the app *feel*
+   like a 2026 product: grid, type, density, states, motion, a11y,
+   performance, forms, theme, responsive. Nothing here needs a new
+   endpoint; all of it is visible.
+2. **Phase F — resilience (F1–F4).** Offline, recovery. Runs alongside A;
+   they touch different files.
+3. **Phase B — announcements and the real Needs-You queue.**
+4. **Phase C — calendar and counters.**
+5. **Phase D — Home bar, Team, Helpdesk/SOP/Profile, glossary,
+   notifications.**
+6. **Phase E — baselines, last, because everything above changes pixels.**
+
+A6 (the KPI fence guard) still runs before anything touches `kpi/`.
+
+---
+
+## 29. Every gate, after all of this
+
+A rule without a gate is a promise. The full set:
+
+| Gate | Enforces | New? |
+|---|---|---|
+| `lint.mjs` | no raw colours, **no stray pixel values** | extended |
+| `contrast.mjs` | 4.5:1 body, per theme | exists |
+| `surfaces.mjs` | ≤6 glass surfaces per screen | exists |
+| `a11y.mjs` | axe serious+critical, **+ WCAG 2.2 criteria** | extended |
+| `tokens.mjs` | role binding, collapse, **+ 4pt grid, + type ratio** | extended |
+| `coherence.mjs` | design-system coherence | exists |
+| `usage.mjs` | tokens actually used | exists |
+| `visual.mjs` | 114 baselines | exists |
+| **`states.mjs`** | four states on every data surface | **new** |
+| **`bundle.mjs`** | chunk and entry budgets | **new** |
+| **`motion.mjs`** | no raw transitions; reduced-motion honoured | **new** |
+| **`responsive.mjs`** | no overflow 320→1024; 200% text | **new** |
+| **`naming.test.js`** | nav, page title and spec agree; glossary respected | **new** |
+| **`permission.test.js`** | no role literal in `views/` | **new** |
+| **`test_kpi_fence.py`** | the four tiers, unwidened | **new** |
+| **`aria-live.test.js`** | transient messages are announced | **new** |
+
+Seven new gates, four extended. This is the answer to "how do I know you
+are not doing something wrong": every claim in this plan fails a build if
+it stops being true.
+
+---
+
+## 30. Rulings still open
+
+| # | Question |
+|---|---|
+| Q6 | Bahasa Malaysia — wanted now, later, or not? Strings are already wrapped; the cost is translation |
+| Q7 | Appearance — dark only (stated), follow the system, or follow + override? **Recommendation: follow + override** |
+| Q8 | Offline check-in queueing — the device clock stamps it and the server validates on arrival. Acceptable, given attendance history? |
+| Q9 | Landscape — must not break is the proposal. Anyone using it? |
