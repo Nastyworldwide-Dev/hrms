@@ -1271,6 +1271,65 @@ html[data-theme="dark"] .g-badge--open {
 .g-cellgrid--stat-4 > .g-cell + .g-cell {
 	border-left: 1px solid var(--g-hair);
 }
+
+/* ---------- quick-link tile grid (plan §2 C1) ----------
+   Eight full-width rows cost ~450px on a phone whose whole usable height is
+   ~440px (invariant F1). Four across x two rows carries the same eight
+   destinations for ~176px.
+   Same one-surface rule as the balance grid: the cells sit inside a single
+   .g-glass .g-cellgrid, so this is 1 surface against the §15 budget of 6, not
+   8. Dividers are drawn as cell borders for the same reason. */
+.g-cellgrid--quick {
+	grid-template-columns: repeat(4, 1fr);
+}
+.g-cell--quick {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 6px;
+	/* The tile is the target. 44px is the floor from layout.touch-target-min —
+	   already stricter than WCAG 2.5.8 AA (24px) — but the real tile is taller;
+	   min-height is the guarantee, not the design. */
+	min-height: var(--g-touch-target-min);
+	padding: 11px 4px 10px;
+	border-radius: var(--g-radius-tile);
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	color: var(--g-ink);
+	text-align: center;
+}
+.g-cell--quick:active {
+	background: var(--g-icon-bg);
+}
+/* The panel clips overflow, so an outer ring cannot show on a tile (WCAG
+   2.4.7) — the inset variant, same as .g-row--tappable. */
+.g-cell--quick:focus-visible {
+	outline: none;
+	box-shadow: var(--g-shadow-focus-ring-inset);
+}
+/* One hairline between columns and between the two rows, drawn on the cells so
+   the panel keeps a single background. */
+.g-cellgrid--quick > .g-cell:not(:nth-child(4n + 1)) {
+	border-left: 1px solid var(--g-hair);
+}
+.g-cellgrid--quick > .g-cell:nth-child(n + 5) {
+	border-top: 1px solid var(--g-hair);
+}
+.g-cell__label {
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-caption-size);
+	line-height: 1.2;
+	color: var(--g-ink);
+	/* Two lines, then ellipsis: "Request Attendance" must not push one tile
+	   taller than its neighbours and break the grid's rhythm. The full label
+	   stays in the accessible name either way. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
 /* §20.5: balance grid 2-up mobile → 4-up at lg:, one row, no top dividers.
    Stat tiles stay 3-up at both breakpoints. */
 @media (min-width: 1024px) {
