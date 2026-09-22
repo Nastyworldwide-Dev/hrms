@@ -547,3 +547,35 @@ EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: the title
   contrast 56/0, surfaces 47/0, tokens ok. Build clean.
 NEXT: 2.0 slice 2.1 — Attendance and clock-in history, then 4.1 (Approvals +
   Helpdesk) and D.1 (desktop).
+- 2026-09-22T14:27:13Z PUSH: nz-glass @ be2e5f5a5
+- 2026-09-22T14:27:13Z COMMIT: be2e5f5a5 fix(overtime): a claim about money read as a document → review+design dispatched
+- 2026-09-22T14:30:55Z EVIDENCE: 2 correct — mapped tests green (bun ) for 8 file(s) ⟂514b00a817f9
+
+REPAIR: 2.0 slice 2.1 — attendance screens name the thing, not the table.
+  Three were titled with a doctype: "Employee Checkin History", "Shift
+  Assignment History", "Attendance Request History". An employee looking for
+  the times they tapped in does not know what an Employee Checkin is, and
+  "Shift Assignment" is the TABLE that stores a roster line — the word is
+  "shifts". Now "Your check-ins", "Your shifts", "Your attendance requests".
+  And the dashboard carried the SAME defect slice 2.2 had just fixed one
+  screen over: `__(claimableOt.data.compensation)`, translating the server's
+  own Select value, so "Overtime Pay" reached the screen because the
+  translation files do not contain it. Mapped explicitly, same two values, and
+  a test now scans every attendance screen and every component for
+  `__(compensation|workflow_state|docstatus)` so the class cannot reappear.
+NOTE: the layout work §3.2 describes for these screens — the day sheet, the
+  missing-punch flag, travel and training dots — is marked N in the plan: it
+  needs backend that does not exist. Building it is a FEATURE, and §7 puts
+  features out of 2.0's scope. This slice is the wording, which is what the
+  §6 row actually asks for ("plain labels; no doctype words").
+NOTE: the fix exposed a real runtime bug that only the lint gate could see.
+  `__` is a TEMPLATE-only global (main.js:141, app.config.globalProperties) —
+  Vue resolves it in markup, and this file had never needed it in the script
+  because every previous call was in the template. A computed that builds a
+  word does need the real function, and `no-undef` said so. Injected.
+EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: a title
+  reverts to the doctype; the raw compensation is translated; the shifts title
+  says "Assignment"; the outcome mapping is dropped. Suite 608 / 604 pass,
+  same 4 red at HEAD. Gates: lint 234/0, contrast 56/0, surfaces 47/0, tokens
+  ok. Build clean.
+NEXT: 2.0 slice 4.1 — Approvals and the Helpdesk hub. Then D.1 (desktop).

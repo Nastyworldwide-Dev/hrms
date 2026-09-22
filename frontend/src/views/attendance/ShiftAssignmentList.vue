@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Shift Assignment"
-			:pageTitle="__('Shift Assignment History')"
+			:pageTitle="__('Your shifts')"
 			:fields="SHIFT_ASSIGNMENT_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>

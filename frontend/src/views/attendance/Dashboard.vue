@@ -26,7 +26,7 @@
 									}}
 								</span>
 								<span class="text-sm text-ink-600">
-									{{ __("{0} · tap to claim", [__(claimableOt.data.compensation)]) }}
+									{{ __("{0} · tap to claim", [claimOutcome]) }}
 								</span>
 							</div>
 							<span class="text-accent-ink text-xl" aria-hidden="true">→</span>
@@ -182,12 +182,32 @@ const router = useRouter()
 const calendar = ref(null)
 onIonViewWillEnter(() => calendar.value?.refresh?.())
 const dayjs = inject("$dayjs")
+// This file had never needed `__` in the SCRIPT — every call was in the
+// template, where Vue resolves it from globalProperties. A computed that
+// builds a word needs the real function.
+const __ = inject("$translate")
 
 // Overtime the employee has worked but not yet filed — drives the "to claim" card
 // at the top of the screen so it is discoverable, not accidental. Session-scoped.
 const claimableOt = createResource({
 	url: "hrms.api.get_claimable_ot_summary",
 	auto: true,
+})
+
+//: The two wire values of `compensation` — the doctype's Select options,
+//: which cannot change without a migration. Mapped explicitly rather than
+//: passed through `__()`: the translation files carry UI strings, not doctype
+//: values, so translating the raw value is precisely how "Overtime Pay"
+//: reaches an employee's screen. Same defect, same fix as the OT row
+//: (2.0 slice 2.2) and the shift chip (1.2).
+const CLAIM_OUTCOME = {
+	"Overtime Pay": () => __("Overtime pay"),
+	"Replacement Leave": () => __("A day off in return"),
+}
+
+const claimOutcome = computed(() => {
+	const chosen = CLAIM_OUTCOME[claimableOt.data?.compensation]
+	return chosen ? chosen() : __("Overtime")
 })
 
 const isRLClaim = computed(() => claimableOt.data?.compensation === "Replacement Leave")

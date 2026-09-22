@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Employee Checkin"
-			:pageTitle="__('Employee Checkin History')"
+			:pageTitle="__('Your check-ins')"
 			:fields="EMPLOYEE_CHECKIN_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 			orderBy="time desc"
