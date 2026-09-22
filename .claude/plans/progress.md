@@ -286,3 +286,24 @@ LEARNING(gate): a mutation run must clear __pycache__ between mutants — a
 NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
   (19:00-03:30), then cut the check-out grace from 120.
 - 2026-09-22T08:09:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-22T08:09:57Z PUSH: nz-glass @ 29d56b08f
+- 2026-09-22T08:09:58Z COMMIT: 29d56b08f fix(attendance): the repair trusted an owner list that could go stale → review dispatched
+
+NOTE: second review (29d56b08f) came back DEPLOY, no Critical, 86 tests green.
+  Its one Warning asked me to confirm why `roster_drifted` refuses the WHOLE
+  shift rather than just excluding the drifted name — and one premise in it is
+  wrong, which is why the answer is now in the docstring rather than in a reply
+  nobody will read. It reasoned that an extra assignee "would only ever be
+  excluded, same as a legitimate owner", so treating them as an owner is free.
+  It is not: a STRAY assignment is what stamped these punches to the wrong
+  shift in the first place, so reading ownership back out of the roster lets
+  the defect grant itself an exemption and skip somebody who should be
+  repaired. The constant is the only reading of ownership taken while a human
+  was looking at the list. Refusing costs the two real owners nothing — their
+  punches on their own shift are correct by definition and this job never
+  touches them. What it defers is everyone else, until a human reads the log.
+LEARNING(how): when a reviewer asks "is this the intended trade?", the answer
+  belongs next to the rule, not in a reply — the next reader will have the same
+  question and no transcript.
+NEXT: Nabil deploys. Order: repair first, THEN save the corrected shift times
+  (19:00-03:30), then cut the check-out grace from 120.

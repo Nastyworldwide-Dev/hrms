@@ -88,6 +88,20 @@ def roster_drifted(shift, owners) -> str | None:
 	So a drifted roster REFUSES the shift rather than repairing against a
 	stale list. Doing nothing is recoverable; reverting a real owner's month
 	is not.
+
+	WHY THE WHOLE SHIFT, AND NOT JUST THE DRIFTED NAME (review of 29d56b08f).
+	The obvious lighter answer is to treat an extra assignee as an owner too —
+	exclude them, repair everyone else. That is precisely the circularity this
+	constant exists to avoid: a STRAY assignment is what stamped these punches
+	to the wrong shift in the first place, so reading ownership back out of the
+	roster would let the defect grant itself an exemption and skip a person who
+	should be repaired. The constant is the only reading of ownership taken
+	while a human was looking at the list.
+
+	Refusing costs nothing for the two known owners: their punches on their own
+	shift are correct by definition and this job never touches them. What it
+	defers is the repair of everyone else on that shift, until a human reads
+	the Error Log and says who owns it now. That is the intended trade.
 	"""
 	assigned = {
 		row["employee"]
