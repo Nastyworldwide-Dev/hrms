@@ -23,7 +23,10 @@
 
   Props:
     title      string, required — e.g. "August 2026"
-    days       array, required — [{ day: 14, state: "present"|"leave"|"rest"|"absent"|"none" }]
+    days       array, required — [{ day: 14, state: "present"|"leave"|"rest"|"absent"|"none",
+               flags: ["leave"|"holiday"|"event"|"needs_you"] }]. `flags` is
+               optional and capped at three BY THE SERVER, so the payload and
+               the tile always agree about what is drawn.
     leadingBlanks number, default 0 — empty cells before day 1
     weekdays   array — 7 single-letter headers, defaults to Mon–Sun initials
     legend     array — [{ state, label }]; defaults to the four states above
@@ -59,10 +62,26 @@
 				type="button"
 				class="g-cal__day g-focusable"
 				:class="`g-cal__day--${d.state}`"
-				:aria-label="`${d.day} ${title}, ${stateLabel(d.state)}`"
+				:aria-label="dayLabel(d)"
 				@click="$emit('select', d.day)"
 			>
 				{{ d.day }}
+				<!-- DOTS, never words (revamp §4). A tile is ~44px: it holds a
+				     date and up to three 4px dots, and trying to fit a sentence
+				     into it is what makes a calendar unreadable. The words are
+				     one tap away, on the day sheet.
+
+				     aria-hidden, because the dots are already IN the button's
+				     label — a screen reader reading "14 September, present" and
+				     then three unnamed marks is worse than not drawing them. -->
+				<span v-if="d.flags?.length" class="g-cal__dots" aria-hidden="true">
+					<span
+						v-for="flag in d.flags"
+						:key="flag"
+						class="g-cal__dot"
+						:class="`g-cal__dot--${flag}`"
+					/>
+				</span>
 			</button>
 		</div>
 
@@ -98,5 +117,21 @@ defineEmits(["select"])
 // a state in the legend renames it in the announcement too
 function stateLabel(state) {
 	return props.legend.find((k) => k.state === state)?.label ?? "no record"
+}
+
+//: What each dot MEANS, spoken. §14.1: colour is never the only signal, and a
+//: dot is colour and nothing else — so the flags go into the tile's accessible
+//: name rather than being drawn and left unexplained.
+const FLAG_LABELS = {
+	leave: "on leave",
+	holiday: "holiday",
+	event: "company event",
+	needs_you: "needs you",
+}
+
+function dayLabel(d) {
+	const base = `${d.day} ${props.title}, ${stateLabel(d.state)}`
+	if (!d.flags?.length) return base
+	return `${base}, ${d.flags.map((flag) => FLAG_LABELS[flag] || flag).join(", ")}`
 }
 </script>

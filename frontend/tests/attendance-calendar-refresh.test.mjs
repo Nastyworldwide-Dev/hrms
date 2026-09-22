@@ -14,7 +14,7 @@ import assert from "node:assert/strict"
 import vm from "node:vm"
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
-import { computed, ref, reactive, effectScope, nextTick } from "vue"
+import { computed, ref, reactive, watch, effectScope, nextTick } from "vue"
 
 const require = createRequire(import.meta.url)
 const dayjs = require("dayjs")
@@ -40,6 +40,18 @@ function fixture() {
 		computed,
 		ref,
 		reactive,
+		// The component watches `firstOfMonth` to fetch that month's calendar
+		// DOTS (revamp §4). Without `watch` in the sandbox the whole script
+		// block threw "watch is not defined" and three unrelated tests failed
+		// — the harness stubs Vue by hand, so every API the component adds has
+		// to be added here too.
+		watch,
+		// Every import is stripped by `executable`, so anything the component
+		// imports has to exist in the sandbox. The flags resource is a
+		// SEPARATE read from the attendance calendar these tests are about —
+		// stubbed rather than exercised, so a month-stepping bug in one cannot
+		// be masked by the other.
+		monthFlags: reactive({ data: null, fetch() {} }),
 		Event,
 		console: { info() {}, warn() {} },
 		getConfig: () => undefined,

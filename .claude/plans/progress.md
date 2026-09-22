@@ -2,106 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  tab routes now.
-NOTE: two gates were silently stale and neither would have said so.
-  coherence-rules.mjs still listed the OLD tab roots, and it skips without a
-  running site, so nothing complained; e2e/screens.mjs did not know /requests
-  existed, so every future measurement would have missed a tab root.
-EVIDENCE: 2 correct — 7 tests red first (4 of 7), 4 mutants killed: wrong
-  order; Calendar points elsewhere; More drops the routes it inherited; a
-  sixth tab. Suite 592 / 588 pass, same 4 red at HEAD. Gates: lint 234/0,
-  contrast 56/0, surfaces 47 screens (the new hub) / 0 over, tokens ok. Build
-  clean.
-NOTE: my own test read the bar's order from COMMENTS (stripped, so never
-  matched), then from literal titles (only More has one), before resolving
-  NAV_ITEMS[n] against the source list. Three attempts to read five names.
-NEXT: 2.0 slice 1.3 — Home, now that the bar says what Home is for.
-- 2026-09-22T12:15:28Z PUSH: nz-glass @ bb3796ebe
-- 2026-09-22T12:15:28Z COMMIT: bb3796ebe feat(nav): the tab bar is Home, Calendar, Requests, Score, More → review+design dispatched
-- 2026-09-22T14:23:10Z EVIDENCE: 2 correct — mapped tests green (bun ) for 13 file(s) ⟂884c4344e835
-
-REPAIR: 2.0 slice 1.3 — Home. §3.1's order is check-in, what NEEDS YOU, then
-  your requests. What shipped was an approvals banner, the check-in card,
-  SEVEN QUICK LINKS, then the request panel.
-  The quick links are the change. They were Home's answer to "how do I start a
-  request?" — a question that now has a screen of its own one tap from
-  anywhere (slice 0.1's Requests tab). Keeping them meant Home's LARGEST block
-  existed to answer what the navigation answers, while the thing the plan puts
-  in that slot — what needs the employee today — was one conditional banner.
-  PendingApprovalsBanner is now a ROW inside NeedsYou. It answered exactly one
-  question; the plan's row is wider (approvals, geofence reviews, issue
-  replies, later SOPs and expiring certs) and as banners each new kind would
-  be another conditional block above the fold with its own empty state. As
-  rows in one bounded list, a new kind is a row. Bounded at three with "N
-  more", the request panel's shape, because this is the list that spikes when
-  an approver goes on leave.
-  Its empty state is ABSENCE: a permanent "nothing needs you" row is wrong
-  most of the time and costs the fold every day.
-NOTE: the banner's two hard-won copy rules travelled with it and are now
-  pinned against NeedsYou — no "tap to review" on a row that is already a
-  button, and "REMOTE check-in(s)", because the count is
-  remote_checkin.get_pending_count and an approver reading a bare "check-ins
-  to approve" would take it for all of them and stop looking.
-NOTE: two existing tests failed for the right reason and were re-aimed, not
-  loosened: the skeleton-tile count read Home for the link count (the links
-  moved), and the expenses-coin rule pointed at Home (same). Re-aiming the
-  first found a REAL defect — GTileGrid's skeleton still defaulted to seven
-  tiles while Requests passes six, so the panel would have jumped a row on
-  load. That is the defect that test was written for, caught by moving it.
-NOTE: the coin mutant survived TWICE before the assertion was right. A window
-  ending at the label missed the icon on the same line; a line match missed it
-  once the formatter wrapped the entry across five lines. It matches the whole
-  ENTRY now, brace to label.
-NOTE: `h-[17px] w-[17px]` is ELEVEN literals across SEVEN files. NeedsYou uses
-  the named `.g-row-icon` instead; the other ten are a TICKET in family.md,
-  not smuggled into a Home restructure.
-EVIDENCE: 2 correct — 6 tests red first (4 of 6), 5 mutants killed (wrong
-  order; quick links return to Home; needs-you unbounded; it renders when
-  empty; a quick link lost in the move) plus 2 on the re-aimed tests. Suite
-  598 / 594 pass, same 4 red at HEAD. Gates: lint 234/0, contrast 56/0,
-  surfaces 47 / 0 over, tokens ok. Build clean.
-NEXT: 2.0 slice 2.2 — OT claims read as money owed, not documents.
-- 2026-09-22T14:23:17Z PUSH: nz-glass @ 2ebffe118
-- 2026-09-22T14:23:17Z COMMIT: 2ebffe118 feat(home): Home is what is happening, what needs you, what you asked for → review+design dispatched
-- 2026-09-22T14:27:07Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-
-REPAIR: 2.0 slice 2.2 — overtime reads as what is owed, not as a document.
-  An OT claim is the one request in this app ABOUT MONEY and the screens
-  described it as paperwork: the history was "OT Request History" (a table),
-  its filter offered "Compensation" (the field's label in Desk) with options
-  "Overtime Pay" and "Replacement Leave", and a row read "1.5h overtime ·
-  Overtime Pay".
-  The row led with the INPUT. An employee knows how long they stayed; what
-  they opened the screen to find out is whether it turned into money or into a
-  day off. So the row leads with the outcome and carries the hours as the
-  detail they belong to, beside the date.
-  The two wire values are mapped EXPLICITLY rather than passed through __():
-  "Overtime Pay" and "Replacement Leave" are the doctype's Select options and
-  cannot change without a migration, so translating the raw value is exactly
-  how the server's vocabulary reaches the screen — the same defect slice 1.2
-  fixed on the shift chip. Naming them in a map also makes it visible here
-  that there are only two.
-  Filters: "Date worked" and "Paid or time off". The OPTIONS keep the server's
-  spelling because the filter sends them as-is; only the label is the
-  question the employee is actually asking.
-NOTE: the forms needed nothing — slice 1.1's `noun` prop already gave them
-  "overtime request" and "replacement leave claim".
-EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: the title
-  reverts to the doctype; the filter label reverts to Desk's; the row leads
-  with hours again; the raw compensation is translated through. Suite 603 /
-  599 pass — the same 4 red at HEAD, and one of them NAMES OT claims, so it
-  was verified against a stashed tree rather than assumed. Gates: lint 234/0,
-  contrast 56/0, surfaces 47/0, tokens ok. Build clean.
-NEXT: 2.0 slice 2.1 — Attendance and clock-in history, then 4.1 (Approvals +
-  Helpdesk) and D.1 (desktop).
-- 2026-09-22T14:27:13Z PUSH: nz-glass @ be2e5f5a5
-- 2026-09-22T14:27:13Z COMMIT: be2e5f5a5 fix(overtime): a claim about money read as a document → review+design dispatched
-- 2026-09-22T14:30:55Z EVIDENCE: 2 correct — mapped tests green (bun ) for 8 file(s) ⟂514b00a817f9
-
-REPAIR: 2.0 slice 2.1 — attendance screens name the thing, not the table.
-  Three were titled with a doctype: "Employee Checkin History", "Shift
-  Assignment History", "Attendance Request History". An employee looking for
-  the times they tapped in does not know what an Employee Checkin is, and
   "Shift Assignment" is the TABLE that stores a roster line — the word is
   "shifts". Now "Your check-ins", "Your shifts", "Your attendance requests".
   And the dashboard carried the SAME defect slice 2.2 had just fixed one
@@ -301,3 +201,11 @@ DEAD END: reading `to_date` from get_leave_balance_map. The map emits from_date 
   to_date, so expires_on was always None and expiring_soon could never fire. The end
   date comes from Leave Allocation now, earliest first.
 NEXT: Calendar (C2/C3) — month dots, then the day sheet.
+- 2026-09-22T17:29:17Z COMMIT: 7824b9649 feat(requests): the numbers were on a different screen from the decision → review+design dispatched
+- 2026-09-22T17:29:25Z PUSH: nz-glass @ 7824b9649
+- 2026-09-22T17:39:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 25 file(s) ⟂7d6596642304
+- 2026-09-22T17:39:27Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-22T17:39:53Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-22T17:39:53Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-22T17:40:18Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
+- 2026-09-22T17:40:18Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28

@@ -1759,6 +1759,9 @@ svg.lucide {
 }
 /* every day cell is a 44px touch target (§5) without moving the 10.5px numeral */
 .g-cal__day {
+	/* relative, so the dot row can anchor to the tile's own bottom edge rather
+	   than to whatever ancestor happens to be positioned (revamp §4). */
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -3085,4 +3088,38 @@ ion-router-outlet {
 	transform: translateY(0);
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring);
+}
+
+/* Calendar day dots (revamp §4) — the grid carries dots, the day sheet carries
+   words. A tile is 44px: a date plus up to three 4px marks is what fits, and
+   the cap is applied server-side so the payload and the tile agree.
+
+   The dots sit BELOW the numeral rather than beside it, because a date can be
+   two digits and the row must not reflow between the 9th and the 10th. */
+.g-cal__dots {
+	position: absolute;
+	bottom: 4px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 4px;
+	pointer-events: none;
+}
+.g-cal__dot {
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--g-ink3);
+}
+.g-cal__dot--leave {
+	background: var(--g-leave);
+}
+.g-cal__dot--holiday {
+	background: var(--g-rest);
+}
+.g-cal__dot--event {
+	background: var(--g-accent-ink);
+}
+.g-cal__dot--needs_you {
+	background: var(--g-warn);
 }

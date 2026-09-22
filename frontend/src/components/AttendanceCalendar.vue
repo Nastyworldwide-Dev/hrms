@@ -6,6 +6,7 @@
 			:leading-blanks="firstOfMonth.get('d')"
 			:weekdays="DAYS"
 			:legend="LEGEND"
+			@select="openDay"
 		>
 			<template #action>
 				<!-- gap-3, not gap-2: each stepper expands its 44px target 6px past its
@@ -35,6 +36,10 @@
 				</span>
 			</template>
 		</GCalendar>
+
+		<!-- The words. One tap from the grid, so the tiles never have to carry
+		     a sentence (revamp §4). -->
+		<DaySheet :open="sheetOpen" :date="sheetDate" @close="sheetOpen = false" />
 
 		<!-- The month summary. §12's Attendance anatomy says a 3-up stat panel;
 		     this screen summarises FOUR statuses, so GStatPanel takes columns=4
@@ -71,7 +76,10 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
-import { computed, inject, ref } from "vue"
+import DaySheet from "@/components/DaySheet.vue"
+
+import { monthFlags } from "@/data/calendar"
+import { computed, inject, ref, watch } from "vue"
 import { createResource } from "frappe-ui"
 import { useListUpdate } from "@/composables/realtime"
 
@@ -103,7 +111,16 @@ const LEGEND = [
 const days = computed(() =>
 	Array.from({ length: firstOfMonth.value.endOf("M").get("D") }, (_, i) => {
 		const day = i + 1
-		return { day, state: STATE[getEventOnDate(day)] ?? "none" }
+		// state is WHAT KIND of day it was; flags are what ELSE was on it
+		// (revamp §4). Two reads rather than one: the status comes from the
+		// attendance calendar this screen has always used, and the dots from
+		// the flags endpoint, so neither has to know about the other.
+		const iso = firstOfMonth.value.date(day).format("YYYY-MM-DD")
+		return {
+			day,
+			state: STATE[getEventOnDate(day)] ?? "none",
+			flags: monthFlags.data?.flags?.[iso] || [],
+		}
 	})
 )
 
@@ -114,6 +131,32 @@ const days = computed(() =>
 
 // __("Present"), __("Half Day"), __("Absent"), __("On Leave"), __("Work From Home")
 const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]
+
+//: The day sheet. Opened by tapping a tile, closed by the sheet itself — a
+//: swipe and a backdrop tap dismiss it too, and a parent that only listens to
+//: a button is left with `open` stuck true.
+const sheetDate = ref("")
+const sheetOpen = ref(false)
+
+function openDay(day) {
+	sheetDate.value = firstOfMonth.value.date(day).format("YYYY-MM-DD")
+	sheetOpen.value = true
+}
+
+//: Flags follow the month being LOOKED AT, not the month it was mounted in.
+//: Watched rather than fetched once, or stepping to October would draw
+//: September's dots under October's dates — the same defect the per-month
+//: attendance resources above were built to prevent.
+watch(
+	firstOfMonth,
+	(month) => {
+		monthFlags.fetch({
+			from_date: month.format("YYYY-MM-DD"),
+			to_date: month.endOf("M").format("YYYY-MM-DD"),
+		})
+	},
+	{ immediate: true }
+)
 
 const getEventOnDate = (date) => {
 	return (calendarEvents.value.data || {})[firstOfMonth.value.date(date).format("YYYY-MM-DD")]
