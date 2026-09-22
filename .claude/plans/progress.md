@@ -252,3 +252,10 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T16:59:23Z PUSH: nz-glass @ 8f365e67d
 - 2026-09-22T16:59:23Z COMMIT: 8f365e67d test(responsive): no layout in this app had ever been checked at 320px → review+security+design dispatched
 - 2026-09-22T17:02:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 20 file(s) ⟂9f33a174e0f9
+- 2026-09-22T17:02:22Z PUSH: nz-glass @ a0aa92b30
+- 2026-09-22T17:02:22Z COMMIT: a0aa92b30 feat(a11y): type ignored the reader's text size entirely → review+security+design dispatched
+- 2026-09-22T17:14:00Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 34 file(s) ⟂ecbbf0369341
+- 2026-09-22T17:14:28Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 34 file(s) ⟂ecbbf0369341
+- 2026-09-22T17:14:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141
+- 2026-09-22T17:14:58Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141
+- 2026-09-22T17:15:22Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141

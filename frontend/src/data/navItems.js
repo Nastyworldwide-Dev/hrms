@@ -7,6 +7,7 @@ import {
 	Headphones,
 	House,
 	Kanban,
+	Megaphone,
 	CircleDollarSign,
 	FileText,
 } from "lucide-vue-next"
@@ -80,6 +81,15 @@ const NAV_ITEMS = [
 		shortTitle: "SOPs",
 		route: "/sop",
 	},
+	{
+		// The board's own destination. Home shows two announcements; somebody
+		// looking for one they half remember needs a way in that is not "scroll
+		// Home and hope it is still one of the two".
+		icon: markRaw(Megaphone),
+		title: "Announcements",
+		shortTitle: "Notices",
+		route: "/announcements",
+	},
 ]
 
 // Phone tab bar — FIVE fixed destinations (spec §13.1, §10.1 #8). A bar whose
@@ -117,6 +127,10 @@ export const TAB_ITEMS = [
 			"/sop",
 			"/team",
 			"/remote-approvals",
+			// The board is reached from Home's block as well as from More, and
+			// a destination that moved into MORE_ITEMS without being listed here
+			// leaves the bar with nothing selected while you are standing on it.
+			"/announcements",
 		],
 	},
 ]

@@ -93,6 +93,24 @@ const routes = [
 				component: () => import("@/views/team/TeamRoster.vue"),
 			},
 			{
+				// The announcement board (revamp §3). A TAB CHILD rather than a
+				// top-level route: it is reached from Home's block and from More,
+				// and both are inside the tab shell — a top-level route would
+				// drop the tab bar and make Back leave the app.
+				path: "/announcements",
+				name: "Announcements",
+				component: () => import("@/views/announcements/List.vue"),
+			},
+			{
+				// `props: true` so the id arrives as a prop rather than being read
+				// off the route inside the component: the view refetches on id
+				// change, and a watched prop is what makes that a one-liner.
+				path: "/announcements/:id",
+				name: "AnnouncementDetail",
+				component: () => import("@/views/announcements/Detail.vue"),
+				props: true,
+			},
+			{
 				// overflow hub for the phone tab bar (Issues, SOPs, Team)
 				path: "/more",
 				name: "MoreView",

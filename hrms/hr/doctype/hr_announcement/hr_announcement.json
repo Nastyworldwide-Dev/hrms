@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "autoname": "HR-ANN-.#####",
+ "creation": "2026-09-22 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "category",
+  "column_break_meta",
+  "pinned",
+  "acknowledge_required",
+  "audience_section",
+  "audience",
+  "audience_value",
+  "schedule_section",
+  "publish_from",
+  "column_break_schedule",
+  "publish_until",
+  "content_section",
+  "body",
+  "published"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The one line an employee reads on Home. Say the thing, not the category."
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "reqd": 1,
+   "options": "Notice\nPolicy\nEvent\nUrgent",
+   "default": "Notice",
+   "in_list_view": 1,
+   "description": "Drives the colour and the icon. Nothing else."
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pinned",
+   "fieldtype": "Check",
+   "label": "Pinned",
+   "default": "0",
+   "description": "Keeps this at the top. Only one announcement may be pinned at a time."
+  },
+  {
+   "fieldname": "acknowledge_required",
+   "fieldtype": "Check",
+   "label": "Require acknowledgement",
+   "default": "0",
+   "description": "Adds an 'I've read and understood this' button, and keeps the card on the employee's Home until they press it. For policies and safety notices, not for a canteen closure."
+  },
+  {
+   "fieldname": "audience_section",
+   "fieldtype": "Section Break",
+   "label": "Who sees it"
+  },
+  {
+   "fieldname": "audience",
+   "fieldtype": "Select",
+   "label": "Audience",
+   "reqd": 1,
+   "options": "Everyone\nCompany\nDepartment\nBranch",
+   "default": "Everyone",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "audience_value",
+   "fieldtype": "Data",
+   "label": "Which one",
+   "depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
+   "mandatory_depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
+   "description": "The company, department or branch name this is for. A plain name rather than a Link: a Dynamic Link resolves its target doctype during Frappe's _validate_links(), which runs before every controller hook, so a target derived from `audience` can never be set in time \u2014 verified on the bench, 22 Sep 2026. The fence compares names (api/announcements.audience_matches)."
+  },
+  {
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "When"
+  },
+  {
+   "fieldname": "publish_from",
+   "fieldtype": "Date",
+   "label": "Show from",
+   "reqd": 1,
+   "description": "Defaults to today."
+  },
+  {
+   "fieldname": "column_break_schedule",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "publish_until",
+   "fieldtype": "Date",
+   "label": "Show until",
+   "reqd": 1,
+   "description": "Defaults to two weeks out. It disappears on its own, so nobody has to remember to delete it."
+  },
+  {
+   "fieldname": "content_section",
+   "fieldtype": "Section Break",
+   "label": "Content"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Text Editor",
+   "label": "Body",
+   "description": "Sanitised before it reaches the app."
+  },
+  {
+   "fieldname": "published",
+   "fieldtype": "Check",
+   "label": "Published",
+   "default": "0",
+   "in_list_view": 1,
+   "description": "Nothing reaches an employee until this is ticked."
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-22 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "HR Announcement",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

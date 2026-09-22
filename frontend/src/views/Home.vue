@@ -31,6 +31,12 @@
 				     is why Home's largest block could go. -->
 				<CheckInPanel />
 				<NeedsYou />
+				<!-- Fourth, under what needs you and above what you asked for.
+				     An announcement is something to KNOW; the two blocks above it
+				     are things to DO, and Home's order is the argument (§2). The
+				     block renders nothing when the board is empty, so on a quiet
+				     week Home is exactly what it was. -->
+				<Announcements />
 				<RequestPanel />
 			</div>
 			<PushNotificationPrompt />
@@ -43,6 +49,7 @@ import { reloadRequestLists } from "@/data/requestLists"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
+import Announcements from "@/components/Announcements.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
