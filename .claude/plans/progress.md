@@ -277,3 +277,32 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
   folder (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
   architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
   not correct (spec 6)" note? Phase 2 section 2 cannot start without #3.
+- 2026-09-22T00:20:49Z PUSH: nz-glass @ 26d438d2f
+- 2026-09-22T00:20:49Z COMMIT: 26d438d2f chore(plans): record the push, and the two agent reports not acted on → review dispatched
+- 2026-09-22T00:46:37Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T00:55:06Z COMMIT: 3d4fa0dfe fix(glass): tab bar content came to rest under the floating bar → review+security+design dispatched
+- 2026-09-22T00:57:16Z PUSH: nz-glass @ 3d4fa0dfe
+- 2026-09-22T00:57:53Z PUSH: nz-glass @ 36b5baacb
+- 2026-09-22T00:57:53Z COMMIT: 36b5baacb docs(glass): handoff records the tab-bar fix, not the ledger range → review dispatched
+- REPAIR: 3d4fa0dfe fixed the missing-bottom-nav symptom's real mechanism: Ionic
+  forces box-sizing: content-box !important on ion-tab-bar's host, so
+  --g-tabbar-height was the content box only. The bar rendered 86px (64 token +
+  11/9 padding + 1/1 border); ion-content's scroll reservation read 82px from
+  the same token as if it were the whole box. 4px of every scrollable tab
+  screen rested under the glass bar at max scroll — CLASS H from the mockup-4
+  audit, reproduced in the shipped app, and plausibly why nav felt unreachable
+  without going through Profile first.
+- EVIDENCE: red proven on HEAD's actual CSS/tokens before the fix (3/3 fail,
+  checked out via cp+git checkout, not reasoned); green after (3/3 pass); full
+  suite 13/13, contrast 54/0 failures, no new lint/usage violations in touched
+  files. Design review: DESIGN_APPROVED, 0 critical/warning. Security review:
+  SECURE, not blocking. Code review (frappe-reviewer, N/A checklist but ran the
+  real gates instead): NEXT_ACTION DEPLOY, 0 critical.
+- NOTE: skipped reviewer + retro-analyst dispatch on 36b5baacb (docs, 1 file) —
+  exempted per this repo's own chore/docs/style ≤2-files rule; the fix commit
+  it documents already got full review + its own retro.
+- NEXT: continue Mockup-4 visual work that does not depend on the blocked
+  tab/IA question — redundant page titles (BaseLayout's GAppHeader h1 vs
+  ListView's h2 repeating the same string) and Home screen density/scroll.
+  Owner's word on FOUR from the prior handoff is still open and still blocks
+  Phase 2 section 2 and the tab/IA change specifically.
