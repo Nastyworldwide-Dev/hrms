@@ -1,3 +1,15 @@
-GOAL: an Attendance Request can always be decided (approve/reject) even when its day is already marked; an Employee save no longer re-saves an approver's User when the role is already there.
-DONE WHEN: decide() on a request whose only day is "Attendance status unchanged" submits instead of throwing; update_approver_role calls User.save() only when a role is missing.
-CHECK: python3 hrms/tests/test_attendance_request_decision_is_always_possible.py && python3 hrms/tests/test_approver_role_grant_is_idempotent.py
+GOAL: Fix attendance must stay usable on a day the engine cannot read — the only
+kind of day HR opens it for. Today the dialog pre-ticks EVERY counted punch, which
+is never a valid 1-IN/1-OUT set, so Save & rebuild is dead and nothing is deleted,
+rebuilt or re-shifted.
+
+DONE WHEN:
+ 1. day_plan refusing (no suggested pair) -> the dialog pre-ticks NOTHING and shows
+    the engine's own refusal sentence, instead of pre-ticking every counted punch.
+ 2. A punch belonging to the shift-day but landing on the NEXT calendar morning is
+    shown with its date, so 07:38 (19 Aug) is not misread as a twin of 07:39.
+ 3. Both proved by tests that are RED on HEAD.
+
+CHECK:
+ PYTHONPATH=. python3 -m pytest -q hrms/tests/test_fix_day_unreadable_day.py
+ node --test hrms/public/js/fix_day.bundle.test.js

@@ -55,6 +55,14 @@ function fd_date_of(when) {
 	return new Date(when.getTime() - when.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+// "27 Aug" when this punch is NOT on the day being fixed, else "". A shift that
+// runs past midnight puts its closing punch on the next calendar date, and the
+// dialog lists it under that day's own punches.
+function fd_other_day(time, date) {
+	const on = String(time || "").slice(0, 10);
+	return on && date && on !== String(date) ? fd_day_label(on) : "";
+}
+
 // a punch's moment: its own datetime, or the clock HR typed on the day being fixed
 function fd_when(row, date) {
 	return new Date(row.time ? String(row.time).replace(" ", "T") : `${date}T${row.clock}:00`);
@@ -226,14 +234,24 @@ class FixDayScreen {
 		// `get_day` marks the engine's pair PER TAP: `suggested` = "IN" / "OUT"
 		// on the two taps it would read the day from (verifier, 21 Sep 2026).
 		const from_engine = (day.taps || []).some((tap) => tap.suggested);
+		// ...and says WHY when it marked none. A day the engine refuses is the
+		// only kind HR opens this for, and the old fallback ticked every counted
+		// punch on it: Adam Daniel's 18 August opened as 3 IN + 1 OUT, which the
+		// dialog then refused itself, with Save & rebuild dead (22 Sep 2026).
+		// Nothing pre-ticked, the reason on screen, HR ticks the real pair.
+		const unreadable = !from_engine && Boolean(day.suggestion_refusal);
 		const rows = (day.taps || []).map((tap) => {
 			const locked = Boolean(tap.linked_request);
 			const hidden = FD_HIDDEN_STATES.includes(tap.state);
-			const counts = from_engine ? Boolean(tap.suggested) : Boolean(tap.counted);
+			const counts = unreadable ? false : from_engine ? Boolean(tap.suggested) : Boolean(tap.counted);
 			return {
 				name: tap.name,
 				time: tap.time,
 				clock: fd_clock(tap.time),
+				// A punch of THIS shift-day may land the next calendar morning
+				// (a 7PM-3.30AM shift). Shown bare it read as a twin of the
+				// previous morning's punch 24 h earlier (22 Sep 2026).
+				day_label: fd_other_day(tap.time, day.date),
 				// the engine's reading of the tap (IN/OUT) is the pre-applied label;
 				// the device's label stays visible through the flip (G1)
 				log_type: (from_engine && tap.suggested) || tap.log_type || "IN",
@@ -323,7 +341,7 @@ class FixDayScreen {
 		if (row.hidden) tags.push(`<span class="text-muted small">${__("hidden: {0}", [fd_escape(row.why)])}</span>`);
 		return `<tr class="${klass}" data-fd-row="${fd_escape(row.name)}"${style}>
 			<td><input type="checkbox" data-fd-tick="${fd_escape(row.name)}"${checked}${disabled}></td>
-			<td>${fd_escape(row.clock)}</td>
+			<td>${fd_escape(row.clock)}${row.day_label ? ` <span class="text-muted small">${fd_escape(row.day_label)}</span>` : ""}</td>
 			<td><button class="btn btn-xs btn-default" data-fd-flip="${fd_escape(row.name)}">${fd_escape(row.log_type)}</button></td>
 			<td>${fd_escape(row.shift || "—")}</td>
 			<td>${tags.join(" ") || `<span class="text-muted small">${fd_escape(row.state)}</span>`}</td>
@@ -379,7 +397,16 @@ class FixDayScreen {
 			: "";
 		const now = `<div class="text-muted small">${__("Now")}: ${fd_day_lines(state.day.attendance, " | ")}</div>`;
 		const note = `<div class="text-muted small">${__("Hours and status are recomputed from the ticked punches; they are never typed here.")}</div>`;
-		this.dialog.fields_dict.summary.$wrapper.html(line + del + now + note);
+		// The engine's own reason for suggesting no pair, above the rest: it is
+		// why nothing is ticked, and it tells HR what to look for.
+		const why = state.day.suggestion_refusal
+			? `<div class="alert alert-warning py-1 my-1">${fd_escape(
+					__("The engine could not read this day: {0} Tick the IN and the OUT that count.", [
+						state.day.suggestion_refusal,
+					])
+				)}</div>`
+			: "";
+		this.dialog.fields_dict.summary.$wrapper.html(why + line + del + now + note);
 		if (plan.error) this.dialog.disable_primary_action();
 		else this.dialog.enable_primary_action();
 	}

@@ -1445,6 +1445,11 @@ def _screen(emp, day) -> dict:
 	taps = _day_taps(emp.name, day)
 	linked = _approved_requests([tap.get("name") for tap in taps])
 	suggested = _suggested_roles(emp, day, taps)
+	# Why there is no suggestion, when there is none: the dialog pre-ticks
+	# nothing on a day the engine cannot read, instead of ticking every counted
+	# punch and refusing its own opening state (22 Sep 2026). Asked only when
+	# there IS no pair, so a readable day pays nothing for it.
+	refusal = None if suggested else suggestion_refusal(taps, pairing=_day_pairing(taps))
 	return {
 		"employee": emp.name,
 		"employee_name": emp.employee_name,
@@ -1460,6 +1465,8 @@ def _screen(emp, day) -> dict:
 			}
 			for tap in taps
 		],
+		# why the engine suggested no pair, when it suggested none (22 Sep 2026)
+		"suggestion_refusal": refusal,
 		# the version the dialog hands back as `seen_modified` (G11)
 		"seen_modified": day_version(taps),
 		"attendance": [row_view(row) for row in rows],
@@ -1657,6 +1664,31 @@ def _pair_stamp(emp, day, sessions, by_name) -> dict:
 	if not resolved:
 		_refuse(_("This day has no shift. Choose the shift the pair belongs to."))
 	return _shift_stamp(resolved, day)
+
+
+def suggestion_refusal(taps, pairing: str | None = None) -> str | None:
+	"""Why the engine cannot read this day into a pair, or None. Pure.
+
+	The companion of `_suggested_roles`, and the reason it exists: that function
+	answers "which two taps" and says nothing when there are none. But NO PAIR
+	has two very different causes, and the dialog must tell them apart.
+
+	A day the planner reads suggests a pair. A day it REFUSES suggests none —
+	and refusing is the planner's whole contract on a broken day, which is the
+	only kind HR opens this screen for. Reading "no suggestion" as "nothing is
+	known, so pre-tick everything that counts" put 3 IN and 1 OUT on Adam
+	Daniel's 18 August, and the dialog then refused its own opening state and
+	disabled Save & rebuild (22 Sep 2026). A refusal is information, not an
+	absence: this hands the sentence over so the screen can show it and tick
+	nothing.
+	"""
+	try:
+		return day_plan(taps, [], pairing=pairing).get("refusal")
+	except Exception:
+		# Same promise as `_suggested_roles`: a suggestion failing must never
+		# take the screen down with it.
+		logger.warning("[attendance_fix_day] no verdict for a day's taps", exc_info=True)
+		return None
 
 
 def _suggested_roles(emp, day, taps) -> dict:

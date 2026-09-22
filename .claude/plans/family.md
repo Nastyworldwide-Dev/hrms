@@ -1,48 +1,39 @@
-CLASS: a surface carrying its own private copy of "what state is this request
-in". utils/requestStatus.js was made the one rule on 21 Sep (527baf268) and six
-item components joined it; two surfaces never did, and two Employee Issue
-states had no entry in the variant table, so a finished issue rendered the same
-grey as an untouched one. On top of that the rule faithfully reported three
-different pending words — Open, Draft, Pending — for one state, so a staff
-member reading two of their own requests side by side saw two words.
+CLASS: a REFUSAL read as an ABSENCE. A producer that answers "here is the
+answer, or here is why there is none" is consumed as "here is the answer, or
+nothing is known" — and the consumer then falls back to a guess on exactly the
+inputs the producer refused. The refusal carries the information the fallback
+needed; dropping it turns the most-broken case into the least-informed one.
 
-Instance test: frontend/src/utils/__tests__/requestStatus.test.js
-  "a remote check-in row reads the same rule as every other request"
-Invariant test: same file — "a decided draft is still pending and says ONE
-  waiting word" walks the whole doctype table, and "the stored pending word is
-  never rewritten" pins that this is a display change, not a migration.
+INSTANCE: `day_plan` suggests a pair only when it can READ the day. The dialog's
+`fresh_state` read "no suggestion" as "nothing known" and pre-ticked every
+counted punch — on a day the planner had explicitly refused. Four ticks are
+never 1 IN + 1 OUT, so the dialog refused its own opening state and Save &
+rebuild was dead. The only days HR opens this screen for are the refused ones.
 
-Call sites of requestStatus / requestStatusChip / chipVariant / GStatusChip:
+CALL SITES of what changed (`_suggested_roles`, `_screen`, `fresh_state`):
 
-frontend/src/utils/requestStatus.js same-root — the rule itself; WAITING, the
-  Remote Checkin Request row and the two Employee Issue variants.
-frontend/src/views/RemoteApprovals.vue:49 same-root — the hand-rolled chip,
-  replaced by GStatusChip; this is the defect instance.
-frontend/src/components/LeaveRequestItem.vue:49 same-root — reads .label, now
-  "Waiting" while pending. Display only.
-frontend/src/components/AttendanceRequestItem.vue:47 same-root — same.
-frontend/src/components/OTRequestItem.vue:54 same-root — same.
-frontend/src/components/ReplacementLeaveClaimItem.vue:56 same-root — same.
-frontend/src/components/ShiftRequestItem.vue:53 same-root — same; this is the
-  row that used to say "Draft" against a list filter offering "Draft".
-frontend/src/components/ExpenseClaimItem.vue:54 same-root — same; its submitted
-  composite ("Approved & Unpaid") is untouched.
-frontend/src/components/FormView.vue:552 same-root — the detail header; a
-  workflow state field still wins over the rule, unchanged.
-frontend/src/components/RequestActionSheet.vue:259 same-root — the review sheet
-  reads .pending to decide whether to offer buttons; .pending is unchanged.
-frontend/src/views/ot/OTRequestForm.vue:193 same-root — statusLabel, the word
-  only.
-frontend/src/views/ot/ReplacementLeave.vue:86 same-root — same.
-frontend/src/components/glass/GStatusChip.vue:44 same-root — chipVariant; the
-  two new Employee Issue keys reach every chip through it.
-frontend/src/views/issues/IssueList.vue:45 same-root — renders the raw Employee
-  Issue status; it now gets colour without changing this file.
+ hrms/api/attendance_fix_day.py:_screen        same-root — now also asks
+   `suggestion_refusal` when there is no pair, and ships it as
+   `suggestion_refusal` on the screen payload.
+ hrms/public/js/fix_day.bundle.js:fresh_state  same-root — an unreadable day
+   pre-ticks NOTHING; the two "no suggestion" cases are now distinguished.
+ hrms/public/js/fix_day.bundle.js:render_summary  same-root — shows the
+   planner's own sentence, so HR reads why nothing is ticked.
+ hrms/public/js/fix_day.bundle.js:tap_html     same-root (second defect) — a
+   punch of this shift-day landing the NEXT calendar morning now carries its
+   date, so 07:38 (19 Aug) is not read as a twin of 07:39 (18 Aug).
+ hrms/public/dist/js/fix_day.bundle.*.js       not-affected — build output,
+   gitignored, regenerated on deploy from the source above.
 
-Not affected:
-Every server word. hrms/api/approval.py DECIDE_THEN_SUBMIT, the doctype JSON
-  Select options and hrms/api/__init__.py get_filters() keep Open / Draft /
-  Pending exactly as stored. No list filter, no report and no existing row
-  changes. Pinned by the "stored pending word is never rewritten" test.
-frontend/src/utils/helpdesk.js — already renames at display time (statusLabel,
-  "Replied" -> "Awaiting you"); the precedent this slice follows, unchanged.
+No other consumer of `day_plan` drops its refusal: `plan_day` and `rebuild_day`
+both return/raise it. Verified by grep for `_suggested_roles|fresh_state|
+suggestion_refusal` across hrms/ — no call sites outside the two changed files.
+
+LOCKING THE CLASS:
+ regression (the instance): hrms/tests/test_fix_day_unreadable_day.py
+   TheEngineCannotReadThisDay — Adam's 18 Aug really is refused by the planner.
+ invariant (the class): same file, TheScreenSaysSoInsteadOfGuessing —
+   a refused day reports the planner's OWN sentence (not a second wording),
+   and a readable day reports none. Plus three source-asserted tests in
+   hrms/public/js/fix_day.bundle.test.js pinning that the dialog reads the
+   refusal rather than inferring it from an empty suggestion.
