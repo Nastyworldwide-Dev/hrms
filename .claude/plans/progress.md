@@ -263,3 +263,5 @@ NEXT: Nabil deploys e28041076. Four things to check by hand, because they are
   the ones only a render can answer: airplane mode shows the bar WITHOUT
   covering the back arrow; a second deploy offers "A new version is ready";
   tapping a text field does not zoom; Home's icons and "Show N more" behave.
+- 2026-09-22T11:17:53Z PUSH: nz-glass @ 0b0c622a7
+- 2026-09-22T11:17:53Z COMMIT: 0b0c622a7 docs(plans): a real bench was here all along → review dispatched
