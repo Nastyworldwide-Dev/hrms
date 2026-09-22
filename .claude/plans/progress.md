@@ -579,3 +579,39 @@ EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: a title
   same 4 red at HEAD. Gates: lint 234/0, contrast 56/0, surfaces 47/0, tokens
   ok. Build clean.
 NEXT: 2.0 slice 4.1 — Approvals and the Helpdesk hub. Then D.1 (desktop).
+- 2026-09-22T14:31:11Z PUSH: nz-glass @ 1e4e07f51
+- 2026-09-22T14:31:11Z COMMIT: 1e4e07f51 fix(attendance): three screens were titled with the name of a table → review+design dispatched
+- 2026-09-22T14:36:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+
+REPAIR: 2.0 slice 4.1 — approvals say whose turn it is. The tabs were
+  "Pending" and "History", and "Pending" never said pending on WHOM: both
+  lists on that screen hold pending things and only one is waiting on the
+  person reading it. Now "Waiting on you" / "Decided by you" (§3.5's own
+  words), plus the count above the rows — an approver wants to know whether
+  this is a two-minute job before they start reading.
+  KEY AND LABEL ARE DIFFERENT THINGS and conflating them is why the tabs still
+  said "Pending": the string is compared in the template
+  (`activeTab === 'History'`) and carried in the deep link a decided request's
+  notification uses (`?tab=History`). GSegmented already takes { key, label },
+  so the key is untouched and only the label is the employee's word.
+NOTE: §3.5 also asks for a UNIFIED queue over a new
+  `approval.list_pending_for_user`. The plan marks it N (new backend) and §7
+  puts new backend out of 2.0's scope, so that is its own piece of work. This
+  slice is what §6's row asks for.
+NOTE: my first placement of the count was wrong twice in one edit — it landed
+  in the HISTORY branch (the anchor matched the first occurrence) counting the
+  PENDING list, and it sat between `v-else-if` and `v-else`, which breaks the
+  chain. It shares the v-else with the rows now.
+NOTE: two of my own assertions were too loose and mutants proved it. The count
+  check matched a `.length` in a `v-if`, which is a render decision and not a
+  number anybody reads; and the "Remote survives" check matched the word
+  anywhere in a file that contains it eight times, so renaming the HEADING
+  passed. Both are scoped now — a number in a sentence, and the <h2>.
+EVIDENCE: 2 correct — 5 tests red first (3 of 5 after the count check was
+  tightened), 4 mutants killed: labels revert; the key is translated (which
+  would break the deep link); the count is removed; "Remote" leaves the title.
+  Suite 613 / 609 pass, same 4 red at HEAD. Gates: lint 234/0, contrast 56/0,
+  surfaces 47/0, tokens ok. Build clean — the template change was verified by
+  compiling, not only by reading.
+NEXT: D.1 — desktop. O2 answered (720px), so the token is signed off rather
+  than provisional. The 1440 baselines it asks for need a reachable site.

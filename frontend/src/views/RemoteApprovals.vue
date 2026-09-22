@@ -112,76 +112,89 @@
 								:body="__('Remote check-ins from your team will show up here.')"
 							/>
 
-							<div
-								v-else
-								v-for="req in pending.data"
-								:key="req.name"
-								class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
-							>
-								<div class="flex flex-row items-center justify-between">
-									<div
-										class="min-w-0 font-sans font-extrabold text-button-label text-inkbase truncate"
-									>
-										{{ req.employee_name || req.employee }}
-									</div>
-									<span
-										class="g-eyebrow px-2 py-[3px]"
-										:class="
-											req.log_type === 'IN'
-												? 'bg-inkbase text-ground'
-												: 'border border-accent-ink text-accent-700'
-										"
-									>
-										{{ req.log_type }}
-									</span>
-								</div>
+							<!-- The count, above the rows (§3.5). An approver opening
+							     this wants to know whether it is a two-minute job before
+							     they start reading; the number is the difference between
+							     "now" and "later".
+							     It shares the `v-else` with the rows rather than sitting
+							     between the branches — an element in the middle of a
+							     v-if/v-else-if/v-else chain breaks it, and the first
+							     attempt at this did exactly that, in the History branch,
+							     counting the pending list. -->
+							<template v-else>
+								<p class="g-eyebrow text-ink-600">
+									{{ __("{0} waiting on you", [pending.data.length]) }}
+								</p>
 								<div
-									class="flex flex-row items-center justify-between text-kra-label text-ink-600"
+									v-for="req in pending.data"
+									:key="req.name"
+									class="border border-divider rounded-panel p-3.5 flex flex-col gap-2"
 								>
-									<span>{{ formatTimestamp(req.checkin_time) }}</span>
-									<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
-								</div>
-								<!-- The check-in photo — the evidence the employee supplied with an
+									<div class="flex flex-row items-center justify-between">
+										<div
+											class="min-w-0 font-sans font-extrabold text-button-label text-inkbase truncate"
+										>
+											{{ req.employee_name || req.employee }}
+										</div>
+										<span
+											class="g-eyebrow px-2 py-[3px]"
+											:class="
+												req.log_type === 'IN'
+													? 'bg-inkbase text-ground'
+													: 'border border-accent-ink text-accent-700'
+											"
+										>
+											{{ req.log_type }}
+										</span>
+									</div>
+									<div
+										class="flex flex-row items-center justify-between text-kra-label text-ink-600"
+									>
+										<span>{{ formatTimestamp(req.checkin_time) }}</span>
+										<span class="tabular-nums">{{ formatDistance(req.distance_m) }}</span>
+									</div>
+									<!-- The check-in photo — the evidence the employee supplied with an
 								     out-of-radius punch. Public file, so the approver can open it
 								     full-size; until it was listed here it was reachable only from Desk. -->
-								<a
-									v-if="req.selfie_image"
-									:href="req.selfie_image"
-									target="_blank"
-									rel="noopener"
-									class="block border border-divider overflow-hidden"
-								>
-									<img
-										:src="req.selfie_image"
-										:alt="__('Check-in photo')"
-										class="w-full max-h-64 object-cover"
-										loading="lazy"
-									/>
-								</a>
-								<div
-									v-if="req.employee_remarks"
-									class="text-xs text-inkbase bg-surface border border-divider p-2.5"
-								>
-									{{ req.employee_remarks }}
-								</div>
-								<div v-else class="text-xs text-ink-500 italic">
-									{{ __("No reason provided.") }}
-								</div>
-								<div class="flex flex-row gap-2.5 mt-1">
-									<button
-										class="flex-1 flex items-center justify-center bg-transparent border border-accent-ink text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
-										@click="openDecision(req, 'reject')"
+									<a
+										v-if="req.selfie_image"
+										:href="req.selfie_image"
+										target="_blank"
+										rel="noopener"
+										class="block border border-divider overflow-hidden"
 									>
-										{{ __("Reject") }}
-									</button>
-									<button
-										class="flex-1 flex items-center justify-center bg-accent-ink text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
-										@click="openDecision(req, 'approve')"
+										<img
+											:src="req.selfie_image"
+											:alt="__('Check-in photo')"
+											class="w-full max-h-64 object-cover"
+											loading="lazy"
+										/>
+									</a>
+									<div
+										v-if="req.employee_remarks"
+										class="text-xs text-inkbase bg-surface border border-divider p-2.5"
 									>
-										{{ __("Approve") }}
-									</button>
+										{{ req.employee_remarks }}
+									</div>
+									<div v-else class="text-xs text-ink-500 italic">
+										{{ __("No reason provided.") }}
+									</div>
+									<div class="flex flex-row gap-2.5 mt-1">
+										<button
+											class="flex-1 flex items-center justify-center bg-transparent border border-accent-ink text-accent-700 px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-100"
+											@click="openDecision(req, 'reject')"
+										>
+											{{ __("Reject") }}
+										</button>
+										<button
+											class="flex-1 flex items-center justify-center bg-accent-ink text-ground px-3.5 py-2.5 font-sans font-extrabold text-xs hover:bg-accent-600"
+											@click="openDecision(req, 'approve')"
+										>
+											{{ __("Approve") }}
+										</button>
+									</div>
 								</div>
-							</div>
+							</template>
 						</template>
 					</div>
 				</div>
@@ -279,7 +292,19 @@ const route = useRoute()
 
 const pending = pendingForApproverResource
 const decided = decidedForApproverResource
-const TAB_BUTTONS = ["Pending", "History"] // __("Pending"), __("History")
+//: KEY and LABEL are different things here, and conflating them is why the
+//: tabs still said "Pending". The key is compared in the template
+//: (`activeTab === 'History'`) and carried in the deep link a decided
+//: request's notification uses (`?tab=History`), so it must not move. The
+//: label is what an approver reads, and "Pending" never said pending on
+//: WHOM — both lists on this screen hold pending things, and only one of
+//: them is waiting on the person looking at it (2.0 slice 4.1, §3.5).
+//:
+//: GSegmented takes `{ key, label }` for exactly this.
+const TAB_BUTTONS = [
+	{ key: "Pending", label: __("Waiting on you") },
+	{ key: "History", label: __("Decided by you") },
+]
 // ?tab=History deep-links a decided request's notification straight to its
 // History entry; anything else lands on the queue.
 const activeTab = ref(route.query.tab === "History" ? "History" : "Pending")
