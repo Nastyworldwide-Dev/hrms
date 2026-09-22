@@ -12,6 +12,7 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from hrms.api.kpi import (
 	CEO_DESIGNATION,
 	can_view_team_kpi,
+	get_department_kpi,
 	get_employee_kpi,
 	get_my_kpi_dashboard,
 	get_team_kpi,
@@ -723,3 +724,140 @@ class TestTeamKPI(FrappeTestCase):
 			list(inspect.signature(get_team_kpi).parameters),
 			["year", "cycle", "department", "company"],
 		)
+
+
+class TestKpiFence(FrappeTestCase):
+	"""THE FENCE, pinned as one thing (revamp slice A6, KR5).
+
+	A performance score reaching the wrong person is a personnel incident, not
+	a UI bug. The revamp touches views/kpi/ for tokens, density and the empty
+	path, and none of that may widen who sees what — so the fence gets a guard
+	that lands BEFORE any of it, rather than a hope that the existing 47 tests
+	happen to cover the right four things.
+
+	These are not new rules. They are the four properties `_scope` already has,
+	written down in one place so that widening any of them fails a build:
+
+	  1. no tier => no tab AND no detail. Both, because the tab is a NAV gate
+	     and the detail re-derives the tier; a test of only one would pass
+	     against an endpoint that stopped checking.
+	  2. a manager is confined to their own chain.
+	  3. the DEPARTMENT TREE is CEO and HR only. This is the highest-privilege
+	     surface in the module and, until this class, the only one of the five
+	     endpoints with no permission test at all.
+	  4. HR keeps the view with no Employee record, because HR is a role.
+
+	This is a GUARD, not a regression test: all four hold on the code before
+	it, which is why the commit carrying it is a chore and not a fix.
+	"""
+
+	def setUp(self):
+		frappe.db.delete("Goal")
+		frappe.db.delete("Appraisal")
+		frappe.db.delete("User Permission", {"allow": "Company"})
+
+		self.company = create_company("_Test KPI Fence").name
+		self.template = create_appraisal_template()
+		engineer = create_designation(designation_name="Engineer")
+		engineer.appraisal_template = self.template.name
+		engineer.save()
+		create_designation(designation_name=CEO_DESIGNATION)
+
+		self.dept = self._department("Fence Dept", self.company)
+
+		self.nobody_user = "kpi_fence_nobody@example.com"
+		self.mgr_user = "kpi_fence_mgr@example.com"
+		self.report_user = "kpi_fence_report@example.com"
+		self.outsider_user = "kpi_fence_outsider@example.com"
+		self.ceo_user = "kpi_fence_ceo@example.com"
+		self.hr_user = "kpi_fence_hr@example.com"
+
+		self.nobody = self._employee(self.nobody_user, "Engineer")
+		self.mgr = self._employee(self.mgr_user, "Engineer")
+		self.report = self._employee(self.report_user, "Engineer")
+		self.outsider = self._employee(self.outsider_user, "Engineer")
+		self.ceo = self._employee(self.ceo_user, CEO_DESIGNATION)
+		self.hr = self._employee(self.hr_user, "Engineer")
+		frappe.get_doc("User", self.hr_user).add_roles("HR Manager")
+
+		frappe.db.set_value("Employee", self.report, "reports_to", self.mgr)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("User Permission", {"allow": "Company"})
+
+	def _department(self, name: str) -> str:
+		existing = frappe.db.exists("Department", {"department_name": name, "company": self.company})
+		if existing:
+			return existing
+		return frappe.get_doc(
+			{"doctype": "Department", "department_name": name, "company": self.company}
+		).insert(ignore_permissions=True).name
+
+	def _employee(self, user: str, designation: str) -> str:
+		employee = make_employee(user, company=self.company, designation=designation)
+		frappe.db.set_value("Employee", employee, "department", self.dept)
+		return employee
+
+	# --- 1. no tier ---------------------------------------------------------
+
+	def test_a_tierless_employee_gets_no_tab_and_no_door(self):
+		frappe.set_user(self.nobody_user)
+		self.assertIsNone(can_view_team_kpi(), "no tab")
+		self.assertRaises(frappe.PermissionError, get_team_kpi)
+		self.assertRaises(frappe.PermissionError, get_employee_kpi, self.outsider)
+		self.assertRaises(frappe.PermissionError, get_department_kpi)
+
+	def test_a_tierless_employee_still_reads_their_own(self):
+		# The fence is about OTHER people. Refusing somebody their own score
+		# would be the opposite failure, and just as wrong.
+		frappe.set_user(self.nobody_user)
+		mine = get_my_kpi_dashboard()
+		self.assertEqual(mine["employee"]["name"], self.nobody)
+
+	# --- 2. a manager is confined to their chain ----------------------------
+
+	def test_a_manager_is_refused_outside_their_chain(self):
+		frappe.set_user(self.mgr_user)
+		self.assertEqual(can_view_team_kpi(), "manager")
+		get_employee_kpi(self.report)  # their own report: allowed
+		self.assertRaises(frappe.PermissionError, get_employee_kpi, self.outsider)
+
+	# --- 3. the department tree is CEO and HR only --------------------------
+
+	def test_the_department_tree_refuses_a_manager(self):
+		"""A manager's scope is PEOPLE, not org structure. Until this guard the
+		module's highest-privilege endpoint had no permission test of its own."""
+		frappe.set_user(self.mgr_user)
+		self.assertRaises(frappe.PermissionError, get_department_kpi)
+
+	def test_the_department_tree_admits_the_office_and_hr(self):
+		for user, tier in ((self.ceo_user, "ceo"), (self.hr_user, "hr")):
+			frappe.set_user(user)
+			self.assertEqual(can_view_team_kpi(), tier)
+			self.assertEqual(get_department_kpi()["viewer_mode"], tier)
+
+	# --- 4. HR is a role, not an identity -----------------------------------
+
+	def test_hr_keeps_the_tab_without_an_employee_row(self):
+		email = "kpi_fence_hr_no_employee@example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc(
+				{"doctype": "User", "email": email, "first_name": "Fence HR", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		frappe.get_doc("User", email).add_roles("HR Manager")
+		self.assertFalse(frappe.db.exists("Employee", {"user_id": email, "status": "Active"}))
+
+		frappe.set_user(email)
+		self.assertEqual(can_view_team_kpi(), "hr")
+
+	# --- the nav gate is not the data gate ----------------------------------
+
+	def test_the_tab_gate_is_advisory_and_every_door_re_checks(self):
+		"""`can_view_team_kpi` decides whether a TAB is drawn. If a caller who
+		is refused the tab could still open a door, the fence would be a CSS
+		rule. Asserted as a pair so neither half can be relaxed alone."""
+		frappe.set_user(self.nobody_user)
+		self.assertIsNone(can_view_team_kpi())
+		for door in (get_team_kpi, get_department_kpi):
+			self.assertRaises(frappe.PermissionError, door)
