@@ -106,6 +106,7 @@
 	--g-tabbar-pad-bottom: 8px;
 	--g-tabbar-pad-top: 12px;
 	--g-touch-target-min: 44px;
+	--g-viewport-floor: 320px;
 	--g-viewport-height: 844px;
 	--g-viewport-width: 390px;
 	/* field */
