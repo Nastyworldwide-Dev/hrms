@@ -108,7 +108,7 @@ class TestTheExpectedOutput(SaveDayCase):
 			self.assertEqual(self.store.taps[name]["skip_auto_attendance"], 0)
 			self.assertIsNone(self.store.taps[name]["attendance"])
 		# the engine re-marks the day; nothing here typed a result
-		self.assertEqual([day for _, day, _ in self.store.rebuilt], [str(DAY)])
+		self.assertEqual([day for _, day, *_ in self.store.rebuilt], [str(DAY)])
 		# the fix log keeps a copy of what was deleted, and says what was deleted
 		entry = self.store.logs[answer["log"]]
 		self.assertEqual(entry["action"], "save_day")
@@ -264,7 +264,9 @@ class TestTheGuards(SaveDayCase):
 		)
 
 	def test_the_ordinary_day_guards_still_apply(self):
-		self.financial = "SAL-0001"
+		# Save & rebuild runs with requests_ok=True, so the money check is `_paid_day`,
+		# not `_financial` — a submitted Salary Slip still blocks (21 Sep ruling).
+		self.paid = "SAL-0001"
 		self.assertIn("paid", self.refusal(self.save, {"in": "CKIN-A", "out": "CKIN-D"}))
 
 	def test_a_reason_is_required(self):
@@ -296,7 +298,7 @@ class TestTheUndo(SaveDayCase):
 		self.assertIn(f"CKIN-C->{recreated[1]['name']}", refs)
 		# rows are never restored by hand: the day is rebuilt from the punches
 		self.assertIn("stays cancelled", undo["note"])
-		self.assertEqual([day for _, day, _ in self.store.rebuilt], [str(DAY), str(DAY)])
+		self.assertEqual([day for _, day, *_ in self.store.rebuilt], [str(DAY), str(DAY)])
 		self.assertEqual(self.store.logs[self.answer["log"]]["undone"], 1)
 
 	def test_the_undo_puts_the_kept_taps_back_as_they_were(self):
@@ -335,7 +337,7 @@ class TestOnlyTouchedDaysChange(SaveDayCase):
 		self.save({"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
 		self.assertEqual(self.store.taps["CKIN-G"], frozen)
 		self.assertEqual(self.store.rows["ATT-9"]["docstatus"], 1)
-		self.assertEqual([day for _, day, _ in self.store.rebuilt], [str(DAY)])
+		self.assertEqual([day for _, day, *_ in self.store.rebuilt], [str(DAY)])
 
 	def test_the_day_a_ticked_tap_leaves_is_rebuilt_too(self):
 		"""The night's OUT was stamped onto the next morning's shift: pairing it
@@ -346,7 +348,7 @@ class TestOnlyTouchedDaysChange(SaveDayCase):
 		self.save({"in": "CKIN-A", "out": "CKIN-D"})
 		self.assertEqual(self.store.taps["CKIN-D"]["shift"], NIGHT)
 		self.assertEqual(self.store.taps["CKIN-D"]["log_type"], "OUT")
-		self.assertEqual(sorted(day for _, day, _ in self.store.rebuilt), [str(DAY), str(NEXT)])
+		self.assertEqual(sorted(day for _, day, *_ in self.store.rebuilt), [str(DAY), str(NEXT)])
 
 
 class TestTheScreenGainsWhatTheDialogNeeds(SaveDayCase):

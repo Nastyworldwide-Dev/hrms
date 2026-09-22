@@ -185,19 +185,28 @@ class TheDialogTellsTheTruthCase(unittest.TestCase):
 		self.src = BUNDLE.read_text(encoding="utf-8")
 
 	def test_it_does_not_claim_a_rebuild_it_cannot_see(self):
-		start = self.src.index("show_change(answer) {")
-		body = self.src[start : self.src.index("\n\t}", start)]
+		# Written against `show_change`, which the 21 Sep one-button rewrite
+		# retired; re-aimed at `result_html`, the one place a per-day answer is
+		# painted now. The incident is unchanged: a day the engine HELD came
+		# back reading exactly like a day it rebuilt, so HR closed the dialog
+		# believing a day had moved that had not.
+		start = self.src.index("result_html(date, answer) {")
+		body = self.src[start : self.src.index("\n\t// Undo", start)]
 		self.assertIn(
-			"changed",
+			'verdict.action === "held"',
 			body,
-			"the title must depend on whether the day came back different",
+			"a held day is picked out of the engine's per-day verdicts",
 		)
-		self.assertNotIn(
-			'title: __("The day was rebuilt"),',
+		self.assertIn(
+			"verdict.detail",
 			body,
-			"an unconditional title is how a no-op read as a success",
+			"and the engine's own sentence is printed, not just the fact of a hold",
 		)
-
+		self.assertIn(
+			"alert-warning",
+			body,
+			"where HR reads it as a warning, not as part of the success line",
+		)
 
 if __name__ == "__main__":
 	unittest.main()
