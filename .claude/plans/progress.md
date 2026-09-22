@@ -240,3 +240,7 @@ NEXT: SOP search-first (the last D3 piece), then the deploy note.
 - 2026-09-22T17:53:10Z PUSH: nz-glass @ d0e98da13
 - 2026-09-22T17:53:10Z COMMIT: d0e98da13 feat(support): the pills never said whether anything was behind them → review+design dispatched
 - 2026-09-22T17:56:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 17 file(s) ⟂da5fdd6c5fcd
+- 2026-09-22T17:56:48Z PUSH: nz-glass @ f4373af50
+- 2026-09-22T17:56:48Z COMMIT: f4373af50 feat(sop): the library re-grouped itself between every keystroke → review+design dispatched
+- 2026-09-22T18:01:30Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
+- 2026-09-22T18:01:30Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b

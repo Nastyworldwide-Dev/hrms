@@ -29,6 +29,11 @@
 				     answered "how do I start a request?" — a question the
 				     Requests tab now answers in one tap from anywhere, which
 				     is why Home's largest block could go. -->
+				<!-- FIRST, above the check-in button: what is true right now,
+				     so the button underneath is a decision rather than a guess
+				     (§2). Renders nothing when there is no shift and no open
+				     session, which is most of a day off. -->
+				<NowBar />
 				<CheckInPanel />
 				<NeedsYou />
 				<!-- Fourth, under what needs you and above what you asked for.
@@ -48,6 +53,7 @@
 import { reloadRequestLists } from "@/data/requestLists"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
+import NowBar from "@/components/NowBar.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
 import Announcements from "@/components/Announcements.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
