@@ -295,3 +295,34 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
 - EVIDENCE: rung 1+2 — both probes run clean; gate suite unaffected, 13/13
   tests, contrast 54 checked 0 failures. No token changed; this is measurement,
   not a fix.
+- 2026-09-22T01:33:19Z PUSH: nz-glass @ e56319358
+- 2026-09-22T01:33:19Z COMMIT: e56319358 docs(design): measure the .86 glass-fill proposal instead of ruling on taste → review dispatched
+- EVIDENCE (glass-fill ruling, adversarial): fresh-context verifier ran against
+  e56319358 with the brief to REFUTE all three claims. Returned CONFIRMED on
+  each, and it did not take the probes' word for it — it re-derived the numbers
+  from design/gates/contrast.mjs independently and compared the probes'
+  parse/over/luminance/ratio/blobGeometry/alphaAt formulas line-by-line against
+  the gate's (identical, including the negative-offset gotcha: blob-b-right
+  "-163px" -> cx 448 in both).
+  It also closed the one gap I flagged as my own weakest point. I had asked
+  whether --ink-muted's 3.84:1 might be exempt under WCAG large-text (3.0:1
+  floor rather than 4.5). It is not: every ink-muted call site grepped from
+  glass-components.css / glass.css is 10-13px (--g-type-caption-size 10.5px,
+  --g-type-data-system-size 10px, --g-type-row-label-size 12.5px) — GInput
+  placeholder, GCalendar day numbers, GStatusChip muted, GIssueCard id. All far
+  under the 18.66px/24px threshold, so no exemption applies and FINDING 2 stands
+  as a genuine failure, not a technicality.
+  It further confirmed the lg: question I could not fully model in the probes:
+  the gate already scales the blobs by vw at lg: and finds ZERO alpha reaching
+  the column across 24 viewport x nav x blob combinations, so there is no
+  breakpoint where the mockup's premise becomes true.
+- NOTE: two things neither the probes nor the gate measure, recorded rather than
+  left looking covered. (1) Stacked translucency — a sheet over a panel, or the
+  tab bar over content, composes two veils; nothing measures the doubled case.
+  (2) "Backdrop visible" (1 - alpha: 44% at .56, 14% at .86) is arithmetic and
+  correct, but whether it is the right PROXY for perceived glass is a judgment,
+  not a measurement — backdrop-filter blur and saturate also carry the effect
+  and were not quantified. Neither gap changes the ruling: the mockup's comment
+  is specifically about the light-field blobs dragging ink2, which is exactly
+  what was refuted. Both are candidates if the owner ever wants the density
+  question reopened on taste grounds.
