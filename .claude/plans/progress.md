@@ -2,142 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  unbounded. The actual list screens (Attendance/OT/Expense/Shift/Leave request
-  histories) already paginate — ListView.vue:306 page_length:50 with infinite
-  scroll (start-offset paging, ListView.vue:338-485). Both already match what
-  was asked; nothing broken to fix.
-- NEXT: both remaining items from the original complaint (redundant title, page
-  scroll/pagination) are investigated-closed as above — no reproducible defect,
-  no fabricated fix. Nav-bar item is DONE (3d4fa0dfe). Nothing left from that
-  report to action without new input. Owner's word on FOUR (mockup folder,
-  Mockup 4 sign-off, visual-vs-IA contract, --g-glass-fill .86) still blocks
-  everything past this. Minor, not actioned: Home has two <h1> elements on one
-  page (GAppHeader + CheckInPanel greeting) — an a11y landmark issue, flagged
-  for the owner's queue, not fixed here (out of scope of what was asked).
-- 2026-09-22T01:05:14Z PUSH: nz-glass @ 9c4df8ac3
-- 2026-09-22T01:05:15Z COMMIT: 9c4df8ac3 docs(glass): redundant-title and scroll complaints don't reproduce → review dispatched
-- NOTE: skipped reviewer + retro-analyst dispatch on 9c4df8ac3 (docs, 2 files,
-  no code changed) — exempted per this repo's own chore/docs/style ≤2-files
-  rule, same as 36b5baacb and 078698b5b earlier this session.
-- NOTE: frappe-reviewer on 3d4fa0dfe DID report: NEXT_ACTION DEPLOY, 0 critical.
-  It had needed one nudge first (it was trying to run ruff + bench run-tests in a
-  repo with neither), then ran the real Node/CSS gates instead. Not silent, so the
-  FIX_CRITICAL branch of the silent-reviewer rule never applied. Recorded here
-  because a later prompt asked whether it was still outstanding: it was not, and
-  3d4fa0dfe has been an ancestor of origin/nz-glass since 00:57Z.
-- 2026-09-22T01:26:52Z PUSH: nz-glass @ d62bddd53
-- 2026-09-22T01:26:52Z COMMIT: d62bddd53 chore(plans): dedupe a doubled ledger entry, record reviewer status → review dispatched
-- 2026-09-22T01:07Z COMMIT: d62bddd53 chore(plans): dedupe a doubled ledger entry, record reviewer status
-- 2026-09-22T01:07Z PUSH: nz-glass @ d62bddd53
-- NOTE: skipped reviewer + retro-analyst dispatch on d62bddd53 (docs, 1 file,
-  no code changed) — exempted per this repo's own chore/docs/style ≤2-files
-  rule, same as 36b5baacb, 078698b5b and 9c4df8ac3 earlier this session.
-- EVIDENCE (owner question 4, --g-glass-fill .86): measured, not reasoned. Two
-  probes added under design/tools/ using the same WCAG math contrast.mjs uses:
-  glass-fill-candidates.mjs (shipped .56/.075 vs mockup-4 .86/.86-dark vs a
-  .86-light-only hybrid) and glass-fill-premise.mjs (does the mockup's stated
-  reason hold?).
-  FINDING 1 — the mockup's premise is FALSE for the shipped field geometry. Its
-  comment says .56 drags --ink2 from 6.2:1 to 3.7:1 over the light field. All
-  three blob centres sit OUTSIDE the content column (x=-65, x=448, x=-47 against
-  a column of x=[15,375]), each 62-80px away with a gradient reach of 63-81px,
-  so the alpha landing on text is 0.0045/0.0042/0.0105. Measured drop: 6.36 flat
-  -> 6.34 worst blob. Delta 0.02, not 2.5. The 3.7:1 figure is reproducible only
-  with a blob centre inside the column, which §3.3's own placement rule forbids
-  and contrast.mjs already proves never happens.
-  FINDING 2 — the dark half of the proposal FAILS the repo's own floor. A
-  #2A2E38 tint at .86 puts --ink-muted at 3.84:1 against the 4.5 minimum, flat
-  AND over all three blobs. Shipped .075 white measures 4.58. Adopting mockup-4's
-  dark value as written would introduce the first contrast regression in the
-  token set.
-  FINDING 3 — .86 LIGHT alone is safe but buys almost nothing: +0.27 on ink2
-  (6.36->6.63), +0.20 on ink-muted, +0.20 on danger-ink, and it costs 30 points
-  of backdrop visibility (44% -> 14%), i.e. most of the glass effect the design
-  exists for. tokens.json's own note ("Light is deliberately more opaque than
-  dark; do not correct (spec 6)") is the standing ruling and the measurements
-  support it.
-  RECOMMENDATION to the owner: do NOT adopt .86. Keep .56/.075. The proposal
-  fixes a legibility problem the shipped geometry does not have, and its dark
-  value creates a real one. If the owner wants the panels visually denser, that
-  is a taste call to make on its own terms, not on the mockup's contrast
-  argument, and the light-only variant is the sole adoptable form of it.
-- EVIDENCE: rung 1+2 — both probes run clean; gate suite unaffected, 13/13
-  tests, contrast 54 checked 0 failures. No token changed; this is measurement,
-  not a fix.
-- 2026-09-22T01:33:19Z PUSH: nz-glass @ e56319358
-- 2026-09-22T01:33:19Z COMMIT: e56319358 docs(design): measure the .86 glass-fill proposal instead of ruling on taste → review dispatched
-- EVIDENCE (glass-fill ruling, adversarial): fresh-context verifier ran against
-  e56319358 with the brief to REFUTE all three claims. Returned CONFIRMED on
-  each, and it did not take the probes' word for it — it re-derived the numbers
-  from design/gates/contrast.mjs independently and compared the probes'
-  parse/over/luminance/ratio/blobGeometry/alphaAt formulas line-by-line against
-  the gate's (identical, including the negative-offset gotcha: blob-b-right
-  "-163px" -> cx 448 in both).
-  It also closed the one gap I flagged as my own weakest point. I had asked
-  whether --ink-muted's 3.84:1 might be exempt under WCAG large-text (3.0:1
-  floor rather than 4.5). It is not: every ink-muted call site grepped from
-  glass-components.css / glass.css is 10-13px (--g-type-caption-size 10.5px,
-  --g-type-data-system-size 10px, --g-type-row-label-size 12.5px) — GInput
-  placeholder, GCalendar day numbers, GStatusChip muted, GIssueCard id. All far
-  under the 18.66px/24px threshold, so no exemption applies and FINDING 2 stands
-  as a genuine failure, not a technicality.
-  It further confirmed the lg: question I could not fully model in the probes:
-  the gate already scales the blobs by vw at lg: and finds ZERO alpha reaching
-  the column across 24 viewport x nav x blob combinations, so there is no
-  breakpoint where the mockup's premise becomes true.
-- NOTE: two things neither the probes nor the gate measure, recorded rather than
-  left looking covered. (1) Stacked translucency — a sheet over a panel, or the
-  tab bar over content, composes two veils; nothing measures the doubled case.
-  (2) "Backdrop visible" (1 - alpha: 44% at .56, 14% at .86) is arithmetic and
-  correct, but whether it is the right PROXY for perceived glass is a judgment,
-  not a measurement — backdrop-filter blur and saturate also carry the effect
-  and were not quantified. Neither gap changes the ruling: the mockup's comment
-  is specifically about the light-field blobs dragging ink2, which is exactly
-  what was refuted. Both are candidates if the owner ever wants the density
-  question reopened on taste grounds.
-- 2026-09-22T01:35:27Z PUSH: nz-glass @ 54b4b7b77
-- 2026-09-22T01:35:27Z COMMIT: 54b4b7b77 chore(plans): adversarial check confirms the glass-fill ruling → review dispatched
-- NOTE: skipped reviewer + retro-analyst dispatch on e56319358 and 54b4b7b77 —
-  both are docs/evidence commits touching no shipped code (two new probe scripts
-  under design/tools/ that nothing imports, plus the ledger), exempted per this
-  repo's own chore/docs/style rule. The adversarial verifier already did the
-  substantive review of e56319358's content, which is stronger than a reviewer
-  pass on a diff with no runtime surface.
-- NEXT: answered owner question 4 with measurement (recommend KEEP .56/.075,
-  reject .86; light-only .86 is the sole adoptable variant if density is wanted
-  on taste grounds) — awaiting the owner's ruling, not proceeding on my own read.
-  Questions 1-3 still open and still blocking: un-ignore the mockup folder
-  (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
-  architecture contract? Nothing deployed; deploy is the owner's.
-- 2026-09-22T01:35:44Z COMMIT: a62ea0f11 chore(plans): record the exemptions and what question 4 now awaits → review dispatched
-- 2026-09-22T01:40:46Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-22T01:56:18Z COMPACT: context compacted — read the last NEXT above before continuing
-- EVIDENCE (owner questions 1-3, and a gate defect found while answering 2):
-  measured, not reasoned. New probe design/tools/mockup-column-candidates.mjs
-  models the desktop column three ways and prints all three.
-  Q2, the column: mockup-4's --g-content-column-lg: 880px FAILS the shipped
-  gate. Perturbed tokens.json to 880, ran the gate: FAIL lg 1024px nav:216 dark
-  ink-muted over blob B = 4.31, GATE_RESULT checked:57 failures:1, exit 1.
-  Restored; 54/0 and 13/13 again, git diff clean. Bisected: 773px is the widest
-  value that clears the gate's model, not 800px as this probe's first header
-  said. Above ~778 the value saturates at 4.31 because the column is
-  viewport-clamped.
-- CORRECTION: my first reading of that failure was wrong in the app's favour
-  and a fresh-context verifier refuted it. I had said the gate's lg: model is
-  left-aligned while the app centres the column, so the 880 failure was a
-  harmless model artifact. The centring half is right (15/15 uses of
-  max-w-content-column-lg pair it with mx-auto; browser-measured at 1024/nav216
-  the real text box is [288,952] at 720 and [244,996] at 880, against the
-  gate's [231,951]/[231,1009]). The rest was wrong: the field is NOT
-  viewport-anchored. GLightField mounts inside <ion-page> (GPage.vue:26) and
-  .g-lightfield is position:absolute inset:0, so in TabbedView's flex shell the
-  blob box starts at x=nav while the blob offsets stay in vw. Every
-  left-anchored blob shifts right by the nav width. Browser: blob A's real
-  centre at 1024/nav216 is x=+123, not the gate's -93. I had inherited the
-  gate's own centres, so my "no blob reaches the text box" derivation was built
-  on numbers 216px off.
-- REPAIR (none applied; measurement only): correcting both errors surfaces a
-  real defect the column question had nothing to do with. One shipped lg:
   container is UNCAPPED — expense_claim/Dashboard.vue:5 is
   `lg:grid lg:grid-cols-[1fr_1.2fr] lg:p-7` with no max-width, inside
   BaseLayout's `lg:max-w-none lg:mx-0`. There the blobs DO reach the text box:
@@ -275,3 +139,67 @@ NEXT: Nabil deploys on Frappe Cloud; then open Adam Daniel 18 Aug in Fix attenda
   before the commit stands. Both extra shots were caught by a reviewer, not by me.
 NEXT: Nabil deploys on Frappe Cloud; then open Adam Daniel 18 Aug in Fix attendance and confirm
   four punches listed, none ticked, the engine's reason shown.
+- 2026-09-22T03:17:47Z PUSH: nz-glass @ fe2638b16
+- 2026-09-22T03:17:47Z COMMIT: fe2638b16 docs(plans): the retro's second shot was not a spec gap → review dispatched
+- 2026-09-22T03:22:48Z COMPACT: context compacted — read the last NEXT above before continuing
+
+EVIDENCE: rung 1 — Home density + icon inventory measured 22 Sep. Shipped Home
+  1382px content / 844 fold / 538 overflow at 390x844 for TEN tap targets
+  (docs/glass/audit/2026-09-09-app-measure.json). That file records tabH:0 on all
+  36 screens — measured BEFORE the bottom nav repair (3d4fa0dfe) — so every fold
+  is ~64-73px too generous. Directionally right, precisely wrong; must be re-run.
+EVIDENCE: rung 1 — icons: feather-icons 4.29.2 already a dep; frappe-ui's
+  FeatherIcon does `import feather from 'feather-icons'` (namespace), so all 287
+  icons ship (52.5 KB raw / 10.5 KB gz) while only 13 names are used across 6
+  files (1.6 KB / 0.6 KB gz). Cannot tree-shake: Object.keys(feather.icons) runs
+  at module scope for the prop validator. Plus 14 hand-rolled components
+  (263 lines / 6.9 KB) and 34 inline <svg> in 29 .vue files. 0 ion-icon.
+CORRECTION: I cited "mockup-4 home = 723px, 0 overflow" as evidence the no-scroll
+  goal was already proven. Wrong file. 2026-09-09-prototype-measure.json measures
+  nadi-prototype.html (e2e/prototype-measure.mjs:12), not mockup-4. Withdrawn.
+EVIDENCE: rung 1 — mockup-4 measured directly instead. It hardcodes
+  .app{width:390px;height:844px;overflow:hidden} (line 124), so a fixed frame
+  CANNOT show overflow and eyeballing it reports "no scroll" at any window size.
+  Measured one screen at a time inside its own frame: s-home 912/774 = 138 over,
+  s-appr 1030/774 = 256, s-leaveform 915/774 = 141, s-score 27, s-req 25; six
+  screens fit. Frame released to real heights, home alone: 360x640 824 over,
+  360x740 501, 360x800 347, 390x844 229, 414x896 138, 430x932 67. So "no scroll"
+  is not proven anywhere yet — not in the app, not in the mockup.
+CORRECTION: my first tap-target pass reported minTap 12-14px on mockup-4. It was
+  measuring card DIVs matched by [class*=card]/[class*=row], not controls.
+  Re-audited over button/a/[role=button]/input/select only: exactly ONE target
+  under 24x24 (a 38x22 toggle track on s-leaveform). Mockup tap targets are
+  otherwise WCAG 2.2 SC 2.5.8 clean. Withdrawn.
+NOTE: latent bug found, NOT in scope for the Home work — glass.css:96
+  --g-sheet-max-height: calc(100vh - 5rem) plus 9 more 100vh/88vh/80vh/70vh
+  sites. 100vh is the LARGEST mobile viewport state, so sheets are cut off while
+  browser chrome shows. dvh/svh have been Baseline Widely Available since Jun
+  2025. Filed as its own slice (S7) with its own root cause.
+PLAN: .claude/plans/current-plan.md written, tier risky — Home density (4 named
+  causes, each with its own fix), the fold FORMULA (anchor block sized against
+  the SMALLEST usable height ~440px at 360x640, elastic list allowed to scroll;
+  invariant F1), and one icon library (recommend lucide-vue-next, feather
+  REMOVED with it). 7 slices. Mockup sign-off required before S2.
+NEXT: present the plan for approval — no code until the owner rules on it, and a
+  measured frameless mockup is required before the QuickLinks grid slice.
+
+REPAIR: S1 — Home spent its small-phone budget on air and said things twice.
+  Three causes, one slice: (a) four panels at gap-8 = 96px of inter-panel air on
+  a screen whose usable budget is ~440px at 360x640 -> gap-5; (b) CheckInPanel
+  rendered an <h1> greeting while GAppHeader.vue:44 already renders the page h1,
+  so every screen reader announced Home's title twice AND display-size type ate
+  anchor height -> <p>, same words, same look, no structural claim;
+  (c) PendingApprovalsBanner said "{0} remote check-in(s) awaiting your approval"
+  + "Tap to review and decide." = 11 words for one count and one tap, on a
+  GBanner that is already `interactive` -> "{0} check-in(s) to approve".
+EVIDENCE: rung 2 — frontend/src/views/__tests__/home-fold-budget.test.js, 3
+  tests, RED on all three before the edit (verified, not assumed). Mutation-
+  checked: reintroducing the <h1> turns it red again and restoring it green.
+  First draft of the h1 test matched its OWN explanatory comment (the comment
+  names the tag it removed), so it stripped comments before asserting — a test
+  its subject's prose can fail is not a test.
+EVIDENCE: rung 3 — contrast gate 54 checked / 0 failures, gate tests 13/13,
+  component+view tests 55/55, biome clean on all four files, production build
+  green (188 asset chunks, Home/CheckInPanel/PendingApprovalsBanner all emitted).
+- 2026-09-22T04:13:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-22T04:14:29Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8

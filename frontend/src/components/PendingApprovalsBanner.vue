@@ -13,10 +13,14 @@
 		class="g-approvals"
 		@click="router.push({ name: 'RemoteApprovals' })"
 	>
+		<!-- "{0} remote check-in(s) awaiting your approval" + "Tap to review
+		     and decide." was 11 words for one count and one tap. GBanner is
+		     already `interactive`, so the instruction is redundant to a
+		     sighted user and noise to a screen reader, which announces the
+		     row as a button regardless. The count is the information. -->
 		<span class="g-approvals__title">
-			{{ __("{0} remote check-in(s) awaiting your approval", [count]) }}
+			{{ __("{0} check-in(s) to approve", [count]) }}
 		</span>
-		<span class="g-approvals__hint">{{ __("Tap to review and decide.") }}</span>
 	</GBanner>
 </template>
 

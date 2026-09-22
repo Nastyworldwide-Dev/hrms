@@ -4,9 +4,15 @@
 		<div class="g-eyebrow" data-visual-mask>
 			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
 		</div>
-		<h1 class="text-display-number lg:text-clock text-inkbase mt-2 mb-1.5">
+		<!-- A greeting is not a heading. This was an <h1>, which made TWO h1
+		     on Home: GAppHeader.vue:44 already renders the page's one. A
+		     screen reader announced the page title twice and the display-size
+		     type cost the anchor block height it needs at 360x640, where the
+		     whole usable budget is ~440px. Same words, same look, no
+		     structural claim. -->
+		<p class="text-display-number lg:text-clock text-inkbase mt-2 mb-1.5">
 			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
-		</h1>
+		</p>
 
 		<!-- A failed settings read hides check-in entirely, and the employee standing
 		     at the door has no way to tell that from the feature being switched off

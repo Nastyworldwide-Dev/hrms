@@ -11,9 +11,17 @@
 			<!-- Pull to refresh: the socket is not a delivery guarantee on a phone,
 			     so the employee always has a hand-driven way to see the decided
 			     status without a full reload (A-C1). -->
+			<!-- gap-5, not gap-8. The fold is a BUDGET, not a length:
+			     USABLE = 100dvh - header - tab bar (64 + 9 + safe-area) -
+			     padding, which is ~440px at 360x640 and ~640px at 390x844.
+			     Four panels at gap-8 spent 96px of that on air alone, on a
+			     screen measured at 1382px of content for ten tap targets.
+			     Sized against the SMALLEST budget, every larger phone gains
+			     list rows instead of needing its own layout. Invariant F1 and
+			     the arithmetic: src/views/__tests__/home-fold-budget.test.js. -->
 			<GPullRefresh @refresh="refreshRequests" />
 			<div
-				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
 				<PendingApprovalsBanner />
 				<CheckInPanel />
