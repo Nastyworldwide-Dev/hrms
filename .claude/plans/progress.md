@@ -259,3 +259,27 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T17:14:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141
 - 2026-09-22T17:14:58Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141
 - 2026-09-22T17:15:22Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 20 file(s) ⟂ca85ac4a0141
+- 2026-09-22T17:15:26Z COMMIT: 96c0925a7 feat(announcements): the feature 2.0 was asked for and could not build → review+design dispatched
+- 2026-09-22T17:15:35Z PUSH: nz-glass @ 96c0925a7
+
+EVIDENCE: rung 2 (correct) — announcements: 690/690 frontend tests green (yarn test),
+  ruff clean across hrms/, and the audience fence exercised as a pure function over
+  10 cases with 3 deliberate mutants (blank target opens the gate, unknown audience
+  opens the gate, Department compares to company) — all 3 killed, file restored.
+EVIDENCE: rung 3 (works) — announcements exercised END TO END on spoke.localhost
+  (verify-bench, real data, 30 active employees). Verified: a Department notice
+  reached reader A and was refused to reader B; the refusal left NO read row;
+  expired and unpublished notices reached nobody; opening a card twice recorded one
+  reading; acknowledge wrote acknowledged=1 with a timestamp; acknowledging a notice
+  that never asked was refused; the pin is exclusive (first unpinned on second pin);
+  deleting an announcement removed its read rows. Script: /tmp/ann_e2e.py, output
+  "ALL CHECKS PASSED".
+EVIDENCE: rung 3 (works) — both doctypes install cleanly on spoke.localhost via
+  import_file_by_path; HR Announcement and HR Announcement Read both exist after.
+DEAD END: audience_value as a Dynamic Link. Frappe resolves a Dynamic Link's target
+  in _validate_links(), which runs BEFORE run_before_save_methods() — so neither
+  validate() nor before_validate() can populate a derived target in time. Both were
+  tried on the bench and both threw "Audience DocType must be set first". Now a
+  plain Data name with our own existence check.
+NEXT: patch to install the two announcement doctypes on deploy (a migrate that fails
+  earlier must not leave endpoints with no tables), then B3 home.needs_you.
