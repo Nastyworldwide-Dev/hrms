@@ -17,9 +17,15 @@
 		     and decide." was 11 words for one count and one tap. GBanner is
 		     already `interactive`, so the instruction is redundant to a
 		     sighted user and noise to a screen reader, which announces the
-		     row as a button regardless. The count is the information. -->
+		     row as a button regardless.
+		     "remote" is NOT part of that trim, and the first attempt at this
+		     cut it: the count is remote_checkin.get_pending_count and the row
+		     routes to RemoteApprovals only, so an approver reading a bare
+		     "check-in(s) to approve" could take it for every pending approval
+		     and stop looking. A qualifier that makes the count true is
+		     information, not prose. Five words, still half of eleven. -->
 		<span class="g-approvals__title">
-			{{ __("{0} check-in(s) to approve", [count]) }}
+			{{ __("{0} remote check-in(s) to approve", [count]) }}
 		</span>
 	</GBanner>
 </template>

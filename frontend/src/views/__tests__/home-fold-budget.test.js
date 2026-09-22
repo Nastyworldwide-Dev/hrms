@@ -70,3 +70,19 @@ test("the approvals banner does not tell the user to tap what is already a butto
 		"the whole banner is interactive; the instruction is noise"
 	)
 })
+
+// C4 follow-up, from the S1 review. Shortening the banner is right; deleting
+// its SCOPE is not. `count` comes from hrms.api.remote_checkin.get_pending_count
+// (data/remoteCheckin.js:21) and the row routes to RemoteApprovals only, so the
+// banner has no sight of any on-site approval. "check-in(s) to approve" reads as
+// if it covered all of them. An approver who trusts that stops looking
+// elsewhere, which is the one failure a visibility banner must not cause.
+// Brevity is a budget for words, not a licence to drop the qualifier that makes
+// the count true.
+test("the approvals banner names the scope of the count it shows", () => {
+	assert.match(
+		src("../../components/PendingApprovalsBanner.vue"),
+		/__\("\{0\} remote check-in\(s\)/,
+		"the count is remote-only (hrms.api.remote_checkin.get_pending_count); say so"
+	)
+})

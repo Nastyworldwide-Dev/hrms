@@ -203,3 +203,46 @@ EVIDENCE: rung 3 — contrast gate 54 checked / 0 failures, gate tests 13/13,
   green (188 asset chunks, Home/CheckInPanel/PendingApprovalsBanner all emitted).
 - 2026-09-22T04:13:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
 - 2026-09-22T04:14:29Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-09-22T04:14:32Z COMMIT: 8e07bf701 fix(home): the fold is a budget, and Home overspent it → review+design dispatched
+- 2026-09-22T04:15:05Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: S1 review follow-up. The frappe reviewer's one Warning was right and I
+  verified it at source before acting: the banner's count is
+  hrms.api.remote_checkin.get_pending_count (data/remoteCheckin.js:21) and the
+  row routes to RemoteApprovals only, so cutting "remote" left a bare
+  "check-in(s) to approve" that reads as EVERY pending approval. An approver who
+  believes that stops looking elsewhere — the one failure a visibility banner
+  must not cause. Restored to "{0} remote check-in(s) to approve": five words,
+  still less than half the original eleven. CLASS: a trim that removed a
+  qualifier carrying scope, not prose. Brevity is a word budget, not a licence.
+  Also took the design reviewer's DSN-06: .g-approvals__hint had no emitter left
+  after S1, so the dead branch is gone from glass-components.css:931.
+  .g-banner__hint stays — CheckInPanel.vue:74 still emits it.
+EVIDENCE: 2 correct — new test "the approvals banner names the scope of the
+  count it shows" RED before the edit (3 pass / 1 fail, verified), green after
+  (4/4). Mutation-checked: re-cutting the scope word turns it red again, and the
+  file was restored byte-identical (git diff --numstat 8/2, the intended edit).
+EVIDENCE: 3 works — contrast 54 checked / 0 failures, gate tests 13/13,
+  component+view tests 56/56, biome clean on all three touched files.
+NOTE: both S1 reviewers cleared the commit (NEXT_ACTION: DEPLOY,
+  VERDICT: DESIGN_APPROVED, zero Critical between them). Both nonetheless hit
+  their 10-turn limit and returned nothing until nudged — a silent reviewer here
+  was a truncated one, not a clean one. Their remaining SUGGESTIONs are NOT
+  taken: the orphan-translation risk can only be settled against live Translation
+  doctype rows (repo has no .csv/.po; lookup is exact-source-string via
+  translationsPlugin.js), and converging content-column gaps onto one token
+  (--g-stack-column, Home/Team gap-5 vs Leave/Attendance/KPI/Expense gap-8) is a
+  five-view change that belongs to the owner, not to this slice.
+EVIDENCE: rung 1 — S3 icon map measured against real Lucide (1848 icons, fetched
+  from lucide-static). 36 feather names are actually rendered, NOT the 13 I
+  recorded earlier: that count came from literal name="" only and missed the
+  dynamic bindings, all three of which resolve to literals in the code
+  (WorkflowActionSheet.vue:89/94 x/check; Home.vue link.icon = components).
+  CORRECTION to the earlier inventory line. Coverage: 29 identical, 5 renamed
+  (alert-triangle->triangle-alert, check-circle->circle-check,
+  check-square->square-check, edit->pen-line, edit-2->pencil), and 2 with NO
+  same-name target (filter, trash-2) that need a named substitute before S4 can
+  claim parity. All 14 hand-rolled components have a Lucide target.
+NEXT: commit this follow-up, then finish S3 as a committed doc (the 2 unmapped
+  names get a decided substitute, not a guess) before S4 installs anything.
+- 2026-09-22T04:21:43Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833

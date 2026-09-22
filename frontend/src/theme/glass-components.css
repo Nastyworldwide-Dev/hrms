@@ -928,8 +928,10 @@ html[data-theme="dark"] .g-badge--open {
 	font-weight: var(--g-type-card-title-weight);
 	color: var(--g-ink);
 }
-.g-banner__hint,
-.g-approvals__hint {
+/* .g-approvals__hint was dropped with the banner's redundant tap hint
+   (PendingApprovalsBanner, 22 Sep). CheckInPanel:74 still emits
+   .g-banner__hint, so the rule stays; only the dead branch goes. */
+.g-banner__hint {
 	display: block;
 	margin-top: 2px;
 	font-family: var(--g-type-caption-family);
