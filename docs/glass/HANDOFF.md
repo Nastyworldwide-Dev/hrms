@@ -1,16 +1,16 @@
 # HANDOFF
-prompt:   redundant title / page-scroll items from the original bug report
-status:   done (investigated, no defect found — no code change)
-commit:   none (docs only, see below)
-files:    .claude/plans/progress.md
-verify:   none — no code changed
-flags:    Redundant title: no literal duplicate reproduces on mobile PWA.
-          Checked ListView+BaseLayout overlap (none), in-body heading dupes
-          (0/11 BaseLayout views), SideNav vs header (real but desktop-only,
-          hidden on phone, and standard nav pattern anyway). Scroll/pagination:
-          Home is bounded (RequestPanel caps at 10); real list screens already
-          paginate (ListView.vue page_length:50 + infinite scroll). Earlier
-          NEXT line's framing of the title bug was wrong — corrected in ledger.
-next:     nothing actionable left from the original report. Owner's word on
-          FOUR (mockup folder, Mockup 4 sign-off, visual/IA contract,
-          --g-glass-fill) still blocks further 2.0 work.
+prompt:   hotfix — Fix attendance does nothing on a broken day
+status:   done
+commit:   ecb213981 on nz-glass (8 commits, 0c23be5f9..ecb213981)
+files:    hrms/api/attendance_fix_day.py
+          hrms/public/js/fix_day.bundle.js
+          hrms/public/js/fix_day.bundle.test.js
+          hrms/tests/test_fix_day_unreadable_day.py
+          hrms/tests/test_attendance_fix_day_save_day.py
+          hrms/tests/test_fix_day_refuses_a_two_row_day.py
+          .claude/design-tokens.css
+          .claude/plans/ticket-g13-has-no-test.md
+verify:   node --test hrms/public/js/fix_day.bundle.test.js (13) and
+          python3 -m pytest hrms/tests/test_fix_day_unreadable_day.py hrms/tests/test_attendance_fix_day_save_day.py hrms/tests/test_fix_day_refuses_a_two_row_day.py -q (43)
+flags:    UI not browser-verified (no dev site reachable); G13 still has no test (ticket filed)
+next:     deploy on Frappe Cloud, then open Adam Daniel 18 Aug and confirm 4 punches, none ticked
