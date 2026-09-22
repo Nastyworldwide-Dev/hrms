@@ -94,8 +94,11 @@
 	--g-content-column: calc(100% - 30px);
 	--g-content-column-lg: 720px;
 	--g-sheet-max-height: calc(100vh - 5rem);
+	--g-tabbar-border: 1px;
 	--g-tabbar-gap: 9px;
 	--g-tabbar-height: 64px;
+	--g-tabbar-pad-bottom: 9px;
+	--g-tabbar-pad-top: 11px;
 	--g-touch-target-min: 44px;
 	--g-viewport-height: 844px;
 	--g-viewport-width: 390px;

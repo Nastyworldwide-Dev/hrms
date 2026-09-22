@@ -107,10 +107,19 @@
    the page cannot detect it with :has(). Sub-pages routed outside ion-tabs
    carry no bar and correctly get no padding.
    Bar height + the gap beneath it + the safe area + one more gap of breathing
-   room above it, all from the same tokens the bar itself is positioned with. */
+   room above it, all from the same tokens the bar itself is positioned with.
+   PLUS the padding and border the bar draws beyond tabbar-height: Ionic's
+   tab-bar host forces `box-sizing: content-box !important` and light DOM
+   cannot override it, so tabbar-height is the CONTENT box only — the padding
+   and the border on both edges render outside it. Measured: a 64px token with
+   11px/9px padding and a 1px border rendered 86px tall while this reservation
+   read 82px, 4px short, and every tab screen came to rest with its last row
+   under the glass. Reading the same --g-tabbar-pad-*/--g-tabbar-border tokens
+   the bar itself draws from is what tabbar-reservation.test.mjs guards. */
 ion-tabs .g-page ion-content {
 	--padding-bottom: calc(
-		var(--g-tabbar-height) + (2 * var(--g-tabbar-gap)) + env(safe-area-inset-bottom, 0px)
+		var(--g-tabbar-height) + var(--g-tabbar-pad-top) + var(--g-tabbar-pad-bottom) +
+			(2 * var(--g-tabbar-border)) + (2 * var(--g-tabbar-gap)) + env(safe-area-inset-bottom, 0px)
 	);
 }
 /* §20.4 — the bar is lg:hidden and the side nav replaces it, so the reservation
@@ -177,12 +186,15 @@ ion-tab-bar.g-tabbar {
 	bottom: calc(env(safe-area-inset-bottom, 0px) + var(--g-tabbar-gap));
 	width: auto;
 	/* Pinned, not intrinsic. The scroll padding that keeps content out from
-	   behind this bar is computed from the same token (see .g-page ion-content
-	   below); if the height were left intrinsic the two could drift and content
-	   would silently slide back under the bar. */
+	   behind this bar is computed from the same tokens (see .g-page ion-content
+	   below) — including the padding and border below, which Ionic's forced
+	   content-box renders OUTSIDE this height. Drawing them from named tokens
+	   rather than literals is what lets the reservation read them back; a
+	   literal here is invisible to it and is how content ended up under the
+	   bar (tabbar-reservation.test.mjs). */
 	height: var(--g-tabbar-height);
-	padding: 11px 6px 9px;
-	border: 1px solid var(--g-glass-rim);
+	padding: var(--g-tabbar-pad-top) 6px var(--g-tabbar-pad-bottom);
+	border: var(--g-tabbar-border) solid var(--g-glass-rim);
 	border-radius: var(--g-radius-tabbar);
 	background: var(--g-glass-fill);
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
