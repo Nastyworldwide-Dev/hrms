@@ -198,7 +198,15 @@ for (const theme of ["light", "dark"]) {
 // mobile, which moves it toward blob B and away from A and C.
 
 const LG = {
-	// §20.4 blob sizes as a fraction of viewport width, matching glass-components.css
+	// §20.4 blob sizes as a fraction of viewport width. These ARE a copy of
+	// glass-components.css's hand-authored 32vw/29vw/25vw, and they stay one:
+	// it is the only geometry input in this gate with no token behind it, so
+	// there is nothing to read instead. 6a9b01d9e is typed fix: and changed no
+	// line of this file — what it fixed was that the copy was UNGUARDED.
+	// contrast-column.test.mjs now asserts these three against the CSS's own
+	// declarations, and the derived origins against its -25.04/-22.51/-19.03vw,
+	// so editing the CSS turns that test red instead of leaving this proof
+	// green on geometry the app no longer draws.
 	scale: { a: 0.32, b: 0.29, c: 0.25 },
 	// §20.2 side nav: collapsed and expanded are both real states
 	nav: [72, 216],

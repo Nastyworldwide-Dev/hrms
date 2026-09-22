@@ -222,3 +222,40 @@ LEARNING(fact): design/gates/contrast.mjs is not importable — no exports, no
 LEARNING(how): before answering a "revert to before X" question, check whether X
   actually shipped. Here it had not, and the tag the question implied would have
   cost two releases of unrelated repair work.
+- 2026-09-22T00:14:06Z COMMIT: 0c0a53dc0 docs(glass): the handoff said "nothing pushed" after the push → review dispatched
+- 2026-09-22T00:14:44Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T00:18:26Z PUSH: nz-glass @ 0c0a53dc0
+- REPAIR: the retro flagged 6a9b01d9e as the likely "fix committed before its red
+  test" — its red proof perturbs the CSS AFTER the fix rather than showing the
+  pre-fix code red. REFUTED, and what is underneath is better: `git show --stat
+  6a9b01d9e` is two files, and design/gates/contrast.mjs is NOT one of them. That
+  commit changed no line of the gate. There was no "before the fix" state of the
+  code to prove red, because no code was fixed — the literals {a:.32,b:.29,c:.25}
+  are still in contrast.mjs:202 today and are still a copy. What 6a9b01d9e
+  actually did was GUARD the copy. Perturbing the CSS is therefore the only red
+  proof available to it, and it is the correct one.
+- CLASS: a fix: commit whose message describes removing a copy while its diff only
+  constrains one. The message says "the lg: blob model was a copy of hand-written
+  CSS" in the past tense; the model is still a copy. Not false — the defect WAS
+  the unguarded copy — but a reader checking the claim against the file finds the
+  literals sitting there and cannot tell which is wrong. Fixed where it will be
+  read: the comment above LG.scale now says the copy stays, why (no token exists
+  behind it), and what makes it safe (contrast-column.test.mjs asserts it against
+  the CSS both halves).
+- EVIDENCE: rung 2 — 10/10 tests, contrast 54 checked 0 failures exit 0, before
+  and after. Comment-only change to contrast.mjs; no behaviour touched.
+- NOTE: the retro's LEARNING(gate) proposal — "no numeric literal in a gates/*.mjs
+  file that duplicates a value also present in tokens.json or a component CSS
+  file" — is RECORDED, NOT BUILT. It would fire on LG.scale, which is the one
+  instance that is correct as a literal and is guarded by a test instead. A lint
+  rule whose first hit is a false positive teaches people to suppress it. The
+  right rule is narrower: a literal that duplicates a TOKEN is the defect; a
+  literal duplicating hand-authored CSS needs a guard test, not removal. Design
+  work, not a drive-by.
+- PUSH: ef3137541..0c0a53dc0 nz-glass — the handoff docs correction, completing
+  the protocol the owner's "push" started.
+- NEXT: owner's word on FOUR, unchanged and still blocking — un-ignore the mockup
+  folder (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
+  architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
+  not correct (spec 6)" note? Phase 2 section 2 cannot start without #3. Nothing
+  deployed; deploy is the owner's.
