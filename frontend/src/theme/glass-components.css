@@ -193,7 +193,7 @@ ion-tab-bar.g-tabbar {
 	   literal here is invisible to it and is how content ended up under the
 	   bar (tabbar-reservation.test.mjs). */
 	height: var(--g-tabbar-height);
-	padding: var(--g-tabbar-pad-top) 6px var(--g-tabbar-pad-bottom);
+	padding: var(--g-tabbar-pad-top) 8px var(--g-tabbar-pad-bottom);
 	border: var(--g-tabbar-border) solid var(--g-glass-rim);
 	border-radius: var(--g-radius-tabbar);
 	background: var(--g-glass-fill);
@@ -240,9 +240,9 @@ ion-tab-button.g-tabbar__btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 19px;
-	height: 19px;
-	border-radius: 7px;
+	width: 20px;
+	height: 20px;
+	border-radius: 8px;
 	flex: none;
 }
 .g-tabbar__well--active {
@@ -298,7 +298,7 @@ html[data-transparency="reduce"] .g-sidenav {
 /* the divider between the direct destinations and the flat More list (§20.2) */
 .g-sidenav__divider {
 	height: 1px;
-	margin: 9px 12px;
+	margin: 8px 12px;
 	background: var(--g-hair);
 	border: 0;
 }
@@ -308,7 +308,7 @@ html[data-transparency="reduce"] .g-sidenav {
 	gap: 12px;
 	width: 100%;
 	min-height: 44px;
-	padding: 11px 18px;
+	padding: 12px 16px;
 	border: 0;
 	border-left: 3px solid transparent;
 	background: transparent;
@@ -439,8 +439,8 @@ html[data-transparency="reduce"] .g-glass-ghost {
    slice, and it is on the debt ledger rather than smuggled into a Home
    restructure. New code uses this. */
 .g-row-icon {
-	width: 17px;
-	height: 17px;
+	width: 16px;
+	height: 16px;
 	flex: none;
 }
 
@@ -494,7 +494,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
    a title and must not take the row. Same fill, same component, same role. */
 .g-btn--compact {
 	width: auto;
-	padding: 0 14px;
+	padding: 0 16px;
 	white-space: nowrap;
 }
 
@@ -711,7 +711,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 9px;
+	gap: 8px;
 	width: 100%;
 	min-height: 44px;
 	padding: var(--g-pad-action);
@@ -728,8 +728,8 @@ html[data-transparency="reduce"] .g-glass-ghost {
 /* The provider's mark, exactly as supplied. Deliberately NO filter, tint,
    radius or mask — see the component header. */
 .g-provider__mark {
-	width: 18px;
-	height: 18px;
+	width: 16px;
+	height: 16px;
 	flex: none;
 	object-fit: contain;
 }
@@ -796,7 +796,7 @@ html[data-theme="dark"] .g-badge--open {
 /* ---------- GEmptyState (§10.1 #11, copy §11.1) ---------- */
 
 .g-empty {
-	padding: 26px 18px;
+	padding: 24px 16px;
 	border: 1px dashed var(--g-glass-rim);
 	border-radius: var(--g-radius-banner);
 	text-align: center;
@@ -907,7 +907,7 @@ html[data-theme="dark"] .g-badge--open {
 
 .g-banner {
 	border-radius: var(--g-radius-banner);
-	padding: 13px 14px;
+	padding: 12px 16px;
 	padding-left: 17px; /* 14px + the 3px rule */
 	overflow: hidden;
 	font-family: var(--g-type-row-label-family);
@@ -980,7 +980,7 @@ html[data-theme="dark"] .g-badge--open {
 	position: relative;
 	display: flex;
 	align-items: center;
-	gap: 11px;
+	gap: 12px;
 	width: 100%;
 	min-height: 44px;
 	padding: var(--g-pad-row);
@@ -1008,8 +1008,8 @@ html[data-theme="dark"] .g-badge--open {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 15px;
-	right: 15px;
+	left: 16px;
+	right: 16px;
 	height: 1px;
 	background: var(--g-hair);
 }
@@ -1018,8 +1018,8 @@ html[data-theme="dark"] .g-badge--open {
 	align-items: center;
 	justify-content: center;
 	flex: none;
-	width: 27px;
-	height: 27px;
+	width: 28px;
+	height: 28px;
 	border-radius: var(--g-radius-well);
 	background: var(--g-icon-bg);
 	color: var(--g-ink2);
@@ -1108,7 +1108,7 @@ html[data-theme="dark"] .g-badge--open {
 	align-items: center;
 	width: 100%;
 	min-height: 44px;
-	padding: 13px 14px;
+	padding: 12px 16px;
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
@@ -1132,7 +1132,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-input--textarea {
 	align-items: flex-start;
-	height: 66px;
+	height: 64px;
 	resize: none;
 }
 .g-input:disabled {
@@ -1154,7 +1154,7 @@ html[data-theme="dark"] .g-badge--open {
 .g-datefield input {
 	width: 100%;
 	min-height: var(--g-touch-target-min);
-	padding: 13px 14px;
+	padding: 12px 16px;
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
@@ -1188,7 +1188,7 @@ html[data-theme="dark"] .g-badge--open {
 .g-linkfield button.h-7.w-full {
 	min-height: var(--g-touch-target-min);
 	height: auto;
-	padding: 13px 14px;
+	padding: 12px 16px;
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
@@ -1339,7 +1339,7 @@ html[data-theme="dark"] .g-badge--open {
 	border-radius: var(--g-radius-card);
 }
 .g-cell--tile {
-	padding: 12px 6px;
+	padding: 12px 8px;
 	border-radius: var(--g-radius-tile);
 	text-align: center;
 }
@@ -1381,12 +1381,12 @@ html[data-theme="dark"] .g-badge--open {
 	flex-direction: column;
 	align-items: center;
 	justify-content: flex-start;
-	gap: 6px;
+	gap: 8px;
 	/* The tile is the target. 44px is the floor from layout.touch-target-min —
 	   already stricter than WCAG 2.5.8 AA (24px) — but the real tile is taller;
 	   min-height is the guarantee, not the design. */
 	min-height: var(--g-touch-target-min);
-	padding: 11px 4px 10px;
+	padding: 12px 4px 12px;
 	border-radius: var(--g-radius-tile);
 	background: transparent;
 	border: 0;
@@ -1587,14 +1587,14 @@ html[data-theme="dark"] .g-badge--open {
 	width: 100%;
 	text-align: left;
 	cursor: pointer;
-	padding: 13px;
+	padding: 12px;
 	border-radius: var(--g-radius-banner);
 }
 .g-issue__top {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 9px;
+	gap: 8px;
 }
 .g-issue__id {
 	font-family: var(--g-font-mono);
@@ -1694,7 +1694,7 @@ svg.lucide {
 /* ---------- GCalendar (§10.2 #18) ---------- */
 
 .g-cal {
-	padding: 15px 13px;
+	padding: 16px 12px;
 	border-radius: var(--g-radius-action);
 }
 .g-cal__head {
@@ -1832,21 +1832,21 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__legend {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 11px;
+	gap: 12px;
 	margin-top: 12px;
 }
 .g-cal__key {
 	display: flex;
 	align-items: center;
-	gap: 5px;
+	gap: 4px;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
 	line-height: var(--g-type-caption-line-height);
 	color: var(--g-ink2);
 }
 .g-cal__swatch {
-	width: 7px;
-	height: 7px;
+	width: 8px;
+	height: 8px;
 	border-radius: 2.5px;
 	flex: none;
 }
@@ -1868,8 +1868,8 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-score {
 	display: flex;
 	align-items: center;
-	gap: 15px;
-	padding: 17px 15px;
+	gap: 16px;
+	padding: 16px 16px;
 	border-radius: var(--g-radius-panel);
 }
 .g-score__verdict {
@@ -1897,11 +1897,11 @@ html[data-theme="dark"] .g-cal__day--present {
 /* ---------- GKraPanel (§10.2 #16) ---------- */
 
 .g-kra {
-	padding: 0 15px;
+	padding: 0 16px;
 	border-radius: var(--g-radius-panel);
 }
 .g-kra__row {
-	padding: 11px 0;
+	padding: 12px 0;
 }
 .g-kra__row + .g-kra__row {
 	border-top: 1px solid var(--g-hair);
@@ -1910,7 +1910,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 9px;
+	gap: 8px;
 }
 .g-kra__label {
 	/* moved out of GKraPanel.vue's scoped block (8.16) */
@@ -1955,7 +1955,7 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-goals {
 	display: flex;
 	align-items: center;
-	gap: 13px;
+	gap: 12px;
 	width: 100%;
 	padding: var(--g-pad-panel);
 	border-radius: var(--g-radius-card);
@@ -1998,7 +1998,7 @@ html[data-theme="dark"] .g-cal__day--present {
    be glass without nesting (§15) */
 .g-map {
 	position: relative;
-	height: 150px;
+	height: 152px;
 	border-radius: var(--g-radius-action);
 	overflow: hidden;
 	background: linear-gradient(160deg, var(--g-icon-bg), var(--g-track-solid));
@@ -2017,9 +2017,9 @@ html[data-theme="dark"] .g-cal__day--present {
 	position: absolute;
 	top: 50%;
 	left: 50%;
-	width: 13px;
-	height: 13px;
-	margin: -7px 0 0 -7px;
+	width: 12px;
+	height: 12px;
+	margin: -8px 0 0 -8px;
 	border-radius: 50%;
 	background: var(--g-brand);
 	box-shadow: 0 0 10px var(--g-accent-glow);
@@ -2047,9 +2047,9 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-map__caption {
 	position: absolute;
-	left: 9px;
-	bottom: 9px;
-	padding: 5px 8px;
+	left: 8px;
+	bottom: 8px;
+	padding: 4px 8px;
 	border-radius: var(--g-radius-pill);
 	font-family: var(--g-font-mono);
 	font-size: var(--g-type-data-system-size);
@@ -2070,7 +2070,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	/* §10.2 #20's 118px sizes the PLACEHOLDER. A live camera preview sets its
 	   own height — a face framed in 118px is not a usable preview — so this is
 	   a floor, not a fixed height. Flagged for a spec ruling. */
-	min-height: 118px;
+	min-height: 120px;
 	overflow: hidden;
 	border-radius: var(--g-radius-action);
 }
@@ -2135,8 +2135,8 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-header {
 	display: flex;
 	align-items: center;
-	gap: 14px;
-	padding: 13px var(--g-screen-gutter);
+	gap: 16px;
+	padding: 12px var(--g-screen-gutter);
 	/* TRANSPARENT, not --g-bg (Track B). The solid band was old-shell residue —
 	   an operator filed it as exactly that — and the mockup, which wins on
 	   values, has no header band at all: the top of every screen floats over
@@ -2186,8 +2186,8 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-header__dot {
 	position: absolute;
-	top: 9px;
-	right: 9px;
+	top: 8px;
+	right: 8px;
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
@@ -2241,7 +2241,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	/* 44px, not the 38 this shipped with — the component's own doc comment
 	   claimed §14.1 compliance while the CSS was 6px short of it. */
 	min-height: var(--g-touch-target-min);
-	padding: 9px 14px;
+	padding: 8px 16px;
 	border: 0;
 	border-radius: var(--g-radius-pill);
 	background: transparent;
@@ -2311,7 +2311,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
 }
 .g-sheet__title {
-	padding: 0 2px 9px;
+	padding: 0 2px 8px;
 	font-family: var(--g-type-panel-title-family);
 	font-size: var(--g-type-panel-title-size);
 	font-weight: var(--g-type-panel-title-weight);
@@ -2319,7 +2319,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	color: var(--g-ink);
 }
 .g-confirm__body {
-	padding: 0 2px 15px;
+	padding: 0 2px 16px;
 	font-family: var(--g-type-row-label-family);
 	font-size: var(--g-type-row-label-size);
 	line-height: var(--g-type-row-label-line-height);
@@ -2339,7 +2339,7 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-sheet__action {
 	display: flex;
 	align-items: center;
-	gap: 11px;
+	gap: 12px;
 	width: 100%;
 	min-height: 44px;
 	padding: var(--g-pad-row);
@@ -2405,7 +2405,7 @@ html[data-theme="dark"] .g-cal__day--present {
 	width: 100%;
 	min-height: 44px;
 	/* room for the 16px icon and the 44px clear target */
-	padding: 12px 48px 12px 35px;
+	padding: 12px 48px 12px 32px;
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
@@ -2581,8 +2581,8 @@ textarea {
 .g-pdf__scroller {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-	padding: 10px;
+	gap: 12px;
+	padding: 12px;
 	max-height: 70vh;
 	overflow-y: auto;
 }
@@ -2596,12 +2596,12 @@ textarea {
 	border-radius: var(--g-radius-input);
 }
 .g-pdf__skeleton-line {
-	height: 6px;
+	height: 8px;
 	border-radius: var(--g-radius-pill);
 	background: var(--g-icon-bg);
 }
 .g-pdf__skeleton-line--head {
-	height: 10px;
+	height: 12px;
 	width: 60%;
 }
 .g-pdf__error {
@@ -2615,7 +2615,7 @@ textarea {
 	border-radius: var(--g-radius-input);
 }
 .g-pdf__retry {
-	padding: 9px 13px;
+	padding: 8px 12px;
 	border: 1px solid var(--g-accent-ink);
 	border-radius: var(--g-radius-pill);
 	color: var(--g-accent-ink);
@@ -2628,8 +2628,8 @@ textarea {
 }
 .g-pdf__pagecount {
 	position: absolute;
-	right: 10px;
-	bottom: 10px;
+	right: 12px;
+	bottom: 12px;
 	padding: 4px 8px;
 	border-radius: var(--g-radius-pill);
 	background: var(--g-ink);
@@ -2701,14 +2701,14 @@ textarea {
 .g-files {
 	display: flex;
 	flex-direction: column;
-	gap: 7px;
+	gap: 8px;
 }
 .g-file {
 	display: flex;
 	align-items: center;
-	gap: 9px;
+	gap: 8px;
 	min-height: 44px;
-	padding: 9px 11px;
+	padding: 8px 12px;
 	border: 1px solid var(--g-hair);
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
@@ -2734,7 +2734,7 @@ textarea {
 	flex: none;
 	width: 44px;
 	height: 44px;
-	margin: -9px -11px -9px 0;
+	margin: -8px -12px -8px 0;
 	border: 0;
 	background: transparent;
 	color: var(--g-ink3);
@@ -2744,8 +2744,8 @@ textarea {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 66px;
-	padding: 15px;
+	min-height: 64px;
+	padding: 16px;
 	border: 1px dashed var(--g-glass-rim);
 	border-radius: var(--g-radius-input);
 	background: transparent;
@@ -2779,15 +2779,15 @@ ion-refresher {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 7px;
-	padding: 11px 0;
+	gap: 8px;
+	padding: 12px 0;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
 	letter-spacing: var(--g-type-caption-tracking);
 	color: var(--g-ink2);
 }
 .g-refresh__bar {
-	width: 34px;
+	width: 32px;
 	height: 3px;
 	border-radius: var(--g-radius-pill);
 	background: var(--g-track-solid);
@@ -2883,7 +2883,7 @@ ion-router-outlet {
 	justify-content: center;
 	gap: 8px;
 	/* The status bar's own height on a notched phone, so the text is not under it. */
-	padding: calc(env(safe-area-inset-top, 0px) + 7px) var(--g-screen-gutter) 7px;
+	padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--g-screen-gutter) 8px;
 	/* --g-warn-fill, not --g-warn-ink. warn-ink is a TEXT colour meant for
 	   glass; at its light value this 10.5px caption over it measured 4.36:1 against
 	   §14.1's 4.5 floor — a real failure, found by measuring rather than by
@@ -2903,8 +2903,8 @@ ion-router-outlet {
 }
 .g-offline__dot {
 	flex: none;
-	width: 6px;
-	height: 6px;
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
 	background: currentColor;
 }
@@ -2959,7 +2959,7 @@ ion-router-outlet {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	padding: 10px 12px 10px 14px;
+	padding: 12px 12px 12px 16px;
 	border-radius: var(--g-radius-action);
 	background: var(--g-ink);
 	color: var(--g-bg);
@@ -2980,7 +2980,7 @@ ion-router-outlet {
 	   thumb can hit, not the glyph. */
 	width: var(--g-touch-target-min);
 	height: var(--g-touch-target-min);
-	margin: calc((var(--g-touch-target-min) - 24px) / -2) -6px;
+	margin: calc((var(--g-touch-target-min) - 24px) / -2) -8px;
 	border: 0;
 	background: transparent;
 	color: var(--g-bg);
@@ -2990,7 +2990,7 @@ ion-router-outlet {
 .g-update__action {
 	flex: none;
 	min-height: var(--g-touch-target-min);
-	padding: 0 14px;
+	padding: 0 16px;
 	border: 0;
 	border-radius: var(--g-radius-action);
 	background: var(--g-brand);

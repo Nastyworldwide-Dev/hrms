@@ -103,11 +103,50 @@ for (let i = 1; i < distinct.length; i++) {
 	}
 }
 
+// ---------- the stylesheet, not just the tokens ------------------------------
+// A token system on a 4pt grid is worth nothing if the components that consume
+// it hand-write 11px beside it. Measured 22 Sep 2026 before the density pass:
+// 96 off-grid declarations in glass-components.css — gaps of 9, 11 and 13, row
+// padding of 13x14, a 27px icon well, a 66px header.
+//
+// 1, 2 and 3px are exempt and always will be: a hairline, a rim and a focus
+// ring are not spacing, and rounding them changes what they are.
+const HAIRLINES = new Set([1, 2, 3]);
+const CSS_PROPS = new Set([
+	"gap", "padding", "margin", "min-height", "height", "width",
+	"top", "bottom", "left", "right", "inset", "border-radius",
+]);
+//: Values a component is allowed to hold off-grid, each with its reason.
+const CSS_EXEMPT = new Map([
+	[2.5, "the notification dot's rim curve — a 4px radius on a 5px dot is a square"],
+]);
+
+const cssPath = join(ROOT, "frontend/src/theme/glass-components.css");
+const cssRaw = readFileSync(cssPath, "utf8");
+// Comments are BLANKED, not stripped: a comment explaining "this was 11px"
+// must not be counted as an 11px declaration. Six separate gates in this repo
+// have been caught by their own prose; this one is written knowing that.
+const cssBody = cssRaw
+	.split(/(\/\*[\s\S]*?\*\/)/)
+	.filter((part) => !part.startsWith("/*"))
+	.join("");
+
+const cssOffGrid = [];
+for (const m of cssBody.matchAll(/([a-z-]+):([^;{}]+);/g)) {
+	if (!CSS_PROPS.has(m[1])) continue;
+	for (const n of m[2].matchAll(/(-?\d+(?:\.\d+)?)px/g)) {
+		const px = Math.abs(Number(n[1]));
+		if (!px || px % GRID === 0 || HAIRLINES.has(px) || CSS_EXEMPT.has(px)) continue;
+		cssOffGrid.push(`  glass-components.css: ${m[1]}: ${m[2].trim()}   (${n[1]}px)`);
+	}
+}
+
 const problems = [
 	["off the 4pt grid", offGrid],
 	["fractional type sizes", fractional],
 	["body copy below the floor", tooSmall],
 	["type steps outside the ratio band", badSteps],
+	["off the 4pt grid in the stylesheet", cssOffGrid],
 ].filter(([, list]) => list.length);
 
 for (const [what, list] of problems) {
@@ -116,7 +155,7 @@ for (const [what, list] of problems) {
 }
 
 if (problems.length) {
-	console.log(`GATE_RESULT ${JSON.stringify({ gate: "scale", status: "fail", offGrid: offGrid.length, steps: badSteps.length })}`);
+	console.log(`GATE_RESULT ${JSON.stringify({ gate: "scale", status: "fail", offGrid: offGrid.length + cssOffGrid.length, steps: badSteps.length })}`);
 	process.exit(1);
 }
 
