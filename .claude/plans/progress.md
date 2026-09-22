@@ -287,3 +287,32 @@ NOTE: the 14 component->Lucide rows are JUDGEMENT, not measurement, and the doc
 NEXT: commit S3, then S2 (QuickLinks 8 full-width rows -> 4-across grid) — the
   largest single saving at ~274px, with a red tap-target test first at 44px.
   S4 stays blocked on its own revert condition: the real gzip delta, measured.
+- 2026-09-22T04:24:37Z COMMIT: ac8890e81 docs(icons): every icon has a Lucide target, and two needed a decision → review dispatched
+- 2026-09-22T04:28:41Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T04:40:00Z REPAIR: my icon inventory was wrong and a fresh-context
+  verifier REFUTED it before S4 could act on it. I claimed "36 names across 28
+  files, three dynamic sites" and attributed two dynamic bindings to
+  RequestActionSheet.vue, which has none. Recount, scripted rather than eyeballed:
+  40 distinct names across 28 files, FIVE dynamic binding sites —
+  CheckInPanel.vue:54, ExpenseTaxesTable.vue:111, ExpensesTable.vue:119,
+  WorkflowActionSheet.vue:33, Profile.vue:50. The four names every earlier count
+  missed (book, file, user from Profile.vue's profileLinks literal, plus
+  external-link) are all identical in Lucide, so the load-bearing conclusion
+  survives: 33 identical + 5 renamed + 2 decided + 0 missing.
+EVIDENCE: rung 1 — byte figures re-derived with feather's own toSvg() then gzip,
+  and the methodology is now stated in the doc because it matters: all 287 icons
+  are 106.2 KB raw / 11.2 KB gz and the 40 used names are 14.1 KB / 1.9 KB gz.
+  My earlier 52.5/10.5 was wrong, and a raw read of dist/feather.js gives 159 KB
+  because it measures a different thing. Projected delta restated honestly as
+  "~9 KB gz from feather leaving, plus most of the 6.9 KB of hand-rolled SVG,
+  minus whatever Lucide's 40 tree-shaken icons add back" — not the "-14 KB gz"
+  I first wrote, which double-counted.
+NOTE: the coverage map was already committed (ac8890e81) when the verifier
+  refuted it. Correcting a shipped doc is cheaper than a shipped migration, which
+  is the entire reason S3 is a doc and runs before S4.
+LEARNING(how): an inventory I assemble by reading is an estimate. Three counts of
+  the same 28 files gave 13, then 36, then 40. Only the scripted one is a count.
+  Script the extraction, then have a fresh context try to refute it.
+NEXT: S2 — QuickLinks 8 full-width rows -> 4-across g-cellgrid grid, the largest
+  single saving at ~274px. The 5 red tests are written and the CSS is in place;
+  QuickLinks.vue is the remaining edit.

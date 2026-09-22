@@ -18,11 +18,18 @@ tree-shake, and near-identical names.
 
 The size case is not the main one but it is real, and measured:
 
+Measured by rendering each icon through feather's own `toSvg()` and gzipping the
+result — the methodology matters, because a raw read of `dist/feather.js` (159 KB)
+is a different number measuring a different thing:
+
 | | raw | gzipped |
 |---|---|---|
-| all 287 feather icons (what ships today) | 52.5 KB | **10.5 KB** |
-| the names actually rendered | 1.6 KB | **0.6 KB** |
-| 14 hand-rolled components | 6.9 KB | — |
+| all 287 feather icons (what ships today) | 106.2 KB | **11.2 KB** |
+| the 40 names actually rendered | 14.1 KB | **1.9 KB** |
+| 14 hand-rolled components (263 lines) | 6.9 KB | — |
+
+So the waste is about **9.3 KB gzipped**, not the 9.9 KB first recorded. Smaller
+than first claimed, and still the weakest of the three reasons to move.
 
 All 287 ship regardless of use. `frappe-ui`'s `FeatherIcon.vue` does
 `import feather from 'feather-icons'` and then reads `Object.keys(feather.icons)`
@@ -30,21 +37,45 @@ at module scope for its prop validator, so the whole namespace is retained. That
 is not a bundler setting we can change from here; it is what the dependency does.
 
 **S4 must record the real gzip delta and revert if it is not negative.** The
-projection is about −14 KB gz. A projection is not a measurement.
+projection is roughly −9 KB gz from feather leaving, plus most of the 6.9 KB raw
+the hand-rolled components cost, minus whatever Lucide's 40 tree-shaken icons add
+back. A projection is not a measurement, and this one has already been restated
+once — the build is what decides.
 
 ## Correction to the earlier inventory
 
-An earlier progress note recorded "13 feather names across 6 files". That was
-wrong: it counted literal `name="..."` only. **36 names are rendered across 28
-files.** Three call sites bind the name dynamically, and all three resolve to
-literals in the code — `WorkflowActionSheet.vue:89,94` (`x`, `check`),
-`Home.vue:70-107` (`link.icon`, which is a component, not a feather name), and
-`RequestActionSheet.vue` (`plus`/`check`, `alert-triangle`/`clock`). No name is
-computed from server data, so the migration set is closed and knowable.
+This section has now been wrong twice, so here is how the current figure was
+derived: script every file containing `FeatherIcon`, collect both `name="..."`
+and every literal inside a `:name="..."` expression, and add the `icon:` strings
+that `Profile.vue` passes through as a prop.
 
-## Coverage: 36 rendered names
+**40 names render across 28 files.** The first attempt said 13 (literal `name=`
+only). The second said 36 and attributed the dynamic sites to the wrong files;
+an adversarial check refuted it. There are **five** dynamic binding sites:
 
-- **29 identical** — the name works unchanged in Lucide.
+| file | expression |
+|---|---|
+| `CheckInPanel.vue:54` | `isAbandoned ? 'alert-triangle' : 'clock'` |
+| `ExpenseTaxesTable.vue:111` | `editingIdx === null ? 'plus' : 'check'` |
+| `ExpensesTable.vue:119` | `editingIdx === null ? 'plus' : 'check'` |
+| `WorkflowActionSheet.vue:33` | `action.featherIcon` |
+| `Profile.vue:50` | `link.icon` |
+
+The last two are the ones worth tracing, and both are closed:
+`action.featherIcon` is assigned in the same file (`WorkflowActionSheet.vue:89,94`)
+to `"x"` or `"check"` by inspecting a workflow transition label — the LABEL comes
+from the server, the icon name does not. `link.icon` reads
+`profileLinks` (`Profile.vue:205-237`), a literal array holding `user`, `file`
+and `book` — three names the earlier counts missed entirely.
+
+**No icon name is computed from server data.** The migration set is closed and
+knowable — but that conclusion now rests on a scripted sweep, not on reading.
+
+## Coverage: 40 rendered names
+
+- **33 identical** — the name works unchanged in Lucide. That includes `book`,
+  `file` and `user` (from `Profile.vue`'s link list) and `external-link`, none of
+  which appeared in the earlier counts at all.
 - **5 renamed**, all mechanical:
 
 | feather | lucide |
