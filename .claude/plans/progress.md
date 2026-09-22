@@ -223,3 +223,26 @@ LEARNING(how): in fix_day.bundle.test.js the source-asserted tests slice per met
   pinning the producer->consumer wire. Match a name that occurs ONCE in the slice (the assignment
   `const why = ...`), never the bare field name — it recurs and survives the mutation.
 NEXT: push nz-glass, then write docs/glass/HANDOFF.md.
+- 2026-09-22T03:03:25Z COMMIT: 9aae23f42 test(fix-attendance): pin the wire, not just the consumer → review dispatched
+- 2026-09-22T03:04:18Z COMMIT: f844ae9bd docs(plans): G13 has no test, and the split ticket has no date → review dispatched
+- 2026-09-22T03:04:31Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-22T03:08:35Z COMMIT: 7950344fd docs(design): the contrast note was wrong — only green fails → review+security+design dispatched
+- 2026-09-22 REPAIR: the 5e84d51fb contrast annotation understated every ratio (by 0.4-0.8) and
+  called orange a WCAG failure at 4.22 when it passes at 4.92. Recomputed from the committed
+  hexes: blue 4.58 / orange 4.92 / red 5.70 pass, green 3.58 is the ONLY pill that fails.
+  Greys stand (500 2.85, 600 4.17 fail; 700 7.81 passes). Committed 7950344fd.
+  EVIDENCE: 2 correct - WCAG 2.1 relative luminance recomputed independently before editing;
+  the design reviewer's figures and mine agree to 2 dp on all 10 pairs.
+- 2026-09-22 NOTE: a reviewer left mutant (c) applied in the working tree (`const why = ""` in
+  fix_day.bundle.js). Caught by `git diff` before the commit, restored, suite re-run 13/13 on a
+  clean bundle. A mutation reviewer edits the real file - check the tree after every one.
+LEARNING(gate): a subagent's mutation test can leave the source mutated -> before every commit,
+  `git diff --numstat` the files the reviewer touched, never just `git status`.
+- 2026-09-22 NOTE: the f844ae9bd reviewer returned FIX_CRITICAL, but its Critical is "implement
+  the G13 test" - which is what the ticket asks the OWNER to schedule. It independently confirmed
+  the ticket's claim (G13 unreferenced anywhere in hrms/) and found no other unreferenced guard.
+  A filed ticket is not a defect in the commit that files it; no code change taken.
+  It also found test_attendance_endgame.py:153 "agrees with nightly" asserts state MARKS only,
+  not day CONTENT - a name/behaviour mismatch worth recording on the G13 ticket.
+NEXT: land the design reviewer's verdict on 7950344fd, then push nz-glass and write
+  docs/glass/HANDOFF.md.

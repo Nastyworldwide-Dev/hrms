@@ -25,3 +25,16 @@ hours, in/out, shift. Red today would mean the two paths already disagree.
 
 NOT DONE HERE because it needs a real-DB fixture (the opt-in env-var suite),
 not the stubbed pytest path, and that is a slice of its own.
+
+## Confirmed independently, 22 Sep 2026
+
+A frappe-reviewer run on the commit that filed this ticket searched `hrms/` for G13 by label and
+by meaning (`invariant`, `idempot`, `nightly`, `recompute`, plus `test_fix_day_rebuilds_a_day.py`
+and `test_attendance_endgame.py`) and found no test comparing a Fix Attendance save against the
+nightly or hourly recompute. It reported no OTHER guard unreferenced.
+
+One trap it surfaced, which is why the gap survived this long: the test named
+`test_attendance_endgame.py:153` reads as "agrees with nightly" but asserts only that the state
+MARKS line up — not that the rebuilt day has the same content. A name that describes G13 over a
+body that does not. Whoever takes this ticket should read that test before writing a new one, and
+either rename it or fold it in.
